@@ -154,6 +154,18 @@ class Dataset(object):
         return fobj.getvalue()
 
 if __name__ == "__main__":
+    """
+    For now this regression test assumes you've downloaded a sample
+    netCDF file and placed it in scidata/test/
+    
+    Heres one way to get going:
+    
+      mkdir test
+      cd test
+      wget http://www.unidata.ucar.edu/software/netcdf/examples/ECMWF_ERA-40_subset.nc
+      
+    """
+    
     base_dir = os.path.dirname(__file__)
     test_dir = os.path.join(base_dir, '..', 'test', )
     write_test_path = os.path.join(test_dir, 'test_output.nc')
