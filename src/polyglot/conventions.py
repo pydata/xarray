@@ -59,6 +59,16 @@ _reserved_names = set([
         'string',
         ])
 
+def pretty_print(x, numchars):
+    """Given an object x, call x.__str__() and format the returned
+    string so that it is numchars long, padding with trailing spaces or
+    truncating with ellipses as necessary"""
+    s = str(x).rstrip(NULL)
+    if len(s) > numchars:
+        return s[:(numchars - 3)] + '...'
+    else:
+        return s
+
 def coerce_type(arr):
     """Coerce a numeric data type to a type that is compatible with
     netCDF-3

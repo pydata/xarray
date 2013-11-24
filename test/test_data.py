@@ -6,7 +6,7 @@ import scipy.interpolate
 from copy import deepcopy
 from cStringIO import StringIO
 
-from polyglot import Dataset, Variable
+from polyglot import Dataset, Variable, backends
 
 _dims = {'dim1':100, 'dim2':50, 'dim3':10}
 _vars = {'var1':['dim1', 'dim2'],
@@ -16,12 +16,13 @@ _vars = {'var1':['dim1', 'dim2'],
 _testvar = sorted(_vars.keys())[0]
 _testdim = sorted(_dims.keys())[0]
 
-def test_data():
-    obj = Dataset()
+def create_test_data(store=None):
+    obj = Dataset(store=store)
     obj.create_dimension('time', 10)
     for d, l in _dims.items():
         obj.create_dimension(d, l)
-        var = obj.create_variable(name=d, dims=(d,), data=np.arange(l),
+        var = obj.create_variable(name=d, dims=(d,),
+                                  data=np.arange(l, dtype=np.int32),
                                   attributes={'units':'integers'})
     for v, dims in _vars.items():
         var = obj.create_variable(name=v, dims=tuple(dims),
@@ -31,8 +32,11 @@ def test_data():
 
 class DataTest(unittest.TestCase):
 
+    def get_store(self):
+        return None
+
     def test_iterator(self):
-        data = test_data()
+        data = create_test_data(self.get_store())
         # iterate over the first dim
         iterdim = _testdim
         for t, sub in data.iterator(dim=iterdim):
@@ -51,7 +55,7 @@ class DataTest(unittest.TestCase):
         self.assertTrue((data[_testvar].data != -71).all())
 
     def test_iterarray(self):
-        data = test_data()
+        data = create_test_data(self.get_store())
         # iterate over the first dim
         iterdim = _testdim
         for t, d in data.iterarray(dim=iterdim, var=_testvar):
@@ -127,7 +131,7 @@ class DataTest(unittest.TestCase):
         attributes = {'foo': 'bar'}
         a.create_coordinate('x', data=vec, attributes=attributes)
         self.assertTrue('x' in a.coordinates)
-        self.assertTrue(a.coordinates['x'] == a.dimensions['x'])
+        self.assertTrue(a.coordinates['x'] == a.variables['x'])
         b = Dataset()
         b.create_dimension('x', vec.size)
         b.create_variable('x', dims=('x',), data=vec, attributes=attributes)
@@ -187,7 +191,7 @@ class DataTest(unittest.TestCase):
         self.assertRaises(ValueError, b.attributes.__setitem__, 'foo', dict())
 
     def test_view(self):
-        data = test_data()
+        data = create_test_data(self.get_store())
         slicedim = _testdim
         s = slice(None, None, 2)
         ret = data.view(s=s, dim=slicedim)
@@ -205,10 +209,10 @@ class DataTest(unittest.TestCase):
             if slicedim in data[v].dimensions:
                 slice_list = [slice(None)] * data[v].data.ndim
                 slice_list[data[v].dimensions.index(slicedim)] = s
-                expected = data[v].data[slice_list]
+                expected = data[v].data[slice_list][:]
             else:
-                expected = data[v].data
-            actual = ret[v].data
+                expected = data[v].data[:]
+            actual = ret[v].data[:]
             np.testing.assert_array_equal(expected, actual)
             # Test that our view accesses the same underlying array
             actual.fill(np.pi)
@@ -219,7 +223,7 @@ class DataTest(unittest.TestCase):
                           s=slice(100, 200), dim=slicedim)
 
     def test_views(self):
-        data = test_data()
+        data = create_test_data(self.get_store())
 
         data.create_variable('var4', ('dim1', 'dim1'),
                              data = np.empty((data.dimensions['dim1'],
@@ -257,7 +261,7 @@ class DataTest(unittest.TestCase):
                           {'not_a_dim': slice(0, 2)})
 
     def test_take(self):
-        data = test_data()
+        data = create_test_data(self.get_store())
         slicedim = _testdim
         # using a list
         ret = data.take(indices=range(2, 5), dim=slicedim)
@@ -282,7 +286,7 @@ class DataTest(unittest.TestCase):
                 expected = data[v].data.take(
                     indices, axis=data[v].dimensions.index(slicedim))
             else:
-                expected = data[v].data
+                expected = data[v].data[:]
             actual = ret[v].data
             np.testing.assert_array_equal(expected, actual)
             # Test that our take is a copy
@@ -295,7 +299,7 @@ class DataTest(unittest.TestCase):
                           dim=slicedim)
 
     def test_squeeze(self):
-        data = test_data()
+        data = create_test_data(self.get_store())
         singleton = data.take([1], 'dim2')
         squeezed = singleton.squeeze('dim2')
         assert not 'dim2' in squeezed.dimensions
@@ -304,7 +308,7 @@ class DataTest(unittest.TestCase):
                                           squeezed[x].data)
 
     def test_select(self):
-        data = test_data()
+        data = create_test_data(self.get_store())
         ret = data.select(_testvar)
         np.testing.assert_array_equal(data[_testvar].data,
                                       ret[_testvar].data)
@@ -312,7 +316,7 @@ class DataTest(unittest.TestCase):
         self.assertRaises(KeyError, data.select, (_testvar, 'not_a_var'))
 
     def test_copy(self):
-        data = test_data()
+        data = create_test_data(self.get_store())
         var = data.variables[_testvar]
         var.attributes['foo'] = 'hello world'
         var_copy = var.__deepcopy__()
@@ -328,7 +332,7 @@ class DataTest(unittest.TestCase):
         self.assertNotEqual(id(var.attributes), id(var_copy.attributes))
 
     def test_rename(self):
-        data = test_data()
+        data = create_test_data(self.get_store())
         newnames = {'var1':'renamed_var1', 'dim2':'renamed_dim2'}
         renamed = data.renamed(newnames)
 
@@ -344,12 +348,57 @@ class DataTest(unittest.TestCase):
                 if name in dims:
                     dims[dims.index(name)] = newname
             self.assertEqual(dims, list(renamed.variables[k].dimensions))
-            np.testing.assert_array_equal(v.data, renamed.variables[k].data)
+            np.testing.assert_array_equal(v.data[:], renamed.variables[k].data[:])
 
         self.assertTrue('var1' not in renamed.variables)
         self.assertTrue('var1' not in renamed.dimensions)
         self.assertTrue('dim2' not in renamed.variables)
         self.assertTrue('dim2' not in renamed.dimensions)
+
+class NetCDF4DataTest(DataTest):
+
+    def get_store(self):
+        tmp_file = './delete_me.nc'
+        if os.path.exists(tmp_file):
+            os.remove(tmp_file)
+        return backends.NetCDF4DataStore(tmp_file, mode='w')
+
+    # Views on NetCDF4 objects result in copies of the arrays
+    # since the netCDF4 package requires data to live on disk
+    def test_view(self):
+        pass
+
+    def test_views(self):
+        pass
+
+    def test_iterarray(self):
+        pass
+
+    # TODO: select isn't working for netCDF4 yet.
+    def test_select(self):
+        pass
+
+class ScipyDataTest(DataTest):
+
+    def get_store(self):
+        fobj = StringIO()
+        return backends.ScipyDataStore(fobj, 'w')
+
+class StoreTest(unittest.TestCase):
+
+    def test_translate_consistency(self):
+
+        store = backends.InMemoryDataStore()
+        expected = create_test_data(store)
+
+        mem_nc = deepcopy(expected)
+        self.assertTrue(isinstance(mem_nc.store, backends.InMemoryDataStore))
+
+        fobj = StringIO()
+        actual = Dataset(store=backends.ScipyDataStore(fobj, 'w'))
+        mem_nc.translate(actual)
+
+        self.assertTrue(actual == expected)
 
 if __name__ == "__main__":
     unittest.main()
