@@ -1,5 +1,3 @@
-import polyglot.data as data
-
 import unittest
 import os.path
 import numpy as np
