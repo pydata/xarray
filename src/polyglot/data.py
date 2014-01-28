@@ -859,8 +859,8 @@ class Dataset(object):
 
     def renamed(self, name_dict):
         """
-        Returns a copy of the current object with variables and dimensions
-        reanmed according to the arguments passed via **kwds
+        Returns a new object with variables and dimensions renamed according to
+        the arguments passed via **kwds
 
         Parameters
         ----------
@@ -896,7 +896,7 @@ class Dataset(object):
         for (name, v) in self.variables.iteritems():
             obj.create_variable(new_names[name],
                                 tuple([new_names[d] for d in v.dimensions]),
-                                data=v.data.copy(),
+                                data=v.data,
                                 attributes=v.attributes.copy())
         # update the root attributes
         self.unchecked_set_attributes(self.attributes.copy())
@@ -935,7 +935,7 @@ class Dataset(object):
             if not name in self.variables:
                 self.create_variable(name,
                                      v.dimensions,
-                                     data=v.data.copy(),
+                                     data=v.data,
                                      attributes=v.attributes.copy())
             else:
                 if self[name].dimensions != other[name].dimensions:
@@ -990,7 +990,7 @@ class Dataset(object):
             if (name in var) or ((name in dim) and (v.dimensions == (name,))):
                 obj.unchecked_create_variable(name,
                         dims=v.dimensions,
-                        data=v.data.copy(),
+                        data=v.data,
                         attributes=v.attributes.copy())
         obj.unchecked_set_attributes(self.attributes.copy())
         return obj
@@ -1186,7 +1186,7 @@ class Dataset(object):
         for (name, var) in self.variables.iteritems():
             if not name == dimension:
                 dims = list(var.dimensions)
-                data = var.data.copy()
+                data = var.data
                 if dimension in dims:
                     shape = list(var.data.shape)
                     index = dims.index(dimension)
