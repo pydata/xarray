@@ -438,12 +438,11 @@ class Dataset(object):
     def coordinates(self):
         # A coordinate variable is a 1-dimensional variable with the
         # same name as its dimension
-        return OrderedDict([(dim, length)
-                for (dim, length) in self.dimensions.iteritems()
-                if (dim in self.variables) and
-                (self.variables[dim].data.ndim == 1) and
-                (self.variables[dim].dimensions == (dim,))
-                ])
+        return OrderedDict([(dim, self.variables[dim])
+                for dim in self.dimensions
+                if dim in self.variables and
+                self.variables[dim].data.ndim == 1 and
+                self.variables[dim].dimensions == (dim,)])
 
     @property
     def noncoordinates(self):
