@@ -90,6 +90,18 @@ class AttributesDict(OrderedDict):
         return True
 
 
+def _expand_key(key, ndim):
+    """Given a key for getting an item from an ndarray, expand the key to an
+    equivalent key which is a tuple with length equal to the number of
+    dimensions
+    """
+    if not isinstance(key, tuple):
+        key = (key,)
+    new_key = [slice(None)] * ndim
+    new_key[:len(key)] = key
+    return tuple(new_key)
+
+
 class Variable(object):
     """
     A netcdf-like variable consisting of dimensions, data and attributes
@@ -97,66 +109,101 @@ class Variable(object):
     fully described outside the context of its parent Dataset.
     """
     def __init__(self, dims, data, attributes=None):
-        object.__setattr__(self, 'dimensions', dims)
-        object.__setattr__(self, 'data', data)
+        if len(dims) != data.ndim:
+            raise ValueError('data must have same shape as the number of '
+                             'dimensions')
+        self._dimensions = tuple(dims)
+        self._data = data
         if attributes is None:
             attributes = {}
-        object.__setattr__(self, 'attributes', AttributesDict(attributes))
+        self._attributes = AttributesDict(attributes)
 
-    def _allocate(self):
-        return self.__class__(dims=(), data=0)
+    @property
+    def dimensions(self):
+        return self._dimensions
 
-    def __getattribute__(self, key):
+    @property
+    def data(self):
         """
-        Here we give some of the attributes of self.data preference over
-        attributes in the object instelf.
+        The variable's data as a numpy.ndarray
         """
-        if key in ['dtype', 'shape', 'size', 'ndim', 'nbytes',
-                'flat', '__iter__', 'view']:
-            return getattr(self.data, key)
-        else:
-            return object.__getattribute__(self, key)
+        if not isinstance(self._data, np.ndarray):
+            self._data = np.asarray(self._data[...])
+        return self._data
 
-    def __setattr__(self, attr, value):
-        """"__setattr__ is overloaded to prevent operations that could
-        cause loss of data consistency. If you really intend to update
-        dir(self), use the self.__dict__.update method or the
-        super(type(a), self).__setattr__ method to bypass."""
-        raise AttributeError, "Object is tamper-proof"
+    @data.setter
+    def data(self, value):
+        value = np.asarray(value)
+        if value.shape != self.shape:
+            raise ValueError("replacement data must match the Variable's "
+                             "shape")
+        self._data = value
 
-    def __delattr__(self, attr):
-        raise AttributeError, "Object is tamper-proof"
+    @property
+    def dtype(self):
+        return self._data.dtype
 
-    def __getitem__(self, index):
-        """__getitem__ is overloaded to access the underlying numpy data"""
-        return self.data[index]
+    @property
+    def shape(self):
+        return self._data.shape
 
-    def __setitem__(self, index, data):
-        """__setitem__ is overloaded to access the underlying numpy data"""
-        self.data[index] = data
+    @property
+    def size(self):
+        return self._data.size
 
-    def __hash__(self):
-        """__hash__ is overloaded to guarantee that two variables with the same
-        attributes and np.data values have the same hash (the converse is not true)"""
-        return hash((self.dimensions,
-                     frozenset((k,v.tostring()) if isinstance(v,np.ndarray) else (k,v)
-                               for (k,v) in self.attributes.items()),
-                     self.data.tostring()))
+    @property
+    def ndim(self):
+        return self._data.ndim
 
     def __len__(self):
-        """__len__ is overloaded to access the underlying numpy data"""
-        return self.data.__len__()
+        return len(self._data)
+
+    def __getitem__(self, key):
+        """
+        Return a new Variable object whose contents are consistent with getting
+        the provided key from the underlying data
+        """
+        key = _expand_key(key, self.ndim)
+        dimensions = [dim for k, dim in zip(key, self.dimensions)
+                      if not isinstance(k, int)]
+        return Variable(dimensions, self._data[key], self.attributes)
+
+    def __setitem__(self, key, value):
+        """__setitem__ is overloaded to access the underlying numpy data"""
+        self.data[key] = value
+
+    def __iter__(self):
+        """
+        Iterate over the contents of this Variable
+        """
+        for n in range(len(self)):
+            yield self[n]
+
+    @property
+    def attributes(self):
+        return self._attributes
+
+    def copy(self):
+        """
+        Returns a shallow copy of the current object.
+        """
+        return self.__copy__()
+
+    def _copy(self, deepcopy=False):
+        # deepcopies should always be of a numpy view of the data, not the data
+        # itself, because non-memory backends don't necessarily have deepcopy
+        # defined sensibly (this is a problem for netCDF4 variables)
+        data = copy.deepcopy(self.data) if deepcopy else self._data
+        # note:
+        # dimensions is already an immutable tuple
+        # attributes will be copied when the new Variable is created
+        return Variable(self.dimensions, data, self.attributes)
 
     def __copy__(self):
         """
         Returns a shallow copy of the current object.
         """
-        # Create the simplest possible dummy object and then overwrite it
-        obj = self._allocate()
-        object.__setattr__(obj, 'dimensions', self.dimensions)
-        object.__setattr__(obj, 'data', self.data)
-        object.__setattr__(obj, 'attributes', self.attributes)
-        return obj
+        return self._copy(deepcopy=False)
 
     def __deepcopy__(self, memo=None):
         """
@@ -164,24 +211,21 @@ class Variable(object):
 
         memo does nothing but is required for compatability with copy.deepcopy
         """
-        # Create the simplest possible dummy object and then overwrite it
-        obj = self._allocate()
-        # tuples are immutable
-        object.__setattr__(obj, 'dimensions', self.dimensions)
-        object.__setattr__(obj, 'data', self.data[:].copy())
-        object.__setattr__(obj, 'attributes', self.attributes.copy())
-        return obj
+        return self._copy(deepcopy=True)
+
+    # mutable objects should not be hashable
+    __hash__ = None
 
     def __eq__(self, other):
-        if self.dimensions != other.dimensions or \
-           (self.data.tostring() != other.data.tostring()):
+        try:
+            return (self.dimensions == other.dimensions
+                    and np.all(self.data == other.data)
+                    and self.attributes == other.attributes)
+        except AttributeError:
             return False
-        if not self.attributes == other.attributes:
-            return False
-        return True
 
     def __ne__(self, other):
-        return not self.__eq__(other)
+        return not self == other
 
     def __str__(self):
         """Create a ncdump-like summary of the object"""
@@ -230,10 +274,7 @@ class Variable(object):
         for i, dim in enumerate(self.dimensions):
             if dim in slicers:
                 slices[i] = slicers[dim]
-        # Shallow copy
-        obj = copy.copy(self)
-        object.__setattr__(obj, 'data', self.data[slices])
-        return obj
+        return self[tuple(slices)]
 
     def view(self, s, dim):
         """Return a new Variable object whose contents are a view of the object
@@ -244,9 +285,7 @@ class Variable(object):
         s : slice
             The slice representing the range of the values to extract.
         dim : string
-            The dimension to slice along. If multiple dimensions equal
-            dim (e.g. a correlation matrix), then the slicing is done
-            only along the first matching dimension.
+            The dimension to slice along.
 
         Returns
         -------
@@ -261,7 +300,7 @@ class Variable(object):
         --------
         take
         """
-        return self.views({dim : s})
+        return self.views({dim: s})
 
     def take(self, indices, dim):
         """Return a new Variable object whose contents are sliced from
@@ -293,65 +332,7 @@ class Variable(object):
             raise ValueError('indices should have a single dimension')
         # When dim appears repeatedly in self.dimensions, using the index()
         # method gives us only the first one, which is the desired behavior
-        axis = list(self.dimensions).index(dim)
-        # Deep copy
-        obj = copy.deepcopy(self)
-        # In case data is lazy we need to slice out all the data before taking.
-        object.__setattr__(obj, 'data', self.data[:].take(indices, axis=axis))
-        return obj
-
-class LazyVariableData(object):
-    """
-    This object wraps around a Variable object (though
-    it only really makes sense to use it with a class that
-    extends variable.Variable).  The result mascarades as
-    variable data, but doesn't actually try accessing the
-    data until indexing is attempted.
-
-    For example, imagine you have some variable that was
-    derived from an opendap dataset, 'nc'.
-
-        var = nc['massive_variable']
-
-    if you wanted to check the data type of var:
-
-        var.data.dtype
-
-    you would find that it might involve downloading all
-    of the actual data, then inspecting the resulting
-    numpy array.  But with this wrapper calling:
-
-        nc['large_variable'].data.someattribute
-
-    will first inspect the Variable object to see if it has
-    the desired attribute and only then will it suck down the
-    actual numpy array and request 'someattribute'.
-    """
-    def __init__(self, lazy_variable):
-        self.lazyvar = lazy_variable
-
-    def __eq__(self, other):
-        return self.lazyvar[:] == other
-
-    def __ne__(self, other):
-        return self.lazyvar[:] != other
-
-    def __getitem__(self, key):
-        return self.lazyvar[key]
-
-    def __setitem__(self, key, value):
-        if not isinstance(self.lazyvar, Variable):
-            self.lazyvar = Variable(self.lazyvar.dimensions,
-                                        data = self.lazyvar[:],
-                                        dtype = self.lazyvar.dtype,
-                                        shape = self.lazyvar.shape,
-                                        attributes = self.lazyvar.attributes)
-        self.lazyvar.__setitem__(key, value)
-
-    def __getattr__(self, attr):
-        """__getattr__ is overloaded to selectively expose some of the
-        attributes of the underlying lazy variable"""
-        if hasattr(self.lazyvar, attr):
-            return getattr(self.lazyvar, attr)
-        else:
-            return getattr(self.lazyvar[:], attr)
+        axis = self.dimensions.index(dim)
+        # take only works on actual numpy arrays
+        data = self.data.take(indices, axis=axis)
+        return Variable(self.dimensions, data, self.attributes)
