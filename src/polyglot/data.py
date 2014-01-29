@@ -118,35 +118,45 @@ class Variable(object):
     fully described outside the context of its parent Dataset.
     """
     def __init__(self, dims, data, attributes=None):
-        object.__setattr__(self, 'dimensions', dims)
-        object.__setattr__(self, 'data', data)
+        self._dimensions = tuple(dims)
+        if len(dims) != data.ndim:
+            raise ValueError('data must have same shape as the number of '
+                             'dimensions')
+        self._data = data
         if attributes is None:
             attributes = {}
-        object.__setattr__(self, 'attributes', AttributesDict(attributes))
+        self._attributes = AttributesDict(attributes)
 
-    def _allocate(self):
-        return self.__class__(dims=(), data=0)
+    @property
+    def dimensions(self):
+        return self._dimensions
 
+    @property
+    def data(self):
+        return self._data
+
+    @data.setter
+    def data(self, value):
+        if value.shape != self.shape:
+            raise ValueError("replacement data must match the Variable's "
+                             "shape")
+        self._data = value
+
+    @property
+    def attributes(self):
+        return self._attributes
+
+    #TODO: replace these with explicit properties?
     def __getattribute__(self, key):
         """
         Here we give some of the attributes of self.data preference over
         attributes in the object instelf.
         """
         if key in ['dtype', 'shape', 'size', 'ndim', 'nbytes',
-                'flat', '__iter__', 'view']:
+                   'flat', '__iter__']:
             return getattr(self.data, key)
         else:
             return object.__getattribute__(self, key)
-
-    def __setattr__(self, attr, value):
-        """"__setattr__ is overloaded to prevent operations that could
-        cause loss of data consistency. If you really intend to update
-        dir(self), use the self.__dict__.update method or the
-        super(type(a), self).__setattr__ method to bypass."""
-        raise AttributeError("Object is tamper-proof")
-
-    def __delattr__(self, attr):
-        raise AttributeError("Object is tamper-proof")
 
     def __getitem__(self, index):
         """__getitem__ is overloaded to access the underlying numpy data"""
@@ -156,17 +166,12 @@ class Variable(object):
         """__setitem__ is overloaded to access the underlying numpy data"""
         self.data[index] = data
 
-    def __hash__(self):
-        """__hash__ is overloaded to guarantee that two variables with the same
-        attributes and np.data values have the same hash (the converse is not true)"""
-        return hash((self.dimensions,
-                     frozenset((k,v.tostring()) if isinstance(v,np.ndarray) else (k,v)
-                               for (k,v) in self.attributes.items()),
-                     self.data.tostring()))
+    # mutable objects should not have a hash
+    __hash__ = None
 
     def __len__(self):
         """__len__ is overloaded to access the underlying numpy data"""
-        return self.data.__len__()
+        return len(self.data)
 
     def copy(self):
         """
@@ -175,12 +180,13 @@ class Variable(object):
         return self.__copy__()
 
     def _copy(self, deepcopy=False):
-        data = self.data[:].copy() if deepcopy else self.data
-        obj = self._allocate()
-        object.__setattr__(obj, 'dimensions', copy.copy(self.dimensions))
-        object.__setattr__(obj, 'data', data)
-        object.__setattr__(obj, 'attributes', self.attributes.copy())
-        return obj
+        # dimensions is already an immutable tuple
+        dims = self.dimensions
+        data = copy.deepcopy(self.data) if deepcopy else self.data
+        # deepcopy attributes for sanity since there should be essentially no
+        # performance penalty
+        attributes = copy.deepcopy(self.attributes)
+        return type(self)(dims, data, attributes)
 
     def __copy__(self):
         return self._copy(deepcopy=False)
@@ -194,15 +200,12 @@ class Variable(object):
         return self._copy(deepcopy=True)
 
     def __eq__(self, other):
-        if self.dimensions != other.dimensions or \
-           (self.data.tostring() != other.data.tostring()):
-            return False
-        if not self.attributes == other.attributes:
-            return False
-        return True
+        return (self.dimensions == other.dimensions
+                and np.all(self.data[:] == other.data[:])
+                and self.attributes == other.attributes)
 
     def __ne__(self, other):
-        return not self.__eq__(other)
+        return not self == other
 
     def __str__(self):
         """Create a ncdump-like summary of the object"""
@@ -251,9 +254,8 @@ class Variable(object):
         for i, dim in enumerate(self.dimensions):
             if dim in slicers:
                 slices[i] = slicers[dim]
-        # Shallow copy
-        obj = copy.copy(self)
-        object.__setattr__(obj, 'data', self.data[slices])
+        obj = self.copy()
+        obj._data = self.data[slices]
         return obj
 
     def view(self, s, dim):
@@ -315,10 +317,9 @@ class Variable(object):
         # When dim appears repeatedly in self.dimensions, using the index()
         # method gives us only the first one, which is the desired behavior
         axis = list(self.dimensions).index(dim)
-        # Deep copy
-        obj = copy.deepcopy(self)
+        obj = self.copy()
         # In case data is lazy we need to slice out all the data before taking.
-        object.__setattr__(obj, 'data', self.data[:].take(indices, axis=axis))
+        obj._data = self.data[:].take(indices, axis=axis)
         return obj
 
 
@@ -411,7 +412,7 @@ class Dataset(object):
         obj = self._allocate()
         object.__setattr__(obj, 'dimensions', self.dimensions.copy())
         object.__setattr__(obj, 'variables', self.variables.copy())
-        object.__setattr__(obj, 'attributes', self.attributes.copy())
+        object.__setattr__(obj, 'attributes', copy.deepcopy(self.attributes))
         return obj
 
     def __setattr__(self, attr, value):
@@ -747,7 +748,7 @@ class Dataset(object):
         # Create a new object
         obj = self._allocate()
         # Create views onto the variables and infer the new dimension length
-        new_dims = dict(self.dimensions.iteritems())
+        new_dims = self.dimensions.copy()
         for (name, var) in self.variables.iteritems():
             var_slicers = dict((k, v) for k, v in slicers.iteritems() if k in var.dimensions)
             if len(var_slicers):
@@ -800,7 +801,7 @@ class Dataset(object):
             raise IndexError("view results in a dimension of length zero")
         return obj
 
-    def take(self, indices, dim=None):
+    def take(self, indices, dim):
         """Return a new object whose contents are taken from the
         current object along a specified dimension
 
@@ -813,9 +814,6 @@ class Dataset(object):
             The dimension to slice along. If multiple dimensions of a
             variable equal dim (e.g. a correlation matrix), then that
             variable is sliced only along its first matching dimension.
-            If None (default), then the object is sliced along its
-            unlimited dimension; an exception is raised if the object
-            does not have an unlimited dimension.
 
         Returns
         -------
@@ -832,8 +830,6 @@ class Dataset(object):
         numpy.take
         Variable.take
         """
-        if dim is None:
-            raise ValueError("dim cannot be None")
         # Create a new object
         obj = self._allocate()
         # Create fancy-indexed variables and infer the new dimension length
@@ -1103,7 +1099,7 @@ class Dataset(object):
                 for i in xrange(n):
                     yield (None, self.take(np.array([i]), dim=dim))
 
-    def iterarray(self, var, dim=None):
+    def iterarray(self, var, dim):
         """Iterator along a data dimension returning the corresponding slices
         of the underlying data of a varaible.
 
@@ -1117,10 +1113,7 @@ class Dataset(object):
             The variable over which you want to iterate.
 
         dim : string, optional
-            The dimension along which you want to iterate. If None
-            (default), then the iterator operates along the record
-            dimension; if there is no record dimension, an exception
-            will be raised.
+            The dimension along which you want to iterate.
 
         Returns
         -------

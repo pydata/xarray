@@ -118,8 +118,6 @@ class DataTest(unittest.TestCase):
         self.assertFalse(v1 == v3)
         self.assertFalse(v1 == v4)
         self.assertFalse(v1 == v5)
-        # Variable hash
-        self.assertEquals(hash(v1), hash(v2))
 
     def test_coordinate(self):
         a = Dataset()
@@ -230,6 +228,8 @@ class DataTest(unittest.TestCase):
         ret = data.views(slicers)
         data.views(slicers)
 
+        # Verify dimensions still have matching items
+        self.assertItemsEqual(ret.dimensions, data.dimensions)
         # Verify that only the specified dimension was altered
         for d in data.dimensions:
             if d in slicers:
