@@ -131,7 +131,7 @@ class DataTest(unittest.TestCase):
         attributes = {'foo': 'bar'}
         a.create_coordinate('x', data=vec, attributes=attributes)
         self.assertTrue('x' in a.coordinates)
-        self.assertTrue(a.coordinates['x'] == a.dimensions['x'])
+        self.assertTrue(a.coordinates['x'] == a.variables['x'])
         b = Dataset()
         b.create_dimension('x', vec.size)
         b.create_variable('x', dims=('x',), data=vec, attributes=attributes)

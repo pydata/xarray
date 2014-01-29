@@ -85,6 +85,20 @@ class Dataset(object):
     def _allocate(self):
         return self.__class__()
 
+    def copy(self):
+        """
+        Returns a shallow copy of the current object.
+        """
+        return self.__copy__()
+
+    def _copy(self, deepcopy=False):
+        data = self.data[:].copy() if deepcopy else self.data
+        obj = self._allocate()
+        object.__setattr__(obj, 'dimensions', copy.copy(self.dimensions))
+        object.__setattr__(obj, 'data', data)
+        object.__setattr__(obj, 'attributes', self.attributes.copy())
+        return obj
+
     def __copy__(self):
         """
         Returns a shallow copy of the current object.
@@ -99,13 +113,7 @@ class Dataset(object):
 
         memo does nothing but is required for compatability with copy.deepcopy
         """
-        # Create the simplest possible dummy object and then overwrite it
-        obj = self._allocate()
-        obj._unchecked_set_dimensions(copy.deepcopy(self.dimensions))
-        for vn, v in self.variables.iteritems():
-            obj._unchecked_add_variable(vn, copy.deepcopy(v))
-        obj._unchecked_set_attributes(copy.deepcopy(self.attributes))
-        return obj
+        return self._copy(deepcopy=True)
 
     def _load_scipy(self, scipy_nc, *args, **kwdargs):
         """
@@ -198,7 +206,7 @@ class Dataset(object):
     def translate(self, target):
         target.store.unchecked_set_dimensions(self.dimensions)
         target.store.unchecked_set_variables(self.variables)
-        target.store.unchecked_set_attributes((self.attributes))
+        target.store.unchecked_set_attributes(self.attributes)
         target.store.sync()
 
     def dump(self, filepath, *args, **kwdargs):
@@ -297,13 +305,8 @@ class Dataset(object):
         dims : tuple
             The dimensions of the new variable. Elements must be dimensions of
             the object.
-        data : numpy.ndarray or None, optional
-            Data to populate the new variable. If None (default), then
-            an empty numpy array is allocated with the appropriate
-            shape and dtype. If data contains int64 integers, it will
-            be coerced to int32 (for the sake of netCDF compatibility),
-            and an exception will be raised if this coercion is not
-            safe.
+        data : numpy.ndarray
+            Data to populate the new variable.
         attributes : dict_like or None, optional
             Attributes to assign to the new variable. Attribute names
             must be unique and must satisfy netCDF-3 naming rules. If
@@ -410,7 +413,6 @@ class Dataset(object):
             raise ValueError("Object does not have a variable '%s'" %
                     (str(name)))
         else:
-
             super(type(self.variables), self.variables).__delitem__(name)
 
     def views(self, slicers):
