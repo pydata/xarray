@@ -2,8 +2,6 @@
 
 import os
 import copy
-import itertools
-import unicodedata
 
 import numpy as np
 import netCDF4 as nc4
@@ -112,6 +110,7 @@ class AttributesDict(OrderedDict):
                     return False
         return True
 
+
 class Variable(object):
     """
     A netcdf-like variable consisting of dimensions, data and attributes
@@ -144,10 +143,10 @@ class Variable(object):
         cause loss of data consistency. If you really intend to update
         dir(self), use the self.__dict__.update method or the
         super(type(a), self).__setattr__ method to bypass."""
-        raise AttributeError, "Object is tamper-proof"
+        raise AttributeError("Object is tamper-proof")
 
     def __delattr__(self, attr):
-        raise AttributeError, "Object is tamper-proof"
+        raise AttributeError("Object is tamper-proof")
 
     def __getitem__(self, index):
         """__getitem__ is overloaded to access the underlying numpy data"""
@@ -169,16 +168,22 @@ class Variable(object):
         """__len__ is overloaded to access the underlying numpy data"""
         return self.data.__len__()
 
-    def __copy__(self):
+    def copy(self):
         """
         Returns a shallow copy of the current object.
         """
-        # Create the simplest possible dummy object and then overwrite it
+        return self.__copy__()
+
+    def _copy(self, deepcopy=False):
+        data = self.data[:].copy() if deepcopy else self.data
         obj = self._allocate()
-        object.__setattr__(obj, 'dimensions', self.dimensions)
-        object.__setattr__(obj, 'data', self.data)
-        object.__setattr__(obj, 'attributes', self.attributes)
+        object.__setattr__(obj, 'dimensions', copy.copy(self.dimensions))
+        object.__setattr__(obj, 'data', data)
+        object.__setattr__(obj, 'attributes', self.attributes.copy())
         return obj
+
+    def __copy__(self):
+        return self._copy(deepcopy=False)
 
     def __deepcopy__(self, memo=None):
         """
@@ -186,13 +191,7 @@ class Variable(object):
 
         memo does nothing but is required for compatability with copy.deepcopy
         """
-        # Create the simplest possible dummy object and then overwrite it
-        obj = self._allocate()
-        # tuples are immutable
-        object.__setattr__(obj, 'dimensions', self.dimensions)
-        object.__setattr__(obj, 'data', self.data[:].copy())
-        object.__setattr__(obj, 'attributes', self.attributes.copy())
-        return obj
+        return self._copy(deepcopy=True)
 
     def __eq__(self, other):
         if self.dimensions != other.dimensions or \
@@ -214,7 +213,7 @@ class Variable(object):
                                                  _prettyprint(l, 10))
         # add each dimension to the summary
         summary.extend([dim_print(d, l) for d, l in zip(self.dimensions, self.shape)])
-        summary.append("type : %s" % (_prettyprint(var.dtype, 8)))
+        summary.append("type : %s" % (_prettyprint(self.dtype, 8)))
         summary.append("\nattributes:")
         #    attribute:value
         summary.extend(["\t%s:%s" % (_prettyprint(att, 30),
@@ -322,6 +321,7 @@ class Variable(object):
         object.__setattr__(obj, 'data', self.data[:].take(indices, axis=axis))
         return obj
 
+
 class Dataset(object):
     """
     A netcdf-like data object consisting of dimensions, variables and
@@ -356,9 +356,9 @@ class Dataset(object):
         self.dimensions.update(dimensions)
 
         object.__setattr__(self, 'variables', OrderedDict())
-        OrderedDict = OrderedDict((vn, from_scipy_variable(v))
-                                   for vn, v in nc.variables.iteritems())
-        self.variables.update()
+        variables = OrderedDict((vn, from_scipy_variable(v))
+                                for vn, v in nc.variables.iteritems())
+        self.variables.update(variables)
 
     def _load_netcdf4(self, netcdf_path, *args, **kwdargs):
         """
@@ -386,25 +386,33 @@ class Dataset(object):
         self.variables.update(dict((vn.encode(), from_netcdf4_variable(v))
                                    for vn, v in nc.variables.iteritems()))
 
-    def __init__(self, nc = None, *args, **kwdargs):
+    def __init__(self, nc=None, *args, **kwdargs):
         if isinstance(nc, basestring) and not nc.startswith('CDF'):
-            """
-            If the initialization nc is a string and it doesn't
-            appear to be the contents of a netcdf file we load
-            it using the netCDF4 package
-            """
+            # If the initialization nc is a string and it doesn't
+            # appear to be the contents of a netcdf file we load
+            # it using the netCDF4 package
             self._load_netcdf4(nc, *args, **kwdargs)
         elif nc is None:
             object.__setattr__(self, 'attributes', AttributesDict())
             object.__setattr__(self, 'dimensions', OrderedDict())
             object.__setattr__(self, 'variables', OrderedDict())
         else:
-            """
-            If nc is a file-like object we read it using
-            the scipy.io.netcdf package
-            """
+            # If nc is a file-like object we read it using
+            # the scipy.io.netcdf package
             self._load_scipy(nc)
 
+    def copy(self):
+        """
+        Returns a shallow copy of the current object.
+        """
+        return self.__copy__()
+
+    def __copy__(self):
+        obj = self._allocate()
+        object.__setattr__(obj, 'dimensions', self.dimensions.copy())
+        object.__setattr__(obj, 'variables', self.variables.copy())
+        object.__setattr__(obj, 'attributes', self.attributes.copy())
+        return obj
 
     def __setattr__(self, attr, value):
         """"__setattr__ is overloaded to prevent operations that could
@@ -464,11 +472,7 @@ class Dataset(object):
             nc.createVariable(vn, v.dtype, v.dimensions)
             nc.variables[vn][:] = v.data[:]
             for k, a in v.attributes.iteritems():
-                try:
-                    nc.variables[vn].setncattr(k, a)
-                except:
-                    import pdb; pdb.set_trace()
-
+                nc.variables[vn].setncattr(k, a)
         nc.setncatts(self.attributes)
         return nc
 
@@ -534,7 +538,10 @@ class Dataset(object):
         if key in self.variables:
             return self.variables[key]
         else:
-            raise ValueError("%s is not a variable" % key)
+            raise KeyError("%s is not a variable" % key)
+
+    def __len__(self):
+        return len(self.variables)
 
     def unchecked_set_dimensions(self, dimensions):
         object.__setattr__(self, 'dimensions', dimensions)
@@ -590,13 +597,8 @@ class Dataset(object):
         dims : tuple
             The dimensions of the new variable. Elements must be dimensions of
             the object.
-        data : numpy.ndarray or None, optional
-            Data to populate the new variable. If None (default), then
-            an empty numpy array is allocated with the appropriate
-            shape and dtype. If data contains int64 integers, it will
-            be coerced to int32 (for the sake of netCDF compatibility),
-            and an exception will be raised if this coercion is not
-            safe.
+        data : numpy.ndarray
+            Data to populate the new variable.
         attributes : dict_like or None, optional
             Attributes to assign to the new variable. Attribute names
             must be unique and must satisfy netCDF-3 naming rules. If
@@ -707,7 +709,6 @@ class Dataset(object):
             raise ValueError("Object does not have a variable '%s'" %
                     (str(name)))
         else:
-
             super(type(self.variables), self.variables).__delitem__(name)
 
     def views(self, slicers):
