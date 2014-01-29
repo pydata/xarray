@@ -604,12 +604,6 @@ class Dataset(object):
         # if a dimension is a new one it gets added, if the dimension already
         # exists we confirm that they are identical (or throw an exception)
         for (name, length) in other.dimensions.iteritems():
-            if (name == other.record_dimension and
-                    name != self.record_dimension):
-                raise ValueError(
-                    ("record dimensions do not match: "
-                     "self: %s, other: %s") %
-                    (self.record_dimension, other.record_dimension))
             if not name in self.dimensions:
                 self.create_dimension(name, length)
             else:

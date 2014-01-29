@@ -1,7 +1,6 @@
 import unittest
 import os.path
 import numpy as np
-import scipy.interpolate
 
 from copy import deepcopy
 from cStringIO import StringIO
@@ -93,8 +92,8 @@ class DataTest(unittest.TestCase):
         a.create_variable(name='bar', dims=('time', 'x',), data=d)
         # order of creation is preserved
         self.assertTrue(a.variables.keys() == ['foo', 'bar'])
-        self.assertTrue(all([a['foo'][i] == d[i]
-                for i in np.ndindex(*d.shape)]))
+        self.assertTrue(all([a['foo'][i].data == d[i]
+                        for i in np.ndindex(*d.shape)]))
         # prevent duplicate creation
         self.assertRaises(ValueError, a.create_variable,
                 name='foo', dims=('time', 'x',), data=d)
@@ -122,8 +121,6 @@ class DataTest(unittest.TestCase):
         self.assertFalse(v1 == v3)
         self.assertFalse(v1 == v4)
         self.assertFalse(v1 == v5)
-        # Variable hash
-        self.assertEquals(hash(v1), hash(v2))
 
     def test_coordinate(self):
         a = Dataset()
