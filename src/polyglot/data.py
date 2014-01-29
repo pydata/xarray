@@ -255,7 +255,7 @@ class Variable(object):
             if dim in slicers:
                 slices[i] = slicers[dim]
         obj = self.copy()
-        obj.data = self.data[slices]
+        obj._data = self.data[slices]
         return obj
 
     def view(self, s, dim):
@@ -319,7 +319,7 @@ class Variable(object):
         axis = list(self.dimensions).index(dim)
         obj = self.copy()
         # In case data is lazy we need to slice out all the data before taking.
-        obj.data = self.data[:].take(indices, axis=axis)
+        obj._data = self.data[:].take(indices, axis=axis)
         return obj
 
 
@@ -748,7 +748,7 @@ class Dataset(object):
         # Create a new object
         obj = self._allocate()
         # Create views onto the variables and infer the new dimension length
-        new_dims = dict(self.dimensions.iteritems())
+        new_dims = self.dimensions.copy()
         for (name, var) in self.variables.iteritems():
             var_slicers = dict((k, v) for k, v in slicers.iteritems() if k in var.dimensions)
             if len(var_slicers):
@@ -801,7 +801,7 @@ class Dataset(object):
             raise IndexError("view results in a dimension of length zero")
         return obj
 
-    def take(self, indices, dim=None):
+    def take(self, indices, dim):
         """Return a new object whose contents are taken from the
         current object along a specified dimension
 
@@ -814,9 +814,6 @@ class Dataset(object):
             The dimension to slice along. If multiple dimensions of a
             variable equal dim (e.g. a correlation matrix), then that
             variable is sliced only along its first matching dimension.
-            If None (default), then the object is sliced along its
-            unlimited dimension; an exception is raised if the object
-            does not have an unlimited dimension.
 
         Returns
         -------
@@ -833,8 +830,6 @@ class Dataset(object):
         numpy.take
         Variable.take
         """
-        if dim is None:
-            raise ValueError("dim cannot be None")
         # Create a new object
         obj = self._allocate()
         # Create fancy-indexed variables and infer the new dimension length
@@ -1104,7 +1099,7 @@ class Dataset(object):
                 for i in xrange(n):
                     yield (None, self.take(np.array([i]), dim=dim))
 
-    def iterarray(self, var, dim=None):
+    def iterarray(self, var, dim):
         """Iterator along a data dimension returning the corresponding slices
         of the underlying data of a varaible.
 
@@ -1118,10 +1113,7 @@ class Dataset(object):
             The variable over which you want to iterate.
 
         dim : string, optional
-            The dimension along which you want to iterate. If None
-            (default), then the iterator operates along the record
-            dimension; if there is no record dimension, an exception
-            will be raised.
+            The dimension along which you want to iterate.
 
         Returns
         -------

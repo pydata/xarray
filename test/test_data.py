@@ -228,6 +228,8 @@ class DataTest(unittest.TestCase):
         ret = data.views(slicers)
         data.views(slicers)
 
+        # Verify dimensions still have matching items
+        self.assertItemsEqual(ret.dimensions, data.dimensions)
         # Verify that only the specified dimension was altered
         for d in data.dimensions:
             if d in slicers:
