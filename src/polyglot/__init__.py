@@ -1,1 +1,4 @@
-from data import Dataset, Variable
+from data import Dataset
+from variable import Variable
+
+import backends
