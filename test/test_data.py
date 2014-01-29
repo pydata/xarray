@@ -118,8 +118,6 @@ class DataTest(unittest.TestCase):
         self.assertFalse(v1 == v3)
         self.assertFalse(v1 == v4)
         self.assertFalse(v1 == v5)
-        # Variable hash
-        self.assertEquals(hash(v1), hash(v2))
 
     def test_coordinate(self):
         a = Dataset()
