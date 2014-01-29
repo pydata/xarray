@@ -200,9 +200,12 @@ class Variable(object):
         return self._copy(deepcopy=True)
 
     def __eq__(self, other):
-        return (self.dimensions == other.dimensions
-                and np.all(self.data[:] == other.data[:])
-                and self.attributes == other.attributes)
+        try:
+            return (self.dimensions == other.dimensions
+                    and np.all(self.data[:] == other.data[:])
+                    and self.attributes == other.attributes)
+        except AttributeError:
+            return False
 
     def __ne__(self, other):
         return not self == other
@@ -255,7 +258,10 @@ class Variable(object):
             if dim in slicers:
                 slices[i] = slicers[dim]
         obj = self.copy()
+        obj._dimensions = tuple(dim for s, dim in zip(slices, self.dimensions)
+                                if not isinstance(s, int))
         obj._data = self.data[slices]
+        assert len(obj.dimensions) == obj.ndim
         return obj
 
     def view(self, s, dim):
@@ -267,9 +273,7 @@ class Variable(object):
         s : slice
             The slice representing the range of the values to extract.
         dim : string
-            The dimension to slice along. If multiple dimensions equal
-            dim (e.g. a correlation matrix), then the slicing is done
-            only along the first matching dimension.
+            The dimension to slice along.
 
         Returns
         -------
@@ -307,6 +311,10 @@ class Variable(object):
             as the original. Data contents are taken along the
             specified dimension.
 
+        Notes
+        -----
+        This operation does NOT preserve lazy data.
+
         See Also
         --------
         numpy.take
@@ -321,6 +329,35 @@ class Variable(object):
         # In case data is lazy we need to slice out all the data before taking.
         obj._data = self.data[:].take(indices, axis=axis)
         return obj
+
+    def transpose(self, dimensions=None):
+        """Return a new Variable object with transposed dimensions
+
+        Parameters
+        ----------
+        dimensions : list of string, optional
+            By default, reverse the dimensions, otherwise permute the axes
+            according to the values given.
+
+        Returns
+        -------
+        obj : Variable object
+            The returned object has transposed data and dimensions with the
+            same attributes as the original.
+
+        Notes
+        -----
+        This operation does NOT preserve lazy data.
+
+        See Also
+        --------
+        numpy.transpose
+        """
+        if dimensions is None:
+            dimensions = self.dimensions[::-1]
+        axes = [self.dimensions.index(dim) for dim in dimensions]
+        data = self.data[:].transpose(axes)
+        return type(self)(dimensions, data, self.attributes)
 
 
 class Dataset(object):
@@ -339,6 +376,7 @@ class Dataset(object):
         try:
             nc = netcdf.netcdf_file(scipy_nc, mode='r', *args, **kwdargs)
         except:
+            #FIXME: can we catch a specific exception here?
             scipy_nc = StringIO(scipy_nc)
             scipy_nc.seek(0)
             nc = netcdf.netcdf_file(scipy_nc, mode='r', *args, **kwdargs)
@@ -348,15 +386,12 @@ class Dataset(object):
                             data = sci_var.data,
                             attributes = sci_var._attributes)
 
-        object.__setattr__(self, 'attributes', AttributesDict())
         self.attributes.update(nc._attributes)
 
-        object.__setattr__(self, 'dimensions', OrderedDict())
         dimensions = OrderedDict((k, len(d))
                                  for k, d in nc.dimensions.iteritems())
         self.dimensions.update(dimensions)
 
-        object.__setattr__(self, 'variables', OrderedDict())
         variables = OrderedDict((vn, from_scipy_variable(v))
                                 for vn, v in nc.variables.iteritems())
         self.variables.update(variables)
@@ -368,10 +403,8 @@ class Dataset(object):
         """
         nc = nc4.Dataset(netcdf_path, *args, **kwdargs)
 
-        object.__setattr__(self, 'attributes', AttributesDict())
         self.attributes.update(dict((k.encode(), nc.getncattr(k)) for k in nc.ncattrs()))
 
-        object.__setattr__(self, 'dimensions', OrderedDict())
         dimensions = OrderedDict((k.encode(), len(d)) for k, d in nc.dimensions.iteritems())
         self.dimensions.update(dimensions)
 
@@ -383,21 +416,22 @@ class Dataset(object):
                             data = nc4_var,
                             attributes = attributes)
 
-        object.__setattr__(self, 'variables', OrderedDict())
         self.variables.update(dict((vn.encode(), from_netcdf4_variable(v))
                                    for vn, v in nc.variables.iteritems()))
 
+    #TODO: alternate constructors for loading files or python objects
+
     def __init__(self, nc=None, *args, **kwdargs):
+        object.__setattr__(self, 'attributes', AttributesDict())
+        object.__setattr__(self, 'dimensions', OrderedDict())
+        object.__setattr__(self, 'variables', OrderedDict())
+
         if isinstance(nc, basestring) and not nc.startswith('CDF'):
             # If the initialization nc is a string and it doesn't
             # appear to be the contents of a netcdf file we load
             # it using the netCDF4 package
             self._load_netcdf4(nc, *args, **kwdargs)
-        elif nc is None:
-            object.__setattr__(self, 'attributes', AttributesDict())
-            object.__setattr__(self, 'dimensions', OrderedDict())
-            object.__setattr__(self, 'variables', OrderedDict())
-        else:
+        elif nc is not None:
             # If nc is a file-like object we read it using
             # the scipy.io.netcdf package
             self._load_scipy(nc)
@@ -411,7 +445,9 @@ class Dataset(object):
     def __copy__(self):
         obj = self._allocate()
         object.__setattr__(obj, 'dimensions', self.dimensions.copy())
-        object.__setattr__(obj, 'variables', self.variables.copy())
+        object.__setattr__(obj, 'variables',
+                           OrderedDict((k, v.copy()) for k, v
+                                       in self.variables.iteritems()))
         object.__setattr__(obj, 'attributes', copy.deepcopy(self.attributes))
         return obj
 
@@ -425,23 +461,20 @@ class Dataset(object):
     def __contains__(self, key):
         """
         The 'in' operator will return true or false depending on
-        whether 'key' is a varibale in the data object or not.
+        whether 'key' is a variable in the data object or not.
         """
         return key in self.variables
 
     def __eq__(self, other):
-        if not isinstance(other, Dataset):
+        try:
+            return (self.dimensions == other.dimensions and
+                    self.variables == other.variables and
+                    self.attributes == other.attributes)
+        except AttributeError:
             return False
-        if dict(self.dimensions) != dict(other.dimensions):
-            return False
-        if not dict(self.variables) == dict(other.variables):
-            return False
-        if not self.attributes == other.attributes:
-            return False
-        return True
 
     def __ne__(self, other):
-        return not self.__eq__(other)
+        return not self == other
 
     @property
     def coordinates(self):
@@ -740,26 +773,20 @@ class Dataset(object):
         numpy.take
         Variable.take
         """
-        if not all([isinstance(sl, slice) for sl in slicers.values()]):
-            raise ValueError("view expects a dict whose values are slice objects")
-        if not all([k in self.dimensions for k in slicers.keys()]):
+        if not all(k in self.dimensions for k in slicers.keys()):
             invalid = [k for k in slicers.keys() if not k in self.dimensions]
             raise KeyError("dimensions %s don't exist" % ', '.join(map(str, invalid)))
-        # Create a new object
-        obj = self._allocate()
-        # Create views onto the variables and infer the new dimension length
+
+        obj = type(self)()
         new_dims = self.dimensions.copy()
         for (name, var) in self.variables.iteritems():
-            var_slicers = dict((k, v) for k, v in slicers.iteritems() if k in var.dimensions)
-            if len(var_slicers):
-                obj.unchecked_add_variable(name, var.views(var_slicers))
-                new_dims.update(dict(zip(obj[name].dimensions, obj[name].shape)))
-            else:
-                obj.unchecked_add_variable(name, var)
-        # Hard write the dimensions, skipping validation
+            var_slicers = dict((k, v) for k, v in slicers.iteritems()
+                               if k in var.dimensions)
+            obj.unchecked_add_variable(name, var.views(var_slicers))
+            new_dims.update(dict(zip(obj[name].dimensions, obj[name].shape)))
+
         obj.unchecked_set_dimensions(new_dims)
-        # Reference to the attributes, this intentionally does not copy.
-        obj.unchecked_set_attributes(self.attributes)
+        obj.unchecked_set_attributes(copy.deepcopy(self.attributes))
         return obj
 
     def view(self, s, dim=None):
@@ -771,11 +798,7 @@ class Dataset(object):
         s : slice
             The slice representing the range of the values to extract.
         dim : string, optional
-            The dimension to slice along. If multiple dimensions of a
-            variable equal dim (e.g. a correlation matrix), then that
-            variable is sliced only along both dimensions.  Without
-            this behavior the resulting data object would have
-            inconsistent dimensions.
+            The dimension to slice along.
 
         Returns
         -------
@@ -898,9 +921,14 @@ class Dataset(object):
         self.unchecked_set_attributes(self.attributes.copy())
         return obj
 
+    def updated(self, other):
+        """
+
+        """
+
     def update(self, other):
         """
-        An update method (simular to dict.update) for data objects whereby each
+        An update method (similar to dict.update) for data objects whereby each
         dimension, variable and attribute from 'other' is updated in the current
         object.  Note however that because Data object attributes are often
         write protected an exception will be raised if an attempt to overwrite
@@ -909,12 +937,6 @@ class Dataset(object):
         # if a dimension is a new one it gets added, if the dimension already
         # exists we confirm that they are identical (or throw an exception)
         for (name, length) in other.dimensions.iteritems():
-            if (name == other.record_dimension and
-                    name != self.record_dimension):
-                raise ValueError(
-                    ("record dimensions do not match: "
-                     "self: %s, other: %s") %
-                    (self.record_dimension, other.record_dimension))
             if not name in self.dimensions:
                 self.create_dimension(name, length)
             else:
@@ -990,6 +1012,8 @@ class Dataset(object):
                         attributes=v.attributes.copy())
         obj.unchecked_set_attributes(self.attributes.copy())
         return obj
+
+    #TODO: move iterator and iterarray to Variable or the new "Cube" object
 
     def iterator(self, dim=None, views=False):
         """Iterator along a data dimension
