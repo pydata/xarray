@@ -348,7 +348,7 @@ class DataTest(unittest.TestCase):
                 if name in dims:
                     dims[dims.index(name)] = newname
             self.assertEqual(dims, list(renamed.variables[k].dimensions))
-            np.testing.assert_array_equal(v.data[:], renamed.variables[k].data)
+            np.testing.assert_array_equal(v.data[:], renamed.variables[k].data[:])
 
         self.assertTrue('var1' not in renamed.variables)
         self.assertTrue('var1' not in renamed.dimensions)
@@ -388,8 +388,7 @@ class StoreTest(unittest.TestCase):
 
     def test_translate_consistency(self):
 
-        fobj = StringIO()
-        store = backends.ScipyDataStore(fobj, 'w')
+        store = backends.InMemoryDataStore()
         expected = create_test_data(store)
 
         mem_nc = deepcopy(expected)

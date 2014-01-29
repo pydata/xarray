@@ -91,29 +91,13 @@ class Dataset(object):
         """
         return self.__copy__()
 
-    def _copy(self, deepcopy=False):
-        data = self.data[:].copy() if deepcopy else self.data
-        obj = self._allocate()
-        object.__setattr__(obj, 'dimensions', copy.copy(self.dimensions))
-        object.__setattr__(obj, 'data', data)
-        object.__setattr__(obj, 'attributes', self.attributes.copy())
-        return obj
-
     def __copy__(self):
         """
         Returns a shallow copy of the current object.
         """
         obj = self._allocate()
-        self.translate(obj)
+        self.translate(obj, copy=True)
         return obj
-
-    def __deepcopy__(self, memo=None):
-        """
-        Returns a deep copy of the current object.
-
-        memo does nothing but is required for compatability with copy.deepcopy
-        """
-        return self._copy(deepcopy=True)
 
     def _load_scipy(self, scipy_nc, *args, **kwdargs):
         """
@@ -203,10 +187,13 @@ class Dataset(object):
                 for (name, v) in self.variables.iteritems()
                 if name not in self.coordinates])
 
-    def translate(self, target):
-        target.store.unchecked_set_dimensions(self.dimensions)
-        target.store.unchecked_set_variables(self.variables)
-        target.store.unchecked_set_attributes(self.attributes)
+    def translate(self, target, copy=False):
+        dims = self.dimensions.copy() if copy else self.dimensions
+        variables = self.variables.copy() if copy else self.variables
+        atts = self.attributes.copy() if copy else self.attributes
+        target.store.unchecked_set_dimensions(dims)
+        target.store.unchecked_set_variables(variables)
+        target.store.unchecked_set_attributes(atts)
         target.store.sync()
 
     def dump(self, filepath, *args, **kwdargs):
@@ -594,16 +581,16 @@ class Dataset(object):
         # if a dimension is a new one it gets added, if the dimension already
         # exists we confirm that they are identical (or throw an exception)
         for (name, length) in self.dimensions.iteritems():
-            obj.create_dimension(new_names[name], length)
+            obj._unchecked_create_dimension(new_names[name], length)
         # a variable is only added if it doesn't currently exist, otherwise
         # and exception is thrown
         for (name, v) in self.variables.iteritems():
-            obj.create_variable(new_names[name],
-                                tuple([new_names[d] for d in v.dimensions]),
-                                data=v.data,
-                                attributes=v.attributes.copy())
+            obj._unchecked_create_variable(new_names[name],
+                            dims=tuple([new_names[d] for d in v.dimensions]),
+                            data=v.data,
+                            attributes=v.attributes.copy())
         # update the root attributes
-        self._unchecked_set_attributes(self.attributes.copy())
+        obj._unchecked_set_attributes(self.attributes.copy())
         return obj
 
     def update(self, other):
@@ -692,11 +679,11 @@ class Dataset(object):
         # dimensions
         for (name, v) in self.variables.iteritems():
             if (name in var) or ((name in dim) and (v.dimensions == (name,))):
-                obj.unchecked_create_variable(name,
+                obj._unchecked_create_variable(name,
                         dims=v.dimensions,
                         data=v.data,
                         attributes=v.attributes.copy())
-        obj.unchecked_set_attributes(self.attributes.copy())
+        obj._unchecked_set_attributes(self.attributes.copy())
         return obj
 
     def iterator(self, dim=None, views=False):
