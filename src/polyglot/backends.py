@@ -1,4 +1,3 @@
-import iris
 import netCDF4 as nc4
 
 from scipy.io import netcdf
@@ -13,23 +12,22 @@ class InMemoryDataStore(object):
     in ordered dictionaries, making this store
     fast compared to stores which store to disk.
     """
-
     def __init__(self):
-        self.unchecked_set_attributes(variable.AttributesDict())
-        self.unchecked_set_dimensions(OrderedDict())
-        self.unchecked_set_variables(OrderedDict())
+        self.dimensions = OrderedDict()
+        self.variables = OrderedDict()
+        self.attributes = variable.AttributesDict()
 
     def unchecked_set_dimensions(self, dimensions):
         """Set the dimensions without checking validity"""
-        self.dimensions = dimensions
+        self.dimensions.update(dimensions)
 
     def unchecked_set_attributes(self, attributes):
         """Set the attributes without checking validity"""
-        self.attributes = attributes
+        self.attributes.update(attributes)
 
     def unchecked_set_variables(self, variables):
         """Set the variables without checking validity"""
-        self.variables = variables
+        self.variables.update(variables)
 
     def unchecked_create_dimension(self, name, length):
         """Set a dimension length"""
@@ -39,18 +37,6 @@ class InMemoryDataStore(object):
         """Add a variable without checks"""
         self.variables[name] = variable
         return self.variables[name]
-
-    def unchecked_create_variable(self, name, dims, data, attributes):
-        """Creates a variable without checks"""
-        v = variable.Variable(dims=dims, data=data,
-                              attributes=attributes)
-        self._unchecked_add_variable(name, v)
-        return v
-
-    def unchecked_create_coordinate(self, name, data, attributes):
-        """Creates a coordinate (dim and var) without checks"""
-        self._unchecked_create_dimension(name, data.size)
-        return self._unchecked_create_variable(name, (name,), data, attributes)
 
     def sync(self):
         pass
@@ -112,18 +98,14 @@ class ScipyDataStore(object):
         self.ds.variables[name][:] = variable.data[:]
         for k, v in variable.attributes.iteritems():
             setattr(self.ds.variables[name], k, v)
-
-    def unchecked_create_coordinate(self, name, data, attributes):
-        """Creates a coordinate (dim and var) without checks"""
-        self.unchecked_create_dimension(name, data.size)
-        return self.unchecked_create_variable(name, (name,), data, attributes)
+        return variable #self.ds.variables[name]
+        # return self.ds.variables[name]
 
     def sync(self):
         self.ds.flush()
 
 
 class NetCDF4Variable(variable.Variable):
-
     def __init__(self, nc4_variable):
         self._nc4_variable = nc4_variable
         self._dimensions = nc4_variable.dimensions
@@ -153,7 +135,6 @@ class NetCDF4Variable(variable.Variable):
 
 
 class NetCDF4DataStore(object):
-
     def __init__(self, filename, *args, **kwdargs):
         self.ds = nc4.Dataset(filename, *args, **kwdargs)
 
@@ -202,11 +183,7 @@ class NetCDF4DataStore(object):
                                fill_value=fill_value)
         self.ds.variables[name][:] = variable.data[:]
         self.ds.variables[name].setncatts(variable.attributes)
-
-    def unchecked_create_coordinate(self, name, data, attributes):
-        """Creates a coordinate (dim and var) without checks"""
-        self.unchecked_create_dimension(name, data.size)
-        return self.unchecked_create_variable(name, (name,), data, attributes)
+        return variable #self.ds.variables[name]
 
     def sync(self):
         self.ds.sync()

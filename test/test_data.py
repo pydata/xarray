@@ -2,6 +2,7 @@ import unittest
 import os.path
 import numpy as np
 
+from collections import OrderedDict
 from copy import deepcopy
 from cStringIO import StringIO
 
@@ -31,6 +32,7 @@ def create_test_data(store=None):
     return obj
 
 class DataTest(unittest.TestCase):
+    #TODO: test constructor
 
     def get_store(self):
         return None
@@ -72,8 +74,6 @@ class DataTest(unittest.TestCase):
 
     def test_dimension(self):
         a = Dataset()
-        # data objects (currently) do not support record dimensions
-        self.assertRaises(ValueError, a.create_dimension, 'time', None)
         a.create_dimension('time', 10)
         a.create_dimension('x', 5)
         # prevent duplicate creation
@@ -81,6 +81,7 @@ class DataTest(unittest.TestCase):
         # length must be integer
         self.assertRaises(TypeError, a.create_dimension, 'foo', 'a')
         self.assertRaises(TypeError, a.create_dimension, 'foo', [1,])
+        self.assertRaises(ValueError, a.create_dimension, 'foo', -1)
         self.assertTrue('foo' not in a.dimensions)
 
     def test_variable(self):
@@ -192,8 +193,8 @@ class DataTest(unittest.TestCase):
     def test_view(self):
         data = create_test_data(self.get_store())
         slicedim = _testdim
-        self.assertRaises(IndexError, data.view,
-                          s=slice(100, 200), dim=slicedim)
+        self.assertEqual(data.view(slice(10), slicedim),
+                         data.views({slicedim: slice(10)}))
 
     def test_views(self):
         data = create_test_data(self.get_store())
@@ -312,14 +313,14 @@ class DataTest(unittest.TestCase):
 
     def test_rename(self):
         data = create_test_data(self.get_store())
-        newnames = {'var1':'renamed_var1', 'dim2':'renamed_dim2'}
+        newnames = {'var1': 'renamed_var1', 'dim2': 'renamed_dim2'}
         renamed = data.renamed(newnames)
 
-        vars = dict((k, v) for k, v in data.variables.iteritems())
+        variables = OrderedDict(data.variables)
         for k, v in newnames.iteritems():
-            vars[v] = vars.pop(k)
+            variables[v] = variables.pop(k)
 
-        for k, v in vars.iteritems():
+        for k, v in variables.iteritems():
             self.assertTrue(k in renamed.variables)
             self.assertEqual(v.attributes, renamed.variables[k].attributes)
             dims = list(v.dimensions)
@@ -327,12 +328,25 @@ class DataTest(unittest.TestCase):
                 if name in dims:
                     dims[dims.index(name)] = newname
             self.assertEqual(dims, list(renamed.variables[k].dimensions))
-            np.testing.assert_array_equal(v.data[:], renamed.variables[k].data[:])
+            self.assertTrue(np.all(v.data == renamed.variables[k].data))
+            self.assertEqual(v.attributes, renamed.variables[k].attributes)
 
         self.assertTrue('var1' not in renamed.variables)
         self.assertTrue('var1' not in renamed.dimensions)
         self.assertTrue('dim2' not in renamed.variables)
         self.assertTrue('dim2' not in renamed.dimensions)
+
+    def test_join(self):
+        data = create_test_data(self.get_store())
+        ds1 = data.select('var1')
+        ds2 = data.select('var3')
+        expected = data.select(['var1', 'var3'])
+        actual = ds1.join(ds2)
+        self.assertEqual(expected, actual)
+        with self.assertRaises(ValueError):
+            ds1.join(ds2.view(0, 'dim1'))
+        with self.assertRaises(ValueError):
+            ds1.join(ds2.renamed({'var3': 'var1'}))
 
 
 class NetCDF4DataTest(DataTest):
@@ -350,9 +364,7 @@ class ScipyDataTest(DataTest):
 
 
 class StoreTest(unittest.TestCase):
-
-    def test_translate_consistency(self):
-
+    def test_dump_to_consistency(self):
         store = backends.InMemoryDataStore()
         expected = create_test_data(store)
 
@@ -360,9 +372,9 @@ class StoreTest(unittest.TestCase):
         self.assertTrue(isinstance(mem_nc.store, backends.InMemoryDataStore))
 
         fobj = StringIO()
-        actual = Dataset(store=backends.ScipyDataStore(fobj, 'w'))
-        mem_nc.translate(actual)
-
+        store = backends.ScipyDataStore(fobj, 'w')
+        mem_nc.dump_to(store)
+        actual = Dataset(store=store)
         self.assertTrue(actual == expected)
 
 
