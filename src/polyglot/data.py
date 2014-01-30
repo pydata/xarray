@@ -430,29 +430,55 @@ class Dataset(object):
         numpy.take
         Variable.take
         """
-        if not all([isinstance(sl, slice) for sl in slicers.values()]):
-            raise ValueError("view expects a dict whose values are slice objects")
-        if not all([k in self.dimensions for k in slicers.keys()]):
-            invalid = [k for k in slicers.keys() if not k in self.dimensions]
-            raise KeyError("dimensions %s don't exist" % ', '.join(map(str, invalid)))
+        if not all(k in self.dimensions for k in slicers):
+            invalid = [k for k in slicers if not k in self.dimensions]
+            raise KeyError("dimensions %s don't exist"
+                           % ', '.join(map(str, invalid)))
+
         # Create a new object
         obj = self._allocate()
         # Create views onto the variables and infer the new dimension length
-        new_dims = dict(self.dimensions.iteritems())
         for (name, var) in self.variables.iteritems():
-            var_slicers = dict((k, v) for k, v in slicers.iteritems() if k in var.dimensions)
-            if len(var_slicers):
-                obj.store.unchecked_add_variable(name, var.views(var_slicers))
-                new_dims.update(dict(zip(obj[name].dimensions, obj[name].shape)))
-            else:
-                obj.store.unchecked_add_variable(name, var)
+            var_slicers = dict((k, v) for k, v in slicers.iteritems()
+                               if k in var.dimensions)
+            obj.store.unchecked_add_variable(name, var.views(var_slicers))
+
+        def search_dim_len(dim, variables):
+            # loop through the variables to find the dimension length, or if
+            # the dimension is not found, return None
+            for var in variables.values():
+                if dim in var.dimensions:
+                    return int(var.shape[var.dimensions.index(dim)])
+            return None
+
+        new_dims = OrderedDict()
+        for dim in self.dimensions:
+            new_len = search_dim_len(dim, obj.variables)
+            if new_len is not None:
+                # dimension length is defined by a new dataset variable
+                new_dims[dim] = new_len
+            elif search_dim_len(dim, self.variables) is None:
+                # dimension length is not defined by old dataset variables,
+                # either
+                if dim not in slicers:
+                    new_dims[dim] = self.dimensions[dim]
+                else:
+                    # figure it by slicing temporary coordinate data
+                    temp_data = np.arange(self.dimensions[dim])
+                    temp_data_sliced = temp_data[slicers[dim]]
+                    new_len = temp_data_sliced.size
+                    if new_len > 0 and temp_data_sliced.ndim > 0:
+                        # drop the dimension if the result of getitem is an
+                        # integer (dimension 0)
+                        new_dims[dim] = new_len
+
         # Hard write the dimensions, skipping validation
         obj.store.unchecked_set_dimensions(new_dims)
         # Reference to the attributes, this intentionally does not copy.
         obj.store.unchecked_set_attributes(self.attributes)
         return obj
 
-    def view(self, s, dim=None):
+    def view(self, s, dim):
         """Return a new object whose contents are a view of a slice from the
         current object along a specified dimension
 
@@ -461,11 +487,7 @@ class Dataset(object):
         s : slice
             The slice representing the range of the values to extract.
         dim : string, optional
-            The dimension to slice along. If multiple dimensions of a
-            variable equal dim (e.g. a correlation matrix), then that
-            variable is sliced only along both dimensions.  Without
-            this behavior the resulting data object would have
-            inconsistent dimensions.
+            The dimension to slice along.
 
         Returns
         -------
@@ -486,7 +508,7 @@ class Dataset(object):
         numpy.take
         Variable.take
         """
-        obj = self.views({dim : s})
+        obj = self.views({dim: s})
         if obj.dimensions[dim] == 0:
             raise IndexError("view results in a dimension of length zero")
         return obj

@@ -7,6 +7,7 @@ from cStringIO import StringIO
 
 from polyglot import Dataset, Variable, backends
 
+
 _dims = {'dim1':100, 'dim2':50, 'dim3':10}
 _vars = {'var1':['dim1', 'dim2'],
          'var2':['dim1', 'dim2'],
@@ -18,12 +19,12 @@ _testdim = sorted(_dims.keys())[0]
 def create_test_data(store=None):
     obj = Dataset(store=store)
     obj.create_dimension('time', 10)
-    for d, l in _dims.items():
+    for d, l in sorted(_dims.items()):
         obj.create_dimension(d, l)
         var = obj.create_variable(name=d, dims=(d,),
                                   data=np.arange(l, dtype=np.int32),
                                   attributes={'units':'integers'})
-    for v, dims in _vars.items():
+    for v, dims in sorted(_vars.items()):
         var = obj.create_variable(name=v, dims=tuple(dims),
                 data=np.random.normal(size=tuple([_dims[d] for d in dims])))
         var.attributes['foo'] = 'variable'
@@ -64,9 +65,10 @@ class DataTest(unittest.TestCase):
             expected = data[_testvar].data.take([ind], axis=dim_axis)
             np.testing.assert_array_equal(d, expected)
         # test that the yielded objects are views of the original
-        for (t, d) in data.iterarray(dim=iterdim, var=_testvar):
-            d[:] = -71
-        self.assertTrue((data[_testvar].data == -71).all())
+        # This test doesn't make sense for the netCDF4 backend
+        # for (t, d) in data.iterarray(dim=iterdim, var=_testvar):
+        #     d[:] = -71
+        # self.assertTrue((data[_testvar].data == -71).all())
 
     def test_dimension(self):
         a = Dataset()
@@ -190,48 +192,16 @@ class DataTest(unittest.TestCase):
     def test_view(self):
         data = create_test_data(self.get_store())
         slicedim = _testdim
-        s = slice(None, None, 2)
-        ret = data.view(s=s, dim=slicedim)
-        # Verify that only the specified dimension was altered
-        for d in data.dimensions:
-            if d == slicedim:
-                self.assertEqual(ret.dimensions[d],
-                                 np.arange(data.dimensions[d])[s].size)
-            else:
-                self.assertEqual(data.dimensions[d], ret.dimensions[d])
-        # Verify that the data is what we expect
-        for v in data.variables:
-            self.assertEqual(data[v].dimensions, ret[v].dimensions)
-            self.assertEqual(data[v].attributes, ret[v].attributes)
-            if slicedim in data[v].dimensions:
-                slice_list = [slice(None)] * data[v].data.ndim
-                slice_list[data[v].dimensions.index(slicedim)] = s
-                expected = data[v].data[slice_list][:]
-            else:
-                expected = data[v].data[:]
-            actual = ret[v].data[:]
-            np.testing.assert_array_equal(expected, actual)
-            # Test that our view accesses the same underlying array
-            actual.fill(np.pi)
-            np.testing.assert_array_equal(expected, actual)
-        self.assertRaises(KeyError, data.view,
-                          s=s, dim='not_a_dim')
         self.assertRaises(IndexError, data.view,
                           s=slice(100, 200), dim=slicedim)
 
     def test_views(self):
         data = create_test_data(self.get_store())
-
-        data.create_variable('var4', ('dim1', 'dim1'),
-                             data = np.empty((data.dimensions['dim1'],
-                                              data.dimensions['dim1']),
-                                             np.float))
-        data['var4'].data[:] = np.random.normal(size=data['var4'].shape)
-        slicers = {'dim1': slice(None, None, 2), 'dim2':slice(0, 2)}
+        slicers = {'dim1': slice(None, None, 2), 'dim2': slice(0, 2)}
         ret = data.views(slicers)
-        data.views(slicers)
 
         # Verify that only the specified dimension was altered
+        self.assertItemsEqual(data.dimensions, ret.dimensions)
         for d in data.dimensions:
             if d in slicers:
                 self.assertEqual(ret.dimensions[d],
@@ -252,10 +222,22 @@ class DataTest(unittest.TestCase):
             actual = ret[v].data
             np.testing.assert_array_equal(expected, actual)
             # Test that our view accesses the same underlying array
-            actual.fill(np.pi)
-            np.testing.assert_array_equal(expected, actual)
+            # This test doesn't make sense for the netCDF4 backend
+            # actual.fill(np.pi)
+            # np.testing.assert_array_equal(expected, actual)
+
         self.assertRaises(KeyError, data.views,
                           {'not_a_dim': slice(0, 2)})
+
+        ret = data.views({'dim1': 0})
+        self.assertEqual({'time': 10, 'dim2': 50, 'dim3': 10}, ret.dimensions)
+
+        ret = data.views({'time': slice(2), 'dim1': 0, 'dim2': slice(5)})
+        self.assertEqual({'time': 2, 'dim2': 5, 'dim3': 10}, ret.dimensions)
+
+        ret = data.views({'time': 0, 'dim1': 0, 'dim2': slice(5)})
+        self.assertItemsEqual({'dim2': 5, 'dim3': 10}, ret.dimensions)
+
 
     def test_take(self):
         data = create_test_data(self.get_store())
@@ -352,34 +334,20 @@ class DataTest(unittest.TestCase):
         self.assertTrue('dim2' not in renamed.variables)
         self.assertTrue('dim2' not in renamed.dimensions)
 
-class NetCDF4DataTest(DataTest):
 
+class NetCDF4DataTest(DataTest):
     def get_store(self):
         tmp_file = './delete_me.nc'
         if os.path.exists(tmp_file):
             os.remove(tmp_file)
         return backends.NetCDF4DataStore(tmp_file, mode='w')
 
-    # Views on NetCDF4 objects result in copies of the arrays
-    # since the netCDF4 package requires data to live on disk
-    def test_view(self):
-        pass
-
-    def test_views(self):
-        pass
-
-    def test_iterarray(self):
-        pass
-
-    # TODO: select isn't working for netCDF4 yet.
-    def test_select(self):
-        pass
 
 class ScipyDataTest(DataTest):
-
     def get_store(self):
         fobj = StringIO()
         return backends.ScipyDataStore(fobj, 'w')
+
 
 class StoreTest(unittest.TestCase):
 
@@ -396,6 +364,7 @@ class StoreTest(unittest.TestCase):
         mem_nc.translate(actual)
 
         self.assertTrue(actual == expected)
+
 
 if __name__ == "__main__":
     unittest.main()
