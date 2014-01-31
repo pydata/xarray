@@ -1,6 +1,6 @@
 import numpy as np
 
-from polyglot import utils
+from scidata import utils
 from . import TestCase
 
 

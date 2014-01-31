@@ -6,7 +6,7 @@ import unittest
 
 import numpy as np
 
-from polyglot import Dataset, Variable, backends
+from scidata import Dataset, Variable, backends
 from . import TestCase
 
 

@@ -2,7 +2,7 @@ import unittest
 
 from numpy.testing import assert_array_equal
 
-from polyglot import utils
+from scidata import utils
 
 
 class TestCase(unittest.TestCase):
