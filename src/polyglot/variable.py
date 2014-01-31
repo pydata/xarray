@@ -244,14 +244,19 @@ class Variable(object):
                                                  conventions.pretty_print(l, 10))
         # add each dimension to the summary
         summary.extend([dim_print(d, l) for d, l in zip(self.dimensions, self.shape)])
-        summary.append("\ndtype : %s" % (conventions.pretty_print(self.dtype, 8)))
-        summary.append("\nattributes:")
+        summary.append("dtype : %s" % (conventions.pretty_print(self.dtype, 8)))
+        summary.append("attributes:")
         #    attribute:value
         summary.extend(["\t%s:%s" % (conventions.pretty_print(att, 30),
                                      conventions.pretty_print(val, 30))
                         for att, val in self.attributes.iteritems()])
         # create the actual summary
         return '\n'.join(summary)
+
+    def __repr__(self):
+        dim_summary = ', '.join('%s: %s' % (k, v) for k, v
+                                in zip(self.dimensions, self.shape))
+        return '<scidata.Variable (%s): %s>' % (dim_summary, self.dtype)
 
     def views(self, slicers):
         """Return a new Variable object whose contents are a view of the object

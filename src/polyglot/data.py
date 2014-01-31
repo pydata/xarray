@@ -284,7 +284,7 @@ class Dataset(object):
         summary.extend([dim_print(d, l) for d, l in self.dimensions.iteritems()])
 
         # Print variables
-        summary.append("\nvariables:")
+        summary.append("variables:")
         for vname, var in self.variables.iteritems():
             # this looks like:
             #    dtype name(dim1, dim2)
@@ -296,13 +296,19 @@ class Dataset(object):
                                            conventions.pretty_print(val, 30))
                             for att, val in var.attributes.iteritems()])
 
-        summary.append("\nattributes:")
+        summary.append("attributes:")
         #    attribute:value
         summary.extend(["\t%s:%s" % (conventions.pretty_print(att, 30),
                                      conventions.pretty_print(val, 30))
                         for att, val in self.attributes.iteritems()])
         # create the actual summary
         return '\n'.join(summary)
+
+    def __repr__(self):
+        dim_summary = ', '.join('%s: %s' % (k, v) for k, v
+                                in self.dimensions.iteritems())
+        vars_summary = ' '.join(map(str, self.noncoordinates))
+        return '<scidata.Dataset (%s): %s>' % (dim_summary, vars_summary)
 
     def create_dimension(self, name, length):
         """Adds a dimension with name dim and length to the object
