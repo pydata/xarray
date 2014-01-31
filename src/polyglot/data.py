@@ -214,7 +214,7 @@ class Dataset(object):
     def __eq__(self, other):
         try:
             # some stores (e.g., scipy) do not seem to preserve order, so don't
-            # require matching dimension or varaible order for equality
+            # require matching dimension or variable order for equality
             return (dict(self.dimensions) == dict(other.dimensions)
                     and self.attributes == other.attributes
                     and all(k1 == k2 and utils.variable_equal(v1, v2)
@@ -245,10 +245,10 @@ class Dataset(object):
                 for (name, v) in self.variables.iteritems()
                 if name not in self.coordinates])
 
-    def saved_to(self, store):
+    def stored_to(self, store):
         """
-        Dump dataset contents to a backends.*DataStore object and return a new
-        dataset with the contents
+        Store dataset contents to a backends.*DataStore object and return a new
+        dataset with the contents of the store
         """
         target = type(self)(self.variables, self.dimensions, self.attributes,
                             store=store, check_consistency=False)
@@ -756,7 +756,7 @@ class Dataset(object):
 
     def iterarray(self, var, dim=None):
         """Iterator along a data dimension returning the corresponding slices
-        of the underlying data of a varaible.
+        of the underlying data of a variable.
 
         Return an iterator yielding (scalar, ndarray) pairs that are singleton
         along the specified dimension.  While iterator is more general, this

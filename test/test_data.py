@@ -364,7 +364,7 @@ class ScipyDataTest(DataTest):
 
 
 class StoreTest(TestCase):
-    def test_saved_to_consistency(self):
+    def test_stored_to_consistency(self):
         store = backends.InMemoryDataStore()
         expected = create_test_data(store)
 
@@ -373,8 +373,7 @@ class StoreTest(TestCase):
 
         fobj = StringIO()
         store = backends.ScipyDataStore(fobj, 'w')
-        mem_nc.saved_to(store)
-        actual = Dataset(store=store)
+        actual = mem_nc.stored_to(store)
         self.assertTrue(actual == expected)
 
 

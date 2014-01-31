@@ -182,6 +182,9 @@ class Variable(object):
         key = expanded_indexer(key, self.ndim)
         dimensions = [dim for k, dim in zip(key, self.dimensions)
                       if not isinstance(k, int)]
+        # always return a Variable, because Variable subtypes may have
+        # different constructors and may not make sense without an attached
+        # datastore
         return Variable(dimensions, self._data[key], self.attributes)
 
     def __setitem__(self, key, value):
@@ -345,7 +348,7 @@ class Variable(object):
 
 def broadcast_var_data(self, other):
     self_data = self.data
-    if hasattr(other, 'dimensions'):
+    if all(hasattr(other, attr) for attr in ['dimensions', 'data']):
         # build dimensions for new Variable
         other_only_dims = [dim for dim in other.dimensions
                            if dim not in self.dimensions]
@@ -372,13 +375,39 @@ def broadcast_var_data(self, other):
     return self_data, other_data, dimensions
 
 
+def _math_safe_attributes(v):
+    """Given a variable, return the variables's attributes that are safe for
+    mathematical operations (e.g., all those except for 'units')
+    """
+    try:
+        attr = v.attributes
+    except AttributeError:
+        return {}
+    else:
+        return OrderedDict((k, v) for k, v in attr.items() if k != 'units')
+
+
 def unary_op_wrapper(name):
     f = getattr(operator, '__%s__' % name)
     @wraps(f)
     def func(self):
-        obj = self.copy()
-        obj.data = f(self.data[:])
-        return obj
+        new_data = f(self.data)
+        new_attr = _math_safe_attributes(self)
+        return Variable(self.dimensions, new_data, new_attr)
+    return func
+
+
+def binary_op(name, reflexive=False):
+    f = getattr(operator, '__%s__' % name)
+    @wraps(f)
+    def func(self, other):
+        self_data, other_data, new_dims = broadcast_var_data(self, other)
+        new_data = (f(self_data, other_data)
+                    if not reflexive
+                    else f(other_data, self_data))
+        new_attr = safe_merge(_math_safe_attributes(self),
+                              _math_safe_attributes(other))
+        return Variable(new_dims, new_data, new_attr)
     return func
 
 
@@ -394,21 +423,6 @@ def inplace_binary_op(name):
     return func
 
 
-def binary_op(name, reflexive=False):
-    f = getattr(operator, '__%s__' % name)
-    @wraps(f)
-    def func(self, other):
-        self_data, other_data, new_dims = broadcast_var_data(self, other)
-        new_data = (f(self_data, other_data)
-                    if not reflexive
-                    else f(other_data, self_data))
-        all_attributes = (getattr(v, 'attributes') for v in [self, other]
-                          if hasattr(v, 'attributes'))
-        new_attr = safe_merge(*all_attributes)
-        return Variable(new_dims, new_data, new_attr)
-    return func
-
-
 UNARY_OPS = ['neg', 'pos', 'abs', 'invert']
 CMP_BINARY_OPS = ['lt', 'le', 'eq', 'ne', 'ge', 'gt']
 NUM_BINARY_OPS = ['add', 'sub', 'mul', 'div', 'truediv', 'floordiv', 'mod',
@@ -418,15 +432,14 @@ NUM_BINARY_OPS = ['add', 'sub', 'mul', 'div', 'truediv', 'floordiv', 'mod',
 def inject_special_operations(cls, priority=10):
     # priortize our operations over numpy.ndarray's (priority=1.0)
     cls.__array_priority__ = priority
-
     for name in UNARY_OPS:
         setattr(cls, '__%s__' % name, unary_op_wrapper(name))
     for name in CMP_BINARY_OPS:
         setattr(cls, '__%s__' % name, binary_op(name))
     for name in NUM_BINARY_OPS:
         setattr(cls, '__%s__' % name, binary_op(name))
-        setattr(cls, '__i%s__' % name, inplace_binary_op(name))
         setattr(cls, '__r%s__' % name, binary_op(name, reflexive=True))
+        setattr(cls, '__i%s__' % name, inplace_binary_op(name))
 
 
 inject_special_operations(Variable)

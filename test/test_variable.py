@@ -22,7 +22,7 @@ class TestVariable(TestCase):
 
         with warnings.catch_warnings(record=True) as w:
             v = polyglot.Variable(['x'], range(5))
-            self.assertTrue("converting data" in str(w[-1].message))
+            self.assertIn("converting data to np.ndarray", str(w[-1].message))
             self.assertIsInstance(v.data, np.ndarray)
         with warnings.catch_warnings(record=True) as w:
             # don't warn for numpy numbers
@@ -68,6 +68,11 @@ class TestVariable(TestCase):
         self.assertVarEqual(v, +v)
         self.assertVarEqual(v, abs(v))
         self.assertArrayEqual((-v).data, -x)
+        # verify attributes
+        v2 = polyglot.Variable(['x'], x, {'units': 'meters'})
+        self.assertVarEqual(v, +v2)
+        v3 = polyglot.Variable(['x'], x, {'some': 'attribute'})
+        self.assertVarEqual(v3, +v3)
         # bianry ops with numbers
         self.assertVarEqual(v, v + 0)
         self.assertVarEqual(v, 0 + v)
@@ -92,6 +97,10 @@ class TestVariable(TestCase):
     def test_broadcasting_math(self):
         x = np.random.randn(2, 3)
         v = polyglot.Variable(['a', 'b'], x)
+        # 1d to 2d broadcasting
+        self.assertVarEqual(
+            v * v,
+            polyglot.Variable(['a', 'b'], np.einsum('ab,ab->ab', x, x)))
         self.assertVarEqual(
             v * v[0],
             polyglot.Variable(['a', 'b'], np.einsum('ab,b->ab', x, x[0])))
@@ -101,6 +110,7 @@ class TestVariable(TestCase):
         self.assertVarEqual(
             v[0] * v[:, 0],
             polyglot.Variable(['b', 'a'], np.einsum('b,a->ba', x[0], x[:, 0])))
+        # higher dim broadcasting
         y = np.random.randn(3, 4, 5)
         w = polyglot.Variable(['b', 'c', 'd'], y)
         self.assertVarEqual(
@@ -120,5 +130,5 @@ class TestVariable(TestCase):
         v2 += 1
         self.assertIs(v, v2)
         # since we provided an ndarray for data, it is also modified in-place
-        self.assertArrayEqual(v.data, x)
+        self.assertIs(v.data, x)
         self.assertArrayEqual(v.data, np.arange(5) + 1)
