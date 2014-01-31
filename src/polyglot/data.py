@@ -5,12 +5,10 @@ import copy
 import numpy as np
 import netCDF4 as nc4
 
-from operator import or_
-from scipy.io import netcdf
 from cStringIO import StringIO
 from collections import OrderedDict
 
-import conventions, backends, variable
+import conventions, backends, variable, utils
 
 date2num = nc4.date2num
 num2date = nc4.num2date
@@ -182,14 +180,15 @@ class Dataset(object):
         """
         Returns a shallow copy of the current object.
         """
-        return Dataset(self.variables, self.dimensions, self.attributes,
-                       check_consistency=False)
+        return type(self)(self.variables, self.dimensions, self.attributes,
+                          check_consistency=False)
 
     def __setattr__(self, attr, value):
         """"__setattr__ is overloaded to prevent operations that could
         cause loss of data consistency. If you really intend to update
         dir(self), use the self.__dict__.update method or the
         super(type(a), self).__setattr__ method to bypass."""
+        #TODO: remove this hack?
         raise AttributeError("__setattr__ is disabled")
 
     def __contains__(self, key):
@@ -215,10 +214,13 @@ class Dataset(object):
     def __eq__(self, other):
         try:
             # some stores (e.g., scipy) do not seem to preserve order, so don't
-            # require matching order for equality
+            # require matching dimension or varaible order for equality
             return (dict(self.dimensions) == dict(other.dimensions)
-                    and dict(self.variables) == dict(other.variables)
-                    and self.attributes == other.attributes)
+                    and self.attributes == other.attributes
+                    and all(k1 == k2 and utils.variable_equal(v1, v2)
+                            for (k1, v1), (k2, v2)
+                            in zip(dict(self.variables).items(),
+                                   dict(other.variables).items())))
         except AttributeError:
             return False
 
@@ -227,8 +229,7 @@ class Dataset(object):
 
     @property
     def coordinates(self):
-        # A coordinate variable is a 1-dimensional variable with the
-        # same name as its dimension
+        """Coordinates are variables with names that match dimensions"""
         return OrderedDict([(dim, self.variables[dim])
                 for dim in self.dimensions
                 if dim in self.variables and
@@ -237,24 +238,26 @@ class Dataset(object):
 
     @property
     def noncoordinates(self):
-        # A coordinate variable is a 1-dimensional variable with the
-        # same name as its dimension
+        """Non-coordinates are variables with names that do not match
+        dimensions
+        """
         return OrderedDict([(name, v)
                 for (name, v) in self.variables.iteritems()
                 if name not in self.coordinates])
 
-    def dump_to(self, store):
+    def saved_to(self, store):
         """
-        Dump dataset contents to a backends.*DataStore object
+        Dump dataset contents to a backends.*DataStore object and return a new
+        dataset with the contents
         """
-        target = Dataset(self.variables, self.dimensions, self.attributes,
-                         store=store, check_consistency=False)
+        target = type(self)(self.variables, self.dimensions, self.attributes,
+                            store=store, check_consistency=False)
         target.store.sync()
+        return target
 
     def dump(self, filepath, *args, **kwdargs):
         """
-        Dump dataset contents to a location on disk using
-        the netCDF4 package
+        Dump dataset contents to a location on disk using the netCDF4 package
         """
         nc4_store = backends.NetCDF4DataStore(filepath, mode='w',
                                               *args, **kwdargs)
@@ -262,9 +265,8 @@ class Dataset(object):
 
     def dumps(self):
         """
-        Serialize dataset contents to a string.  The serialization
-        creates an in memory netcdf version 3 string using
-        the scipy.io.netcdf package.
+        Serialize dataset contents to a string. The serialization creates an
+        in memory netcdf version 3 string using the scipy.io.netcdf package.
         """
         fobj = StringIO()
         scipy_store = backends.ScipyDataStore(fobj, mode='w')
@@ -338,10 +340,8 @@ class Dataset(object):
         data : numpy.ndarray
             Data to populate the new variable.
         attributes : dict_like or None, optional
-            Attributes to assign to the new variable. Attribute names
-            must be unique and must satisfy netCDF-3 naming rules. If
-            None (default), an empty attribute dictionary is
-            initialized.
+            Attributes to assign to the new variable. If None (default), an
+            empty attribute dictionary is initialized.
 
         Returns
         -------
@@ -362,20 +362,15 @@ class Dataset(object):
         Parameters
         ----------
         name : string
-            The name of the new dimension and variable. An exception
-            will be raised if the object already has a dimension or
-            variable with this name. name must satisfy netCDF-3 naming
-            rules.
+            The name of the new dimension and variable. An exception will be
+            raised if the object already has a dimension or variable with this
+            name.
         data : array_like
-            The coordinate values along this dimension; must be
-            1-dimensional.  The dtype of data is the dtype of the new
-            coordinate variable, and the size of data is the length of
-            the new dimension.
+            The coordinate values along this dimension; must be 1-dimensional.
+            The size of data is the length of the new dimension.
         attributes : dict_like or None, optional
-            Attributes to assign to the new variable. Attribute names
-            must be unique and must satisfy netCDF-3 naming rules. If
-            None (default), an empty attribute dictionary is
-            initialized.
+            Attributes to assign to the new variable. If None (default), an
+            empty attribute dictionary is initialized.
 
         Returns
         -------
@@ -399,7 +394,7 @@ class Dataset(object):
         Parameters
         ----------
         name : string
-            The name under which the variable will be added
+            The name under which the variable will be added.
         variable : variable.Variable
             The variable to be added. If the desired action is to add a copy of
             the variable be sure to do so before passing it to this function.
@@ -604,63 +599,26 @@ class Dataset(object):
         return type(self)(variables, dimensions, self.attributes,
                           check_consistency=False)
 
-    def _update(self, other, override_attributes=True):
-        """
-        An update method (simular to dict.update) for data objects whereby each
-        dimension, variable and attribute from 'other' is updated in the current
-        object.  Note however that because Data object attributes are often
-        write protected an exception will be raised if an attempt to overwrite
-        any variables is made.
-        """
-        if not override_attributes:
-            #TODO: add options to hard fail instead of overriding attributes
-            raise NotImplementedError
-
-        # if a dimension is a new one it gets added, if the dimension already
-        # exists we confirm that they are identical (or throw an exception)
-        for (name, length) in other.dimensions.iteritems():
-            if not name in self.dimensions:
-                self.create_dimension(name, length)
-            else:
-                cur_length = self.dimensions[name]
-                if length != cur_length:
-                    raise ValueError("inconsistent dimension lengths for "
-                                     "dim: %s, %s != %s" %
-                                     (name, length, cur_length))
-        # a variable is only added if it doesn't currently exist, otherwise
-        # it is confirmed to be identical (except for attributes)
-        for (name, v1) in other.variables.iteritems():
-            if not name in self.variables:
-                self.add_variable(name, v1)
-            else:
-                v0 = self.variables[name]
-                if v0.dimensions != v1.dimensions:
-                    raise ValueError("%r has different dimensions cur:%r new:%r"
-                                     % (name, v0.dimensions, v1.dimensions))
-                elif v0._data is not v1._data and np.any(v0.data != v1.data):
-                    raise ValueError("%s has different data" % name)
-                v0.attributes.update(v1.attributes)
-        # update the root attributes
-        self._unchecked_set_attributes(other.attributes)
-
-    def join(self, other, override_attributes=True):
+    def join(self, other):
         """
         Join two datasets into a single new dataset
 
         Raises ValueError if any variables or dimensions do not match.
         """
-        obj = self.copy()
-        obj._update(other, override_attributes=override_attributes)
-        return obj
+        new_vars = utils.safe_merge(self.variables, other.variables,
+                                    compat=utils.variable_equal)
+        new_dims = utils.safe_merge(self.dimensions, other.dimensions)
+        new_attr = utils.safe_merge(self.attributes, other.attributes)
+        return type(self)(new_vars, new_dims, new_attr)
 
-    def select(self, names):
+    def select(self, *names):
         """Return a new object that contains the specified namesiables,
         along with the dimensions on which those variables are defined
         and corresponding coordinate variables.
 
         Parameters
         ----------
-        names : bounded sequence of strings
+        *names : str
             Names of the variables to include in the returned object.
 
         Returns
@@ -674,15 +632,11 @@ class Dataset(object):
             dimension are also included. All other variables are
             dropped.
         """
-        if isinstance(names, basestring):
-            names = [names]
-        if not (hasattr(names, '__iter__') and hasattr(names, '__len__')):
-            raise TypeError("names must be a bounded sequence")
         if not all(k in self.variables for k in names):
             raise KeyError(
                 "One or more of the specified variables does not exist")
 
-        dim_names = [set(self.variables[k].dimensions) for k in names]
+        dim_names = (set(self.variables[k].dimensions) for k in names)
         names = set(names).union(*dim_names)
 
         variables = OrderedDict((k, v) for k, v in self.variables.iteritems()

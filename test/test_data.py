@@ -1,12 +1,13 @@
-import unittest
-import os.path
-import numpy as np
-
 from collections import OrderedDict
 from copy import deepcopy
 from cStringIO import StringIO
+import os.path
+import unittest
+
+import numpy as np
 
 from polyglot import Dataset, Variable, backends
+from . import TestCase
 
 
 _dims = {'dim1':100, 'dim2':50, 'dim3':10}
@@ -31,7 +32,7 @@ def create_test_data(store=None):
         var.attributes['foo'] = 'variable'
     return obj
 
-class DataTest(unittest.TestCase):
+class DataTest(TestCase):
     #TODO: test constructor
 
     def get_store(self):
@@ -120,10 +121,10 @@ class DataTest(unittest.TestCase):
                            attributes={'att1': 3, 'att2': [1,2,4]})
         v5 = deepcopy(v1)
         v5.data[:] = np.random.rand(10,3)
-        self.assertEquals(v1, v2)
-        self.assertFalse(v1 == v3)
-        self.assertFalse(v1 == v4)
-        self.assertFalse(v1 == v5)
+        self.assertVarEqual(v1, v2)
+        self.assertVarNotEqual(v1, v3)
+        self.assertVarNotEqual(v1, v4)
+        self.assertVarNotEqual(v1, v5)
 
     def test_coordinate(self):
         a = Dataset()
@@ -131,11 +132,11 @@ class DataTest(unittest.TestCase):
         attributes = {'foo': 'bar'}
         a.create_coordinate('x', data=vec, attributes=attributes)
         self.assertTrue('x' in a.coordinates)
-        self.assertTrue(a.coordinates['x'] == a.variables['x'])
+        self.assertVarEqual(a.coordinates['x'], a.variables['x'])
         b = Dataset()
         b.create_dimension('x', vec.size)
         b.create_variable('x', dims=('x',), data=vec, attributes=attributes)
-        self.assertTrue((a['x'].data == b['x'].data).all())
+        self.assertVarEqual(a['x'], b['x'])
         self.assertEquals(a.dimensions, b.dimensions)
         arr = np.random.random((10, 1,))
         scal = np.array(0)
@@ -290,8 +291,7 @@ class DataTest(unittest.TestCase):
     def test_select(self):
         data = create_test_data(self.get_store())
         ret = data.select(_testvar)
-        np.testing.assert_array_equal(data[_testvar].data,
-                                      ret[_testvar].data)
+        self.assertVarEqual(data[_testvar], ret[_testvar])
         self.assertTrue(_vars.keys()[1] not in ret.variables)
         self.assertRaises(KeyError, data.select, (_testvar, 'not_a_var'))
 
@@ -340,7 +340,7 @@ class DataTest(unittest.TestCase):
         data = create_test_data(self.get_store())
         ds1 = data.select('var1')
         ds2 = data.select('var3')
-        expected = data.select(['var1', 'var3'])
+        expected = data.select('var1', 'var3')
         actual = ds1.join(ds2)
         self.assertEqual(expected, actual)
         with self.assertRaises(ValueError):
@@ -363,8 +363,8 @@ class ScipyDataTest(DataTest):
         return backends.ScipyDataStore(fobj, 'w')
 
 
-class StoreTest(unittest.TestCase):
-    def test_dump_to_consistency(self):
+class StoreTest(TestCase):
+    def test_saved_to_consistency(self):
         store = backends.InMemoryDataStore()
         expected = create_test_data(store)
 
@@ -373,7 +373,7 @@ class StoreTest(unittest.TestCase):
 
         fobj = StringIO()
         store = backends.ScipyDataStore(fobj, 'w')
-        mem_nc.dump_to(store)
+        mem_nc.saved_to(store)
         actual = Dataset(store=store)
         self.assertTrue(actual == expected)
 
