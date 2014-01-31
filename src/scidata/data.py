@@ -211,6 +211,9 @@ class Dataset(object):
         # does deleting variables make sense for all backends?
         raise NotImplementedError
 
+    # mutable objects should not be hashable
+    __hash__ = None
+
     def __eq__(self, other):
         try:
             # some stores (e.g., scipy) do not seem to preserve order, so don't
@@ -302,13 +305,14 @@ class Dataset(object):
                                      conventions.pretty_print(val, 30))
                         for att, val in self.attributes.iteritems()])
         # create the actual summary
-        return '\n'.join(summary)
+        return '\n'.join(summary).replace('\t', ' ' * 4)
 
     def __repr__(self):
-        dim_summary = ', '.join('%s: %s' % (k, v) for k, v
-                                in self.dimensions.iteritems())
-        vars_summary = ' '.join(map(str, self.noncoordinates))
-        return '<scidata.Dataset (%s): %s>' % (dim_summary, vars_summary)
+        dim_summary = ', '.join('%s%s: %s' % ('@' if k in self else '', k, v)
+                                for k, v in self.dimensions.iteritems())
+        return '<scidata.%s (%s): %s>' % (type(self).__name__,
+                                          dim_summary,
+                                          ' '.join(self.noncoordinates))
 
     def create_dimension(self, name, length):
         """Adds a dimension with name dim and length to the object
@@ -365,6 +369,9 @@ class Dataset(object):
         for the common case when the variable is a 1-dimensional coordinate
         variable with the same name as the dimension.
 
+        If the dimension already exists, this function proceeds unless there is
+        already a corresponding variable or if the lengths disagree.
+
         Parameters
         ----------
         name : string
@@ -386,12 +393,15 @@ class Dataset(object):
         # We need to be cleanly roll back the effects of
         # create_dimension if create_variable fails, otherwise we will
         # end up in a partial state.
-        if name in self.dimensions:
-            raise ValueError("dimension named '%s' already exists" % name)
+        if name in self.coordinates:
+            raise ValueError("coordinate named '%s' already exists" % name)
         var = variable.Variable((name,), np.asarray(data), attributes)
         if var.ndim != 1:
             raise ValueError("coordinate data must be 1-dimensional (vector)")
-        self._unchecked_create_dimension(name, var.size)
+        if name not in self.dimensions:
+            self._unchecked_create_dimension(name, var.size)
+        elif self.dimensions[name] != var.size:
+            raise ValueError('dimension already exists with different length')
         return self._unchecked_add_variable(name, var)
 
     def add_variable(self, name, var):

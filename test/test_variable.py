@@ -8,7 +8,7 @@ from . import TestCase
 
 class TestVariable(TestCase):
     def setUp(self):
-        self.d = np.random.random((10, 3))
+        self.d = np.random.random((10, 3)).astype(np.float64)
 
     def test_data(self):
         v = Variable(['time', 'x'], self.d)
@@ -38,6 +38,11 @@ class TestVariable(TestCase):
         self.assertEqual(v.ndim, 2)
         self.assertEqual(len(v), 10)
         self.assertEqual(v.attributes, {'foo': u'bar'})
+
+    def test_repr(self):
+        v = Variable(['time', 'x'], self.d)
+        self.assertEqual('<scidata.Variable (time: 10, x: 3) float64>',
+                         repr(v))
 
     def test_items(self):
         v = Variable(['time', 'x'], self.d)

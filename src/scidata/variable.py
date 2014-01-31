@@ -251,12 +251,13 @@ class Variable(object):
                                      conventions.pretty_print(val, 30))
                         for att, val in self.attributes.iteritems()])
         # create the actual summary
-        return '\n'.join(summary)
+        return '\n'.join(summary).replace('\t', ' ' * 4)
 
     def __repr__(self):
         dim_summary = ', '.join('%s: %s' % (k, v) for k, v
                                 in zip(self.dimensions, self.shape))
-        return '<scidata.Variable (%s): %s>' % (dim_summary, self.dtype)
+        return '<scidata.%s (%s) %s>' % (type(self).__name__,
+                                         dim_summary, self.dtype)
 
     def views(self, slicers):
         """Return a new Variable object whose contents are a view of the object

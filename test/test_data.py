@@ -38,6 +38,11 @@ class DataTest(TestCase):
     def get_store(self):
         return None
 
+    def test_repr(self):
+        data = create_test_data(self.get_store())
+        self.assertEqual('<scidata.Dataset (time: 10, @dim1: 100, @dim2: 50, '
+                         '@dim3: 10): var1 var2 var3>', repr(data))
+
     def test_iterator(self):
         data = create_test_data(self.get_store())
         # iterate over the first dim
@@ -361,6 +366,10 @@ class ScipyDataTest(DataTest):
     def get_store(self):
         fobj = StringIO()
         return backends.ScipyDataStore(fobj, 'w')
+
+    def test_repr(self):
+        # scipy.io.netcdf does not keep track of dimension order :(
+        pass
 
 
 class StoreTest(TestCase):
