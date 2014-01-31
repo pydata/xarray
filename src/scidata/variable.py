@@ -2,8 +2,13 @@ import copy
 import numpy as np
 
 from collections import OrderedDict
+from functools import wraps
+import operator
+import warnings
 
 import conventions
+from utils import expanded_indexer, safe_merge
+
 
 class AttributesDict(OrderedDict):
     """A subclass of OrderedDict whose __setitem__ method automatically
@@ -90,16 +95,19 @@ class AttributesDict(OrderedDict):
         return True
 
 
-def _expand_key(key, ndim):
-    """Given a key for getting an item from an ndarray, expand the key to an
-    equivalent key which is a tuple with length equal to the number of
-    dimensions
+def _as_compatible_data(data):
+    """If data does not have the necessary attributes to be the private _data
+    attribute, convert it to a np.ndarray and raise an warning
     """
-    if not isinstance(key, tuple):
-        key = (key,)
-    new_key = [slice(None)] * ndim
-    new_key[:len(key)] = key
-    return tuple(new_key)
+    # don't check for __len__ or __iter__ so as not to warn if data is a numpy
+    # numeric type like np.float32
+    required = ['dtype', 'shape', 'size', 'ndim']
+    if not all(hasattr(data, attr) for attr in required):
+        warnings.warn('converting data to np.ndarray because it lacks some of '
+                      'the necesssary attributes for lazy use', RuntimeWarning,
+                      stacklevel=3)
+        data = np.asarray(data)
+    return data
 
 
 class Variable(object):
@@ -109,6 +117,7 @@ class Variable(object):
     fully described outside the context of its parent Dataset.
     """
     def __init__(self, dims, data, attributes=None):
+        data = _as_compatible_data(data)
         if len(dims) != data.ndim:
             raise ValueError('data must have same shape as the number of '
                              'dimensions')
@@ -158,14 +167,24 @@ class Variable(object):
     def __len__(self):
         return len(self._data)
 
+    def __nonzero__(self):
+        if self.size == 1:
+            return bool(self.data)
+        else:
+            raise ValueError('ValueError: The truth value of variable with '
+                             'more than one element is ambiguous.')
+
     def __getitem__(self, key):
         """
         Return a new Variable object whose contents are consistent with getting
         the provided key from the underlying data
         """
-        key = _expand_key(key, self.ndim)
+        key = expanded_indexer(key, self.ndim)
         dimensions = [dim for k, dim in zip(key, self.dimensions)
                       if not isinstance(k, int)]
+        # always return a Variable, because Variable subtypes may have
+        # different constructors and may not make sense without an attached
+        # datastore
         return Variable(dimensions, self._data[key], self.attributes)
 
     def __setitem__(self, key, value):
@@ -216,17 +235,6 @@ class Variable(object):
     # mutable objects should not be hashable
     __hash__ = None
 
-    def __eq__(self, other):
-        try:
-            return (self.dimensions == other.dimensions
-                    and np.all(self.data == other.data)
-                    and self.attributes == other.attributes)
-        except AttributeError:
-            return False
-
-    def __ne__(self, other):
-        return not self == other
-
     def __str__(self):
         """Create a ncdump-like summary of the object"""
         summary = ["dimensions:"]
@@ -236,14 +244,19 @@ class Variable(object):
                                                  conventions.pretty_print(l, 10))
         # add each dimension to the summary
         summary.extend([dim_print(d, l) for d, l in zip(self.dimensions, self.shape)])
-        summary.append("\ndtype : %s" % (conventions.pretty_print(self.dtype, 8)))
-        summary.append("\nattributes:")
+        summary.append("dtype : %s" % (conventions.pretty_print(self.dtype, 8)))
+        summary.append("attributes:")
         #    attribute:value
         summary.extend(["\t%s:%s" % (conventions.pretty_print(att, 30),
                                      conventions.pretty_print(val, 30))
                         for att, val in self.attributes.iteritems()])
         # create the actual summary
         return '\n'.join(summary)
+
+    def __repr__(self):
+        dim_summary = ', '.join('%s: %s' % (k, v) for k, v
+                                in zip(self.dimensions, self.shape))
+        return '<scidata.Variable (%s): %s>' % (dim_summary, self.dtype)
 
     def views(self, slicers):
         """Return a new Variable object whose contents are a view of the object
@@ -336,3 +349,102 @@ class Variable(object):
         # take only works on actual numpy arrays
         data = self.data.take(indices, axis=axis)
         return Variable(self.dimensions, data, self.attributes)
+
+
+def broadcast_var_data(self, other):
+    self_data = self.data
+    if all(hasattr(other, attr) for attr in ['dimensions', 'data']):
+        # build dimensions for new Variable
+        other_only_dims = [dim for dim in other.dimensions
+                           if dim not in self.dimensions]
+        dimensions = list(self.dimensions) + other_only_dims
+
+        # expand self_data's dimensions so it's broadcast compatible after
+        # adding other's dimensions to the end
+        for _ in xrange(len(other_only_dims)):
+            self_data = np.expand_dims(self_data, axis=-1)
+
+        # expand and reorder other_data so the dimensions line up
+        self_only_dims = [dim for dim in dimensions
+                          if dim not in other.dimensions]
+        other_data = other.data
+        for _ in xrange(len(self_only_dims)):
+            other_data = np.expand_dims(other_data, axis=-1)
+        other_dims = list(other.dimensions) + self_only_dims
+        axes = [other_dims.index(dim) for dim in dimensions]
+        other_data = other_data.transpose(axes)
+    else:
+        # rely on numpy broadcasting rules
+        other_data = other
+        dimensions = self.dimensions
+    return self_data, other_data, dimensions
+
+
+def _math_safe_attributes(v):
+    """Given a variable, return the variables's attributes that are safe for
+    mathematical operations (e.g., all those except for 'units')
+    """
+    try:
+        attr = v.attributes
+    except AttributeError:
+        return {}
+    else:
+        return OrderedDict((k, v) for k, v in attr.items() if k != 'units')
+
+
+def unary_op_wrapper(name):
+    f = getattr(operator, '__%s__' % name)
+    @wraps(f)
+    def func(self):
+        new_data = f(self.data)
+        new_attr = _math_safe_attributes(self)
+        return Variable(self.dimensions, new_data, new_attr)
+    return func
+
+
+def binary_op(name, reflexive=False):
+    f = getattr(operator, '__%s__' % name)
+    @wraps(f)
+    def func(self, other):
+        self_data, other_data, new_dims = broadcast_var_data(self, other)
+        new_data = (f(self_data, other_data)
+                    if not reflexive
+                    else f(other_data, self_data))
+        new_attr = safe_merge(_math_safe_attributes(self),
+                              _math_safe_attributes(other))
+        return Variable(new_dims, new_data, new_attr)
+    return func
+
+
+def inplace_binary_op(name):
+    f = getattr(operator, '__i%s__' % name)
+    @wraps(f)
+    def func(self, other):
+        self_data, other_data, dimensions = broadcast_var_data(self, other)
+        if dimensions != self.dimensions:
+            raise ValueError('dimensions cannot change for in-place operations')
+        self.data = f(self_data, other_data)
+        return self
+    return func
+
+
+UNARY_OPS = ['neg', 'pos', 'abs', 'invert']
+CMP_BINARY_OPS = ['lt', 'le', 'eq', 'ne', 'ge', 'gt']
+NUM_BINARY_OPS = ['add', 'sub', 'mul', 'div', 'truediv', 'floordiv', 'mod',
+                  'pow', 'and', 'xor', 'or']
+
+
+def inject_special_operations(cls, priority=10):
+    # priortize our operations over numpy.ndarray's (priority=1.0)
+    cls.__array_priority__ = priority
+    for name in UNARY_OPS:
+        setattr(cls, '__%s__' % name, unary_op_wrapper(name))
+    for name in CMP_BINARY_OPS:
+        setattr(cls, '__%s__' % name, binary_op(name))
+    for name in NUM_BINARY_OPS:
+        setattr(cls, '__%s__' % name, binary_op(name))
+        setattr(cls, '__r%s__' % name, binary_op(name, reflexive=True))
+        setattr(cls, '__i%s__' % name, inplace_binary_op(name))
+
+
+inject_special_operations(Variable)

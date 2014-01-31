@@ -14,5 +14,5 @@ setup(name='scidata',
       tests_require=['nose >= 1.0'],
       url='https://github.com/akleeman/scidata',
       test_suite='nose.collector',
-      packages=['polyglot'],
+      packages=['scidata'],
       package_dir={'': 'src'})
