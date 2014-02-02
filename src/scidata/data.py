@@ -1,14 +1,17 @@
 # TODO Use various backend data stores. pytable, ncdf4, scipy.io, iris, memory
-
 import os
 import copy
 import numpy as np
 import netCDF4 as nc4
+import pandas as pd
 
 from cStringIO import StringIO
 from collections import OrderedDict
 
-import conventions, backends, variable, utils
+from dataview import DataView
+from utils import FrozenOrderedDict
+from variable import Variable
+import backends, conventions, utils
 
 date2num = nc4.date2num
 num2date = nc4.num2date
@@ -115,7 +118,7 @@ class Dataset(object):
     store : baackends.*DataStore
     """
     def __init__(self, variables=None, dimensions=None, attributes=None,
-                 store=None, check_consistency=True):
+                 store=None, indices=None, check_consistency=True):
         """
         If dimensions are not provided, they are inferred from the variables.
 
@@ -125,7 +128,7 @@ class Dataset(object):
         # TODO: fill out this docstring
         if store is None:
             store = backends.InMemoryDataStore()
-        object.__setattr__(self, 'store', store)
+        self.store = store
 
         if attributes is not None:
             self._unchecked_set_attributes(attributes)
@@ -140,8 +143,42 @@ class Dataset(object):
                 check_dims_and_vars_consistency(dimensions, variables)
             self._unchecked_set_variables(variables)
 
-    def _unchecked_set_dimensions(self, *args, **kwdargs):
-        self.store.unchecked_set_dimensions(*args, **kwdargs)
+        if indices is None:
+            indices = {}
+        else:
+            for k, v in indices.iteritems():
+                if k not in self.dimensions or v.size != self.dimensions[k]:
+                    raise ValueError('inconsisent index %r' % k)
+        self._indices = indices
+
+    def _create_index(self, dim):
+        if dim in self.variables:
+            var = self.variables[dim]
+            data = var.data
+            attr = var.attributes
+            if 'units' in attr and 'since' in attr['units']:
+                print 'time units!'
+                data = num2date(data, attr['units'])
+            else:
+                print var.attributes
+        elif dim in self.dimensions:
+            data = np.arange(self.dimensions[dim])
+        else:
+            raise ValueError('cannot find index %r in dataset' % dim)
+        return pd.Index(data)
+
+    def _lookup_index(self, dim):
+        if dim not in self._indices:
+            self._indices[dim] = self._create_index(dim)
+        return self._indices[dim]
+
+    @property
+    def indices(self):
+        return FrozenOrderedDict((dim, self._lookup_index(dim))
+                                 for dim in self.dimensions)
+
+    def _unchecked_set_dimensions(self, dims, *args, **kwdargs):
+        self.store.unchecked_set_dimensions(dims, *args, **kwdargs)
 
     def _unchecked_set_attributes(self, *args, **kwdargs):
         self.store.unchecked_set_attributes(*args, **kwdargs)
@@ -149,8 +186,8 @@ class Dataset(object):
     def _unchecked_set_variables(self, *args, **kwdargs):
         self.store.unchecked_set_variables(*args, **kwdargs)
 
-    def _unchecked_create_dimension(self, *args, **kwdargs):
-        self.store.unchecked_create_dimension(*args, **kwdargs)
+    def _unchecked_create_dimension(self, dim, *args, **kwdargs):
+        self.store.unchecked_create_dimension(dim, *args, **kwdargs)
 
     def _unchecked_add_variable(self, *args, **kwdargs):
         return self.store.unchecked_add_variable(*args, **kwdargs)
@@ -183,14 +220,6 @@ class Dataset(object):
         return type(self)(self.variables, self.dimensions, self.attributes,
                           check_consistency=False)
 
-    def __setattr__(self, attr, value):
-        """"__setattr__ is overloaded to prevent operations that could
-        cause loss of data consistency. If you really intend to update
-        dir(self), use the self.__dict__.update method or the
-        super(type(a), self).__setattr__ method to bypass."""
-        #TODO: remove this hack?
-        raise AttributeError("__setattr__ is disabled")
-
     def __contains__(self, key):
         """
         The 'in' operator will return true or false depending on
@@ -209,7 +238,10 @@ class Dataset(object):
 
     def __delitem__(self, key):
         # does deleting variables make sense for all backends?
-        raise NotImplementedError
+        del self.variables[key]
+
+    #TODO: add keys, items, and values methods (and the iter versions) to
+    # complete the dict analogy?
 
     # mutable objects should not be hashable
     __hash__ = None
@@ -233,7 +265,7 @@ class Dataset(object):
     @property
     def coordinates(self):
         """Coordinates are variables with names that match dimensions"""
-        return OrderedDict([(dim, self.variables[dim])
+        return FrozenOrderedDict([(dim, self.variables[dim])
                 for dim in self.dimensions
                 if dim in self.variables and
                 self.variables[dim].data.ndim == 1 and
@@ -244,7 +276,7 @@ class Dataset(object):
         """Non-coordinates are variables with names that do not match
         dimensions
         """
-        return OrderedDict([(name, v)
+        return FrozenOrderedDict([(name, v)
                 for (name, v) in self.variables.iteritems()
                 if name not in self.coordinates])
 
@@ -359,7 +391,7 @@ class Dataset(object):
             Reference to the newly created variable.
         """
         # any error checking should be taken care of by add_variable
-        v = variable.Variable(dims, np.asarray(data), attributes)
+        v = Variable(dims, np.asarray(data), attributes)
         return self.add_variable(name, v)
 
     def create_coordinate(self, name, data, attributes=None):
@@ -395,7 +427,7 @@ class Dataset(object):
         # end up in a partial state.
         if name in self.coordinates:
             raise ValueError("coordinate named '%s' already exists" % name)
-        var = variable.Variable((name,), np.asarray(data), attributes)
+        var = Variable((name,), np.asarray(data), attributes)
         if var.ndim != 1:
             raise ValueError("coordinate data must be 1-dimensional (vector)")
         if name not in self.dimensions:
@@ -411,7 +443,7 @@ class Dataset(object):
         ----------
         name : string
             The name under which the variable will be added.
-        variable : variable.Variable
+        variable : Variable
             The variable to be added. If the desired action is to add a copy of
             the variable be sure to do so before passing it to this function.
 
@@ -422,6 +454,9 @@ class Dataset(object):
         """
         if name in self.variables:
             raise ValueError("Variable named %r already exists" % name)
+        if name in self.dimensions and name in self._indices:
+            # remove existing index
+            del self._indices[name]
         check_dims_and_vars_consistency(self.dimensions, {name: var})
         return self._unchecked_add_variable(name, var)
 
@@ -455,7 +490,7 @@ class Dataset(object):
         """
         if not all(k in self.dimensions for k in slicers):
             invalid = [k for k in slicers if not k in self.dimensions]
-            raise KeyError("dimensions %r don't exist" % invalid)
+            raise ValueError("dimensions %r don't exist" % invalid)
 
         # slice all variables
         variables = OrderedDict()
@@ -495,8 +530,31 @@ class Dataset(object):
                         # integer (dimension 0)
                         dimensions[dim] = new_len
 
+        # TODO: slice indices and pass them on so we don't need to create them
+        # from scratch in the new object
         return type(self)(variables, dimensions, self.attributes,
                           check_consistency=False)
+
+    def loc_views(self, slicers):
+        islicers = {}
+        for k, v in slicers.iteritems():
+            index = self.indices[k]
+            if isinstance(v, slice):
+                ind_slice = index.slice_indexer(v.start, v.stop)
+                print v, ind_slice
+                # assume step-size is valid unchanged
+                islicers[k] = slice(ind_slice.start, ind_slice.stop, v.step)
+            elif not np.iterable(v):
+                islicers[k] = index.get_loc(v)
+            else:
+                new_index, indexer = index.reindex(v)
+                if np.any(indexer < 0):
+                    raise ValueError('not all values found in index %s' % k)
+                islicers[k] = indexer
+                # FIXME: don't throw away new_index (we'll need to recreate it
+                # later)
+        return self.views(islicers)
+
 
     def view(self, s, dim):
         """Return a new object whose contents are a view of a slice from the
@@ -530,7 +588,7 @@ class Dataset(object):
         """
         return self.views({dim: s})
 
-    def take(self, indices, dim=None):
+    def take(self, indices, dim):
         """Return a new object whose contents are taken from the
         current object along a specified dimension
 
@@ -543,9 +601,6 @@ class Dataset(object):
             The dimension to slice along. If multiple dimensions of a
             variable equal dim (e.g. a correlation matrix), then that
             variable is sliced only along its first matching dimension.
-            If None (default), then the object is sliced along its
-            unlimited dimension; an exception is raised if the object
-            does not have an unlimited dimension.
 
         Returns
         -------
@@ -562,8 +617,6 @@ class Dataset(object):
         numpy.take
         Variable.take
         """
-        if dim is None:
-            raise ValueError("dim cannot be None")
         # Create a new object
         obj = type(self)()
         # Create fancy-indexed variables and infer the new dimension length
@@ -607,7 +660,7 @@ class Dataset(object):
             dims = tuple(name_dict.get(dim, dim) for dim in v.dimensions)
             #TODO: public interface for renaming a variable without loading
             # data
-            variables[name] = variable.Variable(dims, v._data, v.attributes)
+            variables[name] = Variable(dims, v._data, v.attributes)
 
         dimensions = OrderedDict((name_dict.get(k, k), v)
                                  for k, v in self.dimensions.iteritems())
@@ -615,11 +668,27 @@ class Dataset(object):
         return type(self)(variables, dimensions, self.attributes,
                           check_consistency=False)
 
-    def join(self, other):
-        """
-        Join two datasets into a single new dataset
+    def merge(self, other):
+        """Merge two datasets into a single new dataset
 
-        Raises ValueError if any variables or dimensions do not match.
+        Parameters
+        ----------
+        other : Dataset
+            Dataset to merge with this dataset.
+
+        Returns
+        -------
+        Dataset
+            New dataset with the merged contents of both datasets
+
+        Raises
+        ------
+        ValueError
+            If any variables, dimensions or attributes conflict.
+
+        See Also
+        --------
+        Dataset.update : update a dataset in place
         """
         new_vars = utils.safe_merge(self.variables, other.variables,
                                     compat=utils.variable_equal)
@@ -627,10 +696,37 @@ class Dataset(object):
         new_attr = utils.safe_merge(self.attributes, other.attributes)
         return type(self)(new_vars, new_dims, new_attr)
 
+    def update(self, other):
+        """Update this dataset in place with the contents of another dataset
+
+        Parameters
+        ----------
+        other : Dataset
+            Dataset with which to update this dataset.
+
+        Raises
+        ------
+        ValueError
+            If any variables, dimensions or attributes conflict.
+
+        See Also
+        --------
+        Dataset.merge : merge two datasets into a new dataset
+        """
+        # check for conflicts
+        utils.update_safety_check(self.variables, other.variables,
+                                  compat=utils.variable_equal)
+        utils.update_safety_check(self.dimensions, other.dimensions)
+        utils.update_safety_check(self.attributes, other.attributes)
+        # update contents
+        self.variables.update(other.variables)
+        self.dimensions.update(other.dimensions)
+        self.attributes.update(other.attributes)
+
     def select(self, *names):
-        """Return a new object that contains the specified namesiables,
-        along with the dimensions on which those variables are defined
-        and corresponding coordinate variables.
+        """Returns a new dataset that contains the named variables, along with
+        the dimensions on which those variables are defined and corresponding
+        coordinate variables.
 
         Parameters
         ----------
@@ -639,17 +735,16 @@ class Dataset(object):
 
         Returns
         -------
-        obj : Data object
-            The returned object has the same attributes as the
-            original. A dimension is included if at least one of the
-            specified variables is defined along that dimension.
-            Coordinate variables (1-dimensional variables with the same
-            name as a dimension) that correspond to an included
-            dimension are also included. All other variables are
+        Dataset
+            The returned object has the same attributes as the original. A
+            dimension is included if at least one of the specified variables is
+            defined along that dimension. Coordinate variables (1-dimensional
+            variables with the same name as a dimension) that correspond to an
+            included dimension are also included. All other variables are
             dropped.
         """
         if not all(k in self.variables for k in names):
-            raise KeyError(
+            raise ValueError(
                 "One or more of the specified variables does not exist")
 
         dim_names = (set(self.variables[k].dimensions) for k in names)
@@ -661,6 +756,51 @@ class Dataset(object):
                                  if k in names)
         return type(self)(variables, dimensions, self.attributes,
                           check_consistency=False)
+
+    def unselect(self, *names):
+        """Returns a new dataset without the named variables
+
+        Parameters
+        ----------
+        *names : str
+            Names of the variables to omit from the returned object.
+
+        Returns
+        -------
+        Dataset
+            New dataset based on this dataset. Only the named variables are
+            removed. Dimensions are unchanged.
+        """
+        if not all(k in self.variables for k in names):
+            raise ValueError(
+                "One or more of the specified variables does not exist")
+        variables = OrderedDict((k, v) for k, v in self.variables.iteritems()
+                                if k not in names)
+        return type(self)(variables, self.dimensions, self.attributes,
+                          check_consistency=False)
+
+    def to_dataview(self, name, extra_variables=None):
+        """Return a dataview selected from this dataset
+
+        Parameters
+        ----------
+        name : str
+            Name of variable on which to orient (and name) the new dataview.
+        extra_variables : sequence of str, optional
+            Additional variables from this dataset to include in the dataview's
+            dataset. These variables's coordinates (if any) are also included.
+            By default, the dataview's dataset only includes `name` and all of
+            its coordinate variables.
+
+        Returns
+        -------
+        dataview : DataView
+            Dataview with a selection of variables from this dataset and the
+            name `name`.
+        """
+        if extra_variables is None:
+            extra_variables = []
+        return DataView(self.select(*([name] + list(extra_variables))), name)
 
     def iterator(self, dim=None, views=False):
         """Iterator along a data dimension

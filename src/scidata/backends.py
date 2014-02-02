@@ -1,8 +1,12 @@
+#TODO: refactor this module so all the stores just expose dimension, variables
+# and attributes with the OrderedDict API that handle all the storage logic
+
 import netCDF4 as nc4
 
 from scipy.io import netcdf
 from collections import OrderedDict
 
+from utils import FrozenOrderedDict
 import variable
 
 
@@ -61,8 +65,8 @@ class ScipyDataStore(object):
 
     @property
     def variables(self):
-        return OrderedDict((k, ScipyVariable(v))
-                           for k, v in self.ds.variables.iteritems())
+        return FrozenOrderedDict((k, ScipyVariable(v))
+                                 for k, v in self.ds.variables.iteritems())
 
     @property
     def attributes(self):
@@ -98,7 +102,8 @@ class ScipyDataStore(object):
         self.ds.variables[name][:] = variable.data[:]
         for k, v in variable.attributes.iteritems():
             setattr(self.ds.variables[name], k, v)
-        return variable #self.ds.variables[name]
+        return variable
+        #TODO: return the variable instead?
         # return self.ds.variables[name]
 
     def sync(self):
@@ -140,8 +145,8 @@ class NetCDF4DataStore(object):
 
     @property
     def variables(self):
-        return OrderedDict((k, NetCDF4Variable(v))
-                           for k, v in self.ds.variables.iteritems())
+        return FrozenOrderedDict((k, NetCDF4Variable(v))
+                                 for k, v in self.ds.variables.iteritems())
 
     @property
     def attributes(self):
@@ -150,7 +155,7 @@ class NetCDF4DataStore(object):
 
     @property
     def dimensions(self):
-        return OrderedDict((k, len(v)) for k, v in self.ds.dimensions.iteritems())
+        return FrozenOrderedDict((k, len(v)) for k, v in self.ds.dimensions.iteritems())
 
     def unchecked_set_dimensions(self, dimensions):
         """Set the dimensions without checking validity"""

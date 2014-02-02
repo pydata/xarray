@@ -1,13 +1,15 @@
 import copy
 import numpy as np
 
-from collections import OrderedDict
-from functools import wraps
-import operator
 import warnings
+from collections import OrderedDict
 
 import conventions
-from utils import expanded_indexer, safe_merge
+import data
+import dataview
+from common import _DataWrapperMixin
+from utils import expanded_indexer, safe_merge, safe_update
+from ops import inject_special_operations
 
 
 class AttributesDict(OrderedDict):
@@ -110,7 +112,7 @@ def _as_compatible_data(data):
     return data
 
 
-class Variable(object):
+class Variable(_DataWrapperMixin):
     """
     A netcdf-like variable consisting of dimensions, data and attributes
     which describe a single varRiable.  A single variable object is not
@@ -131,49 +133,6 @@ class Variable(object):
     def dimensions(self):
         return self._dimensions
 
-    @property
-    def data(self):
-        """
-        The variable's data as a numpy.ndarray
-        """
-        if not isinstance(self._data, np.ndarray):
-            self._data = np.asarray(self._data[...])
-        return self._data
-
-    @data.setter
-    def data(self, value):
-        value = np.asarray(value)
-        if value.shape != self.shape:
-            raise ValueError("replacement data must match the Variable's "
-                             "shape")
-        self._data = value
-
-    @property
-    def dtype(self):
-        return self._data.dtype
-
-    @property
-    def shape(self):
-        return self._data.shape
-
-    @property
-    def size(self):
-        return self._data.size
-
-    @property
-    def ndim(self):
-        return self._data.ndim
-
-    def __len__(self):
-        return len(self._data)
-
-    def __nonzero__(self):
-        if self.size == 1:
-            return bool(self.data)
-        else:
-            raise ValueError('ValueError: The truth value of variable with '
-                             'more than one element is ambiguous.')
-
     def __getitem__(self, key):
         """
         Return a new Variable object whose contents are consistent with getting
@@ -182,10 +141,20 @@ class Variable(object):
         key = expanded_indexer(key, self.ndim)
         dimensions = [dim for k, dim in zip(key, self.dimensions)
                       if not isinstance(k, int)]
+        #TODO: wrap _data in a biggus array or use np.ix_ so fancy indexing
+        # always slices axes independently (as in the python-netcdf4 package)
+        new_data = self._data[key]
+        if new_data.ndim != len(dimensions):
+            raise ValueError('indexing results in an array of shape %s, '
+                             'which has inconsistent length with the '
+                             'expected dimensions %s (if you really want to '
+                             'do this sort of indexing, index the `data` '
+                             'attribute directly)'
+                             % (new_data.shape, dimensions))
         # always return a Variable, because Variable subtypes may have
         # different constructors and may not make sense without an attached
         # datastore
-        return Variable(dimensions, self._data[key], self.attributes)
+        return Variable(dimensions, new_data, self.attributes)
 
     def __setitem__(self, key, value):
         """__setitem__ is overloaded to access the underlying numpy data"""
@@ -254,10 +223,13 @@ class Variable(object):
         return '\n'.join(summary).replace('\t', ' ' * 4)
 
     def __repr__(self):
-        dim_summary = ', '.join('%s: %s' % (k, v) for k, v
-                                in zip(self.dimensions, self.shape))
-        return '<scidata.%s (%s) %s>' % (type(self).__name__,
-                                         dim_summary, self.dtype)
+        if self.ndim > 0:
+            dim_summary = ', '.join('%s: %s' % (k, v) for k, v
+                                    in zip(self.dimensions, self.shape))
+            contents = ' (%s): %s' % (dim_summary, self.dtype)
+        else:
+            contents = ': %s' % self.data
+        return '<scidata.%s%s>' % (type(self).__name__, contents)
 
     def views(self, slicers):
         """Return a new Variable object whose contents are a view of the object
@@ -351,10 +323,53 @@ class Variable(object):
         data = self.data.take(indices, axis=axis)
         return Variable(self.dimensions, data, self.attributes)
 
+    def transpose(self, *dimensions):
+        """Return a new Variable object with transposed dimensions
+
+        Note: Although this operation returns a view of this variable's data,
+        it is not lazy -- the data will be fully loaded.
+
+        Parameters
+        ----------
+        *dimensions : str, optional
+            By default, reverse the dimensions. Otherwise, reorder the
+            dimensions to this order.
+
+        Returns
+        -------
+        obj : Variable object
+            The returned object has transposed data and dimensions with the
+            same attributes as the original.
+
+        See Also
+        --------
+        numpy.transpose
+        """
+        if len(dimensions) == 0:
+            dimensions = self.dimensions[::-1]
+        axes = [dimensions.index(dim) for dim in self.dimensions]
+        data = self.data.transpose(*axes)
+        return Variable(dimensions, data, self.attributes)
+
 
 def broadcast_var_data(self, other):
     self_data = self.data
-    if all(hasattr(other, attr) for attr in ['dimensions', 'data']):
+    if isinstance(other, data.Dataset):
+        raise TypeError('datasets do not support mathematical operations')
+    elif all(hasattr(other, attr) for attr in ['dimensions', 'data', 'shape']):
+        # validate dimensions
+        dim_lengths = dict(zip(self.dimensions, self.shape))
+        for k, v in zip(other.dimensions, other.shape):
+            if k in dim_lengths and dim_lengths[k] != v:
+                raise ValueError('operands could not be broadcast together '
+                                 'with mismatched lengths for dimension %r: %s'
+                                 % (k, (dim_lengths[k], v)))
+        for dimensions in [self.dimensions, other.dimensions]:
+            if len(set(dimensions)) < len(dimensions):
+                raise ValueError('broadcasting requires that neither operand '
+                                 'has duplicate dimensions: %r'
+                                 % list(dimensions))
+
         # build dimensions for new Variable
         other_only_dims = [dim for dim in other.dimensions
                            if dim not in self.dimensions]
@@ -393,20 +408,16 @@ def _math_safe_attributes(v):
         return OrderedDict((k, v) for k, v in attr.items() if k != 'units')
 
 
-def unary_op_wrapper(name):
-    f = getattr(operator, '__%s__' % name)
-    @wraps(f)
+def unary_op(f):
     def func(self):
-        new_data = f(self.data)
-        new_attr = _math_safe_attributes(self)
-        return Variable(self.dimensions, new_data, new_attr)
+        return Variable(self.dimensions, f(self.data), self.attributes)
     return func
 
 
-def binary_op(name, reflexive=False):
-    f = getattr(operator, '__%s__' % name)
-    @wraps(f)
+def binary_op(f, reflexive=False):
     def func(self, other):
+        if isinstance(other, dataview.DataView):
+            return NotImplemented
         self_data, other_data, new_dims = broadcast_var_data(self, other)
         new_data = (f(self_data, other_data)
                     if not reflexive
@@ -417,35 +428,15 @@ def binary_op(name, reflexive=False):
     return func
 
 
-def inplace_binary_op(name):
-    f = getattr(operator, '__i%s__' % name)
-    @wraps(f)
+def inplace_binary_op(f):
     def func(self, other):
         self_data, other_data, dimensions = broadcast_var_data(self, other)
         if dimensions != self.dimensions:
             raise ValueError('dimensions cannot change for in-place operations')
         self.data = f(self_data, other_data)
+        safe_update(self.attributes, _math_safe_attributes(other))
         return self
     return func
 
 
-UNARY_OPS = ['neg', 'pos', 'abs', 'invert']
-CMP_BINARY_OPS = ['lt', 'le', 'eq', 'ne', 'ge', 'gt']
-NUM_BINARY_OPS = ['add', 'sub', 'mul', 'div', 'truediv', 'floordiv', 'mod',
-                  'pow', 'and', 'xor', 'or']
-
-
-def inject_special_operations(cls, priority=10):
-    # priortize our operations over numpy.ndarray's (priority=1.0)
-    cls.__array_priority__ = priority
-    for name in UNARY_OPS:
-        setattr(cls, '__%s__' % name, unary_op_wrapper(name))
-    for name in CMP_BINARY_OPS:
-        setattr(cls, '__%s__' % name, binary_op(name))
-    for name in NUM_BINARY_OPS:
-        setattr(cls, '__%s__' % name, binary_op(name))
-        setattr(cls, '__r%s__' % name, binary_op(name, reflexive=True))
-        setattr(cls, '__i%s__' % name, inplace_binary_op(name))
-
-
-inject_special_operations(Variable)
+inject_special_operations(Variable, unary_op, binary_op, inplace_binary_op)

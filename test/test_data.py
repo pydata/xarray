@@ -20,7 +20,7 @@ _testdim = sorted(_dims.keys())[0]
 
 def create_test_data(store=None):
     obj = Dataset(store=store)
-    obj.create_dimension('time', 10)
+    obj.create_dimension('time', 1000)
     for d, l in sorted(_dims.items()):
         obj.create_dimension(d, l)
         var = obj.create_variable(name=d, dims=(d,),
@@ -40,8 +40,8 @@ class DataTest(TestCase):
 
     def test_repr(self):
         data = create_test_data(self.get_store())
-        self.assertEqual('<scidata.Dataset (time: 10, @dim1: 100, @dim2: 50, '
-                         '@dim3: 10): var1 var2 var3>', repr(data))
+        self.assertEqual('<scidata.Dataset (time: 1000, @dim1: 100, '
+                         '@dim2: 50, @dim3: 10): var1 var2 var3>', repr(data))
 
     def test_iterator(self):
         data = create_test_data(self.get_store())
@@ -233,11 +233,11 @@ class DataTest(TestCase):
             # actual.fill(np.pi)
             # np.testing.assert_array_equal(expected, actual)
 
-        self.assertRaises(KeyError, data.views,
+        self.assertRaises(ValueError, data.views,
                           {'not_a_dim': slice(0, 2)})
 
         ret = data.views({'dim1': 0})
-        self.assertEqual({'time': 10, 'dim2': 50, 'dim3': 10}, ret.dimensions)
+        self.assertEqual({'time': 1000, 'dim2': 50, 'dim3': 10}, ret.dimensions)
 
         ret = data.views({'time': slice(2), 'dim1': 0, 'dim2': slice(5)})
         self.assertEqual({'time': 2, 'dim2': 5, 'dim3': 10}, ret.dimensions)
@@ -245,6 +245,19 @@ class DataTest(TestCase):
         ret = data.views({'time': 0, 'dim1': 0, 'dim2': slice(5)})
         self.assertItemsEqual({'dim2': 5, 'dim3': 10}, ret.dimensions)
 
+    def test_loc_views(self):
+        data = create_test_data(self.get_store())
+        int_slicers = {'dim1': slice(None, None, 2), 'dim2': slice(0, 2)}
+        loc_slicers = {'dim1': slice(None, None, 2), 'dim2': slice(0, 1)}
+        self.assertEqual(data.views(int_slicers), data.loc_views(loc_slicers))
+        data.create_variable('time', ['time'], np.arange(1000, dtype=np.int32),
+                             {'units': 'days since 2000-01-01'})
+        data.create_variable('foobar', ['time', 'dim3'],
+                             np.random.randn(1000, 10))
+        self.assertEqual(data.views({'time': slice(10)}),
+                         data.loc_views({'time':
+                            slice('2000-01-01', '2000-01-10')}))
+        self.assertEqual(data, data.loc_views({'time': slice('1999', '2005')}))
 
     def test_take(self):
         data = create_test_data(self.get_store())
@@ -298,7 +311,7 @@ class DataTest(TestCase):
         ret = data.select(_testvar)
         self.assertVarEqual(data[_testvar], ret[_testvar])
         self.assertTrue(_vars.keys()[1] not in ret.variables)
-        self.assertRaises(KeyError, data.select, (_testvar, 'not_a_var'))
+        self.assertRaises(ValueError, data.select, (_testvar, 'not_a_var'))
 
     def test_copy(self):
         data = create_test_data(self.get_store())
@@ -341,17 +354,17 @@ class DataTest(TestCase):
         self.assertTrue('dim2' not in renamed.variables)
         self.assertTrue('dim2' not in renamed.dimensions)
 
-    def test_join(self):
+    def test_merge(self):
         data = create_test_data(self.get_store())
         ds1 = data.select('var1')
         ds2 = data.select('var3')
         expected = data.select('var1', 'var3')
-        actual = ds1.join(ds2)
+        actual = ds1.merge(ds2)
         self.assertEqual(expected, actual)
         with self.assertRaises(ValueError):
-            ds1.join(ds2.view(0, 'dim1'))
+            ds1.merge(ds2.view(0, 'dim1'))
         with self.assertRaises(ValueError):
-            ds1.join(ds2.renamed({'var3': 'var1'}))
+            ds1.merge(ds2.renamed({'var3': 'var1'}))
 
 
 class NetCDF4DataTest(DataTest):

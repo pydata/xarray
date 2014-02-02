@@ -41,7 +41,7 @@ class TestVariable(TestCase):
 
     def test_repr(self):
         v = Variable(['time', 'x'], self.d)
-        self.assertEqual('<scidata.Variable (time: 10, x: 3) float64>',
+        self.assertEqual('<scidata.Variable (time: 10, x: 3): float64>',
                          repr(v))
 
     def test_items(self):
@@ -65,6 +65,15 @@ class TestVariable(TestCase):
         self.assertVarEqual(v.views({'time': slice(0, 3)}), v[:3])
         self.assertVarEqual(v.views({'x': 0}), v[:, 0])
 
+    def test_transpose(self):
+        v = Variable(['time', 'x'], self.d)
+        v2 = Variable(['x', 'time'], self.d.T)
+        self.assertVarEqual(v, v2.transpose())
+        x = np.random.randn(2, 3, 4, 5)
+        w = Variable(['a', 'b', 'c', 'd'], x)
+        w2 = Variable(['d', 'b', 'c', 'a'], np.einsum('abcd->dbca', x))
+        self.assertVarEqual(w2, w.transpose('d', 'b', 'c', 'a'))
+
     def test_1d_math(self):
         x = np.arange(5)
         y = np.ones(5)
@@ -73,11 +82,6 @@ class TestVariable(TestCase):
         self.assertVarEqual(v, +v)
         self.assertVarEqual(v, abs(v))
         self.assertArrayEqual((-v).data, -x)
-        # verify attributes
-        v2 = Variable(['x'], x, {'units': 'meters'})
-        self.assertVarEqual(v, +v2)
-        v3 = Variable(['x'], x, {'some': 'attribute'})
-        self.assertVarEqual(v3, +v3)
         # bianry ops with numbers
         self.assertVarEqual(v, v + 0)
         self.assertVarEqual(v, 0 + v)
@@ -91,6 +95,10 @@ class TestVariable(TestCase):
         self.assertArrayEqual((x * v).data, x ** 2)
         self.assertArrayEqual(v - y, v - 1)
         self.assertArrayEqual(y - v, 1 - v)
+        # verify attributes
+        v2 = Variable(['x'], x, {'units': 'meters'})
+        self.assertVarEqual(v2, +v2)
+        self.assertVarEqual(v, 0 + v2)
         # binary ops with all variables
         self.assertArrayEqual(v + v, 2 * v)
         w = Variable(['x'], y, {'foo': 'bar'})
@@ -127,6 +135,15 @@ class TestVariable(TestCase):
         self.assertVarEqual(
             v * w[0], Variable(['a', 'b', 'c', 'd'],
                             np.einsum('ab,cd->abcd', x, y[0])))
+
+    def test_broadcasting_failures(self):
+        a = Variable(['x'], np.arange(10))
+        b = Variable(['x'], np.arange(5))
+        c = Variable(['x', 'x'], np.arange(100).reshape(10, 10))
+        with self.assertRaisesRegexp(ValueError, 'mismatched lengths'):
+            a + b
+        with self.assertRaisesRegexp(ValueError, 'duplicate dimensions'):
+            a + c
 
     def test_inplace_math(self):
         x = np.arange(5)

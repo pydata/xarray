@@ -11,10 +11,12 @@ class ReturnItem(object):
 
 class TestExpandedIndexer(TestCase):
     def test(self):
-        x = np.random.randn(10, 20, 30)
+        x = np.random.randn(10, 11, 12, 13, 14)
+        y = np.arange(5)
         i = ReturnItem()
-        for i in [i[:], i[...], i[0, :, 10], i[:5, ...], i[np.arange(5)]]:
-            j = utils.expanded_indexer(i, 3)
+        for i in [i[:], i[...], i[0, :, 10], i[..., 10], i[:5, ..., 0],
+                  i[y], i[y, y], i[..., y, y], i[..., 0, 1, 2, 3, 4]]:
+            j = utils.expanded_indexer(i, x.ndim)
             self.assertArrayEqual(x[i], x[j])
 
 
