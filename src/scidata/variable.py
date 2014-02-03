@@ -7,94 +7,9 @@ from collections import OrderedDict
 import conventions
 import data
 import dataview
+import utils
 from common import _DataWrapperMixin
-from utils import expanded_indexer, safe_merge, safe_update
 from ops import inject_special_operations
-
-
-class AttributesDict(OrderedDict):
-    """A subclass of OrderedDict whose __setitem__ method automatically
-    checks and converts values to be valid netCDF attributes
-    """
-    def __init__(self, *args, **kwds):
-        OrderedDict.__init__(self, *args, **kwds)
-
-    def __setitem__(self, key, value):
-        if not conventions.is_valid_name(key):
-            raise ValueError("Not a valid attribute name")
-        # Strings get special handling because netCDF treats them as
-        # character arrays. Everything else gets coerced to a numpy
-        # vector. netCDF treats scalars as 1-element vectors. Arrays of
-        # non-numeric type are not allowed.
-        if isinstance(value, basestring):
-            # netcdf attributes should be unicode
-            value = unicode(value)
-        else:
-            try:
-                value = conventions.coerce_type(np.atleast_1d(np.asarray(value)))
-            except:
-                raise ValueError("Not a valid value for a netCDF attribute")
-            if value.ndim > 1:
-                raise ValueError("netCDF attributes must be vectors " +
-                        "(1-dimensional)")
-            value = conventions.coerce_type(value)
-            if str(value.dtype) not in conventions.TYPEMAP:
-                # A plain string attribute is okay, but an array of
-                # string objects is not okay!
-                raise ValueError("Can not convert to a valid netCDF type")
-        OrderedDict.__setitem__(self, key, value)
-
-    def copy(self):
-        """The copy method of the superclass simply calls the constructor,
-        which in turn calls the update method, which in turns calls
-        __setitem__. This subclass implementation bypasses the expensive
-        validation in __setitem__ for a substantial speedup."""
-        obj = self.__class__()
-        for (attr, value) in self.iteritems():
-            OrderedDict.__setitem__(obj, attr, copy.copy(value))
-        return obj
-
-    def __deepcopy__(self, memo=None):
-        """
-        Returns a deep copy of the current object.
-
-        memo does nothing but is required for compatability with copy.deepcopy
-        """
-        return self.copy()
-
-    def update(self, *other, **kwargs):
-        """Set multiple attributes with a mapping object or an iterable of
-        key/value pairs"""
-        # Capture arguments in an OrderedDict
-        args_dict = OrderedDict(*other, **kwargs)
-        try:
-            # Attempt __setitem__
-            for (attr, value) in args_dict.iteritems():
-                self.__setitem__(attr, value)
-        except:
-            # A plain string attribute is okay, but an array of
-            # string objects is not okay!
-            raise ValueError("Can not convert to a valid netCDF type")
-            # Clean up so that we don't end up in a partial state
-            for (attr, value) in args_dict.iteritems():
-                if self.__contains__(attr):
-                    self.__delitem__(attr)
-            # Re-raise
-            raise
-
-    def __eq__(self, other):
-        if not set(self.keys()) == set(other.keys()):
-            return False
-        for (key, value) in self.iteritems():
-            if value.__class__ != other[key].__class__:
-                return False
-            if isinstance(value, basestring):
-                if value != other[key]:
-                    return False
-            else:
-                if value.tostring() != other[key].tostring():
-                    return False
-        return True
 
 
 def _as_compatible_data(data):
@@ -105,9 +20,9 @@ def _as_compatible_data(data):
     # numeric type like np.float32
     required = ['dtype', 'shape', 'size', 'ndim']
     if not all(hasattr(data, attr) for attr in required):
-        warnings.warn('converting data to np.ndarray because it lacks some of '
-                      'the necesssary attributes for lazy use', RuntimeWarning,
-                      stacklevel=3)
+        warnings.warn('converting data to np.ndarray because %s lacks some of '
+                      'the necesssary attributes for lazy use'
+                      % type(data).__name__, RuntimeWarning, stacklevel=3)
         data = np.asarray(data)
     return data
 
@@ -127,43 +42,62 @@ class Variable(_DataWrapperMixin):
         self._data = data
         if attributes is None:
             attributes = {}
-        self._attributes = AttributesDict(attributes)
+        self._attributes = OrderedDict(attributes)
 
     @property
     def dimensions(self):
         return self._dimensions
 
+    def _remap_indexer(self, key):
+        """Converts an orthogonal indexer into a fully expanded key (of the
+        same length as dimensions) suitable for indexing `_data`
+
+        See Also
+        --------
+        utils.expanded_indexer
+        utils.orthogonal_indexer
+        """
+        key = utils.expanded_indexer(key, self.ndim)
+        if any(not isinstance(k, (int, slice)) for k in key):
+            # key would trigger fancy indexing
+            key = utils.orthogonal_indexer(key, self.shape)
+        return key
+
     def __getitem__(self, key):
+        """Return a new Variable object whose contents are consistent with
+        getting the provided key from the underlying data
+
+        NB. __getitem__ and __setitem__ implement "orthogonal indexing" like
+        netCDF4-python, where the key can only include integers, slices
+        (including `Ellipsis`) and 1d arrays, each of which are applied
+        orthogonally along their respective dimensions.
+
+        The difference not matter in most cases unless you are using numpy's
+        "fancy indexing," which can otherwise result in data arrays
+        with shapes is inconsistent (or just uninterpretable with) with the
+        variable's dimensions.
+
+        If you really want to do indexing like `x[x > 0]`, manipulate the numpy
+        array `x.data` directly.
         """
-        Return a new Variable object whose contents are consistent with getting
-        the provided key from the underlying data
-        """
-        key = expanded_indexer(key, self.ndim)
+        key = self._remap_indexer(key)
         dimensions = [dim for k, dim in zip(key, self.dimensions)
                       if not isinstance(k, int)]
-        #TODO: wrap _data in a biggus array or use np.ix_ so fancy indexing
-        # always slices axes independently (as in the python-netcdf4 package)
         new_data = self._data[key]
-        if new_data.ndim != len(dimensions):
-            raise ValueError('indexing results in an array of shape %s, '
-                             'which has inconsistent length with the '
-                             'expected dimensions %s (if you really want to '
-                             'do this sort of indexing, index the `data` '
-                             'attribute directly)'
-                             % (new_data.shape, dimensions))
+        # orthogonal indexing should ensure the dimensionality is consistent
+        assert new_data.ndim == len(dimensions)
         # always return a Variable, because Variable subtypes may have
         # different constructors and may not make sense without an attached
         # datastore
         return Variable(dimensions, new_data, self.attributes)
 
     def __setitem__(self, key, value):
-        """__setitem__ is overloaded to access the underlying numpy data"""
-        self.data[key] = value
+        """__setitem__ is overloaded to access the underlying numpy data with
+        orthogonal indexing (see __getitem__ for more details)
+        """
+        self.data[self._remap_indexer(key)] = value
 
     def __iter__(self):
-        """
-        Iterate over the contents of this Variable
-        """
         for n in range(len(self)):
             yield self[n]
 
@@ -288,41 +222,6 @@ class Variable(_DataWrapperMixin):
         """
         return self.views({dim: s})
 
-    def take(self, indices, dim):
-        """Return a new Variable object whose contents are sliced from
-        the current object along a specified dimension
-
-        Parameters
-        ----------
-        indices : array_like
-            The indices of the values to extract. indices must be compatible
-            with the ndarray.take() method.
-        dim : string
-            The dimension to slice along. If multiple dimensions equal
-            dim (e.g. a correlation matrix), then the slicing is done
-            only along the first matching dimension.
-
-        Returns
-        -------
-        obj : Variable object
-            The returned object has the same attributes and dimensions
-            as the original. Data contents are taken along the
-            specified dimension.
-
-        See Also
-        --------
-        numpy.take
-        """
-        indices = np.asarray(indices)
-        if indices.ndim != 1:
-            raise ValueError('indices should have a single dimension')
-        # When dim appears repeatedly in self.dimensions, using the index()
-        # method gives us only the first one, which is the desired behavior
-        axis = self.dimensions.index(dim)
-        # take only works on actual numpy arrays
-        data = self.data.take(indices, axis=axis)
-        return Variable(self.dimensions, data, self.attributes)
-
     def transpose(self, *dimensions):
         """Return a new Variable object with transposed dimensions
 
@@ -422,8 +321,8 @@ def binary_op(f, reflexive=False):
         new_data = (f(self_data, other_data)
                     if not reflexive
                     else f(other_data, self_data))
-        new_attr = safe_merge(_math_safe_attributes(self),
-                              _math_safe_attributes(other))
+        new_attr = utils.safe_merge(_math_safe_attributes(self),
+                                    _math_safe_attributes(other))
         return Variable(new_dims, new_data, new_attr)
     return func
 
@@ -434,7 +333,7 @@ def inplace_binary_op(f):
         if dimensions != self.dimensions:
             raise ValueError('dimensions cannot change for in-place operations')
         self.data = f(self_data, other_data)
-        safe_update(self.attributes, _math_safe_attributes(other))
+        utils.safe_update(self.attributes, _math_safe_attributes(other))
         return self
     return func
 

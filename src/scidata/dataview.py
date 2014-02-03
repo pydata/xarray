@@ -1,9 +1,23 @@
 import re
 
-import variable
 from common import _DataWrapperMixin
 from ops import inject_special_operations
 from utils import expanded_indexer
+
+
+class _LocIndexer(object):
+    def __init__(self, dataview):
+        self.dataview = dataview
+
+    def _remap_key(self, key):
+        return tuple(self.dataview.dataset._loc_to_int_indexer(k, v)
+                     for k, v in self.dataview._key_to_slicers(key))
+
+    def __getitem__(self, key):
+        return self.dataview[self._remap_key(key)]
+
+    def __setitem__(self, key, value):
+        self.dataview[self._remap_key(key)] = value
 
 
 class DataView(_DataWrapperMixin):
@@ -37,31 +51,39 @@ class DataView(_DataWrapperMixin):
 
     @property
     def variable(self):
-        return self.dataset[self.name]
-
+        return self.dataset.variables[self.name]
     @variable.setter
     def variable(self, value):
-        # TODO: remove this line, so we change DataView's dataset in-place
-        # (if supported by the underlying store)
-        self.dataset = self.unselected()
-        self.dataset[self.name] = value
+        self.dataset.set_variable(self.name, value)
 
+    # _data and _data.setter are necessary for _DataWrapperMixin
     @property
     def _data(self):
-        # necessary for _DataWrapperMixin
         return self.variable._data
+    @_data.setter
+    def _data(self, value):
+        self.variable._data = value
 
     @property
     def dimensions(self):
         return self.variable.dimensions
 
-    def __getitem__(self, key):
+    def _key_to_slicers(self, key):
         key = expanded_indexer(key, self.ndim)
-        slicers = dict(zip(self.dimensions, key))
+        return zip(self.dimensions, key)
+
+    def __getitem__(self, key):
+        slicers = dict(self._key_to_slicers(key))
         return type(self)(self.dataset.views(slicers), self.name)
 
     def __setitem__(self, key, value):
         self.variable[key] = value
+
+    @property
+    def loc(self):
+        """Attribute for location based indexing with pandas
+        """
+        return _LocIndexer(self)
 
     def __iter__(self):
         for n in range(len(self)):
@@ -109,30 +131,32 @@ class DataView(_DataWrapperMixin):
         """
         return self.dataset.unselect(self.name)
 
+    def replace_focus(self, new_var):
+        """Returns a copy of this DataView's dataset with this DataView's
+        focus variable replaced by 'new_var'
+        """
+        ds = self.dataset.replace(self.name, new_var)
+        return type(self)(ds, self.name)
+
     def transpose(self, *dimensions):
-        ds = self.unselected()
-        ds[self.name] = self.variable.transpose(*dimensions)
-        return DataView(ds, self.name)
+        return self.replace_focus(self.variable.transpose(*dimensions))
 
 
 def unary_op(f):
     def func(self):
-        ds = self.unselected()
-        ds[self.name] = f(self.variable)
-        return DataView(ds, self.name)
+        return self.replace_focus(f(self.variable))
     return func
 
 
 def binary_op(f, reflexive=False):
     def func(self, other):
-        ds = self.unselected()
         other_variable = getattr(other, 'variable', other)
-        ds[self.name] = (f(self.variable, other_variable)
-                         if not reflexive
-                         else f(other_variable, self.variable))
+        dv = self.replace_focus(f(self.variable, other_variable)
+                                if not reflexive
+                                else f(other_variable, self.variable))
         if hasattr(other, 'unselected'):
-            ds.update(other.unselected())
-        return DataView(ds, self.name)
+            dv.dataset.update(other.unselected())
+        return dv
     return func
 
 
@@ -147,6 +171,3 @@ def inplace_binary_op(f):
 
 
 inject_special_operations(DataView, unary_op, binary_op, inplace_binary_op)
-
-DataView.tranpose = unary_op(variable.Variable.transpose)
-

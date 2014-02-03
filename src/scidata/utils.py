@@ -5,8 +5,12 @@ import numpy as np
 
 
 def expanded_indexer(key, ndim):
-    """Given a key for indexing an ndarray, return an equivalent
-    key which is a tuple with length equal to the number of dimensions
+    """Given a key for indexing an ndarray, return an equivalent key which is a
+    tuple with length equal to the number of dimensions
+
+    The expansion is done by replacing all `Ellipsis` items with the right
+    number of full slices and then padding the key with full slices so that it
+    reaches the appropriate dimensionality.
     """
     if not isinstance(key, tuple):
         # numpy treats non-tuple keys equivalent to tuples of length 1
@@ -26,6 +30,33 @@ def expanded_indexer(key, ndim):
             new_key.append(k)
     new_key.extend((ndim - len(new_key)) * [slice(None)])
     return tuple(new_key)
+
+
+def orthogonal_indexer(key, shape):
+    """Given a key for orthogonal array indexing, returns an equivalent key
+    suitable for indexing a numpy.ndarray with fancy indexing
+    """
+    def expand_array(k, length):
+        if isinstance(k, slice):
+            return np.arange(k.start or 0, k.stop or length, k.step or 1)
+        else:
+            k = np.asarray(k)
+            if k.ndim != 1:
+                raise ValueError('orthogonal array indexing only supports '
+                                 '1d arrays')
+            return k
+    # replace Ellipsis objects with slices
+    key = list(expanded_indexer(key, len(shape)))
+    # replace 1d arrays and slices with broadcast compatible arrays
+    # note: we treat integers separately (instead of turning them into 1d
+    # arrays) because integers (and only integers) collapse axes when used with
+    # __getitem__
+    non_int_keys = [n for n, k in enumerate(key) if not isinstance(k, int)]
+    array_indexers = np.ix_(*(expand_array(key[n], shape[n])
+                              for n in non_int_keys))
+    for i, n in enumerate(non_int_keys):
+        key[n] = array_indexers[i]
+    return tuple(key)
 
 
 def update_safety_check(first_dict, second_dict, compat=operator.eq):
@@ -112,6 +143,9 @@ def variable_equal(v1, v2):
         return np.array_equal(v1.data, v2.data)
     else:
         return False
+
+
+# class DisabledMixin(object):
 
 
 class FrozenOrderedDict(OrderedDict):

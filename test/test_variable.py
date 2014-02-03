@@ -53,6 +53,8 @@ class TestVariable(TestCase):
             Variable(['time'], self.d[:, 0]), v[:, 0])
         self.assertVarEqual(
             Variable(['time', 'x'], self.d[:3, :2]), v[:3, :2])
+        # variables should do orthogonal indexing
+        self.assertVarEqual(v[:3, :2], v[range(3), range(2)])
         for n, item in enumerate(v):
             self.assertVarEqual(Variable(['x'], self.d[n]), item)
         v.data[:] = 0
