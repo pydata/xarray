@@ -3,6 +3,7 @@ from copy import deepcopy
 from cStringIO import StringIO
 import os.path
 import unittest
+import tempfile
 
 import numpy as np
 import pandas as pd
@@ -377,10 +378,13 @@ class DataTest(TestCase):
 
 class NetCDF4DataTest(DataTest):
     def get_store(self):
-        tmp_file = './delete_me.nc'
-        if os.path.exists(tmp_file):
-            os.remove(tmp_file)
-        return backends.NetCDF4DataStore(tmp_file, mode='w')
+        f, self.tmp_file = tempfile.mkstemp(suffix='.nc')
+        os.close(f)
+        return backends.NetCDF4DataStore(self.tmp_file, mode='w')
+
+    def tearDown(self):
+        if hasattr(self, 'tmp_file') and os.path.exists(self.tmp_file):
+            os.remove(self.tmp_file)
 
 
 class ScipyDataTest(DataTest):

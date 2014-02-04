@@ -1,4 +1,6 @@
+import netCDF4 as nc4
 import numpy as np
+import pandas as pd
 
 from scidata import utils
 from . import TestCase
@@ -59,6 +61,17 @@ class TestIndexers(TestCase):
         # standard numpy (non-orthogonal) indexing doesn't work anymore
         with self.assertRaisesRegexp(ValueError, 'only supports 1d'):
             utils.orthogonal_indexer(x > 0, x.shape)
+
+
+class TestNum2DatetimeIndex(TestCase):
+    def test(self):
+        for num_dates, units in [
+                (np.arange(1000), 'days since 2000-01-01'),
+                (12300 + np.arange(500), 'hours since 1680-01-01 00:00:00')]:
+            for calendar in ['standard', 'gregorian', 'proleptic_gregorian']:
+                expected = pd.Index(nc4.num2date(num_dates, units, calendar))
+                actual = utils.num2datetimeindex(num_dates, units, calendar)
+                self.assertArrayEqual(expected, actual)
 
 
 class TestSafeMerge(TestCase):

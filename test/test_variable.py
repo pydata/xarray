@@ -156,3 +156,19 @@ class TestVariable(TestCase):
         # since we provided an ndarray for data, it is also modified in-place
         self.assertIs(v.data, x)
         self.assertArrayEqual(v.data, np.arange(5) + 1)
+
+    def test_collapsed(self):
+        v = Variable(['time', 'x'], self.d)
+        # intentionally test with an operation for which order matters
+        self.assertVarEqual(v.collapsed(np.std, 'time'),
+                            Variable(['x'], self.d.std(axis=0),
+                                     {'cell_methods': 'time: std'}))
+        self.assertVarEqual(v.collapsed(np.std, axis=0),
+                            v.collapsed(np.std, dimension='time'))
+        self.assertVarEqual(v.collapsed(np.std, ['x', 'time']),
+                            Variable([], self.d.std(axis=1).std(axis=0),
+                                     {'cell_methods': 'x: std time: std'}))
+        self.assertVarEqual(v.collapsed(np.std),
+                            Variable([], self.d.std(),
+                                     {'cell_methods': 'time: x: std'}))
+        self.assertVarEqual(v.mean('time'), v.collapsed(np.mean, 'time'))

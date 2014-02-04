@@ -27,6 +27,9 @@ class TestDataView(TestCase):
             self.assertEqual(getattr(self.dv, attr), getattr(self.v, attr))
         self.assertEqual(len(self.dv), len(self.v))
         self.assertVarEqual(self.dv, self.v)
+        self.assertEqual(list(self.dv.indices), list(self.ds.indices))
+        for k, v in self.dv.indices.iteritems():
+            self.assertArrayEqual(v, self.ds.indices[k])
 
     def test_items(self):
         self.assertVarEqual(self.dv[0], self.v[0])
@@ -34,6 +37,7 @@ class TestDataView(TestCase):
         self.assertVarEqual(self.dv[:3, :5], self.v[:3, :5])
         self.assertEqual(self.dv[:3, :5].dataset,
                          self.ds.views({'x': slice(3), 'y': slice(5)}))
+        self.assertEqual(list(self.dv[0].indices), ['y'])
 
     def test_renamed(self):
         renamed = self.dv.renamed('bar')
@@ -59,6 +63,13 @@ class TestDataView(TestCase):
         self.assertViewEqual(a, 0 * x + a)
         self.assertViewEqual(a, a + 0 * a)
         self.assertViewEqual(a, 0 * a + a)
+        # test different indices
+        ds2 = self.ds.replace('x', Variable(['x'], 3 + np.arange(10)))
+        b = DataView(ds2, 'foo')
+        with self.assertRaisesRegexp(ValueError, 'not aligned'):
+            a + b
+        with self.assertRaisesRegexp(ValueError, 'not aligned'):
+            b + a
 
     def test_inplace_math(self):
         x = self.x
@@ -69,5 +80,9 @@ class TestDataView(TestCase):
         self.assertIs(b, a)
         self.assertIs(b.variable, v)
         self.assertIs(b.data, x)
-        #FIXME: this test currently fails (see DataView.variable.setter)
-        # self.assertIs(b.dataset, self.ds)
+        self.assertIs(b.dataset, self.ds)
+
+    def test_collapsed(self):
+        self.assertVarEqual(self.dv.collapsed(np.mean, 'x'),
+                            self.v.collapsed(np.mean, 'x'))
+        # needs more...

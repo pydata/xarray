@@ -1,15 +1,16 @@
 import copy
-import numpy as np
-
+import functools
 import warnings
 from collections import OrderedDict
+
+import numpy as np
 
 import conventions
 import data
 import dataview
+import ops
 import utils
 from common import _DataWrapperMixin
-from ops import inject_special_operations
 
 
 def _as_compatible_data(data):
@@ -236,7 +237,7 @@ class Variable(_DataWrapperMixin):
 
         Returns
         -------
-        obj : Variable object
+        transposed : Variable
             The returned object has transposed data and dimensions with the
             same attributes as the original.
 
@@ -250,8 +251,124 @@ class Variable(_DataWrapperMixin):
         data = self.data.transpose(*axes)
         return Variable(dimensions, data, self.attributes)
 
+    def collapsed(self, f, dimension=None, axis=None, **kwargs):
+        """Collapse this variable by applying `f` along some dimension(s)
 
-def broadcast_var_data(self, other):
+        Parameters
+        ----------
+        f : function
+            Function which can be called in the form
+            `f(x, axis=axis, **kwargs)` to return the result of collapsing an
+            np.ndarray over an integer valued axis.
+        dimension : str or sequence of str, optional
+            Dimension(s) over which to repeatedly apply `f`.
+        axis : int or sequence of int, optional
+            Axis(es) over which to repeatedly apply `f`. Only one of the
+            'dimension' and 'axis' arguments can be supplied. If neither are
+            supplied, then the collapse is calculated over the flattened array
+            (by calling `f(x)` without an axis argument).
+        **kwargs : dict
+            Additional keyword arguments passed on to `f`.
+
+        Note
+        ----
+        If `collapsed` is called with multiple dimensions (or axes, which
+        are converted into dimensions), then the collapse operation is
+        performed repeatedly along each dimension in turn from left to right.
+
+        Returns
+        -------
+        collapsed : Variable
+            Variable with summarized data and the indicated dimension(s)
+            removed.
+        """
+        if dimension is not None and axis is not None:
+            raise ValueError("cannot supply both 'axis' and 'dimension' "
+                             "arguments")
+
+        if axis is not None:
+            # determine dimensions
+            if isinstance(axis, int):
+                axis = [axis]
+            dimension = [self.dimensions[i] for i in axis]
+
+        if dimension is not None:
+            if isinstance(dimension, basestring):
+                dimension = [dimension]
+            var = self
+            for dim in dimension:
+                var = var._collapsed(f, dim, **kwargs)
+        else:
+            attr = self._attributes_with_added_cell_method(
+                ': '.join(self.dimensions) + ': ' + f.__name__)
+            var = Variable([], f(self.data, **kwargs), attr)
+        return var
+
+    def _attributes_with_added_cell_method(self, string):
+        attr = OrderedDict(self.attributes)
+        if 'cell_methods' in attr:
+            base = attr['cell_methods'] + ' '
+        else:
+            base = ''
+        attr['cell_methods'] = base + string
+        return attr
+
+    def _collapsed(self, f, dim, **kwargs):
+        """Collapse a single dimension"""
+        axis = self.dimensions.index(dim)
+        dims = tuple(dim for i, dim in enumerate(self.dimensions)
+                     if axis not in [i, i - self.ndim])
+        data = f(self.data, axis=axis, **kwargs)
+        attr = self._attributes_with_added_cell_method(
+            self.dimensions[axis] + ': ' + f.__name__)
+        return Variable(dims, data, attr)
+
+    @staticmethod
+    def _unary_op(f):
+        @functools.wraps(f)
+        def func(self):
+            return Variable(self.dimensions, f(self.data), self.attributes)
+        return func
+
+    @staticmethod
+    def _binary_op(f, reflexive=False):
+        @functools.wraps(f)
+        def func(self, other):
+            if isinstance(other, dataview.DataView):
+                return NotImplemented
+            self_data, other_data, new_dims = _broadcast_var_data(self, other)
+            new_data = (f(self_data, other_data)
+                        if not reflexive
+                        else f(other_data, self_data))
+            new_attr = utils.safe_merge(_math_safe_attributes(self),
+                                        _math_safe_attributes(other))
+            return Variable(new_dims, new_data, new_attr)
+        return func
+
+    @staticmethod
+    def _inplace_binary_op(f):
+        @functools.wraps(f)
+        def func(self, other):
+            self_data, other_data, dims = _broadcast_var_data(self, other)
+            if dims != self.dimensions:
+                raise ValueError('dimensions cannot change for in-place '
+                                 'operations')
+            self.data = f(self_data, other_data)
+            utils.safe_update(self.attributes, _math_safe_attributes(other))
+            return self
+        return func
+
+    # @staticmethod
+    # def collapse_method(f):
+    #     @functools.wraps(f)
+    #     def func(self, dimension=None, axis=None):
+    #         return self.collapsed(f, dimension, axis)
+    #     return func
+
+ops.inject_special_operations(Variable)
+
+
+def _broadcast_var_data(self, other):
     self_data = self.data
     if isinstance(other, data.Dataset):
         raise TypeError('datasets do not support mathematical operations')
@@ -305,37 +422,3 @@ def _math_safe_attributes(v):
         return {}
     else:
         return OrderedDict((k, v) for k, v in attr.items() if k != 'units')
-
-
-def unary_op(f):
-    def func(self):
-        return Variable(self.dimensions, f(self.data), self.attributes)
-    return func
-
-
-def binary_op(f, reflexive=False):
-    def func(self, other):
-        if isinstance(other, dataview.DataView):
-            return NotImplemented
-        self_data, other_data, new_dims = broadcast_var_data(self, other)
-        new_data = (f(self_data, other_data)
-                    if not reflexive
-                    else f(other_data, self_data))
-        new_attr = utils.safe_merge(_math_safe_attributes(self),
-                                    _math_safe_attributes(other))
-        return Variable(new_dims, new_data, new_attr)
-    return func
-
-
-def inplace_binary_op(f):
-    def func(self, other):
-        self_data, other_data, dimensions = broadcast_var_data(self, other)
-        if dimensions != self.dimensions:
-            raise ValueError('dimensions cannot change for in-place operations')
-        self.data = f(self_data, other_data)
-        utils.safe_update(self.attributes, _math_safe_attributes(other))
-        return self
-    return func
-
-
-inject_special_operations(Variable, unary_op, binary_op, inplace_binary_op)

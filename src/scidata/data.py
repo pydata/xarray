@@ -93,15 +93,28 @@ def open_dataset(nc, *args, **kwargs):
 
 
 class _IndicesCache(MutableMapping):
+    """Cache for Dataset indices"""
     # MutableMapping subclasses should implement:
     # __getitem__, __setitem__, __delitem__, __iter__, __len__
     def __init__(self, dataset, cache=None):
         self.dataset = dataset
         self.cache = {} if cache is None else dict(cache)
+        # for performance reasons, we could remove this:
+        self.sync()
+
+    def build_index(self, key):
+        """Cache the index for the dimension 'key'"""
+        self.cache[key] = self.dataset._create_index(key)
+
+    def sync(self):
+        """Cache indices for all dimensions in this dataset"""
+        for key in self.dataset.dimensions:
+            self.build_index(key)
 
     def __getitem__(self, key):
         if not key in self.cache:
-            self.cache[key] = self.dataset._create_index(key)
+            assert key in self.dataset.dimensions
+            self.build_index(key)
         return self.cache[key]
 
     def __setitem__(self, key, value):
@@ -115,6 +128,17 @@ class _IndicesCache(MutableMapping):
 
     def __len__(self):
         return len(self.dataset.dimensions)
+
+    def __contains__(self, key):
+        return key in self.cache
+
+    def __repr__(self):
+        contents = '\n'.join("'%s': %s" %
+                             (k, str(v).replace(
+                                  '\n', '\n' + ' ' * (len(k) + 4)))
+                             for k, v in self.items())
+        return ("<class 'scidata.data.%s' (dict-like)>\n%s"
+                % (type(self).__name__, contents))
 
 
 class Dataset(object):
@@ -140,7 +164,7 @@ class Dataset(object):
     store : baackends.*DataStore
     """
     def __init__(self, variables=None, dimensions=None, attributes=None,
-                 store=None, indices=None, check_consistency=True):
+                 store=None, indices=None):
         """
         If dimensions are not provided, they are inferred from the variables.
 
@@ -161,14 +185,16 @@ class Dataset(object):
         if variables is not None:
             if dimensions is None:
                 store.unchecked_set_dimensions(construct_dimensions(variables))
-            elif check_consistency:
+            else:
                 check_dims_and_vars_consistency(dimensions, variables)
             store.unchecked_set_variables(variables)
 
-        if indices is not None:
+        if indices is None:
+            indices = {}
+        else:
             for k, v in indices.iteritems():
                 if k not in self.dimensions or v.size != self.dimensions[k]:
-                    raise ValueError('inconsisent index %r' % k)
+                    raise ValueError('inconsistent index %r' % k)
         self._indices = _IndicesCache(self, indices)
 
     def _create_index(self, dim):
@@ -177,12 +203,15 @@ class Dataset(object):
             data = var.data
             attr = var.attributes
             if 'units' in attr and 'since' in attr['units']:
-                data = num2date(data, attr['units'])
+                index = utils.num2datetimeindex(data, attr['units'],
+                                                attr.get('calendar'))
+            else:
+                index = pd.Index(data)
         elif dim in self.dimensions:
-            data = np.arange(self.dimensions[dim])
+            index = pd.Index(np.arange(self.dimensions[dim]))
         else:
             raise ValueError('cannot find index %r in dataset' % dim)
-        return pd.Index(data)
+        return index
 
     @property
     def indices(self):
@@ -214,7 +243,7 @@ class Dataset(object):
         Returns a shallow copy of the current object.
         """
         return type(self)(self.variables, self.dimensions, self.attributes,
-                          check_consistency=False)
+                          indices=self.indices.cache)
 
     def __contains__(self, key):
         """
@@ -275,7 +304,7 @@ class Dataset(object):
         dataset with the contents of the store
         """
         target = type(self)(self.variables, self.dimensions, self.attributes,
-                            store=store, check_consistency=False)
+                            store=store, indices=self.indices.cache)
         target.store.sync()
         return target
 
@@ -438,18 +467,36 @@ class Dataset(object):
         Returns
         -------
         variable
-            The variable object in the underlying datastore
+            The variable object in the underlying datastore.
         """
         if name in self.variables:
             raise ValueError("Variable named %r already exists" % name)
         return self.set_variable(name, var)
 
     def set_variable(self, name, var):
-        if name in self.dimensions and name in self._indices:
-            # remove existing index
-            del self._indices[name]
+        """Set a variable in the dataset
+
+        Unlike `add_variable`, this function allows for overriding existing
+        variables.
+
+        Parameters
+        ----------
+        name : string
+            The name under which the variable will be added.
+        variable : Variable
+            The variable to be added. If the desired action is to add a copy of
+            the variable be sure to do so before passing it to this function.
+
+        Returns
+        -------
+        variable
+            The variable object in the underlying datastore.
+        """
         check_dims_and_vars_consistency(self.dimensions, {name: var})
-        return self.store.unchecked_set_variable(name, var)
+        new_var = self.store.unchecked_set_variable(name, var)
+        if name in self.indices:
+            self.indices.build_index(name)
+        return new_var
 
     def views(self, slicers):
         """Return a new object whose contents are a view of a slice from the
@@ -521,10 +568,12 @@ class Dataset(object):
                         # integer (dimension 0)
                         dimensions[dim] = new_len
 
-        # TODO: slice indices and pass them on so we don't need to create them
-        # from scratch in the new object
+        # slice index cache
+        indices = {k: v[slicers[k]]
+                   if k in slicers and not isinstance(slicers[k], int) else v
+                   for k, v in self.indices.cache.items() if k in dimensions}
         return type(self)(variables, dimensions, self.attributes,
-                          check_consistency=False)
+                          indices=indices)
 
     def _loc_to_int_indexer(self, dim, locations):
         index = self.indices[dim]
@@ -604,9 +653,10 @@ class Dataset(object):
 
         dimensions = OrderedDict((name_dict.get(k, k), v)
                                  for k, v in self.dimensions.iteritems())
-
+        indices = {name_dict.get(k, k): v
+                   for k, v in self.indices.cache.items()}
         return type(self)(variables, dimensions, self.attributes,
-                          check_consistency=False)
+                          indices=indices)
 
     def merge(self, other):
         """Merge two datasets into a single new dataset
@@ -634,7 +684,9 @@ class Dataset(object):
                                     compat=utils.variable_equal)
         new_dims = utils.safe_merge(self.dimensions, other.dimensions)
         new_attr = utils.safe_merge(self.attributes, other.attributes)
-        return type(self)(new_vars, new_dims, new_attr)
+        new_indices = utils.safe_merge(self.indices.cache, other.indices.cache,
+                                       compat=np.array_equal)
+        return type(self)(new_vars, new_dims, new_attr, indices=new_indices)
 
     def update(self, other):
         """Update this dataset in place with the contents of another dataset
@@ -658,15 +710,20 @@ class Dataset(object):
                                   compat=utils.variable_equal)
         utils.update_safety_check(self.dimensions, other.dimensions)
         utils.update_safety_check(self.attributes, other.attributes)
+        utils.update_safety_check(self.indices.cache, other.indices.cache,
+                                  compat=np.array_equal)
         # update contents
         self.variables.update(other.variables)
         self.dimensions.update(other.dimensions)
         self.attributes.update(other.attributes)
+        self.indices.update(other.indices.cache)
 
     def select(self, *names):
-        """Returns a new dataset that contains the named variables, along with
-        the dimensions on which those variables are defined and corresponding
-        coordinate variables.
+        """Returns a new dataset that contains the named variables
+
+        Dimensions on which those variables are defined are also included, as
+        well as the corresponding coordinate variables, and any variables
+        listed under the 'coordinates' attribute of the named variables.
 
         Parameters
         ----------
@@ -687,37 +744,58 @@ class Dataset(object):
             raise ValueError(
                 "One or more of the specified variables does not exist")
 
-        dim_names = (set(self.variables[k].dimensions) for k in names)
-        names = set(names).union(*dim_names)
+        def get_aux_names(var):
+            names = set(var.dimensions)
+            if 'coordinates' in var.attributes:
+                coords = var.attributes['coordinates']
+                if coords != '':
+                    names |= set(coords.split(' '))
+            return names
+
+        aux_names = [get_aux_names(self.variables[k]) for k in names]
+        names = set(names).union(*aux_names)
 
         variables = OrderedDict((k, v) for k, v in self.variables.iteritems()
                                 if k in names)
         dimensions = OrderedDict((k, v) for k, v in self.dimensions.iteritems()
                                  if k in names)
+        indices = {k: v for k, v in self.indices.cache.items() if k in names}
         return type(self)(variables, dimensions, self.attributes,
-                          check_consistency=False)
+                          indices=indices)
 
-    def unselect(self, *names):
+    def unselect(self, *names, **kwargs):
         """Returns a new dataset without the named variables
 
         Parameters
         ----------
         *names : str
             Names of the variables to omit from the returned object.
+        omit_dimensions : bool, optional (default True)
+            Whether or not to also omit dimensions with the given names.
 
         Returns
         -------
         Dataset
-            New dataset based on this dataset. Only the named variables are
-            removed. Dimensions are unchanged.
+            New dataset based on this dataset. Only the named variables
+            /dimensions are removed.
         """
-        if not all(k in self.variables for k in names):
-            raise ValueError(
-                "One or more of the specified variables does not exist")
+        if any(k not in self.variables and k not in self.dimensions
+               for k in names):
+            raise ValueError('One or more of the specified variable/dimension '
+                             'names does not exist on this dataset')
         variables = OrderedDict((k, v) for k, v in self.variables.iteritems()
                                 if k not in names)
-        return type(self)(variables, self.dimensions, self.attributes,
-                          check_consistency=False)
+        if kwargs.get('omit_dimensions', True):
+            dimensions = OrderedDict((k, v) for k, v
+                                     in self.dimensions.iteritems()
+                                     if k not in names)
+            indices = {k: v for k, v in self.indices.cache.items()
+                       if k not in names}
+        else:
+            dimensions = self.dimensions
+            indices = self.indices
+        return type(self)(variables, dimensions, self.attributes,
+                          indices=indices)
 
     def replace(self, name, variable):
         """Returns a new dataset with the variable 'name' replaced with
@@ -735,7 +813,7 @@ class Dataset(object):
         Dataset
             New dataset based on this dataset. Dimensions are unchanged.
         """
-        ds = self.unselect(name)
+        ds = self.unselect(name, omit_dimensions=False)
         ds.add_variable(name, variable)
         return ds
 

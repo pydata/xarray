@@ -1,8 +1,11 @@
+import functools
 import re
 
+import numpy as np
+
+import ops
 from common import _DataWrapperMixin
-from ops import inject_special_operations
-from utils import expanded_indexer
+from utils import expanded_indexer, FrozenOrderedDict
 
 
 class _LocIndexer(object):
@@ -93,6 +96,12 @@ class DataView(_DataWrapperMixin):
     def attributes(self):
         return self.variable.attributes
 
+    @property
+    def indices(self):
+        return FrozenOrderedDict((k, v) for k, v
+                                 in self.dataset.indices.iteritems()
+                                 if k in self.dimensions)
+
     def copy(self):
         return self.__copy__()
 
@@ -139,35 +148,112 @@ class DataView(_DataWrapperMixin):
         return type(self)(ds, self.name)
 
     def transpose(self, *dimensions):
+        """Return a new DataView object with transposed dimensions
+
+        Note: Although this operation returns a view of this dataview's
+        variable's data, it is not lazy -- the data will be fully loaded.
+
+        Parameters
+        ----------
+        *dimensions : str, optional
+            By default, reverse the dimensions. Otherwise, reorder the
+            dimensions to this order.
+
+        Returns
+        -------
+        transposed : DataView
+            The returned DataView's variable is transposed.
+
+        See Also
+        --------
+        numpy.transpose
+        Variable.tranpose
+        """
         return self.replace_focus(self.variable.transpose(*dimensions))
 
+    def collapsed(self, f, dimension=None, axis=None, **kwargs):
+        """Collapse this variable by applying `f` along some dimension(s)
 
-def unary_op(f):
-    def func(self):
-        return self.replace_focus(f(self.variable))
-    return func
+        Parameters
+        ----------
+        f : function
+            Function which can be called in the form
+            `f(x, axis=axis, **kwargs)` to return the result of collapsing an
+            np.ndarray over an integer valued axis.
+        dimension : str or sequence of str, optional
+            Dimension(s) over which to repeatedly apply `f`.
+        axis : int or sequence of int, optional
+            Axis(es) over which to repeatedly apply `f`. Only one of the
+            'dimension' and 'axis' arguments can be supplied. If neither are
+            supplied, then the collapse is calculated over the flattened array
+            (by calling `f(x)` without an axis argument).
+        **kwargs : dict
+            Additional keyword arguments passed on to `f`.
+
+        Note
+        ----
+        If `collapsed` is called with multiple dimensions (or axes, which
+        are converted into dimensions), then the collapse operation is
+        performed repeatedly along each dimension in turn from left to right.
+
+        Returns
+        -------
+        collapsed : DataView
+            DataView with this dataview's variable replaced with a variable
+            with summarized data and the indicated dimension(s) removed.
+        """
+        var = self.variable.collapsed(f, dimension, axis, **kwargs)
+        dropped_dims = set(self.dimensions) - set(var.dimensions)
+        # For now, take an aggressive strategy of removing all variables
+        # associated with any dropped dimensions
+        # TODO: save some summary (mean? bounds?) of dropped variables
+        drop = ({self.name} | dropped_dims |
+                {k for k, v in self.dataset.variables.iteritems()
+                if any(dim in dropped_dims for dim in v.dimensions)})
+        ds = self.dataset.unselect(*drop)
+        ds.add_variable(self.name, var)
+        return type(self)(ds, self.name)
+
+    @staticmethod
+    def _unary_op(f):
+        @functools.wraps(f)
+        def func(self):
+            return self.replace_focus(f(self.variable))
+        return func
+
+    def _check_indices_compat(self, other):
+        # TODO: possibly automatically select index intersection instead?
+        if hasattr(other, 'indices'):
+            for k, v in self.indices.iteritems():
+                if (k in other.indices
+                        and not np.array_equal(v, other.indices[k])):
+                    raise ValueError('index %r is not aligned' % k)
+
+    @staticmethod
+    def _binary_op(f, reflexive=False):
+        @functools.wraps(f)
+        def func(self, other):
+            self._check_indices_compat(other)
+            other_variable = getattr(other, 'variable', other)
+            dv = self.replace_focus(f(self.variable, other_variable)
+                                    if not reflexive
+                                    else f(other_variable, self.variable))
+            if hasattr(other, 'unselected'):
+                dv.dataset.update(other.unselected())
+            return dv
+        return func
+
+    @staticmethod
+    def _inplace_binary_op(f):
+        @functools.wraps(f)
+        def func(self, other):
+            self._check_indices_compat(other)
+            other_variable = getattr(other, 'variable', other)
+            self.variable = f(self.variable, other_variable)
+            if hasattr(other, 'unselected'):
+                self.dataset.update(other.unselected())
+            return self
+        return func
 
 
-def binary_op(f, reflexive=False):
-    def func(self, other):
-        other_variable = getattr(other, 'variable', other)
-        dv = self.replace_focus(f(self.variable, other_variable)
-                                if not reflexive
-                                else f(other_variable, self.variable))
-        if hasattr(other, 'unselected'):
-            dv.dataset.update(other.unselected())
-        return dv
-    return func
-
-
-def inplace_binary_op(f):
-    def func(self, other):
-        other_variable = getattr(other, 'variable', other)
-        self.variable = f(self.variable, other_variable)
-        if hasattr(other, 'unselected'):
-            self.dataset.update(other.unselected())
-        return self
-    return func
-
-
-inject_special_operations(DataView, unary_op, binary_op, inplace_binary_op)
+ops.inject_special_operations(DataView)

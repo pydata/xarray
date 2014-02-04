@@ -1,7 +1,10 @@
+import netCDF4 as nc4
 import operator
 from collections import OrderedDict
+from datetime import datetime
 
 import numpy as np
+import pandas as pd
 
 
 def expanded_indexer(key, ndim):
@@ -57,6 +60,52 @@ def orthogonal_indexer(key, shape):
     for i, n in enumerate(non_int_keys):
         key[n] = array_indexers[i]
     return tuple(key)
+
+
+def num2datetimeindex(num_dates, units, calendar=None):
+    """Convert an array of numeric dates in netCDF format into a
+    pandas.DatetimeIndex
+
+    For standard (Gregorian) calendars, this function uses vectorized
+    operations, which makes it much faster than netCDF4.num2date.
+    """
+    num_dates = np.asarray(num_dates)
+    if calendar is None:
+        calendar = 'standard'
+    start_date = nc4.num2date(num_dates[0], units, calendar)
+    if (num_dates.size < 2
+            or calendar not in ['standard', 'gregorian', 'proleptic_gregorian']
+            or (start_date < datetime(1582, 10, 15)
+                and calendar != 'proleptic_gregorian')):
+        dates = nc4.num2date(num_dates, units, calendar)
+    else:
+        first_dates = nc4.num2date(num_dates[:2], units, calendar)
+        first_time_delta = np.timedelta64(first_dates[1] - first_dates[0])
+        num_delta = (num_dates - num_dates[0]) / (num_dates[1] - num_dates[0])
+        dates = first_time_delta * num_delta + np.datetime64(first_dates[0])
+    return pd.Index(dates)
+
+
+def variable_equal(v1, v2):
+    """True if two objects have the same dimensions, attributes and data;
+    otherwise False
+
+    This function is necessary because `v1 == v2` for variables and dataviews
+    does element-wise comparisos (like numpy.ndarrays).
+    """
+    if (v1.dimensions == v2.dimensions
+            and v1.attributes == v2.attributes):
+        try:
+            # if _data is identical, skip checking arrays by value
+            if v1._data is v2._data:
+                return True
+        except AttributeError:
+            # _data is not part of the public interface, so it's okay if its
+            # missing
+            pass
+        return np.array_equal(v1.data, v2.data)
+    else:
+        return False
 
 
 def update_safety_check(first_dict, second_dict, compat=operator.eq):
@@ -121,31 +170,6 @@ def safe_merge(first_dict, second_dict, compat=operator.eq):
     new_dict = OrderedDict(first_dict)
     new_dict.update(second_dict)
     return new_dict
-
-
-def variable_equal(v1, v2):
-    """True if two objects have the same dimensions, attributes and data;
-    otherwise False
-
-    This function is necessary because `v1 == v2` does element-wise comparison
-    (like numpy.ndarrays).
-    """
-    if (v1.dimensions == v2.dimensions
-            and v1.attributes == v2.attributes):
-        try:
-            # if _data is identical, skip checking arrays by value
-            if v1._data is v2._data:
-                return True
-        except AttributeError:
-            # _data is not part of the public interface, so it's okay if its
-            # missing
-            pass
-        return np.array_equal(v1.data, v2.data)
-    else:
-        return False
-
-
-# class DisabledMixin(object):
 
 
 class FrozenOrderedDict(OrderedDict):
