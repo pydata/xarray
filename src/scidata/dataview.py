@@ -81,8 +81,13 @@ class DataView(_DataWrapperMixin):
         return zip(self.dimensions, key)
 
     def __getitem__(self, key):
-        slicers = dict(self._key_to_slicers(key))
-        return type(self)(self.dataset.views(**slicers), self.name)
+        if isinstance(key, basestring):
+            # grab another dataview from the dataset
+            return self.dataset[key]
+        else:
+            # orthogonal array indexing
+            slicers = dict(self._key_to_slicers(key))
+            return type(self)(self.dataset.views(**slicers), self.name)
 
     def __setitem__(self, key, value):
         self.variable[key] = value

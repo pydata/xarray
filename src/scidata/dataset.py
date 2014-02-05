@@ -8,7 +8,7 @@ from cStringIO import StringIO
 from collections import OrderedDict, MutableMapping
 
 from dataview import DataView
-from utils import FrozenOrderedDict
+from utils import FrozenOrderedDict, Frozen
 from variable import Variable
 import backends, conventions, utils
 
@@ -94,8 +94,6 @@ def open_dataset(nc, *args, **kwargs):
 
 class _IndicesCache(MutableMapping):
     """Cache for Dataset indices"""
-    # MutableMapping subclasses should implement:
-    # __getitem__, __setitem__, __delitem__, __iter__, __len__
     def __init__(self, dataset, cache=None):
         self.dataset = dataset
         self.cache = {} if cache is None else dict(cache)
@@ -130,7 +128,7 @@ class _IndicesCache(MutableMapping):
         return len(self.dataset.dimensions)
 
     def __contains__(self, key):
-        return key in self.cache
+        return key in self.dataset.dimensions
 
     def __repr__(self):
         contents = '\n'.join("'%s': %s" %
@@ -231,15 +229,15 @@ class Dataset(object):
 
     @property
     def variables(self):
-        return self.store.variables
+        return Frozen(self.store.variables)
 
     @property
     def attributes(self):
-        return self.store.attributes
+        return Frozen(self.store.attributes)
 
     @property
     def dimensions(self):
-        return self.store.dimensions
+        return Frozen(self.store.dimensions)
 
     def copy(self):
         """
@@ -265,25 +263,23 @@ class Dataset(object):
         return iter(self.variables)
 
     @property
-    def _unique_datetimeindex(self):
-        time_indices = [k for k, v in self.indices.iteritems()
-                        if isinstance(v, pd.DatetimeIndex)]
-        if len(time_indices) == 1:
-            return time_indices[0]
-        else:
-            return None
+    def _datetimeindices(self):
+        return [k for k, v in self.indices.iteritems()
+                if isinstance(v, pd.DatetimeIndex)]
 
     def _get_virtual_variable(self, key):
         if key in self.indices:
             return Variable([key], self.indices[key].values)
-        time = self._unique_datetimeindex
-        if time is not None:
-            if key in _DATETIMEINDEX_COMPONENTS:
-                return Variable([time], getattr(self.indices[time], key))
-            elif key == 'season':
-                seasons = np.array(['DJF', 'MAM', 'JJA', 'SON'])
-                month = self.indices[time].month
-                return Variable([time], seasons[(month // 3) % 4])
+        split_key = key.split('.')
+        if len(split_key) == 2:
+            var, suffix = split_key
+            if var in self._datetimeindices:
+                if suffix in _DATETIMEINDEX_COMPONENTS:
+                    return Variable([var], getattr(self.indices[var], suffix))
+                elif suffix == 'season':
+                    seasons = np.array(['DJF', 'MAM', 'JJA', 'SON'])
+                    month = self.indices[var].month
+                    return Variable([var], seasons[(month // 3) % 4])
         raise ValueError('virtual variable %r not found' % key)
 
     def _get_virtual_dataview(self, key):
@@ -300,8 +296,9 @@ class Dataset(object):
         dataset variables or dimensions)
         """
         possible_vars = list(self.dimensions)
-        if self._unique_datetimeindex is not None:
-            possible_vars += _DATETIMEINDEX_COMPONENTS + ['season']
+        for k in self._datetimeindices:
+            for suffix in _DATETIMEINDEX_COMPONENTS + ['season']:
+                possible_vars.append('%s.%s' % (k, suffix))
         return tuple(k for k in possible_vars if k not in self)
 
     def __getitem__(self, key):
@@ -570,49 +567,50 @@ class Dataset(object):
             self.indices.build_index(name)
         return new_var
 
-    def views(self, **slicers):
-        """Return a new object whose contents are a view of a slice from the
-        current object along a specified dimension
+    def indexed_by(self, **indexers):
+        """Return a new dataset with each variable indexed along the specified
+        dimension(s)
+
+        This method selects values from each variable using its `__getitem__`
+        method, except this method does not require knowing the order of
+        each variable's dimensions.
 
         Parameters
         ----------
-        slicers : {dim: slice, ...}
-            A dictionary mapping from dimensions to integers or slice objects.
+        **indexers : {dim: indexer, ...}
+            Keyword arguments with names matching dimensions and values given
+            by integers, slice objects or arrays.
 
         Returns
         -------
-        obj : Data object
-            The returned object has the same attributes, dimensions,
-            variable names and variable attributes as the original.
-            Variables that are not defined along the specified
-            dimensions are viewed in their entirety. Variables that are
-            defined along the specified dimension have their data
-            contents taken along the specified dimension.
-
-            Care must be taken since modifying (most) values in the returned
-            object will result in modification to the parent object.
+        obj : Dataset
+            A new Dataset with the same contents as this dataset, except each
+            variable and dimension is indexed by the appropriate indexers. In
+            general, each variable's data will be a view of the variable's data
+            in this dataset, unless numpy fancy indexing was triggered by using
+            an array indexer, in which case the data will be a copy.
 
         See Also
         --------
-        view
-        numpy.take
-        Variable.take
+        Dataset.labeled_by
+        Dataset.indexed_by
+        Variable.indexed_by
         """
-        invalid = [k for k in slicers if not k in self.dimensions]
+        invalid = [k for k in indexers if not k in self.dimensions]
         if invalid:
             raise ValueError("dimensions %r do not exist" % invalid)
 
-        # all slicers should be int, slice or np.ndarrays
-        slicers = {k: np.asarray(v) if not isinstance(v, (int, slice)) else v
-                   for k, v in slicers.iteritems()}
+        # all indexers should be int, slice or np.ndarrays
+        indexers = {k: np.asarray(v) if not isinstance(v, (int, slice)) else v
+                   for k, v in indexers.iteritems()}
 
         variables = OrderedDict()
         for name, var in self.variables.iteritems():
-            var_slicers = {k: v for k, v in slicers.iteritems()
+            var_indexers = {k: v for k, v in indexers.iteritems()
                            if k in var.dimensions}
-            variables[name] = var.views(**var_slicers)
+            variables[name] = var.indexed_by(**var_indexers)
 
-        indices = {k: (v[slicers[k]] if k in slicers else v)
+        indices = {k: (v[indexers[k]] if k in indexers else v)
                    for k, v in self.indices.iteritems()}
         # filter out non-indices (indices for which one value was selected)
         indices = {k: v for k, v in indices.iteritems()
@@ -639,9 +637,46 @@ class Dataset(object):
                 # later)
         return indexer
 
-    def loc_views(self, **slicers):
-        return self.views(**{k: self._loc_to_int_indexer(k, v)
-                             for k, v in slicers.iteritems()})
+    def labeled_by(self, **indexers):
+        """Return a new dataset with each variable indexed by coordinate labels
+        along the specified dimension(s)
+
+        In contrast to `Dataset.indexed_by`, indexers for this method should
+        use coordinate values instead of integers.
+
+        Under the hood, this method is powered by using Panda's powerful Index
+        objects. This makes label based indexing essentially just as fast as
+        using integer indexing.
+
+        It also means this method uses pandas's (well documented) logic for
+        indexing. This means you can use string shortcuts for datetime indexes
+        (e.g., '2000-01' to select all values in January 2000). It also means
+        that slices are treated as inclusive of both the start and stop values,
+        unlike normal Python indexing.
+
+        Parameters
+        ----------
+        **indexers : {dim: indexer, ...}
+            Keyword arguments with names matching dimensions and values given
+            by individual, slices or arrays of coordinate values.
+
+        Returns
+        -------
+        obj : Dataset
+            A new Dataset with the same contents as this dataset, except each
+            variable and dimension is indexed by the appropriate indexers. In
+            general, each variable's data will be a view of the variable's data
+            in this dataset, unless numpy fancy indexing was triggered by using
+            an array indexer, in which case the data will be a copy.
+
+        See Also
+        --------
+        Dataset.labeled_by
+        Dataset.indexed_by
+        Variable.indexed_by
+        """
+        return self.indexed_by(**{k: self._loc_to_int_indexer(k, v)
+                                  for k, v in indexers.iteritems()})
 
     def renamed(self, name_dict):
         """
@@ -813,177 +848,26 @@ class Dataset(object):
         ds.add_variable(name, variable)
         return ds
 
-    def iterator(self, dim=None, views=False):
-        """Iterator along a data dimension
+    def iterator(self, dimension):
+        """Iterate along a data dimension
 
-        Return an iterator yielding (coordinate, data_object) pairs
-        that are singleton along the specified dimension
+        Returns an iterator yielding (coordinate, dataset) pairs for each
+        coordinate value along the specified dimension.
 
         Parameters
         ----------
-        dim : string, optional
-            The dimension along which you want to iterate. If None
-            (default), then the iterator operates along the record
-            dimension; if there is no record dimension, an exception
-            will be raised.
-        views : boolean, optional
-            If True, the iterator will give views of the data along
-            the dimension, otherwise copies.
+        dimension : string
+            The dimension along which to iterate.
 
         Returns
         -------
         it : iterator
-            The returned iterator yields pairs of scalar-valued
-            coordinate variables and data objects. The yielded data
-            objects contain *copies* onto the underlying numpy arrays of
-            the original data object. If the data object does not have
-            a coordinate variable with the same name as the specified
-            dimension, then the returned coordinate value is None. If
-            multiple dimensions of a variable equal dim (e.g. a
-            correlation matrix), then that variable is iterated along
-            the first matching dimension.
-
-        Examples
-        --------
-        >>> d = Data()
-        >>> d.create_coordinate(name='x', data=numpy.arange(10))
-        >>> d.create_coordinate(name='y', data=numpy.arange(20))
-        >>> print d
-
-        dimensions:
-          name            | length
-         ===========================
-          x               | 10
-          y               | 20
-
-        variables:
-          name            | dtype   | shape           | dimensions
-         =====================================================================
-          x               | int32   | (10,)           | ('x',)
-          y               | int32   | (20,)           | ('y',)
-
-        attributes:
-          None
-
-        >>> i = d.iterator(dim='x')
-        >>> (a, b) = i.next()
-        >>> print a
-
-        dtype:
-          int32
-
-        dimensions:
-          name            | length
-         ===========================
-          x               | 1
-
-        attributes:
-          None
-
-        >>> print b
-
-        dimensions:
-          name            | length
-         ===========================
-          x               | 1
-          y               | 20
-
-        variables:
-          name            | dtype   | shape           | dimensions
-         =====================================================================
-          x               | int32   | (1,)            | ('x',)
-          y               | int32   | (20,)           | ('y',)
-
-        attributes:
-          None
-
+            The returned iterator yields pairs of scalar-valued coordinate
+            variables and Dataset objects.
         """
-        # Determine the size of the dim we're about to iterate over
-        n = self.dimensions[dim]
-        # Iterate over the object
-        if dim in self.coordinates:
-            coord = self.variables[dim]
-            if views:
-                for i in xrange(n):
-                    s = slice(i, i + 1)
-                    yield (coord.view(s, dim=dim),
-                           self.view(s, dim=dim))
-            else:
-                for i in xrange(n):
-                    indices = np.array([i])
-                    yield (coord.take(indices, dim=dim),
-                           self.take(indices, dim=dim))
-        else:
-            if views:
-                for i in xrange(n):
-                    yield (None, self.view(slice(i, i + 1), dim=dim))
-            else:
-                for i in xrange(n):
-                    yield (None, self.take(np.array([i]), dim=dim))
-
-    def iterarray(self, var, dim=None):
-        """Iterator along a data dimension returning the corresponding slices
-        of the underlying data of a variable.
-
-        Return an iterator yielding (scalar, ndarray) pairs that are singleton
-        along the specified dimension.  While iterator is more general, this
-        method has less overhead and in turn should be considerably faster.
-
-        Parameters
-        ----------
-        var : string
-            The variable over which you want to iterate.
-
-        dim : string, optional
-            The dimension along which you want to iterate. If None
-            (default), then the iterator operates along the record
-            dimension; if there is no record dimension, an exception
-            will be raised.
-
-        Returns
-        -------
-        it : iterator
-            The returned iterator yields pairs of scalar-valued
-            and ndarray objects. The yielded data objects contain *views*
-            onto the underlying numpy arrays of the original data object.
-
-        Examples
-        --------
-        >>> d = Data()
-        >>> d.create_coordinate(name='t', data=numpy.arange(5))
-        >>> d.create_dimension(name='h', length=3)
-        >>> d.create_variable(name='x', dim=('t', 'h'),\
-        ...     data=numpy.random.random((10, 3,)))
-        >>> print d['x'].data
-        [[ 0.33499995  0.47606901  0.41334325]
-         [ 0.20229308  0.73693437  0.97451746]
-         [ 0.40020704  0.29763575  0.85588908]
-         [ 0.44114434  0.79233816  0.59115313]
-         [ 0.18583972  0.55084889  0.95478946]]
-        >>> i = d.iterarray(var='x', dim='t')
-        >>> (a, b) = i.next()
-        >>> print a
-        0
-        >>> print b
-        [[ 0.33499995  0.47606901  0.41334325]]
-        """
-        # Get a reference to the underlying ndarray for the desired variable
-        # and build a list of slice objects
-        data = self.variables[var].data
-        axis = list(self.variables[var].dimensions).index(dim)
-        slicer = [slice(None)] * data.ndim
-        # Determine the size of the dim we're about to iterate over
-        n = self.dimensions[dim]
-        # Iterate over dim returning views of the variable.
-        if dim in self.coordinates:
-            coord = self.variables[dim].data
-            for i in xrange(n):
-                slicer[axis] = slice(i, i + 1)
-                yield (coord[i], data[slicer])
-        else:
-            for i in xrange(n):
-                slicer[axis] = slice(i, i + 1)
-                yield (None, data[slicer])
+        coord = self.variables[dimension]
+        for i in xrange(self.dimensions[dimension]):
+            yield (coord[i], self.indexed_by(**{dimension: i}))
 
 
 if __name__ == "__main__":
