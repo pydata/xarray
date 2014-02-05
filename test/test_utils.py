@@ -69,7 +69,7 @@ class TestNum2DatetimeIndex(TestCase):
                 self.assertArrayEqual(expected, actual)
 
 
-class TestDictionaryChecks(TestCase):
+class TestDictionaries(TestCase):
     def setUp(self):
         self.x = {'a': 'A', 'b': 'B'}
         self.y = {'c': 'C', 'b': 'B'}
@@ -88,3 +88,14 @@ class TestDictionaryChecks(TestCase):
                           utils.ordered_dict_intersection(self.x, self.y))
         self.assertEquals({'b': 'B'},
                           utils.ordered_dict_intersection(self.x, self.z))
+
+    def test_frozen(self):
+        x = utils.Frozen(self.x)
+        with self.assertRaises(TypeError):
+            x['foo'] = 'bar'
+        with self.assertRaises(TypeError):
+            del x['a']
+        with self.assertRaises(AttributeError):
+            x.update(self.y)
+        self.assertEquals(x.mapping, self.x)
+

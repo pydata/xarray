@@ -1,6 +1,6 @@
 import netCDF4 as nc4
 import operator
-from collections import OrderedDict
+from collections import OrderedDict, Mapping
 from datetime import datetime
 
 import numpy as np
@@ -172,22 +172,29 @@ def ordered_dict_intersection(first_dict, second_dict, compat=operator.eq):
     return new_dict
 
 
-class FrozenOrderedDict(OrderedDict):
-    """A subclass of OrderedDict whose contents are frozen after initialization
-    to prevent tampering
+class Frozen(Mapping):
+    """Wrapper around an object implementing the mapping interface to make it
+    immutable. If you really want to modify the mapping, the mutable version is
+    saved under the `mapping` attribute.
     """
-    def __init__(self, *args, **kwds):
-        # bypass the disabled __setitem__ method
-        # initialize as an empty OrderedDict
-        super(FrozenOrderedDict, self).__init__()
-        # Capture arguments in an OrderedDict
-        args_dict = OrderedDict(*args, **kwds)
-        # Call __setitem__ of the superclass
-        for (key, value) in args_dict.iteritems():
-            super(FrozenOrderedDict, self).__setitem__(key, value)
+    def __init__(self, mapping):
+        self.mapping = mapping
 
-    def _not_implemented(self, *args, **kwargs):
-        raise TypeError('%s is immutable' % type(self).__name__)
+    def __getitem__(self, key):
+        return self.mapping[key]
 
-    __setitem__ = __delitem__ = setdefault = update = pop = popitem = clear = \
-        _not_implemented
+    def __iter__(self):
+        return iter(self.mapping)
+
+    def __len__(self):
+        return len(self.mapping)
+
+    def __contains__(self, key):
+        return key in self.mapping
+
+    def __repr__(self):
+        return '%s(%r)' % (type(self).__name__, self.mapping)
+
+
+def FrozenOrderedDict(*args, **kwargs):
+    return Frozen(OrderedDict(*args, **kwargs))

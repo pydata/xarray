@@ -9,7 +9,7 @@ import numpy as np
 from scipy.io import netcdf
 from collections import OrderedDict
 
-from utils import FrozenOrderedDict
+from utils import FrozenOrderedDict, Frozen
 from variable import Variable
 import conventions
 
@@ -83,11 +83,11 @@ class ScipyDataStore(AbstractDataStore):
 
     @property
     def attributes(self):
-        return self.ds._attributes
+        return Frozen(self.ds._attributes)
 
     @property
     def dimensions(self):
-        return self.ds.dimensions
+        return Frozen(self.ds.dimensions)
 
     def set_dimension(self, name, length):
         """Set a dimension length"""

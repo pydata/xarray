@@ -8,7 +8,7 @@ from cStringIO import StringIO
 from collections import OrderedDict, MutableMapping
 
 from dataview import DataView
-from utils import FrozenOrderedDict
+from utils import FrozenOrderedDict, Frozen
 from variable import Variable
 import backends, conventions, utils
 
@@ -94,8 +94,6 @@ def open_dataset(nc, *args, **kwargs):
 
 class _IndicesCache(MutableMapping):
     """Cache for Dataset indices"""
-    # MutableMapping subclasses should implement:
-    # __getitem__, __setitem__, __delitem__, __iter__, __len__
     def __init__(self, dataset, cache=None):
         self.dataset = dataset
         self.cache = {} if cache is None else dict(cache)
@@ -130,7 +128,7 @@ class _IndicesCache(MutableMapping):
         return len(self.dataset.dimensions)
 
     def __contains__(self, key):
-        return key in self.cache
+        return key in self.dataset.dimensions
 
     def __repr__(self):
         contents = '\n'.join("'%s': %s" %
@@ -231,15 +229,15 @@ class Dataset(object):
 
     @property
     def variables(self):
-        return self.store.variables
+        return Frozen(self.store.variables)
 
     @property
     def attributes(self):
-        return self.store.attributes
+        return Frozen(self.store.attributes)
 
     @property
     def dimensions(self):
-        return self.store.dimensions
+        return Frozen(self.store.dimensions)
 
     def copy(self):
         """
