@@ -166,7 +166,7 @@ class Variable(_DataWrapperMixin):
             contents = ': %s' % self.data
         return '<scidata.%s%s>' % (type(self).__name__, contents)
 
-    def views(self, slicers):
+    def views(self, **slicers):
         """Return a new Variable object whose contents are a view of the object
         sliced along a specified dimension.
 
@@ -191,37 +191,15 @@ class Variable(_DataWrapperMixin):
         view
         take
         """
+        invalid = [k for k in slicers if not k in self.dimensions]
+        if invalid:
+            raise ValueError("dimensions %r do not exist" % invalid)
+
         slices = [slice(None)] * self.data.ndim
         for i, dim in enumerate(self.dimensions):
             if dim in slicers:
                 slices[i] = slicers[dim]
         return self[tuple(slices)]
-
-    def view(self, s, dim):
-        """Return a new Variable object whose contents are a view of the object
-        sliced along a specified dimension.
-
-        Parameters
-        ----------
-        s : slice
-            The slice representing the range of the values to extract.
-        dim : string
-            The dimension to slice along.
-
-        Returns
-        -------
-        obj : Variable object
-            The returned object has the same attributes and dimensions
-            as the original. Data contents are taken along the
-            specified dimension.  Care must be taken since modifying (most)
-            values in the returned object will result in modification to the
-            parent object.
-
-        See Also
-        --------
-        take
-        """
-        return self.views({dim: s})
 
     def transpose(self, *dimensions):
         """Return a new Variable object with transposed dimensions
@@ -251,24 +229,24 @@ class Variable(_DataWrapperMixin):
         data = self.data.transpose(*axes)
         return Variable(dimensions, data, self.attributes)
 
-    def collapsed(self, f, dimension=None, axis=None, **kwargs):
-        """Collapse this variable by applying `f` along some dimension(s)
+    def collapsed(self, func, dimension=None, axis=None, **kwargs):
+        """Collapse this variable by applying `func` along some dimension(s)
 
         Parameters
         ----------
-        f : function
+        func : function
             Function which can be called in the form
-            `f(x, axis=axis, **kwargs)` to return the result of collapsing an
+            `func(x, axis=axis, **kwargs)` to return the result of collapsing an
             np.ndarray over an integer valued axis.
         dimension : str or sequence of str, optional
-            Dimension(s) over which to repeatedly apply `f`.
+            Dimension(s) over which to repeatedly apply `func`.
         axis : int or sequence of int, optional
-            Axis(es) over which to repeatedly apply `f`. Only one of the
+            Axis(es) over which to repeatedly apply `func`. Only one of the
             'dimension' and 'axis' arguments can be supplied. If neither are
             supplied, then the collapse is calculated over the flattened array
-            (by calling `f(x)` without an axis argument).
+            (by calling `func(x)` without an axis argument).
         **kwargs : dict
-            Additional keyword arguments passed on to `f`.
+            Additional keyword arguments passed on to `func`.
 
         Note
         ----
@@ -297,21 +275,19 @@ class Variable(_DataWrapperMixin):
                 dimension = [dimension]
             var = self
             for dim in dimension:
-                var = var._collapsed(f, dim, **kwargs)
+                var = var._collapsed(func, dim, **kwargs)
         else:
-            attr = self._attributes_with_added_cell_method(
-                ': '.join(self.dimensions) + ': ' + f.__name__)
-            var = Variable([], f(self.data, **kwargs), attr)
+            var = Variable([], func(self.data, **kwargs), self.attributes)
+            var._append_to_cell_methods(': '.join(self.dimensions)
+                                        + ': ' + func.__name__)
         return var
 
-    def _attributes_with_added_cell_method(self, string):
-        attr = OrderedDict(self.attributes)
-        if 'cell_methods' in attr:
-            base = attr['cell_methods'] + ' '
+    def _append_to_cell_methods(self, string):
+        if 'cell_methods' in self.attributes:
+            base = self.attributes['cell_methods'] + ' '
         else:
             base = ''
-        attr['cell_methods'] = base + string
-        return attr
+        self.attributes['cell_methods'] = base + string
 
     def _collapsed(self, f, dim, **kwargs):
         """Collapse a single dimension"""
@@ -319,9 +295,56 @@ class Variable(_DataWrapperMixin):
         dims = tuple(dim for i, dim in enumerate(self.dimensions)
                      if axis not in [i, i - self.ndim])
         data = f(self.data, axis=axis, **kwargs)
-        attr = self._attributes_with_added_cell_method(
-            self.dimensions[axis] + ': ' + f.__name__)
-        return Variable(dims, data, attr)
+        new_var = Variable(dims, data, self.attributes)
+        new_var._append_to_cell_methods(self.dimensions[axis]
+                                        + ': ' + f.__name__)
+        return new_var
+
+    def aggregated_by(self, func, new_dim_name, groups, **kwargs):
+        """Aggregate this variable by applying `func` to grouped elements
+
+        Parameters
+        ----------
+        func : function
+            Function which can be called in the form
+            `func(x, axis=axis, **kwargs)` to reduce an np.ndarray over an
+            integer valued axis.
+        new_dim_name : str or sequence of str, optional
+            Name of the new dimension to create.
+        groups : Variable
+            1D variable which contains the values by which to group.
+        **kwargs : dict
+            Additional keyword arguments passed on to `func`.
+
+        Returns
+        -------
+        unique : Variable
+            1D variable of unique values in group, along the dimension given by
+            `new_dim_name`.
+        aggregated : Variable
+            Variable with aggregated data and the original dimension from
+            `groups` replaced by `new_dim_name`.
+        """
+        if groups.ndim != 1:
+            # TODO: remove this limitation?
+            raise ValueError('aggregation variables must be 1 dimensional')
+        dim = groups.dimensions[0]
+        axis = self.dimensions.index(dim)
+        if groups.size != self.shape[axis]:
+            raise ValueError('the aggregation variable\'s length does not '
+                             'match the length of this variable along its '
+                             'dimension')
+        unique_values = np.unique(groups.data)
+        aggregated = [self.views(**{dim: groups == u}).collapsed(
+                          func, dim, axis=None, **kwargs)
+                      for u in unique_values]
+        stacked = stack_variables(aggregated, new_dim_name, unique_values.size)
+        ordered_dims = [new_dim_name if d == dim else d for d in self.dimensions]
+        unique = Variable([new_dim_name], unique_values)
+        return unique, stacked.transpose(*ordered_dims)
+
+    def __array_wrap__(self, result):
+        return Variable(self.dimensions, result, self.attributes)
 
     @staticmethod
     def _unary_op(f):
@@ -340,8 +363,11 @@ class Variable(_DataWrapperMixin):
             new_data = (f(self_data, other_data)
                         if not reflexive
                         else f(other_data, self_data))
-            new_attr = utils.safe_merge(_math_safe_attributes(self),
-                                        _math_safe_attributes(other))
+            if hasattr(other, 'attributes'):
+                new_attr = utils.ordered_dict_intersection(self.attributes,
+                                                           other.attributes)
+            else:
+                new_attr = self.attributes
             return Variable(new_dims, new_data, new_attr)
         return func
 
@@ -354,18 +380,69 @@ class Variable(_DataWrapperMixin):
                 raise ValueError('dimensions cannot change for in-place '
                                  'operations')
             self.data = f(self_data, other_data)
-            utils.safe_update(self.attributes, _math_safe_attributes(other))
+            if hasattr(other, 'attributes'):
+                utils.remove_incompatible_items(self.attributes, other)
             return self
         return func
 
-    # @staticmethod
-    # def collapse_method(f):
-    #     @functools.wraps(f)
-    #     def func(self, dimension=None, axis=None):
-    #         return self.collapsed(f, dimension, axis)
-    #     return func
-
 ops.inject_special_operations(Variable)
+
+
+def stack_variables(variables, dim, length=None,
+                    allow_conflicting_attributes=False):
+    """Stack variables along a new dimension
+
+    Parameters
+    ----------
+    variables : iterable of Variable
+        Variables to stack.
+    dim : str
+        Name of the new dimension
+    length : int, optional
+        Length of the new dimension. This is used to allocate the new data
+        array for the stacked variable data before iterating over all items,
+        which can be more memory efficient.
+    allow_conflicting_attributes : bool, optional
+        Whether or not to enforce safely checks to require identical attribute
+        data. If `True`, each variable be applied in turn to determien the new
+        attributes.
+
+    Returns
+    -------
+    stacked : Variable
+        Stacked variable formed by stacking all the supplied variables along
+        the new dimension. The new dimension will be the first dimension in the
+        stacked variable.
+    """
+    if length is None:
+        # so much for lazy evaluation! we need to figure out how many variables
+        # there are
+        variables = list(variables)
+        length = len(variables)
+
+    i = -1
+    for i, var in enumerate(variables):
+        if i == 0:
+            new_data = np.empty((length,) + var.shape, dtype=var.dtype)
+            old_dimensions = var.dimensions
+            attributes = OrderedDict(var.attributes)
+        else:
+            if i == length:
+                raise ValueError('too many stack variables; supplied length '
+                                 'was %s' % length)
+            if var.dimensions != old_dimensions:
+                raise ValueError('inconsistent dimensions between merge '
+                                 'variables')
+            if not allow_conflicting_attributes:
+                utils.update_safety_check(attributes, var.attributes)
+            attributes.update(var.attributes)
+        new_data[i] = var.data
+
+    if i + 1 != length:
+        raise ValueError('only %s stack variables; supplied length '
+                         'was %s' % (i + 1, length))
+
+    return Variable((dim,) + old_dimensions, new_data, attributes)
 
 
 def _broadcast_var_data(self, other):

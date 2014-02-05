@@ -53,6 +53,18 @@ class _DataWrapperMixin(object):
     def __long__(self):
         return long(self._data)
 
+    # adapted from pandas.NDFrame
+    # https://github.com/pydata/pandas/blob/master/pandas/core/generic.py#L699
+
+    def __array__(self, dtype=None):
+        return self.data
+
+    # @property
+    # def __array_interface__(self):
+    #    data = self.data
+    #    return dict(typestr=data.dtype.str, shape=data.shape, data=data)
+
+
     _collapse_method_docstring = \
         """Collapse this {cls}'s data' by applying `{name}` along some
         dimension(s)
@@ -93,3 +105,14 @@ class _DataWrapperMixin(object):
             name=('' if module is None else module + '.') + name,
             cls=cls.__name__)
         return func
+
+    # we want something like this, right?
+    # def apply(self, func, dimension=None, axis=None, **kwargs):
+    #     if dimension is not None and axis is not None:
+    #         raise ValueError("cannot supply both 'axis' and 'dimension' "
+    #                          "arguments")
+    #     if axis is None:
+    #         axis = self.dimensions.index(dimension)
+    #     f = self._unary_op(partial(func, axis=axis, **kwargs))
+    #     return f(self)
+

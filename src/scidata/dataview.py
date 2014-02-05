@@ -77,7 +77,7 @@ class DataView(_DataWrapperMixin):
 
     def __getitem__(self, key):
         slicers = dict(self._key_to_slicers(key))
-        return type(self)(self.dataset.views(slicers), self.name)
+        return type(self)(self.dataset.views(**slicers), self.name)
 
     def __setitem__(self, key, value):
         self.variable[key] = value
@@ -128,6 +128,17 @@ class DataView(_DataWrapperMixin):
             contents = ': %s' % self.data
         return '<scidata.%s %r%s>' % (type(self).__name__, self.name, contents)
 
+    def views(self, **slicers):
+        """Return a new Dataset whose contents are a view of a slice from the
+        current dataset along specified dimensions
+
+        See Also
+        --------
+        Dataset.views
+        """
+        ds = self.dataset.views(**slicers)
+        return type(self)(ds, self.name)
+
     def renamed(self, new_name):
         """Returns a new DataView with this DataView's focus variable renamed
         """
@@ -171,24 +182,24 @@ class DataView(_DataWrapperMixin):
         """
         return self.replace_focus(self.variable.transpose(*dimensions))
 
-    def collapsed(self, f, dimension=None, axis=None, **kwargs):
-        """Collapse this variable by applying `f` along some dimension(s)
+    def collapsed(self, func, dimension=None, axis=None, **kwargs):
+        """Collapse this variable by applying `func` along some dimension(s)
 
         Parameters
         ----------
-        f : function
+        func : function
             Function which can be called in the form
             `f(x, axis=axis, **kwargs)` to return the result of collapsing an
             np.ndarray over an integer valued axis.
         dimension : str or sequence of str, optional
-            Dimension(s) over which to repeatedly apply `f`.
+            Dimension(s) over which to repeatedly apply `func`.
         axis : int or sequence of int, optional
-            Axis(es) over which to repeatedly apply `f`. Only one of the
+            Axis(es) over which to repeatedly apply `func`. Only one of the
             'dimension' and 'axis' arguments can be supplied. If neither are
             supplied, then the collapse is calculated over the flattened array
             (by calling `f(x)` without an axis argument).
         **kwargs : dict
-            Additional keyword arguments passed on to `f`.
+            Additional keyword arguments passed on to `func`.
 
         Note
         ----
@@ -202,7 +213,7 @@ class DataView(_DataWrapperMixin):
             DataView with this dataview's variable replaced with a variable
             with summarized data and the indicated dimension(s) removed.
         """
-        var = self.variable.collapsed(f, dimension, axis, **kwargs)
+        var = self.variable.collapsed(func, dimension, axis, **kwargs)
         dropped_dims = set(self.dimensions) - set(var.dimensions)
         # For now, take an aggressive strategy of removing all variables
         # associated with any dropped dimensions
@@ -213,6 +224,43 @@ class DataView(_DataWrapperMixin):
         ds = self.dataset.unselect(*drop)
         ds.add_variable(self.name, var)
         return type(self)(ds, self.name)
+
+    def aggregated_by(self, func, new_dim_name, **kwargs):
+        """Aggregate this dataview by applying `func` to grouped elements
+
+        Parameters
+        ----------
+        func : function
+            Function which can be called in the form
+            `func(x, axis=axis, **kwargs)` to reduce an np.ndarray over an
+            integer valued axis.
+        new_dim_name : str or sequence of str, optional
+            Name of the variable in this dataview's dataset by which to group
+            variable elements. The dimension along which this variable exists
+            will be replaced by this name.
+        **kwargs : dict
+            Additional keyword arguments passed on to `func`.
+
+        Returns
+        -------
+        aggregated : DataView
+            DataView with aggregated data and the new dimension `new_dim_name`.
+        """
+        agg_var = self.dataset[new_dim_name]
+        unique, aggregated = self.variable.aggregated_by(
+            func, new_dim_name, agg_var, **kwargs)
+        # TODO: add options for how to summarize variables along aggregated
+        # dimensions instead of just dropping them
+        drop = ({self.name, new_dim_name} |
+                {k for k, v in self.dataset.variables.iteritems()
+                if any(dim in agg_var.dimensions for dim in v.dimensions)})
+        ds = self.dataset.unselect(*drop)
+        ds.add_coordinate(unique)
+        ds.add_variable(self.name, aggregated)
+        return type(self)(ds, self.name)
+
+    def __array_wrap__(self, result):
+        return self.replace_focus(self.variable.__array_wrap__(result))
 
     @staticmethod
     def _unary_op(f):
@@ -256,4 +304,4 @@ class DataView(_DataWrapperMixin):
         return func
 
 
-ops.inject_special_operations(DataView)
+ops.inject_special_operations(DataView, priority=60)

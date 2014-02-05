@@ -1,7 +1,7 @@
 import numpy as np
 
 from scidata import Dataset, DataView, Variable
-from . import TestCase
+from . import TestCase, ReturnItem
 
 
 class TestDataView(TestCase):
@@ -32,20 +32,36 @@ class TestDataView(TestCase):
             self.assertArrayEqual(v, self.ds.indices[k])
 
     def test_items(self):
-        self.assertVarEqual(self.dv[0], self.v[0])
-        self.assertEqual(self.dv[0].dataset, self.ds.views({'x': 0}))
-        self.assertVarEqual(self.dv[:3, :5], self.v[:3, :5])
-        self.assertEqual(self.dv[:3, :5].dataset,
-                         self.ds.views({'x': slice(3), 'y': slice(5)}))
+        # test indexing
+        x = self.ds['x']
+        y = self.ds['y']
+        I = ReturnItem()
+        for i in [I[:], I[...], I[x.data], I[x.variable], I[x], I[x, y],
+                  I[x.data > -1], I[x.variable > -1], I[x > -1],
+                  I[x > -1, y > -1]]:
+            self.assertVarEqual(self.dv, self.dv[i])
+        for i in [I[0], I[:, 0], I[:3, :2],
+                  I[x.data[:3]], I[x.variable[:3]], I[x[:3]], I[x[:3], y[:4]],
+                  I[x.data > 3], I[x.variable > 3], I[x > 3], I[x > 3, y > 3]]:
+            self.assertVarEqual(self.v[i], self.dv[i])
+        # test index
         self.assertEqual(list(self.dv[0].indices), ['y'])
+        # test matches views
+        self.assertEqual(self.dv[0].dataset, self.ds.views(x=0))
+        self.assertEqual(self.dv[:3, :5].dataset,
+                         self.ds.views(x=slice(3), y=slice(5)))
+
+    def test_views(self):
+        self.assertViewEqual(self.dv, self.dv.views(x=slice(None)))
+        self.assertViewEqual(self.dv[:3], self.dv.views(x=slice(3)))
 
     def test_renamed(self):
         renamed = self.dv.renamed('bar')
         self.assertEqual(renamed.dataset, self.ds.renamed({'foo': 'bar'}))
         self.assertEqual(renamed.name, 'bar')
 
-    def test_to_dataview(self):
-        dv = self.ds.to_dataview('foo')
+    def test_dataset_getitem(self):
+        dv = self.ds['foo']
         self.assertViewEqual(dv, self.dv)
 
     def test_math(self):
@@ -86,3 +102,16 @@ class TestDataView(TestCase):
         self.assertVarEqual(self.dv.collapsed(np.mean, 'x'),
                             self.v.collapsed(np.mean, 'x'))
         # needs more...
+        # should check which extra dimensions are dropped
+
+    def test_aggregated_by(self):
+        agg_var = Variable(['y'], np.array(['a'] * 9 + ['c'] + ['b'] * 7 +
+                                           ['c'] * 3))
+        self.ds.add_variable('abc', agg_var)
+        expected_unique, expected_var = \
+            self.dv.variable.aggregated_by(np.mean, 'abc', agg_var)
+        expected = DataView(Dataset(
+            {'foo': expected_var, 'x': self.ds.variables['x'],
+             'abc': expected_unique}), 'foo')
+        actual = self.dv.aggregated_by(np.mean, 'abc')
+        self.assertViewEqual(expected, actual)

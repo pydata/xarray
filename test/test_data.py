@@ -22,9 +22,9 @@ _testdim = sorted(_dims.keys())[0]
 
 def create_test_data(store=None):
     obj = Dataset(store=store)
-    obj.create_dimension('time', 1000)
+    obj.add_dimension('time', 1000)
     for d, l in sorted(_dims.items()):
-        obj.create_dimension(d, l)
+        obj.add_dimension(d, l)
         var = obj.create_variable(name=d, dims=(d,),
                                   data=np.arange(l, dtype=np.int32),
                                   attributes={'units':'integers'})
@@ -83,20 +83,20 @@ class DataTest(TestCase):
 
     def test_dimension(self):
         a = Dataset()
-        a.create_dimension('time', 10)
-        a.create_dimension('x', 5)
+        a.add_dimension('time', 10)
+        a.add_dimension('x', 5)
         # prevent duplicate creation
-        self.assertRaises(ValueError, a.create_dimension, 'time', 0)
+        self.assertRaises(ValueError, a.add_dimension, 'time', 0)
         # length must be integer
-        self.assertRaises(ValueError, a.create_dimension, 'foo', 'a')
-        self.assertRaises(TypeError, a.create_dimension, 'foo', [1,])
-        self.assertRaises(ValueError, a.create_dimension, 'foo', -1)
+        self.assertRaises(ValueError, a.add_dimension, 'foo', 'a')
+        self.assertRaises(TypeError, a.add_dimension, 'foo', [1,])
+        self.assertRaises(ValueError, a.add_dimension, 'foo', -1)
         self.assertTrue('foo' not in a.dimensions)
 
     def test_variable(self):
         a = Dataset()
-        a.create_dimension('time', 10)
-        a.create_dimension('x', 3)
+        a.add_dimension('time', 10)
+        a.add_dimension('x', 3)
         d = np.random.random((10, 3))
         a.create_variable(name='foo', dims=('time', 'x',), data=d)
         self.assertTrue('foo' in a.variables)
@@ -142,7 +142,7 @@ class DataTest(TestCase):
         self.assertTrue('x' in a.coordinates)
         self.assertVarEqual(a.coordinates['x'], a.variables['x'])
         b = Dataset()
-        b.create_dimension('x', vec.size)
+        b.add_dimension('x', vec.size)
         b.create_variable('x', dims=('x',), data=vec, attributes=attributes)
         self.assertVarEqual(a['x'], b['x'])
         self.assertEquals(a.dimensions, b.dimensions)
@@ -200,16 +200,10 @@ class DataTest(TestCase):
         self.assertRaises(ValueError, b.attributes.__setitem__, 'foo', np.zeros((2, 2)))
         self.assertRaises(ValueError, b.attributes.__setitem__, 'foo', dict())
 
-    def test_view(self):
-        data = create_test_data(self.get_store())
-        slicedim = _testdim
-        self.assertEqual(data.view(slice(10), slicedim),
-                         data.views({slicedim: slice(10)}))
-
     def test_views(self):
         data = create_test_data(self.get_store())
         slicers = {'dim1': slice(None, None, 2), 'dim2': slice(0, 2)}
-        ret = data.views(slicers)
+        ret = data.views(**slicers)
 
         # Verify that only the specified dimension was altered
         self.assertItemsEqual(data.dimensions, ret.dimensions)
@@ -237,34 +231,35 @@ class DataTest(TestCase):
             # actual.fill(np.pi)
             # np.testing.assert_array_equal(expected, actual)
 
-        self.assertRaises(ValueError, data.views,
-                          {'not_a_dim': slice(0, 2)})
+        with self.assertRaises(ValueError):
+            data.views(not_a_dim=slice(0, 2))
 
-        ret = data.views({'dim1': 0})
+        ret = data.views(dim1=0)
         self.assertEqual({'time': 1000, 'dim2': 50, 'dim3': 10}, ret.dimensions)
 
-        ret = data.views({'time': slice(2), 'dim1': 0, 'dim2': slice(5)})
+        ret = data.views(time=slice(2), dim1=0, dim2=slice(5))
         self.assertEqual({'time': 2, 'dim2': 5, 'dim3': 10}, ret.dimensions)
 
-        ret = data.views({'time': 0, 'dim1': 0, 'dim2': slice(5)})
+        ret = data.views(time=0, dim1=0, dim2=slice(5))
         self.assertItemsEqual({'dim2': 5, 'dim3': 10}, ret.dimensions)
 
     def test_loc_views(self):
         data = create_test_data(self.get_store())
         int_slicers = {'dim1': slice(None, None, 2), 'dim2': slice(0, 2)}
         loc_slicers = {'dim1': slice(None, None, 2), 'dim2': slice(0, 1)}
-        self.assertEqual(data.views(int_slicers), data.loc_views(loc_slicers))
+        self.assertEqual(data.views(**int_slicers),
+                         data.loc_views(**loc_slicers))
         data.create_variable('time', ['time'], np.arange(1000, dtype=np.int32),
                              {'units': 'days since 2000-01-01'})
-        self.assertEqual(data.views({'time': 0}),
-                         data.loc_views({'time': '2000-01-01'}))
-        self.assertEqual(data.views({'time': slice(10)}),
-                         data.loc_views({'time':
-                            slice('2000-01-01', '2000-01-10')}))
-        self.assertEqual(data, data.loc_views({'time': slice('1999', '2005')}))
-        self.assertEqual(data.views({'time': slice(3)}),
-                         data.loc_views({'time':
-                            pd.date_range('2000-01-01', periods=3)}))
+        self.assertEqual(data.views(time=0),
+                         data.loc_views(time='2000-01-01'))
+        self.assertEqual(data.views(time=slice(10)),
+                         data.loc_views(time=slice('2000-01-01',
+                                                   '2000-01-10')))
+        self.assertEqual(data, data.loc_views(time=slice('1999', '2005')))
+        self.assertEqual(data.views(time=slice(3)),
+                         data.loc_views(
+                            time=pd.date_range('2000-01-01', periods=3)))
 
     @unittest.skip('obsolete method should be removed')
     def test_take(self):
@@ -371,7 +366,7 @@ class DataTest(TestCase):
         actual = ds1.merge(ds2)
         self.assertEqual(expected, actual)
         with self.assertRaises(ValueError):
-            ds1.merge(ds2.view(0, 'dim1'))
+            ds1.merge(ds2.views(dim1=0))
         with self.assertRaises(ValueError):
             ds1.merge(ds2.renamed({'var3': 'var1'}))
 

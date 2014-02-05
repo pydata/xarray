@@ -91,7 +91,7 @@ def variable_equal(v1, v2):
     otherwise False
 
     This function is necessary because `v1 == v2` for variables and dataviews
-    does element-wise comparisos (like numpy.ndarrays).
+    does element-wise comparisions (like numpy.ndarrays).
     """
     if (v1.dimensions == v2.dimensions
             and v1.attributes == v2.attributes):
@@ -169,6 +169,49 @@ def safe_merge(first_dict, second_dict, compat=operator.eq):
     update_safety_check(first_dict, second_dict, compat=compat)
     new_dict = OrderedDict(first_dict)
     new_dict.update(second_dict)
+    return new_dict
+
+
+def remove_incompatible_items(first_dict, second_dict, compat=operator.eq):
+    """Remove incompatible items from the first dictionary in-place
+
+    Items are retained if their keys are found in both dictionaries and the
+    values are compatible.
+
+    Parameters
+    ----------
+    first_dict, second_dict : dict-like
+        Mappings to merge.
+    compat : function, optional
+        Binary operator to determine if two values are compatible. By default,
+        checks for equality.
+    """
+    for k, v in second_dict.iteritems():
+        if k in first_dict and not compat(v, first_dict[k]):
+            del k
+
+
+def ordered_dict_intersection(first_dict, second_dict, compat=operator.eq):
+    """Return the intersection of two dictionaries as a new OrderedDict
+
+    Items are retained if their keys are found in both dictionaries and the
+    values are compatible.
+
+    Parameters
+    ----------
+    first_dict, second_dict : dict-like
+        Mappings to merge.
+    compat : function, optional
+        Binary operator to determine if two values are compatible. By default,
+        checks for equality.
+
+    Returns
+    -------
+    intersection : OrderedDict
+        Intersection of the contents.
+    """
+    new_dict = OrderedDict(first_dict)
+    remove_incompatible_items(new_dict, second_dict, compat)
     return new_dict
 
 

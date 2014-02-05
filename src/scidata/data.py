@@ -268,12 +268,14 @@ class Dataset(object):
         try:
             # some stores (e.g., scipy) do not seem to preserve order, so don't
             # require matching dimension or variable order for equality
-            return (dict(self.dimensions) == dict(other.dimensions)
-                    and self.attributes == other.attributes
+            return (sorted(self.dimensions.items())
+                     == sorted(other.dimensions.items())
+                    and sorted(self.attributes.items())
+                        == sorted(other.attributes.items())
                     and all(k1 == k2 and utils.variable_equal(v1, v2)
                             for (k1, v1), (k2, v2)
-                            in zip(dict(self.variables).items(),
-                                   dict(other.variables).items())))
+                            in zip(sorted(self.variables.items()),
+                                   sorted(other.variables.items()))))
         except AttributeError:
             return False
 
@@ -364,24 +366,6 @@ class Dataset(object):
                                           dim_summary,
                                           ' '.join(self.noncoordinates))
 
-    def create_dimension(self, name, length):
-        """Add a dimension to this datasets
-
-        Parameters
-        ----------
-        name : string
-            The name of the new dimension. An exception will be raised if the
-            object already has a dimension with this name.
-        length : int
-            The length of the new dimension; must a be non-negative integer.
-        """
-        if name in self.dimensions:
-            raise ValueError('dimension named %r already exists' % name)
-        length = int(length)
-        if length < 0:
-            raise ValueError('length must be non-negative')
-        self.store.unchecked_set_dimension(name, int(length))
-
     def create_variable(self, name, dims, data, attributes=None):
         """Create a new variable and add it to this dataset
 
@@ -439,19 +423,27 @@ class Dataset(object):
         var : Variable
             Reference to the newly created coordinate variable.
         """
-        # We need to be cleanly roll back the effects of
-        # create_dimension if create_variable fails, otherwise we will
-        # end up in a partial state.
-        if name in self.coordinates:
-            raise ValueError("coordinate named '%s' already exists" % name)
-        var = Variable((name,), np.asarray(data), attributes)
-        if var.ndim != 1:
-            raise ValueError("coordinate data must be 1-dimensional (vector)")
-        if name not in self.dimensions:
-            self.store.unchecked_set_dimension(name, var.size)
-        elif self.dimensions[name] != var.size:
-            raise ValueError('dimension already exists with different length')
-        return self.store.unchecked_set_variable(name, var)
+        # any error checking should be taken care of by add_coordinate
+        v = Variable((name,), np.asarray(data), attributes)
+        return self.add_coordinate(v)
+
+    def add_dimension(self, name, length):
+        """Add a dimension to this dataset
+
+        Parameters
+        ----------
+        name : string
+            The name of the new dimension. An exception will be raised if the
+            object already has a dimension with this name.
+        length : int
+            The length of the new dimension; must a be non-negative integer.
+        """
+        if name in self.dimensions:
+            raise ValueError('dimension named %r already exists' % name)
+        length = int(length)
+        if length < 0:
+            raise ValueError('length must be non-negative')
+        self.store.unchecked_set_dimension(name, int(length))
 
     def add_variable(self, name, var):
         """Add a variable to the dataset
@@ -472,6 +464,34 @@ class Dataset(object):
         if name in self.variables:
             raise ValueError("Variable named %r already exists" % name)
         return self.set_variable(name, var)
+
+    def add_coordinate(self, var):
+        """Add a coordinate variable to the dataset
+
+        Parameters
+        ----------
+        variable : Variable
+            The coordinate variable to be added. Coordinate variables must be
+            1D, and will be added under the same name as their sole dimension.
+
+        Returns
+        -------
+        variable
+            The variable object in the underlying datastore.
+        """
+        # We need to be cleanly roll back the effects of
+        # create_dimension if create_variable fails, otherwise we will
+        # end up in a partial state.
+        name = var.dimensions[0]
+        if name in self.coordinates:
+            raise ValueError("coordinate named '%s' already exists" % name)
+        if var.ndim != 1:
+            raise ValueError("coordinate data must be 1-dimensional (vector)")
+        if name not in self.dimensions:
+            self.store.unchecked_set_dimension(name, var.size)
+        elif self.dimensions[name] != var.size:
+            raise ValueError('dimension already exists with different length')
+        return self.store.unchecked_set_variable(name, var)
 
     def set_variable(self, name, var):
         """Set a variable in the dataset
@@ -498,7 +518,7 @@ class Dataset(object):
             self.indices.build_index(name)
         return new_var
 
-    def views(self, slicers):
+    def views(self, **slicers):
         """Return a new object whose contents are a view of a slice from the
         current object along a specified dimension
 
@@ -526,52 +546,27 @@ class Dataset(object):
         numpy.take
         Variable.take
         """
-        if not all(k in self.dimensions for k in slicers):
-            invalid = [k for k in slicers if not k in self.dimensions]
-            raise ValueError("dimensions %r don't exist" % invalid)
+        invalid = [k for k in slicers if not k in self.dimensions]
+        if invalid:
+            raise ValueError("dimensions %r do not exist" % invalid)
 
-        # slice all variables
+        # all slicers should be int, slice or np.ndarrays
+        slicers = {k: np.asarray(v) if not isinstance(v, (int, slice)) else v
+                   for k, v in slicers.iteritems()}
+
         variables = OrderedDict()
-        for (name, var) in self.variables.iteritems():
-            var_slicers = dict((k, v) for k, v in slicers.iteritems()
-                               if k in var.dimensions)
-            variables[name] = var.views(var_slicers)
+        for name, var in self.variables.iteritems():
+            var_slicers = {k: v for k, v in slicers.iteritems()
+                           if k in var.dimensions}
+            variables[name] = var.views(**var_slicers)
 
-        def search_dim_len(dim, variables):
-            # loop through the variables to find the dimension length, or if
-            # the dimension is not found, return None
-            for var in variables.values():
-                if dim in var.dimensions:
-                    return int(var.shape[var.dimensions.index(dim)])
-            return None
-
-        # update dimensions
-        dimensions = OrderedDict()
-        for dim in self.dimensions:
-            new_len = search_dim_len(dim, variables)
-            if new_len is not None:
-                # dimension length is defined by a new dataset variable
-                dimensions[dim] = new_len
-            elif search_dim_len(dim, self.variables) is None:
-                # dimension length is also not defined by old dataset variables
-                # note: dimensions only defined in old dataset variables are be
-                # dropped
-                if dim not in slicers:
-                    dimensions[dim] = self.dimensions[dim]
-                else:
-                    # figure it by slicing temporary coordinate data
-                    temp_data = np.arange(self.dimensions[dim])
-                    temp_data_sliced = temp_data[slicers[dim]]
-                    new_len = temp_data_sliced.size
-                    if new_len > 0 and temp_data_sliced.ndim > 0:
-                        # drop the dimension if the result of getitem is an
-                        # integer (dimension 0)
-                        dimensions[dim] = new_len
-
-        # slice index cache
-        indices = {k: v[slicers[k]]
-                   if k in slicers and not isinstance(slicers[k], int) else v
-                   for k, v in self.indices.cache.items() if k in dimensions}
+        indices = {k: (v[slicers[k]] if k in slicers else v)
+                   for k, v in self.indices.iteritems()}
+        # filter out non-indices (indices for which one value was selected)
+        indices = {k: v for k, v in indices.iteritems()
+                   if isinstance(v, pd.Index)}
+        dimensions = OrderedDict((k, indices[k].size) for k in self.dimensions
+                                 if k in indices)
         return type(self)(variables, dimensions, self.attributes,
                           indices=indices)
 
@@ -586,48 +581,16 @@ class Dataset(object):
                 indexer = index.get_loc(locations)
             except TypeError:
                 # value is an list or array
-                new_index, indexer = index.reindex(locations)
+                new_index, indexer = index.reindex(np.asarray(locations))
                 if np.any(indexer < 0):
                     raise ValueError('not all values found in index %r' % dim)
                 # FIXME: don't throw away new_index (we'll need to recreate it
                 # later)
         return indexer
 
-    def loc_views(self, slicers):
-        return self.views({k: self._loc_to_int_indexer(k, v)
-                           for k, v in slicers.iteritems()})
-
-    def view(self, s, dim):
-        """Return a new object whose contents are a view of a slice from the
-        current object along a specified dimension
-
-        Parameters
-        ----------
-        s : slice
-            The slice representing the range of the values to extract.
-        dim : string, optional
-            The dimension to slice along.
-
-        Returns
-        -------
-        obj : Data object
-            The returned object has the same attributes, dimensions,
-            variable names and variable attributes as the original.
-            Variables that are not defined along the specified
-            dimensions are viewed in their entirety. Variables that are
-            defined along the specified dimension have their data
-            contents taken along the specified dimension.
-
-            Care must be taken since modifying (most) values in the returned
-            object will result in modification to the parent object.
-
-        See Also
-        --------
-        views
-        numpy.take
-        Variable.take
-        """
-        return self.views({dim: s})
+    def loc_views(self, **slicers):
+        return self.views(**{k: self._loc_to_int_indexer(k, v)
+                             for k, v in slicers.iteritems()})
 
     def renamed(self, name_dict):
         """
@@ -661,6 +624,10 @@ class Dataset(object):
     def merge(self, other):
         """Merge two datasets into a single new dataset
 
+        This method generally not allow for overriding data. Variables,
+        dimensions and indices are checked for conflicts. However, conflicting
+        attributes are removed.
+
         Parameters
         ----------
         other : Dataset
@@ -683,13 +650,18 @@ class Dataset(object):
         new_vars = utils.safe_merge(self.variables, other.variables,
                                     compat=utils.variable_equal)
         new_dims = utils.safe_merge(self.dimensions, other.dimensions)
-        new_attr = utils.safe_merge(self.attributes, other.attributes)
+        new_attr = utils.ordered_dict_intersection(self.attributes,
+                                                   other.attributes)
         new_indices = utils.safe_merge(self.indices.cache, other.indices.cache,
                                        compat=np.array_equal)
         return type(self)(new_vars, new_dims, new_attr, indices=new_indices)
 
     def update(self, other):
         """Update this dataset in place with the contents of another dataset
+
+        Unlike `dict.update`, this method generally not allow for overriding
+        data. Variables, dimensions and indices are checked for conflicts.
+        However, conflicting attributes are removed.
 
         Parameters
         ----------
@@ -709,14 +681,14 @@ class Dataset(object):
         utils.update_safety_check(self.variables, other.variables,
                                   compat=utils.variable_equal)
         utils.update_safety_check(self.dimensions, other.dimensions)
-        utils.update_safety_check(self.attributes, other.attributes)
         utils.update_safety_check(self.indices.cache, other.indices.cache,
                                   compat=np.array_equal)
         # update contents
         self.variables.update(other.variables)
         self.dimensions.update(other.dimensions)
-        self.attributes.update(other.attributes)
         self.indices.update(other.indices.cache)
+        # override attributes without checking for compatibility
+        utils.remove_incompatible_items(self.attributes, other.attributes)
 
     def select(self, *names):
         """Returns a new dataset that contains the named variables

@@ -3,12 +3,7 @@ import numpy as np
 import pandas as pd
 
 from scidata import utils
-from . import TestCase
-
-
-class ReturnItem(object):
-    def __getitem__(self, key):
-        return key
+from . import TestCase, ReturnItem
 
 
 class TestIndexers(TestCase):

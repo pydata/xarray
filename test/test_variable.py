@@ -2,7 +2,8 @@ import warnings
 
 import numpy as np
 
-from scidata import Variable
+from scidata import Variable, Dataset
+from scidata.variable import stack_variables
 from . import TestCase
 
 
@@ -45,27 +46,39 @@ class TestVariable(TestCase):
                          repr(v))
 
     def test_items(self):
-        v = Variable(['time', 'x'], self.d)
+        data = np.random.random((10, 11))
+        v = Variable(['x', 'y'], data)
+        # test slicing
         self.assertVarEqual(v, v[:])
         self.assertVarEqual(v, v[...])
-        self.assertVarEqual(Variable(['x'], self.d[0]), v[0])
-        self.assertVarEqual(
-            Variable(['time'], self.d[:, 0]), v[:, 0])
-        self.assertVarEqual(
-            Variable(['time', 'x'], self.d[:3, :2]), v[:3, :2])
-        # variables should do orthogonal indexing
+        self.assertVarEqual(Variable(['y'], data[0]), v[0])
+        self.assertVarEqual(Variable(['x'], data[:, 0]), v[:, 0])
+        self.assertVarEqual(Variable(['x', 'y'], data[:3, :2]), v[:3, :2])
+        # test array indexing
+        x = Variable(['x'], np.arange(10))
+        y = Variable(['y'], np.arange(11))
+        self.assertVarEqual(v, v[x.data])
+        self.assertVarEqual(v, v[x])
+        self.assertVarEqual(v[:3], v[x < 3])
+        self.assertVarEqual(v[:, 3:], v[:, y >= 3])
+        self.assertVarEqual(v[:3, 3:], v[x < 3, y >= 3])
+        self.assertVarEqual(v[:3, :2], v[x[:3], y[:2]])
         self.assertVarEqual(v[:3, :2], v[range(3), range(2)])
+        # test iteration
         for n, item in enumerate(v):
-            self.assertVarEqual(Variable(['x'], self.d[n]), item)
+            self.assertVarEqual(Variable(['y'], data[n]), item)
+        # test setting
         v.data[:] = 0
         self.assertTrue(np.all(v.data == 0))
 
     def test_views(self):
         v = Variable(['time', 'x'], self.d)
-        self.assertVarEqual(v.views({'time': slice(None)}), v)
-        self.assertVarEqual(v.views({'time': 0}), v[0])
-        self.assertVarEqual(v.views({'time': slice(0, 3)}), v[:3])
-        self.assertVarEqual(v.views({'x': 0}), v[:, 0])
+        self.assertVarEqual(v.views(time=slice(None)), v)
+        self.assertVarEqual(v.views(time=0), v[0])
+        self.assertVarEqual(v.views(time=slice(0, 3)), v[:3])
+        self.assertVarEqual(v.views(x=0), v[:, 0])
+        with self.assertRaisesRegexp(ValueError, 'do not exist'):
+            v.views(not_a_dim=0)
 
     def test_transpose(self):
         v = Variable(['time', 'x'], self.d)
@@ -100,11 +113,11 @@ class TestVariable(TestCase):
         # verify attributes
         v2 = Variable(['x'], x, {'units': 'meters'})
         self.assertVarEqual(v2, +v2)
-        self.assertVarEqual(v, 0 + v2)
+        self.assertVarEqual(v2, 0 + v2)
         # binary ops with all variables
         self.assertArrayEqual(v + v, 2 * v)
         w = Variable(['x'], y, {'foo': 'bar'})
-        self.assertVarEqual(v + w, Variable(['x'], x + y, {'foo': 'bar'}))
+        self.assertVarEqual(v + w, Variable(['x'], x + y))
         self.assertArrayEqual((v * w).data, x * y)
         # something complicated
         self.assertArrayEqual((v ** 2 * w - 1 + x).data, x ** 2 * y - 1 + x)
@@ -157,6 +170,13 @@ class TestVariable(TestCase):
         self.assertIs(v.data, x)
         self.assertArrayEqual(v.data, np.arange(5) + 1)
 
+    def test_array_interface(self):
+        x = np.arange(5)
+        v = Variable(['x'], x)
+        self.assertArrayEqual(np.asarray(v), x)
+        # test ufuncs
+        self.assertVarEqual(np.sin(v), Variable(['x'], np.sin(x)))
+
     def test_collapsed(self):
         v = Variable(['time', 'x'], self.d)
         # intentionally test with an operation for which order matters
@@ -172,3 +192,41 @@ class TestVariable(TestCase):
                             Variable([], self.d.std(),
                                      {'cell_methods': 'time: x: std'}))
         self.assertVarEqual(v.mean('time'), v.collapsed(np.mean, 'time'))
+
+    def test_aggregated_by(self):
+        agg_var = Variable(['y'], np.array(['a', 'a', 'b']))
+        v = Variable(['x', 'y'], self.d)
+        expected_unique = Variable(['abc'], np.array(['a', 'b']))
+        expected_aggregated = Variable(['x', 'abc'],
+                                       np.array([self.d[:, :2].sum(axis=1),
+                                                 self.d[:, 2:].sum(axis=1)]).T,
+                                       {'cell_methods': 'y: sum'})
+        actual_unique, actual_aggregated = v.aggregated_by(np.sum, 'abc', agg_var)
+        self.assertVarEqual(expected_unique, actual_unique)
+        self.assertVarEqual(expected_aggregated, actual_aggregated)
+        # should be equivalent to aggregate by a dataview, too
+        alt_agg_var = Dataset({'abc': agg_var})['abc']
+        actual_unique, actual_aggregated = v.aggregated_by(np.sum, 'abc',
+                                                           alt_agg_var)
+        self.assertVarEqual(expected_unique, actual_unique)
+        self.assertVarEqual(expected_aggregated, actual_aggregated)
+
+    def test_stack_variables(self):
+        x = np.arange(5)
+        y = np.ones(5)
+        v = Variable(['a'], x)
+        w = Variable(['a'], y)
+        self.assertVarEqual(Variable(['b', 'a'], np.array([x, y])),
+                            stack_variables([v, w], 'b'))
+        self.assertVarEqual(Variable(['b', 'a'], np.array([x, y])),
+                            stack_variables((v, w), 'b'))
+        self.assertVarEqual(Variable(['b', 'a'], np.array([x, y])),
+                            stack_variables((v, w), 'b', length=2))
+        with self.assertRaisesRegexp(ValueError, 'too many'):
+            stack_variables([v, w], 'b', length=1)
+        with self.assertRaisesRegexp(ValueError, r'only \d+ stack'):
+            stack_variables([v, w, w], 'b', length=4)
+        with self.assertRaisesRegexp(ValueError, 'inconsistent dimensions'):
+            stack_variables([v, Variable(['c'], y)], 'b')
+
+
