@@ -20,6 +20,7 @@ _vars = {'var1':['dim1', 'dim2'],
 _testvar = sorted(_vars.keys())[0]
 _testdim = sorted(_dims.keys())[0]
 
+
 def create_test_data(store=None):
     obj = Dataset() if store is None else Dataset.load_store(store)
     obj.add_dimension('time', 1000)
@@ -34,6 +35,7 @@ def create_test_data(store=None):
         var.attributes['foo'] = 'variable'
     return obj
 
+
 class DataTest(TestCase):
     def get_store(self):
         return backends.InMemoryDataStore()
@@ -43,41 +45,13 @@ class DataTest(TestCase):
         self.assertEqual('<scidata.Dataset (time: 1000, @dim1: 100, '
                          '@dim2: 50, @dim3: 10): var1 var2 var3>', repr(data))
 
-    @unittest.skip('method needs rewrite and/or removal')
     def test_iterator(self):
         data = create_test_data(self.get_store())
-        # iterate over the first dim
-        iterdim = _testdim
-        for t, sub in data.iterator(dim=iterdim):
-            ind = int(np.where(data.variables[iterdim].data == t.data)[0])
-            # make sure all the slices match
-            for v in _vars.keys():
-                if iterdim in data[v].dimensions:
-                    dim_axis = list(data[v].dimensions).index(iterdim)
-                    expected = data[v].data.take(
-                            [ind], axis=dim_axis).reshape(sub[v].data.shape)
-                    np.testing.assert_array_equal(sub[v].data, expected)
-                self.assertEquals(sub.dimensions[iterdim], 1)
-        # test that the yielded objects are copies of the original
-        for (t, sub) in data.iterator(dim=iterdim):
-            sub[_testvar][:] = -71
-        self.assertTrue((data[_testvar].data != -71).all())
-
-    def test_iterarray(self):
-        data = create_test_data(self.get_store())
-        # iterate over the first dim
-        iterdim = _testdim
-        for t, d in data.iterarray(dim=iterdim, var=_testvar):
-            ind = int(np.where(data.variables[iterdim].data == t)[0])
-            # make sure all the slices match
-            dim_axis = list(data[_testvar].dimensions).index(iterdim)
-            expected = data.variables[_testvar].data.take([ind], axis=dim_axis)
-            np.testing.assert_array_equal(d, expected)
-        # test that the yielded objects are views of the original
-        # This test doesn't make sense for the netCDF4 backend
-        # for (t, d) in data.iterarray(dim=iterdim, var=_testvar):
-        #     d[:] = -71
-        # self.assertTrue((data[_testvar].data == -71).all())
+        for n, (t, sub) in enumerate(list(data.iterator('dim1'))[:3]):
+            self.assertEqual(data['dim1'][n], t)
+            self.assertVarEqual(data['var1'][n], sub['var1'])
+            self.assertVarEqual(data['var2'][n], sub['var2'])
+            self.assertVarEqual(data['var3'][:, n], sub['var3'])
 
     def test_dimension(self):
         a = Dataset()
@@ -271,55 +245,6 @@ class DataTest(TestCase):
         self.assertVarEqual(v[:3, 3:], v[d1 < 3, d2 >= 3])
         self.assertVarEqual(v[:3, :2], v[d1[:3], d2[:2]])
         self.assertVarEqual(v[:3, :2], v[range(3), range(2)])
-
-    @unittest.skip('obsolete method should be removed')
-    def test_take(self):
-        data = create_test_data(self.get_store())
-        slicedim = _testdim
-        # using a list
-        ret = data.take(indices=range(2, 5), dim=slicedim)
-        self.assertEquals(len(ret[slicedim].data), 3)
-        # using a numpy vector
-        ret = data.take(indices=np.array([2, 3, 4,]), dim=slicedim)
-        self.assertEquals(len(ret[slicedim].data), 3)
-        # With a random index
-        indices = np.random.randint(data.dimensions[slicedim], size=10)
-        ret = data.take(indices=indices, dim=slicedim)
-        # Verify that only the specified dimension was altered
-        for d in data.dimensions:
-            if d == slicedim:
-                self.assertEqual(ret.dimensions[d], indices.size)
-            else:
-                self.assertEqual(data.dimensions[d], ret.dimensions[d])
-        # Verify that the data is what we expect
-        for v in data.variables:
-            self.assertEqual(data[v].dimensions, ret[v].dimensions)
-            self.assertEqual(data[v].attributes, ret[v].attributes)
-            if slicedim in data[v].dimensions:
-                expected = data[v].data.take(
-                    indices, axis=data[v].dimensions.index(slicedim))
-            else:
-                expected = data[v].data[:]
-            actual = ret[v].data
-            np.testing.assert_array_equal(expected, actual)
-            # Test that our take is a copy
-            ret[v].data.fill(np.pi)
-            self.assertTrue(not (data[v].data == np.pi).any())
-        self.assertRaises(KeyError, data.take,
-                          indices=indices, dim='not_a_dim')
-        self.assertRaises(IndexError, data.take,
-                          indices=[data.dimensions[slicedim] + 10],
-                          dim=slicedim)
-
-    @unittest.skip('method needs rewrite and/or removal')
-    def test_squeeze(self):
-        data = create_test_data(self.get_store())
-        singleton = data.take([1], 'dim2')
-        squeezed = singleton.squeeze('dim2')
-        assert not 'dim2' in squeezed.dimensions
-        for x in [v for v, d in _vars.iteritems() if 'dim2' in d]:
-            np.testing.assert_array_equal(singleton[x].data.flatten(),
-                                          squeezed[x].data)
 
     def test_select(self):
         data = create_test_data(self.get_store())

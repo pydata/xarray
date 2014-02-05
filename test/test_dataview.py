@@ -51,6 +51,14 @@ class TestDataView(TestCase):
         self.assertEqual(self.dv[:3, :5].dataset,
                          self.ds.views(x=slice(3), y=slice(5)))
 
+    def test_iteration(self):
+        for ((act_x, act_dv), (exp_x, exp_ds)) in \
+                zip(self.dv.iterator('y'), self.ds.iterator('y')):
+            self.assertVarEqual(exp_x, act_x)
+            self.assertViewEqual(DataView(exp_ds, 'foo'), act_dv)
+        for ((_, exp_dv), act_dv) in zip(self.dv.iterator('x'), self.dv):
+            self.assertViewEqual(exp_dv, act_dv)
+
     def test_views(self):
         self.assertViewEqual(self.dv, self.dv.views(x=slice(None)))
         self.assertViewEqual(self.dv[:3], self.dv.views(x=slice(3)))

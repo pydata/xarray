@@ -811,177 +811,26 @@ class Dataset(object):
         ds.add_variable(name, variable)
         return ds
 
-    def iterator(self, dim=None, views=False):
-        """Iterator along a data dimension
+    def iterator(self, dimension):
+        """Iterate along a data dimension
 
-        Return an iterator yielding (coordinate, data_object) pairs
-        that are singleton along the specified dimension
+        Returns an iterator yielding (coordinate, dataset) pairs for each
+        coordinate value along the specified dimension.
 
         Parameters
         ----------
-        dim : string, optional
-            The dimension along which you want to iterate. If None
-            (default), then the iterator operates along the record
-            dimension; if there is no record dimension, an exception
-            will be raised.
-        views : boolean, optional
-            If True, the iterator will give views of the data along
-            the dimension, otherwise copies.
+        dimension : string
+            The dimension along which to iterate.
 
         Returns
         -------
         it : iterator
-            The returned iterator yields pairs of scalar-valued
-            coordinate variables and data objects. The yielded data
-            objects contain *copies* onto the underlying numpy arrays of
-            the original data object. If the data object does not have
-            a coordinate variable with the same name as the specified
-            dimension, then the returned coordinate value is None. If
-            multiple dimensions of a variable equal dim (e.g. a
-            correlation matrix), then that variable is iterated along
-            the first matching dimension.
-
-        Examples
-        --------
-        >>> d = Data()
-        >>> d.create_coordinate(name='x', data=numpy.arange(10))
-        >>> d.create_coordinate(name='y', data=numpy.arange(20))
-        >>> print d
-
-        dimensions:
-          name            | length
-         ===========================
-          x               | 10
-          y               | 20
-
-        variables:
-          name            | dtype   | shape           | dimensions
-         =====================================================================
-          x               | int32   | (10,)           | ('x',)
-          y               | int32   | (20,)           | ('y',)
-
-        attributes:
-          None
-
-        >>> i = d.iterator(dim='x')
-        >>> (a, b) = i.next()
-        >>> print a
-
-        dtype:
-          int32
-
-        dimensions:
-          name            | length
-         ===========================
-          x               | 1
-
-        attributes:
-          None
-
-        >>> print b
-
-        dimensions:
-          name            | length
-         ===========================
-          x               | 1
-          y               | 20
-
-        variables:
-          name            | dtype   | shape           | dimensions
-         =====================================================================
-          x               | int32   | (1,)            | ('x',)
-          y               | int32   | (20,)           | ('y',)
-
-        attributes:
-          None
-
+            The returned iterator yields pairs of scalar-valued coordinate
+            variables and Dataset objects.
         """
-        # Determine the size of the dim we're about to iterate over
-        n = self.dimensions[dim]
-        # Iterate over the object
-        if dim in self.coordinates:
-            coord = self.variables[dim]
-            if views:
-                for i in xrange(n):
-                    s = slice(i, i + 1)
-                    yield (coord.view(s, dim=dim),
-                           self.view(s, dim=dim))
-            else:
-                for i in xrange(n):
-                    indices = np.array([i])
-                    yield (coord.take(indices, dim=dim),
-                           self.take(indices, dim=dim))
-        else:
-            if views:
-                for i in xrange(n):
-                    yield (None, self.view(slice(i, i + 1), dim=dim))
-            else:
-                for i in xrange(n):
-                    yield (None, self.take(np.array([i]), dim=dim))
-
-    def iterarray(self, var, dim=None):
-        """Iterator along a data dimension returning the corresponding slices
-        of the underlying data of a variable.
-
-        Return an iterator yielding (scalar, ndarray) pairs that are singleton
-        along the specified dimension.  While iterator is more general, this
-        method has less overhead and in turn should be considerably faster.
-
-        Parameters
-        ----------
-        var : string
-            The variable over which you want to iterate.
-
-        dim : string, optional
-            The dimension along which you want to iterate. If None
-            (default), then the iterator operates along the record
-            dimension; if there is no record dimension, an exception
-            will be raised.
-
-        Returns
-        -------
-        it : iterator
-            The returned iterator yields pairs of scalar-valued
-            and ndarray objects. The yielded data objects contain *views*
-            onto the underlying numpy arrays of the original data object.
-
-        Examples
-        --------
-        >>> d = Data()
-        >>> d.create_coordinate(name='t', data=numpy.arange(5))
-        >>> d.create_dimension(name='h', length=3)
-        >>> d.create_variable(name='x', dim=('t', 'h'),\
-        ...     data=numpy.random.random((10, 3,)))
-        >>> print d['x'].data
-        [[ 0.33499995  0.47606901  0.41334325]
-         [ 0.20229308  0.73693437  0.97451746]
-         [ 0.40020704  0.29763575  0.85588908]
-         [ 0.44114434  0.79233816  0.59115313]
-         [ 0.18583972  0.55084889  0.95478946]]
-        >>> i = d.iterarray(var='x', dim='t')
-        >>> (a, b) = i.next()
-        >>> print a
-        0
-        >>> print b
-        [[ 0.33499995  0.47606901  0.41334325]]
-        """
-        # Get a reference to the underlying ndarray for the desired variable
-        # and build a list of slice objects
-        data = self.variables[var].data
-        axis = list(self.variables[var].dimensions).index(dim)
-        slicer = [slice(None)] * data.ndim
-        # Determine the size of the dim we're about to iterate over
-        n = self.dimensions[dim]
-        # Iterate over dim returning views of the variable.
-        if dim in self.coordinates:
-            coord = self.variables[dim].data
-            for i in xrange(n):
-                slicer[axis] = slice(i, i + 1)
-                yield (coord[i], data[slicer])
-        else:
-            for i in xrange(n):
-                slicer[axis] = slice(i, i + 1)
-                yield (None, data[slicer])
+        coord = self.variables[dimension]
+        for i in xrange(self.dimensions[dimension]):
+            yield (coord[i], self.views(**{dimension: i}))
 
 
 if __name__ == "__main__":

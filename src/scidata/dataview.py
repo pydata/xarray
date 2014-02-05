@@ -168,6 +168,26 @@ class DataView(_DataWrapperMixin):
         ds = self.dataset.replace(self.name, new_var)
         return type(self)(ds, self.name)
 
+    def iterator(self, dimension):
+        """Iterate along a data dimension
+
+        Returns an iterator yielding (coordinate, dataview) pairs for each
+        coordinate value along the specified dimension.
+
+        Parameters
+        ----------
+        dimension : string
+            The dimension along which to iterate.
+
+        Returns
+        -------
+        it : iterator
+            The returned iterator yields pairs of scalar-valued coordinate
+            variables and DataView objects.
+        """
+        for (x, dataset) in self.dataset.iterator(dimension):
+            yield (x, type(self)(dataset, self.name))
+
     def transpose(self, *dimensions):
         """Return a new DataView object with transposed dimensions
 
