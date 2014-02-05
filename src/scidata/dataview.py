@@ -59,13 +59,18 @@ class DataView(_DataWrapperMixin):
     def variable(self, value):
         self.dataset.set_variable(self.name, value)
 
-    # _data and _data.setter are necessary for _DataWrapperMixin
+    # _data is necessary for _DataWrapperMixin
     @property
     def _data(self):
         return self.variable._data
-    @_data.setter
-    def _data(self, value):
-        self.variable._data = value
+
+    @property
+    def data(self):
+        """The dataview's data as a numpy.ndarray"""
+        return self.variable.data
+    @data.setter
+    def data(self, value):
+        self.variable.data = value
 
     @property
     def dimensions(self):
@@ -251,9 +256,10 @@ class DataView(_DataWrapperMixin):
             func, new_dim_name, agg_var, **kwargs)
         # TODO: add options for how to summarize variables along aggregated
         # dimensions instead of just dropping them
-        drop = ({self.name, new_dim_name} |
+        drop = ({self.name} |
+                ({new_dim_name} if new_dim_name in self.dataset else set()) |
                 {k for k, v in self.dataset.variables.iteritems()
-                if any(dim in agg_var.dimensions for dim in v.dimensions)})
+                 if any(dim in agg_var.dimensions for dim in v.dimensions)})
         ds = self.dataset.unselect(*drop)
         ds.add_coordinate(unique)
         ds.add_variable(self.name, aggregated)
@@ -287,7 +293,7 @@ class DataView(_DataWrapperMixin):
                                     if not reflexive
                                     else f(other_variable, self.variable))
             if hasattr(other, 'unselected'):
-                dv.dataset.update(other.unselected())
+                dv.dataset.merge(other.unselected(), inplace=True)
             return dv
         return func
 
@@ -299,7 +305,7 @@ class DataView(_DataWrapperMixin):
             other_variable = getattr(other, 'variable', other)
             self.variable = f(self.variable, other_variable)
             if hasattr(other, 'unselected'):
-                self.dataset.update(other.unselected())
+                self.dataset.merge(other.unselected(), inplace=True)
             return self
         return func
 

@@ -1,6 +1,8 @@
-#TODO: refactor this module so all the stores just expose dimension, variables
-# and attributes with the OrderedDict API that handle all the storage logic
+"""Backend objects for saving and loading data
 
+DataStores provide a uniform interface for saving and loading data in different
+formats. They should not be used directly, but rather through Dataset objects.
+"""
 import netCDF4 as nc4
 import numpy as np
 
@@ -8,26 +10,25 @@ from scipy.io import netcdf
 from collections import OrderedDict
 
 from utils import FrozenOrderedDict
+from variable import Variable
 import conventions
-import utils
-import variable
 
 
 class AbstractDataStore(object):
-    def unchecked_set_dimensions(self, dimensions):
+    def set_dimensions(self, dimensions):
         """Set the dimensions without checking validity"""
         for d, l in dimensions.iteritems():
-            self.unchecked_set_dimension(d, l)
+            self.set_dimension(d, l)
 
-    def unchecked_set_attributes(self, attributes):
+    def set_attributes(self, attributes):
         """Set the attributes without checking validity"""
         for k, v in attributes.iteritems():
-            self.unchecked_set_attribute(k, v)
+            self.set_attribute(k, v)
 
-    def unchecked_set_variables(self, variables):
+    def set_variables(self, variables):
         """Set the variables without checking validity"""
         for vn, v in variables.iteritems():
-            self.unchecked_set_variable(vn, v)
+            self.set_variable(vn, v)
 
 
 class InMemoryDataStore(AbstractDataStore):
@@ -41,28 +42,28 @@ class InMemoryDataStore(AbstractDataStore):
         self.variables = OrderedDict()
         self.attributes = OrderedDict()
 
-    def unchecked_set_dimension(self, name, length):
+    def set_dimension(self, name, length):
         """Set a dimension length"""
         self.dimensions[name] = length
 
-    def unchecked_set_attribute(self, key, value):
+    def set_attribute(self, key, value):
         """Set the attributes without checking validity"""
         self.attributes[key] = value
 
-    def unchecked_set_variable(self, name, variable):
+    def set_variable(self, name, variable):
         """Set a variable without checks"""
         self.variables[name] = variable
         return self.variables[name]
+
+    def del_attribute(self, key):
+        del self.attributes[key]
 
     def sync(self):
         pass
 
 
-class ScipyVariable(variable.Variable):
-    def __init__(self, scipy_var):
-        self._dimensions = scipy_var.dimensions
-        self._data = scipy_var.data
-        self._attributes = scipy_var._attributes
+def convert_scipy_variable(var):
+    return Variable(var.dimensions, var.data, var._attributes)
 
 
 class ScipyDataStore(AbstractDataStore):
@@ -77,7 +78,7 @@ class ScipyDataStore(AbstractDataStore):
 
     @property
     def variables(self):
-        return FrozenOrderedDict((k, ScipyVariable(v))
+        return FrozenOrderedDict((k, convert_scipy_variable(v))
                                  for k, v in self.ds.variables.iteritems())
 
     @property
@@ -88,7 +89,7 @@ class ScipyDataStore(AbstractDataStore):
     def dimensions(self):
         return self.ds.dimensions
 
-    def unchecked_set_dimension(self, name, length):
+    def set_dimension(self, name, length):
         """Set a dimension length"""
         if name in self.ds.dimensions:
             raise ValueError('%s does not support modifying dimensions'
@@ -122,11 +123,11 @@ class ScipyDataStore(AbstractDataStore):
                 raise ValueError("Can not convert to a valid netCDF type")
         return value
 
-    def unchecked_set_attribute(self, key, value):
+    def set_attribute(self, key, value):
         self._validate_attr_key(key)
         setattr(self.ds, key, self._cast_attr_value(value))
 
-    def unchecked_set_variable(self, name, variable):
+    def set_variable(self, name, variable):
         """Add a variable without checks"""
         if name not in self.ds.variables:
             self.ds.createVariable(name, variable.dtype, variable.dimensions)
@@ -135,44 +136,29 @@ class ScipyDataStore(AbstractDataStore):
         for k, v in variable.attributes.iteritems():
             self._validate_attr_key(k)
             setattr(scipy_var, k, self._cast_attr_value(v))
-        return ScipyVariable(scipy_var)
+        return convert_scipy_variable(scipy_var)
+
+    def del_attribute(self, key):
+        delattr(self.ds, key)
 
     def sync(self):
         self.ds.flush()
 
 
-class NetCDF4Variable(variable.Variable):
-    def __init__(self, nc4_variable):
-        self._nc4_variable = nc4_variable
-        self._dimensions = nc4_variable.dimensions
-        self._data = nc4_variable
-        self._attributes = None
-
-    def _remap_indexer(self, key):
-        # netCDF4-python already does orthogonal indexing, so just expand
-        # the indexer
-        return utils.expanded_indexer(key, self.ndim)
-
-    @property
-    def attributes(self):
-        if self._attributes is None:
-            # we don't want to see scale_factor and add_offset in the attributes
-            # since the netCDF4 package automatically scales the data on read.
-            # If we kept scale_factor and add_offset around and did this:
-            #
-            # foo = ncdf4.Dataset('foo.nc')
-            # ncdf4.dump(foo, 'bar.nc')
-            # bar = ncdf4.Dataset('bar.nc')
-            #
-            # you would find that any packed variables in the original
-            # netcdf file would now have been scaled twice!
-            packing_attributes = ['scale_factor', 'add_offset']
-            keys = [k for k in self._nc4_variable.ncattrs()
-                    if not k in packing_attributes]
-            attr_dict = OrderedDict(
-                (k, self._nc4_variable.getncattr(k)) for k in keys)
-            self._attributes = attr_dict
-        return self._attributes
+def convert_nc4_variable(var):
+    # we don't want to see scale_factor and add_offset in the attributes
+    # since the netCDF4 package automatically scales the data on read.
+    # If we kept scale_factor and add_offset around and did this:
+    #
+    # foo = ncdf4.Dataset('foo.nc')
+    # ncdf4.dump(foo, 'bar.nc')
+    # bar = ncdf4.Dataset('bar.nc')
+    #
+    # you would find that any packed variables in the original
+    # netcdf file would now have been scaled twice!
+    attr = OrderedDict((k, var.getncattr(k)) for k in var.ncattrs()
+                       if k not in ['scale_factor', 'add_offset'])
+    return Variable(var.dimensions, var, attr, indexing_mode='orthogonal')
 
 
 class NetCDF4DataStore(AbstractDataStore):
@@ -181,7 +167,7 @@ class NetCDF4DataStore(AbstractDataStore):
 
     @property
     def variables(self):
-        return FrozenOrderedDict((k, NetCDF4Variable(v))
+        return FrozenOrderedDict((k, convert_nc4_variable(v))
                                  for k, v in self.ds.variables.iteritems())
 
     @property
@@ -193,14 +179,14 @@ class NetCDF4DataStore(AbstractDataStore):
     def dimensions(self):
         return FrozenOrderedDict((k, len(v)) for k, v in self.ds.dimensions.iteritems())
 
-    def unchecked_set_dimension(self, name, length):
+    def set_dimension(self, name, length):
         """Set a dimension length"""
         self.ds.createDimension(name, size=length)
 
-    def unchecked_set_attribute(self, key, value):
+    def set_attribute(self, key, value):
         self.ds.setncatts({key: value})
 
-    def unchecked_set_variable(self, name, variable):
+    def set_variable(self, name, variable):
         """Set a variable without checks"""
         # netCDF4 will automatically assign a fill value
         # depending on the datatype of the variable.  Here
@@ -215,7 +201,10 @@ class NetCDF4DataStore(AbstractDataStore):
         nc4_var = self.ds.variables[name]
         nc4_var[:] = variable.data[:]
         nc4_var.setncatts(variable.attributes)
-        return NetCDF4Variable(nc4_var)
+        return convert_nc4_variable(nc4_var)
+
+    def del_attribute(self, key):
+        self.ds.delncattr(key)
 
     def sync(self):
         self.ds.sync()

@@ -89,7 +89,7 @@ def open_dataset(nc, *args, **kwargs):
         # If nc is a file-like object we read it using
         # the scipy.io.netcdf package
         store = backends.ScipyDataStore(nc, *args, **kwargs)
-    return Dataset(store=store)
+    return Dataset.load_store(store)
 
 
 class _IndicesCache(MutableMapping):
@@ -161,15 +161,16 @@ class Dataset(object):
     attributes : {key: value, ...}
     indices : {dimension: index, ...}
         Mapping from dimensions to pandas.Index objects.
-    store : baackends.*DataStore
+    store : backends.*DataStore
     """
     def __init__(self, variables=None, dimensions=None, attributes=None,
-                 store=None, indices=None):
+                 indices=None, store=None):
         """
         If dimensions are not provided, they are inferred from the variables.
 
-        Otherwise, variables and dimensions are only checked for consistency
-        if check_dimensions=True.
+        Only set a store if you want to Dataset operations to modify stored
+        data in-place. Otherwise, load data from a store using the
+        `open_dataset` function or the `from_store` class method.
         """
         # TODO: fill out this docstring
         if store is None:
@@ -177,17 +178,17 @@ class Dataset(object):
         self.store = store
 
         if attributes is not None:
-            store.unchecked_set_attributes(attributes)
+            store.set_attributes(attributes)
 
         if dimensions is not None:
-            store.unchecked_set_dimensions(dimensions)
+            store.set_dimensions(dimensions)
 
         if variables is not None:
             if dimensions is None:
-                store.unchecked_set_dimensions(construct_dimensions(variables))
+                store.set_dimensions(construct_dimensions(variables))
             else:
                 check_dims_and_vars_consistency(dimensions, variables)
-            store.unchecked_set_variables(variables)
+            store.set_variables(variables)
 
         if indices is None:
             indices = {}
@@ -196,6 +197,10 @@ class Dataset(object):
                 if k not in self.dimensions or v.size != self.dimensions[k]:
                     raise ValueError('inconsistent index %r' % k)
         self._indices = _IndicesCache(self, indices)
+
+    @classmethod
+    def load_store(cls, store):
+        return cls(store.variables, store.dimensions, store.attributes)
 
     def _create_index(self, dim):
         if dim in self.variables:
@@ -216,9 +221,6 @@ class Dataset(object):
     @property
     def indices(self):
         return self._indices
-
-    def sync(self):
-        return self.store.sync()
 
     @property
     def variables(self):
@@ -300,32 +302,28 @@ class Dataset(object):
                 for (name, v) in self.variables.iteritems()
                 if name not in self.coordinates])
 
-    def stored_to(self, store):
-        """
-        Store dataset contents to a backends.*DataStore object and return a new
-        dataset with the contents of the store
-        """
+    def dump_to_store(self, store):
+        """Store dataset contents to a backends.*DataStore object"""
         target = type(self)(self.variables, self.dimensions, self.attributes,
                             store=store, indices=self.indices.cache)
         target.store.sync()
         return target
 
     def dump(self, filepath, *args, **kwdargs):
-        """
-        Dump dataset contents to a location on disk using the netCDF4 package
+        """Dump dataset contents to a location on disk using the netCDF4
+        package
         """
         nc4_store = backends.NetCDF4DataStore(filepath, mode='w',
                                               *args, **kwdargs)
-        self.stored_to(nc4_store)
+        self.dump_to_store(nc4_store)
 
     def dumps(self):
-        """
-        Serialize dataset contents to a string. The serialization creates an
+        """Serialize dataset contents to a string. The serialization creates an
         in memory netcdf version 3 string using the scipy.io.netcdf package.
         """
         fobj = StringIO()
         scipy_store = backends.ScipyDataStore(fobj, mode='w')
-        self.stored_to(scipy_store)
+        self.dump_to_store(scipy_store)
         return fobj.getvalue()
 
     def __str__(self):
@@ -443,7 +441,7 @@ class Dataset(object):
         length = int(length)
         if length < 0:
             raise ValueError('length must be non-negative')
-        self.store.unchecked_set_dimension(name, int(length))
+        self.store.set_dimension(name, length)
 
     def add_variable(self, name, var):
         """Add a variable to the dataset
@@ -488,10 +486,10 @@ class Dataset(object):
         if var.ndim != 1:
             raise ValueError("coordinate data must be 1-dimensional (vector)")
         if name not in self.dimensions:
-            self.store.unchecked_set_dimension(name, var.size)
+            self.store.set_dimension(name, var.size)
         elif self.dimensions[name] != var.size:
             raise ValueError('dimension already exists with different length')
-        return self.store.unchecked_set_variable(name, var)
+        return self.store.set_variable(name, var)
 
     def set_variable(self, name, var):
         """Set a variable in the dataset
@@ -513,7 +511,7 @@ class Dataset(object):
             The variable object in the underlying datastore.
         """
         check_dims_and_vars_consistency(self.dimensions, {name: var})
-        new_var = self.store.unchecked_set_variable(name, var)
+        new_var = self.store.set_variable(name, var)
         if name in self.indices:
             self.indices.build_index(name)
         return new_var
@@ -621,7 +619,7 @@ class Dataset(object):
         return type(self)(variables, dimensions, self.attributes,
                           indices=indices)
 
-    def merge(self, other):
+    def merge(self, other, inplace=False):
         """Merge two datasets into a single new dataset
 
         This method generally not allow for overriding data. Variables,
@@ -632,50 +630,19 @@ class Dataset(object):
         ----------
         other : Dataset
             Dataset to merge with this dataset.
+        inplace : bool, optional
+            If True, merge the other dataset into this dataset in-place.
 
         Returns
         -------
-        Dataset
-            New dataset with the merged contents of both datasets
+        merged : Dataset
+            Merged dataset.
 
         Raises
         ------
         ValueError
-            If any variables, dimensions or attributes conflict.
-
-        See Also
-        --------
-        Dataset.update : update a dataset in place
-        """
-        new_vars = utils.safe_merge(self.variables, other.variables,
-                                    compat=utils.variable_equal)
-        new_dims = utils.safe_merge(self.dimensions, other.dimensions)
-        new_attr = utils.ordered_dict_intersection(self.attributes,
-                                                   other.attributes)
-        new_indices = utils.safe_merge(self.indices.cache, other.indices.cache,
-                                       compat=np.array_equal)
-        return type(self)(new_vars, new_dims, new_attr, indices=new_indices)
-
-    def update(self, other):
-        """Update this dataset in place with the contents of another dataset
-
-        Unlike `dict.update`, this method generally not allow for overriding
-        data. Variables, dimensions and indices are checked for conflicts.
-        However, conflicting attributes are removed.
-
-        Parameters
-        ----------
-        other : Dataset
-            Dataset with which to update this dataset.
-
-        Raises
-        ------
-        ValueError
-            If any variables, dimensions or attributes conflict.
-
-        See Also
-        --------
-        Dataset.merge : merge two datasets into a new dataset
+            If any variables or dimensions conflict. Conflicting attributes
+            are silently dropped.
         """
         # check for conflicts
         utils.update_safety_check(self.variables, other.variables,
@@ -684,11 +651,15 @@ class Dataset(object):
         utils.update_safety_check(self.indices.cache, other.indices.cache,
                                   compat=np.array_equal)
         # update contents
-        self.variables.update(other.variables)
-        self.dimensions.update(other.dimensions)
-        self.indices.update(other.indices.cache)
-        # override attributes without checking for compatibility
-        utils.remove_incompatible_items(self.attributes, other.attributes)
+        obj = self if inplace else self.copy()
+        obj.store.set_variables(other.variables)
+        obj.store.set_dimensions(other.dimensions)
+        obj._indices.update(other.indices.cache)
+        # remove conflicting attributes
+        for k, v in other.attributes.iteritems():
+            if k in self.attributes and not v != self.attributes[k]:
+                obj.store.del_attribute(k)
+        return obj
 
     def select(self, *names):
         """Returns a new dataset that contains the named variables
@@ -788,29 +759,6 @@ class Dataset(object):
         ds = self.unselect(name, omit_dimensions=False)
         ds.add_variable(name, variable)
         return ds
-
-    def to_dataview(self, name, extra_variables=None):
-        """Return a dataview selected from this dataset
-
-        Parameters
-        ----------
-        name : str
-            Name of variable on which to orient (and name) the new dataview.
-        extra_variables : sequence of str, optional
-            Additional variables from this dataset to include in the dataview's
-            dataset. These variables's coordinates (if any) are also included.
-            By default, the dataview's dataset only includes `name` and all of
-            its coordinate variables.
-
-        Returns
-        -------
-        dataview : DataView
-            Dataview with a selection of variables from this dataset and the
-            name `name`.
-        """
-        if extra_variables is None:
-            extra_variables = []
-        return DataView(self.select(*([name] + list(extra_variables))), name)
 
     def iterator(self, dim=None, views=False):
         """Iterator along a data dimension
@@ -983,39 +931,6 @@ class Dataset(object):
             for i in xrange(n):
                 slicer[axis] = slice(i, i + 1)
                 yield (None, data[slicer])
-
-    def squeeze(self, dimension):
-        """
-        Squeezes a dimension of length 1, returning a copy of the object
-        with that dimension removed.
-        """
-        if self.dimensions[dimension] != 1:
-            raise ValueError(("Can only squeeze along dimensions with" +
-                             "length one, %s has length %d") %
-                             (dimension, self.dimensions[dimension]))
-        # Create a new Data instance
-        obj = type(self)()
-        # Copy dimensions
-        for (name, length) in self.dimensions.iteritems():
-            if not name == dimension:
-                obj.create_dimension(name, length)
-        # Copy variables
-        for (name, var) in self.variables.iteritems():
-            if not name == dimension:
-                dims = list(var.dimensions)
-                data = var.data
-                if dimension in dims:
-                    shape = list(var.data.shape)
-                    index = dims.index(dimension)
-                    shape.pop(index)
-                    dims.pop(index)
-                    data = data.reshape(shape)
-                obj.create_variable(name=name,
-                        dims=tuple(dims),
-                        data=data,
-                        attributes=var.attributes.copy())
-        obj.store.unchecked_set_attributes(self.attributes.copy())
-        return obj
 
 
 if __name__ == "__main__":

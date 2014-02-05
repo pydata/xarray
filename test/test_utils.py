@@ -69,16 +69,22 @@ class TestNum2DatetimeIndex(TestCase):
                 self.assertArrayEqual(expected, actual)
 
 
-class TestSafeMerge(TestCase):
+class TestDictionaryChecks(TestCase):
     def setUp(self):
         self.x = {'a': 'A', 'b': 'B'}
         self.y = {'c': 'C', 'b': 'B'}
+        self.z = {'a': 'Z'}
 
-    def test_good_merge(self):
-        actual = utils.safe_merge(self.x, self.y)
-        self.x.update(self.y)
-        self.assertEqual(self.x, actual)
+    def test_safe(self):
+        # should not raise exception:
+        utils.update_safety_check(self.x, self.y)
 
-    def test_bad_merge(self):
+    def test_unsafe(self):
         with self.assertRaises(ValueError):
-            utils.safe_merge(self.x, {'a': 'Z'})
+            utils.update_safety_check(self.x, self.z)
+
+    def test_ordered_dict_intersection(self):
+        self.assertEquals({'a': 'A', 'b': 'B'},
+                          utils.ordered_dict_intersection(self.x, self.y))
+        self.assertEquals({'b': 'B'},
+                          utils.ordered_dict_intersection(self.x, self.z))

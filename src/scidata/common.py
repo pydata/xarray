@@ -3,23 +3,6 @@ import numpy as np
 
 class _DataWrapperMixin(object):
     @property
-    def data(self):
-        """
-        The variable's data as a numpy.ndarray
-        """
-        if not isinstance(self._data, np.ndarray):
-            self._data = np.asarray(self._data[...])
-        return self._data
-
-    @data.setter
-    def data(self, value):
-        value = np.asarray(value)
-        if value.shape != self.shape:
-            raise ValueError("replacement data must match the Variable's "
-                             "shape")
-        self._data = value
-
-    @property
     def dtype(self):
         return self._data.dtype
 
@@ -63,7 +46,6 @@ class _DataWrapperMixin(object):
     # def __array_interface__(self):
     #    data = self.data
     #    return dict(typestr=data.dtype.str, shape=data.shape, data=data)
-
 
     _collapse_method_docstring = \
         """Collapse this {cls}'s data' by applying `{name}` along some

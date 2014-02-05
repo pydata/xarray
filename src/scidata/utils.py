@@ -129,49 +129,6 @@ def update_safety_check(first_dict, second_dict, compat=operator.eq):
                              'overriding values')
 
 
-def safe_update(first_dict, second_dict, compat=operator.eq):
-    """Safely update a dictionary with another dictionary
-
-    Raises ValueError if dictionaries have non-compatible values for any key,
-    where compatibility is determined by the `compat` function.
-
-    Parameters
-    ----------
-    first_dict, second_dict : dict-like
-        Mappings to merge. The first dictionary is modified in place.
-    compat : function, optional
-        Binary operator to determine if two values are compatible. By default,
-        checks for equality.
-    """
-    update_safety_check(first_dict, second_dict, compat=compat)
-    first_dict.update(second_dict)
-
-
-def safe_merge(first_dict, second_dict, compat=operator.eq):
-    """Safely merge two dictionaries into a new OrderedDict
-
-    Raises ValueError if dictionaries have non-compatible values for any key,
-    where compatibility is determined by the `compat` function.
-
-    Parameters
-    ----------
-    first_dict, second_dict : dict-like
-        Mappings to merge.
-    compat : function, optional
-        Binary operator to determine if two values are compatible. By default,
-        checks for equality.
-
-    Returns
-    -------
-    merged : OrderedDict
-        Merged contents.
-    """
-    update_safety_check(first_dict, second_dict, compat=compat)
-    new_dict = OrderedDict(first_dict)
-    new_dict.update(second_dict)
-    return new_dict
-
-
 def remove_incompatible_items(first_dict, second_dict, compat=operator.eq):
     """Remove incompatible items from the first dictionary in-place
 
@@ -188,7 +145,7 @@ def remove_incompatible_items(first_dict, second_dict, compat=operator.eq):
     """
     for k, v in second_dict.iteritems():
         if k in first_dict and not compat(v, first_dict[k]):
-            del k
+            del first_dict[k]
 
 
 def ordered_dict_intersection(first_dict, second_dict, compat=operator.eq):

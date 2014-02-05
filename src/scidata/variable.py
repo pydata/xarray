@@ -1,4 +1,3 @@
-import copy
 import functools
 import warnings
 from collections import OrderedDict
@@ -22,7 +21,7 @@ def _as_compatible_data(data):
     required = ['dtype', 'shape', 'size', 'ndim']
     if not all(hasattr(data, attr) for attr in required):
         warnings.warn('converting data to np.ndarray because %s lacks some of '
-                      'the necesssary attributes for lazy use'
+                      'the necesssary attributes for direct use'
                       % type(data).__name__, RuntimeWarning, stacklevel=3)
         data = np.asarray(data)
     return data
@@ -34,7 +33,7 @@ class Variable(_DataWrapperMixin):
     which describe a single varRiable.  A single variable object is not
     fully described outside the context of its parent Dataset.
     """
-    def __init__(self, dims, data, attributes=None):
+    def __init__(self, dims, data, attributes=None, indexing_mode='numpy'):
         data = _as_compatible_data(data)
         if len(dims) != data.ndim:
             raise ValueError('data must have same shape as the number of '
@@ -44,6 +43,23 @@ class Variable(_DataWrapperMixin):
         if attributes is None:
             attributes = {}
         self._attributes = OrderedDict(attributes)
+        self._indexing_mode = indexing_mode
+
+    @property
+    def data(self):
+        """The variable's data as a numpy.ndarray"""
+        if not isinstance(self._data, np.ndarray):
+            self._data = np.asarray(self._data[...])
+            self._indexing_mode = 'numpy'
+        return self._data
+
+    @data.setter
+    def data(self, value):
+        value = np.asarray(value)
+        if value.shape != self.shape:
+            raise ValueError("replacement data must match the Variable's "
+                             "shape")
+        self._data = value
 
     @property
     def dimensions(self):
@@ -59,7 +75,8 @@ class Variable(_DataWrapperMixin):
         utils.orthogonal_indexer
         """
         key = utils.expanded_indexer(key, self.ndim)
-        if any(not isinstance(k, (int, slice)) for k in key):
+        if (self._indexing_mode == 'numpy'
+                and any(not isinstance(k, (int, slice)) for k in key)):
             # key would trigger fancy indexing
             key = utils.orthogonal_indexer(key, self.shape)
         return key
@@ -87,16 +104,16 @@ class Variable(_DataWrapperMixin):
         new_data = self._data[key]
         # orthogonal indexing should ensure the dimensionality is consistent
         assert new_data.ndim == len(dimensions)
-        # always return a Variable, because Variable subtypes may have
-        # different constructors and may not make sense without an attached
-        # datastore
-        return Variable(dimensions, new_data, self.attributes)
+        # return a variable with the same indexing_mode, because data should
+        # still be the same type as _data
+        return type(self)(dimensions, new_data, self.attributes,
+                          indexing_mode=self._indexing_mode)
 
     def __setitem__(self, key, value):
         """__setitem__ is overloaded to access the underlying numpy data with
         orthogonal indexing (see __getitem__ for more details)
         """
-        self.data[self._remap_indexer(key)] = value
+        self._data[self._remap_indexer(key)] = value
 
     def __iter__(self):
         for n in range(len(self)):
@@ -107,33 +124,25 @@ class Variable(_DataWrapperMixin):
         return self._attributes
 
     def copy(self):
-        """
-        Returns a shallow copy of the current object.
+        """Returns a shallow copy of the current object. The data array is
+        always loaded into memory.
         """
         return self.__copy__()
 
     def _copy(self, deepcopy=False):
-        # deepcopies should always be of a numpy view of the data, not the data
-        # itself, because non-memory backends don't necessarily have deepcopy
-        # defined sensibly (this is a problem for netCDF4 variables)
-        data = copy.deepcopy(self.data) if deepcopy else self._data
+        # np.array always makes a copy
+        data = np.array(self._data) if deepcopy else self.data
         # note:
         # dimensions is already an immutable tuple
         # attributes will be copied when the new Variable is created
-        return Variable(self.dimensions, data, self.attributes)
+        return type(self)(self.dimensions, data, self.attributes)
 
     def __copy__(self):
-        """
-        Returns a shallow copy of the current object.
-        """
         return self._copy(deepcopy=False)
 
     def __deepcopy__(self, memo=None):
-        """
-        Returns a deep copy of the current object.
-
-        memo does nothing but is required for compatability with copy.deepcopy
-        """
+        # memo does nothing but is required for compatability with
+        # copy.deepcopy
         return self._copy(deepcopy=True)
 
     # mutable objects should not be hashable
@@ -227,7 +236,7 @@ class Variable(_DataWrapperMixin):
             dimensions = self.dimensions[::-1]
         axes = [dimensions.index(dim) for dim in self.dimensions]
         data = self.data.transpose(*axes)
-        return Variable(dimensions, data, self.attributes)
+        return type(self)(dimensions, data, self.attributes)
 
     def collapsed(self, func, dimension=None, axis=None, **kwargs):
         """Collapse this variable by applying `func` along some dimension(s)
@@ -277,7 +286,7 @@ class Variable(_DataWrapperMixin):
             for dim in dimension:
                 var = var._collapsed(func, dim, **kwargs)
         else:
-            var = Variable([], func(self.data, **kwargs), self.attributes)
+            var = type(self)([], func(self.data, **kwargs), self.attributes)
             var._append_to_cell_methods(': '.join(self.dimensions)
                                         + ': ' + func.__name__)
         return var
@@ -295,7 +304,7 @@ class Variable(_DataWrapperMixin):
         dims = tuple(dim for i, dim in enumerate(self.dimensions)
                      if axis not in [i, i - self.ndim])
         data = f(self.data, axis=axis, **kwargs)
-        new_var = Variable(dims, data, self.attributes)
+        new_var = type(self)(dims, data, self.attributes)
         new_var._append_to_cell_methods(self.dimensions[axis]
                                         + ': ' + f.__name__)
         return new_var
@@ -327,11 +336,11 @@ class Variable(_DataWrapperMixin):
         """
         if groups.ndim != 1:
             # TODO: remove this limitation?
-            raise ValueError('aggregation variables must be 1 dimensional')
+            raise ValueError('group variables must be 1 dimensional')
         dim = groups.dimensions[0]
         axis = self.dimensions.index(dim)
         if groups.size != self.shape[axis]:
-            raise ValueError('the aggregation variable\'s length does not '
+            raise ValueError('the group variable\'s length does not '
                              'match the length of this variable along its '
                              'dimension')
         unique_values = np.unique(groups.data)
@@ -340,17 +349,17 @@ class Variable(_DataWrapperMixin):
                       for u in unique_values]
         stacked = stack_variables(aggregated, new_dim_name, unique_values.size)
         ordered_dims = [new_dim_name if d == dim else d for d in self.dimensions]
-        unique = Variable([new_dim_name], unique_values)
+        unique = type(self)([new_dim_name], unique_values)
         return unique, stacked.transpose(*ordered_dims)
 
     def __array_wrap__(self, result):
-        return Variable(self.dimensions, result, self.attributes)
+        return type(self)(self.dimensions, result, self.attributes)
 
     @staticmethod
     def _unary_op(f):
         @functools.wraps(f)
         def func(self):
-            return Variable(self.dimensions, f(self.data), self.attributes)
+            return type(self)(self.dimensions, f(self.data), self.attributes)
         return func
 
     @staticmethod
@@ -368,7 +377,7 @@ class Variable(_DataWrapperMixin):
                                                            other.attributes)
             else:
                 new_attr = self.attributes
-            return Variable(new_dims, new_data, new_attr)
+            return type(self)(new_dims, new_data, new_attr)
         return func
 
     @staticmethod
@@ -388,8 +397,7 @@ class Variable(_DataWrapperMixin):
 ops.inject_special_operations(Variable)
 
 
-def stack_variables(variables, dim, length=None,
-                    allow_conflicting_attributes=False):
+def stack_variables(variables, dim, length=None):
     """Stack variables along a new dimension
 
     Parameters
@@ -402,10 +410,6 @@ def stack_variables(variables, dim, length=None,
         Length of the new dimension. This is used to allocate the new data
         array for the stacked variable data before iterating over all items,
         which can be more memory efficient.
-    allow_conflicting_attributes : bool, optional
-        Whether or not to enforce safely checks to require identical attribute
-        data. If `True`, each variable be applied in turn to determien the new
-        attributes.
 
     Returns
     -------
@@ -433,9 +437,7 @@ def stack_variables(variables, dim, length=None,
             if var.dimensions != old_dimensions:
                 raise ValueError('inconsistent dimensions between merge '
                                  'variables')
-            if not allow_conflicting_attributes:
-                utils.update_safety_check(attributes, var.attributes)
-            attributes.update(var.attributes)
+            utils.remove_incompatible_items(attributes, var.attributes)
         new_data[i] = var.data
 
     if i + 1 != length:

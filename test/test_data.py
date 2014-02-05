@@ -21,7 +21,7 @@ _testvar = sorted(_vars.keys())[0]
 _testdim = sorted(_dims.keys())[0]
 
 def create_test_data(store=None):
-    obj = Dataset(store=store)
+    obj = Dataset() if store is None else Dataset.load_store(store)
     obj.add_dimension('time', 1000)
     for d, l in sorted(_dims.items()):
         obj.add_dimension(d, l)
@@ -38,7 +38,7 @@ class DataTest(TestCase):
     #TODO: test constructor
 
     def get_store(self):
-        return None
+        return backends.InMemoryDataStore()
 
     def test_repr(self):
         data = create_test_data(self.get_store())
@@ -261,6 +261,19 @@ class DataTest(TestCase):
                          data.loc_views(
                             time=pd.date_range('2000-01-01', periods=3)))
 
+    def test_variable_indexing(self):
+        data = create_test_data(self.get_store())
+        v = data['var1']
+        d1 = data['dim1']
+        d2 = data['dim2']
+        self.assertVarEqual(v, v[d1.data])
+        self.assertVarEqual(v, v[d1])
+        self.assertVarEqual(v[:3], v[d1 < 3])
+        self.assertVarEqual(v[:, 3:], v[:, d2 >= 3])
+        self.assertVarEqual(v[:3, 3:], v[d1 < 3, d2 >= 3])
+        self.assertVarEqual(v[:3, :2], v[d1[:3], d2[:2]])
+        self.assertVarEqual(v[:3, :2], v[range(3), range(2)])
+
     @unittest.skip('obsolete method should be removed')
     def test_take(self):
         data = create_test_data(self.get_store())
@@ -370,6 +383,17 @@ class DataTest(TestCase):
         with self.assertRaises(ValueError):
             ds1.merge(ds2.renamed({'var3': 'var1'}))
 
+    def test_virtual_variables(self):
+        # need to fill this out
+        pass
+
+    def test_write_store(self):
+        expected = create_test_data()
+        store = self.get_store()
+        expected.dump_to_store(store)
+        actual = Dataset.load_store(store)
+        self.assertEquals(expected, actual)
+
 
 class NetCDF4DataTest(DataTest):
     def get_store(self):
@@ -392,18 +416,17 @@ class ScipyDataTest(DataTest):
         pass
 
 
-class StoreTest(TestCase):
-    def test_stored_to_consistency(self):
-        store = backends.InMemoryDataStore()
-        expected = create_test_data(store)
+# class StoreTest(TestCase):
+#     def test_store_consistency(self):
+#         mem_ds = create_test_data()
 
-        mem_nc = deepcopy(expected)
-        self.assertTrue(isinstance(mem_nc.store, backends.InMemoryDataStore))
+#         fobj = StringIO()
+#         store = backends.ScipyDataStore(fobj, 'w')
+#         store = self.get_store()
+#         mem_ds.dump_to_store()
 
-        fobj = StringIO()
-        store = backends.ScipyDataStore(fobj, 'w')
-        actual = mem_nc.stored_to(store)
-        self.assertTrue(actual == expected)
+#         stored_ds = Dataset.load_store(store)
+#         self.assertEquals(mem_ds, stored_ds)
 
 
 if __name__ == "__main__":
