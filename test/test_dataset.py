@@ -35,8 +35,6 @@ def create_test_data(store=None):
     return obj
 
 class DataTest(TestCase):
-    #TODO: test constructor
-
     def get_store(self):
         return backends.InMemoryDataStore()
 

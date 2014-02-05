@@ -5,7 +5,7 @@ from collections import OrderedDict
 import numpy as np
 
 import conventions
-import data
+import dataset
 import dataview
 import ops
 import utils
@@ -449,7 +449,7 @@ def stack_variables(variables, dim, length=None):
 
 def _broadcast_var_data(self, other):
     self_data = self.data
-    if isinstance(other, data.Dataset):
+    if isinstance(other, dataset.Dataset):
         raise TypeError('datasets do not support mathematical operations')
     elif all(hasattr(other, attr) for attr in ['dimensions', 'data', 'shape']):
         # validate dimensions
