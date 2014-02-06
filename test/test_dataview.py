@@ -106,6 +106,9 @@ class TestDataView(TestCase):
         # test ufuncs
         self.assertViewEqual(np.sin(self.dv),
                              self.dv.replace_focus(np.sin(self.x)))
+        self.assertViewEqual(self.dv, np.maximum(self.v, self.dv))
+        self.ds['bar'] = Variable(['x', 'y'], np.zeros((10, 20)))
+        self.assertViewEqual(self.dv, np.maximum(self.dv, self.ds['bar']))
 
     def test_math(self):
         x = self.x
