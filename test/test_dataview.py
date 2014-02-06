@@ -158,6 +158,8 @@ class TestDataView(TestCase):
              'abc': expected_unique}), 'foo')
         actual = self.dv.aggregate(np.mean, 'abc')
         self.assertViewEqual(expected, actual)
+        actual = self.dv.aggregate(np.mean, self.ds['abc'])
+        self.assertViewEqual(expected, actual)
 
     def test_intersection(self):
         with self.assertRaises(ValueError):

@@ -274,7 +274,7 @@ class DataView(_DataWrapperMixin):
         ds.add_variable(self.focus, var)
         return type(self)(ds, self.focus)
 
-    def aggregate(self, func, new_dim_name, **kwargs):
+    def aggregate(self, func, new_dim, **kwargs):
         """Aggregate this dataview by applying `func` to grouped elements
 
         Parameters
@@ -283,27 +283,29 @@ class DataView(_DataWrapperMixin):
             Function which can be called in the form
             `func(x, axis=axis, **kwargs)` to reduce an np.ndarray over an
             integer valued axis.
-        new_dim_name : str or sequence of str, optional
-            Name of the variable in this dataview's dataset by which to group
-            variable elements. The dimension along which this variable exists
-            will be replaced by this name.
+        new_dim : str or DataView
+            Name of a variable in this dataview's dataset or DataView by which
+            to group variable elements. The dimension along which this variable
+            exists will be replaced by this name. The variable or dataview must
+            be one-dimensional.
         **kwargs : dict
             Additional keyword arguments passed on to `func`.
 
         Returns
         -------
         aggregated : DataView
-            DataView with aggregated data and the new dimension `new_dim_name`.
+            DataView with aggregated data and the new dimension `new_dim`.
         """
-        agg_var = self.dataset[new_dim_name]
+        if isinstance(new_dim, basestring):
+            new_dim = self.dataset[new_dim]
         unique, aggregated = self.variable.aggregate(
-            func, new_dim_name, agg_var, **kwargs)
+            func, new_dim.focus, new_dim, **kwargs)
         # TODO: add options for how to summarize variables along aggregated
-        # dimensions instead of just dropping them
+        # dimensions instead of just dropping them?
         drop = ({self.focus} |
-                ({new_dim_name} if new_dim_name in self.dataset else set()) |
+                ({new_dim.focus} if new_dim.focus in self.dataset else set()) |
                 {k for k, v in self.dataset.variables.iteritems()
-                 if any(dim in agg_var.dimensions for dim in v.dimensions)})
+                 if any(dim in new_dim.dimensions for dim in v.dimensions)})
         ds = self.dataset.unselect(*drop)
         ds.add_coordinate(unique)
         ds.add_variable(self.focus, aggregated)

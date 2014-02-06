@@ -27,6 +27,29 @@ def _as_compatible_data(data):
     return data
 
 
+def unique_value_groups(ar):
+    """Group an array by its unique values
+
+    Parameters
+    ----------
+    ar : array_like
+        Input array. This will be flattened if it is not already 1-D.
+
+    Returns
+    -------
+    values : np.ndarray
+        Sorted, unique values as returned by `np.unique`.
+    indices : list of lists of int
+        Each element provides the integer indices in `ar` with values given by
+        the corresponding value in `unique_values`.
+    """
+    values, inverse = np.unique(ar, return_inverse=True)
+    groups = [[] for _ in range(len(values))]
+    for n, g in enumerate(inverse):
+        groups[g].append(n)
+    return values, groups
+
+
 class Variable(_DataWrapperMixin):
     """
     A netcdf-like variable consisting of dimensions, data and attributes
@@ -321,7 +344,7 @@ class Variable(_DataWrapperMixin):
                                         + ': ' + f.__name__)
         return new_var
 
-    def aggregate(self, func, new_dim_name, groups, **kwargs):
+    def aggregate(self, func, new_dim_name, group_by, **kwargs):
         """Aggregate this variable by applying `func` to grouped elements
 
         Parameters
@@ -332,7 +355,7 @@ class Variable(_DataWrapperMixin):
             integer valued axis.
         new_dim_name : str or sequence of str, optional
             Name of the new dimension to create.
-        groups : Variable
+        group_by : Variable
             1D variable which contains the values by which to group.
         **kwargs : dict
             Additional keyword arguments passed on to `func`.
@@ -344,21 +367,21 @@ class Variable(_DataWrapperMixin):
             `new_dim_name`.
         aggregated : Variable
             Variable with aggregated data and the original dimension from
-            `groups` replaced by `new_dim_name`.
+            `group_by` replaced by `new_dim_name`.
         """
-        if groups.ndim != 1:
+        if group_by.ndim != 1:
             # TODO: remove this limitation?
             raise ValueError('group variables must be 1 dimensional')
-        dim = groups.dimensions[0]
+        dim = group_by.dimensions[0]
         axis = self.dimensions.index(dim)
-        if groups.size != self.shape[axis]:
+        if group_by.size != self.shape[axis]:
             raise ValueError('the group variable\'s length does not '
                              'match the length of this variable along its '
                              'dimension')
-        unique_values = np.unique(groups.data)
-        aggregated = (self.indexed_by(**{dim: groups.data == u}).collapse(
+        unique_values, group_indices = unique_value_groups(group_by.data)
+        aggregated = (self.indexed_by(**{dim: indices}).collapse(
                           func, dim, axis=None, **kwargs)
-                      for u in unique_values)
+                      for indices in group_indices)
         stacked = type(self).from_stack(aggregated, new_dim_name,
                                         length=unique_values.size)
         ordered_dims = [new_dim_name if d == dim else d for d in self.dimensions]
