@@ -173,6 +173,10 @@ class TestVariable(TestCase):
         x = np.arange(5)
         v = Variable(['x'], x)
         self.assertArrayEqual(np.asarray(v), x)
+        # test patched in methods
+        self.assertArrayEqual(v.take([2, 3]), x.take([2, 3]))
+        self.assertVarEqual(v.argsort(), v)
+        self.assertVarEqual(v.clip(2, 3), Variable('x', x.clip(2, 3)))
         # test ufuncs
         self.assertVarEqual(np.sin(v), Variable(['x'], np.sin(x)))
 

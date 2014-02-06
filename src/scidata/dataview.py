@@ -182,6 +182,8 @@ class DataView(_DataWrapperMixin):
         """Returns a copy of this DataView's dataset with this DataView's
         focus variable replaced by 'new_var'
         """
+        if not hasattr(new_var, 'dimensions'):
+            new_var = type(self.variable)(self.variable.dimensions, new_var)
         ds = self.dataset.replace(self.focus, new_var)
         return type(self)(ds, self.focus)
 
@@ -348,8 +350,8 @@ class DataView(_DataWrapperMixin):
     @staticmethod
     def _unary_op(f):
         @functools.wraps(f)
-        def func(self):
-            return self.replace_focus(f(self.variable))
+        def func(self, *args, **kwargs):
+            return self.replace_focus(f(self.variable, *args, **kwargs))
         return func
 
     def _check_indices_compat(self, other):

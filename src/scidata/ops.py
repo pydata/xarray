@@ -7,9 +7,33 @@ UNARY_OPS = ['neg', 'pos', 'abs', 'invert']
 CMP_BINARY_OPS = ['lt', 'le', 'eq', 'ne', 'ge', 'gt']
 NUM_BINARY_OPS = ['add', 'sub', 'mul', 'div', 'truediv', 'floordiv', 'mod',
                   'pow', 'and', 'xor', 'or']
+# methods which should return the standard numpy return value unchanged
+# some of these can probably be wrapped
+NUMPY_CONVERT_METHODS = ['choose', 'compress', 'flatten', 'item', 'itemset',
+                         'nonzero', 'ravel', 'repeat', 'reshape',
+                         'searchsorted', 'squeeze', 'swapaxes', 'take',
+                         'trace', 'diagonal', 'dot']
+# methods which don't modify the data shape, so the result should still be
+# wrapped in an Variable/DataView
+NUMPY_UNARY_METHODS = ['argsort', 'clip', 'conj', 'conjugate', 'fill',
+                       'getfield', 'newbyteorder', 'put', 'round', 'setfield',
+                       'setflags', 'view']
+# methods which remove an axis
 NUMPY_COLLAPSE_METHODS = ['all', 'any', 'argmax', 'argmin', 'cumprod',
                           'cumsum', 'max', 'mean', 'min', 'prod', 'ptp', 'std',
                           'sum', 'var']
+
+
+def _data_method_wrapper(f):
+    def func(self, *args, **kwargs):
+        return getattr(self.data, f)(*args, **kwargs)
+    return func
+
+
+def _method_wrapper(f):
+    def func(self, *args, **kwargs):
+        return getattr(self, f)(*args, **kwargs)
+    return func
 
 
 def inject_special_operations(cls, priority=50):
@@ -30,6 +54,12 @@ def inject_special_operations(cls, priority=50):
                 cls._binary_op(op(name), reflexive=True))
         setattr(cls, op_str('i' + name),
                 cls._inplace_binary_op(op('i' + name)))
+    # patch in numpy methods
+    for name in NUMPY_CONVERT_METHODS:
+        setattr(cls, name, _data_method_wrapper(name))
+    for name in NUMPY_UNARY_METHODS:
+        setattr(cls, name, cls._unary_op(_method_wrapper(name)))
+    # TODO: change these to use methods instead of numpy functions
     for name in NUMPY_COLLAPSE_METHODS:
         setattr(cls, name, cls._collapse_method(getattr(np, name),
                                                 name, 'numpy'))

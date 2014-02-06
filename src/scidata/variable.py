@@ -422,8 +422,9 @@ class Variable(_DataWrapperMixin):
     @staticmethod
     def _unary_op(f):
         @functools.wraps(f)
-        def func(self):
-            return type(self)(self.dimensions, f(self.data), self.attributes)
+        def func(self, *args, **kwargs):
+            return type(self)(self.dimensions, f(self.data, *args, **kwargs),
+                              self.attributes)
         return func
 
     @staticmethod

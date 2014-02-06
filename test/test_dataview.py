@@ -87,9 +87,25 @@ class TestDataView(TestCase):
         self.assertEqual(renamed.dataset, self.ds.renamed({'foo': 'bar'}))
         self.assertEqual(renamed.focus, 'bar')
 
+    def test_replace_focus(self):
+        self.assertVarEqual(self.dv, self.dv.replace_focus(self.v))
+        self.assertVarEqual(self.dv, self.dv.replace_focus(self.x))
+
     def test_dataset_getitem(self):
         dv = self.ds['foo']
         self.assertViewEqual(dv, self.dv)
+
+    def test_array_interface(self):
+        self.assertArrayEqual(np.asarray(self.dv), self.x)
+        # test patched in methods
+        self.assertArrayEqual(self.dv.take([2, 3]), self.x.take([2, 3]))
+        self.assertViewEqual(self.dv.argsort(),
+                             self.dv.replace_focus(self.x.argsort()))
+        self.assertViewEqual(self.dv.clip(2, 3),
+                             self.dv.replace_focus(self.x.clip(2, 3)))
+        # test ufuncs
+        self.assertViewEqual(np.sin(self.dv),
+                             self.dv.replace_focus(np.sin(self.x)))
 
     def test_math(self):
         x = self.x
