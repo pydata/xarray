@@ -14,7 +14,7 @@ class _LocIndexer(object):
 
     def _remap_key(self, key):
         return tuple(self.dataview.dataset._loc_to_int_indexer(k, v)
-                     for k, v in self.dataview._key_to_slicers(key))
+                     for k, v in self.dataview._key_to_indexers(key))
 
     def __getitem__(self, key):
         return self.dataview[self._remap_key(key)]
@@ -76,7 +76,7 @@ class DataView(_DataWrapperMixin):
     def dimensions(self):
         return self.variable.dimensions
 
-    def _key_to_slicers(self, key):
+    def _key_to_indexers(self, key):
         key = expanded_indexer(key, self.ndim)
         return zip(self.dimensions, key)
 
@@ -86,8 +86,8 @@ class DataView(_DataWrapperMixin):
             return self.dataset[key]
         else:
             # orthogonal array indexing
-            slicers = dict(self._key_to_slicers(key))
-            return type(self)(self.dataset.views(**slicers), self.name)
+            indexers = dict(self._key_to_indexers(key))
+            return type(self)(self.dataset.indexed_by(**indexers), self.name)
 
     def __setitem__(self, key, value):
         self.variable[key] = value
@@ -138,16 +138,25 @@ class DataView(_DataWrapperMixin):
             contents = ': %s' % self.data
         return '<scidata.%s %r%s>' % (type(self).__name__, self.name, contents)
 
-    def views(self, **slicers):
-        """Return a new Dataset whose contents are a view of a slice from the
-        current dataset along specified dimensions
+    def indexed_by(self, **indexers):
+        """Return a new dataview whose dataset is given by indexing along the
+        specified dimension(s)
 
         See Also
         --------
-        Dataset.views
+        Dataset.indexed_by
         """
-        ds = self.dataset.views(**slicers)
-        return type(self)(ds, self.name)
+        return type(self)(self.dataset.indexed_by(**indexers), self.name)
+
+    def labeled_by(self, **indexers):
+        """Return a new dataview whose dataset is given by selecting coordinate
+        labels along the specified dimension(s)
+
+        See Also
+        --------
+        Dataset.labeled_by
+        """
+        return type(self)(self.dataset.labeled_by(**indexers), self.name)
 
     def renamed(self, new_name):
         """Returns a new DataView with this DataView's focus variable renamed

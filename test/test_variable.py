@@ -71,14 +71,14 @@ class TestVariable(TestCase):
         v.data[:] = 0
         self.assertTrue(np.all(v.data == 0))
 
-    def test_views(self):
+    def test_indexed_by(self):
         v = Variable(['time', 'x'], self.d)
-        self.assertVarEqual(v.views(time=slice(None)), v)
-        self.assertVarEqual(v.views(time=0), v[0])
-        self.assertVarEqual(v.views(time=slice(0, 3)), v[:3])
-        self.assertVarEqual(v.views(x=0), v[:, 0])
+        self.assertVarEqual(v.indexed_by(time=slice(None)), v)
+        self.assertVarEqual(v.indexed_by(time=0), v[0])
+        self.assertVarEqual(v.indexed_by(time=slice(0, 3)), v[:3])
+        self.assertVarEqual(v.indexed_by(x=0), v[:, 0])
         with self.assertRaisesRegexp(ValueError, 'do not exist'):
-            v.views(not_a_dim=0)
+            v.indexed_by(not_a_dim=0)
 
     def test_transpose(self):
         v = Variable(['time', 'x'], self.d)

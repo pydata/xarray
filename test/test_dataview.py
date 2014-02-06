@@ -32,9 +32,13 @@ class TestDataView(TestCase):
             self.assertArrayEqual(v, self.ds.indices[k])
 
     def test_items(self):
-        # test indexing
-        x = self.ds['x']
-        y = self.ds['y']
+        # strings pull out dataviews
+        self.assertViewEqual(self.dv, self.ds['foo'])
+        x = self.dv['x']
+        y = self.dv['y']
+        self.assertViewEqual(DataView(self.ds.select('x'), 'x'), x)
+        self.assertViewEqual(DataView(self.ds.select('y'), 'y'), y)
+        # integer indexing
         I = ReturnItem()
         for i in [I[:], I[...], I[x.data], I[x.variable], I[x], I[x, y],
                   I[x.data > -1], I[x.variable > -1], I[x > -1],
@@ -44,12 +48,8 @@ class TestDataView(TestCase):
                   I[x.data[:3]], I[x.variable[:3]], I[x[:3]], I[x[:3], y[:4]],
                   I[x.data > 3], I[x.variable > 3], I[x > 3], I[x > 3, y > 3]]:
             self.assertVarEqual(self.v[i], self.dv[i])
-        # test index
+        # check that the new index is consistent
         self.assertEqual(list(self.dv[0].indices), ['y'])
-        # test matches views
-        self.assertEqual(self.dv[0].dataset, self.ds.views(x=0))
-        self.assertEqual(self.dv[:3, :5].dataset,
-                         self.ds.views(x=slice(3), y=slice(5)))
 
     def test_iteration(self):
         for ((act_x, act_dv), (exp_x, exp_ds)) in \
@@ -59,9 +59,28 @@ class TestDataView(TestCase):
         for ((_, exp_dv), act_dv) in zip(self.dv.iterator('x'), self.dv):
             self.assertViewEqual(exp_dv, act_dv)
 
-    def test_views(self):
-        self.assertViewEqual(self.dv, self.dv.views(x=slice(None)))
-        self.assertViewEqual(self.dv[:3], self.dv.views(x=slice(3)))
+    def test_indexed_by(self):
+        self.assertEqual(self.dv[0].dataset, self.ds.indexed_by(x=0))
+        self.assertEqual(self.dv[:3, :5].dataset,
+                         self.ds.indexed_by(x=slice(3), y=slice(5)))
+        self.assertViewEqual(self.dv, self.dv.indexed_by(x=slice(None)))
+        self.assertViewEqual(self.dv[:3], self.dv.indexed_by(x=slice(3)))
+
+    def test_labeled_by(self):
+        self.ds.set_variable('x', Variable(['x'], np.array(list('abcdefghij'))))
+        self.assertViewEqual(self.dv, self.dv.labeled_by(x=slice(None)))
+        self.assertViewEqual(self.dv[1], self.dv.labeled_by(x='b'))
+        self.assertViewEqual(self.dv[:3], self.dv.labeled_by(x=slice('c')))
+
+    def test_loc(self):
+        self.ds.set_variable('x', Variable(['x'], np.array(list('abcdefghij'))))
+        self.assertViewEqual(self.dv[:3], self.dv.loc[:'c'])
+        self.assertViewEqual(self.dv[1], self.dv.loc['b'])
+        self.assertViewEqual(self.dv[:3], self.dv.loc[['a', 'b', 'c']])
+        self.assertViewEqual(self.dv[:3, :4],
+                             self.dv.loc[['a', 'b', 'c'], np.arange(4)])
+        self.dv.loc['a':'j'] = 0
+        self.assertTrue(np.all(self.dv.data == 0))
 
     def test_renamed(self):
         renamed = self.dv.renamed('bar')

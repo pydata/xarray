@@ -568,49 +568,50 @@ class Dataset(object):
             self.indices.build_index(name)
         return new_var
 
-    def views(self, **slicers):
-        """Return a new object whose contents are a view of a slice from the
-        current object along a specified dimension
+    def indexed_by(self, **indexers):
+        """Return a new dataset with each variable indexed along the specified
+        dimension(s)
+
+        This method selects values from each variable using its `__getitem__`
+        method, except this method does not require knowing the order of
+        each variable's dimensions.
 
         Parameters
         ----------
-        slicers : {dim: slice, ...}
-            A dictionary mapping from dimensions to integers or slice objects.
+        **indexers : {dim: indexer, ...}
+            Keyword arguments with names matching dimensions and values given
+            by integers, slice objects or arrays.
 
         Returns
         -------
-        obj : Data object
-            The returned object has the same attributes, dimensions,
-            variable names and variable attributes as the original.
-            Variables that are not defined along the specified
-            dimensions are viewed in their entirety. Variables that are
-            defined along the specified dimension have their data
-            contents taken along the specified dimension.
-
-            Care must be taken since modifying (most) values in the returned
-            object will result in modification to the parent object.
+        obj : Dataset
+            A new Dataset with the same contents as this dataset, except each
+            variable and dimension is indexed by the appropriate indexers. In
+            general, each variable's data will be a view of the variable's data
+            in this dataset, unless numpy fancy indexing was triggered by using
+            an array indexer, in which case the data will be a copy.
 
         See Also
         --------
-        view
-        numpy.take
-        Variable.take
+        Dataset.labeled_by
+        Dataset.indexed_by
+        Variable.indexed_by
         """
-        invalid = [k for k in slicers if not k in self.dimensions]
+        invalid = [k for k in indexers if not k in self.dimensions]
         if invalid:
             raise ValueError("dimensions %r do not exist" % invalid)
 
-        # all slicers should be int, slice or np.ndarrays
-        slicers = {k: np.asarray(v) if not isinstance(v, (int, slice)) else v
-                   for k, v in slicers.iteritems()}
+        # all indexers should be int, slice or np.ndarrays
+        indexers = {k: np.asarray(v) if not isinstance(v, (int, slice)) else v
+                   for k, v in indexers.iteritems()}
 
         variables = OrderedDict()
         for name, var in self.variables.iteritems():
-            var_slicers = {k: v for k, v in slicers.iteritems()
+            var_indexers = {k: v for k, v in indexers.iteritems()
                            if k in var.dimensions}
-            variables[name] = var.views(**var_slicers)
+            variables[name] = var.indexed_by(**var_indexers)
 
-        indices = {k: (v[slicers[k]] if k in slicers else v)
+        indices = {k: (v[indexers[k]] if k in indexers else v)
                    for k, v in self.indices.iteritems()}
         # filter out non-indices (indices for which one value was selected)
         indices = {k: v for k, v in indices.iteritems()
@@ -637,9 +638,46 @@ class Dataset(object):
                 # later)
         return indexer
 
-    def loc_views(self, **slicers):
-        return self.views(**{k: self._loc_to_int_indexer(k, v)
-                             for k, v in slicers.iteritems()})
+    def labeled_by(self, **indexers):
+        """Return a new dataset with each variable indexed by coordinate labels
+        along the specified dimension(s)
+
+        In contrast to `Dataset.indexed_by`, indexers for this method should
+        use coordinate values instead of integers.
+
+        Under the hood, this method is powered by using Panda's powerful Index
+        objects. This makes label based indexing essentially just as fast as
+        using integer indexing.
+
+        It also means this method uses pandas's (well documented) logic for
+        indexing. This means you can use string shortcuts for datetime indexes
+        (e.g., '2000-01' to select all values in January 2000). It also means
+        that slices are treated as inclusive of both the start and stop values,
+        unlike normal Python indexing.
+
+        Parameters
+        ----------
+        **indexers : {dim: indexer, ...}
+            Keyword arguments with names matching dimensions and values given
+            by individual, slices or arrays of coordinate values.
+
+        Returns
+        -------
+        obj : Dataset
+            A new Dataset with the same contents as this dataset, except each
+            variable and dimension is indexed by the appropriate indexers. In
+            general, each variable's data will be a view of the variable's data
+            in this dataset, unless numpy fancy indexing was triggered by using
+            an array indexer, in which case the data will be a copy.
+
+        See Also
+        --------
+        Dataset.labeled_by
+        Dataset.indexed_by
+        Variable.indexed_by
+        """
+        return self.indexed_by(**{k: self._loc_to_int_indexer(k, v)
+                                  for k, v in indexers.iteritems()})
 
     def renamed(self, name_dict):
         """
@@ -830,7 +868,7 @@ class Dataset(object):
         """
         coord = self.variables[dimension]
         for i in xrange(self.dimensions[dimension]):
-            yield (coord[i], self.views(**{dimension: i}))
+            yield (coord[i], self.indexed_by(**{dimension: i}))
 
 
 if __name__ == "__main__":

@@ -48,7 +48,7 @@ class Variable(_DataWrapperMixin):
     @property
     def data(self):
         """The variable's data as a numpy.ndarray"""
-        if not isinstance(self._data, np.ndarray):
+        if not isinstance(self._data, (np.ndarray, np.string_)):
             self._data = np.asarray(self._data[...])
             self._indexing_mode = 'numpy'
         return self._data
@@ -175,40 +175,32 @@ class Variable(_DataWrapperMixin):
             contents = ': %s' % self.data
         return '<scidata.%s%s>' % (type(self).__name__, contents)
 
-    def views(self, **slicers):
-        """Return a new Variable object whose contents are a view of the object
-        sliced along a specified dimension.
+    def indexed_by(self, **indexers):
+        """Return a new variable indexed along the specified dimension(s)
 
         Parameters
         ----------
-        slicers : {dim: slice, ...}
-            A dictionary mapping from dim to slice, dim represents
-            the dimension to slice along slice represents the range of the
-            values to extract.
+        **indexers : {dim: indexer, ...}
+            Keyword arguments with names matching dimensions and values given
+            by integers, slice objects or arrays.
 
         Returns
         -------
         obj : Variable object
-            The returned object has the same attributes and dimensions
-            as the original. Data contents are taken along the
-            specified dimension.  Care must be taken since modifying (most)
-            values in the returned object will result in modification to the
-            parent object.
-
-        See Also
-        --------
-        view
-        take
+            A new Variable with the selected data and dimensions. In general,
+            the new variable's data will be a view of this variable's data,
+            unless numpy fancy indexing was triggered by using an array
+            indexer, in which case the data will be a copy.
         """
-        invalid = [k for k in slicers if not k in self.dimensions]
+        invalid = [k for k in indexers if not k in self.dimensions]
         if invalid:
             raise ValueError("dimensions %r do not exist" % invalid)
 
-        slices = [slice(None)] * self.data.ndim
+        key = [slice(None)] * self.data.ndim
         for i, dim in enumerate(self.dimensions):
-            if dim in slicers:
-                slices[i] = slicers[dim]
-        return self[tuple(slices)]
+            if dim in indexers:
+                key[i] = indexers[dim]
+        return self[tuple(key)]
 
     def transpose(self, *dimensions):
         """Return a new Variable object with transposed dimensions
@@ -344,7 +336,7 @@ class Variable(_DataWrapperMixin):
                              'match the length of this variable along its '
                              'dimension')
         unique_values = np.unique(groups.data)
-        aggregated = [self.views(**{dim: groups == u}).collapsed(
+        aggregated = [self.indexed_by(**{dim: groups == u}).collapsed(
                           func, dim, axis=None, **kwargs)
                       for u in unique_values]
         stacked = stack_variables(aggregated, new_dim_name, unique_values.size)
