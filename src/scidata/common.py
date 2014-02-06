@@ -77,7 +77,7 @@ class _DataWrapperMixin(object):
     @classmethod
     def _collapse_method(cls, f, name=None, module=None):
         def func(self, dimension=None, axis=None, **kwargs):
-            return self.collapsed(f, dimension, axis, **kwargs)
+            return self.collapse(f, dimension, axis, **kwargs)
         if name is None:
             name = f.__name__
         func.__name__ = name

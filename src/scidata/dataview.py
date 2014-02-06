@@ -1,3 +1,5 @@
+# TODO: replace aggregate and iterator methods by a 'groupby' method/object
+# like pandas
 import functools
 import re
 
@@ -36,28 +38,28 @@ class DataView(_DataWrapperMixin):
     dataviews are much lighter weight than cubes. They are simply aligned,
     labeled datasets and do not explicitly guarantee or rely on the CF model.
     """
-    def __init__(self, dataset, name):
+    def __init__(self, dataset, focus):
         """
         Parameters
         ----------
         dataset : scidata.Dataset
             The dataset on which to build this data view.
-        name : str
+        focus : str
             The name of the "focus variable" in dataset on which this view is
             oriented.
         """
-        if not name in dataset:
-            raise ValueError('name %r is not a variable in dataset %r'
-                             % (name, dataset))
+        if not focus in dataset:
+            raise ValueError('focus %r is not a variable in dataset %r'
+                             % (focus, dataset))
         self.dataset = dataset
-        self.name = name
+        self.focus = focus
 
     @property
     def variable(self):
-        return self.dataset.variables[self.name]
+        return self.dataset.variables[self.focus]
     @variable.setter
     def variable(self, value):
-        self.dataset.set_variable(self.name, value)
+        self.dataset.set_variable(self.focus, value)
 
     # _data is necessary for _DataWrapperMixin
     @property
@@ -77,8 +79,7 @@ class DataView(_DataWrapperMixin):
         return self.variable.dimensions
 
     def _key_to_indexers(self, key):
-        key = expanded_indexer(key, self.ndim)
-        return zip(self.dimensions, key)
+        return zip(self.dimensions, expanded_indexer(key, self.ndim))
 
     def __getitem__(self, key):
         if isinstance(key, basestring):
@@ -86,11 +87,18 @@ class DataView(_DataWrapperMixin):
             return self.dataset[key]
         else:
             # orthogonal array indexing
-            indexers = dict(self._key_to_indexers(key))
-            return type(self)(self.dataset.indexed_by(**indexers), self.name)
+            return self.indexed_by(**dict(self._key_to_indexers(key)))
 
     def __setitem__(self, key, value):
-        self.variable[key] = value
+        if isinstance(key, basestring):
+            # add a variable or dataview to the dataset
+            self.dataset[key] = value
+        else:
+            # orthogonal array indexing
+            self.variable[key] = value
+
+    def __contains__(self, key):
+        return key in self.dataset
 
     @property
     def loc(self):
@@ -117,14 +125,14 @@ class DataView(_DataWrapperMixin):
 
     def __copy__(self):
         # shallow copy the underlying dataset
-        return DataView(self.dataset.copy(), self.name)
+        return DataView(self.dataset.copy(), self.focus)
 
     # mutable objects should not be hashable
     __hash__ = None
 
     def __str__(self):
         #TODO: make this less hacky
-        return re.sub(' {4}(%s\s+%s)' % (self.dtype, self.name),
+        return re.sub(' {4}(%s\s+%s)' % (self.dtype, self.focus),
                       r'--> \1', str(self.dataset))
 
     def __repr__(self):
@@ -136,7 +144,7 @@ class DataView(_DataWrapperMixin):
             contents = ' (%s): %s' % (dim_summary, self.dtype)
         else:
             contents = ': %s' % self.data
-        return '<scidata.%s %r%s>' % (type(self).__name__, self.name, contents)
+        return '<scidata.%s %r%s>' % (type(self).__name__, self.focus, contents)
 
     def indexed_by(self, **indexers):
         """Return a new dataview whose dataset is given by indexing along the
@@ -146,7 +154,7 @@ class DataView(_DataWrapperMixin):
         --------
         Dataset.indexed_by
         """
-        return type(self)(self.dataset.indexed_by(**indexers), self.name)
+        return type(self)(self.dataset.indexed_by(**indexers), self.focus)
 
     def labeled_by(self, **indexers):
         """Return a new dataview whose dataset is given by selecting coordinate
@@ -156,26 +164,26 @@ class DataView(_DataWrapperMixin):
         --------
         Dataset.labeled_by
         """
-        return type(self)(self.dataset.labeled_by(**indexers), self.name)
+        return type(self)(self.dataset.labeled_by(**indexers), self.focus)
 
     def renamed(self, new_name):
         """Returns a new DataView with this DataView's focus variable renamed
         """
-        renamed_dataset = self.dataset.renamed({self.name: new_name})
+        renamed_dataset = self.dataset.renamed({self.focus: new_name})
         return type(self)(renamed_dataset, new_name)
 
     def unselected(self):
         """Returns a copy of this DataView's dataset with this DataView's
         focus variable removed
         """
-        return self.dataset.unselect(self.name)
+        return self.dataset.unselect(self.focus)
 
     def replace_focus(self, new_var):
         """Returns a copy of this DataView's dataset with this DataView's
         focus variable replaced by 'new_var'
         """
-        ds = self.dataset.replace(self.name, new_var)
-        return type(self)(ds, self.name)
+        ds = self.dataset.replace(self.focus, new_var)
+        return type(self)(ds, self.focus)
 
     def iterator(self, dimension):
         """Iterate along a data dimension
@@ -195,7 +203,7 @@ class DataView(_DataWrapperMixin):
             variables and DataView objects.
         """
         for (x, dataset) in self.dataset.iterator(dimension):
-            yield (x, type(self)(dataset, self.name))
+            yield (x, type(self)(dataset, self.focus))
 
     def transpose(self, *dimensions):
         """Return a new DataView object with transposed dimensions
@@ -221,7 +229,7 @@ class DataView(_DataWrapperMixin):
         """
         return self.replace_focus(self.variable.transpose(*dimensions))
 
-    def collapsed(self, func, dimension=None, axis=None, **kwargs):
+    def collapse(self, func, dimension=None, axis=None, **kwargs):
         """Collapse this variable by applying `func` along some dimension(s)
 
         Parameters
@@ -242,7 +250,7 @@ class DataView(_DataWrapperMixin):
 
         Note
         ----
-        If `collapsed` is called with multiple dimensions (or axes, which
+        If `collapse` is called with multiple dimensions (or axes, which
         are converted into dimensions), then the collapse operation is
         performed repeatedly along each dimension in turn from left to right.
 
@@ -252,19 +260,19 @@ class DataView(_DataWrapperMixin):
             DataView with this dataview's variable replaced with a variable
             with summarized data and the indicated dimension(s) removed.
         """
-        var = self.variable.collapsed(func, dimension, axis, **kwargs)
+        var = self.variable.collapse(func, dimension, axis, **kwargs)
         dropped_dims = set(self.dimensions) - set(var.dimensions)
         # For now, take an aggressive strategy of removing all variables
         # associated with any dropped dimensions
         # TODO: save some summary (mean? bounds?) of dropped variables
-        drop = ({self.name} | dropped_dims |
+        drop = ({self.focus} | dropped_dims |
                 {k for k, v in self.dataset.variables.iteritems()
                 if any(dim in dropped_dims for dim in v.dimensions)})
         ds = self.dataset.unselect(*drop)
-        ds.add_variable(self.name, var)
-        return type(self)(ds, self.name)
+        ds.add_variable(self.focus, var)
+        return type(self)(ds, self.focus)
 
-    def aggregated_by(self, func, new_dim_name, **kwargs):
+    def aggregate(self, func, new_dim_name, **kwargs):
         """Aggregate this dataview by applying `func` to grouped elements
 
         Parameters
@@ -286,18 +294,53 @@ class DataView(_DataWrapperMixin):
             DataView with aggregated data and the new dimension `new_dim_name`.
         """
         agg_var = self.dataset[new_dim_name]
-        unique, aggregated = self.variable.aggregated_by(
+        unique, aggregated = self.variable.aggregate(
             func, new_dim_name, agg_var, **kwargs)
         # TODO: add options for how to summarize variables along aggregated
         # dimensions instead of just dropping them
-        drop = ({self.name} |
+        drop = ({self.focus} |
                 ({new_dim_name} if new_dim_name in self.dataset else set()) |
                 {k for k, v in self.dataset.variables.iteritems()
                  if any(dim in agg_var.dimensions for dim in v.dimensions)})
         ds = self.dataset.unselect(*drop)
         ds.add_coordinate(unique)
-        ds.add_variable(self.name, aggregated)
-        return type(self)(ds, self.name)
+        ds.add_variable(self.focus, aggregated)
+        return type(self)(ds, self.focus)
+
+    @classmethod
+    def from_stack(cls, dataviews, new_dim_name='stacked_dimension'):
+        """Stack dataviews along a new dimension to form a new dataview
+
+        Parameters
+        ----------
+        dataviews : iterable of Variable and/or DataView
+            Variables and/or DataView objects to stack together.
+        dim : str, optional
+            Name of the new dimension.
+
+        Returns
+        -------
+        stacked : DataView
+            Stacked dataview formed by stacking all the supplied variables
+            along the new dimension. The new dimension will be the first
+            dimension in the stacked dataview.
+        """
+        views = list(dataviews)
+        if not views:
+            raise ValueError('DataView.from_stack was supplied with an '
+                             'empty argument')
+        dataset = Dataset()
+        focus = default_focus = 'stacked_variable'
+        for view in views:
+            if isinstance(view, cls):
+                dataset.merge(view.unselected(), inplace=True)
+                if focus == default_focus:
+                    focus = view.focus
+                elif focus != view.focus:
+                    raise ValueError('DataView.from_stack requires that all '
+                                     'stacked views have the same focus')
+        dataset[focus] = Variable.from_stack(dataviews, new_dim_name)
+        return cls(dataset, focus)
 
     def __array_wrap__(self, result):
         return self.replace_focus(self.variable.__array_wrap__(result))
@@ -343,5 +386,16 @@ class DataView(_DataWrapperMixin):
             return self
         return func
 
-
 ops.inject_special_operations(DataView, priority=60)
+
+
+def intersection(dataview1, dataview2):
+    """Given two dataview objects, returns two new dataviews where all indices
+    found on both dataviews are replaced by their intersection
+    """
+    overlapping_indices = {k: dataview1.indices[k] & dataview2.indices[k]
+                           for k in dataview1.indices
+                           if k in dataview2.indices}
+    return tuple(dv.indexed_by(**overlapping_indices)
+                 for dv in [dataview1, dataview2])
+

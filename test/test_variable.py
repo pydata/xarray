@@ -3,7 +3,6 @@ import warnings
 import numpy as np
 
 from scidata import Variable, Dataset
-from scidata.variable import stack_variables
 from . import TestCase
 
 
@@ -177,23 +176,23 @@ class TestVariable(TestCase):
         # test ufuncs
         self.assertVarEqual(np.sin(v), Variable(['x'], np.sin(x)))
 
-    def test_collapsed(self):
+    def test_collapse(self):
         v = Variable(['time', 'x'], self.d)
         # intentionally test with an operation for which order matters
-        self.assertVarEqual(v.collapsed(np.std, 'time'),
+        self.assertVarEqual(v.collapse(np.std, 'time'),
                             Variable(['x'], self.d.std(axis=0),
                                      {'cell_methods': 'time: std'}))
-        self.assertVarEqual(v.collapsed(np.std, axis=0),
-                            v.collapsed(np.std, dimension='time'))
-        self.assertVarEqual(v.collapsed(np.std, ['x', 'time']),
+        self.assertVarEqual(v.collapse(np.std, axis=0),
+                            v.collapse(np.std, dimension='time'))
+        self.assertVarEqual(v.collapse(np.std, ['x', 'time']),
                             Variable([], self.d.std(axis=1).std(axis=0),
                                      {'cell_methods': 'x: std time: std'}))
-        self.assertVarEqual(v.collapsed(np.std),
+        self.assertVarEqual(v.collapse(np.std),
                             Variable([], self.d.std(),
                                      {'cell_methods': 'time: x: std'}))
-        self.assertVarEqual(v.mean('time'), v.collapsed(np.mean, 'time'))
+        self.assertVarEqual(v.mean('time'), v.collapse(np.mean, 'time'))
 
-    def test_aggregated_by(self):
+    def test_aggregate(self):
         agg_var = Variable(['y'], np.array(['a', 'a', 'b']))
         v = Variable(['x', 'y'], self.d)
         expected_unique = Variable(['abc'], np.array(['a', 'b']))
@@ -201,32 +200,30 @@ class TestVariable(TestCase):
                                        np.array([self.d[:, :2].sum(axis=1),
                                                  self.d[:, 2:].sum(axis=1)]).T,
                                        {'cell_methods': 'y: sum'})
-        actual_unique, actual_aggregated = v.aggregated_by(np.sum, 'abc', agg_var)
+        actual_unique, actual_aggregated = v.aggregate(np.sum, 'abc', agg_var)
         self.assertVarEqual(expected_unique, actual_unique)
         self.assertVarEqual(expected_aggregated, actual_aggregated)
         # should be equivalent to aggregate by a dataview, too
         alt_agg_var = Dataset({'abc': agg_var})['abc']
-        actual_unique, actual_aggregated = v.aggregated_by(np.sum, 'abc',
+        actual_unique, actual_aggregated = v.aggregate(np.sum, 'abc',
                                                            alt_agg_var)
         self.assertVarEqual(expected_unique, actual_unique)
         self.assertVarEqual(expected_aggregated, actual_aggregated)
 
-    def test_stack_variables(self):
+    def test_from_stack(self):
         x = np.arange(5)
         y = np.ones(5)
         v = Variable(['a'], x)
         w = Variable(['a'], y)
         self.assertVarEqual(Variable(['b', 'a'], np.array([x, y])),
-                            stack_variables([v, w], 'b'))
+                            Variable.from_stack([v, w], 'b'))
         self.assertVarEqual(Variable(['b', 'a'], np.array([x, y])),
-                            stack_variables((v, w), 'b'))
+                            Variable.from_stack((v, w), 'b'))
         self.assertVarEqual(Variable(['b', 'a'], np.array([x, y])),
-                            stack_variables((v, w), 'b', length=2))
+                            Variable.from_stack((v, w), 'b', length=2))
         with self.assertRaisesRegexp(ValueError, 'too many'):
-            stack_variables([v, w], 'b', length=1)
+            Variable.from_stack([v, w], 'b', length=1)
         with self.assertRaisesRegexp(ValueError, r'only \d+ stack'):
-            stack_variables([v, w, w], 'b', length=4)
+            Variable.from_stack([v, w, w], 'b', length=4)
         with self.assertRaisesRegexp(ValueError, 'inconsistent dimensions'):
-            stack_variables([v, Variable(['c'], y)], 'b')
-
-
+            Variable.from_stack([v, Variable(['c'], y)], 'b')

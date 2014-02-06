@@ -5,7 +5,7 @@ import netCDF4 as nc4
 import pandas as pd
 
 from cStringIO import StringIO
-from collections import OrderedDict, MutableMapping
+from collections import OrderedDict, Mapping, MutableMapping
 
 from dataview import DataView
 from utils import FrozenOrderedDict, Frozen
@@ -36,6 +36,9 @@ def construct_dimensions(variables):
     """
     dimensions = OrderedDict()
     for k, var in variables.iteritems():
+        if k in var.dimensions and var.ndim != 1:
+            raise ValueError('a coordinate variable must be defined with '
+                             '1-dimensional data')
         for dim, length in zip(var.dimensions, var.shape):
             if dim not in dimensions:
                 dimensions[dim] = length
@@ -73,12 +76,11 @@ def check_dims_and_vars_consistency(dimensions, variables):
                                  (dim, k, list(dimensions)))
             elif dimensions[dim] != length:
                 raise ValueError('dimension %r on variable %r has length '
-                                 '%s but in on the dataset has length %s' %
+                                 '%s but on the dataset has length %s' %
                                  (dim, k, length, dimensions[dim]))
 
 
 def open_dataset(nc, *args, **kwargs):
-    #TODO: add tests for this function
     # move this to a classmethod Dataset.open?
     if isinstance(nc, basestring) and not nc.startswith('CDF'):
         # If the initialization nc is a string and it doesn't
@@ -146,13 +148,12 @@ _DATETIMEINDEX_COMPONENTS = ['year', 'month', 'day', 'hour', 'minute',
                              'quarter']
 
 
-class Dataset(object):
-    """
-    A netcdf-like data object consisting of dimensions, variables and
+class Dataset(Mapping):
+    """A netcdf-like data object consisting of dimensions, variables and
     attributes which together form a self describing data set
 
-    Datasets are containers of variable name. Getting an item from a Dataset
-    returns a DataView focused on that variable.
+    Datasets are mappings from variable names to dataviews focused on those
+    variable.
 
     Attributes
     ----------
@@ -167,15 +168,19 @@ class Dataset(object):
     indices : {dimension: index, ...}
         Mapping from dimensions to pandas.Index objects.
     store : backends.*DataStore
+        Don't modify the store directly unless you want to avoid all validation
+        checks.
     """
     def __init__(self, variables=None, dimensions=None, attributes=None,
                  indices=None, store=None):
         """
         If dimensions are not provided, they are inferred from the variables.
 
-        Only set a store if you want to Dataset operations to modify stored
-        data in-place. Otherwise, load data from a store using the
-        `open_dataset` function or the `from_store` class method.
+        In general, load data from a store using the `open_dataset` function or
+        the `from_store` class method. The `store` argument should only be used
+        if you want to Dataset operations to modify stored data in-place.
+        Note, however, that modifying datasets in-place is not entirely
+        implemented and thus may lead to unexpected behavior.
         """
         # TODO: fill out this docstring
         if store is None:
@@ -259,29 +264,30 @@ class Dataset(object):
         """
         return key in self.variables
 
+    def __len__(self):
+        return len(self.variable)
+
     def __iter__(self):
         return iter(self.variables)
 
     @property
-    def _unique_datetimeindex(self):
-        time_indices = [k for k, v in self.indices.iteritems()
-                        if isinstance(v, pd.DatetimeIndex)]
-        if len(time_indices) == 1:
-            return time_indices[0]
-        else:
-            return None
+    def _datetimeindices(self):
+        return [k for k, v in self.indices.iteritems()
+                if isinstance(v, pd.DatetimeIndex)]
 
     def _get_virtual_variable(self, key):
         if key in self.indices:
             return Variable([key], self.indices[key].values)
-        time = self._unique_datetimeindex
-        if time is not None:
-            if key in _DATETIMEINDEX_COMPONENTS:
-                return Variable([time], getattr(self.indices[time], key))
-            elif key == 'season':
-                seasons = np.array(['DJF', 'MAM', 'JJA', 'SON'])
-                month = self.indices[time].month
-                return Variable([time], seasons[(month // 3) % 4])
+        split_key = key.split('.')
+        if len(split_key) == 2:
+            var, suffix = split_key
+            if var in self._datetimeindices:
+                if suffix in _DATETIMEINDEX_COMPONENTS:
+                    return Variable([var], getattr(self.indices[var], suffix))
+                elif suffix == 'season':
+                    # seasons = np.array(['DJF', 'MAM', 'JJA', 'SON'])
+                    month = self.indices[var].month
+                    return Variable([var], (month // 3) % 4 + 1)
         raise ValueError('virtual variable %r not found' % key)
 
     def _get_virtual_dataview(self, key):
@@ -298,8 +304,9 @@ class Dataset(object):
         dataset variables or dimensions)
         """
         possible_vars = list(self.dimensions)
-        if self._unique_datetimeindex is not None:
-            possible_vars += _DATETIMEINDEX_COMPONENTS + ['season']
+        for k in self._datetimeindices:
+            for suffix in _DATETIMEINDEX_COMPONENTS + ['season']:
+                possible_vars.append('%s.%s' % (k, suffix))
         return tuple(k for k in possible_vars if k not in self)
 
     def __getitem__(self, key):
@@ -312,8 +319,18 @@ class Dataset(object):
         else:
             return DataView(self.select(key), key)
 
-    #TODO: add keys, items, and values methods (and the iter versions) to
-    # complete the dict analogy?
+    def __setitem__(self, key, value):
+        # TODO: allow this operation to be destructive, overriding existing
+        # variables? If so, we may want to implement __delitem__, too.
+        # (We would need to change DataView.__setitem__ in that case, because
+        # we definitely don't want to override focus variables.)
+        if isinstance(value, DataView):
+            self.merge(value.renamed(key).dataset, inplace=True)
+        elif isinstance(value, Variable):
+            self.set_variable(key, value)
+        else:
+            raise TypeError('only DataViews and Variables can be added to '
+                            'datasets via `__setitem__`')
 
     # mutable objects should not be hashable
     __hash__ = None
@@ -422,10 +439,9 @@ class Dataset(object):
         Parameters
         ----------
         name : string
-            The name of the new variable. An exception will be raised
-            if the object already has a variable with this name. name
-            must satisfy netCDF-3 naming rules. If name equals the name
-            of a dimension, then the new variable is treated as a
+            The name of the new variable. An exception will be raised if the
+            object already has a variable with this name. If name equals the
+            name of a dimension, then the new variable is treated as a
             coordinate variable and must be 1-dimensional.
         dims : tuple
             The dimensions of the new variable. Elements must be dimensions of
@@ -562,9 +578,18 @@ class Dataset(object):
         variable
             The variable object in the underlying datastore.
         """
-        check_dims_and_vars_consistency(self.dimensions, {name: var})
+        # check old + new dimensions for consistency checks
+        new_dims = OrderedDict()
+        for dim, length in zip(var.dimensions, var.shape):
+            if dim not in self.dimensions:
+                new_dims[dim] = length
+        check_dims_and_vars_consistency(
+            dict(self.dimensions.items() + new_dims.items()),
+            {name: var})
+        # now set the new dimensions and variables, and rebuild the indices
+        self.store.set_dimensions(new_dims)
         new_var = self.store.set_variable(name, var)
-        if name in self.indices:
+        if name in list(self.indices) + list(new_dims):
             self.indices.build_index(name)
         return new_var
 
@@ -734,15 +759,22 @@ class Dataset(object):
             are silently dropped.
         """
         # check for conflicts
-        utils.update_safety_check(self.variables, other.variables,
+        utils.update_safety_check(self.noncoordinates, other.noncoordinates,
                                   compat=utils.variable_equal)
         utils.update_safety_check(self.dimensions, other.dimensions)
-        utils.update_safety_check(self.indices.cache, other.indices.cache,
+        # note: coordinates are checked by comparing indices instead of
+        # variables, which lets us merge two datasets even if they have
+        # different time units
+        utils.update_safety_check(self.indices, other.indices,
                                   compat=np.array_equal)
         # update contents
         obj = self if inplace else self.copy()
-        obj.store.set_variables(other.variables)
-        obj.store.set_dimensions(other.dimensions)
+        obj.store.set_variables(OrderedDict((k, v) for k, v
+                                            in other.variables.iteritems()
+                                            if k not in obj.variables))
+        obj.store.set_dimensions(OrderedDict((k, v) for k, v
+                                             in other.dimensions.iteritems()
+                                             if k not in obj.dimensions))
         obj._indices.update(other.indices.cache)
         # remove conflicting attributes
         for k, v in other.attributes.iteritems():

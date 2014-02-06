@@ -8,7 +8,7 @@ import tempfile
 import numpy as np
 import pandas as pd
 
-from scidata import Dataset, Variable, backends
+from scidata import Dataset, DataView, Variable, backends, open_dataset
 from . import TestCase
 
 
@@ -44,6 +44,15 @@ class DataTest(TestCase):
         data = create_test_data(self.get_store())
         self.assertEqual('<scidata.Dataset (time: 1000, @dim1: 100, '
                          '@dim2: 50, @dim3: 10): var1 var2 var3>', repr(data))
+
+    def test_init(self):
+        var1 = Variable('x', np.arange(100))
+        var2 = Variable('x', np.arange(1000))
+        var3 = Variable(['x', 'y'], np.arange(1000).reshape(100, 10))
+        with self.assertRaisesRegexp(ValueError, 'already is saved with len'):
+            Dataset({'a': var1, 'b': var2})
+        with self.assertRaisesRegexp(ValueError, 'must be defined with 1-d'):
+            Dataset({'a': var1, 'x': var3})
 
     def test_iterator(self):
         data = create_test_data(self.get_store())
@@ -82,8 +91,8 @@ class DataTest(TestCase):
         self.assertRaises(ValueError, a.create_variable,
                 name='foo', dims=('time', 'x',), data=d)
         # dimension must be defined
-        self.assertRaises(ValueError, a.create_variable,
-                name='qux', dims=('time', 'missing_dim',), data=d)
+        # self.assertRaises(ValueError, a.create_variable,
+        #         name='qux', dims=('time', 'missing_dim',), data=d)
         # try to add variable with dim (10,3) with data that's (3,10)
         self.assertRaises(ValueError, a.create_variable,
                 name='qux', dims=('time', 'x'), data=d.T)
@@ -302,13 +311,40 @@ class DataTest(TestCase):
         actual = ds1.merge(ds2)
         self.assertEqual(expected, actual)
         with self.assertRaises(ValueError):
-            ds1.merge(ds2.indexed_by(dim1=0))
+            ds1.merge(ds2.indexed_by(dim1=slice(2)))
         with self.assertRaises(ValueError):
             ds1.merge(ds2.renamed({'var3': 'var1'}))
 
-    def test_virtual_variables(self):
-        # need to fill this out
-        pass
+    def test_getitem(self):
+        data = create_test_data(self.get_store())
+        data.create_variable('time', ['time'], np.arange(1000, dtype=np.int32),
+                             {'units': 'days since 2000-01-01'})
+        self.assertIsInstance(data['var1'], DataView)
+        self.assertVarEqual(data['var1'], data.variables['var1'])
+        self.assertItemsEqual(data['var1'].dataset.variables,
+                              {'var1', 'dim1', 'dim2'})
+        # access virtual variables
+        self.assertVarEqual(data['time.dayofyear'][:300],
+                            Variable('time', 1 + np.arange(300)))
+        self.assertArrayEqual(data['time.month'].data,
+                              data.indices['time'].month)
+
+    def test_setitem(self):
+        # assign a variable
+        var = Variable(['dim1'], np.random.randn(100))
+        data1 = create_test_data(self.get_store())
+        data1.set_variable('A', var)
+        data2 = data1.copy()
+        data2['A'] = var
+        self.assertEqual(data1, data2)
+        # assign a dataview
+        dv = 2 * data2['A']
+        data1.set_variable('B', dv.variable)
+        data2['B'] = dv
+        self.assertEqual(data1, data2)
+        # assign an array
+        with self.assertRaisesRegexp(TypeError, 'DataViews and Variables'):
+            data2['C'] = var.data
 
     def test_write_store(self):
         expected = create_test_data()
@@ -324,6 +360,17 @@ class NetCDF4DataTest(DataTest):
         os.close(f)
         return backends.NetCDF4DataStore(self.tmp_file, mode='w')
 
+    def test_dump_and_open_dataset(self):
+        data = create_test_data(self.get_store())
+        f, tmp_file = tempfile.mkstemp(suffix='.nc')
+        os.close(f)
+        data.dump(tmp_file)
+
+        expected = data.copy()
+        actual = open_dataset(tmp_file)
+        self.assertEquals(expected, actual)
+        os.remove(tmp_file)
+
     def tearDown(self):
         if hasattr(self, 'tmp_file') and os.path.exists(self.tmp_file):
             os.remove(self.tmp_file)
@@ -333,6 +380,14 @@ class ScipyDataTest(DataTest):
     def get_store(self):
         fobj = StringIO()
         return backends.ScipyDataStore(fobj, 'w')
+
+    def test_dump_and_open_dataset(self):
+        data = create_test_data(self.get_store())
+        serialized = data.dumps()
+
+        expected = data.copy()
+        actual = open_dataset(StringIO(serialized))
+        self.assertEquals(expected, actual)
 
     def test_repr(self):
         # scipy.io.netcdf does not keep track of dimension order :(

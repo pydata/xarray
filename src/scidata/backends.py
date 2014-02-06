@@ -3,6 +3,8 @@
 DataStores provide a uniform interface for saving and loading data in different
 formats. They should not be used directly, but rather through Dataset objects.
 """
+# TODO: implement backend logic directly in OrderedDict subclasses, to allow
+# for directly manipulating Dataset.variables and the like?
 import netCDF4 as nc4
 import numpy as np
 
@@ -91,7 +93,7 @@ class ScipyDataStore(AbstractDataStore):
 
     def set_dimension(self, name, length):
         """Set a dimension length"""
-        if name in self.ds.dimensions:
+        if name in self.dimensions:
             raise ValueError('%s does not support modifying dimensions'
                              % type(self).__name__)
         self.ds.createDimension(name, length)

@@ -1,13 +1,13 @@
 import numpy as np
 
-from scidata import Dataset, DataView, Variable
+from scidata import Dataset, DataView, Variable, intersection
 from . import TestCase, ReturnItem
 
 
 class TestDataView(TestCase):
     def assertViewEqual(self, dv1, dv2):
         self.assertEqual(dv1.dataset, dv2.dataset)
-        self.assertEqual(dv1.name, dv2.name)
+        self.assertEqual(dv1.focus, dv2.focus)
 
     def setUp(self):
         self.x = np.random.random((10, 20))
@@ -19,7 +19,7 @@ class TestDataView(TestCase):
 
     def test_properties(self):
         self.assertIs(self.dv.dataset, self.ds)
-        self.assertEqual(self.dv.name, 'foo')
+        self.assertEqual(self.dv.focus, 'foo')
         self.assertVarEqual(self.dv.variable, self.v)
         self.assertArrayEqual(self.dv.data, self.v.data)
         for attr in ['dimensions', 'dtype', 'shape', 'size', 'ndim',
@@ -85,7 +85,7 @@ class TestDataView(TestCase):
     def test_renamed(self):
         renamed = self.dv.renamed('bar')
         self.assertEqual(renamed.dataset, self.ds.renamed({'foo': 'bar'}))
-        self.assertEqual(renamed.name, 'bar')
+        self.assertEqual(renamed.focus, 'bar')
 
     def test_dataset_getitem(self):
         dv = self.ds['foo']
@@ -125,20 +125,27 @@ class TestDataView(TestCase):
         self.assertIs(b.data, x)
         self.assertIs(b.dataset, self.ds)
 
-    def test_collapsed(self):
-        self.assertVarEqual(self.dv.collapsed(np.mean, 'x'),
-                            self.v.collapsed(np.mean, 'x'))
+    def test_collapse(self):
+        self.assertVarEqual(self.dv.collapse(np.mean, 'x'),
+                            self.v.collapse(np.mean, 'x'))
         # needs more...
         # should check which extra dimensions are dropped
 
-    def test_aggregated_by(self):
+    def test_aggregate(self):
         agg_var = Variable(['y'], np.array(['a'] * 9 + ['c'] + ['b'] * 7 +
                                            ['c'] * 3))
         self.ds.add_variable('abc', agg_var)
         expected_unique, expected_var = \
-            self.dv.variable.aggregated_by(np.mean, 'abc', agg_var)
+            self.dv.variable.aggregate(np.mean, 'abc', agg_var)
         expected = DataView(Dataset(
             {'foo': expected_var, 'x': self.ds.variables['x'],
              'abc': expected_unique}), 'foo')
-        actual = self.dv.aggregated_by(np.mean, 'abc')
+        actual = self.dv.aggregate(np.mean, 'abc')
         self.assertViewEqual(expected, actual)
+
+    def test_intersection(self):
+        with self.assertRaises(ValueError):
+            self.dv + self.dv[:5]
+        dv1, dv2 = intersection(self.dv, self.dv[:5])
+        self.assertViewEqual(dv1, self.dv[:5])
+        self.assertViewEqual(dv2, self.dv[:5])
