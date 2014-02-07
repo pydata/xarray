@@ -5,7 +5,9 @@ import re
 
 import numpy as np
 
+import dataset
 import ops
+import variable
 from common import _DataWrapperMixin
 from utils import expanded_indexer, FrozenOrderedDict
 
@@ -333,18 +335,18 @@ class DataView(_DataWrapperMixin):
         if not views:
             raise ValueError('DataView.from_stack was supplied with an '
                              'empty argument')
-        dataset = Dataset()
+        ds = dataset.Dataset()
         focus = default_focus = 'stacked_variable'
         for view in views:
             if isinstance(view, cls):
-                dataset.merge(view.unselected(), inplace=True)
+                ds.merge(view.unselected(), inplace=True)
                 if focus == default_focus:
                     focus = view.focus
                 elif focus != view.focus:
                     raise ValueError('DataView.from_stack requires that all '
                                      'stacked views have the same focus')
-        dataset[focus] = Variable.from_stack(dataviews, new_dim_name)
-        return cls(dataset, focus)
+        ds[focus] = variable.Variable.from_stack(dataviews, new_dim_name)
+        return cls(ds, focus)
 
     def __array_wrap__(self, result):
         return self.replace_focus(self.variable.__array_wrap__(result))

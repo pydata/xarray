@@ -164,6 +164,20 @@ class TestDataView(TestCase):
         actual = self.dv.aggregate(np.mean, self.ds['abc'])
         self.assertViewEqual(expected, actual)
 
+    def test_from_stack(self):
+        self.ds['bar'] = Variable(['x', 'y'], np.random.randn(10, 20))
+        foo = self.ds['foo']
+        bar = self.ds['bar'].renamed('foo')
+        # from dataviews:
+        self.assertVarEqual(Variable(['w', 'x', 'y'],
+                                     np.array([foo.data, bar.data])),
+                            DataView.from_stack([foo, bar], 'w'))
+        # from variables:
+        self.assertVarEqual(Variable(['w', 'x', 'y'],
+                                     np.array([foo.data, bar.data])),
+                            DataView.from_stack([foo.variable,
+                                                 bar.variable], 'w'))
+
     def test_intersection(self):
         with self.assertRaises(ValueError):
             self.dv + self.dv[:5]
