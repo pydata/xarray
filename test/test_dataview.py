@@ -179,6 +179,7 @@ class TestDataView(TestCase):
                                                  bar.variable], 'w'))
 
     def test_intersection(self):
+        self.ds.set_variable('x', Variable(['x'], np.array(list('abcdefghij'))))
         with self.assertRaises(ValueError):
             self.dv + self.dv[:5]
         dv1, dv2 = intersection(self.dv, self.dv[:5])

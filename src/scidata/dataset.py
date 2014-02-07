@@ -655,12 +655,10 @@ class Dataset(Mapping):
             try:
                 indexer = index.get_loc(locations)
             except TypeError:
-                # value is an list or array
-                new_index, indexer = index.reindex(np.asarray(locations))
+                # value is a list or array
+                indexer = index.get_indexer(np.asarray(locations))
                 if np.any(indexer < 0):
                     raise ValueError('not all values found in index %r' % dim)
-                # FIXME: don't throw away new_index (we'll need to recreate it
-                # later)
         return indexer
 
     def labeled_by(self, **indexers):

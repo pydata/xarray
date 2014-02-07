@@ -103,6 +103,8 @@ def variable_equal(v1, v2):
             # _data is not part of the public interface, so it's okay if its
             # missing
             pass
+        # TODO: replace this with a NaN safe version.
+        # see: pandas.core.common.array_equivalent
         return np.array_equal(v1.data, v2.data)
     else:
         return False

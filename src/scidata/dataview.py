@@ -408,9 +408,12 @@ def intersection(dataview1, dataview2):
     """Given two dataview objects, returns two new dataviews where all indices
     found on both dataviews are replaced by their intersection
     """
+    # TODO: automatically calculate the intersection when doing math with
+    # dataviews, or better yet calculate the union of the indices and fill in
+    # the mis-aligned data with NaN.
     overlapping_indices = {k: dataview1.indices[k] & dataview2.indices[k]
                            for k in dataview1.indices
                            if k in dataview2.indices}
-    return tuple(dv.indexed_by(**overlapping_indices)
+    return tuple(dv.labeled_by(**overlapping_indices)
                  for dv in [dataview1, dataview2])
 
