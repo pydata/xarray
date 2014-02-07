@@ -1,21 +1,49 @@
-scidata
-=======
+# scidata: objects for working with scientific data in Python
 
-Objects for holding self describing scientific data in python.  The goal of this project is to
-provide a Common Data Model (http://www.unidata.ucar.edu/software/thredds/current/netcdf-java/CDM/)
-allowing users to read write and manipulate netcdf-like data without worrying about where the data 
-source lives. A dataset that is too large to fit in memory, served from an OpenDAP server, streamed 
-or stored as NetCDF3, NetCDF4, grib (?), HDF5 and others can all be inspected and manipulated using 
-the same methods.
+**scidata** is a Python package for working with aligned sets of homogeneous,
+n-dimensional arrays. It implements flexible array operations and dataset
+manipulation for in-memory datasets within the [Common Data Model][cdm] widely
+used for self-describing scientific data (netCDF, OpenDAP, etc.).
 
-Of course there are already several packages in python that offer similar functionality (netCDF4, 
-scipy.io, pupynere, iris, ... ) but each of those packages have their own shortcomings:
+## Main Feaures
 
-netCDF4
-    Doesn't allow streaming.  If you want to create a new object it needs to live on disk.
-scipy.io / pupynere
-    Only works with NetCDF3 and doesn't support DAP making it difficult to work with large datasets.
-iris
-    is REALLY close to what this project will provide, but iris strays further from the CDM,
-    than I would like. (if you read then write a netcdf file using iris all global attributes 
-    are pushed down to variable level attributes.
+  - A `DataView` object that is compatible with NumPy's ndarray and ufuncs
+    but keeps ancilliary variables and metadata intact.
+  - Array broadcasting based on dimension names and coordinate indices
+    instead of only shapes.
+  - Aggregate variables across dimensions or grouped by other variables.
+  - Fast label-based indexing and time-series functionality built on
+    [pandas][pandas].
+
+## Design Goals
+
+  - Provide a data analysis toolkit as fast and powerful as pandas but
+    designed for working with datasets of aligned, homogeneous N-dimensional
+    arrays.
+  - Whenever possible, build on top of and interoperate with pandas and the
+    rest of the awesome [scientific python stack][scipy].
+  - Be as fast as NumPy.
+  - Provide a uniform API for loading and saving scientific data in a variety
+    of formats (including streaming data).
+  - Use metadata according to [conventions][cf] when appropriate, but don't
+    strictly enforce it. Conflicting attributes (e.g., units) may be silently
+    dropped.
+
+## Prior Art
+
+  - [Iris][iris] is an awesome package for working with meteorological data with
+    unfortunately complex data-structures and strict enforcement of metadata
+    conventions. Scidata's `DataView` is largely based on the Iris `Cube`.
+  - [netCDF4-python][nc4] provides scidata's primary interface for working with
+    netCDF and OpenDAP datasets.
+  - [pandas][pandas] fast and powerful but oriented around working with
+    tabular datasets. pandas has experimental N-dimensional panels, but they
+    don't support aligned math with other objects. We believe the `DataView`/
+    `Cube` model is better suited to working with scientific datasets.
+
+[pandas]: http://pandas.pydata.org/
+[cdm]: http://www.unidata.ucar.edu/software/thredds/current/netcdf-java/CDM/
+[cf]: http://cf-pcmdi.llnl.gov/documents/cf-conventions/1.6/cf-conventions.html
+[scipy]: http://scipy.org/
+[nc4]: http://netcdf4-python.googlecode.com/svn/trunk/docs/netCDF4-module.html
+[iris]: http://scitools.org.uk/iris/
