@@ -180,7 +180,7 @@ class DataView(_DataWrapperMixin):
         """
         return self.dataset.unselect(self.focus)
 
-    def replace_focus(self, new_var):
+    def refocus(self, new_var):
         """Returns a copy of this DataView's dataset with this DataView's
         focus variable replaced by 'new_var'
         """
@@ -231,7 +231,7 @@ class DataView(_DataWrapperMixin):
         numpy.transpose
         Variable.tranpose
         """
-        return self.replace_focus(self.variable.transpose(*dimensions))
+        return self.refocus(self.variable.transpose(*dimensions))
 
     def collapse(self, func, dimension=None, axis=None, **kwargs):
         """Collapse this variable by applying `func` along some dimension(s)
@@ -358,13 +358,13 @@ class DataView(_DataWrapperMixin):
         return self.dataset.to_dataframe()
 
     def __array_wrap__(self, result):
-        return self.replace_focus(self.variable.__array_wrap__(result))
+        return self.refocus(self.variable.__array_wrap__(result))
 
     @staticmethod
     def _unary_op(f):
         @functools.wraps(f)
         def func(self, *args, **kwargs):
-            return self.replace_focus(f(self.variable, *args, **kwargs))
+            return self.refocus(f(self.variable, *args, **kwargs))
         return func
 
     def _check_indices_compat(self, other):
@@ -381,7 +381,7 @@ class DataView(_DataWrapperMixin):
         def func(self, other):
             self._check_indices_compat(other)
             other_variable = getattr(other, 'variable', other)
-            dv = self.replace_focus(f(self.variable, other_variable)
+            dv = self.refocus(f(self.variable, other_variable)
                                     if not reflexive
                                     else f(other_variable, self.variable))
             if hasattr(other, 'unselected'):

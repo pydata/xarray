@@ -87,9 +87,9 @@ class TestDataView(TestCase):
         self.assertEqual(renamed.dataset, self.ds.renamed({'foo': 'bar'}))
         self.assertEqual(renamed.focus, 'bar')
 
-    def test_replace_focus(self):
-        self.assertVarEqual(self.dv, self.dv.replace_focus(self.v))
-        self.assertVarEqual(self.dv, self.dv.replace_focus(self.x))
+    def test_refocus(self):
+        self.assertVarEqual(self.dv, self.dv.refocus(self.v))
+        self.assertVarEqual(self.dv, self.dv.refocus(self.x))
 
     def test_dataset_getitem(self):
         dv = self.ds['foo']
@@ -100,12 +100,12 @@ class TestDataView(TestCase):
         # test patched in methods
         self.assertArrayEqual(self.dv.take([2, 3]), self.x.take([2, 3]))
         self.assertViewEqual(self.dv.argsort(),
-                             self.dv.replace_focus(self.x.argsort()))
+                             self.dv.refocus(self.x.argsort()))
         self.assertViewEqual(self.dv.clip(2, 3),
-                             self.dv.replace_focus(self.x.clip(2, 3)))
+                             self.dv.refocus(self.x.clip(2, 3)))
         # test ufuncs
         self.assertViewEqual(np.sin(self.dv),
-                             self.dv.replace_focus(np.sin(self.x)))
+                             self.dv.refocus(np.sin(self.x)))
         self.assertViewEqual(self.dv, np.maximum(self.v, self.dv))
         self.ds['bar'] = Variable(['x', 'y'], np.zeros((10, 20)))
         self.assertViewEqual(self.dv, np.maximum(self.dv, self.ds['bar']))

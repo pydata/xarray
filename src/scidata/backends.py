@@ -165,6 +165,8 @@ def convert_nc4_variable(var):
 
 class NetCDF4DataStore(AbstractDataStore):
     def __init__(self, filename, *args, **kwdargs):
+        # TODO: set auto_maskandscale=True so we can handle the array
+        # packing/unpacking ourselves (using NaN instead of masked arrays)
         self.ds = nc4.Dataset(filename, *args, **kwdargs)
 
     @property
