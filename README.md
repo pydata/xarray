@@ -22,12 +22,12 @@ used for self-describing scientific data (netCDF, OpenDAP, etc.).
     arrays.
   - Whenever possible, build on top of and interoperate with pandas and the
     rest of the awesome [scientific python stack][scipy].
-  - Be as fast as NumPy.
   - Provide a uniform API for loading and saving scientific data in a variety
     of formats (including streaming data).
   - Use metadata according to [conventions][cf] when appropriate, but don't
-    strictly enforce it. Conflicting attributes (e.g., units) may be silently
-    dropped.
+    strictly enforce them. Conflicting attributes (e.g., units) should be
+    silently dropped instead of causing errors. The onus is on the user to
+    make sure that operations make sense.
 
 ## Prior Art
 
@@ -36,7 +36,7 @@ used for self-describing scientific data (netCDF, OpenDAP, etc.).
     conventions. Scidata's `DataView` is largely based on the Iris `Cube`.
   - [netCDF4-python][nc4] provides scidata's primary interface for working with
     netCDF and OpenDAP datasets.
-  - [pandas][pandas] fast and powerful but oriented around working with
+  - [pandas][pandas] is fast and powerful but oriented around working with
     tabular datasets. pandas has experimental N-dimensional panels, but they
     don't support aligned math with other objects. We believe the `DataView`/
     `Cube` model is better suited to working with scientific datasets.
