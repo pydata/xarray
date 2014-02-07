@@ -9,7 +9,7 @@ from collections import OrderedDict, Mapping, MutableMapping
 
 from dataview import DataView
 from utils import FrozenOrderedDict, Frozen
-from variable import Variable
+from variable import Variable, broadcast_variables
 import backends, conventions, utils
 
 date2num = nc4.date2num
@@ -901,6 +901,28 @@ class Dataset(Mapping):
         coord = self.variables[dimension]
         for i in xrange(self.dimensions[dimension]):
             yield (coord[i], self.indexed_by(**{dimension: i}))
+
+    def to_dataframe(self):
+        """Convert this dataset into a pandas.DataFrame
+
+        Non-coordinate variables in this dataset form the columns of the
+        DataFrame. The DataFrame is be indexed by the Cartesian product of
+        this dataset's indices.
+        """
+        index_names = self.indices.keys()
+        columns = self.noncoordinates.keys()
+        data = []
+        # we need a template to broadcast all dataset variables against
+        template = Variable(self.dimensions.keys(),
+                            np.empty(self.dimensions.values()))
+        for k in columns:
+            _, var = broadcast_variables(template, self[k])
+            _, var_data = np.broadcast_arrays(template.data, var.data)
+            data.append(var_data.reshape(-1))
+        # note: pd.MultiIndex.from_product is new in pandas-0.13.1
+        index = pd.MultiIndex.from_product(self.indices.values(),
+                                           names=index_names)
+        return pd.DataFrame(OrderedDict(zip(columns, data)), index=index)
 
 
 if __name__ == "__main__":

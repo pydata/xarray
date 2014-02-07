@@ -353,6 +353,16 @@ class DataTest(TestCase):
         actual = Dataset.load_store(store)
         self.assertEquals(expected, actual)
 
+    def test_to_dataframe(self):
+        x = np.random.randn(10)
+        y = np.random.randn(10)
+        ds = Dataset({'a': Variable('t', x), 'b': Variable('t', y)})
+        expected = pd.DataFrame(np.array([x, y]).T, columns=['a', 'b'],
+                                index=pd.Index(np.arange(10), name='t'))
+        actual = ds.to_dataframe()
+        # use the .equals method to check all DataFrame metadata
+        self.assertTrue(expected.equals(actual))
+
 
 class NetCDF4DataTest(DataTest):
     def get_store(self):

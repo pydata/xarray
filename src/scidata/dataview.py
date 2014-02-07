@@ -348,6 +348,15 @@ class DataView(_DataWrapperMixin):
         ds[focus] = variable.Variable.from_stack(dataviews, new_dim_name)
         return cls(ds, focus)
 
+    def to_dataframe(self):
+        """Convert this dataview into a pandas.DataFrame
+
+        Non-coordinate variables in this dataview's dataset (which include the
+        view's data) form the columns of the DataFrame. The DataFrame is be
+        indexed by the Cartesian product of the dataset's indices.
+        """
+        return self.dataset.to_dataframe()
+
     def __array_wrap__(self, result):
         return self.replace_focus(self.variable.__array_wrap__(result))
 

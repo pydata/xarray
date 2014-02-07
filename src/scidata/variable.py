@@ -269,7 +269,7 @@ class Variable(_DataWrapperMixin):
         """
         if len(dimensions) == 0:
             dimensions = self.dimensions[::-1]
-        axes = [dimensions.index(dim) for dim in self.dimensions]
+        axes = [self.dimensions.index(dim) for dim in dimensions]
         data = self.data.transpose(*axes)
         return type(self)(dimensions, data, self.attributes)
 
@@ -456,7 +456,7 @@ class Variable(_DataWrapperMixin):
         def func(self, other):
             if isinstance(other, dataview.DataView):
                 return NotImplemented
-            self_data, other_data, new_dims = _broadcast_var_data(self, other)
+            self_data, other_data, dims = _broadcast_variable_data(self, other)
             new_data = (f(self_data, other_data)
                         if not reflexive
                         else f(other_data, self_data))
@@ -465,14 +465,14 @@ class Variable(_DataWrapperMixin):
                                                            other.attributes)
             else:
                 new_attr = self.attributes
-            return type(self)(new_dims, new_data, new_attr)
+            return type(self)(dims, new_data, new_attr)
         return func
 
     @staticmethod
     def _inplace_binary_op(f):
         @functools.wraps(f)
         def func(self, other):
-            self_data, other_data, dims = _broadcast_var_data(self, other)
+            self_data, other_data, dims = _broadcast_variable_data(self, other)
             if dims != self.dimensions:
                 raise ValueError('dimensions cannot change for in-place '
                                  'operations')
@@ -485,57 +485,68 @@ class Variable(_DataWrapperMixin):
 ops.inject_special_operations(Variable)
 
 
-def _broadcast_var_data(self, other):
-    self_data = self.data
+def broadcast_variables(first, second):
+    """Given two variables, return two variables with matching dimensions and
+    numpy broadcast compatible data
+
+    Parameters
+    ----------
+    first, second : Variable
+        Variable objects to broadcast.
+
+    Returns
+    -------
+    first_broadcast, second_broadcast : Variable
+        Broadcast variables. The data on each variable will be a view of the
+        data on the corresponding original variables, but dimensions will be
+        reordered and inserted so that both broadcast variables have the same
+        dimensions. The new dimensions are sorted in order of appearence in the
+        first variable's dimensions followed by the second variable's
+        dimensions.
+    """
+    # TODO: add unit tests specifically for this function
+    # validate dimensions
+    dim_lengths = dict(zip(first.dimensions, first.shape))
+    for k, v in zip(second.dimensions, second.shape):
+        if k in dim_lengths and dim_lengths[k] != v:
+            raise ValueError('operands could not be broadcast together '
+                             'with mismatched lengths for dimension %r: %s'
+                             % (k, (dim_lengths[k], v)))
+    for dimensions in [first.dimensions, second.dimensions]:
+        if len(set(dimensions)) < len(dimensions):
+            raise ValueError('broadcasting requires that neither operand '
+                             'has duplicate dimensions: %r'
+                             % list(dimensions))
+
+    # build dimensions for new Variable
+    second_only_dims = [d for d in second.dimensions
+                        if d not in first.dimensions]
+    dimensions = list(first.dimensions) + second_only_dims
+
+    # expand first_data's dimensions so it's broadcast compatible after
+    # adding second's dimensions at the end
+    first_data = first.data[(Ellipsis,) + (None,) * len(second_only_dims)]
+    new_first = Variable(dimensions, first_data)
+    # expand and reorder second_data so the dimensions line up
+    first_only_dims = [d for d in dimensions if d not in second.dimensions]
+    second_dims = list(second.dimensions) + first_only_dims
+    second_data = second.data[(Ellipsis,) + (None,) * len(first_only_dims)]
+    new_second = Variable(second_dims, second_data).transpose(*dimensions)
+    return new_first, new_second
+
+
+def _broadcast_variable_data(self, other):
     if isinstance(other, dataset.Dataset):
         raise TypeError('datasets do not support mathematical operations')
     elif all(hasattr(other, attr) for attr in ['dimensions', 'data', 'shape']):
-        # validate dimensions
-        dim_lengths = dict(zip(self.dimensions, self.shape))
-        for k, v in zip(other.dimensions, other.shape):
-            if k in dim_lengths and dim_lengths[k] != v:
-                raise ValueError('operands could not be broadcast together '
-                                 'with mismatched lengths for dimension %r: %s'
-                                 % (k, (dim_lengths[k], v)))
-        for dimensions in [self.dimensions, other.dimensions]:
-            if len(set(dimensions)) < len(dimensions):
-                raise ValueError('broadcasting requires that neither operand '
-                                 'has duplicate dimensions: %r'
-                                 % list(dimensions))
-
-        # build dimensions for new Variable
-        other_only_dims = [dim for dim in other.dimensions
-                           if dim not in self.dimensions]
-        dimensions = list(self.dimensions) + other_only_dims
-
-        # expand self_data's dimensions so it's broadcast compatible after
-        # adding other's dimensions to the end
-        for _ in xrange(len(other_only_dims)):
-            self_data = np.expand_dims(self_data, axis=-1)
-
-        # expand and reorder other_data so the dimensions line up
-        self_only_dims = [dim for dim in dimensions
-                          if dim not in other.dimensions]
-        other_data = other.data
-        for _ in xrange(len(self_only_dims)):
-            other_data = np.expand_dims(other_data, axis=-1)
-        other_dims = list(other.dimensions) + self_only_dims
-        axes = [other_dims.index(dim) for dim in dimensions]
-        other_data = other_data.transpose(axes)
+        # `other` satisfies the Variable API
+        new_self, new_other = broadcast_variables(self, other)
+        self_data = new_self.data
+        other_data = new_other.data
+        dimensions = new_self.dimensions
     else:
         # rely on numpy broadcasting rules
+        self_data = self.data
         other_data = other
         dimensions = self.dimensions
     return self_data, other_data, dimensions
-
-
-def _math_safe_attributes(v):
-    """Given a variable, return the variables's attributes that are safe for
-    mathematical operations (e.g., all those except for 'units')
-    """
-    try:
-        attr = v.attributes
-    except AttributeError:
-        return {}
-    else:
-        return OrderedDict((k, v) for k, v in attr.items() if k != 'units')

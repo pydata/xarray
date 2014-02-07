@@ -86,7 +86,11 @@ class TestVariable(TestCase):
         x = np.random.randn(2, 3, 4, 5)
         w = Variable(['a', 'b', 'c', 'd'], x)
         w2 = Variable(['d', 'b', 'c', 'a'], np.einsum('abcd->dbca', x))
+        self.assertEqual(w2.shape, (5, 3, 4, 2))
         self.assertVarEqual(w2, w.transpose('d', 'b', 'c', 'a'))
+        self.assertVarEqual(w, w2.transpose('a', 'b', 'c', 'd'))
+        w3 = Variable(['b', 'c', 'd', 'a'], np.einsum('abcd->bcda', x))
+        self.assertVarEqual(w, w3.transpose('a', 'b', 'c', 'd'))
 
     def test_1d_math(self):
         x = np.arange(5)
