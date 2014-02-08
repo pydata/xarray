@@ -358,9 +358,7 @@ class Dataset(Mapping):
         """Coordinates are variables with names that match dimensions"""
         return FrozenOrderedDict([(dim, self.variables[dim])
                 for dim in self.dimensions
-                if dim in self.variables and
-                self.variables[dim].data.ndim == 1 and
-                self.variables[dim].dimensions == (dim,)])
+                if dim in self.variables])
 
     @property
     def noncoordinates(self):
@@ -792,22 +790,33 @@ class Dataset(Mapping):
             raise ValueError(
                 "One or more of the specified variables does not exist")
 
-        def get_aux_names(var):
-            names = set(var.dimensions)
-            if 'coordinates' in var.attributes:
-                coords = var.attributes['coordinates']
-                if coords != '':
-                    names |= set(coords.split(' '))
-            return names
+        def get_all_associated_names(name):
+            yield name
+            if name in self:
+                var = self.variables[name]
+                for dim in var.dimensions:
+                    yield dim
+                if 'coordinates' in var.attributes:
+                    coords = var.attributes['coordinates']
+                    if coords != '':
+                        for coord in coords.split(' '):
+                            yield coord
 
-        aux_names = [get_aux_names(self.variables[k]) for k in names]
-        names = set(names).union(*aux_names)
+        queue = set(names)
+        selected_names = set()
+        while queue:
+            name = queue.pop()
+            new_names = set(get_all_associated_names(name))
+            queue |= new_names - selected_names
+            selected_names |= new_names
 
-        variables = OrderedDict((k, v) for k, v in self.variables.iteritems()
-                                if k in names)
-        dimensions = OrderedDict((k, v) for k, v in self.dimensions.iteritems()
-                                 if k in names)
-        indices = {k: v for k, v in self.indices.cache.items() if k in names}
+        def ordered_keys_in(dictionary, selection):
+            return OrderedDict((k, v) for k, v in dictionary.iteritems()
+                               if k in selection)
+
+        variables = ordered_keys_in(self.variables, selected_names)
+        dimensions = ordered_keys_in(self.dimensions, selected_names)
+        indices = ordered_keys_in(self.indices.cache, selected_names)
         return type(self)(variables, dimensions, self.attributes,
                           indices=indices)
 
