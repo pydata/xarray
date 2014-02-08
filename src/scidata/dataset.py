@@ -8,7 +8,7 @@ from cStringIO import StringIO
 from collections import OrderedDict, Mapping, MutableMapping
 
 from dataview import DataView
-from utils import FrozenOrderedDict, Frozen
+from utils import FrozenOrderedDict, Frozen, remap_loc_indexers
 from variable import Variable, broadcast_variables
 import backends, conventions, utils
 
@@ -641,25 +641,12 @@ class Dataset(Mapping):
         # filter out non-indices (indices for which one value was selected)
         indices = {k: v for k, v in indices.iteritems()
                    if isinstance(v, pd.Index)}
+        variables = OrderedDict((k, v) for k, v in variables.iteritems()
+                                if v.ndim > 0)
         dimensions = OrderedDict((k, indices[k].size) for k in self.dimensions
                                  if k in indices)
         return type(self)(variables, dimensions, self.attributes,
                           indices=indices)
-
-    def _loc_to_int_indexer(self, dim, locations):
-        index = self.indices[dim]
-        if isinstance(locations, slice):
-            indexer = index.slice_indexer(locations.start, locations.stop,
-                                          locations.step)
-        else:
-            try:
-                indexer = index.get_loc(locations)
-            except TypeError:
-                # value is a list or array
-                indexer = index.get_indexer(np.asarray(locations))
-                if np.any(indexer < 0):
-                    raise ValueError('not all values found in index %r' % dim)
-        return indexer
 
     def labeled_by(self, **indexers):
         """Return a new dataset with each variable indexed by coordinate labels
@@ -699,8 +686,7 @@ class Dataset(Mapping):
         Dataset.indexed_by
         Variable.indexed_by
         """
-        return self.indexed_by(**{k: self._loc_to_int_indexer(k, v)
-                                  for k, v in indexers.iteritems()})
+        return self.indexed_by(**remap_loc_indexers(self.indices, indexers))
 
     def renamed(self, name_dict):
         """

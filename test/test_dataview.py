@@ -50,6 +50,10 @@ class TestDataView(TestCase):
             self.assertVarEqual(self.v[i], self.dv[i])
         # check that the new index is consistent
         self.assertEqual(list(self.dv[0].indices), ['y'])
+        # we always to keep the dataview variable around
+        self.assertVarEqual(self.dv[0, 0], self.dv.variable[0, 0])
+        self.assertEqual(self.dv[0, 0].dataset,
+                         Dataset({'foo': self.dv.variable[0, 0]}))
 
     def test_iteration(self):
         for ((act_x, act_dv), (exp_x, exp_ds)) in \
@@ -132,6 +136,16 @@ class TestDataView(TestCase):
             a + b
         with self.assertRaisesRegexp(ValueError, 'not aligned'):
             b + a
+
+    def test_item_math(self):
+        self.ds.set_variable('x', Variable(['x'], np.array(list('abcdefghij'))))
+        self.assertVarEqual(self.dv + self.dv[0, 0],
+                            self.dv + self.dv[0, 0].data)
+        new_data = self.x[0][None, :] + self.x[:, 0][:, None]
+        self.assertVarEqual(self.dv[:, 0] + self.dv[0],
+                            Variable(['x', 'y'], new_data))
+        self.assertVarEqual(self.dv[0] + self.dv[:, 0],
+                            Variable(['y', 'x'], new_data.T))
 
     def test_inplace_math(self):
         x = self.x

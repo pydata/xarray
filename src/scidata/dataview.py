@@ -2,6 +2,7 @@
 # like pandas
 import functools
 import re
+from collections import OrderedDict
 
 import numpy as np
 
@@ -9,7 +10,7 @@ import dataset
 import ops
 import variable
 from common import _DataWrapperMixin
-from utils import expanded_indexer, FrozenOrderedDict
+from utils import expanded_indexer, FrozenOrderedDict, remap_loc_indexers
 
 
 class _LocIndexer(object):
@@ -17,8 +18,9 @@ class _LocIndexer(object):
         self.dataview = dataview
 
     def _remap_key(self, key):
-        return tuple(self.dataview.dataset._loc_to_int_indexer(k, v)
-                     for k, v in self.dataview._key_to_indexers(key))
+        indexers = remap_loc_indexers(self.dataview.indices,
+                                      self.dataview._key_to_indexers(key))
+        return tuple(indexers.values())
 
     def __getitem__(self, key):
         return self.dataview[self._remap_key(key)]
@@ -81,7 +83,8 @@ class DataView(_DataWrapperMixin):
         return self.variable.dimensions
 
     def _key_to_indexers(self, key):
-        return zip(self.dimensions, expanded_indexer(key, self.ndim))
+        return OrderedDict(
+            zip(self.dimensions, expanded_indexer(key, self.ndim)))
 
     def __getitem__(self, key):
         if isinstance(key, basestring):
@@ -89,7 +92,7 @@ class DataView(_DataWrapperMixin):
             return self.dataset[key]
         else:
             # orthogonal array indexing
-            return self.indexed_by(**dict(self._key_to_indexers(key)))
+            return self.indexed_by(**self._key_to_indexers(key))
 
     def __setitem__(self, key, value):
         if isinstance(key, basestring):
@@ -156,7 +159,12 @@ class DataView(_DataWrapperMixin):
         --------
         Dataset.indexed_by
         """
-        return type(self)(self.dataset.indexed_by(**indexers), self.focus)
+        ds = self.dataset.indexed_by(**indexers)
+        if self.focus not in ds:
+            # always keep focus variable in the dataset, even if it was
+            # unselected because indexing made it a scaler
+            ds[self.focus] = self.variable.indexed_by(**indexers)
+        return type(self)(ds, self.focus)
 
     def labeled_by(self, **indexers):
         """Return a new dataview whose dataset is given by selecting coordinate
@@ -166,7 +174,7 @@ class DataView(_DataWrapperMixin):
         --------
         Dataset.labeled_by
         """
-        return type(self)(self.dataset.labeled_by(**indexers), self.focus)
+        return self.indexed_by(**remap_loc_indexers(self.indices, indexers))
 
     def renamed(self, new_name):
         """Returns a new DataView with this DataView's focus variable renamed
@@ -182,11 +190,14 @@ class DataView(_DataWrapperMixin):
 
     def refocus(self, new_var):
         """Returns a copy of this DataView's dataset with this DataView's
-        focus variable replaced by 'new_var'
+        focus variable replaced by `new_var`
+
+        If `new_var` is a dataview, its contents will be merged in.
         """
         if not hasattr(new_var, 'dimensions'):
             new_var = type(self.variable)(self.variable.dimensions, new_var)
-        ds = self.dataset.replace(self.focus, new_var)
+        ds = self.unselected()
+        ds[self.focus] = new_var
         return type(self)(ds, self.focus)
 
     def iterator(self, dimension):
@@ -206,8 +217,8 @@ class DataView(_DataWrapperMixin):
             The returned iterator yields pairs of scalar-valued coordinate
             variables and DataView objects.
         """
-        for (x, dataset) in self.dataset.iterator(dimension):
-            yield (x, type(self)(dataset, self.focus))
+        for (x, ds) in self.dataset.iterator(dimension):
+            yield (x, type(self)(ds, self.focus))
 
     def transpose(self, *dimensions):
         """Return a new DataView object with transposed dimensions
@@ -379,14 +390,16 @@ class DataView(_DataWrapperMixin):
     def _binary_op(f, reflexive=False):
         @functools.wraps(f)
         def func(self, other):
+            # TODO: automatically group by other variable dimensions
             self._check_indices_compat(other)
-            other_variable = getattr(other, 'variable', other)
-            dv = self.refocus(f(self.variable, other_variable)
-                                    if not reflexive
-                                    else f(other_variable, self.variable))
+            ds = self.unselected()
             if hasattr(other, 'unselected'):
-                dv.dataset.merge(other.unselected(), inplace=True)
-            return dv
+                ds.merge(other.unselected(), inplace=True)
+            other_variable = getattr(other, 'variable', other)
+            ds[self.focus] = (f(self.variable, other_variable)
+                              if not reflexive
+                              else f(other_variable, self.variable))
+            return ds[self.focus]
         return func
 
     @staticmethod

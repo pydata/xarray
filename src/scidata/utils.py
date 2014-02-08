@@ -62,6 +62,27 @@ def orthogonal_indexer(key, shape):
     return tuple(key)
 
 
+def remap_loc_indexers(indices, indexers):
+    """Given mappings of indices and label based indexers, return equivalent
+    location based indexers
+    """
+    new_indexers = OrderedDict()
+    for dim, loc in indexers.iteritems():
+        index = indices[dim]
+        if isinstance(loc, slice):
+            indexer = index.slice_indexer(loc.start, loc.stop, loc.step)
+        else:
+            try:
+                indexer = index.get_loc(loc)
+            except TypeError:
+                # value is a list or array
+                indexer = index.get_indexer(np.asarray(loc))
+                if np.any(indexer < 0):
+                    raise ValueError('not all values found in index %r' % dim)
+        new_indexers[dim] = indexer
+    return new_indexers
+
+
 def num2datetimeindex(num_dates, units, calendar=None):
     """Convert an array of numeric dates in netCDF format into a
     pandas.DatetimeIndex
