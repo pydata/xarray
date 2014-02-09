@@ -229,9 +229,18 @@ class TestVariable(TestCase):
                             Variable.from_stack((v, w), 'b'))
         self.assertVarEqual(Variable(['b', 'a'], np.array([x, y])),
                             Variable.from_stack((v, w), 'b', length=2))
-        with self.assertRaisesRegexp(ValueError, 'too many'):
+        with self.assertRaisesRegexp(ValueError, 'greater than expected'):
             Variable.from_stack([v, w], 'b', length=1)
-        with self.assertRaisesRegexp(ValueError, r'only \d+ stack'):
+        with self.assertRaisesRegexp(ValueError, 'but expected length was'):
             Variable.from_stack([v, w, w], 'b', length=4)
         with self.assertRaisesRegexp(ValueError, 'inconsistent dimensions'):
             Variable.from_stack([v, Variable(['c'], y)], 'b')
+        # test concatenating along a dimension
+        v = Variable(['time', 'x'], np.random.random((10, 8)))
+        self.assertVarEqual(v, Variable.from_stack([v[:5], v[5:]], 'time'))
+        self.assertVarEqual(v, Variable.from_stack([v[:5], v[5], v[6:]], 'time'))
+        self.assertVarEqual(v, Variable.from_stack([v[0], v[1:]], 'time'))
+        # test dimension order
+        self.assertVarEqual(v, Variable.from_stack([v[:, :5], v[:, 5:]], 'x'))
+        self.assertVarEqual(v.transpose(),
+                            Variable.from_stack([v[:, 0], v[:, 1:]], 'x'))

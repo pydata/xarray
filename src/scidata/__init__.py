@@ -5,6 +5,8 @@ from variable import Variable, broadcast_variables
 
 import backends
 
+concat = DataView.from_stack
+
 __all__ = ['open_dataset', 'Dataset', 'DataView', 'Variable', 'intersection',
            'broadcast_variables', 'orthogonal_indexer', 'num2datetimeindex',
            'variable_equal']

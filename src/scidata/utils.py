@@ -135,7 +135,8 @@ def update_safety_check(first_dict, second_dict, compat=operator.eq):
     """Check the safety of updating one dictionary with another
 
     Raises ValueError if dictionaries have non-compatible values for any key,
-    where compatibility is determined by the `compat` function.
+    where compatibility is determined by identity (they are the same item) or
+    the `compat` function.
 
     Parameters
     ----------
@@ -147,7 +148,8 @@ def update_safety_check(first_dict, second_dict, compat=operator.eq):
         checks for equality.
     """
     for k, v in second_dict.iteritems():
-        if k in first_dict and not compat(v, first_dict[k]):
+        if (k in first_dict and
+                not (v is first_dict[k] or compat(v, first_dict[k]))):
             raise ValueError('unsafe to merge dictionaries without '
                              'overriding values')
 

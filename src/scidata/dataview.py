@@ -315,48 +315,66 @@ class DataView(_DataWrapperMixin):
             func, new_dim.focus, new_dim, **kwargs)
         # TODO: add options for how to summarize variables along aggregated
         # dimensions instead of just dropping them?
-        drop = ({self.focus} |
-                ({new_dim.focus} if new_dim.focus in self.dataset else set()) |
-                {k for k, v in self.dataset.variables.iteritems()
-                 if any(dim in new_dim.dimensions for dim in v.dimensions)})
+        drop = {k for k, v in self.dataset.variables.iteritems()
+                if any(dim in new_dim.dimensions for dim in v.dimensions)}
         ds = self.dataset.unselect(*drop)
         ds.add_coordinate(unique)
         ds.add_variable(self.focus, aggregated)
         return type(self)(ds, self.focus)
 
     @classmethod
-    def from_stack(cls, dataviews, new_dim_name='stacked_dimension'):
-        """Stack dataviews along a new dimension to form a new dataview
+    def from_stack(cls, dataviews, dimension='stacked_dimension'):
+        """Stack dataviews along a new or existing dimension to form a new
+        dataview
 
         Parameters
         ----------
-        dataviews : iterable of Variable and/or DataView
-            Variables and/or DataView objects to stack together.
-        dim : str, optional
-            Name of the new dimension.
+        dataviews : iterable of DataView or Variable
+            Variables to stack together. Each variable is expected to have
+            matching dimensions and shape except for along the stacked
+            dimension.
+        dimension : str or DataView, optional
+            Name of the dimension to stack along. This can either be a new
+            dimension name, in which case it is added along axis=0, or an
+            existing dimension name, in which case the location of the
+            dimension is unchanged. Where to insert the new dimension is
+            determined by the first dataview.
 
         Returns
         -------
         stacked : DataView
             Stacked dataview formed by stacking all the supplied variables
-            along the new dimension. The new dimension will be the first
-            dimension in the stacked dataview.
+            along the new dimension.
         """
-        views = list(dataviews)
-        if not views:
+        dataviews = list(dataviews)
+        if not dataviews:
             raise ValueError('DataView.from_stack was supplied with an '
                              'empty argument')
+
+        # create an empty dataset in which to stack variables
+        # start by putting in the dimension variable
         ds = dataset.Dataset()
-        focus = default_focus = 'stacked_variable'
-        for view in views:
+        if isinstance(dimension, basestring):
+            dim_name = dimension
+        else:
+            dim_name = dimension.focus
+            ds[dim_name] = dimension
+
+        # figure out metadata for each dataview
+        focus = None
+        for view in dataviews:
             if isinstance(view, cls):
                 ds.merge(view.unselected(), inplace=True)
-                if focus == default_focus:
+                if focus is None:
                     focus = view.focus
                 elif focus != view.focus:
                     raise ValueError('DataView.from_stack requires that all '
                                      'stacked views have the same focus')
-        ds[focus] = variable.Variable.from_stack(dataviews, new_dim_name)
+        if focus is None:
+            focus = 'stacked_variable'
+
+        # finally, merge in the stacked variables
+        ds[focus] = variable.Variable.from_stack(dataviews, dim_name)
         return cls(ds, focus)
 
     def to_dataframe(self):

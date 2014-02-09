@@ -70,10 +70,13 @@ class Variable(_DataWrapperMixin):
             Attributes to assign to the new variable. If None (default), an
             empty attribute dictionary is initialized.
         indexing_mode : {'numpy', 'orthogonal'}
-            String indicating how data handles to fancy indexing (with
-            arrays). Two modes are supported: 'numpy' (fancy indexing like
-            numpy.ndarray objects) and 'orthogonal' (array indexing accesses
-            different dimensions independently, like netCDF4 variables).
+            String indicating how the data parameter handles fancy indexing
+            (with arrays). Two modes are supported: 'numpy' (fancy indexing
+            like numpy.ndarray objects) and 'orthogonal' (array indexing
+            accesses different dimensions independently, like netCDF4
+            variables). Accessing data from a Variable always uses orthogonal
+            indexing, so `indexing_mode` tells the variable whether index
+            lookups need to be internally converted to numpy-style indexing.
         """
         if isinstance(dims, basestring):
             dims = [dims]
@@ -389,55 +392,93 @@ class Variable(_DataWrapperMixin):
         return unique, stacked.transpose(*ordered_dims)
 
     @classmethod
-    def from_stack(cls, variables, new_dim_name='stacked_dimension',
+    def from_stack(cls, variables, dimension='stacked_dimension',
                    length=None):
-        """Stack variables along a new dimension to form a new variable
+        """Stack variables along a new or existing dimension to form a new
+        variable
 
         Parameters
         ----------
         variables : iterable of Variable
-            Variables to stack together.
-        new_dim_name : str, optional
-            Name of the new dimension.
+            Variables to stack together. Each variable is expected to have
+            matching dimensions and shape except for along the stacked
+            dimension.
+        dimension : str, optional
+            Name of the dimension to stack along. This can either be a new
+            dimension name, in which case it is added along axis=0, or an
+            existing dimension name, in which case the location of the
+            dimension is unchanged. Where to insert the new dimension is
+            determined by the first variable.
         length : int, optional
             Length of the new dimension. This is used to allocate the new data
             array for the stacked variable data before iterating over all
-            items, which can be more memory efficient.
+            items, which is thus more memory efficient and a bit faster.
 
         Returns
         -------
         stacked : Variable
             Stacked variable formed by stacking all the supplied variables
-            along the new dimension. The new dimension will be the first
-            dimension in the stacked variable.
+            along the new dimension.
         """
         if length is None:
-            # so much for lazy evaluation! we need to figure out how many
-            # variables there are
+            # so much for lazy evaluation! we need to look at all the variables
+            # to figure out the dimensions of the stacked variable
             variables = list(variables)
-            length = len(variables)
+            length = 0
+            for var in variables:
+                if dimension in var.dimensions:
+                    axis = var.dimensions.index(dimension)
+                    length += var.shape[axis]
+                else:
+                    length += 1
 
-        i = -1
-        for i, var in enumerate(variables):
+        # manually keep track of progress along
+        i = 0
+        for var in variables:
             if i == 0:
-                new_data = np.empty((length,) + var.shape, dtype=var.dtype)
-                old_dimensions = var.dimensions
-                attributes = OrderedDict(var.attributes)
+                # initialize the stacked variable with empty data
+                if dimension not in var.dimensions:
+                    shape = (length,) + var.shape
+                    dims = (dimension,) + var.dimensions
+                else:
+                    shape = tuple(length if d == dimension else s
+                                  for d, s in zip(var.dimensions, var.shape))
+                    dims = var.dimensions
+                stacked = cls(dims, np.empty(shape, dtype=var.dtype),
+                              var.attributes)
+                # required dimensions (including order) if we have any N - 1
+                # dimensional variables
+                alt_dims = tuple(d for d in dims if d != dimension)
+
+            if dimension in var.dimensions:
+                # transpose requires that the dimensions are equivalent
+                var = var.transpose(*stacked.dimensions)
+                axis = var.dimensions.index(dimension)
+                step = var.shape[axis]
+            elif var.dimensions == alt_dims:
+                step = 1
             else:
-                if i == length:
-                    raise ValueError('too many stack variables; supplied '
-                                     'length was %s' % length)
-                if var.dimensions != old_dimensions:
-                    raise ValueError('inconsistent dimensions between merge '
-                                     'variables')
-                utils.remove_incompatible_items(attributes, var.attributes)
-            new_data[i] = var.data
+                raise ValueError('inconsistent dimensions')
 
-        if i + 1 != length:
-            raise ValueError('only %s stack variables; supplied length '
-                             'was %s' % (i + 1, length))
+            if i + step > length:
+                raise ValueError('actual length of stacked variables along %s '
+                                 'is greater than expected length %s'
+                                 % (dimension, length))
 
-        return cls((new_dim_name,) + old_dimensions, new_data, attributes)
+            indexer = tuple((slice(i, i + step) if step > 1 else i)
+                            if d == dimension else slice(None)
+                            for d in stacked.dimensions)
+            # by-pass variable indexing for possible speedup
+            stacked.data[indexer] = var.data
+            utils.remove_incompatible_items(stacked.attributes, var.attributes)
+            i += step
+
+        if i != length:
+            raise ValueError('actual length of stacked variables along %s is '
+                             '%s but expected length was %s'
+                             % (dimension, i, length))
+
+        return stacked
 
     def __array_wrap__(self, result):
         return type(self)(self.dimensions, result, self.attributes)

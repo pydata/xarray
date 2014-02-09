@@ -191,6 +191,10 @@ class TestDataView(TestCase):
                                      np.array([foo.data, bar.data])),
                             DataView.from_stack([foo.variable,
                                                  bar.variable], 'w'))
+        # from iteration:
+        stacked = DataView.from_stack((v for _, v in foo.iterator('x')),
+                                      self.ds['x'])
+        self.assertViewEqual(foo, stacked)
 
     def test_intersection(self):
         self.ds.set_variable('x', Variable(['x'], np.array(list('abcdefghij'))))
