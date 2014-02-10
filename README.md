@@ -12,7 +12,7 @@ used for self-describing scientific data (netCDF, OpenDAP, etc.).
   - Array broadcasting based on dimension names and coordinate indices
     instead of only shapes.
   - Aggregate variables across dimensions or grouped by other variables.
-  - Fast label-based indexing and time-series functionality built on
+  - Fast label-based indexing and (limited) time-series functionality built on
     [pandas][pandas].
 
 ## Design Goals
@@ -31,15 +31,38 @@ used for self-describing scientific data (netCDF, OpenDAP, etc.).
 
 ## Prior Art
 
-  - [Iris][iris] is an awesome package for working with meteorological data with
-    unfortunately complex data-structures and strict enforcement of metadata
-    conventions. Scidata's `DataView` is largely based on the Iris `Cube`.
-  - [netCDF4-python][nc4] provides scidata's primary interface for working with
-    netCDF and OpenDAP datasets.
+  - [Iris][iris] (supported by the UK Met office) is a similar package
+    designed for working with geophysical datasets in Python. Iris provided
+    much of the inspiration for scidata (e.g., scidata's `DataView` is largely
+    based on the Iris `Cube`), but it has several limitations that led us to
+    build scidata instead of extending Iris:
+    1. Iris has essentially one first-class object (the `Cube`) on which it
+       attempts to build all functionality (`Coord` supports a much more
+       limited set of functionality). scidata has its equivalent of the Cube
+       (the `DataView` object), but it is only a thin wrapper on the more
+       primitive building blocks of Dataset and Variable objects.
+    2. Iris has a strict interpretation of [CF conventions][cf], which,
+       although a principled choice, we have found to be impractical for
+       everyday uses. With Iris, every quantity has physical (SI) units, all
+       coordinates have cell-bounds, and all metadata (units, cell-bounds and
+       other attributes) is required to match before merging or doing
+       operations with on multiple cubes. This means that a lot of time with
+       Iris is spent figuring out why cubes are incompatible and explicitly
+       removing possibly conflicting metadata.
+    3. Iris can be slow and complex. Strictly interpretting metadata requires
+       a lot of work and (in our experience) can be difficult to build mental
+       models of how Iris functions work. Moreover, it means that a lot of
+       logic (e.g., constraint handling) uses non-vectorized operations. For
+       example, extracting all times within a range can be surprisingly slow
+       (e.g., 0.3 seconds vs 3 milliseconds in scidata to select along a time
+       dimension with 10000 elements).
   - [pandas][pandas] is fast and powerful but oriented around working with
     tabular datasets. pandas has experimental N-dimensional panels, but they
     don't support aligned math with other objects. We believe the `DataView`/
-    `Cube` model is better suited to working with scientific datasets.
+    `Cube` model is better suited to working with scientific datasets. We use
+    pandas internally in scidata to support fast indexing.
+  - [netCDF4-python][nc4] provides scidata's primary interface for working with
+    netCDF and OpenDAP datasets.
 
 [pandas]: http://pandas.pydata.org/
 [cdm]: http://www.unidata.ucar.edu/software/thredds/current/netcdf-java/CDM/
