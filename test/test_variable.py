@@ -83,6 +83,7 @@ class TestVariable(TestCase):
         v = Variable(['time', 'x'], self.d)
         v2 = Variable(['x', 'time'], self.d.T)
         self.assertVarEqual(v, v2.transpose())
+        self.assertVarEqual(v.transpose(), v.T)
         x = np.random.randn(2, 3, 4, 5)
         w = Variable(['a', 'b', 'c', 'd'], x)
         w2 = Variable(['d', 'b', 'c', 'a'], np.einsum('abcd->dbca', x))

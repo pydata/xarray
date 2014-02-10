@@ -45,6 +45,10 @@ class _DataWrapperMixin(object):
     #    data = self.data
     #    return dict(typestr=data.dtype.str, shape=data.shape, data=data)
 
+    @property
+    def T(self):
+        return self.transpose()
+
     _collapse_method_docstring = \
         """Collapse this {cls}'s data' by applying `{name}` along some
         dimension(s)
