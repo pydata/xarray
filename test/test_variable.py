@@ -185,6 +185,14 @@ class TestVariable(TestCase):
         # test ufuncs
         self.assertVarEqual(np.sin(v), Variable(['x'], np.sin(x)))
 
+    def test_apply(self):
+        x = np.arange(5)
+        v = Variable(['x'], x)
+        def numpy_only_square(x):
+            return np.asarray(x) ** 2
+        self.assertArrayEqual(x ** 2, numpy_only_square(v))
+        self.assertVarEqual(v ** 2, v.apply(numpy_only_square))
+
     def test_collapse(self):
         v = Variable(['time', 'x'], self.d)
         # intentionally test with an operation for which order matters

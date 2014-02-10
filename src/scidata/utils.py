@@ -61,7 +61,6 @@ def orthogonal_indexer(key, shape):
         key[n] = array_indexers[i]
     return tuple(key)
 
-
 def remap_loc_indexers(indices, indexers):
     """Given mappings of indices and label based indexers, return equivalent
     location based indexers

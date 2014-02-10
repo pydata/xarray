@@ -377,6 +377,12 @@ class DataView(_DataWrapperMixin):
         ds[focus] = variable.Variable.from_stack(dataviews, dim_name)
         return cls(ds, focus)
 
+    def apply(self, func, *args, **kwargs):
+        """Apply `func` with *args and **kwargs to this dataview's data and
+        return the result as a new dataview
+        """
+        return self.refocus(self.variable.apply(func, *args, **kwargs))
+
     def to_dataframe(self):
         """Convert this dataview into a pandas.DataFrame
 

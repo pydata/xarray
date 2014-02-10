@@ -480,6 +480,13 @@ class Variable(_DataWrapperMixin):
 
         return stacked
 
+    def apply(self, func, *args, **kwargs):
+        """Apply `func` with *args and **kwargs to this variable's data and
+        return the result as a new variable with the same dimensions
+        """
+        data = np.asarray(func(self.data, *args, **kwargs))
+        return type(self)(self.dimensions, data, self.attributes)
+
     def __array_wrap__(self, result):
         return type(self)(self.dimensions, result, self.attributes)
 

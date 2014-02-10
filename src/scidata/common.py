@@ -89,14 +89,3 @@ class _DataWrapperMixin(object):
             name=('' if module is None else module + '.') + name,
             cls=cls.__name__)
         return func
-
-    # we want something like this, right?
-    # def apply(self, func, dimension=None, axis=None, **kwargs):
-    #     if dimension is not None and axis is not None:
-    #         raise ValueError("cannot supply both 'axis' and 'dimension' "
-    #                          "arguments")
-    #     if axis is None:
-    #         axis = self.dimensions.index(dimension)
-    #     f = self._unary_op(partial(func, axis=axis, **kwargs))
-    #     return f(self)
-
