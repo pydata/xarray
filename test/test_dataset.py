@@ -8,7 +8,7 @@ import tempfile
 import numpy as np
 import pandas as pd
 
-from scidata import Dataset, DataView, Variable, backends, open_dataset
+from scidata import Dataset, DatasetArray, Array, backends, open_dataset
 from . import TestCase
 
 
@@ -46,9 +46,9 @@ class DataTest(TestCase):
                          '@dim2: 50, @dim3: 10): var1 var2 var3>', repr(data))
 
     def test_init(self):
-        var1 = Variable('x', np.arange(100))
-        var2 = Variable('x', np.arange(1000))
-        var3 = Variable(['x', 'y'], np.arange(1000).reshape(100, 10))
+        var1 = Array('x', np.arange(100))
+        var2 = Array('x', np.arange(1000))
+        var3 = Array(['x', 'y'], np.arange(1000).reshape(100, 10))
         with self.assertRaisesRegexp(ValueError, 'already is saved with len'):
             Dataset({'a': var1, 'b': var2})
         with self.assertRaisesRegexp(ValueError, 'must be defined with 1-d'):
@@ -96,17 +96,17 @@ class DataTest(TestCase):
         # try to add variable with dim (10,3) with data that's (3,10)
         self.assertRaises(ValueError, a.create_variable,
                 name='qux', dims=('time', 'x'), data=d.T)
-        # Variable equality
+        # Array equality
         d = np.random.rand(10, 3)
-        v1 = Variable(('dim1','dim2'), data=d,
+        v1 = Array(('dim1','dim2'), data=d,
                            attributes={'att1': 3, 'att2': [1,2,3]})
-        v2 = Variable(('dim1','dim2'), data=d,
+        v2 = Array(('dim1','dim2'), data=d,
                            attributes={'att1': 3, 'att2': [1,2,3]})
-        v5 = Variable(('dim1','dim2'), data=d,
+        v5 = Array(('dim1','dim2'), data=d,
                            attributes={'att1': 3, 'att2': [1,2,3]})
-        v3 = Variable(('dim1','dim3'), data=d,
+        v3 = Array(('dim1','dim3'), data=d,
                            attributes={'att1': 3, 'att2': [1,2,3]})
-        v4 = Variable(('dim1','dim2'), data=d,
+        v4 = Array(('dim1','dim2'), data=d,
                            attributes={'att1': 3, 'att2': [1,2,4]})
         v5 = deepcopy(v1)
         v5.data[:] = np.random.rand(10,3)
@@ -319,19 +319,19 @@ class DataTest(TestCase):
         data = create_test_data(self.get_store())
         data.create_variable('time', ['time'], np.arange(1000, dtype=np.int32),
                              {'units': 'days since 2000-01-01'})
-        self.assertIsInstance(data['var1'], DataView)
+        self.assertIsInstance(data['var1'], DatasetArray)
         self.assertVarEqual(data['var1'], data.variables['var1'])
         self.assertItemsEqual(data['var1'].dataset.variables,
                               {'var1', 'dim1', 'dim2'})
         # access virtual variables
         self.assertVarEqual(data['time.dayofyear'][:300],
-                            Variable('time', 1 + np.arange(300)))
-        self.assertArrayEqual(data['time.month'].data,
-                              data.indices['time'].month)
+                            Array('time', 1 + np.arange(300)))
+        self.assertNDArrayEqual(data['time.month'].data,
+                                data.indices['time'].month)
 
     def test_setitem(self):
         # assign a variable
-        var = Variable(['dim1'], np.random.randn(100))
+        var = Array(['dim1'], np.random.randn(100))
         data1 = create_test_data(self.get_store())
         data1.set_variable('A', var)
         data2 = data1.copy()
@@ -343,7 +343,7 @@ class DataTest(TestCase):
         data2['B'] = dv
         self.assertEqual(data1, data2)
         # assign an array
-        with self.assertRaisesRegexp(TypeError, 'DataViews and Variables'):
+        with self.assertRaisesRegexp(TypeError, 'DatasetArrays and Arrays'):
             data2['C'] = var.data
 
     def test_write_store(self):
@@ -356,7 +356,7 @@ class DataTest(TestCase):
     def test_to_dataframe(self):
         x = np.random.randn(10)
         y = np.random.randn(10)
-        ds = Dataset({'a': Variable('t', x), 'b': Variable('t', y)})
+        ds = Dataset({'a': Array('t', x), 'b': Array('t', y)})
         expected = pd.DataFrame(np.array([x, y]).T, columns=['a', 'b'],
                                 index=pd.Index(np.arange(10), name='t'))
         actual = ds.to_dataframe()

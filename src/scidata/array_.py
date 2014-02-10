@@ -6,10 +6,10 @@ import numpy as np
 
 import conventions
 import dataset
-import dataview
+import dataset_array
 import ops
 import utils
-from common import _DataWrapperMixin
+from common import AbstractArray
 
 
 def _as_compatible_data(data):
@@ -23,6 +23,9 @@ def _as_compatible_data(data):
         warnings.warn('converting data to np.ndarray because %s lacks some of '
                       'the necesssary attributes for direct use'
                       % type(data).__name__, RuntimeWarning, stacklevel=3)
+        data = np.asarray(data)
+    elif isinstance(data, AbstractArray):
+        # we don't want nested Array objects
         data = np.asarray(data)
     return data
 
@@ -50,10 +53,10 @@ def unique_value_groups(ar):
     return values, groups
 
 
-class Variable(_DataWrapperMixin):
+class Array(AbstractArray):
     """
     A netcdf-like variable consisting of dimensions, data and attributes
-    which describe a single Variable.  A single variable object is not
+    which describe a single Array.  A single variable object is not
     fully described outside the context of its parent Dataset.
     """
     def __init__(self, dims, data, attributes=None, indexing_mode='numpy'):
@@ -74,7 +77,7 @@ class Variable(_DataWrapperMixin):
             (with arrays). Two modes are supported: 'numpy' (fancy indexing
             like numpy.ndarray objects) and 'orthogonal' (array indexing
             accesses different dimensions independently, like netCDF4
-            variables). Accessing data from a Variable always uses orthogonal
+            variables). Accessing data from a Array always uses orthogonal
             indexing, so `indexing_mode` tells the variable whether index
             lookups need to be internally converted to numpy-style indexing.
         """
@@ -103,7 +106,7 @@ class Variable(_DataWrapperMixin):
     def data(self, value):
         value = np.asarray(value)
         if value.shape != self.shape:
-            raise ValueError("replacement data must match the Variable's "
+            raise ValueError("replacement data must match the Array's "
                              "shape")
         self._data = value
 
@@ -128,7 +131,7 @@ class Variable(_DataWrapperMixin):
         return key
 
     def __getitem__(self, key):
-        """Return a new Variable object whose contents are consistent with
+        """Return a new Array object whose contents are consistent with
         getting the provided key from the underlying data
 
         NB. __getitem__ and __setitem__ implement "orthogonal indexing" like
@@ -180,7 +183,7 @@ class Variable(_DataWrapperMixin):
         data = np.array(self._data) if deepcopy else self.data
         # note:
         # dimensions is already an immutable tuple
-        # attributes will be copied when the new Variable is created
+        # attributes will be copied when the new Array is created
         return type(self)(self.dimensions, data, self.attributes)
 
     def __copy__(self):
@@ -232,8 +235,8 @@ class Variable(_DataWrapperMixin):
 
         Returns
         -------
-        obj : Variable object
-            A new Variable with the selected data and dimensions. In general,
+        obj : Array object
+            A new Array with the selected data and dimensions. In general,
             the new variable's data will be a view of this variable's data,
             unless numpy fancy indexing was triggered by using an array
             indexer, in which case the data will be a copy.
@@ -249,7 +252,7 @@ class Variable(_DataWrapperMixin):
         return self[tuple(key)]
 
     def transpose(self, *dimensions):
-        """Return a new Variable object with transposed dimensions
+        """Return a new Array object with transposed dimensions
 
         Note: Although this operation returns a view of this variable's data,
         it is not lazy -- the data will be fully loaded.
@@ -262,7 +265,7 @@ class Variable(_DataWrapperMixin):
 
         Returns
         -------
-        transposed : Variable
+        transposed : Array
             The returned object has transposed data and dimensions with the
             same attributes as the original.
 
@@ -303,8 +306,8 @@ class Variable(_DataWrapperMixin):
 
         Returns
         -------
-        collapsed : Variable
-            Variable with summarized data and the indicated dimension(s)
+        collapsed : Array
+            Array with summarized data and the indicated dimension(s)
             removed.
         """
         if dimension is not None and axis is not None:
@@ -358,18 +361,18 @@ class Variable(_DataWrapperMixin):
             integer valued axis.
         new_dim_name : str or sequence of str, optional
             Name of the new dimension to create.
-        group_by : Variable
+        group_by : Array
             1D variable which contains the values by which to group.
         **kwargs : dict
             Additional keyword arguments passed on to `func`.
 
         Returns
         -------
-        unique : Variable
+        unique : Array
             1D variable of unique values in group, along the dimension given by
             `new_dim_name`.
-        aggregated : Variable
-            Variable with aggregated data and the original dimension from
+        aggregated : Array
+            Array with aggregated data and the original dimension from
             `group_by` replaced by `new_dim_name`.
         """
         if group_by.ndim != 1:
@@ -399,8 +402,8 @@ class Variable(_DataWrapperMixin):
 
         Parameters
         ----------
-        variables : iterable of Variable
-            Variables to stack together. Each variable is expected to have
+        variables : iterable of Array
+            Arrays to stack together. Each variable is expected to have
             matching dimensions and shape except for along the stacked
             dimension.
         dimension : str, optional
@@ -416,7 +419,7 @@ class Variable(_DataWrapperMixin):
 
         Returns
         -------
-        stacked : Variable
+        stacked : Array
             Stacked variable formed by stacking all the supplied variables
             along the new dimension.
         """
@@ -502,7 +505,7 @@ class Variable(_DataWrapperMixin):
     def _binary_op(f, reflexive=False):
         @functools.wraps(f)
         def func(self, other):
-            if isinstance(other, dataview.DataView):
+            if isinstance(other, dataset_array.DatasetArray):
                 return NotImplemented
             self_data, other_data, dims = _broadcast_variable_data(self, other)
             new_data = (f(self_data, other_data)
@@ -530,24 +533,24 @@ class Variable(_DataWrapperMixin):
             return self
         return func
 
-ops.inject_special_operations(Variable)
+ops.inject_special_operations(Array)
 
 
 def broadcast_variables(first, second):
-    """Given two variables, return two variables with matching dimensions and
-    numpy broadcast compatible data
+    """Given two arrays, return two arrays with matching dimensions and numpy
+    broadcast compatible data
 
     Parameters
     ----------
-    first, second : Variable
-        Variable objects to broadcast.
+    first, second : Array
+        Array objects to broadcast.
 
     Returns
     -------
-    first_broadcast, second_broadcast : Variable
-        Broadcast variables. The data on each variable will be a view of the
-        data on the corresponding original variables, but dimensions will be
-        reordered and inserted so that both broadcast variables have the same
+    first_broadcast, second_broadcast : Array
+        Broadcast arrays. The data on each variable will be a view of the
+        data on the corresponding original arrays, but dimensions will be
+        reordered and inserted so that both broadcast arrays have the same
         dimensions. The new dimensions are sorted in order of appearence in the
         first variable's dimensions followed by the second variable's
         dimensions.
@@ -566,7 +569,7 @@ def broadcast_variables(first, second):
                              'has duplicate dimensions: %r'
                              % list(dimensions))
 
-    # build dimensions for new Variable
+    # build dimensions for new Array
     second_only_dims = [d for d in second.dimensions
                         if d not in first.dimensions]
     dimensions = list(first.dimensions) + second_only_dims
@@ -574,12 +577,12 @@ def broadcast_variables(first, second):
     # expand first_data's dimensions so it's broadcast compatible after
     # adding second's dimensions at the end
     first_data = first.data[(Ellipsis,) + (None,) * len(second_only_dims)]
-    new_first = Variable(dimensions, first_data)
+    new_first = Array(dimensions, first_data)
     # expand and reorder second_data so the dimensions line up
     first_only_dims = [d for d in dimensions if d not in second.dimensions]
     second_dims = list(second.dimensions) + first_only_dims
     second_data = second.data[(Ellipsis,) + (None,) * len(first_only_dims)]
-    new_second = Variable(second_dims, second_data).transpose(*dimensions)
+    new_second = Array(second_dims, second_data).transpose(*dimensions)
     return new_first, new_second
 
 
@@ -587,7 +590,7 @@ def _broadcast_variable_data(self, other):
     if isinstance(other, dataset.Dataset):
         raise TypeError('datasets do not support mathematical operations')
     elif all(hasattr(other, attr) for attr in ['dimensions', 'data', 'shape']):
-        # `other` satisfies the Variable API
+        # `other` satisfies the scidata.Array API
         new_self, new_other = broadcast_variables(self, other)
         self_data = new_self.data
         other_data = new_other.data

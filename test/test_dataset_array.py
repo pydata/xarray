@@ -1,27 +1,27 @@
 import numpy as np
 
-from scidata import Dataset, DataView, Variable, intersection
+from scidata import Dataset, DatasetArray, Array, intersection
 from . import TestCase, ReturnItem
 
 
-class TestDataView(TestCase):
+class TestDatasetArray(TestCase):
     def assertViewEqual(self, dv1, dv2):
         self.assertEqual(dv1.dataset, dv2.dataset)
         self.assertEqual(dv1.focus, dv2.focus)
 
     def setUp(self):
         self.x = np.random.random((10, 20))
-        self.v = Variable(['x', 'y'], self.x)
+        self.v = Array(['x', 'y'], self.x)
         self.ds = Dataset({'foo': self.v})
         self.ds.create_coordinate('x', np.arange(10))
         self.ds.create_coordinate('y', np.arange(20))
-        self.dv = DataView(self.ds, 'foo')
+        self.dv = DatasetArray(self.ds, 'foo')
 
     def test_properties(self):
         self.assertIs(self.dv.dataset, self.ds)
         self.assertEqual(self.dv.focus, 'foo')
         self.assertVarEqual(self.dv.variable, self.v)
-        self.assertArrayEqual(self.dv.data, self.v.data)
+        self.assertNDArrayEqual(self.dv.data, self.v.data)
         for attr in ['dimensions', 'dtype', 'shape', 'size', 'ndim',
                      'attributes']:
             self.assertEqual(getattr(self.dv, attr), getattr(self.v, attr))
@@ -29,15 +29,15 @@ class TestDataView(TestCase):
         self.assertVarEqual(self.dv, self.v)
         self.assertEqual(list(self.dv.indices), list(self.ds.indices))
         for k, v in self.dv.indices.iteritems():
-            self.assertArrayEqual(v, self.ds.indices[k])
+            self.assertNDArrayEqual(v, self.ds.indices[k])
 
     def test_items(self):
         # strings pull out dataviews
         self.assertViewEqual(self.dv, self.ds['foo'])
         x = self.dv['x']
         y = self.dv['y']
-        self.assertViewEqual(DataView(self.ds.select('x'), 'x'), x)
-        self.assertViewEqual(DataView(self.ds.select('y'), 'y'), y)
+        self.assertViewEqual(DatasetArray(self.ds.select('x'), 'x'), x)
+        self.assertViewEqual(DatasetArray(self.ds.select('y'), 'y'), y)
         # integer indexing
         I = ReturnItem()
         for i in [I[:], I[...], I[x.data], I[x.variable], I[x], I[x, y],
@@ -59,7 +59,7 @@ class TestDataView(TestCase):
         for ((act_x, act_dv), (exp_x, exp_ds)) in \
                 zip(self.dv.iterator('y'), self.ds.iterator('y')):
             self.assertVarEqual(exp_x, act_x)
-            self.assertViewEqual(DataView(exp_ds, 'foo'), act_dv)
+            self.assertViewEqual(DatasetArray(exp_ds, 'foo'), act_dv)
         for ((_, exp_dv), act_dv) in zip(self.dv.iterator('x'), self.dv):
             self.assertViewEqual(exp_dv, act_dv)
 
@@ -71,13 +71,13 @@ class TestDataView(TestCase):
         self.assertViewEqual(self.dv[:3], self.dv.indexed_by(x=slice(3)))
 
     def test_labeled_by(self):
-        self.ds.set_variable('x', Variable(['x'], np.array(list('abcdefghij'))))
+        self.ds.set_variable('x', Array(['x'], np.array(list('abcdefghij'))))
         self.assertViewEqual(self.dv, self.dv.labeled_by(x=slice(None)))
         self.assertViewEqual(self.dv[1], self.dv.labeled_by(x='b'))
         self.assertViewEqual(self.dv[:3], self.dv.labeled_by(x=slice('c')))
 
     def test_loc(self):
-        self.ds.set_variable('x', Variable(['x'], np.array(list('abcdefghij'))))
+        self.ds.set_variable('x', Array(['x'], np.array(list('abcdefghij'))))
         self.assertViewEqual(self.dv[:3], self.dv.loc[:'c'])
         self.assertViewEqual(self.dv[1], self.dv.loc['b'])
         self.assertViewEqual(self.dv[:3], self.dv.loc[['a', 'b', 'c']])
@@ -100,9 +100,9 @@ class TestDataView(TestCase):
         self.assertViewEqual(dv, self.dv)
 
     def test_array_interface(self):
-        self.assertArrayEqual(np.asarray(self.dv), self.x)
+        self.assertNDArrayEqual(np.asarray(self.dv), self.x)
         # test patched in methods
-        self.assertArrayEqual(self.dv.take([2, 3]), self.x.take([2, 3]))
+        self.assertNDArrayEqual(self.dv.take([2, 3]), self.x.take([2, 3]))
         self.assertViewEqual(self.dv.argsort(),
                              self.dv.refocus(self.x.argsort()))
         self.assertViewEqual(self.dv.clip(2, 3),
@@ -111,7 +111,7 @@ class TestDataView(TestCase):
         self.assertViewEqual(np.sin(self.dv),
                              self.dv.refocus(np.sin(self.x)))
         self.assertViewEqual(self.dv, np.maximum(self.v, self.dv))
-        self.ds['bar'] = Variable(['x', 'y'], np.zeros((10, 20)))
+        self.ds['bar'] = Array(['x', 'y'], np.zeros((10, 20)))
         self.assertViewEqual(self.dv, np.maximum(self.dv, self.ds['bar']))
 
     def test_math(self):
@@ -130,22 +130,22 @@ class TestDataView(TestCase):
         self.assertViewEqual(a, a + 0 * a)
         self.assertViewEqual(a, 0 * a + a)
         # test different indices
-        ds2 = self.ds.replace('x', Variable(['x'], 3 + np.arange(10)))
-        b = DataView(ds2, 'foo')
+        ds2 = self.ds.replace('x', Array(['x'], 3 + np.arange(10)))
+        b = DatasetArray(ds2, 'foo')
         with self.assertRaisesRegexp(ValueError, 'not aligned'):
             a + b
         with self.assertRaisesRegexp(ValueError, 'not aligned'):
             b + a
 
     def test_item_math(self):
-        self.ds.set_variable('x', Variable(['x'], np.array(list('abcdefghij'))))
+        self.ds.set_variable('x', Array(['x'], np.array(list('abcdefghij'))))
         self.assertVarEqual(self.dv + self.dv[0, 0],
                             self.dv + self.dv[0, 0].data)
         new_data = self.x[0][None, :] + self.x[:, 0][:, None]
         self.assertVarEqual(self.dv[:, 0] + self.dv[0],
-                            Variable(['x', 'y'], new_data))
+                            Array(['x', 'y'], new_data))
         self.assertVarEqual(self.dv[0] + self.dv[:, 0],
-                            Variable(['y', 'x'], new_data.T))
+                            Array(['y', 'x'], new_data.T))
 
     def test_inplace_math(self):
         x = self.x
@@ -165,12 +165,12 @@ class TestDataView(TestCase):
         # should check which extra dimensions are dropped
 
     def test_aggregate(self):
-        agg_var = Variable(['y'], np.array(['a'] * 9 + ['c'] + ['b'] * 7 +
+        agg_var = Array(['y'], np.array(['a'] * 9 + ['c'] + ['b'] * 7 +
                                            ['c'] * 3))
         self.ds.add_variable('abc', agg_var)
         expected_unique, expected_var = \
             self.dv.variable.aggregate(np.mean, 'abc', agg_var)
-        expected = DataView(Dataset(
+        expected = DatasetArray(Dataset(
             {'foo': expected_var, 'x': self.ds.variables['x'],
              'abc': expected_unique}), 'foo')
         actual = self.dv.aggregate(np.mean, 'abc')
@@ -179,25 +179,25 @@ class TestDataView(TestCase):
         self.assertViewEqual(expected, actual)
 
     def test_from_stack(self):
-        self.ds['bar'] = Variable(['x', 'y'], np.random.randn(10, 20))
+        self.ds['bar'] = Array(['x', 'y'], np.random.randn(10, 20))
         foo = self.ds['foo']
         bar = self.ds['bar'].renamed('foo')
         # from dataviews:
-        self.assertVarEqual(Variable(['w', 'x', 'y'],
+        self.assertVarEqual(Array(['w', 'x', 'y'],
                                      np.array([foo.data, bar.data])),
-                            DataView.from_stack([foo, bar], 'w'))
+                            DatasetArray.from_stack([foo, bar], 'w'))
         # from variables:
-        self.assertVarEqual(Variable(['w', 'x', 'y'],
+        self.assertVarEqual(Array(['w', 'x', 'y'],
                                      np.array([foo.data, bar.data])),
-                            DataView.from_stack([foo.variable,
-                                                 bar.variable], 'w'))
+                            DatasetArray.from_stack([foo.variable,
+                                                     bar.variable], 'w'))
         # from iteration:
-        stacked = DataView.from_stack((v for _, v in foo.iterator('x')),
+        stacked = DatasetArray.from_stack((v for _, v in foo.iterator('x')),
                                       self.ds['x'])
         self.assertViewEqual(foo, stacked)
 
     def test_intersection(self):
-        self.ds.set_variable('x', Variable(['x'], np.array(list('abcdefghij'))))
+        self.ds.set_variable('x', Array(['x'], np.array(list('abcdefghij'))))
         with self.assertRaises(ValueError):
             self.dv + self.dv[:5]
         dv1, dv2 = intersection(self.dv, self.dv[:5])

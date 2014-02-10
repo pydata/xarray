@@ -7,10 +7,12 @@ import pandas as pd
 from cStringIO import StringIO
 from collections import OrderedDict, Mapping, MutableMapping
 
-from dataview import DataView
+import array_ as array
+import backends
+import conventions
+import utils
+from dataset_array import DatasetArray
 from utils import FrozenOrderedDict, Frozen, remap_loc_indexers
-from variable import Variable, broadcast_variables
-import backends, conventions, utils
 
 date2num = nc4.date2num
 num2date = nc4.num2date
@@ -23,7 +25,7 @@ def construct_dimensions(variables):
     Parameters
     ----------
     variables : mapping
-        Mapping from variable names to Variable objects.
+        Mapping from variable names to Array objects.
 
     Returns
     -------
@@ -58,7 +60,7 @@ def check_dims_and_vars_consistency(dimensions, variables):
     dimensions : mapping
         Mapping from dimension names to lengths.
     variables : mapping
-        Mapping from variable names to Variable objects.
+        Mapping from variable names to Array objects.
 
     Raises
     ------
@@ -163,7 +165,7 @@ class Dataset(Mapping):
         Coordinates are simply variables that are also dimensions. They must
         all have dimension 1.
     noncoordinates : {name: variable, ...}
-        Variables that are not coordinates.
+        Arrays that are not coordinates.
     attributes : {key: value, ...}
     indices : {dimension: index, ...}
         Mapping from dimensions to pandas.Index objects.
@@ -277,17 +279,17 @@ class Dataset(Mapping):
 
     def _get_virtual_variable(self, key):
         if key in self.indices:
-            return Variable([key], self.indices[key].values)
+            return array.Array([key], self.indices[key].values)
         split_key = key.split('.')
         if len(split_key) == 2:
             var, suffix = split_key
             if var in self._datetimeindices:
                 if suffix in _DATETIMEINDEX_COMPONENTS:
-                    return Variable([var], getattr(self.indices[var], suffix))
+                    return array.Array([var], getattr(self.indices[var], suffix))
                 elif suffix == 'season':
                     # seasons = np.array(['DJF', 'MAM', 'JJA', 'SON'])
                     month = self.indices[var].month
-                    return Variable([var], (month // 3) % 4 + 1)
+                    return array.Array([var], (month // 3) % 4 + 1)
         raise ValueError('virtual variable %r not found' % key)
 
     def _get_virtual_dataview(self, key):
@@ -295,11 +297,11 @@ class Dataset(Mapping):
         new_vars = OrderedDict(self.variables.items() + [(key, virtual_var)])
         ds = type(self)(new_vars, self.dimensions, self.attributes,
                         indices=self.indices.cache)
-        return DataView(ds, key)
+        return DatasetArray(ds, key)
 
     @property
     def virtual_variables(self):
-        """Variables that don't exist in this dataset but for which dataviews
+        """Arrays that don't exist in this dataset but for which dataviews
         could be created on demand (because they can be calculated from other
         dataset variables or dimensions)
         """
@@ -317,19 +319,19 @@ class Dataset(Mapping):
                 raise KeyError('dataset contains no variable with name %r '
                                % key)
         else:
-            return DataView(self.select(key), key)
+            return DatasetArray(self.select(key), key)
 
     def __setitem__(self, key, value):
         # TODO: allow this operation to be destructive, overriding existing
         # variables? If so, we may want to implement __delitem__, too.
-        # (We would need to change DataView.__setitem__ in that case, because
+        # (We would need to change DatasetArray.__setitem__ in that case, because
         # we definitely don't want to override focus variables.)
-        if isinstance(value, DataView):
+        if isinstance(value, DatasetArray):
             self.merge(value.renamed(key).dataset, inplace=True)
-        elif isinstance(value, Variable):
+        elif isinstance(value, array.Array):
             self.set_variable(key, value)
         else:
-            raise TypeError('only DataViews and Variables can be added to '
+            raise TypeError('only DatasetArrays and Arrays can be added to '
                             'datasets via `__setitem__`')
 
     # mutable objects should not be hashable
@@ -452,11 +454,11 @@ class Dataset(Mapping):
 
         Returns
         -------
-        var : Variable
+        var : Array
             Reference to the newly created variable.
         """
         # any error checking should be taken care of by add_variable
-        v = Variable(dims, np.asarray(data), attributes)
+        v = array.Array(dims, np.asarray(data), attributes)
         return self.add_variable(name, v)
 
     def create_coordinate(self, name, data, attributes=None):
@@ -484,11 +486,11 @@ class Dataset(Mapping):
 
         Returns
         -------
-        var : Variable
+        var : Array
             Reference to the newly created coordinate variable.
         """
         # any error checking should be taken care of by add_coordinate
-        v = Variable((name,), np.asarray(data), attributes)
+        v = array.Array((name,), np.asarray(data), attributes)
         return self.add_coordinate(v)
 
     def add_dimension(self, name, length):
@@ -516,17 +518,17 @@ class Dataset(Mapping):
         ----------
         name : string
             The name under which the variable will be added.
-        variable : Variable
+        variable : Array
             The variable to be added. If the desired action is to add a copy of
             the variable be sure to do so before passing it to this function.
 
         Returns
         -------
-        variable
-            The variable object in the underlying datastore.
+        Array
+            An Array object attached to the underlying datastore.
         """
         if name in self.variables:
-            raise ValueError("Variable named %r already exists" % name)
+            raise ValueError("Array named %r already exists" % name)
         return self.set_variable(name, var)
 
     def add_coordinate(self, var):
@@ -534,14 +536,14 @@ class Dataset(Mapping):
 
         Parameters
         ----------
-        variable : Variable
+        variable : Array
             The coordinate variable to be added. Coordinate variables must be
             1D, and will be added under the same name as their sole dimension.
 
         Returns
         -------
         variable
-            The variable object in the underlying datastore.
+            An Array object attached to the underlying datastore.
         """
         # We need to be cleanly roll back the effects of
         # create_dimension if create_variable fails, otherwise we will
@@ -567,14 +569,14 @@ class Dataset(Mapping):
         ----------
         name : string
             The name under which the variable will be added.
-        variable : Variable
+        variable : Array
             The variable to be added. If the desired action is to add a copy of
             the variable be sure to do so before passing it to this function.
 
         Returns
         -------
         variable
-            The variable object in the underlying datastore.
+            An Array object attached to the underlying datastore.
         """
         # check old + new dimensions for consistency checks
         new_dims = OrderedDict()
@@ -592,12 +594,12 @@ class Dataset(Mapping):
         return new_var
 
     def indexed_by(self, **indexers):
-        """Return a new dataset with each variable indexed along the specified
+        """Return a new dataset with each array indexed along the specified
         dimension(s)
 
-        This method selects values from each variable using its `__getitem__`
+        This method selects values from each array using its `__getitem__`
         method, except this method does not require knowing the order of
-        each variable's dimensions.
+        each array's dimensions.
 
         Parameters
         ----------
@@ -609,8 +611,8 @@ class Dataset(Mapping):
         -------
         obj : Dataset
             A new Dataset with the same contents as this dataset, except each
-            variable and dimension is indexed by the appropriate indexers. In
-            general, each variable's data will be a view of the variable's data
+            array and dimension is indexed by the appropriate indexers. In
+            general, each array's data will be a view of the array's data
             in this dataset, unless numpy fancy indexing was triggered by using
             an array indexer, in which case the data will be a copy.
 
@@ -618,7 +620,7 @@ class Dataset(Mapping):
         --------
         Dataset.labeled_by
         Dataset.indexed_by
-        Variable.indexed_by
+        Array.indexed_by
         """
         invalid = [k for k in indexers if not k in self.dimensions]
         if invalid:
@@ -682,7 +684,7 @@ class Dataset(Mapping):
         --------
         Dataset.labeled_by
         Dataset.indexed_by
-        Variable.indexed_by
+        Array.indexed_by
         """
         return self.indexed_by(**remap_loc_indexers(self.indices, indexers))
 
@@ -706,7 +708,7 @@ class Dataset(Mapping):
             dims = tuple(name_dict.get(dim, dim) for dim in v.dimensions)
             #TODO: public interface for renaming a variable without loading
             # data
-            variables[name] = Variable(dims, v._data, v.attributes)
+            variables[name] = array.Array(dims, v._data, v.attributes)
 
         dimensions = OrderedDict((name_dict.get(k, k), v)
                                  for k, v in self.dimensions.iteritems())
@@ -718,7 +720,7 @@ class Dataset(Mapping):
     def merge(self, other, inplace=False):
         """Merge two datasets into a single new dataset
 
-        This method generally not allow for overriding data. Variables,
+        This method generally not allow for overriding data. Arrays,
         dimensions and indices are checked for conflicts. However, conflicting
         attributes are removed.
 
@@ -862,7 +864,7 @@ class Dataset(Mapping):
         ----------
         name : str
             Name of the variable to replace in this object.
-        variable : Variable
+        variable : Array
             Replacement variable.
 
         Returns
@@ -906,10 +908,10 @@ class Dataset(Mapping):
         columns = self.noncoordinates.keys()
         data = []
         # we need a template to broadcast all dataset variables against
-        template = Variable(self.dimensions.keys(),
-                            np.empty(self.dimensions.values()))
+        template = array.Array(self.dimensions.keys(),
+                               np.empty(self.dimensions.values()))
         for k in columns:
-            _, var = broadcast_variables(template, self[k])
+            _, var = array.broadcast_variables(template, self[k])
             _, var_data = np.broadcast_arrays(template.data, var.data)
             data.append(var_data.reshape(-1))
         # note: pd.MultiIndex.from_product is new in pandas-0.13.1

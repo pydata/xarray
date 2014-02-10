@@ -1,5 +1,5 @@
 
-class _DataWrapperMixin(object):
+class AbstractArray(object):
     @property
     def dtype(self):
         return self._data.dtype

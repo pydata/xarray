@@ -11,9 +11,9 @@ import numpy as np
 from scipy.io import netcdf
 from collections import OrderedDict
 
-from utils import FrozenOrderedDict, Frozen
-from variable import Variable
+import array_ as array
 import conventions
+from utils import FrozenOrderedDict, Frozen
 
 
 class AbstractDataStore(object):
@@ -65,7 +65,7 @@ class InMemoryDataStore(AbstractDataStore):
 
 
 def convert_scipy_variable(var):
-    return Variable(var.dimensions, var.data, var._attributes)
+    return array.Array(var.dimensions, var.data, var._attributes)
 
 
 class ScipyDataStore(AbstractDataStore):
@@ -160,7 +160,7 @@ def convert_nc4_variable(var):
     # netcdf file would now have been scaled twice!
     attr = OrderedDict((k, var.getncattr(k)) for k in var.ncattrs()
                        if k not in ['scale_factor', 'add_offset'])
-    return Variable(var.dimensions, var, attr, indexing_mode='orthogonal')
+    return array.Array(var.dimensions, var, attr, indexing_mode='orthogonal')
 
 
 class NetCDF4DataStore(AbstractDataStore):

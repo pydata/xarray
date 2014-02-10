@@ -6,40 +6,39 @@ from collections import OrderedDict
 
 import numpy as np
 
+import array_
 import dataset
 import ops
-import variable
-from common import _DataWrapperMixin
+from common import AbstractArray
 from utils import expanded_indexer, FrozenOrderedDict, remap_loc_indexers
 
 
 class _LocIndexer(object):
-    def __init__(self, dataview):
-        self.dataview = dataview
+    def __init__(self, array):
+        self.array = array
 
     def _remap_key(self, key):
-        indexers = remap_loc_indexers(self.dataview.indices,
-                                      self.dataview._key_to_indexers(key))
+        indexers = remap_loc_indexers(self.array.indices,
+                                      self.array._key_to_indexers(key))
         return tuple(indexers.values())
 
     def __getitem__(self, key):
-        return self.dataview[self._remap_key(key)]
+        return self.array[self._remap_key(key)]
 
     def __setitem__(self, key, value):
-        self.dataview[self._remap_key(key)] = value
+        self.array[self._remap_key(key)] = value
 
 
-class DataView(_DataWrapperMixin):
-    """
-    A Dataset wrapper oriented around a single Variable
+class DatasetArray(AbstractArray):
+    """A Dataset wrapper oriented around a single Array
 
     Dataviews are the primary way to do computations with Dataset variables.
     They are designed to make it easy to manipulate variables in the context of
     an intact Dataset object. Getting items from or doing mathematical
-    operations with a dataview returns another dataview.
+    operations with a dataset array returns another dataset array.
 
-    The design of dataviews is strongly inspired by the Iris Cube. However,
-    dataviews are much lighter weight than cubes. They are simply aligned,
+    The design of DatasetArray is strongly inspired by the Iris Cube. However,
+    dataset arrays are much lighter weight than cubes. They are simply aligned,
     labeled datasets and do not explicitly guarantee or rely on the CF model.
     """
     def __init__(self, dataset, focus):
@@ -49,8 +48,8 @@ class DataView(_DataWrapperMixin):
         dataset : scidata.Dataset
             The dataset on which to build this data view.
         focus : str
-            The name of the "focus variable" in dataset on which this view is
-            oriented.
+            The name of the "focus variable" in `dataset` on which this object
+            is oriented.
         """
         if not focus in dataset:
             raise ValueError('focus %r is not a variable in dataset %r'
@@ -65,14 +64,14 @@ class DataView(_DataWrapperMixin):
     def variable(self, value):
         self.dataset.set_variable(self.focus, value)
 
-    # _data is necessary for _DataWrapperMixin
+    # _data is necessary for AbstractArray
     @property
     def _data(self):
         return self.variable._data
 
     @property
     def data(self):
-        """The dataview's data as a numpy.ndarray"""
+        """The dataset array's data as a numpy.ndarray"""
         return self.variable.data
     @data.setter
     def data(self, value):
@@ -88,7 +87,7 @@ class DataView(_DataWrapperMixin):
 
     def __getitem__(self, key):
         if isinstance(key, basestring):
-            # grab another dataview from the dataset
+            # grab another dataset array from the dataset
             return self.dataset[key]
         else:
             # orthogonal array indexing
@@ -96,7 +95,7 @@ class DataView(_DataWrapperMixin):
 
     def __setitem__(self, key, value):
         if isinstance(key, basestring):
-            # add a variable or dataview to the dataset
+            # add an array to the dataset
             self.dataset[key] = value
         else:
             # orthogonal array indexing
@@ -130,7 +129,7 @@ class DataView(_DataWrapperMixin):
 
     def __copy__(self):
         # shallow copy the underlying dataset
-        return DataView(self.dataset.copy(), self.focus)
+        return DatasetArray(self.dataset.copy(), self.focus)
 
     # mutable objects should not be hashable
     __hash__ = None
@@ -152,8 +151,8 @@ class DataView(_DataWrapperMixin):
         return '<scidata.%s %r%s>' % (type(self).__name__, self.focus, contents)
 
     def indexed_by(self, **indexers):
-        """Return a new dataview whose dataset is given by indexing along the
-        specified dimension(s)
+        """Return a new dataset array whose dataset is given by indexing along
+        the specified dimension(s)
 
         See Also
         --------
@@ -167,8 +166,8 @@ class DataView(_DataWrapperMixin):
         return type(self)(ds, self.focus)
 
     def labeled_by(self, **indexers):
-        """Return a new dataview whose dataset is given by selecting coordinate
-        labels along the specified dimension(s)
+        """Return a new dataset array whose dataset is given by selecting
+        coordinate labels along the specified dimension(s)
 
         See Also
         --------
@@ -177,20 +176,21 @@ class DataView(_DataWrapperMixin):
         return self.indexed_by(**remap_loc_indexers(self.indices, indexers))
 
     def renamed(self, new_name):
-        """Returns a new DataView with this DataView's focus variable renamed
+        """Returns a new DatasetArray with this DatasetArray's focus variable
+        renamed
         """
         renamed_dataset = self.dataset.renamed({self.focus: new_name})
         return type(self)(renamed_dataset, new_name)
 
     def unselected(self):
-        """Returns a copy of this DataView's dataset with this DataView's
-        focus variable removed
+        """Returns a copy of this DatasetArray's dataset with this
+        DatasetArray's focus variable removed
         """
         return self.dataset.unselect(self.focus)
 
     def refocus(self, new_var):
-        """Returns a copy of this DataView's dataset with this DataView's
-        focus variable replaced by `new_var`
+        """Returns a copy of this DatasetArray's dataset with this
+        DatasetArray's focus variable replaced by `new_var`
 
         If `new_var` is a dataview, its contents will be merged in.
         """
@@ -215,16 +215,16 @@ class DataView(_DataWrapperMixin):
         -------
         it : iterator
             The returned iterator yields pairs of scalar-valued coordinate
-            variables and DataView objects.
+            arrays and DatasetArray objects.
         """
         for (x, ds) in self.dataset.iterator(dimension):
             yield (x, type(self)(ds, self.focus))
 
     def transpose(self, *dimensions):
-        """Return a new DataView object with transposed dimensions
+        """Return a new DatasetArray object with transposed dimensions
 
-        Note: Although this operation returns a view of this dataview's
-        variable's data, it is not lazy -- the data will be fully loaded.
+        Note: Although this operation returns a view of this array's data, it
+        is not lazy -- the data will be fully loaded.
 
         Parameters
         ----------
@@ -234,18 +234,18 @@ class DataView(_DataWrapperMixin):
 
         Returns
         -------
-        transposed : DataView
-            The returned DataView's variable is transposed.
+        transposed : DatasetArray
+            The returned DatasetArray's variable is transposed.
 
         See Also
         --------
         numpy.transpose
-        Variable.tranpose
+        Array.tranpose
         """
         return self.refocus(self.variable.transpose(*dimensions))
 
     def collapse(self, func, dimension=None, axis=None, **kwargs):
-        """Collapse this variable by applying `func` along some dimension(s)
+        """Collapse this array by applying `func` along some dimension(s)
 
         Parameters
         ----------
@@ -271,9 +271,9 @@ class DataView(_DataWrapperMixin):
 
         Returns
         -------
-        collapsed : DataView
-            DataView with this dataview's variable replaced with a variable
-            with summarized data and the indicated dimension(s) removed.
+        collapsed : DatasetArray
+            DatasetArray with this object's array replaced with an array with
+            summarized data and the indicated dimension(s) removed.
         """
         var = self.variable.collapse(func, dimension, axis, **kwargs)
         dropped_dims = set(self.dimensions) - set(var.dimensions)
@@ -288,7 +288,7 @@ class DataView(_DataWrapperMixin):
         return type(self)(ds, self.focus)
 
     def aggregate(self, func, new_dim, **kwargs):
-        """Aggregate this dataview by applying `func` to grouped elements
+        """Aggregate this array by applying `func` to grouped elements
 
         Parameters
         ----------
@@ -296,18 +296,18 @@ class DataView(_DataWrapperMixin):
             Function which can be called in the form
             `func(x, axis=axis, **kwargs)` to reduce an np.ndarray over an
             integer valued axis.
-        new_dim : str or DataView
-            Name of a variable in this dataview's dataset or DataView by which
+        new_dim : str or DatasetArray
+            Name of a variable in this array's dataset or DatasetArray by which
             to group variable elements. The dimension along which this variable
-            exists will be replaced by this name. The variable or dataview must
-            be one-dimensional.
+            exists will be replaced by this name. The array must be one-
+            dimensional.
         **kwargs : dict
             Additional keyword arguments passed on to `func`.
 
         Returns
         -------
-        aggregated : DataView
-            DataView with aggregated data and the new dimension `new_dim`.
+        aggregated : DatasetArray
+            DatasetArray with aggregated data and the new dimension `new_dim`.
         """
         if isinstance(new_dim, basestring):
             new_dim = self.dataset[new_dim]
@@ -323,17 +323,17 @@ class DataView(_DataWrapperMixin):
         return type(self)(ds, self.focus)
 
     @classmethod
-    def from_stack(cls, dataviews, dimension='stacked_dimension'):
-        """Stack dataviews along a new or existing dimension to form a new
+    def from_stack(cls, arrays, dimension='stacked_dimension'):
+        """Stack arrays along a new or existing dimension to form a new
         dataview
 
         Parameters
         ----------
-        dataviews : iterable of DataView or Variable
-            Variables to stack together. Each variable is expected to have
+        arrays : iterable of DatasetArray or Array
+            Arrays to stack together. Each variable is expected to have
             matching dimensions and shape except for along the stacked
             dimension.
-        dimension : str or DataView, optional
+        dimension : str or DatasetArray, optional
             Name of the dimension to stack along. This can either be a new
             dimension name, in which case it is added along axis=0, or an
             existing dimension name, in which case the location of the
@@ -342,13 +342,13 @@ class DataView(_DataWrapperMixin):
 
         Returns
         -------
-        stacked : DataView
+        stacked : DatasetArray
             Stacked dataview formed by stacking all the supplied variables
             along the new dimension.
         """
-        dataviews = list(dataviews)
-        if not dataviews:
-            raise ValueError('DataView.from_stack was supplied with an '
+        arrays = list(arrays)
+        if not arrays:
+            raise ValueError('DatasetArray.from_stack was supplied with an '
                              'empty argument')
 
         # create an empty dataset in which to stack variables
@@ -362,31 +362,31 @@ class DataView(_DataWrapperMixin):
 
         # figure out metadata for each dataview
         focus = None
-        for view in dataviews:
-            if isinstance(view, cls):
-                ds.merge(view.unselected(), inplace=True)
+        for array in arrays:
+            if isinstance(array, cls):
+                ds.merge(array.unselected(), inplace=True)
                 if focus is None:
-                    focus = view.focus
-                elif focus != view.focus:
-                    raise ValueError('DataView.from_stack requires that all '
+                    focus = array.focus
+                elif focus != array.focus:
+                    raise ValueError('DatasetArray.from_stack requires that all '
                                      'stacked views have the same focus')
         if focus is None:
             focus = 'stacked_variable'
 
         # finally, merge in the stacked variables
-        ds[focus] = variable.Variable.from_stack(dataviews, dim_name)
+        ds[focus] = array_.Array.from_stack(arrays, dim_name)
         return cls(ds, focus)
 
     def apply(self, func, *args, **kwargs):
-        """Apply `func` with *args and **kwargs to this dataview's data and
-        return the result as a new dataview
+        """Apply `func` with *args and **kwargs to this array's data and
+        return the result as a new array
         """
         return self.refocus(self.variable.apply(func, *args, **kwargs))
 
     def to_dataframe(self):
-        """Convert this dataview into a pandas.DataFrame
+        """Convert this array into a pandas.DataFrame
 
-        Non-coordinate variables in this dataview's dataset (which include the
+        Non-coordinate variables in this array's dataset (which include the
         view's data) form the columns of the DataFrame. The DataFrame is be
         indexed by the Cartesian product of the dataset's indices.
         """
@@ -438,19 +438,17 @@ class DataView(_DataWrapperMixin):
             return self
         return func
 
-ops.inject_special_operations(DataView, priority=60)
+ops.inject_special_operations(DatasetArray, priority=60)
 
 
-def intersection(dataview1, dataview2):
-    """Given two dataview objects, returns two new dataviews where all indices
-    found on both dataviews are replaced by their intersection
+def intersection(array1, array2):
+    """Given two dataset array objects, returns two new dataset arrays where
+    all indices found on both arrays are replaced by their intersection
     """
     # TODO: automatically calculate the intersection when doing math with
-    # dataviews, or better yet calculate the union of the indices and fill in
+    # arrays, or better yet calculate the union of the indices and fill in
     # the mis-aligned data with NaN.
-    overlapping_indices = {k: dataview1.indices[k] & dataview2.indices[k]
-                           for k in dataview1.indices
-                           if k in dataview2.indices}
+    overlapping_indices = {k: array1.indices[k] & array2.indices[k]
+                           for k in array1.indices if k in array2.indices}
     return tuple(dv.labeled_by(**overlapping_indices)
-                 for dv in [dataview1, dataview2])
-
+                 for dv in [array1, array2])

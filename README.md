@@ -7,7 +7,7 @@ used for self-describing scientific data (netCDF, OpenDAP, etc.).
 
 ## Main Feaures
 
-  - A `DataView` object that is compatible with NumPy's ndarray and ufuncs
+  - A `DatasetArray` object that is compatible with NumPy's ndarray and ufuncs
     but keeps ancilliary variables and metadata intact.
   - Array broadcasting based on dimension names and coordinate indices
     instead of only shapes.
@@ -33,13 +33,13 @@ used for self-describing scientific data (netCDF, OpenDAP, etc.).
 
   - [Iris][iris] (supported by the UK Met office) is a similar package
     designed for working with geophysical datasets in Python. Iris provided
-    much of the inspiration for scidata (e.g., scidata's `DataView` is largely
-    based on the Iris `Cube`), but it has several limitations that led us to
-    build scidata instead of extending Iris:
+    much of the inspiration for scidata (e.g., scidata's `DatasetArray` is
+    largely based on the Iris `Cube`), but it has several limitations that led
+    us to build scidata instead of extending Iris:
     1. Iris has essentially one first-class object (the `Cube`) on which it
        attempts to build all functionality (`Coord` supports a much more
        limited set of functionality). scidata has its equivalent of the Cube
-       (the `DataView` object), but it is only a thin wrapper on the more
+       (the `DatasetArray` object), but it is only a thin wrapper on the more
        primitive building blocks of Dataset and Variable objects.
     2. Iris has a strict interpretation of [CF conventions][cf], which,
        although a principled choice, we have found to be impractical for
@@ -58,9 +58,9 @@ used for self-describing scientific data (netCDF, OpenDAP, etc.).
        dimension with 10000 elements).
   - [pandas][pandas] is fast and powerful but oriented around working with
     tabular datasets. pandas has experimental N-dimensional panels, but they
-    don't support aligned math with other objects. We believe the `DataView`/
-    `Cube` model is better suited to working with scientific datasets. We use
-    pandas internally in scidata to support fast indexing.
+    don't support aligned math with other objects. We believe the
+    `DatasetArray`/ `Cube` model is better suited to working with scientific
+    datasets. We use pandas internally in scidata to support fast indexing.
   - [netCDF4-python][nc4] provides scidata's primary interface for working with
     netCDF and OpenDAP datasets.
 
