@@ -1,5 +1,20 @@
 
-class AbstractArray(object):
+class ImplementsCollapse(object):
+    @classmethod
+    def _collapse_method(cls, f, name=None, module=None):
+        def func(self, dimension=cls._collapse_dimension_default,
+                 axis=cls._collapse_axis_default, **kwargs):
+            return self.collapse(f, dimension, axis, **kwargs)
+        if name is None:
+            name = f.__name__
+        func.__name__ = name
+        func.__doc__ = cls._collapse_method_docstring.format(
+            name=('' if module is None else module + '.') + name,
+            cls=cls.__name__)
+        return func
+
+
+class AbstractArray(ImplementsCollapse):
     @property
     def dtype(self):
         return self._data.dtype
@@ -78,14 +93,5 @@ class AbstractArray(object):
             indicated dimension(s) removed.
         """
 
-    @classmethod
-    def _collapse_method(cls, f, name=None, module=None):
-        def func(self, dimension=None, axis=None, **kwargs):
-            return self.collapse(f, dimension, axis, **kwargs)
-        if name is None:
-            name = f.__name__
-        func.__name__ = name
-        func.__doc__ = cls._collapse_method_docstring.format(
-            name=('' if module is None else module + '.') + name,
-            cls=cls.__name__)
-        return func
+    _collapse_dimension_default = None
+    _collapse_axis_default = None

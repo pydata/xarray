@@ -164,9 +164,45 @@ class TestDatasetArray(TestCase):
         # needs more...
         # should check which extra dimensions are dropped
 
+    def test_groupby(self):
+        agg_var = Array(['y'], np.array(['a'] * 9 + ['c'] + ['b'] * 10))
+        self.dv['abc'] = agg_var
+        self.dv['y'] = 20 + 100 * self.ds['y'].variable
+
+        identity = lambda x: x
+        self.assertViewEqual(self.dv, self.dv.groupby('x').apply(identity))
+        self.assertViewEqual(self.dv, self.dv.groupby('x', squeeze=False
+                                                      ).apply(identity))
+        self.assertViewEqual(self.dv, self.dv.groupby('y').apply(identity))
+        self.assertViewEqual(self.dv, self.dv.groupby('y', squeeze=False
+                                                      ).apply(identity))
+
+        grouped = self.dv.groupby('abc')
+
+        expected_sum_all = DatasetArray(Dataset(
+            {'foo': Array(['abc'], np.array([self.x[:, :9].sum(),
+                                             self.x[:, 10:].sum(),
+                                             self.x[:, 9:10].sum()]).T,
+                          {'cell_methods': 'x: y: sum'}),
+             'abc': Array(['abc'], np.array(['a', 'b', 'c']))}), 'foo')
+        self.assertViewEqual(expected_sum_all,
+                             grouped.collapse(np.sum, dimension=None))
+        self.assertViewEqual(expected_sum_all, grouped.sum(dimension=None))
+
+        expected_sum_axis1 = DatasetArray(Dataset(
+            {'foo': Array(['x', 'abc'], np.array([self.x[:, :9].sum(1),
+                                                  self.x[:, 10:].sum(1),
+                                                  self.x[:, 9:10].sum(1)]).T,
+                          {'cell_methods': 'y: sum'}),
+             'x': self.ds.variables['x'],
+             'abc': Array(['abc'], np.array(['a', 'b', 'c']))}), 'foo')
+        self.assertViewEqual(expected_sum_axis1, grouped.collapse(np.sum))
+        self.assertViewEqual(expected_sum_axis1, grouped.sum())
+
+        self.assertViewEqual(self.dv, grouped.apply(identity))
+
     def test_aggregate(self):
-        agg_var = Array(['y'], np.array(['a'] * 9 + ['c'] + ['b'] * 7 +
-                                           ['c'] * 3))
+        agg_var = Array(['y'], np.array(['a'] * 9 + ['c'] + ['b'] * 10))
         self.ds.add_variable('abc', agg_var)
         expected_unique, expected_var = \
             self.dv.variable.aggregate(np.mean, 'abc', agg_var)

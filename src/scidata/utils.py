@@ -107,7 +107,7 @@ def num2datetimeindex(num_dates, units, calendar=None):
     return pd.Index(dates)
 
 
-def variable_equal(v1, v2):
+def variable_equal(v1, v2, rtol=1e-05, atol=1e-08):
     """True if two objects have the same dimensions, attributes and data;
     otherwise False
 
@@ -126,7 +126,12 @@ def variable_equal(v1, v2):
             pass
         # TODO: replace this with a NaN safe version.
         # see: pandas.core.common.array_equivalent
-        return np.array_equal(v1.data, v2.data)
+        data1 = v1.data
+        data2 = v2.data
+        if np.issubdtype(data1.dtype, (str, object)):
+            return np.array_equal(data1, data2)
+        else:
+            return np.allclose(data1, data2, rtol=rtol, atol=atol)
     else:
         return False
 

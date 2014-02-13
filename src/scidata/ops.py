@@ -36,6 +36,13 @@ def _method_wrapper(f):
     return func
 
 
+def inject_collapse_methods(cls):
+    # TODO: change these to use methods instead of numpy functions
+    for name in NUMPY_COLLAPSE_METHODS:
+        setattr(cls, name, cls._collapse_method(getattr(np, name),
+                                                name, 'numpy'))
+
+
 def inject_special_operations(cls, priority=50):
     # priortize our operations over those of numpy.ndarray (priority=1)
     # and numpy.matrix (priority=10)
@@ -59,7 +66,4 @@ def inject_special_operations(cls, priority=50):
         setattr(cls, name, _data_method_wrapper(name))
     for name in NUMPY_UNARY_METHODS:
         setattr(cls, name, cls._unary_op(_method_wrapper(name)))
-    # TODO: change these to use methods instead of numpy functions
-    for name in NUMPY_COLLAPSE_METHODS:
-        setattr(cls, name, cls._collapse_method(getattr(np, name),
-                                                name, 'numpy'))
+    inject_collapse_methods(cls)

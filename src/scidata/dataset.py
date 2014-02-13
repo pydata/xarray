@@ -309,7 +309,7 @@ class Dataset(Mapping):
         for k in self._datetimeindices:
             for suffix in _DATETIMEINDEX_COMPONENTS + ['season']:
                 possible_vars.append('%s.%s' % (k, suffix))
-        return tuple(k for k in possible_vars if k not in self)
+        return tuple(k for k in possible_vars if k not in self.variables)
 
     def __getitem__(self, key):
         if key not in self.variables:
@@ -327,6 +327,9 @@ class Dataset(Mapping):
         # (We would need to change DatasetArray.__setitem__ in that case, because
         # we definitely don't want to override focus variables.)
         if isinstance(value, DatasetArray):
+            # print 'value was ', repr(value)
+            # print 'renamed to ', repr(value.renamed())
+            # print 'setting item', repr(value.renamed(key).dataset)
             self.merge(value.renamed(key).dataset, inplace=True)
         elif isinstance(value, array.Array):
             self.set_variable(key, value)
@@ -830,7 +833,8 @@ class Dataset(Mapping):
         *names : str
             Names of the variables to omit from the returned object.
         omit_dimensions : bool, optional (default True)
-            Whether or not to also omit dimensions with the given names.
+            Whether or not to also omit dimensions with the given names. All
+            variables along omited dimensions will also be removed.
 
         Returns
         -------
@@ -848,6 +852,9 @@ class Dataset(Mapping):
             dimensions = OrderedDict((k, v) for k, v
                                      in self.dimensions.iteritems()
                                      if k not in names)
+            variables = OrderedDict((k, v) for k, v in variables.iteritems()
+                                    if all(d in dimensions
+                                           for d in v.dimensions))
             indices = {k: v for k, v in self.indices.cache.items()
                        if k not in names}
         else:

@@ -11,7 +11,8 @@ used for self-describing scientific data (netCDF, OpenDAP, etc.).
     but keeps ancilliary variables and metadata intact.
   - Array broadcasting based on dimension names and coordinate indices
     instead of only shapes.
-  - Aggregate variables across dimensions or grouped by other variables.
+  - Flexible split-apply-combine functionality with the `Array.groupby` method
+    (patterned after [pandas][pandas]).
   - Fast label-based indexing and (limited) time-series functionality built on
     [pandas][pandas].
 

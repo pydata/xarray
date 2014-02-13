@@ -185,14 +185,6 @@ class TestArray(TestCase):
         # test ufuncs
         self.assertVarEqual(np.sin(v), Array(['x'], np.sin(x)))
 
-    def test_apply(self):
-        x = np.arange(5)
-        v = Array(['x'], x)
-        def numpy_only_square(x):
-            return np.asarray(x) ** 2
-        self.assertNDArrayEqual(x ** 2, numpy_only_square(v))
-        self.assertVarEqual(v ** 2, v.apply(numpy_only_square))
-
     def test_collapse(self):
         v = Array(['time', 'x'], self.d)
         # intentionally test with an operation for which order matters
@@ -209,14 +201,41 @@ class TestArray(TestCase):
                                      {'cell_methods': 'time: x: std'}))
         self.assertVarEqual(v.mean('time'), v.collapse(np.mean, 'time'))
 
+    def test_groupby(self):
+        agg_var = Array(['y'], np.array(['a', 'a', 'b']))
+        v = Array(['x', 'y'], self.d)
+
+        expected_unique = Array(['abc'], np.array(['a', 'b']))
+        expected_aggregated = Array(['x', 'abc'],
+                                    np.array([self.d[:, :2].sum(axis=1),
+                                              self.d[:, 2:].sum(axis=1)]).T,
+                                    {'cell_methods': 'y: sum'})
+
+        x = Array('x', np.arange(10))
+        y = Array('y', np.arange(3))
+        self.assertVarEqual(v, v.groupby('y', y).apply(lambda x: x))
+        self.assertVarEqual(v, v.groupby('x', x).apply(lambda x: x))
+
+        grouped = v.groupby('abc', agg_var)
+        self.assertVarEqual(expected_unique, grouped.unique_coord)
+        self.assertVarEqual(v, grouped.apply(lambda x: x))
+        self.assertVarEqual(expected_aggregated, grouped.collapse(np.sum))
+
+        actual = list(grouped)
+        expected = zip(expected_unique, [v[:, :2], v[:, 2:]])
+        self.assertEqual(len(expected), len(actual))
+        for (ke, ve), (ka, va) in zip(expected, actual):
+            self.assertVarEqual(ke, ka)
+            self.assertVarEqual(ve, va)
+
     def test_aggregate(self):
         agg_var = Array(['y'], np.array(['a', 'a', 'b']))
         v = Array(['x', 'y'], self.d)
         expected_unique = Array(['abc'], np.array(['a', 'b']))
         expected_aggregated = Array(['x', 'abc'],
-                                       np.array([self.d[:, :2].sum(axis=1),
-                                                 self.d[:, 2:].sum(axis=1)]).T,
-                                       {'cell_methods': 'y: sum'})
+                                    np.array([self.d[:, :2].sum(axis=1),
+                                              self.d[:, 2:].sum(axis=1)]).T,
+                                    {'cell_methods': 'y: sum'})
         actual_unique, actual_aggregated = v.aggregate(np.sum, 'abc', agg_var)
         self.assertVarEqual(expected_unique, actual_unique)
         self.assertVarEqual(expected_aggregated, actual_aggregated)
@@ -238,9 +257,9 @@ class TestArray(TestCase):
                             Array.from_stack((v, w), 'b'))
         self.assertVarEqual(Array(['b', 'a'], np.array([x, y])),
                             Array.from_stack((v, w), 'b', length=2))
-        with self.assertRaisesRegexp(ValueError, 'greater than expected'):
+        with self.assertRaisesRegexp(ValueError, 'actual length'):
             Array.from_stack([v, w], 'b', length=1)
-        with self.assertRaisesRegexp(ValueError, 'but expected length was'):
+        with self.assertRaisesRegexp(ValueError, 'actual length'):
             Array.from_stack([v, w, w], 'b', length=4)
         with self.assertRaisesRegexp(ValueError, 'inconsistent dimensions'):
             Array.from_stack([v, Array(['c'], y)], 'b')

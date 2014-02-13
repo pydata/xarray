@@ -262,6 +262,10 @@ class DataTest(TestCase):
         self.assertTrue(_vars.keys()[1] not in ret.variables)
         self.assertRaises(ValueError, data.select, (_testvar, 'not_a_var'))
 
+    @unittest.skip('need to write this test')
+    def test_unselect(self):
+        pass
+
     def test_copy(self):
         data = create_test_data(self.get_store())
         var = data.variables[_testvar]
