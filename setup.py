@@ -5,7 +5,7 @@ try:
 except:
     from distutils.core import setup
 
-setup(name='scidata',
+setup(name='xray',
       version='0.1-dev',
       description='Objects for holding self describing scientific data in python',
       author='Stephan Hoyer, Alex Kleeman',
@@ -15,5 +15,5 @@ setup(name='scidata',
       tests_require=['nose >= 1.0'],
       url='https://github.com/akleeman/scidata',
       test_suite='nose.collector',
-      packages=['scidata'],
+      packages=['xray'],
       package_dir={'': 'src'})

@@ -2,7 +2,7 @@ import warnings
 
 import numpy as np
 
-from scidata import Array, Dataset
+from xray import Array, Dataset
 from . import TestCase
 
 
@@ -41,7 +41,7 @@ class TestArray(TestCase):
 
     def test_repr(self):
         v = Array(['time', 'x'], self.d)
-        self.assertEqual('<scidata.Array (time: 10, x: 3): float64>',
+        self.assertEqual('<xray.Array (time: 10, x: 3): float64>',
                          repr(v))
 
     def test_items(self):

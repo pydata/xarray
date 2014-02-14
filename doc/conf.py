@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# scidata documentation build configuration file, created by
+# xray documentation build configuration file, created by
 # sphinx-quickstart on Thu Feb  6 18:57:54 2014.
 #
 # This file is execfile()d with the current directory set to its
@@ -53,7 +53,7 @@ source_suffix = '.rst'
 master_doc = 'index'
 
 # General information about the project.
-project = u'scidata'
+project = u'xray'
 copyright = u'2014, Stephan Hoyer and Alex Kleeman'
 
 # The version info for the project you're documenting, acts as replacement for
@@ -186,7 +186,7 @@ html_static_path = ['_static']
 #html_file_suffix = None
 
 # Output file base name for HTML help builder.
-htmlhelp_basename = 'scidatadoc'
+htmlhelp_basename = 'xraydoc'
 
 
 # -- Options for LaTeX output ---------------------------------------------
@@ -206,7 +206,7 @@ latex_elements = {
 # (source start file, target name, title,
 #  author, documentclass [howto, manual, or own class]).
 latex_documents = [
-  ('index', 'scidata.tex', u'scidata Documentation',
+  ('index', 'xray.tex', u'xray Documentation',
    u'Stephan Hoyer and Alex Kleeman', 'manual'),
 ]
 
@@ -236,7 +236,7 @@ latex_documents = [
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
 man_pages = [
-    ('index', 'scidata', u'scidata Documentation',
+    ('index', 'xray', u'xray Documentation',
      [u'Stephan Hoyer and Alex Kleeman'], 1)
 ]
 
@@ -250,8 +250,8 @@ man_pages = [
 # (source start file, target name, title, author,
 #  dir menu entry, description, category)
 texinfo_documents = [
-  ('index', 'scidata', u'scidata Documentation',
-   u'Stephan Hoyer and Alex Kleeman', 'scidata', 'One line description of project.',
+  ('index', 'xray', u'xray Documentation',
+   u'Stephan Hoyer and Alex Kleeman', 'xray', 'One line description of project.',
    'Miscellaneous'),
 ]
 

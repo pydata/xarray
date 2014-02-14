@@ -139,7 +139,7 @@ class _IndicesCache(MutableMapping):
                              (k, str(v).replace(
                                   '\n', '\n' + ' ' * (len(k) + 4)))
                              for k, v in self.items())
-        return ("<class 'scidata.data.%s' (dict-like)>\n%s"
+        return ("<class 'xray.data.%s' (dict-like)>\n%s"
                 % (type(self).__name__, contents))
 
 
@@ -432,9 +432,8 @@ class Dataset(Mapping):
     def __repr__(self):
         dim_summary = ', '.join('%s%s: %s' % ('@' if k in self else '', k, v)
                                 for k, v in self.dimensions.iteritems())
-        return '<scidata.%s (%s): %s>' % (type(self).__name__,
-                                          dim_summary,
-                                          ' '.join(self.noncoordinates))
+        return '<xray.%s (%s): %s>' % (type(self).__name__, dim_summary,
+                                       ' '.join(self.noncoordinates))
 
     def create_variable(self, name, dims, data, attributes=None):
         """Create a new variable and add it to this dataset

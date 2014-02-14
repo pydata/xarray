@@ -1,6 +1,6 @@
 import numpy as np
 
-from scidata import Dataset, DatasetArray, Array, intersection
+from xray import Dataset, DatasetArray, Array, intersection
 from . import TestCase, ReturnItem
 
 

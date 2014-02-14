@@ -1,9 +1,12 @@
-# scidata: objects for working with scientific data in Python
+# xray: transparently manipulate scientific datasets in Python
 
-**scidata** is a Python package for working with aligned sets of homogeneous,
+**xray** is a Python package for working with aligned sets of homogeneous,
 n-dimensional arrays. It implements flexible array operations and dataset
 manipulation for in-memory datasets within the [Common Data Model][cdm] widely
 used for self-describing scientific data (netCDF, OpenDAP, etc.).
+
+***Warning: xray is still in its early development phase. Expect the API to
+change.***
 
 ## Main Feaures
 
@@ -34,14 +37,14 @@ used for self-describing scientific data (netCDF, OpenDAP, etc.).
 
   - [Iris][iris] (supported by the UK Met office) is a similar package
     designed for working with geophysical datasets in Python. Iris provided
-    much of the inspiration for scidata (e.g., scidata's `DatasetArray` is
-    largely based on the Iris `Cube`), but it has several limitations that led
-    us to build scidata instead of extending Iris:
+    much of the inspiration for xray (e.g., xray's `DatasetArray` is largely
+    based on the Iris `Cube`), but it has several limitations that led us to
+    build xray instead of extending Iris:
     1. Iris has essentially one first-class object (the `Cube`) on which it
        attempts to build all functionality (`Coord` supports a much more
-       limited set of functionality). scidata has its equivalent of the Cube
+       limited set of functionality). xray has its equivalent of the Cube
        (the `DatasetArray` object), but it is only a thin wrapper on the more
-       primitive building blocks of Dataset and Variable objects.
+       primitive building blocks of Dataset and Array objects.
     2. Iris has a strict interpretation of [CF conventions][cf], which,
        although a principled choice, we have found to be impractical for
        everyday uses. With Iris, every quantity has physical (SI) units, all
@@ -55,14 +58,14 @@ used for self-describing scientific data (netCDF, OpenDAP, etc.).
        models of how Iris functions work. Moreover, it means that a lot of
        logic (e.g., constraint handling) uses non-vectorized operations. For
        example, extracting all times within a range can be surprisingly slow
-       (e.g., 0.3 seconds vs 3 milliseconds in scidata to select along a time
+       (e.g., 0.3 seconds vs 3 milliseconds in xray to select along a time
        dimension with 10000 elements).
   - [pandas][pandas] is fast and powerful but oriented around working with
     tabular datasets. pandas has experimental N-dimensional panels, but they
     don't support aligned math with other objects. We believe the
     `DatasetArray`/ `Cube` model is better suited to working with scientific
-    datasets. We use pandas internally in scidata to support fast indexing.
-  - [netCDF4-python][nc4] provides scidata's primary interface for working with
+    datasets. We use pandas internally in xray to support fast indexing.
+  - [netCDF4-python][nc4] provides xray's primary interface for working with
     netCDF and OpenDAP datasets.
 
 [pandas]: http://pandas.pydata.org/

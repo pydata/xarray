@@ -2,7 +2,7 @@ import netCDF4 as nc4
 import numpy as np
 import pandas as pd
 
-from scidata import utils
+from xray import utils
 from . import TestCase, ReturnItem
 
 

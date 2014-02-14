@@ -8,7 +8,7 @@ import tempfile
 import numpy as np
 import pandas as pd
 
-from scidata import Dataset, DatasetArray, Array, backends, open_dataset
+from xray import Dataset, DatasetArray, Array, backends, open_dataset
 from . import TestCase
 
 
@@ -42,7 +42,7 @@ class DataTest(TestCase):
 
     def test_repr(self):
         data = create_test_data(self.get_store())
-        self.assertEqual('<scidata.Dataset (time: 1000, @dim1: 100, '
+        self.assertEqual('<xray.Dataset (time: 1000, @dim1: 100, '
                          '@dim2: 50, @dim3: 10): var1 var2 var3>', repr(data))
 
     def test_init(self):

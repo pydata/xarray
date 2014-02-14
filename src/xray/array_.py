@@ -224,7 +224,7 @@ class Array(AbstractArray):
             contents = ' (%s): %s' % (dim_summary, self.dtype)
         else:
             contents = ': %s' % self.data
-        return '<scidata.%s%s>' % (type(self).__name__, contents)
+        return '<xray.%s%s>' % (type(self).__name__, contents)
 
     def indexed_by(self, **indexers):
         """Return a new variable indexed along the specified dimension(s)
@@ -591,7 +591,7 @@ def _broadcast_variable_data(self, other):
     if isinstance(other, dataset.Dataset):
         raise TypeError('datasets do not support mathematical operations')
     elif all(hasattr(other, attr) for attr in ['dimensions', 'data', 'shape']):
-        # `other` satisfies the scidata.Array API
+        # `other` satisfies the xray.Array API
         new_self, new_other = broadcast_variables(self, other)
         self_data = new_self.data
         other_data = new_other.data

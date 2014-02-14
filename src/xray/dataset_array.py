@@ -46,7 +46,7 @@ class DatasetArray(AbstractArray):
         """
         Parameters
         ----------
-        dataset : scidata.Dataset
+        dataset : xray.Dataset
             The dataset on which to build this data view.
         focus : str
             The name of the "focus variable" in `dataset` on which this object
@@ -155,7 +155,7 @@ class DatasetArray(AbstractArray):
             contents = ' (%s): %s' % (dim_summary, self.dtype)
         else:
             contents = ': %s' % self.data
-        return '<scidata.%s %r%s>' % (type(self).__name__, self.focus, contents)
+        return '<xray.%s %r%s>' % (type(self).__name__, self.focus, contents)
 
     def indexed_by(self, **indexers):
         """Return a new dataset array whose dataset is given by indexing along
