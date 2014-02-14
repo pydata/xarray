@@ -261,7 +261,7 @@ class Dataset(object):
         """
         nc4_store = backends.NetCDF4DataStore(filepath, mode='w',
                                               *args, **kwdargs)
-        self.dump_to(nc4_store)
+        self.stored_to(nc4_store)
 
     def dumps(self):
         """
@@ -270,7 +270,7 @@ class Dataset(object):
         """
         fobj = StringIO()
         scipy_store = backends.ScipyDataStore(fobj, mode='w')
-        self.dump_to(scipy_store)
+        self.stored_to(scipy_store)
         return fobj.getvalue()
 
     def __str__(self):
