@@ -164,6 +164,8 @@ class Array(AbstractArray):
         """__setitem__ is overloaded to access the underlying numpy data with
         orthogonal indexing (see __getitem__ for more details)
         """
+        # TODO: change this to copy on write (by setting self.data) instead of
+        # modifying the original array (self._data).
         self._data[self._remap_indexer(key)] = value
 
     def __iter__(self):
@@ -281,6 +283,7 @@ class Array(AbstractArray):
         data = self.data.transpose(*axes)
         return type(self)(dimensions, data, self.attributes)
 
+    # TODO: rename this method to 'reduce'
     def collapse(self, func, dimension=None, axis=None, **kwargs):
         """Collapse this variable by applying `func` along some dimension(s)
 
@@ -355,6 +358,7 @@ class Array(AbstractArray):
     def groupby(self, group_name, group_array, squeeze=True):
         return groupby.GroupBy(self, group_name, group_array, squeeze=squeeze)
 
+    # TODO: remove this method (groupby encompasses its functionality)
     def aggregate(self, func, new_dim_name, group_by, **kwargs):
         """Aggregate this variable by applying `func` to grouped elements
 
