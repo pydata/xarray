@@ -1,6 +1,6 @@
 import numpy as np
 
-from xray import Dataset, DatasetArray, Array, intersection
+from xray import Dataset, DatasetArray, Array, align
 from . import TestCase, ReturnItem
 
 
@@ -159,9 +159,9 @@ class TestDatasetArray(TestCase):
         self.assertIs(b.data, x)
         self.assertIs(b.dataset, self.ds)
 
-    def test_collapse(self):
-        self.assertVarEqual(self.dv.collapse(np.mean, 'x'),
-                            self.v.collapse(np.mean, 'x'))
+    def test_reduce(self):
+        self.assertVarEqual(self.dv.reduce(np.mean, 'x'),
+                            self.v.reduce(np.mean, 'x'))
         # needs more...
         # should check which extra dimensions are dropped
 
@@ -187,7 +187,7 @@ class TestDatasetArray(TestCase):
                           {'cell_methods': 'x: y: sum'}),
              'abc': Array(['abc'], np.array(['a', 'b', 'c']))}), 'foo')
         self.assertDSArrayEqual(expected_sum_all,
-                                grouped.collapse(np.sum, dimension=None))
+                                grouped.reduce(np.sum, dimension=None))
         self.assertDSArrayEqual(expected_sum_all, grouped.sum(dimension=None))
 
         expected_sum_axis1 = DatasetArray(Dataset(
@@ -197,7 +197,7 @@ class TestDatasetArray(TestCase):
                           {'cell_methods': 'y: sum'}),
              'x': self.ds.variables['x'],
              'abc': Array(['abc'], np.array(['a', 'b', 'c']))}), 'foo')
-        self.assertDSArrayEqual(expected_sum_axis1, grouped.collapse(np.sum))
+        self.assertDSArrayEqual(expected_sum_axis1, grouped.reduce(np.sum))
         self.assertDSArrayEqual(expected_sum_axis1, grouped.sum())
 
         self.assertDSArrayEqual(self.dv, grouped.apply(identity))
@@ -233,10 +233,10 @@ class TestDatasetArray(TestCase):
                                       self.ds['x'])
         self.assertDSArrayEqual(foo, stacked)
 
-    def test_intersection(self):
+    def test_align(self):
         self.ds['x'] = ('x', np.array(list('abcdefghij')))
         with self.assertRaises(ValueError):
             self.dv + self.dv[:5]
-        dv1, dv2 = intersection(self.dv, self.dv[:5])
+        dv1, dv2 = align(self.dv, self.dv[:5])
         self.assertDSArrayEqual(dv1, self.dv[:5])
         self.assertDSArrayEqual(dv2, self.dv[:5])

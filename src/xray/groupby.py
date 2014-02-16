@@ -1,7 +1,7 @@
 import itertools
 
-from common import ImplementsCollapse
-from ops import inject_collapse_methods
+from common import ImplementsReduce
+from ops import inject_reduce_methods
 import array_
 import dataset
 import numpy as np
@@ -39,12 +39,12 @@ def peek_at(iterable):
     return peek, itertools.chain([peek], gen)
 
 
-class GroupBy(ImplementsCollapse):
+class GroupBy(ImplementsReduce):
     """A object that implements the split-apply-combine pattern
 
     Modeled after `pandas.GroupBy`. The `GroupBy` object can be iterated over
     (unique_value, grouped_array) pairs, but the main way to interact with a
-    groupby object are with the `apply` or `collapse` methods. You can also
+    groupby object are with the `apply` or `reduce` methods. You can also
     directly call numpy methods like `mean` or `std`.
 
     See Also
@@ -107,8 +107,8 @@ class GroupBy(ImplementsCollapse):
     def iter_fast(self):
         # extract the underlying Array object
         array = self.array
-        if hasattr(self.array, 'variable'):
-            array = array.variable
+        if hasattr(self.array, 'array'):
+            array = array.array
 
         # build the new dimensions
         index_int = isinstance(self.group_indices[0], int)
@@ -195,8 +195,38 @@ class GroupBy(ImplementsCollapse):
                      for d in stacked.dimensions]
         return stacked.transpose(*new_order)
 
-    def collapse(self, func, dimension=Ellipsis, axis=Ellipsis, shortcut=True,
+    def reduce(self, func, dimension=Ellipsis, axis=Ellipsis, shortcut=True,
                  **kwargs):
+        """Reduce this variable by applying `func` along some dimension(s)
+
+        Parameters
+        ----------
+        func : function
+            Function which can be called in the form
+            `func(x, axis=axis, **kwargs)` to return the result of collapsing an
+            np.ndarray over an integer valued axis.
+        dimension : str or sequence of str, optional
+            Dimension(s) over which to repeatedly apply `func`.
+        axis : int or sequence of int, optional
+            Axis(es) over which to repeatedly apply `func`. Only one of the
+            'dimension' and 'axis' arguments can be supplied. If neither are
+            supplied, then the reduction is calculated over the flattened array
+            (by calling `func(x)` without an axis argument).
+        **kwargs : dict
+            Additional keyword arguments passed on to `func`.
+
+        Note
+        ----
+        If `reduce` is called with multiple dimensions (or axes, which
+        are converted into dimensions), then the reduce operation is
+        performed repeatedly along each dimension in turn from left to right.
+
+        Returns
+        -------
+        reduced : Array
+            Array with summarized data and the indicated dimension(s)
+            removed.
+        """
         # Ellipsis is used as a sentinel value for the altered default
         if axis is Ellipsis and dimension is Ellipsis:
             dimension = self.group_dim
@@ -204,12 +234,12 @@ class GroupBy(ImplementsCollapse):
             dimension = None
         if axis is Ellipsis:
             axis = None
-        def collapse_array(ar):
-            return ar.collapse(func, dimension, axis, **kwargs)
-        return self.apply(collapse_array, shortcut=shortcut)
+        def reduce_array(ar):
+            return ar.reduce(func, dimension, axis, **kwargs)
+        return self.apply(reduce_array, shortcut=shortcut)
 
-    _collapse_method_docstring = \
-        """Collapse this {cls}'s data' by applying `{name}` along some
+    _reduce_method_docstring = \
+        """Reduce this {cls}'s data' by applying `{name}` along some
         dimension(s)
 
         Parameters
@@ -238,13 +268,13 @@ class GroupBy(ImplementsCollapse):
 
         Returns
         -------
-        collapsed : {cls}
+        reduced : {cls}
             New {cls} object with `{name}` applied to its data and the
             indicated dimension(s) removed.
         """
 
-    _collapse_dimension_default = Ellipsis
-    _collapse_axis_default = Ellipsis
+    _reduce_dimension_default = Ellipsis
+    _reduce_axis_default = Ellipsis
 
 
-inject_collapse_methods(GroupBy)
+inject_reduce_methods(GroupBy)

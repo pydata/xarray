@@ -1,20 +1,20 @@
 
-class ImplementsCollapse(object):
+class ImplementsReduce(object):
     @classmethod
-    def _collapse_method(cls, f, name=None, module=None):
-        def func(self, dimension=cls._collapse_dimension_default,
-                 axis=cls._collapse_axis_default, **kwargs):
-            return self.collapse(f, dimension, axis, **kwargs)
+    def _reduce_method(cls, f, name=None, module=None):
+        def func(self, dimension=cls._reduce_dimension_default,
+                 axis=cls._reduce_axis_default, **kwargs):
+            return self.reduce(f, dimension, axis, **kwargs)
         if name is None:
             name = f.__name__
         func.__name__ = name
-        func.__doc__ = cls._collapse_method_docstring.format(
+        func.__doc__ = cls._reduce_method_docstring.format(
             name=('' if module is None else module + '.') + name,
             cls=cls.__name__)
         return func
 
 
-class AbstractArray(ImplementsCollapse):
+class AbstractArray(ImplementsReduce):
     @property
     def dtype(self):
         return getattr(self._data, 'dtype', object)
@@ -64,8 +64,8 @@ class AbstractArray(ImplementsCollapse):
     def T(self):
         return self.transpose()
 
-    _collapse_method_docstring = \
-        """Collapse this {cls}'s data' by applying `{name}` along some
+    _reduce_method_docstring = \
+        """Reduce this {cls}'s data' by applying `{name}` along some
         dimension(s)
 
         Parameters
@@ -88,10 +88,10 @@ class AbstractArray(ImplementsCollapse):
 
         Returns
         -------
-        collapsed : {cls}
+        reduced : {cls}
             New {cls} object with `{name}` applied to its data and the
             indicated dimension(s) removed.
         """
 
-    _collapse_dimension_default = None
-    _collapse_axis_default = None
+    _reduce_dimension_default = None
+    _reduce_axis_default = None

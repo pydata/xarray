@@ -88,33 +88,39 @@ class _VariablesDict(OrderedDict):
 
 
 class Dataset(Mapping):
-    """A netcdf-like data object consisting of dimensions, variables and
-    attributes which together form a self describing data set
+    """A netcdf-like data object consisting of variables and attributes which
+    together form a self describing data set
 
-    Datasets are mappings from variable names to dataviews focused on those
-    variable.
+    Dataset implements the mapping interface with keys given by variable names
+    and values given by DatasetArray objects focused on each variable name.
 
     Note: the size of dimensions in a dataset cannot be changed.
 
     Attributes
     ----------
-    dimensions : {name: length, ...}
     variables : {name: variable, ...}
-    coordinates : {name: variable, ...}
-        Coordinates are simply variables that are also dimensions. They must
-        all have dimension 1.
-    noncoordinates : {name: variable, ...}
-        Arrays that are not coordinates.
     attributes : {key: value, ...}
-    indices : {dimension: index, ...}
-        Mapping from dimensions to pandas.Index objects.
-    store : backends.*DataStore
-        Don't modify the store directly unless you want to avoid all validation
-        checks.
+    dimensions : {name: length, ...}
+    coordinates : {name: variable, ...}
+    noncoordinates : {name: variable, ...}
+    virtual_variables : list
     """
     def __init__(self, variables=None, attributes=None):
         """To load data from a file or file-like object, use the `open_dataset`
         function.
+
+        Parameters
+        ----------
+        variables : dict-like, optional
+            A mapping from variable names to `xray.Array` objects or sequences
+            of the form `(dimensions, data[, attributes])` which can be used as
+            arguments to create a new `xray.Array`. Each dimension must have
+            the same length in all variables in which it appears. One
+            dimensional variables with name equal to their dimension are
+            coordinate variables, which means they are saved in the dataset as
+            `pandas.Index` objects.
+        attributes : dict-like, optional
+            Global attributes to save on this dataset.
         """
         self._variables = _VariablesDict()
         self._dimensions = OrderedDict()

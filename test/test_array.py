@@ -195,21 +195,21 @@ class TestArray(TestCase):
         # test ufuncs
         self.assertVarEqual(np.sin(v), Array(['x'], np.sin(x)))
 
-    def test_collapse(self):
+    def test_reduce(self):
         v = Array(['time', 'x'], self.d)
         # intentionally test with an operation for which order matters
-        self.assertVarEqual(v.collapse(np.std, 'time'),
+        self.assertVarEqual(v.reduce(np.std, 'time'),
                             Array(['x'], self.d.std(axis=0),
                                   {'cell_methods': 'time: std'}))
-        self.assertVarEqual(v.collapse(np.std, axis=0),
-                            v.collapse(np.std, dimension='time'))
-        self.assertVarEqual(v.collapse(np.std, ['x', 'time']),
+        self.assertVarEqual(v.reduce(np.std, axis=0),
+                            v.reduce(np.std, dimension='time'))
+        self.assertVarEqual(v.reduce(np.std, ['x', 'time']),
                             Array([], self.d.std(axis=1).std(axis=0),
                                   {'cell_methods': 'x: std time: std'}))
-        self.assertVarEqual(v.collapse(np.std),
+        self.assertVarEqual(v.reduce(np.std),
                             Array([], self.d.std(),
                                      {'cell_methods': 'time: x: std'}))
-        self.assertVarEqual(v.mean('time'), v.collapse(np.mean, 'time'))
+        self.assertVarEqual(v.mean('time'), v.reduce(np.mean, 'time'))
 
     def test_groupby(self):
         agg_var = Array(['y'], np.array(['a', 'a', 'b']))
@@ -229,7 +229,7 @@ class TestArray(TestCase):
         grouped = v.groupby('abc', agg_var)
         self.assertVarEqual(expected_unique, grouped.unique_coord)
         self.assertVarEqual(v, grouped.apply(lambda x: x))
-        self.assertVarEqual(expected_aggregated, grouped.collapse(np.sum))
+        self.assertVarEqual(expected_aggregated, grouped.reduce(np.sum))
 
         actual = list(grouped)
         expected = zip(expected_unique, [v[:, :2], v[:, 2:]])

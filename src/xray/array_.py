@@ -56,10 +56,10 @@ def unique_value_groups(ar):
 
 
 class Array(AbstractArray):
-    """
-    A netcdf-like variable consisting of dimensions, data and attributes
-    which describe a single Array.  A single variable object is not
-    fully described outside the context of its parent Dataset.
+    """A netcdf-like variable consisting of dimensions, data and attributes
+    which describe a single Array. A single Array object is not fully described
+    outside the context of its parent Dataset (if you want such a fully
+    described object, use a DatasetArray instead).
     """
     def __init__(self, dims, data, attributes=None, indexing_mode='numpy'):
         """
@@ -239,7 +239,7 @@ class Array(AbstractArray):
         return '<xray.%s%s>' % (type(self).__name__, contents)
 
     def indexed_by(self, **indexers):
-        """Return a new variable indexed along the specified dimension(s)
+        """Return a new array indexed along the specified dimension(s)
 
         Parameters
         ----------
@@ -294,34 +294,34 @@ class Array(AbstractArray):
         return type(self)(dimensions, data, self.attributes)
 
     # TODO: rename this method to 'reduce'
-    def collapse(self, func, dimension=None, axis=None, **kwargs):
-        """Collapse this variable by applying `func` along some dimension(s)
+    def reduce(self, func, dimension=None, axis=None, **kwargs):
+        """Reduce this array by applying `func` along some dimension(s)
 
         Parameters
         ----------
         func : function
             Function which can be called in the form
-            `func(x, axis=axis, **kwargs)` to return the result of collapsing an
+            `func(x, axis=axis, **kwargs)` to return the result of reducing an
             np.ndarray over an integer valued axis.
         dimension : str or sequence of str, optional
             Dimension(s) over which to repeatedly apply `func`.
         axis : int or sequence of int, optional
             Axis(es) over which to repeatedly apply `func`. Only one of the
             'dimension' and 'axis' arguments can be supplied. If neither are
-            supplied, then the collapse is calculated over the flattened array
+            supplied, then the reduction is calculated over the flattened array
             (by calling `func(x)` without an axis argument).
         **kwargs : dict
             Additional keyword arguments passed on to `func`.
 
         Note
         ----
-        If `collapse` is called with multiple dimensions (or axes, which
-        are converted into dimensions), then the collapse operation is
+        If `reduce` is called with multiple dimensions (or axes, which
+        are converted into dimensions), then the reduce operation is
         performed repeatedly along each dimension in turn from left to right.
 
         Returns
         -------
-        collapsed : Array
+        reduced : Array
             Array with summarized data and the indicated dimension(s)
             removed.
         """
@@ -340,7 +340,7 @@ class Array(AbstractArray):
                 dimension = [dimension]
             var = self
             for dim in dimension:
-                var = var._collapse(func, dim, **kwargs)
+                var = var._reduce(func, dim, **kwargs)
         else:
             var = type(self)([], func(self.data, **kwargs), self.attributes)
             var._append_to_cell_methods(': '.join(self.dimensions)
@@ -354,8 +354,8 @@ class Array(AbstractArray):
             base = ''
         self.attributes['cell_methods'] = base + string
 
-    def _collapse(self, f, dim, **kwargs):
-        """Collapse a single dimension"""
+    def _reduce(self, f, dim, **kwargs):
+        """Reduce a single dimension"""
         axis = self.dimensions.index(dim)
         dims = tuple(dim for i, dim in enumerate(self.dimensions)
                      if axis not in [i, i - self.ndim])
@@ -404,7 +404,7 @@ class Array(AbstractArray):
                              'match the length of this variable along its '
                              'dimension')
         unique_values, group_indices = unique_value_groups(group_by.data)
-        aggregated = (self.indexed_by(**{dim: indices}).collapse(
+        aggregated = (self.indexed_by(**{dim: indices}).reduce(
                           func, dim, axis=None, **kwargs)
                       for indices in group_indices)
         stacked = type(self).from_stack(aggregated, new_dim_name,

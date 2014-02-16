@@ -31,12 +31,15 @@ class _LocIndexer(object):
 
 
 class DatasetArray(AbstractArray):
-    """A Dataset wrapper oriented around a single Array
+    """Hybrid between Dataset and Array
 
-    Dataviews are the primary way to do computations with Dataset variables.
-    They are designed to make it easy to manipulate variables in the context of
-    an intact Dataset object. Getting items from or doing mathematical
-    operations with a dataset array returns another dataset array.
+    Dataset arrays are the primary way to do computations with Dataset
+    variables. They are designed to make it easy to manipulate arrays in the
+    context of an intact Dataset object. Indeed, the contents of a DatasetArray
+    are uniquely defined by its `dataset` and `focus` paramters.
+
+    Getting items from or doing mathematical operations with a dataset array
+    returns another dataset array.
 
     The design of DatasetArray is strongly inspired by the Iris Cube. However,
     dataset arrays are much lighter weight than cubes. They are simply aligned,
@@ -50,7 +53,8 @@ class DatasetArray(AbstractArray):
             The dataset on which to build this dataset array.
         focus : str
             The name of the "focus variable" in `dataset` on which this object
-            is oriented.
+            is oriented. This is the variable on which mathematical operations
+            are applied.
         """
         if not isinstance(dataset, dataset_.Dataset):
             dataset = dataset_.Dataset(dataset)
@@ -74,7 +78,7 @@ class DatasetArray(AbstractArray):
 
     @property
     def data(self):
-        """The dataset array's data as a numpy.ndarray"""
+        """The array's data as a numpy.ndarray"""
         return self.array.data
     @data.setter
     def data(self, value):
@@ -112,7 +116,7 @@ class DatasetArray(AbstractArray):
 
     @property
     def loc(self):
-        """Attribute for location based indexing with pandas
+        """Attribute for location based indexing like pandas
         """
         return _LocIndexer(self)
 
@@ -123,6 +127,10 @@ class DatasetArray(AbstractArray):
     @property
     def attributes(self):
         return self.array.attributes
+
+    @property
+    def variables(self):
+        return self.dataset.variables
 
     @property
     def coordinates(self):
@@ -267,39 +275,38 @@ class DatasetArray(AbstractArray):
         """
         return self.refocus(self.array.transpose(*dimensions))
 
-    def collapse(self, func, dimension=None, axis=None, **kwargs):
-        """Collapse this array by applying `func` along some dimension(s)
+    def reduce(self, func, dimension=None, axis=None, **kwargs):
+        """Reduce this array by applying `func` along some dimension(s)
 
         Parameters
         ----------
         func : function
             Function which can be called in the form
-            `f(x, axis=axis, **kwargs)` to return the result of collapsing an
+            `f(x, axis=axis, **kwargs)` to return the result of reducing an
             np.ndarray over an integer valued axis.
         dimension : str or sequence of str, optional
             Dimension(s) over which to repeatedly apply `func`.
         axis : int or sequence of int, optional
             Axis(es) over which to repeatedly apply `func`. Only one of the
             'dimension' and 'axis' arguments can be supplied. If neither are
-            supplied, then the collapse is calculated over the flattened array
+            supplied, then the reduction is calculated over the flattened array
             (by calling `f(x)` without an axis argument).
         **kwargs : dict
             Additional keyword arguments passed on to `func`.
 
         Note
         ----
-        If `collapse` is called with multiple dimensions (or axes, which
-        are converted into dimensions), then the collapse operation is
+        If `reduce` is called with multiple dimensions (or axes, which
+        are converted into dimensions), then the reduce operation is
         performed repeatedly along each dimension in turn from left to right.
 
         Returns
         -------
-        collapsed : DatasetArray
+        reduced : DatasetArray
             DatasetArray with this object's array replaced with an array with
             summarized data and the indicated dimension(s) removed.
         """
-        # TODO: rename this method "reduce"
-        var = self.array.collapse(func, dimension, axis, **kwargs)
+        var = self.array.reduce(func, dimension, axis, **kwargs)
         drop = set(self.dimensions) - set(var.dimensions)
         # For now, take an aggressive strategy of removing all variables
         # associated with any dropped dimensions
@@ -475,13 +482,14 @@ class DatasetArray(AbstractArray):
 ops.inject_special_operations(DatasetArray, priority=60)
 
 
-def intersection(array1, array2):
-    """Given two dataset array objects, returns two new dataset arrays where
-    all indices found on both arrays are replaced by their intersection
+def align(array1, array2):
+    """Given two Dataset or DatasetArray objects, returns two new objects where
+    all coordinates found on both datasets are replaced by their intersection,
+    and thus are aligned for performing mathematical operations.
     """
-    # TODO: automatically calculate the intersection when doing math with
-    # arrays, or better yet calculate the union of the indices and fill in
-    # the mis-aligned data with NaN.
+    # TODO: automatically align when doing math with arrays, or better yet
+    # calculate the union of the indices and fill in the mis-aligned data with
+    # NaN.
     overlapping_coords = {k: (array1.coordinates[k].data
                               & array2.coordinates[k].data)
                           for k in array1.coordinates
