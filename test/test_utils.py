@@ -58,8 +58,8 @@ class TestIndexers(TestCase):
             utils.orthogonal_indexer(x > 0, x.shape)
 
 
-class TestNum2DatetimeIndex(TestCase):
-    def test(self):
+class TestDatetime(TestCase):
+    def test_num2datetimeindex(self):
         for num_dates, units in [
                 (np.arange(1000), 'days since 2000-01-01'),
                 (12300 + np.arange(500), 'hours since 1680-01-01 00:00:00')]:
@@ -67,6 +67,17 @@ class TestNum2DatetimeIndex(TestCase):
                 expected = pd.Index(nc4.num2date(num_dates, units, calendar))
                 actual = utils.num2datetimeindex(num_dates, units, calendar)
                 self.assertNDArrayEqual(expected, actual)
+
+    def test_guess_time_units(self):
+        for dates, expected in [(pd.date_range('1900-01-01', periods=5),
+                                 'days since 1900-01-01 00:00:00'),
+                                (pd.date_range('1900-01-01 12:00:00', freq='H',
+                                               periods=2),
+                                 'hours since 1900-01-01 12:00:00'),
+                                (['1900-01-01', '1900-01-02',
+                                  '1900-01-02 00:00:01'],
+                                 'seconds since 1900-01-01 00:00:00')]:
+            self.assertEquals(expected, utils.guess_time_units(dates))
 
 
 class TestDictionaries(TestCase):

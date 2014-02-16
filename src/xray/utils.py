@@ -107,6 +107,41 @@ def num2datetimeindex(num_dates, units, calendar=None):
     return pd.Index(dates)
 
 
+def guess_time_units(dates):
+    """Given an array of dates suitable for input to `pandas.DatetimeIndex`,
+    returns a CF compatible time-unit string of the form "{time_unit} since
+    {date[0]}", where `time_unit` is 'days', 'hours', 'minutes' or 'seconds'
+    (the first one that can evenly divide all unique time deltas in `dates`)
+    """
+    dates = pd.DatetimeIndex(dates)
+    unique_timedeltas = np.unique(np.diff(dates.values))
+    for time_unit, delta in [('days', '1 days'), ('hours', '3600s'),
+                             ('minutes', '60s'), ('seconds', '1s')]:
+        unit_delta = pd.to_timedelta(delta)
+        diffs = unique_timedeltas / unit_delta
+        if np.all(diffs == diffs.astype(int)):
+            break
+    else:
+        raise ValueError('could not automatically determine time units')
+    return '%s since %s' % (time_unit, dates[0])
+
+
+def datetimeindex2num(dates, units=None, calendar=None):
+    """Given an array of dates suitable for input to `pandas.DatetimeIndex`,
+    returns the tuple `(num, units, calendar)` suitable for CF complient time
+    variable.
+    """
+    dates = pd.DatetimeIndex(dates)
+    if units is None:
+        units = guess_time_units(dates)
+    if calendar is None:
+        calendar = 'proleptic_gregorian'
+    # for now, don't bother doing any trickery like num2datetimeindex to
+    # convert dates to numbers faster
+    num = nc4.date2num(dates.to_pydatetime(), units, calendar)
+    return (num, units, calendar)
+
+
 def variable_equal(v1, v2, rtol=1e-05, atol=1e-08):
     """True if two objects have the same dimensions, attributes and data;
     otherwise False

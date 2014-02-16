@@ -7,28 +7,26 @@ formats. They should not be used directly, but rather through Dataset objects.
 # for directly manipulating Dataset.variables and the like?
 import netCDF4 as nc4
 import numpy as np
+import pandas as pd
 
 from scipy.io import netcdf
 from collections import OrderedDict
 
-import array_ as array
+import array_
 import conventions
-from utils import FrozenOrderedDict, Frozen
+from utils import FrozenOrderedDict, Frozen, datetimeindex2num
 
 
 class AbstractDataStore(object):
     def set_dimensions(self, dimensions):
-        """Set the dimensions without checking validity"""
         for d, l in dimensions.iteritems():
             self.set_dimension(d, l)
 
     def set_attributes(self, attributes):
-        """Set the attributes without checking validity"""
         for k, v in attributes.iteritems():
             self.set_attribute(k, v)
 
     def set_variables(self, variables):
-        """Set the variables without checking validity"""
         for vn, v in variables.iteritems():
             self.set_variable(vn, v)
 
@@ -45,15 +43,12 @@ class InMemoryDataStore(AbstractDataStore):
         self.attributes = OrderedDict()
 
     def set_dimension(self, name, length):
-        """Set a dimension length"""
         self.dimensions[name] = length
 
     def set_attribute(self, key, value):
-        """Set the attributes without checking validity"""
         self.attributes[key] = value
 
     def set_variable(self, name, variable):
-        """Set a variable without checks"""
         self.variables[name] = variable
         return self.variables[name]
 
@@ -64,8 +59,18 @@ class InMemoryDataStore(AbstractDataStore):
         pass
 
 
+def convert_to_cf_variable(array):
+    data = array.data
+    attributes = array.attributes.copy()
+    if isinstance(array.data, pd.DatetimeIndex):
+        (data, units, calendar) = datetimeindex2num(array.data)
+        attributes['units'] = units
+        attributes['calendar'] = calendar
+    return array_.Array(array.dimensions, data, attributes)
+
+
 def convert_scipy_variable(var):
-    return array.Array(var.dimensions, var.data, var._attributes)
+    return array_.Array(var.dimensions, var.data, var._attributes)
 
 
 class ScipyDataStore(AbstractDataStore):
@@ -92,7 +97,6 @@ class ScipyDataStore(AbstractDataStore):
         return Frozen(self.ds.dimensions)
 
     def set_dimension(self, name, length):
-        """Set a dimension length"""
         if name in self.dimensions:
             raise ValueError('%s does not support modifying dimensions'
                              % type(self).__name__)
@@ -130,7 +134,7 @@ class ScipyDataStore(AbstractDataStore):
         setattr(self.ds, key, self._cast_attr_value(value))
 
     def set_variable(self, name, variable):
-        """Add a variable without checks"""
+        variable = convert_to_cf_variable(variable)
         data = variable.data
         dtype_convert = {'int64': 'int32', 'float64': 'float32'}
         if str(data.dtype) in dtype_convert:
@@ -141,7 +145,6 @@ class ScipyDataStore(AbstractDataStore):
         for k, v in variable.attributes.iteritems():
             self._validate_attr_key(k)
             setattr(scipy_var, k, self._cast_attr_value(v))
-        return convert_scipy_variable(scipy_var)
 
     def del_attribute(self, key):
         delattr(self.ds, key)
@@ -163,7 +166,7 @@ def convert_nc4_variable(var):
     # netcdf file would now have been scaled twice!
     attr = OrderedDict((k, var.getncattr(k)) for k in var.ncattrs()
                        if k not in ['scale_factor', 'add_offset'])
-    return array.Array(var.dimensions, var, attr, indexing_mode='orthogonal')
+    return array_.Array(var.dimensions, var, attr, indexing_mode='orthogonal')
 
 
 class NetCDF4DataStore(AbstractDataStore):
@@ -187,14 +190,18 @@ class NetCDF4DataStore(AbstractDataStore):
         return FrozenOrderedDict((k, len(v)) for k, v in self.ds.dimensions.iteritems())
 
     def set_dimension(self, name, length):
-        """Set a dimension length"""
         self.ds.createDimension(name, size=length)
 
     def set_attribute(self, key, value):
         self.ds.setncatts({key: value})
 
+    def _cast_data(self, data):
+        if isinstance(data, pd.DatetimeIndex):
+            data = datetimeindex2num(data)
+        return data
+
     def set_variable(self, name, variable):
-        """Set a variable without checks"""
+        variable = convert_to_cf_variable(variable)
         # netCDF4 will automatically assign a fill value
         # depending on the datatype of the variable.  Here
         # we let the package handle the _FillValue attribute
@@ -207,7 +214,6 @@ class NetCDF4DataStore(AbstractDataStore):
         nc4_var = self.ds.variables[name]
         nc4_var[:] = variable.data[:]
         nc4_var.setncatts(variable.attributes)
-        return convert_nc4_variable(nc4_var)
 
     def del_attribute(self, key):
         self.ds.delncattr(key)
