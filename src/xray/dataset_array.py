@@ -7,7 +7,7 @@ from collections import OrderedDict
 import numpy as np
 
 import array_
-import dataset
+import dataset as dataset_
 import groupby
 import ops
 from common import AbstractArray
@@ -15,19 +15,19 @@ from utils import expanded_indexer, FrozenOrderedDict, remap_loc_indexers
 
 
 class _LocIndexer(object):
-    def __init__(self, array):
-        self.array = array
+    def __init__(self, ds_array):
+        self.ds_array = ds_array
 
     def _remap_key(self, key):
-        indexers = remap_loc_indexers(self.array.indices,
-                                      self.array._key_to_indexers(key))
+        indexers = remap_loc_indexers(self.ds_array.dataset.variables,
+                                      self.ds_array._key_to_indexers(key))
         return tuple(indexers.values())
 
     def __getitem__(self, key):
-        return self.array[self._remap_key(key)]
+        return self.ds_array[self._remap_key(key)]
 
     def __setitem__(self, key, value):
-        self.array[self._remap_key(key)] = value
+        self.ds_array[self._remap_key(key)] = value
 
 
 class DatasetArray(AbstractArray):
@@ -47,46 +47,42 @@ class DatasetArray(AbstractArray):
         Parameters
         ----------
         dataset : xray.Dataset
-            The dataset on which to build this data view.
+            The dataset on which to build this dataset array.
         focus : str
             The name of the "focus variable" in `dataset` on which this object
             is oriented.
         """
+        if not isinstance(dataset, dataset_.Dataset):
+            dataset = dataset_.Dataset(dataset)
         if not focus in dataset:
             raise ValueError('focus %r is not a variable in dataset %r'
                              % (focus, dataset))
         self.dataset = dataset
         self.focus = focus
 
-    @classmethod
-    def create(cls, focus, dimensions, data):
-        ds = dataset.Dataset()
-        ds.create_variable(focus, dimensions, data)
-        return ds[focus]
-
     @property
-    def variable(self):
+    def array(self):
         return self.dataset.variables[self.focus]
-    @variable.setter
-    def variable(self, value):
-        self.dataset.set_variable(self.focus, value)
+    @array.setter
+    def array(self, value):
+        self.dataset[self.focus] = value
 
     # _data is necessary for AbstractArray
     @property
     def _data(self):
-        return self.variable._data
+        return self.array._data
 
     @property
     def data(self):
         """The dataset array's data as a numpy.ndarray"""
-        return self.variable.data
+        return self.array.data
     @data.setter
     def data(self, value):
-        self.variable.data = value
+        self.array.data = value
 
     @property
     def dimensions(self):
-        return self.variable.dimensions
+        return self.array.dimensions
 
     def _key_to_indexers(self, key):
         return OrderedDict(
@@ -106,7 +102,10 @@ class DatasetArray(AbstractArray):
             self.dataset[key] = value
         else:
             # orthogonal array indexing
-            self.variable[key] = value
+            self.array[key] = value
+
+    def __delitem__(self, key):
+        del self.dataset[key]
 
     def __contains__(self, key):
         return key in self.dataset
@@ -123,13 +122,12 @@ class DatasetArray(AbstractArray):
 
     @property
     def attributes(self):
-        return self.variable.attributes
+        return self.array.attributes
 
     @property
-    def indices(self):
-        return FrozenOrderedDict((k, v) for k, v
-                                 in self.dataset.indices.iteritems()
-                                 if k in self.dimensions)
+    def coordinates(self):
+        return FrozenOrderedDict((k, self.dataset.variables[k])
+                                 for k in self.dimensions)
 
     def copy(self):
         return self.__copy__()
@@ -148,10 +146,8 @@ class DatasetArray(AbstractArray):
 
     def __repr__(self):
         if self.ndim > 0:
-            dim_summary = ', '.join('%s%s: %s' %
-                                    ('@' if k in self.dataset else '', k, v)
-                                    for k, v in zip(self.dimensions,
-                                                    self.shape))
+            dim_summary = ', '.join('%s: %s' % (k, v) for k, v
+                                    in zip(self.dimensions, self.shape))
             contents = ' (%s): %s' % (dim_summary, self.dtype)
         else:
             contents = ': %s' % self.data
@@ -169,7 +165,7 @@ class DatasetArray(AbstractArray):
         if self.focus not in ds:
             # always keep focus variable in the dataset, even if it was
             # unselected because indexing made it a scaler
-            ds[self.focus] = self.variable.indexed_by(**indexers)
+            ds[self.focus] = self.array.indexed_by(**indexers)
         return type(self)(ds, self.focus)
 
     def labeled_by(self, **indexers):
@@ -180,7 +176,8 @@ class DatasetArray(AbstractArray):
         --------
         Dataset.labeled_by
         """
-        return self.indexed_by(**remap_loc_indexers(self.indices, indexers))
+        return self.indexed_by(**remap_loc_indexers(self.dataset.variables,
+                                                    indexers))
 
     def renamed(self, new_name):
         """Returns a new DatasetArray with this DatasetArray's focus variable
@@ -202,17 +199,19 @@ class DatasetArray(AbstractArray):
                              'method or the `unselect` method of the dataset.')
         return type(self)(self.dataset.unselect(*names), self.focus)
 
-    def refocus(self, new_var):
+    def refocus(self, new_var, name=None):
         """Returns a copy of this DatasetArray's dataset with this
         DatasetArray's focus variable replaced by `new_var`
 
-        If `new_var` is a dataview, its contents will be merged in.
+        If `new_var` is a dataset array, its contents will be merged in.
         """
         if not hasattr(new_var, 'dimensions'):
-            new_var = type(self.variable)(self.variable.dimensions, new_var)
+            new_var = type(self.array)(self.array.dimensions, new_var)
         ds = self.unselected()
-        ds[self.focus] = new_var
-        return type(self)(ds, self.focus)
+        if name is None:
+            name = self.focus
+        ds[name] = new_var
+        return type(self)(ds, name)
 
     def iterator(self, dimension):
         """Iterate along a data dimension
@@ -231,10 +230,12 @@ class DatasetArray(AbstractArray):
             The returned iterator yields pairs of scalar-valued coordinate
             arrays and DatasetArray objects.
         """
+        # TODO: remove this method (replaced by groupby)
         for (x, ds) in self.dataset.iterator(dimension):
             yield (x, type(self)(ds, self.focus))
 
     def groupby(self, group, squeeze=True):
+        # TODO: document this method
         if isinstance(group, basestring):
             # merge in the group's dataset to allow group to be a virtual
             # variable in this dataset
@@ -264,7 +265,7 @@ class DatasetArray(AbstractArray):
         numpy.transpose
         Array.transpose
         """
-        return self.refocus(self.variable.transpose(*dimensions))
+        return self.refocus(self.array.transpose(*dimensions))
 
     def collapse(self, func, dimension=None, axis=None, **kwargs):
         """Collapse this array by applying `func` along some dimension(s)
@@ -297,7 +298,8 @@ class DatasetArray(AbstractArray):
             DatasetArray with this object's array replaced with an array with
             summarized data and the indicated dimension(s) removed.
         """
-        var = self.variable.collapse(func, dimension, axis, **kwargs)
+        # TODO: rename this method "reduce"
+        var = self.array.collapse(func, dimension, axis, **kwargs)
         drop = set(self.dimensions) - set(var.dimensions)
         # For now, take an aggressive strategy of removing all variables
         # associated with any dropped dimensions
@@ -305,7 +307,7 @@ class DatasetArray(AbstractArray):
         drop |= {k for k, v in self.dataset.variables.iteritems()
                  if any(dim in drop for dim in v.dimensions)}
         ds = self.dataset.unselect(*drop)
-        ds.add_variable(self.focus, var)
+        ds[self.focus] = var
         return type(self)(ds, self.focus)
 
     def aggregate(self, func, new_dim, **kwargs):
@@ -330,17 +332,18 @@ class DatasetArray(AbstractArray):
         aggregated : DatasetArray
             DatasetArray with aggregated data and the new dimension `new_dim`.
         """
+        # TODO: remove this method (replaced by groupby)
         if isinstance(new_dim, basestring):
             new_dim = self.dataset[new_dim]
-        unique, aggregated = self.variable.aggregate(
+        unique, aggregated = self.array.aggregate(
             func, new_dim.focus, new_dim, **kwargs)
         # TODO: add options for how to summarize variables along aggregated
         # dimensions instead of just dropping them?
         drop = {k for k, v in self.dataset.variables.iteritems()
                 if any(dim in new_dim.dimensions for dim in v.dimensions)}
         ds = self.dataset.unselect(*drop)
-        ds.add_coordinate(unique)
-        ds.add_variable(self.focus, aggregated)
+        ds[unique.dimensions[0]] = unique
+        ds[self.focus] = aggregated
         return type(self)(ds, self.focus)
 
     @classmethod
@@ -371,9 +374,7 @@ class DatasetArray(AbstractArray):
             Stacked dataset array formed by stacking all the supplied variables
             along the new dimension.
         """
-        # create an empty dataset in which to stack variables
-        # start by putting in the dimension variable
-        ds = dataset.Dataset()
+        ds = dataset_.Dataset()
         if isinstance(dimension, basestring):
             dim_name = dimension
         else:
@@ -384,8 +385,9 @@ class DatasetArray(AbstractArray):
         if template is not None:
             # use metadata from the template dataset array
             focus = template.focus
+            old_dim_name, = template.dataset.variables[dim_name].dimensions
             drop = {k for k, v in template.dataset.variables.iteritems()
-                    if k in [focus, dim_name]}
+                    if old_dim_name in v.dimensions}
             ds.merge(template.dataset.unselect(*drop), inplace=True)
         else:
             # figure out metadata by inspecting each array
@@ -406,68 +408,65 @@ class DatasetArray(AbstractArray):
             if focus is None:
                 focus = 'stacked_variable'
 
-        # finally, merge in the stacked variables
         ds[focus] = array_.Array.from_stack(arrays, dimension,
                                             stacked_indexers, length, template)
-        stacked = cls(ds, focus)
-
-        if template is not None:
-            drop = set(template.dataset.dimensions) - set(stacked.dimensions)
-            drop |= {k for k, v in ds.variables.iteritems()
-                     if any(dim in drop for dim in v.dimensions)}
-            stacked = stacked.unselect(*drop)
-        return stacked
+        return cls(ds, focus)
 
     def to_dataframe(self):
         """Convert this array into a pandas.DataFrame
 
         Non-coordinate variables in this array's dataset (which include the
         view's data) form the columns of the DataFrame. The DataFrame is be
-        indexed by the Cartesian product of the dataset's indices.
+        indexed by the Cartesian product of the dataset's coordinates.
         """
         return self.dataset.to_dataframe()
 
     def __array_wrap__(self, result):
-        return self.refocus(self.variable.__array_wrap__(result))
+        return self.refocus(self.array.__array_wrap__(result),
+                            self.focus + '_')
 
     @staticmethod
     def _unary_op(f):
         @functools.wraps(f)
         def func(self, *args, **kwargs):
-            return self.refocus(f(self.variable, *args, **kwargs))
+            return self.refocus(f(self.array, *args, **kwargs),
+                                self.focus + '_' + f.__name__)
         return func
 
-    def _check_indices_compat(self, other):
+    def _check_coordinates_compat(self, other):
         # TODO: possibly automatically select index intersection instead?
-        if hasattr(other, 'indices'):
-            for k, v in self.indices.iteritems():
-                if (k in other.indices
-                        and not np.array_equal(v, other.indices[k])):
-                    raise ValueError('index %r is not aligned' % k)
+        if hasattr(other, 'coordinates'):
+            for k, v in self.coordinates.iteritems():
+                if (k in other.coordinates
+                        and not np.array_equal(v, other.coordinates[k])):
+                    raise ValueError('coordinate %r is not aligned' % k)
 
     @staticmethod
     def _binary_op(f, reflexive=False):
         @functools.wraps(f)
         def func(self, other):
-            # TODO: automatically group by other variable dimensions
-            self._check_indices_compat(other)
+            # TODO: automatically group by other variable dimensions to allow
+            # for broadcasting dimensions like 'dayofyear' against 'time'
+            self._check_coordinates_compat(other)
             ds = self.unselected()
             if hasattr(other, 'unselected'):
                 ds.merge(other.unselected(), inplace=True)
-            other_variable = getattr(other, 'variable', other)
-            ds[self.focus] = (f(self.variable, other_variable)
-                              if not reflexive
-                              else f(other_variable, self.variable))
-            return ds[self.focus]
+            other_array = getattr(other, 'array', other)
+            other_focus = getattr(other, 'focus', 'other')
+            focus = self.focus + '_' + f.__name__ + '_' + other_focus
+            ds[focus] = (f(self.array, other_array)
+                         if not reflexive
+                         else f(other_array, self.array))
+            return type(self)(ds, focus)
         return func
 
     @staticmethod
     def _inplace_binary_op(f):
         @functools.wraps(f)
         def func(self, other):
-            self._check_indices_compat(other)
-            other_variable = getattr(other, 'variable', other)
-            self.variable = f(self.variable, other_variable)
+            self._check_coordinates_compat(other)
+            other_array = getattr(other, 'array', other)
+            self.array = f(self.array, other_array)
             if hasattr(other, 'unselected'):
                 self.dataset.merge(other.unselected(), inplace=True)
             return self
@@ -483,7 +482,9 @@ def intersection(array1, array2):
     # TODO: automatically calculate the intersection when doing math with
     # arrays, or better yet calculate the union of the indices and fill in
     # the mis-aligned data with NaN.
-    overlapping_indices = {k: array1.indices[k] & array2.indices[k]
-                           for k in array1.indices if k in array2.indices}
-    return tuple(dv.labeled_by(**overlapping_indices)
-                 for dv in [array1, array2])
+    overlapping_coords = {k: (array1.coordinates[k].data
+                              & array2.coordinates[k].data)
+                          for k in array1.coordinates
+                          if k in array2.coordinates}
+    return tuple(ar.labeled_by(**overlapping_coords)
+                 for ar in [array1, array2])

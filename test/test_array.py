@@ -1,3 +1,4 @@
+from copy import deepcopy
 import warnings
 
 import numpy as np
@@ -11,7 +12,7 @@ class TestArray(TestCase):
         self.d = np.random.random((10, 3)).astype(np.float64)
 
     def test_data(self):
-        v = Array(['time', 'x'], self.d)
+        v = Array(['time', 'x'], self.d, indexing_mode='not-supported')
         self.assertIs(v.data, self.d)
         with self.assertRaises(ValueError):
             # wrong size
@@ -19,15 +20,24 @@ class TestArray(TestCase):
         d2 = np.random.random((10, 3))
         v.data = d2
         self.assertIs(v.data, d2)
+        self.assertEqual(v._indexing_mode, 'numpy')
 
-        with warnings.catch_warnings(record=True) as w:
-            v = Array(['x'], range(5))
-            self.assertIn("converting data to np.ndarray", str(w[-1].message))
-            self.assertIsInstance(v.data, np.ndarray)
-        with warnings.catch_warnings(record=True) as w:
-            # don't warn for numpy numbers
-            v = Array([], np.float32(1))
-            self.assertFalse(w)
+    def test_array_equality(self):
+        d = np.random.rand(10, 3)
+        v1 = Array(('dim1', 'dim2'), data=d,
+                    attributes={'att1': 3, 'att2': [1, 2, 3]})
+        v2 = Array(('dim1', 'dim2'), data=d,
+                    attributes={'att1': 3, 'att2': [1, 2, 3]})
+        v3 = Array(('dim1', 'dim3'), data=d,
+                   attributes={'att1': 3, 'att2': [1, 2, 3]})
+        v4 = Array(('dim1', 'dim2'), data=d,
+                   attributes={'att1': 3, 'att2': [1, 2, 4]})
+        v5 = deepcopy(v1)
+        v5.data[:] = np.random.rand(10, 3)
+        self.assertVarEqual(v1, v2)
+        self.assertVarNotEqual(v1, v3)
+        self.assertVarNotEqual(v1, v4)
+        self.assertVarNotEqual(v1, v5)
 
     def test_properties(self):
         v = Array(['time', 'x'], self.d, {'foo': 'bar'})

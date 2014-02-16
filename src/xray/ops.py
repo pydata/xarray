@@ -1,3 +1,4 @@
+import functools
 import operator
 
 import numpy as np
@@ -27,12 +28,14 @@ NUMPY_COLLAPSE_METHODS = ['all', 'any', 'argmax', 'argmin', 'cumprod',
 def _data_method_wrapper(f):
     def func(self, *args, **kwargs):
         return getattr(self.data, f)(*args, **kwargs)
+    func.__name__ = f
     return func
 
 
 def _method_wrapper(f):
     def func(self, *args, **kwargs):
         return getattr(self, f)(*args, **kwargs)
+    func.__name__ = f
     return func
 
 

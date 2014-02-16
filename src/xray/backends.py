@@ -131,10 +131,13 @@ class ScipyDataStore(AbstractDataStore):
 
     def set_variable(self, name, variable):
         """Add a variable without checks"""
-        if name not in self.ds.variables:
-            self.ds.createVariable(name, variable.dtype, variable.dimensions)
+        data = variable.data
+        dtype_convert = {'int64': 'int32', 'float64': 'float32'}
+        if str(data.dtype) in dtype_convert:
+            data = np.asarray(data, dtype=dtype_convert[str(data.dtype)])
+        self.ds.createVariable(name, data.dtype, variable.dimensions)
         scipy_var = self.ds.variables[name]
-        scipy_var[:] = variable.data[:]
+        scipy_var[:] = data[:]
         for k, v in variable.attributes.iteritems():
             self._validate_attr_key(k)
             setattr(scipy_var, k, self._cast_attr_value(v))
@@ -197,11 +200,10 @@ class NetCDF4DataStore(AbstractDataStore):
         # we let the package handle the _FillValue attribute
         # instead of setting it ourselves.
         fill_value = variable.attributes.pop('_FillValue', None)
-        if name not in self.ds.variables:
-            self.ds.createVariable(varname=name,
-                                   datatype=variable.dtype,
-                                   dimensions=variable.dimensions,
-                                   fill_value=fill_value)
+        self.ds.createVariable(varname=name,
+                               datatype=variable.dtype,
+                               dimensions=variable.dimensions,
+                               fill_value=fill_value)
         nc4_var = self.ds.variables[name]
         nc4_var[:] = variable.data[:]
         nc4_var.setncatts(variable.attributes)

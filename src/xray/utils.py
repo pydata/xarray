@@ -68,7 +68,7 @@ def remap_loc_indexers(indices, indexers):
     """
     new_indexers = OrderedDict()
     for dim, loc in indexers.iteritems():
-        index = indices[dim]
+        index = indices[dim].data
         if isinstance(loc, slice):
             indexer = index.slice_indexer(loc.start, loc.stop, loc.step)
         else:
@@ -128,7 +128,10 @@ def variable_equal(v1, v2, rtol=1e-05, atol=1e-08):
         # see: pandas.core.common.array_equivalent
         data1 = v1.data
         data2 = v2.data
-        if np.issubdtype(data1.dtype, (str, object)):
+        if hasattr(data1, 'equals'):
+            # handle pandas.Index objects
+            return data1.equals(data2)
+        elif np.issubdtype(data1.dtype, (str, object)):
             return np.array_equal(data1, data2)
         else:
             return np.allclose(data1, data2, rtol=rtol, atol=atol)
@@ -156,7 +159,7 @@ def update_safety_check(first_dict, second_dict, compat=operator.eq):
         if (k in first_dict and
                 not (v is first_dict[k] or compat(v, first_dict[k]))):
             raise ValueError('unsafe to merge dictionaries without '
-                             'overriding values')
+                             'overriding values; conflicting key %r' % k)
 
 
 def remove_incompatible_items(first_dict, second_dict, compat=operator.eq):

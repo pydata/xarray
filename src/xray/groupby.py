@@ -3,7 +3,7 @@ import itertools
 from common import ImplementsCollapse
 from ops import inject_collapse_methods
 import array_
-import dataset_array
+import dataset
 import numpy as np
 
 
@@ -84,8 +84,8 @@ class GroupBy(ImplementsCollapse):
         else:
             # look through group_coord to find the unique values
             unique_values, group_indices = unique_value_groups(group_coord)
-            unique_coord = dataset_array.DatasetArray.create(
-                group_name, [group_name], unique_values)
+            unique_coord = dataset.Dataset(
+                {group_name: (group_name, unique_values)})[group_name]
 
         self.group_indices = group_indices
         self.unique_coord = unique_coord

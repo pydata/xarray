@@ -21,14 +21,11 @@ def _as_compatible_data(data):
     # don't check for __len__ or __iter__ so as not to warn if data is a numpy
     # numeric type like np.float32
     required = ['dtype', 'shape', 'size', 'ndim']
-    if not all(hasattr(data, attr) for attr in required):
-        warnings.warn('converting data to np.ndarray because %s lacks some of '
-                      'the necesssary attributes for direct use'
-                      % type(data).__name__, RuntimeWarning, stacklevel=3)
+    if np.iterable(data) and not all(hasattr(data, attr) for attr in required):
         data = np.asarray(data)
     elif isinstance(data, AbstractArray):
         # we don't want nested Array objects
-        data = np.asarray(data)
+        data = data.data
     return data
 
 
@@ -84,13 +81,12 @@ class Array(AbstractArray):
             lookups need to be internally converted to numpy-style indexing.
         """
         if isinstance(dims, basestring):
-            dims = [dims]
-        data = _as_compatible_data(data)
-        if len(dims) != data.ndim:
+            dims = (dims,)
+        self._dimensions = tuple(dims)
+        self._data = _as_compatible_data(data)
+        if len(dims) != self.ndim:
             raise ValueError('data and dimensions must have the same '
                              'dimensionality')
-        self._dimensions = tuple(dims)
-        self._data = data
         if attributes is None:
             attributes = {}
         self._attributes = OrderedDict(attributes)
@@ -106,27 +102,32 @@ class Array(AbstractArray):
 
     @data.setter
     def data(self, value):
-        value = np.asarray(value)
+        # allow any array to support pandas.Index objects
+        value = np.asanyarray(value)
         if value.shape != self.shape:
             raise ValueError("replacement data must match the Array's "
                              "shape")
         self._data = value
+        self._indexing_mode = 'numpy'
 
     @property
     def dimensions(self):
         return self._dimensions
 
-    def _remap_indexer(self, key):
+    def _convert_indexer(self, key, indexing_mode=None):
         """Converts an orthogonal indexer into a fully expanded key (of the
-        same length as dimensions) suitable for indexing `_data`
+        same length as dimensions) suitable for indexing a data array with the
+        given indexing_mode.
 
         See Also
         --------
         utils.expanded_indexer
         utils.orthogonal_indexer
         """
+        if indexing_mode is None:
+            indexing_mode = self._indexing_mode
         key = utils.expanded_indexer(key, self.ndim)
-        if (self._indexing_mode == 'numpy'
+        if (indexing_mode == 'numpy'
                 and any(not isinstance(k, (int, slice)) for k in key)):
             # key would trigger fancy indexing
             key = utils.orthogonal_indexer(key, self.shape)
@@ -149,12 +150,20 @@ class Array(AbstractArray):
         If you really want to do indexing like `x[x > 0]`, manipulate the numpy
         array `x.data` directly.
         """
-        key = self._remap_indexer(key)
+        key = self._convert_indexer(key)
         dimensions = [dim for k, dim in zip(key, self.dimensions)
                       if not isinstance(k, int)]
-        new_data = self._data[key]
+        if len(key) == 1:
+            # unpack key so it can index a pandas.Index object (pandas.Index
+            # objects don't like tuples)
+            key, = key
+        # do location based indexing if supported by _data
+        new_data = getattr(self._data, 'iloc', self._data)[key]
         # orthogonal indexing should ensure the dimensionality is consistent
-        assert new_data.ndim == len(dimensions)
+        if hasattr(new_data, 'ndim'):
+            assert new_data.ndim == len(dimensions)
+        else:
+            assert len(dimensions) == 0
         # return a variable with the same indexing_mode, because data should
         # still be the same type as _data
         return type(self)(dimensions, new_data, self.attributes,
@@ -164,9 +173,7 @@ class Array(AbstractArray):
         """__setitem__ is overloaded to access the underlying numpy data with
         orthogonal indexing (see __getitem__ for more details)
         """
-        # TODO: change this to copy on write (by setting self.data) instead of
-        # modifying the original array (self._data).
-        self._data[self._remap_indexer(key)] = value
+        self.data[self._convert_indexer(key, indexing_mode='numpy')] = value
 
     def __iter__(self):
         for n in range(len(self)):

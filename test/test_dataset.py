@@ -23,16 +23,12 @@ _testdim = sorted(_dims.keys())[0]
 
 def create_test_data(store=None):
     obj = Dataset() if store is None else Dataset.load_store(store)
-    obj.add_dimension('time', 1000)
-    for d, l in sorted(_dims.items()):
-        obj.add_dimension(d, l)
-        var = obj.create_variable(name=d, dims=(d,),
-                                  data=np.arange(l, dtype=np.int32),
-                                  attributes={'units':'integers'})
+    obj['time'] = ('time', pd.date_range('2000-01-01', periods=1000))
+    for k, d in sorted(_dims.items()):
+        obj[k] = (k, np.arange(d))
     for v, dims in sorted(_vars.items()):
-        var = obj.create_variable(name=v, dims=tuple(dims),
-                data=np.random.normal(size=tuple([_dims[d] for d in dims])))
-        var.attributes['foo'] = 'variable'
+        data = np.random.normal(size=tuple(_dims[d] for d in dims))
+        obj[v] = (dims, data, {'foo': 'variable'})
     return obj
 
 
@@ -42,14 +38,14 @@ class DataTest(TestCase):
 
     def test_repr(self):
         data = create_test_data(self.get_store())
-        self.assertEqual('<xray.Dataset (time: 1000, @dim1: 100, '
-                         '@dim2: 50, @dim3: 10): var1 var2 var3>', repr(data))
+        self.assertEqual('<xray.Dataset (time: 1000, dim1: 100, '
+                         'dim2: 50, dim3: 10): var1 var2 var3>', repr(data))
 
     def test_init(self):
         var1 = Array('x', np.arange(100))
         var2 = Array('x', np.arange(1000))
         var3 = Array(['x', 'y'], np.arange(1000).reshape(100, 10))
-        with self.assertRaisesRegexp(ValueError, 'already is saved with len'):
+        with self.assertRaisesRegexp(ValueError, 'but already is saved'):
             Dataset({'a': var1, 'b': var2})
         with self.assertRaisesRegexp(ValueError, 'must be defined with 1-d'):
             Dataset({'a': var1, 'x': var3})
@@ -62,77 +58,41 @@ class DataTest(TestCase):
             self.assertVarEqual(data['var2'][n], sub['var2'])
             self.assertVarEqual(data['var3'][:, n], sub['var3'])
 
-    def test_dimension(self):
-        a = Dataset()
-        a.add_dimension('time', 10)
-        a.add_dimension('x', 5)
-        # prevent duplicate creation
-        self.assertRaises(ValueError, a.add_dimension, 'time', 0)
-        # length must be integer
-        self.assertRaises(ValueError, a.add_dimension, 'foo', 'a')
-        self.assertRaises(TypeError, a.add_dimension, 'foo', [1,])
-        self.assertRaises(ValueError, a.add_dimension, 'foo', -1)
-        self.assertTrue('foo' not in a.dimensions)
-
     def test_variable(self):
         a = Dataset()
-        a.add_dimension('time', 10)
-        a.add_dimension('x', 3)
         d = np.random.random((10, 3))
-        a.create_variable(name='foo', dims=('time', 'x',), data=d)
+        a['foo'] = (('time', 'x',), d)
         self.assertTrue('foo' in a.variables)
         self.assertTrue('foo' in a)
-        a.create_variable(name='bar', dims=('time', 'x',), data=d)
+        a['bar'] = (('time', 'x',), d)
         # order of creation is preserved
-        self.assertTrue(a.variables.keys() == ['foo', 'bar'])
+        self.assertTrue(a.variables.keys() == ['time', 'x', 'foo', 'bar'])
         self.assertTrue(all([a.variables['foo'][i].data == d[i]
                              for i in np.ndindex(*d.shape)]))
-        # prevent duplicate creation
-        self.assertRaises(ValueError, a.create_variable,
-                name='foo', dims=('time', 'x',), data=d)
-        # dimension must be defined
-        # self.assertRaises(ValueError, a.create_variable,
-        #         name='qux', dims=('time', 'missing_dim',), data=d)
         # try to add variable with dim (10,3) with data that's (3,10)
-        self.assertRaises(ValueError, a.create_variable,
-                name='qux', dims=('time', 'x'), data=d.T)
-        # Array equality
-        d = np.random.rand(10, 3)
-        v1 = Array(('dim1','dim2'), data=d,
-                           attributes={'att1': 3, 'att2': [1,2,3]})
-        v2 = Array(('dim1','dim2'), data=d,
-                           attributes={'att1': 3, 'att2': [1,2,3]})
-        v5 = Array(('dim1','dim2'), data=d,
-                           attributes={'att1': 3, 'att2': [1,2,3]})
-        v3 = Array(('dim1','dim3'), data=d,
-                           attributes={'att1': 3, 'att2': [1,2,3]})
-        v4 = Array(('dim1','dim2'), data=d,
-                           attributes={'att1': 3, 'att2': [1,2,4]})
-        v5 = deepcopy(v1)
-        v5.data[:] = np.random.rand(10,3)
-        self.assertVarEqual(v1, v2)
-        self.assertVarNotEqual(v1, v3)
-        self.assertVarNotEqual(v1, v4)
-        self.assertVarNotEqual(v1, v5)
+        with self.assertRaises(ValueError):
+            a['qux'] = (('time', 'x'), d.T)
 
     def test_coordinate(self):
         a = Dataset()
         vec = np.random.random((10,))
         attributes = {'foo': 'bar'}
-        a.create_coordinate('x', data=vec, attributes=attributes)
+        a['x'] = ('x', vec, attributes)
         self.assertTrue('x' in a.coordinates)
+        self.assertIsInstance(a.coordinates['x'].data, pd.Index)
         self.assertVarEqual(a.coordinates['x'], a.variables['x'])
         b = Dataset()
-        b.add_dimension('x', vec.size)
-        b.create_variable('x', dims=('x',), data=vec, attributes=attributes)
+        b['x'] = ('x', vec, attributes)
         self.assertVarEqual(a['x'], b['x'])
         self.assertEquals(a.dimensions, b.dimensions)
+        with self.assertRaises(ValueError):
+            a['x'] = ('x', vec[:5])
         arr = np.random.random((10, 1,))
         scal = np.array(0)
-        self.assertRaises(ValueError, a.create_coordinate,
-                name='y', data=arr)
-        self.assertRaises(ValueError, a.create_coordinate,
-                name='y', data=scal)
+        with self.assertRaises(ValueError):
+            a['y'] = ('y', arr)
+        with self.assertRaises(ValueError):
+            a['y'] = ('y', scal)
         self.assertTrue('y' not in a.dimensions)
 
     @unittest.skip('attribute checks are not yet backend specific')
@@ -207,10 +167,6 @@ class DataTest(TestCase):
             expected = data[v].data[slice_list]
             actual = ret[v].data
             np.testing.assert_array_equal(expected, actual)
-            # Test that our view accesses the same underlying array
-            # This test doesn't make sense for the netCDF4 backend
-            # actual.fill(np.pi)
-            # np.testing.assert_array_equal(expected, actual)
 
         with self.assertRaises(ValueError):
             data.indexed_by(not_a_dim=slice(0, 2))
@@ -230,8 +186,8 @@ class DataTest(TestCase):
         loc_slicers = {'dim1': slice(None, None, 2), 'dim2': slice(0, 1)}
         self.assertEqual(data.indexed_by(**int_slicers),
                          data.labeled_by(**loc_slicers))
-        data.create_variable('time', ['time'], np.arange(1000, dtype=np.int32),
-                             {'units': 'days since 2000-01-01'})
+        data['time'] = ('time', np.arange(1000, dtype=np.int32),
+                        {'units': 'days since 2000-01-01'})
         self.assertEqual(data.indexed_by(time=0),
                          data.labeled_by(time='2000-01-01'))
         self.assertEqual(data.indexed_by(time=slice(10)),
@@ -321,8 +277,8 @@ class DataTest(TestCase):
 
     def test_getitem(self):
         data = create_test_data(self.get_store())
-        data.create_variable('time', ['time'], np.arange(1000, dtype=np.int32),
-                             {'units': 'days since 2000-01-01'})
+        data['time'] = ('time', np.arange(1000, dtype=np.int32),
+                        {'units': 'days since 2000-01-01'})
         self.assertIsInstance(data['var1'], DatasetArray)
         self.assertVarEqual(data['var1'], data.variables['var1'])
         self.assertItemsEqual(data['var1'].dataset.variables,
@@ -331,23 +287,23 @@ class DataTest(TestCase):
         self.assertVarEqual(data['time.dayofyear'][:300],
                             Array('time', 1 + np.arange(300)))
         self.assertNDArrayEqual(data['time.month'].data,
-                                data.indices['time'].month)
+                                data.variables['time'].data.month)
 
     def test_setitem(self):
         # assign a variable
         var = Array(['dim1'], np.random.randn(100))
         data1 = create_test_data(self.get_store())
-        data1.set_variable('A', var)
+        data1['A'] = var
         data2 = data1.copy()
         data2['A'] = var
         self.assertEqual(data1, data2)
-        # assign a dataview
+        # assign a dataset array
         dv = 2 * data2['A']
-        data1.set_variable('B', dv.variable)
+        data1['B'] = dv.array
         data2['B'] = dv
         self.assertEqual(data1, data2)
         # assign an array
-        with self.assertRaisesRegexp(TypeError, 'DatasetArrays and Arrays'):
+        with self.assertRaisesRegexp(TypeError, 'variables must be of type'):
             data2['C'] = var.data
 
     def test_write_store(self):

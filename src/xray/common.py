@@ -17,19 +17,19 @@ class ImplementsCollapse(object):
 class AbstractArray(ImplementsCollapse):
     @property
     def dtype(self):
-        return self._data.dtype
+        return getattr(self._data, 'dtype', object)
 
     @property
     def shape(self):
-        return self._data.shape
+        return getattr(self._data, 'shape', ())
 
     @property
     def size(self):
-        return self._data.size
+        return getattr(self._data, 'size', 1)
 
     @property
     def ndim(self):
-        return self._data.ndim
+        return getattr(self._data, 'ndim', 0)
 
     def __len__(self):
         return len(self._data)

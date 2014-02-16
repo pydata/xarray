@@ -1,11 +1,9 @@
-# TODO Use various backend data stores. pytable, ncdf4, scipy.io, iris, memory
-import os
 import numpy as np
 import netCDF4 as nc4
 import pandas as pd
 
 from cStringIO import StringIO
-from collections import OrderedDict, Mapping, MutableMapping
+from collections import OrderedDict, Mapping
 
 import array_ as array
 import backends
@@ -16,70 +14,6 @@ from utils import FrozenOrderedDict, Frozen, remap_loc_indexers
 
 date2num = nc4.date2num
 num2date = nc4.num2date
-
-
-def construct_dimensions(variables):
-    """
-    Given a dictionary of variables, construct a dimensions mapping
-
-    Parameters
-    ----------
-    variables : mapping
-        Mapping from variable names to Array objects.
-
-    Returns
-    -------
-    dimensions : mapping
-        Mapping from dimension names to lengths.
-
-    Raises
-    ------
-    ValueError if variable dimensions are inconsistent.
-    """
-    dimensions = OrderedDict()
-    for k, var in variables.iteritems():
-        if k in var.dimensions and var.ndim != 1:
-            raise ValueError('a coordinate variable must be defined with '
-                             '1-dimensional data')
-        for dim, length in zip(var.dimensions, var.shape):
-            if dim not in dimensions:
-                dimensions[dim] = length
-            elif dimensions[dim] != length:
-                raise ValueError('dimension %r on variable %r has length %s '
-                                 'but already is saved with length %s' %
-                                 (dim, k, length, dimensions[dim]))
-    return dimensions
-
-
-def check_dims_and_vars_consistency(dimensions, variables):
-    """
-    Validate dimensions and variables are consistent
-
-    Parameters
-    ----------
-    dimensions : mapping
-        Mapping from dimension names to lengths.
-    variables : mapping
-        Mapping from variable names to Array objects.
-
-    Raises
-    ------
-    ValueError if variable dimensions are inconsistent with the provided
-    dimensions.
-    """
-    for k, var in variables.iteritems():
-        if k in dimensions and var.ndim != 1:
-            raise ValueError('a coordinate variable must be defined with '
-                             '1-dimensional data')
-        for dim, length in zip(var.dimensions, var.shape):
-            if dim not in dimensions:
-                raise ValueError('dimension %r on variable %r is not one '
-                                 'of the dataset dimensions %r' %
-                                 (dim, k, list(dimensions)))
-            elif dimensions[dim] != length:
-                raise ValueError('dimension %r on variable %r has length '
-                                 '%s but on the dataset has length %s' %
-                                 (dim, k, length, dimensions[dim]))
 
 
 def open_dataset(nc, *args, **kwargs):
@@ -96,53 +30,6 @@ def open_dataset(nc, *args, **kwargs):
     return Dataset.load_store(store)
 
 
-class _IndicesCache(MutableMapping):
-    """Cache for Dataset indices"""
-    def __init__(self, dataset, cache=None):
-        self.dataset = dataset
-        self.cache = {} if cache is None else dict(cache)
-        # for performance reasons, we could remove this:
-        self.sync()
-
-    def build_index(self, key):
-        """Cache the index for the dimension 'key'"""
-        self.cache[key] = self.dataset._create_index(key)
-
-    def sync(self):
-        """Cache indices for all dimensions in this dataset"""
-        for key in self.dataset.dimensions:
-            self.build_index(key)
-
-    def __getitem__(self, key):
-        if not key in self.cache:
-            assert key in self.dataset.dimensions
-            self.build_index(key)
-        return self.cache[key]
-
-    def __setitem__(self, key, value):
-        self.cache[key] = value
-
-    def __delitem__(self, key):
-        del self.cache[key]
-
-    def __iter__(self):
-        return iter(self.dataset.dimensions)
-
-    def __len__(self):
-        return len(self.dataset.dimensions)
-
-    def __contains__(self, key):
-        return key in self.dataset.dimensions
-
-    def __repr__(self):
-        contents = '\n'.join("'%s': %s" %
-                             (k, str(v).replace(
-                                  '\n', '\n' + ' ' * (len(k) + 4)))
-                             for k, v in self.items())
-        return ("<class 'xray.data.%s' (dict-like)>\n%s"
-                % (type(self).__name__, contents))
-
-
 # list of attributes of pd.DatetimeIndex that are ndarrays of time info
 _DATETIMEINDEX_COMPONENTS = ['year', 'month', 'day', 'hour', 'minute',
                              'second', 'microsecond', 'nanosecond', 'date',
@@ -156,6 +43,8 @@ class Dataset(Mapping):
 
     Datasets are mappings from variable names to dataviews focused on those
     variable.
+
+    Note: the size of dimensions in a dataset cannot be changed.
 
     Attributes
     ----------
@@ -173,78 +62,79 @@ class Dataset(Mapping):
         Don't modify the store directly unless you want to avoid all validation
         checks.
     """
-    def __init__(self, variables=None, dimensions=None, attributes=None,
-                 indices=None, store=None):
+    def __init__(self, variables=None, attributes=None):
+        """To load data from a file or file-like object, use the `open_dataset`
+        function.
         """
-        If dimensions are not provided, they are inferred from the variables.
-
-        In general, load data from a store using the `open_dataset` function or
-        the `from_store` class method. The `store` argument should only be used
-        if you want to Dataset operations to modify stored data in-place.
-        Note, however, that modifying datasets in-place is not entirely
-        implemented and thus may lead to unexpected behavior.
-        """
-        # TODO: fill out this docstring
-        if store is None:
-            store = backends.InMemoryDataStore()
-        self.store = store
-
-        if attributes is not None:
-            store.set_attributes(attributes)
-
-        if dimensions is not None:
-            store.set_dimensions(dimensions)
-
+        self._variables = OrderedDict()
+        self._dimensions = OrderedDict()
         if variables is not None:
-            if dimensions is None:
-                store.set_dimensions(construct_dimensions(variables))
-            else:
-                check_dims_and_vars_consistency(dimensions, variables)
-            store.set_variables(variables)
+            self._set_variables(variables)
+        if attributes is None:
+            attributes = {}
+        self._attributes = OrderedDict(attributes)
 
-        if indices is None:
-            indices = {}
-        else:
-            for k, v in indices.iteritems():
-                if k not in self.dimensions or v.size != self.dimensions[k]:
-                    raise ValueError('inconsistent index %r' % k)
-        self._indices = _IndicesCache(self, indices)
+    def _as_variable(self, name, var):
+        if not isinstance(var, array.Array):
+            try:
+                var = array.Array(*var)
+            except TypeError:
+                raise TypeError('Dataset variables must be of type '
+                                'DatasetArray or Array, or a sequence of the '
+                                'form (dimensions, data[, attributes])')
+
+        if name in var.dimensions:
+            # convert the coordinate into a pandas.Index
+            if var.ndim != 1:
+                raise ValueError('a coordinate variable must be defined with '
+                                 '1-dimensional data')
+            attr = var.attributes
+            if 'units' in attr and 'since' in attr['units']:
+                var.data = utils.num2datetimeindex(var.data, attr.pop('units'),
+                                                   attr.pop('calendar', None))
+            else:
+                var.data = pd.Index(var.data)
+        return var
+
+    def _set_variables(self, variables):
+        """Set a mapping of variables and update dimensions"""
+        # save new variables into a temporary list so all the error checking
+        # can be done before updating _variables
+        new_variables = []
+        for k, var in variables.iteritems():
+            var = self._as_variable(k, var)
+            for dim, size in zip(var.dimensions, var.shape):
+                if dim not in self._dimensions:
+                    self._dimensions[dim] = size
+                    if dim not in variables and dim not in self._variables:
+                        coord = self._as_variable(dim, (dim, np.arange(size)))
+                        new_variables.append((dim, coord))
+                elif self._dimensions[dim] != size:
+                    raise ValueError('dimension %r on variable %r has size %s '
+                                     'but already is saved with size %s' %
+                                     (dim, k, size, self._dimensions[dim]))
+            new_variables.append((k, var))
+        self._variables.update(new_variables)
 
     @classmethod
     def load_store(cls, store):
-        return cls(store.variables, store.dimensions, store.attributes)
-
-    def _create_index(self, dim):
-        if dim in self.variables:
-            var = self.variables[dim]
-            data = var.data
-            attr = var.attributes
-            if 'units' in attr and 'since' in attr['units']:
-                index = utils.num2datetimeindex(data, attr['units'],
-                                                attr.get('calendar'))
-            else:
-                index = pd.Index(data)
-        elif dim in self.dimensions:
-            index = pd.Index(np.arange(self.dimensions[dim]))
-        else:
-            raise ValueError('cannot find index %r in dataset' % dim)
-        return index
-
-    @property
-    def indices(self):
-        return self._indices
+        return cls(store.variables, store.attributes)
 
     @property
     def variables(self):
-        return Frozen(self.store.variables)
+        return Frozen(self._variables)
 
     @property
     def attributes(self):
-        return Frozen(self.store.attributes)
+        return self._attributes
+
+    @attributes.setter
+    def attributes(self, value):
+        self._attributes = OrderedDict(value)
 
     @property
     def dimensions(self):
-        return Frozen(self.store.dimensions)
+        return Frozen(self._dimensions)
 
     def copy(self):
         """
@@ -256,8 +146,7 @@ class Dataset(Mapping):
         """
         Returns a shallow copy of the current object.
         """
-        return type(self)(self.variables, self.dimensions, self.attributes,
-                          indices=self.indices.cache)
+        return type(self)(self.variables, self.attributes)
 
     def __contains__(self, key):
         """
@@ -267,37 +156,35 @@ class Dataset(Mapping):
         return key in self.variables
 
     def __len__(self):
-        return len(self.variable)
+        return len(self.variables)
 
     def __iter__(self):
         return iter(self.variables)
 
     @property
     def _datetimeindices(self):
-        return [k for k, v in self.indices.iteritems()
-                if isinstance(v, pd.DatetimeIndex)]
+        return [k for k, v in self.variables.iteritems()
+                if isinstance(v._data, pd.DatetimeIndex)]
 
     def _get_virtual_variable(self, key):
-        if key in self.indices:
-            return array.Array([key], self.indices[key].values)
         split_key = key.split('.')
         if len(split_key) == 2:
-            var, suffix = split_key
-            if var in self._datetimeindices:
-                if suffix in _DATETIMEINDEX_COMPONENTS:
-                    return array.Array([var], getattr(self.indices[var], suffix))
-                elif suffix == 'season':
+            name, suffix = split_key
+            if name in self._datetimeindices:
+                if suffix == 'season':
                     # seasons = np.array(['DJF', 'MAM', 'JJA', 'SON'])
-                    month = self.indices[var].month
-                    return array.Array([var], (month // 3) % 4 + 1)
+                    month = self.variables[name].data.month
+                    data = (month // 3) % 4 + 1
+                else:
+                    data = getattr(self.variables[name].data, suffix)
+                return array.Array(self.variables[name].dimensions, data)
         raise ValueError('virtual variable %r not found' % key)
 
-    def _get_virtual_dataview(self, key):
+    def _get_virtual_dataset_array(self, key):
         virtual_var = self._get_virtual_variable(key)
-        new_vars = OrderedDict(self.variables.items() + [(key, virtual_var)])
-        ds = type(self)(new_vars, self.dimensions, self.attributes,
-                        indices=self.indices.cache)
-        return DatasetArray(ds, key)
+        ds = self.copy()
+        ds[key] = virtual_var
+        return ds[key]
 
     @property
     def virtual_variables(self):
@@ -305,37 +192,34 @@ class Dataset(Mapping):
         could be created on demand (because they can be calculated from other
         dataset variables or dimensions)
         """
-        possible_vars = list(self.dimensions)
+        possible_vars = []
         for k in self._datetimeindices:
             for suffix in _DATETIMEINDEX_COMPONENTS + ['season']:
                 possible_vars.append('%s.%s' % (k, suffix))
         return tuple(k for k in possible_vars if k not in self.variables)
 
     def __getitem__(self, key):
-        if key not in self.variables:
+        if key in self.variables:
+            return DatasetArray(self.select(key), key)
+        else:
             try:
-                return self._get_virtual_dataview(key)
+                return self._get_virtual_dataset_array(key)
             except ValueError:
                 raise KeyError('dataset contains no variable with name %r '
                                % key)
-        else:
-            return DatasetArray(self.select(key), key)
 
     def __setitem__(self, key, value):
-        # TODO: allow this operation to be destructive, overriding existing
-        # variables? If so, we may want to implement __delitem__, too.
-        # (We would need to change DatasetArray.__setitem__ in that case, because
-        # we definitely don't want to override focus variables.)
         if isinstance(value, DatasetArray):
-            # print 'value was ', repr(value)
-            # print 'renamed to ', repr(value.renamed())
-            # print 'setting item', repr(value.renamed(key).dataset)
             self.merge(value.renamed(key).dataset, inplace=True)
-        elif isinstance(value, array.Array):
-            self.set_variable(key, value)
         else:
-            raise TypeError('only DatasetArrays and Arrays can be added to '
-                            'datasets via `__setitem__`')
+            self._set_variables({key: value})
+
+    def __delitem__(self, key):
+        del self._variables[key]
+        dims = set().union(v.dimensions for v in self._variables.itervalues())
+        for dim in self._dimensions:
+            if dim not in dims:
+                del self._dimensions[dim]
 
     # mutable objects should not be hashable
     __hash__ = None
@@ -344,9 +228,7 @@ class Dataset(Mapping):
         try:
             # some stores (e.g., scipy) do not seem to preserve order, so don't
             # require matching dimension or variable order for equality
-            return (sorted(self.dimensions.items())
-                     == sorted(other.dimensions.items())
-                    and sorted(self.attributes.items())
+            return (sorted(self.attributes.items())
                         == sorted(other.attributes.items())
                     and all(k1 == k2 and utils.variable_equal(v1, v2)
                             for (k1, v1), (k2, v2)
@@ -360,10 +242,13 @@ class Dataset(Mapping):
 
     @property
     def coordinates(self):
-        """Coordinates are variables with names that match dimensions"""
+        """Coordinates are variables with names that match dimensions
+
+        They are always stored internally as arrays with data that is a
+        pandas.Index object
+        """
         return FrozenOrderedDict([(dim, self.variables[dim])
-                for dim in self.dimensions
-                if dim in self.variables])
+                                  for dim in self.dimensions])
 
     @property
     def noncoordinates(self):
@@ -372,14 +257,14 @@ class Dataset(Mapping):
         """
         return FrozenOrderedDict([(name, v)
                 for (name, v) in self.variables.iteritems()
-                if name not in self.coordinates])
+                if name not in self.dimensions])
 
     def dump_to_store(self, store):
         """Store dataset contents to a backends.*DataStore object"""
-        target = type(self)(self.variables, self.dimensions, self.attributes,
-                            store=store, indices=self.indices.cache)
-        target.store.sync()
-        return target
+        store.set_dimensions(self.dimensions)
+        store.set_variables(self.variables)
+        store.set_attributes(self.attributes)
+        store.sync()
 
     def dump(self, filepath, *args, **kwdargs):
         """Dump dataset contents to a location on disk using the netCDF4
@@ -430,170 +315,10 @@ class Dataset(Mapping):
         return '\n'.join(summary).replace('\t', ' ' * 4)
 
     def __repr__(self):
-        dim_summary = ', '.join('%s%s: %s' % ('@' if k in self else '', k, v)
-                                for k, v in self.dimensions.iteritems())
+        dim_summary = ', '.join('%s: %s' % (k, v) for k, v
+                                in self.dimensions.iteritems())
         return '<xray.%s (%s): %s>' % (type(self).__name__, dim_summary,
                                        ' '.join(self.noncoordinates))
-
-    def create_variable(self, name, dims, data, attributes=None):
-        """Create a new variable and add it to this dataset
-
-        Parameters
-        ----------
-        name : string
-            The name of the new variable. An exception will be raised if the
-            object already has a variable with this name. If name equals the
-            name of a dimension, then the new variable is treated as a
-            coordinate variable and must be 1-dimensional.
-        dims : tuple
-            The dimensions of the new variable. Elements must be dimensions of
-            the object.
-        data : numpy.ndarray
-            Data to populate the new variable.
-        attributes : dict_like or None, optional
-            Attributes to assign to the new variable. If None (default), an
-            empty attribute dictionary is initialized.
-
-        Returns
-        -------
-        var : Array
-            Reference to the newly created variable.
-        """
-        # any error checking should be taken care of by add_variable
-        v = array.Array(dims, np.asarray(data), attributes)
-        return self.add_variable(name, v)
-
-    def create_coordinate(self, name, data, attributes=None):
-        """Create a new dimension and a corresponding coordinate variable
-
-        This method combines the create_dimension and create_variable methods
-        for the common case when the variable is a 1-dimensional coordinate
-        variable with the same name as the dimension.
-
-        If the dimension already exists, this function proceeds unless there is
-        already a corresponding variable or if the lengths disagree.
-
-        Parameters
-        ----------
-        name : string
-            The name of the new dimension and variable. An exception will be
-            raised if the object already has a dimension or variable with this
-            name.
-        data : array_like
-            The coordinate values along this dimension; must be 1-dimensional.
-            The size of data is the length of the new dimension.
-        attributes : dict_like or None, optional
-            Attributes to assign to the new variable. If None (default), an
-            empty attribute dictionary is initialized.
-
-        Returns
-        -------
-        var : Array
-            Reference to the newly created coordinate variable.
-        """
-        # any error checking should be taken care of by add_coordinate
-        v = array.Array((name,), np.asarray(data), attributes)
-        return self.add_coordinate(v)
-
-    def add_dimension(self, name, length):
-        """Add a dimension to this dataset
-
-        Parameters
-        ----------
-        name : string
-            The name of the new dimension. An exception will be raised if the
-            object already has a dimension with this name.
-        length : int
-            The length of the new dimension; must a be non-negative integer.
-        """
-        if name in self.dimensions:
-            raise ValueError('dimension named %r already exists' % name)
-        length = int(length)
-        if length < 0:
-            raise ValueError('length must be non-negative')
-        self.store.set_dimension(name, length)
-
-    def add_variable(self, name, var):
-        """Add a variable to the dataset
-
-        Parameters
-        ----------
-        name : string
-            The name under which the variable will be added.
-        variable : Array
-            The variable to be added. If the desired action is to add a copy of
-            the variable be sure to do so before passing it to this function.
-
-        Returns
-        -------
-        Array
-            An Array object attached to the underlying datastore.
-        """
-        if name in self.variables:
-            raise ValueError("Array named %r already exists" % name)
-        return self.set_variable(name, var)
-
-    def add_coordinate(self, var):
-        """Add a coordinate variable to the dataset
-
-        Parameters
-        ----------
-        variable : Array
-            The coordinate variable to be added. Coordinate variables must be
-            1D, and will be added under the same name as their sole dimension.
-
-        Returns
-        -------
-        variable
-            An Array object attached to the underlying datastore.
-        """
-        # We need to be cleanly roll back the effects of
-        # create_dimension if create_variable fails, otherwise we will
-        # end up in a partial state.
-        name = var.dimensions[0]
-        if name in self.coordinates:
-            raise ValueError("coordinate named '%s' already exists" % name)
-        if var.ndim != 1:
-            raise ValueError("coordinate data must be 1-dimensional (vector)")
-        if name not in self.dimensions:
-            self.store.set_dimension(name, var.size)
-        elif self.dimensions[name] != var.size:
-            raise ValueError('dimension already exists with different length')
-        return self.store.set_variable(name, var)
-
-    def set_variable(self, name, var):
-        """Set a variable in the dataset
-
-        Unlike `add_variable`, this function allows for overriding existing
-        variables.
-
-        Parameters
-        ----------
-        name : string
-            The name under which the variable will be added.
-        variable : Array
-            The variable to be added. If the desired action is to add a copy of
-            the variable be sure to do so before passing it to this function.
-
-        Returns
-        -------
-        variable
-            An Array object attached to the underlying datastore.
-        """
-        # check old + new dimensions for consistency checks
-        new_dims = OrderedDict()
-        for dim, length in zip(var.dimensions, var.shape):
-            if dim not in self.dimensions:
-                new_dims[dim] = length
-        check_dims_and_vars_consistency(
-            dict(self.dimensions.items() + new_dims.items()),
-            {name: var})
-        # now set the new dimensions and variables, and rebuild the indices
-        self.store.set_dimensions(new_dims)
-        new_var = self.store.set_variable(name, var)
-        if name in list(self.indices) + list(new_dims):
-            self.indices.build_index(name)
-        return new_var
 
     def indexed_by(self, **indexers):
         """Return a new dataset with each array indexed along the specified
@@ -635,20 +360,13 @@ class Dataset(Mapping):
         variables = OrderedDict()
         for name, var in self.variables.iteritems():
             var_indexers = {k: v for k, v in indexers.iteritems()
-                           if k in var.dimensions}
-            variables[name] = var.indexed_by(**var_indexers)
+                            if k in var.dimensions}
+            new_var = var.indexed_by(**var_indexers)
+            if new_var.ndim > 0:
+                # filter out variables reduced to numbers
+                variables[name] = new_var
 
-        indices = {k: (v[indexers[k]] if k in indexers else v)
-                   for k, v in self.indices.iteritems()}
-        # filter out non-indices (indices for which one value was selected)
-        indices = {k: v for k, v in indices.iteritems()
-                   if isinstance(v, pd.Index)}
-        variables = OrderedDict((k, v) for k, v in variables.iteritems()
-                                if v.ndim > 0)
-        dimensions = OrderedDict((k, indices[k].size) for k in self.dimensions
-                                 if k in indices)
-        return type(self)(variables, dimensions, self.attributes,
-                          indices=indices)
+        return type(self)(variables, self.attributes)
 
     def labeled_by(self, **indexers):
         """Return a new dataset with each variable indexed by coordinate labels
@@ -688,7 +406,7 @@ class Dataset(Mapping):
         Dataset.indexed_by
         Array.indexed_by
         """
-        return self.indexed_by(**remap_loc_indexers(self.indices, indexers))
+        return self.indexed_by(**remap_loc_indexers(self.variables, indexers))
 
     def renamed(self, name_dict):
         """
@@ -701,23 +419,19 @@ class Dataset(Mapping):
             names and whose values are new names.
         """
         for k in name_dict:
-            if k not in self.dimensions and k not in self.variables:
+            if k not in self.variables:
                 raise ValueError("Cannot rename %r because it is not a "
-                                 "variable or dimension in this dataset" % k)
+                                 "variable in this dataset" % k)
         variables = OrderedDict()
         for k, v in self.variables.iteritems():
             name = name_dict.get(k, k)
             dims = tuple(name_dict.get(dim, dim) for dim in v.dimensions)
             #TODO: public interface for renaming a variable without loading
-            # data
-            variables[name] = array.Array(dims, v._data, v.attributes)
+            # data?
+            variables[name] = array.Array(dims, v._data, v.attributes,
+                                          v._indexing_mode)
 
-        dimensions = OrderedDict((name_dict.get(k, k), v)
-                                 for k, v in self.dimensions.iteritems())
-        indices = {name_dict.get(k, k): v
-                   for k, v in self.indices.cache.items()}
-        return type(self)(variables, dimensions, self.attributes,
-                          indices=indices)
+        return type(self)(variables, self.attributes)
 
     def merge(self, other, inplace=False):
         """Merge two datasets into a single new dataset
@@ -745,27 +459,17 @@ class Dataset(Mapping):
             are silently dropped.
         """
         # check for conflicts
-        utils.update_safety_check(self.noncoordinates, other.noncoordinates,
+        utils.update_safety_check(self.variables, other.variables,
                                   compat=utils.variable_equal)
-        utils.update_safety_check(self.dimensions, other.dimensions)
-        # note: coordinates are checked by comparing indices instead of
-        # variables, which lets us merge two datasets even if they have
-        # different time units
-        utils.update_safety_check(self.indices, other.indices,
-                                  compat=np.array_equal)
         # update contents
         obj = self if inplace else self.copy()
-        obj.store.set_variables(OrderedDict((k, v) for k, v
-                                            in other.variables.iteritems()
-                                            if k not in obj.variables))
-        obj.store.set_dimensions(OrderedDict((k, v) for k, v
-                                             in other.dimensions.iteritems()
-                                             if k not in obj.dimensions))
-        obj._indices.update(other.indices.cache)
+        obj._set_variables(OrderedDict((k, v) for k, v
+                                       in other.variables.iteritems()
+                                       if k not in obj.variables))
         # remove conflicting attributes
         for k, v in other.attributes.iteritems():
-            if k in self.attributes and not v != self.attributes[k]:
-                obj.store.del_attribute(k)
+            if k in self.attributes and v != self.attributes[k]:
+                del self.attributes[k]
         return obj
 
     def select(self, *names):
@@ -783,12 +487,10 @@ class Dataset(Mapping):
         Returns
         -------
         Dataset
-            The returned object has the same attributes as the original. A
-            dimension is included if at least one of the specified variables is
-            defined along that dimension. Coordinate variables (1-dimensional
-            variables with the same name as a dimension) that correspond to an
-            included dimension are also included. All other variables are
-            dropped.
+            The returned object has the same attributes as the original.
+            Variables are included (recursively) if at least one of the
+            specified variables refers to that variable in its dimensions or
+            "coordinates" attribute. All other variables are dropped.
         """
         if not all(k in self.variables for k in names):
             raise ValueError(
@@ -814,32 +516,23 @@ class Dataset(Mapping):
             queue |= new_names - selected_names
             selected_names |= new_names
 
-        def ordered_keys_in(dictionary, selection):
-            return OrderedDict((k, v) for k, v in dictionary.iteritems()
-                               if k in selection)
+        variables = OrderedDict((k, v) for k, v in self.variables.iteritems()
+                                if k in selected_names)
+        return type(self)(variables, self.attributes)
 
-        variables = ordered_keys_in(self.variables, selected_names)
-        dimensions = ordered_keys_in(self.dimensions, selected_names)
-        indices = ordered_keys_in(self.indices.cache, selected_names)
-        return type(self)(variables, dimensions, self.attributes,
-                          indices=indices)
-
-    def unselect(self, *names, **kwargs):
+    def unselect(self, *names):
         """Returns a new dataset without the named variables
 
         Parameters
         ----------
         *names : str
             Names of the variables to omit from the returned object.
-        omit_dimensions : bool, optional (default True)
-            Whether or not to also omit dimensions with the given names. All
-            variables along omited dimensions will also be removed.
 
         Returns
         -------
         Dataset
-            New dataset based on this dataset. Only the named variables
-            /dimensions are removed.
+            New dataset based on this dataset. Only the named variables are
+            removed.
         """
         if any(k not in self.variables and k not in self.dimensions
                for k in names):
@@ -847,20 +540,7 @@ class Dataset(Mapping):
                              'names does not exist on this dataset')
         variables = OrderedDict((k, v) for k, v in self.variables.iteritems()
                                 if k not in names)
-        if kwargs.get('omit_dimensions', True):
-            dimensions = OrderedDict((k, v) for k, v
-                                     in self.dimensions.iteritems()
-                                     if k not in names)
-            variables = OrderedDict((k, v) for k, v in variables.iteritems()
-                                    if all(d in dimensions
-                                           for d in v.dimensions))
-            indices = {k: v for k, v in self.indices.cache.items()
-                       if k not in names}
-        else:
-            dimensions = self.dimensions
-            indices = self.indices
-        return type(self)(variables, dimensions, self.attributes,
-                          indices=indices)
+        return type(self)(variables, self.attributes)
 
     def replace(self, name, variable):
         """Returns a new dataset with the variable 'name' replaced with
@@ -878,8 +558,8 @@ class Dataset(Mapping):
         Dataset
             New dataset based on this dataset. Dimensions are unchanged.
         """
-        ds = self.unselect(name, omit_dimensions=False)
-        ds.add_variable(name, variable)
+        ds = self.unselect(name)
+        ds[name] = variable
         return ds
 
     def iterator(self, dimension):
@@ -910,7 +590,7 @@ class Dataset(Mapping):
         DataFrame. The DataFrame is be indexed by the Cartesian product of
         this dataset's indices.
         """
-        index_names = self.indices.keys()
+        index_names = self.coordinates.keys()
         columns = self.noncoordinates.keys()
         data = []
         # we need a template to broadcast all dataset variables against
@@ -921,39 +601,6 @@ class Dataset(Mapping):
             _, var_data = np.broadcast_arrays(template.data, var.data)
             data.append(var_data.reshape(-1))
         # note: pd.MultiIndex.from_product is new in pandas-0.13.1
-        index = pd.MultiIndex.from_product(self.indices.values(),
+        index = pd.MultiIndex.from_product(self.coordinates.values(),
                                            names=index_names)
         return pd.DataFrame(OrderedDict(zip(columns, data)), index=index)
-
-
-if __name__ == "__main__":
-    """
-    A bunch of regression tests.
-    """
-    base_dir = os.path.dirname(__file__)
-    test_dir = os.path.join(base_dir, '..', '..', 'test', )
-    write_test_path = os.path.join(test_dir, 'test_output.nc')
-    ecmwf_netcdf = os.path.join(test_dir, 'ECMWF_ERA-40_subset.nc')
-
-    import time
-    st = time.time()
-    nc = Dataset(ecmwf_netcdf)
-    print "Seconds to read from filepath : ", time.time() - st
-
-    st = time.time()
-    nc.dump(write_test_path)
-    print "Seconds to write : ", time.time() - st
-
-    st = time.time()
-    nc_string = nc.dumps()
-    print "Seconds to serialize : ", time.time() - st
-
-    st = time.time()
-    nc = Dataset(nc_string)
-    print "Seconds to deserialize : ", time.time() - st
-
-    st = time.time()
-    with open(ecmwf_netcdf, 'r') as f:
-        nc = Dataset(f)
-    print "Seconds to read from fobj : ", time.time() - st
-
