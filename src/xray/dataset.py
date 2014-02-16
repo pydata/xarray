@@ -37,6 +37,56 @@ _DATETIMEINDEX_COMPONENTS = ['year', 'month', 'day', 'hour', 'minute',
                              'quarter']
 
 
+class _VariablesDict(OrderedDict):
+    """_VariablesDict is an OrderedDict subclass that also implements "virtual"
+    variables that are created from other variables on demand
+
+    Currently, virtual variables are restricted to attributes of
+    pandas.DatetimeIndex objects (e.g., 'year', 'month', 'day', etc., plus
+    'season' for climatological season), which are accessed by getting the item
+    'time.year'.
+    """
+    def _datetimeindices(self):
+        return [k for k, v in self.iteritems()
+                if isinstance(v._data, pd.DatetimeIndex)]
+
+    @property
+    def virtual(self):
+        """Variables that don't exist in this dataset but for which could be
+        created on demand (because they can be calculated from other dataset
+        variables)
+        """
+        virtual_vars = []
+        for k in self._datetimeindices():
+            for suffix in _DATETIMEINDEX_COMPONENTS + ['season']:
+                name = '%s.%s' % (k, suffix)
+                if name not in self:
+                    virtual_vars.append(name)
+        return virtual_vars
+
+    def _get_virtual_variable(self, key):
+        split_key = key.split('.')
+        if len(split_key) == 2:
+            ref_var, suffix = split_key
+            if ref_var in self._datetimeindices():
+                if suffix == 'season':
+                    # seasons = np.array(['DJF', 'MAM', 'JJA', 'SON'])
+                    month = self[ref_var].data.month
+                    data = (month // 3) % 4 + 1
+                else:
+                    data = getattr(self[ref_var].data, suffix)
+                return array.Array(self[ref_var].dimensions, data)
+        raise KeyError('virtual variable %r not found' % key)
+
+    def __getitem__(self, key):
+        if key in self:
+            return OrderedDict.__getitem__(self, key)
+        elif key in self.virtual:
+            return self._get_virtual_variable(key)
+        else:
+            raise KeyError(repr(key))
+
+
 class Dataset(Mapping):
     """A netcdf-like data object consisting of dimensions, variables and
     attributes which together form a self describing data set
@@ -66,7 +116,7 @@ class Dataset(Mapping):
         """To load data from a file or file-like object, use the `open_dataset`
         function.
         """
-        self._variables = OrderedDict()
+        self._variables = _VariablesDict()
         self._dimensions = OrderedDict()
         if variables is not None:
             self._set_variables(variables)
@@ -162,51 +212,15 @@ class Dataset(Mapping):
         return iter(self.variables)
 
     @property
-    def _datetimeindices(self):
-        return [k for k, v in self.variables.iteritems()
-                if isinstance(v._data, pd.DatetimeIndex)]
-
-    def _get_virtual_variable(self, key):
-        split_key = key.split('.')
-        if len(split_key) == 2:
-            name, suffix = split_key
-            if name in self._datetimeindices:
-                if suffix == 'season':
-                    # seasons = np.array(['DJF', 'MAM', 'JJA', 'SON'])
-                    month = self.variables[name].data.month
-                    data = (month // 3) % 4 + 1
-                else:
-                    data = getattr(self.variables[name].data, suffix)
-                return array.Array(self.variables[name].dimensions, data)
-        raise ValueError('virtual variable %r not found' % key)
-
-    def _get_virtual_dataset_array(self, key):
-        virtual_var = self._get_virtual_variable(key)
-        ds = self.copy()
-        ds[key] = virtual_var
-        return ds[key]
-
-    @property
     def virtual_variables(self):
         """Arrays that don't exist in this dataset but for which dataviews
         could be created on demand (because they can be calculated from other
         dataset variables or dimensions)
         """
-        possible_vars = []
-        for k in self._datetimeindices:
-            for suffix in _DATETIMEINDEX_COMPONENTS + ['season']:
-                possible_vars.append('%s.%s' % (k, suffix))
-        return tuple(k for k in possible_vars if k not in self.variables)
+        return self._variables.virtual
 
     def __getitem__(self, key):
-        if key in self.variables:
-            return DatasetArray(self.select(key), key)
-        else:
-            try:
-                return self._get_virtual_dataset_array(key)
-            except ValueError:
-                raise KeyError('dataset contains no variable with name %r '
-                               % key)
+        return DatasetArray(self.select(key), key)
 
     def __setitem__(self, key, value):
         if isinstance(value, DatasetArray):
@@ -492,13 +506,14 @@ class Dataset(Mapping):
             specified variables refers to that variable in its dimensions or
             "coordinates" attribute. All other variables are dropped.
         """
-        if not all(k in self.variables for k in names):
+        possible_vars = set(self) | set(self.virtual_variables)
+        if not set(names) <= possible_vars:
             raise ValueError(
                 "One or more of the specified variables does not exist")
 
         def get_all_associated_names(name):
             yield name
-            if name in self:
+            if name in possible_vars:
                 var = self.variables[name]
                 for dim in var.dimensions:
                     yield dim
@@ -516,7 +531,8 @@ class Dataset(Mapping):
             queue |= new_names - selected_names
             selected_names |= new_names
 
-        variables = OrderedDict((k, v) for k, v in self.variables.iteritems()
+        variables = OrderedDict((k, self.variables[k])
+                                for k in list(self) + self.virtual_variables
                                 if k in selected_names)
         return type(self)(variables, self.attributes)
 
