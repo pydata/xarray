@@ -21,8 +21,11 @@ def _as_compatible_data(data):
     # don't check for __len__ or __iter__ so as not to warn if data is a numpy
     # numeric type like np.float32
     required = ['dtype', 'shape', 'size', 'ndim']
-    if np.iterable(data) and not all(hasattr(data, attr) for attr in required):
+    if not all(hasattr(data, attr) for attr in required):
         data = np.asarray(data)
+        if data.ndim == 0:
+            # unpack 0d data
+            data = data[()]
     elif isinstance(data, AbstractArray):
         # we don't want nested Array objects
         data = data.data
