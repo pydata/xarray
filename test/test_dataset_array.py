@@ -95,6 +95,10 @@ class TestDatasetArray(TestCase):
     def test_refocus(self):
         self.assertVarEqual(self.dv, self.dv.refocus(self.v))
         self.assertVarEqual(self.dv, self.dv.refocus(self.x))
+        self.ds['x'] = ('x', np.array(list('abcdefghij')))
+        self.assertVarEqual(self.dv.coordinates['x'],
+                            self.dv['x'].refocus(
+                                np.arange(10)).coordinates['x'])
 
     def test_dataset_getitem(self):
         dv = self.ds['foo']
@@ -171,12 +175,13 @@ class TestDatasetArray(TestCase):
         self.dv['y'] = 20 + 100 * self.ds['y'].array
 
         identity = lambda x: x
-        self.assertDSArrayEqual(self.dv, self.dv.groupby('x').apply(identity))
-        self.assertDSArrayEqual(self.dv, self.dv.groupby('x', squeeze=False
-                                                      ).apply(identity))
-        self.assertDSArrayEqual(self.dv, self.dv.groupby('y').apply(identity))
-        self.assertDSArrayEqual(self.dv, self.dv.groupby('y', squeeze=False
-                                                      ).apply(identity))
+        for g in ['x', 'y']:
+            for shortcut in [True, False]:
+                for squeeze in [True, False]:
+                    expected = self.dv
+                    actual = self.dv.groupby(g, squeeze=squeeze).apply(
+                        identity, shortcut=shortcut)
+                    self.assertDSArrayEqual(expected, actual)
 
         grouped = self.dv.groupby('abc')
 
@@ -188,6 +193,9 @@ class TestDatasetArray(TestCase):
              'abc': Array(['abc'], np.array(['a', 'b', 'c']))}), 'foo')
         self.assertDSArrayEqual(expected_sum_all,
                                 grouped.reduce(np.sum, dimension=None))
+        self.assertDSArrayEqual(expected_sum_all, grouped.sum(dimension=None))
+
+        grouped = self.dv.groupby('abc', squeeze=False)
         self.assertDSArrayEqual(expected_sum_all, grouped.sum(dimension=None))
 
         expected_sum_axis1 = DatasetArray(Dataset(

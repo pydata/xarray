@@ -84,8 +84,8 @@ class GroupBy(ImplementsReduce):
         else:
             # look through group_coord to find the unique values
             unique_values, group_indices = unique_value_groups(group_coord)
-            unique_coord = dataset.Dataset(
-                {group_name: (group_name, unique_values)})[group_name]
+            variables = {group_name: (group_name, unique_values)}
+            unique_coord = dataset.Dataset(variables)[group_name]
 
         self.group_indices = group_indices
         self.unique_coord = unique_coord
@@ -129,7 +129,7 @@ class GroupBy(ImplementsReduce):
         for indices in self.group_indices:
             yield self.array.indexed_by(**{self.group_dim: indices})
 
-    def apply(self, func, shortcut=True, **kwargs):
+    def apply(self, func, shortcut=False, **kwargs):
         """Apply a function over each array in the group and stack them
         together into a new array
 
@@ -166,9 +166,8 @@ class GroupBy(ImplementsReduce):
         applied : Array
             A new Array of the same type from which this grouping was created.
         """
-        shortcut = kwargs.pop('shortcut', True)
         applied = (func(ar, **kwargs) for ar in (self.iter_fast() if shortcut
-                                                 else self.iter_array()))
+                                                 else self.iter_arrays()))
 
         # peek at applied to determine which coordinate to stack over
         applied_example, applied = peek_at(applied)
@@ -196,7 +195,7 @@ class GroupBy(ImplementsReduce):
         return stacked.transpose(*new_order)
 
     def reduce(self, func, dimension=Ellipsis, axis=Ellipsis, shortcut=True,
-                 **kwargs):
+               **kwargs):
         """Reduce this variable by applying `func` along some dimension(s)
 
         Parameters
@@ -210,8 +209,8 @@ class GroupBy(ImplementsReduce):
         axis : int or sequence of int, optional
             Axis(es) over which to repeatedly apply `func`. Only one of the
             'dimension' and 'axis' arguments can be supplied. If neither are
-            supplied, then the reduction is calculated over the flattened array
-            (by calling `func(x)` without an axis argument).
+            supplied, then `{name}` is calculated over the axis of the variable
+            over which the group was formed.
         **kwargs : dict
             Additional keyword arguments passed on to `func`.
 
@@ -220,6 +219,12 @@ class GroupBy(ImplementsReduce):
         If `reduce` is called with multiple dimensions (or axes, which
         are converted into dimensions), then the reduce operation is
         performed repeatedly along each dimension in turn from left to right.
+
+        `Ellipsis` is used as a sentinel value for the default dimension and
+        axis to indicate that this operation is applied along the axis over
+        which the group was formed, instead of all axes. To instead apply
+        `{name}` simultaneously over all grouped values, use `dimension=None`
+        (or equivalently `axis=None`).
 
         Returns
         -------
@@ -260,11 +265,11 @@ class GroupBy(ImplementsReduce):
         converted into dimensions), then `{name}` is performed repeatedly along
         each dimension in turn from left to right.
 
-        `Ellipsis` is used as the default dimension and axis for this method to
-        indicate that this operation is by default applied along the axis along
-        which the grouping variable lies. To instead apply `{name}`
-        simultaneously over all grouped values, use `dimension=None` (or
-        equivalently `axis=None`).
+        `Ellipsis` is used as a sentinel value for the default dimension and
+        axis to indicate that this operation is applied along the axis over
+        which the group was formed, instead of all axes. To instead apply
+        `{name}` simultaneously over all grouped values, use `dimension=None`
+        (or equivalently `axis=None`).
 
         Returns
         -------

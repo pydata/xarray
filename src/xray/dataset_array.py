@@ -215,9 +215,14 @@ class DatasetArray(AbstractArray):
         """
         if not hasattr(new_var, 'dimensions'):
             new_var = type(self.array)(self.array.dimensions, new_var)
-        ds = self.unselected()
+        if self.focus not in self.dimensions:
+            ds = self.unselected()
+        else:
+            ds = self.dataset
         if name is None:
-            name = self.focus
+            name = self.focus + '_'
+        print new_var
+        print name
         ds[name] = new_var
         return type(self)(ds, name)
 
@@ -243,7 +248,27 @@ class DatasetArray(AbstractArray):
             yield (x, type(self)(ds, self.focus))
 
     def groupby(self, group, squeeze=True):
-        # TODO: document this method
+        """Group this dataset by unique values of the indicated group
+
+        Parameters
+        ----------
+        group : str or DatasetArray
+            Array whose unique values should be used to group this array. If a
+            string, must be the name of a variable contained in this dataset.
+        squeeze : boolean, optional
+            If "group" is a coordinate of this array, `squeeze` controls
+            whether the subarrays have a dimension of length 1 along that
+            coordinate or if the dimension is squeezed out.
+
+        Returns
+        -------
+        grouped : GroupBy
+            A `GroupBy` object patterned after `pandas.GroupBy` that can be
+            iterated over in the form of `(unique_value, grouped_array)` pairs
+            or over which grouped operations can be applied with the `apply`
+            and `reduce` methods (and the associated aliases `mean`, `sum`,
+            `std`, etc.).
+        """
         if isinstance(group, basestring):
             # merge in the group's dataset to allow group to be a virtual
             # variable in this dataset
@@ -266,14 +291,14 @@ class DatasetArray(AbstractArray):
         Returns
         -------
         transposed : DatasetArray
-            The returned DatasetArray's variable is transposed.
+            The returned DatasetArray's array is transposed.
 
         See Also
         --------
         numpy.transpose
         Array.transpose
         """
-        return self.refocus(self.array.transpose(*dimensions))
+        return self.refocus(self.array.transpose(*dimensions), self.focus)
 
     def reduce(self, func, dimension=None, axis=None, **kwargs):
         """Reduce this array by applying `func` along some dimension(s)
@@ -339,19 +364,7 @@ class DatasetArray(AbstractArray):
         aggregated : DatasetArray
             DatasetArray with aggregated data and the new dimension `new_dim`.
         """
-        # TODO: remove this method (replaced by groupby)
-        if isinstance(new_dim, basestring):
-            new_dim = self.dataset[new_dim]
-        unique, aggregated = self.array.aggregate(
-            func, new_dim.focus, new_dim, **kwargs)
-        # TODO: add options for how to summarize variables along aggregated
-        # dimensions instead of just dropping them?
-        drop = {k for k, v in self.dataset.variables.iteritems()
-                if any(dim in new_dim.dimensions for dim in v.dimensions)}
-        ds = self.dataset.unselect(*drop)
-        ds[unique.dimensions[0]] = unique
-        ds[self.focus] = aggregated
-        return type(self)(ds, self.focus)
+        return self.groupby(new_dim).reduce(func, **kwargs)
 
     @classmethod
     def from_stack(cls, arrays, dimension='stacked_dimension',
@@ -403,8 +416,10 @@ class DatasetArray(AbstractArray):
             for array in arrays:
                 if isinstance(array, cls):
                     unselected = array.unselected()
-                    if dim_name in unselected:
-                        unselected = unselected.unselect(dim_name)
+                    drop = {k for k, v in unselected.variables.iteritems()
+                            if k == dim_name or dim_name in v.dimensions}
+                    if drop:
+                        unselected = unselected.unselect(*drop)
                     ds.merge(unselected, inplace=True)
                     if focus is None:
                         focus = array.focus
@@ -429,8 +444,7 @@ class DatasetArray(AbstractArray):
         return self.dataset.to_dataframe()
 
     def __array_wrap__(self, result):
-        return self.refocus(self.array.__array_wrap__(result),
-                            self.focus + '_')
+        return self.refocus(self.array.__array_wrap__(result))
 
     @staticmethod
     def _unary_op(f):

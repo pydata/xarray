@@ -293,7 +293,6 @@ class Array(AbstractArray):
         data = self.data.transpose(*axes)
         return type(self)(dimensions, data, self.attributes)
 
-    # TODO: rename this method to 'reduce'
     def reduce(self, func, dimension=None, axis=None, **kwargs):
         """Reduce this array by applying `func` along some dimension(s)
 
@@ -366,6 +365,28 @@ class Array(AbstractArray):
         return new_var
 
     def groupby(self, group_name, group_array, squeeze=True):
+        """Group this dataset by unique values of the indicated group
+
+        Parameters
+        ----------
+        group_name : str
+            Name of the group array.
+        group_array : Array
+            Array whose unique values should be used to group this array.
+        squeeze : boolean, optional
+            If "group" is a coordinate of this array, `squeeze` controls
+            whether the subarrays have a dimension of length 1 along that
+            coordinate or if the dimension is squeezed out.
+
+        Returns
+        -------
+        grouped : GroupBy
+            A `GroupBy` object patterned after `pandas.GroupBy` that can be
+            iterated over in the form of `(unique_value, grouped_array)` pairs
+            or over which grouped operations can be applied with the `apply`
+            and `reduce` methods (and the associated aliases `mean`, `sum`,
+            `std`, etc.).
+        """
         return groupby.GroupBy(self, group_name, group_array, squeeze=squeeze)
 
     # TODO: remove this method (groupby encompasses its functionality)
