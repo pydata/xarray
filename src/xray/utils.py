@@ -55,9 +55,32 @@ def orthogonal_indexer(key, shape):
     # arrays) because integers (and only integers) collapse axes when used with
     # __getitem__
     non_int_keys = [n for n, k in enumerate(key) if not isinstance(k, int)]
+
+    def full_slices_unselected(n_list):
+        def all_full_slices(key_index):
+            return all(isinstance(key[n], slice) and key[n] == slice(None)
+                       for n in key_index)
+        if not n_list:
+            return n_list
+        elif all_full_slices(range(n_list[0] + 1)):
+            return full_slices_unselected(n_list[1:])
+        elif all_full_slices(range(n_list[-1], len(key))):
+            return full_slices_unselected(n_list[:-1])
+        else:
+            return n_list
+
+    # However, testing suggests it is OK to keep contiguous sequences of full
+    # slices at the start or the end of the key. Keeping slices around (when
+    # possible) instead of converting slices to arrays significantly speeds up
+    # indexing.
+    # (Honestly, I don't understand when it's not OK to keep slices even in
+    # between integer indices if as array is somewhere in the key, but such are
+    # the admittedly mind-boggling ways of numpy's advanced indexing.)
+    array_keys = full_slices_unselected(non_int_keys)
+
     array_indexers = np.ix_(*(expand_array(key[n], shape[n])
-                              for n in non_int_keys))
-    for i, n in enumerate(non_int_keys):
+                              for n in array_keys))
+    for i, n in enumerate(array_keys):
         key[n] = array_indexers[i]
     return tuple(key)
 
