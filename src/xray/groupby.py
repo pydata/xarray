@@ -39,7 +39,7 @@ def peek_at(iterable):
     return peek, itertools.chain([peek], gen)
 
 
-class GroupBy(ImplementsReduce):
+class GroupBy(object):
     """A object that implements the split-apply-combine pattern
 
     Modeled after `pandas.GroupBy`. The `GroupBy` object can be iterated over
@@ -52,29 +52,34 @@ class GroupBy(ImplementsReduce):
     Array.groupby
     DatasetArray.groupby
     """
-    def __init__(self, array, group_name, group_coord, squeeze=True):
+    def __init__(self, obj, group_name, group_coord, squeeze=True):
         """See Array.groupby and DatasetArray.groupby
         """
         if group_coord.ndim != 1:
             # TODO: remove this limitation?
             raise ValueError('`group_coord` must be 1 dimensional')
 
-        self.array = array
+        self.obj = obj
         self.group_coord = group_coord
         self.group_dim, = group_coord.dimensions
-        self.group_axis = array.dimensions.index(self.group_dim)
 
-        if group_coord.size != array.shape[self.group_axis]:
+        dimensions = obj.dimensions
+        try:
+            expected_size = dimensions[self.group_dim]
+        except TypeError:
+            expected_size = obj.shape[obj.dimensions.index(self.group_dim)]
+
+        if group_coord.size != expected_size:
             raise ValueError('the group variable\'s length does not '
                              'match the length of this variable along its '
                              'dimension')
 
-        if group_name in array.dimensions:
+        if group_name in obj.dimensions:
             # assume that group_coord already has sorted, unique values
             if group_coord.dimensions != (group_name,):
                 raise ValueError('`group_coord` is required to be a coordinate '
                                  'variable along the `group_name` dimension '
-                                 'if `group_name` is a dimension in `array`')
+                                 'if `group_name` is a dimension in `obj`')
             group_indices = np.arange(group_coord.size)
             if not squeeze:
                 # group_indices = group_indices.reshape(-1, 1)
@@ -102,32 +107,38 @@ class GroupBy(ImplementsReduce):
         return self.unique_coord.size
 
     def __iter__(self):
-        return itertools.izip(self.unique_coord, self.iter_arrays())
+        return itertools.izip(self.unique_coord, self.iter_indexed())
 
-    def iter_fast(self):
+    def iter_indexed(self):
+        for indices in self.group_indices:
+            yield self.obj.indexed_by(**{self.group_dim: indices})
+
+
+class ArrayGroupBy(GroupBy, ImplementsReduce):
+    def iter_shortcut(self):
+        """Fast version of `iter_groups` that yields Arrays without metadata
+        """
         # extract the underlying Array object
-        array = self.array
-        if hasattr(self.array, 'array'):
+        array = self.obj
+        if hasattr(array, 'array'):
             array = array.array
+
+        group_axis = array.dimensions.index(self.group_dim)
 
         # build the new dimensions
         index_int = isinstance(self.group_indices[0], int)
         if index_int:
             dims = tuple(d for n, d in enumerate(array.dimensions)
-                         if n != self.group_axis)
+                         if n != group_axis)
         else:
             dims = array.dimensions
 
         # slice the data and build the new Arrays directly
         for indices in self.group_indices:
-            indexer = tuple(indices if n == self.group_axis else slice(None)
+            indexer = tuple(indices if n == group_axis else slice(None)
                             for n in range(array.ndim))
             data = array.data[indexer]
             yield array_.Array(dims, data)
-
-    def iter_arrays(self):
-        for indices in self.group_indices:
-            yield self.array.indexed_by(**{self.group_dim: indices})
 
     def apply(self, func, shortcut=False, **kwargs):
         """Apply a function over each array in the group and stack them
@@ -166,8 +177,8 @@ class GroupBy(ImplementsReduce):
         applied : Array
             A new Array of the same type from which this grouping was created.
         """
-        applied = (func(ar, **kwargs) for ar in (self.iter_fast() if shortcut
-                                                 else self.iter_arrays()))
+        applied = (func(ar, **kwargs) for ar in (self.iter_shortcut() if shortcut
+                                                 else self.iter_indexed()))
 
         # peek at applied to determine which coordinate to stack over
         applied_example, applied = peek_at(applied)
@@ -178,16 +189,16 @@ class GroupBy(ImplementsReduce):
             stack_coord = self.unique_coord
             indexers = np.arange(self.unique_coord.size)
 
-        from_stack_kwargs = {'template': self.array} if shortcut else {}
-        stacked = type(self.array).from_stack(applied, stack_coord, indexers,
-                                              **from_stack_kwargs)
+        from_stack_kwargs = {'template': self.obj} if shortcut else {}
+        stacked = type(self.obj).from_stack(applied, stack_coord, indexers,
+                                            **from_stack_kwargs)
 
         # now, reorder the stacked array's dimensions so that those that
         # appeared in the original array appear in the same order they did
         # originally
         stack_dim, = stack_coord.dimensions
         original_dims = [stack_dim if d == self.group_dim else d
-                         for d in self.array.dimensions
+                         for d in self.obj.dimensions
                          if d in stacked.dimensions or d == self.group_dim]
         iter_original_dims = iter(original_dims)
         new_order = [iter_original_dims.next() if d in original_dims else d
@@ -282,4 +293,4 @@ class GroupBy(ImplementsReduce):
     _reduce_axis_default = Ellipsis
 
 
-inject_reduce_methods(GroupBy)
+inject_reduce_methods(ArrayGroupBy)

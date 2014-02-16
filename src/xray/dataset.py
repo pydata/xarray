@@ -8,6 +8,7 @@ from collections import OrderedDict, Mapping
 import array_ as array
 import backends
 import conventions
+import groupby
 import utils
 from dataset_array import DatasetArray
 from utils import FrozenOrderedDict, Frozen, remap_loc_indexers
@@ -584,26 +585,31 @@ class Dataset(Mapping):
         ds[name] = variable
         return ds
 
-    def iterator(self, dimension):
-        """Iterate along a data dimension
-
-        Returns an iterator yielding (coordinate, dataset) pairs for each
-        coordinate value along the specified dimension.
+    def groupby(self, group, squeeze=True):
+        """Group this dataset by unique values of the indicated group
 
         Parameters
         ----------
-        dimension : string
-            The dimension along which to iterate.
+        group : str or DatasetArray
+            Array whose unique values should be used to group this array. If a
+            string, must be the name of a variable contained in this dataset.
+        squeeze : boolean, optional
+            If "group" is a coordinate of this array, `squeeze` controls
+            whether the subarrays have a dimension of length 1 along that
+            coordinate or if the dimension is squeezed out.
 
         Returns
         -------
-        it : iterator
-            The returned iterator yields pairs of scalar-valued coordinate
-            variables and Dataset objects.
+        grouped : GroupBy
+            A `GroupBy` object patterned after `pandas.GroupBy` that can be
+            iterated over in the form of `(unique_value, grouped_array)` pairs.
         """
-        coord = self.variables[dimension]
-        for i in xrange(self.dimensions[dimension]):
-            yield (coord[i], self.indexed_by(**{dimension: i}))
+        if isinstance(group, basestring):
+            # merge in the group's dataset to allow group to be a virtual
+            # variable in this dataset
+            ds = self.merge(self[group].dataset)
+            group = DatasetArray(ds, group)
+        return groupby.GroupBy(self, group.focus, group, squeeze=squeeze)
 
     def to_dataframe(self):
         """Convert this dataset into a pandas.DataFrame

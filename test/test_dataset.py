@@ -50,9 +50,9 @@ class DataTest(TestCase):
         with self.assertRaisesRegexp(ValueError, 'must be defined with 1-d'):
             Dataset({'a': var1, 'x': var3})
 
-    def test_iterator(self):
+    def test_groupby(self):
         data = create_test_data(self.get_store())
-        for n, (t, sub) in enumerate(list(data.iterator('dim1'))[:3]):
+        for n, (t, sub) in enumerate(list(data.groupby('dim1'))[:3]):
             self.assertEqual(data['dim1'][n], t)
             self.assertVarEqual(data['var1'][n], sub['var1'])
             self.assertVarEqual(data['var2'][n], sub['var2'])

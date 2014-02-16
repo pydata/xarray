@@ -238,24 +238,6 @@ class TestArray(TestCase):
             self.assertVarEqual(ke, ka)
             self.assertVarEqual(ve, va)
 
-    def test_aggregate(self):
-        agg_var = Array(['y'], np.array(['a', 'a', 'b']))
-        v = Array(['x', 'y'], self.d)
-        expected_unique = Array(['abc'], np.array(['a', 'b']))
-        expected_aggregated = Array(['x', 'abc'],
-                                    np.array([self.d[:, :2].sum(axis=1),
-                                              self.d[:, 2:].sum(axis=1)]).T,
-                                    {'cell_methods': 'y: sum'})
-        actual_unique, actual_aggregated = v.aggregate(np.sum, 'abc', agg_var)
-        self.assertVarEqual(expected_unique, actual_unique)
-        self.assertVarEqual(expected_aggregated, actual_aggregated)
-        # should be equivalent to aggregate by a dataset array, too
-        alt_agg_var = Dataset({'abc': agg_var})['abc']
-        actual_unique, actual_aggregated = v.aggregate(np.sum, 'abc',
-                                                       alt_agg_var)
-        self.assertVarEqual(expected_unique, actual_unique)
-        self.assertVarEqual(expected_aggregated, actual_aggregated)
-
     def test_from_stack(self):
         x = np.arange(5)
         y = np.ones(5)

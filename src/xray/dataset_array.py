@@ -216,36 +216,15 @@ class DatasetArray(AbstractArray):
         if not hasattr(new_var, 'dimensions'):
             new_var = type(self.array)(self.array.dimensions, new_var)
         if self.focus not in self.dimensions:
+            # only unselect the focus from the dataset if it isn't a coordinate
+            # variable
             ds = self.unselected()
         else:
             ds = self.dataset
         if name is None:
             name = self.focus + '_'
-        print new_var
-        print name
         ds[name] = new_var
         return type(self)(ds, name)
-
-    def iterator(self, dimension):
-        """Iterate along a data dimension
-
-        Returns an iterator yielding (coordinate, dataview) pairs for each
-        coordinate value along the specified dimension.
-
-        Parameters
-        ----------
-        dimension : string
-            The dimension along which to iterate.
-
-        Returns
-        -------
-        it : iterator
-            The returned iterator yields pairs of scalar-valued coordinate
-            arrays and DatasetArray objects.
-        """
-        # TODO: remove this method (replaced by groupby)
-        for (x, ds) in self.dataset.iterator(dimension):
-            yield (x, type(self)(ds, self.focus))
 
     def groupby(self, group, squeeze=True):
         """Group this dataset by unique values of the indicated group
@@ -274,7 +253,7 @@ class DatasetArray(AbstractArray):
             # variable in this dataset
             ds = self.dataset.merge(self.dataset[group].dataset)
             group = DatasetArray(ds, group)
-        return groupby.GroupBy(self, group.focus, group, squeeze=squeeze)
+        return groupby.ArrayGroupBy(self, group.focus, group, squeeze=squeeze)
 
     def transpose(self, *dimensions):
         """Return a new DatasetArray object with transposed dimensions
@@ -341,30 +320,6 @@ class DatasetArray(AbstractArray):
         ds = self.dataset.unselect(*drop)
         ds[self.focus] = var
         return type(self)(ds, self.focus)
-
-    def aggregate(self, func, new_dim, **kwargs):
-        """Aggregate this array by applying `func` to grouped elements
-
-        Parameters
-        ----------
-        func : function
-            Function which can be called in the form
-            `func(x, axis=axis, **kwargs)` to reduce an np.ndarray over an
-            integer valued axis.
-        new_dim : str or DatasetArray
-            Name of a variable in this array's dataset or DatasetArray by which
-            to group variable elements. The dimension along which this variable
-            exists will be replaced by this name. The array must be one-
-            dimensional.
-        **kwargs : dict
-            Additional keyword arguments passed on to `func`.
-
-        Returns
-        -------
-        aggregated : DatasetArray
-            DatasetArray with aggregated data and the new dimension `new_dim`.
-        """
-        return self.groupby(new_dim).reduce(func, **kwargs)
 
     @classmethod
     def from_stack(cls, arrays, dimension='stacked_dimension',

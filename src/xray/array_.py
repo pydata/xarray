@@ -32,29 +32,6 @@ def _as_compatible_data(data):
     return data
 
 
-def unique_value_groups(ar):
-    """Group an array by its unique values
-
-    Parameters
-    ----------
-    ar : array_like
-        Input array. This will be flattened if it is not already 1-D.
-
-    Returns
-    -------
-    values : np.ndarray
-        Sorted, unique values as returned by `np.unique`.
-    indices : list of lists of int
-        Each element provides the integer indices in `ar` with values given by
-        the corresponding value in `unique_values`.
-    """
-    values, inverse = np.unique(ar, return_inverse=True)
-    groups = [[] for _ in range(len(values))]
-    for n, g in enumerate(inverse):
-        groups[g].append(n)
-    return values, groups
-
-
 class Array(AbstractArray):
     """A netcdf-like variable consisting of dimensions, data and attributes
     which describe a single Array. A single Array object is not fully described
@@ -387,52 +364,8 @@ class Array(AbstractArray):
             and `reduce` methods (and the associated aliases `mean`, `sum`,
             `std`, etc.).
         """
-        return groupby.GroupBy(self, group_name, group_array, squeeze=squeeze)
-
-    # TODO: remove this method (groupby encompasses its functionality)
-    def aggregate(self, func, new_dim_name, group_by, **kwargs):
-        """Aggregate this variable by applying `func` to grouped elements
-
-        Parameters
-        ----------
-        func : function
-            Function which can be called in the form
-            `func(x, axis=axis, **kwargs)` to reduce an np.ndarray over an
-            integer valued axis.
-        new_dim_name : str or sequence of str, optional
-            Name of the new dimension to create.
-        group_by : Array
-            1D variable which contains the values by which to group.
-        **kwargs : dict
-            Additional keyword arguments passed on to `func`.
-
-        Returns
-        -------
-        unique : Array
-            1D variable of unique values in group, along the dimension given by
-            `new_dim_name`.
-        aggregated : Array
-            Array with aggregated data and the original dimension from
-            `group_by` replaced by `new_dim_name`.
-        """
-        if group_by.ndim != 1:
-            # TODO: remove this limitation?
-            raise ValueError('group variables must be 1 dimensional')
-        dim = group_by.dimensions[0]
-        axis = self.dimensions.index(dim)
-        if group_by.size != self.shape[axis]:
-            raise ValueError('the group variable\'s length does not '
-                             'match the length of this variable along its '
-                             'dimension')
-        unique_values, group_indices = unique_value_groups(group_by.data)
-        aggregated = (self.indexed_by(**{dim: indices}).reduce(
-                          func, dim, axis=None, **kwargs)
-                      for indices in group_indices)
-        stacked = type(self).from_stack(aggregated, new_dim_name,
-                                        length=unique_values.size)
-        ordered_dims = [new_dim_name if d == dim else d for d in self.dimensions]
-        unique = type(self)([new_dim_name], unique_values)
-        return unique, stacked.transpose(*ordered_dims)
+        return groupby.ArrayGroupBy(
+            self, group_name, group_array, squeeze=squeeze)
 
     @classmethod
     def from_stack(cls, variables, dimension='stacked_dimension',

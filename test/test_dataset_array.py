@@ -56,14 +56,6 @@ class TestDatasetArray(TestCase):
         self.assertEqual(self.dv[0, 0].dataset,
                          Dataset({'foo': self.dv.array[0, 0]}))
 
-    def test_iteration(self):
-        for ((act_x, act_dv), (exp_x, exp_ds)) in \
-                zip(self.dv.iterator('y'), self.ds.iterator('y')):
-            self.assertVarEqual(exp_x, act_x)
-            self.assertDSArrayEqual(DatasetArray(exp_ds, 'foo'), act_dv)
-        for ((_, exp_dv), act_dv) in zip(self.dv.iterator('x'), self.dv):
-            self.assertDSArrayEqual(exp_dv, act_dv)
-
     def test_indexed_by(self):
         self.assertEqual(self.dv[0].dataset, self.ds.indexed_by(x=0))
         self.assertEqual(self.dv[:3, :5].dataset,
@@ -169,6 +161,14 @@ class TestDatasetArray(TestCase):
         # needs more...
         # should check which extra dimensions are dropped
 
+    def test_groupby_iter(self):
+        for ((act_x, act_dv), (exp_x, exp_ds)) in \
+                zip(self.dv.groupby('y'), self.ds.groupby('y')):
+            self.assertVarEqual(exp_x, act_x)
+            self.assertDSArrayEqual(DatasetArray(exp_ds, 'foo'), act_dv)
+        for ((_, exp_dv), act_dv) in zip(self.dv.groupby('x'), self.dv):
+            self.assertDSArrayEqual(exp_dv, act_dv)
+
     def test_groupby(self):
         agg_var = Array(['y'], np.array(['a'] * 9 + ['c'] + ['b'] * 10))
         self.dv['abc'] = agg_var
@@ -210,19 +210,6 @@ class TestDatasetArray(TestCase):
 
         self.assertDSArrayEqual(self.dv, grouped.apply(identity))
 
-    def test_aggregate(self):
-        agg_var = Array('y', np.array(['a'] * 9 + ['c'] + ['b'] * 10))
-        self.ds['abc'] = agg_var
-        expected_unique, expected_var = \
-            self.dv.array.aggregate(np.mean, 'abc', agg_var)
-        expected = DatasetArray(Dataset(
-            {'foo': expected_var, 'x': self.ds.variables['x'],
-             'abc': expected_unique}), 'foo')
-        actual = self.dv.aggregate(np.mean, 'abc')
-        self.assertDSArrayEqual(expected, actual)
-        actual = self.dv.aggregate(np.mean, self.ds['abc'])
-        self.assertDSArrayEqual(expected, actual)
-
     def test_from_stack(self):
         self.ds['bar'] = Array(['x', 'y'], np.random.randn(10, 20))
         foo = self.ds['foo']
@@ -237,7 +224,7 @@ class TestDatasetArray(TestCase):
                             DatasetArray.from_stack([foo.array,
                                                      bar.array], 'w'))
         # from iteration:
-        stacked = DatasetArray.from_stack((v for _, v in foo.iterator('x')),
+        stacked = DatasetArray.from_stack((v for _, v in foo.groupby('x')),
                                       self.ds['x'])
         self.assertDSArrayEqual(foo, stacked)
 
