@@ -622,8 +622,12 @@ class Dataset(Mapping):
         columns = self.noncoordinates.keys()
         data = []
         # we need a template to broadcast all dataset variables against
-        template = array.Array(self.dimensions.keys(),
-                               np.empty(self.dimensions.values()))
+        # using stride_tricks lets us make the ndarray for broadcasting without
+        # having to allocate memory
+        shape = tuple(self.dimensions.values())
+        empty_data = np.lib.stride_tricks.as_strided(np.array(0), shape=shape,
+                                                     strides=[0] * len(shape))
+        template = array.Array(self.dimensions.keys(), empty_data)
         for k in columns:
             _, var = array.broadcast_variables(template, self[k])
             _, var_data = np.broadcast_arrays(template.data, var.data)
