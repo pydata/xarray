@@ -5,6 +5,7 @@ import re
 from collections import OrderedDict
 
 import numpy as np
+import pandas as pd
 
 import array_
 import dataset as dataset_
@@ -397,6 +398,17 @@ class DatasetArray(AbstractArray):
         indexed by the Cartesian product of the dataset's coordinates.
         """
         return self.dataset.to_dataframe()
+
+    def to_series(self):
+        """Conver this array into a pandas.Series
+
+        The Series is be indexed by the Cartesian product of the coordinates.
+        Unlike `to_dataframe`, only the variable at the focus of this array is
+        including in the returned series.
+        """
+        index = pd.MultiIndex.from_product(self.coordinates.values(),
+                                           names=self.coordinates.keys())
+        return pd.Series(self.data.reshape(-1), index=index, name=self.focus)
 
     def __array_wrap__(self, result):
         return self.refocus(self.array.__array_wrap__(result))

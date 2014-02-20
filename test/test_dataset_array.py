@@ -235,3 +235,10 @@ class TestDatasetArray(TestCase):
         dv1, dv2 = align(self.dv, self.dv[:5])
         self.assertDSArrayEqual(dv1, self.dv[:5])
         self.assertDSArrayEqual(dv2, self.dv[:5])
+
+    def test_to_series(self):
+        expected = self.dv.to_dataframe()['foo']
+        actual = self.dv.to_series()
+        self.assertNDArrayEqual(expected.values, actual.values)
+        self.assertNDArrayEqual(expected.index.values, actual.index.values)
+        self.assertEqual('foo', actual.name)
