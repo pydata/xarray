@@ -459,8 +459,8 @@ class Array(AbstractArray):
 
         return stacked
 
-    def __array_wrap__(self, result):
-        return type(self)(self.dimensions, result, self.attributes)
+    def __array_wrap__(self, obj, context=None):
+        return type(self)(self.dimensions, obj, self.attributes)
 
     @staticmethod
     def _unary_op(f):

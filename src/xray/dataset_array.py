@@ -410,8 +410,8 @@ class DatasetArray(AbstractArray):
                                            names=self.coordinates.keys())
         return pd.Series(self.data.reshape(-1), index=index, name=self.focus)
 
-    def __array_wrap__(self, result):
-        return self.refocus(self.array.__array_wrap__(result))
+    def __array_wrap__(self, obj, context=None):
+        return self.refocus(self.array.__array_wrap__(obj, context))
 
     @staticmethod
     def _unary_op(f):
