@@ -1,33 +1,115 @@
+import netCDF4 as nc4
 import numpy as np
+import pandas as pd
 
-from scidata import utils
-from . import TestCase
-
-
-class ReturnItem(object):
-    def __getitem__(self, key):
-        return key
+from xray import utils
+from . import TestCase, ReturnItem
 
 
-class TestExpandedIndexer(TestCase):
-    def test(self):
-        x = np.random.randn(10, 20, 30)
-        i = ReturnItem()
-        for i in [i[:], i[...], i[0, :, 10], i[:5, ...], i[np.arange(5)]]:
-            j = utils.expanded_indexer(i, 3)
-            self.assertArrayEqual(x[i], x[j])
+class TestIndexers(TestCase):
+    def set_to_zero(self, x, i):
+        x = x.copy()
+        x[i] = 0
+        return x
+
+    def test_expanded_indexer(self):
+        x = np.random.randn(10, 11, 12, 13, 14)
+        y = np.arange(5)
+        I = ReturnItem()
+        for i in [I[:], I[...], I[0, :, 10], I[..., 10], I[:5, ..., 0],
+                  I[y], I[y, y], I[..., y, y], I[..., 0, 1, 2, 3, 4]]:
+            j = utils.expanded_indexer(i, x.ndim)
+            self.assertNDArrayEqual(x[i], x[j])
+            self.assertNDArrayEqual(self.set_to_zero(x, i),
+                                    self.set_to_zero(x, j))
+
+    def test_orthogonal_indexer(self):
+        x = np.random.randn(10, 11, 12, 13, 14)
+        y = np.arange(5)
+        I = ReturnItem()
+        # orthogonal and numpy indexing should be equivalent, because we only
+        # use at most one array and it never in between two slice objects
+        # (i.e., we try to avoid numpy's mind-boggling "partial indexing"
+        # http://docs.scipy.org/doc/numpy/reference/arrays.indexing.html)
+        for i in [I[:], I[0], I[0, 0], I[:5], I[2:5], I[2:5:-1], I[:3, :4],
+                  I[:3, 0, :4], I[:3, 0, :4, 0], I[y], I[:, y], I[0, y],
+                  I[:2, :3, y], I[0, y, :, :4, 0]]:
+            j = utils.orthogonal_indexer(i, x.shape)
+            self.assertNDArrayEqual(x[i], x[j])
+            self.assertNDArrayEqual(self.set_to_zero(x, i),
+                                    self.set_to_zero(x, j))
+        # for more complicated cases, check orthogonal indexing is still
+        # equivalent to slicing
+        z = np.arange(2, 8, 2)
+        for i, j, shape in [
+                (I[y, y], I[:5, :5], (5, 5, 12, 13, 14)),
+                (I[y, z], I[:5, 2:8:2], (5, 3, 12, 13, 14)),
+                (I[0, y, y], I[0, :5, :5], (5, 5, 13, 14)),
+                (I[y, 0, z], I[:5, 0, 2:8:2], (5, 3, 13, 14)),
+                (I[y, :, z], I[:5, :, 2:8:2], (5, 11, 3, 13, 14)),
+                (I[0, :2, y, y, 0], I[0, :2, :5, :5, 0], (2, 5, 5)),
+                (I[0, :, y, :, 0], I[0, :, :5, :, 0], (11, 5, 13)),
+                (I[:, :, y, :, 0], I[:, :, :5, :, 0], (10, 11, 5, 13)),
+                (I[:, :, y, z, :], I[:, :, :5, 2:8:2], (10, 11, 5, 3, 14))]:
+            k = utils.orthogonal_indexer(i, x.shape)
+            self.assertEqual(shape, x[k].shape)
+            self.assertNDArrayEqual(x[j], x[k])
+            self.assertNDArrayEqual(self.set_to_zero(x, j),
+                                    self.set_to_zero(x, k))
+        # standard numpy (non-orthogonal) indexing doesn't work anymore
+        with self.assertRaisesRegexp(ValueError, 'only supports 1d'):
+            utils.orthogonal_indexer(x > 0, x.shape)
 
 
-class TestSafeMerge(TestCase):
+class TestDatetime(TestCase):
+    def test_num2datetimeindex(self):
+        for num_dates, units in [
+                (np.arange(1000), 'days since 2000-01-01'),
+                (12300 + np.arange(500), 'hours since 1680-01-01 00:00:00')]:
+            for calendar in ['standard', 'gregorian', 'proleptic_gregorian']:
+                expected = pd.Index(nc4.num2date(num_dates, units, calendar))
+                actual = utils.num2datetimeindex(num_dates, units, calendar)
+                self.assertNDArrayEqual(expected, actual)
+
+    def test_guess_time_units(self):
+        for dates, expected in [(pd.date_range('1900-01-01', periods=5),
+                                 'days since 1900-01-01 00:00:00'),
+                                (pd.date_range('1900-01-01 12:00:00', freq='H',
+                                               periods=2),
+                                 'hours since 1900-01-01 12:00:00'),
+                                (['1900-01-01', '1900-01-02',
+                                  '1900-01-02 00:00:01'],
+                                 'seconds since 1900-01-01 00:00:00')]:
+            self.assertEquals(expected, utils.guess_time_units(dates))
+
+
+class TestDictionaries(TestCase):
     def setUp(self):
         self.x = {'a': 'A', 'b': 'B'}
         self.y = {'c': 'C', 'b': 'B'}
+        self.z = {'a': 'Z'}
 
-    def test_good_merge(self):
-        actual = utils.safe_merge(self.x, self.y)
-        self.x.update(self.y)
-        self.assertEqual(self.x, actual)
+    def test_safe(self):
+        # should not raise exception:
+        utils.update_safety_check(self.x, self.y)
 
-    def test_bad_merge(self):
+    def test_unsafe(self):
         with self.assertRaises(ValueError):
-            utils.safe_merge(self.x, {'a': 'Z'})
+            utils.update_safety_check(self.x, self.z)
+
+    def test_ordered_dict_intersection(self):
+        self.assertEquals({'a': 'A', 'b': 'B'},
+                          utils.ordered_dict_intersection(self.x, self.y))
+        self.assertEquals({'b': 'B'},
+                          utils.ordered_dict_intersection(self.x, self.z))
+
+    def test_frozen(self):
+        x = utils.Frozen(self.x)
+        with self.assertRaises(TypeError):
+            x['foo'] = 'bar'
+        with self.assertRaises(TypeError):
+            del x['a']
+        with self.assertRaises(AttributeError):
+            x.update(self.y)
+        self.assertEquals(x.mapping, self.x)
+
