@@ -12,7 +12,7 @@ import pandas as pd
 from scipy.io import netcdf
 from collections import OrderedDict
 
-import array_
+import xarray
 import conventions
 from utils import FrozenOrderedDict, Frozen, datetimeindex2num
 
@@ -66,11 +66,11 @@ def convert_to_cf_variable(array):
         (data, units, calendar) = datetimeindex2num(array.data)
         attributes['units'] = units
         attributes['calendar'] = calendar
-    return array_.Array(array.dimensions, data, attributes)
+    return xarray.XArray(array.dimensions, data, attributes)
 
 
 def convert_scipy_variable(var):
-    return array_.Array(var.dimensions, var.data, var._attributes)
+    return xarray.XArray(var.dimensions, var.data, var._attributes)
 
 
 class ScipyDataStore(AbstractDataStore):
@@ -166,7 +166,7 @@ def convert_nc4_variable(var):
     # netcdf file would now have been scaled twice!
     attr = OrderedDict((k, var.getncattr(k)) for k in var.ncattrs()
                        if k not in ['scale_factor', 'add_offset'])
-    return array_.Array(var.dimensions, var, attr, indexing_mode='orthogonal')
+    return xarray.XArray(var.dimensions, var, attr, indexing_mode='orthogonal')
 
 
 class NetCDF4DataStore(AbstractDataStore):

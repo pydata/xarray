@@ -19,9 +19,9 @@ class TestIndexers(TestCase):
         for i in [I[:], I[...], I[0, :, 10], I[..., 10], I[:5, ..., 0],
                   I[y], I[y, y], I[..., y, y], I[..., 0, 1, 2, 3, 4]]:
             j = utils.expanded_indexer(i, x.ndim)
-            self.assertNDArrayEqual(x[i], x[j])
-            self.assertNDArrayEqual(self.set_to_zero(x, i),
-                                    self.set_to_zero(x, j))
+            self.assertArrayEqual(x[i], x[j])
+            self.assertArrayEqual(self.set_to_zero(x, i),
+                                  self.set_to_zero(x, j))
 
     def test_orthogonal_indexer(self):
         x = np.random.randn(10, 11, 12, 13, 14)
@@ -35,9 +35,9 @@ class TestIndexers(TestCase):
                   I[:3, 0, :4], I[:3, 0, :4, 0], I[y], I[:, y], I[0, y],
                   I[:2, :3, y], I[0, y, :, :4, 0]]:
             j = utils.orthogonal_indexer(i, x.shape)
-            self.assertNDArrayEqual(x[i], x[j])
-            self.assertNDArrayEqual(self.set_to_zero(x, i),
-                                    self.set_to_zero(x, j))
+            self.assertArrayEqual(x[i], x[j])
+            self.assertArrayEqual(self.set_to_zero(x, i),
+                                  self.set_to_zero(x, j))
         # for more complicated cases, check orthogonal indexing is still
         # equivalent to slicing
         z = np.arange(2, 8, 2)
@@ -53,9 +53,9 @@ class TestIndexers(TestCase):
                 (I[:, :, y, z, :], I[:, :, :5, 2:8:2], (10, 11, 5, 3, 14))]:
             k = utils.orthogonal_indexer(i, x.shape)
             self.assertEqual(shape, x[k].shape)
-            self.assertNDArrayEqual(x[j], x[k])
-            self.assertNDArrayEqual(self.set_to_zero(x, j),
-                                    self.set_to_zero(x, k))
+            self.assertArrayEqual(x[j], x[k])
+            self.assertArrayEqual(self.set_to_zero(x, j),
+                                  self.set_to_zero(x, k))
         # standard numpy (non-orthogonal) indexing doesn't work anymore
         with self.assertRaisesRegexp(ValueError, 'only supports 1d'):
             utils.orthogonal_indexer(x > 0, x.shape)
@@ -69,7 +69,7 @@ class TestDatetime(TestCase):
             for calendar in ['standard', 'gregorian', 'proleptic_gregorian']:
                 expected = pd.Index(nc4.num2date(num_dates, units, calendar))
                 actual = utils.num2datetimeindex(num_dates, units, calendar)
-                self.assertNDArrayEqual(expected, actual)
+                self.assertArrayEqual(expected, actual)
 
     def test_guess_time_units(self):
         for dates, expected in [(pd.date_range('1900-01-01', periods=5),

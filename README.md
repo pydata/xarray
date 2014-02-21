@@ -1,4 +1,4 @@
-# xray: transparently manipulate scientific datasets in Python
+# xray: extended arrays for working with scientific datasets in Python
 
 **xray** is a Python package for working with aligned sets of homogeneous,
 n-dimensional arrays. It implements flexible array operations and dataset
@@ -10,11 +10,12 @@ change.***
 
 ## Main Feaures
 
-  - A `DatasetArray` object that is compatible with NumPy's ndarray and ufuncs
-    but keeps ancilliary variables and metadata intact.
-  - Array broadcasting based on dimension names and coordinate indices
-    instead of only shapes.
-  - Flexible split-apply-combine functionality with the `Array.groupby` method
+  - Extended array objects (`XArray` and `DatasetArray`) that are compatible
+    with NumPy's ndarray and ufuncs but that keep ancilliary variables and
+    metadata intact.
+  - Flexible array broadcasting based on dimension names and coordinate indices.
+  - Lazily load arrays from netCDF files on disk or OpenDAP URLs.
+  - Flexible split-apply-combine functionality with the array `groupby` method
     (patterned after [pandas][pandas]).
   - Fast label-based indexing and (limited) time-series functionality built on
     [pandas][pandas].

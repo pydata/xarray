@@ -32,7 +32,7 @@ def _as_compatible_data(data):
     return data
 
 
-class Array(AbstractArray):
+class XArray(AbstractArray):
     """A netcdf-like variable consisting of dimensions, data and attributes
     which describe a single Array. A single Array object is not fully described
     outside the context of its parent Dataset (if you want such a fully
@@ -476,7 +476,7 @@ class Array(AbstractArray):
         def func(self, other):
             if isinstance(other, dataset_array.DatasetArray):
                 return NotImplemented
-            self_data, other_data, dims = _broadcast_variable_data(self, other)
+            self_data, other_data, dims = _broadcast_xarray_data(self, other)
             new_data = (f(self_data, other_data)
                         if not reflexive
                         else f(other_data, self_data))
@@ -492,7 +492,7 @@ class Array(AbstractArray):
     def _inplace_binary_op(f):
         @functools.wraps(f)
         def func(self, other):
-            self_data, other_data, dims = _broadcast_variable_data(self, other)
+            self_data, other_data, dims = _broadcast_xarray_data(self, other)
             if dims != self.dimensions:
                 raise ValueError('dimensions cannot change for in-place '
                                  'operations')
@@ -502,11 +502,11 @@ class Array(AbstractArray):
             return self
         return func
 
-ops.inject_special_operations(Array)
+ops.inject_special_operations(XArray)
 
 
-def broadcast_variables(first, second):
-    """Given two arrays, return two arrays with matching dimensions and numpy
+def broadcast_xarrays(first, second):
+    """Given two XArrays, return two AXrrays with matching dimensions and numpy
     broadcast compatible data
 
     Parameters
@@ -546,21 +546,22 @@ def broadcast_variables(first, second):
     # expand first_data's dimensions so it's broadcast compatible after
     # adding second's dimensions at the end
     first_data = first.data[(Ellipsis,) + (None,) * len(second_only_dims)]
-    new_first = Array(dimensions, first_data)
+    new_first = XArray(dimensions, first_data, first.attributes)
     # expand and reorder second_data so the dimensions line up
     first_only_dims = [d for d in dimensions if d not in second.dimensions]
     second_dims = list(second.dimensions) + first_only_dims
     second_data = second.data[(Ellipsis,) + (None,) * len(first_only_dims)]
-    new_second = Array(second_dims, second_data).transpose(*dimensions)
+    new_second = XArray(second_dims, second_data, first.attributes
+        ).transpose(*dimensions)
     return new_first, new_second
 
 
-def _broadcast_variable_data(self, other):
+def _broadcast_xarray_data(self, other):
     if isinstance(other, dataset.Dataset):
         raise TypeError('datasets do not support mathematical operations')
     elif all(hasattr(other, attr) for attr in ['dimensions', 'data', 'shape']):
         # `other` satisfies the xray.Array API
-        new_self, new_other = broadcast_variables(self, other)
+        new_self, new_other = broadcast_xarrays(self, other)
         self_data = new_self.data
         other_data = new_other.data
         dimensions = new_self.dimensions

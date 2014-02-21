@@ -2,7 +2,7 @@ import itertools
 
 from common import ImplementsReduce
 from ops import inject_reduce_methods
-import array_
+import xarray
 import dataset
 import numpy as np
 
@@ -12,7 +12,7 @@ def unique_value_groups(ar):
 
     Parameters
     ----------
-    ar : array_like
+    ar : xarraylike
         Input array. This will be flattened if it is not already 1-D.
 
     Returns
@@ -49,11 +49,11 @@ class GroupBy(object):
 
     See Also
     --------
-    Array.groupby
+    XArray.groupby
     DatasetArray.groupby
     """
     def __init__(self, obj, group_name, group_coord, squeeze=True):
-        """See Array.groupby and DatasetArray.groupby
+        """See XArray.groupby and DatasetArray.groupby
         """
         if group_coord.ndim != 1:
             # TODO: remove this limitation?
@@ -116,7 +116,7 @@ class GroupBy(object):
 
 class ArrayGroupBy(GroupBy, ImplementsReduce):
     def iter_shortcut(self):
-        """Fast version of `iter_groups` that yields Arrays without metadata
+        """Fast version of `iter_groups` that yields XArrays without metadata
         """
         # extract the underlying Array object
         array = self.obj
@@ -138,7 +138,7 @@ class ArrayGroupBy(GroupBy, ImplementsReduce):
             indexer = tuple(indices if n == group_axis else slice(None)
                             for n in range(array.ndim))
             data = array.data[indexer]
-            yield array_.Array(dims, data)
+            yield xarray.XArray(dims, data)
 
     def apply(self, func, shortcut=False, **kwargs):
         """Apply a function over each array in the group and stack them

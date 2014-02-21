@@ -5,7 +5,7 @@ import pandas as pd
 from cStringIO import StringIO
 from collections import OrderedDict, Mapping
 
-import array_ as array
+import xarray
 import backends
 import conventions
 import groupby
@@ -76,7 +76,7 @@ class _VariablesDict(OrderedDict):
                     data = (month // 3) % 4 + 1
                 else:
                     data = getattr(self[ref_var].data, suffix)
-                return array.Array(self[ref_var].dimensions, data)
+                return xarray.XArray(self[ref_var].dimensions, data)
         raise KeyError('virtual variable %r not found' % key)
 
     def __getitem__(self, key):
@@ -113,12 +113,12 @@ class Dataset(Mapping):
         Parameters
         ----------
         variables : dict-like, optional
-            A mapping from variable names to `xray.Array` objects or sequences
-            of the form `(dimensions, data[, attributes])` which can be used as
-            arguments to create a new `xray.Array`. Each dimension must have
-            the same length in all variables in which it appears. One
-            dimensional variables with name equal to their dimension are
-            coordinate variables, which means they are saved in the dataset as
+            A mapping from variable names to `XArray` objects or sequences of
+            the form `(dimensions, data[, attributes])` which can be used as
+            arguments to create a new `XArray`. Each dimension must have the
+            same length in all variables in which it appears. One dimensional
+            variables with name equal to their dimension are coordinate
+            variables, which means they are saved in the dataset as
             `pandas.Index` objects.
         attributes : dict-like, optional
             Global attributes to save on this dataset.
@@ -132,12 +132,12 @@ class Dataset(Mapping):
         self._attributes = OrderedDict(attributes)
 
     def _as_variable(self, name, var):
-        if not isinstance(var, array.Array):
+        if not isinstance(var, xarray.XArray):
             try:
-                var = array.Array(*var)
+                var = xarray.XArray(*var)
             except TypeError:
                 raise TypeError('Dataset variables must be of type '
-                                'DatasetArray or Array, or a sequence of the '
+                                'DatasetArray or XArray, or a sequence of the '
                                 'form (dimensions, data[, attributes])')
 
         if name in var.dimensions:
@@ -251,7 +251,7 @@ class Dataset(Mapping):
             # require matching dimension or variable order for equality
             return (sorted(self.attributes.items())
                         == sorted(other.attributes.items())
-                    and all(k1 == k2 and utils.variable_equal(v1, v2)
+                    and all(k1 == k2 and utils.xarray_equal(v1, v2)
                             for (k1, v1), (k2, v2)
                             in zip(sorted(self.variables.items()),
                                    sorted(other.variables.items()))))
@@ -449,8 +449,8 @@ class Dataset(Mapping):
             dims = tuple(name_dict.get(dim, dim) for dim in v.dimensions)
             #TODO: public interface for renaming a variable without loading
             # data?
-            variables[name] = array.Array(dims, v._data, v.attributes,
-                                          v._indexing_mode)
+            variables[name] = xarray.XArray(dims, v._data, v.attributes,
+                                            v._indexing_mode)
 
         return type(self)(variables, self.attributes)
 
@@ -481,7 +481,7 @@ class Dataset(Mapping):
         """
         # check for conflicts
         utils.update_safety_check(self.variables, other.variables,
-                                  compat=utils.variable_equal)
+                                  compat=utils.xarray_equal)
         # update contents
         obj = self if inplace else self.copy()
         obj._set_variables(OrderedDict((k, v) for k, v
@@ -627,9 +627,9 @@ class Dataset(Mapping):
         shape = tuple(self.dimensions.values())
         empty_data = np.lib.stride_tricks.as_strided(np.array(0), shape=shape,
                                                      strides=[0] * len(shape))
-        template = array.Array(self.dimensions.keys(), empty_data)
+        template = xarray.XArray(self.dimensions.keys(), empty_data)
         for k in columns:
-            _, var = array.broadcast_variables(template, self[k])
+            _, var = xarray.broadcast_xarrays(template, self[k])
             _, var_data = np.broadcast_arrays(template.data, var.data)
             data.append(var_data.reshape(-1))
         # note: pd.MultiIndex.from_product is new in pandas-0.13.1

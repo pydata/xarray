@@ -8,7 +8,7 @@ import tempfile
 import numpy as np
 import pandas as pd
 
-from xray import Dataset, DatasetArray, Array, backends, open_dataset
+from xray import Dataset, DatasetArray, XArray, backends, open_dataset
 from . import TestCase
 
 
@@ -42,9 +42,9 @@ class DataTest(TestCase):
                          'dim2: 50, dim3: 10): var1 var2 var3>', repr(data))
 
     def test_init(self):
-        var1 = Array('x', np.arange(100))
-        var2 = Array('x', np.arange(1000))
-        var3 = Array(['x', 'y'], np.arange(1000).reshape(100, 10))
+        var1 = XArray('x', np.arange(100))
+        var2 = XArray('x', np.arange(1000))
+        var3 = XArray(['x', 'y'], np.arange(1000).reshape(100, 10))
         with self.assertRaisesRegexp(ValueError, 'but already is saved'):
             Dataset({'a': var1, 'b': var2})
         with self.assertRaisesRegexp(ValueError, 'must be defined with 1-d'):
@@ -54,9 +54,9 @@ class DataTest(TestCase):
         data = create_test_data(self.get_store())
         for n, (t, sub) in enumerate(list(data.groupby('dim1'))[:3]):
             self.assertEqual(data['dim1'][n], t)
-            self.assertVarEqual(data['var1'][n], sub['var1'])
-            self.assertVarEqual(data['var2'][n], sub['var2'])
-            self.assertVarEqual(data['var3'][:, n], sub['var3'])
+            self.assertXArrayEqual(data['var1'][n], sub['var1'])
+            self.assertXArrayEqual(data['var2'][n], sub['var2'])
+            self.assertXArrayEqual(data['var3'][:, n], sub['var3'])
 
     def test_variable(self):
         a = Dataset()
@@ -80,10 +80,10 @@ class DataTest(TestCase):
         a['x'] = ('x', vec, attributes)
         self.assertTrue('x' in a.coordinates)
         self.assertIsInstance(a.coordinates['x'].data, pd.Index)
-        self.assertVarEqual(a.coordinates['x'], a.variables['x'])
+        self.assertXArrayEqual(a.coordinates['x'], a.variables['x'])
         b = Dataset()
         b['x'] = ('x', vec, attributes)
-        self.assertVarEqual(a['x'], b['x'])
+        self.assertXArrayEqual(a['x'], b['x'])
         self.assertEquals(a.dimensions, b.dimensions)
         with self.assertRaises(ValueError):
             a['x'] = ('x', vec[:5])
@@ -203,18 +203,18 @@ class DataTest(TestCase):
         v = data['var1']
         d1 = data['dim1']
         d2 = data['dim2']
-        self.assertVarEqual(v, v[d1.data])
-        self.assertVarEqual(v, v[d1])
-        self.assertVarEqual(v[:3], v[d1 < 3])
-        self.assertVarEqual(v[:, 3:], v[:, d2 >= 3])
-        self.assertVarEqual(v[:3, 3:], v[d1 < 3, d2 >= 3])
-        self.assertVarEqual(v[:3, :2], v[d1[:3], d2[:2]])
-        self.assertVarEqual(v[:3, :2], v[range(3), range(2)])
+        self.assertXArrayEqual(v, v[d1.data])
+        self.assertXArrayEqual(v, v[d1])
+        self.assertXArrayEqual(v[:3], v[d1 < 3])
+        self.assertXArrayEqual(v[:, 3:], v[:, d2 >= 3])
+        self.assertXArrayEqual(v[:3, 3:], v[d1 < 3, d2 >= 3])
+        self.assertXArrayEqual(v[:3, :2], v[d1[:3], d2[:2]])
+        self.assertXArrayEqual(v[:3, :2], v[range(3), range(2)])
 
     def test_select(self):
         data = create_test_data(self.get_store())
         ret = data.select(_testvar)
-        self.assertVarEqual(data[_testvar], ret[_testvar])
+        self.assertXArrayEqual(data[_testvar], ret[_testvar])
         self.assertTrue(_vars.keys()[1] not in ret.variables)
         self.assertRaises(ValueError, data.select, (_testvar, 'not_a_var'))
 
@@ -280,18 +280,18 @@ class DataTest(TestCase):
         data['time'] = ('time', np.arange(1000, dtype=np.int32),
                         {'units': 'days since 2000-01-01'})
         self.assertIsInstance(data['var1'], DatasetArray)
-        self.assertVarEqual(data['var1'], data.variables['var1'])
+        self.assertXArrayEqual(data['var1'], data.variables['var1'])
         self.assertItemsEqual(data['var1'].dataset.variables,
                               {'var1', 'dim1', 'dim2'})
         # access virtual variables
-        self.assertVarEqual(data['time.dayofyear'][:300],
-                            Array('time', 1 + np.arange(300)))
-        self.assertNDArrayEqual(data['time.month'].data,
-                                data.variables['time'].data.month)
+        self.assertXArrayEqual(data['time.dayofyear'][:300],
+                            XArray('time', 1 + np.arange(300)))
+        self.assertArrayEqual(data['time.month'].data,
+                              data.variables['time'].data.month)
 
     def test_setitem(self):
         # assign a variable
-        var = Array(['dim1'], np.random.randn(100))
+        var = XArray(['dim1'], np.random.randn(100))
         data1 = create_test_data(self.get_store())
         data1['A'] = var
         data2 = data1.copy()
@@ -316,7 +316,7 @@ class DataTest(TestCase):
     def test_to_dataframe(self):
         x = np.random.randn(10)
         y = np.random.randn(10)
-        ds = Dataset({'a': Array('t', x), 'b': Array('t', y)})
+        ds = Dataset({'a': XArray('t', x), 'b': XArray('t', y)})
         expected = pd.DataFrame(np.array([x, y]).T, columns=['a', 'b'],
                                 index=pd.Index(np.arange(10), name='t'))
         actual = ds.to_dataframe()

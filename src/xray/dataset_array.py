@@ -7,7 +7,7 @@ from collections import OrderedDict
 import numpy as np
 import pandas as pd
 
-import array_
+import xarray
 import dataset as dataset_
 import groupby
 import ops
@@ -386,8 +386,9 @@ class DatasetArray(AbstractArray):
             if focus is None:
                 focus = 'stacked_variable'
 
-        ds[focus] = array_.Array.from_stack(arrays, dimension,
-                                            stacked_indexers, length, template)
+        ds[focus] = xarray.XArray.from_stack(arrays, dimension,
+                                             stacked_indexers, length,
+                                             template)
         return cls(ds, focus)
 
     def to_dataframe(self):
