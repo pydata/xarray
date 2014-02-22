@@ -83,6 +83,13 @@ class TestDatetime(TestCase):
             self.assertEquals(expected, utils.guess_time_units(dates))
 
 
+class TestMisc(TestCase):
+    def test_unzipped_cartesian_product(self):
+        self.assertArrayEqual(
+            [[0, 0, 0, 1, 1, 1], ['a', 'b', 'c', 'a', 'b', 'c']],
+            utils.unzipped_cartesian_product([[0, 1], ['a', 'b', 'c']]))
+
+
 class TestDictionaries(TestCase):
     def setUp(self):
         self.x = {'a': 'A', 'b': 'B'}
