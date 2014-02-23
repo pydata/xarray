@@ -34,4 +34,7 @@ nosetests.xml
 .project
 .pydevproject
 
+# xray specific
 doc/_build
+src/xray/version.py
+
