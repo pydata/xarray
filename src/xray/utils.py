@@ -165,36 +165,6 @@ def datetimeindex2num(dates, units=None, calendar=None):
     return (num, units, calendar)
 
 
-def unzipped_cartesian_product(arrays):
-    """Given an iterable of arrays, return a list of arrays with elements equal
-    to the tensor product of the original arrays
-
-    Like an unzipped version of itertools.product, but uses numpy array
-    broadcasting. Given separate arrays for each level of a hierarchical index,
-    this function returns a list of arrays suitable for passing to
-    pandas.MultiIndex.from_arrays.
-    """
-    # monkey-patch numpy to apply the fix in GitHub issue #4343
-    from numpy.lib.stride_tricks import DummyArray
-    def as_strided(x, shape=None, strides=None):
-        """ Make an ndarray from the given array with the given shape and strides.
-        """
-        interface = dict(x.__array_interface__)
-        if shape is not None:
-            interface['shape'] = tuple(shape)
-        if strides is not None:
-            interface['strides'] = tuple(strides)
-        array = np.asarray(DummyArray(interface, base=x))
-        # Make sure dtype is correct in case of custom dtype
-        if array.dtype is not np.dtype('O'):
-            array.dtype = x.dtype
-        return array
-    np.lib.stride_tricks.as_strided = as_strided
-
-    # adapted from http://stackoverflow.com/a/11146645/809705
-    return [arr.reshape(-1) for arr in np.broadcast_arrays(*np.ix_(*arrays))]
-
-
 def xarray_equal(v1, v2, rtol=1e-05, atol=1e-08):
     """True if two objects have the same dimensions, attributes and data;
     otherwise False

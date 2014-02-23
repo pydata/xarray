@@ -11,8 +11,7 @@ import conventions
 import groupby
 import utils
 from dataset_array import DatasetArray
-from utils import (FrozenOrderedDict, Frozen, remap_loc_indexers,
-                   unzipped_cartesian_product)
+from utils import FrozenOrderedDict, Frozen, remap_loc_indexers
 
 date2num = nc4.date2num
 num2date = nc4.num2date
@@ -633,11 +632,9 @@ class Dataset(Mapping):
             _, var = xarray.broadcast_xarrays(template, self.variables[k])
             _, var_data = np.broadcast_arrays(template.data, var.data)
             data.append(var_data.reshape(-1))
-        coord_product = unzipped_cartesian_product(self.coordinates.values())
-        index = pd.MultiIndex.from_arrays(coord_product, names=index_names)
-        # this should work, except from_product doesn't handle pd.DatetimeIndex
-        # objects correctly:
-        # also, pd.MultiIndex.from_product is new in pandas-0.13.1
-        # index = pd.MultiIndex.from_product(self.coordinates.values(),
-        #                                    names=index_names)
+        # note: pd.MultiIndex.from_product is new in pandas-0.13.1
+        # np.asarray is necessary to work around a pandas bug:
+        # https://github.com/pydata/pandas/issues/6439
+        coords = [np.asarray(v) for v in self.coordinates.values()]
+        index = pd.MultiIndex.from_product(coords, names=index_names)
         return pd.DataFrame(OrderedDict(zip(columns, data)), index=index)

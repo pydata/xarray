@@ -407,8 +407,11 @@ class DatasetArray(AbstractArray):
         Unlike `to_dataframe`, only the variable at the focus of this array is
         including in the returned series.
         """
-        index = pd.MultiIndex.from_product(self.coordinates.values(),
-                                           names=self.coordinates.keys())
+        # np.asarray is necessary to work around a pandas bug:
+        # https://github.com/pydata/pandas/issues/6439
+        coords = [np.asarray(v) for v in self.coordinates.values()]
+        index_names = self.coordinates.keys()
+        index = pd.MultiIndex.from_product(coords, names=index_names)
         return pd.Series(self.data.reshape(-1), index=index, name=self.focus)
 
     def __array_wrap__(self, obj, context=None):
