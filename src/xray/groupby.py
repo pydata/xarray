@@ -8,7 +8,7 @@ import numpy as np
 
 
 def unique_value_groups(ar):
-    """Group an array by its unique values
+    """Group an array by its unique values.
 
     Parameters
     ----------
@@ -40,7 +40,7 @@ def peek_at(iterable):
 
 
 class GroupBy(object):
-    """A object that implements the split-apply-combine pattern
+    """A object that implements the split-apply-combine pattern.
 
     Modeled after `pandas.GroupBy`. The `GroupBy` object can be iterated over
     (unique_value, grouped_array) pairs, but the main way to interact with a
@@ -142,7 +142,7 @@ class ArrayGroupBy(GroupBy, ImplementsReduce):
 
     def apply(self, func, shortcut=False, **kwargs):
         """Apply a function over each array in the group and stack them
-        together into a new array
+        together into a new array.
 
         `func` is called like `func(ar, *args, **kwargs)` for each array `ar`
         in this group.
@@ -207,7 +207,7 @@ class ArrayGroupBy(GroupBy, ImplementsReduce):
 
     def reduce(self, func, dimension=Ellipsis, axis=Ellipsis, shortcut=True,
                **kwargs):
-        """Reduce this variable by applying `func` along some dimension(s)
+        """Reduce this variable by applying `func` along some dimension(s).
 
         Parameters
         ----------
@@ -225,8 +225,8 @@ class ArrayGroupBy(GroupBy, ImplementsReduce):
         **kwargs : dict
             Additional keyword arguments passed on to `func`.
 
-        Note
-        ----
+        Notes
+        -----
         If `reduce` is called with multiple dimensions (or axes, which
         are converted into dimensions), then the reduce operation is
         performed repeatedly along each dimension in turn from left to right.
@@ -256,7 +256,7 @@ class ArrayGroupBy(GroupBy, ImplementsReduce):
 
     _reduce_method_docstring = \
         """Reduce this {cls}'s data' by applying `{name}` along some
-        dimension(s)
+        dimension(s).
 
         Parameters
         ----------
@@ -270,8 +270,8 @@ class ArrayGroupBy(GroupBy, ImplementsReduce):
         **kwargs : dict
             Additional keyword arguments passed on to `{name}`.
 
-        Note
-        ----
+        Notes
+        -----
         If this method is called with multiple dimensions (or axes, which are
         converted into dimensions), then `{name}` is performed repeatedly along
         each dimension in turn from left to right.

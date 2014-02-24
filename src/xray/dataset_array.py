@@ -32,7 +32,7 @@ class _LocIndexer(object):
 
 
 class DatasetArray(AbstractArray):
-    """Hybrid between Dataset and Array
+    """Hybrid between Dataset and Array.
 
     Dataset arrays are the primary way to do computations with Dataset
     variables. They are designed to make it easy to manipulate arrays in the
@@ -117,7 +117,7 @@ class DatasetArray(AbstractArray):
 
     @property
     def loc(self):
-        """Attribute for location based indexing like pandas
+        """Attribute for location based indexing like pandas.
         """
         return _LocIndexer(self)
 
@@ -164,7 +164,7 @@ class DatasetArray(AbstractArray):
 
     def indexed_by(self, **indexers):
         """Return a new dataset array whose dataset is given by indexing along
-        the specified dimension(s)
+        the specified dimension(s).
 
         See Also
         --------
@@ -179,7 +179,7 @@ class DatasetArray(AbstractArray):
 
     def labeled_by(self, **indexers):
         """Return a new dataset array whose dataset is given by selecting
-        coordinate labels along the specified dimension(s)
+        coordinate labels along the specified dimension(s).
 
         See Also
         --------
@@ -190,18 +190,24 @@ class DatasetArray(AbstractArray):
 
     def renamed(self, new_name):
         """Returns a new DatasetArray with this DatasetArray's focus variable
-        renamed
+        renamed.
         """
         renamed_dataset = self.dataset.renamed({self.focus: new_name})
         return type(self)(renamed_dataset, new_name)
 
     def unselected(self):
         """Returns a copy of this DatasetArray's dataset with this
-        DatasetArray's focus variable removed
+        DatasetArray's focus variable removed.
         """
         return self.dataset.unselect(self.focus)
 
     def unselect(self, *names):
+        """Returns a new DatasetArray without the named variables.
+
+        See Also
+        --------
+        Dataset.unselect
+        """
         if self.focus in names:
             raise ValueError('cannot unselect the focus variable of a '
                              'DatasetArray with unselect. Use the `unselected`'
@@ -210,7 +216,7 @@ class DatasetArray(AbstractArray):
 
     def refocus(self, new_var, name=None):
         """Returns a copy of this DatasetArray's dataset with this
-        DatasetArray's focus variable replaced by `new_var`
+        DatasetArray's focus variable replaced by `new_var`.
 
         If `new_var` is a dataset array, its contents will be merged in.
         """
@@ -228,7 +234,7 @@ class DatasetArray(AbstractArray):
         return type(self)(ds, name)
 
     def groupby(self, group, squeeze=True):
-        """Group this dataset by unique values of the indicated group
+        """Group this dataset by unique values of the indicated group.
 
         Parameters
         ----------
@@ -257,7 +263,7 @@ class DatasetArray(AbstractArray):
         return groupby.ArrayGroupBy(self, group.focus, group, squeeze=squeeze)
 
     def transpose(self, *dimensions):
-        """Return a new DatasetArray object with transposed dimensions
+        """Return a new DatasetArray object with transposed dimensions.
 
         Note: Although this operation returns a view of this array's data, it
         is not lazy -- the data will be fully loaded.
@@ -281,7 +287,7 @@ class DatasetArray(AbstractArray):
         return self.refocus(self.array.transpose(*dimensions), self.focus)
 
     def reduce(self, func, dimension=None, axis=None, **kwargs):
-        """Reduce this array by applying `func` along some dimension(s)
+        """Reduce this array by applying `func` along some dimension(s).
 
         Parameters
         ----------
@@ -299,8 +305,8 @@ class DatasetArray(AbstractArray):
         **kwargs : dict
             Additional keyword arguments passed on to `func`.
 
-        Note
-        ----
+        Notes
+        -----
         If `reduce` is called with multiple dimensions (or axes, which
         are converted into dimensions), then the reduce operation is
         performed repeatedly along each dimension in turn from left to right.
@@ -326,7 +332,7 @@ class DatasetArray(AbstractArray):
     def from_stack(cls, arrays, dimension='stacked_dimension',
                    stacked_indexers=None, length=None, template=None):
         """Stack arrays along a new or existing dimension to form a new
-        dataview
+        dataview.
 
         Parameters
         ----------
@@ -392,7 +398,7 @@ class DatasetArray(AbstractArray):
         return cls(ds, focus)
 
     def to_dataframe(self):
-        """Convert this array into a pandas.DataFrame
+        """Convert this array into a pandas.DataFrame.
 
         Non-coordinate variables in this array's dataset (which include the
         view's data) form the columns of the DataFrame. The DataFrame is be
@@ -401,7 +407,7 @@ class DatasetArray(AbstractArray):
         return self.dataset.to_dataframe()
 
     def to_series(self):
-        """Conver this array into a pandas.Series
+        """Conver this array into a pandas.Series.
 
         The Series is be indexed by the Cartesian product of the coordinates.
         Unlike `to_dataframe`, only the variable at the focus of this array is

@@ -18,6 +18,10 @@ num2date = nc4.num2date
 
 
 def open_dataset(nc, *args, **kwargs):
+    """Open the dataset given the object or path `nc`.
+
+    *args and **kwargs provide format specific options
+    """
     # move this to a classmethod Dataset.open?
     if isinstance(nc, basestring) and not nc.startswith('CDF'):
         # If the initialization nc is a string and it doesn't
@@ -90,21 +94,12 @@ class _VariablesDict(OrderedDict):
 
 class Dataset(Mapping):
     """A netcdf-like data object consisting of variables and attributes which
-    together form a self describing data set
+    together form a self describing dataset.
 
     Dataset implements the mapping interface with keys given by variable names
     and values given by DatasetArray objects focused on each variable name.
 
     Note: the size of dimensions in a dataset cannot be changed.
-
-    Attributes
-    ----------
-    variables : {name: variable, ...}
-    attributes : {key: value, ...}
-    dimensions : {name: length, ...}
-    coordinates : {name: variable, ...}
-    noncoordinates : {name: variable, ...}
-    virtual_variables : list
     """
     def __init__(self, variables=None, attributes=None):
         """To load data from a file or file-like object, use the `open_dataset`
@@ -179,10 +174,20 @@ class Dataset(Mapping):
 
     @property
     def variables(self):
+        """Dictionary of XArray objects contained in this dataset.
+
+        This dictionary is frozen to prevent it from being modified in ways
+        that would dataset metadata (e.g., by setting variables with
+        inconsistent dimensions). Instead, add or remove variables by
+        acccessing the dataset directly (e.g., `dataset['foo'] = bar` or
+        `del dataset['foo']`).
+        """
         return Frozen(self._variables)
 
     @property
     def attributes(self):
+        """Dictionary of global attributes on this dataset
+        """
         return self._attributes
 
     @attributes.setter
@@ -191,6 +196,11 @@ class Dataset(Mapping):
 
     @property
     def dimensions(self):
+        """Mapping from dimension names to lengths.
+
+        This dictionary cannot be modified directly, but is updated when adding
+        new variables.
+        """
         return Frozen(self._dimensions)
 
     def copy(self):
@@ -206,9 +216,8 @@ class Dataset(Mapping):
         return type(self)(self.variables, self.attributes)
 
     def __contains__(self, key):
-        """
-        The 'in' operator will return true or false depending on
-        whether 'key' is a varibale in the data object or not.
+        """The 'in' operator will return true or false depending on whether
+        'key' is a variable in the dataset or not.
         """
         return key in self.variables
 
@@ -220,23 +229,49 @@ class Dataset(Mapping):
 
     @property
     def virtual_variables(self):
-        """Arrays that don't exist in this dataset but for which dataviews
-        could be created on demand (because they can be calculated from other
-        dataset variables or dimensions)
+        """Variables that do not exist in this dataset but could be created on
+        demand.
+
+        These variables can be derived by performing simple operations on
+        existing dataset variables. Currently, the only implemented virtual
+        variables are time/date components [1_] such as "time.month" or
+        "time.dayofyear", where "time" is the name of a coordinate whose data
+        is a `pandas.DatetimeIndex` object. The virtual variable "time.season"
+        (for climatological season, starting with 1 for "DJF") is the only such
+        variable which is not directly implemented in pandas.
+
+        References
+        ----------
+        .. [1] http://pandas.pydata.org/pandas-docs/stable/api.html#time-date-components
         """
         return self._variables.virtual
 
     def __getitem__(self, key):
+        """Select the variable with name "key" and return a new DatasetArray
+        focused on it.
+        """
         return DatasetArray(self.select(key), key)
 
     def __setitem__(self, key, value):
+        """Add an array to this dataset.
+
+        If value is a `DatasetArray`, merge its contents into this dataset.
+
+        If value is an `XArray` object (or tuple of form
+        `(dimensions, data[, attributes])`), add it to this dataset as a new
+        variable.
+        """
         if isinstance(value, DatasetArray):
+            # TODO: should remove key from this dataset if it already exists
             self.merge(value.renamed(key).dataset, inplace=True)
         else:
             self._set_variables({key: value})
 
     def __delitem__(self, key):
+        """Remove a variable from this dataset.
+        """
         del self._variables[key]
+        # TODO: needs better testing
         dims = set().union(v.dimensions for v in self._variables.itervalues())
         for dim in self._dimensions:
             if dim not in dims:
@@ -263,10 +298,10 @@ class Dataset(Mapping):
 
     @property
     def coordinates(self):
-        """Coordinates are variables with names that match dimensions
+        """Coordinates are variables with names that match dimensions.
 
-        They are always stored internally as arrays with data that is a
-        pandas.Index object
+        They are always stored internally as `XArray` objects with data that is
+        a `pandas.Index` object.
         """
         return FrozenOrderedDict([(dim, self.variables[dim])
                                   for dim in self.dimensions])
@@ -274,14 +309,14 @@ class Dataset(Mapping):
     @property
     def noncoordinates(self):
         """Non-coordinates are variables with names that do not match
-        dimensions
+        dimensions.
         """
         return FrozenOrderedDict([(name, v)
                 for (name, v) in self.variables.iteritems()
                 if name not in self.dimensions])
 
     def dump_to_store(self, store):
-        """Store dataset contents to a backends.*DataStore object"""
+        """Store dataset contents to a backends.*DataStore object."""
         store.set_dimensions(self.dimensions)
         store.set_variables(self.variables)
         store.set_attributes(self.attributes)
@@ -289,7 +324,7 @@ class Dataset(Mapping):
 
     def dump(self, filepath, *args, **kwdargs):
         """Dump dataset contents to a location on disk using the netCDF4
-        package
+        package.
         """
         nc4_store = backends.NetCDF4DataStore(filepath, mode='w',
                                               *args, **kwdargs)
@@ -305,7 +340,7 @@ class Dataset(Mapping):
         return fobj.getvalue()
 
     def __str__(self):
-        """Create a ncdump-like summary of the object"""
+        """Create a ncdump-like summary of the object."""
         summary = ["dimensions:"]
         # prints dims that look like:
         #    dimension = length
@@ -343,7 +378,7 @@ class Dataset(Mapping):
 
     def indexed_by(self, **indexers):
         """Return a new dataset with each array indexed along the specified
-        dimension(s)
+        dimension(s).
 
         This method selects values from each array using its `__getitem__`
         method, except this method does not require knowing the order of
@@ -391,7 +426,7 @@ class Dataset(Mapping):
 
     def labeled_by(self, **indexers):
         """Return a new dataset with each variable indexed by coordinate labels
-        along the specified dimension(s)
+        along the specified dimension(s).
 
         In contrast to `Dataset.indexed_by`, indexers for this method should
         use coordinate values instead of integers.
@@ -430,8 +465,7 @@ class Dataset(Mapping):
         return self.indexed_by(**remap_loc_indexers(self.variables, indexers))
 
     def renamed(self, name_dict):
-        """
-        Returns a new object with renamed variables and dimensions
+        """Returns a new object with renamed variables and dimensions.
 
         Parameters
         ----------
@@ -455,7 +489,7 @@ class Dataset(Mapping):
         return type(self)(variables, self.attributes)
 
     def merge(self, other, inplace=False):
-        """Merge two datasets into a single new dataset
+        """Merge two datasets into a single new dataset.
 
         This method generally not allow for overriding data. Arrays,
         dimensions and indices are checked for conflicts. However, conflicting
@@ -494,7 +528,7 @@ class Dataset(Mapping):
         return obj
 
     def select(self, *names):
-        """Returns a new dataset that contains the named variables
+        """Returns a new dataset that contains the named variables.
 
         Dimensions on which those variables are defined are also included, as
         well as the corresponding coordinate variables, and any variables
@@ -567,7 +601,7 @@ class Dataset(Mapping):
 
     def replace(self, name, variable):
         """Returns a new dataset with the variable 'name' replaced with
-        'variable'
+        'variable'.
 
         Parameters
         ----------
@@ -586,7 +620,7 @@ class Dataset(Mapping):
         return ds
 
     def groupby(self, group, squeeze=True):
-        """Group this dataset by unique values of the indicated group
+        """Group this dataset by unique values of the indicated group.
 
         Parameters
         ----------
@@ -612,7 +646,7 @@ class Dataset(Mapping):
         return groupby.GroupBy(self, group.focus, group, squeeze=squeeze)
 
     def to_dataframe(self):
-        """Convert this dataset into a pandas.DataFrame
+        """Convert this dataset into a pandas.DataFrame.
 
         Non-coordinate variables in this dataset form the columns of the
         DataFrame. The DataFrame is be indexed by the Cartesian product of

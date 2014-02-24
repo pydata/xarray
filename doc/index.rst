@@ -9,11 +9,10 @@ xray reference
 Contents:
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 1
 
-.. automodule:: scidata
-  :members:
-
+   data-structures
+   api
 
 Indices and tables
 ==================

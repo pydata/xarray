@@ -34,7 +34,7 @@ def _as_compatible_data(data):
 
 class XArray(AbstractArray):
     """A netcdf-like variable consisting of dimensions, data and attributes
-    which describe a single Array. A single Array object is not fully described
+    which describe a single Array. A single XArray object is not fully described
     outside the context of its parent Dataset (if you want such a fully
     described object, use a DatasetArray instead).
     """
@@ -92,6 +92,8 @@ class XArray(AbstractArray):
 
     @property
     def dimensions(self):
+        """Tuple of dimension names with which this array is associated.
+        """
         return self._dimensions
 
     def _convert_indexer(self, key, indexing_mode=None):
@@ -115,7 +117,7 @@ class XArray(AbstractArray):
 
     def __getitem__(self, key):
         """Return a new Array object whose contents are consistent with
-        getting the provided key from the underlying data
+        getting the provided key from the underlying data.
 
         NB. __getitem__ and __setitem__ implement "orthogonal indexing" like
         netCDF4-python, where the key can only include integers, slices
@@ -151,7 +153,9 @@ class XArray(AbstractArray):
 
     def __setitem__(self, key, value):
         """__setitem__ is overloaded to access the underlying numpy data with
-        orthogonal indexing (see __getitem__ for more details)
+        orthogonal indexing.
+
+        See __getitem__ for more details.
         """
         self.data[self._convert_indexer(key, indexing_mode='numpy')] = value
 
@@ -161,6 +165,8 @@ class XArray(AbstractArray):
 
     @property
     def attributes(self):
+        """Dictionary of local attributes on this array.
+        """
         return self._attributes
 
     def copy(self):
@@ -216,7 +222,7 @@ class XArray(AbstractArray):
         return '<xray.%s%s>' % (type(self).__name__, contents)
 
     def indexed_by(self, **indexers):
-        """Return a new array indexed along the specified dimension(s)
+        """Return a new array indexed along the specified dimension(s).
 
         Parameters
         ----------
@@ -243,7 +249,7 @@ class XArray(AbstractArray):
         return self[tuple(key)]
 
     def transpose(self, *dimensions):
-        """Return a new Array object with transposed dimensions
+        """Return a new Array object with transposed dimensions.
 
         Note: Although this operation returns a view of this variable's data,
         it is not lazy -- the data will be fully loaded.
@@ -271,7 +277,7 @@ class XArray(AbstractArray):
         return type(self)(dimensions, data, self.attributes)
 
     def reduce(self, func, dimension=None, axis=None, **kwargs):
-        """Reduce this array by applying `func` along some dimension(s)
+        """Reduce this array by applying `func` along some dimension(s).
 
         Parameters
         ----------
@@ -342,7 +348,7 @@ class XArray(AbstractArray):
         return new_var
 
     def groupby(self, group_name, group_array, squeeze=True):
-        """Group this dataset by unique values of the indicated group
+        """Group this dataset by unique values of the indicated group.
 
         Parameters
         ----------
@@ -371,7 +377,7 @@ class XArray(AbstractArray):
     def from_stack(cls, variables, dimension='stacked_dimension',
                    stacked_indexers=None, length=None, template=None):
         """Stack variables along a new or existing dimension to form a new
-        variable
+        variable.
 
         Parameters
         ----------
@@ -507,7 +513,7 @@ ops.inject_special_operations(XArray)
 
 def broadcast_xarrays(first, second):
     """Given two XArrays, return two AXrrays with matching dimensions and numpy
-    broadcast compatible data
+    broadcast compatible data.
 
     Parameters
     ----------

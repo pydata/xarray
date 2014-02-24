@@ -66,7 +66,7 @@ class AbstractArray(ImplementsReduce):
 
     _reduce_method_docstring = \
         """Reduce this {cls}'s data' by applying `{name}` along some
-        dimension(s)
+        dimension(s).
 
         Parameters
         ----------
@@ -80,8 +80,8 @@ class AbstractArray(ImplementsReduce):
         **kwargs : dict
             Additional keyword arguments passed on to `{name}`.
 
-        Note
-        ----
+        Notes
+        -----
         If this method is called with multiple dimensions (or axes, which are
         converted into dimensions), then `{name}` is performed repeatedly along
         each dimension in turn from left to right.

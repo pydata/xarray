@@ -9,7 +9,7 @@ import pandas as pd
 
 def expanded_indexer(key, ndim):
     """Given a key for indexing an ndarray, return an equivalent key which is a
-    tuple with length equal to the number of dimensions
+    tuple with length equal to the number of dimensions.
 
     The expansion is done by replacing all `Ellipsis` items with the right
     number of full slices and then padding the key with full slices so that it
@@ -37,7 +37,7 @@ def expanded_indexer(key, ndim):
 
 def orthogonal_indexer(key, shape):
     """Given a key for orthogonal array indexing, returns an equivalent key
-    suitable for indexing a numpy.ndarray with fancy indexing
+    suitable for indexing a numpy.ndarray with fancy indexing.
     """
     def expand_array(k, length):
         if isinstance(k, slice):
@@ -87,7 +87,7 @@ def orthogonal_indexer(key, shape):
 
 def remap_loc_indexers(indices, indexers):
     """Given mappings of indices and label based indexers, return equivalent
-    location based indexers
+    location based indexers.
     """
     new_indexers = OrderedDict()
     for dim, loc in indexers.iteritems():
@@ -108,7 +108,7 @@ def remap_loc_indexers(indices, indexers):
 
 def num2datetimeindex(num_dates, units, calendar=None):
     """Convert an array of numeric dates in netCDF format into a
-    pandas.DatetimeIndex
+    pandas.DatetimeIndex.
 
     For standard (Gregorian) calendars, this function uses vectorized
     operations, which makes it much faster than netCDF4.num2date.
@@ -167,7 +167,7 @@ def datetimeindex2num(dates, units=None, calendar=None):
 
 def xarray_equal(v1, v2, rtol=1e-05, atol=1e-08):
     """True if two objects have the same dimensions, attributes and data;
-    otherwise False
+    otherwise False.
 
     This function is necessary because `v1 == v2` for variables and dataviews
     does element-wise comparisions (like numpy.ndarrays).
@@ -198,7 +198,7 @@ def xarray_equal(v1, v2, rtol=1e-05, atol=1e-08):
 
 
 def update_safety_check(first_dict, second_dict, compat=operator.eq):
-    """Check the safety of updating one dictionary with another
+    """Check the safety of updating one dictionary with another.
 
     Raises ValueError if dictionaries have non-compatible values for any key,
     where compatibility is determined by identity (they are the same item) or
@@ -221,7 +221,7 @@ def update_safety_check(first_dict, second_dict, compat=operator.eq):
 
 
 def remove_incompatible_items(first_dict, second_dict, compat=operator.eq):
-    """Remove incompatible items from the first dictionary in-place
+    """Remove incompatible items from the first dictionary in-place.
 
     Items are retained if their keys are found in both dictionaries and the
     values are compatible.
@@ -240,7 +240,7 @@ def remove_incompatible_items(first_dict, second_dict, compat=operator.eq):
 
 
 def ordered_dict_intersection(first_dict, second_dict, compat=operator.eq):
-    """Return the intersection of two dictionaries as a new OrderedDict
+    """Return the intersection of two dictionaries as a new OrderedDict.
 
     Items are retained if their keys are found in both dictionaries and the
     values are compatible.
