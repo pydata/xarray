@@ -62,10 +62,13 @@ class InMemoryDataStore(AbstractDataStore):
 def convert_to_cf_variable(array):
     data = array.data
     attributes = array.attributes.copy()
-    if isinstance(array.data, pd.DatetimeIndex):
-        (data, units, calendar) = datetimeindex2num(array.data)
+    if isinstance(data, pd.DatetimeIndex):
+        (data, units, calendar) = datetimeindex2num(data)
         attributes['units'] = units
         attributes['calendar'] = calendar
+    elif data.dtype == np.dtype('O'):
+        dtype = np.array(data.reshape(-1)[0]).dtype
+        data = np.asarray(data).astype(dtype)
     return xarray.XArray(array.dimensions, data, attributes)
 
 
