@@ -316,11 +316,24 @@ class DataTest(TestCase):
     def test_to_dataframe(self):
         x = np.random.randn(10)
         y = np.random.randn(10)
-        ds = Dataset({'a': XArray('t', x), 'b': XArray('t', y)})
+        t = list('abcdefghij')
+        ds = Dataset({'a': ('t', x), 'b': ('t', y), 't': ('t', t)})
         expected = pd.DataFrame(np.array([x, y]).T, columns=['a', 'b'],
-                                index=pd.Index(np.arange(10), name='t'))
+                                index=pd.Index(t, name='t'))
         actual = ds.to_dataframe()
         # use the .equals method to check all DataFrame metadata
+        self.assertTrue(expected.equals(actual))
+
+        # test a case with a MultiIndex
+        w = np.random.randn(2, 3)
+        ds = Dataset({'w': (('x', 'y'), w)})
+        ds['y'] = ('y', list('abc'))
+        print ds.dimensions
+        exp_index = pd.MultiIndex.from_arrays(
+            [[0, 0, 0, 1, 1, 1], ['a', 'b', 'c', 'a', 'b', 'c']],
+            names=['x', 'y'])
+        expected = pd.DataFrame(w.reshape(-1), columns=['w'], index=exp_index)
+        actual = ds.to_dataframe()
         self.assertTrue(expected.equals(actual))
 
 

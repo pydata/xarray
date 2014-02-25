@@ -629,10 +629,12 @@ class Dataset(Mapping):
                                                      strides=[0] * len(shape))
         template = xarray.XArray(self.dimensions.keys(), empty_data)
         for k in columns:
-            _, var = xarray.broadcast_xarrays(template, self[k])
+            _, var = xarray.broadcast_xarrays(template, self.variables[k])
             _, var_data = np.broadcast_arrays(template.data, var.data)
             data.append(var_data.reshape(-1))
         # note: pd.MultiIndex.from_product is new in pandas-0.13.1
-        index = pd.MultiIndex.from_product(self.coordinates.values(),
-                                           names=index_names)
+        # np.asarray is necessary to work around a pandas bug:
+        # https://github.com/pydata/pandas/issues/6439
+        coords = [np.asarray(v) for v in self.coordinates.values()]
+        index = pd.MultiIndex.from_product(coords, names=index_names)
         return pd.DataFrame(OrderedDict(zip(columns, data)), index=index)
