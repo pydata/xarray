@@ -60,14 +60,27 @@ class InMemoryDataStore(AbstractDataStore):
 
 
 def convert_to_cf_variable(array):
+    """Converts an XArray into an XArray suitable for saving as a netCDF
+    variable
+    """
     data = array.data
     attributes = array.attributes.copy()
     if isinstance(data, pd.DatetimeIndex):
+        # DatetimeIndex objects need to be encoded into numeric arrays
         (data, units, calendar) = datetimeindex2num(data)
         attributes['units'] = units
         attributes['calendar'] = calendar
     elif data.dtype == np.dtype('O'):
+        # Unfortunately, pandas.Index arrays are often have dtype=object even
+        # if they were created from an array with a sensible datatype (e.g.,
+        # pandas.Float64Index always dtype=object for some reason). Because we
+        # allow for doing math with coordinates, these object arrays can
+        # propagate onward into other variables, which is why we don't only
+        # apply this check to XArrays with data that is a pandas.Index.
         dtype = np.array(data.reshape(-1)[0]).dtype
+        # N.B. the "astype" call will fail if data cannot be cast to the type
+        # of its first element (which is probably the only sensible thing to
+        # do).
         data = np.asarray(data).astype(dtype)
     return xarray.XArray(array.dimensions, data, attributes)
 
