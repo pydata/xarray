@@ -236,7 +236,7 @@ class XArray(AbstractArray):
         if invalid:
             raise ValueError("dimensions %r do not exist" % invalid)
 
-        key = [slice(None)] * self.data.ndim
+        key = [slice(None)] * self.ndim
         for i, dim in enumerate(self.dimensions):
             if dim in indexers:
                 key[i] = indexers[dim]
