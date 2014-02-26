@@ -1,5 +1,6 @@
 import netCDF4 as nc4
 import operator
+from itertools import izip
 from collections import OrderedDict, Mapping
 from datetime import datetime
 
@@ -173,7 +174,7 @@ def xarray_equal(v1, v2, rtol=1e-05, atol=1e-08):
     does element-wise comparisions (like numpy.ndarrays).
     """
     if (v1.dimensions == v2.dimensions
-            and v1.attributes == v2.attributes):
+        and dict_equal(v1.attributes, v2.attributes)):
         try:
             # if _data is identical, skip checking arrays by value
             if v1._data is v2._data:
@@ -238,6 +239,35 @@ def remove_incompatible_items(first_dict, second_dict, compat=operator.eq):
         if k in first_dict and not compat(v, first_dict[k]):
             del first_dict[k]
 
+""" Test equality of two OrderedDict objects.  If any of the values
+    are numpy arrays, compare them for equality correctly.
+
+    Parameters
+    ----------
+    first, second : dict-like
+        dictionaries to compare for equality
+
+    Returns
+    -------
+    equals : bool
+        True if the dictionaries are equal
+"""
+def dict_equal(first, second):
+    k1 = sorted(first.keys())
+    k2 = sorted(second.keys())
+    if k1 != k2:
+        return False
+    for k in k1:
+        v1 = first[k]
+        v2 = second[k]
+        if isinstance(v1, np.ndarray) != isinstance(v2, np.ndarray):
+            return False # one is an ndarray, other is not
+        elif (isinstance(v1, np.ndarray) and isinstance(v2, np.ndarray)):
+            if not np.array_equal(v1, v2):
+                return False
+        elif v1 != v2:
+            return False
+    return True
 
 def ordered_dict_intersection(first_dict, second_dict, compat=operator.eq):
     """Return the intersection of two dictionaries as a new OrderedDict.

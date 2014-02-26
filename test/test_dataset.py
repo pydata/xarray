@@ -11,6 +11,7 @@ import pandas as pd
 from xray import Dataset, DatasetArray, XArray, backends, open_dataset
 from . import TestCase
 
+_test_data_path = os.path.join(os.path.dirname(__file__), 'data')
 
 _dims = {'dim1':100, 'dim2':50, 'dim3':10}
 _vars = {'var1':['dim1', 'dim2'],
@@ -19,7 +20,6 @@ _vars = {'var1':['dim1', 'dim2'],
          }
 _testvar = sorted(_vars.keys())[0]
 _testdim = sorted(_dims.keys())[0]
-
 
 def create_test_data(store=None):
     obj = Dataset() if store is None else Dataset.load_store(store)
@@ -366,6 +366,14 @@ class ScipyDataTest(DataTest):
 
     def test_dump_and_open_dataset(self):
         data = create_test_data(self.get_store())
+        serialized = data.dumps()
+
+        expected = data.copy()
+        actual = open_dataset(StringIO(serialized))
+        self.assertEquals(expected, actual)
+
+    def test_open_and_reopen_existing(self):
+        data = open_dataset(os.path.join(_test_data_path, 'example_1.nc'))
         serialized = data.dumps()
 
         expected = data.copy()
