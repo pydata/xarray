@@ -142,8 +142,10 @@ class Dataset(Mapping):
                                  '1-dimensional data')
             attr = var.attributes
             if 'units' in attr and 'since' in attr['units']:
-                var.data = utils.num2datetimeindex(var.data, attr.pop('units'),
+                units = attr.pop('units')
+                var.data = utils.num2datetimeindex(var.data, units,
                                                    attr.pop('calendar', None))
+                attr['cf_units'] = units
             else:
                 var.data = pd.Index(var.data)
         return var

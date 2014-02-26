@@ -5,15 +5,16 @@ formats. They should not be used directly, but rather through Dataset objects.
 """
 # TODO: implement backend logic directly in OrderedDict subclasses, to allow
 # for directly manipulating Dataset.variables and the like?
-import netCDF4 as nc4
 import numpy as np
 import pandas as pd
+import netCDF4 as nc4
 
 from scipy.io import netcdf
 from collections import OrderedDict
 
 import xarray
 import conventions
+
 from utils import FrozenOrderedDict, Frozen, datetimeindex2num
 
 
@@ -67,7 +68,11 @@ def convert_to_cf_variable(array):
     attributes = array.attributes.copy()
     if isinstance(data, pd.DatetimeIndex):
         # DatetimeIndex objects need to be encoded into numeric arrays
-        (data, units, calendar) = datetimeindex2num(data)
+        cf_units = array.attributes.get('cf_units', None)
+        (data, units, calendar) = datetimeindex2num(data, units=cf_units)
+        # sanity check to make sure the original cf units persist.
+        if not cf_units is None:
+            assert cf_units == units
         attributes['units'] = units
         attributes['calendar'] = calendar
     elif data.dtype == np.dtype('O'):
