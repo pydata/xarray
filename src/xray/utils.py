@@ -155,13 +155,13 @@ def datetimeindex2num(dates, units=None, calendar=None):
     variable.
     """
     dates = pd.DatetimeIndex(dates)
+    # units are required, but calendar defaults to 'standard' the same
+    # way it does in netCDF4
     if units is None:
         units = guess_time_units(dates)
-    if calendar is None:
-        calendar = 'proleptic_gregorian'
     # for now, don't bother doing any trickery like num2datetimeindex to
     # convert dates to numbers faster
-    num = nc4.date2num(dates.to_pydatetime(), units, calendar)
+    num = nc4.date2num(dates.to_pydatetime(), units, calendar or 'standard')
     return (num, units, calendar)
 
 

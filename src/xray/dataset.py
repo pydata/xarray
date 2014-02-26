@@ -143,9 +143,12 @@ class Dataset(Mapping):
             attr = var.attributes
             if 'units' in attr and 'since' in attr['units']:
                 units = attr.pop('units')
+                calendar = attr.pop('calendar', None)
                 var.data = utils.num2datetimeindex(var.data, units,
-                                                   attr.pop('calendar', None))
-                attr['cf_units'] = units
+                                                   calendar)
+                attr['_units'] = units
+                if not calendar is None:
+                    attr['_calendar'] = calendar
             else:
                 var.data = pd.Index(var.data)
         return var
