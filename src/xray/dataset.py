@@ -177,7 +177,7 @@ class Dataset(Mapping):
         """Dictionary of XArray objects contained in this dataset.
 
         This dictionary is frozen to prevent it from being modified in ways
-        that would dataset metadata (e.g., by setting variables with
+        that would cause invalid dataset metadata (e.g., by setting variables with
         inconsistent dimensions). Instead, add or remove variables by
         acccessing the dataset directly (e.g., `dataset['foo'] = bar` or
         `del dataset['foo']`).
