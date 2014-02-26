@@ -284,8 +284,7 @@ class Dataset(Mapping):
         try:
             # some stores (e.g., scipy) do not seem to preserve order, so don't
             # require matching dimension or variable order for equality
-            return (sorted(self.attributes.items())
-                        == sorted(other.attributes.items())
+            return (utils.dict_equal(self.attributes, other.attributes)
                     and all(k1 == k2 and utils.xarray_equal(v1, v2)
                             for (k1, v1), (k2, v2)
                             in zip(sorted(self.variables.items()),

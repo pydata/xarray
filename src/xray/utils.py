@@ -1,6 +1,5 @@
 import netCDF4 as nc4
 import operator
-from itertools import izip
 from collections import OrderedDict, Mapping
 from datetime import datetime
 
@@ -239,7 +238,8 @@ def remove_incompatible_items(first_dict, second_dict, compat=operator.eq):
         if k in first_dict and not compat(v, first_dict[k]):
             del first_dict[k]
 
-""" Test equality of two OrderedDict objects.  If any of the values
+def dict_equal(first, second):
+    """ Test equality of two dict-like objects.  If any of the values
     are numpy arrays, compare them for equality correctly.
 
     Parameters
@@ -251,8 +251,7 @@ def remove_incompatible_items(first_dict, second_dict, compat=operator.eq):
     -------
     equals : bool
         True if the dictionaries are equal
-"""
-def dict_equal(first, second):
+    """
     k1 = sorted(first.keys())
     k2 = sorted(second.keys())
     if k1 != k2:
