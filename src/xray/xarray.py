@@ -1,16 +1,17 @@
 import functools
-import warnings
+
 from collections import OrderedDict
 from itertools import izip
 
 import numpy as np
 
-import conventions
-import dataset
-import dataset_array
-import groupby
 import ops
 import utils
+import dataset
+import groupby
+import conventions
+import dataset_array
+
 from common import AbstractArray
 
 
@@ -193,10 +194,11 @@ class XArray(AbstractArray):
         summary = ["dimensions:"]
         # prints dims that look like:
         #    dimension = length
-        dim_print = lambda d, l : "\t%s : %s" % (conventions.pretty_print(d, 30),
-                                                 conventions.pretty_print(l, 10))
+        dim_print = lambda d, l: "\t%s : %s" % (conventions.pretty_print(d, 30),
+                                                conventions.pretty_print(l, 10))
         # add each dimension to the summary
-        summary.extend([dim_print(d, l) for d, l in zip(self.dimensions, self.shape)])
+        summary.extend([dim_print(d, l) for d, l in zip(self.dimensions,
+                                                        self.shape)])
         summary.append("dtype : %s" % (conventions.pretty_print(self.dtype, 8)))
         summary.append("attributes:")
         #    attribute:value
