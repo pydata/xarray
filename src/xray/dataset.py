@@ -316,25 +316,23 @@ class Dataset(Mapping):
 
     def dump_to_store(self, store):
         """Store dataset contents to a backends.*DataStore object."""
-        store.set_dimensions(self.dimensions)
         store.set_variables(self.variables)
         store.set_attributes(self.attributes)
         store.sync()
 
-    def dump(self, filepath, *args, **kwdargs):
+    def dump(self, filepath, **kwdargs):
         """Dump dataset contents to a location on disk using the netCDF4
         package.
         """
-        nc4_store = backends.NetCDF4DataStore(filepath, mode='w',
-                                              *args, **kwdargs)
+        nc4_store = backends.NetCDF4DataStore(filepath, mode='w', **kwdargs)
         self.dump_to_store(nc4_store)
 
-    def dumps(self):
+    def dumps(self, **kwargs):
         """Serialize dataset contents to a string. The serialization creates an
         in memory netcdf version 3 string using the scipy.io.netcdf package.
         """
         fobj = StringIO()
-        scipy_store = backends.ScipyDataStore(fobj, mode='w')
+        scipy_store = backends.ScipyDataStore(fobj, mode='w', **kwargs)
         self.dump_to_store(scipy_store)
         return fobj.getvalue()
 

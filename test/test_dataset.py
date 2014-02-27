@@ -32,13 +32,7 @@ def create_test_data():
     return obj
 
 
-class DataTest(TestCase):
-    def get_store(self):
-        return backends.InMemoryDataStore()
-
-    def roundtrip(self, data):
-        return data.copy()
-
+class TestDataset(TestCase):
     def test_repr(self):
         data = create_test_data()
         self.assertEqual('<xray.Dataset (time: 1000, dim1: 100, '
@@ -309,13 +303,6 @@ class DataTest(TestCase):
         with self.assertRaisesRegexp(TypeError, 'variables must be of type'):
             data2['C'] = var.data
 
-    def test_write_store(self):
-        expected = create_test_data()
-        store = self.get_store()
-        expected.dump_to_store(store)
-        actual = Dataset.load_store(store)
-        self.assertDatasetEqual(expected, actual)
-
     def test_to_dataframe(self):
         x = np.random.randn(10)
         y = np.random.randn(10)
@@ -339,15 +326,6 @@ class DataTest(TestCase):
         actual = ds.to_dataframe()
         self.assertTrue(expected.equals(actual))
 
-    def test_dump_and_open_dataset(self):
-        for expected in [
-                create_string_data(),
-                create_test_data(),
-                create_masked_and_scaled_data(),
-                open_dataset(os.path.join(_test_data_path, 'example_1.nc'))]:
-            actual = self.roundtrip(expected)
-            self.assertDatasetEqual(expected, actual)
-
 
 def create_masked_and_scaled_data():
     x = np.array([np.nan, np.nan, 10, 10.1, 10.2])
@@ -356,11 +334,58 @@ def create_masked_and_scaled_data():
     return Dataset({'x': ('t', x, {}, encoding)})
 
 
-def create_string_data():
-    return Dataset({'x': ('t', ['abc', 'def'])})
+def create_encoded_masked_and_scaled_data():
+    attributes = {'_FillValue': -1, 'add_offset': 10, 'scale_factor': 0.1}
+    return Dataset({'x': XArray('t', [-1, -1, 0, 1, 2], attributes)})
 
 
-class NetCDF4DataTest(DataTest):
+class DatasetIOCases(object):
+    def get_store(self):
+        raise NotImplementedError
+
+    def roundtrip(self, data, **kwargs):
+        raise NotImplementedError
+
+    def test_write_store(self):
+        expected = create_test_data()
+        store = self.get_store()
+        expected.dump_to_store(store)
+        actual = Dataset.load_store(store)
+        self.assertDatasetEqual(expected, actual)
+
+    def test_roundtrip_test_data(self):
+        expected = create_test_data()
+        actual = self.roundtrip(expected)
+        self.assertDatasetEqual(expected, actual)
+
+    def test_roundtrip_string_data(self):
+        expected = Dataset({'x': ('t', ['abc', 'def'])})
+        actual = self.roundtrip(expected)
+        self.assertDatasetEqual(expected, actual)
+
+    def test_roundtrip_mask_and_scale(self):
+        expected = create_masked_and_scaled_data()
+        actual = self.roundtrip(expected)
+        self.assertDatasetEqual(expected, actual)
+
+    def test_roundtrip_mask_and_scale_False(self):
+        expected = create_masked_and_scaled_data()
+        actual = self.roundtrip(expected, mask_and_scale=False)
+        self.assertDatasetEqual(expected, actual)
+
+    def test_roundtrip_example_1_netcdf(self):
+        expected = open_dataset(os.path.join(_test_data_path, 'example_1.nc'))
+        actual = self.roundtrip(expected)
+        self.assertDatasetEqual(expected, actual)
+
+    def test_encoded_masked_and_scaled_data(self):
+        original = create_encoded_masked_and_scaled_data()
+        actual = self.roundtrip(original, mask_and_scale=True)
+        expected = create_masked_and_scaled_data()
+        self.assertDatasetEqual(expected, actual)
+
+
+class NetCDF4DataTest(DatasetIOCases, TestCase):
     def get_store(self):
         f, self.tmp_file = tempfile.mkstemp(suffix='.nc')
         os.close(f)
@@ -370,11 +395,11 @@ class NetCDF4DataTest(DataTest):
         if hasattr(self, 'tmp_file') and os.path.exists(self.tmp_file):
             os.remove(self.tmp_file)
 
-    def roundtrip(self, data):
+    def roundtrip(self, data, **kwargs):
         f, tmp_file = tempfile.mkstemp(suffix='.nc')
         os.close(f)
         data.dump(tmp_file)
-        roundtrip_data = open_dataset(tmp_file)
+        roundtrip_data = open_dataset(tmp_file, **kwargs)
         os.remove(tmp_file)
         return roundtrip_data
 
@@ -399,29 +424,18 @@ class NetCDF4DataTest(DataTest):
         actual = nc.variables['x'][:]
         self.assertArrayEqual(expected, actual)
 
-        def replace_nan(x):
-            # replace NaN with a sentinel value because xarray_equal is not
-            # NaN safe
-            x[np.isnan(x)] = -9999
-            return x
-
         # now check xray
         ds = open_dataset(tmp_file)
         expected = create_masked_and_scaled_data()
-        self.assertDatasetEqual(replace_nan(expected['x']).dataset,
-                                replace_nan(ds['x']).dataset)
+        self.assertDatasetEqual(expected, ds)
         os.remove(tmp_file)
 
 
-class ScipyDataTest(DataTest):
+class ScipyDataTest(DatasetIOCases, TestCase):
     def get_store(self):
         fobj = StringIO()
         return backends.ScipyDataStore(fobj, 'w')
 
-    def roundtrip(self, data):
+    def roundtrip(self, data, **kwargs):
         serialized = data.dumps()
-        return open_dataset(StringIO(serialized))
-
-    def test_repr(self):
-        # scipy.io.netcdf does not keep track of dimension order :(
-        pass
+        return open_dataset(StringIO(serialized), **kwargs)

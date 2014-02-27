@@ -130,6 +130,10 @@ class DatasetArray(AbstractArray):
         return self.array.attributes
 
     @property
+    def encoding(self):
+        return self.array.encoding
+
+    @property
     def variables(self):
         return self.dataset.variables
 

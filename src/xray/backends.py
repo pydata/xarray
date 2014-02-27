@@ -174,7 +174,7 @@ class NetCDF4DataStore(AbstractDataStore):
         # depending on the datatype of the variable.  Here
         # we let the package handle the _FillValue attribute
         # instead of setting it ourselves.
-        fill_value = variable.encoding.get('_FillValue')
+        fill_value = variable.attributes.pop('_FillValue', None)
         self.ds.createVariable(varname=name,
                                datatype=variable.dtype,
                                dimensions=variable.dimensions,

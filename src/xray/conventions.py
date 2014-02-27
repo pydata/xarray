@@ -247,6 +247,7 @@ def encode_cf_variable(array):
     dimensions = array.dimensions
     data = array.data
     attributes = array.attributes.copy()
+    encoding = array.encoding
 
     if isinstance(data, pd.DatetimeIndex):
         # DatetimeIndex objects need to be encoded into numeric arrays
@@ -277,7 +278,6 @@ def encode_cf_variable(array):
         dimensions = dimensions + ('string%s' % data.shape[-1],)
 
     # unscale/mask
-    encoding = array.encoding
     if any(k in encoding for k in ['add_offset', 'scale_factor']):
         data = np.array(data, dtype=float, copy=True)
         if 'add_offset' in encoding:
@@ -285,27 +285,37 @@ def encode_cf_variable(array):
         if 'scale_factor' in encoding:
             data /= get_to(encoding, attributes, 'scale_factor')
 
+    # replace NaN with the fill value
+    if '_FillValue' in encoding:
+        if encoding['_FillValue'] is np.nan:
+            attributes['_FillValue'] = np.nan
+        else:
+            nans = np.isnan(data)
+            if nans.any():
+                data[nans] = get_to(encoding, attributes, '_FillValue')
+
     # restore original dtype
     if 'dtype' in encoding:
         data = data.astype(encoding['dtype'])
 
-    return xarray.XArray(array.dimensions, data, attributes, encoding)
+    return xarray.XArray(dimensions, data, attributes, encoding=encoding)
 
 
 def decode_cf_variable(dimensions, data, attributes, indexing_mode='numpy',
                        mask_and_scale=True):
-    def pop_to(source, dest, k):
-        v = source.pop(k, None)
-        if v is not None:
-            dest[k] = v
-        return v
-
     encoding = {'dtype': data.dtype}
-
     if np.issubdtype(data.dtype, (str, unicode)):
+        # TODO: add some sort of check instead of just assuming that the last
+        # dimension on a character array is always the string dimension
         dimensions = dimensions[:-1]
         data = CharToStringArray(data)
     elif mask_and_scale:
+        def pop_to(source, dest, k):
+            v = source.pop(k, None)
+            if v is not None:
+                dest[k] = v
+            return v
+
         fill_value = pop_to(attributes, encoding, '_FillValue')
         scale_factor = pop_to(attributes, encoding, 'scale_factor')
         add_offset = pop_to(attributes, encoding, 'add_offset')
@@ -313,5 +323,7 @@ def decode_cf_variable(dimensions, data, attributes, indexing_mode='numpy',
                 or add_offset is not None):
             data = MaskedAndScaledArray(data, fill_value, scale_factor,
                                         add_offset)
+
+    # TODO: decode arrays with time units into np.datetime64 objects here
 
     return xarray.XArray(dimensions, data, attributes, indexing_mode, encoding)
