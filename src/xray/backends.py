@@ -67,8 +67,11 @@ class ScipyDataStore(AbstractDataStore):
     be initialized with a StringIO object, allow for
     serialization.
     """
-    def __init__(self, fobj, *args, **kwdargs):
-        self.ds = netcdf.netcdf_file(fobj, *args, **kwdargs)
+    def __init__(self, filename_or_obj, mode='r', mmap=None, version=1,
+                 decode_mask_and_scale=True):
+        self.ds = netcdf.netcdf_file(filename_or_obj, mode=mode, mmap=None,
+                                     version=version)
+        self.decode_mask_and_scale = decode_mask_and_scale
 
     @property
     def variables(self):
@@ -125,16 +128,21 @@ class ScipyDataStore(AbstractDataStore):
 
 
 class NetCDF4DataStore(AbstractDataStore):
-    def __init__(self, filename, *args, **kwdargs):
-        self.ds = nc4.Dataset(filename, *args, **kwdargs)
+    def __init__(self, filename, mode='r', clobber=True, diskless=False,
+                 persist=False, format='NETCDF4', decode_mask_and_scale=True):
+        self.ds = nc4.Dataset(filename, mode=mode, clobber=clobber,
+                              diskless=diskless, persist=persist,
+                              format=format)
+        self.decode_mask_and_scale = decode_mask_and_scale
 
     @property
     def variables(self):
         def convert_variable(var):
             attr = OrderedDict((k, var.getncattr(k)) for k in var.ncattrs())
             var.set_auto_maskandscale(False)
-            return decode_cf_variable(var.dimensions, var, attr,
-                                      indexing_mode='orthogonal')
+            return decode_cf_variable(
+                var.dimensions, var, attr, indexing_mode='orthogonal',
+                decode_mask_and_scale=self.decode_mask_and_scale)
         return FrozenOrderedDict((k, convert_variable(v))
                                  for k, v in self.ds.variables.iteritems())
 
@@ -153,18 +161,13 @@ class NetCDF4DataStore(AbstractDataStore):
     def set_attribute(self, key, value):
         self.ds.setncatts({key: value})
 
-    def _cast_data(self, data):
-        if isinstance(data, pd.DatetimeIndex):
-            data = datetimeindex2num(data)
-        return data
-
     def set_variable(self, name, variable):
         variable = encode_cf_variable(variable)
         # netCDF4 will automatically assign a fill value
         # depending on the datatype of the variable.  Here
         # we let the package handle the _FillValue attribute
         # instead of setting it ourselves.
-        fill_value = variable.attributes.pop('_FillValue', None)
+        fill_value = variable.encoding.get('_FillValue')
         self.ds.createVariable(varname=name,
                                datatype=variable.dtype,
                                dimensions=variable.dimensions,

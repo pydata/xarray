@@ -37,16 +37,18 @@ def coerce_nc3_dtype(arr):
         float64 -> float32
         bool -> int8
 
-    Data is checked for equality, or equivalence with the default values of
-    `np.allclose`.
+    Data is checked for equality, or equivalence (non-NaN values) with
+    `np.allclose` with the default keyword arguments.
     """
     dtype = str(arr.dtype)
     dtype_map = {'int64': 'int32', 'float64': 'float32', 'bool': 'int8'}
     if dtype in dtype_map:
         new_dtype = dtype_map[dtype]
+        # TODO: raise a warning whenever casting the data-type instead?
         cast_arr = arr.astype(new_dtype)
         if (('int' in dtype and not (cast_arr == arr).all())
-                or ('float' in dtype and not np.allclose(cast_arr, arr))):
+                or ('float' in dtype and
+                    not utils.allclose_or_equiv(cast_arr, arr))):
             raise ValueError('could not safely cast array from dtype %s to %s'
                              % (dtype, new_dtype))
         arr = cast_arr
@@ -199,28 +201,40 @@ def encode_cf_variable(array):
         data = np.asarray(data).astype(dtype)
 
     # unscale/mask
-    if any(k in attributes for k in ['add_offset', 'scale_factor']):
+    encoding = array.encoding
+    if any(k in encoding for k in ['add_offset', 'scale_factor']):
         data = np.array(data, dtype=float, copy=True)
-        if 'add_offset' in attributes:
-            data -= attributes['add_offset']
-        if 'scale_factor' in attributes:
-            data /= attributes['scale_factor']
+        if 'add_offset' in encoding:
+            data -= encoding['add_offset']
+            attributes['add_offset'] = encoding['add_offset']
+        if 'scale_factor' in encoding:
+            data /= encoding['scale_factor']
+            attributes['add_offset'] = encoding['add_offset']
 
     # restore original dtype
-    if 'encoded_dtype' in attributes:
-        data = data.astype(attributes.pop('encoded_dtype'))
+    if 'dtype' in encoding:
+        data = data.astype(encoding['dtype'])
 
-    return xarray.XArray(array.dimensions, data, attributes)
+    return xarray.XArray(array.dimensions, data, attributes, encoding)
 
 
-def decode_cf_variable(dimensions, data, attributes, indexing_mode='numpy'):
-    attributes = attributes.copy()
-    attributes['encoded_dtype'] = data.dtype
+def decode_cf_variable(dimensions, data, attributes, indexing_mode='numpy',
+                       decode_mask_and_scale=True):
+    def pop_to(k, source, dest):
+        v = source.pop(k, None)
+        if v is not None:
+            dest[k] = v
+        return v
 
-    mask_and_scale_attrs = ['_FillValue', 'scale_factor', 'add_offset']
-    if any(k in attributes for k in mask_and_scale_attrs):
-        data = MaskedAndScaledArray(data, attributes.get('_FillValue'),
-                                    attributes.get('scale_factor'),
-                                    attributes.get('add_offset'))
+    encoding = {'dtype': data.dtype}
 
-    return xarray.XArray(dimensions, data, attributes, indexing_mode)
+    if decode_mask_and_scale:
+        fill_value = pop_to('_FillValue', attributes, encoding)
+        scale_factor = pop_to('scale_factor', attributes, encoding)
+        add_offset = pop_to('add_offset', attributes, encoding)
+        if (fill_value is not None or scale_factor is not None
+                or add_offset is not None):
+            data = MaskedAndScaledArray(data, fill_value, scale_factor,
+                                        add_offset)
+
+    return xarray.XArray(dimensions, data, attributes, indexing_mode, encoding)

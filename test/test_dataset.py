@@ -339,9 +339,9 @@ class DataTest(TestCase):
 
 def create_masked_and_scaled_data():
     x = np.array([np.nan, np.nan, 10, 10.1, 10.2])
-    attr = {'_FillValue': -1, 'add_offset': 10, 'scale_factor': 0.1,
-            'encoded_dtype': np.int16}
-    return Dataset({'x': ('t', x, attr)})
+    encoding = {'_FillValue': -1, 'add_offset': 10, 'scale_factor': 0.1,
+                'dtype': np.int16}
+    return Dataset({'x': ('t', x, {}, encoding)})
 
 
 class NetCDF4DataTest(DataTest):
@@ -418,9 +418,6 @@ class ScipyDataTest(DataTest):
 
         expected = data.copy()
         actual = open_dataset(StringIO(serialized))
-        # TODO: remove these print statements:
-        print data
-        print actual
         self.assertDatasetEqual(expected, actual)
 
     def test_repr(self):
