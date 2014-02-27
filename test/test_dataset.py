@@ -23,7 +23,8 @@ _testdim = sorted(_dims.keys())[0]
 
 def create_test_data(store=None):
     obj = Dataset() if store is None else Dataset.load_store(store)
-    obj['time'] = ('time', pd.date_range('2000-01-01', periods=1000))
+    obj['time'] = ('time', pd.date_range('2000-01-01', periods=1000),
+                   {'_units': 'days since 2000-01-01'})
     for k, d in sorted(_dims.items()):
         obj[k] = (k, np.arange(d))
     for v, dims in sorted(_vars.items()):

@@ -5,15 +5,16 @@ formats. They should not be used directly, but rather through Dataset objects.
 """
 # TODO: implement backend logic directly in OrderedDict subclasses, to allow
 # for directly manipulating Dataset.variables and the like?
-import netCDF4 as nc4
 import numpy as np
 import pandas as pd
+import netCDF4 as nc4
 
 from scipy.io import netcdf
 from collections import OrderedDict
 
 import xarray
 import conventions
+
 from utils import FrozenOrderedDict, Frozen, datetimeindex2num
 
 
@@ -66,10 +67,24 @@ def convert_to_cf_variable(array):
     data = array.data
     attributes = array.attributes.copy()
     if isinstance(data, pd.DatetimeIndex):
-        # DatetimeIndex objects need to be encoded into numeric arrays
-        (data, units, calendar) = datetimeindex2num(data)
+        if 'units' in attributes:
+            raise ValueError("DatetimeIndices are fully describing, " +
+                             "they shouldn't have units")
+        if 'calendar' in attributes:
+            raise ValueError("DatetimeIndices are fully describing, " +
+                             "they shouldn't have calendars")
+        cf_units = attributes.pop('_units', None)
+        cf_calendar = attributes.pop('_calendar', None)
+        (data, units, calendar) = datetimeindex2num(data, units=cf_units,
+                                                    calendar=cf_calendar)
+        # sanity check to make sure the original cf attributes persist.
+        if not cf_units is None:
+            assert cf_units == units
+        # calendar can be None
+        assert cf_calendar == calendar
         attributes['units'] = units
-        attributes['calendar'] = calendar
+        if not calendar is None:
+            attributes['calendar'] = calendar
     elif data.dtype == np.dtype('O'):
         # Unfortunately, pandas.Index arrays often have dtype=object even if
         # they were created from an array with a sensible datatype (e.g.,
