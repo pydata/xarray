@@ -169,7 +169,7 @@ def xarray_equal(v1, v2, rtol=1e-05, atol=1e-08):
     """True if two objects have the same dimensions, attributes and data;
     otherwise False.
 
-    This function is necessary because `v1 == v2` for variables and dataviews
+    This function is necessary because `v1 == v2` for XArrays and DatasetArrays
     does element-wise comparisions (like numpy.ndarrays).
     """
     if (v1.dimensions == v2.dimensions

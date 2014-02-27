@@ -324,7 +324,8 @@ class XArray(AbstractArray):
             for dim in dimension:
                 var = var._reduce(func, dim, **kwargs)
         else:
-            var = type(self)([], func(self.data, **kwargs), self.attributes)
+            var = type(self)([], func(self.data, **kwargs),
+                             self._math_safe_attributes())
             var._append_to_cell_methods(': '.join(self.dimensions)
                                         + ': ' + func.__name__)
         return var
@@ -342,7 +343,7 @@ class XArray(AbstractArray):
         dims = tuple(dim for i, dim in enumerate(self.dimensions)
                      if axis not in [i, i - self.ndim])
         data = f(self.data, axis=axis, **kwargs)
-        new_var = type(self)(dims, data, self.attributes)
+        new_var = type(self)(dims, data, self._math_safe_attributes())
         new_var._append_to_cell_methods(self.dimensions[axis]
                                         + ': ' + f.__name__)
         return new_var
@@ -468,12 +469,16 @@ class XArray(AbstractArray):
     def __array_wrap__(self, obj, context=None):
         return type(self)(self.dimensions, obj, self.attributes)
 
+    def _math_safe_attributes(self):
+        return OrderedDict((k, v) for k, v in self.attributes.iteritems()
+                           if k not in ['units', 'encoded_dtype'])
+
     @staticmethod
     def _unary_op(f):
         @functools.wraps(f)
         def func(self, *args, **kwargs):
             return type(self)(self.dimensions, f(self.data, *args, **kwargs),
-                              self.attributes)
+                              self._math_safe_attributes())
         return func
 
     @staticmethod
@@ -486,11 +491,11 @@ class XArray(AbstractArray):
             new_data = (f(self_data, other_data)
                         if not reflexive
                         else f(other_data, self_data))
-            if hasattr(other, 'attributes'):
-                new_attr = utils.ordered_dict_intersection(self.attributes,
-                                                           other.attributes)
-            else:
-                new_attr = self.attributes
+            new_attr = self._math_safe_attributes()
+            # TODO: reconsider handling of conflicting attributes
+            if hasattr(other, '_math_safe_attributes'):
+                new_attr = utils.ordered_dict_intersection(
+                    new_attr, other._math_safe_attributes())
             return type(self)(dims, new_data, new_attr)
         return func
 
@@ -503,8 +508,9 @@ class XArray(AbstractArray):
                 raise ValueError('dimensions cannot change for in-place '
                                  'operations')
             self.data = f(self_data, other_data)
-            if hasattr(other, 'attributes'):
-                utils.remove_incompatible_items(self.attributes, other)
+            if hasattr(other, '_math_safe_attributes'):
+                utils.remove_incompatible_items(
+                    self.attributes, other._math_safe_attributes())
             return self
         return func
 
