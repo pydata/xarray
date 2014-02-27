@@ -17,6 +17,10 @@ _reserved_names = set(['byte', 'char', 'short', 'ushort', 'int', 'uint',
                        'int64', 'uint64', 'float' 'real', 'double', 'bool',
                        'string'])
 
+# These data-types aren't supported by netCDF3, so they are automatically
+# coerced instead as indicated by the "coerce_nc3_dtype" function
+_nc3_dtype_coercions = {'int64': 'int32', 'float64': 'float32', 'bool': 'int8'}
+
 
 def pretty_print(x, numchars):
     """Given an object x, call x.__str__() and format the returned
@@ -41,9 +45,8 @@ def coerce_nc3_dtype(arr):
     `np.allclose` with the default keyword arguments.
     """
     dtype = str(arr.dtype)
-    dtype_map = {'int64': 'int32', 'float64': 'float32', 'bool': 'int8'}
-    if dtype in dtype_map:
-        new_dtype = dtype_map[dtype]
+    if dtype in _nc3_dtype_coercions:
+        new_dtype = _nc3_dtype_coercions[dtype]
         # TODO: raise a warning whenever casting the data-type instead?
         cast_arr = arr.astype(new_dtype)
         if (('int' in dtype and not (cast_arr == arr).all())
@@ -200,16 +203,19 @@ def encode_cf_variable(array):
         # do).
         data = np.asarray(data).astype(dtype)
 
+    def get_to(source, dest, k):
+        v = source.get(k)
+        dest[k] = v
+        return v
+
     # unscale/mask
     encoding = array.encoding
     if any(k in encoding for k in ['add_offset', 'scale_factor']):
         data = np.array(data, dtype=float, copy=True)
         if 'add_offset' in encoding:
-            data -= encoding['add_offset']
-            attributes['add_offset'] = encoding['add_offset']
+            data -= get_to(encoding, attributes, 'add_offset')
         if 'scale_factor' in encoding:
-            data /= encoding['scale_factor']
-            attributes['add_offset'] = encoding['add_offset']
+            data /= get_to(encoding, attributes, 'scale_factor')
 
     # restore original dtype
     if 'dtype' in encoding:
@@ -219,8 +225,8 @@ def encode_cf_variable(array):
 
 
 def decode_cf_variable(dimensions, data, attributes, indexing_mode='numpy',
-                       decode_mask_and_scale=True):
-    def pop_to(k, source, dest):
+                       mask_and_scale=True):
+    def pop_to(source, dest, k):
         v = source.pop(k, None)
         if v is not None:
             dest[k] = v
@@ -228,10 +234,10 @@ def decode_cf_variable(dimensions, data, attributes, indexing_mode='numpy',
 
     encoding = {'dtype': data.dtype}
 
-    if decode_mask_and_scale:
-        fill_value = pop_to('_FillValue', attributes, encoding)
-        scale_factor = pop_to('scale_factor', attributes, encoding)
-        add_offset = pop_to('add_offset', attributes, encoding)
+    if mask_and_scale:
+        fill_value = pop_to(attributes, encoding, '_FillValue')
+        scale_factor = pop_to(attributes, encoding, 'scale_factor')
+        add_offset = pop_to(attributes, encoding, 'add_offset')
         if (fill_value is not None or scale_factor is not None
                 or add_offset is not None):
             data = MaskedAndScaledArray(data, fill_value, scale_factor,

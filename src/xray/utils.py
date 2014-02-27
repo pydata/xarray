@@ -166,21 +166,20 @@ def datetimeindex2num(dates, units=None, calendar=None):
 
 
 def allclose_or_equiv(arr1, arr2, rtol=1e-5, atol=1e-8):
-    """Like np.allclose, but also allows values to NaN in both arrays
+    """Like np.allclose, but also allows values to be NaN in both arrays
     """
     if arr1.shape != arr2.shape:
         return False
     nan_indices = np.isnan(arr1)
     if not (nan_indices == np.isnan(arr2)).all():
         return False
-    else:
-        if arr1.ndim > 0:
-            arr1 = arr1[~nan_indices]
-            arr2 = arr2[~nan_indices]
-        elif nan_indices:
-            # 0-d arrays can't be indexed, so just check if the value is NaN
-            return True
-        return np.allclose(arr1, arr2, rtol=rtol, atol=atol)
+    if arr1.ndim > 0:
+        arr1 = arr1[~nan_indices]
+        arr2 = arr2[~nan_indices]
+    elif nan_indices:
+        # 0-d arrays can't be indexed, so just check if the value is NaN
+        return True
+    return np.allclose(arr1, arr2, rtol=rtol, atol=atol)
 
 
 def xarray_equal(v1, v2, rtol=1e-05, atol=1e-08):

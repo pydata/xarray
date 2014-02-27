@@ -68,10 +68,10 @@ class ScipyDataStore(AbstractDataStore):
     serialization.
     """
     def __init__(self, filename_or_obj, mode='r', mmap=None, version=1,
-                 decode_mask_and_scale=True):
+                 mask_and_scale=True):
         self.ds = netcdf.netcdf_file(filename_or_obj, mode=mode, mmap=None,
                                      version=version)
-        self.decode_mask_and_scale = decode_mask_and_scale
+        self.mask_and_scale = mask_and_scale
 
     @property
     def variables(self):
@@ -129,11 +129,11 @@ class ScipyDataStore(AbstractDataStore):
 
 class NetCDF4DataStore(AbstractDataStore):
     def __init__(self, filename, mode='r', clobber=True, diskless=False,
-                 persist=False, format='NETCDF4', decode_mask_and_scale=True):
+                 persist=False, format='NETCDF4', mask_and_scale=True):
         self.ds = nc4.Dataset(filename, mode=mode, clobber=clobber,
                               diskless=diskless, persist=persist,
                               format=format)
-        self.decode_mask_and_scale = decode_mask_and_scale
+        self.mask_and_scale = mask_and_scale
 
     @property
     def variables(self):
@@ -142,7 +142,7 @@ class NetCDF4DataStore(AbstractDataStore):
             var.set_auto_maskandscale(False)
             return decode_cf_variable(
                 var.dimensions, var, attr, indexing_mode='orthogonal',
-                decode_mask_and_scale=self.decode_mask_and_scale)
+                mask_and_scale=self.mask_and_scale)
         return FrozenOrderedDict((k, convert_variable(v))
                                  for k, v in self.ds.variables.iteritems())
 
