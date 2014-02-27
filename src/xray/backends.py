@@ -31,6 +31,11 @@ class AbstractDataStore(object):
         for vn, v in variables.iteritems():
             self.set_variable(vn, v)
 
+    def set_necessary_dimensions(self, variable):
+        for d, l in zip(variable.dimensions, variable.shape):
+            if d not in self.ds.dimensions:
+                self.set_dimension(d, l)
+
 
 class InMemoryDataStore(AbstractDataStore):
     """
@@ -113,6 +118,7 @@ class ScipyDataStore(AbstractDataStore):
     def set_variable(self, name, variable):
         variable = encode_cf_variable(variable)
         data = coerce_nc3_dtype(variable.data)
+        self.set_necessary_dimensions(variable)
         self.ds.createVariable(name, data.dtype, variable.dimensions)
         scipy_var = self.ds.variables[name]
         scipy_var[:] = data[:]
@@ -163,6 +169,7 @@ class NetCDF4DataStore(AbstractDataStore):
 
     def set_variable(self, name, variable):
         variable = encode_cf_variable(variable)
+        self.set_necessary_dimensions(variable)
         # netCDF4 will automatically assign a fill value
         # depending on the datatype of the variable.  Here
         # we let the package handle the _FillValue attribute

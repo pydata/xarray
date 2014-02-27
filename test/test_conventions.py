@@ -1,6 +1,6 @@
 import numpy as np
 
-from xray.conventions import MaskedAndScaledArray
+from xray.conventions import MaskedAndScaledArray, CharToStringArray
 from . import TestCase
 
 
@@ -23,3 +23,33 @@ class TestMaskedAndScaledArray(TestCase):
         x = MaskedAndScaledArray(np.array([-99, -1, 0, 1, 2]), -99, 0.01, 1)
         expected = np.array([np.nan, 0.99, 1, 1.01, 1.02])
         self.assertArrayEqual(expected, x)
+
+
+class TestCharToStringArray(TestCase):
+    def test(self):
+        array = np.array(list('abc'))
+        actual = CharToStringArray(array)
+        expected = np.array('abc')
+        self.assertEqual(actual.dtype, expected.dtype)
+        self.assertEqual(actual.shape, expected.shape)
+        self.assertEqual(actual.size, expected.size)
+        self.assertEqual(actual.ndim, expected.ndim)
+        with self.assertRaises(TypeError):
+            len(actual)
+        self.assertArrayEqual(expected, actual)
+        with self.assertRaises(IndexError):
+            actual[:2]
+        self.assertEqual(str(actual), 'abc')
+
+        array = np.array([list('abc'), list('cdf')])
+        actual = CharToStringArray(array)
+        expected = np.array(['abc', 'cdf'])
+        self.assertEqual(actual.dtype, expected.dtype)
+        self.assertEqual(actual.shape, expected.shape)
+        self.assertEqual(actual.size, expected.size)
+        self.assertEqual(actual.ndim, expected.ndim)
+        self.assertEqual(len(actual), len(expected))
+        self.assertArrayEqual(expected, actual)
+        self.assertArrayEqual(expected[:1], actual[:1])
+        with self.assertRaises(IndexError):
+            actual[:, :2]

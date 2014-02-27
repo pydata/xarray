@@ -1,5 +1,6 @@
 import unicodedata
 
+import netCDF4 as nc4
 import numpy as np
 import pandas as pd
 
@@ -179,12 +180,74 @@ class MaskedAndScaledArray(object):
                  self.scale_factor, self.add_offset))
 
 
+class CharToStringArray(object):
+    """Wrapper around array-like objects to create a new indexable object where
+    values, when accessesed, are automatically concatenated along the last
+    dimension
+
+    >>> CharToStringArray(np.array(['a', 'b', 'c']))[:]
+    array('abc',
+          dtype='|S3')
+    """
+    def __init__(self, array):
+        """
+        Parameters
+        ----------
+        array : array-like
+            Original array of values to wrap.
+        """
+        self.array = array
+
+    @property
+    def dtype(self):
+        return np.dtype(str(self.array.dtype)[:2] + str(self.array.shape[-1]))
+
+    @property
+    def shape(self):
+        return self.array.shape[:-1]
+
+    @property
+    def size(self):
+        return np.prod(self.shape)
+
+    @property
+    def ndim(self):
+        return self.array.ndim - 1
+
+    def __len__(self):
+        if self.ndim > 0:
+            return len(self.array)
+        else:
+            raise TypeError('len() of unsized object')
+
+    def __str__(self):
+        if self.ndim == 0:
+            return str(self[...])
+        else:
+            return repr(self)
+
+    def __repr__(self):
+        return '%s(%r)' % (type(self).__name__, self.array)
+
+    def __array__(self):
+        return self[...]
+
+    def __getitem__(self, key):
+        # require slicing the last dimension completely
+        key = utils.expanded_indexer(key, self.array.ndim)
+        if key[-1] != slice(None):
+            raise IndexError('too many indices')
+        return nc4.chartostring(self.array[key])
+
+
 def encode_cf_variable(array):
     """Converts an XArray into an XArray suitable for saving as a netCDF
     variable
     """
+    dimensions = array.dimensions
     data = array.data
     attributes = array.attributes.copy()
+
     if isinstance(data, pd.DatetimeIndex):
         # DatetimeIndex objects need to be encoded into numeric arrays
         (data, units, calendar) = utils.datetimeindex2num(data)
@@ -207,6 +270,11 @@ def encode_cf_variable(array):
         v = source.get(k)
         dest[k] = v
         return v
+
+    # encode strings as character arrays
+    if np.issubdtype(data.dtype, (str, unicode)):
+        data = nc4.stringtochar(data)
+        dimensions = dimensions + ('string%s' % data.shape[-1],)
 
     # unscale/mask
     encoding = array.encoding
@@ -234,7 +302,10 @@ def decode_cf_variable(dimensions, data, attributes, indexing_mode='numpy',
 
     encoding = {'dtype': data.dtype}
 
-    if mask_and_scale:
+    if np.issubdtype(data.dtype, (str, unicode)):
+        dimensions = dimensions[:-1]
+        data = CharToStringArray(data)
+    elif mask_and_scale:
         fill_value = pop_to(attributes, encoding, '_FillValue')
         scale_factor = pop_to(attributes, encoding, 'scale_factor')
         add_offset = pop_to(attributes, encoding, 'add_offset')

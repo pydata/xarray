@@ -36,6 +36,9 @@ class DataTest(TestCase):
     def get_store(self):
         return backends.InMemoryDataStore()
 
+    def roundtrip(self, data):
+        return data.copy()
+
     def test_repr(self):
         data = create_test_data()
         self.assertEqual('<xray.Dataset (time: 1000, dim1: 100, '
@@ -336,12 +339,25 @@ class DataTest(TestCase):
         actual = ds.to_dataframe()
         self.assertTrue(expected.equals(actual))
 
+    def test_dump_and_open_dataset(self):
+        for expected in [
+                create_string_data(),
+                create_test_data(),
+                create_masked_and_scaled_data(),
+                open_dataset(os.path.join(_test_data_path, 'example_1.nc'))]:
+            actual = self.roundtrip(expected)
+            self.assertDatasetEqual(expected, actual)
+
 
 def create_masked_and_scaled_data():
     x = np.array([np.nan, np.nan, 10, 10.1, 10.2])
     encoding = {'_FillValue': -1, 'add_offset': 10, 'scale_factor': 0.1,
                 'dtype': np.int16}
     return Dataset({'x': ('t', x, {}, encoding)})
+
+
+def create_string_data():
+    return Dataset({'x': ('t', ['abc', 'def'])})
 
 
 class NetCDF4DataTest(DataTest):
@@ -354,16 +370,13 @@ class NetCDF4DataTest(DataTest):
         if hasattr(self, 'tmp_file') and os.path.exists(self.tmp_file):
             os.remove(self.tmp_file)
 
-    def test_dump_and_open_dataset(self):
-        for data in [create_test_data(), create_masked_and_scaled_data()]:
-            f, tmp_file = tempfile.mkstemp(suffix='.nc')
-            os.close(f)
-            data.dump(tmp_file)
-
-            expected = data.copy()
-            actual = open_dataset(tmp_file)
-            self.assertDatasetEqual(expected, actual)
-            os.remove(tmp_file)
+    def roundtrip(self, data):
+        f, tmp_file = tempfile.mkstemp(suffix='.nc')
+        os.close(f)
+        data.dump(tmp_file)
+        roundtrip_data = open_dataset(tmp_file)
+        os.remove(tmp_file)
+        return roundtrip_data
 
     def test_mask_and_scale(self):
         f, tmp_file = tempfile.mkstemp(suffix='.nc')
@@ -405,20 +418,9 @@ class ScipyDataTest(DataTest):
         fobj = StringIO()
         return backends.ScipyDataStore(fobj, 'w')
 
-    def test_dump_and_open_dataset(self):
-        for data in [create_test_data(), create_masked_and_scaled_data()]:
-            serialized = data.dumps()
-            expected = data.copy()
-            actual = open_dataset(StringIO(serialized))
-            self.assertDatasetEqual(expected, actual)
-
-    def test_open_and_reopen_existing(self):
-        data = open_dataset(os.path.join(_test_data_path, 'example_1.nc'))
+    def roundtrip(self, data):
         serialized = data.dumps()
-
-        expected = data.copy()
-        actual = open_dataset(StringIO(serialized))
-        self.assertDatasetEqual(expected, actual)
+        return open_dataset(StringIO(serialized))
 
     def test_repr(self):
         # scipy.io.netcdf does not keep track of dimension order :(
