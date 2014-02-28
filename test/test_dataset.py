@@ -13,13 +13,14 @@ from . import TestCase
 
 _test_data_path = os.path.join(os.path.dirname(__file__), 'data')
 
-_dims = {'dim1':100, 'dim2':50, 'dim3':10}
-_vars = {'var1':['dim1', 'dim2'],
-         'var2':['dim1', 'dim2'],
-         'var3':['dim3', 'dim1'],
+_dims = {'dim1': 100, 'dim2': 50, 'dim3': 10}
+_vars = {'var1': ['dim1', 'dim2'],
+         'var2': ['dim1', 'dim2'],
+         'var3': ['dim3', 'dim1'],
          }
 _testvar = sorted(_vars.keys())[0]
 _testdim = sorted(_dims.keys())[0]
+
 
 def create_test_data():
     obj = Dataset()
@@ -183,8 +184,7 @@ class TestDataset(TestCase):
         loc_slicers = {'dim1': slice(None, None, 2), 'dim2': slice(0, 1)}
         self.assertEqual(data.indexed_by(**int_slicers),
                          data.labeled_by(**loc_slicers))
-        data['time'] = ('time', np.arange(1000, dtype=np.int32),
-                        {'units': 'days since 2000-01-01'})
+        data['time'] = ('time', pd.date_range('2000-01-01', periods=1000))
         self.assertEqual(data.indexed_by(time=0),
                          data.labeled_by(time='2000-01-01'))
         self.assertEqual(data.indexed_by(time=slice(10)),
@@ -274,8 +274,7 @@ class TestDataset(TestCase):
 
     def test_getitem(self):
         data = create_test_data()
-        data['time'] = ('time', np.arange(1000, dtype=np.int32),
-                        {'units': 'days since 2000-01-01'})
+        data['time'] = ('time', pd.date_range('2000-01-01', periods=1000))
         self.assertIsInstance(data['var1'], DatasetArray)
         self.assertXArrayEqual(data['var1'], data.variables['var1'])
         self.assertItemsEqual(data['var1'].dataset.variables,
@@ -370,7 +369,7 @@ class DatasetIOCases(object):
 
     def test_roundtrip_mask_and_scale_False(self):
         expected = create_masked_and_scaled_data()
-        actual = self.roundtrip(expected, mask_and_scale=False)
+        actual = self.roundtrip(expected, decode_cf=False)
         self.assertDatasetEqual(expected, actual)
 
     def test_roundtrip_example_1_netcdf(self):
@@ -380,7 +379,7 @@ class DatasetIOCases(object):
 
     def test_encoded_masked_and_scaled_data(self):
         original = create_encoded_masked_and_scaled_data()
-        actual = self.roundtrip(original, mask_and_scale=True)
+        actual = self.roundtrip(original, decode_cf=True)
         expected = create_masked_and_scaled_data()
         self.assertDatasetEqual(expected, actual)
 
@@ -402,6 +401,60 @@ class NetCDF4DataTest(DatasetIOCases, TestCase):
         roundtrip_data = open_dataset(tmp_file, **kwargs)
         os.remove(tmp_file)
         return roundtrip_data
+
+    def test_open_encodings(self):
+        # Create a netCDF file with explicit time units
+        # and make sure it makes it into the encodings
+        # and survives a round trip
+        f, tmp_file = tempfile.mkstemp(suffix='.nc')
+        os.close(f)
+
+        ds = nc4.Dataset(tmp_file, 'w')
+        ds.createDimension('time', size=10)
+        ds.createVariable('time', np.int32, dimensions=('time',))
+        units = 'days since 1999-01-01'
+        ds.variables['time'].setncattr('units', units)
+        ds.variables['time'][:] = np.arange(10) + 4
+        ds.close()
+
+        expected = Dataset()
+        expected['time'] = ('time', pd.date_range('1999-01-05', periods=10))
+        expected['time'].encoding['units'] = units
+        expected['time'].encoding['dtype'] = np.dtype('int32')
+
+        actual = open_dataset(tmp_file)
+
+        self.assertXArrayEqual(actual['time'], expected['time'])
+        self.assertDictEqual(actual['time'].encoding, expected['time'].encoding)
+
+        os.remove(tmp_file)
+
+    def test_dump_and_open_encodings(self):
+        # Create a netCDF file with explicit time units
+        # and make sure it makes it into the encodings
+        # and survives a round trip
+        f, tmp_file = tempfile.mkstemp(suffix='.nc')
+        os.close(f)
+
+        ds = nc4.Dataset(tmp_file, 'w')
+        ds.createDimension('time', size=10)
+        ds.createVariable('time', np.int32, dimensions=('time',))
+        units = 'days since 1999-01-01'
+        ds.variables['time'].setncattr('units', units)
+        ds.variables['time'][:] = np.arange(10) + 4
+        ds.close()
+
+        xray_dataset = open_dataset(tmp_file)
+        os.remove(tmp_file)
+        xray_dataset.dump(tmp_file)
+
+        ds = nc4.Dataset(tmp_file, 'r')
+
+        self.assertEqual(ds.variables['time'].getncattr('units'), units)
+        self.assertArrayEqual(ds.variables['time'], np.arange(10) + 4)
+
+        ds.close()
+        os.remove(tmp_file)
 
     def test_mask_and_scale(self):
         f, tmp_file = tempfile.mkstemp(suffix='.nc')

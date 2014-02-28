@@ -251,7 +251,9 @@ def encode_cf_variable(array):
 
     if isinstance(data, pd.DatetimeIndex):
         # DatetimeIndex objects need to be encoded into numeric arrays
-        (data, units, calendar) = utils.datetimeindex2num(data)
+        (data, units, calendar) = utils.datetimeindex2num(data,
+                                          units=encoding.get('units', None),
+                                          calendar=encoding.get('calendar', None))
         attributes['units'] = units
         attributes['calendar'] = calendar
     elif data.dtype == np.dtype('O'):
@@ -301,21 +303,36 @@ def encode_cf_variable(array):
     return xarray.XArray(dimensions, data, attributes, encoding=encoding)
 
 
-def decode_cf_variable(dimensions, data, attributes, indexing_mode='numpy',
-                       mask_and_scale=True):
-    encoding = {'dtype': data.dtype}
+def decode_cf_variable(var, mask_and_scale=True):
+    data = var.data
+    dimensions = var.dimensions
+    attributes = var.attributes.copy()
+    encoding = var.encoding.copy()
+    indexing_mode = var._indexing_mode
+
+    def pop_to(source, dest, k):
+        """
+        A convenience function which pops a key k from source to dest.
+        None values are not passed on.  If k already exists in dest an
+        error is raised.
+        """
+        v = source.pop(k, None)
+        if v is not None:
+            if k in dest:
+                raise ValueError("Failed hard to prevent overwriting key %s" % k)
+            dest[k] = v
+        return v
+
+    if 'dtype' in encoding:
+        if not var.data.dtype == encoding.dtype:
+            raise ValueError("Refused to overwrite dtype")
+    encoding['dtype'] = data.dtype
     if np.issubdtype(data.dtype, (str, unicode)):
         # TODO: add some sort of check instead of just assuming that the last
         # dimension on a character array is always the string dimension
         dimensions = dimensions[:-1]
         data = CharToStringArray(data)
     elif mask_and_scale:
-        def pop_to(source, dest, k):
-            v = source.pop(k, None)
-            if v is not None:
-                dest[k] = v
-            return v
-
         fill_value = pop_to(attributes, encoding, '_FillValue')
         scale_factor = pop_to(attributes, encoding, 'scale_factor')
         add_offset = pop_to(attributes, encoding, 'add_offset')
@@ -323,7 +340,15 @@ def decode_cf_variable(dimensions, data, attributes, indexing_mode='numpy',
                 or add_offset is not None):
             data = MaskedAndScaledArray(data, fill_value, scale_factor,
                                         add_offset)
-
-    # TODO: decode arrays with time units into np.datetime64 objects here
+    # TODO: How should multidimensional time variables be handled?
+    if (data.ndim == 1 and
+        'units' in attributes and
+        'since' in attributes['units']):
+        # convert times to datetime indices.  We only do this if the dimension
+        # is one, since otherwise it can't be a coordinate.
+        units = pop_to(attributes, encoding, 'units')
+        calendar = pop_to(attributes, encoding, 'calendar')
+        data = utils.num2datetimeindex(data, units=units,
+                                       calendar=calendar)
 
     return xarray.XArray(dimensions, data, attributes, indexing_mode, encoding)

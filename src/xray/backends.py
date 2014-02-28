@@ -5,17 +5,16 @@ formats. They should not be used directly, but rather through Dataset objects.
 """
 # TODO: implement backend logic directly in OrderedDict subclasses, to allow
 # for directly manipulating Dataset.variables and the like?
-import netCDF4 as nc4
 import numpy as np
-import pandas as pd
+import netCDF4 as nc4
 
 from scipy.io import netcdf
 from collections import OrderedDict
 
 import xarray
-from conventions import (decode_cf_variable, encode_cf_variable,
-                         is_valid_nc3_name, coerce_nc3_dtype)
-from utils import FrozenOrderedDict, Frozen, datetimeindex2num
+
+from utils import FrozenOrderedDict, Frozen
+from conventions import is_valid_nc3_name, coerce_nc3_dtype, encode_cf_variable
 
 
 class AbstractDataStore(object):
@@ -72,16 +71,14 @@ class ScipyDataStore(AbstractDataStore):
     be initialized with a StringIO object, allow for
     serialization.
     """
-    def __init__(self, filename_or_obj, mode='r', mmap=None, version=1,
-                 mask_and_scale=True):
-        self.ds = netcdf.netcdf_file(filename_or_obj, mode=mode, mmap=None,
+    def __init__(self, filename_or_obj, mode='r', mmap=None, version=1):
+        self.ds = netcdf.netcdf_file(filename_or_obj, mode=mode, mmap=mmap,
                                      version=version)
-        self.mask_and_scale = mask_and_scale
 
     @property
     def variables(self):
-        return FrozenOrderedDict((k, decode_cf_variable(v.dimensions, v.data,
-                                                        v._attributes))
+        return FrozenOrderedDict((k, xarray.XArray(v.dimensions, v.data,
+                                            v._attributes))
                                  for k, v in self.ds.variables.iteritems())
 
     @property
@@ -134,21 +131,20 @@ class ScipyDataStore(AbstractDataStore):
 
 
 class NetCDF4DataStore(AbstractDataStore):
+
     def __init__(self, filename, mode='r', clobber=True, diskless=False,
-                 persist=False, format='NETCDF4', mask_and_scale=True):
+                 persist=False, format='NETCDF4'):
         self.ds = nc4.Dataset(filename, mode=mode, clobber=clobber,
                               diskless=diskless, persist=persist,
                               format=format)
-        self.mask_and_scale = mask_and_scale
 
     @property
     def variables(self):
         def convert_variable(var):
             attr = OrderedDict((k, var.getncattr(k)) for k in var.ncattrs())
             var.set_auto_maskandscale(False)
-            return decode_cf_variable(
-                var.dimensions, var, attr, indexing_mode='orthogonal',
-                mask_and_scale=self.mask_and_scale)
+            return xarray.XArray(var.dimensions, var,
+                          attr, indexing_mode='orthogonal')
         return FrozenOrderedDict((k, convert_variable(v))
                                  for k, v in self.ds.variables.iteritems())
 
@@ -159,7 +155,8 @@ class NetCDF4DataStore(AbstractDataStore):
 
     @property
     def dimensions(self):
-        return FrozenOrderedDict((k, len(v)) for k, v in self.ds.dimensions.iteritems())
+        return FrozenOrderedDict((k, len(v))
+                                 for k, v in self.ds.dimensions.iteritems())
 
     def set_dimension(self, name, length):
         self.ds.createDimension(name, size=length)

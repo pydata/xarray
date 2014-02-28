@@ -17,7 +17,7 @@ date2num = nc4.date2num
 num2date = nc4.num2date
 
 
-def open_dataset(nc, *args, **kwargs):
+def open_dataset(nc, decode_cf=True, *args, **kwargs):
     """Open the dataset given the object or path `nc`.
 
     *args and **kwargs provide format specific options
@@ -32,7 +32,7 @@ def open_dataset(nc, *args, **kwargs):
         # If nc is a file-like object we read it using
         # the scipy.io.netcdf package
         store = backends.ScipyDataStore(nc, *args, **kwargs)
-    return Dataset.load_store(store)
+    return Dataset.load_store(store, decode_cf=decode_cf)
 
 
 # list of attributes of pd.DatetimeIndex that are ndarrays of time info
@@ -101,7 +101,7 @@ class Dataset(Mapping):
 
     Note: the size of dimensions in a dataset cannot be changed.
     """
-    def __init__(self, variables=None, attributes=None):
+    def __init__(self, variables=None, attributes=None, decode_cf=False):
         """To load data from a file or file-like object, use the `open_dataset`
         function.
 
@@ -118,6 +118,7 @@ class Dataset(Mapping):
         attributes : dict-like, optional
             Global attributes to save on this dataset.
         """
+        self._decode_cf = decode_cf
         self._variables = _VariablesDict()
         self._dimensions = OrderedDict()
         if variables is not None:
@@ -134,18 +135,16 @@ class Dataset(Mapping):
                 raise TypeError('Dataset variables must be of type '
                                 'DatasetArray or XArray, or a sequence of the '
                                 'form (dimensions, data[, attributes])')
-
+        # this will unmask and rescale the data as well as convert
+        # time variables to datetime indices.
+        if self._decode_cf:
+            var = conventions.decode_cf_variable(var)
         if name in var.dimensions:
             # convert the coordinate into a pandas.Index
             if var.ndim != 1:
                 raise ValueError('a coordinate variable must be defined with '
                                  '1-dimensional data')
-            attr = var.attributes
-            if 'units' in attr and 'since' in attr['units']:
-                var.data = utils.num2datetimeindex(var.data, attr.pop('units'),
-                                                   attr.pop('calendar', None))
-            else:
-                var.data = pd.Index(var.data)
+            var.data = pd.Index(var.data)
         return var
 
     def _set_variables(self, variables):
@@ -169,8 +168,8 @@ class Dataset(Mapping):
         self._variables.update(new_variables)
 
     @classmethod
-    def load_store(cls, store):
-        return cls(store.variables, store.attributes)
+    def load_store(cls, store, decode_cf=True):
+        return cls(store.variables, store.attributes, decode_cf)
 
     @property
     def variables(self):

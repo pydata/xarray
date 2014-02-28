@@ -1,16 +1,16 @@
 import functools
-import warnings
-from collections import OrderedDict
-from itertools import izip
-
 import numpy as np
 
-import conventions
-import dataset
-import dataset_array
-import groupby
+from itertools import izip
+from collections import OrderedDict
+
 import ops
 import utils
+import dataset
+import groupby
+import conventions
+import dataset_array
+
 from common import AbstractArray
 
 
