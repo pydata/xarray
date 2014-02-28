@@ -2,6 +2,8 @@
 language: python
 python:
   - "2.7"
+notifications:
+  email: false
 # Setup anaconda
 before_install:
   - wget http://repo.continuum.io/miniconda/Miniconda-2.2.2-Linux-x86_64.sh -O miniconda.sh
@@ -20,4 +22,4 @@ install:
   - python setup.py install
 # Run test
 script:
-  - nosetests
+  - nosetests -v
