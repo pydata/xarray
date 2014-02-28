@@ -298,6 +298,8 @@ def encode_cf_variable(array):
 
     # restore original dtype
     if 'dtype' in encoding:
+        if np.issubdtype(encoding['dtype'], int):
+            data = data.round()
         data = data.astype(encoding['dtype'])
 
     return xarray.XArray(dimensions, data, attributes, encoding=encoding)
@@ -308,7 +310,6 @@ def decode_cf_variable(var, mask_and_scale=True):
     dimensions = var.dimensions
     attributes = var.attributes.copy()
     encoding = var.encoding.copy()
-    indexing_mode = var._indexing_mode
 
     def pop_to(source, dest, k):
         """
@@ -324,7 +325,7 @@ def decode_cf_variable(var, mask_and_scale=True):
         return v
 
     if 'dtype' in encoding:
-        if not var.data.dtype == encoding.dtype:
+        if var.data.dtype != encoding['dtype']:
             raise ValueError("Refused to overwrite dtype")
     encoding['dtype'] = data.dtype
     if np.issubdtype(data.dtype, (str, unicode)):
@@ -342,8 +343,8 @@ def decode_cf_variable(var, mask_and_scale=True):
                                         add_offset)
     # TODO: How should multidimensional time variables be handled?
     if (data.ndim == 1 and
-        'units' in attributes and
-        'since' in attributes['units']):
+            'units' in attributes and
+            'since' in attributes['units']):
         # convert times to datetime indices.  We only do this if the dimension
         # is one, since otherwise it can't be a coordinate.
         units = pop_to(attributes, encoding, 'units')
@@ -351,4 +352,4 @@ def decode_cf_variable(var, mask_and_scale=True):
         data = utils.num2datetimeindex(data, units=units,
                                        calendar=calendar)
 
-    return xarray.XArray(dimensions, data, attributes, indexing_mode, encoding)
+    return xarray.XArray(dimensions, data, attributes, encoding=encoding)

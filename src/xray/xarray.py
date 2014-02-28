@@ -38,8 +38,8 @@ class XArray(AbstractArray):
     outside the context of its parent Dataset (if you want such a fully
     described object, use a DatasetArray instead).
     """
-    def __init__(self, dims, data, attributes=None, indexing_mode='numpy',
-                 encoding=None):
+    def __init__(self, dims, data, attributes=None, encoding=None,
+                 indexing_mode='numpy'):
         """
         Parameters
         ----------
@@ -52,6 +52,11 @@ class XArray(AbstractArray):
         attributes : dict_like or None, optional
             Attributes to assign to the new variable. If None (default), an
             empty attribute dictionary is initialized.
+        encoding : dict_like or None, optional
+            Dictionary specifying how to encode this array's data into a
+            serialized format like netCDF4. Currently used keys (for netCDF)
+            include '_FillValue', 'scale_factor', 'add_offset' and 'dtype'.
+            Well behaviored code to serialize an XArray should ignore
         indexing_mode : {'numpy', 'orthogonal'}
             String indicating how the data parameter handles fancy indexing
             (with arrays). Two modes are supported: 'numpy' (fancy indexing
@@ -60,11 +65,6 @@ class XArray(AbstractArray):
             variables). Accessing data from an XArray always uses orthogonal
             indexing, so `indexing_mode` tells the variable whether index
             lookups need to be internally converted to numpy-style indexing.
-        encoding : dict_like or None, optional
-            Dictionary specifying how to encode this array's data into a
-            serialized format like netCDF4. Currently used keys (for netCDF)
-            include '_FillValue', 'scale_factor', 'add_offset' and 'dtype'.
-            Well behaviored code to serialize an XArray should ignore
             unrecognized keys in this dictionary.
         """
         if isinstance(dims, basestring):
@@ -77,8 +77,8 @@ class XArray(AbstractArray):
         if attributes is None:
             attributes = {}
         self._attributes = OrderedDict(attributes)
-        self._indexing_mode = indexing_mode
         self.encoding = dict({} if encoding is None else encoding)
+        self._indexing_mode = indexing_mode
 
     @property
     def data(self):
@@ -157,8 +157,7 @@ class XArray(AbstractArray):
         # return a variable with the same indexing_mode, because data should
         # still be the same type as _data
         return type(self)(dimensions, new_data, self.attributes,
-                          indexing_mode=self._indexing_mode,
-                          encoding=self.encoding)
+                          self.encoding, self._indexing_mode)
 
     def __setitem__(self, key, value):
         """__setitem__ is overloaded to access the underlying numpy data with
@@ -191,7 +190,7 @@ class XArray(AbstractArray):
         # dimensions is already an immutable tuple
         # attributes will be copied when the new Array is created
         return type(self)(self.dimensions, data, self.attributes,
-                          encoding=self.encoding)
+                          self.encoding)
 
     def __copy__(self):
         return self._copy(deepcopy=False)
@@ -284,8 +283,7 @@ class XArray(AbstractArray):
             dimensions = self.dimensions[::-1]
         axes = [self.dimensions.index(dim) for dim in dimensions]
         data = self.data.transpose(*axes)
-        return type(self)(dimensions, data, self.attributes,
-                          encoding=self.encoding)
+        return type(self)(dimensions, data, self.attributes, self.encoding)
 
     def reduce(self, func, dimension=None, axis=None, **kwargs):
         """Reduce this array by applying `func` along some dimension(s).
@@ -572,13 +570,13 @@ def broadcast_xarrays(first, second):
     # adding second's dimensions at the end
     first_data = first.data[(Ellipsis,) + (None,) * len(second_only_dims)]
     new_first = XArray(dimensions, first_data, first.attributes,
-                       encoding=first.encoding)
+                        first.encoding)
     # expand and reorder second_data so the dimensions line up
     first_only_dims = [d for d in dimensions if d not in second.dimensions]
     second_dims = list(second.dimensions) + first_only_dims
     second_data = second.data[(Ellipsis,) + (None,) * len(first_only_dims)]
     new_second = XArray(second_dims, second_data, first.attributes,
-                        encoding=second.encoding).transpose(*dimensions)
+                        second.encoding).transpose(*dimensions)
     return new_first, new_second
 
 

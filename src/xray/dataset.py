@@ -117,17 +117,18 @@ class Dataset(Mapping):
             `pandas.Index` objects.
         attributes : dict-like, optional
             Global attributes to save on this dataset.
+        decode_cf : bool, optional
+            Whether to decode these variables according to CF conventions.
         """
-        self._decode_cf = decode_cf
         self._variables = _VariablesDict()
         self._dimensions = OrderedDict()
         if variables is not None:
-            self._set_variables(variables)
+            self.set_variables(variables, decode_cf=decode_cf)
         if attributes is None:
             attributes = {}
         self._attributes = OrderedDict(attributes)
 
-    def _as_variable(self, name, var):
+    def _as_variable(self, name, var, decode_cf=False):
         if not isinstance(var, xarray.XArray):
             try:
                 var = xarray.XArray(*var)
@@ -137,23 +138,43 @@ class Dataset(Mapping):
                                 'form (dimensions, data[, attributes])')
         # this will unmask and rescale the data as well as convert
         # time variables to datetime indices.
-        if self._decode_cf:
+        if decode_cf:
             var = conventions.decode_cf_variable(var)
         if name in var.dimensions:
             # convert the coordinate into a pandas.Index
             if var.ndim != 1:
                 raise ValueError('a coordinate variable must be defined with '
                                  '1-dimensional data')
-            var.data = pd.Index(var.data)
+            # create a new XArray object on which to modify the data
+            var = xarray.XArray(var.dimensions, pd.Index(var.data),
+                                var.attributes, encoding=var.encoding)
         return var
 
-    def _set_variables(self, variables):
-        """Set a mapping of variables and update dimensions"""
+    def set_variables(self, variables, decode_cf=False):
+        """Set a mapping of variables and update dimensions.
+
+        Parameters
+        ----------
+        variables : dict-like, optional
+            A mapping from variable names to `XArray` objects or sequences of
+            the form `(dimensions, data[, attributes])` which can be used as
+            arguments to create a new `XArray`. Each dimension must have the
+            same length in all variables in which it appears. One dimensional
+            variables with name equal to their dimension are coordinate
+            variables, which means they are saved in the dataset as
+            `pandas.Index` objects.
+        decode_cf : bool, optional
+            Whether to decode these variables according to CF conventions.
+
+        Returns
+        -------
+        None
+        """
         # save new variables into a temporary list so all the error checking
         # can be done before updating _variables
         new_variables = []
         for k, var in variables.iteritems():
-            var = self._as_variable(k, var)
+            var = self._as_variable(k, var, decode_cf=decode_cf)
             for dim, size in zip(var.dimensions, var.shape):
                 if dim not in self._dimensions:
                     self._dimensions[dim] = size
@@ -169,7 +190,7 @@ class Dataset(Mapping):
 
     @classmethod
     def load_store(cls, store, decode_cf=True):
-        return cls(store.variables, store.attributes, decode_cf)
+        return cls(store.variables, store.attributes, decode_cf=decode_cf)
 
     @property
     def variables(self):
@@ -264,7 +285,7 @@ class Dataset(Mapping):
             # TODO: should remove key from this dataset if it already exists
             self.merge(value.renamed(key).dataset, inplace=True)
         else:
-            self._set_variables({key: value})
+            self.set_variables({key: value})
 
     def __delitem__(self, key):
         """Remove a variable from this dataset.
@@ -480,7 +501,7 @@ class Dataset(Mapping):
             #TODO: public interface for renaming a variable without loading
             # data?
             variables[name] = xarray.XArray(dims, v._data, v.attributes,
-                                            v._indexing_mode)
+                                            v.encoding, v._indexing_mode)
 
         return type(self)(variables, self.attributes)
 
@@ -514,9 +535,9 @@ class Dataset(Mapping):
                                   compat=utils.xarray_equal)
         # update contents
         obj = self if inplace else self.copy()
-        obj._set_variables(OrderedDict((k, v) for k, v
-                                       in other.variables.iteritems()
-                                       if k not in obj.variables))
+        obj.set_variables(OrderedDict((k, v) for k, v
+                                      in other.variables.iteritems()
+                                      if k not in obj.variables))
         # remove conflicting attributes
         for k, v in other.attributes.iteritems():
             if k in self.attributes and v != self.attributes[k]:

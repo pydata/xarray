@@ -78,7 +78,7 @@ class ScipyDataStore(AbstractDataStore):
     @property
     def variables(self):
         return FrozenOrderedDict((k, xarray.XArray(v.dimensions, v.data,
-                                            v._attributes))
+                                                   v._attributes))
                                  for k, v in self.ds.variables.iteritems())
 
     @property

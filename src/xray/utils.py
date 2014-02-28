@@ -113,6 +113,7 @@ def num2datetimeindex(num_dates, units, calendar=None):
     For standard (Gregorian) calendars, this function uses vectorized
     operations, which makes it much faster than netCDF4.num2date.
     """
+    # TODO: fix this function so it works on arbitrary n-dimensional arrays
     num_dates = np.asarray(num_dates)
     if calendar is None:
         calendar = 'standard'
@@ -257,14 +258,15 @@ def remove_incompatible_items(first_dict, second_dict, compat=operator.eq):
         if k in first_dict and not compat(v, first_dict[k]):
             del first_dict[k]
 
+
 def dict_equal(first, second):
-    """ Test equality of two dict-like objects.  If any of the values
+    """Test equality of two dict-like objects.  If any of the values
     are numpy arrays, compare them for equality correctly.
 
     Parameters
     ----------
     first, second : dict-like
-        dictionaries to compare for equality
+        Dictionaries to compare for equality
 
     Returns
     -------
@@ -278,6 +280,13 @@ def dict_equal(first, second):
     for k in k1:
         v1 = first[k]
         v2 = second[k]
+        if isinstance(v1, np.ndarray) != isinstance(v2, np.ndarray):
+            return False # one is an ndarray, other is not
+        elif (isinstance(v1, np.ndarray) and isinstance(v2, np.ndarray)):
+            if not np.array_equal(v1, v2):
+                return False
+        elif v1 != v2:
+            return False
         if isinstance(v1, np.ndarray) != isinstance(v2, np.ndarray):
             return False # one is an ndarray, other is not
         elif (isinstance(v1, np.ndarray) and isinstance(v2, np.ndarray)):

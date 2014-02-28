@@ -328,13 +328,14 @@ class TestDataset(TestCase):
 
 def create_masked_and_scaled_data():
     x = np.array([np.nan, np.nan, 10, 10.1, 10.2])
-    encoding = {'_FillValue': -1, 'add_offset': 10, 'scale_factor': 0.1,
-                'dtype': np.int16}
+    encoding = {'_FillValue': -1, 'add_offset': 10,
+                'scale_factor': np.float32(0.1), 'dtype': np.int16}
     return Dataset({'x': ('t', x, {}, encoding)})
 
 
 def create_encoded_masked_and_scaled_data():
-    attributes = {'_FillValue': -1, 'add_offset': 10, 'scale_factor': 0.1}
+    attributes = {'_FillValue': -1, 'add_offset': 10,
+                  'scale_factor': np.float32(0.1)}
     return Dataset({'x': XArray('t', [-1, -1, 0, 1, 2], attributes)})
 
 
@@ -363,24 +364,18 @@ class DatasetIOCases(object):
         self.assertDatasetEqual(expected, actual)
 
     def test_roundtrip_mask_and_scale(self):
-        expected = create_masked_and_scaled_data()
-        actual = self.roundtrip(expected)
-        self.assertDatasetEqual(expected, actual)
-
-    def test_roundtrip_mask_and_scale_False(self):
-        expected = create_masked_and_scaled_data()
-        actual = self.roundtrip(expected, decode_cf=False)
-        self.assertDatasetEqual(expected, actual)
+        decoded = create_masked_and_scaled_data()
+        encoded = create_encoded_masked_and_scaled_data()
+        self.assertDatasetEqual(decoded, self.roundtrip(decoded))
+        self.assertDatasetEqual(encoded,
+                                self.roundtrip(decoded, decode_cf=False))
+        self.assertDatasetEqual(decoded, self.roundtrip(encoded))
+        self.assertDatasetEqual(encoded,
+                                self.roundtrip(encoded, decode_cf=False))
 
     def test_roundtrip_example_1_netcdf(self):
         expected = open_dataset(os.path.join(_test_data_path, 'example_1.nc'))
         actual = self.roundtrip(expected)
-        self.assertDatasetEqual(expected, actual)
-
-    def test_encoded_masked_and_scaled_data(self):
-        original = create_encoded_masked_and_scaled_data()
-        actual = self.roundtrip(original, decode_cf=True)
-        expected = create_masked_and_scaled_data()
         self.assertDatasetEqual(expected, actual)
 
 
@@ -418,9 +413,10 @@ class NetCDF4DataTest(DatasetIOCases, TestCase):
         ds.close()
 
         expected = Dataset()
-        expected['time'] = ('time', pd.date_range('1999-01-05', periods=10))
-        expected['time'].encoding['units'] = units
-        expected['time'].encoding['dtype'] = np.dtype('int32')
+
+        time = pd.date_range('1999-01-05', periods=10)
+        encoding = {'units': units, 'dtype': np.dtype('int32')}
+        expected['time'] = ('time', time, {}, encoding)
 
         actual = open_dataset(tmp_file)
 
