@@ -4,7 +4,7 @@ python:
   - "2.7"
 # Setup anaconda
 before_install:
-  - wget http://repo.continuum.io/miniconda/Miniconda-3.0.5-Linux-x86_64.sh -O miniconda.sh
+  - wget http://repo.continuum.io/miniconda/Miniconda-2.2.2-Linux-x86_64.sh -O miniconda.sh
   - chmod +x miniconda.sh
   - ./miniconda.sh -b
   - export PATH=/home/travis/anaconda/bin:$PATH
@@ -15,7 +15,7 @@ before_install:
   - sudo ln -s /run/shm /dev/shm
 # Install packages
 install:
-  - conda create --yes -n env_name python=$TRAVIS_PYTHON_VERSION pip numpy scipy netCDF4 pandas
+  - conda create --yes -n env_name python=$TRAVIS_PYTHON_VERSION pip nose numpy scipy netCDF4 pandas
   - source activate env_name
   - python setup.py install
 # Run test
