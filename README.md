@@ -19,6 +19,8 @@ change.***
     (patterned after [pandas][pandas]).
   - Fast label-based indexing and (limited) time-series functionality built on
     [pandas][pandas].
+  - For more details, see the **[full documentation][docs]** (still a work in
+    progress) or the source code.
 
 ## Design Goals
 
@@ -69,6 +71,7 @@ change.***
   - [netCDF4-python][nc4] provides xray's primary interface for working with
     netCDF and OpenDAP datasets.
 
+[docs]: http://xray.readthedocs.org/
 [pandas]: http://pandas.pydata.org/
 [cdm]: http://www.unidata.ucar.edu/software/thredds/current/netcdf-java/CDM/
 [cf]: http://cf-pcmdi.llnl.gov/documents/cf-conventions/1.6/cf-conventions.html
