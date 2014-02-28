@@ -287,13 +287,6 @@ def dict_equal(first, second):
                 return False
         elif v1 != v2:
             return False
-        if isinstance(v1, np.ndarray) != isinstance(v2, np.ndarray):
-            return False # one is an ndarray, other is not
-        elif (isinstance(v1, np.ndarray) and isinstance(v2, np.ndarray)):
-            if not np.array_equal(v1, v2):
-                return False
-        elif v1 != v2:
-            return False
     return True
 
 def ordered_dict_intersection(first_dict, second_dict, compat=operator.eq):
