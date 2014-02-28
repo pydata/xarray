@@ -1,0 +1,16 @@
+language: python
+python:
+  - "2.7"
+# command to install dependencies
+before_install:
+  - sudo apt-get install -qq liblapack-dev gfortran libblas-dev
+install:
+  - "pip install -q --use-mirrors numpy"
+  # do not quiet scipy since compiling takes so long; travis-ci assumes there
+  # has been an error if no output received in 10m
+  - "pip install --use-mirrors scipy"
+  - "pip install -q --use-mirrors netCDF4"
+  - "pip install -q --use-mirrors pandas"
+  - "pip install ."
+# command to run tests
+script: nosetests
