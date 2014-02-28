@@ -123,10 +123,11 @@ class TestXArray(TestCase):
         self.assertArrayEqual((x * v).data, x ** 2)
         self.assertArrayEqual(v - y, v - 1)
         self.assertArrayEqual(y - v, 1 - v)
-        # verify attributes
+        # verify math-safe attributes
         v2 = XArray(['x'], x, {'units': 'meters'})
-        self.assertXArrayEqual(v2, +v2)
-        self.assertXArrayEqual(v2, 0 + v2)
+        self.assertXArrayEqual(v, +v2)
+        v3 = XArray(['x'], x, {'something': 'else'})
+        self.assertXArrayEqual(v3, +v3)
         # binary ops with all variables
         self.assertArrayEqual(v + v, 2 * v)
         w = XArray(['x'], y, {'foo': 'bar'})

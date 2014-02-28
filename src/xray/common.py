@@ -35,19 +35,19 @@ class AbstractArray(ImplementsReduce):
         return len(self._data)
 
     def __nonzero__(self):
-        return bool(self._data)
+        return bool(self.data)
 
     def __float__(self):
-        return float(self._data)
+        return float(self.data)
 
     def __int__(self):
-        return int(self._data)
+        return int(self.data)
 
     def __complex__(self):
-        return complex(self._data)
+        return complex(self.data)
 
     def __long__(self):
-        return long(self._data)
+        return long(self.data)
 
     # adapted from pandas.NDFrame
     # https://github.com/pydata/pandas/blob/master/pandas/core/generic.py#L699

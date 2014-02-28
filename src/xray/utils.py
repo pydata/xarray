@@ -113,6 +113,7 @@ def num2datetimeindex(num_dates, units, calendar=None):
     For standard (Gregorian) calendars, this function uses vectorized
     operations, which makes it much faster than netCDF4.num2date.
     """
+    # TODO: fix this function so it works on arbitrary n-dimensional arrays
     num_dates = np.asarray(num_dates)
     if calendar is None:
         calendar = 'standard'
@@ -165,11 +166,28 @@ def datetimeindex2num(dates, units=None, calendar=None):
     return (num, units, calendar)
 
 
+def allclose_or_equiv(arr1, arr2, rtol=1e-5, atol=1e-8):
+    """Like np.allclose, but also allows values to be NaN in both arrays
+    """
+    if arr1.shape != arr2.shape:
+        return False
+    nan_indices = np.isnan(arr1)
+    if not (nan_indices == np.isnan(arr2)).all():
+        return False
+    if arr1.ndim > 0:
+        arr1 = arr1[~nan_indices]
+        arr2 = arr2[~nan_indices]
+    elif nan_indices:
+        # 0-d arrays can't be indexed, so just check if the value is NaN
+        return True
+    return np.allclose(arr1, arr2, rtol=rtol, atol=atol)
+
+
 def xarray_equal(v1, v2, rtol=1e-05, atol=1e-08):
     """True if two objects have the same dimensions, attributes and data;
     otherwise False.
 
-    This function is necessary because `v1 == v2` for variables and dataviews
+    This function is necessary because `v1 == v2` for XArrays and DatasetArrays
     does element-wise comparisions (like numpy.ndarrays).
     """
     if (v1.dimensions == v2.dimensions
@@ -182,17 +200,19 @@ def xarray_equal(v1, v2, rtol=1e-05, atol=1e-08):
             # _data is not part of the public interface, so it's okay if its
             # missing
             pass
-        # TODO: replace this with a NaN safe version.
-        # see: pandas.core.common.array_equivalent
+
+        def is_floating(arr):
+            return np.issubdtype(arr.dtype, float)
+
         data1 = v1.data
         data2 = v2.data
         if hasattr(data1, 'equals'):
             # handle pandas.Index objects
             return data1.equals(data2)
-        elif np.issubdtype(data1.dtype, (str, object)):
-            return np.array_equal(data1, data2)
+        elif is_floating(data1) or is_floating(data2):
+            return allclose_or_equiv(data1, data2)
         else:
-            return np.allclose(data1, data2, rtol=rtol, atol=atol)
+            return np.array_equal(data1, data2)
     else:
         return False
 
@@ -238,14 +258,15 @@ def remove_incompatible_items(first_dict, second_dict, compat=operator.eq):
         if k in first_dict and not compat(v, first_dict[k]):
             del first_dict[k]
 
+
 def dict_equal(first, second):
-    """ Test equality of two dict-like objects.  If any of the values
+    """Test equality of two dict-like objects.  If any of the values
     are numpy arrays, compare them for equality correctly.
 
     Parameters
     ----------
     first, second : dict-like
-        dictionaries to compare for equality
+        Dictionaries to compare for equality
 
     Returns
     -------

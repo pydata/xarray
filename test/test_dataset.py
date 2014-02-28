@@ -1,10 +1,10 @@
 from collections import OrderedDict
-from copy import deepcopy
 from cStringIO import StringIO
 import os.path
 import unittest
 import tempfile
 
+import netCDF4 as nc4
 import numpy as np
 import pandas as pd
 
@@ -13,16 +13,17 @@ from . import TestCase
 
 _test_data_path = os.path.join(os.path.dirname(__file__), 'data')
 
-_dims = {'dim1':100, 'dim2':50, 'dim3':10}
-_vars = {'var1':['dim1', 'dim2'],
-         'var2':['dim1', 'dim2'],
-         'var3':['dim3', 'dim1'],
+_dims = {'dim1': 100, 'dim2': 50, 'dim3': 10}
+_vars = {'var1': ['dim1', 'dim2'],
+         'var2': ['dim1', 'dim2'],
+         'var3': ['dim3', 'dim1'],
          }
 _testvar = sorted(_vars.keys())[0]
 _testdim = sorted(_dims.keys())[0]
 
-def create_test_data(store=None):
-    obj = Dataset() if store is None else Dataset.load_store(store)
+
+def create_test_data():
+    obj = Dataset()
     obj['time'] = ('time', pd.date_range('2000-01-01', periods=1000))
     for k, d in sorted(_dims.items()):
         obj[k] = (k, np.arange(d))
@@ -32,12 +33,9 @@ def create_test_data(store=None):
     return obj
 
 
-class DataTest(TestCase):
-    def get_store(self):
-        return backends.InMemoryDataStore()
-
+class TestDataset(TestCase):
     def test_repr(self):
-        data = create_test_data(self.get_store())
+        data = create_test_data()
         self.assertEqual('<xray.Dataset (time: 1000, dim1: 100, '
                          'dim2: 50, dim3: 10): var1 var2 var3>', repr(data))
 
@@ -51,7 +49,7 @@ class DataTest(TestCase):
             Dataset({'a': var1, 'x': var3})
 
     def test_groupby(self):
-        data = create_test_data(self.get_store())
+        data = create_test_data()
         for n, (t, sub) in enumerate(list(data.groupby('dim1'))[:3]):
             self.assertEqual(data['dim1'][n], t)
             self.assertXArrayEqual(data['var1'][n], sub['var1'])
@@ -142,7 +140,7 @@ class DataTest(TestCase):
         self.assertRaises(ValueError, b.attributes.__setitem__, 'foo', dict())
 
     def test_indexed_by(self):
-        data = create_test_data(self.get_store())
+        data = create_test_data()
         slicers = {'dim1': slice(None, None, 2), 'dim2': slice(0, 2)}
         ret = data.indexed_by(**slicers)
 
@@ -181,13 +179,12 @@ class DataTest(TestCase):
         self.assertItemsEqual({'dim2': 5, 'dim3': 10}, ret.dimensions)
 
     def test_labeled_by(self):
-        data = create_test_data(self.get_store())
+        data = create_test_data()
         int_slicers = {'dim1': slice(None, None, 2), 'dim2': slice(0, 2)}
         loc_slicers = {'dim1': slice(None, None, 2), 'dim2': slice(0, 1)}
         self.assertEqual(data.indexed_by(**int_slicers),
                          data.labeled_by(**loc_slicers))
-        data['time'] = ('time', np.arange(1000, dtype=np.int32),
-                        {'units': 'days since 2000-01-01'})
+        data['time'] = ('time', pd.date_range('2000-01-01', periods=1000))
         self.assertEqual(data.indexed_by(time=0),
                          data.labeled_by(time='2000-01-01'))
         self.assertEqual(data.indexed_by(time=slice(10)),
@@ -199,7 +196,7 @@ class DataTest(TestCase):
                             time=pd.date_range('2000-01-01', periods=3)))
 
     def test_variable_indexing(self):
-        data = create_test_data(self.get_store())
+        data = create_test_data()
         v = data['var1']
         d1 = data['dim1']
         d2 = data['dim2']
@@ -212,7 +209,7 @@ class DataTest(TestCase):
         self.assertXArrayEqual(v[:3, :2], v[range(3), range(2)])
 
     def test_select(self):
-        data = create_test_data(self.get_store())
+        data = create_test_data()
         ret = data.select(_testvar)
         self.assertXArrayEqual(data[_testvar], ret[_testvar])
         self.assertTrue(_vars.keys()[1] not in ret.variables)
@@ -223,7 +220,7 @@ class DataTest(TestCase):
         pass
 
     def test_copy(self):
-        data = create_test_data(self.get_store())
+        data = create_test_data()
         var = data.variables[_testvar]
         var.attributes['foo'] = 'hello world'
         var_copy = var.__deepcopy__()
@@ -239,7 +236,7 @@ class DataTest(TestCase):
         self.assertNotEqual(id(var.attributes), id(var_copy.attributes))
 
     def test_rename(self):
-        data = create_test_data(self.get_store())
+        data = create_test_data()
         newnames = {'var1': 'renamed_var1', 'dim2': 'renamed_dim2'}
         renamed = data.renamed(newnames)
 
@@ -264,7 +261,7 @@ class DataTest(TestCase):
         self.assertTrue('dim2' not in renamed.dimensions)
 
     def test_merge(self):
-        data = create_test_data(self.get_store())
+        data = create_test_data()
         ds1 = data.select('var1')
         ds2 = data.select('var3')
         expected = data.select('var1', 'var3')
@@ -276,9 +273,8 @@ class DataTest(TestCase):
             ds1.merge(ds2.renamed({'var3': 'var1'}))
 
     def test_getitem(self):
-        data = create_test_data(self.get_store())
-        data['time'] = ('time', np.arange(1000, dtype=np.int32),
-                        {'units': 'days since 2000-01-01'})
+        data = create_test_data()
+        data['time'] = ('time', pd.date_range('2000-01-01', periods=1000))
         self.assertIsInstance(data['var1'], DatasetArray)
         self.assertXArrayEqual(data['var1'], data.variables['var1'])
         self.assertItemsEqual(data['var1'].dataset.variables,
@@ -292,7 +288,7 @@ class DataTest(TestCase):
     def test_setitem(self):
         # assign a variable
         var = XArray(['dim1'], np.random.randn(100))
-        data1 = create_test_data(self.get_store())
+        data1 = create_test_data()
         data1['A'] = var
         data2 = data1.copy()
         data2['A'] = var
@@ -305,13 +301,6 @@ class DataTest(TestCase):
         # assign an array
         with self.assertRaisesRegexp(TypeError, 'variables must be of type'):
             data2['C'] = var.data
-
-    def test_write_store(self):
-        expected = create_test_data()
-        store = self.get_store()
-        expected.dump_to_store(store)
-        actual = Dataset.load_store(store)
-        self.assertEquals(expected, actual)
 
     def test_to_dataframe(self):
         x = np.random.randn(10)
@@ -337,49 +326,165 @@ class DataTest(TestCase):
         self.assertTrue(expected.equals(actual))
 
 
-class NetCDF4DataTest(DataTest):
+def create_masked_and_scaled_data():
+    x = np.array([np.nan, np.nan, 10, 10.1, 10.2])
+    encoding = {'_FillValue': -1, 'add_offset': 10,
+                'scale_factor': np.float32(0.1), 'dtype': np.int16}
+    return Dataset({'x': ('t', x, {}, encoding)})
+
+
+def create_encoded_masked_and_scaled_data():
+    attributes = {'_FillValue': -1, 'add_offset': 10,
+                  'scale_factor': np.float32(0.1)}
+    return Dataset({'x': XArray('t', [-1, -1, 0, 1, 2], attributes)})
+
+
+class DatasetIOCases(object):
+    def get_store(self):
+        raise NotImplementedError
+
+    def roundtrip(self, data, **kwargs):
+        raise NotImplementedError
+
+    def test_write_store(self):
+        expected = create_test_data()
+        store = self.get_store()
+        expected.dump_to_store(store)
+        actual = Dataset.load_store(store)
+        self.assertDatasetEqual(expected, actual)
+
+    def test_roundtrip_test_data(self):
+        expected = create_test_data()
+        actual = self.roundtrip(expected)
+        self.assertDatasetEqual(expected, actual)
+
+    def test_roundtrip_string_data(self):
+        expected = Dataset({'x': ('t', ['abc', 'def'])})
+        actual = self.roundtrip(expected)
+        self.assertDatasetEqual(expected, actual)
+
+    def test_roundtrip_mask_and_scale(self):
+        decoded = create_masked_and_scaled_data()
+        encoded = create_encoded_masked_and_scaled_data()
+        self.assertDatasetEqual(decoded, self.roundtrip(decoded))
+        self.assertDatasetEqual(encoded,
+                                self.roundtrip(decoded, decode_cf=False))
+        self.assertDatasetEqual(decoded, self.roundtrip(encoded))
+        self.assertDatasetEqual(encoded,
+                                self.roundtrip(encoded, decode_cf=False))
+
+    def test_roundtrip_example_1_netcdf(self):
+        expected = open_dataset(os.path.join(_test_data_path, 'example_1.nc'))
+        actual = self.roundtrip(expected)
+        self.assertDatasetEqual(expected, actual)
+
+
+class NetCDF4DataTest(DatasetIOCases, TestCase):
     def get_store(self):
         f, self.tmp_file = tempfile.mkstemp(suffix='.nc')
         os.close(f)
         return backends.NetCDF4DataStore(self.tmp_file, mode='w')
 
-    def test_dump_and_open_dataset(self):
-        data = create_test_data(self.get_store())
-        f, tmp_file = tempfile.mkstemp(suffix='.nc')
-        os.close(f)
-        data.dump(tmp_file)
-
-        expected = data.copy()
-        actual = open_dataset(tmp_file)
-        self.assertEquals(expected, actual)
-        os.remove(tmp_file)
-
     def tearDown(self):
         if hasattr(self, 'tmp_file') and os.path.exists(self.tmp_file):
             os.remove(self.tmp_file)
 
+    def roundtrip(self, data, **kwargs):
+        f, tmp_file = tempfile.mkstemp(suffix='.nc')
+        os.close(f)
+        data.dump(tmp_file)
+        roundtrip_data = open_dataset(tmp_file, **kwargs)
+        os.remove(tmp_file)
+        return roundtrip_data
 
-class ScipyDataTest(DataTest):
+    def test_open_encodings(self):
+        # Create a netCDF file with explicit time units
+        # and make sure it makes it into the encodings
+        # and survives a round trip
+        f, tmp_file = tempfile.mkstemp(suffix='.nc')
+        os.close(f)
+
+        ds = nc4.Dataset(tmp_file, 'w')
+        ds.createDimension('time', size=10)
+        ds.createVariable('time', np.int32, dimensions=('time',))
+        units = 'days since 1999-01-01'
+        ds.variables['time'].setncattr('units', units)
+        ds.variables['time'][:] = np.arange(10) + 4
+        ds.close()
+
+        expected = Dataset()
+
+        time = pd.date_range('1999-01-05', periods=10)
+        encoding = {'units': units, 'dtype': np.dtype('int32')}
+        expected['time'] = ('time', time, {}, encoding)
+
+        actual = open_dataset(tmp_file)
+
+        self.assertXArrayEqual(actual['time'], expected['time'])
+        self.assertDictEqual(actual['time'].encoding, expected['time'].encoding)
+
+        os.remove(tmp_file)
+
+    def test_dump_and_open_encodings(self):
+        # Create a netCDF file with explicit time units
+        # and make sure it makes it into the encodings
+        # and survives a round trip
+        f, tmp_file = tempfile.mkstemp(suffix='.nc')
+        os.close(f)
+
+        ds = nc4.Dataset(tmp_file, 'w')
+        ds.createDimension('time', size=10)
+        ds.createVariable('time', np.int32, dimensions=('time',))
+        units = 'days since 1999-01-01'
+        ds.variables['time'].setncattr('units', units)
+        ds.variables['time'][:] = np.arange(10) + 4
+        ds.close()
+
+        xray_dataset = open_dataset(tmp_file)
+        os.remove(tmp_file)
+        xray_dataset.dump(tmp_file)
+
+        ds = nc4.Dataset(tmp_file, 'r')
+
+        self.assertEqual(ds.variables['time'].getncattr('units'), units)
+        self.assertArrayEqual(ds.variables['time'], np.arange(10) + 4)
+
+        ds.close()
+        os.remove(tmp_file)
+
+    def test_mask_and_scale(self):
+        f, tmp_file = tempfile.mkstemp(suffix='.nc')
+        os.close(f)
+
+        nc = nc4.Dataset(tmp_file, mode='w')
+        nc.createDimension('t', 5)
+        nc.createVariable('x', 'int16', ('t',), fill_value=-1)
+        v = nc.variables['x']
+        v.set_auto_maskandscale(False)
+        v.add_offset = 10
+        v.scale_factor = 0.1
+        v[:] = np.array([-1, -1, 0, 1, 2])
+        nc.close()
+
+        # first make sure netCDF4 reads the masked and scaled data correctly
+        nc = nc4.Dataset(tmp_file, mode='r')
+        expected = np.ma.array([-1, -1, 10, 10.1, 10.2],
+                               mask=[True, True, False, False, False])
+        actual = nc.variables['x'][:]
+        self.assertArrayEqual(expected, actual)
+
+        # now check xray
+        ds = open_dataset(tmp_file)
+        expected = create_masked_and_scaled_data()
+        self.assertDatasetEqual(expected, ds)
+        os.remove(tmp_file)
+
+
+class ScipyDataTest(DatasetIOCases, TestCase):
     def get_store(self):
         fobj = StringIO()
         return backends.ScipyDataStore(fobj, 'w')
 
-    def test_dump_and_open_dataset(self):
-        data = create_test_data(self.get_store())
+    def roundtrip(self, data, **kwargs):
         serialized = data.dumps()
-
-        expected = data.copy()
-        actual = open_dataset(StringIO(serialized))
-        self.assertEquals(expected, actual)
-
-    def test_open_and_reopen_existing(self):
-        data = open_dataset(os.path.join(_test_data_path, 'example_1.nc'))
-        serialized = data.dumps()
-
-        expected = data.copy()
-        actual = open_dataset(StringIO(serialized))
-        self.assertEquals(expected, actual)
-
-    def test_repr(self):
-        # scipy.io.netcdf does not keep track of dimension order :(
-        pass
+        return open_dataset(StringIO(serialized), **kwargs)

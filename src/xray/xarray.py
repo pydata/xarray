@@ -1,16 +1,16 @@
 import functools
-import warnings
-from collections import OrderedDict
-from itertools import izip
-
 import numpy as np
 
-import conventions
-import dataset
-import dataset_array
-import groupby
+from itertools import izip
+from collections import OrderedDict
+
 import ops
 import utils
+import dataset
+import groupby
+import conventions
+import dataset_array
+
 from common import AbstractArray
 
 
@@ -38,7 +38,8 @@ class XArray(AbstractArray):
     outside the context of its parent Dataset (if you want such a fully
     described object, use a DatasetArray instead).
     """
-    def __init__(self, dims, data, attributes=None, indexing_mode='numpy'):
+    def __init__(self, dims, data, attributes=None, encoding=None,
+                 indexing_mode='numpy'):
         """
         Parameters
         ----------
@@ -51,14 +52,20 @@ class XArray(AbstractArray):
         attributes : dict_like or None, optional
             Attributes to assign to the new variable. If None (default), an
             empty attribute dictionary is initialized.
+        encoding : dict_like or None, optional
+            Dictionary specifying how to encode this array's data into a
+            serialized format like netCDF4. Currently used keys (for netCDF)
+            include '_FillValue', 'scale_factor', 'add_offset' and 'dtype'.
+            Well behaviored code to serialize an XArray should ignore
         indexing_mode : {'numpy', 'orthogonal'}
             String indicating how the data parameter handles fancy indexing
             (with arrays). Two modes are supported: 'numpy' (fancy indexing
             like numpy.ndarray objects) and 'orthogonal' (array indexing
             accesses different dimensions independently, like netCDF4
-            variables). Accessing data from a Array always uses orthogonal
+            variables). Accessing data from an XArray always uses orthogonal
             indexing, so `indexing_mode` tells the variable whether index
             lookups need to be internally converted to numpy-style indexing.
+            unrecognized keys in this dictionary.
         """
         if isinstance(dims, basestring):
             dims = (dims,)
@@ -70,6 +77,7 @@ class XArray(AbstractArray):
         if attributes is None:
             attributes = {}
         self._attributes = OrderedDict(attributes)
+        self.encoding = dict({} if encoding is None else encoding)
         self._indexing_mode = indexing_mode
 
     @property
@@ -149,7 +157,7 @@ class XArray(AbstractArray):
         # return a variable with the same indexing_mode, because data should
         # still be the same type as _data
         return type(self)(dimensions, new_data, self.attributes,
-                          indexing_mode=self._indexing_mode)
+                          self.encoding, self._indexing_mode)
 
     def __setitem__(self, key, value):
         """__setitem__ is overloaded to access the underlying numpy data with
@@ -181,7 +189,8 @@ class XArray(AbstractArray):
         # note:
         # dimensions is already an immutable tuple
         # attributes will be copied when the new Array is created
-        return type(self)(self.dimensions, data, self.attributes)
+        return type(self)(self.dimensions, data, self.attributes,
+                          self.encoding)
 
     def __copy__(self):
         return self._copy(deepcopy=False)
@@ -274,7 +283,7 @@ class XArray(AbstractArray):
             dimensions = self.dimensions[::-1]
         axes = [self.dimensions.index(dim) for dim in dimensions]
         data = self.data.transpose(*axes)
-        return type(self)(dimensions, data, self.attributes)
+        return type(self)(dimensions, data, self.attributes, self.encoding)
 
     def reduce(self, func, dimension=None, axis=None, **kwargs):
         """Reduce this array by applying `func` along some dimension(s).
@@ -324,7 +333,8 @@ class XArray(AbstractArray):
             for dim in dimension:
                 var = var._reduce(func, dim, **kwargs)
         else:
-            var = type(self)([], func(self.data, **kwargs), self.attributes)
+            var = type(self)([], func(self.data, **kwargs),
+                             _math_safe_attributes(self.attributes))
             var._append_to_cell_methods(': '.join(self.dimensions)
                                         + ': ' + func.__name__)
         return var
@@ -342,7 +352,8 @@ class XArray(AbstractArray):
         dims = tuple(dim for i, dim in enumerate(self.dimensions)
                      if axis not in [i, i - self.ndim])
         data = f(self.data, axis=axis, **kwargs)
-        new_var = type(self)(dims, data, self.attributes)
+        new_var = type(self)(dims, data,
+                             _math_safe_attributes(self.attributes))
         new_var._append_to_cell_methods(self.dimensions[axis]
                                         + ': ' + f.__name__)
         return new_var
@@ -473,7 +484,7 @@ class XArray(AbstractArray):
         @functools.wraps(f)
         def func(self, *args, **kwargs):
             return type(self)(self.dimensions, f(self.data, *args, **kwargs),
-                              self.attributes)
+                              _math_safe_attributes(self.attributes))
         return func
 
     @staticmethod
@@ -486,11 +497,11 @@ class XArray(AbstractArray):
             new_data = (f(self_data, other_data)
                         if not reflexive
                         else f(other_data, self_data))
+            new_attr = _math_safe_attributes(self.attributes)
+            # TODO: reconsider handling of conflicting attributes
             if hasattr(other, 'attributes'):
-                new_attr = utils.ordered_dict_intersection(self.attributes,
-                                                           other.attributes)
-            else:
-                new_attr = self.attributes
+                new_attr = utils.ordered_dict_intersection(
+                    new_attr, _math_safe_attributes(other.attributes))
             return type(self)(dims, new_data, new_attr)
         return func
 
@@ -504,11 +515,17 @@ class XArray(AbstractArray):
                                  'operations')
             self.data = f(self_data, other_data)
             if hasattr(other, 'attributes'):
-                utils.remove_incompatible_items(self.attributes, other)
+                utils.remove_incompatible_items(
+                    self.attributes, _math_safe_attributes(other.attributes))
             return self
         return func
 
 ops.inject_special_operations(XArray)
+
+
+def _math_safe_attributes(attributes):
+    return OrderedDict((k, v) for k, v in attributes.iteritems()
+                       if k not in ['units'])
 
 
 def broadcast_xarrays(first, second):
@@ -517,12 +534,12 @@ def broadcast_xarrays(first, second):
 
     Parameters
     ----------
-    first, second : Array
-        Array objects to broadcast.
+    first, second : XArray
+        XArray objects to broadcast.
 
     Returns
     -------
-    first_broadcast, second_broadcast : Array
+    first_broadcast, second_broadcast : XArray
         Broadcast arrays. The data on each variable will be a view of the
         data on the corresponding original arrays, but dimensions will be
         reordered and inserted so that both broadcast arrays have the same
@@ -552,21 +569,23 @@ def broadcast_xarrays(first, second):
     # expand first_data's dimensions so it's broadcast compatible after
     # adding second's dimensions at the end
     first_data = first.data[(Ellipsis,) + (None,) * len(second_only_dims)]
-    new_first = XArray(dimensions, first_data, first.attributes)
+    new_first = XArray(dimensions, first_data, first.attributes,
+                        first.encoding)
     # expand and reorder second_data so the dimensions line up
     first_only_dims = [d for d in dimensions if d not in second.dimensions]
     second_dims = list(second.dimensions) + first_only_dims
     second_data = second.data[(Ellipsis,) + (None,) * len(first_only_dims)]
-    new_second = XArray(second_dims, second_data, first.attributes
-        ).transpose(*dimensions)
+    new_second = XArray(second_dims, second_data, first.attributes,
+                        second.encoding).transpose(*dimensions)
     return new_first, new_second
 
 
 def _broadcast_xarray_data(self, other):
     if isinstance(other, dataset.Dataset):
         raise TypeError('datasets do not support mathematical operations')
-    elif all(hasattr(other, attr) for attr in ['dimensions', 'data', 'shape']):
-        # `other` satisfies the xray.Array API
+    elif all(hasattr(other, attr) for attr
+             in ['dimensions', 'data', 'shape', 'encoding']):
+        # `other` satisfies the necessary xray.Array API for broadcast_xarrays
         new_self, new_other = broadcast_xarrays(self, other)
         self_data = new_self.data
         other_data = new_other.data
