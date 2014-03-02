@@ -311,6 +311,17 @@ class TestDataset(TestCase):
         with self.assertRaisesRegexp(TypeError, 'variables must be of type'):
             data2['C'] = var.data
 
+    def test_delitem(self):
+        data = create_test_data()
+        all_items = {'time', 'dim1', 'dim2', 'dim3', 'var1', 'var2', 'var3'}
+        self.assertItemsEqual(data, all_items)
+        del data['var1']
+        self.assertItemsEqual(data, all_items - {'var1'})
+        print data.keys()
+        print data._variables.keys()
+        del data['dim1']
+        self.assertItemsEqual(data, {'time', 'dim2', 'dim3'})
+
     def test_to_dataframe(self):
         x = np.random.randn(10)
         y = np.random.randn(10)

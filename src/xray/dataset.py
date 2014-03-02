@@ -291,18 +291,25 @@ class Dataset(Mapping):
 
     def __delitem__(self, key):
         """Remove a variable from this dataset.
+
+        If this variable is a dimension, all variables containing this
+        dimension are also removed.
         """
+        if key in self._dimensions:
+            del self._dimensions[key]
         del self._variables[key]
-        # TODO: needs better testing
-        dims = set().union(v.dimensions for v in self._variables.itervalues())
-        for dim in self._dimensions:
-            if dim not in dims:
-                del self._dimensions[dim]
+        also_delete = [k for k, v in self._variables.iteritems()
+                       if key in v.dimensions]
+        for key in also_delete:
+            del self._variables[key]
 
     # mutable objects should not be hashable
     __hash__ = None
 
     def __eq__(self, other):
+        """Two Datasets are equal if they have equal variables and global
+        attributes.
+        """
         try:
             # some stores (e.g., scipy) do not seem to preserve order, so don't
             # require matching dimension or variable order for equality
