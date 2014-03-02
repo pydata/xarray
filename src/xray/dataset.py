@@ -267,10 +267,9 @@ class Dataset(Mapping):
         return self._variables.virtual
 
     def __getitem__(self, key):
-        """Select the variable with name "key" and return a new DatasetArray
-        focused on it.
+        """Access the DatasetArray focused on the given variable name.
         """
-        return DatasetArray(self.select(key), key)
+        return DatasetArray(self, key)
 
     def __setitem__(self, key, value):
         """Add an array to this dataset.
@@ -608,12 +607,14 @@ class Dataset(Mapping):
             New dataset based on this dataset. Only the named variables are
             removed.
         """
-        if any(k not in self.variables and k not in self.dimensions
-               for k in names):
-            raise ValueError('One or more of the specified variable/dimension '
+        if any(k not in self.variables for k in names):
+            raise ValueError('One or more of the specified variable '
                              'names does not exist on this dataset')
+        drop = set(names)
+        drop |= {k for k, v in self.variables.iteritems()
+                 if any(name in v.dimensions for name in names)}
         variables = OrderedDict((k, v) for k, v in self.variables.iteritems()
-                                if k not in names)
+                                if k not in drop)
         return type(self)(variables, self.attributes)
 
     def replace(self, name, variable):
@@ -632,7 +633,7 @@ class Dataset(Mapping):
         Dataset
             New dataset based on this dataset. Dimensions are unchanged.
         """
-        ds = self.unselect(name)
+        ds = self.copy()
         ds[name] = variable
         return ds
 

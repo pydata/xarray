@@ -59,7 +59,7 @@ class DatasetArray(AbstractArray):
         """
         if not isinstance(dataset, dataset_.Dataset):
             dataset = dataset_.Dataset(dataset)
-        if not focus in dataset:
+        if focus not in dataset and focus not in dataset.virtual_variables:
             raise ValueError('focus %r is not a variable in dataset %r'
                              % (focus, dataset))
         self.dataset = dataset
@@ -199,6 +199,17 @@ class DatasetArray(AbstractArray):
         renamed_dataset = self.dataset.renamed({self.focus: new_name})
         return type(self)(renamed_dataset, new_name)
 
+    def select(self, *names):
+        """Returns a new DatasetArray with only the named variables, as well
+        as this DatasetArray's focus.
+
+        See Also
+        --------
+        Dataset.select
+        """
+        names = names + (self.focus,)
+        return type(self)(self.dataset.select(*names), self.focus)
+
     def unselected(self):
         """Returns a copy of this DatasetArray's dataset with this
         DatasetArray's focus variable removed.
@@ -260,10 +271,7 @@ class DatasetArray(AbstractArray):
             `std`, etc.).
         """
         if isinstance(group, basestring):
-            # merge in the group's dataset to allow group to be a virtual
-            # variable in this dataset
-            ds = self.dataset.merge(self.dataset[group].dataset)
-            group = DatasetArray(ds, group)
+            group = self[group]
         return groupby.ArrayGroupBy(self, group.focus, group, squeeze=squeeze)
 
     def transpose(self, *dimensions):
@@ -336,7 +344,7 @@ class DatasetArray(AbstractArray):
     def from_stack(cls, arrays, dimension='stacked_dimension',
                    stacked_indexers=None, length=None, template=None):
         """Stack arrays along a new or existing dimension to form a new
-        dataview.
+        DatasetArray.
 
         Parameters
         ----------
@@ -344,15 +352,33 @@ class DatasetArray(AbstractArray):
             Arrays to stack together. Each variable is expected to have
             matching dimensions and shape except for along the stacked
             dimension.
-        dimension : str or Array, optional
+        dimension : str or DatasetArray, optional
             Name of the dimension to stack along. This can either be a new
             dimension name, in which case it is added along axis=0, or an
             existing dimension name, in which case the location of the
             dimension is unchanged. Where to insert the new dimension is
-            determined by whether it is found in the first array.
-        stacked_indexers : optional
-        length : optional
-        template : optional
+            determined by whether it is found in the first array. If dimension
+            is provided as an DatasetArray, the focus of the dataset array
+            is used as the stacking dimension and the array is added to
+            the returned dataset.
+        stacked_indexers : iterable of indexers, optional
+            Iterable of indexers of the same length as variables which
+            specifies how to assign variables along the given dimension. If
+            not supplied, stacked_indexers is inferred from the length of each
+            variable along the dimension, and the variables are stacked in the
+            given order.
+        length : int, optional
+            Length of the new dimension. This is used to allocate the new data
+            array for the stacked variable data before iterating over all
+            items, which is thus more memory efficient and a bit faster. If
+            dimension is provided as an array, length is calculated
+            automatically.
+        template : DatasetArray, optional
+            This option is used internally to speed-up groupby operations. The
+            template's attributes and variables that are not along the stacked
+            dimension are added to the returned array. Furthermore, if a
+            template is given, some checks of internal consistency between
+            arrays to stack are skipped.
 
         Returns
         -------
@@ -360,46 +386,46 @@ class DatasetArray(AbstractArray):
             Stacked dataset array formed by stacking all the supplied variables
             along the new dimension.
         """
+        def unselect_nonfocus_dims(dataset_array):
+            # Given a dataset array, unselect all dimensions found in the
+            # dataset that aren't also found in the dimensions of the array.
+            # Returns either a modified copy or the original dataset array if
+            # there were no dimensions to remove.
+            other_dims = [k for k in dataset_array.dataset.dimensions
+                          if k not in dataset_array.dimensions]
+            if other_dims:
+                dataset_array = dataset_array.unselect(*other_dims)
+            return dataset_array
+
         ds = dataset_.Dataset()
         if isinstance(dimension, basestring):
             dim_name = dimension
         else:
             dim_name, = dimension.dimensions
-            if hasattr(dimension, 'focus'):
-                ds[dimension.focus] = dimension
+            if isinstance(dimension, cls):
+                ds[dimension.focus] = unselect_nonfocus_dims(dimension)
 
         if template is not None:
             # use metadata from the template dataset array
             focus = template.focus
-            old_dim_name, = template.dataset.variables[dim_name].dimensions
-            drop = {k for k, v in template.dataset.variables.iteritems()
-                    if old_dim_name in v.dimensions}
-            ds.merge(template.dataset.unselect(*drop), inplace=True)
+            old_dim_name, = template[dim_name].dimensions
+            ds.merge(template.dataset.unselect(old_dim_name), inplace=True)
         else:
             # figure out metadata by inspecting each array
-            focus = None
+            focus = 'stacked_variable'
             arrays = list(arrays)
             for array in arrays:
                 if isinstance(array, cls):
-                    unselected = array.unselected()
-                    drop = {k for k, v in unselected.variables.iteritems()
-                            if k == dim_name or dim_name in v.dimensions}
-                    if drop:
-                        unselected = unselected.unselect(*drop)
-                    ds.merge(unselected, inplace=True)
-                    if focus is None:
+                    drop = [array.focus] + [k for k in array.dataset.dimensions
+                                            if k == dim_name]
+                    ds.merge(array.dataset.unselect(*drop), inplace=True)
+                    if focus is 'stacked_variable':
                         focus = array.focus
-                    elif focus != array.focus:
-                        raise ValueError('DatasetArray.from_stack requires '
-                                         'that all stacked views have the '
-                                         'same focus')
-            if focus is None:
-                focus = 'stacked_variable'
 
         ds[focus] = xarray.XArray.from_stack(arrays, dimension,
                                              stacked_indexers, length,
                                              template)
-        return cls(ds, focus)
+        return unselect_nonfocus_dims(cls(ds, focus))
 
     def to_dataframe(self):
         """Convert this array into a pandas.DataFrame.

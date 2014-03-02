@@ -277,11 +277,10 @@ class TestDataset(TestCase):
         data['time'] = ('time', pd.date_range('2000-01-01', periods=1000))
         self.assertIsInstance(data['var1'], DatasetArray)
         self.assertXArrayEqual(data['var1'], data.variables['var1'])
-        self.assertItemsEqual(data['var1'].dataset.variables,
-                              {'var1', 'dim1', 'dim2'})
+        self.assertIs(data['var1'].dataset, data)
         # access virtual variables
         self.assertXArrayEqual(data['time.dayofyear'][:300],
-                            XArray('time', 1 + np.arange(300)))
+                               XArray('time', 1 + np.arange(300)))
         self.assertArrayEqual(data['time.month'].data,
                               data.variables['time'].data.month)
 
