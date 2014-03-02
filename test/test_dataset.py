@@ -260,6 +260,15 @@ class TestDataset(TestCase):
         self.assertTrue('dim2' not in renamed.variables)
         self.assertTrue('dim2' not in renamed.dimensions)
 
+    def test_squeeze(self):
+        data = Dataset({'foo': (['x', 'y'], [[1, 2]])})
+        expected = Dataset({'y': data['y'], 'foo': data['foo'].squeeze()})
+        self.assertDatasetEqual(expected, data.squeeze())
+        self.assertDatasetEqual(expected, data.squeeze('x'))
+        self.assertDatasetEqual(expected, data.squeeze(['x']))
+        with self.assertRaisesRegexp(ValueError, 'cannot select a dimension'):
+            data.squeeze('y')
+
     def test_merge(self):
         data = create_test_data()
         ds1 = data.select('var1')

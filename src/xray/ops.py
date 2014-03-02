@@ -11,8 +11,8 @@ NUM_BINARY_OPS = ['add', 'sub', 'mul', 'div', 'truediv', 'floordiv', 'mod',
 # some of these can probably be wrapped
 NUMPY_CONVERT_METHODS = ['choose', 'compress', 'flatten', 'item', 'itemset',
                          'nonzero', 'ravel', 'repeat', 'reshape',
-                         'searchsorted', 'squeeze', 'swapaxes', 'take',
-                         'trace', 'diagonal', 'dot']
+                         'searchsorted', 'swapaxes', 'take', 'trace',
+                         'diagonal', 'dot']
 # methods which don't modify the data shape, so the result should still be
 # wrapped in an Variable/DataView
 NUMPY_UNARY_METHODS = ['argsort', 'clip', 'conj', 'conjugate', 'fill',

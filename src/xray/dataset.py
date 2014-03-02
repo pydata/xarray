@@ -129,6 +129,8 @@ class Dataset(Mapping):
         self._attributes = OrderedDict(attributes)
 
     def _as_variable(self, name, var, decode_cf=False):
+        if isinstance(var, DatasetArray):
+            var = var.array
         if not isinstance(var, xarray.XArray):
             try:
                 var = xarray.XArray(*var)
@@ -661,6 +663,40 @@ class Dataset(Mapping):
             ds = self.merge(self[group].dataset)
             group = DatasetArray(ds, group)
         return groupby.GroupBy(self, group.focus, group, squeeze=squeeze)
+
+    def squeeze(self, dimension=None):
+        """Return a new dataset with squeezed data.
+
+        Parameters
+        ----------
+        dimension : None or str or tuple of str, optional
+            Selects a subset of the length one dimensions. If a dimension is
+            selected with length greater than one, an error is raised.
+
+        Returns
+        -------
+        squeezed : Dataset
+            This dataset, but with with all or a subset of the dimensions of
+            length 1 removed.
+
+        Notes
+        -----
+        Although this operation returns a view of each variable's data, it is
+        not lazy -- all variable data will be fully loaded.
+
+        See Also
+        --------
+        numpy.squeeze
+        """
+        if dimension is None:
+            dimension = [d for d, s in self.dimensions.iteritems() if s == 1]
+        else:
+            if isinstance(dimension, basestring):
+                dimension = [dimension]
+            if any(self.dimensions[k] > 1 for k in dimension):
+                raise ValueError('cannot select a dimension to squeeze out '
+                                 'which has length greater than one')
+        return self.indexed_by(**{dim: 0 for dim in dimension})
 
     def to_dataframe(self):
         """Convert this dataset into a pandas.DataFrame.

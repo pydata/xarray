@@ -283,12 +283,43 @@ class DatasetArray(AbstractArray):
         transposed : DatasetArray
             The returned DatasetArray's array is transposed.
 
+        Notes
+        -----
+        Although this operation returns a view of this array's data, it is
+        not lazy -- the data will be fully loaded.
+
         See Also
         --------
         numpy.transpose
         Array.transpose
         """
         return self.refocus(self.array.transpose(*dimensions), self.focus)
+
+    def squeeze(self, dimension=None):
+        """Return a new DatasetArray object with squeezed data.
+
+        Parameters
+        ----------
+        dimensions : None or str or tuple of str, optional
+            Selects a subset of the length one dimensions. If a dimension is
+            selected with length greater than one, an error is raised.
+
+        Returns
+        -------
+        squeezed : DatasetArray
+            This array, but with with all or a subset of the dimensions of
+            length 1 removed.
+
+        Notes
+        -----
+        Although this operation returns a view of this array's data, it is
+        not lazy -- the data will be fully loaded.
+
+        See Also
+        --------
+        numpy.squeeze
+        """
+        return type(self)(self.dataset.squeeze(dimension), self.focus)
 
     def reduce(self, func, dimension=None, axis=None, **kwargs):
         """Reduce this array by applying `func` along some dimension(s).
