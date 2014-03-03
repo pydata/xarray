@@ -302,7 +302,8 @@ class DatasetArray(AbstractArray):
         ----------
         dimensions : None or str or tuple of str, optional
             Selects a subset of the length one dimensions. If a dimension is
-            selected with length greater than one, an error is raised.
+            selected with length greater than one, an error is raised. If
+            None, all length one dimensions are squeezed.
 
         Returns
         -------
