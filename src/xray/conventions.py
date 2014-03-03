@@ -166,7 +166,7 @@ class MaskedAndScaledArray(object):
     def __getitem__(self, key):
         # cast to float to insure NaN is meaningful
         values = np.array(self.array[key], dtype=float, copy=True)
-        if self.fill_value is not None:
+        if self.fill_value is not None and not np.isnan(self.fill_value):
             if self.ndim > 0:
                 values[values == self.fill_value] = np.nan
             elif values == self.fill_value:
@@ -340,8 +340,8 @@ def decode_cf_variable(var, mask_and_scale=True):
         fill_value = pop_to(attributes, encoding, '_FillValue')
         scale_factor = pop_to(attributes, encoding, 'scale_factor')
         add_offset = pop_to(attributes, encoding, 'add_offset')
-        if (fill_value is not None or scale_factor is not None
-                or add_offset is not None):
+        if ((fill_value is not None and not np.isnan(fill_value))
+                or scale_factor is not None or add_offset is not None):
             data = MaskedAndScaledArray(data, fill_value, scale_factor,
                                         add_offset)
     # TODO: How should multidimensional time variables be handled?
