@@ -52,6 +52,7 @@ Selecting
    Dataset.renamed
    Dataset.select
    Dataset.unselect
+   Dataset.squeeze
    Dataset.replace
    Dataset.groupby
 
@@ -85,8 +86,10 @@ Selecting
    DatasetArray.indexed_by
    DatasetArray.labeled_by
    DatasetArray.renamed
+   DatasetArray.select
    DatasetArray.unselected
    DatasetArray.unselect
+   DatasetArray.squeeze
    DatasetArray.refocus
 
 Group operations

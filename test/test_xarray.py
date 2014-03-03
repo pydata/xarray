@@ -102,6 +102,20 @@ class TestXArray(TestCase):
         w3 = XArray(['b', 'c', 'd', 'a'], np.einsum('abcd->bcda', x))
         self.assertXArrayEqual(w, w3.transpose('a', 'b', 'c', 'd'))
 
+    def test_squeeze(self):
+        v = XArray(['x', 'y'], [[1]])
+        self.assertXArrayEqual(XArray([], 1), v.squeeze())
+        self.assertXArrayEqual(XArray(['y'], [1]), v.squeeze('x'))
+        self.assertXArrayEqual(XArray(['y'], [1]), v.squeeze(['x']))
+        self.assertXArrayEqual(XArray(['x'], [1]), v.squeeze('y'))
+        self.assertXArrayEqual(XArray([], 1), v.squeeze(['x', 'y']))
+
+        v = XArray(['x', 'y'], [[1, 2]])
+        self.assertXArrayEqual(XArray(['y'], [1, 2]), v.squeeze())
+        self.assertXArrayEqual(XArray(['y'], [1, 2]), v.squeeze('x'))
+        with self.assertRaisesRegexp(ValueError, 'cannot select a dimension'):
+            v.squeeze('y')
+
     def test_1d_math(self):
         x = np.arange(5)
         y = np.ones(5)

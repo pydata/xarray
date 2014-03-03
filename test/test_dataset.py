@@ -260,6 +260,23 @@ class TestDataset(TestCase):
         self.assertTrue('dim2' not in renamed.variables)
         self.assertTrue('dim2' not in renamed.dimensions)
 
+    def test_squeeze(self):
+        data = Dataset({'foo': (['x', 'y', 'z'], [[[1], [2]]])})
+        # squeeze everything
+        expected = Dataset({'y': data['y'], 'foo': data['foo'].squeeze()})
+        self.assertDatasetEqual(expected, data.squeeze())
+        # squeeze only x
+        expected = Dataset({'y': data['y'], 'foo': (['y', 'z'], data['foo'].data[0])})
+        self.assertDatasetEqual(expected, data.squeeze('x'))
+        self.assertDatasetEqual(expected, data.squeeze(['x']))
+        # squeeze only z
+        expected = Dataset({'y': data['y'], 'foo': (['x', 'y'], data['foo'].data[:, :, 0])})
+        self.assertDatasetEqual(expected, data.squeeze('z'))
+        self.assertDatasetEqual(expected, data.squeeze(['z']))
+        # invalid squeeze
+        with self.assertRaisesRegexp(ValueError, 'cannot select a dimension'):
+            data.squeeze('y')
+
     def test_merge(self):
         data = create_test_data()
         ds1 = data.select('var1')
@@ -300,6 +317,17 @@ class TestDataset(TestCase):
         # assign an array
         with self.assertRaisesRegexp(TypeError, 'variables must be of type'):
             data2['C'] = var.data
+
+    def test_delitem(self):
+        data = create_test_data()
+        all_items = {'time', 'dim1', 'dim2', 'dim3', 'var1', 'var2', 'var3'}
+        self.assertItemsEqual(data, all_items)
+        del data['var1']
+        self.assertItemsEqual(data, all_items - {'var1'})
+        print data.keys()
+        print data._variables.keys()
+        del data['dim1']
+        self.assertItemsEqual(data, {'time', 'dim2', 'dim3'})
 
     def test_to_dataframe(self):
         x = np.random.randn(10)

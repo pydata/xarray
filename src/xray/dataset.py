@@ -129,6 +129,8 @@ class Dataset(Mapping):
         self._attributes = OrderedDict(attributes)
 
     def _as_variable(self, name, var, decode_cf=False):
+        if isinstance(var, DatasetArray):
+            var = var.array
         if not isinstance(var, xarray.XArray):
             try:
                 var = xarray.XArray(*var)
@@ -288,18 +290,25 @@ class Dataset(Mapping):
 
     def __delitem__(self, key):
         """Remove a variable from this dataset.
+
+        If this variable is a dimension, all variables containing this
+        dimension are also removed.
         """
+        if key in self._dimensions:
+            del self._dimensions[key]
         del self._variables[key]
-        # TODO: needs better testing
-        dims = set().union(v.dimensions for v in self._variables.itervalues())
-        for dim in self._dimensions:
-            if dim not in dims:
-                del self._dimensions[dim]
+        also_delete = [k for k, v in self._variables.iteritems()
+                       if key in v.dimensions]
+        for key in also_delete:
+            del self._variables[key]
 
     # mutable objects should not be hashable
     __hash__ = None
 
     def __eq__(self, other):
+        """Two Datasets are equal if they have equal variables and global
+        attributes.
+        """
         try:
             # some stores (e.g., scipy) do not seem to preserve order, so don't
             # require matching dimension or variable order for equality
@@ -662,6 +671,41 @@ class Dataset(Mapping):
             ds = self.merge(self[group].dataset)
             group = DatasetArray(ds, group)
         return groupby.GroupBy(self, group.focus, group, squeeze=squeeze)
+
+    def squeeze(self, dimension=None):
+        """Return a new dataset with squeezed data.
+
+        Parameters
+        ----------
+        dimension : None or str or tuple of str, optional
+            Selects a subset of the length one dimensions. If a dimension is
+            selected with length greater than one, an error is raised.  If
+            None, all length one dimensions are squeezed.
+
+        Returns
+        -------
+        squeezed : Dataset
+            This dataset, but with with all or a subset of the dimensions of
+            length 1 removed.
+
+        Notes
+        -----
+        Although this operation returns a view of each variable's data, it is
+        not lazy -- all variable data will be fully loaded.
+
+        See Also
+        --------
+        numpy.squeeze
+        """
+        if dimension is None:
+            dimension = [d for d, s in self.dimensions.iteritems() if s == 1]
+        else:
+            if isinstance(dimension, basestring):
+                dimension = [dimension]
+            if any(self.dimensions[k] > 1 for k in dimension):
+                raise ValueError('cannot select a dimension to squeeze out '
+                                 'which has length greater than one')
+        return self.indexed_by(**{dim: 0 for dim in dimension})
 
     def to_dataframe(self):
         """Convert this dataset into a pandas.DataFrame.

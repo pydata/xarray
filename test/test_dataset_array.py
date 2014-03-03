@@ -155,6 +155,12 @@ class TestDatasetArray(TestCase):
         self.assertIs(b.data, x)
         self.assertIs(b.dataset, self.ds)
 
+    def test_transpose(self):
+        self.assertXArrayEqual(self.dv.array.transpose(), self.dv.transpose())
+
+    def test_squeeze(self):
+        self.assertXArrayEqual(self.dv.array.squeeze(), self.dv.squeeze())
+
     def test_reduce(self):
         self.assertXArrayEqual(self.dv.reduce(np.mean, 'x'),
                             self.v.reduce(np.mean, 'x'))

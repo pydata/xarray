@@ -258,10 +258,7 @@ class XArray(AbstractArray):
         return self[tuple(key)]
 
     def transpose(self, *dimensions):
-        """Return a new Array object with transposed dimensions.
-
-        Note: Although this operation returns a view of this variable's data,
-        it is not lazy -- the data will be fully loaded.
+        """Return a new XArray object with transposed dimensions.
 
         Parameters
         ----------
@@ -271,9 +268,14 @@ class XArray(AbstractArray):
 
         Returns
         -------
-        transposed : Array
+        transposed : XArray
             The returned object has transposed data and dimensions with the
             same attributes as the original.
+
+        Notes
+        -----
+        Although this operation returns a view of this array's data, it is
+        not lazy -- the data will be fully loaded.
 
         See Also
         --------
@@ -284,6 +286,42 @@ class XArray(AbstractArray):
         axes = [self.dimensions.index(dim) for dim in dimensions]
         data = self.data.transpose(*axes)
         return type(self)(dimensions, data, self.attributes, self.encoding)
+
+    def squeeze(self, dimension=None):
+        """Return a new XArray object with squeezed data.
+
+        Parameters
+        ----------
+        dimensions : None or str or tuple of str, optional
+            Selects a subset of the length one dimensions. If a dimension is
+            selected with length greater than one, an error is raised. If
+            None, all length one dimensions are squeezed.
+
+        Returns
+        -------
+        squeezed : XArray
+            This array, but with with all or a subset of the dimensions of
+            length 1 removed.
+
+        Notes
+        -----
+        Although this operation returns a view of this variable's data, it is
+        not lazy -- the data will be fully loaded.
+
+        See Also
+        --------
+        numpy.squeeze
+        """
+        dimensions = dict(zip(self.dimensions, self.shape))
+        if dimension is None:
+            dimension = [d for d, s in dimensions.iteritems() if s == 1]
+        else:
+            if isinstance(dimension, basestring):
+                dimension = [dimension]
+            if any(dimensions[k] > 1 for k in dimension):
+                raise ValueError('cannot select a dimension to squeeze out '
+                                 'which has length greater than one')
+        return self.indexed_by(**{dim: 0 for dim in dimension})
 
     def reduce(self, func, dimension=None, axis=None, **kwargs):
         """Reduce this array by applying `func` along some dimension(s).
