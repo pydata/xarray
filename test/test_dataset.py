@@ -24,7 +24,7 @@ _testdim = sorted(_dims.keys())[0]
 
 def create_test_data():
     obj = Dataset()
-    obj['time'] = ('time', pd.date_range('2000-01-01', periods=1000))
+    obj['time'] = ('time', pd.date_range('2000-01-01', periods=20))
     for k, d in sorted(_dims.items()):
         obj[k] = (k, np.arange(d))
     for v, dims in sorted(_vars.items()):
@@ -36,7 +36,7 @@ def create_test_data():
 class TestDataset(TestCase):
     def test_repr(self):
         data = create_test_data()
-        self.assertEqual('<xray.Dataset (time: 1000, dim1: 100, '
+        self.assertEqual('<xray.Dataset (time: 20, dim1: 100, '
                          'dim2: 50, dim3: 10): var1 var2 var3>', repr(data))
 
     def test_init(self):
@@ -170,7 +170,7 @@ class TestDataset(TestCase):
             data.indexed_by(not_a_dim=slice(0, 2))
 
         ret = data.indexed_by(dim1=0)
-        self.assertEqual({'time': 1000, 'dim2': 50, 'dim3': 10}, ret.dimensions)
+        self.assertEqual({'time': 20, 'dim2': 50, 'dim3': 10}, ret.dimensions)
 
         ret = data.indexed_by(time=slice(2), dim1=0, dim2=slice(5))
         self.assertEqual({'time': 2, 'dim2': 5, 'dim3': 10}, ret.dimensions)
@@ -184,7 +184,7 @@ class TestDataset(TestCase):
         loc_slicers = {'dim1': slice(None, None, 2), 'dim2': slice(0, 1)}
         self.assertEqual(data.indexed_by(**int_slicers),
                          data.labeled_by(**loc_slicers))
-        data['time'] = ('time', pd.date_range('2000-01-01', periods=1000))
+        data['time'] = ('time', pd.date_range('2000-01-01', periods=20))
         self.assertEqual(data.indexed_by(time=0),
                          data.labeled_by(time='2000-01-01'))
         self.assertEqual(data.indexed_by(time=slice(10)),
@@ -291,13 +291,13 @@ class TestDataset(TestCase):
 
     def test_getitem(self):
         data = create_test_data()
-        data['time'] = ('time', pd.date_range('2000-01-01', periods=1000))
+        data['time'] = ('time', pd.date_range('2000-01-01', periods=20))
         self.assertIsInstance(data['var1'], DatasetArray)
         self.assertXArrayEqual(data['var1'], data.variables['var1'])
         self.assertIs(data['var1'].dataset, data)
         # access virtual variables
-        self.assertXArrayEqual(data['time.dayofyear'][:300],
-                               XArray('time', 1 + np.arange(300)))
+        self.assertXArrayEqual(data['time.dayofyear'],
+                               XArray('time', 1 + np.arange(20)))
         self.assertArrayEqual(data['time.month'].data,
                               data.variables['time'].data.month)
 
@@ -324,8 +324,6 @@ class TestDataset(TestCase):
         self.assertItemsEqual(data, all_items)
         del data['var1']
         self.assertItemsEqual(data, all_items - {'var1'})
-        print data.keys()
-        print data._variables.keys()
         del data['dim1']
         self.assertItemsEqual(data, {'time', 'dim2', 'dim3'})
 
@@ -344,7 +342,6 @@ class TestDataset(TestCase):
         w = np.random.randn(2, 3)
         ds = Dataset({'w': (('x', 'y'), w)})
         ds['y'] = ('y', list('abc'))
-        print ds.dimensions
         exp_index = pd.MultiIndex.from_arrays(
             [[0, 0, 0, 1, 1, 1], ['a', 'b', 'c', 'a', 'b', 'c']],
             names=['x', 'y'])
@@ -520,6 +517,10 @@ class NetCDF4DataTest(DatasetIOCases, TestCase):
         ds = open_dataset(tmp_file)
         expected = Dataset({'x': ((), 123)})
         self.assertDatasetEqual(expected, ds)
+
+    def test_lazy_decode(self):
+        data = self.roundtrip(create_test_data(), decode_cf=True)
+        self.assertIsInstance(data['var1']._data, nc4.Variable)
 
 
 class ScipyDataTest(DatasetIOCases, TestCase):
