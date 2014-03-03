@@ -249,11 +249,12 @@ def encode_cf_variable(array):
     attributes = array.attributes.copy()
     encoding = array.encoding
 
-    if isinstance(data, pd.DatetimeIndex):
+    if (isinstance(data, pd.DatetimeIndex) or
+        str(data.dtype).startswith('datetime')):
         # DatetimeIndex objects need to be encoded into numeric arrays
         (data, units, calendar) = utils.datetimeindex2num(data,
-                                          units=encoding.get('units', None),
-                                          calendar=encoding.get('calendar', None))
+                                          units=encoding.pop('units', None),
+                                          calendar=encoding.pop('calendar', None))
         attributes['units'] = units
         attributes['calendar'] = calendar
     elif data.dtype == np.dtype('O'):
@@ -327,7 +328,10 @@ def decode_cf_variable(var, mask_and_scale=True):
     if 'dtype' in encoding:
         if var.data.dtype != encoding['dtype']:
             raise ValueError("Refused to overwrite dtype")
-    encoding['dtype'] = data.dtype
+    if not isinstance(data, pd.Index):
+        # When data is a pandas Index we assume the dtype will be
+        # inferred during encode_cf_variable.
+        encoding['dtype'] = data.dtype
     if np.issubdtype(data.dtype, (str, unicode)):
         # TODO: add some sort of check instead of just assuming that the last
         # dimension on a character array is always the string dimension
