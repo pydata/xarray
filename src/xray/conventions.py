@@ -167,7 +167,10 @@ class MaskedAndScaledArray(object):
         # cast to float to insure NaN is meaningful
         values = np.array(self.array[key], dtype=float, copy=True)
         if self.fill_value is not None:
-            values[values == self.fill_value] = np.nan
+            if self.ndim > 0:
+                values[values == self.fill_value] = np.nan
+            elif values == self.fill_value:
+                values = np.array(np.nan)
         if self.scale_factor is not None:
             values *= self.scale_factor
         if self.add_offset is not None:
