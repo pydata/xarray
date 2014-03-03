@@ -247,10 +247,9 @@ def encode_cf_variable(array):
     dimensions = array.dimensions
     data = array.data
     attributes = array.attributes.copy()
-    encoding = array.encoding
+    encoding = array.encoding.copy()
 
-    if (isinstance(data, pd.DatetimeIndex) or
-        str(data.dtype).startswith('datetime')):
+    if np.issubdtype(data.dtype, np.datetime64):
         # DatetimeIndex objects need to be encoded into numeric arrays
         (data, units, calendar) = utils.datetimeindex2num(data,
                                           units=encoding.pop('units', None),
