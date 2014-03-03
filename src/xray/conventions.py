@@ -306,7 +306,8 @@ def encode_cf_variable(array):
 
 
 def decode_cf_variable(var, mask_and_scale=True):
-    data = var.data
+    # use _data instead of data so as not to trigger loading data
+    data = var._data
     dimensions = var.dimensions
     attributes = var.attributes.copy()
     encoding = var.encoding.copy()
