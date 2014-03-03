@@ -141,10 +141,18 @@ class NetCDF4DataStore(AbstractDataStore):
     @property
     def variables(self):
         def convert_variable(var):
-            attr = OrderedDict((k, var.getncattr(k)) for k in var.ncattrs())
             var.set_auto_maskandscale(False)
-            return xarray.XArray(var.dimensions, var,
-                          attr, indexing_mode='orthogonal')
+            dimensions = var.dimensions
+            data = var
+            if var.ndim == 0:
+                # work around for netCDF4-python's broken handling of 0-d
+                # arrays (slicing them always returns a 1-dimensional array):
+                # https://github.com/Unidata/netcdf4-python/pull/220
+                data = np.asscalar(var[...])
+            attributes = OrderedDict((k, var.getncattr(k))
+                                     for k in var.ncattrs())
+            return xarray.XArray(dimensions, data, attributes,
+                                 indexing_mode='orthogonal')
         return FrozenOrderedDict((k, convert_variable(v))
                                  for k, v in self.ds.variables.iteritems())
 

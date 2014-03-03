@@ -478,6 +478,21 @@ class NetCDF4DataTest(DatasetIOCases, TestCase):
         self.assertDatasetEqual(expected, ds)
         os.remove(tmp_file)
 
+    def test_0dimensional_variable(self):
+        # This fix verifies our work-around to this netCDF4-python bug:
+        # https://github.com/Unidata/netcdf4-python/pull/220
+        f, tmp_file = tempfile.mkstemp(suffix='.nc')
+        os.close(f)
+
+        nc = nc4.Dataset(tmp_file, mode='w')
+        v = nc.createVariable('x', 'int16')
+        v[...] = 123
+        nc.close()
+
+        ds = open_dataset(tmp_file)
+        expected = Dataset({'x': ((), 123)})
+        self.assertDatasetEqual(expected, ds)
+
 
 class ScipyDataTest(DatasetIOCases, TestCase):
     def get_store(self):
