@@ -6,13 +6,13 @@ from . import TestCase, ReturnItem
 
 class TestDatasetArray(TestCase):
     def assertDSArrayEqual(self, ar1, ar2):
-        self.assertEqual(ar1.dataset, ar2.dataset)
         self.assertEqual(ar1.focus, ar2.focus)
+        self.assertDatasetEqual(ar1.dataset, ar2.dataset)
 
     def assertDSArrayEquiv(self, ar1, ar2):
         random_name = 'randomly-renamed-variable'
-        self.assertEqual(ar1.renamed(random_name).dataset,
-                         ar2.renamed(random_name).dataset)
+        self.assertDSArrayEqual(ar1.renamed(random_name),
+                                ar2.renamed(random_name))
 
     def setUp(self):
         self.x = np.random.random((10, 20))
@@ -39,8 +39,8 @@ class TestDatasetArray(TestCase):
         self.assertDSArrayEqual(self.dv, self.ds['foo'])
         x = self.dv['x']
         y = self.dv['y']
-        self.assertDSArrayEqual(DatasetArray(self.ds.select('x'), 'x'), x)
-        self.assertDSArrayEqual(DatasetArray(self.ds.select('y'), 'y'), y)
+        self.assertDSArrayEqual(DatasetArray(self.ds, 'x'), x)
+        self.assertDSArrayEqual(DatasetArray(self.ds, 'y'), y)
         # integer indexing
         I = ReturnItem()
         for i in [I[:], I[...], I[x.data], I[x.array], I[x], I[x, y],
@@ -187,9 +187,9 @@ class TestDatasetArray(TestCase):
 
         expected_sum_all = DatasetArray(Dataset(
             {'foo': XArray(['abc'], np.array([self.x[:, :9].sum(),
-                                             self.x[:, 10:].sum(),
-                                             self.x[:, 9:10].sum()]).T,
-                          {'cell_methods': 'x: y: sum'}),
+                                              self.x[:, 10:].sum(),
+                                              self.x[:, 9:10].sum()]).T,
+                           {'cell_methods': 'x: y: sum'}),
              'abc': XArray(['abc'], np.array(['a', 'b', 'c']))}), 'foo')
         self.assertDSArrayEqual(expected_sum_all,
                                 grouped.reduce(np.sum, dimension=None))
@@ -200,9 +200,9 @@ class TestDatasetArray(TestCase):
 
         expected_sum_axis1 = DatasetArray(Dataset(
             {'foo': XArray(['x', 'abc'], np.array([self.x[:, :9].sum(1),
-                                                  self.x[:, 10:].sum(1),
-                                                  self.x[:, 9:10].sum(1)]).T,
-                          {'cell_methods': 'y: sum'}),
+                                                   self.x[:, 10:].sum(1),
+                                                   self.x[:, 9:10].sum(1)]).T,
+                           {'cell_methods': 'y: sum'}),
              'x': self.ds.variables['x'],
              'abc': XArray(['abc'], np.array(['a', 'b', 'c']))}), 'foo')
         self.assertDSArrayEqual(expected_sum_axis1, grouped.reduce(np.sum))
@@ -212,21 +212,21 @@ class TestDatasetArray(TestCase):
 
     def test_from_stack(self):
         self.ds['bar'] = XArray(['x', 'y'], np.random.randn(10, 20))
-        foo = self.ds['foo']
-        bar = self.ds['bar'].renamed('foo')
-        # from dataviews:
+        foo = self.ds['foo'].select()
+        bar = self.ds['bar'].renamed('foo').select()
+        # from dataset array:
         self.assertXArrayEqual(XArray(['w', 'x', 'y'],
-                                   np.array([foo.data, bar.data])),
-                            DatasetArray.from_stack([foo, bar], 'w'))
-        # from variables:
+                                      np.array([foo.data, bar.data])),
+                               DatasetArray.from_stack([foo, bar], 'w'))
+        # from xarrays:
         self.assertXArrayEqual(XArray(['w', 'x', 'y'],
-                                   np.array([foo.data, bar.data])),
-                            DatasetArray.from_stack([foo.array,
-                                                     bar.array], 'w'))
+                                      np.array([foo.data, bar.data])),
+                               DatasetArray.from_stack([foo.array,
+                                                        bar.array], 'w'))
         # from iteration:
         stacked = DatasetArray.from_stack((v for _, v in foo.groupby('x')),
-                                      self.ds['x'])
-        self.assertDSArrayEqual(foo, stacked)
+                                          self.ds['x'])
+        self.assertDSArrayEqual(foo.select(), stacked)
 
     def test_align(self):
         self.ds['x'] = ('x', np.array(list('abcdefghij')))

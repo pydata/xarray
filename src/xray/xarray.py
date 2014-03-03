@@ -403,10 +403,22 @@ class XArray(AbstractArray):
             dimension is unchanged. Where to insert the new dimension is
             determined by the first variable.
         stacked_indexers : iterable of indexers, optional
+            Iterable of indexers of the same length as variables which
+            specifies how to assign variables along the given dimension. If
+            not supplied, stacked_indexers is inferred from the length of each
+            variable along the dimension, and the variables are stacked in the
+            given order.
         length : int, optional
             Length of the new dimension. This is used to allocate the new data
             array for the stacked variable data before iterating over all
-            items, which is thus more memory efficient and a bit faster.
+            items, which is thus more memory efficient and a bit faster. If
+            dimension is provided as an array, length is calculated
+            automatically.
+        template : XArray, optional
+            This option is used internally to speed-up groupby operations. The
+            template's attributes are added to the returned array's attributes.
+            Furthermore, if a template is given, some checks of internal
+            consistency between arrays to stack are skipped.
 
         Returns
         -------
