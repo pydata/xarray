@@ -261,11 +261,19 @@ class TestDataset(TestCase):
         self.assertTrue('dim2' not in renamed.dimensions)
 
     def test_squeeze(self):
-        data = Dataset({'foo': (['x', 'y'], [[1, 2]])})
+        data = Dataset({'foo': (['x', 'y', 'z'], [[[1], [2]]])})
+        # squeeze everything
         expected = Dataset({'y': data['y'], 'foo': data['foo'].squeeze()})
         self.assertDatasetEqual(expected, data.squeeze())
+        # squeeze only x
+        expected = Dataset({'y': data['y'], 'foo': (['y', 'z'], data['foo'].data[0])})
         self.assertDatasetEqual(expected, data.squeeze('x'))
         self.assertDatasetEqual(expected, data.squeeze(['x']))
+        # squeeze only z
+        expected = Dataset({'y': data['y'], 'foo': (['x', 'y'], data['foo'].data[:, :, 0])})
+        self.assertDatasetEqual(expected, data.squeeze('z'))
+        self.assertDatasetEqual(expected, data.squeeze(['z']))
+        # invalid squeeze
         with self.assertRaisesRegexp(ValueError, 'cannot select a dimension'):
             data.squeeze('y')
 
