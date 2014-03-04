@@ -247,7 +247,7 @@ def encode_cf_variable(array):
     dimensions = array.dimensions
     data = array.data
     attributes = array.attributes.copy()
-    encoding = array.encoding
+    encoding = array.encoding.copy()
 
     if (np.issubdtype(data.dtype, np.datetime64)
             or (data.dtype.kind == 'O'

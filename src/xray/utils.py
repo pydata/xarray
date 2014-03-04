@@ -106,13 +106,6 @@ def remap_loc_indexers(indices, indexers):
     return new_indexers
 
 
-def first_value(arr):
-    """Helper function for extracting the first value from an n-dimensional
-    array (including n=0)
-    """
-    return np.nditer(arr, ['refs_ok']).next()[()]
-
-
 def decode_cf_datetime(num_dates, units, calendar=None):
     """Given an array of numeric dates in netCDF format, convert it into a
     numpy array of date time objects.
@@ -120,13 +113,6 @@ def decode_cf_datetime(num_dates, units, calendar=None):
     For standard (Gregorian) calendars, this function uses vectorized
     operations, which makes it much faster than netCDF4.num2date. In such a
     case, the returned array will be of type np.datetime64.
-
-    Warning
-    -------
-    This function checks only the first date to determine that it falls within
-    the range expressable by the np.datetime64 dtype with nanosecond precision
-    (roughly the years 1678 through 2361). If subsequent dates fall outside
-    this range, the array may possibly overflow.
 
     See also
     --------
@@ -136,33 +122,37 @@ def decode_cf_datetime(num_dates, units, calendar=None):
     if calendar is None:
         calendar = 'standard'
 
-    first_date = nc4.num2date(first_value(num_dates), units, calendar)
+    min_num = np.min(num_dates)
+    max_num = np.max(num_dates)
+    min_date = nc4.num2date(min_num, units, calendar)
+    if num_dates.size > 1:
+        max_date = nc4.num2date(max_num, units, calendar)
+    else:
+        max_date = min_date
+
     if (calendar not in ['standard', 'gregorian', 'proleptic_gregorian']
-            or first_date < datetime(1678, 1, 1)
-            or first_date > datetime(2262, 4, 11)):
+            or min_date < datetime(1678, 1, 1)
+            or max_date > datetime(2262, 4, 11)):
         dates = nc4.num2date(num_dates, units, calendar)
     else:
-        # assume we can safely use np.datetime64 arrays
-        # TODO: catch the unlikely corner cases described in the warning in the
-        # function docstring
-        if num_dates.size == 1:
-            dates = np.datetime64(first_date)
+        # we can safely use np.datetime64
+        if min_num == max_num:
+            # we can't safely divide by max_num - min_num
+            dates = np.repeat(np.datetime64(min_date), num_dates.size)
         else:
             # Calculate the date as a np.datetime64 array from linear scaling
-            # of two example dates calculated via num2date.
-            # Despite the names "first_date" and "second_date", it is not
-            # actually necessary for these dates to be in order.
+            # of the max and min dates calculated via num2date.
             flat_num_dates = num_dates.reshape(-1)
-            ex_nums = flat_num_dates[:2].astype(float)
-            second_date = nc4.num2date(ex_nums[1], units, calendar)
-            ex_time_delta = np.timedelta64(second_date - first_date)
-            num_delta = ((flat_num_dates - ex_nums[0])
-                         / (ex_nums[1] - ex_nums[0]))
-            dates = ex_time_delta * num_delta + np.datetime64(first_date)
+            time_delta = np.timedelta64(max_date - min_date)
+            # apply the numerator and denominator separately so we don't need
+            # to cast to floating point numbers under the assumption that all
+            # dates can be given exactly with ns precision
+            numerator = flat_num_dates - min_num
+            denominator = max_num - min_num
+            dates = (time_delta * numerator / denominator
+                     + np.datetime64(min_date))
         # restore original shape
         dates = dates.reshape(num_dates.shape)
-        if num_dates.ndim == 0:
-            dates = dates[()]
     return dates
 
 
@@ -201,16 +191,19 @@ def encode_cf_datetime(dates, units=None, calendar=None):
         units = guess_time_units(dates)
     if calendar is None:
         calendar = 'proleptic_gregorian'
-    if (isinstance(dates, np.ndarray)
+
+    if isinstance(dates, np.datetime64):
+        dates = pd.Timestamp(dates).to_pydatetime()
+    elif (isinstance(dates, np.ndarray)
             and np.issubdtype(dates.dtype, np.datetime64)):
         # for now, don't bother doing any trickery like num_to_datetime64 to
         # convert dates to numbers faster
-        dates_array = np.asarray(dates)
-        date_index = pd.DatetimeIndex(dates_array.reshape(-1))
-        dates = date_index.to_pydatetime().reshape(dates_array.shape)
-        if dates_array.ndim == 0:
-            # unpack dates out of the array
-            dates = dates[()]
+        date_index = pd.DatetimeIndex(dates.reshape(-1))
+        dates = date_index.to_pydatetime().reshape(dates.shape)
+
+    if hasattr(dates, 'ndim') and dates.ndim == 0:
+        # unpack dates because date2num doesn't like 0-dimensional arguments
+        dates = dates[()]
     num = nc4.date2num(dates, units, calendar)
     return (num, units, calendar)
 

@@ -69,9 +69,12 @@ class TestDatetime(TestCase):
                 (np.arange(100).reshape(10, 10), 'days since 2000-01-01'),
                 (12300 + np.arange(50), 'hours since 1680-01-01 00:00:00'),
                 (10, 'days since 2000-01-01'),
-                (np.array([10]), 'days since 2000-01-01'),
-                (np.array([[10]]), 'days since 2000-01-01'),
+                ([10], 'days since 2000-01-01'),
+                ([[10]], 'days since 2000-01-01'),
+                ([10, 10], 'days since 2000-01-01'),
                 (0, 'days since 1000-01-01'),
+                ([0], 'days since 1000-01-01'),
+                ([[0]], 'days since 1000-01-01'),
                 (np.arange(20), 'days since 1000-01-01'),
                 ]:
             for calendar in ['standard', 'gregorian', 'proleptic_gregorian']:
