@@ -23,15 +23,6 @@ class TestXArray(TestCase):
         self.assertIs(v.data, d2)
         self.assertEqual(v._indexing_mode, 'numpy')
 
-    def assertArray0D(self, x, dtype=None, subdtype=None):
-        self.assertEqual(x.shape, ())
-        self.assertEqual(x.ndim, 0)
-        self.assertEqual(x.size, 1)
-        if dtype is not None:
-            self.assertEqual(x.dtype, dtype)
-        if subdtype is not None:
-            self.assertTrue(np.issubdtype(x.dtype, subdtype))
-
     def test_0d_data(self):
         d = datetime(2000, 1, 1)
         for value, dtype in [(0, int),
