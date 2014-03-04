@@ -17,19 +17,19 @@ class ImplementsReduce(object):
 class AbstractArray(ImplementsReduce):
     @property
     def dtype(self):
-        return getattr(self._data, 'dtype', object)
+        return self._data.dtype
 
     @property
     def shape(self):
-        return getattr(self._data, 'shape', ())
+        return self._data.shape
 
     @property
     def size(self):
-        return getattr(self._data, 'size', 1)
+        return self._data.size
 
     @property
     def ndim(self):
-        return getattr(self._data, 'ndim', 0)
+        return self._data.ndim
 
     def __len__(self):
         return len(self._data)

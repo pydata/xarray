@@ -1,4 +1,5 @@
 from copy import deepcopy
+from datetime import datetime
 
 import numpy as np
 
@@ -20,6 +21,30 @@ class TestXArray(TestCase):
         v.data = d2
         self.assertIs(v.data, d2)
         self.assertEqual(v._indexing_mode, 'numpy')
+
+    def test_0d_data(self):
+        d = datetime(2000, 1, 1)
+        for value, dtype in [(0, int),
+                             (np.float32(0.5), np.float32),
+                             ('foo', np.string_),
+                             (d, None),
+                             (np.datetime64(d), np.datetime64)]:
+            x = XArray(['x'], [value])
+            # check array properties
+            self.assertEqual(x[0].shape, ())
+            self.assertEqual(x[0].ndim, 0)
+            self.assertEqual(x[0].size, 1)
+            # check value is equal for both ndarray and XArray
+            self.assertEqual(x.data[0], value)
+            self.assertEqual(x[0].data, value)
+            # check type or dtype is consistent for both ndarray and XArray
+            if dtype is None:
+                # check output type instead of array dtype
+                self.assertEqual(type(x.data[0]), type(value))
+                self.assertEqual(type(x[0].data), type(value))
+            else:
+                self.assertTrue(np.issubdtype(x.data[0].dtype, dtype))
+                self.assertTrue(np.issubdtype(x[0].data.dtype, dtype))
 
     def test_array_equality(self):
         d = np.random.rand(10, 3)
