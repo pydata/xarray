@@ -343,8 +343,8 @@ class XArray(AbstractArray):
         **kwargs : dict
             Additional keyword arguments passed on to `func`.
 
-        Note
-        ----
+        Notes
+        -----
         If `reduce` is called with multiple dimensions (or axes, which
         are converted into dimensions), then the reduce operation is
         performed repeatedly along each dimension in turn from left to right.
