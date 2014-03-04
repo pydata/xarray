@@ -361,7 +361,6 @@ class TestDataset(TestCase):
             raise UnexpectedDataAccess("Tried Accessing Data")
 
         class InaccesibleArray(XArray):
-
             def __init__(self, dims, data, attributes):
                 XArray.__init__(self, dims, data, attributes)
                 # make sure the only operations on _data
@@ -379,7 +378,6 @@ class TestDataset(TestCase):
                 raise UnexpectedDataAccess("Tried Accessing Data")
 
         class InaccessibleVariableDataStore(backends.InMemoryDataStore):
-
             def __init__(self):
                 self.dimensions = OrderedDict()
                 self._variables = OrderedDict()
@@ -396,7 +394,7 @@ class TestDataset(TestCase):
 
                 def mask_noncoords(k, v):
                     if k in coords:
-                        return k, XArray(v.dimensions, v.data, v._attributes)
+                        return k, v
                     else:
                         return k, InaccesibleArray(v.dimensions, v.data, v.attributes)
                 return utils.FrozenOrderedDict(mask_noncoords(k, v)
