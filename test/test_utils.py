@@ -63,14 +63,31 @@ class TestIndexers(TestCase):
 
 
 class TestDatetime(TestCase):
-    def test_num2datetimeindex(self):
+    def test_cf_datetime(self):
         for num_dates, units in [
-                (np.arange(1000), 'days since 2000-01-01'),
-                (12300 + np.arange(500), 'hours since 1680-01-01 00:00:00')]:
+                (np.arange(100), 'days since 2000-01-01'),
+                (np.arange(100).reshape(10, 10), 'days since 2000-01-01'),
+                (12300 + np.arange(50), 'hours since 1680-01-01 00:00:00'),
+                (10, 'days since 2000-01-01'),
+                (np.array([10]), 'days since 2000-01-01'),
+                (np.array([[10]]), 'days since 2000-01-01'),
+                (0, 'days since 1000-01-01'),
+                (np.arange(20), 'days since 1000-01-01'),
+                ]:
             for calendar in ['standard', 'gregorian', 'proleptic_gregorian']:
-                expected = pd.Index(nc4.num2date(num_dates, units, calendar))
-                actual = utils.num2datetimeindex(num_dates, units, calendar)
+                expected = nc4.num2date(num_dates, units, calendar)
+                actual = utils.decode_cf_datetime(num_dates, units, calendar)
                 self.assertArrayEqual(expected, actual)
+                encoded, _, _ = utils.encode_cf_datetime(actual, units, calendar)
+                self.assertArrayEqual(num_dates, np.around(encoded))
+                if (hasattr(num_dates, 'ndim') and num_dates.ndim == 1
+                        and '1000' not in units):
+                    # verify that wrapping with a pandas.Index works
+                    # note that it *does not* currently work to even put
+                    # non-datetime64 compatible dates into a pandas.Index :(
+                    encoded, _, _ = utils.encode_cf_datetime(
+                        pd.Index(actual), units, calendar)
+                    self.assertArrayEqual(num_dates, np.around(encoded))
 
     def test_guess_time_units(self):
         for dates, expected in [(pd.date_range('1900-01-01', periods=5),
