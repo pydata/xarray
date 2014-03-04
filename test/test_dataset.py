@@ -1,14 +1,17 @@
-from collections import OrderedDict
-from cStringIO import StringIO
+import mock
 import os.path
 import unittest
 import tempfile
 
-import netCDF4 as nc4
+from cStringIO import StringIO
+from collections import OrderedDict
+
 import numpy as np
 import pandas as pd
+import netCDF4 as nc4
 
-from xray import Dataset, DatasetArray, XArray, backends, open_dataset
+from xray import Dataset, DatasetArray, XArray, backends, open_dataset, utils
+
 from . import TestCase
 
 _test_data_path = os.path.join(os.path.dirname(__file__), 'data')
@@ -348,6 +351,66 @@ class TestDataset(TestCase):
         expected = pd.DataFrame(w.reshape(-1), columns=['w'], index=exp_index)
         actual = ds.to_dataframe()
         self.assertTrue(expected.equals(actual))
+
+    def test_lazy_load(self):
+
+        class UnexpectedDataAccess(BaseException):
+            pass
+
+        def _fail(*args, **kwdargs):
+            raise UnexpectedDataAccess("Tried Accessing Data")
+
+        class InaccesibleArray(XArray):
+            def __init__(self, dims, data, attributes):
+                XArray.__init__(self, dims, data, attributes)
+                # make sure the only operations on _data
+                # are to check ndim, dtype, size and shape
+                self._data = mock.Mock()
+                self._data.ndim = data.ndim
+                self._data.dtype = data.dtype
+                self._data.size = data.size
+                self._data.shape = data.shape
+                # fail if the actual data is accessed from _data
+                self._data.__getitem__ = _fail
+
+            @property
+            def data(self):
+                raise UnexpectedDataAccess("Tried Accessing Data")
+
+        class InaccessibleVariableDataStore(backends.InMemoryDataStore):
+            def __init__(self):
+                self.dimensions = OrderedDict()
+                self._variables = OrderedDict()
+                self.attributes = OrderedDict()
+
+            def set_variable(self, name, variable):
+                self._variables[name] = variable
+                return self._variables[name]
+
+            @property
+            def variables(self):
+                coords = [k for k in self._variables.keys()
+                          if k in self.dimensions]
+
+                def mask_noncoords(k, v):
+                    if k in coords:
+                        return k, v
+                    else:
+                        return k, InaccesibleArray(v.dimensions, v.data, v.attributes)
+                return utils.FrozenOrderedDict(mask_noncoords(k, v)
+                                    for k, v in self._variables.iteritems())
+
+        store = InaccessibleVariableDataStore()
+        store.set_dimension('dim', 10)
+        store.set_variable('dim', XArray(('dim'),
+                                          np.arange(10)))
+        store.set_variable('var', XArray(('dim'),
+                                          np.random.uniform(size=10)))
+        ds = Dataset()
+        ds = ds.load_store(store, decode_cf=False)
+        self.assertRaises(UnexpectedDataAccess, lambda: ds['var'].data)
+        ds = ds.load_store(store, decode_cf=True)
+        self.assertRaises(UnexpectedDataAccess, lambda: ds['var'].data)
 
 
 def create_masked_and_scaled_data():

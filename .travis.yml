@@ -17,7 +17,7 @@ before_install:
   - sudo ln -s /run/shm /dev/shm
 # Install packages
 install:
-  - conda create --yes -n env_name python=$TRAVIS_PYTHON_VERSION pip nose numpy scipy netCDF4 pandas
+  - conda create --yes -n env_name python=$TRAVIS_PYTHON_VERSION pip nose numpy scipy netCDF4 pandas mock
   - source activate env_name
   - python setup.py install
 # Run test
