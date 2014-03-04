@@ -23,9 +23,6 @@ def _as_compatible_data(data):
     required = ['dtype', 'shape', 'size', 'ndim']
     if not all(hasattr(data, attr) for attr in required):
         data = np.asarray(data)
-        if data.ndim == 0:
-            # unpack 0d data
-            data = data[()]
     elif isinstance(data, AbstractArray):
         # we don't want nested Array objects
         data = data.data
@@ -86,7 +83,11 @@ class XArray(AbstractArray):
         if not isinstance(self._data, (np.ndarray, np.string_)):
             self._data = np.asarray(self._data[...])
             self._indexing_mode = 'numpy'
-        return self._data
+        data = self._data
+        if data.ndim == 0 and data.dtype.kind == 'O':
+            # unpack 0d object arrays to be consistent with numpy
+            data = data[()]
+        return data
 
     @data.setter
     def data(self, value):

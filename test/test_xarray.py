@@ -1,6 +1,8 @@
 from copy import deepcopy
+from datetime import datetime
 
 import numpy as np
+import pandas as pd
 
 from xray import XArray
 from . import TestCase
@@ -20,6 +22,40 @@ class TestXArray(TestCase):
         v.data = d2
         self.assertIs(v.data, d2)
         self.assertEqual(v._indexing_mode, 'numpy')
+
+    def assertArray0D(self, x, dtype=None, subdtype=None):
+        self.assertEqual(x.shape, ())
+        self.assertEqual(x.ndim, 0)
+        self.assertEqual(x.size, 1)
+        if dtype is not None:
+            self.assertEqual(x.dtype, dtype)
+        if subdtype is not None:
+            self.assertTrue(np.issubdtype(x.dtype, subdtype))
+
+    def test_0d_data(self):
+        x = XArray([], 0)
+        self.assertArrayEqual(x, 0)
+        self.assertArray0D(x, int)
+        self.assertEqual(x.data, 0)
+        x = XArray([], 'something')
+        self.assertArray0D(x)
+        self.assertArrayEqual(x, 'something')
+        self.assertEqual(x.data, 'something')
+        d = datetime(2000, 1, 1)
+        x = XArray([], d)
+        self.assertArray0D(x, object)
+        # don't check for array equality with datetime arguments (since the
+        # array has dtype=object)
+        self.assertEqual(x.data, d)
+        d64 = np.datetime64(d)
+        x = XArray([], d64)
+        self.assertArray0D(x, subdtype=np.datetime64)
+        self.assertArrayEqual(x, d64)
+        self.assertEqual(x.data, d64)
+        self.assertEqual(x, d64)
+        x = XArray(['x'], pd.date_range('2000-01-01', periods=2))
+        self.assertArray0D(x[0])
+        self.assertArrayEqual(x[0].data, d64)
 
     def test_array_equality(self):
         d = np.random.rand(10, 3)
