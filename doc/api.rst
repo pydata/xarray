@@ -13,7 +13,7 @@ Creating a dataset
 
    Dataset
    open_dataset
-   Dataset.from_stack
+   Dataset.concat
 
 Attributes and underlying data
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -100,7 +100,7 @@ Group operations
    :toctree: generated/
 
    DatasetArray.groupby
-   DatasetArray.from_stack
+   DatasetArray.concat
 
 Manipulating data
 ~~~~~~~~~~~~~~~~~

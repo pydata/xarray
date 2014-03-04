@@ -216,21 +216,21 @@ class TestDatasetArray(TestCase):
 
         self.assertDSArrayEqual(self.dv, grouped.apply(identity))
 
-    def test_from_stack(self):
+    def test_concat(self):
         self.ds['bar'] = XArray(['x', 'y'], np.random.randn(10, 20))
         foo = self.ds['foo'].select()
         bar = self.ds['bar'].renamed('foo').select()
         # from dataset array:
         self.assertXArrayEqual(XArray(['w', 'x', 'y'],
                                       np.array([foo.data, bar.data])),
-                               DatasetArray.from_stack([foo, bar], 'w'))
+                               DatasetArray.concat([foo, bar], 'w'))
         # from xarrays:
         self.assertXArrayEqual(XArray(['w', 'x', 'y'],
                                       np.array([foo.data, bar.data])),
-                               DatasetArray.from_stack([foo.array,
-                                                        bar.array], 'w'))
+                               DatasetArray.concat([foo.array,
+                                                    bar.array], 'w'))
         # from iteration:
-        stacked = DatasetArray.from_stack((v for _, v in foo.groupby('x')),
+        stacked = DatasetArray.concat((v for _, v in foo.groupby('x')),
                                           self.ds['x'])
         self.assertDSArrayEqual(foo.select(), stacked)
 

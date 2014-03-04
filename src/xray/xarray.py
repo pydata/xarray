@@ -424,10 +424,9 @@ class XArray(AbstractArray):
             self, group_name, group_array, squeeze=squeeze)
 
     @classmethod
-    def from_stack(cls, variables, dimension='stacked_dimension',
-                   stacked_indexers=None, length=None, template=None):
-        """Stack variables along a new or existing dimension to form a new
-        variable.
+    def concat(cls, variables, dimension='stacked_dimension',
+               indexers=None, length=None, template=None):
+        """Concatenate variables along a new or existing dimension.
 
         Parameters
         ----------
@@ -441,10 +440,10 @@ class XArray(AbstractArray):
             existing dimension name, in which case the location of the
             dimension is unchanged. Where to insert the new dimension is
             determined by the first variable.
-        stacked_indexers : iterable of indexers, optional
+        indexers : iterable of indexers, optional
             Iterable of indexers of the same length as variables which
             specifies how to assign variables along the given dimension. If
-            not supplied, stacked_indexers is inferred from the length of each
+            not supplied, indexers is inferred from the length of each
             variable along the dimension, and the variables are stacked in the
             given order.
         length : int, optional
@@ -461,15 +460,15 @@ class XArray(AbstractArray):
 
         Returns
         -------
-        stacked : Array
-            Stacked variable formed by stacking all the supplied variables
-            along the new dimension.
+        stacked : XArray
+            Concatenated XArray formed by stacking all the supplied variables
+            along the given dimension.
         """
         if not isinstance(dimension, basestring):
             length = dimension.size
             dimension, = dimension.dimensions
 
-        if length is None or stacked_indexers is None:
+        if length is None or indexers is None:
             # so much for lazy evaluation! we need to look at all the variables
             # to figure out the indexers and/or dimensions of the stacked
             # variable
@@ -479,11 +478,11 @@ class XArray(AbstractArray):
                      for var in variables]
             if length is None:
                 length = sum(steps)
-            if stacked_indexers is None:
-                stacked_indexers = []
+            if indexers is None:
+                indexers = []
                 i = 0
                 for step in steps:
-                    stacked_indexers.append(slice(i, i + step))
+                    indexers.append(slice(i, i + step))
                     i += step
                 if i != length:
                     raise ValueError('actual length of stacked variables '
@@ -503,29 +502,29 @@ class XArray(AbstractArray):
             dims = (dimension,) + first_var.dimensions
         attr = OrderedDict() if template is None else template.attributes
 
-        stacked = cls(dims, np.empty(shape, dtype=first_var.dtype), attr)
-        stacked.attributes.update(first_var.attributes)
+        concatenated = cls(dims, np.empty(shape, dtype=first_var.dtype), attr)
+        concatenated.attributes.update(first_var.attributes)
 
         alt_dims = tuple(d for d in dims if d != dimension)
 
         # copy in the data from the variables
-        for var, indexer in izip(variables, stacked_indexers):
+        for var, indexer in izip(variables, indexers):
             if template is None:
                 # do sanity checks if we don't have a template
                 if dimension in var.dimensions:
                     # transpose verifies that the dimensions are equivalent
-                    if var.dimensions != stacked.dimensions:
-                        var = var.transpose(*stacked.dimensions)
+                    if var.dimensions != concatenated.dimensions:
+                        var = var.transpose(*concatenated.dimensions)
                 elif var.dimensions != alt_dims:
                     raise ValueError('inconsistent dimensions')
-                utils.remove_incompatible_items(stacked.attributes,
+                utils.remove_incompatible_items(concatenated.attributes,
                                                 var.attributes)
 
             key = tuple(indexer if n == axis else slice(None)
-                        for n in range(stacked.ndim))
-            stacked.data[tuple(key)] = var.data
+                        for n in range(concatenated.ndim))
+            concatenated.data[tuple(key)] = var.data
 
-        return stacked
+        return concatenated
 
     def __array_wrap__(self, obj, context=None):
         return type(self)(self.dimensions, obj, self.attributes)

@@ -189,9 +189,9 @@ class ArrayGroupBy(GroupBy, ImplementsReduce):
             stack_coord = self.unique_coord
             indexers = np.arange(self.unique_coord.size)
 
-        from_stack_kwargs = {'template': self.obj} if shortcut else {}
-        stacked = type(self.obj).from_stack(applied, stack_coord, indexers,
-                                            **from_stack_kwargs)
+        concat_kwargs = {'template': self.obj} if shortcut else {}
+        stacked = type(self.obj).concat(applied, stack_coord, indexers,
+                                        **concat_kwargs)
 
         # now, reorder the stacked array's dimensions so that those that
         # appeared in the original array appear in the same order they did

@@ -6,5 +6,4 @@ from .utils import (orthogonal_indexer, decode_cf_datetime, encode_cf_datetime,
 
 from .version import version as __version__
 
-
-concat = DatasetArray.from_stack
+# TODO: define a global "concat" function to provide a uniform interface
