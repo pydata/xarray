@@ -192,18 +192,16 @@ def encode_cf_datetime(dates, units=None, calendar=None):
     if calendar is None:
         calendar = 'proleptic_gregorian'
 
-    if isinstance(dates, np.datetime64):
-        dates = pd.Timestamp(dates).to_pydatetime()
-    elif (isinstance(dates, np.ndarray)
+    if (isinstance(dates, np.ndarray)
             and np.issubdtype(dates.dtype, np.datetime64)):
-        # for now, don't bother doing any trickery like num_to_datetime64 to
+        # for now, don't bother doing any trickery like decode_cf_datetime to
         # convert dates to numbers faster
-        date_index = pd.DatetimeIndex(dates.reshape(-1))
-        dates = date_index.to_pydatetime().reshape(dates.shape)
+        dates = dates.astype(datetime)
 
     if hasattr(dates, 'ndim') and dates.ndim == 0:
         # unpack dates because date2num doesn't like 0-dimensional arguments
         dates = dates[()]
+
     num = nc4.date2num(dates, units, calendar)
     return (num, units, calendar)
 
