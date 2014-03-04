@@ -106,29 +106,54 @@ def remap_loc_indexers(indices, indexers):
     return new_indexers
 
 
-def num2datetimeindex(num_dates, units, calendar=None):
-    """Convert an array of numeric dates in netCDF format into a
-    pandas.DatetimeIndex.
+def decode_cf_datetime(num_dates, units, calendar=None):
+    """Given an array of numeric dates in netCDF format, convert it into a
+    numpy array of date time objects.
 
     For standard (Gregorian) calendars, this function uses vectorized
-    operations, which makes it much faster than netCDF4.num2date.
+    operations, which makes it much faster than netCDF4.num2date. In such a
+    case, the returned array will be of type np.datetime64.
+
+    See also
+    --------
+    netCDF4.num2date
     """
-    # TODO: fix this function so it works on arbitrary n-dimensional arrays
     num_dates = np.asarray(num_dates)
     if calendar is None:
         calendar = 'standard'
-    start_date = nc4.num2date(num_dates[0], units, calendar)
-    if (num_dates.size < 2
-            or calendar not in ['standard', 'gregorian', 'proleptic_gregorian']
-            or (start_date < datetime(1582, 10, 15)
-                and calendar != 'proleptic_gregorian')):
+
+    min_num = np.min(num_dates)
+    max_num = np.max(num_dates)
+    min_date = nc4.num2date(min_num, units, calendar)
+    if num_dates.size > 1:
+        max_date = nc4.num2date(max_num, units, calendar)
+    else:
+        max_date = min_date
+
+    if (calendar not in ['standard', 'gregorian', 'proleptic_gregorian']
+            or min_date < datetime(1678, 1, 1)
+            or max_date > datetime(2262, 4, 11)):
         dates = nc4.num2date(num_dates, units, calendar)
     else:
-        first_dates = nc4.num2date(num_dates[:2], units, calendar)
-        first_time_delta = np.timedelta64(first_dates[1] - first_dates[0])
-        num_delta = (num_dates - num_dates[0]) / (num_dates[1] - num_dates[0])
-        dates = first_time_delta * num_delta + np.datetime64(first_dates[0])
-    return pd.Index(dates)
+        # we can safely use np.datetime64
+        if min_num == max_num:
+            # we can't safely divide by max_num - min_num
+            dates = np.repeat(np.datetime64(min_date), num_dates.size)
+        else:
+            # Calculate the date as a np.datetime64 array from linear scaling
+            # of the max and min dates calculated via num2date.
+            flat_num_dates = num_dates.reshape(-1)
+            time_delta = np.timedelta64(max_date - min_date)
+            # apply the numerator and denominator separately so we don't need
+            # to cast to floating point numbers under the assumption that all
+            # dates can be given exactly with ns precision
+            numerator = flat_num_dates - min_num
+            denominator = max_num - min_num
+            dates = (time_delta * numerator / denominator
+                     + np.datetime64(min_date))
+        # restore original shape
+        dates = dates.reshape(num_dates.shape)
+    return dates
 
 
 def guess_time_units(dates):
@@ -137,7 +162,7 @@ def guess_time_units(dates):
     {date[0]}", where `time_unit` is 'days', 'hours', 'minutes' or 'seconds'
     (the first one that can evenly divide all unique time deltas in `dates`)
     """
-    dates = pd.DatetimeIndex(dates)
+    dates = pd.DatetimeIndex(np.asarray(dates).reshape(-1))
     unique_timedeltas = np.unique(np.diff(dates.values))
     for time_unit, delta in [('days', '1 days'), ('hours', '3600s'),
                              ('minutes', '60s'), ('seconds', '1s')]:
@@ -150,19 +175,34 @@ def guess_time_units(dates):
     return '%s since %s' % (time_unit, dates[0])
 
 
-def datetimeindex2num(dates, units=None, calendar=None):
-    """Given an array of dates suitable for input to `pandas.DatetimeIndex`,
-    returns the tuple `(num, units, calendar)` suitable for CF complient time
-    variable.
+def encode_cf_datetime(dates, units=None, calendar=None):
+    """Given an array of datetime objects, returns the tuple `(num, units,
+    calendar)` suitable for a CF complient time variable.
+
+    Unlike encode_cf_datetime, this function does not (yet) speedup encoding
+    of datetime64 arrays. However, unlike `date2num`, it can handle datetime64
+    arrays.
+
+    See also
+    --------
+    netCDF4.date2num
     """
-    dates = pd.DatetimeIndex(dates)
     if units is None:
         units = guess_time_units(dates)
     if calendar is None:
         calendar = 'proleptic_gregorian'
-    # for now, don't bother doing any trickery like num2datetimeindex to
-    # convert dates to numbers faster
-    num = nc4.date2num(dates.to_pydatetime(), units, calendar)
+
+    if (isinstance(dates, np.ndarray)
+            and np.issubdtype(dates.dtype, np.datetime64)):
+        # for now, don't bother doing any trickery like decode_cf_datetime to
+        # convert dates to numbers faster
+        dates = dates.astype(datetime)
+
+    if hasattr(dates, 'ndim') and dates.ndim == 0:
+        # unpack dates because date2num doesn't like 0-dimensional arguments
+        dates = dates[()]
+
+    num = nc4.date2num(dates, units, calendar)
     return (num, units, calendar)
 
 

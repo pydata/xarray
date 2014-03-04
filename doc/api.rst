@@ -152,3 +152,5 @@ Top-level functions
    broadcast_xarrays
    xarray_equal
    align
+   encode_cf_datetime
+   decode_cf_datetime

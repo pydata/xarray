@@ -2,7 +2,7 @@ import unicodedata
 
 import netCDF4 as nc4
 import numpy as np
-import pandas as pd
+from datetime import datetime
 
 import xarray
 import utils
@@ -250,13 +250,14 @@ def encode_cf_variable(array):
     dimensions = array.dimensions
     data = array.data
     attributes = array.attributes.copy()
-    encoding = array.encoding
+    encoding = array.encoding.copy()
 
-    if isinstance(data, pd.DatetimeIndex):
-        # DatetimeIndex objects need to be encoded into numeric arrays
-        (data, units, calendar) = utils.datetimeindex2num(data,
-                                          units=encoding.get('units', None),
-                                          calendar=encoding.get('calendar', None))
+    if (np.issubdtype(data.dtype, np.datetime64)
+            or (data.dtype.kind == 'O'
+                and isinstance(utils.first_value(data), datetime))):
+        # encode datetime arrays into numeric arrays
+        (data, units, calendar) = utils.encode_cf_datetime(
+            data, encoding.pop('units', None), encoding.pop('calendar', None))
         attributes['units'] = units
         attributes['calendar'] = calendar
     elif data.dtype == np.dtype('O'):
@@ -266,10 +267,12 @@ def encode_cf_variable(array):
         # we allow for doing math with coordinates, these object arrays can
         # propagate onward to other variables, which is why we don't only apply
         # this check to XArrays with data that is a pandas.Index.
+        # Accordingly, we convert object arrays to the type of their first
+        # variable.
         dtype = np.array(data.reshape(-1)[0]).dtype
-        # N.B. the "astype" call will fail if data cannot be cast to the type
-        # of its first element (which is probably the only sensible thing to
-        # do).
+        # N.B. the "astype" call below will fail if data cannot be cast to the
+        # type of its first element (which is probably the only sensible thing
+        # to do).
         data = np.asarray(data).astype(dtype)
 
     def get_to(source, dest, k):
@@ -332,6 +335,7 @@ def decode_cf_variable(var, mask_and_scale=True):
         if var.data.dtype != encoding['dtype']:
             raise ValueError("Refused to overwrite dtype")
     encoding['dtype'] = data.dtype
+
     if np.issubdtype(data.dtype, (str, unicode)):
         # TODO: add some sort of check instead of just assuming that the last
         # dimension on a character array is always the string dimension
@@ -345,15 +349,12 @@ def decode_cf_variable(var, mask_and_scale=True):
                 or scale_factor is not None or add_offset is not None):
             data = MaskedAndScaledArray(data, fill_value, scale_factor,
                                         add_offset)
-    # TODO: How should multidimensional time variables be handled?
-    if (data.ndim == 1 and
-            'units' in attributes and
-            'since' in attributes['units']):
-        # convert times to datetime indices.  We only do this if the dimension
-        # is one, since otherwise it can't be a coordinate.
+
+    if 'units' in attributes and 'since' in attributes['units']:
+        # convert CF times to datetimes
+        # TODO: make this lazy
         units = pop_to(attributes, encoding, 'units')
         calendar = pop_to(attributes, encoding, 'calendar')
-        data = utils.num2datetimeindex(data, units=units,
-                                       calendar=calendar)
+        data = utils.decode_cf_datetime(data, units=units, calendar=calendar)
 
     return xarray.XArray(dimensions, data, attributes, encoding=encoding)
