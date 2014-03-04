@@ -33,29 +33,28 @@ class TestXArray(TestCase):
             self.assertTrue(np.issubdtype(x.dtype, subdtype))
 
     def test_0d_data(self):
-        x = XArray([], 0)
-        self.assertArrayEqual(x, 0)
-        self.assertArray0D(x, int)
-        self.assertEqual(x.data, 0)
-        x = XArray([], 'something')
-        self.assertArray0D(x)
-        self.assertArrayEqual(x, 'something')
-        self.assertEqual(x.data, 'something')
         d = datetime(2000, 1, 1)
-        x = XArray([], d)
-        self.assertArray0D(x, object)
-        # don't check for array equality with datetime arguments (since the
-        # array has dtype=object)
-        self.assertEqual(x.data, d)
-        d64 = np.datetime64(d)
-        x = XArray([], d64)
-        self.assertArray0D(x, subdtype=np.datetime64)
-        self.assertArrayEqual(x, d64)
-        self.assertEqual(x.data, d64)
-        self.assertEqual(x, d64)
-        x = XArray(['x'], pd.date_range('2000-01-01', periods=2))
-        self.assertArray0D(x[0])
-        self.assertArrayEqual(x[0].data, d64)
+        for value, dtype in [(0, int),
+                             (np.float32(0.5), np.float32),
+                             ('foo', np.string_),
+                             (d, None),
+                             (np.datetime64(d), np.datetime64)]:
+            x = XArray(['x'], [value])
+            # check array properties
+            self.assertEqual(x[0].shape, ())
+            self.assertEqual(x[0].ndim, 0)
+            self.assertEqual(x[0].size, 1)
+            # check value is equal for both ndarray and XArray
+            self.assertEqual(x.data[0], value)
+            self.assertEqual(x[0].data, value)
+            # check type or dtype is consistent for both ndarray and XArray
+            if dtype is None:
+                # check output type instead of array dtype
+                self.assertEqual(type(x.data[0]), type(value))
+                self.assertEqual(type(x[0].data), type(value))
+            else:
+                self.assertTrue(np.issubdtype(x.data[0].dtype, dtype))
+                self.assertTrue(np.issubdtype(x[0].data.dtype, dtype))
 
     def test_array_equality(self):
         d = np.random.rand(10, 3)
