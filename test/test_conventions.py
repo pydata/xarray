@@ -24,6 +24,14 @@ class TestMaskedAndScaledArray(TestCase):
         expected = np.array([np.nan, 0.99, 1, 1.01, 1.02])
         self.assertArrayEqual(expected, x)
 
+    def test_0d(self):
+        x = MaskedAndScaledArray(np.array(0), fill_value=0)
+        self.assertTrue(np.isnan(x))
+        self.assertTrue(np.isnan(x[...]))
+
+        x = MaskedAndScaledArray(np.array(0), fill_value=10)
+        self.assertEqual(0, x[...])
+
 
 class TestCharToStringArray(TestCase):
     def test(self):
