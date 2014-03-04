@@ -146,7 +146,7 @@ def decode_cf_datetime(num_dates, units, calendar=None):
         # TODO: catch the unlikely corner cases described in the warning in the
         # function docstring
         if num_dates.size == 1:
-            dates = np.array(first_date)
+            dates = np.datetime64(first_date)
         else:
             # Calculate the date as a np.datetime64 array from linear scaling
             # of two example dates calculated via num2date.
