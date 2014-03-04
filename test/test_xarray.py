@@ -2,7 +2,6 @@ from copy import deepcopy
 from datetime import datetime
 
 import numpy as np
-import pandas as pd
 
 from xray import XArray
 from . import TestCase
