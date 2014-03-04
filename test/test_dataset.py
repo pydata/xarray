@@ -5,6 +5,7 @@ import tempfile
 
 from cStringIO import StringIO
 from collections import OrderedDict
+from copy import deepcopy
 
 import numpy as np
 import pandas as pd
