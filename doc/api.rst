@@ -13,6 +13,7 @@ Creating a dataset
 
    Dataset
    open_dataset
+   Dataset.from_stack
 
 Attributes and underlying data
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

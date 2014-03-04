@@ -707,6 +707,80 @@ class Dataset(Mapping):
                                  'which has length greater than one')
         return self.indexed_by(**{dim: 0 for dim in dimension})
 
+    @classmethod
+    def from_stack(cls, datasets, dimension, stacked_indexers=None,
+                   vars_to_stack=None):
+        """Stack datasets along a new or existing dimension to form a new
+        Dataset.
+
+        Parameters
+        ----------
+        datasets : iterable of Dataset
+            Datasets to stack together. Each dataset is expected to have
+            matching attributes, and all variables except those along the
+            stacked dimension (those that contain "dimension" as a dimension or
+            are listed in "vars_to_stack") are expected to be equal.
+        dimension : str
+            Name of the dimension to stack along.
+        stacked_indexers : None or iterable of indexers, optional
+            Iterable of indexers of the same length as variables which
+            specifies how to assign variables along the given dimension. If
+            not supplied, stacked_indexers is inferred from the length of each
+            variable along the dimension, and the variables are stacked in the
+            given order.
+        vars_to_stack : None or iterable of str, optional
+            Names of variables to stack in which "dimension" does not already
+            appear as a dimension.
+
+        Returns
+        -------
+        stacked : Dataset
+            Stacked dataset formed by stacking dataset variables.
+        """
+        # don't bother trying to work with datasets as a generator instead of a
+        # list; the gains would be minimal
+        datasets = list(datasets)
+        if not datasets:
+            raise ValueError('datasets cannot be empty')
+        if not isinstance(dimension, basestring):
+            raise ValueError('dimension currently must be a string')
+        # create the new dataset and add non-stacked variables
+        stacked = cls({}, datasets[0].attributes)
+        if vars_to_stack is None:
+            vars_to_stack = set()
+        else:
+            vars_to_stack = set(vars_to_stack)
+            if any(v not in datasets[0] for v in vars_to_stack):
+                raise ValueError('not all elements in vars_to_stack %r found '
+                                 'in the first dataset %r'
+                                 % (vars_to_stack, datasets[0]))
+        for k, v in datasets[0].variables.iteritems():
+            if k == dimension or dimension in v.dimensions:
+                vars_to_stack.add(k)
+                # fall through
+            if k not in vars_to_stack:
+                stacked[k] = v
+        # check that global attributes and non-stacked variables are fixed
+        # across all datasets
+        for ds in datasets[1:]:
+            if not utils.dict_equal(ds.attributes, stacked.attributes):
+                raise ValueError('dataset global attributes not equal')
+            for k, v in ds.variables.iteritems():
+                if k not in stacked and k not in vars_to_stack:
+                    raise ValueError('encountered unexpected variable %r' % k)
+                elif k in stacked and not utils.xarray_equal(v, stacked[k]):
+                    raise ValueError(
+                        'variable %r not equal across datasets' % k)
+        # stack up each variable in turn
+        for k in vars_to_stack:
+            stacked[k] = xarray.XArray.from_stack(
+                [ds[k] for ds in datasets], dimension, stacked_indexers)
+        # finally, reorder the stacked dataset's variables to the order they
+        # were encountered in the first dataset
+        restacked = cls(OrderedDict((k, stacked[k]) for k in datasets[0]),
+                        stacked.attributes)
+        return restacked
+
     def to_dataframe(self):
         """Convert this dataset into a pandas.DataFrame.
 

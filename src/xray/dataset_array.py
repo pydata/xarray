@@ -384,14 +384,14 @@ class DatasetArray(AbstractArray):
             Arrays to stack together. Each variable is expected to have
             matching dimensions and shape except for along the stacked
             dimension.
-        dimension : str or DatasetArray, optional
+        dimension : str or Array, optional
             Name of the dimension to stack along. This can either be a new
             dimension name, in which case it is added along axis=0, or an
             existing dimension name, in which case the location of the
             dimension is unchanged. Where to insert the new dimension is
             determined by whether it is found in the first array. If dimension
-            is provided as an DatasetArray, the focus of the dataset array
-            is used as the stacking dimension and the array is added to
+            is provided as an XArray or DatasetArray, the focus of the dataset
+            array is used as the stacking dimension and the array is added to
             the returned dataset.
         stacked_indexers : iterable of indexers, optional
             Iterable of indexers of the same length as variables which
