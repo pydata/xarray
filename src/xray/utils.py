@@ -95,11 +95,11 @@ def remap_loc_indexers(indices, indexers):
         if isinstance(loc, slice):
             indexer = index.slice_indexer(loc.start, loc.stop, loc.step)
         else:
-            try:
-                indexer = index.get_loc(loc)
-            except TypeError:
-                # value is a list or array
-                indexer = index.get_indexer(np.asarray(loc))
+            loc = np.asarray(loc)
+            if loc.ndim == 0:
+                indexer = index.get_loc(np.asscalar(loc))
+            else:
+                indexer = index.get_indexer(loc)
                 if np.any(indexer < 0):
                     raise ValueError('not all values found in index %r' % dim)
         new_indexers[dim] = indexer
