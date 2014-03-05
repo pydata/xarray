@@ -28,8 +28,9 @@ _testdim = sorted(_dims.keys())[0]
 def create_test_data():
     obj = Dataset()
     obj['time'] = ('time', pd.date_range('2000-01-01', periods=20))
-    for k, d in sorted(_dims.items()):
-        obj[k] = (k, np.arange(d))
+    obj['dim1'] = ('dim1', np.arange(_dims['dim1']))
+    obj['dim2'] = ('dim2', 0.5 * np.arange(_dims['dim2']))
+    obj['dim3'] = ('dim3', list('abcdefghij'))
     for v, dims in sorted(_vars.items()):
         data = np.random.normal(size=tuple(_dims[d] for d in dims))
         obj[v] = (dims, data, {'foo': 'variable'})
@@ -183,8 +184,12 @@ class TestDataset(TestCase):
 
     def test_labeled_by(self):
         data = create_test_data()
-        int_slicers = {'dim1': slice(None, None, 2), 'dim2': slice(0, 2)}
-        loc_slicers = {'dim1': slice(None, None, 2), 'dim2': slice(0, 1)}
+        int_slicers = {'dim1': slice(None, None, 2),
+                       'dim2': slice(2),
+                       'dim3': slice(3)}
+        loc_slicers = {'dim1': slice(None, None, 2),
+                       'dim2': slice(0, 0.5),
+                       'dim3': slice('a', 'c')}
         self.assertEqual(data.indexed_by(**int_slicers),
                          data.labeled_by(**loc_slicers))
         data['time'] = ('time', pd.date_range('2000-01-01', periods=20))
@@ -206,10 +211,10 @@ class TestDataset(TestCase):
         self.assertXArrayEqual(v, v[d1.data])
         self.assertXArrayEqual(v, v[d1])
         self.assertXArrayEqual(v[:3], v[d1 < 3])
-        self.assertXArrayEqual(v[:, 3:], v[:, d2 >= 3])
-        self.assertXArrayEqual(v[:3, 3:], v[d1 < 3, d2 >= 3])
-        self.assertXArrayEqual(v[:3, :2], v[d1[:3], d2[:2]])
+        self.assertXArrayEqual(v[:, 3:], v[:, d2 >= 1.5])
+        self.assertXArrayEqual(v[:3, 3:], v[d1 < 3, d2 >= 1.5])
         self.assertXArrayEqual(v[:3, :2], v[range(3), range(2)])
+        self.assertXArrayEqual(v[:3, :2], v.loc[d1[:3], d2[:2]])
 
     def test_select(self):
         data = create_test_data()

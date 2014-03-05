@@ -254,7 +254,7 @@ def encode_cf_variable(array):
 
     if (np.issubdtype(data.dtype, np.datetime64)
             or (data.dtype.kind == 'O'
-                and isinstance(utils.first_value(data), datetime))):
+                and isinstance(data.reshape(-1)[0], datetime))):
         # encode datetime arrays into numeric arrays
         (data, units, calendar) = utils.encode_cf_datetime(
             data, encoding.pop('units', None), encoding.pop('calendar', None))
