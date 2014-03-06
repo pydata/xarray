@@ -317,6 +317,7 @@ def decode_cf_variable(var, mask_and_scale=True):
     dimensions = var.dimensions
     attributes = var.attributes.copy()
     encoding = var.encoding.copy()
+    indexing_mode = var._indexing_mode
 
     def pop_to(source, dest, k):
         """
@@ -356,5 +357,7 @@ def decode_cf_variable(var, mask_and_scale=True):
         units = pop_to(attributes, encoding, 'units')
         calendar = pop_to(attributes, encoding, 'calendar')
         data = utils.decode_cf_datetime(data, units=units, calendar=calendar)
+        indexing_mode = 'numpy'
 
-    return xarray.XArray(dimensions, data, attributes, encoding=encoding)
+    return xarray.XArray(dimensions, data, attributes, encoding=encoding,
+                         indexing_mode=indexing_mode)
