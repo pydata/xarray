@@ -250,7 +250,7 @@ def xarray_equal(v1, v2, rtol=1e-05, atol=1e-08):
             # handle pandas.Index objects
             return data1.equals(data2)
         elif is_floating(data1) or is_floating(data2):
-            return allclose_or_equiv(data1, data2)
+            return allclose_or_equiv(data1, data2, rtol=rtol, atol=atol)
         else:
             return np.array_equal(data1, data2)
     else:
