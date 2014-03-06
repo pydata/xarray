@@ -151,7 +151,23 @@ class NetCDF4DataStore(AbstractDataStore):
                 data = np.asscalar(var[...])
             attributes = OrderedDict((k, var.getncattr(k))
                                      for k in var.ncattrs())
-            return xarray.XArray(dimensions, data, attributes,
+            # netCDF4 specific encoding; save _FillValue for later
+            encoding = {}
+            filters = var.filters()
+            if filters is not None:
+                encoding.update(filters)
+            chunking = var.chunking()
+            if chunking is not None:
+                if chunking == 'contiguous':
+                    encoding['contiguous'] = True
+                    encoding['chunksizes'] = None
+                else:
+                    encoding['contiguous'] = False
+                    encoding['chunksizes'] = tuple(chunking)
+            encoding['endian'] = var.endian()
+            encoding['least_significant_digit'] = \
+                attributes.pop('least_significant_digit', None)
+            return xarray.XArray(dimensions, data, attributes, encoding,
                                  indexing_mode='orthogonal')
         return FrozenOrderedDict((k, convert_variable(v))
                                  for k, v in self.ds.variables.iteritems())
@@ -180,10 +196,20 @@ class NetCDF4DataStore(AbstractDataStore):
         # we let the package handle the _FillValue attribute
         # instead of setting it ourselves.
         fill_value = variable.attributes.pop('_FillValue', None)
-        self.ds.createVariable(varname=name,
-                               datatype=variable.dtype,
-                               dimensions=variable.dimensions,
-                               fill_value=fill_value)
+        encoding = variable.encoding
+        self.ds.createVariable(
+            varname=name,
+            datatype=variable.dtype,
+            dimensions=variable.dimensions,
+            zlib=encoding.get('zlib', False),
+            complevel=encoding.get('complevel', 4),
+            shuffle=encoding.get('shuffle', True),
+            fletcher32=encoding.get('fletcher32', False),
+            contiguous=encoding.get('contiguous', False),
+            chunksizes=encoding.get('chunksizes'),
+            endian=encoding.get('endian', 'native'),
+            least_significant_digit=encoding.get('least_significant_digit'),
+            fill_value=fill_value)
         nc4_var = self.ds.variables[name]
         nc4_var.set_auto_maskandscale(False)
         nc4_var[:] = variable.data[:]
