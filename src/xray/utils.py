@@ -118,7 +118,7 @@ def decode_cf_datetime(num_dates, units, calendar=None):
     --------
     netCDF4.num2date
     """
-    num_dates = np.asarray(num_dates)
+    num_dates = np.asarray(num_dates).astype(float)
     if calendar is None:
         calendar = 'standard'
 
@@ -143,7 +143,12 @@ def decode_cf_datetime(num_dates, units, calendar=None):
             # Calculate the date as a np.datetime64 array from linear scaling
             # of the max and min dates calculated via num2date.
             flat_num_dates = num_dates.reshape(-1)
-            time_delta = np.timedelta64(max_date - min_date)
+            # Use second precision for the timedelta to decrease the chance of
+            # a numeric overflow
+            time_delta = np.timedelta64(max_date - min_date).astype('m8[s]')
+            if time_delta != max_date - min_date:
+                raise ValueError('unable to exactly represent max_date minus'
+                                 'min_date with second precision')
             # apply the numerator and denominator separately so we don't need
             # to cast to floating point numbers under the assumption that all
             # dates can be given exactly with ns precision

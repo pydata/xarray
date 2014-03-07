@@ -76,6 +76,7 @@ class TestDatetime(TestCase):
                 ([0], 'days since 1000-01-01'),
                 ([[0]], 'days since 1000-01-01'),
                 (np.arange(20), 'days since 1000-01-01'),
+                (np.arange(0, 100000, 10000), 'days since 1900-01-01')
                 ]:
             for calendar in ['standard', 'gregorian', 'proleptic_gregorian']:
                 expected = nc4.num2date(num_dates, units, calendar)
