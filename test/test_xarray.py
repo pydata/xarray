@@ -277,29 +277,29 @@ class TestXArray(TestCase):
             self.assertXArrayEqual(ke, ka)
             self.assertXArrayEqual(ve, va)
 
-    def test_from_stack(self):
+    def test_concat(self):
         x = np.arange(5)
         y = np.ones(5)
         v = XArray(['a'], x)
         w = XArray(['a'], y)
         self.assertXArrayEqual(XArray(['b', 'a'], np.array([x, y])),
-                               XArray.from_stack([v, w], 'b'))
+                               XArray.concat([v, w], 'b'))
         self.assertXArrayEqual(XArray(['b', 'a'], np.array([x, y])),
-                               XArray.from_stack((v, w), 'b'))
+                               XArray.concat((v, w), 'b'))
         self.assertXArrayEqual(XArray(['b', 'a'], np.array([x, y])),
-                               XArray.from_stack((v, w), 'b', length=2))
+                               XArray.concat((v, w), 'b', length=2))
         with self.assertRaisesRegexp(ValueError, 'actual length'):
-            XArray.from_stack([v, w], 'b', length=1)
+            XArray.concat([v, w], 'b', length=1)
         with self.assertRaisesRegexp(ValueError, 'actual length'):
-            XArray.from_stack([v, w, w], 'b', length=4)
+            XArray.concat([v, w, w], 'b', length=4)
         with self.assertRaisesRegexp(ValueError, 'inconsistent dimensions'):
-            XArray.from_stack([v, XArray(['c'], y)], 'b')
+            XArray.concat([v, XArray(['c'], y)], 'b')
         # test concatenating along a dimension
         v = XArray(['time', 'x'], np.random.random((10, 8)))
-        self.assertXArrayEqual(v, XArray.from_stack([v[:5], v[5:]], 'time'))
-        self.assertXArrayEqual(v, XArray.from_stack([v[:5], v[5], v[6:]], 'time'))
-        self.assertXArrayEqual(v, XArray.from_stack([v[0], v[1:]], 'time'))
+        self.assertXArrayEqual(v, XArray.concat([v[:5], v[5:]], 'time'))
+        self.assertXArrayEqual(v, XArray.concat([v[:5], v[5], v[6:]], 'time'))
+        self.assertXArrayEqual(v, XArray.concat([v[0], v[1:]], 'time'))
         # test dimension order
-        self.assertXArrayEqual(v, XArray.from_stack([v[:, :5], v[:, 5:]], 'x'))
+        self.assertXArrayEqual(v, XArray.concat([v[:, :5], v[:, 5:]], 'x'))
         self.assertXArrayEqual(v.transpose(),
-                               XArray.from_stack([v[:, 0], v[:, 1:]], 'x'))
+                               XArray.concat([v[:, 0], v[:, 1:]], 'x'))

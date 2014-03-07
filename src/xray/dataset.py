@@ -716,6 +716,78 @@ class Dataset(Mapping):
                                  'which has length greater than one')
         return self.indexed_by(**{dim: 0 for dim in dimension})
 
+    @classmethod
+    def concat(cls, datasets, dimension, indexers=None, concat_over=None):
+        """Concatenate datasets along a new or existing dimension.
+
+        Parameters
+        ----------
+        datasets : iterable of Dataset
+            Datasets to stack together. Each dataset is expected to have
+            matching attributes, and all variables except those along the
+            stacked dimension (those that contain "dimension" as a dimension or
+            are listed in "concat_over") are expected to be equal.
+        dimension : str
+            Name of the dimension to stack along.
+        indexers : None or iterable of indexers, optional
+            Iterable of indexers of the same length as variables which
+            specifies how to assign variables from each dataset along the given
+            dimension. If not supplied, indexers is inferred from the length of
+            each variable along the dimension, and the variables are stacked in
+            the given order.
+        concat_over : None or iterable of str, optional
+            Names of additional variables to concatenate, in which "dimension"
+            does not already appear as a dimension.
+
+        Returns
+        -------
+        concatenated : Dataset
+            Concatenated dataset formed by concatenating dataset variables.
+        """
+        # don't bother trying to work with datasets as a generator instead of a
+        # list; the gains would be minimal
+        datasets = list(datasets)
+        if not datasets:
+            raise ValueError('datasets cannot be empty')
+        if not isinstance(dimension, basestring):
+            raise ValueError('dimension currently must be a string')
+        # create the new dataset and add non-concatenated variables
+        concatenated = cls({}, datasets[0].attributes)
+        if concat_over is None:
+            concat_over = set()
+        else:
+            concat_over = set(concat_over)
+            if any(v not in datasets[0] for v in concat_over):
+                raise ValueError('not all elements in concat_over %r found '
+                                 'in the first dataset %r'
+                                 % (concat_over, datasets[0]))
+        for k, v in datasets[0].variables.iteritems():
+            if k == dimension or dimension in v.dimensions:
+                concat_over.add(k)
+            elif k not in concat_over:
+                concatenated[k] = v
+        # check that global attributes and non-concatenated variables are fixed
+        # across all datasets
+        for ds in datasets[1:]:
+            if not utils.dict_equal(ds.attributes, concatenated.attributes):
+                raise ValueError('dataset global attributes not equal')
+            for k, v in ds.variables.iteritems():
+                if k not in concatenated and k not in concat_over:
+                    raise ValueError('encountered unexpected variable %r' % k)
+                elif (k in concatenated and
+                          not utils.xarray_equal(v, concatenated[k])):
+                    raise ValueError(
+                        'variable %r not equal across datasets' % k)
+        # stack up each variable in turn
+        for k in concat_over:
+            concatenated[k] = xarray.XArray.concat(
+                [ds[k] for ds in datasets], dimension, indexers)
+        # finally, reorder the concatenated dataset's variables to the order they
+        # were encountered in the first dataset
+        reordered = cls(OrderedDict((k, concatenated[k]) for k in datasets[0]),
+                        concatenated.attributes)
+        return reordered
+
     def to_dataframe(self):
         """Convert this dataset into a pandas.DataFrame.
 

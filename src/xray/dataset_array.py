@@ -373,8 +373,8 @@ class DatasetArray(AbstractArray):
         return type(self)(ds, self.focus)
 
     @classmethod
-    def from_stack(cls, arrays, dimension='stacked_dimension',
-                   stacked_indexers=None, length=None, template=None):
+    def concat(cls, arrays, dimension='concatenated_dimension', indexers=None,
+               length=None, template=None):
         """Stack arrays along a new or existing dimension to form a new
         DatasetArray.
 
@@ -382,41 +382,54 @@ class DatasetArray(AbstractArray):
         ----------
         arrays : iterable of Array
             Arrays to stack together. Each variable is expected to have
-            matching dimensions and shape except for along the stacked
+            matching dimensions and shape except for along the concatenated
             dimension.
-        dimension : str or DatasetArray, optional
+        dimension : str or Array, optional
             Name of the dimension to stack along. This can either be a new
             dimension name, in which case it is added along axis=0, or an
             existing dimension name, in which case the location of the
             dimension is unchanged. Where to insert the new dimension is
             determined by whether it is found in the first array. If dimension
-            is provided as an DatasetArray, the focus of the dataset array
-            is used as the stacking dimension and the array is added to
+            is provided as an XArray or DatasetArray, the focus of the dataset
+            array is used as the stacking dimension and the array is added to
             the returned dataset.
-        stacked_indexers : iterable of indexers, optional
+        indexers : iterable of indexers, optional
             Iterable of indexers of the same length as variables which
             specifies how to assign variables along the given dimension. If
-            not supplied, stacked_indexers is inferred from the length of each
-            variable along the dimension, and the variables are stacked in the
-            given order.
+            not supplied, indexers is inferred from the length of each
+            variable along the dimension, and the variables are concatenated in
+            the given order.
         length : int, optional
             Length of the new dimension. This is used to allocate the new data
-            array for the stacked variable data before iterating over all
+            array for the concatenated variable data before iterating over all
             items, which is thus more memory efficient and a bit faster. If
             dimension is provided as an array, length is calculated
             automatically.
         template : DatasetArray, optional
             This option is used internally to speed-up groupby operations. The
-            template's attributes and variables that are not along the stacked
-            dimension are added to the returned array. Furthermore, if a
-            template is given, some checks of internal consistency between
-            arrays to stack are skipped.
+            template's attributes and variables that are not along the
+            concatenated dimension are added to the returned array.
+            Furthermore, if a template is given, some checks of internal
+            consistency between arrays to stack are skipped.
 
         Returns
         -------
-        stacked : DatasetArray
-            Stacked dataset array formed by stacking all the supplied variables
-            along the new dimension.
+        concatenated : DatasetArray
+            Concatenated dataset array formed by concatenated all the supplied
+            variables along the new dimension.
+
+        Notes
+        -----
+        This function has subtly different logic from Dataset.concat. It is not
+        entirely clear that it is necessary or useful in the public API.
+
+        The current implementation will fail hard if Datasets with more than
+        one variable to concatenate are supplied.
+
+        See also
+        --------
+        Dataset.concat
+        XArray.concat
         """
         def unselect_nonfocus_dims(dataset_array):
             # Given a dataset array, unselect all dimensions found in the
@@ -444,19 +457,18 @@ class DatasetArray(AbstractArray):
             ds.merge(template.dataset.unselect(old_dim_name), inplace=True)
         else:
             # figure out metadata by inspecting each array
-            focus = 'stacked_variable'
+            focus = 'concat_variable'
             arrays = list(arrays)
             for array in arrays:
                 if isinstance(array, cls):
                     drop = [array.focus] + [k for k in array.dataset.dimensions
                                             if k == dim_name]
                     ds.merge(array.dataset.unselect(*drop), inplace=True)
-                    if focus is 'stacked_variable':
+                    if focus is 'concat_variable':
                         focus = array.focus
 
-        ds[focus] = xarray.XArray.from_stack(arrays, dimension,
-                                             stacked_indexers, length,
-                                             template)
+        ds[focus] = xarray.XArray.concat(arrays, dimension, indexers, length,
+                                         template)
         return unselect_nonfocus_dims(cls(ds, focus))
 
     def to_dataframe(self):

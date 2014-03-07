@@ -5,6 +5,7 @@ import tempfile
 
 from cStringIO import StringIO
 from collections import OrderedDict
+from copy import deepcopy
 
 import numpy as np
 import pandas as pd
@@ -337,6 +338,42 @@ class TestDataset(TestCase):
         self.assertItemsEqual(data, all_items - {'var1'})
         del data['dim1']
         self.assertItemsEqual(data, {'time', 'dim2', 'dim3'})
+
+    def test_concat(self):
+        data = create_test_data()
+
+        split_data = [data.indexed_by(dim1=slice(10)),
+                      data.indexed_by(dim1=slice(10, None))]
+        self.assertDatasetEqual(data, Dataset.concat(split_data, 'dim1'))
+
+        datasets = [ds for _, ds in data.groupby('dim1', squeeze=False)]
+        self.assertDatasetEqual(data, Dataset.concat(datasets, 'dim1'))
+
+        datasets = [ds for _, ds in data.groupby('dim1', squeeze=True)]
+        actual = Dataset.concat(datasets, 'dim1',
+                                concat_over=['var1', 'var2', 'var3'])
+        # we need to tranpose dataset variables to move diensions to the
+        # original order
+        self.assertDatasetEqual(
+            data, Dataset({k: v.transpose(*data[k].dimensions)
+                           for k, v in actual.variables.iteritems()}))
+
+        with self.assertRaisesRegexp(ValueError, 'cannot be empty'):
+            Dataset.concat([], 'dim1')
+        with self.assertRaisesRegexp(ValueError, 'not all elements in'):
+            Dataset.concat(split_data, 'dim1', concat_over=['not_found'])
+        with self.assertRaisesRegexp(ValueError, 'global attributes not'):
+            data0, data1 = deepcopy(split_data)
+            data1.attributes['foo'] = 'bar'
+            Dataset.concat([data0, data1], 'dim1')
+        with self.assertRaisesRegexp(ValueError, 'encountered unexpected'):
+            data0, data1 = deepcopy(split_data)
+            data1['foo'] = ('bar', np.random.randn(10))
+            Dataset.concat([data0, data1], 'dim1')
+        with self.assertRaisesRegexp(ValueError, 'not equal across datasets'):
+            data0, data1 = deepcopy(split_data)
+            data1['dim2'] *= 2
+            Dataset.concat([data0, data1], 'dim1')
 
     def test_to_dataframe(self):
         x = np.random.randn(10)
