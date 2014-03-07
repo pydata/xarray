@@ -3,7 +3,7 @@ import netCDF4 as nc4
 import numpy as np
 import pandas as pd
 
-from xray import utils
+from xray import utils, XArray
 from . import TestCase, ReturnItem
 
 
@@ -60,6 +60,14 @@ class TestIndexers(TestCase):
         # standard numpy (non-orthogonal) indexing doesn't work anymore
         with self.assertRaisesRegexp(ValueError, 'only supports 1d'):
             utils.orthogonal_indexer(x > 0, x.shape)
+
+    def test_remap_loc_indexers(self):
+        # TODO: fill in more tests!
+        indices = {'x': XArray(['x'], pd.Index([1, 2, 3]))}
+        test_indexer = lambda x: utils.remap_loc_indexers(indices, {'x': x})
+        self.assertEqual({'x': 0}, test_indexer(1))
+        self.assertEqual({'x': 0}, test_indexer(np.int32(1)))
+        self.assertEqual({'x': 0}, test_indexer(XArray([], 1)))
 
 
 class TestDatetime(TestCase):
