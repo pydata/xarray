@@ -9,6 +9,19 @@ from . import TestCase
 
 
 class XArraySubclassTestCases(object):
+    def test_properties(self):
+        data = 0.5 * np.arange(10)
+        v = XArray(['time'], data, {'foo': 'bar'})
+        self.assertEqual(v.dimensions, ('time',))
+        self.assertArrayEqual(v.data, data)
+        self.assertTrue(pd.Index(data).equals(v.index))
+        self.assertEqual(v.dtype, float)
+        self.assertEqual(v.shape, (10,))
+        self.assertEqual(v.size, 10)
+        self.assertEqual(v.ndim, 1)
+        self.assertEqual(len(v), 10)
+        self.assertEqual(v.attributes, {'foo': u'bar'})
+
     def test_0d_data(self):
         d = datetime(2000, 1, 1)
         for value, dtype in [(0, int),
@@ -164,16 +177,6 @@ class TestXArray(TestCase, XArraySubclassTestCases):
         self.assertXArrayNotEqual(v1, v3)
         self.assertXArrayNotEqual(v1, v4)
         self.assertXArrayNotEqual(v1, v5)
-
-    def test_properties(self):
-        v = XArray(['time', 'x'], self.d, {'foo': 'bar'})
-        self.assertEqual(v.dimensions, ('time', 'x'))
-        self.assertEqual(v.dtype, float)
-        self.assertEqual(v.shape, (10, 3))
-        self.assertEqual(v.size, 30)
-        self.assertEqual(v.ndim, 2)
-        self.assertEqual(len(v), 10)
-        self.assertEqual(v.attributes, {'foo': u'bar'})
 
     def test_repr(self):
         v = XArray(['time', 'x'], self.d)
