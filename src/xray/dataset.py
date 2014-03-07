@@ -283,8 +283,8 @@ class Dataset(Mapping):
         variable.
         """
         if isinstance(value, DatasetArray):
-            # TODO: should remove key from this dataset if it already exists
-            self.merge(value.renamed(key).dataset, inplace=True)
+            self.merge(value.renamed(key).dataset, inplace=True,
+                       overwrite_vars=[key])
         else:
             self.set_variables({key: value})
 
@@ -513,7 +513,7 @@ class Dataset(Mapping):
 
         return type(self)(variables, self.attributes)
 
-    def merge(self, other, inplace=False):
+    def merge(self, other, inplace=False, overwrite_vars=None):
         """Merge two datasets into a single new dataset.
 
         This method generally not allow for overriding data. Arrays,
@@ -526,6 +526,9 @@ class Dataset(Mapping):
             Dataset to merge with this dataset.
         inplace : bool, optional
             If True, merge the other dataset into this dataset in-place.
+        overwrite_vars : list, optional
+            If provided, update variables of these names without checking for
+            conflicts in this dataset.
 
         Returns
         -------
@@ -539,13 +542,19 @@ class Dataset(Mapping):
             are silently dropped.
         """
         # check for conflicts
-        utils.update_safety_check(self.variables, other.variables,
-                                  compat=utils.xarray_equal)
+        if overwrite_vars is None:
+            overwrite_vars = {}
+        for k, v in other.variables.iteritems():
+            if (k in self and k not in overwrite_vars
+                    and not utils.xarray_equal(v, self[k])):
+                raise ValueError('unsafe to merge datasets; '
+                                 'conflicting variable %r' % k)
         # update contents
         obj = self if inplace else self.copy()
         obj.set_variables(OrderedDict((k, v) for k, v
                                       in other.variables.iteritems()
-                                      if k not in obj.variables))
+                                      if k not in obj.variables
+                                      or k in overwrite_vars))
         # remove conflicting attributes
         for k, v in other.attributes.iteritems():
             if k in self.attributes and v != self.attributes[k]:

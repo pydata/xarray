@@ -320,6 +320,9 @@ class TestDataset(TestCase):
         # assign an array
         with self.assertRaisesRegexp(TypeError, 'variables must be of type'):
             data2['C'] = var.data
+        # override an existing value
+        data1['A'] = 3 * data2['A']
+        self.assertXArrayEqual(data1['A'], 3 * data2['A'])
 
     def test_delitem(self):
         data = create_test_data()
