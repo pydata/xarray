@@ -260,6 +260,17 @@ def encode_cf_variable(array):
             data, encoding.pop('units', None), encoding.pop('calendar', None))
         attributes['units'] = units
         attributes['calendar'] = calendar
+    elif data.dtype == np.dtype('O'):
+        # Occasionally, one will end up with variables with dtype=object
+        # (likely because they were created from pandas objects which don't
+        # maintain dtype careful). Thie code makes a best effort attempt to
+        # encode them into a dtype that NETCDF can handle by inspecting the
+        # dtype of the first element.
+        dtype = np.array(data.reshape(-1)[0]).dtype
+        # N.B. the "astype" call below will fail if data cannot be cast to the
+        # type of its first element (which is probably the only sensible thing
+        # to do).
+        data = np.asarray(data).astype(dtype)
 
     def get_to(source, dest, k):
         v = source.get(k)
