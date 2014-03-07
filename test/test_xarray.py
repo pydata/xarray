@@ -123,6 +123,13 @@ class XArraySubclassTestCases(object):
         self.assertXArrayEqual(v.transpose(),
                                XArray.concat([v[:, 0], v[:, 1:]], 'x'))
 
+    def test_copy(self):
+        v = self.cls('x', 0.5 * np.arange(10))
+        w = v.copy()
+        self.assertIs(type(v), type(w))
+        self.assertXArrayEqual(v, w)
+        self.assertEqual(v.dtype, w.dtype)
+
 
 class TestXArray(TestCase, XArraySubclassTestCases):
     cls = XArray

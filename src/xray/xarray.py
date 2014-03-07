@@ -697,6 +697,13 @@ class CoordXArray(XArray):
     def __setitem__(self, key, value):
         raise TypeError('%s data cannot be modified' % type(self).__name__)
 
+    def _copy(self, deepcopy=False):
+        # there is no need to copy the index data here since pandas.Index
+        # objects are immutable
+        return type(self)(self.dimensions, self.index, self.attributes,
+                          self.encoding, self.dtype)
+
+
 
 def _math_safe_attributes(attributes):
     return OrderedDict((k, v) for k, v in attributes.iteritems()
