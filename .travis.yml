@@ -22,4 +22,4 @@ install:
   - python setup.py install
 # Run test
 script:
-  - nosetests -v
+  - nosetests
