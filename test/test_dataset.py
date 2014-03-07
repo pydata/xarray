@@ -511,7 +511,9 @@ class NetCDF4DataTest(DatasetIOCases, TestCase):
         actual = open_dataset(tmp_file)
 
         self.assertXArrayEqual(actual['time'], expected['time'])
-        self.assertDictEqual(actual['time'].encoding, expected['time'].encoding)
+        actual_encoding = {k: v for k, v in actual['time'].encoding.iteritems()
+                           if k in expected['time'].encoding}
+        self.assertDictEqual(actual_encoding, expected['time'].encoding)
 
         os.remove(tmp_file)
 
@@ -541,6 +543,15 @@ class NetCDF4DataTest(DatasetIOCases, TestCase):
 
         ds.close()
         os.remove(tmp_file)
+
+    def test_compression_encoding(self):
+        data = create_test_data()
+        data['var2'].encoding.update({'zlib': True,
+                                      'chunksizes': (10, 10),
+                                      'least_significant_digit': 2})
+        actual = self.roundtrip(data)
+        for k, v in data['var2'].encoding.iteritems():
+            self.assertEqual(v, actual['var2'].encoding[k])
 
     def test_mask_and_scale(self):
         f, tmp_file = tempfile.mkstemp(suffix='.nc')
