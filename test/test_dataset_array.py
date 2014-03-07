@@ -23,7 +23,7 @@ class TestDatasetArray(TestCase):
     def test_properties(self):
         self.assertIs(self.dv.dataset, self.ds)
         self.assertEqual(self.dv.focus, 'foo')
-        self.assertXArrayEqual(self.dv.array, self.v)
+        self.assertXArrayEqual(self.dv.variable, self.v)
         self.assertArrayEqual(self.dv.data, self.v.data)
         for attr in ['dimensions', 'dtype', 'shape', 'size', 'ndim',
                      'attributes']:
@@ -43,18 +43,18 @@ class TestDatasetArray(TestCase):
         self.assertDSArrayEqual(DatasetArray(self.ds, 'y'), y)
         # integer indexing
         I = ReturnItem()
-        for i in [I[:], I[...], I[x.data], I[x.array], I[x], I[x, y],
-                  I[x.data > -1], I[x.array > -1], I[x > -1],
+        for i in [I[:], I[...], I[x.data], I[x.variable], I[x], I[x, y],
+                  I[x.data > -1], I[x.variable > -1], I[x > -1],
                   I[x > -1, y > -1]]:
             self.assertXArrayEqual(self.dv, self.dv[i])
         for i in [I[0], I[:, 0], I[:3, :2],
-                  I[x.data[:3]], I[x.array[:3]], I[x[:3]], I[x[:3], y[:4]],
-                  I[x.data > 3], I[x.array > 3], I[x > 3], I[x > 3, y > 3]]:
+                  I[x.data[:3]], I[x.variable[:3]], I[x[:3]], I[x[:3], y[:4]],
+                  I[x.data > 3], I[x.variable > 3], I[x > 3], I[x > 3, y > 3]]:
             self.assertXArrayEqual(self.v[i], self.dv[i])
         # make sure we always keep the array around, even if it's a scalar
-        self.assertXArrayEqual(self.dv[0, 0], self.dv.array[0, 0])
+        self.assertXArrayEqual(self.dv[0, 0], self.dv.variable[0, 0])
         self.assertEqual(self.dv[0, 0].dataset,
-                         Dataset({'foo': self.dv.array[0, 0]}))
+                         Dataset({'foo': self.dv.variable[0, 0]}))
 
     def test_indexed_by(self):
         self.assertEqual(self.dv[0].dataset, self.ds.indexed_by(x=0))
@@ -137,12 +137,12 @@ class TestDatasetArray(TestCase):
     def test_item_math(self):
         self.ds['x'] = ('x', np.array(list('abcdefghij')))
         self.assertXArrayEqual(self.dv + self.dv[0, 0],
-                            self.dv + self.dv[0, 0].data)
+                               self.dv + self.dv[0, 0].data)
         new_data = self.x[0][None, :] + self.x[:, 0][:, None]
         self.assertXArrayEqual(self.dv[:, 0] + self.dv[0],
-                            XArray(['x', 'y'], new_data))
+                               XArray(['x', 'y'], new_data))
         self.assertXArrayEqual(self.dv[0] + self.dv[:, 0],
-                            XArray(['y', 'x'], new_data.T))
+                               XArray(['y', 'x'], new_data.T))
 
     def test_inplace_math(self):
         x = self.x
@@ -151,15 +151,16 @@ class TestDatasetArray(TestCase):
         b = a
         b += 1
         self.assertIs(b, a)
-        self.assertIs(b.array, v)
+        self.assertIs(b.variable, v)
         self.assertIs(b.data, x)
         self.assertIs(b.dataset, self.ds)
 
     def test_transpose(self):
-        self.assertXArrayEqual(self.dv.array.transpose(), self.dv.transpose())
+        self.assertXArrayEqual(self.dv.variable.transpose(),
+                               self.dv.transpose())
 
     def test_squeeze(self):
-        self.assertXArrayEqual(self.dv.array.squeeze(), self.dv.squeeze())
+        self.assertXArrayEqual(self.dv.variable.squeeze(), self.dv.squeeze())
 
     def test_reduce(self):
         self.assertXArrayEqual(self.dv.reduce(np.mean, 'x'),
@@ -178,7 +179,7 @@ class TestDatasetArray(TestCase):
     def test_groupby(self):
         agg_var = XArray(['y'], np.array(['a'] * 9 + ['c'] + ['b'] * 10))
         self.dv['abc'] = agg_var
-        self.dv['y'] = 20 + 100 * self.ds['y'].array
+        self.dv['y'] = 20 + 100 * self.ds['y'].variable
 
         identity = lambda x: x
         for g in ['x', 'y']:
@@ -227,8 +228,8 @@ class TestDatasetArray(TestCase):
         # from xarrays:
         self.assertXArrayEqual(XArray(['w', 'x', 'y'],
                                       np.array([foo.data, bar.data])),
-                               DatasetArray.concat([foo.array,
-                                                    bar.array], 'w'))
+                               DatasetArray.concat([foo.variable,
+                                                    bar.variable], 'w'))
         # from iteration:
         stacked = DatasetArray.concat((v for _, v in foo.groupby('x')),
                                           self.ds['x'])

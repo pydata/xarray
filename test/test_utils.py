@@ -113,6 +113,21 @@ class TestDatetime(TestCase):
             self.assertEquals(expected, utils.guess_time_units(dates))
 
 
+class TestSafeCastToIndex(TestCase):
+    def test(self):
+        dates = pd.date_range('2000-01-01', periods=10)
+        x = np.arange(5)
+        timedeltas = x * np.timedelta64(1, 'D')
+        for expected, array in [
+                (dates, dates.values),
+                (pd.Index(x, dtype=object), x.astype(object)),
+                (pd.Index(timedeltas, dtype=object), timedeltas),
+                ]:
+            actual = utils.safe_cast_to_index(array)
+            self.assertArrayEqual(expected, actual)
+            self.assertEqual(expected.dtype, actual.dtype)
+
+
 class TestDictionaries(TestCase):
     def setUp(self):
         self.x = {'a': 'A', 'b': 'B'}

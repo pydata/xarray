@@ -66,28 +66,47 @@ class DatasetArray(AbstractArray):
         self.focus = focus
 
     @property
-    def array(self):
+    def variable(self):
         return self.dataset.variables[self.focus]
-    @array.setter
-    def array(self, value):
+    @variable.setter
+    def variable(self, value):
         self.dataset[self.focus] = value
 
-    # _data is necessary for AbstractArray
     @property
-    def _data(self):
-        return self.array._data
+    def dtype(self):
+        return self.variable.dtype
+
+    @property
+    def shape(self):
+        return self.variable.shape
+
+    @property
+    def size(self):
+        return self.variable.size
+
+    @property
+    def ndim(self):
+        return self.variable.ndim
+
+    def __len__(self):
+        return len(self.variable)
 
     @property
     def data(self):
-        """The array's data as a numpy.ndarray"""
-        return self.array.data
+        """The variables's data as a numpy.ndarray"""
+        return self.variable.data
     @data.setter
     def data(self, value):
-        self.array.data = value
+        self.variable.data = value
+
+    @property
+    def index(self):
+        """The variable's data as a pandas.Index"""
+        return self.variable.index
 
     @property
     def dimensions(self):
-        return self.array.dimensions
+        return self.variable.dimensions
 
     def _key_to_indexers(self, key):
         return OrderedDict(
@@ -107,7 +126,7 @@ class DatasetArray(AbstractArray):
             self.dataset[key] = value
         else:
             # orthogonal array indexing
-            self.array[key] = value
+            self.variable[key] = value
 
     def __delitem__(self, key):
         del self.dataset[key]
@@ -127,11 +146,11 @@ class DatasetArray(AbstractArray):
 
     @property
     def attributes(self):
-        return self.array.attributes
+        return self.variable.attributes
 
     @property
     def encoding(self):
-        return self.array.encoding
+        return self.variable.encoding
 
     @property
     def variables(self):
@@ -178,7 +197,7 @@ class DatasetArray(AbstractArray):
         if self.focus not in ds:
             # always keep focus variable in the dataset, even if it was
             # unselected because indexing made it a scaler
-            ds[self.focus] = self.array.indexed_by(**indexers)
+            ds[self.focus] = self.variable.indexed_by(**indexers)
         return type(self)(ds, self.focus)
 
     def labeled_by(self, **indexers):
@@ -236,7 +255,7 @@ class DatasetArray(AbstractArray):
         If `new_var` is a dataset array, its contents will be merged in.
         """
         if not hasattr(new_var, 'dimensions'):
-            new_var = type(self.array)(self.array.dimensions, new_var)
+            new_var = type(self.variable)(self.variable.dimensions, new_var)
         if self.focus not in self.dimensions:
             # only unselect the focus from the dataset if it isn't a coordinate
             # variable
@@ -301,7 +320,7 @@ class DatasetArray(AbstractArray):
         numpy.transpose
         Array.transpose
         """
-        return self.refocus(self.array.transpose(*dimensions), self.focus)
+        return self.refocus(self.variable.transpose(*dimensions), self.focus)
 
     def squeeze(self, dimension=None):
         """Return a new DatasetArray object with squeezed data.
@@ -361,7 +380,7 @@ class DatasetArray(AbstractArray):
             DatasetArray with this object's array replaced with an array with
             summarized data and the indicated dimension(s) removed.
         """
-        var = self.array.reduce(func, dimension, axis, **kwargs)
+        var = self.variable.reduce(func, dimension, axis, **kwargs)
         drop = set(self.dimensions) - set(var.dimensions)
         # For now, take an aggressive strategy of removing all variables
         # associated with any dropped dimensions
@@ -495,13 +514,13 @@ class DatasetArray(AbstractArray):
         return pd.Series(self.data.reshape(-1), index=index, name=self.focus)
 
     def __array_wrap__(self, obj, context=None):
-        return self.refocus(self.array.__array_wrap__(obj, context))
+        return self.refocus(self.variable.__array_wrap__(obj, context))
 
     @staticmethod
     def _unary_op(f):
         @functools.wraps(f)
         def func(self, *args, **kwargs):
-            return self.refocus(f(self.array, *args, **kwargs),
+            return self.refocus(f(self.variable, *args, **kwargs),
                                 self.focus + '_' + f.__name__)
         return func
 
@@ -523,12 +542,12 @@ class DatasetArray(AbstractArray):
             ds = self.unselected()
             if hasattr(other, 'unselected'):
                 ds.merge(other.unselected(), inplace=True)
-            other_array = getattr(other, 'array', other)
+            other_array = getattr(other, 'variable', other)
             other_focus = getattr(other, 'focus', 'other')
             focus = self.focus + '_' + f.__name__ + '_' + other_focus
-            ds[focus] = (f(self.array, other_array)
+            ds[focus] = (f(self.variable, other_array)
                          if not reflexive
-                         else f(other_array, self.array))
+                         else f(other_array, self.variable))
             return type(self)(ds, focus)
         return func
 
@@ -537,8 +556,8 @@ class DatasetArray(AbstractArray):
         @functools.wraps(f)
         def func(self, other):
             self._check_coordinates_compat(other)
-            other_array = getattr(other, 'array', other)
-            self.array = f(self.array, other_array)
+            other_array = getattr(other, 'variable', other)
+            self.variable = f(self.variable, other_array)
             if hasattr(other, 'unselected'):
                 self.dataset.merge(other.unselected(), inplace=True)
             return self
@@ -555,8 +574,9 @@ def align(array1, array2):
     # TODO: automatically align when doing math with arrays, or better yet
     # calculate the union of the indices and fill in the mis-aligned data with
     # NaN.
-    overlapping_coords = {k: (array1.coordinates[k].data
-                              & array2.coordinates[k].data)
+    # TODO: generalize this function to any number of arguments
+    overlapping_coords = {k: (array1.coordinates[k].index
+                              & array2.coordinates[k].index)
                           for k in array1.coordinates
                           if k in array2.coordinates}
     return tuple(ar.labeled_by(**overlapping_coords)

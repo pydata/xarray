@@ -1,5 +1,6 @@
 import functools
 import numpy as np
+import pandas as pd
 
 from itertools import izip
 from collections import OrderedDict
@@ -14,6 +15,25 @@ import dataset_array
 from common import AbstractArray
 
 
+def as_xarray(array):
+    """Convert an object into an XArray
+
+    If the object is a DatasetArray or already an XArray, the existing XArray
+    object is returned. Otherwise, the object is converted into a new XArray
+    based on its 'dimensions' and 'data' attributes.
+    """
+    # TODO: consider extending this method to automatically handle Iris and
+    # pandas objects.
+    if hasattr(array, 'variable'):
+        # extract the focus XArray from DatasetArrays
+        array = array.variable
+    if not isinstance(array, XArray):
+        array = XArray(array.dimensions, array.data,
+                       getattr(array, 'attributes', None),
+                       getattr(array, 'encoding', None))
+    return array
+
+
 def _as_compatible_data(data):
     """If data does not have the necessary attributes to be the private _data
     attribute, convert it to a np.ndarray and raise an warning
@@ -21,7 +41,8 @@ def _as_compatible_data(data):
     # don't check for __len__ or __iter__ so as not to warn if data is a numpy
     # numeric type like np.float32
     required = ['dtype', 'shape', 'size', 'ndim']
-    if not all(hasattr(data, attr) for attr in required):
+    if (not all(hasattr(data, attr) for attr in required)
+            or isinstance(data, np.string_)):
         data = np.asarray(data)
     elif isinstance(data, AbstractArray):
         # we don't want nested Array objects
@@ -78,26 +99,70 @@ class XArray(AbstractArray):
         self._indexing_mode = indexing_mode
 
     @property
+    def dtype(self):
+        return self._data.dtype
+
+    @property
+    def shape(self):
+        return self._data.shape
+
+    @property
+    def size(self):
+        return self._data.size
+
+    @property
+    def ndim(self):
+        return self._data.ndim
+
+    def __len__(self):
+        return len(self._data)
+
+    def _data_as_ndarray(self):
+        if isinstance(self._data, pd.Index):
+            # pandas does automatic type conversion when an index is accessed
+            # like index[...], so use index.values instead
+            data = self._data.values
+        else:
+            data = np.asarray(self._data[...])
+        return data
+
+    @property
     def data(self):
         """The variable's data as a numpy.ndarray"""
-        if not isinstance(self._data, (np.ndarray, np.string_)):
-            self._data = np.asarray(self._data[...])
-            self._indexing_mode = 'numpy'
+        self._data = self._data_as_ndarray()
+        self._indexing_mode = 'numpy'
         data = self._data
         if data.ndim == 0 and data.dtype.kind == 'O':
             # unpack 0d object arrays to be consistent with numpy
-            data = data[()]
+            data = data.item()
         return data
 
     @data.setter
     def data(self, value):
-        # allow any array to support pandas.Index objects
-        value = np.asanyarray(value)
+        value = np.asarray(value)
         if value.shape != self.shape:
-            raise ValueError("replacement data must match the Array's "
-                             "shape")
+            raise ValueError("replacement data must match the XArray's shape")
         self._data = value
         self._indexing_mode = 'numpy'
+
+    @property
+    def index(self):
+        """The variable's data as a pandas.Index"""
+        if self.ndim != 1:
+            raise ValueError('can only access 1-d arrays as an index')
+        if isinstance(self._data, pd.Index):
+            index = self._data
+        else:
+            # TODO: add some logic to set dtype=object in some cases where
+            # pandas won't otherwise create a faithful index (e.g., for
+            # dtype=np.timedelta64 and arrays of datetime objects)
+            index = utils.safe_cast_to_index(self.data)
+        return index
+
+    def to_coord(self):
+        """Return this array as an CoordXArray"""
+        return CoordXArray(self.dimensions, self._data, self.attributes,
+                           encoding=self.encoding, dtype=self.dtype)
 
     @property
     def dimensions(self):
@@ -124,6 +189,17 @@ class XArray(AbstractArray):
             key = utils.orthogonal_indexer(key, self.shape)
         return key
 
+    def _get_data(self, key):
+        """Internal method for getting data from _data, given a key already
+        converted to a suitable type (via _convert_indexer)"""
+        if len(key) == 1:
+            # unpack key so it can index a pandas.Index object (pandas.Index
+            # objects don't like tuples)
+            key, = key
+        # do integer based indexing if supported by _data (i.e., if _data is
+        # a pandas object)
+        return getattr(self._data, 'iloc', self._data)[key]
+
     def __getitem__(self, key):
         """Return a new Array object whose contents are consistent with
         getting the provided key from the underlying data.
@@ -144,20 +220,15 @@ class XArray(AbstractArray):
         key = self._convert_indexer(key)
         dimensions = [dim for k, dim in zip(key, self.dimensions)
                       if not isinstance(k, int)]
-        if len(key) == 1:
-            # unpack key so it can index a pandas.Index object (pandas.Index
-            # objects don't like tuples)
-            key, = key
-        # do location based indexing if supported by _data
-        new_data = getattr(self._data, 'iloc', self._data)[key]
+        data = self._get_data(key)
         # orthogonal indexing should ensure the dimensionality is consistent
-        if hasattr(new_data, 'ndim'):
-            assert new_data.ndim == len(dimensions)
+        if hasattr(data, 'ndim'):
+            assert data.ndim == len(dimensions)
         else:
             assert len(dimensions) == 0
         # return a variable with the same indexing_mode, because data should
         # still be the same type as _data
-        return type(self)(dimensions, new_data, self.attributes,
+        return type(self)(dimensions, data, self.attributes,
                           self.encoding, self._indexing_mode)
 
     def __setitem__(self, key, value):
@@ -186,7 +257,7 @@ class XArray(AbstractArray):
 
     def _copy(self, deepcopy=False):
         # np.array always makes a copy
-        data = np.array(self._data) if deepcopy else self.data
+        data = np.array(self.data) if deepcopy else self.data
         # note:
         # dimensions is already an immutable tuple
         # attributes will be copied when the new Array is created
@@ -527,14 +598,14 @@ class XArray(AbstractArray):
         return concatenated
 
     def __array_wrap__(self, obj, context=None):
-        return type(self)(self.dimensions, obj, self.attributes)
+        return XArray(self.dimensions, obj, self.attributes)
 
     @staticmethod
     def _unary_op(f):
         @functools.wraps(f)
         def func(self, *args, **kwargs):
-            return type(self)(self.dimensions, f(self.data, *args, **kwargs),
-                              _math_safe_attributes(self.attributes))
+            return XArray(self.dimensions, f(self.data, *args, **kwargs),
+                          _math_safe_attributes(self.attributes))
         return func
 
     @staticmethod
@@ -552,7 +623,7 @@ class XArray(AbstractArray):
             if hasattr(other, 'attributes'):
                 new_attr = utils.ordered_dict_intersection(
                     new_attr, _math_safe_attributes(other.attributes))
-            return type(self)(dims, new_data, new_attr)
+            return XArray(dims, new_data, new_attr)
         return func
 
     @staticmethod
@@ -571,6 +642,60 @@ class XArray(AbstractArray):
         return func
 
 ops.inject_special_operations(XArray)
+
+
+class CoordXArray(XArray):
+    """Subclass of XArray which caches its data as a pandas.Index instead of
+    a numpy.ndarray
+
+    CoordXArrays must always be 1-dimensional.
+    """
+    def __init__(self, dims, data, attributes=None, encoding=None, dtype=None):
+        """
+        Parameters
+        ----------
+        dtype : np.dtype, optional
+            Numpy dtype for the values in data. It is useful to keep track of
+            this separately because data converted into a pandas.Index does not
+            necessarily faithfully maintain the data type (many types are
+            converted into object arrays).
+        """
+        super(CoordXArray, self).__init__(dims, data, attributes, encoding)
+        if self.ndim != 1:
+            raise ValueError('%s objects must be 1-dimensional' %
+                             type(self).__name__)
+        if dtype is None:
+            dtype = self._data.dtype
+        self._dtype = dtype
+
+    @property
+    def dtype(self):
+        return self._dtype
+
+    @property
+    def data(self):
+        """The variable's data as a numpy.ndarray"""
+        data = self._data_as_ndarray().astype(self.dtype)
+        if not isinstance(self._data, pd.Index):
+            # always cache data as a pandas index
+            self._data = utils.safe_cast_to_index(data)
+        return data
+
+    @data.setter
+    def data(self, value):
+        raise TypeError('%s data cannot be modified' % type(self).__name__)
+
+    def __getitem__(self, key):
+        data = self._get_data(self._convert_indexer(key))
+        if not hasattr(data, 'ndim') or data.ndim == 0:
+            data = np.asarray(data).astype(self.dtype)
+            return XArray((), data, self.attributes, self.encoding)
+        else:
+            return type(self)(self.dimensions, data, self.attributes,
+                              self.encoding, self.dtype)
+
+    def __setitem__(self, key, value):
+        raise TypeError('%s data cannot be modified' % type(self).__name__)
 
 
 def _math_safe_attributes(attributes):

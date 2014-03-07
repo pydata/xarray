@@ -260,20 +260,6 @@ def encode_cf_variable(array):
             data, encoding.pop('units', None), encoding.pop('calendar', None))
         attributes['units'] = units
         attributes['calendar'] = calendar
-    elif data.dtype == np.dtype('O'):
-        # Unfortunately, pandas.Index arrays often have dtype=object even if
-        # they were created from an array with a sensible datatype (e.g.,
-        # pandas.Float64Index always has dtype=object for some reason). Because
-        # we allow for doing math with coordinates, these object arrays can
-        # propagate onward to other variables, which is why we don't only apply
-        # this check to XArrays with data that is a pandas.Index.
-        # Accordingly, we convert object arrays to the type of their first
-        # variable.
-        dtype = np.array(data.reshape(-1)[0]).dtype
-        # N.B. the "astype" call below will fail if data cannot be cast to the
-        # type of its first element (which is probably the only sensible thing
-        # to do).
-        data = np.asarray(data).astype(dtype)
 
     def get_to(source, dest, k):
         v = source.get(k)
