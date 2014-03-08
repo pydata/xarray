@@ -43,11 +43,17 @@ def orthogonal_indexer(key, shape):
         if isinstance(k, slice):
             return np.arange(k.start or 0, k.stop or length, k.step or 1)
         else:
-            k = np.asarray(k)
-            if k.ndim != 1:
+            arr = np.asarray(k)
+            if (not np.issubdtype(arr.dtype, int)
+                    and not np.issubdtype(arr.dtype, bool)):
+                raise ValueError("invalid subkey '%s' for integer based array "
+                                 'indexing; all subkeys must be slices, '
+                                 'integers or sequences of integers or '
+                                 'Booleans' % k)
+            if arr.ndim != 1:
                 raise ValueError('orthogonal array indexing only supports '
                                  '1d arrays')
-            return k
+            return arr
     # replace Ellipsis objects with slices
     key = list(expanded_indexer(key, len(shape)))
     # replace 1d arrays and slices with broadcast compatible arrays
