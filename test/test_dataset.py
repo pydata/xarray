@@ -300,7 +300,6 @@ class TestDataset(TestCase):
 
     def test_getitem(self):
         data = create_test_data()
-        data['time'] = ('time', pd.date_range('2000-01-01', periods=20))
         self.assertIsInstance(data['var1'], DatasetArray)
         self.assertXArrayEqual(data['var1'], data.variables['var1'])
         self.assertIs(data['var1'].dataset, data)
@@ -309,6 +308,12 @@ class TestDataset(TestCase):
                                XArray('time', 1 + np.arange(20)))
         self.assertArrayEqual(data['time.month'].data,
                               data.variables['time'].index.month)
+        # test accessing a decoded virtual variable
+        data.set_variables({'time2': ('time', np.arange(20),
+                                     {'units': 'days since 2000-01-01'})},
+                           decode_cf=True)
+        self.assertXArrayEqual(data['time2.dayofyear'],
+                               XArray('time', 1 + np.arange(20)))
 
     def test_setitem(self):
         # assign a variable
