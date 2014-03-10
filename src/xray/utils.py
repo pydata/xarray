@@ -204,11 +204,11 @@ def encode_cf_datetime(dates, units=None, calendar=None):
             and np.issubdtype(dates.dtype, np.datetime64)):
         # for now, don't bother doing any trickery like decode_cf_datetime to
         # convert dates to numbers faster
-        # TODO: don't use pandas.DatetimeIndex to do the conversion
-        dates = pd.Index(dates.reshape(-1)).to_pydatetime().reshape(dates.shape)
+        # note: numpy's broken datetime conversion only works for us precision
+        dates = np.asarray(dates).astype('M8[us]').astype(datetime)
 
     if hasattr(dates, 'ndim') and dates.ndim == 0:
-        # date2num doesn't like 0-dimensional arguments
+        # unpack dates because date2num doesn't like 0-dimensional arguments
         dates = dates.item()
 
     num = nc4.date2num(dates, units, calendar)
