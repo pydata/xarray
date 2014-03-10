@@ -134,6 +134,13 @@ class TestDatasetArray(TestCase):
         with self.assertRaisesRegexp(ValueError, 'not aligned'):
             b + a
 
+    def test_coord_math(self):
+        ds = Dataset({'x': ('x', 1 + np.arange(3))})
+        expected = ds.copy()
+        expected['x2'] = ('x', np.arange(3))
+        actual = ds['x'] - 1
+        self.assertDSArrayEquiv(expected['x2'], actual)
+
     def test_item_math(self):
         self.ds['x'] = ('x', np.array(list('abcdefghij')))
         self.assertXArrayEqual(self.dv + self.dv[0, 0],

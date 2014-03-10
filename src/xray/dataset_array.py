@@ -104,6 +104,9 @@ class DatasetArray(AbstractArray):
         """The variable's data as a pandas.Index"""
         return self.variable.index
 
+    def is_coord(self):
+        return isinstance(self.variable, xarray.CoordXArray)
+
     @property
     def dimensions(self):
         return self.variable.dimensions
@@ -257,12 +260,7 @@ class DatasetArray(AbstractArray):
         """
         if not hasattr(new_var, 'dimensions'):
             new_var = type(self.variable)(self.variable.dimensions, new_var)
-        if self.focus not in self.dimensions:
-            # only unselect the focus from the dataset if it isn't a coordinate
-            # variable
-            ds = self.unselected()
-        else:
-            ds = self.dataset
+        ds = self.dataset.copy() if self.is_coord() else self.unselected()
         if name is None:
             name = self.focus + '_'
         ds[name] = new_var
@@ -540,7 +538,7 @@ class DatasetArray(AbstractArray):
             # TODO: automatically group by other variable dimensions to allow
             # for broadcasting dimensions like 'dayofyear' against 'time'
             self._check_coordinates_compat(other)
-            ds = self.unselected()
+            ds = self.dataset.copy() if self.is_coord() else self.unselected()
             if hasattr(other, 'unselected'):
                 ds.merge(other.unselected(), inplace=True)
             other_array = getattr(other, 'variable', other)
