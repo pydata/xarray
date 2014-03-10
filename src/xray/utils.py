@@ -137,7 +137,8 @@ def decode_cf_datetime(num_dates, units, calendar=None):
             or max_date > datetime(2262, 4, 11)):
         dates = nc4.num2date(num_dates, units, calendar)
     else:
-        # we can safely use np.datetime64
+        # we can safely use np.datetime64 with nanosecond precision (pandas
+        # likes ns precision so it can directly make DatetimeIndex objects)
         if min_num == max_num:
             # we can't safely divide by max_num - min_num
             dates = np.repeat(np.datetime64(min_date), num_dates.size)
@@ -158,8 +159,8 @@ def decode_cf_datetime(num_dates, units, calendar=None):
             denominator = max_num - min_num
             dates = (time_delta * numerator / denominator
                      + np.datetime64(min_date))
-        # restore original shape
-        dates = dates.reshape(num_dates.shape)
+        # restore original shape and ensure dates are given in ns
+        dates = dates.reshape(num_dates.shape).astype('M8[ns]')
     return dates
 
 

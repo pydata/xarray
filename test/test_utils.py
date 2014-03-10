@@ -89,7 +89,17 @@ class TestDatetime(TestCase):
             for calendar in ['standard', 'gregorian', 'proleptic_gregorian']:
                 expected = nc4.num2date(num_dates, units, calendar)
                 actual = utils.decode_cf_datetime(num_dates, units, calendar)
-                self.assertArrayEqual(expected, actual)
+                if (isinstance(actual, np.ndarray)
+                        and np.issubdtype(actual.dtype, np.datetime64)):
+                    self.assertEqual(actual.dtype, np.dtype('M8[ns]'))
+                    # For some reason, numpy 1.8 does not compare ns precision
+                    # datetime64 arrays as equal to arrays of datetime objects,
+                    # but it works for us precision. Thus, convert to us
+                    # precision for the actual array equal comparison...
+                    actual_cmp = actual.astype('M8[us]')
+                else:
+                    actual_cmp = actual
+                self.assertArrayEqual(expected, actual_cmp)
                 encoded, _, _ = utils.encode_cf_datetime(actual, units, calendar)
                 self.assertArrayEqual(num_dates, np.around(encoded))
                 if (hasattr(num_dates, 'ndim') and num_dates.ndim == 1
