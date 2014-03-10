@@ -162,7 +162,8 @@ class XArray(AbstractArray):
     def to_coord(self):
         """Return this array as an CoordXArray"""
         return CoordXArray(self.dimensions, self._data, self.attributes,
-                           encoding=self.encoding, dtype=self.dtype)
+                           encoding=self.encoding,
+                           indexing_mode=self._indexing_mode, dtype=self.dtype)
 
     @property
     def dimensions(self):
@@ -650,7 +651,8 @@ class CoordXArray(XArray):
 
     CoordXArrays must always be 1-dimensional.
     """
-    def __init__(self, dims, data, attributes=None, encoding=None, dtype=None):
+    def __init__(self, dims, data, attributes=None, encoding=None,
+                 indexing_mode='numpy', dtype=None):
         """
         Parameters
         ----------
@@ -660,7 +662,8 @@ class CoordXArray(XArray):
             necessarily faithfully maintain the data type (many types are
             converted into object arrays).
         """
-        super(CoordXArray, self).__init__(dims, data, attributes, encoding)
+        super(CoordXArray, self).__init__(dims, data, attributes, encoding,
+                                          indexing_mode)
         if self.ndim != 1:
             raise ValueError('%s objects must be 1-dimensional' %
                              type(self).__name__)
@@ -693,7 +696,7 @@ class CoordXArray(XArray):
             return XArray((), data, self.attributes, self.encoding)
         else:
             return type(self)(self.dimensions, data, self.attributes,
-                              self.encoding, self.dtype)
+                              self.encoding, self._indexing_mode, self.dtype)
 
     def __setitem__(self, key, value):
         raise TypeError('%s data cannot be modified' % type(self).__name__)
@@ -702,8 +705,7 @@ class CoordXArray(XArray):
         # there is no need to copy the index data here since pandas.Index
         # objects are immutable
         return type(self)(self.dimensions, self.index, self.attributes,
-                          self.encoding, self.dtype)
-
+                          self.encoding, self._indexing_mode, self.dtype)
 
 
 def _math_safe_attributes(attributes):
