@@ -194,9 +194,10 @@ class DatasetArray(AbstractArray):
         Dataset.indexed_by
         """
         ds = self.dataset.indexed_by(**indexers)
-        if self.focus not in ds:
+        if self.focus not in ds and self.focus in self.dataset:
             # always keep focus variable in the dataset, even if it was
             # unselected because indexing made it a scaler
+            # don't add back in virtual variables (not found in the dataset)
             ds[self.focus] = self.variable.indexed_by(**indexers)
         return type(self)(ds, self.focus)
 

@@ -303,7 +303,10 @@ class TestDataset(TestCase):
         self.assertIsInstance(data['var1'], DatasetArray)
         self.assertXArrayEqual(data['var1'], data.variables['var1'])
         self.assertIs(data['var1'].dataset, data)
+
+    def test_virtual_variables(self):
         # access virtual variables
+        data = create_test_data()
         self.assertXArrayEqual(data['time.dayofyear'],
                                XArray('time', 1 + np.arange(20)))
         self.assertArrayEqual(data['time.month'].data,
@@ -314,6 +317,15 @@ class TestDataset(TestCase):
                            decode_cf=True)
         self.assertXArrayEqual(data['time2.dayofyear'],
                                XArray('time', 1 + np.arange(20)))
+        # test virtual variable math
+        self.assertArrayEqual(data['time.dayofyear'] + 1, 2 + np.arange(20))
+        self.assertArrayEqual(data['time2.dayofyear'] + 1, 2 + np.arange(20))
+        self.assertArrayEqual(np.sin(data['time.dayofyear']),
+                              np.sin(1 + np.arange(20)))
+        # test slicing the virtual variable -- it should still be virtual
+        actual = data['time.dayofyear'][:10].dataset
+        expected = data.indexed_by(time=slice(10))
+        self.assertDatasetEqual(expected, actual)
 
     def test_setitem(self):
         # assign a variable

@@ -625,7 +625,8 @@ class Dataset(Mapping):
             New dataset based on this dataset. Only the named variables are
             removed.
         """
-        if any(k not in self.variables for k in names):
+        if any(k not in self.variables and k not in self.virtual_variables
+               for k in names):
             raise ValueError('One or more of the specified variable '
                              'names does not exist on this dataset')
         drop = set(names)
