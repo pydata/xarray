@@ -679,6 +679,7 @@ class CoordXArray(XArray):
         if not isinstance(self._data, pd.Index):
             # always cache data as a pandas index
             self._data = utils.safe_cast_to_index(data)
+            self._indexing_mode = 'numpy'
         return data
 
     @data.setter
@@ -711,7 +712,7 @@ def _math_safe_attributes(attributes):
 
 
 def broadcast_xarrays(first, second):
-    """Given two XArrays, return two AXrrays with matching dimensions and numpy
+    """Given two XArrays, return two XArrays with matching dimensions and numpy
     broadcast compatible data.
 
     Parameters
@@ -752,7 +753,7 @@ def broadcast_xarrays(first, second):
     # adding second's dimensions at the end
     first_data = first.data[(Ellipsis,) + (None,) * len(second_only_dims)]
     new_first = XArray(dimensions, first_data, first.attributes,
-                        first.encoding)
+                       first.encoding)
     # expand and reorder second_data so the dimensions line up
     first_only_dims = [d for d in dimensions if d not in second.dimensions]
     second_dims = list(second.dimensions) + first_only_dims
