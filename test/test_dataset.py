@@ -527,6 +527,18 @@ class DatasetIOTestCases(object):
         actual = self.roundtrip(expected)
         self.assertDatasetEqual(expected, actual)
 
+    def test_orthogonal_indexing(self):
+        in_memory = create_test_data()
+        on_disk = self.roundtrip(in_memory)
+        indexers = {'dim1': range(3), 'dim2': range(4), 'dim3': range(5)}
+        expected = in_memory.indexed_by(**indexers)
+        actual = on_disk.indexed_by(**indexers)
+        self.assertDatasetEqual(expected, actual)
+        # do it twice, to make sure we're switched from orthogonal -> numpy
+        # when we cached the values
+        actual = on_disk.indexed_by(**indexers)
+        self.assertDatasetEqual(expected, actual)
+
 
 class NetCDF4DataTest(DatasetIOTestCases, TestCase):
     def get_store(self):

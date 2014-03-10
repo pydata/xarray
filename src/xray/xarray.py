@@ -227,10 +227,8 @@ class XArray(AbstractArray):
             assert data.ndim == len(dimensions)
         else:
             assert len(dimensions) == 0
-        # return a variable with the same indexing_mode, because data should
-        # still be the same type as _data
-        return type(self)(dimensions, data, self.attributes,
-                          self.encoding, self._indexing_mode)
+        # don't keep indexing_mode, because data should now be an ndarray
+        return type(self)(dimensions, data, self.attributes, self.encoding)
 
     def __setitem__(self, key, value):
         """__setitem__ is overloaded to access the underlying numpy data with
@@ -696,7 +694,7 @@ class CoordXArray(XArray):
             return XArray((), data, self.attributes, self.encoding)
         else:
             return type(self)(self.dimensions, data, self.attributes,
-                              self.encoding, self._indexing_mode, self.dtype)
+                              self.encoding, dtype=self.dtype)
 
     def __setitem__(self, key, value):
         raise TypeError('%s data cannot be modified' % type(self).__name__)
@@ -705,7 +703,7 @@ class CoordXArray(XArray):
         # there is no need to copy the index data here since pandas.Index
         # objects are immutable
         return type(self)(self.dimensions, self.index, self.attributes,
-                          self.encoding, self._indexing_mode, self.dtype)
+                          self.encoding, dtype=self.dtype)
 
 
 def _math_safe_attributes(attributes):
