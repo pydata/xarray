@@ -2,25 +2,25 @@ from copy import deepcopy
 from datetime import datetime
 
 import numpy as np
+import pandas as pd
 
-from xray import XArray
+from xray import XArray, CoordXArray
 from . import TestCase
 
 
-class TestXArray(TestCase):
-    def setUp(self):
-        self.d = np.random.random((10, 3)).astype(np.float64)
-
-    def test_data(self):
-        v = XArray(['time', 'x'], self.d, indexing_mode='not-supported')
-        self.assertIs(v.data, self.d)
-        with self.assertRaises(ValueError):
-            # wrong size
-            v.data = np.random.random(5)
-        d2 = np.random.random((10, 3))
-        v.data = d2
-        self.assertIs(v.data, d2)
-        self.assertEqual(v._indexing_mode, 'numpy')
+class XArraySubclassTestCases(object):
+    def test_properties(self):
+        data = 0.5 * np.arange(10)
+        v = XArray(['time'], data, {'foo': 'bar'})
+        self.assertEqual(v.dimensions, ('time',))
+        self.assertArrayEqual(v.data, data)
+        self.assertTrue(pd.Index(data).equals(v.index))
+        self.assertEqual(v.dtype, float)
+        self.assertEqual(v.shape, (10,))
+        self.assertEqual(v.size, 10)
+        self.assertEqual(v.ndim, 1)
+        self.assertEqual(len(v), 10)
+        self.assertEqual(v.attributes, {'foo': u'bar'})
 
     def test_0d_data(self):
         d = datetime(2000, 1, 1)
@@ -29,7 +29,7 @@ class TestXArray(TestCase):
                              ('foo', np.string_),
                              (d, None),
                              (np.datetime64(d), np.datetime64)]:
-            x = XArray(['x'], [value])
+            x = self.cls(['x'], [value])
             # check array properties
             self.assertEqual(x[0].shape, ())
             self.assertEqual(x[0].ndim, 0)
@@ -45,6 +45,121 @@ class TestXArray(TestCase):
             else:
                 self.assertTrue(np.issubdtype(x.data[0].dtype, dtype))
                 self.assertTrue(np.issubdtype(x[0].data.dtype, dtype))
+
+    def test_pandas_data(self):
+        v = self.cls(['x'], pd.Series([0, 1, 2], index=[3, 2, 1]))
+        self.assertXArrayEqual(v, v[[0, 1, 2]])
+        v = self.cls(['x'], pd.Index([0, 1, 2]))
+        self.assertEqual(v[0].data, v.data[0])
+
+    def test_1d_math(self):
+        x = 1.0 * np.arange(5)
+        y = np.ones(5)
+        v = self.cls(['x'], x)
+        # unary ops
+        self.assertXArrayEqual(v, +v)
+        self.assertXArrayEqual(v, abs(v))
+        self.assertArrayEqual((-v).data, -x)
+        # bianry ops with numbers
+        self.assertXArrayEqual(v, v + 0)
+        self.assertXArrayEqual(v, 0 + v)
+        self.assertXArrayEqual(v, v * 1)
+        self.assertArrayEqual((v > 2).data, x > 2)
+        self.assertArrayEqual((0 == v).data, 0 == x)
+        self.assertArrayEqual((v - 1).data, x - 1)
+        self.assertArrayEqual((1 - v).data, 1 - x)
+        # binary ops with numpy arrays
+        self.assertArrayEqual((v * x).data, x ** 2)
+        self.assertArrayEqual((x * v).data, x ** 2)
+        self.assertArrayEqual(v - y, v - 1)
+        self.assertArrayEqual(y - v, 1 - v)
+        # verify math-safe attributes
+        v2 = self.cls(['x'], x, {'units': 'meters'})
+        self.assertXArrayEqual(v, +v2)
+        v3 = self.cls(['x'], x, {'something': 'else'})
+        self.assertXArrayEqual(v3, +v3)
+        # binary ops with all variables
+        self.assertArrayEqual(v + v, 2 * v)
+        w = self.cls(['x'], y, {'foo': 'bar'})
+        self.assertXArrayEqual(v + w, self.cls(['x'], x + y))
+        self.assertArrayEqual((v * w).data, x * y)
+        # something complicated
+        self.assertArrayEqual((v ** 2 * w - 1 + x).data, x ** 2 * y - 1 + x)
+        # make sure dtype is preserved (for CoordXArrays)
+        self.assertEqual(float, (+v).dtype)
+        self.assertEqual(float, (+v).data.dtype)
+        self.assertEqual(float, (0 + v).dtype)
+        self.assertEqual(float, (0 + v).data.dtype)
+        # check types of returned data
+        self.assertIsInstance(+v, XArray)
+        self.assertNotIsInstance(+v, CoordXArray)
+        self.assertIsInstance(0 + v, XArray)
+        self.assertNotIsInstance(0 + v, CoordXArray)
+
+    def test_array_interface(self):
+        x = np.arange(5)
+        v = self.cls(['x'], x)
+        self.assertArrayEqual(np.asarray(v), x)
+        # test patched in methods
+        self.assertArrayEqual(v.take([2, 3]), x.take([2, 3]))
+        self.assertXArrayEqual(v.argsort(), v)
+        self.assertXArrayEqual(v.clip(2, 3), self.cls('x', x.clip(2, 3)))
+        # test ufuncs
+        self.assertXArrayEqual(np.sin(v), self.cls(['x'], np.sin(x)))
+        self.assertIsInstance(np.sin(v), XArray)
+        self.assertNotIsInstance(np.sin(v), CoordXArray)
+
+    def test_concat(self):
+        x = np.arange(5)
+        y = np.ones(5)
+        v = self.cls(['a'], x)
+        w = self.cls(['a'], y)
+        self.assertXArrayEqual(XArray(['b', 'a'], np.array([x, y])),
+                               XArray.concat([v, w], 'b'))
+        self.assertXArrayEqual(XArray(['b', 'a'], np.array([x, y])),
+                               XArray.concat((v, w), 'b'))
+        self.assertXArrayEqual(XArray(['b', 'a'], np.array([x, y])),
+                               XArray.concat((v, w), 'b', length=2))
+        with self.assertRaisesRegexp(ValueError, 'actual length'):
+            XArray.concat([v, w], 'b', length=1)
+        with self.assertRaisesRegexp(ValueError, 'actual length'):
+            XArray.concat([v, w, w], 'b', length=4)
+        with self.assertRaisesRegexp(ValueError, 'inconsistent dimensions'):
+            XArray.concat([v, XArray(['c'], y)], 'b')
+        # test concatenating along a dimension
+        v = XArray(['time', 'x'], np.random.random((10, 8)))
+        self.assertXArrayEqual(v, XArray.concat([v[:5], v[5:]], 'time'))
+        self.assertXArrayEqual(v, XArray.concat([v[:5], v[5], v[6:]], 'time'))
+        self.assertXArrayEqual(v, XArray.concat([v[0], v[1:]], 'time'))
+        # test dimension order
+        self.assertXArrayEqual(v, XArray.concat([v[:, :5], v[:, 5:]], 'x'))
+        self.assertXArrayEqual(v.transpose(),
+                               XArray.concat([v[:, 0], v[:, 1:]], 'x'))
+
+    def test_copy(self):
+        v = self.cls('x', 0.5 * np.arange(10))
+        w = v.copy()
+        self.assertIs(type(v), type(w))
+        self.assertXArrayEqual(v, w)
+        self.assertEqual(v.dtype, w.dtype)
+
+
+class TestXArray(TestCase, XArraySubclassTestCases):
+    cls = XArray
+
+    def setUp(self):
+        self.d = np.random.random((10, 3)).astype(np.float64)
+
+    def test_data(self):
+        v = XArray(['time', 'x'], self.d, indexing_mode='not-supported')
+        self.assertIs(v.data, self.d)
+        with self.assertRaises(ValueError):
+            # wrong size
+            v.data = np.random.random(5)
+        d2 = np.random.random((10, 3))
+        v.data = d2
+        self.assertIs(v.data, d2)
+        self.assertEqual(v._indexing_mode, 'numpy')
 
     def test_array_equality(self):
         d = np.random.rand(10, 3)
@@ -62,16 +177,6 @@ class TestXArray(TestCase):
         self.assertXArrayNotEqual(v1, v3)
         self.assertXArrayNotEqual(v1, v4)
         self.assertXArrayNotEqual(v1, v5)
-
-    def test_properties(self):
-        v = XArray(['time', 'x'], self.d, {'foo': 'bar'})
-        self.assertEqual(v.dimensions, ('time', 'x'))
-        self.assertEqual(v.dtype, float)
-        self.assertEqual(v.shape, (10, 3))
-        self.assertEqual(v.size, 30)
-        self.assertEqual(v.ndim, 2)
-        self.assertEqual(len(v), 10)
-        self.assertEqual(v.attributes, {'foo': u'bar'})
 
     def test_repr(self):
         v = XArray(['time', 'x'], self.d)
@@ -141,40 +246,6 @@ class TestXArray(TestCase):
         with self.assertRaisesRegexp(ValueError, 'cannot select a dimension'):
             v.squeeze('y')
 
-    def test_1d_math(self):
-        x = np.arange(5)
-        y = np.ones(5)
-        v = XArray(['x'], x)
-        # unary ops
-        self.assertXArrayEqual(v, +v)
-        self.assertXArrayEqual(v, abs(v))
-        self.assertArrayEqual((-v).data, -x)
-        # bianry ops with numbers
-        self.assertXArrayEqual(v, v + 0)
-        self.assertXArrayEqual(v, 0 + v)
-        self.assertXArrayEqual(v, v * 1)
-        self.assertArrayEqual((v > 2).data, x > 2)
-        self.assertArrayEqual((0 == v).data, 0 == x)
-        self.assertArrayEqual((v - 1).data, x - 1)
-        self.assertArrayEqual((1 - v).data, 1 - x)
-        # binary ops with numpy arrays
-        self.assertArrayEqual((v * x).data, x ** 2)
-        self.assertArrayEqual((x * v).data, x ** 2)
-        self.assertArrayEqual(v - y, v - 1)
-        self.assertArrayEqual(y - v, 1 - v)
-        # verify math-safe attributes
-        v2 = XArray(['x'], x, {'units': 'meters'})
-        self.assertXArrayEqual(v, +v2)
-        v3 = XArray(['x'], x, {'something': 'else'})
-        self.assertXArrayEqual(v3, +v3)
-        # binary ops with all variables
-        self.assertArrayEqual(v + v, 2 * v)
-        w = XArray(['x'], y, {'foo': 'bar'})
-        self.assertXArrayEqual(v + w, XArray(['x'], x + y))
-        self.assertArrayEqual((v * w).data, x * y)
-        # something complicated
-        self.assertArrayEqual((v ** 2 * w - 1 + x).data, x ** 2 * y - 1 + x)
-
     def test_broadcasting_math(self):
         x = np.random.randn(2, 3)
         v = XArray(['a', 'b'], x)
@@ -223,17 +294,6 @@ class TestXArray(TestCase):
         self.assertIs(v.data, x)
         self.assertArrayEqual(v.data, np.arange(5) + 1)
 
-    def test_array_interface(self):
-        x = np.arange(5)
-        v = XArray(['x'], x)
-        self.assertArrayEqual(np.asarray(v), x)
-        # test patched in methods
-        self.assertArrayEqual(v.take([2, 3]), x.take([2, 3]))
-        self.assertXArrayEqual(v.argsort(), v)
-        self.assertXArrayEqual(v.clip(2, 3), XArray('x', x.clip(2, 3)))
-        # test ufuncs
-        self.assertXArrayEqual(np.sin(v), XArray(['x'], np.sin(x)))
-
     def test_reduce(self):
         v = XArray(['time', 'x'], self.d)
         # intentionally test with an operation for which order matters
@@ -277,29 +337,22 @@ class TestXArray(TestCase):
             self.assertXArrayEqual(ke, ka)
             self.assertXArrayEqual(ve, va)
 
-    def test_concat(self):
-        x = np.arange(5)
-        y = np.ones(5)
-        v = XArray(['a'], x)
-        w = XArray(['a'], y)
-        self.assertXArrayEqual(XArray(['b', 'a'], np.array([x, y])),
-                               XArray.concat([v, w], 'b'))
-        self.assertXArrayEqual(XArray(['b', 'a'], np.array([x, y])),
-                               XArray.concat((v, w), 'b'))
-        self.assertXArrayEqual(XArray(['b', 'a'], np.array([x, y])),
-                               XArray.concat((v, w), 'b', length=2))
-        with self.assertRaisesRegexp(ValueError, 'actual length'):
-            XArray.concat([v, w], 'b', length=1)
-        with self.assertRaisesRegexp(ValueError, 'actual length'):
-            XArray.concat([v, w, w], 'b', length=4)
-        with self.assertRaisesRegexp(ValueError, 'inconsistent dimensions'):
-            XArray.concat([v, XArray(['c'], y)], 'b')
-        # test concatenating along a dimension
-        v = XArray(['time', 'x'], np.random.random((10, 8)))
-        self.assertXArrayEqual(v, XArray.concat([v[:5], v[5:]], 'time'))
-        self.assertXArrayEqual(v, XArray.concat([v[:5], v[5], v[6:]], 'time'))
-        self.assertXArrayEqual(v, XArray.concat([v[0], v[1:]], 'time'))
-        # test dimension order
-        self.assertXArrayEqual(v, XArray.concat([v[:, :5], v[:, 5:]], 'x'))
-        self.assertXArrayEqual(v.transpose(),
-                               XArray.concat([v[:, 0], v[:, 1:]], 'x'))
+
+class TestCoordXArray(TestCase, XArraySubclassTestCases):
+    cls = CoordXArray
+
+    def test_init(self):
+        with self.assertRaisesRegexp(ValueError, 'must be 1-dimensional'):
+            CoordXArray((), 0)
+
+    def test_data(self):
+        x = CoordXArray('x', [0, 1, 2], dtype=float)
+        # data should be initially saved as an ndarray
+        self.assertIs(type(x._data), np.ndarray)
+        self.assertEqual(float, x.dtype)
+        self.assertArrayEqual(np.arange(3), x)
+        self.assertEqual(float, x.data.dtype)
+        # after inspecting x.data, the CoordXArray will be saved as an Index
+        self.assertIsInstance(x._data, pd.Index)
+        with self.assertRaisesRegexp(TypeError, 'cannot be modified'):
+            x[:] = 0

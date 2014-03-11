@@ -53,7 +53,8 @@ class _VariablesDict(OrderedDict):
     """
     def _datetimeindices(self):
         return [k for k, v in self.iteritems()
-                if isinstance(v._data, pd.DatetimeIndex)]
+                if np.issubdtype(v.dtype, np.datetime64)
+                and isinstance(v.index, pd.DatetimeIndex)]
 
     @property
     def virtual(self):
@@ -76,10 +77,10 @@ class _VariablesDict(OrderedDict):
             if ref_var in self._datetimeindices():
                 if suffix == 'season':
                     # seasons = np.array(['DJF', 'MAM', 'JJA', 'SON'])
-                    month = self[ref_var].data.month
+                    month = self[ref_var].index.month
                     data = (month // 3) % 4 + 1
                 else:
-                    data = getattr(self[ref_var].data, suffix)
+                    data = getattr(self[ref_var].index, suffix)
                 return xarray.XArray(self[ref_var].dimensions, data)
         raise KeyError('virtual variable %r not found' % key)
 
@@ -130,14 +131,15 @@ class Dataset(Mapping):
 
     def _as_variable(self, name, var, decode_cf=False):
         if isinstance(var, DatasetArray):
-            var = var.array
-        if not isinstance(var, xarray.XArray):
+            var = xarray.as_xarray(var)
+        elif not isinstance(var, xarray.XArray):
             try:
                 var = xarray.XArray(*var)
             except TypeError:
                 raise TypeError('Dataset variables must be of type '
                                 'DatasetArray or XArray, or a sequence of the '
-                                'form (dimensions, data[, attributes])')
+                                'form (dimensions, data[, attributes, '
+                                'encoding])')
         # this will unmask and rescale the data as well as convert
         # time variables to datetime indices.
         if decode_cf:
@@ -147,9 +149,7 @@ class Dataset(Mapping):
             if var.ndim != 1:
                 raise ValueError('a coordinate variable must be defined with '
                                  '1-dimensional data')
-            # create a new XArray object on which to modify the data
-            var = xarray.XArray(var.dimensions, pd.Index(var.data),
-                                var.attributes, encoding=var.encoding)
+            var = var.to_coord()
         return var
 
     def set_variables(self, variables, decode_cf=False):
@@ -487,7 +487,7 @@ class Dataset(Mapping):
         Dataset.indexed_by
         Array.indexed_by
         """
-        return self.indexed_by(**remap_loc_indexers(self.variables, indexers))
+        return self.indexed_by(**remap_loc_indexers(self, indexers))
 
     def renamed(self, name_dict):
         """Returns a new object with renamed variables and dimensions.
@@ -625,7 +625,8 @@ class Dataset(Mapping):
             New dataset based on this dataset. Only the named variables are
             removed.
         """
-        if any(k not in self.variables for k in names):
+        if any(k not in self.variables and k not in self.virtual_variables
+               for k in names):
             raise ValueError('One or more of the specified variable '
                              'names does not exist on this dataset')
         drop = set(names)

@@ -82,7 +82,7 @@ class TestDataset(TestCase):
         attributes = {'foo': 'bar'}
         a['x'] = ('x', vec, attributes)
         self.assertTrue('x' in a.coordinates)
-        self.assertIsInstance(a.coordinates['x'].data, pd.Index)
+        self.assertIsInstance(a.coordinates['x'].index, pd.Index)
         self.assertXArrayEqual(a.coordinates['x'], a.variables['x'])
         b = Dataset()
         b['x'] = ('x', vec, attributes)
@@ -300,15 +300,32 @@ class TestDataset(TestCase):
 
     def test_getitem(self):
         data = create_test_data()
-        data['time'] = ('time', pd.date_range('2000-01-01', periods=20))
         self.assertIsInstance(data['var1'], DatasetArray)
         self.assertXArrayEqual(data['var1'], data.variables['var1'])
         self.assertIs(data['var1'].dataset, data)
+
+    def test_virtual_variables(self):
         # access virtual variables
+        data = create_test_data()
         self.assertXArrayEqual(data['time.dayofyear'],
                                XArray('time', 1 + np.arange(20)))
         self.assertArrayEqual(data['time.month'].data,
-                              data.variables['time'].data.month)
+                              data.variables['time'].index.month)
+        # test accessing a decoded virtual variable
+        data.set_variables({'time2': ('time', np.arange(20),
+                                     {'units': 'days since 2000-01-01'})},
+                           decode_cf=True)
+        self.assertXArrayEqual(data['time2.dayofyear'],
+                               XArray('time', 1 + np.arange(20)))
+        # test virtual variable math
+        self.assertArrayEqual(data['time.dayofyear'] + 1, 2 + np.arange(20))
+        self.assertArrayEqual(data['time2.dayofyear'] + 1, 2 + np.arange(20))
+        self.assertArrayEqual(np.sin(data['time.dayofyear']),
+                              np.sin(1 + np.arange(20)))
+        # test slicing the virtual variable -- it should still be virtual
+        actual = data['time.dayofyear'][:10].dataset
+        expected = data.indexed_by(time=slice(10))
+        self.assertDatasetEqual(expected, actual)
 
     def test_setitem(self):
         # assign a variable
@@ -320,7 +337,7 @@ class TestDataset(TestCase):
         self.assertEqual(data1, data2)
         # assign a dataset array
         dv = 2 * data2['A']
-        data1['B'] = dv.array
+        data1['B'] = dv.variable
         data2['B'] = dv
         self.assertEqual(data1, data2)
         # assign an array
@@ -370,9 +387,9 @@ class TestDataset(TestCase):
             data0, data1 = deepcopy(split_data)
             data1['foo'] = ('bar', np.random.randn(10))
             Dataset.concat([data0, data1], 'dim1')
-        with self.assertRaisesRegexp(ValueError, 'unsafe to merge datasets'):
+        with self.assertRaisesRegexp(ValueError, 'not equal across datasets'):
             data0, data1 = deepcopy(split_data)
-            data1['dim2'] *= 2
+            data1['dim2'] = 2 * data1['dim2']
             Dataset.concat([data0, data1], 'dim1')
 
     def test_to_dataframe(self):
@@ -471,7 +488,7 @@ def create_encoded_masked_and_scaled_data():
     return Dataset({'x': XArray('t', [-1, -1, 0, 1, 2], attributes)})
 
 
-class DatasetIOCases(object):
+class DatasetIOTestCases(object):
     def get_store(self):
         raise NotImplementedError
 
@@ -510,8 +527,20 @@ class DatasetIOCases(object):
         actual = self.roundtrip(expected)
         self.assertDatasetEqual(expected, actual)
 
+    def test_orthogonal_indexing(self):
+        in_memory = create_test_data()
+        on_disk = self.roundtrip(in_memory)
+        indexers = {'dim1': range(3), 'dim2': range(4), 'dim3': range(5)}
+        expected = in_memory.indexed_by(**indexers)
+        actual = on_disk.indexed_by(**indexers)
+        self.assertDatasetEqual(expected, actual)
+        # do it twice, to make sure we're switched from orthogonal -> numpy
+        # when we cached the values
+        actual = on_disk.indexed_by(**indexers)
+        self.assertDatasetEqual(expected, actual)
 
-class NetCDF4DataTest(DatasetIOCases, TestCase):
+
+class NetCDF4DataTest(DatasetIOTestCases, TestCase):
     def get_store(self):
         f, self.tmp_file = tempfile.mkstemp(suffix='.nc')
         os.close(f)
@@ -639,10 +668,10 @@ class NetCDF4DataTest(DatasetIOCases, TestCase):
 
     def test_lazy_decode(self):
         data = self.roundtrip(create_test_data(), decode_cf=True)
-        self.assertIsInstance(data['var1']._data, nc4.Variable)
+        self.assertIsInstance(data['var1'].variable._data, nc4.Variable)
 
 
-class ScipyDataTest(DatasetIOCases, TestCase):
+class ScipyDataTest(DatasetIOTestCases, TestCase):
     def get_store(self):
         fobj = StringIO()
         return backends.ScipyDataStore(fobj, 'w')

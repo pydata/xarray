@@ -6,6 +6,8 @@ from datetime import datetime
 import numpy as np
 import pandas as pd
 
+import xarray
+
 
 def expanded_indexer(key, ndim):
     """Given a key for indexing an ndarray, return an equivalent key which is a
@@ -86,12 +88,12 @@ def orthogonal_indexer(key, shape):
 
 
 def remap_loc_indexers(indices, indexers):
-    """Given mappings of indices and label based indexers, return equivalent
-    location based indexers.
+    """Given mappings of XArray indices and label based indexers, return
+    equivalent location based indexers.
     """
     new_indexers = OrderedDict()
     for dim, loc in indexers.iteritems():
-        index = indices[dim].data
+        index = indices[dim].index
         if isinstance(loc, slice):
             indexer = index.slice_indexer(loc.start, loc.stop, loc.step)
         else:
@@ -201,11 +203,12 @@ def encode_cf_datetime(dates, units=None, calendar=None):
             and np.issubdtype(dates.dtype, np.datetime64)):
         # for now, don't bother doing any trickery like decode_cf_datetime to
         # convert dates to numbers faster
-        dates = dates.astype(datetime)
+        # TODO: don't use pandas.DatetimeIndex to do the conversion
+        dates = pd.Index(dates.reshape(-1)).to_pydatetime().reshape(dates.shape)
 
     if hasattr(dates, 'ndim') and dates.ndim == 0:
-        # unpack dates because date2num doesn't like 0-dimensional arguments
-        dates = dates[()]
+        # date2num doesn't like 0-dimensional arguments
+        dates = dates.item()
 
     num = nc4.date2num(dates, units, calendar)
     return (num, units, calendar)
@@ -235,31 +238,38 @@ def xarray_equal(v1, v2, rtol=1e-05, atol=1e-08):
     This function is necessary because `v1 == v2` for XArrays and DatasetArrays
     does element-wise comparisions (like numpy.ndarrays).
     """
+    v1, v2 = map(xarray.as_xarray, [v1, v2])
     if (v1.dimensions == v2.dimensions
-        and dict_equal(v1.attributes, v2.attributes)):
-        try:
+            and dict_equal(v1.attributes, v2.attributes)):
+        if v1._data is v2._data:
             # if _data is identical, skip checking arrays by value
-            if v1._data is v2._data:
-                return True
-        except AttributeError:
-            # _data is not part of the public interface, so it's okay if its
-            # missing
-            pass
-
-        def is_floating(arr):
-            return np.issubdtype(arr.dtype, float)
-
-        data1 = v1.data
-        data2 = v2.data
-        if hasattr(data1, 'equals'):
-            # handle pandas.Index objects
-            return data1.equals(data2)
-        elif is_floating(data1) or is_floating(data2):
-            return allclose_or_equiv(data1, data2, rtol=rtol, atol=atol)
+            return True
         else:
-            return np.array_equal(data1, data2)
+            def is_floating(arr):
+                return np.issubdtype(arr.dtype, float)
+
+            data1 = v1.data
+            data2 = v2.data
+            if is_floating(data1) or is_floating(data2):
+                return allclose_or_equiv(data1, data2, rtol=rtol, atol=atol)
+            else:
+                return np.array_equal(data1, data2)
     else:
         return False
+
+
+def safe_cast_to_index(array):
+    """Given an array, safely cast it to a pandas.Index
+
+    Unlike pandas.Index, if the array has dtype=object or dtype=timedelta64,
+    this function will not attempt to do automatic type conversion but will
+    always return an index with dtype=object.
+    """
+    kwargs = {}
+    if isinstance(array, np.ndarray):
+        if array.dtype == object or array.dtype == np.timedelta64:
+            kwargs['dtype'] = object
+    return pd.Index(array, **kwargs)
 
 
 def update_safety_check(first_dict, second_dict, compat=operator.eq):

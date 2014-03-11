@@ -15,25 +15,6 @@ class ImplementsReduce(object):
 
 
 class AbstractArray(ImplementsReduce):
-    @property
-    def dtype(self):
-        return self._data.dtype
-
-    @property
-    def shape(self):
-        return self._data.shape
-
-    @property
-    def size(self):
-        return self._data.size
-
-    @property
-    def ndim(self):
-        return self._data.ndim
-
-    def __len__(self):
-        return len(self._data)
-
     def __nonzero__(self):
         return bool(self.data)
 
