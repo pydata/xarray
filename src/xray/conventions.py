@@ -351,6 +351,7 @@ def decode_cf_variable(var, mask_and_scale=True):
     if 'units' in attributes and 'since' in attributes['units']:
         # convert CF times to datetimes
         # TODO: make this lazy
+        data = var.data
         units = pop_to(attributes, encoding, 'units')
         calendar = pop_to(attributes, encoding, 'calendar')
         data = utils.decode_cf_datetime(data, units=units, calendar=calendar)
