@@ -513,6 +513,38 @@ class Dataset(Mapping):
 
         return type(self)(variables, self.attributes)
 
+    def replace(self, variables, decode_cf=False):
+        """Returns a new dataset with some variables replaced or removed.
+
+        Parameters
+        ----------
+        variables : dict-like, optional
+            A mapping from variable names to `XArray` objects, sequences of
+            the form `(dimensions, data[, attributes])` which can be used as
+            arguments to create a new `XArray`, or `None`, which indicates that
+            the variable by this name should be omited if it already exists
+            in this dataset.
+        decode_cf : bool, optional
+            Whether to decode these variables according to CF conventions.
+
+        Returns
+        -------
+        replaced: Dataset
+            New dataset based on this dataset.
+
+
+        Notes
+        -----
+
+        As long as dimensions in the resulting dataset are consistent, replace
+        can alter or replace existing dimensinos.
+        """
+        all_variables = OrderedDict(
+            [(k, v) for k, v in self.variables.iteritems()
+             if k not in variables]
+            + [(k, v) for k, v in variables.iteritems() if v is not None])
+        return type(self)(all_variables, self.attributes, decode_cf=decode_cf)
+
     def merge(self, other, inplace=False, overwrite_vars=None):
         """Merge two datasets into a single new dataset.
 
@@ -635,26 +667,6 @@ class Dataset(Mapping):
         variables = OrderedDict((k, v) for k, v in self.variables.iteritems()
                                 if k not in drop)
         return type(self)(variables, self.attributes)
-
-    def replace(self, name, variable):
-        """Returns a new dataset with the variable 'name' replaced with
-        'variable'.
-
-        Parameters
-        ----------
-        name : str
-            Name of the variable to replace in this object.
-        variable : Array
-            Replacement variable.
-
-        Returns
-        -------
-        Dataset
-            New dataset based on this dataset. Dimensions are unchanged.
-        """
-        ds = self.copy()
-        ds[name] = variable
-        return ds
 
     def groupby(self, group, squeeze=True):
         """Group this dataset by unique values of the indicated group.

@@ -269,6 +269,15 @@ class TestDataset(TestCase):
         self.assertTrue('dim2' not in renamed.variables)
         self.assertTrue('dim2' not in renamed.dimensions)
 
+    def test_replace(self):
+        data = create_test_data()
+        var2 = ('dim1', np.arange(100))
+        actual = data.replace({'var1': None, 'var2': var2})
+        expected = data.copy()
+        del expected['var1']
+        expected['var2'] = var2
+        self.assertDatasetEqual(expected, actual)
+
     def test_squeeze(self):
         data = Dataset({'foo': (['x', 'y', 'z'], [[[1], [2]]])})
         # squeeze everything
