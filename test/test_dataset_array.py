@@ -11,8 +11,8 @@ class TestDatasetArray(TestCase):
 
     def assertDSArrayEquiv(self, ar1, ar2):
         random_name = 'randomly-renamed-variable'
-        self.assertDSArrayEqual(ar1.renamed(random_name),
-                                ar2.renamed(random_name))
+        self.assertDSArrayEqual(ar1.rename(random_name),
+                                ar2.rename(random_name))
 
     def setUp(self):
         self.x = np.random.random((10, 20))
@@ -79,9 +79,13 @@ class TestDatasetArray(TestCase):
         self.dv.loc['a':'j'] = 0
         self.assertTrue(np.all(self.dv.data == 0))
 
-    def test_renamed(self):
-        renamed = self.dv.renamed('bar')
-        self.assertEqual(renamed.dataset, self.ds.renamed({'foo': 'bar'}))
+    def test_rename(self):
+        renamed = self.dv.rename('bar')
+        self.assertEqual(renamed.dataset, self.ds.rename({'foo': 'bar'}))
+        self.assertEqual(renamed.focus, 'bar')
+
+        renamed = self.dv.rename({'foo': 'bar'})
+        self.assertEqual(renamed.dataset, self.ds.rename({'foo': 'bar'}))
         self.assertEqual(renamed.focus, 'bar')
 
     def test_refocus(self):
@@ -227,7 +231,7 @@ class TestDatasetArray(TestCase):
     def test_concat(self):
         self.ds['bar'] = XArray(['x', 'y'], np.random.randn(10, 20))
         foo = self.ds['foo'].select()
-        bar = self.ds['bar'].renamed('foo').select()
+        bar = self.ds['bar'].rename('foo').select()
         # from dataset array:
         self.assertXArrayEqual(XArray(['w', 'x', 'y'],
                                       np.array([foo.data, bar.data])),

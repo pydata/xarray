@@ -283,7 +283,7 @@ class Dataset(Mapping):
         variable.
         """
         if isinstance(value, DatasetArray):
-            self.merge(value.renamed(key).dataset, inplace=True,
+            self.merge(value.rename(key).dataset, inplace=True,
                        overwrite_vars=[key])
         else:
             self.set_variables({key: value})
@@ -489,14 +489,19 @@ class Dataset(Mapping):
         """
         return self.indexed_by(**remap_loc_indexers(self, indexers))
 
-    def renamed(self, name_dict):
+    def rename(self, name_dict):
         """Returns a new object with renamed variables and dimensions.
 
         Parameters
         ----------
         name_dict : dict-like
-            Dictionary-like object whose keys are current variable or dimension
-            names and whose values are new names.
+            Dictionary whose keys are current variable or dimension names and
+            whose values are new names.
+
+        Returns
+        -------
+        renamed : Dataset
+            Dataset with renamed variables and dimensions.
         """
         for k in name_dict:
             if k not in self.variables:

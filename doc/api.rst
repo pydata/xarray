@@ -50,11 +50,11 @@ Selecting
 
    Dataset.indexed_by
    Dataset.labeled_by
-   Dataset.renamed
+   Dataset.rename
+   Dataset.replace
    Dataset.select
    Dataset.unselect
    Dataset.squeeze
-   Dataset.replace
    Dataset.groupby
 
 IO / Conversion
@@ -86,7 +86,7 @@ Selecting
    DatasetArray.loc
    DatasetArray.indexed_by
    DatasetArray.labeled_by
-   DatasetArray.renamed
+   DatasetArray.rename
    DatasetArray.select
    DatasetArray.unselected
    DatasetArray.unselect

@@ -247,7 +247,7 @@ class TestDataset(TestCase):
     def test_rename(self):
         data = create_test_data()
         newnames = {'var1': 'renamed_var1', 'dim2': 'renamed_dim2'}
-        renamed = data.renamed(newnames)
+        renamed = data.rename(newnames)
 
         variables = OrderedDict(data.variables)
         for k, v in newnames.iteritems():
@@ -296,7 +296,7 @@ class TestDataset(TestCase):
         with self.assertRaises(ValueError):
             ds1.merge(ds2.indexed_by(dim1=slice(2)))
         with self.assertRaises(ValueError):
-            ds1.merge(ds2.renamed({'var3': 'var1'}))
+            ds1.merge(ds2.rename({'var3': 'var1'}))
 
     def test_getitem(self):
         data = create_test_data()
