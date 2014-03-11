@@ -254,20 +254,18 @@ class TestDataset(TestCase):
             variables[v] = variables.pop(k)
 
         for k, v in variables.iteritems():
-            self.assertTrue(k in renamed.variables)
-            self.assertEqual(v.attributes, renamed.variables[k].attributes)
             dims = list(v.dimensions)
             for name, newname in newnames.iteritems():
                 if name in dims:
                     dims[dims.index(name)] = newname
-            self.assertEqual(dims, list(renamed.variables[k].dimensions))
-            self.assertTrue(np.all(v.data == renamed.variables[k].data))
-            self.assertEqual(v.attributes, renamed.variables[k].attributes)
+
+            self.assertXArrayEqual(XArray(dims, v.data, v.attributes),
+                                   renamed.variables[k])
+            self.assertEqual(v.encoding, renamed.variables[k].encoding)
+            self.assertEqual(type(v), type(renamed.variables[k]))
 
         self.assertTrue('var1' not in renamed.variables)
-        self.assertTrue('var1' not in renamed.dimensions)
         self.assertTrue('dim2' not in renamed.variables)
-        self.assertTrue('dim2' not in renamed.dimensions)
 
     def test_squeeze(self):
         data = Dataset({'foo': (['x', 'y', 'z'], [[[1], [2]]])})

@@ -513,9 +513,10 @@ class Dataset(Mapping):
             dims = tuple(name_dict.get(dim, dim) for dim in v.dimensions)
             #TODO: public interface for renaming a variable without loading
             # data?
-            variables[name] = xarray.XArray(dims, v._data, v.attributes,
-                                            v.encoding, v._indexing_mode)
-
+            kwargs = {'dtype': v.dtype} if hasattr(v, '_dtype') else {}
+            # perserve the type of the variable (XArray vs CoordXArray)
+            variables[name] = type(v)(dims, v._data, v.attributes, v.encoding,
+                                      v._indexing_mode, **kwargs)
         return type(self)(variables, self.attributes)
 
     def merge(self, other, inplace=False, overwrite_vars=None):
