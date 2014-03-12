@@ -247,27 +247,25 @@ class TestDataset(TestCase):
     def test_rename(self):
         data = create_test_data()
         newnames = {'var1': 'renamed_var1', 'dim2': 'renamed_dim2'}
-        renamed = data.renamed(newnames)
+        renamed = data.rename(newnames)
 
         variables = OrderedDict(data.variables)
         for k, v in newnames.iteritems():
             variables[v] = variables.pop(k)
 
         for k, v in variables.iteritems():
-            self.assertTrue(k in renamed.variables)
-            self.assertEqual(v.attributes, renamed.variables[k].attributes)
             dims = list(v.dimensions)
             for name, newname in newnames.iteritems():
                 if name in dims:
                     dims[dims.index(name)] = newname
-            self.assertEqual(dims, list(renamed.variables[k].dimensions))
-            self.assertTrue(np.all(v.data == renamed.variables[k].data))
-            self.assertEqual(v.attributes, renamed.variables[k].attributes)
+
+            self.assertXArrayEqual(XArray(dims, v.data, v.attributes),
+                                   renamed.variables[k])
+            self.assertEqual(v.encoding, renamed.variables[k].encoding)
+            self.assertEqual(type(v), type(renamed.variables[k]))
 
         self.assertTrue('var1' not in renamed.variables)
-        self.assertTrue('var1' not in renamed.dimensions)
         self.assertTrue('dim2' not in renamed.variables)
-        self.assertTrue('dim2' not in renamed.dimensions)
 
     def test_squeeze(self):
         data = Dataset({'foo': (['x', 'y', 'z'], [[[1], [2]]])})
@@ -296,7 +294,7 @@ class TestDataset(TestCase):
         with self.assertRaises(ValueError):
             ds1.merge(ds2.indexed_by(dim1=slice(2)))
         with self.assertRaises(ValueError):
-            ds1.merge(ds2.renamed({'var3': 'var1'}))
+            ds1.merge(ds2.rename({'var3': 'var1'}))
 
     def test_getitem(self):
         data = create_test_data()

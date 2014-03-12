@@ -215,11 +215,24 @@ class DatasetArray(AbstractArray):
         return self.indexed_by(**remap_loc_indexers(self.dataset.variables,
                                                     indexers))
 
-    def renamed(self, new_name):
-        """Returns a new DatasetArray with this DatasetArray's focus variable
-        renamed.
+    def rename(self, new_name_or_name_dict):
+        """Returns a new DatasetArray with renamed variables.
+
+        If the argument is a string, rename this DatasetArray's focus variable.
+        Otherwise, the argument is assumed to be a mapping from old names to
+        new names for dataset variables.
+
+        See Also
+        --------
+        Dataset.rename
         """
-        renamed_dataset = self.dataset.renamed({self.focus: new_name})
+        if isinstance(new_name_or_name_dict, basestring):
+            new_name = new_name_or_name_dict
+            name_dict = {self.focus: new_name}
+        else:
+            name_dict = new_name_or_name_dict
+            new_name = name_dict.get(self.focus, self.focus)
+        renamed_dataset = self.dataset.rename(name_dict)
         return type(self)(renamed_dataset, new_name)
 
     def select(self, *names):

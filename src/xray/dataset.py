@@ -283,7 +283,7 @@ class Dataset(Mapping):
         variable.
         """
         if isinstance(value, DatasetArray):
-            self.merge(value.renamed(key).dataset, inplace=True,
+            self.merge(value.rename(key).dataset, inplace=True,
                        overwrite_vars=[key])
         else:
             self.set_variables({key: value})
@@ -489,14 +489,19 @@ class Dataset(Mapping):
         """
         return self.indexed_by(**remap_loc_indexers(self, indexers))
 
-    def renamed(self, name_dict):
+    def rename(self, name_dict):
         """Returns a new object with renamed variables and dimensions.
 
         Parameters
         ----------
         name_dict : dict-like
-            Dictionary-like object whose keys are current variable or dimension
-            names and whose values are new names.
+            Dictionary whose keys are current variable or dimension names and
+            whose values are new names.
+
+        Returns
+        -------
+        renamed : Dataset
+            Dataset with renamed variables and dimensions.
         """
         for k in name_dict:
             if k not in self.variables:
@@ -508,9 +513,10 @@ class Dataset(Mapping):
             dims = tuple(name_dict.get(dim, dim) for dim in v.dimensions)
             #TODO: public interface for renaming a variable without loading
             # data?
-            variables[name] = xarray.XArray(dims, v._data, v.attributes,
-                                            v.encoding, v._indexing_mode)
-
+            kwargs = {'dtype': v.dtype} if hasattr(v, '_dtype') else {}
+            # perserve the type of the variable (XArray vs CoordXArray)
+            variables[name] = type(v)(dims, v._data, v.attributes, v.encoding,
+                                      v._indexing_mode, **kwargs)
         return type(self)(variables, self.attributes)
 
     def merge(self, other, inplace=False, overwrite_vars=None):
