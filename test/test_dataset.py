@@ -361,17 +361,32 @@ class TestDataset(TestCase):
                       data.indexed_by(dim1=slice(10, None))]
         self.assertDatasetEqual(data, Dataset.concat(split_data, 'dim1'))
 
-        datasets = [ds for _, ds in data.groupby('dim1', squeeze=False)]
-        self.assertDatasetEqual(data, Dataset.concat(datasets, 'dim1'))
+        def rectify_dim_order(dataset):
+            # return a new dataset with all variable dimensions tranposed into
+            # the order in which they are found in `data`
+            return Dataset({k: v.transpose(*data[k].dimensions)
+                           for k, v in dataset.variables.iteritems()},
+                           dataset.attributes)
 
-        datasets = [ds for _, ds in data.groupby('dim1', squeeze=True)]
-        actual = Dataset.concat(datasets, 'dim1',
-                                concat_over=['var1', 'var2', 'var3'])
-        # we need to tranpose dataset variables to move diensions to the
-        # original order
-        self.assertDatasetEqual(
-            data, Dataset({k: v.transpose(*data[k].dimensions)
-                           for k, v in actual.variables.iteritems()}))
+        for dim in ['dim1', 'dim2', 'dim3']:
+            datasets = [ds for _, ds in data.groupby(dim, squeeze=False)]
+            self.assertDatasetEqual(data, Dataset.concat(datasets, dim))
+            self.assertDatasetEqual(data, Dataset.concat(datasets, data[dim]))
+            self.assertDatasetEqual(data, Dataset.concat(datasets, data[dim].variable))
+
+            datasets = [ds for _, ds in data.groupby(dim, squeeze=True)]
+            concat_over = [k for k, v in data.variables.iteritems()
+                           if dim in v.dimensions and k != dim]
+            actual = Dataset.concat(datasets, data[dim], concat_over=concat_over)
+            self.assertDatasetEqual(data, rectify_dim_order(actual))
+
+        # verify that the dimension argument takes precedence over
+        # concatenating dataset variables of the same name
+        dimension = (2 * data['dim1']).rename('dim1')
+        datasets = [ds for _, ds in data.groupby('dim1', squeeze=False)]
+        expected = data.copy()
+        expected['dim1'] = dimension
+        self.assertDatasetEqual(expected, Dataset.concat(datasets, dimension))
 
         with self.assertRaisesRegexp(ValueError, 'cannot be empty'):
             Dataset.concat([], 'dim1')
