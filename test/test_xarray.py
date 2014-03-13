@@ -1,10 +1,11 @@
+from collections import namedtuple
 from copy import deepcopy
 from datetime import datetime
 
 import numpy as np
 import pandas as pd
 
-from xray import XArray, CoordXArray
+from xray import XArray, CoordXArray, Dataset, DatasetArray, as_xarray
 from . import TestCase
 
 
@@ -177,6 +178,28 @@ class TestXArray(TestCase, XArraySubclassTestCases):
         self.assertXArrayNotEqual(v1, v3)
         self.assertXArrayNotEqual(v1, v4)
         self.assertXArrayNotEqual(v1, v5)
+
+    def test_as_xarray(self):
+        data = np.arange(10)
+        expected = XArray('x', data)
+
+        self.assertXArrayEqual(expected, as_xarray(expected))
+
+        ds = Dataset({'x': expected})
+        self.assertXArrayEqual(expected, as_xarray(ds['x']))
+        self.assertNotIsInstance(ds['x'], XArray)
+        self.assertIsInstance(as_xarray(ds['x']), XArray)
+        self.assertIsInstance(as_xarray(ds['x'], strict=False), DatasetArray)
+
+        FakeXArray = namedtuple('FakeXArray', 'data dimensions')
+        fake_xarray = FakeXArray(expected.data, expected.dimensions)
+        self.assertXArrayEqual(expected, as_xarray(fake_xarray))
+
+        xarray_tuple = (expected.dimensions, expected.data)
+        self.assertXArrayEqual(expected, as_xarray(xarray_tuple))
+
+        with self.assertRaisesRegexp(TypeError, 'cannot convert arg'):
+            as_xarray(data)
 
     def test_repr(self):
         v = XArray(['time', 'x'], self.d)
