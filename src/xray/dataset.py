@@ -8,6 +8,7 @@ from collections import OrderedDict, Mapping
 import xarray
 import backends
 import conventions
+import common
 import groupby
 import utils
 from dataset_array import DatasetArray
@@ -362,42 +363,8 @@ class Dataset(Mapping):
         self.dump_to_store(scipy_store)
         return fobj.getvalue()
 
-    def __str__(self):
-        """Create a ncdump-like summary of the object."""
-        summary = ["dimensions:"]
-        # prints dims that look like:
-        #    dimension = length
-        dim_print = lambda d, l : "\t%s = %s" % (conventions.pretty_print(d, 30),
-                                                 conventions.pretty_print(l, 10))
-        # add each dimension to the summary
-        summary.extend([dim_print(d, l) for d, l in self.dimensions.iteritems()])
-
-        # Print variables
-        summary.append("variables:")
-        for vname, var in self.variables.iteritems():
-            # this looks like:
-            #    dtype name(dim1, dim2)
-            summary.append("\t%s %s(%s)" % (conventions.pretty_print(var.dtype, 8),
-                                            conventions.pretty_print(vname, 20),
-                                            conventions.pretty_print(', '.join(var.dimensions), 45)))
-            #        attribute:value
-            summary.extend(["\t\t%s:%s" % (conventions.pretty_print(att, 30),
-                                           conventions.pretty_print(val, 30))
-                            for att, val in var.attributes.iteritems()])
-
-        summary.append("attributes:")
-        #    attribute:value
-        summary.extend(["\t%s:%s" % (conventions.pretty_print(att, 30),
-                                     conventions.pretty_print(val, 30))
-                        for att, val in self.attributes.iteritems()])
-        # create the actual summary
-        return '\n'.join(summary).replace('\t', ' ' * 4)
-
     def __repr__(self):
-        dim_summary = ', '.join('%s: %s' % (k, v) for k, v
-                                in self.dimensions.iteritems())
-        return '<xray.%s (%s): %s>' % (type(self).__name__, dim_summary,
-                                       ' '.join(self.noncoordinates))
+        return common.dataset_repr(self)
 
     def indexed_by(self, **indexers):
         """Return a new dataset with each array indexed along the specified

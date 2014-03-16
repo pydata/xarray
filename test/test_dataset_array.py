@@ -1,5 +1,6 @@
 import numpy as np
 from copy import deepcopy
+from textwrap import dedent
 
 from xray import Dataset, DatasetArray, XArray, align
 from . import TestCase, ReturnItem
@@ -22,6 +23,18 @@ class TestDatasetArray(TestCase):
         self.v = XArray(['x', 'y'], self.x)
         self.ds = Dataset({'foo': self.v})
         self.dv = DatasetArray(self.ds, 'foo')
+
+    def test_repr(self):
+        v = XArray(['time', 'x'], [[1, 2, 3], [4, 5, 6]], {'foo': 'bar'})
+        dataset_array = Dataset({'my_variable': v})['my_variable']
+        expected = dedent("""
+        <xray.DatasetArray 'my_variable' (time: 2, x: 3)>
+        array([[1, 2, 3],
+               [4, 5, 6]])
+        Attributes:
+            foo: bar
+        """).strip()
+        self.assertEqual(expected, repr(dataset_array))
 
     def test_properties(self):
         self.assertIs(self.dv.dataset, self.ds)

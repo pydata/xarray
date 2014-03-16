@@ -99,6 +99,9 @@ class DatasetArray(AbstractArray):
     def data(self, value):
         self.variable.data = value
 
+    def in_memory(self):
+        return self.variable.in_memory()
+
     @property
     def index(self):
         """The variable's data as a pandas.Index"""
@@ -173,20 +176,6 @@ class DatasetArray(AbstractArray):
 
     # mutable objects should not be hashable
     __hash__ = None
-
-    def __str__(self):
-        #TODO: make this less hacky
-        return re.sub(' {4}(%s\s+%s)' % (self.dtype, self.focus),
-                      r'--> \1', str(self.dataset))
-
-    def __repr__(self):
-        if self.ndim > 0:
-            dim_summary = ', '.join('%s: %s' % (k, v) for k, v
-                                    in zip(self.dimensions, self.shape))
-            contents = ' (%s): %s' % (dim_summary, self.dtype)
-        else:
-            contents = ': %s' % self.data
-        return '<xray.%s %r%s>' % (type(self).__name__, self.focus, contents)
 
     def indexed_by(self, **indexers):
         """Return a new dataset array whose dataset is given by indexing along

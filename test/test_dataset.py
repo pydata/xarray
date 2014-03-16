@@ -6,6 +6,7 @@ import tempfile
 from cStringIO import StringIO
 from collections import OrderedDict
 from copy import deepcopy
+from textwrap import dedent
 
 import numpy as np
 import pandas as pd
@@ -41,8 +42,18 @@ def create_test_data():
 class TestDataset(TestCase):
     def test_repr(self):
         data = create_test_data()
-        self.assertEqual('<xray.Dataset (time: 20, dim1: 100, '
-                         'dim2: 50, dim3: 10): var1 var2 var3>', repr(data))
+        expected = dedent("""
+        <xray.Dataset>
+        Coordinates:     (time: 20, dim1: 100, dim2: 50, dim3: 10)
+        Non-coordinates:
+            var1              -         X          X         -
+            var2              -         X          X         -
+            var3              -         X          -         X
+        Attributes:
+            Empty
+        """).strip()
+        actual = '\n'.join(x.rstrip() for x in repr(data).split('\n'))
+        self.assertEqual(expected, actual)
 
     def test_init(self):
         var1 = XArray('x', np.arange(100))
