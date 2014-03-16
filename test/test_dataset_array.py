@@ -8,7 +8,7 @@ from . import TestCase, ReturnItem
 
 class TestDatasetArray(TestCase):
     def assertDSArrayEqual(self, ar1, ar2):
-        self.assertEqual(ar1.focus, ar2.focus)
+        self.assertEqual(ar1.name, ar2.name)
         self.assertDatasetEqual(ar1.dataset, ar2.dataset)
 
     def assertDSArrayEquiv(self, ar1, ar2):
@@ -38,7 +38,7 @@ class TestDatasetArray(TestCase):
 
     def test_properties(self):
         self.assertIs(self.dv.dataset, self.ds)
-        self.assertEqual(self.dv.focus, 'foo')
+        self.assertEqual(self.dv.name, 'foo')
         self.assertXArrayEqual(self.dv.variable, self.v)
         self.assertArrayEqual(self.dv.data, self.v.data)
         for attr in ['dimensions', 'dtype', 'shape', 'size', 'ndim',
@@ -49,6 +49,10 @@ class TestDatasetArray(TestCase):
         self.assertEqual(list(self.dv.coordinates), list(self.ds.coordinates))
         for k, v in self.dv.coordinates.iteritems():
             self.assertArrayEqual(v, self.ds.coordinates[k])
+        with self.assertRaises(AttributeError):
+            self.dv.name = 'bar'
+        with self.assertRaises(AttributeError):
+            self.dv.dataset = self.ds
 
     def test_items(self):
         # strings pull out dataviews
@@ -98,11 +102,11 @@ class TestDatasetArray(TestCase):
     def test_rename(self):
         renamed = self.dv.rename('bar')
         self.assertEqual(renamed.dataset, self.ds.rename({'foo': 'bar'}))
-        self.assertEqual(renamed.focus, 'bar')
+        self.assertEqual(renamed.name, 'bar')
 
         renamed = self.dv.rename({'foo': 'bar'})
         self.assertEqual(renamed.dataset, self.ds.rename({'foo': 'bar'}))
-        self.assertEqual(renamed.focus, 'bar')
+        self.assertEqual(renamed.name, 'bar')
 
     def test_dataset_getitem(self):
         dv = self.ds['foo']

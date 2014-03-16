@@ -99,7 +99,7 @@ class Dataset(Mapping):
     together form a self describing dataset.
 
     Dataset implements the mapping interface with keys given by variable names
-    and values given by DatasetArray objects focused on each variable name.
+    and values given by DatasetArray objects for each variable name.
 
     Note: the size of dimensions in a dataset cannot be changed.
     """
@@ -276,7 +276,7 @@ class Dataset(Mapping):
         return self._variables.virtual
 
     def __getitem__(self, key):
-        """Access the DatasetArray focused on the given variable name.
+        """Access the array with the given variable name.
         """
         return DatasetArray(self, key)
 
@@ -673,7 +673,7 @@ class Dataset(Mapping):
             # variable in this dataset
             ds = self.merge(self[group].dataset)
             group = DatasetArray(ds, group)
-        return groupby.GroupBy(self, group.focus, group, squeeze=squeeze)
+        return groupby.GroupBy(self, group.name, group, squeeze=squeeze)
 
     def squeeze(self, dimension=None):
         """Return a new dataset with squeezed data.
