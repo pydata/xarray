@@ -53,7 +53,7 @@ class _VariablesDict(OrderedDict):
     """
     def _datetimeindices(self):
         return [k for k, v in self.iteritems()
-                if np.issubdtype(v.dtype, np.datetime64)
+                if np.issubdtype(v.dtype, np.datetime64) and v.ndim == 1
                 and isinstance(v.index, pd.DatetimeIndex)]
 
     @property
