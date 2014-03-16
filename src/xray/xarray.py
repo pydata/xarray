@@ -85,13 +85,8 @@ class XArray(AbstractArray):
             lookups need to be internally converted to numpy-style indexing.
             unrecognized keys in this dictionary.
         """
-        if isinstance(dims, basestring):
-            dims = (dims,)
-        self._dimensions = tuple(dims)
         self._data = _as_compatible_data(data)
-        if len(dims) != self.ndim:
-            raise ValueError('data and dimensions must have the same '
-                             'dimensionality')
+        self._dimensions = self._parse_dimensions(dims)
         if attributes is None:
             attributes = {}
         self._attributes = OrderedDict(attributes)
@@ -153,9 +148,6 @@ class XArray(AbstractArray):
         if isinstance(self._data, pd.Index):
             index = self._data
         else:
-            # TODO: add some logic to set dtype=object in some cases where
-            # pandas won't otherwise create a faithful index (e.g., for
-            # dtype=np.timedelta64 and arrays of datetime objects)
             index = utils.safe_cast_to_index(self.data)
         return index
 
@@ -170,6 +162,20 @@ class XArray(AbstractArray):
         """Tuple of dimension names with which this array is associated.
         """
         return self._dimensions
+
+    def _parse_dimensions(self, dims):
+        if isinstance(dims, basestring):
+            dims = (dims,)
+        dims = tuple(dims)
+        if len(dims) != self.ndim:
+            raise ValueError('dimensions %s must have the same length as the '
+                             'number of data dimensions, ndim=%s'
+                             % (dims, self.ndim))
+        return dims
+
+    @dimensions.setter
+    def dimensions(self, value):
+        self._dimensions = self._parse_dimensions(value)
 
     def _convert_indexer(self, key, indexing_mode=None):
         """Converts an orthogonal indexer into a fully expanded key (of the
@@ -248,28 +254,26 @@ class XArray(AbstractArray):
         """
         return self._attributes
 
-    def copy(self):
-        """Returns a shallow copy of the current object. The data array is
-        always loaded into memory.
-        """
-        return self.__copy__()
+    def copy(self, deep=True):
+        """Returns a copy of this object.
 
-    def _copy(self, deepcopy=False):
-        # np.array always makes a copy
-        data = np.array(self.data) if deepcopy else self.data
+        If `deep=True`, the data array is loaded into memory and copied onto
+        the new object. Dimensions, attributes and encodings are always copied.
+        """
+        data = self.data.copy() if deep else self._data
         # note:
         # dimensions is already an immutable tuple
-        # attributes will be copied when the new Array is created
+        # attributes and encoding will be copied when the new Array is created
         return type(self)(self.dimensions, data, self.attributes,
-                          self.encoding)
+                          self.encoding, self._indexing_mode)
 
     def __copy__(self):
-        return self._copy(deepcopy=False)
+        return self.copy(deep=False)
 
     def __deepcopy__(self, memo=None):
         # memo does nothing but is required for compatability with
         # copy.deepcopy
-        return self._copy(deepcopy=True)
+        return self.copy(deep=True)
 
     # mutable objects should not be hashable
     __hash__ = None
@@ -699,11 +703,21 @@ class CoordXArray(XArray):
     def __setitem__(self, key, value):
         raise TypeError('%s data cannot be modified' % type(self).__name__)
 
-    def _copy(self, deepcopy=False):
-        # there is no need to copy the index data here since pandas.Index
-        # objects are immutable
-        return type(self)(self.dimensions, self.index, self.attributes,
-                          self.encoding, dtype=self.dtype)
+    def copy(self, deep=True):
+        """Returns a copy of this object.
+
+        If `deep=True`, the data array is loaded into memory and copied onto
+        the new object. Dimensions, attributes and encodings are always copied.
+        """
+        # there is no need to copy the index data here even if deep=True since
+        # pandas.Index objects are immutable
+        data = self.index if deep else self._data
+        return type(self)(self.dimensions, data, self.attributes,
+                          self.encoding, self._indexing_mode, self.dtype)
+
+    def to_coord(self):
+        """Return this array as an CoordXArray"""
+        return self
 
 
 def _math_safe_attributes(attributes):

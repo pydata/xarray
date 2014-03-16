@@ -15,6 +15,7 @@ from xray import Dataset, DatasetArray, XArray, backends, open_dataset, utils
 
 from . import TestCase
 
+
 _test_data_path = os.path.join(os.path.dirname(__file__), 'data')
 
 _dims = {'dim1': 100, 'dim2': 50, 'dim3': 10}
@@ -36,6 +37,57 @@ def create_test_data():
         data = np.random.normal(size=tuple(_dims[d] for d in dims))
         obj[v] = (dims, data, {'foo': 'variable'})
     return obj
+
+
+class UnexpectedDataAccess(Exception):
+    pass
+
+
+def _data_fail(*args, **kwdargs):
+    raise UnexpectedDataAccess("Tried Accessing Data")
+
+
+class InaccessibleArray(XArray):
+    def __init__(self, dims, data, *args, **kwargs):
+        XArray.__init__(self, dims, data, *args, **kwargs)
+        # make sure the only operations on _data
+        # are to check ndim, dtype, size and shape
+        self._data = mock.Mock()
+        self._data.ndim = data.ndim
+        self._data.dtype = data.dtype
+        self._data.size = data.size
+        self._data.shape = data.shape
+        # fail if the actual data is accessed from _data
+        self._data.__getitem__ = _data_fail
+
+    @property
+    def data(self):
+        _data_fail()
+
+
+class InaccessibleVariableDataStore(backends.InMemoryDataStore):
+    def __init__(self):
+        self.dimensions = OrderedDict()
+        self._variables = OrderedDict()
+        self.attributes = OrderedDict()
+
+    def set_variable(self, name, variable):
+        self._variables[name] = variable
+        return self._variables[name]
+
+    @property
+    def variables(self):
+        coords = [k for k in self._variables.keys()
+                  if k in self.dimensions]
+
+        def mask_noncoords(k, v):
+            if k in coords:
+                return k, v
+            else:
+                return k, InaccessibleArray(v.dimensions, v.data, v.attributes)
+        return utils.FrozenOrderedDict(mask_noncoords(k, v)
+                            for k, v in self._variables.iteritems())
+
 
 
 class TestDataset(TestCase):
@@ -230,19 +282,22 @@ class TestDataset(TestCase):
 
     def test_copy(self):
         data = create_test_data()
-        var = data.variables[_testvar]
-        var.attributes['foo'] = 'hello world'
-        var_copy = var.__deepcopy__()
-        self.assertEqual(var.data[2, 3], var_copy.data[2, 3])
-        var_copy.data[2, 3] = np.pi
-        self.assertNotEqual(var.data[2, 3], np.pi)
-        self.assertEqual(var_copy.attributes['foo'], var.attributes['foo'])
-        var_copy.attributes['foo'] = 'xyz'
-        self.assertNotEqual(var_copy.attributes['foo'], var.attributes['foo'])
-        self.assertEqual(var_copy.attributes['foo'], 'xyz')
-        self.assertNotEqual(id(var), id(var_copy))
-        self.assertNotEqual(id(var.data), id(var_copy.data))
-        self.assertNotEqual(id(var.attributes), id(var_copy.attributes))
+
+        copied = data.copy(deep=False)
+        self.assertDatasetEqual(data, copied)
+        for k in data:
+            v0 = data.variables[k]
+            v1 = copied.variables[k]
+            self.assertIs(v0, v1)
+        copied['foo'] = ('z', np.arange(5))
+        self.assertNotIn('foo', data)
+
+        copied = data.copy(deep=True)
+        self.assertDatasetEqual(data, copied)
+        for k in data:
+            v0 = data.variables[k]
+            v1 = copied.variables[k]
+            self.assertIsNot(v0, v1)
 
     def test_rename(self):
         data = create_test_data()
@@ -266,6 +321,13 @@ class TestDataset(TestCase):
 
         self.assertTrue('var1' not in renamed.variables)
         self.assertTrue('dim2' not in renamed.variables)
+
+        # verify that we can rename a variable without accessing the data
+        var1 = data['var1']
+        data['var1'] = InaccessibleArray(var1.dimensions, var1.data)
+        renamed = data.rename(newnames)
+        with self.assertRaises(UnexpectedDataAccess):
+            renamed['renamed_var1'].data
 
     def test_squeeze(self):
         data = Dataset({'foo': (['x', 'y', 'z'], [[[1], [2]]])})
@@ -413,53 +475,6 @@ class TestDataset(TestCase):
         self.assertTrue(expected.equals(actual))
 
     def test_lazy_load(self):
-
-        class UnexpectedDataAccess(BaseException):
-            pass
-
-        def _fail(*args, **kwdargs):
-            raise UnexpectedDataAccess("Tried Accessing Data")
-
-        class InaccesibleArray(XArray):
-            def __init__(self, dims, data, attributes):
-                XArray.__init__(self, dims, data, attributes)
-                # make sure the only operations on _data
-                # are to check ndim, dtype, size and shape
-                self._data = mock.Mock()
-                self._data.ndim = data.ndim
-                self._data.dtype = data.dtype
-                self._data.size = data.size
-                self._data.shape = data.shape
-                # fail if the actual data is accessed from _data
-                self._data.__getitem__ = _fail
-
-            @property
-            def data(self):
-                raise UnexpectedDataAccess("Tried Accessing Data")
-
-        class InaccessibleVariableDataStore(backends.InMemoryDataStore):
-            def __init__(self):
-                self.dimensions = OrderedDict()
-                self._variables = OrderedDict()
-                self.attributes = OrderedDict()
-
-            def set_variable(self, name, variable):
-                self._variables[name] = variable
-                return self._variables[name]
-
-            @property
-            def variables(self):
-                coords = [k for k in self._variables.keys()
-                          if k in self.dimensions]
-
-                def mask_noncoords(k, v):
-                    if k in coords:
-                        return k, v
-                    else:
-                        return k, InaccesibleArray(v.dimensions, v.data, v.attributes)
-                return utils.FrozenOrderedDict(mask_noncoords(k, v)
-                                    for k, v in self._variables.iteritems())
-
         store = InaccessibleVariableDataStore()
         store.set_dimension('dim', 10)
         store.set_variable('dim', XArray(('dim'),
