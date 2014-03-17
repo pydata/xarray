@@ -12,6 +12,7 @@ Contents:
    :maxdepth: 1
 
    data-structures
+   getting-started
    api
 
 Indices and tables
