@@ -272,14 +272,16 @@ class Dataset(Mapping):
     def __setitem__(self, key, value):
         """Add an array to this dataset.
 
-        If value is a `DatasetArray`, merge its contents into this dataset.
+        If value is a `DatasetArray`, call its `select()` method, rename it to
+        `key` and merge the contents of the resulting dataset into this
+        dataset.
 
         If value is an `XArray` object (or tuple of form
         `(dimensions, data[, attributes])`), add it to this dataset as a new
         variable.
         """
         if isinstance(value, DatasetArray):
-            self.merge(value.rename(key).dataset, inplace=True,
+            self.merge(value.rename(key).select().dataset, inplace=True,
                        overwrite_vars=[key])
         else:
             self.set_variables({key: value})
