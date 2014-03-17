@@ -128,7 +128,7 @@ class XArray(AbstractArray):
         return len(self._data)
 
     def in_memory(self):
-        return isinstance(self._data, (np.array, pd.Index))
+        return isinstance(self._data, (np.ndarray, pd.Index))
 
     def _data_as_ndarray(self):
         if isinstance(self._data, pd.Index):
