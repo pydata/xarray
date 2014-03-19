@@ -221,13 +221,26 @@ def encode_cf_datetime(dates, units=None, calendar=None):
     return (num, units, calendar)
 
 
+def safe_isnan(arr):
+    """Like np.isnan for floating point arrays, but returns a vector of the
+    repeated value `False` for non-floating point arrays
+
+    This is necessary because numpy does not support NaN or isnan for integer
+    valued arrays.
+    """
+    if np.issubdtype(arr.dtype, float):
+        return np.isnan(arr)
+    else:
+        return np.zeros(arr.shape, dtype=bool)
+
+
 def allclose_or_equiv(arr1, arr2, rtol=1e-5, atol=1e-8):
     """Like np.allclose, but also allows values to be NaN in both arrays
     """
     if arr1.shape != arr2.shape:
         return False
-    nan_indices = np.isnan(arr1)
-    if not (nan_indices == np.isnan(arr2)).all():
+    nan_indices = safe_isnan(arr1)
+    if not (nan_indices == safe_isnan(arr2)).all():
         return False
     if arr1.ndim > 0:
         arr1 = arr1[~nan_indices]
@@ -238,31 +251,26 @@ def allclose_or_equiv(arr1, arr2, rtol=1e-5, atol=1e-8):
     return np.allclose(arr1, arr2, rtol=rtol, atol=atol)
 
 
-def xarray_equal(v1, v2, rtol=1e-05, atol=1e-08):
+def xarray_equal(v1, v2, rtol=1e-05, atol=1e-08, check_attributes=True):
     """True if two objects have the same dimensions, attributes and data;
     otherwise False.
 
     This function is necessary because `v1 == v2` for XArrays and DatasetArrays
     does element-wise comparisions (like numpy.ndarrays).
     """
-    v1, v2 = map(xarray.as_xarray, [v1, v2])
-    if (v1.dimensions == v2.dimensions
-            and dict_equal(v1.attributes, v2.attributes)):
-        if v1._data is v2._data:
-            # if _data is identical, skip checking arrays by value
-            return True
+    def data_equiv(arr1, arr2):
+        exact_dtypes = [np.datetime64, np.timedelta64, np.string_]
+        if any(np.issubdtype(arr.dtype, t)
+               for t in exact_dtypes for arr in [arr1, arr2]):
+            return np.array_equal(arr1, arr2)
         else:
-            def is_floating(arr):
-                return np.issubdtype(arr.dtype, float)
+            return allclose_or_equiv(arr1, arr2, rtol=rtol, atol=atol)
 
-            data1 = v1.data
-            data2 = v2.data
-            if is_floating(data1) or is_floating(data2):
-                return allclose_or_equiv(data1, data2, rtol=rtol, atol=atol)
-            else:
-                return np.array_equal(data1, data2)
-    else:
-        return False
+    v1, v2 = map(xarray.as_xarray, [v1, v2])
+    return (v1.dimensions == v2.dimensions
+            and (not check_attributes
+                 or dict_equal(v1.attributes, v2.attributes))
+            and (v1._data is v2._data or data_equiv(v1.data, v2.data)))
 
 
 def safe_cast_to_index(array):
