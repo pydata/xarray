@@ -15,23 +15,33 @@ import dataset_array
 from common import AbstractArray
 
 
-def as_xarray(array):
+def as_xarray(obj, strict=True):
     """Convert an object into an XArray
 
-    If the object is a DatasetArray or already an XArray, the existing XArray
-    object is returned. Otherwise, the object is converted into a new XArray
-    based on its 'dimensions' and 'data' attributes.
+    - If the object is already an `XArray`, return it.
+    - If the object is a `DatasetArray`, return it if `strict=False` or return
+      its variable if `strict=True`.
+    - Otherwise, if the object has 'dimensions' and 'data' attributes, convert
+      it into a new `XArray`.
+    - If all else fails, attempt to convert the object into an `XArray` by
+      unpacking it into the arguments for `XArray.__init__`.
     """
     # TODO: consider extending this method to automatically handle Iris and
     # pandas objects.
-    if hasattr(array, 'variable'):
+    if strict and hasattr(obj, 'variable'):
         # extract the focus XArray from DatasetArrays
-        array = array.variable
-    if not isinstance(array, XArray):
-        array = XArray(array.dimensions, array.data,
-                       getattr(array, 'attributes', None),
-                       getattr(array, 'encoding', None))
-    return array
+        obj = obj.variable
+    if not isinstance(obj, (XArray, dataset_array.DatasetArray)):
+        if hasattr(obj, 'dimensions') and hasattr(obj, 'data'):
+            obj = XArray(obj.dimensions, obj.data,
+                         getattr(obj, 'attributes', None),
+                         getattr(obj, 'encoding', None))
+        else:
+            try:
+                obj = XArray(*obj)
+            except TypeError:
+                raise TypeError('cannot convert argument into an XArray')
+    return obj
 
 
 def _as_compatible_data(data):

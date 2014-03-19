@@ -150,6 +150,7 @@ Top-level functions
 .. autosummary::
    :toctree: generated/
 
+   as_xarray
    broadcast_xarrays
    xarray_equal
    align

@@ -130,16 +130,12 @@ class Dataset(Mapping):
         self._attributes = OrderedDict(attributes)
 
     def _as_variable(self, name, var, decode_cf=False):
-        if isinstance(var, DatasetArray):
+        try:
             var = xarray.as_xarray(var)
-        elif not isinstance(var, xarray.XArray):
-            try:
-                var = xarray.XArray(*var)
-            except TypeError:
-                raise TypeError('Dataset variables must be of type '
-                                'DatasetArray or XArray, or a sequence of the '
-                                'form (dimensions, data[, attributes, '
-                                'encoding])')
+        except TypeError:
+            raise TypeError('Dataset variables must be of type '
+                            'DatasetArray or XArray, or a sequence of the '
+                            'form (dimensions, data[, attributes, encoding])')
         # this will unmask and rescale the data as well as convert
         # time variables to datetime indices.
         if decode_cf:
