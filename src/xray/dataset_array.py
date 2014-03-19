@@ -403,8 +403,19 @@ class DatasetArray(AbstractArray):
         ds[self.focus] = var
         return type(self)(ds, self.focus)
 
+    def _unselect_nonfocus_dims(self):
+        """Unselect all dimensions found in this array's dataset that aren't
+        also found in the dimensions of the array. Returns either a modified
+        copy or this dataset array if there were no dimensions to remove.
+        """
+        other_dims = [k for k in self.dataset.dimensions
+                      if k not in self.dimensions]
+        if other_dims:
+            self = self.unselect(*other_dims)
+        return self
+
     @classmethod
-    def concat(cls, arrays, dimension='concatenated_dimension', indexers=None,
+    def concat(cls, arrays, dimension='concat_dimension', indexers=None,
                length=None, template=None):
         """Stack arrays along a new or existing dimension to form a new
         DatasetArray.
@@ -422,8 +433,8 @@ class DatasetArray(AbstractArray):
             dimension is unchanged. Where to insert the new dimension is
             determined by whether it is found in the first array. If dimension
             is provided as an XArray or DatasetArray, the focus of the dataset
-            array is used as the stacking dimension and the array is added to
-            the returned dataset.
+            array or the singleton dimension of the xarray is used as the
+            stacking dimension and the array is added to the returned dataset.
         indexers : iterable of indexers, optional
             Iterable of indexers of the same length as variables which
             specifies how to assign variables along the given dimension. If
@@ -462,24 +473,8 @@ class DatasetArray(AbstractArray):
         Dataset.concat
         XArray.concat
         """
-        def unselect_nonfocus_dims(dataset_array):
-            # Given a dataset array, unselect all dimensions found in the
-            # dataset that aren't also found in the dimensions of the array.
-            # Returns either a modified copy or the original dataset array if
-            # there were no dimensions to remove.
-            other_dims = [k for k in dataset_array.dataset.dimensions
-                          if k not in dataset_array.dimensions]
-            if other_dims:
-                dataset_array = dataset_array.unselect(*other_dims)
-            return dataset_array
-
         ds = dataset_.Dataset()
-        if isinstance(dimension, basestring):
-            dim_name = dimension
-        else:
-            dim_name, = dimension.dimensions
-            if isinstance(dimension, cls):
-                ds[dimension.focus] = unselect_nonfocus_dims(dimension)
+        dim_name = ds._add_dimension(dimension)
 
         if template is not None:
             # use metadata from the template dataset array
@@ -498,9 +493,9 @@ class DatasetArray(AbstractArray):
                     if focus is 'concat_variable':
                         focus = array.focus
 
-        ds[focus] = xarray.XArray.concat(arrays, dimension, indexers, length,
-                                         template)
-        return unselect_nonfocus_dims(cls(ds, focus))
+        ds[focus] = xarray.XArray.concat(
+            arrays, dimension, indexers, length, template)
+        return cls(ds, focus)._unselect_nonfocus_dims()
 
     def to_dataframe(self):
         """Convert this array into a pandas.DataFrame.

@@ -723,8 +723,25 @@ class Dataset(Mapping):
                                  'which has length greater than one')
         return self.indexed_by(**{dim: 0 for dim in dimension})
 
+    def _add_dimension(self, dimension):
+        """Given a dimension (string or Array), add the dimension to this
+        dataset (is it is an array) and return its name.
+
+        N.B. This function modifies the dataset in-place.
+        """
+        if isinstance(dimension, basestring):
+            dim_name = dimension
+        else:
+            dim_name, = dimension.dimensions
+            if isinstance(dimension, DatasetArray):
+                self[dimension.focus] = dimension._unselect_nonfocus_dims()
+            else:
+                self[dim_name] = dimension
+        return dim_name
+
     @classmethod
-    def concat(cls, datasets, dimension, indexers=None, concat_over=None):
+    def concat(cls, datasets, dimension='concat_dimension', indexers=None,
+               concat_over=None):
         """Concatenate datasets along a new or existing dimension.
 
         Parameters
@@ -734,8 +751,11 @@ class Dataset(Mapping):
             matching attributes, and all variables except those along the
             stacked dimension (those that contain "dimension" as a dimension or
             are listed in "concat_over") are expected to be equal.
-        dimension : str
-            Name of the dimension to stack along.
+        dimension : str or Array, optional
+            Name of the dimension to stack along. If dimension is provided as
+            an XArray or DatasetArray, the focus of the dataset array or the
+            singleton dimension of the xarray is used as the stacking dimension
+            and the array is added to the returned dataset.
         indexers : None or iterable of indexers, optional
             Iterable of indexers of the same length as variables which
             specifies how to assign variables from each dataset along the given
@@ -756,10 +776,9 @@ class Dataset(Mapping):
         datasets = list(datasets)
         if not datasets:
             raise ValueError('datasets cannot be empty')
-        if not isinstance(dimension, basestring):
-            raise ValueError('dimension currently must be a string')
         # create the new dataset and add non-concatenated variables
         concatenated = cls({}, datasets[0].attributes)
+        dim_name = concatenated._add_dimension(dimension)
         if concat_over is None:
             concat_over = set()
         else:
@@ -769,8 +788,10 @@ class Dataset(Mapping):
                                  'in the first dataset %r'
                                  % (concat_over, datasets[0]))
         for k, v in datasets[0].variables.iteritems():
-            if k == dimension or dimension in v.dimensions:
-                concat_over.add(k)
+            if k == dim_name or dim_name in v.dimensions:
+                if k not in concatenated:
+                    # don't concat over dim_name if it was provided as an array
+                    concat_over.add(k)
             elif k not in concat_over:
                 concatenated[k] = v
         # check that global attributes and non-concatenated variables are fixed
@@ -781,19 +802,15 @@ class Dataset(Mapping):
             for k, v in ds.variables.iteritems():
                 if k not in concatenated and k not in concat_over:
                     raise ValueError('encountered unexpected variable %r' % k)
-                elif (k in concatenated and
+                elif (k in concatenated and k != dim_name and
                           not utils.xarray_equal(v, concatenated[k])):
                     raise ValueError(
                         'variable %r not equal across datasets' % k)
-        # stack up each variable in turn
+        # stack up each variable to fill-out the dataset
         for k in concat_over:
             concatenated[k] = xarray.XArray.concat(
-                [ds[k] for ds in datasets], dimension, indexers)
-        # finally, reorder the concatenated dataset's variables to the order they
-        # were encountered in the first dataset
-        reordered = cls(OrderedDict((k, concatenated[k]) for k in datasets[0]),
-                        concatenated.attributes)
-        return reordered
+                [ds[k] for ds in datasets], dim_name, indexers)
+        return concatenated
 
     def to_dataframe(self):
         """Convert this dataset into a pandas.DataFrame.
