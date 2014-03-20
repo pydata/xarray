@@ -260,8 +260,8 @@ def xarray_equal(v1, v2, rtol=1e-05, atol=1e-08, check_attributes=True):
     """
     def data_equiv(arr1, arr2):
         exact_dtypes = [np.datetime64, np.timedelta64, np.string_]
-        if any(np.issubdtype(arr.dtype, t)
-               for t in exact_dtypes for arr in [arr1, arr2]):
+        if any(any(np.issubdtype(arr.dtype, t) for t in exact_dtypes)
+               or arr.dtype == object for arr in [arr1, arr2]):
             return np.array_equal(arr1, arr2)
         else:
             return allclose_or_equiv(arr1, arr2, rtol=rtol, atol=atol)
