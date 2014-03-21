@@ -278,6 +278,19 @@ class TestDataset(TestCase):
                          data.labeled_by(
                             time=pd.date_range('2000-01-01', periods=3)))
 
+    def test_reindex_like(self):
+        data = create_test_data()
+        expected = data.indexed_by(dim1=slice(10), time=slice(13))
+        actual = data.reindex_like(expected)
+        self.assertDatasetEqual(actual, expected)
+
+        expected = data.copy(deep=True)
+        expected['dim3'] = ('dim3', list('cdefghijkl'))
+        expected['var3'][:-2] = expected['var3'][2:]
+        expected['var3'][-2:] = np.nan
+        actual = data.reindex_like(expected)
+        self.assertDatasetEqual(actual, expected)
+
     def test_variable_indexing(self):
         data = create_test_data()
         v = data['var1']

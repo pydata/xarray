@@ -232,6 +232,29 @@ class DataArray(AbstractArray):
         return self.indexed_by(**remap_loc_indexers(self.dataset.variables,
                                                     indexers))
 
+    def reindex_like(self, other):
+        """Conform this DatasetArray onto the coordinates of another object,
+        filling in missing values with NaN
+
+        Parameters
+        ----------
+        other : Dataset or DatasetArray
+            Object with a coordinates attribute giving a mapping from dimension
+            names to xray.XArray objects, which provides coordinates upon which
+            to index the variables in this dataset. The coordinates on this
+            other object need not be the same as the coordinates on this
+            dataset. Any mis-matched coordinates values will be filled in with
+            NaN, and any mis-matched coordinate names will simply be ignored.
+
+        Returns
+        -------
+        reindexed : DatasetArray
+            Another dataset array, with coordinates replaced from the other
+            object.
+        """
+        ds = self.select().dataset.reindex_like(other)
+        return type(self)(ds, self.focus)
+
     def rename(self, new_name_or_name_dict):
         """Returns a new DataArray with renamed variables.
 

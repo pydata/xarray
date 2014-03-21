@@ -466,6 +466,96 @@ class Dataset(Mapping):
         """
         return self.indexed_by(**remap_loc_indexers(self, indexers))
 
+    def reindex_like(self, other):
+        """Conform a Dataset onto the coordinates of another object, filling in
+        missing values with NaN
+
+        Parameters
+        ----------
+        other : Dataset or DatasetArray
+            Object with a coordinates attribute giving a mapping from dimension
+            names to xray.XArray objects, which provides coordinates upon which
+            to index the variables in this dataset. The coordinates on this
+            other object need not be the same as the coordinates on this
+            dataset. Any mis-matched coordinates values will be filled in with
+            NaN, and any mis-matched coordinate names will simply be ignored.
+
+        Returns
+        -------
+        reindexed : Dataset
+            Another dataset, with coordinates replaced from the other object.
+        """
+        # build up indexers for assignment along each coordinate
+        to_indexers = {}
+        from_indexers = {}
+        for k, v in self.coordinates.iteritems():
+            if k in other.coordinates:
+                indexer = v.index.get_indexer(other.coordinates[k].index)
+                # N.B. pandas uses negative values from get_indexer to signify
+                # values that are missing in the index
+                to_indexers[k] = indexer >= 0
+                from_indexers[k] = indexer[to_indexers[k]]
+                if to_indexers[k].all():
+                    # if an indexer includes no negative values, then the
+                    # assignment can be to a full-slice (which is much faster,
+                    # and means we won't need to fill in any missing values)
+                    to_indexers[k] = slice(None)
+
+        def indexer_tuple(var, indexers):
+            return tuple(indexers.get(d, slice(None)) for d in var.dimensions)
+
+        variables = OrderedDict()
+        for name, var in self.variables.iteritems():
+            if name in other.coordinates:
+                # coordinates are semi-immutable CoordXArray objects, so just
+                # use the other coordinate
+                new_var = other.coordinates[name]
+            else:
+                # TODO: Resolve edge cases where variables are not found in
+                # self.coordinates, but actually take on coordinates values
+                # associated with a variable in the second dataset. An example
+                # would be latitude and longitude if the dataset has some non-
+                # Mercator projection. For these variables, we probably want
+                # to replace them with the other coordinates unchanged (if
+                # possible) instead of filling these values in with NaN.
+
+                # we need to copy values (probably)
+                assign_to = indexer_tuple(var, to_indexers)
+                assign_from = indexer_tuple(var, from_indexers)
+
+                if any(not isinstance(idx, slice) for idx in assign_to):
+                    # there missing values to in-fill
+                    dtype = var.dtype
+                    # TODO: factor this dtype inference out into another
+                    # function (once we multiple functions that can in-fill
+                    # missing values)
+                    if np.issubdtype(dtype, np.datetime64):
+                        fill_value = np.datetime64('NaT')
+                    elif any(np.issubdtype(dtype, t) for t in (str, unicode)):
+                        fill_value = 'NA'
+                    elif any(np.issubdtype(dtype, t) for t in (int, float)):
+                        # convert to floating point so NaN is valid
+                        dtype = float
+                        fill_value = np.nan
+                    else:
+                        dtype = object
+                        fill_value = np.nan
+
+                    shape = tuple(s if isinstance(idx, slice) else idx.size
+                                  for idx, s in zip(assign_to, var.shape))
+                    data = np.empty(shape, dtype=dtype)
+                    data[:] = fill_value
+                    # create a new XArray so we can use orthogonal indexing
+                    new_var = xarray.XArray(
+                        var.dimensions, data, var.attributes)
+                    new_var[assign_to] = var[assign_from]
+                else:
+                    # type coercion is not necessary as there are no missing
+                    # values
+                    new_var = var[assign_from]
+            variables[name] = new_var
+        return type(self)(variables, self.attributes)
+
     def rename(self, name_dict):
         """Returns a new object with renamed variables and dimensions.
 
