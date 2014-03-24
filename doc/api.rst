@@ -88,10 +88,8 @@ Selecting
    DatasetArray.labeled_by
    DatasetArray.rename
    DatasetArray.select
-   DatasetArray.unselected
    DatasetArray.unselect
    DatasetArray.squeeze
-   DatasetArray.refocus
 
 Group operations
 ~~~~~~~~~~~~~~~~

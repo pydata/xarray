@@ -237,7 +237,7 @@ class DatasetArray(AbstractArray):
 
     def select(self, *names):
         """Returns a new DatasetArray with only the named variables, as well
-        as this DatasetArray's focus.
+        as this DatasetArray's focus (and all associated coordinates).
 
         See Also
         --------
@@ -245,12 +245,6 @@ class DatasetArray(AbstractArray):
         """
         names = names + (self.focus,)
         return type(self)(self.dataset.select(*names), self.focus)
-
-    def unselected(self):
-        """Returns a copy of this DatasetArray's dataset with this
-        DatasetArray's focus variable removed.
-        """
-        return self.dataset.unselect(self.focus)
 
     def unselect(self, *names):
         """Returns a new DatasetArray without the named variables.
@@ -264,20 +258,6 @@ class DatasetArray(AbstractArray):
                              'DatasetArray with unselect. Use the `unselected`'
                              'method or the `unselect` method of the dataset.')
         return type(self)(self.dataset.unselect(*names), self.focus)
-
-    def refocus(self, new_var, name=None):
-        """Returns a copy of this DatasetArray's dataset with this
-        DatasetArray's focus variable replaced by `new_var`.
-
-        If `new_var` is a dataset array, its contents will be merged in.
-        """
-        if not hasattr(new_var, 'dimensions'):
-            new_var = type(self.variable)(self.variable.dimensions, new_var)
-        ds = self.dataset.copy() if self.is_coord() else self.unselected()
-        if name is None:
-            name = self.focus + '_'
-        ds[name] = new_var
-        return type(self)(ds, name)
 
     def groupby(self, group, squeeze=True):
         """Group this dataset by unique values of the indicated group.
@@ -332,7 +312,9 @@ class DatasetArray(AbstractArray):
         numpy.transpose
         Array.transpose
         """
-        return self.refocus(self.variable.transpose(*dimensions), self.focus)
+        ds = self.copy()
+        ds[self.focus] = self.variable.transpose(*dimensions)
+        return ds[self.focus]
 
     def squeeze(self, dimension=None):
         """Return a new DatasetArray object with squeezed data.
@@ -520,15 +502,35 @@ class DatasetArray(AbstractArray):
         index = pd.MultiIndex.from_product(coords, names=index_names)
         return pd.Series(self.data.reshape(-1), index=index, name=self.focus)
 
+    def _select_coordinates(self):
+        dataset = self.select().dataset
+        if not self.is_coord():
+            del dataset[self.focus]
+        return dataset
+
+    def _refocus(self, new_var, name=None):
+        """Returns a copy of this DatasetArray's dataset with this
+        DatasetArray's focus variable replaced by `new_var`.
+
+        If `new_var` is a dataset array, its contents will be merged in.
+        """
+        if not hasattr(new_var, 'dimensions'):
+            new_var = type(self.variable)(self.variable.dimensions, new_var)
+        ds = self._select_coordinates()
+        if name is None:
+            name = self.focus + '_'
+        ds[name] = new_var
+        return type(self)(ds, name)
+
     def __array_wrap__(self, obj, context=None):
-        return self.refocus(self.variable.__array_wrap__(obj, context))
+        return self._refocus(self.variable.__array_wrap__(obj, context))
 
     @staticmethod
     def _unary_op(f):
         @functools.wraps(f)
         def func(self, *args, **kwargs):
-            return self.refocus(f(self.variable, *args, **kwargs),
-                                self.focus + '_' + f.__name__)
+            return self._refocus(f(self.variable, *args, **kwargs),
+                                 self.focus + '_' + f.__name__)
         return func
 
     def _check_coordinates_compat(self, other):
@@ -546,9 +548,9 @@ class DatasetArray(AbstractArray):
             # TODO: automatically group by other variable dimensions to allow
             # for broadcasting dimensions like 'dayofyear' against 'time'
             self._check_coordinates_compat(other)
-            ds = self.dataset.copy() if self.is_coord() else self.unselected()
-            if hasattr(other, 'unselected'):
-                ds.merge(other.unselected(), inplace=True)
+            ds = self._select_coordinates()
+            if hasattr(other, '_select_coordinates'):
+                ds.merge(other._select_coordinates(), inplace=True)
             other_array = getattr(other, 'variable', other)
             other_focus = getattr(other, 'focus', 'other')
             focus = self.focus + '_' + f.__name__ + '_' + other_focus
@@ -565,8 +567,8 @@ class DatasetArray(AbstractArray):
             self._check_coordinates_compat(other)
             other_array = getattr(other, 'variable', other)
             self.variable = f(self.variable, other_array)
-            if hasattr(other, 'unselected'):
-                self.dataset.merge(other.unselected(), inplace=True)
+            if hasattr(other, '_select_coordinates'):
+                self.dataset.merge(other._select_coordinates(), inplace=True)
             return self
         return func
 

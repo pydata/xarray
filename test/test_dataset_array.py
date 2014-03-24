@@ -1,4 +1,5 @@
 import numpy as np
+from copy import deepcopy
 
 from xray import Dataset, DatasetArray, XArray, align
 from . import TestCase, ReturnItem
@@ -10,6 +11,8 @@ class TestDatasetArray(TestCase):
         self.assertDatasetEqual(ar1.dataset, ar2.dataset)
 
     def assertDSArrayEquiv(self, ar1, ar2):
+        self.assertIsInstance(ar1, DatasetArray)
+        self.assertIsInstance(ar2, DatasetArray)
         random_name = 'randomly-renamed-variable'
         self.assertDSArrayEqual(ar1.rename(random_name),
                                 ar2.rename(random_name))
@@ -88,14 +91,6 @@ class TestDatasetArray(TestCase):
         self.assertEqual(renamed.dataset, self.ds.rename({'foo': 'bar'}))
         self.assertEqual(renamed.focus, 'bar')
 
-    def test_refocus(self):
-        self.assertXArrayEqual(self.dv, self.dv.refocus(self.v))
-        self.assertXArrayEqual(self.dv, self.dv.refocus(self.x))
-        self.ds['x'] = ('x', np.array(list('abcdefghij')))
-        self.assertXArrayEqual(self.dv.coordinates['x'],
-                            self.dv['x'].refocus(
-                                np.arange(10)).coordinates['x'])
-
     def test_dataset_getitem(self):
         dv = self.ds['foo']
         self.assertDSArrayEqual(dv, self.dv)
@@ -103,17 +98,16 @@ class TestDatasetArray(TestCase):
     def test_array_interface(self):
         self.assertArrayEqual(np.asarray(self.dv), self.x)
         # test patched in methods
-        self.assertArrayEqual(self.dv.take([2, 3]), self.x.take([2, 3]))
-        self.assertDSArrayEquiv(self.dv.argsort(),
-                                self.dv.refocus(self.x.argsort()))
-        self.assertDSArrayEquiv(self.dv.clip(2, 3),
-                                self.dv.refocus(self.x.clip(2, 3)))
+        self.assertArrayEqual(self.dv.take([2, 3]), self.v.take([2, 3]))
+        self.assertXArrayEqual(self.dv.argsort(), self.v.argsort())
+        self.assertXArrayEqual(self.dv.clip(2, 3), self.v.clip(2, 3))
         # test ufuncs
-        self.assertDSArrayEquiv(np.sin(self.dv),
-                                self.dv.refocus(np.sin(self.x)))
+        expected = deepcopy(self.ds)
+        expected['foo'][:] = np.sin(self.x)
+        self.assertDSArrayEquiv(expected['foo'], np.sin(self.dv))
         self.assertDSArrayEquiv(self.dv, np.maximum(self.v, self.dv))
-        self.ds['bar'] = XArray(['x', 'y'], np.zeros((10, 20)))
-        self.assertDSArrayEquiv(self.dv, np.maximum(self.dv, self.ds['bar']))
+        bar = XArray(['x', 'y'], np.zeros((10, 20)))
+        self.assertDSArrayEquiv(self.dv, np.maximum(self.dv, bar))
 
     def test_math(self):
         x = self.x
@@ -137,6 +131,40 @@ class TestDatasetArray(TestCase):
             a + b
         with self.assertRaisesRegexp(ValueError, 'not aligned'):
             b + a
+
+    def test_dataset_math(self):
+        # verify that mathematical operators keep around the expected variables
+        # when doing math with dataset arrays from one or more aligned datasets
+        obs = Dataset({'tmin': ('x', np.arange(5)),
+                       'tmax': ('x', 10 + np.arange(5)),
+                       'x': ('x', 0.5 * np.arange(5))})
+
+        actual = 2 * obs['tmax']
+        expected = Dataset({'tmax2': ('x', 2 * (10 + np.arange(5))),
+                            'x': obs['x']})['tmax2']
+        self.assertDSArrayEquiv(actual, expected)
+
+        actual = obs['tmax'] - obs['tmin']
+        expected = Dataset({'trange': ('x', 10 * np.ones(5)),
+                            'x': obs['x']})['trange']
+        self.assertDSArrayEquiv(actual, expected)
+
+        sim = Dataset({'tmin': ('x', 1 + np.arange(5)),
+                       'tmax': ('x', 11 + np.arange(5)),
+                       'x': ('x', 0.5 * np.arange(5))})
+
+        actual = sim['tmin'] - obs['tmin']
+        expected = Dataset({'error': ('x', np.ones(5)),
+                            'x': obs['x']})['error']
+        self.assertDSArrayEquiv(actual, expected)
+
+        # in place math shouldn't remove or conflict with other variables
+        actual = deepcopy(sim['tmin'])
+        actual -= obs['tmin']
+        expected = Dataset({'tmin': ('x', np.ones(5)),
+                            'tmax': sim['tmax'],
+                            'x': sim['x']})['tmin']
+        self.assertDSArrayEquiv(actual, expected)
 
     def test_coord_math(self):
         ds = Dataset({'x': ('x', 1 + np.arange(3))})
@@ -194,8 +222,8 @@ class TestDatasetArray(TestCase):
 
         identity = lambda x: x
         for g in ['x', 'y']:
-            for shortcut in [True, False]:
-                for squeeze in [True, False]:
+            for shortcut in [False, True]:
+                for squeeze in [False, True]:
                     expected = self.dv
                     actual = self.dv.groupby(g, squeeze=squeeze).apply(
                         identity, shortcut=shortcut)
