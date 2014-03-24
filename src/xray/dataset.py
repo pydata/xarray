@@ -466,9 +466,9 @@ class Dataset(Mapping):
         """
         return self.indexed_by(**remap_loc_indexers(self, indexers))
 
-    def reindex_like(self, other):
-        """Conform a Dataset onto the coordinates of another object, filling in
-        missing values with NaN
+    def reindex_like(self, other, copy=True):
+        """Conform this object onto the coordinates of another object, filling
+        in missing values with NaN.
 
         Parameters
         ----------
@@ -479,80 +479,149 @@ class Dataset(Mapping):
             other object need not be the same as the coordinates on this
             dataset. Any mis-matched coordinates values will be filled in with
             NaN, and any mis-matched coordinate names will simply be ignored.
+        copy : bool, optional
+            If `copy=True`, the returned dataset contains only copied
+            variables. If `copy=False` and no reindexing is required then
+            original variables from this dataset are returned.
 
         Returns
         -------
         reindexed : Dataset
             Another dataset, with coordinates replaced from the other object.
+
+        See Also
+        --------
+        Dataset.reindex
+        align
         """
+        return self.reindex(copy=copy, **other.coordinates)
+
+    def reindex(self, copy=True, **coordinates):
+        """Conform this object onto a new set of coordinates or pandas.Index
+        objects, filling in missing values with NaN.
+
+        Parameters
+        ----------
+        copy : bool, optional
+            If `copy=True`, the returned dataset contains only copied
+            variables. If `copy=False` and no reindexing is required then
+            original variables from this dataset are returned.
+        **coordinates : dict
+            Dictionary with keys given by dimension names and values given by
+            arrays of coordinate labels. Any mis-matched coordinates values
+            will be filled in with NaN, and any mis-matched coordinate names
+            will simply be ignored.
+
+        Returns
+        -------
+        reindexed : Dataset
+            Another dataset, with replaced coordinates.
+
+        See Also
+        --------
+        Dataset.reindex_like
+        align
+        """
+        if not coordinates:
+            # shortcut
+            return self.copy(deep=True) if copy else self
+
         # build up indexers for assignment along each coordinate
         to_indexers = {}
         from_indexers = {}
-        for k, v in self.coordinates.iteritems():
-            if k in other.coordinates:
-                indexer = v.index.get_indexer(other.coordinates[k].index)
-                # N.B. pandas uses negative values from get_indexer to signify
+        for name, coord in self.coordinates.iteritems():
+            if name in coordinates:
+                index = coordinates[name]
+                if hasattr(index, 'index'):
+                    index = index.index
+                indexer = coord.index.get_indexer(index)
+
+                # Note pandas uses negative values from get_indexer to signify
                 # values that are missing in the index
-                to_indexers[k] = indexer >= 0
-                from_indexers[k] = indexer[to_indexers[k]]
-                if to_indexers[k].all():
-                    # if an indexer includes no negative values, then the
+                # The non-negative values thus indicate the non-missing values
+                to_indexers[name] = indexer >= 0
+                if to_indexers[name].all():
+                    # If an indexer includes no negative values, then the
                     # assignment can be to a full-slice (which is much faster,
                     # and means we won't need to fill in any missing values)
-                    to_indexers[k] = slice(None)
+                    to_indexers[name] = slice(None)
 
-        def indexer_tuple(var, indexers):
+                from_indexers[name] = indexer[to_indexers[name]]
+                if np.array_equal(from_indexers[name], np.arange(coord.size)):
+                    # If the indexer is equal to the original index, use a full
+                    # slice object to speed up selection and so we can avoid
+                    # unnecessary copies
+                    from_indexers[name] = slice(None)
+
+        def is_full_slice(idx):
+            return isinstance(idx, slice) and idx == slice(None)
+
+        def any_not_full_slices(indexers):
+            return any(not is_full_slice(idx) for idx in indexers)
+
+        def var_indexers(var, indexers):
             return tuple(indexers.get(d, slice(None)) for d in var.dimensions)
 
+        def get_fill_value_and_dtype(dtype):
+            if np.issubdtype(dtype, np.datetime64):
+                fill_value = np.datetime64('NaT')
+            elif any(np.issubdtype(dtype, t) for t in (int, float)):
+                # convert to floating point so NaN is valid
+                dtype = float
+                fill_value = np.nan
+            elif any(np.issubdtype(dtype, t) for t in (str, unicode)):
+                # TODO: consider eliminating this case to better align behavior
+                # with pandas (which upcasts strings to object arrays and
+                # inserts NaN for missing values)
+                fill_value = 'NA'
+            else:
+                dtype = object
+                fill_value = np.nan
+            return fill_value, dtype
+
+        # create variables for the new dataset
         variables = OrderedDict()
         for name, var in self.variables.iteritems():
-            if name in other.coordinates:
-                # coordinates are semi-immutable CoordXArray objects, so just
-                # use the other coordinate
-                new_var = other.coordinates[name]
+            if name in coordinates:
+                new_var = coordinates[name]
+                if not (hasattr(new_var, 'dimensions') and
+                        hasattr(new_var, 'data')):
+                    new_var = xarray.CoordXArray(var.dimensions, new_var,
+                                                 var.attributes, var.encoding)
+                elif copy:
+                    new_var = xarray.as_xarray(new_var).copy()
             else:
                 # TODO: Resolve edge cases where variables are not found in
-                # self.coordinates, but actually take on coordinates values
+                # coordinates, but actually take on coordinates values
                 # associated with a variable in the second dataset. An example
                 # would be latitude and longitude if the dataset has some non-
-                # Mercator projection. For these variables, we probably want
-                # to replace them with the other coordinates unchanged (if
-                # possible) instead of filling these values in with NaN.
+                # Mercator projection. For these variables, we probably want to
+                # replace them with the other coordinates unchanged (if
+                # possible) instead of filling these coordinate values in with
+                # NaN.
 
-                # we need to copy values (probably)
-                assign_to = indexer_tuple(var, to_indexers)
-                assign_from = indexer_tuple(var, from_indexers)
+                assign_to = var_indexers(var, to_indexers)
+                assign_from = var_indexers(var, from_indexers)
 
-                if any(not isinstance(idx, slice) for idx in assign_to):
-                    # there missing values to in-fill
-                    dtype = var.dtype
-                    # TODO: factor this dtype inference out into another
-                    # function (once we multiple functions that can in-fill
-                    # missing values)
-                    if np.issubdtype(dtype, np.datetime64):
-                        fill_value = np.datetime64('NaT')
-                    elif any(np.issubdtype(dtype, t) for t in (str, unicode)):
-                        fill_value = 'NA'
-                    elif any(np.issubdtype(dtype, t) for t in (int, float)):
-                        # convert to floating point so NaN is valid
-                        dtype = float
-                        fill_value = np.nan
-                    else:
-                        dtype = object
-                        fill_value = np.nan
-
-                    shape = tuple(s if isinstance(idx, slice) else idx.size
-                                  for idx, s in zip(assign_to, var.shape))
+                if any_not_full_slices(assign_to):
+                    # there are missing values to in-fill
+                    fill_value, dtype = get_fill_value_and_dtype(var.dtype)
+                    shape = tuple(length if is_full_slice(idx) else idx.size
+                                  for idx, length in zip(assign_to, var.shape))
                     data = np.empty(shape, dtype=dtype)
                     data[:] = fill_value
                     # create a new XArray so we can use orthogonal indexing
-                    new_var = xarray.XArray(
-                        var.dimensions, data, var.attributes)
-                    new_var[assign_to] = var[assign_from]
-                else:
+                    new_var = xarray.XArray(var.dimensions, data, var.attributes)
+                    new_var[assign_to] = var[assign_from].data
+                elif any_not_full_slices(assign_from):
                     # type coercion is not necessary as there are no missing
                     # values
                     new_var = var[assign_from]
+                else:
+                    # no reindexing is necessary
+                    # here we need to manually deal with copying data, since
+                    # we neither created a new ndarray nor used fancy indexing
+                    new_var = var.copy() if copy else var
             variables[name] = new_var
         return type(self)(variables, self.attributes)
 
