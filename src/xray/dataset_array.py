@@ -12,7 +12,8 @@ import dataset as dataset_
 import groupby
 import ops
 from common import AbstractArray
-from utils import expanded_indexer, FrozenOrderedDict, remap_loc_indexers
+from utils import (expanded_indexer, FrozenOrderedDict, remap_loc_indexers,
+                   multi_index_from_product)
 
 
 class _LocIndexer(object):
@@ -506,18 +507,29 @@ class DataArray(AbstractArray):
         return self.dataset.to_dataframe()
 
     def to_series(self):
-        """Conver this array into a pandas.Series.
+        """Convert this array into a pandas.Series.
 
         The Series is indexed by the Cartesian product of the coordinates.
         Unlike `to_dataframe`, only this array is including in the returned
         series; the other non-coordinates variables in the dataset are not.
         """
-        # np.asarray is necessary to work around a pandas bug:
-        # https://github.com/pydata/pandas/issues/6439
-        coords = [np.asarray(v) for v in self.coordinates.values()]
-        index_names = self.coordinates.keys()
-        index = pd.MultiIndex.from_product(coords, names=index_names)
+        index = multi_index_from_product(self.coordinates.values(),
+                                         names=self.coordinates.keys())
         return pd.Series(self.data.reshape(-1), index=index, name=self.name)
+
+    @classmethod
+    def from_series(cls, series):
+        """Convert a pandas.Series into an xray.DatasetArray
+
+        If the series's index is a MultiIndex, it will be expanded into a
+        tensor product of one-dimensional indices  (filling in missing values
+        with NaN). Thus this operation should be the inverse of the `to_series`
+        method.
+        """
+        name = series.name if series.name is not None else 'values'
+        df = pd.DataFrame({name: series})
+        ds = dataset_.Dataset.from_dataframe(df)
+        return ds[name]
 
     def _select_coordinates(self):
         dataset = self.select().dataset

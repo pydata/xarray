@@ -489,7 +489,7 @@ class TestDataset(TestCase):
             data1['dim2'] = 2 * data1['dim2']
             Dataset.concat([data0, data1], 'dim1')
 
-    def test_to_dataframe(self):
+    def test_to_and_from_dataframe(self):
         x = np.random.randn(10)
         y = np.random.randn(10)
         t = list('abcdefghij')
@@ -499,6 +499,9 @@ class TestDataset(TestCase):
         actual = ds.to_dataframe()
         # use the .equals method to check all DataFrame metadata
         self.assertTrue(expected.equals(actual))
+
+        # check roundtrip
+        self.assertDatasetEqual(ds, Dataset.from_dataframe(actual))
 
         # test a case with a MultiIndex
         w = np.random.randn(2, 3)
@@ -510,6 +513,9 @@ class TestDataset(TestCase):
         expected = pd.DataFrame(w.reshape(-1), columns=['w'], index=exp_index)
         actual = ds.to_dataframe()
         self.assertTrue(expected.equals(actual))
+
+        # check roundtrip
+        self.assertDatasetEqual(ds, Dataset.from_dataframe(actual))
 
     def test_lazy_load(self):
         store = InaccessibleVariableDataStore()

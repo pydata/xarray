@@ -68,6 +68,7 @@ IO / Conversion
    Dataset.dumps
    Dataset.dump_to_store
    Dataset.to_dataframe
+   Dataset.from_dataframe
 
 
 DataArray
@@ -133,6 +134,7 @@ IO / Conversion
 
    DataArray.to_dataframe
    DataArray.to_series
+   DataArray.from_series
    DataArray.copy
 
 
