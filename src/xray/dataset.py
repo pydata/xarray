@@ -732,7 +732,8 @@ class Dataset(Mapping):
         else:
             dim_name, = dimension.dimensions
             if isinstance(dimension, DatasetArray):
-                self[dimension.focus] = dimension._unselect_nonfocus_dims()
+                self.merge(dimension._unselect_nonfocus_dims().dataset,
+                           inplace=True)
             else:
                 self[dim_name] = dimension
         return dim_name
