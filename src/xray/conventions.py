@@ -23,17 +23,6 @@ _reserved_names = set(['byte', 'char', 'short', 'ushort', 'int', 'uint',
 _nc3_dtype_coercions = {'int64': 'int32', 'float64': 'float32', 'bool': 'int8'}
 
 
-def pretty_print(x, numchars):
-    """Given an object x, call x.__str__() and format the returned
-    string so that it is numchars long, padding with trailing spaces or
-    truncating with ellipses as necessary"""
-    s = str(x)
-    if len(s) > numchars:
-        return s[:(numchars - 3)] + '...'
-    else:
-        return s
-
-
 def coerce_nc3_dtype(arr):
     """Coerce an array to a data type that can be stored in a netCDF-3 file
 

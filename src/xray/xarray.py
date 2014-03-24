@@ -127,6 +127,9 @@ class XArray(AbstractArray):
     def __len__(self):
         return len(self._data)
 
+    def in_memory(self):
+        return isinstance(self._data, (np.ndarray, pd.Index))
+
     def _data_as_ndarray(self):
         if isinstance(self._data, pd.Index):
             # pandas does automatic type conversion when an index is accessed
@@ -283,33 +286,6 @@ class XArray(AbstractArray):
 
     # mutable objects should not be hashable
     __hash__ = None
-
-    def __str__(self):
-        """Create a ncdump-like summary of the object"""
-        summary = ["dimensions:"]
-        # prints dims that look like:
-        #    dimension = length
-        dim_print = lambda d, l : "\t%s : %s" % (conventions.pretty_print(d, 30),
-                                                 conventions.pretty_print(l, 10))
-        # add each dimension to the summary
-        summary.extend([dim_print(d, l) for d, l in zip(self.dimensions, self.shape)])
-        summary.append("dtype : %s" % (conventions.pretty_print(self.dtype, 8)))
-        summary.append("attributes:")
-        #    attribute:value
-        summary.extend(["\t%s:%s" % (conventions.pretty_print(att, 30),
-                                     conventions.pretty_print(val, 30))
-                        for att, val in self.attributes.iteritems()])
-        # create the actual summary
-        return '\n'.join(summary).replace('\t', ' ' * 4)
-
-    def __repr__(self):
-        if self.ndim > 0:
-            dim_summary = ', '.join('%s: %s' % (k, v) for k, v
-                                    in zip(self.dimensions, self.shape))
-            contents = ' (%s): %s' % (dim_summary, self.dtype)
-        else:
-            contents = ': %s' % self.data
-        return '<xray.%s%s>' % (type(self).__name__, contents)
 
     def indexed_by(self, **indexers):
         """Return a new array indexed along the specified dimension(s).

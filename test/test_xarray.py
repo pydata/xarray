@@ -1,6 +1,7 @@
 from collections import namedtuple
 from copy import deepcopy
 from datetime import datetime
+from textwrap import dedent
 
 import numpy as np
 import pandas as pd
@@ -202,9 +203,15 @@ class TestXArray(TestCase, XArraySubclassTestCases):
             as_xarray(data)
 
     def test_repr(self):
-        v = XArray(['time', 'x'], self.d)
-        self.assertEqual('<xray.XArray (time: 10, x: 3): float64>',
-                         repr(v))
+        v = XArray(['time', 'x'], [[1, 2, 3], [4, 5, 6]], {'foo': 'bar'})
+        expected = dedent("""
+        <xray.XArray (time: 2, x: 3)>
+        array([[1, 2, 3],
+               [4, 5, 6]])
+        Attributes:
+            foo: bar
+        """).strip()
+        self.assertEqual(expected, repr(v))
 
     def test_items(self):
         data = np.random.random((10, 11))
