@@ -140,10 +140,16 @@ class XArraySubclassTestCases(object):
 
     def test_copy(self):
         v = self.cls('x', 0.5 * np.arange(10))
-        w = v.copy()
-        self.assertIs(type(v), type(w))
-        self.assertXArrayEqual(v, w)
-        self.assertEqual(v.dtype, w.dtype)
+        for deep in [True, False]:
+            w = v.copy(deep=deep)
+            self.assertIs(type(v), type(w))
+            self.assertXArrayEqual(v, w)
+            self.assertEqual(v.dtype, w.dtype)
+            if self.cls is XArray:
+                if deep:
+                    self.assertIsNot(v.data, w.data)
+                else:
+                    self.assertIs(v.data, w.data)
 
 
 class TestXArray(TestCase, XArraySubclassTestCases):

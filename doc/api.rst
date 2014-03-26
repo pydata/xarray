@@ -41,6 +41,7 @@ and values given by ``DatasetArray`` objects focused on each variable name.
    Dataset.__setitem__
    Dataset.__delitem__
    Dataset.merge
+   Dataset.copy
 
 Selecting
 ~~~~~~~~~
@@ -132,6 +133,7 @@ IO / Conversion
 
    DatasetArray.to_dataframe
    DatasetArray.to_series
+   DatasetArray.copy
 
 
 XArray

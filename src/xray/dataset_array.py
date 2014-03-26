@@ -167,12 +167,22 @@ class DatasetArray(AbstractArray):
         return FrozenOrderedDict((k, self.dataset.variables[k])
                                  for k in self.dimensions)
 
-    def copy(self):
-        return self.__copy__()
+    def copy(self, deep=True):
+        """Returns a copy of this dataset array.
+
+        If `deep=True`, a deep copy is made of all variables in the underlying
+        dataset. Otherwise, a shallow copy is made, so each variable in the new
+        dataset array's dataset is also a variable in this array's dataset.
+        """
+        return type(self)(self.dataset.copy(deep=deep), self.focus)
 
     def __copy__(self):
-        # shallow copy the underlying dataset
-        return DatasetArray(self.dataset.copy(), self.focus)
+        return self.copy(deep=False)
+
+    def __deepcopy__(self, memo=None):
+        # memo does nothing but is required for compatability with
+        # copy.deepcopy
+        return self.copy(deep=True)
 
     # mutable objects should not be hashable
     __hash__ = None

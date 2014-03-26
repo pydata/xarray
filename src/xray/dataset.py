@@ -222,17 +222,27 @@ class Dataset(Mapping):
         """
         return Frozen(self._dimensions)
 
-    def copy(self):
+    def copy(self, deep=False):
+        """Returns a copy of this dataset.
+
+        If `deep=True`, a deep copy is made of each of the component variables.
+        Otherwise, a shallow copy is made, so each variable in the new dataset
+        is also a variable in the original dataset.
         """
-        Returns a shallow copy of the current object.
-        """
-        return self.__copy__()
+        if deep:
+            variables = OrderedDict((k, v.copy(deep=True))
+                                    for k, v in self.variables.iteritems())
+        else:
+            variables = self.variables
+        return type(self)(variables, self.attributes)
 
     def __copy__(self):
-        """
-        Returns a shallow copy of the current object.
-        """
-        return type(self)(self.variables, self.attributes)
+        return self.copy(deep=False)
+
+    def __deepcopy__(self, memo=None):
+        # memo does nothing but is required for compatability with
+        # copy.deepcopy
+        return self.copy(deep=True)
 
     def __contains__(self, key):
         """The 'in' operator will return true or false depending on whether
@@ -476,12 +486,9 @@ class Dataset(Mapping):
         for k, v in self.variables.iteritems():
             name = name_dict.get(k, k)
             dims = tuple(name_dict.get(dim, dim) for dim in v.dimensions)
-            #TODO: public interface for renaming a variable without loading
-            # data?
-            kwargs = {'dtype': v.dtype} if hasattr(v, '_dtype') else {}
-            # perserve the type of the variable (XArray vs CoordXArray)
-            variables[name] = type(v)(dims, v._data, v.attributes, v.encoding,
-                                      v._indexing_mode, **kwargs)
+            var = v.copy(deep=False)
+            var.dimensions = dims
+            variables[name] = var
         return type(self)(variables, self.attributes)
 
     def merge(self, other, inplace=False, overwrite_vars=None):
