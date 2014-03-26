@@ -15,6 +15,29 @@
 import sys
 import os
 
+print "python exec:", sys.executable
+print "sys.path:", sys.path
+try:
+    import numpy
+    print "numpy: %s, %s" % (numpy.__version__, numpy.__file__)
+except ImportError:
+    print "no numpy"
+try:
+    import pandas
+    print "pandas: %s, %s" % (pandas.__version__, pandas.__file__)
+except ImportError:
+    print "no pandas"
+try:
+    import matplotlib
+    print "matplotlib: %s, %s" % (matplotlib.__version__, matplotlib.__file__)
+except ImportError:
+    print "no matplotlib"
+try:
+    import IPython
+    print "ipython: %s, %s" % (IPython.__version__, IPython.__file__)
+except ImportError:
+    print "no ipython"
+
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
@@ -22,6 +45,8 @@ import os
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'sphinxext',
                                 'numpydoc'))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'sphinxext',
+                                'ipython_sphinxext'))
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
 
 # Mock imports for readthedocs
@@ -43,7 +68,7 @@ class Mock(object):
         else:
             return Mock()
 
-MOCK_MODULES = ['numpy', 'netCDF4', 'scipy', 'scipy.io', 'pandas']
+MOCK_MODULES = ['netCDF4', 'scipy', 'scipy.io']
 
 for mod_name in MOCK_MODULES:
     sys.modules[mod_name] = Mock()
@@ -59,8 +84,10 @@ for mod_name in MOCK_MODULES:
 # ones.
 extensions = [
     'sphinx.ext.autodoc',
-    'numpydoc',
     'sphinx.ext.autosummary',
+    'numpydoc',
+    'ipython_directive',
+    'ipython_console_highlighting'
 ]
 
 autosummary_generate = True
