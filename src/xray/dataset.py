@@ -735,7 +735,7 @@ class Dataset(Mapping):
             dimension. If not supplied, indexers is inferred from the length of
             each variable along the dimension, and the variables are stacked in
             the given order.
-        concat_over : None or iterable of str, optional
+        concat_over : None or str or iterable of str, optional
             Names of additional variables to concatenate, in which "dimension"
             does not already appear as a dimension.
 
@@ -755,6 +755,8 @@ class Dataset(Mapping):
         if concat_over is None:
             concat_over = set()
         else:
+            if isinstance(concat_over, basestring):
+                concat_over = {concat_over}
             concat_over = set(concat_over)
             if any(v not in datasets[0] for v in concat_over):
                 raise ValueError('not all elements in concat_over %r found '
