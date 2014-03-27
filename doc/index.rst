@@ -1,12 +1,17 @@
-.. scidata documentation master file, created by
-   sphinx-quickstart on Thu Feb  6 18:57:54 2014.
-   You can adapt this file completely to your liking, but it should at least
-   contain the root `toctree` directive.
+xray: extended arrays for working with scientific datasets in Python
+====================================================================
 
-xray reference
-==============
+**xray** is a Python package for working with aligned sets of homogeneous,
+n-dimensional arrays. It implements flexible array operations and dataset
+manipulation for in-memory datasets within the Common Data Model widely
+used for self-describing scientific data (e.g., the NetCDF file format).
 
-Contents:
+For a longer introduction to **xray**, see the project's README on GitHub_.
+
+.. _GitHub: https://github.com/akleeman/xray
+
+Contents
+--------
 
 .. toctree::
    :maxdepth: 1
@@ -14,11 +19,3 @@ Contents:
    data-structures
    getting-started
    api
-
-Indices and tables
-==================
-
-* :ref:`genindex`
-* :ref:`modindex`
-* :ref:`search`
-
