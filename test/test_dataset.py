@@ -107,6 +107,17 @@ class TestDataset(TestCase):
         actual = '\n'.join(x.rstrip() for x in repr(data).split('\n'))
         self.assertEqual(expected, actual)
 
+        expected = dedent("""
+        <xray.Dataset>
+        Coordinates:     ()
+        Non-coordinates:
+            None
+        Attributes:
+            Empty
+        """).strip()
+        actual = '\n'.join(x.rstrip() for x in repr(Dataset()).split('\n'))
+        self.assertEqual(expected, actual)
+
     def test_init(self):
         var1 = XArray('x', np.arange(100))
         var2 = XArray('x', np.arange(1000))
