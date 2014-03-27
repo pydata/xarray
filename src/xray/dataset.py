@@ -126,7 +126,7 @@ class Dataset(Mapping):
             Whether to decode these variables according to CF conventions.
         """
         self._variables = _VariablesDict()
-        self._dimensions = OrderedDict()
+        self._dimensions = {}
         if variables is not None:
             self.set_variables(variables, decode_cf=decode_cf)
         if attributes is None:
@@ -223,7 +223,10 @@ class Dataset(Mapping):
         This dictionary cannot be modified directly, but is updated when adding
         new variables.
         """
-        return Frozen(self._dimensions)
+        # TODO: save dimensions in some sort of SortedDictionary that always
+        # iterates over its items in sorted order so we don't need to recreate
+        # the hashtable every time we check `d in self.dimensions`
+        return Frozen(OrderedDict(sorted(self._dimensions.items())))
 
     def copy(self, deep=False):
         """Returns a copy of this dataset.
