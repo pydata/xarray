@@ -5,9 +5,11 @@ formats. They should not be used directly, but rather through Dataset objects.
 """
 # TODO: implement backend logic directly in OrderedDict subclasses, to allow
 # for directly manipulating Dataset.variables and the like?
+import os
 import numpy as np
 import netCDF4 as nc4
 
+from cStringIO import StringIO
 from scipy.io import netcdf
 from collections import OrderedDict
 
@@ -72,6 +74,17 @@ class ScipyDataStore(AbstractDataStore):
     serialization.
     """
     def __init__(self, filename_or_obj, mode='r', mmap=None, version=1):
+        if isinstance(filename_or_obj, basestring):
+            # if filename_or_obj is a string we want to check if its
+            # a path to a file, or a NetCDF3 byte string.
+            try:
+                # this will fail if filename_or_obj is actually a string
+                # holding raw NetCDF3 bytes.
+                is_path = os.path.exists(filename_or_obj)
+            except:
+                is_path = False
+            if not is_path:
+                filename_or_obj = StringIO(filename_or_obj)
         self.ds = netcdf.netcdf_file(filename_or_obj, mode=mode, mmap=mmap,
                                      version=version)
 
@@ -118,7 +131,10 @@ class ScipyDataStore(AbstractDataStore):
         self.set_necessary_dimensions(variable)
         self.ds.createVariable(name, data.dtype, variable.dimensions)
         scipy_var = self.ds.variables[name]
-        scipy_var[:] = data[:]
+        if data.ndim == 0:
+            scipy_var.assignValue(data)
+        else:
+            scipy_var[:] = data[:]
         for k, v in variable.attributes.iteritems():
             self._validate_attr_key(k)
             setattr(scipy_var, k, self._cast_attr_value(v))
@@ -212,7 +228,10 @@ class NetCDF4DataStore(AbstractDataStore):
             fill_value=fill_value)
         nc4_var = self.ds.variables[name]
         nc4_var.set_auto_maskandscale(False)
-        nc4_var[:] = variable.data[:]
+        if variable.data.ndim == 0:
+            nc4_var[:] = variable.data
+        else:
+            nc4_var[:] = variable.data[:]
         nc4_var.setncatts(variable.attributes)
 
     def del_attribute(self, key):
