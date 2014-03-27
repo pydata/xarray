@@ -74,17 +74,12 @@ class ScipyDataStore(AbstractDataStore):
     serialization.
     """
     def __init__(self, filename_or_obj, mode='r', mmap=None, version=1):
-        if isinstance(filename_or_obj, basestring):
-            # if filename_or_obj is a string we want to check if its
-            # a path to a file, or a NetCDF3 byte string.
-            try:
-                # this will fail if filename_or_obj is actually a string
-                # holding raw NetCDF3 bytes.
-                is_path = os.path.exists(filename_or_obj)
-            except:
-                is_path = False
-            if not is_path:
-                filename_or_obj = StringIO(filename_or_obj)
+        # if filename is a NetCDF3 bytestring we store it in a StringIO
+        if (isinstance(filename_or_obj, basestring)
+            and filename_or_obj.startswith('CDF')):
+            # TODO: this check has the unfortunate side-effect that
+            # paths to files cannot start with 'CDF'.
+            filename_or_obj = StringIO(filename_or_obj)
         self.ds = netcdf.netcdf_file(filename_or_obj, mode=mode, mmap=mmap,
                                      version=version)
 
