@@ -491,7 +491,8 @@ class Dataset(Mapping):
             variables[name] = var
         return type(self)(variables, self.attributes)
 
-    def merge(self, other, inplace=False, overwrite_vars=None):
+    def merge(self, other, inplace=False, overwrite_vars=None,
+              attribute_conflicts='ignore'):
         """Merge two datasets into a single new dataset.
 
         This method generally not allow for overriding data. Arrays,
@@ -507,6 +508,9 @@ class Dataset(Mapping):
         overwrite_vars : list, optional
             If provided, update variables of these names without checking for
             conflicts in this dataset.
+        attribute_conflicts : str, optional
+            How to handle attribute conflicts on datasets and variables. The
+            only currently supported option is 'ignore'.
 
         Returns
         -------
@@ -518,13 +522,24 @@ class Dataset(Mapping):
         ValueError
             If any variables or dimensions conflict. Conflicting attributes
             are silently dropped.
+
+        Warning
+        -------
+        The current interface and defaults for handling for conflicting
+        attributes is not ideal and very preliminary. Expect this behavior to
+        change in future pre-release versions of xray. See the discussion
+        on GitHub: https://github.com/akleeman/xray/issues/25
         """
+        if attribute_conflicts != 'ignore':
+            raise NotImplementedError
+
         # check for conflicts
         if overwrite_vars is None:
             overwrite_vars = {}
         for k, v in other.variables.iteritems():
             if (k in self and k not in overwrite_vars
-                    and not utils.xarray_equal(v, self[k])):
+                    and not utils.xarray_equal(v, self[k],
+                                               check_attributes=False)):
                 raise ValueError('unsafe to merge datasets; '
                                  'conflicting variable %r' % k)
         # update contents
