@@ -110,7 +110,11 @@ def pretty_print(x, numchars):
 def dataset_repr(ds):
     summary = ['<xray.%s>' % type(ds).__name__]
 
-    first_col_width = max(4 + max(len(k) for k in ds.variables), 17)
+    if len(ds.variables):
+        max_name_length = max(len(k) for k in ds.variables)
+    else:
+        max_name_length = 0
+    first_col_width = max(4 + max_name_length, 17)
     coords_str = pretty_print('Coordinates:', first_col_width)
     all_dim_strings = ['%s: %s' % (k, v) for k, v in ds.dimensions.iteritems()]
     summary.append('%s(%s)' % (coords_str, ', '.join(all_dim_strings)))
