@@ -24,6 +24,8 @@ def open_dataset(nc, decode_cf=True, *args, **kwargs):
     *args and **kwargs provide format specific options
     """
     # move this to a classmethod Dataset.open?
+    # TODO: this check has the unfortunate side-effect that
+    # paths to files cannot start with 'CDF'.
     if isinstance(nc, basestring) and not nc.startswith('CDF'):
         # If the initialization nc is a string and it doesn't
         # appear to be the contents of a netcdf file we load

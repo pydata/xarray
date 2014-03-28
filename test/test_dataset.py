@@ -545,6 +545,15 @@ class DatasetIOTestCases(object):
     def roundtrip(self, data, **kwargs):
         raise NotImplementedError
 
+    def test_zero_dimensional_variable(self):
+        expected = create_test_data()
+        expected['xray_awesomeness'] = ([], np.array(1.e9),
+                                        {'units': 'units of awesome'})
+        store = self.get_store()
+        expected.dump_to_store(store)
+        actual = Dataset.load_store(store)
+        self.assertDatasetEqual(expected, actual)
+
     def test_write_store(self):
         expected = create_test_data()
         store = self.get_store()
