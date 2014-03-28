@@ -19,7 +19,7 @@ def as_xarray(obj, strict=True):
     """Convert an object into an XArray
 
     - If the object is already an `XArray`, return it.
-    - If the object is a `DatasetArray`, return it if `strict=False` or return
+    - If the object is a `DataArray`, return it if `strict=False` or return
       its variable if `strict=True`.
     - Otherwise, if the object has 'dimensions' and 'data' attributes, convert
       it into a new `XArray`.
@@ -29,9 +29,9 @@ def as_xarray(obj, strict=True):
     # TODO: consider extending this method to automatically handle Iris and
     # pandas objects.
     if strict and hasattr(obj, 'variable'):
-        # extract the focus XArray from DatasetArrays
+        # extract the primary XArray from DataArrays
         obj = obj.variable
-    if not isinstance(obj, (XArray, dataset_array.DatasetArray)):
+    if not isinstance(obj, (XArray, dataset_array.DataArray)):
         if hasattr(obj, 'dimensions') and hasattr(obj, 'data'):
             obj = XArray(obj.dimensions, obj.data,
                          getattr(obj, 'attributes', None),
@@ -64,7 +64,7 @@ class XArray(AbstractArray):
     """A netcdf-like variable consisting of dimensions, data and attributes
     which describe a single Array. A single XArray object is not fully described
     outside the context of its parent Dataset (if you want such a fully
-    described object, use a DatasetArray instead).
+    described object, use a DataArray instead).
     """
     def __init__(self, dims, data, attributes=None, encoding=None,
                  indexing_mode='numpy'):
@@ -494,7 +494,7 @@ class XArray(AbstractArray):
             Arrays to stack together. Each variable is expected to have
             matching dimensions and shape except for along the stacked
             dimension.
-        dimension : str or DatasetArray, optional
+        dimension : str or DataArray, optional
             Name of the dimension to stack along. This can either be a new
             dimension name, in which case it is added along axis=0, or an
             existing dimension name, in which case the location of the
@@ -601,7 +601,7 @@ class XArray(AbstractArray):
     def _binary_op(f, reflexive=False):
         @functools.wraps(f)
         def func(self, other):
-            if isinstance(other, dataset_array.DatasetArray):
+            if isinstance(other, dataset_array.DataArray):
                 return NotImplemented
             self_data, other_data, dims = _broadcast_xarray_data(self, other)
             new_data = (f(self_data, other_data)

@@ -1,7 +1,8 @@
 Data structures
 ===============
 
-``xray``'s core data structures are the ``Dataset``, ``XArray`` and ``DatasetArray``.
+``xray``'s core data structures are the ``Dataset``, ``XArray`` and
+``DataArray``.
 
 Dataset
 -------
@@ -32,22 +33,22 @@ XArray with dimensions `('space',)` results in a new XArray with dimensions
 ``sum`` are overwritten to take a "dimension" argument instead of an "axis".
 
 XArrays are light-weight objects used as the building block for datasets.
-However, usually manipulating data in the form of a DatasetArray should be
+However, usually manipulating data in the form of a DataArray should be
 preferred (see below), because they can use more complete metadata in the full
 of other dataset variables.
 
-DatasetArray
-------------
+DataArray
+---------
 
-``DatasetArray`` is a flexible hybrid of Dataset and XArray that attempts to
-provide the best of both in a single object. Under the covers, DatasetArrays
+``DataArray`` is a flexible hybrid of Dataset and XArray that attempts to
+provide the best of both in a single object. Under the covers, DataArrays
 are simply pointers to a dataset (the ``dataset`` attribute) and the name of a
 "focus variable" in the dataset (the ``focus`` attribute), which indicates to
 which variable array operations should be applied.
 
-DatasetArray objects implement the broadcasting rules of XArray objects, but
+DataArray objects implement the broadcasting rules of XArray objects, but
 also use and maintain coordinates (aka "indices"). This means you can do
-intelligent (and fast!) label based indexing on DatasetArrays (via the
+intelligent (and fast!) label based indexing on DataArrays (via the
 ``.loc`` attribute), do flexibly split-apply-combine operations with
 ``groupby`` and also easily export them to ``pandas.DataFrame`` or
 ``pandas.Series`` objects.

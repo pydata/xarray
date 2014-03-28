@@ -34,7 +34,7 @@ Let's create some ``XArray`` objects and put them in a ``Dataset``:
 This dataset contains two non-coordinate variables, ``temperature`` and
 ``avg_rain``, as well as the coordinates ``time`` and ``us_state``.
 
-We can now access the contents of ``ds`` as self-described ``DatasetArray``
+We can now access the contents of ``ds`` as self-described ``DataArray``
 objects:
 
 .. ipython:: python

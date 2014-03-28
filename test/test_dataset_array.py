@@ -2,18 +2,18 @@ import numpy as np
 from copy import deepcopy
 from textwrap import dedent
 
-from xray import Dataset, DatasetArray, XArray, align
+from xray import Dataset, DataArray, XArray, align
 from . import TestCase, ReturnItem
 
 
-class TestDatasetArray(TestCase):
+class TestDataArray(TestCase):
     def assertDSArrayEqual(self, ar1, ar2):
         self.assertEqual(ar1.name, ar2.name)
         self.assertDatasetEqual(ar1.dataset, ar2.dataset)
 
     def assertDSArrayEquiv(self, ar1, ar2):
-        self.assertIsInstance(ar1, DatasetArray)
-        self.assertIsInstance(ar2, DatasetArray)
+        self.assertIsInstance(ar1, DataArray)
+        self.assertIsInstance(ar2, DataArray)
         random_name = 'randomly-renamed-variable'
         self.assertDSArrayEqual(ar1.rename(random_name),
                                 ar2.rename(random_name))
@@ -22,13 +22,13 @@ class TestDatasetArray(TestCase):
         self.x = np.random.random((10, 20))
         self.v = XArray(['x', 'y'], self.x)
         self.ds = Dataset({'foo': self.v})
-        self.dv = DatasetArray(self.ds, 'foo')
+        self.dv = DataArray(self.ds, 'foo')
 
     def test_repr(self):
         v = XArray(['time', 'x'], [[1, 2, 3], [4, 5, 6]], {'foo': 'bar'})
         dataset_array = Dataset({'my_variable': v})['my_variable']
         expected = dedent("""
-        <xray.DatasetArray 'my_variable' (time: 2, x: 3)>
+        <xray.DataArray 'my_variable' (time: 2, x: 3)>
         array([[1, 2, 3],
                [4, 5, 6]])
         Attributes:
@@ -59,8 +59,8 @@ class TestDatasetArray(TestCase):
         self.assertDSArrayEqual(self.dv, self.ds['foo'])
         x = self.dv['x']
         y = self.dv['y']
-        self.assertDSArrayEqual(DatasetArray(self.ds, 'x'), x)
-        self.assertDSArrayEqual(DatasetArray(self.ds, 'y'), y)
+        self.assertDSArrayEqual(DataArray(self.ds, 'x'), x)
+        self.assertDSArrayEqual(DataArray(self.ds, 'y'), y)
         # integer indexing
         I = ReturnItem()
         for i in [I[:], I[...], I[x.data], I[x.variable], I[x], I[x, y],
@@ -143,7 +143,7 @@ class TestDatasetArray(TestCase):
         self.assertDSArrayEquiv(a, 0 * a + a)
         # test different indices
         ds2 = self.ds.replace('x', XArray(['x'], 3 + np.arange(10)))
-        b = DatasetArray(ds2, 'foo')
+        b = DataArray(ds2, 'foo')
         with self.assertRaisesRegexp(ValueError, 'not aligned'):
             a + b
         with self.assertRaisesRegexp(ValueError, 'not aligned'):
@@ -228,7 +228,7 @@ class TestDatasetArray(TestCase):
         for ((act_x, act_dv), (exp_x, exp_ds)) in \
                 zip(self.dv.groupby('y'), self.ds.groupby('y')):
             self.assertXArrayEqual(exp_x, act_x)
-            self.assertDSArrayEqual(DatasetArray(exp_ds, 'foo'), act_dv)
+            self.assertDSArrayEqual(DataArray(exp_ds, 'foo'), act_dv)
         for ((_, exp_dv), act_dv) in zip(self.dv.groupby('x'), self.dv):
             self.assertDSArrayEqual(exp_dv, act_dv)
 
@@ -248,7 +248,7 @@ class TestDatasetArray(TestCase):
 
         grouped = self.dv.groupby('abc')
 
-        expected_sum_all = DatasetArray(Dataset(
+        expected_sum_all = DataArray(Dataset(
             {'foo': XArray(['abc'], np.array([self.x[:, :9].sum(),
                                               self.x[:, 10:].sum(),
                                               self.x[:, 9:10].sum()]).T,
@@ -261,7 +261,7 @@ class TestDatasetArray(TestCase):
         grouped = self.dv.groupby('abc', squeeze=False)
         self.assertDSArrayEqual(expected_sum_all, grouped.sum(dimension=None))
 
-        expected_sum_axis1 = DatasetArray(Dataset(
+        expected_sum_axis1 = DataArray(Dataset(
             {'foo': XArray(['x', 'abc'], np.array([self.x[:, :9].sum(1),
                                                    self.x[:, 10:].sum(1),
                                                    self.x[:, 9:10].sum(1)]).T,
@@ -280,14 +280,14 @@ class TestDatasetArray(TestCase):
         # from dataset array:
         self.assertXArrayEqual(XArray(['w', 'x', 'y'],
                                       np.array([foo.data, bar.data])),
-                               DatasetArray.concat([foo, bar], 'w'))
+                               DataArray.concat([foo, bar], 'w'))
         # from xarrays:
         self.assertXArrayEqual(XArray(['w', 'x', 'y'],
                                       np.array([foo.data, bar.data])),
-                               DatasetArray.concat([foo.variable,
+                               DataArray.concat([foo.variable,
                                                     bar.variable], 'w'))
         # from iteration:
-        stacked = DatasetArray.concat((v for _, v in foo.groupby('x')),
+        stacked = DataArray.concat((v for _, v in foo.groupby('x')),
                                           self.ds['x'])
         self.assertDSArrayEqual(foo.select(), stacked)
 

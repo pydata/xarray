@@ -32,7 +32,7 @@ Dataset contents
 ~~~~~~~~~~~~~~~~
 
 Datasets implement the mapping interface with keys given by variable names
-and values given by ``DatasetArray`` objects focused on each variable name.
+and values given by ``DataArray`` objects focused on each variable name.
 
 .. autosummary::
    :toctree: generated/
@@ -70,13 +70,13 @@ IO / Conversion
    Dataset.to_dataframe
 
 
-DatasetArray
-------------
+DataArray
+---------
 
 .. autosummary::
    :toctree: generated/
 
-   DatasetArray
+   DataArray
 
 Selecting
 ~~~~~~~~~
@@ -84,13 +84,13 @@ Selecting
 .. autosummary::
    :toctree: generated/
 
-   DatasetArray.loc
-   DatasetArray.indexed_by
-   DatasetArray.labeled_by
-   DatasetArray.rename
-   DatasetArray.select
-   DatasetArray.unselect
-   DatasetArray.squeeze
+   DataArray.loc
+   DataArray.indexed_by
+   DataArray.labeled_by
+   DataArray.rename
+   DataArray.select
+   DataArray.unselect
+   DataArray.squeeze
 
 Group operations
 ~~~~~~~~~~~~~~~~
@@ -98,8 +98,8 @@ Group operations
 .. autosummary::
    :toctree: generated/
 
-   DatasetArray.groupby
-   DatasetArray.concat
+   DataArray.groupby
+   DataArray.concat
 
 Manipulating data
 ~~~~~~~~~~~~~~~~~
@@ -107,23 +107,23 @@ Manipulating data
 .. autosummary::
    :toctree: generated/
 
-   DatasetArray.transpose
-   DatasetArray.T
-   DatasetArray.reduce
-   DatasetArray.all
-   DatasetArray.any
-   DatasetArray.argmax
-   DatasetArray.argmin
-   DatasetArray.cumprod
-   DatasetArray.cumsum
-   DatasetArray.max
-   DatasetArray.min
-   DatasetArray.mean
-   DatasetArray.prod
-   DatasetArray.ptp
-   DatasetArray.std
-   DatasetArray.sum
-   DatasetArray.var
+   DataArray.transpose
+   DataArray.T
+   DataArray.reduce
+   DataArray.all
+   DataArray.any
+   DataArray.argmax
+   DataArray.argmin
+   DataArray.cumprod
+   DataArray.cumsum
+   DataArray.max
+   DataArray.min
+   DataArray.mean
+   DataArray.prod
+   DataArray.ptp
+   DataArray.std
+   DataArray.sum
+   DataArray.var
 
 IO / Conversion
 ~~~~~~~~~~~~~~~
@@ -131,9 +131,9 @@ IO / Conversion
 .. autosummary::
    :toctree: generated/
 
-   DatasetArray.to_dataframe
-   DatasetArray.to_series
-   DatasetArray.copy
+   DataArray.to_dataframe
+   DataArray.to_series
+   DataArray.copy
 
 
 XArray
