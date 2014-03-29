@@ -34,16 +34,16 @@ class _LocIndexer(object):
 class DataArray(AbstractArray):
     """Hybrid between Dataset and Array.
 
-    Dataset arrays are the primary way to do computations with Dataset
+    DataArrays are the primary way to do computations with Dataset
     variables. They are designed to make it easy to manipulate arrays in the
     context of an intact Dataset object. Indeed, the contents of a DataArray
     are uniquely defined by its `dataset` and `name` parameters.
 
-    Getting items from or doing mathematical operations with a dataset array
-    returns another dataset array.
+    Getting items from or doing mathematical operations with a DataArray
+    returns another DataArray.
 
     The design of DataArray is strongly inspired by the Iris Cube. However,
-    dataset arrays are much lighter weight than cubes. They are simply aligned,
+    DataArrays are much lighter weight than cubes. They are simply aligned,
     labeled datasets and do not explicitly guarantee or rely on the CF model.
     """
     def __init__(self, dataset, name):
@@ -51,7 +51,7 @@ class DataArray(AbstractArray):
         Parameters
         ----------
         dataset : xray.Dataset
-            The dataset on which to build this dataset array.
+            The dataset in which to find this array.
         name : str
             The name of the variable in `dataset` to which array operations
             should be applied.
@@ -66,7 +66,7 @@ class DataArray(AbstractArray):
 
     @property
     def dataset(self):
-        """The dataset with which this dataset array is associated.
+        """The dataset with which this DataArray is associated.
         """
         return self._dataset
 
@@ -76,6 +76,11 @@ class DataArray(AbstractArray):
         are applied.
         """
         return self._name
+
+    @name.setter
+    def name(self, value):
+        raise AttributeError('cannot modify the name of a %s inplace; use the '
+                             "'rename' method instead" % type(self).__name__)
 
     @property
     def variable(self):
@@ -181,11 +186,11 @@ class DataArray(AbstractArray):
                                  for k in self.dimensions)
 
     def copy(self, deep=True):
-        """Returns a copy of this dataset array.
+        """Returns a copy of this array.
 
         If `deep=True`, a deep copy is made of all variables in the underlying
         dataset. Otherwise, a shallow copy is made, so each variable in the new
-        dataset array's dataset is also a variable in this array's dataset.
+        array's dataset is also a variable in this array's dataset.
         """
         return type(self)(self.dataset.copy(deep=deep), self.name)
 
@@ -201,7 +206,7 @@ class DataArray(AbstractArray):
     __hash__ = None
 
     def indexed_by(self, **indexers):
-        """Return a new dataset array whose dataset is given by indexing along
+        """Return a new dat array whose dataset is given by indexing along
         the specified dimension(s).
 
         See Also
@@ -217,7 +222,7 @@ class DataArray(AbstractArray):
         return type(self)(ds, self.name)
 
     def labeled_by(self, **indexers):
-        """Return a new dataset array whose dataset is given by selecting
+        """Return a new DataArray whose dataset is given by selecting
         coordinate labels along the specified dimension(s).
 
         See Also
@@ -400,7 +405,7 @@ class DataArray(AbstractArray):
     def _unselect_nonfocus_dims(self):
         """Unselect all dimensions found in this array's dataset that aren't
         also found in the dimensions of the array. Returns either a modified
-        copy or this dataset array if there were no dimensions to remove.
+        copy or this DataArray if there were no dimensions to remove.
         """
         other_dims = [k for k in self.dataset.dimensions
                       if k not in self.dimensions]
@@ -451,7 +456,7 @@ class DataArray(AbstractArray):
         Returns
         -------
         concatenated : DataArray
-            Concatenated dataset array formed by concatenated all the supplied
+            Concatenated DataArray formed by concatenated all the supplied
             variables along the new dimension.
 
         Notes
@@ -471,7 +476,7 @@ class DataArray(AbstractArray):
         dim_name = ds._add_dimension(dimension)
 
         if template is not None:
-            # use metadata from the template dataset array
+            # use metadata from the template data array
             name = template.name
             old_dim_name, = template[dim_name].dimensions
             ds.merge(template.dataset.unselect(old_dim_name), inplace=True)
@@ -524,7 +529,7 @@ class DataArray(AbstractArray):
         """Returns a copy of this DataArray's dataset with this
         DataArray's focus variable replaced by `new_var`.
 
-        If `new_var` is a dataset array, its contents will be merged in.
+        If `new_var` is a DataArray, its contents will be merged in.
         """
         if not hasattr(new_var, 'dimensions'):
             new_var = type(self.variable)(self.variable.dimensions, new_var)
