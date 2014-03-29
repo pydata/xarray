@@ -90,7 +90,7 @@ setup(name='xray',
       install_requires=['scipy >= 0.13', 'numpy >= 1.8', 'netCDF4 >= 1.0.6',
                         'pandas >= 0.13.1', 'mock >= 1.0.1'],
       tests_require=['nose >= 1.0'],
-      url='https://github.com/akleeman/scidata',
+      url='https://github.com/akleeman/xray',
       test_suite='nose.collector',
       packages=['xray'],
       package_dir={'': 'src'})
