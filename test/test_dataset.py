@@ -13,7 +13,7 @@ import pandas as pd
 import netCDF4 as nc4
 
 from xray import (Dataset, DataArray, XArray, backends, open_dataset, utils,
-                  align)
+                  align, conventions)
 
 from . import TestCase
 
@@ -29,14 +29,15 @@ _testvar = sorted(_vars.keys())[0]
 _testdim = sorted(_dims.keys())[0]
 
 
-def create_test_data():
+def create_test_data(seed=None):
+    rs = np.random.RandomState(seed)
     obj = Dataset()
     obj['time'] = ('time', pd.date_range('2000-01-01', periods=20))
     obj['dim1'] = ('dim1', np.arange(_dims['dim1']))
     obj['dim2'] = ('dim2', 0.5 * np.arange(_dims['dim2']))
     obj['dim3'] = ('dim3', list('abcdefghij'))
     for v, dims in sorted(_vars.items()):
-        data = np.random.normal(size=tuple(_dims[d] for d in dims))
+        data = rs.normal(size=tuple(_dims[d] for d in dims))
         obj[v] = (dims, data, {'foo': 'variable'})
     return obj
 
@@ -91,7 +92,6 @@ class InaccessibleVariableDataStore(backends.InMemoryDataStore):
                             for k, v in self._variables.iteritems())
 
 
-
 class TestDataset(TestCase):
     def test_repr(self):
         data = create_test_data()
@@ -127,13 +127,17 @@ class TestDataset(TestCase):
         self.assertEqual(expected, actual)
 
     def test_init(self):
-        var1 = XArray('x', np.arange(100))
+        var1 = XArray('x', 2 * np.arange(100))
         var2 = XArray('x', np.arange(1000))
         var3 = XArray(['x', 'y'], np.arange(1000).reshape(100, 10))
-        with self.assertRaisesRegexp(ValueError, 'but already is saved'):
+        with self.assertRaisesRegexp(ValueError, 'but already exists'):
             Dataset({'a': var1, 'b': var2})
         with self.assertRaisesRegexp(ValueError, 'must be defined with 1-d'):
             Dataset({'a': var1, 'x': var3})
+        # verify handling of DataArrays
+        expected = Dataset({'x': var1, 'z': var3})
+        actual = Dataset({'z': expected['z']})
+        self.assertDatasetEqual(expected, actual)
 
     def test_groupby(self):
         data = create_test_data()
@@ -151,7 +155,7 @@ class TestDataset(TestCase):
         self.assertTrue('foo' in a)
         a['bar'] = (('time', 'x',), d)
         # order of creation is preserved
-        self.assertTrue(a.variables.keys() == ['time', 'x', 'foo', 'bar'])
+        self.assertTrue(a.variables.keys() == ['foo', 'time', 'x', 'bar'])
         self.assertTrue(all([a.variables['foo'][i].data == d[i]
                              for i in np.ndindex(*d.shape)]))
         # try to add variable with dim (10,3) with data that's (3,10)
@@ -170,8 +174,12 @@ class TestDataset(TestCase):
         b['x'] = ('x', vec, attributes)
         self.assertXArrayEqual(a['x'], b['x'])
         self.assertEquals(a.dimensions, b.dimensions)
+        # this should work
+        a['x'] = ('x', vec[:5])
+        a['z'] = ('x', np.arange(5))
         with self.assertRaises(ValueError):
-            a['x'] = ('x', vec[:5])
+            # now it shouldn't, since there is a conflicting length
+            a['x'] = ('x', vec[:4])
         arr = np.random.random((10, 1,))
         scal = np.array(0)
         with self.assertRaises(ValueError):
@@ -179,52 +187,6 @@ class TestDataset(TestCase):
         with self.assertRaises(ValueError):
             a['y'] = ('y', scal)
         self.assertTrue('y' not in a.dimensions)
-
-    @unittest.skip('attribute checks are not yet backend specific')
-    def test_attributes(self):
-        a = Dataset()
-        a.attributes['foo'] = 'abc'
-        a.attributes['bar'] = 1
-        # numeric scalars are stored as length-1 vectors
-        self.assertTrue(isinstance(a.attributes['bar'], np.ndarray) and
-                a.attributes['bar'].ndim == 1)
-        # __contains__ method
-        self.assertTrue('foo' in a.attributes)
-        self.assertTrue('bar' in a.attributes)
-        self.assertTrue('baz' not in a.attributes)
-        # user-defined attributes are not object attributes
-        self.assertRaises(AttributeError, object.__getattribute__, a, 'foo')
-        # different ways of setting attributes ought to be equivalent
-        b = Dataset()
-        b.attributes.update(foo='abc')
-        self.assertEquals(a.attributes['foo'], b.attributes['foo'])
-        b = Dataset()
-        b.attributes.update([('foo', 'abc')])
-        self.assertEquals(a.attributes['foo'], b.attributes['foo'])
-        b = Dataset()
-        b.attributes.update({'foo': 'abc'})
-        self.assertEquals(a.attributes['foo'], b.attributes['foo'])
-        # attributes can be overwritten
-        b.attributes['foo'] = 'xyz'
-        self.assertEquals(b.attributes['foo'], 'xyz')
-        # attributes can be deleted
-        del b.attributes['foo']
-        self.assertTrue('foo' not in b.attributes)
-        # attributes can be cleared
-        b.attributes.clear()
-        self.assertTrue(len(b.attributes) == 0)
-        # attributes can be compared
-        a = Dataset()
-        b = Dataset()
-        a.attributes['foo'] = 'bar'
-        b.attributes['foo'] = np.nan
-        self.assertFalse(a == b)
-        a.attributes['foo'] = np.nan
-        self.assertTrue(a == b)
-        # attribute names/values must be netCDF-compatible
-        self.assertRaises(ValueError, b.attributes.__setitem__, '/', 0)
-        self.assertRaises(ValueError, b.attributes.__setitem__, 'foo', np.zeros((2, 2)))
-        self.assertRaises(ValueError, b.attributes.__setitem__, 'foo', dict())
 
     def test_indexed_by(self):
         data = create_test_data()
@@ -420,22 +382,19 @@ class TestDataset(TestCase):
         with self.assertRaises(UnexpectedDataAccess):
             renamed['renamed_var1'].data
 
-    def test_squeeze(self):
-        data = Dataset({'foo': (['x', 'y', 'z'], [[[1], [2]]])})
-        # squeeze everything
-        expected = Dataset({'y': data['y'], 'foo': data['foo'].squeeze()})
-        self.assertDatasetEqual(expected, data.squeeze())
-        # squeeze only x
-        expected = Dataset({'y': data['y'], 'foo': (['y', 'z'], data['foo'].data[0])})
-        self.assertDatasetEqual(expected, data.squeeze('x'))
-        self.assertDatasetEqual(expected, data.squeeze(['x']))
-        # squeeze only z
-        expected = Dataset({'y': data['y'], 'foo': (['x', 'y'], data['foo'].data[:, :, 0])})
-        self.assertDatasetEqual(expected, data.squeeze('z'))
-        self.assertDatasetEqual(expected, data.squeeze(['z']))
-        # invalid squeeze
-        with self.assertRaisesRegexp(ValueError, 'cannot select a dimension'):
-            data.squeeze('y')
+    def test_update(self):
+        data = create_test_data(seed=0)
+        var2 = XArray('dim1', np.arange(100))
+        actual = data.update({'var2': var2})
+        expected_vars = OrderedDict(create_test_data(seed=0).variables)
+        expected_vars['var2'] = var2
+        expected = Dataset(expected_vars)
+        self.assertDatasetEqual(expected, actual)
+        # test in-place
+        data2 = data.update(data, inplace=True)
+        self.assertIs(data2, data)
+        data2 = data.update(data, inplace=False)
+        self.assertIsNot(data2, data)
 
     def test_merge(self):
         data = create_test_data()
@@ -463,9 +422,9 @@ class TestDataset(TestCase):
         self.assertArrayEqual(data['time.month'].data,
                               data.variables['time'].index.month)
         # test accessing a decoded virtual variable
-        data.set_variables({'time2': ('time', np.arange(20),
-                                     {'units': 'days since 2000-01-01'})},
-                           decode_cf=True)
+        time2 = XArray('time', np.arange(20),
+                       {'units': 'days since 2000-01-01'})
+        data['time2'] = conventions.decode_cf_variable(time2)
         self.assertXArrayEqual(data['time2.dayofyear'],
                                XArray('time', 1 + np.arange(20)))
         # test virtual variable math
@@ -485,18 +444,21 @@ class TestDataset(TestCase):
         data1['A'] = var
         data2 = data1.copy()
         data2['A'] = var
-        self.assertEqual(data1, data2)
+        self.assertDatasetEqual(data1, data2)
         # assign a dataset array
         dv = 2 * data2['A']
         data1['B'] = dv.variable
         data2['B'] = dv
-        self.assertEqual(data1, data2)
+        self.assertDatasetEqual(data1, data2)
         # assign an array
         with self.assertRaisesRegexp(TypeError, 'variables must be of type'):
             data2['C'] = var.data
         # override an existing value
         data1['A'] = 3 * data2['A']
         self.assertXArrayEqual(data1['A'], 3 * data2['A'])
+        # can't resize a used dimension
+        with self.assertRaisesRegexp(ValueError, 'but already exists with'):
+            data1['dim1'] = data1['dim1'][:5]
 
     def test_delitem(self):
         data = create_test_data()
@@ -506,6 +468,23 @@ class TestDataset(TestCase):
         self.assertItemsEqual(data, all_items - {'var1'})
         del data['dim1']
         self.assertItemsEqual(data, {'time', 'dim2', 'dim3'})
+
+    def test_squeeze(self):
+        data = Dataset({'foo': (['x', 'y', 'z'], [[[1], [2]]])})
+        # squeeze everything
+        expected = Dataset({'y': data['y'], 'foo': data['foo'].squeeze()})
+        self.assertDatasetEqual(expected, data.squeeze())
+        # squeeze only x
+        expected = Dataset({'y': data['y'], 'foo': (['y', 'z'], data['foo'].data[0])})
+        self.assertDatasetEqual(expected, data.squeeze('x'))
+        self.assertDatasetEqual(expected, data.squeeze(['x']))
+        # squeeze only z
+        expected = Dataset({'y': data['y'], 'foo': (['x', 'y'], data['foo'].data[:, :, 0])})
+        self.assertDatasetEqual(expected, data.squeeze('z'))
+        self.assertDatasetEqual(expected, data.squeeze(['z']))
+        # invalid squeeze
+        with self.assertRaisesRegexp(ValueError, 'cannot select a dimension'):
+            data.squeeze('y')
 
     def test_concat(self):
         data = create_test_data()

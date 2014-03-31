@@ -142,7 +142,7 @@ class TestDataArray(TestCase):
         self.assertDSArrayEquiv(a, a + 0 * a)
         self.assertDSArrayEquiv(a, 0 * a + a)
         # test different indices
-        ds2 = self.ds.replace('x', XArray(['x'], 3 + np.arange(10)))
+        ds2 = self.ds.update({'x': ('x', 3 + np.arange(10))}, inplace=False)
         b = DataArray(ds2, 'foo')
         with self.assertRaisesRegexp(ValueError, 'not aligned'):
             a + b
