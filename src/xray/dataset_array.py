@@ -290,7 +290,7 @@ class DataArray(AbstractArray):
         align
         """
         reindexed_ds = self.select().dataset.reindex(copy=copy, **coordinates)
-        return type(self)(reindexed_ds, self.focus)
+        return type(self)(reindexed_ds, self.name)
 
     def rename(self, new_name_or_name_dict):
         """Returns a new DataArray with renamed variables.
