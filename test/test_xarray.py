@@ -6,7 +6,7 @@ from textwrap import dedent
 import numpy as np
 import pandas as pd
 
-from xray import XArray, CoordXArray, Dataset, DatasetArray, as_xarray
+from xray import XArray, CoordXArray, Dataset, DataArray, as_xarray
 from . import TestCase
 
 
@@ -196,7 +196,7 @@ class TestXArray(TestCase, XArraySubclassTestCases):
         self.assertXArrayEqual(expected, as_xarray(ds['x']))
         self.assertNotIsInstance(ds['x'], XArray)
         self.assertIsInstance(as_xarray(ds['x']), XArray)
-        self.assertIsInstance(as_xarray(ds['x'], strict=False), DatasetArray)
+        self.assertIsInstance(as_xarray(ds['x'], strict=False), DataArray)
 
         FakeXArray = namedtuple('FakeXArray', 'data dimensions')
         fake_xarray = FakeXArray(expected.data, expected.dimensions)

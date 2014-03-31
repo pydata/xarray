@@ -31,46 +31,64 @@ class _LocIndexer(object):
         self.ds_array[self._remap_key(key)] = value
 
 
-class DatasetArray(AbstractArray):
+class DataArray(AbstractArray):
     """Hybrid between Dataset and Array.
 
-    Dataset arrays are the primary way to do computations with Dataset
+    DataArrays are the primary way to do computations with Dataset
     variables. They are designed to make it easy to manipulate arrays in the
-    context of an intact Dataset object. Indeed, the contents of a DatasetArray
-    are uniquely defined by its `dataset` and `focus` paramters.
+    context of an intact Dataset object. Indeed, the contents of a DataArray
+    are uniquely defined by its `dataset` and `name` parameters.
 
-    Getting items from or doing mathematical operations with a dataset array
-    returns another dataset array.
+    Getting items from or doing mathematical operations with a DataArray
+    returns another DataArray.
 
-    The design of DatasetArray is strongly inspired by the Iris Cube. However,
-    dataset arrays are much lighter weight than cubes. They are simply aligned,
+    The design of DataArray is strongly inspired by the Iris Cube. However,
+    DataArrays are much lighter weight than cubes. They are simply aligned,
     labeled datasets and do not explicitly guarantee or rely on the CF model.
     """
-    def __init__(self, dataset, focus):
+    def __init__(self, dataset, name):
         """
         Parameters
         ----------
         dataset : xray.Dataset
-            The dataset on which to build this dataset array.
-        focus : str
-            The name of the "focus variable" in `dataset` on which this object
-            is oriented. This is the variable on which mathematical operations
-            are applied.
+            The dataset in which to find this array.
+        name : str
+            The name of the variable in `dataset` to which array operations
+            should be applied.
         """
         if not isinstance(dataset, dataset_.Dataset):
             dataset = dataset_.Dataset(dataset)
-        if focus not in dataset and focus not in dataset.virtual_variables:
-            raise ValueError('focus %r is not a variable in dataset %r'
-                             % (focus, dataset))
-        self.dataset = dataset
-        self.focus = focus
+        if name not in dataset and name not in dataset.virtual_variables:
+            raise ValueError('name %r is not a variable in dataset %r'
+                             % (name, dataset))
+        self._dataset = dataset
+        self._name = name
+
+    @property
+    def dataset(self):
+        """The dataset with which this DataArray is associated.
+        """
+        return self._dataset
+
+    @property
+    def name(self):
+        """The name of the variable in `dataset` to which array operations
+        are applied.
+        """
+        return self._name
+
+    @name.setter
+    def name(self, value):
+        raise AttributeError('cannot modify the name of a %s inplace; use the '
+                             "'rename' method instead" % type(self).__name__)
 
     @property
     def variable(self):
-        return self.dataset.variables[self.focus]
+        return self.dataset.variables[self.name]
+
     @variable.setter
     def variable(self, value):
-        self.dataset[self.focus] = value
+        self.dataset[self.name] = value
 
     @property
     def dtype(self):
@@ -168,13 +186,13 @@ class DatasetArray(AbstractArray):
                                  for k in self.dimensions)
 
     def copy(self, deep=True):
-        """Returns a copy of this dataset array.
+        """Returns a copy of this array.
 
         If `deep=True`, a deep copy is made of all variables in the underlying
         dataset. Otherwise, a shallow copy is made, so each variable in the new
-        dataset array's dataset is also a variable in this array's dataset.
+        array's dataset is also a variable in this array's dataset.
         """
-        return type(self)(self.dataset.copy(deep=deep), self.focus)
+        return type(self)(self.dataset.copy(deep=deep), self.name)
 
     def __copy__(self):
         return self.copy(deep=False)
@@ -188,7 +206,7 @@ class DatasetArray(AbstractArray):
     __hash__ = None
 
     def indexed_by(self, **indexers):
-        """Return a new dataset array whose dataset is given by indexing along
+        """Return a new dat array whose dataset is given by indexing along
         the specified dimension(s).
 
         See Also
@@ -196,15 +214,15 @@ class DatasetArray(AbstractArray):
         Dataset.indexed_by
         """
         ds = self.dataset.indexed_by(**indexers)
-        if self.focus not in ds and self.focus in self.dataset:
-            # always keep focus variable in the dataset, even if it was
+        if self.name not in ds and self.name in self.dataset:
+            # always keep the array variable in the dataset, even if it was
             # unselected because indexing made it a scaler
             # don't add back in virtual variables (not found in the dataset)
-            ds[self.focus] = self.variable.indexed_by(**indexers)
-        return type(self)(ds, self.focus)
+            ds[self.name] = self.variable.indexed_by(**indexers)
+        return type(self)(ds, self.name)
 
     def labeled_by(self, **indexers):
-        """Return a new dataset array whose dataset is given by selecting
+        """Return a new DataArray whose dataset is given by selecting
         coordinate labels along the specified dimension(s).
 
         See Also
@@ -215,9 +233,9 @@ class DatasetArray(AbstractArray):
                                                     indexers))
 
     def rename(self, new_name_or_name_dict):
-        """Returns a new DatasetArray with renamed variables.
+        """Returns a new DataArray with renamed variables.
 
-        If the argument is a string, rename this DatasetArray's focus variable.
+        If the argument is a string, rename this DataArray's arary variable.
         Otherwise, the argument is assumed to be a mapping from old names to
         new names for dataset variables.
 
@@ -227,43 +245,43 @@ class DatasetArray(AbstractArray):
         """
         if isinstance(new_name_or_name_dict, basestring):
             new_name = new_name_or_name_dict
-            name_dict = {self.focus: new_name}
+            name_dict = {self.name: new_name}
         else:
             name_dict = new_name_or_name_dict
-            new_name = name_dict.get(self.focus, self.focus)
+            new_name = name_dict.get(self.name, self.name)
         renamed_dataset = self.dataset.rename(name_dict)
         return type(self)(renamed_dataset, new_name)
 
     def select(self, *names):
-        """Returns a new DatasetArray with only the named variables, as well
-        as this DatasetArray's focus (and all associated coordinates).
+        """Returns a new DataArray with only the named variables, as well
+        as this DataArray's array variable (and all associated coordinates).
 
         See Also
         --------
         Dataset.select
         """
-        names = names + (self.focus,)
-        return type(self)(self.dataset.select(*names), self.focus)
+        names = names + (self.name,)
+        return type(self)(self.dataset.select(*names), self.name)
 
     def unselect(self, *names):
-        """Returns a new DatasetArray without the named variables.
+        """Returns a new DataArray without the named variables.
 
         See Also
         --------
         Dataset.unselect
         """
-        if self.focus in names:
-            raise ValueError('cannot unselect the focus variable of a '
-                             'DatasetArray with unselect. Use the `unselected`'
+        if self.name in names:
+            raise ValueError('cannot unselect the array variable of a '
+                             'DataArray with unselect. Use the `unselected`'
                              'method or the `unselect` method of the dataset.')
-        return type(self)(self.dataset.unselect(*names), self.focus)
+        return type(self)(self.dataset.unselect(*names), self.name)
 
     def groupby(self, group, squeeze=True):
         """Group this dataset by unique values of the indicated group.
 
         Parameters
         ----------
-        group : str or DatasetArray
+        group : str or DataArray
             Array whose unique values should be used to group this array. If a
             string, must be the name of a variable contained in this dataset.
         squeeze : boolean, optional
@@ -282,10 +300,10 @@ class DatasetArray(AbstractArray):
         """
         if isinstance(group, basestring):
             group = self[group]
-        return groupby.ArrayGroupBy(self, group.focus, group, squeeze=squeeze)
+        return groupby.ArrayGroupBy(self, group.name, group, squeeze=squeeze)
 
     def transpose(self, *dimensions):
-        """Return a new DatasetArray object with transposed dimensions.
+        """Return a new DataArray object with transposed dimensions.
 
         Note: Although this operation returns a view of this array's data, it
         is not lazy -- the data will be fully loaded.
@@ -298,8 +316,8 @@ class DatasetArray(AbstractArray):
 
         Returns
         -------
-        transposed : DatasetArray
-            The returned DatasetArray's array is transposed.
+        transposed : DataArray
+            The returned DataArray's array is transposed.
 
         Notes
         -----
@@ -312,11 +330,11 @@ class DatasetArray(AbstractArray):
         Array.transpose
         """
         ds = self.copy()
-        ds[self.focus] = self.variable.transpose(*dimensions)
-        return ds[self.focus]
+        ds[self.name] = self.variable.transpose(*dimensions)
+        return ds[self.name]
 
     def squeeze(self, dimension=None):
-        """Return a new DatasetArray object with squeezed data.
+        """Return a new DataArray object with squeezed data.
 
         Parameters
         ----------
@@ -327,7 +345,7 @@ class DatasetArray(AbstractArray):
 
         Returns
         -------
-        squeezed : DatasetArray
+        squeezed : DataArray
             This array, but with with all or a subset of the dimensions of
             length 1 removed.
 
@@ -340,7 +358,7 @@ class DatasetArray(AbstractArray):
         --------
         numpy.squeeze
         """
-        return type(self)(self.dataset.squeeze(dimension), self.focus)
+        return type(self)(self.dataset.squeeze(dimension), self.name)
 
     def reduce(self, func, dimension=None, axis=None, **kwargs):
         """Reduce this array by applying `func` along some dimension(s).
@@ -369,8 +387,8 @@ class DatasetArray(AbstractArray):
 
         Returns
         -------
-        reduced : DatasetArray
-            DatasetArray with this object's array replaced with an array with
+        reduced : DataArray
+            DataArray with this object's array replaced with an array with
             summarized data and the indicated dimension(s) removed.
         """
         var = self.variable.reduce(func, dimension, axis, **kwargs)
@@ -381,13 +399,13 @@ class DatasetArray(AbstractArray):
         drop |= {k for k, v in self.dataset.variables.iteritems()
                  if any(dim in drop for dim in v.dimensions)}
         ds = self.dataset.unselect(*drop)
-        ds[self.focus] = var
-        return type(self)(ds, self.focus)
+        ds[self.name] = var
+        return type(self)(ds, self.name)
 
     def _unselect_nonfocus_dims(self):
         """Unselect all dimensions found in this array's dataset that aren't
         also found in the dimensions of the array. Returns either a modified
-        copy or this dataset array if there were no dimensions to remove.
+        copy or this DataArray if there were no dimensions to remove.
         """
         other_dims = [k for k in self.dataset.dimensions
                       if k not in self.dimensions]
@@ -399,7 +417,7 @@ class DatasetArray(AbstractArray):
     def concat(cls, arrays, dimension='concat_dimension', indexers=None,
                length=None, template=None):
         """Stack arrays along a new or existing dimension to form a new
-        DatasetArray.
+        DataArray.
 
         Parameters
         ----------
@@ -413,7 +431,7 @@ class DatasetArray(AbstractArray):
             existing dimension name, in which case the location of the
             dimension is unchanged. Where to insert the new dimension is
             determined by whether it is found in the first array. If dimension
-            is provided as an XArray or DatasetArray, the focus of the dataset
+            is provided as an XArray or DataArray, the name of the dataset
             array or the singleton dimension of the xarray is used as the
             stacking dimension and the array is added to the returned dataset.
         indexers : iterable of indexers, optional
@@ -428,7 +446,7 @@ class DatasetArray(AbstractArray):
             items, which is thus more memory efficient and a bit faster. If
             dimension is provided as an array, length is calculated
             automatically.
-        template : DatasetArray, optional
+        template : DataArray, optional
             This option is used internally to speed-up groupby operations. The
             template's attributes and variables that are not along the
             concatenated dimension are added to the returned array.
@@ -437,8 +455,8 @@ class DatasetArray(AbstractArray):
 
         Returns
         -------
-        concatenated : DatasetArray
-            Concatenated dataset array formed by concatenated all the supplied
+        concatenated : DataArray
+            Concatenated DataArray formed by concatenated all the supplied
             variables along the new dimension.
 
         Notes
@@ -458,31 +476,31 @@ class DatasetArray(AbstractArray):
         dim_name = ds._add_dimension(dimension)
 
         if template is not None:
-            # use metadata from the template dataset array
-            focus = template.focus
+            # use metadata from the template data array
+            name = template.name
             old_dim_name, = template[dim_name].dimensions
             ds.merge(template.dataset.unselect(old_dim_name), inplace=True)
         else:
             # figure out metadata by inspecting each array
-            focus = 'concat_variable'
+            name = 'concat_variable'
             arrays = list(arrays)
             for array in arrays:
                 if isinstance(array, cls):
-                    drop = [array.focus] + [k for k in array.dataset.dimensions
-                                            if k == dim_name]
+                    drop = [array.name] + [k for k in array.dataset.dimensions
+                                           if k == dim_name]
                     ds.merge(array.dataset.unselect(*drop), inplace=True)
-                    if focus is 'concat_variable':
-                        focus = array.focus
+                    if name is 'concat_variable':
+                        name = array.name
 
-        ds[focus] = xarray.XArray.concat(
+        ds[name] = xarray.XArray.concat(
             arrays, dimension, indexers, length, template)
-        return cls(ds, focus)._unselect_nonfocus_dims()
+        return cls(ds, name)._unselect_nonfocus_dims()
 
     def to_dataframe(self):
         """Convert this array into a pandas.DataFrame.
 
-        Non-coordinate variables in this array's dataset (which include the
-        view's data) form the columns of the DataFrame. The DataFrame is be
+        Non-coordinate variables in this array's dataset (which include this
+        array's data) form the columns of the DataFrame. The DataFrame is be
         indexed by the Cartesian product of the dataset's coordinates.
         """
         return self.dataset.to_dataframe()
@@ -490,34 +508,34 @@ class DatasetArray(AbstractArray):
     def to_series(self):
         """Conver this array into a pandas.Series.
 
-        The Series is be indexed by the Cartesian product of the coordinates.
-        Unlike `to_dataframe`, only the variable at the focus of this array is
-        including in the returned series.
+        The Series is indexed by the Cartesian product of the coordinates.
+        Unlike `to_dataframe`, only this array is including in the returned
+        series; the other non-coordinates variables in the dataset are not.
         """
         # np.asarray is necessary to work around a pandas bug:
         # https://github.com/pydata/pandas/issues/6439
         coords = [np.asarray(v) for v in self.coordinates.values()]
         index_names = self.coordinates.keys()
         index = pd.MultiIndex.from_product(coords, names=index_names)
-        return pd.Series(self.data.reshape(-1), index=index, name=self.focus)
+        return pd.Series(self.data.reshape(-1), index=index, name=self.name)
 
     def _select_coordinates(self):
         dataset = self.select().dataset
         if not self.is_coord():
-            del dataset[self.focus]
+            del dataset[self.name]
         return dataset
 
     def _refocus(self, new_var, name=None):
-        """Returns a copy of this DatasetArray's dataset with this
-        DatasetArray's focus variable replaced by `new_var`.
+        """Returns a copy of this DataArray's dataset with this
+        DataArray's focus variable replaced by `new_var`.
 
-        If `new_var` is a dataset array, its contents will be merged in.
+        If `new_var` is a DataArray, its contents will be merged in.
         """
         if not hasattr(new_var, 'dimensions'):
             new_var = type(self.variable)(self.variable.dimensions, new_var)
         ds = self._select_coordinates()
         if name is None:
-            name = self.focus + '_'
+            name = self.name + '_'
         ds[name] = new_var
         return type(self)(ds, name)
 
@@ -529,7 +547,7 @@ class DatasetArray(AbstractArray):
         @functools.wraps(f)
         def func(self, *args, **kwargs):
             return self._refocus(f(self.variable, *args, **kwargs),
-                                 self.focus + '_' + f.__name__)
+                                 self.name + '_' + f.__name__)
         return func
 
     def _check_coordinates_compat(self, other):
@@ -551,12 +569,12 @@ class DatasetArray(AbstractArray):
             if hasattr(other, '_select_coordinates'):
                 ds.merge(other._select_coordinates(), inplace=True)
             other_array = getattr(other, 'variable', other)
-            other_focus = getattr(other, 'focus', 'other')
-            focus = self.focus + '_' + f.__name__ + '_' + other_focus
-            ds[focus] = (f(self.variable, other_array)
+            other_name = getattr(other, 'name', 'other')
+            name = self.name + '_' + f.__name__ + '_' + other_name
+            ds[name] = (f(self.variable, other_array)
                          if not reflexive
                          else f(other_array, self.variable))
-            return type(self)(ds, focus)
+            return type(self)(ds, name)
         return func
 
     @staticmethod
@@ -571,11 +589,11 @@ class DatasetArray(AbstractArray):
             return self
         return func
 
-ops.inject_special_operations(DatasetArray, priority=60)
+ops.inject_special_operations(DataArray, priority=60)
 
 
 def align(array1, array2):
-    """Given two Dataset or DatasetArray objects, returns two new objects where
+    """Given two Dataset or DataArray objects, returns two new objects where
     all coordinates found on both datasets are replaced by their intersection,
     and thus are aligned for performing mathematical operations.
     """

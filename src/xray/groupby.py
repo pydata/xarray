@@ -50,10 +50,10 @@ class GroupBy(object):
     See Also
     --------
     XArray.groupby
-    DatasetArray.groupby
+    DataArray.groupby
     """
     def __init__(self, obj, group_name, group_coord, squeeze=True):
-        """See XArray.groupby and DatasetArray.groupby
+        """See XArray.groupby and DataArray.groupby
         """
         if group_coord.ndim != 1:
             # TODO: remove this limitation?

@@ -12,7 +12,7 @@ import numpy as np
 import pandas as pd
 import netCDF4 as nc4
 
-from xray import Dataset, DatasetArray, XArray, backends, open_dataset, utils
+from xray import Dataset, DataArray, XArray, backends, open_dataset, utils
 
 from . import TestCase
 
@@ -382,7 +382,7 @@ class TestDataset(TestCase):
 
     def test_getitem(self):
         data = create_test_data()
-        self.assertIsInstance(data['var1'], DatasetArray)
+        self.assertIsInstance(data['var1'], DataArray)
         self.assertXArrayEqual(data['var1'], data.variables['var1'])
         self.assertIs(data['var1'].dataset, data)
 

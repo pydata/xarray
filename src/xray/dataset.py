@@ -11,7 +11,7 @@ import conventions
 import common
 import groupby
 import utils
-from dataset_array import DatasetArray
+from dataset_array import DataArray
 from utils import FrozenOrderedDict, Frozen, remap_loc_indexers
 
 date2num = nc4.date2num
@@ -101,7 +101,7 @@ class Dataset(Mapping):
     together form a self describing dataset.
 
     Dataset implements the mapping interface with keys given by variable names
-    and values given by DatasetArray objects focused on each variable name.
+    and values given by DataArray objects for each variable name.
 
     Note: the size of dimensions in a dataset cannot be changed.
     """
@@ -137,7 +137,7 @@ class Dataset(Mapping):
             var = xarray.as_xarray(var)
         except TypeError:
             raise TypeError('Dataset variables must be of type '
-                            'DatasetArray or XArray, or a sequence of the '
+                            'DataArray or XArray, or a sequence of the '
                             'form (dimensions, data[, attributes, encoding])')
         # this will unmask and rescale the data as well as convert
         # time variables to datetime indices.
@@ -278,14 +278,14 @@ class Dataset(Mapping):
         return self._variables.virtual
 
     def __getitem__(self, key):
-        """Access the DatasetArray focused on the given variable name.
+        """Access the given variable name in this dataset as a `DataArray`.
         """
-        return DatasetArray(self, key)
+        return DataArray(self, key)
 
     def __setitem__(self, key, value):
         """Add an array to this dataset.
 
-        If value is a `DatasetArray`, call its `select()` method, rename it to
+        If value is a `DataArray`, call its `select()` method, rename it to
         `key` and merge the contents of the resulting dataset into this
         dataset.
 
@@ -293,7 +293,7 @@ class Dataset(Mapping):
         `(dimensions, data[, attributes])`), add it to this dataset as a new
         variable.
         """
-        if isinstance(value, DatasetArray):
+        if isinstance(value, DataArray):
             self.merge(value.rename(key).select().dataset, inplace=True,
                        overwrite_vars=[key])
         else:
@@ -656,7 +656,7 @@ class Dataset(Mapping):
 
         Parameters
         ----------
-        group : str or DatasetArray
+        group : str or DataArray
             Array whose unique values should be used to group this array. If a
             string, must be the name of a variable contained in this dataset.
         squeeze : boolean, optional
@@ -674,8 +674,8 @@ class Dataset(Mapping):
             # merge in the group's dataset to allow group to be a virtual
             # variable in this dataset
             ds = self.merge(self[group].dataset)
-            group = DatasetArray(ds, group)
-        return groupby.GroupBy(self, group.focus, group, squeeze=squeeze)
+            group = DataArray(ds, group)
+        return groupby.GroupBy(self, group.name, group, squeeze=squeeze)
 
     def squeeze(self, dimension=None):
         """Return a new dataset with squeezed data.
@@ -722,7 +722,7 @@ class Dataset(Mapping):
             dim_name = dimension
         else:
             dim_name, = dimension.dimensions
-            if isinstance(dimension, DatasetArray):
+            if isinstance(dimension, DataArray):
                 self.merge(dimension._unselect_nonfocus_dims().dataset,
                            inplace=True)
             else:
@@ -743,7 +743,7 @@ class Dataset(Mapping):
             are listed in "concat_over") are expected to be equal.
         dimension : str or Array, optional
             Name of the dimension to stack along. If dimension is provided as
-            an XArray or DatasetArray, the focus of the dataset array or the
+            an XArray or DataArray, the focus of the dataset array or the
             singleton dimension of the xarray is used as the stacking dimension
             and the array is added to the returned dataset.
         indexers : None or iterable of indexers, optional
