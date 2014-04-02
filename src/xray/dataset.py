@@ -12,8 +12,8 @@ import common
 import groupby
 import utils
 from dataset_array import DataArray
-from utils import (FrozenOrderedDict, Frozen, remap_loc_indexers,
-                   multi_index_from_product)
+from utils import (FrozenOrderedDict, Frozen, SortedKeysDict,
+                   remap_loc_indexers, multi_index_from_product)
 
 date2num = nc4.date2num
 num2date = nc4.num2date
@@ -126,7 +126,7 @@ class Dataset(Mapping):
             Whether to decode these variables according to CF conventions.
         """
         self._variables = _VariablesDict()
-        self._dimensions = {}
+        self._dimensions = SortedKeysDict()
         if variables is not None:
             self.set_variables(variables, decode_cf=decode_cf)
         if attributes is None:
@@ -223,10 +223,7 @@ class Dataset(Mapping):
         This dictionary cannot be modified directly, but is updated when adding
         new variables.
         """
-        # TODO: save dimensions in some sort of SortedDictionary that always
-        # iterates over its items in sorted order so we don't need to recreate
-        # the hashtable every time we check `d in self.dimensions`
-        return Frozen(OrderedDict(sorted(self._dimensions.items())))
+        return Frozen(self._dimensions)
 
     def copy(self, deep=False):
         """Returns a copy of this dataset.

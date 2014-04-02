@@ -191,3 +191,7 @@ class TestDictionaries(TestCase):
             x.update(self.y)
         self.assertEquals(x.mapping, self.x)
 
+    def test_sorted_keys_dict(self):
+        x = {'a': 1, 'b': 2, 'c': 3}
+        y = utils.SortedKeysDict(x)
+        self.assertItemsEqual(y, ['a', 'b', 'c'])
