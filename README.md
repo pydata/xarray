@@ -16,7 +16,8 @@ Adding dimensions names and coordinate values to numpy's [ndarray][ndarray]
 makes many powerful array operations easy:
 
   - Apply operations over dimensions by name: `x.sum('time')`.
-  - Select values by label instead of integer location: `x.loc['2014-01-01']`.
+  - Select values by label instead of integer location: `x.loc['2014-01-01']`
+    or `x.labeled_by(time='2014-01-01')`.
   - Mathematical operations (e.g., `x - y`) vectorize across multiple
     dimensions (known in numpy as "broadcasting") based on dimension names,
     regardless of their original order.
@@ -155,9 +156,12 @@ For more details, see the **[full documentation][docs]** (still a work in
 progress) or the source code. **xray** is rapidly maturing, but it is still in
 its early development phase. ***Expect the API to change.***
 
-At present, it requires the python dependencies numpy 1.8.0, scipy 0.13,
-pandas 0.13.1 and netCDF4 1.0.6. The easiest way to get these installed from
-scratch is to use [Anaconda][anaconda].
+xray currently requires Python 2.7 and the python libraries `numpy>=1.8.0`,
+`scipy>=0.13`, `pandas>=0.13.1` and `netCDF4>=1.0.6`. The easiest way to get
+these installed from scratch is to use [Anaconda][anaconda]. Eventually these
+requirements will be relaxed: python libraries (other than numpy and pandas)
+will be required only for the relevant functionality, and we will support
+Python 3.
 
 It is not yet available on the Python package index (prior to its initial
 release). For now, you need to install it from source:
