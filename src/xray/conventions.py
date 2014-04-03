@@ -1,7 +1,9 @@
 import unicodedata
 
+import functools
 import netCDF4 as nc4
 import numpy as np
+import pandas as pd
 from datetime import datetime
 
 import xarray
@@ -88,19 +90,216 @@ def is_valid_nc3_name(s):
             all((_isalnumMUTF8(c) or c in _specialchars for c in s)))
 
 
-class MaskedAndScaledArray(object):
+def mask_and_scale(array, fill_value=None, scale_factor=None, add_offset=None):
+    """Scale and mask array values according to CF conventions for packed and
+    missing values
+
+    First, values equal to the fill_value are replaced by NaN. Then, new values
+    are given by the formula:
+
+        original_values * scale_factor + add_offset
+
+    Parameters
+    ----------
+    array : array-like
+        Original array of values to wrap
+    fill_value : number, optional
+        All values equal to fill_value in the original array are replaced
+        by NaN.
+    scale_factor : number, optional
+        Multiply entries in the original array by this number.
+    add_offset : number, optional
+        After applying scale_factor, add this number to entries in the
+        original array.
+
+    Returns
+    -------
+    scaled : np.ndarray
+        Array of masked and scaled values.
+
+    References
+    ----------
+    http://www.unidata.ucar.edu/software/netcdf/docs/BestPractices.html
+    """
+    # cast to float to insure NaN is meaningful
+    values = np.array(array, dtype=float, copy=True)
+    if fill_value is not None and not np.isnan(fill_value):
+        if values.ndim > 0:
+            values[values == fill_value] = np.nan
+        elif values == fill_value:
+            values = np.array(np.nan)
+    if scale_factor is not None:
+        values *= scale_factor
+    if add_offset is not None:
+        values += add_offset
+    return values
+
+
+def decode_cf_datetime(num_dates, units, calendar=None):
+    """Given an array of numeric dates in netCDF format, convert it into a
+    numpy array of date time objects.
+
+    For standard (Gregorian) calendars, this function uses vectorized
+    operations, which makes it much faster than netCDF4.num2date. In such a
+    case, the returned array will be of type np.datetime64.
+
+    See also
+    --------
+    netCDF4.num2date
+    """
+    num_dates = np.asarray(num_dates).astype(float)
+    if calendar is None:
+        calendar = 'standard'
+
+    def nan_safe_num2date(num):
+        if np.isnan(num):
+            date = 'NaT'
+        else:
+            date = nc4.num2date(num, units, calendar)
+        return np.datetime64(date)
+
+    min_num = np.nanmin(num_dates)
+    max_num = np.nanmax(num_dates)
+    min_date = nan_safe_num2date(min_num)
+    if num_dates.size > 1:
+        max_date = nan_safe_num2date(max_num)
+    else:
+        max_date = min_date
+
+    NaT = np.datetime64('NaT')
+    # NaT comparisons are broken in numpy, so NaT always evaluates to less than
+    # 1678-01-01, even though it probably shouldn't. Hence we check for
+    # min_date != NaT first:
+    if (calendar not in ['standard', 'gregorian', 'proleptic_gregorian']
+            or (min_date != NaT and (min_date < np.datetime64('1678-01-01') or
+                                     max_date > np.datetime64('2262-04-11')))):
+        dates = nc4.num2date(num_dates, units, calendar)
+    else:
+        # we can safely use np.datetime64 with nanosecond precision (pandas
+        # likes ns precision so it can directly make DatetimeIndex objects)
+        if min_num == max_num:
+            # we can't safely divide by max_num - min_num
+            dates = np.repeat(np.datetime64(min_date), num_dates.size)
+            if dates.size > 1:
+                # don't bother with one element, since it will be fixed at
+                # min_date and isn't indexable anyways
+                dates[np.isnan(num_dates)] = NaT
+        else:
+            # Calculate the date as a np.datetime64 array from linear scaling
+            # of the max and min dates calculated via num2date.
+            flat_num_dates = num_dates.reshape(-1)
+            # Use second precision for the timedelta to decrease the chance of
+            # a numeric overflow
+            time_delta = np.timedelta64(max_date - min_date).astype('m8[s]')
+            if time_delta != max_date - min_date:
+                raise ValueError('unable to exactly represent max_date minus'
+                                 'min_date with second precision')
+            # apply the numerator and denominator separately so we don't need
+            # to cast to floating point numbers under the assumption that all
+            # dates can be given exactly with ns precision
+            numerator = flat_num_dates - min_num
+            denominator = max_num - min_num
+            dates = (time_delta * numerator / denominator
+                     + np.datetime64(min_date))
+        # restore original shape and ensure dates are given in ns
+        dates = dates.reshape(num_dates.shape).astype('M8[ns]')
+    return dates
+
+
+def guess_time_units(dates):
+    """Given an array of dates suitable for input to `pandas.DatetimeIndex`,
+    returns a CF compatible time-unit string of the form "{time_unit} since
+    {date[0]}", where `time_unit` is 'days', 'hours', 'minutes' or 'seconds'
+    (the first one that can evenly divide all unique time deltas in `dates`)
+    """
+    dates = pd.DatetimeIndex(np.asarray(dates).reshape(-1))
+    unique_timedeltas = np.unique(np.diff(dates.values))
+    for time_unit, delta in [('days', '1 days'), ('hours', '3600s'),
+                             ('minutes', '60s'), ('seconds', '1s')]:
+        unit_delta = pd.to_timedelta(delta)
+        diffs = unique_timedeltas / unit_delta
+        if np.all(diffs == diffs.astype(int)):
+            break
+    else:
+        raise ValueError('could not automatically determine time units')
+    return '%s since %s' % (time_unit, dates[0])
+
+
+def encode_cf_datetime(dates, units=None, calendar=None):
+    """Given an array of datetime objects, returns the tuple `(num, units,
+    calendar)` suitable for a CF complient time variable.
+
+    Unlike encode_cf_datetime, this function does not (yet) speedup encoding
+    of datetime64 arrays. However, unlike `date2num`, it can handle datetime64
+    arrays.
+
+    See also
+    --------
+    netCDF4.date2num
+    """
+    if units is None:
+        units = guess_time_units(dates)
+    if calendar is None:
+        calendar = 'proleptic_gregorian'
+
+    if (isinstance(dates, np.ndarray)
+            and np.issubdtype(dates.dtype, np.datetime64)):
+        # for now, don't bother doing any trickery like decode_cf_datetime to
+        # convert dates to numbers faster
+        # note: numpy's broken datetime conversion only works for us precision
+        dates = np.asarray(dates).astype('M8[us]').astype(datetime)
+
+    if hasattr(dates, 'ndim') and dates.ndim == 0:
+        # unpack dates because date2num doesn't like 0-dimensional arguments
+        dates = dates.item()
+
+    num = nc4.date2num(dates, units, calendar)
+    return (num, units, calendar)
+
+
+class LazyArrayMixin(object):
+    """Wrapper around array-like objects to create a new indexable object where
+    values, when accessesed, are automatically transformed.
+    """
+    @property
+    def dtype(self):
+        return self.array.dtype
+
+    @property
+    def shape(self):
+        return self.array.shape
+
+    @property
+    def size(self):
+        return self.array.size
+
+    @property
+    def ndim(self):
+        return self.array.ndim
+
+    def __len__(self):
+        return len(self.array)
+
+    def __array__(self):
+        return self[...]
+
+    def __getitem__(self, key):
+        raise NotImplementedError
+
+
+class MaskedAndScaledArray(LazyArrayMixin):
     """Wrapper around array-like objects to create a new indexable object where
     values, when accessesed, are automatically scaled and masked according to
-    CF conventions for packed and missing data values
+    CF conventions for packed and missing data values.
 
     New values are given by the formula:
         original_values * scale_factor + add_offset
 
     Values can only be accessed via `__getitem__`:
 
-    >>> x = _MaskedAndScaledArray(np.array([-99, -1, 0, 1, 2]), -99, 0.01, 1)
+    >>> x = MaskedAndScaledArray(np.array([-99, -1, 0, 1, 2]), -99, 0.01, 1)
     >>> x
-    _MaskedAndScaledArray(array([-99, -1,  0,  1,  2]), fill_value=-99,
+    MaskedAndScaledArray(array([-99, -1,  0,  1,  2]), fill_value=-99,
     scale_factor=0.01, add_offset=1)
     >>> x[:]
     array([  nan,  0.99,  1.  ,  1.01,  1.02]
@@ -126,45 +325,17 @@ class MaskedAndScaledArray(object):
             original array.
         """
         self.array = array
+        self.fill_value = fill_value
         self.scale_factor = scale_factor
         self.add_offset = add_offset
-        self.fill_value = fill_value
 
     @property
     def dtype(self):
         return np.dtype('float')
 
-    @property
-    def shape(self):
-        return self.array.shape
-
-    @property
-    def size(self):
-        return self.array.size
-
-    @property
-    def ndim(self):
-        return self.array.ndim
-
-    def __len__(self):
-        return len(self.array)
-
-    def __array__(self):
-        return self[...]
-
     def __getitem__(self, key):
-        # cast to float to insure NaN is meaningful
-        values = np.array(self.array[key], dtype=float, copy=True)
-        if self.fill_value is not None and not np.isnan(self.fill_value):
-            if self.ndim > 0:
-                values[values == self.fill_value] = np.nan
-            elif values == self.fill_value:
-                values = np.array(np.nan)
-        if self.scale_factor is not None:
-            values *= self.scale_factor
-        if self.add_offset is not None:
-            values += self.add_offset
-        return values
+        return mask_and_scale(self.array[key], self.fill_value,
+                              self.scale_factor, self.add_offset)
 
     def __repr__(self):
         return ("%s(%r, fill_value=%r, scale_factor=%r, add_offset=%r)" %
@@ -172,7 +343,27 @@ class MaskedAndScaledArray(object):
                  self.scale_factor, self.add_offset))
 
 
-class CharToStringArray(object):
+
+class DecodedCFDatetimeArray(LazyArrayMixin):
+    """Wrapper around array-like objects to create a new indexable object where
+    values, when accessesed, are automatically converted into datetime objects
+    using decode_cf_datetime.
+    """
+    def __init__(self, array, units, calendar=None):
+        self.array = array
+        self.units = units
+        self.calendar = calendar
+
+    @property
+    def dtype(self):
+        return np.dtype('datetime64[ns]')
+
+    def __getitem__(self, key):
+        return decode_cf_datetime(self.array, units=self.units,
+                                  calendar=self.calendar)
+
+
+class CharToStringArray(LazyArrayMixin):
     """Wrapper around array-like objects to create a new indexable object where
     values, when accessesed, are automatically concatenated along the last
     dimension
@@ -221,9 +412,6 @@ class CharToStringArray(object):
     def __repr__(self):
         return '%s(%r)' % (type(self).__name__, self.array)
 
-    def __array__(self):
-        return self[...]
-
     def __getitem__(self, key):
         # require slicing the last dimension completely
         key = utils.expanded_indexer(key, self.array.ndim)
@@ -245,7 +433,7 @@ def encode_cf_variable(array):
             or (data.dtype.kind == 'O'
                 and isinstance(data.reshape(-1)[0], datetime))):
         # encode datetime arrays into numeric arrays
-        (data, units, calendar) = utils.encode_cf_datetime(
+        (data, units, calendar) = encode_cf_datetime(
             data, encoding.pop('units', None), encoding.pop('calendar', None))
         attributes['units'] = units
         attributes['calendar'] = calendar
@@ -338,13 +526,9 @@ def decode_cf_variable(var, mask_and_scale=True):
                                         add_offset)
 
     if 'units' in attributes and 'since' in attributes['units']:
-        # convert CF times to datetimes
-        # TODO: make this lazy
-        data = var.data
         units = pop_to(attributes, encoding, 'units')
         calendar = pop_to(attributes, encoding, 'calendar')
-        data = utils.decode_cf_datetime(data, units=units, calendar=calendar)
-        indexing_mode = 'numpy'
+        data = DecodedCFDatetimeArray(data, units, calendar)
 
     return xarray.XArray(dimensions, data, attributes, encoding=encoding,
                          indexing_mode=indexing_mode)
