@@ -98,6 +98,14 @@ class XArraySubclassTestCases(object):
         self.assertIsInstance(0 + v, XArray)
         self.assertNotIsInstance(0 + v, CoordXArray)
 
+    def test_1d_reduce(self):
+        x = np.arange(5)
+        v = self.cls(['x'], x)
+        actual = v.sum()
+        expected = XArray((), 10, {'cell_methods': 'x: sum'})
+        self.assertXArrayEqual(expected, actual)
+        self.assertIs(type(actual), XArray)
+
     def test_array_interface(self):
         x = np.arange(5)
         v = self.cls(['x'], x)

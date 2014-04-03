@@ -432,8 +432,8 @@ class XArray(AbstractArray):
             for dim in dimension:
                 var = var._reduce(func, dim, **kwargs)
         else:
-            var = type(self)([], func(self.data, **kwargs),
-                             _math_safe_attributes(self.attributes))
+            var = XArray([], func(self.data, **kwargs),
+                         _math_safe_attributes(self.attributes))
             var._append_to_cell_methods(': '.join(self.dimensions)
                                         + ': ' + func.__name__)
         return var
@@ -451,8 +451,7 @@ class XArray(AbstractArray):
         dims = tuple(dim for i, dim in enumerate(self.dimensions)
                      if axis not in [i, i - self.ndim])
         data = f(self.data, axis=axis, **kwargs)
-        new_var = type(self)(dims, data,
-                             _math_safe_attributes(self.attributes))
+        new_var = XArray(dims, data, _math_safe_attributes(self.attributes))
         new_var._append_to_cell_methods(self.dimensions[axis]
                                         + ': ' + f.__name__)
         return new_var
