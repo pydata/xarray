@@ -36,7 +36,7 @@ pandas.
 
 Because **xray** implements the same data model as the NetCDF file format,
 xray datasets have a natural and portable serialization format. But it's
-also easy to robustly convert an xray `DatasetArray` to and from a numpy
+also easy to robustly convert an xray `DataArray` to and from a numpy
 `ndarray` or a pandas `DataFrame` or `Series`, providing compatibility with
 the full [scientific-python ecosystem][scipy].
 
@@ -96,14 +96,13 @@ working with many scientific datasets.
 
 [Iris][iris] (supported by the UK Met office) is a similar package designed
 for working with weather data in Python. Iris provided much of the inspiration
-for xray (xray's `DatasetArray` is largely based on the Iris `Cube`),
-but it has several limitations that led us to build xray instead of extending
-Iris:
+for xray (xray's `DataArray` is largely based on the Iris `Cube`), but it has
+several limitations that led us to build xray instead of extending Iris:
 
   1. Iris has essentially one first-class object (the `Cube`) on which it
      attempts to build all functionality (`Coord` supports a much more
      limited set of functionality). xray has its equivalent of the Cube
-     (the `DatasetArray` object), but under the hood it is only thin wrapper
+     (the `DataArray` object), but under the hood it is only thin wrapper
      on the more primitive building blocks of Dataset and XArray objects.
   2. Iris has a strict interpretation of [CF conventions][cf], which,
      although a principled choice, we have found to be impractical for
