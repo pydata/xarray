@@ -152,11 +152,7 @@ def decode_cf_datetime(num_dates, units, calendar=None):
         calendar = 'standard'
 
     def nan_safe_num2date(num):
-        if np.isnan(num):
-            date = 'NaT'
-        else:
-            date = nc4.num2date(num, units, calendar)
-        return np.datetime64(date)
+        return pd.NaT if np.isnan(num) else nc4.num2date(num, units, calendar)
 
     min_num = np.nanmin(num_dates)
     max_num = np.nanmax(num_dates)
@@ -166,24 +162,24 @@ def decode_cf_datetime(num_dates, units, calendar=None):
     else:
         max_date = min_date
 
-    NaT = np.datetime64('NaT')
-    # NaT comparisons are broken in numpy, so NaT always evaluates to less than
-    # 1678-01-01, even though it probably shouldn't. Hence we check for
-    # min_date != NaT first:
     if (calendar not in ['standard', 'gregorian', 'proleptic_gregorian']
-            or (min_date != NaT and (min_date < np.datetime64('1678-01-01') or
-                                     max_date > np.datetime64('2262-04-11')))):
+            or min_date < datetime(1678, 1, 1)
+            or max_date > datetime(2262, 4, 11)):
         dates = nc4.num2date(num_dates, units, calendar)
     else:
         # we can safely use np.datetime64 with nanosecond precision (pandas
         # likes ns precision so it can directly make DatetimeIndex objects)
-        if min_num == max_num:
+        if pd.isnull(min_num):
+            # pandas.NaT doesn't cast to numpy.datetime64('NaT'), so handle it
+            # separately
+            dates = np.repeat(np.datetime64('NaT'), num_dates.size)
+        elif min_num == max_num:
             # we can't safely divide by max_num - min_num
             dates = np.repeat(np.datetime64(min_date), num_dates.size)
             if dates.size > 1:
                 # don't bother with one element, since it will be fixed at
                 # min_date and isn't indexable anyways
-                dates[np.isnan(num_dates)] = NaT
+                dates[np.isnan(num_dates)] = np.datetime64('NaT')
         else:
             # Calculate the date as a np.datetime64 array from linear scaling
             # of the max and min dates calculated via num2date.
