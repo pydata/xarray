@@ -532,7 +532,7 @@ def decode_cf_variable(var, mask_and_scale=True):
             raise ValueError("Refused to overwrite dtype")
     encoding['dtype'] = data.dtype
 
-    if np.issubdtype(data.dtype, (str, unicode)):
+    if np.issubdtype(data.dtype, (str, unicode)) and data.dtype.itemsize == 1:
         # TODO: add some sort of check instead of just assuming that the last
         # dimension on a character array is always the string dimension
         dimensions = dimensions[:-1]
