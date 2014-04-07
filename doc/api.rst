@@ -13,6 +13,7 @@ Creating a dataset
 
    Dataset
    open_dataset
+   Dataset.from_store
    Dataset.concat
 
 Attributes and underlying data
@@ -74,6 +75,19 @@ IO / Conversion
    Dataset.to_dataframe
    Dataset.from_dataframe
 
+Backends (experimental)
+~~~~~~~~~~~~~~~~~~~~~~~
+
+These backends provide a low-level interface for lazily loading data from
+external file-formats or protocols, and can be manually invoked to create
+arguments for the `from_store` and `dump_to_store` Dataset methods.
+
+.. autosummary::
+   :toctree: generated/
+
+   backends.NetCDF4DataStore
+   backends.PydapDataStore
+   backends.ScipyDataStore
 
 DataArray
 ---------

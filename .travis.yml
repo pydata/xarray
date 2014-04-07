@@ -15,10 +15,15 @@ before_install:
   # The next couple lines fix a crash with multiprocessing on Travis and are not specific to using Miniconda
   - sudo rm -rf /dev/shm
   - sudo ln -s /run/shm /dev/shm
+# Test with and without netCDF4/scipy/pydap
+env:
+  - UPDATE_PYENV='conda remove --yes scipy netCDF4'
+  - UPDATE_PYENV='pip install pydap'
 # Install packages
 install:
-  - conda create --yes -n env_name python=$TRAVIS_PYTHON_VERSION pip nose numpy scipy netCDF4 pandas mock
-  - source activate env_name
+  - conda create --yes -n test_env python=$TRAVIS_PYTHON_VERSION pip nose mock numpy pandas scipy netCDF4
+  - source activate test_env
+  - echo $UPDATE_PYENV; $UPDATE_PYENV
   - python setup.py install
 # Run test
 script:

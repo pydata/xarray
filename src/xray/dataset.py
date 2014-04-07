@@ -5,11 +5,11 @@ import pandas as pd
 from cStringIO import StringIO
 from collections import OrderedDict, Mapping
 
-import xarray
 import backends
 import conventions
 import common
 import groupby
+import xarray
 import utils
 from dataset_array import DataArray
 from utils import (FrozenOrderedDict, Frozen, SortedKeysDict, ChainMap,
@@ -166,7 +166,8 @@ def _expand_variables(raw_variables, old_variables={},
 def _calculate_dimensions(variables):
     """Calculate the dimensions corresponding to a set of variables.
 
-    Returns dictionary mapping from dimension names to sizes. Raises ValueError
+    Returns dictionary mapping from d
+    imension names to sizes. Raises ValueError
     if any of the dimension sizes conflict.
     """
     dimensions = SortedKeysDict()

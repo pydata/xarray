@@ -1,7 +1,6 @@
 import unicodedata
 
 import functools
-import netCDF4 as nc4
 import numpy as np
 import pandas as pd
 from datetime import datetime
@@ -147,6 +146,7 @@ def decode_cf_datetime(num_dates, units, calendar=None):
     --------
     netCDF4.num2date
     """
+    import netCDF4 as nc4
     num_dates = np.asarray(num_dates).astype(float)
     if calendar is None:
         calendar = 'standard'
@@ -233,6 +233,7 @@ def encode_cf_datetime(dates, units=None, calendar=None):
     --------
     netCDF4.date2num
     """
+    import netCDF4 as nc4
     if units is None:
         units = guess_time_units(dates)
     if calendar is None:
@@ -391,7 +392,7 @@ class CharToStringArray(LazyArrayMixin):
 
     @property
     def ndim(self):
-        return self.array.ndim - 1
+        return max(self.array.ndim - 1, 0)
 
     def __len__(self):
         if self.ndim > 0:
@@ -409,11 +410,33 @@ class CharToStringArray(LazyArrayMixin):
         return '%s(%r)' % (type(self).__name__, self.array)
 
     def __getitem__(self, key):
-        # require slicing the last dimension completely
-        key = utils.expanded_indexer(key, self.array.ndim)
-        if key[-1] != slice(None):
-            raise IndexError('too many indices')
-        return nc4.chartostring(self.array[key])
+        if self.array.ndim == 0:
+            return self.array[key]
+        else:
+            # require slicing the last dimension completely
+            key = utils.expanded_indexer(key, self.array.ndim)
+            if  key[-1] != slice(None):
+                raise IndexError('too many indices')
+            return char_to_string(self.array[key])
+
+
+def string_to_char(arr):
+    """Like netCDF4.stringtochar, but faster and more flexible.
+    """
+    kind = arr.dtype.kind
+    if kind not in ['U', 'S']:
+        raise ValueError('argument must be a string')
+    return arr.view(kind + '1').reshape(*[arr.shape + (-1,)])
+
+
+def char_to_string(arr):
+    """Like netCDF4.chartostring, but faster and more flexible.
+    """
+    # based on: http://stackoverflow.com/a/10984878/809705
+    kind = arr.dtype.kind
+    if kind not in ['U', 'S']:
+        raise ValueError('argument must be a string')
+    return arr.view(kind + str(arr.shape[-1]))[..., 0]
 
 
 def encode_cf_variable(array):
@@ -433,10 +456,10 @@ def encode_cf_variable(array):
             data, encoding.pop('units', None), encoding.pop('calendar', None))
         attributes['units'] = units
         attributes['calendar'] = calendar
-    elif data.dtype == np.dtype('O'):
+    elif data.dtype.kind == 'O':
         # Occasionally, one will end up with variables with dtype=object
         # (likely because they were created from pandas objects which don't
-        # maintain dtype careful). Thie code makes a best effort attempt to
+        # maintain dtype careful). This code makes a best effort attempt to
         # encode them into a dtype that NETCDF can handle by inspecting the
         # dtype of the first element.
         dtype = np.array(data.reshape(-1)[0]).dtype
@@ -451,8 +474,10 @@ def encode_cf_variable(array):
         return v
 
     # encode strings as character arrays
+    # TODO: add a check data.dtype.itemsize > 1 (when we have optional string
+    # decoding)
     if np.issubdtype(data.dtype, (str, unicode)):
-        data = nc4.stringtochar(data)
+        data = string_to_char(data)
         dimensions = dimensions + ('string%s' % data.shape[-1],)
 
     # unscale/mask
@@ -473,7 +498,7 @@ def encode_cf_variable(array):
                 data[nans] = get_to(encoding, attributes, '_FillValue')
 
     # restore original dtype
-    if 'dtype' in encoding:
+    if 'dtype' in encoding and encoding['dtype'].kind != 'O':
         if np.issubdtype(encoding['dtype'], int):
             data = data.round()
         data = data.astype(encoding['dtype'])
