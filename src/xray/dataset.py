@@ -12,7 +12,8 @@ import common
 import groupby
 import utils
 from dataset_array import DataArray
-from utils import FrozenOrderedDict, Frozen, remap_loc_indexers
+from utils import (FrozenOrderedDict, Frozen, remap_loc_indexers,
+                   multi_index_from_product)
 
 date2num = nc4.date2num
 num2date = nc4.num2date
@@ -970,7 +971,6 @@ class Dataset(Mapping):
         DataFrame. The DataFrame is be indexed by the Cartesian product of
         this dataset's indices.
         """
-        index_names = self.coordinates.keys()
         columns = self.noncoordinates.keys()
         data = []
         # we need a template to broadcast all dataset variables against
@@ -984,9 +984,46 @@ class Dataset(Mapping):
             _, var = xarray.broadcast_xarrays(template, self.variables[k])
             _, var_data = np.broadcast_arrays(template.data, var.data)
             data.append(var_data.reshape(-1))
-        # note: pd.MultiIndex.from_product is new in pandas-0.13.1
-        # np.asarray is necessary to work around a pandas bug:
-        # https://github.com/pydata/pandas/issues/6439
-        coords = [np.asarray(v) for v in self.coordinates.values()]
-        index = pd.MultiIndex.from_product(coords, names=index_names)
+
+        index = multi_index_from_product(self.coordinates.values(),
+                                         names=self.coordinates.keys())
         return pd.DataFrame(OrderedDict(zip(columns, data)), index=index)
+
+    @classmethod
+    def from_dataframe(cls, dataframe):
+        """Convert a pandas.DataFrame into an xray.Dataset
+
+        Each column will be converted into an independent variable in the
+        Dataset. If the dataframe's index is a MultiIndex, it will be expanded
+        into a tensor product of one-dimensional indices (filling in missing
+        values with NaN). This method will produce a Dataset very similar to
+        that on which the 'to_dataframe' method was called, except with
+        possibly redundant dimensions (since all dataset variables will have
+        the same dimensionality).
+        """
+        # TODO: Add an option to remove dimensions along which the variables
+        # are constant, to enable consistent serialization to/from a dataframe,
+        # even if some variables have different dimensionality.
+
+        idx = dataframe.index
+        obj = cls()
+
+        if hasattr(idx, 'levels'):
+            # it's a multi-index
+            # expand the DataFrame to include the product of all levels
+            full_idx = multi_index_from_product(idx.levels, idx.names)
+            dataframe = dataframe.reindex(full_idx)
+            dimensions = [name if name is not None else 'level_%i' % n
+                          for n, name in enumerate(idx.names)]
+            for dim, lev in zip(dimensions, idx.levels):
+                obj[dim] = (dim, lev)
+            shape = [lev.size for lev in idx.levels]
+        else:
+            dimensions = (idx.name if idx.name is not None else 'index',)
+            obj[dimensions[0]] = (dimensions, idx)
+            shape = -1
+
+        for name, series in dataframe.iteritems():
+            data = series.values.reshape(shape)
+            obj[name] = (dimensions, data)
+        return obj

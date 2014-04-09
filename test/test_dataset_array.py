@@ -299,9 +299,11 @@ class TestDataArray(TestCase):
         self.assertDSArrayEqual(dv1, self.dv[:5])
         self.assertDSArrayEqual(dv2, self.dv[:5])
 
-    def test_to_series(self):
+    def test_to_and_from_series(self):
         expected = self.dv.to_dataframe()['foo']
         actual = self.dv.to_series()
         self.assertArrayEqual(expected.values, actual.values)
         self.assertArrayEqual(expected.index.values, actual.index.values)
         self.assertEqual('foo', actual.name)
+        # test roundtrip
+        self.assertDSArrayEqual(self.dv, DataArray.from_series(actual))
