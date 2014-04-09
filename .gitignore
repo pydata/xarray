@@ -37,5 +37,4 @@ nosetests.xml
 # xray specific
 doc/_build
 doc/generated
-src/xray/version.py
-
+xray/version.py

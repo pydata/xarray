@@ -31,7 +31,7 @@ class TestDataArray(TestCase):
 
     def test_repr(self):
         v = XArray(['time', 'x'], [[1, 2, 3], [4, 5, 6]], {'foo': 'bar'})
-        dataset_array = Dataset({'my_variable': v})['my_variable']
+        data_array = Dataset({'my_variable': v})['my_variable']
         expected = dedent("""
         <xray.DataArray 'my_variable' (time: 2, x: 3)>
         array([[1, 2, 3],
@@ -39,7 +39,7 @@ class TestDataArray(TestCase):
         Attributes:
             foo: bar
         """).strip()
-        self.assertEqual(expected, repr(dataset_array))
+        self.assertEqual(expected, repr(data_array))
 
     def test_properties(self):
         self.assertIs(self.dv.dataset, self.ds)
