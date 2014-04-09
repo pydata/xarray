@@ -212,9 +212,20 @@ class NetCDF4DataTest(DatasetIOTestCases, TestCase):
             expected = Dataset({'x': ((), 123)})
             self.assertDatasetEqual(expected, ds)
 
-    def test_lazy_decode(self):
-        data = self.roundtrip(create_test_data(), decode_cf=True)
-        self.assertIsInstance(data['var1'].variable._data, nc4.Variable)
+    def test_variable_len_strings(self):
+        with create_tmp_file() as tmp_file:
+            values = np.array(['foo', 'bar', 'baz'], dtype=object)
+
+            nc = nc4.Dataset(tmp_file, mode='w')
+            nc.createDimension('x', 3)
+            v = nc.createVariable('x', str, ('x',))
+            v[:] = values
+            nc.close()
+
+            expected = Dataset({'x': ('x', values)})
+            for kwargs in [{}, {'decode_cf': True}]:
+                actual = open_dataset(tmp_file, **kwargs)
+                self.assertDatasetEqual(expected, actual)
 
 
 @requires_netCDF4

@@ -383,3 +383,40 @@ class ChainMap(MutableMapping):
 
     def __len__(self):
         raise NotImplementedError
+
+
+class NDArrayMixin(object):
+    """Mixin class for making wrappers of N-dimensional arrays that conform
+    to the ndarray interface that xray expects for the data argument to XArray
+    objects.
+
+    A subclass should set the `array` property and override one or more of
+    `dtype`, `shape` and `__getitem__`.
+    """
+    @property
+    def dtype(self):
+        return self.array.dtype
+
+    @property
+    def shape(self):
+        return self.array.shape
+
+    @property
+    def ndim(self):
+        return len(self.shape)
+
+    @property
+    def size(self):
+        return np.prod(self.shape)
+
+    def __len__(self):
+        try:
+            return self.shape[0]
+        except IndexError:
+            raise TypeError('len() of unsized object')
+
+    def __array__(self):
+        return np.asarray(self[...])
+
+    def __getitem__(self, key):
+        raise self.array[key]

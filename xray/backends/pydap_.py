@@ -1,24 +1,12 @@
 import numpy as np
 
 import xray
-from xray.utils import FrozenOrderedDict, Frozen
+from xray.utils import FrozenOrderedDict, Frozen, NDArrayMixin
 
 
-class _ArrayWrapper(object):
+class PydapArrayWrapper(NDArrayMixin):
     def __init__(self, array):
         self.array = array
-
-    @property
-    def ndim(self):
-        return len(self.array.shape)
-
-    @property
-    def shape(self):
-        return self.array.shape
-
-    @property
-    def size(self):
-        return np.prod(self.shape)
 
     @property
     def dtype(self):
@@ -30,9 +18,6 @@ class _ArrayWrapper(object):
             return np.dtype('O')
         else:
             return np.dtype(t.typecode + str(t.size))
-
-    def __array__(self):
-        return np.asarray(self[...])
 
     def __getitem__(self, key):
         if not isinstance(key, tuple):
@@ -61,7 +46,7 @@ class PydapDataStore(object):
     @property
     def variables(self):
         return FrozenOrderedDict((k, xray.XArray(v.dimensions,
-                                                 _ArrayWrapper(v),
+                                                 PydapArrayWrapper(v),
                                                  v.attributes))
                                 for k, v in self.ds.iteritems())
 

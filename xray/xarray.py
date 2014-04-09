@@ -36,6 +36,9 @@ def as_xarray(obj, strict=True):
                          getattr(obj, 'attributes', None),
                          getattr(obj, 'encoding', None))
         else:
+            if isinstance(obj, np.ndarray):
+                raise TypeError('cannot convert numpy.ndarray objects into '
+                                'XArray objects without supplying dimensions')
             try:
                 obj = XArray(*obj)
             except TypeError:
@@ -124,19 +127,10 @@ class XArray(AbstractArray):
     def in_memory(self):
         return isinstance(self._data, (np.ndarray, pd.Index))
 
-    def _data_as_ndarray(self):
-        if isinstance(self._data, pd.Index):
-            # pandas does automatic type conversion when an index is accessed
-            # like index[...], so use index.values instead
-            data = self._data.values
-        else:
-            data = np.asarray(self._data[...])
-        return data
-
     @property
     def data(self):
         """The variable's data as a numpy.ndarray"""
-        self._data = self._data_as_ndarray()
+        self._data = np.asarray(self._data)
         self._indexing_mode = 'numpy'
         data = self._data
         if data.ndim == 0 and data.dtype.kind == 'O':
@@ -644,7 +638,7 @@ class CoordXArray(XArray):
     @property
     def data(self):
         """The variable's data as a numpy.ndarray"""
-        data = self._data_as_ndarray().astype(self.dtype)
+        data = np.asarray(self._data).astype(self.dtype)
         if not isinstance(self._data, pd.Index):
             # always cache data as a pandas index
             self._data = utils.safe_cast_to_index(data)

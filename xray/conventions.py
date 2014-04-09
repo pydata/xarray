@@ -1,6 +1,5 @@
 import unicodedata
 
-import functools
 import numpy as np
 import pandas as pd
 from datetime import datetime
@@ -254,37 +253,7 @@ def encode_cf_datetime(dates, units=None, calendar=None):
     return (num, units, calendar)
 
 
-class LazyArrayMixin(object):
-    """Wrapper around array-like objects to create a new indexable object where
-    values, when accessesed, are automatically transformed.
-    """
-    @property
-    def dtype(self):
-        return self.array.dtype
-
-    @property
-    def shape(self):
-        return self.array.shape
-
-    @property
-    def size(self):
-        return self.array.size
-
-    @property
-    def ndim(self):
-        return self.array.ndim
-
-    def __len__(self):
-        return len(self.array)
-
-    def __array__(self):
-        return self[...]
-
-    def __getitem__(self, key):
-        raise NotImplementedError
-
-
-class MaskedAndScaledArray(LazyArrayMixin):
+class MaskedAndScaledArray(utils.NDArrayMixin):
     """Wrapper around array-like objects to create a new indexable object where
     values, when accessesed, are automatically scaled and masked according to
     CF conventions for packed and missing data values.
@@ -341,7 +310,7 @@ class MaskedAndScaledArray(LazyArrayMixin):
 
 
 
-class DecodedCFDatetimeArray(LazyArrayMixin):
+class DecodedCFDatetimeArray(utils.NDArrayMixin):
     """Wrapper around array-like objects to create a new indexable object where
     values, when accessesed, are automatically converted into datetime objects
     using decode_cf_datetime.
@@ -360,7 +329,7 @@ class DecodedCFDatetimeArray(LazyArrayMixin):
                                   calendar=self.calendar)
 
 
-class CharToStringArray(LazyArrayMixin):
+class CharToStringArray(utils.NDArrayMixin):
     """Wrapper around array-like objects to create a new indexable object where
     values, when accessesed, are automatically concatenated along the last
     dimension
@@ -385,20 +354,6 @@ class CharToStringArray(LazyArrayMixin):
     @property
     def shape(self):
         return self.array.shape[:-1]
-
-    @property
-    def size(self):
-        return np.prod(self.shape)
-
-    @property
-    def ndim(self):
-        return max(self.array.ndim - 1, 0)
-
-    def __len__(self):
-        if self.ndim > 0:
-            return len(self.array)
-        else:
-            raise TypeError('len() of unsized object')
 
     def __str__(self):
         if self.ndim == 0:

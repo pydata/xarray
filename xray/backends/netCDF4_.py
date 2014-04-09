@@ -6,7 +6,32 @@ import numpy as np
 from common import AbstractDataStore
 import xray
 from xray.conventions import encode_cf_variable
-from xray.utils import FrozenOrderedDict
+from xray.utils import FrozenOrderedDict, NDArrayMixin
+
+
+class NetCDF4ArrayWrapper(NDArrayMixin):
+    def __init__(self, array):
+        self.array = array
+
+    @property
+    def dtype(self):
+        dtype = self.array.dtype
+        if dtype is str:
+            # return object dtype because that's the only way in numpy to
+            # represent variable length strings; it also prevents automatic
+            # string concatenation via conventions.decode_cf_variable
+            dtype = np.dtype('O')
+        return dtype
+
+    def __getitem__(self, key):
+        if self.ndim == 0:
+            # work around for netCDF4-python's broken handling of 0-d
+            # arrays (slicing them always returns a 1-dimensional array):
+            # https://github.com/Unidata/netcdf4-python/pull/220
+            data = np.asarray(np.asscalar(self.array[...]))
+        else:
+            data = self.array[key]
+        return data
 
 
 class NetCDF4DataStore(AbstractDataStore):
@@ -31,12 +56,7 @@ class NetCDF4DataStore(AbstractDataStore):
         def convert_variable(var):
             var.set_auto_maskandscale(False)
             dimensions = var.dimensions
-            data = var
-            if var.ndim == 0:
-                # work around for netCDF4-python's broken handling of 0-d
-                # arrays (slicing them always returns a 1-dimensional array):
-                # https://github.com/Unidata/netcdf4-python/pull/220
-                data = np.asscalar(var[...])
+            data = NetCDF4ArrayWrapper(var)
             attributes = OrderedDict((k, var.getncattr(k))
                                      for k in var.ncattrs())
             # netCDF4 specific encoding; save _FillValue for later

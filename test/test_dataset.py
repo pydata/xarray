@@ -55,6 +55,7 @@ class InaccessibleArray(XArray):
         self._data.size = data.size
         self._data.shape = data.shape
         # fail if the actual data is accessed from _data
+        self._data.__array__ = _data_fail
         self._data.__getitem__ = _data_fail
 
     @property
@@ -74,16 +75,9 @@ class InaccessibleVariableDataStore(backends.InMemoryDataStore):
 
     @property
     def variables(self):
-        coords = [k for k in self._variables.keys()
-                  if k in self.dimensions]
-
-        def mask_noncoords(k, v):
-            if k in coords:
-                return k, v
-            else:
-                return k, InaccessibleArray(v.dimensions, v.data, v.attributes)
-        return utils.FrozenOrderedDict(mask_noncoords(k, v)
-                            for k, v in self._variables.iteritems())
+        return utils.FrozenOrderedDict(
+            (k, InaccessibleArray(v.dimensions, v.data, v.attributes))
+            for k, v in self._variables.iteritems())
 
 
 class TestDataset(TestCase):
@@ -554,11 +548,8 @@ class TestDataset(TestCase):
 
     def test_lazy_load(self):
         store = InaccessibleVariableDataStore()
-        store.set_dimension('dim', 10)
-        store.set_variable('dim', XArray(('dim'),
-                                          np.arange(10)))
-        store.set_variable('var', XArray(('dim'),
-                                          np.random.uniform(size=10)))
+        store.set_variable('dim', XArray(('dim'), np.arange(10)))
+        store.set_variable('var', XArray(('dim'), np.random.uniform(size=10)))
         ds = Dataset()
         ds = ds.load_store(store, decode_cf=False)
         self.assertRaises(UnexpectedDataAccess, lambda: ds['var'].data)
