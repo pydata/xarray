@@ -348,20 +348,22 @@ class TestXArray(TestCase, XArraySubclassTestCases):
         self.assertArrayEqual(v.data, np.arange(5) + 1)
 
     def test_reduce(self):
-        v = XArray(['time', 'x'], self.d)
-        # intentionally test with an operation for which order matters
-        self.assertXArrayEqual(v.reduce(np.std, 'time'),
-                               XArray(['x'], self.d.std(axis=0),
-                                      {'cell_methods': 'time: std'}))
+        v = XArray(['x', 'y'], self.d)
+        self.assertXArrayEqual(v.reduce(np.std, 'x'),
+                               XArray(['y'], self.d.std(axis=0),
+                                      {'cell_methods': 'x: std'}))
         self.assertXArrayEqual(v.reduce(np.std, axis=0),
-                               v.reduce(np.std, dimension='time'))
-        self.assertXArrayEqual(v.reduce(np.std, ['x', 'time']),
-                               XArray([], self.d.std(axis=1).std(axis=0),
-                                      {'cell_methods': 'x: std time: std'}))
+                               v.reduce(np.std, dimension='x'))
+        self.assertXArrayEqual(v.reduce(np.std, ['y', 'x']),
+                               XArray([], self.d.std(axis=(0, 1)),
+                                      {'cell_methods': 'x: y: std'}))
         self.assertXArrayEqual(v.reduce(np.std),
                                XArray([], self.d.std(),
-                                      {'cell_methods': 'time: x: std'}))
-        self.assertXArrayEqual(v.mean('time'), v.reduce(np.mean, 'time'))
+                                      {'cell_methods': 'x: y: std'}))
+        self.assertXArrayEqual(v.reduce(np.mean, 'x').reduce(np.std, 'y'),
+                               XArray([], self.d.mean(axis=0).std(),
+                                      {'cell_methods': 'x: mean y: std'}))
+        self.assertXArrayEqual(v.mean('x'), v.reduce(np.mean, 'x'))
 
     def test_groupby(self):
         agg_var = XArray(['y'], np.array(['a', 'a', 'b']))

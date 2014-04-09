@@ -383,7 +383,6 @@ class XArray(AbstractArray):
                                  'which has length greater than one')
         return self.indexed_by(**{dim: 0 for dim in dimension})
 
-
     def reduce(self, func, dimension=None, axis=None, **kwargs):
         """Reduce this array by applying `func` along some dimension(s).
 
@@ -394,20 +393,14 @@ class XArray(AbstractArray):
             `func(x, axis=axis, **kwargs)` to return the result of reducing an
             np.ndarray over an integer valued axis.
         dimension : str or sequence of str, optional
-            Dimension(s) over which to repeatedly apply `func`.
+            Dimension(s) over which to apply `func`.
         axis : int or sequence of int, optional
-            Axis(es) over which to repeatedly apply `func`. Only one of the
-            'dimension' and 'axis' arguments can be supplied. If neither are
-            supplied, then the reduction is calculated over the flattened array
-            (by calling `func(x)` without an axis argument).
+            Axis(es) over which to apply `func`. Only one of the 'dimension'
+            and 'axis' arguments can be supplied. If neither are supplied, then
+            the reduction is calculated over the flattened array (by calling
+            `func(x)` without an axis argument).
         **kwargs : dict
             Additional keyword arguments passed on to `func`.
-
-        Notes
-        -----
-        If `reduce` is called with multiple dimensions (or axes, which
-        are converted into dimensions), then the reduce operation is
-        performed repeatedly along each dimension in turn from left to right.
 
         Returns
         -------
@@ -419,42 +412,28 @@ class XArray(AbstractArray):
             raise ValueError("cannot supply both 'axis' and 'dimension' "
                              "arguments")
 
-        if axis is not None:
-            # determine dimensions
-            if isinstance(axis, int):
-                axis = [axis]
-            dimension = [self.dimensions[i] for i in axis]
-
+        # reduce the data
         if dimension is not None:
-            if isinstance(dimension, basestring):
-                dimension = [dimension]
-            var = self
-            for dim in dimension:
-                var = var._reduce(func, dim, **kwargs)
+            axis = self.get_axis_num(dimension)
+        data = func(self.data, axis=axis, **kwargs)
+
+        # construct the new XArray
+        removed_axes = (range(self.ndim) if axis is None
+                        else np.atleast_1d(axis) % self.ndim)
+        dims = [dim for axis, dim in enumerate(self.dimensions)
+                if axis not in removed_axes]
+        var = XArray(dims, data, _math_safe_attributes(self.attributes))
+
+        # update 'cell_methods' according to CF conventions
+        removed_dims = [dim for axis, dim in enumerate(self.dimensions)
+                        if axis in removed_axes]
+        summary = '%s: %s' % (': '.join(removed_dims), func.__name__)
+        if 'cell_methods' in var.attributes:
+            var.attributes['cell_methods'] += ' ' + summary
         else:
-            var = XArray([], func(self.data, **kwargs),
-                         _math_safe_attributes(self.attributes))
-            var._append_to_cell_methods(': '.join(self.dimensions)
-                                        + ': ' + func.__name__)
+            var.attributes['cell_methods'] = summary
+
         return var
-
-    def _append_to_cell_methods(self, string):
-        if 'cell_methods' in self.attributes:
-            base = self.attributes['cell_methods'] + ' '
-        else:
-            base = ''
-        self.attributes['cell_methods'] = base + string
-
-    def _reduce(self, f, dim, **kwargs):
-        """Reduce a single dimension"""
-        axis = self.get_axis_num(dim)
-        dims = tuple(dim for i, dim in enumerate(self.dimensions)
-                     if axis not in [i, i - self.ndim])
-        data = f(self.data, axis=axis, **kwargs)
-        new_var = XArray(dims, data, _math_safe_attributes(self.attributes))
-        new_var._append_to_cell_methods(self.dimensions[axis]
-                                        + ': ' + f.__name__)
-        return new_var
 
     def groupby(self, group_name, group_array, squeeze=True):
         """Group this dataset by unique values of the indicated group.
