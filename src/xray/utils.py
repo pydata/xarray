@@ -1,6 +1,6 @@
 import netCDF4 as nc4
 import operator
-from collections import OrderedDict, Mapping
+from collections import OrderedDict, Mapping, MutableMapping
 from datetime import datetime
 
 import numpy as np
@@ -421,3 +421,33 @@ class Frozen(Mapping):
 
 def FrozenOrderedDict(*args, **kwargs):
     return Frozen(OrderedDict(*args, **kwargs))
+
+
+class SortedKeysDict(MutableMapping):
+    """An wrapper for dictionary-like objects that always iterates over its
+    items in sorted order by key but is otherwise equivalent to the underlying
+    mapping.
+    """
+    def __init__(self, mapping=None):
+        self.mapping = {} if mapping is None else mapping
+
+    def __getitem__(self, key):
+        return self.mapping[key]
+
+    def __setitem__(self, key, value):
+        self.mapping[key] = value
+
+    def __delitem__(self, key):
+        del self.mapping[key]
+
+    def __iter__(self):
+        return iter(sorted(self.mapping))
+
+    def __len__(self):
+        return len(self.mapping)
+
+    def __contains__(self, key):
+        return key in self.mapping
+
+    def __repr__(self):
+        return '%s(%r)' % (type(self).__name__, self.mapping)

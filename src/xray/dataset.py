@@ -12,8 +12,8 @@ import common
 import groupby
 import utils
 from dataset_array import DataArray
-from utils import (FrozenOrderedDict, Frozen, remap_loc_indexers,
-                   multi_index_from_product)
+from utils import (FrozenOrderedDict, Frozen, SortedKeysDict,
+                   remap_loc_indexers, multi_index_from_product)
 
 date2num = nc4.date2num
 num2date = nc4.num2date
@@ -126,7 +126,7 @@ class Dataset(Mapping):
             Whether to decode these variables according to CF conventions.
         """
         self._variables = _VariablesDict()
-        self._dimensions = OrderedDict()
+        self._dimensions = SortedKeysDict()
         if variables is not None:
             self.set_variables(variables, decode_cf=decode_cf)
         if attributes is None:
