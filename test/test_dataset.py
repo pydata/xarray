@@ -1,24 +1,18 @@
 import mock
-import os.path
 import unittest
-import tempfile
 
-from cStringIO import StringIO
 from collections import OrderedDict
 from copy import deepcopy
 from textwrap import dedent
 
 import numpy as np
 import pandas as pd
-import netCDF4 as nc4
 
 from xray import (Dataset, DataArray, XArray, backends, open_dataset, utils,
                   align, conventions)
 
-from . import TestCase
+from . import TestCase, requires_netCDF4
 
-
-_test_data_path = os.path.join(os.path.dirname(__file__), 'data')
 
 _dims = {'dim1': 100, 'dim2': 50, 'dim3': 10}
 _vars = {'var1': ['dim1', 'dim2'],
@@ -421,15 +415,8 @@ class TestDataset(TestCase):
                                XArray('time', 1 + np.arange(20)))
         self.assertArrayEqual(data['time.month'].data,
                               data.variables['time'].index.month)
-        # test accessing a decoded virtual variable
-        time2 = XArray('time', np.arange(20),
-                       {'units': 'days since 2000-01-01'})
-        data['time2'] = conventions.decode_cf_variable(time2)
-        self.assertXArrayEqual(data['time2.dayofyear'],
-                               XArray('time', 1 + np.arange(20)))
         # test virtual variable math
         self.assertArrayEqual(data['time.dayofyear'] + 1, 2 + np.arange(20))
-        self.assertArrayEqual(data['time2.dayofyear'] + 1, 2 + np.arange(20))
         self.assertArrayEqual(np.sin(data['time.dayofyear']),
                               np.sin(1 + np.arange(20)))
         # test slicing the virtual variable -- it should still be virtual
@@ -577,218 +564,3 @@ class TestDataset(TestCase):
         self.assertRaises(UnexpectedDataAccess, lambda: ds['var'].data)
         ds = ds.load_store(store, decode_cf=True)
         self.assertRaises(UnexpectedDataAccess, lambda: ds['var'].data)
-
-
-def create_masked_and_scaled_data():
-    x = np.array([np.nan, np.nan, 10, 10.1, 10.2])
-    encoding = {'_FillValue': -1, 'add_offset': 10,
-                'scale_factor': np.float32(0.1), 'dtype': np.int16}
-    return Dataset({'x': ('t', x, {}, encoding)})
-
-
-def create_encoded_masked_and_scaled_data():
-    attributes = {'_FillValue': -1, 'add_offset': 10,
-                  'scale_factor': np.float32(0.1)}
-    return Dataset({'x': XArray('t', [-1, -1, 0, 1, 2], attributes)})
-
-
-class DatasetIOTestCases(object):
-    def get_store(self):
-        raise NotImplementedError
-
-    def roundtrip(self, data, **kwargs):
-        raise NotImplementedError
-
-    def test_zero_dimensional_variable(self):
-        expected = create_test_data()
-        expected['xray_awesomeness'] = ([], np.array(1.e9),
-                                        {'units': 'units of awesome'})
-        store = self.get_store()
-        expected.dump_to_store(store)
-        actual = Dataset.load_store(store)
-        self.assertDatasetEqual(expected, actual)
-
-    def test_write_store(self):
-        expected = create_test_data()
-        store = self.get_store()
-        expected.dump_to_store(store)
-        actual = Dataset.load_store(store)
-        self.assertDatasetEqual(expected, actual)
-
-    def test_roundtrip_test_data(self):
-        expected = create_test_data()
-        actual = self.roundtrip(expected)
-        self.assertDatasetEqual(expected, actual)
-
-    def test_roundtrip_string_data(self):
-        expected = Dataset({'x': ('t', ['abc', 'def'])})
-        actual = self.roundtrip(expected)
-        self.assertDatasetEqual(expected, actual)
-
-    def test_roundtrip_mask_and_scale(self):
-        decoded = create_masked_and_scaled_data()
-        encoded = create_encoded_masked_and_scaled_data()
-        self.assertDatasetEqual(decoded, self.roundtrip(decoded))
-        self.assertDatasetEqual(encoded,
-                                self.roundtrip(decoded, decode_cf=False))
-        self.assertDatasetEqual(decoded, self.roundtrip(encoded))
-        self.assertDatasetEqual(encoded,
-                                self.roundtrip(encoded, decode_cf=False))
-
-    def test_roundtrip_example_1_netcdf(self):
-        expected = open_dataset(os.path.join(_test_data_path, 'example_1.nc'))
-        actual = self.roundtrip(expected)
-        self.assertDatasetEqual(expected, actual)
-
-    def test_orthogonal_indexing(self):
-        in_memory = create_test_data()
-        on_disk = self.roundtrip(in_memory)
-        indexers = {'dim1': range(3), 'dim2': range(4), 'dim3': range(5)}
-        expected = in_memory.indexed_by(**indexers)
-        actual = on_disk.indexed_by(**indexers)
-        self.assertDatasetEqual(expected, actual)
-        # do it twice, to make sure we're switched from orthogonal -> numpy
-        # when we cached the values
-        actual = on_disk.indexed_by(**indexers)
-        self.assertDatasetEqual(expected, actual)
-
-
-class NetCDF4DataTest(DatasetIOTestCases, TestCase):
-    def get_store(self):
-        f, self.tmp_file = tempfile.mkstemp(suffix='.nc')
-        os.close(f)
-        return backends.NetCDF4DataStore(self.tmp_file, mode='w')
-
-    def tearDown(self):
-        if hasattr(self, 'tmp_file') and os.path.exists(self.tmp_file):
-            os.remove(self.tmp_file)
-
-    def roundtrip(self, data, **kwargs):
-        f, tmp_file = tempfile.mkstemp(suffix='.nc')
-        os.close(f)
-        data.dump(tmp_file)
-        roundtrip_data = open_dataset(tmp_file, **kwargs)
-        os.remove(tmp_file)
-        return roundtrip_data
-
-    def test_open_encodings(self):
-        # Create a netCDF file with explicit time units
-        # and make sure it makes it into the encodings
-        # and survives a round trip
-        f, tmp_file = tempfile.mkstemp(suffix='.nc')
-        os.close(f)
-
-        ds = nc4.Dataset(tmp_file, 'w')
-        ds.createDimension('time', size=10)
-        ds.createVariable('time', np.int32, dimensions=('time',))
-        units = 'days since 1999-01-01'
-        ds.variables['time'].setncattr('units', units)
-        ds.variables['time'][:] = np.arange(10) + 4
-        ds.close()
-
-        expected = Dataset()
-
-        time = pd.date_range('1999-01-05', periods=10)
-        encoding = {'units': units, 'dtype': np.dtype('int32')}
-        expected['time'] = ('time', time, {}, encoding)
-
-        actual = open_dataset(tmp_file)
-
-        self.assertXArrayEqual(actual['time'], expected['time'])
-        actual_encoding = {k: v for k, v in actual['time'].encoding.iteritems()
-                           if k in expected['time'].encoding}
-        self.assertDictEqual(actual_encoding, expected['time'].encoding)
-
-        os.remove(tmp_file)
-
-    def test_dump_and_open_encodings(self):
-        # Create a netCDF file with explicit time units
-        # and make sure it makes it into the encodings
-        # and survives a round trip
-        f, tmp_file = tempfile.mkstemp(suffix='.nc')
-        os.close(f)
-
-        ds = nc4.Dataset(tmp_file, 'w')
-        ds.createDimension('time', size=10)
-        ds.createVariable('time', np.int32, dimensions=('time',))
-        units = 'days since 1999-01-01'
-        ds.variables['time'].setncattr('units', units)
-        ds.variables['time'][:] = np.arange(10) + 4
-        ds.close()
-
-        xray_dataset = open_dataset(tmp_file)
-        os.remove(tmp_file)
-        xray_dataset.dump(tmp_file)
-
-        ds = nc4.Dataset(tmp_file, 'r')
-
-        self.assertEqual(ds.variables['time'].getncattr('units'), units)
-        self.assertArrayEqual(ds.variables['time'], np.arange(10) + 4)
-
-        ds.close()
-        os.remove(tmp_file)
-
-    def test_compression_encoding(self):
-        data = create_test_data()
-        data['var2'].encoding.update({'zlib': True,
-                                      'chunksizes': (10, 10),
-                                      'least_significant_digit': 2})
-        actual = self.roundtrip(data)
-        for k, v in data['var2'].encoding.iteritems():
-            self.assertEqual(v, actual['var2'].encoding[k])
-
-    def test_mask_and_scale(self):
-        f, tmp_file = tempfile.mkstemp(suffix='.nc')
-        os.close(f)
-
-        nc = nc4.Dataset(tmp_file, mode='w')
-        nc.createDimension('t', 5)
-        nc.createVariable('x', 'int16', ('t',), fill_value=-1)
-        v = nc.variables['x']
-        v.set_auto_maskandscale(False)
-        v.add_offset = 10
-        v.scale_factor = 0.1
-        v[:] = np.array([-1, -1, 0, 1, 2])
-        nc.close()
-
-        # first make sure netCDF4 reads the masked and scaled data correctly
-        nc = nc4.Dataset(tmp_file, mode='r')
-        expected = np.ma.array([-1, -1, 10, 10.1, 10.2],
-                               mask=[True, True, False, False, False])
-        actual = nc.variables['x'][:]
-        self.assertArrayEqual(expected, actual)
-
-        # now check xray
-        ds = open_dataset(tmp_file)
-        expected = create_masked_and_scaled_data()
-        self.assertDatasetEqual(expected, ds)
-        os.remove(tmp_file)
-
-    def test_0dimensional_variable(self):
-        # This fix verifies our work-around to this netCDF4-python bug:
-        # https://github.com/Unidata/netcdf4-python/pull/220
-        f, tmp_file = tempfile.mkstemp(suffix='.nc')
-        os.close(f)
-
-        nc = nc4.Dataset(tmp_file, mode='w')
-        v = nc.createVariable('x', 'int16')
-        v[...] = 123
-        nc.close()
-
-        ds = open_dataset(tmp_file)
-        expected = Dataset({'x': ((), 123)})
-        self.assertDatasetEqual(expected, ds)
-
-    def test_lazy_decode(self):
-        data = self.roundtrip(create_test_data(), decode_cf=True)
-        self.assertIsInstance(data['var1'].variable._data, nc4.Variable)
-
-
-class ScipyDataTest(DatasetIOTestCases, TestCase):
-    def get_store(self):
-        fobj = StringIO()
-        return backends.ScipyDataStore(fobj, 'w')
-
-    def roundtrip(self, data, **kwargs):
-        serialized = data.dumps()
-        return open_dataset(StringIO(serialized), **kwargs)

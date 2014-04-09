@@ -1,9 +1,7 @@
 # TODO: separate out these utilities into different modules based on whether
 # they are for internal or external use
-import netCDF4 as nc4
 import operator
 from collections import OrderedDict, Mapping, MutableMapping
-from datetime import datetime
 
 import numpy as np
 import pandas as pd
@@ -116,37 +114,15 @@ def remap_loc_indexers(indices, indexers):
     return new_indexers
 
 
-def safe_isnan(arr):
-    """Like np.isnan for floating point arrays, but returns a vector of the
-    repeated value `False` for non-floating point arrays
-
-    This is necessary because numpy does not support NaN or isnan for integer
-    valued arrays.
-    """
-    if np.issubdtype(arr.dtype, float):
-        return np.isnan(arr)
-    else:
-        return np.zeros(arr.shape, dtype=bool)
-
-
 def allclose_or_equiv(arr1, arr2, rtol=1e-5, atol=1e-8):
     """Like np.allclose, but also allows values to be NaN in both arrays
     """
     if arr1.shape != arr2.shape:
         return False
-    nan_indices = safe_isnan(arr1)
-    if not (nan_indices == safe_isnan(arr2)).all():
-        return False
-    if arr1.ndim > 0:
-        arr1 = arr1[~nan_indices]
-        arr2 = arr2[~nan_indices]
-    elif nan_indices:
-        # 0-d arrays can't be indexed, so just check if the value is NaN
-        return True
-    return np.allclose(arr1, arr2, rtol=rtol, atol=atol)
+    return np.isclose(arr1, arr2, rtol=rtol, atol=atol, equal_nan=True).all()
 
 
-def xarray_equal(v1, v2, rtol=1e-05, atol=1e-08, check_attributes=True):
+def xarray_allclose(v1, v2, rtol=1e-05, atol=1e-08):
     """True if two objects have the same dimensions, attributes and data;
     otherwise False.
 
@@ -163,9 +139,43 @@ def xarray_equal(v1, v2, rtol=1e-05, atol=1e-08, check_attributes=True):
 
     v1, v2 = map(xarray.as_xarray, [v1, v2])
     return (v1.dimensions == v2.dimensions
+            and dict_equal(v1.attributes, v2.attributes)
+            and (v1._data is v2._data or data_equiv(v1.data, v2.data)))
+
+
+def _safe_isnan(arr):
+    """Like np.isnan for floating point arrays, but returns `False` for non-
+    floating point arrays
+
+    This is necessary because np.isnan doesn't work for object or datetime64
+    arrays.
+    """
+    if np.issubdtype(arr.dtype, float):
+        return np.isnan(arr)
+    else:
+        return False
+
+
+def array_equiv(arr1, arr2):
+    """Like np.array_equal, but also allows values to be NaN in both arrays
+    """
+    if arr1.shape != arr2.shape:
+        return False
+    return ((arr1 == arr2) | (_safe_isnan(arr1) & _safe_isnan(arr2))).all()
+
+
+def xarray_equal(v1, v2, check_attributes=True):
+    """True if two objects have the same dimensions, attributes and data;
+    otherwise False.
+
+    This function is necessary because `v1 == v2` for XArrays and DataArrays
+    does element-wise comparisions (like numpy.ndarrays).
+    """
+    v1, v2 = map(xarray.as_xarray, [v1, v2])
+    return (v1.dimensions == v2.dimensions
             and (not check_attributes
                  or dict_equal(v1.attributes, v2.attributes))
-            and (v1._data is v2._data or data_equiv(v1.data, v2.data)))
+            and (v1._data is v2._data or array_equiv(v1.data, v2.data)))
 
 
 def safe_cast_to_index(array):
@@ -255,10 +265,7 @@ def dict_equal(first, second):
     for k in k1:
         v1 = first[k]
         v2 = second[k]
-        if isinstance(v1, np.ndarray) != isinstance(v2, np.ndarray):
-            # one is an ndarray, other is not
-            return False
-        elif (isinstance(v1, np.ndarray) and isinstance(v2, np.ndarray)):
+        if isinstance(v1, np.ndarray) or isinstance(v2, np.ndarray):
             if not np.array_equal(v1, v2):
                 return False
         elif v1 != v2:

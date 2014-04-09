@@ -3,7 +3,7 @@ import numpy as np
 import pandas as pd
 
 from xray import utils, XArray
-from . import TestCase, ReturnItem
+from . import TestCase, ReturnItem, requires_netCDF4
 
 
 class TestIndexers(TestCase):
@@ -113,7 +113,7 @@ class TestDictionaries(TestCase):
         y['a'] = 3
         self.assertTrue(utils.dict_equal(x, y)) # two nparrays are equal
         y['b'] = [1, 2, 3] # np.array not the same as a list
-        self.assertFalse(utils.dict_equal(x, y)) # nparray != list
+        self.assertTrue(utils.dict_equal(x, y)) # nparray == list
         x['b'] = [1.0, 2.0, 3.0]
         self.assertTrue(utils.dict_equal(x, y)) # list vs. list
         x['c'] = None

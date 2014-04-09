@@ -11,6 +11,11 @@ class TestDataArray(TestCase):
         self.assertEqual(ar1.name, ar2.name)
         self.assertDatasetEqual(ar1.dataset, ar2.dataset)
 
+    def assertDSArrayAllClose(self, ar1, ar2, rtol=1e-05, atol=1e-08):
+        self.assertEqual(ar1.name, ar2.name)
+        self.assertDatasetAllClose(ar1.dataset, ar2.dataset,
+                                   rtol=rtol, atol=atol)
+
     def assertDSArrayEquiv(self, ar1, ar2):
         self.assertIsInstance(ar1, DataArray)
         self.assertIsInstance(ar2, DataArray)
@@ -254,12 +259,14 @@ class TestDataArray(TestCase):
                                               self.x[:, 9:10].sum()]).T,
                            {'cell_methods': 'x: y: sum'}),
              'abc': XArray(['abc'], np.array(['a', 'b', 'c']))}), 'foo')
-        self.assertDSArrayEqual(expected_sum_all,
-                                grouped.reduce(np.sum, dimension=None))
-        self.assertDSArrayEqual(expected_sum_all, grouped.sum(dimension=None))
+        self.assertDSArrayAllClose(expected_sum_all,
+                                   grouped.reduce(np.sum, dimension=None))
+        self.assertDSArrayAllClose(
+            expected_sum_all, grouped.sum(dimension=None))
 
         grouped = self.dv.groupby('abc', squeeze=False)
-        self.assertDSArrayEqual(expected_sum_all, grouped.sum(dimension=None))
+        self.assertDSArrayAllClose(
+            expected_sum_all, grouped.sum(dimension=None))
 
         expected_sum_axis1 = DataArray(Dataset(
             {'foo': XArray(['x', 'abc'], np.array([self.x[:, :9].sum(1),
@@ -268,8 +275,8 @@ class TestDataArray(TestCase):
                            {'cell_methods': 'y: sum'}),
              'x': self.ds.variables['x'],
              'abc': XArray(['abc'], np.array(['a', 'b', 'c']))}), 'foo')
-        self.assertDSArrayEqual(expected_sum_axis1, grouped.reduce(np.sum))
-        self.assertDSArrayEqual(expected_sum_axis1, grouped.sum())
+        self.assertDSArrayAllClose(expected_sum_axis1, grouped.reduce(np.sum))
+        self.assertDSArrayAllClose(expected_sum_axis1, grouped.sum())
 
         self.assertDSArrayEqual(self.dv, grouped.apply(identity))
 
