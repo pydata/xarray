@@ -110,27 +110,41 @@ def dataset_repr(ds):
     summary = ['<xray.%s>' % type(ds).__name__]
 
     max_name_length = max(len(k) for k in ds.variables) if ds else 0
-    first_col_width = max(4 + max_name_length, 17)
-    coords_str = pretty_print('Coordinates:', first_col_width)
+    first_col_width = max(4 + max_name_length, 16)
+    coords_str = pretty_print('Dimensions:', first_col_width)
     all_dim_strings = ['%s: %s' % (k, v) for k, v in ds.dimensions.iteritems()]
     summary.append('%s(%s)' % (coords_str, ', '.join(all_dim_strings)))
 
-    def summarize_var(k):
+    def summarize_var(k, not_found=' ', found=int):
         v = ds.variables[k]
         dim_strs = []
         for n, d in enumerate(ds.dimensions):
             length = len(all_dim_strings[n])
             prepend = ' ' * (length // 2)
-            indicator = 'X' if d in v.dimensions else '-'
+            if d in v.dimensions:
+                if found is int:
+                    indicator = str(v.dimensions.index(d))
+                else:
+                    indicator = found
+            else:
+                indicator = not_found
             dim_strs.append(pretty_print(prepend + indicator, length))
         string = pretty_print('    ' + k, first_col_width) + ' '
         string += '  '.join(dim_strs)
         return string
 
-    summary.append('Non-coordinates:')
-    if ds.noncoordinates:
-        summary.extend(summarize_var(k) for k in ds.noncoordinates)
-    else:
-        summary.append('    None')
+    def summarize_variables(variables, not_found=' ', found=int):
+        if variables:
+            return [summarize_var(k, not_found, found) for k in variables]
+        else:
+            return ['    None']
+
+    summary.append('Coordinates:')
+    summary.extend(summarize_variables(ds.coordinates, ' ', 'X'))
+
+    summary.append('Noncoordinates:')
+    summary.extend(summarize_variables(ds.noncoordinates, ' ', int))
+
     summary.append('Attributes:\n%s' % _summarize_attributes(ds))
+
     return '\n'.join(summary)

@@ -97,11 +97,16 @@ class TestDataset(TestCase):
         data = create_test_data()
         expected = dedent("""
         <xray.Dataset>
-        Coordinates:     (dim1: 100, dim2: 50, dim3: 10, time: 20)
-        Non-coordinates:
-            var1              X          X         -         -
-            var2              X          X         -         -
-            var3              X          -         X         -
+        Dimensions:     (dim1: 100, dim2: 50, dim3: 10, time: 20)
+        Coordinates:
+            dim1             X
+            dim2                        X
+            dim3                                  X
+            time                                            X
+        Noncoordinates:
+            var1             0          1
+            var2             0          1
+            var3             1                    0
         Attributes:
             Empty
         """).strip()
@@ -110,8 +115,10 @@ class TestDataset(TestCase):
 
         expected = dedent("""
         <xray.Dataset>
-        Coordinates:     ()
-        Non-coordinates:
+        Dimensions:     ()
+        Coordinates:
+            None
+        Noncoordinates:
             None
         Attributes:
             Empty
