@@ -71,20 +71,14 @@ class AbstractArray(ImplementsReduce):
         Parameters
         ----------
         dimension : str or sequence of str, optional
-            Dimension(s) over which to repeatedly apply `{name}`.
+            Dimension(s) over which to apply `{name}`.
         axis : int or sequence of int, optional
-            Axis(es) over which to repeatedly apply `{name}`. Only one of the
-            'dimension' and 'axis' arguments can be supplied. If neither are
-            supplied, then `{name}` is calculated over the flattened array
-            (by calling `{name}(x)` without an axis argument).
+            Axis(es) over which to apply `{name}`. Only one of the 'dimension'
+            and 'axis' arguments can be supplied. If neither are supplied, then
+            `{name}` is calculated over the flattened array (by calling
+            `{name}(x)` without an axis argument).
         **kwargs : dict
             Additional keyword arguments passed on to `{name}`.
-
-        Notes
-        -----
-        If this method is called with multiple dimensions (or axes, which are
-        converted into dimensions), then `{name}` is performed repeatedly along
-        each dimension in turn from left to right.
 
         Returns
         -------

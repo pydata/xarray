@@ -431,7 +431,7 @@ class DataArray(AbstractArray):
             `f(x, axis=axis, **kwargs)` to return the result of reducing an
             np.ndarray over an integer valued axis.
         dimension : str or sequence of str, optional
-            Dimension(s) over which to repeatedly apply `func`.
+            Dimension(s) over which to apply `func`.
         axis : int or sequence of int, optional
             Axis(es) over which to repeatedly apply `func`. Only one of the
             'dimension' and 'axis' arguments can be supplied. If neither are
@@ -439,12 +439,6 @@ class DataArray(AbstractArray):
             (by calling `f(x)` without an axis argument).
         **kwargs : dict
             Additional keyword arguments passed on to `func`.
-
-        Notes
-        -----
-        If `reduce` is called with multiple dimensions (or axes, which
-        are converted into dimensions), then the reduce operation is
-        performed repeatedly along each dimension in turn from left to right.
 
         Returns
         -------

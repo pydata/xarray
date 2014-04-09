@@ -216,21 +216,17 @@ class ArrayGroupBy(GroupBy, ImplementsReduce):
             `func(x, axis=axis, **kwargs)` to return the result of collapsing an
             np.ndarray over an integer valued axis.
         dimension : str or sequence of str, optional
-            Dimension(s) over which to repeatedly apply `func`.
+            Dimension(s) over which to apply `func`.
         axis : int or sequence of int, optional
-            Axis(es) over which to repeatedly apply `func`. Only one of the
-            'dimension' and 'axis' arguments can be supplied. If neither are
-            supplied, then `{name}` is calculated over the axis of the variable
-            over which the group was formed.
+            Axis(es) over which to apply `func`. Only one of the 'dimension'
+            and 'axis' arguments can be supplied. If neither are supplied, then
+            `{name}` is calculated over the axis of the variable over which the
+            group was formed.
         **kwargs : dict
             Additional keyword arguments passed on to `func`.
 
         Notes
         -----
-        If `reduce` is called with multiple dimensions (or axes, which
-        are converted into dimensions), then the reduce operation is
-        performed repeatedly along each dimension in turn from left to right.
-
         `Ellipsis` is used as a sentinel value for the default dimension and
         axis to indicate that this operation is applied along the axis over
         which the group was formed, instead of all axes. To instead apply
@@ -261,21 +257,17 @@ class ArrayGroupBy(GroupBy, ImplementsReduce):
         Parameters
         ----------
         dimension : str or sequence of str, optional
-            Dimension(s) over which to repeatedly apply `{name}`.
+            Dimension(s) over which to apply `{name}`.
         axis : int or sequence of int, optional
-            Axis(es) over which to repeatedly apply `{name}`. Only one of the
-            'dimension' and 'axis' arguments can be supplied. If neither are
-            supplied, then `{name}` is calculated over the axis of the variable
-            over which the group was formed.
+            Axis(es) over which to apply `{name}`. Only one of the 'dimension'
+            and 'axis' arguments can be supplied. If neither are supplied, then
+            `{name}` is calculated over the axis of the variable over which the
+            group was formed.
         **kwargs : dict
             Additional keyword arguments passed on to `{name}`.
 
         Notes
         -----
-        If this method is called with multiple dimensions (or axes, which are
-        converted into dimensions), then `{name}` is performed repeatedly along
-        each dimension in turn from left to right.
-
         `Ellipsis` is used as a sentinel value for the default dimension and
         axis to indicate that this operation is applied along the axis over
         which the group was formed, instead of all axes. To instead apply
