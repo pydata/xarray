@@ -290,6 +290,15 @@ class TestXArray(TestCase, XArraySubclassTestCases):
         with self.assertRaisesRegexp(ValueError, 'cannot select a dimension'):
             v.squeeze('y')
 
+    def test_get_axis_num(self):
+        v = XArray(['x', 'y', 'z'], np.random.randn(2, 3, 4))
+        self.assertEqual(v.get_axis_num('x'), 0)
+        self.assertEqual(v.get_axis_num(['x']), (0,))
+        self.assertEqual(v.get_axis_num(['x', 'y']), (0, 1))
+        self.assertEqual(v.get_axis_num(['z', 'y', 'x']), (2, 1, 0))
+        with self.assertRaisesRegexp(ValueError, 'not found in array dim'):
+            v.get_axis_num('foobar')
+
     def test_broadcasting_math(self):
         x = np.random.randn(2, 3)
         v = XArray(['a', 'b'], x)
