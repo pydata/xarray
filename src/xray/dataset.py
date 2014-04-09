@@ -1,5 +1,5 @@
+import functools
 import numpy as np
-import netCDF4 as nc4
 import pandas as pd
 
 from cStringIO import StringIO
@@ -12,17 +12,29 @@ import common
 import groupby
 import utils
 from dataset_array import DataArray
-from utils import (FrozenOrderedDict, Frozen, SortedKeysDict,
+from utils import (FrozenOrderedDict, Frozen, SortedKeysDict, ChainMap,
                    remap_loc_indexers, multi_index_from_product)
-
-date2num = nc4.date2num
-num2date = nc4.num2date
 
 
 def open_dataset(nc, decode_cf=True, *args, **kwargs):
-    """Open the dataset given the object or path `nc`.
+    """Load a dataset from a file or file-like object
 
-    *args and **kwargs provide format specific options
+    Parameters
+    ----------
+    nc : str or file
+        Path to a netCDF4 file or an OpenDAP URL (opened with python-netCDF4)
+        or a file object or string serialization of a netCDF3 file (opened with
+        scipy.io.netcdf).
+    decode_cf : bool, optional
+        Whether to decode these variables, assuming they were saved according
+        to CF conventions.
+    *args, **kwargs : optional
+        Format specific loading options passed on to the datastore.
+
+    Returns
+    -------
+    dataset : Dataset
+        The newly created dataset.
     """
     # move this to a classmethod Dataset.open?
     # TODO: this check has the unfortunate side-effect that
@@ -97,6 +109,106 @@ class _VariablesDict(OrderedDict):
             raise KeyError(repr(key))
 
 
+def _as_dataset_variable(name, var):
+    """Prepare a variable for adding it to a Dataset
+    """
+    try:
+        var = xarray.as_xarray(var)
+    except TypeError:
+        raise TypeError('Dataset variables must be of type '
+                        'DataArray or XArray, or a sequence of the '
+                        'form (dimensions, data[, attributes, encoding])')
+    if name in var.dimensions:
+        # convert the coordinate into a pandas.Index
+        if var.ndim != 1:
+            raise ValueError('a coordinate variable must be defined with '
+                             '1-dimensional data')
+        var = var.to_coord()
+    return var
+
+
+def _expand_variables(raw_variables, old_variables={},
+                      compat=utils.xarray_equal):
+    """Expand a dictionary of variables.
+
+    Returns a dictionary of XArray objects suitable for inserting into a
+    Dataset._variables dictionary.
+
+    This includes converting tuples (dimensions, data) into XArray objects,
+    converting 1D variables into CoordXArray objects and expanding DataArray
+    objects into all their composite variables.
+
+    Raises ValueError if any conflicting values are found, between any of the
+    new or old variables.
+    """
+    new_variables = OrderedDict()
+    variables = ChainMap(new_variables, old_variables)
+
+    def add_variable(k, var):
+        if k not in variables:
+            variables[k] = _as_dataset_variable(k, var)
+        elif not compat(variables[k], var):
+            raise ValueError('conflicting value for variable %s:\n'
+                             'first value: %r\nsecond value: %r'
+                             % (k, variables[k], var))
+
+    for k, var in raw_variables.iteritems():
+        if hasattr(var, 'dataset'):
+            # it's a DataArray
+            var = var.rename(k)
+            for k, var in var.select().variables.items():
+                add_variable(k, var)
+        else:
+            add_variable(k, var)
+    return new_variables
+
+
+def _calculate_dimensions(variables):
+    """Calculate the dimensions corresponding to a set of variables.
+
+    Returns dictionary mapping from dimension names to sizes. Raises ValueError
+    if any of the dimension sizes conflict.
+    """
+    dimensions = SortedKeysDict()
+    for k, var in variables.iteritems():
+        for dim, size in zip(var.dimensions, var.shape):
+            if dim not in dimensions:
+                dimensions[dim] = size
+            elif dimensions[dim] != size:
+                raise ValueError('dimension %r on variable %r has length '
+                                 '%s but already exists with length %s' %
+                                 (dim, k, size, dimensions[dim]))
+    return dimensions
+
+
+def _get_dataset_vars_and_attr(obj):
+    """Returns the variables and attributes associated with a dataset
+
+    Like `as_dataset`, handles DataArrays, Datasets and dictionaries of
+    variables. The difference is that this method never creates a new Dataset
+    object, and hence is much more lightweight, avoiding any consistency
+    checks on the variables (this should be handled later).
+    """
+    if hasattr(obj, 'dataset'):
+        obj = obj.dataset
+    variables = getattr(obj, 'variables', obj)
+    attributes = getattr(obj, 'attributes', {})
+    return variables, attributes
+
+
+def as_dataset(obj):
+    """Cast the given object to a Dataset.
+
+    Handles DataArrays, Datasets and dictionaries of variables. A new Dataset
+    object is only created in the last case.
+    """
+    if hasattr(obj, 'dataset'):
+        obj = obj.dataset
+    if not isinstance(obj, Dataset):
+        obj = Dataset(obj)
+    return obj
+
+
 class Dataset(Mapping):
     """A netcdf-like data object consisting of variables and attributes which
     together form a self describing dataset.
@@ -104,105 +216,88 @@ class Dataset(Mapping):
     Dataset implements the mapping interface with keys given by variable names
     and values given by DataArray objects for each variable name.
 
-    Note: the size of dimensions in a dataset cannot be changed.
+    One dimensional variables with name equal to their dimension are coordinate
+    variables, which means they are saved in the dataset as `pandas.Index`
+    objects.
     """
-    def __init__(self, variables=None, attributes=None, decode_cf=False):
+    def __init__(self, variables=None, attributes=None):
         """To load data from a file or file-like object, use the `open_dataset`
         function.
 
         Parameters
         ----------
         variables : dict-like, optional
-            A mapping from variable names to `XArray` objects or sequences of
-            the form `(dimensions, data[, attributes])` which can be used as
-            arguments to create a new `XArray`. Each dimension must have the
-            same length in all variables in which it appears. One dimensional
-            variables with name equal to their dimension are coordinate
-            variables, which means they are saved in the dataset as
-            `pandas.Index` objects.
+            A mapping from variable names to `DataArray` objets, `XArray`
+            objects or sequences of the form `(dimensions, data[, attributes])`
+            which can be used as arguments to create a new `XArray`. Each
+            dimension must have the same length in all variables in which it
+            appears.
         attributes : dict-like, optional
             Global attributes to save on this dataset.
-        decode_cf : bool, optional
-            Whether to decode these variables according to CF conventions.
         """
         self._variables = _VariablesDict()
         self._dimensions = SortedKeysDict()
+        self._attributes = OrderedDict()
         if variables is not None:
-            self.set_variables(variables, decode_cf=decode_cf)
-        if attributes is None:
-            attributes = {}
-        self._attributes = OrderedDict(attributes)
+            self._set_init_vars_and_dims(variables)
+        if attributes is not None:
+            self._attributes.update(attributes)
 
-    def _as_variable(self, name, var, decode_cf=False):
-        try:
-            var = xarray.as_xarray(var)
-        except TypeError:
-            raise TypeError('Dataset variables must be of type '
-                            'DataArray or XArray, or a sequence of the '
-                            'form (dimensions, data[, attributes, encoding])')
-        # this will unmask and rescale the data as well as convert
-        # time variables to datetime indices.
-        if decode_cf:
-            var = conventions.decode_cf_variable(var)
-        if name in var.dimensions:
-            # convert the coordinate into a pandas.Index
-            if var.ndim != 1:
-                raise ValueError('a coordinate variable must be defined with '
-                                 '1-dimensional data')
-            var = var.to_coord()
-        return var
-
-    def set_variables(self, variables, decode_cf=False):
-        """Set a mapping of variables and update dimensions.
-
-        Parameters
-        ----------
-        variables : dict-like, optional
-            A mapping from variable names to `XArray` objects or sequences of
-            the form `(dimensions, data[, attributes])` which can be used as
-            arguments to create a new `XArray`. Each dimension must have the
-            same length in all variables in which it appears. One dimensional
-            variables with name equal to their dimension are coordinate
-            variables, which means they are saved in the dataset as
-            `pandas.Index` objects.
-        decode_cf : bool, optional
-            Whether to decode these variables according to CF conventions.
-
-        Returns
-        -------
-        None
+    def _add_missing_coordinates(self):
+        """Add missing coordinate variables IN-PLACE to the variables dict
         """
-        # save new variables into a temporary list so all the error checking
-        # can be done before updating _variables
-        new_variables = []
-        for k, var in variables.iteritems():
-            var = self._as_variable(k, var, decode_cf=decode_cf)
-            for dim, size in zip(var.dimensions, var.shape):
-                if dim not in self._dimensions:
-                    self._dimensions[dim] = size
-                    if dim not in variables and dim not in self._variables:
-                        coord = self._as_variable(dim, (dim, np.arange(size)))
-                        new_variables.append((dim, coord))
-                elif self._dimensions[dim] != size:
-                    raise ValueError('dimension %r on variable %r has size %s '
-                                     'but already is saved with size %s' %
-                                     (dim, k, size, self._dimensions[dim]))
-            new_variables.append((k, var))
-        self._variables.update(new_variables)
+        for dim, size in self._dimensions.iteritems():
+            if dim not in self._variables:
+                self._variables[dim] = xarray.CoordXArray(dim, np.arange(size))
+
+    def _update_vars_and_dims(self, new_variables, needs_copy=True):
+        """Add a dictionary of new variables to this dataset.
+
+        Raises a ValueError if any dimensions have conflicting lengths in the
+        new dataset. Otherwise will update this dataset's _variables and
+        _dimensions attributes in-place.
+
+        Set `needs_copy=False` only if this dataset is brand-new and hence
+        can be thrown away if this method fails.
+        """
+        # default to creating another copy of variables so can unroll if we end
+        # up with inconsistent dimensions
+        variables = self._variables.copy() if needs_copy else self._variables
+        variables.update(new_variables)
+        dimensions = _calculate_dimensions(variables)
+        # all checks are complete: it's safe to update
+        self._variables = variables
+        self._dimensions = dimensions
+        self._add_missing_coordinates()
+
+    def _set_init_vars_and_dims(self, variables):
+        """Set the initial value of Dataset variables and dimensions
+        """
+        new_variables = _expand_variables(variables)
+        self._update_vars_and_dims(new_variables, needs_copy=False)
 
     @classmethod
     def load_store(cls, store, decode_cf=True):
-        return cls(store.variables, store.attributes, decode_cf=decode_cf)
+        """Create a new dataset from the contents of a backends.*DataStore
+        object
+        """
+        variables = store.variables
+        if decode_cf:
+            # this will unmask and rescale the data as well as convert
+            # time variables to datetime indices.
+            variables = OrderedDict((k, conventions.decode_cf_variable(v))
+                                    for k, v in variables.iteritems())
+        return cls(variables, store.attributes)
 
     @property
     def variables(self):
         """Dictionary of XArray objects contained in this dataset.
 
         This dictionary is frozen to prevent it from being modified in ways
-        that would cause invalid dataset metadata (e.g., by setting variables with
-        inconsistent dimensions). Instead, add or remove variables by
-        acccessing the dataset directly (e.g., `dataset['foo'] = bar` or
-        `del dataset['foo']`).
+        that would cause invalid dataset metadata (e.g., by setting variables
+        with inconsistent dimensions). Instead, add or remove variables by
+        acccessing the dataset directly (e.g., `dataset['foo'] = bar` or `del
+        dataset['foo']`).
         """
         return Frozen(self._variables)
 
@@ -294,11 +389,7 @@ class Dataset(Mapping):
         `(dimensions, data[, attributes])`), add it to this dataset as a new
         variable.
         """
-        if isinstance(value, DataArray):
-            self.merge(value.rename(key).select().dataset, inplace=True,
-                       overwrite_vars=[key])
-        else:
-            self.set_variables({key: value})
+        self.merge({key: value}, inplace=True, overwrite_vars=[key])
 
     def __delitem__(self, key):
         """Remove a variable from this dataset.
@@ -653,20 +744,52 @@ class Dataset(Mapping):
             variables[name] = var
         return type(self)(variables, self.attributes)
 
+    def update(self, other, inplace=True):
+        """Update this dataset's variables and attributes with those from
+        another dataset.
+
+        Parameters
+        ----------
+        other : Dataset or castable to Dataset
+            Dataset or variables with which to update this dataset.
+        inplace : bool, optional
+            If True, merge the other dataset into this dataset in-place.
+            Otherwise, return a new dataset object.
+
+        Returns
+        -------
+        updated : Dataset
+            Updated dataset.
+
+        Raises
+        ------
+        ValueError
+            If any dimensions would inconsistent sizes between different
+            variables in the updated dataset.
+        """
+        other_variables, other_attributes = _get_dataset_vars_and_attr(other)
+        new_variables = _expand_variables(other_variables)
+
+        obj = self if inplace else self.copy()
+        obj._update_vars_and_dims(new_variables, needs_copy=inplace)
+        obj.attributes.update(other_attributes)
+        return obj
+
     def merge(self, other, inplace=False, overwrite_vars=None,
               attribute_conflicts='ignore'):
         """Merge two datasets into a single new dataset.
 
-        This method generally not allow for overriding data. Arrays,
-        dimensions and indices are checked for conflicts. However, conflicting
-        attributes are removed.
+        This method generally not allow for overriding data. Variables and
+        dimensions are checked for conflicts. However, conflicting attributes
+        are removed.
 
         Parameters
         ----------
-        other : Dataset
-            Dataset to merge with this dataset.
+        other : Dataset or castable to Dataset
+            Dataset or variables to merge with this dataset.
         inplace : bool, optional
             If True, merge the other dataset into this dataset in-place.
+            Otherwise, return a new dataset object.
         overwrite_vars : list, optional
             If provided, update variables of these names without checking for
             conflicts in this dataset.
@@ -695,25 +818,28 @@ class Dataset(Mapping):
         if attribute_conflicts != 'ignore':
             raise NotImplementedError
 
-        # check for conflicts
+        other_variables, other_attributes = _get_dataset_vars_and_attr(other)
+
+        # determine variables to check for conflicts
         if overwrite_vars is None:
-            overwrite_vars = {}
-        for k, v in other.variables.iteritems():
-            if (k in self and k not in overwrite_vars
-                    and not utils.xarray_equal(v, self[k],
-                                               check_attributes=False)):
-                raise ValueError('unsafe to merge datasets; '
-                                 'conflicting variable %r' % k)
-        # update contents
+            potential_conflicts = self.variables
+        else:
+            if isinstance(overwrite_vars, basestring):
+                overwrite_vars = {overwrite_vars}
+            potential_conflicts = {k: v for k, v in self.variables.iteritems()
+                                  if k not in overwrite_vars}
+
+        # update variables
+        compat = functools.partial(utils.xarray_equal, check_attributes=False)
+        new_variables = _expand_variables(other_variables, potential_conflicts,
+                                          compat=compat)
         obj = self if inplace else self.copy()
-        obj.set_variables(OrderedDict((k, v) for k, v
-                                      in other.variables.iteritems()
-                                      if k not in obj.variables
-                                      or k in overwrite_vars))
+        obj._update_vars_and_dims(new_variables, needs_copy=inplace)
+
         # remove conflicting attributes
-        for k, v in other.attributes.iteritems():
-            if k in self.attributes and v != self.attributes[k]:
-                del self.attributes[k]
+        for k, v in other_attributes.iteritems():
+            if k in obj.attributes and v != obj.attributes[k]:
+                del obj.attributes[k]
         return obj
 
     def select(self, *names):
@@ -753,6 +879,8 @@ class Dataset(Mapping):
                         for coord in coords.split(' '):
                             yield coord
 
+        # TODO: come up with a better way of selecting associated variables
+        # that aren't dimensions -- perhaps adding something to the public API?
         queue = set(names)
         selected_names = set()
         while queue:
@@ -790,26 +918,6 @@ class Dataset(Mapping):
         variables = OrderedDict((k, v) for k, v in self.variables.iteritems()
                                 if k not in drop)
         return type(self)(variables, self.attributes)
-
-    def replace(self, name, variable):
-        """Returns a new dataset with the variable 'name' replaced with
-        'variable'.
-
-        Parameters
-        ----------
-        name : str
-            Name of the variable to replace in this object.
-        variable : Array
-            Replacement variable.
-
-        Returns
-        -------
-        Dataset
-            New dataset based on this dataset. Dimensions are unchanged.
-        """
-        ds = self.copy()
-        ds[name] = variable
-        return ds
 
     def groupby(self, group, squeeze=True):
         """Group this dataset by unique values of the indicated group.
@@ -903,9 +1011,9 @@ class Dataset(Mapping):
             are listed in "concat_over") are expected to be equal.
         dimension : str or Array, optional
             Name of the dimension to stack along. If dimension is provided as
-            an XArray or DataArray, the focus of the dataset array or the
-            singleton dimension of the xarray is used as the stacking dimension
-            and the array is added to the returned dataset.
+            an XArray or DataArray, the name of the DataArray or the singleton
+            dimension of the XArray is used as the stacking dimension and the
+            array is added to the returned dataset.
         indexers : None or iterable of indexers, optional
             Iterable of indexers of the same length as variables which
             specifies how to assign variables from each dataset along the given
