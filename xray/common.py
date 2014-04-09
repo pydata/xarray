@@ -39,6 +39,31 @@ class AbstractArray(ImplementsReduce):
     def T(self):
         return self.transpose()
 
+    def get_axis_num(self, dimension):
+        """Return axis number(s) corresponding to dimension(s) in this array.
+
+        Parameters
+        ----------
+        dimension : str or iterable of str
+            Dimension name(s) for which to lookup axes.
+
+        Returns
+        -------
+        int or tuple of int
+            Axis number or numbers corresponding to the given dimensions.
+        """
+        if isinstance(dimension, basestring):
+            return self._get_axis_num(dimension)
+        else:
+            return tuple(self._get_axis_num(dim) for dim in dimension)
+
+    def _get_axis_num(self, dim):
+        try:
+            return self.dimensions.index(dim)
+        except ValueError:
+            raise ValueError("%r not found in array dimensions %r" %
+                             (dim, self.dimensions))
+
     _reduce_method_docstring = \
         """Reduce this {cls}'s data' by applying `{name}` along some
         dimension(s).

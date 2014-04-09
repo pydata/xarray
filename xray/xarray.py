@@ -383,6 +383,7 @@ class XArray(AbstractArray):
                                  'which has length greater than one')
         return self.indexed_by(**{dim: 0 for dim in dimension})
 
+
     def reduce(self, func, dimension=None, axis=None, **kwargs):
         """Reduce this array by applying `func` along some dimension(s).
 
@@ -446,7 +447,7 @@ class XArray(AbstractArray):
 
     def _reduce(self, f, dim, **kwargs):
         """Reduce a single dimension"""
-        axis = self.dimensions.index(dim)
+        axis = self.get_axis_num(dim)
         dims = tuple(dim for i, dim in enumerate(self.dimensions)
                      if axis not in [i, i - self.ndim])
         data = f(self.data, axis=axis, **kwargs)
@@ -550,7 +551,7 @@ class XArray(AbstractArray):
         # initialize the stacked variable with empty data
         first_var, variables = groupby.peek_at(variables)
         if dimension in first_var.dimensions:
-            axis = first_var.dimensions.index(dimension)
+            axis = first_var.get_axis_num(dimension)
             shape = tuple(length if n == axis else s
                           for n, s in enumerate(first_var.shape))
             dims = first_var.dimensions
