@@ -1,8 +1,8 @@
-# TODO: replace aggregate and iterator methods by a 'groupby' method/object
-# like pandas
 import functools
+import operator
 import re
-from collections import OrderedDict
+import warnings
+from collections import defaultdict, OrderedDict
 
 import numpy as np
 import pandas as pd
@@ -231,6 +231,66 @@ class DataArray(AbstractArray):
         """
         return self.indexed_by(**remap_loc_indexers(self.dataset.variables,
                                                     indexers))
+
+    def reindex_like(self, other, copy=True):
+        """Conform this object onto the coordinates of another object, filling
+        in missing values with NaN.
+
+        Parameters
+        ----------
+        other : Dataset or DatasetArray
+            Object with a coordinates attribute giving a mapping from dimension
+            names to xray.XArray objects, which provides coordinates upon which
+            to index the variables in this dataset. The coordinates on this
+            other object need not be the same as the coordinates on this
+            dataset. Any mis-matched coordinates values will be filled in with
+            NaN, and any mis-matched coordinate names will simply be ignored.
+        copy : bool, optional
+            If `copy=True`, the returned array's dataset contains only copied
+            variables. If `copy=False` and no reindexing is required then
+            original variables from this array's dataset are returned.
+
+        Returns
+        -------
+        reindexed : DatasetArray
+            Another dataset array, with coordinates replaced from the other
+            object.
+
+        See Also
+        --------
+        DatasetArray.reindex
+        align
+        """
+        return self.reindex(copy=copy, **other.coordinates)
+
+    def reindex(self, copy=True, **coordinates):
+        """Conform this object onto a new set of coordinates or pandas.Index
+        objects, filling in missing values with NaN.
+
+        Parameters
+        ----------
+        copy : bool, optional
+            If `copy=True`, the returned array's dataset contains only copied
+            variables. If `copy=False` and no reindexing is required then
+            original variables from this array's dataset are returned.
+        **coordinates : dict
+            Dictionary with keys given by dimension names and values given by
+            arrays of coordinate labels. Any mis-matched coordinates values
+            will be filled in with NaN, and any mis-matched coordinate names
+            will simply be ignored.
+
+        Returns
+        -------
+        reindexed : DatasetArray
+            Another dataset array, with replaced coordinates.
+
+        See Also
+        --------
+        DatasetArray.reindex_like
+        align
+        """
+        reindexed_ds = self.select().dataset.reindex(copy=copy, **coordinates)
+        return type(self)(reindexed_ds, self.name)
 
     def rename(self, new_name_or_name_dict):
         """Returns a new DataArray with renamed variables.
@@ -592,18 +652,68 @@ class DataArray(AbstractArray):
 ops.inject_special_operations(DataArray, priority=60)
 
 
-def align(array1, array2):
-    """Given two Dataset or DataArray objects, returns two new objects where
-    all coordinates found on both datasets are replaced by their intersection,
-    and thus are aligned for performing mathematical operations.
+def align(*objects, **kwargs):
+    """align(*objects, join='inner', copy=True)
+
+    Given any number of Dataset and/or DataArray objects, returns new
+    objects with aligned coordinates.
+
+    Array from the aligned objects are suitable as input to mathematical
+    operators, because along each dimension they have the same coordinates.
+
+    Missing values (if ``join != 'inner'``) are filled with NaN.
+
+    Parameters
+    ----------
+    *objects : Dataset or DatasetArray
+        Objects to align.
+    join : {'outer', 'inner', 'left', 'right'}, optional
+        Method for joining the coordinates of the passed objects along each
+        dimension:
+         - 'outer': use the union of object coordinates
+         - 'outer': use the intersection of object coordinates
+         - 'left': use coordinates from the first object with each dimension
+         - 'right': use coordinates from the last object with each dimension
+    copy : bool, optional
+        If `copy=True`, the returned objects contain all new variables. If
+        `copy=False` and no reindexing is required then the aligned objects
+        will include original variables.
+
+    Returns
+    -------
+    aligned : same as *bobjects
+        Tuple of objects with aligned coordinates.
     """
-    # TODO: automatically align when doing math with arrays, or better yet
-    # calculate the union of the indices and fill in the mis-aligned data with
-    # NaN.
-    # TODO: generalize this function to any number of arguments
-    overlapping_coords = {k: (array1.coordinates[k].index
-                              & array2.coordinates[k].index)
-                          for k in array1.coordinates
-                          if k in array2.coordinates}
-    return tuple(ar.labeled_by(**overlapping_coords)
-                 for ar in [array1, array2])
+    # TODO: automatically align when doing math with dataset arrays?
+    # TODO: change this to default to join='outer' like pandas?
+    if 'join' not in kwargs:
+        warnings.warn('using align without setting explicitly setting the '
+                      "'join' keyword argument. In future versions of xray, "
+                      "the default will likely change from join='inner' to "
+                      "join='outer', to match pandas.",
+                      FutureWarning, stacklevel=2)
+
+    join = kwargs.pop('join', 'inner')
+    copy = kwargs.pop('copy', True)
+
+    if join == 'outer':
+        join_indices = functools.partial(reduce, operator.or_)
+    elif join == 'inner':
+        join_indices = functools.partial(reduce, operator.and_)
+    elif join == 'left':
+        join_indices = operator.itemgetter(0)
+    elif join == 'right':
+        join_indices = operator.itemgetter(-1)
+
+    all_coords = defaultdict(list)
+    for obj in objects:
+        for k, v in obj.coordinates.iteritems():
+            all_coords[k].append(v.index)
+
+    # Exclude dimensions with all equal indices to avoid unnecessary reindexing
+    # work. Note: pandas.Index.equals uses some clever shortcuts to compare
+    # indices very quickly.
+    joined_coords = {k: join_indices(v) for k, v in all_coords.iteritems()
+                     if any(not v[0].equals(idx) for idx in v[1:])}
+
+    return tuple(obj.reindex(copy=copy, **joined_coords) for obj in objects)

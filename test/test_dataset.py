@@ -12,7 +12,8 @@ import numpy as np
 import pandas as pd
 import netCDF4 as nc4
 
-from xray import Dataset, DataArray, XArray, backends, open_dataset, utils
+from xray import (Dataset, DataArray, XArray, backends, open_dataset, utils,
+                  align)
 
 from . import TestCase
 
@@ -277,6 +278,67 @@ class TestDataset(TestCase):
         self.assertEqual(data.indexed_by(time=slice(3)),
                          data.labeled_by(
                             time=pd.date_range('2000-01-01', periods=3)))
+
+    def test_reindex_like(self):
+        data = create_test_data()
+        expected = data.indexed_by(dim1=slice(10), time=slice(13))
+        actual = data.reindex_like(expected)
+        self.assertDatasetEqual(actual, expected)
+
+        expected = data.copy(deep=True)
+        expected['dim3'] = ('dim3', list('cdefghijkl'))
+        expected['var3'][:-2] = expected['var3'][2:]
+        expected['var3'][-2:] = np.nan
+        actual = data.reindex_like(expected)
+        self.assertDatasetEqual(actual, expected)
+
+    def test_reindex(self):
+        data = create_test_data()
+        expected = data.indexed_by(dim1=slice(10))
+        actual = data.reindex(dim1=data['dim1'][:10])
+        self.assertDatasetEqual(actual, expected)
+
+        actual = data.reindex(dim1=data['dim1'][:10].data)
+        self.assertDatasetEqual(actual, expected)
+
+        actual = data.reindex(dim1=data['dim1'][:10].index)
+        self.assertDatasetEqual(actual, expected)
+
+    def test_align(self):
+        left = create_test_data()
+        right = left.copy(deep=True)
+        right['dim3'] = ('dim3', list('cdefghijkl'))
+        right['var3'][:-2] = right['var3'][2:]
+        right['var3'][-2:] = np.random.randn(*right['var3'][-2:].shape)
+
+        intersection = list('cdefghij')
+        union = list('abcdefghijkl')
+
+        left2, right2 = align(left, right, join='inner')
+        self.assertArrayEqual(left2['dim3'], intersection)
+        self.assertDatasetEqual(left2, right2)
+
+        left2, right2 = align(left, right, join='outer')
+        self.assertXArrayEqual(left2['dim3'], right2['dim3'])
+        self.assertArrayEqual(left2['dim3'], union)
+        self.assertDatasetEqual(left2.labeled_by(dim3=intersection),
+                                right2.labeled_by(dim3=intersection))
+        self.assertTrue(np.isnan(left2['var3'][-2:]).all())
+        self.assertTrue(np.isnan(right2['var3'][:2]).all())
+
+        left2, right2 = align(left, right, join='left')
+        self.assertXArrayEqual(left2['dim3'], right2['dim3'])
+        self.assertXArrayEqual(left2['dim3'], left['dim3'])
+        self.assertDatasetEqual(left2.labeled_by(dim3=intersection),
+                                right2.labeled_by(dim3=intersection))
+        self.assertTrue(np.isnan(right2['var3'][:2]).all())
+
+        left2, right2 = align(left, right, join='right')
+        self.assertXArrayEqual(left2['dim3'], right2['dim3'])
+        self.assertXArrayEqual(left2['dim3'], right['dim3'])
+        self.assertDatasetEqual(left2.labeled_by(dim3=intersection),
+                                right2.labeled_by(dim3=intersection))
+        self.assertTrue(np.isnan(left2['var3'][-2:]).all())
 
     def test_variable_indexing(self):
         data = create_test_data()

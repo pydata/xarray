@@ -51,6 +51,8 @@ Selecting
 
    Dataset.indexed_by
    Dataset.labeled_by
+   Dataset.reindex
+   Dataset.reindex_like
    Dataset.rename
    Dataset.replace
    Dataset.select
@@ -87,6 +89,8 @@ Selecting
    DataArray.loc
    DataArray.indexed_by
    DataArray.labeled_by
+   DataArray.reindex
+   DataArray.reindex_like
    DataArray.rename
    DataArray.select
    DataArray.unselect
@@ -138,6 +142,10 @@ IO / Conversion
 
 XArray
 ------
+
+`XArray` objects provide a low-level interface for manipulating the contents
+of `Dataset` objects. Essentially, they are `DatasetArray`s without coordinate
+labels.
 
 .. autosummary::
    :toctree: generated/
