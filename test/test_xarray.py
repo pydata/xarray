@@ -213,8 +213,11 @@ class TestXArray(TestCase, XArraySubclassTestCases):
         xarray_tuple = (expected.dimensions, expected.data)
         self.assertXArrayEqual(expected, as_xarray(xarray_tuple))
 
-        with self.assertRaisesRegexp(TypeError, 'cannot convert arg'):
+        with self.assertRaisesRegexp(TypeError, 'cannot convert numpy'):
             as_xarray(data)
+        with self.assertRaisesRegexp(TypeError, 'cannot convert arg'):
+            as_xarray(list(data))
+
 
     def test_repr(self):
         v = XArray(['time', 'x'], [[1, 2, 3], [4, 5, 6]], {'foo': 'bar'})
