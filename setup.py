@@ -38,7 +38,7 @@ if not ISRELEASED:
 
     if pipe is None or pipe.returncode != 0:
         # no git, or not in git dir
-        if os.path.exists('src/xray/version.py'):
+        if os.path.exists('xray/version.py'):
             warnings.warn("WARNING: Couldn't get git revision, using existing xray/version.py")
             write_version = False
         else:
@@ -70,7 +70,7 @@ short_version = '%s'
 """
     if not filename:
         filename = os.path.join(
-            os.path.dirname(__file__), 'src', 'xray', 'version.py')
+            os.path.dirname(__file__), 'xray', 'version.py')
 
     a = open(filename, 'w')
     try:
@@ -91,5 +91,4 @@ setup(name='xray',
       tests_require=['mock >= 1.0.1', 'nose >= 1.0'],
       url='https://github.com/akleeman/xray',
       test_suite='nose.collector',
-      packages=['xray'],
-      package_dir={'': 'src'})
+      packages=['xray'])

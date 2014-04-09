@@ -11,7 +11,7 @@ import common
 import groupby
 import xarray
 import utils
-from dataset_array import DataArray
+from data_array import DataArray
 from utils import (FrozenOrderedDict, Frozen, SortedKeysDict, ChainMap,
                    remap_loc_indexers, multi_index_from_product)
 

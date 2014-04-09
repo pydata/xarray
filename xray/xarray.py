@@ -9,8 +9,7 @@ import ops
 import utils
 import dataset
 import groupby
-import conventions
-import dataset_array
+import data_array
 
 from common import AbstractArray
 
@@ -31,7 +30,7 @@ def as_xarray(obj, strict=True):
     if strict and hasattr(obj, 'variable'):
         # extract the primary XArray from DataArrays
         obj = obj.variable
-    if not isinstance(obj, (XArray, dataset_array.DataArray)):
+    if not isinstance(obj, (XArray, data_array.DataArray)):
         if hasattr(obj, 'dimensions') and hasattr(obj, 'data'):
             obj = XArray(obj.dimensions, obj.data,
                          getattr(obj, 'attributes', None),
@@ -600,7 +599,7 @@ class XArray(AbstractArray):
     def _binary_op(f, reflexive=False):
         @functools.wraps(f)
         def func(self, other):
-            if isinstance(other, dataset_array.DataArray):
+            if isinstance(other, data_array.DataArray):
                 return NotImplemented
             self_data, other_data, dims = _broadcast_xarray_data(self, other)
             new_data = (f(self_data, other_data)
