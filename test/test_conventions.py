@@ -1,11 +1,9 @@
-import netCDF4 as nc4
 import numpy as np
 import pandas as pd
 from datetime import datetime
 import warnings
 
 from xray import conventions
-from . import TestCase
 from . import TestCase, requires_netCDF4
 
 
@@ -38,7 +36,6 @@ class TestMaskedAndScaledArray(TestCase):
         self.assertEqual(0, x[...])
 
 
-@requires_netCDF4
 class TestCharToStringArray(TestCase):
     def test(self):
         array = np.array(list('abc'))
@@ -70,7 +67,9 @@ class TestCharToStringArray(TestCase):
 
 
 class TestDatetime(TestCase):
+    @requires_netCDF4
     def test_cf_datetime(self):
+        import netCDF4 as nc4
         for num_dates, units in [
                 (np.arange(100), 'days since 2000-01-01'),
                 (np.arange(100).reshape(10, 10), 'days since 2000-01-01'),
@@ -110,6 +109,7 @@ class TestDatetime(TestCase):
                         pd.Index(actual), units, calendar)
                     self.assertArrayEqual(num_dates, np.around(encoded))
 
+    @requires_netCDF4
     def test_cf_datetime_nan(self):
         for num_dates, units, expected_list in [
                 ([np.nan], 'days since 2000-01-01', ['NaT']),
