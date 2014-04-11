@@ -13,8 +13,6 @@ Creating a dataset
 
    Dataset
    open_dataset
-   Dataset.from_store
-   Dataset.concat
 
 Attributes and underlying data
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -43,6 +41,7 @@ and values given by ``DataArray`` objects.
    Dataset.__delitem__
    Dataset.update
    Dataset.merge
+   Dataset.concat
    Dataset.copy
    Dataset.iteritems
    Dataset.itervalues
@@ -103,6 +102,8 @@ Selecting
 .. autosummary::
    :toctree: generated/
 
+   DataArray.__getitem__
+   DataArray.__setitem__
    DataArray.loc
    DataArray.indexed_by
    DataArray.labeled_by
@@ -158,27 +159,12 @@ IO / Conversion
    DataArray.copy
 
 
-XArray
-------
-
-`XArray` objects provide a low-level interface for manipulating the contents
-of `Dataset` objects. Essentially, they are `DatasetArray`s without coordinate
-labels.
-
-.. autosummary::
-   :toctree: generated/
-
-   XArray
-
 Top-level functions
 -------------------
 
 .. autosummary::
    :toctree: generated/
 
-   as_xarray
-   broadcast_xarrays
-   xarray_equal
    align
    encode_cf_datetime
    decode_cf_datetime

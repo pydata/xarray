@@ -2,7 +2,7 @@ import unittest
 
 from numpy.testing import assert_array_equal
 
-from xray import utils
+from xray import utils, DataArray
 
 try:
     import scipy
@@ -65,6 +65,22 @@ class TestCase(unittest.TestCase):
             v1 = d1.variables[k]
             v2 = d2.variables[k]
             self.assertXArrayAllClose(v1, v2, rtol=rtol, atol=atol)
+
+    def assertDataArrayEqual(self, ar1, ar2):
+        self.assertEqual(ar1.name, ar2.name)
+        self.assertDatasetEqual(ar1.dataset, ar2.dataset)
+
+    def assertDataArrayAllClose(self, ar1, ar2, rtol=1e-05, atol=1e-08):
+        self.assertEqual(ar1.name, ar2.name)
+        self.assertDatasetAllClose(ar1.dataset, ar2.dataset,
+                                   rtol=rtol, atol=atol)
+
+    def assertDataArrayEquiv(self, ar1, ar2):
+        self.assertIsInstance(ar1, DataArray)
+        self.assertIsInstance(ar2, DataArray)
+        random_name = 'randomly-renamed-variable'
+        self.assertDataArrayEqual(ar1.rename(random_name),
+                                  ar2.rename(random_name))
 
 
 class ReturnItem(object):

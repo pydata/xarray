@@ -180,13 +180,13 @@ class TestXArray(TestCase, XArraySubclassTestCases):
     def test_array_equality(self):
         d = np.random.rand(10, 3)
         v1 = XArray(('dim1', 'dim2'), data=d,
-                    attributes={'att1': 3, 'att2': [1, 2, 3]})
+                     attributes={'att1': 3, 'att2': [1, 2, 3]})
         v2 = XArray(('dim1', 'dim2'), data=d,
-                    attributes={'att1': 3, 'att2': [1, 2, 3]})
+                     attributes={'att1': 3, 'att2': [1, 2, 3]})
         v3 = XArray(('dim1', 'dim3'), data=d,
-                   attributes={'att1': 3, 'att2': [1, 2, 3]})
+                    attributes={'att1': 3, 'att2': [1, 2, 3]})
         v4 = XArray(('dim1', 'dim2'), data=d,
-                   attributes={'att1': 3, 'att2': [1, 2, 4]})
+                    attributes={'att1': 3, 'att2': [1, 2, 4]})
         v5 = deepcopy(v1)
         v5.data[:] = np.random.rand(10, 3)
         self.assertXArrayEqual(v1, v2)
@@ -367,33 +367,6 @@ class TestXArray(TestCase, XArraySubclassTestCases):
                                XArray([], self.d.mean(axis=0).std(),
                                       {'cell_methods': 'x: mean y: std'}))
         self.assertXArrayEqual(v.mean('x'), v.reduce(np.mean, 'x'))
-
-    def test_groupby(self):
-        agg_var = XArray(['y'], np.array(['a', 'a', 'b']))
-        v = XArray(['x', 'y'], self.d)
-
-        expected_unique = XArray(['abc'], np.array(['a', 'b']))
-        expected_aggregated = XArray(['x', 'abc'],
-                                    np.array([self.d[:, :2].sum(axis=1),
-                                              self.d[:, 2:].sum(axis=1)]).T,
-                                    {'cell_methods': 'y: sum'})
-
-        x = XArray('x', np.arange(10))
-        y = XArray('y', np.arange(3))
-        self.assertXArrayEqual(v, v.groupby('y', y).apply(lambda x: x))
-        self.assertXArrayEqual(v, v.groupby('x', x).apply(lambda x: x))
-
-        grouped = v.groupby('abc', agg_var)
-        self.assertXArrayEqual(expected_unique, grouped.unique_coord)
-        self.assertXArrayEqual(v, grouped.apply(lambda x: x))
-        self.assertXArrayEqual(expected_aggregated, grouped.reduce(np.sum))
-
-        actual = list(grouped)
-        expected = zip(expected_unique, [v[:, :2], v[:, 2:]])
-        self.assertEqual(len(expected), len(actual))
-        for (ke, ve), (ka, va) in zip(expected, actual):
-            self.assertXArrayEqual(ke, ka)
-            self.assertXArrayEqual(ve, va)
 
 
 class TestCoordXArray(TestCase, XArraySubclassTestCases):
