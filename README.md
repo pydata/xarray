@@ -176,6 +176,46 @@ Don't forget to `git fetch` regular updates!
 [pydap]: http://www.pydap.org/
 [anaconda]: https://store.continuum.io/cshop/anaconda/
 
+## Anticipated API changes
+
+Aspects of the API that we currently intend to change:
+
+ - Integer indexing on `Datasets` with 1-dimensional variables (via
+   `indexed_by` or `labeled_by`) will turn those variables into 0-dimensional
+   (scalar) variables instead of dropping them.
+ - The primitive `XArray` object will be removed from the public API.
+   `DataArray` will be used instead in all public interfaces.
+ - The constructor for `DataArray` objects will change, so that it is possible
+   to create new `DataArray` objects without putting them into a `Dataset`
+   first.
+ - We currently check `var.attributes['coordinates']` for figuring out which
+   variables to select with `Dataset.select`. This will probably be removed:
+   we don't want users to rely on attribute metadata that is not necessarily
+   maintained by array operations.
+ - Array reduction methods like `mean` may change to NA skipping versions
+   (like pandas).
+ - Array indexing will be made lazy, instead of immediately creating an
+   ndarray. This will make it easier to subsample from very large Datasets
+   using the `indexed_by` and `labeled_by` methods. We might need to add a
+   special method to allow for explicitly caching values in memory.
+ - We will automatically align `DataArray` objects when doing math. Most
+   likely, we will use an inner join (unlike pandas's outer join), because an
+   outer join can result in ridiculous memory blow-ups when working with high
+   dimensional arrays.
+
+Once we finalize these aspects of the API and improve the documentation, we
+intend to release version 0.1. Our target is to do so before the xray talk on
+May 3, 2014 at [PyData Silicon Valley][pydata]. Future versions of xray will
+add better support for working with datasets too big to fit into memory,
+probably by wrapping libraries like [blaze][blaze]/[blz][blz] or
+[biggus][biggus]. At a minimum, we intend to support `Dataset` objects linked
+to NetCDF or HDF5 files on disk to allow for incremental writing of data.
+
+[pydata]: http://pydata.org/sv2014/
+[blaze]: https://github.com/ContinuumIO/blaze/
+[blz]: https://github.com/ContinuumIO/blz
+[biggus]: https://github.com/SciTools/biggus
+
 ## About xray
 
 xray is an evolution of an internal tool developed at
