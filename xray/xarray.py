@@ -429,35 +429,9 @@ class XArray(AbstractArray):
 
         return var
 
-    def groupby(self, group_name, group_array, squeeze=True):
-        """Group this dataset by unique values of the indicated group.
-
-        Parameters
-        ----------
-        group_name : str
-            Name of the group array.
-        group_array : Array
-            Array whose unique values should be used to group this array.
-        squeeze : boolean, optional
-            If "group" is a coordinate of this array, `squeeze` controls
-            whether the subarrays have a dimension of length 1 along that
-            coordinate or if the dimension is squeezed out.
-
-        Returns
-        -------
-        grouped : GroupBy
-            A `GroupBy` object patterned after `pandas.GroupBy` that can be
-            iterated over in the form of `(unique_value, grouped_array)` pairs
-            or over which grouped operations can be applied with the `apply`
-            and `reduce` methods (and the associated aliases `mean`, `sum`,
-            `std`, etc.).
-        """
-        return groupby.ArrayGroupBy(
-            self, group_name, group_array, squeeze=squeeze)
-
     @classmethod
     def concat(cls, variables, dimension='stacked_dimension',
-               indexers=None, length=None, template=None):
+               indexers=None, length=None, shortcut=False):
         """Concatenate variables along a new or existing dimension.
 
         Parameters
@@ -482,13 +456,12 @@ class XArray(AbstractArray):
             Length of the new dimension. This is used to allocate the new data
             array for the stacked variable data before iterating over all
             items, which is thus more memory efficient and a bit faster. If
-            dimension is provided as an array, length is calculated
+            dimension is provided as a DataArray, length is calculated
             automatically.
-        template : XArray, optional
-            This option is used internally to speed-up groupby operations. The
-            template's attributes are added to the returned array's attributes.
-            Furthermore, if a template is given, some checks of internal
-            consistency between arrays to stack are skipped.
+        shortcut : bool, optional
+            This option is used internally to speed-up groupby operations.
+            If `shortcut` is True, some checks of internal consistency between
+            arrays to concatenate are skipped.
 
         Returns
         -------
@@ -532,17 +505,16 @@ class XArray(AbstractArray):
             axis = 0
             shape = (length,) + first_var.shape
             dims = (dimension,) + first_var.dimensions
-        attr = OrderedDict() if template is None else template.attributes
 
-        concatenated = cls(dims, np.empty(shape, dtype=first_var.dtype), attr)
+        concatenated = cls(dims, np.empty(shape, dtype=first_var.dtype))
         concatenated.attributes.update(first_var.attributes)
 
         alt_dims = tuple(d for d in dims if d != dimension)
 
         # copy in the data from the variables
         for var, indexer in izip(variables, indexers):
-            if template is None:
-                # do sanity checks if we don't have a template
+            if not shortcut:
+                # do sanity checks & attributes clean-up
                 if dimension in var.dimensions:
                     # transpose verifies that the dimensions are equivalent
                     if var.dimensions != concatenated.dimensions:
@@ -554,7 +526,7 @@ class XArray(AbstractArray):
 
             key = tuple(indexer if n == axis else slice(None)
                         for n in range(concatenated.ndim))
-            concatenated.data[tuple(key)] = var.data
+            concatenated.data[key] = var.data
 
         return concatenated
 

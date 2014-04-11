@@ -1,6 +1,5 @@
 import functools
 import operator
-import re
 import warnings
 from collections import defaultdict, OrderedDict
 
@@ -215,11 +214,6 @@ class DataArray(AbstractArray):
         Dataset.indexed_by
         """
         ds = self.dataset.indexed_by(**indexers)
-        if self.name not in ds and self.name in self.dataset:
-            # always keep the array variable in the dataset, even if it was
-            # unselected because indexing made it a scaler
-            # don't add back in virtual variables (not found in the dataset)
-            ds[self.name] = self.variable.indexed_by(**indexers)
         return type(self)(ds, self.name)
 
     def labeled_by(self, **indexers):
@@ -361,7 +355,7 @@ class DataArray(AbstractArray):
         """
         if isinstance(group, basestring):
             group = self[group]
-        return groupby.ArrayGroupBy(self, group.name, group, squeeze=squeeze)
+        return groupby.ArrayGroupBy(self, group, squeeze=squeeze)
 
     def transpose(self, *dimensions):
         """Return a new DataArray object with transposed dimensions.
@@ -457,7 +451,7 @@ class DataArray(AbstractArray):
         ds[self.name] = var
         return type(self)(ds, self.name)
 
-    def _unselect_nonfocus_dims(self):
+    def _unselect_unused_dims(self):
         """Unselect all dimensions found in this array's dataset that aren't
         also found in the dimensions of the array. Returns either a modified
         copy or this DataArray if there were no dimensions to remove.
@@ -470,13 +464,13 @@ class DataArray(AbstractArray):
 
     @classmethod
     def concat(cls, arrays, dimension='concat_dimension', indexers=None,
-               length=None, template=None):
+               concat_over=None):
         """Stack arrays along a new or existing dimension to form a new
         DataArray.
 
         Parameters
         ----------
-        arrays : iterable of Array
+        arrays : iterable of DataArray
             Arrays to stack together. Each variable is expected to have
             matching dimensions and shape except for along the concatenated
             dimension.
@@ -495,18 +489,10 @@ class DataArray(AbstractArray):
             not supplied, indexers is inferred from the length of each
             variable along the dimension, and the variables are concatenated in
             the given order.
-        length : int, optional
-            Length of the new dimension. This is used to allocate the new data
-            array for the concatenated variable data before iterating over all
-            items, which is thus more memory efficient and a bit faster. If
-            dimension is provided as an array, length is calculated
-            automatically.
-        template : DataArray, optional
-            This option is used internally to speed-up groupby operations. The
-            template's attributes and variables that are not along the
-            concatenated dimension are added to the returned array.
-            Furthermore, if a template is given, some checks of internal
-            consistency between arrays to stack are skipped.
+        concat_over : None or str or iterable of str, optional
+            Names of additional variables to concatenate (other than the given
+            arrays variables), in which "dimension" does not already appear as
+            a dimension.
 
         Returns
         -------
@@ -514,42 +500,25 @@ class DataArray(AbstractArray):
             Concatenated DataArray formed by concatenated all the supplied
             variables along the new dimension.
 
-        Notes
-        -----
-        This function has subtly different logic from Dataset.concat. It is not
-        entirely clear that it is necessary or useful in the public API.
-
-        The current implementation will fail hard if Datasets with more than
-        one variable to concatenate are supplied.
-
         See also
         --------
         Dataset.concat
-        XArray.concat
         """
-        ds = dataset_.Dataset()
-        dim_name = ds._add_dimension(dimension)
-
-        if template is not None:
-            # use metadata from the template data array
-            name = template.name
-            old_dim_name, = template[dim_name].dimensions
-            ds.merge(template.dataset.unselect(old_dim_name), inplace=True)
-        else:
-            # figure out metadata by inspecting each array
-            name = 'concat_variable'
-            arrays = list(arrays)
-            for array in arrays:
-                if isinstance(array, cls):
-                    drop = [array.name] + [k for k in array.dataset.dimensions
-                                           if k == dim_name]
-                    ds.merge(array.dataset.unselect(*drop), inplace=True)
-                    if name is 'concat_variable':
-                        name = array.name
-
-        ds[name] = xarray.XArray.concat(
-            arrays, dimension, indexers, length, template)
-        return cls(ds, name)._unselect_nonfocus_dims()
+        # TODO: call select() on each DataArray and get rid of the confusing
+        # concat_over kwarg.
+        new_arrays = []
+        for n, arr in enumerate(arrays):
+            if n == 0:
+                name = arr.name
+            elif name != arr.name:
+                arr = arr.rename(name)
+            new_arrays.append(arr)
+        if concat_over is None:
+            concat_over = set()
+        concat_over = set(concat_over) | {name}
+        ds = dataset_.Dataset.concat(new_arrays, dimension, indexers,
+                                     concat_over=concat_over)
+        return ds[name]
 
     def to_dataframe(self):
         """Convert this array into a pandas.DataFrame.
@@ -598,7 +567,7 @@ class DataArray(AbstractArray):
         If `new_var` is a DataArray, its contents will be merged in.
         """
         if not hasattr(new_var, 'dimensions'):
-            new_var = type(self.variable)(self.variable.dimensions, new_var)
+            new_var = xarray.XArray(self.variable.dimensions, new_var)
         ds = self._select_coordinates()
         if name is None:
             name = self.name + '_'

@@ -12,7 +12,7 @@ def unique_value_groups(ar):
 
     Parameters
     ----------
-    ar : xarraylike
+    ar : array-like
         Input array. This will be flattened if it is not already 1-D.
 
     Returns
@@ -47,13 +47,27 @@ class GroupBy(object):
     groupby object are with the `apply` or `reduce` methods. You can also
     directly call numpy methods like `mean` or `std`.
 
+    You should create a GroupBy object by using the `DataArray.groupby` or
+    `Dataset.groupby` methods.
+
     See Also
     --------
     XArray.groupby
     DataArray.groupby
     """
-    def __init__(self, obj, group_name, group_coord, squeeze=True):
-        """See XArray.groupby and DataArray.groupby
+    def __init__(self, obj, group_coord, squeeze=True):
+        """Create a GroupBy object
+
+        Parameters
+        ----------
+        obj : Dataset or DataArray
+            Object to group.
+        group_coord : DataArray
+            1-dimensional array with the group values.
+        squeeze : boolean, optional
+            If "group" is a coordinate of object, `squeeze` controls whether
+            the subarrays have a dimension of length 1 along that coordinate or
+            if the dimension is squeezed out.
         """
         if group_coord.ndim != 1:
             # TODO: remove this limitation?
@@ -63,23 +77,18 @@ class GroupBy(object):
         self.group_coord = group_coord
         self.group_dim, = group_coord.dimensions
 
-        dimensions = obj.dimensions
-        try:
-            expected_size = dimensions[self.group_dim]
-        except TypeError:
-            expected_size = obj.shape[obj.dimensions.index(self.group_dim)]
-
+        expected_size = dataset.as_dataset(obj).dimensions[self.group_dim]
         if group_coord.size != expected_size:
             raise ValueError('the group variable\'s length does not '
                              'match the length of this variable along its '
                              'dimension')
 
-        if group_name in obj.dimensions:
+        if group_coord.name in obj.dimensions:
             # assume that group_coord already has sorted, unique values
-            if group_coord.dimensions != (group_name,):
-                raise ValueError('`group_coord` is required to be a coordinate '
-                                 'variable along the `group_name` dimension '
-                                 'if `group_name` is a dimension in `obj`')
+            if group_coord.dimensions != (group_coord.name,):
+                raise ValueError('`group_coord` is required to be a '
+                                 'coordinate variable if `group_coord.name` '
+                                 'is a dimension in `obj`')
             group_indices = np.arange(group_coord.size)
             if not squeeze:
                 # group_indices = group_indices.reshape(-1, 1)
@@ -89,8 +98,11 @@ class GroupBy(object):
         else:
             # look through group_coord to find the unique values
             unique_values, group_indices = unique_value_groups(group_coord)
-            variables = {group_name: (group_name, unique_values)}
-            unique_coord = dataset.Dataset(variables)[group_name]
+            # TODO: switch this to using the new DataArray constructor when we
+            # get around to writing it:
+            # unique_coord = xary.DataArray(unique_values, name=group_coord.name)
+            variables = {group_coord.name: (group_coord.name, unique_values)}
+            unique_coord = dataset.Dataset(variables)[group_coord.name]
 
         self.group_indices = group_indices
         self.unique_coord = unique_coord
@@ -98,50 +110,96 @@ class GroupBy(object):
 
     @property
     def groups(self):
-        # provided for compatibility with pandas.groupby
+        # provided to mimic pandas.groupby
         if self._groups is None:
-            self._groups = dict(zip(self.unique_coord, self.group_indices))
+            self._groups = dict(zip(self.unique_coord.data,
+                                    self.group_indices))
         return self._groups
 
     def __len__(self):
         return self.unique_coord.size
 
     def __iter__(self):
-        return itertools.izip(self.unique_coord, self.iter_indexed())
+        return itertools.izip(self.unique_coord.data, self._iter_grouped())
 
-    def iter_indexed(self):
+    def _iter_grouped(self):
+        """Iterate over each element in this group"""
         for indices in self.group_indices:
             yield self.obj.indexed_by(**{self.group_dim: indices})
 
+    def _infer_concat_args(self, applied_example):
+        if self.group_dim in applied_example.dimensions:
+            concat_dim = self.group_coord
+            indexers = self.group_indices
+        else:
+            concat_dim = self.unique_coord
+            indexers = np.arange(self.unique_coord.size)
+        return concat_dim, indexers
+
+    def _combine(self, applied, concat_dim, indexers):
+        orig_ds = dataset.as_dataset(self.obj)
+        # use the concat_over list so we can combine even if we squeezed out
+        # this dimension
+        concat_over = [k for k, v in orig_ds.iteritems()
+                       if self.group_dim in v.dimensions]
+        stacked = type(self.obj).concat(
+            applied, concat_dim, indexers, concat_over=concat_over)
+        return stacked
+
 
 class ArrayGroupBy(GroupBy, ImplementsReduce):
-    def iter_shortcut(self):
-        """Fast version of `iter_groups` that yields XArrays without metadata
+    """GroupBy object specialized to grouping DataArray objects
+    """
+    def _iter_grouped_shortcut(self):
+        """Fast version of `_iter_grouped` that yields XArrays without metadata
         """
-        # extract the underlying Array object
-        array = self.obj
-        if hasattr(array, 'array'):
-            array = array.array
-
-        group_axis = array.dimensions.index(self.group_dim)
+        array = xarray.as_xarray(self.obj)
 
         # build the new dimensions
-        index_int = isinstance(self.group_indices[0], int)
-        if index_int:
-            dims = tuple(d for n, d in enumerate(array.dimensions)
-                         if n != group_axis)
+        if isinstance(self.group_indices[0], int):
+            # group_dim is squeezed out
+            dims = tuple(d for d in array.dimensions if d != self.group_dim)
         else:
             dims = array.dimensions
 
         # slice the data and build the new Arrays directly
+        indexer = [slice(None)] * array.ndim
+        group_axis = array.get_axis_num(self.group_dim)
         for indices in self.group_indices:
-            indexer = tuple(indices if n == group_axis else slice(None)
-                            for n in range(array.ndim))
-            data = array.data[indexer]
+            indexer[group_axis] = indices
+            data = array.data[tuple(indexer)]
             yield xarray.XArray(dims, data)
 
+    def _combine_shortcut(self, applied, concat_dim, indexers):
+        stacked = xarray.XArray.concat(
+            applied, concat_dim, indexers, shortcut=True)
+        stacked.attributes.update(self.obj.attributes)
+
+        name = self.obj.name
+        ds = self.obj.dataset.unselect(name)
+        ds[concat_dim.name] = concat_dim
+        # remove extraneous dimensions
+        for dim in self.obj.dimensions:
+            if dim not in stacked.dimensions:
+                del ds[dim]
+        ds[name] = stacked
+        return ds[name]
+
+    def _restore_dim_order(self, stacked, concat_dim):
+        def lookup_order(dimension):
+            if dimension == self.group_coord.name:
+                dimension, = concat_dim.dimensions
+            if dimension in self.obj.dimensions:
+                axis = self.obj.get_axis_num(dimension)
+            else:
+                axis = 1e6  # some arbitrarily high value
+            return axis
+
+        new_order = sorted(stacked.dimensions, key=lookup_order)
+        return stacked.transpose(*new_order)
+
     def apply(self, func, shortcut=False, **kwargs):
-        """Apply a function over each array in the group and stack them
+        """Apply a function over each array in the group and concatenate them
         together into a new array.
 
         `func` is called like `func(ar, *args, **kwargs)` for each array `ar`
@@ -166,44 +224,33 @@ class ArrayGroupBy(GroupBy, ImplementsReduce):
                 only on the data and dimensions.
             (2) The action of `func` creates arrays with homogeneous metadata,
                 that is, with the same dimensions and attributes.
-            If these conditions are satisfied (and they should be in most
-            cases), the `shortcut` provides significant speedup for common
-            groupby operations like applying numpy ufuncs.
+            If these conditions are satisfied `shortcut` provides significant
+            speedup. This should be the case for many common groupby operations
+            (e.g., applying numpy ufuncs).
         **kwargs
             Used to call `func(ar, **kwargs)` for each array `ar.
 
         Returns
         -------
-        applied : Array
-            A new Array of the same type from which this grouping was created.
+        applied : DataArray
+            The result of splitting, applying and combining this array.
         """
-        applied = (func(ar, **kwargs) for ar in (self.iter_shortcut() if shortcut
-                                                 else self.iter_indexed()))
+        if shortcut:
+            grouped = self._iter_grouped_shortcut()
+        else:
+            grouped = self._iter_grouped()
+        applied = (func(arr, **kwargs) for arr in grouped)
 
         # peek at applied to determine which coordinate to stack over
         applied_example, applied = peek_at(applied)
-        if self.group_dim in applied_example.dimensions:
-            stack_coord = self.group_coord
-            indexers = self.group_indices
+        concat_dim, indexers = self._infer_concat_args(applied_example)
+        if shortcut:
+            combined = self._combine_shortcut(applied, concat_dim, indexers)
         else:
-            stack_coord = self.unique_coord
-            indexers = np.arange(self.unique_coord.size)
+            combined = self._combine(applied, concat_dim, indexers)
 
-        concat_kwargs = {'template': self.obj} if shortcut else {}
-        stacked = type(self.obj).concat(applied, stack_coord, indexers,
-                                        **concat_kwargs)
-
-        # now, reorder the stacked array's dimensions so that those that
-        # appeared in the original array appear in the same order they did
-        # originally
-        stack_dim, = stack_coord.dimensions
-        original_dims = [stack_dim if d == self.group_dim else d
-                         for d in self.obj.dimensions
-                         if d in stacked.dimensions or d == self.group_dim]
-        iter_original_dims = iter(original_dims)
-        new_order = [iter_original_dims.next() if d in original_dims else d
-                     for d in stacked.dimensions]
-        return stacked.transpose(*new_order)
+        reordered = self._restore_dim_order(combined, concat_dim)
+        return reordered
 
     def reduce(self, func, dimension=Ellipsis, axis=Ellipsis, shortcut=True,
                **kwargs):
@@ -286,3 +333,37 @@ class ArrayGroupBy(GroupBy, ImplementsReduce):
 
 
 inject_reduce_methods(ArrayGroupBy)
+
+
+class DatasetGroupBy(GroupBy):
+    def apply(self, func, **kwargs):
+        """Apply a function over each Dataset in the group and concatenate them
+        together into a new Dataset.
+
+        `func` is called like `func(ds, *args, **kwargs)` for each dataset `ds`
+        in this group.
+
+        Apply uses heuristics (like `pandas.GroupBy.apply`) to figure out how
+        to stack together the datasets. The rule is:
+        1. If the dimension along which the group coordinate is defined is
+           still in the first grouped item after applying `func`, then stack
+           over this dimension.
+        2. Otherwise, stack over the new dimension given by name of this
+           grouping (the argument to the `groupby` function).
+
+        Parameters
+        ----------
+        func : function
+            Callable to apply to each sub-dataset.
+        **kwargs
+            Used to call `func(ds, **kwargs)` for each sub-dataset `ar`.
+
+        Returns
+        -------
+        applied : Dataset
+            The result of splitting, applying and combining this dataset.
+        """
+        applied = [func(ds, **kwargs) for ds in self._iter_grouped()]
+        concat_dim, indexers = self._infer_concat_args(applied[0])
+        combined = self._combine(applied, concat_dim, indexers)
+        return combined

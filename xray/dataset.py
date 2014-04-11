@@ -166,8 +166,7 @@ def _expand_variables(raw_variables, old_variables={},
 def _calculate_dimensions(variables):
     """Calculate the dimensions corresponding to a set of variables.
 
-    Returns dictionary mapping from d
-    imension names to sizes. Raises ValueError
+    Returns dictionary mapping from dimension names to sizes. Raises ValueError
     if any of the dimension sizes conflict.
     """
     dimensions = SortedKeysDict()
@@ -512,11 +511,7 @@ class Dataset(Mapping):
         for name, var in self.variables.iteritems():
             var_indexers = {k: v for k, v in indexers.iteritems()
                             if k in var.dimensions}
-            new_var = var.indexed_by(**var_indexers)
-            if new_var.ndim > 0:
-                # filter out variables reduced to numbers
-                variables[name] = new_var
-
+            variables[name] = var.indexed_by(**var_indexers)
         return type(self)(variables, self.attributes)
 
     def labeled_by(self, **indexers):
@@ -912,7 +907,7 @@ class Dataset(Mapping):
         if any(k not in self.variables and k not in self.virtual_variables
                for k in names):
             raise ValueError('One or more of the specified variable '
-                             'names does not exist on this dataset')
+                             'names does not exist in this dataset')
         drop = set(names)
         drop |= {k for k, v in self.variables.iteritems()
                  if any(name in v.dimensions for name in names)}
@@ -940,11 +935,8 @@ class Dataset(Mapping):
             iterated over in the form of `(unique_value, grouped_array)` pairs.
         """
         if isinstance(group, basestring):
-            # merge in the group's dataset to allow group to be a virtual
-            # variable in this dataset
-            ds = self.merge(self[group].dataset)
-            group = DataArray(ds, group)
-        return groupby.GroupBy(self, group.name, group, squeeze=squeeze)
+            group = self[group]
+        return groupby.DatasetGroupBy(self, group, squeeze=squeeze)
 
     def squeeze(self, dimension=None):
         """Return a new dataset with squeezed data.
@@ -981,23 +973,6 @@ class Dataset(Mapping):
                                  'which has length greater than one')
         return self.indexed_by(**{dim: 0 for dim in dimension})
 
-    def _add_dimension(self, dimension):
-        """Given a dimension (string or Array), add the dimension to this
-        dataset (is it is an array) and return its name.
-
-        N.B. This function modifies the dataset in-place.
-        """
-        if isinstance(dimension, basestring):
-            dim_name = dimension
-        else:
-            dim_name, = dimension.dimensions
-            if isinstance(dimension, DataArray):
-                self.merge(dimension._unselect_nonfocus_dims().dataset,
-                           inplace=True)
-            else:
-                self[dim_name] = dimension
-        return dim_name
-
     @classmethod
     def concat(cls, datasets, dimension='concat_dimension', indexers=None,
                concat_over=None):
@@ -1010,11 +985,10 @@ class Dataset(Mapping):
             matching attributes, and all variables except those along the
             stacked dimension (those that contain "dimension" as a dimension or
             are listed in "concat_over") are expected to be equal.
-        dimension : str or Array, optional
+        dimension : str or DataArray, optional
             Name of the dimension to stack along. If dimension is provided as
-            an XArray or DataArray, the name of the DataArray or the singleton
-            dimension of the XArray is used as the stacking dimension and the
-            array is added to the returned dataset.
+            an DataArray, the name of the DataArray is used as the stacking
+            dimension and the array is added to the returned dataset.
         indexers : None or iterable of indexers, optional
             Iterable of indexers of the same length as variables which
             specifies how to assign variables from each dataset along the given
@@ -1029,48 +1003,67 @@ class Dataset(Mapping):
         -------
         concatenated : Dataset
             Concatenated dataset formed by concatenating dataset variables.
+
+        See Also
+        --------
+        DataArray.concat
         """
         # don't bother trying to work with datasets as a generator instead of a
         # list; the gains would be minimal
-        datasets = list(datasets)
+        datasets = list(map(as_dataset, datasets))
         if not datasets:
-            raise ValueError('datasets cannot be empty')
-        # create the new dataset and add non-concatenated variables
-        concatenated = cls({}, datasets[0].attributes)
-        dim_name = concatenated._add_dimension(dimension)
+            raise ValueError('must supply at least one dataset to concatenate')
+        dim_name = getattr(dimension, 'name', dimension)
+
+        # figure out variables to concatenate over
         if concat_over is None:
             concat_over = set()
+        elif isinstance(concat_over, basestring):
+            concat_over = {concat_over}
         else:
-            if isinstance(concat_over, basestring):
-                concat_over = {concat_over}
             concat_over = set(concat_over)
-            if any(v not in datasets[0] for v in concat_over):
-                raise ValueError('not all elements in concat_over %r found '
-                                 'in the first dataset %r'
-                                 % (concat_over, datasets[0]))
-        for k, v in datasets[0].variables.iteritems():
-            if k == dim_name or dim_name in v.dimensions:
-                if k not in concatenated:
-                    # don't concat over dim_name if it was provided as an array
-                    concat_over.add(k)
-            elif k not in concat_over:
+
+        if any(v not in datasets[0] for v in concat_over):
+            raise ValueError('not all elements in concat_over %r found '
+                             'in the first dataset %r'
+                             % (concat_over, datasets[0]))
+
+        # automatically concatenate over variables along the dimension
+        auto_concat_dims = {dim_name}
+        if hasattr(dimension, 'dimensions'):
+            auto_concat_dims |= set(dimension.dimensions)
+        for k, v in datasets[0].iteritems():
+            if k == dim_name or auto_concat_dims.intersection(v.dimensions):
+                concat_over.add(k)
+
+        # create the new dataset and add constant variables
+        concatenated = cls({}, datasets[0].attributes)
+        for k, v in datasets[0].iteritems():
+            if k not in concat_over:
                 concatenated[k] = v
+
         # check that global attributes and non-concatenated variables are fixed
         # across all datasets
         for ds in datasets[1:]:
             if not utils.dict_equal(ds.attributes, concatenated.attributes):
                 raise ValueError('dataset global attributes not equal')
-            for k, v in ds.variables.iteritems():
+            for k, v in ds.iteritems():
                 if k not in concatenated and k not in concat_over:
                     raise ValueError('encountered unexpected variable %r' % k)
                 elif (k in concatenated and k != dim_name and
                           not utils.xarray_equal(v, concatenated[k])):
                     raise ValueError(
                         'variable %r not equal across datasets' % k)
+
         # stack up each variable to fill-out the dataset
         for k in concat_over:
             concatenated[k] = xarray.XArray.concat(
-                [ds[k] for ds in datasets], dim_name, indexers)
+                [ds[k] for ds in datasets], dimension, indexers)
+
+        if not isinstance(dimension, basestring):
+            # add dimension last to ensure that its in the final Dataset
+            concatenated[dim_name] = dimension
+
         return concatenated
 
     def to_dataframe(self):

@@ -79,7 +79,6 @@ class InaccessibleVariableDataStore(backends.InMemoryDataStore):
             (k, InaccessibleArray(v.dimensions, v.data, v.attributes))
             for k, v in self._variables.iteritems())
 
-
 class TestDataset(TestCase):
     def test_repr(self):
         data = create_test_data()
@@ -126,14 +125,6 @@ class TestDataset(TestCase):
         expected = Dataset({'x': var1, 'z': var3})
         actual = Dataset({'z': expected['z']})
         self.assertDatasetEqual(expected, actual)
-
-    def test_groupby(self):
-        data = create_test_data()
-        for n, (t, sub) in enumerate(list(data.groupby('dim1'))[:3]):
-            self.assertEqual(data['dim1'][n], t)
-            self.assertXArrayEqual(data['var1'][n], sub['var1'])
-            self.assertXArrayEqual(data['var2'][n], sub['var2'])
-            self.assertXArrayEqual(data['var3'][:, n], sub['var3'])
 
     def test_variable(self):
         a = Dataset()
@@ -208,12 +199,18 @@ class TestDataset(TestCase):
 
         ret = data.indexed_by(dim1=0)
         self.assertEqual({'time': 20, 'dim2': 50, 'dim3': 10}, ret.dimensions)
+        self.assertItemsEqual(list(data.noncoordinates) + ['dim1'],
+                              ret.noncoordinates)
 
         ret = data.indexed_by(time=slice(2), dim1=0, dim2=slice(5))
         self.assertEqual({'time': 2, 'dim2': 5, 'dim3': 10}, ret.dimensions)
+        self.assertItemsEqual(list(data.noncoordinates) + ['dim1'],
+                              ret.noncoordinates)
 
         ret = data.indexed_by(time=0, dim1=0, dim2=slice(5))
         self.assertItemsEqual({'dim2': 5, 'dim3': 10}, ret.dimensions)
+        self.assertItemsEqual(list(data.noncoordinates) + ['dim1', 'time'],
+                              ret.noncoordinates)
 
     def test_labeled_by(self):
         data = create_test_data()
@@ -317,9 +314,21 @@ class TestDataset(TestCase):
         self.assertTrue(_vars.keys()[1] not in ret.variables)
         self.assertRaises(ValueError, data.select, (_testvar, 'not_a_var'))
 
-    @unittest.skip('need to write this test')
     def test_unselect(self):
-        pass
+        data = create_test_data()
+
+        self.assertEqual(data, data.unselect())
+
+        expected = Dataset({k: data[k] for k in data if k != 'time'})
+        actual = data.unselect('time')
+        self.assertEqual(expected, actual)
+
+        expected = Dataset({k: data[k] for k in ['dim2', 'dim3', 'time']})
+        actual = data.unselect('dim1')
+        self.assertEqual(expected, actual)
+
+        with self.assertRaisesRegexp(ValueError, 'does not exist in this'):
+            data.unselect('not_found_here')
 
     def test_copy(self):
         data = create_test_data()
@@ -452,20 +461,40 @@ class TestDataset(TestCase):
 
     def test_squeeze(self):
         data = Dataset({'foo': (['x', 'y', 'z'], [[[1], [2]]])})
-        # squeeze everything
-        expected = Dataset({'y': data['y'], 'foo': data['foo'].squeeze()})
-        self.assertDatasetEqual(expected, data.squeeze())
-        # squeeze only x
-        expected = Dataset({'y': data['y'], 'foo': (['y', 'z'], data['foo'].data[0])})
-        self.assertDatasetEqual(expected, data.squeeze('x'))
-        self.assertDatasetEqual(expected, data.squeeze(['x']))
-        # squeeze only z
-        expected = Dataset({'y': data['y'], 'foo': (['x', 'y'], data['foo'].data[:, :, 0])})
-        self.assertDatasetEqual(expected, data.squeeze('z'))
-        self.assertDatasetEqual(expected, data.squeeze(['z']))
+        for args in [[], [['x']], [['x', 'z']]]:
+            def get_args(v):
+                return [set(args[0]) & set(v.dimensions)] if args else []
+            expected = Dataset({k: v.squeeze(*get_args(v))
+                               for k, v in data.variables.iteritems()})
+            self.assertDatasetEqual(expected, data.squeeze(*args))
         # invalid squeeze
         with self.assertRaisesRegexp(ValueError, 'cannot select a dimension'):
             data.squeeze('y')
+
+    def test_groupby(self):
+        data = Dataset({'x': ('x', list('abc')),
+                        'c': ('x', [0, 1, 0]),
+                        'z': (['x', 'y'], np.random.randn(3, 5))})
+        groupby = data.groupby('x')
+        self.assertEqual(len(groupby), 3)
+        expected_groups = {'a': 0, 'b': 1, 'c': 2}
+        self.assertEqual(groupby.groups, expected_groups)
+        expected_items = [('a', data.indexed_by(x=0)),
+                          ('b', data.indexed_by(x=1)),
+                          ('c', data.indexed_by(x=2))]
+        self.assertEqual(list(groupby), expected_items)
+
+        identity = lambda x: x
+        for k in ['x', 'c', 'y']:
+            actual = data.groupby(k, squeeze=False).apply(identity)
+            self.assertEqual(data, actual)
+
+        data = create_test_data()
+        for n, (t, sub) in enumerate(list(data.groupby('dim1'))[:3]):
+            self.assertEqual(data['dim1'][n], t)
+            self.assertXArrayEqual(data['var1'][n], sub['var1'])
+            self.assertXArrayEqual(data['var2'][n], sub['var2'])
+            self.assertXArrayEqual(data['var3'][:, n], sub['var3'])
 
     def test_concat(self):
         data = create_test_data()
@@ -482,12 +511,11 @@ class TestDataset(TestCase):
                            dataset.attributes)
 
         for dim in ['dim1', 'dim2', 'dim3']:
-            datasets = [ds for _, ds in data.groupby(dim, squeeze=False)]
+            datasets = [g for _, g in data.groupby(dim, squeeze=False)]
             self.assertDatasetEqual(data, Dataset.concat(datasets, dim))
             self.assertDatasetEqual(data, Dataset.concat(datasets, data[dim]))
-            self.assertDatasetEqual(data, Dataset.concat(datasets, data[dim].variable))
 
-            datasets = [ds for _, ds in data.groupby(dim, squeeze=True)]
+            datasets = [g for _, g in data.groupby(dim, squeeze=True)]
             concat_over = [k for k, v in data.variables.iteritems()
                            if dim in v.dimensions and k != dim]
             actual = Dataset.concat(datasets, data[dim], concat_over=concat_over)
@@ -496,12 +524,12 @@ class TestDataset(TestCase):
         # verify that the dimension argument takes precedence over
         # concatenating dataset variables of the same name
         dimension = (2 * data['dim1']).rename('dim1')
-        datasets = [ds for _, ds in data.groupby('dim1', squeeze=False)]
+        datasets = [g for _, g in data.groupby('dim1', squeeze=False)]
         expected = data.copy()
         expected['dim1'] = dimension
         self.assertDatasetEqual(expected, Dataset.concat(datasets, dimension))
 
-        with self.assertRaisesRegexp(ValueError, 'cannot be empty'):
+        with self.assertRaisesRegexp(ValueError, 'must supply at least one'):
             Dataset.concat([], 'dim1')
         with self.assertRaisesRegexp(ValueError, 'not all elements in'):
             Dataset.concat(split_data, 'dim1', concat_over=['not_found'])
