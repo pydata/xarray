@@ -85,12 +85,12 @@ class DatasetIOTestCases(object):
         in_memory = create_test_data()
         on_disk = self.roundtrip(in_memory)
         indexers = {'dim1': range(3), 'dim2': range(4), 'dim3': range(5)}
-        expected = in_memory.indexed_by(**indexers)
-        actual = on_disk.indexed_by(**indexers)
+        expected = in_memory.indexed(**indexers)
+        actual = on_disk.indexed(**indexers)
         self.assertDatasetAllClose(expected, actual)
         # do it twice, to make sure we're switched from orthogonal -> numpy
         # when we cached the values
-        actual = on_disk.indexed_by(**indexers)
+        actual = on_disk.indexed(**indexers)
         self.assertDatasetAllClose(expected, actual)
 
 

@@ -188,10 +188,10 @@ Aspects of the API that we currently intend to change:
  - The constructor for `DataArray` objects will change, so that it is possible
    to create new `DataArray` objects without putting them into a `Dataset`
    first.
- - We currently check `var.attributes['coordinates']` for figuring out which
+ - ~~We currently check `var.attributes['coordinates']` for figuring out which
    variables to select with `Dataset.select`. This will probably be removed:
    we don't want users to rely on attribute metadata that is not necessarily
-   maintained by array operations.
+   maintained by array operations.~~
  - Array reduction methods like `mean` may change to NA skipping versions
    (like pandas).
  - Array indexing will be made lazy, instead of immediately creating an

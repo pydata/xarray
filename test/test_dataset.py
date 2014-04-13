@@ -1,6 +1,3 @@
-import mock
-import unittest
-
 from collections import OrderedDict
 from copy import deepcopy
 from textwrap import dedent
@@ -8,10 +5,9 @@ from textwrap import dedent
 import numpy as np
 import pandas as pd
 
-from xray import (Dataset, DataArray, Variable, backends, open_dataset, utils,
-                  align, conventions)
+from xray import Dataset, DataArray, Variable, backends, utils, align
 
-from . import TestCase, requires_netCDF4
+from . import TestCase
 
 
 _dims = {'dim1': 100, 'dim2': 50, 'dim3': 10}
@@ -135,7 +131,7 @@ class TestDataset(TestCase):
         attributes = {'foo': 'bar'}
         a['x'] = ('x', vec, attributes)
         self.assertTrue('x' in a.coordinates)
-        self.assertIsInstance(a.coordinates['x'].index, pd.Index)
+        self.assertIsInstance(a.coordinates['x'].as_index, pd.Index)
         self.assertVariableEqual(a.coordinates['x'], a.variables['x'])
         b = Dataset()
         b['x'] = ('x', vec, attributes)
@@ -155,10 +151,10 @@ class TestDataset(TestCase):
             a['y'] = ('y', scal)
         self.assertTrue('y' not in a.dimensions)
 
-    def test_indexed_by(self):
+    def test_indexed(self):
         data = create_test_data()
         slicers = {'dim1': slice(None, None, 2), 'dim2': slice(0, 2)}
-        ret = data.indexed_by(**slicers)
+        ret = data.indexed(**slicers)
 
         # Verify that only the specified dimension was altered
         self.assertItemsEqual(data.dimensions, ret.dimensions)
@@ -183,24 +179,24 @@ class TestDataset(TestCase):
             np.testing.assert_array_equal(expected, actual)
 
         with self.assertRaises(ValueError):
-            data.indexed_by(not_a_dim=slice(0, 2))
+            data.indexed(not_a_dim=slice(0, 2))
 
-        ret = data.indexed_by(dim1=0)
+        ret = data.indexed(dim1=0)
         self.assertEqual({'time': 20, 'dim2': 50, 'dim3': 10}, ret.dimensions)
         self.assertItemsEqual(list(data.noncoordinates) + ['dim1'],
                               ret.noncoordinates)
 
-        ret = data.indexed_by(time=slice(2), dim1=0, dim2=slice(5))
+        ret = data.indexed(time=slice(2), dim1=0, dim2=slice(5))
         self.assertEqual({'time': 2, 'dim2': 5, 'dim3': 10}, ret.dimensions)
         self.assertItemsEqual(list(data.noncoordinates) + ['dim1'],
                               ret.noncoordinates)
 
-        ret = data.indexed_by(time=0, dim1=0, dim2=slice(5))
+        ret = data.indexed(time=0, dim1=0, dim2=slice(5))
         self.assertItemsEqual({'dim2': 5, 'dim3': 10}, ret.dimensions)
         self.assertItemsEqual(list(data.noncoordinates) + ['dim1', 'time'],
                               ret.noncoordinates)
 
-    def test_labeled_by(self):
+    def test_labeled(self):
         data = create_test_data()
         int_slicers = {'dim1': slice(None, None, 2),
                        'dim2': slice(2),
@@ -208,22 +204,22 @@ class TestDataset(TestCase):
         loc_slicers = {'dim1': slice(None, None, 2),
                        'dim2': slice(0, 0.5),
                        'dim3': slice('a', 'c')}
-        self.assertEqual(data.indexed_by(**int_slicers),
-                         data.labeled_by(**loc_slicers))
+        self.assertEqual(data.indexed(**int_slicers),
+                         data.labeled(**loc_slicers))
         data['time'] = ('time', pd.date_range('2000-01-01', periods=20))
-        self.assertEqual(data.indexed_by(time=0),
-                         data.labeled_by(time='2000-01-01'))
-        self.assertEqual(data.indexed_by(time=slice(10)),
-                         data.labeled_by(time=slice('2000-01-01',
+        self.assertEqual(data.indexed(time=0),
+                         data.labeled(time='2000-01-01'))
+        self.assertEqual(data.indexed(time=slice(10)),
+                         data.labeled(time=slice('2000-01-01',
                                                    '2000-01-10')))
-        self.assertEqual(data, data.labeled_by(time=slice('1999', '2005')))
-        self.assertEqual(data.indexed_by(time=slice(3)),
-                         data.labeled_by(
+        self.assertEqual(data, data.labeled(time=slice('1999', '2005')))
+        self.assertEqual(data.indexed(time=slice(3)),
+                         data.labeled(
                             time=pd.date_range('2000-01-01', periods=3)))
 
     def test_reindex_like(self):
         data = create_test_data()
-        expected = data.indexed_by(dim1=slice(10), time=slice(13))
+        expected = data.indexed(dim1=slice(10), time=slice(13))
         actual = data.reindex_like(expected)
         self.assertDatasetEqual(actual, expected)
 
@@ -236,14 +232,14 @@ class TestDataset(TestCase):
 
     def test_reindex(self):
         data = create_test_data()
-        expected = data.indexed_by(dim1=slice(10))
+        expected = data.indexed(dim1=slice(10))
         actual = data.reindex(dim1=data['dim1'][:10])
         self.assertDatasetEqual(actual, expected)
 
         actual = data.reindex(dim1=data['dim1'][:10].values)
         self.assertDatasetEqual(actual, expected)
 
-        actual = data.reindex(dim1=data['dim1'][:10].index)
+        actual = data.reindex(dim1=data['dim1'][:10].as_index)
         self.assertDatasetEqual(actual, expected)
 
     def test_align(self):
@@ -263,23 +259,23 @@ class TestDataset(TestCase):
         left2, right2 = align(left, right, join='outer')
         self.assertVariableEqual(left2['dim3'], right2['dim3'])
         self.assertArrayEqual(left2['dim3'], union)
-        self.assertDatasetEqual(left2.labeled_by(dim3=intersection),
-                                right2.labeled_by(dim3=intersection))
+        self.assertDatasetEqual(left2.labeled(dim3=intersection),
+                                right2.labeled(dim3=intersection))
         self.assertTrue(np.isnan(left2['var3'][-2:]).all())
         self.assertTrue(np.isnan(right2['var3'][:2]).all())
 
         left2, right2 = align(left, right, join='left')
         self.assertVariableEqual(left2['dim3'], right2['dim3'])
         self.assertVariableEqual(left2['dim3'], left['dim3'])
-        self.assertDatasetEqual(left2.labeled_by(dim3=intersection),
-                                right2.labeled_by(dim3=intersection))
+        self.assertDatasetEqual(left2.labeled(dim3=intersection),
+                                right2.labeled(dim3=intersection))
         self.assertTrue(np.isnan(right2['var3'][:2]).all())
 
         left2, right2 = align(left, right, join='right')
         self.assertVariableEqual(left2['dim3'], right2['dim3'])
         self.assertVariableEqual(left2['dim3'], right['dim3'])
-        self.assertDatasetEqual(left2.labeled_by(dim3=intersection),
-                                right2.labeled_by(dim3=intersection))
+        self.assertDatasetEqual(left2.labeled(dim3=intersection),
+                                right2.labeled(dim3=intersection))
         self.assertTrue(np.isnan(left2['var3'][-2:]).all())
 
     def test_variable_indexing(self):
@@ -389,7 +385,7 @@ class TestDataset(TestCase):
         actual = ds1.merge(ds2)
         self.assertEqual(expected, actual)
         with self.assertRaises(ValueError):
-            ds1.merge(ds2.indexed_by(dim1=slice(2)))
+            ds1.merge(ds2.indexed(dim1=slice(2)))
         with self.assertRaises(ValueError):
             ds1.merge(ds2.rename({'var3': 'var1'}))
 
@@ -405,14 +401,14 @@ class TestDataset(TestCase):
         self.assertVariableEqual(data['time.dayofyear'],
                                Variable('time', 1 + np.arange(20)))
         self.assertArrayEqual(data['time.month'].values,
-                              data.variables['time'].index.month)
+                              data.variables['time'].as_index.month)
         # test virtual variable math
         self.assertArrayEqual(data['time.dayofyear'] + 1, 2 + np.arange(20))
         self.assertArrayEqual(np.sin(data['time.dayofyear']),
                               np.sin(1 + np.arange(20)))
         # test slicing the virtual variable -- it should still be virtual
         actual = data['time.dayofyear'][:10].dataset
-        expected = data.indexed_by(time=slice(10))
+        expected = data.indexed(time=slice(10))
         self.assertDatasetEqual(expected, actual)
 
     def test_setitem(self):
@@ -467,9 +463,9 @@ class TestDataset(TestCase):
         self.assertEqual(len(groupby), 3)
         expected_groups = {'a': 0, 'b': 1, 'c': 2}
         self.assertEqual(groupby.groups, expected_groups)
-        expected_items = [('a', data.indexed_by(x=0)),
-                          ('b', data.indexed_by(x=1)),
-                          ('c', data.indexed_by(x=2))]
+        expected_items = [('a', data.indexed(x=0)),
+                          ('b', data.indexed(x=1)),
+                          ('c', data.indexed(x=2))]
         self.assertEqual(list(groupby), expected_items)
 
         identity = lambda x: x
@@ -487,8 +483,8 @@ class TestDataset(TestCase):
     def test_concat(self):
         data = create_test_data()
 
-        split_data = [data.indexed_by(dim1=slice(10)),
-                      data.indexed_by(dim1=slice(10, None))]
+        split_data = [data.indexed(dim1=slice(10)),
+                      data.indexed(dim1=slice(10, None))]
         self.assertDatasetEqual(data, Dataset.concat(split_data, 'dim1'))
 
         def rectify_dim_order(dataset):

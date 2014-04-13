@@ -159,7 +159,7 @@ class Variable(AbstractArray):
         self.values = value
 
     @property
-    def index(self):
+    def as_index(self):
         """The variable's data as a pandas.Index"""
         if self.ndim != 1:
             raise ValueError('can only access 1-d arrays as an index')
@@ -168,6 +168,11 @@ class Variable(AbstractArray):
         else:
             index = utils.safe_cast_to_index(self.values)
         return index
+
+    @property
+    def index(self):
+        utils.alias_warning('index', 'as_index', stacklevel=3)
+        return self.as_index
 
     def to_coord(self):
         """Return this variable as an CoordVariable"""
@@ -261,10 +266,6 @@ class Variable(AbstractArray):
         """
         self.values[self._convert_indexer(key, indexing_mode='numpy')] = value
 
-    def __iter__(self):
-        for n in range(len(self)):
-            yield self[n]
-
     @property
     def attributes(self):
         """Dictionary of local attributes on this variable.
@@ -295,7 +296,7 @@ class Variable(AbstractArray):
     # mutable objects should not be hashable
     __hash__ = None
 
-    def indexed_by(self, **indexers):
+    def indexed(self, **indexers):
         """Return a new array indexed along the specified dimension(s).
 
         Parameters
@@ -321,6 +322,8 @@ class Variable(AbstractArray):
             if dim in indexers:
                 key[i] = indexers[dim]
         return self[tuple(key)]
+
+    indexed_by = utils.function_alias(indexed, 'indexed_by')
 
     def transpose(self, *dimensions):
         """Return a new Variable object with transposed dimensions.
@@ -378,15 +381,7 @@ class Variable(AbstractArray):
         numpy.squeeze
         """
         dimensions = dict(zip(self.dimensions, self.shape))
-        if dimension is None:
-            dimension = [d for d, s in dimensions.iteritems() if s == 1]
-        else:
-            if isinstance(dimension, basestring):
-                dimension = [dimension]
-            if any(dimensions[k] > 1 for k in dimension):
-                raise ValueError('cannot select a dimension to squeeze out '
-                                 'which has length greater than one')
-        return self.indexed_by(**{dim: 0 for dim in dimension})
+        return utils.squeeze(self, dimensions, dimension)
 
     def reduce(self, func, dimension=None, axis=None, **kwargs):
         """Reduce this array by applying `func` along some dimension(s).
@@ -652,13 +647,32 @@ class CoordVariable(Variable):
         """
         # there is no need to copy the index values here even if deep=True
         # since pandas.Index objects are immutable
-        data = self.index if deep else self._data
+        data = self.as_index if deep else self._data
         return type(self)(self.dimensions, data, self.attributes,
                           self.encoding, self._indexing_mode, self.dtype)
 
     def to_coord(self):
         """Return this variable as an CoordVariable"""
         return self
+
+    def get_indexer(self, label):
+        return self.as_index.get_indexer(label)
+
+    def slice_indexer(self, start=None, stop=None, step=None):
+        return self.as_index.slice_indexer(start, stop, step)
+
+    def slice_locs(self, start=None, stop=None):
+        return self.as_index.slice_locs(start, stop)
+
+    def get_loc(self, label):
+        return self.as_index.get_loc(label)
+
+    @property
+    def is_monotonic(self):
+        return self.as_index.is_monotonic
+
+    def is_numeric(self):
+        return self.as_index.is_numeric()
 
 
 def _math_safe_attributes(attributes):

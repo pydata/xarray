@@ -65,18 +65,18 @@ class TestDataArray(TestCase):
         self.assertEqual(self.dv[0, 0].dataset,
                          Dataset({'foo': self.dv.variable[0, 0]}))
 
-    def test_indexed_by(self):
-        self.assertEqual(self.dv[0].dataset, self.ds.indexed_by(x=0))
+    def test_indexed(self):
+        self.assertEqual(self.dv[0].dataset, self.ds.indexed(x=0))
         self.assertEqual(self.dv[:3, :5].dataset,
-                         self.ds.indexed_by(x=slice(3), y=slice(5)))
-        self.assertDataArrayEqual(self.dv, self.dv.indexed_by(x=slice(None)))
-        self.assertDataArrayEqual(self.dv[:3], self.dv.indexed_by(x=slice(3)))
+                         self.ds.indexed(x=slice(3), y=slice(5)))
+        self.assertDataArrayEqual(self.dv, self.dv.indexed(x=slice(None)))
+        self.assertDataArrayEqual(self.dv[:3], self.dv.indexed(x=slice(3)))
 
-    def test_labeled_by(self):
+    def test_labeled(self):
         self.ds['x'] = ('x', np.array(list('abcdefghij')))
-        self.assertDataArrayEqual(self.dv, self.dv.labeled_by(x=slice(None)))
-        self.assertDataArrayEqual(self.dv[1], self.dv.labeled_by(x='b'))
-        self.assertDataArrayEqual(self.dv[:3], self.dv.labeled_by(x=slice('c')))
+        self.assertDataArrayEqual(self.dv, self.dv.labeled(x=slice(None)))
+        self.assertDataArrayEqual(self.dv[1], self.dv.labeled(x='b'))
+        self.assertDataArrayEqual(self.dv[:3], self.dv.labeled(x=slice('c')))
 
     def test_loc(self):
         self.ds['x'] = ('x', np.array(list('abcdefghij')))
@@ -238,8 +238,8 @@ class TestDataArray(TestCase):
         grouped = self.dv.groupby('abc', squeeze=True)
         expected_sum_all = Dataset(
             {'foo': Variable(['abc'], np.array([self.x[:, :9].sum(),
-                                              self.x[:, 10:].sum(),
-                                              self.x[:, 9:10].sum()]).T,
+                                                self.x[:, 10:].sum(),
+                                                self.x[:, 9:10].sum()]).T,
                            {'cell_methods': 'x: y: sum'}),
              'abc': Variable(['abc'], np.array(['a', 'b', 'c']))})['foo']
         self.assertDataArrayAllClose(

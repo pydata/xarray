@@ -35,6 +35,15 @@ class AbstractArray(ImplementsReduce):
     def __repr__(self):
         return array_repr(self)
 
+    def _iter(self):
+        for n in range(len(self)):
+            yield self[n]
+
+    def __iter__(self):
+        if self.ndim == 0:
+            raise TypeError('iteration over a 0-d array')
+        return self._iter()
+
     @property
     def T(self):
         return self.transpose()

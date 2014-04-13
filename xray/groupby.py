@@ -125,7 +125,7 @@ class GroupBy(object):
     def _iter_grouped(self):
         """Iterate over each element in this group"""
         for indices in self.group_indices:
-            yield self.obj.indexed_by(**{self.group_dim: indices})
+            yield self.obj.indexed(**{self.group_dim: indices})
 
     def _infer_concat_args(self, applied_example):
         if self.group_dim in applied_example.dimensions:

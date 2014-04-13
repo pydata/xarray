@@ -12,8 +12,8 @@ import groupby
 import ops
 import utils
 from common import AbstractArray
-from utils import (expanded_indexer, FrozenOrderedDict, remap_loc_indexers,
-                   multi_index_from_product)
+from utils import (expanded_indexer, FrozenOrderedDict, convert_label_indexer,
+                   remap_label_indexers, multi_index_from_product)
 
 
 class _LocIndexer(object):
@@ -21,9 +21,12 @@ class _LocIndexer(object):
         self.data_array = data_array
 
     def _remap_key(self, key):
-        indexers = remap_loc_indexers(self.data_array.dataset.variables,
-                                      self.data_array._key_to_indexers(key))
-        return tuple(indexers.values())
+        label_indexers = self.data_array._key_to_indexers(key)
+        indexers = []
+        for dim, label in label_indexers.iteritems():
+            index = self.data_array.coordinates[dim]
+            indexers.append(convert_label_indexer(index, label))
+        return tuple(indexers)
 
     def __getitem__(self, key):
         return self.data_array[self._remap_key(key)]
@@ -33,7 +36,7 @@ class _LocIndexer(object):
 
 
 class DataArray(AbstractArray):
-    """N-dimensional homogeneous labeled array
+    """N-dimensional array with labeled coordinates and dimensions.
 
     DataArray provides a wrapper around numpy ndarrays that uses labeled
     dimensions and coordinates to support metadata aware operations. The API is
@@ -46,7 +49,7 @@ class DataArray(AbstractArray):
     - Apply operations over dimensions by name: ``x.sum('time')``.
     - Select or assign values by integer location (like numpy): ``x[:10]``
       or by label (like pandas): ``x.loc['2014-01-01']`` or
-      ``x.labeled_by(time='2014-01-01')``.
+      ``x.labeled(time='2014-01-01')``.
     - Mathematical operations (e.g., ``x - y``) vectorize across multiple
       dimensions (known in numpy as "broadcasting") based on dimension names,
       regardless of their original order.
@@ -166,9 +169,14 @@ class DataArray(AbstractArray):
         return self.variable.in_memory()
 
     @property
-    def index(self):
+    def as_index(self):
         """The variable's data as a pandas.Index"""
-        return self.variable.index
+        return self.variable.as_index
+
+    @property
+    def index(self):
+        utils.alias_warning('index', 'as_index', stacklevel=3)
+        return self.as_index
 
     def is_coord(self):
         return isinstance(self.variable, variable.CoordVariable)
@@ -187,7 +195,7 @@ class DataArray(AbstractArray):
             return self.dataset[key]
         else:
             # orthogonal array indexing
-            return self.indexed_by(**self._key_to_indexers(key))
+            return self.indexed(**self._key_to_indexers(key))
 
     def __setitem__(self, key, value):
         if isinstance(key, basestring):
@@ -205,13 +213,9 @@ class DataArray(AbstractArray):
 
     @property
     def loc(self):
-        """Attribute for location based indexing like pandas.
+        """Attribute for location based indexing like pandas..
         """
         return _LocIndexer(self)
-
-    def __iter__(self):
-        for n in range(len(self)):
-            yield self[n]
 
     @property
     def attributes(self):
@@ -226,11 +230,10 @@ class DataArray(AbstractArray):
 
     @property
     def coordinates(self):
-        """Dictionary of DataArrays whose names match dimensions.
-
-        Used for label based indexing.
+        """Dictionary of CoordVaraibles used for label based indexing.
         """
-        return FrozenOrderedDict((k, self.dataset[k]) for k in self.dimensions)
+        return FrozenOrderedDict((dim, self.dataset.variables[dim])
+                                 for dim in self.dimensions)
 
     def copy(self, deep=True):
         """Returns a copy of this array.
@@ -253,27 +256,32 @@ class DataArray(AbstractArray):
     # mutable objects should not be hashable
     __hash__ = None
 
-    def indexed_by(self, **indexers):
-        """Return a new dat array whose dataset is given by indexing along
+    def indexed(self, **indexers):
+        """Return a new DataArray whose dataset is given by indexing along
         the specified dimension(s).
 
         See Also
         --------
-        Dataset.indexed_by
+        Dataset.indexed
+        DataArray.labeled
         """
-        ds = self.dataset.indexed_by(**indexers)
+        ds = self.dataset.indexed(**indexers)
         return ds[self.name]
 
-    def labeled_by(self, **indexers):
+    indexed_by = utils.function_alias(indexed, 'indexed_by')
+
+    def labeled(self, **indexers):
         """Return a new DataArray whose dataset is given by selecting
         coordinate labels along the specified dimension(s).
 
         See Also
         --------
-        Dataset.labeled_by
+        Dataset.labeled
+        DataArray.indexed
         """
-        return self.indexed_by(**remap_loc_indexers(self.dataset.variables,
-                                                    indexers))
+        return self.indexed(**remap_label_indexers(self, indexers))
+
+    labeled_by = utils.function_alias(labeled, 'labeled_by')
 
     def reindex_like(self, other, copy=True):
         """Conform this object onto the coordinates of another object, filling
@@ -556,18 +564,18 @@ class DataArray(AbstractArray):
         Dataset.concat
         """
         # TODO: call select() on each DataArray and get rid of the confusing
-        # concat_over kwarg.
-        new_arrays = []
+        # concat_over kwarg?
+        datasets = []
         for n, arr in enumerate(arrays):
             if n == 0:
                 name = arr.name
             elif name != arr.name:
                 arr = arr.rename(name)
-            new_arrays.append(arr)
+            datasets.append(arr.dataset)
         if concat_over is None:
             concat_over = set()
         concat_over = set(concat_over) | {name}
-        ds = dataset_.Dataset.concat(new_arrays, dimension, indexers,
+        ds = dataset_.Dataset.concat(datasets, dimension, indexers,
                                      concat_over=concat_over)
         return ds[name]
 
@@ -606,10 +614,7 @@ class DataArray(AbstractArray):
         return ds[name]
 
     def _select_coordinates(self):
-        dataset = self.select().dataset
-        if not self.is_coord():
-            del dataset[self.name]
-        return dataset
+        return dataset_.Dataset(self.coordinates)
 
     def _refocus(self, new_var, name=None):
         """Returns a copy of this DataArray's dataset with this
@@ -734,7 +739,7 @@ def align(*objects, **kwargs):
     all_coords = defaultdict(list)
     for obj in objects:
         for k, v in obj.coordinates.iteritems():
-            all_coords[k].append(v.index)
+            all_coords[k].append(v.as_index)
 
     # Exclude dimensions with all equal indices to avoid unnecessary reindexing
     # work. Note: pandas.Index.equals uses some clever shortcuts to compare

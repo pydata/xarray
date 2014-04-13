@@ -17,7 +17,7 @@ class VariableSubclassTestCases(object):
         v = Variable(['time'], data, {'foo': 'bar'})
         self.assertEqual(v.dimensions, ('time',))
         self.assertArrayEqual(v.values, data)
-        self.assertTrue(pd.Index(data).equals(v.index))
+        self.assertTrue(pd.Index(data).equals(v.as_index))
         self.assertEqual(v.dtype, float)
         self.assertEqual(v.shape, (10,))
         self.assertEqual(v.size, 10)
@@ -253,18 +253,20 @@ class TestVariable(TestCase, VariableSubclassTestCases):
         # test iteration
         for n, item in enumerate(v):
             self.assertVariableEqual(Variable(['y'], data[n]), item)
+        with self.assertRaisesRegexp(TypeError, 'iteration over a 0-d'):
+            iter(Variable([], 0))
         # test setting
         v.values[:] = 0
         self.assertTrue(np.all(v.values == 0))
 
-    def test_indexed_by(self):
+    def test_indexed(self):
         v = Variable(['time', 'x'], self.d)
-        self.assertVariableEqual(v.indexed_by(time=slice(None)), v)
-        self.assertVariableEqual(v.indexed_by(time=0), v[0])
-        self.assertVariableEqual(v.indexed_by(time=slice(0, 3)), v[:3])
-        self.assertVariableEqual(v.indexed_by(x=0), v[:, 0])
+        self.assertVariableEqual(v.indexed(time=slice(None)), v)
+        self.assertVariableEqual(v.indexed(time=0), v[0])
+        self.assertVariableEqual(v.indexed(time=slice(0, 3)), v[:3])
+        self.assertVariableEqual(v.indexed(x=0), v[:, 0])
         with self.assertRaisesRegexp(ValueError, 'do not exist'):
-            v.indexed_by(not_a_dim=0)
+            v.indexed(not_a_dim=0)
 
     def test_transpose(self):
         v = Variable(['time', 'x'], self.d)

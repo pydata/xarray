@@ -118,25 +118,43 @@ def orthogonal_indexer(key, shape):
     return tuple(key)
 
 
-def remap_loc_indexers(indices, indexers):
-    """Given mappings of XArray indices and label based indexers, return
-    equivalent location based indexers.
+def convert_label_indexer(index, label):
+    """Given a pandas.Index (or xray.CoordVariable) and labels (e.g., from
+    __getitem__) for one dimension, return an indexer suitable for indexing an
+    ndarray along that dimension
     """
-    new_indexers = OrderedDict()
-    for dim, loc in indexers.iteritems():
-        index = indices[dim].index
-        if isinstance(loc, slice):
-            indexer = index.slice_indexer(loc.start, loc.stop, loc.step)
+    if isinstance(label, slice):
+        indexer = index.slice_indexer(label.start, label.stop, label.step)
+    else:
+        label = np.asarray(label)
+        if label.ndim ==0:
+            indexer = index.get_loc(np.asscalar(label))
         else:
-            loc = np.asarray(loc)
-            if loc.ndim == 0:
-                indexer = index.get_loc(np.asscalar(loc))
-            else:
-                indexer = index.get_indexer(loc)
-                if np.any(indexer < 0):
-                    raise ValueError('not all values found in index %r' % dim)
-        new_indexers[dim] = indexer
-    return new_indexers
+            indexer = index.get_indexer(label)
+            if np.any(indexer < 0):
+                raise ValueError('not all values found in index %r' % dim)
+    return indexer
+
+
+def remap_label_indexers(data_obj, indexers):
+    """Given an xray data object and label based indexers, return a mapping
+    of equivalent location based indexers.
+    """
+    return {dim: convert_label_indexer(data_obj.coordinates[dim], label)
+            for dim, label in indexers.iteritems()}
+
+
+def squeeze(xray_obj, dimensions, dimension=None):
+    """Squeeze the dimensions of an xray object."""
+    if dimension is None:
+        dimension = [d for d, s in dimensions.iteritems() if s == 1]
+    else:
+        if isinstance(dimension, basestring):
+            dimension = [dimension]
+        if any(dimensions[k] > 1 for k in dimension):
+            raise ValueError('cannot select a dimension to squeeze out '
+                             'which has length greater than one')
+    return xray_obj.indexed(**{dim: 0 for dim in dimension})
 
 
 def allclose_or_equiv(arr1, arr2, rtol=1e-5, atol=1e-8):
@@ -208,7 +226,7 @@ xarray_equal = function_alias(variable_equal, 'xarray_equal')
 
 
 def safe_cast_to_index(array):
-    """Given an array, safely cast it to a pandas.Index
+    """Given an array, safely cast it to a pandas.Index.
 
     Unlike pandas.Index, if the array has dtype=object or dtype=timedelta64,
     this function will not attempt to do automatic type conversion but will
@@ -219,6 +237,20 @@ def safe_cast_to_index(array):
         if array.dtype == object or array.dtype == np.timedelta64:
             kwargs['dtype'] = object
     return pd.Index(array, **kwargs)
+
+
+def as_index(array):
+    """Given an array, return it if it already is a pandas Index; otherwise
+    safely cast it to a pandas Index.
+    """
+    if isinstance(array, pd.Index):
+        index = array
+    else:
+        try:
+            index = array.as_index
+        except AttributeError:
+            index = safe_cast_to_index(array)
+    return index
 
 
 def multi_index_from_product(iterables, names=None):

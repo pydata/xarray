@@ -13,7 +13,7 @@ import variable
 import utils
 from data_array import DataArray
 from utils import (FrozenOrderedDict, Frozen, SortedKeysDict, ChainMap,
-                   remap_loc_indexers, multi_index_from_product)
+                   remap_label_indexers, multi_index_from_product)
 
 
 def open_dataset(nc, decode_cf=True, *args, **kwargs):
@@ -70,7 +70,7 @@ class _VariablesDict(OrderedDict):
     def _datetimeindices(self):
         return [k for k, v in self.iteritems()
                 if np.issubdtype(v.dtype, np.datetime64) and v.ndim == 1
-                and isinstance(v.index, pd.DatetimeIndex)]
+                and isinstance(v.as_index, pd.DatetimeIndex)]
 
     @property
     def virtual(self):
@@ -91,12 +91,13 @@ class _VariablesDict(OrderedDict):
         if len(split_key) == 2:
             ref_var, suffix = split_key
             if ref_var in self._datetimeindices():
+                index = self[ref_var].as_index
                 if suffix == 'season':
                     # seasons = np.array(['DJF', 'MAM', 'JJA', 'SON'])
-                    month = self[ref_var].index.month
+                    month = index.month
                     data = (month // 3) % 4 + 1
                 else:
-                    data = getattr(self[ref_var].index, suffix)
+                    data = getattr(index, suffix)
                 return variable.Variable(self[ref_var].dimensions, data)
         raise KeyError('virtual variable %r not found' % key)
 
@@ -144,22 +145,21 @@ def _expand_variables(raw_variables, old_variables={},
     new_variables = OrderedDict()
     variables = ChainMap(new_variables, old_variables)
 
-    def add_variable(k, var):
-        if k not in variables:
-            variables[k] = _as_dataset_variable(k, var)
-        elif not compat(variables[k], var):
+    def add_variable(name, var):
+        if name not in variables:
+            variables[name] = _as_dataset_variable(name, var)
+        elif not compat(variables[name], var):
             raise ValueError('conflicting value for variable %s:\n'
                              'first value: %r\nsecond value: %r'
-                             % (k, variables[k], var))
+                             % (name, variables[name], var))
 
-    for k, var in raw_variables.iteritems():
+    for name, var in raw_variables.iteritems():
         if hasattr(var, 'dataset'):
             # it's a DataArray
-            var = var.rename(k)
-            for k, var in var.select().dataset.variables.items():
-                add_variable(k, var)
-        else:
-            add_variable(k, var)
+            for dim, coord in var.coordinates.iteritems():
+                if dim != name:
+                    add_variable(dim, coord)
+        add_variable(name, var)
     return new_variables
 
 
@@ -248,7 +248,8 @@ class Dataset(Mapping):
         """
         for dim, size in self._dimensions.iteritems():
             if dim not in self._variables:
-                self._variables[dim] = variable.CoordVariable(dim, np.arange(size))
+                coord = variable.CoordVariable(dim, np.arange(size))
+                self._variables[dim] = coord
 
     def _update_vars_and_dims(self, new_variables, needs_copy=True):
         """Add a dictionary of new variables to this dataset.
@@ -431,11 +432,10 @@ class Dataset(Mapping):
 
     @property
     def coordinates(self):
-        """Dictionary of DataArrays whose names match dimensions.
-
-        Used for label based indexing.
+        """Dictionary of CoordVaraibles used for label based indexing.
         """
-        return FrozenOrderedDict((dim, self[dim]) for dim in self.dimensions)
+        return FrozenOrderedDict((dim, self.variables[dim])
+                                 for dim in self.dimensions)
 
     @property
     def noncoordinates(self):
@@ -469,7 +469,7 @@ class Dataset(Mapping):
     def __repr__(self):
         return common.dataset_repr(self)
 
-    def indexed_by(self, **indexers):
+    def indexed(self, **indexers):
         """Return a new dataset with each array indexed along the specified
         dimension(s).
 
@@ -494,9 +494,9 @@ class Dataset(Mapping):
 
         See Also
         --------
-        Dataset.labeled_by
-        Dataset.indexed_by
-        Array.indexed_by
+        Dataset.labeled
+        DataArray.indexed
+        DataArray.labeled
         """
         invalid = [k for k in indexers if not k in self.dimensions]
         if invalid:
@@ -510,15 +510,17 @@ class Dataset(Mapping):
         for name, var in self.variables.iteritems():
             var_indexers = {k: v for k, v in indexers.iteritems()
                             if k in var.dimensions}
-            variables[name] = var.indexed_by(**var_indexers)
+            variables[name] = var.indexed(**var_indexers)
         return type(self)(variables, self.attributes)
 
-    def labeled_by(self, **indexers):
+    indexed_by = utils.function_alias(indexed, 'indexed_by')
+
+    def labeled(self, **indexers):
         """Return a new dataset with each variable indexed by coordinate labels
         along the specified dimension(s).
 
-        In contrast to `Dataset.indexed_by`, indexers for this method should
-        use coordinate values instead of integers.
+        In contrast to `Dataset.indexed`, indexers for this method should use
+        coordinate values instead of integers.
 
         Under the hood, this method is powered by using Panda's powerful Index
         objects. This makes label based indexing essentially just as fast as
@@ -547,11 +549,13 @@ class Dataset(Mapping):
 
         See Also
         --------
-        Dataset.labeled_by
-        Dataset.indexed_by
-        Array.indexed_by
+        Dataset.indexed
+        DataArray.indexed
+        DataArray.labeled
         """
-        return self.indexed_by(**remap_loc_indexers(self, indexers))
+        return self.indexed(**remap_label_indexers(self, indexers))
+
+    labeled_by = utils.function_alias(labeled, 'labeled_by')
 
     def reindex_like(self, other, copy=True):
         """Conform this object onto the coordinates of another object, filling
@@ -618,10 +622,7 @@ class Dataset(Mapping):
         from_indexers = {}
         for name, coord in self.coordinates.iteritems():
             if name in coordinates:
-                index = coordinates[name]
-                if hasattr(index, 'index'):
-                    index = index.index
-                indexer = coord.index.get_indexer(index)
+                indexer = coord.get_indexer(utils.as_index(coordinates[name]))
 
                 # Note pandas uses negative values from get_indexer to signify
                 # values that are missing in the index
@@ -679,15 +680,6 @@ class Dataset(Mapping):
                 elif copy:
                     new_var = variable.as_variable(new_var).copy()
             else:
-                # TODO: Resolve edge cases where variables are not found in
-                # coordinates, but actually take on coordinates values
-                # associated with a variable in the second dataset. An example
-                # would be latitude and longitude if the dataset has some non-
-                # Mercator projection. For these variables, we probably want to
-                # replace them with the other coordinates unchanged (if
-                # possible) instead of filling these coordinate values in with
-                # NaN.
-
                 assign_to = var_indexers(var, to_indexers)
                 assign_from = var_indexers(var, from_indexers)
 
@@ -839,12 +831,14 @@ class Dataset(Mapping):
                 del obj.attributes[k]
         return obj
 
-    def select(self, *names):
-        """Returns a new dataset that contains the named variables.
+    def _get_associated_variables(self, *names):
+        associated = set(names)
+        associated |= {k for k, v in self.iteritems()
+                       if any(name in v.dimensions for name in names)}
 
-        Dimensions on which those variables are defined are also included, as
-        well as the corresponding coordinate variables, and any variables
-        listed under the 'coordinates' attribute of the named variables.
+    def select(self, *names):
+        """Returns a new dataset that contains only the named variables and
+        their coordinates.
 
         Parameters
         ----------
@@ -854,45 +848,14 @@ class Dataset(Mapping):
         Returns
         -------
         Dataset
-            The returned object has the same attributes as the original.
-            Variables are included (recursively) if at least one of the
-            specified variables refers to that variable in its dimensions or
-            "coordinates" attribute. All other variables are dropped.
+            The returned object has the same attributes as the original. Only
+            the names variables and their coordinates are included.
         """
-        possible_vars = set(self) | set(self.virtual_variables)
-        if not set(names) <= possible_vars:
-            raise ValueError(
-                "One or more of the specified variables does not exist")
-
-        def get_all_associated_names(name):
-            yield name
-            if name in possible_vars:
-                var = self.variables[name]
-                for dim in var.dimensions:
-                    yield dim
-                if 'coordinates' in var.attributes:
-                    coords = var.attributes['coordinates']
-                    if coords != '':
-                        for coord in coords.split(' '):
-                            yield coord
-
-        # TODO: come up with a better way of selecting associated variables
-        # that aren't dimensions -- perhaps adding something to the public API?
-        queue = set(names)
-        selected_names = set()
-        while queue:
-            name = queue.pop()
-            new_names = set(get_all_associated_names(name))
-            queue |= new_names - selected_names
-            selected_names |= new_names
-
-        variables = OrderedDict((k, self.variables[k])
-                                for k in list(self) + self.virtual_variables
-                                if k in selected_names)
+        variables = OrderedDict((k, self[k]) for k in names)
         return type(self)(variables, self.attributes)
 
     def unselect(self, *names):
-        """Returns a new dataset without the named variables
+        """Returns a new dataset without the named variables.
 
         Parameters
         ----------
@@ -964,15 +927,7 @@ class Dataset(Mapping):
         --------
         numpy.squeeze
         """
-        if dimension is None:
-            dimension = [d for d, s in self.dimensions.iteritems() if s == 1]
-        else:
-            if isinstance(dimension, basestring):
-                dimension = [dimension]
-            if any(self.dimensions[k] > 1 for k in dimension):
-                raise ValueError('cannot select a dimension to squeeze out '
-                                 'which has length greater than one')
-        return self.indexed_by(**{dim: 0 for dim in dimension})
+        return utils.squeeze(self, self.dimensions, dimension)
 
     @classmethod
     def concat(cls, datasets, dimension='concat_dimension', indexers=None,
