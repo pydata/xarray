@@ -15,22 +15,22 @@ class ImplementsReduce(object):
 
 class AbstractArray(ImplementsReduce):
     def __nonzero__(self):
-        return bool(self.data)
+        return bool(self.values)
 
     def __float__(self):
-        return float(self.data)
+        return float(self.values)
 
     def __int__(self):
-        return int(self.data)
+        return int(self.values)
 
     def __complex__(self):
-        return complex(self.data)
+        return complex(self.values)
 
     def __long__(self):
-        return long(self.data)
+        return long(self.values)
 
     def __array__(self, dtype=None):
-        return self.data
+        return self.values
 
     def __repr__(self):
         return array_repr(self)
@@ -106,7 +106,7 @@ def array_repr(arr):
                             in zip(arr.dimensions, arr.shape))
     summary = ['<xray.%s %s(%s)>'% (type(arr).__name__, name_str, dim_summary)]
     if arr.size < 1e5 or arr.in_memory():
-        summary.append(repr(arr.data))
+        summary.append(repr(arr.values))
     else:
         summary.append('[%s values with dtype=%s]' % (arr.size, arr.dtype))
     summary.append('Attributes:\n%s' % _summarize_attributes(arr))

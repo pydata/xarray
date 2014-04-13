@@ -6,47 +6,79 @@ from collections import defaultdict, OrderedDict
 import numpy as np
 import pandas as pd
 
-import xarray
+import variable
 import dataset as dataset_
 import groupby
 import ops
+import utils
 from common import AbstractArray
 from utils import (expanded_indexer, FrozenOrderedDict, remap_loc_indexers,
                    multi_index_from_product)
 
 
 class _LocIndexer(object):
-    def __init__(self, ds_array):
-        self.ds_array = ds_array
+    def __init__(self, data_array):
+        self.data_array = data_array
 
     def _remap_key(self, key):
-        indexers = remap_loc_indexers(self.ds_array.dataset.variables,
-                                      self.ds_array._key_to_indexers(key))
+        indexers = remap_loc_indexers(self.data_array.dataset.variables,
+                                      self.data_array._key_to_indexers(key))
         return tuple(indexers.values())
 
     def __getitem__(self, key):
-        return self.ds_array[self._remap_key(key)]
+        return self.data_array[self._remap_key(key)]
 
     def __setitem__(self, key, value):
-        self.ds_array[self._remap_key(key)] = value
+        self.data_array[self._remap_key(key)] = value
 
 
 class DataArray(AbstractArray):
-    """Hybrid between Dataset and Array.
+    """N-dimensional homogeneous labeled array
 
-    DataArrays are the primary way to do computations with Dataset
-    variables. They are designed to make it easy to manipulate arrays in the
-    context of an intact Dataset object. Indeed, the contents of a DataArray
-    are uniquely defined by its `dataset` and `name` parameters.
+    DataArray provides a wrapper around numpy ndarrays that uses labeled
+    dimensions and coordinates to support metadata aware operations. The API is
+    similar to that for the pandas Series or DataFrame, but DataArray objects
+    can have any number of dimensions, and their contents have fixed data
+    types.
+
+    Additional features over raw numpy arrays:
+
+    - Apply operations over dimensions by name: ``x.sum('time')``.
+    - Select or assign values by integer location (like numpy): ``x[:10]``
+      or by label (like pandas): ``x.loc['2014-01-01']`` or
+      ``x.labeled_by(time='2014-01-01')``.
+    - Mathematical operations (e.g., ``x - y``) vectorize across multiple
+      dimensions (known in numpy as "broadcasting") based on dimension names,
+      regardless of their original order.
+    - Keep track of arbitrary metadata in the form of a Python dictionary:
+      ``x.attributes``
+    - Convert to a pandas Series: ``x.to_series()``.
 
     Getting items from or doing mathematical operations with a DataArray
-    returns another DataArray.
+    always returns another DataArray.
 
-    The design of DataArray is strongly inspired by the Iris Cube. However,
-    DataArrays are much lighter weight than cubes. They are simply aligned,
-    labeled datasets and do not explicitly guarantee or rely on the CF model.
+    Under the covers, a DataArray is a thin wrapper around an xray Dataset,
+    and is uniquely defined by its `dataset` and `name` parameters.
+
+    Attributes
+    ----------
+    dimensions : tuple
+        Dimension names associated with this array.
+    values : np.ndarray
+        Access or modify DataArray values as a numpy array.
+    coordinates : OrderedDict
+        Dictionary of DataArray objects that label values along each dimension.
     """
-    def __init__(self, dataset, name):
+    def __new__(cls, dataset, name):
+        warnings.warn('the constructor for DataArray objects will change in a '
+                      'future version of xray. For now, create new '
+                      'DataArray objects by getting items from a Dataset '
+                      'instead of calling the constructor directly.',
+                      FutureWarning, stacklevel=2)
+        return cls._constructor(dataset, name)
+
+    @classmethod
+    def _constructor(cls, dataset, name):
         """
         Parameters
         ----------
@@ -56,13 +88,15 @@ class DataArray(AbstractArray):
             The name of the variable in `dataset` to which array operations
             should be applied.
         """
+        obj = object.__new__(cls)
         if not isinstance(dataset, dataset_.Dataset):
             dataset = dataset_.Dataset(dataset)
         if name not in dataset and name not in dataset.virtual_variables:
-            raise ValueError('name %r is not a variable in dataset %r'
+            raise ValueError('name %r must be a variable in dataset %r'
                              % (name, dataset))
-        self._dataset = dataset
-        self._name = name
+        obj._dataset = dataset
+        obj._name = name
+        return obj
 
     @property
     def dataset(self):
@@ -110,12 +144,23 @@ class DataArray(AbstractArray):
         return len(self.variable)
 
     @property
-    def data(self):
+    def values(self):
         """The variables's data as a numpy.ndarray"""
-        return self.variable.data
+        return self.variable.values
+
+    @values.setter
+    def values(self, value):
+        self.variable.values = value
+
+    @property
+    def data(self):
+        utils.alias_warning('data', 'values', stacklevel=3)
+        return self.values
+
     @data.setter
     def data(self, value):
-        self.variable.data = value
+        utils.alias_warning('data', 'values', stacklevel=3)
+        self.values = value
 
     def in_memory(self):
         return self.variable.in_memory()
@@ -126,7 +171,7 @@ class DataArray(AbstractArray):
         return self.variable.index
 
     def is_coord(self):
-        return isinstance(self.variable, xarray.CoordXArray)
+        return isinstance(self.variable, variable.CoordVariable)
 
     @property
     def dimensions(self):
@@ -170,20 +215,22 @@ class DataArray(AbstractArray):
 
     @property
     def attributes(self):
+        """Dictionary storing arbitrary metadata with this array."""
         return self.variable.attributes
 
     @property
     def encoding(self):
+        """Dictionary of format-specific settings for how this array should be
+        serialized."""
         return self.variable.encoding
 
     @property
-    def variables(self):
-        return self.dataset.variables
-
-    @property
     def coordinates(self):
-        return FrozenOrderedDict((k, self.dataset.variables[k])
-                                 for k in self.dimensions)
+        """Dictionary of DataArrays whose names match dimensions.
+
+        Used for label based indexing.
+        """
+        return FrozenOrderedDict((k, self.dataset[k]) for k in self.dimensions)
 
     def copy(self, deep=True):
         """Returns a copy of this array.
@@ -192,7 +239,8 @@ class DataArray(AbstractArray):
         dataset. Otherwise, a shallow copy is made, so each variable in the new
         array's dataset is also a variable in this array's dataset.
         """
-        return type(self)(self.dataset.copy(deep=deep), self.name)
+        ds = self.dataset.copy(deep=deep)
+        return ds[self.name]
 
     def __copy__(self):
         return self.copy(deep=False)
@@ -214,7 +262,7 @@ class DataArray(AbstractArray):
         Dataset.indexed_by
         """
         ds = self.dataset.indexed_by(**indexers)
-        return type(self)(ds, self.name)
+        return ds[self.name]
 
     def labeled_by(self, **indexers):
         """Return a new DataArray whose dataset is given by selecting
@@ -285,7 +333,7 @@ class DataArray(AbstractArray):
         align
         """
         reindexed_ds = self.select().dataset.reindex(copy=copy, **coordinates)
-        return type(self)(reindexed_ds, self.name)
+        return reindexed_ds[self.name]
 
     def rename(self, new_name_or_name_dict):
         """Returns a new DataArray with renamed variables.
@@ -305,7 +353,7 @@ class DataArray(AbstractArray):
             name_dict = new_name_or_name_dict
             new_name = name_dict.get(self.name, self.name)
         renamed_dataset = self.dataset.rename(name_dict)
-        return type(self)(renamed_dataset, new_name)
+        return renamed_dataset[new_name]
 
     def select(self, *names):
         """Returns a new DataArray with only the named variables, as well
@@ -316,7 +364,8 @@ class DataArray(AbstractArray):
         Dataset.select
         """
         names = names + (self.name,)
-        return type(self)(self.dataset.select(*names), self.name)
+        ds = self.dataset.select(*names)
+        return ds[self.name]
 
     def unselect(self, *names):
         """Returns a new DataArray without the named variables.
@@ -329,7 +378,8 @@ class DataArray(AbstractArray):
             raise ValueError('cannot unselect the array variable of a '
                              'DataArray with unselect. Use the `unselected`'
                              'method or the `unselect` method of the dataset.')
-        return type(self)(self.dataset.unselect(*names), self.name)
+        ds = self.dataset.unselect(*names)
+        return ds[self.name]
 
     def groupby(self, group, squeeze=True):
         """Group this dataset by unique values of the indicated group.
@@ -413,7 +463,8 @@ class DataArray(AbstractArray):
         --------
         numpy.squeeze
         """
-        return type(self)(self.dataset.squeeze(dimension), self.name)
+        ds = self.dataset.squeeze(dimension)
+        return ds[self.name]
 
     def reduce(self, func, dimension=None, axis=None, **kwargs):
         """Reduce this array by applying `func` along some dimension(s).
@@ -449,7 +500,7 @@ class DataArray(AbstractArray):
                  if any(dim in drop for dim in v.dimensions)}
         ds = self.dataset.unselect(*drop)
         ds[self.name] = var
-        return type(self)(ds, self.name)
+        return ds[self.name]
 
     def _unselect_unused_dims(self):
         """Unselect all dimensions found in this array's dataset that aren't
@@ -481,7 +532,7 @@ class DataArray(AbstractArray):
             dimension is unchanged. Where to insert the new dimension is
             determined by whether it is found in the first array. If dimension
             is provided as an XArray or DataArray, the name of the dataset
-            array or the singleton dimension of the xarray is used as the
+            array or the singleton dimension of the variable is used as the
             stacking dimension and the array is added to the returned dataset.
         indexers : iterable of indexers, optional
             Iterable of indexers of the same length as variables which
@@ -538,7 +589,7 @@ class DataArray(AbstractArray):
         """
         index = multi_index_from_product(self.coordinates.values(),
                                          names=self.coordinates.keys())
-        return pd.Series(self.data.reshape(-1), index=index, name=self.name)
+        return pd.Series(self.values.reshape(-1), index=index, name=self.name)
 
     @classmethod
     def from_series(cls, series):
@@ -567,12 +618,12 @@ class DataArray(AbstractArray):
         If `new_var` is a DataArray, its contents will be merged in.
         """
         if not hasattr(new_var, 'dimensions'):
-            new_var = xarray.XArray(self.variable.dimensions, new_var)
+            new_var = variable.Variable(self.variable.dimensions, new_var)
         ds = self._select_coordinates()
         if name is None:
             name = self.name + '_'
         ds[name] = new_var
-        return type(self)(ds, name)
+        return ds[name]
 
     def __array_wrap__(self, obj, context=None):
         return self._refocus(self.variable.__array_wrap__(obj, context))
@@ -609,7 +660,7 @@ class DataArray(AbstractArray):
             ds[name] = (f(self.variable, other_array)
                          if not reflexive
                          else f(other_array, self.variable))
-            return type(self)(ds, name)
+            return ds[name]
         return func
 
     @staticmethod

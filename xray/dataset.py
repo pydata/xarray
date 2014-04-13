@@ -9,7 +9,7 @@ import backends
 import conventions
 import common
 import groupby
-import xarray
+import variable
 import utils
 from data_array import DataArray
 from utils import (FrozenOrderedDict, Frozen, SortedKeysDict, ChainMap,
@@ -97,7 +97,7 @@ class _VariablesDict(OrderedDict):
                     data = (month // 3) % 4 + 1
                 else:
                     data = getattr(self[ref_var].index, suffix)
-                return xarray.XArray(self[ref_var].dimensions, data)
+                return variable.Variable(self[ref_var].dimensions, data)
         raise KeyError('virtual variable %r not found' % key)
 
     def __getitem__(self, key):
@@ -113,10 +113,10 @@ def _as_dataset_variable(name, var):
     """Prepare a variable for adding it to a Dataset
     """
     try:
-        var = xarray.as_xarray(var)
+        var = variable.as_variable(var)
     except TypeError:
         raise TypeError('Dataset variables must be of type '
-                        'DataArray or XArray, or a sequence of the '
+                        'DataArray or Variable, or a sequence of the '
                         'form (dimensions, data[, attributes, encoding])')
     if name in var.dimensions:
         # convert the coordinate into a pandas.Index
@@ -128,14 +128,14 @@ def _as_dataset_variable(name, var):
 
 
 def _expand_variables(raw_variables, old_variables={},
-                      compat=utils.xarray_equal):
+                      compat=utils.variable_equal):
     """Expand a dictionary of variables.
 
-    Returns a dictionary of XArray objects suitable for inserting into a
+    Returns a dictionary of Variable objects suitable for inserting into a
     Dataset._variables dictionary.
 
-    This includes converting tuples (dimensions, data) into XArray objects,
-    converting 1D variables into CoordXArray objects and expanding DataArray
+    This includes converting tuples (dimensions, data) into Variable objects,
+    converting 1D variables into CoordVariable objects and expanding DataArray
     objects into all their composite variables.
 
     Raises ValueError if any conflicting values are found, between any of the
@@ -156,7 +156,7 @@ def _expand_variables(raw_variables, old_variables={},
         if hasattr(var, 'dataset'):
             # it's a DataArray
             var = var.rename(k)
-            for k, var in var.select().variables.items():
+            for k, var in var.select().dataset.variables.items():
                 add_variable(k, var)
         else:
             add_variable(k, var)
@@ -227,9 +227,9 @@ class Dataset(Mapping):
         Parameters
         ----------
         variables : dict-like, optional
-            A mapping from variable names to `DataArray` objets, `XArray`
+            A mapping from variable names to `DataArray` objets, `Variable`
             objects or sequences of the form `(dimensions, data[, attributes])`
-            which can be used as arguments to create a new `XArray`. Each
+            which can be used as arguments to create a new `Variable`. Each
             dimension must have the same length in all variables in which it
             appears.
         attributes : dict-like, optional
@@ -248,7 +248,7 @@ class Dataset(Mapping):
         """
         for dim, size in self._dimensions.iteritems():
             if dim not in self._variables:
-                self._variables[dim] = xarray.CoordXArray(dim, np.arange(size))
+                self._variables[dim] = variable.CoordVariable(dim, np.arange(size))
 
     def _update_vars_and_dims(self, new_variables, needs_copy=True):
         """Add a dictionary of new variables to this dataset.
@@ -291,13 +291,16 @@ class Dataset(Mapping):
 
     @property
     def variables(self):
-        """Dictionary of XArray objects contained in this dataset.
+        """Dictionary of Variable objects contained in this dataset.
 
-        This dictionary is frozen to prevent it from being modified in ways
-        that would cause invalid dataset metadata (e.g., by setting variables
-        with inconsistent dimensions). Instead, add or remove variables by
-        acccessing the dataset directly (e.g., `dataset['foo'] = bar` or `del
-        dataset['foo']`).
+        This is a low-level interface into the contents of a dataset. The
+        dictionary is frozen to prevent it from being modified in ways that
+        could create an inconsistent dataset (e.g., by setting variables with
+        inconsistent dimensions).
+
+        In general, to access and modify dataset contents, you should use
+        dictionary methods on the dataset itself instead of the variables
+        dictionary.
         """
         return Frozen(self._variables)
 
@@ -376,7 +379,7 @@ class Dataset(Mapping):
     def __getitem__(self, key):
         """Access the given variable name in this dataset as a `DataArray`.
         """
-        return DataArray(self, key)
+        return DataArray._constructor(self, key)
 
     def __setitem__(self, key, value):
         """Add an array to this dataset.
@@ -385,7 +388,7 @@ class Dataset(Mapping):
         `key` and merge the contents of the resulting dataset into this
         dataset.
 
-        If value is an `XArray` object (or tuple of form
+        If value is an `Variable` object (or tuple of form
         `(dimensions, data[, attributes])`), add it to this dataset as a new
         variable.
         """
@@ -416,7 +419,7 @@ class Dataset(Mapping):
             # some stores (e.g., scipy) do not seem to preserve order, so don't
             # require matching dimension or variable order for equality
             return (utils.dict_equal(self.attributes, other.attributes)
-                    and all(k1 == k2 and utils.xarray_equal(v1, v2)
+                    and all(k1 == k2 and utils.variable_equal(v1, v2)
                             for (k1, v1), (k2, v2)
                             in zip(sorted(self.variables.items()),
                                    sorted(other.variables.items()))))
@@ -428,22 +431,18 @@ class Dataset(Mapping):
 
     @property
     def coordinates(self):
-        """Coordinates are variables with names that match dimensions.
+        """Dictionary of DataArrays whose names match dimensions.
 
-        They are always stored internally as `XArray` objects with data that is
-        a `pandas.Index` object.
+        Used for label based indexing.
         """
-        return FrozenOrderedDict([(dim, self.variables[dim])
-                                  for dim in self.dimensions])
+        return FrozenOrderedDict((dim, self[dim]) for dim in self.dimensions)
 
     @property
     def noncoordinates(self):
-        """Non-coordinates are variables with names that do not match
-        dimensions.
+        """Dictionary of DataArrays whose names do not match dimensions.
         """
-        return FrozenOrderedDict([(name, v)
-                for (name, v) in self.variables.iteritems()
-                if name not in self.dimensions])
+        return FrozenOrderedDict((name, self[name]) for name in self
+                                 if name not in self.dimensions)
 
     def dump_to_store(self, store):
         """Store dataset contents to a backends.*DataStore object."""
@@ -562,7 +561,7 @@ class Dataset(Mapping):
         ----------
         other : Dataset or DatasetArray
             Object with a coordinates attribute giving a mapping from dimension
-            names to xray.XArray objects, which provides coordinates upon which
+            names to Variable objects, which provides coordinates upon which
             to index the variables in this dataset. The coordinates on this
             other object need not be the same as the coordinates on this
             dataset. Any mis-matched coordinates values will be filled in with
@@ -673,11 +672,12 @@ class Dataset(Mapping):
             if name in coordinates:
                 new_var = coordinates[name]
                 if not (hasattr(new_var, 'dimensions') and
-                        hasattr(new_var, 'data')):
-                    new_var = xarray.CoordXArray(var.dimensions, new_var,
-                                                 var.attributes, var.encoding)
+                        hasattr(new_var, 'values')):
+                    new_var = variable.CoordVariable(var.dimensions, new_var,
+                                                     var.attributes,
+                                                     var.encoding)
                 elif copy:
-                    new_var = xarray.as_xarray(new_var).copy()
+                    new_var = variable.as_variable(new_var).copy()
             else:
                 # TODO: Resolve edge cases where variables are not found in
                 # coordinates, but actually take on coordinates values
@@ -698,9 +698,10 @@ class Dataset(Mapping):
                                   for idx, length in zip(assign_to, var.shape))
                     data = np.empty(shape, dtype=dtype)
                     data[:] = fill_value
-                    # create a new XArray so we can use orthogonal indexing
-                    new_var = xarray.XArray(var.dimensions, data, var.attributes)
-                    new_var[assign_to] = var[assign_from].data
+                    # create a new Variable so we can use orthogonal indexing
+                    new_var = variable.Variable(
+                        var.dimensions, data, var.attributes)
+                    new_var[assign_to] = var[assign_from].values
                 elif any_not_full_slices(assign_from):
                     # type coercion is not necessary as there are no missing
                     # values
@@ -826,7 +827,7 @@ class Dataset(Mapping):
                                   if k not in overwrite_vars}
 
         # update variables
-        compat = functools.partial(utils.xarray_equal, check_attributes=False)
+        compat = functools.partial(utils.variable_equal, check_attributes=False)
         new_variables = _expand_variables(other_variables, potential_conflicts,
                                           compat=compat)
         obj = self if inplace else self.copy()
@@ -1051,13 +1052,13 @@ class Dataset(Mapping):
                 if k not in concatenated and k not in concat_over:
                     raise ValueError('encountered unexpected variable %r' % k)
                 elif (k in concatenated and k != dim_name and
-                          not utils.xarray_equal(v, concatenated[k])):
+                          not utils.variable_equal(v, concatenated[k])):
                     raise ValueError(
                         'variable %r not equal across datasets' % k)
 
         # stack up each variable to fill-out the dataset
         for k in concat_over:
-            concatenated[k] = xarray.XArray.concat(
+            concatenated[k] = variable.Variable.concat(
                 [ds[k] for ds in datasets], dimension, indexers)
 
         if not isinstance(dimension, basestring):
@@ -1081,10 +1082,10 @@ class Dataset(Mapping):
         shape = tuple(self.dimensions.values())
         empty_data = np.lib.stride_tricks.as_strided(np.array(0), shape=shape,
                                                      strides=[0] * len(shape))
-        template = xarray.XArray(self.dimensions.keys(), empty_data)
+        template = variable.Variable(self.dimensions.keys(), empty_data)
         for k in columns:
-            _, var = xarray.broadcast_xarrays(template, self.variables[k])
-            _, var_data = np.broadcast_arrays(template.data, var.data)
+            _, var = variable.broadcast_variables(template, self.variables[k])
+            _, var_data = np.broadcast_arrays(template.values, var.values)
             data.append(var_data.reshape(-1))
 
         index = multi_index_from_product(self.coordinates.values(),

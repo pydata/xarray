@@ -136,7 +136,7 @@ class NetCDF4DataTest(DatasetIOTestCases, TestCase):
 
             actual = open_dataset(tmp_file)
 
-            self.assertXArrayEqual(actual['time'], expected['time'])
+            self.assertVariableEqual(actual['time'], expected['time'])
             actual_encoding = {k: v for k, v in actual['time'].encoding.iteritems()
                                if k in expected['time'].encoding}
             self.assertDictEqual(actual_encoding, expected['time'].encoding)

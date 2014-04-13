@@ -2,7 +2,7 @@ from collections import OrderedDict
 import numpy as np
 import pandas as pd
 
-from xray import utils, XArray
+from xray import utils, Variable
 from . import TestCase, ReturnItem, requires_netCDF4
 
 
@@ -62,11 +62,11 @@ class TestIndexers(TestCase):
 
     def test_remap_loc_indexers(self):
         # TODO: fill in more tests!
-        indices = {'x': XArray(['x'], pd.Index([1, 2, 3]))}
+        indices = {'x': Variable(['x'], pd.Index([1, 2, 3]))}
         test_indexer = lambda x: utils.remap_loc_indexers(indices, {'x': x})
         self.assertEqual({'x': 0}, test_indexer(1))
         self.assertEqual({'x': 0}, test_indexer(np.int32(1)))
-        self.assertEqual({'x': 0}, test_indexer(XArray([], 1)))
+        self.assertEqual({'x': 0}, test_indexer(Variable([], 1)))
 
 
 class TestSafeCastToIndex(TestCase):

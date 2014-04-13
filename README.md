@@ -183,8 +183,8 @@ Aspects of the API that we currently intend to change:
  - ~~Integer indexing on `Datasets` with 1-dimensional variables (via
    `indexed_by` or `labeled_by`) will turn those variables into 0-dimensional
    (scalar) variables instead of dropping them.~~
- - The primitive `XArray` object will be removed from the public API.
-   `DataArray` will be used instead in all public interfaces.
+ - ~~The primitive `XArray` object will be removed from the public API.
+   `DataArray` will be used instead in all public interfaces.~~
  - The constructor for `DataArray` objects will change, so that it is possible
    to create new `DataArray` objects without putting them into a `Dataset`
    first.
