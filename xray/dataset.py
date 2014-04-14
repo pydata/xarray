@@ -975,7 +975,7 @@ class Dataset(Mapping):
 
     @classmethod
     def concat(cls, datasets, dimension='concat_dimension', indexers=None,
-               concat_over=None):
+               mode='different', concat_over=None):
         """Concatenate datasets along a new or existing dimension.
 
         Parameters
@@ -995,11 +995,16 @@ class Dataset(Mapping):
             dimension. If not supplied, indexers is inferred from the length of
             each variable along the dimension, and the variables are stacked in
             the given order.
-        concat_over : None or str or iterable of str or True, optional
+        mode : {'minimal', 'different', 'all'}, optional
+            Decides which variables are concatenated.  Choices are 'minimal'
+            in which only variables in which dimension already appears are
+            included, 'different' in which all variables which are not equal
+            (ignoring attributes) across all datasets are concatenated (as well
+            as all for which dimension already appears), and 'all' for which all
+            variables are concatenated. Default 'different'.
+        concat_over : None or str or iterable of str, optional
             Names of additional variables to concatenate, in which "dimension"
-            does not already appear as a dimension.  If True all noncoordinate
-            variables that are not the same across all datasets will be
-            concatenated over.
+            does not already appear as a dimension.
 
         Returns
         -------
@@ -1020,15 +1025,32 @@ class Dataset(Mapping):
         # figure out variables to concatenate over
         if concat_over is None:
             concat_over = set()
-        elif concat_over is True:
-            # all noncoordinates that are not the same in each dataset
-            concat_over = {k for k, v in datasets[0].noncoordinates.iteritems()
-                           if not all(utils.xarray_equal(ds[k], v)
-                                      for ds in datasets[1:])}
         elif isinstance(concat_over, basestring):
             concat_over = {concat_over}
         else:
             concat_over = set(concat_over)
+
+        # add variables to concat_over depending on the mode
+        if mode == 'different':
+            def differs(vname, v):
+                # simple helper function which compares a variable
+                # across all datasets and indicates whether that
+                # variable differs or not.
+                return any(not utils.xarray_equal(ds[vname], v,
+                                                  check_attributes=False)
+                           for ds in datasets[1:])
+            non_coords = datasets[0].noncoordinates.iteritems()
+            # all noncoordinates that are not the same in each dataset
+            concat_over.update({k for k, v in non_coords if differs(k, v)})
+        elif mode == 'all':
+            # concatenate all noncoordinates
+            concat_over.update(set(datasets[0].noncoordinates.keys()))
+        elif mode == 'minimal':
+            # only concatenate variables in which 'dimension' already
+            # appears. These variables are added later.
+            pass
+        else:
+            raise ValueError("Unexpected value for mode: %s" % mode)
 
         if any(v not in datasets[0] for v in concat_over):
             raise ValueError('not all elements in concat_over %r found '

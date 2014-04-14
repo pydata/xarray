@@ -514,12 +514,33 @@ class TestDataset(TestCase):
             datasets = [g for _, g in data.groupby(dim, squeeze=False)]
             self.assertDatasetEqual(data, Dataset.concat(datasets, dim))
             self.assertDatasetEqual(data, Dataset.concat(datasets, data[dim]))
+            self.assertDatasetEqual(data, Dataset.concat(datasets, data[dim],
+                                                         mode='minimal'))
 
             datasets = [g for _, g in data.groupby(dim, squeeze=True)]
             concat_over = [k for k, v in data.variables.iteritems()
                            if dim in v.dimensions and k != dim]
             actual = Dataset.concat(datasets, data[dim], concat_over=concat_over)
             self.assertDatasetEqual(data, rectify_dim_order(actual))
+
+            actual = Dataset.concat(datasets, data[dim], mode='different')
+            self.assertDatasetEqual(data, rectify_dim_order(actual))
+
+        # Now add a new variable that doesn't depend on any of the current
+        # dims and make sure the mode argument behaves as expected
+        data['var4'] = ('dim4', np.arange(data.dimensions['dim3']))
+        for dim in ['dim1', 'dim2', 'dim3']:
+            datasets = [g for _, g in data.groupby(dim, squeeze=False)]
+            actual = Dataset.concat(datasets, data[dim], mode='all')
+            expected = np.array([data['var4'].data
+                                 for i in range(data.dimensions[dim])])
+            np.testing.assert_array_equal(actual['var4'].data,
+                                          expected)
+
+            actual = Dataset.concat(datasets, data[dim], mode='different')
+            self.assertXArrayEqual(data['var4'], actual['var4'])
+            actual = Dataset.concat(datasets, data[dim], mode='minimal')
+            self.assertXArrayEqual(data['var4'], actual['var4'])
 
         # verify that the dimension argument takes precedence over
         # concatenating dataset variables of the same name
