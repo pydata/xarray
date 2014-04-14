@@ -71,8 +71,7 @@ def orthogonal_indexer(key, shape):
             return np.arange(k.start or 0, k.stop or length, k.step or 1)
         else:
             arr = np.asarray(k)
-            if (not np.issubdtype(arr.dtype, int)
-                    and not np.issubdtype(arr.dtype, bool)):
+            if arr.dtype.kind not in ('i', 'b'):
                 raise ValueError("invalid subkey '%s' for integer based array "
                                  'indexing; all subkeys must be slices, '
                                  'integers or sequences of integers or '
@@ -118,7 +117,7 @@ def orthogonal_indexer(key, shape):
     return tuple(key)
 
 
-def convert_label_indexer(index, label):
+def convert_label_indexer(index, label, index_name=''):
     """Given a pandas.Index (or xray.CoordVariable) and labels (e.g., from
     __getitem__) for one dimension, return an indexer suitable for indexing an
     ndarray along that dimension
@@ -127,12 +126,13 @@ def convert_label_indexer(index, label):
         indexer = index.slice_indexer(label.start, label.stop, label.step)
     else:
         label = np.asarray(label)
-        if label.ndim ==0:
+        if label.ndim == 0:
             indexer = index.get_loc(np.asscalar(label))
         else:
             indexer = index.get_indexer(label)
             if np.any(indexer < 0):
-                raise ValueError('not all values found in index %r' % dim)
+                raise ValueError('not all values found in index %r'
+                                 % index_name)
     return indexer
 
 
@@ -140,7 +140,7 @@ def remap_label_indexers(data_obj, indexers):
     """Given an xray data object and label based indexers, return a mapping
     of equivalent location based indexers.
     """
-    return {dim: convert_label_indexer(data_obj.coordinates[dim], label)
+    return {dim: convert_label_indexer(data_obj.coordinates[dim], label, dim)
             for dim, label in indexers.iteritems()}
 
 

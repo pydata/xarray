@@ -232,6 +232,8 @@ class TestDataset(TestCase):
 
     def test_reindex(self):
         data = create_test_data()
+        self.assertDatasetEqual(data, data.reindex())
+
         expected = data.indexed(dim1=slice(10))
         actual = data.reindex(dim1=data['dim1'][:10])
         self.assertDatasetEqual(actual, expected)
@@ -356,6 +358,9 @@ class TestDataset(TestCase):
         self.assertTrue('var1' not in renamed.variables)
         self.assertTrue('dim2' not in renamed.variables)
 
+        with self.assertRaisesRegexp(ValueError, "cannot rename 'not_a_var'"):
+            data.rename({'not_a_var': 'nada'})
+
         # verify that we can rename a variable without accessing the data
         var1 = data['var1']
         data['var1'] = (var1.dimensions, InaccessibleArray(var1.values))
@@ -399,9 +404,10 @@ class TestDataset(TestCase):
         # access virtual variables
         data = create_test_data()
         self.assertVariableEqual(data['time.dayofyear'],
-                               Variable('time', 1 + np.arange(20)))
+                                 Variable('time', 1 + np.arange(20)))
         self.assertArrayEqual(data['time.month'].values,
                               data.variables['time'].as_index.month)
+        self.assertArrayEqual(data['time.season'].values, 1)
         # test virtual variable math
         self.assertArrayEqual(data['time.dayofyear'] + 1, 2 + np.arange(20))
         self.assertArrayEqual(np.sin(data['time.dayofyear']),
@@ -479,6 +485,10 @@ class TestDataset(TestCase):
             self.assertVariableEqual(data['var1'][n], sub['var1'])
             self.assertVariableEqual(data['var2'][n], sub['var2'])
             self.assertVariableEqual(data['var3'][:, n], sub['var3'])
+
+        # TODO: test the other edge cases
+        with self.assertRaisesRegexp(ValueError, 'must be 1 dimensional'):
+            data.groupby('var1')
 
     def test_concat(self):
         data = create_test_data()

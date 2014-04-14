@@ -2,7 +2,7 @@ from collections import OrderedDict
 import numpy as np
 import pandas as pd
 
-from xray import utils, Dataset, Variable
+from xray import utils, Dataset, Variable, Coordinate
 from . import TestCase, ReturnItem, requires_netCDF4
 
 
@@ -17,7 +17,8 @@ class TestIndexers(TestCase):
         y = np.arange(5)
         I = ReturnItem()
         for i in [I[:], I[...], I[0, :, 10], I[..., 10], I[:5, ..., 0],
-                  I[y], I[y, y], I[..., y, y], I[..., 0, 1, 2, 3, 4]]:
+                  I[..., 0, ...], I[y], I[y, y], I[..., y, y],
+                  I[..., 0, 1, 2, 3, 4]]:
             j = utils.expanded_indexer(i, x.ndim)
             self.assertArrayEqual(x[i], x[j])
             self.assertArrayEqual(self.set_to_zero(x, i),
@@ -59,6 +60,16 @@ class TestIndexers(TestCase):
         # standard numpy (non-orthogonal) indexing doesn't work anymore
         with self.assertRaisesRegexp(ValueError, 'only supports 1d'):
             utils.orthogonal_indexer(x > 0, x.shape)
+        with self.assertRaisesRegexp(ValueError, 'invalid subkey'):
+            print utils.orthogonal_indexer((1.5 * y, 1.5 * y), x.shape)
+
+    def test_convert_label_indexer(self):
+        # TODO: add tests that aren't just for edge cases
+        coord = Coordinate('x', [1, 2, 3])
+        with self.assertRaisesRegexp(ValueError, 'not all values found'):
+            utils.convert_label_indexer(coord, [0])
+        with self.assertRaises(KeyError):
+            utils.convert_label_indexer(coord, 0)
 
     def test_remap_label_indexers(self):
         # TODO: fill in more tests!
@@ -126,6 +137,8 @@ class TestDictionaries(TestCase):
         self.assertTrue(utils.dict_equal(x, y)) # inf == inf
         y = dict(y)
         self.assertTrue(utils.dict_equal(x, y)) # different dictionary types are fine
+        y['b'] = 3 * np.arange(3)
+        self.assertFalse(utils.dict_equal(x, y)) # not equal when arrays differ
 
     def test_frozen(self):
         x = utils.Frozen(self.x)
@@ -136,8 +149,11 @@ class TestDictionaries(TestCase):
         with self.assertRaises(AttributeError):
             x.update(self.y)
         self.assertEquals(x.mapping, self.x)
+        self.assertEquals(repr(x), "Frozen({'a': 'A', 'b': 'B'})")
 
     def test_sorted_keys_dict(self):
         x = {'a': 1, 'b': 2, 'c': 3}
         y = utils.SortedKeysDict(x)
         self.assertItemsEqual(y, ['a', 'b', 'c'])
+        self.assertEquals(repr(utils.SortedKeysDict()),
+                          "SortedKeysDict({})")

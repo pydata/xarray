@@ -383,9 +383,9 @@ class DataArray(AbstractArray):
         Dataset.unselect
         """
         if self.name in names:
-            raise ValueError('cannot unselect the array variable of a '
-                             'DataArray with unselect. Use the `unselected`'
-                             'method or the `unselect` method of the dataset.')
+            raise ValueError('cannot unselect the name of a DataArray with '
+                             'unselect. Use the `unselect` method of the '
+                             'dataset instead.')
         ds = self.dataset.unselect(*names)
         return ds[self.name]
 
@@ -509,17 +509,6 @@ class DataArray(AbstractArray):
         ds = self.dataset.unselect(*drop)
         ds[self.name] = var
         return ds[self.name]
-
-    def _unselect_unused_dims(self):
-        """Unselect all dimensions found in this array's dataset that aren't
-        also found in the dimensions of the array. Returns either a modified
-        copy or this DataArray if there were no dimensions to remove.
-        """
-        other_dims = [k for k in self.dataset.dimensions
-                      if k not in self.dimensions]
-        if other_dims:
-            self = self.unselect(*other_dims)
-        return self
 
     @classmethod
     def concat(cls, arrays, dimension='concat_dimension', indexers=None,

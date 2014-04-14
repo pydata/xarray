@@ -213,6 +213,12 @@ class TestDataArray(TestCase):
         # needs more...
         # should check which extra dimensions are dropped
 
+    def test_unselect(self):
+        with self.assertRaisesRegexp(ValueError, 'cannot unselect the name'):
+            self.dv.unselect('foo')
+        with self.assertRaisesRegexp(ValueError, 'must be a variable in'):
+            self.dv.unselect('y')
+
     def test_groupby_iter(self):
         for ((act_x, act_dv), (exp_x, exp_ds)) in \
                 zip(self.dv.groupby('y'), self.ds.groupby('y')):

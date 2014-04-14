@@ -58,8 +58,8 @@ _DATETIMEINDEX_COMPONENTS = ['year', 'month', 'day', 'hour', 'minute',
                              'quarter']
 
 
-class _VariablesDict(OrderedDict):
-    """_VariablesDict is an OrderedDict subclass that also implements "virtual"
+class VariablesDict(OrderedDict):
+    """VariablesDict is an OrderedDict subclass that also implements "virtual"
     variables that are created from other variables on demand
 
     Currently, virtual variables are restricted to attributes of
@@ -88,18 +88,16 @@ class _VariablesDict(OrderedDict):
 
     def _get_virtual_variable(self, key):
         split_key = key.split('.')
-        if len(split_key) == 2:
-            ref_var, suffix = split_key
-            if ref_var in self._datetimeindices():
-                index = self[ref_var].as_index
-                if suffix == 'season':
-                    # seasons = np.array(['DJF', 'MAM', 'JJA', 'SON'])
-                    month = index.month
-                    data = (month // 3) % 4 + 1
-                else:
-                    data = getattr(index, suffix)
-                return variable.Variable(self[ref_var].dimensions, data)
-        raise KeyError('virtual variable %r not found' % key)
+        assert len(split_key) == 2
+        ref_var, suffix = split_key
+        index = self[ref_var].as_index
+        if suffix == 'season':
+            # seasons = np.array(['DJF', 'MAM', 'JJA', 'SON'])
+            month = index.month
+            data = (month // 3) % 4 + 1
+        else:
+            data = getattr(index, suffix)
+        return variable.Variable(self[ref_var].dimensions, data)
 
     def __getitem__(self, key):
         if key in self:
@@ -235,7 +233,7 @@ class Dataset(Mapping):
         attributes : dict-like, optional
             Global attributes to save on this dataset.
         """
-        self._variables = _VariablesDict()
+        self._variables = VariablesDict()
         self._dimensions = SortedKeysDict()
         self._attributes = OrderedDict()
         if variables is not None:
@@ -722,7 +720,7 @@ class Dataset(Mapping):
         """
         for k in name_dict:
             if k not in self.variables:
-                raise ValueError("Cannot rename %r because it is not a "
+                raise ValueError("cannot rename %r because it is not a "
                                  "variable in this dataset" % k)
         variables = OrderedDict()
         for k, v in self.variables.iteritems():
