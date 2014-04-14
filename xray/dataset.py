@@ -995,9 +995,11 @@ class Dataset(Mapping):
             dimension. If not supplied, indexers is inferred from the length of
             each variable along the dimension, and the variables are stacked in
             the given order.
-        concat_over : None or str or iterable of str, optional
+        concat_over : None or str or iterable of str or True, optional
             Names of additional variables to concatenate, in which "dimension"
-            does not already appear as a dimension.
+            does not already appear as a dimension.  If True all noncoordinate
+            variables that are not the same across all datasets will be
+            concatenated over.
 
         Returns
         -------
@@ -1018,6 +1020,11 @@ class Dataset(Mapping):
         # figure out variables to concatenate over
         if concat_over is None:
             concat_over = set()
+        elif concat_over is True:
+            # all noncoordinates that are not the same in each dataset
+            concat_over = {k for k, v in datasets[0].noncoordinates.iteritems()
+                           if not all(utils.xarray_equal(ds[k], v)
+                                      for ds in datasets[1:])}
         elif isinstance(concat_over, basestring):
             concat_over = {concat_over}
         else:
