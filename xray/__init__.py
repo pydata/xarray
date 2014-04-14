@@ -1,4 +1,4 @@
-from .variable import Variable, CoordVariable
+from .variable import Variable, Coordinate
 from .dataset import Dataset, open_dataset
 from .data_array import DataArray, align
 from .utils import class_alias as _class_alias

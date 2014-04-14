@@ -7,7 +7,7 @@ import numpy as np
 import pandas as pd
 
 from xray import Variable, Dataset, DataArray
-from xray.variable import CoordVariable, as_variable
+from xray.variable import Coordinate, as_variable
 from . import TestCase
 
 
@@ -88,16 +88,16 @@ class VariableSubclassTestCases(object):
         self.assertArrayEqual((v * w).values, x * y)
         # something complicated
         self.assertArrayEqual((v ** 2 * w - 1 + x).values, x ** 2 * y - 1 + x)
-        # make sure dtype is preserved (for CoordVariables)
+        # make sure dtype is preserved (for Coordinates)
         self.assertEqual(float, (+v).dtype)
         self.assertEqual(float, (+v).values.dtype)
         self.assertEqual(float, (0 + v).dtype)
         self.assertEqual(float, (0 + v).values.dtype)
         # check types of returned data
         self.assertIsInstance(+v, Variable)
-        self.assertNotIsInstance(+v, CoordVariable)
+        self.assertNotIsInstance(+v, Coordinate)
         self.assertIsInstance(0 + v, Variable)
-        self.assertNotIsInstance(0 + v, CoordVariable)
+        self.assertNotIsInstance(0 + v, Coordinate)
 
     def test_1d_reduce(self):
         x = np.arange(5)
@@ -118,7 +118,7 @@ class VariableSubclassTestCases(object):
         # test ufuncs
         self.assertVariableEqual(np.sin(v), self.cls(['x'], np.sin(x)))
         self.assertIsInstance(np.sin(v), Variable)
-        self.assertNotIsInstance(np.sin(v), CoordVariable)
+        self.assertNotIsInstance(np.sin(v), Coordinate)
 
     def test_concat(self):
         x = np.arange(5)
@@ -372,21 +372,21 @@ class TestVariable(TestCase, VariableSubclassTestCases):
         self.assertVariableEqual(v.mean('x'), v.reduce(np.mean, 'x'))
 
 
-class TestCoordVariable(TestCase, VariableSubclassTestCases):
-    cls = staticmethod(CoordVariable)
+class TestCoordinate(TestCase, VariableSubclassTestCases):
+    cls = staticmethod(Coordinate)
 
     def test_init(self):
         with self.assertRaisesRegexp(ValueError, 'must be 1-dimensional'):
-            CoordVariable((), 0)
+            Coordinate((), 0)
 
     def test_data(self):
-        x = CoordVariable('x', [0, 1, 2], dtype=float)
+        x = Coordinate('x', [0, 1, 2], dtype=float)
         # data should be initially saved as an ndarray
         self.assertIs(type(x._data), np.ndarray)
         self.assertEqual(float, x.dtype)
         self.assertArrayEqual(np.arange(3), x)
         self.assertEqual(float, x.values.dtype)
-        # after inspecting x.values, the CoordVariable will be saved as an Index
+        # after inspecting x.values, the Coordinate will be saved as an Index
         self.assertIsInstance(x._data, pd.Index)
         with self.assertRaisesRegexp(TypeError, 'cannot be modified'):
             x[:] = 0

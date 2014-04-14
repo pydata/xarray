@@ -175,11 +175,10 @@ class Variable(AbstractArray):
         return self.as_index
 
     def to_coord(self):
-        """Return this variable as an CoordVariable"""
-        return CoordVariable(self.dimensions, self._data, self.attributes,
-                             encoding=self.encoding,
-                             indexing_mode=self._indexing_mode,
-                             dtype=self.dtype)
+        """Return this variable as a Coordinate"""
+        return Coordinate(self.dimensions, self._data, self.attributes,
+                          encoding=self.encoding,
+                          indexing_mode=self._indexing_mode)
 
     @property
     def dimensions(self):
@@ -583,11 +582,12 @@ class Variable(AbstractArray):
 ops.inject_special_operations(Variable)
 
 
-class CoordVariable(Variable):
+class Coordinate(Variable):
     """Subclass of Variable which caches its data as a pandas.Index instead of
-    a numpy.ndarray
+    a numpy.ndarray.
 
-    CoordVariables must always be 1-dimensional.
+    Coordinates must always be 1-dimensional. In addition to Variable methods,
+    they support some pandas.Index methods directly (e.g., get_indexer).
     """
     def __init__(self, dims, data, attributes=None, encoding=None,
                  indexing_mode='numpy', dtype=None):
@@ -600,7 +600,7 @@ class CoordVariable(Variable):
             necessarily faithfully maintain the data type (many types are
             converted into object arrays).
         """
-        super(CoordVariable, self).__init__(dims, data, attributes, encoding,
+        super(Coordinate, self).__init__(dims, data, attributes, encoding,
                                           indexing_mode)
         if self.ndim != 1:
             raise ValueError('%s objects must be 1-dimensional' %
@@ -652,7 +652,7 @@ class CoordVariable(Variable):
                           self.encoding, self._indexing_mode, self.dtype)
 
     def to_coord(self):
-        """Return this variable as an CoordVariable"""
+        """Return this variable as an Coordinate"""
         return self
 
     def get_indexer(self, label):

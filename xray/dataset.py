@@ -136,8 +136,8 @@ def _expand_variables(raw_variables, old_variables={},
     Dataset._variables dictionary.
 
     This includes converting tuples (dimensions, data) into Variable objects,
-    converting 1D variables into CoordVariable objects and expanding DataArray
-    objects into all their composite variables.
+    converting coordinate variables into Coordinate objects and expanding
+    DataArray objects into Variable plus Coordinates.
 
     Raises ValueError if any conflicting values are found, between any of the
     new or old variables.
@@ -248,7 +248,7 @@ class Dataset(Mapping):
         """
         for dim, size in self._dimensions.iteritems():
             if dim not in self._variables:
-                coord = variable.CoordVariable(dim, np.arange(size))
+                coord = variable.Coordinate(dim, np.arange(size))
                 self._variables[dim] = coord
 
     def _update_vars_and_dims(self, new_variables, needs_copy=True):
@@ -674,7 +674,7 @@ class Dataset(Mapping):
                 new_var = coordinates[name]
                 if not (hasattr(new_var, 'dimensions') and
                         hasattr(new_var, 'values')):
-                    new_var = variable.CoordVariable(var.dimensions, new_var,
+                    new_var = variable.Coordinate(var.dimensions, new_var,
                                                      var.attributes,
                                                      var.encoding)
                 elif copy:
