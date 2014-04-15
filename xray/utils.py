@@ -27,9 +27,10 @@ def function_alias(obj, old_name):
 
 def class_alias(obj, old_name):
     class Wrapper(obj):
-        def __new__(*args, **kwargs):
+        def __new__(cls, *args, **kwargs):
             alias_warning(old_name, obj.__name__, stacklevel=3)
-            return obj.__new__(*args, **kwargs)
+            import ipdb; ipdb.set_trace()
+            return super(Wrapper, cls).__new__(cls, *args, **kwargs)
     Wrapper.__name__ = obj.__name__
     return Wrapper
 
