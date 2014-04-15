@@ -29,7 +29,6 @@ def class_alias(obj, old_name):
     class Wrapper(obj):
         def __new__(cls, *args, **kwargs):
             alias_warning(old_name, obj.__name__, stacklevel=3)
-            import ipdb; ipdb.set_trace()
             return super(Wrapper, cls).__new__(cls, *args, **kwargs)
     Wrapper.__name__ = obj.__name__
     return Wrapper
