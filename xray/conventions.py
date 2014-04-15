@@ -349,7 +349,7 @@ class CharToStringArray(utils.NDArrayMixin):
 
     @property
     def dtype(self):
-        return np.dtype(str(self.array.dtype)[:2] + str(self.array.shape[-1]))
+        return np.dtype(self.array.dtype.kind + str(self.array.shape[-1]))
 
     @property
     def shape(self):
@@ -431,7 +431,7 @@ def encode_cf_variable(var):
     # encode strings as character arrays
     # TODO: add a check data.dtype.itemsize > 1 (when we have optional string
     # decoding)
-    if np.issubdtype(data.dtype, (str, unicode)):
+    if data.dtype.kind in ['S', 'U']:
         data = string_to_char(data)
         dimensions = dimensions + ('string%s' % data.shape[-1],)
 
