@@ -1,12 +1,38 @@
 # TODO: separate out these utilities into different modules based on whether
 # they are for internal or external use
+import functools
 import operator
+import warnings
 from collections import OrderedDict, Mapping, MutableMapping
 
 import numpy as np
 import pandas as pd
 
-import xarray
+import variable
+
+
+def alias_warning(old_name, new_name, stacklevel=2):
+    warnings.warn('%s has been renamed to %s; this alias will be removed '
+                  "before xray's initial release" % (old_name, new_name),
+                  FutureWarning, stacklevel=stacklevel)
+
+
+def function_alias(obj, old_name):
+    @functools.wraps(obj)
+    def wrapper(*args, **kwargs):
+        alias_warning(old_name, obj.__name__, stacklevel=3)
+        return obj(*args, **kwargs)
+    return wrapper
+
+
+def class_alias(obj, old_name):
+    class Wrapper(obj):
+        def __new__(cls, *args, **kwargs):
+            alias_warning(old_name, obj.__name__, stacklevel=3)
+            import ipdb; ipdb.set_trace()
+            return super(Wrapper, cls).__new__(cls, *args, **kwargs)
+    Wrapper.__name__ = obj.__name__
+    return Wrapper
 
 
 def expanded_indexer(key, ndim):
@@ -46,8 +72,7 @@ def orthogonal_indexer(key, shape):
             return np.arange(k.start or 0, k.stop or length, k.step or 1)
         else:
             arr = np.asarray(k)
-            if (not np.issubdtype(arr.dtype, int)
-                    and not np.issubdtype(arr.dtype, bool)):
+            if arr.dtype.kind not in ('i', 'b'):
                 raise ValueError("invalid subkey '%s' for integer based array "
                                  'indexing; all subkeys must be slices, '
                                  'integers or sequences of integers or '
@@ -93,25 +118,44 @@ def orthogonal_indexer(key, shape):
     return tuple(key)
 
 
-def remap_loc_indexers(indices, indexers):
-    """Given mappings of XArray indices and label based indexers, return
-    equivalent location based indexers.
+def convert_label_indexer(index, label, index_name=''):
+    """Given a pandas.Index (or xray.CoordVariable) and labels (e.g., from
+    __getitem__) for one dimension, return an indexer suitable for indexing an
+    ndarray along that dimension
     """
-    new_indexers = OrderedDict()
-    for dim, loc in indexers.iteritems():
-        index = indices[dim].index
-        if isinstance(loc, slice):
-            indexer = index.slice_indexer(loc.start, loc.stop, loc.step)
+    if isinstance(label, slice):
+        indexer = index.slice_indexer(label.start, label.stop, label.step)
+    else:
+        label = np.asarray(label)
+        if label.ndim == 0:
+            indexer = index.get_loc(np.asscalar(label))
         else:
-            loc = np.asarray(loc)
-            if loc.ndim == 0:
-                indexer = index.get_loc(np.asscalar(loc))
-            else:
-                indexer = index.get_indexer(loc)
-                if np.any(indexer < 0):
-                    raise ValueError('not all values found in index %r' % dim)
-        new_indexers[dim] = indexer
-    return new_indexers
+            indexer = index.get_indexer(label)
+            if np.any(indexer < 0):
+                raise ValueError('not all values found in index %r'
+                                 % index_name)
+    return indexer
+
+
+def remap_label_indexers(data_obj, indexers):
+    """Given an xray data object and label based indexers, return a mapping
+    of equivalent location based indexers.
+    """
+    return {dim: convert_label_indexer(data_obj.coordinates[dim], label, dim)
+            for dim, label in indexers.iteritems()}
+
+
+def squeeze(xray_obj, dimensions, dimension=None):
+    """Squeeze the dimensions of an xray object."""
+    if dimension is None:
+        dimension = [d for d, s in dimensions.iteritems() if s == 1]
+    else:
+        if isinstance(dimension, basestring):
+            dimension = [dimension]
+        if any(dimensions[k] > 1 for k in dimension):
+            raise ValueError('cannot select a dimension to squeeze out '
+                             'which has length greater than one')
+    return xray_obj.indexed(**{dim: 0 for dim in dimension})
 
 
 def allclose_or_equiv(arr1, arr2, rtol=1e-5, atol=1e-8):
@@ -122,7 +166,7 @@ def allclose_or_equiv(arr1, arr2, rtol=1e-5, atol=1e-8):
     return np.isclose(arr1, arr2, rtol=rtol, atol=atol, equal_nan=True).all()
 
 
-def xarray_allclose(v1, v2, rtol=1e-05, atol=1e-08):
+def variable_allclose(v1, v2, rtol=1e-05, atol=1e-08):
     """True if two objects have the same dimensions, attributes and data;
     otherwise False.
 
@@ -137,10 +181,12 @@ def xarray_allclose(v1, v2, rtol=1e-05, atol=1e-08):
         else:
             return allclose_or_equiv(arr1, arr2, rtol=rtol, atol=atol)
 
-    v1, v2 = map(xarray.as_xarray, [v1, v2])
+    v1, v2 = map(variable.as_variable, [v1, v2])
     return (v1.dimensions == v2.dimensions
             and dict_equal(v1.attributes, v2.attributes)
-            and (v1._data is v2._data or data_equiv(v1.data, v2.data)))
+            and (v1._data is v2._data or data_equiv(v1.values, v2.values)))
+
+xarray_allclose = function_alias(variable_allclose, 'xarray_allclose')
 
 
 def _safe_isnan(arr):
@@ -164,22 +210,24 @@ def array_equiv(arr1, arr2):
     return ((arr1 == arr2) | (_safe_isnan(arr1) & _safe_isnan(arr2))).all()
 
 
-def xarray_equal(v1, v2, check_attributes=True):
+def variable_equal(v1, v2, check_attributes=True):
     """True if two objects have the same dimensions, attributes and data;
     otherwise False.
 
     This function is necessary because `v1 == v2` for XArrays and DataArrays
     does element-wise comparisions (like numpy.ndarrays).
     """
-    v1, v2 = map(xarray.as_xarray, [v1, v2])
+    v1, v2 = map(variable.as_variable, [v1, v2])
     return (v1.dimensions == v2.dimensions
             and (not check_attributes
                  or dict_equal(v1.attributes, v2.attributes))
-            and (v1._data is v2._data or array_equiv(v1.data, v2.data)))
+            and (v1._data is v2._data or array_equiv(v1.values, v2.values)))
+
+xarray_equal = function_alias(variable_equal, 'xarray_equal')
 
 
 def safe_cast_to_index(array):
-    """Given an array, safely cast it to a pandas.Index
+    """Given an array, safely cast it to a pandas.Index.
 
     Unlike pandas.Index, if the array has dtype=object or dtype=timedelta64,
     this function will not attempt to do automatic type conversion but will
@@ -190,6 +238,20 @@ def safe_cast_to_index(array):
         if array.dtype == object or array.dtype == np.timedelta64:
             kwargs['dtype'] = object
     return pd.Index(array, **kwargs)
+
+
+def as_index(array):
+    """Given an array, return it if it already is a pandas Index; otherwise
+    safely cast it to a pandas Index.
+    """
+    if isinstance(array, pd.Index):
+        index = array
+    else:
+        try:
+            index = array.as_index
+        except AttributeError:
+            index = safe_cast_to_index(array)
+    return index
 
 
 def multi_index_from_product(iterables, names=None):
@@ -386,9 +448,8 @@ class ChainMap(MutableMapping):
 
 
 class NDArrayMixin(object):
-    """Mixin class for making wrappers of N-dimensional arrays that conform
-    to the ndarray interface that xray expects for the data argument to XArray
-    objects.
+    """Mixin class for making wrappers of N-dimensional arrays that conform to
+    the ndarray interface required for the data argument to Variable objects.
 
     A subclass should set the `array` property and override one or more of
     `dtype`, `shape` and `__getitem__`.

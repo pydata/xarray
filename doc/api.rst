@@ -166,5 +166,3 @@ Top-level functions
    :toctree: generated/
 
    align
-   encode_cf_datetime
-   decode_cf_datetime

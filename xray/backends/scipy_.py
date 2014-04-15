@@ -38,8 +38,8 @@ class ScipyDataStore(AbstractDataStore):
 
     @property
     def variables(self):
-        return FrozenOrderedDict((k, xray.XArray(v.dimensions, v.data,
-                                                 v._attributes))
+        return FrozenOrderedDict((k, xray.Variable(v.dimensions, v.data,
+                                                   v._attributes))
                                  for k, v in self.ds.variables.iteritems())
 
     @property
@@ -75,7 +75,7 @@ class ScipyDataStore(AbstractDataStore):
 
     def set_variable(self, name, variable):
         variable = encode_cf_variable(variable)
-        data = coerce_nc3_dtype(variable.data)
+        data = coerce_nc3_dtype(variable.values)
         self.set_necessary_dimensions(variable)
         self.ds.createVariable(name, data.dtype, variable.dimensions)
         scipy_var = self.ds.variables[name]

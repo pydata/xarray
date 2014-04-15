@@ -1,6 +1,3 @@
-import mock
-import unittest
-
 from collections import OrderedDict
 from copy import deepcopy
 from textwrap import dedent
@@ -8,10 +5,9 @@ from textwrap import dedent
 import numpy as np
 import pandas as pd
 
-from xray import (Dataset, DataArray, XArray, backends, open_dataset, utils,
-                  align, conventions)
+from xray import Dataset, DataArray, Variable, backends, utils, align
 
-from . import TestCase, requires_netCDF4
+from . import TestCase
 
 
 _dims = {'dim1': 100, 'dim2': 50, 'dim3': 10}
@@ -40,27 +36,12 @@ class UnexpectedDataAccess(Exception):
     pass
 
 
-def _data_fail(*args, **kwdargs):
-    raise UnexpectedDataAccess("Tried Accessing Data")
+class InaccessibleArray(utils.NDArrayMixin):
+    def __init__(self, array):
+        self.array = array
 
-
-class InaccessibleArray(XArray):
-    def __init__(self, dims, data, *args, **kwargs):
-        XArray.__init__(self, dims, data, *args, **kwargs)
-        # make sure the only operations on _data
-        # are to check ndim, dtype, size and shape
-        self._data = mock.Mock()
-        self._data.ndim = data.ndim
-        self._data.dtype = data.dtype
-        self._data.size = data.size
-        self._data.shape = data.shape
-        # fail if the actual data is accessed from _data
-        self._data.__array__ = _data_fail
-        self._data.__getitem__ = _data_fail
-
-    @property
-    def data(self):
-        _data_fail()
+    def __getitem__(self, key):
+        raise UnexpectedDataAccess("Tried accessing data")
 
 
 class InaccessibleVariableDataStore(backends.InMemoryDataStore):
@@ -76,8 +57,11 @@ class InaccessibleVariableDataStore(backends.InMemoryDataStore):
     @property
     def variables(self):
         return utils.FrozenOrderedDict(
-            (k, InaccessibleArray(v.dimensions, v.data, v.attributes))
+            (k, Variable(v.dimensions,
+                         InaccessibleArray(v.values),
+                         v.attributes))
             for k, v in self._variables.iteritems())
+
 
 class TestDataset(TestCase):
     def test_repr(self):
@@ -114,9 +98,9 @@ class TestDataset(TestCase):
         self.assertEqual(expected, actual)
 
     def test_init(self):
-        var1 = XArray('x', 2 * np.arange(100))
-        var2 = XArray('x', np.arange(1000))
-        var3 = XArray(['x', 'y'], np.arange(1000).reshape(100, 10))
+        var1 = Variable('x', 2 * np.arange(100))
+        var2 = Variable('x', np.arange(1000))
+        var3 = Variable(['x', 'y'], np.arange(1000).reshape(100, 10))
         with self.assertRaisesRegexp(ValueError, 'but already exists'):
             Dataset({'a': var1, 'b': var2})
         with self.assertRaisesRegexp(ValueError, 'must be defined with 1-d'):
@@ -135,7 +119,7 @@ class TestDataset(TestCase):
         a['bar'] = (('time', 'x',), d)
         # order of creation is preserved
         self.assertTrue(a.variables.keys() == ['foo', 'time', 'x', 'bar'])
-        self.assertTrue(all([a.variables['foo'][i].data == d[i]
+        self.assertTrue(all([a.variables['foo'][i].values == d[i]
                              for i in np.ndindex(*d.shape)]))
         # try to add variable with dim (10,3) with data that's (3,10)
         with self.assertRaises(ValueError):
@@ -147,11 +131,11 @@ class TestDataset(TestCase):
         attributes = {'foo': 'bar'}
         a['x'] = ('x', vec, attributes)
         self.assertTrue('x' in a.coordinates)
-        self.assertIsInstance(a.coordinates['x'].index, pd.Index)
-        self.assertXArrayEqual(a.coordinates['x'], a.variables['x'])
+        self.assertIsInstance(a.coordinates['x'].as_index, pd.Index)
+        self.assertVariableEqual(a.coordinates['x'], a.variables['x'])
         b = Dataset()
         b['x'] = ('x', vec, attributes)
-        self.assertXArrayEqual(a['x'], b['x'])
+        self.assertVariableEqual(a['x'], b['x'])
         self.assertEquals(a.dimensions, b.dimensions)
         # this should work
         a['x'] = ('x', vec[:5])
@@ -167,10 +151,10 @@ class TestDataset(TestCase):
             a['y'] = ('y', scal)
         self.assertTrue('y' not in a.dimensions)
 
-    def test_indexed_by(self):
+    def test_indexed(self):
         data = create_test_data()
         slicers = {'dim1': slice(None, None, 2), 'dim2': slice(0, 2)}
-        ret = data.indexed_by(**slicers)
+        ret = data.indexed(**slicers)
 
         # Verify that only the specified dimension was altered
         self.assertItemsEqual(data.dimensions, ret.dimensions)
@@ -184,35 +168,35 @@ class TestDataset(TestCase):
         for v in data.variables:
             self.assertEqual(data[v].dimensions, ret[v].dimensions)
             self.assertEqual(data[v].attributes, ret[v].attributes)
-            slice_list = [slice(None)] * data[v].data.ndim
+            slice_list = [slice(None)] * data[v].values.ndim
             for d, s in slicers.iteritems():
                 if d in data[v].dimensions:
                     inds = np.nonzero(np.array(data[v].dimensions) == d)[0]
                     for ind in inds:
                         slice_list[ind] = s
-            expected = data[v].data[slice_list]
-            actual = ret[v].data
+            expected = data[v].values[slice_list]
+            actual = ret[v].values
             np.testing.assert_array_equal(expected, actual)
 
         with self.assertRaises(ValueError):
-            data.indexed_by(not_a_dim=slice(0, 2))
+            data.indexed(not_a_dim=slice(0, 2))
 
-        ret = data.indexed_by(dim1=0)
+        ret = data.indexed(dim1=0)
         self.assertEqual({'time': 20, 'dim2': 50, 'dim3': 10}, ret.dimensions)
         self.assertItemsEqual(list(data.noncoordinates) + ['dim1'],
                               ret.noncoordinates)
 
-        ret = data.indexed_by(time=slice(2), dim1=0, dim2=slice(5))
+        ret = data.indexed(time=slice(2), dim1=0, dim2=slice(5))
         self.assertEqual({'time': 2, 'dim2': 5, 'dim3': 10}, ret.dimensions)
         self.assertItemsEqual(list(data.noncoordinates) + ['dim1'],
                               ret.noncoordinates)
 
-        ret = data.indexed_by(time=0, dim1=0, dim2=slice(5))
+        ret = data.indexed(time=0, dim1=0, dim2=slice(5))
         self.assertItemsEqual({'dim2': 5, 'dim3': 10}, ret.dimensions)
         self.assertItemsEqual(list(data.noncoordinates) + ['dim1', 'time'],
                               ret.noncoordinates)
 
-    def test_labeled_by(self):
+    def test_labeled(self):
         data = create_test_data()
         int_slicers = {'dim1': slice(None, None, 2),
                        'dim2': slice(2),
@@ -220,22 +204,22 @@ class TestDataset(TestCase):
         loc_slicers = {'dim1': slice(None, None, 2),
                        'dim2': slice(0, 0.5),
                        'dim3': slice('a', 'c')}
-        self.assertEqual(data.indexed_by(**int_slicers),
-                         data.labeled_by(**loc_slicers))
+        self.assertEqual(data.indexed(**int_slicers),
+                         data.labeled(**loc_slicers))
         data['time'] = ('time', pd.date_range('2000-01-01', periods=20))
-        self.assertEqual(data.indexed_by(time=0),
-                         data.labeled_by(time='2000-01-01'))
-        self.assertEqual(data.indexed_by(time=slice(10)),
-                         data.labeled_by(time=slice('2000-01-01',
+        self.assertEqual(data.indexed(time=0),
+                         data.labeled(time='2000-01-01'))
+        self.assertEqual(data.indexed(time=slice(10)),
+                         data.labeled(time=slice('2000-01-01',
                                                    '2000-01-10')))
-        self.assertEqual(data, data.labeled_by(time=slice('1999', '2005')))
-        self.assertEqual(data.indexed_by(time=slice(3)),
-                         data.labeled_by(
+        self.assertEqual(data, data.labeled(time=slice('1999', '2005')))
+        self.assertEqual(data.indexed(time=slice(3)),
+                         data.labeled(
                             time=pd.date_range('2000-01-01', periods=3)))
 
     def test_reindex_like(self):
         data = create_test_data()
-        expected = data.indexed_by(dim1=slice(10), time=slice(13))
+        expected = data.indexed(dim1=slice(10), time=slice(13))
         actual = data.reindex_like(expected)
         self.assertDatasetEqual(actual, expected)
 
@@ -248,14 +232,16 @@ class TestDataset(TestCase):
 
     def test_reindex(self):
         data = create_test_data()
-        expected = data.indexed_by(dim1=slice(10))
+        self.assertDatasetEqual(data, data.reindex())
+
+        expected = data.indexed(dim1=slice(10))
         actual = data.reindex(dim1=data['dim1'][:10])
         self.assertDatasetEqual(actual, expected)
 
-        actual = data.reindex(dim1=data['dim1'][:10].data)
+        actual = data.reindex(dim1=data['dim1'][:10].values)
         self.assertDatasetEqual(actual, expected)
 
-        actual = data.reindex(dim1=data['dim1'][:10].index)
+        actual = data.reindex(dim1=data['dim1'][:10].as_index)
         self.assertDatasetEqual(actual, expected)
 
     def test_align(self):
@@ -273,25 +259,25 @@ class TestDataset(TestCase):
         self.assertDatasetEqual(left2, right2)
 
         left2, right2 = align(left, right, join='outer')
-        self.assertXArrayEqual(left2['dim3'], right2['dim3'])
+        self.assertVariableEqual(left2['dim3'], right2['dim3'])
         self.assertArrayEqual(left2['dim3'], union)
-        self.assertDatasetEqual(left2.labeled_by(dim3=intersection),
-                                right2.labeled_by(dim3=intersection))
+        self.assertDatasetEqual(left2.labeled(dim3=intersection),
+                                right2.labeled(dim3=intersection))
         self.assertTrue(np.isnan(left2['var3'][-2:]).all())
         self.assertTrue(np.isnan(right2['var3'][:2]).all())
 
         left2, right2 = align(left, right, join='left')
-        self.assertXArrayEqual(left2['dim3'], right2['dim3'])
-        self.assertXArrayEqual(left2['dim3'], left['dim3'])
-        self.assertDatasetEqual(left2.labeled_by(dim3=intersection),
-                                right2.labeled_by(dim3=intersection))
+        self.assertVariableEqual(left2['dim3'], right2['dim3'])
+        self.assertVariableEqual(left2['dim3'], left['dim3'])
+        self.assertDatasetEqual(left2.labeled(dim3=intersection),
+                                right2.labeled(dim3=intersection))
         self.assertTrue(np.isnan(right2['var3'][:2]).all())
 
         left2, right2 = align(left, right, join='right')
-        self.assertXArrayEqual(left2['dim3'], right2['dim3'])
-        self.assertXArrayEqual(left2['dim3'], right['dim3'])
-        self.assertDatasetEqual(left2.labeled_by(dim3=intersection),
-                                right2.labeled_by(dim3=intersection))
+        self.assertVariableEqual(left2['dim3'], right2['dim3'])
+        self.assertVariableEqual(left2['dim3'], right['dim3'])
+        self.assertDatasetEqual(left2.labeled(dim3=intersection),
+                                right2.labeled(dim3=intersection))
         self.assertTrue(np.isnan(left2['var3'][-2:]).all())
 
     def test_variable_indexing(self):
@@ -299,18 +285,18 @@ class TestDataset(TestCase):
         v = data['var1']
         d1 = data['dim1']
         d2 = data['dim2']
-        self.assertXArrayEqual(v, v[d1.data])
-        self.assertXArrayEqual(v, v[d1])
-        self.assertXArrayEqual(v[:3], v[d1 < 3])
-        self.assertXArrayEqual(v[:, 3:], v[:, d2 >= 1.5])
-        self.assertXArrayEqual(v[:3, 3:], v[d1 < 3, d2 >= 1.5])
-        self.assertXArrayEqual(v[:3, :2], v[range(3), range(2)])
-        self.assertXArrayEqual(v[:3, :2], v.loc[d1[:3], d2[:2]])
+        self.assertVariableEqual(v, v[d1.values])
+        self.assertVariableEqual(v, v[d1])
+        self.assertVariableEqual(v[:3], v[d1 < 3])
+        self.assertVariableEqual(v[:, 3:], v[:, d2 >= 1.5])
+        self.assertVariableEqual(v[:3, 3:], v[d1 < 3, d2 >= 1.5])
+        self.assertVariableEqual(v[:3, :2], v[range(3), range(2)])
+        self.assertVariableEqual(v[:3, :2], v.loc[d1[:3], d2[:2]])
 
     def test_select(self):
         data = create_test_data()
         ret = data.select(_testvar)
-        self.assertXArrayEqual(data[_testvar], ret[_testvar])
+        self.assertVariableEqual(data[_testvar], ret[_testvar])
         self.assertTrue(_vars.keys()[1] not in ret.variables)
         self.assertRaises(ValueError, data.select, (_testvar, 'not_a_var'))
 
@@ -364,7 +350,7 @@ class TestDataset(TestCase):
                 if name in dims:
                     dims[dims.index(name)] = newname
 
-            self.assertXArrayEqual(XArray(dims, v.data, v.attributes),
+            self.assertVariableEqual(Variable(dims, v.values, v.attributes),
                                    renamed.variables[k])
             self.assertEqual(v.encoding, renamed.variables[k].encoding)
             self.assertEqual(type(v), type(renamed.variables[k]))
@@ -372,16 +358,19 @@ class TestDataset(TestCase):
         self.assertTrue('var1' not in renamed.variables)
         self.assertTrue('dim2' not in renamed.variables)
 
+        with self.assertRaisesRegexp(ValueError, "cannot rename 'not_a_var'"):
+            data.rename({'not_a_var': 'nada'})
+
         # verify that we can rename a variable without accessing the data
         var1 = data['var1']
-        data['var1'] = InaccessibleArray(var1.dimensions, var1.data)
+        data['var1'] = (var1.dimensions, InaccessibleArray(var1.values))
         renamed = data.rename(newnames)
         with self.assertRaises(UnexpectedDataAccess):
-            renamed['renamed_var1'].data
+            renamed['renamed_var1'].values
 
     def test_update(self):
         data = create_test_data(seed=0)
-        var2 = XArray('dim1', np.arange(100))
+        var2 = Variable('dim1', np.arange(100))
         actual = data.update({'var2': var2})
         expected_vars = OrderedDict(create_test_data(seed=0).variables)
         expected_vars['var2'] = var2
@@ -401,35 +390,36 @@ class TestDataset(TestCase):
         actual = ds1.merge(ds2)
         self.assertEqual(expected, actual)
         with self.assertRaises(ValueError):
-            ds1.merge(ds2.indexed_by(dim1=slice(2)))
+            ds1.merge(ds2.indexed(dim1=slice(2)))
         with self.assertRaises(ValueError):
             ds1.merge(ds2.rename({'var3': 'var1'}))
 
     def test_getitem(self):
         data = create_test_data()
         self.assertIsInstance(data['var1'], DataArray)
-        self.assertXArrayEqual(data['var1'], data.variables['var1'])
+        self.assertVariableEqual(data['var1'], data.variables['var1'])
         self.assertIs(data['var1'].dataset, data)
 
     def test_virtual_variables(self):
         # access virtual variables
         data = create_test_data()
-        self.assertXArrayEqual(data['time.dayofyear'],
-                               XArray('time', 1 + np.arange(20)))
-        self.assertArrayEqual(data['time.month'].data,
-                              data.variables['time'].index.month)
+        self.assertVariableEqual(data['time.dayofyear'],
+                                 Variable('time', 1 + np.arange(20)))
+        self.assertArrayEqual(data['time.month'].values,
+                              data.variables['time'].as_index.month)
+        self.assertArrayEqual(data['time.season'].values, 1)
         # test virtual variable math
         self.assertArrayEqual(data['time.dayofyear'] + 1, 2 + np.arange(20))
         self.assertArrayEqual(np.sin(data['time.dayofyear']),
                               np.sin(1 + np.arange(20)))
         # test slicing the virtual variable -- it should still be virtual
         actual = data['time.dayofyear'][:10].dataset
-        expected = data.indexed_by(time=slice(10))
+        expected = data.indexed(time=slice(10))
         self.assertDatasetEqual(expected, actual)
 
     def test_setitem(self):
         # assign a variable
-        var = XArray(['dim1'], np.random.randn(100))
+        var = Variable(['dim1'], np.random.randn(100))
         data1 = create_test_data()
         data1['A'] = var
         data2 = data1.copy()
@@ -442,10 +432,10 @@ class TestDataset(TestCase):
         self.assertDatasetEqual(data1, data2)
         # assign an array
         with self.assertRaisesRegexp(TypeError, 'variables must be of type'):
-            data2['C'] = var.data
+            data2['C'] = var.values
         # override an existing value
         data1['A'] = 3 * data2['A']
-        self.assertXArrayEqual(data1['A'], 3 * data2['A'])
+        self.assertVariableEqual(data1['A'], 3 * data2['A'])
         # can't resize a used dimension
         with self.assertRaisesRegexp(ValueError, 'but already exists with'):
             data1['dim1'] = data1['dim1'][:5]
@@ -479,9 +469,9 @@ class TestDataset(TestCase):
         self.assertEqual(len(groupby), 3)
         expected_groups = {'a': 0, 'b': 1, 'c': 2}
         self.assertEqual(groupby.groups, expected_groups)
-        expected_items = [('a', data.indexed_by(x=0)),
-                          ('b', data.indexed_by(x=1)),
-                          ('c', data.indexed_by(x=2))]
+        expected_items = [('a', data.indexed(x=0)),
+                          ('b', data.indexed(x=1)),
+                          ('c', data.indexed(x=2))]
         self.assertEqual(list(groupby), expected_items)
 
         identity = lambda x: x
@@ -492,15 +482,19 @@ class TestDataset(TestCase):
         data = create_test_data()
         for n, (t, sub) in enumerate(list(data.groupby('dim1'))[:3]):
             self.assertEqual(data['dim1'][n], t)
-            self.assertXArrayEqual(data['var1'][n], sub['var1'])
-            self.assertXArrayEqual(data['var2'][n], sub['var2'])
-            self.assertXArrayEqual(data['var3'][:, n], sub['var3'])
+            self.assertVariableEqual(data['var1'][n], sub['var1'])
+            self.assertVariableEqual(data['var2'][n], sub['var2'])
+            self.assertVariableEqual(data['var3'][:, n], sub['var3'])
+
+        # TODO: test the other edge cases
+        with self.assertRaisesRegexp(ValueError, 'must be 1 dimensional'):
+            data.groupby('var1')
 
     def test_concat(self):
         data = create_test_data()
 
-        split_data = [data.indexed_by(dim1=slice(10)),
-                      data.indexed_by(dim1=slice(10, None))]
+        split_data = [data.indexed(dim1=slice(10)),
+                      data.indexed(dim1=slice(10, None))]
         self.assertDatasetEqual(data, Dataset.concat(split_data, 'dim1'))
 
         def rectify_dim_order(dataset):
@@ -576,10 +570,10 @@ class TestDataset(TestCase):
 
     def test_lazy_load(self):
         store = InaccessibleVariableDataStore()
-        store.set_variable('dim', XArray(('dim'), np.arange(10)))
-        store.set_variable('var', XArray(('dim'), np.random.uniform(size=10)))
+        store.set_variable('dim', Variable(('dim'), np.arange(10)))
+        store.set_variable('var', Variable(('dim'), np.random.uniform(size=10)))
         ds = Dataset()
         ds = ds.load_store(store, decode_cf=False)
-        self.assertRaises(UnexpectedDataAccess, lambda: ds['var'].data)
+        self.assertRaises(UnexpectedDataAccess, lambda: ds['var'].values)
         ds = ds.load_store(store, decode_cf=True)
-        self.assertRaises(UnexpectedDataAccess, lambda: ds['var'].data)
+        self.assertRaises(UnexpectedDataAccess, lambda: ds['var'].values)

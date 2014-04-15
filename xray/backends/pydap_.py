@@ -45,9 +45,9 @@ class PydapDataStore(object):
 
     @property
     def variables(self):
-        return FrozenOrderedDict((k, xray.XArray(v.dimensions,
-                                                 PydapArrayWrapper(v),
-                                                 v.attributes))
+        return FrozenOrderedDict((k, xray.Variable(v.dimensions,
+                                                   PydapArrayWrapper(v),
+                                                   v.attributes))
                                 for k, v in self.ds.iteritems())
 
     @property

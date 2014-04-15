@@ -77,8 +77,8 @@ class NetCDF4DataStore(AbstractDataStore):
             # encoding['endian'] = var.endian()
             encoding['least_significant_digit'] = \
                 attributes.pop('least_significant_digit', None)
-            return xray.XArray(dimensions, data, attributes, encoding,
-                               indexing_mode='orthogonal')
+            return xray.Variable(dimensions, data, attributes, encoding,
+                                 indexing_mode='orthogonal')
         return FrozenOrderedDict((k, convert_variable(v))
                                  for k, v in self.ds.variables.iteritems())
 
@@ -118,10 +118,10 @@ class NetCDF4DataStore(AbstractDataStore):
             fill_value=fill_value)
         nc4_var = self.ds.variables[name]
         nc4_var.set_auto_maskandscale(False)
-        if variable.data.ndim == 0:
-            nc4_var[:] = variable.data
+        if variable.values.ndim == 0:
+            nc4_var[:] = variable.values
         else:
-            nc4_var[:] = variable.data[:]
+            nc4_var[:] = variable.values[:]
         nc4_var.setncatts(variable.attributes)
 
     def del_attribute(self, key):

@@ -2,7 +2,7 @@ import itertools
 
 from common import ImplementsReduce
 from ops import inject_reduce_methods
-import xarray
+import variable
 import dataset
 import numpy as np
 
@@ -112,7 +112,7 @@ class GroupBy(object):
     def groups(self):
         # provided to mimic pandas.groupby
         if self._groups is None:
-            self._groups = dict(zip(self.unique_coord.data,
+            self._groups = dict(zip(self.unique_coord.values,
                                     self.group_indices))
         return self._groups
 
@@ -120,12 +120,12 @@ class GroupBy(object):
         return self.unique_coord.size
 
     def __iter__(self):
-        return itertools.izip(self.unique_coord.data, self._iter_grouped())
+        return itertools.izip(self.unique_coord.values, self._iter_grouped())
 
     def _iter_grouped(self):
         """Iterate over each element in this group"""
         for indices in self.group_indices:
-            yield self.obj.indexed_by(**{self.group_dim: indices})
+            yield self.obj.indexed(**{self.group_dim: indices})
 
     def _infer_concat_args(self, applied_example):
         if self.group_dim in applied_example.dimensions:
@@ -153,7 +153,7 @@ class ArrayGroupBy(GroupBy, ImplementsReduce):
     def _iter_grouped_shortcut(self):
         """Fast version of `_iter_grouped` that yields XArrays without metadata
         """
-        array = xarray.as_xarray(self.obj)
+        array = variable.as_variable(self.obj)
 
         # build the new dimensions
         if isinstance(self.group_indices[0], int):
@@ -167,11 +167,11 @@ class ArrayGroupBy(GroupBy, ImplementsReduce):
         group_axis = array.get_axis_num(self.group_dim)
         for indices in self.group_indices:
             indexer[group_axis] = indices
-            data = array.data[tuple(indexer)]
-            yield xarray.XArray(dims, data)
+            data = array.values[tuple(indexer)]
+            yield variable.Variable(dims, data)
 
     def _combine_shortcut(self, applied, concat_dim, indexers):
-        stacked = xarray.XArray.concat(
+        stacked = variable.Variable.concat(
             applied, concat_dim, indexers, shortcut=True)
         stacked.attributes.update(self.obj.attributes)
 

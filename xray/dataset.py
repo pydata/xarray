@@ -9,11 +9,11 @@ import backends
 import conventions
 import common
 import groupby
-import xarray
+import variable
 import utils
 from data_array import DataArray
 from utils import (FrozenOrderedDict, Frozen, SortedKeysDict, ChainMap,
-                   remap_loc_indexers, multi_index_from_product)
+                   remap_label_indexers, multi_index_from_product)
 
 
 def open_dataset(nc, decode_cf=True, *args, **kwargs):
@@ -58,8 +58,8 @@ _DATETIMEINDEX_COMPONENTS = ['year', 'month', 'day', 'hour', 'minute',
                              'quarter']
 
 
-class _VariablesDict(OrderedDict):
-    """_VariablesDict is an OrderedDict subclass that also implements "virtual"
+class VariablesDict(OrderedDict):
+    """VariablesDict is an OrderedDict subclass that also implements "virtual"
     variables that are created from other variables on demand
 
     Currently, virtual variables are restricted to attributes of
@@ -70,7 +70,7 @@ class _VariablesDict(OrderedDict):
     def _datetimeindices(self):
         return [k for k, v in self.iteritems()
                 if np.issubdtype(v.dtype, np.datetime64) and v.ndim == 1
-                and isinstance(v.index, pd.DatetimeIndex)]
+                and isinstance(v.as_index, pd.DatetimeIndex)]
 
     @property
     def virtual(self):
@@ -88,17 +88,16 @@ class _VariablesDict(OrderedDict):
 
     def _get_virtual_variable(self, key):
         split_key = key.split('.')
-        if len(split_key) == 2:
-            ref_var, suffix = split_key
-            if ref_var in self._datetimeindices():
-                if suffix == 'season':
-                    # seasons = np.array(['DJF', 'MAM', 'JJA', 'SON'])
-                    month = self[ref_var].index.month
-                    data = (month // 3) % 4 + 1
-                else:
-                    data = getattr(self[ref_var].index, suffix)
-                return xarray.XArray(self[ref_var].dimensions, data)
-        raise KeyError('virtual variable %r not found' % key)
+        assert len(split_key) == 2
+        ref_var, suffix = split_key
+        index = self[ref_var].as_index
+        if suffix == 'season':
+            # seasons = np.array(['DJF', 'MAM', 'JJA', 'SON'])
+            month = index.month
+            data = (month // 3) % 4 + 1
+        else:
+            data = getattr(index, suffix)
+        return variable.Variable(self[ref_var].dimensions, data)
 
     def __getitem__(self, key):
         if key in self:
@@ -113,10 +112,10 @@ def _as_dataset_variable(name, var):
     """Prepare a variable for adding it to a Dataset
     """
     try:
-        var = xarray.as_xarray(var)
+        var = variable.as_variable(var)
     except TypeError:
         raise TypeError('Dataset variables must be of type '
-                        'DataArray or XArray, or a sequence of the '
+                        'DataArray or Variable, or a sequence of the '
                         'form (dimensions, data[, attributes, encoding])')
     if name in var.dimensions:
         # convert the coordinate into a pandas.Index
@@ -128,15 +127,15 @@ def _as_dataset_variable(name, var):
 
 
 def _expand_variables(raw_variables, old_variables={},
-                      compat=utils.xarray_equal):
+                      compat=utils.variable_equal):
     """Expand a dictionary of variables.
 
-    Returns a dictionary of XArray objects suitable for inserting into a
+    Returns a dictionary of Variable objects suitable for inserting into a
     Dataset._variables dictionary.
 
-    This includes converting tuples (dimensions, data) into XArray objects,
-    converting 1D variables into CoordXArray objects and expanding DataArray
-    objects into all their composite variables.
+    This includes converting tuples (dimensions, data) into Variable objects,
+    converting coordinate variables into Coordinate objects and expanding
+    DataArray objects into Variable plus Coordinates.
 
     Raises ValueError if any conflicting values are found, between any of the
     new or old variables.
@@ -144,22 +143,21 @@ def _expand_variables(raw_variables, old_variables={},
     new_variables = OrderedDict()
     variables = ChainMap(new_variables, old_variables)
 
-    def add_variable(k, var):
-        if k not in variables:
-            variables[k] = _as_dataset_variable(k, var)
-        elif not compat(variables[k], var):
+    def add_variable(name, var):
+        if name not in variables:
+            variables[name] = _as_dataset_variable(name, var)
+        elif not compat(variables[name], var):
             raise ValueError('conflicting value for variable %s:\n'
                              'first value: %r\nsecond value: %r'
-                             % (k, variables[k], var))
+                             % (name, variables[name], var))
 
-    for k, var in raw_variables.iteritems():
+    for name, var in raw_variables.iteritems():
         if hasattr(var, 'dataset'):
             # it's a DataArray
-            var = var.rename(k)
-            for k, var in var.select().variables.items():
-                add_variable(k, var)
-        else:
-            add_variable(k, var)
+            for dim, coord in var.coordinates.iteritems():
+                if dim != name:
+                    add_variable(dim, coord)
+        add_variable(name, var)
     return new_variables
 
 
@@ -227,15 +225,15 @@ class Dataset(Mapping):
         Parameters
         ----------
         variables : dict-like, optional
-            A mapping from variable names to `DataArray` objets, `XArray`
+            A mapping from variable names to `DataArray` objets, `Variable`
             objects or sequences of the form `(dimensions, data[, attributes])`
-            which can be used as arguments to create a new `XArray`. Each
+            which can be used as arguments to create a new `Variable`. Each
             dimension must have the same length in all variables in which it
             appears.
         attributes : dict-like, optional
             Global attributes to save on this dataset.
         """
-        self._variables = _VariablesDict()
+        self._variables = VariablesDict()
         self._dimensions = SortedKeysDict()
         self._attributes = OrderedDict()
         if variables is not None:
@@ -248,7 +246,8 @@ class Dataset(Mapping):
         """
         for dim, size in self._dimensions.iteritems():
             if dim not in self._variables:
-                self._variables[dim] = xarray.CoordXArray(dim, np.arange(size))
+                coord = variable.Coordinate(dim, np.arange(size))
+                self._variables[dim] = coord
 
     def _update_vars_and_dims(self, new_variables, needs_copy=True):
         """Add a dictionary of new variables to this dataset.
@@ -291,13 +290,16 @@ class Dataset(Mapping):
 
     @property
     def variables(self):
-        """Dictionary of XArray objects contained in this dataset.
+        """Dictionary of Variable objects contained in this dataset.
 
-        This dictionary is frozen to prevent it from being modified in ways
-        that would cause invalid dataset metadata (e.g., by setting variables
-        with inconsistent dimensions). Instead, add or remove variables by
-        acccessing the dataset directly (e.g., `dataset['foo'] = bar` or `del
-        dataset['foo']`).
+        This is a low-level interface into the contents of a dataset. The
+        dictionary is frozen to prevent it from being modified in ways that
+        could create an inconsistent dataset (e.g., by setting variables with
+        inconsistent dimensions).
+
+        In general, to access and modify dataset contents, you should use
+        dictionary methods on the dataset itself instead of the variables
+        dictionary.
         """
         return Frozen(self._variables)
 
@@ -376,7 +378,7 @@ class Dataset(Mapping):
     def __getitem__(self, key):
         """Access the given variable name in this dataset as a `DataArray`.
         """
-        return DataArray(self, key)
+        return DataArray._constructor(self, key)
 
     def __setitem__(self, key, value):
         """Add an array to this dataset.
@@ -385,7 +387,7 @@ class Dataset(Mapping):
         `key` and merge the contents of the resulting dataset into this
         dataset.
 
-        If value is an `XArray` object (or tuple of form
+        If value is an `Variable` object (or tuple of form
         `(dimensions, data[, attributes])`), add it to this dataset as a new
         variable.
         """
@@ -416,7 +418,7 @@ class Dataset(Mapping):
             # some stores (e.g., scipy) do not seem to preserve order, so don't
             # require matching dimension or variable order for equality
             return (utils.dict_equal(self.attributes, other.attributes)
-                    and all(k1 == k2 and utils.xarray_equal(v1, v2)
+                    and all(k1 == k2 and utils.variable_equal(v1, v2)
                             for (k1, v1), (k2, v2)
                             in zip(sorted(self.variables.items()),
                                    sorted(other.variables.items()))))
@@ -428,22 +430,17 @@ class Dataset(Mapping):
 
     @property
     def coordinates(self):
-        """Coordinates are variables with names that match dimensions.
-
-        They are always stored internally as `XArray` objects with data that is
-        a `pandas.Index` object.
+        """Dictionary of CoordVaraibles used for label based indexing.
         """
-        return FrozenOrderedDict([(dim, self.variables[dim])
-                                  for dim in self.dimensions])
+        return FrozenOrderedDict((dim, self.variables[dim])
+                                 for dim in self.dimensions)
 
     @property
     def noncoordinates(self):
-        """Non-coordinates are variables with names that do not match
-        dimensions.
+        """Dictionary of DataArrays whose names do not match dimensions.
         """
-        return FrozenOrderedDict([(name, v)
-                for (name, v) in self.variables.iteritems()
-                if name not in self.dimensions])
+        return FrozenOrderedDict((name, self[name]) for name in self
+                                 if name not in self.dimensions)
 
     def dump_to_store(self, store):
         """Store dataset contents to a backends.*DataStore object."""
@@ -470,7 +467,7 @@ class Dataset(Mapping):
     def __repr__(self):
         return common.dataset_repr(self)
 
-    def indexed_by(self, **indexers):
+    def indexed(self, **indexers):
         """Return a new dataset with each array indexed along the specified
         dimension(s).
 
@@ -495,9 +492,9 @@ class Dataset(Mapping):
 
         See Also
         --------
-        Dataset.labeled_by
-        Dataset.indexed_by
-        Array.indexed_by
+        Dataset.labeled
+        DataArray.indexed
+        DataArray.labeled
         """
         invalid = [k for k in indexers if not k in self.dimensions]
         if invalid:
@@ -511,15 +508,17 @@ class Dataset(Mapping):
         for name, var in self.variables.iteritems():
             var_indexers = {k: v for k, v in indexers.iteritems()
                             if k in var.dimensions}
-            variables[name] = var.indexed_by(**var_indexers)
+            variables[name] = var.indexed(**var_indexers)
         return type(self)(variables, self.attributes)
 
-    def labeled_by(self, **indexers):
+    indexed_by = utils.function_alias(indexed, 'indexed_by')
+
+    def labeled(self, **indexers):
         """Return a new dataset with each variable indexed by coordinate labels
         along the specified dimension(s).
 
-        In contrast to `Dataset.indexed_by`, indexers for this method should
-        use coordinate values instead of integers.
+        In contrast to `Dataset.indexed`, indexers for this method should use
+        coordinate values instead of integers.
 
         Under the hood, this method is powered by using Panda's powerful Index
         objects. This makes label based indexing essentially just as fast as
@@ -548,11 +547,13 @@ class Dataset(Mapping):
 
         See Also
         --------
-        Dataset.labeled_by
-        Dataset.indexed_by
-        Array.indexed_by
+        Dataset.indexed
+        DataArray.indexed
+        DataArray.labeled
         """
-        return self.indexed_by(**remap_loc_indexers(self, indexers))
+        return self.indexed(**remap_label_indexers(self, indexers))
+
+    labeled_by = utils.function_alias(labeled, 'labeled_by')
 
     def reindex_like(self, other, copy=True):
         """Conform this object onto the coordinates of another object, filling
@@ -562,7 +563,7 @@ class Dataset(Mapping):
         ----------
         other : Dataset or DatasetArray
             Object with a coordinates attribute giving a mapping from dimension
-            names to xray.XArray objects, which provides coordinates upon which
+            names to Variable objects, which provides coordinates upon which
             to index the variables in this dataset. The coordinates on this
             other object need not be the same as the coordinates on this
             dataset. Any mis-matched coordinates values will be filled in with
@@ -619,10 +620,7 @@ class Dataset(Mapping):
         from_indexers = {}
         for name, coord in self.coordinates.iteritems():
             if name in coordinates:
-                index = coordinates[name]
-                if hasattr(index, 'index'):
-                    index = index.index
-                indexer = coord.index.get_indexer(index)
+                indexer = coord.get_indexer(utils.as_index(coordinates[name]))
 
                 # Note pandas uses negative values from get_indexer to signify
                 # values that are missing in the index
@@ -673,21 +671,13 @@ class Dataset(Mapping):
             if name in coordinates:
                 new_var = coordinates[name]
                 if not (hasattr(new_var, 'dimensions') and
-                        hasattr(new_var, 'data')):
-                    new_var = xarray.CoordXArray(var.dimensions, new_var,
-                                                 var.attributes, var.encoding)
+                        hasattr(new_var, 'values')):
+                    new_var = variable.Coordinate(var.dimensions, new_var,
+                                                     var.attributes,
+                                                     var.encoding)
                 elif copy:
-                    new_var = xarray.as_xarray(new_var).copy()
+                    new_var = variable.as_variable(new_var).copy()
             else:
-                # TODO: Resolve edge cases where variables are not found in
-                # coordinates, but actually take on coordinates values
-                # associated with a variable in the second dataset. An example
-                # would be latitude and longitude if the dataset has some non-
-                # Mercator projection. For these variables, we probably want to
-                # replace them with the other coordinates unchanged (if
-                # possible) instead of filling these coordinate values in with
-                # NaN.
-
                 assign_to = var_indexers(var, to_indexers)
                 assign_from = var_indexers(var, from_indexers)
 
@@ -698,9 +688,10 @@ class Dataset(Mapping):
                                   for idx, length in zip(assign_to, var.shape))
                     data = np.empty(shape, dtype=dtype)
                     data[:] = fill_value
-                    # create a new XArray so we can use orthogonal indexing
-                    new_var = xarray.XArray(var.dimensions, data, var.attributes)
-                    new_var[assign_to] = var[assign_from].data
+                    # create a new Variable so we can use orthogonal indexing
+                    new_var = variable.Variable(
+                        var.dimensions, data, var.attributes)
+                    new_var[assign_to] = var[assign_from].values
                 elif any_not_full_slices(assign_from):
                     # type coercion is not necessary as there are no missing
                     # values
@@ -729,7 +720,7 @@ class Dataset(Mapping):
         """
         for k in name_dict:
             if k not in self.variables:
-                raise ValueError("Cannot rename %r because it is not a "
+                raise ValueError("cannot rename %r because it is not a "
                                  "variable in this dataset" % k)
         variables = OrderedDict()
         for k, v in self.variables.iteritems():
@@ -826,7 +817,7 @@ class Dataset(Mapping):
                                   if k not in overwrite_vars}
 
         # update variables
-        compat = functools.partial(utils.xarray_equal, check_attributes=False)
+        compat = functools.partial(utils.variable_equal, check_attributes=False)
         new_variables = _expand_variables(other_variables, potential_conflicts,
                                           compat=compat)
         obj = self if inplace else self.copy()
@@ -838,12 +829,14 @@ class Dataset(Mapping):
                 del obj.attributes[k]
         return obj
 
-    def select(self, *names):
-        """Returns a new dataset that contains the named variables.
+    def _get_associated_variables(self, *names):
+        associated = set(names)
+        associated |= {k for k, v in self.iteritems()
+                       if any(name in v.dimensions for name in names)}
 
-        Dimensions on which those variables are defined are also included, as
-        well as the corresponding coordinate variables, and any variables
-        listed under the 'coordinates' attribute of the named variables.
+    def select(self, *names):
+        """Returns a new dataset that contains only the named variables and
+        their coordinates.
 
         Parameters
         ----------
@@ -853,45 +846,14 @@ class Dataset(Mapping):
         Returns
         -------
         Dataset
-            The returned object has the same attributes as the original.
-            Variables are included (recursively) if at least one of the
-            specified variables refers to that variable in its dimensions or
-            "coordinates" attribute. All other variables are dropped.
+            The returned object has the same attributes as the original. Only
+            the names variables and their coordinates are included.
         """
-        possible_vars = set(self) | set(self.virtual_variables)
-        if not set(names) <= possible_vars:
-            raise ValueError(
-                "One or more of the specified variables does not exist")
-
-        def get_all_associated_names(name):
-            yield name
-            if name in possible_vars:
-                var = self.variables[name]
-                for dim in var.dimensions:
-                    yield dim
-                if 'coordinates' in var.attributes:
-                    coords = var.attributes['coordinates']
-                    if coords != '':
-                        for coord in coords.split(' '):
-                            yield coord
-
-        # TODO: come up with a better way of selecting associated variables
-        # that aren't dimensions -- perhaps adding something to the public API?
-        queue = set(names)
-        selected_names = set()
-        while queue:
-            name = queue.pop()
-            new_names = set(get_all_associated_names(name))
-            queue |= new_names - selected_names
-            selected_names |= new_names
-
-        variables = OrderedDict((k, self.variables[k])
-                                for k in list(self) + self.virtual_variables
-                                if k in selected_names)
+        variables = OrderedDict((k, self[k]) for k in names)
         return type(self)(variables, self.attributes)
 
     def unselect(self, *names):
-        """Returns a new dataset without the named variables
+        """Returns a new dataset without the named variables.
 
         Parameters
         ----------
@@ -963,15 +925,7 @@ class Dataset(Mapping):
         --------
         numpy.squeeze
         """
-        if dimension is None:
-            dimension = [d for d, s in self.dimensions.iteritems() if s == 1]
-        else:
-            if isinstance(dimension, basestring):
-                dimension = [dimension]
-            if any(self.dimensions[k] > 1 for k in dimension):
-                raise ValueError('cannot select a dimension to squeeze out '
-                                 'which has length greater than one')
-        return self.indexed_by(**{dim: 0 for dim in dimension})
+        return utils.squeeze(self, self.dimensions, dimension)
 
     @classmethod
     def concat(cls, datasets, dimension='concat_dimension', indexers=None,
@@ -1051,13 +1005,13 @@ class Dataset(Mapping):
                 if k not in concatenated and k not in concat_over:
                     raise ValueError('encountered unexpected variable %r' % k)
                 elif (k in concatenated and k != dim_name and
-                          not utils.xarray_equal(v, concatenated[k])):
+                          not utils.variable_equal(v, concatenated[k])):
                     raise ValueError(
                         'variable %r not equal across datasets' % k)
 
         # stack up each variable to fill-out the dataset
         for k in concat_over:
-            concatenated[k] = xarray.XArray.concat(
+            concatenated[k] = variable.Variable.concat(
                 [ds[k] for ds in datasets], dimension, indexers)
 
         if not isinstance(dimension, basestring):
@@ -1081,10 +1035,10 @@ class Dataset(Mapping):
         shape = tuple(self.dimensions.values())
         empty_data = np.lib.stride_tricks.as_strided(np.array(0), shape=shape,
                                                      strides=[0] * len(shape))
-        template = xarray.XArray(self.dimensions.keys(), empty_data)
+        template = variable.Variable(self.dimensions.keys(), empty_data)
         for k in columns:
-            _, var = xarray.broadcast_xarrays(template, self.variables[k])
-            _, var_data = np.broadcast_arrays(template.data, var.data)
+            _, var = variable.broadcast_variables(template, self.variables[k])
+            _, var_data = np.broadcast_arrays(template.values, var.values)
             data.append(var_data.reshape(-1))
 
         index = multi_index_from_product(self.coordinates.values(),

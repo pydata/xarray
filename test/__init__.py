@@ -36,14 +36,14 @@ def requires_netCDF4(test):
 
 
 class TestCase(unittest.TestCase):
-    def assertXArrayEqual(self, v1, v2):
-        self.assertTrue(utils.xarray_equal(v1, v2))
+    def assertVariableEqual(self, v1, v2):
+        self.assertTrue(utils.variable_equal(v1, v2))
 
-    def assertXArrayAllClose(self, v1, v2, rtol=1e-05, atol=1e-08):
-        self.assertTrue(utils.xarray_allclose(v1, v2, rtol=rtol, atol=atol))
+    def assertVariableAllClose(self, v1, v2, rtol=1e-05, atol=1e-08):
+        self.assertTrue(utils.variable_allclose(v1, v2, rtol=rtol, atol=atol))
 
-    def assertXArrayNotEqual(self, v1, v2):
-        self.assertFalse(utils.xarray_equal(v1, v2))
+    def assertVariableNotEqual(self, v1, v2):
+        self.assertFalse(utils.variable_equal(v1, v2))
 
     def assertArrayEqual(self, a1, a2):
         assert_array_equal(a1, a2)
@@ -56,7 +56,7 @@ class TestCase(unittest.TestCase):
         for k in d1:
             v1 = d1.variables[k]
             v2 = d2.variables[k]
-            self.assertXArrayEqual(v1, v2)
+            self.assertVariableEqual(v1, v2)
 
     def assertDatasetAllClose(self, d1, d2, rtol=1e-05, atol=1e-08):
         self.assertTrue(utils.dict_equal(d1.attributes, d2.attributes))
@@ -64,7 +64,7 @@ class TestCase(unittest.TestCase):
         for k in d1:
             v1 = d1.variables[k]
             v2 = d2.variables[k]
-            self.assertXArrayAllClose(v1, v2, rtol=rtol, atol=atol)
+            self.assertVariableAllClose(v1, v2, rtol=rtol, atol=atol)
 
     def assertDataArrayEqual(self, ar1, ar2):
         self.assertEqual(ar1.name, ar2.name)

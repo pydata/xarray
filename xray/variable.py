@@ -14,35 +14,36 @@ import data_array
 from common import AbstractArray
 
 
-def as_xarray(obj, strict=True):
-    """Convert an object into an XArray
+def as_variable(obj, strict=True):
+    """Convert an object into an Variable
 
-    - If the object is already an `XArray`, return it.
+    - If the object is already an `Variable`, return it.
     - If the object is a `DataArray`, return it if `strict=False` or return
       its variable if `strict=True`.
     - Otherwise, if the object has 'dimensions' and 'data' attributes, convert
-      it into a new `XArray`.
-    - If all else fails, attempt to convert the object into an `XArray` by
-      unpacking it into the arguments for `XArray.__init__`.
+      it into a new `Variable`.
+    - If all else fails, attempt to convert the object into an `Variable` by
+      unpacking it into the arguments for `Variable.__init__`.
     """
     # TODO: consider extending this method to automatically handle Iris and
     # pandas objects.
     if strict and hasattr(obj, 'variable'):
-        # extract the primary XArray from DataArrays
+        # extract the primary Variable from DataArrays
         obj = obj.variable
-    if not isinstance(obj, (XArray, data_array.DataArray)):
-        if hasattr(obj, 'dimensions') and hasattr(obj, 'data'):
-            obj = XArray(obj.dimensions, obj.data,
+    if not isinstance(obj, (Variable, data_array.DataArray)):
+        if hasattr(obj, 'dimensions') and hasattr(obj, 'values'):
+            obj = Variable(obj.dimensions, obj.values,
                          getattr(obj, 'attributes', None),
                          getattr(obj, 'encoding', None))
         else:
             if isinstance(obj, np.ndarray):
                 raise TypeError('cannot convert numpy.ndarray objects into '
-                                'XArray objects without supplying dimensions')
+                                'Variable objects without supplying '
+                                'dimensions')
             try:
-                obj = XArray(*obj)
+                obj = Variable(*obj)
             except TypeError:
-                raise TypeError('cannot convert argument into an XArray')
+                raise TypeError('cannot convert argument into an Variable')
     return obj
 
 
@@ -56,17 +57,17 @@ def _as_compatible_data(data):
     if (not all(hasattr(data, attr) for attr in required)
             or isinstance(data, np.string_)):
         data = np.asarray(data)
-    elif isinstance(data, AbstractArray):
-        # we don't want nested Array objects
-        data = data.data
+    elif hasattr(data, 'values') and not isinstance(data, pd.Index):
+        # we don't want nested self-described arrays
+        data = data.values
     return data
 
 
-class XArray(AbstractArray):
+class Variable(AbstractArray):
     """A netcdf-like variable consisting of dimensions, data and attributes
-    which describe a single Array. A single XArray object is not fully described
-    outside the context of its parent Dataset (if you want such a fully
-    described object, use a DataArray instead).
+    which describe a single Array. A single Variable object is not fully
+    described outside the context of its parent Dataset (if you want such a
+    fully described object, use a DataArray instead).
     """
     def __init__(self, dims, data, attributes=None, encoding=None,
                  indexing_mode='numpy'):
@@ -86,13 +87,13 @@ class XArray(AbstractArray):
             Dictionary specifying how to encode this array's data into a
             serialized format like netCDF4. Currently used keys (for netCDF)
             include '_FillValue', 'scale_factor', 'add_offset' and 'dtype'.
-            Well behaviored code to serialize an XArray should ignore
+            Well behaviored code to serialize an Variable should ignore
         indexing_mode : {'numpy', 'orthogonal'}
             String indicating how the data parameter handles fancy indexing
             (with arrays). Two modes are supported: 'numpy' (fancy indexing
             like numpy.ndarray objects) and 'orthogonal' (array indexing
             accesses different dimensions independently, like netCDF4
-            variables). Accessing data from an XArray always uses orthogonal
+            variables). Accessing data from an Variable always uses orthogonal
             indexing, so `indexing_mode` tells the variable whether index
             lookups need to be internally converted to numpy-style indexing.
             unrecognized keys in this dictionary.
@@ -128,44 +129,60 @@ class XArray(AbstractArray):
         return isinstance(self._data, (np.ndarray, pd.Index))
 
     @property
-    def data(self):
+    def values(self):
         """The variable's data as a numpy.ndarray"""
         self._data = np.asarray(self._data)
         self._indexing_mode = 'numpy'
-        data = self._data
-        if data.ndim == 0 and data.dtype.kind == 'O':
+        values = self._data
+        if values.ndim == 0 and values.dtype.kind == 'O':
             # unpack 0d object arrays to be consistent with numpy
-            data = data.item()
-        return data
+            values = values.item()
+        return values
 
-    @data.setter
-    def data(self, value):
-        value = np.asarray(value)
-        if value.shape != self.shape:
-            raise ValueError("replacement data must match the XArray's shape")
-        self._data = value
+    @values.setter
+    def values(self, values):
+        values = np.asarray(values)
+        if values.shape != self.shape:
+            raise ValueError(
+                "replacement values must match the Variable's shape")
+        self._data = values
         self._indexing_mode = 'numpy'
 
     @property
-    def index(self):
+    def data(self):
+        utils.alias_warning('data', 'values', stacklevel=3)
+        return self.values
+
+    @data.setter
+    def data(self, value):
+        utils.alias_warning('data', 'values')
+        self.values = value
+
+    @property
+    def as_index(self):
         """The variable's data as a pandas.Index"""
         if self.ndim != 1:
             raise ValueError('can only access 1-d arrays as an index')
         if isinstance(self._data, pd.Index):
             index = self._data
         else:
-            index = utils.safe_cast_to_index(self.data)
+            index = utils.safe_cast_to_index(self.values)
         return index
 
+    @property
+    def index(self):
+        utils.alias_warning('index', 'as_index', stacklevel=3)
+        return self.as_index
+
     def to_coord(self):
-        """Return this array as an CoordXArray"""
-        return CoordXArray(self.dimensions, self._data, self.attributes,
-                           encoding=self.encoding,
-                           indexing_mode=self._indexing_mode, dtype=self.dtype)
+        """Return this variable as a Coordinate"""
+        return Coordinate(self.dimensions, self._data, self.attributes,
+                          encoding=self.encoding,
+                          indexing_mode=self._indexing_mode)
 
     @property
     def dimensions(self):
-        """Tuple of dimension names with which this array is associated.
+        """Tuple of dimension names with which this variable is associated.
         """
         return self._dimensions
 
@@ -202,16 +219,14 @@ class XArray(AbstractArray):
             key = utils.orthogonal_indexer(key, self.shape)
         return key
 
-    def _get_data(self, key):
+    def _get_values(self, key):
         """Internal method for getting data from _data, given a key already
         converted to a suitable type (via _convert_indexer)"""
         if len(key) == 1:
             # unpack key so it can index a pandas.Index object (pandas.Index
             # objects don't like tuples)
             key, = key
-        # do integer based indexing if supported by _data (i.e., if _data is
-        # a pandas object)
-        return getattr(self._data, 'iloc', self._data)[key]
+        return self._data[key]
 
     def __getitem__(self, key):
         """Return a new Array object whose contents are consistent with
@@ -228,35 +243,31 @@ class XArray(AbstractArray):
         variable's dimensions.
 
         If you really want to do indexing like `x[x > 0]`, manipulate the numpy
-        array `x.data` directly.
+        array `x.values` directly.
         """
         key = self._convert_indexer(key)
         dimensions = [dim for k, dim in zip(key, self.dimensions)
                       if not isinstance(k, int)]
-        data = self._get_data(key)
+        values = self._get_values(key)
         # orthogonal indexing should ensure the dimensionality is consistent
-        if hasattr(data, 'ndim'):
-            assert data.ndim == len(dimensions)
+        if hasattr(values, 'ndim'):
+            assert values.ndim == len(dimensions)
         else:
             assert len(dimensions) == 0
-        # don't keep indexing_mode, because data should now be an ndarray
-        return type(self)(dimensions, data, self.attributes, self.encoding)
+        # don't keep indexing_mode, because values should now be an ndarray
+        return type(self)(dimensions, values, self.attributes, self.encoding)
 
     def __setitem__(self, key, value):
-        """__setitem__ is overloaded to access the underlying numpy data with
+        """__setitem__ is overloaded to access the underlying numpy values with
         orthogonal indexing.
 
         See __getitem__ for more details.
         """
-        self.data[self._convert_indexer(key, indexing_mode='numpy')] = value
-
-    def __iter__(self):
-        for n in range(len(self)):
-            yield self[n]
+        self.values[self._convert_indexer(key, indexing_mode='numpy')] = value
 
     @property
     def attributes(self):
-        """Dictionary of local attributes on this array.
+        """Dictionary of local attributes on this variable.
         """
         return self._attributes
 
@@ -266,7 +277,7 @@ class XArray(AbstractArray):
         If `deep=True`, the data array is loaded into memory and copied onto
         the new object. Dimensions, attributes and encodings are always copied.
         """
-        data = self.data.copy() if deep else self._data
+        data = self.values.copy() if deep else self._data
         # note:
         # dimensions is already an immutable tuple
         # attributes and encoding will be copied when the new Array is created
@@ -284,7 +295,7 @@ class XArray(AbstractArray):
     # mutable objects should not be hashable
     __hash__ = None
 
-    def indexed_by(self, **indexers):
+    def indexed(self, **indexers):
         """Return a new array indexed along the specified dimension(s).
 
         Parameters
@@ -311,8 +322,10 @@ class XArray(AbstractArray):
                 key[i] = indexers[dim]
         return self[tuple(key)]
 
+    indexed_by = utils.function_alias(indexed, 'indexed_by')
+
     def transpose(self, *dimensions):
-        """Return a new XArray object with transposed dimensions.
+        """Return a new Variable object with transposed dimensions.
 
         Parameters
         ----------
@@ -322,13 +335,13 @@ class XArray(AbstractArray):
 
         Returns
         -------
-        transposed : XArray
+        transposed : Variable
             The returned object has transposed data and dimensions with the
             same attributes as the original.
 
         Notes
         -----
-        Although this operation returns a view of this array's data, it is
+        Although this operation returns a view of this variable's data, it is
         not lazy -- the data will be fully loaded.
 
         See Also
@@ -338,11 +351,11 @@ class XArray(AbstractArray):
         if len(dimensions) == 0:
             dimensions = self.dimensions[::-1]
         axes = [self.dimensions.index(dim) for dim in dimensions]
-        data = self.data.transpose(*axes)
+        data = self.values.transpose(*axes)
         return type(self)(dimensions, data, self.attributes, self.encoding)
 
     def squeeze(self, dimension=None):
-        """Return a new XArray object with squeezed data.
+        """Return a new Variable object with squeezed data.
 
         Parameters
         ----------
@@ -353,7 +366,7 @@ class XArray(AbstractArray):
 
         Returns
         -------
-        squeezed : XArray
+        squeezed : Variable
             This array, but with with all or a subset of the dimensions of
             length 1 removed.
 
@@ -367,15 +380,7 @@ class XArray(AbstractArray):
         numpy.squeeze
         """
         dimensions = dict(zip(self.dimensions, self.shape))
-        if dimension is None:
-            dimension = [d for d, s in dimensions.iteritems() if s == 1]
-        else:
-            if isinstance(dimension, basestring):
-                dimension = [dimension]
-            if any(dimensions[k] > 1 for k in dimension):
-                raise ValueError('cannot select a dimension to squeeze out '
-                                 'which has length greater than one')
-        return self.indexed_by(**{dim: 0 for dim in dimension})
+        return utils.squeeze(self, dimensions, dimension)
 
     def reduce(self, func, dimension=None, axis=None, **kwargs):
         """Reduce this array by applying `func` along some dimension(s).
@@ -409,14 +414,14 @@ class XArray(AbstractArray):
         # reduce the data
         if dimension is not None:
             axis = self.get_axis_num(dimension)
-        data = func(self.data, axis=axis, **kwargs)
+        data = func(self.values, axis=axis, **kwargs)
 
-        # construct the new XArray
+        # construct the new Variable
         removed_axes = (range(self.ndim) if axis is None
                         else np.atleast_1d(axis) % self.ndim)
         dims = [dim for axis, dim in enumerate(self.dimensions)
                 if axis not in removed_axes]
-        var = XArray(dims, data, _math_safe_attributes(self.attributes))
+        var = Variable(dims, data, _math_safe_attributes(self.attributes))
 
         # update 'cell_methods' according to CF conventions
         removed_dims = [dim for axis, dim in enumerate(self.dimensions)
@@ -465,8 +470,8 @@ class XArray(AbstractArray):
 
         Returns
         -------
-        stacked : XArray
-            Concatenated XArray formed by stacking all the supplied variables
+        stacked : Variable
+            Concatenated Variable formed by stacking all the supplied variables
             along the given dimension.
         """
         if not isinstance(dimension, basestring):
@@ -526,18 +531,18 @@ class XArray(AbstractArray):
 
             key = tuple(indexer if n == axis else slice(None)
                         for n in range(concatenated.ndim))
-            concatenated.data[key] = var.data
+            concatenated.values[key] = var.values
 
         return concatenated
 
     def __array_wrap__(self, obj, context=None):
-        return XArray(self.dimensions, obj, self.attributes)
+        return Variable(self.dimensions, obj, self.attributes)
 
     @staticmethod
     def _unary_op(f):
         @functools.wraps(f)
         def func(self, *args, **kwargs):
-            return XArray(self.dimensions, f(self.data, *args, **kwargs),
+            return Variable(self.dimensions, f(self.values, *args, **kwargs),
                           _math_safe_attributes(self.attributes))
         return func
 
@@ -547,7 +552,7 @@ class XArray(AbstractArray):
         def func(self, other):
             if isinstance(other, data_array.DataArray):
                 return NotImplemented
-            self_data, other_data, dims = _broadcast_xarray_data(self, other)
+            self_data, other_data, dims = _broadcast_variable_data(self, other)
             new_data = (f(self_data, other_data)
                         if not reflexive
                         else f(other_data, self_data))
@@ -556,32 +561,33 @@ class XArray(AbstractArray):
             if hasattr(other, 'attributes'):
                 new_attr = utils.ordered_dict_intersection(
                     new_attr, _math_safe_attributes(other.attributes))
-            return XArray(dims, new_data, new_attr)
+            return Variable(dims, new_data, new_attr)
         return func
 
     @staticmethod
     def _inplace_binary_op(f):
         @functools.wraps(f)
         def func(self, other):
-            self_data, other_data, dims = _broadcast_xarray_data(self, other)
+            self_data, other_data, dims = _broadcast_variable_data(self, other)
             if dims != self.dimensions:
                 raise ValueError('dimensions cannot change for in-place '
                                  'operations')
-            self.data = f(self_data, other_data)
+            self.values = f(self_data, other_data)
             if hasattr(other, 'attributes'):
                 utils.remove_incompatible_items(
                     self.attributes, _math_safe_attributes(other.attributes))
             return self
         return func
 
-ops.inject_special_operations(XArray)
+ops.inject_special_operations(Variable)
 
 
-class CoordXArray(XArray):
-    """Subclass of XArray which caches its data as a pandas.Index instead of
-    a numpy.ndarray
+class Coordinate(Variable):
+    """Subclass of Variable which caches its data as a pandas.Index instead of
+    a numpy.ndarray.
 
-    CoordXArrays must always be 1-dimensional.
+    Coordinates must always be 1-dimensional. In addition to Variable methods,
+    they support some pandas.Index methods directly (e.g., get_indexer).
     """
     def __init__(self, dims, data, attributes=None, encoding=None,
                  indexing_mode='numpy', dtype=None):
@@ -594,7 +600,7 @@ class CoordXArray(XArray):
             necessarily faithfully maintain the data type (many types are
             converted into object arrays).
         """
-        super(CoordXArray, self).__init__(dims, data, attributes, encoding,
+        super(Coordinate, self).__init__(dims, data, attributes, encoding,
                                           indexing_mode)
         if self.ndim != 1:
             raise ValueError('%s objects must be 1-dimensional' %
@@ -608,46 +614,65 @@ class CoordXArray(XArray):
         return self._dtype
 
     @property
-    def data(self):
-        """The variable's data as a numpy.ndarray"""
-        data = np.asarray(self._data).astype(self.dtype)
+    def values(self):
+        """The variable's values as a numpy.ndarray"""
+        values = np.asarray(self._data).astype(self.dtype)
         if not isinstance(self._data, pd.Index):
-            # always cache data as a pandas index
-            self._data = utils.safe_cast_to_index(data)
+            # always cache values as a pandas index
+            self._data = utils.safe_cast_to_index(values)
             self._indexing_mode = 'numpy'
-        return data
+        return values
 
-    @data.setter
-    def data(self, value):
-        raise TypeError('%s data cannot be modified' % type(self).__name__)
+    @values.setter
+    def values(self, value):
+        raise TypeError('%s values cannot be modified' % type(self).__name__)
 
     def __getitem__(self, key):
-        data = self._get_data(self._convert_indexer(key))
-        if not hasattr(data, 'ndim') or data.ndim == 0:
-            data = np.asarray(data).astype(self.dtype)
-            return XArray((), data, self.attributes, self.encoding)
+        values = self._get_values(self._convert_indexer(key))
+        if not hasattr(values, 'ndim') or values.ndim == 0:
+            values = np.asarray(values).astype(self.dtype)
+            return Variable((), values, self.attributes, self.encoding)
         else:
-            return type(self)(self.dimensions, data, self.attributes,
+            return type(self)(self.dimensions, values, self.attributes,
                               self.encoding, dtype=self.dtype)
 
     def __setitem__(self, key, value):
-        raise TypeError('%s data cannot be modified' % type(self).__name__)
+        raise TypeError('%s values cannot be modified' % type(self).__name__)
 
     def copy(self, deep=True):
         """Returns a copy of this object.
 
-        If `deep=True`, the data array is loaded into memory and copied onto
+        If `deep=True`, the values array is loaded into memory and copied onto
         the new object. Dimensions, attributes and encodings are always copied.
         """
-        # there is no need to copy the index data here even if deep=True since
-        # pandas.Index objects are immutable
-        data = self.index if deep else self._data
+        # there is no need to copy the index values here even if deep=True
+        # since pandas.Index objects are immutable
+        data = self.as_index if deep else self._data
         return type(self)(self.dimensions, data, self.attributes,
                           self.encoding, self._indexing_mode, self.dtype)
 
     def to_coord(self):
-        """Return this array as an CoordXArray"""
+        """Return this variable as an Coordinate"""
         return self
+
+    def get_indexer(self, label):
+        return self.as_index.get_indexer(label)
+
+    def slice_indexer(self, start=None, stop=None, step=None):
+        return self.as_index.slice_indexer(start, stop, step)
+
+    def slice_locs(self, start=None, stop=None):
+        return self.as_index.slice_locs(start, stop)
+
+    def get_loc(self, label):
+        return self.as_index.get_loc(label)
+
+    @property
+    def is_monotonic(self):
+        return self.as_index.is_monotonic
+
+    def is_numeric(self):
+        return self.as_index.is_numeric()
 
 
 def _math_safe_attributes(attributes):
@@ -655,18 +680,18 @@ def _math_safe_attributes(attributes):
                        if k not in ['units'])
 
 
-def broadcast_xarrays(first, second):
-    """Given two XArrays, return two XArrays with matching dimensions and numpy
-    broadcast compatible data.
+def broadcast_variables(first, second):
+    """Given two Variables, return two Variables with matching dimensions and
+    numpy broadcast compatible data.
 
     Parameters
     ----------
-    first, second : XArray
-        XArray objects to broadcast.
+    first, second : Variable
+        Variable objects to broadcast.
 
     Returns
     -------
-    first_broadcast, second_broadcast : XArray
+    first_broadcast, second_broadcast : Variable
         Broadcast arrays. The data on each variable will be a view of the
         data on the corresponding original arrays, but dimensions will be
         reordered and inserted so that both broadcast arrays have the same
@@ -695,31 +720,31 @@ def broadcast_xarrays(first, second):
 
     # expand first_data's dimensions so it's broadcast compatible after
     # adding second's dimensions at the end
-    first_data = first.data[(Ellipsis,) + (None,) * len(second_only_dims)]
-    new_first = XArray(dimensions, first_data, first.attributes,
+    first_data = first.values[(Ellipsis,) + (None,) * len(second_only_dims)]
+    new_first = Variable(dimensions, first_data, first.attributes,
                        first.encoding)
     # expand and reorder second_data so the dimensions line up
     first_only_dims = [d for d in dimensions if d not in second.dimensions]
     second_dims = list(second.dimensions) + first_only_dims
-    second_data = second.data[(Ellipsis,) + (None,) * len(first_only_dims)]
-    new_second = XArray(second_dims, second_data, first.attributes,
+    second_data = second.values[(Ellipsis,) + (None,) * len(first_only_dims)]
+    new_second = Variable(second_dims, second_data, first.attributes,
                         second.encoding).transpose(*dimensions)
     return new_first, new_second
 
 
-def _broadcast_xarray_data(self, other):
+def _broadcast_variable_data(self, other):
     if isinstance(other, dataset.Dataset):
         raise TypeError('datasets do not support mathematical operations')
     elif all(hasattr(other, attr) for attr
-             in ['dimensions', 'data', 'shape', 'encoding']):
-        # `other` satisfies the necessary xray.Array API for broadcast_xarrays
-        new_self, new_other = broadcast_xarrays(self, other)
-        self_data = new_self.data
-        other_data = new_other.data
+             in ['dimensions', 'values', 'shape', 'encoding']):
+        # `other` satisfies the necessary Variable API for broadcast_variables
+        new_self, new_other = broadcast_variables(self, other)
+        self_data = new_self.values
+        other_data = new_other.values
         dimensions = new_self.dimensions
     else:
         # rely on numpy broadcasting rules
-        self_data = self.data
+        self_data = self.values
         other_data = other
         dimensions = self.dimensions
     return self_data, other_data, dimensions

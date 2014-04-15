@@ -4,8 +4,8 @@ import numpy as np
 import pandas as pd
 from datetime import datetime
 
-import xarray
 import utils
+import variable
 
 
 # Special characters that are permitted in netCDF names except in the
@@ -394,14 +394,14 @@ def char_to_string(arr):
     return arr.view(kind + str(arr.shape[-1]))[..., 0]
 
 
-def encode_cf_variable(array):
+def encode_cf_variable(var):
     """Converts an XArray into an XArray suitable for saving as a netCDF
     variable
     """
-    dimensions = array.dimensions
-    data = array.data
-    attributes = array.attributes.copy()
-    encoding = array.encoding.copy()
+    dimensions = var.dimensions
+    data = var.values
+    attributes = var.attributes.copy()
+    encoding = var.encoding.copy()
 
     if (np.issubdtype(data.dtype, np.datetime64)
             or (data.dtype.kind == 'O'
@@ -458,7 +458,7 @@ def encode_cf_variable(array):
             data = data.round()
         data = data.astype(encoding['dtype'])
 
-    return xarray.XArray(dimensions, data, attributes, encoding=encoding)
+    return variable.Variable(dimensions, data, attributes, encoding=encoding)
 
 
 def decode_cf_variable(var, mask_and_scale=True):
@@ -506,5 +506,5 @@ def decode_cf_variable(var, mask_and_scale=True):
         calendar = pop_to(attributes, encoding, 'calendar')
         data = DecodedCFDatetimeArray(data, units, calendar)
 
-    return xarray.XArray(dimensions, data, attributes, encoding=encoding,
-                         indexing_mode=indexing_mode)
+    return variable.Variable(dimensions, data, attributes, encoding=encoding,
+                             indexing_mode=indexing_mode)
