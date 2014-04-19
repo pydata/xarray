@@ -467,7 +467,6 @@ def decode_cf_variable(var, mask_and_scale=True):
     dimensions = var.dimensions
     attributes = var.attributes.copy()
     encoding = var.encoding.copy()
-    indexing_mode = var._indexing_mode
 
     def pop_to(source, dest, k):
         """
@@ -506,5 +505,4 @@ def decode_cf_variable(var, mask_and_scale=True):
         calendar = pop_to(attributes, encoding, 'calendar')
         data = DecodedCFDatetimeArray(data, units, calendar)
 
-    return variable.Variable(dimensions, data, attributes, encoding=encoding,
-                             indexing_mode=indexing_mode)
+    return variable.Variable(dimensions, data, attributes, encoding=encoding)

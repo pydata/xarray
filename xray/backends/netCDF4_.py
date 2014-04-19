@@ -6,7 +6,7 @@ import numpy as np
 from common import AbstractDataStore
 import xray
 from xray.conventions import encode_cf_variable
-from xray.utils import FrozenOrderedDict, NDArrayMixin
+from xray.utils import FrozenOrderedDict, NDArrayMixin, as_array_or_item
 
 
 class NetCDF4ArrayWrapper(NDArrayMixin):
@@ -28,7 +28,7 @@ class NetCDF4ArrayWrapper(NDArrayMixin):
             # work around for netCDF4-python's broken handling of 0-d
             # arrays (slicing them always returns a 1-dimensional array):
             # https://github.com/Unidata/netcdf4-python/pull/220
-            data = np.asarray(np.asscalar(self.array[...]))
+            data = as_array_or_item(np.asscalar(self.array[key]))
         else:
             data = self.array[key]
         return data
@@ -77,8 +77,7 @@ class NetCDF4DataStore(AbstractDataStore):
             # encoding['endian'] = var.endian()
             encoding['least_significant_digit'] = \
                 attributes.pop('least_significant_digit', None)
-            return xray.Variable(dimensions, data, attributes, encoding,
-                                 indexing_mode='orthogonal')
+            return xray.Variable(dimensions, data, attributes, encoding)
         return FrozenOrderedDict((k, convert_variable(v))
                                  for k, v in self.ds.variables.iteritems())
 

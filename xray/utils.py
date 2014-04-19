@@ -8,6 +8,7 @@ from collections import OrderedDict, Mapping, MutableMapping
 import numpy as np
 import pandas as pd
 
+import xray
 import variable
 
 
@@ -32,6 +33,17 @@ def class_alias(obj, old_name):
             return super(Wrapper, cls).__new__(cls, *args, **kwargs)
     Wrapper.__name__ = obj.__name__
     return Wrapper
+
+
+def as_array_or_item(values, dtype=None):
+    """Return the given values as a numpy array of the indicated dtype, or as
+    an individual value if it's a 0-dimensional object array.
+    """
+    values = np.asarray(values, dtype=dtype)
+    if values.ndim == 0 and values.dtype.kind == 'O':
+        # unpack 0d object arrays to be consistent with numpy
+        values = values.item()
+    return values
 
 
 def expanded_indexer(key, ndim):
@@ -228,28 +240,22 @@ xarray_equal = function_alias(variable_equal, 'xarray_equal')
 def safe_cast_to_index(array):
     """Given an array, safely cast it to a pandas.Index.
 
+    If it is already a pandas.Index, return it unchanged.
+
     Unlike pandas.Index, if the array has dtype=object or dtype=timedelta64,
     this function will not attempt to do automatic type conversion but will
     always return an index with dtype=object.
     """
-    kwargs = {}
-    if isinstance(array, np.ndarray):
-        if array.dtype == object or array.dtype == np.timedelta64:
-            kwargs['dtype'] = object
-    return pd.Index(array, **kwargs)
-
-
-def as_index(array):
-    """Given an array, return it if it already is a pandas Index; otherwise
-    safely cast it to a pandas Index.
-    """
     if isinstance(array, pd.Index):
         index = array
+    elif isinstance(array, xray.Coordinate):
+        index = array.as_index
     else:
-        try:
-            index = array.as_index
-        except AttributeError:
-            index = safe_cast_to_index(array)
+        kwargs = {}
+        if hasattr(array, 'dtype'):
+            if array.dtype == object or array.dtype == np.timedelta64:
+                kwargs['dtype'] = object
+        index = pd.Index(np.asarray(array), **kwargs)
     return index
 
 

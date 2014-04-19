@@ -60,7 +60,70 @@ def _as_compatible_data(data):
     elif hasattr(data, 'values') and not isinstance(data, pd.Index):
         # we don't want nested self-described arrays
         data = data.values
+
+    if isinstance(data, pd.Index):
+        # check pd.Index first since it's (currently) an ndarray subclass
+        data = PandasIndexAdapter(data)
+    elif isinstance(data, np.ndarray):
+        data = NumpyArrayAdapter(data)
     return data
+
+
+class NumpyArrayAdapter(utils.NDArrayMixin):
+    """Wrap a NumPy array to use orthogonal indexing (array indexing
+    accesses different dimensions independently, like netCDF4-python variables)
+    """
+    # note: this object is somewhat similar to biggus.NumpyArrayAdapter in that
+    # it implements orthogonal indexing, except it casts to a numpy array,
+    # isn't lazy and supports writing values.
+    def __init__(self, array):
+        self.array = np.asarray(array)
+
+    def __array__(self):
+        return self.array
+
+    def _convert_key(self, key):
+        key = utils.expanded_indexer(key, self.ndim)
+        if any(not isinstance(k, (int, slice)) for k in key):
+            # key would trigger fancy indexing
+            key = utils.orthogonal_indexer(key, self.shape)
+        return key
+
+    def __getitem__(self, key):
+        key = self._convert_key(key)
+        return self.array[key]
+
+    def __setitem__(self, key, value):
+        key = self._convert_key(key)
+        self.array[key] = value
+
+
+class PandasIndexAdapter(utils.NDArrayMixin):
+    """Wrap a pandas.Index to be better about preserving dtypes and to handle
+    indexing by length 1 tuples like numpy
+    """
+    def __init__(self, array, dtype=None):
+        self.array = utils.safe_cast_to_index(array)
+        if dtype is None:
+            dtype = array.dtype
+        self._dtype = dtype
+
+    @property
+    def dtype(self):
+        return self._dtype
+
+    def __array__(self):
+        return self.array.values.astype(self.dtype)
+
+    def __getitem__(self, key):
+        if isinstance(key, tuple) and len(key) == 1:
+            # unpack key so it can index a pandas.Index object (pandas.Index
+            # objects don't like tuples)
+            key, = key
+        if isinstance(key, int):
+            return utils.as_array_or_item(self.array[key], dtype=self.dtype)
+        else:
+            return PandasIndexAdapter(self.array[key], dtype=self.dtype)
 
 
 class Variable(AbstractArray):
@@ -69,8 +132,7 @@ class Variable(AbstractArray):
     described outside the context of its parent Dataset (if you want such a
     fully described object, use a DataArray instead).
     """
-    def __init__(self, dims, data, attributes=None, encoding=None,
-                 indexing_mode='numpy'):
+    def __init__(self, dims, data, attributes=None, encoding=None):
         """
         Parameters
         ----------
@@ -87,16 +149,8 @@ class Variable(AbstractArray):
             Dictionary specifying how to encode this array's data into a
             serialized format like netCDF4. Currently used keys (for netCDF)
             include '_FillValue', 'scale_factor', 'add_offset' and 'dtype'.
-            Well behaviored code to serialize an Variable should ignore
-        indexing_mode : {'numpy', 'orthogonal'}
-            String indicating how the data parameter handles fancy indexing
-            (with arrays). Two modes are supported: 'numpy' (fancy indexing
-            like numpy.ndarray objects) and 'orthogonal' (array indexing
-            accesses different dimensions independently, like netCDF4
-            variables). Accessing data from an Variable always uses orthogonal
-            indexing, so `indexing_mode` tells the variable whether index
-            lookups need to be internally converted to numpy-style indexing.
-            unrecognized keys in this dictionary.
+            Well behaviored code to serialize a Variable should ignore
+            unrecognized encoding items.
         """
         self._data = _as_compatible_data(data)
         self._dimensions = self._parse_dimensions(dims)
@@ -104,7 +158,6 @@ class Variable(AbstractArray):
             attributes = {}
         self._attributes = OrderedDict(attributes)
         self.encoding = dict({} if encoding is None else encoding)
-        self._indexing_mode = indexing_mode
 
     @property
     def dtype(self):
@@ -126,27 +179,27 @@ class Variable(AbstractArray):
         return len(self._data)
 
     def in_memory(self):
-        return isinstance(self._data, (np.ndarray, pd.Index))
+        return isinstance(self._data, (NumpyArrayAdapter, PandasIndexAdapter))
+
+    _cache_data_class = NumpyArrayAdapter
+
+    def _data_cached(self):
+        if not isinstance(self._data, self._cache_data_class):
+            self._data = self._cache_data_class(self._data)
+        return self._data
 
     @property
     def values(self):
         """The variable's data as a numpy.ndarray"""
-        self._data = np.asarray(self._data)
-        self._indexing_mode = 'numpy'
-        values = self._data
-        if values.ndim == 0 and values.dtype.kind == 'O':
-            # unpack 0d object arrays to be consistent with numpy
-            values = values.item()
-        return values
+        return utils.as_array_or_item(self._data_cached())
 
     @values.setter
     def values(self, values):
-        values = np.asarray(values)
+        values = _as_compatible_data(values)
         if values.shape != self.shape:
             raise ValueError(
                 "replacement values must match the Variable's shape")
         self._data = values
-        self._indexing_mode = 'numpy'
 
     @property
     def data(self):
@@ -158,27 +211,10 @@ class Variable(AbstractArray):
         utils.alias_warning('data', 'values')
         self.values = value
 
-    @property
-    def as_index(self):
-        """The variable's data as a pandas.Index"""
-        if self.ndim != 1:
-            raise ValueError('can only access 1-d arrays as an index')
-        if isinstance(self._data, pd.Index):
-            index = self._data
-        else:
-            index = utils.safe_cast_to_index(self.values)
-        return index
-
-    @property
-    def index(self):
-        utils.alias_warning('index', 'as_index', stacklevel=3)
-        return self.as_index
-
     def to_coord(self):
         """Return this variable as a Coordinate"""
         return Coordinate(self.dimensions, self._data, self.attributes,
-                          encoding=self.encoding,
-                          indexing_mode=self._indexing_mode)
+                          encoding=self.encoding)
 
     @property
     def dimensions(self):
@@ -200,34 +236,6 @@ class Variable(AbstractArray):
     def dimensions(self, value):
         self._dimensions = self._parse_dimensions(value)
 
-    def _convert_indexer(self, key, indexing_mode=None):
-        """Converts an orthogonal indexer into a fully expanded key (of the
-        same length as dimensions) suitable for indexing a data array with the
-        given indexing_mode.
-
-        See Also
-        --------
-        utils.expanded_indexer
-        utils.orthogonal_indexer
-        """
-        if indexing_mode is None:
-            indexing_mode = self._indexing_mode
-        key = utils.expanded_indexer(key, self.ndim)
-        if (indexing_mode == 'numpy'
-                and any(not isinstance(k, (int, slice)) for k in key)):
-            # key would trigger fancy indexing
-            key = utils.orthogonal_indexer(key, self.shape)
-        return key
-
-    def _get_values(self, key):
-        """Internal method for getting data from _data, given a key already
-        converted to a suitable type (via _convert_indexer)"""
-        if len(key) == 1:
-            # unpack key so it can index a pandas.Index object (pandas.Index
-            # objects don't like tuples)
-            key, = key
-        return self._data[key]
-
     def __getitem__(self, key):
         """Return a new Array object whose contents are consistent with
         getting the provided key from the underlying data.
@@ -245,16 +253,15 @@ class Variable(AbstractArray):
         If you really want to do indexing like `x[x > 0]`, manipulate the numpy
         array `x.values` directly.
         """
-        key = self._convert_indexer(key)
+        key = utils.expanded_indexer(key, self.ndim)
         dimensions = [dim for k, dim in zip(key, self.dimensions)
                       if not isinstance(k, int)]
-        values = self._get_values(key)
+        values = self._data[key]
         # orthogonal indexing should ensure the dimensionality is consistent
         if hasattr(values, 'ndim'):
             assert values.ndim == len(dimensions)
         else:
             assert len(dimensions) == 0
-        # don't keep indexing_mode, because values should now be an ndarray
         return type(self)(dimensions, values, self.attributes, self.encoding)
 
     def __setitem__(self, key, value):
@@ -263,7 +270,7 @@ class Variable(AbstractArray):
 
         See __getitem__ for more details.
         """
-        self.values[self._convert_indexer(key, indexing_mode='numpy')] = value
+        self.values[key] = value
 
     @property
     def attributes(self):
@@ -282,7 +289,7 @@ class Variable(AbstractArray):
         # dimensions is already an immutable tuple
         # attributes and encoding will be copied when the new Array is created
         return type(self)(self.dimensions, data, self.attributes,
-                          self.encoding, self._indexing_mode)
+                          self.encoding)
 
     def __copy__(self):
         return self.copy(deep=False)
@@ -589,52 +596,21 @@ class Coordinate(Variable):
     Coordinates must always be 1-dimensional. In addition to Variable methods,
     they support some pandas.Index methods directly (e.g., get_indexer).
     """
-    def __init__(self, dims, data, attributes=None, encoding=None,
-                 indexing_mode='numpy', dtype=None):
-        """
-        Parameters
-        ----------
-        dtype : np.dtype, optional
-            Numpy dtype for the values in data. It is useful to keep track of
-            this separately because data converted into a pandas.Index does not
-            necessarily faithfully maintain the data type (many types are
-            converted into object arrays).
-        """
-        super(Coordinate, self).__init__(dims, data, attributes, encoding,
-                                          indexing_mode)
+    _cache_data_class = PandasIndexAdapter
+
+    def __init__(self, *args, **kwargs):
+        super(Coordinate, self).__init__(*args, **kwargs)
         if self.ndim != 1:
             raise ValueError('%s objects must be 1-dimensional' %
                              type(self).__name__)
-        if dtype is None:
-            dtype = self._data.dtype
-        self._dtype = dtype
-
-    @property
-    def dtype(self):
-        return self._dtype
-
-    @property
-    def values(self):
-        """The variable's values as a numpy.ndarray"""
-        values = np.asarray(self._data).astype(self.dtype)
-        if not isinstance(self._data, pd.Index):
-            # always cache values as a pandas index
-            self._data = utils.safe_cast_to_index(values)
-            self._indexing_mode = 'numpy'
-        return values
-
-    @values.setter
-    def values(self, value):
-        raise TypeError('%s values cannot be modified' % type(self).__name__)
 
     def __getitem__(self, key):
-        values = self._get_values(self._convert_indexer(key))
+        values = self._data[key]
         if not hasattr(values, 'ndim') or values.ndim == 0:
-            values = np.asarray(values).astype(self.dtype)
             return Variable((), values, self.attributes, self.encoding)
         else:
             return type(self)(self.dimensions, values, self.attributes,
-                              self.encoding, dtype=self.dtype)
+                              self.encoding)
 
     def __setitem__(self, key, value):
         raise TypeError('%s values cannot be modified' % type(self).__name__)
@@ -647,9 +623,26 @@ class Coordinate(Variable):
         """
         # there is no need to copy the index values here even if deep=True
         # since pandas.Index objects are immutable
-        data = self.as_index if deep else self._data
+        data = PandasIndexAdapter(self) if deep else self._data
         return type(self)(self.dimensions, data, self.attributes,
-                          self.encoding, self._indexing_mode, self.dtype)
+                          self.encoding)
+
+    @property
+    def as_index(self):
+        """The variable's data as a pandas.Index"""
+        if self.ndim != 1:
+            raise ValueError('can only access 1-d arrays as an index')
+        data = self._data_cached()
+        if isinstance(data, PandasIndexAdapter):
+            index = data.array
+        else:
+            index = utils.safe_cast_to_index(data)
+        return index
+
+    @property
+    def index(self):
+        utils.alias_warning('index', 'as_index', stacklevel=3)
+        return self.as_index
 
     def to_coord(self):
         """Return this variable as an Coordinate"""

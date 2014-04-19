@@ -448,12 +448,14 @@ class Dataset(Mapping):
         store.set_attributes(self.attributes)
         store.sync()
 
-    def dump(self, filepath, **kwdargs):
+    def to_netcdf(self, filepath, **kwdargs):
         """Dump dataset contents to a location on disk using the netCDF4
         package.
         """
         nc4_store = backends.NetCDF4DataStore(filepath, mode='w', **kwdargs)
         self.dump_to_store(nc4_store)
+
+    dump = to_netcdf
 
     def dumps(self, **kwargs):
         """Serialize dataset contents to a string. The serialization creates an
@@ -620,7 +622,8 @@ class Dataset(Mapping):
         from_indexers = {}
         for name, coord in self.coordinates.iteritems():
             if name in coordinates:
-                indexer = coord.get_indexer(utils.as_index(coordinates[name]))
+                target = utils.safe_cast_to_index(coordinates[name])
+                indexer = coord.get_indexer(target)
 
                 # Note pandas uses negative values from get_indexer to signify
                 # values that are missing in the index

@@ -7,7 +7,9 @@ import numpy as np
 import pandas as pd
 
 from xray import Variable, Dataset, DataArray
-from xray.variable import Coordinate, as_variable
+from xray.variable import (Coordinate, as_variable, NumpyArrayAdapter,
+                           PandasIndexAdapter)
+
 from . import TestCase
 
 
@@ -17,7 +19,6 @@ class VariableSubclassTestCases(object):
         v = Variable(['time'], data, {'foo': 'bar'})
         self.assertEqual(v.dimensions, ('time',))
         self.assertArrayEqual(v.values, data)
-        self.assertTrue(pd.Index(data).equals(v.as_index))
         self.assertEqual(v.dtype, float)
         self.assertEqual(v.shape, (10,))
         self.assertEqual(v.size, 10)
@@ -168,7 +169,7 @@ class TestVariable(TestCase, VariableSubclassTestCases):
         self.d = np.random.random((10, 3)).astype(np.float64)
 
     def test_data(self):
-        v = Variable(['time', 'x'], self.d, indexing_mode='not-supported')
+        v = Variable(['time', 'x'], self.d)
         self.assertIs(v.values, self.d)
         with self.assertRaises(ValueError):
             # wrong size
@@ -176,7 +177,6 @@ class TestVariable(TestCase, VariableSubclassTestCases):
         d2 = np.random.random((10, 3))
         v.values = d2
         self.assertIs(v.values, d2)
-        self.assertEqual(v._indexing_mode, 'numpy')
 
     def test_array_equality(self):
         d = np.random.rand(10, 3)
@@ -379,14 +379,19 @@ class TestCoordinate(TestCase, VariableSubclassTestCases):
         with self.assertRaisesRegexp(ValueError, 'must be 1-dimensional'):
             Coordinate((), 0)
 
+    def test_as_index(self):
+        data = 0.5 * np.arange(10)
+        v = Coordinate(['time'], data, {'foo': 'bar'})
+        self.assertTrue(pd.Index(data).equals(v.as_index))
+
     def test_data(self):
-        x = Coordinate('x', [0, 1, 2], dtype=float)
+        x = Coordinate('x', np.arange(3.0))
         # data should be initially saved as an ndarray
-        self.assertIs(type(x._data), np.ndarray)
+        self.assertIs(type(x._data), NumpyArrayAdapter)
         self.assertEqual(float, x.dtype)
         self.assertArrayEqual(np.arange(3), x)
         self.assertEqual(float, x.values.dtype)
         # after inspecting x.values, the Coordinate will be saved as an Index
-        self.assertIsInstance(x._data, pd.Index)
+        self.assertIsInstance(x._data, PandasIndexAdapter)
         with self.assertRaisesRegexp(TypeError, 'cannot be modified'):
             x[:] = 0
