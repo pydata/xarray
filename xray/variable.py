@@ -188,6 +188,13 @@ class Variable(AbstractArray):
             self._data = self._cache_data_class(self._data)
         return self._data
 
+    def __getstate__(self):
+        """Always cache data as an in-memory array before pickling"""
+        self._data_cached()
+        # self.__dict__ is the default pickle object, we don't need to
+        # implement our own __setstate__ method to make pickle work
+        return self.__dict__
+
     @property
     def values(self):
         """The variable's data as a numpy.ndarray"""

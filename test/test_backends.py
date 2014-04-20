@@ -1,3 +1,4 @@
+import cPickle as pickle
 import contextlib
 import os.path
 import tempfile
@@ -16,8 +17,9 @@ try:
 except ImportError:
     pass
 
-_test_data_path = os.path.join(os.path.dirname(__file__), 'data')
 
+def open_example_dataset(name):
+    return open_dataset(os.path.join(os.path.dirname(__file__), 'data', name))
 
 
 def create_masked_and_scaled_data():
@@ -77,7 +79,7 @@ class DatasetIOTestCases(object):
                                    self.roundtrip(encoded, decode_cf=False))
 
     def test_roundtrip_example_1_netcdf(self):
-        expected = open_dataset(os.path.join(_test_data_path, 'example_1.nc'))
+        expected = open_example_dataset('example_1.nc')
         actual = self.roundtrip(expected)
         self.assertDatasetEqual(expected, actual)
 
@@ -92,6 +94,11 @@ class DatasetIOTestCases(object):
         # when we cached the values
         actual = on_disk.indexed(**indexers)
         self.assertDatasetAllClose(expected, actual)
+
+    def test_pickle(self):
+        on_disk = open_example_dataset('bears.nc')
+        unpickled = pickle.loads(pickle.dumps(on_disk))
+        self.assertDatasetEqual(on_disk, unpickled)
 
 
 @contextlib.contextmanager
@@ -259,7 +266,7 @@ class PydapTest(TestCase):
     def test_cmp_local_file(self):
         url = 'http://test.opendap.org/opendap/hyrax/data/nc/bears.nc'
         actual = Dataset.load_store(backends.PydapDataStore(url))
-        expected = open_dataset(os.path.join(_test_data_path, 'bears.nc'))
+        expected = open_example_dataset('bears.nc')
         # don't check attributes, since pydap decodes the strings improperly
         for ds in [actual, expected]:
             clear_attributes(ds)

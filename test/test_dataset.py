@@ -1,6 +1,7 @@
 from collections import OrderedDict
 from copy import deepcopy
 from textwrap import dedent
+import cPickle as pickle
 
 import numpy as np
 import pandas as pd
@@ -567,6 +568,11 @@ class TestDataset(TestCase):
 
         # check roundtrip
         self.assertDatasetEqual(ds, Dataset.from_dataframe(actual))
+
+    def test_pickle(self):
+        data = create_test_data()
+        roundtripped = pickle.loads(pickle.dumps(data))
+        self.assertDatasetEqual(data, roundtripped)
 
     def test_lazy_load(self):
         store = InaccessibleVariableDataStore()
