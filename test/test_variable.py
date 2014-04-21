@@ -178,22 +178,25 @@ class TestVariable(TestCase, VariableSubclassTestCases):
         v.values = d2
         self.assertIs(v.values, d2)
 
-    def test_array_equality(self):
+    def test_equals_and_identical(self):
         d = np.random.rand(10, 3)
         v1 = Variable(('dim1', 'dim2'), data=d,
-                     attributes={'att1': 3, 'att2': [1, 2, 3]})
+                       attributes={'att1': 3, 'att2': [1, 2, 3]})
         v2 = Variable(('dim1', 'dim2'), data=d,
-                     attributes={'att1': 3, 'att2': [1, 2, 3]})
-        v3 = Variable(('dim1', 'dim3'), data=d,
-                    attributes={'att1': 3, 'att2': [1, 2, 3]})
-        v4 = Variable(('dim1', 'dim2'), data=d,
-                    attributes={'att1': 3, 'att2': [1, 2, 4]})
+                       attributes={'att1': 3, 'att2': [1, 2, 3]})
+        self.assertTrue(v1.equals(v2))
+        self.assertTrue(v1.identical(v2))
+
+        v3 = Variable(('dim1', 'dim3'), data=d)
+        self.assertFalse(v1.equals(v3))
+
+        v4 = Variable(('dim1', 'dim2'), data=d)
+        self.assertTrue(v1.equals(v4))
+        self.assertFalse(v1.identical(v4))
+
         v5 = deepcopy(v1)
         v5.values[:] = np.random.rand(10, 3)
-        self.assertVariableEqual(v1, v2)
-        self.assertVariableNotEqual(v1, v3)
-        self.assertVariableNotEqual(v1, v4)
-        self.assertVariableNotEqual(v1, v5)
+        self.assertFalse(v1.equals(v5))
 
     def test_as_variable(self):
         data = np.arange(10)

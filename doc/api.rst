@@ -46,6 +46,12 @@ and values given by ``DataArray`` objects.
    Dataset.iteritems
    Dataset.itervalues
 
+Comparisons
+~~~~~~~~~~~
+
+   Dataset.equals
+   Dataset.identical
+
 Selecting
 ~~~~~~~~~
 
@@ -96,6 +102,18 @@ DataArray
 
    DataArray
 
+Attributes and underlying data
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. autosummary::
+   :toctree: generated/
+
+   DataArray.values
+   DataArray.coordinates
+   DataArray.name
+   DataArray.dataset
+   DataArray.attributes
+
 Selecting
 ~~~~~~~~~
 
@@ -123,8 +141,8 @@ Group operations
    DataArray.groupby
    DataArray.concat
 
-Manipulating data
-~~~~~~~~~~~~~~~~~
+Computations
+~~~~~~~~~~~~
 
 .. autosummary::
    :toctree: generated/
@@ -136,16 +154,18 @@ Manipulating data
    DataArray.any
    DataArray.argmax
    DataArray.argmin
-   DataArray.cumprod
-   DataArray.cumsum
    DataArray.max
    DataArray.min
    DataArray.mean
-   DataArray.prod
-   DataArray.ptp
    DataArray.std
    DataArray.sum
    DataArray.var
+
+Comparisons
+~~~~~~~~~~~
+
+   DataArray.equals
+   DataArray.identical
 
 IO / Conversion
 ~~~~~~~~~~~~~~~

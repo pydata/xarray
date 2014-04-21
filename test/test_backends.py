@@ -105,8 +105,10 @@ class DatasetIOTestCases(object):
 def create_tmp_file(suffix='.nc'):
     f, path = tempfile.mkstemp(suffix=suffix)
     os.close(f)
-    yield path
-    os.remove(path)
+    try:
+        yield path
+    finally:
+        os.remove(path)
 
 
 @requires_netCDF4

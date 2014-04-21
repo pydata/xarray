@@ -602,6 +602,39 @@ class DataArray(AbstractArray):
         ds = dataset_.Dataset.from_dataframe(df)
         return ds[name]
 
+    def equals(self, other, check_attributes=False):
+        """True if two DataArrays have the same dimensions, coordinates and
+        values; otherwise False.
+
+        DataArrays can still be equal (like pandas objects) if they have NaN
+        values in the same locations.
+
+        This method is necessary because `v1 == v2` for DataArrays
+        does element-wise comparisions (like numpy.ndarrays).
+        """
+        try:
+            return (all(k1 == k2 and v1.equals(v2)
+                        for (k1, v1), (k2, v2)
+                        in zip(self.coordinates.items(),
+                               other.coordinates.items()))
+                    and self.variable.equals(other.variable))
+        except AttributeError:
+            return False
+
+    def identical(self, other):
+        """Like equals, but also checks DataArray names and attributes, and
+        attributes on their coordinates.
+        """
+        try:
+            return (self.name == other.name
+                    and all(k1 == k2 and v1.identical(v2)
+                            for (k1, v1), (k2, v2)
+                            in zip(self.coordinates.items(),
+                                   other.coordinates.items()))
+                    and self.variable.identical(other.variable))
+        except AttributeError:
+            return False
+
     def _select_coordinates(self):
         return dataset_.Dataset(self.coordinates)
 
@@ -635,7 +668,7 @@ class DataArray(AbstractArray):
         if hasattr(other, 'coordinates'):
             for k, v in self.coordinates.iteritems():
                 if (k in other.coordinates
-                        and not np.array_equal(v, other.coordinates[k])):
+                        and not v.equals(other.coordinates[k])):
                     raise ValueError('coordinate %r is not aligned' % k)
 
     @staticmethod
@@ -646,8 +679,8 @@ class DataArray(AbstractArray):
             # for broadcasting dimensions like 'dayofyear' against 'time'
             self._check_coordinates_compat(other)
             ds = self._select_coordinates()
-            if hasattr(other, '_select_coordinates'):
-                ds.merge(other._select_coordinates(), inplace=True)
+            if hasattr(other, 'coordinates'):
+                ds.merge(other.coordinates, inplace=True)
             other_array = getattr(other, 'variable', other)
             other_name = getattr(other, 'name', 'other')
             name = self.name + '_' + f.__name__ + '_' + other_name
@@ -664,8 +697,8 @@ class DataArray(AbstractArray):
             self._check_coordinates_compat(other)
             other_array = getattr(other, 'variable', other)
             self.variable = f(self.variable, other_array)
-            if hasattr(other, '_select_coordinates'):
-                self.dataset.merge(other._select_coordinates(), inplace=True)
+            if hasattr(other, 'coordinates'):
+                self.dataset.merge(other.coordinates, inplace=True)
             return self
         return func
 

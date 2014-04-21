@@ -99,10 +99,8 @@ class VariablesDict(OrderedDict):
             data = getattr(index, suffix)
         return variable.Variable(self[ref_var].dimensions, data)
 
-    def __getitem__(self, key):
-        if key in self:
-            return OrderedDict.__getitem__(self, key)
-        elif key in self.virtual:
+    def __missing__(self, key):
+        if key in self.virtual:
             return self._get_virtual_variable(key)
         else:
             raise KeyError(repr(key))
@@ -126,8 +124,7 @@ def _as_dataset_variable(name, var):
     return var
 
 
-def _expand_variables(raw_variables, old_variables={},
-                      compat=utils.variable_equal):
+def _expand_variables(raw_variables, old_variables={}, compat='identical'):
     """Expand a dictionary of variables.
 
     Returns a dictionary of Variable objects suitable for inserting into a
@@ -146,7 +143,7 @@ def _expand_variables(raw_variables, old_variables={},
     def add_variable(name, var):
         if name not in variables:
             variables[name] = _as_dataset_variable(name, var)
-        elif not compat(variables[name], var):
+        elif not getattr(variables[name], compat)(var):
             raise ValueError('conflicting value for variable %s:\n'
                              'first value: %r\nsecond value: %r'
                              % (name, variables[name], var))
@@ -410,23 +407,42 @@ class Dataset(Mapping):
     # mutable objects should not be hashable
     __hash__ = None
 
-    def __eq__(self, other):
-        """Two Datasets are equal if they have equal variables and global
-        attributes.
+    def equals(self, other):
+        """Two Datasets are equal if they have the same variables and all
+        variables are equal.
         """
+        # use equals as an alias for __eq__ to support a common interface with
+        # DataArray
         try:
             # some stores (e.g., scipy) do not seem to preserve order, so don't
-            # require matching dimension or variable order for equality
-            return (utils.dict_equal(self.attributes, other.attributes)
-                    and all(k1 == k2 and utils.variable_equal(v1, v2)
+            # require matching order for equality
+            return (len(self) == len(other)
+                    and all(k1 == k2 and v1.equals(v2)
                             for (k1, v1), (k2, v2)
                             in zip(sorted(self.variables.items()),
                                    sorted(other.variables.items()))))
         except AttributeError:
             return False
 
+    __eq__ = equals
+
     def __ne__(self, other):
         return not self == other
+
+    def identical(self, other):
+        """Two Datasets are identical if they have the same variables and all
+        variables are identical (with the same attributes), and they also have
+        the same global attributes.
+        """
+        try:
+            return (utils.dict_equal(self.attributes, other.attributes)
+                    and len(self) == len(other)
+                    and all(k1 == k2 and v1.identical(v2)
+                            for (k1, v1), (k2, v2)
+                            in zip(sorted(self.variables.items()),
+                                   sorted(other.variables.items()))))
+        except AttributeError:
+            return False
 
     @property
     def coordinates(self):
@@ -820,9 +836,7 @@ class Dataset(Mapping):
                                   if k not in overwrite_vars}
 
         # update variables
-        compat = functools.partial(utils.variable_equal, check_attributes=False)
-        new_variables = _expand_variables(other_variables, potential_conflicts,
-                                          compat=compat)
+        new_variables = _expand_variables(other_variables, potential_conflicts)
         obj = self if inplace else self.copy()
         obj._update_vars_and_dims(new_variables, needs_copy=inplace)
 
@@ -1002,15 +1016,16 @@ class Dataset(Mapping):
         # check that global attributes and non-concatenated variables are fixed
         # across all datasets
         for ds in datasets[1:]:
+            # TODO: remove attribute checks? (identical -> equals)
             if not utils.dict_equal(ds.attributes, concatenated.attributes):
                 raise ValueError('dataset global attributes not equal')
-            for k, v in ds.iteritems():
+            for k, v in ds.variables.iteritems():
                 if k not in concatenated and k not in concat_over:
                     raise ValueError('encountered unexpected variable %r' % k)
                 elif (k in concatenated and k != dim_name and
-                          not utils.variable_equal(v, concatenated[k])):
+                          not v.identical(concatenated[k])):
                     raise ValueError(
-                        'variable %r not equal across datasets' % k)
+                        'variable %r not identical across datasets' % k)
 
         # stack up each variable to fill-out the dataset
         for k in concat_over:
