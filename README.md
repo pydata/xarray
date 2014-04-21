@@ -17,7 +17,7 @@ makes many powerful array operations easy:
 
   - Apply operations over dimensions by name: `x.sum('time')`.
   - Select values by label instead of integer location: `x.loc['2014-01-01']`
-    or `x.labeled_by(time='2014-01-01')`.
+    or `x.labeled(time='2014-01-01')`.
   - Mathematical operations (e.g., `x - y`) vectorize across multiple
     dimensions (known in numpy as "broadcasting") based on dimension names,
     regardless of their original order.
