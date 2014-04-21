@@ -285,7 +285,7 @@ class Variable(AbstractArray):
         """
         return self._attributes
 
-    @attrs.setter
+    @attributes.setter
     def attributes(self, value):
         self._attributes = value
 

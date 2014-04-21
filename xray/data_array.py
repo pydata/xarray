@@ -222,7 +222,7 @@ class DataArray(AbstractArray):
         """Dictionary storing arbitrary metadata with this array."""
         return self.variable.attributes
 
-    @attrs.setter
+    @attributes.setter
     def attributes(self, value):
         self.variable.attributes = value
 
