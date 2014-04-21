@@ -844,7 +844,8 @@ class Dataset(Mapping):
                                   if k not in overwrite_vars}
 
         # update variables
-        new_variables = _expand_variables(other_variables, potential_conflicts)
+        new_variables = _expand_variables(other_variables, potential_conflicts,
+                                          'equals')
         obj = self if inplace else self.copy()
         obj._update_vars_and_dims(new_variables, needs_copy=inplace)
 
@@ -853,11 +854,6 @@ class Dataset(Mapping):
             if k in obj.attributes and v != obj.attributes[k]:
                 del obj.attributes[k]
         return obj
-
-    def _get_associated_variables(self, *names):
-        associated = set(names)
-        associated |= {k for k, v in self.iteritems()
-                       if any(name in v.dimensions for name in names)}
 
     def select(self, *names):
         """Returns a new dataset that contains only the named variables and
