@@ -113,7 +113,7 @@ class VariableSubclassTestCases(object):
         v = self.cls(['x'], x)
         self.assertArrayEqual(np.asarray(v), x)
         # test patched in methods
-        self.assertArrayEqual(v.take([2, 3]), x.take([2, 3]))
+        self.assertArrayEqual(v.astype(float), x.astype(float))
         self.assertVariableEqual(v.argsort(), v)
         self.assertVariableEqual(v.clip(2, 3), self.cls('x', x.clip(2, 3)))
         # test ufuncs

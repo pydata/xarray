@@ -136,7 +136,7 @@ class TestDataArray(TestCase):
     def test_array_interface(self):
         self.assertArrayEqual(np.asarray(self.dv), self.x)
         # test patched in methods
-        self.assertArrayEqual(self.dv.take([2, 3]), self.v.take([2, 3]))
+        self.assertArrayEqual(self.dv.astype(float), self.v.astype(float))
         self.assertVariableEqual(self.dv.argsort(), self.v.argsort())
         self.assertVariableEqual(self.dv.clip(2, 3), self.v.clip(2, 3))
         # test ufuncs

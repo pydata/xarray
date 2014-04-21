@@ -7,28 +7,14 @@ UNARY_OPS = ['neg', 'pos', 'abs', 'invert']
 CMP_BINARY_OPS = ['lt', 'le', 'eq', 'ne', 'ge', 'gt']
 NUM_BINARY_OPS = ['add', 'sub', 'mul', 'div', 'truediv', 'floordiv', 'mod',
                   'pow', 'and', 'xor', 'or']
-# methods which should return the standard numpy return value unchanged
-# some of these can probably be wrapped
-NUMPY_CONVERT_METHODS = ['choose', 'compress', 'flatten', 'item', 'itemset',
-                         'nonzero', 'ravel', 'repeat', 'reshape',
-                         'searchsorted', 'swapaxes', 'take', 'trace',
-                         'diagonal', 'dot']
 # methods which don't modify the data shape, so the result should still be
-# wrapped in an Variable/DataView
-NUMPY_UNARY_METHODS = ['argsort', 'clip', 'conj', 'conjugate', 'fill',
-                       'getfield', 'newbyteorder', 'put', 'round', 'setfield',
-                       'setflags', 'view']
+# wrapped in an Variable/DataArray
+NUMPY_UNARY_METHODS = ['astype', 'argsort', 'clip', 'conj', 'conjugate',
+                       'round']
 # methods which remove an axis
-NUMPY_REDUCE_METHODS = ['all', 'any', 'argmax', 'argmin', 'cumprod',
-                        'cumsum', 'max', 'mean', 'min', 'prod', 'ptp', 'std',
-                        'sum', 'var']
-
-
-def _data_method_wrapper(f):
-    def func(self, *args, **kwargs):
-        return getattr(self.values, f)(*args, **kwargs)
-    func.__name__ = f
-    return func
+NUMPY_REDUCE_METHODS = ['all', 'any', 'argmax', 'argmin', 'max', 'mean', 'min',
+                        'prod', 'ptp', 'std', 'sum', 'var']
+# TODO: wrap cumprod, cumsum, take and dot
 
 
 def _method_wrapper(f):
@@ -64,8 +50,6 @@ def inject_special_operations(cls, priority=50):
         setattr(cls, op_str('i' + name),
                 cls._inplace_binary_op(op('i' + name)))
     # patch in numpy methods
-    for name in NUMPY_CONVERT_METHODS:
-        setattr(cls, name, _data_method_wrapper(name))
     for name in NUMPY_UNARY_METHODS:
         setattr(cls, name, cls._unary_op(_method_wrapper(name)))
     inject_reduce_methods(cls)
