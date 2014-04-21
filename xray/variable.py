@@ -285,6 +285,18 @@ class Variable(AbstractArray):
         """
         return self._attributes
 
+    @attrs.setter
+    def attributes(self, value):
+        self._attributes = value
+
+    @property
+    def attrs(self):
+        return self._attributes
+
+    @attrs.setter
+    def attrs(self, value):
+        self._attributes = value
+
     def copy(self, deep=True):
         """Returns a copy of this object.
 

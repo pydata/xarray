@@ -311,6 +311,14 @@ class Dataset(Mapping):
         self._attributes = OrderedDict(value)
 
     @property
+    def attrs(self):
+        return self._attributes
+
+    @attrs.setter
+    def attrs(self, value):
+        self.attributes = value
+
+    @property
     def dimensions(self):
         """Mapping from dimension names to lengths.
 

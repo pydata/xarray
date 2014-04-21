@@ -222,6 +222,18 @@ class DataArray(AbstractArray):
         """Dictionary storing arbitrary metadata with this array."""
         return self.variable.attributes
 
+    @attrs.setter
+    def attributes(self, value):
+        self.variable.attributes = value
+
+    @property
+    def attrs(self):
+        return self.variable.attributes
+
+    @attrs.setter
+    def attrs(self, value):
+        self.variable.attributes = value
+
     @property
     def encoding(self):
         """Dictionary of format-specific settings for how this array should be
@@ -602,7 +614,7 @@ class DataArray(AbstractArray):
         ds = dataset_.Dataset.from_dataframe(df)
         return ds[name]
 
-    def equals(self, other, check_attributes=False):
+    def equals(self, other):
         """True if two DataArrays have the same dimensions, coordinates and
         values; otherwise False.
 
