@@ -3,6 +3,7 @@ import unittest
 from numpy.testing import assert_array_equal
 
 from xray import utils, DataArray
+from xray.variable import as_variable
 
 try:
     import scipy
@@ -37,13 +38,13 @@ def requires_netCDF4(test):
 
 class TestCase(unittest.TestCase):
     def assertVariableEqual(self, v1, v2):
-        self.assertTrue(utils.variable_equal(v1, v2))
+        self.assertTrue(as_variable(v1).equals(v2))
 
     def assertVariableAllClose(self, v1, v2, rtol=1e-05, atol=1e-08):
         self.assertTrue(utils.variable_allclose(v1, v2, rtol=rtol, atol=atol))
 
     def assertVariableNotEqual(self, v1, v2):
-        self.assertFalse(utils.variable_equal(v1, v2))
+        self.assertFalse(as_variable(v1).equals(v2))
 
     def assertArrayEqual(self, a1, a2):
         assert_array_equal(a1, a2)

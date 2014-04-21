@@ -549,6 +549,33 @@ class Variable(AbstractArray):
 
         return concatenated
 
+    def equals(self, other):
+        """True if two Variables have the same dimensions and values;
+        otherwise False.
+
+        Variables can still be equal (like pandas objects) if they have NaN
+        values in the same locations.
+
+        This method is necessary because `v1 == v2` for Variables
+        does element-wise comparisions (like numpy.ndarrays).
+        """
+        other = getattr(other, 'variable', other)
+        try:
+            return (self.dimensions == other.dimensions
+                    and (self._data is other._data
+                         or utils.array_equiv(self.values, other.values)))
+        except AttributeError:
+            return False
+
+    def identical(self, other):
+        """Like equals, but also checks attributes.
+        """
+        try:
+            return (utils.dict_equal(self.attributes, other.attributes)
+                    and self.equals(other))
+        except AttributeError:
+            return False
+
     def __array_wrap__(self, obj, context=None):
         return Variable(self.dimensions, obj, self.attributes)
 
@@ -557,7 +584,7 @@ class Variable(AbstractArray):
         @functools.wraps(f)
         def func(self, *args, **kwargs):
             return Variable(self.dimensions, f(self.values, *args, **kwargs),
-                          _math_safe_attributes(self.attributes))
+                            _math_safe_attributes(self.attributes))
         return func
 
     @staticmethod

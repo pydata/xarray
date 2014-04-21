@@ -43,8 +43,40 @@ class TestDataArray(TestCase):
         with self.assertRaises(AttributeError):
             self.dv.dataset = self.ds
 
+    def test_equals_and_identical(self):
+        da2 = self.dv.copy()
+        self.assertTrue(self.dv.equals(da2))
+        self.assertTrue(self.dv.identical(da2))
+
+        da3 = self.dv.rename('baz')
+        self.assertTrue(self.dv.equals(da3))
+        self.assertFalse(self.dv.identical(da3))
+
+        da4 = self.dv.rename({'x': 'xxx'})
+        self.assertFalse(self.dv.equals(da4))
+        self.assertFalse(self.dv.identical(da4))
+
+        da5 = self.dv.copy()
+        da5.attributes['foo'] = 'bar'
+        self.assertTrue(self.dv.equals(da5))
+        self.assertFalse(self.dv.identical(da5))
+
+        da6 = self.dv.copy()
+        da6['x'] = ('x', -np.arange(10))
+        self.assertFalse(self.dv.equals(da6))
+        self.assertFalse(self.dv.identical(da6))
+
+        da2[0, 0] = np.nan
+        self.dv[0, 0] = np.nan
+        self.assertTrue(self.dv.equals(da2))
+        self.assertTrue(self.dv.identical(da2))
+
+        da2[:] = np.nan
+        self.assertFalse(self.dv.equals(da2))
+        self.assertFalse(self.dv.identical(da2))
+
     def test_items(self):
-        # strings pull out dataviews
+        # strings pull out dataarrays
         self.assertDataArrayEqual(self.dv, self.ds['foo'])
         x = self.dv['x']
         y = self.dv['y']
@@ -62,8 +94,8 @@ class TestDataArray(TestCase):
             self.assertVariableEqual(self.v[i], self.dv[i])
         # make sure we always keep the array around, even if it's a scalar
         self.assertVariableEqual(self.dv[0, 0], self.dv.variable[0, 0])
-        self.assertEqual(self.dv[0, 0].dataset,
-                         Dataset({'foo': self.dv.variable[0, 0]}))
+        for k in ['x', 'y', 'foo']:
+            self.assertIn(k, self.dv[0, 0].dataset)
 
     def test_indexed(self):
         self.assertEqual(self.dv[0].dataset, self.ds.indexed(x=0))

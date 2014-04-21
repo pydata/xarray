@@ -152,6 +152,19 @@ class TestDataset(TestCase):
             a['y'] = ('y', scal)
         self.assertTrue('y' not in a.dimensions)
 
+    def test_equals_and_identical(self):
+        data = create_test_data(seed=42)
+        self.assertTrue(data.equals(data))
+        self.assertTrue(data.identical(data))
+
+        data2 = create_test_data(seed=42)
+        data2.attributes['foobar'] = 'baz'
+        self.assertTrue(data.equals(data2))
+        self.assertFalse(data.identical(data2))
+
+        del data2['time']
+        self.assertFalse(data.equals(data2))
+
     def test_indexed(self):
         data = create_test_data()
         slicers = {'dim1': slice(None, None, 2), 'dim2': slice(0, 2)}
@@ -536,7 +549,7 @@ class TestDataset(TestCase):
             data0, data1 = deepcopy(split_data)
             data1['foo'] = ('bar', np.random.randn(10))
             Dataset.concat([data0, data1], 'dim1')
-        with self.assertRaisesRegexp(ValueError, 'not equal across datasets'):
+        with self.assertRaisesRegexp(ValueError, 'identical across datasets'):
             data0, data1 = deepcopy(split_data)
             data1['dim2'] = 2 * data1['dim2']
             Dataset.concat([data0, data1], 'dim1')

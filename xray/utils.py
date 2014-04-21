@@ -200,25 +200,17 @@ def variable_allclose(v1, v2, rtol=1e-05, atol=1e-08):
 xarray_allclose = function_alias(variable_allclose, 'xarray_allclose')
 
 
-def _safe_isnan(arr):
-    """Like np.isnan for floating point arrays, but returns `False` for non-
-    floating point arrays
-
-    This is necessary because np.isnan doesn't work for object or datetime64
-    arrays.
-    """
-    if np.issubdtype(arr.dtype, float):
-        return np.isnan(arr)
-    else:
-        return False
-
-
 def array_equiv(arr1, arr2):
     """Like np.array_equal, but also allows values to be NaN in both arrays
     """
+    arr1, arr2 = np.asarray(arr1), np.asarray(arr2)
     if arr1.shape != arr2.shape:
         return False
-    return ((arr1 == arr2) | (_safe_isnan(arr1) & _safe_isnan(arr2))).all()
+    # we could make this faster by not-checking for null values if the dtype
+    # does not support them, but the logic would get more convoluted.
+    # using pd.isnull lets us defer the NaN handling to pandas (and unlike
+    # np.isnan it works on every dtype).
+    return ((arr1 == arr2) | (pd.isnull(arr1) & pd.isnull(arr2))).all()
 
 
 def variable_equal(v1, v2, check_attributes=True):
@@ -228,11 +220,15 @@ def variable_equal(v1, v2, check_attributes=True):
     This function is necessary because `v1 == v2` for XArrays and DataArrays
     does element-wise comparisions (like numpy.ndarrays).
     """
+    warnings.warn('use the `equals` or `identical` methods instead of calling '
+                  'utils.variable_equal directly; this alias will be removed '
+                  'at some point',
+                  FutureWarning, stacklevel=2)
     v1, v2 = map(variable.as_variable, [v1, v2])
-    return (v1.dimensions == v2.dimensions
-            and (not check_attributes
-                 or dict_equal(v1.attributes, v2.attributes))
-            and (v1._data is v2._data or array_equiv(v1.values, v2.values)))
+    if check_attributes:
+        return v1.identical(v2)
+    else:
+        return v1.equals(v2)
 
 xarray_equal = function_alias(variable_equal, 'xarray_equal')
 
