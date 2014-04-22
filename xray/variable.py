@@ -376,7 +376,7 @@ class Variable(AbstractArray):
         """
         if len(dimensions) == 0:
             dimensions = self.dimensions[::-1]
-        axes = [self.dimensions.index(dim) for dim in dimensions]
+        axes = self.get_axis_num(dimensions)
         data = self.values.transpose(*axes)
         return type(self)(dimensions, data, self.attributes, self.encoding)
 
@@ -509,7 +509,7 @@ class Variable(AbstractArray):
             # to figure out the indexers and/or dimensions of the stacked
             # variable
             variables = list(variables)
-            steps = [var.shape[var.dimensions.index(dimension)]
+            steps = [var.shape[var.get_axis_num(dimension)]
                      if dimension in var.dimensions else 1
                      for var in variables]
             if length is None:
