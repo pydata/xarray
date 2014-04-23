@@ -13,7 +13,7 @@ used for self-describing scientific data (e.g., the NetCDF file format).
 ## Why xray?
 
 Adding dimensions names and coordinate values to numpy's [ndarray][ndarray]
-makes many powerful array operations easy:
+makes many powerful array operations possible:
 
   - Apply operations over dimensions by name: `x.sum('time')`.
   - Select values by label instead of integer location: `x.loc['2014-01-01']`
@@ -129,11 +129,12 @@ several limitations that led us to build xray instead of extending Iris:
 NetCDF and OpenDAP datasets in Python. We use netCDF4-python internally in
 xray, and have contributed a number of improvements and fixes upstream.
 
-[larry][larry] is another package that implements labeled arrays for
-Python built on top of numpy that provided some guidance for xray.
+[larry][larry] and [datarray][datarray] are other implementations of
+labeled numpy arrays that provided some guidance for the design of xray.
 
 [nc4]: https://github.com/Unidata/netcdf4-python
 [larry]: https://pypi.python.org/pypi/la
+[datarray]: https://github.com/fperez/datarray
 
 ## Broader design goals
 
@@ -199,9 +200,9 @@ Aspects of the API that we currently intend to change:
    - We intend to support `Dataset` objects linked to NetCDF or HDF5 files on
      disk to allow for incremental writing of data.
 
-Once we get the API in a state we're comfortable with and improve the documentation, we
-intend to release version 0.1. Our target is to do so before the xray talk on
-May 3, 2014 at [PyData Silicon Valley][pydata].
+Once we get the API in a state we're comfortable with and improve the
+documentation, we intend to release version 0.1. Our target is to do so before
+the xray talk on May 3, 2014 at [PyData Silicon Valley][pydata].
 
 [pydata]: http://pydata.org/sv2014/
 [blaze]: https://github.com/ContinuumIO/blaze/
