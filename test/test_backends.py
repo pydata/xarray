@@ -235,12 +235,6 @@ class NetCDF4DataTest(DatasetIOTestCases, TestCase):
             for kwargs in [{}, {'decode_cf': True}]:
                 actual = open_dataset(tmp_file, **kwargs)
                 self.assertDatasetEqual(expected, actual)
-                # netCDF4 appears to have a bug when reading/writing unicode
-                # TODO: comment this out when that bug is fixed; also add a
-                # reference to the bug tracker
-                actual['x'] = actual['x'].astype(str)
-                roundtripped = self.roundtrip(actual)
-                self.assertDatasetEqual(roundtripped, actual)
 
 
 @requires_netCDF4

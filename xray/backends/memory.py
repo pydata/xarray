@@ -29,3 +29,6 @@ class InMemoryDataStore(AbstractDataStore):
 
     def sync(self):
         pass
+
+    def close(self):
+        pass

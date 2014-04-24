@@ -128,3 +128,9 @@ class NetCDF4DataStore(AbstractDataStore):
 
     def sync(self):
         self.ds.sync()
+
+    def close(self):
+        self.ds.close()
+
+    def __exit__(self, type, value, tb):
+        self.close()

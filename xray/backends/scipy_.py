@@ -92,3 +92,9 @@ class ScipyDataStore(AbstractDataStore):
 
     def sync(self):
         self.ds.flush()
+
+    def close(self):
+        self.ds.close()
+
+    def __exit__(self, type, value, tb):
+        self.close()
