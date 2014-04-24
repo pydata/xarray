@@ -540,15 +540,14 @@ class TestDataset(TestCase):
         for dim in ['dim1', 'dim2', 'dim3']:
             datasets = [g for _, g in data.groupby(dim, squeeze=False)]
             actual = Dataset.concat(datasets, data[dim], mode='all')
-            expected = np.array([data['var4'].data
-                                 for i in range(data.dimensions[dim])])
-            np.testing.assert_array_equal(actual['var4'].data,
-                                          expected)
+            expected = np.array([data['var4'].values
+                                 for _ in range(data.dimensions[dim])])
+            self.assertArrayEqual(actual['var4'].values, expected)
 
             actual = Dataset.concat(datasets, data[dim], mode='different')
-            self.assertXArrayEqual(data['var4'], actual['var4'])
+            self.assertDataArrayEqual(data['var4'], actual['var4'])
             actual = Dataset.concat(datasets, data[dim], mode='minimal')
-            self.assertXArrayEqual(data['var4'], actual['var4'])
+            self.assertDataArrayEqual(data['var4'], actual['var4'])
 
         # verify that the dimension argument takes precedence over
         # concatenating dataset variables of the same name

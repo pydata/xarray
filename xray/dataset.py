@@ -1011,12 +1011,10 @@ class Dataset(Mapping):
                 # simple helper function which compares a variable
                 # across all datasets and indicates whether that
                 # variable differs or not.
-                return any(not utils.xarray_equal(ds[vname], v,
-                                                  check_attributes=False)
-                           for ds in datasets[1:])
+                return any(not ds[vname].equals(v) for ds in datasets[1:])
             non_coords = datasets[0].noncoordinates.iteritems()
             # all noncoordinates that are not the same in each dataset
-            concat_over.update({k for k, v in non_coords if differs(k, v)})
+            concat_over.update(k for k, v in non_coords if differs(k, v))
         elif mode == 'all':
             # concatenate all noncoordinates
             concat_over.update(set(datasets[0].noncoordinates.keys()))
