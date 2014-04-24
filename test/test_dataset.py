@@ -2,6 +2,7 @@ from collections import OrderedDict
 from copy import deepcopy
 from textwrap import dedent
 import cPickle as pickle
+import unittest
 
 import numpy as np
 import pandas as pd
@@ -430,6 +431,13 @@ class TestDataset(TestCase):
         actual = data['time.dayofyear'][:10].dataset
         expected = data.indexed(time=slice(10))
         self.assertDatasetEqual(expected, actual)
+
+    @unittest.expectedFailure
+    def test_slice_virtual_variable(self):
+        data = create_test_data()
+        self.assertVariableEqual(data['time.dayofyear'][:10],
+                                 Variable(['time'], 1 + np.arange(10)))
+        self.assertVariableEqual(data['time.dayofyear'][0], Variable([], 1))
 
     def test_setitem(self):
         # assign a variable
