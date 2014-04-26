@@ -43,7 +43,7 @@ class ScipyDataStore(AbstractDataStore):
                                  for k, v in self.ds.variables.iteritems())
 
     @property
-    def attributes(self):
+    def attrs(self):
         return Frozen(self.ds._attributes)
 
     @property
@@ -83,7 +83,7 @@ class ScipyDataStore(AbstractDataStore):
             scipy_var.assignValue(data)
         else:
             scipy_var[:] = data[:]
-        for k, v in variable.attributes.iteritems():
+        for k, v in variable.attrs.iteritems():
             self._validate_attr_key(k)
             setattr(scipy_var, k, self._cast_attr_value(v))
 

@@ -177,29 +177,6 @@ def allclose_or_equiv(arr1, arr2, rtol=1e-5, atol=1e-8):
     return np.isclose(arr1, arr2, rtol=rtol, atol=atol, equal_nan=True).all()
 
 
-def variable_allclose(v1, v2, rtol=1e-05, atol=1e-08):
-    """True if two objects have the same dimensions, attributes and data;
-    otherwise False.
-
-    This function is necessary because `v1 == v2` for XArrays and DataArrays
-    does element-wise comparisions (like numpy.ndarrays).
-    """
-    def data_equiv(arr1, arr2):
-        exact_dtypes = [np.datetime64, np.timedelta64, np.string_]
-        if any(any(np.issubdtype(arr.dtype, t) for t in exact_dtypes)
-               or arr.dtype == object for arr in [arr1, arr2]):
-            return np.array_equal(arr1, arr2)
-        else:
-            return allclose_or_equiv(arr1, arr2, rtol=rtol, atol=atol)
-
-    v1, v2 = map(variable.as_variable, [v1, v2])
-    return (v1.dimensions == v2.dimensions
-            and dict_equal(v1.attributes, v2.attributes)
-            and (v1._data is v2._data or data_equiv(v1.values, v2.values)))
-
-xarray_allclose = function_alias(variable_allclose, 'xarray_allclose')
-
-
 def array_equiv(arr1, arr2):
     """Like np.array_equal, but also allows values to be NaN in both arrays
     """

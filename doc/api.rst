@@ -25,7 +25,7 @@ Attributes and underlying data
    Dataset.coordinates
    Dataset.noncoordinates
    Dataset.dimensions
-   Dataset.attributes
+   Dataset.attrs
 
 Dataset contents
 ~~~~~~~~~~~~~~~~
@@ -112,7 +112,7 @@ Attributes and underlying data
    DataArray.coordinates
    DataArray.name
    DataArray.dataset
-   DataArray.attributes
+   DataArray.attrs
 
 Selecting
 ~~~~~~~~~

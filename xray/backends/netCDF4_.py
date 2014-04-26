@@ -82,7 +82,7 @@ class NetCDF4DataStore(AbstractDataStore):
                                  for k, v in self.ds.variables.iteritems())
 
     @property
-    def attributes(self):
+    def attrs(self):
         return FrozenOrderedDict((k, self.ds.getncattr(k))
                                  for k in self.ds.ncattrs())
 
@@ -100,7 +100,7 @@ class NetCDF4DataStore(AbstractDataStore):
     def set_variable(self, name, variable):
         variable = encode_cf_variable(variable)
         self.set_necessary_dimensions(variable)
-        fill_value = variable.attributes.pop('_FillValue', None)
+        fill_value = variable.attrs.pop('_FillValue', None)
         encoding = variable.encoding
         self.ds.createVariable(
             varname=name,
@@ -121,7 +121,7 @@ class NetCDF4DataStore(AbstractDataStore):
             nc4_var[:] = variable.values
         else:
             nc4_var[:] = variable.values[:]
-        nc4_var.setncatts(variable.attributes)
+        nc4_var.setncatts(variable.attrs)
 
     def del_attribute(self, key):
         self.ds.delncattr(key)

@@ -101,9 +101,9 @@ class AbstractArray(ImplementsReduce):
 
 
 def _summarize_attributes(data):
-    if data.attributes:
+    if data.attrs:
         attr_summary = '\n'.join('    %s: %s' % (k, v) for k, v
-                                 in data.attributes.iteritems())
+                                 in data.attrs.iteritems())
     else:
         attr_summary = '    Empty'
     return attr_summary

@@ -400,7 +400,7 @@ def encode_cf_variable(var):
     """
     dimensions = var.dimensions
     data = var.values
-    attributes = var.attributes.copy()
+    attributes = var.attrs.copy()
     encoding = var.encoding.copy()
 
     if (np.issubdtype(data.dtype, np.datetime64)
@@ -465,7 +465,7 @@ def decode_cf_variable(var, mask_and_scale=True):
     # use _data instead of data so as not to trigger loading data
     data = var._data
     dimensions = var.dimensions
-    attributes = var.attributes.copy()
+    attributes = var.attrs.copy()
     encoding = var.encoding.copy()
 
     def pop_to(source, dest, k):

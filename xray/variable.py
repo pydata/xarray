@@ -220,7 +220,7 @@ class Variable(AbstractArray):
 
     def to_coord(self):
         """Return this variable as a Coordinate"""
-        return Coordinate(self.dimensions, self._data, self.attributes,
+        return Coordinate(self.dimensions, self._data, self.attrs,
                           encoding=self.encoding)
 
     @property
@@ -269,7 +269,7 @@ class Variable(AbstractArray):
             assert values.ndim == len(dimensions)
         else:
             assert len(dimensions) == 0
-        return type(self)(dimensions, values, self.attributes, self.encoding)
+        return type(self)(dimensions, values, self.attrs, self.encoding)
 
     def __setitem__(self, key, value):
         """__setitem__ is overloaded to access the underlying numpy values with
@@ -281,16 +281,18 @@ class Variable(AbstractArray):
 
     @property
     def attributes(self):
-        """Dictionary of local attributes on this variable.
-        """
+        utils.alias_warning('attributes', 'attrs', 3)
         return self._attributes
 
     @attributes.setter
     def attributes(self, value):
+        utils.alias_warning('attributes', 'attrs', 3)
         self._attributes = value
 
     @property
     def attrs(self):
+        """Dictionary of local attributes on this variable.
+        """
         return self._attributes
 
     @attrs.setter
@@ -307,8 +309,7 @@ class Variable(AbstractArray):
         # note:
         # dimensions is already an immutable tuple
         # attributes and encoding will be copied when the new Array is created
-        return type(self)(self.dimensions, data, self.attributes,
-                          self.encoding)
+        return type(self)(self.dimensions, data, self.attrs, self.encoding)
 
     def __copy__(self):
         return self.copy(deep=False)
@@ -378,7 +379,7 @@ class Variable(AbstractArray):
             dimensions = self.dimensions[::-1]
         axes = self.get_axis_num(dimensions)
         data = self.values.transpose(*axes)
-        return type(self)(dimensions, data, self.attributes, self.encoding)
+        return type(self)(dimensions, data, self.attrs, self.encoding)
 
     def squeeze(self, dimension=None):
         """Return a new Variable object with squeezed data.
@@ -437,28 +438,16 @@ class Variable(AbstractArray):
             raise ValueError("cannot supply both 'axis' and 'dimension' "
                              "arguments")
 
-        # reduce the data
         if dimension is not None:
             axis = self.get_axis_num(dimension)
         data = func(self.values, axis=axis, **kwargs)
 
-        # construct the new Variable
         removed_axes = (range(self.ndim) if axis is None
                         else np.atleast_1d(axis) % self.ndim)
-        dims = [dim for axis, dim in enumerate(self.dimensions)
-                if axis not in removed_axes]
-        var = Variable(dims, data, _math_safe_attributes(self.attributes))
+        dims = [dim for n, dim in enumerate(self.dimensions)
+                if n not in removed_axes]
 
-        # update 'cell_methods' according to CF conventions
-        removed_dims = [dim for axis, dim in enumerate(self.dimensions)
-                        if axis in removed_axes]
-        summary = '%s: %s' % (': '.join(removed_dims), func.__name__)
-        if 'cell_methods' in var.attributes:
-            var.attributes['cell_methods'] += ' ' + summary
-        else:
-            var.attributes['cell_methods'] = summary
-
-        return var
+        return Variable(dims, data)
 
     @classmethod
     def concat(cls, variables, dimension='stacked_dimension',
@@ -538,7 +527,7 @@ class Variable(AbstractArray):
             dims = (dimension,) + first_var.dimensions
 
         concatenated = cls(dims, np.empty(shape, dtype=first_var.dtype))
-        concatenated.attributes.update(first_var.attributes)
+        concatenated.attrs.update(first_var.attrs)
 
         alt_dims = tuple(d for d in dims if d != dimension)
 
@@ -552,8 +541,7 @@ class Variable(AbstractArray):
                         var = var.transpose(*concatenated.dimensions)
                 elif var.dimensions != alt_dims:
                     raise ValueError('inconsistent dimensions')
-                utils.remove_incompatible_items(concatenated.attributes,
-                                                var.attributes)
+                utils.remove_incompatible_items(concatenated.attrs, var.attrs)
 
             key = tuple(indexer if n == axis else slice(None)
                         for n in range(concatenated.ndim))
@@ -583,20 +571,19 @@ class Variable(AbstractArray):
         """Like equals, but also checks attributes.
         """
         try:
-            return (utils.dict_equal(self.attributes, other.attributes)
+            return (utils.dict_equal(self.attrs, other.attrs)
                     and self.equals(other))
         except AttributeError:
             return False
 
     def __array_wrap__(self, obj, context=None):
-        return Variable(self.dimensions, obj, self.attributes)
+        return Variable(self.dimensions, obj)
 
     @staticmethod
     def _unary_op(f):
         @functools.wraps(f)
         def func(self, *args, **kwargs):
-            return Variable(self.dimensions, f(self.values, *args, **kwargs),
-                            _math_safe_attributes(self.attributes))
+            return Variable(self.dimensions, f(self.values, *args, **kwargs))
         return func
 
     @staticmethod
@@ -609,12 +596,7 @@ class Variable(AbstractArray):
             new_data = (f(self_data, other_data)
                         if not reflexive
                         else f(other_data, self_data))
-            new_attr = _math_safe_attributes(self.attributes)
-            # TODO: reconsider handling of conflicting attributes
-            if hasattr(other, 'attributes'):
-                new_attr = utils.ordered_dict_intersection(
-                    new_attr, _math_safe_attributes(other.attributes))
-            return Variable(dims, new_data, new_attr)
+            return Variable(dims, new_data)
         return func
 
     @staticmethod
@@ -626,9 +608,6 @@ class Variable(AbstractArray):
                 raise ValueError('dimensions cannot change for in-place '
                                  'operations')
             self.values = f(self_data, other_data)
-            if hasattr(other, 'attributes'):
-                utils.remove_incompatible_items(
-                    self.attributes, _math_safe_attributes(other.attributes))
             return self
         return func
 
@@ -653,9 +632,9 @@ class Coordinate(Variable):
     def __getitem__(self, key):
         values = self._data[key]
         if not hasattr(values, 'ndim') or values.ndim == 0:
-            return Variable((), values, self.attributes, self.encoding)
+            return Variable((), values, self.attrs, self.encoding)
         else:
-            return type(self)(self.dimensions, values, self.attributes,
+            return type(self)(self.dimensions, values, self.attrs,
                               self.encoding)
 
     def __setitem__(self, key, value):
@@ -670,8 +649,7 @@ class Coordinate(Variable):
         # there is no need to copy the index values here even if deep=True
         # since pandas.Index objects are immutable
         data = PandasIndexAdapter(self) if deep else self._data
-        return type(self)(self.dimensions, data, self.attributes,
-                          self.encoding)
+        return type(self)(self.dimensions, data, self.attrs, self.encoding)
 
     @property
     def as_index(self):
@@ -712,11 +690,6 @@ class Coordinate(Variable):
 
     def is_numeric(self):
         return self.as_index.is_numeric()
-
-
-def _math_safe_attributes(attributes):
-    return OrderedDict((k, v) for k, v in attributes.iteritems()
-                       if k not in ['units'])
 
 
 def broadcast_variables(first, second):
@@ -760,14 +733,13 @@ def broadcast_variables(first, second):
     # expand first_data's dimensions so it's broadcast compatible after
     # adding second's dimensions at the end
     first_data = first.values[(Ellipsis,) + (None,) * len(second_only_dims)]
-    new_first = Variable(dimensions, first_data, first.attributes,
-                       first.encoding)
+    new_first = Variable(dimensions, first_data, first.attrs, first.encoding)
     # expand and reorder second_data so the dimensions line up
     first_only_dims = [d for d in dimensions if d not in second.dimensions]
     second_dims = list(second.dimensions) + first_only_dims
     second_data = second.values[(Ellipsis,) + (None,) * len(first_only_dims)]
-    new_second = Variable(second_dims, second_data, first.attributes,
-                        second.encoding).transpose(*dimensions)
+    new_second = Variable(second_dims, second_data, second.attrs,
+                          second.encoding).transpose(*dimensions)
     return new_first, new_second
 
 
