@@ -119,6 +119,16 @@ class TestDataArray(TestCase):
         self.dv.loc['a':'j'] = 0
         self.assertTrue(np.all(self.dv.values == 0))
 
+    def test_reindex(self):
+        foo = self.dv
+        bar = self.dv[:2, :2]
+        self.assertDataArrayIdentical(foo.reindex_like(bar), bar)
+
+        expected = foo.copy()
+        expected[:] = np.nan
+        expected[:2, :2] = bar
+        self.assertDataArrayIdentical(bar.reindex_like(foo), expected)
+
     def test_rename(self):
         renamed = self.dv.rename('bar')
         self.assertEqual(renamed.dataset, self.ds.rename({'foo': 'bar'}))
