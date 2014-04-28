@@ -4,6 +4,7 @@ import functools
 import operator
 import warnings
 from collections import OrderedDict, Mapping, MutableMapping
+from datetime import datetime
 
 import numpy as np
 import pandas as pd
@@ -37,12 +38,20 @@ def class_alias(obj, old_name):
 
 def as_array_or_item(values, dtype=None):
     """Return the given values as a numpy array of the indicated dtype, or as
-    an individual value if it's a 0-dimensional object array.
+    an individual value if it's a 0-dimensional object array or datetime.
     """
+    if isinstance(values, datetime):
+        # shortcut because if you try to make a datetime or Timestamp object
+        # into an array with the proper dtype, it is liable to be silently
+        # converted into an integer instead :(
+        return values
     values = np.asarray(values, dtype=dtype)
     if values.ndim == 0 and values.dtype.kind == 'O':
         # unpack 0d object arrays to be consistent with numpy
         values = values.item()
+        if isinstance(values, pd.Timestamp):
+            # turn Timestamps back into datetime64 objects
+            values = np.datetime64(values)
     return values
 
 

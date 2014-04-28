@@ -50,6 +50,12 @@ class VariableSubclassTestCases(object):
                 self.assertTrue(np.issubdtype(x.values[0].dtype, dtype))
                 self.assertTrue(np.issubdtype(x[0].values.dtype, dtype))
 
+    def test_0d_time_data(self):
+        # regression test for #105
+        x = self.cls('time', pd.date_range('2000-01-01', periods=5))
+        expected = pd.Timestamp('2000-01-01')
+        self.assertEqual(x[0].values, expected)
+
     def test_pandas_data(self):
         v = self.cls(['x'], pd.Series([0, 1, 2], index=[3, 2, 1]))
         self.assertVariableIdentical(v, v[[0, 1, 2]])

@@ -563,6 +563,9 @@ class Variable(AbstractArray):
         try:
             return (self.dimensions == other.dimensions
                     and (self._data is other._data
+                         or ((not isinstance(self.values, np.ndarray)
+                              or not isinstance(other.values, np.ndarray))
+                             and self.values == other.values)
                          or utils.array_equiv(self.values, other.values)))
         except AttributeError:
             return False
