@@ -26,7 +26,7 @@ makes many powerful array operations possible:
   - Database like aligment based on coordinate labels that smoothly
     handles missing values: `x, y = xray.align(x, y, join='outer')`.
   - Keep track of arbitrary metadata in the form of a Python dictionary:
-    `x.attributes`.
+    `x.attrs`.
 
 **xray** aims to provide a data analysis toolkit as powerful as
 [pandas][pandas] but designed for working with homogeneous N-dimensional
@@ -103,7 +103,7 @@ several limitations that led us to build xray instead of extending Iris:
      attempts to build all functionality (`Coord` supports a much more
      limited set of functionality). xray has its equivalent of the Cube
      (the `DataArray` object), but under the hood it is only thin wrapper
-     on the more primitive building blocks of Dataset and XArray objects.
+     on the more primitive building blocks of Dataset and Variable objects.
   2. Iris has a strict interpretation of [CF conventions][cf], which,
      although a principled choice, we have found to be impractical for
      everyday uses. With Iris, every quantity has physical (SI) units, all
@@ -145,10 +145,10 @@ labeled numpy arrays that provided some guidance for the design of xray.
     enough. The goal is to be as fast as pandas or raw numpy.
   - Provide a uniform API for loading and saving scientific data in a variety
     of formats (including streaming data).
-  - Understand metadata according to [Climate and Forecast Conventions][cf]
-    when appropriate, but don't strictly enforce them. Conflicting attributes
-    (e.g., units) should be silently dropped instead of causing errors. The
-    onus is on the user to make sure that operations make sense.
+  - Take a pragmatic approach to metadata (attributes), and be very cautious
+    before implementing any functionality that relies on it. Automatically
+    maintaining attributes is a tricky and very hard to get right (see
+    discussion about Iris above).
 
 ## Getting started
 

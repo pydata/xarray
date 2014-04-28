@@ -4,6 +4,7 @@ import functools
 import operator
 import warnings
 from collections import OrderedDict, Mapping, MutableMapping
+from datetime import datetime
 
 import numpy as np
 import pandas as pd
@@ -37,12 +38,20 @@ def class_alias(obj, old_name):
 
 def as_array_or_item(values, dtype=None):
     """Return the given values as a numpy array of the indicated dtype, or as
-    an individual value if it's a 0-dimensional object array.
+    an individual value if it's a 0-dimensional object array or datetime.
     """
+    if isinstance(values, datetime):
+        # shortcut because if you try to make a datetime or Timestamp object
+        # into an array with the proper dtype, it is liable to be silently
+        # converted into an integer instead :(
+        return values
     values = np.asarray(values, dtype=dtype)
     if values.ndim == 0 and values.dtype.kind == 'O':
         # unpack 0d object arrays to be consistent with numpy
         values = values.item()
+        if isinstance(values, pd.Timestamp):
+            # turn Timestamps back into datetime64 objects
+            values = np.datetime64(values)
     return values
 
 
@@ -175,29 +184,6 @@ def allclose_or_equiv(arr1, arr2, rtol=1e-5, atol=1e-8):
     if arr1.shape != arr2.shape:
         return False
     return np.isclose(arr1, arr2, rtol=rtol, atol=atol, equal_nan=True).all()
-
-
-def variable_allclose(v1, v2, rtol=1e-05, atol=1e-08):
-    """True if two objects have the same dimensions, attributes and data;
-    otherwise False.
-
-    This function is necessary because `v1 == v2` for XArrays and DataArrays
-    does element-wise comparisions (like numpy.ndarrays).
-    """
-    def data_equiv(arr1, arr2):
-        exact_dtypes = [np.datetime64, np.timedelta64, np.string_]
-        if any(any(np.issubdtype(arr.dtype, t) for t in exact_dtypes)
-               or arr.dtype == object for arr in [arr1, arr2]):
-            return np.array_equal(arr1, arr2)
-        else:
-            return allclose_or_equiv(arr1, arr2, rtol=rtol, atol=atol)
-
-    v1, v2 = map(variable.as_variable, [v1, v2])
-    return (v1.dimensions == v2.dimensions
-            and dict_equal(v1.attributes, v2.attributes)
-            and (v1._data is v2._data or data_equiv(v1.values, v2.values)))
-
-xarray_allclose = function_alias(variable_allclose, 'xarray_allclose')
 
 
 def array_equiv(arr1, arr2):

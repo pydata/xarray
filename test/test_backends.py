@@ -66,7 +66,7 @@ class DatasetIOTestCases(object):
     def test_roundtrip_string_data(self):
         expected = Dataset({'x': ('t', ['abc', 'def'])})
         actual = self.roundtrip(expected)
-        self.assertDatasetEqual(expected, actual)
+        self.assertDatasetIdentical(expected, actual)
 
     def test_roundtrip_mask_and_scale(self):
         decoded = create_masked_and_scaled_data()
@@ -81,7 +81,7 @@ class DatasetIOTestCases(object):
     def test_roundtrip_example_1_netcdf(self):
         expected = open_example_dataset('example_1.nc')
         actual = self.roundtrip(expected)
-        self.assertDatasetEqual(expected, actual)
+        self.assertDatasetIdentical(expected, actual)
 
     def test_orthogonal_indexing(self):
         in_memory = create_test_data()
@@ -98,7 +98,7 @@ class DatasetIOTestCases(object):
     def test_pickle(self):
         on_disk = open_example_dataset('bears.nc')
         unpickled = pickle.loads(pickle.dumps(on_disk))
-        self.assertDatasetEqual(on_disk, unpickled)
+        self.assertDatasetIdentical(on_disk, unpickled)
 
 
 @contextlib.contextmanager
@@ -206,7 +206,7 @@ class NetCDF4DataTest(DatasetIOTestCases, TestCase):
             # now check xray
             ds = open_dataset(tmp_file)
             expected = create_masked_and_scaled_data()
-            self.assertDatasetEqual(expected, ds)
+            self.assertDatasetIdentical(expected, ds)
 
     def test_0dimensional_variable(self):
         # This fix verifies our work-around to this netCDF4-python bug:
@@ -219,7 +219,7 @@ class NetCDF4DataTest(DatasetIOTestCases, TestCase):
 
             ds = open_dataset(tmp_file)
             expected = Dataset({'x': ((), 123)})
-            self.assertDatasetEqual(expected, ds)
+            self.assertDatasetIdentical(expected, ds)
 
     def test_variable_len_strings(self):
         with create_tmp_file() as tmp_file:
@@ -234,7 +234,7 @@ class NetCDF4DataTest(DatasetIOTestCases, TestCase):
             expected = Dataset({'x': ('x', values)})
             for kwargs in [{}, {'decode_cf': True}]:
                 actual = open_dataset(tmp_file, **kwargs)
-                self.assertDatasetEqual(expected, actual)
+                self.assertDatasetIdentical(expected, actual)
 
 
 @requires_netCDF4
@@ -251,9 +251,9 @@ class ScipyDataTest(DatasetIOTestCases, TestCase):
 
 
 def clear_attributes(ds):
-    ds.attributes.clear()
+    ds.attrs.clear()
     for v in ds.itervalues():
-        v.attributes.clear()
+        v.attrs.clear()
 
 
 @requires_netCDF4
@@ -263,7 +263,5 @@ class PydapTest(TestCase):
         url = 'http://test.opendap.org/opendap/hyrax/data/nc/bears.nc'
         actual = Dataset.load_store(backends.PydapDataStore(url))
         expected = open_example_dataset('bears.nc')
-        # don't check attributes, since pydap decodes the strings improperly
-        for ds in [actual, expected]:
-            clear_attributes(ds)
+        # don't check attributes since pydap doesn't serialize them correctly
         self.assertDatasetEqual(actual, expected)

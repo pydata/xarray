@@ -50,7 +50,7 @@ class InaccessibleVariableDataStore(backends.InMemoryDataStore):
     def __init__(self):
         self.dimensions = OrderedDict()
         self._variables = OrderedDict()
-        self.attributes = OrderedDict()
+        self.attrs = OrderedDict()
 
     def set_variable(self, name, variable):
         self._variables[name] = variable
@@ -61,7 +61,7 @@ class InaccessibleVariableDataStore(backends.InMemoryDataStore):
         return utils.FrozenOrderedDict(
             (k, Variable(v.dimensions,
                          InaccessibleArray(v.values),
-                         v.attributes))
+                         v.attrs))
             for k, v in self._variables.iteritems())
 
 
@@ -110,7 +110,7 @@ class TestDataset(TestCase):
         # verify handling of DataArrays
         expected = Dataset({'x': var1, 'z': var3})
         actual = Dataset({'z': expected['z']})
-        self.assertDatasetEqual(expected, actual)
+        self.assertDatasetIdentical(expected, actual)
 
     def test_variable(self):
         a = Dataset()
@@ -159,7 +159,7 @@ class TestDataset(TestCase):
         self.assertTrue(data.identical(data))
 
         data2 = create_test_data(seed=42)
-        data2.attributes['foobar'] = 'baz'
+        data2.attrs['foobar'] = 'baz'
         self.assertTrue(data.equals(data2))
         self.assertFalse(data.identical(data2))
 
@@ -182,7 +182,7 @@ class TestDataset(TestCase):
         # Verify that the data is what we expect
         for v in data.variables:
             self.assertEqual(data[v].dimensions, ret[v].dimensions)
-            self.assertEqual(data[v].attributes, ret[v].attributes)
+            self.assertEqual(data[v].attrs, ret[v].attrs)
             slice_list = [slice(None)] * data[v].values.ndim
             for d, s in slicers.iteritems():
                 if d in data[v].dimensions:
@@ -236,28 +236,28 @@ class TestDataset(TestCase):
         data = create_test_data()
         expected = data.indexed(dim1=slice(10), time=slice(13))
         actual = data.reindex_like(expected)
-        self.assertDatasetEqual(actual, expected)
+        self.assertDatasetIdentical(actual, expected)
 
         expected = data.copy(deep=True)
         expected['dim3'] = ('dim3', list('cdefghijkl'))
         expected['var3'][:-2] = expected['var3'][2:]
         expected['var3'][-2:] = np.nan
         actual = data.reindex_like(expected)
-        self.assertDatasetEqual(actual, expected)
+        self.assertDatasetIdentical(actual, expected)
 
     def test_reindex(self):
         data = create_test_data()
-        self.assertDatasetEqual(data, data.reindex())
+        self.assertDatasetIdentical(data, data.reindex())
 
         expected = data.indexed(dim1=slice(10))
         actual = data.reindex(dim1=data['dim1'][:10])
-        self.assertDatasetEqual(actual, expected)
+        self.assertDatasetIdentical(actual, expected)
 
         actual = data.reindex(dim1=data['dim1'][:10].values)
-        self.assertDatasetEqual(actual, expected)
+        self.assertDatasetIdentical(actual, expected)
 
         actual = data.reindex(dim1=data['dim1'][:10].as_index)
-        self.assertDatasetEqual(actual, expected)
+        self.assertDatasetIdentical(actual, expected)
 
     def test_align(self):
         left = create_test_data()
@@ -271,28 +271,28 @@ class TestDataset(TestCase):
 
         left2, right2 = align(left, right, join='inner')
         self.assertArrayEqual(left2['dim3'], intersection)
-        self.assertDatasetEqual(left2, right2)
+        self.assertDatasetIdentical(left2, right2)
 
         left2, right2 = align(left, right, join='outer')
         self.assertVariableEqual(left2['dim3'], right2['dim3'])
         self.assertArrayEqual(left2['dim3'], union)
-        self.assertDatasetEqual(left2.labeled(dim3=intersection),
-                                right2.labeled(dim3=intersection))
+        self.assertDatasetIdentical(left2.labeled(dim3=intersection),
+                                    right2.labeled(dim3=intersection))
         self.assertTrue(np.isnan(left2['var3'][-2:]).all())
         self.assertTrue(np.isnan(right2['var3'][:2]).all())
 
         left2, right2 = align(left, right, join='left')
         self.assertVariableEqual(left2['dim3'], right2['dim3'])
         self.assertVariableEqual(left2['dim3'], left['dim3'])
-        self.assertDatasetEqual(left2.labeled(dim3=intersection),
-                                right2.labeled(dim3=intersection))
+        self.assertDatasetIdentical(left2.labeled(dim3=intersection),
+                                    right2.labeled(dim3=intersection))
         self.assertTrue(np.isnan(right2['var3'][:2]).all())
 
         left2, right2 = align(left, right, join='right')
         self.assertVariableEqual(left2['dim3'], right2['dim3'])
         self.assertVariableEqual(left2['dim3'], right['dim3'])
-        self.assertDatasetEqual(left2.labeled(dim3=intersection),
-                                right2.labeled(dim3=intersection))
+        self.assertDatasetIdentical(left2.labeled(dim3=intersection),
+                                    right2.labeled(dim3=intersection))
         self.assertTrue(np.isnan(left2['var3'][-2:]).all())
 
     def test_variable_indexing(self):
@@ -335,7 +335,7 @@ class TestDataset(TestCase):
         data = create_test_data()
 
         copied = data.copy(deep=False)
-        self.assertDatasetEqual(data, copied)
+        self.assertDatasetIdentical(data, copied)
         for k in data:
             v0 = data.variables[k]
             v1 = copied.variables[k]
@@ -344,7 +344,7 @@ class TestDataset(TestCase):
         self.assertNotIn('foo', data)
 
         copied = data.copy(deep=True)
-        self.assertDatasetEqual(data, copied)
+        self.assertDatasetIdentical(data, copied)
         for k in data:
             v0 = data.variables[k]
             v1 = copied.variables[k]
@@ -365,8 +365,8 @@ class TestDataset(TestCase):
                 if name in dims:
                     dims[dims.index(name)] = newname
 
-            self.assertVariableEqual(Variable(dims, v.values, v.attributes),
-                                   renamed.variables[k])
+            self.assertVariableEqual(Variable(dims, v.values, v.attrs),
+                                     renamed.variables[k])
             self.assertEqual(v.encoding, renamed.variables[k].encoding)
             self.assertEqual(type(v), type(renamed.variables[k]))
 
@@ -390,7 +390,7 @@ class TestDataset(TestCase):
         expected_vars = OrderedDict(create_test_data(seed=0).variables)
         expected_vars['var2'] = var2
         expected = Dataset(expected_vars)
-        self.assertDatasetEqual(expected, actual)
+        self.assertDatasetIdentical(expected, actual)
         # test in-place
         data2 = data.update(data, inplace=True)
         self.assertIs(data2, data)
@@ -430,7 +430,7 @@ class TestDataset(TestCase):
         # test slicing the virtual variable -- it should still be virtual
         actual = data['time.dayofyear'][:10].dataset
         expected = data.indexed(time=slice(10))
-        self.assertDatasetEqual(expected, actual)
+        self.assertDatasetIdentical(expected, actual)
 
     @unittest.expectedFailure
     def test_slice_virtual_variable(self):
@@ -446,12 +446,12 @@ class TestDataset(TestCase):
         data1['A'] = var
         data2 = data1.copy()
         data2['A'] = var
-        self.assertDatasetEqual(data1, data2)
+        self.assertDatasetIdentical(data1, data2)
         # assign a dataset array
         dv = 2 * data2['A']
         data1['B'] = dv.variable
         data2['B'] = dv
-        self.assertDatasetEqual(data1, data2)
+        self.assertDatasetIdentical(data1, data2)
         # assign an array
         with self.assertRaisesRegexp(TypeError, 'variables must be of type'):
             data2['C'] = var.values
@@ -478,7 +478,7 @@ class TestDataset(TestCase):
                 return [set(args[0]) & set(v.dimensions)] if args else []
             expected = Dataset({k: v.squeeze(*get_args(v))
                                for k, v in data.variables.iteritems()})
-            self.assertDatasetEqual(expected, data.squeeze(*args))
+            self.assertDatasetIdentical(expected, data.squeeze(*args))
         # invalid squeeze
         with self.assertRaisesRegexp(ValueError, 'cannot select a dimension'):
             data.squeeze('y')
@@ -517,30 +517,32 @@ class TestDataset(TestCase):
 
         split_data = [data.indexed(dim1=slice(10)),
                       data.indexed(dim1=slice(10, None))]
-        self.assertDatasetEqual(data, Dataset.concat(split_data, 'dim1'))
+        self.assertDatasetIdentical(data, Dataset.concat(split_data, 'dim1'))
 
         def rectify_dim_order(dataset):
             # return a new dataset with all variable dimensions tranposed into
             # the order in which they are found in `data`
             return Dataset({k: v.transpose(*data[k].dimensions)
                            for k, v in dataset.variables.iteritems()},
-                           dataset.attributes)
+                           dataset.attrs)
 
         for dim in ['dim1', 'dim2', 'dim3']:
             datasets = [g for _, g in data.groupby(dim, squeeze=False)]
-            self.assertDatasetEqual(data, Dataset.concat(datasets, dim))
-            self.assertDatasetEqual(data, Dataset.concat(datasets, data[dim]))
-            self.assertDatasetEqual(data, Dataset.concat(datasets, data[dim],
-                                                         mode='minimal'))
+            self.assertDatasetIdentical(data, Dataset.concat(datasets, dim))
+            self.assertDatasetIdentical(
+                data, Dataset.concat(datasets, data[dim]))
+            self.assertDatasetIdentical(
+                data, Dataset.concat(datasets, data[dim], mode='minimal'))
 
             datasets = [g for _, g in data.groupby(dim, squeeze=True)]
             concat_over = [k for k, v in data.variables.iteritems()
                            if dim in v.dimensions and k != dim]
-            actual = Dataset.concat(datasets, data[dim], concat_over=concat_over)
-            self.assertDatasetEqual(data, rectify_dim_order(actual))
+            actual = Dataset.concat(datasets, data[dim],
+                                    concat_over=concat_over)
+            self.assertDatasetIdentical(data, rectify_dim_order(actual))
 
             actual = Dataset.concat(datasets, data[dim], mode='different')
-            self.assertDatasetEqual(data, rectify_dim_order(actual))
+            self.assertDatasetIdentical(data, rectify_dim_order(actual))
 
         # Now add a new variable that doesn't depend on any of the current
         # dims and make sure the mode argument behaves as expected
@@ -563,21 +565,33 @@ class TestDataset(TestCase):
         datasets = [g for _, g in data.groupby('dim1', squeeze=False)]
         expected = data.copy()
         expected['dim1'] = dimension
-        self.assertDatasetEqual(expected, Dataset.concat(datasets, dimension))
+        self.assertDatasetIdentical(
+            expected, Dataset.concat(datasets, dimension))
+
+        # TODO: factor this into several distinct tests
+        data = create_test_data()
+        split_data = [data.indexed(dim1=slice(10)),
+                      data.indexed(dim1=slice(10, None))]
 
         with self.assertRaisesRegexp(ValueError, 'must supply at least one'):
             Dataset.concat([], 'dim1')
+
         with self.assertRaisesRegexp(ValueError, 'not all elements in'):
             Dataset.concat(split_data, 'dim1', concat_over=['not_found'])
+
         with self.assertRaisesRegexp(ValueError, 'global attributes not'):
             data0, data1 = deepcopy(split_data)
-            data1.attributes['foo'] = 'bar'
-            Dataset.concat([data0, data1], 'dim1')
+            data1.attrs['foo'] = 'bar'
+            Dataset.concat([data0, data1], 'dim1', compat='identical')
+        self.assertDatasetIdentical(
+            data, Dataset.concat([data0, data1], 'dim1', compat='equals'))
+
         with self.assertRaisesRegexp(ValueError, 'encountered unexpected'):
             data0, data1 = deepcopy(split_data)
             data1['foo'] = ('bar', np.random.randn(10))
             Dataset.concat([data0, data1], 'dim1')
-        with self.assertRaisesRegexp(ValueError, 'identical across datasets'):
+
+        with self.assertRaisesRegexp(ValueError, 'not equal across datasets'):
             data0, data1 = deepcopy(split_data)
             data1['dim2'] = 2 * data1['dim2']
             Dataset.concat([data0, data1], 'dim1')
@@ -594,7 +608,7 @@ class TestDataset(TestCase):
         self.assertTrue(expected.equals(actual))
 
         # check roundtrip
-        self.assertDatasetEqual(ds, Dataset.from_dataframe(actual))
+        self.assertDatasetIdentical(ds, Dataset.from_dataframe(actual))
 
         # test a case with a MultiIndex
         w = np.random.randn(2, 3)
@@ -608,12 +622,12 @@ class TestDataset(TestCase):
         self.assertTrue(expected.equals(actual))
 
         # check roundtrip
-        self.assertDatasetEqual(ds, Dataset.from_dataframe(actual))
+        self.assertDatasetIdentical(ds, Dataset.from_dataframe(actual))
 
     def test_pickle(self):
         data = create_test_data()
         roundtripped = pickle.loads(pickle.dumps(data))
-        self.assertDatasetEqual(data, roundtripped)
+        self.assertDatasetIdentical(data, roundtripped)
 
     def test_lazy_load(self):
         store = InaccessibleVariableDataStore()

@@ -173,7 +173,7 @@ class ArrayGroupBy(GroupBy, ImplementsReduce):
     def _combine_shortcut(self, applied, concat_dim, indexers):
         stacked = variable.Variable.concat(
             applied, concat_dim, indexers, shortcut=True)
-        stacked.attributes.update(self.obj.attributes)
+        stacked.attrs.update(self.obj.attrs)
 
         name = self.obj.name
         ds = self.obj.dataset.unselect(name)

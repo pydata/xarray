@@ -51,5 +51,5 @@ class PydapDataStore(object):
                                 for k, v in self.ds.iteritems())
 
     @property
-    def attributes(self):
+    def attrs(self):
         return Frozen(self.ds.attributes)

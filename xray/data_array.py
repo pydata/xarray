@@ -54,7 +54,7 @@ class DataArray(AbstractArray):
       dimensions (known in numpy as "broadcasting") based on dimension names,
       regardless of their original order.
     - Keep track of arbitrary metadata in the form of a Python dictionary:
-      ``x.attributes``
+      ``x.attrs``
     - Convert to a pandas Series: ``x.to_series()``.
 
     Getting items from or doing mathematical operations with a DataArray
@@ -220,19 +220,21 @@ class DataArray(AbstractArray):
     @property
     def attributes(self):
         """Dictionary storing arbitrary metadata with this array."""
-        return self.variable.attributes
+        utils.alias_warning('attributes', 'attrs', 3)
+        return self.variable.attrs
 
     @attributes.setter
     def attributes(self, value):
-        self.variable.attributes = value
+        utils.alias_warning('attributes', 'attrs', 3)
+        self.variable.attrs = value
 
     @property
     def attrs(self):
-        return self.variable.attributes
+        return self.variable.attrs
 
     @attrs.setter
     def attrs(self, value):
-        self.variable.attributes = value
+        self.variable.attrs = value
 
     @property
     def encoding(self):

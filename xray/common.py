@@ -32,6 +32,10 @@ class AbstractArray(ImplementsReduce):
     def __array__(self, dtype=None):
         return self.values
 
+    def item(self):
+        """Calls numpy.ndarray.item on this array's values"""
+        return self.values.item()
+
     def __repr__(self):
         return array_repr(self)
 
@@ -101,9 +105,9 @@ class AbstractArray(ImplementsReduce):
 
 
 def _summarize_attributes(data):
-    if data.attributes:
+    if data.attrs:
         attr_summary = '\n'.join('    %s: %s' % (k, v) for k, v
-                                 in data.attributes.iteritems())
+                                 in data.attrs.iteritems())
     else:
         attr_summary = '    Empty'
     return attr_summary

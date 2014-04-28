@@ -176,7 +176,7 @@ def _calculate_dimensions(variables):
     return dimensions
 
 
-def _get_dataset_vars_and_attr(obj):
+def _get_dataset_vars_and_attrs(obj):
     """Returns the variables and attributes associated with a dataset
 
     Like `as_dataset`, handles DataArrays, Datasets and dictionaries of
@@ -187,8 +187,14 @@ def _get_dataset_vars_and_attr(obj):
     if hasattr(obj, 'dataset'):
         obj = obj.dataset
     variables = getattr(obj, 'variables', obj)
-    attributes = getattr(obj, 'attributes', {})
+    attributes = getattr(obj, 'attrs', {})
     return variables, attributes
+
+
+def _assert_compat_valid(compat):
+    if compat not in ['equals', 'identical']:
+        raise ValueError("compat=%r invalid: must be 'equals' or "
+                         "'identical'" % compat)
 
 
 def as_dataset(obj):
@@ -283,7 +289,7 @@ class Dataset(Mapping):
             # time variables to datetime indices.
             variables = OrderedDict((k, conventions.decode_cf_variable(v))
                                     for k, v in variables.iteritems())
-        return cls(variables, store.attributes)
+        return cls(variables, store.attrs)
 
     @property
     def variables(self):
@@ -302,21 +308,23 @@ class Dataset(Mapping):
 
     @property
     def attributes(self):
-        """Dictionary of global attributes on this dataset
-        """
+        utils.alias_warning('attributes', 'attrs', 3)
         return self._attributes
 
     @attributes.setter
     def attributes(self, value):
+        utils.alias_warning('attributes', 'attrs', 3)
         self._attributes = OrderedDict(value)
 
     @property
     def attrs(self):
+        """Dictionary of global attributes on this dataset
+        """
         return self._attributes
 
     @attrs.setter
     def attrs(self, value):
-        self.attributes = value
+        self._attributes = OrderedDict(value)
 
     @property
     def dimensions(self):
@@ -339,7 +347,7 @@ class Dataset(Mapping):
                                     for k, v in self.variables.iteritems())
         else:
             variables = self.variables
-        return type(self)(variables, self.attributes)
+        return type(self)(variables, self.attrs)
 
     def __copy__(self):
         return self.copy(deep=False)
@@ -443,7 +451,7 @@ class Dataset(Mapping):
         the same global attributes.
         """
         try:
-            return (utils.dict_equal(self.attributes, other.attributes)
+            return (utils.dict_equal(self.attrs, other.attrs)
                     and len(self) == len(other)
                     and all(k1 == k2 and v1.identical(v2)
                             for (k1, v1), (k2, v2)
@@ -469,7 +477,7 @@ class Dataset(Mapping):
     def dump_to_store(self, store):
         """Store dataset contents to a backends.*DataStore object."""
         store.set_variables(self.variables)
-        store.set_attributes(self.attributes)
+        store.set_attributes(self.attrs)
         store.sync()
 
     def to_netcdf(self, filepath, **kwdargs):
@@ -535,7 +543,7 @@ class Dataset(Mapping):
             var_indexers = {k: v for k, v in indexers.iteritems()
                             if k in var.dimensions}
             variables[name] = var.indexed(**var_indexers)
-        return type(self)(variables, self.attributes)
+        return type(self)(variables, self.attrs)
 
     indexed_by = utils.function_alias(indexed, 'indexed_by')
 
@@ -700,8 +708,7 @@ class Dataset(Mapping):
                 if not (hasattr(new_var, 'dimensions') and
                         hasattr(new_var, 'values')):
                     new_var = variable.Coordinate(var.dimensions, new_var,
-                                                     var.attributes,
-                                                     var.encoding)
+                                                  var.attrs, var.encoding)
                 elif copy:
                     new_var = variable.as_variable(new_var).copy()
             else:
@@ -717,7 +724,7 @@ class Dataset(Mapping):
                     data[:] = fill_value
                     # create a new Variable so we can use orthogonal indexing
                     new_var = variable.Variable(
-                        var.dimensions, data, var.attributes)
+                        var.dimensions, data, var.attrs)
                     new_var[assign_to] = var[assign_from].values
                 elif any_not_full_slices(assign_from):
                     # type coercion is not necessary as there are no missing
@@ -729,7 +736,7 @@ class Dataset(Mapping):
                     # we neither created a new ndarray nor used fancy indexing
                     new_var = var.copy() if copy else var
             variables[name] = new_var
-        return type(self)(variables, self.attributes)
+        return type(self)(variables, self.attrs)
 
     def rename(self, name_dict):
         """Returns a new object with renamed variables and dimensions.
@@ -756,7 +763,7 @@ class Dataset(Mapping):
             var = v.copy(deep=False)
             var.dimensions = dims
             variables[name] = var
-        return type(self)(variables, self.attributes)
+        return type(self)(variables, self.attrs)
 
     def update(self, other, inplace=True):
         """Update this dataset's variables and attributes with those from
@@ -781,21 +788,22 @@ class Dataset(Mapping):
             If any dimensions would inconsistent sizes between different
             variables in the updated dataset.
         """
-        other_variables, other_attributes = _get_dataset_vars_and_attr(other)
+        other_variables, other_attrs = _get_dataset_vars_and_attrs(other)
         new_variables = _expand_variables(other_variables)
 
         obj = self if inplace else self.copy()
         obj._update_vars_and_dims(new_variables, needs_copy=inplace)
-        obj.attributes.update(other_attributes)
+        obj.attrs.update(other_attrs)
         return obj
 
-    def merge(self, other, inplace=False, overwrite_vars=None,
-              attribute_conflicts='ignore'):
-        """Merge two datasets into a single new dataset.
+    def merge(self, other, inplace=False, overwrite_vars=set(),
+              compat='equals'):
+        """Merge the variables of two datasets into a single new dataset.
 
-        This method generally not allow for overriding data. Variables and
-        dimensions are checked for conflicts. However, conflicting attributes
-        are removed.
+        This method generally not allow for overriding data, with the exception
+        of attributes, which are ignored on the second dataset. Variables with
+        the same name are checked for conflicts via the equals or identical
+        methods.
 
         Parameters
         ----------
@@ -804,12 +812,13 @@ class Dataset(Mapping):
         inplace : bool, optional
             If True, merge the other dataset into this dataset in-place.
             Otherwise, return a new dataset object.
-        overwrite_vars : list, optional
-            If provided, update variables of these names without checking for
+        overwrite_vars : str or sequence, optional
+            If provided, update variables of these name(s) without checking for
             conflicts in this dataset.
-        attribute_conflicts : str, optional
-            How to handle attribute conflicts on datasets and variables. The
-            only currently supported option is 'ignore'.
+        compat : {'equals', 'identical'}, optional
+            String indicating how to compare variables of the same name for
+            potential conflicts. 'equals' means that all values and dimensions
+            must be the same; 'identical' means attributes must also be equal.
 
         Returns
         -------
@@ -819,40 +828,28 @@ class Dataset(Mapping):
         Raises
         ------
         ValueError
-            If any variables or dimensions conflict. Conflicting attributes
+            If any variables conflict. Conflicting variables attributes
             are silently dropped.
-
-        Warning
-        -------
-        The current interface and defaults for handling for conflicting
-        attributes is not ideal and very preliminary. Expect this behavior to
-        change in future pre-release versions of xray. See the discussion
-        on GitHub: https://github.com/akleeman/xray/issues/25
         """
-        if attribute_conflicts != 'ignore':
-            raise NotImplementedError
-
-        other_variables, other_attributes = _get_dataset_vars_and_attr(other)
+        _assert_compat_valid(compat)
+        other_variables, other_attrs = _get_dataset_vars_and_attrs(other)
 
         # determine variables to check for conflicts
-        if overwrite_vars is None:
+        if not overwrite_vars:
             potential_conflicts = self.variables
         else:
             if isinstance(overwrite_vars, basestring):
                 overwrite_vars = {overwrite_vars}
+            else:
+                overwrite_vars = set(overwrite_vars)
             potential_conflicts = {k: v for k, v in self.variables.iteritems()
-                                  if k not in overwrite_vars}
+                                   if k not in overwrite_vars}
 
         # update variables
         new_variables = _expand_variables(other_variables, potential_conflicts,
-                                          'equals')
+                                          compat)
         obj = self if inplace else self.copy()
         obj._update_vars_and_dims(new_variables, needs_copy=inplace)
-
-        # remove conflicting attributes
-        for k, v in other_attributes.iteritems():
-            if k in obj.attributes and v != obj.attributes[k]:
-                del obj.attributes[k]
         return obj
 
     def select(self, *names):
@@ -871,7 +868,7 @@ class Dataset(Mapping):
             the names variables and their coordinates are included.
         """
         variables = OrderedDict((k, self[k]) for k in names)
-        return type(self)(variables, self.attributes)
+        return type(self)(variables, self.attrs)
 
     def unselect(self, *names):
         """Returns a new dataset without the named variables.
@@ -896,7 +893,7 @@ class Dataset(Mapping):
                  if any(name in v.dimensions for name in names)}
         variables = OrderedDict((k, v) for k, v in self.variables.iteritems()
                                 if k not in drop)
-        return type(self)(variables, self.attributes)
+        return type(self)(variables, self.attrs)
 
     def groupby(self, group, squeeze=True):
         """Group this dataset by unique values of the indicated group.
@@ -913,8 +910,7 @@ class Dataset(Mapping):
 
         Returns
         -------
-        grouped : GroupBy
-            A `GroupBy` object patterned after `pandas.GroupBy` that can be
+        grouped : GroupBy            A `GroupBy` object patterned after `pandas.GroupBy` that can be
             iterated over in the form of `(unique_value, grouped_array)` pairs.
         """
         if isinstance(group, basestring):
@@ -950,7 +946,7 @@ class Dataset(Mapping):
 
     @classmethod
     def concat(cls, datasets, dimension='concat_dimension', indexers=None,
-               mode='different', concat_over=None):
+               mode='different', concat_over=None, compat='equals'):
         """Concatenate datasets along a new or existing dimension.
 
         Parameters
@@ -980,6 +976,12 @@ class Dataset(Mapping):
         concat_over : None or str or iterable of str, optional
             Names of additional variables to concatenate, in which "dimension"
             does not already appear as a dimension.
+        compat : {'equals', 'identical'}, optional
+            String indicating how to compare non-concatenated variables and
+            dataset global attributes for potential conflicts. 'equals' means
+            that all variable values and dimensions must be the same;
+            'identical' means that variable attributes and global attributes
+            must also be equal.
 
         Returns
         -------
@@ -990,6 +992,8 @@ class Dataset(Mapping):
         --------
         DataArray.concat
         """
+        _assert_compat_valid(compat)
+
         # don't bother trying to work with datasets as a generator instead of a
         # list; the gains would be minimal
         datasets = list(map(as_dataset, datasets))
@@ -1039,7 +1043,7 @@ class Dataset(Mapping):
                 concat_over.add(k)
 
         # create the new dataset and add constant variables
-        concatenated = cls({}, datasets[0].attributes)
+        concatenated = cls({}, datasets[0].attrs)
         for k, v in datasets[0].iteritems():
             if k not in concat_over:
                 concatenated[k] = v
@@ -1047,16 +1051,17 @@ class Dataset(Mapping):
         # check that global attributes and non-concatenated variables are fixed
         # across all datasets
         for ds in datasets[1:]:
-            # TODO: remove attribute checks? (identical -> equals)
-            if not utils.dict_equal(ds.attributes, concatenated.attributes):
+            if (compat == 'identical'
+                    and not utils.dict_equal(ds.attrs, concatenated.attrs)):
                 raise ValueError('dataset global attributes not equal')
             for k, v in ds.variables.iteritems():
                 if k not in concatenated and k not in concat_over:
                     raise ValueError('encountered unexpected variable %r' % k)
                 elif (k in concatenated and k != dim_name and
-                          not v.identical(concatenated[k])):
+                          not getattr(v, compat)(concatenated[k])):
+                    verb = 'equal' if compat == 'equals' else compat
                     raise ValueError(
-                        'variable %r not identical across datasets' % k)
+                        'variable %r not %s across datasets' % (k, verb))
 
         # stack up each variable to fill-out the dataset
         for k in concat_over:
