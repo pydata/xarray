@@ -182,6 +182,11 @@ class TestVariable(TestCase, VariableSubclassTestCases):
         v.values = d2
         self.assertIs(v.values, d2)
 
+    def test_item(self):
+        v = Variable([], np.float32(0.0))
+        self.assertEquals(v.item(), 0)
+        self.assertIs(type(v.item()), float)
+
     def test_equals_and_identical(self):
         d = np.random.rand(10, 3)
         v1 = Variable(('dim1', 'dim2'), data=d,
