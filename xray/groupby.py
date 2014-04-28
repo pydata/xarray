@@ -136,15 +136,9 @@ class GroupBy(object):
             indexers = np.arange(self.unique_coord.size)
         return concat_dim, indexers
 
-    def _combine(self, applied, concat_dim, indexers):
-        orig_ds = dataset.as_dataset(self.obj)
-        # use the concat_over list so we can combine even if we squeezed out
-        # this dimension
-        concat_over = [k for k, v in orig_ds.iteritems()
-                       if self.group_dim in v.dimensions]
-        stacked = type(self.obj).concat(
-            applied, concat_dim, indexers, concat_over=concat_over)
-        return stacked
+    @property
+    def _combine(self):
+        return type(self.obj).concat
 
 
 class ArrayGroupBy(GroupBy, ImplementsReduce):

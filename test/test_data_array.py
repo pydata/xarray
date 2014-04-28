@@ -286,8 +286,7 @@ class TestDataArray(TestCase):
         expected_sum_all = Dataset(
             {'foo': Variable(['abc'], np.array([self.x[:, :9].sum(),
                                                 self.x[:, 10:].sum(),
-                                                self.x[:, 9:10].sum()]).T,
-                           {'cell_methods': 'x: y: sum'}),
+                                                self.x[:, 9:10].sum()]).T),
              'abc': Variable(['abc'], np.array(['a', 'b', 'c']))})['foo']
         self.assertDataArrayAllClose(
             expected_sum_all, grouped.reduce(np.sum, dimension=None))
@@ -304,15 +303,26 @@ class TestDataArray(TestCase):
             expected_sum_all, grouped.sum(dimension=None))
 
         expected_sum_axis1 = Dataset(
-            {'foo': Variable(['x', 'abc'], np.array([self.x[:, :9].sum(1),
-                                                   self.x[:, 10:].sum(1),
-                                                   self.x[:, 9:10].sum(1)]).T,
-                           {'cell_methods': 'y: sum'}),
+            {'foo': (['x', 'abc'], np.array([self.x[:, :9].sum(1),
+                                             self.x[:, 10:].sum(1),
+                                             self.x[:, 9:10].sum(1)]).T),
              'x': self.ds.variables['x'],
              'abc': Variable(['abc'], np.array(['a', 'b', 'c']))})['foo']
         self.assertDataArrayAllClose(expected_sum_axis1, grouped.reduce(np.sum))
         self.assertDataArrayAllClose(expected_sum_axis1, grouped.sum())
         self.assertDataArrayAllClose(expected_sum_axis1, grouped.sum('y'))
+
+        def center(x):
+            return x - np.mean(x)
+
+        expected_ds = self.dv.dataset.copy()
+        exp_data = np.hstack([center(self.x[:, :9]),
+                              center(self.x[:, 9:10]),
+                              center(self.x[:, 10:])])
+        expected_ds['foo'] = (['x', 'y'], exp_data)
+        expected_centered = expected_ds['foo']
+        self.assertDataArrayAllClose(expected_centered,
+                                     grouped.apply(center))
 
     def test_concat(self):
         self.ds['bar'] = Variable(['x', 'y'], np.random.randn(10, 20))
