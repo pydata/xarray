@@ -271,6 +271,9 @@ class TestVariable(TestCase, VariableSubclassTestCases):
         # test setting
         v.values[:] = 0
         self.assertTrue(np.all(v.values == 0))
+        # test orthogonal setting
+        v[range(10), range(11)] = 1
+        self.assertArrayEqual(v.values, np.ones((10, 11)))
 
     def test_indexed(self):
         v = Variable(['time', 'x'], self.d)

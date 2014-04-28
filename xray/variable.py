@@ -277,7 +277,7 @@ class Variable(AbstractArray):
 
         See __getitem__ for more details.
         """
-        self.values[key] = value
+        self._data_cached()[key] = value
 
     @property
     def attributes(self):
