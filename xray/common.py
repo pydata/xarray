@@ -1,8 +1,7 @@
 class ImplementsReduce(object):
     @classmethod
     def _reduce_method(cls, f, name=None, module=None):
-        def func(self, dimension=cls._reduce_dimension_default,
-                 axis=cls._reduce_axis_default, **kwargs):
+        def func(self, dimension=None, axis=None, **kwargs):
             return self.reduce(f, dimension, axis, **kwargs)
         if name is None:
             name = f.__name__
