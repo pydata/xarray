@@ -289,11 +289,11 @@ class TestDataArray(TestCase):
                                                 self.x[:, 9:10].sum()]).T),
              'abc': Variable(['abc'], np.array(['a', 'b', 'c']))})['foo']
         self.assertDataArrayAllClose(
-            expected_sum_all, grouped.reduce(np.sum, dimension=None))
+            expected_sum_all, grouped.reduce(np.sum))
         self.assertDataArrayAllClose(
-            expected_sum_all, grouped.sum(dimension=None))
+            expected_sum_all, grouped.sum())
         self.assertDataArrayAllClose(
-            expected_sum_all, grouped.sum(axis=None))
+            expected_sum_all, grouped.sum())
         expected_unique = Variable('abc', ['a', 'b', 'c'])
         self.assertVariableEqual(expected_unique, grouped.unique_coord)
         self.assertEqual(3, len(grouped))
@@ -308,8 +308,8 @@ class TestDataArray(TestCase):
                                              self.x[:, 9:10].sum(1)]).T),
              'x': self.ds.variables['x'],
              'abc': Variable(['abc'], np.array(['a', 'b', 'c']))})['foo']
-        self.assertDataArrayAllClose(expected_sum_axis1, grouped.reduce(np.sum))
-        self.assertDataArrayAllClose(expected_sum_axis1, grouped.sum())
+        self.assertDataArrayAllClose(expected_sum_axis1,
+                                     grouped.reduce(np.sum, 'y'))
         self.assertDataArrayAllClose(expected_sum_axis1, grouped.sum('y'))
 
         def center(x):

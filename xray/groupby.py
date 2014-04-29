@@ -246,9 +246,10 @@ class ArrayGroupBy(GroupBy, ImplementsReduce):
         reordered = self._restore_dim_order(combined, concat_dim)
         return reordered
 
-    def reduce(self, func, dimension=Ellipsis, axis=Ellipsis, shortcut=True,
+    def reduce(self, func, dimension=None, axis=None, shortcut=True,
                **kwargs):
-        """Reduce this variable by applying `func` along some dimension(s).
+        """Reduce the items in this group by applying `func` along some
+        dimension(s).
 
         Parameters
         ----------
@@ -261,18 +262,9 @@ class ArrayGroupBy(GroupBy, ImplementsReduce):
         axis : int or sequence of int, optional
             Axis(es) over which to apply `func`. Only one of the 'dimension'
             and 'axis' arguments can be supplied. If neither are supplied, then
-            `{name}` is calculated over the axis of the variable over which the
-            group was formed.
+            `func` is calculated over all dimension for each group item.
         **kwargs : dict
             Additional keyword arguments passed on to `func`.
-
-        Notes
-        -----
-        `Ellipsis` is used as a sentinel value for the default dimension and
-        axis to indicate that this operation is applied along the axis over
-        which the group was formed, instead of all axes. To instead apply
-        `{name}` simultaneously over all grouped values, use `dimension=None`
-        (or equivalently `axis=None`).
 
         Returns
         -------
@@ -280,19 +272,12 @@ class ArrayGroupBy(GroupBy, ImplementsReduce):
             Array with summarized data and the indicated dimension(s)
             removed.
         """
-        # Ellipsis is used as a sentinel value for the altered default
-        if axis is Ellipsis and dimension is Ellipsis:
-            dimension = self.group_dim
-        if dimension is Ellipsis:
-            dimension = None
-        if axis is Ellipsis:
-            axis = None
         def reduce_array(ar):
             return ar.reduce(func, dimension, axis, **kwargs)
         return self.apply(reduce_array, shortcut=shortcut)
 
     _reduce_method_docstring = \
-        """Reduce this {cls}'s data' by applying `{name}` along some
+        """Reduce the items in this group by applying `{name}` along some
         dimension(s).
 
         Parameters
@@ -302,18 +287,9 @@ class ArrayGroupBy(GroupBy, ImplementsReduce):
         axis : int or sequence of int, optional
             Axis(es) over which to apply `{name}`. Only one of the 'dimension'
             and 'axis' arguments can be supplied. If neither are supplied, then
-            `{name}` is calculated over the axis of the variable over which the
-            group was formed.
+            `{name}` is calculated over all dimension for each group item.
         **kwargs : dict
             Additional keyword arguments passed on to `{name}`.
-
-        Notes
-        -----
-        `Ellipsis` is used as a sentinel value for the default dimension and
-        axis to indicate that this operation is applied along the axis over
-        which the group was formed, instead of all axes. To instead apply
-        `{name}` simultaneously over all grouped values, use `dimension=None`
-        (or equivalently `axis=None`).
 
         Returns
         -------
@@ -321,10 +297,6 @@ class ArrayGroupBy(GroupBy, ImplementsReduce):
             New {cls} object with `{name}` applied to its data and the
             indicated dimension(s) removed.
         """
-
-    _reduce_dimension_default = Ellipsis
-    _reduce_axis_default = Ellipsis
-
 
 inject_reduce_methods(ArrayGroupBy)
 

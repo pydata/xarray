@@ -164,6 +164,9 @@ Computations
 Comparisons
 ~~~~~~~~~~~
 
+.. autosummary::
+   :toctree: generated/
+
    DataArray.equals
    DataArray.identical
 
