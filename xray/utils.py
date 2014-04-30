@@ -36,6 +36,16 @@ def class_alias(obj, old_name):
     return Wrapper
 
 
+def as_safe_array(values, dtype=None):
+    """Like np.asarray, but convert all datetime64 arrays to ns precision
+    """
+    values = np.asarray(values, dtype=dtype)
+    if values.dtype.kind == 'M':
+        # np.datetime64
+        values = values.astype('datetime64[ns]')
+    return values
+
+
 def as_array_or_item(values, dtype=None):
     """Return the given values as a numpy array of the indicated dtype, or as
     an individual value if it's a 0-dimensional object array or datetime.
@@ -45,13 +55,13 @@ def as_array_or_item(values, dtype=None):
         # into an array with the proper dtype, it is liable to be silently
         # converted into an integer instead :(
         return values
-    values = np.asarray(values, dtype=dtype)
+    values = as_safe_array(values, dtype=dtype)
     if values.ndim == 0 and values.dtype.kind == 'O':
         # unpack 0d object arrays to be consistent with numpy
         values = values.item()
         if isinstance(values, pd.Timestamp):
             # turn Timestamps back into datetime64 objects
-            values = np.datetime64(values)
+            values = np.datetime64(values, 'ns')
     return values
 
 

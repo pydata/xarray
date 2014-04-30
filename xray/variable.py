@@ -56,7 +56,7 @@ def _as_compatible_data(data):
     required = ['dtype', 'shape', 'size', 'ndim']
     if (not all(hasattr(data, attr) for attr in required)
             or isinstance(data, np.string_)):
-        data = np.asarray(data)
+        data = utils.as_safe_array(data)
     elif hasattr(data, 'values') and not isinstance(data, pd.Index):
         # we don't want nested self-described arrays
         data = data.values
@@ -65,10 +65,7 @@ def _as_compatible_data(data):
         # check pd.Index first since it's (currently) an ndarray subclass
         data = PandasIndexAdapter(data)
     elif isinstance(data, np.ndarray):
-        if data.dtype.kind == 'M':
-            # np.datetime64
-            data = data.astype('datetime64[ns]')
-        data = NumpyArrayAdapter(data)
+        data = NumpyArrayAdapter(utils.as_safe_array(data))
     return data
 
 

@@ -56,7 +56,7 @@ class VariableSubclassTestCases(object):
     def test_0d_time_data(self):
         # regression test for #105
         x = self.cls('time', pd.date_range('2000-01-01', periods=5))
-        expected = pd.Timestamp('2000-01-01')
+        expected = np.datetime64('2000-01-01T00Z', 'ns')
         self.assertEqual(x[0].values, expected)
 
     def test_pandas_data(self):
