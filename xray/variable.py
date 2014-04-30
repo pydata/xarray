@@ -552,6 +552,13 @@ class Variable(AbstractArray):
 
         return concatenated
 
+    def _data_equals(self, other):
+        return (self._data is other._data
+                or ((not isinstance(self.values, np.ndarray)
+                     or not isinstance(other.values, np.ndarray))
+                     and self.values == other.values)
+                or utils.array_equiv(self.values, other.values))
+
     def equals(self, other):
         """True if two Variables have the same dimensions and values;
         otherwise False.
@@ -565,11 +572,7 @@ class Variable(AbstractArray):
         other = getattr(other, 'variable', other)
         try:
             return (self.dimensions == other.dimensions
-                    and (self._data is other._data
-                         or ((not isinstance(self.values, np.ndarray)
-                              or not isinstance(other.values, np.ndarray))
-                             and self.values == other.values)
-                         or utils.array_equiv(self.values, other.values)))
+                    and self._data_equals(other))
         except AttributeError:
             return False
 
@@ -668,6 +671,9 @@ class Coordinate(Variable):
         else:
             index = utils.safe_cast_to_index(data)
         return index
+
+    def _data_equals(self, other):
+        return self.as_index.equals(other.to_coord().as_index)
 
     @property
     def index(self):
