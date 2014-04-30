@@ -38,6 +38,9 @@ class VariableSubclassTestCases(object):
             self.assertEqual(x[0].shape, ())
             self.assertEqual(x[0].ndim, 0)
             self.assertEqual(x[0].size, 1)
+            # test identity
+            self.assertTrue(x.equals(x.copy()))
+            self.assertTrue(x.identical(x.copy()))
             # check value is equal for both ndarray and Variable
             self.assertEqual(x.values[0], value)
             self.assertEqual(x[0].values, value)
@@ -125,17 +128,30 @@ class VariableSubclassTestCases(object):
         self.assertIsInstance(np.sin(v), Variable)
         self.assertNotIsInstance(np.sin(v), Coordinate)
 
-    def test___array__(self):
+    def example_1d_objects(self):
         for data in [range(3),
                      0.5 * np.arange(3),
                      0.5 * np.arange(3, dtype=np.float32),
                      pd.date_range('2000-01-01', periods=3),
                      np.array(['a', 'b', 'c'], dtype=object)]:
-            v = self.cls('x', data)
+            yield (self.cls('x', data), data)
+
+    def test___array__(self):
+        for v, data in self.example_1d_objects():
             self.assertArrayEqual(v.values, np.asarray(data))
             self.assertArrayEqual(np.asarray(v), np.asarray(data))
             self.assertEqual(v[0].values, np.asarray(data)[0])
             self.assertEqual(np.asarray(v[0]), np.asarray(data)[0])
+
+    def test_equals_all_dtypes(self):
+        for v, _ in self.example_1d_objects():
+            v2 = v.copy()
+            self.assertTrue(v.equals(v2))
+            self.assertTrue(v.identical(v2))
+            self.assertTrue(v[0].equals(v2[0]))
+            self.assertTrue(v[0].identical(v2[0]))
+            self.assertTrue(v[:2].equals(v2[:2]))
+            self.assertTrue(v[:2].identical(v2[:2]))
 
     def test_concat(self):
         x = np.arange(5)
@@ -201,6 +217,7 @@ class TestVariable(TestCase, VariableSubclassTestCases):
 
     def test_equals_and_identical(self):
         d = np.random.rand(10, 3)
+        d[0, 0] = np.nan
         v1 = Variable(('dim1', 'dim2'), data=d,
                        attributes={'att1': 3, 'att2': [1, 2, 3]})
         v2 = Variable(('dim1', 'dim2'), data=d,
