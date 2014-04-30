@@ -91,4 +91,4 @@ setup(name='xray',
       tests_require=['mock >= 1.0.1', 'nose >= 1.0'],
       url='https://github.com/akleeman/xray',
       test_suite='nose.collector',
-      packages=['xray'])
+      packages=['xray', 'xray.backends'])
