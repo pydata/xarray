@@ -1,3 +1,6 @@
+import numpy as np
+
+
 class ImplementsReduce(object):
     @classmethod
     def _reduce_method(cls, f, name=None, module=None):
@@ -29,7 +32,7 @@ class AbstractArray(ImplementsReduce):
         return long(self.values)
 
     def __array__(self, dtype=None):
-        return self.values
+        return np.asarray(self.values, dtype=dtype)
 
     def item(self):
         """Calls numpy.ndarray.item on this array's values"""

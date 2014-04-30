@@ -125,6 +125,18 @@ class VariableSubclassTestCases(object):
         self.assertIsInstance(np.sin(v), Variable)
         self.assertNotIsInstance(np.sin(v), Coordinate)
 
+    def test___array__(self):
+        for data in [range(3),
+                     0.5 * np.arange(3),
+                     0.5 * np.arange(3, dtype=np.float32),
+                     pd.date_range('2000-01-01', periods=3),
+                     np.array(['a', 'b', 'c'], dtype=object)]:
+            v = self.cls('x', data)
+            self.assertArrayEqual(v.values, np.asarray(data))
+            self.assertArrayEqual(np.asarray(v), np.asarray(data))
+            self.assertEqual(v[0].values, np.asarray(data)[0])
+            self.assertEqual(np.asarray(v[0]), np.asarray(data)[0])
+
     def test_concat(self):
         x = np.arange(5)
         y = np.ones(5)
