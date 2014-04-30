@@ -65,6 +65,9 @@ def _as_compatible_data(data):
         # check pd.Index first since it's (currently) an ndarray subclass
         data = PandasIndexAdapter(data)
     elif isinstance(data, np.ndarray):
+        if data.dtype.kind == 'M':
+            # np.datetime64
+            data = data.astype('datetime64[ns]')
         data = NumpyArrayAdapter(data)
     return data
 
