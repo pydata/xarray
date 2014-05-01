@@ -154,16 +154,6 @@ class DataArray(AbstractArray):
     def values(self, value):
         self.variable.values = value
 
-    @property
-    def data(self):
-        utils.alias_warning('data', 'values', stacklevel=3)
-        return self.values
-
-    @data.setter
-    def data(self, value):
-        utils.alias_warning('data', 'values', stacklevel=3)
-        self.values = value
-
     def _in_memory(self):
         return self.variable._in_memory()
 
@@ -171,14 +161,6 @@ class DataArray(AbstractArray):
     def as_index(self):
         """The variable's data as a pandas.Index"""
         return self.variable.as_index
-
-    @property
-    def index(self):
-        utils.alias_warning('index', 'as_index', stacklevel=3)
-        return self.as_index
-
-    def is_coord(self):
-        return isinstance(self.variable, variable.CoordVariable)
 
     @property
     def dimensions(self):
@@ -218,7 +200,6 @@ class DataArray(AbstractArray):
 
     @property
     def attributes(self):
-        """Dictionary storing arbitrary metadata with this array."""
         utils.alias_warning('attributes', 'attrs', 3)
         return self.variable.attrs
 
@@ -229,6 +210,7 @@ class DataArray(AbstractArray):
 
     @property
     def attrs(self):
+        """Dictionary storing arbitrary metadata with this array."""
         return self.variable.attrs
 
     @attrs.setter
@@ -281,8 +263,6 @@ class DataArray(AbstractArray):
         ds = self.dataset.indexed(**indexers)
         return ds[self.name]
 
-    indexed_by = utils.function_alias(indexed, 'indexed_by')
-
     def labeled(self, **indexers):
         """Return a new DataArray whose dataset is given by selecting
         coordinate labels along the specified dimension(s).
@@ -293,8 +273,6 @@ class DataArray(AbstractArray):
         DataArray.indexed
         """
         return self.indexed(**indexing.remap_label_indexers(self, indexers))
-
-    labeled_by = utils.function_alias(labeled, 'labeled_by')
 
     def reindex_like(self, other, copy=True):
         """Conform this object onto the coordinates of another object, filling
@@ -747,7 +725,7 @@ def align(*objects, **kwargs):
 
     Returns
     -------
-    aligned : same as *bobjects
+    aligned : same as *objects
         Tuple of objects with aligned coordinates.
     """
     # TODO: automatically align when doing math with dataset arrays?
@@ -777,8 +755,7 @@ def align(*objects, **kwargs):
             all_coords[k].append(v.as_index)
 
     # Exclude dimensions with all equal indices to avoid unnecessary reindexing
-    # work. Note: pandas.Index.equals uses some clever shortcuts to compare
-    # indices very quickly.
+    # work.
     joined_coords = {k: join_indices(v) for k, v in all_coords.iteritems()
                      if any(not v[0].equals(idx) for idx in v[1:])}
 

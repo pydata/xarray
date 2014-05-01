@@ -557,8 +557,6 @@ class Dataset(Mapping):
             variables[name] = var.indexed(**var_indexers)
         return type(self)(variables, self.attrs)
 
-    indexed_by = utils.function_alias(indexed, 'indexed_by')
-
     def labeled(self, **indexers):
         """Return a new dataset with each variable indexed by coordinate labels
         along the specified dimension(s).
@@ -598,8 +596,6 @@ class Dataset(Mapping):
         DataArray.labeled
         """
         return self.indexed(**indexing.remap_label_indexers(self, indexers))
-
-    labeled_by = utils.function_alias(labeled, 'labeled_by')
 
     def reindex_like(self, other, copy=True):
         """Conform this object onto the coordinates of another object, filling

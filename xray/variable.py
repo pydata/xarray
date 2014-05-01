@@ -223,16 +223,6 @@ class Variable(AbstractArray):
                 "replacement values must match the Variable's shape")
         self._data = values
 
-    @property
-    def data(self):
-        utils.alias_warning('data', 'values', stacklevel=3)
-        return self.values
-
-    @data.setter
-    def data(self, value):
-        utils.alias_warning('data', 'values')
-        self.values = value
-
     def to_coord(self):
         """Return this variable as a Coordinate"""
         return Coordinate(self.dimensions, self._data, self.attrs,
@@ -363,8 +353,6 @@ class Variable(AbstractArray):
             if dim in indexers:
                 key[i] = indexers[dim]
         return self[tuple(key)]
-
-    indexed_by = utils.function_alias(indexed, 'indexed_by')
 
     def transpose(self, *dimensions):
         """Return a new Variable object with transposed dimensions.
@@ -679,11 +667,6 @@ class Coordinate(Variable):
 
     def _data_equals(self, other):
         return self.as_index.equals(other.to_coord().as_index)
-
-    @property
-    def index(self):
-        utils.alias_warning('index', 'as_index', stacklevel=3)
-        return self.as_index
 
     def to_coord(self):
         """Return this variable as an Coordinate"""

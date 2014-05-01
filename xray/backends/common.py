@@ -15,7 +15,6 @@ class AbstractDataStore(object):
                                  for k, v in self.store_variables.iteritems())
 
 
-
 class AbstractWritableDataStore(AbstractDataStore):
     def set_dimensions(self, dimensions):
         for d, l in dimensions.iteritems():

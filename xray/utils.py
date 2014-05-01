@@ -99,26 +99,6 @@ def array_equiv(arr1, arr2):
     return ((arr1 == arr2) | (pd.isnull(arr1) & pd.isnull(arr2))).all()
 
 
-def variable_equal(v1, v2, check_attributes=True):
-    """True if two objects have the same dimensions, attributes and data;
-    otherwise False.
-
-    This function is necessary because `v1 == v2` for XArrays and DataArrays
-    does element-wise comparisions (like numpy.ndarrays).
-    """
-    warnings.warn('use the `equals` or `identical` methods instead of calling '
-                  'utils.variable_equal directly; this alias will be removed '
-                  'at some point',
-                  FutureWarning, stacklevel=2)
-    v1, v2 = map(variable.as_variable, [v1, v2])
-    if check_attributes:
-        return v1.identical(v2)
-    else:
-        return v1.equals(v2)
-
-xarray_equal = function_alias(variable_equal, 'xarray_equal')
-
-
 def safe_cast_to_index(array):
     """Given an array, safely cast it to a pandas.Index.
 
