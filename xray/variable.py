@@ -55,10 +55,11 @@ def _as_compatible_data(data):
     # don't check for __len__ or __iter__ so as not to warn if data is a numpy
     # numeric type like np.float32
     required = ['dtype', 'shape', 'size', 'ndim']
-    if (not all(hasattr(data, attr) for attr in required)
+    if (any(not hasattr(data, attr) for attr in required)
             or isinstance(data, np.string_)):
         data = utils.as_safe_array(data)
-    elif hasattr(data, 'values') and not isinstance(data, pd.Index):
+    elif (hasattr(data, 'values')
+            and not isinstance(data, (pd.Index, indexing.LazilyIndexedArray))):
         # we don't want nested self-described arrays
         data = data.values
 
@@ -80,8 +81,8 @@ class NumpyArrayAdapter(utils.NDArrayMixin):
     def __init__(self, array):
         self.array = np.asarray(array)
 
-    def __array__(self):
-        return self.array
+    def __array__(self, dtype=None):
+        return np.asarray(self.array, dtype=dtype)
 
     def _convert_key(self, key):
         key = indexing.expanded_indexer(key, self.ndim)
@@ -113,8 +114,10 @@ class PandasIndexAdapter(utils.NDArrayMixin):
     def dtype(self):
         return self._dtype
 
-    def __array__(self):
-        return self.array.values.astype(self.dtype)
+    def __array__(self, dtype=None):
+        if dtype is None:
+            dtype = self.dtype
+        return self.array.values.astype(dtype)
 
     def __getitem__(self, key):
         if isinstance(key, tuple) and len(key) == 1:
@@ -124,7 +127,18 @@ class PandasIndexAdapter(utils.NDArrayMixin):
         if isinstance(key, int):
             return utils.as_array_or_item(self.array[key], dtype=self.dtype)
         else:
-            return PandasIndexAdapter(self.array[key], dtype=self.dtype)
+            if isinstance(key, slice) and key == slice(None):
+                # pandas<0.14 does dtype inference when slicing; we would like
+                # to avoid this if possible
+                # https://github.com/pydata/pandas/issues/6370
+                arr = self.array
+            else:
+                arr = self.array[key]
+            return PandasIndexAdapter(arr, dtype=self.dtype)
+
+    def __repr__(self):
+        return ('%s(array=%r, dtype=%r)'
+                % (type(self).__name__, self.array, self.dtype))
 
 
 class Variable(AbstractArray):
@@ -661,14 +675,7 @@ class Coordinate(Variable):
     @property
     def as_index(self):
         """The variable's data as a pandas.Index"""
-        if self.ndim != 1:
-            raise ValueError('can only access 1-d arrays as an index')
-        data = self._data_cached()
-        if isinstance(data, PandasIndexAdapter):
-            index = data.array
-        else:
-            index = utils.safe_cast_to_index(data)
-        return index
+        return self._data_cached().array
 
     def _data_equals(self, other):
         return self.as_index.equals(other.to_coord().as_index)

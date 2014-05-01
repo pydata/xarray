@@ -215,8 +215,8 @@ class LazilyIndexedArray(utils.NDArrayMixin):
     def values(self):
         return self.array[self.key]
 
-    def __array__(self):
-        return np.asarray(self.values)
+    def __array__(self, dtype=None):
+        return np.asarray(self.values, dtype=None)
 
     def __getitem__(self, key):
         return type(self)(self.array, self._updated_key(key))

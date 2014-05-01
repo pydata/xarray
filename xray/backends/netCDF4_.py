@@ -3,10 +3,11 @@ import warnings
 
 import numpy as np
 
-from common import AbstractDataStore
+from common import AbstractWritableDataStore
 import xray
 from xray.conventions import encode_cf_variable
 from xray.utils import FrozenOrderedDict, NDArrayMixin, as_array_or_item
+from xray import indexing
 
 
 class NetCDF4ArrayWrapper(NDArrayMixin):
@@ -34,7 +35,7 @@ class NetCDF4ArrayWrapper(NDArrayMixin):
         return data
 
 
-class NetCDF4DataStore(AbstractDataStore):
+class NetCDF4DataStore(AbstractWritableDataStore):
     """Store for reading and writing data via the Python-NetCDF4 library.
 
     This store supports NetCDF3, NetCDF4 and OpenDAP datasets.
@@ -51,35 +52,31 @@ class NetCDF4DataStore(AbstractDataStore):
                               diskless=diskless, persist=persist,
                               format=format)
 
-    @property
-    def variables(self):
-        def convert_variable(var):
-            var.set_auto_maskandscale(False)
-            dimensions = var.dimensions
-            data = NetCDF4ArrayWrapper(var)
-            attributes = OrderedDict((k, var.getncattr(k))
-                                     for k in var.ncattrs())
-            # netCDF4 specific encoding; save _FillValue for later
-            encoding = {}
-            filters = var.filters()
-            if filters is not None:
-                encoding.update(filters)
-            chunking = var.chunking()
-            if chunking is not None:
-                if chunking == 'contiguous':
-                    encoding['contiguous'] = True
-                    encoding['chunksizes'] = None
-                else:
-                    encoding['contiguous'] = False
-                    encoding['chunksizes'] = tuple(chunking)
-            # TODO: figure out how to round-trip "endian-ness" without raising
-            # warnings from netCDF4
-            # encoding['endian'] = var.endian()
-            encoding['least_significant_digit'] = \
-                attributes.pop('least_significant_digit', None)
-            return xray.Variable(dimensions, data, attributes, encoding)
-        return FrozenOrderedDict((k, convert_variable(v))
-                                 for k, v in self.ds.variables.iteritems())
+    def open_store_variable(self, var):
+        var.set_auto_maskandscale(False)
+        dimensions = var.dimensions
+        data = indexing.LazilyIndexedArray(NetCDF4ArrayWrapper(var))
+        attributes = OrderedDict((k, var.getncattr(k))
+                                 for k in var.ncattrs())
+        # netCDF4 specific encoding; save _FillValue for later
+        encoding = {}
+        filters = var.filters()
+        if filters is not None:
+            encoding.update(filters)
+        chunking = var.chunking()
+        if chunking is not None:
+            if chunking == 'contiguous':
+                encoding['contiguous'] = True
+                encoding['chunksizes'] = None
+            else:
+                encoding['contiguous'] = False
+                encoding['chunksizes'] = tuple(chunking)
+        # TODO: figure out how to round-trip "endian-ness" without raising
+        # warnings from netCDF4
+        # encoding['endian'] = var.endian()
+        encoding['least_significant_digit'] = \
+            attributes.pop('least_significant_digit', None)
+        return xray.Variable(dimensions, data, attributes, encoding)
 
     @property
     def attrs(self):

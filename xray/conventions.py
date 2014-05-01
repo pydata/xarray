@@ -379,6 +379,7 @@ class CharToStringArray(utils.NDArrayMixin):
 def string_to_char(arr):
     """Like netCDF4.stringtochar, but faster and more flexible.
     """
+    arr = np.asarray(arr)
     kind = arr.dtype.kind
     if kind not in ['U', 'S']:
         raise ValueError('argument must be a string')
@@ -389,6 +390,7 @@ def char_to_string(arr):
     """Like netCDF4.chartostring, but faster and more flexible.
     """
     # based on: http://stackoverflow.com/a/10984878/809705
+    arr = np.asarray(arr)
     kind = arr.dtype.kind
     if kind not in ['U', 'S']:
         raise ValueError('argument must be a string')
@@ -506,4 +508,5 @@ def decode_cf_variable(var, mask_and_scale=True):
         calendar = pop_to(attributes, encoding, 'calendar')
         data = DecodedCFDatetimeArray(data, units, calendar)
 
-    return variable.Variable(dimensions, data, attributes, encoding=encoding)
+    return variable.Variable(dimensions, indexing.LazilyIndexedArray(data),
+                             attributes, encoding=encoding)

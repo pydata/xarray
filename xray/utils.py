@@ -355,7 +355,8 @@ class NDArrayMixin(object):
 
     @property
     def size(self):
-        return np.prod(self.shape)
+        # cast to int so that shape = () gives size = 1
+        return int(np.prod(self.shape))
 
     def __len__(self):
         try:
@@ -363,8 +364,11 @@ class NDArrayMixin(object):
         except IndexError:
             raise TypeError('len() of unsized object')
 
-    def __array__(self):
-        return np.asarray(self[...])
+    def __array__(self, dtype=None):
+        return np.asarray(self[...], dtype=dtype)
 
     def __getitem__(self, key):
-        raise self.array[key]
+        return self.array[key]
+
+    def __repr__(self):
+        return '%s(array=%r)' % (type(self).__name__, self.array)
