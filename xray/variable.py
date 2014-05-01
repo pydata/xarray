@@ -58,10 +58,13 @@ def _as_compatible_data(data):
     if (any(not hasattr(data, attr) for attr in required)
             or isinstance(data, np.string_)):
         data = utils.as_safe_array(data)
-    elif (hasattr(data, 'values')
-            and not isinstance(data, (pd.Index, indexing.LazilyIndexedArray))):
-        # we don't want nested self-described arrays
-        data = data.values
+    elif not isinstance(data, (pd.Index, indexing.LazilyIndexedArray)):
+        try:
+            # we don't want nested self-described arrays
+            # use try/except instead of hasattr to only calculate values once
+            data = data.values
+        except AttributeError:
+            pass
 
     if isinstance(data, pd.Index):
         # check pd.Index first since it's (currently) an ndarray subclass
