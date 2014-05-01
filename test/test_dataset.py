@@ -1,5 +1,5 @@
 from collections import OrderedDict
-from copy import deepcopy
+from copy import copy, deepcopy
 from textwrap import dedent
 import cPickle as pickle
 import unittest
@@ -161,10 +161,18 @@ class TestDataset(TestCase):
         data2 = create_test_data(seed=42)
         data2.attrs['foobar'] = 'baz'
         self.assertTrue(data.equals(data2))
+        self.assertTrue(data == data2)
         self.assertFalse(data.identical(data2))
 
         del data2['time']
         self.assertFalse(data.equals(data2))
+        self.assertTrue(data != data2)
+
+    def test_attrs(self):
+        data = create_test_data(seed=42)
+        data.attrs = {'foobar': 'baz'}
+        self.assertTrue(data.attrs['foobar'], 'baz')
+        self.assertIsInstance(data.attrs, OrderedDict)
 
     def test_indexed(self):
         data = create_test_data()
@@ -334,21 +342,21 @@ class TestDataset(TestCase):
     def test_copy(self):
         data = create_test_data()
 
-        copied = data.copy(deep=False)
-        self.assertDatasetIdentical(data, copied)
-        for k in data:
-            v0 = data.variables[k]
-            v1 = copied.variables[k]
-            self.assertIs(v0, v1)
-        copied['foo'] = ('z', np.arange(5))
-        self.assertNotIn('foo', data)
+        for copied in [data.copy(deep=False), copy(data)]:
+            self.assertDatasetIdentical(data, copied)
+            for k in data:
+                v0 = data.variables[k]
+                v1 = copied.variables[k]
+                self.assertIs(v0, v1)
+            copied['foo'] = ('z', np.arange(5))
+            self.assertNotIn('foo', data)
 
-        copied = data.copy(deep=True)
-        self.assertDatasetIdentical(data, copied)
-        for k in data:
-            v0 = data.variables[k]
-            v1 = copied.variables[k]
-            self.assertIsNot(v0, v1)
+        for copied in [data.copy(deep=True), deepcopy(data)]:
+            self.assertDatasetIdentical(data, copied)
+            for k in data:
+                v0 = data.variables[k]
+                v1 = copied.variables[k]
+                self.assertIsNot(v0, v1)
 
     def test_rename(self):
         data = create_test_data()
@@ -510,6 +518,8 @@ class TestDataset(TestCase):
         # TODO: test the other edge cases
         with self.assertRaisesRegexp(ValueError, 'must be 1 dimensional'):
             data.groupby('var1')
+        with self.assertRaisesRegexp(ValueError, 'length does not match'):
+            data.groupby(data['dim1'][:3])
 
     def test_concat(self):
         data = create_test_data()

@@ -178,6 +178,8 @@ class TestDataArray(TestCase):
             a + b
         with self.assertRaisesRegexp(ValueError, 'not aligned'):
             b + a
+        with self.assertRaisesRegexp(TypeError, 'datasets do not support'):
+            a + a.dataset
 
     def test_dataset_math(self):
         # verify that mathematical operators keep around the expected variables

@@ -1,5 +1,5 @@
-from collections import namedtuple
-from copy import deepcopy
+from collections import namedtuple, OrderedDict
+from copy import copy, deepcopy
 from datetime import datetime
 from textwrap import dedent
 
@@ -16,7 +16,7 @@ from . import TestCase, source_ndarray
 class VariableSubclassTestCases(object):
     def test_properties(self):
         data = 0.5 * np.arange(10)
-        v = Variable(['time'], data, {'foo': 'bar'})
+        v = self.cls(['time'], data, {'foo': 'bar'})
         self.assertEqual(v.dimensions, ('time',))
         self.assertArrayEqual(v.values, data)
         self.assertEqual(v.dtype, float)
@@ -25,6 +25,16 @@ class VariableSubclassTestCases(object):
         self.assertEqual(v.ndim, 1)
         self.assertEqual(len(v), 10)
         self.assertEqual(v.attrs, {'foo': u'bar'})
+
+    def test_attrs(self):
+        v = self.cls(['time'], 0.5 * np.arange(10))
+        self.assertEqual(v.attrs, {})
+        attrs = {'foo': 'bar'}
+        v.attrs = attrs
+        self.assertEqual(v.attrs, attrs)
+        self.assertIsInstance(v.attrs, OrderedDict)
+        v.attrs['foo'] = 'baz'
+        self.assertEqual(v.attrs['foo'], 'baz')
 
     def test_0d_data(self):
         d = datetime(2000, 1, 1)
@@ -181,7 +191,7 @@ class VariableSubclassTestCases(object):
                                Variable.concat([v[:, 0], v[:, 1:]], 'x'))
 
     def test_copy(self):
-        v = self.cls('x', 0.5 * np.arange(10))
+        v = self.cls('x', 0.5 * np.arange(10), {'foo': 'bar'})
         for deep in [True, False]:
             w = v.copy(deep=deep)
             self.assertIs(type(v), type(w))
@@ -194,6 +204,7 @@ class VariableSubclassTestCases(object):
                 else:
                     self.assertIs(source_ndarray(v.values),
                                   source_ndarray(w.values))
+        self.assertVariableIdentical(v, copy(v))
 
 
 class TestVariable(TestCase, VariableSubclassTestCases):
@@ -238,6 +249,12 @@ class TestVariable(TestCase, VariableSubclassTestCases):
         v5 = deepcopy(v1)
         v5.values[:] = np.random.rand(10, 3)
         self.assertFalse(v1.equals(v5))
+
+        self.assertFalse(v1.equals(None))
+        self.assertFalse(v1.equals(d))
+
+        self.assertFalse(v1.identical(None))
+        self.assertFalse(v1.identical(d))
 
     def test_as_variable(self):
         data = np.arange(10)
@@ -401,6 +418,9 @@ class TestVariable(TestCase, VariableSubclassTestCases):
         self.assertIs(source_ndarray(v.values), x)
         self.assertArrayEqual(v.values, np.arange(5) + 1)
 
+        with self.assertRaisesRegexp(ValueError, 'dimensions cannot change'):
+            v += Variable('y', np.arange(5))
+
     def test_reduce(self):
         v = Variable(['x', 'y'], self.d, {'ignored': 'attributes'})
         self.assertVariableIdentical(v.reduce(np.std, 'x'),
@@ -415,6 +435,9 @@ class TestVariable(TestCase, VariableSubclassTestCases):
             v.reduce(np.mean, 'x').reduce(np.std, 'y'),
             Variable([], self.d.mean(axis=0).std()))
         self.assertVariableIdentical(v.mean('x'), v.reduce(np.mean, 'x'))
+
+        with self.assertRaisesRegexp(ValueError, 'cannot supply both'):
+            v.mean(dimension='x', axis=0)
 
 
 class TestCoordinate(TestCase, VariableSubclassTestCases):

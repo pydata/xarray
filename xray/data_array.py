@@ -91,8 +91,6 @@ class DataArray(AbstractArray):
             should be applied.
         """
         obj = object.__new__(cls)
-        if not isinstance(dataset, dataset_.Dataset):
-            dataset = dataset_.Dataset(dataset)
         if name not in dataset and name not in dataset.virtual_variables:
             raise ValueError('name %r must be a variable in dataset %r'
                              % (name, dataset))

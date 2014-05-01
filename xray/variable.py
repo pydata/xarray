@@ -292,7 +292,7 @@ class Variable(AbstractArray):
     @attributes.setter
     def attributes(self, value):
         utils.alias_warning('attributes', 'attrs', 3)
-        self._attributes = value
+        self._attributes = OrderedDict(value)
 
     @property
     def attrs(self):
@@ -302,7 +302,7 @@ class Variable(AbstractArray):
 
     @attrs.setter
     def attrs(self, value):
-        self._attributes = value
+        self._attributes = OrderedDict(value)
 
     def copy(self, deep=True):
         """Returns a copy of this object.
@@ -573,7 +573,7 @@ class Variable(AbstractArray):
         try:
             return (self.dimensions == other.dimensions
                     and self._data_equals(other))
-        except AttributeError:
+        except (TypeError, AttributeError):
             return False
 
     def identical(self, other):
@@ -582,7 +582,7 @@ class Variable(AbstractArray):
         try:
             return (utils.dict_equal(self.attrs, other.attrs)
                     and self.equals(other))
-        except AttributeError:
+        except (TypeError, AttributeError):
             return False
 
     def __array_wrap__(self, obj, context=None):

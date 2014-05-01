@@ -449,7 +449,7 @@ class Dataset(Mapping):
                             for (k1, v1), (k2, v2)
                             in zip(sorted(self.variables.items()),
                                    sorted(other.variables.items()))))
-        except AttributeError:
+        except (TypeError, AttributeError):
             return False
 
     __eq__ = equals
@@ -469,7 +469,7 @@ class Dataset(Mapping):
                             for (k1, v1), (k2, v2)
                             in zip(sorted(self.variables.items()),
                                    sorted(other.variables.items()))))
-        except AttributeError:
+        except (TypeError, AttributeError):
             return False
 
     @property
