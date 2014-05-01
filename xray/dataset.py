@@ -1,4 +1,3 @@
-import functools
 import numpy as np
 import pandas as pd
 
@@ -9,11 +8,12 @@ import backends
 import conventions
 import common
 import groupby
+import indexing
 import variable
 import utils
-from data_array import DataArray
+import data_array
 from utils import (FrozenOrderedDict, Frozen, SortedKeysDict, ChainMap,
-                   remap_label_indexers, multi_index_from_product)
+                   multi_index_from_product)
 
 
 def open_dataset(nc, decode_cf=True, *args, **kwargs):
@@ -391,7 +391,7 @@ class Dataset(Mapping):
     def __getitem__(self, key):
         """Access the given variable name in this dataset as a `DataArray`.
         """
-        return DataArray._constructor(self, key)
+        return data_array.DataArray._constructor(self, key)
 
     def __setitem__(self, key, value):
         """Add an array to this dataset.
@@ -585,7 +585,7 @@ class Dataset(Mapping):
         DataArray.indexed
         DataArray.labeled
         """
-        return self.indexed(**remap_label_indexers(self, indexers))
+        return self.indexed(**indexing.remap_label_indexers(self, indexers))
 
     labeled_by = utils.function_alias(labeled, 'labeled_by')
 

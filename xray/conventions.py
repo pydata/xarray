@@ -4,6 +4,7 @@ import numpy as np
 import pandas as pd
 from datetime import datetime
 
+import indexing
 import utils
 import variable
 
@@ -369,7 +370,7 @@ class CharToStringArray(utils.NDArrayMixin):
             return self.array[key]
         else:
             # require slicing the last dimension completely
-            key = utils.expanded_indexer(key, self.array.ndim)
+            key = indexing.expanded_indexer(key, self.array.ndim)
             if  key[-1] != slice(None):
                 raise IndexError('too many indices')
             return char_to_string(self.array[key])

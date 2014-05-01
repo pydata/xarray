@@ -3,17 +3,16 @@ import operator
 import warnings
 from collections import defaultdict, OrderedDict
 
-import numpy as np
 import pandas as pd
 
-import variable
 import dataset as dataset_
+import indexing
 import groupby
 import ops
 import utils
+import variable
 from common import AbstractArray
-from utils import (expanded_indexer, FrozenOrderedDict, convert_label_indexer,
-                   remap_label_indexers, multi_index_from_product)
+from utils import FrozenOrderedDict, multi_index_from_product
 
 
 class _LocIndexer(object):
@@ -25,7 +24,7 @@ class _LocIndexer(object):
         indexers = []
         for dim, label in label_indexers.iteritems():
             index = self.data_array.coordinates[dim]
-            indexers.append(convert_label_indexer(index, label))
+            indexers.append(indexing.convert_label_indexer(index, label))
         return tuple(indexers)
 
     def __getitem__(self, key):
@@ -165,8 +164,8 @@ class DataArray(AbstractArray):
         utils.alias_warning('data', 'values', stacklevel=3)
         self.values = value
 
-    def in_memory(self):
-        return self.variable.in_memory()
+    def _in_memory(self):
+        return self.variable._in_memory()
 
     @property
     def as_index(self):
@@ -187,7 +186,7 @@ class DataArray(AbstractArray):
 
     def _key_to_indexers(self, key):
         return OrderedDict(
-            zip(self.dimensions, expanded_indexer(key, self.ndim)))
+            zip(self.dimensions, indexing.expanded_indexer(key, self.ndim)))
 
     def __getitem__(self, key):
         if isinstance(key, basestring):
@@ -293,7 +292,7 @@ class DataArray(AbstractArray):
         Dataset.labeled
         DataArray.indexed
         """
-        return self.indexed(**remap_label_indexers(self, indexers))
+        return self.indexed(**indexing.remap_label_indexers(self, indexers))
 
     labeled_by = utils.function_alias(labeled, 'labeled_by')
 

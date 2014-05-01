@@ -5,11 +5,12 @@ import pandas as pd
 from itertools import izip
 from collections import OrderedDict
 
-import ops
-import utils
+import data_array
 import dataset
 import groupby
-import data_array
+import indexing
+import ops
+import utils
 
 from common import AbstractArray
 
@@ -33,8 +34,8 @@ def as_variable(obj, strict=True):
     if not isinstance(obj, (Variable, data_array.DataArray)):
         if hasattr(obj, 'dimensions') and hasattr(obj, 'values'):
             obj = Variable(obj.dimensions, obj.values,
-                         getattr(obj, 'attributes', None),
-                         getattr(obj, 'encoding', None))
+                           getattr(obj, 'attributes', None),
+                           getattr(obj, 'encoding', None))
         else:
             if isinstance(obj, np.ndarray):
                 raise TypeError('cannot convert numpy.ndarray objects into '
@@ -83,10 +84,10 @@ class NumpyArrayAdapter(utils.NDArrayMixin):
         return self.array
 
     def _convert_key(self, key):
-        key = utils.expanded_indexer(key, self.ndim)
+        key = indexing.expanded_indexer(key, self.ndim)
         if any(not isinstance(k, (int, slice)) for k in key):
             # key would trigger fancy indexing
-            key = utils.orthogonal_indexer(key, self.shape)
+            key = indexing.orthogonal_indexer(key, self.shape)
         return key
 
     def __getitem__(self, key):
@@ -178,7 +179,7 @@ class Variable(AbstractArray):
     def __len__(self):
         return len(self._data)
 
-    def in_memory(self):
+    def _in_memory(self):
         return isinstance(self._data, (NumpyArrayAdapter, PandasIndexAdapter))
 
     _cache_data_class = NumpyArrayAdapter
@@ -260,7 +261,7 @@ class Variable(AbstractArray):
         If you really want to do indexing like `x[x > 0]`, manipulate the numpy
         array `x.values` directly.
         """
-        key = utils.expanded_indexer(key, self.ndim)
+        key = indexing.expanded_indexer(key, self.ndim)
         dimensions = [dim for k, dim in zip(key, self.dimensions)
                       if not isinstance(k, int)]
         values = self._data[key]
