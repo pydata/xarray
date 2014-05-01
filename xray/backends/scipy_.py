@@ -3,13 +3,13 @@ import numpy as np
 import warnings
 
 import xray
-from xray.backends.common import AbstractDataStore
+from xray.backends.common import AbstractWritableDataStore
 from xray.conventions import (is_valid_nc3_name, coerce_nc3_dtype,
                               encode_cf_variable)
-from xray.utils import Frozen, FrozenOrderedDict
+from xray.utils import Frozen
 
 
-class ScipyDataStore(AbstractDataStore):
+class ScipyDataStore(AbstractWritableDataStore):
     """Store for reading and writing data via scipy.io.netcdf.
 
     This store has the advantage of being able to be initialized with a
@@ -36,11 +36,8 @@ class ScipyDataStore(AbstractDataStore):
         self.ds = scipy.io.netcdf.netcdf_file(
             filename_or_obj, mode=mode, mmap=mmap, version=version)
 
-    @property
-    def variables(self):
-        return FrozenOrderedDict((k, xray.Variable(v.dimensions, v.data,
-                                                   v._attributes))
-                                 for k, v in self.ds.variables.iteritems())
+    def open_store_variable(self, var):
+        return xray.Variable(var.dimensions, var.data, var._attributes)
 
     @property
     def attrs(self):

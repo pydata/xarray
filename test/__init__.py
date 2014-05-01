@@ -113,3 +113,13 @@ class TestCase(unittest.TestCase):
 class ReturnItem(object):
     def __getitem__(self, key):
         return key
+
+
+def source_ndarray(array):
+    """Given an ndarray, return the base object which holds its memory, or the
+    object itself.
+    """
+    base = array.base
+    if base is None:
+        base = array
+    return base

@@ -7,7 +7,7 @@ import unittest
 import numpy as np
 import pandas as pd
 
-from xray import Dataset, DataArray, Variable, backends, utils, align
+from xray import Dataset, DataArray, Variable, backends, utils, align, indexing
 
 from . import TestCase
 
@@ -56,13 +56,13 @@ class InaccessibleVariableDataStore(backends.InMemoryDataStore):
         self._variables[name] = variable
         return self._variables[name]
 
+    def open_store_variable(self, var):
+        data = indexing.LazilyIndexedArray(InaccessibleArray(var.values))
+        return Variable(var.dimensions, data, var.attrs)
+
     @property
-    def variables(self):
-        return utils.FrozenOrderedDict(
-            (k, Variable(v.dimensions,
-                         InaccessibleArray(v.values),
-                         v.attrs))
-            for k, v in self._variables.iteritems())
+    def store_variables(self):
+        return self._variables
 
 
 class TestDataset(TestCase):
@@ -631,10 +631,13 @@ class TestDataset(TestCase):
 
     def test_lazy_load(self):
         store = InaccessibleVariableDataStore()
-        store.set_variable('dim', Variable(('dim'), np.arange(10)))
-        store.set_variable('var', Variable(('dim'), np.random.uniform(size=10)))
-        ds = Dataset()
-        ds = ds.load_store(store, decode_cf=False)
-        self.assertRaises(UnexpectedDataAccess, lambda: ds['var'].values)
-        ds = ds.load_store(store, decode_cf=True)
-        self.assertRaises(UnexpectedDataAccess, lambda: ds['var'].values)
+        create_test_data().dump_to_store(store)
+
+        for decode_cf in [False, True]:
+            ds = Dataset.load_store(store, decode_cf=decode_cf)
+            with self.assertRaises(UnexpectedDataAccess):
+                ds['var1'].values
+
+            # these should not raise UnexpectedDataAccess:
+            ds.indexed(time=10)
+            ds.indexed(time=slice(10), dim1=[0]).indexed(dim1=0, dim2=-1)

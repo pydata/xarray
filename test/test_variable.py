@@ -10,7 +10,7 @@ from xray import Variable, Dataset, DataArray
 from xray.variable import (Coordinate, as_variable, NumpyArrayAdapter,
                            PandasIndexAdapter)
 
-from . import TestCase
+from . import TestCase, source_ndarray
 
 
 class VariableSubclassTestCases(object):
@@ -189,9 +189,11 @@ class VariableSubclassTestCases(object):
             self.assertEqual(v.dtype, w.dtype)
             if self.cls is Variable:
                 if deep:
-                    self.assertIsNot(v.values, w.values)
+                    self.assertIsNot(source_ndarray(v.values),
+                                     source_ndarray(w.values))
                 else:
-                    self.assertIs(v.values, w.values)
+                    self.assertIs(source_ndarray(v.values),
+                                  source_ndarray(w.values))
 
 
 class TestVariable(TestCase, VariableSubclassTestCases):
@@ -202,13 +204,14 @@ class TestVariable(TestCase, VariableSubclassTestCases):
 
     def test_data(self):
         v = Variable(['time', 'x'], self.d)
-        self.assertIs(v.values, self.d)
+        self.assertArrayEqual(v.values, self.d)
+        self.assertIs(source_ndarray(v.values), self.d)
         with self.assertRaises(ValueError):
             # wrong size
             v.values = np.random.random(5)
         d2 = np.random.random((10, 3))
         v.values = d2
-        self.assertIs(v.values, d2)
+        self.assertIs(source_ndarray(v.values), d2)
 
     def test_item(self):
         v = Variable([], np.float32(0.0))
@@ -395,7 +398,7 @@ class TestVariable(TestCase, VariableSubclassTestCases):
         v2 += 1
         self.assertIs(v, v2)
         # since we provided an ndarray for data, it is also modified in-place
-        self.assertIs(v.values, x)
+        self.assertIs(source_ndarray(v.values), x)
         self.assertArrayEqual(v.values, np.arange(5) + 1)
 
     def test_reduce(self):

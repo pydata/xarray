@@ -2,6 +2,9 @@ import numpy as np
 
 import xray
 from xray.utils import FrozenOrderedDict, Frozen, NDArrayMixin
+from xray import indexing
+
+from common import AbstractDataStore
 
 
 class PydapArrayWrapper(NDArrayMixin):
@@ -33,7 +36,7 @@ class PydapArrayWrapper(NDArrayMixin):
         return getattr(self.array, 'array', self.array)[key]
 
 
-class PydapDataStore(object):
+class PydapDataStore(AbstractDataStore):
     """Store for accessing OpenDAP datasets with pydap.
 
     This store provides an alternative way to access OpenDAP datasets that may
@@ -43,12 +46,13 @@ class PydapDataStore(object):
         import pydap.client
         self.ds = pydap.client.open_url(url)
 
+    def open_store_variable(self, var):
+        data = indexing.LazilyIndexedArray(PydapArrayWrapper(var))
+        return xray.Variable(var.dimensions, data, var.attributes)
+
     @property
-    def variables(self):
-        return FrozenOrderedDict((k, xray.Variable(v.dimensions,
-                                                   PydapArrayWrapper(v),
-                                                   v.attributes))
-                                for k, v in self.ds.iteritems())
+    def store_variables(self):
+        return self.ds
 
     @property
     def attrs(self):
