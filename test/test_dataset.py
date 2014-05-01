@@ -432,7 +432,6 @@ class TestDataset(TestCase):
         expected = data.indexed(time=slice(10))
         self.assertDatasetIdentical(expected, actual)
 
-    @unittest.expectedFailure
     def test_slice_virtual_variable(self):
         data = create_test_data()
         self.assertVariableEqual(data['time.dayofyear'][:10],

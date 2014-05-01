@@ -67,43 +67,55 @@ class VariablesDict(OrderedDict):
     'season' for climatological season), which are accessed by getting the item
     'time.year'.
     """
-    def _datetimeindices(self):
-        return [k for k, v in self.iteritems()
-                if np.issubdtype(v.dtype, np.datetime64) and v.ndim == 1
-                and isinstance(v.as_index, pd.DatetimeIndex)]
-
     @property
     def virtual(self):
-        """Variables that don't exist in this dataset but for which could be
-        created on demand (because they can be calculated from other dataset
-        variables)
+        """A frozenset of variable names that don't exist in this dataset but
+        for which could be created on demand (because they can be calculated
+        from other dataset variables)
         """
-        virtual_vars = []
-        for k in self._datetimeindices():
-            for suffix in _DATETIMEINDEX_COMPONENTS + ['season']:
-                name = '%s.%s' % (k, suffix)
-                if name not in self:
-                    virtual_vars.append(name)
-        return virtual_vars
+        def _castable_to_timestamp(obj):
+            try:
+                pd.Timestamp(obj)
+            except:
+                return False
+            else:
+                return True
 
-    def _get_virtual_variable(self, key):
-        split_key = key.split('.')
-        assert len(split_key) == 2
-        ref_var, suffix = split_key
-        index = self[ref_var].as_index
-        if suffix == 'season':
-            # seasons = np.array(['DJF', 'MAM', 'JJA', 'SON'])
-            month = index.month
-            data = (month // 3) % 4 + 1
-        else:
-            data = getattr(index, suffix)
-        return variable.Variable(self[ref_var].dimensions, data)
+        virtual_vars = []
+        for k, v in self.iteritems():
+            if ((v.dtype.kind == 'M' and isinstance(v, variable.Coordinate))
+                    or (v.ndim == 0 and _castable_to_timestamp(v.values))):
+                # nb. dtype.kind == 'M' is datetime64
+                for suffix in _DATETIMEINDEX_COMPONENTS + ['season']:
+                    name = '%s.%s' % (k, suffix)
+                    if name not in self:
+                        virtual_vars.append(name)
+        return frozenset(virtual_vars)
 
     def __missing__(self, key):
-        if key in self.virtual:
-            return self._get_virtual_variable(key)
-        else:
+        """Fall back to returning a virtual variable, if possible
+        """
+        if not isinstance(key, basestring):
             raise KeyError(repr(key))
+
+        split_key = key.split('.')
+        if len(split_key) != 2:
+            raise KeyError(repr(key))
+
+        ref_var_name, suffix = split_key
+        ref_var = self[ref_var_name]
+        if isinstance(ref_var, variable.Coordinate):
+            date = ref_var.as_index
+        elif ref_var.ndim == 0:
+            date = pd.Timestamp(ref_var.values)
+
+        if suffix == 'season':
+            # seasons = np.array(['DJF', 'MAM', 'JJA', 'SON'])
+            month = date.month
+            data = (month // 3) % 4 + 1
+        else:
+            data = getattr(date, suffix)
+        return variable.Variable(ref_var.dimensions, data)
 
 
 def _as_dataset_variable(name, var):
@@ -371,8 +383,8 @@ class Dataset(Mapping):
 
     @property
     def virtual_variables(self):
-        """Variables that do not exist in this dataset but could be created on
-        demand.
+        """A frozenset of variable names that don't exist in this dataset but
+        for which could be created on demand.
 
         These variables can be derived by performing simple operations on
         existing dataset variables. Currently, the only implemented virtual
