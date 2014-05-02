@@ -3,7 +3,7 @@ from copy import deepcopy
 from textwrap import dedent
 
 from xray import Dataset, DataArray, Variable, align
-from . import TestCase, ReturnItem
+from . import TestCase, ReturnItem, source_ndarray
 
 
 class TestDataArray(TestCase):
@@ -178,6 +178,8 @@ class TestDataArray(TestCase):
             a + b
         with self.assertRaisesRegexp(ValueError, 'not aligned'):
             b + a
+        with self.assertRaisesRegexp(TypeError, 'datasets do not support'):
+            a + a.dataset
 
     def test_dataset_math(self):
         # verify that mathematical operators keep around the expected variables
@@ -238,7 +240,8 @@ class TestDataArray(TestCase):
         b += 1
         self.assertIs(b, a)
         self.assertIs(b.variable, v)
-        self.assertIs(b.values, x)
+        self.assertArrayEqual(b.values, x)
+        self.assertIs(source_ndarray(b.values), x)
         self.assertIs(b.dataset, self.ds)
 
     def test_transpose(self):

@@ -1,9 +1,9 @@
 from collections import OrderedDict
 
-from common import AbstractDataStore
+from common import AbstractWritableDataStore
 
 
-class InMemoryDataStore(AbstractDataStore):
+class InMemoryDataStore(AbstractWritableDataStore):
     """
     Stores dimensions, variables and attributes
     in ordered dictionaries, making this store

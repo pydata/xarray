@@ -120,7 +120,7 @@ def array_repr(arr):
     dim_summary = ', '.join('%s: %s' % (k, v) for k, v
                             in zip(arr.dimensions, arr.shape))
     summary = ['<xray.%s %s(%s)>'% (type(arr).__name__, name_str, dim_summary)]
-    if arr.size < 1e5 or arr.in_memory():
+    if arr.size < 1e5 or arr._in_memory():
         summary.append(repr(arr.values))
     else:
         summary.append('[%s values with dtype=%s]' % (arr.size, arr.dtype))

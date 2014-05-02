@@ -1,5 +1,5 @@
 from collections import OrderedDict
-from copy import deepcopy
+from copy import copy, deepcopy
 from textwrap import dedent
 import cPickle as pickle
 import unittest
@@ -7,7 +7,7 @@ import unittest
 import numpy as np
 import pandas as pd
 
-from xray import Dataset, DataArray, Variable, backends, utils, align
+from xray import Dataset, DataArray, Variable, backends, utils, align, indexing
 
 from . import TestCase
 
@@ -56,13 +56,13 @@ class InaccessibleVariableDataStore(backends.InMemoryDataStore):
         self._variables[name] = variable
         return self._variables[name]
 
+    def open_store_variable(self, var):
+        data = indexing.LazilyIndexedArray(InaccessibleArray(var.values))
+        return Variable(var.dimensions, data, var.attrs)
+
     @property
-    def variables(self):
-        return utils.FrozenOrderedDict(
-            (k, Variable(v.dimensions,
-                         InaccessibleArray(v.values),
-                         v.attrs))
-            for k, v in self._variables.iteritems())
+    def store_variables(self):
+        return self._variables
 
 
 class TestDataset(TestCase):
@@ -161,10 +161,18 @@ class TestDataset(TestCase):
         data2 = create_test_data(seed=42)
         data2.attrs['foobar'] = 'baz'
         self.assertTrue(data.equals(data2))
+        self.assertTrue(data == data2)
         self.assertFalse(data.identical(data2))
 
         del data2['time']
         self.assertFalse(data.equals(data2))
+        self.assertTrue(data != data2)
+
+    def test_attrs(self):
+        data = create_test_data(seed=42)
+        data.attrs = {'foobar': 'baz'}
+        self.assertTrue(data.attrs['foobar'], 'baz')
+        self.assertIsInstance(data.attrs, OrderedDict)
 
     def test_indexed(self):
         data = create_test_data()
@@ -334,21 +342,21 @@ class TestDataset(TestCase):
     def test_copy(self):
         data = create_test_data()
 
-        copied = data.copy(deep=False)
-        self.assertDatasetIdentical(data, copied)
-        for k in data:
-            v0 = data.variables[k]
-            v1 = copied.variables[k]
-            self.assertIs(v0, v1)
-        copied['foo'] = ('z', np.arange(5))
-        self.assertNotIn('foo', data)
+        for copied in [data.copy(deep=False), copy(data)]:
+            self.assertDatasetIdentical(data, copied)
+            for k in data:
+                v0 = data.variables[k]
+                v1 = copied.variables[k]
+                self.assertIs(v0, v1)
+            copied['foo'] = ('z', np.arange(5))
+            self.assertNotIn('foo', data)
 
-        copied = data.copy(deep=True)
-        self.assertDatasetIdentical(data, copied)
-        for k in data:
-            v0 = data.variables[k]
-            v1 = copied.variables[k]
-            self.assertIsNot(v0, v1)
+        for copied in [data.copy(deep=True), deepcopy(data)]:
+            self.assertDatasetIdentical(data, copied)
+            for k in data:
+                v0 = data.variables[k]
+                v1 = copied.variables[k]
+                self.assertIsNot(v0, v1)
 
     def test_rename(self):
         data = create_test_data()
@@ -432,7 +440,6 @@ class TestDataset(TestCase):
         expected = data.indexed(time=slice(10))
         self.assertDatasetIdentical(expected, actual)
 
-    @unittest.expectedFailure
     def test_slice_virtual_variable(self):
         data = create_test_data()
         self.assertVariableEqual(data['time.dayofyear'][:10],
@@ -511,6 +518,8 @@ class TestDataset(TestCase):
         # TODO: test the other edge cases
         with self.assertRaisesRegexp(ValueError, 'must be 1 dimensional'):
             data.groupby('var1')
+        with self.assertRaisesRegexp(ValueError, 'length does not match'):
+            data.groupby(data['dim1'][:3])
 
     def test_concat(self):
         data = create_test_data()
@@ -631,10 +640,13 @@ class TestDataset(TestCase):
 
     def test_lazy_load(self):
         store = InaccessibleVariableDataStore()
-        store.set_variable('dim', Variable(('dim'), np.arange(10)))
-        store.set_variable('var', Variable(('dim'), np.random.uniform(size=10)))
-        ds = Dataset()
-        ds = ds.load_store(store, decode_cf=False)
-        self.assertRaises(UnexpectedDataAccess, lambda: ds['var'].values)
-        ds = ds.load_store(store, decode_cf=True)
-        self.assertRaises(UnexpectedDataAccess, lambda: ds['var'].values)
+        create_test_data().dump_to_store(store)
+
+        for decode_cf in [False, True]:
+            ds = Dataset.load_store(store, decode_cf=decode_cf)
+            with self.assertRaises(UnexpectedDataAccess):
+                ds['var1'].values
+
+            # these should not raise UnexpectedDataAccess:
+            ds.indexed(time=10)
+            ds.indexed(time=slice(10), dim1=[0]).indexed(dim1=0, dim2=-1)
