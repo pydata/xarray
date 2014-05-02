@@ -38,9 +38,10 @@ Because **xray** implements the same data model as the NetCDF file format,
 xray datasets have a natural and portable serialization format. But it's
 also easy to robustly convert an xray `DataArray` to and from a numpy
 `ndarray` or a pandas `DataFrame` or `Series`, providing compatibility with
-the full [scientific-python ecosystem][scipy].
+the full [PyData ecosystem][pydata].
 
 [pandas]: http://pandas.pydata.org/
+[pydata]: http://pydata.org/
 [scipy]: http://scipy.org/
 [ndarray]: http://docs.scipy.org/doc/numpy/reference/arrays.ndarray.html
 
@@ -143,43 +144,34 @@ labeled numpy arrays that provided some guidance for the design of xray.
   - Be fast. There shouldn't be a significant overhead for metadata aware
     manipulation of n-dimensional arrays, as long as the arrays are large
     enough. The goal is to be as fast as pandas or raw numpy.
-  - Provide a uniform API for loading and saving scientific data in a variety
-    of formats (including streaming data).
-  - Take a pragmatic approach to metadata (attributes), and be very cautious
-    before implementing any functionality that relies on it. Automatically
-    maintaining attributes is a tricky and very hard to get right (see
-    discussion about Iris above).
+  - Support loading and saving labeled scientific data in a variety of formats
+    (including streaming data).
 
 ## Getting started
 
-For more details, see the **[full documentation][docs]** (still a work in
-progress) or the source code. **xray** is rapidly maturing, but it is still in
-its early development phase. ***Expect the API to change.***
+For more details, see the **[full documentation][docs]**, particularly the
+**[tutorial][tutorial]**.
 
 xray requires Python 2.7 and recent versions of [numpy][numpy] (1.8.0 or
 later) and [pandas][pandas] (0.13.1 or later). [netCDF4-python][nc4],
 [pydap][pydap] and [scipy][scipy] are optional: they add support for reading
 and writing netCDF files and/or accessing OpenDAP datasets. We plan to
-eventually support Python 3 but aren't there yet. The easiest way to get any
-of these dependencies installed from scratch is to use [Anaconda][anaconda].
+eventually support Python 3 but aren't there yet.
 
-xray is not yet available on the Python package index (prior to its initial
-release). For now, you need to install it from source:
+You can install xray from the pypi with pip:
 
-    git clone https://github.com/akleeman/xray.git
-    # WARNING: this will automatically upgrade numpy & pandas if necessary!
-    pip install -e xray
-
-Don't forget to `git fetch` regular updates!
+    pip install xray
 
 [docs]: http://xray.readthedocs.org/
+[tutorial]: http://xray.readthedocs.org/en/latest/tutorial.html
 [numpy]: http://www.numpy.org/
 [pydap]: http://www.pydap.org/
 [anaconda]: https://store.continuum.io/cshop/anaconda/
 
 ## Anticipated API changes
 
-Aspects of the API that we currently intend to change:
+Aspects of the API that we currently intend to change in future versions of
+xray:
 
  - The constructor for `DataArray` objects will probably change, so that it
    is possible to create new `DataArray` objects without putting them into a
@@ -192,19 +184,10 @@ Aspects of the API that we currently intend to change:
    dimensional arrays.
  - Future versions of xray will add better support for working with datasets
    too big to fit into memory, probably by wrapping libraries like
-   [blaze][blaze]/[blz][blz] or [biggus][biggus]. More immediately:
-   - Array indexing will be made lazy, instead of immediately creating an
-     ndarray. This will make it easier to subsample from very large Datasets
-     incrementally using the `indexed` and `labeled` methods. We might need to
-     add a special method to allow for explicitly caching values in memory.
-   - We intend to support `Dataset` objects linked to NetCDF or HDF5 files on
-     disk to allow for incremental writing of data.
+   [blaze][blaze]/[blz][blz] or [biggus][biggus]. More immediately, we intend
+   to support `Dataset` objects linked to NetCDF or HDF5 files on disk to
+   allow for incremental writing of data.
 
-Once we get the API in a state we're comfortable with and improve the
-documentation, we intend to release version 0.1. Our target is to do so before
-the xray talk on May 3, 2014 at [PyData Silicon Valley][pydata].
-
-[pydata]: http://pydata.org/sv2014/
 [blaze]: https://github.com/ContinuumIO/blaze/
 [blz]: https://github.com/ContinuumIO/blz
 [biggus]: https://github.com/SciTools/biggus
