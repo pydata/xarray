@@ -157,8 +157,9 @@ class DataArray(AbstractArray):
 
     @property
     def as_index(self):
-        """The variable's data as a pandas.Index"""
-        return self.variable.as_index
+        """The variable's data as a pandas.Index. Only possible for 1D arrays.
+        """
+        return self.variable.to_coord().as_index
 
     @property
     def dimensions(self):

@@ -7,7 +7,7 @@ Dataset
 -------
 
 Creating a dataset
-~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~
 .. autosummary::
    :toctree: generated/
 
@@ -20,8 +20,6 @@ Attributes and underlying data
 .. autosummary::
    :toctree: generated/
 
-   Dataset.variables
-   Dataset.virtual_variables
    Dataset.coordinates
    Dataset.noncoordinates
    Dataset.dimensions
@@ -45,9 +43,13 @@ and values given by ``DataArray`` objects.
    Dataset.copy
    Dataset.iteritems
    Dataset.itervalues
+   Dataset.virtual_variables
 
 Comparisons
 ~~~~~~~~~~~
+
+.. autosummary::
+   :toctree: generated/
 
    Dataset.equals
    Dataset.identical
@@ -58,8 +60,8 @@ Selecting
 .. autosummary::
    :toctree: generated/
 
-   Dataset.indexed_by
-   Dataset.labeled_by
+   Dataset.indexed
+   Dataset.labeled
    Dataset.reindex
    Dataset.reindex_like
    Dataset.rename
@@ -74,11 +76,25 @@ IO / Conversion
 .. autosummary::
    :toctree: generated/
 
-   Dataset.dump
+   Dataset.to_netcdf
    Dataset.dumps
    Dataset.dump_to_store
    Dataset.to_dataframe
    Dataset.from_dataframe
+
+Dataset internals
+~~~~~~~~~~~~~~~~~
+
+These attributes and classes provide a low-level interface for working
+with Dataset variables. In general you should use the Dataset dictionary-
+like interface instead and working with DataArray objects:
+
+.. autosummary::
+   :toctree: generated/
+
+   Dataset.variables
+   Variable
+   Coordinate
 
 Backends (experimental)
 ~~~~~~~~~~~~~~~~~~~~~~~
@@ -109,10 +125,24 @@ Attributes and underlying data
    :toctree: generated/
 
    DataArray.values
+   DataArray.as_index
    DataArray.coordinates
    DataArray.name
    DataArray.dataset
    DataArray.attrs
+   DataArray.encoding
+   DataArray.variable
+
+NDArray attributes
+~~~~~~~~~~~~~~~~~~
+
+.. autosummary::
+    :toctree: generated/
+
+    DataArray.ndim
+    DataArray.shape
+    DataArray.size
+    DataArray.dtype
 
 Selecting
 ~~~~~~~~~
@@ -123,8 +153,8 @@ Selecting
    DataArray.__getitem__
    DataArray.__setitem__
    DataArray.loc
-   DataArray.indexed_by
-   DataArray.labeled_by
+   DataArray.indexed
+   DataArray.labeled
    DataArray.reindex
    DataArray.reindex_like
    DataArray.rename
@@ -150,6 +180,7 @@ Computations
    DataArray.transpose
    DataArray.T
    DataArray.reduce
+   DataArray.get_axis_num
    DataArray.all
    DataArray.any
    DataArray.argmax

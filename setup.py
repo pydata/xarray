@@ -15,6 +15,69 @@ ISRELEASED = False
 VERSION = '%d.%d.%d' % (MAJOR, MINOR, MICRO)
 QUALIFIER = ''
 
+
+DISTNAME = 'xray'
+LICENSE = 'Apache'
+AUTHOR = 'Stephan Hoyer, Alex Kleeman, Eugene Brevdo'
+AUTHOR_EMAIL = 'shoyer@climate.com'
+URL = 'https://github.com/akleeman/xray'
+CLASSIFIERS = [
+    'Development Status :: 3 - Alpha',
+    'License :: OSI Approved :: Apache Software License',
+    'Operating System :: OS Independent',
+    'Intended Audience :: Science/Research',
+    'Programming Language :: Python :: 2.7',
+    'Topic :: Scientific/Engineering',
+]
+
+
+DESCRIPTION = "Extended arrays for working with scientific datasets in Python"
+LONG_DESCRIPTION = """
+**xray** is a Python package for working with aligned sets of
+homogeneous, n-dimensional arrays. It implements flexible array
+operations and dataset manipulation for in-memory datasets within the
+`Common Data
+Model <http://www.unidata.ucar.edu/software/thredds/current/netcdf-java/CDM/>`__
+widely used for self-describing scientific data (e.g., the NetCDF file
+format).
+
+Why xray?
+---------
+
+Adding dimensions names and coordinate values to numpy's
+`ndarray <http://docs.scipy.org/doc/numpy/reference/arrays.ndarray.html>`__
+makes many powerful array operations possible:
+
+-  Apply operations over dimensions by name: ``x.sum('time')``.
+-  Select values by label instead of integer location:
+   ``x.loc['2014-01-01']`` or ``x.labeled(time='2014-01-01')``.
+-  Mathematical operations (e.g., ``x - y``) vectorize across multiple
+   dimensions (known in numpy as "broadcasting") based on dimension
+   names, regardless of their original order.
+-  Flexible split-apply-combine operations with groupby:
+   ``x.groupby('time.dayofyear').mean()``.
+-  Database like aligment based on coordinate labels that smoothly
+   handles missing values: ``x, y = xray.align(x, y, join='outer')``.
+-  Keep track of arbitrary metadata in the form of a Python dictionary:
+   ``x.attrs``.
+
+**xray** aims to provide a data analysis toolkit as powerful as
+`pandas <http://pandas.pydata.org/>`__ but designed for working with
+homogeneous N-dimensional arrays instead of tabular data. Indeed, much
+of its design and internal functionality (in particular, fast indexing)
+is shamelessly borrowed from pandas.
+
+Because **xray** implements the same data model as the NetCDF file
+format, xray datasets have a natural and portable serialization format.
+But it's also easy to robustly convert an xray ``DataArray`` to and from
+a numpy ``ndarray`` or a pandas ``DataFrame`` or ``Series``, providing
+compatibility with the full `PyData ecosystem <http://pydata.org/>`__.
+
+For more about **xray**, see the project's `GitHub page
+<https://github.com/akleeman/xray>`__ and `documentation
+<http://xray.readthedocs.org>`__
+"""
+
 # code to extract and write the version copied from pandas, which is available
 # under the BSD license:
 FULLVERSION = VERSION
@@ -82,13 +145,16 @@ if write_version:
     write_version_py()
 
 
-setup(name='xray',
+setup(name=DISTNAME,
       version=FULLVERSION,
-      description='Extended arrays for working with scientific datasets',
-      author='Stephan Hoyer, Alex Kleeman, Eugene Brevdo',
-      author_email='TODO',
+      license=LICENSE,
+      author=AUTHOR,
+      author_email=AUTHOR_EMAIL,
+      classifiers=CLASSIFIERS,
+      description=DESCRIPTION,
+      long_description=LONG_DESCRIPTION,
       install_requires=['numpy >= 1.8', 'pandas >= 0.13.1'],
       tests_require=['mock >= 1.0.1', 'nose >= 1.0'],
-      url='https://github.com/akleeman/xray',
+      url=URL,
       test_suite='nose.collector',
       packages=['xray', 'xray.backends'])

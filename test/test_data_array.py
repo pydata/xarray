@@ -1,4 +1,5 @@
 import numpy as np
+import pandas as pd
 from copy import deepcopy
 from textwrap import dedent
 
@@ -41,6 +42,9 @@ class TestDataArray(TestCase):
             self.dv.name = 'bar'
         with self.assertRaises(AttributeError):
             self.dv.dataset = self.ds
+        self.assertIsInstance(self.ds['x'].as_index, pd.Index)
+        with self.assertRaisesRegexp(ValueError, 'must be 1-dimensional'):
+            self.ds['foo'].as_index
 
     def test_equals_and_identical(self):
         da2 = self.dv.copy()
