@@ -7,8 +7,23 @@ Tutorial
    import numpy as np
    np.random.seed(123456)
 
+To get started, we will import numpy, pandas and xray:
+
+.. ipython:: python
+
+    import numpy as np
+    import pandas as pd
+    import xray
+
 ``Dataset`` objects
 -------------------
+
+:py:class:`xray.Dataset` is xray's primary data structure. It is a dict-like
+container of labeled arrays (:py:class:`xray.DataArray` objects) with aligned
+dimensions. It is designed as an in-memory representation of the data model
+from the `NetCDF`__ file format.
+
+__ http://www.unidata.ucar.edu/software/netcdf/
 
 Creating a ``Dataset``
 ~~~~~~~~~~~~~~~~~~~~~~
@@ -22,10 +37,6 @@ values in the form ``(dimensions, data[, attributes])``.
 
 .. ipython:: python
 
-    import numpy as np
-    import pandas as pd
-    import xray
-
     foo_values = np.random.RandomState(0).rand(3, 4)
     times = pd.date_range('2000-01-01', periods=3)
 
@@ -34,7 +45,7 @@ values in the form ``(dimensions, data[, attributes])``.
     ds
 
 You can also insert :py:class:`xray.Variable` or :py:class:`xray.DataArray`
-objects directly into a Dataset, or create an dataset from a
+objects directly into a ``Dataset``, or create an dataset from a
 :py:class:`pandas.DataFrame` with
 :py:meth:`Dataset.from_dataframe <xray.Dataset.from_dataframe>` or from a
 NetCDF file on disk with :py:func:`~xray.open_dataset`. See
@@ -44,8 +55,7 @@ NetCDF file on disk with :py:func:`~xray.open_dataset`. See
 ~~~~~~~~~~~~~~~~~~~~
 
 :py:class:`~xray.Dataset` implements the Python dictionary interface, with
-values given by :py:class:`xray.DataArray` objects. The valid keys include
-each listed "coordinate" and "noncoordinate":
+values given by :py:class:`xray.DataArray` objects:
 
 .. ipython:: python
 
@@ -55,7 +65,19 @@ each listed "coordinate" and "noncoordinate":
 
     ds['time']
 
-We didn't explicitly include a variable for the "space" dimension, so it
+The valid keys include each listed "coordinate" and "noncoordinate".
+Coordinates are arrays that labels values along a particular dimension, which
+they index by keeping track of a :py:class:`pandas.Index` object. They
+are created automatically from dataset arrays whose name is equal to the one
+item in their list of dimensions.
+
+Noncoordinates include all arrays in a ``Dataset`` other than its coordinates.
+These arrays can exist along multiple dimensions. The numbers in the columns in
+the ``Dataset`` representation indicate the order in which dimensions appear
+for each array (on a ``Dataset``, the dimensions are always listed in
+alphabetical order).
+
+We didn't explicitly include a coordinate for the "space" dimension, so it
 was filled with an array of ascending integers of the proper length:
 
 .. ipython:: python
@@ -64,9 +86,9 @@ was filled with an array of ascending integers of the proper length:
 
     ds['foo']
 
-The numbers in the columns in the ``Dataset`` representation indicate the order
-of the dimension for each array (on a ``Dataset``, the dimensions are always
-listed in alphabetical order).
+Noncoordinates and coordinates are listed explicitly by the
+:py:attr:`~xray.Dataset.noncoordinates` and
+:py:attr:`~xray.Dataset.coordinates` attributes.
 
 There are also a few derived variables based on datetime coordinates that you
 can access from a dataset (e.g., "year", "month" and "day"), even if you didn't
@@ -77,7 +99,7 @@ explicitly add them. These are known as
 
     ds['time.dayofyear']
 
-Finally, Datasets also store arbitrary metadata in the form of `attributes`:
+Finally, datasets also store arbitrary metadata in the form of `attributes`:
 
 .. ipython:: python
 
@@ -225,7 +247,7 @@ including the name of only the DataArray itself:
     foo2
 
 `foo2` is generally an equivalent labeled array to `foo`, but we dropped the
-non-relevant dataset variables:
+dataset variables that are no longer relevant:
 
 .. ipython:: python
 
@@ -309,7 +331,7 @@ which wouldn't work with numpy arrays:
 
 This is a much simpler model than numpy's `advanced indexing`__,
 and is basically the only model that works for labeled arrays. If you would
-like to do this sort of indexing, so you always index ``.values`` instead:
+like to do advanced indexing, so you always index ``.values`` instead:
 
 __ http://docs.scipy.org/doc/numpy/reference/arrays.indexing.html
 
@@ -794,7 +816,7 @@ section below.
 
     Although xray provides reasonable support for incremental reads of files on
     disk, it does not yet support incremental writes, which is important for
-    dealing with datasets that do not fit into memory. This is a major
+    dealing with datasets that do not fit into memory. This is a significant
     shortcoming which is on the roadmap for fixing in the next major version,
     which will include the ability to create ``Dataset`` objects directly
     linked to a NetCDF file on disk.
@@ -901,10 +923,10 @@ Now, let's access and plot a small subset:
 
     In [6]: tmax_ss = tmax[0]
 
-For this dataset, we still to manually fill in some of the values with `NaN`
-to indicate that they are missing. As soon as we access ``tmax_ss.values``, the
-values are loaded over the network and cached on the DataArray so they can
-be manipulated:
+For this dataset, we still need to manually fill in some of the values with
+`NaN` to indicate that they are missing. As soon as we access
+``tmax_ss.values``, the values are loaded over the network and cached on the
+DataArray so they can be manipulated:
 
 .. ipython::
     :verbatim:
@@ -930,5 +952,3 @@ Finally, we can plot the values with matplotlib:
     In [13]: plt.colorbar()
 
 .. image:: _static/opendap-prism-tmax.png
-
-

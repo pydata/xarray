@@ -6,7 +6,8 @@ homogeneous, n-dimensional arrays. It implements flexible array
 operations and dataset manipulation for in-memory datasets within the
 `Common Data
 Model <http://www.unidata.ucar.edu/software/thredds/current/netcdf-java/CDM/>`__
-widely used for self-describing scientific data (e.g., the NetCDF file
+widely used for self-describing scientific data (e.g., the
+`NetCDF <http://www.unidata.ucar.edu/software/netcdf/>`__ file
 format).
 
 Why xray?
@@ -23,7 +24,7 @@ makes many powerful array operations possible:
    dimensions (known in numpy as "broadcasting") based on dimension
    names, regardless of their original order.
 -  Flexible split-apply-combine operations with groupby:
-   ``x.groupby('time.dayofyear').apply(lambda y: y - y.mean())``.
+   ``x.groupby('time.dayofyear').mean()``.
 -  Database like aligment based on coordinate labels that smoothly
    handles missing values: ``x, y = xray.align(x, y, join='outer')``.
 -  Keep track of arbitrary metadata in the form of a Python dictionary:
@@ -42,7 +43,19 @@ a numpy ``ndarray`` or a pandas ``DataFrame`` or ``Series``, providing
 compatibility with the full `PyData ecosystem <http://pydata.org/>`__.
 
 For a longer introduction to **xray** and its design goals, see
-`the project's GitHub page <https://github.com/akleeman/xray>`__.
+`the project's GitHub page <http://github.com/akleeman/xray>`__. The GitHub
+page is where to go to look at the code, report a bug or make your own
+contribution. You can also get in touch via `Twitter
+<http://twitter.com/shoyer>`__.
+
+.. note ::
+
+    **xray** is still very new -- it is on its first release and is only a few
+    months old. Although we will make a best effort to maintain the current
+    API, it is likely that the API will change in future versions as xray
+    matures. Some changes are already anticipated, as called out in the
+    `Tutorial <tutorial>`_ and the project `README
+    <http://github.com/akleeman/xray>`__.
 
 Contents
 --------

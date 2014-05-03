@@ -22,7 +22,7 @@ makes many powerful array operations possible:
     dimensions (known in numpy as "broadcasting") based on dimension names,
     regardless of their original order.
   - Flexible split-apply-combine operations with groupby:
-    `x.groupby('time.dayofyear').apply(lambda y: y - y.mean())`.
+    `x.groupby('time.dayofyear').mean()`.
   - Database like aligment based on coordinate labels that smoothly
     handles missing values: `x, y = xray.align(x, y, join='outer')`.
   - Keep track of arbitrary metadata in the form of a Python dictionary:
