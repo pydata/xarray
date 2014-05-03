@@ -474,7 +474,7 @@ class Dataset(Mapping):
 
     @property
     def coordinates(self):
-        """Dictionary of CoordVaraibles used for label based indexing.
+        """Dictionary of Coordinate objects used for label based indexing.
         """
         return FrozenOrderedDict((dim, self.variables[dim])
                                  for dim in self.dimensions)
