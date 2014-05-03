@@ -1,4 +1,8 @@
 import itertools
+try:  # Python 2
+    from itertools import izip
+except ImportError: # Python 3
+    izip = zip
 
 from common import ImplementsReduce
 from ops import inject_reduce_methods
@@ -120,7 +124,7 @@ class GroupBy(object):
         return self.unique_coord.size
 
     def __iter__(self):
-        return itertools.izip(self.unique_coord.values, self._iter_grouped())
+        return izip(self.unique_coord.values, self._iter_grouped())
 
     def _iter_grouped(self):
         """Iterate over each element in this group"""

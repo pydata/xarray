@@ -2,7 +2,10 @@ import functools
 import numpy as np
 import pandas as pd
 
-from itertools import izip
+try:  # Python 2
+    from itertools import izip
+except ImportError: # Python 3
+    izip = zip
 from collections import OrderedDict
 
 import data_array
