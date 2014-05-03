@@ -6,7 +6,7 @@ from datetime import datetime
 
 from . import indexing
 from . import utils
-from . import variable
+import xray
 
 
 # Special characters that are permitted in netCDF names except in the
@@ -461,7 +461,7 @@ def encode_cf_variable(var):
             data = data.round()
         data = data.astype(encoding['dtype'])
 
-    return variable.Variable(dimensions, data, attributes, encoding=encoding)
+    return xray.Variable(dimensions, data, attributes, encoding=encoding)
 
 
 def decode_cf_variable(var, mask_and_scale=True):
@@ -508,5 +508,5 @@ def decode_cf_variable(var, mask_and_scale=True):
         calendar = pop_to(attributes, encoding, 'calendar')
         data = DecodedCFDatetimeArray(data, units, calendar)
 
-    return variable.Variable(dimensions, indexing.LazilyIndexedArray(data),
+    return xray.Variable(dimensions, indexing.LazilyIndexedArray(data),
                              attributes, encoding=encoding)

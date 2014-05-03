@@ -5,7 +5,7 @@ from collections import defaultdict, OrderedDict
 
 import pandas as pd
 
-from . import dataset as dataset_
+import xray
 from . import indexing
 from . import groupby
 from . import ops
@@ -554,7 +554,7 @@ class DataArray(AbstractArray):
         if concat_over is None:
             concat_over = set()
         concat_over = set(concat_over) | {name}
-        ds = dataset_.Dataset.concat(datasets, dimension, indexers,
+        ds = xray.Dataset.concat(datasets, dimension, indexers,
                                      concat_over=concat_over)
         return ds[name]
 
@@ -589,7 +589,7 @@ class DataArray(AbstractArray):
         """
         name = series.name if series.name is not None else 'values'
         df = pd.DataFrame({name: series})
-        ds = dataset_.Dataset.from_dataframe(df)
+        ds = xray.Dataset.from_dataframe(df)
         return ds[name]
 
     def equals(self, other):
@@ -626,7 +626,7 @@ class DataArray(AbstractArray):
             return False
 
     def _select_coordinates(self):
-        return dataset_.Dataset(self.coordinates)
+        return xray.Dataset(self.coordinates)
 
     def _refocus(self, new_var, name=None):
         """Returns a copy of this DataArray's dataset with this

@@ -8,12 +8,11 @@ except ImportError: # Python 3
     izip = zip
 from collections import OrderedDict
 
-from . import data_array
-from . import dataset
 from . import groupby
 from . import indexing
 from . import ops
 from . import utils
+import xray
 
 from .common import AbstractArray
 
@@ -34,7 +33,7 @@ def as_variable(obj, strict=True):
     if strict and hasattr(obj, 'variable'):
         # extract the primary Variable from DataArrays
         obj = obj.variable
-    if not isinstance(obj, (Variable, data_array.DataArray)):
+    if not isinstance(obj, (Variable, xray.DataArray)):
         if hasattr(obj, 'dimensions') and hasattr(obj, 'values'):
             obj = Variable(obj.dimensions, obj.values,
                            getattr(obj, 'attributes', None),
@@ -605,7 +604,7 @@ class Variable(AbstractArray):
     def _binary_op(f, reflexive=False):
         @functools.wraps(f)
         def func(self, other):
-            if isinstance(other, data_array.DataArray):
+            if isinstance(other, xray.DataArray):
                 return NotImplemented
             self_data, other_data, dims = _broadcast_variable_data(self, other)
             new_data = (f(self_data, other_data)
@@ -750,7 +749,7 @@ def broadcast_variables(first, second):
 
 
 def _broadcast_variable_data(self, other):
-    if isinstance(other, dataset.Dataset):
+    if isinstance(other, xray.Dataset):
         raise TypeError('datasets do not support mathematical operations')
     elif all(hasattr(other, attr) for attr
              in ['dimensions', 'values', 'shape', 'encoding']):
