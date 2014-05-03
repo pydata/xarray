@@ -8,14 +8,14 @@ except ImportError: # Python 3
     izip = zip
 from collections import OrderedDict
 
-import data_array
-import dataset
-import groupby
-import indexing
-import ops
-import utils
+from . import data_array
+from . import dataset
+from . import groupby
+from . import indexing
+from . import ops
+from . import utils
 
-from common import AbstractArray
+from .common import AbstractArray
 
 
 def as_variable(obj, strict=True):

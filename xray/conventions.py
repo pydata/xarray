@@ -4,9 +4,9 @@ import numpy as np
 import pandas as pd
 from datetime import datetime
 
-import indexing
-import utils
-import variable
+from . import indexing
+from . import utils
+from . import variable
 
 
 # Special characters that are permitted in netCDF names except in the

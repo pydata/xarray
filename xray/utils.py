@@ -10,7 +10,7 @@ import numpy as np
 import pandas as pd
 
 import xray
-import variable
+from . import variable
 
 
 def alias_warning(old_name, new_name, stacklevel=2):

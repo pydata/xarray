@@ -4,10 +4,10 @@ try:  # Python 2
 except ImportError: # Python 3
     izip = zip
 
-from common import ImplementsReduce
-from ops import inject_reduce_methods
-import variable
-import dataset
+from .common import ImplementsReduce
+from .ops import inject_reduce_methods
+from . import variable
+from . import dataset
 import numpy as np
 
 

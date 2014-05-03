@@ -1,5 +1,5 @@
 import numpy as np
-import utils
+from . import utils
 
 
 def expanded_indexer(key, ndim):

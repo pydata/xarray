@@ -5,14 +5,14 @@ from collections import defaultdict, OrderedDict
 
 import pandas as pd
 
-import dataset as dataset_
-import indexing
-import groupby
-import ops
-import utils
-import variable
-from common import AbstractArray
-from utils import FrozenOrderedDict, multi_index_from_product
+from . import dataset as dataset_
+from . import indexing
+from . import groupby
+from . import ops
+from . import utils
+from . import variable
+from .common import AbstractArray
+from .utils import FrozenOrderedDict, multi_index_from_product
 
 
 class _LocIndexer(object):

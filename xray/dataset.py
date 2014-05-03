@@ -4,15 +4,15 @@ import pandas as pd
 from cStringIO import StringIO
 from collections import OrderedDict, Mapping
 
-import backends
-import conventions
-import common
-import groupby
-import indexing
-import variable
-import utils
-import data_array
-from utils import (FrozenOrderedDict, Frozen, SortedKeysDict, ChainMap,
+from . import backends
+from . import conventions
+from . import common
+from . import groupby
+from . import indexing
+from . import variable
+from . import utils
+from . import data_array
+from .utils import (FrozenOrderedDict, Frozen, SortedKeysDict, ChainMap,
                    multi_index_from_product)
 
 

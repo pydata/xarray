@@ -3,7 +3,7 @@ import warnings
 
 import numpy as np
 
-from common import AbstractWritableDataStore
+from .common import AbstractWritableDataStore
 import xray
 from xray.conventions import encode_cf_variable
 from xray.utils import FrozenOrderedDict, NDArrayMixin, as_array_or_item
