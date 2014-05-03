@@ -2,7 +2,10 @@ import cPickle as pickle
 import contextlib
 import os.path
 import tempfile
-from cStringIO import StringIO
+try:  # Python 2
+    from cStringIO import StringIO as BytesIO
+except ImportError:  # Python 3
+    from io import BytesIO
 
 import numpy as np
 import pandas as pd
@@ -242,12 +245,12 @@ class NetCDF4DataTest(DatasetIOTestCases, TestCase):
 class ScipyDataTest(DatasetIOTestCases, TestCase):
     @contextlib.contextmanager
     def create_store(self):
-        fobj = StringIO()
+        fobj = BytesIO()
         yield backends.ScipyDataStore(fobj, 'w')
 
     def roundtrip(self, data, **kwargs):
         serialized = data.dumps()
-        return open_dataset(StringIO(serialized), **kwargs)
+        return open_dataset(BytesIO(serialized), **kwargs)
 
 
 def clear_attributes(ds):

@@ -1,7 +1,10 @@
 import numpy as np
 import pandas as pd
 
-from cStringIO import StringIO
+try:  # Python 2
+    from cStringIO import StringIO as BytesIO
+except ImportError:  # Python 3
+    from io import BytesIO
 from collections import OrderedDict, Mapping
 
 from . import backends
@@ -505,7 +508,7 @@ class Dataset(Mapping):
         """Serialize dataset contents to a string. The serialization creates an
         in memory netcdf version 3 string using the scipy.io.netcdf package.
         """
-        fobj = StringIO()
+        fobj = BytesIO()
         scipy_store = backends.ScipyDataStore(fobj, mode='w', **kwargs)
         self.dump_to_store(scipy_store)
         return fobj.getvalue()

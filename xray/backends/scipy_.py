@@ -1,4 +1,7 @@
-from cStringIO import StringIO
+try: # Python 2
+    from cStringIO import StringIO as BytesIO
+except ImportError: # Python 3
+    from io import BytesIO
 import numpy as np
 import warnings
 
@@ -32,7 +35,7 @@ class ScipyDataStore(AbstractWritableDataStore):
             and filename_or_obj.startswith('CDF')):
             # TODO: this check has the unfortunate side-effect that
             # paths to files cannot start with 'CDF'.
-            filename_or_obj = StringIO(filename_or_obj)
+            filename_or_obj = BytesIO(filename_or_obj)
         self.ds = scipy.io.netcdf.netcdf_file(
             filename_or_obj, mode=mode, mmap=mmap, version=version)
 
