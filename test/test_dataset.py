@@ -1,7 +1,10 @@
 from collections import OrderedDict
 from copy import copy, deepcopy
 from textwrap import dedent
-import cPickle as pickle
+try:
+    import cPickle as pickle
+except ImportError:
+    import pickle
 import unittest
 
 import numpy as np
