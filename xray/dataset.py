@@ -17,7 +17,7 @@ from . import utils
 from . import data_array
 from .utils import (FrozenOrderedDict, Frozen, SortedKeysDict, ChainMap,
                    multi_index_from_product)
-from .pycompat import iteritems
+from .pycompat import iteritems, basestring
 
 
 def open_dataset(nc, decode_cf=True, *args, **kwargs):
