@@ -1,5 +1,6 @@
 import numpy as np
 
+from .pycompat import basestring
 
 class ImplementsReduce(object):
     @classmethod

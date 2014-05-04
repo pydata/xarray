@@ -11,6 +11,7 @@ from collections import OrderedDict
 from . import groupby
 from . import indexing
 from . import ops
+from .pycompat import basestring
 from . import utils
 import xray
 

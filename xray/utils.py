@@ -10,6 +10,7 @@ import numpy as np
 import pandas as pd
 
 import xray
+from .pycompat import basestring
 
 
 def alias_warning(old_name, new_name, stacklevel=2):
