@@ -23,7 +23,7 @@ class ScipyDataStore(AbstractWritableDataStore):
     """
     def __init__(self, filename_or_obj, mode='r', mmap=None, version=1):
         import scipy
-        if mode != 'r' and scipy.__version__ < (0, 13):
+        if mode != 'r' and scipy.__version__ < '0.13':
             warnings.warn('scipy %s detected; '
                           'the minimal recommended version is 0.13. '
                           'Older version of this library do not reliably '
