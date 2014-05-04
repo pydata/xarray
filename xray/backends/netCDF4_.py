@@ -35,6 +35,12 @@ class NetCDF4ArrayWrapper(NDArrayMixin):
             data = self.array[key]
         return data
 
+def _version_check(actual, required):
+    actual_tup = tuple(int(p) if p.isdigit() else p for p in actual.split('.'))
+    try:
+        return actual_tup >= required
+    except TypeError:
+        return True
 
 class NetCDF4DataStore(AbstractWritableDataStore):
     """Store for reading and writing data via the Python-NetCDF4 library.
@@ -44,7 +50,7 @@ class NetCDF4DataStore(AbstractWritableDataStore):
     def __init__(self, filename, mode='r', clobber=True, diskless=False,
                  persist=False, format='NETCDF4'):
         import netCDF4 as nc4
-        if nc4.__version__ < (1, 0, 6):
+        if not _version_check(nc4.__version__, (1, 0, 6)):
             warnings.warn('python-netCDF4 %s detected; '
                           'the minimal recommended version is 1.0.6.'
                           % nc4.__version__, ImportWarning)
