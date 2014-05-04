@@ -328,7 +328,7 @@ class TestDataset(TestCase):
         data = create_test_data()
         ret = data.select(_testvar)
         self.assertVariableEqual(data[_testvar], ret[_testvar])
-        self.assertTrue(next(iter(_vars)) not in ret.variables)
+        self.assertTrue(sorted(_vars.keys())[1] not in ret.variables)
         self.assertRaises(ValueError, data.select, (_testvar, 'not_a_var'))
 
     def test_unselect(self):
