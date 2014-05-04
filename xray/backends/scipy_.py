@@ -10,7 +10,7 @@ from xray.backends.common import AbstractWritableDataStore
 from xray.conventions import (is_valid_nc3_name, coerce_nc3_dtype,
                               encode_cf_variable)
 from xray.utils import Frozen
-from xray.pycompat import iteritems, basestring
+from xray.pycompat import iteritems, basestring, unicode_type
 
 
 class ScipyDataStore(AbstractWritableDataStore):
@@ -63,7 +63,8 @@ class ScipyDataStore(AbstractWritableDataStore):
 
     def _cast_attr_value(self, value):
         if isinstance(value, basestring):
-            value = unicode(value)
+            if not isinstance(value, unicode_type):
+                value = value.decode('utf-8')
         else:
             value = coerce_nc3_dtype(np.atleast_1d(value))
             if value.ndim > 1:
