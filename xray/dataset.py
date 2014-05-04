@@ -1107,8 +1107,8 @@ class Dataset(Mapping):
             _, var_data = np.broadcast_arrays(template.values, var.values)
             data.append(var_data.reshape(-1))
 
-        index = multi_index_from_product(self.coordinates.values(),
-                                         names=self.coordinates.keys())
+        index = multi_index_from_product(list(self.coordinates.values()),
+                                         names=list(self.coordinates.keys()))
         return pd.DataFrame(OrderedDict(zip(columns, data)), index=index)
 
     @classmethod
