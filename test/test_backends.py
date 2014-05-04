@@ -14,6 +14,7 @@ import numpy as np
 import pandas as pd
 
 from xray import Dataset, open_dataset, backends
+from xray.pycompat import iteritems, itervalues
 
 from . import TestCase, requires_scipy, requires_netCDF4, requires_pydap
 from test_dataset import create_test_data
@@ -152,7 +153,7 @@ class NetCDF4DataTest(DatasetIOTestCases, TestCase):
             actual = open_dataset(tmp_file)
 
             self.assertVariableEqual(actual['time'], expected['time'])
-            actual_encoding = {k: v for k, v in actual['time'].encoding.iteritems()
+            actual_encoding = {k: v for k, v in iteritems(actual['time'].encoding)
                                if k in expected['time'].encoding}
             self.assertDictEqual(actual_encoding, expected['time'].encoding)
 
@@ -187,7 +188,7 @@ class NetCDF4DataTest(DatasetIOTestCases, TestCase):
                                       'chunksizes': (10, 10),
                                       'least_significant_digit': 2})
         actual = self.roundtrip(data)
-        for k, v in data['var2'].encoding.iteritems():
+        for k, v in iteritems(data['var2'].encoding):
             self.assertEqual(v, actual['var2'].encoding[k])
 
     def test_mask_and_scale(self):
@@ -258,7 +259,7 @@ class ScipyDataTest(DatasetIOTestCases, TestCase):
 
 def clear_attributes(ds):
     ds.attrs.clear()
-    for v in ds.itervalues():
+    for v in itervalues(ds):
         v.attrs.clear()
 
 

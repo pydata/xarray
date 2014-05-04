@@ -11,6 +11,7 @@ import numpy as np
 import pandas as pd
 
 from xray import Dataset, DataArray, Variable, backends, utils, align, indexing
+from xray.pycompat import iteritems
 
 from . import TestCase
 
@@ -195,7 +196,7 @@ class TestDataset(TestCase):
             self.assertEqual(data[v].dimensions, ret[v].dimensions)
             self.assertEqual(data[v].attrs, ret[v].attrs)
             slice_list = [slice(None)] * data[v].values.ndim
-            for d, s in slicers.iteritems():
+            for d, s in iteritems(slicers):
                 if d in data[v].dimensions:
                     inds = np.nonzero(np.array(data[v].dimensions) == d)[0]
                     for ind in inds:
@@ -367,12 +368,12 @@ class TestDataset(TestCase):
         renamed = data.rename(newnames)
 
         variables = OrderedDict(data.variables)
-        for k, v in newnames.iteritems():
+        for k, v in iteritems(newnames):
             variables[v] = variables.pop(k)
 
-        for k, v in variables.iteritems():
+        for k, v in iteritems(variables):
             dims = list(v.dimensions)
-            for name, newname in newnames.iteritems():
+            for name, newname in iteritems(newnames):
                 if name in dims:
                     dims[dims.index(name)] = newname
 
@@ -487,7 +488,7 @@ class TestDataset(TestCase):
             def get_args(v):
                 return [set(args[0]) & set(v.dimensions)] if args else []
             expected = Dataset({k: v.squeeze(*get_args(v))
-                               for k, v in data.variables.iteritems()})
+                               for k, v in iteritems(data.variables)})
             self.assertDatasetIdentical(expected, data.squeeze(*args))
         # invalid squeeze
         with self.assertRaisesRegexp(ValueError, 'cannot select a dimension'):
@@ -535,7 +536,7 @@ class TestDataset(TestCase):
             # return a new dataset with all variable dimensions tranposed into
             # the order in which they are found in `data`
             return Dataset({k: v.transpose(*data[k].dimensions)
-                           for k, v in dataset.variables.iteritems()},
+                           for k, v in iteritems(dataset.variables)},
                            dataset.attrs)
 
         for dim in ['dim1', 'dim2', 'dim3']:
@@ -547,7 +548,7 @@ class TestDataset(TestCase):
                 data, Dataset.concat(datasets, data[dim], mode='minimal'))
 
             datasets = [g for _, g in data.groupby(dim, squeeze=True)]
-            concat_over = [k for k, v in data.variables.iteritems()
+            concat_over = [k for k, v in iteritems(data.variables)
                            if dim in v.dimensions and k != dim]
             actual = Dataset.concat(datasets, data[dim],
                                     concat_over=concat_over)
