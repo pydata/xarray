@@ -10,6 +10,7 @@ from xray.backends.common import AbstractWritableDataStore
 from xray.conventions import (is_valid_nc3_name, coerce_nc3_dtype,
                               encode_cf_variable)
 from xray.utils import Frozen
+from xray.pycompat import iteritems, basestring
 
 
 class ScipyDataStore(AbstractWritableDataStore):
@@ -83,7 +84,7 @@ class ScipyDataStore(AbstractWritableDataStore):
             scipy_var.assignValue(data)
         else:
             scipy_var[:] = data[:]
-        for k, v in variable.attrs.iteritems():
+        for k, v in iteritems(variable.attrs):
             self._validate_attr_key(k)
             setattr(scipy_var, k, self._cast_attr_value(v))
 

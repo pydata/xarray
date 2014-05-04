@@ -10,7 +10,7 @@ import numpy as np
 import pandas as pd
 
 import xray
-from .pycompat import basestring
+from .pycompat import basestring, iteritems
 
 
 def alias_warning(old_name, new_name, stacklevel=2):
@@ -68,7 +68,7 @@ def as_array_or_item(values, dtype=None):
 def squeeze(xray_obj, dimensions, dimension=None):
     """Squeeze the dimensions of an xray object."""
     if dimension is None:
-        dimension = [d for d, s in dimensions.iteritems() if s == 1]
+        dimension = [d for d, s in iteritems(dimensions) if s == 1]
     else:
         if isinstance(dimension, basestring):
             dimension = [dimension]
@@ -147,7 +147,7 @@ def update_safety_check(first_dict, second_dict, compat=operator.eq):
         Binary operator to determine if two values are compatible. By default,
         checks for equality.
     """
-    for k, v in second_dict.iteritems():
+    for k, v in iteritems(second_dict):
         if (k in first_dict and
                 not (v is first_dict[k] or compat(v, first_dict[k]))):
             raise ValueError('unsafe to merge dictionaries without '
@@ -168,7 +168,7 @@ def remove_incompatible_items(first_dict, second_dict, compat=operator.eq):
         Binary operator to determine if two values are compatible. By default,
         checks for equality.
     """
-    for k, v in second_dict.iteritems():
+    for k, v in iteritems(second_dict):
         if k in first_dict and not compat(v, first_dict[k]):
             del first_dict[k]
 

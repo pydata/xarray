@@ -8,6 +8,7 @@ import xray
 from xray.conventions import encode_cf_variable
 from xray.utils import FrozenOrderedDict, NDArrayMixin, as_array_or_item
 from xray import indexing
+from xray.pycompat import iteritems
 
 
 class NetCDF4ArrayWrapper(NDArrayMixin):
@@ -86,7 +87,7 @@ class NetCDF4DataStore(AbstractWritableDataStore):
     @property
     def dimensions(self):
         return FrozenOrderedDict((k, len(v))
-                                 for k, v in self.ds.dimensions.iteritems())
+                                 for k, v in iteritems(self.ds.dimensions))
 
     def set_dimension(self, name, length):
         self.ds.createDimension(name, size=length)

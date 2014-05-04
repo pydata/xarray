@@ -1,5 +1,6 @@
 import numpy as np
 from . import utils
+from .pycompat import iteritems
 
 
 def expanded_indexer(key, ndim):
@@ -129,7 +130,7 @@ def remap_label_indexers(data_obj, indexers):
     of equivalent location based indexers.
     """
     return {dim: convert_label_indexer(data_obj.coordinates[dim], label, dim)
-            for dim, label in indexers.iteritems()}
+            for dim, label in iteritems(indexers)}
 
 
 def _expand_slice(slice_, size):
