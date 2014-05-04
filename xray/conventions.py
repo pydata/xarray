@@ -6,6 +6,7 @@ from datetime import datetime
 
 from . import indexing
 from . import utils
+from .pycompat import unicode_type, basestring
 import xray
 
 
@@ -77,8 +78,8 @@ def is_valid_nc3_name(s):
     """
     if not isinstance(s, basestring):
         return False
-    if not isinstance(s, unicode):
-        s = unicode(s, 'utf-8')
+    if not isinstance(s, unicode_type):
+        s = s.decode('utf-8')
     num_bytes = len(s.encode('utf-8'))
     return ((unicodedata.normalize('NFC', s) == s) and
             (s not in _reserved_names) and
@@ -489,7 +490,7 @@ def decode_cf_variable(var, mask_and_scale=True):
             raise ValueError("Refused to overwrite dtype")
     encoding['dtype'] = data.dtype
 
-    if np.issubdtype(data.dtype, (str, unicode)) and data.dtype.itemsize == 1:
+    if np.issubdtype(data.dtype, (str, unicode_type)) and data.dtype.itemsize == 1:
         # TODO: add some sort of check instead of just assuming that the last
         # dimension on a character array is always the string dimension
         dimensions = dimensions[:-1]
