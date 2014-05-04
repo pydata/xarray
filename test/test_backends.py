@@ -17,7 +17,7 @@ from xray import Dataset, open_dataset, backends
 from xray.pycompat import iteritems, itervalues
 
 from . import TestCase, requires_scipy, requires_netCDF4, requires_pydap
-from test_dataset import create_test_data
+from .test_dataset import create_test_data
 
 try:
     import netCDF4 as nc4
