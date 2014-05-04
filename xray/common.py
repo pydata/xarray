@@ -20,6 +20,9 @@ class AbstractArray(ImplementsReduce):
     def __nonzero__(self):
         return bool(self.values)
 
+    # Python 3 uses __bool__, Python 2 uses __nonzero__
+    __bool__ = __nonzero__
+
     def __float__(self):
         return float(self.values)
 
