@@ -128,7 +128,7 @@ class TestDataset(TestCase):
         self.assertTrue('foo' in a)
         a['bar'] = (('time', 'x',), d)
         # order of creation is preserved
-        self.assertTrue(a.variables.keys() == ['foo', 'time', 'x', 'bar'])
+        self.assertEqual(set(a.variables.keys()),  {'foo', 'time', 'x', 'bar'})
         self.assertTrue(all([a.variables['foo'][i].values == d[i]
                              for i in np.ndindex(*d.shape)]))
         # try to add variable with dim (10,3) with data that's (3,10)
