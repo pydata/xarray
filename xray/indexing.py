@@ -199,7 +199,7 @@ class LazilyIndexedArray(utils.NDArrayMixin):
             if isinstance(k, int):
                 key.append(k)
             else:
-                key.append(_index_indexer_1d(k, new_key.next(), size))
+                key.append(_index_indexer_1d(k, next(new_key), size))
         return tuple(key)
 
     @property

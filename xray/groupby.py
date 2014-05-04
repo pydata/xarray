@@ -38,7 +38,7 @@ def peek_at(iterable):
     the same content as the original iterable
     """
     gen = iter(iterable)
-    peek = gen.next()
+    peek = next(gen)
     return peek, itertools.chain([peek], gen)
 
 
