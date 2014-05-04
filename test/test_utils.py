@@ -3,6 +3,7 @@ import numpy as np
 import pandas as pd
 
 from xray import utils
+from xray.pycompat import PY3
 from . import TestCase
 
 
@@ -80,6 +81,10 @@ class TestDictionaries(TestCase):
     def test_sorted_keys_dict(self):
         x = {'a': 1, 'b': 2, 'c': 3}
         y = utils.SortedKeysDict(x)
-        self.assertItemsEqual(y, ['a', 'b', 'c'])
+        if PY3:
+            # This got renamed
+            self.assertCountEqual(y, ['a', 'b', 'c'])
+        else:
+            self.assertItemsEqual(y, ['a', 'b', 'c'])
         self.assertEquals(repr(utils.SortedKeysDict()),
                           "SortedKeysDict({})")
