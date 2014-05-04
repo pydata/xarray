@@ -741,9 +741,9 @@ def align(*objects, **kwargs):
     copy = kwargs.pop('copy', True)
 
     if join == 'outer':
-        join_indices = functools.partial(reduce, operator.or_)
+        join_indices = functools.partial(functools.reduce, operator.or_)
     elif join == 'inner':
-        join_indices = functools.partial(reduce, operator.and_)
+        join_indices = functools.partial(functools.reduce, operator.and_)
     elif join == 'left':
         join_indices = operator.itemgetter(0)
     elif join == 'right':
