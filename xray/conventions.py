@@ -398,7 +398,7 @@ def char_to_string(arr):
 
 
 def encode_cf_variable(var):
-    """Converts an XArray into an XArray suitable for saving as a netCDF
+    """Converts an Variable into an Variable suitable for saving as a netCDF
     variable
     """
     dimensions = var.dimensions

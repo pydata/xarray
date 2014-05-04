@@ -52,7 +52,7 @@ class GroupBy(object):
 
     See Also
     --------
-    XArray.groupby
+    Dataset.groupby
     DataArray.groupby
     """
     def __init__(self, obj, group_coord, squeeze=True):
@@ -145,7 +145,8 @@ class ArrayGroupBy(GroupBy, ImplementsReduce):
     """GroupBy object specialized to grouping DataArray objects
     """
     def _iter_grouped_shortcut(self):
-        """Fast version of `_iter_grouped` that yields XArrays without metadata
+        """Fast version of `_iter_grouped` that yields Variables without
+        metadata
         """
         array = variable.as_variable(self.obj)
 

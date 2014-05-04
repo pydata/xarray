@@ -281,9 +281,9 @@ class DataArray(AbstractArray):
         ----------
         other : Dataset or DatasetArray
             Object with a coordinates attribute giving a mapping from dimension
-            names to xray.XArray objects, which provides coordinates upon which
-            to index the variables in this dataset. The coordinates on this
-            other object need not be the same as the coordinates on this
+            names to xray.Variable objects, which provides coordinates upon
+            which to index the variables in this dataset. The coordinates on
+            this other object need not be the same as the coordinates on this
             dataset. Any mis-matched coordinates values will be filled in with
             NaN, and any mis-matched coordinate names will simply be ignored.
         copy : bool, optional
@@ -518,7 +518,7 @@ class DataArray(AbstractArray):
             existing dimension name, in which case the location of the
             dimension is unchanged. Where to insert the new dimension is
             determined by whether it is found in the first array. If dimension
-            is provided as an XArray or DataArray, the name of the dataset
+            is provided as an Variable or DataArray, the name of the dataset
             array or the singleton dimension of the variable is used as the
             stacking dimension and the array is added to the returned dataset.
         indexers : iterable of indexers, optional
