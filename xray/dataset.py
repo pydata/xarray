@@ -551,7 +551,7 @@ class Dataset(Mapping):
             raise ValueError("dimensions %r do not exist" % invalid)
 
         # all indexers should be int, slice or np.ndarrays
-        indexers = {k: np.asarray(v) if not isinstance(v, (int, slice)) else v
+        indexers = {k: np.asarray(v) if not isinstance(v, (int, np.integer, slice)) else v
                    for k, v in iteritems(indexers)}
 
         variables = OrderedDict()

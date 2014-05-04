@@ -155,7 +155,7 @@ class ArrayGroupBy(GroupBy, ImplementsReduce):
         array = as_variable(self.obj)
 
         # build the new dimensions
-        if isinstance(self.group_indices[0], int):
+        if isinstance(self.group_indices[0], (int, np.integer)):
             # group_dim is squeezed out
             dims = tuple(d for d in array.dimensions if d != self.group_dim)
         else:
