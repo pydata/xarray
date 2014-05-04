@@ -1,6 +1,6 @@
 import numpy as np
 from . import utils
-from .pycompat import iteritems
+from .pycompat import iteritems, xrange
 
 
 def expanded_indexer(key, ndim):
