@@ -125,7 +125,7 @@ class NetCDF4DataStore(AbstractWritableDataStore):
             nc4_var[:] = variable.values
         else:
             nc4_var[:] = variable.values[:]
-        nc4_var.setncatts(variable.attrs)
+        nc4_var.setncatts(dict(variable.attrs))
 
     def del_attribute(self, key):
         self.ds.delncattr(key)
