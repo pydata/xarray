@@ -12,6 +12,11 @@ from xray.conventions import (is_valid_nc3_name, coerce_nc3_dtype,
 from xray.utils import Frozen
 from xray.pycompat import iteritems, basestring, unicode_type
 
+def _encode_unicode_data(data):
+    # Scipy's NetCDF 3 does not support unicode types
+    if data.dtype.kind == 'U':
+        return np.core.defchararray.encode(data, 'ascii')
+    return data
 
 class ScipyDataStore(AbstractWritableDataStore):
     """Store for reading and writing data via scipy.io.netcdf.
@@ -78,6 +83,7 @@ class ScipyDataStore(AbstractWritableDataStore):
     def set_variable(self, name, variable):
         variable = encode_cf_variable(variable)
         data = coerce_nc3_dtype(variable.values)
+        data = _encode_unicode_data(data)
         self.set_necessary_dimensions(variable)
         self.ds.createVariable(name, data.dtype, variable.dimensions)
         scipy_var = self.ds.variables[name]
