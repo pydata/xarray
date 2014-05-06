@@ -622,7 +622,7 @@ class TestDataset(TestCase):
                                 index=pd.Index(t, name='t'))
         actual = ds.to_dataframe()
         # use the .equals method to check all DataFrame metadata
-        self.assertTrue(expected.equals(actual))
+        assert expected.equals(actual), (expected, actual)
 
         # check roundtrip
         self.assertDatasetIdentical(ds, Dataset.from_dataframe(actual))
