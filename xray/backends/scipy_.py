@@ -15,7 +15,13 @@ from xray.pycompat import iteritems, basestring, unicode_type
 def _encode_unicode_data(data):
     # Scipy's NetCDF 3 does not support unicode types
     if data.dtype.kind == 'U':
-        return np.core.defchararray.encode(data, 'ascii')
+        return np.core.defchararray.encode(data, 'utf-8')
+    return data
+
+def _decode_string_data(data):
+    # Convert all strings to unicode when loading
+    if data.dtype.kind == 'S':
+        return np.core.defchararray.decode(data, 'utf-8', 'replace')
     return data
 
 class ScipyDataStore(AbstractWritableDataStore):
@@ -46,7 +52,7 @@ class ScipyDataStore(AbstractWritableDataStore):
             filename_or_obj, mode=mode, mmap=mmap, version=version)
 
     def open_store_variable(self, var):
-        return xray.Variable(var.dimensions, var.data, var._attributes)
+        return xray.Variable(var.dimensions, _decode_string_data(var.data), var._attributes)
 
     @property
     def attrs(self):

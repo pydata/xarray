@@ -464,6 +464,7 @@ def encode_cf_variable(var):
 
     return xray.Variable(dimensions, data, attributes, encoding=encoding)
 
+_u1size = np.dtype('U1').itemsize
 
 def decode_cf_variable(var, mask_and_scale=True):
     # use _data instead of data so as not to trigger loading data
@@ -492,7 +493,8 @@ def decode_cf_variable(var, mask_and_scale=True):
             raise ValueError("Refused to overwrite dtype")
     encoding['dtype'] = data.dtype
 
-    if np.issubdtype(data.dtype, (bytes, unicode_type)) and data.dtype.itemsize == 1:
+    if (np.issubdtype(data.dtype, unicode_type) and data.dtype.itemsize == _u1size)\
+            or (np.issubdtype(data.dtype, bytes) and data.dtype.itemsize == 1):
         # TODO: add some sort of check instead of just assuming that the last
         # dimension on a character array is always the string dimension
         dimensions = dimensions[:-1]
