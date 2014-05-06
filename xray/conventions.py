@@ -472,13 +472,15 @@ def decode_cf_variable(var, mask_and_scale=True):
     attributes = var.attrs.copy()
     encoding = var.encoding.copy()
 
-    def pop_to(source, dest, k):
+    def pop_to(source, dest, k, cast_unicode=False):
         """
         A convenience function which pops a key k from source to dest.
         None values are not passed on.  If k already exists in dest an
         error is raised.
         """
         v = source.pop(k, None)
+        if cast_unicode and isinstance(v, bytes):
+            v = v.decode('utf-8', 'replace')
         if v is not None:
             if k in dest:
                 raise ValueError("Failed hard to prevent overwriting key %s" % k)
@@ -504,10 +506,14 @@ def decode_cf_variable(var, mask_and_scale=True):
             data = MaskedAndScaledArray(data, fill_value, scale_factor,
                                         add_offset)
 
-    if 'units' in attributes and 'since' in attributes['units']:
-        units = pop_to(attributes, encoding, 'units')
-        calendar = pop_to(attributes, encoding, 'calendar')
-        data = DecodedCFDatetimeArray(data, units, calendar)
+    if 'units' in attributes:
+        units = attributes['units']
+        if isinstance(units, bytes):
+            units = units.decode('utf-8', 'replace')
+        if u'since' in units:
+            units = pop_to(attributes, encoding, 'units', cast_unicode=True)
+            calendar = pop_to(attributes, encoding, 'calendar', cast_unicode=True)
+            data = DecodedCFDatetimeArray(data, units, calendar)
 
     return xray.Variable(dimensions, indexing.LazilyIndexedArray(data),
                              attributes, encoding=encoding)
