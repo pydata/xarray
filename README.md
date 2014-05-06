@@ -1,13 +1,13 @@
 # xray: extended arrays for working with scientific datasets in Python
 
-[![travis-ci build status](https://travis-ci.org/akleeman/xray.png)][travis]
+[![travis-ci build status](https://travis-ci.org/xray-pydata/xray.png)][travis]
 
 **xray** is a Python package for working with aligned sets of homogeneous,
 n-dimensional arrays. It implements flexible array operations and dataset
 manipulation for in-memory datasets within the [Common Data Model][cdm] widely
 used for self-describing scientific data (e.g., the NetCDF file format).
 
-[travis]: https://travis-ci.org/akleeman/xray
+[travis]: https://travis-ci.org/xray-pydata/xray
 [cdm]: http://www.unidata.ucar.edu/software/thredds/current/netcdf-java/CDM/
 
 ## Why xray?

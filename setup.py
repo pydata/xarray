@@ -20,7 +20,7 @@ DISTNAME = 'xray'
 LICENSE = 'Apache'
 AUTHOR = 'Stephan Hoyer, Alex Kleeman, Eugene Brevdo'
 AUTHOR_EMAIL = 'shoyer@climate.com'
-URL = 'https://github.com/akleeman/xray'
+URL = 'https://github.com/xray-pydata/xray'
 CLASSIFIERS = [
     'Development Status :: 3 - Alpha',
     'License :: OSI Approved :: Apache Software License',
@@ -74,7 +74,7 @@ a numpy ``ndarray`` or a pandas ``DataFrame`` or ``Series``, providing
 compatibility with the full `PyData ecosystem <http://pydata.org/>`__.
 
 For more about **xray**, see the project's `GitHub page
-<https://github.com/akleeman/xray>`__ and `documentation
+<https://github.com/xray-pydata/xray>`__ and `documentation
 <http://xray.readthedocs.org>`__
 """
 
