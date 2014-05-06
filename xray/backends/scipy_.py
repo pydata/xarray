@@ -1,3 +1,4 @@
+from collections import OrderedDict
 try: # Python 2
     from cStringIO import StringIO as BytesIO
 except ImportError: # Python 3
@@ -23,6 +24,11 @@ def _decode_string_data(data):
     if data.dtype.kind == 'S':
         return np.core.defchararray.decode(data, 'utf-8', 'replace')
     return data
+
+def _decode_string(s):
+    if isinstance(s, bytes):
+        return s.decode('utf-8', 'replace')
+    return s
 
 class ScipyDataStore(AbstractWritableDataStore):
     """Store for reading and writing data via scipy.io.netcdf.
@@ -52,11 +58,13 @@ class ScipyDataStore(AbstractWritableDataStore):
             filename_or_obj, mode=mode, mmap=mmap, version=version)
 
     def open_store_variable(self, var):
-        return xray.Variable(var.dimensions, _decode_string_data(var.data), var._attributes)
+        return xray.Variable(var.dimensions, _decode_string_data(var.data), \
+            OrderedDict((k,_decode_string(v)) for (k,v) in iteritems(var._attributes)))
 
     @property
     def attrs(self):
-        return Frozen(self.ds._attributes)
+        return Frozen(OrderedDict((k, _decode_string(v)) \
+                for (k,v) in iteritems(self.ds._attributes)))
 
     @property
     def dimensions(self):
