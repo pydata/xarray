@@ -5,7 +5,6 @@ try:
     import cPickle as pickle
 except ImportError:
     import pickle
-import unittest
 
 import numpy as np
 import pandas as pd
@@ -617,7 +616,10 @@ class TestDataset(TestCase):
         x = np.random.randn(10)
         y = np.random.randn(10)
         t = list('abcdefghij')
-        ds = Dataset({'a': ('t', x), 'b': ('t', y), 't': ('t', t)})
+        ds = Dataset(OrderedDict([('a', ('t', x)),
+                                  ('b', ('t', y)),
+                                  ('t', ('t', t)),
+                                 ]))
         expected = pd.DataFrame(np.array([x, y]).T, columns=['a', 'b'],
                                 index=pd.Index(t, name='t'))
         actual = ds.to_dataframe()
