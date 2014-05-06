@@ -99,6 +99,7 @@ class ScipyDataStore(AbstractWritableDataStore):
         data = coerce_nc3_dtype(variable.values)
         data = _encode_unicode_data(data)
         self.set_necessary_dimensions(variable)
+        print(name, data.dtype, variable.dimensions)
         self.ds.createVariable(name, data.dtype, variable.dimensions)
         scipy_var = self.ds.variables[name]
         if data.ndim == 0:
