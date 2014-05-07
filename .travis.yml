@@ -20,6 +20,12 @@ before_install:
 env:
   - UPDATE_PYENV='conda remove --yes scipy netCDF4'
   - UPDATE_PYENV='pip install pydap'
+
+matrix:
+  exclude:
+    - python: "3.3"
+      env: UPDATE_PYENV='pip install pydap'
+
 # Install packages
 install:
   - conda create --yes -n test_env python=$TRAVIS_PYTHON_VERSION pip nose mock numpy pandas scipy netCDF4
