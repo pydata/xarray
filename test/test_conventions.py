@@ -111,6 +111,30 @@ class TestDatetime(TestCase):
                     self.assertArrayEqual(num_dates, np.around(encoded))
 
     @requires_netCDF4
+    def test_decoded_cf_datetime_array(self):
+        import netCDF4 as nc4
+
+        actual = conventions.DecodedCFDatetimeArray(
+            [0, 1, 2], 'days since 1900-01-01', 'standard')
+        expected = pd.date_range('1900-01-01', periods=3).values
+        self.assertEqual(actual.dtype, np.dtype('datetime64[ns]'))
+        self.assertArrayEqual(actual, expected)
+
+        # default calendar
+        actual = conventions.DecodedCFDatetimeArray(
+            [0, 1, 2], 'days since 1900-01-01')
+        self.assertEqual(actual.dtype, np.dtype('datetime64[ns]'))
+        self.assertArrayEqual(actual, expected)
+
+        num_dates = [722000, 720000.5]
+        units = 'days since 0001-01-01 0:0:0'
+        calendar = 'noleap'
+        actual = conventions.DecodedCFDatetimeArray(num_dates, units, calendar)
+        expected = nc4.num2date(num_dates, units, calendar)
+        self.assertEqual(actual.dtype, np.dtype('O'))
+        self.assertArrayEqual(actual, expected)
+
+    @requires_netCDF4
     def test_cf_datetime_nan(self):
         for num_dates, units, expected_list in [
                 ([np.nan], 'days since 2000-01-01', ['NaT']),
