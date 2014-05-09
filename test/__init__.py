@@ -5,6 +5,7 @@ from numpy.testing import assert_array_equal
 
 from xray import utils, DataArray
 from xray.variable import as_variable
+from xray.pycompat import PY3
 
 try:
     import scipy
@@ -47,6 +48,12 @@ def data_allclose_or_equiv(arr1, arr2, rtol=1e-05, atol=1e-08):
 
 
 class TestCase(unittest.TestCase):
+    if PY3:
+        # Python 3 assertCountEqual is roughly equivalent to Python 2
+        # assertItemsEqual
+        def assertItemsEqual(self, first, second, msg=None):
+            return self.assertCountEqual(first, second, msg)
+
     def assertVariableEqual(self, v1, v2):
         self.assertTrue(as_variable(v1).equals(v2))
 

@@ -10,7 +10,7 @@ import numpy as np
 import pandas as pd
 
 from xray import Dataset, DataArray, Variable, backends, utils, align, indexing
-from xray.pycompat import iteritems, PY3
+from xray.pycompat import iteritems
 
 from . import TestCase
 
@@ -69,10 +69,6 @@ class InaccessibleVariableDataStore(backends.InMemoryDataStore):
 
 
 class TestDataset(TestCase):
-    if PY3:
-        def assertItemsEqual(self, first, second, msg=None):
-            return self.assertCountEqual(first, second, msg)
-    
     def test_repr(self):
         data = create_test_data()
         expected = dedent("""
