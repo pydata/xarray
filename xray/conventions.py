@@ -24,6 +24,9 @@ _reserved_names = set(['byte', 'char', 'short', 'ushort', 'int', 'uint',
 # coerced instead as indicated by the "coerce_nc3_dtype" function
 _nc3_dtype_coercions = {'int64': 'int32', 'float64': 'float32', 'bool': 'int8'}
 
+# standard calendars recognized by netcdftime
+_STANDARD_CALENDARS = {'standard', 'gregorian', 'proleptic_gregorian'}
+
 
 def coerce_nc3_dtype(arr):
     """Coerce an array to a data type that can be stored in a netCDF-3 file
@@ -163,7 +166,7 @@ def decode_cf_datetime(num_dates, units, calendar=None):
     else:
         max_date = min_date
 
-    if (calendar not in ['standard', 'gregorian', 'proleptic_gregorian']
+    if (calendar not in _STANDARD_CALENDARS
             or min_date < datetime(1678, 1, 1)
             or max_date > datetime(2262, 4, 11)):
         dates = nc4.num2date(num_dates, units, calendar)
@@ -324,7 +327,13 @@ class DecodedCFDatetimeArray(utils.NDArrayMixin):
 
     @property
     def dtype(self):
-        return np.dtype('datetime64[ns]')
+        if self.calendar is None or self.calendar in _STANDARD_CALENDARS:
+            # TODO: return the proper dtype (object) for a standard calendar
+            # that can't be expressed in ns precision. Perhaps we could guess
+            # this from the units?
+            return np.dtype('datetime64[ns]')
+        else:
+            return np.dtype('O')
 
     def __getitem__(self, key):
         return decode_cf_datetime(self.array, units=self.units,
