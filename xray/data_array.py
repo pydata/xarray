@@ -5,14 +5,15 @@ from collections import defaultdict, OrderedDict
 
 import pandas as pd
 
-import dataset as dataset_
-import indexing
-import groupby
-import ops
-import utils
-import variable
-from common import AbstractArray
-from utils import FrozenOrderedDict, multi_index_from_product
+import xray
+from . import indexing
+from . import groupby
+from . import ops
+from . import utils
+from . import variable
+from .common import AbstractArray
+from .utils import FrozenOrderedDict, multi_index_from_product
+from .pycompat import iteritems, basestring
 
 
 class _LocIndexer(object):
@@ -22,7 +23,7 @@ class _LocIndexer(object):
     def _remap_key(self, key):
         label_indexers = self.data_array._key_to_indexers(key)
         indexers = []
-        for dim, label in label_indexers.iteritems():
+        for dim, label in iteritems(label_indexers):
             index = self.data_array.coordinates[dim]
             indexers.append(indexing.convert_label_indexer(index, label))
         return tuple(indexers)
@@ -494,7 +495,7 @@ class DataArray(AbstractArray):
         # For now, take an aggressive strategy of removing all variables
         # associated with any dropped dimensions
         # TODO: save some summary (mean? bounds?) of dropped variables
-        drop |= {k for k, v in self.dataset.variables.iteritems()
+        drop |= {k for k, v in iteritems(self.dataset.variables)
                  if any(dim in drop for dim in v.dimensions)}
         ds = self.dataset.unselect(*drop)
         ds[self.name] = var
@@ -554,7 +555,7 @@ class DataArray(AbstractArray):
         if concat_over is None:
             concat_over = set()
         concat_over = set(concat_over) | {name}
-        ds = dataset_.Dataset.concat(datasets, dimension, indexers,
+        ds = xray.Dataset.concat(datasets, dimension, indexers,
                                      concat_over=concat_over)
         return ds[name]
 
@@ -589,7 +590,7 @@ class DataArray(AbstractArray):
         """
         name = series.name if series.name is not None else 'values'
         df = pd.DataFrame({name: series})
-        ds = dataset_.Dataset.from_dataframe(df)
+        ds = xray.Dataset.from_dataframe(df)
         return ds[name]
 
     def equals(self, other):
@@ -626,7 +627,7 @@ class DataArray(AbstractArray):
             return False
 
     def _select_coordinates(self):
-        return dataset_.Dataset(self.coordinates)
+        return xray.Dataset(self.coordinates)
 
     def _refocus(self, new_var, name=None):
         """Returns a copy of this DataArray's dataset with this
@@ -656,7 +657,7 @@ class DataArray(AbstractArray):
     def _check_coordinates_compat(self, other):
         # TODO: possibly automatically select index intersection instead?
         if hasattr(other, 'coordinates'):
-            for k, v in self.coordinates.iteritems():
+            for k, v in iteritems(self.coordinates):
                 if (k in other.coordinates
                         and not v.equals(other.coordinates[k])):
                     raise ValueError('coordinate %r is not aligned' % k)
@@ -740,9 +741,9 @@ def align(*objects, **kwargs):
     copy = kwargs.pop('copy', True)
 
     if join == 'outer':
-        join_indices = functools.partial(reduce, operator.or_)
+        join_indices = functools.partial(functools.reduce, operator.or_)
     elif join == 'inner':
-        join_indices = functools.partial(reduce, operator.and_)
+        join_indices = functools.partial(functools.reduce, operator.and_)
     elif join == 'left':
         join_indices = operator.itemgetter(0)
     elif join == 'right':
@@ -750,12 +751,12 @@ def align(*objects, **kwargs):
 
     all_coords = defaultdict(list)
     for obj in objects:
-        for k, v in obj.coordinates.iteritems():
+        for k, v in iteritems(obj.coordinates):
             all_coords[k].append(v.as_index)
 
     # Exclude dimensions with all equal indices to avoid unnecessary reindexing
     # work.
-    joined_coords = {k: join_indices(v) for k, v in all_coords.iteritems()
+    joined_coords = {k: join_indices(v) for k, v in iteritems(all_coords)
                      if any(not v[0].equals(idx) for idx in v[1:])}
 
     return tuple(obj.reindex(copy=copy, **joined_coords) for obj in objects)

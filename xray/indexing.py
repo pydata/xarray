@@ -1,5 +1,6 @@
 import numpy as np
-import utils
+from . import utils
+from .pycompat import iteritems, xrange
 
 
 def expanded_indexer(key, ndim):
@@ -74,7 +75,7 @@ def orthogonal_indexer(key, shape):
     # note: we treat integers separately (instead of turning them into 1d
     # arrays) because integers (and only integers) collapse axes when used with
     # __getitem__
-    non_int_keys = [n for n, k in enumerate(key) if not isinstance(k, int)]
+    non_int_keys = [n for n, k in enumerate(key) if not isinstance(k, (int, np.integer))]
 
     def full_slices_unselected(n_list):
         def all_full_slices(key_index):
@@ -129,7 +130,7 @@ def remap_label_indexers(data_obj, indexers):
     of equivalent location based indexers.
     """
     return {dim: convert_label_indexer(data_obj.coordinates[dim], label, dim)
-            for dim, label in indexers.iteritems()}
+            for dim, label in iteritems(indexers)}
 
 
 def _expand_slice(slice_, size):
@@ -159,7 +160,7 @@ def slice_slice(old_slice, applied_slice, size):
 
 
 def _index_indexer_1d(old_indexer, applied_indexer, size):
-    assert isinstance(applied_indexer, (int, slice, np.ndarray))
+    assert isinstance(applied_indexer, (int, np.integer, slice, np.ndarray))
     if isinstance(applied_indexer, slice) and applied_indexer == slice(None):
         # shortcut for the usual case
         return old_indexer
@@ -195,10 +196,10 @@ class LazilyIndexedArray(utils.NDArrayMixin):
         new_key = iter(canonicalize_indexer(new_key, self.ndim))
         key = []
         for size, k in zip(self.array.shape, self.key):
-            if isinstance(k, int):
+            if isinstance(k, (int, np.integer)):
                 key.append(k)
             else:
-                key.append(_index_indexer_1d(k, new_key.next(), size))
+                key.append(_index_indexer_1d(k, next(new_key), size))
         return tuple(key)
 
     @property

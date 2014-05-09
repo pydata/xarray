@@ -1,6 +1,6 @@
 from collections import OrderedDict
 
-from common import AbstractWritableDataStore
+from .common import AbstractWritableDataStore
 
 
 class InMemoryDataStore(AbstractWritableDataStore):

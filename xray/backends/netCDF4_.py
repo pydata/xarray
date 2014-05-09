@@ -3,11 +3,12 @@ import warnings
 
 import numpy as np
 
-from common import AbstractWritableDataStore
+from .common import AbstractWritableDataStore
 import xray
 from xray.conventions import encode_cf_variable
 from xray.utils import FrozenOrderedDict, NDArrayMixin, as_array_or_item
 from xray import indexing
+from xray.pycompat import iteritems
 
 
 class NetCDF4ArrayWrapper(NDArrayMixin):
@@ -34,6 +35,12 @@ class NetCDF4ArrayWrapper(NDArrayMixin):
             data = self.array[key]
         return data
 
+def _version_check(actual, required):
+    actual_tup = tuple(int(p) if p.isdigit() else p for p in actual.split('.'))
+    try:
+        return actual_tup >= required
+    except TypeError:
+        return True
 
 class NetCDF4DataStore(AbstractWritableDataStore):
     """Store for reading and writing data via the Python-NetCDF4 library.
@@ -43,7 +50,7 @@ class NetCDF4DataStore(AbstractWritableDataStore):
     def __init__(self, filename, mode='r', clobber=True, diskless=False,
                  persist=False, format='NETCDF4'):
         import netCDF4 as nc4
-        if nc4.__version__ < (1, 0, 6):
+        if not _version_check(nc4.__version__, (1, 0, 6)):
             warnings.warn('python-netCDF4 %s detected; '
                           'the minimal recommended version is 1.0.6.'
                           % nc4.__version__, ImportWarning)
@@ -86,7 +93,7 @@ class NetCDF4DataStore(AbstractWritableDataStore):
     @property
     def dimensions(self):
         return FrozenOrderedDict((k, len(v))
-                                 for k, v in self.ds.dimensions.iteritems())
+                                 for k, v in iteritems(self.ds.dimensions))
 
     def set_dimension(self, name, length):
         self.ds.createDimension(name, size=length)
@@ -118,7 +125,7 @@ class NetCDF4DataStore(AbstractWritableDataStore):
             nc4_var[:] = variable.values
         else:
             nc4_var[:] = variable.values[:]
-        nc4_var.setncatts(variable.attrs)
+        nc4_var.setncatts(dict(variable.attrs))
 
     def del_attribute(self, key):
         self.ds.delncattr(key)

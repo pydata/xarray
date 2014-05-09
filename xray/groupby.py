@@ -1,9 +1,12 @@
 import itertools
+try:  # Python 2
+    from itertools import izip
+except ImportError: # Python 3
+    izip = zip
 
-from common import ImplementsReduce
-from ops import inject_reduce_methods
-import variable
-import dataset
+from .common import ImplementsReduce
+from .ops import inject_reduce_methods
+import xray
 import numpy as np
 
 
@@ -35,7 +38,7 @@ def peek_at(iterable):
     the same content as the original iterable
     """
     gen = iter(iterable)
-    peek = gen.next()
+    peek = next(gen)
     return peek, itertools.chain([peek], gen)
 
 
@@ -77,7 +80,8 @@ class GroupBy(object):
         self.group_coord = group_coord
         self.group_dim, = group_coord.dimensions
 
-        expected_size = dataset.as_dataset(obj).dimensions[self.group_dim]
+        from .dataset import as_dataset
+        expected_size = as_dataset(obj).dimensions[self.group_dim]
         if group_coord.size != expected_size:
             raise ValueError('the group variable\'s length does not '
                              'match the length of this variable along its '
@@ -102,7 +106,7 @@ class GroupBy(object):
             # get around to writing it:
             # unique_coord = xary.DataArray(unique_values, name=group_coord.name)
             variables = {group_coord.name: (group_coord.name, unique_values)}
-            unique_coord = dataset.Dataset(variables)[group_coord.name]
+            unique_coord = xray.Dataset(variables)[group_coord.name]
 
         self.group_indices = group_indices
         self.unique_coord = unique_coord
@@ -120,7 +124,7 @@ class GroupBy(object):
         return self.unique_coord.size
 
     def __iter__(self):
-        return itertools.izip(self.unique_coord.values, self._iter_grouped())
+        return izip(self.unique_coord.values, self._iter_grouped())
 
     def _iter_grouped(self):
         """Iterate over each element in this group"""
@@ -148,10 +152,11 @@ class ArrayGroupBy(GroupBy, ImplementsReduce):
         """Fast version of `_iter_grouped` that yields Variables without
         metadata
         """
-        array = variable.as_variable(self.obj)
+        from .variable import as_variable
+        array = as_variable(self.obj)
 
         # build the new dimensions
-        if isinstance(self.group_indices[0], int):
+        if isinstance(self.group_indices[0], (int, np.integer)):
             # group_dim is squeezed out
             dims = tuple(d for d in array.dimensions if d != self.group_dim)
         else:
@@ -163,10 +168,10 @@ class ArrayGroupBy(GroupBy, ImplementsReduce):
         for indices in self.group_indices:
             indexer[group_axis] = indices
             data = array.values[tuple(indexer)]
-            yield variable.Variable(dims, data)
+            yield xray.Variable(dims, data)
 
     def _combine_shortcut(self, applied, concat_dim, indexers):
-        stacked = variable.Variable.concat(
+        stacked = xray.Variable.concat(
             applied, concat_dim, indexers, shortcut=True)
         stacked.attrs.update(self.obj.attrs)
 

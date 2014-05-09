@@ -1,19 +1,23 @@
 import numpy as np
 import pandas as pd
 
-from cStringIO import StringIO
+try:  # Python 2
+    from cStringIO import StringIO as BytesIO
+except ImportError:  # Python 3
+    from io import BytesIO
 from collections import OrderedDict, Mapping
 
-import backends
-import conventions
-import common
-import groupby
-import indexing
-import variable
-import utils
-import data_array
-from utils import (FrozenOrderedDict, Frozen, SortedKeysDict, ChainMap,
+from . import backends
+from . import conventions
+from . import common
+from . import groupby
+from . import indexing
+from . import variable
+from . import utils
+from . import data_array
+from .utils import (FrozenOrderedDict, Frozen, SortedKeysDict, ChainMap,
                    multi_index_from_product)
+from .pycompat import iteritems, basestring
 
 
 def open_dataset(nc, decode_cf=True, *args, **kwargs):
@@ -82,7 +86,7 @@ class VariablesDict(OrderedDict):
                 return True
 
         virtual_vars = []
-        for k, v in self.iteritems():
+        for k, v in iteritems(self):
             if ((v.dtype.kind == 'M' and isinstance(v, variable.Coordinate))
                     or (v.ndim == 0 and _castable_to_timestamp(v.values))):
                 # nb. dtype.kind == 'M' is datetime64
@@ -160,10 +164,10 @@ def _expand_variables(raw_variables, old_variables={}, compat='identical'):
                              'first value: %r\nsecond value: %r'
                              % (name, variables[name], var))
 
-    for name, var in raw_variables.iteritems():
+    for name, var in iteritems(raw_variables):
         if hasattr(var, 'dataset'):
             # it's a DataArray
-            for dim, coord in var.coordinates.iteritems():
+            for dim, coord in iteritems(var.coordinates):
                 if dim != name:
                     add_variable(dim, coord)
         add_variable(name, var)
@@ -177,7 +181,7 @@ def _calculate_dimensions(variables):
     if any of the dimension sizes conflict.
     """
     dimensions = SortedKeysDict()
-    for k, var in variables.iteritems():
+    for k, var in iteritems(variables):
         for dim, size in zip(var.dimensions, var.shape):
             if dim not in dimensions:
                 dimensions[dim] = size
@@ -259,7 +263,7 @@ class Dataset(Mapping):
     def _add_missing_coordinates(self):
         """Add missing coordinate variables IN-PLACE to the variables dict
         """
-        for dim, size in self._dimensions.iteritems():
+        for dim, size in iteritems(self._dimensions):
             if dim not in self._variables:
                 coord = variable.Coordinate(dim, np.arange(size))
                 self._variables[dim] = coord
@@ -300,7 +304,7 @@ class Dataset(Mapping):
             # this will unmask and rescale the data as well as convert
             # time variables to datetime indices.
             variables = OrderedDict((k, conventions.decode_cf_variable(v))
-                                    for k, v in variables.iteritems())
+                                    for k, v in iteritems(variables))
         return cls(variables, store.attrs)
 
     @property
@@ -356,7 +360,7 @@ class Dataset(Mapping):
         """
         if deep:
             variables = OrderedDict((k, v.copy(deep=True))
-                                    for k, v in self.variables.iteritems())
+                                    for k, v in iteritems(self.variables))
         else:
             variables = self.variables
         return type(self)(variables, self.attrs)
@@ -427,7 +431,7 @@ class Dataset(Mapping):
         if key in self._dimensions:
             del self._dimensions[key]
         del self._variables[key]
-        also_delete = [k for k, v in self._variables.iteritems()
+        also_delete = [k for k, v in iteritems(self._variables)
                        if key in v.dimensions]
         for key in also_delete:
             del self._variables[key]
@@ -505,7 +509,7 @@ class Dataset(Mapping):
         """Serialize dataset contents to a string. The serialization creates an
         in memory netcdf version 3 string using the scipy.io.netcdf package.
         """
-        fobj = StringIO()
+        fobj = BytesIO()
         scipy_store = backends.ScipyDataStore(fobj, mode='w', **kwargs)
         self.dump_to_store(scipy_store)
         return fobj.getvalue()
@@ -547,12 +551,12 @@ class Dataset(Mapping):
             raise ValueError("dimensions %r do not exist" % invalid)
 
         # all indexers should be int, slice or np.ndarrays
-        indexers = {k: np.asarray(v) if not isinstance(v, (int, slice)) else v
-                   for k, v in indexers.iteritems()}
+        indexers = {k: np.asarray(v) if not isinstance(v, (int, np.integer, slice)) else v
+                   for k, v in iteritems(indexers)}
 
         variables = OrderedDict()
-        for name, var in self.variables.iteritems():
-            var_indexers = {k: v for k, v in indexers.iteritems()
+        for name, var in iteritems(self.variables):
+            var_indexers = {k: v for k, v in iteritems(indexers)
                             if k in var.dimensions}
             variables[name] = var.indexed(**var_indexers)
         return type(self)(variables, self.attrs)
@@ -660,7 +664,7 @@ class Dataset(Mapping):
         # build up indexers for assignment along each coordinate
         to_indexers = {}
         from_indexers = {}
-        for name, coord in self.coordinates.iteritems():
+        for name, coord in iteritems(self.coordinates):
             if name in coordinates:
                 target = utils.safe_cast_to_index(coordinates[name])
                 indexer = coord.get_indexer(target)
@@ -710,7 +714,7 @@ class Dataset(Mapping):
 
         # create variables for the new dataset
         variables = OrderedDict()
-        for name, var in self.variables.iteritems():
+        for name, var in iteritems(self.variables):
             if name in coordinates:
                 new_var = coordinates[name]
                 if not (hasattr(new_var, 'dimensions') and
@@ -765,7 +769,7 @@ class Dataset(Mapping):
                 raise ValueError("cannot rename %r because it is not a "
                                  "variable in this dataset" % k)
         variables = OrderedDict()
-        for k, v in self.variables.iteritems():
+        for k, v in iteritems(self.variables):
             name = name_dict.get(k, k)
             dims = tuple(name_dict.get(dim, dim) for dim in v.dimensions)
             var = v.copy(deep=False)
@@ -850,7 +854,7 @@ class Dataset(Mapping):
                 overwrite_vars = {overwrite_vars}
             else:
                 overwrite_vars = set(overwrite_vars)
-            potential_conflicts = {k: v for k, v in self.variables.iteritems()
+            potential_conflicts = {k: v for k, v in iteritems(self.variables)
                                    if k not in overwrite_vars}
 
         # update variables
@@ -897,9 +901,9 @@ class Dataset(Mapping):
             raise ValueError('One or more of the specified variable '
                              'names does not exist in this dataset')
         drop = set(names)
-        drop |= {k for k, v in self.variables.iteritems()
+        drop |= {k for k, v in iteritems(self.variables)
                  if any(name in v.dimensions for name in names)}
-        variables = OrderedDict((k, v) for k, v in self.variables.iteritems()
+        variables = OrderedDict((k, v) for k, v in iteritems(self.variables)
                                 if k not in drop)
         return type(self)(variables, self.attrs)
 
@@ -1024,7 +1028,7 @@ class Dataset(Mapping):
                 # across all datasets and indicates whether that
                 # variable differs or not.
                 return any(not ds[vname].equals(v) for ds in datasets[1:])
-            non_coords = datasets[0].noncoordinates.iteritems()
+            non_coords = iteritems(datasets[0].noncoordinates)
             # all noncoordinates that are not the same in each dataset
             concat_over.update(k for k, v in non_coords if differs(k, v))
         elif mode == 'all':
@@ -1046,13 +1050,13 @@ class Dataset(Mapping):
         auto_concat_dims = {dim_name}
         if hasattr(dimension, 'dimensions'):
             auto_concat_dims |= set(dimension.dimensions)
-        for k, v in datasets[0].iteritems():
+        for k, v in iteritems(datasets[0]):
             if k == dim_name or auto_concat_dims.intersection(v.dimensions):
                 concat_over.add(k)
 
         # create the new dataset and add constant variables
         concatenated = cls({}, datasets[0].attrs)
-        for k, v in datasets[0].iteritems():
+        for k, v in iteritems(datasets[0]):
             if k not in concat_over:
                 concatenated[k] = v
 
@@ -1062,7 +1066,7 @@ class Dataset(Mapping):
             if (compat == 'identical'
                     and not utils.dict_equal(ds.attrs, concatenated.attrs)):
                 raise ValueError('dataset global attributes not equal')
-            for k, v in ds.variables.iteritems():
+            for k, v in iteritems(ds.variables):
                 if k not in concatenated and k not in concat_over:
                     raise ValueError('encountered unexpected variable %r' % k)
                 elif (k in concatenated and k != dim_name and
@@ -1103,8 +1107,8 @@ class Dataset(Mapping):
             _, var_data = np.broadcast_arrays(template.values, var.values)
             data.append(var_data.reshape(-1))
 
-        index = multi_index_from_product(self.coordinates.values(),
-                                         names=self.coordinates.keys())
+        index = multi_index_from_product(list(self.coordinates.values()),
+                                         names=list(self.coordinates.keys()))
         return pd.DataFrame(OrderedDict(zip(columns, data)), index=index)
 
     @classmethod
@@ -1141,7 +1145,7 @@ class Dataset(Mapping):
             obj[dimensions[0]] = (dimensions, idx)
             shape = -1
 
-        for name, series in dataframe.iteritems():
+        for name, series in iteritems(dataframe):
             data = series.values.reshape(shape)
             obj[name] = (dimensions, data)
         return obj

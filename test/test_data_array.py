@@ -4,6 +4,7 @@ from copy import deepcopy
 from textwrap import dedent
 
 from xray import Dataset, DataArray, Variable, align
+from xray.pycompat import iteritems
 from . import TestCase, ReturnItem, source_ndarray
 
 
@@ -36,7 +37,7 @@ class TestDataArray(TestCase):
         self.assertEqual(len(self.dv), len(self.v))
         self.assertVariableEqual(self.dv, self.v)
         self.assertEqual(list(self.dv.coordinates), list(self.ds.coordinates))
-        for k, v in self.dv.coordinates.iteritems():
+        for k, v in iteritems(self.dv.coordinates):
             self.assertArrayEqual(v, self.ds.coordinates[k])
         with self.assertRaises(AttributeError):
             self.dv.name = 'bar'

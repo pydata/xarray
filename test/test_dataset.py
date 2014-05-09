@@ -1,13 +1,16 @@
 from collections import OrderedDict
 from copy import copy, deepcopy
 from textwrap import dedent
-import cPickle as pickle
-import unittest
+try:
+    import cPickle as pickle
+except ImportError:
+    import pickle
 
 import numpy as np
 import pandas as pd
 
 from xray import Dataset, DataArray, Variable, backends, utils, align, indexing
+from xray.pycompat import iteritems
 
 from . import TestCase
 
@@ -120,7 +123,7 @@ class TestDataset(TestCase):
         self.assertTrue('foo' in a)
         a['bar'] = (('time', 'x',), d)
         # order of creation is preserved
-        self.assertTrue(a.variables.keys() == ['foo', 'time', 'x', 'bar'])
+        self.assertEqual(list(a.variables.keys()),  ['foo', 'time', 'x', 'bar'])
         self.assertTrue(all([a.variables['foo'][i].values == d[i]
                              for i in np.ndindex(*d.shape)]))
         # try to add variable with dim (10,3) with data that's (3,10)
@@ -192,7 +195,7 @@ class TestDataset(TestCase):
             self.assertEqual(data[v].dimensions, ret[v].dimensions)
             self.assertEqual(data[v].attrs, ret[v].attrs)
             slice_list = [slice(None)] * data[v].values.ndim
-            for d, s in slicers.iteritems():
+            for d, s in iteritems(slicers):
                 if d in data[v].dimensions:
                     inds = np.nonzero(np.array(data[v].dimensions) == d)[0]
                     for ind in inds:
@@ -320,7 +323,7 @@ class TestDataset(TestCase):
         data = create_test_data()
         ret = data.select(_testvar)
         self.assertVariableEqual(data[_testvar], ret[_testvar])
-        self.assertTrue(_vars.keys()[1] not in ret.variables)
+        self.assertTrue(sorted(_vars.keys())[1] not in ret.variables)
         self.assertRaises(ValueError, data.select, (_testvar, 'not_a_var'))
 
     def test_unselect(self):
@@ -364,12 +367,12 @@ class TestDataset(TestCase):
         renamed = data.rename(newnames)
 
         variables = OrderedDict(data.variables)
-        for k, v in newnames.iteritems():
+        for k, v in iteritems(newnames):
             variables[v] = variables.pop(k)
 
-        for k, v in variables.iteritems():
+        for k, v in iteritems(variables):
             dims = list(v.dimensions)
-            for name, newname in newnames.iteritems():
+            for name, newname in iteritems(newnames):
                 if name in dims:
                     dims[dims.index(name)] = newname
 
@@ -484,7 +487,7 @@ class TestDataset(TestCase):
             def get_args(v):
                 return [set(args[0]) & set(v.dimensions)] if args else []
             expected = Dataset({k: v.squeeze(*get_args(v))
-                               for k, v in data.variables.iteritems()})
+                               for k, v in iteritems(data.variables)})
             self.assertDatasetIdentical(expected, data.squeeze(*args))
         # invalid squeeze
         with self.assertRaisesRegexp(ValueError, 'cannot select a dimension'):
@@ -532,7 +535,7 @@ class TestDataset(TestCase):
             # return a new dataset with all variable dimensions tranposed into
             # the order in which they are found in `data`
             return Dataset({k: v.transpose(*data[k].dimensions)
-                           for k, v in dataset.variables.iteritems()},
+                           for k, v in iteritems(dataset.variables)},
                            dataset.attrs)
 
         for dim in ['dim1', 'dim2', 'dim3']:
@@ -544,7 +547,7 @@ class TestDataset(TestCase):
                 data, Dataset.concat(datasets, data[dim], mode='minimal'))
 
             datasets = [g for _, g in data.groupby(dim, squeeze=True)]
-            concat_over = [k for k, v in data.variables.iteritems()
+            concat_over = [k for k, v in iteritems(data.variables)
                            if dim in v.dimensions and k != dim]
             actual = Dataset.concat(datasets, data[dim],
                                     concat_over=concat_over)
@@ -609,12 +612,15 @@ class TestDataset(TestCase):
         x = np.random.randn(10)
         y = np.random.randn(10)
         t = list('abcdefghij')
-        ds = Dataset({'a': ('t', x), 'b': ('t', y), 't': ('t', t)})
+        ds = Dataset(OrderedDict([('a', ('t', x)),
+                                  ('b', ('t', y)),
+                                  ('t', ('t', t)),
+                                 ]))
         expected = pd.DataFrame(np.array([x, y]).T, columns=['a', 'b'],
                                 index=pd.Index(t, name='t'))
         actual = ds.to_dataframe()
         # use the .equals method to check all DataFrame metadata
-        self.assertTrue(expected.equals(actual))
+        assert expected.equals(actual), (expected, actual)
 
         # check roundtrip
         self.assertDatasetIdentical(ds, Dataset.from_dataframe(actual))

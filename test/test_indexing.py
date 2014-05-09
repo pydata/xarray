@@ -61,7 +61,7 @@ class TestIndexers(TestCase):
         with self.assertRaisesRegexp(ValueError, 'only supports 1d'):
             indexing.orthogonal_indexer(x > 0, x.shape)
         with self.assertRaisesRegexp(ValueError, 'invalid subkey'):
-            print indexing.orthogonal_indexer((1.5 * y, 1.5 * y), x.shape)
+            print(indexing.orthogonal_indexer((1.5 * y, 1.5 * y), x.shape))
 
     def test_convert_label_indexer(self):
         # TODO: add tests that aren't just for edge cases

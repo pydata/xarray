@@ -5,6 +5,7 @@ from numpy.testing import assert_array_equal
 
 from xray import utils, DataArray
 from xray.variable import as_variable
+from xray.pycompat import PY3
 
 try:
     import scipy
@@ -47,6 +48,12 @@ def data_allclose_or_equiv(arr1, arr2, rtol=1e-05, atol=1e-08):
 
 
 class TestCase(unittest.TestCase):
+    if PY3:
+        # Python 3 assertCountEqual is roughly equivalent to Python 2
+        # assertItemsEqual
+        def assertItemsEqual(self, first, second, msg=None):
+            return self.assertCountEqual(first, second, msg)
+
     def assertVariableEqual(self, v1, v2):
         self.assertTrue(as_variable(v1).equals(v2))
 
@@ -55,8 +62,8 @@ class TestCase(unittest.TestCase):
 
     def assertVariableAllClose(self, v1, v2, rtol=1e-05, atol=1e-08):
         self.assertEqual(v1.dimensions, v2.dimensions)
-        self.assertTrue(data_allclose_or_equiv(v1.values, v2.values,
-                                               rtol=rtol, atol=atol))
+        assert data_allclose_or_equiv(v1.values, v2.values, rtol=rtol, atol=atol),\
+            (repr(v1.values), repr(v2.values))
 
     def assertVariableNotEqual(self, v1, v2):
         self.assertFalse(as_variable(v1).equals(v2))
@@ -76,12 +83,12 @@ class TestCase(unittest.TestCase):
     def assertDatasetIdentical(self, d1, d2):
         # this method is functionally equivalent to `assert d1.identical(d2)`,
         # but it checks each aspect of equality separately for easier debugging
-        self.assertTrue(utils.dict_equal(d1.attrs, d2.attrs))
+        assert utils.dict_equal(d1.attrs, d2.attrs), (d1.attrs, d2.attrs)
         self.assertEqual(sorted(d1.variables), sorted(d2.variables))
         for k in d1:
             v1 = d1.variables[k]
             v2 = d2.variables[k]
-            self.assertTrue(v1.identical(v2))
+            assert v1.identical(v2), (v1, v2)
 
     def assertDatasetAllClose(self, d1, d2, rtol=1e-05, atol=1e-08):
         self.assertEqual(sorted(d1.variables), sorted(d2.variables))

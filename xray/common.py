@@ -1,5 +1,6 @@
 import numpy as np
 
+from .pycompat import basestring, iteritems
 
 class ImplementsReduce(object):
     @classmethod
@@ -18,6 +19,9 @@ class ImplementsReduce(object):
 class AbstractArray(ImplementsReduce):
     def __nonzero__(self):
         return bool(self.values)
+
+    # Python 3 uses __bool__, Python 2 uses __nonzero__
+    __bool__ = __nonzero__
 
     def __float__(self):
         return float(self.values)
@@ -109,7 +113,7 @@ class AbstractArray(ImplementsReduce):
 def _summarize_attributes(data):
     if data.attrs:
         attr_summary = '\n'.join('    %s: %s' % (k, v) for k, v
-                                 in data.attrs.iteritems())
+                                 in iteritems(data.attrs))
     else:
         attr_summary = '    Empty'
     return attr_summary
@@ -146,7 +150,7 @@ def dataset_repr(ds):
     max_name_length = max(len(k) for k in ds.variables) if ds else 0
     first_col_width = max(4 + max_name_length, 16)
     coords_str = pretty_print('Dimensions:', first_col_width)
-    all_dim_strings = ['%s: %s' % (k, v) for k, v in ds.dimensions.iteritems()]
+    all_dim_strings = ['%s: %s' % (k, v) for k, v in iteritems(ds.dimensions)]
     summary.append('%s(%s)' % (coords_str, ', '.join(all_dim_strings)))
 
     def summarize_var(k, not_found=' ', found=int):

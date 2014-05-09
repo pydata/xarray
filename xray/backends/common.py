@@ -1,4 +1,5 @@
 from xray.utils import FrozenOrderedDict
+from xray.pycompat import iteritems
 
 
 class AbstractDataStore(object):
@@ -12,20 +13,20 @@ class AbstractDataStore(object):
     @property
     def variables(self):
         return FrozenOrderedDict((k, self.open_store_variable(v))
-                                 for k, v in self.store_variables.iteritems())
+                                 for k, v in iteritems(self.store_variables))
 
 
 class AbstractWritableDataStore(AbstractDataStore):
     def set_dimensions(self, dimensions):
-        for d, l in dimensions.iteritems():
+        for d, l in iteritems(dimensions):
             self.set_dimension(d, l)
 
     def set_attributes(self, attributes):
-        for k, v in attributes.iteritems():
+        for k, v in iteritems(attributes):
             self.set_attribute(k, v)
 
     def set_variables(self, variables):
-        for vn, v in variables.iteritems():
+        for vn, v in iteritems(variables):
             self.set_variable(vn, v)
 
     def set_necessary_dimensions(self, variable):

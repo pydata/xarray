@@ -4,7 +4,7 @@ import xray
 from xray.utils import FrozenOrderedDict, Frozen, NDArrayMixin
 from xray import indexing
 
-from common import AbstractDataStore
+from .common import AbstractDataStore
 
 
 class PydapArrayWrapper(NDArrayMixin):

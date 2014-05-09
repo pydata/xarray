@@ -75,7 +75,8 @@ class TestDictionaries(TestCase):
         with self.assertRaises(AttributeError):
             x.update(self.y)
         self.assertEquals(x.mapping, self.x)
-        self.assertEquals(repr(x), "Frozen({'a': 'A', 'b': 'B'})")
+        self.assertIn(repr(x), ("Frozen({'a': 'A', 'b': 'B'})",
+                                "Frozen({'b': 'B', 'a': 'A'})"))
 
     def test_sorted_keys_dict(self):
         x = {'a': 1, 'b': 2, 'c': 3}

@@ -1,16 +1,23 @@
-import cPickle as pickle
+try:
+    import cPickle as pickle
+except ImportError:
+    import pickle
 import contextlib
 import os.path
 import tempfile
-from cStringIO import StringIO
+try:  # Python 2
+    from cStringIO import StringIO as BytesIO
+except ImportError:  # Python 3
+    from io import BytesIO
 
 import numpy as np
 import pandas as pd
 
 from xray import Dataset, open_dataset, backends
+from xray.pycompat import iteritems, itervalues
 
 from . import TestCase, requires_scipy, requires_netCDF4, requires_pydap
-from test_dataset import create_test_data
+from .test_dataset import create_test_data
 
 try:
     import netCDF4 as nc4
@@ -146,7 +153,7 @@ class NetCDF4DataTest(DatasetIOTestCases, TestCase):
             actual = open_dataset(tmp_file)
 
             self.assertVariableEqual(actual['time'], expected['time'])
-            actual_encoding = {k: v for k, v in actual['time'].encoding.iteritems()
+            actual_encoding = {k: v for k, v in iteritems(actual['time'].encoding)
                                if k in expected['time'].encoding}
             self.assertDictEqual(actual_encoding, expected['time'].encoding)
 
@@ -181,7 +188,7 @@ class NetCDF4DataTest(DatasetIOTestCases, TestCase):
                                       'chunksizes': (10, 10),
                                       'least_significant_digit': 2})
         actual = self.roundtrip(data)
-        for k, v in data['var2'].encoding.iteritems():
+        for k, v in iteritems(data['var2'].encoding):
             self.assertEqual(v, actual['var2'].encoding[k])
 
     def test_mask_and_scale(self):
@@ -242,17 +249,17 @@ class NetCDF4DataTest(DatasetIOTestCases, TestCase):
 class ScipyDataTest(DatasetIOTestCases, TestCase):
     @contextlib.contextmanager
     def create_store(self):
-        fobj = StringIO()
+        fobj = BytesIO()
         yield backends.ScipyDataStore(fobj, 'w')
 
     def roundtrip(self, data, **kwargs):
         serialized = data.dumps()
-        return open_dataset(StringIO(serialized), **kwargs)
+        return open_dataset(BytesIO(serialized), **kwargs)
 
 
 def clear_attributes(ds):
     ds.attrs.clear()
-    for v in ds.itervalues():
+    for v in itervalues(ds):
         v.attrs.clear()
 
 

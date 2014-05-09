@@ -2,11 +2,16 @@ import operator
 
 import numpy as np
 
+from .pycompat import PY3
+
 
 UNARY_OPS = ['neg', 'pos', 'abs', 'invert']
 CMP_BINARY_OPS = ['lt', 'le', 'eq', 'ne', 'ge', 'gt']
-NUM_BINARY_OPS = ['add', 'sub', 'mul', 'div', 'truediv', 'floordiv', 'mod',
+NUM_BINARY_OPS = ['add', 'sub', 'mul', 'truediv', 'floordiv', 'mod',
                   'pow', 'and', 'xor', 'or']
+if not PY3:
+    NUM_BINARY_OPS.append('div')
+
 # methods which don't modify the data shape, so the result should still be
 # wrapped in an Variable/DataArray
 NUMPY_UNARY_METHODS = ['astype', 'argsort', 'clip', 'conj', 'conjugate',

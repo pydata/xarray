@@ -4,9 +4,10 @@ import numpy as np
 import pandas as pd
 from datetime import datetime
 
-import indexing
-import utils
-import variable
+from . import indexing
+from . import utils
+from .pycompat import unicode_type, basestring
+import xray
 
 
 # Special characters that are permitted in netCDF names except in the
@@ -77,8 +78,8 @@ def is_valid_nc3_name(s):
     """
     if not isinstance(s, basestring):
         return False
-    if not isinstance(s, unicode):
-        s = unicode(s, 'utf-8')
+    if not isinstance(s, unicode_type):
+        s = s.decode('utf-8')
     num_bytes = len(s.encode('utf-8'))
     return ((unicodedata.normalize('NFC', s) == s) and
             (s not in _reserved_names) and
@@ -461,8 +462,9 @@ def encode_cf_variable(var):
             data = data.round()
         data = data.astype(encoding['dtype'])
 
-    return variable.Variable(dimensions, data, attributes, encoding=encoding)
+    return xray.Variable(dimensions, data, attributes, encoding=encoding)
 
+_u1size = np.dtype('U1').itemsize
 
 def decode_cf_variable(var, mask_and_scale=True):
     # use _data instead of data so as not to trigger loading data
@@ -489,7 +491,8 @@ def decode_cf_variable(var, mask_and_scale=True):
             raise ValueError("Refused to overwrite dtype")
     encoding['dtype'] = data.dtype
 
-    if np.issubdtype(data.dtype, (str, unicode)) and data.dtype.itemsize == 1:
+    if (np.issubdtype(data.dtype, unicode_type) and data.dtype.itemsize == _u1size)\
+            or (np.issubdtype(data.dtype, bytes) and data.dtype.itemsize == 1):
         # TODO: add some sort of check instead of just assuming that the last
         # dimension on a character array is always the string dimension
         dimensions = dimensions[:-1]
@@ -503,10 +506,10 @@ def decode_cf_variable(var, mask_and_scale=True):
             data = MaskedAndScaledArray(data, fill_value, scale_factor,
                                         add_offset)
 
-    if 'units' in attributes and 'since' in attributes['units']:
+    if 'units' in attributes and u'since' in attributes['units']:
         units = pop_to(attributes, encoding, 'units')
         calendar = pop_to(attributes, encoding, 'calendar')
         data = DecodedCFDatetimeArray(data, units, calendar)
 
-    return variable.Variable(dimensions, indexing.LazilyIndexedArray(data),
+    return xray.Variable(dimensions, indexing.LazilyIndexedArray(data),
                              attributes, encoding=encoding)

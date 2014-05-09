@@ -40,7 +40,7 @@ class VariableSubclassTestCases(object):
         d = datetime(2000, 1, 1)
         for value, dtype in [(0, int),
                              (np.float32(0.5), np.float32),
-                             ('foo', np.string_),
+                             ('foo', np.str_),
                              (d, None),
                              (np.datetime64(d), np.datetime64)]:
             x = self.cls(['x'], [value])
@@ -60,8 +60,8 @@ class VariableSubclassTestCases(object):
                 self.assertEqual(type(x.values[0]), type(value))
                 self.assertEqual(type(x[0].values), type(value))
             else:
-                self.assertTrue(np.issubdtype(x.values[0].dtype, dtype))
-                self.assertTrue(np.issubdtype(x[0].values.dtype, dtype))
+                assert np.issubdtype(x.values[0].dtype, dtype), (x.values[0].dtype, dtype)
+                assert np.issubdtype(x[0].values.dtype, dtype), (x[0].values.dtype, dtype)
 
     def test_0d_time_data(self):
         # regression test for #105

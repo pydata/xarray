@@ -1,4 +1,8 @@
-from cStringIO import StringIO
+from collections import OrderedDict
+try: # Python 2
+    from cStringIO import StringIO as BytesIO
+except ImportError: # Python 3
+    from io import BytesIO
 import numpy as np
 import warnings
 
@@ -7,7 +11,27 @@ from xray.backends.common import AbstractWritableDataStore
 from xray.conventions import (is_valid_nc3_name, coerce_nc3_dtype,
                               encode_cf_variable)
 from xray.utils import Frozen
+from xray.pycompat import iteritems, basestring, unicode_type
 
+def _encode_unicode_data(data):
+    # Scipy's NetCDF 3 does not support unicode types
+    if data.dtype.kind == 'U':
+        return np.core.defchararray.encode(data, 'utf-8')
+    return data
+
+def _decode_string_data(data):
+    # Convert all strings to unicode when loading
+    if data.dtype.kind == 'S':
+        return np.core.defchararray.decode(data, 'utf-8', 'replace')
+    return data
+
+def _decode_string(s):
+    if isinstance(s, bytes):
+        return s.decode('utf-8', 'replace')
+    return s
+
+def _decode_values(d):
+    return OrderedDict((k, _decode_string(v)) for (k,v) in iteritems(d))
 
 class ScipyDataStore(AbstractWritableDataStore):
     """Store for reading and writing data via scipy.io.netcdf.
@@ -19,7 +43,7 @@ class ScipyDataStore(AbstractWritableDataStore):
     """
     def __init__(self, filename_or_obj, mode='r', mmap=None, version=1):
         import scipy
-        if mode != 'r' and scipy.__version__ < (0, 13):
+        if mode != 'r' and scipy.__version__ < '0.13':
             warnings.warn('scipy %s detected; '
                           'the minimal recommended version is 0.13. '
                           'Older version of this library do not reliably '
@@ -32,16 +56,17 @@ class ScipyDataStore(AbstractWritableDataStore):
             and filename_or_obj.startswith('CDF')):
             # TODO: this check has the unfortunate side-effect that
             # paths to files cannot start with 'CDF'.
-            filename_or_obj = StringIO(filename_or_obj)
+            filename_or_obj = BytesIO(filename_or_obj)
         self.ds = scipy.io.netcdf.netcdf_file(
             filename_or_obj, mode=mode, mmap=mmap, version=version)
 
     def open_store_variable(self, var):
-        return xray.Variable(var.dimensions, var.data, var._attributes)
+        return xray.Variable(var.dimensions, _decode_string_data(var.data), 
+                             _decode_values(var._attributes))
 
     @property
     def attrs(self):
-        return Frozen(self.ds._attributes)
+        return Frozen(_decode_values(self.ds._attributes))
 
     @property
     def dimensions(self):
@@ -59,7 +84,8 @@ class ScipyDataStore(AbstractWritableDataStore):
 
     def _cast_attr_value(self, value):
         if isinstance(value, basestring):
-            value = unicode(value)
+            if not isinstance(value, unicode_type):
+                value = value.decode('utf-8')
         else:
             value = coerce_nc3_dtype(np.atleast_1d(value))
             if value.ndim > 1:
@@ -73,14 +99,16 @@ class ScipyDataStore(AbstractWritableDataStore):
     def set_variable(self, name, variable):
         variable = encode_cf_variable(variable)
         data = coerce_nc3_dtype(variable.values)
+        data = _encode_unicode_data(data)
         self.set_necessary_dimensions(variable)
+        print(name, data.dtype, variable.dimensions)
         self.ds.createVariable(name, data.dtype, variable.dimensions)
         scipy_var = self.ds.variables[name]
         if data.ndim == 0:
             scipy_var.assignValue(data)
         else:
             scipy_var[:] = data[:]
-        for k, v in variable.attrs.iteritems():
+        for k, v in iteritems(variable.attrs):
             self._validate_attr_key(k)
             setattr(scipy_var, k, self._cast_attr_value(v))
 
