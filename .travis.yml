@@ -20,11 +20,14 @@ before_install:
 env:
   - UPDATE_PYENV='conda remove --yes scipy netCDF4'
   - UPDATE_PYENV='pip install pydap'
+  - UPDATE_PYENV=''
 
 matrix:
   exclude:
     - python: "3.3"
       env: UPDATE_PYENV='pip install pydap'
+    - python: "2.7"
+      env: UPDATE_PYENV=''
 
 # Install packages
 install:
