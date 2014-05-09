@@ -30,6 +30,9 @@ def _decode_string(s):
         return s.decode('utf-8', 'replace')
     return s
 
+def _decode_values(d):
+    return OrderedDict((k, _decode_string(v)) for (k,v) in iteritems(d))
+
 class ScipyDataStore(AbstractWritableDataStore):
     """Store for reading and writing data via scipy.io.netcdf.
 
@@ -58,13 +61,12 @@ class ScipyDataStore(AbstractWritableDataStore):
             filename_or_obj, mode=mode, mmap=mmap, version=version)
 
     def open_store_variable(self, var):
-        return xray.Variable(var.dimensions, _decode_string_data(var.data), \
-            OrderedDict((k,_decode_string(v)) for (k,v) in iteritems(var._attributes)))
+        return xray.Variable(var.dimensions, _decode_string_data(var.data), 
+                             _decode_values(var._attributes))
 
     @property
     def attrs(self):
-        return Frozen(OrderedDict((k, _decode_string(v)) \
-                for (k,v) in iteritems(self.ds._attributes)))
+        return Frozen(_decode_values(self.ds._attributes))
 
     @property
     def dimensions(self):
