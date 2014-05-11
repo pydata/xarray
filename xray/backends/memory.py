@@ -26,9 +26,3 @@ class InMemoryDataStore(AbstractWritableDataStore):
 
     def del_attribute(self, key):
         del self.attributes[key]
-
-    def sync(self):
-        pass
-
-    def close(self):
-        pass

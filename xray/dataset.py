@@ -500,8 +500,8 @@ class Dataset(Mapping):
         """Dump dataset contents to a location on disk using the netCDF4
         package.
         """
-        nc4_store = backends.NetCDF4DataStore(filepath, mode='w', **kwdargs)
-        self.dump_to_store(nc4_store)
+        with backends.NetCDF4DataStore(filepath, mode='w', **kwdargs) as store:
+            self.dump_to_store(store)
 
     dump = to_netcdf
 
@@ -510,8 +510,8 @@ class Dataset(Mapping):
         in memory netcdf version 3 string using the scipy.io.netcdf package.
         """
         fobj = BytesIO()
-        scipy_store = backends.ScipyDataStore(fobj, mode='w', **kwargs)
-        self.dump_to_store(scipy_store)
+        store = backends.ScipyDataStore(fobj, mode='w', **kwargs)
+        self.dump_to_store(store)
         return fobj.getvalue()
 
     def __repr__(self):

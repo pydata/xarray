@@ -1,5 +1,3 @@
-import unicodedata
-
 import numpy as np
 import pandas as pd
 from datetime import datetime
@@ -9,88 +7,8 @@ from . import utils
 from .pycompat import unicode_type, basestring
 import xray
 
-
-# Special characters that are permitted in netCDF names except in the
-# 0th position of the string
-_specialchars = '_.@+- !"#$%&\()*,:;<=>?[]^`{|}~'
-
-# The following are reserved names in CDL and may not be used as names of
-# variables, dimension, attributes
-_reserved_names = set(['byte', 'char', 'short', 'ushort', 'int', 'uint',
-                       'int64', 'uint64', 'float' 'real', 'double', 'bool',
-                       'string'])
-
-# These data-types aren't supported by netCDF3, so they are automatically
-# coerced instead as indicated by the "coerce_nc3_dtype" function
-_nc3_dtype_coercions = {'int64': 'int32', 'float64': 'float32', 'bool': 'int8'}
-
 # standard calendars recognized by netcdftime
 _STANDARD_CALENDARS = {'standard', 'gregorian', 'proleptic_gregorian'}
-
-
-def coerce_nc3_dtype(arr):
-    """Coerce an array to a data type that can be stored in a netCDF-3 file
-
-    This function performs the following dtype conversions:
-        int64 -> int32
-        float64 -> float32
-        bool -> int8
-
-    Data is checked for equality, or equivalence (non-NaN values) with
-    `np.allclose` with the default keyword arguments.
-    """
-    dtype = str(arr.dtype)
-    if dtype in _nc3_dtype_coercions:
-        new_dtype = _nc3_dtype_coercions[dtype]
-        # TODO: raise a warning whenever casting the data-type instead?
-        cast_arr = arr.astype(new_dtype)
-        if (('int' in dtype and not (cast_arr == arr).all())
-                or ('float' in dtype and
-                    not utils.allclose_or_equiv(cast_arr, arr))):
-            raise ValueError('could not safely cast array from dtype %s to %s'
-                             % (dtype, new_dtype))
-        arr = cast_arr
-    return arr
-
-
-def _isalnumMUTF8(c):
-    """Return True if the given UTF-8 encoded character is alphanumeric
-    or multibyte.
-
-    Input is not checked!
-    """
-    return c.isalnum() or (len(c.encode('utf-8')) > 1)
-
-
-def is_valid_nc3_name(s):
-    """Test whether an object can be validly converted to a netCDF-3
-    dimension, variable or attribute name
-
-    Earlier versions of the netCDF C-library reference implementation
-    enforced a more restricted set of characters in creating new names,
-    but permitted reading names containing arbitrary bytes. This
-    specification extends the permitted characters in names to include
-    multi-byte UTF-8 encoded Unicode and additional printing characters
-    from the US-ASCII alphabet. The first character of a name must be
-    alphanumeric, a multi-byte UTF-8 character, or '_' (reserved for
-    special names with meaning to implementations, such as the
-    "_FillValue" attribute). Subsequent characters may also include
-    printing special characters, except for '/' which is not allowed in
-    names. Names that have trailing space characters are also not
-    permitted.
-    """
-    if not isinstance(s, basestring):
-        return False
-    if not isinstance(s, unicode_type):
-        s = s.decode('utf-8')
-    num_bytes = len(s.encode('utf-8'))
-    return ((unicodedata.normalize('NFC', s) == s) and
-            (s not in _reserved_names) and
-            (num_bytes >= 0) and
-            ('/' not in s) and
-            (s[-1] != ' ') and
-            (_isalnumMUTF8(s[0]) or (s[0] == '_')) and
-            all((_isalnumMUTF8(c) or c in _specialchars for c in s)))
 
 
 def mask_and_scale(array, fill_value=None, scale_factor=None, add_offset=None):
@@ -166,9 +84,9 @@ def decode_cf_datetime(num_dates, units, calendar=None):
     else:
         max_date = min_date
 
-    if (calendar not in _STANDARD_CALENDARS
-            or min_date < datetime(1678, 1, 1)
-            or max_date > datetime(2262, 4, 11)):
+    if ((calendar not in _STANDARD_CALENDARS
+            or min_date.year < 1678 or max_date.year >= 2262)
+            and min_date is not pd.NaT):
         dates = nc4.num2date(num_dates, units, calendar)
     else:
         # we can safely use np.datetime64 with nanosecond precision (pandas
@@ -343,11 +261,11 @@ class DecodedCFDatetimeArray(utils.NDArrayMixin):
 class CharToStringArray(utils.NDArrayMixin):
     """Wrapper around array-like objects to create a new indexable object where
     values, when accessesed, are automatically concatenated along the last
-    dimension
+    dimension and coerced to unicode.
 
     >>> CharToStringArray(np.array(['a', 'b', 'c']))[:]
     array('abc',
-          dtype='|S3')
+          dtype='|U3')
     """
     def __init__(self, array):
         """
@@ -360,7 +278,7 @@ class CharToStringArray(utils.NDArrayMixin):
 
     @property
     def dtype(self):
-        return np.dtype(self.array.dtype.kind + str(self.array.shape[-1]))
+        return np.dtype('U' + str(self.array.shape[-1]))
 
     @property
     def shape(self):
@@ -377,13 +295,14 @@ class CharToStringArray(utils.NDArrayMixin):
 
     def __getitem__(self, key):
         if self.array.ndim == 0:
-            return self.array[key]
+            values = self.array[key]
         else:
             # require slicing the last dimension completely
             key = indexing.expanded_indexer(key, self.array.ndim)
             if  key[-1] != slice(None):
                 raise IndexError('too many indices')
-            return char_to_string(self.array[key])
+            values = char_to_string(self.array[key])
+        return decode_string_data(values)
 
 
 def string_to_char(arr):
@@ -405,6 +324,12 @@ def char_to_string(arr):
     if kind not in ['U', 'S']:
         raise ValueError('argument must be a string')
     return arr.view(kind + str(arr.shape[-1]))[..., 0]
+
+
+def decode_string_data(data):
+    if data.dtype.kind == 'S':
+        return np.core.defchararray.decode(data, 'utf-8', 'replace')
+    return data
 
 
 def encode_cf_variable(var):
@@ -441,13 +366,6 @@ def encode_cf_variable(var):
         dest[k] = v
         return v
 
-    # encode strings as character arrays
-    # TODO: add a check data.dtype.itemsize > 1 (when we have optional string
-    # decoding)
-    if data.dtype.kind in ['S', 'U']:
-        data = string_to_char(data)
-        dimensions = dimensions + ('string%s' % data.shape[-1],)
-
     # unscale/mask
     if any(k in encoding for k in ['add_offset', 'scale_factor']):
         data = np.array(data, dtype=float, copy=True)
@@ -473,7 +391,6 @@ def encode_cf_variable(var):
 
     return xray.Variable(dimensions, data, attributes, encoding=encoding)
 
-_u1size = np.dtype('U1').itemsize
 
 def decode_cf_variable(var, mask_and_scale=True):
     # use _data instead of data so as not to trigger loading data
@@ -500,8 +417,7 @@ def decode_cf_variable(var, mask_and_scale=True):
             raise ValueError("Refused to overwrite dtype")
     encoding['dtype'] = data.dtype
 
-    if (np.issubdtype(data.dtype, unicode_type) and data.dtype.itemsize == _u1size)\
-            or (np.issubdtype(data.dtype, bytes) and data.dtype.itemsize == 1):
+    if data.dtype.kind == 'S' and data.dtype.itemsize == 1:
         # TODO: add some sort of check instead of just assuming that the last
         # dimension on a character array is always the string dimension
         dimensions = dimensions[:-1]

@@ -38,9 +38,9 @@ class TestMaskedAndScaledArray(TestCase):
 
 class TestCharToStringArray(TestCase):
     def test(self):
-        array = np.array(list('abc'))
+        array = np.array(list(u'abc'))
         actual = conventions.CharToStringArray(array)
-        expected = np.array('abc')
+        expected = np.array(u'abc')
         self.assertEqual(actual.dtype, expected.dtype)
         self.assertEqual(actual.shape, expected.shape)
         self.assertEqual(actual.size, expected.size)
@@ -52,9 +52,9 @@ class TestCharToStringArray(TestCase):
             actual[:2]
         self.assertEqual(str(actual), 'abc')
 
-        array = np.array([list('abc'), list('cdf')])
+        array = np.array([list(u'abc'), list(u'cdf')])
         actual = conventions.CharToStringArray(array)
-        expected = np.array(['abc', 'cdf'])
+        expected = np.array([u'abc', u'cdf'])
         self.assertEqual(actual.dtype, expected.dtype)
         self.assertEqual(actual.shape, expected.shape)
         self.assertEqual(actual.size, expected.size)

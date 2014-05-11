@@ -8,30 +8,21 @@ import warnings
 
 import xray
 from xray.backends.common import AbstractWritableDataStore
-from xray.conventions import (is_valid_nc3_name, coerce_nc3_dtype,
-                              encode_cf_variable)
 from xray.utils import Frozen
 from xray.pycompat import iteritems, basestring, unicode_type
 
-def _encode_unicode_data(data):
-    # Scipy's NetCDF 3 does not support unicode types
-    if data.dtype.kind == 'U':
-        return np.core.defchararray.encode(data, 'utf-8')
-    return data
+from .netcdf3 import is_valid_nc3_name, coerce_nc3_dtype, encode_nc3_variable
 
-def _decode_string_data(data):
-    # Convert all strings to unicode when loading
-    if data.dtype.kind == 'S':
-        return np.core.defchararray.decode(data, 'utf-8', 'replace')
-    return data
 
 def _decode_string(s):
     if isinstance(s, bytes):
         return s.decode('utf-8', 'replace')
     return s
 
+
 def _decode_values(d):
-    return OrderedDict((k, _decode_string(v)) for (k,v) in iteritems(d))
+    return OrderedDict((k, _decode_string(v)) for (k, v) in iteritems(d))
+
 
 class ScipyDataStore(AbstractWritableDataStore):
     """Store for reading and writing data via scipy.io.netcdf.
@@ -53,7 +44,7 @@ class ScipyDataStore(AbstractWritableDataStore):
         import scipy.io
         # if filename is a NetCDF3 bytestring we store it in a StringIO
         if (isinstance(filename_or_obj, basestring)
-            and filename_or_obj.startswith('CDF')):
+                and filename_or_obj.startswith('CDF')):
             # TODO: this check has the unfortunate side-effect that
             # paths to files cannot start with 'CDF'.
             filename_or_obj = BytesIO(filename_or_obj)
@@ -61,7 +52,7 @@ class ScipyDataStore(AbstractWritableDataStore):
             filename_or_obj, mode=mode, mmap=mmap, version=version)
 
     def open_store_variable(self, var):
-        return xray.Variable(var.dimensions, _decode_string_data(var.data), 
+        return xray.Variable(var.dimensions, var.data,
                              _decode_values(var._attributes))
 
     @property
@@ -97,11 +88,9 @@ class ScipyDataStore(AbstractWritableDataStore):
         setattr(self.ds, key, self._cast_attr_value(value))
 
     def set_variable(self, name, variable):
-        variable = encode_cf_variable(variable)
-        data = coerce_nc3_dtype(variable.values)
-        data = _encode_unicode_data(data)
+        variable = encode_nc3_variable(variable)
         self.set_necessary_dimensions(variable)
-        print(name, data.dtype, variable.dimensions)
+        data = variable.values
         self.ds.createVariable(name, data.dtype, variable.dimensions)
         scipy_var = self.ds.variables[name]
         if data.ndim == 0:

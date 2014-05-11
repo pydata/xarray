@@ -35,12 +35,31 @@ class NetCDF4ArrayWrapper(NDArrayMixin):
             data = self.array[key]
         return data
 
+
 def _version_check(actual, required):
     actual_tup = tuple(int(p) if p.isdigit() else p for p in actual.split('.'))
     try:
         return actual_tup >= required
     except TypeError:
         return True
+
+
+def _nc4_values_and_dtype(variable):
+    if variable.dtype.kind in ['i', 'u', 'f'] or variable.dtype == 'S1':
+        values = variable.values
+        dtype = variable.dtype
+    elif (variable.dtype.kind == 'U' or
+              (variable.dtype.kind == 'S' and variable.dtype.itemsize > 1)):
+        # this entire clause should not be necessary with netCDF4>=1.0.9
+        if len(variable) > 0:
+            values = variable.values.astype('O')
+        else:
+            values = variable.values
+        dtype = str
+    else:
+        raise ValueError('cannot infer dtype for netCDF4 variable')
+    return values, dtype
+
 
 class NetCDF4DataStore(AbstractWritableDataStore):
     """Store for reading and writing data via the Python-NetCDF4 library.
@@ -99,16 +118,17 @@ class NetCDF4DataStore(AbstractWritableDataStore):
         self.ds.createDimension(name, size=length)
 
     def set_attribute(self, key, value):
-        self.ds.setncatts({key: value})
+        self.ds.setncattr(key, value)
 
     def set_variable(self, name, variable):
         variable = encode_cf_variable(variable)
+        values, datatype = _nc4_values_and_dtype(variable)
         self.set_necessary_dimensions(variable)
         fill_value = variable.attrs.pop('_FillValue', None)
         encoding = variable.encoding
-        self.ds.createVariable(
+        nc4_var = self.ds.createVariable(
             varname=name,
-            datatype=variable.dtype,
+            datatype=datatype,
             dimensions=variable.dimensions,
             zlib=encoding.get('zlib', False),
             complevel=encoding.get('complevel', 4),
@@ -119,13 +139,12 @@ class NetCDF4DataStore(AbstractWritableDataStore):
             endian=encoding.get('endian', 'native'),
             least_significant_digit=encoding.get('least_significant_digit'),
             fill_value=fill_value)
-        nc4_var = self.ds.variables[name]
         nc4_var.set_auto_maskandscale(False)
-        if variable.values.ndim == 0:
-            nc4_var[:] = variable.values
-        else:
-            nc4_var[:] = variable.values[:]
-        nc4_var.setncatts(dict(variable.attrs))
+        nc4_var[:] = values
+        for k, v in iteritems(variable.attrs):
+            # set attributes one-by-one since netCDF4<1.0.10 can't handle
+            # OrderedDict as the input to setncatts
+            nc4_var.setncattr(k, v)
 
     def del_attribute(self, key):
         self.ds.delncattr(key)
@@ -135,6 +154,3 @@ class NetCDF4DataStore(AbstractWritableDataStore):
 
     def close(self):
         self.ds.close()
-
-    def __exit__(self, type, value, tb):
-        self.close()

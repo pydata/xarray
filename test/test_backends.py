@@ -93,7 +93,8 @@ class DatasetIOTestCases(object):
     def test_orthogonal_indexing(self):
         in_memory = create_test_data()
         on_disk = self.roundtrip(in_memory)
-        indexers = {'dim1': range(3), 'dim2': range(4), 'dim3': range(5)}
+        indexers = {'dim1': np.arange(3), 'dim2': np.arange(4),
+                    'dim3': np.arange(5)}
         expected = in_memory.indexed(**indexers)
         actual = on_disk.indexed(**indexers)
         self.assertDatasetAllClose(expected, actual)
