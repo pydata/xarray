@@ -303,8 +303,7 @@ class Dataset(Mapping):
         if decode_cf:
             # this will unmask and rescale the data as well as convert
             # time variables to datetime indices.
-            variables = OrderedDict((k, conventions.decode_cf_variable(v))
-                                    for k, v in iteritems(variables))
+            variables = conventions.decode_cf_variables(store.variables)
         return cls(variables, store.attrs)
 
     @property

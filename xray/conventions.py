@@ -1,10 +1,11 @@
 import numpy as np
 import pandas as pd
+from collections import OrderedDict
 from datetime import datetime
 
 from . import indexing
 from . import utils
-from .pycompat import unicode_type, basestring
+from .pycompat import iteritems
 import xray
 
 # standard calendars recognized by netcdftime
@@ -392,7 +393,8 @@ def encode_cf_variable(var):
     return xray.Variable(dimensions, data, attributes, encoding=encoding)
 
 
-def decode_cf_variable(var, mask_and_scale=True):
+def decode_cf_variable(var, stack_characters=True, mask_and_scale=True,
+                       decode_times=True):
     # use _data instead of data so as not to trigger loading data
     data = var._data
     dimensions = var.dimensions
@@ -417,12 +419,12 @@ def decode_cf_variable(var, mask_and_scale=True):
             raise ValueError("Refused to overwrite dtype")
     encoding['dtype'] = data.dtype
 
-    if data.dtype.kind == 'S' and data.dtype.itemsize == 1:
-        # TODO: add some sort of check instead of just assuming that the last
-        # dimension on a character array is always the string dimension
-        dimensions = dimensions[:-1]
-        data = CharToStringArray(data)
-    elif mask_and_scale:
+    if stack_characters:
+        if data.dtype.kind == 'S' and data.dtype.itemsize == 1:
+            dimensions = dimensions[:-1]
+            data = CharToStringArray(data)
+
+    if mask_and_scale:
         fill_value = pop_to(attributes, encoding, '_FillValue')
         scale_factor = pop_to(attributes, encoding, 'scale_factor')
         add_offset = pop_to(attributes, encoding, 'add_offset')
@@ -431,10 +433,26 @@ def decode_cf_variable(var, mask_and_scale=True):
             data = MaskedAndScaledArray(data, fill_value, scale_factor,
                                         add_offset)
 
-    if 'units' in attributes and u'since' in attributes['units']:
-        units = pop_to(attributes, encoding, 'units')
-        calendar = pop_to(attributes, encoding, 'calendar')
-        data = DecodedCFDatetimeArray(data, units, calendar)
+    if decode_times:
+        if 'units' in attributes and 'since' in attributes['units']:
+            units = pop_to(attributes, encoding, 'units')
+            calendar = pop_to(attributes, encoding, 'calendar')
+            data = DecodedCFDatetimeArray(data, units, calendar)
 
     return xray.Variable(dimensions, indexing.LazilyIndexedArray(data),
-                             attributes, encoding=encoding)
+                         attributes, encoding=encoding)
+
+
+def decode_cf_variables(variables, stack_characters=True, mask_and_scale=True,
+                        decode_times=True):
+    """Decode a bunch of CF variables together.
+    """
+    new_vars = OrderedDict()
+    for k, v in iteritems(variables):
+        stack = (stack_characters and
+                 v.dtype.kind == 'S' and v.ndim > 0 and
+                 v.dimensions[-1] not in variables)
+        new_vars[k] = decode_cf_variable(
+            v, stack_characters=stack, mask_and_scale=mask_and_scale,
+            decode_times=decode_times)
+    return new_vars
