@@ -4,6 +4,7 @@ import warnings
 import numpy as np
 
 from .common import AbstractWritableDataStore
+from .netcdf3 import encode_nc3_variable
 import xray
 from xray.conventions import encode_cf_variable
 from xray.utils import FrozenOrderedDict, NDArrayMixin, as_array_or_item
@@ -77,6 +78,7 @@ class NetCDF4DataStore(AbstractWritableDataStore):
         self.ds = nc4.Dataset(filename, mode=mode, clobber=clobber,
                               diskless=diskless, persist=persist,
                               format=format)
+        self.format = format
 
     def open_store_variable(self, var):
         var.set_auto_maskandscale(False)
@@ -122,8 +124,13 @@ class NetCDF4DataStore(AbstractWritableDataStore):
 
     def set_variable(self, name, variable):
         variable = encode_cf_variable(variable)
-        # TODO: handle saving netCDF3 files
-        values, datatype = _nc4_values_and_dtype(variable)
+        if self.format == 'NETCDF4':
+            values, datatype = _nc4_values_and_dtype(variable)
+        else:
+            variable = encode_nc3_variable(variable)
+            values = variable.values
+            datatype = variable.dtype
+
         self.set_necessary_dimensions(variable)
         fill_value = variable.attrs.pop('_FillValue', None)
         encoding = variable.encoding

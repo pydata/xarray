@@ -263,10 +263,19 @@ class ScipyDataTest(DatasetIOTestCases, TestCase):
         return open_dataset(BytesIO(serialized), **kwargs)
 
 
-def clear_attributes(ds):
-    ds.attrs.clear()
-    for v in itervalues(ds):
-        v.attrs.clear()
+@requires_netCDF4
+class NetCDF3ViaNetCDF4DataTest(DatasetIOTestCases, TestCase):
+    @contextlib.contextmanager
+    def create_store(self):
+        with create_tmp_file() as tmp_file:
+            yield backends.NetCDF4DataStore(tmp_file, mode='w',
+                                            format='NETCDF3_CLASSIC')
+
+    def roundtrip(self, data, **kwargs):
+        with create_tmp_file() as tmp_file:
+            data.dump(tmp_file, format='NETCDF3_CLASSIC')
+            roundtrip_data = open_dataset(tmp_file, **kwargs)
+        return roundtrip_data
 
 
 @requires_netCDF4

@@ -11,6 +11,7 @@ from xray.backends.common import AbstractWritableDataStore
 from xray.utils import Frozen
 from xray.pycompat import iteritems, basestring, unicode_type
 
+from .. import conventions
 from .netcdf3 import is_valid_nc3_name, coerce_nc3_dtype, encode_nc3_variable
 
 
@@ -88,7 +89,8 @@ class ScipyDataStore(AbstractWritableDataStore):
         setattr(self.ds, key, self._cast_attr_value(value))
 
     def set_variable(self, name, variable):
-        variable = encode_nc3_variable(variable)
+        variable = encode_nc3_variable(
+            conventions.encode_cf_variable(variable))
         self.set_necessary_dimensions(variable)
         data = variable.values
         self.ds.createVariable(name, data.dtype, variable.dimensions)
