@@ -415,9 +415,7 @@ def decode_cf_variable(var, concat_characters=True, mask_and_scale=True,
     encoding['dtype'] = data.dtype
 
     if concat_characters:
-        print('concatenating!', dimensions)
         if data.dtype.kind == 'S' and data.dtype.itemsize == 1:
-            print('concatenating!', dimensions)
             dimensions = dimensions[:-1]
             data = CharToStringArray(data)
 
