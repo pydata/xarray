@@ -26,8 +26,9 @@ except ImportError:
     pass
 
 
-def open_example_dataset(name):
-    return open_dataset(os.path.join(os.path.dirname(__file__), 'data', name))
+def open_example_dataset(name, *args, **kwargs):
+    return open_dataset(os.path.join(os.path.dirname(__file__), 'data', name),
+                        *args, **kwargs)
 
 
 def create_masked_and_scaled_data():
@@ -286,4 +287,7 @@ class PydapTest(TestCase):
         actual = Dataset.load_store(backends.PydapDataStore(url))
         expected = open_example_dataset('bears.nc')
         # don't check attributes since pydap doesn't serialize them correctly
-        self.assertDatasetEqual(actual, expected)
+        # also skip the "bears" variable since the test DAP server incorrectly
+        # concatenates it.
+        self.assertDatasetEqual(actual.unselect('bears'),
+                                expected.unselect('bears'))
