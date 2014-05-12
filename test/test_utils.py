@@ -36,9 +36,9 @@ class TestDictionaries(TestCase):
             utils.update_safety_check(self.x, self.z)
 
     def test_ordered_dict_intersection(self):
-        self.assertEquals({'a': 'A', 'b': 'B'},
-                          utils.ordered_dict_intersection(self.x, self.y))
-        self.assertEquals({'b': 'B'},
+        self.assertEqual({'a': 'A', 'b': 'B'},
+                         utils.ordered_dict_intersection(self.x, self.y))
+        self.assertEqual({'b': 'B'},
                           utils.ordered_dict_intersection(self.x, self.z))
 
     def test_dict_equal(self):
@@ -74,7 +74,7 @@ class TestDictionaries(TestCase):
             del x['a']
         with self.assertRaises(AttributeError):
             x.update(self.y)
-        self.assertEquals(x.mapping, self.x)
+        self.assertEqual(x.mapping, self.x)
         self.assertIn(repr(x), ("Frozen({'a': 'A', 'b': 'B'})",
                                 "Frozen({'b': 'B', 'a': 'A'})"))
 
@@ -82,5 +82,5 @@ class TestDictionaries(TestCase):
         x = {'a': 1, 'b': 2, 'c': 3}
         y = utils.SortedKeysDict(x)
         self.assertItemsEqual(y, ['a', 'b', 'c'])
-        self.assertEquals(repr(utils.SortedKeysDict()),
-                          "SortedKeysDict({})")
+        self.assertEqual(repr(utils.SortedKeysDict()),
+                         "SortedKeysDict({})")

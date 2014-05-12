@@ -38,11 +38,19 @@ def requires_netCDF4(test):
     return test if has_netCDF4 else unittest.skip('requires netCDF4')(test)
 
 
+def decode_string_data(data):
+    if data.dtype.kind == 'S':
+        return np.core.defchararray.decode(data, 'utf-8', 'replace')
+    return data
+
+
 def data_allclose_or_equiv(arr1, arr2, rtol=1e-05, atol=1e-08):
-    exact_dtypes = [np.datetime64, np.timedelta64, np.string_]
-    if any(any(np.issubdtype(arr.dtype, t) for t in exact_dtypes)
-           or arr.dtype == object for arr in [arr1, arr2]):
-        return np.array_equal(arr1, arr2)
+    if any(arr.dtype.kind == 'S' for arr in [arr1, arr2]):
+        arr1 = decode_string_data(arr1)
+        arr2 = decode_string_data(arr2)
+    exact_dtypes = ['M', 'm', 'O', 'U']
+    if any(arr.dtype.kind in exact_dtypes for arr in [arr1, arr2]):
+        return utils.array_equiv(arr1, arr2)
     else:
         return utils.allclose_or_equiv(arr1, arr2, rtol=rtol, atol=atol)
 
@@ -62,8 +70,9 @@ class TestCase(unittest.TestCase):
 
     def assertVariableAllClose(self, v1, v2, rtol=1e-05, atol=1e-08):
         self.assertEqual(v1.dimensions, v2.dimensions)
-        assert data_allclose_or_equiv(v1.values, v2.values, rtol=rtol, atol=atol),\
-            (repr(v1.values), repr(v2.values))
+        allclose = data_allclose_or_equiv(
+            v1.values, v2.values, rtol=rtol, atol=atol)
+        assert allclose, (v1.values, v2.values)
 
     def assertVariableNotEqual(self, v1, v2):
         self.assertFalse(as_variable(v1).equals(v2))

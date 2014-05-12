@@ -81,6 +81,7 @@ def squeeze(xray_obj, dimensions, dimension=None):
 def allclose_or_equiv(arr1, arr2, rtol=1e-5, atol=1e-8):
     """Like np.allclose, but also allows values to be NaN in both arrays
     """
+    arr1, arr2 = np.asarray(arr1), np.asarray(arr2)
     if arr1.shape != arr2.shape:
         return False
     return np.isclose(arr1, arr2, rtol=rtol, atol=atol, equal_nan=True).all()

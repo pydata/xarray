@@ -5,6 +5,7 @@ except ImportError:
 import contextlib
 import os.path
 import tempfile
+import unittest
 try:  # Python 2
     from cStringIO import StringIO as BytesIO
 except ImportError:  # Python 3
@@ -14,7 +15,7 @@ import numpy as np
 import pandas as pd
 
 from xray import Dataset, open_dataset, backends
-from xray.pycompat import iteritems, itervalues
+from xray.pycompat import iteritems, itervalues, PY3
 
 from . import TestCase, requires_scipy, requires_netCDF4, requires_pydap
 from .test_dataset import create_test_data
@@ -25,8 +26,9 @@ except ImportError:
     pass
 
 
-def open_example_dataset(name):
-    return open_dataset(os.path.join(os.path.dirname(__file__), 'data', name))
+def open_example_dataset(name, *args, **kwargs):
+    return open_dataset(os.path.join(os.path.dirname(__file__), 'data', name),
+                        *args, **kwargs)
 
 
 def create_masked_and_scaled_data():
@@ -50,6 +52,10 @@ class DatasetIOTestCases(object):
         raise NotImplementedError
 
     def test_zero_dimensional_variable(self):
+        if PY3 and type(self) is ScipyDataTest:
+            # see the fix: https://github.com/scipy/scipy/pull/3617
+            raise unittest.SkipTest('scipy.io.netcdf is broken on Python 3')
+
         expected = create_test_data()
         expected['xray_awesomeness'] = ([], np.array(1.e9),
                                         {'units': 'units of awesome'})
@@ -73,7 +79,7 @@ class DatasetIOTestCases(object):
     def test_roundtrip_string_data(self):
         expected = Dataset({'x': ('t', ['abc', 'def'])})
         actual = self.roundtrip(expected)
-        self.assertDatasetIdentical(expected, actual)
+        self.assertDatasetAllClose(expected, actual)
 
     def test_roundtrip_mask_and_scale(self):
         decoded = create_masked_and_scaled_data()
@@ -93,7 +99,8 @@ class DatasetIOTestCases(object):
     def test_orthogonal_indexing(self):
         in_memory = create_test_data()
         on_disk = self.roundtrip(in_memory)
-        indexers = {'dim1': range(3), 'dim2': range(4), 'dim3': range(5)}
+        indexers = {'dim1': np.arange(3), 'dim2': np.arange(4),
+                    'dim3': np.arange(5)}
         expected = in_memory.indexed(**indexers)
         actual = on_disk.indexed(**indexers)
         self.assertDatasetAllClose(expected, actual)
@@ -257,10 +264,19 @@ class ScipyDataTest(DatasetIOTestCases, TestCase):
         return open_dataset(BytesIO(serialized), **kwargs)
 
 
-def clear_attributes(ds):
-    ds.attrs.clear()
-    for v in itervalues(ds):
-        v.attrs.clear()
+@requires_netCDF4
+class NetCDF3ViaNetCDF4DataTest(DatasetIOTestCases, TestCase):
+    @contextlib.contextmanager
+    def create_store(self):
+        with create_tmp_file() as tmp_file:
+            yield backends.NetCDF4DataStore(tmp_file, mode='w',
+                                            format='NETCDF3_CLASSIC')
+
+    def roundtrip(self, data, **kwargs):
+        with create_tmp_file() as tmp_file:
+            data.dump(tmp_file, format='NETCDF3_CLASSIC')
+            roundtrip_data = open_dataset(tmp_file, **kwargs)
+        return roundtrip_data
 
 
 @requires_netCDF4
@@ -271,4 +287,7 @@ class PydapTest(TestCase):
         actual = Dataset.load_store(backends.PydapDataStore(url))
         expected = open_example_dataset('bears.nc')
         # don't check attributes since pydap doesn't serialize them correctly
-        self.assertDatasetEqual(actual, expected)
+        # also skip the "bears" variable since the test DAP server incorrectly
+        # concatenates it.
+        self.assertDatasetEqual(actual.unselect('bears'),
+                                expected.unselect('bears'))

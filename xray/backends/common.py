@@ -15,6 +15,18 @@ class AbstractDataStore(object):
         return FrozenOrderedDict((k, self.open_store_variable(v))
                                  for k, v in iteritems(self.store_variables))
 
+    def sync(self):
+        pass
+
+    def close(self):
+        pass
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exception_type, exception_value, tracebook):
+        self.close()
+
 
 class AbstractWritableDataStore(AbstractDataStore):
     def set_dimensions(self, dimensions):

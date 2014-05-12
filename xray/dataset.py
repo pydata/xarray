@@ -20,8 +20,9 @@ from .utils import (FrozenOrderedDict, Frozen, SortedKeysDict, ChainMap,
 from .pycompat import iteritems, basestring
 
 
-def open_dataset(nc, decode_cf=True, *args, **kwargs):
-    """Load a dataset from a file or file-like object
+def open_dataset(nc, decode_cf=True, mask_and_scale=True, decode_times=True,
+                 concat_characters=True, *args, **kwargs):
+    """Load a dataset from a file or file-like object.
 
     Parameters
     ----------
@@ -32,6 +33,19 @@ def open_dataset(nc, decode_cf=True, *args, **kwargs):
     decode_cf : bool, optional
         Whether to decode these variables, assuming they were saved according
         to CF conventions.
+    mask_and_scale : bool, optional
+        If True, replace array values equal to `_FillValue` with NA and scale
+        values according to the formula `original_values * scale_factor +
+        add_offset`, where `_FillValue`, `scale_factor` and `add_offset` are
+        taken from variable attributes (if they exist).
+    decode_times : bool, optional
+        If True, decode times encoded in the standard NetCDF datetime format
+        into datetime objects. Otherwise, leave them encoded as numbers.
+    concat_characters : bool, optional
+        If True, concatenate along the last dimension of character arrays to
+        form string arrays. Dimensions will only be concatenated over (and
+        removed) if they have no corresponding variable and if they are only
+        used as the last dimension of character arrays.
     *args, **kwargs : optional
         Format specific loading options passed on to the datastore.
 
@@ -52,7 +66,10 @@ def open_dataset(nc, decode_cf=True, *args, **kwargs):
         # If nc is a file-like object we read it using
         # the scipy.io.netcdf package
         store = backends.ScipyDataStore(nc, *args, **kwargs)
-    return Dataset.load_store(store, decode_cf=decode_cf)
+    return Dataset.load_store(store, decode_cf=decode_cf,
+                              mask_and_scale=mask_and_scale,
+                              decode_times=decode_times,
+                              concat_characters=concat_characters)
 
 
 # list of attributes of pd.DatetimeIndex that are ndarrays of time info
@@ -295,16 +312,16 @@ class Dataset(Mapping):
         self._update_vars_and_dims(new_variables, needs_copy=False)
 
     @classmethod
-    def load_store(cls, store, decode_cf=True):
+    def load_store(cls, store, decode_cf=True, mask_and_scale=True,
+                   decode_times=True, concat_characters=True):
         """Create a new dataset from the contents of a backends.*DataStore
         object
         """
         variables = store.variables
         if decode_cf:
-            # this will unmask and rescale the data as well as convert
-            # time variables to datetime indices.
-            variables = OrderedDict((k, conventions.decode_cf_variable(v))
-                                    for k, v in iteritems(variables))
+            variables = conventions.decode_cf_variables(
+                store.variables, mask_and_scale=mask_and_scale,
+                decode_times=decode_times, concat_characters=concat_characters)
         return cls(variables, store.attrs)
 
     @property
@@ -500,8 +517,8 @@ class Dataset(Mapping):
         """Dump dataset contents to a location on disk using the netCDF4
         package.
         """
-        nc4_store = backends.NetCDF4DataStore(filepath, mode='w', **kwdargs)
-        self.dump_to_store(nc4_store)
+        with backends.NetCDF4DataStore(filepath, mode='w', **kwdargs) as store:
+            self.dump_to_store(store)
 
     dump = to_netcdf
 
@@ -510,8 +527,8 @@ class Dataset(Mapping):
         in memory netcdf version 3 string using the scipy.io.netcdf package.
         """
         fobj = BytesIO()
-        scipy_store = backends.ScipyDataStore(fobj, mode='w', **kwargs)
-        self.dump_to_store(scipy_store)
+        store = backends.ScipyDataStore(fobj, mode='w', **kwargs)
+        self.dump_to_store(store)
         return fobj.getvalue()
 
     def __repr__(self):
