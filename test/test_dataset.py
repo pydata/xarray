@@ -141,7 +141,7 @@ class TestDataset(TestCase):
         b = Dataset()
         b['x'] = ('x', vec, attributes)
         self.assertVariableEqual(a['x'], b['x'])
-        self.assertEquals(a.dimensions, b.dimensions)
+        self.assertEqual(a.dimensions, b.dimensions)
         # this should work
         a['x'] = ('x', vec[:5])
         a['z'] = ('x', np.arange(5))

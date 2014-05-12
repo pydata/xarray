@@ -1,6 +1,5 @@
 import numpy as np
 import pandas as pd
-from datetime import datetime
 import warnings
 
 from xray import conventions
@@ -38,9 +37,9 @@ class TestMaskedAndScaledArray(TestCase):
 
 class TestCharToStringArray(TestCase):
     def test(self):
-        array = np.array(list(u'abc'))
+        array = np.array(list('abc'), dtype='S')
         actual = conventions.CharToStringArray(array)
-        expected = np.array(u'abc')
+        expected = np.array('abc', dtype='S')
         self.assertEqual(actual.dtype, expected.dtype)
         self.assertEqual(actual.shape, expected.shape)
         self.assertEqual(actual.size, expected.size)
@@ -52,9 +51,9 @@ class TestCharToStringArray(TestCase):
             actual[:2]
         self.assertEqual(str(actual), 'abc')
 
-        array = np.array([list(u'abc'), list(u'cdf')])
+        array = np.array([list('abc'), list('cdf')], dtype='S')
         actual = conventions.CharToStringArray(array)
-        expected = np.array([u'abc', u'cdf'])
+        expected = np.array(['abc', 'cdf'], dtype='S')
         self.assertEqual(actual.dtype, expected.dtype)
         self.assertEqual(actual.shape, expected.shape)
         self.assertEqual(actual.size, expected.size)
@@ -158,4 +157,4 @@ class TestDatetime(TestCase):
                                 (['1900-01-01', '1900-01-02',
                                   '1900-01-02 00:00:01'],
                                  'seconds since 1900-01-01 00:00:00')]:
-            self.assertEquals(expected, conventions.guess_time_units(dates))
+            self.assertEqual(expected, conventions.guess_time_units(dates))

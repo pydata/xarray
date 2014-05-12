@@ -122,6 +122,7 @@ class NetCDF4DataStore(AbstractWritableDataStore):
 
     def set_variable(self, name, variable):
         variable = encode_cf_variable(variable)
+        # TODO: handle saving netCDF3 files
         values, datatype = _nc4_values_and_dtype(variable)
         self.set_necessary_dimensions(variable)
         fill_value = variable.attrs.pop('_FillValue', None)

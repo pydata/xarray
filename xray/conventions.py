@@ -1,6 +1,6 @@
 import numpy as np
 import pandas as pd
-from collections import OrderedDict
+from collections import defaultdict, OrderedDict
 from datetime import datetime
 
 from . import indexing
@@ -262,11 +262,11 @@ class DecodedCFDatetimeArray(utils.NDArrayMixin):
 class CharToStringArray(utils.NDArrayMixin):
     """Wrapper around array-like objects to create a new indexable object where
     values, when accessesed, are automatically concatenated along the last
-    dimension and coerced to unicode.
+    dimension.
 
     >>> CharToStringArray(np.array(['a', 'b', 'c']))[:]
     array('abc',
-          dtype='|U3')
+          dtype='|S3')
     """
     def __init__(self, array):
         """
@@ -279,7 +279,7 @@ class CharToStringArray(utils.NDArrayMixin):
 
     @property
     def dtype(self):
-        return np.dtype('U' + str(self.array.shape[-1]))
+        return np.dtype('S' + str(self.array.shape[-1]))
 
     @property
     def shape(self):
@@ -287,7 +287,8 @@ class CharToStringArray(utils.NDArrayMixin):
 
     def __str__(self):
         if self.ndim == 0:
-            return str(self[...])
+            # always return a unicode str if it's a single item for py3 compat
+            return self[...].item().decode('utf-8')
         else:
             return repr(self)
 
@@ -303,7 +304,7 @@ class CharToStringArray(utils.NDArrayMixin):
             if  key[-1] != slice(None):
                 raise IndexError('too many indices')
             values = char_to_string(self.array[key])
-        return decode_string_data(values)
+        return values
 
 
 def string_to_char(arr):
@@ -325,12 +326,6 @@ def char_to_string(arr):
     if kind not in ['U', 'S']:
         raise ValueError('argument must be a string')
     return arr.view(kind + str(arr.shape[-1]))[..., 0]
-
-
-def decode_string_data(data):
-    if data.dtype.kind == 'S':
-        return np.core.defchararray.decode(data, 'utf-8', 'replace')
-    return data
 
 
 def encode_cf_variable(var):
@@ -393,7 +388,7 @@ def encode_cf_variable(var):
     return xray.Variable(dimensions, data, attributes, encoding=encoding)
 
 
-def decode_cf_variable(var, stack_characters=True, mask_and_scale=True,
+def decode_cf_variable(var, concat_characters=True, mask_and_scale=True,
                        decode_times=True):
     # use _data instead of data so as not to trigger loading data
     data = var._data
@@ -419,7 +414,7 @@ def decode_cf_variable(var, stack_characters=True, mask_and_scale=True,
             raise ValueError("Refused to overwrite dtype")
     encoding['dtype'] = data.dtype
 
-    if stack_characters:
+    if concat_characters:
         if data.dtype.kind == 'S' and data.dtype.itemsize == 1:
             dimensions = dimensions[:-1]
             data = CharToStringArray(data)
@@ -443,16 +438,29 @@ def decode_cf_variable(var, stack_characters=True, mask_and_scale=True,
                          attributes, encoding=encoding)
 
 
-def decode_cf_variables(variables, stack_characters=True, mask_and_scale=True,
+def decode_cf_variables(variables, concat_characters=True, mask_and_scale=True,
                         decode_times=True):
     """Decode a bunch of CF variables together.
     """
+    dimensions_used_by = defaultdict(list)
+    for v in variables.values():
+        for d in v.dimensions:
+            dimensions_used_by[d].append(v)
+
+    def stackable(dim):
+        # figure out if a dimension can be concatenated over
+        if dim in variables:
+            return False
+        for v in dimensions_used_by[dim]:
+            if v.dtype.kind != 'S' or dim != v.dimensions[-1]:
+                return False
+        return True
+
     new_vars = OrderedDict()
     for k, v in iteritems(variables):
-        stack = (stack_characters and
-                 v.dtype.kind == 'S' and v.ndim > 0 and
-                 v.dimensions[-1] not in variables)
+        concat = (concat_characters and v.dtype.kind == 'S' and v.ndim > 0 and
+                  stackable(v.dimensions[-1]))
         new_vars[k] = decode_cf_variable(
-            v, stack_characters=stack, mask_and_scale=mask_and_scale,
+            v, concat_characters=concat, mask_and_scale=mask_and_scale,
             decode_times=decode_times)
     return new_vars

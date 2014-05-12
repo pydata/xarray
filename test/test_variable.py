@@ -226,7 +226,7 @@ class TestVariable(TestCase, VariableSubclassTestCases):
 
     def test_item(self):
         v = Variable([], np.float32(0.0))
-        self.assertEquals(v.item(), 0)
+        self.assertEqual(v.item(), 0)
         self.assertIs(type(v.item()), float)
 
     def test_equals_and_identical(self):
