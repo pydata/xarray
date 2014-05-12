@@ -125,12 +125,15 @@ class TestDatetime(TestCase):
         self.assertEqual(actual.dtype, np.dtype('datetime64[ns]'))
         self.assertArrayEqual(actual, expected)
 
-        num_dates = [722000, 720000.5]
-        units = 'days since 0001-01-01 0:0:0'
         calendar = 'noleap'
-        actual = conventions.DecodedCFDatetimeArray(num_dates, units, calendar)
-        expected = nc4.num2date(num_dates, units, calendar)
-        self.assertEqual(actual.dtype, np.dtype('O'))
+        units = 'days since 0001-01-01'
+        times = pd.date_range('2001-01-01-00', end='2001-07-31-23', freq='H')
+        noleap_time = nc4.date2num(times.to_pydatetime(), units,
+                                   calendar=calendar)
+        expected = times.values
+        actual = conventions.decode_cf_datetime(noleap_time, units,
+                                                calendar=calendar)
+        self.assertEqual(actual.dtype, np.dtype('M8[ns]'))
         self.assertArrayEqual(actual, expected)
 
     @requires_netCDF4
