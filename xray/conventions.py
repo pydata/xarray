@@ -88,8 +88,11 @@ def decode_cf_datetime(num_dates, units, calendar=None):
     if ((calendar not in _STANDARD_CALENDARS
             or min_date.year < 1678 or max_date.year >= 2262)
             and min_date is not pd.NaT):
-        ncdates = nc4.num2date(num_dates, units, calendar)
-        dates = nctime_to_nptime(ncdates)
+
+        dates = nc4.num2date(num_dates, units, calendar)
+        
+        if min_date.year >= 1678 and max_date.year < 2262:
+            dates = nctime_to_nptime(dates)
     else:
         # we can safely use np.datetime64 with nanosecond precision (pandas
         # likes ns precision so it can directly make DatetimeIndex objects)
