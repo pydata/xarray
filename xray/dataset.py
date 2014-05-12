@@ -1076,7 +1076,6 @@ class Dataset(Mapping):
         for k, v in iteritems(datasets[0]):
             if k not in concat_over:
                 concatenated[k] = v
-
         # check that global attributes and non-concatenated variables are fixed
         # across all datasets
         for ds in datasets[1:]:

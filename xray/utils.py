@@ -40,8 +40,8 @@ def as_safe_array(values, dtype=None):
     """Like np.asarray, but convert all datetime64 arrays to ns precision
     """
     values = np.asarray(values, dtype=dtype)
-    if values.dtype.kind == 'M':
-        # np.datetime64
+    if values.dtype.kind == 'M' and not values.dtype == '<M8[ns]':
+        # Here us precision datetime arrays will be converted to ns.
         values = values.astype('datetime64[ns]')
     return values
 
