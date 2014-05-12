@@ -155,12 +155,14 @@ For more details, see the **[full documentation][docs]**, particularly the
 xray requires Python 2.7 and recent versions of [numpy][numpy] (1.8.0 or
 later) and [pandas][pandas] (0.13.1 or later). [netCDF4-python][nc4],
 [pydap][pydap] and [scipy][scipy] are optional: they add support for reading
-and writing netCDF files and/or accessing OpenDAP datasets. We plan to
-eventually support Python 3 but aren't there yet.
+and writing netCDF files and/or accessing OpenDAP datasets.
 
 You can install xray from the pypi with pip:
 
     pip install xray
+
+Python 3 is supported on the current development version (available from
+Github).
 
 [docs]: http://xray.readthedocs.org/
 [tutorial]: http://xray.readthedocs.org/en/latest/tutorial.html
