@@ -72,23 +72,19 @@ def _nc4_group(ds, group):
         # support path-like syntax
         path = group.strip('/').split('/')
         # find the specified group by recursive search
-        return _nc4_group_from_path(ds, path, set([ds]))
+        return _nc4_group_from_path(ds, path)
 
 
-def _nc4_group_from_path(parent, path, visited):
-    key = path.pop(0)
+def _nc4_group_from_path(parent, path):
+    key = path[0]
+    path = path[1:]
     if key not in parent.groups:
-        # TODO more specific exception type?
-        raise Exception('group not found: %r, %s' % (parent, key))
+        raise IOError('group not found: %r, %s' % (parent, key))
     else:
         parent = parent.groups[key]
-        if parent in visited:
-            # TODO more specific exception type?
-            raise Exception('encountered circular group structure')
-        elif len(path) > 0:
+        if len(path) > 0:
             # recurse
-            visited.add(parent)
-            return _nc4_group_from_path(parent, path, visited)
+            return _nc4_group_from_path(parent, path)
         else:
             return parent
 
