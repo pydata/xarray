@@ -62,22 +62,55 @@ def _nc4_values_and_dtype(variable):
     return values, dtype
 
 
+def _nc4_group(ds, group):
+    if group in {None, '', '/'}:
+        # use the root group
+        return ds
+    else:
+        # make sure it's a string (maybe should raise an error if not?)
+        group = str(group)
+        # support path-like syntax
+        path = group.strip('/').split('/')
+        # find the specified group by recursive search
+        return _nc4_group_from_path(ds, path, set([ds]))
+
+
+def _nc4_group_from_path(parent, path, visited):
+    key = path.pop(0)
+    if key not in parent.groups:
+        # TODO more specific exception type?
+        raise Exception('group not found: %r, %s' % (parent, key))
+    else:
+        parent = parent.groups[key]
+        if parent in visited:
+            # TODO more specific exception type?
+            raise Exception('encountered circular group structure')
+        elif len(path) > 0:
+            # recurse
+            visited.add(parent)
+            return _nc4_group_from_path(parent, path, visited)
+        else:
+            return parent
+
+
 class NetCDF4DataStore(AbstractWritableDataStore):
     """Store for reading and writing data via the Python-NetCDF4 library.
 
     This store supports NetCDF3, NetCDF4 and OpenDAP datasets.
     """
     def __init__(self, filename, mode='r', clobber=True, diskless=False,
-                 persist=False, format='NETCDF4'):
+                 persist=False, format='NETCDF4', group=None):
         import netCDF4 as nc4
         if not _version_check(nc4.__version__, (1, 0, 6)):
             warnings.warn('python-netCDF4 %s detected; '
                           'the minimal recommended version is 1.0.6.'
                           % nc4.__version__, ImportWarning)
 
-        self.ds = nc4.Dataset(filename, mode=mode, clobber=clobber,
-                              diskless=diskless, persist=persist,
-                              format=format)
+        ds = nc4.Dataset(filename, mode=mode, clobber=clobber,
+                         diskless=diskless, persist=persist,
+                         format=format)
+        # support use of groups
+        self.ds = _nc4_group(ds, group)
         self.format = format
 
     def open_store_variable(self, var):

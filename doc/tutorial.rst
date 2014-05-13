@@ -807,6 +807,12 @@ We can load NetCDF files to create a new Dataset using the
     Attributes:
         title: example attribute
 
+A dataset can also be loaded from a specific group within a NetCDF
+file. To load from a group, pass a ``group`` keyword argument to the
+``open_dataset`` function. The group can be specified as a path-like
+string, e.g., to access subgroup 'bar' within group 'foo' pass
+'/foo/bar' as the ``group`` argument.
+
 Data is loaded lazily from NetCDF files. You can manipulate, slice and subset
 Dataset and DataArray objects, and no array values are loaded into memory until
 necessary. For an example of how these lazy arrays work, since the OpenDAP
