@@ -93,6 +93,8 @@ class DataArray(AbstractArray):
         """
         obj = object.__new__(cls)
         if name not in dataset and name not in dataset.virtual_variables:
+            if name == 'time.dayofyear':
+                import ipdb; ipdb.set_trace()
             raise ValueError('name %r must be a variable in dataset %r'
                              % (name, dataset))
         obj._dataset = dataset

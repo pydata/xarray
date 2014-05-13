@@ -68,12 +68,15 @@ def _as_compatible_data(data):
             data = data.values
         except AttributeError:
             pass
-
+    if (data.dtype.kind == 'O' or
+        (data.dtype.kind == 'M' and not data.dtype == '<M8[ns]')):
+        data = utils.as_safe_array(data)
     if isinstance(data, pd.Index):
         # check pd.Index first since it's (currently) an ndarray subclass
         data = PandasIndexAdapter(data)
     elif isinstance(data, np.ndarray):
         data = NumpyArrayAdapter(utils.as_safe_array(data))
+
     return data
 
 
