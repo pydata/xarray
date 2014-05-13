@@ -111,8 +111,6 @@ class TestDatetime(TestCase):
 
     @requires_netCDF4
     def test_decoded_cf_datetime_array(self):
-        import netCDF4 as nc4
-
         actual = conventions.DecodedCFDatetimeArray(
             [0, 1, 2], 'days since 1900-01-01', 'standard')
         expected = pd.date_range('1900-01-01', periods=3).values
@@ -125,16 +123,59 @@ class TestDatetime(TestCase):
         self.assertEqual(actual.dtype, np.dtype('datetime64[ns]'))
         self.assertArrayEqual(actual, expected)
 
+    @requires_netCDF4
+    def test_decode_non_standard_calendar(self):
+        import netCDF4 as nc4
+
+        for calendar in ['noleap', '365_day', '360_day', 'julian', 'all_leap',
+                         '366_day']:
+            units = 'days since 0001-01-01'
+            times = pd.date_range('2001-04-01-00', end='2001-04-30-23',
+                                  freq='H')
+            noleap_time = nc4.date2num(times.to_pydatetime(), units,
+                                       calendar=calendar)
+            expected = times.values
+            actual = conventions.decode_cf_datetime(noleap_time, units,
+                                                    calendar=calendar)
+            self.assertEqual(actual.dtype, np.dtype('M8[ns]'))
+            self.assertArrayEqual(actual, expected)
+
+    @requires_netCDF4
+    def test_decode_non_standard_calendar_multidim_time(self):
+        import netCDF4 as nc4
+
         calendar = 'noleap'
         units = 'days since 0001-01-01'
-        times = pd.date_range('2001-01-01-00', end='2001-07-31-23', freq='H')
-        noleap_time = nc4.date2num(times.to_pydatetime(), units,
-                                   calendar=calendar)
-        expected = times.values
-        actual = conventions.decode_cf_datetime(noleap_time, units,
+        times1 = pd.date_range('2001-04-01', end='2001-04-05', freq='D')
+        times2 = pd.date_range('2001-05-01', end='2001-05-05', freq='D')
+        noleap_time1 = nc4.date2num(times1.to_pydatetime(), units,
+                                    calendar=calendar)
+        noleap_time2 = nc4.date2num(times2.to_pydatetime(), units,
+                                    calendar=calendar)
+        mdim_time = np.empty((len(noleap_time1), 2), )
+        mdim_time[:, 0] = noleap_time1
+        mdim_time[:, 1] = noleap_time2
+
+        expected1 = times1.values
+        expected2 = times2.values
+        actual = conventions.decode_cf_datetime(mdim_time, units,
                                                 calendar=calendar)
         self.assertEqual(actual.dtype, np.dtype('M8[ns]'))
-        self.assertArrayEqual(actual, expected)
+        self.assertArrayEqual(actual[:, 0], expected1)
+        self.assertArrayEqual(actual[:, 1], expected2)
+
+    @requires_netCDF4
+    def test_decode_non_calendar_fallback(self):
+        import netCDF4 as nc4
+        for year in [2010, 2011, 2012, 2013, 2014]:
+            calendar = '360_day'
+            units = 'days since {0}-01-01'.format(year)
+            num_times = np.arange(100)
+            expected = nc4.num2date(num_times, units, calendar)
+            actual = conventions.decode_cf_datetime(num_times, units,
+                                                    calendar=calendar)
+            self.assertEqual(actual.dtype, np.dtype('O'))
+            self.assertArrayEqual(actual, expected)
 
     @requires_netCDF4
     def test_cf_datetime_nan(self):
