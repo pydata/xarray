@@ -17,11 +17,17 @@ class TestDataArray(TestCase):
 
     def test_repr(self):
         v = Variable(['time', 'x'], [[1, 2, 3], [4, 5, 6]], {'foo': 'bar'})
-        data_array = Dataset({'my_variable': v})['my_variable']
+        data_array = Dataset({'my_variable': v, 'other': ([], 0)}
+                             )['my_variable']
         expected = dedent("""
         <xray.DataArray 'my_variable' (time: 2, x: 3)>
         array([[1, 2, 3],
                [4, 5, 6]])
+        Coordinates:
+            time: Int64Index([0, 1], dtype='int64')
+            x: Int64Index([0, 1, 2], dtype='int64')
+        Linked dataset variables:
+            other
         Attributes:
             foo: bar
         """).strip()
