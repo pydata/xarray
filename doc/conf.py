@@ -23,6 +23,11 @@ try:
 except ImportError:
     print "no numpy"
 try:
+    import scipy
+    print "scipy: %s, %s" % (scipy.__version__, scipy.__file__)
+except ImportError:
+    print "no scipy"
+try:
     import pandas
     print "pandas: %s, %s" % (pandas.__version__, pandas.__file__)
 except ImportError:
@@ -68,7 +73,7 @@ class Mock(object):
         else:
             return Mock()
 
-MOCK_MODULES = ['netCDF4', 'scipy', 'scipy.io']
+MOCK_MODULES = ['netCDF4']
 
 for mod_name in MOCK_MODULES:
     sys.modules[mod_name] = Mock()
