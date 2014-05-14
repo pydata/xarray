@@ -63,30 +63,22 @@ def _nc4_values_and_dtype(variable):
 
 
 def _nc4_group(ds, group):
-    if group in {None, '', '/'}:
+    if group in set([None, '', '/']):
         # use the root group
         return ds
     else:
-        # make sure it's a string (maybe should raise an error if not?)
-        group = str(group)
+        # make sure it's a string
+        if not isinstance(group, basestring):
+            raise ValueError('group must be a string or None')
         # support path-like syntax
         path = group.strip('/').split('/')
-        # find the specified group by recursive search
-        return _nc4_group_from_path(ds, path)
-
-
-def _nc4_group_from_path(parent, path):
-    key = path[0]
-    path = path[1:]
-    if key not in parent.groups:
-        raise IOError('group not found: %r, %s' % (parent, key))
-    else:
-        parent = parent.groups[key]
-        if len(path) > 0:
-            # recurse
-            return _nc4_group_from_path(parent, path)
-        else:
-            return parent
+        for key in path:
+            try:
+                ds = ds.groups[key]
+            except KeyError as e:
+                # wrap error to provide slightly more helpful message
+                raise IOError('group not found: %s' % key, e)
+        return ds
 
 
 class NetCDF4DataStore(AbstractWritableDataStore):
