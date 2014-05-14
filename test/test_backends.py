@@ -183,6 +183,12 @@ class NetCDF4DataTest(DatasetIOTestCases, TestCase):
                 actual = open_dataset(tmp_file, group=group)
                 self.assertVariableEqual(actual['x'], expected['x'])
 
+            # check that missing group raises appropriate exception
+            try:
+                open_dataset(tmp_file, group='bar')
+            except IOError:
+                pass  # expected
+
     def test_open_subgroup(self):
         # Create a netCDF file with a dataset stored within a group within a group
         with create_tmp_file() as tmp_file:
