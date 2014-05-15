@@ -392,6 +392,17 @@ pandas) in the future. For now, you can do NA skipping aggregate by passing
 NA aware numpy functions to the :py:attr:`~xray.DataArray.reduce` method:
 
 .. ipython:: python
+    :suppress:
+
+    # monkey patch numpy with nanmean from scipy.stats so the docs can build
+    # even with numpy 1.7 (np.nanmean first appears in numpy 1.8).
+    # this is to work around an unfortunate limitation of readthedocs/pip which
+    # stops us from upgrading both numpy and pandas.
+
+    from scipy import stats
+    np.nanmean = stats.nanmean
+
+.. ipython:: python
 
     foo.reduce(np.nanmean, 'time')
 
