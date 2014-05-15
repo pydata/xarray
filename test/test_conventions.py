@@ -87,7 +87,7 @@ class TestDatetime(TestCase):
                 expected = nc4.num2date(num_dates, units, calendar)
                 print(num_dates, units, calendar)
                 with warnings.catch_warnings():
-                    warnings.filterwarnings('ignore', 'All-NaN')
+                    warnings.filterwarnings('ignore', 'Unable to decode time axis')
                     actual = conventions.decode_cf_datetime(num_dates, units, calendar)
                 if (isinstance(actual, np.ndarray)
                         and np.issubdtype(actual.dtype, np.datetime64)):
@@ -138,7 +138,7 @@ class TestDatetime(TestCase):
                                        calendar=calendar)
             expected = times.values
             with warnings.catch_warnings():
-                warnings.filterwarnings('ignore', 'All-NaN')
+                warnings.filterwarnings('ignore', 'Unable to decode time axis')
                 actual = conventions.decode_cf_datetime(noleap_time, units,
                                                         calendar=calendar)
             self.assertEqual(actual.dtype, np.dtype('M8[ns]'))
@@ -154,7 +154,7 @@ class TestDatetime(TestCase):
             for num_time in [735368, [735368], [[735368]]]:
 
                 with warnings.catch_warnings():
-                    warnings.filterwarnings('ignore', 'All-NaN')
+                    warnings.filterwarnings('ignore', 'Unable to decode time axis')
                     actual = conventions.decode_cf_datetime(num_time, units,
                                                             calendar=calendar)
                 self.assertTrue(actual.dtype in [np.dtype('M8[ns]'),
@@ -179,7 +179,7 @@ class TestDatetime(TestCase):
         expected1 = times1.values
         expected2 = times2.values
         with warnings.catch_warnings():
-            warnings.filterwarnings('ignore', 'All-NaN')
+            warnings.filterwarnings('ignore', 'Unable to decode time axis')
             actual = conventions.decode_cf_datetime(mdim_time, units,
                                                     calendar=calendar)
         self.assertEqual(actual.dtype, np.dtype('M8[ns]'))
@@ -196,7 +196,7 @@ class TestDatetime(TestCase):
             expected = nc4.num2date(num_times, units, calendar)
 
             with warnings.catch_warnings():
-                warnings.filterwarnings('ignore', 'All-NaN')
+                warnings.filterwarnings('ignore', 'Unable to decode time axis')
                 actual = conventions.decode_cf_datetime(num_times, units,
                                                         calendar=calendar)
             self.assertEqual(actual.dtype, np.dtype('O'))
@@ -212,7 +212,7 @@ class TestDatetime(TestCase):
                  ['NaT', '2000-01-01T00:00:00Z', '2000-01-02T00:00:00Z']),
                 ]:
             with warnings.catch_warnings():
-                warnings.filterwarnings('ignore', 'All-NaN')
+                warnings.filterwarnings('ignore', 'Unable to decode time axis')
                 actual = conventions.decode_cf_datetime(num_dates, units)
             expected = np.array(expected_list, dtype='datetime64[ns]')
             self.assertArrayEqual(expected, actual)
