@@ -135,10 +135,28 @@ class TestDatetime(TestCase):
             noleap_time = nc4.date2num(times.to_pydatetime(), units,
                                        calendar=calendar)
             expected = times.values
-            actual = conventions.decode_cf_datetime(noleap_time, units,
-                                                    calendar=calendar)
+            with warnings.catch_warnings():
+                warnings.filterwarnings('ignore', 'All-NaN')
+                actual = conventions.decode_cf_datetime(noleap_time, units,
+                                                        calendar=calendar)
             self.assertEqual(actual.dtype, np.dtype('M8[ns]'))
             self.assertArrayEqual(actual, expected)
+
+    @requires_netCDF4
+    def test_decode_non_standard_calendar_single_element(self):
+
+        for calendar in ['noleap', '365_day', '360_day', 'julian', 'all_leap',
+                         '366_day']:
+            units = 'days since 0001-01-01'
+
+            for num_time in [735368, [735368], [[735368]]]:
+
+                with warnings.catch_warnings():
+                    warnings.filterwarnings('ignore', 'All-NaN')
+                    actual = conventions.decode_cf_datetime(num_time, units,
+                                                            calendar=calendar)
+                self.assertTrue(actual.dtype in [np.dtype('M8[ns]'),
+                                                 np.dtype('O')])
 
     @requires_netCDF4
     def test_decode_non_standard_calendar_multidim_time(self):
@@ -158,8 +176,10 @@ class TestDatetime(TestCase):
 
         expected1 = times1.values
         expected2 = times2.values
-        actual = conventions.decode_cf_datetime(mdim_time, units,
-                                                calendar=calendar)
+        with warnings.catch_warnings():
+            warnings.filterwarnings('ignore', 'All-NaN')
+            actual = conventions.decode_cf_datetime(mdim_time, units,
+                                                    calendar=calendar)
         self.assertEqual(actual.dtype, np.dtype('M8[ns]'))
         self.assertArrayEqual(actual[:, 0], expected1)
         self.assertArrayEqual(actual[:, 1], expected2)
@@ -172,8 +192,11 @@ class TestDatetime(TestCase):
             units = 'days since {0}-01-01'.format(year)
             num_times = np.arange(100)
             expected = nc4.num2date(num_times, units, calendar)
-            actual = conventions.decode_cf_datetime(num_times, units,
-                                                    calendar=calendar)
+
+            with warnings.catch_warnings():
+                warnings.filterwarnings('ignore', 'All-NaN')
+                actual = conventions.decode_cf_datetime(num_times, units,
+                                                        calendar=calendar)
             self.assertEqual(actual.dtype, np.dtype('O'))
             self.assertArrayEqual(actual, expected)
 
