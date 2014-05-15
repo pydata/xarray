@@ -100,6 +100,11 @@ def decode_cf_datetime(num_dates, units, calendar=None):
                               'numpy.datetime64 objects, continuing using '
                               'dummy netCDF4.datetime objects instead, reason:'
                               '{0}'.format(e), RuntimeWarning, stacklevel=2)
+        else:
+            warnings.warn('Unable to decode time axis into full '
+                          'numpy.datetime64 objects, continuing using dummy '
+                          'netCDF4.datetime objects instead, reason: dates out'
+                          ' of range', RuntimeWarning, stacklevel=2)
     else:
         # we can safely use np.datetime64 with nanosecond precision (pandas
         # likes ns precision so it can directly make DatetimeIndex objects)
@@ -159,6 +164,7 @@ def guess_time_units(dates):
 def nctime_to_nptime(times):
     """Given an array of netCDF4.datetime objects, return an array of
     numpy.datetime64 objects of the same size"""
+    times = np.asarray(times)
     new = np.empty(times.shape, dtype='M8[ns]')
     for i, t in np.ndenumerate(times):
         new[i] = np.datetime64(datetime(*t.timetuple()[:6]))
