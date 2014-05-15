@@ -86,7 +86,9 @@ class TestDatetime(TestCase):
             for calendar in ['standard', 'gregorian', 'proleptic_gregorian']:
                 expected = nc4.num2date(num_dates, units, calendar)
                 print(num_dates, units, calendar)
-                actual = conventions.decode_cf_datetime(num_dates, units, calendar)
+                with warnings.catch_warnings():
+                    warnings.filterwarnings('ignore', 'All-NaN')
+                    actual = conventions.decode_cf_datetime(num_dates, units, calendar)
                 if (isinstance(actual, np.ndarray)
                         and np.issubdtype(actual.dtype, np.datetime64)):
                     self.assertEqual(actual.dtype, np.dtype('M8[ns]'))
