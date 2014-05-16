@@ -9,7 +9,7 @@ import xray
 from xray.conventions import encode_cf_variable
 from xray.utils import FrozenOrderedDict, NDArrayMixin, as_array_or_item
 from xray import indexing
-from xray.pycompat import iteritems
+from xray.pycompat import iteritems, basestring
 
 
 class NetCDF4ArrayWrapper(NDArrayMixin):
