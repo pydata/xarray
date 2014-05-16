@@ -100,11 +100,14 @@ def decode_cf_datetime(num_dates, units, calendar=None):
                               'numpy.datetime64 objects, continuing using '
                               'dummy netCDF4.datetime objects instead, reason:'
                               '{0}'.format(e), RuntimeWarning, stacklevel=2)
+                dates = np.asarray(dates)
         else:
             warnings.warn('Unable to decode time axis into full '
                           'numpy.datetime64 objects, continuing using dummy '
                           'netCDF4.datetime objects instead, reason: dates out'
                           ' of range', RuntimeWarning, stacklevel=2)
+            dates = np.asarray(dates)
+
     else:
         # we can safely use np.datetime64 with nanosecond precision (pandas
         # likes ns precision so it can directly make DatetimeIndex objects)

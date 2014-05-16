@@ -146,19 +146,35 @@ class TestDatetime(TestCase):
 
     @requires_netCDF4
     def test_decode_non_standard_calendar_single_element(self):
-
+        units = 'days since 0001-01-01'
         for calendar in ['noleap', '365_day', '360_day', 'julian', 'all_leap',
                          '366_day']:
-            units = 'days since 0001-01-01'
-
             for num_time in [735368, [735368], [[735368]]]:
-
                 with warnings.catch_warnings():
                     warnings.filterwarnings('ignore', 'Unable to decode time axis')
                     actual = conventions.decode_cf_datetime(num_time, units,
                                                             calendar=calendar)
-                self.assertTrue(actual.dtype in [np.dtype('M8[ns]'),
-                                                 np.dtype('O')])
+                self.assertEqual(actual.dtype, np.dtype('M8[ns]'))
+
+    @requires_netCDF4
+    def test_decode_non_standard_calendar_single_element_fallback(self):
+        import netCDF4 as nc4
+
+        units = 'days since 0001-01-01'
+        dt = nc4.netcdftime.datetime(2001, 2, 29)
+        for calendar in ['360_day', 'all_leap', '366_day']:
+            num_time = nc4.date2num(dt, units, calendar)
+            with warnings.catch_warnings(record=True) as w:
+                warnings.simplefilter('always')
+                actual = conventions.decode_cf_datetime(num_time, units,
+                                                        calendar=calendar)
+                self.assertEqual(len(w), 1)
+                self.assertIn('Unable to decode time axis',
+                              str(w[0].message))
+            expected = np.asarray(nc4.num2date(num_time, units, calendar))
+            print(num_time, calendar, actual, expected)
+            self.assertEqual(actual.dtype, np.dtype('O'))
+            self.assertEqual(expected, actual)
 
     @requires_netCDF4
     def test_decode_non_standard_calendar_multidim_time(self):
@@ -187,20 +203,25 @@ class TestDatetime(TestCase):
         self.assertArrayEqual(actual[:, 1], expected2)
 
     @requires_netCDF4
-    def test_decode_non_calendar_fallback(self):
+    def test_decode_non_standard_calendar_fallback(self):
         import netCDF4 as nc4
-        for year in [2010, 2011, 2012, 2013, 2014]:
-            calendar = '360_day'
-            units = 'days since {0}-01-01'.format(year)
-            num_times = np.arange(100)
-            expected = nc4.num2date(num_times, units, calendar)
+        for year in [2010, 2011, 2012, 2013, 2014]: # insure leap year doesn't matter
+            for calendar in ['360_day', '366_day', 'all_leap']:
+                calendar = '360_day'
+                units = 'days since {0}-01-01'.format(year)
+                num_times = np.arange(100)
+                expected = nc4.num2date(num_times, units, calendar)
 
-            with warnings.catch_warnings():
-                warnings.filterwarnings('ignore', 'Unable to decode time axis')
-                actual = conventions.decode_cf_datetime(num_times, units,
-                                                        calendar=calendar)
-            self.assertEqual(actual.dtype, np.dtype('O'))
-            self.assertArrayEqual(actual, expected)
+                with warnings.catch_warnings(record=True) as w:
+                    warnings.simplefilter('always')
+                    actual = conventions.decode_cf_datetime(num_times, units,
+                                                            calendar=calendar)
+                    self.assertEqual(len(w), 1)
+                    self.assertIn('Unable to decode time axis',
+                                  str(w[0].message))
+
+                self.assertEqual(actual.dtype, np.dtype('O'))
+                self.assertArrayEqual(actual, expected)
 
     @requires_netCDF4
     def test_cf_datetime_nan(self):
@@ -212,7 +233,7 @@ class TestDatetime(TestCase):
                  ['NaT', '2000-01-01T00:00:00Z', '2000-01-02T00:00:00Z']),
                 ]:
             with warnings.catch_warnings():
-                warnings.filterwarnings('ignore', 'Unable to decode time axis')
+                warnings.filterwarnings('ignore', 'All-NaN')
                 actual = conventions.decode_cf_datetime(num_dates, units)
             expected = np.array(expected_list, dtype='datetime64[ns]')
             self.assertArrayEqual(expected, actual)
