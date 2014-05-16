@@ -43,7 +43,7 @@ a numpy ``ndarray`` or a pandas ``DataFrame`` or ``Series``, providing
 compatibility with the full `PyData ecosystem <http://pydata.org/>`__.
 
 For a longer introduction to **xray** and its design goals, see
-`the project's GitHub page <http://github.com/xray-pydata/xray>`__. The GitHub
+`the project's GitHub page <http://github.com/xray/xray>`__. The GitHub
 page is where to go to look at the code, report a bug or make your own
 contribution. You can also get in touch via `Twitter
 <http://twitter.com/shoyer>`__.
@@ -55,7 +55,7 @@ contribution. You can also get in touch via `Twitter
     API, it is likely that the API will change in future versions as xray
     matures. Some changes are already anticipated, as called out in the
     `Tutorial <tutorial>`_ and the project `README
-    <http://github.com/xray-pydata/xray>`__.
+    <http://github.com/xray/xray>`__.
 
 Contents
 --------
