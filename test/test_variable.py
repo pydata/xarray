@@ -473,17 +473,19 @@ class TestCompatibleArray(TestCase):
 
     def test_as_compatible_array(self):
         d = datetime(2000, 1, 1)
-        for value, dtype in [(0, int),
-                             (np.float32(0.5), np.float32),
-                             ('foo', '|S3'),
-                             (d, '<M8[ns]'),
-                             (np.datetime64(d), '<M8[ns]')]:
+        for value, dtypes in [(0, [int]),
+                             (np.float32(0.5), [np.float32]),
+                             # String types will depend on
+                             # the version of python.
+                             ('foo', ['|S3', '<U3']),
+                             (d, ['<M8[ns]']),
+                             (np.datetime64(d), ['<M8[ns]'])]:
             actual = _as_compatible_data(value)
             for attr in ['dtype', 'shape', 'size', 'ndim']:
                 getattr(actual, attr)
-            self.assertEqual(actual.dtype, dtype)
+            self.assertIn(actual.dtype, dtypes)
             # now do the same but as a 1-d array
             actual = _as_compatible_data([value])
             for attr in ['dtype', 'shape', 'size', 'ndim']:
                 getattr(actual, attr)
-            self.assertEqual(actual.dtype, dtype)
+            self.assertIn(actual.dtype, dtypes)
