@@ -36,6 +36,25 @@ def class_alias(obj, old_name):
     return Wrapper
 
 
+def safe_timestamp(x):
+    """
+    This is a fix required since datetime64[ns] can occasionally get cast to
+    integers.  Heres an example:
+
+        > x
+         array(946684800000000000L, dtype='datetime64[ns]')
+        > pd.Timestamp(x)
+         ValueError: Could not construct Timestamp from argument
+                     <type 'numpy.ndarray'>
+
+    Oddly enough, recasting to datetime64 seems to fix things:
+
+        > pd.Timestamp(np.datetime64(x))
+         Timestamp('2000-01-01 00:00:00', tz=None)
+    """
+    return pd.Timestamp(np.datetime64(x))
+
+
 def as_safe_array(values, dtype=None):
     """Like np.asarray, but convert all datetime64 arrays to ns precision
     """

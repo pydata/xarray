@@ -468,6 +468,7 @@ class TestCoordinate(TestCase, VariableSubclassTestCases):
         with self.assertRaisesRegexp(TypeError, 'cannot be modified'):
             x[:] = 0
 
+
 class TestCompatibleArray(TestCase):
 
     def test_as_compatible_array(self):
@@ -480,10 +481,7 @@ class TestCompatibleArray(TestCase):
             actual = _as_compatible_data(value)
             for attr in ['dtype', 'shape', 'size', 'ndim']:
                 getattr(actual, attr)
-            try:
-                self.assertEqual(actual.dtype, dtype)
-            except:
-                import ipdb; ipdb.set_trace()
+            self.assertEqual(actual.dtype, dtype)
             # now do the same but as a 1-d array
             actual = _as_compatible_data([value])
             for attr in ['dtype', 'shape', 'size', 'ndim']:

@@ -96,7 +96,7 @@ class VariablesDict(OrderedDict):
         """
         def _castable_to_timestamp(obj):
             try:
-                pd.Timestamp(obj)
+                utils.safe_timestamp(obj)
             except:
                 return False
             else:
@@ -128,7 +128,7 @@ class VariablesDict(OrderedDict):
         if isinstance(ref_var, variable.Coordinate):
             date = ref_var.as_index
         elif ref_var.ndim == 0:
-            date = pd.Timestamp(ref_var.values)
+            date = utils.safe_timestamp(ref_var.values)
 
         if suffix == 'season':
             # seasons = np.array(['DJF', 'MAM', 'JJA', 'SON'])
