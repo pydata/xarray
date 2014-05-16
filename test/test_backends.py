@@ -179,15 +179,14 @@ class NetCDF4DataTest(DatasetIOTestCases, TestCase):
             expected = Dataset()
             expected['x'] = ('time', x)
 
-            for group in 'foo', '/foo', '/foo/':  # equivalent ways to specify group
+            # check equivalent ways to specify group
+            for group in 'foo', '/foo', 'foo/', '/foo/':
                 actual = open_dataset(tmp_file, group=group)
                 self.assertVariableEqual(actual['x'], expected['x'])
 
             # check that missing group raises appropriate exception
-            try:
+            with self.assertRaises(IOError):
                 open_dataset(tmp_file, group='bar')
-            except IOError:
-                pass  # expected
 
     def test_open_subgroup(self):
         # Create a netCDF file with a dataset stored within a group within a group
@@ -205,7 +204,8 @@ class NetCDF4DataTest(DatasetIOTestCases, TestCase):
             expected = Dataset()
             expected['x'] = ('time', x)
 
-            for group in 'foo/bar', '/foo/bar', '/foo/bar/':  # equivalent ways to specify group
+            # check equivalent ways to specify group
+            for group in 'foo/bar', '/foo/bar', 'foo/bar/', '/foo/bar/':
                 actual = open_dataset(tmp_file, group=group)
                 self.assertVariableEqual(actual['x'], expected['x'])
 
