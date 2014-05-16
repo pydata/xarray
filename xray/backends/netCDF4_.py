@@ -9,7 +9,7 @@ import xray
 from xray.conventions import encode_cf_variable
 from xray.utils import FrozenOrderedDict, NDArrayMixin, as_array_or_item
 from xray import indexing
-from xray.pycompat import iteritems
+from xray.pycompat import iteritems, basestring
 
 
 class NetCDF4ArrayWrapper(NDArrayMixin):
@@ -62,22 +62,43 @@ def _nc4_values_and_dtype(variable):
     return values, dtype
 
 
+def _nc4_group(ds, group):
+    if group in set([None, '', '/']):
+        # use the root group
+        return ds
+    else:
+        # make sure it's a string
+        if not isinstance(group, basestring):
+            raise ValueError('group must be a string or None')
+        # support path-like syntax
+        path = group.strip('/').split('/')
+        for key in path:
+            try:
+                ds = ds.groups[key]
+            except KeyError as e:
+                # wrap error to provide slightly more helpful message
+                raise IOError('group not found: %s' % key, e)
+        return ds
+
+
 class NetCDF4DataStore(AbstractWritableDataStore):
     """Store for reading and writing data via the Python-NetCDF4 library.
 
     This store supports NetCDF3, NetCDF4 and OpenDAP datasets.
     """
     def __init__(self, filename, mode='r', clobber=True, diskless=False,
-                 persist=False, format='NETCDF4'):
+                 persist=False, format='NETCDF4', group=None):
         import netCDF4 as nc4
         if not _version_check(nc4.__version__, (1, 0, 6)):
             warnings.warn('python-netCDF4 %s detected; '
                           'the minimal recommended version is 1.0.6.'
                           % nc4.__version__, ImportWarning)
 
-        self.ds = nc4.Dataset(filename, mode=mode, clobber=clobber,
-                              diskless=diskless, persist=persist,
-                              format=format)
+        ds = nc4.Dataset(filename, mode=mode, clobber=clobber,
+                         diskless=diskless, persist=persist,
+                         format=format)
+        # support use of groups
+        self.ds = _nc4_group(ds, group)
         self.format = format
 
     def open_store_variable(self, var):

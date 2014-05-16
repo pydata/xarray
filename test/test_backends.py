@@ -164,6 +164,51 @@ class NetCDF4DataTest(DatasetIOTestCases, TestCase):
                                if k in expected['time'].encoding}
             self.assertDictEqual(actual_encoding, expected['time'].encoding)
 
+    def test_open_group(self):
+        # Create a netCDF file with a dataset stored within a group
+        with create_tmp_file() as tmp_file:
+            rootgrp = nc4.Dataset(tmp_file, 'w')
+            foogrp = rootgrp.createGroup('foo')
+            ds = foogrp
+            ds.createDimension('time', size=10)
+            x = np.arange(10)
+            ds.createVariable('x', np.int32, dimensions=('time',))
+            ds.variables['x'][:] = x
+            rootgrp.close()
+
+            expected = Dataset()
+            expected['x'] = ('time', x)
+
+            # check equivalent ways to specify group
+            for group in 'foo', '/foo', 'foo/', '/foo/':
+                actual = open_dataset(tmp_file, group=group)
+                self.assertVariableEqual(actual['x'], expected['x'])
+
+            # check that missing group raises appropriate exception
+            with self.assertRaises(IOError):
+                open_dataset(tmp_file, group='bar')
+
+    def test_open_subgroup(self):
+        # Create a netCDF file with a dataset stored within a group within a group
+        with create_tmp_file() as tmp_file:
+            rootgrp = nc4.Dataset(tmp_file, 'w')
+            foogrp = rootgrp.createGroup('foo')
+            bargrp = foogrp.createGroup('bar')
+            ds = bargrp
+            ds.createDimension('time', size=10)
+            x = np.arange(10)
+            ds.createVariable('x', np.int32, dimensions=('time',))
+            ds.variables['x'][:] = x
+            rootgrp.close()
+
+            expected = Dataset()
+            expected['x'] = ('time', x)
+
+            # check equivalent ways to specify group
+            for group in 'foo/bar', '/foo/bar', 'foo/bar/', '/foo/bar/':
+                actual = open_dataset(tmp_file, group=group)
+                self.assertVariableEqual(actual['x'], expected['x'])
+
     def test_dump_and_open_encodings(self):
         # Create a netCDF file with explicit time units
         # and make sure it makes it into the encodings
