@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+import warnings
 from collections import defaultdict, OrderedDict
 from datetime import datetime
 
@@ -88,7 +89,25 @@ def decode_cf_datetime(num_dates, units, calendar=None):
     if ((calendar not in _STANDARD_CALENDARS
             or min_date.year < 1678 or max_date.year >= 2262)
             and min_date is not pd.NaT):
+
         dates = nc4.num2date(num_dates, units, calendar)
+
+        if min_date.year >= 1678 and max_date.year < 2262:
+            try:
+                dates = nctime_to_nptime(dates)
+            except ValueError as e:
+                warnings.warn('Unable to decode time axis into full '
+                              'numpy.datetime64 objects, continuing using '
+                              'dummy netCDF4.datetime objects instead, reason:'
+                              '{0}'.format(e), RuntimeWarning, stacklevel=2)
+                dates = np.asarray(dates)
+        else:
+            warnings.warn('Unable to decode time axis into full '
+                          'numpy.datetime64 objects, continuing using dummy '
+                          'netCDF4.datetime objects instead, reason: dates out'
+                          ' of range', RuntimeWarning, stacklevel=2)
+            dates = np.asarray(dates)
+
     else:
         # we can safely use np.datetime64 with nanosecond precision (pandas
         # likes ns precision so it can directly make DatetimeIndex objects)
@@ -122,6 +141,7 @@ def decode_cf_datetime(num_dates, units, calendar=None):
                      + np.datetime64(min_date))
         # restore original shape and ensure dates are given in ns
         dates = dates.reshape(num_dates.shape).astype('M8[ns]')
+
     return dates
 
 
@@ -142,6 +162,16 @@ def guess_time_units(dates):
     else:
         raise ValueError('could not automatically determine time units')
     return '%s since %s' % (time_unit, dates[0])
+
+
+def nctime_to_nptime(times):
+    """Given an array of netCDF4.datetime objects, return an array of
+    numpy.datetime64 objects of the same size"""
+    times = np.asarray(times)
+    new = np.empty(times.shape, dtype='M8[ns]')
+    for i, t in np.ndenumerate(times):
+        new[i] = np.datetime64(datetime(*t.timetuple()[:6]))
+    return new
 
 
 def encode_cf_datetime(dates, units=None, calendar=None):
@@ -246,13 +276,7 @@ class DecodedCFDatetimeArray(utils.NDArrayMixin):
 
     @property
     def dtype(self):
-        if self.calendar is None or self.calendar in _STANDARD_CALENDARS:
-            # TODO: return the proper dtype (object) for a standard calendar
-            # that can't be expressed in ns precision. Perhaps we could guess
-            # this from the units?
-            return np.dtype('datetime64[ns]')
-        else:
-            return np.dtype('O')
+        return np.dtype('datetime64[ns]')
 
     def __getitem__(self, key):
         return decode_cf_datetime(self.array, units=self.units,
