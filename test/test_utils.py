@@ -1,9 +1,34 @@
 from collections import OrderedDict
+import datetime
 import numpy as np
 import pandas as pd
 
 from xray import utils
 from . import TestCase
+
+
+class TestAsSafeArray(TestCase):
+    def test_as_safe_array(self):
+        values = np.arange(5.)
+        safe_values = utils.as_safe_array(values)
+        safe_values[0] = 5.
+        self.assertEqual(values[0], safe_values[0])
+
+        dates = [datetime.datetime(2010, 1, i + 1) for i in range(5)]
+        values = np.array(dates).astype('<M8[ns]')
+        safe_values = utils.as_safe_array(values)
+        safe_values[0] = datetime.datetime(1982, 11, 20)
+        self.assertEqual(values[0], safe_values[0])
+
+    def test_as_safe_array_datetime(self):
+        dates = [datetime.datetime(2010, 1, i + 1) for i in range(5)]
+        values = np.array(dates)
+        safe_values = utils.as_safe_array(values)
+        safe_values[0] = datetime.datetime(1982, 11, 20)
+        # Note that this will fail, because as_safe_array converts
+        # datetime obecjts to datetime64 objects, which requires copying
+        #self.assertEqual(values.astype('<M8[ns]')[0], safe_values[0])
+        self.assertEqual(safe_values.dtype, '<M8[ns]')
 
 
 class TestSafeCastToIndex(TestCase):

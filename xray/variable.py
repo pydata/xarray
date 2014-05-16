@@ -68,12 +68,15 @@ def _as_compatible_data(data):
             data = data.values
         except AttributeError:
             pass
-
+    if (data.dtype.kind == 'O' or
+        (data.dtype.kind == 'M' and not data.dtype == '<M8[ns]')):
+        data = utils.as_safe_array(data)
     if isinstance(data, pd.Index):
         # check pd.Index first since it's (currently) an ndarray subclass
         data = PandasIndexAdapter(data)
     elif isinstance(data, np.ndarray):
         data = NumpyArrayAdapter(utils.as_safe_array(data))
+
     return data
 
 
@@ -85,7 +88,7 @@ class NumpyArrayAdapter(utils.NDArrayMixin):
     # it implements orthogonal indexing, except it casts to a numpy array,
     # isn't lazy and supports writing values.
     def __init__(self, array):
-        self.array = np.asarray(array)
+        self.array = utils.as_array_or_item(array)
 
     def __array__(self, dtype=None):
         return np.asarray(self.array, dtype=dtype)
@@ -554,6 +557,7 @@ class Variable(AbstractArray):
 
             key = tuple(indexer if n == axis else slice(None)
                         for n in range(concatenated.ndim))
+
             concatenated.values[key] = var.values
 
         return concatenated

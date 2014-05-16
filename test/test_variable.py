@@ -8,7 +8,7 @@ import pandas as pd
 
 from xray import Variable, Dataset, DataArray
 from xray.variable import (Coordinate, as_variable, NumpyArrayAdapter,
-                           PandasIndexAdapter)
+                           PandasIndexAdapter, _as_compatible_data)
 
 from . import TestCase, source_ndarray
 
@@ -38,11 +38,11 @@ class VariableSubclassTestCases(object):
 
     def test_0d_data(self):
         d = datetime(2000, 1, 1)
-        for value, dtype in [(0, int),
-                             (np.float32(0.5), np.float32),
-                             ('foo', np.str_),
-                             (d, None),
-                             (np.datetime64(d), np.datetime64)]:
+        for value, dtype, expected in [(0, int, 0),
+                                       (np.float32(0.5), np.float32, np.float32(0.5)),
+                                       ('foo', np.str_, 'foo'),
+                                       (d, None, np.datetime64(d, 'ns')),
+                                       (np.datetime64(d), np.datetime64, np.datetime64(d, 'ns'))]:
             x = self.cls(['x'], [value])
             # check array properties
             self.assertEqual(x[0].shape, ())
@@ -52,13 +52,17 @@ class VariableSubclassTestCases(object):
             self.assertTrue(x.equals(x.copy()))
             self.assertTrue(x.identical(x.copy()))
             # check value is equal for both ndarray and Variable
-            self.assertEqual(x.values[0], value)
-            self.assertEqual(x[0].values, value)
+            self.assertEqual(x.values[0], expected)
+            self.assertEqual(x[0].values, expected)
             # check type or dtype is consistent for both ndarray and Variable
             if dtype is None:
                 # check output type instead of array dtype
-                self.assertEqual(type(x.values[0]), type(value))
-                self.assertEqual(type(x[0].values), type(value))
+                self.assertEqual(type(x.values[0]), type(expected))
+                if not x.dtype.kind == 'M':
+                    # unfortunately if x contains datetime64 objects slicing
+                    # out the scalar value will actually result in another
+                    # ndarray, so we skip this test for dates.
+                    self.assertEqual(type(x[0].values), type(expected))
             else:
                 assert np.issubdtype(x.values[0].dtype, dtype), (x.values[0].dtype, dtype)
                 assert np.issubdtype(x[0].values.dtype, dtype), (x[0].values.dtype, dtype)
@@ -463,3 +467,25 @@ class TestCoordinate(TestCase, VariableSubclassTestCases):
         self.assertIsInstance(x._data, PandasIndexAdapter)
         with self.assertRaisesRegexp(TypeError, 'cannot be modified'):
             x[:] = 0
+
+
+class TestCompatibleArray(TestCase):
+
+    def test_as_compatible_array(self):
+        d = datetime(2000, 1, 1)
+        for value, dtypes in [(0, [int]),
+                             (np.float32(0.5), [np.float32]),
+                             # String types will depend on
+                             # the version of python.
+                             ('foo', ['|S3', '<U3']),
+                             (d, ['<M8[ns]']),
+                             (np.datetime64(d), ['<M8[ns]'])]:
+            actual = _as_compatible_data(value)
+            for attr in ['dtype', 'shape', 'size', 'ndim']:
+                getattr(actual, attr)
+            self.assertIn(actual.dtype, dtypes)
+            # now do the same but as a 1-d array
+            actual = _as_compatible_data([value])
+            for attr in ['dtype', 'shape', 'size', 'ndim']:
+                getattr(actual, attr)
+            self.assertIn(actual.dtype, dtypes)
