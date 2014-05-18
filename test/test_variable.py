@@ -9,6 +9,7 @@ import pandas as pd
 from xray import Variable, Dataset, DataArray
 from xray.variable import (Coordinate, as_variable, NumpyArrayAdapter,
                            PandasIndexAdapter)
+from xray.pycompat import PY3
 
 from . import TestCase, source_ndarray
 
@@ -36,32 +37,85 @@ class VariableSubclassTestCases(object):
         v.attrs['foo'] = 'baz'
         self.assertEqual(v.attrs['foo'], 'baz')
 
-    def test_0d_data(self):
-        d = datetime(2000, 1, 1)
-        for value, dtype in [(0, int),
-                             (np.float32(0.5), np.float32),
-                             ('foo', np.str_),
-                             (d, None),
-                             (np.datetime64(d), np.datetime64)]:
+    def assertIndexedLikeNDArray(self, variable, expected_value0,
+                                 expected_dtype=None):
+        """Given a 1-dimensional variable, verify that the variable is indexed
+        like a numpy.ndarray.
+        """
+        self.assertEqual(variable[0].shape, ())
+        self.assertEqual(variable[0].ndim, 0)
+        self.assertEqual(variable[0].size, 1)
+        # test identity
+        self.assertTrue(variable.equals(variable.copy()))
+        self.assertTrue(variable.identical(variable.copy()))
+        # check value is equal for both ndarray and Variable
+        self.assertEqual(variable.values[0], expected_value0)
+        self.assertEqual(variable[0].values, expected_value0)
+        # check type or dtype is consistent for both ndarray and Variable
+        if expected_dtype is None:
+            # check output type instead of array dtype
+            self.assertEqual(type(variable.values[0]), type(expected_value0))
+            self.assertEqual(type(variable[0].values), type(expected_value0))
+        else:
+            self.assertEqual(variable.values[0].dtype, expected_dtype)
+            self.assertEqual(variable[0].values.dtype, expected_dtype)
+
+    def test_index_0d_int(self):
+        for value, dtype in [(0, np.int_),
+                             (np.int32(0), np.int32)]:
             x = self.cls(['x'], [value])
-            # check array properties
-            self.assertEqual(x[0].shape, ())
-            self.assertEqual(x[0].ndim, 0)
-            self.assertEqual(x[0].size, 1)
-            # test identity
-            self.assertTrue(x.equals(x.copy()))
-            self.assertTrue(x.identical(x.copy()))
-            # check value is equal for both ndarray and Variable
-            self.assertEqual(x.values[0], value)
-            self.assertEqual(x[0].values, value)
-            # check type or dtype is consistent for both ndarray and Variable
-            if dtype is None:
-                # check output type instead of array dtype
-                self.assertEqual(type(x.values[0]), type(value))
-                self.assertEqual(type(x[0].values), type(value))
-            else:
-                assert np.issubdtype(x.values[0].dtype, dtype), (x.values[0].dtype, dtype)
-                assert np.issubdtype(x[0].values.dtype, dtype), (x[0].values.dtype, dtype)
+            self.assertIndexedLikeNDArray(x, value, dtype)
+
+    def test_index_0d_float(self):
+        for value, dtype in [(0.5, np.float_),
+                             (np.float32(0.5), np.float32)]:
+            x = self.cls(['x'], [value])
+            self.assertIndexedLikeNDArray(x, value, dtype)
+
+    def test_index_0d_string(self):
+        for value, dtype in [('foo', np.dtype('U3' if PY3 else 'S3')),
+                             (u'foo', np.dtype('U3'))]:
+            x = self.cls(['x'], [value])
+            self.assertIndexedLikeNDArray(x, value, dtype)
+
+    def test_index_0d_datetime(self):
+        d = datetime(2000, 1, 1)
+        x = self.cls(['x'], [d])
+        self.assertIndexedLikeNDArray(x, d)
+
+        x = self.cls(['x'], [np.datetime64(d)])
+        self.assertIndexedLikeNDArray(x, np.datetime64(d), 'datetime64[ns]')
+
+        x = self.cls(['x'], pd.DatetimeIndex([d]))
+        self.assertIndexedLikeNDArray(x, np.datetime64(d), 'datetime64[ns]')
+
+    def test_index_0d_object(self):
+
+        class HashableItemWrapper(object):
+            def __init__(self, item):
+                self.item = item
+
+            def __eq__(self, other):
+                return self.item == other.item
+
+            def __hash__(self):
+                return hash(self.item)
+
+            def __repr__(self):
+                return '%s(item=%r)' % (type(self).__name__, self.item)
+
+        item = HashableItemWrapper((1, 2, 3))
+        x = self.cls('x', [item])
+        self.assertIndexedLikeNDArray(x, item)
+
+    def test_index_and_concat_datetime64(self):
+        # regression test for #125
+        expected = self.cls('t', pd.date_range('2011-09-01', periods=10))
+        for times in [[expected[i] for i in range(10)],
+                      [expected[[i]] for i in range(10)]]:
+            actual = Variable.concat(times, 't')
+            self.assertArrayEqual(expected, actual)
+            self.assertEqual(expected.dtype, actual.dtype)
 
     def test_0d_time_data(self):
         # regression test for #105
@@ -228,6 +282,30 @@ class TestVariable(TestCase, VariableSubclassTestCases):
         v = Variable([], np.float32(0.0))
         self.assertEqual(v.item(), 0)
         self.assertIs(type(v.item()), float)
+
+    def test_datetime64_precision(self):
+        # verify that datetime64 is always converted to ns precision
+        values = np.datetime64('2000-01-01T00')
+        v = Variable([], values)
+        self.assertEqual(v.dtype, np.dtype('datetime64[ns]'))
+        self.assertEqual(v.values, values)
+        self.assertEqual(v.values.dtype, np.dtype('datetime64[ns]'))
+
+        values = pd.date_range('2000-01-01', periods=3).values.astype(
+            'datetime64[s]')
+        v = Variable(['t'], values)
+        self.assertEqual(v.dtype, np.dtype('datetime64[ns]'))
+        self.assertArrayEqual(v.values, values)
+        self.assertEqual(v.values.dtype, np.dtype('datetime64[ns]'))
+
+    def test_0d_str(self):
+        v = Variable([], u'foo')
+        self.assertEqual(v.dtype, np.dtype('U3'))
+        self.assertEqual(v.values, 'foo')
+
+        v = Variable([], np.string_('foo'))
+        self.assertEqual(v.dtype, np.dtype('S3'))
+        self.assertEqual(v.values, bytes('foo', 'ascii') if PY3 else 'foo')
 
     def test_equals_and_identical(self):
         d = np.random.rand(10, 3)

@@ -7,7 +7,7 @@ from .common import AbstractWritableDataStore
 from .netcdf3 import encode_nc3_variable
 import xray
 from xray.conventions import encode_cf_variable
-from xray.utils import FrozenOrderedDict, NDArrayMixin, as_array_or_item
+from xray.utils import FrozenOrderedDict, NDArrayMixin
 from xray import indexing
 from xray.pycompat import iteritems, basestring
 
@@ -31,7 +31,7 @@ class NetCDF4ArrayWrapper(NDArrayMixin):
             # work around for netCDF4-python's broken handling of 0-d
             # arrays (slicing them always returns a 1-dimensional array):
             # https://github.com/Unidata/netcdf4-python/pull/220
-            data = as_array_or_item(np.asscalar(self.array[key]))
+            data = np.asscalar(self.array[key])
         else:
             data = self.array[key]
         return data

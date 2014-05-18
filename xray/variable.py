@@ -59,7 +59,7 @@ def _as_compatible_data(data):
     # numeric type like np.float32
     required = ['dtype', 'shape', 'size', 'ndim']
     if (any(not hasattr(data, attr) for attr in required)
-            or isinstance(data, np.string_)):
+            or isinstance(data, np.datetime64)):
         data = utils.as_safe_array(data)
     elif not isinstance(data, (pd.Index, indexing.LazilyIndexedArray)):
         try:
@@ -130,8 +130,9 @@ class PandasIndexAdapter(utils.NDArrayMixin):
             # unpack key so it can index a pandas.Index object (pandas.Index
             # objects don't like tuples)
             key, = key
+
         if isinstance(key, (int, np.integer)):
-            return utils.as_array_or_item(self.array[key], dtype=self.dtype)
+            value = np.asarray(self.array[key], dtype=self.dtype)
         else:
             if isinstance(key, slice) and key == slice(None):
                 # pandas<0.14 does dtype inference when slicing; we would like
@@ -140,7 +141,9 @@ class PandasIndexAdapter(utils.NDArrayMixin):
                 arr = self.array
             else:
                 arr = self.array[key]
-            return PandasIndexAdapter(arr, dtype=self.dtype)
+            value = PandasIndexAdapter(arr, dtype=self.dtype)
+
+        return value
 
     def __repr__(self):
         return ('%s(array=%r, dtype=%r)'

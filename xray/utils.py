@@ -4,7 +4,6 @@ import functools
 import operator
 import warnings
 from collections import OrderedDict, Mapping, MutableMapping
-from datetime import datetime
 
 import numpy as np
 import pandas as pd
@@ -46,23 +45,23 @@ def as_safe_array(values, dtype=None):
     return values
 
 
-def as_array_or_item(values, dtype=None):
-    """Return the given values as a numpy array of the indicated dtype, or as
-    an individual value if it's a 0-dimensional object array or datetime.
+def as_array_or_item(data):
+    """Return the given values as a numpy array, or as an individual item if
+    it's a 0-dimensional object array or datetime64.
+
+    Importantly, this function does not copy data if it is already an ndarray -
+    otherwise, it will not be possible to update Variable values in place.
     """
-    if isinstance(values, datetime):
-        # shortcut because if you try to make a datetime or Timestamp object
-        # into an array with the proper dtype, it is liable to be silently
-        # converted into an integer instead :(
-        return values
-    values = as_safe_array(values, dtype=dtype)
-    if values.ndim == 0 and values.dtype.kind == 'O':
-        # unpack 0d object arrays to be consistent with numpy
-        values = values.item()
-        if isinstance(values, pd.Timestamp):
-            # turn Timestamps back into datetime64 objects
-            values = np.datetime64(values, 'ns')
-    return values
+    data = np.asarray(data)
+    if data.ndim == 0:
+        if data.dtype.kind == 'O':
+            # unpack 0d object arrays to be consistent with numpy
+            data = data.item()
+        elif data.dtype.kind == 'M':
+            # convert to a np.datetime64 object, because 0-dimensional ndarrays
+            # with dtype=datetime64 are broken :(
+            data = np.datetime64(data, 'ns')
+    return data
 
 
 def squeeze(xray_obj, dimensions, dimension=None):
