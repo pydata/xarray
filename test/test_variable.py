@@ -108,14 +108,18 @@ class VariableSubclassTestCases(object):
         x = self.cls('x', [item])
         self.assertIndexedLikeNDArray(x, item)
 
-    def test_index_and_concat_datetime64(self):
+    def test_index_and_concat_datetime(self):
         # regression test for #125
-        expected = self.cls('t', pd.date_range('2011-09-01', periods=10))
-        for times in [[expected[i] for i in range(10)],
-                      [expected[[i]] for i in range(10)]]:
-            actual = Variable.concat(times, 't')
-            self.assertArrayEqual(expected, actual)
-            self.assertEqual(expected.dtype, actual.dtype)
+        date_range = pd.date_range('2011-09-01', periods=10)
+        for dates in [date_range, date_range.values,
+                      date_range.to_pydatetime()]:
+            expected = self.cls('t', dates)
+            for times in [[expected[i] for i in range(10)],
+                          [expected[i:(i + 1)] for i in range(10)],
+                          [expected[[i]] for i in range(10)]]:
+                actual = Variable.concat(times, 't')
+                self.assertEqual(expected.dtype, actual.dtype)
+                self.assertArrayEqual(expected, actual)
 
     def test_0d_time_data(self):
         # regression test for #105
