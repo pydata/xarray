@@ -35,35 +35,6 @@ def class_alias(obj, old_name):
     return Wrapper
 
 
-def as_safe_array(values, dtype=None):
-    """Like np.asarray, but convert all datetime64 arrays to ns precision
-    """
-    values = np.asarray(values, dtype=dtype)
-    if values.dtype.kind == 'M':
-        # np.datetime64
-        values = values.astype('datetime64[ns]')
-    return values
-
-
-def as_array_or_item(data):
-    """Return the given values as a numpy array, or as an individual item if
-    it's a 0-dimensional object array or datetime64.
-
-    Importantly, this function does not copy data if it is already an ndarray -
-    otherwise, it will not be possible to update Variable values in place.
-    """
-    data = np.asarray(data)
-    if data.ndim == 0:
-        if data.dtype.kind == 'O':
-            # unpack 0d object arrays to be consistent with numpy
-            data = data.item()
-        elif data.dtype.kind == 'M':
-            # convert to a np.datetime64 object, because 0-dimensional ndarrays
-            # with dtype=datetime64 are broken :(
-            data = np.datetime64(data, 'ns')
-    return data
-
-
 def squeeze(xray_obj, dimensions, dimension=None):
     """Squeeze the dimensions of an xray object."""
     if dimension is None:

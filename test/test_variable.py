@@ -6,9 +6,9 @@ from textwrap import dedent
 import numpy as np
 import pandas as pd
 
-from xray import Variable, Dataset, DataArray
+from xray import Variable, Dataset, DataArray, indexing
 from xray.variable import (Coordinate, as_variable, NumpyArrayAdapter,
-                           PandasIndexAdapter)
+                           PandasIndexAdapter, _as_compatible_data)
 from xray.pycompat import PY3
 
 from . import TestCase, source_ndarray
@@ -541,3 +541,41 @@ class TestCoordinate(TestCase, VariableSubclassTestCases):
         self.assertIsInstance(x._data, PandasIndexAdapter)
         with self.assertRaisesRegexp(TypeError, 'cannot be modified'):
             x[:] = 0
+
+
+class TestAsCompatibleData(TestCase):
+    def test_unchanged_types(self):
+        types = (NumpyArrayAdapter, PandasIndexAdapter,
+                 indexing.LazilyIndexedArray)
+        for t in types:
+            for data in [np.arange(3),
+                         pd.date_range('2000-01-01', periods=3),
+                         pd.date_range('2000-01-01', periods=3).values]:
+                x = t(data)
+                self.assertIs(x, _as_compatible_data(x))
+
+    def test_converted_types(self):
+        for input_array in [[[0, 1, 2]], pd.DataFrame([[0, 1, 2]])]:
+            actual = _as_compatible_data(input_array)
+            self.assertArrayEqual(np.asarray(input_array), actual)
+            self.assertEqual(NumpyArrayAdapter, type(actual))
+            self.assertEqual(np.dtype(int), actual.dtype)
+
+    def test_datetime(self):
+        expected = np.datetime64('2000-01-01T00')
+        actual = _as_compatible_data(expected)
+        self.assertEqual(expected, actual)
+        self.assertEqual(np.datetime64, type(actual))
+        self.assertEqual(np.dtype('datetime64[ns]'), actual.dtype)
+
+        expected = np.array([np.datetime64('2000-01-01T00')])
+        actual = _as_compatible_data(expected)
+        self.assertEqual(np.asarray(expected), actual)
+        self.assertEqual(NumpyArrayAdapter, type(actual))
+        self.assertEqual(np.dtype('datetime64[ns]'), actual.dtype)
+
+        expected = pd.Timestamp('2000-01-01T00').to_datetime()
+        actual = _as_compatible_data(expected)
+        self.assertEqual(np.asarray(expected), actual)
+        self.assertEqual(NumpyArrayAdapter, type(actual))
+        self.assertEqual(np.dtype('O'), actual.dtype)
