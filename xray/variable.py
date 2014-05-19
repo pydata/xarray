@@ -88,7 +88,7 @@ def _as_compatible_data(data):
         data = PandasIndexAdapter(data)
     elif isinstance(data, np.ndarray):
         if data.dtype.kind == 'M':
-            data = data.astype('datetime64[ns]')
+            data = np.asarray(data, 'datetime64[ns]')
         data = NumpyArrayAdapter(data)
 
     return data

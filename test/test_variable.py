@@ -283,8 +283,9 @@ class TestVariable(TestCase, VariableSubclassTestCases):
         self.assertEqual(v.item(), 0)
         self.assertIs(type(v.item()), float)
 
-    def test_datetime64_precision(self):
-        # verify that datetime64 is always converted to ns precision
+    def test_datetime64_conversion(self):
+        # verify that datetime64 is always converted to ns precision with
+        # sources preserved
         values = np.datetime64('2000-01-01T00')
         v = Variable([], values)
         self.assertEqual(v.dtype, np.dtype('datetime64[ns]'))
@@ -297,6 +298,14 @@ class TestVariable(TestCase, VariableSubclassTestCases):
         self.assertEqual(v.dtype, np.dtype('datetime64[ns]'))
         self.assertArrayEqual(v.values, values)
         self.assertEqual(v.values.dtype, np.dtype('datetime64[ns]'))
+        self.assertIsNot(source_ndarray(v.values), values)
+
+        values = pd.date_range('2000-01-01', periods=3).values.copy()
+        v = Variable(['t'], values)
+        self.assertEqual(v.dtype, np.dtype('datetime64[ns]'))
+        self.assertArrayEqual(v.values, values)
+        self.assertEqual(v.values.dtype, np.dtype('datetime64[ns]'))
+        self.assertIs(source_ndarray(v.values), values)
 
     def test_0d_str(self):
         v = Variable([], u'foo')
@@ -573,6 +582,13 @@ class TestAsCompatibleData(TestCase):
         self.assertEqual(np.asarray(expected), actual)
         self.assertEqual(NumpyArrayAdapter, type(actual))
         self.assertEqual(np.dtype('datetime64[ns]'), actual.dtype)
+
+        expected = np.array([np.datetime64('2000-01-01T00', 'ns')])
+        actual = _as_compatible_data(expected)
+        self.assertEqual(np.asarray(expected), actual)
+        self.assertEqual(NumpyArrayAdapter, type(actual))
+        self.assertEqual(np.dtype('datetime64[ns]'), actual.dtype)
+        self.assertIs(expected, source_ndarray(np.asarray(actual)))
 
         expected = pd.Timestamp('2000-01-01T00').to_datetime()
         actual = _as_compatible_data(expected)
