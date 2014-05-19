@@ -151,13 +151,13 @@ class PandasIndexAdapter(utils.NDArrayMixin):
         if isinstance(key, (int, np.integer)):
             value = np.asarray(self.array[key], dtype=self.dtype)
         else:
-            if isinstance(key, slice) and key == slice(None):
-                # pandas<0.14 does dtype inference when slicing; we would like
-                # to avoid this if possible
+            arr = self.array[key]
+            if arr.dtype != self.array.dtype:
+                # pandas<0.14 does dtype inference when slicing:
                 # https://github.com/pydata/pandas/issues/6370
-                arr = self.array
-            else:
-                arr = self.array[key]
+                # To avoid this, slice values instead if necessary and accept
+                # that we will need to rebuild the index:
+                arr = self.array.values[key]
             value = PandasIndexAdapter(arr, dtype=self.dtype)
 
         return value

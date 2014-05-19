@@ -551,6 +551,18 @@ class TestCoordinate(TestCase, VariableSubclassTestCases):
         with self.assertRaisesRegexp(TypeError, 'cannot be modified'):
             x[:] = 0
 
+    def test_avoid_index_dtype_inference(self):
+        # verify our work-around for (pandas<0.14):
+        # https://github.com/pydata/pandas/issues/6370
+        data = pd.date_range('2000-01-01', periods=3).to_pydatetime()
+        t = Coordinate('t', data)
+        self.assertArrayEqual(t.values[:2], data[:2])
+        self.assertArrayEqual(t[:2].values, data[:2])
+        self.assertArrayEqual(t.values[:2], data[:2])
+        self.assertArrayEqual(t[:2].values, data[:2])
+        self.assertEqual(t.dtype, object)
+        self.assertEqual(t[:2].dtype, object)
+
 
 class TestAsCompatibleData(TestCase):
     def test_unchanged_types(self):
