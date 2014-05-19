@@ -63,11 +63,22 @@ def array_equiv(arr1, arr2):
     arr1, arr2 = np.asarray(arr1), np.asarray(arr2)
     if arr1.shape != arr2.shape:
         return False
-    # we could make this faster by not-checking for null values if the dtype
-    # does not support them, but the logic would get more convoluted.
-    # using pd.isnull lets us defer the NaN handling to pandas (and unlike
-    # np.isnan it works on every dtype).
-    return ((arr1 == arr2) | (pd.isnull(arr1) & pd.isnull(arr2))).all()
+    if arr1.ndim == 0:
+        # work around for pd.isnull not working for 0-dimensional object
+        # arrays: https://github.com/pydata/pandas/pull/7176 (should be fixed
+        # in pandas 0.14)
+        # use .item() instead of keeping around 0-dimensional arrays to avoid
+        # the numpy quirk where object arrays are checked as equal by identity
+        # (hence NaN in an object array is equal to itself):
+        arr1 = arr1.item()
+        arr2 = arr2.item()
+        return arr1 == arr2 or (arr1 != arr1 and arr2 != arr2)
+    else:
+        # we could make this faster by not-checking for null values if the
+        # dtype does not support them, but the logic would get more convoluted.
+        # using pd.isnull lets us defer the NaN handling to pandas (and unlike
+        # np.isnan it works on every dtype).
+        return ((arr1 == arr2) | (pd.isnull(arr1) & pd.isnull(arr2))).all()
 
 
 def safe_cast_to_index(array):
