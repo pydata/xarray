@@ -48,11 +48,7 @@ except ImportError:
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 #sys.path.insert(0, os.path.abspath('.'))
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'sphinxext',
-                                'numpydoc'))
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'sphinxext',
-                                'ipython_sphinxext'))
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'sphinxext', 'numpydoc'))
 
 # Mock imports for readthedocs
 class Mock(object):
