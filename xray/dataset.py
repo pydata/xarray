@@ -999,8 +999,8 @@ class Dataset(Mapping):
 
     @classmethod
     def _reduce_method(cls, f, name=None, module=None):
-        def func(self, dimension=None, axis=None, **kwargs):
-            return self.reduce(f, dimension, axis, **kwargs)
+        def func(self, dimension=None, **kwargs):
+            return self.reduce(f, dimension, **kwargs)
         if name is None:
             name = f.__name__
         func.__name__ = name
@@ -1009,7 +1009,7 @@ class Dataset(Mapping):
             cls=cls.__name__)
         return func
 
-    def reduce(self, func, dimension=None, axis=None, **kwargs):
+    def reduce(self, func, dimension=None, **kwargs):
         # copy_attrs=False,
         """Reduce this dataset by applying `func` along some dimension(s).
 
@@ -1021,11 +1021,6 @@ class Dataset(Mapping):
             np.ndarray over an integer valued axis.
         dimension : str or sequence of str, optional
             Dimension(s) over which to apply `func`.
-        axis : int or sequence of int, optional
-            Axis(es) over which to repeatedly apply `func`. Only one of the
-            'dimension' and 'axis' arguments can be supplied. If neither are
-            supplied, then the reduction is calculated over the flattened array
-            (by calling `f(x)` without an axis argument).
         **kwargs : dict
             Additional keyword arguments passed on to `func`.
 
@@ -1041,30 +1036,22 @@ class Dataset(Mapping):
         # else:
         #     attrs = {}
 
-        coordinates = self.coordinates.keys()
-
         if isinstance(dimension, basestring):
             dims = set([dimension])
         elif not dimension:
-            dims = set(coordinates)
+            dims = set(self.coordinates)
         else:
             dims = set(dimension)
 
-        variables = {}
-        for name, da in iteritems(self):
-            reduce_dims = [dim for dim in da.coordinates.keys() if dim in dims]
+        variables = OrderedDict()
+        for name, da in iteritems(self.noncoordinates):
+            reduce_dims = [dim for dim in da.coordinates if dim in dims]
             if reduce_dims:
-                if (len(reduce_dims)) == 1 and (name == reduce_dims[0]):
-                    # drop this var: drop (reduction coord)
-                    pass
-                else:
-                    # reduce (not a coord, has at least one reduction coord)
-                    variables[name] = da.reduce(func, reduce_dims, axis,
-                                                **kwargs)
+                variables[name] = da.reduce(func, dimension=reduce_dims,
+                                            **kwargs)
             else:
-                # copy (a var that doesn't use a reduction coord)
                 variables[name] = da
-
+            print(variables[name].coordinates.keys())
         return Dataset(variables=variables)  # , attributes=attrs)
 
     @classmethod

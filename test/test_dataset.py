@@ -663,17 +663,16 @@ class TestDataset(TestCase):
         self.assertEqual(len(data.mean().coordinates), 0)
 
         expected = data.max()
-        for var in _vars:
+        for var in data.noncoordinates:
             expected = data[var].max()
             actual = expected[var]
-            self.assertEqual(expected, actual)
+            self.assertDataArrayEqual(expected, actual)
 
-        self.assertEqual(data.min(dimension=['dim1']),
-                         data.min(dimension='dim1'))
+        self.assertDatasetEqual(data.min(dimension=['dim1']),
+                                data.min(dimension='dim1'))
 
-        self.assertItemsEqual(data.min(dimension='dim2').dimensions,
-                              ['dim1', 'dim3', 'time'])
-        self.assertItemsEqual(data.min(dimension=['dim2', 'time']).dimensions,
-                              ['dim1', 'dim3'])
-        self.assertItemsEqual(data.min(dimension=('dim2', 'time')).dimensions,
-                              ['dim1', 'dim3'])
+        for reduct, expected in [('dim2', ['dim1', 'dim3']),
+                                 (['dim2', 'time'], ['dim1', 'dim3']),
+                                 (('dim2', 'time'), ['dim1', 'dim3'])]:
+            actual = data.min(dimension=reduct).dimensions
+            self.assertItemsEqual(actual, expected)
