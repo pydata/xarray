@@ -671,11 +671,12 @@ class TestDataset(TestCase):
         self.assertDatasetEqual(data.min(dimension=['dim1']),
                                 data.min(dimension='dim1'))
 
-        for reduct, expected in [('dim2', ['dim1', 'dim3']),
+        for reduct, expected in [('dim2', ['dim1', 'dim3', 'time']),
                                  (['dim2', 'time'], ['dim1', 'dim3']),
-                                 (('dim2', 'time'), ['dim1', 'dim3'])]:
+                                 (('dim2', 'time'), ['dim1', 'dim3']),
+                                 ((), ['dim1', 'dim2', 'dim3', 'time'])]:
             actual = data.min(dimension=reduct).dimensions
+            print(reduct, actual, expected)
             self.assertItemsEqual(actual, expected)
 
-        data.__delitem__('time')  # removes unused time dim/var that is dropped
         self.assertDatasetEqual(data.mean(dimension=[]), data)

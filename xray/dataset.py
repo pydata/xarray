@@ -1014,8 +1014,9 @@ class Dataset(Mapping):
             Function which can be called in the form
             `f(x, axis=axis, **kwargs)` to return the result of reducing an
             np.ndarray over an integer valued axis.
-        dimension : str or sequence of str, optional
-            Dimension(s) over which to apply `func`.
+        dimension : str or sequence of str, optional Dimension(s) over which
+            to apply `func`.  If `dimension=None`(default) `func` is applied
+            ove all dimensions.
         **kwargs : dict
             Additional keyword arguments passed on to `func`.
 
@@ -1039,14 +1040,18 @@ class Dataset(Mapping):
             dims = set(dimension)
 
         variables = OrderedDict()
-        for name, da in iteritems(self.noncoordinates):
-            reduce_dims = [dim for dim in da.coordinates if dim in dims]
+        for name, da in iteritems(self):
+            reduce_dims = [dim for dim in da.coordinates.keys() if dim in dims]
             if reduce_dims:
-                try:
-                    variables[name] = da.reduce(func, dimension=reduce_dims,
-                                                **kwargs)
-                except TypeError:
-                    pass
+                if (len(reduce_dims)) == 1 and name in reduce_dims:
+                    pass  # drop this variable --> (reduction coordinate)
+                else:
+                    try:
+                        variables[name] = da.reduce(func,
+                                                    dimension=reduce_dims,
+                                                    **kwargs)
+                    except TypeError:
+                        pass
             else:
                 variables[name] = da
         return Dataset(variables=variables)  # , attributes=attrs)
