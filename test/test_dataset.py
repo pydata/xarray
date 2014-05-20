@@ -656,3 +656,24 @@ class TestDataset(TestCase):
             # these should not raise UnexpectedDataAccess:
             ds.indexed(time=10)
             ds.indexed(time=slice(10), dim1=[0]).indexed(dim1=0, dim2=-1)
+
+    def test_reduce(self):
+        data = create_test_data()
+
+        self.assertEqual(len(data.mean().coordinates), 0)
+
+        expected = data.max()
+        for var in _vars:
+            expected = data[var].max()
+            actual = expected[var]
+            self.assertEqual(expected, actual)
+
+        self.assertEqual(data.min(dimension=['dim1']),
+                         data.min(dimension='dim1'))
+
+        self.assertItemsEqual(data.min(dimension='dim2').dimensions,
+                              ['dim1', 'dim3', 'time'])
+        self.assertItemsEqual(data.min(dimension=['dim2', 'time']).dimensions,
+                              ['dim1', 'dim3'])
+        self.assertItemsEqual(data.min(dimension=('dim2', 'time')).dimensions,
+                              ['dim1', 'dim3'])
