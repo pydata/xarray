@@ -1051,7 +1051,7 @@ class Dataset(Mapping):
             dims = set(dimension)
 
         variables = {}
-        for name, da in self.iteritems():
+        for name, da in iteritems(self):
             reduce_dims = [dim for dim in da.coordinates.keys() if dim in dims]
             if reduce_dims:
                 if (len(reduce_dims)) == 1 and (name == reduce_dims[0]):
