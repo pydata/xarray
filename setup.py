@@ -18,7 +18,7 @@ QUALIFIER = ''
 
 DISTNAME = 'xray'
 LICENSE = 'Apache'
-AUTHOR = 'Stephan Hoyer, Alex Kleeman, Eugene Brevdo'
+AUTHOR = 'xray Developers'
 AUTHOR_EMAIL = 'xray-discussion@googlegroups.com'
 URL = 'https://github.com/xray/xray'
 CLASSIFIERS = [
@@ -26,7 +26,10 @@ CLASSIFIERS = [
     'License :: OSI Approved :: Apache Software License',
     'Operating System :: OS Independent',
     'Intended Audience :: Science/Research',
+    'Programming Language :: Python',
+    'Programming Language :: Python :: 2',
     'Programming Language :: Python :: 2.7',
+    'Programming Language :: Python :: 3',
     'Programming Language :: Python :: 3.3',
     'Topic :: Scientific/Engineering',
 ]

@@ -113,7 +113,7 @@ master_doc = 'index'
 
 # General information about the project.
 project = u'xray'
-copyright = u'2014, Stephan Hoyer, Alex Kleeman, Eugene Brevdo'
+copyright = u'2014, xray Developers'
 
 import xray
 
@@ -268,7 +268,7 @@ latex_elements = {
 #  author, documentclass [howto, manual, or own class]).
 latex_documents = [
   ('index', 'xray.tex', u'xray Documentation',
-   u'Stephan Hoyer and Alex Kleeman', 'manual'),
+   u'xray Developers', 'manual'),
 ]
 
 # The name of an image file (relative to this directory) to place at the top of
@@ -298,7 +298,7 @@ latex_documents = [
 # (source start file, name, description, authors, manual section).
 man_pages = [
     ('index', 'xray', u'xray Documentation',
-     [u'Stephan Hoyer and Alex Kleeman'], 1)
+     [u'xray Developers'], 1)
 ]
 
 # If true, show URL addresses after external links.
@@ -312,7 +312,7 @@ man_pages = [
 #  dir menu entry, description, category)
 texinfo_documents = [
   ('index', 'xray', u'xray Documentation',
-   u'Stephan Hoyer and Alex Kleeman', 'xray', 'One line description of project.',
+   u'xray Developers', 'xray', 'One line description of project.',
    'Miscellaneous'),
 ]
 
@@ -330,4 +330,5 @@ texinfo_documents = [
 
 
 # Example configuration for intersphinx: refer to the Python standard library.
-intersphinx_mapping = {'http://docs.python.org/': None}
+intersphinx_mapping = {}
+intersphinx_mapping['pandas'] = ('http://pandas.pydata.org/pandas-docs/stable/', None)
