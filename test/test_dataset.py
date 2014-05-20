@@ -676,3 +676,6 @@ class TestDataset(TestCase):
                                  (('dim2', 'time'), ['dim1', 'dim3'])]:
             actual = data.min(dimension=reduct).dimensions
             self.assertItemsEqual(actual, expected)
+
+        data.__delitem__('time')  # removes unused time dim/var that is dropped
+        self.assertDatasetEqual(data.mean(dimension=[]), data)

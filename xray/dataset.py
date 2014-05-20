@@ -982,11 +982,6 @@ class Dataset(Mapping):
         ----------
         dimension : str or sequence of str, optional
             Dimension(s) over which to apply `{name}`.
-        axis : int or sequence of int, optional
-            Axis(es) over which to apply `{name}`. Only one of the 'dimension'
-            and 'axis' arguments can be supplied. If neither are supplied, then
-            `{name}` is calculated over the flattened array (by calling
-            `{name}(x)` without an axis argument).
         **kwargs : dict
             Additional keyword arguments passed on to `{name}`.
 
@@ -1038,7 +1033,7 @@ class Dataset(Mapping):
 
         if isinstance(dimension, basestring):
             dims = set([dimension])
-        elif not dimension:
+        elif dimension is None:
             dims = set(self.coordinates)
         else:
             dims = set(dimension)
@@ -1047,11 +1042,13 @@ class Dataset(Mapping):
         for name, da in iteritems(self.noncoordinates):
             reduce_dims = [dim for dim in da.coordinates if dim in dims]
             if reduce_dims:
-                variables[name] = da.reduce(func, dimension=reduce_dims,
-                                            **kwargs)
+                try:
+                    variables[name] = da.reduce(func, dimension=reduce_dims,
+                                                **kwargs)
+                except TypeError:
+                    pass
             else:
                 variables[name] = da
-            print(variables[name].coordinates.keys())
         return Dataset(variables=variables)  # , attributes=attrs)
 
     @classmethod
