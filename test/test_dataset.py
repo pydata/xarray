@@ -656,3 +656,45 @@ class TestDataset(TestCase):
             # these should not raise UnexpectedDataAccess:
             ds.indexed(time=10)
             ds.indexed(time=slice(10), dim1=[0]).indexed(dim1=0, dim2=-1)
+
+    def test_reduce(self):
+        data = create_test_data()
+
+        self.assertEqual(len(data.mean().coordinates), 0)
+
+        expected = data.max()
+        for var in data.noncoordinates:
+            expected = data[var].max()
+            actual = expected[var]
+            self.assertDataArrayEqual(expected, actual)
+
+        self.assertDatasetEqual(data.min(dimension=['dim1']),
+                                data.min(dimension='dim1'))
+
+        for reduct, expected in [('dim2', ['dim1', 'dim3', 'time']),
+                                 (['dim2', 'time'], ['dim1', 'dim3']),
+                                 (('dim2', 'time'), ['dim1', 'dim3']),
+                                 ((), ['dim1', 'dim2', 'dim3', 'time'])]:
+            actual = data.min(dimension=reduct).dimensions
+            print(reduct, actual, expected)
+            self.assertItemsEqual(actual, expected)
+
+        self.assertDatasetEqual(data.mean(dimension=[]), data)
+
+    def test_reduce_bad_dimension(self):
+        data = create_test_data()
+        with self.assertRaisesRegexp(ValueError, 'Dataset does not contain'):
+            ds = data.mean(dimension='bad_dim')
+
+    def test_reduce_non_numeric(self):
+        data1 = create_test_data(seed=44)
+        data2 = create_test_data(seed=44)
+        add_vars = {'var4': ['dim1', 'dim2']}
+        for v, dims in sorted(add_vars.items()):
+            data = np.random.random_integers(0, 100, size=tuple(_dims[d] for d in dims)).astype(np.str_)
+            data1[v] = (dims, data, {'foo': 'variable'})
+
+        self.assertTrue('var4' not in data1.mean())
+        self.assertDatasetEqual(data1.mean(), data2.mean())
+        self.assertDatasetEqual(data1.mean(dimension='dim1'),
+                                data2.mean(dimension='dim1'))

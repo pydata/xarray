@@ -70,6 +70,23 @@ Selecting
    Dataset.squeeze
    Dataset.groupby
 
+Computations
+~~~~~~~~~~~~
+
+.. autosummary::
+   :toctree: generated/
+
+   Dataset.all
+   Dataset.any
+   Dataset.argmax
+   Dataset.argmin
+   Dataset.max
+   Dataset.min
+   Dataset.mean
+   Dataset.std
+   Dataset.sum
+   Dataset.var
+
 IO / Conversion
 ~~~~~~~~~~~~~~~
 

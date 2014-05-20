@@ -15,6 +15,7 @@ from . import indexing
 from . import variable
 from . import utils
 from . import data_array
+from . import ops
 from .utils import (FrozenOrderedDict, Frozen, SortedKeysDict, ChainMap,
                    multi_index_from_product)
 from .pycompat import iteritems, basestring
@@ -973,6 +974,86 @@ class Dataset(Mapping):
         """
         return utils.squeeze(self, self.dimensions, dimension)
 
+    _reduce_method_docstring = \
+        """Reduce this {cls}'s data' by applying `{name}` along some
+        dimension(s).
+
+        Parameters
+        ----------
+        dimension : str or sequence of str, optional
+            Dimension(s) over which to apply `func`.  By default `func` is
+            applied over all dimensions.
+        **kwargs : dict
+            Additional keyword arguments passed on to `{name}`.
+
+        Returns
+        -------
+        reduced : {cls}
+            New {cls} object with `{name}` applied to its data and the
+            indicated dimension(s) removed.
+        """
+
+    @classmethod
+    def _reduce_method(cls, f, name=None, module=None):
+        def func(self, dimension=None, **kwargs):
+            return self.reduce(f, dimension, **kwargs)
+        if name is None:
+            name = f.__name__
+        func.__name__ = name
+        func.__doc__ = cls._reduce_method_docstring.format(
+            name=('' if module is None else module + '.') + name,
+            cls=cls.__name__)
+        return func
+
+    def reduce(self, func, dimension=None, **kwargs):
+        """Reduce this dataset by applying `func` along some dimension(s).
+
+        Parameters
+        ----------
+        func : function
+            Function which can be called in the form
+            `f(x, axis=axis, **kwargs)` to return the result of reducing an
+            np.ndarray over an integer valued axis.
+        dimension : str or sequence of str, optional
+            Dimension(s) over which to apply `func`.  By default `func` is
+            applied over all dimensions.
+        **kwargs : dict
+            Additional keyword arguments passed on to `func`.
+
+        Returns
+        -------
+        reduced : Dataset
+            Dataset with this object's DataArrays replaced with new DataArrays
+            of summarized data and the indicated dimension(s) removed.
+        """
+
+        if isinstance(dimension, basestring):
+            dims = set([dimension])
+        elif dimension is None:
+            dims = set(self.coordinates)
+        else:
+            dims = set(dimension)
+
+        bad_dims = [dim for dim in dims if dim not in self.coordinates]
+        if bad_dims:
+            raise ValueError('Dataset does not contain the dimensions: '
+                             '{0}'.format(bad_dims))
+
+        variables = OrderedDict()
+        for name, var in iteritems(self.variables):
+            reduce_dims = [dim for dim in var.dimensions if dim in dims]
+            if reduce_dims:
+                if name not in self.dimensions:
+                    try:
+                        variables[name] = var.reduce(func,
+                                                     dimension=reduce_dims,
+                                                     **kwargs)
+                    except TypeError:
+                        pass
+            else:
+                variables[name] = var
+        return Dataset(variables=variables)
+
     @classmethod
     def concat(cls, datasets, dimension='concat_dimension', indexers=None,
                mode='different', concat_over=None, compat='equals'):
@@ -1166,3 +1247,5 @@ class Dataset(Mapping):
             data = series.values.reshape(shape)
             obj[name] = (dimensions, data)
         return obj
+
+ops.inject_reduce_methods(Dataset)
