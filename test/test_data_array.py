@@ -2,16 +2,21 @@ import numpy as np
 import pandas as pd
 from copy import deepcopy
 from textwrap import dedent
+from collections import OrderedDict
 
-from xray import Dataset, DataArray, Variable, align
+from xray import Dataset, DataArray, Variable, align, utils
 from xray.pycompat import iteritems
 from . import TestCase, ReturnItem, source_ndarray
+
+
+_attrs = {'units': 'test', 'long_name': 'testing'}
 
 
 class TestDataArray(TestCase):
     def setUp(self):
         self.x = np.random.random((10, 20))
         self.v = Variable(['x', 'y'], self.x)
+        self.va = Variable(['x', 'y'], self.x, _attrs)
         self.ds = Dataset({'foo': self.v})
         self.dv = self.ds['foo']
 
@@ -261,6 +266,18 @@ class TestDataArray(TestCase):
                             self.v.reduce(np.mean, 'x'))
         # needs more...
         # should check which extra dimensions are dropped
+
+    def test_reduce_keep_attrs(self):
+
+        # Test dropped attrs
+        vm = self.va.mean()
+        self.assertEqual(len(vm.attrs), 0)
+        self.assertTrue(utils.dict_equal(vm.attrs, OrderedDict()))
+
+        # Test kept attrs
+        vm = self.va.mean(keep_attrs=True)
+        self.assertEqual(len(vm.attrs), len(_attrs))
+        self.assertTrue(utils.dict_equal(vm.attrs, _attrs))
 
     def test_unselect(self):
         with self.assertRaisesRegexp(ValueError, 'cannot unselect the name'):
