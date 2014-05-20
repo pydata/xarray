@@ -87,10 +87,13 @@ extensions = [
     'sphinx.ext.autodoc',
     'sphinx.ext.autosummary',
     'sphinx.ext.intersphinx',
+    'sphinx.ext.extlinks',
     'numpydoc',
     'IPython.sphinxext.ipython_directive',
     'IPython.sphinxext.ipython_console_highlighting',
 ]
+
+extlinks = {'issue': ('https://github.com/xray/xray/issues/%s', 'GH')}
 
 autosummary_generate = True
 

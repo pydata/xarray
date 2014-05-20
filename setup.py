@@ -9,8 +9,8 @@ except:
     from distutils.core import setup
 
 MAJOR = 0
-MINOR = 2
-MICRO = 0
+MINOR = 1
+MICRO = 1
 ISRELEASED = False
 VERSION = '%d.%d.%d' % (MAJOR, MINOR, MICRO)
 QUALIFIER = ''
@@ -19,7 +19,7 @@ QUALIFIER = ''
 DISTNAME = 'xray'
 LICENSE = 'Apache'
 AUTHOR = 'Stephan Hoyer, Alex Kleeman, Eugene Brevdo'
-AUTHOR_EMAIL = 'shoyer@climate.com'
+AUTHOR_EMAIL = 'xray-discussion@googlegroups.com'
 URL = 'https://github.com/xray/xray'
 CLASSIFIERS = [
     'Development Status :: 3 - Alpha',
@@ -27,6 +27,7 @@ CLASSIFIERS = [
     'Operating System :: OS Independent',
     'Intended Audience :: Science/Research',
     'Programming Language :: Python :: 2.7',
+    'Programming Language :: Python :: 3.3',
     'Topic :: Scientific/Engineering',
 ]
 

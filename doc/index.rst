@@ -45,17 +45,17 @@ compatibility with the full `PyData ecosystem <http://pydata.org/>`__.
 For a longer introduction to **xray** and its design goals, see
 `the project's GitHub page <http://github.com/xray/xray>`__. The GitHub
 page is where to go to look at the code, report a bug or make your own
-contribution. You can also get in touch via `Twitter
-<http://twitter.com/shoyer>`__.
+contribution. If you have questions or more general feedback about xray, feel
+free to get in touch via `Twitter <http://twitter.com/shoyer>`__  or the
+`mailing list <https://groups.google.com/forum/#!forum/xray-discussion>`__.
 
 .. note ::
 
-    **xray** is still very new -- it is on its first release and is only a few
-    months old. Although we will make a best effort to maintain the current
-    API, it is likely that the API will change in future versions as xray
-    matures. Some changes are already anticipated, as called out in the
-    `Tutorial <tutorial>`_ and the project `README
-    <http://github.com/xray/xray>`__.
+    **xray** is still very new -- it is only a few months old. Although we will
+    make a best effort to maintain the current API, it is likely that the API
+    will change in future versions as xray matures. Some changes are already
+    anticipated, as called out in the `Tutorial <tutorial>`_ and the project
+    `README <http://github.com/xray/xray>`__.
 
 Contents
 --------
@@ -67,3 +67,4 @@ Contents
    tutorial
    data-structures
    api
+   whats_new
