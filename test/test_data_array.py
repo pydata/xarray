@@ -4,7 +4,7 @@ from copy import deepcopy
 from textwrap import dedent
 from collections import OrderedDict
 
-from xray import Dataset, DataArray, Variable, align, utils
+from xray import Dataset, DataArray, Variable, align
 from xray.pycompat import iteritems
 from . import TestCase, ReturnItem, source_ndarray
 
@@ -270,12 +270,12 @@ class TestDataArray(TestCase):
         # Test dropped attrs
         vm = self.va.mean()
         self.assertEqual(len(vm.attrs), 0)
-        self.assertTrue(utils.dict_equal(vm.attrs, OrderedDict()))
+        self.assertEqual(vm.attrs, OrderedDict())
 
         # Test kept attrs
         vm = self.va.mean(keep_attrs=True)
         self.assertEqual(len(vm.attrs), len(_attrs))
-        self.assertTrue(utils.dict_equal(vm.attrs, _attrs))
+        self.assertEqual(vm.attrs, _attrs)
 
     def test_unselect(self):
         with self.assertRaisesRegexp(ValueError, 'cannot unselect the name'):

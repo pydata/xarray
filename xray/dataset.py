@@ -1031,11 +1031,6 @@ class Dataset(Mapping):
             of summarized data and the indicated dimension(s) removed.
         """
 
-        if keep_attrs:
-            attrs = self.attrs
-        else:
-            attrs = OrderedDict()
-
         if isinstance(dimension, basestring):
             dims = set([dimension])
         elif dimension is None:
@@ -1061,6 +1056,9 @@ class Dataset(Mapping):
                         pass
             else:
                 variables[name] = var
+
+        attrs = self.attrs if keep_attrs else {}
+
         return Dataset(variables=variables, attributes=attrs)
 
     @classmethod

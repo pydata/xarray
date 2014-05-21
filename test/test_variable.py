@@ -6,7 +6,7 @@ from textwrap import dedent
 import numpy as np
 import pandas as pd
 
-from xray import Variable, Dataset, DataArray, indexing, utils
+from xray import Variable, Dataset, DataArray, indexing
 from xray.variable import (Coordinate, as_variable, NumpyArrayAdapter,
                            PandasIndexAdapter, _as_compatible_data)
 from xray.pycompat import PY3
@@ -538,12 +538,12 @@ class TestVariable(TestCase, VariableSubclassTestCases):
         # Test dropped attrs
         vm = v.mean()
         self.assertEqual(len(vm.attrs), 0)
-        self.assertTrue(utils.dict_equal(vm.attrs, OrderedDict()))
+        self.assertEqual(vm.attrs, OrderedDict())
 
         # Test kept attrs
         vm = v.mean(keep_attrs=True)
         self.assertEqual(len(vm.attrs), len(_attrs))
-        self.assertTrue(utils.dict_equal(vm.attrs, _attrs))
+        self.assertEqual(vm.attrs, _attrs)
 
 
 class TestCoordinate(TestCase, VariableSubclassTestCases):

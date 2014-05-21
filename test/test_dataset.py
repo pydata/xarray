@@ -708,9 +708,9 @@ class TestDataset(TestCase):
         # Test dropped attrs
         ds = data.mean()
         self.assertEqual(len(ds.attrs), 0)
-        self.assertTrue(utils.dict_equal(ds.attrs, OrderedDict()))
+        self.assertEqual(ds.attrs, OrderedDict())
 
         # Test kept attrs
         ds = data.mean(keep_attrs=True)
         self.assertEqual(len(ds.attrs), len(_attrs))
-        self.assertTrue(utils.dict_equal(ds.attrs, attrs))
+        self.assertTrue(ds.attrs, attrs)

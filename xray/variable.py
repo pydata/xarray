@@ -488,11 +488,6 @@ class Variable(AbstractArray):
             removed.
         """
 
-        if keep_attrs:
-            attrs = self.attrs
-        else:
-            attrs = OrderedDict()
-
         if dimension is not None and axis is not None:
             raise ValueError("cannot supply both 'axis' and 'dimension' "
                              "arguments")
@@ -505,6 +500,8 @@ class Variable(AbstractArray):
                         else np.atleast_1d(axis) % self.ndim)
         dims = [dim for n, dim in enumerate(self.dimensions)
                 if n not in removed_axes]
+
+        attrs = self.attrs if keep_attrs else {}
 
         return Variable(dims, data, attributes=attrs)
 
