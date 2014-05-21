@@ -465,7 +465,8 @@ class DataArray(AbstractArray):
         ds = self.dataset.squeeze(dimension)
         return ds[self.name]
 
-    def reduce(self, func, dimension=None, axis=None, **kwargs):
+    def reduce(self, func, dimension=None, axis=None, keep_attrs=False,
+               **kwargs):
         """Reduce this array by applying `func` along some dimension(s).
 
         Parameters
@@ -481,6 +482,10 @@ class DataArray(AbstractArray):
             'dimension' and 'axis' arguments can be supplied. If neither are
             supplied, then the reduction is calculated over the flattened array
             (by calling `f(x)` without an axis argument).
+        keep_attrs : bool, optional
+            If True, the variable's attributes (`attrs`) will be copied from
+            the original object to the new one.  If False (default), the new
+            object will be returned without attributes.
         **kwargs : dict
             Additional keyword arguments passed on to `func`.
 
@@ -490,7 +495,7 @@ class DataArray(AbstractArray):
             DataArray with this object's array replaced with an array with
             summarized data and the indicated dimension(s) removed.
         """
-        var = self.variable.reduce(func, dimension, axis, **kwargs)
+        var = self.variable.reduce(func, dimension, axis, keep_attrs, **kwargs)
         drop = set(self.dimensions) - set(var.dimensions)
         # For now, take an aggressive strategy of removing all variables
         # associated with any dropped dimensions

@@ -6,12 +6,14 @@ from textwrap import dedent
 import numpy as np
 import pandas as pd
 
-from xray import Variable, Dataset, DataArray, indexing
+from xray import Variable, Dataset, DataArray, indexing, utils
 from xray.variable import (Coordinate, as_variable, NumpyArrayAdapter,
                            PandasIndexAdapter, _as_compatible_data)
 from xray.pycompat import PY3
 
 from . import TestCase, source_ndarray
+
+_attrs = {'units': 'test', 'long_name': 'testing'}
 
 
 class VariableSubclassTestCases(object):
@@ -529,6 +531,19 @@ class TestVariable(TestCase, VariableSubclassTestCases):
 
         with self.assertRaisesRegexp(ValueError, 'cannot supply both'):
             v.mean(dimension='x', axis=0)
+
+    def test_reduce_keep_attrs(self):
+        v = Variable(['x', 'y'], self.d, _attrs)
+
+        # Test dropped attrs
+        vm = v.mean()
+        self.assertEqual(len(vm.attrs), 0)
+        self.assertTrue(utils.dict_equal(vm.attrs, OrderedDict()))
+
+        # Test kept attrs
+        vm = v.mean(keep_attrs=True)
+        self.assertEqual(len(vm.attrs), len(_attrs))
+        self.assertTrue(utils.dict_equal(vm.attrs, _attrs))
 
 
 class TestCoordinate(TestCase, VariableSubclassTestCases):

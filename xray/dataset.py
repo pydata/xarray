@@ -1005,7 +1005,7 @@ class Dataset(Mapping):
             cls=cls.__name__)
         return func
 
-    def reduce(self, func, dimension=None, **kwargs):
+    def reduce(self, func, dimension=None, keep_attrs=False, **kwargs):
         """Reduce this dataset by applying `func` along some dimension(s).
 
         Parameters
@@ -1019,6 +1019,10 @@ class Dataset(Mapping):
             applied over all dimensions.
         **kwargs : dict
             Additional keyword arguments passed on to `func`.
+        keep_attrs : bool, optional
+            If True, the variable's attributes (`attrs`) will be copied from
+            the original object to the new one.  If False (default), the new
+            object will be returned without attributes.
 
         Returns
         -------
@@ -1026,6 +1030,11 @@ class Dataset(Mapping):
             Dataset with this object's DataArrays replaced with new DataArrays
             of summarized data and the indicated dimension(s) removed.
         """
+
+        if keep_attrs:
+            attrs = self.attrs
+        else:
+            attrs = OrderedDict()
 
         if isinstance(dimension, basestring):
             dims = set([dimension])
@@ -1052,7 +1061,7 @@ class Dataset(Mapping):
                         pass
             else:
                 variables[name] = var
-        return Dataset(variables=variables)
+        return Dataset(variables=variables, attributes=attrs)
 
     @classmethod
     def concat(cls, datasets, dimension='concat_dimension', indexers=None,
