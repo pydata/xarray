@@ -680,3 +680,8 @@ class TestDataset(TestCase):
             self.assertItemsEqual(actual, expected)
 
         self.assertDatasetEqual(data.mean(dimension=[]), data)
+
+    def test_reduce_bad_dimension(self):
+        data = create_test_data()
+        with self.assertRaisesRegexp(ValueError, 'Dataset does not contain'):
+            ds = data.mean(dimension='bad_dim')
