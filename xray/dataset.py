@@ -981,7 +981,8 @@ class Dataset(Mapping):
         Parameters
         ----------
         dimension : str or sequence of str, optional
-            Dimension(s) over which to apply `{name}`.
+            Dimension(s) over which to apply `func`.  By default `func` is
+            applied over all dimensions.
         **kwargs : dict
             Additional keyword arguments passed on to `{name}`.
 
@@ -1004,7 +1005,7 @@ class Dataset(Mapping):
             cls=cls.__name__)
         return func
 
-    def reduce(self, func, dimension=None, keep_attrs=False, **kwargs):
+    def reduce(self, func, dimension=None, **kwargs):
         """Reduce this dataset by applying `func` along some dimension(s).
 
         Parameters
@@ -1013,9 +1014,9 @@ class Dataset(Mapping):
             Function which can be called in the form
             `f(x, axis=axis, **kwargs)` to return the result of reducing an
             np.ndarray over an integer valued axis.
-        dimension : str or sequence of str, optional Dimension(s) over which
-            to apply `func`.  If `dimension=None`(default) `func` is applied
-            ove all dimensions.
+        dimension : str or sequence of str, optional
+            Dimension(s) over which to apply `func`.  By default `func` is
+            applied over all dimensions.
         **kwargs : dict
             Additional keyword arguments passed on to `func`.
         keep_attrs : bool, optional
@@ -1042,26 +1043,24 @@ class Dataset(Mapping):
         else:
             dims = set(dimension)
 
-        if any([True for dim in dims if dim not in self.coordinates]):
-            bad_dims = [dim for dim in dims if dim not in self.coordinates]
+        bad_dims = [dim for dim in dims if dim not in self.coordinates]
+        if bad_dims:
             raise ValueError('Dataset does not contain the dimensions: '
                              '{0}'.format(bad_dims))
 
         variables = OrderedDict()
-        for name, da in iteritems(self.variables):
-            reduce_dims = [dim for dim in da.dimensions if dim in dims]
+        for name, var in iteritems(self.variables):
+            reduce_dims = [dim for dim in var.dimensions if dim in dims]
             if reduce_dims:
-                if (len(reduce_dims)) == 1 and name in reduce_dims:
-                    pass  # drop this variable --> (reduction coordinate)
-                else:
+                if name not in self.dimensions:
                     try:
-                        variables[name] = da.reduce(func,
-                                                    dimension=reduce_dims,
-                                                    **kwargs)
+                        variables[name] = var.reduce(func,
+                                                     dimension=reduce_dims,
+                                                     **kwargs)
                     except TypeError:
                         pass
             else:
-                variables[name] = da
+                variables[name] = var
         return Dataset(variables=variables, attributes=attrs)
 
     @classmethod

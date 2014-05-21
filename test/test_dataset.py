@@ -702,3 +702,15 @@ class TestDataset(TestCase):
         with self.assertRaisesRegexp(ValueError, 'Dataset does not contain'):
             ds = data.mean(dimension='bad_dim')
 
+    def test_reduce_non_numeric(self):
+        data1 = create_test_data(seed=44)
+        data2 = create_test_data(seed=44)
+        add_vars = {'var4': ['dim1', 'dim2']}
+        for v, dims in sorted(add_vars.items()):
+            data = np.random.random_integers(0, 100, size=tuple(_dims[d] for d in dims)).astype(np.str_)
+            data1[v] = (dims, data, {'foo': 'variable'})
+
+        self.assertTrue('var4' not in data1.mean())
+        self.assertDatasetEqual(data1.mean(), data2.mean())
+        self.assertDatasetEqual(data1.mean(dimension='dim1'),
+                                data2.mean(dimension='dim1'))

@@ -169,7 +169,7 @@ We can numpy reduction functions to the entire dataset, returning a new
     bar = ds.mean()
     bar
 
-The ``dimension=None``(default) keyword will limit the reduction to only the dimension(s) provided.  
+The ``dimension``(default=None) keyword will limit the reduction to only the dimension(s) provided.  
 
 .. ipython:: python
 
