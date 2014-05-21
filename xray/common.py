@@ -96,6 +96,10 @@ class AbstractArray(ImplementsReduce):
             and 'axis' arguments can be supplied. If neither are supplied, then
             `{name}` is calculated over the flattened array (by calling
             `{name}(x)` without an axis argument).
+        keep_attrs : bool, optional
+            If True, the variable's attributes (`attrs`) will be copied from
+            the original object to the new one.  If False (default), the new
+            object will be returned without attributes.
         **kwargs : dict
             Additional keyword arguments passed on to `{name}`.
 

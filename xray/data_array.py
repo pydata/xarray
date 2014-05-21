@@ -504,6 +504,10 @@ class DataArray(AbstractArray):
                  if any(dim in drop for dim in v.dimensions)}
         ds = self.dataset.unselect(*drop)
         ds[self.name] = var
+
+        if keep_attrs:
+            ds.attrs = self.dataset.attrs
+
         return ds[self.name]
 
     @classmethod

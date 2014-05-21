@@ -13,8 +13,6 @@ from xray.pycompat import PY3
 
 from . import TestCase, source_ndarray
 
-_attrs = {'units': 'test', 'long_name': 'testing'}
-
 
 class VariableSubclassTestCases(object):
     def test_properties(self):
@@ -533,6 +531,8 @@ class TestVariable(TestCase, VariableSubclassTestCases):
             v.mean(dimension='x', axis=0)
 
     def test_reduce_keep_attrs(self):
+        _attrs = {'units': 'test', 'long_name': 'testing'}
+
         v = Variable(['x', 'y'], self.d, _attrs)
 
         # Test dropped attrs

@@ -20,7 +20,6 @@ _vars = {'var1': ['dim1', 'dim2'],
          'var2': ['dim1', 'dim2'],
          'var3': ['dim3', 'dim1'],
          }
-_attrs = {'attr1': 'value1', 'attr2': 2929}
 _testvar = sorted(_vars.keys())[0]
 _testdim = sorted(_dims.keys())[0]
 
@@ -702,6 +701,8 @@ class TestDataset(TestCase):
 
     def test_reduce_keep_attrs(self):
         data = create_test_data()
+        _attrs = {'attr1': 'value1', 'attr2': 2929}
+
         attrs = OrderedDict(_attrs)
         data.attrs = attrs
 
