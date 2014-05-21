@@ -52,16 +52,30 @@ def as_variable(obj, strict=True):
 
 
 def _as_compatible_data(data):
-    """If data does not have the necessary attributes to be the private _data
-    attribute, convert it to a np.ndarray and raise an warning
+    """Prepare and wrap data to put in a Variable.
+
+    Prepare the data:
+    - If data does not have the necessary attributes, convert it to ndarray.
+    - If data has dtype=datetime64, ensure that it has ns precision.
+    - If data is already a pandas or xray object (other than an Index), just
+      use the values.
+
+    Wrap it up:
+    - Finally, put pandas.Index and numpy.ndarray arguments in adapter objects
+      to ensure they can be indexed properly.
+    - NumpyArrayAdapter, PandasIndexAdapter and LazilyIndexedArray should
+      all pass through unmodified.
     """
-    # don't check for __len__ or __iter__ so as not to warn if data is a numpy
+    # don't check for __len__ or __iter__ so as not to cast if data is a numpy
     # numeric type like np.float32
     required = ['dtype', 'shape', 'size', 'ndim']
-    if (any(not hasattr(data, attr) for attr in required)
-            or isinstance(data, np.string_)):
-        data = utils.as_safe_array(data)
-    elif not isinstance(data, (pd.Index, indexing.LazilyIndexedArray)):
+    if any(not hasattr(data, attr) for attr in required):
+        # data must be ndarray-like
+        data = np.asarray(data)
+    elif isinstance(data, np.datetime64):
+        # note: np.datetime64 is ndarray-like
+        data = np.datetime64(data, 'ns')
+    elif not isinstance(data, pd.Index):
         try:
             # we don't want nested self-described arrays
             # use try/except instead of hasattr to only calculate values once
@@ -73,7 +87,10 @@ def _as_compatible_data(data):
         # check pd.Index first since it's (currently) an ndarray subclass
         data = PandasIndexAdapter(data)
     elif isinstance(data, np.ndarray):
-        data = NumpyArrayAdapter(utils.as_safe_array(data))
+        if data.dtype.kind == 'M':
+            data = np.asarray(data, 'datetime64[ns]')
+        data = NumpyArrayAdapter(data)
+
     return data
 
 
@@ -130,21 +147,43 @@ class PandasIndexAdapter(utils.NDArrayMixin):
             # unpack key so it can index a pandas.Index object (pandas.Index
             # objects don't like tuples)
             key, = key
+
         if isinstance(key, (int, np.integer)):
-            return utils.as_array_or_item(self.array[key], dtype=self.dtype)
+            value = np.asarray(self.array[key], dtype=self.dtype)
         else:
-            if isinstance(key, slice) and key == slice(None):
-                # pandas<0.14 does dtype inference when slicing; we would like
-                # to avoid this if possible
+            arr = self.array[key]
+            if arr.dtype != self.array.dtype:
+                # pandas<0.14 does dtype inference when slicing:
                 # https://github.com/pydata/pandas/issues/6370
-                arr = self.array
-            else:
-                arr = self.array[key]
-            return PandasIndexAdapter(arr, dtype=self.dtype)
+                # To avoid this, slice values instead if necessary and accept
+                # that we will need to rebuild the index:
+                arr = self.array.values[key]
+            value = PandasIndexAdapter(arr, dtype=self.dtype)
+
+        return value
 
     def __repr__(self):
         return ('%s(array=%r, dtype=%r)'
                 % (type(self).__name__, self.array, self.dtype))
+
+
+def _as_array_or_item(data):
+    """Return the given values as a numpy array, or as an individual item if
+    it's a 0-dimensional object array or datetime64.
+
+    Importantly, this function does not copy data if it is already an ndarray -
+    otherwise, it will not be possible to update Variable values in place.
+    """
+    data = np.asarray(data)
+    if data.ndim == 0:
+        if data.dtype.kind == 'O':
+            # unpack 0d object arrays to be consistent with numpy
+            data = data.item()
+        elif data.dtype.kind == 'M':
+            # convert to a np.datetime64 object, because 0-dimensional ndarrays
+            # with dtype=datetime64 are broken :(
+            data = np.datetime64(data, 'ns')
+    return data
 
 
 class Variable(AbstractArray):
@@ -219,7 +258,7 @@ class Variable(AbstractArray):
     @property
     def values(self):
         """The variable's data as a numpy.ndarray"""
-        return utils.as_array_or_item(self._data_cached())
+        return _as_array_or_item(self._data_cached())
 
     @values.setter
     def values(self, values):

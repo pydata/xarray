@@ -4,7 +4,6 @@ import functools
 import operator
 import warnings
 from collections import OrderedDict, Mapping, MutableMapping
-from datetime import datetime
 
 import numpy as np
 import pandas as pd
@@ -36,35 +35,6 @@ def class_alias(obj, old_name):
     return Wrapper
 
 
-def as_safe_array(values, dtype=None):
-    """Like np.asarray, but convert all datetime64 arrays to ns precision
-    """
-    values = np.asarray(values, dtype=dtype)
-    if values.dtype.kind == 'M':
-        # np.datetime64
-        values = values.astype('datetime64[ns]')
-    return values
-
-
-def as_array_or_item(values, dtype=None):
-    """Return the given values as a numpy array of the indicated dtype, or as
-    an individual value if it's a 0-dimensional object array or datetime.
-    """
-    if isinstance(values, datetime):
-        # shortcut because if you try to make a datetime or Timestamp object
-        # into an array with the proper dtype, it is liable to be silently
-        # converted into an integer instead :(
-        return values
-    values = as_safe_array(values, dtype=dtype)
-    if values.ndim == 0 and values.dtype.kind == 'O':
-        # unpack 0d object arrays to be consistent with numpy
-        values = values.item()
-        if isinstance(values, pd.Timestamp):
-            # turn Timestamps back into datetime64 objects
-            values = np.datetime64(values, 'ns')
-    return values
-
-
 def squeeze(xray_obj, dimensions, dimension=None):
     """Squeeze the dimensions of an xray object."""
     if dimension is None:
@@ -93,11 +63,22 @@ def array_equiv(arr1, arr2):
     arr1, arr2 = np.asarray(arr1), np.asarray(arr2)
     if arr1.shape != arr2.shape:
         return False
-    # we could make this faster by not-checking for null values if the dtype
-    # does not support them, but the logic would get more convoluted.
-    # using pd.isnull lets us defer the NaN handling to pandas (and unlike
-    # np.isnan it works on every dtype).
-    return ((arr1 == arr2) | (pd.isnull(arr1) & pd.isnull(arr2))).all()
+    if arr1.ndim == 0:
+        # work around for pd.isnull not working for 0-dimensional object
+        # arrays: https://github.com/pydata/pandas/pull/7176 (should be fixed
+        # in pandas 0.14)
+        # use .item() instead of keeping around 0-dimensional arrays to avoid
+        # the numpy quirk where object arrays are checked as equal by identity
+        # (hence NaN in an object array is equal to itself):
+        arr1 = arr1.item()
+        arr2 = arr2.item()
+        return arr1 == arr2 or (arr1 != arr1 and arr2 != arr2)
+    else:
+        # we could make this faster by not-checking for null values if the
+        # dtype does not support them, but the logic would get more convoluted.
+        # using pd.isnull lets us defer the NaN handling to pandas (and unlike
+        # np.isnan it works on every dtype).
+        return ((arr1 == arr2) | (pd.isnull(arr1) & pd.isnull(arr2))).all()
 
 
 def safe_cast_to_index(array):

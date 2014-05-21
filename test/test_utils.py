@@ -21,6 +21,17 @@ class TestSafeCastToIndex(TestCase):
             self.assertEqual(expected.dtype, actual.dtype)
 
 
+class TestArrayEquiv(TestCase):
+    def test_0d(self):
+        # verify our work around for pd.isnull not working for 0-dimensional
+        # object arrays
+        self.assertTrue(utils.array_equiv(0, np.array(0, dtype=object)))
+        self.assertTrue(
+            utils.array_equiv(np.nan, np.array(np.nan, dtype=object)))
+        self.assertFalse(
+            utils.array_equiv(0, np.array(1, dtype=object)))
+
+
 class TestDictionaries(TestCase):
     def setUp(self):
         self.x = {'a': 'A', 'b': 'B'}

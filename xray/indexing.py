@@ -212,12 +212,8 @@ class LazilyIndexedArray(utils.NDArrayMixin):
                 shape.append(k.size)
         return tuple(shape)
 
-    @property
-    def values(self):
-        return self.array[self.key]
-
     def __array__(self, dtype=None):
-        return np.asarray(self.values, dtype=None)
+        return np.asarray(self.array[self.key], dtype=None)
 
     def __getitem__(self, key):
         return type(self)(self.array, self._updated_key(key))

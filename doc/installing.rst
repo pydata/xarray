@@ -1,8 +1,9 @@
 Installing xray
 ===============
 
-xray requires Python 2.7 and recent versions of
-`numpy <http://www.numpy.org/>`__ (1.8.0 or later) and
+xray runs on Python 2.7 and Python 3.3 (Python 3.4 has not yet been tested).
+It also requires
+`numpy <http://www.numpy.org/>`__ (1.7 or later) and
 `pandas <http://pandas.pydata.org/>`__ (0.13.1 or later).
 `netCDF4-python <https://github.com/Unidata/netcdf4-python>`__,
 `pydap <http://www.pydap.org/>`__ and `scipy <http://scipy.org/>`__ are
