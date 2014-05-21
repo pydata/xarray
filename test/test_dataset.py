@@ -20,6 +20,7 @@ _vars = {'var1': ['dim1', 'dim2'],
          'var2': ['dim1', 'dim2'],
          'var3': ['dim3', 'dim1'],
          }
+_attrs = {'attr1': 'value1', 'attr2': 2929}
 _testvar = sorted(_vars.keys())[0]
 _testdim = sorted(_dims.keys())[0]
 
@@ -698,3 +699,18 @@ class TestDataset(TestCase):
         self.assertDatasetEqual(data1.mean(), data2.mean())
         self.assertDatasetEqual(data1.mean(dimension='dim1'),
                                 data2.mean(dimension='dim1'))
+
+    def test_reduce_keep_attrs(self):
+        data = create_test_data()
+        attrs = OrderedDict(_attrs)
+        data.attrs = attrs
+
+        # Test dropped attrs
+        ds = data.mean()
+        self.assertEqual(len(ds.attrs), 0)
+        self.assertTrue(utils.dict_equal(ds.attrs, OrderedDict()))
+
+        # Test kept attrs
+        ds = data.mean(keep_attrs=True)
+        self.assertEqual(len(ds.attrs), len(_attrs))
+        self.assertTrue(utils.dict_equal(ds.attrs, attrs))

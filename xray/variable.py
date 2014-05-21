@@ -457,7 +457,8 @@ class Variable(AbstractArray):
         dimensions = dict(zip(self.dimensions, self.shape))
         return utils.squeeze(self, dimensions, dimension)
 
-    def reduce(self, func, dimension=None, axis=None, **kwargs):
+    def reduce(self, func, dimension=None, axis=None, keep_attrs=False,
+               **kwargs):
         """Reduce this array by applying `func` along some dimension(s).
 
         Parameters
@@ -473,6 +474,10 @@ class Variable(AbstractArray):
             and 'axis' arguments can be supplied. If neither are supplied, then
             the reduction is calculated over the flattened array (by calling
             `func(x)` without an axis argument).
+        keep_attrs : bool, optional
+            If True, the variable's attributes (`attrs`) will be copied from
+            the original object to the new one.  If False (default), the new
+            object will be returned without attributes.
         **kwargs : dict
             Additional keyword arguments passed on to `func`.
 
@@ -482,6 +487,12 @@ class Variable(AbstractArray):
             Array with summarized data and the indicated dimension(s)
             removed.
         """
+
+        if keep_attrs:
+            attrs = self.attrs
+        else:
+            attrs = OrderedDict()
+
         if dimension is not None and axis is not None:
             raise ValueError("cannot supply both 'axis' and 'dimension' "
                              "arguments")
@@ -495,7 +506,7 @@ class Variable(AbstractArray):
         dims = [dim for n, dim in enumerate(self.dimensions)
                 if n not in removed_axes]
 
-        return Variable(dims, data)
+        return Variable(dims, data, attributes=attrs)
 
     @classmethod
     def concat(cls, variables, dimension='stacked_dimension',
