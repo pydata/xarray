@@ -1042,9 +1042,14 @@ class Dataset(Mapping):
         else:
             dims = set(dimension)
 
+        if any([True for dim in dims if dim not in self.coordinates]):
+            bad_dims = [dim for dim in dims if dim not in self.coordinates]
+            raise ValueError('Dataset does not contain the dimensions: '
+                             '{0}'.format(bad_dims))
+
         variables = OrderedDict()
-        for name, da in iteritems(self):
-            reduce_dims = [dim for dim in da.coordinates.keys() if dim in dims]
+        for name, da in iteritems(self.variables):
+            reduce_dims = [dim for dim in da.dimensions if dim in dims]
             if reduce_dims:
                 if (len(reduce_dims)) == 1 and name in reduce_dims:
                     pass  # drop this variable --> (reduction coordinate)

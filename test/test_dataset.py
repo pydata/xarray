@@ -696,3 +696,9 @@ class TestDataset(TestCase):
         ds = data.mean(keep_attrs=True)
         self.assertEqual(len(ds.attrs), len(_attrs))
         self.assertTrue(utils.dict_equal(ds.attrs, attrs))        
+
+    def test_reduce_bad_dimension(self):
+        data = create_test_data()
+        with self.assertRaisesRegexp(ValueError, 'Dataset does not contain'):
+            ds = data.mean(dimension='bad_dim')
+
