@@ -1005,7 +1005,7 @@ class Dataset(Mapping):
             cls=cls.__name__)
         return func
 
-    def reduce(self, func, dimension=None, **kwargs):
+    def reduce(self, func, dimension=None, keep_attrs=False, **kwargs):
         """Reduce this dataset by applying `func` along some dimension(s).
 
         Parameters
