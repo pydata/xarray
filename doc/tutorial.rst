@@ -159,6 +159,23 @@ contents of the ``Dataset`` will still be the same underlying
 :py:class:`xray.Variable`. You can copy all data by supplying the argument
 ``deep=True``.
 
+Datasets reductions
+~~~~~~~~~~~~~~~~~~
+We can numpy reduction functions to the entire dataset, returning a new 
+``Dataset``.  
+
+.. ipython:: python
+
+    bar = ds.mean()
+    bar
+
+The ``dimension``(default=None) keyword will limit the reduction to only the dimension(s) provided.  
+
+.. ipython:: python
+
+    spam = ds.mean(dimension='time')
+    spam
+
 ``DataArray`` objects
 ---------------------
 
