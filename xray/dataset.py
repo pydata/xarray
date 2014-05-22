@@ -999,8 +999,8 @@ class Dataset(Mapping):
 
     @classmethod
     def _reduce_method(cls, f, name=None, module=None):
-        def func(self, dimension=None, **kwargs):
-            return self.reduce(f, dimension, **kwargs)
+        def func(self, dimension=None, keep_attrs=False, **kwargs):
+            return self.reduce(f, dimension, keep_attrs, **kwargs)
         if name is None:
             name = f.__name__
         func.__name__ = name

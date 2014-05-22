@@ -5,8 +5,8 @@ from .pycompat import basestring, iteritems
 class ImplementsReduce(object):
     @classmethod
     def _reduce_method(cls, f, name=None, module=None):
-        def func(self, dimension=None, axis=None, **kwargs):
-            return self.reduce(f, dimension, axis, **kwargs)
+        def func(self, dimension=None, axis=None, keep_attrs=False, **kwargs):
+            return self.reduce(f, dimension, axis, keep_attrs, **kwargs)
         if name is None:
             name = f.__name__
         func.__name__ = name
