@@ -983,6 +983,10 @@ class Dataset(Mapping):
         dimension : str or sequence of str, optional
             Dimension(s) over which to apply `func`.  By default `func` is
             applied over all dimensions.
+        keep_attrs : bool, optional
+            If True, the datasets's attributes (`attrs`) will be copied from
+            the original object to the new one.  If False (default), the new
+            object will be returned without attributes.
         **kwargs : dict
             Additional keyword arguments passed on to `{name}`.
 
@@ -995,8 +999,8 @@ class Dataset(Mapping):
 
     @classmethod
     def _reduce_method(cls, f, name=None, module=None):
-        def func(self, dimension=None, **kwargs):
-            return self.reduce(f, dimension, **kwargs)
+        def func(self, dimension=None, keep_attrs=False, **kwargs):
+            return self.reduce(f, dimension, keep_attrs, **kwargs)
         if name is None:
             name = f.__name__
         func.__name__ = name
@@ -1005,7 +1009,7 @@ class Dataset(Mapping):
             cls=cls.__name__)
         return func
 
-    def reduce(self, func, dimension=None, **kwargs):
+    def reduce(self, func, dimension=None, keep_attrs=False, **kwargs):
         """Reduce this dataset by applying `func` along some dimension(s).
 
         Parameters
@@ -1017,6 +1021,10 @@ class Dataset(Mapping):
         dimension : str or sequence of str, optional
             Dimension(s) over which to apply `func`.  By default `func` is
             applied over all dimensions.
+        keep_attrs : bool, optional
+            If True, the datasets's attributes (`attrs`) will be copied from
+            the original object to the new one.  If False (default), the new
+            object will be returned without attributes.
         **kwargs : dict
             Additional keyword arguments passed on to `func`.
 
@@ -1052,7 +1060,10 @@ class Dataset(Mapping):
                         pass
             else:
                 variables[name] = var
-        return Dataset(variables=variables)
+
+        attrs = self.attrs if keep_attrs else {}
+
+        return Dataset(variables=variables, attributes=attrs)
 
     @classmethod
     def concat(cls, datasets, dimension='concat_dimension', indexers=None,

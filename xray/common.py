@@ -5,8 +5,8 @@ from .pycompat import basestring, iteritems
 class ImplementsReduce(object):
     @classmethod
     def _reduce_method(cls, f, name=None, module=None):
-        def func(self, dimension=None, axis=None, **kwargs):
-            return self.reduce(f, dimension, axis, **kwargs)
+        def func(self, dimension=None, axis=None, keep_attrs=False, **kwargs):
+            return self.reduce(f, dimension, axis, keep_attrs, **kwargs)
         if name is None:
             name = f.__name__
         func.__name__ = name
@@ -96,6 +96,10 @@ class AbstractArray(ImplementsReduce):
             and 'axis' arguments can be supplied. If neither are supplied, then
             `{name}` is calculated over the flattened array (by calling
             `{name}(x)` without an axis argument).
+        keep_attrs : bool, optional
+            If True, the variable's attributes (`attrs`) will be copied from
+            the original object to the new one.  If False (default), the new
+            object will be returned without attributes.
         **kwargs : dict
             Additional keyword arguments passed on to `{name}`.
 

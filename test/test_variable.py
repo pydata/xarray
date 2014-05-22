@@ -530,6 +530,21 @@ class TestVariable(TestCase, VariableSubclassTestCases):
         with self.assertRaisesRegexp(ValueError, 'cannot supply both'):
             v.mean(dimension='x', axis=0)
 
+    def test_reduce_keep_attrs(self):
+        _attrs = {'units': 'test', 'long_name': 'testing'}
+
+        v = Variable(['x', 'y'], self.d, _attrs)
+
+        # Test dropped attrs
+        vm = v.mean()
+        self.assertEqual(len(vm.attrs), 0)
+        self.assertEqual(vm.attrs, OrderedDict())
+
+        # Test kept attrs
+        vm = v.mean(keep_attrs=True)
+        self.assertEqual(len(vm.attrs), len(_attrs))
+        self.assertEqual(vm.attrs, _attrs)
+
 
 class TestCoordinate(TestCase, VariableSubclassTestCases):
     cls = staticmethod(Coordinate)
