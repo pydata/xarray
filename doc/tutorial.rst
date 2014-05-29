@@ -823,6 +823,7 @@ We can load NetCDF files to create a new Dataset using the
     In [1]: ds_disk = xray.open_dataset('saved_on_disk.nc')
 
     In [2]: ds_disk
+    Out[2]:
     <xray.Dataset>
     Dimensions:     (space: 4, time: 3)
     Coordinates:
@@ -874,6 +875,7 @@ serializes objects, by viewing and manipulating the
     :verbatim:
 
     In [1]: ds_disk['time'].encoding
+    Out[1]:
     {'calendar': u'proleptic_gregorian',
      'chunksizes': None,
      'complevel': 0,
@@ -907,6 +909,7 @@ __ http://iri.columbia.edu/
         'http://iridl.ldeo.columbia.edu/SOURCES/.OSU/.PRISM/.monthly/dods')
 
     In [4]: remote_data
+    Out[4]:
     <xray.Dataset>
     Dimensions:     (T: 1432, X: 1405, Y: 621)
     Coordinates:
@@ -923,6 +926,7 @@ __ http://iri.columbia.edu/
         expires: 1401580800
 
     In [5]: remote_data['tmax']
+    Out[5]:
     <xray.DataArray 'tmax' (T: 1432, Y: 621, X: 1405)>
     [1249427160 values with dtype=float64]
     Attributes:
@@ -941,6 +945,7 @@ over the network until we look at particular values:
     In [4]: tmax = remote_data['tmax'][:500, ::3, ::3]
 
     In [5]: tmax
+    Out[5]:
     <xray.DataArray 'tmax' (T: 500, Y: 207, X: 469)>
     [48541500 values with dtype=float64]
     Attributes:
@@ -980,9 +985,9 @@ Finally, we can plot the values with matplotlib:
 
     In [11]: plt.gca().patch.set_color('0')
 
-    In [12]: plt.contourf(tmax_ss['X'], tmax_ss['Y'], tmax_ss.values, 20,
-                 cmap=get_cmap('RdBu_r'))
+    In [112]: plt.contourf(tmax_ss['X'], tmax_ss['Y'], tmax_ss.values, 20,
+         ...:     cmap=get_cmap('RdBu_r'))
 
-    In [13]: plt.colorbar()
+    In [113]: plt.colorbar()
 
 .. image:: _static/opendap-prism-tmax.png

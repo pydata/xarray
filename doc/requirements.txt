@@ -1,7 +1,7 @@
 # only the dependencies required to build xray's docs
 # all others (only netCDF4 for now) are mocked out in conf.py
 numpy>=1.7
-ipython==2.0.0
+ipython==2.1.0
 pandas==0.13.1
 python-dateutil
 scipy
