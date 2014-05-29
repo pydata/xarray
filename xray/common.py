@@ -123,6 +123,13 @@ def _summarize_attributes(data):
     return attr_summary
 
 
+def _wrap_indent(text, start='', length=None):
+    if length is None:
+        length = len(start)
+    indent = '\n' + ' ' * length
+    return start + indent.join(x for x in text.splitlines())
+
+
 def array_repr(arr):
     name_str = ('%r ' % arr.name) if hasattr(arr, 'name') else ''
     dim_summary = ', '.join('%s: %s' % (k, v) for k, v
@@ -132,6 +139,16 @@ def array_repr(arr):
         summary.append(repr(arr.values))
     else:
         summary.append('[%s values with dtype=%s]' % (arr.size, arr.dtype))
+    if hasattr(arr, 'name'):
+        if arr.coordinates:
+            summary.append('Coordinates:')
+            for k, v in arr.coordinates.items():
+                summary.append(_wrap_indent(repr(v.as_index), '    %s: ' % k))
+        other_vars = [k for k in arr.dataset
+                      if k not in arr.coordinates and k != arr.name]
+        if other_vars:
+            summary.append('Linked dataset variables:')
+            summary.append('    ' + ', '.join(other_vars))
     summary.append('Attributes:\n%s' % _summarize_attributes(arr))
     return '\n'.join(summary)
 
