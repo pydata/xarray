@@ -414,8 +414,7 @@ def encode_cf_variable(var):
 
 def decode_cf_variable(var, concat_characters=True, mask_and_scale=True,
                        decode_times=True):
-    # use _data instead of data so as not to trigger loading data
-    data = var._data
+    data = var.values
     dimensions = var.dimensions
     attributes = var.attrs.copy()
     encoding = var.encoding.copy()
