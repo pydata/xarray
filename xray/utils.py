@@ -113,7 +113,17 @@ def multi_index_from_product(iterables, names=None):
     return pd.MultiIndex.from_product(coords, names=names)
 
 
-def update_safety_check(first_dict, second_dict, compat=operator.eq):
+def equivalent(first, second):
+    """Compare two objects for equivalence (identity or equality), using
+    array_equiv if either object is an ndarray
+    """
+    if isinstance(first, np.ndarray) or isinstance(second, np.ndarray):
+        return array_equiv(first, second)
+    else:
+        return first is second or first == second
+
+
+def update_safety_check(first_dict, second_dict, compat=equivalent):
     """Check the safety of updating one dictionary with another.
 
     Raises ValueError if dictionaries have non-compatible values for any key,
@@ -127,16 +137,15 @@ def update_safety_check(first_dict, second_dict, compat=operator.eq):
         against items in the first dictionary.
     compat : function, optional
         Binary operator to determine if two values are compatible. By default,
-        checks for equality.
+        checks for equivalence.
     """
     for k, v in iteritems(second_dict):
-        if (k in first_dict and
-                not (v is first_dict[k] or compat(v, first_dict[k]))):
+        if k in first_dict and not compat(v, first_dict[k]):
             raise ValueError('unsafe to merge dictionaries without '
                              'overriding values; conflicting key %r' % k)
 
 
-def remove_incompatible_items(first_dict, second_dict, compat=operator.eq):
+def remove_incompatible_items(first_dict, second_dict, compat=equivalent):
     """Remove incompatible items from the first dictionary in-place.
 
     Items are retained if their keys are found in both dictionaries and the
@@ -148,21 +157,25 @@ def remove_incompatible_items(first_dict, second_dict, compat=operator.eq):
         Mappings to merge.
     compat : function, optional
         Binary operator to determine if two values are compatible. By default,
-        checks for equality.
+        checks for equivalence.
     """
-    for k, v in iteritems(second_dict):
-        if k in first_dict and not compat(v, first_dict[k]):
+    for k, v in iteritems(first_dict):
+        if (k not in second_dict
+                or (k in second_dict and not compat(v, second_dict[k]))):
             del first_dict[k]
 
 
-def dict_equal(first, second):
-    """Test equality of two dict-like objects.  If any of the values
-    are numpy arrays, compare them for equality correctly.
+def dict_equiv(first, second, compat=equivalent):
+    """Test equivalence of two dict-like objects. If any of the values are
+    numpy arrays, compare them correctly.
 
     Parameters
     ----------
     first, second : dict-like
         Dictionaries to compare for equality
+    compat : function, optional
+        Binary operator to determine if two values are compatible. By default,
+        checks for equivalence.
 
     Returns
     -------
@@ -174,17 +187,12 @@ def dict_equal(first, second):
     if k1 != k2:
         return False
     for k in k1:
-        v1 = first[k]
-        v2 = second[k]
-        if isinstance(v1, np.ndarray) or isinstance(v2, np.ndarray):
-            if not np.array_equal(v1, v2):
-                return False
-        elif v1 != v2:
+        if not compat(first[k], second[k]):
             return False
     return True
 
 
-def ordered_dict_intersection(first_dict, second_dict, compat=operator.eq):
+def ordered_dict_intersection(first_dict, second_dict, compat=equivalent):
     """Return the intersection of two dictionaries as a new OrderedDict.
 
     Items are retained if their keys are found in both dictionaries and the
@@ -196,7 +204,7 @@ def ordered_dict_intersection(first_dict, second_dict, compat=operator.eq):
         Mappings to merge.
     compat : function, optional
         Binary operator to determine if two values are compatible. By default,
-        checks for equality.
+        checks for equivalence.
 
     Returns
     -------

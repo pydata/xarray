@@ -92,7 +92,7 @@ class TestCase(unittest.TestCase):
     def assertDatasetIdentical(self, d1, d2):
         # this method is functionally equivalent to `assert d1.identical(d2)`,
         # but it checks each aspect of equality separately for easier debugging
-        assert utils.dict_equal(d1.attrs, d2.attrs), (d1.attrs, d2.attrs)
+        assert utils.dict_equiv(d1.attrs, d2.attrs), (d1.attrs, d2.attrs)
         self.assertEqual(sorted(d1.variables), sorted(d2.variables))
         for k in d1:
             v1 = d1.variables[k]
