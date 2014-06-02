@@ -38,6 +38,15 @@ class TestDictionaries(TestCase):
         self.y = {'c': 'C', 'b': 'B'}
         self.z = {'a': 'Z'}
 
+    def test_equivalent(self):
+        self.assertTrue(utils.equivalent(0, 0))
+        self.assertTrue(utils.equivalent(np.nan, np.nan))
+        self.assertTrue(utils.equivalent(0, np.array(0.0)))
+        self.assertTrue(utils.equivalent([0], np.array([0])))
+        self.assertTrue(utils.equivalent(np.array([0]), [0]))
+        self.assertTrue(utils.equivalent(np.arange(3), 1.0 * np.arange(3)))
+        self.assertFalse(utils.equivalent(0, np.zeros(3)))
+
     def test_safe(self):
         # should not raise exception:
         utils.update_safety_check(self.x, self.y)
@@ -47,35 +56,34 @@ class TestDictionaries(TestCase):
             utils.update_safety_check(self.x, self.z)
 
     def test_ordered_dict_intersection(self):
-        self.assertEqual({'a': 'A', 'b': 'B'},
-                         utils.ordered_dict_intersection(self.x, self.y))
         self.assertEqual({'b': 'B'},
-                          utils.ordered_dict_intersection(self.x, self.z))
+                         utils.ordered_dict_intersection(self.x, self.y))
+        self.assertEqual({}, utils.ordered_dict_intersection(self.x, self.z))
 
-    def test_dict_equal(self):
+    def test_dict_equiv(self):
         x = OrderedDict()
         x['a'] = 3
         x['b'] = np.array([1, 2, 3])
         y = OrderedDict()
         y['b'] = np.array([1.0, 2.0, 3.0])
         y['a'] = 3
-        self.assertTrue(utils.dict_equal(x, y)) # two nparrays are equal
+        self.assertTrue(utils.dict_equiv(x, y)) # two nparrays are equal
         y['b'] = [1, 2, 3] # np.array not the same as a list
-        self.assertTrue(utils.dict_equal(x, y)) # nparray == list
+        self.assertTrue(utils.dict_equiv(x, y)) # nparray == list
         x['b'] = [1.0, 2.0, 3.0]
-        self.assertTrue(utils.dict_equal(x, y)) # list vs. list
+        self.assertTrue(utils.dict_equiv(x, y)) # list vs. list
         x['c'] = None
-        self.assertFalse(utils.dict_equal(x, y)) # new key in x
+        self.assertFalse(utils.dict_equiv(x, y)) # new key in x
         x['c'] = np.nan
         y['c'] = np.nan
-        self.assertFalse(utils.dict_equal(x, y)) # as intended, nan != nan
+        self.assertTrue(utils.dict_equiv(x, y)) # as intended, nan is nan
         x['c'] = np.inf
         y['c'] = np.inf
-        self.assertTrue(utils.dict_equal(x, y)) # inf == inf
+        self.assertTrue(utils.dict_equiv(x, y)) # inf == inf
         y = dict(y)
-        self.assertTrue(utils.dict_equal(x, y)) # different dictionary types are fine
+        self.assertTrue(utils.dict_equiv(x, y)) # different dictionary types are fine
         y['b'] = 3 * np.arange(3)
-        self.assertFalse(utils.dict_equal(x, y)) # not equal when arrays differ
+        self.assertFalse(utils.dict_equiv(x, y)) # not equal when arrays differ
 
     def test_frozen(self):
         x = utils.Frozen(self.x)

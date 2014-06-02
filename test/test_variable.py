@@ -227,11 +227,11 @@ class VariableSubclassTestCases(object):
         v = self.cls(['a'], x)
         w = self.cls(['a'], y)
         self.assertVariableIdentical(Variable(['b', 'a'], np.array([x, y])),
-                               Variable.concat([v, w], 'b'))
+                                     Variable.concat([v, w], 'b'))
         self.assertVariableIdentical(Variable(['b', 'a'], np.array([x, y])),
-                               Variable.concat((v, w), 'b'))
+                                     Variable.concat((v, w), 'b'))
         self.assertVariableIdentical(Variable(['b', 'a'], np.array([x, y])),
-                               Variable.concat((v, w), 'b', length=2))
+                                     Variable.concat((v, w), 'b', length=2))
         with self.assertRaisesRegexp(ValueError, 'actual length'):
             Variable.concat([v, w], 'b', length=1)
         with self.assertRaisesRegexp(ValueError, 'actual length'):
@@ -246,7 +246,19 @@ class VariableSubclassTestCases(object):
         # test dimension order
         self.assertVariableIdentical(v, Variable.concat([v[:, :5], v[:, 5:]], 'x'))
         self.assertVariableIdentical(v.transpose(),
-                               Variable.concat([v[:, 0], v[:, 1:]], 'x'))
+                                     Variable.concat([v[:, 0], v[:, 1:]], 'x'))
+
+    def test_concat_attrs(self):
+        # different or conflicting attributes should be removed
+        v = self.cls('a', np.arange(5), {'foo': 'bar'})
+        w = self.cls('a', np.ones(5))
+        expected = self.cls('a', np.concatenate([np.arange(5), np.ones(5)]))
+        self.assertVariableIdentical(expected, Variable.concat([v, w], 'a'))
+        w.attrs['foo'] = 2
+        self.assertVariableIdentical(expected, Variable.concat([v, w], 'a'))
+        w.attrs['foo'] = 'bar'
+        expected.attrs['foo'] = 'bar'
+        self.assertVariableIdentical(expected, Variable.concat([v, w], 'a'))
 
     def test_copy(self):
         v = self.cls('x', 0.5 * np.arange(10), {'foo': 'bar'})

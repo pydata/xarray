@@ -633,7 +633,7 @@ class Variable(AbstractArray):
         """Like equals, but also checks attributes.
         """
         try:
-            return (utils.dict_equal(self.attrs, other.attrs)
+            return (utils.dict_equiv(self.attrs, other.attrs)
                     and self.equals(other))
         except (TypeError, AttributeError):
             return False

@@ -485,7 +485,7 @@ class Dataset(Mapping):
         the same global attributes.
         """
         try:
-            return (utils.dict_equal(self.attrs, other.attrs)
+            return (utils.dict_equiv(self.attrs, other.attrs)
                     and len(self) == len(other)
                     and all(k1 == k2 and v1.identical(v2)
                             for (k1, v1), (k2, v2)
@@ -1173,7 +1173,7 @@ class Dataset(Mapping):
         # across all datasets
         for ds in datasets[1:]:
             if (compat == 'identical'
-                    and not utils.dict_equal(ds.attrs, concatenated.attrs)):
+                    and not utils.dict_equiv(ds.attrs, concatenated.attrs)):
                 raise ValueError('dataset global attributes not equal')
             for k, v in iteritems(ds.variables):
                 if k not in concatenated and k not in concat_over:
