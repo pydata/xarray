@@ -1,9 +1,5 @@
-# only the dependencies required to build xray's docs
-# all others (only netCDF4 for now) are mocked out in conf.py
-numpy>=1.7
+# only the dependencies required to build xray's docs which are not already
+# available in RTD's system site-packages
 ipython==2.1.0
-pandas==0.13.1
+pandas==0.14.0
 python-dateutil
-scipy
-six
-matplotlib
