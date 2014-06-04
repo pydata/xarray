@@ -152,12 +152,6 @@ if write_version:
     write_version_py()
 
 
-# remove dependencies if on Read the Docs to work around its quirks:
-on_rtd = os.getenv('READTHEDOCS') == 'True'
-if on_rtd:
-    INSTALL_REQUIRES = []
-
-
 setup(name=DISTNAME,
       version=FULLVERSION,
       license=LICENSE,
