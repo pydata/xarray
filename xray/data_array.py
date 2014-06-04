@@ -345,7 +345,8 @@ class DataArray(AbstractArray):
         --------
         Dataset.rename
         """
-        if isinstance(new_name_or_name_dict, basestring):
+        if (isinstance(new_name_or_name_dict, basestring)
+                or new_name_or_name_dict is None):
             new_name = new_name_or_name_dict
             name_dict = {self.name: new_name}
         else:
@@ -597,10 +598,9 @@ class DataArray(AbstractArray):
         with NaN). Thus this operation should be the inverse of the `to_series`
         method.
         """
-        name = series.name if series.name is not None else 'values'
-        df = pd.DataFrame({name: series})
+        df = pd.DataFrame({series.name: series})
         ds = xray.Dataset.from_dataframe(df)
-        return ds[name]
+        return ds[series.name]
 
     def equals(self, other):
         """True if two DataArrays have the same dimensions, coordinates and
@@ -638,29 +638,22 @@ class DataArray(AbstractArray):
     def _select_coordinates(self):
         return xray.Dataset(self.coordinates)
 
-    def _refocus(self, new_var, name=None):
-        """Returns a copy of this DataArray's dataset with this
-        DataArray's focus variable replaced by `new_var`.
-
-        If `new_var` is a DataArray, its contents will be merged in.
-        """
-        if not hasattr(new_var, 'dimensions'):
-            new_var = variable.Variable(self.variable.dimensions, new_var)
+    def __array_wrap__(self, obj, context=None):
+        new_var = self.variable.__array_wrap__(obj, context)
         ds = self._select_coordinates()
-        if name is None:
-            name = self.name + '_'
+        if (self.name,) == self.dimensions:
+            # use a new name for coordinate variables
+            name = None
+        else:
+            name = self.name
         ds[name] = new_var
         return ds[name]
-
-    def __array_wrap__(self, obj, context=None):
-        return self._refocus(self.variable.__array_wrap__(obj, context))
 
     @staticmethod
     def _unary_op(f):
         @functools.wraps(f)
         def func(self, *args, **kwargs):
-            return self._refocus(f(self.variable, *args, **kwargs),
-                                 self.name + '_' + f.__name__)
+            return self.__array_wrap__(f(self.variable, *args, **kwargs))
         return func
 
     def _check_coordinates_compat(self, other):
@@ -682,11 +675,13 @@ class DataArray(AbstractArray):
             if hasattr(other, 'coordinates'):
                 ds.merge(other.coordinates, inplace=True)
             other_array = getattr(other, 'variable', other)
-            other_name = getattr(other, 'name', 'other')
-            name = self.name + '_' + f.__name__ + '_' + other_name
+            if hasattr(other, 'name') or (self.name,) == self.dimensions:
+                name = None
+            else:
+                name = self.name
             ds[name] = (f(self.variable, other_array)
-                         if not reflexive
-                         else f(other_array, self.variable))
+                        if not reflexive
+                        else f(other_array, self.variable))
             return ds[name]
         return func
 
