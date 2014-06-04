@@ -34,6 +34,9 @@ CLASSIFIERS = [
     'Topic :: Scientific/Engineering',
 ]
 
+INSTALL_REQUIRES = ['numpy >= 1.7', 'pandas >= 0.13.1']
+TESTS_REQUIRE = ['nose >= 1.0']
+
 
 DESCRIPTION = "Extended arrays for working with scientific datasets in Python"
 LONG_DESCRIPTION = """
@@ -157,8 +160,8 @@ setup(name=DISTNAME,
       classifiers=CLASSIFIERS,
       description=DESCRIPTION,
       long_description=LONG_DESCRIPTION,
-      install_requires=['numpy >= 1.7', 'pandas >= 0.13.1'],
-      tests_require=['nose >= 1.0'],
+      install_requires=INSTALL_REQUIRES,
+      tests_require=TESTS_REQUIRE,
       url=URL,
       test_suite='nose.collector',
       packages=['xray', 'xray.backends'])

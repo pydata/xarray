@@ -50,29 +50,93 @@ except ImportError:
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'sphinxext', 'numpydoc'))
 
-# Mock imports for readthedocs
-class Mock(object):
-    def __init__(self, *args, **kwargs):
-        pass
 
-    def __call__(self, *args, **kwargs):
-        return Mock()
+# Monkey patch inspect.findsource to work around a Python bug that manifests on
+# RTD. Copied from IPython.core.ultratb.
+# Reference: https://github.com/ipython/ipython/issues/1456
 
-    @classmethod
-    def __getattr__(cls, name):
-        if name in ('__file__', '__path__'):
-            return '/dev/null'
-        elif name[0] == name[0].upper():
-            mockType = type(name, (), {})
-            mockType.__module__ = __name__
-            return mockType
+import linecache
+import re
+from inspect import getsourcefile, getfile, getmodule,\
+     ismodule, isclass, ismethod, isfunction, istraceback, isframe, iscode
+
+def findsource(object):
+    """Return the entire source file and starting line number for an object.
+
+    The argument may be a module, class, method, function, traceback, frame,
+    or code object.  The source code is returned as a list of all the lines
+    in the file and the line number indexes a line in that list.  An IOError
+    is raised if the source code cannot be retrieved.
+
+    FIXED version with which we monkeypatch the stdlib to work around a bug."""
+
+    file = getsourcefile(object) or getfile(object)
+    # If the object is a frame, then trying to get the globals dict from its
+    # module won't work. Instead, the frame object itself has the globals
+    # dictionary.
+    globals_dict = None
+    if inspect.isframe(object):
+        # XXX: can this ever be false?
+        globals_dict = object.f_globals
+    else:
+        module = getmodule(object, file)
+        if module:
+            globals_dict = module.__dict__
+    lines = linecache.getlines(file, globals_dict)
+    if not lines:
+        raise IOError('could not get source code')
+
+    if ismodule(object):
+        return lines, 0
+
+    if isclass(object):
+        name = object.__name__
+        pat = re.compile(r'^(\s*)class\s*' + name + r'\b')
+        # make some effort to find the best matching class definition:
+        # use the one with the least indentation, which is the one
+        # that's most probably not inside a function definition.
+        candidates = []
+        for i in range(len(lines)):
+            match = pat.match(lines[i])
+            if match:
+                # if it's at toplevel, it's already the best one
+                if lines[i][0] == 'c':
+                    return lines, i
+                # else add whitespace to candidate list
+                candidates.append((match.group(1), i))
+        if candidates:
+            # this will sort by whitespace, and by line number,
+            # less whitespace first
+            candidates.sort()
+            return lines, candidates[0][1]
         else:
-            return Mock()
+            raise IOError('could not find class definition')
 
-MOCK_MODULES = ['netCDF4']
+    if ismethod(object):
+        object = object.__func__
+    if isfunction(object):
+        object = object.__code__
+    if istraceback(object):
+        object = object.tb_frame
+    if isframe(object):
+        object = object.f_code
+    if iscode(object):
+        if not hasattr(object, 'co_firstlineno'):
+            raise IOError('could not find function definition')
+        pat = re.compile(r'^(\s*def\s)|(.*(?<!\w)lambda(:|\s))|^(\s*@)')
+        pmatch = pat.match
+        # fperez - fix: sometimes, co_firstlineno can give a number larger than
+        # the length of lines, which causes an error.  Safeguard against that.
+        lnum = min(object.co_firstlineno,len(lines))-1
+        while lnum > 0:
+            if pmatch(lines[lnum]): break
+            lnum -= 1
 
-for mod_name in MOCK_MODULES:
-    sys.modules[mod_name] = Mock()
+        return lines, lnum
+    raise IOError('could not find code object')
+
+import inspect
+inspect.findsource = findsource
 
 
 # -- General configuration ------------------------------------------------
