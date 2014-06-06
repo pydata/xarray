@@ -171,6 +171,10 @@ class TestDataset(TestCase):
         self.assertFalse(data.equals(data2))
         self.assertTrue(data != data2)
 
+        data = create_test_data(seed=42).rename({'var1': None})
+        self.assertTrue(data.equals(data))
+        self.assertTrue(data.identical(data))
+
     def test_attrs(self):
         data = create_test_data(seed=42)
         data.attrs = {'foobar': 'baz'}
