@@ -117,13 +117,15 @@ class DataArray(AbstractArray):
     coordinates : OrderedDict
         Dictionary of DataArray objects that label values along each dimension.
     """
-    def __new__(cls, data, indexes=None, dimensions=None, name=None,
-                attributes=None, encoding=None):
+    def __init__(self, data=None, indexes=None, dimensions=None, name=None,
+                 attributes=None, encoding=None, dataset=None):
         """
         Parameters
         ----------
-        data : array_like
-            Data array which supports numpy-like data access.
+        data : array_like, optional
+            Raw unlabeled values for this array. Must be a ``numpy.ndarray``,
+            ndarray like, or castable to an ``ndarray``. Required unless the
+            'dataset' argument is provided.
         indexes : sequence or dict of array_like objects, optional
             Indexes (tick labels) to use for each dimension. If dict-like,
             should be a mapping from dimension names to the corresponding
@@ -133,7 +135,7 @@ class DataArray(AbstractArray):
             for 1D data) or a sequence of strings with length equal to the
             number of dimensions. If this argument is omited, dimension names
             are taken from indexes (if possible) and otherwise default to
-            ['dim_0', ... 'dim_n'].
+            ``['dim_0', ... 'dim_n']``.
         name : str or None, optional
             Name of this array.
         attributes : dict_like or None, optional
@@ -145,34 +147,25 @@ class DataArray(AbstractArray):
             include '_FillValue', 'scale_factor', 'add_offset', 'dtype',
             'units' and 'calendar' (the later two only for datetime arrays).
             Unrecognized keys are ignored.
+        dataset : xray.Dataset, optional
+            If provided, all arguments other than 'name' are ignored and the
+            new data array is created from an existing array in this dataset.
         """
-        data = variable._as_compatible_data(data)
-        indexes, dimensions = _infer_indexes_and_dimensions(
-            data.shape, indexes, dimensions)
-        variables = OrderedDict((idx.name, idx) for idx in indexes)
-        variables[name] = variable.Variable(
-            dimensions, data, attributes, encoding)
-        ds = xray.Dataset(variables)
-        return cls._constructor(ds, name)
+        if dataset is None:
+            data = variable._as_compatible_data(data)
+            indexes, dimensions = _infer_indexes_and_dimensions(
+                data.shape, indexes, dimensions)
+            variables = OrderedDict((idx.name, idx) for idx in indexes)
+            variables[name] = variable.Variable(
+                dimensions, data, attributes, encoding)
+            dataset = xray.Dataset(variables)
+        else:
+            if name not in dataset and name not in dataset.virtual_variables:
+                raise ValueError('name %r must be a variable in dataset %s' %
+                                 (name, dataset))
 
-    @classmethod
-    def _constructor(cls, dataset, name):
-        """
-        Parameters
-        ----------
-        dataset : xray.Dataset
-            The dataset in which to find this array.
-        name : str
-            The name of the variable in `dataset` to which array operations
-            should be applied.
-        """
-        obj = object.__new__(cls)
-        if name not in dataset and name not in dataset.virtual_variables:
-            raise ValueError('name %r must be a variable in dataset %r'
-                             % (name, dataset))
-        obj._dataset = dataset
-        obj._name = name
-        return obj
+        self._dataset = dataset
+        self._name = name
 
     @property
     def dataset(self):

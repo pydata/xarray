@@ -433,7 +433,7 @@ class Dataset(Mapping):
     def __getitem__(self, key):
         """Access the given variable name in this dataset as a `DataArray`.
         """
-        return data_array.DataArray._constructor(self, key)
+        return data_array.DataArray(name=key, dataset=self)
 
     def __setitem__(self, key, value):
         """Add an array to this dataset.
