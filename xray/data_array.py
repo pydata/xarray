@@ -163,6 +163,9 @@ class DataArray(AbstractArray):
             if name not in dataset and name not in dataset.virtual_variables:
                 raise ValueError('name %r must be a variable in dataset %s' %
                                  (name, dataset))
+            # make a shallow copy of the dataset so we can safely modify the
+            # array in-place?
+            # dataset = dataset.copy(deep=False)
 
         self._dataset = dataset
         self._name = name

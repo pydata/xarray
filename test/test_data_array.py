@@ -37,7 +37,7 @@ class TestDataArray(TestCase):
         self.assertEqual(expected, repr(data_array))
 
     def test_properties(self):
-        self.assertIs(self.dv.dataset, self.ds)
+        self.assertDatasetIdentical(self.dv.dataset, self.ds)
         self.assertEqual(self.dv.name, 'foo')
         self.assertVariableEqual(self.dv.variable, self.v)
         self.assertArrayEqual(self.dv.values, self.v.values)
@@ -193,19 +193,21 @@ class TestDataArray(TestCase):
 
     def test_labeled(self):
         self.ds['x'] = ('x', np.array(list('abcdefghij')))
-        self.assertDataArrayIdentical(self.dv, self.dv.labeled(x=slice(None)))
-        self.assertDataArrayIdentical(self.dv[1], self.dv.labeled(x='b'))
-        self.assertDataArrayIdentical(self.dv[:3], self.dv.labeled(x=slice('c')))
+        da = self.ds['foo']
+        self.assertDataArrayIdentical(da, da.labeled(x=slice(None)))
+        self.assertDataArrayIdentical(da[1], da.labeled(x='b'))
+        self.assertDataArrayIdentical(da[:3], da.labeled(x=slice('c')))
 
     def test_loc(self):
         self.ds['x'] = ('x', np.array(list('abcdefghij')))
-        self.assertDataArrayIdentical(self.dv[:3], self.dv.loc[:'c'])
-        self.assertDataArrayIdentical(self.dv[1], self.dv.loc['b'])
-        self.assertDataArrayIdentical(self.dv[:3], self.dv.loc[['a', 'b', 'c']])
-        self.assertDataArrayIdentical(self.dv[:3, :4],
-                                      self.dv.loc[['a', 'b', 'c'], np.arange(4)])
-        self.dv.loc['a':'j'] = 0
-        self.assertTrue(np.all(self.dv.values == 0))
+        da = self.ds['foo']
+        self.assertDataArrayIdentical(da[:3], da.loc[:'c'])
+        self.assertDataArrayIdentical(da[1], da.loc['b'])
+        self.assertDataArrayIdentical(da[:3], da.loc[['a', 'b', 'c']])
+        self.assertDataArrayIdentical(da[:3, :4],
+                                      da.loc[['a', 'b', 'c'], np.arange(4)])
+        da.loc['a':'j'] = 0
+        self.assertTrue(np.all(da.values == 0))
 
     def test_reindex(self):
         foo = self.dv
@@ -345,7 +347,7 @@ class TestDataArray(TestCase):
         self.assertIs(b.variable, v)
         self.assertArrayEqual(b.values, x)
         self.assertIs(source_ndarray(b.values), x)
-        self.assertIs(b.dataset, self.ds)
+        self.assertDatasetIdentical(b.dataset, self.ds)
 
     def test_transpose(self):
         self.assertVariableEqual(self.dv.variable.transpose(),
