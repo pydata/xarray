@@ -142,7 +142,7 @@ def array_repr(arr):
         summary.append(repr(arr.values))
     else:
         summary.append('[%s values with dtype=%s]' % (arr.size, arr.dtype))
-    if hasattr(arr, 'name'):
+    if hasattr(arr, 'coordinates'):
         if arr.coordinates:
             summary.append('Coordinates:')
             for k, v in arr.coordinates.items():

@@ -11,10 +11,10 @@ from . import TestCase, ReturnItem, source_ndarray
 
 class TestDataArray(TestCase):
     def setUp(self):
-        self._attrs = {'attr1': 'value1', 'attr2': 2929}
+        self.attrs = {'attr1': 'value1', 'attr2': 2929}
         self.x = np.random.random((10, 20))
         self.v = Variable(['x', 'y'], self.x)
-        self.va = Variable(['x', 'y'], self.x, self._attrs)
+        self.va = Variable(['x', 'y'], self.x, self.attrs)
         self.ds = Dataset({'foo': self.v})
         self.dv = self.ds['foo']
 
@@ -55,6 +55,80 @@ class TestDataArray(TestCase):
         self.assertIsInstance(self.ds['x'].as_index, pd.Index)
         with self.assertRaisesRegexp(ValueError, 'must be 1-dimensional'):
             self.ds['foo'].as_index
+
+    def test_constructor(self):
+        data = np.random.random((2, 3))
+
+        actual = DataArray(data)
+        expected = Dataset({None: (['dim_0', 'dim_1'], data)})[None]
+        self.assertDataArrayIdentical(expected, actual)
+
+        actual = DataArray(data, [['a', 'b'], [-1, -2, -3]])
+        expected = Dataset({None: (['dim_0', 'dim_1'], data),
+                            'dim_0': ('dim_0', ['a', 'b']),
+                            'dim_1': ('dim_1', [-1, -2, -3])})[None]
+        self.assertDataArrayIdentical(expected, actual)
+
+        actual = DataArray(data, [pd.Index(['a', 'b'], name='x'),
+                                  pd.Index([-1, -2, -3], name='y')])
+        expected = Dataset({None: (['x', 'y'], data),
+                            'x': ('x', ['a', 'b']),
+                            'y': ('y', [-1, -2, -3])})[None]
+        self.assertDataArrayIdentical(expected, actual)
+
+        indexes = [['a', 'b'], [-1, -2, -3]]
+        actual = DataArray(data, indexes, ['x', 'y'])
+        self.assertDataArrayIdentical(expected, actual)
+
+        indexes = [pd.Index(['a', 'b'], name='A'),
+                   pd.Index([-1, -2, -3], name='B')]
+        actual = DataArray(data, indexes, ['x', 'y'])
+        self.assertDataArrayIdentical(expected, actual)
+
+        indexes = {'x': ['a', 'b'], 'y': [-1, -2, -3]}
+        actual = DataArray(data, indexes, ['x', 'y'])
+        self.assertDataArrayIdentical(expected, actual)
+
+        indexes = OrderedDict([('x', ['a', 'b']), ('y', [-1, -2, -3])])
+        actual = DataArray(data, indexes)
+        self.assertDataArrayIdentical(expected, actual)
+
+        expected = Dataset({None: (['x', 'y'], data),
+                            'x': ('x', ['a', 'b'])})[None]
+        actual = DataArray(data, {'x': ['a', 'b']}, ['x', 'y'])
+        self.assertDataArrayIdentical(expected, actual)
+
+        with self.assertRaisesRegexp(ValueError, 'but data has ndim'):
+            DataArray(data, [[0, 1, 2]], ['x', 'y'])
+
+        with self.assertRaisesRegexp(ValueError, 'not array dimensions'):
+            DataArray(data, {'x': [0, 1, 2]}, ['a', 'b'])
+
+        with self.assertRaisesRegexp(ValueError, 'must have the same length'):
+            DataArray(data, {'x': [0, 1, 2]})
+
+        actual = DataArray(data, dimensions=['x', 'y'])
+        expected = Dataset({None: (['x', 'y'], data)})[None]
+        self.assertDataArrayIdentical(expected, actual)
+
+        actual = DataArray(data, dimensions=['x', 'y'], name='foo')
+        expected = Dataset({'foo': (['x', 'y'], data)})['foo']
+        self.assertDataArrayIdentical(expected, actual)
+
+        with self.assertRaisesRegexp(TypeError, 'is not a string'):
+            DataArray(data, dimensions=['x', None])
+
+        actual = DataArray(data, name='foo')
+        expected = Dataset({'foo': (['dim_0', 'dim_1'], data)})['foo']
+        self.assertDataArrayIdentical(expected, actual)
+
+        actual = DataArray(data, dimensions=['x', 'y'], attributes={'bar': 2})
+        expected = Dataset({None: (['x', 'y'], data, {'bar': 2})})[None]
+        self.assertDataArrayIdentical(expected, actual)
+
+        actual = DataArray(data, dimensions=['x', 'y'], encoding={'bar': 2})
+        expected = Dataset({None: (['x', 'y'], data, {}, {'bar': 2})})[None]
+        self.assertDataArrayIdentical(expected, actual)
 
     def test_equals_and_identical(self):
         da2 = self.dv.copy()
@@ -294,8 +368,8 @@ class TestDataArray(TestCase):
 
         # Test kept attrs
         vm = self.va.mean(keep_attrs=True)
-        self.assertEqual(len(vm.attrs), len(self._attrs))
-        self.assertEqual(vm.attrs, self._attrs)
+        self.assertEqual(len(vm.attrs), len(self.attrs))
+        self.assertEqual(vm.attrs, self.attrs)
 
     def test_unselect(self):
         with self.assertRaisesRegexp(ValueError, 'cannot unselect the name'):

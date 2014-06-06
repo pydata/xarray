@@ -3,6 +3,7 @@ import operator
 import warnings
 from collections import defaultdict, OrderedDict
 
+import numpy as np
 import pandas as pd
 
 import xray
@@ -14,6 +15,50 @@ from . import variable
 from .common import AbstractArray
 from .utils import FrozenOrderedDict, multi_index_from_product
 from .pycompat import iteritems, basestring
+
+
+def _is_dict_like(value):
+    return hasattr(value, 'items') and hasattr(value, 'keys')
+
+
+def _infer_indexes_and_dimensions(shape, indexes, dimensions):
+    """All the logic for creating a new DataArray"""
+
+    if isinstance(dimensions, basestring):
+        dimensions = [dimensions]
+
+    if _is_dict_like(indexes):
+        if dimensions is None:
+            dimensions = list(indexes)
+        else:
+            bad_indexes = [dim for dim in indexes if dim not in dimensions]
+            if bad_indexes:
+                raise ValueError('indexes %r are not array dimensions'
+                                 % bad_indexes)
+        indexes = [indexes.get(d, None) for d in dimensions]
+    elif indexes is not None and len(indexes) != len(shape):
+        raise ValueError('%s indexes supplied but data has ndim=%s'
+                         % (len(indexes), len(shape)))
+
+    if dimensions is None:
+        dimensions = ['dim_%s' % n for n in range(len(shape))]
+        if indexes is not None:
+            for n, idx in enumerate(indexes):
+                if hasattr(idx, 'name') and idx.name is not None:
+                    dimensions[n] = idx.name
+    else:
+        for d in dimensions:
+            if not isinstance(d, basestring):
+                raise TypeError('dimension %s is not a string' % d)
+
+    if indexes is None:
+        indexes = [None] * len(shape)
+    indexes = [idx if isinstance(idx, AbstractArray) else
+               xray.Coordinate(dimensions[n], idx) if idx is not None else
+               xray.Coordinate(dimensions[n], np.arange(shape[n]))
+               for n, idx in enumerate(indexes)]
+
+    return indexes, dimensions
 
 
 class _LocIndexer(object):
@@ -72,13 +117,43 @@ class DataArray(AbstractArray):
     coordinates : OrderedDict
         Dictionary of DataArray objects that label values along each dimension.
     """
-    def __new__(cls, dataset, name):
-        warnings.warn('the constructor for DataArray objects will change in a '
-                      'future version of xray. For now, create new '
-                      'DataArray objects by getting items from a Dataset '
-                      'instead of calling the constructor directly.',
-                      FutureWarning, stacklevel=2)
-        return cls._constructor(dataset, name)
+    def __new__(cls, data, indexes=None, dimensions=None, name=None,
+                attributes=None, encoding=None):
+        """
+        Parameters
+        ----------
+        data : array_like
+            Data array which supports numpy-like data access.
+        indexes : sequence or dict of array_like objects, optional
+            Indexes (tick labels) to use for each dimension. If dict-like,
+            should be a mapping from dimension names to the corresponding
+            index.
+        dimensions : str or sequence of str, optional
+            Name(s) of the the data dimension(s). Must be either a string (only
+            for 1D data) or a sequence of strings with length equal to the
+            number of dimensions. If this argument is omited, dimension names
+            are taken from indexes (if possible) and otherwise default to
+            ['dim_0', ... 'dim_n'].
+        name : str or None, optional
+            Name of this array.
+        attributes : dict_like or None, optional
+            Attributes to assign to the new variable. By default, an empty
+            attribute dictionary is initialized.
+        encoding : dict_like or None, optional
+            Dictionary specifying how to encode this array's data into a
+            serialized format like netCDF4. Currently used keys (for netCDF)
+            include '_FillValue', 'scale_factor', 'add_offset', 'dtype',
+            'units' and 'calendar' (the later two only for datetime arrays).
+            Unrecognized keys are ignored.
+        """
+        data = variable._as_compatible_data(data)
+        indexes, dimensions = _infer_indexes_and_dimensions(
+            data.shape, indexes, dimensions)
+        variables = OrderedDict((idx.name, idx) for idx in indexes)
+        variables[name] = variable.Variable(
+            dimensions, data, attributes, encoding)
+        ds = xray.Dataset(variables)
+        return cls._constructor(ds, name)
 
     @classmethod
     def _constructor(cls, dataset, name):
@@ -337,21 +412,20 @@ class DataArray(AbstractArray):
     def rename(self, new_name_or_name_dict):
         """Returns a new DataArray with renamed variables.
 
-        If the argument is a string, rename this DataArray's arary variable.
-        Otherwise, the argument is assumed to be a mapping from old names to
-        new names for dataset variables.
+        If the argument is dict-like, it it used as a mapping from old names to
+        new names for dataset variables. Otherwise, use the argument as the new
+        name for this array.
 
         See Also
         --------
         Dataset.rename
         """
-        if (isinstance(new_name_or_name_dict, basestring)
-                or new_name_or_name_dict is None):
-            new_name = new_name_or_name_dict
-            name_dict = {self.name: new_name}
-        else:
+        if _is_dict_like(new_name_or_name_dict):
             name_dict = new_name_or_name_dict
             new_name = name_dict.get(self.name, self.name)
+        else:
+            new_name = new_name_or_name_dict
+            name_dict = {self.name: new_name}
         renamed_dataset = self.dataset.rename(name_dict)
         return renamed_dataset[new_name]
 
@@ -594,7 +668,7 @@ class DataArray(AbstractArray):
         """Convert a pandas.Series into an xray.DatasetArray
 
         If the series's index is a MultiIndex, it will be expanded into a
-        tensor product of one-dimensional indices  (filling in missing values
+        tensor product of one-dimensional indexes  (filling in missing values
         with NaN). Thus this operation should be the inverse of the `to_series`
         method.
         """

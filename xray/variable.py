@@ -725,6 +725,12 @@ class Coordinate(Variable):
         """Return this variable as an Coordinate"""
         return self
 
+    # pandas.Index like properties:
+
+    @property
+    def name(self):
+        return self.dimensions[0]
+
     def get_indexer(self, label):
         return self.as_index.get_indexer(label)
 
