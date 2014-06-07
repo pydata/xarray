@@ -385,11 +385,16 @@ class Dataset(Mapping):
         is also a variable in the original dataset.
         """
         if deep:
-            variables = OrderedDict((k, v.copy(deep=True))
-                                    for k, v in iteritems(self.variables))
+            variables = VariablesDict((k, v.copy(deep=True))
+                                      for k, v in iteritems(self.variables))
         else:
-            variables = self.variables
-        return type(self)(variables, self.attrs)
+            variables = self._variables.copy()
+        # skip __init__ to avoid costly validation
+        obj = self.__new__(type(self))
+        obj._variables = variables
+        obj._dimensions = self._dimensions.copy()
+        obj._attributes = self._attributes.copy()
+        return obj
 
     def __copy__(self):
         return self.copy(deep=False)
