@@ -716,7 +716,9 @@ class Coordinate(Variable):
     @property
     def as_index(self):
         """The variable's data as a pandas.Index"""
-        return self._data_cached().array
+        # n.b. creating a new pandas.Index from an old pandas.Index is
+        # basically free as pandas.Index objcets are immutable
+        return pd.Index(self._data_cached().array, name=self.name)
 
     def _data_equals(self, other):
         return self.as_index.equals(other.to_coord().as_index)
