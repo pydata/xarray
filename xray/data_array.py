@@ -18,7 +18,7 @@ from .pycompat import iteritems, basestring
 
 
 def _is_dict_like(value):
-    return hasattr(value, 'items') and hasattr(value, 'keys')
+    return hasattr(value, '__getitem__') and hasattr(value, 'keys')
 
 
 def _infer_indexes_and_dimensions(shape, indexes, dimensions):
@@ -188,6 +188,18 @@ class DataArray(AbstractArray):
             new data array is created from an existing array in this dataset.
         """
         if dataset is None:
+            # fill in arguments from data if they weren't supplied
+            if indexes is None:
+                indexes = getattr(data, 'coordinates', None)
+            if dimensions is None:
+                dimensions = getattr(data, 'dimensions', None)
+            if name is None:
+                name = getattr(data, 'name', None)
+            if attributes is None:
+                attributes = getattr(data, 'attrs', None)
+            if encoding is None:
+                encoding = getattr(data, 'encoding', None)
+
             data = variable._as_compatible_data(data)
             indexes, dimensions = _infer_indexes_and_dimensions(
                 data.shape, indexes, dimensions)

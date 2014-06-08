@@ -142,6 +142,18 @@ class TestDataArray(TestCase):
         expected = Dataset({None: (['x', 'y'], data, {}, {'bar': 2})})[None]
         self.assertDataArrayIdentical(expected, actual)
 
+    def test_constructor_from_self_described(self):
+        expected = DataArray([[-0.1, 21], [0, 2]],
+                             indexes={'x': ['a', 'b'], 'y': [-1, -2]},
+                             dimensions=['x', 'y'], name='foobar',
+                             attributes={'bar': 2}, encoding={'foo': 3})
+        actual = DataArray(expected)
+        self.assertDataArrayIdentical(expected, actual)
+
+        expected = DataArray(['a', 'b'], name='foo')
+        actual = DataArray(pd.Index(['a', 'b'], name='foo'))
+        self.assertDataArrayIdentical(expected, actual)
+
     def test_equals_and_identical(self):
         da2 = self.dv.copy()
         self.assertTrue(self.dv.equals(da2))
