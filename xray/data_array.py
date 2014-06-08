@@ -1,7 +1,7 @@
 import functools
 import operator
 import warnings
-from collections import defaultdict, OrderedDict
+from collections import defaultdict, OrderedDict, Mapping
 
 import numpy as np
 import pandas as pd
@@ -13,7 +13,7 @@ from . import ops
 from . import utils
 from . import variable
 from .common import AbstractArray
-from .utils import FrozenOrderedDict, multi_index_from_product
+from .utils import multi_index_from_product
 from .pycompat import iteritems, basestring
 
 
@@ -78,6 +78,42 @@ class _LocIndexer(object):
 
     def __setitem__(self, key, value):
         self.data_array[self._remap_key(key)] = value
+
+
+class Indexes(Mapping):
+    """Dictionary like container for DataArray indexes.
+
+    `Indexes` is essentially an OrderedDict with keys given by the array's
+    dimensions and the values given by the corresponding xray.Index objects,
+    but it also supports list-like indexing with integers.
+    """
+    def __init__(self, dimensions, indexes):
+        self._dimensions = list(dimensions)
+        self._indexes = list(indexes)
+        self._mapping = OrderedDict(zip(dimensions, indexes))
+
+    def __getitem__(self, key):
+        if isinstance(key, basestring):
+            return self._mapping[key]
+        elif isinstance(key, (int, np.integer)):
+            return self._indexes[key]
+        elif isinstance(key, slice):
+            return type(self)(self._dimensions[key], self._indexes[key])
+        else:
+            raise KeyError(repr(key))
+
+    def __iter__(self):
+        return iter(self._mapping)
+
+    def __len__(self):
+        return len(self._mapping)
+
+    def __contains__(self, key):
+        return key in self._mapping
+
+    def __repr__(self):
+        return '%s(%r, %r)' % (type(self).__name__,
+                               self._dimensions, self._indexes)
 
 
 class DataArray(AbstractArray):
@@ -298,8 +334,8 @@ class DataArray(AbstractArray):
     def coordinates(self):
         """Dictionary of Coordinate objects used for label based indexing.
         """
-        return FrozenOrderedDict((dim, self.dataset.variables[dim])
-                                 for dim in self.dimensions)
+        indexes = [self.dataset.variables[dim] for dim in self.dimensions]
+        return Indexes(self.dimensions, indexes)
 
     def copy(self, deep=True):
         """Returns a copy of this array.

@@ -5,8 +5,20 @@ from textwrap import dedent
 from collections import OrderedDict
 
 from xray import Dataset, DataArray, Variable, align
+from xray.data_array import Indexes
 from xray.pycompat import iteritems
 from . import TestCase, ReturnItem, source_ndarray
+
+
+class TestIndexes(TestCase):
+    def test(self):
+        indexes = Indexes(['a', 'b', 'c'], [0, 1, 2])
+        self.assertEqual(indexes['a'], 0)
+        self.assertEqual(indexes[0], 0)
+        self.assertEqual(indexes[:1], Indexes(['a'], [0]))
+        self.assertEqual(indexes[:], indexes)
+        self.assertEqual(repr(indexes),
+                         "Indexes(['a', 'b', 'c'], [0, 1, 2])")
 
 
 class TestDataArray(TestCase):
