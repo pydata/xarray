@@ -159,8 +159,10 @@ class DataArray(AbstractArray):
         Parameters
         ----------
         data : array_like, optional
-            Raw unlabeled values for this array. Must be a ``numpy.ndarray``,
-            ndarray like, or castable to an ``ndarray``. Required unless the
+            Values for this array. Must be a ``numpy.ndarray``, ndarray like,
+            or castable to an ``ndarray``. If a self-described xray or pandas
+            object, attempst are made to use this array's metadata to fill in
+            other unspecified arguments. This argument is required unless the
             'dataset' argument is provided.
         indexes : sequence or dict of array_like objects, optional
             Indexes (tick labels) to use for each dimension. If dict-like,
@@ -191,6 +193,12 @@ class DataArray(AbstractArray):
             # try to fill in arguments from data if they weren't supplied
             if indexes is None:
                 indexes = getattr(data, 'coordinates', None)
+                if isinstance(data, pd.Series):
+                    indexes = [data.index]
+                elif isinstance(data, pd.DataFrame):
+                    indexes = [data.index, data.columns]
+                elif isinstance(data, pd.Panel):
+                    indexes = [data.items, data.major_axis, data.minor_axis]
             if dimensions is None:
                 dimensions = getattr(data, 'dimensions', None)
             if name is None:

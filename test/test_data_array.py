@@ -143,11 +143,26 @@ class TestDataArray(TestCase):
         self.assertDataArrayIdentical(expected, actual)
 
     def test_constructor_from_self_described(self):
-        expected = DataArray([[-0.1, 21], [0, 2]],
+        data = [[-0.1, 21], [0, 2]]
+        expected = DataArray(data,
                              indexes={'x': ['a', 'b'], 'y': [-1, -2]},
                              dimensions=['x', 'y'], name='foobar',
                              attributes={'bar': 2}, encoding={'foo': 3})
         actual = DataArray(expected)
+        self.assertDataArrayIdentical(expected, actual)
+
+        frame = pd.DataFrame(data, index=pd.Index(['a', 'b'], name='x'),
+                             columns=pd.Index([-1, -2], name='y'))
+        actual = DataArray(frame)
+        self.assertDataArrayEqual(expected, actual)
+
+        series = pd.Series(data[0], index=pd.Index([-1, -2], name='y'))
+        actual = DataArray(series)
+        self.assertDataArrayEqual(expected[0], actual)
+
+        panel = pd.Panel({0: frame})
+        actual = DataArray(panel)
+        expected = DataArray([data], expected.coordinates, ['dim_0', 'x', 'y'])
         self.assertDataArrayIdentical(expected, actual)
 
         expected = DataArray(['a', 'b'], name='foo')

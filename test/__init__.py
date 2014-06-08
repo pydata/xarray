@@ -63,10 +63,10 @@ class TestCase(unittest.TestCase):
             return self.assertCountEqual(first, second, msg)
 
     def assertVariableEqual(self, v1, v2):
-        self.assertTrue(as_variable(v1).equals(v2))
+        assert as_variable(v1).equals(v2), (v1, v2)
 
     def assertVariableIdentical(self, v1, v2):
-        self.assertTrue(as_variable(v1).identical(v2))
+        assert as_variable(v1).identical(v2), (v1, v2)
 
     def assertVariableAllClose(self, v1, v2, rtol=1e-05, atol=1e-08):
         self.assertEqual(v1.dimensions, v2.dimensions)
