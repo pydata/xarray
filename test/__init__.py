@@ -109,16 +109,16 @@ class TestCase(unittest.TestCase):
             v2 = d2.variables[k]
             self.assertVariableAllClose(v1, v2, rtol=rtol, atol=atol)
 
-    def assertCoordsEqual(self, d1, d2):
-        self.assertEqual(sorted(d1.coordinates), sorted(d2.coordinates))
-        for k in d1.coordinates:
-            v1 = d1.coordinates[k]
-            v2 = d2.coordinates[k]
+    def assertIndexesEqual(self, d1, d2):
+        self.assertEqual(sorted(d1.indexes), sorted(d2.indexes))
+        for k in d1.indexes:
+            v1 = d1.indexes[k]
+            v2 = d2.indexes[k]
             self.assertVariableEqual(v1, v2)
 
     def assertDataArrayEqual(self, ar1, ar2):
         self.assertVariableEqual(ar1, ar2)
-        self.assertCoordsEqual(ar1, ar2)
+        self.assertIndexesEqual(ar1, ar2)
 
     def assertDataArrayIdentical(self, ar1, ar2):
         self.assertEqual(ar1.name, ar2.name)
@@ -126,7 +126,7 @@ class TestCase(unittest.TestCase):
 
     def assertDataArrayAllClose(self, ar1, ar2, rtol=1e-05, atol=1e-08):
         self.assertVariableAllClose(ar1, ar2, rtol=rtol, atol=atol)
-        self.assertCoordsEqual(ar1, ar2)
+        self.assertIndexesEqual(ar1, ar2)
 
 
 class ReturnItem(object):

@@ -73,16 +73,16 @@ class TestDataset(TestCase):
         data = create_test_data()
         expected = dedent("""
         <xray.Dataset>
-        Dimensions:     (dim1: 100, dim2: 50, dim3: 10, time: 20)
-        Coordinates:
-            dim1             X
-            dim2                        X
-            dim3                                  X
-            time                                            X
-        Noncoordinates:
-            var1             0          1
-            var2             0          1
-            var3             1                    0
+        Dimensions:  (dim1: 100, dim2: 50, dim3: 10, time: 20)
+        Indexes:
+            dim1          X
+            dim2                     X
+            dim3                               X
+            time                                         X
+        Non-indexes:
+            var1          0          1
+            var2          0          1
+            var3          1                    0
         Attributes:
             Empty
         """).strip()
@@ -91,10 +91,10 @@ class TestDataset(TestCase):
 
         expected = dedent("""
         <xray.Dataset>
-        Dimensions:     ()
-        Coordinates:
+        Dimensions:  ()
+        Indexes:
             None
-        Noncoordinates:
+        Non-indexes:
             None
         Attributes:
             Empty
@@ -130,14 +130,14 @@ class TestDataset(TestCase):
         with self.assertRaises(ValueError):
             a['qux'] = (('time', 'x'), d.T)
 
-    def test_coordinate(self):
+    def test_indexes(self):
         a = Dataset()
         vec = np.random.random((10,))
         attributes = {'foo': 'bar'}
         a['x'] = ('x', vec, attributes)
-        self.assertTrue('x' in a.coordinates)
-        self.assertIsInstance(a.coordinates['x'].as_index, pd.Index)
-        self.assertVariableEqual(a.coordinates['x'], a.variables['x'])
+        self.assertTrue('x' in a.indexes)
+        self.assertIsInstance(a.indexes['x'].as_pandas, pd.Index)
+        self.assertVariableEqual(a.indexes['x'], a.variables['x'])
         b = Dataset()
         b['x'] = ('x', vec, attributes)
         self.assertVariableEqual(a['x'], b['x'])
@@ -213,18 +213,18 @@ class TestDataset(TestCase):
 
         ret = data.indexed(dim1=0)
         self.assertEqual({'time': 20, 'dim2': 50, 'dim3': 10}, ret.dimensions)
-        self.assertItemsEqual(list(data.noncoordinates) + ['dim1'],
-                              ret.noncoordinates)
+        self.assertItemsEqual(list(data.nonindexes) + ['dim1'],
+                              ret.nonindexes)
 
         ret = data.indexed(time=slice(2), dim1=0, dim2=slice(5))
         self.assertEqual({'time': 2, 'dim2': 5, 'dim3': 10}, ret.dimensions)
-        self.assertItemsEqual(list(data.noncoordinates) + ['dim1'],
-                              ret.noncoordinates)
+        self.assertItemsEqual(list(data.nonindexes) + ['dim1'],
+                              ret.nonindexes)
 
         ret = data.indexed(time=0, dim1=0, dim2=slice(5))
         self.assertItemsEqual({'dim2': 5, 'dim3': 10}, ret.dimensions)
-        self.assertItemsEqual(list(data.noncoordinates) + ['dim1', 'time'],
-                              ret.noncoordinates)
+        self.assertItemsEqual(list(data.nonindexes) + ['dim1', 'time'],
+                              ret.nonindexes)
 
     def test_labeled(self):
         data = create_test_data()
@@ -440,7 +440,7 @@ class TestDataset(TestCase):
         self.assertVariableEqual(data['time.dayofyear'],
                                  Variable('time', 1 + np.arange(20)))
         self.assertArrayEqual(data['time.month'].values,
-                              data.variables['time'].as_index.month)
+                              data.variables['time'].as_pandas.month)
         self.assertArrayEqual(data['time.season'].values, 1)
         # test virtual variable math
         self.assertArrayEqual(data['time.dayofyear'] + 1, 2 + np.arange(20))
@@ -670,10 +670,10 @@ class TestDataset(TestCase):
     def test_reduce(self):
         data = create_test_data()
 
-        self.assertEqual(len(data.mean().coordinates), 0)
+        self.assertEqual(len(data.mean().indexes), 0)
 
         expected = data.max()
-        for var in data.noncoordinates:
+        for var in data.nonindexes:
             expected = data[var].max()
             actual = expected[var]
             self.assertDataArrayEqual(expected, actual)

@@ -1,3 +1,5 @@
+"""Internal utilties; not for external use
+"""
 import functools
 import warnings
 from collections import OrderedDict, Mapping, MutableMapping
@@ -9,16 +11,16 @@ import xray
 from .pycompat import basestring, iteritems, PY3
 
 
-def alias_warning(old_name, new_name, stacklevel=2):
-    warnings.warn('%s has been renamed to %s; this alias will be removed '
-                  "before xray's initial release" % (old_name, new_name),
+def alias_warning(old_name, new_name, stacklevel=3):
+    warnings.warn('%s has been deprecated and renamed to %s'
+                  % (old_name, new_name),
                   FutureWarning, stacklevel=stacklevel)
 
 
 def function_alias(obj, old_name):
     @functools.wraps(obj)
     def wrapper(*args, **kwargs):
-        alias_warning(old_name, obj.__name__, stacklevel=3)
+        alias_warning(old_name, obj.__name__)
         return obj(*args, **kwargs)
     return wrapper
 
@@ -26,7 +28,7 @@ def function_alias(obj, old_name):
 def class_alias(obj, old_name):
     class Wrapper(obj):
         def __new__(cls, *args, **kwargs):
-            alias_warning(old_name, obj.__name__, stacklevel=3)
+            alias_warning(old_name, obj.__name__)
             return super(Wrapper, cls).__new__(cls, *args, **kwargs)
     Wrapper.__name__ = obj.__name__
     return Wrapper

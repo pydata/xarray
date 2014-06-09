@@ -280,10 +280,10 @@ class Variable(AbstractArray):
                 "replacement values must match the Variable's shape")
         self._data = values
 
-    def to_coord(self):
-        """Return this variable as a Coordinate"""
-        return Coordinate(self.dimensions, self._data, self.attrs,
-                          encoding=self.encoding)
+    def to_index(self):
+        """Return this variable as an xray.Index"""
+        return Index(self.dimensions, self._data, self.attrs,
+                     encoding=self.encoding)
 
     @property
     def dimensions(self):
@@ -688,7 +688,7 @@ class Variable(AbstractArray):
 ops.inject_special_operations(Variable)
 
 
-class Coordinate(Variable):
+class Index(Variable):
     """Subclass of Variable which caches its data as a pandas.Index instead of
     a numpy.ndarray.
 
@@ -698,7 +698,7 @@ class Coordinate(Variable):
     _cache_data_class = PandasIndexAdapter
 
     def __init__(self, *args, **kwargs):
-        super(Coordinate, self).__init__(*args, **kwargs)
+        super(Index, self).__init__(*args, **kwargs)
         if self.ndim != 1:
             raise ValueError('%s objects must be 1-dimensional' %
                              type(self).__name__)
@@ -727,16 +727,21 @@ class Coordinate(Variable):
 
     @property
     def as_index(self):
-        """The variable's data as a pandas.Index"""
+        utils.alias_warning('as_index', 'as_pandas')
+        return self.as_pandas
+
+    @property
+    def as_pandas(self):
+        """This index as a pandas.Index"""
         # n.b. creating a new pandas.Index from an old pandas.Index is
         # basically free as pandas.Index objcets are immutable
         return pd.Index(self._data_cached().array, name=self.name)
 
     def _data_equals(self, other):
-        return self.as_index.equals(other.to_coord().as_index)
+        return self.as_pandas.equals(other.to_index().as_pandas)
 
-    def to_coord(self):
-        """Return this variable as an Coordinate"""
+    def to_index(self):
+        """Return this variable as an xray.Index"""
         return self
 
     # pandas.Index like properties:
@@ -746,23 +751,26 @@ class Coordinate(Variable):
         return self.dimensions[0]
 
     def get_indexer(self, label):
-        return self.as_index.get_indexer(label)
+        return self.as_pandas.get_indexer(label)
 
     def slice_indexer(self, start=None, stop=None, step=None):
-        return self.as_index.slice_indexer(start, stop, step)
+        return self.as_pandas.slice_indexer(start, stop, step)
 
     def slice_locs(self, start=None, stop=None):
-        return self.as_index.slice_locs(start, stop)
+        return self.as_pandas.slice_locs(start, stop)
 
     def get_loc(self, label):
-        return self.as_index.get_loc(label)
+        return self.as_pandas.get_loc(label)
 
     @property
     def is_monotonic(self):
-        return self.as_index.is_monotonic
+        return self.as_pandas.is_monotonic
 
     def is_numeric(self):
-        return self.as_index.is_numeric()
+        return self.as_pandas.is_numeric()
+
+
+Coordinate = utils.class_alias(Index, 'Coordinate')
 
 
 def broadcast_variables(first, second):

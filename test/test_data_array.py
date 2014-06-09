@@ -38,7 +38,7 @@ class TestDataArray(TestCase):
         <xray.DataArray 'my_variable' (time: 2, x: 3)>
         array([[1, 2, 3],
                [4, 5, 6]])
-        Coordinates:
+        Indexes:
             time: Int64Index([0, 1], dtype='int64')
             x: Int64Index([0, 1, 2], dtype='int64')
         Linked dataset variables:
@@ -57,9 +57,9 @@ class TestDataArray(TestCase):
             self.assertEqual(getattr(self.dv, attr), getattr(self.v, attr))
         self.assertEqual(len(self.dv), len(self.v))
         self.assertVariableEqual(self.dv, self.v)
-        self.assertEqual(list(self.dv.coordinates), list(self.ds.coordinates))
-        for k, v in iteritems(self.dv.coordinates):
-            self.assertArrayEqual(v, self.ds.coordinates[k])
+        self.assertEqual(list(self.dv.indexes), list(self.ds.indexes))
+        for k, v in iteritems(self.dv.indexes):
+            self.assertArrayEqual(v, self.ds.indexes[k])
         with self.assertRaises(AttributeError):
             self.dv.name = 'bar'
         with self.assertRaises(AttributeError):
@@ -162,7 +162,7 @@ class TestDataArray(TestCase):
 
         panel = pd.Panel({0: frame})
         actual = DataArray(panel)
-        expected = DataArray([data], expected.coordinates, ['dim_0', 'x', 'y'])
+        expected = DataArray([data], expected.indexes, ['dim_0', 'x', 'y'])
         self.assertDataArrayIdentical(expected, actual)
 
         expected = DataArray(['a', 'b'], name='foo')

@@ -20,8 +20,8 @@ Attributes and underlying data
 .. autosummary::
    :toctree: generated/
 
-   Dataset.coordinates
-   Dataset.noncoordinates
+   Dataset.indexes
+   Dataset.nonindexes
    Dataset.dimensions
    Dataset.attrs
 
@@ -143,7 +143,7 @@ Attributes and underlying data
 
    DataArray.values
    DataArray.as_index
-   DataArray.coordinates
+   DataArray.indexes
    DataArray.name
    DataArray.dataset
    DataArray.attrs
