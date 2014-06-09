@@ -263,7 +263,6 @@ class MaskedAndScaledArray(utils.NDArrayMixin):
                  self.scale_factor, self.add_offset))
 
 
-
 class DecodedCFDatetimeArray(utils.NDArrayMixin):
     """Wrapper around array-like objects to create a new indexable object where
     values, when accessesed, are automatically converted into datetime objects
@@ -279,7 +278,7 @@ class DecodedCFDatetimeArray(utils.NDArrayMixin):
         return np.dtype('datetime64[ns]')
 
     def __getitem__(self, key):
-        return decode_cf_datetime(self.array, units=self.units,
+        return decode_cf_datetime(self.array[key], units=self.units,
                                   calendar=self.calendar)
 
 
