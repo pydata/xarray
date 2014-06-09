@@ -248,6 +248,17 @@ class Variable(AbstractArray):
             self._data = self._cache_data_class(self._data)
         return self._data
 
+    def load_data(self):
+        """Manually trigger loading of this variable's data from disk or a
+        remote source and return this variable.
+
+        Normally, it should not be necessary to call this method in user code,
+        because all xray functions should either work on deferred data or
+        load data automatically.
+        """
+        self._data_cached()
+        return self
+
     def __getstate__(self):
         """Always cache data as an in-memory array before pickling"""
         self._data_cached()

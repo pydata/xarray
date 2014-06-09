@@ -76,6 +76,30 @@ class DatasetIOTestCases(object):
         actual = self.roundtrip(expected)
         self.assertDatasetAllClose(expected, actual)
 
+    def test_load_data(self):
+        expected = create_test_data()
+
+        @contextlib.contextmanager
+        def assert_loads():
+            actual = self.roundtrip(expected)
+            for v in actual.variables.values():
+                self.assertFalse(v._in_memory())
+            yield actual
+            for v in actual.variables.values():
+                self.assertTrue(v._in_memory())
+            self.assertDatasetAllClose(expected, actual)
+
+        with self.assertRaises(AssertionError):
+            # make sure the contextmanager works!
+            with assert_loads() as ds:
+                pass
+
+        with assert_loads() as ds:
+            ds.load_data()
+
+        with assert_loads() as ds:
+            ds['var1'].load_data()
+
     def test_roundtrip_None_variable(self):
         expected = Dataset({None: (('x', 'y'), [[0, 1], [2, 3]])})
         actual = self.roundtrip(expected)
