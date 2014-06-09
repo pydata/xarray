@@ -655,6 +655,8 @@ class TestDataset(TestCase):
         for decode_cf in [False, True]:
             ds = Dataset.load_store(store, decode_cf=decode_cf)
             with self.assertRaises(UnexpectedDataAccess):
+                ds.load_data()
+            with self.assertRaises(UnexpectedDataAccess):
                 ds['var1'].values
 
             # these should not raise UnexpectedDataAccess:

@@ -18,7 +18,7 @@ from . import data_array
 from . import ops
 from .utils import (FrozenOrderedDict, Frozen, SortedKeysDict, ChainMap,
                    multi_index_from_product)
-from .pycompat import iteritems, basestring
+from .pycompat import iteritems, itervalues, basestring
 
 
 def open_dataset(nc, decode_cf=True, mask_and_scale=True, decode_times=True,
@@ -376,6 +376,18 @@ class Dataset(Mapping):
         new variables.
         """
         return Frozen(self._dimensions)
+
+    def load_data(self):
+        """Manually trigger loading of this dataset's data from disk or a
+        remote source and return this dataset.
+
+        Normally, it should not be necessary to call this method in user code,
+        because all xray functions should either work on deferred data or
+        load data automatically.
+        """
+        for v in itervalues(self._variables):
+            v.load_data()
+        return self
 
     def copy(self, deep=False):
         """Returns a copy of this dataset.
