@@ -129,7 +129,7 @@ class GroupBy(object):
     def _iter_grouped(self):
         """Iterate over each element in this group"""
         for indices in self.group_indices:
-            yield self.obj.indexed(**{self.group_dim: indices})
+            yield self.obj.isel(**{self.group_dim: indices})
 
     def _infer_concat_args(self, applied_example):
         if self.group_dim in applied_example.dimensions:
@@ -176,7 +176,7 @@ class ArrayGroupBy(GroupBy, ImplementsReduce):
         stacked.attrs.update(self.obj.attrs)
 
         name = self.obj.name
-        ds = self.obj.dataset.unselect(name)
+        ds = self.obj.dataset.drop_vars(name)
         ds[concat_dim.name] = concat_dim
         # remove extraneous dimensions
         for dim in self.obj.dimensions:

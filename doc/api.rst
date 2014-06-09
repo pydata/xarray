@@ -60,13 +60,13 @@ Selecting
 .. autosummary::
    :toctree: generated/
 
-   Dataset.indexed
-   Dataset.labeled
+   Dataset.isel
+   Dataset.sel
    Dataset.reindex
    Dataset.reindex_like
    Dataset.rename
-   Dataset.select
-   Dataset.unselect
+   Dataset.select_vars
+   Dataset.drop_vars
    Dataset.squeeze
    Dataset.groupby
 
@@ -170,13 +170,13 @@ Selecting
    DataArray.__getitem__
    DataArray.__setitem__
    DataArray.loc
-   DataArray.indexed
-   DataArray.labeled
+   DataArray.isel
+   DataArray.sel
    DataArray.reindex
    DataArray.reindex_like
    DataArray.rename
-   DataArray.select
-   DataArray.unselect
+   DataArray.select_vars
+   DataArray.drop_vars
    DataArray.squeeze
 
 Group operations

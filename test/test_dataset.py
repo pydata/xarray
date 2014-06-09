@@ -181,10 +181,10 @@ class TestDataset(TestCase):
         self.assertTrue(data.attrs['foobar'], 'baz')
         self.assertIsInstance(data.attrs, OrderedDict)
 
-    def test_indexed(self):
+    def test_isel(self):
         data = create_test_data()
         slicers = {'dim1': slice(None, None, 2), 'dim2': slice(0, 2)}
-        ret = data.indexed(**slicers)
+        ret = data.isel(**slicers)
 
         # Verify that only the specified dimension was altered
         self.assertItemsEqual(data.dimensions, ret.dimensions)
@@ -209,24 +209,24 @@ class TestDataset(TestCase):
             np.testing.assert_array_equal(expected, actual)
 
         with self.assertRaises(ValueError):
-            data.indexed(not_a_dim=slice(0, 2))
+            data.isel(not_a_dim=slice(0, 2))
 
-        ret = data.indexed(dim1=0)
+        ret = data.isel(dim1=0)
         self.assertEqual({'time': 20, 'dim2': 50, 'dim3': 10}, ret.dimensions)
         self.assertItemsEqual(list(data.nonindexes) + ['dim1'],
                               ret.nonindexes)
 
-        ret = data.indexed(time=slice(2), dim1=0, dim2=slice(5))
+        ret = data.isel(time=slice(2), dim1=0, dim2=slice(5))
         self.assertEqual({'time': 2, 'dim2': 5, 'dim3': 10}, ret.dimensions)
         self.assertItemsEqual(list(data.nonindexes) + ['dim1'],
                               ret.nonindexes)
 
-        ret = data.indexed(time=0, dim1=0, dim2=slice(5))
+        ret = data.isel(time=0, dim1=0, dim2=slice(5))
         self.assertItemsEqual({'dim2': 5, 'dim3': 10}, ret.dimensions)
         self.assertItemsEqual(list(data.nonindexes) + ['dim1', 'time'],
                               ret.nonindexes)
 
-    def test_labeled(self):
+    def test_sel(self):
         data = create_test_data()
         int_slicers = {'dim1': slice(None, None, 2),
                        'dim2': slice(2),
@@ -234,24 +234,24 @@ class TestDataset(TestCase):
         loc_slicers = {'dim1': slice(None, None, 2),
                        'dim2': slice(0, 0.5),
                        'dim3': slice('a', 'c')}
-        self.assertEqual(data.indexed(**int_slicers),
-                         data.labeled(**loc_slicers))
+        self.assertEqual(data.isel(**int_slicers),
+                         data.sel(**loc_slicers))
         data['time'] = ('time', pd.date_range('2000-01-01', periods=20))
-        self.assertEqual(data.indexed(time=0),
-                         data.labeled(time='2000-01-01'))
-        self.assertEqual(data.indexed(time=slice(10)),
-                         data.labeled(time=slice('2000-01-01',
+        self.assertEqual(data.isel(time=0),
+                         data.sel(time='2000-01-01'))
+        self.assertEqual(data.isel(time=slice(10)),
+                         data.sel(time=slice('2000-01-01',
                                                    '2000-01-10')))
-        self.assertEqual(data, data.labeled(time=slice('1999', '2005')))
-        self.assertEqual(data.indexed(time=slice(3)),
-                         data.labeled(
+        self.assertEqual(data, data.sel(time=slice('1999', '2005')))
+        self.assertEqual(data.isel(time=slice(3)),
+                         data.sel(
                             time=pd.date_range('2000-01-01', periods=3)))
 
     def test_reindex_like(self):
         data = create_test_data()
         data['letters'] = ('dim3', 10 * ['a'])
 
-        expected = data.indexed(dim1=slice(10), time=slice(13))
+        expected = data.isel(dim1=slice(10), time=slice(13))
         actual = data.reindex_like(expected)
         self.assertDatasetIdentical(actual, expected)
 
@@ -268,7 +268,7 @@ class TestDataset(TestCase):
         data = create_test_data()
         self.assertDatasetIdentical(data, data.reindex())
 
-        expected = data.indexed(dim1=slice(10))
+        expected = data.isel(dim1=slice(10))
         actual = data.reindex(dim1=data['dim1'][:10])
         self.assertDatasetIdentical(actual, expected)
 
@@ -295,23 +295,23 @@ class TestDataset(TestCase):
         left2, right2 = align(left, right, join='outer')
         self.assertVariableEqual(left2['dim3'], right2['dim3'])
         self.assertArrayEqual(left2['dim3'], union)
-        self.assertDatasetIdentical(left2.labeled(dim3=intersection),
-                                    right2.labeled(dim3=intersection))
+        self.assertDatasetIdentical(left2.sel(dim3=intersection),
+                                    right2.sel(dim3=intersection))
         self.assertTrue(np.isnan(left2['var3'][-2:]).all())
         self.assertTrue(np.isnan(right2['var3'][:2]).all())
 
         left2, right2 = align(left, right, join='left')
         self.assertVariableEqual(left2['dim3'], right2['dim3'])
         self.assertVariableEqual(left2['dim3'], left['dim3'])
-        self.assertDatasetIdentical(left2.labeled(dim3=intersection),
-                                    right2.labeled(dim3=intersection))
+        self.assertDatasetIdentical(left2.sel(dim3=intersection),
+                                    right2.sel(dim3=intersection))
         self.assertTrue(np.isnan(right2['var3'][:2]).all())
 
         left2, right2 = align(left, right, join='right')
         self.assertVariableEqual(left2['dim3'], right2['dim3'])
         self.assertVariableEqual(left2['dim3'], right['dim3'])
-        self.assertDatasetIdentical(left2.labeled(dim3=intersection),
-                                    right2.labeled(dim3=intersection))
+        self.assertDatasetIdentical(left2.sel(dim3=intersection),
+                                    right2.sel(dim3=intersection))
         self.assertTrue(np.isnan(left2['var3'][-2:]).all())
 
     def test_variable_indexing(self):
@@ -327,28 +327,28 @@ class TestDataset(TestCase):
         self.assertVariableEqual(v[:3, :2], v[range(3), range(2)])
         self.assertVariableEqual(v[:3, :2], v.loc[d1[:3], d2[:2]])
 
-    def test_select(self):
+    def test_select_vars(self):
         data = create_test_data()
-        ret = data.select(_testvar)
+        ret = data.select_vars(_testvar)
         self.assertVariableEqual(data[_testvar], ret[_testvar])
         self.assertTrue(sorted(_vars.keys())[1] not in ret.variables)
-        self.assertRaises(ValueError, data.select, (_testvar, 'not_a_var'))
+        self.assertRaises(ValueError, data.select_vars, (_testvar, 'not_a_var'))
 
-    def test_unselect(self):
+    def test_drop_vars(self):
         data = create_test_data()
 
-        self.assertEqual(data, data.unselect())
+        self.assertEqual(data, data.drop_vars())
 
         expected = Dataset({k: data[k] for k in data if k != 'time'})
-        actual = data.unselect('time')
+        actual = data.drop_vars('time')
         self.assertEqual(expected, actual)
 
         expected = Dataset({k: data[k] for k in ['dim2', 'dim3', 'time']})
-        actual = data.unselect('dim1')
+        actual = data.drop_vars('dim1')
         self.assertEqual(expected, actual)
 
         with self.assertRaisesRegexp(ValueError, 'does not exist in this'):
-            data.unselect('not_found_here')
+            data.drop_vars('not_found_here')
 
     def test_copy(self):
         data = create_test_data()
@@ -418,13 +418,13 @@ class TestDataset(TestCase):
 
     def test_merge(self):
         data = create_test_data()
-        ds1 = data.select('var1')
-        ds2 = data.select('var3')
-        expected = data.select('var1', 'var3')
+        ds1 = data.select_vars('var1')
+        ds2 = data.select_vars('var3')
+        expected = data.select_vars('var1', 'var3')
         actual = ds1.merge(ds2)
         self.assertEqual(expected, actual)
         with self.assertRaises(ValueError):
-            ds1.merge(ds2.indexed(dim1=slice(2)))
+            ds1.merge(ds2.isel(dim1=slice(2)))
         with self.assertRaises(ValueError):
             ds1.merge(ds2.rename({'var3': 'var1'}))
 
@@ -448,7 +448,7 @@ class TestDataset(TestCase):
                               np.sin(1 + np.arange(20)))
         # test slicing the virtual variable -- it should still be virtual
         actual = data['time.dayofyear'][:10].dataset
-        expected = data.indexed(time=slice(10))
+        expected = data.isel(time=slice(10))
         self.assertDatasetIdentical(expected, actual)
 
     def test_slice_virtual_variable(self):
@@ -509,9 +509,9 @@ class TestDataset(TestCase):
         self.assertEqual(len(groupby), 3)
         expected_groups = {'a': 0, 'b': 1, 'c': 2}
         self.assertEqual(groupby.groups, expected_groups)
-        expected_items = [('a', data.indexed(x=0)),
-                          ('b', data.indexed(x=1)),
-                          ('c', data.indexed(x=2))]
+        expected_items = [('a', data.isel(x=0)),
+                          ('b', data.isel(x=1)),
+                          ('c', data.isel(x=2))]
         self.assertEqual(list(groupby), expected_items)
 
         identity = lambda x: x
@@ -535,8 +535,8 @@ class TestDataset(TestCase):
     def test_concat(self):
         data = create_test_data()
 
-        split_data = [data.indexed(dim1=slice(10)),
-                      data.indexed(dim1=slice(10, None))]
+        split_data = [data.isel(dim1=slice(10)),
+                      data.isel(dim1=slice(10, None))]
         self.assertDatasetIdentical(data, Dataset.concat(split_data, 'dim1'))
 
         def rectify_dim_order(dataset):
@@ -590,8 +590,8 @@ class TestDataset(TestCase):
 
         # TODO: factor this into several distinct tests
         data = create_test_data()
-        split_data = [data.indexed(dim1=slice(10)),
-                      data.indexed(dim1=slice(10, None))]
+        split_data = [data.isel(dim1=slice(10)),
+                      data.isel(dim1=slice(10, None))]
 
         with self.assertRaisesRegexp(ValueError, 'must supply at least one'):
             Dataset.concat([], 'dim1')
@@ -664,8 +664,8 @@ class TestDataset(TestCase):
                 ds['var1'].values
 
             # these should not raise UnexpectedDataAccess:
-            ds.indexed(time=10)
-            ds.indexed(time=slice(10), dim1=[0]).indexed(dim1=0, dim2=-1)
+            ds.isel(time=10)
+            ds.isel(time=slice(10), dim1=[0]).isel(dim1=0, dim2=-1)
 
     def test_reduce(self):
         data = create_test_data()

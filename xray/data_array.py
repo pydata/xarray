@@ -303,7 +303,7 @@ class DataArray(AbstractArray):
             return self.dataset[key]
         else:
             # orthogonal array indexing
-            return self.indexed(**self._key_to_indexers(key))
+            return self.isel(**self._key_to_indexers(key))
 
     def __setitem__(self, key, value):
         if isinstance(key, basestring):
@@ -398,28 +398,32 @@ class DataArray(AbstractArray):
     # mutable objects should not be hashable
     __hash__ = None
 
-    def indexed(self, **indexers):
-        """Return a new DataArray whose dataset is given by indexing along
-        the specified dimension(s).
+    def isel(self, **indexers):
+        """Return a new DataArray whose dataset is given by integer indexing
+        along the specified dimension(s).
 
         See Also
         --------
-        Dataset.indexed
-        DataArray.labeled
+        Dataset.isel
+        DataArray.sel
         """
-        ds = self.dataset.indexed(**indexers)
+        ds = self.dataset.isel(**indexers)
         return ds[self.name]
 
-    def labeled(self, **indexers):
+    indexed = utils.function_alias(isel, 'indexed')
+
+    def sel(self, **indexers):
         """Return a new DataArray whose dataset is given by selecting
         index labels along the specified dimension(s).
 
         See Also
         --------
-        Dataset.labeled
-        DataArray.indexed
+        Dataset.sel
+        DataArray.isel
         """
-        return self.indexed(**indexing.remap_label_indexers(self, indexers))
+        return self.isel(**indexing.remap_label_indexers(self, indexers))
+
+    labeled = utils.function_alias(sel, 'labeled')
 
     def reindex_like(self, other, copy=True):
         """Conform this object onto the indexes of another object, filling
@@ -452,7 +456,7 @@ class DataArray(AbstractArray):
         """
         return self.reindex(copy=copy, **other.indexes)
 
-    def reindex(self, copy=True, **indxes):
+    def reindex(self, copy=True, **indexes):
         """Conform this object onto a new set of indxes or pandas.Index
         objects, filling in missing values with NaN.
 
@@ -462,23 +466,23 @@ class DataArray(AbstractArray):
             If `copy=True`, the returned array's dataset contains only copied
             variables. If `copy=False` and no reindexing is required then
             original variables from this array's dataset are returned.
-        **indxes : dict
+        **indexes : dict
             Dictionary with keys given by dimension names and values given by
-            arrays of coordinate labels. Any mis-matched indxes values
-            will be filled in with NaN, and any mis-matched coordinate names
+            arrays of index labels. Any mis-matched indexes values
+            will be filled in with NaN, and any mis-matched index names
             will simply be ignored.
 
         Returns
         -------
         reindexed : DatasetArray
-            Another dataset array, with replaced indxes.
+            Another dataset array, with replaced indexes.
 
         See Also
         --------
         DatasetArray.reindex_like
         align
         """
-        reindexed_ds = self.select().dataset.reindex(copy=copy, **indxes)
+        reindexed_ds = self.select_vars().dataset.reindex(copy=copy, **indexes)
         return reindexed_ds[self.name]
 
     def rename(self, new_name_or_name_dict):
@@ -501,31 +505,35 @@ class DataArray(AbstractArray):
         renamed_dataset = self.dataset.rename(name_dict)
         return renamed_dataset[new_name]
 
-    def select(self, *names):
+    def select_vars(self, *names):
         """Returns a new DataArray with only the named variables, as well
         as this DataArray's array variable (and all associated indexes).
 
         See Also
         --------
-        Dataset.select
+        Dataset.select_vars
         """
         names = names + (self.name,)
-        ds = self.dataset.select(*names)
+        ds = self.dataset.select_vars(*names)
         return ds[self.name]
 
-    def unselect(self, *names):
+    select = utils.function_alias(select_vars, 'select')
+
+    def drop_vars(self, *names):
         """Returns a new DataArray without the named variables.
 
         See Also
         --------
-        Dataset.unselect
+        Dataset.drop_vars
         """
         if self.name in names:
-            raise ValueError('cannot unselect the name of a DataArray with '
-                             'unselect. Use the `unselect` method of the '
-                             'dataset instead.')
-        ds = self.dataset.unselect(*names)
+            raise ValueError('cannot drop the name of a DataArray with '
+                             'drop_vars. Use the `drop_vars` method of '
+                             'the dataset instead.')
+        ds = self.dataset.drop_vars(*names)
         return ds[self.name]
+
+    unselect = utils.function_alias(drop_vars, 'unselect')
 
     def groupby(self, group, squeeze=True):
         """Group this dataset by unique values of the indicated group.
@@ -649,7 +657,7 @@ class DataArray(AbstractArray):
         # TODO: save some summary (mean? bounds?) of dropped variables
         drop |= {k for k, v in iteritems(self.dataset.variables)
                  if any(dim in drop for dim in v.dimensions)}
-        ds = self.dataset.unselect(*drop)
+        ds = self.dataset.drop_vars(*drop)
         ds[self.name] = var
 
         if keep_attrs:

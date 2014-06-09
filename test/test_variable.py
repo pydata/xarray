@@ -427,14 +427,14 @@ class TestVariable(TestCase, VariableSubclassTestCases):
         v[range(10), range(11)] = 1
         self.assertArrayEqual(v.values, np.ones((10, 11)))
 
-    def test_indexed(self):
+    def test_isel(self):
         v = Variable(['time', 'x'], self.d)
-        self.assertVariableIdentical(v.indexed(time=slice(None)), v)
-        self.assertVariableIdentical(v.indexed(time=0), v[0])
-        self.assertVariableIdentical(v.indexed(time=slice(0, 3)), v[:3])
-        self.assertVariableIdentical(v.indexed(x=0), v[:, 0])
+        self.assertVariableIdentical(v.isel(time=slice(None)), v)
+        self.assertVariableIdentical(v.isel(time=0), v[0])
+        self.assertVariableIdentical(v.isel(time=slice(0, 3)), v[:3])
+        self.assertVariableIdentical(v.isel(x=0), v[:, 0])
         with self.assertRaisesRegexp(ValueError, 'do not exist'):
-            v.indexed(not_a_dim=0)
+            v.isel(not_a_dim=0)
 
     def test_index_0d_numpy_string(self):
         # regression test to verify our work around for indexing 0d strings

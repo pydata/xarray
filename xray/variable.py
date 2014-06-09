@@ -384,7 +384,7 @@ class Variable(AbstractArray):
     # mutable objects should not be hashable
     __hash__ = None
 
-    def indexed(self, **indexers):
+    def isel(self, **indexers):
         """Return a new array indexed along the specified dimension(s).
 
         Parameters
@@ -410,6 +410,8 @@ class Variable(AbstractArray):
             if dim in indexers:
                 key[i] = indexers[dim]
         return self[tuple(key)]
+
+    indexed = utils.function_alias(isel, 'indexed')
 
     def transpose(self, *dimensions):
         """Return a new Variable object with transposed dimensions.

@@ -454,8 +454,8 @@ class Dataset(Mapping):
     def __setitem__(self, key, value):
         """Add an array to this dataset.
 
-        If value is a `DataArray`, call its `select()` method, rename it to
-        `key` and merge the contents of the resulting dataset into this
+        If value is a `DataArray`, call its `select_vars()` method, rename it
+        to `key` and merge the contents of the resulting dataset into this
         dataset.
 
         If value is an `Variable` object (or tuple of form
@@ -573,7 +573,7 @@ class Dataset(Mapping):
     def __repr__(self):
         return common.dataset_repr(self)
 
-    def indexed(self, **indexers):
+    def isel(self, **indexers):
         """Return a new dataset with each array indexed along the specified
         dimension(s).
 
@@ -598,9 +598,9 @@ class Dataset(Mapping):
 
         See Also
         --------
-        Dataset.labeled
-        DataArray.indexed
-        DataArray.labeled
+        Dataset.sel
+        DataArray.isel
+        DataArray.sel
         """
         invalid = [k for k in indexers if not k in self.dimensions]
         if invalid:
@@ -614,14 +614,16 @@ class Dataset(Mapping):
         for name, var in iteritems(self.variables):
             var_indexers = {k: v for k, v in iteritems(indexers)
                             if k in var.dimensions}
-            variables[name] = var.indexed(**var_indexers)
+            variables[name] = var.isel(**var_indexers)
         return type(self)(variables, self.attrs)
 
-    def labeled(self, **indexers):
+    indexed = utils.function_alias(isel, 'indexed')
+
+    def sel(self, **indexers):
         """Return a new dataset with each variable indexed by tick labels
         along the specified dimension(s).
 
-        In contrast to `Dataset.indexed`, indexers for this method should use
+        In contrast to `Dataset.isel`, indexers for this method should use
         labels instead of integers.
 
         Under the hood, this method is powered by using Panda's powerful Index
@@ -651,11 +653,13 @@ class Dataset(Mapping):
 
         See Also
         --------
-        Dataset.indexed
-        DataArray.indexed
-        DataArray.labeled
+        Dataset.isel
+        DataArray.isel
+        DataArray.sel
         """
-        return self.indexed(**indexing.remap_label_indexers(self, indexers))
+        return self.isel(**indexing.remap_label_indexers(self, indexers))
+
+    labeled = utils.function_alias(sel, 'labeled')
 
     def reindex_like(self, other, copy=True):
         """Conform this object onto the indexes of another object, filling
@@ -916,7 +920,7 @@ class Dataset(Mapping):
         obj._update_vars_and_dims(new_variables, needs_copy=inplace)
         return obj
 
-    def select(self, *names):
+    def select_vars(self, *names):
         """Returns a new dataset that contains only the named variables and
         their indexes.
 
@@ -934,7 +938,9 @@ class Dataset(Mapping):
         variables = OrderedDict((k, self[k]) for k in names)
         return type(self)(variables, self.attrs)
 
-    def unselect(self, *names):
+    select = utils.function_alias(select_vars, 'select')
+
+    def drop_vars(self, *names):
         """Returns a new dataset without the named variables.
 
         Parameters
@@ -958,6 +964,8 @@ class Dataset(Mapping):
         variables = OrderedDict((k, v) for k, v in iteritems(self.variables)
                                 if k not in drop)
         return type(self)(variables, self.attrs)
+
+    unselect = utils.function_alias(drop_vars, 'unselect')
 
     def groupby(self, group, squeeze=True):
         """Group this dataset by unique values of the indicated group.
