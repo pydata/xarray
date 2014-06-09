@@ -69,7 +69,8 @@ def _as_compatible_data(data):
     # don't check for __len__ or __iter__ so as not to cast if data is a numpy
     # numeric type like np.float32
     required = ['dtype', 'shape', 'size', 'ndim']
-    if any(not hasattr(data, attr) for attr in required):
+    if (any(not hasattr(data, attr) for attr in required)
+            or isinstance(data, np.string_)):
         # data must be ndarray-like
         data = np.asarray(data)
     elif isinstance(data, np.datetime64):
