@@ -229,6 +229,21 @@ class TestDataArray(TestCase):
                             'x': sim['x']})['tmin']
         self.assertDataArrayEqual(actual, expected)
 
+    def test_math_name(self):
+        # Verify that name is preserved only when it can be done unambiguously.
+        # The rule (copied from pandas.Series) is keep the current name only if
+        # the other object has no name attribute and this object isn't a
+        # coordinate; otherwise reset to None.
+        ds = self.ds
+        a = self.dv
+        self.assertEqual((+a).name, 'foo')
+        self.assertEqual((a + 0).name, 'foo')
+        self.assertIs((a + a.rename(None)).name, None)
+        self.assertIs((a + a).name, None)
+        self.assertIs((+ds['x']).name, None)
+        self.assertIs((ds['x'] + 0).name, None)
+        self.assertIs((a + ds['x']).name, None)
+
     def test_coord_math(self):
         ds = Dataset({'x': ('x', 1 + np.arange(3))})
         expected = ds.copy()
@@ -381,3 +396,8 @@ class TestDataArray(TestCase):
         self.assertEqual('foo', actual.name)
         # test roundtrip
         self.assertDataArrayIdentical(self.dv, DataArray.from_series(actual))
+        # test name is None
+        actual.name = None
+        expected_da = self.dv.rename(None)
+        self.assertDataArrayIdentical(expected_da,
+                                      DataArray.from_series(actual))

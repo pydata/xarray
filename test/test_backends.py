@@ -76,6 +76,11 @@ class DatasetIOTestCases(object):
         actual = self.roundtrip(expected)
         self.assertDatasetAllClose(expected, actual)
 
+    def test_roundtrip_None_variable(self):
+        expected = Dataset({None: (('x', 'y'), [[0, 1], [2, 3]])})
+        actual = self.roundtrip(expected)
+        self.assertDatasetAllClose(expected, actual)
+
     def test_roundtrip_string_data(self):
         expected = Dataset({'x': ('t', ['abc', 'def'])})
         actual = self.roundtrip(expected)

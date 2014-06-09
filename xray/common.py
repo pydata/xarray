@@ -131,7 +131,10 @@ def _wrap_indent(text, start='', length=None):
 
 
 def array_repr(arr):
-    name_str = ('%r ' % arr.name) if hasattr(arr, 'name') else ''
+    if hasattr(arr, 'name') and arr.name is not None:
+        name_str = '%r ' % arr.name
+    else:
+        name_str = ''
     dim_summary = ', '.join('%s: %s' % (k, v) for k, v
                             in zip(arr.dimensions, arr.shape))
     summary = ['<xray.%s %s(%s)>'% (type(arr).__name__, name_str, dim_summary)]

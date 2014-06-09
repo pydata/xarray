@@ -231,6 +231,14 @@ def _assert_compat_valid(compat):
                          "'identical'" % compat)
 
 
+def _item0_str(items):
+    """Key function for use in sorted on a list of variables.
+
+    This is useful because None is not comparable to strings in Python 3.
+    """
+    return str(items[0])
+
+
 def as_dataset(obj):
     """Cast the given object to a Dataset.
 
@@ -469,8 +477,10 @@ class Dataset(Mapping):
             return (len(self) == len(other)
                     and all(k1 == k2 and v1.equals(v2)
                             for (k1, v1), (k2, v2)
-                            in zip(sorted(self.variables.items()),
-                                   sorted(other.variables.items()))))
+                            in zip(sorted(self.variables.items(),
+                                          key=_item0_str),
+                                   sorted(other.variables.items(),
+                                          key=_item0_str))))
         except (TypeError, AttributeError):
             return False
 
@@ -489,8 +499,10 @@ class Dataset(Mapping):
                     and len(self) == len(other)
                     and all(k1 == k2 and v1.identical(v2)
                             for (k1, v1), (k2, v2)
-                            in zip(sorted(self.variables.items()),
-                                   sorted(other.variables.items()))))
+                            in zip(sorted(self.variables.items(),
+                                          key=_item0_str),
+                                   sorted(other.variables.items(),
+                                          key=_item0_str))))
         except (TypeError, AttributeError):
             return False
 
