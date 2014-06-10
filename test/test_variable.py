@@ -436,6 +436,11 @@ class TestVariable(TestCase, VariableSubclassTestCases):
         with self.assertRaisesRegexp(ValueError, 'do not exist'):
             v.indexed(not_a_dim=0)
 
+    def test_index_0d_numpy_string(self):
+        # regression test to verify our work around for indexing 0d strings
+        v = Variable([], np.string_('asdf'))
+        self.assertVariableIdentical(v[()], v)
+
     def test_transpose(self):
         v = Variable(['time', 'x'], self.d)
         v2 = Variable(['x', 'time'], self.d.T)
