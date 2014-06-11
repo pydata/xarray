@@ -428,7 +428,7 @@ class TestDataset(TestCase):
         data = create_test_data()
         self.assertIsInstance(data['var1'], DataArray)
         self.assertVariableEqual(data['var1'], data.variables['var1'])
-        self.assertIs(data['var1'].dataset, data)
+        self.assertDatasetIdentical(data['var1'].dataset, data)
 
     def test_virtual_variables(self):
         # access virtual variables
