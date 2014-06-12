@@ -413,8 +413,7 @@ def encode_cf_variable(var):
 
 def decode_cf_variable(var, concat_characters=True, mask_and_scale=True,
                        decode_times=True):
-    if isinstance(var, xray.DataArray):
-        var = var.variable
+    var = xray.variable.as_variable(var)
     # use _data instead of values so as not to trigger loading data
     data = var._data
     dimensions = var.dimensions
