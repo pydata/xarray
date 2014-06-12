@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 import warnings
 
-from xray import conventions
+from xray import conventions, Dataset
 from . import TestCase, requires_netCDF4
 
 
@@ -138,6 +138,27 @@ class TestDatetime(TestCase):
         expected = pd.date_range('1900-01-01', periods=3).values
         self.assertEqual(actual.dtype, np.dtype('datetime64[ns]'))
         self.assertArrayEqual(actual[[0, 2]], expected[[0, 2]])
+
+    @requires_netCDF4
+    def test_decode_cf_variable(self):
+        ds = Dataset({'time': ('time', [0, 1, 2],
+                               {'units': 'days since 1900-01-01',
+                                'calendar': 'standard'})})
+        actual = conventions.decode_cf_variable(ds['time'])
+        expected = pd.date_range('1900-01-01', periods=3).values
+        self.assertEqual(actual.dtype, np.dtype('datetime64[ns]'))
+        self.assertArrayEqual(actual.values, expected)
+
+        actual = conventions.decode_cf_variable(ds['time'].variable)
+        self.assertEqual(actual.dtype, np.dtype('datetime64[ns]'))
+        self.assertArrayEqual(actual.values, expected)
+
+        # default calendar
+        ds = Dataset({'time': ('time', [0, 1, 2],
+                               {'units': 'days since 1900-01-01'})})
+        actual = conventions.decode_cf_variable(ds['time'])
+        self.assertEqual(actual.dtype, np.dtype('datetime64[ns]'))
+        self.assertArrayEqual(actual.values, expected)
 
     @requires_netCDF4
     def test_decode_non_standard_calendar(self):
