@@ -414,6 +414,7 @@ def encode_cf_variable(var):
 def decode_cf_variable(var, concat_characters=True, mask_and_scale=True,
                        decode_times=True):
     # use _data instead of data so as not to trigger loading data
+    var = xray.variable.as_variable(var)
     data = var._data
     dimensions = var.dimensions
     attributes = var.attrs.copy()
@@ -433,7 +434,7 @@ def decode_cf_variable(var, concat_characters=True, mask_and_scale=True,
         return v
 
     if 'dtype' in encoding:
-        if var.data.dtype != encoding['dtype']:
+        if data.dtype != encoding['dtype']:
             raise ValueError("Refused to overwrite dtype")
     encoding['dtype'] = data.dtype
 
