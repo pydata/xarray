@@ -44,9 +44,9 @@ def mask_and_scale(array, fill_value=None, scale_factor=None, add_offset=None):
     ----------
     http://www.unidata.ucar.edu/software/netcdf/docs/BestPractices.html
     """
-    # cast to float to insure NaN is meaningful
+    # cast to float to ensure NaN is meaningful
     values = np.array(array, dtype=float, copy=True)
-    if fill_value is not None and not np.isnan(fill_value):
+    if fill_value is not None and not pd.isnull(fill_value):
         if values.ndim > 0:
             values[values == fill_value] = np.nan
         elif values == fill_value:
@@ -398,7 +398,7 @@ def encode_cf_variable(var):
         if encoding['_FillValue'] is np.nan:
             attributes['_FillValue'] = np.nan
         else:
-            nans = np.isnan(data)
+            nans = pd.isnull(data)
             if nans.any():
                 data[nans] = get_to(encoding, attributes, '_FillValue')
 
@@ -429,7 +429,8 @@ def decode_cf_variable(var, concat_characters=True, mask_and_scale=True,
         v = source.pop(k, None)
         if v is not None:
             if k in dest:
-                raise ValueError("Failed hard to prevent overwriting key %s" % k)
+                raise ValueError(
+                    "Failed hard to prevent overwriting key %s" % k)
             dest[k] = v
         return v
 
@@ -447,7 +448,7 @@ def decode_cf_variable(var, concat_characters=True, mask_and_scale=True,
         fill_value = pop_to(attributes, encoding, '_FillValue')
         scale_factor = pop_to(attributes, encoding, 'scale_factor')
         add_offset = pop_to(attributes, encoding, 'add_offset')
-        if ((fill_value is not None and not np.isnan(fill_value))
+        if ((fill_value is not None and not pd.isnull(fill_value))
                 or scale_factor is not None or add_offset is not None):
             data = MaskedAndScaledArray(data, fill_value, scale_factor,
                                         add_offset)

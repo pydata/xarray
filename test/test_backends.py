@@ -106,7 +106,8 @@ class DatasetIOTestCases(object):
         self.assertDatasetAllClose(expected, actual)
 
     def test_roundtrip_string_data(self):
-        expected = Dataset({'x': ('t', ['abc', 'def'])})
+        expected = Dataset({'x': ('t', ['abc', 'def', np.nan],
+                                  {}, {'_FillValue': ''})})
         actual = self.roundtrip(expected)
         self.assertDatasetAllClose(expected, actual)
 
