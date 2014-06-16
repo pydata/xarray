@@ -314,9 +314,9 @@ class Variable(AbstractArray):
         (including `Ellipsis`) and 1d arrays, each of which are applied
         orthogonally along their respective dimensions.
 
-        The difference not matter in most cases unless you are using numpy's
-        "fancy indexing," which can otherwise result in data arrays
-        with shapes is inconsistent (or just uninterpretable with) with the
+        The difference does not matter in most cases unless you are using
+        numpy's "fancy indexing," which can otherwise result in data arrays
+        whose shapes is inconsistent (or just uninterpretable with) with the
         variable's dimensions.
 
         If you really want to do indexing like `x[x > 0]`, manipulate the numpy
@@ -324,14 +324,14 @@ class Variable(AbstractArray):
         """
         key = indexing.expanded_indexer(key, self.ndim)
         dimensions = [dim for k, dim in zip(key, self.dimensions)
-                        if not isinstance(k, (int, np.integer))]
+                      if not isinstance(k, (int, np.integer))]
         values = self._data[key]
         # orthogonal indexing should ensure the dimensionality is consistent
         if hasattr(values, 'ndim'):
             assert values.ndim == len(dimensions), (values.ndim, len(dimensions))
         else:
             assert len(dimensions) == 0, len(dimensions)
-        return type(self)(dimensions, values, self.attrs, self.encoding)
+        return type(self)(dimensions, values, self.attrs)
 
     def __setitem__(self, key, value):
         """__setitem__ is overloaded to access the underlying numpy values with
