@@ -105,9 +105,23 @@ class DatasetIOTestCases(object):
         with self.roundtrip(expected) as actual:
             self.assertDatasetAllClose(expected, actual)
 
+    def test_roundtrip_object_dtype(self):
+        floats = np.array([np.nan, np.nan, 1.0, 2.0, 3.0], dtype=object)
+        letters = np.array(['abc', 'def'], dtype=object)
+        expected = Dataset({'x': ('a', floats),
+                            'y': ('b', letters)})
+        with self.roundtrip(expected) as actual:
+            self.assertDatasetIdentical(expected, actual)
+
     def test_roundtrip_string_data(self):
-        expected = Dataset({'x': ('t', ['abc', 'def', np.nan],
-                                  {}, {'_FillValue': ''})})
+        expected = Dataset({'x': ('t', ['abc', 'def'])})
+        with self.roundtrip(expected) as actual:
+            self.assertDatasetAllClose(expected, actual)
+
+    def test_roundtrip_strings_with_fill_value(self):
+        values = np.array(['abc', 'def'])
+        encoding = {'_FillValue': ' ', 'dtype': np.dtype('S1')}
+        expected = Dataset({'x': ('t', values, {}, encoding)})
         with self.roundtrip(expected) as actual:
             self.assertDatasetAllClose(expected, actual)
 
