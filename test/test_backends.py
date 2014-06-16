@@ -332,7 +332,7 @@ class NetCDF4DataTest(DatasetIOTestCases, TestCase):
 
     def test_roundtrip_character_array(self):
         with create_tmp_file() as tmp_file:
-            values = np.array([['a', 'b', 'c'], ['d', 'e', 'f']])
+            values = np.array([['a', 'b', 'c'], ['d', 'e', 'f']], dtype='S')
 
             with nc4.Dataset(tmp_file, mode='w') as nc:
                 nc.createDimension('x', 2)
@@ -340,7 +340,8 @@ class NetCDF4DataTest(DatasetIOTestCases, TestCase):
                 v = nc.createVariable('x', np.dtype('S1'), ('x', 'string3'))
                 v[:] = values
 
-            expected = Dataset({'x': ('x', ['abc', 'def'])})
+            values = np.array(['abc', 'def'], dtype='S')
+            expected = Dataset({'x': ('x', values)})
             actual = open_dataset(tmp_file)
             self.assertDatasetIdentical(expected, actual)
 
