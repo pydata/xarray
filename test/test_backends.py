@@ -273,6 +273,11 @@ class NetCDF4DataTest(DatasetIOTestCases, TestCase):
         for k, v in iteritems(data['var2'].encoding):
             self.assertEqual(v, actual['var2'].encoding[k])
 
+        # regression test for #156
+        expected = data.indexed(dim1=0)
+        actual = self.roundtrip(expected)
+        self.assertDatasetEqual(expected, actual)
+
     def test_mask_and_scale(self):
         with create_tmp_file() as tmp_file:
             nc = nc4.Dataset(tmp_file, mode='w')
@@ -324,6 +329,24 @@ class NetCDF4DataTest(DatasetIOTestCases, TestCase):
             for kwargs in [{}, {'decode_cf': True}]:
                 actual = open_dataset(tmp_file, **kwargs)
                 self.assertDatasetIdentical(expected, actual)
+
+    def test_roundtrip_character_array(self):
+        with create_tmp_file() as tmp_file:
+            values = np.array([['a', 'b', 'c'], ['d', 'e', 'f']])
+
+            with nc4.Dataset(tmp_file, mode='w') as nc:
+                nc.createDimension('x', 2)
+                nc.createDimension('string3', 3)
+                v = nc.createVariable('x', np.dtype('S1'), ('x', 'string3'))
+                v[:] = values
+
+            expected = Dataset({'x': ('x', ['abc', 'def'])})
+            actual = open_dataset(tmp_file)
+            self.assertDatasetIdentical(expected, actual)
+
+            # regression test for #157
+            roundtripped = self.roundtrip(actual)
+            self.assertDatasetIdentical(expected, roundtripped)
 
 
 @requires_netCDF4

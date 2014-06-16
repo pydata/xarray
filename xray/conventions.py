@@ -374,6 +374,8 @@ def encode_cf_variable(var):
         # maintain dtype careful). This code makes a best effort attempt to
         # encode them into a dtype that NETCDF can handle by inspecting the
         # dtype of the first element.
+        # TODO: we should really check all elements here, because if the first
+        # value is missing (represented as np.nan), this is liable to fail
         dtype = np.array(data.reshape(-1)[0]).dtype
         # N.B. the "astype" call below will fail if data cannot be cast to the
         # type of its first element (which is probably the only sensible thing
@@ -406,7 +408,10 @@ def encode_cf_variable(var):
     if 'dtype' in encoding and encoding['dtype'].kind != 'O':
         if np.issubdtype(encoding['dtype'], int):
             data = data.round()
-        data = data.astype(encoding['dtype'])
+        if encoding['dtype'].kind == 'S' and encoding['dtype'].itemsize == 1:
+            data = string_to_char(data)
+            dimensions = dimensions + ('string%s' % data.shape[-1],)
+        data = np.asarray(data, dtype=encoding['dtype'])
 
     return xray.Variable(dimensions, data, attributes, encoding=encoding)
 
