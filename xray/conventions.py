@@ -6,7 +6,7 @@ from datetime import datetime
 
 from . import indexing
 from . import utils
-from .pycompat import iteritems
+from .pycompat import iteritems, basestring
 import xray
 
 # standard calendars recognized by netcdftime
@@ -354,19 +354,40 @@ def char_to_string(arr):
     return arr.view(kind + str(arr.shape[-1]))[..., 0]
 
 
-def pop_to(source, dest, k):
+def _safe_setitem(dest, key, value):
+    if key in dest:
+        raise ValueError('Failed hard to prevent overwriting key %r' % key)
+    dest[key] = value
+
+
+def pop_to(source, dest, key, default=None):
     """
     A convenience function which pops a key k from source to dest.
     None values are not passed on.  If k already exists in dest an
     error is raised.
     """
-    v = source.pop(k, None)
-    if v is not None:
-        if k in dest:
-            raise ValueError(
-                "Failed hard to prevent overwriting key %s" % k)
-        dest[k] = v
-    return v
+    value = source.pop(key, default)
+    if value is not None:
+        _safe_setitem(dest, key, value)
+    return value
+
+
+def _infer_dtype(array):
+    """Given an object array with no missing values, infer its dtype from its
+    first element
+    """
+    if array.size == 0:
+        dtype = np.dtype(float)
+    else:
+        dtype = np.array(array.flat[0]).dtype
+        if dtype.kind in ['S', 'U']:
+            # don't just use inferred_dtype to avoid truncating arrays to
+            # the length of their first element
+            dtype = np.dtype(dtype.kind)
+        elif dtype.kind == 'O':
+            raise ValueError('unable to infer dtype; xray cannot '
+                             'serialize arbitrary Python objects')
+    return dtype
 
 
 def encode_cf_variable(var):
@@ -402,30 +423,45 @@ def encode_cf_variable(var):
     if '_FillValue' in encoding:
         fill_value = pop_to(encoding, attributes, '_FillValue')
         if not pd.isnull(fill_value):
-            nans = pd.isnull(data)
-            if nans.any():
-                data[nans] = fill_value
+            missing = pd.isnull(data)
+            if missing.any():
+                data = data.copy()
+                data[missing] = fill_value
 
-    # restore original dtype
+    # cast to encoded dtype
     if 'dtype' in encoding and encoding['dtype'].kind != 'O':
         dtype = encoding.pop('dtype')
         if np.issubdtype(dtype, int):
             data = data.round()
-        if dtype.kind == 'S' and dtype.itemsize == 1:
-            data = string_to_char(data)
+        if dtype == 'S1' and data.dtype != 'S1':
+            data = string_to_char(np.asarray(data, 'S'))
             dimensions = dimensions + ('string%s' % data.shape[-1],)
         data = np.asarray(data, dtype=dtype)
 
+    # infer a valid dtype if necessary
+    # TODO: move this from conventions to backends (it's not CF related)
     if data.dtype.kind == 'O':
-        # Occasionally, one will end up with variables with dtype=object
-        # (likely because they were created from pandas objects which don't
-        # maintain dtype carefully). This code makes a best effort attempt to
-        # encode them into a dtype that NETCDF can handle by inspecting the
-        # dtype of the first element.
-        # TODO: we should really check all elements here, because if the first
-        # value is missing (represented as np.nan), this is liable to fail
-        dtype = np.array(data.reshape(-1)[0]).dtype
-        data = np.asarray(data, dtype=dtype)
+        missing = pd.isnull(data)
+        if missing.any():
+            non_missing_data = data[~missing]
+            inferred_dtype = _infer_dtype(non_missing_data)
+
+            if inferred_dtype.kind in ['S', 'U']:
+                # There is no safe bit-pattern for NA in typical binary string
+                # formats, we so can't set a _FillValue. Unfortunately, this
+                # means we won't be able to restore string arrays with missing
+                # values.
+                fill_value = ''
+            else:
+                # insist on using float for numeric data
+                if not np.issubdtype(inferred_dtype, float):
+                    inferred_dtype = np.dtype(float)
+                fill_value = np.nan
+
+            data = np.array(data, dtype=inferred_dtype, copy=True)
+            data[missing] = fill_value
+        else:
+            data = np.asarray(data, dtype=_infer_dtype(data))
 
     return xray.Variable(dimensions, data, attributes, encoding=encoding)
 

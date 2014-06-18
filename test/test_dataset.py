@@ -249,6 +249,8 @@ class TestDataset(TestCase):
 
     def test_reindex_like(self):
         data = create_test_data()
+        data['letters'] = ('dim3', 10 * ['a'])
+
         expected = data.indexed(dim1=slice(10), time=slice(13))
         actual = data.reindex_like(expected)
         self.assertDatasetIdentical(actual, expected)
@@ -257,6 +259,8 @@ class TestDataset(TestCase):
         expected['dim3'] = ('dim3', list('cdefghijkl'))
         expected['var3'][:-2] = expected['var3'][2:]
         expected['var3'][-2:] = np.nan
+        expected['letters'] = expected['letters'].astype(object)
+        expected['letters'][-2:] = np.nan
         actual = data.reindex_like(expected)
         self.assertDatasetIdentical(actual, expected)
 

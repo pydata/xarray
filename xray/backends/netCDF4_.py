@@ -153,7 +153,13 @@ class NetCDF4DataStore(AbstractWritableDataStore):
             datatype = variable.dtype
 
         self.set_necessary_dimensions(variable)
+
         fill_value = variable.attrs.pop('_FillValue', None)
+        if fill_value in ['', '\x00']:
+            # these are equivalent to the default FillValue, but netCDF4
+            # doesn't like setting fill_value to an empty string
+            fill_value = None
+
         encoding = variable.encoding
         nc4_var = self.ds.createVariable(
             varname=name,

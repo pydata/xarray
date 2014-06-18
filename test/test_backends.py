@@ -106,24 +106,42 @@ class DatasetIOTestCases(object):
             self.assertDatasetAllClose(expected, actual)
 
     def test_roundtrip_object_dtype(self):
-        floats = np.array([np.nan, np.nan, 1.0, 2.0, 3.0], dtype=object)
-        letters = np.array(['abc', 'def'], dtype=object)
-        expected = Dataset({'x': ('a', floats),
-                            'y': ('b', letters)})
-        with self.roundtrip(expected) as actual:
+        floats = np.array([0.0, 0.0, 1.0, 2.0, 3.0], dtype=object)
+        floats_nans = np.array([np.nan, np.nan, 1.0, 2.0, 3.0], dtype=object)
+        letters = np.array(['ab', 'cdef', 'g'], dtype=object)
+        letters_nans = np.array(['ab', 'cdef', np.nan], dtype=object)
+        all_nans = np.array([np.nan, np.nan], dtype=object)
+        original = Dataset({'floats': ('a', floats),
+                            'floats_nans': ('a', floats_nans),
+                            'letters': ('b', letters),
+                            'letters_nans': ('b', letters_nans),
+                            'all_nans': ('c', all_nans),
+                            'nan': ([], np.nan)})
+        expected = original.copy(deep=True)
+        expected['letters_nans'][-1] = ''
+        with self.roundtrip(original) as actual:
             self.assertDatasetIdentical(expected, actual)
 
     def test_roundtrip_string_data(self):
-        expected = Dataset({'x': ('t', ['abc', 'def'])})
+        expected = Dataset({'x': ('t', ['ab', 'cdef'])})
         with self.roundtrip(expected) as actual:
-            self.assertDatasetAllClose(expected, actual)
+            self.assertDatasetIdentical(expected, actual)
 
     def test_roundtrip_strings_with_fill_value(self):
-        values = np.array(['abc', 'def'])
-        encoding = {'_FillValue': ' ', 'dtype': np.dtype('S1')}
+        values = np.array(['ab', 'cdef', np.nan], dtype=object)
+        encoding = {'_FillValue': 'X', 'dtype': np.dtype('S1')}
         expected = Dataset({'x': ('t', values, {}, encoding)})
         with self.roundtrip(expected) as actual:
-            self.assertDatasetAllClose(expected, actual)
+            self.assertDatasetIdentical(expected, actual)
+
+        original = Dataset({'x': ('t', values, {}, {'_FillValue': ''})})
+        expected = original.copy(deep=True)
+        if type(self) is not ScipyDataTest:
+            # scipy (unlike netCDF4) can actually keep track of an empty
+            # _FillValue
+            expected['x'][-1] = ''
+        with self.roundtrip(original) as actual:
+            self.assertDatasetIdentical(expected, actual)
 
     def test_roundtrip_mask_and_scale(self):
         decoded = create_masked_and_scaled_data()
