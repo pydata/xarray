@@ -6,7 +6,7 @@ import numpy as np
 import pandas as pd
 
 import xray
-from .pycompat import basestring, iteritems, PY3
+from .pycompat import basestring, iteritems
 
 
 def alias_warning(old_name, new_name, stacklevel=2):
@@ -218,8 +218,6 @@ class Frozen(Mapping):
     immutable. If you really want to modify the mapping, the mutable version is
     saved under the `mapping` attribute.
     """
-    __slots__ = ['mapping']
-
     def __init__(self, mapping):
         self.mapping = mapping
 
@@ -238,11 +236,6 @@ class Frozen(Mapping):
     def __repr__(self):
         return '%s(%r)' % (type(self).__name__, self.mapping)
 
-    if not PY3:
-        def __getstate__(self):
-            return self.__dict__
-
-
 def FrozenOrderedDict(*args, **kwargs):
     return Frozen(OrderedDict(*args, **kwargs))
 
@@ -252,8 +245,6 @@ class SortedKeysDict(MutableMapping):
     items in sorted order by key but is otherwise equivalent to the underlying
     mapping.
     """
-    __slots__ = ['mapping']
-
     def __init__(self, mapping=None):
         self.mapping = {} if mapping is None else mapping
 
@@ -281,10 +272,6 @@ class SortedKeysDict(MutableMapping):
     def copy(self):
         return type(self)(self.mapping.copy())
 
-    if not PY3:
-        def __getstate__(self):
-            return self.__dict__
-
 
 class ChainMap(MutableMapping):
     """Partial backport of collections.ChainMap from Python>=3.3
@@ -292,8 +279,6 @@ class ChainMap(MutableMapping):
     Don't return this from any public APIs, since some of the public methods
     for a MutableMapping are missing (they will raise a NotImplementedError)
     """
-    __slots__ = ['maps']
-
     def __init__(self, *maps):
         self.maps = maps
 
@@ -316,10 +301,6 @@ class ChainMap(MutableMapping):
 
     def __len__(self):
         raise NotImplementedError
-
-    if not PY3:
-        def __getstate__(self):
-            return self.__dict__
 
 
 class NDArrayMixin(object):
