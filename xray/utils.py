@@ -215,7 +215,18 @@ def ordered_dict_intersection(first_dict, second_dict, compat=equivalent):
     return new_dict
 
 
-class Frozen(Mapping):
+class SingleSlotPickleMixin(object):
+    """Mixin class to add the ability to pickle objects whose state is defined
+    by a single __slots__ attribute. Only necessary under Python 2.
+    """
+    def __getstate__(self):
+        return getattr(self, self.__slots__[0])
+
+    def __setstate__(self, state):
+        setattr(self, self.__slots__[0], state)
+
+
+class Frozen(Mapping, SingleSlotPickleMixin):
     """Wrapper around an object implementing the mapping interface to make it
     immutable. If you really want to modify the mapping, the mutable version is
     saved under the `mapping` attribute.
@@ -240,16 +251,12 @@ class Frozen(Mapping):
     def __repr__(self):
         return '%s(%r)' % (type(self).__name__, self.mapping)
 
-    if not PY3:
-        def __getstate__(self):
-            return self.__dict__
-
 
 def FrozenOrderedDict(*args, **kwargs):
     return Frozen(OrderedDict(*args, **kwargs))
 
 
-class SortedKeysDict(MutableMapping):
+class SortedKeysDict(MutableMapping, SingleSlotPickleMixin):
     """An wrapper for dictionary-like objects that always iterates over its
     items in sorted order by key but is otherwise equivalent to the underlying
     mapping.
@@ -283,12 +290,8 @@ class SortedKeysDict(MutableMapping):
     def copy(self):
         return type(self)(self.mapping.copy())
 
-    if not PY3:
-        def __getstate__(self):
-            return self.__dict__
 
-
-class ChainMap(MutableMapping):
+class ChainMap(MutableMapping, SingleSlotPickleMixin):
     """Partial backport of collections.ChainMap from Python>=3.3
 
     Don't return this from any public APIs, since some of the public methods
@@ -318,10 +321,6 @@ class ChainMap(MutableMapping):
 
     def __len__(self):
         raise NotImplementedError
-
-    if not PY3:
-        def __getstate__(self):
-            return self.__dict__
 
 
 class NDArrayMixin(object):
