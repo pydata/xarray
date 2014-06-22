@@ -142,13 +142,13 @@ def array_repr(arr):
         summary.append(repr(arr.values))
     else:
         summary.append('[%s values with dtype=%s]' % (arr.size, arr.dtype))
-    if hasattr(arr, 'coordinates'):
-        if arr.coordinates:
-            summary.append('Coordinates:')
-            for k, v in arr.coordinates.items():
-                summary.append(_wrap_indent(repr(v.as_index), '    %s: ' % k))
+    if hasattr(arr, 'dataset'):
+        if arr.indexes:
+            summary.append('Indexes:')
+            for k, v in arr.indexes.items():
+                summary.append(_wrap_indent(repr(v.as_pandas), '    %s: ' % k))
         other_vars = [k for k in arr.dataset
-                      if k not in arr.coordinates and k != arr.name]
+                      if k not in arr.indexes and k != arr.name]
         if other_vars:
             summary.append('Linked dataset variables:')
             summary.append('    ' + ', '.join(other_vars))
@@ -172,7 +172,7 @@ def dataset_repr(ds):
     summary = ['<xray.%s>' % type(ds).__name__]
 
     max_name_length = max(len(k) for k in ds.variables) if ds else 0
-    first_col_width = max(4 + max_name_length, 16)
+    first_col_width = max(4 + max_name_length, 13)
     coords_str = pretty_print('Dimensions:', first_col_width)
     all_dim_strings = ['%s: %s' % (k, v) for k, v in iteritems(ds.dimensions)]
     summary.append('%s(%s)' % (coords_str, ', '.join(all_dim_strings)))
@@ -201,11 +201,11 @@ def dataset_repr(ds):
         else:
             return ['    None']
 
-    summary.append('Coordinates:')
-    summary.extend(summarize_variables(ds.coordinates, ' ', 'X'))
+    summary.append('Indexes:')
+    summary.extend(summarize_variables(ds.indexes, ' ', 'X'))
 
-    summary.append('Noncoordinates:')
-    summary.extend(summarize_variables(ds.noncoordinates, ' ', int))
+    summary.append('Non-indexes:')
+    summary.extend(summarize_variables(ds.nonindexes, ' ', int))
 
     summary.append('Attributes:\n%s' % _summarize_attributes(ds))
 

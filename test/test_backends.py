@@ -181,12 +181,12 @@ class DatasetIOTestCases(object):
         with self.roundtrip(in_memory) as on_disk:
             indexers = {'dim1': np.arange(3), 'dim2': np.arange(4),
                         'dim3': np.arange(5)}
-            expected = in_memory.indexed(**indexers)
-            actual = on_disk.indexed(**indexers)
+            expected = in_memory.isel(**indexers)
+            actual = on_disk.isel(**indexers)
             self.assertDatasetAllClose(expected, actual)
             # do it twice, to make sure we're switched from orthogonal -> numpy
             # when we cached the values
-            actual = on_disk.indexed(**indexers)
+            actual = on_disk.isel(**indexers)
             self.assertDatasetAllClose(expected, actual)
 
     def test_pickle(self):
@@ -319,7 +319,7 @@ class NetCDF4DataTest(DatasetIOTestCases, TestCase):
                 self.assertEqual(v, actual['var2'].encoding[k])
 
         # regression test for #156
-        expected = data.indexed(dim1=0)
+        expected = data.isel(dim1=0)
         with self.roundtrip(expected) as actual:
             self.assertDatasetEqual(expected, actual)
 

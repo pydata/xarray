@@ -38,7 +38,7 @@ class TestDataArray(TestCase):
         <xray.DataArray 'my_variable' (time: 2, x: 3)>
         array([[1, 2, 3],
                [4, 5, 6]])
-        Coordinates:
+        Indexes:
             time: Int64Index([0, 1], dtype='int64')
             x: Int64Index([0, 1, 2], dtype='int64')
         Linked dataset variables:
@@ -57,9 +57,9 @@ class TestDataArray(TestCase):
             self.assertEqual(getattr(self.dv, attr), getattr(self.v, attr))
         self.assertEqual(len(self.dv), len(self.v))
         self.assertVariableEqual(self.dv, self.v)
-        self.assertEqual(list(self.dv.coordinates), list(self.ds.coordinates))
-        for k, v in iteritems(self.dv.coordinates):
-            self.assertArrayEqual(v, self.ds.coordinates[k])
+        self.assertEqual(list(self.dv.indexes), list(self.ds.indexes))
+        for k, v in iteritems(self.dv.indexes):
+            self.assertArrayEqual(v, self.ds.indexes[k])
         with self.assertRaises(AttributeError):
             self.dv.name = 'bar'
         with self.assertRaises(AttributeError):
@@ -162,7 +162,7 @@ class TestDataArray(TestCase):
 
         panel = pd.Panel({0: frame})
         actual = DataArray(panel)
-        expected = DataArray([data], expected.coordinates, ['dim_0', 'x', 'y'])
+        expected = DataArray([data], expected.indexes, ['dim_0', 'x', 'y'])
         self.assertDataArrayIdentical(expected, actual)
 
         expected = DataArray(['a', 'b'], name='foo')
@@ -223,19 +223,19 @@ class TestDataArray(TestCase):
         for k in ['x', 'y', 'foo']:
             self.assertIn(k, self.dv[0, 0].dataset)
 
-    def test_indexed(self):
-        self.assertEqual(self.dv[0].dataset, self.ds.indexed(x=0))
+    def test_isel(self):
+        self.assertEqual(self.dv[0].dataset, self.ds.isel(x=0))
         self.assertEqual(self.dv[:3, :5].dataset,
-                         self.ds.indexed(x=slice(3), y=slice(5)))
-        self.assertDataArrayIdentical(self.dv, self.dv.indexed(x=slice(None)))
-        self.assertDataArrayIdentical(self.dv[:3], self.dv.indexed(x=slice(3)))
+                         self.ds.isel(x=slice(3), y=slice(5)))
+        self.assertDataArrayIdentical(self.dv, self.dv.isel(x=slice(None)))
+        self.assertDataArrayIdentical(self.dv[:3], self.dv.isel(x=slice(3)))
 
-    def test_labeled(self):
+    def test_sel(self):
         self.ds['x'] = ('x', np.array(list('abcdefghij')))
         da = self.ds['foo']
-        self.assertDataArrayIdentical(da, da.labeled(x=slice(None)))
-        self.assertDataArrayIdentical(da[1], da.labeled(x='b'))
-        self.assertDataArrayIdentical(da[:3], da.labeled(x=slice('c')))
+        self.assertDataArrayIdentical(da, da.sel(x=slice(None)))
+        self.assertDataArrayIdentical(da[1], da.sel(x='b'))
+        self.assertDataArrayIdentical(da[:3], da.sel(x=slice('c')))
 
     def test_loc(self):
         self.ds['x'] = ('x', np.array(list('abcdefghij')))
@@ -412,11 +412,11 @@ class TestDataArray(TestCase):
         self.assertEqual(len(vm.attrs), len(self.attrs))
         self.assertEqual(vm.attrs, self.attrs)
 
-    def test_unselect(self):
-        with self.assertRaisesRegexp(ValueError, 'cannot unselect the name'):
-            self.dv.unselect('foo')
+    def test_drop_vars(self):
+        with self.assertRaisesRegexp(ValueError, 'cannot drop the name'):
+            self.dv.drop_vars('foo')
         with self.assertRaisesRegexp(ValueError, 'must be a variable in'):
-            self.dv.unselect('y')
+            self.dv.drop_vars('y')
 
     def test_groupby_iter(self):
         for ((act_x, act_dv), (exp_x, exp_ds)) in \
@@ -484,8 +484,8 @@ class TestDataArray(TestCase):
 
     def test_concat(self):
         self.ds['bar'] = Variable(['x', 'y'], np.random.randn(10, 20))
-        foo = self.ds['foo'].select()
-        bar = self.ds['bar'].rename('foo').select()
+        foo = self.ds['foo'].select_vars()
+        bar = self.ds['bar'].rename('foo').select_vars()
         # from dataset array:
         self.assertVariableEqual(Variable(['w', 'x', 'y'],
                                           np.array([foo.values, bar.values])),
@@ -493,7 +493,7 @@ class TestDataArray(TestCase):
         # from iteration:
         grouped = [g for _, g in foo.groupby('x')]
         stacked = DataArray.concat(grouped, self.ds['x'])
-        self.assertDataArrayIdentical(foo.select(), stacked)
+        self.assertDataArrayIdentical(foo.select_vars(), stacked)
 
     def test_align(self):
         self.ds['x'] = ('x', np.array(list('abcdefghij')))

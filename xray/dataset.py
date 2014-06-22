@@ -17,7 +17,7 @@ from . import utils
 from . import data_array
 from . import ops
 from .utils import (FrozenOrderedDict, Frozen, SortedKeysDict, ChainMap,
-                   multi_index_from_product)
+                    multi_index_from_product)
 from .pycompat import iteritems, itervalues, basestring
 
 
@@ -105,7 +105,7 @@ class VariablesDict(OrderedDict):
 
         virtual_vars = []
         for k, v in iteritems(self):
-            if ((v.dtype.kind == 'M' and isinstance(v, variable.Coordinate))
+            if ((v.dtype.kind == 'M' and isinstance(v, variable.Index))
                     or (v.ndim == 0 and _castable_to_timestamp(v.values))):
                 # nb. dtype.kind == 'M' is datetime64
                 for suffix in _DATETIMEINDEX_COMPONENTS + ['season']:
@@ -126,8 +126,8 @@ class VariablesDict(OrderedDict):
 
         ref_var_name, suffix = split_key
         ref_var = self[ref_var_name]
-        if isinstance(ref_var, variable.Coordinate):
-            date = ref_var.as_index
+        if isinstance(ref_var, variable.Index):
+            date = ref_var.as_pandas
         elif ref_var.ndim == 0:
             date = pd.Timestamp(ref_var.values)
 
@@ -150,11 +150,11 @@ def _as_dataset_variable(name, var):
                         'DataArray or Variable, or a sequence of the '
                         'form (dimensions, data[, attributes, encoding])')
     if name in var.dimensions:
-        # convert the coordinate into a pandas.Index
+        # convert the into an Index
         if var.ndim != 1:
-            raise ValueError('a coordinate variable must be defined with '
+            raise ValueError('an index variable must be defined with '
                              '1-dimensional data')
-        var = var.to_coord()
+        var = var.to_index()
     return var
 
 
@@ -165,8 +165,8 @@ def _expand_variables(raw_variables, old_variables={}, compat='identical'):
     Dataset._variables dictionary.
 
     This includes converting tuples (dimensions, data) into Variable objects,
-    converting coordinate variables into Coordinate objects and expanding
-    DataArray objects into Variable plus Coordinates.
+    converting index variables into Index objects and expanding DataArray
+    objects into Variables plus Indexs.
 
     Raises ValueError if any conflicting values are found, between any of the
     new or old variables.
@@ -185,7 +185,7 @@ def _expand_variables(raw_variables, old_variables={}, compat='identical'):
     for name, var in iteritems(raw_variables):
         if hasattr(var, 'dataset'):
             # it's a DataArray
-            for dim, coord in iteritems(var.coordinates):
+            for dim, coord in iteritems(var.indexes):
                 if dim != name:
                     add_variable(dim, coord)
         add_variable(name, var)
@@ -259,9 +259,8 @@ class Dataset(Mapping):
     Dataset implements the mapping interface with keys given by variable names
     and values given by DataArray objects for each variable name.
 
-    One dimensional variables with name equal to their dimension are coordinate
-    variables, which means they are saved in the dataset as `pandas.Index`
-    objects.
+    One dimensional variables with name equal to their dimension are indexes,
+    which means they are saved in the dataset as `xray.Index` objects.
     """
     def __init__(self, variables=None, attributes=None):
         """To load data from a file or file-like object, use the `open_dataset`
@@ -286,12 +285,12 @@ class Dataset(Mapping):
         if attributes is not None:
             self._attributes.update(attributes)
 
-    def _add_missing_coordinates(self):
-        """Add missing coordinate variables IN-PLACE to the variables dict
+    def _add_missing_indexes(self):
+        """Add missing index variables IN-PLACE to the variables dict
         """
         for dim, size in iteritems(self._dimensions):
             if dim not in self._variables:
-                coord = variable.Coordinate(dim, np.arange(size))
+                coord = variable.Index(dim, np.arange(size))
                 self._variables[dim] = coord
 
     def _update_vars_and_dims(self, new_variables, needs_copy=True):
@@ -312,7 +311,7 @@ class Dataset(Mapping):
         # all checks are complete: it's safe to update
         self._variables = variables
         self._dimensions = dimensions
-        self._add_missing_coordinates()
+        self._add_missing_indexes()
 
     def _set_init_vars_and_dims(self, variables):
         """Set the initial value of Dataset variables and dimensions
@@ -436,7 +435,7 @@ class Dataset(Mapping):
         These variables can be derived by performing simple operations on
         existing dataset variables. Currently, the only implemented virtual
         variables are time/date components [1_] such as "time.month" or
-        "time.dayofyear", where "time" is the name of a coordinate whose data
+        "time.dayofyear", where "time" is the name of a index whose data
         is a `pandas.DatetimeIndex` object. The virtual variable "time.season"
         (for climatological season, starting with 1 for "DJF") is the only such
         variable which is not directly implemented in pandas.
@@ -455,8 +454,8 @@ class Dataset(Mapping):
     def __setitem__(self, key, value):
         """Add an array to this dataset.
 
-        If value is a `DataArray`, call its `select()` method, rename it to
-        `key` and merge the contents of the resulting dataset into this
+        If value is a `DataArray`, call its `select_vars()` method, rename it
+        to `key` and merge the contents of the resulting dataset into this
         dataset.
 
         If value is an `Variable` object (or tuple of form
@@ -525,13 +524,23 @@ class Dataset(Mapping):
 
     @property
     def coordinates(self):
-        """Dictionary of Coordinate objects used for label based indexing.
+        utils.alias_warning('coordinates', 'indexes', 3)
+        return self.indexes
+
+    @property
+    def indexes(self):
+        """Dictionary of xray.Index objects used for label based indexing.
         """
         return FrozenOrderedDict((dim, self.variables[dim])
                                  for dim in self.dimensions)
 
     @property
     def noncoordinates(self):
+        utils.alias_warning('noncoordinates', 'nonindexes', 3)
+        return self.nonindexes
+
+    @property
+    def nonindexes(self):
         """Dictionary of DataArrays whose names do not match dimensions.
         """
         return FrozenOrderedDict((name, self[name]) for name in self
@@ -564,7 +573,7 @@ class Dataset(Mapping):
     def __repr__(self):
         return common.dataset_repr(self)
 
-    def indexed(self, **indexers):
+    def isel(self, **indexers):
         """Return a new dataset with each array indexed along the specified
         dimension(s).
 
@@ -589,9 +598,9 @@ class Dataset(Mapping):
 
         See Also
         --------
-        Dataset.labeled
-        DataArray.indexed
-        DataArray.labeled
+        Dataset.sel
+        DataArray.isel
+        DataArray.sel
         """
         invalid = [k for k in indexers if not k in self.dimensions]
         if invalid:
@@ -605,15 +614,17 @@ class Dataset(Mapping):
         for name, var in iteritems(self.variables):
             var_indexers = {k: v for k, v in iteritems(indexers)
                             if k in var.dimensions}
-            variables[name] = var.indexed(**var_indexers)
+            variables[name] = var.isel(**var_indexers)
         return type(self)(variables, self.attrs)
 
-    def labeled(self, **indexers):
-        """Return a new dataset with each variable indexed by coordinate labels
+    indexed = utils.function_alias(isel, 'indexed')
+
+    def sel(self, **indexers):
+        """Return a new dataset with each variable indexed by tick labels
         along the specified dimension(s).
 
-        In contrast to `Dataset.indexed`, indexers for this method should use
-        coordinate values instead of integers.
+        In contrast to `Dataset.isel`, indexers for this method should use
+        labels instead of integers.
 
         Under the hood, this method is powered by using Panda's powerful Index
         objects. This makes label based indexing essentially just as fast as
@@ -629,7 +640,7 @@ class Dataset(Mapping):
         ----------
         **indexers : {dim: indexer, ...}
             Keyword arguments with names matching dimensions and values given
-            by individual, slices or arrays of coordinate values.
+            by individual, slices or arrays of tick labels.
 
         Returns
         -------
@@ -642,25 +653,27 @@ class Dataset(Mapping):
 
         See Also
         --------
-        Dataset.indexed
-        DataArray.indexed
-        DataArray.labeled
+        Dataset.isel
+        DataArray.isel
+        DataArray.sel
         """
-        return self.indexed(**indexing.remap_label_indexers(self, indexers))
+        return self.isel(**indexing.remap_label_indexers(self, indexers))
+
+    labeled = utils.function_alias(sel, 'labeled')
 
     def reindex_like(self, other, copy=True):
-        """Conform this object onto the coordinates of another object, filling
+        """Conform this object onto the indexes of another object, filling
         in missing values with NaN.
 
         Parameters
         ----------
         other : Dataset or DatasetArray
-            Object with a coordinates attribute giving a mapping from dimension
-            names to Variable objects, which provides coordinates upon which
-            to index the variables in this dataset. The coordinates on this
-            other object need not be the same as the coordinates on this
-            dataset. Any mis-matched coordinates values will be filled in with
-            NaN, and any mis-matched coordinate names will simply be ignored.
+            Object with an indexes attribute giving a mapping from dimension
+            names to Index objects, which provides indexes upon which
+            to index the variables in this dataset. The indexes on this
+            other object need not be the same as the indexes on this
+            dataset. Any mis-matched indexes values will be filled in with
+            NaN, and any mis-matched dimension names will simply be ignored.
         copy : bool, optional
             If `copy=True`, the returned dataset contains only copied
             variables. If `copy=False` and no reindexing is required then
@@ -669,17 +682,17 @@ class Dataset(Mapping):
         Returns
         -------
         reindexed : Dataset
-            Another dataset, with coordinates replaced from the other object.
+            Another dataset, with indexes replaced from the other object.
 
         See Also
         --------
         Dataset.reindex
         align
         """
-        return self.reindex(copy=copy, **other.coordinates)
+        return self.reindex(copy=copy, **other.indexes)
 
-    def reindex(self, copy=True, **coordinates):
-        """Conform this object onto a new set of coordinates or pandas.Index
+    def reindex(self, copy=True, **indexes):
+        """Conform this object onto a new set of indexes or pandas.Index
         objects, filling in missing values with NaN.
 
         Parameters
@@ -688,32 +701,32 @@ class Dataset(Mapping):
             If `copy=True`, the returned dataset contains only copied
             variables. If `copy=False` and no reindexing is required then
             original variables from this dataset are returned.
-        **coordinates : dict
+        **indexes : dict
             Dictionary with keys given by dimension names and values given by
-            arrays of coordinate labels. Any mis-matched coordinates values
-            will be filled in with NaN, and any mis-matched coordinate names
+            arrays of index labels. Any mis-matched indexes values
+            will be filled in with NaN, and any mis-matched index names
             will simply be ignored.
 
         Returns
         -------
         reindexed : Dataset
-            Another dataset, with replaced coordinates.
+            Another dataset, with replaced indexes.
 
         See Also
         --------
         Dataset.reindex_like
         align
         """
-        if not coordinates:
+        if not indexes:
             # shortcut
             return self.copy(deep=True) if copy else self
 
-        # build up indexers for assignment along each coordinate
+        # build up indexers for assignment along each index
         to_indexers = {}
         from_indexers = {}
-        for name, coord in iteritems(self.coordinates):
-            if name in coordinates:
-                target = utils.safe_cast_to_index(coordinates[name])
+        for name, coord in iteritems(self.indexes):
+            if name in indexes:
+                target = utils.safe_cast_to_index(indexes[name])
                 indexer = coord.get_indexer(target)
 
                 # Note pandas uses negative values from get_indexer to signify
@@ -758,11 +771,11 @@ class Dataset(Mapping):
         # create variables for the new dataset
         variables = OrderedDict()
         for name, var in iteritems(self.variables):
-            if name in coordinates:
-                new_var = coordinates[name]
+            if name in indexes:
+                new_var = indexes[name]
                 if not (hasattr(new_var, 'dimensions') and
                         hasattr(new_var, 'values')):
-                    new_var = variable.Coordinate(var.dimensions, new_var,
+                    new_var = variable.Index(var.dimensions, new_var,
                                                   var.attrs, var.encoding)
                 elif copy:
                     new_var = variable.as_variable(new_var).copy()
@@ -907,9 +920,9 @@ class Dataset(Mapping):
         obj._update_vars_and_dims(new_variables, needs_copy=inplace)
         return obj
 
-    def select(self, *names):
+    def select_vars(self, *names):
         """Returns a new dataset that contains only the named variables and
-        their coordinates.
+        their indexes.
 
         Parameters
         ----------
@@ -920,12 +933,14 @@ class Dataset(Mapping):
         -------
         Dataset
             The returned object has the same attributes as the original. Only
-            the names variables and their coordinates are included.
+            the names variables and their indexes are included.
         """
         variables = OrderedDict((k, self[k]) for k in names)
         return type(self)(variables, self.attrs)
 
-    def unselect(self, *names):
+    select = utils.function_alias(select_vars, 'select')
+
+    def drop_vars(self, *names):
         """Returns a new dataset without the named variables.
 
         Parameters
@@ -950,6 +965,8 @@ class Dataset(Mapping):
                                 if k not in drop)
         return type(self)(variables, self.attrs)
 
+    unselect = utils.function_alias(drop_vars, 'unselect')
+
     def groupby(self, group, squeeze=True):
         """Group this dataset by unique values of the indicated group.
 
@@ -959,13 +976,14 @@ class Dataset(Mapping):
             Array whose unique values should be used to group this array. If a
             string, must be the name of a variable contained in this dataset.
         squeeze : boolean, optional
-            If "group" is a coordinate of this array, `squeeze` controls
-            whether the subarrays have a dimension of length 1 along that
-            coordinate or if the dimension is squeezed out.
+            If "group" is a dimension of any arrays in this dataset, `squeeze`
+            controls whether the subarrays have a dimension of length 1 along
+            that dimension or if the dimension is squeezed out.
 
         Returns
         -------
-        grouped : GroupBy            A `GroupBy` object patterned after `pandas.GroupBy` that can be
+        grouped : GroupBy
+            A `GroupBy` object patterned after `pandas.GroupBy` that can be
             iterated over in the form of `(unique_value, grouped_array)` pairs.
         """
         if isinstance(group, basestring):
@@ -1063,11 +1081,11 @@ class Dataset(Mapping):
         if isinstance(dimension, basestring):
             dims = set([dimension])
         elif dimension is None:
-            dims = set(self.coordinates)
+            dims = set(self.indexes)
         else:
             dims = set(dimension)
 
-        bad_dims = [dim for dim in dims if dim not in self.coordinates]
+        bad_dims = [dim for dim in dims if dim not in self.indexes]
         if bad_dims:
             raise ValueError('Dataset does not contain the dimensions: '
                              '{0}'.format(bad_dims))
@@ -1162,12 +1180,12 @@ class Dataset(Mapping):
                 # across all datasets and indicates whether that
                 # variable differs or not.
                 return any(not ds[vname].equals(v) for ds in datasets[1:])
-            non_coords = iteritems(datasets[0].noncoordinates)
-            # all noncoordinates that are not the same in each dataset
+            non_coords = iteritems(datasets[0].nonindexes)
+            # all nonindexes that are not the same in each dataset
             concat_over.update(k for k, v in non_coords if differs(k, v))
         elif mode == 'all':
-            # concatenate all noncoordinates
-            concat_over.update(set(datasets[0].noncoordinates.keys()))
+            # concatenate all nonindexes
+            concat_over.update(set(datasets[0].nonindexes.keys()))
         elif mode == 'minimal':
             # only concatenate variables in which 'dimension' already
             # appears. These variables are added later.
@@ -1223,11 +1241,11 @@ class Dataset(Mapping):
     def to_dataframe(self):
         """Convert this dataset into a pandas.DataFrame.
 
-        Non-coordinate variables in this dataset form the columns of the
+        Non-index variables in this dataset form the columns of the
         DataFrame. The DataFrame is be indexed by the Cartesian product of
         this dataset's indices.
         """
-        columns = self.noncoordinates.keys()
+        columns = self.nonindexes.keys()
         data = []
         # we need a template to broadcast all dataset variables against
         # using stride_tricks lets us make the ndarray for broadcasting without
@@ -1241,8 +1259,8 @@ class Dataset(Mapping):
             _, var_data = np.broadcast_arrays(template.values, var.values)
             data.append(var_data.reshape(-1))
 
-        index = multi_index_from_product(list(self.coordinates.values()),
-                                         names=list(self.coordinates.keys()))
+        index = multi_index_from_product(list(self.indexes.values()),
+                                         names=list(self.indexes.keys()))
         return pd.DataFrame(OrderedDict(zip(columns, data)), index=index)
 
     @classmethod

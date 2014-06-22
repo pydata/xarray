@@ -7,7 +7,7 @@ import numpy as np
 import pandas as pd
 
 from xray import Variable, Dataset, DataArray, indexing
-from xray.variable import (Coordinate, as_variable, NumpyArrayAdapter,
+from xray.variable import (Index, as_variable, NumpyArrayAdapter,
                            PandasIndexAdapter, _as_compatible_data)
 from xray.pycompat import PY3
 
@@ -164,16 +164,16 @@ class VariableSubclassTestCases(object):
         self.assertArrayEqual((v * w).values, x * y)
         # something complicated
         self.assertArrayEqual((v ** 2 * w - 1 + x).values, x ** 2 * y - 1 + x)
-        # make sure dtype is preserved (for Coordinates)
+        # make sure dtype is preserved (for Index objects)
         self.assertEqual(float, (+v).dtype)
         self.assertEqual(float, (+v).values.dtype)
         self.assertEqual(float, (0 + v).dtype)
         self.assertEqual(float, (0 + v).values.dtype)
         # check types of returned data
         self.assertIsInstance(+v, Variable)
-        self.assertNotIsInstance(+v, Coordinate)
+        self.assertNotIsInstance(+v, Index)
         self.assertIsInstance(0 + v, Variable)
-        self.assertNotIsInstance(0 + v, Coordinate)
+        self.assertNotIsInstance(0 + v, Index)
 
     def test_1d_reduce(self):
         x = np.arange(5)
@@ -194,7 +194,7 @@ class VariableSubclassTestCases(object):
         # test ufuncs
         self.assertVariableIdentical(np.sin(v), self.cls(['x'], np.sin(x)))
         self.assertIsInstance(np.sin(v), Variable)
-        self.assertNotIsInstance(np.sin(v), Coordinate)
+        self.assertNotIsInstance(np.sin(v), Index)
 
     def example_1d_objects(self):
         for data in [range(3),
@@ -427,14 +427,14 @@ class TestVariable(TestCase, VariableSubclassTestCases):
         v[range(10), range(11)] = 1
         self.assertArrayEqual(v.values, np.ones((10, 11)))
 
-    def test_indexed(self):
+    def test_isel(self):
         v = Variable(['time', 'x'], self.d)
-        self.assertVariableIdentical(v.indexed(time=slice(None)), v)
-        self.assertVariableIdentical(v.indexed(time=0), v[0])
-        self.assertVariableIdentical(v.indexed(time=slice(0, 3)), v[:3])
-        self.assertVariableIdentical(v.indexed(x=0), v[:, 0])
+        self.assertVariableIdentical(v.isel(time=slice(None)), v)
+        self.assertVariableIdentical(v.isel(time=0), v[0])
+        self.assertVariableIdentical(v.isel(time=slice(0, 3)), v[:3])
+        self.assertVariableIdentical(v.isel(x=0), v[:, 0])
         with self.assertRaisesRegexp(ValueError, 'do not exist'):
-            v.indexed(not_a_dim=0)
+            v.isel(not_a_dim=0)
 
     def test_index_0d_numpy_string(self):
         # regression test to verify our work around for indexing 0d strings
@@ -563,27 +563,27 @@ class TestVariable(TestCase, VariableSubclassTestCases):
         self.assertEqual(vm.attrs, _attrs)
 
 
-class TestCoordinate(TestCase, VariableSubclassTestCases):
-    cls = staticmethod(Coordinate)
+class TestIndex(TestCase, VariableSubclassTestCases):
+    cls = staticmethod(Index)
 
     def test_init(self):
         with self.assertRaisesRegexp(ValueError, 'must be 1-dimensional'):
-            Coordinate((), 0)
+            Index((), 0)
 
     def test_as_index(self):
         data = 0.5 * np.arange(10)
-        v = Coordinate(['time'], data, {'foo': 'bar'})
-        self.assertTrue(pd.Index(data, name='time').identical(v.as_index))
+        v = Index(['time'], data, {'foo': 'bar'})
+        self.assertTrue(pd.Index(data, name='time').identical(v.as_pandas))
 
     def test_data(self):
-        x = Coordinate('x', np.arange(3.0))
+        x = Index('x', np.arange(3.0))
         # data should be initially saved as an ndarray
         self.assertIs(type(x._data), NumpyArrayAdapter)
         self.assertEqual(float, x.dtype)
         self.assertArrayEqual(np.arange(3), x)
         self.assertEqual(float, x.values.dtype)
         self.assertEqual('x', x.name)
-        # after inspecting x.values, the Coordinate will be saved as an Index
+        # after inspecting x.values, the Index will be saved as an Index
         self.assertIsInstance(x._data, PandasIndexAdapter)
         with self.assertRaisesRegexp(TypeError, 'cannot be modified'):
             x[:] = 0
@@ -592,7 +592,7 @@ class TestCoordinate(TestCase, VariableSubclassTestCases):
         # verify our work-around for (pandas<0.14):
         # https://github.com/pydata/pandas/issues/6370
         data = pd.date_range('2000-01-01', periods=3).to_pydatetime()
-        t = Coordinate('t', data)
+        t = Index('t', data)
         self.assertArrayEqual(t.values[:2], data[:2])
         self.assertArrayEqual(t[:2].values, data[:2])
         self.assertArrayEqual(t.values[:2], data[:2])

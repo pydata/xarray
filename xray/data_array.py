@@ -54,8 +54,8 @@ def _infer_indexes_and_dimensions(shape, indexes, dimensions):
     if indexes is None:
         indexes = [None] * len(shape)
     indexes = [idx if isinstance(idx, AbstractArray) else
-               xray.Coordinate(dimensions[n], idx) if idx is not None else
-               xray.Coordinate(dimensions[n], np.arange(shape[n]))
+               xray.Index(dimensions[n], idx) if idx is not None else
+               xray.Index(dimensions[n], np.arange(shape[n]))
                for n, idx in enumerate(indexes)]
 
     return indexes, dimensions
@@ -69,7 +69,7 @@ class _LocIndexer(object):
         label_indexers = self.data_array._key_to_indexers(key)
         indexers = []
         for dim, label in iteritems(label_indexers):
-            index = self.data_array.coordinates[dim]
+            index = self.data_array.indexes[dim]
             indexers.append(indexing.convert_label_indexer(index, label))
         return tuple(indexers)
 
@@ -150,7 +150,7 @@ class DataArray(AbstractArray):
         Dimension names associated with this array.
     values : np.ndarray
         Access or modify DataArray values as a numpy array.
-    coordinates : OrderedDict
+    indexes : OrderedDict
         Dictionary of DataArray objects that label values along each dimension.
     """
     def __init__(self, data=None, indexes=None, dimensions=None, name=None,
@@ -192,7 +192,7 @@ class DataArray(AbstractArray):
         if dataset is None:
             # try to fill in arguments from data if they weren't supplied
             if indexes is None:
-                indexes = getattr(data, 'coordinates', None)
+                indexes = getattr(data, 'indexes', None)
                 if isinstance(data, pd.Series):
                     indexes = [data.index]
                 elif isinstance(data, pd.DataFrame):
@@ -287,7 +287,7 @@ class DataArray(AbstractArray):
     def as_index(self):
         """The variable's data as a pandas.Index. Only possible for 1D arrays.
         """
-        return self.variable.to_coord().as_index
+        return self.variable.to_index().as_pandas
 
     @property
     def dimensions(self):
@@ -303,7 +303,7 @@ class DataArray(AbstractArray):
             return self.dataset[key]
         else:
             # orthogonal array indexing
-            return self.indexed(**self._key_to_indexers(key))
+            return self.isel(**self._key_to_indexers(key))
 
     def __setitem__(self, key, value):
         if isinstance(key, basestring):
@@ -352,7 +352,16 @@ class DataArray(AbstractArray):
 
     @property
     def coordinates(self):
-        """Dictionary of Coordinate objects used for label based indexing.
+        utils.alias_warning('coordinates', 'indexes', 3)
+        return self.indexes
+
+    @property
+    def indexes(self):
+        """Dictionary-like container of xray.Index objects used for label based
+        indexing.
+
+        Keys are given by the dimensions, but list-like (integer based)
+        indexing is also support.
         """
         indexes = [self.dataset.variables[dim] for dim in self.dimensions]
         return Indexes(self.dimensions, indexes)
@@ -389,42 +398,46 @@ class DataArray(AbstractArray):
     # mutable objects should not be hashable
     __hash__ = None
 
-    def indexed(self, **indexers):
-        """Return a new DataArray whose dataset is given by indexing along
-        the specified dimension(s).
+    def isel(self, **indexers):
+        """Return a new DataArray whose dataset is given by integer indexing
+        along the specified dimension(s).
 
         See Also
         --------
-        Dataset.indexed
-        DataArray.labeled
+        Dataset.isel
+        DataArray.sel
         """
-        ds = self.dataset.indexed(**indexers)
+        ds = self.dataset.isel(**indexers)
         return ds[self.name]
 
-    def labeled(self, **indexers):
+    indexed = utils.function_alias(isel, 'indexed')
+
+    def sel(self, **indexers):
         """Return a new DataArray whose dataset is given by selecting
-        coordinate labels along the specified dimension(s).
+        index labels along the specified dimension(s).
 
         See Also
         --------
-        Dataset.labeled
-        DataArray.indexed
+        Dataset.sel
+        DataArray.isel
         """
-        return self.indexed(**indexing.remap_label_indexers(self, indexers))
+        return self.isel(**indexing.remap_label_indexers(self, indexers))
+
+    labeled = utils.function_alias(sel, 'labeled')
 
     def reindex_like(self, other, copy=True):
-        """Conform this object onto the coordinates of another object, filling
+        """Conform this object onto the indexes of another object, filling
         in missing values with NaN.
 
         Parameters
         ----------
         other : Dataset or DatasetArray
-            Object with a coordinates attribute giving a mapping from dimension
-            names to xray.Variable objects, which provides coordinates upon
-            which to index the variables in this dataset. The coordinates on
-            this other object need not be the same as the coordinates on this
-            dataset. Any mis-matched coordinates values will be filled in with
-            NaN, and any mis-matched coordinate names will simply be ignored.
+            Object with a indexes attribute giving a mapping from dimension
+            names to xray.Variable objects, which provides indexes upon
+            which to index the variables in this dataset. The indexes on
+            this other object need not be the same as the indexes on this
+            dataset. Any mis-matched indexes values will be filled in with
+            NaN, and any mis-matched index names will simply be ignored.
         copy : bool, optional
             If `copy=True`, the returned array's dataset contains only copied
             variables. If `copy=False` and no reindexing is required then
@@ -433,7 +446,7 @@ class DataArray(AbstractArray):
         Returns
         -------
         reindexed : DatasetArray
-            Another dataset array, with coordinates replaced from the other
+            Another dataset array, with indexes replaced from the other
             object.
 
         See Also
@@ -441,10 +454,10 @@ class DataArray(AbstractArray):
         DatasetArray.reindex
         align
         """
-        return self.reindex(copy=copy, **other.coordinates)
+        return self.reindex(copy=copy, **other.indexes)
 
-    def reindex(self, copy=True, **coordinates):
-        """Conform this object onto a new set of coordinates or pandas.Index
+    def reindex(self, copy=True, **indexes):
+        """Conform this object onto a new set of indxes or pandas.Index
         objects, filling in missing values with NaN.
 
         Parameters
@@ -453,23 +466,23 @@ class DataArray(AbstractArray):
             If `copy=True`, the returned array's dataset contains only copied
             variables. If `copy=False` and no reindexing is required then
             original variables from this array's dataset are returned.
-        **coordinates : dict
+        **indexes : dict
             Dictionary with keys given by dimension names and values given by
-            arrays of coordinate labels. Any mis-matched coordinates values
-            will be filled in with NaN, and any mis-matched coordinate names
+            arrays of index labels. Any mis-matched indexes values
+            will be filled in with NaN, and any mis-matched index names
             will simply be ignored.
 
         Returns
         -------
         reindexed : DatasetArray
-            Another dataset array, with replaced coordinates.
+            Another dataset array, with replaced indexes.
 
         See Also
         --------
         DatasetArray.reindex_like
         align
         """
-        reindexed_ds = self.select().dataset.reindex(copy=copy, **coordinates)
+        reindexed_ds = self.select_vars().dataset.reindex(copy=copy, **indexes)
         return reindexed_ds[self.name]
 
     def rename(self, new_name_or_name_dict):
@@ -492,31 +505,35 @@ class DataArray(AbstractArray):
         renamed_dataset = self.dataset.rename(name_dict)
         return renamed_dataset[new_name]
 
-    def select(self, *names):
+    def select_vars(self, *names):
         """Returns a new DataArray with only the named variables, as well
-        as this DataArray's array variable (and all associated coordinates).
+        as this DataArray's array variable (and all associated indexes).
 
         See Also
         --------
-        Dataset.select
+        Dataset.select_vars
         """
         names = names + (self.name,)
-        ds = self.dataset.select(*names)
+        ds = self.dataset.select_vars(*names)
         return ds[self.name]
 
-    def unselect(self, *names):
+    select = utils.function_alias(select_vars, 'select')
+
+    def drop_vars(self, *names):
         """Returns a new DataArray without the named variables.
 
         See Also
         --------
-        Dataset.unselect
+        Dataset.drop_vars
         """
         if self.name in names:
-            raise ValueError('cannot unselect the name of a DataArray with '
-                             'unselect. Use the `unselect` method of the '
-                             'dataset instead.')
-        ds = self.dataset.unselect(*names)
+            raise ValueError('cannot drop the name of a DataArray with '
+                             'drop_vars. Use the `drop_vars` method of '
+                             'the dataset instead.')
+        ds = self.dataset.drop_vars(*names)
         return ds[self.name]
+
+    unselect = utils.function_alias(drop_vars, 'unselect')
 
     def groupby(self, group, squeeze=True):
         """Group this dataset by unique values of the indicated group.
@@ -527,9 +544,9 @@ class DataArray(AbstractArray):
             Array whose unique values should be used to group this array. If a
             string, must be the name of a variable contained in this dataset.
         squeeze : boolean, optional
-            If "group" is a coordinate of this array, `squeeze` controls
+            If "group" is a diension of this array, `squeeze` controls
             whether the subarrays have a dimension of length 1 along that
-            coordinate or if the dimension is squeezed out.
+            dimension or if the dimension is squeezed out.
 
         Returns
         -------
@@ -640,7 +657,7 @@ class DataArray(AbstractArray):
         # TODO: save some summary (mean? bounds?) of dropped variables
         drop |= {k for k, v in iteritems(self.dataset.variables)
                  if any(dim in drop for dim in v.dimensions)}
-        ds = self.dataset.unselect(*drop)
+        ds = self.dataset.drop_vars(*drop)
         ds[self.name] = var
 
         if keep_attrs:
@@ -709,21 +726,21 @@ class DataArray(AbstractArray):
     def to_dataframe(self):
         """Convert this array into a pandas.DataFrame.
 
-        Non-coordinate variables in this array's dataset (which include this
+        Non-index variables in this array's dataset (which include this
         array's data) form the columns of the DataFrame. The DataFrame is be
-        indexed by the Cartesian product of the dataset's coordinates.
+        indexed by the Cartesian product of the dataset's indexes.
         """
         return self.dataset.to_dataframe()
 
     def to_series(self):
         """Convert this array into a pandas.Series.
 
-        The Series is indexed by the Cartesian product of the coordinates.
+        The Series is indexed by the Cartesian product of the indexes.
         Unlike `to_dataframe`, only this array is including in the returned
-        series; the other non-coordinates variables in the dataset are not.
+        series; the other non-index variables in the dataset are not.
         """
-        index = multi_index_from_product(self.coordinates.values(),
-                                         names=self.coordinates.keys())
+        index = multi_index_from_product(self.indexes.values(),
+                                         names=self.indexes.keys())
         return pd.Series(self.values.reshape(-1), index=index, name=self.name)
 
     @classmethod
@@ -740,7 +757,7 @@ class DataArray(AbstractArray):
         return ds[series.name]
 
     def equals(self, other):
-        """True if two DataArrays have the same dimensions, coordinates and
+        """True if two DataArrays have the same dimensions, indexes and
         values; otherwise False.
 
         DataArrays can still be equal (like pandas objects) if they have NaN
@@ -752,32 +769,32 @@ class DataArray(AbstractArray):
         try:
             return (all(k1 == k2 and v1.equals(v2)
                         for (k1, v1), (k2, v2)
-                        in zip(self.coordinates.items(),
-                               other.coordinates.items()))
+                        in zip(self.indexes.items(),
+                               other.indexes.items()))
                     and self.variable.equals(other.variable))
         except AttributeError:
             return False
 
     def identical(self, other):
         """Like equals, but also checks DataArray names and attributes, and
-        attributes on their coordinates.
+        attributes on their indexes.
         """
         try:
             return (self.name == other.name
                     and all(k1 == k2 and v1.identical(v2)
                             for (k1, v1), (k2, v2)
-                            in zip(self.coordinates.items(),
-                                   other.coordinates.items()))
+                            in zip(self.indexes.items(),
+                                   other.indexes.items()))
                     and self.variable.identical(other.variable))
         except AttributeError:
             return False
 
-    def _select_coordinates(self):
-        return xray.Dataset(self.coordinates)
+    def _select_indexes(self):
+        return xray.Dataset(self.indexes)
 
     def __array_wrap__(self, obj, context=None):
         new_var = self.variable.__array_wrap__(obj, context)
-        ds = self._select_coordinates()
+        ds = self._select_indexes()
         if (self.name,) == self.dimensions:
             # use a new name for coordinate variables
             name = None
@@ -793,12 +810,12 @@ class DataArray(AbstractArray):
             return self.__array_wrap__(f(self.variable, *args, **kwargs))
         return func
 
-    def _check_coordinates_compat(self, other):
+    def _check_indexes_compat(self, other):
         # TODO: possibly automatically select index intersection instead?
-        if hasattr(other, 'coordinates'):
-            for k, v in iteritems(self.coordinates):
-                if (k in other.coordinates
-                        and not v.equals(other.coordinates[k])):
+        if hasattr(other, 'indexes'):
+            for k, v in iteritems(self.indexes):
+                if (k in other.indexes
+                        and not v.equals(other.indexes[k])):
                     raise ValueError('coordinate %r is not aligned' % k)
 
     @staticmethod
@@ -807,10 +824,10 @@ class DataArray(AbstractArray):
         def func(self, other):
             # TODO: automatically group by other variable dimensions to allow
             # for broadcasting dimensions like 'dayofyear' against 'time'
-            self._check_coordinates_compat(other)
-            ds = self._select_coordinates()
-            if hasattr(other, 'coordinates'):
-                ds.merge(other.coordinates, inplace=True)
+            self._check_indexes_compat(other)
+            ds = self._select_indexes()
+            if hasattr(other, 'indexes'):
+                ds.merge(other.indexes, inplace=True)
             other_array = getattr(other, 'variable', other)
             if hasattr(other, 'name') or (self.name,) == self.dimensions:
                 name = None
@@ -826,11 +843,11 @@ class DataArray(AbstractArray):
     def _inplace_binary_op(f):
         @functools.wraps(f)
         def func(self, other):
-            self._check_coordinates_compat(other)
+            self._check_indexes_compat(other)
             other_array = getattr(other, 'variable', other)
             self.variable = f(self.variable, other_array)
-            if hasattr(other, 'coordinates'):
-                self.dataset.merge(other.coordinates, inplace=True)
+            if hasattr(other, 'indexes'):
+                self.dataset.merge(other.indexes, inplace=True)
             return self
         return func
 
@@ -841,10 +858,10 @@ def align(*objects, **kwargs):
     """align(*objects, join='inner', copy=True)
 
     Given any number of Dataset and/or DataArray objects, returns new
-    objects with aligned coordinates.
+    objects with aligned indexes.
 
     Array from the aligned objects are suitable as input to mathematical
-    operators, because along each dimension they have the same coordinates.
+    operators, because along each dimension they have the same indexes.
 
     Missing values (if ``join != 'inner'``) are filled with NaN.
 
@@ -853,12 +870,12 @@ def align(*objects, **kwargs):
     *objects : Dataset or DatasetArray
         Objects to align.
     join : {'outer', 'inner', 'left', 'right'}, optional
-        Method for joining the coordinates of the passed objects along each
+        Method for joining the indexes of the passed objects along each
         dimension:
-         - 'outer': use the union of object coordinates
-         - 'outer': use the intersection of object coordinates
-         - 'left': use coordinates from the first object with each dimension
-         - 'right': use coordinates from the last object with each dimension
+         - 'outer': use the union of object indexes
+         - 'outer': use the intersection of object indexes
+         - 'left': use indexes from the first object with each dimension
+         - 'right': use indexes from the last object with each dimension
     copy : bool, optional
         If `copy=True`, the returned objects contain all new variables. If
         `copy=False` and no reindexing is required then the aligned objects
@@ -867,7 +884,7 @@ def align(*objects, **kwargs):
     Returns
     -------
     aligned : same as *objects
-        Tuple of objects with aligned coordinates.
+        Tuple of objects with aligned indexes.
     """
     # TODO: automatically align when doing math with dataset arrays?
     # TODO: change this to default to join='outer' like pandas?
@@ -890,14 +907,14 @@ def align(*objects, **kwargs):
     elif join == 'right':
         join_indices = operator.itemgetter(-1)
 
-    all_coords = defaultdict(list)
+    all_indexes = defaultdict(list)
     for obj in objects:
-        for k, v in iteritems(obj.coordinates):
-            all_coords[k].append(v.as_index)
+        for k, v in iteritems(obj.indexes):
+            all_indexes[k].append(v.as_pandas)
 
     # Exclude dimensions with all equal indices to avoid unnecessary reindexing
     # work.
-    joined_coords = {k: join_indices(v) for k, v in iteritems(all_coords)
-                     if any(not v[0].equals(idx) for idx in v[1:])}
+    joined_indexes = {k: join_indices(v) for k, v in iteritems(all_indexes)
+                      if any(not v[0].equals(idx) for idx in v[1:])}
 
-    return tuple(obj.reindex(copy=copy, **joined_coords) for obj in objects)
+    return tuple(obj.reindex(copy=copy, **joined_indexes) for obj in objects)
