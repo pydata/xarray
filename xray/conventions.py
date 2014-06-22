@@ -429,14 +429,15 @@ def encode_cf_variable(var):
                 data[missing] = fill_value
 
     # cast to encoded dtype
-    if 'dtype' in encoding and encoding['dtype'].kind != 'O':
-        dtype = encoding.pop('dtype')
-        if np.issubdtype(dtype, int):
-            data = data.round()
-        if dtype == 'S1' and data.dtype != 'S1':
-            data = string_to_char(np.asarray(data, 'S'))
-            dimensions = dimensions + ('string%s' % data.shape[-1],)
-        data = np.asarray(data, dtype=dtype)
+    if 'dtype' in encoding:
+        dtype = np.dtype(encoding.pop('dtype'))
+        if dtype.kind != 'O':
+            if np.issubdtype(dtype, int):
+                data = data.round()
+            if dtype == 'S1' and data.dtype != 'S1':
+                data = string_to_char(np.asarray(data, 'S'))
+                dimensions = dimensions + ('string%s' % data.shape[-1],)
+            data = np.asarray(data, dtype=dtype)
 
     # infer a valid dtype if necessary
     # TODO: move this from conventions to backends (it's not CF related)

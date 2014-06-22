@@ -34,7 +34,7 @@ def open_example_dataset(name, *args, **kwargs):
 def create_masked_and_scaled_data():
     x = np.array([np.nan, np.nan, 10, 10.1, 10.2])
     encoding = {'_FillValue': -1, 'add_offset': 10,
-                'scale_factor': np.float32(0.1), 'dtype': np.dtype(np.int16)}
+                'scale_factor': np.float32(0.1), 'dtype': 'i2'}
     return Dataset({'x': ('t', x, {}, encoding)})
 
 
