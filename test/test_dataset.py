@@ -651,6 +651,8 @@ class TestDataset(TestCase):
         data = create_test_data()
         roundtripped = pickle.loads(pickle.dumps(data))
         self.assertDatasetIdentical(data, roundtripped)
+        # regression test for #167:
+        self.assertEqual(data.dimensions, roundtripped.dimensions)
 
     def test_lazy_load(self):
         store = InaccessibleVariableDataStore()
