@@ -6,6 +6,7 @@ except ImportError: # Python 3
 
 from .common import ImplementsReduce
 from .ops import inject_reduce_methods
+from .variable import as_variable, Variable, Index
 import xray
 import numpy as np
 
@@ -58,73 +59,72 @@ class GroupBy(object):
     Dataset.groupby
     DataArray.groupby
     """
-    def __init__(self, obj, group_coord, squeeze=True):
+    def __init__(self, obj, group, squeeze=True):
         """Create a GroupBy object
 
         Parameters
         ----------
         obj : Dataset or DataArray
             Object to group.
-        group_coord : DataArray
+        group : DataArray or Index
             1-dimensional array with the group values.
         squeeze : boolean, optional
             If "group" is a coordinate of object, `squeeze` controls whether
             the subarrays have a dimension of length 1 along that coordinate or
             if the dimension is squeezed out.
         """
-        if group_coord.ndim != 1:
+        if group.ndim != 1:
             # TODO: remove this limitation?
-            raise ValueError('`group_coord` must be 1 dimensional')
+            raise ValueError('`group` must be 1 dimensional')
+        if getattr(group, 'name', None) is None:
+            raise ValueError('`group` must have a name')
+        if not hasattr(group, 'dimensions'):
+            raise ValueError("`group` must have a 'dimensions' attribute")
 
         self.obj = obj
-        self.group_coord = group_coord
-        self.group_dim, = group_coord.dimensions
+        self.group = group
+        self.group_dim, = group.dimensions
 
         from .dataset import as_dataset
         expected_size = as_dataset(obj).dimensions[self.group_dim]
-        if group_coord.size != expected_size:
+        if group.size != expected_size:
             raise ValueError('the group variable\'s length does not '
                              'match the length of this variable along its '
                              'dimension')
 
-        if group_coord.name in obj.dimensions:
-            # assume that group_coord already has sorted, unique values
-            if group_coord.dimensions != (group_coord.name,):
-                raise ValueError('`group_coord` is required to be a '
-                                 'coordinate variable if `group_coord.name` '
-                                 'is a dimension in `obj`')
-            group_indices = np.arange(group_coord.size)
+        if group.name in obj.dimensions:
+            # assume that group already has sorted, unique values
+            if group.dimensions != (group.name,):
+                raise ValueError('`group` is required to be an index if '
+                                 '`group.name` is a dimension in `obj`')
+            group_indices = np.arange(group.size)
             if not squeeze:
                 # group_indices = group_indices.reshape(-1, 1)
                 # use slices to do views instead of fancy indexing
                 group_indices = [slice(i, i + 1) for i in group_indices]
-            unique_coord = group_coord
+            unique_index = group
         else:
-            # look through group_coord to find the unique values
-            unique_values, group_indices = unique_value_groups(group_coord)
-            # TODO: switch this to using the new DataArray constructor when we
-            # get around to writing it:
-            # unique_coord = xary.DataArray(unique_values, name=group_coord.name)
-            variables = {group_coord.name: (group_coord.name, unique_values)}
-            unique_coord = xray.Dataset(variables)[group_coord.name]
+            # look through group to find the unique values
+            unique_values, group_indices = unique_value_groups(group)
+            unique_index = Index(group.name, unique_values)
 
         self.group_indices = group_indices
-        self.unique_coord = unique_coord
+        self.unique_index = unique_index
         self._groups = None
 
     @property
     def groups(self):
         # provided to mimic pandas.groupby
         if self._groups is None:
-            self._groups = dict(zip(self.unique_coord.values,
+            self._groups = dict(zip(self.unique_index.values,
                                     self.group_indices))
         return self._groups
 
     def __len__(self):
-        return self.unique_coord.size
+        return self.unique_index.size
 
     def __iter__(self):
-        return izip(self.unique_coord.values, self._iter_grouped())
+        return izip(self.unique_index.values, self._iter_grouped())
 
     def _iter_grouped(self):
         """Iterate over each element in this group"""
@@ -133,11 +133,11 @@ class GroupBy(object):
 
     def _infer_concat_args(self, applied_example):
         if self.group_dim in applied_example.dimensions:
-            concat_dim = self.group_coord
+            concat_dim = self.group
             indexers = self.group_indices
         else:
-            concat_dim = self.unique_coord
-            indexers = np.arange(self.unique_coord.size)
+            concat_dim = self.unique_index
+            indexers = np.arange(self.unique_index.size)
         return concat_dim, indexers
 
     @property
@@ -168,10 +168,10 @@ class ArrayGroupBy(GroupBy, ImplementsReduce):
         for indices in self.group_indices:
             indexer[group_axis] = indices
             data = array.values[tuple(indexer)]
-            yield xray.Variable(dims, data)
+            yield Variable(dims, data)
 
     def _combine_shortcut(self, applied, concat_dim, indexers):
-        stacked = xray.Variable.concat(
+        stacked = Variable.concat(
             applied, concat_dim, indexers, shortcut=True)
         stacked.attrs.update(self.obj.attrs)
 
@@ -187,7 +187,7 @@ class ArrayGroupBy(GroupBy, ImplementsReduce):
 
     def _restore_dim_order(self, stacked, concat_dim):
         def lookup_order(dimension):
-            if dimension == self.group_coord.name:
+            if dimension == self.group.name:
                 dimension, = concat_dim.dimensions
             if dimension in self.obj.dimensions:
                 axis = self.obj.get_axis_num(dimension)

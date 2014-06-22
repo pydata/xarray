@@ -8,7 +8,6 @@ except ImportError: # Python 3
     izip = zip
 from collections import OrderedDict
 
-from . import groupby
 from . import indexing
 from . import ops
 from .pycompat import basestring
@@ -585,6 +584,7 @@ class Variable(AbstractArray):
                                      '%s' % (dimension, i, length))
 
         # initialize the stacked variable with empty data
+        from . import groupby
         first_var, variables = groupby.peek_at(variables)
         if dimension in first_var.dimensions:
             axis = first_var.get_axis_num(dimension)

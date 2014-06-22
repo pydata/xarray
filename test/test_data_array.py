@@ -260,11 +260,13 @@ class TestDataArray(TestCase):
 
     def test_rename(self):
         renamed = self.dv.rename('bar')
-        self.assertEqual(renamed.dataset, self.ds.rename({'foo': 'bar'}))
+        self.assertDatasetIdentical(
+            renamed.dataset, self.ds.rename({'foo': 'bar'}))
         self.assertEqual(renamed.name, 'bar')
 
         renamed = self.dv.rename({'foo': 'bar'})
-        self.assertEqual(renamed.dataset, self.ds.rename({'foo': 'bar'}))
+        self.assertDatasetIdentical(
+            renamed.dataset, self.ds.rename({'foo': 'bar'}))
         self.assertEqual(renamed.name, 'bar')
 
     def test_dataset_getitem(self):
@@ -431,8 +433,10 @@ class TestDataArray(TestCase):
         self.dv['abc'] = agg_var
         self.dv['y'] = 20 + 100 * self.ds['y'].variable
 
+        idx = self.dv.indexes['y']
+
         identity = lambda x: x
-        for g in ['x', 'y', 'abc']:
+        for g in ['x', 'y', 'abc', idx]:
             for shortcut in [False, True]:
                 for squeeze in [False, True]:
                     expected = self.dv
@@ -453,7 +457,7 @@ class TestDataArray(TestCase):
         self.assertDataArrayAllClose(
             expected_sum_all, grouped.sum())
         expected_unique = Variable('abc', ['a', 'b', 'c'])
-        self.assertVariableEqual(expected_unique, grouped.unique_coord)
+        self.assertVariableEqual(expected_unique, grouped.unique_index)
         self.assertEqual(3, len(grouped))
 
         grouped = self.dv.groupby('abc', squeeze=False)
