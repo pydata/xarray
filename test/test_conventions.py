@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 import warnings
 
-from xray import conventions
+from xray import conventions, Variable
 from . import TestCase, requires_netCDF4
 
 
@@ -262,3 +262,16 @@ class TestDatetime(TestCase):
                                   '1900-01-02 00:00:01'],
                                  'seconds since 1900-01-01 00:00:00')]:
             self.assertEqual(expected, conventions.guess_time_units(dates))
+
+
+class TestEncodeCFVariable(TestCase):
+    def test_incompatible_attributes(self):
+        invalid_vars = [
+            Variable(['t'], pd.date_range('2000-01-01', periods=3),
+                     {'units': 'foobar'}),
+            Variable(['t'], [0, 1, 2], {'add_offset': 0}, {'add_offset': 2}),
+            Variable(['t'], [0, 1, 2], {'_FillValue': 0}, {'_FillValue': 2}),
+            ]
+        for var in invalid_vars:
+            with self.assertRaises(ValueError):
+                conventions.encode_cf_variable(var)

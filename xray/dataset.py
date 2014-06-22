@@ -743,17 +743,13 @@ class Dataset(Mapping):
             return tuple(indexers.get(d, slice(None)) for d in var.dimensions)
 
         def get_fill_value_and_dtype(dtype):
+            # N.B. these casting rules should match pandas
             if np.issubdtype(dtype, np.datetime64):
                 fill_value = np.datetime64('NaT')
             elif any(np.issubdtype(dtype, t) for t in (int, float)):
                 # convert to floating point so NaN is valid
                 dtype = float
                 fill_value = np.nan
-            elif any(np.issubdtype(dtype, t) for t in (str, unicode)):
-                # TODO: consider eliminating this case to better align behavior
-                # with pandas (which upcasts strings to object arrays and
-                # inserts NaN for missing values)
-                fill_value = 'NA'
             else:
                 dtype = object
                 fill_value = np.nan

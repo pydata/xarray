@@ -1,3 +1,5 @@
+import numpy as np
+
 from xray.utils import FrozenOrderedDict
 from xray.pycompat import iteritems
 

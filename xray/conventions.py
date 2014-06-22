@@ -6,14 +6,15 @@ from datetime import datetime
 
 from . import indexing
 from . import utils
-from .pycompat import iteritems
+from .pycompat import iteritems, bytes_type, unicode_type
 import xray
 
 # standard calendars recognized by netcdftime
 _STANDARD_CALENDARS = {'standard', 'gregorian', 'proleptic_gregorian'}
 
 
-def mask_and_scale(array, fill_value=None, scale_factor=None, add_offset=None):
+def mask_and_scale(array, fill_value=None, scale_factor=None, add_offset=None,
+                   dtype=float):
     """Scale and mask array values according to CF conventions for packed and
     missing values
 
@@ -44,8 +45,8 @@ def mask_and_scale(array, fill_value=None, scale_factor=None, add_offset=None):
     ----------
     http://www.unidata.ucar.edu/software/netcdf/docs/BestPractices.html
     """
-    # cast to float to ensure NaN is meaningful
-    values = np.array(array, dtype=float, copy=True)
+    # by default, cast to float to ensure NaN is meaningful
+    values = np.array(array, dtype=dtype, copy=True)
     if fill_value is not None and not pd.isnull(fill_value):
         if values.ndim > 0:
             values[values == fill_value] = np.nan
@@ -229,7 +230,7 @@ class MaskedAndScaledArray(utils.NDArrayMixin):
     http://www.unidata.ucar.edu/software/netcdf/docs/BestPractices.html
     """
     def __init__(self, array, fill_value=None, scale_factor=None,
-                 add_offset=None):
+                 add_offset=None, dtype=float):
         """
         Parameters
         ----------
@@ -248,19 +249,21 @@ class MaskedAndScaledArray(utils.NDArrayMixin):
         self.fill_value = fill_value
         self.scale_factor = scale_factor
         self.add_offset = add_offset
+        self._dtype = dtype
 
     @property
     def dtype(self):
-        return np.dtype('float')
+        return np.dtype(self._dtype)
 
     def __getitem__(self, key):
         return mask_and_scale(self.array[key], self.fill_value,
-                              self.scale_factor, self.add_offset)
+                              self.scale_factor, self.add_offset, self._dtype)
 
     def __repr__(self):
-        return ("%s(%r, fill_value=%r, scale_factor=%r, add_offset=%r)" %
+        return ("%s(%r, fill_value=%r, scale_factor=%r, add_offset=%r, "
+                "dtype=%r)" %
                 (type(self).__name__, self.array, self.fill_value,
-                 self.scale_factor, self.add_offset))
+                 self.scale_factor, self.add_offset, self._dtype))
 
 
 class DecodedCFDatetimeArray(utils.NDArrayMixin):
@@ -324,7 +327,7 @@ class CharToStringArray(utils.NDArrayMixin):
         else:
             # require slicing the last dimension completely
             key = indexing.expanded_indexer(key, self.array.ndim)
-            if  key[-1] != slice(None):
+            if key[-1] != slice(None):
                 raise IndexError('too many indices')
             values = char_to_string(self.array[key])
         return values
@@ -351,6 +354,42 @@ def char_to_string(arr):
     return arr.view(kind + str(arr.shape[-1]))[..., 0]
 
 
+def _safe_setitem(dest, key, value):
+    if key in dest:
+        raise ValueError('Failed hard to prevent overwriting key %r' % key)
+    dest[key] = value
+
+
+def pop_to(source, dest, key, default=None):
+    """
+    A convenience function which pops a key k from source to dest.
+    None values are not passed on.  If k already exists in dest an
+    error is raised.
+    """
+    value = source.pop(key, default)
+    if value is not None:
+        _safe_setitem(dest, key, value)
+    return value
+
+
+def _infer_dtype(array):
+    """Given an object array with no missing values, infer its dtype from its
+    first element
+    """
+    if array.size == 0:
+        dtype = np.dtype(float)
+    else:
+        dtype = np.array(array.flat[0]).dtype
+        if dtype.kind in ['S', 'U']:
+            # don't just use inferred_dtype to avoid truncating arrays to
+            # the length of their first element
+            dtype = np.dtype(dtype.kind)
+        elif dtype.kind == 'O':
+            raise ValueError('unable to infer dtype; xray cannot '
+                             'serialize arbitrary Python objects')
+    return dtype
+
+
 def encode_cf_variable(var):
     """Converts an Variable into an Variable suitable for saving as a netCDF
     variable
@@ -360,58 +399,70 @@ def encode_cf_variable(var):
     attributes = var.attrs.copy()
     encoding = var.encoding.copy()
 
+    # convert datetimes into numbers
     if (np.issubdtype(data.dtype, np.datetime64)
             or (data.dtype.kind == 'O'
                 and isinstance(data.reshape(-1)[0], datetime))):
-        # encode datetime arrays into numeric arrays
+        if 'units' in attributes or 'calendar' in attributes:
+            raise ValueError(
+                "Failed hard to prevent overwriting 'units' or 'calendar'")
         (data, units, calendar) = encode_cf_datetime(
             data, encoding.pop('units', None), encoding.pop('calendar', None))
         attributes['units'] = units
         attributes['calendar'] = calendar
-    elif data.dtype.kind == 'O':
-        # Occasionally, one will end up with variables with dtype=object
-        # (likely because they were created from pandas objects which don't
-        # maintain dtype careful). This code makes a best effort attempt to
-        # encode them into a dtype that NETCDF can handle by inspecting the
-        # dtype of the first element.
-        # TODO: we should really check all elements here, because if the first
-        # value is missing (represented as np.nan), this is liable to fail
-        dtype = np.array(data.reshape(-1)[0]).dtype
-        # N.B. the "astype" call below will fail if data cannot be cast to the
-        # type of its first element (which is probably the only sensible thing
-        # to do).
-        data = np.asarray(data).astype(dtype)
-
-    def get_to(source, dest, k):
-        v = source.get(k)
-        dest[k] = v
-        return v
 
     # unscale/mask
     if any(k in encoding for k in ['add_offset', 'scale_factor']):
         data = np.array(data, dtype=float, copy=True)
         if 'add_offset' in encoding:
-            data -= get_to(encoding, attributes, 'add_offset')
+            data -= pop_to(encoding, attributes, 'add_offset')
         if 'scale_factor' in encoding:
-            data /= get_to(encoding, attributes, 'scale_factor')
+            data /= pop_to(encoding, attributes, 'scale_factor')
 
     # replace NaN with the fill value
     if '_FillValue' in encoding:
-        if encoding['_FillValue'] is np.nan:
-            attributes['_FillValue'] = np.nan
-        else:
-            nans = pd.isnull(data)
-            if nans.any():
-                data[nans] = get_to(encoding, attributes, '_FillValue')
+        fill_value = pop_to(encoding, attributes, '_FillValue')
+        if not pd.isnull(fill_value):
+            missing = pd.isnull(data)
+            if missing.any():
+                data = data.copy()
+                data[missing] = fill_value
 
-    # restore original dtype
-    if 'dtype' in encoding and encoding['dtype'].kind != 'O':
-        if np.issubdtype(encoding['dtype'], int):
-            data = data.round()
-        if encoding['dtype'].kind == 'S' and encoding['dtype'].itemsize == 1:
-            data = string_to_char(data)
-            dimensions = dimensions + ('string%s' % data.shape[-1],)
-        data = np.asarray(data, dtype=encoding['dtype'])
+    # cast to encoded dtype
+    if 'dtype' in encoding:
+        dtype = np.dtype(encoding.pop('dtype'))
+        if dtype.kind != 'O':
+            if np.issubdtype(dtype, int):
+                data = data.round()
+            if dtype == 'S1' and data.dtype != 'S1':
+                data = string_to_char(np.asarray(data, 'S'))
+                dimensions = dimensions + ('string%s' % data.shape[-1],)
+            data = np.asarray(data, dtype=dtype)
+
+    # infer a valid dtype if necessary
+    # TODO: move this from conventions to backends (it's not CF related)
+    if data.dtype.kind == 'O':
+        missing = pd.isnull(data)
+        if missing.any():
+            non_missing_data = data[~missing]
+            inferred_dtype = _infer_dtype(non_missing_data)
+
+            if inferred_dtype.kind in ['S', 'U']:
+                # There is no safe bit-pattern for NA in typical binary string
+                # formats, we so can't set a _FillValue. Unfortunately, this
+                # means we won't be able to restore string arrays with missing
+                # values.
+                fill_value = ''
+            else:
+                # insist on using float for numeric data
+                if not np.issubdtype(inferred_dtype, float):
+                    inferred_dtype = np.dtype(float)
+                fill_value = np.nan
+
+            data = np.array(data, dtype=inferred_dtype, copy=True)
+            data[missing] = fill_value
+        else:
+            data = np.asarray(data, dtype=_infer_dtype(data))
 
     return xray.Variable(dimensions, data, attributes, encoding=encoding)
 
@@ -424,20 +475,6 @@ def decode_cf_variable(var, concat_characters=True, mask_and_scale=True,
     dimensions = var.dimensions
     attributes = var.attrs.copy()
     encoding = var.encoding.copy()
-
-    def pop_to(source, dest, k):
-        """
-        A convenience function which pops a key k from source to dest.
-        None values are not passed on.  If k already exists in dest an
-        error is raised.
-        """
-        v = source.pop(k, None)
-        if v is not None:
-            if k in dest:
-                raise ValueError(
-                    "Failed hard to prevent overwriting key %s" % k)
-            dest[k] = v
-        return v
 
     if 'dtype' in encoding:
         if data.dtype != encoding['dtype']:
@@ -455,8 +492,12 @@ def decode_cf_variable(var, concat_characters=True, mask_and_scale=True,
         add_offset = pop_to(attributes, encoding, 'add_offset')
         if ((fill_value is not None and not pd.isnull(fill_value))
                 or scale_factor is not None or add_offset is not None):
+            if isinstance(fill_value, (bytes_type, unicode_type)):
+                dtype = object
+            else:
+                dtype = float
             data = MaskedAndScaledArray(data, fill_value, scale_factor,
-                                        add_offset)
+                                        add_offset, dtype)
 
     if decode_times:
         if 'units' in attributes and 'since' in attributes['units']:

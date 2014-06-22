@@ -21,8 +21,11 @@ def _decode_string(s):
     return s
 
 
-def _decode_values(d):
-    return OrderedDict((k, _decode_string(v)) for (k, v) in iteritems(d))
+def _decode_attrs(d):
+    # don't decode _FillValue from bytes -> unicode, because we want to ensure
+    # that its type matches the data exactly
+    return OrderedDict((k, v if k == '_FillValue' else _decode_string(v))
+                       for (k, v) in iteritems(d))
 
 
 class ScipyDataStore(AbstractWritableDataStore):
@@ -54,11 +57,11 @@ class ScipyDataStore(AbstractWritableDataStore):
 
     def open_store_variable(self, var):
         return xray.Variable(var.dimensions, var.data,
-                             _decode_values(var._attributes))
+                             _decode_attrs(var._attributes))
 
     @property
     def attrs(self):
-        return Frozen(_decode_values(self.ds._attributes))
+        return Frozen(_decode_attrs(self.ds._attributes))
 
     @property
     def dimensions(self):

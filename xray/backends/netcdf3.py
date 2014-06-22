@@ -54,7 +54,7 @@ def coerce_nc3_dtype(arr):
 def encode_nc3_variable(var):
     dimensions = var.dimensions
     data = coerce_nc3_dtype(var.values)
-    if data.dtype.kind == 'S':
+    if data.dtype.kind == 'S' and data.dtype.itemsize > 1:
         data = conventions.string_to_char(data)
         dimensions = dimensions + ('string%s' % data.shape[-1],)
     return xray.Variable(dimensions, data, var.attrs, var.encoding)

@@ -9,7 +9,7 @@ import xray
 from xray.conventions import encode_cf_variable
 from xray.utils import FrozenOrderedDict, NDArrayMixin
 from xray import indexing
-from xray.pycompat import iteritems, basestring
+from xray.pycompat import iteritems, basestring, bytes_type
 
 
 class NetCDF4ArrayWrapper(NDArrayMixin):
@@ -81,6 +81,13 @@ def _nc4_group(ds, group):
         return ds
 
 
+def _ensure_fill_value_valid(data, attributes):
+    # work around for netCDF4/scipy issue where _FillValue has the wrong type:
+    # https://github.com/Unidata/netcdf4-python/issues/271
+    if data.dtype.kind == 'S' and '_FillValue' in attributes:
+        attributes['_FillValue'] = np.string_(attributes['_FillValue'])
+
+
 class NetCDF4DataStore(AbstractWritableDataStore):
     """Store for reading and writing data via the Python-NetCDF4 library.
 
@@ -107,6 +114,7 @@ class NetCDF4DataStore(AbstractWritableDataStore):
         data = indexing.LazilyIndexedArray(NetCDF4ArrayWrapper(var))
         attributes = OrderedDict((k, var.getncattr(k))
                                  for k in var.ncattrs())
+        _ensure_fill_value_valid(data, attributes)
         # netCDF4 specific encoding; save _FillValue for later
         encoding = {}
         filters = var.filters()
@@ -153,7 +161,13 @@ class NetCDF4DataStore(AbstractWritableDataStore):
             datatype = variable.dtype
 
         self.set_necessary_dimensions(variable)
+
         fill_value = variable.attrs.pop('_FillValue', None)
+        if fill_value in ['', '\x00']:
+            # these are equivalent to the default FillValue, but netCDF4
+            # doesn't like setting fill_value to an empty string
+            fill_value = None
+
         encoding = variable.encoding
         nc4_var = self.ds.createVariable(
             varname=name,

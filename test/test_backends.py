@@ -34,7 +34,7 @@ def open_example_dataset(name, *args, **kwargs):
 def create_masked_and_scaled_data():
     x = np.array([np.nan, np.nan, 10, 10.1, 10.2])
     encoding = {'_FillValue': -1, 'add_offset': 10,
-                'scale_factor': np.float32(0.1), 'dtype': np.dtype(np.int16)}
+                'scale_factor': np.float32(0.1), 'dtype': 'i2'}
     return Dataset({'x': ('t', x, {}, encoding)})
 
 
@@ -105,11 +105,59 @@ class DatasetIOTestCases(object):
         with self.roundtrip(expected) as actual:
             self.assertDatasetAllClose(expected, actual)
 
+    def test_roundtrip_object_dtype(self):
+        floats = np.array([0.0, 0.0, 1.0, 2.0, 3.0], dtype=object)
+        floats_nans = np.array([np.nan, np.nan, 1.0, 2.0, 3.0], dtype=object)
+        letters = np.array(['ab', 'cdef', 'g'], dtype=object)
+        letters_nans = np.array(['ab', 'cdef', np.nan], dtype=object)
+        all_nans = np.array([np.nan, np.nan], dtype=object)
+        original = Dataset({'floats': ('a', floats),
+                            'floats_nans': ('a', floats_nans),
+                            'letters': ('b', letters),
+                            'letters_nans': ('b', letters_nans),
+                            'all_nans': ('c', all_nans),
+                            'nan': ([], np.nan)})
+        if PY3 and type(self) is ScipyDataTest:
+            # see the note under test_zero_dimensional_variable
+            del original['nan']
+        expected = original.copy(deep=True)
+        expected['letters_nans'][-1] = ''
+        if type(self) is not NetCDF4DataTest:
+            # for netCDF3 tests, expect the results to come back as characters
+            expected['letters_nans'] = expected['letters_nans'].astype('S')
+            expected['letters'] = expected['letters'].astype('S')
+        with self.roundtrip(original) as actual:
+            self.assertDatasetIdentical(expected, actual)
+
     def test_roundtrip_string_data(self):
-        expected = Dataset({'x': ('t', ['abc', 'def', np.nan],
-                                  {}, {'_FillValue': ''})})
+        expected = Dataset({'x': ('t', ['ab', 'cdef'])})
         with self.roundtrip(expected) as actual:
-            self.assertDatasetAllClose(expected, actual)
+            if type(self) is not NetCDF4DataTest:
+                expected['x'] = expected['x'].astype('S')
+            self.assertDatasetIdentical(expected, actual)
+
+    def test_roundtrip_strings_with_fill_value(self):
+        values = np.array(['ab', 'cdef', np.nan], dtype=object)
+        encoding = {'_FillValue': np.string_('X'), 'dtype': np.dtype('S1')}
+        original = Dataset({'x': ('t', values, {}, encoding)})
+        expected = original.copy(deep=True)
+        expected['x'][:2] = values[:2].astype('S')
+        with self.roundtrip(original) as actual:
+            self.assertDatasetIdentical(expected, actual)
+
+        original = Dataset({'x': ('t', values, {}, {'_FillValue': '\x00'})})
+        if type(self) is NetCDF4DataTest:
+            # NetCDF4 should still write a VLEN (unicode) string
+            expected = original.copy(deep=True)
+            # the netCDF4 library can't keep track of an empty _FillValue for
+            # VLEN variables:
+            expected['x'][-1] = ''
+        elif type(self) is NetCDF3ViaNetCDF4DataTest:
+            # netCDF4 can't keep track of an empty _FillValue for nc3, either:
+            # https://github.com/Unidata/netcdf4-python/issues/273
+            expected['x'][-1] = np.string_('')
+        with self.roundtrip(original) as actual:
+            self.assertDatasetIdentical(expected, actual)
 
     def test_roundtrip_mask_and_scale(self):
         decoded = create_masked_and_scaled_data()
