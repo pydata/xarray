@@ -8,7 +8,6 @@ except ImportError: # Python 3
     izip = zip
 from collections import OrderedDict
 
-from . import groupby
 from . import indexing
 from . import ops
 from .pycompat import basestring
@@ -585,6 +584,7 @@ class Variable(AbstractArray):
                                      '%s' % (dimension, i, length))
 
         # initialize the stacked variable with empty data
+        from . import groupby
         first_var, variables = groupby.peek_at(variables)
         if dimension in first_var.dimensions:
             axis = first_var.get_axis_num(dimension)
@@ -694,7 +694,7 @@ class Index(Variable):
     """Subclass of Variable which caches its data as a pandas.Index instead of
     a numpy.ndarray.
 
-    Coordinates must always be 1-dimensional. In addition to Variable methods,
+    Indexes must always be 1-dimensional. In addition to Variable methods,
     they support some pandas.Index methods directly (e.g., get_indexer).
     """
     _cache_data_class = PandasIndexAdapter
@@ -734,7 +734,7 @@ class Index(Variable):
 
     @property
     def as_pandas(self):
-        """This index as a pandas.Index"""
+        """This xray.Index as a pandas.Index"""
         # n.b. creating a new pandas.Index from an old pandas.Index is
         # basically free as pandas.Index objcets are immutable
         return pd.Index(self._data_cached().array, name=self.name)

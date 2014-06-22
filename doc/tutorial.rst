@@ -65,19 +65,19 @@ values given by :py:class:`xray.DataArray` objects:
 
     ds['time']
 
-The valid keys include each listed "coordinate" and "noncoordinate".
-Coordinates are arrays that labels values along a particular dimension, which
-they index by keeping track of a :py:class:`pandas.Index` object. They
+The valid keys include each listed "index" and "nonindex".
+Indexes are arrays that label values along a particular dimension, implemented
+as a thin wrapper wrapper around a :py:class:`pandas.Index` object. They
 are created automatically from dataset arrays whose name is equal to the one
 item in their list of dimensions.
 
-Noncoordinates include all arrays in a ``Dataset`` other than its coordinates.
+Nonindexes include all arrays in a ``Dataset`` other than its indexes.
 These arrays can exist along multiple dimensions. The numbers in the columns in
 the ``Dataset`` representation indicate the order in which dimensions appear
 for each array (on a ``Dataset``, the dimensions are always listed in
 alphabetical order).
 
-We didn't explicitly include a coordinate for the "space" dimension, so it
+We didn't explicitly include an index for the "space" dimension, so it
 was filled with an array of ascending integers of the proper length:
 
 .. ipython:: python
@@ -86,11 +86,11 @@ was filled with an array of ascending integers of the proper length:
 
     ds['foo']
 
-Noncoordinates and coordinates are listed explicitly by the
-:py:attr:`~xray.Dataset.noncoordinates` and
-:py:attr:`~xray.Dataset.coordinates` attributes.
+Nonindexes and indexes are listed explicitly by the
+:py:attr:`~xray.Dataset.nonindexes` and
+:py:attr:`~xray.Dataset.indexes` attributes.
 
-There are also a few derived variables based on datetime coordinates that you
+There are also a few derived variables based on datetime indexes that you
 can access from a dataset (e.g., "year", "month" and "day"), even if you didn't
 explicitly add them. These are known as
 ":py:attr:`~xray.Dataset.virtual_variables`":
@@ -124,27 +124,27 @@ We can update a dataset in-place using Python's standard dictionary syntax:
     ds
 
 It should be evident now how a ``Dataset`` lets you store many arrays along a
-(partially) shared set of common dimensions and coordinates.
+(partially) shared set of common dimensions and indexes.
 
 To change the variables in a ``Dataset``, you can use all the standard dictionary
 methods, including ``values``, ``items``, ``__del__``, ``get`` and
 ``update``.
 
-You also can select and unselect an explicit list of variables by using the
-:py:meth:`~xray.Dataset.select` and :py:meth:`~xray.Dataset.unselect` methods
-to return a new ``Dataset``. `select` automatically includes the relevant
-coordinate values:
+You also can select and drop an explicit list of variables by using the
+:py:meth:`~xray.Dataset.select_vars` and :py:meth:`~xray.Dataset.drop_vars`
+methods to return a new ``Dataset``. `select_var` automatically includes the
+relevant indexes:
 
 .. ipython:: python
 
-    ds.select('abc')
+    ds.select_vars('abc')
 
-If a coordinate is given as an argument to `unselect`, it also unselects all
-variables that use that coordinate:
+If an index name is given as an argument to `drop_vars`, it also drops all
+variables that use that index:
 
 .. ipython:: python
 
-    ds.unselect('time', 'space')
+    ds.drop_vars('time', 'space')
 
 You can copy a ``Dataset`` by using the :py:meth:`~xray.Dataset.copy` method:
 
@@ -161,15 +161,15 @@ contents of the ``Dataset`` will still be the same underlying
 
 Datasets reductions
 ~~~~~~~~~~~~~~~~~~
-We can numpy reduction functions to the entire dataset, returning a new 
-``Dataset``.  
+We can numpy reduction functions to the entire dataset, returning a new
+``Dataset``.
 
 .. ipython:: python
 
     bar = ds.mean()
     bar
 
-The ``dimension``(default=None) keyword will limit the reduction to only the dimension(s) provided.  
+The ``dimension``(default=None) keyword will limit the reduction to only the dimension(s) provided.
 
 .. ipython:: python
 
@@ -182,7 +182,7 @@ The ``dimension``(default=None) keyword will limit the reduction to only the dim
 The contents of a :py:class:`~xray.Dataset` are :py:class:`~xray.DataArray`
 objects, xray's version of a labeled multi-dimensional array.
 ``DataArray`` supports metadata aware array operations based on their
-labeled dimensions (axis names) and labeled coordinates (tick values).
+labeled dimensions (axis names) and labeled indexes (tick values).
 
 The idea of the DataArray is to provide an alternative to
 :py:class:`pandas.Series` and :py:class:`pandas.DataFrame` with functionality
@@ -225,13 +225,13 @@ They also have a tuple of dimension labels:
 
     foo.dimensions
 
-They track of their coordinates (tick labels) in a read-only ordered
-dictionary mapping from dimension names to :py:class:`~xray.Coordinate`
+They track of their indexes (tick labels) in a read-only ordered
+dictionary mapping from dimension names to :py:class:`~xray.Index`
 objects:
 
 .. ipython:: python
 
-    foo.coordinates
+    foo.indexes
 
 They also keep track of their own attributes:
 
@@ -239,7 +239,7 @@ They also keep track of their own attributes:
 
     foo.attrs
 
-You can pull out other variable (including coordinates) from a DataArray's
+You can pull out other variables (including indexes) from a DataArray's
 dataset by indexing the data array with a string:
 
 .. ipython:: python
@@ -287,7 +287,7 @@ numpy arrays, except that the returned object is always another DataArray:
     foo[:, [2, 1]]
 
 xray also supports label based indexing like pandas. Because
-:py:class:`~xray.Coordinate` is a thin wrapper around a
+:py:class:`~xray.Index` is a thin wrapper around a
 :py:class:`pandas.Index`, label indexing is very fast. To do
 label based indexing, use the :py:attr:`~xray.DataArray.loc` attribute:
 
@@ -310,16 +310,16 @@ Setting values with label based indexing is also supported:
     foo
 
 With labeled dimension names, we do not have to rely on dimension order and can
-use them explicitly to slice data with the :py:meth:`~xray.DataArray.indexed`
-and :py:meth:`~xray.DataArray.labeled` methods:
+use them explicitly to slice data with the :py:meth:`~xray.DataArray.sel`
+and :py:meth:`~xray.DataArray.isel` methods:
 
 .. ipython:: python
 
-    # index by array indices
-    foo.indexed(space=0, time=slice(0, 2))
+    # index by integer array indices
+    foo.isel(space=0, time=slice(0, 2))
 
-    # index by coordinate labels
-    foo.labeled(time=slice('2000-01-01', '2000-01-02'))
+    # index by index labels
+    foo.sel(time=slice('2000-01-01', '2000-01-02'))
 
 The arguments to these methods can be any objects that could index the array
 along that dimension, e.g., labels for an individual value, Python ``slice``
@@ -330,11 +330,11 @@ simultaneously, returning a new dataset:
 
 .. ipython:: python
 
-    ds.indexed(space=[0], time=[0])
+    ds.isel(space=[0], time=[0])
 
 .. ipython:: python
 
-    ds.labeled(time='2000-01-01')
+    ds.sel(time='2000-01-01')
 
 Indexing with xray objects has one important difference from indexing numpy
 arrays: you can only use one-dimensional arrays to index xray objects, and
@@ -463,10 +463,10 @@ appeared. That means you can always subtract an array from its transpose!
 
     foo - foo.T
 
-Coordinate based alignment
-~~~~~~~~~~~~~~~~~~~~~~~~~~
+Index based alignment
+~~~~~~~~~~~~~~~~~~~~~
 
-You can also align arrays based on their coordinate values, very similarly
+You can also align arrays based on their index values, very similarly
 to how pandas handles alignment. This can be done with the
 :py:meth:`~xray.DataArray.reindex` or :py:meth:`~xray.DataArray.reindex_like`
 methods, or the :py:func:`~xray.align` top-level function. All these work
@@ -618,8 +618,7 @@ To combine arrays along a dimension into a larger arrays, you can use the
 
     xray.DataArray.concat([foo[0], foo[1]], 'new_dim')
 
-    xray.Dataset.concat([ds.labeled(time='2000-01-01'),
-                         ds.labeled(time='2000-01-03')],
+    xray.Dataset.concat([ds.sel(time='2000-01-01'), ds.sel(time='2000-01-03')],
                         'new_dim')
 
 :py:meth:`Dataset.concat <xray.Dataset.concat>` has a number of options which
@@ -655,7 +654,7 @@ Equals and identical
 xray objects can be compared by using the :py:meth:`~xray.DataArray.equals`
 and :py:meth:`~xray.DataArray.identical` methods.
 
-``equals`` checks dimension names, coordinate labels and array values:
+``equals`` checks dimension names, indexes and array values:
 
 .. ipython:: python
 
@@ -699,8 +698,8 @@ __ http://ggplot.yhathq.com/
 Fortunately, there are straightforward representations of
 :py:class:`~xray.Dataset` and :py:class:`~xray.DataArray` in terms of
 :py:class:`pandas.DataFrame` and :py:class:`pandas.Series`, respectively.
-The representation works by flattening noncoordinates to 1D, and turning the
-tensor product of coordinates into a :py:class:`pandas.MultiIndex`.
+The representation works by flattening nonindexes to 1D, and turning the
+tensor product of indexes into a :py:class:`pandas.MultiIndex`.
 
 ``pandas.DataFrame``
 ~~~~~~~~~~~~~~~~~~~~
@@ -713,7 +712,7 @@ To convert to a ``DataFrame``, use the :py:meth:`Dataset.to_dataframe()
     df = ds.to_dataframe()
     df
 
-We see that each noncoordinate in the Dataset is now a column in the DataFrame.
+We see that each nonindex in the Dataset is now a column in the DataFrame.
 The ``DataFrame`` representation is reminiscent of Hadley Wickham's notion of
 `tidy data`__. To convert the ``DataFrame`` to any other convenient representation,
 use ``DataFrame`` methods like :py:meth:`~pandas.DataFrame.reset_index`,
@@ -728,7 +727,7 @@ To create a ``Dataset`` from a ``DataFrame``, use the
 
     xray.Dataset.from_dataframe(df)
 
-Notice that that dimensions of noncoordinates in the ``Dataset`` have now
+Notice that that dimensions of nonindexes in the ``Dataset`` have now
 expanded after the round-trip conversion to a ``DataFrame``. This is because
 every object in a ``DataFrame`` must have the same indices, so needed to
 broadcast the data of each array to the full size of the new ``MultiIndex``.
@@ -826,10 +825,10 @@ We can load NetCDF files to create a new Dataset using the
     Out[2]:
     <xray.Dataset>
     Dimensions:     (space: 4, time: 3)
-    Coordinates:
+    Indexes:
         space            X
         time                      X
-    Noncoordinates:
+    Nonindexes:
         foo              1        0
         numbers          0
         abc                       0
@@ -912,11 +911,11 @@ __ http://iri.columbia.edu/
     Out[4]:
     <xray.Dataset>
     Dimensions:     (T: 1432, X: 1405, Y: 621)
-    Coordinates:
+    Indexes:
         T               X
         X                        X
         Y                                 X
-    Noncoordinates:
+    Nonindexes:
         ppt             0        2        1
         tdmean          0        2        1
         tmax            0        2        1

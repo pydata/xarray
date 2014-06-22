@@ -540,7 +540,7 @@ class DataArray(AbstractArray):
 
         Parameters
         ----------
-        group : str or DataArray
+        group : str, DataArray or Index
             Array whose unique values should be used to group this array. If a
             string, must be the name of a variable contained in this dataset.
         squeeze : boolean, optional
@@ -558,7 +558,7 @@ class DataArray(AbstractArray):
             `std`, etc.).
         """
         if isinstance(group, basestring):
-            group = self[group]
+            group = self.dataset[group]
         return groupby.ArrayGroupBy(self, group, squeeze=squeeze)
 
     def transpose(self, *dimensions):

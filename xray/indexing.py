@@ -107,7 +107,7 @@ def orthogonal_indexer(key, shape):
 
 
 def convert_label_indexer(index, label, index_name=''):
-    """Given a pandas.Index (or xray.Coordinate) and labels (e.g., from
+    """Given a pandas.Index (or xray.Index) and labels (e.g., from
     __getitem__) for one dimension, return an indexer suitable for indexing an
     ndarray along that dimension
     """

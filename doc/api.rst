@@ -41,6 +41,7 @@ and values given by ``DataArray`` objects.
    Dataset.merge
    Dataset.concat
    Dataset.copy
+   Dataset.load_data
    Dataset.iteritems
    Dataset.itervalues
    Dataset.virtual_variables
@@ -111,7 +112,7 @@ like interface instead and working with DataArray objects:
 
    Dataset.variables
    Variable
-   Coordinate
+   Index
 
 Backends (experimental)
 ~~~~~~~~~~~~~~~~~~~~~~~
@@ -228,6 +229,7 @@ IO / Conversion
    DataArray.to_series
    DataArray.from_series
    DataArray.copy
+   DataArray.load_data
 
 
 Top-level functions

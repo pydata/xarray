@@ -529,8 +529,12 @@ class TestDataset(TestCase):
         # TODO: test the other edge cases
         with self.assertRaisesRegexp(ValueError, 'must be 1 dimensional'):
             data.groupby('var1')
+        with self.assertRaisesRegexp(ValueError, 'must have a name'):
+            data.groupby(np.arange(10))
         with self.assertRaisesRegexp(ValueError, 'length does not match'):
             data.groupby(data['dim1'][:3])
+        with self.assertRaisesRegexp(ValueError, "must have a 'dimensions'"):
+            data.groupby(data.indexes['dim1'].as_pandas)
 
     def test_concat(self):
         data = create_test_data()
