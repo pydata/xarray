@@ -428,41 +428,49 @@ class TestDataArray(TestCase):
         for ((_, exp_dv), act_dv) in zip(self.dv.groupby('x'), self.dv):
             self.assertDataArrayIdentical(exp_dv, act_dv)
 
-    def test_groupby(self):
+    def make_groupby_example_array(self):
+        da = self.dv.copy()
         agg_var = Variable(['y'], np.array(['a'] * 9 + ['c'] + ['b'] * 10))
-        self.dv['abc'] = agg_var
-        self.dv['y'] = 20 + 100 * self.ds['y'].variable
+        da['abc'] = agg_var
+        da['y'] = 20 + 100 * da['y']
+        return da
 
-        idx = self.dv.indexes['y']
+    def test_groupby_properties(self):
+        grouped = self.make_groupby_example_array().groupby('abc')
+        expected_unique = Variable('abc', ['a', 'b', 'c'])
+        self.assertVariableEqual(expected_unique, grouped.unique_index)
+        self.assertEqual(3, len(grouped))
 
+    def test_groupby_apply_identity(self):
+        expected = self.make_groupby_example_array()
+        idx = expected.indexes['y']
         identity = lambda x: x
         for g in ['x', 'y', 'abc', idx]:
             for shortcut in [False, True]:
                 for squeeze in [False, True]:
-                    expected = self.dv
-                    grouped = self.dv.groupby(g, squeeze=squeeze)
+                    grouped = expected.groupby(g, squeeze=squeeze)
                     actual = grouped.apply(identity, shortcut=shortcut)
                     self.assertDataArrayIdentical(expected, actual)
 
-        grouped = self.dv.groupby('abc', squeeze=True)
+    def test_groupby_sum(self):
+        array = self.make_groupby_example_array()
+        grouped = array.groupby('abc')
+
         expected_sum_all = Dataset(
             {'foo': Variable(['abc'], np.array([self.x[:, :9].sum(),
                                                 self.x[:, 10:].sum(),
                                                 self.x[:, 9:10].sum()]).T),
              'abc': Variable(['abc'], np.array(['a', 'b', 'c']))})['foo']
-        self.assertDataArrayAllClose(
-            expected_sum_all, grouped.reduce(np.sum))
-        self.assertDataArrayAllClose(
-            expected_sum_all, grouped.sum())
-        self.assertDataArrayAllClose(
-            expected_sum_all, grouped.sum())
-        expected_unique = Variable('abc', ['a', 'b', 'c'])
-        self.assertVariableEqual(expected_unique, grouped.unique_index)
-        self.assertEqual(3, len(grouped))
+        self.assertDataArrayAllClose(expected_sum_all, grouped.reduce(np.sum))
+        self.assertDataArrayAllClose(expected_sum_all, grouped.sum())
 
-        grouped = self.dv.groupby('abc', squeeze=False)
-        self.assertDataArrayAllClose(
-            expected_sum_all, grouped.sum(dimension=None))
+        expected = DataArray([array['y'].values[idx].sum() for idx
+                              in [slice(9), slice(10, None), slice(9, 10)]],
+                             [['a', 'b', 'c']], ['abc'])
+        actual = array['y'].groupby('abc').apply(np.sum)
+        self.assertDataArrayAllClose(expected, actual)
+        actual = array['y'].groupby('abc').sum()
+        self.assertDataArrayAllClose(expected, actual)
 
         expected_sum_axis1 = Dataset(
             {'foo': (['x', 'abc'], np.array([self.x[:, :9].sum(1),
@@ -474,17 +482,20 @@ class TestDataArray(TestCase):
                                      grouped.reduce(np.sum, 'y'))
         self.assertDataArrayAllClose(expected_sum_axis1, grouped.sum('y'))
 
+    def test_groupby_apply_center(self):
         def center(x):
             return x - np.mean(x)
 
-        expected_ds = self.dv.dataset.copy()
+        array = self.make_groupby_example_array()
+        grouped = array.groupby('abc')
+
+        expected_ds = array.dataset.copy()
         exp_data = np.hstack([center(self.x[:, :9]),
                               center(self.x[:, 9:10]),
                               center(self.x[:, 10:])])
         expected_ds['foo'] = (['x', 'y'], exp_data)
         expected_centered = expected_ds['foo']
-        self.assertDataArrayAllClose(expected_centered,
-                                     grouped.apply(center))
+        self.assertDataArrayAllClose(expected_centered, grouped.apply(center))
 
     def test_concat(self):
         self.ds['bar'] = Variable(['x', 'y'], np.random.randn(10, 20))

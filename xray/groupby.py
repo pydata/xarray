@@ -180,7 +180,7 @@ class ArrayGroupBy(GroupBy, ImplementsArrayReduce):
         ds[concat_dim.name] = concat_dim
         # remove extraneous dimensions
         for dim in self.obj.dimensions:
-            if dim not in stacked.dimensions:
+            if dim not in stacked.dimensions and dim in ds:
                 del ds[dim]
         ds[name] = stacked
         return ds[name]
