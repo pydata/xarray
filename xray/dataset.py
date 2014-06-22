@@ -252,7 +252,7 @@ def as_dataset(obj):
     return obj
 
 
-class Dataset(Mapping):
+class Dataset(Mapping, common.ImplementsDatasetReduce):
     """A netcdf-like data object consisting of variables and attributes which
     together form a self describing dataset.
 
@@ -1016,41 +1016,6 @@ class Dataset(Mapping):
         numpy.squeeze
         """
         return utils.squeeze(self, self.dimensions, dimension)
-
-    _reduce_method_docstring = \
-        """Reduce this {cls}'s data' by applying `{name}` along some
-        dimension(s).
-
-        Parameters
-        ----------
-        dimension : str or sequence of str, optional
-            Dimension(s) over which to apply `func`.  By default `func` is
-            applied over all dimensions.
-        keep_attrs : bool, optional
-            If True, the datasets's attributes (`attrs`) will be copied from
-            the original object to the new one.  If False (default), the new
-            object will be returned without attributes.
-        **kwargs : dict
-            Additional keyword arguments passed on to `{name}`.
-
-        Returns
-        -------
-        reduced : {cls}
-            New {cls} object with `{name}` applied to its data and the
-            indicated dimension(s) removed.
-        """
-
-    @classmethod
-    def _reduce_method(cls, f, name=None, module=None):
-        def func(self, dimension=None, keep_attrs=False, **kwargs):
-            return self.reduce(f, dimension, keep_attrs, **kwargs)
-        if name is None:
-            name = f.__name__
-        func.__name__ = name
-        func.__doc__ = cls._reduce_method_docstring.format(
-            name=('' if module is None else module + '.') + name,
-            cls=cls.__name__)
-        return func
 
     def reduce(self, func, dimension=None, keep_attrs=False, **kwargs):
         """Reduce this dataset by applying `func` along some dimension(s).

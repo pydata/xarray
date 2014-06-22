@@ -4,7 +4,7 @@ try:  # Python 2
 except ImportError: # Python 3
     izip = zip
 
-from .common import ImplementsReduce
+from .common import ImplementsArrayReduce, ImplementsDatasetReduce
 from .ops import inject_reduce_methods
 from .variable import as_variable, Variable, Index
 import xray
@@ -145,7 +145,7 @@ class GroupBy(object):
         return type(self.obj).concat
 
 
-class ArrayGroupBy(GroupBy, ImplementsReduce):
+class ArrayGroupBy(GroupBy, ImplementsArrayReduce):
     """GroupBy object specialized to grouping DataArray objects
     """
     def _iter_grouped_shortcut(self):
@@ -252,8 +252,8 @@ class ArrayGroupBy(GroupBy, ImplementsReduce):
         reordered = self._restore_dim_order(combined, concat_dim)
         return reordered
 
-    def reduce(self, func, dimension=None, axis=None, shortcut=True,
-               **kwargs):
+    def reduce(self, func, dimension=None, axis=None, keep_attrs=False,
+               shortcut=True, **kwargs):
         """Reduce the items in this group by applying `func` along some
         dimension(s).
 
@@ -269,6 +269,10 @@ class ArrayGroupBy(GroupBy, ImplementsReduce):
             Axis(es) over which to apply `func`. Only one of the 'dimension'
             and 'axis' arguments can be supplied. If neither are supplied, then
             `func` is calculated over all dimension for each group item.
+        keep_attrs : bool, optional
+            If True, the datasets's attributes (`attrs`) will be copied from
+            the original object to the new one.  If False (default), the new
+            object will be returned without attributes.
         **kwargs : dict
             Additional keyword arguments passed on to `func`.
 
@@ -282,32 +286,10 @@ class ArrayGroupBy(GroupBy, ImplementsReduce):
             return ar.reduce(func, dimension, axis, **kwargs)
         return self.apply(reduce_array, shortcut=shortcut)
 
-    _reduce_method_docstring = \
-        """Reduce the items in this group by applying `{name}` along some
-        dimension(s).
-
-        Parameters
-        ----------
-        dimension : str or sequence of str, optional
-            Dimension(s) over which to apply `{name}`.
-        axis : int or sequence of int, optional
-            Axis(es) over which to apply `{name}`. Only one of the 'dimension'
-            and 'axis' arguments can be supplied. If neither are supplied, then
-            `{name}` is calculated over all dimension for each group item.
-        **kwargs : dict
-            Additional keyword arguments passed on to `{name}`.
-
-        Returns
-        -------
-        reduced : {cls}
-            New {cls} object with `{name}` applied to its data and the
-            indicated dimension(s) removed.
-        """
-
 inject_reduce_methods(ArrayGroupBy)
 
 
-class DatasetGroupBy(GroupBy):
+class DatasetGroupBy(GroupBy, ImplementsDatasetReduce):
     def apply(self, func, **kwargs):
         """Apply a function over each Dataset in the group and concatenate them
         together into a new Dataset.
@@ -339,3 +321,38 @@ class DatasetGroupBy(GroupBy):
         concat_dim, indexers = self._infer_concat_args(applied[0])
         combined = self._combine(applied, concat_dim, indexers)
         return combined
+
+    def reduce(self, func, dimension=None, keep_attrs=False, **kwargs):
+        """Reduce the items in this group by applying `func` along some
+        dimension(s).
+
+        Parameters
+        ----------
+        func : function
+            Function which can be called in the form
+            `func(x, axis=axis, **kwargs)` to return the result of collapsing an
+            np.ndarray over an integer valued axis.
+        dimension : str or sequence of str, optional
+            Dimension(s) over which to apply `func`.
+        axis : int or sequence of int, optional
+            Axis(es) over which to apply `func`. Only one of the 'dimension'
+            and 'axis' arguments can be supplied. If neither are supplied, then
+            `func` is calculated over all dimension for each group item.
+        keep_attrs : bool, optional
+            If True, the datasets's attributes (`attrs`) will be copied from
+            the original object to the new one.  If False (default), the new
+            object will be returned without attributes.
+        **kwargs : dict
+            Additional keyword arguments passed on to `func`.
+
+        Returns
+        -------
+        reduced : Array
+            Array with summarized data and the indicated dimension(s)
+            removed.
+        """
+        def reduce_dataset(ds):
+            return ds.reduce(func, dimension, keep_attrs, **kwargs)
+        return self.apply(reduce_dataset)
+
+inject_reduce_methods(DatasetGroupBy)

@@ -519,6 +519,7 @@ class TestDataset(TestCase):
             actual = data.groupby(k, squeeze=False).apply(identity)
             self.assertEqual(data, actual)
 
+    def test_groupby_iter(self):
         data = create_test_data()
         for n, (t, sub) in enumerate(list(data.groupby('dim1'))[:3]):
             self.assertEqual(data['dim1'][n], t)
@@ -526,7 +527,8 @@ class TestDataset(TestCase):
             self.assertVariableEqual(data['var2'][n], sub['var2'])
             self.assertVariableEqual(data['var3'][:, n], sub['var3'])
 
-        # TODO: test the other edge cases
+    def test_groupby_errors(self):
+        data = create_test_data()
         with self.assertRaisesRegexp(ValueError, 'must be 1 dimensional'):
             data.groupby('var1')
         with self.assertRaisesRegexp(ValueError, 'must have a name'):
@@ -535,6 +537,25 @@ class TestDataset(TestCase):
             data.groupby(data['dim1'][:3])
         with self.assertRaisesRegexp(ValueError, "must have a 'dimensions'"):
             data.groupby(data.indexes['dim1'].as_pandas)
+
+    def test_groupby_reduce(self):
+        data = Dataset({'xy': (['x', 'y'], np.random.randn(3, 4)),
+                        'xonly': ('x', np.random.randn(3)),
+                        'yonly': ('y', np.random.randn(4)),
+                        'letters': ('y', ['a', 'a', 'b', 'b'])})
+
+        expected = data.mean('y')
+        actual = data.groupby('x').mean()
+        self.assertDatasetAllClose(expected, actual)
+
+        actual = data.groupby('x').mean('y')
+        self.assertDatasetAllClose(expected, actual)
+
+        expected = Dataset({'xy': data['xy'].groupby('letters').mean(),
+                            'xonly': data['xonly'].mean(),
+                            'yonly': data['yonly'].groupby('letters').mean()})
+        actual = data.groupby('letters').mean()
+        self.assertDatasetAllClose(expected, actual)
 
     def test_concat(self):
         data = create_test_data()
