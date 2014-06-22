@@ -6,7 +6,7 @@ from datetime import datetime
 
 from . import indexing
 from . import utils
-from .pycompat import iteritems, basestring
+from .pycompat import iteritems, bytes_type, unicode_type
 import xray
 
 # standard calendars recognized by netcdftime
@@ -327,7 +327,7 @@ class CharToStringArray(utils.NDArrayMixin):
         else:
             # require slicing the last dimension completely
             key = indexing.expanded_indexer(key, self.array.ndim)
-            if  key[-1] != slice(None):
+            if key[-1] != slice(None):
                 raise IndexError('too many indices')
             values = char_to_string(self.array[key])
         return values
@@ -491,7 +491,10 @@ def decode_cf_variable(var, concat_characters=True, mask_and_scale=True,
         add_offset = pop_to(attributes, encoding, 'add_offset')
         if ((fill_value is not None and not pd.isnull(fill_value))
                 or scale_factor is not None or add_offset is not None):
-            dtype = object if isinstance(fill_value, basestring) else float
+            if isinstance(fill_value, (bytes_type, unicode_type)):
+                dtype = object
+            else:
+                dtype = float
             data = MaskedAndScaledArray(data, fill_value, scale_factor,
                                         add_offset, dtype)
 

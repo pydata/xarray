@@ -117,29 +117,45 @@ class DatasetIOTestCases(object):
                             'letters_nans': ('b', letters_nans),
                             'all_nans': ('c', all_nans),
                             'nan': ([], np.nan)})
+        if PY3 and type(self) is ScipyDataTest:
+            # see the note under test_zero_dimensional_variable
+            del original['nan']
         expected = original.copy(deep=True)
         expected['letters_nans'][-1] = ''
+        if type(self) is not NetCDF4DataTest:
+            # for netCDF3 tests, expect the results to come back as characters
+            expected['letters_nans'] = expected['letters_nans'].astype('S')
+            expected['letters'] = expected['letters'].astype('S')
         with self.roundtrip(original) as actual:
             self.assertDatasetIdentical(expected, actual)
 
     def test_roundtrip_string_data(self):
         expected = Dataset({'x': ('t', ['ab', 'cdef'])})
         with self.roundtrip(expected) as actual:
+            if type(self) is not NetCDF4DataTest:
+                expected['x'] = expected['x'].astype('S')
             self.assertDatasetIdentical(expected, actual)
 
     def test_roundtrip_strings_with_fill_value(self):
         values = np.array(['ab', 'cdef', np.nan], dtype=object)
-        encoding = {'_FillValue': 'X', 'dtype': np.dtype('S1')}
-        expected = Dataset({'x': ('t', values, {}, encoding)})
-        with self.roundtrip(expected) as actual:
+        encoding = {'_FillValue': np.string_('X'), 'dtype': np.dtype('S1')}
+        original = Dataset({'x': ('t', values, {}, encoding)})
+        expected = original.copy(deep=True)
+        expected['x'][:2] = values[:2].astype('S')
+        with self.roundtrip(original) as actual:
             self.assertDatasetIdentical(expected, actual)
 
-        original = Dataset({'x': ('t', values, {}, {'_FillValue': ''})})
-        expected = original.copy(deep=True)
-        if type(self) is not ScipyDataTest:
-            # scipy (unlike netCDF4) can actually keep track of an empty
-            # _FillValue
+        original = Dataset({'x': ('t', values, {}, {'_FillValue': '\x00'})})
+        if type(self) is NetCDF4DataTest:
+            # NetCDF4 should still write a VLEN (unicode) string
+            expected = original.copy(deep=True)
+            # the netCDF4 library can't keep track of an empty _FillValue for
+            # VLEN variables:
             expected['x'][-1] = ''
+        elif type(self) is NetCDF3ViaNetCDF4DataTest:
+            # netCDF4 can't keep track of an empty _FillValue for nc3, either:
+            # https://github.com/Unidata/netcdf4-python/issues/273
+            expected['x'][-1] = np.string_('')
         with self.roundtrip(original) as actual:
             self.assertDatasetIdentical(expected, actual)
 
