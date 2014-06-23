@@ -19,7 +19,7 @@ NUMPY_UNARY_METHODS = ['astype', 'argsort', 'clip', 'conj', 'conjugate',
 # methods which remove an axis
 NUMPY_REDUCE_METHODS = ['all', 'any', 'argmax', 'argmin', 'max', 'mean', 'min',
                         'prod', 'ptp', 'std', 'sum', 'var']
-# TODO: wrap cumprod, cumsum, take and dot
+# TODO: wrap cumprod, cumsum, take, dot, searchsorted
 
 
 def _method_wrapper(f):
@@ -29,11 +29,37 @@ def _method_wrapper(f):
     return func
 
 
+_REDUCE_DOCSTRING_TEMPLATE = \
+        """Reduce this {cls}'s data by applying `{name}` along some
+        dimension(s).
+
+        Parameters
+        ----------
+        {extra_args}
+        keep_attrs : bool, optional
+            If True, the attributes (`attrs`) will be copied from the original
+            object to the new one.  If False (default), the new object will be
+            returned without attributes.
+        **kwargs : dict
+            Additional keyword arguments passed on to `{name}`.
+
+        Returns
+        -------
+        reduced : {cls}
+            New {cls} object with `{name}` applied to its data and the
+            indicated dimension(s) removed.
+        """
+
+
 def inject_reduce_methods(cls):
     # TODO: change these to use methods instead of numpy functions
     for name in NUMPY_REDUCE_METHODS:
-        setattr(cls, name, cls._reduce_method(getattr(np, name),
-                                              name, 'numpy'))
+        func = cls._reduce_method(getattr(np, name))
+        func.__name__ = name
+        func.__doc__ = _REDUCE_DOCSTRING_TEMPLATE.format(
+            name='numpy.' + name, cls=cls.__name__,
+            extra_args=cls._reduce_extra_args_docstring)
+        setattr(cls, name, func)
 
 
 def inject_special_operations(cls, priority=50):
