@@ -55,10 +55,6 @@ class AbstractArray(ImplementsArrayReduce):
     def __array__(self, dtype=None):
         return np.asarray(self.values, dtype=dtype)
 
-    def item(self):
-        """Calls numpy.ndarray.item on this array's values"""
-        return self.values.item()
-
     def __repr__(self):
         return array_repr(self)
 
