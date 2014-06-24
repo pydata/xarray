@@ -5,7 +5,7 @@ import warnings
 
 from .. import conventions, Variable
 from ..core.pycompat import iteritems, basestring, unicode_type, OrderedDict
-from ..core.utils import Frozen
+from ..core.utils import Frozen, FrozenOrderedDict
 
 from .common import AbstractWritableDataStore
 from .netcdf3 import is_valid_nc3_name, coerce_nc3_dtype, encode_nc3_variable
@@ -23,7 +23,7 @@ def _decode_attrs(d):
     return OrderedDict((k, v if k == '_FillValue' else _decode_string(v))
                        for (k, v) in iteritems(d))
 
-
+@conventions.cf_encoded
 class ScipyDataStore(AbstractWritableDataStore):
     """Store for reading and writing data via scipy.io.netcdf.
 
@@ -55,12 +55,14 @@ class ScipyDataStore(AbstractWritableDataStore):
         return Variable(var.dimensions, var.data,
                         _decode_attrs(var._attributes))
 
-    @property
-    def attrs(self):
+    def get_variables(self):
+        return FrozenOrderedDict((k, self.open_store_variable(v))
+                                 for k, v in iteritems(self.ds.variables))
+
+    def get_attrs(self):
         return Frozen(_decode_attrs(self.ds._attributes))
 
-    @property
-    def dimensions(self):
+    def get_dimensions(self):
         return Frozen(self.ds.dimensions)
 
     def set_dimension(self, name, length):
@@ -88,8 +90,8 @@ class ScipyDataStore(AbstractWritableDataStore):
         setattr(self.ds, key, self._cast_attr_value(value))
 
     def set_variable(self, name, variable):
-        variable = encode_nc3_variable(
-            conventions.encode_cf_variable(variable))
+        # TODO, create a netCDF3 encoder
+        variable = encode_nc3_variable(variable)
         self.set_necessary_dimensions(variable)
         data = variable.values
         self.ds.createVariable(name, data.dtype, variable.dims)

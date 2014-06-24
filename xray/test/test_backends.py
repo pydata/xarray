@@ -42,6 +42,10 @@ def create_encoded_masked_and_scaled_data():
     return Dataset({'x': ('t', [-1, -1, 0, 1, 2], attributes)})
 
 
+class CastUnicodeToBytes(object):
+    pass
+
+
 class DatasetIOTestCases(object):
     def create_store(self):
         raise NotImplementedError
@@ -120,20 +124,65 @@ class DatasetIOTestCases(object):
             # see the note under test_zero_dimensional_variable
             del original['nan']
         expected = original.copy(deep=True)
-        expected['letters_nans'][-1] = ''
-        if type(self) is not NetCDF4DataTest:
+        if type(self) in [NetCDF3ViaNetCDF4DataTest, ScipyDataTest]:
             # for netCDF3 tests, expect the results to come back as characters
             expected['letters_nans'] = expected['letters_nans'].astype('S')
             expected['letters'] = expected['letters'].astype('S')
         with self.roundtrip(original) as actual:
-            self.assertDatasetIdentical(expected, actual)
+            try:
+                self.assertDatasetIdentical(expected, actual)
+            except:
+                # Most stores use '' for nans in strings, but some don't
+                # first try the ideal case (where the store returns exactly)
+                # the original Dataset), then try a more realistic case.
+                expected['letters_nans'][-1] = ''
+                self.assertDatasetIdentical(expected, actual)
 
     def test_roundtrip_string_data(self):
         expected = Dataset({'x': ('t', ['ab', 'cdef'])})
         with self.roundtrip(expected) as actual:
-            if type(self) is not NetCDF4DataTest:
+            if isinstance(self, CastUnicodeToBytes):
                 expected['x'] = expected['x'].astype('S')
             self.assertDatasetIdentical(expected, actual)
+
+    def test_roundtrip_example_1_netcdf(self):
+        expected = open_example_dataset('example_1.nc')
+        with self.roundtrip(expected) as actual:
+            # we allow the attributes to differ since that
+            # will depend on the encoding used.  For example,
+            # without CF encoding 'actual' will end up with
+            # a dtype attribute.
+            self.assertDatasetEqual(expected, actual)
+
+    def test_roundtrip_example_1_netcdf_gz(self):
+        if sys.version_info[:2] < (2, 7):
+           with self.assertRaisesRegexp(ValueError, 'gzipped netCDF not supported'):
+                open_example_dataset('example_1.nc.gz')
+        else:
+           with open_example_dataset('example_1.nc.gz') as expected:
+                with open_example_dataset('example_1.nc') as actual:
+                    self.assertDatasetIdentical(expected, actual)
+
+    def test_orthogonal_indexing(self):
+        in_memory = create_test_data()
+        with self.roundtrip(in_memory) as on_disk:
+            indexers = {'dim1': np.arange(3), 'dim2': np.arange(4),
+                        'dim3': np.arange(5)}
+            expected = in_memory.isel(**indexers)
+            actual = on_disk.isel(**indexers)
+            self.assertDatasetAllClose(expected, actual)
+            # do it twice, to make sure we're switched from orthogonal -> numpy
+            # when we cached the values
+            actual = on_disk.isel(**indexers)
+            self.assertDatasetAllClose(expected, actual)
+
+    def test_pickle(self):
+        on_disk = open_example_dataset('bears.nc')
+        unpickled = pickle.loads(pickle.dumps(on_disk))
+        self.assertDatasetIdentical(on_disk, unpickled)
+
+
+class CFEncodedDataTest(DatasetIOTestCases):
 
     def test_roundtrip_strings_with_fill_value(self):
         values = np.array(['ab', 'cdef', np.nan], dtype=object)
@@ -165,42 +214,16 @@ class DatasetIOTestCases(object):
             self.assertDatasetAllClose(decoded, actual)
         with self.roundtrip(decoded, decode_cf=False) as actual:
             self.assertDatasetAllClose(encoded, actual)
+        with self.roundtrip(encoded, decode_cf=False) as actual:
+            self.assertDatasetAllClose(encoded, actual)
+        # make sure roundtrip encoding didn't change the
+        # original dataset.
+        self.assertDatasetIdentical(encoded,
+                                    create_encoded_masked_and_scaled_data())
         with self.roundtrip(encoded) as actual:
             self.assertDatasetAllClose(decoded, actual)
         with self.roundtrip(encoded, decode_cf=False) as actual:
             self.assertDatasetAllClose(encoded, actual)
-
-    def test_roundtrip_example_1_netcdf(self):
-        with open_example_dataset('example_1.nc') as expected:
-            with self.roundtrip(expected) as actual:
-                self.assertDatasetIdentical(expected, actual)
-
-    def test_roundtrip_example_1_netcdf_gz(self):
-        if sys.version_info[:2] < (2, 7):
-           with self.assertRaisesRegexp(ValueError, 'gzipped netCDF not supported'):
-                open_example_dataset('example_1.nc.gz')
-        else:
-           with open_example_dataset('example_1.nc.gz') as expected:
-                with open_example_dataset('example_1.nc') as actual:
-                    self.assertDatasetIdentical(expected, actual)
-
-    def test_orthogonal_indexing(self):
-        in_memory = create_test_data()
-        with self.roundtrip(in_memory) as on_disk:
-            indexers = {'dim1': np.arange(3), 'dim2': np.arange(4),
-                        'dim3': np.arange(5)}
-            expected = in_memory.isel(**indexers)
-            actual = on_disk.isel(**indexers)
-            self.assertDatasetAllClose(expected, actual)
-            # do it twice, to make sure we're switched from orthogonal -> numpy
-            # when we cached the values
-            actual = on_disk.isel(**indexers)
-            self.assertDatasetAllClose(expected, actual)
-
-    def test_pickle(self):
-        with open_example_dataset('bears.nc') as on_disk:
-            unpickled = pickle.loads(pickle.dumps(on_disk))
-            self.assertDatasetIdentical(on_disk, unpickled)
 
 
 @contextlib.contextmanager
@@ -214,7 +237,7 @@ def create_tmp_file(suffix='.nc'):
 
 
 @requires_netCDF4
-class NetCDF4DataTest(DatasetIOTestCases, TestCase):
+class NetCDF4DataTest(CFEncodedDataTest, TestCase):
     @contextlib.contextmanager
     def create_store(self):
         with create_tmp_file() as tmp_file:
@@ -402,10 +425,56 @@ class NetCDF4DataTest(DatasetIOTestCases, TestCase):
             self.assertDatasetIdentical(data, actual)
             self.assertEqual(actual['x'].dtype, np.dtype('S4'))
 
+    def test_open_encodings(self):
+        # Create a netCDF file with explicit time units
+        # and make sure it makes it into the encodings
+        # and survives a round trip
+        with create_tmp_file() as tmp_file:
+            with nc4.Dataset(tmp_file, 'w') as ds:
+                ds.createDimension('time', size=10)
+                ds.createVariable('time', np.int32, dimensions=('time',))
+                units = 'days since 1999-01-01'
+                ds.variables['time'].setncattr('units', units)
+                ds.variables['time'][:] = np.arange(10) + 4
+
+            expected = Dataset()
+
+            time = pd.date_range('1999-01-05', periods=10)
+            encoding = {'units': units, 'dtype': np.dtype('int32')}
+            expected['time'] = ('time', time, {}, encoding)
+
+            actual = open_dataset(tmp_file)
+
+            self.assertVariableEqual(actual['time'], expected['time'])
+            actual_encoding = {k: v for k, v in iteritems(actual['time'].encoding)
+                               if k in expected['time'].encoding}
+            self.assertDictEqual(actual_encoding, expected['time'].encoding)
+
+    def test_dump_and_open_encodings(self):
+        # Create a netCDF file with explicit time units
+        # and make sure it makes it into the encodings
+        # and survives a round trip
+        with create_tmp_file() as tmp_file:
+            with nc4.Dataset(tmp_file, 'w') as ds:
+                ds.createDimension('time', size=10)
+                ds.createVariable('time', np.int32, dimensions=('time',))
+                units = 'days since 1999-01-01'
+                ds.variables['time'].setncattr('units', units)
+                ds.variables['time'][:] = np.arange(10) + 4
+
+            xray_dataset = open_dataset(tmp_file)
+
+            with create_tmp_file() as tmp_file2:
+                xray_dataset.dump(tmp_file2)
+
+                with nc4.Dataset(tmp_file2, 'r') as ds:
+                    self.assertEqual(ds.variables['time'].getncattr('units'), units)
+                    self.assertArrayEqual(ds.variables['time'], np.arange(10) + 4)
+
 
 @requires_netCDF4
 @requires_scipy
-class ScipyDataTest(DatasetIOTestCases, TestCase):
+class ScipyDataTest(CFEncodedDataTest, CastUnicodeToBytes, TestCase):
     @contextlib.contextmanager
     def create_store(self):
         fobj = BytesIO()
@@ -419,7 +488,7 @@ class ScipyDataTest(DatasetIOTestCases, TestCase):
 
 
 @requires_netCDF4
-class NetCDF3ViaNetCDF4DataTest(DatasetIOTestCases, TestCase):
+class NetCDF3ViaNetCDF4DataTest(CFEncodedDataTest, CastUnicodeToBytes, TestCase):
     @contextlib.contextmanager
     def create_store(self):
         with create_tmp_file() as tmp_file:

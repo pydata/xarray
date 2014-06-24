@@ -338,7 +338,10 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
         """
         for dim, size in iteritems(self.dims):
             if dim not in self._arrays:
-                coord = variable.Coordinate(dim, np.arange(size))
+                # This is equivalent to np.arange(size), but
+                # waits to create the array until its actually accessed.
+                data = indexing.LazyIntegerRange(size)
+                coord = variable.Coordinate(dim, data)
                 self._arrays[dim] = coord
 
     def _update_vars_and_coords(self, new_arrays, new_coord_names={},
@@ -387,17 +390,16 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
                                      check_coord_names=False)
 
     @classmethod
-    def load_store(cls, store, decode_cf=True, mask_and_scale=True,
-                   decode_times=True, concat_characters=True):
+    def load_store(cls, store, decoder=None, *args, **kwdargs):
         """Create a new dataset from the contents of a backends.*DataStore
         object
         """
-        variables = store.variables
-        if decode_cf:
-            variables = conventions.decode_cf_variables(
-                variables, mask_and_scale=mask_and_scale,
-                decode_times=decode_times, concat_characters=concat_characters)
-        obj = cls(variables, attrs=store.attrs)
+        if decoder:
+            # here the new 'store' name is a bit overloaded, it will
+            # typically actually be a Dataset, but still functions
+            # the way a store does.
+            store = decoder(store, *args, **kwdargs)
+        obj = cls(store.variables, attrs=store.attrs)
         obj._file_obj = store
         return obj
 
@@ -775,10 +777,12 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
                 del obj._arrays[name]
         return obj
 
-    def dump_to_store(self, store):
+    def dump_to_store(self, store, encoder=None):
         """Store dataset contents to a backends.*DataStore object."""
-        store.set_variables(self._arrays)
-        store.set_attributes(self.attrs)
+        ds = self
+        if encoder:
+            ds = encoder(ds)
+        store.store(ds)
         store.sync()
 
     def to_netcdf(self, filepath, **kwdargs):

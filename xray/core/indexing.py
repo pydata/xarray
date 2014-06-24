@@ -177,6 +177,47 @@ def _index_indexer_1d(old_indexer, applied_indexer, size):
     return indexer
 
 
+class LazyIntegerRange(utils.NDArrayMixin):
+
+    def __init__(self, *args, **kwdargs):
+        """
+        Parameters
+        ----------
+        See np.arange
+        """
+        self.args = args
+        self.kwdargs = kwdargs
+        assert 'dtype' not in self.kwdargs
+        # range will fail if any arguments are not integers
+        self.array = range(*args, **kwdargs)
+
+    @property
+    def shape(self):
+        return (len(self.array),)
+
+    @property
+    def dtype(self):
+        return np.dtype('int64')
+
+    @property
+    def ndim(self):
+        return 1
+
+    @property
+    def size(self):
+        return len(self.array)
+
+    def __getitem__(self, key):
+        return np.array(self)[key]
+
+    def __array__(self, dtype=None):
+        return np.arange(*self.args, **self.kwdargs)
+
+    def __repr__(self):
+        return ('%s(array=%r)' %
+                (type(self).__name__, self.array))
+
+
 class LazilyIndexedArray(utils.NDArrayMixin):
     """Wrap an array that handles orthogonal indexing to make indexing lazy
     """
