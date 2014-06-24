@@ -50,10 +50,12 @@ class PydapDataStore(AbstractDataStore):
         data = indexing.LazilyIndexedArray(PydapArrayWrapper(var))
         return xray.Variable(var.dimensions, data, var.attributes)
 
-    @property
-    def store_variables(self):
-        return self.ds
+    def get_variables(self):
+        return FrozenOrderedDict((k, self.open_store_variable(v))
+                                 for k, v in self.ds.iteritems())
 
-    @property
-    def attrs(self):
+    def get_attrs(self):
         return Frozen(self.ds.attributes)
+
+    def get_dimensions(self):
+        return Frozen(self.ds.dimensions)

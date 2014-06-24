@@ -8,7 +8,7 @@ import warnings
 
 import xray
 from xray.backends.common import AbstractWritableDataStore
-from xray.utils import Frozen
+from xray.utils import Frozen, FrozenOrderedDict
 from xray.pycompat import iteritems, basestring, unicode_type
 
 from .. import conventions
@@ -27,7 +27,7 @@ def _decode_attrs(d):
     return OrderedDict((k, v if k == '_FillValue' else _decode_string(v))
                        for (k, v) in iteritems(d))
 
-
+@conventions.cf_encoded
 class ScipyDataStore(AbstractWritableDataStore):
     """Store for reading and writing data via scipy.io.netcdf.
 
@@ -55,16 +55,15 @@ class ScipyDataStore(AbstractWritableDataStore):
         self.ds = scipy.io.netcdf.netcdf_file(
             filename_or_obj, mode=mode, mmap=mmap, version=version)
 
-    def open_store_variable(self, var):
-        return xray.Variable(var.dimensions, var.data,
-                             _decode_attrs(var._attributes))
+    def get_variables(self):
+        return FrozenOrderedDict((k, xray.Variable(v.dimensions, v.data,
+                                                _decode_attrs(v._attributes)))
+                                 for k, v in self.ds.variables.iteritems())
 
-    @property
-    def attrs(self):
+    def get_attrs(self):
         return Frozen(_decode_attrs(self.ds._attributes))
 
-    @property
-    def dimensions(self):
+    def get_dimensions(self):
         return Frozen(self.ds.dimensions)
 
     def set_dimension(self, name, length):
@@ -92,8 +91,7 @@ class ScipyDataStore(AbstractWritableDataStore):
         setattr(self.ds, key, self._cast_attr_value(value))
 
     def set_variable(self, name, variable):
-        variable = encode_nc3_variable(
-            conventions.encode_cf_variable(variable))
+        variable = encode_nc3_variable(variable)
         self.set_necessary_dimensions(variable)
         data = variable.values
         self.ds.createVariable(name, data.dtype, variable.dimensions)

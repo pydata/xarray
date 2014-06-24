@@ -166,7 +166,7 @@ def _expand_variables(raw_variables, old_variables={}, compat='identical'):
 
     This includes converting tuples (dimensions, data) into Variable objects,
     converting index variables into Index objects and expanding DataArray
-    objects into Variables plus Indexs.
+    objects into Variables plus Indexes.
 
     Raises ValueError if any conflicting values are found, between any of the
     new or old variables.
@@ -307,7 +307,10 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
         """
         for dim, size in iteritems(self._dimensions):
             if dim not in self._variables:
-                coord = variable.Index(dim, np.arange(size))
+                # This is equivalent to np.arange(size), but
+                # waits to create the array until its actually accessed.
+                data = indexing.LazyIntegerRange(size)
+                coord = variable.Index(dim, data)
                 self._variables[dim] = coord
 
     def _update_vars_and_dims(self, new_variables, needs_copy=True):
@@ -337,17 +340,16 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
         self._update_vars_and_dims(new_variables, needs_copy=False)
 
     @classmethod
-    def load_store(cls, store, decode_cf=True, mask_and_scale=True,
-                   decode_times=True, concat_characters=True):
+    def load_store(cls, store, decoder=conventions.cf_decoder, *args, **kwdargs):
         """Create a new dataset from the contents of a backends.*DataStore
         object
         """
-        variables = store.variables
-        if decode_cf:
-            variables = conventions.decode_cf_variables(
-                store.variables, mask_and_scale=mask_and_scale,
-                decode_times=decode_times, concat_characters=concat_characters)
-        return cls(variables, store.attrs)
+        if decoder:
+            # here the new 'store' name is a bit overloaded, it will
+            # typically actually be a Dataset, but still functions
+            # the way a store does.
+            store = decoder(store, *args, **kwdargs)
+        return cls(store.variables, store.attrs)
 
     @property
     def variables(self):
@@ -562,10 +564,12 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
         return FrozenOrderedDict((name, self[name]) for name in self
                                  if name not in self.dimensions)
 
-    def dump_to_store(self, store):
+    def dump_to_store(self, store, encoder=None):
         """Store dataset contents to a backends.*DataStore object."""
-        store.set_variables(self.variables)
-        store.set_attributes(self.attrs)
+        ds = self
+        if encoder:
+            ds = encoder(ds)
+        store.store(ds)
         store.sync()
 
     def to_netcdf(self, filepath, **kwdargs):

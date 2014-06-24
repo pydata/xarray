@@ -51,22 +51,13 @@ class InaccessibleArray(utils.NDArrayMixin):
 
 
 class InaccessibleVariableDataStore(backends.InMemoryDataStore):
-    def __init__(self):
-        self.dimensions = OrderedDict()
-        self._variables = OrderedDict()
-        self.attrs = OrderedDict()
 
-    def set_variable(self, name, variable):
-        self._variables[name] = variable
-        return self._variables[name]
-
-    def open_store_variable(self, var):
-        data = indexing.LazilyIndexedArray(InaccessibleArray(var.values))
-        return Variable(var.dimensions, data, var.attrs)
-
-    @property
-    def store_variables(self):
-        return self._variables
+    def get_variables(self):
+        def lazy_inaccessible(x):
+            data = indexing.LazilyIndexedArray(InaccessibleArray(x.values))
+            return Variable(x.dimensions, data, x.attrs)
+        return {k: lazy_inaccessible(v) for
+                k, v in self.ds['variables'].iteritems()}
 
 
 class TestDataset(TestCase):
