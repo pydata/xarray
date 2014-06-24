@@ -29,7 +29,7 @@ def _infer_indexes_and_dimensions(shape, indexes, dimensions):
 
     if _is_dict_like(indexes):
         if dimensions is None:
-            dimensions = list(indexes)
+            dimensions = list(indexes.keys())
         else:
             bad_indexes = [dim for dim in indexes if dim not in dimensions]
             if bad_indexes:
@@ -330,6 +330,10 @@ class DataArray(AbstractArray):
         """Dictionary of format-specific settings for how this array should be
         serialized."""
         return self.variable.encoding
+
+    @encoding.setter
+    def encoding(self, value):
+        self.variable.encoding = value
 
     @property
     def coordinates(self):

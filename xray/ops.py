@@ -12,6 +12,9 @@ NUM_BINARY_OPS = ['add', 'sub', 'mul', 'truediv', 'floordiv', 'mod',
 if not PY3:
     NUM_BINARY_OPS.append('div')
 
+# methods which pass on the numpy return value unchanged
+# be careful not to list methods that we would want to wrap later
+NUMPY_SAME_METHODS = ['item', 'searchsorted']
 # methods which don't modify the data shape, so the result should still be
 # wrapped in an Variable/DataArray
 NUMPY_UNARY_METHODS = ['astype', 'argsort', 'clip', 'conj', 'conjugate',
@@ -19,7 +22,14 @@ NUMPY_UNARY_METHODS = ['astype', 'argsort', 'clip', 'conj', 'conjugate',
 # methods which remove an axis
 NUMPY_REDUCE_METHODS = ['all', 'any', 'argmax', 'argmin', 'max', 'mean', 'min',
                         'prod', 'ptp', 'std', 'sum', 'var']
-# TODO: wrap cumprod, cumsum, take, dot, searchsorted
+# TODO: wrap cumprod/cumsum, take, dot, argsort/sort
+
+
+def _values_method_wrapper(f):
+    def func(self, *args, **kwargs):
+        return getattr(self.values, f)(*args, **kwargs)
+    func.__name__ = f
+    return func
 
 
 def _method_wrapper(f):
@@ -81,6 +91,8 @@ def inject_special_operations(cls, priority=50):
         setattr(cls, op_str('i' + name),
                 cls._inplace_binary_op(op('i' + name)))
     # patch in numpy methods
+    for name in NUMPY_SAME_METHODS:
+        setattr(cls, name, _values_method_wrapper(name))
     for name in NUMPY_UNARY_METHODS:
         setattr(cls, name, cls._unary_op(_method_wrapper(name)))
     inject_reduce_methods(cls)

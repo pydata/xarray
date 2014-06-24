@@ -294,10 +294,13 @@ class TestVariable(TestCase, VariableSubclassTestCases):
         v.values = d2
         self.assertIs(source_ndarray(v.values), d2)
 
-    def test_item(self):
+    def test_numpy_same_methods(self):
         v = Variable([], np.float32(0.0))
         self.assertEqual(v.item(), 0)
         self.assertIs(type(v.item()), float)
+
+        v = Index('x', np.arange(5))
+        self.assertEqual(2, v.searchsorted(2))
 
     def test_datetime64_conversion(self):
         # verify that datetime64 is always converted to ns precision with

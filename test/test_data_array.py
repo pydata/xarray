@@ -56,6 +56,16 @@ class TestDataArray(TestCase):
         with self.assertRaisesRegexp(ValueError, 'must be 1-dimensional'):
             self.ds['foo'].as_index
 
+    def test_encoding(self):
+        expected = {'foo': 'bar'}
+        self.dv.encoding['foo'] = 'bar'
+        self.assertEquals(expected, self.dv.encoding)
+
+        expected = {'baz': 0}
+        self.dv.encoding = expected
+        self.assertEquals(expected, self.dv.encoding)
+        self.assertIsNot(expected, self.dv.encoding)
+
     def test_constructor(self):
         data = np.random.random((2, 3))
 
@@ -90,6 +100,10 @@ class TestDataArray(TestCase):
         self.assertDataArrayIdentical(expected, actual)
 
         indexes = OrderedDict([('x', ['a', 'b']), ('y', [-1, -2, -3])])
+        actual = DataArray(data, indexes)
+        self.assertDataArrayIdentical(expected, actual)
+
+        indexes = pd.Series([['a', 'b'], [-1, -2, -3]], ['x', 'y'])
         actual = DataArray(data, indexes)
         self.assertDataArrayIdentical(expected, actual)
 
