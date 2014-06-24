@@ -105,6 +105,10 @@ class TestDataArray(TestCase):
         actual = DataArray(data, indexes)
         self.assertDataArrayIdentical(expected, actual)
 
+        indexes = pd.Series([['a', 'b'], [-1, -2, -3]], ['x', 'y'])
+        actual = DataArray(data, indexes)
+        self.assertDataArrayIdentical(expected, actual)
+
         expected = Dataset({None: (['x', 'y'], data),
                             'x': ('x', ['a', 'b'])})[None]
         actual = DataArray(data, {'x': ['a', 'b']}, ['x', 'y'])

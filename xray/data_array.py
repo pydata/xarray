@@ -29,7 +29,7 @@ def _infer_indexes_and_dimensions(shape, indexes, dimensions):
 
     if _is_dict_like(indexes):
         if dimensions is None:
-            dimensions = list(indexes)
+            dimensions = list(indexes.keys())
         else:
             bad_indexes = [dim for dim in indexes if dim not in dimensions]
             if bad_indexes:
