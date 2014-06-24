@@ -68,6 +68,16 @@ class TestDataArray(TestCase):
         with self.assertRaisesRegexp(ValueError, 'must be 1-dimensional'):
             self.ds['foo'].as_index
 
+    def test_encoding(self):
+        expected = {'foo': 'bar'}
+        self.dv.encoding['foo'] = 'bar'
+        self.assertEquals(expected, self.dv.encoding)
+
+        expected = {'baz': 0}
+        self.dv.encoding = expected
+        self.assertEquals(expected, self.dv.encoding)
+        self.assertIsNot(expected, self.dv.encoding)
+
     def test_constructor(self):
         data = np.random.random((2, 3))
 

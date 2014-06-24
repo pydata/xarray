@@ -217,7 +217,7 @@ class Variable(AbstractArray):
         if attributes is None:
             attributes = {}
         self._attributes = OrderedDict(attributes)
-        self.encoding = dict({} if encoding is None else encoding)
+        self._encoding = dict({} if encoding is None else encoding)
 
     @property
     def dtype(self):
@@ -359,6 +359,16 @@ class Variable(AbstractArray):
     @attrs.setter
     def attrs(self, value):
         self._attributes = OrderedDict(value)
+
+    @property
+    def encoding(self):
+        """Dictionary of encodings on this variable.
+        """
+        return self._encoding
+
+    @encoding.setter
+    def encoding(self, value):
+        self._encoding = dict(value)
 
     def copy(self, deep=True):
         """Returns a copy of this object.

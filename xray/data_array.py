@@ -350,6 +350,10 @@ class DataArray(AbstractArray):
         serialized."""
         return self.variable.encoding
 
+    @encoding.setter
+    def encoding(self, value):
+        self.variable.encoding = value
+
     @property
     def coordinates(self):
         utils.alias_warning('coordinates', 'indexes', 3)
