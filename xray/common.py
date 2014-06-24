@@ -1,3 +1,5 @@
+from collections import Mapping
+
 import numpy as np
 
 from .pycompat import basestring, iteritems
@@ -101,6 +103,27 @@ class AbstractArray(ImplementsArrayReduce):
                              (dim, self.dimensions))
 
 
+class AbstractIndexes(Mapping):
+    def __init__(self, data):
+        self._data = data
+
+    def __getitem__(self, key):
+        raise NotImplementedError
+
+    def __iter__(self):
+        return iter(self._data.dimensions)
+
+    def __len__(self):
+        return len(self._data.dimensions)
+
+    def __contains__(self, key):
+        return key in self._data.dimensions
+
+    def __repr__(self):
+        return '\n'.join(_wrap_indent(repr(v.as_pandas), '%s: ' % k)
+                         for k, v in self.items())
+
+
 def _summarize_attributes(data):
     if data.attrs:
         attr_summary = '\n'.join('    %s: %s' % (k, v) for k, v
@@ -132,8 +155,7 @@ def array_repr(arr):
     if hasattr(arr, 'dataset'):
         if arr.indexes:
             summary.append('Indexes:')
-            for k, v in arr.indexes.items():
-                summary.append(_wrap_indent(repr(v.as_pandas), '    %s: ' % k))
+            summary.append(_wrap_indent(repr(arr.indexes), '    '))
         other_vars = [k for k in arr.dataset
                       if k not in arr.indexes and k != arr.name]
         if other_vars:

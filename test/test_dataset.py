@@ -9,7 +9,8 @@ except ImportError:
 import numpy as np
 import pandas as pd
 
-from xray import Dataset, DataArray, Variable, backends, utils, align, indexing
+from xray import (Dataset, DataArray, Index, Variable,
+                  backends, utils, align, indexing)
 from xray.pycompat import iteritems
 
 from . import TestCase
@@ -130,17 +131,17 @@ class TestDataset(TestCase):
         with self.assertRaises(ValueError):
             a['qux'] = (('time', 'x'), d.T)
 
-    def test_indexes(self):
+    def test_indexes_create(self):
         a = Dataset()
         vec = np.random.random((10,))
         attributes = {'foo': 'bar'}
         a['x'] = ('x', vec, attributes)
         self.assertTrue('x' in a.indexes)
         self.assertIsInstance(a.indexes['x'].as_pandas, pd.Index)
-        self.assertVariableEqual(a.indexes['x'], a.variables['x'])
+        self.assertVariableIdentical(a.indexes['x'], a.variables['x'])
         b = Dataset()
         b['x'] = ('x', vec, attributes)
-        self.assertVariableEqual(a['x'], b['x'])
+        self.assertVariableIdentical(a['x'], b['x'])
         self.assertEqual(a.dimensions, b.dimensions)
         # this should work
         a['x'] = ('x', vec[:5])
@@ -155,6 +156,33 @@ class TestDataset(TestCase):
         with self.assertRaises(ValueError):
             a['y'] = ('y', scal)
         self.assertTrue('y' not in a.dimensions)
+
+    def test_indexes_properties(self):
+        data = Dataset({'x': ('x', [-1, -2]),
+                        'y': ('y', [0, 1, 2]),
+                        'foo': (['x', 'y'], np.random.randn(2, 3))})
+
+        self.assertEquals(2, len(data.indexes))
+
+        self.assertEquals({'x', 'y'}, set(data.indexes))
+
+        self.assertVariableIdentical(data.indexes['x'], data['x'].variable)
+        self.assertVariableIdentical(data.indexes['y'], data['y'].variable)
+
+        self.assertIn('x', data.indexes)
+        self.assertNotIn(0, data.indexes)
+        self.assertNotIn('foo', data.indexes)
+
+        with self.assertRaises(KeyError):
+            data.indexes['foo']
+        with self.assertRaises(KeyError):
+            data.indexes[0]
+
+        expected = dedent("""\
+        x: Int64Index([-1, -2], dtype='int64')
+        y: Int64Index([0, 1, 2], dtype='int64')""")
+        actual = repr(data.indexes)
+        self.assertEquals(expected, actual)
 
     def test_equals_and_identical(self):
         data = create_test_data(seed=42)
