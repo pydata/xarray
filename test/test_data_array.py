@@ -4,21 +4,9 @@ from copy import deepcopy
 from textwrap import dedent
 from collections import OrderedDict
 
-from xray import Dataset, DataArray, Variable, align
-from xray.data_array import Indexes
+from xray import Dataset, DataArray, Index, Variable, align
 from xray.pycompat import iteritems
 from . import TestCase, ReturnItem, source_ndarray
-
-
-class TestIndexes(TestCase):
-    def test(self):
-        indexes = Indexes(['a', 'b', 'c'], [0, 1, 2])
-        self.assertEqual(indexes['a'], 0)
-        self.assertEqual(indexes[0], 0)
-        self.assertEqual(indexes[:1], Indexes(['a'], [0]))
-        self.assertEqual(indexes[:], indexes)
-        self.assertEqual(repr(indexes),
-                         "Indexes(['a', 'b', 'c'], [0, 1, 2])")
 
 
 class TestDataArray(TestCase):
@@ -247,6 +235,32 @@ class TestDataArray(TestCase):
                                       da.loc[['a', 'b', 'c'], np.arange(4)])
         da.loc['a':'j'] = 0
         self.assertTrue(np.all(da.values == 0))
+
+    def test_indexes(self):
+        indexes = [Index('x', [-1, -2]), Index('y', [0, 1, 2])]
+        da = DataArray(np.random.randn(2, 3), indexes, name='foo')
+
+        self.assertEquals(2, len(da.indexes))
+
+        self.assertEquals(['x', 'y'], list(da.indexes))
+
+        self.assertTrue(da.indexes[0].identical(indexes[0]))
+        self.assertTrue(da.indexes['x'].identical(indexes[0]))
+        self.assertTrue(da.indexes[1].identical(indexes[1]))
+        self.assertTrue(da.indexes['y'].identical(indexes[1]))
+
+        self.assertIn('x', da.indexes)
+        self.assertNotIn(0, da.indexes)
+        self.assertNotIn('foo', da.indexes)
+
+        with self.assertRaises(KeyError):
+            da.indexes['foo']
+
+        expected = dedent("""\
+        x: Int64Index([-1, -2], dtype='int64')
+        y: Int64Index([0, 1, 2], dtype='int64')""")
+        actual = repr(da.indexes)
+        self.assertEquals(expected, actual)
 
     def test_reindex(self):
         foo = self.dv

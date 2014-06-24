@@ -239,6 +239,23 @@ def _item0_str(items):
     return str(items[0])
 
 
+class DatasetIndexes(common.AbstractIndexes):
+    """Dictionary like container for Dataset indexes.
+
+    Essentially an immutable OrderedDict with keys given by the array's
+    dimensions and the values given by the corresponding xray.Index objects.
+    Unlike DataArrayIndexes, does *not* support integer based lookups.
+    """
+    def __getitem__(self, key):
+        if key in self._data.dimensions:
+            return self._data.variables[key]
+        elif isinstance(key, (int, np.integer)):
+            raise KeyError('%r: Dataset indexes do not support integer based '
+                           'lookups' % key)
+        else:
+            raise KeyError(repr(key))
+
+
 def as_dataset(obj):
     """Cast the given object to a Dataset.
 
@@ -531,8 +548,7 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
     def indexes(self):
         """Dictionary of xray.Index objects used for label based indexing.
         """
-        return FrozenOrderedDict((dim, self.variables[dim])
-                                 for dim in self.dimensions)
+        return DatasetIndexes(self)
 
     @property
     def noncoordinates(self):

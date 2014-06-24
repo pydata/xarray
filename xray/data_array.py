@@ -1,7 +1,7 @@
 import functools
 import operator
 import warnings
-from collections import defaultdict, OrderedDict, Mapping
+from collections import defaultdict, OrderedDict
 
 import numpy as np
 import pandas as pd
@@ -12,7 +12,7 @@ from . import groupby
 from . import ops
 from . import utils
 from . import variable
-from .common import AbstractArray
+from .common import AbstractArray, AbstractIndexes
 from .utils import multi_index_from_product
 from .pycompat import iteritems, basestring
 
@@ -54,8 +54,8 @@ def _infer_indexes_and_dimensions(shape, indexes, dimensions):
     if indexes is None:
         indexes = [None] * len(shape)
     indexes = [idx if isinstance(idx, AbstractArray) else
-               xray.Index(dimensions[n], idx) if idx is not None else
-               xray.Index(dimensions[n], np.arange(shape[n]))
+               variable.Index(dimensions[n], idx) if idx is not None else
+               variable.Index(dimensions[n], np.arange(shape[n]))
                for n, idx in enumerate(indexes)]
 
     return indexes, dimensions
@@ -80,40 +80,21 @@ class _LocIndexer(object):
         self.data_array[self._remap_key(key)] = value
 
 
-class Indexes(Mapping):
+class DataArrayIndexes(AbstractIndexes):
     """Dictionary like container for DataArray indexes.
 
-    `Indexes` is essentially an OrderedDict with keys given by the array's
+    Essentially an immutable OrderedDict with keys given by the array's
     dimensions and the values given by the corresponding xray.Index objects,
     but it also supports list-like indexing with integers.
     """
-    def __init__(self, dimensions, indexes):
-        self._dimensions = list(dimensions)
-        self._indexes = list(indexes)
-        self._mapping = OrderedDict(zip(dimensions, indexes))
-
     def __getitem__(self, key):
-        if isinstance(key, basestring):
-            return self._mapping[key]
+        if key in self._data.dimensions:
+            return self._data.dataset.variables[key]
         elif isinstance(key, (int, np.integer)):
-            return self._indexes[key]
-        elif isinstance(key, slice):
-            return type(self)(self._dimensions[key], self._indexes[key])
+            dimension = self._data.dimensions[key]
+            return self._data.dataset.variables[dimension]
         else:
             raise KeyError(repr(key))
-
-    def __iter__(self):
-        return iter(self._mapping)
-
-    def __len__(self):
-        return len(self._mapping)
-
-    def __contains__(self, key):
-        return key in self._mapping
-
-    def __repr__(self):
-        return '%s(%r, %r)' % (type(self).__name__,
-                               self._dimensions, self._indexes)
 
 
 class DataArray(AbstractArray):
@@ -363,8 +344,7 @@ class DataArray(AbstractArray):
         Keys are given by the dimensions, but list-like (integer based)
         indexing is also support.
         """
-        indexes = [self.dataset.variables[dim] for dim in self.dimensions]
-        return Indexes(self.dimensions, indexes)
+        return DataArrayIndexes(self)
 
     def load_data(self):
         """Manually trigger loading of this array's data from disk or a
@@ -814,9 +794,8 @@ class DataArray(AbstractArray):
         # TODO: possibly automatically select index intersection instead?
         if hasattr(other, 'indexes'):
             for k, v in iteritems(self.indexes):
-                if (k in other.indexes
-                        and not v.equals(other.indexes[k])):
-                    raise ValueError('coordinate %r is not aligned' % k)
+                if k in other.indexes and not v.equals(other.indexes[k]):
+                    raise ValueError('index %r is not aligned' % k)
 
     @staticmethod
     def _binary_op(f, reflexive=False):
