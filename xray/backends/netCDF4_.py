@@ -137,7 +137,7 @@ class NetCDF4DataStore(AbstractWritableDataStore):
 
     def get_variables(self):
         return FrozenOrderedDict((k, self.open_store_variable(v))
-                                 for k, v in self.ds.variables.iteritems())
+                                 for k, v in iteritems(self.ds.variables))
 
     def get_attrs(self):
         return FrozenOrderedDict((k, self.ds.getncattr(k))

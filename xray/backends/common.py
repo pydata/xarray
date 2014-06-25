@@ -99,7 +99,7 @@ class AbstractWritableDataStore(AbstractDataStore):
                           for v in dataset.variables.values()]
         neccesary_dims = set(itertools.chain(*neccesary_dims))
         # set all non-indexes and any index which is not trivial.
-        variables = {k: v for k, v in dataset.variables.iteritems()
+        variables = {k: v for k, v in iteritems(dataset.variables)
                      if not (k in neccesary_dims and is_trivial_index(v))}
         self.set_variables(variables)
         #self.set_variables(dataset.variables)
