@@ -791,7 +791,7 @@ class DataArray(AbstractArray):
     def _unary_op(f):
         @functools.wraps(f)
         def func(self, *args, **kwargs):
-            return self.__array_wrap__(f(self.variable, *args, **kwargs))
+            return self.__array_wrap__(f(self.values, *args, **kwargs))
         return func
 
     def _check_indexes_compat(self, other):

@@ -1,6 +1,7 @@
 import operator
 
 import numpy as np
+import pandas as pd
 
 from .pycompat import PY3
 
@@ -19,10 +20,11 @@ NUMPY_SAME_METHODS = ['item', 'searchsorted']
 # wrapped in an Variable/DataArray
 NUMPY_UNARY_METHODS = ['astype', 'argsort', 'clip', 'conj', 'conjugate',
                        'round']
+PANDAS_UNARY_FUNCTIONS = ['isnull', 'notnull']
 # methods which remove an axis
 NUMPY_REDUCE_METHODS = ['all', 'any', 'argmax', 'argmin', 'max', 'mean', 'min',
                         'prod', 'ptp', 'std', 'sum', 'var']
-# TODO: wrap cumprod/cumsum, take, dot, argsort/sort
+# TODO: wrap cumprod/cumsum, take, dot, sort
 
 
 def _values_method_wrapper(f):
@@ -95,4 +97,6 @@ def inject_special_operations(cls, priority=50):
         setattr(cls, name, _values_method_wrapper(name))
     for name in NUMPY_UNARY_METHODS:
         setattr(cls, name, cls._unary_op(_method_wrapper(name)))
+    for name in PANDAS_UNARY_FUNCTIONS:
+        setattr(cls, name, cls._unary_op(getattr(pd, name)))
     inject_reduce_methods(cls)

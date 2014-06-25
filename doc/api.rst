@@ -209,6 +209,9 @@ Computations
    DataArray.std
    DataArray.sum
    DataArray.var
+   DataArray.isnull
+   DataArray.notnull
+
 
 Comparisons
 ~~~~~~~~~~~
