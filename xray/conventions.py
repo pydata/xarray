@@ -8,6 +8,8 @@ from . import indexing
 from . import utils
 from .pycompat import iteritems, bytes_type, unicode_type
 import xray
+from xray.backends.common import encoding_decorator
+from xray.backends import InMemoryDataStore
 
 # standard calendars recognized by netcdftime
 _STANDARD_CALENDARS = {'standard', 'gregorian', 'proleptic_gregorian'}
@@ -391,8 +393,24 @@ def _infer_dtype(array):
 
 
 def encode_cf_variable(var):
-    """Converts an Variable into an Variable suitable for saving as a netCDF
-    variable
+    """
+    Converts an Variable into an Variable which follows some
+    of the CF conventions:
+
+        - Nans are masked using _FillValue (or the deprecated missing_value)
+        - Rescaling via: scale_factor and add_offset
+        - datetimes are converted to the CF 'units since time' format
+        - dtype encodings are enforced.
+
+    Parameters
+    ----------
+    var : xray.Variable
+        A variable holding un-encoded data.
+
+    Returns
+    -------
+    out : xray.Variable
+        A variable which has been encoded as described above.
     """
     dimensions = var.dimensions
     data = var.values
@@ -428,6 +446,15 @@ def encode_cf_variable(var):
                 data = data.copy()
                 data[missing] = fill_value
 
+    # replace NaN with the missing_value
+    if 'missing_value' in encoding:
+        missing_value = pop_to(encoding, attributes, 'missing_value')
+        if not pd.isnull(missing_value):
+            missing = pd.isnull(data)
+            if missing.any():
+                data = data.copy()
+                data[missing] = missing_value
+
     # cast to encoded dtype
     if 'dtype' in encoding:
         dtype = np.dtype(encoding.pop('dtype'))
@@ -449,7 +476,7 @@ def encode_cf_variable(var):
 
             if inferred_dtype.kind in ['S', 'U']:
                 # There is no safe bit-pattern for NA in typical binary string
-                # formats, we so can't set a _FillValue. Unfortunately, this
+                # formats, we so can't set a fill_value. Unfortunately, this
                 # means we won't be able to restore string arrays with missing
                 # values.
                 fill_value = ''
@@ -463,12 +490,37 @@ def encode_cf_variable(var):
             data[missing] = fill_value
         else:
             data = np.asarray(data, dtype=_infer_dtype(data))
-
     return xray.Variable(dimensions, data, attributes, encoding=encoding)
 
 
 def decode_cf_variable(var, concat_characters=True, mask_and_scale=True,
                        decode_times=True):
+    """
+    Decodes a variable which may hold CF encoded information.
+
+    This includes variables that have been masked and scaled, which
+    hold CF style time variables (this is almost always the case if
+    the dataset has been serialized) and which have strings encoded
+    as character arrays.
+
+    Parameters
+    ----------
+    var : Variable
+        A variable holding potentially CF encoded information.
+    concat_characters : bool
+        Should character arrays be concatenated to strings, for
+        example: ['h', 'e', 'l', 'l', 'o'] -> 'hello'
+    mask_and_scale: bool
+        Lazily scale (using scale_factor and add_offset) and mask
+        (using _FillValue).
+    decode_times : bool
+        Decode cf times ('hours since 2000-01-01') to np.datetime64.
+
+    Returns
+    -------
+    out : Variable
+        A variable holding the decoded equivalent of var
+    """
     # use _data instead of data so as not to trigger loading data
     var = xray.variable.as_variable(var)
     data = var._data
@@ -478,8 +530,9 @@ def decode_cf_variable(var, concat_characters=True, mask_and_scale=True,
 
     if 'dtype' in encoding:
         if data.dtype != encoding['dtype']:
-            raise ValueError("Refused to overwrite dtype")
-    encoding['dtype'] = data.dtype
+            warnings.warn("CF decoding is overwriting dtype")
+    else:
+        encoding['dtype'] = data.dtype
 
     if concat_characters:
         if data.dtype.kind == 'S' and data.dtype.itemsize == 1:
@@ -487,7 +540,15 @@ def decode_cf_variable(var, concat_characters=True, mask_and_scale=True,
             data = CharToStringArray(data)
 
     if mask_and_scale:
+        # missing_value is deprecated, but we still want to support it.
+        missing_value = pop_to(attributes, encoding, 'missing_value')
         fill_value = pop_to(attributes, encoding, '_FillValue')
+        # if missing_value is given but not fill_value we use missing_value
+        if fill_value is None and missing_value is not None:
+            fill_value = missing_value
+        # if both were given we make sure they are the same.
+        if fill_value is not None and missing_value is not None:
+            assert fill_value == missing_value
         scale_factor = pop_to(attributes, encoding, 'scale_factor')
         add_offset = pop_to(attributes, encoding, 'add_offset')
         if ((fill_value is not None and not pd.isnull(fill_value))
@@ -511,7 +572,10 @@ def decode_cf_variable(var, concat_characters=True, mask_and_scale=True,
 
 def decode_cf_variables(variables, concat_characters=True, mask_and_scale=True,
                         decode_times=True):
-    """Decode a bunch of CF variables together.
+    """
+    Decode a several CF encoded variables.
+
+    See: decode_cf_variable
     """
     dimensions_used_by = defaultdict(list)
     for v in variables.values():
@@ -535,3 +599,79 @@ def decode_cf_variables(variables, concat_characters=True, mask_and_scale=True,
             v, concat_characters=concat, mask_and_scale=mask_and_scale,
             decode_times=decode_times)
     return new_vars
+
+
+def cf_decoder(ds, concat_characters=True, mask_and_scale=True,
+               decode_times=True, decode_cf=True):
+    """
+    Decode a data store or Dataset which holds CF encoded variables.
+
+    See Also, decode_cf_variable
+
+    Parameters
+    ----------
+    ds : Datastore
+        This can technically be any object with properties 'variables'
+        and 'attrs' and whose constructor follows type(ds)(variables, attrs)
+    concat_characters : bool
+        Should character arrays be concatenated to strings, for
+        example: ['h', 'e', 'l', 'l', 'o'] -> 'hello'
+    mask_and_scale: bool
+        Lazily scale (using scale_factor and add_offset) and mask
+        (using _FillValue).
+    decode_times : bool
+        Decode cf times ('hours since 2000-01-01') to np.datetime64.
+    decode_cf : bool
+        If false this skips decoding.  This is around for backward
+        compatibility.
+    Returns
+    -------
+    ds : DataStore
+        A DataStore holding the decoded variables and attributes
+    """
+    # if decode_cf is false, we do nothing.
+    if not decode_cf:
+        return ds
+    new_vars = decode_cf_variables(ds.variables, concat_characters,
+                                   mask_and_scale, decode_times)
+    # Note that we don't return a Dataset because in some (though
+    # very few) cases the backend.stores are more flexible than
+    # xray.  For example a string Index which gets expanded to a
+    # a character array during CF encoding would result in the
+    # requirement for multidimensional indexes which xray does
+    # not currently support.  Instead we store the variables as
+    # a dictionary of variables and attributes in an in memory store.
+    return InMemoryDataStore({'variables': new_vars,
+                              'attributes': ds.attrs})
+
+
+def cf_encoder(ds, encode_cf=True):
+    """
+    A function which takes a DataStore (ds) and encodes its
+    variables and attributes to conform to CF conventions as much
+    as possible.  This includes masking, scaling, character
+    array handling, and CF-time encoding.
+
+    See also: encode_cf_variable
+    """
+    if not encode_cf:
+        return ds
+    new_vars = OrderedDict((k, encode_cf_variable(v))
+                           for k, v in iteritems(ds.variables))
+    return InMemoryDataStore({'variables': new_vars,
+                              'attributes': ds.attrs})
+
+
+def cf_encoded(*args, **kwdargs):
+    """
+    This Class decorator can be used to turn a DataStore into a
+    CF encoded DataStore.  For example, to take some DataStore
+    and add a CF encoding layer you can do this:
+
+        @cf_encoded
+        CFPunchCardDataStore(PunchCardDataStore):
+            pass
+
+    See also: encoding_decorator, cf_encoder, cf_decoder
+    """
+    return encoding_decorator(cf_encoder, cf_decoder)(*args, **kwdargs)

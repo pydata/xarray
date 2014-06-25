@@ -1,9 +1,12 @@
 import numpy as np
 import pandas as pd
 import warnings
+import contextlib
 
-from xray import conventions, Variable
+from xray import conventions, Variable, Dataset, utils, indexing
 from . import TestCase, requires_netCDF4
+from .test_backends import CFEncodedDataTest, DatasetIOTestCases
+from xray.backends.memory import InMemoryDataStore
 
 
 class TestMaskedAndScaledArray(TestCase):
@@ -275,3 +278,67 @@ class TestEncodeCFVariable(TestCase):
         for var in invalid_vars:
             with self.assertRaises(ValueError):
                 conventions.encode_cf_variable(var)
+
+
+@conventions.cf_encoded
+class CFEncodedInMemoryStore(InMemoryDataStore):
+    pass
+
+
+class TestCFEncodedDataStore(CFEncodedDataTest, TestCase):
+    @contextlib.contextmanager
+    def create_store(self):
+        yield CFEncodedInMemoryStore()
+
+    @contextlib.contextmanager
+    def roundtrip(self, data, **kwargs):
+        store = CFEncodedInMemoryStore(**kwargs)
+        store.store(data)
+        yield Dataset.load_store(store, decoder=None)
+
+
+class NullWrapper(utils.NDArrayMixin):
+    """
+    Just for testing, this lets us create a numpy array directly
+    but make it look like its not in memory yet.
+    """
+    def __init__(self, array):
+        self.array = array
+
+    def __getitem__(self, key):
+        return self.array[indexing.orthogonal_indexer(key, self.shape)]
+
+
+def lazy_identity(x):
+    """
+    Given a data store this wraps each variable in a NullWrapper so that
+    it appears to be out of memory.
+    """
+    variables = {k: Variable(v.dimensions,
+                             NullWrapper(v.values),
+                             v.attrs) for k, v in x.variables.iteritems()}
+    return InMemoryDataStore({'variables': variables,
+                              'attributes': x.attrs})
+
+
+@conventions.encoding_decorator(lambda x: x, lazy_identity)
+class IdentityEncodedInMemoryStore(InMemoryDataStore):
+    """
+    This InMemoryStore does no encoding or decoding, other than
+    wrapping all variables in NullWrappers, which lets us
+    test the trivial case of encoding and decoding.
+    """
+    pass
+
+
+class EncodedDataTest(DatasetIOTestCases, TestCase):
+
+    @contextlib.contextmanager
+    def create_store(self):
+        yield IdentityEncodedInMemoryStore()
+
+    @contextlib.contextmanager
+    def roundtrip(self, data, **kwargs):
+        store = IdentityEncodedInMemoryStore(**kwargs)
+        store.store(data)
+        yield Dataset.load_store(store, decoder=None)
