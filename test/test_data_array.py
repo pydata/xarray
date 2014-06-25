@@ -315,6 +315,15 @@ class TestDataArray(TestCase):
         bar = Variable(['x', 'y'], np.zeros((10, 20)))
         self.assertDataArrayEqual(self.dv, np.maximum(self.dv, bar))
 
+    def test_is_null(self):
+        x = np.random.RandomState(42).randn(5, 6)
+        x[x < 0] = np.nan
+        original = DataArray(x, [-np.arange(5), np.arange(6)], ['x', 'y'])
+        expected = DataArray(pd.isnull(x), [-np.arange(5), np.arange(6)],
+                             ['x', 'y'])
+        self.assertDataArrayIdentical(expected, original.isnull())
+        self.assertDataArrayIdentical(~expected, original.notnull())
+
     def test_math(self):
         x = self.x
         v = self.v
