@@ -340,7 +340,7 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
         self._update_vars_and_dims(new_variables, needs_copy=False)
 
     @classmethod
-    def load_store(cls, store, decoder=conventions.cf_decoder, *args, **kwdargs):
+    def load_store(cls, store, decoder=None, *args, **kwdargs):
         """Create a new dataset from the contents of a backends.*DataStore
         object
         """

@@ -91,6 +91,7 @@ class ScipyDataStore(AbstractWritableDataStore):
         setattr(self.ds, key, self._cast_attr_value(value))
 
     def set_variable(self, name, variable):
+        # TODO, create a netCDF3 encoder
         variable = encode_nc3_variable(variable)
         self.set_necessary_dimensions(variable)
         data = variable.values

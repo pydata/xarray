@@ -1,12 +1,11 @@
 import numpy as np
 import inspect
 import itertools
+import functools
 
 from xray.utils import FrozenOrderedDict
 from xray.pycompat import iteritems
 from xray.variable import Index
-from collections import OrderedDict
-import functools
 
 NONE_VAR_NAME = '__values__'
 
@@ -24,6 +23,13 @@ def _decode_variable_name(name):
 
 
 def is_trivial_index(var):
+    """
+    Determines if in index is 'trivial' mean that it is
+    equivalent to np.arange().  This is determined by
+    checking if there are any attributes or encodings,
+    if ndims is one, dtype is int and finally by comparing
+    the actual values to np.arange()
+    """
     # if either attributes or encodings are defined
     # the index is not trival.
     if len(var.attrs) or len(var.encoding):

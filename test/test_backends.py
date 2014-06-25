@@ -85,7 +85,7 @@ class DatasetIOTestCases(object):
                 for v in actual.variables.values():
                     self.assertFalse(v._in_memory())
                 yield actual
-                for v in actual.nonindexes.values():
+                for v in actual.variables.values():
                     self.assertTrue(v._in_memory())
                 self.assertDatasetAllClose(expected, actual)
 
@@ -174,7 +174,7 @@ class CFEncodedDataTest(DatasetIOTestCases):
 
     def test_roundtrip_strings_with_fill_value(self):
         values = np.array(['ab', 'cdef', np.nan], dtype=object)
-        encoding = {'missing_value': np.string_('X'), 'dtype': np.dtype('S1')}
+        encoding = {'_FillValue': np.string_('X'), 'dtype': np.dtype('S1')}
         original = Dataset({'x': ('t', values, {}, encoding)})
         expected = original.copy(deep=True)
         expected['x'][:2] = values[:2].astype('S')
@@ -200,6 +200,8 @@ class CFEncodedDataTest(DatasetIOTestCases):
         encoded = create_encoded_masked_and_scaled_data()
         with self.roundtrip(decoded) as actual:
             self.assertDatasetAllClose(decoded, actual)
+        with self.roundtrip(decoded, decode_cf=False) as actual:
+            self.assertDatasetAllClose(encoded, actual)
         with self.roundtrip(encoded, decode_cf=False) as actual:
             self.assertDatasetAllClose(encoded, actual)
         # make sure roundtrip encoding didn't change the
