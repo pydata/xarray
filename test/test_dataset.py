@@ -366,11 +366,11 @@ class TestDataset(TestCase):
 
         self.assertEqual(data, data.drop_vars())
 
-        expected = Dataset({k: data[k] for k in data if k != 'time'})
+        expected = Dataset(dict((k, data[k]) for k in data if k != 'time'))
         actual = data.drop_vars('time')
         self.assertEqual(expected, actual)
 
-        expected = Dataset({k: data[k] for k in ['dim2', 'dim3', 'time']})
+        expected = Dataset(dict((k, data[k] for k in ['dim2', 'dim3', 'time']))
         actual = data.drop_vars('dim1')
         self.assertEqual(expected, actual)
 

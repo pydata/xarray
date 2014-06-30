@@ -897,7 +897,7 @@ def align(*objects, **kwargs):
 
     # Exclude dimensions with all equal indices to avoid unnecessary reindexing
     # work.
-    joined_indexes = {k: join_indices(v) for k, v in iteritems(all_indexes)
-                      if any(not v[0].equals(idx) for idx in v[1:])}
+    joined_indexes = dict((k, join_indices(v)) for k, v in iteritems(all_indexes)
+                          if any(not v[0].equals(idx) for idx in v[1:]))
 
     return tuple(obj.reindex(copy=copy, **joined_indexes) for obj in objects)
