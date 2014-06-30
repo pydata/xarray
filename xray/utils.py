@@ -44,7 +44,7 @@ def squeeze(xray_obj, dimensions, dimension=None):
         if any(dimensions[k] > 1 for k in dimension):
             raise ValueError('cannot select a dimension to squeeze out '
                              'which has length greater than one')
-    return xray_obj.isel(**{dim: 0 for dim in dimension})
+    return xray_obj.isel(**dict((dim, 0) for dim in dimension))
 
 
 def allclose_or_equiv(arr1, arr2, rtol=1e-5, atol=1e-8):

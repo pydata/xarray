@@ -922,7 +922,7 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
             potential_conflicts = self.variables
         else:
             if isinstance(overwrite_vars, basestring):
-                overwrite_vars = {overwrite_vars}
+                overwrite_vars = set([overwrite_vars])
             else:
                 overwrite_vars = set(overwrite_vars)
             potential_conflicts = ((k, v) for k, v in iteritems(self.variables)
@@ -974,8 +974,8 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
             raise ValueError('One or more of the specified variable '
                              'names does not exist in this dataset')
         drop = set(names)
-        drop |= {k for k, v in iteritems(self.variables)
-                 if any(name in v.dimensions for name in names)}
+        drop |= set(k for k, v in iteritems(self.variables)
+                    if any(name in v.dimensions for name in names))
         variables = OrderedDict((k, v) for k, v in iteritems(self.variables)
                                 if k not in drop)
         return type(self)(variables, self.attrs)
@@ -1149,7 +1149,7 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
         if concat_over is None:
             concat_over = set()
         elif isinstance(concat_over, basestring):
-            concat_over = {concat_over}
+            concat_over = set([concat_over])
         else:
             concat_over = set(concat_over)
 
@@ -1179,7 +1179,7 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
                              % (concat_over, datasets[0]))
 
         # automatically concatenate over variables along the dimension
-        auto_concat_dims = {dim_name}
+        auto_concat_dims = set([dim_name])
         if hasattr(dimension, 'dimensions'):
             auto_concat_dims |= set(dimension.dimensions)
         for k, v in iteritems(datasets[0]):

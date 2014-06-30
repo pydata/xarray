@@ -639,8 +639,8 @@ class DataArray(AbstractArray):
         # For now, take an aggressive strategy of removing all variables
         # associated with any dropped dimensions
         # TODO: save some summary (mean? bounds?) of dropped variables
-        drop |= {k for k, v in iteritems(self.dataset.variables)
-                 if any(dim in drop for dim in v.dimensions)}
+        drop |= set(k for k, v in iteritems(self.dataset.variables)
+                    if any(dim in drop for dim in v.dimensions))
         ds = self.dataset.drop_vars(*drop)
         ds[self.name] = var
 
@@ -702,7 +702,10 @@ class DataArray(AbstractArray):
             datasets.append(arr.dataset)
         if concat_over is None:
             concat_over = set()
-        concat_over = set(concat_over) | {name}
+        elif isinstance(concat_over, basestring):
+            concat_over = set([concat_over])
+        else:
+            concat_over = set(concat_over) | set([name])
         ds = xray.Dataset.concat(datasets, dimension, indexers,
                                      concat_over=concat_over)
         return ds[name]

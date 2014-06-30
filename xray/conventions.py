@@ -10,7 +10,7 @@ from .pycompat import iteritems, bytes_type, unicode_type, OrderedDict
 import xray
 
 # standard calendars recognized by netcdftime
-_STANDARD_CALENDARS = {'standard', 'gregorian', 'proleptic_gregorian'}
+_STANDARD_CALENDARS = set(['standard', 'gregorian', 'proleptic_gregorian'])
 
 
 def mask_and_scale(array, fill_value=None, scale_factor=None, add_offset=None,
