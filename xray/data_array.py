@@ -1,7 +1,7 @@
 import functools
 import operator
 import warnings
-from collections import defaultdict, OrderedDict
+from collections import defaultdict
 
 import numpy as np
 import pandas as pd
@@ -14,7 +14,7 @@ from . import utils
 from . import variable
 from .common import AbstractArray, AbstractIndexes
 from .utils import multi_index_from_product
-from .pycompat import iteritems, basestring
+from .pycompat import iteritems, basestring, OrderedDict
 
 
 def _is_dict_like(value):

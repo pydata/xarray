@@ -21,3 +21,7 @@ else:
     def itervalues(d):
         return d.itervalues()
     xrange = xrange
+    try:
+        from collections import OrderedDict
+    except ImportError:
+        from ordereddict import OrderedDict

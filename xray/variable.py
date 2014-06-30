@@ -6,11 +6,10 @@ try:  # Python 2
     from itertools import izip
 except ImportError: # Python 3
     izip = zip
-from collections import OrderedDict
 
 from . import indexing
 from . import ops
-from .pycompat import basestring
+from .pycompat import basestring, OrderedDict
 from . import utils
 import xray
 

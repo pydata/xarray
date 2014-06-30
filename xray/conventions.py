@@ -1,12 +1,12 @@
 import numpy as np
 import pandas as pd
 import warnings
-from collections import defaultdict, OrderedDict
+from collections import defaultdict
 from datetime import datetime
 
 from . import indexing
 from . import utils
-from .pycompat import iteritems, bytes_type, unicode_type
+from .pycompat import iteritems, bytes_type, unicode_type, OrderedDict
 import xray
 
 # standard calendars recognized by netcdftime

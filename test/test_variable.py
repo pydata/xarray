@@ -1,4 +1,4 @@
-from collections import namedtuple, OrderedDict
+from collections import namedtuple
 from copy import copy, deepcopy
 from datetime import datetime
 from textwrap import dedent
@@ -9,7 +9,7 @@ import pandas as pd
 from xray import Variable, Dataset, DataArray, indexing
 from xray.variable import (Index, as_variable, NumpyArrayAdapter,
                            PandasIndexAdapter, _as_compatible_data)
-from xray.pycompat import PY3
+from xray.pycompat import PY3, OrderedDict
 
 from . import TestCase, source_ndarray
 

@@ -1,4 +1,3 @@
-from collections import OrderedDict
 from copy import copy, deepcopy
 from textwrap import dedent
 try:
@@ -11,7 +10,7 @@ import pandas as pd
 
 from xray import (Dataset, DataArray, Index, Variable,
                   backends, utils, align, indexing)
-from xray.pycompat import iteritems
+from xray.pycompat import iteritems, OrderedDict
 
 from . import TestCase
 

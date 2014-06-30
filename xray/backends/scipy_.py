@@ -1,4 +1,3 @@
-from collections import OrderedDict
 try: # Python 2
     from cStringIO import StringIO as BytesIO
 except ImportError: # Python 3
@@ -9,7 +8,7 @@ import warnings
 import xray
 from xray.backends.common import AbstractWritableDataStore
 from xray.utils import Frozen
-from xray.pycompat import iteritems, basestring, unicode_type
+from xray.pycompat import iteritems, basestring, unicode_type, OrderedDict
 
 from .. import conventions
 from .netcdf3 import is_valid_nc3_name, coerce_nc3_dtype, encode_nc3_variable

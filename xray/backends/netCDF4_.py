@@ -1,4 +1,3 @@
-from collections import OrderedDict
 import warnings
 
 import numpy as np
@@ -9,7 +8,7 @@ import xray
 from xray.conventions import encode_cf_variable
 from xray.utils import FrozenOrderedDict, NDArrayMixin
 from xray import indexing
-from xray.pycompat import iteritems, basestring, bytes_type
+from xray.pycompat import iteritems, basestring, bytes_type, OrderedDict
 
 
 class NetCDF4ArrayWrapper(NDArrayMixin):

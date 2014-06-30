@@ -5,7 +5,7 @@ try:  # Python 2
     from cStringIO import StringIO as BytesIO
 except ImportError:  # Python 3
     from io import BytesIO
-from collections import OrderedDict, Mapping
+from collections import Mapping
 
 from . import backends
 from . import conventions
@@ -18,7 +18,7 @@ from . import data_array
 from . import ops
 from .utils import (FrozenOrderedDict, Frozen, SortedKeysDict, ChainMap,
                     multi_index_from_product)
-from .pycompat import iteritems, itervalues, basestring
+from .pycompat import iteritems, itervalues, basestring, OrderedDict
 
 
 def open_dataset(nc, decode_cf=True, mask_and_scale=True, decode_times=True,

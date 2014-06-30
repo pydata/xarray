@@ -2,13 +2,13 @@
 """
 import functools
 import warnings
-from collections import OrderedDict, Mapping, MutableMapping
+from collections import Mapping, MutableMapping
 
 import numpy as np
 import pandas as pd
 
 import xray
-from .pycompat import basestring, iteritems, PY3
+from .pycompat import basestring, iteritems, PY3, OrderedDict
 
 
 def alias_warning(old_name, new_name, stacklevel=3):

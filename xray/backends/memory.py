@@ -1,4 +1,4 @@
-from collections import OrderedDict
+from xray.pycompat import OrderedDict
 
 from .common import AbstractWritableDataStore
 
