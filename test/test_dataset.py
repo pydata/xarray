@@ -163,7 +163,7 @@ class TestDataset(TestCase):
 
         self.assertEquals(2, len(data.indexes))
 
-        self.assertEquals({'x', 'y'}, set(data.indexes))
+        self.assertEquals(set(['x', 'y']), set(data.indexes))
 
         self.assertVariableIdentical(data.indexes['x'], data['x'].variable)
         self.assertVariableIdentical(data.indexes['y'], data['y'].variable)
