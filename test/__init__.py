@@ -1,11 +1,14 @@
-import unittest
-
 import numpy as np
 from numpy.testing import assert_array_equal
 
 from xray import utils, DataArray
 from xray.variable import as_variable
 from xray.pycompat import PY3
+
+try:
+    import unittest2 as unittest
+except ImportError:
+    import unittest
 
 try:
     import scipy

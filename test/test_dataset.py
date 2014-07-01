@@ -1,4 +1,3 @@
-from collections import OrderedDict
 from copy import copy, deepcopy
 from textwrap import dedent
 try:
@@ -11,7 +10,7 @@ import pandas as pd
 
 from xray import (Dataset, DataArray, Index, Variable,
                   backends, utils, align, indexing)
-from xray.pycompat import iteritems
+from xray.pycompat import iteritems, OrderedDict
 
 from . import TestCase
 
@@ -164,7 +163,7 @@ class TestDataset(TestCase):
 
         self.assertEquals(2, len(data.indexes))
 
-        self.assertEquals({'x', 'y'}, set(data.indexes))
+        self.assertEquals(set(['x', 'y']), set(data.indexes))
 
         self.assertVariableIdentical(data.indexes['x'], data['x'].variable)
         self.assertVariableIdentical(data.indexes['y'], data['y'].variable)
@@ -367,11 +366,11 @@ class TestDataset(TestCase):
 
         self.assertEqual(data, data.drop_vars())
 
-        expected = Dataset({k: data[k] for k in data if k != 'time'})
+        expected = Dataset(dict((k, data[k]) for k in data if k != 'time'))
         actual = data.drop_vars('time')
         self.assertEqual(expected, actual)
 
-        expected = Dataset({k: data[k] for k in ['dim2', 'dim3', 'time']})
+        expected = Dataset(dict((k, data[k]) for k in ['dim2', 'dim3', 'time']))
         actual = data.drop_vars('dim1')
         self.assertEqual(expected, actual)
 
@@ -510,20 +509,20 @@ class TestDataset(TestCase):
 
     def test_delitem(self):
         data = create_test_data()
-        all_items = {'time', 'dim1', 'dim2', 'dim3', 'var1', 'var2', 'var3'}
+        all_items = set(['time', 'dim1', 'dim2', 'dim3', 'var1', 'var2', 'var3'])
         self.assertItemsEqual(data, all_items)
         del data['var1']
-        self.assertItemsEqual(data, all_items - {'var1'})
+        self.assertItemsEqual(data, all_items - set(['var1']))
         del data['dim1']
-        self.assertItemsEqual(data, {'time', 'dim2', 'dim3'})
+        self.assertItemsEqual(data, set(['time', 'dim2', 'dim3']))
 
     def test_squeeze(self):
         data = Dataset({'foo': (['x', 'y', 'z'], [[[1], [2]]])})
         for args in [[], [['x']], [['x', 'z']]]:
             def get_args(v):
                 return [set(args[0]) & set(v.dimensions)] if args else []
-            expected = Dataset({k: v.squeeze(*get_args(v))
-                               for k, v in iteritems(data.variables)})
+            expected = Dataset(dict((k, v.squeeze(*get_args(v)))
+                                    for k, v in iteritems(data.variables)))
             self.assertDatasetIdentical(expected, data.squeeze(*args))
         # invalid squeeze
         with self.assertRaisesRegexp(ValueError, 'cannot select a dimension'):
@@ -595,8 +594,8 @@ class TestDataset(TestCase):
         def rectify_dim_order(dataset):
             # return a new dataset with all variable dimensions tranposed into
             # the order in which they are found in `data`
-            return Dataset({k: v.transpose(*data[k].dimensions)
-                           for k, v in iteritems(dataset.variables)},
+            return Dataset(dict((k, v.transpose(*data[k].dimensions))
+                                for k, v in iteritems(dataset.variables)),
                            dataset.attrs)
 
         for dim in ['dim1', 'dim2', 'dim3']:

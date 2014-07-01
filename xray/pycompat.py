@@ -11,6 +11,7 @@ if PY3:
     def itervalues(d):
         return iter(d.values())
     xrange = range
+    from collections import OrderedDict
 else:
     # Python 2
     basestring = basestring
@@ -21,3 +22,7 @@ else:
     def itervalues(d):
         return d.itervalues()
     xrange = xrange
+    try:
+        from collections import OrderedDict
+    except ImportError:
+        from ordereddict import OrderedDict

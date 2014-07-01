@@ -2,10 +2,9 @@ import numpy as np
 import pandas as pd
 from copy import deepcopy
 from textwrap import dedent
-from collections import OrderedDict
 
 from xray import Dataset, DataArray, Index, Variable, align
-from xray.pycompat import iteritems
+from xray.pycompat import iteritems, OrderedDict
 from . import TestCase, ReturnItem, source_ndarray
 
 

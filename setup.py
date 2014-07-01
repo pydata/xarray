@@ -28,6 +28,7 @@ CLASSIFIERS = [
     'Intended Audience :: Science/Research',
     'Programming Language :: Python',
     'Programming Language :: Python :: 2',
+    'Programming Language :: Python :: 2.6',
     'Programming Language :: Python :: 2.7',
     'Programming Language :: Python :: 3',
     'Programming Language :: Python :: 3.3',
@@ -37,6 +38,8 @@ CLASSIFIERS = [
 INSTALL_REQUIRES = ['numpy >= 1.7', 'pandas >= 0.13.1']
 TESTS_REQUIRE = ['nose >= 1.0']
 
+if sys.version_info[:2] < (2, 7):
+    TESTS_REQUIRE += ["unittest2 == 0.5.1"]
 
 DESCRIPTION = "Extended arrays for working with scientific datasets in Python"
 LONG_DESCRIPTION = """

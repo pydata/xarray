@@ -1,7 +1,7 @@
 import functools
 import operator
 import warnings
-from collections import defaultdict, OrderedDict
+from collections import defaultdict
 
 import numpy as np
 import pandas as pd
@@ -14,7 +14,7 @@ from . import utils
 from . import variable
 from .common import AbstractArray, AbstractIndexes
 from .utils import multi_index_from_product
-from .pycompat import iteritems, basestring
+from .pycompat import iteritems, basestring, OrderedDict
 
 
 def _is_dict_like(value):
@@ -639,8 +639,8 @@ class DataArray(AbstractArray):
         # For now, take an aggressive strategy of removing all variables
         # associated with any dropped dimensions
         # TODO: save some summary (mean? bounds?) of dropped variables
-        drop |= {k for k, v in iteritems(self.dataset.variables)
-                 if any(dim in drop for dim in v.dimensions)}
+        drop |= set(k for k, v in iteritems(self.dataset.variables)
+                    if any(dim in drop for dim in v.dimensions))
         ds = self.dataset.drop_vars(*drop)
         ds[self.name] = var
 
@@ -702,7 +702,9 @@ class DataArray(AbstractArray):
             datasets.append(arr.dataset)
         if concat_over is None:
             concat_over = set()
-        concat_over = set(concat_over) | {name}
+        elif isinstance(concat_over, basestring):
+            concat_over = set([concat_over])
+        concat_over = set(concat_over) | set([name])
         ds = xray.Dataset.concat(datasets, dimension, indexers,
                                      concat_over=concat_over)
         return ds[name]
@@ -897,7 +899,7 @@ def align(*objects, **kwargs):
 
     # Exclude dimensions with all equal indices to avoid unnecessary reindexing
     # work.
-    joined_indexes = {k: join_indices(v) for k, v in iteritems(all_indexes)
-                      if any(not v[0].equals(idx) for idx in v[1:])}
+    joined_indexes = dict((k, join_indices(v)) for k, v in iteritems(all_indexes)
+                          if any(not v[0].equals(idx) for idx in v[1:]))
 
     return tuple(obj.reindex(copy=copy, **joined_indexes) for obj in objects)

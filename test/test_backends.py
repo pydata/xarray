@@ -239,8 +239,8 @@ class NetCDF4DataTest(DatasetIOTestCases, TestCase):
             actual = open_dataset(tmp_file)
 
             self.assertVariableEqual(actual['time'], expected['time'])
-            actual_encoding = {k: v for k, v in iteritems(actual['time'].encoding)
-                               if k in expected['time'].encoding}
+            actual_encoding = dict((k, v) for k, v in iteritems(actual['time'].encoding)
+                                   if k in expected['time'].encoding)
             self.assertDictEqual(actual_encoding, expected['time'].encoding)
 
     def test_open_group(self):
