@@ -37,7 +37,7 @@ install:
   - conda create --yes -n test_env python=$TRAVIS_PYTHON_VERSION pip nose mock numpy pandas scipy netCDF4
   - source activate test_env
   # install unittest2 ONLY if running 2.6
-  - if [ ${TRAVIS_PYTHON_VERSION:0:2} == "2.6" ]; then pip install unittest2; fi
+  - if [ ${TRAVIS_PYTHON_VERSION:0:3} == "2.6" ]; then pip install unittest2; fi
   - echo $UPDATE_PYENV; $UPDATE_PYENV
   - python setup.py install
 # Run test
