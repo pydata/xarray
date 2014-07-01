@@ -628,7 +628,7 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
 
         variables = OrderedDict()
         for name, var in iteritems(self.variables):
-            var_indexers = ((k, v) for k, v in iteritems(indexers) if k in var.dimensions)
+            var_indexers = dict((k, v) for k, v in iteritems(indexers) if k in var.dimensions)
             variables[name] = var.isel(**var_indexers)
         return type(self)(variables, self.attrs)
 
@@ -925,8 +925,8 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
                 overwrite_vars = set([overwrite_vars])
             else:
                 overwrite_vars = set(overwrite_vars)
-            potential_conflicts = ((k, v) for k, v in iteritems(self.variables)
-                                   if k not in overwrite_vars)
+            potential_conflicts = dict((k, v) for k, v in iteritems(self.variables)
+                                       if k not in overwrite_vars)
 
         # update variables
         new_variables = _expand_variables(other_variables, potential_conflicts,

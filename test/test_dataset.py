@@ -509,20 +509,20 @@ class TestDataset(TestCase):
 
     def test_delitem(self):
         data = create_test_data()
-        all_items = {'time', 'dim1', 'dim2', 'dim3', 'var1', 'var2', 'var3'}
+        all_items = set(['time', 'dim1', 'dim2', 'dim3', 'var1', 'var2', 'var3'])
         self.assertItemsEqual(data, all_items)
         del data['var1']
-        self.assertItemsEqual(data, all_items - {'var1'})
+        self.assertItemsEqual(data, all_items - set(['var1']))
         del data['dim1']
-        self.assertItemsEqual(data, {'time', 'dim2', 'dim3'})
+        self.assertItemsEqual(data, set(['time', 'dim2', 'dim3']))
 
     def test_squeeze(self):
         data = Dataset({'foo': (['x', 'y', 'z'], [[[1], [2]]])})
         for args in [[], [['x']], [['x', 'z']]]:
             def get_args(v):
                 return [set(args[0]) & set(v.dimensions)] if args else []
-            expected = Dataset({k: v.squeeze(*get_args(v))
-                               for k, v in iteritems(data.variables)})
+            expected = Dataset(dict((k, v.squeeze(*get_args(v)))
+                                    for k, v in iteritems(data.variables)))
             self.assertDatasetIdentical(expected, data.squeeze(*args))
         # invalid squeeze
         with self.assertRaisesRegexp(ValueError, 'cannot select a dimension'):
@@ -594,8 +594,8 @@ class TestDataset(TestCase):
         def rectify_dim_order(dataset):
             # return a new dataset with all variable dimensions tranposed into
             # the order in which they are found in `data`
-            return Dataset({k: v.transpose(*data[k].dimensions)
-                           for k, v in iteritems(dataset.variables)},
+            return Dataset(dict((k, v.transpose(*data[k].dimensions))
+                                for k, v in iteritems(dataset.variables)),
                            dataset.attrs)
 
         for dim in ['dim1', 'dim2', 'dim3']:
