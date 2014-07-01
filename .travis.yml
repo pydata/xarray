@@ -29,6 +29,8 @@ matrix:
       env: UPDATE_PYENV='pip install pydap'
     - python: "2.7"
       env: UPDATE_PYENV=''
+    - python: "2.6"
+      env: UPDATE_PYENV=''
 
 # Install packages
 install:
