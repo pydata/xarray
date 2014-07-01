@@ -12,6 +12,7 @@ if PY3:
         return iter(d.values())
     xrange = range
     from collections import OrderedDict
+    import unittest
 else:
     # Python 2
     basestring = basestring
@@ -26,3 +27,4 @@ else:
         from collections import OrderedDict
     except ImportError:
         from ordereddict import OrderedDict
+    import unittest2 as unittest

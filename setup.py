@@ -36,7 +36,7 @@ CLASSIFIERS = [
 ]
 
 INSTALL_REQUIRES = ['numpy >= 1.7', 'pandas >= 0.13.1']
-TESTS_REQUIRE = ['nose >= 1.0']
+TESTS_REQUIRE = ['nose >= 1.0', 'unittest2 == 0.5.1']
 
 
 DESCRIPTION = "Extended arrays for working with scientific datasets in Python"
