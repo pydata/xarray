@@ -704,8 +704,7 @@ class DataArray(AbstractArray):
             concat_over = set()
         elif isinstance(concat_over, basestring):
             concat_over = set([concat_over])
-        else:
-            concat_over = set(concat_over) | set([name])
+        concat_over = set(concat_over) | set([name])
         ds = xray.Dataset.concat(datasets, dimension, indexers,
                                      concat_over=concat_over)
         return ds[name]
