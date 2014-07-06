@@ -278,10 +278,18 @@ class Variable(AbstractArray):
                 "replacement values must match the Variable's shape")
         self._data = values
 
-    def to_index(self):
-        """Return this variable as an xray.Index"""
-        return Index(self.dimensions, self._data, self.attrs,
-                     encoding=self.encoding)
+    def to_xindex(self):
+        """Return this variable as an xray.XIndex"""
+        return XIndex(self.dimensions, self._data, self.attrs,
+                      encoding=self.encoding)
+
+    @property
+    def as_index(self):
+        """This variable as a pandas.Index"""
+        # n.b. creating a new pandas.Index from an old pandas.Index is
+        # basically free as pandas.Index objcets are immutable
+        assert self.ndim == 1
+        return pd.Index(self._data_cached().array, name=self.dimensions[0])
 
     @property
     def dimensions(self):
@@ -630,9 +638,6 @@ class Variable(AbstractArray):
 
     def _data_equals(self, other):
         return (self._data is other._data
-                or ((not isinstance(self.values, np.ndarray)
-                     or not isinstance(other.values, np.ndarray))
-                     and self.values == other.values)
                 or utils.array_equiv(self.values, other.values))
 
     def equals(self, other):
@@ -699,17 +704,21 @@ class Variable(AbstractArray):
 ops.inject_special_operations(Variable)
 
 
-class Index(Variable):
-    """Subclass of Variable which caches its data as a pandas.Index instead of
-    a numpy.ndarray.
+class XIndex(Variable):
+    """Wrapper around pandas.Index that adds xray specific functionality.
 
-    Indexes must always be 1-dimensional. In addition to Variable methods,
-    they support some pandas.Index methods directly (e.g., get_indexer).
+    The most important difference is that XIndex objects must always have a
+    name, which is the dimension along which they index values.
+
+    Indexes must always be 1-dimensional. In addition to Variable methods and
+    properties (attributes, encoding, broadcasting), they support some
+    pandas.Index methods directly (e.g., get_indexer), even though pandas does
+    not (yet) support duck-typing for indexes.
     """
     _cache_data_class = PandasIndexAdapter
 
-    def __init__(self, *args, **kwargs):
-        super(Index, self).__init__(*args, **kwargs)
+    def __init__(self, name, data, attributes=None, encoding=None):
+        super(XIndex, self).__init__(name, data, attributes, encoding)
         if self.ndim != 1:
             raise ValueError('%s objects must be 1-dimensional' %
                              type(self).__name__)
@@ -736,22 +745,10 @@ class Index(Variable):
         data = PandasIndexAdapter(self) if deep else self._data
         return type(self)(self.dimensions, data, self.attrs, self.encoding)
 
-    @property
-    def as_index(self):
-        utils.alias_warning('as_index', 'as_pandas')
-        return self.as_pandas
-
-    @property
-    def as_pandas(self):
-        """This xray.Index as a pandas.Index"""
-        # n.b. creating a new pandas.Index from an old pandas.Index is
-        # basically free as pandas.Index objcets are immutable
-        return pd.Index(self._data_cached().array, name=self.name)
-
     def _data_equals(self, other):
-        return self.as_pandas.equals(other.to_index().as_pandas)
+        return self.as_index.equals(other.as_index)
 
-    def to_index(self):
+    def to_xindex(self):
         """Return this variable as an xray.Index"""
         return self
 
@@ -762,26 +759,27 @@ class Index(Variable):
         return self.dimensions[0]
 
     def get_indexer(self, label):
-        return self.as_pandas.get_indexer(label)
+        return self.as_index.get_indexer(label)
 
     def slice_indexer(self, start=None, stop=None, step=None):
-        return self.as_pandas.slice_indexer(start, stop, step)
+        return self.as_index.slice_indexer(start, stop, step)
 
     def slice_locs(self, start=None, stop=None):
-        return self.as_pandas.slice_locs(start, stop)
+        return self.as_index.slice_locs(start, stop)
 
     def get_loc(self, label):
-        return self.as_pandas.get_loc(label)
+        return self.as_index.get_loc(label)
 
     @property
     def is_monotonic(self):
-        return self.as_pandas.is_monotonic
+        return self.as_index.is_monotonic
 
     def is_numeric(self):
-        return self.as_pandas.is_numeric()
+        return self.as_index.is_numeric()
 
 
-Coordinate = utils.class_alias(Index, 'Coordinate')
+Coordinate = utils.class_alias(XIndex, 'Coordinate')
+Index = utils.class_alias(XIndex, 'Index')
 
 
 def broadcast_variables(first, second):

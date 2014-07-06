@@ -1,4 +1,4 @@
-from .variable import Variable, Index, Coordinate
+from .variable import Variable, XIndex, Index, Coordinate
 from .dataset import Dataset, open_dataset
 from .data_array import DataArray, align
 
