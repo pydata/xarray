@@ -116,7 +116,7 @@ class AbstractIndexes(Mapping):
         return key in self._data.dimensions
 
     def __repr__(self):
-        return '\n'.join(_wrap_indent(repr(v.as_pandas), '%s: ' % k)
+        return '\n'.join(_wrap_indent(repr(v.as_index), '%s: ' % k)
                          for k, v in self.items())
 
 

@@ -6,7 +6,7 @@ except ImportError: # Python 3
 
 from .common import ImplementsArrayReduce, ImplementsDatasetReduce
 from .ops import inject_reduce_methods
-from .variable import as_variable, Variable, Index
+from .variable import as_variable, Variable, XIndex
 import xray
 import numpy as np
 
@@ -66,7 +66,7 @@ class GroupBy(object):
         ----------
         obj : Dataset or DataArray
             Object to group.
-        group : DataArray or Index
+        group : DataArray or XIndex
             1-dimensional array with the group values.
         squeeze : boolean, optional
             If "group" is a coordinate of object, `squeeze` controls whether
@@ -106,7 +106,7 @@ class GroupBy(object):
         else:
             # look through group to find the unique values
             unique_values, group_indices = unique_value_groups(group)
-            unique_index = Index(group.name, unique_values)
+            unique_index = XIndex(group.name, unique_values)
 
         self.group_indices = group_indices
         self.unique_index = unique_index

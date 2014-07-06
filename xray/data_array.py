@@ -54,8 +54,8 @@ def _infer_indexes_and_dimensions(shape, indexes, dimensions):
     if indexes is None:
         indexes = [None] * len(shape)
     indexes = [idx if isinstance(idx, AbstractArray) else
-               variable.Index(dimensions[n], idx) if idx is not None else
-               variable.Index(dimensions[n], np.arange(shape[n]))
+               variable.XIndex(dimensions[n], idx) if idx is not None else
+               variable.XIndex(dimensions[n], np.arange(shape[n]))
                for n, idx in enumerate(indexes)]
 
     return indexes, dimensions
@@ -268,7 +268,7 @@ class DataArray(AbstractArray):
     def as_index(self):
         """The variable's data as a pandas.Index. Only possible for 1D arrays.
         """
-        return self.variable.to_index().as_pandas
+        return self.variable.to_xindex().as_index
 
     @property
     def dimensions(self):
@@ -342,7 +342,7 @@ class DataArray(AbstractArray):
 
     @property
     def indexes(self):
-        """Dictionary-like container of xray.Index objects used for label based
+        """Dictionary-like container of xray.XIndex objects used for label based
         indexing.
 
         Keys are given by the dimensions, but list-like (integer based)
@@ -441,7 +441,7 @@ class DataArray(AbstractArray):
         return self.reindex(copy=copy, **other.indexes)
 
     def reindex(self, copy=True, **indexes):
-        """Conform this object onto a new set of indxes or pandas.Index
+        """Conform this object onto a new set of indexes or pandas.Index
         objects, filling in missing values with NaN.
 
         Parameters
@@ -524,7 +524,7 @@ class DataArray(AbstractArray):
 
         Parameters
         ----------
-        group : str, DataArray or Index
+        group : str, DataArray or XIndex
             Array whose unique values should be used to group this array. If a
             string, must be the name of a variable contained in this dataset.
         squeeze : boolean, optional
@@ -895,7 +895,7 @@ def align(*objects, **kwargs):
     all_indexes = defaultdict(list)
     for obj in objects:
         for k, v in iteritems(obj.indexes):
-            all_indexes[k].append(v.as_pandas)
+            all_indexes[k].append(v.as_index)
 
     # Exclude dimensions with all equal indices to avoid unnecessary reindexing
     # work.

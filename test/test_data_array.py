@@ -3,7 +3,7 @@ import pandas as pd
 from copy import deepcopy
 from textwrap import dedent
 
-from xray import Dataset, DataArray, Index, Variable, align
+from xray import Dataset, DataArray, XIndex, Variable, align
 from xray.pycompat import iteritems, OrderedDict
 from . import TestCase, ReturnItem, source_ndarray
 
@@ -250,7 +250,7 @@ class TestDataArray(TestCase):
         self.assertTrue(np.all(da.values == 0))
 
     def test_indexes(self):
-        indexes = [Index('x', [-1, -2]), Index('y', [0, 1, 2])]
+        indexes = [XIndex('x', [-1, -2]), XIndex('y', [0, 1, 2])]
         da = DataArray(np.random.randn(2, 3), indexes, name='foo')
 
         self.assertEquals(2, len(da.indexes))

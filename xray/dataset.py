@@ -105,7 +105,7 @@ class VariablesDict(OrderedDict):
 
         virtual_vars = []
         for k, v in iteritems(self):
-            if ((v.dtype.kind == 'M' and isinstance(v, variable.Index))
+            if ((v.dtype.kind == 'M' and isinstance(v, variable.XIndex))
                     or (v.ndim == 0 and _castable_to_timestamp(v.values))):
                 # nb. dtype.kind == 'M' is datetime64
                 for suffix in _DATETIMEINDEX_COMPONENTS + ['season']:
@@ -126,8 +126,8 @@ class VariablesDict(OrderedDict):
 
         ref_var_name, suffix = split_key
         ref_var = self[ref_var_name]
-        if isinstance(ref_var, variable.Index):
-            date = ref_var.as_pandas
+        if isinstance(ref_var, variable.XIndex):
+            date = ref_var.as_index
         elif ref_var.ndim == 0:
             date = pd.Timestamp(ref_var.values)
 
@@ -154,7 +154,7 @@ def _as_dataset_variable(name, var):
         if var.ndim != 1:
             raise ValueError('an index variable must be defined with '
                              '1-dimensional data')
-        var = var.to_index()
+        var = var.to_xindex()
     return var
 
 
@@ -165,8 +165,8 @@ def _expand_variables(raw_variables, old_variables={}, compat='identical'):
     Dataset._variables dictionary.
 
     This includes converting tuples (dimensions, data) into Variable objects,
-    converting index variables into Index objects and expanding DataArray
-    objects into Variables plus Indexs.
+    converting index variables into XIndex objects and expanding DataArray
+    objects into Variables plus XIndexes.
 
     Raises ValueError if any conflicting values are found, between any of the
     new or old variables.
@@ -277,7 +277,7 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
     and values given by DataArray objects for each variable name.
 
     One dimensional variables with name equal to their dimension are indexes,
-    which means they are saved in the dataset as `xray.Index` objects.
+    which means they are saved in the dataset as `xray.XIndex` objects.
     """
     def __init__(self, variables=None, attributes=None):
         """To load data from a file or file-like object, use the `open_dataset`
@@ -307,7 +307,7 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
         """
         for dim, size in iteritems(self._dimensions):
             if dim not in self._variables:
-                coord = variable.Index(dim, np.arange(size))
+                coord = variable.XIndex(dim, np.arange(size))
                 self._variables[dim] = coord
 
     def _update_vars_and_dims(self, new_variables, needs_copy=True):
@@ -790,8 +790,8 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
                 new_var = indexes[name]
                 if not (hasattr(new_var, 'dimensions') and
                         hasattr(new_var, 'values')):
-                    new_var = variable.Index(var.dimensions, new_var,
-                                                  var.attrs, var.encoding)
+                    new_var = variable.XIndex(var.dimensions, new_var,
+                                              var.attrs, var.encoding)
                 elif copy:
                     new_var = variable.as_variable(new_var).copy()
             else:

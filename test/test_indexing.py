@@ -1,6 +1,6 @@
 import numpy as np
 
-from xray import indexing, variable, Dataset, Variable, Index
+from xray import indexing, variable, Dataset, Variable, XIndex
 from . import TestCase, ReturnItem
 
 
@@ -65,7 +65,7 @@ class TestIndexers(TestCase):
 
     def test_convert_label_indexer(self):
         # TODO: add tests that aren't just for edge cases
-        coord = Index('x', [1, 2, 3])
+        coord = XIndex('x', [1, 2, 3])
         with self.assertRaisesRegexp(ValueError, 'not all values found'):
             indexing.convert_label_indexer(coord, [0])
         with self.assertRaises(KeyError):

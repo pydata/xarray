@@ -136,7 +136,7 @@ class TestDataset(TestCase):
         attributes = {'foo': 'bar'}
         a['x'] = ('x', vec, attributes)
         self.assertTrue('x' in a.indexes)
-        self.assertIsInstance(a.indexes['x'].as_pandas, pd.Index)
+        self.assertIsInstance(a.indexes['x'].as_index, pd.Index)
         self.assertVariableIdentical(a.indexes['x'], a.variables['x'])
         b = Dataset()
         b['x'] = ('x', vec, attributes)
@@ -467,7 +467,7 @@ class TestDataset(TestCase):
         self.assertVariableEqual(data['time.dayofyear'],
                                  Variable('time', 1 + np.arange(20)))
         self.assertArrayEqual(data['time.month'].values,
-                              data.variables['time'].as_pandas.month)
+                              data.variables['time'].as_index.month)
         self.assertArrayEqual(data['time.season'].values, 1)
         # test virtual variable math
         self.assertArrayEqual(data['time.dayofyear'] + 1, 2 + np.arange(20))
@@ -563,7 +563,7 @@ class TestDataset(TestCase):
         with self.assertRaisesRegexp(ValueError, 'length does not match'):
             data.groupby(data['dim1'][:3])
         with self.assertRaisesRegexp(ValueError, "must have a 'dimensions'"):
-            data.groupby(data.indexes['dim1'].as_pandas)
+            data.groupby(data.indexes['dim1'].as_index)
 
     def test_groupby_reduce(self):
         data = Dataset({'xy': (['x', 'y'], np.random.randn(3, 4)),
