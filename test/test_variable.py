@@ -7,7 +7,7 @@ import numpy as np
 import pandas as pd
 
 from xray import Variable, Dataset, DataArray, indexing
-from xray.variable import (Index, as_variable, NumpyArrayAdapter,
+from xray.variable import (Coordinate, as_variable, NumpyArrayAdapter,
                            PandasIndexAdapter, _as_compatible_data)
 from xray.pycompat import PY3, OrderedDict
 
@@ -171,9 +171,9 @@ class VariableSubclassTestCases(object):
         self.assertEqual(float, (0 + v).values.dtype)
         # check types of returned data
         self.assertIsInstance(+v, Variable)
-        self.assertNotIsInstance(+v, Index)
+        self.assertNotIsInstance(+v, Coordinate)
         self.assertIsInstance(0 + v, Variable)
-        self.assertNotIsInstance(0 + v, Index)
+        self.assertNotIsInstance(0 + v, Coordinate)
 
     def test_1d_reduce(self):
         x = np.arange(5)
@@ -194,7 +194,7 @@ class VariableSubclassTestCases(object):
         # test ufuncs
         self.assertVariableIdentical(np.sin(v), self.cls(['x'], np.sin(x)))
         self.assertIsInstance(np.sin(v), Variable)
-        self.assertNotIsInstance(np.sin(v), Index)
+        self.assertNotIsInstance(np.sin(v), Coordinate)
 
     def example_1d_objects(self):
         for data in [range(3),
@@ -299,7 +299,7 @@ class TestVariable(TestCase, VariableSubclassTestCases):
         self.assertEqual(v.item(), 0)
         self.assertIs(type(v.item()), float)
 
-        v = Index('x', np.arange(5))
+        v = Coordinate('x', np.arange(5))
         self.assertEqual(2, v.searchsorted(2))
 
     def test_datetime64_conversion(self):
@@ -566,27 +566,27 @@ class TestVariable(TestCase, VariableSubclassTestCases):
         self.assertEqual(vm.attrs, _attrs)
 
 
-class TestIndex(TestCase, VariableSubclassTestCases):
-    cls = staticmethod(Index)
+class TestCoordinate(TestCase, VariableSubclassTestCases):
+    cls = staticmethod(Coordinate)
 
     def test_init(self):
         with self.assertRaisesRegexp(ValueError, 'must be 1-dimensional'):
-            Index((), 0)
+            Coordinate((), 0)
 
     def test_as_index(self):
         data = 0.5 * np.arange(10)
-        v = Index(['time'], data, {'foo': 'bar'})
-        self.assertTrue(pd.Index(data, name='time').identical(v.as_pandas))
+        v = Coordinate(['time'], data, {'foo': 'bar'})
+        self.assertTrue(pd.Index(data, name='time').identical(v.as_index))
 
     def test_data(self):
-        x = Index('x', np.arange(3.0))
+        x = Coordinate('x', np.arange(3.0))
         # data should be initially saved as an ndarray
         self.assertIs(type(x._data), NumpyArrayAdapter)
         self.assertEqual(float, x.dtype)
         self.assertArrayEqual(np.arange(3), x)
         self.assertEqual(float, x.values.dtype)
         self.assertEqual('x', x.name)
-        # after inspecting x.values, the Index will be saved as an Index
+        # after inspecting x.values, the Coordinate value will be saved as an Index
         self.assertIsInstance(x._data, PandasIndexAdapter)
         with self.assertRaisesRegexp(TypeError, 'cannot be modified'):
             x[:] = 0
@@ -595,7 +595,7 @@ class TestIndex(TestCase, VariableSubclassTestCases):
         # verify our work-around for (pandas<0.14):
         # https://github.com/pydata/pandas/issues/6370
         data = pd.date_range('2000-01-01', periods=3).to_pydatetime()
-        t = Index('t', data)
+        t = Coordinate('t', data)
         self.assertArrayEqual(t.values[:2], data[:2])
         self.assertArrayEqual(t[:2].values, data[:2])
         self.assertArrayEqual(t.values[:2], data[:2])

@@ -8,7 +8,7 @@ except ImportError:
 import numpy as np
 import pandas as pd
 
-from xray import (Dataset, DataArray, Index, Variable,
+from xray import (Dataset, DataArray, Coordinate, Variable,
                   backends, utils, align, indexing)
 from xray.pycompat import iteritems, OrderedDict
 
@@ -73,16 +73,16 @@ class TestDataset(TestCase):
         data = create_test_data()
         expected = dedent("""
         <xray.Dataset>
-        Dimensions:  (dim1: 100, dim2: 50, dim3: 10, time: 20)
-        Indexes:
-            dim1          X
-            dim2                     X
-            dim3                               X
-            time                                         X
-        Non-indexes:
-            var1          0          1
-            var2          0          1
-            var3          1                    0
+        Dimensions:     (dim1: 100, dim2: 50, dim3: 10, time: 20)
+        Coordinates:
+            dim1             X
+            dim2                        X
+            dim3                                  X
+            time                                            X
+        Noncoordinates:
+            var1             0          1
+            var2             0          1
+            var3             1                    0
         Attributes:
             Empty
         """).strip()
@@ -91,10 +91,10 @@ class TestDataset(TestCase):
 
         expected = dedent("""
         <xray.Dataset>
-        Dimensions:  ()
-        Indexes:
+        Dimensions:     ()
+        Coordinates:
             None
-        Non-indexes:
+        Noncoordinates:
             None
         Attributes:
             Empty
@@ -130,14 +130,14 @@ class TestDataset(TestCase):
         with self.assertRaises(ValueError):
             a['qux'] = (('time', 'x'), d.T)
 
-    def test_indexes_create(self):
+    def test_coordinates_create(self):
         a = Dataset()
         vec = np.random.random((10,))
         attributes = {'foo': 'bar'}
         a['x'] = ('x', vec, attributes)
-        self.assertTrue('x' in a.indexes)
-        self.assertIsInstance(a.indexes['x'].as_pandas, pd.Index)
-        self.assertVariableIdentical(a.indexes['x'], a.variables['x'])
+        self.assertTrue('x' in a.coordinates)
+        self.assertIsInstance(a.coordinates['x'].as_index, pd.Index)
+        self.assertVariableIdentical(a.coordinates['x'], a.variables['x'])
         b = Dataset()
         b['x'] = ('x', vec, attributes)
         self.assertVariableIdentical(a['x'], b['x'])
@@ -156,31 +156,31 @@ class TestDataset(TestCase):
             a['y'] = ('y', scal)
         self.assertTrue('y' not in a.dimensions)
 
-    def test_indexes_properties(self):
+    def test_coordinates_properties(self):
         data = Dataset({'x': ('x', [-1, -2]),
                         'y': ('y', [0, 1, 2]),
                         'foo': (['x', 'y'], np.random.randn(2, 3))})
 
-        self.assertEquals(2, len(data.indexes))
+        self.assertEquals(2, len(data.coordinates))
 
-        self.assertEquals(set(['x', 'y']), set(data.indexes))
+        self.assertEquals(set(['x', 'y']), set(data.coordinates))
 
-        self.assertVariableIdentical(data.indexes['x'], data['x'].variable)
-        self.assertVariableIdentical(data.indexes['y'], data['y'].variable)
+        self.assertVariableIdentical(data.coordinates['x'], data['x'].variable)
+        self.assertVariableIdentical(data.coordinates['y'], data['y'].variable)
 
-        self.assertIn('x', data.indexes)
-        self.assertNotIn(0, data.indexes)
-        self.assertNotIn('foo', data.indexes)
+        self.assertIn('x', data.coordinates)
+        self.assertNotIn(0, data.coordinates)
+        self.assertNotIn('foo', data.coordinates)
 
         with self.assertRaises(KeyError):
-            data.indexes['foo']
+            data.coordinates['foo']
         with self.assertRaises(KeyError):
-            data.indexes[0]
+            data.coordinates[0]
 
         expected = dedent("""\
         x: Int64Index([-1, -2], dtype='int64')
         y: Int64Index([0, 1, 2], dtype='int64')""")
-        actual = repr(data.indexes)
+        actual = repr(data.coordinates)
         self.assertEquals(expected, actual)
 
     def test_equals_and_identical(self):
@@ -240,18 +240,18 @@ class TestDataset(TestCase):
 
         ret = data.isel(dim1=0)
         self.assertEqual({'time': 20, 'dim2': 50, 'dim3': 10}, ret.dimensions)
-        self.assertItemsEqual(list(data.nonindexes) + ['dim1'],
-                              ret.nonindexes)
+        self.assertItemsEqual(list(data.noncoordinates) + ['dim1'],
+                              ret.noncoordinates)
 
         ret = data.isel(time=slice(2), dim1=0, dim2=slice(5))
         self.assertEqual({'time': 2, 'dim2': 5, 'dim3': 10}, ret.dimensions)
-        self.assertItemsEqual(list(data.nonindexes) + ['dim1'],
-                              ret.nonindexes)
+        self.assertItemsEqual(list(data.noncoordinates) + ['dim1'],
+                              ret.noncoordinates)
 
         ret = data.isel(time=0, dim1=0, dim2=slice(5))
         self.assertItemsEqual({'dim2': 5, 'dim3': 10}, ret.dimensions)
-        self.assertItemsEqual(list(data.nonindexes) + ['dim1', 'time'],
-                              ret.nonindexes)
+        self.assertItemsEqual(list(data.noncoordinates) + ['dim1', 'time'],
+                              ret.noncoordinates)
 
     def test_sel(self):
         data = create_test_data()
@@ -467,7 +467,7 @@ class TestDataset(TestCase):
         self.assertVariableEqual(data['time.dayofyear'],
                                  Variable('time', 1 + np.arange(20)))
         self.assertArrayEqual(data['time.month'].values,
-                              data.variables['time'].as_pandas.month)
+                              data.variables['time'].as_index.month)
         self.assertArrayEqual(data['time.season'].values, 1)
         # test virtual variable math
         self.assertArrayEqual(data['time.dayofyear'] + 1, 2 + np.arange(20))
@@ -563,7 +563,7 @@ class TestDataset(TestCase):
         with self.assertRaisesRegexp(ValueError, 'length does not match'):
             data.groupby(data['dim1'][:3])
         with self.assertRaisesRegexp(ValueError, "must have a 'dimensions'"):
-            data.groupby(data.indexes['dim1'].as_pandas)
+            data.groupby(data.coordinates['dim1'].as_index)
 
     def test_groupby_reduce(self):
         data = Dataset({'xy': (['x', 'y'], np.random.randn(3, 4)),
@@ -724,10 +724,10 @@ class TestDataset(TestCase):
     def test_reduce(self):
         data = create_test_data()
 
-        self.assertEqual(len(data.mean().indexes), 0)
+        self.assertEqual(len(data.mean().coordinates), 0)
 
         expected = data.max()
-        for var in data.nonindexes:
+        for var in data.noncoordinates:
             expected = data[var].max()
             actual = expected[var]
             self.assertDataArrayEqual(expected, actual)

@@ -105,7 +105,7 @@ class VariablesDict(OrderedDict):
 
         virtual_vars = []
         for k, v in iteritems(self):
-            if ((v.dtype.kind == 'M' and isinstance(v, variable.Index))
+            if ((v.dtype.kind == 'M' and isinstance(v, variable.Coordinate))
                     or (v.ndim == 0 and _castable_to_timestamp(v.values))):
                 # nb. dtype.kind == 'M' is datetime64
                 for suffix in _DATETIMEINDEX_COMPONENTS + ['season']:
@@ -126,8 +126,8 @@ class VariablesDict(OrderedDict):
 
         ref_var_name, suffix = split_key
         ref_var = self[ref_var_name]
-        if isinstance(ref_var, variable.Index):
-            date = ref_var.as_pandas
+        if isinstance(ref_var, variable.Coordinate):
+            date = ref_var.as_index
         elif ref_var.ndim == 0:
             date = pd.Timestamp(ref_var.values)
 
@@ -154,7 +154,7 @@ def _as_dataset_variable(name, var):
         if var.ndim != 1:
             raise ValueError('an index variable must be defined with '
                              '1-dimensional data')
-        var = var.to_index()
+        var = var.to_coord()
     return var
 
 
@@ -165,8 +165,8 @@ def _expand_variables(raw_variables, old_variables={}, compat='identical'):
     Dataset._variables dictionary.
 
     This includes converting tuples (dimensions, data) into Variable objects,
-    converting index variables into Index objects and expanding DataArray
-    objects into Variables plus Indexs.
+    converting coordinate variables into Coordinate objects and expanding
+    DataArray objects into Variables plus coordinates.
 
     Raises ValueError if any conflicting values are found, between any of the
     new or old variables.
@@ -185,7 +185,7 @@ def _expand_variables(raw_variables, old_variables={}, compat='identical'):
     for name, var in iteritems(raw_variables):
         if hasattr(var, 'dataset'):
             # it's a DataArray
-            for dim, coord in iteritems(var.indexes):
+            for dim, coord in iteritems(var.coordinates):
                 if dim != name:
                     add_variable(dim, coord)
         add_variable(name, var)
@@ -239,19 +239,20 @@ def _item0_str(items):
     return str(items[0])
 
 
-class DatasetIndexes(common.AbstractIndexes):
-    """Dictionary like container for Dataset indexes.
+class DatasetCoordinates(common.AbstractCoordinates):
+    """Dictionary like container for Dataset coordinates.
 
     Essentially an immutable OrderedDict with keys given by the array's
-    dimensions and the values given by the corresponding xray.Index objects.
-    Unlike DataArrayIndexes, does *not* support integer based lookups.
+    dimensions and the values given by the corresponding xray.Coordinate
+    objects. Unlike DataArrayCoordinates, does *not* support integer based
+    lookups.
     """
     def __getitem__(self, key):
         if key in self._data.dimensions:
             return self._data.variables[key]
         elif isinstance(key, (int, np.integer)):
-            raise KeyError('%r: Dataset indexes do not support integer based '
-                           'lookups' % key)
+            raise KeyError('%r: Dataset coordinates do not support integer '
+                           'based lookups' % key)
         else:
             raise KeyError(repr(key))
 
@@ -276,8 +277,9 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
     Dataset implements the mapping interface with keys given by variable names
     and values given by DataArray objects for each variable name.
 
-    One dimensional variables with name equal to their dimension are indexes,
-    which means they are saved in the dataset as `xray.Index` objects.
+    One dimensional variables with name equal to their dimension are
+    coordinates, which means they are saved in the dataset as `xray.Coordinate`
+    objects.
     """
     def __init__(self, variables=None, attributes=None):
         """To load data from a file or file-like object, use the `open_dataset`
@@ -302,12 +304,12 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
         if attributes is not None:
             self._attributes.update(attributes)
 
-    def _add_missing_indexes(self):
-        """Add missing index variables IN-PLACE to the variables dict
+    def _add_missing_coordinates(self):
+        """Add missing coordinate variables IN-PLACE to the variables dict
         """
         for dim, size in iteritems(self._dimensions):
             if dim not in self._variables:
-                coord = variable.Index(dim, np.arange(size))
+                coord = variable.Coordinate(dim, np.arange(size))
                 self._variables[dim] = coord
 
     def _update_vars_and_dims(self, new_variables, needs_copy=True):
@@ -328,7 +330,7 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
         # all checks are complete: it's safe to update
         self._variables = variables
         self._dimensions = dimensions
-        self._add_missing_indexes()
+        self._add_missing_coordinates()
 
     def _set_init_vars_and_dims(self, variables):
         """Set the initial value of Dataset variables and dimensions
@@ -540,23 +542,23 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
             return False
 
     @property
-    def coordinates(self):
-        utils.alias_warning('coordinates', 'indexes', 3)
-        return self.indexes
+    def indexes(self):
+        utils.alias_warning('indexes', 'coordinates', 3)
+        return self.coordinates
 
     @property
-    def indexes(self):
-        """Dictionary of xray.Index objects used for label based indexing.
+    def coordinates(self):
+        """Dictionary of xray.Coordinate objects used for label based indexing.
         """
-        return DatasetIndexes(self)
+        return DatasetCoordinates(self)
 
     @property
     def noncoordinates(self):
-        utils.alias_warning('noncoordinates', 'nonindexes', 3)
-        return self.nonindexes
+        utils.alias_warning('noncoordinates', 'noncoordinates', 3)
+        return self.noncoordinates
 
     @property
-    def nonindexes(self):
+    def noncoordinates(self):
         """Dictionary of DataArrays whose names do not match dimensions.
         """
         return FrozenOrderedDict((name, self[name]) for name in self
@@ -677,17 +679,17 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
     labeled = utils.function_alias(sel, 'labeled')
 
     def reindex_like(self, other, copy=True):
-        """Conform this object onto the indexes of another object, filling
+        """Conform this object onto the coordinates of another object, filling
         in missing values with NaN.
 
         Parameters
         ----------
-        other : Dataset or DatasetArray
-            Object with an indexes attribute giving a mapping from dimension
-            names to Index objects, which provides indexes upon which
-            to index the variables in this dataset. The indexes on this
-            other object need not be the same as the indexes on this
-            dataset. Any mis-matched indexes values will be filled in with
+        other : Dataset or DataArray
+            Object with a coordinates attribute giving a mapping from dimension
+            names to Coordinate objects, which provides indexes upon which
+            to index the variables in this dataset. The coordinates on this
+            other object need not be the same as the coordinates on this
+            dataset. Any mis-matched coordinate values will be filled in with
             NaN, and any mis-matched dimension names will simply be ignored.
         copy : bool, optional
             If `copy=True`, the returned dataset contains only copied
@@ -697,17 +699,18 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
         Returns
         -------
         reindexed : Dataset
-            Another dataset, with indexes replaced from the other object.
+            Another dataset, with this dataset's data but coordinates from the
+            other object.
 
         See Also
         --------
         Dataset.reindex
         align
         """
-        return self.reindex(copy=copy, **other.indexes)
+        return self.reindex(copy=copy, **other.coordinates)
 
-    def reindex(self, copy=True, **indexes):
-        """Conform this object onto a new set of indexes or pandas.Index
+    def reindex(self, copy=True, **coordinates):
+        """Conform this object onto a new set of coordinates or pandas.Index
         objects, filling in missing values with NaN.
 
         Parameters
@@ -716,32 +719,32 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
             If `copy=True`, the returned dataset contains only copied
             variables. If `copy=False` and no reindexing is required then
             original variables from this dataset are returned.
-        **indexes : dict
+        **coordinates : dict
             Dictionary with keys given by dimension names and values given by
-            arrays of index labels. Any mis-matched indexes values
-            will be filled in with NaN, and any mis-matched index names
-            will simply be ignored.
+            arrays of coordinates tick labels. Any mis-matched coordinate values
+            will be filled in with NaN, and any mis-matched dimension names will
+            simply be ignored.
 
         Returns
         -------
         reindexed : Dataset
-            Another dataset, with replaced indexes.
+            Another dataset, with this dataset's data but replaced coordinates.
 
         See Also
         --------
         Dataset.reindex_like
         align
         """
-        if not indexes:
+        if not coordinates:
             # shortcut
             return self.copy(deep=True) if copy else self
 
         # build up indexers for assignment along each index
         to_indexers = {}
         from_indexers = {}
-        for name, coord in iteritems(self.indexes):
-            if name in indexes:
-                target = utils.safe_cast_to_index(indexes[name])
+        for name, coord in iteritems(self.coordinates):
+            if name in coordinates:
+                target = utils.safe_cast_to_index(coordinates[name])
                 indexer = coord.get_indexer(target)
 
                 # Note pandas uses negative values from get_indexer to signify
@@ -786,11 +789,11 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
         # create variables for the new dataset
         variables = OrderedDict()
         for name, var in iteritems(self.variables):
-            if name in indexes:
-                new_var = indexes[name]
+            if name in coordinates:
+                new_var = coordinates[name]
                 if not (hasattr(new_var, 'dimensions') and
                         hasattr(new_var, 'values')):
-                    new_var = variable.Index(var.dimensions, new_var,
+                    new_var = variable.Coordinate(var.dimensions, new_var,
                                                   var.attrs, var.encoding)
                 elif copy:
                     new_var = variable.as_variable(new_var).copy()
@@ -937,7 +940,7 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
 
     def select_vars(self, *names):
         """Returns a new dataset that contains only the named variables and
-        their indexes.
+        their coordinates.
 
         Parameters
         ----------
@@ -948,7 +951,7 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
         -------
         Dataset
             The returned object has the same attributes as the original. Only
-            the names variables and their indexes are included.
+            the named variables and their coordinates are included.
         """
         variables = OrderedDict((k, self[k]) for k in names)
         return type(self)(variables, self.attrs)
@@ -987,7 +990,7 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
 
         Parameters
         ----------
-        group : str, DataArray or Index
+        group : str, DataArray or Coordinate
             Array whose unique values should be used to group this array. If a
             string, must be the name of a variable contained in this dataset.
         squeeze : boolean, optional
@@ -1061,11 +1064,11 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
         if isinstance(dimension, basestring):
             dims = set([dimension])
         elif dimension is None:
-            dims = set(self.indexes)
+            dims = set(self.coordinates)
         else:
             dims = set(dimension)
 
-        bad_dims = [dim for dim in dims if dim not in self.indexes]
+        bad_dims = [dim for dim in dims if dim not in self.coordinates]
         if bad_dims:
             raise ValueError('Dataset does not contain the dimensions: '
                              '{0}'.format(bad_dims))
@@ -1160,12 +1163,12 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
                 # across all datasets and indicates whether that
                 # variable differs or not.
                 return any(not ds[vname].equals(v) for ds in datasets[1:])
-            non_coords = iteritems(datasets[0].nonindexes)
-            # all nonindexes that are not the same in each dataset
+            non_coords = iteritems(datasets[0].noncoordinates)
+            # all noncoordinates that are not the same in each dataset
             concat_over.update(k for k, v in non_coords if differs(k, v))
         elif mode == 'all':
-            # concatenate all nonindexes
-            concat_over.update(set(datasets[0].nonindexes.keys()))
+            # concatenate all noncoordinates
+            concat_over.update(set(datasets[0].noncoordinates.keys()))
         elif mode == 'minimal':
             # only concatenate variables in which 'dimension' already
             # appears. These variables are added later.
@@ -1225,7 +1228,7 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
         DataFrame. The DataFrame is be indexed by the Cartesian product of
         this dataset's indices.
         """
-        columns = self.nonindexes.keys()
+        columns = self.noncoordinates.keys()
         data = []
         # we need a template to broadcast all dataset variables against
         # using stride_tricks lets us make the ndarray for broadcasting without
@@ -1239,8 +1242,8 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
             _, var_data = np.broadcast_arrays(template.values, var.values)
             data.append(var_data.reshape(-1))
 
-        index = multi_index_from_product(list(self.indexes.values()),
-                                         names=list(self.indexes.keys()))
+        index = multi_index_from_product(list(self.coordinates.values()),
+                                         names=list(self.coordinates.keys()))
         return pd.DataFrame(OrderedDict(zip(columns, data)), index=index)
 
     @classmethod
