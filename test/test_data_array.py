@@ -170,6 +170,18 @@ class TestDataArray(TestCase):
         actual = DataArray(pd.Index(['a', 'b'], name='foo'))
         self.assertDataArrayIdentical(expected, actual)
 
+    def test_constructor_from_coordinate(self):
+        values = 10 * np.arange(5)
+        coord = Coordinate('x', values)
+        expected = DataArray(values, [values], ['x'], name='x')
+        actual = DataArray(coord)
+        self.assertDataArrayIdentical(expected, actual)
+
+    def test_constructor_from_0d(self):
+        expected = Dataset({None: ([], 0)})[None]
+        actual = DataArray(0)
+        self.assertDataArrayIdentical(expected, actual)
+
     def test_equals_and_identical(self):
         da2 = self.dv.copy()
         self.assertTrue(self.dv.equals(da2))
