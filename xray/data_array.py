@@ -135,7 +135,7 @@ class DataArray(AbstractArray):
         Dictionary of Coordinate objects that label values along each dimension.
     """
     def __init__(self, data=None, coordinates=None, dimensions=None, name=None,
-                 attributes=None, encoding=None, dataset=None):
+                 attributes=None, encoding=None, dataset=None, fastpath=False):
         """
         Parameters
         ----------
@@ -171,27 +171,29 @@ class DataArray(AbstractArray):
             new data array is created from an existing array in this dataset.
         """
         if dataset is None:
-            # try to fill in arguments from data if they weren't supplied
-            if coordinates is None:
-                coordinates = getattr(data, 'coordinates', None)
-                if isinstance(data, pd.Series):
-                    coordinates = [data.index]
-                elif isinstance(data, pd.DataFrame):
-                    coordinates = [data.index, data.columns]
-                elif isinstance(data, pd.Panel):
-                    coordinates = [data.items, data.major_axis, data.minor_axis]
-            if dimensions is None:
-                dimensions = getattr(data, 'dimensions', None)
-            if name is None:
-                name = getattr(data, 'name', None)
-            if attributes is None:
-                attributes = getattr(data, 'attrs', None)
-            if encoding is None:
-                encoding = getattr(data, 'encoding', None)
+            if not fastpath:
+                # try to fill in arguments from data if they were nott supplied
+                if coordinates is None:
+                    coordinates = getattr(data, 'coordinates', None)
+                    if isinstance(data, pd.Series):
+                        coordinates = [data.index]
+                    elif isinstance(data, pd.DataFrame):
+                        coordinates = [data.index, data.columns]
+                    elif isinstance(data, pd.Panel):
+                        coordinates = [data.items, data.major_axis, data.minor_axis]
+                if dimensions is None:
+                    dimensions = getattr(data, 'dimensions', None)
+                if name is None:
+                    name = getattr(data, 'name', None)
+                if attributes is None:
+                    attributes = getattr(data, 'attrs', None)
+                if encoding is None:
+                    encoding = getattr(data, 'encoding', None)
 
-            data = variable._as_compatible_data(data)
-            coordinates, dimensions = _infer_coordinates_and_dimensions(
-                data.shape, coordinates, dimensions)
+                data = variable._as_compatible_data(data)
+                coordinates, dimensions = _infer_coordinates_and_dimensions(
+                    data.shape, coordinates, dimensions)
+
             variables = OrderedDict((var.name, var) for var in coordinates)
             variables[name] = variable.Variable(
                 dimensions, data, attributes, encoding)
@@ -777,12 +779,12 @@ class DataArray(AbstractArray):
         except AttributeError:
             return False
 
-    def _select_coords(self):
-        return xray.Dataset(self.coordinates)
+    # def _select_coords(self):
+    #     return xray.Dataset(self.coordinates)
 
     def __array_wrap__(self, obj, context=None):
         new_var = self.variable.__array_wrap__(obj, context)
-        ds = self._select_coords()
+        ds = xray.Dataset(self.coordinates)
         if (self.name,) == self.dimensions:
             # use a new name for coordinate variables
             name = None
@@ -798,13 +800,13 @@ class DataArray(AbstractArray):
             return self.__array_wrap__(f(self.values, *args, **kwargs))
         return func
 
-    def _check_coords_compat(self, other):
-        # TODO: possibly automatically select index intersection instead?
-        if hasattr(other, 'coordinates'):
-            for k, v in iteritems(self.coordinates):
-                if (k in other.coordinates
-                        and not v.equals(other.coordinates[k])):
-                    raise ValueError('coordinate %r is not aligned' % k)
+    # def _check_coords_compat(self, other):
+    #     # TODO: possibly automatically select index intersection instead?
+    #     if hasattr(other, 'coordinates'):
+    #         for k, v in iteritems(self.coordinates):
+    #             if (k in other.coordinates
+    #                     and not v.equals(other.coordinates[k])):
+    #                 raise ValueError('coordinate %r is not aligned' % k)
 
     @staticmethod
     def _binary_op(f, reflexive=False):
@@ -812,28 +814,41 @@ class DataArray(AbstractArray):
         def func(self, other):
             # TODO: automatically group by other variable dimensions to allow
             # for broadcasting dimensions like 'dayofyear' against 'time'
-            self._check_coords_compat(other)
-            ds = self._select_coords()
-            if hasattr(other, 'coordinates'):
-                ds.merge(other.coordinates, inplace=True)
-            other_array = getattr(other, 'variable', other)
+
             if hasattr(other, 'name') or (self.name,) == self.dimensions:
                 name = None
             else:
                 name = self.name
-            ds[name] = (f(self.variable, other_array)
-                        if not reflexive
-                        else f(other_array, self.variable))
-            return ds[name]
+
+            if hasattr(other, 'coordinates'):
+                self, other = align(self, other, join='inner', copy=False)
+
+            other_variable = getattr(other, 'variable', other)
+            var = (f(self.variable, other_variable)
+                   if not reflexive
+                   else f(other_variable, self.variable))
+
+            coords = list(self.coordinates.values())
+            if hasattr(other, 'coordinates'):
+                for k, v in iteritems(other.coordinates):
+                    if k not in self.coordinates:
+                        coords.append(v)
+
+            return type(self)(var._data, coords, var.dimensions, name,
+                              fastpath=True)
         return func
 
     @staticmethod
     def _inplace_binary_op(f):
         @functools.wraps(f)
         def func(self, other):
-            self._check_coords_compat(other)
-            other_array = getattr(other, 'variable', other)
-            self.variable = f(self.variable, other_array)
+            if hasattr(other, 'coordinates'):
+                # self, other = align(self, other, join='left', copy=False)
+                other = other.reindex_like(self, copy=False)
+
+            other_variable = getattr(other, 'variable', other)
+            self.variable = f(self.variable, other_variable)
+
             if hasattr(other, 'coordinates'):
                 self.dataset.merge(other.coordinates, inplace=True)
             return self
@@ -875,15 +890,6 @@ def align(*objects, **kwargs):
     aligned : same as *objects
         Tuple of objects with aligned coordinates.
     """
-    # TODO: automatically align when doing math with dataset arrays?
-    # TODO: change this to default to join='outer' like pandas?
-    if 'join' not in kwargs:
-        warnings.warn('using align without setting explicitly setting the '
-                      "'join' keyword argument. In future versions of xray, "
-                      "the default will likely change from join='inner' to "
-                      "join='outer', to match pandas.",
-                      FutureWarning, stacklevel=2)
-
     join = kwargs.pop('join', 'inner')
     copy = kwargs.pop('copy', True)
 
