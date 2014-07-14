@@ -91,8 +91,8 @@ def safe_cast_to_index(array):
     """
     if isinstance(array, pd.Index):
         index = array
-    elif isinstance(array, xray.Index):
-        index = array.as_pandas
+    elif isinstance(array, xray.Coordinate):
+        index = array.as_index
     else:
         kwargs = {}
         if hasattr(array, 'dtype'):

@@ -6,7 +6,7 @@ except ImportError: # Python 3
 
 from .common import ImplementsArrayReduce, ImplementsDatasetReduce
 from .ops import inject_reduce_methods
-from .variable import as_variable, Variable, Index
+from .variable import as_variable, Variable, Coordinate
 import xray
 import numpy as np
 
@@ -66,7 +66,7 @@ class GroupBy(object):
         ----------
         obj : Dataset or DataArray
             Object to group.
-        group : DataArray or Index
+        group : DataArray or Coordinate
             1-dimensional array with the group values.
         squeeze : boolean, optional
             If "group" is a coordinate of object, `squeeze` controls whether
@@ -95,36 +95,36 @@ class GroupBy(object):
         if group.name in obj.dimensions:
             # assume that group already has sorted, unique values
             if group.dimensions != (group.name,):
-                raise ValueError('`group` is required to be an index if '
+                raise ValueError('`group` is required to be a coordinate if '
                                  '`group.name` is a dimension in `obj`')
             group_indices = np.arange(group.size)
             if not squeeze:
                 # group_indices = group_indices.reshape(-1, 1)
                 # use slices to do views instead of fancy indexing
                 group_indices = [slice(i, i + 1) for i in group_indices]
-            unique_index = group
+            unique_coord = group
         else:
             # look through group to find the unique values
             unique_values, group_indices = unique_value_groups(group)
-            unique_index = Index(group.name, unique_values)
+            unique_coord = Coordinate(group.name, unique_values)
 
         self.group_indices = group_indices
-        self.unique_index = unique_index
+        self.unique_coord = unique_coord
         self._groups = None
 
     @property
     def groups(self):
         # provided to mimic pandas.groupby
         if self._groups is None:
-            self._groups = dict(zip(self.unique_index.values,
+            self._groups = dict(zip(self.unique_coord.values,
                                     self.group_indices))
         return self._groups
 
     def __len__(self):
-        return self.unique_index.size
+        return self.unique_coord.size
 
     def __iter__(self):
-        return izip(self.unique_index.values, self._iter_grouped())
+        return izip(self.unique_coord.values, self._iter_grouped())
 
     def _iter_grouped(self):
         """Iterate over each element in this group"""
@@ -136,8 +136,8 @@ class GroupBy(object):
             concat_dim = self.group
             indexers = self.group_indices
         else:
-            concat_dim = self.unique_index
-            indexers = np.arange(self.unique_index.size)
+            concat_dim = self.unique_coord
+            indexers = np.arange(self.unique_coord.size)
         return concat_dim, indexers
 
     @property

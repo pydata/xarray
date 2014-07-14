@@ -3,7 +3,7 @@ import pandas as pd
 from copy import deepcopy
 from textwrap import dedent
 
-from xray import Dataset, DataArray, Index, Variable, align
+from xray import Dataset, DataArray, Coordinate, Variable, align
 from xray.pycompat import iteritems, OrderedDict
 from . import TestCase, ReturnItem, source_ndarray
 
@@ -25,7 +25,7 @@ class TestDataArray(TestCase):
         <xray.DataArray 'my_variable' (time: 2, x: 3)>
         array([[1, 2, 3],
                [4, 5, 6]])
-        Indexes:
+        Coordinates:
             time: Int64Index([0, 1], dtype='int64')
             x: Int64Index([0, 1, 2], dtype='int64')
         Linked dataset variables:
@@ -44,9 +44,9 @@ class TestDataArray(TestCase):
             self.assertEqual(getattr(self.dv, attr), getattr(self.v, attr))
         self.assertEqual(len(self.dv), len(self.v))
         self.assertVariableEqual(self.dv, self.v)
-        self.assertEqual(list(self.dv.indexes), list(self.ds.indexes))
-        for k, v in iteritems(self.dv.indexes):
-            self.assertArrayEqual(v, self.ds.indexes[k])
+        self.assertEqual(list(self.dv.coordinates), list(self.ds.coordinates))
+        for k, v in iteritems(self.dv.coordinates):
+            self.assertArrayEqual(v, self.ds.coordinates[k])
         with self.assertRaises(AttributeError):
             self.dv.name = 'bar'
         with self.assertRaises(AttributeError):
@@ -85,25 +85,25 @@ class TestDataArray(TestCase):
                             'y': ('y', [-1, -2, -3])})[None]
         self.assertDataArrayIdentical(expected, actual)
 
-        indexes = [['a', 'b'], [-1, -2, -3]]
-        actual = DataArray(data, indexes, ['x', 'y'])
+        coordinates = [['a', 'b'], [-1, -2, -3]]
+        actual = DataArray(data, coordinates, ['x', 'y'])
         self.assertDataArrayIdentical(expected, actual)
 
-        indexes = [pd.Index(['a', 'b'], name='A'),
+        coordinates = [pd.Index(['a', 'b'], name='A'),
                    pd.Index([-1, -2, -3], name='B')]
-        actual = DataArray(data, indexes, ['x', 'y'])
+        actual = DataArray(data, coordinates, ['x', 'y'])
         self.assertDataArrayIdentical(expected, actual)
 
-        indexes = {'x': ['a', 'b'], 'y': [-1, -2, -3]}
-        actual = DataArray(data, indexes, ['x', 'y'])
+        coordinates = {'x': ['a', 'b'], 'y': [-1, -2, -3]}
+        actual = DataArray(data, coordinates, ['x', 'y'])
         self.assertDataArrayIdentical(expected, actual)
 
-        indexes = OrderedDict([('x', ['a', 'b']), ('y', [-1, -2, -3])])
-        actual = DataArray(data, indexes)
+        coordinates = OrderedDict([('x', ['a', 'b']), ('y', [-1, -2, -3])])
+        actual = DataArray(data, coordinates)
         self.assertDataArrayIdentical(expected, actual)
 
-        indexes = pd.Series([['a', 'b'], [-1, -2, -3]], ['x', 'y'])
-        actual = DataArray(data, indexes)
+        coordinates = pd.Series([['a', 'b'], [-1, -2, -3]], ['x', 'y'])
+        actual = DataArray(data, coordinates)
         self.assertDataArrayIdentical(expected, actual)
 
         expected = Dataset({None: (['x', 'y'], data),
@@ -146,7 +146,7 @@ class TestDataArray(TestCase):
     def test_constructor_from_self_described(self):
         data = [[-0.1, 21], [0, 2]]
         expected = DataArray(data,
-                             indexes={'x': ['a', 'b'], 'y': [-1, -2]},
+                             coordinates={'x': ['a', 'b'], 'y': [-1, -2]},
                              dimensions=['x', 'y'], name='foobar',
                              attributes={'bar': 2}, encoding={'foo': 3})
         actual = DataArray(expected)
@@ -163,7 +163,7 @@ class TestDataArray(TestCase):
 
         panel = pd.Panel({0: frame})
         actual = DataArray(panel)
-        expected = DataArray([data], expected.indexes, ['dim_0', 'x', 'y'])
+        expected = DataArray([data], expected.coordinates, ['dim_0', 'x', 'y'])
         self.assertDataArrayIdentical(expected, actual)
 
         expected = DataArray(['a', 'b'], name='foo')
@@ -249,30 +249,30 @@ class TestDataArray(TestCase):
         da.loc['a':'j'] = 0
         self.assertTrue(np.all(da.values == 0))
 
-    def test_indexes(self):
-        indexes = [Index('x', [-1, -2]), Index('y', [0, 1, 2])]
-        da = DataArray(np.random.randn(2, 3), indexes, name='foo')
+    def test_coordinates(self):
+        coordinates = [Coordinate('x', [-1, -2]), Coordinate('y', [0, 1, 2])]
+        da = DataArray(np.random.randn(2, 3), coordinates, name='foo')
 
-        self.assertEquals(2, len(da.indexes))
+        self.assertEquals(2, len(da.coordinates))
 
-        self.assertEquals(['x', 'y'], list(da.indexes))
+        self.assertEquals(['x', 'y'], list(da.coordinates))
 
-        self.assertTrue(da.indexes[0].identical(indexes[0]))
-        self.assertTrue(da.indexes['x'].identical(indexes[0]))
-        self.assertTrue(da.indexes[1].identical(indexes[1]))
-        self.assertTrue(da.indexes['y'].identical(indexes[1]))
+        self.assertTrue(da.coordinates[0].identical(coordinates[0]))
+        self.assertTrue(da.coordinates['x'].identical(coordinates[0]))
+        self.assertTrue(da.coordinates[1].identical(coordinates[1]))
+        self.assertTrue(da.coordinates['y'].identical(coordinates[1]))
 
-        self.assertIn('x', da.indexes)
-        self.assertNotIn(0, da.indexes)
-        self.assertNotIn('foo', da.indexes)
+        self.assertIn('x', da.coordinates)
+        self.assertNotIn(0, da.coordinates)
+        self.assertNotIn('foo', da.coordinates)
 
         with self.assertRaises(KeyError):
-            da.indexes['foo']
+            da.coordinates['foo']
 
         expected = dedent("""\
         x: Int64Index([-1, -2], dtype='int64')
         y: Int64Index([0, 1, 2], dtype='int64')""")
-        actual = repr(da.indexes)
+        actual = repr(da.coordinates)
         self.assertEquals(expected, actual)
 
     def test_reindex(self):
@@ -474,12 +474,12 @@ class TestDataArray(TestCase):
     def test_groupby_properties(self):
         grouped = self.make_groupby_example_array().groupby('abc')
         expected_unique = Variable('abc', ['a', 'b', 'c'])
-        self.assertVariableEqual(expected_unique, grouped.unique_index)
+        self.assertVariableEqual(expected_unique, grouped.unique_coord)
         self.assertEqual(3, len(grouped))
 
     def test_groupby_apply_identity(self):
         expected = self.make_groupby_example_array()
-        idx = expected.indexes['y']
+        idx = expected.coordinates['y']
         identity = lambda x: x
         for g in ['x', 'y', 'abc', idx]:
             for shortcut in [False, True]:
