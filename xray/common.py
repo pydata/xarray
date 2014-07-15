@@ -176,7 +176,7 @@ def pretty_print(x, numchars):
 def dataset_repr(ds):
     summary = ['<xray.%s>' % type(ds).__name__]
 
-    max_name_length = max(len(k) for k in ds.variables) if ds else 0
+    max_name_length = max(len(str(k)) for k in ds.variables) if ds else 0
     first_col_width = max(4 + max_name_length, 16)
     coords_str = pretty_print('Dimensions:', first_col_width)
     all_dim_strings = ['%s: %s' % (k, v) for k, v in iteritems(ds.dimensions)]
@@ -196,7 +196,7 @@ def dataset_repr(ds):
             else:
                 indicator = not_found
             dim_strs.append(pretty_print(prepend + indicator, length))
-        string = pretty_print('    ' + k, first_col_width) + ' '
+        string = pretty_print('    %s' % k, first_col_width) + ' '
         string += '  '.join(dim_strs)
         return string
 

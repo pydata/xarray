@@ -170,6 +170,18 @@ class TestDataArray(TestCase):
         actual = DataArray(pd.Index(['a', 'b'], name='foo'))
         self.assertDataArrayIdentical(expected, actual)
 
+    def test_constructor_from_coordinate(self):
+        values = 10 * np.arange(5)
+        coord = Coordinate('x', values)
+        expected = DataArray(values, [values], ['x'], name='x')
+        actual = DataArray(coord)
+        self.assertDataArrayIdentical(expected, actual)
+
+    def test_constructor_from_0d(self):
+        expected = Dataset({None: ([], 0)})[None]
+        actual = DataArray(0)
+        self.assertDataArrayIdentical(expected, actual)
+
     def test_equals_and_identical(self):
         da2 = self.dv.copy()
         self.assertTrue(self.dv.equals(da2))
@@ -324,9 +336,10 @@ class TestDataArray(TestCase):
         self.assertDataArrayIdentical(~expected, original.notnull())
 
     def test_math(self):
-        x = self.x
-        v = self.v
-        a = self.dv
+        a = DataArray([np.arange(3), -np.arange(3)],
+                      [[0, 1], ['a', 'b', 'c']], ['x', 'y'])
+        x = a.values
+        v = a.variable
         # variable math was already tested extensively, so let's just make sure
         # that all types are properly converted here
         self.assertDataArrayEqual(a, +a)
@@ -339,12 +352,14 @@ class TestDataArray(TestCase):
         self.assertDataArrayEqual(a, a + 0 * a)
         self.assertDataArrayEqual(a, 0 * a + a)
         # test different indices
-        ds2 = self.ds.update({'x': ('x', 3 + np.arange(10))}, inplace=False)
-        b = ds2['foo']
-        with self.assertRaisesRegexp(ValueError, 'not aligned'):
-            a + b
-        with self.assertRaisesRegexp(ValueError, 'not aligned'):
-            b + a
+        b = a.dataset.update({'x': ('x', [1, 2])}, inplace=False)[None]
+        self.assertDataArrayEqual(a[1:], a + 0 * b)
+        self.assertDataArrayEqual(a[1:], 0 * b + a)
+        expected = DataArray([[np.nan, np.nan, np.nan], -np.arange(3)],
+                             [[0, 1], ['a', 'b', 'c']], ['x', 'y'])
+        a += 0 * b
+        self.assertDataArrayIdentical(a, expected)
+
         with self.assertRaisesRegexp(TypeError, 'datasets do not support'):
             a + a.dataset
 
@@ -548,8 +563,6 @@ class TestDataArray(TestCase):
 
     def test_align(self):
         self.ds['x'] = ('x', np.array(list('abcdefghij')))
-        with self.assertRaises(ValueError):
-            self.dv + self.dv[:5]
         dv1, dv2 = align(self.dv, self.dv[:5], join='inner')
         self.assertDataArrayIdentical(dv1, self.dv[:5])
         self.assertDataArrayIdentical(dv2, self.dv[:5])
