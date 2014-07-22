@@ -299,6 +299,7 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
         self._variables = VariablesDict()
         self._dimensions = SortedKeysDict()
         self._attributes = OrderedDict()
+        self._file_obj = None
         if variables is not None:
             self._set_init_vars_and_dims(variables)
         if attributes is not None:
@@ -349,7 +350,21 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
             variables = conventions.decode_cf_variables(
                 store.variables, mask_and_scale=mask_and_scale,
                 decode_times=decode_times, concat_characters=concat_characters)
-        return cls(variables, store.attrs)
+        obj = cls(variables, store.attrs)
+        obj._file_obj = store
+        return obj
+
+    def close(self):
+        """Close any datastores linked to this dataset
+        """
+        if self._file_obj is not None:
+            self._file_obj.close()
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        self.close()
 
     @property
     def variables(self):
@@ -424,6 +439,7 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
         obj._variables = variables
         obj._dimensions = self._dimensions.copy()
         obj._attributes = self._attributes.copy()
+        obj._file_obj = None
         return obj
 
     def __copy__(self):
