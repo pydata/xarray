@@ -195,4 +195,8 @@ class NetCDF4DataStore(AbstractWritableDataStore):
         self.ds.sync()
 
     def close(self):
-        self.ds.close()
+        ds = self.ds
+        # netCDF4 only allows closing the root group
+        while ds.parent is not None:
+            ds = ds.parent
+        ds.close()
