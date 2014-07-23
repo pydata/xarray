@@ -352,11 +352,14 @@ class DataArray(AbstractArray):
 
     def load_data(self):
         """Manually trigger loading of this array's data from disk or a
-        remote source and return this array.
+        remote source into memory and return this array.
+
+        Any associated file objects are then automatically closed.
 
         Normally, it should not be necessary to call this method in user code,
         because all xray functions should either work on deferred data or
-        load data automatically.
+        load data automatically. However, this method can be necessary when
+        working with many file objects on disk.
         """
         self.dataset.load_data()
         return self

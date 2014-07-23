@@ -359,12 +359,20 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
         """
         if self._file_obj is not None:
             self._file_obj.close()
+        self._file_obj = None
 
     def __enter__(self):
         return self
 
     def __exit__(self, exc_type, exc_value, traceback):
         self.close()
+
+    def __getstate__(self):
+        """Always load data in-memory before pickling"""
+        self.load_data()
+        # self.__dict__ is the default pickle object, we don't need to
+        # implement our own __setstate__ method to make pickle work
+        return self.__dict__
 
     @property
     def variables(self):
@@ -412,14 +420,18 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
 
     def load_data(self):
         """Manually trigger loading of this dataset's data from disk or a
-        remote source and return this dataset.
+        remote source into memory and return this dataset.
+
+        Any associated file objects are then automatically closed.
 
         Normally, it should not be necessary to call this method in user code,
         because all xray functions should either work on deferred data or
-        load data automatically.
+        load data automatically. However, this method can be necessary when
+        working with many file objects on disk.
         """
         for v in itervalues(self._variables):
             v.load_data()
+        self.close()
         return self
 
     def copy(self, deep=False):

@@ -249,7 +249,7 @@ class Variable(AbstractArray):
 
     def load_data(self):
         """Manually trigger loading of this variable's data from disk or a
-        remote source and return this variable.
+        remote source into memory and return this variable.
 
         Normally, it should not be necessary to call this method in user code,
         because all xray functions should either work on deferred data or
