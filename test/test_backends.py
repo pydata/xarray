@@ -80,13 +80,14 @@ class DatasetIOTestCases(object):
         expected = create_test_data()
 
         @contextlib.contextmanager
-        def assert_loads():
+        def assert_loads(vars=None):
             with self.roundtrip(expected) as actual:
                 for v in actual.variables.values():
                     self.assertFalse(v._in_memory())
                 yield actual
-                for v in actual.variables.values():
-                    self.assertTrue(v._in_memory())
+                for k, v in actual.variables.items():
+                    if vars is None or k in vars:
+                        self.assertTrue(v._in_memory())
                 self.assertDatasetAllClose(expected, actual)
 
         with self.assertRaises(AssertionError):
@@ -97,7 +98,7 @@ class DatasetIOTestCases(object):
         with assert_loads() as ds:
             ds.load_data()
 
-        with assert_loads() as ds:
+        with assert_loads(['var1', 'dim1', 'dim2']) as ds:
             ds['var1'].load_data()
 
     def test_roundtrip_None_variable(self):
