@@ -372,7 +372,10 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
         self.load_data()
         # self.__dict__ is the default pickle object, we don't need to
         # implement our own __setstate__ method to make pickle work
-        return self.__dict__
+        state = self.__dict__.copy()
+        # throw away any references to datastores in the pickle
+        state['_file_obj'] = None
+        return state
 
     @property
     def variables(self):
