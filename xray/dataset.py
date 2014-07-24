@@ -422,8 +422,6 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
         """Manually trigger loading of this dataset's data from disk or a
         remote source into memory and return this dataset.
 
-        Any associated file objects are then automatically closed.
-
         Normally, it should not be necessary to call this method in user code,
         because all xray functions should either work on deferred data or
         load data automatically. However, this method can be necessary when
@@ -431,7 +429,6 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
         """
         for v in itervalues(self._variables):
             v.load_data()
-        self.close()
         return self
 
     def copy(self, deep=False):
