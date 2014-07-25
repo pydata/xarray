@@ -77,6 +77,8 @@ Computations
 .. autosummary::
    :toctree: generated/
 
+   Dataset.apply
+   Dataset.reduce
    Dataset.all
    Dataset.any
    Dataset.argmax

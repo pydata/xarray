@@ -779,3 +779,32 @@ class TestDataset(TestCase):
         ds = data.mean(keep_attrs=True)
         self.assertEqual(len(ds.attrs), len(_attrs))
         self.assertTrue(ds.attrs, attrs)
+
+    def test_apply(self):
+        data = create_test_data()
+        data.attrs['foo'] = 'bar'
+
+        self.assertDatasetIdentical(data.apply(np.mean), data.mean())
+        self.assertDatasetIdentical(data.apply(np.mean, keep_attrs=True),
+                                    data.mean(keep_attrs=True))
+
+        self.assertDatasetIdentical(data.apply(lambda x: x, keep_attrs=True),
+                                    data.drop_vars('time'))
+
+        actual = data.apply(np.mean, to=['var1', 'var2', 'var3'])
+        self.assertDatasetIdentical(actual, data.mean())
+
+        actual = data.apply(np.mean, to='var1')
+        modified = data.select_vars('var1').mean()
+        unmodified = data.select_vars('var2', 'var3')
+        expected = modified.merge(unmodified)
+        self.assertDatasetIdentical(actual, expected)
+
+        with self.assertRaisesRegexp(ValueError, 'does not contain'):
+            data.apply(np.mean, to='foobarbaz')
+
+        def scale(x, multiple=1):
+            return multiple * x
+
+        actual = data.apply(scale, multiple=2)
+        self.assertDataArrayEqual(actual['var1'], 2 * data['var1'])
