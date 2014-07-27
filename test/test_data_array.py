@@ -282,6 +282,10 @@ class TestDataArray(TestCase):
         actual = repr(da.coordinates)
         self.assertEquals(expected, actual)
 
+        for k, v in [('x', ['a', 'b']), (0, ['c', 'd']), (-2, ['e', 'f'])]:
+            da.coordinates[k] = v
+            self.assertArrayEqual(da.coordinates[k], v)
+
     def test_reindex(self):
         foo = self.dv
         bar = self.dv[:2, :2]

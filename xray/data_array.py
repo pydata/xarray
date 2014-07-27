@@ -97,6 +97,12 @@ class DataArrayCoordinates(AbstractCoordinates):
         else:
             raise KeyError(repr(key))
 
+    def __setitem__(self, key, value):
+        with self._data._set_new_dataset() as ds:
+            if isinstance(key, (int, np.integer)):
+                key = self._data.dimensions[key]
+            ds[key] = (key, value)
+
 
 class DataArray(AbstractArray):
     """N-dimensional array with labeled coordinates and dimensions.
