@@ -429,6 +429,15 @@ class TestDataset(TestCase):
         with self.assertRaises(UnexpectedDataAccess):
             renamed['renamed_var1'].values
 
+    def test_rename_inplace(self):
+        data = Dataset({'z': ('x', [2, 3, 4])})
+        copied = data.copy()
+        renamed = data.rename({'x': 'y'})
+        data.rename({'x': 'y'}, inplace=True)
+        self.assertDatasetIdentical(data, renamed)
+        self.assertFalse(data.equals(copied))
+        self.assertEquals(data.dimensions, {'y': 3})
+
     def test_update(self):
         data = create_test_data(seed=0)
         var2 = Variable('dim1', np.arange(100))

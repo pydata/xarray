@@ -824,7 +824,7 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
             variables[name] = new_var
         return type(self)(variables, self.attrs)
 
-    def rename(self, name_dict):
+    def rename(self, name_dict, inplace=False):
         """Returns a new object with renamed variables and dimensions.
 
         Parameters
@@ -832,6 +832,9 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
         name_dict : dict-like
             Dictionary whose keys are current variable or dimension names and
             whose values are new names.
+        inplace : bool, optional
+            If True, rename variables and dimensions in-place. Otherwise,
+            return a new dataset object.
 
         Returns
         -------
@@ -849,7 +852,14 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
             var = v.copy(deep=False)
             var.dimensions = dims
             variables[name] = var
-        return type(self)(variables, self.attrs)
+
+        if inplace:
+            self._dimensions = _calculate_dimensions(variables)
+            self._variables = variables
+            obj = self
+        else:
+            obj = type(self)(variables, self.attrs)
+        return obj
 
     def update(self, other, inplace=True):
         """Update this dataset's variables and attributes with those from
