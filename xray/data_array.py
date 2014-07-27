@@ -206,12 +206,10 @@ class DataArray(AbstractArray):
                 dimensions, data, attributes, encoding)
             dataset = xray.Dataset(variables)
         else:
+            # move this back to an alternate constructor?
             if name not in dataset and name not in dataset.virtual_variables:
                 raise ValueError('name %r must be a variable in dataset %s' %
                                  (name, dataset))
-            # make a shallow copy of the dataset so we can safely modify the
-            # array in-place?
-            # dataset = dataset.copy(deep=False)
 
         self._dataset = dataset
         self._name = name
@@ -286,6 +284,17 @@ class DataArray(AbstractArray):
     @property
     def dimensions(self):
         return self.variable.dimensions
+
+    @dimensions.setter
+    def dimensions(self, value):
+        with self._set_new_dataset() as ds:
+            if not len(value) == self.ndim:
+                raise ValueError('%s dimensions supplied but data has ndim=%s'
+                                 % (len(value), self.ndim))
+            name_map = dict(zip(self.dimensions, value))
+            ds.rename(name_map, inplace=True)
+        if self.name in name_map:
+            self._name = name_map[self.name]
 
     def _key_to_indexers(self, key):
         return OrderedDict(
@@ -362,6 +371,29 @@ class DataArray(AbstractArray):
         indexing is also supported.
         """
         return DataArrayCoordinates(self)
+
+    @coordinates.setter
+    def coordinates(self, value):
+        with self._set_new_dataset() as ds:
+            if not len(value) == self.ndim:
+                raise ValueError('%s coordinates supplied but data has ndim=%s'
+                                 % (len(value), self.ndim))
+            # TODO: allow setting to dict-like objects other than
+            # DataArrayCoordinates?
+            if isinstance(value, DataArrayCoordinates):
+                # yes, this is regretably complex and probably slow
+                name_map = dict(zip(self.dimensions, value.keys()))
+                ds.rename(name_map, inplace=True)
+                name = name_map.get(self.name, self.name)
+                dimensions = ds[name].dimensions
+                value = value.values()
+            else:
+                name = self.name
+                dimensions = self.dimensions
+
+            for k, v in zip(dimensions, value):
+                ds[k] = (k, v)
+        self._name = name
 
     def load_data(self):
         """Manually trigger loading of this array's data from disk or a

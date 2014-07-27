@@ -62,6 +62,18 @@ class TestDataArray(TestCase):
         self.assertEqual(arr.name, 'bar')
         self.assertDataArrayEqual(copied, arr)
 
+    def test_dimensions(self):
+        arr = self.dv
+        self.assertEqual(arr.dimensions, ('x', 'y'))
+
+        arr.dimensions = ('w', 'z')
+        self.assertEqual(arr.dimensions, ('w', 'z'))
+
+        x = Dataset({'x': ('x', np.arange(5))})['x']
+        x.dimensions = ('y',)
+        self.assertEqual(x.dimensions, ('y',))
+        self.assertEqual(x.name, 'y')
+
     def test_encoding(self):
         expected = {'foo': 'bar'}
         self.dv.encoding['foo'] = 'bar'
@@ -285,9 +297,40 @@ class TestDataArray(TestCase):
         actual = repr(da.coordinates)
         self.assertEquals(expected, actual)
 
+    def test_coordinates_modify(self):
+        da = DataArray(np.zeros((2, 3)), dimensions=['x', 'y'])
+
         for k, v in [('x', ['a', 'b']), (0, ['c', 'd']), (-2, ['e', 'f'])]:
             da.coordinates[k] = v
             self.assertArrayEqual(da.coordinates[k], v)
+
+        actual = da.copy()
+        actual.coordinates = [[5, 6], [7, 8, 9]]
+        expected = DataArray(np.zeros((2, 3)), coordinates=[[5, 6], [7, 8, 9]],
+                             dimensions=['x', 'y'])
+        self.assertDataArrayIdentical(actual, expected)
+
+        actual = da.copy()
+        actual.coordinates = expected.coordinates
+        self.assertDataArrayIdentical(actual, expected)
+
+        actual = da.copy()
+        expected = DataArray(np.zeros((2, 3)), coordinates=[[5, 6], [7, 8, 9]],
+                             dimensions=['foo', 'bar'])
+        actual.coordinates = expected.coordinates
+        self.assertDataArrayIdentical(actual, expected)
+
+        # modify the coordinates on a coordinate itself
+        x = DataArray(Coordinate('x', [10.0, 20.0, 30.0]))
+
+        actual = x.copy()
+        actual.coordinates = [[0, 1, 2]]
+        expected = DataArray(Coordinate('x', range(3)))
+        self.assertDataArrayIdentical(actual, expected)
+
+        actual = DataArray(Coordinate('y', [-10, -20, -30]))
+        actual.coordinates = expected.coordinates
+        self.assertDataArrayIdentical(actual, expected)
 
     def test_reindex(self):
         foo = self.dv
