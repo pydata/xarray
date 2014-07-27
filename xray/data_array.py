@@ -1,3 +1,4 @@
+import contextlib
 import functools
 import operator
 import warnings
@@ -220,10 +221,18 @@ class DataArray(AbstractArray):
         """
         return self._name
 
+    @contextlib.contextmanager
+    def _set_new_dataset(self):
+        ds = self.dataset.copy(deep=False)
+        yield ds
+        self._dataset = ds
+
     @name.setter
     def name(self, value):
-        raise AttributeError('cannot modify the name of a %s inplace; use the '
-                             "'rename' method instead" % type(self).__name__)
+        with self._set_new_dataset() as ds:
+            del ds[self.name]
+            ds[value] = self.variable
+        self._name = value
 
     @property
     def variable(self):

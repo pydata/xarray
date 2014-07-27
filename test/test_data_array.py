@@ -37,7 +37,6 @@ class TestDataArray(TestCase):
 
     def test_properties(self):
         self.assertDatasetIdentical(self.dv.dataset, self.ds)
-        self.assertEqual(self.dv.name, 'foo')
         self.assertVariableEqual(self.dv.variable, self.v)
         self.assertArrayEqual(self.dv.values, self.v.values)
         for attr in ['dimensions', 'dtype', 'shape', 'size', 'ndim', 'attrs']:
@@ -48,12 +47,18 @@ class TestDataArray(TestCase):
         for k, v in iteritems(self.dv.coordinates):
             self.assertArrayEqual(v, self.ds.coordinates[k])
         with self.assertRaises(AttributeError):
-            self.dv.name = 'bar'
-        with self.assertRaises(AttributeError):
             self.dv.dataset = self.ds
         self.assertIsInstance(self.ds['x'].as_index, pd.Index)
         with self.assertRaisesRegexp(ValueError, 'must be 1-dimensional'):
             self.ds['foo'].as_index
+
+    def test_name(self):
+        arr = self.dv
+        self.assertEqual(arr.name, 'foo')
+        copied = arr.copy()
+        arr.name = 'bar'
+        self.assertEqual(arr.name, 'bar')
+        self.assertDataArrayEqual(copied, arr)
 
     def test_encoding(self):
         expected = {'foo': 'bar'}
