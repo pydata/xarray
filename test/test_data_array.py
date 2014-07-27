@@ -51,6 +51,8 @@ class TestDataArray(TestCase):
         self.assertIsInstance(self.ds['x'].as_index, pd.Index)
         with self.assertRaisesRegexp(ValueError, 'must be 1-dimensional'):
             self.ds['foo'].as_index
+        with self.assertRaises(AttributeError):
+            self.dv.variable = self.v
 
     def test_name(self):
         arr = self.dv

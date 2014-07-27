@@ -238,10 +238,6 @@ class DataArray(AbstractArray):
     def variable(self):
         return self.dataset.variables[self.name]
 
-    @variable.setter
-    def variable(self, value):
-        self.dataset[self.name] = value
-
     @property
     def dtype(self):
         return self.variable.dtype
@@ -842,7 +838,7 @@ class DataArray(AbstractArray):
         def func(self, other):
             self._check_coords_compat(other)
             other_array = getattr(other, 'variable', other)
-            self.variable = f(self.variable, other_array)
+            f(self.variable, other_array)
             if hasattr(other, 'coordinates'):
                 self.dataset.merge(other.coordinates, inplace=True)
             return self
