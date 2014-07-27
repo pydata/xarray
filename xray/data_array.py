@@ -185,6 +185,8 @@ class DataArray(AbstractArray):
                     coordinates = [data.index]
                 elif isinstance(data, pd.DataFrame):
                     coordinates = [data.index, data.columns]
+                elif isinstance(data, (pd.Index, variable.Coordinate)):
+                    coordinates = [data]
                 elif isinstance(data, pd.Panel):
                     coordinates = [data.items, data.major_axis, data.minor_axis]
             if dimensions is None:

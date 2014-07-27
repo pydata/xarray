@@ -173,8 +173,11 @@ class TestDataArray(TestCase):
         expected = DataArray([data], expected.coordinates, ['dim_0', 'x', 'y'])
         self.assertDataArrayIdentical(expected, actual)
 
-        expected = DataArray(['a', 'b'], name='foo')
+        expected = Dataset({'foo': ('foo', ['a', 'b'])})['foo']
         actual = DataArray(pd.Index(['a', 'b'], name='foo'))
+        self.assertDataArrayIdentical(expected, actual)
+
+        actual = DataArray(Coordinate('foo', ['a', 'b']))
         self.assertDataArrayIdentical(expected, actual)
 
     def test_equals_and_identical(self):
