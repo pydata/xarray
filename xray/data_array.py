@@ -240,6 +240,9 @@ class DataArray(AbstractArray):
 
     @contextlib.contextmanager
     def _set_new_dataset(self):
+        """Context manager to use for modifying _dataset, in a manner that
+        can be safely rolled back if an error is encountered.
+        """
         ds = self.dataset.copy(deep=False)
         yield ds
         self._dataset = ds
