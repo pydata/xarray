@@ -247,8 +247,7 @@ class DataArray(AbstractArray):
     @name.setter
     def name(self, value):
         with self._set_new_dataset() as ds:
-            del ds[self.name]
-            ds[value] = self.variable
+            ds.rename({self.name: value}, inplace=True)
         self._name = value
 
     @property

@@ -57,10 +57,16 @@ class TestDataArray(TestCase):
     def test_name(self):
         arr = self.dv
         self.assertEqual(arr.name, 'foo')
+
         copied = arr.copy()
         arr.name = 'bar'
         self.assertEqual(arr.name, 'bar')
         self.assertDataArrayEqual(copied, arr)
+
+        actual = DataArray(Coordinate('x', [3]))
+        actual.name = 'y'
+        expected = DataArray(Coordinate('y', [3]))
+        self.assertDataArrayIdentical(actual, expected)
 
     def test_dimensions(self):
         arr = self.dv
