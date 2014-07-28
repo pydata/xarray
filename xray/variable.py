@@ -749,7 +749,7 @@ class Coordinate(Variable):
         return self.as_index.equals(other.as_index)
 
     def to_coord(self):
-        """Return this variable as an xray.Index"""
+        """Return this variable as an xray.Coordinate"""
         return self
 
     # pandas.Index like properties:
