@@ -758,6 +758,10 @@ class Coordinate(Variable):
     def name(self):
         return self.dimensions[0]
 
+    @name.setter
+    def name(self, value):
+        raise AttributeError('cannot modify name of Coordinate in-place')
+
     def get_indexer(self, label):
         return self.as_index.get_indexer(label)
 
