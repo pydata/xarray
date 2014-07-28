@@ -305,10 +305,12 @@ class TestDataArray(TestCase):
             self.assertArrayEqual(da.coordinates[k], v)
 
         actual = da.copy()
+        orig_dataset = actual.dataset
         actual.coordinates = [[5, 6], [7, 8, 9]]
         expected = DataArray(np.zeros((2, 3)), coordinates=[[5, 6], [7, 8, 9]],
                              dimensions=['x', 'y'])
         self.assertDataArrayIdentical(actual, expected)
+        self.assertIsNot(actual.dataset, orig_dataset)
 
         actual = da.copy()
         actual.coordinates = expected.coordinates
@@ -319,6 +321,15 @@ class TestDataArray(TestCase):
                              dimensions=['foo', 'bar'])
         actual.coordinates = expected.coordinates
         self.assertDataArrayIdentical(actual, expected)
+
+        with self.assertRaisesRegexp(ValueError, 'coordinate has size'):
+            da.coordinates['x'] = ['a']
+
+        with self.assertRaises(IndexError):
+            da.coordinates['foobar'] = np.arange(4)
+
+        with self.assertRaisesRegexp(ValueError, 'coordinate has size'):
+            da.coordinates = da.isel(y=slice(2)).coordinates
 
         # modify the coordinates on a coordinate itself
         x = DataArray(Coordinate('x', [10.0, 20.0, 30.0]))

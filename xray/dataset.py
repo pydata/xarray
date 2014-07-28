@@ -256,6 +256,10 @@ class DatasetCoordinates(common.AbstractCoordinates):
         else:
             raise KeyError(repr(key))
 
+    def __setitem__(self, key, value):
+        expected_size = self[key].size if key in self else None
+        self._data[key] = self._convert_to_coord(key, value, expected_size)
+
 
 def as_dataset(obj):
     """Cast the given object to a Dataset.

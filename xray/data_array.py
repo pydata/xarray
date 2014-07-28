@@ -81,6 +81,12 @@ class _LocIndexer(object):
         self.data_array[self._remap_key(key)] = value
 
 
+def _assert_coordinates_same_size(orig, new):
+    if not new.size == orig.size:
+        raise ValueError('new coordinate has size %s but the existing '
+                         'coordinate has size %s' % (new.size, orig.size))
+
+
 class DataArrayCoordinates(AbstractCoordinates):
     """Dictionary like container for DataArray coordinates.
 
@@ -98,10 +104,15 @@ class DataArrayCoordinates(AbstractCoordinates):
             raise KeyError(repr(key))
 
     def __setitem__(self, key, value):
+        if isinstance(key, (int, np.integer)):
+            key = self._data.dimensions[key]
+
+        if key not in self:
+            raise IndexError('%s is not a coordinate')
+
+        coord = self._convert_to_coord(key, value, self[key].size)
         with self._data._set_new_dataset() as ds:
-            if isinstance(key, (int, np.integer)):
-                key = self._data.dimensions[key]
-            ds[key] = (key, value)
+            ds._variables[key] = coord
 
 
 class DataArray(AbstractArray):
@@ -374,10 +385,10 @@ class DataArray(AbstractArray):
 
     @coordinates.setter
     def coordinates(self, value):
+        if not len(value) == self.ndim:
+            raise ValueError('%s coordinates supplied but data has ndim=%s'
+                             % (len(value), self.ndim))
         with self._set_new_dataset() as ds:
-            if not len(value) == self.ndim:
-                raise ValueError('%s coordinates supplied but data has ndim=%s'
-                                 % (len(value), self.ndim))
             # TODO: allow setting to dict-like objects other than
             # DataArrayCoordinates?
             if isinstance(value, DataArrayCoordinates):
@@ -392,7 +403,9 @@ class DataArray(AbstractArray):
                 dimensions = self.dimensions
 
             for k, v in zip(dimensions, value):
-                ds[k] = (k, v)
+                coord = DataArrayCoordinates._convert_to_coord(
+                    k, v, expected_size=ds.coordinates[k].size)
+                ds[k] = coord
         self._name = name
 
     def load_data(self):

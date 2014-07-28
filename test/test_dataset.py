@@ -183,6 +183,22 @@ class TestDataset(TestCase):
         actual = repr(data.coordinates)
         self.assertEquals(expected, actual)
 
+    def test_coordinates_modify(self):
+        data = Dataset({'x': ('x', [-1, -2]),
+                        'y': ('y', [0, 1, 2]),
+                        'foo': (['x', 'y'], np.random.randn(2, 3))})
+
+        actual = data.copy(deep=True)
+        actual.coordinates['x'] = ['a', 'b']
+        self.assertArrayEqual(actual['x'], ['a', 'b'])
+
+        actual = data.copy(deep=True)
+        actual.coordinates['z'] = ['a', 'b']
+        self.assertArrayEqual(actual['z'], ['a', 'b'])
+
+        with self.assertRaisesRegexp(ValueError, 'coordinate has size'):
+            data.coordinates['x'] = [-1]
+
     def test_equals_and_identical(self):
         data = create_test_data(seed=42)
         self.assertTrue(data.equals(data))
