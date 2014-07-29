@@ -299,6 +299,7 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
         self._variables = VariablesDict()
         self._dimensions = SortedKeysDict()
         self._attributes = OrderedDict()
+        self._file_obj = None
         if variables is not None:
             self._set_init_vars_and_dims(variables)
         if attributes is not None:
@@ -349,7 +350,32 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
             variables = conventions.decode_cf_variables(
                 store.variables, mask_and_scale=mask_and_scale,
                 decode_times=decode_times, concat_characters=concat_characters)
-        return cls(variables, store.attrs)
+        obj = cls(variables, store.attrs)
+        obj._file_obj = store
+        return obj
+
+    def close(self):
+        """Close any datastores linked to this dataset
+        """
+        if self._file_obj is not None:
+            self._file_obj.close()
+        self._file_obj = None
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        self.close()
+
+    def __getstate__(self):
+        """Always load data in-memory before pickling"""
+        self.load_data()
+        # self.__dict__ is the default pickle object, we don't need to
+        # implement our own __setstate__ method to make pickle work
+        state = self.__dict__.copy()
+        # throw away any references to datastores in the pickle
+        state['_file_obj'] = None
+        return state
 
     @property
     def variables(self):
@@ -397,11 +423,12 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
 
     def load_data(self):
         """Manually trigger loading of this dataset's data from disk or a
-        remote source and return this dataset.
+        remote source into memory and return this dataset.
 
         Normally, it should not be necessary to call this method in user code,
         because all xray functions should either work on deferred data or
-        load data automatically.
+        load data automatically. However, this method can be necessary when
+        working with many file objects on disk.
         """
         for v in itervalues(self._variables):
             v.load_data()
@@ -424,6 +451,7 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
         obj._variables = variables
         obj._dimensions = self._dimensions.copy()
         obj._attributes = self._attributes.copy()
+        obj._file_obj = None
         return obj
 
     def __copy__(self):

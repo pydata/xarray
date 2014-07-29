@@ -80,13 +80,14 @@ class DatasetIOTestCases(object):
         expected = create_test_data()
 
         @contextlib.contextmanager
-        def assert_loads():
+        def assert_loads(vars=None):
             with self.roundtrip(expected) as actual:
                 for v in actual.variables.values():
                     self.assertFalse(v._in_memory())
                 yield actual
-                for v in actual.variables.values():
-                    self.assertTrue(v._in_memory())
+                for k, v in actual.variables.items():
+                    if vars is None or k in vars:
+                        self.assertTrue(v._in_memory())
                 self.assertDatasetAllClose(expected, actual)
 
         with self.assertRaises(AssertionError):
@@ -97,7 +98,7 @@ class DatasetIOTestCases(object):
         with assert_loads() as ds:
             ds.load_data()
 
-        with assert_loads() as ds:
+        with assert_loads(['var1', 'dim1', 'dim2']) as ds:
             ds['var1'].load_data()
 
     def test_roundtrip_None_variable(self):
@@ -172,9 +173,9 @@ class DatasetIOTestCases(object):
             self.assertDatasetAllClose(encoded, actual)
 
     def test_roundtrip_example_1_netcdf(self):
-        expected = open_example_dataset('example_1.nc')
-        with self.roundtrip(expected) as actual:
-            self.assertDatasetIdentical(expected, actual)
+        with open_example_dataset('example_1.nc') as expected:
+            with self.roundtrip(expected) as actual:
+                self.assertDatasetIdentical(expected, actual)
 
     def test_orthogonal_indexing(self):
         in_memory = create_test_data()
@@ -190,9 +191,9 @@ class DatasetIOTestCases(object):
             self.assertDatasetAllClose(expected, actual)
 
     def test_pickle(self):
-        on_disk = open_example_dataset('bears.nc')
-        unpickled = pickle.loads(pickle.dumps(on_disk))
-        self.assertDatasetIdentical(on_disk, unpickled)
+        with open_example_dataset('bears.nc') as on_disk:
+            unpickled = pickle.loads(pickle.dumps(on_disk))
+            self.assertDatasetIdentical(on_disk, unpickled)
 
 
 @contextlib.contextmanager
@@ -216,7 +217,8 @@ class NetCDF4DataTest(DatasetIOTestCases, TestCase):
     def roundtrip(self, data, **kwargs):
         with create_tmp_file() as tmp_file:
             data.dump(tmp_file)
-            yield open_dataset(tmp_file, **kwargs)
+            with open_dataset(tmp_file, **kwargs) as ds:
+                yield ds
 
     def test_open_encodings(self):
         # Create a netCDF file with explicit time units
@@ -236,12 +238,11 @@ class NetCDF4DataTest(DatasetIOTestCases, TestCase):
             encoding = {'units': units, 'dtype': np.dtype('int32')}
             expected['time'] = ('time', time, {}, encoding)
 
-            actual = open_dataset(tmp_file)
-
-            self.assertVariableEqual(actual['time'], expected['time'])
-            actual_encoding = dict((k, v) for k, v in iteritems(actual['time'].encoding)
-                                   if k in expected['time'].encoding)
-            self.assertDictEqual(actual_encoding, expected['time'].encoding)
+            with open_dataset(tmp_file) as actual:
+                self.assertVariableEqual(actual['time'], expected['time'])
+                actual_encoding = dict((k, v) for k, v in iteritems(actual['time'].encoding)
+                                       if k in expected['time'].encoding)
+                self.assertDictEqual(actual_encoding, expected['time'].encoding)
 
     def test_open_group(self):
         # Create a netCDF file with a dataset stored within a group
@@ -260,8 +261,8 @@ class NetCDF4DataTest(DatasetIOTestCases, TestCase):
 
             # check equivalent ways to specify group
             for group in 'foo', '/foo', 'foo/', '/foo/':
-                actual = open_dataset(tmp_file, group=group)
-                self.assertVariableEqual(actual['x'], expected['x'])
+                with open_dataset(tmp_file, group=group) as actual:
+                    self.assertVariableEqual(actual['x'], expected['x'])
 
             # check that missing group raises appropriate exception
             with self.assertRaises(IOError):
@@ -285,8 +286,8 @@ class NetCDF4DataTest(DatasetIOTestCases, TestCase):
 
             # check equivalent ways to specify group
             for group in 'foo/bar', '/foo/bar', 'foo/bar/', '/foo/bar/':
-                actual = open_dataset(tmp_file, group=group)
-                self.assertVariableEqual(actual['x'], expected['x'])
+                with open_dataset(tmp_file, group=group) as actual:
+                    self.assertVariableEqual(actual['x'], expected['x'])
 
     def test_dump_and_open_encodings(self):
         # Create a netCDF file with explicit time units
@@ -300,14 +301,12 @@ class NetCDF4DataTest(DatasetIOTestCases, TestCase):
                 ds.variables['time'].setncattr('units', units)
                 ds.variables['time'][:] = np.arange(10) + 4
 
-            xray_dataset = open_dataset(tmp_file)
-
-            with create_tmp_file() as tmp_file2:
-                xray_dataset.dump(tmp_file2)
-
-                with nc4.Dataset(tmp_file2, 'r') as ds:
-                    self.assertEqual(ds.variables['time'].getncattr('units'), units)
-                    self.assertArrayEqual(ds.variables['time'], np.arange(10) + 4)
+            with open_dataset(tmp_file) as xray_dataset:
+                with create_tmp_file() as tmp_file2:
+                    xray_dataset.dump(tmp_file2)
+                    with nc4.Dataset(tmp_file2, 'r') as ds:
+                        self.assertEqual(ds.variables['time'].getncattr('units'), units)
+                        self.assertArrayEqual(ds.variables['time'], np.arange(10) + 4)
 
     def test_compression_encoding(self):
         data = create_test_data()
@@ -342,9 +341,9 @@ class NetCDF4DataTest(DatasetIOTestCases, TestCase):
                 self.assertArrayEqual(expected, actual)
 
             # now check xray
-            ds = open_dataset(tmp_file)
-            expected = create_masked_and_scaled_data()
-            self.assertDatasetIdentical(expected, ds)
+            with open_dataset(tmp_file) as ds:
+                expected = create_masked_and_scaled_data()
+                self.assertDatasetIdentical(expected, ds)
 
     def test_0dimensional_variable(self):
         # This fix verifies our work-around to this netCDF4-python bug:
@@ -354,9 +353,9 @@ class NetCDF4DataTest(DatasetIOTestCases, TestCase):
                 v = nc.createVariable('x', 'int16')
                 v[...] = 123
 
-            ds = open_dataset(tmp_file)
-            expected = Dataset({'x': ((), 123)})
-            self.assertDatasetIdentical(expected, ds)
+            with open_dataset(tmp_file) as ds:
+                expected = Dataset({'x': ((), 123)})
+                self.assertDatasetIdentical(expected, ds)
 
     def test_variable_len_strings(self):
         with create_tmp_file() as tmp_file:
@@ -369,8 +368,8 @@ class NetCDF4DataTest(DatasetIOTestCases, TestCase):
 
             expected = Dataset({'x': ('x', values)})
             for kwargs in [{}, {'decode_cf': True}]:
-                actual = open_dataset(tmp_file, **kwargs)
-                self.assertDatasetIdentical(expected, actual)
+                with open_dataset(tmp_file, **kwargs) as actual:
+                    self.assertDatasetIdentical(expected, actual)
 
     def test_roundtrip_character_array(self):
         with create_tmp_file() as tmp_file:
@@ -384,8 +383,8 @@ class NetCDF4DataTest(DatasetIOTestCases, TestCase):
 
             values = np.array(['abc', 'def'], dtype='S')
             expected = Dataset({'x': ('x', values)})
-            actual = open_dataset(tmp_file)
-            self.assertDatasetIdentical(expected, actual)
+            with open_dataset(tmp_file) as actual:
+                self.assertDatasetIdentical(expected, actual)
 
             # regression test for #157
             with self.roundtrip(actual) as roundtripped:
@@ -403,7 +402,8 @@ class ScipyDataTest(DatasetIOTestCases, TestCase):
     @contextlib.contextmanager
     def roundtrip(self, data, **kwargs):
         serialized = data.dumps()
-        yield open_dataset(BytesIO(serialized), **kwargs)
+        with open_dataset(BytesIO(serialized), **kwargs) as ds:
+            yield ds
 
 
 @requires_netCDF4
@@ -418,7 +418,8 @@ class NetCDF3ViaNetCDF4DataTest(DatasetIOTestCases, TestCase):
     def roundtrip(self, data, **kwargs):
         with create_tmp_file() as tmp_file:
             data.dump(tmp_file, format='NETCDF3_CLASSIC')
-            yield open_dataset(tmp_file, **kwargs)
+            with open_dataset(tmp_file, **kwargs) as ds:
+                yield ds
 
 
 @requires_netCDF4
@@ -427,9 +428,9 @@ class PydapTest(TestCase):
     def test_cmp_local_file(self):
         url = 'http://test.opendap.org/opendap/hyrax/data/nc/bears.nc'
         actual = Dataset.load_store(backends.PydapDataStore(url))
-        expected = open_example_dataset('bears.nc')
-        # don't check attributes since pydap doesn't serialize them correctly
-        # also skip the "bears" variable since the test DAP server incorrectly
-        # concatenates it.
-        self.assertDatasetEqual(actual.unselect('bears'),
-                                expected.unselect('bears'))
+        with open_example_dataset('bears.nc') as expected:
+            # don't check attributes since pydap doesn't serialize them correctly
+            # also skip the "bears" variable since the test DAP server incorrectly
+            # concatenates it.
+            self.assertDatasetEqual(actual.unselect('bears'),
+                                    expected.unselect('bears'))
