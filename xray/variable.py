@@ -749,7 +749,7 @@ class Coordinate(Variable):
         return self.as_index.equals(other.as_index)
 
     def to_coord(self):
-        """Return this variable as an xray.Index"""
+        """Return this variable as an xray.Coordinate"""
         return self
 
     # pandas.Index like properties:
@@ -757,6 +757,10 @@ class Coordinate(Variable):
     @property
     def name(self):
         return self.dimensions[0]
+
+    @name.setter
+    def name(self, value):
+        raise AttributeError('cannot modify name of Coordinate in-place')
 
     def get_indexer(self, label):
         return self.as_index.get_indexer(label)

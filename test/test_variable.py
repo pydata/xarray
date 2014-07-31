@@ -585,7 +585,6 @@ class TestCoordinate(TestCase, VariableSubclassTestCases):
         self.assertEqual(float, x.dtype)
         self.assertArrayEqual(np.arange(3), x)
         self.assertEqual(float, x.values.dtype)
-        self.assertEqual('x', x.name)
         # after inspecting x.values, the Coordinate value will be saved as an Index
         self.assertIsInstance(x._data, PandasIndexAdapter)
         with self.assertRaisesRegexp(TypeError, 'cannot be modified'):
@@ -602,6 +601,13 @@ class TestCoordinate(TestCase, VariableSubclassTestCases):
         self.assertArrayEqual(t[:2].values, data[:2])
         self.assertEqual(t.dtype, object)
         self.assertEqual(t[:2].dtype, object)
+
+    def test_name(self):
+        coord = Coordinate('x', [10.0])
+        self.assertEqual(coord.name, 'x')
+
+        with self.assertRaises(AttributeError):
+            coord.name = 'y'
 
 
 class TestAsCompatibleData(TestCase):

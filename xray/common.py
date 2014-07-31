@@ -119,6 +119,20 @@ class AbstractCoordinates(Mapping):
         return '\n'.join(_wrap_indent(repr(v.as_index), '%s: ' % k)
                          for k, v in self.items())
 
+    @staticmethod
+    def _convert_to_coord(key, value, expected_size=None):
+        from .variable import Coordinate, as_variable
+
+        if not isinstance(value, AbstractArray):
+            value = Coordinate(key, value)
+        coord = as_variable(value).to_coord()
+
+        if expected_size is not None and coord.size != expected_size:
+            raise ValueError('new coordinate has size %s but the existing '
+                             'coordinate has size %s'
+                             % (coord.size, expected_size))
+        return coord
+
 
 def _summarize_attributes(data):
     if data.attrs:

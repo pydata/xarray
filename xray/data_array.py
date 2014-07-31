@@ -1,3 +1,4 @@
+import contextlib
 import functools
 import operator
 import warnings
@@ -80,6 +81,12 @@ class _LocIndexer(object):
         self.data_array[self._remap_key(key)] = value
 
 
+def _assert_coordinates_same_size(orig, new):
+    if not new.size == orig.size:
+        raise ValueError('new coordinate has size %s but the existing '
+                         'coordinate has size %s' % (new.size, orig.size))
+
+
 class DataArrayCoordinates(AbstractCoordinates):
     """Dictionary like container for DataArray coordinates.
 
@@ -95,6 +102,17 @@ class DataArrayCoordinates(AbstractCoordinates):
             return self._data.dataset.variables[dimension]
         else:
             raise KeyError(repr(key))
+
+    def __setitem__(self, key, value):
+        if isinstance(key, (int, np.integer)):
+            key = self._data.dimensions[key]
+
+        if key not in self:
+            raise IndexError('%s is not a coordinate')
+
+        coord = self._convert_to_coord(key, value, self[key].size)
+        with self._data._set_new_dataset() as ds:
+            ds._variables[key] = coord
 
 
 class DataArray(AbstractArray):
@@ -178,6 +196,8 @@ class DataArray(AbstractArray):
                     coordinates = [data.index]
                 elif isinstance(data, pd.DataFrame):
                     coordinates = [data.index, data.columns]
+                elif isinstance(data, (pd.Index, variable.Coordinate)):
+                    coordinates = [data]
                 elif isinstance(data, pd.Panel):
                     coordinates = [data.items, data.major_axis, data.minor_axis]
             if dimensions is None:
@@ -197,12 +217,10 @@ class DataArray(AbstractArray):
                 dimensions, data, attributes, encoding)
             dataset = xray.Dataset(variables)
         else:
+            # move this back to an alternate constructor?
             if name not in dataset and name not in dataset.virtual_variables:
                 raise ValueError('name %r must be a variable in dataset %s' %
                                  (name, dataset))
-            # make a shallow copy of the dataset so we can safely modify the
-            # array in-place?
-            # dataset = dataset.copy(deep=False)
 
         self._dataset = dataset
         self._name = name
@@ -220,18 +238,24 @@ class DataArray(AbstractArray):
         """
         return self._name
 
+    @contextlib.contextmanager
+    def _set_new_dataset(self):
+        """Context manager to use for modifying _dataset, in a manner that
+        can be safely rolled back if an error is encountered.
+        """
+        ds = self.dataset.copy(deep=False)
+        yield ds
+        self._dataset = ds
+
     @name.setter
     def name(self, value):
-        raise AttributeError('cannot modify the name of a %s inplace; use the '
-                             "'rename' method instead" % type(self).__name__)
+        with self._set_new_dataset() as ds:
+            ds.rename({self.name: value}, inplace=True)
+        self._name = value
 
     @property
     def variable(self):
         return self.dataset.variables[self.name]
-
-    @variable.setter
-    def variable(self, value):
-        self.dataset[self.name] = value
 
     @property
     def dtype(self):
@@ -273,6 +297,17 @@ class DataArray(AbstractArray):
     @property
     def dimensions(self):
         return self.variable.dimensions
+
+    @dimensions.setter
+    def dimensions(self, value):
+        with self._set_new_dataset() as ds:
+            if not len(value) == self.ndim:
+                raise ValueError('%s dimensions supplied but data has ndim=%s'
+                                 % (len(value), self.ndim))
+            name_map = dict(zip(self.dimensions, value))
+            ds.rename(name_map, inplace=True)
+        if self.name in name_map:
+            self._name = name_map[self.name]
 
     def _key_to_indexers(self, key):
         return OrderedDict(
@@ -349,6 +384,31 @@ class DataArray(AbstractArray):
         indexing is also supported.
         """
         return DataArrayCoordinates(self)
+
+    @coordinates.setter
+    def coordinates(self, value):
+        if not len(value) == self.ndim:
+            raise ValueError('%s coordinates supplied but data has ndim=%s'
+                             % (len(value), self.ndim))
+        with self._set_new_dataset() as ds:
+            # TODO: allow setting to dict-like objects other than
+            # DataArrayCoordinates?
+            if isinstance(value, DataArrayCoordinates):
+                # yes, this is regretably complex and probably slow
+                name_map = dict(zip(self.dimensions, value.keys()))
+                ds.rename(name_map, inplace=True)
+                name = name_map.get(self.name, self.name)
+                dimensions = ds[name].dimensions
+                value = value.values()
+            else:
+                name = self.name
+                dimensions = self.dimensions
+
+            for k, v in zip(dimensions, value):
+                coord = DataArrayCoordinates._convert_to_coord(
+                    k, v, expected_size=ds.coordinates[k].size)
+                ds[k] = coord
+        self._name = name
 
     def load_data(self):
         """Manually trigger loading of this array's data from disk or a
@@ -836,7 +896,7 @@ class DataArray(AbstractArray):
         def func(self, other):
             self._check_coords_compat(other)
             other_array = getattr(other, 'variable', other)
-            self.variable = f(self.variable, other_array)
+            f(self.variable, other_array)
             if hasattr(other, 'coordinates'):
                 self.dataset.merge(other.coordinates, inplace=True)
             return self

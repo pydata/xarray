@@ -183,6 +183,22 @@ class TestDataset(TestCase):
         actual = repr(data.coordinates)
         self.assertEquals(expected, actual)
 
+    def test_coordinates_modify(self):
+        data = Dataset({'x': ('x', [-1, -2]),
+                        'y': ('y', [0, 1, 2]),
+                        'foo': (['x', 'y'], np.random.randn(2, 3))})
+
+        actual = data.copy(deep=True)
+        actual.coordinates['x'] = ['a', 'b']
+        self.assertArrayEqual(actual['x'], ['a', 'b'])
+
+        actual = data.copy(deep=True)
+        actual.coordinates['z'] = ['a', 'b']
+        self.assertArrayEqual(actual['z'], ['a', 'b'])
+
+        with self.assertRaisesRegexp(ValueError, 'coordinate has size'):
+            data.coordinates['x'] = [-1]
+
     def test_equals_and_identical(self):
         data = create_test_data(seed=42)
         self.assertTrue(data.equals(data))
@@ -428,6 +444,15 @@ class TestDataset(TestCase):
         renamed = data.rename(newnames)
         with self.assertRaises(UnexpectedDataAccess):
             renamed['renamed_var1'].values
+
+    def test_rename_inplace(self):
+        data = Dataset({'z': ('x', [2, 3, 4])})
+        copied = data.copy()
+        renamed = data.rename({'x': 'y'})
+        data.rename({'x': 'y'}, inplace=True)
+        self.assertDatasetIdentical(data, renamed)
+        self.assertFalse(data.equals(copied))
+        self.assertEquals(data.dimensions, {'y': 3})
 
     def test_update(self):
         data = create_test_data(seed=0)
