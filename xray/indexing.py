@@ -117,6 +117,8 @@ def convert_label_indexer(index, label, index_name=''):
         label = np.asarray(label)
         if label.ndim == 0:
             indexer = index.get_loc(np.asscalar(label))
+        elif label.dtype.kind == 'b':
+            indexer, = np.nonzero(label)
         else:
             indexer = index.get_indexer(label)
             if np.any(indexer < 0):
