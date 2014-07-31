@@ -1119,6 +1119,50 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
 
         return Dataset(variables=variables, attributes=attrs)
 
+    def apply(self, func, to=None, keep_attrs=False, **kwargs):
+        """Apply a function over noncoordinates in this dataset.
+
+        Parameters
+        ----------
+        func : function
+            Function which can be called in the form `f(x, **kwargs)` to
+            transform each DataArray `x` in this dataset into another
+            DataArray.
+        to : str or sequence of str, optional
+            Explicit list of noncoordinates in this dataset to which to apply
+            `func`. Unlisted noncoordinates are passed through unchanged. By
+            default, `func` is applied to all noncoordinates in this dataset.
+        keep_attrs : bool, optional
+            If True, the datasets's attributes (`attrs`) will be copied from
+            the original object to the new one. If False, the new object will
+            be returned without attributes.
+        **kwargs : dict
+            Additional keyword arguments passed on to `func`.
+
+        Returns
+        -------
+        applied : Dataset
+            Resulting dataset from applying over each noncoordinate.
+            Coordinates which are no longer used as the dimension of a
+            noncoordinate are dropped.
+        """
+        if to is not None:
+            to = set([to] if isinstance(to, basestring) else to)
+            bad_to = to - set(self.noncoordinates)
+            if bad_to:
+                raise ValueError('Dataset does not contain the '
+                                 'noncoordinates: %r' % list(bad_to))
+        else:
+            to = set(self.noncoordinates)
+
+        variables = OrderedDict()
+        for name, var in iteritems(self.noncoordinates):
+            variables[name] = func(var, **kwargs) if name in to else var
+
+        attrs = self.attrs if keep_attrs else {}
+
+        return Dataset(variables, attrs)
+
     @classmethod
     def concat(cls, datasets, dimension='concat_dimension', indexers=None,
                mode='different', concat_over=None, compat='equals'):
