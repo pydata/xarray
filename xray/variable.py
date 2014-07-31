@@ -718,6 +718,11 @@ class Coordinate(Variable):
     _cache_data_class = PandasIndexAdapter
 
     def __init__(self, name, data, attributes=None, encoding=None):
+        if isinstance(data, pd.MultiIndex):
+            raise NotImplementedError(
+                'no support yet for using a pandas.MultiIndex in an '
+                'xray.Coordinate')
+
         super(Coordinate, self).__init__(name, data, attributes, encoding)
         if self.ndim != 1:
             raise ValueError('%s objects must be 1-dimensional' %
