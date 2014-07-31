@@ -153,7 +153,7 @@ class DataArray(AbstractArray):
         Dictionary of Coordinate objects that label values along each dimension.
     """
     def __init__(self, data=None, coordinates=None, dimensions=None, name=None,
-                 attributes=None, encoding=None):
+                 attrs=None, encoding=None):
         """
         Parameters
         ----------
@@ -175,7 +175,7 @@ class DataArray(AbstractArray):
             ``['dim_0', ... 'dim_n']``.
         name : str or None, optional
             Name of this array.
-        attributes : dict_like or None, optional
+        attrs : dict_like or None, optional
             Attributes to assign to the new variable. By default, an empty
             attribute dictionary is initialized.
         encoding : dict_like or None, optional
@@ -200,8 +200,8 @@ class DataArray(AbstractArray):
             dimensions = getattr(data, 'dimensions', None)
         if name is None:
             name = getattr(data, 'name', None)
-        if attributes is None:
-            attributes = getattr(data, 'attrs', None)
+        if attrs is None:
+            attrs = getattr(data, 'attrs', None)
         if encoding is None:
             encoding = getattr(data, 'encoding', None)
 
@@ -210,7 +210,7 @@ class DataArray(AbstractArray):
             data.shape, coordinates, dimensions)
         variables = OrderedDict((var.name, var) for var in coordinates)
         variables[name] = variable.Variable(
-            dimensions, data, attributes, encoding)
+            dimensions, data, attrs, encoding)
         dataset = xray.Dataset(variables)
 
         self._dataset = dataset

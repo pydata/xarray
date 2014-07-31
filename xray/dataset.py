@@ -289,7 +289,7 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
     coordinates, which means they are saved in the dataset as `xray.Coordinate`
     objects.
     """
-    def __init__(self, variables=None, attributes=None):
+    def __init__(self, variables=None, attrs=None):
         """To load data from a file or file-like object, use the `open_dataset`
         function.
 
@@ -297,21 +297,21 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
         ----------
         variables : dict-like, optional
             A mapping from variable names to `DataArray` objets, `Variable`
-            objects or sequences of the form `(dimensions, data[, attributes])`
+            objects or sequences of the form `(dimensions, data[, attrs])`
             which can be used as arguments to create a new `Variable`. Each
             dimension must have the same length in all variables in which it
             appears.
-        attributes : dict-like, optional
+        attrs : dict-like, optional
             Global attributes to save on this dataset.
         """
         self._variables = VariablesDict()
         self._dimensions = SortedKeysDict()
-        self._attributes = OrderedDict()
+        self._attrs = OrderedDict()
         self._file_obj = None
         if variables is not None:
             self._set_init_vars_and_dims(variables)
-        if attributes is not None:
-            self._attributes.update(attributes)
+        if attrs is not None:
+            self._attrs.update(attrs)
 
     def _add_missing_coordinates(self):
         """Add missing coordinate variables IN-PLACE to the variables dict
@@ -403,22 +403,22 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
     @property
     def attributes(self):
         utils.alias_warning('attributes', 'attrs', 3)
-        return self._attributes
+        return self._attrs
 
     @attributes.setter
     def attributes(self, value):
         utils.alias_warning('attributes', 'attrs', 3)
-        self._attributes = OrderedDict(value)
+        self._attrs = OrderedDict(value)
 
     @property
     def attrs(self):
         """Dictionary of global attributes on this dataset
         """
-        return self._attributes
+        return self._attrs
 
     @attrs.setter
     def attrs(self, value):
-        self._attributes = OrderedDict(value)
+        self._attrs = OrderedDict(value)
 
     @property
     def dimensions(self):
@@ -458,7 +458,7 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
         obj = self.__new__(type(self))
         obj._variables = variables
         obj._dimensions = self._dimensions.copy()
-        obj._attributes = self._attributes.copy()
+        obj._attrs = self._attrs.copy()
         obj._file_obj = None
         return obj
 
@@ -516,7 +516,7 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
         dataset.
 
         If value is an `Variable` object (or tuple of form
-        `(dimensions, data[, attributes])`), add it to this dataset as a new
+        `(dimensions, data[, attrs])`), add it to this dataset as a new
         variable.
         """
         self.merge({key: value}, inplace=True, overwrite_vars=[key])
@@ -1150,7 +1150,7 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
 
         attrs = self.attrs if keep_attrs else {}
 
-        return Dataset(variables=variables, attributes=attrs)
+        return Dataset(variables, attrs)
 
     def apply(self, func, to=None, keep_attrs=False, **kwargs):
         """Apply a function over noncoordinates in this dataset.

@@ -191,17 +191,17 @@ class Variable(AbstractArray):
     described outside the context of its parent Dataset (if you want such a
     fully described object, use a DataArray instead).
     """
-    def __init__(self, dims, data, attributes=None, encoding=None):
+    def __init__(self, dimensions, data, attrs=None, encoding=None):
         """
         Parameters
         ----------
-        dims : str or sequence of str
+        dimensions : str or sequence of str
             Name(s) of the the data dimension(s). Must be either a string (only
             for 1D data) or a sequence of strings with length equal to the
             number of dimensions.
         data : array_like
             Data array which supports numpy-like data access.
-        attributes : dict_like or None, optional
+        attrs : dict_like or None, optional
             Attributes to assign to the new variable. If None (default), an
             empty attribute dictionary is initialized.
         encoding : dict_like or None, optional
@@ -212,10 +212,10 @@ class Variable(AbstractArray):
             unrecognized encoding items.
         """
         self._data = _as_compatible_data(data)
-        self._dimensions = self._parse_dimensions(dims)
-        if attributes is None:
-            attributes = {}
-        self._attributes = OrderedDict(attributes)
+        self._dimensions = self._parse_dimensions(dimensions)
+        if attrs is None:
+            attrs = {}
+        self._attrs = OrderedDict(attrs)
         self._encoding = dict({} if encoding is None else encoding)
 
     @property
@@ -361,11 +361,11 @@ class Variable(AbstractArray):
     def attrs(self):
         """Dictionary of local attributes on this variable.
         """
-        return self._attributes
+        return self._attrs
 
     @attrs.setter
     def attrs(self, value):
-        self._attributes = OrderedDict(value)
+        self._attrs = OrderedDict(value)
 
     @property
     def encoding(self):
@@ -533,7 +533,7 @@ class Variable(AbstractArray):
 
         attrs = self.attrs if keep_attrs else {}
 
-        return Variable(dims, data, attributes=attrs)
+        return Variable(dims, data, attrs=attrs)
 
     @classmethod
     def concat(cls, variables, dimension='stacked_dimension',
@@ -717,13 +717,13 @@ class Coordinate(Variable):
     """
     _cache_data_class = PandasIndexAdapter
 
-    def __init__(self, name, data, attributes=None, encoding=None):
+    def __init__(self, name, data, attrs=None, encoding=None):
         if isinstance(data, pd.MultiIndex):
             raise NotImplementedError(
                 'no support yet for using a pandas.MultiIndex in an '
                 'xray.Coordinate')
 
-        super(Coordinate, self).__init__(name, data, attributes, encoding)
+        super(Coordinate, self).__init__(name, data, attrs, encoding)
         if self.ndim != 1:
             raise ValueError('%s objects must be 1-dimensional' %
                              type(self).__name__)

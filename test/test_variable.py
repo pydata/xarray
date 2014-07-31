@@ -339,9 +339,9 @@ class TestVariable(TestCase, VariableSubclassTestCases):
         d = np.random.rand(10, 3)
         d[0, 0] = np.nan
         v1 = Variable(('dim1', 'dim2'), data=d,
-                       attributes={'att1': 3, 'att2': [1, 2, 3]})
+                       attrs={'att1': 3, 'att2': [1, 2, 3]})
         v2 = Variable(('dim1', 'dim2'), data=d,
-                       attributes={'att1': 3, 'att2': [1, 2, 3]})
+                       attrs={'att1': 3, 'att2': [1, 2, 3]})
         self.assertTrue(v1.equals(v2))
         self.assertTrue(v1.identical(v2))
 

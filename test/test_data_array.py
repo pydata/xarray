@@ -160,7 +160,7 @@ class TestDataArray(TestCase):
         expected = Dataset({'foo': (['dim_0', 'dim_1'], data)})['foo']
         self.assertDataArrayIdentical(expected, actual)
 
-        actual = DataArray(data, dimensions=['x', 'y'], attributes={'bar': 2})
+        actual = DataArray(data, dimensions=['x', 'y'], attrs={'bar': 2})
         expected = Dataset({None: (['x', 'y'], data, {'bar': 2})})[None]
         self.assertDataArrayIdentical(expected, actual)
 
@@ -173,7 +173,7 @@ class TestDataArray(TestCase):
         expected = DataArray(data,
                              coordinates={'x': ['a', 'b'], 'y': [-1, -2]},
                              dimensions=['x', 'y'], name='foobar',
-                             attributes={'bar': 2}, encoding={'foo': 3})
+                             attrs={'bar': 2}, encoding={'foo': 3})
         actual = DataArray(expected)
         self.assertDataArrayIdentical(expected, actual)
 
