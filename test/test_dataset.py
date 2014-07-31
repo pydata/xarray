@@ -289,6 +289,8 @@ class TestDataset(TestCase):
         self.assertEqual(data.isel(time=slice(3)),
                          data.sel(
                             time=pd.date_range('2000-01-01', periods=3)))
+        self.assertEqual(data.isel(time=slice(3)),
+                         data.sel(time=(data['time.dayofyear'] <= 3)))
 
     def test_reindex_like(self):
         data = create_test_data()

@@ -265,6 +265,8 @@ class TestDataArray(TestCase):
         self.assertDataArrayIdentical(da, da.sel(x=slice(None)))
         self.assertDataArrayIdentical(da[1], da.sel(x='b'))
         self.assertDataArrayIdentical(da[:3], da.sel(x=slice('c')))
+        self.assertDataArrayIdentical(da[:3], da.sel(x=['a', 'b', 'c']))
+        self.assertDataArrayIdentical(da[:, :4], da.sel(y=(self.ds['y'] < 4)))
 
     def test_loc(self):
         self.ds['x'] = ('x', np.array(list('abcdefghij')))
@@ -274,6 +276,7 @@ class TestDataArray(TestCase):
         self.assertDataArrayIdentical(da[:3], da.loc[['a', 'b', 'c']])
         self.assertDataArrayIdentical(da[:3, :4],
                                       da.loc[['a', 'b', 'c'], np.arange(4)])
+        self.assertDataArrayIdentical(da[:, :4], da.loc[:, self.ds['y'] < 4])
         da.loc['a':'j'] = 0
         self.assertTrue(np.all(da.values == 0))
 
