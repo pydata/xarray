@@ -280,6 +280,11 @@ class TestDataArray(TestCase):
         da.loc['a':'j'] = 0
         self.assertTrue(np.all(da.values == 0))
 
+    def test_loc_single_boolean(self):
+        data = DataArray([0, 1], coordinates=[[True, False]])
+        self.assertEqual(data.loc[True], 0)
+        self.assertEqual(data.loc[False], 1)
+
     def test_coordinates(self):
         coordinates = [Coordinate('x', [-1, -2]), Coordinate('y', [0, 1, 2])]
         da = DataArray(np.random.randn(2, 3), coordinates, name='foo')
