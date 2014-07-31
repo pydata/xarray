@@ -198,6 +198,10 @@ class TestDataArray(TestCase):
         actual = DataArray(Coordinate('foo', ['a', 'b']))
         self.assertDataArrayIdentical(expected, actual)
 
+        s = pd.Series(range(2), pd.MultiIndex.from_product([['a', 'b'], [0]]))
+        with self.assertRaisesRegexp(NotImplementedError, 'MultiIndex'):
+            DataArray(s)
+
     def test_equals_and_identical(self):
         da2 = self.dv.copy()
         self.assertTrue(self.dv.equals(da2))
