@@ -392,7 +392,7 @@ class TestDataset(TestCase):
         actual = data.drop_vars('dim1')
         self.assertEqual(expected, actual)
 
-        with self.assertRaisesRegexp(ValueError, 'does not exist in this'):
+        with self.assertRaisesRegexp(ValueError, 'cannot be found'):
             data.drop_vars('not_found_here')
 
     def test_copy(self):
@@ -487,6 +487,9 @@ class TestDataset(TestCase):
         self.assertIsInstance(data['var1'], DataArray)
         self.assertVariableEqual(data['var1'], data.variables['var1'])
         self.assertDatasetIdentical(data['var1'].dataset, data)
+
+        with self.assertRaises(KeyError):
+            data['notfound']
 
     def test_virtual_variables(self):
         # access virtual variables
