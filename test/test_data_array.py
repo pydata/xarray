@@ -539,7 +539,7 @@ class TestDataArray(TestCase):
     def test_drop_vars(self):
         with self.assertRaisesRegexp(ValueError, 'cannot drop the name'):
             self.dv.drop_vars('foo')
-        with self.assertRaisesRegexp(ValueError, 'must be a variable in'):
+        with self.assertRaisesRegexp(ValueError, 'cannot drop a coordinate'):
             self.dv.drop_vars('y')
 
     def test_groupby_iter(self):

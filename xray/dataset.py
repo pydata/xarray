@@ -500,7 +500,9 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
     def __getitem__(self, key):
         """Access the given variable name in this dataset as a `DataArray`.
         """
-        return data_array.DataArray(name=key, dataset=self)
+        if key not in self and key not in self.virtual_variables:
+            raise KeyError(key)
+        return data_array.DataArray._new_from_dataset(self, key)
 
     def __setitem__(self, key, value):
         """Add an array to this dataset.
@@ -980,6 +982,12 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
         obj._update_vars_and_dims(new_variables, needs_copy=inplace)
         return obj
 
+    def _assert_all_in_dataset(self, names):
+        if any(k not in self and k not in self.virtual_variables
+               for k in names):
+            raise ValueError('One or more of the specified variables '
+                             'cannot be found in this dataset')
+
     def select_vars(self, *names):
         """Returns a new dataset that contains only the named variables and
         their coordinates.
@@ -995,6 +1003,7 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
             The returned object has the same attributes as the original. Only
             the named variables and their coordinates are included.
         """
+        self._assert_all_in_dataset(names)
         variables = OrderedDict((k, self[k]) for k in names)
         return type(self)(variables, self.attrs)
 
@@ -1014,10 +1023,7 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
             New dataset based on this dataset. Only the named variables are
             removed.
         """
-        if any(k not in self.variables and k not in self.virtual_variables
-               for k in names):
-            raise ValueError('One or more of the specified variable '
-                             'names does not exist in this dataset')
+        self._assert_all_in_dataset(names)
         drop = set(names)
         drop |= set(k for k, v in iteritems(self.variables)
                     if any(name in v.dimensions for name in names))

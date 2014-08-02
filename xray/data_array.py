@@ -153,7 +153,7 @@ class DataArray(AbstractArray):
         Dictionary of Coordinate objects that label values along each dimension.
     """
     def __init__(self, data=None, coordinates=None, dimensions=None, name=None,
-                 attributes=None, encoding=None, dataset=None):
+                 attributes=None, encoding=None):
         """
         Parameters
         ----------
@@ -184,46 +184,47 @@ class DataArray(AbstractArray):
             include '_FillValue', 'scale_factor', 'add_offset', 'dtype',
             'units' and 'calendar' (the later two only for datetime arrays).
             Unrecognized keys are ignored.
-        dataset : xray.Dataset, optional
-            If provided, all arguments other than 'name' are ignored and the
-            new data array is created from an existing array in this dataset.
         """
-        if dataset is None:
-            # try to fill in arguments from data if they weren't supplied
-            if coordinates is None:
-                coordinates = getattr(data, 'coordinates', None)
-                if isinstance(data, pd.Series):
-                    coordinates = [data.index]
-                elif isinstance(data, pd.DataFrame):
-                    coordinates = [data.index, data.columns]
-                elif isinstance(data, (pd.Index, variable.Coordinate)):
-                    coordinates = [data]
-                elif isinstance(data, pd.Panel):
-                    coordinates = [data.items, data.major_axis, data.minor_axis]
-            if dimensions is None:
-                dimensions = getattr(data, 'dimensions', None)
-            if name is None:
-                name = getattr(data, 'name', None)
-            if attributes is None:
-                attributes = getattr(data, 'attrs', None)
-            if encoding is None:
-                encoding = getattr(data, 'encoding', None)
+        # try to fill in arguments from data if they weren't supplied
+        if coordinates is None:
+            coordinates = getattr(data, 'coordinates', None)
+            if isinstance(data, pd.Series):
+                coordinates = [data.index]
+            elif isinstance(data, pd.DataFrame):
+                coordinates = [data.index, data.columns]
+            elif isinstance(data, (pd.Index, variable.Coordinate)):
+                coordinates = [data]
+            elif isinstance(data, pd.Panel):
+                coordinates = [data.items, data.major_axis, data.minor_axis]
+        if dimensions is None:
+            dimensions = getattr(data, 'dimensions', None)
+        if name is None:
+            name = getattr(data, 'name', None)
+        if attributes is None:
+            attributes = getattr(data, 'attrs', None)
+        if encoding is None:
+            encoding = getattr(data, 'encoding', None)
 
-            data = variable._as_compatible_data(data)
-            coordinates, dimensions = _infer_coordinates_and_dimensions(
-                data.shape, coordinates, dimensions)
-            variables = OrderedDict((var.name, var) for var in coordinates)
-            variables[name] = variable.Variable(
-                dimensions, data, attributes, encoding)
-            dataset = xray.Dataset(variables)
-        else:
-            # move this back to an alternate constructor?
-            if name not in dataset and name not in dataset.virtual_variables:
-                raise ValueError('name %r must be a variable in dataset %s' %
-                                 (name, dataset))
+        data = variable._as_compatible_data(data)
+        coordinates, dimensions = _infer_coordinates_and_dimensions(
+            data.shape, coordinates, dimensions)
+        variables = OrderedDict((var.name, var) for var in coordinates)
+        variables[name] = variable.Variable(
+            dimensions, data, attributes, encoding)
+        dataset = xray.Dataset(variables)
 
         self._dataset = dataset
         self._name = name
+
+    @classmethod
+    def _new_from_dataset(cls, dataset, name):
+        """Private constructor for the benefit Dataset.__getitem__ (skips all
+        validation)
+        """
+        obj = object.__new__(cls)
+        obj._dataset = dataset
+        obj._name = name
+        return obj
 
     @property
     def dataset(self):
@@ -578,6 +579,10 @@ class DataArray(AbstractArray):
         if self.name in names:
             raise ValueError('cannot drop the name of a DataArray with '
                              'drop_vars. Use the `drop_vars` method of '
+                             'the dataset instead.')
+        if any(name in self.dimensions for name in names):
+            raise ValueError('cannot drop a coordinate variable from a '
+                             'DataArray. Use the `drop_vars` method of '
                              'the dataset instead.')
         ds = self.dataset.drop_vars(*names)
         return ds[self.name]
