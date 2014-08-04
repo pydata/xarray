@@ -448,13 +448,16 @@ class TestDataset(TestCase):
             renamed['renamed_var1'].values
 
     def test_rename_inplace(self):
-        data = Dataset({'z': ('x', [2, 3, 4])})
+        times = pd.date_range('2000-01-01', periods=3)
+        data = Dataset({'z': ('x', [2, 3, 4]), 't': ('t', times)})
         copied = data.copy()
         renamed = data.rename({'x': 'y'})
         data.rename({'x': 'y'}, inplace=True)
         self.assertDatasetIdentical(data, renamed)
         self.assertFalse(data.equals(copied))
-        self.assertEquals(data.dimensions, {'y': 3})
+        self.assertEquals(data.dimensions, {'y': 3, 't': 3})
+        # check virtual variables
+        self.assertArrayEqual(data['t.dayofyear'], [1, 2, 3])
 
     def test_update(self):
         data = create_test_data(seed=0)

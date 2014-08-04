@@ -879,7 +879,7 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
             if k not in self.variables:
                 raise ValueError("cannot rename %r because it is not a "
                                  "variable in this dataset" % k)
-        variables = OrderedDict()
+        variables = VariablesDict()
         for k, v in iteritems(self.variables):
             name = name_dict.get(k, k)
             dims = tuple(name_dict.get(dim, dim) for dim in v.dimensions)
