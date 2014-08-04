@@ -20,8 +20,8 @@ Attributes and underlying data
 .. autosummary::
    :toctree: generated/
 
-   Dataset.indexes
-   Dataset.nonindexes
+   Dataset.coordinates
+   Dataset.noncoordinates
    Dataset.dimensions
    Dataset.attrs
 
@@ -99,6 +99,7 @@ IO / Conversion
    Dataset.to_netcdf
    Dataset.dumps
    Dataset.dump_to_store
+   Dataset.close
    Dataset.to_dataframe
    Dataset.from_dataframe
 
@@ -146,7 +147,7 @@ Attributes and underlying data
 
    DataArray.values
    DataArray.as_index
-   DataArray.indexes
+   DataArray.coordinates
    DataArray.name
    DataArray.dataset
    DataArray.attrs

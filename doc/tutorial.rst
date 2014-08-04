@@ -15,11 +15,113 @@ To get started, we will import numpy, pandas and xray:
     import pandas as pd
     import xray
 
-``Dataset`` objects
--------------------
+``DataArray``
+-------------
 
-:py:class:`xray.Dataset` is xray's primary data structure. It is a dict-like
-container of labeled arrays (:py:class:`xray.DataArray` objects) with aligned
+:py:class:`xray.DataArray` is xray's implementation of a labeled,
+multi-dimensional array. It has three key properties:
+
+- ``values``: a numpy.ndarray holding the array's values
+- ``dimensions``: names for each axis, e.g., ``('x', 'y', 'z')``
+- ``coordinates``: tick labels along each dimension
+
+xray uses ``dimensions`` and ``coordinates`` to enable its core metadata aware
+operations. Dimensions provide names that xray uses instead of the ``axis``
+argument found in many numpy functions. Coordinates enable fast label based
+indexing and alignment, like the ``index`` found on a pandas
+:py:class:`~pandas.DataFrame` and :py:class:`~pandas.Series`.
+
+DataArray objects also can have a ``name`` and can hold arbitrary metadata in
+the form of their ``attrs`` property (an ordered dictionary). Names and
+attributes are strictly for users and user-written code: xray makes no attempt
+to interpret them, and propagates them only in unambiguous cases.
+
+Creating a DataArray
+~~~~~~~~~~~~~~~~~~~~
+
+The ``DataArray`` constructor takes a multi-dimensional array of values (e.g.,
+a numpy ndarray), a list of coordinates labels and a list of dimension names:
+
+.. ipython:: python
+
+    data = np.random.rand(4, 3)
+    locs = ['IA', 'IL', 'IN']
+    times = pd.date_range('2000-01-01', periods=4)
+    foo = xray.DataArray(data, coordinates=[times, locs],
+                         dimensions=['time', 'space'])
+    foo
+
+All of these arguments (except for ``data``) are optional, and will be filled
+in with default values:
+
+.. ipython:: python
+
+    xray.DataArray(data)
+
+You can also create a ``DataArray`` by supplying a pandas
+:py:class`~pandas.Series`, :py:class`~pandas.DataFrame` or
+:py:class`~pandas.Panel`, in which case any non-specified arguments in the
+``DataArray`` constructor will be filled in from the pandas object:
+
+.. ipython:: python
+
+    df = pd.DataFrame({'x': [0, 1], 'y': [2, 3]}, index=['a', 'b'])
+    df.index.name = 'abc'
+    df.columns.name = 'xyz'
+    df
+    xray.DataArray(df)
+
+xray does not (yet!) support labeling coordinate values with a
+:py:class:`pandas.MultiIndex` (see :issue:`164`).
+However, the alternate ``from_series`` constructor will automatically unpack
+any hierarchical indexes it encounters by expanding the series into a
+multi-dimensional array, as described in `Working with pandas`_.
+
+DataArray properties
+~~~~~~~~~~~~~~~~~~~~
+
+Let's take a look at the important properties on our array:
+
+.. ipython:: python
+
+    foo.values
+    foo.dimensions
+    foo.coordinates
+    foo.attrs
+    print(foo.name)
+
+Now fill in some of that missing metadata:
+
+.. ipython:: python
+
+    foo.name = 'foo'
+    foo.attrs['units'] = 'inches'
+    foo
+
+The ``coordinates`` property is ``dict`` like. Individual coordinates can be
+accessed by name or axis number:
+
+.. ipython:: python
+
+    foo.coordinates['time']
+    foo.coordinates[0]
+
+These are :py:class:`xray.Coordinate` objects, which contain tick-labels for
+each dimension.
+
+You can also access coordinates by indexing a DataArray directly by name, in
+which case it returns another DataArray:
+
+.. ipython:: python
+
+    foo['time']
+
+``Dataset``
+-----------
+
+:py:class:`xray.Dataset` is xray's multi-dimensional equivalent of a
+:py:class:`~pandas.DataFrame`. It is a dict-like
+container of labeled arrays (:py:class:`~xray.DataArray` objects) with aligned
 dimensions. It is designed as an in-memory representation of the data model
 from the `NetCDF`__ file format.
 
@@ -29,24 +131,30 @@ Creating a ``Dataset``
 ~~~~~~~~~~~~~~~~~~~~~~
 
 To make an :py:class:`xray.Dataset` from scratch, pass in a dictionary with
-values in the form ``(dimensions, data[, attributes])``.
-
-- `dimensions` should be a sequence of strings.
-- `data` should be a numpy.ndarray (or array-like object) that has a
-  dimensionality equal to the length of the dimensions list.
+values in the form ``(dimensions, data[, attrs])``:
 
 .. ipython:: python
 
-    foo_values = np.random.RandomState(0).rand(3, 4)
-    times = pd.date_range('2000-01-01', periods=3)
-
+    times
+    locs
+    data
     ds = xray.Dataset({'time': ('time', times),
-                       'foo': (['time', 'space'], foo_values)})
+                       'space': ('space', locs),
+                       'foo': (['time', 'space'], data)})
     ds
 
-You can also insert :py:class:`xray.Variable` or :py:class:`xray.DataArray`
-objects directly into a ``Dataset``, or create an dataset from a
-:py:class:`pandas.DataFrame` with
+- ``dimensions`` should be a sequence of strings.
+- ``data`` should be a numpy.ndarray (or array-like object) that has a
+  dimensionality equal to the length of the dimensions list.
+
+We can also use :py:class:`xray.Variable` or :py:class:`xray.DataArray`
+objects instead of tuples:
+
+.. ipython:: python
+
+    xray.Dataset({'bar': foo})
+
+You can also create an dataset from a :py:class:`pandas.DataFrame` with
 :py:meth:`Dataset.from_dataframe <xray.Dataset.from_dataframe>` or from a
 NetCDF file on disk with :py:func:`~xray.open_dataset`. See
 `Working with pandas`_ and `Serialization and IO`_.
@@ -63,21 +171,21 @@ values given by :py:class:`xray.DataArray` objects:
 
     ds.keys()
 
-    ds['time']
+    ds['foo']
 
-The valid keys include each listed "index" and "nonindex".
-Indexes are arrays that label values along a particular dimension, implemented
+The valid keys include each listed "coordinate" and "noncoordinate".
+Coordinates are arrays that label values along a particular dimension, implemented
 as a thin wrapper wrapper around a :py:class:`pandas.Index` object. They
 are created automatically from dataset arrays whose name is equal to the one
 item in their list of dimensions.
 
-Nonindexes include all arrays in a ``Dataset`` other than its indexes.
+Noncoordinate include all arrays in a ``Dataset`` other than its coordinates.
 These arrays can exist along multiple dimensions. The numbers in the columns in
 the ``Dataset`` representation indicate the order in which dimensions appear
 for each array (on a ``Dataset``, the dimensions are always listed in
 alphabetical order).
 
-We didn't explicitly include an index for the "space" dimension, so it
+We didn't explicitly include an coordinate for the "space" dimension, so it
 was filled with an array of ascending integers of the proper length:
 
 .. ipython:: python
@@ -86,11 +194,11 @@ was filled with an array of ascending integers of the proper length:
 
     ds['foo']
 
-Nonindexes and indexes are listed explicitly by the
-:py:attr:`~xray.Dataset.nonindexes` and
-:py:attr:`~xray.Dataset.indexes` attributes.
+Noncoordinate and coordinates are listed explicitly by the
+:py:attr:`~xray.Dataset.noncoordinates` and
+:py:attr:`~xray.Dataset.coordinates` attributes.
 
-There are also a few derived variables based on datetime indexes that you
+There are also a few derived variables based on datetime coordinates that you
 can access from a dataset (e.g., "year", "month" and "day"), even if you didn't
 explicitly add them. These are known as
 ":py:attr:`~xray.Dataset.virtual_variables`":
@@ -109,8 +217,8 @@ Finally, datasets also store arbitrary metadata in the form of `attributes`:
     ds
 
 xray does not enforce any restrictions on attributes, but serialization to
-some file formats may fail if you put in objects that aren't strings, numbers
-or arrays.
+some file formats may fail if you put in objects that are not strings, numbers
+or :py:class:`numpy.ndarray` objects.
 
 Modifying datasets
 ~~~~~~~~~~~~~~~~~~
@@ -119,12 +227,12 @@ We can update a dataset in-place using Python's standard dictionary syntax:
 
 .. ipython:: python
 
-    ds['numbers'] = ('space', [10, 10, 20, 20])
-    ds['abc'] = ('time', ['A', 'B', 'C'])
+    ds['numbers'] = ('time', [10, 10, 20, 20])
+    ds['abc'] = ('space', ['A', 'B', 'C'])
     ds
 
 It should be evident now how a ``Dataset`` lets you store many arrays along a
-(partially) shared set of common dimensions and indexes.
+(partially) shared set of common dimensions and coordinates.
 
 To change the variables in a ``Dataset``, you can use all the standard dictionary
 methods, including ``values``, ``items``, ``__del__``, ``get`` and
@@ -132,15 +240,15 @@ methods, including ``values``, ``items``, ``__del__``, ``get`` and
 
 You also can select and drop an explicit list of variables by using the
 :py:meth:`~xray.Dataset.select_vars` and :py:meth:`~xray.Dataset.drop_vars`
-methods to return a new ``Dataset``. `select_var` automatically includes the
-relevant indexes:
+methods to return a new ``Dataset``. `select_vars` automatically includes the
+relevant coordinates:
 
 .. ipython:: python
 
     ds.select_vars('abc')
 
-If an index name is given as an argument to `drop_vars`, it also drops all
-variables that use that index:
+If an dimension name is given as an argument to `drop_vars`, it also drops all
+variables that use that dimension:
 
 .. ipython:: python
 
@@ -159,121 +267,8 @@ contents of the ``Dataset`` will still be the same underlying
 :py:class:`xray.Variable`. You can copy all data by supplying the argument
 ``deep=True``.
 
-Datasets reductions
-~~~~~~~~~~~~~~~~~~
-We can numpy reduction functions to the entire dataset, returning a new
-``Dataset``.
-
-.. ipython:: python
-
-    bar = ds.mean()
-    bar
-
-The ``dimension``(default=None) keyword will limit the reduction to only the dimension(s) provided.
-
-.. ipython:: python
-
-    spam = ds.mean(dimension='time')
-    spam
-
-``DataArray`` objects
----------------------
-
-The contents of a :py:class:`~xray.Dataset` are :py:class:`~xray.DataArray`
-objects, xray's version of a labeled multi-dimensional array.
-``DataArray`` supports metadata aware array operations based on their
-labeled dimensions (axis names) and labeled indexes (tick values).
-
-The idea of the DataArray is to provide an alternative to
-:py:class:`pandas.Series` and :py:class:`pandas.DataFrame` with functionality
-much closer to standard numpy N-dimensional array. Unlike pandas objects,
-slicing or manipulating a DataArray always returns another DataArray, and all
-items in a DataArray must have a single (homogeneous) data type. (To work
-with heterogeneous data in xray, put separate DataArrays in the same Dataset.)
-
-You create a DataArray by getting an item from a Dataset:
-
-.. ipython:: python
-
-    foo = ds['foo']
-    foo
-
-.. note::
-
-    You currently cannot make a DataArray without putting objects into Dataset
-    first, unless you use the :py:meth:`DataArray.from_series <xray.DataArray.from_series>`
-    class method to convert an existing :py:class:`pandas.Series`. We do
-    intend to define a constructor for making DataArray objects directly in a
-    future version of xray.
-
-Internally, data arrays are uniquely defined by only two attributes:
-
-- :py:attr:`~xray.DataArray.dataset`: a dataset object.
-- :py:attr:`~xray.DataArray.name`: the name of a variable in the array's
-  dataset.
-
-Like pandas objects, they can be thought of as fancy wrapper around a
-numpy array:
-
-.. ipython:: python
-
-    foo.values
-
-They also have a tuple of dimension labels:
-
-.. ipython:: python
-
-    foo.dimensions
-
-They track of their indexes (tick labels) in a read-only ordered
-dictionary mapping from dimension names to :py:class:`~xray.Index`
-objects:
-
-.. ipython:: python
-
-    foo.indexes
-
-They also keep track of their own attributes:
-
-.. ipython:: python
-
-    foo.attrs
-
-You can pull out other variables (including indexes) from a DataArray's
-dataset by indexing the data array with a string:
-
-.. ipython:: python
-
-    foo['time']
-
-Usually, xray automatically manages the `Dataset` objects that data arrays
-points to in a satisfactory fashion. For example, it will keep around other
-dataset variables when possible until there are potential conflicts, such as
-when you apply a mathematical operation.
-
-However, in some cases, particularly for performance reasons, you may want to
-explicitly ensure that the dataset only includes the variables you are
-interested in. For these cases, use the :py:meth:`xray.DataArray.select`
-method to select the names of variables you want to keep around, by default
-including the name of only the DataArray itself:
-
-.. ipython:: python
-
-    foo2 = foo.select()
-
-    foo2
-
-`foo2` is generally an equivalent labeled array to `foo`, but we dropped the
-dataset variables that are no longer relevant:
-
-.. ipython:: python
-
-    foo.dataset.keys()
-
-    foo2.dataset.keys()
-
-Array indexing
---------------
+Indexing
+--------
 
 Indexing a :py:class:`~xray.DataArray` works (mostly) just like it does for
 numpy arrays, except that the returned object is always another DataArray:
@@ -286,18 +281,18 @@ numpy arrays, except that the returned object is always another DataArray:
 
     foo[:, [2, 1]]
 
-xray also supports label based indexing like pandas. Because
-:py:class:`~xray.Index` is a thin wrapper around a
-:py:class:`pandas.Index`, label indexing is very fast. To do
+xray also supports label based indexing, just like pandas. Because
+:py:class:`~xray.Coordinate` is a thin wrapper around a
+:py:class:`pandas.Index`, label based indexing is very fast. To do
 label based indexing, use the :py:attr:`~xray.DataArray.loc` attribute:
 
 .. ipython:: python
 
-    foo.loc['2000-01-01':'2000-01-02', 0]
+    foo.loc['2000-01-01':'2000-01-02', 'IA']
 
-You can do any of the label indexing operations `supported by pandas`__ with
-the exception of boolean arrays, including looking up particular labels, using
-slice syntax and using arrays of labels. Like pandas, label based indexing is
+You can perform any of the label indexing operations `supported by pandas`__,
+including indexing with individual, slices and arrays of labels, as well as
+indexing with boolean arrays. Like pandas, label based indexing in xray is
 *inclusive* of both the start and stop bounds.
 
 __ http://pandas.pydata.org/pandas-docs/stable/indexing.html#indexing-label
@@ -306,19 +301,19 @@ Setting values with label based indexing is also supported:
 
 .. ipython:: python
 
-    foo.loc['2000-01-01', [1, 2]] = -10
+    foo.loc['2000-01-01', ['IL', 'IN']] = -10
     foo
 
-With labeled dimension names, we do not have to rely on dimension order and can
+With labeled dimensions, we do not have to rely on dimension order and can
 use them explicitly to slice data with the :py:meth:`~xray.DataArray.sel`
 and :py:meth:`~xray.DataArray.isel` methods:
 
 .. ipython:: python
 
     # index by integer array indices
-    foo.isel(space=0, time=slice(0, 2))
+    foo.isel(space=0, time=slice(None, 2))
 
-    # index by index labels
+    # index by coordinate labels
     foo.sel(time=slice('2000-01-01', '2000-01-02'))
 
 The arguments to these methods can be any objects that could index the array
@@ -331,9 +326,6 @@ simultaneously, returning a new dataset:
 .. ipython:: python
 
     ds.isel(space=[0], time=[0])
-
-.. ipython:: python
-
     ds.sel(time='2000-01-01')
 
 Indexing with xray objects has one important difference from indexing numpy
@@ -344,11 +336,12 @@ which wouldn't work with numpy arrays:
 
 .. ipython:: python
 
-    foo[ds['time.day'] > 1, ds['space'] <= 3]
+    foo[foo['time.day'] > 1, foo['space'] != 'IL']
 
 This is a much simpler model than numpy's `advanced indexing`__,
 and is basically the only model that works for labeled arrays. If you would
-like to do advanced indexing, so you always index ``.values`` instead:
+like to do advanced indexing, you can always index ``.values`` directly
+instead:
 
 __ http://docs.scipy.org/doc/numpy/reference/arrays.indexing.html
 
@@ -356,8 +349,8 @@ __ http://docs.scipy.org/doc/numpy/reference/arrays.indexing.html
 
     foo.values[foo.values > 0.5]
 
-``DataArray`` math
-------------------
+Computation
+-----------
 
 The metadata of :py:class:`~xray.DataArray` objects enables particularly nice
 features for doing mathematical operations.
@@ -365,7 +358,7 @@ features for doing mathematical operations.
 Basic math
 ~~~~~~~~~~
 
-Basic math works just as you would expect:
+Basic math with DataArray objects works just as you would expect:
 
 .. ipython:: python
 
@@ -380,134 +373,177 @@ __ http://docs.scipy.org/doc/numpy/reference/ufuncs.html
 
     np.sin(foo)
 
-Aggregation
-~~~~~~~~~~~
-
-Whenever feasible, DataArrays have metadata aware version of standard methods
-and properties from numpy arrays. For example, we can easily take a metadata
-aware :py:attr:`xray.DataArray.transpose`:
+``DataArray`` also has metadata aware versions of many
+:py:class:`numpy.ndarray` methods:
 
 .. ipython:: python
 
     foo.T
+    foo.round(2)
 
-Most of these methods have been updated to take a `dimension` argument instead
-of `axis`. This allows for very intuitive syntax for aggregation methods that
-are applied along particular dimension(s):
+It also has the ``isnull`` and ``notnull`` methods from pandas:
+
+.. ipython:: python
+
+    xray.DataArray([0, 1, np.nan, np.nan, 2]).isnull()
+
+You cannot directly do math with ``Dataset`` objects (yet!), but you can map an
+operation over any or all non-coordinates in a dataset by using
+:py:meth:`~xray.Dataset.apply`:
+
+.. ipython:: python
+
+    ds.apply(lambda x: 2 * x, to=['foo', 'numbers'])
+
+Aggregation
+~~~~~~~~~~~
+
+Aggregation methods from ndarray have been updated to take a `dimension`
+argument instead of `axis`. This allows for very intuitive syntax for
+aggregation methods that are applied along particular dimension(s):
 
 .. ipython:: python
 
     foo.sum('time')
-
-.. ipython:: python
-
     foo.std(['time', 'space'])
+    foo.min()
 
-Currently, these are the standard numpy array methods which do not automatically
-skip missing values, but we expect to switch to NA skipping versions (like
-pandas) in the future. For now, you can do NA skipping aggregate by passing
-NA aware numpy functions to the :py:attr:`~xray.DataArray.reduce` method:
-
-.. ipython:: python
-    :suppress:
-
-    # monkey patch numpy with nanmean from scipy.stats so the docs can build
-    # even with numpy 1.7 (np.nanmean first appears in numpy 1.8).
-    # this is to work around an unfortunate limitation of readthedocs/pip which
-    # stops us from upgrading both numpy and pandas.
-
-    from scipy import stats
-    np.nanmean = stats.nanmean
+These operations also work on ``Dataset`` objects, by mapping over all
+non-coordinates:
 
 .. ipython:: python
 
-    foo.reduce(np.nanmean, 'time')
+    ds.mean('time')
 
-If you ever need to figure out the axis number for a dimension yourself (say,
-for wrapping library code designed to work with numpy arrays), you can use the
+If you need to figure out the axis number for a dimension yourself (say,
+for wrapping code designed to work with numpy arrays), you can use the
 :py:meth:`~xray.DataArray.get_axis_num` method:
 
 .. ipython:: python
 
     foo.get_axis_num('space')
 
+To perform a NA skipping aggregations, pass the NA aware numpy functions
+directly to :py:attr:`~xray.DataArray.reduce` method:
+
+.. ipython:: python
+
+    foo.reduce(np.nanmean, 'time')
+
+.. warning::
+
+    Currently, xray uses the standard ndarray methods which do not
+    automatically skip missing values, but we expect to switch the default
+    to NA skipping versions (like pandas) in a future version (:issue:`130`).
+
 Broadcasting
 ~~~~~~~~~~~~
 
-With dimension names, we automatically align dimensions ("broadcasting" in
-the numpy parlance) by name instead of order. This means that you should never
-need to bother inserting dimensions of length 1 with operations like
-:py:func:`np.reshape` or :py:const:`np.newaxis`, which is pretty routinely
-required when working with standard numpy arrays.
+``DataArray`` objects are automatically align themselves ("broadcasting" in
+the numpy parlance) by dimension name instead of axis order. With xray, you
+do not need to transpose arrays or insert dimensions of length 1 to get array
+operations to work, as commonly done in numpy with :py:func:`np.reshape` or
+:py:const:`np.newaxis`.
 
 This is best illustrated by a few examples. Consider two one-dimensional
 arrays with different sizes aligned along different dimensions:
 
 .. ipython:: python
 
-    foo[:, 0]
+    a = xray.DataArray([1, 2, 3, 4], [['a', 'b', 'c', 'd']], ['x'])
+    a
+    b = xray.DataArray([-1, -2, -3], dimensions=['y'])
+    b
 
-    foo[0, :]
-
-With xray, we can apply binary mathematical operations to arrays, and their
-dimensions are expanded automatically:
+With xray, we can apply binary mathematical operations to these arrays, and
+their dimensions are expanded automatically:
 
 .. ipython:: python
 
-    foo[:, 0] - foo[0, :]
+    a * b
 
 Moreover, dimensions are always reordered to the order in which they first
-appeared. That means you can always subtract an array from its transpose!
+appeared:
 
 .. ipython:: python
 
-    foo - foo.T
+    c = xray.DataArray(np.arange(12).reshape(3, 4), [b['y'], a['x']])
+    c
+    a + c
 
-Index based alignment
-~~~~~~~~~~~~~~~~~~~~~
-
-You can also align arrays based on their index values, very similarly
-to how pandas handles alignment. This can be done with the
-:py:meth:`~xray.DataArray.reindex` or :py:meth:`~xray.DataArray.reindex_like`
-methods, or the :py:func:`~xray.align` top-level function. All these work
-interchangeably with both DataArray and Dataset objects with any number of
-overlapping dimensions.
-
-To demonstrate, we'll make a subset DataArray with new values:
+This means, for example, that you always subtract an array from its transpose!
 
 .. ipython:: python
 
-    bar = (10 * foo[:2, :2]).rename('bar')
-    bar
+    c - c.T
 
-Reindexing ``foo`` with ``bar`` selects out the first two values along each
+Alignment
+~~~~~~~~~
+
+Performing most binary operations on xray objects requires that the all
+coordinate values are equal:
+
+.. ipython::
+
+    @verbatim
+    In [1]: a + a[:2]
+    ValueError: coordinate 'x' is not aligned
+
+However, xray does have some methods (copied from pandas) that make aligning
+``DataArray`` and ``Dataset`` objects manually easy and fast.
+
+.. warning::
+
+    pandas does index based alignment automatically when doing math, using
+    ``join='outer'``. xray doesn't have automatic alignment yet, but we do
+    intend to enable it in a future version (:issue:`186`). Unlike pandas, we
+    expect to default to ``join='inner'``.
+
+Reindexing returns modified arrays with new coordinates, filling in missing
+values with `NaN`. To reindex a particular dimension, use
+:py:meth:`~xray.DataArray.reindex`:
+
+.. ipython::
+
+    foo.reindex(space=['IA', 'CA'])
+
+The :py:meth:`~xray.DataArray.reindex_like` method is a useful shortcut.
+To demonstrate, we will make a subset DataArray with new values:
+
+.. ipython:: python
+
+    baz = (10 * foo[:2, :2]).rename('baz')
+    baz
+
+Reindexing ``foo`` with ``baz`` selects out the first two values along each
 dimension:
 
 .. ipython:: python
 
-    foo.reindex_like(bar)
+    foo.reindex_like(baz)
 
 The opposite operation asks us to reindex to a larger shape, so we fill in
 the missing values with `NaN`:
 
 .. ipython:: python
 
-    bar.reindex_like(foo)
+    baz.reindex_like(foo)
 
-The :py:func:`~xray.align` is even more flexible:
+The :py:func:`~xray.align` function lets us perform more flexible
+``'inner'``, ``'outer'``, ``'left'`` and ``'right'`` joins:
 
 .. ipython:: python
 
-    xray.align(ds, bar, join='inner')
+    xray.align(foo, baz, join='inner')
+    xray.align(foo, baz, join='outer')
 
-Pandas does this sort of index based alignment automatically when doing math,
-using an `join='outer'`. This is an intended feature for xray, too, but we
-haven't turned it on yet, because it is not clear that an outer join (which
-preserves all missing values) is the best choice for working with high-
-dimension arrays. Arguably, an inner join makes more sense, because that is
-less likely to result in memory blow-ups. Hopefully, this point will eventually
-become moot when python libraries better support working with arrays that
-cannot be directly represented in a block of memory.
+Both ``reindex_like`` and ``align`` work interchangeably with DataArray and
+:py:class:`xray.Dataset` objects with any number of overlapping dimensions:
+
+.. ipython:: python
+
+    ds
+    ds.reindex_like(baz)
 
 GroupBy: split-apply-combine
 ----------------------------
@@ -564,7 +600,7 @@ Apply
 ~~~~~
 
 To apply a function to each group, you can use the flexible
-:py:attr:`xray.GroupBy.apply` method. The resulting objects are automatically
+:py:meth:`xray.GroupBy.apply` method. The resulting objects are automatically
 concatenated back together along the group axis:
 
 .. ipython:: python
@@ -572,14 +608,16 @@ concatenated back together along the group axis:
     def standardize(x):
         return (x - x.mean()) / x.std()
 
-    foo.groupby('numbers').apply(standardize)
+    ds['foo'].groupby('numbers').apply(standardize)
 
-Group by objects resulting from DataArrays also have shortcuts to aggregate
-a function over each element of the group:
+GroupBy objects also have a :py:meth:`~xray.GroupBy.reduce` method and
+methods like :py:meth:`~xray.GroupBy.mean` as shortcuts for applying an
+aggregation function:
 
 .. ipython:: python
 
-    foo.groupby('numbers').mean()
+    foo.groupby('time').mean()
+    ds.groupby('numbers').reduce(np.nanmean)
 
 Squeezing
 ~~~~~~~~~
@@ -590,11 +628,11 @@ the ``squeeze`` parameter:
 
 .. ipython:: python
 
-    list(foo.groupby('space'))[0][1]
+    next(iter(foo.groupby('space')))
 
 .. ipython:: python
 
-    list(foo.groupby('space', squeeze=False))[0][1]
+    next(iter(foo.groupby('space', squeeze=False)))
 
 Although xray will attempt to automatically
 :py:attr:`~xray.DataArray.transpose` dimensions back into their original order
@@ -635,14 +673,14 @@ default it returns a new Dataset:
 
 .. ipython:: python
 
-    ds.merge({'hello': ('space', np.arange(4) + 10)})
+    ds.merge({'hello': ('space', np.arange(3) + 10)})
 
 In contrast, update modifies a dataset in-place without checking for conflicts,
 and will overwrite any existing variables with new values:
 
 .. ipython:: python
 
-    ds.update({'space': ('space', [10.2, 9.4, 6.4, 3.9])})
+    ds.update({'space': ('space', [10.2, 9.4, 3.9])})
 
 However, dimensions are still required to be consistent between different
 Dataset variables, so you cannot change the size of a dimension unless you
@@ -691,15 +729,23 @@ ecosystem. For example, for plotting labeled data, we highly recommend
 using the visualization `built in to pandas itself`__ or provided by the pandas
 aware libraries such as `Seaborn`__ and `ggplot`__.
 
-__ http://pandas.pydata.org/pandas-docs/stable visualization.html
+__ http://pandas.pydata.org/pandas-docs/stable/visualization.html
 __ http://stanford.edu/~mwaskom/software/seaborn/
 __ http://ggplot.yhathq.com/
 
 Fortunately, there are straightforward representations of
 :py:class:`~xray.Dataset` and :py:class:`~xray.DataArray` in terms of
 :py:class:`pandas.DataFrame` and :py:class:`pandas.Series`, respectively.
-The representation works by flattening nonindexes to 1D, and turning the
-tensor product of indexes into a :py:class:`pandas.MultiIndex`.
+The representation works by flattening non-coordinates to 1D, and turning the
+tensor product of coordinate indexes into a :py:class:`pandas.MultiIndex`.
+
+.. note::
+
+    If you want to convert a pandas data-structure into a ``DataArray`` with
+    the same number of dimensions, you can simply use the `DataArray construtor
+    directly`__
+
+__ `Creating a DataArray`_
 
 ``pandas.DataFrame``
 ~~~~~~~~~~~~~~~~~~~~
@@ -727,7 +773,7 @@ To create a ``Dataset`` from a ``DataFrame``, use the
 
     xray.Dataset.from_dataframe(df)
 
-Notice that that dimensions of nonindexes in the ``Dataset`` have now
+Notice that that dimensions of non-coordinates in the ``Dataset`` have now
 expanded after the round-trip conversion to a ``DataFrame``. This is because
 every object in a ``DataFrame`` must have the same indices, so needed to
 broadcast the data of each array to the full size of the new ``MultiIndex``.
@@ -747,6 +793,14 @@ DataFrames:
     s
 
     xray.DataArray.from_series(s)
+
+Both the ``from_series`` and ``from_dataframe`` methods use reindexing, so they
+works even if not the hierarchical index is not a full tensor product:
+
+.. ipython:: python
+
+    s[::2]
+    xray.DataArray.from_series(s[::2])
 
 Serialization and IO
 --------------------
@@ -802,7 +856,7 @@ Reading and writing NetCDF files with xray requires the
 __ https://github.com/Unidata/netcdf4-python
 
 We can save a Dataset to disk using the
-:py:attr:`Dataset.to_netcdf <~xray.Dataset.to_netcdf>` method:
+:py:attr:`Dataset.to_netcdf <xray.Dataset.to_netcdf>` method:
 
 .. use verbatim because readthedocs doesn't have netCDF4 support
 
@@ -825,10 +879,10 @@ We can load NetCDF files to create a new Dataset using the
     Out[2]:
     <xray.Dataset>
     Dimensions:     (space: 4, time: 3)
-    Indexes:
+    Coordinates:
         space            X
         time                      X
-    Nonindexes:
+    Noncoordinates:
         foo              1        0
         numbers          0
         abc                       0
@@ -843,17 +897,26 @@ string, e.g., to access subgroup 'bar' within group 'foo' pass
 
 Data is loaded lazily from NetCDF files. You can manipulate, slice and subset
 Dataset and DataArray objects, and no array values are loaded into memory until
-necessary. For an example of how these lazy arrays work, since the OpenDAP
+necessary. For an example of how these lazy arrays work, see the OpenDAP
 section below.
+
+Datasets have a :py:meth:`~xray.Dataset.close` method to close the associated
+NetCDF file. The preferred way to handle this is to use a context-manager:
+
+.. ipython::
+    :verbatim:
+
+    In [100]: with xray.open_dataset('my_file.nc') as ds:
+    ...           print(ds.keys())
+    Out[100]: ['space', 'foo', 'time', 'numbers', 'abc']
 
 .. note::
 
     Although xray provides reasonable support for incremental reads of files on
     disk, it does not yet support incremental writes, which is important for
     dealing with datasets that do not fit into memory. This is a significant
-    shortcoming which is on the roadmap for fixing in the next major version,
-    which will include the ability to create ``Dataset`` objects directly
-    linked to a NetCDF file on disk.
+    shortcoming that we hope to resolve (:issue:`199`) by adding the ability to
+    create ``Dataset`` objects directly linked to a NetCDF file on disk.
 
 NetCDF files follow some conventions for encoding datetime arrays (as numbers
 with a "units" attribute) and for packing and unpacking data (as
@@ -911,11 +974,11 @@ __ http://iri.columbia.edu/
     Out[4]:
     <xray.Dataset>
     Dimensions:     (T: 1432, X: 1405, Y: 621)
-    Indexes:
+    Coordinates:
         T               X
         X                        X
         Y                                 X
-    Nonindexes:
+    Noncoordinates:
         ppt             0        2        1
         tdmean          0        2        1
         tmax            0        2        1
@@ -990,3 +1053,80 @@ Finally, we can plot the values with matplotlib:
     In [113]: plt.colorbar()
 
 .. image:: _static/opendap-prism-tmax.png
+
+Loading into memory
+~~~~~~~~~~~~~~~~~~~
+
+xray's lazy loading of remote or on-disk datasets is not always desirable.
+In such cases, you can use the :py:meth:`~xray.Dataset.load_data` method to
+force loading a Dataset or DataArray entirely into memory. In particular, this
+can lead to significant speedups if done before performing array-based
+indexing.
+
+Notes on xray's internals
+-------------------------
+
+.. warning::
+
+    These implementation details may be useful for advanced users, but are
+    likely to change in future versions.
+
+DataArray
+~~~~~~~~~
+
+In the current version of xray, DataArrays are simply pointers to a dataset
+(the ``dataset`` attribute) and the name of a variable in the dataset (the
+``name`` attribute), which indicates to which variable array operations should
+be applied.
+
+Usually, xray automatically manages the ``Dataset`` objects that data arrays
+points to in a satisfactory fashion.
+
+However, in some cases, particularly for performance reasons, you may want to
+explicitly ensure that the dataset only includes the variables you are
+interested in. For these cases, use the :py:meth:`xray.DataArray.select_vars`
+method to select the names of variables you want to keep around, by default
+including the name of only the DataArray itself:
+
+.. ipython:: python
+
+    foo2 = foo.select_vars()
+
+    foo2
+
+`foo2` is generally an equivalent labeled array to `foo`, but we dropped the
+dataset variables that are no longer relevant:
+
+.. ipython:: python
+
+    foo.dataset.keys()
+
+    foo2.dataset.keys()
+
+Variable
+~~~~~~~~
+
+:py:class:`~xray.Variable` implements xray's basic building block for Dataset
+and DataArray variables. It supports the numpy ndarray interface, but is
+extended to support and use basic metadata (not including index values). It
+consists of:
+
+1. ``dimensions``: A tuple of dimension names.
+2. ``values``: The N-dimensional array (for example, of type
+   :py:class:`numpy.ndarray`) storing the array's data. It must have the same
+   number of dimensions as the length of ``dimensions``.
+3. ``attrs``: An ordered dictionary of additional metadata to associate
+   with this array.
+
+The main functional difference between Variables and numpy arrays is that
+numerical operations on Variables implement array broadcasting by dimension
+name. For example, adding an Variable with dimensions `('time',)` to another
+Variable with dimensions `('space',)` results in a new Variable with dimensions
+`('time', 'space')`. Furthermore, numpy reduce operations like ``mean`` or
+``sum`` are overwritten to take a "dimension" argument instead of an "axis".
+
+Variables are light-weight objects used as the building block for datasets.
+They are more primitive objects, so operations with them provide marginally
+higher performance than using DataArrays. **However, manipulating data in the
+form of a Dataset or DataArray should almost always be preferred**, because
+they can use more complete metadata in context of coordinate labels.

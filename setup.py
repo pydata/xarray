@@ -41,51 +41,31 @@ TESTS_REQUIRE = ['nose >= 1.0']
 if sys.version_info[:2] < (2, 7):
     TESTS_REQUIRE += ["unittest2 == 0.5.1"]
 
-DESCRIPTION = "Extended arrays for working with scientific datasets in Python"
+DESCRIPTION = "pandas for N-dimensional arrays"
 LONG_DESCRIPTION = """
-**xray** is a Python package for working with aligned sets of
-homogeneous, n-dimensional arrays. It implements flexible array
-operations and dataset manipulation for in-memory datasets within the
-`Common Data
-Model <http://www.unidata.ucar.edu/software/thredds/current/netcdf-java/CDM/>`__
-widely used for self-describing scientific data (e.g., the NetCDF file
-format).
+**xray** is an open source project and Python package that aims to bring the
+labeled data power of pandas_ to the physical sciences, by providing
+N-dimensional variants of the core pandas_ data structures, ``Series`` and
+``DataFrame``: the xray ``DataArray`` and ``Dataset``.
 
-Why xray?
----------
+**xray** aims to provide a pandas-like and pandas-compatible toolkit for
+analytics on *multi-dimensional* labeled arrays. Our approach also builds on
+the `Common Data Model`_ for self-describing scientific data (e.g., `NetCDF`_
+and OpenDAP), in widespread use in the Earth sciences: ``xray.Dataset``
+is an in-memory representation of a NetCDF file.
 
-Adding dimensions names and coordinate values to numpy's
-`ndarray <http://docs.scipy.org/doc/numpy/reference/arrays.ndarray.html>`__
-makes many powerful array operations possible:
+.. _pandas: http://pandas.pydata.org
+.. _PyData: http://pydata.org
+.. _Common Data Model: http://www.unidata.ucar.edu/software/thredds/current/netcdf-java/CDM
+.. _NetCDF: http://www.unidata.ucar.edu/software/netcdf
 
--  Apply operations over dimensions by name: ``x.sum('time')``.
--  Select values by label instead of integer location:
-   ``x.loc['2014-01-01']`` or ``x.labeled(time='2014-01-01')``.
--  Mathematical operations (e.g., ``x - y``) vectorize across multiple
-   dimensions (known in numpy as "broadcasting") based on dimension
-   names, regardless of their original order.
--  Flexible split-apply-combine operations with groupby:
-   ``x.groupby('time.dayofyear').mean()``.
--  Database like aligment based on coordinate labels that smoothly
-   handles missing values: ``x, y = xray.align(x, y, join='outer')``.
--  Keep track of arbitrary metadata in the form of a Python dictionary:
-   ``x.attrs``.
+Important links
+---------------
 
-**xray** aims to provide a data analysis toolkit as powerful as
-`pandas <http://pandas.pydata.org/>`__ but designed for working with
-homogeneous N-dimensional arrays instead of tabular data. Indeed, much
-of its design and internal functionality (in particular, fast indexing)
-is shamelessly borrowed from pandas.
-
-Because **xray** implements the same data model as the NetCDF file
-format, xray datasets have a natural and portable serialization format.
-But it's also easy to robustly convert an xray ``DataArray`` to and from
-a numpy ``ndarray`` or a pandas ``DataFrame`` or ``Series``, providing
-compatibility with the full `PyData ecosystem <http://pydata.org/>`__.
-
-For more about **xray**, see the project's `GitHub page
-<https://github.com/xray/xray>`__ and `documentation
-<http://xray.readthedocs.org>`__
+- HTML documentation: http://xray.readthedocs.org
+- Issue tracker: http://github.com/xray/xray/issues
+- Source code: http://github.com/xray/xray
+- PyData talk: https://www.youtube.com/watch?v=T5CZyNwBa9c
 """
 
 # code to extract and write the version copied from pandas, which is available
