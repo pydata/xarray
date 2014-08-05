@@ -41,18 +41,19 @@ TESTS_REQUIRE = ['nose >= 1.0']
 if sys.version_info[:2] < (2, 7):
     TESTS_REQUIRE += ["unittest2 == 0.5.1"]
 
-DESCRIPTION = "pandas for N-dimensional arrays"
+DESCRIPTION = "N-D labeled arrays and datasets in Python"
 LONG_DESCRIPTION = """
 **xray** is an open source project and Python package that aims to bring the
 labeled data power of pandas_ to the physical sciences, by providing
 N-dimensional variants of the core pandas_ data structures, ``Series`` and
 ``DataFrame``: the xray ``DataArray`` and ``Dataset``.
 
-**xray** aims to provide a pandas-like and pandas-compatible toolkit for
-analytics on *multi-dimensional* labeled arrays. Our approach also builds on
-the `Common Data Model`_ for self-describing scientific data (e.g., `NetCDF`_
-and OpenDAP), in widespread use in the Earth sciences: ``xray.Dataset``
-is an in-memory representation of a NetCDF file.
+Our goal is to provide a pandas-like and pandas-compatible toolkit for
+analytics on multi-dimensional arrays, rather than the tabular data for which
+pandas excels. Our approach adopts the `Common Data Model`_ for self-
+describing scientific data in widespread use in the Earth sciences (e.g.,
+`NetCDF`_ and OpenDAP): ``xray.Dataset`` is an in-memory representation of a
+NetCDF file.
 
 .. _pandas: http://pandas.pydata.org
 .. _PyData: http://pydata.org

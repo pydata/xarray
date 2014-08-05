@@ -1,5 +1,5 @@
-xray: pandas for N-dimensional arrays
-=====================================
+xray: N-D labeled arrays and datasets in Python
+===============================================
 
 .. image:: https://travis-ci.org/xray/xray.svg?branch=master
     :target: https://travis-ci.org/xray/xray
@@ -9,11 +9,12 @@ labeled data power of pandas_ to the physical sciences, by providing
 N-dimensional variants of the core pandas_ data structures, ``Series`` and
 ``DataFrame``: the xray ``DataArray`` and ``Dataset``.
 
-**xray** aims to provide a pandas-like and pandas-compatible toolkit for
-analytics on *multi-dimensional* labeled arrays. Our approach also builds on
-the `Common Data Model`_ for self-describing scientific data (e.g., `NetCDF`_
-and OpenDAP), in widespread use in the Earth sciences: ``xray.Dataset``
-is an in-memory representation of a NetCDF file.
+Our goal is to provide a pandas-like and pandas-compatible toolkit for
+analytics on multi-dimensional arrays, rather than the tabular data for which
+pandas excels. Our approach adopts the `Common Data Model`_ for self-
+describing scientific data in widespread use in the Earth sciences (e.g.,
+`NetCDF`_ and OpenDAP): ``xray.Dataset`` is an in-memory representation of a
+NetCDF file.
 
 .. _pandas: http://pandas.pydata.org
 .. _PyData: http://pydata.org
@@ -56,11 +57,15 @@ designed for working with homogeneous N-dimensional arrays
 instead of tabular data. When possible, we copy the pandas API and rely on
 pandas's highly optimized internals (in particular, for fast indexing).
 
-Because **xray** implements the same data model as the NetCDF file
-format, xray datasets have a natural and portable serialization format.
-But it's also easy to robustly convert an xray ``DataArray`` to and from
-a numpy ``ndarray`` or a pandas ``DataFrame`` or ``Series``, providing
-compatibility with the full `PyData ecosystem <http://pydata.org/>`__.
+Because **xray** implements the same data model as the NetCDF file format, xray
+datasets have a natural and portable serialization format. But it is also easy
+to robustly convert an xray ``DataArray`` to and from a numpy ``ndarray`` or a
+pandas ``DataFrame`` or ``Series``, providing compatibility with the full
+`PyData ecosystem <http://pydata.org/>`__.
+
+Our target audience is anyone who needs N-dimensional labeled arrays, but we
+are particularly focused on the data analysis needs of physical scientists --
+especially geoscientists who already know and love NetCDF.
 
 .. _ndarray: http://docs.scipy.org/doc/numpy/reference/arrays.ndarray.html
 .. _pandas: http://pandas.pydata.org
