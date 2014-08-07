@@ -199,8 +199,12 @@ def _calculate_dimensions(variables):
     if any of the dimension sizes conflict.
     """
     dimensions = SortedKeysDict()
+    scalar_vars = set(k for k, v in iteritems(variables) if not v.dimensions)
     for k, var in iteritems(variables):
         for dim, size in zip(var.dimensions, var.shape):
+            if dim in scalar_vars:
+                raise ValueError('dimension %s already exists as a scalar '
+                                 'variable' % dim)
             if dim not in dimensions:
                 dimensions[dim] = size
             elif dimensions[dim] != size:

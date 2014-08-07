@@ -539,6 +539,10 @@ class TestDataset(TestCase):
         # can't resize a used dimension
         with self.assertRaisesRegexp(ValueError, 'but already exists with'):
             data1['dim1'] = data1['dim1'][:5]
+        # can't use the same dimension name as a scalar var
+        data1['scalar'] = ([], 0)
+        with self.assertRaisesRegexp(ValueError, 'already exists as a scalar'):
+            data1['newvar'] = ('scalar', [3, 4, 5])
 
     def test_delitem(self):
         data = create_test_data()
