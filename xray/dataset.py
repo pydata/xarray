@@ -1130,11 +1130,20 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
             reduce_dims = [dim for dim in var.dimensions if dim in dims]
             if reduce_dims:
                 if name not in self.dimensions:
+                    if len(reduce_dims) == 1:
+                        # unpack dimensions for the benefit of functions like
+                        # np.argmin which can't handle tuple arguments
+                        reduce_dims, = reduce_dims
                     try:
                         variables[name] = var.reduce(func,
                                                      dimension=reduce_dims,
                                                      **kwargs)
                     except TypeError:
+                        # array (e.g., string) does not support this reduction,
+                        # so skip it
+                        # TODO: rethink silently passing, because the problem
+                        # may be the dimensions and kwargs arguments, not the
+                        # dtype of the array
                         pass
             else:
                 variables[name] = var
