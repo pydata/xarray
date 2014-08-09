@@ -12,7 +12,7 @@ from xray import (Dataset, DataArray, Coordinate, Variable,
                   backends, utils, align, indexing)
 from xray.pycompat import iteritems, OrderedDict
 
-from . import TestCase
+from . import TestCase, unittest
 
 
 _dims = {'dim1': 100, 'dim2': 50, 'dim3': 10}
@@ -792,7 +792,8 @@ class TestDataset(TestCase):
         data2 = create_test_data(seed=44)
         add_vars = {'var4': ['dim1', 'dim2']}
         for v, dims in sorted(add_vars.items()):
-            data = np.random.random_integers(0, 100, size=tuple(_dims[d] for d in dims)).astype(np.str_)
+            size = tuple(_dims[d] for d in dims)
+            data = np.random.random_integers(0, 100, size=size).astype(np.str_)
             data1[v] = (dims, data, {'foo': 'variable'})
 
         self.assertTrue('var4' not in data1.mean())
@@ -816,6 +817,35 @@ class TestDataset(TestCase):
         ds = data.mean(keep_attrs=True)
         self.assertEqual(len(ds.attrs), len(_attrs))
         self.assertTrue(ds.attrs, attrs)
+
+    def test_reduce_argmin(self):
+        # regression test for #205
+        ds = Dataset({'a': ('x', [0, 1])})
+        expected = Dataset({'a': ([], 0)})
+        actual = ds.argmin()
+        self.assertDatasetIdentical(expected, actual)
+
+        actual = ds.argmin('x')
+        self.assertDatasetIdentical(expected, actual)
+
+    @unittest.skip('see github issue 209')
+    def test_reduce_only_one_axis(self):
+
+        def mean_only_one_axis(x, axis):
+            if not isinstance(axis, (int, np.integer)):
+                raise TypeError('non-integer axis')
+            return x.mean(axis)
+
+        ds = Dataset({'a': (['x', 'y'], [[0, 1, 2, 3, 4]])})
+        expected = Dataset({'a': ('x', [2])})
+        actual = ds.reduce(mean_only_one_axis, 'y')
+        self.assertDatasetIdentical(expected, actual)
+
+        with self.assertRaisesRegexp(TypeError, 'non-integer axis'):
+            ds.reduce(mean_only_one_axis)
+
+        with self.assertRaisesRegexp(TypeError, 'non-integer axis'):
+            ds.reduce(mean_only_one_axis, ['x', 'y'])
 
     def test_apply(self):
         data = create_test_data()
