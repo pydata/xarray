@@ -46,6 +46,9 @@ Get in touch
 - Mailing list: https://groups.google.com/forum/#!forum/xray-dev
 - Twitter: http://twitter.com/shoyer
 
+xray is an ambitious project and we have a lot of work to do make it as
+powerful as it should be. We would love to hear your thoughts!
+
 License
 -------
 
