@@ -23,7 +23,8 @@ multi-dimensional array. It has three key properties:
 
 - ``values``: a numpy.ndarray holding the array's values
 - ``dimensions``: names for each axis, e.g., ``('x', 'y', 'z')``
-- ``coordinates``: tick labels along each dimension
+- ``coordinates``: tick labels along each dimension, e.g., 1-dimensional arrays
+  of numbers, datetime objects or strings.
 
 xray uses ``dimensions`` and ``coordinates`` to enable its core metadata aware
 operations. Dimensions provide names that xray uses instead of the ``axis``
@@ -59,8 +60,8 @@ in with default values:
     xray.DataArray(data)
 
 You can also create a ``DataArray`` by supplying a pandas
-:py:class`~pandas.Series`, :py:class`~pandas.DataFrame` or
-:py:class`~pandas.Panel`, in which case any non-specified arguments in the
+:py:class:`~pandas.Series`, :py:class:`~pandas.DataFrame` or
+:py:class:`~pandas.Panel`, in which case any non-specified arguments in the
 ``DataArray`` constructor will be filled in from the pandas object:
 
 .. ipython:: python
@@ -95,7 +96,7 @@ Now fill in some of that missing metadata:
 .. ipython:: python
 
     foo.name = 'foo'
-    foo.attrs['units'] = 'inches'
+    foo.attrs['units'] = 'meters'
     foo
 
 The ``coordinates`` property is ``dict`` like. Individual coordinates can be
@@ -123,7 +124,7 @@ which case it returns another DataArray:
 :py:class:`~pandas.DataFrame`. It is a dict-like
 container of labeled arrays (:py:class:`~xray.DataArray` objects) with aligned
 dimensions. It is designed as an in-memory representation of the data model
-from the `NetCDF`__ file format.
+from the `netCDF`__ file format.
 
 __ http://www.unidata.ucar.edu/software/netcdf/
 
@@ -156,7 +157,7 @@ objects instead of tuples:
 
 You can also create an dataset from a :py:class:`pandas.DataFrame` with
 :py:meth:`Dataset.from_dataframe <xray.Dataset.from_dataframe>` or from a
-NetCDF file on disk with :py:func:`~xray.open_dataset`. See
+netCDF file on disk with :py:func:`~xray.open_dataset`. See
 `Working with pandas`_ and `Serialization and IO`_.
 
 ``Dataset`` contents
@@ -247,7 +248,7 @@ relevant coordinates:
 
     ds.select_vars('abc')
 
-If an dimension name is given as an argument to `drop_vars`, it also drops all
+If a dimension name is given as an argument to `drop_vars`, it also drops all
 variables that use that dimension:
 
 .. ipython:: python
@@ -281,7 +282,7 @@ numpy arrays, except that the returned object is always another DataArray:
 
     foo[:, [2, 1]]
 
-xray also supports label based indexing, just like pandas. Because
+xray also supports label-based indexing, just like pandas. Because
 :py:class:`~xray.Coordinate` is a thin wrapper around a
 :py:class:`pandas.Index`, label based indexing is very fast. To do
 label based indexing, use the :py:attr:`~xray.DataArray.loc` attribute:
@@ -826,32 +827,32 @@ module:
     pickle.loads(pkl)
 
 Pickle support is important because it doesn't require any external libraries
-and lets you use xray objects with Python modules like ``multiprocessing``.
-However, there are two important cavaets:
+and lets you use xray objects with Python modules like
+:py:mod:`multiprocessing`. However, there are two important cavaets:
 
 1. To simplify serialization, xray's support for pickle currently loads all
    array values into memory before dumping an object. This means it is not
    suitable for serializing datasets too big to load into memory (e.g., from
-   NetCDF or OpenDAP).
+   netCDF or OPeNDAP).
 2. Pickle will only work as long as the internal data structure of xray objects
    remains unchanged. Because the internal design of xray is still being
    refined, we make no guarantees (at this point) that objects pickled with
    this version of xray will work in future versions.
 
-Reading and writing to disk (NetCDF)
+Reading and writing to disk (netCDF)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Currently, the only external serialization format that xray supports is
-`NetCDF`__. NetCDF is a file format for fully self-described datasets that is
+`netCDF`__. netCDF is a file format for fully self-described datasets that is
 widely used in the geosciences and supported on almost all platforms. We use
-NetCDF because xray was based on the NetCDF data model, so NetCDF files on disk
+netCDF because xray was based on the netCDF data model, so netCDF files on disk
 directly correspond to :py:class:`~xray.Dataset` objects. Recent versions
-NetCDF are based on the even more widely used HDF5 file-format.
+netCDF are based on the even more widely used HDF5 file-format.
 
 __ http://www.unidata.ucar.edu/software/netcdf/
 
-Reading and writing NetCDF files with xray requires the
-`Python-NetCDF4`__ library.
+Reading and writing netCDF files with xray requires the
+`Python-netCDF4`__ library.
 
 __ https://github.com/Unidata/netcdf4-python
 
@@ -865,9 +866,9 @@ We can save a Dataset to disk using the
 
     In [1]: ds.to_netcdf('saved_on_disk.nc')
 
-By default, the file is saved as NetCDF4.
+By default, the file is saved as netCDF4.
 
-We can load NetCDF files to create a new Dataset using the
+We can load netCDF files to create a new Dataset using the
 :py:func:`~xray.open_dataset` function:
 
 .. ipython::
@@ -889,19 +890,19 @@ We can load NetCDF files to create a new Dataset using the
     Attributes:
         title: example attribute
 
-A dataset can also be loaded from a specific group within a NetCDF
+A dataset can also be loaded from a specific group within a netCDF
 file. To load from a group, pass a ``group`` keyword argument to the
 ``open_dataset`` function. The group can be specified as a path-like
 string, e.g., to access subgroup 'bar' within group 'foo' pass
 '/foo/bar' as the ``group`` argument.
 
-Data is loaded lazily from NetCDF files. You can manipulate, slice and subset
+Data is loaded lazily from netCDF files. You can manipulate, slice and subset
 Dataset and DataArray objects, and no array values are loaded into memory until
-necessary. For an example of how these lazy arrays work, see the OpenDAP
+necessary. For an example of how these lazy arrays work, see the OPeNDAP
 section below.
 
 Datasets have a :py:meth:`~xray.Dataset.close` method to close the associated
-NetCDF file. The preferred way to handle this is to use a context-manager:
+netCDF file. The preferred way to handle this is to use a context-manager:
 
 .. ipython::
     :verbatim:
@@ -916,13 +917,13 @@ NetCDF file. The preferred way to handle this is to use a context-manager:
     disk, it does not yet support incremental writes, which is important for
     dealing with datasets that do not fit into memory. This is a significant
     shortcoming that we hope to resolve (:issue:`199`) by adding the ability to
-    create ``Dataset`` objects directly linked to a NetCDF file on disk.
+    create ``Dataset`` objects directly linked to a netCDF file on disk.
 
 NetCDF files follow some conventions for encoding datetime arrays (as numbers
 with a "units" attribute) and for packing and unpacking data (as
 described by the "scale_factor" and "_FillValue" attributes). If the argument
 ``decode_cf=True`` (default) is given to ``open_dataset``, xray will attempt
-to automatically decode the values in the NetCDF objects according to
+to automatically decode the values in the netCDF objects according to
 `CF conventions`__. Sometimes this will fail, for example, if a variable
 has an invalid "units" or "calendar" attribute. For these cases, you can
 turn this decoding off manually.
@@ -949,10 +950,10 @@ serializes objects, by viewing and manipulating the
      'units': u'days since 2000-01-01 00:00:00',
      'zlib': False}
 
-Working with remote datasets (OpenDAP)
+Working with remote datasets (OPeNDAP)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-xray includes support for `OpenDAP`__ (via the NetCDF4 library or Pydap), which
+xray includes support for `OPeNDAP`__ (via the netCDF4 library or Pydap), which
 lets us access large datasets over HTTP.
 
 __ http://www.opendap.org/
@@ -1069,7 +1070,7 @@ Notes on xray's internals
 .. warning::
 
     These implementation details may be useful for advanced users, but are
-    likely to change in future versions.
+    highly likely to change in future versions.
 
 DataArray
 ~~~~~~~~~

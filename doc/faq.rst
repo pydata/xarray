@@ -71,7 +71,7 @@ Automatic interpretation of labels is powerful but also reduces flexibility.
 With xray, we draw a firm line between labels that the library understands
 (``dimensions`` and ``coordinates``) and labels for users and user code
 (``attrs``). For example, we do not automatically intrepret and enforce units
-or `CF conventions`_. (An exception is serialization to NetCDF with
+or `CF conventions`_. (An exception is serialization to netCDF with
 ``cf_conventions=True``.)
 
 .. _CF conventions: http://cf-pcmdi.llnl.gov/documents/cf-conventions/1.6/cf-conventions.html
@@ -84,14 +84,14 @@ option ``compat='identical'``. The guiding principle is that metadata should
 not be allowed to get in the way.
 
 
-What other NetCDF related Python libraries should I know about?
+What other netCDF related Python libraries should I know about?
 ---------------------------------------------------------------
 
 `netCDF4-python`__ provides a lower level interface for working with
-NetCDF and OpenDAP datasets in Python. We use netCDF4-python internally in
+netCDF and OpenDAP datasets in Python. We use netCDF4-python internally in
 xray, and have contributed a number of improvements and fixes upstream. xray
 deos not yet support all of netCDF4-python's features, such as writing to
-NetCDF groups or modifying files on-disk.
+netCDF groups or modifying files on-disk.
 
 __ https://github.com/Unidata/netcdf4-python
 
@@ -106,7 +106,7 @@ integration with Cartopy_.
 .. _Iris: http://scitools.org.uk/iris/
 .. _Cartopy: http://scitools.org.uk/cartopy/docs/latest/
 
-`UV-CDAT`__ is another Python library that implements in-memory NetCDF-like
+`UV-CDAT`__ is another Python library that implements in-memory netCDF-like
 variables and `tools for working with climate data`__.
 
 __ http://uvcdat.llnl.gov/

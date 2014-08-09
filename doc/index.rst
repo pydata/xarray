@@ -10,13 +10,13 @@ Our goal is to provide a pandas-like and pandas-compatible toolkit for
 analytics on multi-dimensional arrays, rather than the tabular data for which
 pandas excels. Our approach adopts the `Common Data Model`_ for self-
 describing scientific data in widespread use in the Earth sciences (e.g.,
-`NetCDF`_ and OpenDAP): ``xray.Dataset`` is an in-memory representation of a
-NetCDF file.
+netCDF_ and OPeNDAP_): ``xray.Dataset`` is an in-memory representation of a
+netCDF file.
 
 .. _pandas: http://pandas.pydata.org
-.. _PyData: http://pydata.org
 .. _Common Data Model: http://www.unidata.ucar.edu/software/thredds/current/netcdf-java/CDM
-.. _NetCDF: http://www.unidata.ucar.edu/software/netcdf
+.. _netCDF: http://www.unidata.ucar.edu/software/netcdf
+.. _OPeNDAP: http://www.opendap.org/
 
 Documentation
 -------------

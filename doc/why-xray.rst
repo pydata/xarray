@@ -26,17 +26,18 @@ designed for working with homogeneous N-dimensional arrays
 instead of tabular data. When possible, we copy the pandas API and rely on
 pandas's highly optimized internals (in particular, for fast indexing).
 
-Because **xray** implements the same data model as the NetCDF file format, xray
-datasets have a natural and portable serialization format. But it is also easy
-to robustly convert an xray ``DataArray`` to and from a numpy ``ndarray`` or a
-pandas ``DataFrame`` or ``Series``, providing compatibility with the full
+Because **xray** implements the same data model as the netCDF_ file format,
+xray datasets have a natural and portable serialization format. But it is also
+easy to robustly convert an xray ``DataArray`` to and from a numpy ``ndarray``
+or a pandas ``DataFrame`` or ``Series``, providing compatibility with the full
 `PyData ecosystem <http://pydata.org/>`__.
 
 Our target audience is anyone who needs N-dimensional labeled arrays, but we
 are particularly focused on the data analysis needs of physical scientists --
-especially geoscientists who already know and love NetCDF.
+especially geoscientists who already know and love netCDF.
 
 .. _ndarray: http://docs.scipy.org/doc/numpy/reference/arrays.ndarray.html
+.. _netCDF: http://www.unidata.ucar.edu/software/netcdf
 .. _pandas: http://pandas.pydata.org
 
 .. warning::

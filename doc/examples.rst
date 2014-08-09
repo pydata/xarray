@@ -56,8 +56,12 @@ Monthly averaging
 .. code-block:: python
 
     def year_month(xray_obj):
+        """Given an xray object with a 'time' coordinate, return an DataArray
+        with values given by the first date of the month in which each time
+        falls.
+        """
         time = xray_obj.coordinates['time']
-        values = time.as_index.to_period('M').to_timestamp()
+        values = pd.Index(time).to_period('M').to_timestamp()
         return xray.DataArray(values, [time], name='year_month')
 
     ds.mean('x').to_dataframe().plot()
@@ -88,17 +92,21 @@ Calculate monthly anomalies
 
 .. code-block:: python
 
+    def unique_item(items):
+        """Return the single unique element of an iterable, or raise an error
+        """
+        items = set(items)
+        assert len(items) == 1
+        return items.pop()
+
     def _anomaly_one_month(ds):
-        months = set(ds['time.month'].values)
-        assert len(months) == 1
-        month = months.pop()
+        month = unique_item(ds['time.month'].values)
         rel_clim = climatology.sel(**{'time.month': month})
         return ds.apply(lambda x: x - rel_clim[x.name])
 
     climatology = ds.groupby('time.month').mean('time')
     anomalies = ds.groupby('time.month').apply(_anomaly_one_month)
-
-    # in a future verson of xray, maybe this could be:
+    # in a future verson of xray, this should be as easy as:
     # anomalies = ds.groupby('time.month') - climatology
 
     anomalies.mean('x').drop_vars('time.month').to_dataframe().plot()
@@ -107,10 +115,15 @@ Calculate monthly anomalies
 .. ipython:: python
     :suppress:
 
+    def unique_item(items):
+        """Return the single unique element of an iterable, or raise an error
+        """
+        items = set(items)
+        assert len(items) == 1
+        return items.pop()
+
     def _anomaly_one_month(ds):
-        months = set(ds['time.month'].values)
-        assert len(months) == 1
-        month = months.pop()
+        month = unique_item(ds['time.month'].values)
         rel_clim = climatology.sel(**{'time.month': month})
         return ds.apply(lambda x: x - rel_clim[x.name])
 
@@ -121,5 +134,4 @@ Calculate monthly anomalies
     anomalies.mean('x').drop_vars('time.month').to_dataframe().plot()
 
 
-
-TODO: display these examples better; convert this code into utility functions
+.. TODO: reduce the boilerplate necessary for these examples
