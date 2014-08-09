@@ -1,70 +1,66 @@
-xray: extended arrays for working with scientific datasets in Python
-====================================================================
+xray: N-D labeled arrays and datasets in Python
+===============================================
 
-**xray** is a Python package for working with aligned sets of
-homogeneous, n-dimensional arrays. It implements flexible array
-operations and dataset manipulation for in-memory datasets within the
-`Common Data
-Model <http://www.unidata.ucar.edu/software/thredds/current/netcdf-java/CDM/>`__
-widely used for self-describing scientific data (e.g., the
-`NetCDF <http://www.unidata.ucar.edu/software/netcdf/>`__ file
-format).
+**xray** is an open source project and Python package that aims to bring the
+labeled data power of pandas_ to the physical sciences, by providing
+N-dimensional variants of the core pandas_ data structures, ``Series`` and
+``DataFrame``: the xray ``DataArray`` and ``Dataset``.
 
-Why xray?
----------
+Our goal is to provide a pandas-like and pandas-compatible toolkit for
+analytics on multi-dimensional arrays, rather than the tabular data for which
+pandas excels. Our approach adopts the `Common Data Model`_ for self-
+describing scientific data in widespread use in the Earth sciences (e.g.,
+netCDF_ and OPeNDAP_): ``xray.Dataset`` is an in-memory representation of a
+netCDF file.
 
-Adding dimensions names and coordinate values to numpy's
-`ndarray <http://docs.scipy.org/doc/numpy/reference/arrays.ndarray.html>`__
-makes many powerful array operations possible:
+.. _pandas: http://pandas.pydata.org
+.. _Common Data Model: http://www.unidata.ucar.edu/software/thredds/current/netcdf-java/CDM
+.. _netCDF: http://www.unidata.ucar.edu/software/netcdf
+.. _OPeNDAP: http://www.opendap.org/
 
--  Apply operations over dimensions by name: ``x.sum('time')``.
--  Select values by label instead of integer location:
-   ``x.loc['2014-01-01']`` or ``x.labeled(time='2014-01-01')``.
--  Mathematical operations (e.g., ``x - y``) vectorize across multiple
-   dimensions (known in numpy as "broadcasting") based on dimension
-   names, regardless of their original order.
--  Flexible split-apply-combine operations with groupby:
-   ``x.groupby('time.dayofyear').mean()``.
--  Database like aligment based on coordinate labels that smoothly
-   handles missing values: ``x, y = xray.align(x, y, join='outer')``.
--  Keep track of arbitrary metadata in the form of a Python dictionary:
-   ``x.attrs``.
-
-**xray** aims to provide a data analysis toolkit as powerful as
-`pandas <http://pandas.pydata.org/>`__ but designed for working with
-homogeneous N-dimensional arrays instead of tabular data. Indeed, much
-of its design and internal functionality (in particular, fast indexing)
-is shamelessly borrowed from pandas.
-
-Because **xray** implements the same data model as the NetCDF file
-format, xray datasets have a natural and portable serialization format.
-But it's also easy to robustly convert an xray ``DataArray`` to and from
-a numpy ``ndarray`` or a pandas ``DataFrame`` or ``Series``, providing
-compatibility with the full `PyData ecosystem <http://pydata.org/>`__.
-
-For a longer introduction to **xray** and its design goals, see
-`the project's GitHub page <http://github.com/xray/xray>`__. The GitHub
-page is where to go to look at the code, report a bug or make your own
-contribution. If you have questions or more general feedback about xray, feel
-free to get in touch via `Twitter <http://twitter.com/shoyer>`__  or the
-`mailing list <https://groups.google.com/forum/#!forum/xray-discussion>`__.
-
-.. note ::
-
-    **xray** is still very new -- it is only a few months old. Although we will
-    make a best effort to maintain the current API, it is likely that the API
-    will change in future versions as xray matures. Some changes are already
-    anticipated, as called out in the `Tutorial <tutorial>`_ and the project
-    `README <http://github.com/xray/xray>`__.
-
-Contents
---------
+Documentation
+-------------
 
 .. toctree::
    :maxdepth: 1
 
+   why-xray
    installing
    tutorial
-   data-structures
+   examples
+   faq
    api
-   whats_new
+   whats-new
+
+Important links
+---------------
+
+- HTML documentation: http://xray.readthedocs.org
+- Issue tracker: http://github.com/xray/xray/issues
+- Source code: http://github.com/xray/xray
+- PyData talk: https://www.youtube.com/watch?v=T5CZyNwBa9c
+
+Get in touch
+------------
+
+- Mailing list: https://groups.google.com/forum/#!forum/xray-dev
+- Twitter: http://twitter.com/shoyer
+
+xray is an ambitious project and we have a lot of work to do make it as
+powerful as it should be. We would love to hear your thoughts!
+
+License
+-------
+
+xray is available under the open source `Apache License`__.
+
+__ http://www.apache.org/licenses/LICENSE-2.0.html
+
+History
+-------
+
+xray is an evolution of an internal tool developed at `The Climate
+Corporation`__, and was originally written by current and former Climate Corp
+researchers Stephan Hoyer, Alex Kleeman and Eugene Brevdo.
+
+__ http://climate.com/
