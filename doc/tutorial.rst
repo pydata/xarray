@@ -22,11 +22,11 @@ To get started, we will import numpy, pandas and xray:
 multi-dimensional array. It has three key properties:
 
 - ``values``: a numpy.ndarray holding the array's values
-- ``dimensions``: names for each axis, e.g., ``('x', 'y', 'z')``
-- ``coordinates``: tick labels along each dimension, e.g., 1-dimensional arrays
-  of numbers, datetime objects or strings.
+- ``dims``: dimension names for each axis, e.g., ``('x', 'y', 'z')``
+- ``coords``: tick labels along each dimension, e.g., 1-dimensional
+  arrays of numbers, datetime objects or strings.
 
-xray uses ``dimensions`` and ``coordinates`` to enable its core metadata aware
+xray uses ``dims`` and ``coords`` to enable its core metadata aware
 operations. Dimensions provide names that xray uses instead of the ``axis``
 argument found in many numpy functions. Coordinates enable fast label based
 indexing and alignment, like the ``index`` found on a pandas
@@ -48,8 +48,7 @@ a numpy ndarray), a list of coordinates labels and a list of dimension names:
     data = np.random.rand(4, 3)
     locs = ['IA', 'IL', 'IN']
     times = pd.date_range('2000-01-01', periods=4)
-    foo = xray.DataArray(data, coordinates=[times, locs],
-                         dimensions=['time', 'space'])
+    foo = xray.DataArray(data, coords=[times, locs], dims=['time', 'space'])
     foo
 
 All of these arguments (except for ``data``) are optional, and will be filled
@@ -86,8 +85,8 @@ Let's take a look at the important properties on our array:
 .. ipython:: python
 
     foo.values
-    foo.dimensions
-    foo.coordinates
+    foo.dims
+    foo.coords
     foo.attrs
     print(foo.name)
 
@@ -99,13 +98,13 @@ Now fill in some of that missing metadata:
     foo.attrs['units'] = 'meters'
     foo
 
-The ``coordinates`` property is ``dict`` like. Individual coordinates can be
+The ``coords`` property is ``dict`` like. Individual coordinates can be
 accessed by name or axis number:
 
 .. ipython:: python
 
-    foo.coordinates['time']
-    foo.coordinates[0]
+    foo.coords['time']
+    foo.coords[0]
 
 These are :py:class:`xray.Coordinate` objects, which contain tick-labels for
 each dimension.
@@ -197,7 +196,7 @@ was filled with an array of ascending integers of the proper length:
 
 Noncoordinate and coordinates are listed explicitly by the
 :py:attr:`~xray.Dataset.noncoordinates` and
-:py:attr:`~xray.Dataset.coordinates` attributes.
+:py:attr:`~xray.Dataset.coords` attributes.
 
 There are also a few derived variables based on datetime coordinates that you
 can access from a dataset (e.g., "year", "month" and "day"), even if you didn't
@@ -399,7 +398,7 @@ operation over any or all non-coordinates in a dataset by using
 Aggregation
 ~~~~~~~~~~~
 
-Aggregation methods from ndarray have been updated to take a `dimension`
+Aggregation methods from ndarray have been updated to take a `dim`
 argument instead of `axis`. This allows for very intuitive syntax for
 aggregation methods that are applied along particular dimension(s):
 
@@ -453,7 +452,7 @@ arrays with different sizes aligned along different dimensions:
 
     a = xray.DataArray([1, 2, 3, 4], [['a', 'b', 'c', 'd']], ['x'])
     a
-    b = xray.DataArray([-1, -2, -3], dimensions=['y'])
+    b = xray.DataArray([-1, -2, -3], dims=['y'])
     b
 
 With xray, we can apply binary mathematical operations to these arrays, and
@@ -1112,7 +1111,7 @@ and DataArray variables. It supports the numpy ndarray interface, but is
 extended to support and use basic metadata (not including index values). It
 consists of:
 
-1. ``dimensions``: A tuple of dimension names.
+1. ``dims``: A tuple of dimension names.
 2. ``values``: The N-dimensional array (for example, of type
    :py:class:`numpy.ndarray`) storing the array's data. It must have the same
    number of dimensions as the length of ``dimensions``.
