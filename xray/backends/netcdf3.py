@@ -52,7 +52,7 @@ def coerce_nc3_dtype(arr):
 
 
 def encode_nc3_variable(var):
-    dimensions = var.dimensions
+    dimensions = var.dims
     data = coerce_nc3_dtype(var.values)
     if data.dtype.kind == 'S' and data.dtype.itemsize > 1:
         data = conventions.string_to_char(data)

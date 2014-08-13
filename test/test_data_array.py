@@ -39,13 +39,13 @@ class TestDataArray(TestCase):
         self.assertDatasetIdentical(self.dv.dataset, self.ds)
         self.assertVariableEqual(self.dv.variable, self.v)
         self.assertArrayEqual(self.dv.values, self.v.values)
-        for attr in ['dimensions', 'dtype', 'shape', 'size', 'ndim', 'attrs']:
+        for attr in ['dims', 'dtype', 'shape', 'size', 'ndim', 'attrs']:
             self.assertEqual(getattr(self.dv, attr), getattr(self.v, attr))
         self.assertEqual(len(self.dv), len(self.v))
         self.assertVariableEqual(self.dv, self.v)
-        self.assertEqual(list(self.dv.coordinates), list(self.ds.coordinates))
-        for k, v in iteritems(self.dv.coordinates):
-            self.assertArrayEqual(v, self.ds.coordinates[k])
+        self.assertEqual(list(self.dv.coords), list(self.ds.coords))
+        for k, v in iteritems(self.dv.coords):
+            self.assertArrayEqual(v, self.ds.coords[k])
         with self.assertRaises(AttributeError):
             self.dv.dataset = self.ds
         self.assertIsInstance(self.ds['x'].as_index, pd.Index)
@@ -68,16 +68,16 @@ class TestDataArray(TestCase):
         expected = DataArray(Coordinate('y', [3]))
         self.assertDataArrayIdentical(actual, expected)
 
-    def test_dimensions(self):
+    def test_dims(self):
         arr = self.dv
-        self.assertEqual(arr.dimensions, ('x', 'y'))
+        self.assertEqual(arr.dims, ('x', 'y'))
 
         arr.dims = ('w', 'z')
-        self.assertEqual(arr.dimensions, ('w', 'z'))
+        self.assertEqual(arr.dims, ('w', 'z'))
 
         x = Dataset({'x': ('x', np.arange(5))})['x']
         x.dims = ('y',)
-        self.assertEqual(x.dimensions, ('y',))
+        self.assertEqual(x.dims, ('y',))
         self.assertEqual(x.name, 'y')
 
     def test_encoding(self):
@@ -110,25 +110,25 @@ class TestDataArray(TestCase):
                             'y': ('y', [-1, -2, -3])})[None]
         self.assertDataArrayIdentical(expected, actual)
 
-        coordinates = [['a', 'b'], [-1, -2, -3]]
-        actual = DataArray(data, coordinates, ['x', 'y'])
+        coords = [['a', 'b'], [-1, -2, -3]]
+        actual = DataArray(data, coords, ['x', 'y'])
         self.assertDataArrayIdentical(expected, actual)
 
-        coordinates = [pd.Index(['a', 'b'], name='A'),
+        coords = [pd.Index(['a', 'b'], name='A'),
                    pd.Index([-1, -2, -3], name='B')]
-        actual = DataArray(data, coordinates, ['x', 'y'])
+        actual = DataArray(data, coords, ['x', 'y'])
         self.assertDataArrayIdentical(expected, actual)
 
-        coordinates = {'x': ['a', 'b'], 'y': [-1, -2, -3]}
-        actual = DataArray(data, coordinates, ['x', 'y'])
+        coords = {'x': ['a', 'b'], 'y': [-1, -2, -3]}
+        actual = DataArray(data, coords, ['x', 'y'])
         self.assertDataArrayIdentical(expected, actual)
 
-        coordinates = OrderedDict([('x', ['a', 'b']), ('y', [-1, -2, -3])])
-        actual = DataArray(data, coordinates)
+        coords = OrderedDict([('x', ['a', 'b']), ('y', [-1, -2, -3])])
+        actual = DataArray(data, coords)
         self.assertDataArrayIdentical(expected, actual)
 
-        coordinates = pd.Series([['a', 'b'], [-1, -2, -3]], ['x', 'y'])
-        actual = DataArray(data, coordinates)
+        coords = pd.Series([['a', 'b'], [-1, -2, -3]], ['x', 'y'])
+        actual = DataArray(data, coords)
         self.assertDataArrayIdentical(expected, actual)
 
         expected = Dataset({None: (['x', 'y'], data),
@@ -188,7 +188,7 @@ class TestDataArray(TestCase):
 
         panel = pd.Panel({0: frame})
         actual = DataArray(panel)
-        expected = DataArray([data], expected.coordinates, ['dim_0', 'x', 'y'])
+        expected = DataArray([data], expected.coords, ['dim_0', 'x', 'y'])
         self.assertDataArrayIdentical(expected, actual)
 
         expected = Dataset({'foo': ('foo', ['a', 'b'])})['foo']
@@ -289,33 +289,33 @@ class TestDataArray(TestCase):
         self.assertEqual(data.loc[True], 0)
         self.assertEqual(data.loc[False], 1)
 
-    def test_coordinates(self):
-        coordinates = [Coordinate('x', [-1, -2]), Coordinate('y', [0, 1, 2])]
-        da = DataArray(np.random.randn(2, 3), coordinates, name='foo')
+    def test_coords(self):
+        coords = [Coordinate('x', [-1, -2]), Coordinate('y', [0, 1, 2])]
+        da = DataArray(np.random.randn(2, 3), coords, name='foo')
 
-        self.assertEquals(2, len(da.coordinates))
+        self.assertEquals(2, len(da.coords))
 
-        self.assertEquals(['x', 'y'], list(da.coordinates))
+        self.assertEquals(['x', 'y'], list(da.coords))
 
-        self.assertTrue(da.coordinates[0].identical(coordinates[0]))
-        self.assertTrue(da.coordinates['x'].identical(coordinates[0]))
-        self.assertTrue(da.coordinates[1].identical(coordinates[1]))
-        self.assertTrue(da.coordinates['y'].identical(coordinates[1]))
+        self.assertTrue(da.coords[0].identical(coords[0]))
+        self.assertTrue(da.coords['x'].identical(coords[0]))
+        self.assertTrue(da.coords[1].identical(coords[1]))
+        self.assertTrue(da.coords['y'].identical(coords[1]))
 
-        self.assertIn('x', da.coordinates)
-        self.assertNotIn(0, da.coordinates)
-        self.assertNotIn('foo', da.coordinates)
+        self.assertIn('x', da.coords)
+        self.assertNotIn(0, da.coords)
+        self.assertNotIn('foo', da.coords)
 
         with self.assertRaises(KeyError):
-            da.coordinates['foo']
+            da.coords['foo']
 
         expected = dedent("""\
         x: Int64Index([-1, -2], dtype='int64')
         y: Int64Index([0, 1, 2], dtype='int64')""")
-        actual = repr(da.coordinates)
+        actual = repr(da.coords)
         self.assertEquals(expected, actual)
 
-    def test_coordinates_modify(self):
+    def test_coords_modify(self):
         da = DataArray(np.zeros((2, 3)), dims=['x', 'y'])
 
         for k, v in [('x', ['a', 'b']), (0, ['c', 'd']), (-2, ['e', 'f'])]:
@@ -565,7 +565,7 @@ class TestDataArray(TestCase):
 
     def test_groupby_apply_identity(self):
         expected = self.make_groupby_example_array()
-        idx = expected.coordinates['y']
+        idx = expected.coords['y']
         identity = lambda x: x
         for g in ['x', 'y', 'abc', idx]:
             for shortcut in [False, True]:

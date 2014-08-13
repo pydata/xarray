@@ -164,11 +164,11 @@ def array_repr(arr):
     else:
         summary.append('[%s values with dtype=%s]' % (arr.size, arr.dtype))
     if hasattr(arr, 'dataset'):
-        if arr.coordinates:
+        if arr.coords:
             summary.append('Coordinates:')
-            summary.append(_wrap_indent(repr(arr.coordinates), '    '))
+            summary.append(_wrap_indent(repr(arr.coords), '    '))
         other_vars = [k for k in arr.dataset
-                      if k not in arr.coordinates and k != arr.name]
+                      if k not in arr.coords and k != arr.name]
         if other_vars:
             summary.append('Linked dataset variables:')
             summary.append('    ' + ', '.join(other_vars))
@@ -222,7 +222,7 @@ def dataset_repr(ds):
             return ['    None']
 
     summary.append('Coordinates:')
-    summary.extend(summarize_variables(ds.coordinates, ' ', 'X'))
+    summary.extend(summarize_variables(ds.coords, ' ', 'X'))
 
     summary.append('Noncoordinates:')
     summary.extend(summarize_variables(ds.noncoordinates, ' ', int))

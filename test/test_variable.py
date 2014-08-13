@@ -18,7 +18,7 @@ class VariableSubclassTestCases(object):
     def test_properties(self):
         data = 0.5 * np.arange(10)
         v = self.cls(['time'], data, {'foo': 'bar'})
-        self.assertEqual(v.dimensions, ('time',))
+        self.assertEqual(v.dims, ('time',))
         self.assertArrayEqual(v.values, data)
         self.assertEqual(v.dtype, float)
         self.assertEqual(v.shape, (10,))
@@ -537,7 +537,7 @@ class TestVariable(TestCase, VariableSubclassTestCases):
         self.assertVariableIdentical(v.reduce(np.std, 'x'),
                                      Variable(['y'], self.d.std(axis=0)))
         self.assertVariableIdentical(v.reduce(np.std, axis=0),
-                                     v.reduce(np.std, dimension='x'))
+                                     v.reduce(np.std, dim='x'))
         self.assertVariableIdentical(v.reduce(np.std, ['y', 'x']),
                                      Variable([], self.d.std(axis=(0, 1))))
         self.assertVariableIdentical(v.reduce(np.std),
@@ -548,7 +548,7 @@ class TestVariable(TestCase, VariableSubclassTestCases):
         self.assertVariableIdentical(v.mean('x'), v.reduce(np.mean, 'x'))
 
         with self.assertRaisesRegexp(ValueError, 'cannot supply both'):
-            v.mean(dimension='x', axis=0)
+            v.mean(dim='x', axis=0)
 
     def test_reduce_keep_attrs(self):
         _attrs = {'units': 'test', 'long_name': 'testing'}

@@ -596,7 +596,7 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
 
     @property
     def coordinates(self):
-        utils.alias_warning('indexes', 'coords', 3)
+        utils.alias_warning('coordinates', 'coords', 3)
         return self.coords
 
     @property
@@ -749,11 +749,11 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
         Dataset.reindex
         align
         """
-        return self.reindex(copy=copy, **other.coordinates)
+        return self.reindex(copy=copy, **other.coords)
 
-    def reindex(self, copy=True, **coordinates):
-        """Conform this object onto a new set of coordinates or pandas.Index
-        objects, filling in missing values with NaN.
+    def reindex(self, copy=True, **indexers):
+        """Conform this object onto a new set of coordinates, filling in
+        missing values with NaN.
 
         Parameters
         ----------
@@ -761,7 +761,7 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
             If `copy=True`, the returned dataset contains only copied
             variables. If `copy=False` and no reindexing is required then
             original variables from this dataset are returned.
-        **coordinates : dict
+        **indexers : dict
             Dictionary with keys given by dimension names and values given by
             arrays of coordinates tick labels. Any mis-matched coordinate values
             will be filled in with NaN, and any mis-matched dimension names will
@@ -777,16 +777,16 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
         Dataset.reindex_like
         align
         """
-        if not coordinates:
+        if not indexers:
             # shortcut
             return self.copy(deep=True) if copy else self
 
         # build up indexers for assignment along each index
         to_indexers = {}
         from_indexers = {}
-        for name, coord in iteritems(self.coordinates):
-            if name in coordinates:
-                target = utils.safe_cast_to_index(coordinates[name])
+        for name, coord in iteritems(self.coords):
+            if name in indexers:
+                target = utils.safe_cast_to_index(indexers[name])
                 indexer = coord.get_indexer(target)
 
                 # Note pandas uses negative values from get_indexer to signify
@@ -831,8 +831,8 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
         # create variables for the new dataset
         variables = OrderedDict()
         for name, var in iteritems(self.variables):
-            if name in coordinates:
-                new_var = coordinates[name]
+            if name in indexers:
+                new_var = indexers[name]
                 if not (hasattr(new_var, 'dims') and
                         hasattr(new_var, 'values')):
                     new_var = variable.Coordinate(var.dims, new_var,
@@ -1123,11 +1123,11 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
         if isinstance(dim, basestring):
             dims = set([dim])
         elif dim is None:
-            dims = set(self.coordinates)
+            dims = set(self.dims)
         else:
             dims = set(dim)
 
-        bad_dims = [dim for dim in dims if dim not in self.coordinates]
+        bad_dims = [dim for dim in dims if dim not in self.dims]
         if bad_dims:
             raise ValueError('Dataset does not contain the dimensions: '
                              '{0}'.format(bad_dims))
@@ -1354,8 +1354,8 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
             _, var_data = np.broadcast_arrays(template.values, var.values)
             data.append(var_data.reshape(-1))
 
-        index = multi_index_from_product(list(self.coordinates.values()),
-                                         names=list(self.coordinates.keys()))
+        index = multi_index_from_product(list(self.coords.values()),
+                                         names=list(self.coords.keys()))
         return pd.DataFrame(OrderedDict(zip(columns, data)), index=index)
 
     @classmethod

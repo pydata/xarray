@@ -295,7 +295,7 @@ class DataArray(AbstractArray):
 
     @property
     def dims(self):
-        return self.variable.dimensions
+        return self.variable.dims
 
     @dims.setter
     def dims(self, value):
@@ -511,9 +511,9 @@ class DataArray(AbstractArray):
         """
         return self.reindex(copy=copy, **other.coords)
 
-    def reindex(self, copy=True, **indexes):
-        """Conform this object onto a new set of indexes, filling in missing
-        values with NaN.
+    def reindex(self, copy=True, **indexers):
+        """Conform this object onto a new set of coordinates, filling in
+        missing values with NaN.
 
         Parameters
         ----------
@@ -521,7 +521,7 @@ class DataArray(AbstractArray):
             If `copy=True`, the returned array's dataset contains only copied
             variables. If `copy=False` and no reindexing is required then
             original variables from this array's dataset are returned.
-        **indexes : dict
+        **indexers : dict
             Dictionary with keys given by dimension names and values given by
             arrays of coordinates tick labels. Any mis-matched coordinate values
             will be filled in with NaN, and any mis-matched dimension names will
@@ -531,7 +531,7 @@ class DataArray(AbstractArray):
         -------
         reindexed : DataArray
             Another dataset array, with this array's data but replaced
-            indexes.
+            coordinates.
 
         See Also
         --------
@@ -539,7 +539,7 @@ class DataArray(AbstractArray):
         align
         """
         ds = self.select_vars().dataset
-        reindexed_ds = ds.reindex(copy=copy, **indexes)
+        reindexed_ds = ds.reindex(copy=copy, **indexers)
         return reindexed_ds[self.name]
 
     def rename(self, new_name_or_name_dict):

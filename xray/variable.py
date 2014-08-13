@@ -422,24 +422,24 @@ class Variable(AbstractArray):
             unless numpy fancy indexing was triggered by using an array
             indexer, in which case the data will be a copy.
         """
-        invalid = [k for k in indexers if not k in self.dimensions]
+        invalid = [k for k in indexers if not k in self.dims]
         if invalid:
             raise ValueError("dimensions %r do not exist" % invalid)
 
         key = [slice(None)] * self.ndim
-        for i, dim in enumerate(self.dimensions):
+        for i, dim in enumerate(self.dims):
             if dim in indexers:
                 key[i] = indexers[dim]
         return self[tuple(key)]
 
     indexed = utils.function_alias(isel, 'indexed')
 
-    def transpose(self, *dimensions):
+    def transpose(self, *dims):
         """Return a new Variable object with transposed dimensions.
 
         Parameters
         ----------
-        *dimensions : str, optional
+        *dims : str, optional
             By default, reverse the dimensions. Otherwise, reorder the
             dimensions to this order.
 
@@ -458,18 +458,18 @@ class Variable(AbstractArray):
         --------
         numpy.transpose
         """
-        if len(dimensions) == 0:
-            dimensions = self.dimensions[::-1]
-        axes = self.get_axis_num(dimensions)
+        if len(dims) == 0:
+            dims = self.dims[::-1]
+        axes = self.get_axis_num(dims)
         data = self.values.transpose(*axes)
-        return type(self)(dimensions, data, self.attrs, self.encoding)
+        return type(self)(dims, data, self.attrs, self.encoding)
 
-    def squeeze(self, dimension=None):
+    def squeeze(self, dim=None):
         """Return a new Variable object with squeezed data.
 
         Parameters
         ----------
-        dimensions : None or str or tuple of str, optional
+        dim : None or str or tuple of str, optional
             Selects a subset of the length one dimensions. If a dimension is
             selected with length greater than one, an error is raised. If
             None, all length one dimensions are squeezed.
@@ -489,8 +489,8 @@ class Variable(AbstractArray):
         --------
         numpy.squeeze
         """
-        dimensions = dict(zip(self.dimensions, self.shape))
-        return utils.squeeze(self, dimensions, dimension)
+        dims = dict(zip(self.dims, self.shape))
+        return utils.squeeze(self, dims, dim)
 
     def reduce(self, func, dim=None, axis=None, keep_attrs=False,
                **kwargs):
