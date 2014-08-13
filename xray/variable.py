@@ -22,7 +22,7 @@ def as_variable(obj, strict=True):
     - If the object is already an `Variable`, return it.
     - If the object is a `DataArray`, return it if `strict=False` or return
       its variable if `strict=True`.
-    - Otherwise, if the object has 'dimensions' and 'data' attributes, convert
+    - Otherwise, if the object has 'dims' and 'data' attributes, convert
       it into a new `Variable`.
     - If all else fails, attempt to convert the object into an `Variable` by
       unpacking it into the arguments for `Variable.__init__`.
@@ -33,8 +33,8 @@ def as_variable(obj, strict=True):
         # extract the primary Variable from DataArrays
         obj = obj.variable
     if not isinstance(obj, (Variable, xray.DataArray)):
-        if hasattr(obj, 'dimensions') and hasattr(obj, 'values'):
-            obj = Variable(obj.dimensions, obj.values,
+        if hasattr(obj, 'dims') and hasattr(obj, 'values'):
+            obj = Variable(obj.dims, obj.values,
                            getattr(obj, 'attributes', None),
                            getattr(obj, 'encoding', None))
         else:
@@ -191,11 +191,11 @@ class Variable(AbstractArray):
     described outside the context of its parent Dataset (if you want such a
     fully described object, use a DataArray instead).
     """
-    def __init__(self, dimensions, data, attrs=None, encoding=None):
+    def __init__(self, dims, data, attrs=None, encoding=None):
         """
         Parameters
         ----------
-        dimensions : str or sequence of str
+        dims : str or sequence of str
             Name(s) of the the data dimension(s). Must be either a string (only
             for 1D data) or a sequence of strings with length equal to the
             number of dimensions.
@@ -212,7 +212,7 @@ class Variable(AbstractArray):
             unrecognized encoding items.
         """
         self._data = _as_compatible_data(data)
-        self._dimensions = self._parse_dimensions(dimensions)
+        self._dims = self._parse_dimensions(dims)
         if attrs is None:
             attrs = {}
         self._attrs = OrderedDict(attrs)
@@ -280,7 +280,7 @@ class Variable(AbstractArray):
 
     def to_coord(self):
         """Return this variable as an xray.Coordinate"""
-        return Coordinate(self.dimensions, self._data, self.attrs,
+        return Coordinate(self.dims, self._data, self.attrs,
                           encoding=self.encoding)
 
     @property
@@ -289,13 +289,18 @@ class Variable(AbstractArray):
         # n.b. creating a new pandas.Index from an old pandas.Index is
         # basically free as pandas.Index objcets are immutable
         assert self.ndim == 1
-        return pd.Index(self._data_cached().array, name=self.dimensions[0])
+        return pd.Index(self._data_cached().array, name=self.dims[0])
+
+    @property
+    def dims(self):
+        """Tuple of dimension names with which this variable is associated.
+        """
+        return self._dims
 
     @property
     def dimensions(self):
-        """Tuple of dimension names with which this variable is associated.
-        """
-        return self._dimensions
+        utils.alias_warning('dimensions', 'dims')
+        return self.dims
 
     def _parse_dimensions(self, dims):
         if isinstance(dims, basestring):
@@ -307,9 +312,9 @@ class Variable(AbstractArray):
                              % (dims, self.ndim))
         return dims
 
-    @dimensions.setter
-    def dimensions(self, value):
-        self._dimensions = self._parse_dimensions(value)
+    @dims.setter
+    def dims(self, value):
+        self._dims = self._parse_dimensions(value)
 
     def __getitem__(self, key):
         """Return a new Array object whose contents are consistent with
@@ -329,15 +334,15 @@ class Variable(AbstractArray):
         array `x.values` directly.
         """
         key = indexing.expanded_indexer(key, self.ndim)
-        dimensions = [dim for k, dim in zip(key, self.dimensions)
+        dims = [dim for k, dim in zip(key, self.dims)
                       if not isinstance(k, (int, np.integer))]
         values = self._data[key]
         # orthogonal indexing should ensure the dimensionality is consistent
         if hasattr(values, 'ndim'):
-            assert values.ndim == len(dimensions), (values.ndim, len(dimensions))
+            assert values.ndim == len(dims), (values.ndim, len(dims))
         else:
-            assert len(dimensions) == 0, len(dimensions)
-        return type(self)(dimensions, values, self.attrs)
+            assert len(dims) == 0, len(dims)
+        return type(self)(dims, values, self.attrs)
 
     def __setitem__(self, key, value):
         """__setitem__ is overloaded to access the underlying numpy values with
@@ -385,9 +390,9 @@ class Variable(AbstractArray):
         """
         data = self.values.copy() if deep else self._data
         # note:
-        # dimensions is already an immutable tuple
+        # dims is already an immutable tuple
         # attributes and encoding will be copied when the new Array is created
-        return type(self)(self.dimensions, data, self.attrs, self.encoding)
+        return type(self)(self.dims, data, self.attrs, self.encoding)
 
     def __copy__(self):
         return self.copy(deep=False)
@@ -487,7 +492,7 @@ class Variable(AbstractArray):
         dimensions = dict(zip(self.dimensions, self.shape))
         return utils.squeeze(self, dimensions, dimension)
 
-    def reduce(self, func, dimension=None, axis=None, keep_attrs=False,
+    def reduce(self, func, dim=None, axis=None, keep_attrs=False,
                **kwargs):
         """Reduce this array by applying `func` along some dimension(s).
 
@@ -497,10 +502,10 @@ class Variable(AbstractArray):
             Function which can be called in the form
             `func(x, axis=axis, **kwargs)` to return the result of reducing an
             np.ndarray over an integer valued axis.
-        dimension : str or sequence of str, optional
+        dim : str or sequence of str, optional
             Dimension(s) over which to apply `func`.
         axis : int or sequence of int, optional
-            Axis(es) over which to apply `func`. Only one of the 'dimension'
+            Axis(es) over which to apply `func`. Only one of the 'dim'
             and 'axis' arguments can be supplied. If neither are supplied, then
             the reduction is calculated over the flattened array (by calling
             `func(x)` without an axis argument).
@@ -517,18 +522,20 @@ class Variable(AbstractArray):
             Array with summarized data and the indicated dimension(s)
             removed.
         """
+        if 'dimension' in kwargs and dim is None:
+            dim = kwargs.pop('dimension')
+            utils.alias_warning('dimension', 'dim')
 
-        if dimension is not None and axis is not None:
-            raise ValueError("cannot supply both 'axis' and 'dimension' "
-                             "arguments")
+        if dim is not None and axis is not None:
+            raise ValueError("cannot supply both 'axis' and 'dim' arguments")
 
-        if dimension is not None:
-            axis = self.get_axis_num(dimension)
+        if dim is not None:
+            axis = self.get_axis_num(dim)
         data = func(self.values, axis=axis, **kwargs)
 
         removed_axes = (range(self.ndim) if axis is None
                         else np.atleast_1d(axis) % self.ndim)
-        dims = [dim for n, dim in enumerate(self.dimensions)
+        dims = [dim for n, dim in enumerate(self.dims)
                 if n not in removed_axes]
 
         attrs = self.attrs if keep_attrs else {}
@@ -536,8 +543,8 @@ class Variable(AbstractArray):
         return Variable(dims, data, attrs=attrs)
 
     @classmethod
-    def concat(cls, variables, dimension='stacked_dimension',
-               indexers=None, length=None, shortcut=False):
+    def concat(cls, variables, dim='concat_dim', indexers=None, length=None,
+               shortcut=False):
         """Concatenate variables along a new or existing dimension.
 
         Parameters
@@ -546,7 +553,7 @@ class Variable(AbstractArray):
             Arrays to stack together. Each variable is expected to have
             matching dimensions and shape except for along the stacked
             dimension.
-        dimension : str or DataArray, optional
+        dim : str or DataArray, optional
             Name of the dimension to stack along. This can either be a new
             dimension name, in which case it is added along axis=0, or an
             existing dimension name, in which case the location of the
@@ -575,17 +582,17 @@ class Variable(AbstractArray):
             Concatenated Variable formed by stacking all the supplied variables
             along the given dimension.
         """
-        if not isinstance(dimension, basestring):
-            length = dimension.size
-            dimension, = dimension.dimensions
+        if not isinstance(dim, basestring):
+            length = dim.size
+            dim, = dim.dims
 
         if length is None or indexers is None:
             # so much for lazy evaluation! we need to look at all the variables
             # to figure out the indexers and/or dimensions of the stacked
             # variable
             variables = list(variables)
-            steps = [var.shape[var.get_axis_num(dimension)]
-                     if dimension in var.dimensions else 1
+            steps = [var.shape[var.get_axis_num(dim)]
+                     if dim in var.dims else 1
                      for var in variables]
             if length is None:
                 length = sum(steps)
@@ -598,35 +605,35 @@ class Variable(AbstractArray):
                 if i != length:
                     raise ValueError('actual length of stacked variables '
                                      'along %s is %r but expected length was '
-                                     '%s' % (dimension, i, length))
+                                     '%s' % (dim, i, length))
 
         # initialize the stacked variable with empty data
         from . import groupby
         first_var, variables = groupby.peek_at(variables)
-        if dimension in first_var.dimensions:
-            axis = first_var.get_axis_num(dimension)
+        if dim in first_var.dims:
+            axis = first_var.get_axis_num(dim)
             shape = tuple(length if n == axis else s
                           for n, s in enumerate(first_var.shape))
-            dims = first_var.dimensions
+            dims = first_var.dims
         else:
             axis = 0
             shape = (length,) + first_var.shape
-            dims = (dimension,) + first_var.dimensions
+            dims = (dim,) + first_var.dims
 
         concatenated = cls(dims, np.empty(shape, dtype=first_var.dtype))
         concatenated.attrs.update(first_var.attrs)
 
-        alt_dims = tuple(d for d in dims if d != dimension)
+        alt_dims = tuple(d for d in dims if d != dim)
 
         # copy in the data from the variables
         for var, indexer in izip(variables, indexers):
             if not shortcut:
                 # do sanity checks & attributes clean-up
-                if dimension in var.dimensions:
-                    # transpose verifies that the dimensions are equivalent
-                    if var.dimensions != concatenated.dimensions:
-                        var = var.transpose(*concatenated.dimensions)
-                elif var.dimensions != alt_dims:
+                if dim in var.dims:
+                    # transpose verifies that the dims are equivalent
+                    if var.dims != concatenated.dims:
+                        var = var.transpose(*concatenated.dims)
+                elif var.dims != alt_dims:
                     raise ValueError('inconsistent dimensions')
                 utils.remove_incompatible_items(concatenated.attrs, var.attrs)
 
@@ -652,7 +659,7 @@ class Variable(AbstractArray):
         """
         other = getattr(other, 'variable', other)
         try:
-            return (self.dimensions == other.dimensions
+            return (self.dims == other.dims
                     and self._data_equals(other))
         except (TypeError, AttributeError):
             return False
@@ -667,13 +674,13 @@ class Variable(AbstractArray):
             return False
 
     def __array_wrap__(self, obj, context=None):
-        return Variable(self.dimensions, obj)
+        return Variable(self.dims, obj)
 
     @staticmethod
     def _unary_op(f):
         @functools.wraps(f)
         def func(self, *args, **kwargs):
-            return Variable(self.dimensions, f(self.values, *args, **kwargs))
+            return Variable(self.dims, f(self.values, *args, **kwargs))
         return func
 
     @staticmethod
@@ -694,7 +701,7 @@ class Variable(AbstractArray):
         @functools.wraps(f)
         def func(self, other):
             self_data, other_data, dims = _broadcast_variable_data(self, other)
-            if dims != self.dimensions:
+            if dims != self.dims:
                 raise ValueError('dimensions cannot change for in-place '
                                  'operations')
             self.values = f(self_data, other_data)
@@ -733,8 +740,7 @@ class Coordinate(Variable):
         if not hasattr(values, 'ndim') or values.ndim == 0:
             return Variable((), values, self.attrs, self.encoding)
         else:
-            return type(self)(self.dimensions, values, self.attrs,
-                              self.encoding)
+            return type(self)(self.dims, values, self.attrs, self.encoding)
 
     def __setitem__(self, key, value):
         raise TypeError('%s values cannot be modified' % type(self).__name__)
@@ -748,7 +754,7 @@ class Coordinate(Variable):
         # there is no need to copy the index values here even if deep=True
         # since pandas.Index objects are immutable
         data = PandasIndexAdapter(self) if deep else self._data
-        return type(self)(self.dimensions, data, self.attrs, self.encoding)
+        return type(self)(self.dims, data, self.attrs, self.encoding)
 
     def _data_equals(self, other):
         return self.as_index.equals(other.as_index)
@@ -761,7 +767,7 @@ class Coordinate(Variable):
 
     @property
     def name(self):
-        return self.dimensions[0]
+        return self.dims[0]
 
     @name.setter
     def name(self, value):
@@ -811,33 +817,32 @@ def broadcast_variables(first, second):
     """
     # TODO: add unit tests specifically for this function
     # validate dimensions
-    dim_lengths = dict(zip(first.dimensions, first.shape))
-    for k, v in zip(second.dimensions, second.shape):
+    dim_lengths = dict(zip(first.dims, first.shape))
+    for k, v in zip(second.dims, second.shape):
         if k in dim_lengths and dim_lengths[k] != v:
             raise ValueError('operands could not be broadcast together '
                              'with mismatched lengths for dimension %r: %s'
                              % (k, (dim_lengths[k], v)))
-    for dimensions in [first.dimensions, second.dimensions]:
-        if len(set(dimensions)) < len(dimensions):
+    for dims in [first.dims, second.dims]:
+        if len(set(dims)) < len(dims):
             raise ValueError('broadcasting requires that neither operand '
-                             'has duplicate dimensions: %r'
-                             % list(dimensions))
+                             'has duplicate dimensions: %r' % list(dims))
 
     # build dimensions for new Array
-    second_only_dims = [d for d in second.dimensions
-                        if d not in first.dimensions]
-    dimensions = list(first.dimensions) + second_only_dims
+    second_only_dims = [d for d in second.dims
+                        if d not in first.dims]
+    dims = list(first.dims) + second_only_dims
 
     # expand first_data's dimensions so it's broadcast compatible after
     # adding second's dimensions at the end
     first_data = first.values[(Ellipsis,) + (None,) * len(second_only_dims)]
-    new_first = Variable(dimensions, first_data, first.attrs, first.encoding)
+    new_first = Variable(dims, first_data, first.attrs, first.encoding)
     # expand and reorder second_data so the dimensions line up
-    first_only_dims = [d for d in dimensions if d not in second.dimensions]
-    second_dims = list(second.dimensions) + first_only_dims
+    first_only_dims = [d for d in dims if d not in second.dims]
+    second_dims = list(second.dims) + first_only_dims
     second_data = second.values[(Ellipsis,) + (None,) * len(first_only_dims)]
     new_second = Variable(second_dims, second_data, second.attrs,
-                          second.encoding).transpose(*dimensions)
+                          second.encoding).transpose(*dims)
     return new_first, new_second
 
 
@@ -845,15 +850,15 @@ def _broadcast_variable_data(self, other):
     if isinstance(other, xray.Dataset):
         raise TypeError('datasets do not support mathematical operations')
     elif all(hasattr(other, attr) for attr
-             in ['dimensions', 'values', 'shape', 'encoding']):
+             in ['dims', 'values', 'shape', 'encoding']):
         # `other` satisfies the necessary Variable API for broadcast_variables
         new_self, new_other = broadcast_variables(self, other)
         self_data = new_self.values
         other_data = new_other.values
-        dimensions = new_self.dimensions
+        dims = new_self.dims
     else:
         # rely on numpy broadcasting rules
         self_data = self.values
         other_data = other
-        dimensions = self.dimensions
-    return self_data, other_data, dimensions
+        dims = self.dims
+    return self_data, other_data, dims

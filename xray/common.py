@@ -3,21 +3,22 @@ from collections import Mapping
 import numpy as np
 
 from .pycompat import basestring, iteritems
+from . import utils
 
 
 class ImplementsArrayReduce(object):
     @classmethod
     def _reduce_method(cls, func):
-        def wrapped_func(self, dimension=None, axis=None, keep_attrs=False,
+        def wrapped_func(self, dim=None, axis=None, keep_attrs=False,
                          **kwargs):
-            return self.reduce(func, dimension, axis, keep_attrs, **kwargs)
+            return self.reduce(func, dim, axis, keep_attrs, **kwargs)
         return wrapped_func
 
     _reduce_extra_args_docstring = \
-        """dimension : str or sequence of str, optional
+        """dim : str or sequence of str, optional
             Dimension(s) over which to apply `{name}`.
         axis : int or sequence of int, optional
-            Axis(es) over which to apply `{name}`. Only one of the 'dimension'
+            Axis(es) over which to apply `{name}`. Only one of the 'dim'
             and 'axis' arguments can be supplied. If neither are supplied, then
             `{name}` is calculated over axes.\n"""
 
@@ -25,12 +26,12 @@ class ImplementsArrayReduce(object):
 class ImplementsDatasetReduce(object):
     @classmethod
     def _reduce_method(cls, func):
-        def wrapped_func(self, dimension=None, keep_attrs=False, **kwargs):
-            return self.reduce(func, dimension, keep_attrs, **kwargs)
+        def wrapped_func(self, dim=None, keep_attrs=False, **kwargs):
+            return self.reduce(func, dim, keep_attrs, **kwargs)
         return wrapped_func
 
     _reduce_extra_args_docstring = \
-        """dimension : str or sequence of str, optional
+        """dim : str or sequence of str, optional
             Dimension(s) over which to apply `func`.  By default `func` is
             applied over all dimensions.\n"""
 
@@ -73,12 +74,12 @@ class AbstractArray(ImplementsArrayReduce):
     def T(self):
         return self.transpose()
 
-    def get_axis_num(self, dimension):
+    def get_axis_num(self, dim):
         """Return axis number(s) corresponding to dimension(s) in this array.
 
         Parameters
         ----------
-        dimension : str or iterable of str
+        dim : str or iterable of str
             Dimension name(s) for which to lookup axes.
 
         Returns
@@ -86,17 +87,17 @@ class AbstractArray(ImplementsArrayReduce):
         int or tuple of int
             Axis number or numbers corresponding to the given dimensions.
         """
-        if isinstance(dimension, basestring):
-            return self._get_axis_num(dimension)
+        if isinstance(dim, basestring):
+            return self._get_axis_num(dim)
         else:
-            return tuple(self._get_axis_num(dim) for dim in dimension)
+            return tuple(self._get_axis_num(d) for d in dim)
 
     def _get_axis_num(self, dim):
         try:
-            return self.dimensions.index(dim)
+            return self.dims.index(dim)
         except ValueError:
             raise ValueError("%r not found in array dimensions %r" %
-                             (dim, self.dimensions))
+                             (dim, self.dims))
 
 
 class AbstractCoordinates(Mapping):
@@ -107,13 +108,13 @@ class AbstractCoordinates(Mapping):
         raise NotImplementedError
 
     def __iter__(self):
-        return iter(self._data.dimensions)
+        return iter(self._data.dims)
 
     def __len__(self):
-        return len(self._data.dimensions)
+        return len(self._data.dims)
 
     def __contains__(self, key):
-        return key in self._data.dimensions
+        return key in self._data.dims
 
     def __repr__(self):
         return '\n'.join(_wrap_indent(repr(v.as_index), '%s: ' % k)
@@ -156,7 +157,7 @@ def array_repr(arr):
     else:
         name_str = ''
     dim_summary = ', '.join('%s: %s' % (k, v) for k, v
-                            in zip(arr.dimensions, arr.shape))
+                            in zip(arr.dims, arr.shape))
     summary = ['<xray.%s %s(%s)>'% (type(arr).__name__, name_str, dim_summary)]
     if arr.size < 1e5 or arr._in_memory():
         summary.append(repr(arr.values))
@@ -193,18 +194,18 @@ def dataset_repr(ds):
     max_name_length = max(len(k) for k in ds.variables) if ds else 0
     first_col_width = max(4 + max_name_length, 16)
     coords_str = pretty_print('Dimensions:', first_col_width)
-    all_dim_strings = ['%s: %s' % (k, v) for k, v in iteritems(ds.dimensions)]
+    all_dim_strings = ['%s: %s' % (k, v) for k, v in iteritems(ds.dims)]
     summary.append('%s(%s)' % (coords_str, ', '.join(all_dim_strings)))
 
     def summarize_var(k, not_found=' ', found=int):
         v = ds.variables[k]
         dim_strs = []
-        for n, d in enumerate(ds.dimensions):
+        for n, d in enumerate(ds.dims):
             length = len(all_dim_strings[n])
             prepend = ' ' * (length // 2)
-            if d in v.dimensions:
+            if d in v.dims:
                 if found is int:
-                    indicator = str(v.dimensions.index(d))
+                    indicator = str(v.dims.index(d))
                 else:
                     indicator = found
             else:

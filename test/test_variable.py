@@ -374,11 +374,11 @@ class TestVariable(TestCase, VariableSubclassTestCases):
         self.assertIsInstance(as_variable(ds['x']), Variable)
         self.assertIsInstance(as_variable(ds['x'], strict=False), DataArray)
 
-        FakeVariable = namedtuple('FakeVariable', 'values dimensions')
-        fake_xarray = FakeVariable(expected.values, expected.dimensions)
+        FakeVariable = namedtuple('FakeVariable', 'values dims')
+        fake_xarray = FakeVariable(expected.values, expected.dims)
         self.assertVariableIdentical(expected, as_variable(fake_xarray))
 
-        xarray_tuple = (expected.dimensions, expected.values)
+        xarray_tuple = (expected.dims, expected.values)
         self.assertVariableIdentical(expected, as_variable(xarray_tuple))
 
         with self.assertRaisesRegexp(TypeError, 'cannot convert numpy'):

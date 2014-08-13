@@ -72,7 +72,7 @@ class TestCase(unittest.TestCase):
         assert as_variable(v1).identical(v2), (v1, v2)
 
     def assertVariableAllClose(self, v1, v2, rtol=1e-05, atol=1e-08):
-        self.assertEqual(v1.dimensions, v2.dimensions)
+        self.assertEqual(v1.dims, v2.dims)
         allclose = data_allclose_or_equiv(
             v1.values, v2.values, rtol=rtol, atol=atol)
         assert allclose, (v1.values, v2.values)

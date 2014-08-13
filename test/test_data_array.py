@@ -72,11 +72,11 @@ class TestDataArray(TestCase):
         arr = self.dv
         self.assertEqual(arr.dimensions, ('x', 'y'))
 
-        arr.dimensions = ('w', 'z')
+        arr.dims = ('w', 'z')
         self.assertEqual(arr.dimensions, ('w', 'z'))
 
         x = Dataset({'x': ('x', np.arange(5))})['x']
-        x.dimensions = ('y',)
+        x.dims = ('y',)
         self.assertEqual(x.dimensions, ('y',))
         self.assertEqual(x.name, 'y')
 
@@ -145,34 +145,34 @@ class TestDataArray(TestCase):
         with self.assertRaisesRegexp(ValueError, 'must have the same length'):
             DataArray(data, {'x': [0, 1, 2]})
 
-        actual = DataArray(data, dimensions=['x', 'y'])
+        actual = DataArray(data, dims=['x', 'y'])
         expected = Dataset({None: (['x', 'y'], data)})[None]
         self.assertDataArrayIdentical(expected, actual)
 
-        actual = DataArray(data, dimensions=['x', 'y'], name='foo')
+        actual = DataArray(data, dims=['x', 'y'], name='foo')
         expected = Dataset({'foo': (['x', 'y'], data)})['foo']
         self.assertDataArrayIdentical(expected, actual)
 
         with self.assertRaisesRegexp(TypeError, 'is not a string'):
-            DataArray(data, dimensions=['x', None])
+            DataArray(data, dims=['x', None])
 
         actual = DataArray(data, name='foo')
         expected = Dataset({'foo': (['dim_0', 'dim_1'], data)})['foo']
         self.assertDataArrayIdentical(expected, actual)
 
-        actual = DataArray(data, dimensions=['x', 'y'], attrs={'bar': 2})
+        actual = DataArray(data, dims=['x', 'y'], attrs={'bar': 2})
         expected = Dataset({None: (['x', 'y'], data, {'bar': 2})})[None]
         self.assertDataArrayIdentical(expected, actual)
 
-        actual = DataArray(data, dimensions=['x', 'y'], encoding={'bar': 2})
+        actual = DataArray(data, dims=['x', 'y'], encoding={'bar': 2})
         expected = Dataset({None: (['x', 'y'], data, {}, {'bar': 2})})[None]
         self.assertDataArrayIdentical(expected, actual)
 
     def test_constructor_from_self_described(self):
         data = [[-0.1, 21], [0, 2]]
         expected = DataArray(data,
-                             coordinates={'x': ['a', 'b'], 'y': [-1, -2]},
-                             dimensions=['x', 'y'], name='foobar',
+                             coords={'x': ['a', 'b'], 'y': [-1, -2]},
+                             dims=['x', 'y'], name='foobar',
                              attrs={'bar': 2}, encoding={'foo': 3})
         actual = DataArray(expected)
         self.assertDataArrayIdentical(expected, actual)
@@ -285,7 +285,7 @@ class TestDataArray(TestCase):
         self.assertTrue(np.all(da.values == 0))
 
     def test_loc_single_boolean(self):
-        data = DataArray([0, 1], coordinates=[[True, False]])
+        data = DataArray([0, 1], coords=[[True, False]])
         self.assertEqual(data.loc[True], 0)
         self.assertEqual(data.loc[False], 1)
 
@@ -316,49 +316,49 @@ class TestDataArray(TestCase):
         self.assertEquals(expected, actual)
 
     def test_coordinates_modify(self):
-        da = DataArray(np.zeros((2, 3)), dimensions=['x', 'y'])
+        da = DataArray(np.zeros((2, 3)), dims=['x', 'y'])
 
         for k, v in [('x', ['a', 'b']), (0, ['c', 'd']), (-2, ['e', 'f'])]:
-            da.coordinates[k] = v
-            self.assertArrayEqual(da.coordinates[k], v)
+            da.coords[k] = v
+            self.assertArrayEqual(da.coords[k], v)
 
         actual = da.copy()
         orig_dataset = actual.dataset
-        actual.coordinates = [[5, 6], [7, 8, 9]]
-        expected = DataArray(np.zeros((2, 3)), coordinates=[[5, 6], [7, 8, 9]],
-                             dimensions=['x', 'y'])
+        actual.coords = [[5, 6], [7, 8, 9]]
+        expected = DataArray(np.zeros((2, 3)), coords=[[5, 6], [7, 8, 9]],
+                             dims=['x', 'y'])
         self.assertDataArrayIdentical(actual, expected)
         self.assertIsNot(actual.dataset, orig_dataset)
 
         actual = da.copy()
-        actual.coordinates = expected.coordinates
+        actual.coords = expected.coords
         self.assertDataArrayIdentical(actual, expected)
 
         actual = da.copy()
-        expected = DataArray(np.zeros((2, 3)), coordinates=[[5, 6], [7, 8, 9]],
-                             dimensions=['foo', 'bar'])
-        actual.coordinates = expected.coordinates
+        expected = DataArray(np.zeros((2, 3)), coords=[[5, 6], [7, 8, 9]],
+                             dims=['foo', 'bar'])
+        actual.coords = expected.coords
         self.assertDataArrayIdentical(actual, expected)
 
         with self.assertRaisesRegexp(ValueError, 'coordinate has size'):
-            da.coordinates['x'] = ['a']
+            da.coords['x'] = ['a']
 
         with self.assertRaises(IndexError):
-            da.coordinates['foobar'] = np.arange(4)
+            da.coords['foobar'] = np.arange(4)
 
         with self.assertRaisesRegexp(ValueError, 'coordinate has size'):
-            da.coordinates = da.isel(y=slice(2)).coordinates
+            da.coords = da.isel(y=slice(2)).coords
 
         # modify the coordinates on a coordinate itself
         x = DataArray(Coordinate('x', [10.0, 20.0, 30.0]))
 
         actual = x.copy()
-        actual.coordinates = [[0, 1, 2]]
+        actual.coords = [[0, 1, 2]]
         expected = DataArray(Coordinate('x', range(3)))
         self.assertDataArrayIdentical(actual, expected)
 
         actual = DataArray(Coordinate('y', [-10, -20, -30]))
-        actual.coordinates = expected.coordinates
+        actual.coords = expected.coords
         self.assertDataArrayIdentical(actual, expected)
 
     def test_reindex(self):
