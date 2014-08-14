@@ -283,9 +283,14 @@ class DataArray(AbstractArray):
 
     @property
     def as_index(self):
-        """The variable's data as a pandas.Index. Only possible for 1D arrays.
+        utils.alias_warning('as_index', 'to_index()')
+        return self.to_index()
+
+    def to_index(self):
+        """Convert this variable to a pandas.Index. Only possible for 1D
+        arrays.
         """
-        return self.variable.to_coord().as_index
+        return self.variable.to_index()
 
     @property
     def dims(self):
@@ -971,7 +976,7 @@ def align(*objects, **kwargs):
     all_indexes = defaultdict(list)
     for obj in objects:
         for k, v in iteritems(obj.coords):
-            all_indexes[k].append(v.as_index)
+            all_indexes[k].append(v.to_index())
 
     # Exclude dimensions with all equal indices to avoid unnecessary reindexing
     # work.

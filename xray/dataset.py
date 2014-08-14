@@ -128,7 +128,7 @@ class VariablesDict(OrderedDict):
         ref_var_name, suffix = split_key
         ref_var = self[ref_var_name]
         if isinstance(ref_var, variable.Coordinate):
-            date = ref_var.as_index
+            date = ref_var.to_index()
         elif ref_var.ndim == 0:
             date = pd.Timestamp(ref_var.values)
 

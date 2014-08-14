@@ -117,7 +117,7 @@ class AbstractCoordinates(Mapping):
         return key in self._data.dims
 
     def __repr__(self):
-        return '\n'.join(_wrap_indent(repr(v.as_index), '%s: ' % k)
+        return '\n'.join(_wrap_indent(repr(v.to_index()), '%s: ' % k)
                          for k, v in self.items())
 
     @staticmethod

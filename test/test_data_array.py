@@ -48,9 +48,9 @@ class TestDataArray(TestCase):
             self.assertArrayEqual(v, self.ds.coords[k])
         with self.assertRaises(AttributeError):
             self.dv.dataset = self.ds
-        self.assertIsInstance(self.ds['x'].as_index, pd.Index)
+        self.assertIsInstance(self.ds['x'].to_index(), pd.Index)
         with self.assertRaisesRegexp(ValueError, 'must be 1-dimensional'):
-            self.ds['foo'].as_index
+            self.ds['foo'].to_index()
         with self.assertRaises(AttributeError):
             self.dv.variable = self.v
 
