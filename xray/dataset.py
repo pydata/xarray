@@ -592,15 +592,22 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
 
     @property
     def coordinates(self):
-        utils.alias_warning('coordinates', 'coords', 3)
+        utils.alias_warning('coordinates', 'coords')
         return self.coords
+
+    @property
+    def noncoords(self):
+        """Dictionary of DataArrays whose names do not match dimensions.
+        """
+        return FrozenOrderedDict((name, self[name]) for name in self
+                                 if name not in self.dims)
 
     @property
     def noncoordinates(self):
         """Dictionary of DataArrays whose names do not match dimensions.
         """
-        return FrozenOrderedDict((name, self[name]) for name in self
-                                 if name not in self.dims)
+        utils.alias_warning('noncoordinates', 'noncoords')
+        return self.noncoords
 
     def dump_to_store(self, store):
         """Store dataset contents to a backends.*DataStore object."""
@@ -1184,15 +1191,15 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
         """
         if to is not None:
             to = set([to] if isinstance(to, basestring) else to)
-            bad_to = to - set(self.noncoordinates)
+            bad_to = to - set(self.noncoords)
             if bad_to:
                 raise ValueError('Dataset does not contain the '
                                  'noncoordinates: %r' % list(bad_to))
         else:
-            to = set(self.noncoordinates)
+            to = set(self.noncoords)
 
         variables = OrderedDict()
-        for name, var in iteritems(self.noncoordinates):
+        for name, var in iteritems(self.noncoords):
             variables[name] = func(var, **kwargs) if name in to else var
 
         attrs = self.attrs if keep_attrs else {}
@@ -1271,12 +1278,12 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
                 # across all datasets and indicates whether that
                 # variable differs or not.
                 return any(not ds[vname].equals(v) for ds in datasets[1:])
-            non_coords = iteritems(datasets[0].noncoordinates)
-            # all noncoordinates that are not the same in each dataset
+            non_coords = iteritems(datasets[0].noncoords)
+            # all noncoords that are not the same in each dataset
             concat_over.update(k for k, v in non_coords if differs(k, v))
         elif mode == 'all':
-            # concatenate all noncoordinates
-            concat_over.update(set(datasets[0].noncoordinates.keys()))
+            # concatenate all noncoords
+            concat_over.update(set(datasets[0].noncoords.keys()))
         elif mode == 'minimal':
             # only concatenate variables in which 'dim' already
             # appears. These variables are added later.
@@ -1336,7 +1343,7 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
         DataFrame. The DataFrame is be indexed by the Cartesian product of
         this dataset's indices.
         """
-        columns = self.noncoordinates.keys()
+        columns = self.noncoords.keys()
         data = []
         # we need a template to broadcast all dataset variables against
         # using stride_tricks lets us make the ndarray for broadcasting without

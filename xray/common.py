@@ -225,7 +225,7 @@ def dataset_repr(ds):
     summary.extend(summarize_variables(ds.coords, ' ', 'X'))
 
     summary.append('Noncoordinates:')
-    summary.extend(summarize_variables(ds.noncoordinates, ' ', int))
+    summary.extend(summarize_variables(ds.noncoords, ' ', int))
 
     summary.append('Attributes:\n%s' % _summarize_attributes(ds))
 

@@ -256,18 +256,18 @@ class TestDataset(TestCase):
 
         ret = data.isel(dim1=0)
         self.assertEqual({'time': 20, 'dim2': 50, 'dim3': 10}, ret.dims)
-        self.assertItemsEqual(list(data.noncoordinates) + ['dim1'],
-                              ret.noncoordinates)
+        self.assertItemsEqual(list(data.noncoords) + ['dim1'],
+                              ret.noncoords)
 
         ret = data.isel(time=slice(2), dim1=0, dim2=slice(5))
         self.assertEqual({'time': 2, 'dim2': 5, 'dim3': 10}, ret.dims)
-        self.assertItemsEqual(list(data.noncoordinates) + ['dim1'],
-                              ret.noncoordinates)
+        self.assertItemsEqual(list(data.noncoords) + ['dim1'],
+                              ret.noncoords)
 
         ret = data.isel(time=0, dim1=0, dim2=slice(5))
         self.assertItemsEqual({'dim2': 5, 'dim3': 10}, ret.dims)
-        self.assertItemsEqual(list(data.noncoordinates) + ['dim1', 'time'],
-                              ret.noncoordinates)
+        self.assertItemsEqual(list(data.noncoords) + ['dim1', 'time'],
+                              ret.noncoords)
 
     def test_sel(self):
         data = create_test_data()
@@ -763,7 +763,7 @@ class TestDataset(TestCase):
         self.assertEqual(len(data.mean().coords), 0)
 
         expected = data.max()
-        for var in data.noncoordinates:
+        for var in data.noncoords:
             expected = data[var].max()
             actual = expected[var]
             self.assertDataArrayEqual(expected, actual)
