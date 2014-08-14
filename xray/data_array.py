@@ -224,6 +224,23 @@ class DataArray(AbstractArray):
         """
         return self._dataset
 
+    def to_dataset(self, name=None):
+        """Convert a DataArray to a Dataset
+
+        Parameters
+        ----------
+        name : str, optional
+            Name to substitute for this array's name (if it has one).
+
+        Returns
+        -------
+        dataset : Dataset
+        """
+        if name is None:
+            return self._dataset.copy()
+        else:
+            return self.rename(name)._dataset
+
     @property
     def name(self):
         """The name of the variable in `dataset` to which array operations

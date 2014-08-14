@@ -656,3 +656,24 @@ class TestDataArray(TestCase):
         expected_da = self.dv.rename(None)
         self.assertDataArrayIdentical(expected_da,
                                       DataArray.from_series(actual))
+
+    def test_to_dataset(self):
+        unnamed = DataArray([1, 2], dims='x')
+        actual = unnamed.to_dataset()
+        expected = Dataset({None: ('x', [1, 2])})
+        self.assertDatasetIdentical(expected, actual)
+        self.assertIsNot(unnamed.dataset, actual)
+
+        actual = unnamed.to_dataset('foo')
+        expected = Dataset({'foo': ('x', [1, 2])})
+        self.assertDatasetIdentical(expected, actual)
+
+        named = DataArray([1, 2], dims='x', name='foo')
+        actual = named.to_dataset()
+        expected = Dataset({'foo': ('x', [1, 2])})
+        self.assertDatasetIdentical(expected, actual)
+        self.assertIsNot(named.dataset, actual)
+
+        actual = named.to_dataset('bar')
+        expected = Dataset({'bar': ('x', [1, 2])})
+        self.assertDatasetIdentical(expected, actual)

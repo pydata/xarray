@@ -145,11 +145,9 @@ Attributes and underlying data
    :toctree: generated/
 
    DataArray.values
-   DataArray.as_index
    DataArray.coords
    DataArray.dims
    DataArray.name
-   DataArray.dataset
    DataArray.attrs
    DataArray.encoding
    DataArray.variable
@@ -231,8 +229,10 @@ IO / Conversion
 .. autosummary::
    :toctree: generated/
 
+   DataArray.to_dataset
    DataArray.to_dataframe
    DataArray.to_series
+   DataArray.to_index
    DataArray.from_series
    DataArray.copy
    DataArray.load_data
