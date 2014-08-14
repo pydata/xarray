@@ -1,7 +1,7 @@
 What's New
 ==========
 
-v0.2.0 (in development)
+v0.2.0 (14 August 2014)
 -----------------------
 
 This is major release that includes some new features and quite a few bug
@@ -12,12 +12,15 @@ fixes. Here are the highlights:
   in the refreshed :doc:`tutorial`.
 - You can perform aggregation operations like ``mean`` directly on
   :py:class:`~xray.Dataset` objects, thanks to Joe Hamman. These aggregation
-  methods also worked on grouped Datasets.
+  methods also worked on grouped datasets.
 - xray now works on Python 2.6, thanks to Anna Kuznetsova.
 - A number of methods and attributes were given more sensible (usually shorter)
   names: ``labeled`` -> ``sel``,  ``indexed`` -> ``isel``, ``select`` ->
   ``select_vars``, ``unselect`` -> ``drop_vars``, ``dimensions`` -> ``dims``,
   ``coordinates`` -> ``coords``, ``attributes`` -> ``attrs``.
+- New :py:meth`~xray.Dataset.load_data` and :py:meth`~xray.Dataset.close`
+  methods for datasets facilitate lower level of control of data loaded from
+  disk.
 
 v0.1.1 (20 May 2014)
 --------------------
