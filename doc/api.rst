@@ -97,10 +97,9 @@ IO / Conversion
    :toctree: generated/
 
    Dataset.to_netcdf
-   Dataset.dumps
-   Dataset.close
    Dataset.to_dataframe
    Dataset.from_dataframe
+   Dataset.close
 
 Dataset internals
 ~~~~~~~~~~~~~~~~~
@@ -114,7 +113,7 @@ like interface instead and working with DataArray objects:
 
    Dataset.variables
    Variable
-   Index
+   Coordinate
 
 Backends (experimental)
 ~~~~~~~~~~~~~~~~~~~~~~~
