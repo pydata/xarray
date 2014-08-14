@@ -60,6 +60,6 @@ class AbstractWritableDataStore(AbstractDataStore):
             self.set_variable(_encode_variable_name(vn), v)
 
     def set_necessary_dimensions(self, variable):
-        for d, l in zip(variable.dimensions, variable.shape):
+        for d, l in zip(variable.dims, variable.shape):
             if d not in self.ds.dimensions:
                 self.set_dimension(d, l)

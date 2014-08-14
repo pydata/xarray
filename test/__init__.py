@@ -72,7 +72,7 @@ class TestCase(unittest.TestCase):
         assert as_variable(v1).identical(v2), (v1, v2)
 
     def assertVariableAllClose(self, v1, v2, rtol=1e-05, atol=1e-08):
-        self.assertEqual(v1.dimensions, v2.dimensions)
+        self.assertEqual(v1.dims, v2.dims)
         allclose = data_allclose_or_equiv(
             v1.values, v2.values, rtol=rtol, atol=atol)
         assert allclose, (v1.values, v2.values)
@@ -113,10 +113,10 @@ class TestCase(unittest.TestCase):
             self.assertVariableAllClose(v1, v2, rtol=rtol, atol=atol)
 
     def assertCoordinatesEqual(self, d1, d2):
-        self.assertEqual(sorted(d1.coordinates), sorted(d2.coordinates))
-        for k in d1.coordinates:
-            v1 = d1.coordinates[k]
-            v2 = d2.coordinates[k]
+        self.assertEqual(sorted(d1.coords), sorted(d2.coords))
+        for k in d1.coords:
+            v1 = d1.coords[k]
+            v2 = d2.coords[k]
             self.assertVariableEqual(v1, v2)
 
     def assertDataArrayEqual(self, ar1, ar2):

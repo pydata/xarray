@@ -171,7 +171,7 @@ class NetCDF4DataStore(AbstractWritableDataStore):
         nc4_var = self.ds.createVariable(
             varname=name,
             datatype=datatype,
-            dimensions=variable.dimensions,
+            dimensions=variable.dims,
             zlib=encoding.get('zlib', False),
             complevel=encoding.get('complevel', 4),
             shuffle=encoding.get('shuffle', True),

@@ -78,23 +78,23 @@ class GroupBy(object):
             raise ValueError('`group` must be 1 dimensional')
         if getattr(group, 'name', None) is None:
             raise ValueError('`group` must have a name')
-        if not hasattr(group, 'dimensions'):
-            raise ValueError("`group` must have a 'dimensions' attribute")
+        if not hasattr(group, 'dims'):
+            raise ValueError("`group` must have a 'dims' attribute")
 
         self.obj = obj
         self.group = group
-        self.group_dim, = group.dimensions
+        self.group_dim, = group.dims
 
         from .dataset import as_dataset
-        expected_size = as_dataset(obj).dimensions[self.group_dim]
+        expected_size = as_dataset(obj).dims[self.group_dim]
         if group.size != expected_size:
             raise ValueError('the group variable\'s length does not '
                              'match the length of this variable along its '
                              'dimension')
 
-        if group.name in obj.dimensions:
+        if group.name in obj.dims:
             # assume that group already has sorted, unique values
-            if group.dimensions != (group.name,):
+            if group.dims != (group.name,):
                 raise ValueError('`group` is required to be a coordinate if '
                                  '`group.name` is a dimension in `obj`')
             group_indices = np.arange(group.size)
@@ -132,7 +132,7 @@ class GroupBy(object):
             yield self.obj.isel(**{self.group_dim: indices})
 
     def _infer_concat_args(self, applied_example):
-        if self.group_dim in applied_example.dimensions:
+        if self.group_dim in applied_example.dims:
             concat_dim = self.group
             indexers = self.group_indices
         else:
@@ -158,9 +158,9 @@ class ArrayGroupBy(GroupBy, ImplementsArrayReduce):
         # build the new dimensions
         if isinstance(self.group_indices[0], (int, np.integer)):
             # group_dim is squeezed out
-            dims = tuple(d for d in array.dimensions if d != self.group_dim)
+            dims = tuple(d for d in array.dims if d != self.group_dim)
         else:
-            dims = array.dimensions
+            dims = array.dims
 
         # slice the data and build the new Arrays directly
         indexer = [slice(None)] * array.ndim
@@ -179,8 +179,8 @@ class ArrayGroupBy(GroupBy, ImplementsArrayReduce):
         ds = self.obj.dataset.drop_vars(name)
         ds[concat_dim.name] = concat_dim
         # remove extraneous dimensions
-        for dim in self.obj.dimensions:
-            if dim not in stacked.dimensions and dim in ds:
+        for dim in self.obj.dims:
+            if dim not in stacked.dims and dim in ds:
                 del ds[dim]
         ds[name] = stacked
         return ds[name]
@@ -188,14 +188,14 @@ class ArrayGroupBy(GroupBy, ImplementsArrayReduce):
     def _restore_dim_order(self, stacked, concat_dim):
         def lookup_order(dimension):
             if dimension == self.group.name:
-                dimension, = concat_dim.dimensions
-            if dimension in self.obj.dimensions:
+                dimension, = concat_dim.dims
+            if dimension in self.obj.dims:
                 axis = self.obj.get_axis_num(dimension)
             else:
                 axis = 1e6  # some arbitrarily high value
             return axis
 
-        new_order = sorted(stacked.dimensions, key=lookup_order)
+        new_order = sorted(stacked.dims, key=lookup_order)
         return stacked.transpose(*new_order)
 
     def apply(self, func, shortcut=False, **kwargs):

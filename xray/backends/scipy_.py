@@ -95,7 +95,7 @@ class ScipyDataStore(AbstractWritableDataStore):
             conventions.encode_cf_variable(variable))
         self.set_necessary_dimensions(variable)
         data = variable.values
-        self.ds.createVariable(name, data.dtype, variable.dimensions)
+        self.ds.createVariable(name, data.dtype, variable.dims)
         scipy_var = self.ds.variables[name]
         if data.ndim == 0:
             scipy_var.assignValue(data)

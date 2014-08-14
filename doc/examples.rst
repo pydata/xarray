@@ -60,7 +60,7 @@ Monthly averaging
         with values given by the first date of the month in which each time
         falls.
         """
-        time = xray_obj.coordinates['time']
+        time = xray_obj.coords['time']
         values = pd.Index(time).to_period('M').to_timestamp()
         return xray.DataArray(values, [time], name='year_month')
 
@@ -74,7 +74,7 @@ Monthly averaging
     :suppress:
 
     def year_month(xray_obj):
-        time = xray_obj.coordinates['time']
+        time = xray_obj.coords['time']
         values = time.as_index.to_period('M').to_timestamp()
         return xray.DataArray(values, [time], name='year_month')
 
@@ -83,7 +83,7 @@ Monthly averaging
 
     monthly_avg = ds.groupby(year_month(ds)).mean('time')
 
-    @savefig examples_tmin_tmax_plot2.png width=4in
+    @savefig examples_tmin_tmax_plot_mean.png width=4in
     monthly_avg.mean('x').to_dataframe().plot(style='s-')
 
 

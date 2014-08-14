@@ -51,7 +51,7 @@ class InaccessibleArray(utils.NDArrayMixin):
 
 class InaccessibleVariableDataStore(backends.InMemoryDataStore):
     def __init__(self):
-        self.dimensions = OrderedDict()
+        self.dims = OrderedDict()
         self._variables = OrderedDict()
         self.attrs = OrderedDict()
 
@@ -61,7 +61,7 @@ class InaccessibleVariableDataStore(backends.InMemoryDataStore):
 
     def open_store_variable(self, var):
         data = indexing.LazilyIndexedArray(InaccessibleArray(var.values))
-        return Variable(var.dimensions, data, var.attrs)
+        return Variable(var.dims, data, var.attrs)
 
     @property
     def store_variables(self):
@@ -130,18 +130,18 @@ class TestDataset(TestCase):
         with self.assertRaises(ValueError):
             a['qux'] = (('time', 'x'), d.T)
 
-    def test_coordinates_create(self):
+    def test_coords_create(self):
         a = Dataset()
         vec = np.random.random((10,))
         attributes = {'foo': 'bar'}
         a['x'] = ('x', vec, attributes)
-        self.assertTrue('x' in a.coordinates)
-        self.assertIsInstance(a.coordinates['x'].as_index, pd.Index)
-        self.assertVariableIdentical(a.coordinates['x'], a.variables['x'])
+        self.assertTrue('x' in a.coords)
+        self.assertIsInstance(a.coords['x'].as_index, pd.Index)
+        self.assertVariableIdentical(a.coords['x'], a.variables['x'])
         b = Dataset()
         b['x'] = ('x', vec, attributes)
         self.assertVariableIdentical(a['x'], b['x'])
-        self.assertEqual(a.dimensions, b.dimensions)
+        self.assertEqual(a.dims, b.dims)
         # this should work
         a['x'] = ('x', vec[:5])
         a['z'] = ('x', np.arange(5))
@@ -154,50 +154,50 @@ class TestDataset(TestCase):
             a['y'] = ('y', arr)
         with self.assertRaises(ValueError):
             a['y'] = ('y', scal)
-        self.assertTrue('y' not in a.dimensions)
+        self.assertTrue('y' not in a.dims)
 
-    def test_coordinates_properties(self):
+    def test_coords_properties(self):
         data = Dataset({'x': ('x', [-1, -2]),
                         'y': ('y', [0, 1, 2]),
                         'foo': (['x', 'y'], np.random.randn(2, 3))})
 
-        self.assertEquals(2, len(data.coordinates))
+        self.assertEquals(2, len(data.coords))
 
-        self.assertEquals(set(['x', 'y']), set(data.coordinates))
+        self.assertEquals(set(['x', 'y']), set(data.coords))
 
-        self.assertVariableIdentical(data.coordinates['x'], data['x'].variable)
-        self.assertVariableIdentical(data.coordinates['y'], data['y'].variable)
+        self.assertVariableIdentical(data.coords['x'], data['x'].variable)
+        self.assertVariableIdentical(data.coords['y'], data['y'].variable)
 
-        self.assertIn('x', data.coordinates)
-        self.assertNotIn(0, data.coordinates)
-        self.assertNotIn('foo', data.coordinates)
+        self.assertIn('x', data.coords)
+        self.assertNotIn(0, data.coords)
+        self.assertNotIn('foo', data.coords)
 
         with self.assertRaises(KeyError):
-            data.coordinates['foo']
+            data.coords['foo']
         with self.assertRaises(KeyError):
-            data.coordinates[0]
+            data.coords[0]
 
         expected = dedent("""\
         x: Int64Index([-1, -2], dtype='int64')
         y: Int64Index([0, 1, 2], dtype='int64')""")
-        actual = repr(data.coordinates)
+        actual = repr(data.coords)
         self.assertEquals(expected, actual)
 
-    def test_coordinates_modify(self):
+    def test_coords_modify(self):
         data = Dataset({'x': ('x', [-1, -2]),
                         'y': ('y', [0, 1, 2]),
                         'foo': (['x', 'y'], np.random.randn(2, 3))})
 
         actual = data.copy(deep=True)
-        actual.coordinates['x'] = ['a', 'b']
+        actual.coords['x'] = ['a', 'b']
         self.assertArrayEqual(actual['x'], ['a', 'b'])
 
         actual = data.copy(deep=True)
-        actual.coordinates['z'] = ['a', 'b']
+        actual.coords['z'] = ['a', 'b']
         self.assertArrayEqual(actual['z'], ['a', 'b'])
 
         with self.assertRaisesRegexp(ValueError, 'coordinate has size'):
-            data.coordinates['x'] = [-1]
+            data.coords['x'] = [-1]
 
     def test_equals_and_identical(self):
         data = create_test_data(seed=42)
@@ -230,21 +230,21 @@ class TestDataset(TestCase):
         ret = data.isel(**slicers)
 
         # Verify that only the specified dimension was altered
-        self.assertItemsEqual(data.dimensions, ret.dimensions)
-        for d in data.dimensions:
+        self.assertItemsEqual(data.dims, ret.dims)
+        for d in data.dims:
             if d in slicers:
-                self.assertEqual(ret.dimensions[d],
-                                 np.arange(data.dimensions[d])[slicers[d]].size)
+                self.assertEqual(ret.dims[d],
+                                 np.arange(data.dims[d])[slicers[d]].size)
             else:
-                self.assertEqual(data.dimensions[d], ret.dimensions[d])
+                self.assertEqual(data.dims[d], ret.dims[d])
         # Verify that the data is what we expect
         for v in data.variables:
-            self.assertEqual(data[v].dimensions, ret[v].dimensions)
+            self.assertEqual(data[v].dims, ret[v].dims)
             self.assertEqual(data[v].attrs, ret[v].attrs)
             slice_list = [slice(None)] * data[v].values.ndim
             for d, s in iteritems(slicers):
-                if d in data[v].dimensions:
-                    inds = np.nonzero(np.array(data[v].dimensions) == d)[0]
+                if d in data[v].dims:
+                    inds = np.nonzero(np.array(data[v].dims) == d)[0]
                     for ind in inds:
                         slice_list[ind] = s
             expected = data[v].values[slice_list]
@@ -255,17 +255,17 @@ class TestDataset(TestCase):
             data.isel(not_a_dim=slice(0, 2))
 
         ret = data.isel(dim1=0)
-        self.assertEqual({'time': 20, 'dim2': 50, 'dim3': 10}, ret.dimensions)
+        self.assertEqual({'time': 20, 'dim2': 50, 'dim3': 10}, ret.dims)
         self.assertItemsEqual(list(data.noncoordinates) + ['dim1'],
                               ret.noncoordinates)
 
         ret = data.isel(time=slice(2), dim1=0, dim2=slice(5))
-        self.assertEqual({'time': 2, 'dim2': 5, 'dim3': 10}, ret.dimensions)
+        self.assertEqual({'time': 2, 'dim2': 5, 'dim3': 10}, ret.dims)
         self.assertItemsEqual(list(data.noncoordinates) + ['dim1'],
                               ret.noncoordinates)
 
         ret = data.isel(time=0, dim1=0, dim2=slice(5))
-        self.assertItemsEqual({'dim2': 5, 'dim3': 10}, ret.dimensions)
+        self.assertItemsEqual({'dim2': 5, 'dim3': 10}, ret.dims)
         self.assertItemsEqual(list(data.noncoordinates) + ['dim1', 'time'],
                               ret.noncoordinates)
 
@@ -424,7 +424,7 @@ class TestDataset(TestCase):
             variables[v] = variables.pop(k)
 
         for k, v in iteritems(variables):
-            dims = list(v.dimensions)
+            dims = list(v.dims)
             for name, newname in iteritems(newnames):
                 if name in dims:
                     dims[dims.index(name)] = newname
@@ -442,7 +442,7 @@ class TestDataset(TestCase):
 
         # verify that we can rename a variable without accessing the data
         var1 = data['var1']
-        data['var1'] = (var1.dimensions, InaccessibleArray(var1.values))
+        data['var1'] = (var1.dims, InaccessibleArray(var1.values))
         renamed = data.rename(newnames)
         with self.assertRaises(UnexpectedDataAccess):
             renamed['renamed_var1'].values
@@ -455,7 +455,7 @@ class TestDataset(TestCase):
         data.rename({'x': 'y'}, inplace=True)
         self.assertDatasetIdentical(data, renamed)
         self.assertFalse(data.equals(copied))
-        self.assertEquals(data.dimensions, {'y': 3, 't': 3})
+        self.assertEquals(data.dims, {'y': 3, 't': 3})
         # check virtual variables
         self.assertArrayEqual(data['t.dayofyear'], [1, 2, 3])
 
@@ -557,7 +557,7 @@ class TestDataset(TestCase):
         data = Dataset({'foo': (['x', 'y', 'z'], [[[1], [2]]])})
         for args in [[], [['x']], [['x', 'z']]]:
             def get_args(v):
-                return [set(args[0]) & set(v.dimensions)] if args else []
+                return [set(args[0]) & set(v.dims)] if args else []
             expected = Dataset(dict((k, v.squeeze(*get_args(v)))
                                     for k, v in iteritems(data.variables)))
             self.assertDatasetIdentical(expected, data.squeeze(*args))
@@ -599,8 +599,8 @@ class TestDataset(TestCase):
             data.groupby(np.arange(10))
         with self.assertRaisesRegexp(ValueError, 'length does not match'):
             data.groupby(data['dim1'][:3])
-        with self.assertRaisesRegexp(ValueError, "must have a 'dimensions'"):
-            data.groupby(data.coordinates['dim1'].as_index)
+        with self.assertRaisesRegexp(ValueError, "must have a 'dims'"):
+            data.groupby(data.coords['dim1'].as_index)
 
     def test_groupby_reduce(self):
         data = Dataset({'xy': (['x', 'y'], np.random.randn(3, 4)),
@@ -631,7 +631,7 @@ class TestDataset(TestCase):
         def rectify_dim_order(dataset):
             # return a new dataset with all variable dimensions tranposed into
             # the order in which they are found in `data`
-            return Dataset(dict((k, v.transpose(*data[k].dimensions))
+            return Dataset(dict((k, v.transpose(*data[k].dims))
                                 for k, v in iteritems(dataset.variables)),
                            dataset.attrs)
 
@@ -645,7 +645,7 @@ class TestDataset(TestCase):
 
             datasets = [g for _, g in data.groupby(dim, squeeze=True)]
             concat_over = [k for k, v in iteritems(data.variables)
-                           if dim in v.dimensions and k != dim]
+                           if dim in v.dims and k != dim]
             actual = Dataset.concat(datasets, data[dim],
                                     concat_over=concat_over)
             self.assertDatasetIdentical(data, rectify_dim_order(actual))
@@ -655,12 +655,12 @@ class TestDataset(TestCase):
 
         # Now add a new variable that doesn't depend on any of the current
         # dims and make sure the mode argument behaves as expected
-        data['var4'] = ('dim4', np.arange(data.dimensions['dim3']))
+        data['var4'] = ('dim4', np.arange(data.dims['dim3']))
         for dim in ['dim1', 'dim2', 'dim3']:
             datasets = [g for _, g in data.groupby(dim, squeeze=False)]
             actual = Dataset.concat(datasets, data[dim], mode='all')
             expected = np.array([data['var4'].values
-                                 for _ in range(data.dimensions[dim])])
+                                 for _ in range(data.dims[dim])])
             self.assertArrayEqual(actual['var4'].values, expected)
 
             actual = Dataset.concat(datasets, data[dim], mode='different')
@@ -668,14 +668,13 @@ class TestDataset(TestCase):
             actual = Dataset.concat(datasets, data[dim], mode='minimal')
             self.assertDataArrayEqual(data['var4'], actual['var4'])
 
-        # verify that the dimension argument takes precedence over
+        # verify that the dim argument takes precedence over
         # concatenating dataset variables of the same name
-        dimension = (2 * data['dim1']).rename('dim1')
+        dim = (2 * data['dim1']).rename('dim1')
         datasets = [g for _, g in data.groupby('dim1', squeeze=False)]
         expected = data.copy()
-        expected['dim1'] = dimension
-        self.assertDatasetIdentical(
-            expected, Dataset.concat(datasets, dimension))
+        expected['dim1'] = dim
+        self.assertDatasetIdentical(expected, Dataset.concat(datasets, dim))
 
         # TODO: factor this into several distinct tests
         data = create_test_data()
@@ -741,7 +740,7 @@ class TestDataset(TestCase):
         roundtripped = pickle.loads(pickle.dumps(data))
         self.assertDatasetIdentical(data, roundtripped)
         # regression test for #167:
-        self.assertEqual(data.dimensions, roundtripped.dimensions)
+        self.assertEqual(data.dims, roundtripped.dims)
 
     def test_lazy_load(self):
         store = InaccessibleVariableDataStore()
@@ -761,7 +760,7 @@ class TestDataset(TestCase):
     def test_reduce(self):
         data = create_test_data()
 
-        self.assertEqual(len(data.mean().coordinates), 0)
+        self.assertEqual(len(data.mean().coords), 0)
 
         expected = data.max()
         for var in data.noncoordinates:
@@ -769,23 +768,23 @@ class TestDataset(TestCase):
             actual = expected[var]
             self.assertDataArrayEqual(expected, actual)
 
-        self.assertDatasetEqual(data.min(dimension=['dim1']),
-                                data.min(dimension='dim1'))
+        self.assertDatasetEqual(data.min(dim=['dim1']),
+                                data.min(dim='dim1'))
 
         for reduct, expected in [('dim2', ['dim1', 'dim3', 'time']),
                                  (['dim2', 'time'], ['dim1', 'dim3']),
                                  (('dim2', 'time'), ['dim1', 'dim3']),
                                  ((), ['dim1', 'dim2', 'dim3', 'time'])]:
-            actual = data.min(dimension=reduct).dimensions
+            actual = data.min(dim=reduct).dims
             print(reduct, actual, expected)
             self.assertItemsEqual(actual, expected)
 
-        self.assertDatasetEqual(data.mean(dimension=[]), data)
+        self.assertDatasetEqual(data.mean(dim=[]), data)
 
-    def test_reduce_bad_dimension(self):
+    def test_reduce_bad_dim(self):
         data = create_test_data()
         with self.assertRaisesRegexp(ValueError, 'Dataset does not contain'):
-            ds = data.mean(dimension='bad_dim')
+            ds = data.mean(dim='bad_dim')
 
     def test_reduce_non_numeric(self):
         data1 = create_test_data(seed=44)
@@ -798,8 +797,8 @@ class TestDataset(TestCase):
 
         self.assertTrue('var4' not in data1.mean())
         self.assertDatasetEqual(data1.mean(), data2.mean())
-        self.assertDatasetEqual(data1.mean(dimension='dim1'),
-                                data2.mean(dimension='dim1'))
+        self.assertDatasetEqual(data1.mean(dim='dim1'),
+                                data2.mean(dim='dim1'))
 
     def test_reduce_keep_attrs(self):
         data = create_test_data()

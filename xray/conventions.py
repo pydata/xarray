@@ -394,7 +394,7 @@ def encode_cf_variable(var):
     """Converts an Variable into an Variable suitable for saving as a netCDF
     variable
     """
-    dimensions = var.dimensions
+    dimensions = var.dims
     data = var.values
     attributes = var.attrs.copy()
     encoding = var.encoding.copy()
@@ -472,7 +472,7 @@ def decode_cf_variable(var, concat_characters=True, mask_and_scale=True,
     # use _data instead of data so as not to trigger loading data
     var = xray.variable.as_variable(var)
     data = var._data
-    dimensions = var.dimensions
+    dimensions = var.dims
     attributes = var.attrs.copy()
     encoding = var.encoding.copy()
 
@@ -515,7 +515,7 @@ def decode_cf_variables(variables, concat_characters=True, mask_and_scale=True,
     """
     dimensions_used_by = defaultdict(list)
     for v in variables.values():
-        for d in v.dimensions:
+        for d in v.dims:
             dimensions_used_by[d].append(v)
 
     def stackable(dim):
@@ -523,14 +523,14 @@ def decode_cf_variables(variables, concat_characters=True, mask_and_scale=True,
         if dim in variables:
             return False
         for v in dimensions_used_by[dim]:
-            if v.dtype.kind != 'S' or dim != v.dimensions[-1]:
+            if v.dtype.kind != 'S' or dim != v.dims[-1]:
                 return False
         return True
 
     new_vars = OrderedDict()
     for k, v in iteritems(variables):
         concat = (concat_characters and v.dtype.kind == 'S' and v.ndim > 0 and
-                  stackable(v.dimensions[-1]))
+                  stackable(v.dims[-1]))
         new_vars[k] = decode_cf_variable(
             v, concat_characters=concat, mask_and_scale=mask_and_scale,
             decode_times=decode_times)
