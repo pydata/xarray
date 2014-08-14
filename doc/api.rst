@@ -21,7 +21,7 @@ Attributes and underlying data
    :toctree: generated/
 
    Dataset.coords
-   Dataset.noncoordinates
+   Dataset.noncoords
    Dataset.dims
    Dataset.attrs
 
