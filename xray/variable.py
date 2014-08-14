@@ -42,6 +42,9 @@ def as_variable(obj, strict=True):
                 raise TypeError('cannot convert numpy.ndarray objects into '
                                 'Variable objects without supplying '
                                 'dimensions')
+            if not isinstance(obj, tuple):
+                raise TypeError('can only convert tuples into parameters for '
+                                'xray.Variable parameters')
             try:
                 obj = Variable(*obj)
             except TypeError:

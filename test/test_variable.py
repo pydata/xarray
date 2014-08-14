@@ -383,9 +383,10 @@ class TestVariable(TestCase, VariableSubclassTestCases):
 
         with self.assertRaisesRegexp(TypeError, 'cannot convert numpy'):
             as_variable(data)
-        with self.assertRaisesRegexp(TypeError, 'cannot convert arg'):
+        with self.assertRaisesRegexp(TypeError, 'can only convert tuples'):
             as_variable(list(data))
-
+        with self.assertRaisesRegexp(TypeError, 'cannot convert arg'):
+            as_variable(tuple(data))
 
     def test_repr(self):
         v = Variable(['time', 'x'], [[1, 2, 3], [4, 5, 6]], {'foo': 'bar'})
