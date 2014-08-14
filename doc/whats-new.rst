@@ -18,7 +18,7 @@ fixes. Here are the highlights:
   names: ``labeled`` -> ``sel``,  ``indexed`` -> ``isel``, ``select`` ->
   ``select_vars``, ``unselect`` -> ``drop_vars``, ``dimensions`` -> ``dims``,
   ``coordinates`` -> ``coords``, ``attributes`` -> ``attrs``.
-- New :py:meth`~xray.Dataset.load_data` and :py:meth`~xray.Dataset.close`
+- New :py:meth:`~xray.Dataset.load_data` and :py:meth:`~xray.Dataset.close`
   methods for datasets facilitate lower level of control of data loaded from
   disk.
 
