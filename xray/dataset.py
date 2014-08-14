@@ -248,17 +248,13 @@ class DatasetCoordinates(common.AbstractCoordinates):
 
     Essentially an immutable OrderedDict with keys given by the array's
     dimensions and the values given by the corresponding xray.Coordinate
-    objects. Unlike DataArrayCoordinates, does *not* support integer based
-    lookups.
+    objects.
     """
     def __getitem__(self, key):
         if key in self._data.dims:
             return self._data.variables[key]
-        elif isinstance(key, (int, np.integer)):
-            raise KeyError('%r: Dataset coordinates do not support integer '
-                           'based lookups' % key)
         else:
-            raise KeyError(repr(key))
+            raise KeyError(key)
 
     def __setitem__(self, key, value):
         expected_size = self[key].size if key in self else None

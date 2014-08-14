@@ -92,23 +92,17 @@ class DataArrayCoordinates(AbstractCoordinates):
 
     Essentially an immutable OrderedDict with keys given by the array's
     dimensions and the values given by the corresponding xray.Coordinate
-    objects, but it also supports list-like indexing with integers.
+    objects.
     """
     def __getitem__(self, key):
         if key in self._data.dims:
             return self._data.dataset.variables[key]
-        elif isinstance(key, (int, np.integer)):
-            dim = self._data.dims[key]
-            return self._data.dataset.variables[dim]
         else:
-            raise KeyError(repr(key))
+            raise KeyError(key)
 
     def __setitem__(self, key, value):
-        if isinstance(key, (int, np.integer)):
-            key = self._data.dims[key]
-
         if key not in self:
-            raise IndexError('%s is not a coordinate')
+            raise KeyError('%s is not an existing coordinate')
 
         coord = self._convert_to_coord(key, value, self[key].size)
         with self._data._set_new_dataset() as ds:
