@@ -303,14 +303,11 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
         attrs : dict-like, optional
             Global attributes to save on this dataset.
 
-        Warning
-        -------
-
-        For now, if you wish to specify ``attrs``, you *must* use a keyword
-        argument: ``xray.Dataset(variables, attrs=attrs)``. The ``coords``
-        argument is reserved for specifying coordinates independently of other
-        variables for use in a future version of xray. For now, coordinates
-        will extracted automatically from variables.
+        .. warning:: For now, if you wish to specify ``attrs``, you *must* use
+        a keyword argument: ``xray.Dataset(variables, attrs=attrs)``. The
+        ``coords`` argument is reserved for specifying coordinates
+        independently of other variables for use in a future version of xray.
+        For now, coordinates will extracted automatically from variables.
         """
         if coords is not None:
             if attrs is None:
