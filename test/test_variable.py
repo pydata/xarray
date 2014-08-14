@@ -383,9 +383,10 @@ class TestVariable(TestCase, VariableSubclassTestCases):
 
         with self.assertRaisesRegexp(TypeError, 'cannot convert numpy'):
             as_variable(data)
-        with self.assertRaisesRegexp(TypeError, 'cannot convert arg'):
+        with self.assertRaisesRegexp(TypeError, 'can only convert tuples'):
             as_variable(list(data))
-
+        with self.assertRaisesRegexp(TypeError, 'cannot convert arg'):
+            as_variable(tuple(data))
 
     def test_repr(self):
         v = Variable(['time', 'x'], [[1, 2, 3], [4, 5, 6]], {'foo': 'bar'})
@@ -573,10 +574,10 @@ class TestCoordinate(TestCase, VariableSubclassTestCases):
         with self.assertRaisesRegexp(ValueError, 'must be 1-dimensional'):
             Coordinate((), 0)
 
-    def test_as_index(self):
+    def test_to_index(self):
         data = 0.5 * np.arange(10)
         v = Coordinate(['time'], data, {'foo': 'bar'})
-        self.assertTrue(pd.Index(data, name='time').identical(v.as_index))
+        self.assertTrue(pd.Index(data, name='time').identical(v.to_index()))
 
     def test_data(self):
         x = Coordinate('x', np.arange(3.0))

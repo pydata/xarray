@@ -92,23 +92,17 @@ class DataArrayCoordinates(AbstractCoordinates):
 
     Essentially an immutable OrderedDict with keys given by the array's
     dimensions and the values given by the corresponding xray.Coordinate
-    objects, but it also supports list-like indexing with integers.
+    objects.
     """
     def __getitem__(self, key):
         if key in self._data.dims:
             return self._data.dataset.variables[key]
-        elif isinstance(key, (int, np.integer)):
-            dim = self._data.dims[key]
-            return self._data.dataset.variables[dim]
         else:
-            raise KeyError(repr(key))
+            raise KeyError(key)
 
     def __setitem__(self, key, value):
-        if isinstance(key, (int, np.integer)):
-            key = self._data.dims[key]
-
         if key not in self:
-            raise IndexError('%s is not a coordinate')
+            raise KeyError('%s is not an existing coordinate')
 
         coord = self._convert_to_coord(key, value, self[key].size)
         with self._data._set_new_dataset() as ds:
@@ -230,6 +224,23 @@ class DataArray(AbstractArray):
         """
         return self._dataset
 
+    def to_dataset(self, name=None):
+        """Convert a DataArray to a Dataset
+
+        Parameters
+        ----------
+        name : str, optional
+            Name to substitute for this array's name (if it has one).
+
+        Returns
+        -------
+        dataset : Dataset
+        """
+        if name is None:
+            return self._dataset.copy()
+        else:
+            return self.rename(name)._dataset
+
     @property
     def name(self):
         """The name of the variable in `dataset` to which array operations
@@ -289,9 +300,14 @@ class DataArray(AbstractArray):
 
     @property
     def as_index(self):
-        """The variable's data as a pandas.Index. Only possible for 1D arrays.
+        utils.alias_warning('as_index', 'to_index()')
+        return self.to_index()
+
+    def to_index(self):
+        """Convert this variable to a pandas.Index. Only possible for 1D
+        arrays.
         """
-        return self.variable.to_coord().as_index
+        return self.variable.to_index()
 
     @property
     def dims(self):
@@ -977,7 +993,7 @@ def align(*objects, **kwargs):
     all_indexes = defaultdict(list)
     for obj in objects:
         for k, v in iteritems(obj.coords):
-            all_indexes[k].append(v.as_index)
+            all_indexes[k].append(v.to_index())
 
     # Exclude dimensions with all equal indices to avoid unnecessary reindexing
     # work.

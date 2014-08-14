@@ -21,7 +21,7 @@ Attributes and underlying data
    :toctree: generated/
 
    Dataset.coords
-   Dataset.noncoordinates
+   Dataset.noncoords
    Dataset.dims
    Dataset.attrs
 
@@ -97,10 +97,9 @@ IO / Conversion
    :toctree: generated/
 
    Dataset.to_netcdf
-   Dataset.dumps
-   Dataset.close
    Dataset.to_dataframe
    Dataset.from_dataframe
+   Dataset.close
 
 Dataset internals
 ~~~~~~~~~~~~~~~~~
@@ -114,7 +113,7 @@ like interface instead and working with DataArray objects:
 
    Dataset.variables
    Variable
-   Index
+   Coordinate
 
 Backends (experimental)
 ~~~~~~~~~~~~~~~~~~~~~~~
@@ -145,11 +144,9 @@ Attributes and underlying data
    :toctree: generated/
 
    DataArray.values
-   DataArray.as_index
    DataArray.coords
    DataArray.dims
    DataArray.name
-   DataArray.dataset
    DataArray.attrs
    DataArray.encoding
    DataArray.variable
@@ -231,8 +228,10 @@ IO / Conversion
 .. autosummary::
    :toctree: generated/
 
+   DataArray.to_dataset
    DataArray.to_dataframe
    DataArray.to_series
+   DataArray.to_index
    DataArray.from_series
    DataArray.copy
    DataArray.load_data

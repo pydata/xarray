@@ -48,9 +48,9 @@ class TestDataArray(TestCase):
             self.assertArrayEqual(v, self.ds.coords[k])
         with self.assertRaises(AttributeError):
             self.dv.dataset = self.ds
-        self.assertIsInstance(self.ds['x'].as_index, pd.Index)
+        self.assertIsInstance(self.ds['x'].to_index(), pd.Index)
         with self.assertRaisesRegexp(ValueError, 'must be 1-dimensional'):
-            self.ds['foo'].as_index
+            self.ds['foo'].to_index()
         with self.assertRaises(AttributeError):
             self.dv.variable = self.v
 
@@ -297,15 +297,15 @@ class TestDataArray(TestCase):
 
         self.assertEquals(['x', 'y'], list(da.coords))
 
-        self.assertTrue(da.coords[0].identical(coords[0]))
         self.assertTrue(da.coords['x'].identical(coords[0]))
-        self.assertTrue(da.coords[1].identical(coords[1]))
         self.assertTrue(da.coords['y'].identical(coords[1]))
 
         self.assertIn('x', da.coords)
         self.assertNotIn(0, da.coords)
         self.assertNotIn('foo', da.coords)
 
+        with self.assertRaises(KeyError):
+            da.coords[0]
         with self.assertRaises(KeyError):
             da.coords['foo']
 
@@ -318,7 +318,7 @@ class TestDataArray(TestCase):
     def test_coords_modify(self):
         da = DataArray(np.zeros((2, 3)), dims=['x', 'y'])
 
-        for k, v in [('x', ['a', 'b']), (0, ['c', 'd']), (-2, ['e', 'f'])]:
+        for k, v in [('x', ['a', 'b']), ('y', ['c', 'd', 'e'])]:
             da.coords[k] = v
             self.assertArrayEqual(da.coords[k], v)
 
@@ -340,10 +340,13 @@ class TestDataArray(TestCase):
         actual.coords = expected.coords
         self.assertDataArrayIdentical(actual, expected)
 
+        with self.assertRaises(KeyError):
+            da.coords[0] = [0, 1]
+
         with self.assertRaisesRegexp(ValueError, 'coordinate has size'):
             da.coords['x'] = ['a']
 
-        with self.assertRaises(IndexError):
+        with self.assertRaises(KeyError):
             da.coords['foobar'] = np.arange(4)
 
         with self.assertRaisesRegexp(ValueError, 'coordinate has size'):
@@ -653,3 +656,24 @@ class TestDataArray(TestCase):
         expected_da = self.dv.rename(None)
         self.assertDataArrayIdentical(expected_da,
                                       DataArray.from_series(actual))
+
+    def test_to_dataset(self):
+        unnamed = DataArray([1, 2], dims='x')
+        actual = unnamed.to_dataset()
+        expected = Dataset({None: ('x', [1, 2])})
+        self.assertDatasetIdentical(expected, actual)
+        self.assertIsNot(unnamed.dataset, actual)
+
+        actual = unnamed.to_dataset('foo')
+        expected = Dataset({'foo': ('x', [1, 2])})
+        self.assertDatasetIdentical(expected, actual)
+
+        named = DataArray([1, 2], dims='x', name='foo')
+        actual = named.to_dataset()
+        expected = Dataset({'foo': ('x', [1, 2])})
+        self.assertDatasetIdentical(expected, actual)
+        self.assertIsNot(named.dataset, actual)
+
+        actual = named.to_dataset('bar')
+        expected = Dataset({'bar': ('x', [1, 2])})
+        self.assertDatasetIdentical(expected, actual)

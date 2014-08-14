@@ -99,12 +99,11 @@ Now fill in some of that missing metadata:
     foo
 
 The ``coords`` property is ``dict`` like. Individual coordinates can be
-accessed by name or axis number:
+accessed by name:
 
 .. ipython:: python
 
     foo.coords['time']
-    foo.coords[0]
 
 These are :py:class:`xray.Coordinate` objects, which contain tick-labels for
 each dimension.
@@ -173,17 +172,17 @@ values given by :py:class:`xray.DataArray` objects:
 
     ds['foo']
 
-The valid keys include each listed "coordinate" and "noncoordinate".
+The valid keys include each listed "coordinate" and "noncoordinate" variables.
 Coordinates are arrays that label values along a particular dimension, implemented
 as a thin wrapper wrapper around a :py:class:`pandas.Index` object. They
 are created automatically from dataset arrays whose name is equal to the one
 item in their list of dimensions.
 
-Noncoordinate include all arrays in a ``Dataset`` other than its coordinates.
-These arrays can exist along multiple dimensions. The numbers in the columns in
-the ``Dataset`` representation indicate the order in which dimensions appear
-for each array (on a ``Dataset``, the dimensions are always listed in
-alphabetical order).
+Noncoordinate variables include all arrays in a ``Dataset`` other than its
+coordinates. These arrays can exist along multiple dimensions. The numbers in
+the columns in the ``Dataset`` representation indicate the order in which
+dimensions appear for each array (on a ``Dataset``, the dimensions are always
+listed in alphabetical order).
 
 We didn't explicitly include an coordinate for the "space" dimension, so it
 was filled with an array of ascending integers of the proper length:
@@ -192,10 +191,8 @@ was filled with an array of ascending integers of the proper length:
 
     ds['space']
 
-    ds['foo']
-
-Noncoordinate and coordinates are listed explicitly by the
-:py:attr:`~xray.Dataset.noncoordinates` and
+Noncoordinate and coordinate variables are listed explicitly by the
+:py:attr:`~xray.Dataset.noncoords` and
 :py:attr:`~xray.Dataset.coords` attributes.
 
 There are also a few derived variables based on datetime coordinates that you
@@ -393,7 +390,7 @@ operation over any or all non-coordinates in a dataset by using
 
 .. ipython:: python
 
-    ds.apply(lambda x: 2 * x, to=['foo', 'numbers'])
+    ds.drop_vars('abc').apply(lambda x: 2 * x)
 
 Aggregation
 ~~~~~~~~~~~
@@ -1068,8 +1065,8 @@ Notes on xray's internals
 
 .. warning::
 
-    These implementation details may be useful for advanced users, but are
-    highly likely to change in future versions.
+    These implementation details may be useful for advanced users, but they
+    **will** change in future versions.
 
 DataArray
 ~~~~~~~~~
@@ -1077,7 +1074,12 @@ DataArray
 In the current version of xray, DataArrays are simply pointers to a dataset
 (the ``dataset`` attribute) and the name of a variable in the dataset (the
 ``name`` attribute), which indicates to which variable array operations should
-be applied.
+be applied. These variables are listed in the ``DataArray`` representation as
+"linked dataset variables":
+
+.. ipython:: python
+
+    foo
 
 Usually, xray automatically manages the ``Dataset`` objects that data arrays
 points to in a satisfactory fashion.
@@ -1103,6 +1105,12 @@ dataset variables that are no longer relevant:
 
     foo2.dataset.keys()
 
+.. note::
+
+    This feature may change in a future version of xray, because we intend to
+    support non-index coordinates (:issue:`197`), which should cover all the
+    use cases for "linked dataset variables" in a much more obvious fashion.
+
 Variable
 ~~~~~~~~
 
@@ -1127,6 +1135,9 @@ Variable with dimensions `('space',)` results in a new Variable with dimensions
 
 Variables are light-weight objects used as the building block for datasets.
 They are more primitive objects, so operations with them provide marginally
-higher performance than using DataArrays. **However, manipulating data in the
-form of a Dataset or DataArray should almost always be preferred**, because
+higher performance than using DataArrays. However, manipulating data in the
+form of a Dataset or DataArray should almost always be preferred, because
 they can use more complete metadata in context of coordinate labels.
+
+You can find a read-only copy of the variables associated with a Dataset in its
+``.variables`` attribute, or for a DataArray in its ``.variable`` attribute.

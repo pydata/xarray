@@ -42,6 +42,9 @@ def as_variable(obj, strict=True):
                 raise TypeError('cannot convert numpy.ndarray objects into '
                                 'Variable objects without supplying '
                                 'dimensions')
+            if not isinstance(obj, tuple):
+                raise TypeError('can only convert tuples into parameters for '
+                                'xray.Variable parameters')
             try:
                 obj = Variable(*obj)
             except TypeError:
@@ -285,11 +288,12 @@ class Variable(AbstractArray):
 
     @property
     def as_index(self):
-        """This variable as a pandas.Index"""
-        # n.b. creating a new pandas.Index from an old pandas.Index is
-        # basically free as pandas.Index objcets are immutable
-        assert self.ndim == 1
-        return pd.Index(self._data_cached().array, name=self.dims[0])
+        utils.alias_warning('as_index', 'to_index()')
+        return self.to_index()
+
+    def to_index(self):
+        """Convert this variable to a pandas.Index"""
+        return self.to_coord().to_index()
 
     @property
     def dims(self):
@@ -757,11 +761,18 @@ class Coordinate(Variable):
         return type(self)(self.dims, data, self.attrs, self.encoding)
 
     def _data_equals(self, other):
-        return self.as_index.equals(other.as_index)
+        return self.to_index().equals(other.to_index())
 
     def to_coord(self):
         """Return this variable as an xray.Coordinate"""
         return self
+
+    def to_index(self):
+        """Convert this variable to a pandas.Index"""
+        # n.b. creating a new pandas.Index from an old pandas.Index is
+        # basically free as pandas.Index objects are immutable
+        assert self.ndim == 1
+        return pd.Index(self._data_cached().array, name=self.dims[0])
 
     # pandas.Index like properties:
 
@@ -774,26 +785,23 @@ class Coordinate(Variable):
         raise AttributeError('cannot modify name of Coordinate in-place')
 
     def get_indexer(self, label):
-        return self.as_index.get_indexer(label)
+        return self.to_index().get_indexer(label)
 
     def slice_indexer(self, start=None, stop=None, step=None):
-        return self.as_index.slice_indexer(start, stop, step)
+        return self.to_index().slice_indexer(start, stop, step)
 
     def slice_locs(self, start=None, stop=None):
-        return self.as_index.slice_locs(start, stop)
+        return self.to_index().slice_locs(start, stop)
 
     def get_loc(self, label):
-        return self.as_index.get_loc(label)
+        return self.to_index().get_loc(label)
 
     @property
     def is_monotonic(self):
-        return self.as_index.is_monotonic
+        return self.to_index().is_monotonic
 
     def is_numeric(self):
-        return self.as_index.is_numeric()
-
-
-Index = utils.class_alias(Coordinate, 'Index')
+        return self.to_index().is_numeric()
 
 
 def broadcast_variables(first, second):
