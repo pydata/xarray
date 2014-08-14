@@ -11,7 +11,7 @@ except:
 MAJOR = 0
 MINOR = 2
 MICRO = 0
-ISRELEASED = False
+ISRELEASED = True
 VERSION = '%d.%d.%d' % (MAJOR, MINOR, MICRO)
 QUALIFIER = ''
 
@@ -19,7 +19,7 @@ QUALIFIER = ''
 DISTNAME = 'xray'
 LICENSE = 'Apache'
 AUTHOR = 'xray Developers'
-AUTHOR_EMAIL = 'xray-discussion@googlegroups.com'
+AUTHOR_EMAIL = 'xray-dev@googlegroups.com'
 URL = 'https://github.com/xray/xray'
 CLASSIFIERS = [
     'Development Status :: 3 - Alpha',
