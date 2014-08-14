@@ -102,7 +102,7 @@ class TestDataset(TestCase):
         actual = '\n'.join(x.rstrip() for x in repr(Dataset()).split('\n'))
         self.assertEqual(expected, actual)
 
-    def test_init(self):
+    def test_constructor(self):
         var1 = Variable('x', 2 * np.arange(100))
         var2 = Variable('x', np.arange(1000))
         var3 = Variable(['x', 'y'], np.arange(1000).reshape(100, 10))
@@ -633,7 +633,7 @@ class TestDataset(TestCase):
             # the order in which they are found in `data`
             return Dataset(dict((k, v.transpose(*data[k].dims))
                                 for k, v in iteritems(dataset.variables)),
-                           dataset.attrs)
+                           attrs=dataset.attrs)
 
         for dim in ['dim1', 'dim2', 'dim3']:
             datasets = [g for _, g in data.groupby(dim, squeeze=False)]

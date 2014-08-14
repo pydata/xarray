@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+import warnings
 
 try:  # Python 2
     from cStringIO import StringIO as BytesIO
@@ -285,7 +286,7 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
     coordinates, which means they are saved in the dataset as `xray.Coordinate`
     objects.
     """
-    def __init__(self, variables=None, attrs=None):
+    def __init__(self, variables=None, coords=None, attrs=None):
         """To load data from a file or file-like object, use the `open_dataset`
         function.
 
@@ -297,9 +298,33 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
             which can be used as arguments to create a new `Variable`. Each
             dimension must have the same length in all variables in which it
             appears.
+        coords : dict-like, optional
+            Do not use: not yet implemented!
         attrs : dict-like, optional
             Global attributes to save on this dataset.
+
+        .. warning::
+
+            For now, if you wish to specify ``attrs``, you *must* use a
+            keyword argument: ``xray.Dataset(variables, attrs=attrs)``.
+            The ``coords`` argument is reserved for specifying coordinates
+            independently of other variables for use in a future version of
+            xray. For now, coordinates will extracted automatically from
+            variables.
         """
+        if coords is not None:
+            if attrs is None:
+                warnings.warn("use the keyword-only argument 'attrs' for "
+                              'dataset attributes; the second positional '
+                              "argument to Dataset will change to 'coords' in "
+                              'the next version of xray',
+                              FutureWarning, stacklevel=2)
+                attrs = coords
+            else:
+                raise NotImplementedError(
+                    'cannot yet supply coordinates separately from '
+                    "other variables; for now, put them in the 'variables'")
+
         self._variables = VariablesDict()
         self._dims = SortedKeysDict()
         self._attrs = OrderedDict()
@@ -354,7 +379,7 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
             variables = conventions.decode_cf_variables(
                 store.variables, mask_and_scale=mask_and_scale,
                 decode_times=decode_times, concat_characters=concat_characters)
-        obj = cls(variables, store.attrs)
+        obj = cls(variables, attrs=store.attrs)
         obj._file_obj = store
         return obj
 
@@ -677,7 +702,7 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
         for name, var in iteritems(self.variables):
             var_indexers = dict((k, v) for k, v in iteritems(indexers) if k in var.dims)
             variables[name] = var.isel(**var_indexers)
-        return type(self)(variables, self.attrs)
+        return type(self)(variables, attrs=self.attrs)
 
     indexed = utils.function_alias(isel, 'indexed')
 
@@ -867,7 +892,7 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
                     # we neither created a new ndarray nor used fancy indexing
                     new_var = var.copy() if copy else var
             variables[name] = new_var
-        return type(self)(variables, self.attrs)
+        return type(self)(variables, attrs=self.attrs)
 
     def rename(self, name_dict, inplace=False):
         """Returns a new object with renamed variables and dimensions.
@@ -903,7 +928,7 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
             self._variables = variables
             obj = self
         else:
-            obj = type(self)(variables, self.attrs)
+            obj = type(self)(variables, attrs=self.attrs)
         return obj
 
     def update(self, other, inplace=True):
@@ -1016,7 +1041,7 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
         """
         self._assert_all_in_dataset(names)
         variables = OrderedDict((k, self[k]) for k in names)
-        return type(self)(variables, self.attrs)
+        return type(self)(variables, attrs=self.attrs)
 
     select = utils.function_alias(select_vars, 'select')
 
@@ -1040,7 +1065,7 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
                     if any(name in v.dims for name in names))
         variables = OrderedDict((k, v) for k, v in iteritems(self.variables)
                                 if k not in drop)
-        return type(self)(variables, self.attrs)
+        return type(self)(variables, attrs=self.attrs)
 
     unselect = utils.function_alias(drop_vars, 'unselect')
 
@@ -1160,7 +1185,7 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
 
         attrs = self.attrs if keep_attrs else {}
 
-        return Dataset(variables, attrs)
+        return type(self)(variables, attrs=attrs)
 
     def apply(self, func, keep_attrs=False, **kwargs):
         """Apply a function over noncoordinate variables in this dataset.
@@ -1188,7 +1213,7 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
         variables = OrderedDict((k, func(v, **kwargs))
                                 for k, v in iteritems(self.noncoords))
         attrs = self.attrs if keep_attrs else {}
-        return Dataset(variables, attrs)
+        return type(self)(variables, attrs=attrs)
 
     @classmethod
     def concat(cls, datasets, dim='concat_dim', indexers=None,
@@ -1289,7 +1314,7 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
                 concat_over.add(k)
 
         # create the new dataset and add constant variables
-        concatenated = cls({}, datasets[0].attrs)
+        concatenated = cls({}, attrs=datasets[0].attrs)
         for k, v in iteritems(datasets[0]):
             if k not in concat_over:
                 concatenated[k] = v
