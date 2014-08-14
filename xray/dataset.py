@@ -283,8 +283,8 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
     and values given by DataArray objects for each variable name.
 
     One dimensional variables with name equal to their dimension are
-    coordinates, which means they are saved in the dataset as `xray.Coordinate`
-    objects.
+    coordinates, which means they are saved in the dataset as
+    :py:class:`~xray.Coordinate` objects.
     """
     def __init__(self, variables=None, coords=None, attrs=None):
         """To load data from a file or file-like object, use the `open_dataset`
@@ -293,24 +293,24 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
         Parameters
         ----------
         variables : dict-like, optional
-            A mapping from variable names to `DataArray` objets, `Variable`
-            objects or sequences of the form `(dims, data[, attrs])`
-            which can be used as arguments to create a new `Variable`. Each
-            dimension must have the same length in all variables in which it
-            appears.
+            A mapping from variable names to :py:class:`~xray.DataArray`
+            objects, :py:class:`~xray.Variable` objects or tuples of the
+            form ``(dims, data[, attrs])`` which can be used as arguments to
+            create a new ``Variable``. Each dimension must have the same length
+            in all variables in which it appears.
         coords : dict-like, optional
             Do not use: not yet implemented!
         attrs : dict-like, optional
             Global attributes to save on this dataset.
 
-        .. warning::
+        Warning
+        -------
 
-            For now, if you wish to specify ``attrs``, you *must* use a
-            keyword argument: ``xray.Dataset(variables, attrs=attrs)``.
-            The ``coords`` argument is reserved for specifying coordinates
-            independently of other variables for use in a future version of
-            xray. For now, coordinates will extracted automatically from
-            variables.
+        For now, if you wish to specify ``attrs``, you *must* use a keyword
+        argument: ``xray.Dataset(variables, attrs=attrs)``. The ``coords``
+        argument is reserved for specifying coordinates independently of other
+        variables for use in a future version of xray. For now, coordinates
+        will extracted automatically from variables.
         """
         if coords is not None:
             if attrs is None:
