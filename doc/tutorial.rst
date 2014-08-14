@@ -656,6 +656,14 @@ To combine arrays along a dimension into a larger arrays, you can use the
     xray.Dataset.concat([ds.sel(time='2000-01-01'), ds.sel(time='2000-01-03')],
                         'new_dim')
 
+The second argument to ``concat`` can be :py:class:`~xray.Coordinate` or
+:py:class:`~xray.DataArray` object as well as a string, in which case it is
+used to label the values along the new dimension:
+
+.. ipython:: python
+
+    xray.DataArray.concat([foo[0], foo[1]], xray.Coordinate('x', [-90, -100]))
+
 :py:meth:`Dataset.concat <xray.Dataset.concat>` has a number of options which
 control how it combines data, and in particular, how it handles conflicting
 variables between datasets.
