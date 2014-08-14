@@ -857,18 +857,6 @@ class TestDataset(TestCase):
         self.assertDatasetIdentical(data.apply(lambda x: x, keep_attrs=True),
                                     data.drop_vars('time'))
 
-        actual = data.apply(np.mean, to=['var1', 'var2', 'var3'])
-        self.assertDatasetIdentical(actual, data.mean())
-
-        actual = data.apply(np.mean, to='var1')
-        modified = data.select_vars('var1').mean()
-        unmodified = data.select_vars('var2', 'var3')
-        expected = modified.merge(unmodified)
-        self.assertDatasetIdentical(actual, expected)
-
-        with self.assertRaisesRegexp(ValueError, 'does not contain'):
-            data.apply(np.mean, to='foobarbaz')
-
         def scale(x, multiple=1):
             return multiple * x
 

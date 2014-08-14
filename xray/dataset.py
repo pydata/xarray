@@ -1162,8 +1162,8 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
 
         return Dataset(variables, attrs)
 
-    def apply(self, func, to=None, keep_attrs=False, **kwargs):
-        """Apply a function over noncoordinates in this dataset.
+    def apply(self, func, keep_attrs=False, **kwargs):
+        """Apply a function over noncoordinate variables in this dataset.
 
         Parameters
         ----------
@@ -1171,10 +1171,6 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
             Function which can be called in the form `f(x, **kwargs)` to
             transform each DataArray `x` in this dataset into another
             DataArray.
-        to : str or sequence of str, optional
-            Explicit list of noncoordinates in this dataset to which to apply
-            `func`. Unlisted noncoordinates are passed through unchanged. By
-            default, `func` is applied to all noncoordinates in this dataset.
         keep_attrs : bool, optional
             If True, the datasets's attributes (`attrs`) will be copied from
             the original object to the new one. If False, the new object will
@@ -1189,21 +1185,9 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
             Coordinates which are no longer used as the dimension of a
             noncoordinate are dropped.
         """
-        if to is not None:
-            to = set([to] if isinstance(to, basestring) else to)
-            bad_to = to - set(self.noncoords)
-            if bad_to:
-                raise ValueError('Dataset does not contain the '
-                                 'noncoordinates: %r' % list(bad_to))
-        else:
-            to = set(self.noncoords)
-
-        variables = OrderedDict()
-        for name, var in iteritems(self.noncoords):
-            variables[name] = func(var, **kwargs) if name in to else var
-
+        variables = OrderedDict((k, func(v, **kwargs))
+                                for k, v in iteritems(self.noncoords))
         attrs = self.attrs if keep_attrs else {}
-
         return Dataset(variables, attrs)
 
     @classmethod
