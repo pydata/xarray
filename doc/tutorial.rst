@@ -1065,8 +1065,8 @@ Notes on xray's internals
 
 .. warning::
 
-    These implementation details may be useful for advanced users, but are
-    highly likely to change in future versions.
+    These implementation details may be useful for advanced users, but they
+    **will** change in future versions.
 
 DataArray
 ~~~~~~~~~
@@ -1135,6 +1135,9 @@ Variable with dimensions `('space',)` results in a new Variable with dimensions
 
 Variables are light-weight objects used as the building block for datasets.
 They are more primitive objects, so operations with them provide marginally
-higher performance than using DataArrays. **However, manipulating data in the
-form of a Dataset or DataArray should almost always be preferred**, because
+higher performance than using DataArrays. However, manipulating data in the
+form of a Dataset or DataArray should almost always be preferred, because
 they can use more complete metadata in context of coordinate labels.
+
+You can find a read-only copy of the variables associated with a Dataset in its
+``.variables`` attribute, or for a DataArray in its ``.variable`` attribute.
