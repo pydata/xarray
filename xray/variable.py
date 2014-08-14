@@ -801,9 +801,6 @@ class Coordinate(Variable):
         return self.to_index().is_numeric()
 
 
-Index = utils.class_alias(Coordinate, 'Index')
-
-
 def broadcast_variables(first, second):
     """Given two Variables, return two Variables with matching dimensions and
     numpy broadcast compatible data.
