@@ -2,14 +2,11 @@ try:
     import cPickle as pickle
 except ImportError:
     import pickle
+from io import BytesIO
 import contextlib
 import os.path
 import tempfile
 import unittest
-try:  # Python 2
-    from cStringIO import StringIO as BytesIO
-except ImportError:  # Python 3
-    from io import BytesIO
 
 import numpy as np
 import pandas as pd
@@ -412,7 +409,7 @@ class NetCDF3ViaNetCDF4DataTest(DatasetIOTestCases, TestCase):
     def create_store(self):
         with create_tmp_file() as tmp_file:
             yield io.NetCDF4DataStore(tmp_file, mode='w',
-                                            format='NETCDF3_CLASSIC')
+                                      format='NETCDF3_CLASSIC')
 
     @contextlib.contextmanager
     def roundtrip(self, data, **kwargs):
