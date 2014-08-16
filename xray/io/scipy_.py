@@ -6,11 +6,12 @@ import numpy as np
 import warnings
 
 import xray
-from xray.backends.common import AbstractWritableDataStore
-from xray.utils import Frozen
-from xray.pycompat import iteritems, basestring, unicode_type, OrderedDict
+from .common import AbstractWritableDataStore
 
-from .. import conventions
+from xray.core.utils import Frozen
+from xray.core.pycompat import iteritems, basestring, unicode_type, OrderedDict
+
+from . import conventions
 from .netcdf3 import is_valid_nc3_name, coerce_nc3_dtype, encode_nc3_variable
 
 

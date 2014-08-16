@@ -8,14 +8,14 @@ except ImportError:  # Python 3
     from io import BytesIO
 from collections import Mapping
 
-from . import backends
-from . import conventions
+from .. import io
+from ..io import conventions
 from . import common
 from . import groupby
 from . import indexing
 from . import variable
 from . import utils
-from . import data_array
+from . import dataarray
 from . import ops
 from .utils import (FrozenOrderedDict, Frozen, SortedKeysDict, ChainMap,
                     multi_index_from_product)
@@ -63,11 +63,11 @@ def open_dataset(nc, decode_cf=True, mask_and_scale=True, decode_times=True,
         # If the initialization nc is a string and it doesn't
         # appear to be the contents of a netcdf file we load
         # it using the netCDF4 package
-        store = backends.NetCDF4DataStore(nc, *args, **kwargs)
+        store = io.NetCDF4DataStore(nc, *args, **kwargs)
     else:
         # If nc is a file-like object we read it using
         # the scipy.io.netcdf package
-        store = backends.ScipyDataStore(nc, *args, **kwargs)
+        store = io.ScipyDataStore(nc, *args, **kwargs)
     return Dataset.load_store(store, decode_cf=decode_cf,
                               mask_and_scale=mask_and_scale,
                               decode_times=decode_times,
@@ -368,7 +368,7 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
     @classmethod
     def load_store(cls, store, decode_cf=True, mask_and_scale=True,
                    decode_times=True, concat_characters=True):
-        """Create a new dataset from the contents of a backends.*DataStore
+        """Create a new dataset from the contents of a io.*DataStore
         object
         """
         variables = store.variables
@@ -529,7 +529,7 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
         """
         if key not in self and key not in self.virtual_variables:
             raise KeyError(key)
-        return data_array.DataArray._new_from_dataset(self, key)
+        return dataarray.DataArray._new_from_dataset(self, key)
 
     def __setitem__(self, key, value):
         """Add an array to this dataset.
@@ -632,7 +632,7 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
         return self.noncoords
 
     def dump_to_store(self, store):
-        """Store dataset contents to a backends.*DataStore object."""
+        """Store dataset contents to a io.*DataStore object."""
         store.set_variables(self.variables)
         store.set_attributes(self.attrs)
         store.sync()
@@ -641,7 +641,7 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
         """Dump dataset contents to a location on disk using the netCDF4
         package.
         """
-        with backends.NetCDF4DataStore(filepath, mode='w', **kwdargs) as store:
+        with io.NetCDF4DataStore(filepath, mode='w', **kwdargs) as store:
             self.dump_to_store(store)
 
     dump = to_netcdf
@@ -651,7 +651,7 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
         in memory netcdf version 3 string using the scipy.io.netcdf package.
         """
         fobj = BytesIO()
-        store = backends.ScipyDataStore(fobj, mode='w', **kwargs)
+        store = io.ScipyDataStore(fobj, mode='w', **kwargs)
         self.dump_to_store(store)
         return fobj.getvalue()
 

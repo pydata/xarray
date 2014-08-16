@@ -4,7 +4,7 @@ from copy import deepcopy
 from textwrap import dedent
 
 from xray import Dataset, DataArray, Coordinate, Variable, align
-from xray.pycompat import iteritems, OrderedDict
+from xray.core.pycompat import iteritems, OrderedDict
 from . import TestCase, ReturnItem, source_ndarray
 
 

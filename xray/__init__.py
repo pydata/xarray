@@ -1,6 +1,6 @@
-from .variable import Variable, Coordinate
-from .dataset import Dataset, open_dataset
-from .data_array import DataArray, align
+from .core.variable import Variable, Coordinate
+from .core.dataset import Dataset, open_dataset
+from .core.dataarray import DataArray, align
 
 from .version import version as __version__
 

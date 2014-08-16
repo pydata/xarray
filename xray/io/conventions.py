@@ -4,9 +4,8 @@ import warnings
 from collections import defaultdict
 from datetime import datetime
 
-from . import indexing
-from . import utils
-from .pycompat import iteritems, bytes_type, unicode_type, OrderedDict
+from ..core import indexing, utils
+from ..core.pycompat import iteritems, bytes_type, unicode_type, OrderedDict
 import xray
 
 # standard calendars recognized by netcdftime
@@ -470,7 +469,7 @@ def encode_cf_variable(var):
 def decode_cf_variable(var, concat_characters=True, mask_and_scale=True,
                        decode_times=True):
     # use _data instead of data so as not to trigger loading data
-    var = xray.variable.as_variable(var)
+    var = xray.core.variable.as_variable(var)
     data = var._data
     dimensions = var.dims
     attributes = var.attrs.copy()

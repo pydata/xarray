@@ -1,8 +1,8 @@
 import numpy as np
 
 import xray
-from xray.utils import FrozenOrderedDict, Frozen, NDArrayMixin
-from xray import indexing
+from xray.core.utils import FrozenOrderedDict, Frozen, NDArrayMixin
+from xray.core import indexing
 
 from .common import AbstractDataStore
 

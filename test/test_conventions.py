@@ -2,7 +2,8 @@ import numpy as np
 import pandas as pd
 import warnings
 
-from xray import conventions, Variable
+from xray import Variable
+from xray.io import conventions
 from . import TestCase, requires_netCDF4
 
 

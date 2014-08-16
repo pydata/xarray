@@ -3,8 +3,9 @@ import unicodedata
 import numpy as np
 
 import xray
-from xray.pycompat import basestring, unicode_type
-from xray import conventions, utils
+from xray.core.pycompat import basestring, unicode_type
+from . import conventions
+from ..core import utils
 
 # Special characters that are permitted in netCDF names except in the
 # 0th position of the string

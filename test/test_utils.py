@@ -1,8 +1,8 @@
 import numpy as np
 import pandas as pd
 
-from xray import utils
-from xray.pycompat import OrderedDict
+from xray.core import utils
+from xray.core.pycompat import OrderedDict
 from . import TestCase
 
 

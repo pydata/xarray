@@ -9,8 +9,9 @@ import numpy as np
 import pandas as pd
 
 from xray import (Dataset, DataArray, Coordinate, Variable,
-                  backends, utils, align, indexing)
-from xray.pycompat import iteritems, OrderedDict
+                  io, align)
+from xray.core import indexing, utils
+from xray.core.pycompat import iteritems, OrderedDict
 
 from . import TestCase, unittest
 
@@ -49,7 +50,7 @@ class InaccessibleArray(utils.NDArrayMixin):
         raise UnexpectedDataAccess("Tried accessing data")
 
 
-class InaccessibleVariableDataStore(backends.InMemoryDataStore):
+class InaccessibleVariableDataStore(io.InMemoryDataStore):
     def __init__(self):
         self.dims = OrderedDict()
         self._variables = OrderedDict()

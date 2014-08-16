@@ -2,13 +2,14 @@ import warnings
 
 import numpy as np
 
+from .conventions import encode_cf_variable
 from .common import AbstractWritableDataStore
 from .netcdf3 import encode_nc3_variable
+
 import xray
-from xray.conventions import encode_cf_variable
-from xray.utils import FrozenOrderedDict, NDArrayMixin
-from xray import indexing
-from xray.pycompat import iteritems, basestring, bytes_type, OrderedDict
+from xray.core.utils import FrozenOrderedDict, NDArrayMixin
+from xray.core import indexing
+from xray.core.pycompat import iteritems, basestring, bytes_type, OrderedDict
 
 
 class NetCDF4ArrayWrapper(NDArrayMixin):
