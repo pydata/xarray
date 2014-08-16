@@ -1,1 +1,5 @@
 examples*.png
+*.log
+*.pdf
+*.fbd_latexmk
+*.aux
