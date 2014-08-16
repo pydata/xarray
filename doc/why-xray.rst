@@ -76,8 +76,10 @@ shared dimensions.
 
 The power of the dataset over a plain dictionary is that, in addition to
 pulling out arrays by name, it is possible to select or combine data along a
-dimension across all arrays simultaneously. In this fashion, it is similar to
-a multi-dimensional :py:class:`~pandas.DataFrame`.
+dimension across all arrays simultaneously. Like a
+:py:class:`~pandas.DataFrame`, datasets facilitate array operations with
+heterogeneous data -- the difference is that the arrays in a dataset are not
+required to be one dimesional.
 
 Here is an illustrative example:
 
@@ -105,4 +107,4 @@ utilize and preserve labels. You only need to do the tedious work of adding
 metadata once, not every time you save a file.
 
 ``Dataset`` supports all of the features listed above for an individual
-``DataArray``, except it does not (yet) directly support arithmetic operators.
+``DataArray``, except it does not (yet) directly support arithmetic operations.
