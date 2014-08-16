@@ -6,6 +6,7 @@ import numpy as np
 import pandas as pd
 
 from .. import io
+from . import alignment
 from . import common
 from . import formatting
 from . import groupby
@@ -803,89 +804,8 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
             # shortcut
             return self.copy(deep=True) if copy else self
 
-        # build up indexers for assignment along each index
-        to_indexers = {}
-        from_indexers = {}
-        for name, coord in iteritems(self.coords):
-            if name in indexers:
-                target = utils.safe_cast_to_index(indexers[name])
-                indexer = coord.get_indexer(target)
-
-                # Note pandas uses negative values from get_indexer to signify
-                # values that are missing in the index
-                # The non-negative values thus indicate the non-missing values
-                to_indexers[name] = indexer >= 0
-                if to_indexers[name].all():
-                    # If an indexer includes no negative values, then the
-                    # assignment can be to a full-slice (which is much faster,
-                    # and means we won't need to fill in any missing values)
-                    to_indexers[name] = slice(None)
-
-                from_indexers[name] = indexer[to_indexers[name]]
-                if np.array_equal(from_indexers[name], np.arange(coord.size)):
-                    # If the indexer is equal to the original index, use a full
-                    # slice object to speed up selection and so we can avoid
-                    # unnecessary copies
-                    from_indexers[name] = slice(None)
-
-        def is_full_slice(idx):
-            return isinstance(idx, slice) and idx == slice(None)
-
-        def any_not_full_slices(indexers):
-            return any(not is_full_slice(idx) for idx in indexers)
-
-        def var_indexers(var, indexers):
-            return tuple(indexers.get(d, slice(None)) for d in var.dims)
-
-        def get_fill_value_and_dtype(dtype):
-            # N.B. these casting rules should match pandas
-            if np.issubdtype(dtype, np.datetime64):
-                fill_value = np.datetime64('NaT')
-            elif any(np.issubdtype(dtype, t) for t in (int, float)):
-                # convert to floating point so NaN is valid
-                dtype = float
-                fill_value = np.nan
-            else:
-                dtype = object
-                fill_value = np.nan
-            return fill_value, dtype
-
-        # create variables for the new dataset
-        variables = OrderedDict()
-        for name, var in iteritems(self.variables):
-            if name in indexers:
-                new_var = indexers[name]
-                if not (hasattr(new_var, 'dims') and
-                        hasattr(new_var, 'values')):
-                    new_var = variable.Coordinate(var.dims, new_var,
-                                                  var.attrs, var.encoding)
-                elif copy:
-                    new_var = variable.as_variable(new_var).copy()
-            else:
-                assign_to = var_indexers(var, to_indexers)
-                assign_from = var_indexers(var, from_indexers)
-
-                if any_not_full_slices(assign_to):
-                    # there are missing values to in-fill
-                    fill_value, dtype = get_fill_value_and_dtype(var.dtype)
-                    shape = tuple(length if is_full_slice(idx) else idx.size
-                                  for idx, length in zip(assign_to, var.shape))
-                    data = np.empty(shape, dtype=dtype)
-                    data[:] = fill_value
-                    # create a new Variable so we can use orthogonal indexing
-                    new_var = variable.Variable(
-                        var.dims, data, var.attrs)
-                    new_var[assign_to] = var[assign_from].values
-                elif any_not_full_slices(assign_from):
-                    # type coercion is not necessary as there are no missing
-                    # values
-                    new_var = var[assign_from]
-                else:
-                    # no reindexing is necessary
-                    # here we need to manually deal with copying data, since
-                    # we neither created a new ndarray nor used fancy indexing
-                    new_var = var.copy() if copy else var
-            variables[name] = new_var
+        variables = alignment.reindex_variables(
+            self.variables, self.coords, indexers, copy=copy)
         return type(self)(variables, attrs=self.attrs)
 
     def rename(self, name_dict, inplace=False):
