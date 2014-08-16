@@ -75,7 +75,7 @@ Monthly averaging
 
     def year_month(xray_obj):
         time = xray_obj.coords['time']
-        values = time.as_index.to_period('M').to_timestamp()
+        values = pd.Index(time).to_period('M').to_timestamp()
         return xray.DataArray(values, [time], name='year_month')
 
     @savefig examples_tmin_tmax_plot.png width=4in

@@ -105,4 +105,4 @@ utilize and preserve labels. You only need to do the tedious work of adding
 metadata once, not every time you save a file.
 
 ``Dataset`` supports all of the features listed above for an individual
-``DataArray`, except it does not (yet) directly support arithmetic operators.
+``DataArray``, except it does not (yet) directly support arithmetic operators.
