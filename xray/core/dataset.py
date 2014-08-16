@@ -1110,7 +1110,7 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
         --------
         numpy.squeeze
         """
-        return utils.squeeze(self, self.dims, dim)
+        return common.squeeze(self, self.dims, dim)
 
     def reduce(self, func, dim=None, keep_attrs=False, **kwargs):
         """Reduce this dataset by applying `func` along some dimension(s).

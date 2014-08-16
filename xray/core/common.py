@@ -135,6 +135,19 @@ class AbstractCoordinates(Mapping):
         return coord
 
 
+def squeeze(xray_obj, dims, dim=None):
+    """Squeeze the dims of an xray object."""
+    if dim is None:
+        dim = [d for d, s in iteritems(dims) if s == 1]
+    else:
+        if isinstance(dim, basestring):
+            dim = [dim]
+        if any(dims[k] > 1 for k in dim):
+            raise ValueError('cannot select a dimension to squeeze out '
+                             'which has length greater than one')
+    return xray_obj.isel(**dict((d, 0) for d in dim))
+
+
 def _summarize_attributes(data):
     if data.attrs:
         attr_summary = '\n'.join('    %s: %s' % (k, v) for k, v
