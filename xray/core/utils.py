@@ -7,7 +7,6 @@ from collections import Mapping, MutableMapping
 import numpy as np
 import pandas as pd
 
-import xray
 from .pycompat import basestring, iteritems, PY3, OrderedDict
 
 

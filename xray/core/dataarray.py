@@ -7,13 +7,13 @@ from collections import defaultdict
 import numpy as np
 import pandas as pd
 
-import xray
 from . import indexing
 from . import groupby
 from . import ops
 from . import utils
 from . import variable
 from .common import AbstractArray, AbstractCoordinates
+from .dataset import Dataset
 from .utils import multi_index_from_product
 from .pycompat import iteritems, basestring, OrderedDict
 
@@ -203,7 +203,7 @@ class DataArray(AbstractArray):
         coords, dims = _infer_coords_and_dims(data.shape, coords, dims)
         variables = OrderedDict((var.name, var) for var in coords)
         variables[name] = variable.Variable(dims, data, attrs, encoding)
-        dataset = xray.Dataset(variables)
+        dataset = Dataset(variables)
 
         self._dataset = dataset
         self._name = name
@@ -801,8 +801,7 @@ class DataArray(AbstractArray):
         elif isinstance(concat_over, basestring):
             concat_over = set([concat_over])
         concat_over = set(concat_over) | set([name])
-        ds = xray.Dataset.concat(datasets, dim, indexers,
-                                 concat_over=concat_over)
+        ds = Dataset.concat(datasets, dim, indexers, concat_over=concat_over)
         return ds[name]
 
     def to_dataframe(self):
@@ -835,7 +834,7 @@ class DataArray(AbstractArray):
         method.
         """
         df = pd.DataFrame({series.name: series})
-        ds = xray.Dataset.from_dataframe(df)
+        ds = Dataset.from_dataframe(df)
         return ds[series.name]
 
     def equals(self, other):
@@ -872,7 +871,7 @@ class DataArray(AbstractArray):
             return False
 
     def _select_coords(self):
-        return xray.Dataset(self.coords)
+        return Dataset(self.coords)
 
     def __array_wrap__(self, obj, context=None):
         new_var = self.variable.__array_wrap__(obj, context)

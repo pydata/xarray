@@ -1,14 +1,11 @@
 import itertools
-try:  # Python 2
-    from itertools import izip
-except ImportError: # Python 3
-    izip = zip
+
+import numpy as np
 
 from .common import ImplementsArrayReduce, ImplementsDatasetReduce
 from .ops import inject_reduce_methods
-from .variable import as_variable, Variable, Coordinate
-import xray
-import numpy as np
+from .pycompat import zip
+from .variable import Variable, Coordinate
 
 
 def unique_value_groups(ar):
@@ -124,7 +121,7 @@ class GroupBy(object):
         return self.unique_coord.size
 
     def __iter__(self):
-        return izip(self.unique_coord.values, self._iter_grouped())
+        return zip(self.unique_coord.values, self._iter_grouped())
 
     def _iter_grouped(self):
         """Iterate over each element in this group"""

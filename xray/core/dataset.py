@@ -1,21 +1,16 @@
-import numpy as np
-import pandas as pd
+from io import BytesIO
+from collections import Mapping
 import warnings
 
-try:  # Python 2
-    from cStringIO import StringIO as BytesIO
-except ImportError:  # Python 3
-    from io import BytesIO
-from collections import Mapping
+import numpy as np
+import pandas as pd
 
 from .. import io
-from ..io import conventions
 from . import common
 from . import groupby
 from . import indexing
 from . import variable
 from . import utils
-from . import dataarray
 from . import ops
 from .utils import (FrozenOrderedDict, Frozen, SortedKeysDict, ChainMap,
                     multi_index_from_product)
@@ -373,7 +368,7 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
         """
         variables = store.variables
         if decode_cf:
-            variables = conventions.decode_cf_variables(
+            variables = io.conventions.decode_cf_variables(
                 store.variables, mask_and_scale=mask_and_scale,
                 decode_times=decode_times, concat_characters=concat_characters)
         obj = cls(variables, attrs=store.attrs)
@@ -527,9 +522,10 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
     def __getitem__(self, key):
         """Access the given variable name in this dataset as a `DataArray`.
         """
+        from .dataarray import DataArray
         if key not in self and key not in self.virtual_variables:
             raise KeyError(key)
-        return dataarray.DataArray._new_from_dataset(self, key)
+        return DataArray._new_from_dataset(self, key)
 
     def __setitem__(self, key, value):
         """Add an array to this dataset.

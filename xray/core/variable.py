@@ -2,14 +2,9 @@ import functools
 import numpy as np
 import pandas as pd
 
-try:  # Python 2
-    from itertools import izip
-except ImportError: # Python 3
-    izip = zip
-
 from . import indexing
 from . import ops
-from .pycompat import basestring, OrderedDict
+from .pycompat import basestring, OrderedDict, zip
 from . import utils
 import xray
 
@@ -630,7 +625,7 @@ class Variable(AbstractArray):
         alt_dims = tuple(d for d in dims if d != dim)
 
         # copy in the data from the variables
-        for var, indexer in izip(variables, indexers):
+        for var, indexer in zip(variables, indexers):
             if not shortcut:
                 # do sanity checks & attributes clean-up
                 if dim in var.dims:
