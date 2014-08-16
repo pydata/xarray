@@ -7,6 +7,7 @@ from collections import defaultdict
 import numpy as np
 import pandas as pd
 
+from . import formatting
 from . import indexing
 from . import groupby
 from . import ops

@@ -7,6 +7,7 @@ import pandas as pd
 
 from .. import io
 from . import common
+from . import formatting
 from . import groupby
 from . import indexing
 from . import variable
@@ -652,7 +653,7 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
         return fobj.getvalue()
 
     def __repr__(self):
-        return common.dataset_repr(self)
+        return formatting.dataset_repr(self)
 
     def isel(self, **indexers):
         """Return a new dataset with each array indexed along the specified
