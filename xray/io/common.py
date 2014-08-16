@@ -1,7 +1,7 @@
 import numpy as np
 
-from xray.core.utils import FrozenOrderedDict
-from xray.core.pycompat import iteritems
+from ..core.utils import FrozenOrderedDict
+from ..core.pycompat import iteritems
 
 
 NONE_VAR_NAME = '__values__'

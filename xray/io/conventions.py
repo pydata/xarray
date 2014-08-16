@@ -4,9 +4,10 @@ import warnings
 from collections import defaultdict
 from datetime import datetime
 
+from .. import Variable
 from ..core import indexing, utils
+from ..core.variable import as_variable
 from ..core.pycompat import iteritems, bytes_type, unicode_type, OrderedDict
-import xray
 
 # standard calendars recognized by netcdftime
 _STANDARD_CALENDARS = set(['standard', 'gregorian', 'proleptic_gregorian'])
@@ -463,13 +464,13 @@ def encode_cf_variable(var):
         else:
             data = np.asarray(data, dtype=_infer_dtype(data))
 
-    return xray.Variable(dimensions, data, attributes, encoding=encoding)
+    return Variable(dimensions, data, attributes, encoding=encoding)
 
 
 def decode_cf_variable(var, concat_characters=True, mask_and_scale=True,
                        decode_times=True):
     # use _data instead of data so as not to trigger loading data
-    var = xray.core.variable.as_variable(var)
+    var = as_variable(var)
     data = var._data
     dimensions = var.dims
     attributes = var.attrs.copy()
@@ -504,8 +505,8 @@ def decode_cf_variable(var, concat_characters=True, mask_and_scale=True,
             calendar = pop_to(attributes, encoding, 'calendar')
             data = DecodedCFDatetimeArray(data, units, calendar)
 
-    return xray.Variable(dimensions, indexing.LazilyIndexedArray(data),
-                         attributes, encoding=encoding)
+    return Variable(dimensions, indexing.LazilyIndexedArray(data),
+                    attributes, encoding=encoding)
 
 
 def decode_cf_variables(variables, concat_characters=True, mask_and_scale=True,
