@@ -7,7 +7,7 @@ matrix:
   fast_finish: true
   include:
   - python: 2.6
-    env: UPDATE_ENV="pip install unittest2"
+    env: UPDATE_ENV="conda install unittest2"
   # Test on Python 2.7 with and without netCDF4/scipy
   - python: 2.7
     env: UPDATE_ENV=""
