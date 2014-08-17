@@ -1,19 +1,15 @@
 import functools
+
 import numpy as np
 import pandas as pd
 
-try:  # Python 2
-    from itertools import izip
-except ImportError: # Python 3
-    izip = zip
-
+from . import common
 from . import indexing
 from . import ops
-from .pycompat import basestring, OrderedDict
 from . import utils
-import xray
+from .pycompat import basestring, OrderedDict, zip
 
-from .common import AbstractArray
+import xray # only for Dataset and DataArray
 
 
 def as_variable(obj, strict=True):
@@ -188,7 +184,7 @@ def _as_array_or_item(data):
     return data
 
 
-class Variable(AbstractArray):
+class Variable(common.AbstractArray):
     """A netcdf-like variable consisting of dimensions, data and attributes
     which describe a single Array. A single Variable object is not fully
     described outside the context of its parent Dataset (if you want such a
@@ -494,7 +490,7 @@ class Variable(AbstractArray):
         numpy.squeeze
         """
         dims = dict(zip(self.dims, self.shape))
-        return utils.squeeze(self, dims, dim)
+        return common.squeeze(self, dims, dim)
 
     def reduce(self, func, dim=None, axis=None, keep_attrs=False,
                **kwargs):
@@ -630,7 +626,7 @@ class Variable(AbstractArray):
         alt_dims = tuple(d for d in dims if d != dim)
 
         # copy in the data from the variables
-        for var, indexer in izip(variables, indexers):
+        for var, indexer in zip(variables, indexers):
             if not shortcut:
                 # do sanity checks & attributes clean-up
                 if dim in var.dims:

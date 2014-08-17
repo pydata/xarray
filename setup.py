@@ -3,10 +3,8 @@ import os
 import re
 import sys
 import warnings
-try:
-    from setuptools import setup
-except:
-    from distutils.core import setup
+
+from setuptools import setup, find_packages
 
 MAJOR = 0
 MINOR = 2
@@ -148,4 +146,4 @@ setup(name=DISTNAME,
       tests_require=TESTS_REQUIRE,
       url=URL,
       test_suite='nose.collector',
-      packages=['xray', 'xray.backends'])
+      packages=find_packages())

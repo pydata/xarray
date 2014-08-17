@@ -7,7 +7,6 @@ from collections import Mapping, MutableMapping
 import numpy as np
 import pandas as pd
 
-import xray
 from .pycompat import basestring, iteritems, PY3, OrderedDict
 
 
@@ -32,19 +31,6 @@ def class_alias(obj, old_name):
             return super(Wrapper, cls).__new__(cls, *args, **kwargs)
     Wrapper.__name__ = obj.__name__
     return Wrapper
-
-
-def squeeze(xray_obj, dims, dim=None):
-    """Squeeze the dims of an xray object."""
-    if dim is None:
-        dim = [d for d, s in iteritems(dims) if s == 1]
-    else:
-        if isinstance(dim, basestring):
-            dim = [dim]
-        if any(dims[k] > 1 for k in dim):
-            raise ValueError('cannot select a dimension to squeeze out '
-                             'which has length greater than one')
-    return xray_obj.isel(**dict((d, 0) for d in dim))
 
 
 def allclose_or_equiv(arr1, arr2, rtol=1e-5, atol=1e-8):

@@ -1,16 +1,13 @@
-try: # Python 2
-    from cStringIO import StringIO as BytesIO
-except ImportError: # Python 3
-    from io import BytesIO
+from io import BytesIO
+
 import numpy as np
 import warnings
 
-import xray
-from xray.backends.common import AbstractWritableDataStore
-from xray.utils import Frozen
-from xray.pycompat import iteritems, basestring, unicode_type, OrderedDict
+from .. import conventions, Variable
+from ..core.pycompat import iteritems, basestring, unicode_type, OrderedDict
+from ..core.utils import Frozen
 
-from .. import conventions
+from .common import AbstractWritableDataStore
 from .netcdf3 import is_valid_nc3_name, coerce_nc3_dtype, encode_nc3_variable
 
 
@@ -55,8 +52,8 @@ class ScipyDataStore(AbstractWritableDataStore):
             filename_or_obj, mode=mode, mmap=mmap, version=version)
 
     def open_store_variable(self, var):
-        return xray.Variable(var.dimensions, var.data,
-                             _decode_attrs(var._attributes))
+        return Variable(var.dimensions, var.data,
+                        _decode_attrs(var._attributes))
 
     @property
     def attrs(self):

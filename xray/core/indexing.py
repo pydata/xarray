@@ -1,6 +1,7 @@
 import numpy as np
+
 from . import utils
-from .pycompat import iteritems, xrange
+from .pycompat import iteritems, range
 
 
 def expanded_indexer(key, ndim):
@@ -209,7 +210,7 @@ class LazilyIndexedArray(utils.NDArrayMixin):
         shape = []
         for size, k in zip(self.array.shape, self.key):
             if isinstance(k, slice):
-                shape.append(len(xrange(*k.indices(size))))
+                shape.append(len(range(*k.indices(size))))
             elif isinstance(k, np.ndarray):
                 shape.append(k.size)
         return tuple(shape)

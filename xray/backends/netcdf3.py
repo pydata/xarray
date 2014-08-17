@@ -2,9 +2,10 @@ import unicodedata
 
 import numpy as np
 
-import xray
-from xray.pycompat import basestring, unicode_type
-from xray import conventions, utils
+from .. import conventions, Variable
+from ..core import utils
+from ..core.pycompat import basestring, unicode_type
+
 
 # Special characters that are permitted in netCDF names except in the
 # 0th position of the string
@@ -57,7 +58,7 @@ def encode_nc3_variable(var):
     if data.dtype.kind == 'S' and data.dtype.itemsize > 1:
         data = conventions.string_to_char(data)
         dimensions = dimensions + ('string%s' % data.shape[-1],)
-    return xray.Variable(dimensions, data, var.attrs, var.encoding)
+    return Variable(dimensions, data, var.attrs, var.encoding)
 
 
 def _isalnumMUTF8(c):

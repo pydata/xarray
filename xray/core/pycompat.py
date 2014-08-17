@@ -10,7 +10,8 @@ if PY3:
         return iter(d.items())
     def itervalues(d):
         return iter(d.values())
-    xrange = range
+    range = range
+    zip = zip
     from collections import OrderedDict
 else:
     # Python 2
@@ -21,7 +22,8 @@ else:
         return d.iteritems()
     def itervalues(d):
         return d.itervalues()
-    xrange = xrange
+    range = xrange
+    from itertools import izip as zip
     try:
         from collections import OrderedDict
     except ImportError:

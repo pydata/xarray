@@ -1,8 +1,8 @@
 import numpy as np
 
-import xray
-from xray.utils import FrozenOrderedDict, Frozen, NDArrayMixin
-from xray import indexing
+from .. import Variable
+from ..core.utils import FrozenOrderedDict, Frozen, NDArrayMixin
+from ..core import indexing
 
 from .common import AbstractDataStore
 
@@ -48,7 +48,7 @@ class PydapDataStore(AbstractDataStore):
 
     def open_store_variable(self, var):
         data = indexing.LazilyIndexedArray(PydapArrayWrapper(var))
-        return xray.Variable(var.dimensions, data, var.attributes)
+        return Variable(var.dimensions, data, var.attributes)
 
     @property
     def store_variables(self):

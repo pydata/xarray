@@ -2,13 +2,14 @@ import warnings
 
 import numpy as np
 
+from .. import Variable
+from ..conventions import encode_cf_variable
+from ..core import indexing
+from ..core.utils import FrozenOrderedDict, NDArrayMixin
+from ..core.pycompat import iteritems, basestring, OrderedDict
+
 from .common import AbstractWritableDataStore
 from .netcdf3 import encode_nc3_variable
-import xray
-from xray.conventions import encode_cf_variable
-from xray.utils import FrozenOrderedDict, NDArrayMixin
-from xray import indexing
-from xray.pycompat import iteritems, basestring, bytes_type, OrderedDict
 
 
 class NetCDF4ArrayWrapper(NDArrayMixin):
@@ -132,7 +133,7 @@ class NetCDF4DataStore(AbstractWritableDataStore):
         # encoding['endian'] = var.endian()
         encoding['least_significant_digit'] = \
             attributes.pop('least_significant_digit', None)
-        return xray.Variable(dimensions, data, attributes, encoding)
+        return Variable(dimensions, data, attributes, encoding)
 
     @property
     def attrs(self):

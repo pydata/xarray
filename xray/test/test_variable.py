@@ -6,10 +6,11 @@ from textwrap import dedent
 import numpy as np
 import pandas as pd
 
-from xray import Variable, Dataset, DataArray, indexing
-from xray.variable import (Coordinate, as_variable, NumpyArrayAdapter,
-                           PandasIndexAdapter, _as_compatible_data)
-from xray.pycompat import PY3, OrderedDict
+from xray import Variable, Dataset, DataArray
+from xray.core import indexing
+from xray.core.variable import (Coordinate, as_variable, NumpyArrayAdapter,
+                                PandasIndexAdapter, _as_compatible_data)
+from xray.core.pycompat import PY3, OrderedDict
 
 from . import TestCase, source_ndarray
 

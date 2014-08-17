@@ -2,20 +2,17 @@ try:
     import cPickle as pickle
 except ImportError:
     import pickle
+from io import BytesIO
 import contextlib
 import os.path
 import tempfile
 import unittest
-try:  # Python 2
-    from cStringIO import StringIO as BytesIO
-except ImportError:  # Python 3
-    from io import BytesIO
 
 import numpy as np
 import pandas as pd
 
 from xray import Dataset, open_dataset, backends
-from xray.pycompat import iteritems, itervalues, PY3
+from xray.core.pycompat import iteritems, PY3
 
 from . import TestCase, requires_scipy, requires_netCDF4, requires_pydap
 from .test_dataset import create_test_data

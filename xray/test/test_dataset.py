@@ -8,9 +8,9 @@ except ImportError:
 import numpy as np
 import pandas as pd
 
-from xray import (Dataset, DataArray, Coordinate, Variable,
-                  backends, utils, align, indexing)
-from xray.pycompat import iteritems, OrderedDict
+from xray import align, backends, Dataset, DataArray, Variable
+from xray.core import indexing, utils
+from xray.core.pycompat import iteritems, OrderedDict
 
 from . import TestCase, unittest
 

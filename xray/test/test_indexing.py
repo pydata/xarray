@@ -1,6 +1,7 @@
 import numpy as np
 
-from xray import indexing, variable, Dataset, Variable, Coordinate
+from xray import Dataset, Variable, Coordinate
+from xray.core import indexing, variable
 from . import TestCase, ReturnItem
 
 

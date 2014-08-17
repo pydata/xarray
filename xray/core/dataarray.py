@@ -1,19 +1,16 @@
 import contextlib
 import functools
-import operator
-import warnings
-from collections import defaultdict
 
 import numpy as np
 import pandas as pd
 
-import xray
 from . import indexing
 from . import groupby
 from . import ops
 from . import utils
 from . import variable
 from .common import AbstractArray, AbstractCoordinates
+from .dataset import Dataset
 from .utils import multi_index_from_product
 from .pycompat import iteritems, basestring, OrderedDict
 
@@ -203,7 +200,7 @@ class DataArray(AbstractArray):
         coords, dims = _infer_coords_and_dims(data.shape, coords, dims)
         variables = OrderedDict((var.name, var) for var in coords)
         variables[name] = variable.Variable(dims, data, attrs, encoding)
-        dataset = xray.Dataset(variables)
+        dataset = Dataset(variables)
 
         self._dataset = dataset
         self._name = name
@@ -801,8 +798,7 @@ class DataArray(AbstractArray):
         elif isinstance(concat_over, basestring):
             concat_over = set([concat_over])
         concat_over = set(concat_over) | set([name])
-        ds = xray.Dataset.concat(datasets, dim, indexers,
-                                 concat_over=concat_over)
+        ds = Dataset.concat(datasets, dim, indexers, concat_over=concat_over)
         return ds[name]
 
     def to_dataframe(self):
@@ -835,7 +831,7 @@ class DataArray(AbstractArray):
         method.
         """
         df = pd.DataFrame({series.name: series})
-        ds = xray.Dataset.from_dataframe(df)
+        ds = Dataset.from_dataframe(df)
         return ds[series.name]
 
     def equals(self, other):
@@ -872,7 +868,7 @@ class DataArray(AbstractArray):
             return False
 
     def _select_coords(self):
-        return xray.Dataset(self.coords)
+        return Dataset(self.coords)
 
     def __array_wrap__(self, obj, context=None):
         new_var = self.variable.__array_wrap__(obj, context)
@@ -934,70 +930,3 @@ class DataArray(AbstractArray):
         return func
 
 ops.inject_special_operations(DataArray, priority=60)
-
-
-def align(*objects, **kwargs):
-    """align(*objects, join='inner', copy=True)
-
-    Given any number of Dataset and/or DataArray objects, returns new
-    objects with aligned coordinates.
-
-    Array from the aligned objects are suitable as input to mathematical
-    operators, because along each dimension they are indexed by the same
-    coordinates.
-
-    Missing values (if ``join != 'inner'``) are filled with NaN.
-
-    Parameters
-    ----------
-    *objects : Dataset or DataArray
-        Objects to align.
-    join : {'outer', 'inner', 'left', 'right'}, optional
-        Method for joining the coordinates of the passed objects along each
-        dimension:
-         - 'outer': use the union of object coordinates
-         - 'outer': use the intersection of object coordinates
-         - 'left': use coordinates from the first object with each dimension
-         - 'right': use coordinates from the last object with each dimension
-    copy : bool, optional
-        If `copy=True`, the returned objects contain all new variables. If
-        `copy=False` and no reindexing is required then the aligned objects
-        will include original variables.
-
-    Returns
-    -------
-    aligned : same as *objects
-        Tuple of objects with aligned coordinates.
-    """
-    # TODO: automatically align when doing math with dataset arrays?
-    # TODO: change this to default to join='outer' like pandas?
-    if 'join' not in kwargs:
-        warnings.warn('using align without setting explicitly setting the '
-                      "'join' keyword argument. In future versions of xray, "
-                      "the default will likely change from join='inner' to "
-                      "join='outer', to match pandas.",
-                      FutureWarning, stacklevel=2)
-
-    join = kwargs.pop('join', 'inner')
-    copy = kwargs.pop('copy', True)
-
-    if join == 'outer':
-        join_indices = functools.partial(functools.reduce, operator.or_)
-    elif join == 'inner':
-        join_indices = functools.partial(functools.reduce, operator.and_)
-    elif join == 'left':
-        join_indices = operator.itemgetter(0)
-    elif join == 'right':
-        join_indices = operator.itemgetter(-1)
-
-    all_indexes = defaultdict(list)
-    for obj in objects:
-        for k, v in iteritems(obj.coords):
-            all_indexes[k].append(v.to_index())
-
-    # Exclude dimensions with all equal indices to avoid unnecessary reindexing
-    # work.
-    joined_indexes = dict((k, join_indices(v)) for k, v in iteritems(all_indexes)
-                          if any(not v[0].equals(idx) for idx in v[1:]))
-
-    return tuple(obj.reindex(copy=copy, **joined_indexes) for obj in objects)
