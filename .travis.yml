@@ -1,45 +1,48 @@
-# Based on https://github.com/Jorge-C/ordination/blob/master/.travis.yml
+# Based on http://conda.pydata.org/docs/travis.html
 language: python
-python:
-  - "2.6"
-  - "2.7"
-  - "3.3"
 notifications:
   email: false
-# Setup anaconda
-before_install:
-  - if [ ${TRAVIS_PYTHON_VERSION:0:1} == "2" ]; then wget http://repo.continuum.io/miniconda/Miniconda-2.2.2-Linux-x86_64.sh -O miniconda.sh; else wget http://repo.continuum.io/miniconda/Miniconda3-2.2.2-Linux-x86_64.sh -O miniconda.sh; fi
-  - chmod +x miniconda.sh
-  - ./miniconda.sh -b
-  - export PATH=/home/travis/anaconda/bin:$PATH
-  # Update conda itself
-  - conda update --yes conda
-  # The next couple lines fix a crash with multiprocessing on Travis and are not specific to using Miniconda
-  - sudo rm -rf /dev/shm
-  - sudo ln -s /run/shm /dev/shm
-# Test with and without netCDF4/scipy/pydap
-env:
-  - UPDATE_PYENV='conda remove --yes scipy netCDF4'
-  - UPDATE_PYENV='pip install pydap'
-  - UPDATE_PYENV=''
 
 matrix:
-  exclude:
-    - python: "3.3"
-      env: UPDATE_PYENV='pip install pydap'
-    - python: "2.7"
-      env: UPDATE_PYENV=''
-    - python: "2.6"
-      env: UPDATE_PYENV=''
+  fast_finish: true
+  include:
+  - python: 2.6
+    env: UPDATE_ENV="pip install unittest2"
+  # Test on Python 2.7 with and without netCDF4/scipy
+  - python: 2.7
+    env: UPDATE_ENV=""
+  - python: 2.7
+    # nb. we have to remove scipy because conda install pandas brings it in:
+    # https://github.com/ContinuumIO/anaconda-issues/issues/145
+    env: UPDATE_ENV="conda remove scipy netCDF4"
+  - python: 2.7
+    env: UPDATE_ENV="pip install pydap"
+  - python: 3.3
+  - python: 3.4
+  # don't require pydap tests to pass because the dap test server is unreliable
+  allow_failures:
+  - python: 2.7
+    env: UPDATE_ENV="pip install pydap"
 
-# Install packages
+before_install:
+  - sudo apt-get update
+  - if [[ "$TRAVIS_PYTHON_VERSION" == "2.7" ]]; then
+      wget http://repo.continuum.io/miniconda/Miniconda-3.6.0-Linux-x86_64.sh -O miniconda.sh;
+    else
+      wget http://repo.continuum.io/miniconda/Miniconda3-3.6.0-Linux-x86_64.sh -O miniconda.sh;
+    fi
+  - bash miniconda.sh -b -p $HOME/miniconda
+  - export PATH="$HOME/miniconda/bin:$PATH"
+  - hash -r
+  - conda config --set always_yes yes --set changeps1 no
+  - conda update -q conda
+  - conda info -a
+
 install:
-  - conda create --yes -n test_env python=$TRAVIS_PYTHON_VERSION pip nose mock numpy pandas scipy netCDF4
+  - conda create --yes -n test_env python=$TRAVIS_PYTHON_VERSION pip nose numpy pandas scipy netCDF4
   - source activate test_env
-  # install unittest2 ONLY if running 2.6
-  - if [ ${TRAVIS_PYTHON_VERSION:0:3} == "2.6" ]; then pip install unittest2; fi
-  - echo $UPDATE_PYENV; $UPDATE_PYENV
+  - echo $UPDATE_ENV; $UPDATE_ENV
   - python setup.py install
-# Run test
+
 script:
   - nosetests
