@@ -15,11 +15,11 @@ matrix:
     # nb. we have to remove scipy because conda install pandas brings it in:
     # https://github.com/ContinuumIO/anaconda-issues/issues/145
     env: UPDATE_ENV="conda remove scipy netCDF4"
-  - python: 2.7
-    env: UPDATE_ENV="pip install pydap"
   - python: 3.3
   - python: 3.4
   # don't require pydap tests to pass because the dap test server is unreliable
+  - python: 2.7
+    env: UPDATE_ENV="pip install pydap"
   allow_failures:
   - python: 2.7
     env: UPDATE_ENV="pip install pydap"
