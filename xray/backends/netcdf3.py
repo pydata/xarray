@@ -2,11 +2,9 @@ import unicodedata
 
 import numpy as np
 
-from .. import Variable
+from .. import conventions, Variable
 from ..core import utils
 from ..core.pycompat import basestring, unicode_type
-
-from . import conventions
 
 
 # Special characters that are permitted in netCDF names except in the

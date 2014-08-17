@@ -3,11 +3,10 @@ from io import BytesIO
 import numpy as np
 import warnings
 
-from .. import Variable
+from .. import conventions, Variable
 from ..core.pycompat import iteritems, basestring, unicode_type, OrderedDict
 from ..core.utils import Frozen
 
-from . import conventions
 from .common import AbstractWritableDataStore
 from .netcdf3 import is_valid_nc3_name, coerce_nc3_dtype, encode_nc3_variable
 

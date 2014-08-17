@@ -3,11 +3,11 @@ import warnings
 import numpy as np
 
 from .. import Variable
+from ..conventions import encode_cf_variable
 from ..core import indexing
 from ..core.utils import FrozenOrderedDict, NDArrayMixin
-from ..core.pycompat import iteritems, basestring, bytes_type, OrderedDict
+from ..core.pycompat import iteritems, basestring, OrderedDict
 
-from .conventions import encode_cf_variable
 from .common import AbstractWritableDataStore
 from .netcdf3 import encode_nc3_variable
 

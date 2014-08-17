@@ -4,10 +4,9 @@ import warnings
 from collections import defaultdict
 from datetime import datetime
 
-from .. import Variable
-from ..core import indexing, utils
-from ..core.variable import as_variable
-from ..core.pycompat import iteritems, bytes_type, unicode_type, OrderedDict
+from .core import indexing, utils
+from .core.variable import as_variable, Variable
+from .core.pycompat import iteritems, bytes_type, unicode_type, OrderedDict
 
 # standard calendars recognized by netcdftime
 _STANDARD_CALENDARS = set(['standard', 'gregorian', 'proleptic_gregorian'])

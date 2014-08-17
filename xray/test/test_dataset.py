@@ -8,8 +8,7 @@ except ImportError:
 import numpy as np
 import pandas as pd
 
-from xray import (Dataset, DataArray, Coordinate, Variable,
-                  io, align)
+from xray import align, backends, Dataset, DataArray, Variable
 from xray.core import indexing, utils
 from xray.core.pycompat import iteritems, OrderedDict
 
@@ -50,7 +49,7 @@ class InaccessibleArray(utils.NDArrayMixin):
         raise UnexpectedDataAccess("Tried accessing data")
 
 
-class InaccessibleVariableDataStore(io.InMemoryDataStore):
+class InaccessibleVariableDataStore(backends.InMemoryDataStore):
     def __init__(self):
         self.dims = OrderedDict()
         self._variables = OrderedDict()

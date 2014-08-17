@@ -11,8 +11,8 @@ import unittest
 import numpy as np
 import pandas as pd
 
-from xray import Dataset, open_dataset, io
-from xray.core.pycompat import iteritems, itervalues, PY3
+from xray import Dataset, open_dataset, backends
+from xray.core.pycompat import iteritems, PY3
 
 from . import TestCase, requires_scipy, requires_netCDF4, requires_pydap
 from .test_dataset import create_test_data
@@ -208,7 +208,7 @@ class NetCDF4DataTest(DatasetIOTestCases, TestCase):
     @contextlib.contextmanager
     def create_store(self):
         with create_tmp_file() as tmp_file:
-            yield io.NetCDF4DataStore(tmp_file, mode='w')
+            yield backends.NetCDF4DataStore(tmp_file, mode='w')
 
     @contextlib.contextmanager
     def roundtrip(self, data, **kwargs):
@@ -394,7 +394,7 @@ class ScipyDataTest(DatasetIOTestCases, TestCase):
     @contextlib.contextmanager
     def create_store(self):
         fobj = BytesIO()
-        yield io.ScipyDataStore(fobj, 'w')
+        yield backends.ScipyDataStore(fobj, 'w')
 
     @contextlib.contextmanager
     def roundtrip(self, data, **kwargs):
@@ -408,8 +408,8 @@ class NetCDF3ViaNetCDF4DataTest(DatasetIOTestCases, TestCase):
     @contextlib.contextmanager
     def create_store(self):
         with create_tmp_file() as tmp_file:
-            yield io.NetCDF4DataStore(tmp_file, mode='w',
-                                      format='NETCDF3_CLASSIC')
+            yield backends.NetCDF4DataStore(tmp_file, mode='w',
+                                            format='NETCDF3_CLASSIC')
 
     @contextlib.contextmanager
     def roundtrip(self, data, **kwargs):
@@ -424,7 +424,7 @@ class NetCDF3ViaNetCDF4DataTest(DatasetIOTestCases, TestCase):
 class PydapTest(TestCase):
     def test_cmp_local_file(self):
         url = 'http://test.opendap.org/opendap/hyrax/data/nc/bears.nc'
-        actual = Dataset.load_store(io.PydapDataStore(url))
+        actual = Dataset.load_store(backends.PydapDataStore(url))
         with open_example_dataset('bears.nc') as expected:
             # don't check attributes since pydap doesn't serialize them correctly
             # also skip the "bears" variable since the test DAP server incorrectly
