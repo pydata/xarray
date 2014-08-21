@@ -620,7 +620,13 @@ class Variable(common.AbstractArray):
             shape = (length,) + first_var.shape
             dims = (dim,) + first_var.dims
 
-        concatenated = cls(dims, np.empty(shape, dtype=first_var.dtype))
+        dtype = first_var.dtype
+        if dtype.kind in ['S', 'U']:
+            # use an object array instead of a fixed length strings to avoid
+            # possible truncation
+            dtype = object
+
+        concatenated = cls(dims, np.empty(shape, dtype=dtype))
         concatenated.attrs.update(first_var.attrs)
 
         alt_dims = tuple(d for d in dims if d != dim)

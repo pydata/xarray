@@ -261,6 +261,16 @@ class VariableSubclassTestCases(object):
         expected.attrs['foo'] = 'bar'
         self.assertVariableIdentical(expected, Variable.concat([v, w], 'a'))
 
+    def test_concat_fixed_len_str(self):
+        # regression test for #217
+        for kind in ['S', 'U']:
+            x = self.cls('animal', np.array(['horse'], dtype=kind))
+            y = self.cls('animal', np.array(['aardvark'], dtype=kind))
+            actual = Variable.concat([x, y], 'animal')
+            expected = Variable(
+                'animal', np.array(['horse', 'aardvark'], dtype=kind))
+            self.assertVariableEqual(expected, actual)
+
     def test_copy(self):
         v = self.cls('x', 0.5 * np.arange(10), {'foo': 'bar'})
         for deep in [True, False]:
