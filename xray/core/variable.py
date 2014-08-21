@@ -620,10 +620,17 @@ class Variable(common.AbstractArray):
             shape = (length,) + first_var.shape
             dims = (dim,) + first_var.dims
 
-        concatenated = cls(dims, np.empty(shape, dtype=first_var.dtype))
-        concatenated.attrs.update(first_var.attrs)
+        dtype = first_var.dtype
+        if dtype.kind in ['S', 'U']:
+            # use an object array instead of a fixed length strings to avoid
+            # possible truncation
+            dtype = object
+
+        data = np.empty(shape, dtype=dtype)
+        attrs = OrderedDict(first_var.attrs)
 
         alt_dims = tuple(d for d in dims if d != dim)
+        key = [slice(None)] * len(dims)
 
         # copy in the data from the variables
         for var, indexer in zip(variables, indexers):
@@ -631,17 +638,16 @@ class Variable(common.AbstractArray):
                 # do sanity checks & attributes clean-up
                 if dim in var.dims:
                     # transpose verifies that the dims are equivalent
-                    if var.dims != concatenated.dims:
-                        var = var.transpose(*concatenated.dims)
+                    if var.dims != dims:
+                        var = var.transpose(*dims)
                 elif var.dims != alt_dims:
                     raise ValueError('inconsistent dimensions')
-                utils.remove_incompatible_items(concatenated.attrs, var.attrs)
+                utils.remove_incompatible_items(attrs, var.attrs)
 
-            key = tuple(indexer if n == axis else slice(None)
-                        for n in range(concatenated.ndim))
-            concatenated.values[key] = var.values
+            key[axis] = indexer
+            data[key] = var.values
 
-        return concatenated
+        return cls(dims, data, attrs)
 
     def _data_equals(self, other):
         return (self._data is other._data
