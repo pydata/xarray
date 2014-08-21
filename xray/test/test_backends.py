@@ -80,11 +80,11 @@ class DatasetIOTestCases(object):
         def assert_loads(vars=None):
             with self.roundtrip(expected) as actual:
                 for v in actual.variables.values():
-                    self.assertFalse(v._in_memory())
+                    self.assertFalse(v._in_memory)
                 yield actual
                 for k, v in actual.variables.items():
                     if vars is None or k in vars:
-                        self.assertTrue(v._in_memory())
+                        self.assertTrue(v._in_memory)
                 self.assertDatasetAllClose(expected, actual)
 
         with self.assertRaises(AssertionError):

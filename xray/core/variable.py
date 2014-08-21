@@ -236,6 +236,7 @@ class Variable(common.AbstractArray):
     def __len__(self):
         return len(self._data)
 
+    @property
     def _in_memory(self):
         return isinstance(self._data, (NumpyArrayAdapter, PandasIndexAdapter))
 

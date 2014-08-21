@@ -70,36 +70,37 @@ class InaccessibleVariableDataStore(backends.InMemoryDataStore):
 
 class TestDataset(TestCase):
     def test_repr(self):
-        data = create_test_data()
-        expected = dedent("""
+        data = create_test_data(seed=123)
+        # need to insert str dtype at runtime to handle both Python 2 & 3
+        expected = dedent("""\
         <xray.Dataset>
         Dimensions:     (dim1: 100, dim2: 50, dim3: 10, time: 20)
         Coordinates:
-            dim1             X
-            dim2                        X
-            dim3                                  X
-            time                                            X
+            dim1        (dim1) int64 0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 ...
+            dim2        (dim2) float64 0.0 0.5 1.0 1.5 2.0 2.5 3.0 3.5 4.0 4.5 5.0 5.5 6.0 6.5 7.0 ...
+            dim3        (dim3) %s 'a' 'b' 'c' 'd' 'e' 'f' 'g' 'h' 'i' 'j'
+            time        (time) datetime64[ns] 2000-01-01 2000-01-02 2000-01-03 2000-01-04 ...
         Noncoordinates:
-            var1             0          1
-            var2             0          1
-            var3             1                    0
+            var1        (dim1, dim2) float64 -1.086 0.9973 0.283 -1.506 -0.5786 1.651 -2.427 ...
+            var2        (dim1, dim2) float64 0.3188 1.511 -1.137 0.6425 -1.128 -0.5536 -0.9695 ...
+            var3        (dim3, dim1) float64 -1.241 -0.3129 -0.8489 2.378 0.6575 0.2131 -0.491 ...
         Attributes:
-            Empty
-        """).strip()
+            Empty""") % data['dim3'].dtype
         actual = '\n'.join(x.rstrip() for x in repr(data).split('\n'))
+        print(actual)
         self.assertEqual(expected, actual)
 
-        expected = dedent("""
+        expected = dedent("""\
         <xray.Dataset>
         Dimensions:     ()
         Coordinates:
-            None
-        Noncoordinates:
-            None
-        Attributes:
             Empty
-        """).strip()
+        Noncoordinates:
+            Empty
+        Attributes:
+            Empty""")
         actual = '\n'.join(x.rstrip() for x in repr(Dataset()).split('\n'))
+        print(actual)
         self.assertEqual(expected, actual)
 
     def test_constructor(self):
@@ -178,8 +179,9 @@ class TestDataset(TestCase):
             data.coords[0]
 
         expected = dedent("""\
-        x: Int64Index([-1, -2], dtype='int64')
-        y: Int64Index([0, 1, 2], dtype='int64')""")
+        Coordinates:
+            x (x) int64 -1 -2
+            y (y) int64 0 1 2""")
         actual = repr(data.coords)
         self.assertEquals(expected, actual)
 
