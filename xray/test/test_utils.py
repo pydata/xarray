@@ -103,3 +103,16 @@ class TestDictionaries(TestCase):
         self.assertItemsEqual(y, ['a', 'b', 'c'])
         self.assertEqual(repr(utils.SortedKeysDict()),
                          "SortedKeysDict({})")
+
+    def test_chain_map(self):
+        m = utils.ChainMap({'x': 0, 'y': 1}, {'x': -100, 'z': 2})
+        self.assertIn('x', m)
+        self.assertIn('y', m)
+        self.assertIn('z', m)
+        self.assertEqual(m['x'], 0)
+        self.assertEqual(m['y'], 1)
+        self.assertEqual(m['z'], 2)
+        m['x'] = 100
+        self.assertEqual(m['x'], 100)
+        self.assertEqual(m.maps[0]['x'], 100)
+        self.assertItemsEqual(['x', 'y', 'z'], m)

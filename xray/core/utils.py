@@ -303,10 +303,15 @@ class ChainMap(MutableMapping, SingleSlotPickleMixin):
         raise NotImplementedError
 
     def __iter__(self):
-        raise NotImplementedError
+        seen = set()
+        for mapping in self.maps:
+            for item in mapping:
+                if item not in seen:
+                    yield item
+                    seen.add(item)
 
     def __len__(self):
-        raise NotImplementedError
+        raise len(iter(self))
 
 
 class NDArrayMixin(object):
