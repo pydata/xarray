@@ -34,6 +34,7 @@ def create_test_data(seed=None):
     for v, dims in sorted(_vars.items()):
         data = rs.normal(size=tuple(_dims[d] for d in dims))
         obj[v] = (dims, data, {'foo': 'variable'})
+    # obj.coords['numbers'] = ('dim3', [0, 1, 2, 0, 0, 1, 1, 2, 2, 3])
     return obj
 
 
@@ -86,6 +87,7 @@ class TestDataset(TestCase):
             var3        (dim3, dim1) float64 -1.241 -0.3129 -0.8489 2.378 0.6575 0.2131 -0.491 ...
         Attributes:
             Empty""") % data['dim3'].dtype
+        # numbers     (dim3) int64 0 1 2 0 0 1 1 2 2 3
         actual = '\n'.join(x.rstrip() for x in repr(data).split('\n'))
         print(actual)
         self.assertEqual(expected, actual)
@@ -107,7 +109,7 @@ class TestDataset(TestCase):
         var1 = Variable('x', 2 * np.arange(100))
         var2 = Variable('x', np.arange(1000))
         var3 = Variable(['x', 'y'], np.arange(1000).reshape(100, 10))
-        with self.assertRaisesRegexp(ValueError, 'but already exists'):
+        with self.assertRaisesRegexp(ValueError, 'conflicting sizes'):
             Dataset({'a': var1, 'b': var2})
         with self.assertRaisesRegexp(ValueError, 'must be defined with 1-d'):
             Dataset({'a': var1, 'x': var3})
@@ -191,15 +193,15 @@ class TestDataset(TestCase):
                         'foo': (['x', 'y'], np.random.randn(2, 3))})
 
         actual = data.copy(deep=True)
-        actual.coords['x'] = ['a', 'b']
+        actual.coords['x'] = ('x', ['a', 'b'])
         self.assertArrayEqual(actual['x'], ['a', 'b'])
 
         actual = data.copy(deep=True)
-        actual.coords['z'] = ['a', 'b']
+        actual.coords['z'] = ('z', ['a', 'b'])
         self.assertArrayEqual(actual['z'], ['a', 'b'])
 
-        with self.assertRaisesRegexp(ValueError, 'coordinate has size'):
-            data.coords['x'] = [-1]
+        with self.assertRaisesRegexp(ValueError, 'conflicting sizes'):
+            data.coords['x'] = ('x', [-1])
 
     def test_equals_and_identical(self):
         data = create_test_data(seed=42)
@@ -539,7 +541,7 @@ class TestDataset(TestCase):
         data1['A'] = 3 * data2['A']
         self.assertVariableEqual(data1['A'], 3 * data2['A'])
         # can't resize a used dimension
-        with self.assertRaisesRegexp(ValueError, 'but already exists with'):
+        with self.assertRaisesRegexp(ValueError, 'conflicting sizes'):
             data1['dim1'] = data1['dim1'][:5]
         # can't use the same dimension name as a scalar var
         data1['scalar'] = ([], 0)

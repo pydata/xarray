@@ -181,7 +181,7 @@ def _expand_variables(raw_variables, old_variables={}, compat='identical'):
                              % (name, variables[name], var))
 
     for name, var in iteritems(raw_variables):
-        if hasattr(var, 'dataset'):
+        if hasattr(var, 'coords'):
             # it's a DataArray
             for dim, coord in iteritems(var.coords):
                 if dim != name:
@@ -197,6 +197,7 @@ def _calculate_dims(variables):
     if any of the dimension sizes conflict.
     """
     dims = SortedKeysDict()
+    last_used = {}
     scalar_vars = set(k for k, v in iteritems(variables) if not v.dims)
     for k, var in iteritems(variables):
         for dim, size in zip(var.dims, var.shape):
@@ -205,10 +206,11 @@ def _calculate_dims(variables):
                                  'variable' % dim)
             if dim not in dims:
                 dims[dim] = size
+                last_used[dim] = k
             elif dims[dim] != size:
-                raise ValueError('dimension %r on variable %r has length '
-                                 '%s but already exists with length %s' %
-                                 (dim, k, size, dims[dim]))
+                raise ValueError('conflicting sizes for dimension %r: '
+                                 'length %s on %r and length %s on %r' %
+                                 (dim, size, k, dims[dim], last_used[dim]))
     return dims
 
 
@@ -255,8 +257,10 @@ class DatasetCoordinates(common.AbstractCoordinates):
             raise KeyError(key)
 
     def __setitem__(self, key, value):
-        expected_size = self[key].size if key in self else None
-        self._data[key] = self._convert_to_coord(key, value, expected_size)
+        self._data[key] = value
+        # expected_size = self[key].size if key in self else None
+        # self._data[key] = self._convert_to_coord(key, value, expected_size)
+        self._data._coord_names.add(key)
 
 
 def as_dataset(obj):
@@ -320,16 +324,21 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
                     "other variables; for now, put them in the 'variables'")
 
         self._variables = VariablesDict()
+        self._coord_names = set()
         self._dims = SortedKeysDict()
         self._attrs = OrderedDict()
         self._file_obj = None
-        if variables is not None:
-            self._set_init_vars_and_dims(variables)
+        if variables is None:
+            variables = {}
+        if coords is None:
+            coords = {}
+        if variables or coords:
+            self._set_init_vars_and_dims(variables, coords)
         if attrs is not None:
             self._attrs.update(attrs)
 
     def _add_missing_coords(self):
-        """Add missing coordinate variables IN-PLACE to the variables dict
+        """Add missing coordinates IN-PLACE to _variables
         """
         for dim, size in iteritems(self._dims):
             if dim not in self._variables:
@@ -355,12 +364,14 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
         self._variables = variables
         self._dims = dims
         self._add_missing_coords()
+        self._coord_names.update(dims)
 
-    def _set_init_vars_and_dims(self, variables):
+    def _set_init_vars_and_dims(self, variables, coords):
         """Set the initial value of Dataset variables and dimensions
         """
-        new_variables = _expand_variables(variables)
+        new_variables = _expand_variables(ChainMap(variables, coords))
         self._update_vars_and_dims(new_variables, needs_copy=False)
+        self._coord_names.update(coords)
 
     @classmethod
     def load_store(cls, store, decode_cf=True, mask_and_scale=True,
@@ -477,6 +488,7 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
         # skip __init__ to avoid costly validation
         obj = self.__new__(type(self))
         obj._variables = variables
+        obj._coord_names = self._coord_names.copy()
         obj._dims = self._dims.copy()
         obj._attrs = self._attrs.copy()
         obj._file_obj = None
