@@ -21,18 +21,17 @@ class TestDataArray(TestCase):
         v = Variable(['time', 'x'], [[1, 2, 3], [4, 5, 6]], {'foo': 'bar'})
         data_array = Dataset({'my_variable': v, 'other': ([], 0)}
                              )['my_variable']
-        expected = dedent("""
+        expected = dedent("""\
         <xray.DataArray 'my_variable' (time: 2, x: 3)>
         array([[1, 2, 3],
                [4, 5, 6]])
         Coordinates:
-            time: Int64Index([0, 1], dtype='int64')
-            x: Int64Index([0, 1, 2], dtype='int64')
+            time (time) int64 0 1
+            x    (x) int64 0 1 2
         Linked dataset variables:
             other
         Attributes:
-            foo: bar
-        """).strip()
+            foo: bar""")
         self.assertEqual(expected, repr(data_array))
 
     def test_properties(self):
@@ -310,8 +309,9 @@ class TestDataArray(TestCase):
             da.coords['foo']
 
         expected = dedent("""\
-        x: Int64Index([-1, -2], dtype='int64')
-        y: Int64Index([0, 1, 2], dtype='int64')""")
+        Coordinates:
+            x (x) int64 -1 -2
+            y (y) int64 0 1 2""")
         actual = repr(da.coords)
         self.assertEquals(expected, actual)
 

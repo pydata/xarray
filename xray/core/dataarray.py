@@ -292,8 +292,9 @@ class DataArray(AbstractArray):
     def values(self, value):
         self.variable.values = value
 
+    @property
     def _in_memory(self):
-        return self.variable._in_memory()
+        return self.variable._in_memory
 
     @property
     def as_index(self):

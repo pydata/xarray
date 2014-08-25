@@ -37,14 +37,6 @@ class NetCDF4ArrayWrapper(NDArrayMixin):
         return data
 
 
-def _version_check(actual, required):
-    actual_tup = tuple(int(p) if p.isdigit() else p for p in actual.split('.'))
-    try:
-        return actual_tup >= required
-    except TypeError:
-        return True
-
-
 def _nc4_values_and_dtype(variable):
     if variable.dtype.kind in ['i', 'u', 'f'] or variable.dtype == 'S1':
         values = variable.values
@@ -96,11 +88,6 @@ class NetCDF4DataStore(AbstractWritableDataStore):
     def __init__(self, filename, mode='r', clobber=True, diskless=False,
                  persist=False, format='NETCDF4', group=None):
         import netCDF4 as nc4
-        if not _version_check(nc4.__version__, (1, 0, 6)):
-            warnings.warn('python-netCDF4 %s detected; '
-                          'the minimal recommended version is 1.0.6.'
-                          % nc4.__version__, ImportWarning)
-
         ds = nc4.Dataset(filename, mode=mode, clobber=clobber,
                          diskless=diskless, persist=persist,
                          format=format)
