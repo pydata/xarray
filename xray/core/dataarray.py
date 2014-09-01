@@ -159,7 +159,7 @@ class DataArray(AbstractArray):
             elif isinstance(data, pd.Panel):
                 coords = [data.items, data.major_axis, data.minor_axis]
         if dims is None:
-            dims = getattr(data, 'dims', None)
+            dims = getattr(data, 'dims', getattr(coords, 'dims', None))
         if name is None:
             name = getattr(data, 'name', None)
         if attrs is None:

@@ -124,23 +124,13 @@ class TestDataArray(TestCase):
         actual = DataArray(data, coords)
         self.assertDataArrayIdentical(expected, actual)
 
-        # coords = pd.Series([['a', 'b'], [-1, -2, -3]], ['x', 'y']).to_dict()
-        # actual = DataArray(data, coords)
-        # self.assertDataArrayIdentical(expected, actual)
+        actual = DataArray(data, OrderedDict(coords))
+        self.assertDataArrayIdentical(expected, actual)
 
         expected = Dataset({None: (['x', 'y'], data),
                             'x': ('x', ['a', 'b'])})[None]
         actual = DataArray(data, {'x': ['a', 'b']}, ['x', 'y'])
         self.assertDataArrayIdentical(expected, actual)
-
-        with self.assertRaisesRegexp(ValueError, 'coords is not dict-like'):
-            DataArray(data, [[0, 1, 2]], ['x', 'y'])
-
-        with self.assertRaisesRegexp(ValueError, 'not a subset of the .* dim'):
-            DataArray(data, {'x': [0, 1, 2]}, ['a', 'b'])
-
-        with self.assertRaisesRegexp(ValueError, 'not a subset of the .* dim'):
-            DataArray(data, {'x': [0, 1, 2]})
 
         actual = DataArray(data, dims=['x', 'y'])
         expected = Dataset({None: (['x', 'y'], data)})[None]
@@ -149,9 +139,6 @@ class TestDataArray(TestCase):
         actual = DataArray(data, dims=['x', 'y'], name='foo')
         expected = Dataset({'foo': (['x', 'y'], data)})['foo']
         self.assertDataArrayIdentical(expected, actual)
-
-        with self.assertRaisesRegexp(TypeError, 'is not a string'):
-            DataArray(data, dims=['x', None])
 
         actual = DataArray(data, name='foo')
         expected = Dataset({'foo': (['dim_0', 'dim_1'], data)})['foo']
@@ -165,6 +152,20 @@ class TestDataArray(TestCase):
         expected = Dataset({None: (['x', 'y'], data, {}, {'bar': 2})})[None]
         self.assertDataArrayIdentical(expected, actual)
 
+    def test_constructor_invalid(self):
+        data = np.random.randn(3, 2)
+
+        with self.assertRaisesRegexp(ValueError, 'coords is not dict-like'):
+            DataArray(data, [[0, 1, 2]], ['x', 'y'])
+
+        with self.assertRaisesRegexp(ValueError, 'not a subset of the .* dim'):
+            DataArray(data, {'x': [0, 1, 2]}, ['a', 'b'])
+        with self.assertRaisesRegexp(ValueError, 'not a subset of the .* dim'):
+            DataArray(data, {'x': [0, 1, 2]})
+
+        with self.assertRaisesRegexp(TypeError, 'is not a string'):
+            DataArray(data, dims=['x', None])
+
     def test_constructor_from_self_described(self):
         data = [[-0.1, 21], [0, 2]]
         expected = DataArray(data,
@@ -173,6 +174,9 @@ class TestDataArray(TestCase):
                              attrs={'bar': 2}, encoding={'foo': 3})
         actual = DataArray(expected)
         self.assertDataArrayIdentical(expected, actual)
+
+        actual = DataArray(expected.values, actual.coords)
+        self.assertDataArrayEqual(expected, actual)
 
         frame = pd.DataFrame(data, index=pd.Index(['a', 'b'], name='x'),
                              columns=pd.Index([-1, -2], name='y'))
@@ -186,6 +190,16 @@ class TestDataArray(TestCase):
         panel = pd.Panel({0: frame})
         actual = DataArray(panel)
         expected = DataArray([data], expected.coords, ['dim_0', 'x', 'y'])
+        self.assertDataArrayIdentical(expected, actual)
+
+        expected = DataArray(data,
+                             coords={'x': ['a', 'b'], 'y': [-1, -2],
+                                     'a': 0, 'z': ('x', [-0.5, 0.5])},
+                             dims=['x', 'y'])
+        actual = DataArray(expected)
+        self.assertDataArrayIdentical(expected, actual)
+
+        actual = DataArray(expected.values, expected.coords)
         self.assertDataArrayIdentical(expected, actual)
 
         expected = Dataset({'foo': ('foo', ['a', 'b'])})['foo']
