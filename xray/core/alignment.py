@@ -186,3 +186,57 @@ def reindex_variables(variables, indexes, indexers, copy=True):
         reindexed[name] = new_var
     return reindexed
 
+
+def concat(objs, dim='concat_dim', indexers=None, mode='different',
+           concat_over=None, compat='equals'):
+    """Concatenate xray objects along a new or existing dimension.
+
+    Parameters
+    ----------
+    objs : sequence of Dataset and DataArray objects
+        xray objects to concatenate together. Each object is expected to
+        consist of variables and coordinates with matching shapes except for
+        along the concatenated dimension.
+    dim : str or DataArray or Index, optional
+        Name of the dimension to concatenate along.
+        This can either be a new dimension name, in which case it is added
+        along axis=0, or an existing dimension name, in which case the location
+        of the dimension is unchanged. If dimension is provided as a DataArray
+        or Index, its name is used as the dimension to concatenate along and
+        the values are added as a coordinate.
+    indexers : None or iterable of indexers, optional
+        Iterable of indexers of the same length as datasets which
+        specifies how to assign variables from each dataset along the given
+        dimension. If not supplied, indexers is inferred from the length of
+        each variable along the dimension, and the variables are stacked in
+        the given order.
+    mode : {'minimal', 'different', 'all'}, optional
+        Decides which variables are concatenated.  Choices are 'minimal'
+        in which only variables in which dimension already appears are
+        included, 'different' in which all variables which are not equal
+        (ignoring attributes) across all datasets are concatenated (as well
+        as all for which dimension already appears), and 'all' for which all
+        variables are concatenated.
+    concat_over : None or str or iterable of str, optional
+        Names of additional variables to concatenate, in which the provided
+        parameter ``dim`` does not already appear as a dimension.
+    compat : {'equals', 'identical'}, optional
+        String indicating how to compare non-concatenated variables and
+        dataset global attributes for potential conflicts. 'equals' means
+        that all variable values and dimensions must be the same;
+        'identical' means that variable attributes and global attributes
+        must also be equal.
+
+    Returns
+    -------
+    concatenated : type of objs
+    """
+    # TODO: add join and ignore_index arguments copied from pandas.concat
+    # TODO: support concatenating scaler coordinates even if the concatenated
+    # dimension already exists
+    try:
+        first_obj, objs = utils.peek_at(objs)
+    except StopIteration:
+        raise ValueError('must supply at least one object to concatenate')
+    cls = type(first_obj)
+    return cls._concat(objs, dim, indexers, mode, concat_over, compat)

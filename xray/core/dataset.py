@@ -1,5 +1,6 @@
 from collections import Mapping
 from io import BytesIO
+import warnings
 
 import numpy as np
 import pandas as pd
@@ -1251,60 +1252,20 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
         return type(self)(variables, attrs=attrs)
 
     @classmethod
-    def concat(cls, datasets, dim='concat_dim', indexers=None,
-               mode='different', concat_over=None, compat='equals'):
-        """Concatenate datasets along a new or existing dimension.
+    def concat(cls, *args, **kwargs):
+        """Deprecated; use xray.concat instead"""
+        warnings.warn('xray.Dataset.concat has been deprecated; use '
+                      'xray.concat instead', FutureWarning, stacklevel=2)
+        return cls._concat(*args, **kwargs)
 
-        Parameters
-        ----------
-        datasets : iterable of Dataset
-            Datasets to stack together. Each dataset is expected to have
-            matching attributes, and all variables except those along the
-            stacked dimension (those that contain "dimension" as a dimension or
-            are listed in "concat_over") are expected to be equal.
-        dim : str or DataArray, optional
-            Name of the dimension to stack along. If dimension is provided as
-            an DataArray, the name of the DataArray is used as the stacking
-            dimension and the array is added to the returned dataset.
-        indexers : None or iterable of indexers, optional
-            Iterable of indexers of the same length as datasets which
-            specifies how to assign variables from each dataset along the given
-            dimension. If not supplied, indexers is inferred from the length of
-            each variable along the dimension, and the variables are stacked in
-            the given order.
-        mode : {'minimal', 'different', 'all'}, optional
-            Decides which variables are concatenated.  Choices are 'minimal'
-            in which only variables in which dimension already appears are
-            included, 'different' in which all variables which are not equal
-            (ignoring attributes) across all datasets are concatenated (as well
-            as all for which dimension already appears), and 'all' for which all
-            variables are concatenated. Default 'different'.
-        concat_over : None or str or iterable of str, optional
-            Names of additional variables to concatenate, in which "dimension"
-            does not already appear as a dimension.
-        compat : {'equals', 'identical'}, optional
-            String indicating how to compare non-concatenated variables and
-            dataset global attributes for potential conflicts. 'equals' means
-            that all variable values and dimensions must be the same;
-            'identical' means that variable attributes and global attributes
-            must also be equal.
-
-        Returns
-        -------
-        concatenated : Dataset
-            Concatenated dataset formed by concatenating dataset variables.
-
-        See Also
-        --------
-        DataArray.concat
-        """
+    @classmethod
+    def _concat(cls, datasets, dim='concat_dim', indexers=None,
+                mode='different', concat_over=None, compat='equals'):
         _assert_compat_valid(compat)
 
         # don't bother trying to work with datasets as a generator instead of a
         # list; the gains would be minimal
         datasets = list(map(as_dataset, datasets))
-        if not datasets:
-            raise ValueError('must supply at least one dataset to concatenate')
         dim_name = getattr(dim, 'name', dim)
 
         # figure out variables to concatenate over

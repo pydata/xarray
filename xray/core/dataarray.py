@@ -694,60 +694,15 @@ class DataArray(AbstractArray):
         return ds[self.name]
 
     @classmethod
-    def concat(cls, arrays, dim='concat_dim', indexers=None,
-               mode='different', concat_over=None, compat='equals'):
-        """Stack arrays along a new or existing dimension to form a new
-        DataArray.
+    def concat(cls, *args, **kwargs):
+        """Deprecated; use xray.concat instead"""
+        warnings.warn('xray.DataArray.concat has been deprecated; use '
+                      'xray.concat instead', FutureWarning, stacklevel=2)
+        return cls._concat(*args, **kwargs)
 
-        Parameters
-        ----------
-        arrays : iterable of DataArray
-            Arrays to stack together. Each variable is expected to have
-            matching dimensions and shape except for along the concatenated
-            dimension.
-        dim : str or Array, optional
-            Name of the dimension to stack along. This can either be a new
-            dimension name, in which case it is added along axis=0, or an
-            existing dimension name, in which case the location of the
-            dimension is unchanged. Where to insert the new dimension is
-            determined by whether it is found in the first array. If dimension
-            is provided as an Variable or DataArray, the name of the dataset
-            array or the singleton dimension of the variable is used as the
-            stacking dimension and the array is added to the returned dataset.
-        indexers : iterable of indexers, optional
-            Iterable of indexers of the same length as variables which
-            specifies how to assign variables along the given dimension. If
-            not supplied, indexers is inferred from the length of each
-            variable along the dimension, and the variables are concatenated in
-            the given order.
-        mode : {'minimal', 'different', 'all'}, optional
-            Decides which variables are concatenated.  Choices are 'minimal'
-            in which only variables in which dimension already appears are
-            included, 'different' in which all variables which are not equal
-            (ignoring attributes) across all datasets are concatenated (as well
-            as all for which dimension already appears), and 'all' for which all
-            variables are concatenated. Default 'different'.
-        concat_over : None or str or iterable of str, optional
-            Names of additional variables to concatenate (other than the given
-            arrays variables), in which "dimension" does not already appear as
-            a dimension.
-        compat : {'equals', 'identical'}, optional
-            String indicating how to compare non-concatenated variables and
-            dataset global attributes for potential conflicts. 'equals' means
-            that all variable values and dimensions must be the same;
-            'identical' means that variable attributes and global attributes
-            must also be equal.
-
-        Returns
-        -------
-        concatenated : DataArray
-            Concatenated DataArray formed by concatenated all the supplied
-            variables along the new dimension.
-
-        See also
-        --------
-        Dataset.concat
-        """
+    @classmethod
+    def _concat(cls, arrays, dim='concat_dim', indexers=None,
+                mode='different', concat_over=None, compat='equals'):
         datasets = []
         for n, arr in enumerate(arrays):
             if n == 0:
@@ -765,7 +720,7 @@ class DataArray(AbstractArray):
             concat_over = set([concat_over])
         concat_over = set(concat_over) | set([name])
 
-        ds = Dataset.concat(datasets, dim, indexers, concat_over=concat_over)
+        ds = Dataset._concat(datasets, dim, indexers, concat_over=concat_over)
         return ds[name]
 
     def to_dataframe(self):

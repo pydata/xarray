@@ -610,8 +610,7 @@ class Variable(common.AbstractArray):
                                      '%s' % (dim, i, length))
 
         # initialize the stacked variable with empty data
-        from . import groupby
-        first_var, variables = groupby.peek_at(variables)
+        first_var, variables = utils.peek_at(variables)
         if dim in first_var.dims:
             axis = first_var.get_axis_num(dim)
             shape = tuple(length if n == axis else s

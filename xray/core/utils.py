@@ -1,6 +1,7 @@
 """Internal utilties; not for external use
 """
 import functools
+import itertools
 import warnings
 from collections import Mapping, MutableMapping
 
@@ -106,6 +107,15 @@ def equivalent(first, second):
         return array_equiv(first, second)
     else:
         return first is second or first == second
+
+
+def peek_at(iterable):
+    """Returns the first value from iterable, as well as a new iterable with
+    the same content as the original iterable
+    """
+    gen = iter(iterable)
+    peek = next(gen)
+    return peek, itertools.chain([peek], gen)
 
 
 def update_safety_check(first_dict, second_dict, compat=equivalent):

@@ -3,7 +3,7 @@ import pandas as pd
 from copy import deepcopy
 from textwrap import dedent
 
-from xray import Dataset, DataArray, Coordinate, Variable, align
+from xray import concat, Dataset, DataArray, Coordinate, Variable, align
 from xray.core.pycompat import iteritems, OrderedDict
 from . import TestCase, ReturnItem, source_ndarray
 
@@ -584,15 +584,15 @@ class TestDataArray(TestCase):
         # from dataset array:
         expected = DataArray(np.array([foo.values, bar.values]),
                              dims=['w', 'x', 'y'])
-        actual = DataArray.concat([foo, bar], 'w')
+        actual = concat([foo, bar], 'w')
         self.assertDataArrayEqual(expected, actual)
         # from iteration:
         grouped = [g for _, g in foo.groupby('x')]
-        stacked = DataArray.concat(grouped, self.ds['x'])
+        stacked = concat(grouped, self.ds['x'])
         self.assertDataArrayIdentical(foo, stacked)
 
         with self.assertRaisesRegexp(ValueError, 'not identical'):
-            DataArray.concat([foo, bar], compat='identical')
+            concat([foo, bar], compat='identical')
 
     def test_align(self):
         self.ds['x'] = ('x', np.array(list('abcdefghij')))

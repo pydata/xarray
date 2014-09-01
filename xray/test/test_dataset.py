@@ -8,7 +8,7 @@ except ImportError:
 import numpy as np
 import pandas as pd
 
-from xray import align, backends, Dataset, DataArray, Variable
+from xray import align, concat, backends, Dataset, DataArray, Variable
 from xray.core import indexing, utils
 from xray.core.pycompat import iteritems, OrderedDict
 
@@ -705,7 +705,7 @@ class TestDataset(TestCase):
 
         split_data = [data.isel(dim1=slice(10)),
                       data.isel(dim1=slice(10, None))]
-        self.assertDatasetIdentical(data, Dataset.concat(split_data, 'dim1'))
+        self.assertDatasetIdentical(data, concat(split_data, 'dim1'))
 
         def rectify_dim_order(dataset):
             # return a new dataset with all variable dimensions tranposed into
@@ -716,20 +716,19 @@ class TestDataset(TestCase):
 
         for dim in ['dim1', 'dim2', 'dim3']:
             datasets = [g for _, g in data.groupby(dim, squeeze=False)]
-            self.assertDatasetIdentical(data, Dataset.concat(datasets, dim))
+            self.assertDatasetIdentical(data, concat(datasets, dim))
             self.assertDatasetIdentical(
-                data, Dataset.concat(datasets, data[dim]))
+                data, concat(datasets, data[dim]))
             self.assertDatasetIdentical(
-                data, Dataset.concat(datasets, data[dim], mode='minimal'))
+                data, concat(datasets, data[dim], mode='minimal'))
 
             datasets = [g for _, g in data.groupby(dim, squeeze=True)]
             concat_over = [k for k, v in iteritems(data.variables)
                            if dim in v.dims and k != dim]
-            actual = Dataset.concat(datasets, data[dim],
-                                    concat_over=concat_over)
+            actual = concat(datasets, data[dim], concat_over=concat_over)
             self.assertDatasetIdentical(data, rectify_dim_order(actual))
 
-            actual = Dataset.concat(datasets, data[dim], mode='different')
+            actual = concat(datasets, data[dim], mode='different')
             self.assertDatasetIdentical(data, rectify_dim_order(actual))
 
         # Now add a new variable that doesn't depend on any of the current
@@ -737,14 +736,14 @@ class TestDataset(TestCase):
         data['var4'] = ('dim4', np.arange(data.dims['dim3']))
         for dim in ['dim1', 'dim2', 'dim3']:
             datasets = [g for _, g in data.groupby(dim, squeeze=False)]
-            actual = Dataset.concat(datasets, data[dim], mode='all')
+            actual = concat(datasets, data[dim], mode='all')
             expected = np.array([data['var4'].values
                                  for _ in range(data.dims[dim])])
             self.assertArrayEqual(actual['var4'].values, expected)
 
-            actual = Dataset.concat(datasets, data[dim], mode='different')
+            actual = concat(datasets, data[dim], mode='different')
             self.assertDataArrayEqual(data['var4'], actual['var4'])
-            actual = Dataset.concat(datasets, data[dim], mode='minimal')
+            actual = concat(datasets, data[dim], mode='minimal')
             self.assertDataArrayEqual(data['var4'], actual['var4'])
 
         # verify that the dim argument takes precedence over
@@ -753,7 +752,7 @@ class TestDataset(TestCase):
         datasets = [g for _, g in data.groupby('dim1', squeeze=False)]
         expected = data.copy()
         expected['dim1'] = dim
-        self.assertDatasetIdentical(expected, Dataset.concat(datasets, dim))
+        self.assertDatasetIdentical(expected, concat(datasets, dim))
 
         # TODO: factor this into several distinct tests
         data = create_test_data()
@@ -761,27 +760,27 @@ class TestDataset(TestCase):
                       data.isel(dim1=slice(10, None))]
 
         with self.assertRaisesRegexp(ValueError, 'must supply at least one'):
-            Dataset.concat([], 'dim1')
+            concat([], 'dim1')
 
         with self.assertRaisesRegexp(ValueError, 'not all elements in'):
-            Dataset.concat(split_data, 'dim1', concat_over=['not_found'])
+            concat(split_data, 'dim1', concat_over=['not_found'])
 
         with self.assertRaisesRegexp(ValueError, 'global attributes not'):
             data0, data1 = deepcopy(split_data)
             data1.attrs['foo'] = 'bar'
-            Dataset.concat([data0, data1], 'dim1', compat='identical')
+            concat([data0, data1], 'dim1', compat='identical')
         self.assertDatasetIdentical(
-            data, Dataset.concat([data0, data1], 'dim1', compat='equals'))
+            data, concat([data0, data1], 'dim1', compat='equals'))
 
         with self.assertRaisesRegexp(ValueError, 'encountered unexpected'):
             data0, data1 = deepcopy(split_data)
             data1['foo'] = ('bar', np.random.randn(10))
-            Dataset.concat([data0, data1], 'dim1')
+            concat([data0, data1], 'dim1')
 
         with self.assertRaisesRegexp(ValueError, 'not equal across datasets'):
             data0, data1 = deepcopy(split_data)
             data1['dim2'] = 2 * data1['dim2']
-            Dataset.concat([data0, data1], 'dim1')
+            concat([data0, data1], 'dim1')
 
     def test_to_and_from_dataframe(self):
         x = np.random.randn(10)

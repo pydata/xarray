@@ -39,7 +39,6 @@ and values given by ``DataArray`` objects.
    Dataset.__delitem__
    Dataset.update
    Dataset.merge
-   Dataset.concat
    Dataset.copy
    Dataset.load_data
    Dataset.iteritems
@@ -187,7 +186,6 @@ Group operations
    :toctree: generated/
 
    DataArray.groupby
-   DataArray.concat
 
 Computations
 ~~~~~~~~~~~~
@@ -244,3 +242,4 @@ Top-level functions
    :toctree: generated/
 
    align
+   concat
