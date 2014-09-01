@@ -729,8 +729,6 @@ class DataArray(AbstractArray):
         --------
         Dataset.concat
         """
-        # TODO: call select() on each DataArray and get rid of the confusing
-        # concat_over kwarg?
         datasets = []
         for n, arr in enumerate(arrays):
             if n == 0:

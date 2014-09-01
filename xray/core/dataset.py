@@ -548,12 +548,15 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
         return self._variables.virtual
 
     def __getitem__(self, key):
-        """Access the given variable name in this dataset as a `DataArray`.
+        """Access the given variable name in this dataset as a `DataArray`, or
+        the given variable names as another Dataset.
         """
         from .dataarray import DataArray
-        if key not in self and key not in self.virtual_variables:
-            raise KeyError(key)
-        return DataArray._new_from_dataset(self, key)
+
+        if isinstance(key, basestring) or key is None:
+            return DataArray._new_from_dataset(self, key)
+        else:
+            return self._copy_listed(key)
 
     def __setitem__(self, key, value):
         """Add an array to this dataset.

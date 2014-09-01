@@ -559,6 +559,10 @@ class TestDataset(TestCase):
         with self.assertRaises(KeyError):
             data['notfound']
 
+        actual = data[['var1', 'var2']]
+        expected = Dataset({'var1': data['var1'], 'var2': data['var2']})
+        self.assertDatasetEqual(expected, actual)
+
     def test_virtual_variables(self):
         # access virtual variables
         data = create_test_data()
