@@ -850,10 +850,7 @@ class DataArray(AbstractArray):
         def func(self, other):
             other_coords = getattr(other, 'coords', None)
             other_variable = getattr(other, 'variable', other)
-            print self
-            print other
             ds = self.coords.merge(other_coords)
-            print ds
             name = self._result_name(other)
             ds[name] = (f(self.variable, other_variable)
                         if not reflexive

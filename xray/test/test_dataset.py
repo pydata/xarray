@@ -844,6 +844,17 @@ class TestDataset(TestCase):
         # check roundtrip
         self.assertDatasetIdentical(ds, Dataset.from_dataframe(actual))
 
+        # check pathological cases
+        df = pd.DataFrame([1])
+        actual = Dataset.from_dataframe(df)
+        expected = Dataset({0: ('index', [1])})
+        self.assertDatasetIdentical(expected, actual)
+
+        df = pd.DataFrame()
+        actual = Dataset.from_dataframe(df)
+        expected = Dataset()
+        self.assertDatasetIdentical(expected, actual)
+
     def test_pickle(self):
         data = create_test_data()
         roundtripped = pickle.loads(pickle.dumps(data))

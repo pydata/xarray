@@ -554,8 +554,9 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
         """
         from .dataarray import DataArray
 
-        if isinstance(key, basestring) or key is None:
-            return DataArray._new_from_dataset(self, key)
+        key = np.asarray(key)
+        if key.ndim == 0:
+            return DataArray._new_from_dataset(self, key.item())
         else:
             return self._copy_listed(key)
 
@@ -1398,8 +1399,11 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
                 obj[dim] = (dim, lev)
             shape = [lev.size for lev in idx.levels]
         else:
-            dims = (idx.name if idx.name is not None else 'index',)
-            obj[dims[0]] = (dims, idx)
+            if idx.size:
+                dims = (idx.name if idx.name is not None else 'index',)
+                obj[dims[0]] = (dims, idx)
+            else:
+                dims = []
             shape = -1
 
         for name, series in iteritems(dataframe):

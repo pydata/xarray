@@ -480,7 +480,7 @@ class TestDataArray(TestCase):
         self.assertEqual((a + 0).name, 'foo')
         self.assertIs((a + a.rename(None)).name, None)
         self.assertIs((a + a.rename('bar')).name, None)
-        self.assertIs((a + a).name, 'foo')
+        self.assertEqual((a + a).name, 'foo')
         self.assertIs((+ds['x']).name, None)
         self.assertIs((ds['x'] + 0).name, None)
         self.assertIs((a + ds['x']).name, None)
