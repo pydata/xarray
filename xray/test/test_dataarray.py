@@ -35,7 +35,6 @@ class TestDataArray(TestCase):
         self.assertEqual(expected, repr(data_array))
 
     def test_properties(self):
-        self.assertDatasetIdentical(self.dv.dataset, self.ds)
         self.assertVariableEqual(self.dv.variable, self.v)
         self.assertArrayEqual(self.dv.values, self.v.values)
         for attr in ['dims', 'dtype', 'shape', 'size', 'ndim', 'attrs']:
@@ -255,14 +254,14 @@ class TestDataArray(TestCase):
                   I[x.values[:3]], I[x.variable[:3]], I[x[:3]], I[x[:3], y[:4]],
                   I[x.values > 3], I[x.variable > 3], I[x > 3], I[x > 3, y > 3]]:
             self.assertVariableEqual(self.v[i], self.dv[i])
-        # make sure we always keep the array around, even if it's a scalar
+        # make sure we keep scalar coords around
         self.assertVariableEqual(self.dv[0, 0], self.dv.variable[0, 0])
-        for k in ['x', 'y', 'foo']:
-            self.assertIn(k, self.dv[0, 0].dataset)
+        self.assertIn('x', self.dv[0, 0].coords)
+        self.assertIn('y', self.dv[0, 0].coords)
 
     def test_isel(self):
-        self.assertDatasetIdentical(self.dv[0].dataset, self.ds.isel(x=0))
-        self.assertDatasetIdentical(self.dv[:3, :5].dataset,
+        self.assertDatasetIdentical(self.dv[0].to_dataset(), self.ds.isel(x=0))
+        self.assertDatasetIdentical(self.dv[:3, :5].to_dataset(),
                                     self.ds.isel(x=slice(3), y=slice(5)))
         self.assertDataArrayIdentical(self.dv, self.dv.isel(x=slice(None)))
         self.assertDataArrayIdentical(self.dv[:3], self.dv.isel(x=slice(3)))
@@ -320,55 +319,6 @@ class TestDataArray(TestCase):
         actual = repr(da.coords)
         self.assertEquals(expected, actual)
 
-    # def test_coords_modify(self):
-    #     da = DataArray(np.zeros((2, 3)), dims=['x', 'y'])
-
-    #     for k, v in [('x', ['a', 'b']), ('y', ['c', 'd', 'e'])]:
-    #         da.coords[k] = v
-    #         self.assertArrayEqual(da.coords[k], v)
-
-    #     actual = da.copy()
-    #     orig_dataset = actual.dataset
-    #     actual.coords = [[5, 6], [7, 8, 9]]
-    #     expected = DataArray(np.zeros((2, 3)), coords=[[5, 6], [7, 8, 9]],
-    #                          dims=['x', 'y'])
-    #     self.assertDataArrayIdentical(actual, expected)
-    #     self.assertIsNot(actual.dataset, orig_dataset)
-
-    #     actual = da.copy()
-    #     actual.coords = expected.coords
-    #     self.assertDataArrayIdentical(actual, expected)
-
-    #     actual = da.copy()
-    #     expected = DataArray(np.zeros((2, 3)), coords=[[5, 6], [7, 8, 9]],
-    #                          dims=['foo', 'bar'])
-    #     actual.coords = expected.coords
-    #     self.assertDataArrayIdentical(actual, expected)
-
-    #     with self.assertRaises(KeyError):
-    #         da.coords[0] = [0, 1]
-
-    #     with self.assertRaisesRegexp(ValueError, 'coordinate has size'):
-    #         da.coords['x'] = ['a']
-
-    #     with self.assertRaises(KeyError):
-    #         da.coords['foobar'] = np.arange(4)
-
-    #     with self.assertRaisesRegexp(ValueError, 'coordinate has size'):
-    #         da.coords = da.isel(y=slice(2)).coords
-
-    #     # modify the coordinates on a coordinate itself
-    #     x = DataArray(Coordinate('x', [10.0, 20.0, 30.0]))
-
-    #     actual = x.copy()
-    #     actual.coords = [[0, 1, 2]]
-    #     expected = DataArray(Coordinate('x', range(3)))
-    #     self.assertDataArrayIdentical(actual, expected)
-
-    #     actual = DataArray(Coordinate('y', [-10, -20, -30]))
-    #     actual.coords = expected.coords
-    #     self.assertDataArrayIdentical(actual, expected)
-
     def test_reindex(self):
         foo = self.dv
         bar = self.dv[:2, :2]
@@ -382,12 +332,12 @@ class TestDataArray(TestCase):
     def test_rename(self):
         renamed = self.dv.rename('bar')
         self.assertDatasetIdentical(
-            renamed.dataset, self.ds.rename({'foo': 'bar'}))
+            renamed.to_dataset(), self.ds.rename({'foo': 'bar'}))
         self.assertEqual(renamed.name, 'bar')
 
         renamed = self.dv.rename({'foo': 'bar'})
         self.assertDatasetIdentical(
-            renamed.dataset, self.ds.rename({'foo': 'bar'}))
+            renamed.to_dataset(), self.ds.rename({'foo': 'bar'}))
         self.assertEqual(renamed.name, 'bar')
 
     def test_dataset_getitem(self):
@@ -440,7 +390,7 @@ class TestDataArray(TestCase):
         with self.assertRaisesRegexp(ValueError, 'not aligned'):
             b + a
         with self.assertRaisesRegexp(TypeError, 'datasets do not support'):
-            a + a.dataset
+            a + a.to_dataset()
 
     def test_dataset_math(self):
         # verify that mathematical operators keep around the expected variables
@@ -519,7 +469,7 @@ class TestDataArray(TestCase):
         self.assertIs(b.variable, v)
         self.assertArrayEqual(b.values, x)
         self.assertIs(source_ndarray(b.values), x)
-        self.assertDatasetIdentical(b.dataset, self.ds)
+        self.assertDatasetIdentical(b._dataset, self.ds)
 
     def test_transpose(self):
         self.assertVariableEqual(self.dv.variable.transpose(),
@@ -620,7 +570,7 @@ class TestDataArray(TestCase):
         array = self.make_groupby_example_array()
         grouped = array.groupby('abc')
 
-        expected_ds = array.dataset.copy()
+        expected_ds = array.to_dataset()
         exp_data = np.hstack([center(self.x[:, :9]),
                               center(self.x[:, 9:10]),
                               center(self.x[:, 10:])])
@@ -668,7 +618,7 @@ class TestDataArray(TestCase):
         actual = unnamed.to_dataset()
         expected = Dataset({None: ('x', [1, 2])})
         self.assertDatasetIdentical(expected, actual)
-        self.assertIsNot(unnamed.dataset, actual)
+        self.assertIsNot(unnamed._dataset, actual)
 
         actual = unnamed.to_dataset('foo')
         expected = Dataset({'foo': ('x', [1, 2])})
@@ -678,7 +628,6 @@ class TestDataArray(TestCase):
         actual = named.to_dataset()
         expected = Dataset({'foo': ('x', [1, 2])})
         self.assertDatasetIdentical(expected, actual)
-        self.assertIsNot(named.dataset, actual)
 
         actual = named.to_dataset('bar')
         expected = Dataset({'bar': ('x', [1, 2])})

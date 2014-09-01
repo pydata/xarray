@@ -173,7 +173,7 @@ class ArrayGroupBy(GroupBy, ImplementsArrayReduce):
         stacked.attrs.update(self.obj.attrs)
 
         name = self.obj.name
-        ds = self.obj.dataset.drop_vars(name)
+        ds = self.obj._dataset.drop_vars(name)
         ds[concat_dim.name] = concat_dim
         # remove extraneous dimensions
         for dim in self.obj.dims:

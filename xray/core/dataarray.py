@@ -1,6 +1,7 @@
 from collections import Mapping
 import contextlib
 import functools
+import warnings
 
 import numpy as np
 import pandas as pd
@@ -195,6 +196,11 @@ class DataArray(AbstractArray):
     def dataset(self):
         """The dataset with which this DataArray is associated.
         """
+        warnings.warn("the 'dataset' property has been deprecated; "
+                      'to convert a DataArray into a Dataset, use '
+                      'to_dataset(), or to modify DataArray coordiantes in '
+                      "place, use the 'coords' property",
+                      FutureWarning, stacklevel=2)
         return self._dataset
 
     def to_dataset(self, name=None):
@@ -226,7 +232,7 @@ class DataArray(AbstractArray):
         """Context manager to use for modifying _dataset, in a manner that
         can be safely rolled back if an error is encountered.
         """
-        ds = self.dataset.copy(deep=False)
+        ds = self._dataset.copy(deep=False)
         yield ds
         self._dataset = ds
 
@@ -238,7 +244,7 @@ class DataArray(AbstractArray):
 
     @property
     def variable(self):
-        return self.dataset.variables[self.name]
+        return self._dataset.variables[self.name]
 
     @property
     def dtype(self):
@@ -322,10 +328,10 @@ class DataArray(AbstractArray):
             self.variable[key] = value
 
     def __delitem__(self, key):
-        del self.dataset[key]
+        del self._dataset[key]
 
     def __contains__(self, key):
-        return key in self.dataset
+        return key in self._dataset
 
     @property
     def loc(self):
@@ -402,7 +408,7 @@ class DataArray(AbstractArray):
         dataset. Otherwise, a shallow copy is made, so each variable in the new
         array's dataset is also a variable in this array's dataset.
         """
-        ds = self.dataset.copy(deep=deep)
+        ds = self._dataset.copy(deep=deep)
         return ds[self.name]
 
     def __copy__(self):
@@ -425,7 +431,7 @@ class DataArray(AbstractArray):
         Dataset.isel
         DataArray.sel
         """
-        ds = self.dataset.isel(**indexers)
+        ds = self._dataset.isel(**indexers)
         return ds[self.name]
 
     indexed = utils.function_alias(isel, 'indexed')
@@ -501,7 +507,7 @@ class DataArray(AbstractArray):
         DataArray.reindex_like
         align
         """
-        ds = self.select_vars().dataset
+        ds = self.select_vars()._dataset
         reindexed_ds = ds.reindex(copy=copy, **indexers)
         return reindexed_ds[self.name]
 
@@ -522,7 +528,7 @@ class DataArray(AbstractArray):
         else:
             new_name = new_name_or_name_dict
             name_dict = {self.name: new_name}
-        renamed_dataset = self.dataset.rename(name_dict)
+        renamed_dataset = self._dataset.rename(name_dict)
         return renamed_dataset[new_name]
 
     def select_vars(self, *names):
@@ -534,7 +540,7 @@ class DataArray(AbstractArray):
         Dataset.select_vars
         """
         names = names + (self.name,)
-        ds = self.dataset.select_vars(*names)
+        ds = self._dataset.select_vars(*names)
         return ds[self.name]
 
     select = utils.function_alias(select_vars, 'select')
@@ -554,7 +560,7 @@ class DataArray(AbstractArray):
             raise ValueError('cannot drop a coordinate variable from a '
                              'DataArray. Use the `drop_vars` method of '
                              'the dataset instead.')
-        ds = self.dataset.drop_vars(*names)
+        ds = self._dataset.drop_vars(*names)
         return ds[self.name]
 
     unselect = utils.function_alias(drop_vars, 'unselect')
@@ -612,7 +618,7 @@ class DataArray(AbstractArray):
         numpy.transpose
         Array.transpose
         """
-        ds = self.dataset.copy()
+        ds = self._dataset.copy()
         ds[self.name] = self.variable.transpose(*dims)
         return ds[self.name]
 
@@ -641,7 +647,7 @@ class DataArray(AbstractArray):
         --------
         numpy.squeeze
         """
-        ds = self.dataset.squeeze(dim)
+        ds = self._dataset.squeeze(dim)
         return ds[self.name]
 
     def reduce(self, func, dim=None, axis=None, keep_attrs=False, **kwargs):
@@ -680,9 +686,9 @@ class DataArray(AbstractArray):
         var = self.variable.reduce(func, dim, axis, keep_attrs, **kwargs)
         drop = set(self.dims) - set(var.dims)
         # remove all variables associated with any dropped dimensions
-        drop |= set(k for k, v in iteritems(self.dataset.variables)
+        drop |= set(k for k, v in iteritems(self._dataset.variables)
                     if any(dim in drop for dim in v.dims))
-        ds = self.dataset.drop_vars(*drop)
+        ds = self._dataset.drop_vars(*drop)
         ds[self.name] = var
 
         return ds[self.name]
@@ -735,7 +741,7 @@ class DataArray(AbstractArray):
                 name = arr.name
             elif name != arr.name:
                 arr = arr.rename(name)
-            datasets.append(arr.dataset)
+            datasets.append(arr._dataset)
         if concat_over is None:
             concat_over = set()
         elif isinstance(concat_over, basestring):
