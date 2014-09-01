@@ -387,6 +387,34 @@ class DataArray(AbstractArray):
         utils.alias_warning('coordinates', 'coords')
         return self.coords
 
+    def reset_coords(self, names=None, drop=False, inplace=False):
+        """Given names of coordinates, reset them to become variables.
+
+        Parameters
+        ----------
+        names : str or list of str, optional
+            Name(s) of non-index coordinates in this dataset to reset into
+            variables. By default, all non-index coordinates are reset.
+        drop : bool, optional
+            If True, remove coordinates instead of converting them into
+            variables.
+        inplace : bool, optional
+            If True, modify this dataset inplace. Otherwise, create a new
+            object.
+
+        Returns
+        -------
+        Dataset, or DataArray if ``drop == True``
+        """
+        if inplace and not drop:
+            raise ValueError('cannot reset coordinates in-place on a '
+                             'DataArray without ``drop == True``')
+        if names is None:
+            names = (self._dataset._coord_names - set(self.dims)
+                     - set([self.name]))
+        ds = self._dataset.reset_coords(names, drop, inplace)
+        return ds[self.name] if drop else ds
+
     def load_data(self):
         """Manually trigger loading of this array's data from disk or a
         remote source into memory and return this array.

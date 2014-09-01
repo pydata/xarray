@@ -318,6 +318,50 @@ class TestDataArray(TestCase):
         actual = repr(da.coords)
         self.assertEquals(expected, actual)
 
+    def test_reset_coords(self):
+        data = DataArray(np.zeros((3, 4)),
+                         {'bar': ('x', ['a', 'b', 'c']),
+                          'baz': ('y', range(4))},
+                         dims=['x', 'y'],
+                         name='foo')
+
+        actual = data.reset_coords()
+        expected = Dataset({'foo': (['x', 'y'], np.zeros((3, 4))),
+                            'bar': ('x', ['a', 'b', 'c']),
+                            'baz': ('y', range(4))})
+        self.assertDatasetIdentical(actual, expected)
+
+        actual = data.reset_coords(['bar', 'baz'])
+        self.assertDatasetIdentical(actual, expected)
+
+        actual = data.reset_coords('bar')
+        expected = Dataset({'foo': (['x', 'y'], np.zeros((3, 4))),
+                            'bar': ('x', ['a', 'b', 'c'])},
+                           {'baz': ('y', range(4))})
+        self.assertDatasetIdentical(actual, expected)
+
+        actual = data.reset_coords(['bar'])
+        self.assertDatasetIdentical(actual, expected)
+
+        actual = data.reset_coords(drop=True)
+        expected = DataArray(np.zeros((3, 4)), dims=['x', 'y'], name='foo')
+        self.assertDataArrayIdentical(actual, expected)
+
+        actual = data.copy()
+        actual.reset_coords(drop=True, inplace=True)
+        self.assertDataArrayIdentical(actual, expected)
+
+        actual = data.reset_coords('bar', drop=True)
+        expected = DataArray(np.zeros((3, 4)), {'baz': ('y', range(4))},
+                             dims=['x', 'y'], name='foo')
+        self.assertDataArrayIdentical(actual, expected)
+
+        with self.assertRaisesRegexp(ValueError, 'cannot reset coord'):
+            data.reset_coords(inplace=True)
+
+        with self.assertRaises(KeyError):
+            data.reset_coords('foo', drop=True)
+
     def test_reindex(self):
         foo = self.dv
         bar = self.dv[:2, :2]

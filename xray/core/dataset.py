@@ -117,11 +117,11 @@ class VariablesDict(OrderedDict):
         """Fall back to returning a virtual variable, if possible
         """
         if not isinstance(key, basestring):
-            raise KeyError(repr(key))
+            raise KeyError(key)
 
         split_key = key.split('.')
         if len(split_key) != 2:
-            raise KeyError(repr(key))
+            raise KeyError(key)
 
         ref_var_name, suffix = split_key
         ref_var = self[ref_var_name]
@@ -706,8 +706,8 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
         Parameters
         ----------
         names : str or list of str, optional
-            Name(s) of coordinates in this dataset to reset into variables. By
-            default, all coordinates are reset.
+            Name(s) of non-index coordinates in this dataset to reset into
+            variables. By default, all non-index coordinates are reset.
         drop : bool, optional
             If True, remove coordinates instead of converting them into
             variables.
