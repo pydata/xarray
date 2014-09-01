@@ -150,6 +150,10 @@ def remove_incompatible_items(first_dict, second_dict, compat=equivalent):
             del first_dict[k]
 
 
+def is_dict_like(value):
+    return hasattr(value, '__getitem__') and hasattr(value, 'keys')
+
+
 def dict_equiv(first, second, compat=equivalent):
     """Test equivalence of two dict-like objects. If any of the values are
     numpy arrays, compare them correctly.

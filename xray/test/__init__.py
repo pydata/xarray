@@ -88,6 +88,8 @@ class TestCase(unittest.TestCase):
         # checks each aspect of equality separately for easier debugging
         self.assertEqual(sorted(d1.variables, key=str),
                          sorted(d2.variables, key=str))
+        self.assertEqual(sorted(d1.coords, key=str),
+                         sorted(d2.coords, key=str))
         for k in d1:
             v1 = d1.variables[k]
             v2 = d2.variables[k]
@@ -97,8 +99,10 @@ class TestCase(unittest.TestCase):
         # this method is functionally equivalent to `assert d1.identical(d2)`,
         # but it checks each aspect of equality separately for easier debugging
         assert utils.dict_equiv(d1.attrs, d2.attrs), (d1.attrs, d2.attrs)
-        self.assertEqual(sorted(d1.variables, key=str),
-                         sorted(d2.variables, key=str))
+        self.assertEqual(sorted(d1.noncoords, key=str),
+                         sorted(d2.noncoords, key=str))
+        self.assertEqual(sorted(d1.coords, key=str),
+                         sorted(d2.coords, key=str))
         for k in d1:
             v1 = d1.variables[k]
             v2 = d2.variables[k]

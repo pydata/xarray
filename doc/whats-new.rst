@@ -1,6 +1,12 @@
 What's New
 ==========
 
+v0.3.0 (in development)
+-----------------------
+
+- ``Dataset.__eq__`` and ``Dataset.__ne__`` now are now undefined, because in
+  a future version of xray we intend to make the operations element-wise.
+
 v0.2.0 (14 August 2014)
 -----------------------
 

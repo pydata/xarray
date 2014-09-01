@@ -66,8 +66,8 @@ def align(*objects, **kwargs):
 
     all_indexes = defaultdict(list)
     for obj in objects:
-        for k, v in iteritems(obj.coords):
-            all_indexes[k].append(v.to_index())
+        for k, v in iteritems(obj.indexes):
+            all_indexes[k].append(v)
 
     # Exclude dimensions with all equal indices to avoid unnecessary reindexing
     # work.
@@ -105,10 +105,11 @@ def reindex_variables(variables, indexes, indexers, copy=True):
     # build up indexers for assignment along each index
     to_indexers = {}
     from_indexers = {}
-    for name, coord in iteritems(indexes):
+    for name, index in iteritems(indexes):
+        index = utils.safe_cast_to_index(index)
         if name in indexers:
             target = utils.safe_cast_to_index(indexers[name])
-            indexer = coord.get_indexer(target)
+            indexer = index.get_indexer(target)
 
             # Note pandas uses negative values from get_indexer to signify
             # values that are missing in the index
@@ -121,7 +122,7 @@ def reindex_variables(variables, indexes, indexers, copy=True):
                 to_indexers[name] = slice(None)
 
             from_indexers[name] = indexer[to_indexers[name]]
-            if np.array_equal(from_indexers[name], np.arange(coord.size)):
+            if np.array_equal(from_indexers[name], np.arange(index.size)):
                 # If the indexer is equal to the original index, use a full
                 # slice object to speed up selection and so we can avoid
                 # unnecessary copies

@@ -1,6 +1,5 @@
 from collections import Mapping
 from io import BytesIO
-import warnings
 
 import numpy as np
 import pandas as pd
@@ -14,6 +13,7 @@ from . import indexing
 from . import variable
 from . import utils
 from . import ops
+from .coordinates import DatasetCoordinates
 from .utils import (FrozenOrderedDict, Frozen, SortedKeysDict, ChainMap,
                     multi_index_from_product)
 from .pycompat import iteritems, itervalues, basestring, OrderedDict
@@ -142,11 +142,10 @@ def _as_dataset_variable(name, var):
     """Prepare a variable for adding it to a Dataset
     """
     try:
-        var = variable.as_variable(var)
+        var = variable.as_variable(var, key=name)
     except TypeError:
-        raise TypeError('Dataset variables must be of type '
-                        'DataArray or Variable, or a sequence of the '
-                        'form (dims, data[, attrs, encoding])')
+        raise TypeError('Dataset variables must be an arrays or a tuple of '
+                        'the form (dims, data[, attrs, encoding])')
     if name in var.dims:
         # convert the into an Index
         if var.ndim != 1:
@@ -170,6 +169,7 @@ def _expand_variables(raw_variables, old_variables={}, compat='identical'):
     new or old variables.
     """
     new_variables = OrderedDict()
+    new_coord_names = set()
     variables = ChainMap(new_variables, old_variables)
 
     def add_variable(name, var):
@@ -183,11 +183,12 @@ def _expand_variables(raw_variables, old_variables={}, compat='identical'):
     for name, var in iteritems(raw_variables):
         if hasattr(var, 'coords'):
             # it's a DataArray
+            new_coord_names.update(var.coords)
             for dim, coord in iteritems(var.coords):
                 if dim != name:
                     add_variable(dim, coord)
         add_variable(name, var)
-    return new_variables
+    return new_variables, new_coord_names
 
 
 def _calculate_dims(variables):
@@ -214,19 +215,19 @@ def _calculate_dims(variables):
     return dims
 
 
-def _get_dataset_vars_and_attrs(obj):
-    """Returns the variables and attributes associated with a dataset
+class _DatasetLike(object):
+    """A Dataset-like object that only contains a few private attributes
 
     Like `as_dataset`, handles DataArrays, Datasets and dictionaries of
     variables. The difference is that this method never creates a new Dataset
     object, and hence is much more lightweight, avoiding any consistency
-    checks on the variables (this should be handled later).
+    checks on the variables (that should be handled later).
     """
-    if hasattr(obj, 'dataset'):
-        obj = obj.dataset
-    variables = getattr(obj, 'variables', obj)
-    attributes = getattr(obj, 'attrs', {})
-    return variables, attributes
+    def __init__(self, obj):
+        obj = getattr(obj, '_dataset', obj)
+        self._variables = getattr(obj, '_variables', obj)
+        self._coord_names = getattr(obj, '_coord_names', set())
+        self.attrs = getattr(obj, 'attrs', {})
 
 
 def _assert_compat_valid(compat):
@@ -243,24 +244,9 @@ def _item0_str(items):
     return str(items[0])
 
 
-class DatasetCoordinates(common.AbstractCoordinates):
-    """Dictionary like container for Dataset coordinates.
-
-    Essentially an immutable OrderedDict with keys given by the array's
-    dimensions and the values given by the corresponding xray.Coordinate
-    objects.
-    """
-    def __getitem__(self, key):
-        if key in self._data.dims:
-            return self._data.variables[key]
-        else:
-            raise KeyError(key)
-
-    def __setitem__(self, key, value):
-        self._data[key] = value
-        # expected_size = self[key].size if key in self else None
-        # self._data[key] = self._convert_to_coord(key, value, expected_size)
-        self._data._coord_names.add(key)
+def _assert_empty(args, msg='%s'):
+    if args:
+        raise ValueError(msg % args)
 
 
 def as_dataset(obj):
@@ -269,8 +255,7 @@ def as_dataset(obj):
     Handles DataArrays, Datasets and dictionaries of variables. A new Dataset
     object is only created in the last case.
     """
-    if hasattr(obj, 'dataset'):
-        obj = obj.dataset
+    obj = getattr(obj, '_dataset', obj)
     if not isinstance(obj, Dataset):
         obj = Dataset(obj)
     return obj
@@ -310,19 +295,6 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
         independently of other variables for use in a future version of xray.
         For now, coordinates will extracted automatically from variables.
         """
-        if coords is not None:
-            if attrs is None:
-                warnings.warn("use the keyword-only argument 'attrs' for "
-                              'dataset attributes; the second positional '
-                              "argument to Dataset will change to 'coords' in "
-                              'the next version of xray',
-                              FutureWarning, stacklevel=2)
-                attrs = coords
-            else:
-                raise NotImplementedError(
-                    'cannot yet supply coordinates separately from '
-                    "other variables; for now, put them in the 'variables'")
-
         self._variables = VariablesDict()
         self._coord_names = set()
         self._dims = SortedKeysDict()
@@ -331,7 +303,7 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
         if variables is None:
             variables = {}
         if coords is None:
-            coords = {}
+            coords = set()
         if variables or coords:
             self._set_init_vars_and_dims(variables, coords)
         if attrs is not None:
@@ -345,7 +317,8 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
                 coord = variable.Coordinate(dim, np.arange(size))
                 self._variables[dim] = coord
 
-    def _update_vars_and_dims(self, new_variables, needs_copy=True):
+    def _update_vars_and_coords(self, new_variables, new_coord_names={},
+                                needs_copy=True, check_coord_names=True):
         """Add a dictionary of new variables to this dataset.
 
         Raises a ValueError if any dimensions have conflicting lengths in the
@@ -358,6 +331,11 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
         # default to creating another copy of variables so can unroll if we end
         # up with inconsistent dimensions
         variables = self._variables.copy() if needs_copy else self._variables
+
+        if check_coord_names:
+            _assert_empty([k for k in self.noncoords if k in new_coord_names],
+                          'coordinates already exist as variables: %s')
+
         variables.update(new_variables)
         dims = _calculate_dims(variables)
         # all checks are complete: it's safe to update
@@ -365,13 +343,23 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
         self._dims = dims
         self._add_missing_coords()
         self._coord_names.update(dims)
+        self._coord_names.update(new_coord_names)
 
     def _set_init_vars_and_dims(self, variables, coords):
         """Set the initial value of Dataset variables and dimensions
         """
-        new_variables = _expand_variables(ChainMap(variables, coords))
-        self._update_vars_and_dims(new_variables, needs_copy=False)
-        self._coord_names.update(coords)
+        _assert_empty([k for k in variables if k in coords],
+                      'redundant variables and coordinates: %s')
+        variables = ChainMap(variables, coords)
+
+        new_variables, new_coord_names = _expand_variables(variables)
+        _assert_empty([k for k in new_coord_names if k not in new_variables],
+                      'no matching variables exist for some coordinates: %s')
+
+        new_coord_names.update(coords)
+        self._update_vars_and_coords(new_variables, new_coord_names,
+                                     needs_copy=False,
+                                     check_coord_names=False)
 
     @classmethod
     def load_store(cls, store, decode_cf=True, mask_and_scale=True,
@@ -473,6 +461,20 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
             v.load_data()
         return self
 
+    @classmethod
+    def _construct_direct(cls, variables, coord_names, dims, attrs,
+                          file_obj=None):
+        """Shortcut around __init__ for internal use when we want to skip
+        costly validation
+        """
+        obj = object.__new__(cls)
+        obj._variables = variables
+        obj._coord_names = coord_names
+        obj._dims = dims
+        obj._attrs = attrs
+        obj._file_obj = file_obj
+        return obj
+
     def copy(self, deep=False):
         """Returns a copy of this dataset.
 
@@ -486,13 +488,25 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
         else:
             variables = self._variables.copy()
         # skip __init__ to avoid costly validation
-        obj = self.__new__(type(self))
-        obj._variables = variables
-        obj._coord_names = self._coord_names.copy()
-        obj._dims = self._dims.copy()
-        obj._attrs = self._attrs.copy()
-        obj._file_obj = None
-        return obj
+        return self._construct_direct(variables, self._coord_names.copy(),
+                                      self._dims.copy(), self._attrs.copy())
+
+    def _copy_listed(self, names):
+        """Create a new Dataset with the listed variables from this dataset and
+        the all relevant coordinates. Skips all validation.
+        """
+        variables = VariablesDict((k, self._variables[k]) for k in names)
+        needed_dims = set()
+        for v in variables.values():
+            needed_dims.update(v.dims)
+        coord_names = set()
+        for k in self._coord_names:
+            if set(self._variables[k].dims) <= needed_dims:
+                variables[k] = self._variables[k]
+                coord_names.add(k)
+        dims = SortedKeysDict(dict((k, self._dims[k]) for k in needed_dims))
+        return self._construct_direct(variables, coord_names, dims,
+                                      self._attrs.copy())
 
     def __copy__(self):
         return self.copy(deep=False)
@@ -560,13 +574,17 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
         If this variable is a dimension, all variables containing this
         dimension are also removed.
         """
+        def remove(k):
+            del self._variables[k]
+            self._coord_names.discard(k)
+
         if key in self._dims:
             del self._dims[key]
-        del self._variables[key]
+        remove(key)
         also_delete = [k for k, v in iteritems(self._variables)
                        if key in v.dims]
         for key in also_delete:
-            del self._variables[key]
+            remove(key)
 
     # mutable objects should not be hashable
     __hash__ = None
@@ -590,10 +608,15 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
         except (TypeError, AttributeError):
             return False
 
-    __eq__ = equals
+    def __eq__(self, other):
+        raise TypeError('__eq__ no longer defined for Dataset; in a future '
+                        'version of xray, it will be reenabled but applied '
+                        'elementwise')
 
     def __ne__(self, other):
-        return not self == other
+        raise TypeError('__ne__ no longer defined for Dataset; in a future '
+                        'version of xray, it will be reenabled but applied '
+                        'elementwise')
 
     def identical(self, other):
         """Two Datasets are identical if they have the same variables and all
@@ -614,7 +637,13 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
 
     @property
     def indexes(self):
-        return self.coords
+        return utils.FrozenOrderedDict(
+            (k, self[k].to_index()) for k in self.dims)
+
+    @property
+    def nonindexes(self):
+        return utils.FrozenOrderedDict(
+            (k, self[k]) for k in self.variables if k not in self.dims)
 
     @property
     def coords(self):
@@ -632,7 +661,7 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
         """Dictionary of DataArrays whose names do not match dimensions.
         """
         return FrozenOrderedDict((name, self[name]) for name in self
-                                 if name not in self.dims)
+                                 if name not in self.coords)
 
     @property
     def noncoordinates(self):
@@ -640,6 +669,67 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
         """
         utils.alias_warning('noncoordinates', 'noncoords')
         return self.noncoords
+
+    def set_coords(self, names, inplace=False):
+        """Given names of one or more variables, set them as coordinates
+
+        Parameters
+        ----------
+        names : str or list of str
+            Name(s) of variables in this dataset to convert into coordinates.
+        inplace : bool, optional
+            If True, modify this dataset inplace. Otherwise, create a new
+            object.
+
+        Returns
+        -------
+        Dataset
+        """
+        # TODO: allow inserting new coordinates with this method, like
+        # DataFrame.set_index?
+        # nb. check in self._variables, not self.noncoords to insure that the
+        # operation is idempotent
+        if isinstance(names, basestring):
+            names = [names]
+        self._assert_all_in_dataset(names)
+        obj = self if inplace else self.copy()
+        obj._coord_names.update(names)
+        return obj
+
+    def reset_coords(self, names=None, drop=False, inplace=False):
+        """Given names of coordinates, reset them to become variables
+
+        Parameters
+        ----------
+        names : str or list of str, optional
+            Name(s) of coordinates in this dataset to reset into variables. By
+            default, all coordinates are reset.
+        drop : bool, optional
+            If True, remove coordinates instead of converting them into
+            variables.
+        inplace : bool, optional
+            If True, modify this dataset inplace. Otherwise, create a new
+            object.
+
+        Returns
+        -------
+        Dataset
+        """
+        if names is None:
+            names = self._coord_names - set(self.dims)
+        else:
+            if isinstance(names, basestring):
+                names = [names]
+            self._assert_all_in_dataset(names)
+            _assert_empty(
+                set(names) & set(self.dims),
+                'cannot remove index coordinates with reset_coords: %s')
+        obj = self if inplace else self.copy()
+        obj._coord_names.difference_update(names)
+        if drop:
+            for name in names:
+                del obj._variables[name]
+        return obj
 
     def dump_to_store(self, store):
         """Store dataset contents to a backends.*DataStore object."""
@@ -702,14 +792,18 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
             raise ValueError("dimensions %r do not exist" % invalid)
 
         # all indexers should be int, slice or np.ndarrays
-        indexers = dict((k, np.asarray(v) if not isinstance(v, (int, np.integer, slice)) else v)
-                         for k, v in iteritems(indexers))
+        indexers = [(k, (np.asarray(v)
+                         if not isinstance(v, (int, np.integer, slice))
+                         else v))
+                    for k, v in iteritems(indexers)]
 
         variables = OrderedDict()
         for name, var in iteritems(self.variables):
-            var_indexers = dict((k, v) for k, v in iteritems(indexers) if k in var.dims)
+            var_indexers = dict((k, v) for k, v in indexers if k in var.dims)
             variables[name] = var.isel(**var_indexers)
-        return type(self)(variables, attrs=self.attrs)
+        obj = type(self)(variables, attrs=self.attrs)
+        obj._coord_names.update(self.coords)
+        return obj
 
     indexed = utils.function_alias(isel, 'indexed')
 
@@ -756,17 +850,17 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
     labeled = utils.function_alias(sel, 'labeled')
 
     def reindex_like(self, other, copy=True):
-        """Conform this object onto the coordinates of another object, filling
+        """Conform this object onto the indexes of another object, filling
         in missing values with NaN.
 
         Parameters
         ----------
         other : Dataset or DataArray
-            Object with a coordinates attribute giving a mapping from dimension
-            names to Coordinate objects, which provides indexes upon which
-            to index the variables in this dataset. The coordinates on this
-            other object need not be the same as the coordinates on this
-            dataset. Any mis-matched coordinate values will be filled in with
+            Object with an 'indexes' attribute giving a mapping from dimension
+            names to pandas.Index objects, which provides coordinates upon
+            which to index the variables in this dataset. The indexes on this
+            other object need not be the same as the indexes on this
+            dataset. Any mis-matched index values will be filled in with
             NaN, and any mis-matched dimension names will simply be ignored.
         copy : bool, optional
             If `copy=True`, the returned dataset contains only copied
@@ -784,10 +878,10 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
         Dataset.reindex
         align
         """
-        return self.reindex(copy=copy, **other.coords)
+        return self.reindex(copy=copy, **other.indexes)
 
     def reindex(self, copy=True, **indexers):
-        """Conform this object onto a new set of coordinates, filling in
+        """Conform this object onto a new set of indexes, filling in
         missing values with NaN.
 
         Parameters
@@ -817,8 +911,10 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
             return self.copy(deep=True) if copy else self
 
         variables = alignment.reindex_variables(
-            self.variables, self.coords, indexers, copy=copy)
-        return type(self)(variables, attrs=self.attrs)
+            self.variables, self.indexes, indexers, copy=copy)
+        obj = type(self)(variables, attrs=self.attrs)
+        obj._coord_names.update(self.coords)
+        return obj
 
     def rename(self, name_dict, inplace=False):
         """Returns a new object with renamed variables and dimensions.
@@ -842,12 +938,15 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
                 raise ValueError("cannot rename %r because it is not a "
                                  "variable in this dataset" % k)
         variables = VariablesDict()
+        coord_names = set()
         for k, v in iteritems(self.variables):
             name = name_dict.get(k, k)
             dims = tuple(name_dict.get(dim, dim) for dim in v.dims)
             var = v.copy(deep=False)
             var.dims = dims
             variables[name] = var
+            if k in self._coord_names:
+                coord_names.add(name)
 
         if inplace:
             self._dims = _calculate_dims(variables)
@@ -855,6 +954,7 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
             obj = self
         else:
             obj = type(self)(variables, attrs=self.attrs)
+        obj._coord_names = coord_names
         return obj
 
     def update(self, other, inplace=True):
@@ -877,15 +977,16 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
         Raises
         ------
         ValueError
-            If any dimensions would inconsistent sizes between different
-            variables in the updated dataset.
+            If any dimensions would have inconsistent sizes in the updated
+            dataset.
         """
-        other_variables, other_attrs = _get_dataset_vars_and_attrs(other)
-        new_variables = _expand_variables(other_variables)
+        other = _DatasetLike(other)
+        new_variables, _ = _expand_variables(other._variables)
 
         obj = self if inplace else self.copy()
-        obj._update_vars_and_dims(new_variables, needs_copy=inplace)
-        obj.attrs.update(other_attrs)
+        obj._update_vars_and_coords(new_variables, other._coord_names,
+                                    needs_copy=inplace)
+        obj.attrs.update(other.attrs)
         return obj
 
     def merge(self, other, inplace=False, overwrite_vars=set(),
@@ -920,11 +1021,10 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
         Raises
         ------
         ValueError
-            If any variables conflict. Conflicting variables attributes
-            are silently dropped.
+            If any variables conflict (see ``compat``).
         """
         _assert_compat_valid(compat)
-        other_variables, other_attrs = _get_dataset_vars_and_attrs(other)
+        other = _DatasetLike(other)
 
         # determine variables to check for conflicts
         if not overwrite_vars:
@@ -938,15 +1038,18 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
                                        if k not in overwrite_vars)
 
         # update variables
-        new_variables = _expand_variables(other_variables, potential_conflicts,
-                                          compat)
+        new_variables, _ = _expand_variables(other._variables,
+                                             potential_conflicts, compat)
         obj = self if inplace else self.copy()
-        obj._update_vars_and_dims(new_variables, needs_copy=inplace)
+        obj._update_vars_and_coords(new_variables, other._coord_names,
+                                    needs_copy=inplace)
         return obj
 
-    def _assert_all_in_dataset(self, names):
-        if any(k not in self and k not in self.virtual_variables
-               for k in names):
+    def _assert_all_in_dataset(self, names, virtual_okay=False):
+        bad_names = set(names) - set(self._variables)
+        if virtual_okay:
+            bad_names -= self.virtual_variables
+        if bad_names:
             raise ValueError('One or more of the specified variables '
                              'cannot be found in this dataset')
 
@@ -965,7 +1068,7 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
             The returned object has the same attributes as the original. Only
             the named variables and their coordinates are included.
         """
-        self._assert_all_in_dataset(names)
+        self._assert_all_in_dataset(names, virtual_okay=True)
         variables = OrderedDict((k, self[k]) for k in names)
         return type(self)(variables, attrs=self.attrs)
 
@@ -991,7 +1094,10 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
                     if any(name in v.dims for name in names))
         variables = OrderedDict((k, v) for k, v in iteritems(self.variables)
                                 if k not in drop)
-        return type(self)(variables, attrs=self.attrs)
+        coord_names = set(k for k in self._coord_names if k in variables)
+        obj = type(self)(variables, attrs=self.attrs)
+        obj._coord_names = coord_names
+        return obj
 
     unselect = utils.function_alias(drop_vars, 'unselect')
 
@@ -1081,16 +1187,14 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
         else:
             dims = set(dim)
 
-        bad_dims = [dim for dim in dims if dim not in self.dims]
-        if bad_dims:
-            raise ValueError('Dataset does not contain the dimensions: '
-                             '{0}'.format(bad_dims))
+        _assert_empty([dim for dim in dims if dim not in self.dims],
+                      'Dataset does not contain the dimensions: %s')
 
         variables = OrderedDict()
         for name, var in iteritems(self.variables):
             reduce_dims = [dim for dim in var.dims if dim in dims]
             if reduce_dims:
-                if name not in self.dims:
+                if name not in self.coords:
                     if len(reduce_dims) == 1:
                         # unpack dimensions for the benefit of functions like
                         # np.argmin which can't handle tuple arguments
@@ -1109,9 +1213,11 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
             else:
                 variables[name] = var
 
+        coord_names = set(k for k in self.coords if k in variables)
         attrs = self.attrs if keep_attrs else {}
-
-        return type(self)(variables, attrs=attrs)
+        obj = type(self)(variables, attrs=attrs)
+        obj._coord_names = coord_names
+        return obj
 
     def apply(self, func, keep_attrs=False, **kwargs):
         """Apply a function over noncoordinate variables in this dataset.
@@ -1212,13 +1318,14 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
                 # simple helper function which compares a variable
                 # across all datasets and indicates whether that
                 # variable differs or not.
-                return any(not ds[vname].equals(v) for ds in datasets[1:])
-            non_coords = iteritems(datasets[0].noncoords)
-            # all noncoords that are not the same in each dataset
-            concat_over.update(k for k, v in non_coords if differs(k, v))
+                return any(not ds[vname].variable.equals(v)
+                           for ds in datasets[1:])
+            non_indexes = iteritems(datasets[0].nonindexes)
+            # all nonindexes that are not the same in each dataset
+            concat_over.update(k for k, v in non_indexes if differs(k, v))
         elif mode == 'all':
-            # concatenate all noncoords
-            concat_over.update(set(datasets[0].noncoords.keys()))
+            # concatenate all nonindexes
+            concat_over.update(set(datasets[0].nonindexes))
         elif mode == 'minimal':
             # only concatenate variables in which 'dim' already
             # appears. These variables are added later.
@@ -1235,13 +1342,13 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
         auto_concat_dims = set([dim_name])
         if hasattr(dim, 'dims'):
             auto_concat_dims |= set(dim.dims)
-        for k, v in iteritems(datasets[0]):
+        for k, v in iteritems(datasets[0]._variables):
             if k == dim_name or auto_concat_dims.intersection(v.dims):
                 concat_over.add(k)
 
         # create the new dataset and add constant variables
         concatenated = cls({}, attrs=datasets[0].attrs)
-        for k, v in iteritems(datasets[0]):
+        for k, v in iteritems(datasets[0]._variables):
             if k not in concat_over:
                 concatenated[k] = v
 
@@ -1251,7 +1358,7 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
             if (compat == 'identical'
                     and not utils.dict_equiv(ds.attrs, concatenated.attrs)):
                 raise ValueError('dataset global attributes not equal')
-            for k, v in iteritems(ds.variables):
+            for k, v in iteritems(ds._variables):
                 if k not in concatenated and k not in concat_over:
                     raise ValueError('encountered unexpected variable %r' % k)
                 elif (k in concatenated and k != dim_name and
@@ -1268,6 +1375,8 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
         if not isinstance(dim, basestring):
             # add dimension last to ensure that its in the final Dataset
             concatenated[dim_name] = dim
+
+        concatenated._coord_names.update(datasets[0].coords)
 
         return concatenated
 
@@ -1292,8 +1401,7 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
             _, var_data = np.broadcast_arrays(template.values, var.values)
             data.append(var_data.reshape(-1))
 
-        index = multi_index_from_product(list(self.coords.values()),
-                                         names=list(self.coords.keys()))
+        index = self.coords.to_index()
         return pd.DataFrame(OrderedDict(zip(columns, data)), index=index)
 
     @classmethod

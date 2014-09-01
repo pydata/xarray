@@ -132,7 +132,7 @@ def remap_label_indexers(data_obj, indexers):
     """Given an xray data object and label based indexers, return a mapping
     of equivalent location based indexers.
     """
-    return dict((dim, convert_label_indexer(data_obj.coords[dim], label, dim))
+    return dict((dim, convert_label_indexer(data_obj[dim].to_index(), label, dim))
                 for dim, label in iteritems(indexers))
 
 

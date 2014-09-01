@@ -308,14 +308,14 @@ class NetCDF4DataTest(DatasetIOTestCases, TestCase):
     def test_compression_encoding(self):
         data = create_test_data()
         data['var2'].encoding.update({'zlib': True,
-                                      'chunksizes': (10, 10),
+                                      'chunksizes': (5, 5),
                                       'least_significant_digit': 2})
         with self.roundtrip(data) as actual:
             for k, v in iteritems(data['var2'].encoding):
                 self.assertEqual(v, actual['var2'].encoding[k])
 
         # regression test for #156
-        expected = data.isel(dim1=0)
+        expected = data.isel(dim1=0).reset_coords()
         with self.roundtrip(expected) as actual:
             self.assertDatasetEqual(expected, actual)
 
