@@ -106,6 +106,21 @@ class TestDataset(TestCase):
         print(actual)
         self.assertEqual(expected, actual)
 
+        # verify that ... doesn't appear for scalar coordinates
+        data = Dataset({'foo': ('x', np.ones(10))}).mean()
+        expected = dedent("""\
+        <xray.Dataset>
+        Dimensions:  ()
+        Index Coordinates:
+            Empty
+        Noncoordinates:
+            foo      float64 1.0
+        Attributes:
+            Empty""")
+        actual = '\n'.join(x.rstrip() for x in repr(data).split('\n'))
+        print(actual)
+        self.assertEqual(expected, actual)
+
     def test_constructor(self):
         var1 = Variable('x', 2 * np.arange(100))
         var2 = Variable('x', np.arange(1000))

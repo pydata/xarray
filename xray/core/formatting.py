@@ -85,16 +85,25 @@ def summarize_var(name, var, first_col_width, max_width=100, show_values=True):
     dims_str = '(%s) ' % ', '.join(map(str, var.dims)) if var.dims else ''
     front_str = first_col + dims_str + ('%s ' % var.dtype)
     if show_values:
-        # print '%s: showing values' % name
         values_str = format_array_flat(var, max_width - len(front_str))
     else:
         values_str = '...'
     return front_str + values_str
 
 
+def _not_remote(var):
+    """Helper function to identify if array is positively identifiable as
+    coming from a remote source.
+    """
+    source = var.encoding.get('source')
+    if source and source.startswith('http') and not var._in_memory:
+        return False
+    return True
+
+
 def _summarize_variables(variables, first_col_width, always_show_values):
     return ([summarize_var(v.name, v, first_col_width,
-                           show_values=(always_show_values or v._in_memory))
+                           show_values=(always_show_values or _not_remote(v)))
              for v in itervalues(variables)]
             or ['    Empty'])
 
@@ -104,7 +113,7 @@ def _summarize_coordinates(coords, first_col_width,
     summary = ['Index Coordinates:']
     index_coords = OrderedDict((k, coords[k]) for k in coords.dims)
     summary.extend(_summarize_variables(index_coords, first_col_width,
-                                       always_show_values=True))
+                                        always_show_values=True))
 
     other_coords = OrderedDict((k, v) for k, v in iteritems(coords)
                                if k not in coords.dims)
