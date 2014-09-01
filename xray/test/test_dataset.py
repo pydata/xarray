@@ -563,6 +563,11 @@ class TestDataset(TestCase):
         expected = Dataset({'var1': data['var1'], 'var2': data['var2']})
         self.assertDatasetEqual(expected, actual)
 
+        actual = data['numbers']
+        expected = DataArray(data['numbers'].variable, [data['dim3']],
+                             name='numbers')
+        self.assertDataArrayIdentical(expected, actual)
+
     def test_virtual_variables(self):
         # access virtual variables
         data = create_test_data()

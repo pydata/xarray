@@ -190,6 +190,8 @@ class DataArray(AbstractArray):
         obj = object.__new__(cls)
         obj._dataset = dataset._copy_listed([name])
         obj._name = name
+        if name not in dataset.dims:
+            obj._dataset._coord_names.discard(name)
         return obj
 
     @property
