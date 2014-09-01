@@ -204,15 +204,15 @@ class ArrayGroupBy(GroupBy, ImplementsArrayReduce):
         shortcut : bool, optional
             Whether or not to shortcut evaluation under the assumptions that:
             (1) The action of `func` does not depend on any of the array
-                metadata (attributes, indices or other contained arrays) but
-                only on the data and dimensions.
+                metadata (attributes or coordinates) but only on the data and
+                dimensions.
             (2) The action of `func` creates arrays with homogeneous metadata,
                 that is, with the same dimensions and attributes.
             If these conditions are satisfied `shortcut` provides significant
             speedup. This should be the case for many common groupby operations
             (e.g., applying numpy ufuncs).
         **kwargs
-            Used to call `func(ar, **kwargs)` for each array `ar.
+            Used to call `func(ar, **kwargs)` for each array `ar`.
 
         Returns
         -------
@@ -233,8 +233,9 @@ class ArrayGroupBy(GroupBy, ImplementsArrayReduce):
         else:
             combined = concat(applied, concat_dim, indexers=indexers)
 
-        reordered = self._restore_dim_order(combined, concat_dim)
-        return reordered
+        if type(combined) is type(self.obj):
+            combined = self._restore_dim_order(combined, concat_dim)
+        return combined
 
     def reduce(self, func, dimension=None, axis=None, keep_attrs=False,
                shortcut=True, **kwargs):

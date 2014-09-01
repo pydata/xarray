@@ -661,6 +661,17 @@ class TestDataset(TestCase):
             actual = data.groupby(k, squeeze=False).apply(identity)
             self.assertDatasetEqual(data, actual)
 
+    def test_groupby_returns_new_type(self):
+        data = Dataset({'z': (['x', 'y'], np.random.randn(3, 5))})
+
+        actual = data.groupby('x').apply(lambda ds: ds['z'])
+        expected = data['z']
+        self.assertDataArrayIdentical(expected, actual)
+
+        actual = data['z'].groupby('x').apply(lambda x: x.to_dataset())
+        expected = data
+        self.assertDatasetIdentical(expected, actual)
+
     def test_groupby_iter(self):
         data = create_test_data()
         for n, (t, sub) in enumerate(list(data.groupby('dim1'))[:3]):
