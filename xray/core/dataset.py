@@ -1267,7 +1267,7 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
             an DataArray, the name of the DataArray is used as the stacking
             dimension and the array is added to the returned dataset.
         indexers : None or iterable of indexers, optional
-            Iterable of indexers of the same length as variables which
+            Iterable of indexers of the same length as datasets which
             specifies how to assign variables from each dataset along the given
             dimension. If not supplied, indexers is inferred from the length of
             each variable along the dimension, and the variables are stacked in

@@ -695,7 +695,7 @@ class DataArray(AbstractArray):
 
     @classmethod
     def concat(cls, arrays, dim='concat_dim', indexers=None,
-               concat_over=None):
+               mode='different', concat_over=None, compat='equals'):
         """Stack arrays along a new or existing dimension to form a new
         DataArray.
 
@@ -720,10 +720,23 @@ class DataArray(AbstractArray):
             not supplied, indexers is inferred from the length of each
             variable along the dimension, and the variables are concatenated in
             the given order.
+        mode : {'minimal', 'different', 'all'}, optional
+            Decides which variables are concatenated.  Choices are 'minimal'
+            in which only variables in which dimension already appears are
+            included, 'different' in which all variables which are not equal
+            (ignoring attributes) across all datasets are concatenated (as well
+            as all for which dimension already appears), and 'all' for which all
+            variables are concatenated. Default 'different'.
         concat_over : None or str or iterable of str, optional
             Names of additional variables to concatenate (other than the given
             arrays variables), in which "dimension" does not already appear as
             a dimension.
+        compat : {'equals', 'identical'}, optional
+            String indicating how to compare non-concatenated variables and
+            dataset global attributes for potential conflicts. 'equals' means
+            that all variable values and dimensions must be the same;
+            'identical' means that variable attributes and global attributes
+            must also be equal.
 
         Returns
         -------
@@ -740,13 +753,18 @@ class DataArray(AbstractArray):
             if n == 0:
                 name = arr.name
             elif name != arr.name:
-                arr = arr.rename(name)
+                if compat == 'identical':
+                    raise ValueError('array names not identical')
+                else:
+                    arr = arr.rename(name)
             datasets.append(arr._dataset)
+
         if concat_over is None:
             concat_over = set()
         elif isinstance(concat_over, basestring):
             concat_over = set([concat_over])
         concat_over = set(concat_over) | set([name])
+
         ds = Dataset.concat(datasets, dim, indexers, concat_over=concat_over)
         return ds[name]
 

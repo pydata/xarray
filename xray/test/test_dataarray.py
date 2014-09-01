@@ -1,4 +1,3 @@
-
 import numpy as np
 import pandas as pd
 from copy import deepcopy
@@ -580,16 +579,20 @@ class TestDataArray(TestCase):
 
     def test_concat(self):
         self.ds['bar'] = Variable(['x', 'y'], np.random.randn(10, 20))
-        foo = self.ds['foo'].select_vars()
-        bar = self.ds['bar'].rename('foo').select_vars()
+        foo = self.ds['foo']
+        bar = self.ds['bar']
         # from dataset array:
-        self.assertVariableEqual(Variable(['w', 'x', 'y'],
-                                          np.array([foo.values, bar.values])),
-                                 DataArray.concat([foo, bar], 'w'))
+        expected = DataArray(np.array([foo.values, bar.values]),
+                             dims=['w', 'x', 'y'])
+        actual = DataArray.concat([foo, bar], 'w')
+        self.assertDataArrayEqual(expected, actual)
         # from iteration:
         grouped = [g for _, g in foo.groupby('x')]
         stacked = DataArray.concat(grouped, self.ds['x'])
-        self.assertDataArrayIdentical(foo.select_vars(), stacked)
+        self.assertDataArrayIdentical(foo, stacked)
+
+        with self.assertRaisesRegexp(ValueError, 'not identical'):
+            DataArray.concat([foo, bar], compat='identical')
 
     def test_align(self):
         self.ds['x'] = ('x', np.array(list('abcdefghij')))
