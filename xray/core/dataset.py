@@ -1059,23 +1059,12 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
                              'cannot be found in this dataset')
 
     def select_vars(self, *names):
-        """Returns a new dataset that contains only the named variables and
-        their coordinates.
-
-        Parameters
-        ----------
-        *names : str
-            Names of the variables to include in the returned object.
-
-        Returns
-        -------
-        Dataset
-            The returned object has the same attributes as the original. Only
-            the named variables and their coordinates are included.
+        """Deprecated. Index with a list instead: ``ds[['var1', 'var2']]``
         """
-        self._assert_all_in_dataset(names, virtual_okay=True)
-        variables = OrderedDict((k, self[k]) for k in names)
-        return type(self)(variables, attrs=self.attrs)
+        warnings.warn('select_vars has been deprecated; index the dataset '
+                      'with a list of variables instead',
+                      FutureWarning, stacklevel=2)
+        return self._copy_listed(names)
 
     select = utils.function_alias(select_vars, 'select')
 

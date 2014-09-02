@@ -4,6 +4,10 @@ What's New
 v0.3.0 (in development)
 -----------------------
 
+- ``Dataset.select_vars`` deprecated: index a ``Dataset`` with a list of variables
+  instead.
+- ``DataArray.select_vars`` and ``DataArray.drop_vars`` deprecated: use
+  :py:meth:`~xray.DataArray.reset_coords` instead.
 - ``Dataset.__eq__`` and ``Dataset.__ne__`` now are now undefined, because in
   a future version of xray we intend to make the operations element-wise.
 

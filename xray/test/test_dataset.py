@@ -454,13 +454,6 @@ class TestDataset(TestCase):
         self.assertVariableEqual(v[:3, :2], v[range(3), range(2)])
         self.assertVariableEqual(v[:3, :2], v.loc[d1[:3], d2[:2]])
 
-    def test_select_vars(self):
-        data = create_test_data()
-        ret = data.select_vars(_testvar)
-        self.assertVariableEqual(data[_testvar], ret[_testvar])
-        self.assertTrue(sorted(_vars.keys())[1] not in ret.variables)
-        self.assertRaises(ValueError, data.select_vars, (_testvar, 'not_a_var'))
-
     def test_drop_vars(self):
         data = create_test_data()
 
@@ -557,9 +550,9 @@ class TestDataset(TestCase):
 
     def test_merge(self):
         data = create_test_data()
-        ds1 = data.select_vars('var1')
-        ds2 = data.select_vars('var3')
-        expected = data.select_vars('var1', 'var3')
+        ds1 = data[['var1']]
+        ds2 = data[['var3']]
+        expected = data[['var1', 'var3']]
         actual = ds1.merge(ds2)
         self.assertDatasetEqual(expected, actual)
         with self.assertRaises(ValueError):
@@ -573,6 +566,8 @@ class TestDataset(TestCase):
         self.assertVariableEqual(data['var1'], data.variables['var1'])
         with self.assertRaises(KeyError):
             data['notfound']
+        with self.assertRaises(KeyError):
+            data[['var1', 'notfound']]
 
         actual = data[['var1', 'var2']]
         expected = Dataset({'var1': data['var1'], 'var2': data['var2']})

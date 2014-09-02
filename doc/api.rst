@@ -11,7 +11,7 @@ Creating a dataset
 .. autosummary::
    :toctree: generated/
 
-   Dataset
+   Dataset.__init__
    open_dataset
 
 Attributes and underlying data
@@ -65,10 +65,11 @@ Selecting
    Dataset.reindex
    Dataset.reindex_like
    Dataset.rename
-   Dataset.select_vars
    Dataset.drop_vars
    Dataset.squeeze
    Dataset.groupby
+   Dataset.set_coords
+   Dataset.reset_coords
 
 Computations
 ~~~~~~~~~~~~
@@ -134,7 +135,7 @@ DataArray
 .. autosummary::
    :toctree: generated/
 
-   DataArray
+   DataArray.__init__
 
 Attributes and underlying data
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -175,9 +176,8 @@ Selecting
    DataArray.reindex
    DataArray.reindex_like
    DataArray.rename
-   DataArray.select_vars
-   DataArray.drop_vars
    DataArray.squeeze
+   DataArray.reset_coords
 
 Group operations
 ~~~~~~~~~~~~~~~~

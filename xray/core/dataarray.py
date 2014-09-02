@@ -537,9 +537,8 @@ class DataArray(AbstractArray):
         DataArray.reindex_like
         align
         """
-        ds = self.select_vars()._dataset
-        reindexed_ds = ds.reindex(copy=copy, **indexers)
-        return reindexed_ds[self.name]
+        ds = self._dataset.reindex(copy=copy, **indexers)
+        return ds[self.name]
 
     def rename(self, new_name_or_name_dict):
         """Returns a new DataArray with renamed variables.
@@ -569,6 +568,9 @@ class DataArray(AbstractArray):
         --------
         Dataset.select_vars
         """
+        warnings.warn('select_vars has been deprecated; use '
+                      'reset_coords(drop=True) instead',
+                      FutureWarning, stacklevel=2)
         names = names + (self.name,)
         ds = self._dataset.select_vars(*names)
         return ds[self.name]
@@ -576,22 +578,12 @@ class DataArray(AbstractArray):
     select = utils.function_alias(select_vars, 'select')
 
     def drop_vars(self, *names):
-        """Returns a new DataArray without the named variables.
-
-        See Also
-        --------
-        Dataset.drop_vars
+        """Deprecated; use reset_coords(names, drop=True) instead
         """
-        if self.name in names:
-            raise ValueError('cannot drop the name of a DataArray with '
-                             'drop_vars. Use the `drop_vars` method of '
-                             'the dataset instead.')
-        if any(name in self.dims for name in names):
-            raise ValueError('cannot drop a coordinate variable from a '
-                             'DataArray. Use the `drop_vars` method of '
-                             'the dataset instead.')
-        ds = self._dataset.drop_vars(*names)
-        return ds[self.name]
+        warnings.warn('DataArray.drop_vars has been deprecated; use '
+                      'reset_coords(names, drop=True) instead',
+                      FutureWarning, stacklevel=2)
+        return self.reset_coords(names, drop=True)
 
     unselect = utils.function_alias(drop_vars, 'unselect')
 

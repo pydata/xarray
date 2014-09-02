@@ -185,7 +185,8 @@ class TestDataArray(TestCase):
 
         series = pd.Series(data[0], index=pd.Index([-1, -2], name='y'))
         actual = DataArray(series)
-        self.assertDataArrayEqual(expected[0].drop_vars('x'), actual)
+        self.assertDataArrayEqual(expected[0].reset_coords('x', drop=True),
+                                  actual)
 
         panel = pd.Panel({0: frame})
         actual = DataArray(panel)
@@ -372,9 +373,12 @@ class TestDataArray(TestCase):
 
         with self.assertRaisesRegexp(ValueError, 'cannot reset coord'):
             data.reset_coords(inplace=True)
-
         with self.assertRaises(KeyError):
             data.reset_coords('foo', drop=True)
+        with self.assertRaisesRegexp(ValueError, 'cannot be found'):
+            data.reset_coords('not_found')
+        with self.assertRaisesRegexp(ValueError, 'cannot remove index'):
+            data.reset_coords('y')
 
     def test_reindex(self):
         foo = self.dv
@@ -551,12 +555,6 @@ class TestDataArray(TestCase):
         vm = self.va.mean(keep_attrs=True)
         self.assertEqual(len(vm.attrs), len(self.attrs))
         self.assertEqual(vm.attrs, self.attrs)
-
-    def test_drop_vars(self):
-        with self.assertRaisesRegexp(ValueError, 'cannot drop the name'):
-            self.dv.drop_vars('foo')
-        with self.assertRaisesRegexp(ValueError, 'cannot drop a coordinate'):
-            self.dv.drop_vars('y')
 
     def test_groupby_iter(self):
         for ((act_x, act_dv), (exp_x, exp_ds)) in \
