@@ -1,11 +1,11 @@
-from collections import OrderedDict
 from datetime import datetime
 import itertools
 
 import numpy as np
 import pandas as pd
 
-from .pycompat import iteritems, itervalues, unicode_type, bytes_type
+from .pycompat import (OrderedDict, iteritems, itervalues, unicode_type,
+                       bytes_type)
 
 
 def wrap_indent(text, start='', length=None):
