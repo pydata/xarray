@@ -186,16 +186,18 @@ class TestDataset(TestCase):
     def test_coords_properties(self):
         data = Dataset({'x': ('x', [-1, -2]),
                         'y': ('y', [0, 1, 2]),
-                        'foo': (['x', 'y'], np.random.randn(2, 3))})
+                        'foo': (['x', 'y'], np.random.randn(2, 3))},
+                       {'a': ('x', [4, 5]), 'b': -10})
 
-        self.assertEquals(2, len(data.coords))
+        self.assertEqual(4, len(data.coords))
 
-        self.assertEquals(set(['x', 'y']), set(data.coords))
+        self.assertItemsEqual(['x', 'y', 'a', 'b'], list(data.coords))
 
         self.assertVariableIdentical(data.coords['x'], data['x'].variable)
         self.assertVariableIdentical(data.coords['y'], data['y'].variable)
 
         self.assertIn('x', data.coords)
+        self.assertIn('a', data.coords)
         self.assertNotIn(0, data.coords)
         self.assertNotIn('foo', data.coords)
 
@@ -207,14 +209,20 @@ class TestDataset(TestCase):
         expected = dedent("""\
         Index Coordinates:
             x (x) int64 -1 -2
-            y (y) int64 0 1 2""")
+            y (y) int64 0 1 2
+        Other Coordinates:
+            a (x) int64 4 5
+            b int64 -10""")
         actual = repr(data.coords)
-        self.assertEquals(expected, actual)
+        self.assertEqual(expected, actual)
+
+        self.assertEqual({'x': 2, 'y': 3}, data.coords.dims)
 
     def test_coords_modify(self):
         data = Dataset({'x': ('x', [-1, -2]),
                         'y': ('y', [0, 1, 2]),
-                        'foo': (['x', 'y'], np.random.randn(2, 3))})
+                        'foo': (['x', 'y'], np.random.randn(2, 3))},
+                       {'a': ('x', [4, 5]), 'b': -10})
 
         actual = data.copy(deep=True)
         actual.coords['x'] = ('x', ['a', 'b'])
@@ -226,6 +234,17 @@ class TestDataset(TestCase):
 
         with self.assertRaisesRegexp(ValueError, 'conflicting sizes'):
             data.coords['x'] = ('x', [-1])
+
+        actual = data.copy()
+        del actual.coords['b']
+        expected = data.reset_coords('b', drop=True)
+        self.assertDatasetIdentical(expected, actual)
+
+        with self.assertRaises(KeyError):
+            del data.coords['not_found']
+
+        with self.assertRaises(KeyError):
+            del data.coords['foo']
 
     def test_coords_set(self):
         one_coord = Dataset({'x': ('x', [0]),
@@ -268,6 +287,33 @@ class TestDataset(TestCase):
         expected = all_coords.drop_vars('zzz')
         self.assertDatasetIdentical(expected, actual)
         expected = two_coords.drop_vars('zzz')
+        self.assertDatasetIdentical(expected, actual)
+
+    def test_coords_to_dataset(self):
+        orig = Dataset({'foo': ('y', [-1, 0, 1])}, {'x': 10, 'y': [2, 3, 4]})
+        expected = Dataset(coords={'x': 10, 'y': [2, 3, 4]})
+        actual = orig.coords.to_dataset()
+        self.assertDatasetIdentical(expected, actual)
+
+    def test_coords_merge(self):
+        orig_coords = Dataset(coords={'a': ('x', [1, 2])}).coords
+        other_coords = Dataset(coords={'b': ('x', ['a', 'b'])}).coords
+        expected = Dataset(coords={'a': ('x', [1, 2]),
+                                   'b': ('x', ['a', 'b'])})
+        actual = orig_coords.merge(other_coords)
+        self.assertDatasetIdentical(expected, actual)
+        actual = other_coords.merge(orig_coords)
+        self.assertDatasetIdentical(expected, actual)
+
+        other_coords = Dataset(coords={'x': ('x', ['a', 'b'])}).coords
+        with self.assertRaisesRegexp(ValueError, 'not aligned'):
+            orig_coords.merge(other_coords)
+
+        other_coords = Dataset(coords={'a': ('x', [8, 9])}).coords
+        expected = Dataset(coords={'x': range(2)})
+        actual = orig_coords.merge(other_coords)
+        self.assertDatasetIdentical(expected, actual)
+        actual = other_coords.merge(orig_coords)
         self.assertDatasetIdentical(expected, actual)
 
     def test_equals_and_identical(self):

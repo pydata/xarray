@@ -40,6 +40,8 @@ class AbstractCoordinates(Mapping):
     def __delitem__(self, key):
         if key in self:
             del self._dataset[key]
+        else:
+            raise KeyError(key)
 
     def __repr__(self):
         return formatting.coords_repr(self)
@@ -51,11 +53,7 @@ class AbstractCoordinates(Mapping):
     def to_dataset(self):
         """Convert these coordinates into a new Dataset
         """
-        ds = self._dataset.copy()
-        for k in self._dataset._variables:
-            if k not in self._names:
-                del ds._variables[k]
-        return ds
+        return self._dataset._copy_listed(self._names)
 
     def to_index(self):
         """Convert all index coordinates into a :py:class:`pandas.MultiIndex`
@@ -75,10 +73,10 @@ class AbstractCoordinates(Mapping):
                 in_other_dims = k in other.dims
                 if in_self_dims and in_other_dims:
                     raise ValueError('index %r not aligned' % k)
-                if in_self_dims:
-                    other_conflicts.add(k)
-                elif in_other_dims:
+                if not in_self_dims:
                     self_conflicts.add(k)
+                elif not in_other_dims:
+                    other_conflicts.add(k)
         return self_conflicts, other_conflicts
 
     @contextmanager
@@ -117,7 +115,7 @@ class AbstractCoordinates(Mapping):
         ds = self.to_dataset()
         if other is not None:
             conflicts = self._merge_validate(other)
-            _coord_merge_finalize(ds, other, *conflicts)
+            _coord_merge_finalize(ds.coords, other, *conflicts)
         return ds
 
 
@@ -134,12 +132,6 @@ class DatasetCoordinates(AbstractCoordinates):
     def __setitem__(self, key, value):
         self._dataset[key] = value
         self._names.add(key)
-
-
-def _assert_coordinates_same_size(orig, new):
-    if not new.size == orig.size:
-        raise ValueError('new coordinate has size %s but the existing '
-                         'coordinate has size %s' % (new.size, orig.size))
 
 
 class DataArrayCoordinates(AbstractCoordinates):
