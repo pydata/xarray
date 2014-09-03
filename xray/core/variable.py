@@ -12,7 +12,7 @@ from .pycompat import basestring, OrderedDict, zip
 import xray # only for Dataset and DataArray
 
 
-def as_variable(obj, strict=True):
+def as_variable(obj, key=None, strict=True):
     """Convert an object into an Variable
 
     - If the object is already an `Variable`, return it.
@@ -31,20 +31,21 @@ def as_variable(obj, strict=True):
     if not isinstance(obj, (Variable, xray.DataArray)):
         if hasattr(obj, 'dims') and hasattr(obj, 'values'):
             obj = Variable(obj.dims, obj.values,
-                           getattr(obj, 'attributes', None),
+                           getattr(obj, 'attrs', None),
                            getattr(obj, 'encoding', None))
-        else:
-            if isinstance(obj, np.ndarray):
-                raise TypeError('cannot convert numpy.ndarray objects into '
-                                'Variable objects without supplying '
-                                'dimensions')
-            if not isinstance(obj, tuple):
-                raise TypeError('can only convert tuples into parameters for '
-                                'xray.Variable parameters')
+        elif isinstance(obj, tuple):
             try:
                 obj = Variable(*obj)
             except TypeError:
                 raise TypeError('cannot convert argument into an Variable')
+        elif np.isscalar(obj):
+            obj = Variable([], obj)
+        elif getattr(obj, 'name', None) is not None:
+            obj = Variable(obj.name, obj)
+        elif key is not None:
+            obj = Variable(key, obj)
+        else:
+            raise TypeError('cannot infer Variable dimensions')
     return obj
 
 
@@ -74,14 +75,14 @@ def _as_compatible_data(data):
         # note: np.datetime64 is ndarray-like
         data = np.datetime64(data, 'ns')
     elif not isinstance(data, pd.Index):
-        try:
-            # we don't want nested self-described arrays
-            # use try/except instead of hasattr to only calculate values once
-            data = data.values
-        except AttributeError:
-            pass
+        # we don't want nested self-described arrays
+        data = getattr(data, 'values', data)
 
-    if isinstance(data, pd.Index):
+    if isinstance(data, pd.MultiIndex):
+        raise NotImplementedError(
+            'no support yet for using a pandas.MultiIndex in an '
+            'xray.Coordinate')
+    elif isinstance(data, pd.Index):
         # check pd.Index first since it's (currently) an ndarray subclass
         data = PandasIndexAdapter(data)
     elif isinstance(data, np.ndarray):
@@ -189,6 +190,20 @@ class Variable(common.AbstractArray):
     which describe a single Array. A single Variable object is not fully
     described outside the context of its parent Dataset (if you want such a
     fully described object, use a DataArray instead).
+
+    The main functional difference between Variables and numpy arrays is that
+    numerical operations on Variables implement array broadcasting by dimension
+    name. For example, adding an Variable with dimensions `('time',)` to
+    another Variable with dimensions `('space',)` results in a new Variable
+    with dimensions `('time', 'space')`. Furthermore, numpy reduce operations
+    like ``mean`` or ``sum`` are overwritten to take a "dimension" argument
+    instead of an "axis".
+
+    Variables are light-weight objects used as the building block for datasets.
+    They are more primitive objects, so operations with them provide marginally
+    higher performance than using DataArrays. However, manipulating data in the
+    form of a Dataset or DataArray should almost always be preferred, because
+    they can use more complete metadata in context of coordinate labels.
     """
     def __init__(self, dims, data, attrs=None, encoding=None):
         """
@@ -609,8 +624,7 @@ class Variable(common.AbstractArray):
                                      '%s' % (dim, i, length))
 
         # initialize the stacked variable with empty data
-        from . import groupby
-        first_var, variables = groupby.peek_at(variables)
+        first_var, variables = utils.peek_at(variables)
         if dim in first_var.dims:
             axis = first_var.get_axis_num(dim)
             shape = tuple(length if n == axis else s
@@ -732,11 +746,6 @@ class Coordinate(Variable):
     _cache_data_class = PandasIndexAdapter
 
     def __init__(self, name, data, attrs=None, encoding=None):
-        if isinstance(data, pd.MultiIndex):
-            raise NotImplementedError(
-                'no support yet for using a pandas.MultiIndex in an '
-                'xray.Coordinate')
-
         super(Coordinate, self).__init__(name, data, attrs, encoding)
         if self.ndim != 1:
             raise ValueError('%s objects must be 1-dimensional' %

@@ -14,11 +14,11 @@ def align(*objects, **kwargs):
     """align(*objects, join='inner', copy=True)
 
     Given any number of Dataset and/or DataArray objects, returns new
-    objects with aligned coordinates.
+    objects with aligned indexes.
 
     Array from the aligned objects are suitable as input to mathematical
     operators, because along each dimension they are indexed by the same
-    coordinates.
+    indexes.
 
     Missing values (if ``join != 'inner'``) are filled with NaN.
 
@@ -27,12 +27,12 @@ def align(*objects, **kwargs):
     *objects : Dataset or DataArray
         Objects to align.
     join : {'outer', 'inner', 'left', 'right'}, optional
-        Method for joining the coordinates of the passed objects along each
+        Method for joining the indexes of the passed objects along each
         dimension:
-         - 'outer': use the union of object coordinates
-         - 'outer': use the intersection of object coordinates
-         - 'left': use coordinates from the first object with each dimension
-         - 'right': use coordinates from the last object with each dimension
+         - 'outer': use the union of object indexes
+         - 'outer': use the intersection of object indexes
+         - 'left': use indexes from the first object with each dimension
+         - 'right': use indexes from the last object with each dimension
     copy : bool, optional
         If `copy=True`, the returned objects contain all new variables. If
         `copy=False` and no reindexing is required then the aligned objects
@@ -43,15 +43,6 @@ def align(*objects, **kwargs):
     aligned : same as *objects
         Tuple of objects with aligned coordinates.
     """
-    # TODO: automatically align when doing math with dataset arrays?
-    # TODO: change this to default to join='outer' like pandas?
-    if 'join' not in kwargs:
-        warnings.warn('using align without setting explicitly setting the '
-                      "'join' keyword argument. In future versions of xray, "
-                      "the default will likely change from join='inner' to "
-                      "join='outer', to match pandas.",
-                      FutureWarning, stacklevel=2)
-
     join = kwargs.pop('join', 'inner')
     copy = kwargs.pop('copy', True)
 
@@ -66,8 +57,8 @@ def align(*objects, **kwargs):
 
     all_indexes = defaultdict(list)
     for obj in objects:
-        for k, v in iteritems(obj.coords):
-            all_indexes[k].append(v.to_index())
+        for k, v in iteritems(obj.indexes):
+            all_indexes[k].append(v)
 
     # Exclude dimensions with all equal indices to avoid unnecessary reindexing
     # work.
@@ -100,15 +91,16 @@ def reindex_variables(variables, indexes, indexers, copy=True):
     Returns
     -------
     reindexed : OrderedDict
-        Another dataset, with this dataset's data but replaced coordinates.
+        Another dict, with the items in variables but replaced indexes.
     """
     # build up indexers for assignment along each index
     to_indexers = {}
     from_indexers = {}
-    for name, coord in iteritems(indexes):
+    for name, index in iteritems(indexes):
+        index = utils.safe_cast_to_index(index)
         if name in indexers:
             target = utils.safe_cast_to_index(indexers[name])
-            indexer = coord.get_indexer(target)
+            indexer = index.get_indexer(target)
 
             # Note pandas uses negative values from get_indexer to signify
             # values that are missing in the index
@@ -121,7 +113,7 @@ def reindex_variables(variables, indexes, indexers, copy=True):
                 to_indexers[name] = slice(None)
 
             from_indexers[name] = indexer[to_indexers[name]]
-            if np.array_equal(from_indexers[name], np.arange(coord.size)):
+            if np.array_equal(from_indexers[name], np.arange(index.size)):
                 # If the indexer is equal to the original index, use a full
                 # slice object to speed up selection and so we can avoid
                 # unnecessary copies
@@ -185,3 +177,57 @@ def reindex_variables(variables, indexes, indexers, copy=True):
         reindexed[name] = new_var
     return reindexed
 
+
+def concat(objs, dim='concat_dim', indexers=None, mode='different',
+           concat_over=None, compat='equals'):
+    """Concatenate xray objects along a new or existing dimension.
+
+    Parameters
+    ----------
+    objs : sequence of Dataset and DataArray objects
+        xray objects to concatenate together. Each object is expected to
+        consist of variables and coordinates with matching shapes except for
+        along the concatenated dimension.
+    dim : str or DataArray or Index, optional
+        Name of the dimension to concatenate along. This can either be a new
+        dimension name, in which case it is added along axis=0, or an existing
+        dimension name, in which case the location of the dimension is
+        unchanged. If dimension is provided as a DataArray or Index, its name
+        is used as the dimension to concatenate along and the values are added
+        as a coordinate.
+    indexers : None or iterable of indexers, optional
+        Iterable of indexers of the same length as datasets which
+        specifies how to assign variables from each dataset along the given
+        dimension. If not supplied, indexers is inferred from the length of
+        each variable along the dimension, and the variables are stacked in
+        the given order.
+    mode : {'minimal', 'different', 'all'}, optional
+        Decides which variables are concatenated.  Choices are 'minimal'
+        in which only variables in which dimension already appears are
+        included, 'different' in which all variables which are not equal
+        (ignoring attributes) across all datasets are concatenated (as well
+        as all for which dimension already appears), and 'all' for which all
+        variables are concatenated.
+    concat_over : None or str or iterable of str, optional
+        Names of additional variables to concatenate, in which the provided
+        parameter ``dim`` does not already appear as a dimension.
+    compat : {'equals', 'identical'}, optional
+        String indicating how to compare non-concatenated variables and
+        dataset global attributes for potential conflicts. 'equals' means
+        that all variable values and dimensions must be the same;
+        'identical' means that variable attributes and global attributes
+        must also be equal.
+
+    Returns
+    -------
+    concatenated : type of objs
+    """
+    # TODO: add join and ignore_index arguments copied from pandas.concat
+    # TODO: support concatenating scaler coordinates even if the concatenated
+    # dimension already exists
+    try:
+        first_obj, objs = utils.peek_at(objs)
+    except StopIteration:
+        raise ValueError('must supply at least one object to concatenate')
+    cls = type(first_obj)
+    return cls._concat(objs, dim, indexers, mode, concat_over, compat)

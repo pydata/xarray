@@ -1,6 +1,22 @@
 What's New
 ==========
 
+v0.3.0 (in development)
+-----------------------
+
+The major new feature for this release are revamped "coordinates", which can
+now refer to arrays that are not used to index a dimension. Coordinates are
+intended to allow for keeping track of arrays of metadata that describe the
+grid on which the points in "variable" arrays lie. They are preserved (when
+unambiguous) even though mathematical operations.
+
+- ``Dataset.select_vars`` deprecated: index a ``Dataset`` with a list of variables
+  instead.
+- ``DataArray.select_vars`` and ``DataArray.drop_vars`` deprecated: use
+  :py:meth:`~xray.DataArray.reset_coords` instead.
+- ``Dataset.__eq__`` and ``Dataset.__ne__`` now are now undefined, because in
+  a future version of xray we intend to make the operations element-wise.
+
 v0.2.0 (14 August 2014)
 -----------------------
 

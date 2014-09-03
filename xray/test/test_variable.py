@@ -392,12 +392,17 @@ class TestVariable(TestCase, VariableSubclassTestCases):
         xarray_tuple = (expected.dims, expected.values)
         self.assertVariableIdentical(expected, as_variable(xarray_tuple))
 
-        with self.assertRaisesRegexp(TypeError, 'cannot convert numpy'):
-            as_variable(data)
-        with self.assertRaisesRegexp(TypeError, 'can only convert tuples'):
-            as_variable(list(data))
         with self.assertRaisesRegexp(TypeError, 'cannot convert arg'):
             as_variable(tuple(data))
+        with self.assertRaisesRegexp(TypeError, 'cannot infer .+ dimensions'):
+            as_variable(data)
+
+        actual = as_variable(data, key='x')
+        self.assertVariableIdentical(expected, actual)
+
+        actual = as_variable(0)
+        expected = Variable([], 0)
+        self.assertVariableIdentical(expected, actual)
 
     def test_repr(self):
         v = Variable(['time', 'x'], [[1, 2, 3], [4, 5, 6]], {'foo': 'bar'})

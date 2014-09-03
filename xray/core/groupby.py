@@ -1,10 +1,10 @@
-import itertools
-
 import numpy as np
 
+from .alignment import concat
 from .common import ImplementsArrayReduce, ImplementsDatasetReduce
 from .ops import inject_reduce_methods
 from .pycompat import zip
+from .utils import peek_at
 from .variable import Variable, Coordinate
 
 
@@ -29,15 +29,6 @@ def unique_value_groups(ar):
     for n, g in enumerate(inverse):
         groups[g].append(n)
     return values, groups
-
-
-def peek_at(iterable):
-    """Returns the first value from iterable, as well as a new iterable with
-    the same content as the original iterable
-    """
-    gen = iter(iterable)
-    peek = next(gen)
-    return peek, itertools.chain([peek], gen)
 
 
 class GroupBy(object):
@@ -137,10 +128,6 @@ class GroupBy(object):
             indexers = np.arange(self.unique_coord.size)
         return concat_dim, indexers
 
-    @property
-    def _combine(self):
-        return type(self.obj).concat
-
 
 class ArrayGroupBy(GroupBy, ImplementsArrayReduce):
     """GroupBy object specialized to grouping DataArray objects
@@ -167,17 +154,17 @@ class ArrayGroupBy(GroupBy, ImplementsArrayReduce):
             data = array.values[tuple(indexer)]
             yield Variable(dims, data)
 
-    def _combine_shortcut(self, applied, concat_dim, indexers):
+    def _concat_shortcut(self, applied, concat_dim, indexers):
         stacked = Variable.concat(
             applied, concat_dim, indexers, shortcut=True)
         stacked.attrs.update(self.obj.attrs)
 
         name = self.obj.name
-        ds = self.obj.dataset.drop_vars(name)
+        ds = self.obj._dataset.drop_vars(name)
         ds[concat_dim.name] = concat_dim
         # remove extraneous dimensions
-        for dim in self.obj.dims:
-            if dim not in stacked.dims and dim in ds:
+        for dim in ds.dims:
+            if dim not in stacked.dims:
                 del ds[dim]
         ds[name] = stacked
         return ds[name]
@@ -217,15 +204,15 @@ class ArrayGroupBy(GroupBy, ImplementsArrayReduce):
         shortcut : bool, optional
             Whether or not to shortcut evaluation under the assumptions that:
             (1) The action of `func` does not depend on any of the array
-                metadata (attributes, indices or other contained arrays) but
-                only on the data and dimensions.
+                metadata (attributes or coordinates) but only on the data and
+                dimensions.
             (2) The action of `func` creates arrays with homogeneous metadata,
                 that is, with the same dimensions and attributes.
             If these conditions are satisfied `shortcut` provides significant
             speedup. This should be the case for many common groupby operations
             (e.g., applying numpy ufuncs).
         **kwargs
-            Used to call `func(ar, **kwargs)` for each array `ar.
+            Used to call `func(ar, **kwargs)` for each array `ar`.
 
         Returns
         -------
@@ -242,12 +229,13 @@ class ArrayGroupBy(GroupBy, ImplementsArrayReduce):
         applied_example, applied = peek_at(applied)
         concat_dim, indexers = self._infer_concat_args(applied_example)
         if shortcut:
-            combined = self._combine_shortcut(applied, concat_dim, indexers)
+            combined = self._concat_shortcut(applied, concat_dim, indexers)
         else:
-            combined = self._combine(applied, concat_dim, indexers)
+            combined = concat(applied, concat_dim, indexers=indexers)
 
-        reordered = self._restore_dim_order(combined, concat_dim)
-        return reordered
+        if type(combined) is type(self.obj):
+            combined = self._restore_dim_order(combined, concat_dim)
+        return combined
 
     def reduce(self, func, dimension=None, axis=None, keep_attrs=False,
                shortcut=True, **kwargs):
@@ -316,7 +304,7 @@ class DatasetGroupBy(GroupBy, ImplementsDatasetReduce):
         """
         applied = [func(ds, **kwargs) for ds in self._iter_grouped()]
         concat_dim, indexers = self._infer_concat_args(applied[0])
-        combined = self._combine(applied, concat_dim, indexers)
+        combined = concat(applied, concat_dim, indexers=indexers)
         return combined
 
     def reduce(self, func, dimension=None, keep_attrs=False, **kwargs):

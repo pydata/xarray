@@ -11,7 +11,7 @@ Creating a dataset
 .. autosummary::
    :toctree: generated/
 
-   Dataset
+   Dataset.__init__
    open_dataset
 
 Attributes and underlying data
@@ -39,7 +39,6 @@ and values given by ``DataArray`` objects.
    Dataset.__delitem__
    Dataset.update
    Dataset.merge
-   Dataset.concat
    Dataset.copy
    Dataset.load_data
    Dataset.iteritems
@@ -66,10 +65,11 @@ Selecting
    Dataset.reindex
    Dataset.reindex_like
    Dataset.rename
-   Dataset.select_vars
    Dataset.drop_vars
    Dataset.squeeze
    Dataset.groupby
+   Dataset.set_coords
+   Dataset.reset_coords
 
 Computations
 ~~~~~~~~~~~~
@@ -135,7 +135,7 @@ DataArray
 .. autosummary::
    :toctree: generated/
 
-   DataArray
+   DataArray.__init__
 
 Attributes and underlying data
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -176,9 +176,8 @@ Selecting
    DataArray.reindex
    DataArray.reindex_like
    DataArray.rename
-   DataArray.select_vars
-   DataArray.drop_vars
    DataArray.squeeze
+   DataArray.reset_coords
 
 Group operations
 ~~~~~~~~~~~~~~~~
@@ -187,7 +186,6 @@ Group operations
    :toctree: generated/
 
    DataArray.groupby
-   DataArray.concat
 
 Computations
 ~~~~~~~~~~~~
@@ -244,3 +242,4 @@ Top-level functions
    :toctree: generated/
 
    align
+   concat

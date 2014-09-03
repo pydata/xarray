@@ -4,7 +4,8 @@ import itertools
 import numpy as np
 import pandas as pd
 
-from .pycompat import iteritems, itervalues, unicode_type, bytes_type
+from .pycompat import (OrderedDict, iteritems, itervalues, unicode_type,
+                       bytes_type)
 
 
 def wrap_indent(text, start='', length=None):
@@ -84,27 +85,59 @@ def summarize_var(name, var, first_col_width, max_width=100, show_values=True):
     dims_str = '(%s) ' % ', '.join(map(str, var.dims)) if var.dims else ''
     front_str = first_col + dims_str + ('%s ' % var.dtype)
     if show_values:
-        # print '%s: showing values' % name
         values_str = format_array_flat(var, max_width - len(front_str))
     else:
         values_str = '...'
     return front_str + values_str
 
 
+def _not_remote(var):
+    """Helper function to identify if array is positively identifiable as
+    coming from a remote source.
+    """
+    source = var.encoding.get('source')
+    if source and source.startswith('http') and not var._in_memory:
+        return False
+    return True
+
+
+def _summarize_variables(variables, first_col_width, always_show_values):
+    return ([summarize_var(v.name, v, first_col_width,
+                           show_values=(always_show_values or _not_remote(v)))
+             for v in itervalues(variables)]
+            or ['    Empty'])
+
+
+def _summarize_coordinates(coords, first_col_width,
+                           always_show_values=False):
+    summary = ['Index Coordinates:']
+    index_coords = OrderedDict((k, coords[k]) for k in coords.dims)
+    summary.extend(_summarize_variables(index_coords, first_col_width,
+                                        always_show_values=True))
+
+    other_coords = OrderedDict((k, v) for k, v in iteritems(coords)
+                               if k not in coords.dims)
+    if other_coords:
+        summary.append('Other Coordinates:')
+        summary.extend(_summarize_variables(
+            other_coords, first_col_width,
+            always_show_values=always_show_values))
+    return summary
+
+
 def coords_repr(coords):
     col_width = (max(len(str(k)) for k in coords) if coords else 0) + 5
-    summary = ['Coordinates:']
-    summary.extend(summarize_var(k, v, col_width) for k, v in coords.items())
+    summary = _summarize_coordinates(coords, col_width)
     return '\n'.join(summary)
 
 
 def _summarize_attributes(data, indent='    '):
     if data.attrs:
-        attr_summary = '\n'.join('%s%s: %s' % (indent, k, v) for k, v
-                                 in iteritems(data.attrs))
+        attr_summaries = ['%s%s: %s' % (indent, k, v) for k, v
+                          in iteritems(data.attrs)]
     else:
-        attr_summary = indent + 'Empty'
-    return attr_summary
+        attr_summaries = [indent + 'Empty']
+    return attr_summaries
 
 
 def array_repr(arr):
@@ -115,20 +148,21 @@ def array_repr(arr):
         name_str = ''
     dim_summary = ', '.join('%s: %s' % (k, v) for k, v
                             in zip(arr.dims, arr.shape))
+
     summary = ['<xray.%s %s(%s)>'% (type(arr).__name__, name_str, dim_summary)]
+
     if arr.size < 1e5 or arr._in_memory:
         summary.append(repr(arr.values))
     else:
         summary.append('[%s values with dtype=%s]' % (arr.size, arr.dtype))
+
     if hasattr(arr, 'coords'):
         if arr.coords:
             summary.append(repr(arr.coords))
-        other_vars = [k for k in arr.dataset
-                      if k not in arr.coords and k != arr.name]
-        if other_vars:
-            summary.append('Linked dataset variables:')
-            summary.append('    ' + ', '.join(other_vars))
-    summary.append('Attributes:\n%s' % _summarize_attributes(arr))
+
+    summary.append('Attributes:')
+    summary.extend(_summarize_attributes(arr))
+
     return '\n'.join(summary)
 
 
@@ -144,28 +178,24 @@ def pretty_print(x, numchars):
         return s + ' ' * (numchars - len(s))
 
 
+
 def dataset_repr(ds, preview_all_values=False):
     summary = ['<xray.%s>' % type(ds).__name__]
 
     max_name_length = max(len(str(k)) for k in ds.variables) if ds else 0
-    first_col_width = max(5 + max_name_length, 16)
+    first_col_width = max(6 + max_name_length, 13)
     coords_str = pretty_print('Dimensions:', first_col_width)
     all_dim_strings = ['%s: %s' % (k, v) for k, v in iteritems(ds.dims)]
     summary.append('%s(%s)' % (coords_str, ', '.join(all_dim_strings)))
 
-    def summarize_variables(variables, always_show_values):
-        return ([summarize_var(v.name, v, first_col_width,
-                               show_values=(always_show_values or v._in_memory))
-                 for v in itervalues(variables)]
-                or ['    Empty'])
-
-    summary.append('Coordinates:')
-    summary.extend(summarize_variables(ds.coords, always_show_values=True))
+    summary.extend(_summarize_coordinates(ds.coords, first_col_width,
+                                          preview_all_values))
 
     summary.append('Noncoordinates:')
-    summary.extend(summarize_variables(
-        ds.noncoords, always_show_values=preview_all_values))
+    summary.extend(_summarize_variables(ds.noncoords, first_col_width,
+                                        always_show_values=preview_all_values))
 
-    summary.append('Attributes:\n%s' % _summarize_attributes(ds, '    '))
+    summary.append('Attributes:')
+    summary.extend(_summarize_attributes(ds))
 
     return '\n'.join(summary)

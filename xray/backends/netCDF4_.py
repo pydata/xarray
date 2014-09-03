@@ -91,9 +91,9 @@ class NetCDF4DataStore(AbstractWritableDataStore):
         ds = nc4.Dataset(filename, mode=mode, clobber=clobber,
                          diskless=diskless, persist=persist,
                          format=format)
-        # support use of groups
         self.ds = _nc4_group(ds, group)
         self.format = format
+        self._filename = filename
 
     def open_store_variable(self, var):
         var.set_auto_maskandscale(False)
@@ -120,6 +120,8 @@ class NetCDF4DataStore(AbstractWritableDataStore):
         # encoding['endian'] = var.endian()
         encoding['least_significant_digit'] = \
             attributes.pop('least_significant_digit', None)
+        # save source so __repr__ can detect if it's local or not
+        encoding['source'] = self._filename
         return Variable(dimensions, data, attributes, encoding)
 
     @property

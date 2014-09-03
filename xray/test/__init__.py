@@ -88,6 +88,8 @@ class TestCase(unittest.TestCase):
         # checks each aspect of equality separately for easier debugging
         self.assertEqual(sorted(d1.variables, key=str),
                          sorted(d2.variables, key=str))
+        self.assertEqual(sorted(d1.coords, key=str),
+                         sorted(d2.coords, key=str))
         for k in d1:
             v1 = d1.variables[k]
             v2 = d2.variables[k]
@@ -97,12 +99,14 @@ class TestCase(unittest.TestCase):
         # this method is functionally equivalent to `assert d1.identical(d2)`,
         # but it checks each aspect of equality separately for easier debugging
         assert utils.dict_equiv(d1.attrs, d2.attrs), (d1.attrs, d2.attrs)
-        self.assertEqual(sorted(d1.variables, key=str),
-                         sorted(d2.variables, key=str))
+        self.assertEqual(sorted(d1.noncoords, key=str),
+                         sorted(d2.noncoords, key=str))
+        self.assertEqual(sorted(d1.coords, key=str),
+                         sorted(d2.coords, key=str))
         for k in d1:
             v1 = d1.variables[k]
             v2 = d2.variables[k]
-            assert v1.identical(v2), (v1, v2)
+            self.assertVariableIdentical(v1, v2)
 
     def assertDatasetAllClose(self, d1, d2, rtol=1e-05, atol=1e-08):
         self.assertEqual(sorted(d1.variables, key=str),
@@ -125,7 +129,7 @@ class TestCase(unittest.TestCase):
 
     def assertDataArrayIdentical(self, ar1, ar2):
         self.assertEqual(ar1.name, ar2.name)
-        self.assertDatasetIdentical(ar1.dataset, ar2.dataset)
+        self.assertDatasetIdentical(ar1.to_dataset(), ar2.to_dataset())
 
     def assertDataArrayAllClose(self, ar1, ar2, rtol=1e-05, atol=1e-08):
         self.assertVariableAllClose(ar1, ar2, rtol=rtol, atol=atol)

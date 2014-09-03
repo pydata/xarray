@@ -1,6 +1,7 @@
 """Internal utilties; not for external use
 """
 import functools
+import itertools
 import warnings
 from collections import Mapping, MutableMapping
 
@@ -108,6 +109,15 @@ def equivalent(first, second):
         return first is second or first == second
 
 
+def peek_at(iterable):
+    """Returns the first value from iterable, as well as a new iterable with
+    the same content as the original iterable
+    """
+    gen = iter(iterable)
+    peek = next(gen)
+    return peek, itertools.chain([peek], gen)
+
+
 def update_safety_check(first_dict, second_dict, compat=equivalent):
     """Check the safety of updating one dictionary with another.
 
@@ -148,6 +158,10 @@ def remove_incompatible_items(first_dict, second_dict, compat=equivalent):
         if (k not in second_dict
                 or (k in second_dict and not compat(v, second_dict[k]))):
             del first_dict[k]
+
+
+def is_dict_like(value):
+    return hasattr(value, '__getitem__') and hasattr(value, 'keys')
 
 
 def dict_equiv(first, second, compat=equivalent):
@@ -303,10 +317,15 @@ class ChainMap(MutableMapping, SingleSlotPickleMixin):
         raise NotImplementedError
 
     def __iter__(self):
-        raise NotImplementedError
+        seen = set()
+        for mapping in self.maps:
+            for item in mapping:
+                if item not in seen:
+                    yield item
+                    seen.add(item)
 
     def __len__(self):
-        raise NotImplementedError
+        raise len(iter(self))
 
 
 class NDArrayMixin(object):
