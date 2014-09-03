@@ -184,10 +184,12 @@ class TestDataset(TestCase):
         self.assertTrue('y' not in a.dims)
 
     def test_coords_properties(self):
+        # use an OrderedDict for coordinates to ensure order across python
+        # versions
         data = Dataset({'x': ('x', [-1, -2]),
                         'y': ('y', [0, 1, 2]),
                         'foo': (['x', 'y'], np.random.randn(2, 3))},
-                       {'a': ('x', [4, 5]), 'b': -10})
+                       OrderedDict([('a', ('x', [4, 5])), ('b', -10)]))
 
         self.assertEqual(4, len(data.coords))
 

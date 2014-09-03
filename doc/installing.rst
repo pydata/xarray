@@ -3,13 +3,13 @@ Installing xray
 
 Required dependencies:
 
-- Python 2.6, 2.7 or 3.3
+- Python 2.6, 2.7, 3.3 or 3.4
 - `numpy <http://www.numpy.org/>`__ (1.7 or later)
 - `pandas <http://pandas.pydata.org/>`__ (0.13.1 or later)
 
 Optional dependencies:
 
-- `netCDF4-python <https://github.com/Unidata/netcdf4-python>`__
+- `netCDF4 <https://github.com/Unidata/netcdf4-python>`__ (recommended)
 - `pydap <http://www.pydap.org/>`__
 - `scipy <http://scipy.org/>`__
 
