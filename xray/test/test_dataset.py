@@ -318,6 +318,12 @@ class TestDataset(TestCase):
         actual = other_coords.merge(orig_coords)
         self.assertDatasetIdentical(expected, actual)
 
+        other_coords = Dataset(coords={'x': np.nan}).coords
+        actual = orig_coords.merge(other_coords)
+        self.assertDatasetIdentical(orig_coords.to_dataset(), actual)
+        actual = other_coords.merge(orig_coords)
+        self.assertDatasetIdentical(orig_coords.to_dataset(), actual)
+
     def test_equals_and_identical(self):
         data = create_test_data(seed=42)
         self.assertTrue(data.equals(data))

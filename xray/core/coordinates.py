@@ -8,10 +8,9 @@ from . import utils
 
 def _coord_merge_finalize(target, other, target_conflicts, other_conflicts):
     for k in target_conflicts:
-        if k in target:
-            del target[k]
+        del target[k]
     for k, v in iteritems(other):
-        if k not in target and k not in other_conflicts:
+        if k not in other_conflicts:
             target[k] = v.variable
 
 
