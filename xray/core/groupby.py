@@ -163,8 +163,8 @@ class ArrayGroupBy(GroupBy, ImplementsArrayReduce):
         ds = self.obj._dataset.drop_vars(name)
         ds[concat_dim.name] = concat_dim
         # remove extraneous dimensions
-        for dim in self.obj.dims:
-            if dim not in stacked.dims and dim in ds:
+        for dim in ds.dims:
+            if dim not in stacked.dims:
                 del ds[dim]
         ds[name] = stacked
         return ds[name]

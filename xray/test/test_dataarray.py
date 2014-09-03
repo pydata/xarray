@@ -362,6 +362,25 @@ class TestDataArray(TestCase):
         actual = repr(da.coords)
         self.assertEquals(expected, actual)
 
+    def test_coord_coords(self):
+        orig = DataArray([10, 20],
+                         {'x': [1, 2], 'x2': ('x', ['a', 'b']), 'z': 4},
+                         dims='x')
+
+        actual = orig.coords['x']
+        expected = DataArray([1, 2], {'z': 4, 'x2': ('x', ['a', 'b'])},
+                             dims='x', name='x')
+        self.assertDataArrayIdentical(expected, actual)
+
+        del actual.coords['x2']
+        self.assertDataArrayIdentical(
+            expected.reset_coords('x2', drop=True), actual)
+
+        actual.coords['x3'] = ('x', ['a', 'b'])
+        expected = DataArray([1, 2], {'z': 4, 'x3': ('x', ['a', 'b'])},
+                             dims='x', name='x')
+        self.assertDataArrayIdentical(expected, actual)
+
     def test_reset_coords(self):
         data = DataArray(np.zeros((3, 4)),
                          {'bar': ('x', ['a', 'b', 'c']),
@@ -664,9 +683,8 @@ class TestDataArray(TestCase):
 
     def make_groupby_example_array(self):
         da = self.dv.copy()
-        agg_var = Variable(['y'], np.array(['a'] * 9 + ['c'] + ['b'] * 10))
-        da['abc'] = agg_var
-        da['y'] = 20 + 100 * da['y']
+        da.coords['abc'] = ('y', np.array(['a'] * 9 + ['c'] + ['b'] * 10))
+        da.coords['y'] = 20 + 100 * da['y']
         return da
 
     def test_groupby_properties(self):
