@@ -237,14 +237,6 @@ def _assert_compat_valid(compat):
                          "'identical'" % compat)
 
 
-def _item0_str(items):
-    """Key function for use in sorted on a list of variables.
-
-    This is useful because None is not comparable to strings in Python 3.
-    """
-    return str(items[0])
-
-
 def _assert_empty(args, msg='%s'):
     if args:
         raise ValueError(msg % args)
@@ -595,22 +587,21 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
     # mutable objects should not be hashable
     __hash__ = None
 
+    def _all_compat(self, other, compat_str):
+        """Helper function for equals and identical"""
+        # some stores (e.g., scipy) do not seem to preserve order, so don't
+        # require matching order for equality
+        compat = lambda x, y: getattr(x, compat_str)(y)
+        return (self._coord_names == other._coord_names
+                and utils.dict_equiv(self.variables, other.variables,
+                                     compat=compat))
+
     def equals(self, other):
         """Two Datasets are equal if they have the same variables and all
         variables are equal.
         """
-        # use equals as an alias for __eq__ to support a common interface with
-        # DataArray
         try:
-            # some stores (e.g., scipy) do not seem to preserve order, so don't
-            # require matching order for equality
-            return (len(self) == len(other)
-                    and all(k1 == k2 and v1.equals(v2)
-                            for (k1, v1), (k2, v2)
-                            in zip(sorted(self.variables.items(),
-                                          key=_item0_str),
-                                   sorted(other.variables.items(),
-                                          key=_item0_str))))
+            return self._all_compat(other, 'equals')
         except (TypeError, AttributeError):
             return False
 
@@ -631,13 +622,7 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
         """
         try:
             return (utils.dict_equiv(self.attrs, other.attrs)
-                    and len(self) == len(other)
-                    and all(k1 == k2 and v1.identical(v2)
-                            for (k1, v1), (k2, v2)
-                            in zip(sorted(self.variables.items(),
-                                          key=_item0_str),
-                                   sorted(other.variables.items(),
-                                          key=_item0_str))))
+                    and self._all_compat(other, 'identical'))
         except (TypeError, AttributeError):
             return False
 

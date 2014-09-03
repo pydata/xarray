@@ -345,6 +345,10 @@ class TestDataset(TestCase):
         self.assertTrue(data.equals(data))
         self.assertTrue(data.identical(data))
 
+        data2 = data.reset_coords()
+        self.assertFalse(data2.equals(data))
+        self.assertFalse(data2.identical(data))
+
     def test_attrs(self):
         data = create_test_data(seed=42)
         data.attrs = {'foobar': 'baz'}

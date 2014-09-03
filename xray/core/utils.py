@@ -181,12 +181,11 @@ def dict_equiv(first, second, compat=equivalent):
     equals : bool
         True if the dictionaries are equal
     """
-    k1 = sorted(first.keys())
-    k2 = sorted(second.keys())
-    if k1 != k2:
-        return False
-    for k in k1:
-        if not compat(first[k], second[k]):
+    for k in first:
+        if k not in second or not compat(first[k], second[k]):
+            return False
+    for k in second:
+        if k not in first:
             return False
     return True
 

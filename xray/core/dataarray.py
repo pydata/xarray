@@ -780,6 +780,12 @@ class DataArray(AbstractArray):
         ds = Dataset.from_dataframe(df)
         return ds[series.name]
 
+    def _all_compat(self, other, compat_str):
+        """Helper function for equals and identical"""
+        compat = lambda x, y: getattr(x.variable, compat_str)(y.variable)
+        return (utils.dict_equiv(self.coords, other.coords, compat=compat)
+                and compat(self, other))
+
     def equals(self, other):
         """True if two DataArrays have the same dimensions, coordinates and
         values; otherwise False.
@@ -791,12 +797,8 @@ class DataArray(AbstractArray):
         does element-wise comparisions (like numpy.ndarrays).
         """
         try:
-            return (all(k1 == k2 and v1.variable.equals(v2.variable)
-                        for (k1, v1), (k2, v2)
-                        in zip(self.coords.items(),
-                               other.coords.items()))
-                    and self.variable.equals(other.variable))
-        except AttributeError:
+            return self._all_compat(other, 'equals')
+        except (TypeError, AttributeError):
             return False
 
     def identical(self, other):
@@ -805,12 +807,8 @@ class DataArray(AbstractArray):
         """
         try:
             return (self.name == other.name
-                    and all(k1 == k2 and v1.variable.identical(v2.variable)
-                            for (k1, v1), (k2, v2)
-                            in zip(self.coords.items(),
-                                   other.coords.items()))
-                    and self.variable.identical(other.variable))
-        except AttributeError:
+                    and self._all_compat(other, 'identical'))
+        except (TypeError, AttributeError):
             return False
 
     def _result_name(self, other=None):

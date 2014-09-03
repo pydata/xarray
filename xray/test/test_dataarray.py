@@ -220,36 +220,49 @@ class TestDataArray(TestCase):
         self.assertDataArrayIdentical(expected, actual)
 
     def test_equals_and_identical(self):
-        da2 = self.dv.copy()
-        self.assertTrue(self.dv.equals(da2))
-        self.assertTrue(self.dv.identical(da2))
+        orig = DataArray(np.arange(5.0), {'a': 42}, dims='x')
 
-        da3 = self.dv.rename('baz')
-        self.assertTrue(self.dv.equals(da3))
-        self.assertFalse(self.dv.identical(da3))
+        expected = orig
+        actual = orig.copy()
+        self.assertTrue(expected.equals(actual))
+        self.assertTrue(expected.identical(actual))
 
-        da4 = self.dv.rename({'x': 'xxx'})
-        self.assertFalse(self.dv.equals(da4))
-        self.assertFalse(self.dv.identical(da4))
+        actual = expected.rename('baz')
+        self.assertTrue(expected.equals(actual))
+        self.assertFalse(expected.identical(actual))
 
-        da5 = self.dv.copy()
-        da5.attrs['foo'] = 'bar'
-        self.assertTrue(self.dv.equals(da5))
-        self.assertFalse(self.dv.identical(da5))
+        actual = expected.rename({'x': 'xxx'})
+        self.assertFalse(expected.equals(actual))
+        self.assertFalse(expected.identical(actual))
 
-        da6 = self.dv.copy()
-        da6['x'] = ('x', -np.arange(10))
-        self.assertFalse(self.dv.equals(da6))
-        self.assertFalse(self.dv.identical(da6))
+        actual = expected.copy()
+        actual.attrs['foo'] = 'bar'
+        self.assertTrue(expected.equals(actual))
+        self.assertFalse(expected.identical(actual))
 
-        da2[0, 0] = np.nan
-        self.dv[0, 0] = np.nan
-        self.assertTrue(self.dv.equals(da2))
-        self.assertTrue(self.dv.identical(da2))
+        actual = expected.copy()
+        actual['x'] = ('x', -np.arange(5))
+        self.assertFalse(expected.equals(actual))
+        self.assertFalse(expected.identical(actual))
 
-        da2[:] = np.nan
-        self.assertFalse(self.dv.equals(da2))
-        self.assertFalse(self.dv.identical(da2))
+        actual = expected.reset_coords(drop=True)
+        self.assertFalse(expected.equals(actual))
+        self.assertFalse(expected.identical(actual))
+
+        actual = orig.copy()
+        actual[0] = np.nan
+        expected = actual.copy()
+        self.assertTrue(expected.equals(actual))
+        self.assertTrue(expected.identical(actual))
+
+        actual[:] = np.nan
+        self.assertFalse(expected.equals(actual))
+        self.assertFalse(expected.identical(actual))
+
+        actual = expected.copy()
+        actual['a'] = 100000
+        self.assertFalse(expected.equals(actual))
+        self.assertFalse(expected.identical(actual))
 
     def test_getitem(self):
         # strings pull out dataarrays
