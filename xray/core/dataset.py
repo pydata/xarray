@@ -335,7 +335,8 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
 
         if check_coord_names:
             _assert_empty([k for k in self.noncoords if k in new_coord_names],
-                          'coordinates already exist as variables: %s')
+                          'coordinates with these names already exist as '
+                          'variables: %s')
 
         variables.update(new_variables)
         dims = _calculate_dims(variables)
@@ -986,11 +987,8 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
             dataset.
         """
         other = _DatasetLike(other)
-        new_variables, _ = _expand_variables(other._variables)
-
-        obj = self if inplace else self.copy()
-        obj._update_vars_and_coords(new_variables, other._coord_names,
-                                    needs_copy=inplace)
+        obj = self.merge(other, inplace=inplace,
+                         overwrite_vars=other._variables)
         obj.attrs.update(other.attrs)
         return obj
 
@@ -1042,11 +1040,20 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
             potential_conflicts = dict((k, v) for k, v in iteritems(self.variables)
                                        if k not in overwrite_vars)
 
+        new_variables, new_coord_names = _expand_variables(
+            other._variables, potential_conflicts, compat)
+        new_coord_names |= other._coord_names
+
+        _assert_empty([k for k in other._variables
+                       if k in potential_conflicts
+                       and k not in new_coord_names
+                       and k in self.coords],
+                      'variables with these names already exist as '
+                      'coordinates: %s')
+
         # update variables
-        new_variables, _ = _expand_variables(other._variables,
-                                             potential_conflicts, compat)
         obj = self if inplace else self.copy()
-        obj._update_vars_and_coords(new_variables, other._coord_names,
+        obj._update_vars_and_coords(new_variables, new_coord_names,
                                     needs_copy=inplace)
         return obj
 
@@ -1326,11 +1333,11 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
             concatenated[k] = variable.Variable.concat(
                 [ds[k] for ds in datasets], dim, indexers)
 
+        concatenated._coord_names.update(datasets[0].coords)
+
         if not isinstance(dim, basestring):
             # add dimension last to ensure that its in the final Dataset
             concatenated[dim_name] = dim
-
-        concatenated._coord_names.update(datasets[0].coords)
 
         return concatenated
 

@@ -251,14 +251,14 @@ class TestDataArray(TestCase):
         self.assertFalse(self.dv.equals(da2))
         self.assertFalse(self.dv.identical(da2))
 
-    def test_items(self):
+    def test_getitem(self):
         # strings pull out dataarrays
         self.assertDataArrayIdentical(self.dv, self.ds['foo'])
         x = self.dv['x']
         y = self.dv['y']
         self.assertDataArrayIdentical(self.ds['x'], x)
         self.assertDataArrayIdentical(self.ds['y'], y)
-        # integer indexing
+
         I = ReturnItem()
         for i in [I[:], I[...], I[x.values], I[x.variable], I[x], I[x, y],
                   I[x.values > -1], I[x.variable > -1], I[x > -1],
@@ -268,10 +268,39 @@ class TestDataArray(TestCase):
                   I[x.values[:3]], I[x.variable[:3]], I[x[:3]], I[x[:3], y[:4]],
                   I[x.values > 3], I[x.variable > 3], I[x > 3], I[x > 3, y > 3]]:
             self.assertVariableEqual(self.v[i], self.dv[i])
-        # make sure we keep scalar coords around
-        self.assertVariableEqual(self.dv[0, 0], self.dv.variable[0, 0])
-        self.assertIn('x', self.dv[0, 0].coords)
-        self.assertIn('y', self.dv[0, 0].coords)
+
+    def test_getitem_coords(self):
+        orig = DataArray([[10], [20]],
+                         {'x': [1, 2], 'y': [3], 'z': 4,
+                          'x2': ('x', ['a', 'b']),
+                          'y2': ('y', ['c']),
+                          'xy': (['y', 'x'], [['d', 'e']])},
+                         dims=['x', 'y'])
+
+        self.assertDataArrayIdentical(orig, orig[:])
+        self.assertDataArrayIdentical(orig, orig[:, :])
+        self.assertDataArrayIdentical(orig, orig[...])
+        self.assertDataArrayIdentical(orig, orig[:2, :1])
+        self.assertDataArrayIdentical(orig, orig[[0, 1], [0]])
+
+        actual = orig[0, 0]
+        expected = DataArray(
+            10, {'x': 1, 'y': 3, 'z': 4, 'x2': 'a', 'y2': 'c', 'xy': 'd'})
+        self.assertDataArrayIdentical(expected, actual)
+
+        actual = orig[0, :]
+        expected = DataArray(
+            [10], {'x': 1, 'y': [3], 'z': 4, 'x2': 'a', 'y2': ('y', ['c']),
+                   'xy': ('y', ['d'])},
+            dims='y')
+        self.assertDataArrayIdentical(expected, actual)
+
+        actual = orig[:, 0]
+        expected = DataArray(
+            [10, 20], {'x': [1, 2], 'y': 3, 'z': 4, 'x2': ('x', ['a', 'b']),
+                       'y2': 'c', 'xy': ('x', ['d', 'e'])},
+            dims='x')
+        self.assertDataArrayIdentical(expected, actual)
 
     def test_isel(self):
         self.assertDatasetIdentical(self.dv[0].to_dataset(), self.ds.isel(x=0))
@@ -444,8 +473,8 @@ class TestDataArray(TestCase):
         self.assertDataArrayEqual(a, a + 0 * a)
         self.assertDataArrayEqual(a, 0 * a + a)
         # test different indices
-        ds2 = self.ds.update({'x': ('x', 3 + np.arange(10))}, inplace=False)
-        b = ds2['foo']
+        b = a.copy()
+        b.coords['x'] = 3 + np.arange(10)
         with self.assertRaisesRegexp(ValueError, 'not aligned'):
             a + b
         with self.assertRaisesRegexp(ValueError, 'not aligned'):
@@ -453,74 +482,7 @@ class TestDataArray(TestCase):
         with self.assertRaisesRegexp(TypeError, 'datasets do not support'):
             a + a.to_dataset()
 
-    def test_dataset_math(self):
-        # verify that mathematical operators keep around the expected variables
-        # when doing math with dataset arrays from one or more aligned datasets
-        obs = Dataset({'tmin': ('x', np.arange(5)),
-                       'tmax': ('x', 10 + np.arange(5)),
-                       'x': ('x', 0.5 * np.arange(5))})
-
-        actual = 2 * obs['tmax']
-        expected = Dataset({'tmax2': ('x', 2 * (10 + np.arange(5))),
-                            'x': obs['x']})['tmax2']
-        self.assertDataArrayEqual(actual, expected)
-
-        actual = obs['tmax'] - obs['tmin']
-        expected = Dataset({'trange': ('x', 10 * np.ones(5)),
-                            'x': obs['x']})['trange']
-        self.assertDataArrayEqual(actual, expected)
-
-        sim = Dataset({'tmin': ('x', 1 + np.arange(5)),
-                       'tmax': ('x', 11 + np.arange(5)),
-                       'x': ('x', 0.5 * np.arange(5))})
-
-        actual = sim['tmin'] - obs['tmin']
-        expected = Dataset({'error': ('x', np.ones(5)),
-                            'x': obs['x']})['error']
-        self.assertDataArrayEqual(actual, expected)
-
-        # in place math shouldn't remove or conflict with other variables
-        actual = deepcopy(sim['tmin'])
-        actual -= obs['tmin']
-        expected = Dataset({'tmin': ('x', np.ones(5)),
-                            'tmax': sim['tmax'],
-                            'x': sim['x']})['tmin']
-        self.assertDataArrayEqual(actual, expected)
-
-    def test_math_name(self):
-        # Verify that name is preserved only when it can be done unambiguously.
-        # The rule (copied from pandas.Series) is keep the current name only if
-        # the other object has the same name or no name attribute and this
-        # object isn't a coordinate; otherwise reset to None.
-        ds = self.ds
-        a = self.dv
-        self.assertEqual((+a).name, 'foo')
-        self.assertEqual((a + 0).name, 'foo')
-        self.assertIs((a + a.rename(None)).name, None)
-        self.assertIs((a + a.rename('bar')).name, None)
-        self.assertEqual((a + a).name, 'foo')
-        self.assertIs((+ds['x']).name, None)
-        self.assertIs((ds['x'] + 0).name, None)
-        self.assertIs((a + ds['x']).name, None)
-
-    def test_coord_math(self):
-        ds = Dataset({'x': ('x', 1 + np.arange(3))})
-        expected = ds.copy()
-        expected['x2'] = ('x', np.arange(3))
-        actual = ds['x'] - 1
-        self.assertDataArrayEqual(expected['x2'], actual)
-
-    def test_item_math(self):
-        self.ds['x'] = ('x', np.array(list('abcdefghij')))
-        self.assertVariableEqual(self.dv + self.dv[0, 0],
-                                 self.dv + self.dv[0, 0].values)
-        new_data = self.x[0][None, :] + self.x[:, 0][:, None]
-        self.assertVariableEqual(self.dv[:, 0] + self.dv[0, :],
-                                 Variable(['x', 'y'], new_data))
-        self.assertVariableEqual(self.dv[0, :] + self.dv[:, 0],
-                                 Variable(['y', 'x'], new_data.T))
-
-    def test_inplace_math(self):
+    def test_inplace_math_basics(self):
         x = self.x
         v = self.v
         a = self.dv
@@ -532,6 +494,121 @@ class TestDataArray(TestCase):
         self.assertIs(source_ndarray(b.values), x)
         self.assertDatasetIdentical(b._dataset, self.ds)
 
+    def test_math_name(self):
+        # Verify that name is preserved only when it can be done unambiguously.
+        # The rule (copied from pandas.Series) is keep the current name only if
+        # the other object has the same name or no name attribute and this
+        # object isn't a coordinate; otherwise reset to None.
+        a = self.dv
+        self.assertEqual((+a).name, 'foo')
+        self.assertEqual((a + 0).name, 'foo')
+        self.assertIs((a + a.rename(None)).name, None)
+        self.assertIs((a + a.rename('bar')).name, None)
+        self.assertEqual((a + a).name, 'foo')
+        self.assertIs((+a['x']).name, None)
+        self.assertIs((a['x'] + 0).name, None)
+        self.assertIs((a + a['x']).name, None)
+
+    def test_math_with_coords(self):
+        coords = {'x': [-1, -2], 'y': ['ab', 'cd', 'ef'],
+                  'lat': (['x', 'y'], [[1, 2, 3], [-1, -2, -3]]),
+                  'c': -999}
+        orig = DataArray(np.random.randn(2, 3), coords, dims=['x', 'y'])
+
+        actual = orig + 1
+        expected = DataArray(orig.values + 1, orig.coords)
+        self.assertDataArrayIdentical(expected, actual)
+
+        actual = 1 + orig
+        self.assertDataArrayIdentical(expected, actual)
+
+        actual = orig + orig[0, 0]
+        exp_coords = dict((k, v) for k, v in coords.items() if k != 'lat')
+        expected = DataArray(orig.values + orig.values[0, 0],
+                             exp_coords, dims=['x', 'y'])
+        self.assertDataArrayIdentical(expected, actual)
+
+        actual = orig[0, 0] + orig
+        self.assertDataArrayIdentical(expected, actual)
+
+        actual = orig[0, 0] + orig[-1, -1]
+        expected = DataArray(orig.values[0, 0] + orig.values[-1, -1],
+                             {'c': -999})
+        self.assertDataArrayIdentical(expected, actual)
+
+        actual = orig[:, 0] + orig[0, :]
+        exp_values = orig[:, 0].values[:, None] + orig[0, :].values[None, :]
+        expected = DataArray(exp_values, exp_coords, dims=['x', 'y'])
+        self.assertDataArrayIdentical(expected, actual)
+
+        actual = orig[0, :] + orig[:, 0]
+        self.assertDataArrayIdentical(expected.T, actual)
+
+        actual = orig - orig.T
+        expected = DataArray(np.zeros((2, 3)), orig.coords)
+        self.assertDataArrayIdentical(expected, actual)
+
+        actual = orig.T - orig
+        self.assertDataArrayIdentical(expected.T, actual)
+
+        alt = DataArray([1, 1], {'x': [-1, -2], 'c': 'foo', 'd': 555}, 'x')
+        actual = orig + alt
+        expected = orig + 1
+        expected.coords['d'] = 555
+        del expected.coords['c']
+        self.assertDataArrayIdentical(expected, actual)
+
+        actual = alt + orig
+        self.assertDataArrayIdentical(expected, actual)
+
+    def test_index_math(self):
+        orig = DataArray(range(3), dims='x', name='x')
+        actual = orig + 1
+        expected = DataArray(1 + np.arange(3), coords=[('x', range(3))])
+        self.assertDataArrayIdentical(expected, actual)
+
+    def test_dataset_math(self):
+        # more comprehensive tests with multiple dataset variables
+        obs = Dataset({'tmin': ('x', np.arange(5)),
+                       'tmax': ('x', 10 + np.arange(5))},
+                      {'x': ('x', 0.5 * np.arange(5)),
+                       'loc': ('x', range(-2, 3))})
+
+        actual = 2 * obs['tmax']
+        expected = DataArray(2 * (10 + np.arange(5)), obs.coords, name='tmax')
+        self.assertDataArrayIdentical(actual, expected)
+
+        actual = obs['tmax'] - obs['tmin']
+        expected = DataArray(10 * np.ones(5), obs.coords)
+        self.assertDataArrayIdentical(actual, expected)
+
+        sim = Dataset({'tmin': ('x', 1 + np.arange(5)),
+                       'tmax': ('x', 11 + np.arange(5)),
+                       # does *not* include 'loc' as a coordinate
+                       'x': ('x', 0.5 * np.arange(5))})
+
+        actual = sim['tmin'] - obs['tmin']
+        expected = DataArray(np.ones(5), obs.coords, name='tmin')
+        self.assertDataArrayIdentical(actual, expected)
+
+        actual = -obs['tmin'] + sim['tmin']
+        self.assertDataArrayIdentical(actual, expected)
+
+        actual = sim['tmin'].copy()
+        actual -= obs['tmin']
+        self.assertDataArrayIdentical(actual, expected)
+
+        actual = sim.copy()
+        actual['tmin'] = sim['tmin'] - obs['tmin']
+        expected = Dataset({'tmin': ('x', np.ones(5)),
+                            'tmax': ('x', sim['tmax'].values)},
+                            obs.coords)
+        self.assertDatasetIdentical(actual, expected)
+
+        actual = sim.copy()
+        actual['tmin'] -= obs['tmin']
+        self.assertDatasetIdentical(actual, expected)
+
     def test_transpose(self):
         self.assertVariableEqual(self.dv.variable.transpose(),
                                  self.dv.transpose())
@@ -540,10 +617,31 @@ class TestDataArray(TestCase):
         self.assertVariableEqual(self.dv.variable.squeeze(), self.dv.squeeze())
 
     def test_reduce(self):
+        coords = {'x': [-1, -2], 'y': ['ab', 'cd', 'ef'],
+                  'lat': (['x', 'y'], [[1, 2, 3], [-1, -2, -3]]),
+                  'c': -999}
+        orig = DataArray([[-1, 0, 1], [-3, 0, 3]], coords, dims=['x', 'y'])
+
+        actual = orig.mean()
+        expected = DataArray(0, {'c': -999})
+        self.assertDataArrayIdentical(expected, actual)
+
+        actual = orig.mean(['x', 'y'])
+        self.assertDataArrayIdentical(expected, actual)
+
+        actual = orig.mean('x')
+        expected = DataArray([-2, 0, 2], {'y': coords['y'], 'c': -999}, 'y')
+        self.assertDataArrayIdentical(expected, actual)
+
+        actual = orig.mean(['x'])
+        self.assertDataArrayIdentical(expected, actual)
+
+        actual = orig.mean('y')
+        expected = DataArray([0, 0], {'x': coords['x'], 'c': -999}, 'x')
+        self.assertDataArrayIdentical(expected, actual)
+
         self.assertVariableEqual(self.dv.reduce(np.mean, 'x'),
                                  self.v.reduce(np.mean, 'x'))
-        # needs more...
-        # should check which extra dimensions are dropped
 
     def test_reduce_keep_attrs(self):
         # Test dropped attrs

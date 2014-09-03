@@ -588,11 +588,16 @@ class TestDataset(TestCase):
         actual = data.update({'var2': var2})
         expected['var2'] = var2
         self.assertDatasetIdentical(expected, actual)
-        # test in-place
-        data2 = data.update(data, inplace=True)
-        self.assertIs(data2, data)
-        data2 = data.update(data, inplace=False)
-        self.assertIsNot(data2, data)
+
+        actual = data.copy()
+        actual_result = actual.update(data, inplace=True)
+        self.assertIs(actual_result, actual)
+        self.assertDatasetIdentical(expected, actual)
+
+        actual = data.update(data, inplace=False)
+        expected = data
+        self.assertIsNot(actual, expected)
+        self.assertDatasetIdentical(expected, actual)
 
     def test_merge(self):
         data = create_test_data()
@@ -600,11 +605,26 @@ class TestDataset(TestCase):
         ds2 = data[['var3']]
         expected = data[['var1', 'var3']]
         actual = ds1.merge(ds2)
-        self.assertDatasetEqual(expected, actual)
+        self.assertDatasetIdentical(expected, actual)
+
+        actual = ds2.merge(ds1)
+        self.assertDatasetIdentical(expected, actual)
+
+        actual = data.merge(data)
+        self.assertDatasetIdentical(data, actual)
+        actual = data.reset_coords(drop=True).merge(data)
+        self.assertDatasetIdentical(data, actual)
+        actual = data.merge(data.reset_coords(drop=True))
+        self.assertDatasetIdentical(data, actual)
+
         with self.assertRaises(ValueError):
             ds1.merge(ds2.isel(dim1=slice(2)))
         with self.assertRaises(ValueError):
             ds1.merge(ds2.rename({'var3': 'var1'}))
+        with self.assertRaisesRegexp(ValueError, 'coordinates with these'):
+            data.reset_coords().merge(data)
+        with self.assertRaisesRegexp(ValueError, 'variables with these'):
+            data.merge(data.reset_coords())
 
     def test_getitem(self):
         data = create_test_data()

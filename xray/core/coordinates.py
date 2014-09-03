@@ -7,11 +7,12 @@ from . import utils
 
 
 def _coord_merge_finalize(target, other, target_conflicts, other_conflicts):
+    for k in target_conflicts:
+        if k in target:
+            del target[k]
     for k, v in iteritems(other):
         if k not in target and k not in other_conflicts:
-            target[k] = v
-    for k in target_conflicts:
-        del target[k]
+            target[k] = v.variable
 
 
 class AbstractCoordinates(Mapping):
@@ -75,7 +76,7 @@ class AbstractCoordinates(Mapping):
                     raise ValueError('index %r not aligned' % k)
                 if not in_self_dims:
                     self_conflicts.add(k)
-                elif not in_other_dims:
+                if not in_other_dims:
                     other_conflicts.add(k)
         return self_conflicts, other_conflicts
 
