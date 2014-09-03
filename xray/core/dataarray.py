@@ -179,6 +179,7 @@ class DataArray(AbstractArray):
                                  'are not a subset of the DataArray '
                                  'dimensions %s' % (k, v.dims, dims))
 
+        # these fully describe a DataArray:
         self._dataset = dataset
         self._name = name
 

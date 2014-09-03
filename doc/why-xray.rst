@@ -1,35 +1,6 @@
 Why xray?
 =========
 
-pandas_ excels at working with tabular data. That suffices for many statistical
-analyses, but physical scientists rely on N-dimensional arrays -- which is
-where xray comes in.
-
-xray aims to provide a data analysis toolkit as powerful as pandas_ but
-designed for working with homogeneous N-dimensional arrays
-instead of tabular data. When possible, we copy the pandas API and rely on
-pandas's highly optimized internals (in particular, for fast indexing).
-
-Importantly, xray has robust support for converting its objects to and
-from a numpy ``ndarray`` or a pandas ``DataFrame`` or ``Series``, providing
-compatibility with the full `PyData ecosystem <http://pydata.org/>`__.
-
-Our target audience is anyone who needs N-dimensional labeled arrays, but we
-are particularly focused on the data analysis needs of physical scientists --
-especially geoscientists who already know and love netCDF_.
-
-.. _ndarray: http://docs.scipy.org/doc/numpy/reference/arrays.ndarray.html
-.. _netCDF: http://www.unidata.ucar.edu/software/netcdf
-.. _pandas: http://pandas.pydata.org
-
-.. warning::
-
-    xray is a relatively new project and is still under heavy development.
-    Although we will make a best effort to maintain compatibility with the
-    current API, the API will change in future versions as xray matures.
-    Already anticipated changes are called out in the :doc:`tutorial`.
-
-
 Why ``DataArray``?
 ------------------
 
@@ -108,3 +79,34 @@ metadata once, not every time you save a file.
 
 ``Dataset`` supports all of the features listed above for an individual
 ``DataArray``, except it does not (yet) directly support arithmetic operations.
+
+Project goals
+-------------
+
+pandas_ excels at working with tabular data. That suffices for many statistical
+analyses, but physical scientists rely on N-dimensional arrays -- which is
+where xray comes in.
+
+xray aims to provide a data analysis toolkit as powerful as pandas_ but
+designed for working with homogeneous N-dimensional arrays
+instead of tabular data. When possible, we copy the pandas API and rely on
+pandas's highly optimized internals (in particular, for fast indexing).
+
+Importantly, xray has robust support for converting its objects to and
+from a numpy ``ndarray`` or a pandas ``DataFrame`` or ``Series``, providing
+compatibility with the full `PyData ecosystem <http://pydata.org/>`__.
+
+Our target audience is anyone who needs N-dimensional labeled arrays, but we
+are particularly focused on the data analysis needs of physical scientists --
+especially geoscientists who already know and love netCDF_.
+
+.. _ndarray: http://docs.scipy.org/doc/numpy/reference/arrays.ndarray.html
+.. _netCDF: http://www.unidata.ucar.edu/software/netcdf
+.. _pandas: http://pandas.pydata.org
+
+.. warning::
+
+    xray is a relatively new project and is still under heavy development.
+    Although we will make a best effort to maintain compatibility with the
+    current API, the API will change in future versions as xray matures.
+    Already anticipated changes are called out in the :doc:`tutorial`.

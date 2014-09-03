@@ -190,6 +190,20 @@ class Variable(common.AbstractArray):
     which describe a single Array. A single Variable object is not fully
     described outside the context of its parent Dataset (if you want such a
     fully described object, use a DataArray instead).
+
+    The main functional difference between Variables and numpy arrays is that
+    numerical operations on Variables implement array broadcasting by dimension
+    name. For example, adding an Variable with dimensions `('time',)` to
+    another Variable with dimensions `('space',)` results in a new Variable
+    with dimensions `('time', 'space')`. Furthermore, numpy reduce operations
+    like ``mean`` or ``sum`` are overwritten to take a "dimension" argument
+    instead of an "axis".
+
+    Variables are light-weight objects used as the building block for datasets.
+    They are more primitive objects, so operations with them provide marginally
+    higher performance than using DataArrays. However, manipulating data in the
+    form of a Dataset or DataArray should almost always be preferred, because
+    they can use more complete metadata in context of coordinate labels.
     """
     def __init__(self, dims, data, attrs=None, encoding=None):
         """
