@@ -9,7 +9,7 @@ from ..core.utils import FrozenOrderedDict, NDArrayMixin
 from ..core.pycompat import iteritems, basestring, OrderedDict
 
 from .common import AbstractWritableDataStore
-from .netcdf3 import encode_nc3_variable
+from .netcdf3 import encode_nc3_variable, maybe_convert_to_char_array
 
 
 class NetCDF4ArrayWrapper(NDArrayMixin):
@@ -37,21 +37,21 @@ class NetCDF4ArrayWrapper(NDArrayMixin):
         return data
 
 
-def _nc4_values_and_dtype(variable):
-    if variable.dtype.kind in ['i', 'u', 'f'] or variable.dtype == 'S1':
-        values = variable.values
-        dtype = variable.dtype
-    elif (variable.dtype.kind == 'U' or
-              (variable.dtype.kind == 'S' and variable.dtype.itemsize > 1)):
+def _nc4_values_and_dtype(var):
+    if var.dtype.kind == 'U':
         # this entire clause should not be necessary with netCDF4>=1.0.9
-        if len(variable) > 0:
-            values = variable.values.astype('O')
-        else:
-            values = variable.values
+        if len(var) > 0:
+            var = var.astype('O')
         dtype = str
+    elif var.dtype.kind in ['i', 'u', 'f', 'S']:
+        # use character arrays instead of unicode, because unicode suppot in
+        # netCDF4 is still rather buggy
+        data, dims = maybe_convert_to_char_array(var.values, var.dims)
+        var = Variable(dims, data, var.attrs, var.encoding)
+        dtype = var.dtype
     else:
         raise ValueError('cannot infer dtype for netCDF4 variable')
-    return values, dtype
+    return var, dtype
 
 
 def _nc4_group(ds, group):
@@ -143,10 +143,9 @@ class NetCDF4DataStore(AbstractWritableDataStore):
     def set_variable(self, name, variable):
         variable = encode_cf_variable(variable)
         if self.format == 'NETCDF4':
-            values, datatype = _nc4_values_and_dtype(variable)
+            variable, datatype = _nc4_values_and_dtype(variable)
         else:
             variable = encode_nc3_variable(variable)
-            values = variable.values
             datatype = variable.dtype
 
         self.set_necessary_dimensions(variable)
@@ -172,7 +171,7 @@ class NetCDF4DataStore(AbstractWritableDataStore):
             least_significant_digit=encoding.get('least_significant_digit'),
             fill_value=fill_value)
         nc4_var.set_auto_maskandscale(False)
-        nc4_var[:] = values
+        nc4_var[:] = variable.values
         for k, v in iteritems(variable.attrs):
             # set attributes one-by-one since netCDF4<1.0.10 can't handle
             # OrderedDict as the input to setncatts
