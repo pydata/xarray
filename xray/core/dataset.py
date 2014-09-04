@@ -1333,7 +1333,7 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
         DataFrame. The DataFrame is be indexed by the Cartesian product of
         this dataset's indices.
         """
-        columns = self.noncoords.keys()
+        columns = self.nonindexes.keys()
         data = []
         # we need a template to broadcast all dataset variables against
         # using stride_tricks lets us make the ndarray for broadcasting without

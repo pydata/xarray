@@ -917,12 +917,15 @@ class TestDataset(TestCase):
         t = list('abcdefghij')
         ds = Dataset(OrderedDict([('a', ('t', x)),
                                   ('b', ('t', y)),
-                                  ('t', ('t', t)),
-                                 ]))
+                                  ('t', ('t', t))]))
         expected = pd.DataFrame(np.array([x, y]).T, columns=['a', 'b'],
                                 index=pd.Index(t, name='t'))
         actual = ds.to_dataframe()
         # use the .equals method to check all DataFrame metadata
+        assert expected.equals(actual), (expected, actual)
+
+        # verify coords are included
+        actual = ds.set_coords('b').to_dataframe()
         assert expected.equals(actual), (expected, actual)
 
         # check roundtrip
