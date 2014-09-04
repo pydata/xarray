@@ -122,17 +122,42 @@ class TestDataset(TestCase):
         self.assertEqual(expected, actual)
 
     def test_constructor(self):
-        var1 = Variable('x', 2 * np.arange(100))
-        var2 = Variable('x', np.arange(1000))
-        var3 = Variable(['x', 'y'], np.arange(1000).reshape(100, 10))
+        x1 = ('x', 2 * np.arange(100))
+        x2 = ('x', np.arange(1000))
+        z = (['x', 'y'], np.arange(1000).reshape(100, 10))
+
         with self.assertRaisesRegexp(ValueError, 'conflicting sizes'):
-            Dataset({'a': var1, 'b': var2})
+            Dataset({'a': x1, 'b': x2})
         with self.assertRaisesRegexp(ValueError, 'must be defined with 1-d'):
-            Dataset({'a': var1, 'x': var3})
+            Dataset({'a': x1, 'x': z})
+
         # verify handling of DataArrays
-        expected = Dataset({'x': var1, 'z': var3})
+        expected = Dataset({'x': x1, 'z': z})
         actual = Dataset({'z': expected['z']})
         self.assertDatasetIdentical(expected, actual)
+
+    def test_constructor_1d(self):
+        expected = Dataset({'x': (['x'], 5.0 + np.arange(5))})
+        actual = Dataset({'x': 5.0 + np.arange(5)})
+        self.assertDatasetIdentical(expected, actual)
+
+        actual = Dataset({'x': [5, 6, 7, 8, 9]})
+        self.assertDatasetIdentical(expected, actual)
+
+    def test_constructor_0d(self):
+        expected = Dataset({'x': ([], 1)})
+        for arg in [1, np.array(1), expected['x']]:
+            actual = Dataset({'x': arg})
+            self.assertDatasetIdentical(expected, actual)
+
+        d = pd.Timestamp('2000-01-01T12')
+        args = [True, None, 3.4, np.nan, 'hello', u'uni', b'raw',
+                np.datetime64('2000-01-01T00'), d, d.to_datetime()]
+        for arg in args:
+            print(arg)
+            expected = Dataset({'x': ([], arg)})
+            actual = Dataset({'x': arg})
+            self.assertDatasetIdentical(expected, actual)
 
     def test_constructor_with_coords(self):
         with self.assertRaisesRegexp(ValueError, 'redundant variables and co'):

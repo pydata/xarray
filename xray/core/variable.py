@@ -38,7 +38,7 @@ def as_variable(obj, key=None, strict=True):
                 obj = Variable(*obj)
             except TypeError:
                 raise TypeError('cannot convert argument into an Variable')
-        elif np.isscalar(obj):
+        elif utils.is_scalar(obj):
             obj = Variable([], obj)
         elif getattr(obj, 'name', None) is not None:
             obj = Variable(obj.name, obj)

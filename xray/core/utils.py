@@ -1,5 +1,6 @@
 """Internal utilties; not for external use
 """
+import datetime
 import functools
 import itertools
 import warnings
@@ -162,6 +163,19 @@ def remove_incompatible_items(first_dict, second_dict, compat=equivalent):
 
 def is_dict_like(value):
     return hasattr(value, '__getitem__') and hasattr(value, 'keys')
+
+
+def is_scalar(value):
+    """np.isscalar only work on primitive numeric types and (bizarrely)
+    excludes 0-d ndarrays; this version does more comprehensive checks
+    """
+    if np.isscalar(value):
+        return True
+    if hasattr(value, 'ndim'):
+        return value.ndim == 0
+    if isinstance(value, datetime.datetime) or value is None:
+        return True
+    return False
 
 
 def dict_equiv(first, second, compat=equivalent):
