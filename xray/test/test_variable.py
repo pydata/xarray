@@ -346,6 +346,11 @@ class TestVariable(TestCase, VariableSubclassTestCases):
         self.assertEqual(v.dtype, np.dtype('S3'))
         self.assertEqual(v.values, bytes('foo', 'ascii') if PY3 else 'foo')
 
+    def test_0d_datetime(self):
+        v = Variable([], pd.Timestamp('2000-01-01'))
+        self.assertEqual(v.dtype, np.dtype('datetime64[ns]'))
+        self.assertEqual(v.values, np.datetime64('2000-01-01T00Z', 'ns'))
+
     def test_equals_and_identical(self):
         d = np.random.rand(10, 3)
         d[0, 0] = np.nan

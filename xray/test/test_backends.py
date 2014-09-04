@@ -387,6 +387,12 @@ class NetCDF4DataTest(DatasetIOTestCases, TestCase):
             with self.roundtrip(actual) as roundtripped:
                 self.assertDatasetIdentical(expected, roundtripped)
 
+    def test_default_to_char_arrays(self):
+        data = Dataset({'x': np.array(['foo', 'zzzz'], dtype='S')})
+        with self.roundtrip(data) as actual:
+            self.assertDatasetIdentical(data, actual)
+            self.assertEqual(actual['x'].dtype, np.dtype('S4'))
+
 
 @requires_netCDF4
 @requires_scipy

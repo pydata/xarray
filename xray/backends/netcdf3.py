@@ -52,13 +52,17 @@ def coerce_nc3_dtype(arr):
     return arr
 
 
-def encode_nc3_variable(var):
-    dimensions = var.dims
-    data = coerce_nc3_dtype(var.values)
+def maybe_convert_to_char_array(data, dims):
     if data.dtype.kind == 'S' and data.dtype.itemsize > 1:
         data = conventions.string_to_char(data)
-        dimensions = dimensions + ('string%s' % data.shape[-1],)
-    return Variable(dimensions, data, var.attrs, var.encoding)
+        dims = dims + ('string%s' % data.shape[-1],)
+    return data, dims
+
+
+def encode_nc3_variable(var):
+    data = coerce_nc3_dtype(var.values)
+    data, dims = maybe_convert_to_char_array(data, var.dims)
+    return Variable(dims, data, var.attrs, var.encoding)
 
 
 def _isalnumMUTF8(c):

@@ -54,7 +54,8 @@ def _as_compatible_data(data):
 
     Prepare the data:
     - If data does not have the necessary attributes, convert it to ndarray.
-    - If data has dtype=datetime64, ensure that it has ns precision.
+    - If data has dtype=datetime64, ensure that it has ns precision. If it's a
+      pandas.Timestamp, convert it to datetime64.
     - If data is already a pandas or xray object (other than an Index), just
       use the values.
 
@@ -67,13 +68,13 @@ def _as_compatible_data(data):
     # don't check for __len__ or __iter__ so as not to cast if data is a numpy
     # numeric type like np.float32
     required = ['dtype', 'shape', 'size', 'ndim']
-    if (any(not hasattr(data, attr) for attr in required)
+    if isinstance(data, (np.datetime64, pd.Timestamp)):
+        # note: np.datetime64 is ndarray-like
+        data = np.datetime64(data, 'ns')
+    elif (any(not hasattr(data, attr) for attr in required)
             or isinstance(data, np.string_)):
         # data must be ndarray-like
         data = np.asarray(data)
-    elif isinstance(data, np.datetime64):
-        # note: np.datetime64 is ndarray-like
-        data = np.datetime64(data, 'ns')
     elif not isinstance(data, pd.Index):
         # we don't want nested self-described arrays
         data = getattr(data, 'values', data)
