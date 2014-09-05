@@ -228,10 +228,12 @@ class Variable(common.AbstractArray):
         """
         self._data = _as_compatible_data(data)
         self._dims = self._parse_dimensions(dims)
-        if attrs is None:
-            attrs = {}
-        self._attrs = OrderedDict(attrs)
-        self._encoding = dict({} if encoding is None else encoding)
+        self._attrs = None
+        self._encoding = None
+        if attrs is not None:
+            self.attrs = attrs
+        if encoding is not None:
+            self.encoding = encoding
 
     @property
     def dtype(self):
@@ -383,6 +385,8 @@ class Variable(common.AbstractArray):
     def attrs(self):
         """Dictionary of local attributes on this variable.
         """
+        if self._attrs is None:
+            self._attrs = OrderedDict()
         return self._attrs
 
     @attrs.setter
@@ -393,6 +397,8 @@ class Variable(common.AbstractArray):
     def encoding(self):
         """Dictionary of encodings on this variable.
         """
+        if self._encoding is None:
+            self._encoding = {}
         return self._encoding
 
     @encoding.setter
@@ -555,7 +561,7 @@ class Variable(common.AbstractArray):
         dims = [dim for n, dim in enumerate(self.dims)
                 if n not in removed_axes]
 
-        attrs = self.attrs if keep_attrs else {}
+        attrs = self.attrs if keep_attrs else None
 
         return Variable(dims, data, attrs=attrs)
 

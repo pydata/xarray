@@ -283,7 +283,7 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
         self._variables = OrderedDict()
         self._coord_names = set()
         self._dims = {}
-        self._attrs = OrderedDict()
+        self._attrs = None
         self._file_obj = None
         if variables is None:
             variables = {}
@@ -292,7 +292,7 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
         if variables or coords:
             self._set_init_vars_and_dims(variables, coords)
         if attrs is not None:
-            self._attrs.update(attrs)
+            self.attrs = attrs
 
     def _add_missing_coords(self):
         """Add missing coordinates IN-PLACE to _variables
@@ -403,17 +403,19 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
     @property
     def attributes(self):
         utils.alias_warning('attributes', 'attrs', 3)
-        return self._attrs
+        return self.attrs
 
     @attributes.setter
     def attributes(self, value):
         utils.alias_warning('attributes', 'attrs', 3)
-        self._attrs = OrderedDict(value)
+        self.attrs = value
 
     @property
     def attrs(self):
         """Dictionary of global attributes on this dataset
         """
+        if self._attrs is None:
+            self._attrs = OrderedDict()
         return self._attrs
 
     @attrs.setter
@@ -474,8 +476,9 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
         else:
             variables = self._variables.copy()
         # skip __init__ to avoid costly validation
+        attrs = None if self._attrs is None else self._attrs.copy()
         return self._construct_direct(variables, self._coord_names.copy(),
-                                      self._dims.copy(), self._attrs.copy())
+                                      self._dims.copy(), attrs)
 
     def _copy_listed(self, names, keep_attrs=True):
         """Create a new Dataset with the listed variables from this dataset and
@@ -500,7 +503,7 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
 
         dims = dict((k, self._dims[k]) for k in needed_dims)
 
-        attrs = self._attrs.copy() if keep_attrs else OrderedDict()
+        attrs = self.attrs.copy() if keep_attrs else None
 
         return self._construct_direct(variables, coord_names, dims, attrs)
 
