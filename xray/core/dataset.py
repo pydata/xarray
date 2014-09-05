@@ -326,7 +326,7 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
         variables = self._variables.copy() if needs_copy else self._variables
 
         if check_coord_names:
-            _assert_empty([k for k in self.noncoords if k in new_coord_names],
+            _assert_empty([k for k in self if k in new_coord_names],
                           'coordinates with these names already exist as '
                           'variables: %s')
 
@@ -514,13 +514,13 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
         """The 'in' operator will return true or false depending on whether
         'key' is a variable in the dataset or not.
         """
-        return key in self.variables
+        return key in self._variables and not key in self._coord_names
 
     def __len__(self):
-        return len(self.variables)
+        return len(self._variables) - len(self._coord_names)
 
     def __iter__(self):
-        return iter(self.variables)
+        return (k for k in self._variables if k not in self._coord_names)
 
     @property
     def virtual_variables(self):
@@ -651,15 +651,19 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
     def noncoords(self):
         """Dictionary of DataArrays whose names do not match dimensions.
         """
-        return FrozenOrderedDict((name, self[name]) for name in self
-                                 if name not in self.coords)
+        warnings.warn('the Dataset property `noncoords` has been deprecated; '
+                      'just use the Dataset object directly',
+                      FutureWarning, stacklevel=2)
+        return self
 
     @property
     def noncoordinates(self):
         """Dictionary of DataArrays whose names do not match dimensions.
         """
-        utils.alias_warning('noncoordinates', 'noncoords')
-        return self.noncoords
+        warnings.warn('the Dataset property `noncoordinates` has been '
+                      'deprecated; just use the Dataset object directly',
+                      FutureWarning, stacklevel=2)
+        return self
 
     def set_coords(self, names, inplace=False):
         """Given names of one or more variables, set them as coordinates
@@ -1229,7 +1233,7 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
             noncoordinate are dropped.
         """
         variables = OrderedDict((k, func(v, **kwargs))
-                                for k, v in iteritems(self.noncoords))
+                                for k, v in iteritems(self))
         attrs = self.attrs if keep_attrs else {}
         return type(self)(variables, attrs=attrs)
 
@@ -1279,7 +1283,7 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
         else:
             raise ValueError("Unexpected value for mode: %s" % mode)
 
-        if any(v not in datasets[0] for v in concat_over):
+        if any(v not in datasets[0]._variables for v in concat_over):
             raise ValueError('not all elements in concat_over %r found '
                              'in the first dataset %r'
                              % (concat_over, datasets[0]))
@@ -1305,9 +1309,9 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
                     and not utils.dict_equiv(ds.attrs, concatenated.attrs)):
                 raise ValueError('dataset global attributes not equal')
             for k, v in iteritems(ds._variables):
-                if k not in concatenated and k not in concat_over:
+                if k not in concatenated._variables and k not in concat_over:
                     raise ValueError('encountered unexpected variable %r' % k)
-                elif (k in concatenated and k != dim_name and
+                elif (k in concatenated._variables and k != dim_name and
                           not getattr(v, compat)(concatenated[k])):
                     verb = 'equal' if compat == 'equals' else compat
                     raise ValueError(

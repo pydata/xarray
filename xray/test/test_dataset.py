@@ -15,17 +15,13 @@ from xray.core.pycompat import iteritems, OrderedDict
 from . import TestCase, unittest
 
 
-_dims = {'dim1': 8, 'dim2': 9, 'dim3': 10}
-_vars = {'var1': ['dim1', 'dim2'],
-         'var2': ['dim1', 'dim2'],
-         'var3': ['dim3', 'dim1'],
-         }
-_testvar = sorted(_vars.keys())[0]
-_testdim = sorted(_dims.keys())[0]
-
-
 def create_test_data(seed=None):
     rs = np.random.RandomState(seed)
+    _vars = {'var1': ['dim1', 'dim2'],
+             'var2': ['dim1', 'dim2'],
+             'var3': ['dim3', 'dim1']}
+    _dims = {'dim1': 8, 'dim2': 9, 'dim3': 10}
+
     obj = Dataset()
     obj['time'] = ('time', pd.date_range('2000-01-01', periods=20))
     obj['dim1'] = ('dim1', np.arange(_dims['dim1']))
@@ -72,6 +68,7 @@ class InaccessibleVariableDataStore(backends.InMemoryDataStore):
 class TestDataset(TestCase):
     def test_repr(self):
         data = create_test_data(seed=123)
+        data.attrs['foo'] = 'bar'
         # need to insert str dtype at runtime to handle both Python 2 & 3
         expected = dedent("""\
         <xray.Dataset>
@@ -83,25 +80,22 @@ class TestDataset(TestCase):
             time     (time) datetime64[ns] 2000-01-01 2000-01-02 2000-01-03 2000-01-04 ...
         Other Coordinates:
             numbers  (dim3) int64 0 1 2 0 0 1 1 2 2 3
-        Noncoordinates:
+        Variables:
             var1     (dim1, dim2) float64 -1.086 0.9973 0.283 -1.506 -0.5786 1.651 -2.427 -0.4289 ...
             var2     (dim1, dim2) float64 1.162 -1.097 -2.123 1.04 -0.4034 -0.126 -0.8375 -1.606 ...
             var3     (dim3, dim1) float64 0.5565 -0.2121 0.4563 1.545 -0.2397 0.1433 0.2538 ...
         Attributes:
-            Empty""") % data['dim3'].dtype
+            foo: bar""") % data['dim3'].dtype
         actual = '\n'.join(x.rstrip() for x in repr(data).split('\n'))
         print(actual)
-        self.assertEqual(expected, actual)
 
         expected = dedent("""\
         <xray.Dataset>
         Dimensions:  ()
         Index Coordinates:
-            Empty
-        Noncoordinates:
-            Empty
-        Attributes:
-            Empty""")
+            *empty*
+        Variables:
+            *empty*""")
         actual = '\n'.join(x.rstrip() for x in repr(Dataset()).split('\n'))
         print(actual)
         self.assertEqual(expected, actual)
@@ -112,11 +106,9 @@ class TestDataset(TestCase):
         <xray.Dataset>
         Dimensions:  ()
         Index Coordinates:
-            Empty
-        Noncoordinates:
-            foo      float64 1.0
-        Attributes:
-            Empty""")
+            *empty*
+        Variables:
+            foo      float64 1.0""")
         actual = '\n'.join(x.rstrip() for x in repr(data).split('\n'))
         print(actual)
         self.assertEqual(expected, actual)
@@ -164,8 +156,33 @@ class TestDataset(TestCase):
             Dataset({'a': ('x', [1])}, {'a': ('x', [1])})
 
         ds = Dataset({}, {'a': ('x', [1])})
-        self.assertFalse(ds.noncoords)
+        self.assertFalse(ds)
         self.assertItemsEqual(ds.coords.keys(), ['x', 'a'])
+
+    def test_properties(self):
+        ds = create_test_data()
+        self.assertEqual(ds.dims,
+                         {'dim1': 8, 'dim2': 9, 'dim3': 10, 'time': 20})
+
+        self.assertItemsEqual(ds, ['var1', 'var2', 'var3'])
+        self.assertItemsEqual(ds.keys(), ['var1', 'var2', 'var3'])
+        self.assertIn('var1', ds)
+        self.assertNotIn('dim1', ds)
+        self.assertNotIn('numbers', ds)
+        self.assertEqual(len(ds), 3)
+
+        self.assertItemsEqual(ds.indexes, ['dim1', 'dim2', 'dim3', 'time'])
+        self.assertEqual(len(ds.indexes), 4)
+
+        self.assertItemsEqual(ds.nonindexes, ['var1', 'var2', 'var3', 'numbers'])
+        self.assertEqual(len(ds.nonindexes), 4)
+
+        self.assertItemsEqual(ds.coords,
+                              ['time', 'dim1', 'dim2', 'dim3', 'numbers'])
+        self.assertIn('dim1', ds.coords)
+        self.assertIn('numbers', ds.coords)
+        self.assertNotIn('var1', ds.coords)
+        self.assertEqual(len(ds.coords), 5)
 
     def test_variable(self):
         a = Dataset()
@@ -182,7 +199,7 @@ class TestDataset(TestCase):
         with self.assertRaises(ValueError):
             a['qux'] = (('time', 'x'), d.T)
 
-    def test_coords_create(self):
+    def test_modify_inplace(self):
         a = Dataset()
         vec = np.random.random((10,))
         attributes = {'foo': 'bar'}
@@ -412,19 +429,19 @@ class TestDataset(TestCase):
 
         ret = data.isel(dim1=0)
         self.assertEqual({'time': 20, 'dim2': 9, 'dim3': 10}, ret.dims)
-        self.assertItemsEqual(data.noncoords, ret.noncoords)
+        self.assertItemsEqual(data, ret)
         self.assertItemsEqual(data.coords, ret.coords)
         self.assertItemsEqual(data.indexes, list(ret.indexes) + ['dim1'])
 
         ret = data.isel(time=slice(2), dim1=0, dim2=slice(5))
         self.assertEqual({'time': 2, 'dim2': 5, 'dim3': 10}, ret.dims)
-        self.assertItemsEqual(data.noncoords, ret.noncoords)
+        self.assertItemsEqual(data, ret)
         self.assertItemsEqual(data.coords, ret.coords)
         self.assertItemsEqual(data.indexes, list(ret.indexes) + ['dim1'])
 
         ret = data.isel(time=0, dim1=0, dim2=slice(5))
         self.assertItemsEqual({'dim2': 5, 'dim3': 10}, ret.dims)
-        self.assertItemsEqual(data.noncoords, ret.noncoords)
+        self.assertItemsEqual(data, ret)
         self.assertItemsEqual(data.coords, ret.coords)
         self.assertItemsEqual(data.indexes,
                               list(ret.indexes) + ['dim1', 'time'])
@@ -738,11 +755,12 @@ class TestDataset(TestCase):
     def test_delitem(self):
         data = create_test_data()
         all_items = set(data.variables)
-        self.assertItemsEqual(data, all_items)
+        self.assertItemsEqual(data.variables, all_items)
         del data['var1']
-        self.assertItemsEqual(data, all_items - set(['var1']))
+        self.assertItemsEqual(data.variables, all_items - set(['var1']))
         del data['dim1']
-        self.assertItemsEqual(data, set(['time', 'dim2', 'dim3', 'numbers']))
+        self.assertItemsEqual(data.variables,
+                              set(['time', 'dim2', 'dim3', 'numbers']))
         self.assertNotIn('dim1', data.dims)
         self.assertNotIn('dim1', data.coords)
 
@@ -840,7 +858,7 @@ class TestDataset(TestCase):
             # return a new dataset with all variable dimensions tranposed into
             # the order in which they are found in `data`
             return Dataset(dict((k, v.transpose(*data[k].dims))
-                                for k, v in iteritems(dataset.noncoords)),
+                                for k, v in iteritems(dataset)),
                            dataset.coords, attrs=dataset.attrs)
 
         for dim in ['dim1', 'dim2', 'dim3']:
@@ -985,7 +1003,7 @@ class TestDataset(TestCase):
 
         actual = data.max()
         expected = Dataset(dict((k, v.max())
-                                for k, v in iteritems(data.noncoords)))
+                                for k, v in iteritems(data)))
         self.assertDatasetEqual(expected, actual)
 
         self.assertDatasetEqual(data.min(dim=['dim1']),
@@ -1011,7 +1029,7 @@ class TestDataset(TestCase):
         data2 = create_test_data(seed=44)
         add_vars = {'var4': ['dim1', 'dim2']}
         for v, dims in sorted(add_vars.items()):
-            size = tuple(_dims[d] for d in dims)
+            size = tuple(data1.dims[d] for d in dims)
             data = np.random.random_integers(0, 100, size=size).astype(np.str_)
             data1[v] = (dims, data, {'foo': 'variable'})
 
