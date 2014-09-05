@@ -160,7 +160,7 @@ class TestDataset(TestCase):
             Dataset({'a': ('x', [1])}, {'a': ('x', [1])})
 
         ds = Dataset({}, {'a': ('x', [1])})
-        self.assertFalse(ds.noncoords)
+        self.assertFalse(ds)
         self.assertItemsEqual(ds.coords.keys(), ['x', 'a'])
 
     def test_properties(self):
@@ -433,19 +433,19 @@ class TestDataset(TestCase):
 
         ret = data.isel(dim1=0)
         self.assertEqual({'time': 20, 'dim2': 9, 'dim3': 10}, ret.dims)
-        self.assertItemsEqual(data.noncoords, ret.noncoords)
+        self.assertItemsEqual(data, ret)
         self.assertItemsEqual(data.coords, ret.coords)
         self.assertItemsEqual(data.indexes, list(ret.indexes) + ['dim1'])
 
         ret = data.isel(time=slice(2), dim1=0, dim2=slice(5))
         self.assertEqual({'time': 2, 'dim2': 5, 'dim3': 10}, ret.dims)
-        self.assertItemsEqual(data.noncoords, ret.noncoords)
+        self.assertItemsEqual(data, ret)
         self.assertItemsEqual(data.coords, ret.coords)
         self.assertItemsEqual(data.indexes, list(ret.indexes) + ['dim1'])
 
         ret = data.isel(time=0, dim1=0, dim2=slice(5))
         self.assertItemsEqual({'dim2': 5, 'dim3': 10}, ret.dims)
-        self.assertItemsEqual(data.noncoords, ret.noncoords)
+        self.assertItemsEqual(data, ret)
         self.assertItemsEqual(data.coords, ret.coords)
         self.assertItemsEqual(data.indexes,
                               list(ret.indexes) + ['dim1', 'time'])
@@ -862,7 +862,7 @@ class TestDataset(TestCase):
             # return a new dataset with all variable dimensions tranposed into
             # the order in which they are found in `data`
             return Dataset(dict((k, v.transpose(*data[k].dims))
-                                for k, v in iteritems(dataset.noncoords)),
+                                for k, v in iteritems(dataset)),
                            dataset.coords, attrs=dataset.attrs)
 
         for dim in ['dim1', 'dim2', 'dim3']:
@@ -1007,7 +1007,7 @@ class TestDataset(TestCase):
 
         actual = data.max()
         expected = Dataset(dict((k, v.max())
-                                for k, v in iteritems(data.noncoords)))
+                                for k, v in iteritems(data)))
         self.assertDatasetEqual(expected, actual)
 
         self.assertDatasetEqual(data.min(dim=['dim1']),

@@ -326,7 +326,7 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
         variables = self._variables.copy() if needs_copy else self._variables
 
         if check_coord_names:
-            _assert_empty([k for k in self.noncoords if k in new_coord_names],
+            _assert_empty([k for k in self if k in new_coord_names],
                           'coordinates with these names already exist as '
                           'variables: %s')
 
@@ -651,15 +651,19 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
     def noncoords(self):
         """Dictionary of DataArrays whose names do not match dimensions.
         """
-        return FrozenOrderedDict((name, self[name]) for name in self
-                                 if name not in self.coords)
+        warnings.warn('the Dataset property `noncoords` has been deprecated; '
+                      'just use the Dataset object directly',
+                      FutureWarning, stacklevel=2)
+        return self
 
     @property
     def noncoordinates(self):
         """Dictionary of DataArrays whose names do not match dimensions.
         """
-        utils.alias_warning('noncoordinates', 'noncoords')
-        return self.noncoords
+        warnings.warn('the Dataset property `noncoordinates` has been '
+                      'deprecated; just use the Dataset object directly',
+                      FutureWarning, stacklevel=2)
+        return self
 
     def set_coords(self, names, inplace=False):
         """Given names of one or more variables, set them as coordinates
@@ -1229,7 +1233,7 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
             noncoordinate are dropped.
         """
         variables = OrderedDict((k, func(v, **kwargs))
-                                for k, v in iteritems(self.noncoords))
+                                for k, v in iteritems(self))
         attrs = self.attrs if keep_attrs else {}
         return type(self)(variables, attrs=attrs)
 

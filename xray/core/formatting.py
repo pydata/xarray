@@ -192,7 +192,7 @@ def dataset_repr(ds, preview_all_values=False):
                                           preview_all_values))
 
     summary.append('Noncoordinates:')
-    summary.extend(_summarize_variables(ds.noncoords, first_col_width,
+    summary.extend(_summarize_variables(ds, first_col_width,
                                         always_show_values=preview_all_values))
 
     summary.append('Attributes:')
