@@ -105,7 +105,7 @@ def _summarize_variables(variables, first_col_width, always_show_values):
     return ([summarize_var(v.name, v, first_col_width,
                            show_values=(always_show_values or _not_remote(v)))
              for v in itervalues(variables)]
-            or ['    Empty'])
+            or ['    *empty*'])
 
 
 def _summarize_coordinates(coords, first_col_width,
@@ -131,12 +131,12 @@ def coords_repr(coords):
     return '\n'.join(summary)
 
 
-def _summarize_attributes(data, indent='    '):
-    if data.attrs:
+def _summarize_attributes(attrs, indent='    '):
+    if attrs:
         attr_summaries = ['%s%s: %s' % (indent, k, v) for k, v
-                          in iteritems(data.attrs)]
+                          in iteritems(attrs)]
     else:
-        attr_summaries = [indent + 'Empty']
+        attr_summaries = [indent + '*empty*']
     return attr_summaries
 
 
@@ -160,8 +160,9 @@ def array_repr(arr):
         if arr.coords:
             summary.append(repr(arr.coords))
 
-    summary.append('Attributes:')
-    summary.extend(_summarize_attributes(arr))
+    if arr.attrs:
+        summary.append('Attributes:')
+        summary.extend(_summarize_attributes(arr.attrs))
 
     return '\n'.join(summary)
 
@@ -191,11 +192,12 @@ def dataset_repr(ds, preview_all_values=False):
     summary.extend(_summarize_coordinates(ds.coords, first_col_width,
                                           preview_all_values))
 
-    summary.append('Noncoordinates:')
+    summary.append('Variables:')
     summary.extend(_summarize_variables(ds, first_col_width,
                                         always_show_values=preview_all_values))
 
-    summary.append('Attributes:')
-    summary.extend(_summarize_attributes(ds))
+    if ds.attrs:
+        summary.append('Attributes:')
+        summary.extend(_summarize_attributes(ds.attrs))
 
     return '\n'.join(summary)

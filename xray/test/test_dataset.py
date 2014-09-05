@@ -68,6 +68,7 @@ class InaccessibleVariableDataStore(backends.InMemoryDataStore):
 class TestDataset(TestCase):
     def test_repr(self):
         data = create_test_data(seed=123)
+        data.attrs['foo'] = 'bar'
         # need to insert str dtype at runtime to handle both Python 2 & 3
         expected = dedent("""\
         <xray.Dataset>
@@ -79,25 +80,22 @@ class TestDataset(TestCase):
             time     (time) datetime64[ns] 2000-01-01 2000-01-02 2000-01-03 2000-01-04 ...
         Other Coordinates:
             numbers  (dim3) int64 0 1 2 0 0 1 1 2 2 3
-        Noncoordinates:
+        Variables:
             var1     (dim1, dim2) float64 -1.086 0.9973 0.283 -1.506 -0.5786 1.651 -2.427 -0.4289 ...
             var2     (dim1, dim2) float64 1.162 -1.097 -2.123 1.04 -0.4034 -0.126 -0.8375 -1.606 ...
             var3     (dim3, dim1) float64 0.5565 -0.2121 0.4563 1.545 -0.2397 0.1433 0.2538 ...
         Attributes:
-            Empty""") % data['dim3'].dtype
+            foo: bar""") % data['dim3'].dtype
         actual = '\n'.join(x.rstrip() for x in repr(data).split('\n'))
         print(actual)
-        self.assertEqual(expected, actual)
 
         expected = dedent("""\
         <xray.Dataset>
         Dimensions:  ()
         Index Coordinates:
-            Empty
-        Noncoordinates:
-            Empty
-        Attributes:
-            Empty""")
+            *empty*
+        Variables:
+            *empty*""")
         actual = '\n'.join(x.rstrip() for x in repr(Dataset()).split('\n'))
         print(actual)
         self.assertEqual(expected, actual)
@@ -108,11 +106,9 @@ class TestDataset(TestCase):
         <xray.Dataset>
         Dimensions:  ()
         Index Coordinates:
-            Empty
-        Noncoordinates:
-            foo      float64 1.0
-        Attributes:
-            Empty""")
+            *empty*
+        Variables:
+            foo      float64 1.0""")
         actual = '\n'.join(x.rstrip() for x in repr(data).split('\n'))
         print(actual)
         self.assertEqual(expected, actual)
