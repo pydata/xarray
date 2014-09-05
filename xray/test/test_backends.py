@@ -382,10 +382,9 @@ class NetCDF4DataTest(DatasetIOTestCases, TestCase):
             expected = Dataset({'x': ('x', values)})
             with open_dataset(tmp_file) as actual:
                 self.assertDatasetIdentical(expected, actual)
-
-            # regression test for #157
-            with self.roundtrip(actual) as roundtripped:
-                self.assertDatasetIdentical(expected, roundtripped)
+                # regression test for #157
+                with self.roundtrip(actual) as roundtripped:
+                    self.assertDatasetIdentical(expected, roundtripped)
 
     def test_default_to_char_arrays(self):
         data = Dataset({'x': np.array(['foo', 'zzzz'], dtype='S')})

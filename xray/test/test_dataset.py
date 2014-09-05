@@ -15,17 +15,13 @@ from xray.core.pycompat import iteritems, OrderedDict
 from . import TestCase, unittest
 
 
-_dims = {'dim1': 8, 'dim2': 9, 'dim3': 10}
-_vars = {'var1': ['dim1', 'dim2'],
-         'var2': ['dim1', 'dim2'],
-         'var3': ['dim3', 'dim1'],
-         }
-_testvar = sorted(_vars.keys())[0]
-_testdim = sorted(_dims.keys())[0]
-
-
 def create_test_data(seed=None):
     rs = np.random.RandomState(seed)
+    _vars = {'var1': ['dim1', 'dim2'],
+             'var2': ['dim1', 'dim2'],
+             'var3': ['dim3', 'dim1']}
+    _dims = {'dim1': 8, 'dim2': 9, 'dim3': 10}
+
     obj = Dataset()
     obj['time'] = ('time', pd.date_range('2000-01-01', periods=20))
     obj['dim1'] = ('dim1', np.arange(_dims['dim1']))
@@ -167,6 +163,31 @@ class TestDataset(TestCase):
         self.assertFalse(ds.noncoords)
         self.assertItemsEqual(ds.coords.keys(), ['x', 'a'])
 
+    def test_properties(self):
+        ds = create_test_data()
+        self.assertEqual(ds.dims,
+                         {'dim1': 8, 'dim2': 9, 'dim3': 10, 'time': 20})
+
+        self.assertItemsEqual(ds, ['var1', 'var2', 'var3'])
+        self.assertItemsEqual(ds.keys(), ['var1', 'var2', 'var3'])
+        self.assertIn('var1', ds)
+        self.assertNotIn('dim1', ds)
+        self.assertNotIn('numbers', ds)
+        self.assertEqual(len(ds), 3)
+
+        self.assertItemsEqual(ds.indexes, ['dim1', 'dim2', 'dim3', 'time'])
+        self.assertEqual(len(ds.indexes), 4)
+
+        self.assertItemsEqual(ds.nonindexes, ['var1', 'var2', 'var3', 'numbers'])
+        self.assertEqual(len(ds.nonindexes), 4)
+
+        self.assertItemsEqual(ds.coords,
+                              ['time', 'dim1', 'dim2', 'dim3', 'numbers'])
+        self.assertIn('dim1', ds.coords)
+        self.assertIn('numbers', ds.coords)
+        self.assertNotIn('var1', ds.coords)
+        self.assertEqual(len(ds.coords), 5)
+
     def test_variable(self):
         a = Dataset()
         d = np.random.random((10, 3))
@@ -182,7 +203,7 @@ class TestDataset(TestCase):
         with self.assertRaises(ValueError):
             a['qux'] = (('time', 'x'), d.T)
 
-    def test_coords_create(self):
+    def test_modify_inplace(self):
         a = Dataset()
         vec = np.random.random((10,))
         attributes = {'foo': 'bar'}
@@ -738,11 +759,12 @@ class TestDataset(TestCase):
     def test_delitem(self):
         data = create_test_data()
         all_items = set(data.variables)
-        self.assertItemsEqual(data, all_items)
+        self.assertItemsEqual(data.variables, all_items)
         del data['var1']
-        self.assertItemsEqual(data, all_items - set(['var1']))
+        self.assertItemsEqual(data.variables, all_items - set(['var1']))
         del data['dim1']
-        self.assertItemsEqual(data, set(['time', 'dim2', 'dim3', 'numbers']))
+        self.assertItemsEqual(data.variables,
+                              set(['time', 'dim2', 'dim3', 'numbers']))
         self.assertNotIn('dim1', data.dims)
         self.assertNotIn('dim1', data.coords)
 
@@ -1011,7 +1033,7 @@ class TestDataset(TestCase):
         data2 = create_test_data(seed=44)
         add_vars = {'var4': ['dim1', 'dim2']}
         for v, dims in sorted(add_vars.items()):
-            size = tuple(_dims[d] for d in dims)
+            size = tuple(data1.dims[d] for d in dims)
             data = np.random.random_integers(0, 100, size=size).astype(np.str_)
             data1[v] = (dims, data, {'foo': 'variable'})
 

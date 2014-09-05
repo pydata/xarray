@@ -514,13 +514,13 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
         """The 'in' operator will return true or false depending on whether
         'key' is a variable in the dataset or not.
         """
-        return key in self.variables
+        return key in self._variables and not key in self._coord_names
 
     def __len__(self):
-        return len(self.variables)
+        return len(self._variables) - len(self._coord_names)
 
     def __iter__(self):
-        return iter(self.variables)
+        return (k for k in self._variables if k not in self._coord_names)
 
     @property
     def virtual_variables(self):
@@ -1279,7 +1279,7 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
         else:
             raise ValueError("Unexpected value for mode: %s" % mode)
 
-        if any(v not in datasets[0] for v in concat_over):
+        if any(v not in datasets[0]._variables for v in concat_over):
             raise ValueError('not all elements in concat_over %r found '
                              'in the first dataset %r'
                              % (concat_over, datasets[0]))
@@ -1305,9 +1305,9 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
                     and not utils.dict_equiv(ds.attrs, concatenated.attrs)):
                 raise ValueError('dataset global attributes not equal')
             for k, v in iteritems(ds._variables):
-                if k not in concatenated and k not in concat_over:
+                if k not in concatenated._variables and k not in concat_over:
                     raise ValueError('encountered unexpected variable %r' % k)
-                elif (k in concatenated and k != dim_name and
+                elif (k in concatenated._variables and k != dim_name and
                           not getattr(v, compat)(concatenated[k])):
                     verb = 'equal' if compat == 'equals' else compat
                     raise ValueError(
