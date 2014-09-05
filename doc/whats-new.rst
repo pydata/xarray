@@ -10,12 +10,24 @@ intended to allow for keeping track of arrays of metadata that describe the
 grid on which the points in "variable" arrays lie. They are preserved (when
 unambiguous) even though mathematical operations.
 
-- ``Dataset.select_vars`` deprecated: index a ``Dataset`` with a list of variables
-  instead.
-- ``DataArray.select_vars`` and ``DataArray.drop_vars`` deprecated: use
-  :py:meth:`~xray.DataArray.reset_coords` instead.
+Backwards incompatible changes
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+- The items in a ``Dataset`` for the purposes of iteration (`for v in ds`,
+  `ds.keys()` and `ds.items()`) and contents checks (`k in ds`) are now only
+  only the *variables*, formerly called *non-coordinates*. Correspondingly, the
+  ``Dataset.noncoords`` property has been deprecated (you can just use the
+  ``Dataset`` object itself).
 - ``Dataset.__eq__`` and ``Dataset.__ne__`` now are now undefined, because in
   a future version of xray we intend to make the operations element-wise.
+
+Deprecations
+~~~~~~~~~~~~
+
+- ``Dataset.select_vars`` deprecated: index a ``Dataset`` with a list of
+  variable names instead.
+- ``DataArray.select_vars`` and ``DataArray.drop_vars`` deprecated: use
+  :py:meth:`~xray.DataArray.reset_coords` instead.
 
 v0.2.0 (14 August 2014)
 -----------------------
