@@ -354,7 +354,7 @@ class TestDataArray(TestCase):
 
         self.assertEquals(2, len(da.coords))
 
-        self.assertEquals(['x', 'y'], list(da.coords))
+        self.assertEqual(['x', 'y'], list(da.coords))
 
         self.assertTrue(coords[0].identical(da.coords['x']))
         self.assertTrue(coords[1].identical(da.coords['y']))
