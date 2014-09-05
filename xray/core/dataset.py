@@ -79,64 +79,56 @@ _DATETIMEINDEX_COMPONENTS = ['year', 'month', 'day', 'hour', 'minute',
                              'quarter']
 
 
-class VariablesDict(OrderedDict):
-    """VariablesDict is an OrderedDict subclass that also implements "virtual"
-    variables that are created from other variables on demand
-
-    Currently, virtual variables are restricted to attributes of
-    pandas.DatetimeIndex objects (e.g., 'year', 'month', 'day', etc., plus
-    'season' for climatological season), which are accessed by getting the item
-    'time.year'.
+def _list_virtual_variables(variables):
+    """A frozenset of variable names that don't exist in this dataset but
+    for which could be created on demand (because they can be calculated
+    from other dataset variables)
     """
-    @property
-    def virtual(self):
-        """A frozenset of variable names that don't exist in this dataset but
-        for which could be created on demand (because they can be calculated
-        from other dataset variables)
-        """
-        def _castable_to_timestamp(obj):
-            try:
-                pd.Timestamp(obj)
-            except:
-                return False
-            else:
-                return True
-
-        virtual_vars = []
-        for k, v in iteritems(self):
-            if ((v.dtype.kind == 'M' and isinstance(v, variable.Coordinate))
-                    or (v.ndim == 0 and _castable_to_timestamp(v.values))):
-                # nb. dtype.kind == 'M' is datetime64
-                for suffix in _DATETIMEINDEX_COMPONENTS + ['season']:
-                    name = '%s.%s' % (k, suffix)
-                    if name not in self:
-                        virtual_vars.append(name)
-        return frozenset(virtual_vars)
-
-    def __missing__(self, key):
-        """Fall back to returning a virtual variable, if possible
-        """
-        if not isinstance(key, basestring):
-            raise KeyError(key)
-
-        split_key = key.split('.')
-        if len(split_key) != 2:
-            raise KeyError(key)
-
-        ref_var_name, suffix = split_key
-        ref_var = self[ref_var_name]
-        if isinstance(ref_var, variable.Coordinate):
-            date = ref_var.to_index()
-        elif ref_var.ndim == 0:
-            date = pd.Timestamp(ref_var.values)
-
-        if suffix == 'season':
-            # seasons = np.array(['DJF', 'MAM', 'JJA', 'SON'])
-            month = date.month
-            data = (month // 3) % 4 + 1
+    def _castable_to_timestamp(obj):
+        try:
+            pd.Timestamp(obj)
+        except:
+            return False
         else:
-            data = getattr(date, suffix)
-        return variable.Variable(ref_var.dims, data)
+            return True
+
+    virtual_vars = []
+    for k, v in iteritems(variables):
+        if ((v.dtype.kind == 'M' and isinstance(v, variable.Coordinate))
+                or (v.ndim == 0 and _castable_to_timestamp(v.values))):
+            # nb. dtype.kind == 'M' is datetime64
+            for suffix in _DATETIMEINDEX_COMPONENTS + ['season']:
+                name = '%s.%s' % (k, suffix)
+                if name not in variables:
+                    virtual_vars.append(name)
+    return frozenset(virtual_vars)
+
+
+def _get_virtual_variable(variables, key):
+    """Get a virtual variable (e.g., 'time.year') from a dict of xray.Variable
+    objects (if possible)
+    """
+    if not isinstance(key, basestring):
+        raise KeyError(key)
+
+    split_key = key.split('.')
+    if len(split_key) != 2:
+        raise KeyError(key)
+
+    ref_var_name, suffix = split_key
+    ref_var = variables[ref_var_name]
+    if isinstance(ref_var, variable.Coordinate):
+        date = ref_var.to_index()
+    elif ref_var.ndim == 0:
+        date = pd.Timestamp(ref_var.values)
+
+    if suffix == 'season':
+        # seasons = np.array(['DJF', 'MAM', 'JJA', 'SON'])
+        month = date.month
+        data = (month // 3) % 4 + 1
+    else:
+        data = getattr(date, suffix)
+    return variable.Variable(ref_var.dims, data)
 
 
 def _as_dataset_variable(name, var):
@@ -198,7 +190,7 @@ def _calculate_dims(variables):
     Returns dictionary mapping from dimension names to sizes. Raises ValueError
     if any of the dimension sizes conflict.
     """
-    dims = SortedKeysDict()
+    dims = {}
     last_used = {}
     scalar_vars = set(k for k, v in iteritems(variables) if not v.dims)
     for k, var in iteritems(variables):
@@ -288,9 +280,9 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
         independently of other variables for use in a future version of xray.
         For now, coordinates will extracted automatically from variables.
         """
-        self._variables = VariablesDict()
+        self._variables = OrderedDict()
         self._coord_names = set()
-        self._dims = SortedKeysDict()
+        self._dims = {}
         self._attrs = OrderedDict()
         self._file_obj = None
         if variables is None:
@@ -305,7 +297,7 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
     def _add_missing_coords(self):
         """Add missing coordinates IN-PLACE to _variables
         """
-        for dim, size in iteritems(self._dims):
+        for dim, size in iteritems(self.dims):
             if dim not in self._variables:
                 coord = variable.Coordinate(dim, np.arange(size))
                 self._variables[dim] = coord
@@ -435,7 +427,7 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
         This dictionary cannot be modified directly, but is updated when adding
         new variables.
         """
-        return Frozen(self._dims)
+        return Frozen(SortedKeysDict(self._dims))
 
     @property
     def dimensions(self):
@@ -477,30 +469,40 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
         is also a variable in the original dataset.
         """
         if deep:
-            variables = VariablesDict((k, v.copy(deep=True))
-                                      for k, v in iteritems(self.variables))
+            variables = OrderedDict((k, v.copy(deep=True))
+                                    for k, v in iteritems(self.variables))
         else:
             variables = self._variables.copy()
         # skip __init__ to avoid costly validation
         return self._construct_direct(variables, self._coord_names.copy(),
                                       self._dims.copy(), self._attrs.copy())
 
-    def _copy_listed(self, names):
+    def _copy_listed(self, names, keep_attrs=True):
         """Create a new Dataset with the listed variables from this dataset and
         the all relevant coordinates. Skips all validation.
         """
-        variables = VariablesDict((k, self._variables[k]) for k in names)
+        variables = OrderedDict()
+        for name in names:
+            try:
+                variables[name] = self._variables[name]
+            except KeyError:
+                variables[name] = _get_virtual_variable(self._variables, name)
+
         needed_dims = set()
         for v in variables.values():
-            needed_dims.update(v.dims)
+            needed_dims.update(v._dims)
+
         coord_names = set()
         for k in self._coord_names:
-            if set(self._variables[k].dims) <= needed_dims:
+            if set(self._variables[k]._dims) <= needed_dims:
                 variables[k] = self._variables[k]
                 coord_names.add(k)
-        dims = SortedKeysDict(dict((k, self._dims[k]) for k in needed_dims))
-        return self._construct_direct(variables, coord_names, dims,
-                                      self._attrs.copy())
+
+        dims = dict((k, self._dims[k]) for k in needed_dims)
+
+        attrs = self._attrs.copy() if keep_attrs else OrderedDict()
+
+        return self._construct_direct(variables, coord_names, dims, attrs)
 
     def __copy__(self):
         return self.copy(deep=False)
@@ -539,7 +541,7 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
         ----------
         .. [1] http://pandas.pydata.org/pandas-docs/stable/api.html#time-date-components
         """
-        return self._variables.virtual
+        return _list_virtual_variables(self._variables)
 
     def __getitem__(self, key):
         """Access the given variable name in this dataset as a `DataArray`, or
@@ -572,17 +574,20 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
         If this variable is a dimension, all variables containing this
         dimension are also removed.
         """
+        # nb. this method is intrinsically not very efficient because removing
+        # items from variables (an OrderedDict) takes O(n) time.
         def remove(k):
             del self._variables[k]
             self._coord_names.discard(k)
 
+        remove(key)
+
         if key in self._dims:
             del self._dims[key]
-        remove(key)
-        also_delete = [k for k, v in iteritems(self._variables)
-                       if key in v.dims]
-        for key in also_delete:
-            remove(key)
+            also_delete = [k for k, v in iteritems(self._variables)
+                           if key in v.dims]
+            for key in also_delete:
+                remove(key)
 
     # mutable objects should not be hashable
     __hash__ = None
@@ -628,13 +633,15 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
 
     @property
     def indexes(self):
-        return utils.FrozenOrderedDict(
-            (k, self[k].to_index()) for k in self.dims)
+        """OrderedDict of pandas.Index objects used for label based indexing
+        """
+        return FrozenOrderedDict((k, self._variables[k].to_index())
+                                 for k in self.dims)
 
     @property
     def nonindexes(self):
-        return utils.FrozenOrderedDict(
-            (k, self[k]) for k in self.variables if k not in self.dims)
+        return FrozenOrderedDict((k, self[k]) for k in self.variables
+                                 if k not in self.dims)
 
     @property
     def coords(self):
@@ -932,7 +939,7 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
             if k not in self.variables:
                 raise ValueError("cannot rename %r because it is not a "
                                  "variable in this dataset" % k)
-        variables = VariablesDict()
+        variables = OrderedDict()
         coord_names = set()
         for k, v in iteritems(self.variables):
             name = name_dict.get(k, k)

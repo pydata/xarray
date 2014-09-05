@@ -1,12 +1,9 @@
-from collections import Mapping
 import contextlib
 import functools
 import warnings
 
-import numpy as np
 import pandas as pd
 
-from . import formatting
 from . import indexing
 from . import groupby
 from . import ops
@@ -16,6 +13,7 @@ from .common import AbstractArray
 from .coordinates import DataArrayCoordinates
 from .dataset import Dataset
 from .pycompat import iteritems, basestring, OrderedDict, zip
+from .utils import FrozenOrderedDict
 from .variable import as_variable, _as_compatible_data, Coordinate
 
 
@@ -189,9 +187,9 @@ class DataArray(AbstractArray):
         all validation)
         """
         obj = object.__new__(cls)
-        obj._dataset = dataset._copy_listed([name])
+        obj._dataset = dataset._copy_listed([name], keep_attrs=False)
         obj._name = name
-        if name not in dataset.dims:
+        if name not in dataset._dims:
             obj._dataset._coord_names.discard(name)
         return obj
 
@@ -375,8 +373,8 @@ class DataArray(AbstractArray):
     def indexes(self):
         """OrderedDict of pandas.Index objects used for label based indexing
         """
-        return utils.FrozenOrderedDict(
-            (k, self[k].to_index()) for k in self.dims)
+        return FrozenOrderedDict((k, self._dataset._variables[k].to_index())
+                                 for k in self.dims)
 
     @property
     def coords(self):
