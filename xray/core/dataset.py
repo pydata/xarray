@@ -1422,19 +1422,6 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
             return ds
         return func
 
-    def _merge_binary_op(self, f, orig, other):
-        if utils.is_dict_like(other):
-            if set(orig) != set(other):
-                raise ValueError('Datasets do not have the same variables: '
-                                 '%s, %s' % (list(orig), list(other)))
-            other_variables = getattr(other, '_variables', other)
-            for k in orig:
-                self._variables[k] = f(orig._variables[k], other_variables[k])
-        else:
-            other_variable = getattr(other, 'variable', other)
-            for k in orig:
-                self._variables[k] = f(orig._variables[k], other_variable)
-
     @staticmethod
     def _binary_op(f, reflexive=False):
         @functools.wraps(f)
@@ -1442,7 +1429,7 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
             other_coords = getattr(other, 'coords', None)
             ds = self.coords.merge(other_coords)
             g = f if not reflexive else lambda x, y: f(y, x)
-            ds._merge_binary_op(g, self, other)
+            _calculate_binary_op(g, self, other, ds._variables)
             return ds
         return func
 
@@ -1452,14 +1439,30 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
         def func(self, other):
             other_coords = getattr(other, 'coords', None)
             with self.coords._merge_inplace(other_coords):
-                # nb. this in-place operation is not entirely safe -- if
-                # variables have different types, you could get a TypeError,
-                # and all variables that had already been processed would be
-                # corrupted. I don't see any way around that, though, without
-                # scrapping in-place operations all-together (or doing a
-                # defensive copy first, which is basically equivalent).
-                self._merge_binary_op(f, self, other)
+                # make a defensive copy of variables to modify in-place so we
+                # can rollback in case of an exception
+                # note: when/if we support automatic alignment, only copy the
+                # variables that will actually be included in the result
+                dest_vars = dict((k, self._variables[k].copy()) for k in self)
+                _calculate_binary_op(f, dest_vars, other, dest_vars)
+                self._variables.update(dest_vars)
             return self
         return func
+
+
+def _calculate_binary_op(f, dataset, other, dest_vars):
+    dataset_vars = getattr(dataset, '_variables', dataset)
+    if utils.is_dict_like(other):
+        if set(dataset) != set(other):
+            raise ValueError('Datasets do not have the same variables: '
+                             '%s, %s' % (list(dataset_vars), list(other)))
+        other_variables = getattr(other, '_variables', other)
+        for k in dataset:
+            dest_vars[k] = f(dataset_vars[k], other_variables[k])
+    else:
+        other_variable = getattr(other, 'variable', other)
+        for k in dataset:
+            dest_vars[k] = f(dataset_vars[k], other_variable)
+
 
 ops.inject_special_operations(Dataset, array_only=False)

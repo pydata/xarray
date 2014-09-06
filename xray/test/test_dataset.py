@@ -1098,12 +1098,18 @@ class TestDataset(TestCase):
         self.assertDataArrayEqual(actual['var1'], 2 * data['var1'])
         self.assertDataArrayIdentical(actual['numbers'], data['numbers'])
 
-    def test_math(self):
-        ds = Dataset({'foo': (('x', 'y'), 1.0 * np.arange(12).reshape(3, 4)),
-                      'bar': ('x', np.arange(100, 400, 100))},
-                      coords={'abc': ('x', ['a', 'b', 'c']),
-                              'y': 10 * np.arange(4)})
+    def make_example_math_dataset(self):
+        variables = OrderedDict(
+            [('bar', ('x', np.arange(100, 400, 100))),
+             ('foo', (('x', 'y'), 1.0 * np.arange(12).reshape(3, 4)))])
+        coords = {'abc': ('x', ['a', 'b', 'c']),
+                  'y': 10 * np.arange(4)}
+        ds = Dataset(variables, coords)
         ds['foo'][0, 0] = np.nan
+        return ds
+
+    def test_dataset_number_math(self):
+        ds = self.make_example_math_dataset()
 
         self.assertDatasetIdentical(ds, +ds)
         self.assertDatasetIdentical(ds, ds + 0)
@@ -1115,6 +1121,9 @@ class TestDataset(TestCase):
         actual += 0
         self.assertDatasetIdentical(ds, actual)
 
+    def test_unary_ops(self):
+        ds = self.make_example_math_dataset()
+
         self.assertDatasetIdentical(ds.apply(abs), abs(ds))
         self.assertDatasetIdentical(ds.apply(lambda x: x + 4), ds + 4)
 
@@ -1125,7 +1134,15 @@ class TestDataset(TestCase):
 
         self.assertDatasetIdentical(ds.isnull(), ~ds.notnull())
 
-        # dataset-array
+        # don't actually patch these methods in
+        with self.assertRaises(AttributeError):
+            ds.item
+        with self.assertRaises(AttributeError):
+            ds.searchsorted
+
+    def test_dataset_array_math(self):
+        ds = self.make_example_math_dataset()
+
         expected = ds.apply(lambda x: x + ds['foo'])
         self.assertDatasetIdentical(expected, ds + ds['foo'])
         self.assertDatasetIdentical(expected, ds['foo'] + ds)
@@ -1144,7 +1161,9 @@ class TestDataset(TestCase):
         self.assertDatasetIdentical(expected, ds[['bar']] + np.arange(3))
         self.assertDatasetIdentical(expected, np.arange(3) + ds[['bar']])
 
-        # dataset-dataset
+    def test_dataset_dataset_math(self):
+        ds = self.make_example_math_dataset()
+
         self.assertDatasetIdentical(ds, ds + 0 * ds)
         self.assertDatasetIdentical(ds, ds + {'foo': 0, 'bar': 0})
 
@@ -1159,6 +1178,9 @@ class TestDataset(TestCase):
 
         self.assertDatasetIdentical(ds == ds, ds.notnull())
 
+    def test_dataset_math_errors(self):
+        ds = self.make_example_math_dataset()
+
         with self.assertRaises(TypeError):
             ds['foo'] += ds
         with self.assertRaises(TypeError):
@@ -1167,16 +1189,10 @@ class TestDataset(TestCase):
             ds + ds[['bar']]
 
         # verify we can rollback in-place operations if something goes wrong
-        # nb. there are some edge cases where this fails (see
-        # Dataset._inplace_binary_op)
-        other = DataArray(None, coords={'c': 2})
+        # nb. inplace datetime64 math actually will work with an integer array
+        # but not floats thanks to numpy's inconsistent handling
+        other = DataArray(np.datetime64('2000-01-01T12'), coords={'c': 2})
         actual = ds.copy(deep=True)
         with self.assertRaises(TypeError):
             actual += other
         self.assertDatasetIdentical(actual, ds)
-
-        # don't actually patch these methods in
-        with self.assertRaises(AttributeError):
-            ds.item
-        with self.assertRaises(AttributeError):
-            ds.searchsorted
