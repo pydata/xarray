@@ -27,17 +27,30 @@ NUMPY_REDUCE_METHODS = ['all', 'any', 'argmax', 'argmin', 'max', 'mean', 'min',
 # TODO: wrap cumprod/cumsum, take, dot, sort
 
 
-def _values_method_wrapper(f):
+def _values_method_wrapper(name):
     def func(self, *args, **kwargs):
-        return getattr(self.values, f)(*args, **kwargs)
-    func.__name__ = f
+        return getattr(self.values, name)(*args, **kwargs)
+    func.__name__ = name
     return func
 
 
-def _method_wrapper(f):
+def _method_wrapper(name):
     def func(self, *args, **kwargs):
-        return getattr(self, f)(*args, **kwargs)
-    func.__name__ = f
+        return getattr(self, name)(*args, **kwargs)
+    func.__name__ = name
+    return func
+
+
+def _func_slash_method_wrapper(f, name):
+    # try to wrap a method, but if not found use the function
+    # this is useful when patching in a function as both a DataArray and
+    # Dataset method
+    def func(self, *args, **kwargs):
+        try:
+            return getattr(self, name)(*args, **kwargs)
+        except AttributeError:
+            return f(self, *args, **kwargs)
+    func.__name__ = name
     return func
 
 
@@ -64,7 +77,7 @@ _REDUCE_DOCSTRING_TEMPLATE = \
 
 
 def inject_reduce_methods(cls):
-    # TODO: change these to use methods instead of numpy functions
+    # change these to use methods instead of numpy functions?
     for name in NUMPY_REDUCE_METHODS:
         func = cls._reduce_method(getattr(np, name))
         func.__name__ = name
@@ -74,7 +87,7 @@ def inject_reduce_methods(cls):
         setattr(cls, name, func)
 
 
-def inject_special_operations(cls, priority=50):
+def inject_special_operations(cls, priority=50, array_only=True):
     # priortize our operations over those of numpy.ndarray (priority=1)
     # and numpy.matrix (priority=10)
     cls.__array_priority__ = priority
@@ -93,10 +106,15 @@ def inject_special_operations(cls, priority=50):
         setattr(cls, op_str('i' + name),
                 cls._inplace_binary_op(op('i' + name)))
     # patch in numpy methods
-    for name in NUMPY_SAME_METHODS:
-        setattr(cls, name, _values_method_wrapper(name))
     for name in NUMPY_UNARY_METHODS:
         setattr(cls, name, cls._unary_op(_method_wrapper(name)))
     for name in PANDAS_UNARY_FUNCTIONS:
-        setattr(cls, name, cls._unary_op(getattr(pd, name)))
+        # setattr(cls, name, cls._unary_op(getattr(pd, name)))
+        f = _func_slash_method_wrapper(getattr(pd, name), name)
+        setattr(cls, name, cls._unary_op(f))
+    if array_only:
+        # these methods don't return arrays of the same shape as the input, so
+        # don't try to patch these in for Dataset objects
+        for name in NUMPY_SAME_METHODS:
+            setattr(cls, name, _values_method_wrapper(name))
     inject_reduce_methods(cls)

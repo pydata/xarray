@@ -1,4 +1,5 @@
 from collections import Mapping
+import functools
 from io import BytesIO
 import warnings
 
@@ -605,28 +606,31 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
                                      compat=compat))
 
     def equals(self, other):
-        """Two Datasets are equal if they have the same variables and all
-        variables are equal.
+        """Two Datasets are equal if they have matching variables and
+        coordinates, all of which are equal.
+
+        Datasets can still be equal (like pandas objects) if they have NaN
+        values in the same locations.
+
+        This method is necessary because `v1 == v2` for ``Dataset``
+        does element-wise comparisions (like numpy.ndarrays).
+
+        See Also
+        --------
+        Dataset.identical
         """
         try:
             return self._all_compat(other, 'equals')
         except (TypeError, AttributeError):
             return False
 
-    def __eq__(self, other):
-        raise TypeError('__eq__ no longer defined for Dataset; in a future '
-                        'version of xray, it will be reenabled but applied '
-                        'elementwise')
-
-    def __ne__(self, other):
-        raise TypeError('__ne__ no longer defined for Dataset; in a future '
-                        'version of xray, it will be reenabled but applied '
-                        'elementwise')
-
     def identical(self, other):
-        """Two Datasets are identical if they have the same variables and all
-        variables are identical (with the same attributes), and they also have
-        the same global attributes.
+        """Like equals, but also checks all dataset attributes and the
+        attributes on all variables and coordinates.
+
+        See Also
+        --------
+        Dataset.equals
         """
         try:
             return (utils.dict_equiv(self.attrs, other.attrs)
@@ -1219,7 +1223,7 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
         obj._coord_names = coord_names
         return obj
 
-    def apply(self, func, keep_attrs=False, **kwargs):
+    def apply(self, func, keep_attrs=False, args=(), **kwargs):
         """Apply a function over noncoordinate variables in this dataset.
 
         Parameters
@@ -1232,6 +1236,8 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
             If True, the datasets's attributes (`attrs`) will be copied from
             the original object to the new one. If False, the new object will
             be returned without attributes.
+        args : tuple, optional
+            Position arguments passed on to `func`.
         **kwargs : dict
             Additional keyword arguments passed on to `func`.
 
@@ -1242,9 +1248,9 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
             Coordinates which are no longer used as the dimension of a
             noncoordinate are dropped.
         """
-        variables = OrderedDict((k, func(v, **kwargs))
+        variables = OrderedDict((k, func(v, *args, **kwargs))
                                 for k, v in iteritems(self))
-        attrs = self.attrs if keep_attrs else {}
+        attrs = self.attrs if keep_attrs else None
         return type(self)(variables, attrs=attrs)
 
     @classmethod
@@ -1406,4 +1412,54 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
             obj[name] = (dims, data)
         return obj
 
-ops.inject_reduce_methods(Dataset)
+    @staticmethod
+    def _unary_op(f):
+        @functools.wraps(f)
+        def func(self, *args, **kwargs):
+            ds = self.coords.to_dataset()
+            for k in self:
+                ds._variables[k] = f(self._variables[k], *args, **kwargs)
+            return ds
+        return func
+
+    def _merge_binary_op(self, f, orig, other):
+        if utils.is_dict_like(other):
+            if set(orig) != set(other):
+                raise ValueError('Datasets do not have the same variables: '
+                                 '%s, %s' % (list(orig), list(other)))
+            other_variables = getattr(other, '_variables', other)
+            for k in orig:
+                self._variables[k] = f(orig._variables[k], other_variables[k])
+        else:
+            other_variable = getattr(other, 'variable', other)
+            for k in orig:
+                self._variables[k] = f(orig._variables[k], other_variable)
+
+    @staticmethod
+    def _binary_op(f, reflexive=False):
+        @functools.wraps(f)
+        def func(self, other):
+            other_coords = getattr(other, 'coords', None)
+            ds = self.coords.merge(other_coords)
+            g = f if not reflexive else lambda x, y: f(y, x)
+            ds._merge_binary_op(g, self, other)
+            return ds
+        return func
+
+    @staticmethod
+    def _inplace_binary_op(f):
+        @functools.wraps(f)
+        def func(self, other):
+            other_coords = getattr(other, 'coords', None)
+            with self.coords._merge_inplace(other_coords):
+                # nb. this in-place operation is not entirely safe -- if
+                # variables have different types, you could get a TypeError,
+                # and all variables that had already been processed would be
+                # corrupted. I don't see any way around that, though, without
+                # scrapping in-place operations all-together (or doing a
+                # defensive copy first, which is basically equivalent).
+                self._merge_binary_op(f, self, other)
+            return self
+        return func
+
+ops.inject_special_operations(Dataset, array_only=False)

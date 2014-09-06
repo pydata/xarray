@@ -511,8 +511,6 @@ class TestDataArray(TestCase):
             a + b
         with self.assertRaisesRegexp(ValueError, 'not aligned'):
             b + a
-        with self.assertRaisesRegexp(TypeError, 'datasets do not support'):
-            a + a.to_dataset()
 
     def test_inplace_math_basics(self):
         x = self.x

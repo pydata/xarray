@@ -791,8 +791,12 @@ class DataArray(AbstractArray):
         DataArrays can still be equal (like pandas objects) if they have NaN
         values in the same locations.
 
-        This method is necessary because `v1 == v2` for DataArrays
+        This method is necessary because `v1 == v2` for ``DataArray``
         does element-wise comparisions (like numpy.ndarrays).
+
+        See Also
+        --------
+        DataArray.identical
         """
         try:
             return self._all_compat(other, 'equals')
@@ -800,8 +804,12 @@ class DataArray(AbstractArray):
             return False
 
     def identical(self, other):
-        """Like equals, but also checks DataArray names and attributes, and
-        attributes on their coordinates.
+        """Like equals, but also checks the array name and attributes, and
+        attributes on all coordinates.
+
+        See Also
+        --------
+        DataArray.equal
         """
         try:
             return (self.name == other.name
@@ -837,6 +845,8 @@ class DataArray(AbstractArray):
     def _binary_op(f, reflexive=False):
         @functools.wraps(f)
         def func(self, other):
+            if isinstance(other, Dataset):
+                return NotImplemented
             other_coords = getattr(other, 'coords', None)
             other_variable = getattr(other, 'variable', other)
             ds = self.coords.merge(other_coords)

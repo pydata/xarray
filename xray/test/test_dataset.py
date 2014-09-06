@@ -374,14 +374,10 @@ class TestDataset(TestCase):
         data2 = create_test_data(seed=42)
         data2.attrs['foobar'] = 'baz'
         self.assertTrue(data.equals(data2))
-        with self.assertRaises(TypeError):
-            data == data2
         self.assertFalse(data.identical(data2))
 
         del data2['time']
         self.assertFalse(data.equals(data2))
-        with self.assertRaises(TypeError):
-            data != data2
 
         data = create_test_data(seed=42).rename({'var1': None})
         self.assertTrue(data.equals(data))
@@ -1100,3 +1096,87 @@ class TestDataset(TestCase):
 
         actual = data.apply(scale, multiple=2)
         self.assertDataArrayEqual(actual['var1'], 2 * data['var1'])
+        self.assertDataArrayIdentical(actual['numbers'], data['numbers'])
+
+    def test_math(self):
+        ds = Dataset({'foo': (('x', 'y'), 1.0 * np.arange(12).reshape(3, 4)),
+                      'bar': ('x', np.arange(100, 400, 100))},
+                      coords={'abc': ('x', ['a', 'b', 'c']),
+                              'y': 10 * np.arange(4)})
+        ds['foo'][0, 0] = np.nan
+
+        self.assertDatasetIdentical(ds, +ds)
+        self.assertDatasetIdentical(ds, ds + 0)
+        self.assertDatasetIdentical(ds, 0 + ds)
+        self.assertDatasetIdentical(ds, ds + np.array(0))
+        self.assertDatasetIdentical(ds, np.array(0) + ds)
+
+        actual = ds.copy(deep=True)
+        actual += 0
+        self.assertDatasetIdentical(ds, actual)
+
+        self.assertDatasetIdentical(ds.apply(abs), abs(ds))
+        self.assertDatasetIdentical(ds.apply(lambda x: x + 4), ds + 4)
+
+        for func in [lambda x: x.isnull(),
+                     lambda x: x.round(),
+                     lambda x: x.astype(int)]:
+            self.assertDatasetIdentical(ds.apply(func), func(ds))
+
+        self.assertDatasetIdentical(ds.isnull(), ~ds.notnull())
+
+        # dataset-array
+        expected = ds.apply(lambda x: x + ds['foo'])
+        self.assertDatasetIdentical(expected, ds + ds['foo'])
+        self.assertDatasetIdentical(expected, ds['foo'] + ds)
+        self.assertDatasetIdentical(expected, ds + ds['foo'].variable)
+        self.assertDatasetIdentical(expected, ds['foo'].variable + ds)
+        with self.assertRaisesRegexp(ValueError, 'dimensions cannot change'):
+            ds += ds['foo']
+
+        expected = ds.apply(lambda x: x + ds['bar'])
+        self.assertDatasetIdentical(expected, ds + ds['bar'])
+        actual = ds.copy(deep=True)
+        actual += ds['bar']
+        self.assertDatasetIdentical(expected, actual)
+
+        expected = Dataset({'bar': ds['bar'] + np.arange(3)})
+        self.assertDatasetIdentical(expected, ds[['bar']] + np.arange(3))
+        self.assertDatasetIdentical(expected, np.arange(3) + ds[['bar']])
+
+        # dataset-dataset
+        self.assertDatasetIdentical(ds, ds + 0 * ds)
+        self.assertDatasetIdentical(ds, ds + {'foo': 0, 'bar': 0})
+
+        expected = ds.apply(lambda x: 2 * x)
+        self.assertDatasetIdentical(expected, 2 * ds)
+        self.assertDatasetIdentical(expected, ds + ds)
+        self.assertDatasetIdentical(expected, ds + dict(ds))
+
+        actual = ds.copy(deep=True)
+        actual += ds
+        self.assertDatasetIdentical(expected, actual)
+
+        self.assertDatasetIdentical(ds == ds, ds.notnull())
+
+        with self.assertRaises(TypeError):
+            ds['foo'] += ds
+        with self.assertRaises(TypeError):
+            ds['foo'].variable += ds
+        with self.assertRaisesRegexp(ValueError, 'do not have the same'):
+            ds + ds[['bar']]
+
+        # verify we can rollback in-place operations if something goes wrong
+        # nb. there are some edge cases where this fails (see
+        # Dataset._inplace_binary_op)
+        other = DataArray(None, coords={'c': 2})
+        actual = ds.copy(deep=True)
+        with self.assertRaises(TypeError):
+            actual += other
+        self.assertDatasetIdentical(actual, ds)
+
+        # don't actually patch these methods in
+        with self.assertRaises(AttributeError):
+            ds.item
+        with self.assertRaises(AttributeError):
+            ds.searchsorted
