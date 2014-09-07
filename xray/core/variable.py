@@ -708,14 +708,14 @@ class Variable(common.AbstractArray):
     def _unary_op(f):
         @functools.wraps(f)
         def func(self, *args, **kwargs):
-            return Variable(self.dims, f(self.values, *args, **kwargs))
+            return self.__array_wrap__(f(self.values, *args, **kwargs))
         return func
 
     @staticmethod
     def _binary_op(f, reflexive=False):
         @functools.wraps(f)
         def func(self, other):
-            if isinstance(other, xray.DataArray):
+            if isinstance(other, (xray.DataArray, xray.Dataset)):
                 return NotImplemented
             self_data, other_data, dims = _broadcast_variable_data(self, other)
             new_data = (f(self_data, other_data)
@@ -728,6 +728,8 @@ class Variable(common.AbstractArray):
     def _inplace_binary_op(f):
         @functools.wraps(f)
         def func(self, other):
+            if isinstance(other, xray.Dataset):
+                raise TypeError('cannot add a Dataset to a Variable in-place')
             self_data, other_data, dims = _broadcast_variable_data(self, other)
             if dims != self.dims:
                 raise ValueError('dimensions cannot change for in-place '
@@ -874,9 +876,7 @@ def broadcast_variables(first, second):
 
 
 def _broadcast_variable_data(self, other):
-    if isinstance(other, xray.Dataset):
-        raise TypeError('datasets do not support mathematical operations')
-    elif all(hasattr(other, attr) for attr
+    if all(hasattr(other, attr) for attr
              in ['dims', 'values', 'shape', 'encoding']):
         # `other` satisfies the necessary Variable API for broadcast_variables
         new_self, new_other = broadcast_variables(self, other)

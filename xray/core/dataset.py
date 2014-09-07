@@ -1,4 +1,5 @@
 from collections import Mapping
+import functools
 from io import BytesIO
 import warnings
 
@@ -605,28 +606,31 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
                                      compat=compat))
 
     def equals(self, other):
-        """Two Datasets are equal if they have the same variables and all
-        variables are equal.
+        """Two Datasets are equal if they have matching variables and
+        coordinates, all of which are equal.
+
+        Datasets can still be equal (like pandas objects) if they have NaN
+        values in the same locations.
+
+        This method is necessary because `v1 == v2` for ``Dataset``
+        does element-wise comparisions (like numpy.ndarrays).
+
+        See Also
+        --------
+        Dataset.identical
         """
         try:
             return self._all_compat(other, 'equals')
         except (TypeError, AttributeError):
             return False
 
-    def __eq__(self, other):
-        raise TypeError('__eq__ no longer defined for Dataset; in a future '
-                        'version of xray, it will be reenabled but applied '
-                        'elementwise')
-
-    def __ne__(self, other):
-        raise TypeError('__ne__ no longer defined for Dataset; in a future '
-                        'version of xray, it will be reenabled but applied '
-                        'elementwise')
-
     def identical(self, other):
-        """Two Datasets are identical if they have the same variables and all
-        variables are identical (with the same attributes), and they also have
-        the same global attributes.
+        """Like equals, but also checks all dataset attributes and the
+        attributes on all variables and coordinates.
+
+        See Also
+        --------
+        Dataset.equals
         """
         try:
             return (utils.dict_equiv(self.attrs, other.attrs)
@@ -1124,6 +1128,49 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
             group = self[group]
         return groupby.DatasetGroupBy(self, group, squeeze=squeeze)
 
+    def transpose(self, *dims):
+        """Return a new Dataset object with all array dimensions transposed.
+
+        Although the order of dimensions on each array will change, the dataset
+        dimensions themselves will remain in fixed (sorted) order.
+
+        Parameters
+        ----------
+        *dims : str, optional
+            By default, reverse the dimensions on each array. Otherwise,
+            reorder the dimensions to this order.
+
+        Returns
+        -------
+        transposed : Dataset
+            Each array in the dataset (including) coordinates will be
+            transposed to the given order.
+
+        Notes
+        -----
+        Although this operation returns a view of each array's data, it
+        is not lazy -- the data will be fully loaded into memory.
+
+        See Also
+        --------
+        numpy.transpose
+        DataArray.transpose
+        """
+        if dims:
+            if set(dims) ^ set(self.dims):
+                raise ValueError('arguments to transpose (%s) must be '
+                                 'permuted dataset dimensions (%s)'
+                                 % (dims, tuple(self.dims)))
+        ds = self.copy()
+        for name, var in iteritems(self._variables):
+            var_dims = tuple(dim for dim in dims if dim in var.dims)
+            ds._variables[name] = var.transpose(*var_dims)
+        return ds
+
+    @property
+    def T(self):
+        return self.transpose()
+
     def squeeze(self, dim=None):
         """Return a new dataset with squeezed data.
 
@@ -1219,7 +1266,7 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
         obj._coord_names = coord_names
         return obj
 
-    def apply(self, func, keep_attrs=False, **kwargs):
+    def apply(self, func, keep_attrs=False, args=(), **kwargs):
         """Apply a function over noncoordinate variables in this dataset.
 
         Parameters
@@ -1232,6 +1279,8 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
             If True, the datasets's attributes (`attrs`) will be copied from
             the original object to the new one. If False, the new object will
             be returned without attributes.
+        args : tuple, optional
+            Position arguments passed on to `func`.
         **kwargs : dict
             Additional keyword arguments passed on to `func`.
 
@@ -1242,9 +1291,9 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
             Coordinates which are no longer used as the dimension of a
             noncoordinate are dropped.
         """
-        variables = OrderedDict((k, func(v, **kwargs))
+        variables = OrderedDict((k, func(v, *args, **kwargs))
                                 for k, v in iteritems(self))
-        attrs = self.attrs if keep_attrs else {}
+        attrs = self.attrs if keep_attrs else None
         return type(self)(variables, attrs=attrs)
 
     @classmethod
@@ -1406,4 +1455,57 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
             obj[name] = (dims, data)
         return obj
 
-ops.inject_reduce_methods(Dataset)
+    @staticmethod
+    def _unary_op(f):
+        @functools.wraps(f)
+        def func(self, *args, **kwargs):
+            ds = self.coords.to_dataset()
+            for k in self:
+                ds._variables[k] = f(self._variables[k], *args, **kwargs)
+            return ds
+        return func
+
+    @staticmethod
+    def _binary_op(f, reflexive=False):
+        @functools.wraps(f)
+        def func(self, other):
+            other_coords = getattr(other, 'coords', None)
+            ds = self.coords.merge(other_coords)
+            g = f if not reflexive else lambda x, y: f(y, x)
+            _calculate_binary_op(g, self, other, ds._variables)
+            return ds
+        return func
+
+    @staticmethod
+    def _inplace_binary_op(f):
+        @functools.wraps(f)
+        def func(self, other):
+            other_coords = getattr(other, 'coords', None)
+            with self.coords._merge_inplace(other_coords):
+                # make a defensive copy of variables to modify in-place so we
+                # can rollback in case of an exception
+                # note: when/if we support automatic alignment, only copy the
+                # variables that will actually be included in the result
+                dest_vars = dict((k, self._variables[k].copy()) for k in self)
+                _calculate_binary_op(f, dest_vars, other, dest_vars)
+                self._variables.update(dest_vars)
+            return self
+        return func
+
+
+def _calculate_binary_op(f, dataset, other, dest_vars):
+    dataset_vars = getattr(dataset, '_variables', dataset)
+    if utils.is_dict_like(other):
+        if set(dataset) != set(other):
+            raise ValueError('Datasets do not have the same variables: '
+                             '%s, %s' % (list(dataset_vars), list(other)))
+        other_variables = getattr(other, '_variables', other)
+        for k in dataset:
+            dest_vars[k] = f(dataset_vars[k], other_variables[k])
+    else:
+        other_variable = getattr(other, 'variable', other)
+        for k in dataset:
+            dest_vars[k] = f(dataset_vars[k], other_variable)
+
+
+ops.inject_special_operations(Dataset, array_only=False)

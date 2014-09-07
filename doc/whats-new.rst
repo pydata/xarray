@@ -4,11 +4,21 @@ What's New
 v0.3.0 (in development)
 -----------------------
 
-The major new feature for this release are revamped "coordinates", which can
-now refer to arrays that are not used to index a dimension. Coordinates are
-intended to allow for keeping track of arrays of metadata that describe the
-grid on which the points in "variable" arrays lie. They are preserved (when
-unambiguous) even though mathematical operations.
+New features:
+
+- **Revamped coordinates**: "coordinates" now refer to all arrays that are not
+  used to index a dimension. Coordinates are intended to allow for keeping track
+  of arrays of metadata that describe the grid on which the points in "variable"
+  arrays lie. They are preserved (when unambiguous) even though mathematical
+  operations.
+- **Dataset math** :py:class:`~xray.Dataset` objects now support all arithmetic
+  operations directly. Dataset-array operations map across all dataset
+  variables; dataset-dataset operations act on each pair of variables with the
+  same name.
+- The dataset ``__repr__`` method has been entirely overhauled; dataset
+  objects now show their values when printed.
+- You can now index a dataset with a list of variables to return a new dataset:
+  ``ds[['foo', 'bar']]``.
 
 Backwards incompatible changes
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -18,8 +28,9 @@ Backwards incompatible changes
   only the *variables*, formerly called *non-coordinates*. Correspondingly, the
   ``Dataset.noncoords`` property has been deprecated (you can just use the
   ``Dataset`` object itself).
-- ``Dataset.__eq__`` and ``Dataset.__ne__`` now are now undefined, because in
-  a future version of xray we intend to make the operations element-wise.
+- ``Dataset.__eq__`` and ``Dataset.__ne__`` are now element-wise operations
+  instead of comparing all values to obtain a single boolean. Use the method
+  :py:meth:`~xray.Dataset.equals` instead.
 
 Deprecations
 ~~~~~~~~~~~~

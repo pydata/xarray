@@ -374,14 +374,10 @@ class TestDataset(TestCase):
         data2 = create_test_data(seed=42)
         data2.attrs['foobar'] = 'baz'
         self.assertTrue(data.equals(data2))
-        with self.assertRaises(TypeError):
-            data == data2
         self.assertFalse(data.identical(data2))
 
         del data2['time']
         self.assertFalse(data.equals(data2))
-        with self.assertRaises(TypeError):
-            data != data2
 
         data = create_test_data(seed=42).rename({'var1': None})
         self.assertTrue(data.equals(data))
@@ -1100,3 +1096,134 @@ class TestDataset(TestCase):
 
         actual = data.apply(scale, multiple=2)
         self.assertDataArrayEqual(actual['var1'], 2 * data['var1'])
+        self.assertDataArrayIdentical(actual['numbers'], data['numbers'])
+
+    def make_example_math_dataset(self):
+        variables = OrderedDict(
+            [('bar', ('x', np.arange(100, 400, 100))),
+             ('foo', (('x', 'y'), 1.0 * np.arange(12).reshape(3, 4)))])
+        coords = {'abc': ('x', ['a', 'b', 'c']),
+                  'y': 10 * np.arange(4)}
+        ds = Dataset(variables, coords)
+        ds['foo'][0, 0] = np.nan
+        return ds
+
+    def test_dataset_number_math(self):
+        ds = self.make_example_math_dataset()
+
+        self.assertDatasetIdentical(ds, +ds)
+        self.assertDatasetIdentical(ds, ds + 0)
+        self.assertDatasetIdentical(ds, 0 + ds)
+        self.assertDatasetIdentical(ds, ds + np.array(0))
+        self.assertDatasetIdentical(ds, np.array(0) + ds)
+
+        actual = ds.copy(deep=True)
+        actual += 0
+        self.assertDatasetIdentical(ds, actual)
+
+    def test_unary_ops(self):
+        ds = self.make_example_math_dataset()
+
+        self.assertDatasetIdentical(ds.apply(abs), abs(ds))
+        self.assertDatasetIdentical(ds.apply(lambda x: x + 4), ds + 4)
+
+        for func in [lambda x: x.isnull(),
+                     lambda x: x.round(),
+                     lambda x: x.astype(int)]:
+            self.assertDatasetIdentical(ds.apply(func), func(ds))
+
+        self.assertDatasetIdentical(ds.isnull(), ~ds.notnull())
+
+        # don't actually patch these methods in
+        with self.assertRaises(AttributeError):
+            ds.item
+        with self.assertRaises(AttributeError):
+            ds.searchsorted
+
+    def test_dataset_array_math(self):
+        ds = self.make_example_math_dataset()
+
+        expected = ds.apply(lambda x: x + ds['foo'])
+        self.assertDatasetIdentical(expected, ds + ds['foo'])
+        self.assertDatasetIdentical(expected, ds['foo'] + ds)
+        self.assertDatasetIdentical(expected, ds + ds['foo'].variable)
+        self.assertDatasetIdentical(expected, ds['foo'].variable + ds)
+        with self.assertRaisesRegexp(ValueError, 'dimensions cannot change'):
+            ds += ds['foo']
+
+        expected = ds.apply(lambda x: x + ds['bar'])
+        self.assertDatasetIdentical(expected, ds + ds['bar'])
+        actual = ds.copy(deep=True)
+        actual += ds['bar']
+        self.assertDatasetIdentical(expected, actual)
+
+        expected = Dataset({'bar': ds['bar'] + np.arange(3)})
+        self.assertDatasetIdentical(expected, ds[['bar']] + np.arange(3))
+        self.assertDatasetIdentical(expected, np.arange(3) + ds[['bar']])
+
+    def test_dataset_dataset_math(self):
+        ds = self.make_example_math_dataset()
+
+        self.assertDatasetIdentical(ds, ds + 0 * ds)
+        self.assertDatasetIdentical(ds, ds + {'foo': 0, 'bar': 0})
+
+        expected = ds.apply(lambda x: 2 * x)
+        self.assertDatasetIdentical(expected, 2 * ds)
+        self.assertDatasetIdentical(expected, ds + ds)
+        self.assertDatasetIdentical(expected, ds + dict(ds))
+
+        actual = ds.copy(deep=True)
+        actual += ds
+        self.assertDatasetIdentical(expected, actual)
+
+        self.assertDatasetIdentical(ds == ds, ds.notnull())
+
+    def test_dataset_math_errors(self):
+        ds = self.make_example_math_dataset()
+
+        with self.assertRaises(TypeError):
+            ds['foo'] += ds
+        with self.assertRaises(TypeError):
+            ds['foo'].variable += ds
+        with self.assertRaisesRegexp(ValueError, 'do not have the same'):
+            ds + ds[['bar']]
+
+        # verify we can rollback in-place operations if something goes wrong
+        # nb. inplace datetime64 math actually will work with an integer array
+        # but not floats thanks to numpy's inconsistent handling
+        other = DataArray(np.datetime64('2000-01-01T12'), coords={'c': 2})
+        actual = ds.copy(deep=True)
+        with self.assertRaises(TypeError):
+            actual += other
+        self.assertDatasetIdentical(actual, ds)
+
+    def test_dataset_transpose(self):
+        ds = Dataset({'a': (('x', 'y'), np.random.randn(3, 4)),
+                      'b': (('y', 'x'), np.random.randn(4, 3))})
+
+        actual = ds.transpose()
+        expected = ds.apply(lambda x: x.transpose())
+        self.assertDatasetIdentical(expected, actual)
+
+        actual = ds.T
+        self.assertDatasetIdentical(expected, actual)
+
+        actual = ds.transpose('x', 'y')
+        expected = ds.apply(lambda x: x.transpose('x', 'y'))
+        self.assertDatasetIdentical(expected, actual)
+
+        ds = create_test_data()
+        actual = ds.transpose()
+        for k in ds:
+            self.assertEqual(actual[k].dims[::-1], ds[k].dims)
+
+        new_order = ('dim2', 'dim3', 'dim1', 'time')
+        actual = ds.transpose(*new_order)
+        for k in ds:
+            expected_dims = tuple(d for d in new_order if d in ds[k].dims)
+            self.assertEqual(actual[k].dims, expected_dims)
+
+        with self.assertRaisesRegexp(ValueError, 'arguments to transpose'):
+            ds.transpose('dim1', 'dim2', 'dim3')
+        with self.assertRaisesRegexp(ValueError, 'arguments to transpose'):
+            ds.transpose('dim1', 'dim2', 'dim3', 'time', 'extra_dim')
