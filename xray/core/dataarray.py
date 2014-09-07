@@ -615,9 +615,6 @@ class DataArray(AbstractArray):
     def transpose(self, *dims):
         """Return a new DataArray object with transposed dimensions.
 
-        Note: Although this operation returns a view of this array's data, it
-        is not lazy -- the data will be fully loaded.
-
         Parameters
         ----------
         *dims : str, optional
@@ -637,7 +634,7 @@ class DataArray(AbstractArray):
         See Also
         --------
         numpy.transpose
-        Array.transpose
+        Dataset.transpose
         """
         ds = self._dataset.copy()
         ds[self.name] = self.variable.transpose(*dims)

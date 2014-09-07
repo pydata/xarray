@@ -1128,6 +1128,49 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
             group = self[group]
         return groupby.DatasetGroupBy(self, group, squeeze=squeeze)
 
+    def transpose(self, *dims):
+        """Return a new Dataset object with all array dimensions transposed.
+
+        Although the order of dimensions on each array will change, the dataset
+        dimensions themselves will remain in fixed (sorted) order.
+
+        Parameters
+        ----------
+        *dims : str, optional
+            By default, reverse the dimensions on each array. Otherwise,
+            reorder the dimensions to this order.
+
+        Returns
+        -------
+        transposed : Dataset
+            Each array in the dataset (including) coordinates will be
+            transposed to the given order.
+
+        Notes
+        -----
+        Although this operation returns a view of each array's data, it
+        is not lazy -- the data will be fully loaded into memory.
+
+        See Also
+        --------
+        numpy.transpose
+        DataArray.transpose
+        """
+        if dims:
+            if set(dims) ^ set(self.dims):
+                raise ValueError('arguments to transpose (%s) must be '
+                                 'permuted dataset dimensions (%s)'
+                                 % (dims, tuple(self.dims)))
+        ds = self.copy()
+        for name, var in iteritems(self._variables):
+            var_dims = tuple(dim for dim in dims if dim in var.dims)
+            ds._variables[name] = var.transpose(*var_dims)
+        return ds
+
+    @property
+    def T(self):
+        return self.transpose()
+
     def squeeze(self, dim=None):
         """Return a new dataset with squeezed data.
 

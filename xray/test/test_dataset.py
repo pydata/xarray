@@ -1196,3 +1196,34 @@ class TestDataset(TestCase):
         with self.assertRaises(TypeError):
             actual += other
         self.assertDatasetIdentical(actual, ds)
+
+    def test_dataset_transpose(self):
+        ds = Dataset({'a': (('x', 'y'), np.random.randn(3, 4)),
+                      'b': (('y', 'x'), np.random.randn(4, 3))})
+
+        actual = ds.transpose()
+        expected = ds.apply(lambda x: x.transpose())
+        self.assertDatasetIdentical(expected, actual)
+
+        actual = ds.T
+        self.assertDatasetIdentical(expected, actual)
+
+        actual = ds.transpose('x', 'y')
+        expected = ds.apply(lambda x: x.transpose('x', 'y'))
+        self.assertDatasetIdentical(expected, actual)
+
+        ds = create_test_data()
+        actual = ds.transpose()
+        for k in ds:
+            self.assertEqual(actual[k].dims[::-1], ds[k].dims)
+
+        new_order = ('dim2', 'dim3', 'dim1', 'time')
+        actual = ds.transpose(*new_order)
+        for k in ds:
+            expected_dims = tuple(d for d in new_order if d in ds[k].dims)
+            self.assertEqual(actual[k].dims, expected_dims)
+
+        with self.assertRaisesRegexp(ValueError, 'arguments to transpose'):
+            ds.transpose('dim1', 'dim2', 'dim3')
+        with self.assertRaisesRegexp(ValueError, 'arguments to transpose'):
+            ds.transpose('dim1', 'dim2', 'dim3', 'time', 'extra_dim')
