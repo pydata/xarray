@@ -1,7 +1,7 @@
 from collections import Mapping
 from contextlib import contextmanager
 
-from .pycompat import iteritems
+from .pycompat import iteritems, basestring
 from . import formatting
 from . import utils
 
@@ -20,7 +20,10 @@ class AbstractCoordinates(Mapping):
         return self._dataset._coord_names
 
     def __getitem__(self, key):
-        if key in self._names:
+        if (key in self._names
+                or (isinstance(key, basestring)
+                    and key.split('.')[0] in self._names)):
+            # allow indexing current coordinates or components
             return self._dataset[key]
         else:
             raise KeyError(key)
