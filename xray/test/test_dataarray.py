@@ -348,6 +348,13 @@ class TestDataArray(TestCase):
         self.assertEqual(data.loc[True], 0)
         self.assertEqual(data.loc[False], 1)
 
+    def test_time_components(self):
+        dates = pd.date_range('2000-01-01', periods=10)
+        da = DataArray(np.arange(1, 11), [('time', dates)])
+
+        self.assertArrayEqual(da['time.dayofyear'], da.values)
+        self.assertArrayEqual(da.coords['time.dayofyear'], da.values)
+
     def test_coords(self):
         coords = [Coordinate('x', [-1, -2]), Coordinate('y', [0, 1, 2])]
         da = DataArray(np.random.randn(2, 3), coords, name='foo')
