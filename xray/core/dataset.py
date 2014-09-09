@@ -1469,6 +1469,8 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
     def _binary_op(f, reflexive=False):
         @functools.wraps(f)
         def func(self, other):
+            if isinstance(other, groupby.GroupBy):
+                return NotImplemented
             other_coords = getattr(other, 'coords', None)
             ds = self.coords.merge(other_coords)
             g = f if not reflexive else lambda x, y: f(y, x)
@@ -1480,6 +1482,8 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
     def _inplace_binary_op(f):
         @functools.wraps(f)
         def func(self, other):
+            if isinstance(other, groupby.GroupBy):
+                return NotImplemented
             other_coords = getattr(other, 'coords', None)
             with self.coords._merge_inplace(other_coords):
                 # make a defensive copy of variables to modify in-place so we

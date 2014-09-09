@@ -1,8 +1,9 @@
+import functools
 import numpy as np
 
+from . import ops
 from .alignment import concat
 from .common import ImplementsArrayReduce, ImplementsDatasetReduce
-from .ops import inject_reduce_methods
 from .pycompat import zip
 from .utils import peek_at
 from .variable import Variable, Coordinate
@@ -128,6 +129,41 @@ class GroupBy(object):
             indexers = np.arange(self.unique_coord.size)
         return concat_dim, indexers
 
+    @staticmethod
+    def _binary_op(f, reflexive=False):
+        @functools.wraps(f)
+        def func(self, other):
+            g = f if not reflexive else lambda x, y: f(y, x)
+            return self._apply_binary(g, other)
+        return func
+
+    def _apply_binary(self, func, other):
+        applied = self._iter_binary_applied(func, other)
+        return self._concat(applied)
+
+    def _iter_binary_applied(self, func, other):
+        for group_value, obj in self:
+            try:
+                other_sel = other.sel(**{self.group.name: group_value})
+            except AttributeError:
+                raise TypeError('GroupBy objects only support arithmetic '
+                                'when the other argument is a Dataset or '
+                                'DataArray')
+            # rather awkward work around to handle dataarrays where values are
+            # also coordinates (e.g., name appears as a dimension):
+            if self.group.name != getattr(other_sel, 'name', None):
+                # work around the fact that indexing an individual element
+                # results in a scalar value that is likely to be incompatible
+                # with the corresponding coordinate in self.obj (because they
+                # have different shape)
+                # TODO: figure out some less hacky solution that will also work
+                # for other scalar values collapsed to a point by sel that are
+                # also some constant value in self.obj. Maybe we should relax
+                # the compatibility rules for binary operations to allow for
+                # different shapes, but still all equivalent values?
+                other_sel = other_sel.reset_coords(self.group.name, drop=True)
+            yield func(obj, other_sel)
+
 
 class ArrayGroupBy(GroupBy, ImplementsArrayReduce):
     """GroupBy object specialized to grouping DataArray objects
@@ -224,10 +260,13 @@ class ArrayGroupBy(GroupBy, ImplementsArrayReduce):
         else:
             grouped = self._iter_grouped()
         applied = (func(arr, **kwargs) for arr in grouped)
+        return self._concat(applied, shortcut=shortcut)
 
+    def _concat(self, applied, shortcut=False):
         # peek at applied to determine which coordinate to stack over
         applied_example, applied = peek_at(applied)
         concat_dim, indexers = self._infer_concat_args(applied_example)
+
         if shortcut:
             combined = self._concat_shortcut(applied, concat_dim, indexers)
         else:
@@ -271,7 +310,8 @@ class ArrayGroupBy(GroupBy, ImplementsArrayReduce):
             return ar.reduce(func, dim, axis, keep_attrs=keep_attrs, **kwargs)
         return self.apply(reduce_array, shortcut=shortcut)
 
-inject_reduce_methods(ArrayGroupBy)
+ops.inject_reduce_methods(ArrayGroupBy)
+ops.inject_binary_ops(ArrayGroupBy)
 
 
 class DatasetGroupBy(GroupBy, ImplementsDatasetReduce):
@@ -302,8 +342,13 @@ class DatasetGroupBy(GroupBy, ImplementsDatasetReduce):
         applied : Dataset
             The result of splitting, applying and combining this dataset.
         """
-        applied = [func(ds, **kwargs) for ds in self._iter_grouped()]
-        concat_dim, indexers = self._infer_concat_args(applied[0])
+        kwargs.pop('shortcut', None) # ignore shortcut if set (for now)
+        applied = (func(ds, **kwargs) for ds in self._iter_grouped())
+        return self._concat(applied)
+
+    def _concat(self, applied):
+        applied_example, applied = peek_at(applied)
+        concat_dim, indexers = self._infer_concat_args(applied_example)
         combined = concat(applied, concat_dim, indexers=indexers)
         return combined
 
@@ -340,4 +385,5 @@ class DatasetGroupBy(GroupBy, ImplementsDatasetReduce):
             return ds.reduce(func, dim, keep_attrs, **kwargs)
         return self.apply(reduce_dataset)
 
-inject_reduce_methods(DatasetGroupBy)
+ops.inject_reduce_methods(DatasetGroupBy)
+ops.inject_binary_ops(DatasetGroupBy)

@@ -782,6 +782,37 @@ class TestDataArray(TestCase):
         expected_centered = expected_ds['foo']
         self.assertDataArrayAllClose(expected_centered, grouped.apply(center))
 
+    def test_groupby_math(self):
+        array = self.make_groupby_example_array()
+        for squeeze in [True, False]:
+            grouped = array.groupby('x', squeeze=squeeze)
+
+            expected = array + array.coords['x']
+            actual = grouped + array.coords['x']
+            self.assertDataArrayIdentical(expected, actual)
+
+            actual = array.coords['x'] + grouped
+            self.assertDataArrayIdentical(expected, actual)
+
+            ds = array.coords['x'].to_dataset()
+            expected = array + ds
+            actual = grouped + ds
+            self.assertDatasetIdentical(expected, actual)
+
+            actual = ds + grouped
+            self.assertDatasetIdentical(expected, actual)
+
+        grouped = array.groupby('abc')
+        expected_agg = (grouped.mean() - np.arange(3)).rename(None)
+        actual = grouped - DataArray(range(3), [('abc', ['a', 'b', 'c'])])
+        actual_agg = actual.groupby('abc').mean()
+        self.assertDataArrayAllClose(expected_agg, actual_agg)
+
+        with self.assertRaisesRegexp(TypeError, 'only support arithmetic'):
+            grouped + 1
+        with self.assertRaisesRegexp(TypeError, 'only support arithmetic'):
+            grouped + grouped
+
     def test_concat(self):
         self.ds['bar'] = Variable(['x', 'y'], np.random.randn(10, 20))
         foo = self.ds['foo']

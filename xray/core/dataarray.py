@@ -842,7 +842,7 @@ class DataArray(AbstractArray):
     def _binary_op(f, reflexive=False):
         @functools.wraps(f)
         def func(self, other):
-            if isinstance(other, Dataset):
+            if isinstance(other, (Dataset, groupby.GroupBy)):
                 return NotImplemented
             other_coords = getattr(other, 'coords', None)
             other_variable = getattr(other, 'variable', other)
@@ -858,6 +858,8 @@ class DataArray(AbstractArray):
     def _inplace_binary_op(f):
         @functools.wraps(f)
         def func(self, other):
+            if isinstance(other, groupby.GroupBy):
+                return NotImplemented
             other_coords = getattr(other, 'coords', None)
             other_variable = getattr(other, 'variable', other)
             with self.coords._merge_inplace(other_coords):
