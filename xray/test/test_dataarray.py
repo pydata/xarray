@@ -5,7 +5,7 @@ from textwrap import dedent
 
 from xray import concat, Dataset, DataArray, Coordinate, Variable, align
 from xray.core.pycompat import iteritems, OrderedDict
-from . import TestCase, ReturnItem, source_ndarray
+from . import TestCase, ReturnItem, source_ndarray, unittest
 
 
 class TestDataArray(TestCase):
@@ -751,6 +751,21 @@ class TestDataArray(TestCase):
         self.assertDataArrayAllClose(expected_sum_axis1,
                                      grouped.reduce(np.sum, 'y'))
         self.assertDataArrayAllClose(expected_sum_axis1, grouped.sum('y'))
+
+    @unittest.skip('needs to be fixed for shortcut=False, keep_attrs=False')
+    def test_groupby_reduce_attrs(self):
+        array = self.make_groupby_example_array()
+        array.attrs['foo'] = 'bar'
+
+        for shortcut in [True, False]:
+            for keep_attrs in [True, False]:
+                print('shortcut=%s, keep_attrs=%s' % (shortcut, keep_attrs))
+                actual = array.groupby('abc').reduce(
+                    np.mean, keep_attrs=keep_attrs, shortcut=shortcut)
+                expected = array.groupby('abc').mean()
+                if keep_attrs:
+                    expected.attrs['foo'] = 'bar'
+                self.assertDataArrayIdentical(expected, actual)
 
     def test_groupby_apply_center(self):
         def center(x):

@@ -237,7 +237,7 @@ class ArrayGroupBy(GroupBy, ImplementsArrayReduce):
             combined = self._restore_dim_order(combined, concat_dim)
         return combined
 
-    def reduce(self, func, dimension=None, axis=None, keep_attrs=False,
+    def reduce(self, func, dim=None, axis=None, keep_attrs=False,
                shortcut=True, **kwargs):
         """Reduce the items in this group by applying `func` along some
         dimension(s).
@@ -248,7 +248,7 @@ class ArrayGroupBy(GroupBy, ImplementsArrayReduce):
             Function which can be called in the form
             `func(x, axis=axis, **kwargs)` to return the result of collapsing an
             np.ndarray over an integer valued axis.
-        dimension : str or sequence of str, optional
+        dim : str or sequence of str, optional
             Dimension(s) over which to apply `func`.
         axis : int or sequence of int, optional
             Axis(es) over which to apply `func`. Only one of the 'dimension'
@@ -268,7 +268,7 @@ class ArrayGroupBy(GroupBy, ImplementsArrayReduce):
             removed.
         """
         def reduce_array(ar):
-            return ar.reduce(func, dimension, axis, **kwargs)
+            return ar.reduce(func, dim, axis, keep_attrs=keep_attrs, **kwargs)
         return self.apply(reduce_array, shortcut=shortcut)
 
 inject_reduce_methods(ArrayGroupBy)
@@ -307,7 +307,7 @@ class DatasetGroupBy(GroupBy, ImplementsDatasetReduce):
         combined = concat(applied, concat_dim, indexers=indexers)
         return combined
 
-    def reduce(self, func, dimension=None, keep_attrs=False, **kwargs):
+    def reduce(self, func, dim=None, keep_attrs=False, **kwargs):
         """Reduce the items in this group by applying `func` along some
         dimension(s).
 
@@ -317,7 +317,7 @@ class DatasetGroupBy(GroupBy, ImplementsDatasetReduce):
             Function which can be called in the form
             `func(x, axis=axis, **kwargs)` to return the result of collapsing an
             np.ndarray over an integer valued axis.
-        dimension : str or sequence of str, optional
+        dim : str or sequence of str, optional
             Dimension(s) over which to apply `func`.
         axis : int or sequence of int, optional
             Axis(es) over which to apply `func`. Only one of the 'dimension'
@@ -337,7 +337,7 @@ class DatasetGroupBy(GroupBy, ImplementsDatasetReduce):
             removed.
         """
         def reduce_dataset(ds):
-            return ds.reduce(func, dimension, keep_attrs, **kwargs)
+            return ds.reduce(func, dim, keep_attrs, **kwargs)
         return self.apply(reduce_dataset)
 
 inject_reduce_methods(DatasetGroupBy)
