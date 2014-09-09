@@ -1508,4 +1508,4 @@ def _calculate_binary_op(f, dataset, other, dest_vars):
             dest_vars[k] = f(dataset_vars[k], other_variable)
 
 
-ops.inject_special_operations(Dataset, array_only=False)
+ops.inject_all_ops_and_reduce_methods(Dataset, array_only=False)

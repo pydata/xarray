@@ -75,7 +75,6 @@ _REDUCE_DOCSTRING_TEMPLATE = \
             indicated dimension(s) removed.
         """
 
-
 def inject_reduce_methods(cls):
     # change these to use methods instead of numpy functions?
     for name in NUMPY_REDUCE_METHODS:
@@ -87,24 +86,34 @@ def inject_reduce_methods(cls):
         setattr(cls, name, func)
 
 
-def inject_special_operations(cls, priority=50, array_only=True):
+def op_str(name):
+    return '__%s__' % name
+
+
+def op(name):
+    return getattr(operator, op_str(name))
+
+
+def inject_binary_ops(cls, inplace=False):
+    for name in CMP_BINARY_OPS + NUM_BINARY_OPS:
+        setattr(cls, op_str(name), cls._binary_op(op(name)))
+    for name in NUM_BINARY_OPS:
+        # only numeric operations have in-place and reflexive variants
+        setattr(cls, op_str('r' + name),
+                cls._binary_op(op(name), reflexive=True))
+        if inplace:
+            setattr(cls, op_str('i' + name),
+                    cls._inplace_binary_op(op('i' + name)))
+
+
+def inject_all_ops_and_reduce_methods(cls, priority=50, array_only=True):
     # priortize our operations over those of numpy.ndarray (priority=1)
     # and numpy.matrix (priority=10)
     cls.__array_priority__ = priority
-    op_str = lambda name: '__%s__' % name
-    op = lambda name: getattr(operator, op_str(name))
     # patch in standard special operations
-    for op_names, op_wrap in [(UNARY_OPS, cls._unary_op),
-                              (CMP_BINARY_OPS + NUM_BINARY_OPS,
-                               cls._binary_op)]:
-        for name in op_names:
-            setattr(cls, op_str(name), op_wrap(op(name)))
-    # only numeric operations have in-place and reflexive variants
-    for name in NUM_BINARY_OPS:
-        setattr(cls, op_str('r' + name),
-                cls._binary_op(op(name), reflexive=True))
-        setattr(cls, op_str('i' + name),
-                cls._inplace_binary_op(op('i' + name)))
+    for name in UNARY_OPS:
+        setattr(cls, op_str(name), cls._unary_op(op(name)))
+    inject_binary_ops(cls, inplace=True)
     # patch in numpy methods
     for name in NUMPY_UNARY_METHODS:
         setattr(cls, name, cls._unary_op(_method_wrapper(name)))

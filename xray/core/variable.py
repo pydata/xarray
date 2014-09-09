@@ -738,7 +738,7 @@ class Variable(common.AbstractArray):
             return self
         return func
 
-ops.inject_special_operations(Variable)
+ops.inject_all_ops_and_reduce_methods(Variable)
 
 
 class Coordinate(Variable):

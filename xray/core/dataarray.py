@@ -865,4 +865,6 @@ class DataArray(AbstractArray):
             return self
         return func
 
-ops.inject_special_operations(DataArray, priority=60)
+
+# priority most be higher than Variable to properly work with binary ufuncs
+ops.inject_all_ops_and_reduce_methods(DataArray, priority=60)
