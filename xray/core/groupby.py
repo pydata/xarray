@@ -161,7 +161,8 @@ class GroupBy(object):
                 # also some constant value in self.obj. Maybe we should relax
                 # the compatibility rules for binary operations to allow for
                 # different shapes, but still all equivalent values?
-                other_sel = other_sel.reset_coords(self.group.name, drop=True)
+                other_sel.reset_coords(
+                    self.group.name, drop=True, inplace=True)
             yield func(obj, other_sel)
 
 
