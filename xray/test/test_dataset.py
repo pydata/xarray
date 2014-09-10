@@ -706,6 +706,10 @@ class TestDataset(TestCase):
         self.assertArrayEqual(data['time.dayofyear'] + 1, 2 + np.arange(20))
         self.assertArrayEqual(np.sin(data['time.dayofyear']),
                               np.sin(1 + np.arange(20)))
+        # ensure they become coordinates
+        expected = Dataset({}, {'time.dayofyear': data['time.dayofyear']})
+        actual = data[['time.dayofyear']]
+        self.assertDatasetEqual(expected, actual)
 
     def test_slice_virtual_variable(self):
         data = create_test_data()
