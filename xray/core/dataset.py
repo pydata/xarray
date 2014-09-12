@@ -149,11 +149,11 @@ def _as_dataset_variable(name, var):
     return var
 
 
-def _expand_variables(raw_variables, old_variables={}, compat='identical'):
+def _expand_arrays(raw_variables, old_variables={}, compat='identical'):
     """Expand a dictionary of variables.
 
     Returns a dictionary of Variable objects suitable for inserting into a
-    Dataset._variables dictionary.
+    Dataset._arrays dictionary.
 
     This includes converting tuples (dims, data) into Variable objects,
     converting coordinate variables into Coordinate objects and expanding
@@ -219,7 +219,7 @@ class _DatasetLike(object):
     """
     def __init__(self, obj):
         obj = getattr(obj, '_dataset', obj)
-        self._variables = getattr(obj, '_variables', obj)
+        self._arrays = getattr(obj, '_arrays', obj)
         self._coord_names = getattr(obj, '_coord_names', set())
         self.attrs = getattr(obj, 'attrs', {})
 
@@ -252,14 +252,14 @@ class Variables(Mapping):
         self._dataset = dataset
 
     def __iter__(self):
-        return (key for key in self._dataset._variables
+        return (key for key in self._dataset._arrays
                 if key not in self._dataset._coord_names)
 
     def __len__(self):
-        return len(self._dataset._variables) - len(self._dataset._coord_names)
+        return len(self._dataset._arrays) - len(self._dataset._coord_names)
 
     def __contains__(self, key):
-        return (key in self._dataset._variables
+        return (key in self._dataset._arrays
                 and key not in self._dataset._coord_names)
 
     def __getitem__(self, key):
@@ -306,7 +306,7 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
         independently of other variables for use in a future version of xray.
         For now, coordinates will extracted automatically from variables.
         """
-        self._variables = OrderedDict()
+        self._arrays = OrderedDict()
         self._coord_names = set()
         self._dims = {}
         self._attrs = None
@@ -321,55 +321,55 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
             self.attrs = attrs
 
     def _add_missing_coords(self):
-        """Add missing coordinates IN-PLACE to _variables
+        """Add missing coordinates IN-PLACE to _arrays
         """
         for dim, size in iteritems(self.dims):
-            if dim not in self._variables:
+            if dim not in self._arrays:
                 coord = variable.Coordinate(dim, np.arange(size))
-                self._variables[dim] = coord
+                self._arrays[dim] = coord
 
-    def _update_vars_and_coords(self, new_variables, new_coord_names={},
+    def _update_vars_and_coords(self, new_arrays, new_coord_names={},
                                 needs_copy=True, check_coord_names=True):
         """Add a dictionary of new variables to this dataset.
 
         Raises a ValueError if any dimensions have conflicting lengths in the
-        new dataset. Otherwise will update this dataset's _variables and
+        new dataset. Otherwise will update this dataset's _arrays and
         _dims attributes in-place.
 
         Set `needs_copy=False` only if this dataset is brand-new and hence
         can be thrown away if this method fails.
         """
-        # default to creating another copy of variables so can unroll if we end
+        # default to creating another copy of arrays so can unroll if we end
         # up with inconsistent dimensions
-        variables = self._variables.copy() if needs_copy else self._variables
+        arrays = self._arrays.copy() if needs_copy else self._arrays
 
         if check_coord_names:
             _assert_empty([k for k in self.vars if k in new_coord_names],
                           'coordinates with these names already exist as '
                           'variables: %s')
 
-        variables.update(new_variables)
-        dims = _calculate_dims(variables)
+        arrays.update(new_arrays)
+        dims = _calculate_dims(arrays)
         # all checks are complete: it's safe to update
-        self._variables = variables
+        self._arrays = arrays
         self._dims = dims
         self._add_missing_coords()
         self._coord_names.update(dims)
         self._coord_names.update(new_coord_names)
 
-    def _set_init_vars_and_dims(self, variables, coords):
-        """Set the initial value of Dataset variables and dimensions
+    def _set_init_vars_and_dims(self, vars, coords):
+        """Set the initial value of Dataset arrays and dimensions
         """
-        _assert_empty([k for k in variables if k in coords],
+        _assert_empty([k for k in vars if k in coords],
                       'redundant variables and coordinates: %s')
-        variables = ChainMap(variables, coords)
+        arrays = ChainMap(vars, coords)
 
-        new_variables, new_coord_names = _expand_variables(variables)
-        _assert_empty([k for k in new_coord_names if k not in new_variables],
+        new_arrays, new_coord_names = _expand_arrays(arrays)
+        _assert_empty([k for k in new_coord_names if k not in new_arrays],
                       'no matching variables exist for some coordinates: %s')
 
         new_coord_names.update(coords)
-        self._update_vars_and_coords(new_variables, new_coord_names,
+        self._update_vars_and_coords(new_arrays, new_coord_names,
                                      needs_copy=False,
                                      check_coord_names=False)
 
@@ -382,7 +382,7 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
         variables = store.variables
         if decode_cf:
             variables = conventions.decode_cf_variables(
-                store.variables, mask_and_scale=mask_and_scale,
+                variables, mask_and_scale=mask_and_scale,
                 decode_times=decode_times, concat_characters=concat_characters)
         obj = cls(variables, attrs=store.attrs)
         obj._file_obj = store
@@ -411,23 +411,32 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
         state['_file_obj'] = None
         return state
 
+    # @property
+    # def arrays(self):
+    #     """Dictionary of Variable objects contained in this dataset.
+
+    #     This is a low-level interface into the contents of a dataset. The
+    #     dictionary is frozen to prevent it from being modified in ways that
+    #     could create an inconsistent dataset (e.g., by setting variables with
+    #     inconsistent dimensions).
+
+    #     In general, to access and modify dataset contents, you should use
+    #     dictionary methods on the dataset itself instead of the variables
+    #     dictionary.
+    #     """
+    #     return Frozen(self._arrays)
+
     @property
     def variables(self):
-        """Dictionary of Variable objects contained in this dataset.
-
-        This is a low-level interface into the contents of a dataset. The
-        dictionary is frozen to prevent it from being modified in ways that
-        could create an inconsistent dataset (e.g., by setting variables with
-        inconsistent dimensions).
-
-        In general, to access and modify dataset contents, you should use
-        dictionary methods on the dataset itself instead of the variables
-        dictionary.
-        """
-        return Frozen(self._variables)
+        """Deprecated; do not use"""
+        warnings.warn('the Dataset property `variables` has been deprecated; '
+                      'use the dataset itself instead',
+                      FutureWarning, stacklevel=2)
+        return Frozen(self._arrays)
 
     @property
     def attributes(self):
+        """Deprecated; do not use"""
         utils.alias_warning('attributes', 'attrs', 3)
         return self.attrs
 
@@ -471,7 +480,7 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
         load data automatically. However, this method can be necessary when
         working with many file objects on disk.
         """
-        for v in itervalues(self._variables):
+        for v in itervalues(self._arrays):
             v.load_data()
         return self
 
@@ -482,7 +491,7 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
         costly validation
         """
         obj = object.__new__(cls)
-        obj._variables = variables
+        obj._arrays = variables
         obj._coord_names = coord_names
         obj._dims = dims
         obj._attrs = attrs
@@ -498,9 +507,9 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
         """
         if deep:
             variables = OrderedDict((k, v.copy(deep=True))
-                                    for k, v in iteritems(self.variables))
+                                    for k, v in iteritems(self._arrays))
         else:
-            variables = self._variables.copy()
+            variables = self._arrays.copy()
         # skip __init__ to avoid costly validation
         attrs = None if self._attrs is None else self._attrs.copy()
         return self._construct_direct(variables, self._coord_names.copy(),
@@ -510,31 +519,31 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
         """Create a new Dataset with the listed variables from this dataset and
         the all relevant coordinates. Skips all validation.
         """
-        variables = OrderedDict()
+        arrays = OrderedDict()
         coord_names = set()
 
         for name in names:
             try:
-                variables[name] = self._variables[name]
+                arrays[name] = self._arrays[name]
             except KeyError:
-                ref_name, var = _get_virtual_variable(self._variables, name)
-                variables[name] = var
+                ref_name, var = _get_virtual_variable(self._arrays, name)
+                arrays[name] = var
                 if ref_name in self._coord_names:
                     coord_names.add(name)
 
         needed_dims = set()
-        for v in variables.values():
+        for v in arrays.values():
             needed_dims.update(v._dims)
         for k in self._coord_names:
-            if set(self._variables[k]._dims) <= needed_dims:
-                variables[k] = self._variables[k]
+            if set(self._arrays[k]._dims) <= needed_dims:
+                arrays[k] = self._arrays[k]
                 coord_names.add(k)
 
         dims = dict((k, self._dims[k]) for k in needed_dims)
 
         attrs = self.attrs.copy() if keep_attrs else None
 
-        return self._construct_direct(variables, coord_names, dims, attrs)
+        return self._construct_direct(arrays, coord_names, dims, attrs)
 
     def __copy__(self):
         return self.copy(deep=False)
@@ -548,13 +557,13 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
         """The 'in' operator will return true or false depending on whether
         'key' is an array in the dataset or not.
         """
-        return key in self._variables
+        return key in self._arrays
 
     def __len__(self):
-        return len(self._variables)
+        return len(self._arrays)
 
     def __iter__(self):
-        return iter(self._variables)
+        return iter(self._arrays)
 
     @property
     def virtual_variables(self):
@@ -573,7 +582,7 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
         ----------
         .. [1] http://pandas.pydata.org/pandas-docs/stable/api.html#time-date-components
         """
-        return _list_virtual_variables(self._variables)
+        return _list_virtual_variables(self._arrays)
 
     def __getitem__(self, key):
         """Access the given variable name in this dataset as a `DataArray`, or
@@ -609,14 +618,14 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
         # nb. this method is intrinsically not very efficient because removing
         # items from variables (an OrderedDict) takes O(n) time.
         def remove(k):
-            del self._variables[k]
+            del self._arrays[k]
             self._coord_names.discard(k)
 
         remove(key)
 
         if key in self._dims:
             del self._dims[key]
-            also_delete = [k for k, v in iteritems(self._variables)
+            also_delete = [k for k, v in iteritems(self._arrays)
                            if key in v.dims]
             for key in also_delete:
                 remove(key)
@@ -630,7 +639,7 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
         # require matching order for equality
         compat = lambda x, y: getattr(x, compat_str)(y)
         return (self._coord_names == other._coord_names
-                and utils.dict_equiv(self.variables, other.variables,
+                and utils.dict_equiv(self._arrays, other._arrays,
                                      compat=compat))
 
     def equals(self, other):
@@ -722,7 +731,7 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
         """
         # TODO: allow inserting new coordinates with this method, like
         # DataFrame.set_index?
-        # nb. check in self._variables, not self.noncoords to insure that the
+        # nb. check in self._arrays, not self.noncoords to insure that the
         # operation is idempotent
         if isinstance(names, basestring):
             names = [names]
@@ -763,12 +772,12 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
         obj._coord_names.difference_update(names)
         if drop:
             for name in names:
-                del obj._variables[name]
+                del obj._arrays[name]
         return obj
 
     def dump_to_store(self, store):
         """Store dataset contents to a backends.*DataStore object."""
-        store.set_variables(self.variables)
+        store.set_variables(self._arrays)
         store.set_attributes(self.attrs)
         store.sync()
 
@@ -833,7 +842,7 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
                     for k, v in iteritems(indexers)]
 
         variables = OrderedDict()
-        for name, var in iteritems(self.variables):
+        for name, var in iteritems(self._arrays):
             var_indexers = dict((k, v) for k, v in indexers if k in var.dims)
             variables[name] = var.isel(**var_indexers)
         obj = type(self)(variables, attrs=self.attrs)
@@ -946,7 +955,7 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
             return self.copy(deep=True) if copy else self
 
         variables = alignment.reindex_variables(
-            self.variables, self.indexes, indexers, copy=copy)
+            self._arrays, self.indexes, indexers, copy=copy)
         obj = type(self)(variables, attrs=self.attrs)
         obj._coord_names.update(self.coords)
         return obj
@@ -969,12 +978,12 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
             Dataset with renamed variables and dimensions.
         """
         for k in name_dict:
-            if k not in self.variables:
+            if k not in self._arrays:
                 raise ValueError("cannot rename %r because it is not a "
                                  "variable in this dataset" % k)
         variables = OrderedDict()
         coord_names = set()
-        for k, v in iteritems(self.variables):
+        for k, v in iteritems(self._arrays):
             name = name_dict.get(k, k)
             dims = tuple(name_dict.get(dim, dim) for dim in v.dims)
             var = v.copy(deep=False)
@@ -985,7 +994,7 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
 
         if inplace:
             self._dims = _calculate_dims(variables)
-            self._variables = variables
+            self._arrays = variables
             obj = self
         else:
             obj = type(self)(variables, attrs=self.attrs)
@@ -1017,7 +1026,7 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
         """
         other = _DatasetLike(other)
         obj = self.merge(other, inplace=inplace,
-                         overwrite_vars=other._variables)
+                         overwrite_vars=other._arrays)
         obj.attrs.update(other.attrs)
         return obj
 
@@ -1060,20 +1069,20 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
 
         # determine variables to check for conflicts
         if not overwrite_vars:
-            potential_conflicts = self.variables
+            potential_conflicts = self._arrays
         else:
             if isinstance(overwrite_vars, basestring):
                 overwrite_vars = set([overwrite_vars])
             else:
                 overwrite_vars = set(overwrite_vars)
-            potential_conflicts = dict((k, v) for k, v in iteritems(self.variables)
+            potential_conflicts = dict((k, v) for k, v in iteritems(self._arrays)
                                        if k not in overwrite_vars)
 
-        new_variables, new_coord_names = _expand_variables(
-            other._variables, potential_conflicts, compat)
+        new_variables, new_coord_names = _expand_arrays(
+            other._arrays, potential_conflicts, compat)
         new_coord_names |= other._coord_names
 
-        _assert_empty([k for k in other._variables
+        _assert_empty([k for k in other._arrays
                        if k in potential_conflicts
                        and k not in new_coord_names
                        and k in self.coords],
@@ -1087,7 +1096,7 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
         return obj
 
     def _assert_all_in_dataset(self, names, virtual_okay=False):
-        bad_names = set(names) - set(self._variables)
+        bad_names = set(names) - set(self._arrays)
         if virtual_okay:
             bad_names -= self.virtual_variables
         if bad_names:
@@ -1120,9 +1129,9 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
         """
         self._assert_all_in_dataset(names)
         drop = set(names)
-        drop |= set(k for k, v in iteritems(self.variables)
+        drop |= set(k for k, v in iteritems(self._arrays)
                     if any(name in v.dims for name in names))
-        variables = OrderedDict((k, v) for k, v in iteritems(self.variables)
+        variables = OrderedDict((k, v) for k, v in iteritems(self._arrays)
                                 if k not in drop)
         coord_names = set(k for k in self._coord_names if k in variables)
         obj = type(self)(variables, attrs=self.attrs)
@@ -1188,9 +1197,9 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
                                  'permuted dataset dimensions (%s)'
                                  % (dims, tuple(self.dims)))
         ds = self.copy()
-        for name, var in iteritems(self._variables):
+        for name, var in iteritems(self._arrays):
             var_dims = tuple(dim for dim in dims if dim in var.dims)
-            ds._variables[name] = var.transpose(*var_dims)
+            ds._arrays[name] = var.transpose(*var_dims)
         return ds
 
     @property
@@ -1264,7 +1273,7 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
                       'Dataset does not contain the dimensions: %s')
 
         variables = OrderedDict()
-        for name, var in iteritems(self.variables):
+        for name, var in iteritems(self._arrays):
             reduce_dims = [dim for dim in var.dims if dim in dims]
             if reduce_dims:
                 if name not in self.coords:
@@ -1353,11 +1362,11 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
                 # simple helper function which compares a variable
                 # across all datasets and indicates whether that
                 # variable differs or not.
-                return any(not ds._variables[vname].equals(v)
+                return any(not ds._arrays[vname].equals(v)
                            for ds in datasets[1:])
             # non_indexes = iteritems(datasets[0].nonindexes)
             # all nonindexes that are not the same in each dataset
-            concat_over.update(k for k, v in iteritems(datasets[0]._variables)
+            concat_over.update(k for k, v in iteritems(datasets[0]._arrays)
                                if k not in datasets[0]._dims and differs(k, v))
         elif mode == 'all':
             # concatenate all nonindexes
@@ -1369,7 +1378,7 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
         else:
             raise ValueError("Unexpected value for mode: %s" % mode)
 
-        if any(v not in datasets[0]._variables for v in concat_over):
+        if any(v not in datasets[0]._arrays for v in concat_over):
             raise ValueError('not all elements in concat_over %r found '
                              'in the first dataset %r'
                              % (concat_over, datasets[0]))
@@ -1378,13 +1387,13 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
         auto_concat_dims = set([dim_name])
         if hasattr(dim, 'dims'):
             auto_concat_dims |= set(dim.dims)
-        for k, v in iteritems(datasets[0]._variables):
+        for k, v in iteritems(datasets[0]._arrays):
             if k == dim_name or auto_concat_dims.intersection(v.dims):
                 concat_over.add(k)
 
         # create the new dataset and add constant variables
         concatenated = cls({}, attrs=datasets[0].attrs)
-        for k, v in iteritems(datasets[0]._variables):
+        for k, v in iteritems(datasets[0]._arrays):
             if k not in concat_over:
                 concatenated[k] = v
 
@@ -1394,10 +1403,10 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
             if (compat == 'identical'
                     and not utils.dict_equiv(ds.attrs, concatenated.attrs)):
                 raise ValueError('dataset global attributes not equal')
-            for k, v in iteritems(ds._variables):
-                if k not in concatenated._variables and k not in concat_over:
+            for k, v in iteritems(ds._arrays):
+                if k not in concatenated._arrays and k not in concat_over:
                     raise ValueError('encountered unexpected variable %r' % k)
-                elif (k in concatenated._variables and k != dim_name and
+                elif (k in concatenated._arrays and k != dim_name and
                           not getattr(v, compat)(concatenated[k])):
                     verb = 'equal' if compat == 'equals' else compat
                     raise ValueError(
@@ -1433,7 +1442,7 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
                                                      strides=[0] * len(shape))
         template = variable.Variable(self.dims.keys(), empty_data)
         for k in columns:
-            _, var = variable.broadcast_variables(template, self.variables[k])
+            _, var = variable.broadcast_variables(template, self._arrays[k])
             _, var_data = np.broadcast_arrays(template.values, var.values)
             data.append(var_data.reshape(-1))
 
@@ -1488,7 +1497,7 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
         def func(self, *args, **kwargs):
             ds = self.coords.to_dataset()
             for k in self.vars:
-                ds._variables[k] = f(self._variables[k], *args, **kwargs)
+                ds._arrays[k] = f(self._arrays[k], *args, **kwargs)
             return ds
         return func
 
@@ -1501,7 +1510,7 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
             other_coords = getattr(other, 'coords', None)
             ds = self.coords.merge(other_coords)
             g = f if not reflexive else lambda x, y: f(y, x)
-            _calculate_binary_op(g, self, other, ds._variables)
+            _calculate_binary_op(g, self, other, ds._arrays)
             return ds
         return func
 
@@ -1517,29 +1526,29 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
                 # can rollback in case of an exception
                 # note: when/if we support automatic alignment, only copy the
                 # variables that will actually be included in the result
-                dest_vars = dict((k, self._variables[k].copy())
+                dest_vars = dict((k, self._arrays[k].copy())
                                  for k in self.vars)
                 _calculate_binary_op(f, dest_vars, other, dest_vars)
-                self._variables.update(dest_vars)
+                self._arrays.update(dest_vars)
             return self
         return func
 
 
 def _calculate_binary_op(f, dataset, other, dest_vars):
-    dataset_raw = getattr(dataset, '_variables', dataset)
+    dataset_arrays = getattr(dataset, '_arrays', dataset)
     dataset_vars = getattr(dataset, 'vars', dataset)
     if utils.is_dict_like(other):
+        other_arrays = getattr(other, '_arrays', other)
         other_vars = getattr(other, 'vars', other)
-        other_raw = getattr(other, '_variables', other)
         if set(dataset_vars) != set(other_vars):
             raise ValueError('Datasets do not have the same variables: '
-                             '%s, %s' % (list(dataset_vars), list(other)))
+                             '%s, %s' % (list(dataset_vars), list(other_vars)))
         for k in dataset_vars:
-            dest_vars[k] = f(dataset_raw[k], other_raw[k])
+            dest_vars[k] = f(dataset_arrays[k], other_arrays[k])
     else:
-        other_raw = getattr(other, 'variable', other)
+        other_arrays = getattr(other, 'variable', other)
         for k in dataset_vars:
-            dest_vars[k] = f(dataset_raw[k], other_raw)
+            dest_vars[k] = f(dataset_arrays[k], other_arrays)
 
 
 ops.inject_all_ops_and_reduce_methods(Dataset, array_only=False)

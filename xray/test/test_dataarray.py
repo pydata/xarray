@@ -746,7 +746,7 @@ class TestDataArray(TestCase):
             {'foo': (['x', 'abc'], np.array([self.x[:, :9].sum(1),
                                              self.x[:, 10:].sum(1),
                                              self.x[:, 9:10].sum(1)]).T),
-             'x': self.ds.variables['x'],
+             'x': self.ds['x'],
              'abc': Variable(['abc'], np.array(['a', 'b', 'c']))})['foo']
         self.assertDataArrayAllClose(expected_sum_axis1,
                                      grouped.reduce(np.sum, 'y'))

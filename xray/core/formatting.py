@@ -197,7 +197,7 @@ def pretty_print(x, numchars):
 def dataset_repr(ds, preview_all_values=False):
     summary = ['<xray.%s>' % type(ds).__name__]
 
-    max_name_length = max(len(str(k)) for k in ds.variables) if ds else 0
+    max_name_length = max(len(str(k)) for k in ds) if ds else 0
     first_col_width = max(6 + max_name_length, 13)
 
     dims_start = pretty_print('Dimensions:', first_col_width)
