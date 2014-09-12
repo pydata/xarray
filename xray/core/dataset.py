@@ -129,7 +129,7 @@ def _get_virtual_variable(variables, key):
         data = (month // 3) % 4 + 1
     else:
         data = getattr(date, suffix)
-    return variable.Variable(ref_var.dims, data)
+    return ref_var_name, variable.Variable(ref_var.dims, data)
 
 
 def _as_dataset_variable(name, var):
@@ -486,17 +486,20 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
         the all relevant coordinates. Skips all validation.
         """
         variables = OrderedDict()
+        coord_names = set()
+
         for name in names:
             try:
                 variables[name] = self._variables[name]
             except KeyError:
-                variables[name] = _get_virtual_variable(self._variables, name)
+                ref_name, var = _get_virtual_variable(self._variables, name)
+                variables[name] = var
+                if ref_name in self._coord_names:
+                    coord_names.add(name)
 
         needed_dims = set()
         for v in variables.values():
             needed_dims.update(v._dims)
-
-        coord_names = set()
         for k in self._coord_names:
             if set(self._variables[k]._dims) <= needed_dims:
                 variables[k] = self._variables[k]
@@ -1469,6 +1472,8 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
     def _binary_op(f, reflexive=False):
         @functools.wraps(f)
         def func(self, other):
+            if isinstance(other, groupby.GroupBy):
+                return NotImplemented
             other_coords = getattr(other, 'coords', None)
             ds = self.coords.merge(other_coords)
             g = f if not reflexive else lambda x, y: f(y, x)
@@ -1480,6 +1485,8 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
     def _inplace_binary_op(f):
         @functools.wraps(f)
         def func(self, other):
+            if isinstance(other, groupby.GroupBy):
+                return NotImplemented
             other_coords = getattr(other, 'coords', None)
             with self.coords._merge_inplace(other_coords):
                 # make a defensive copy of variables to modify in-place so we
@@ -1508,4 +1515,4 @@ def _calculate_binary_op(f, dataset, other, dest_vars):
             dest_vars[k] = f(dataset_vars[k], other_variable)
 
 
-ops.inject_special_operations(Dataset, array_only=False)
+ops.inject_all_ops_and_reduce_methods(Dataset, array_only=False)

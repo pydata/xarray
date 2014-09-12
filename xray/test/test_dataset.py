@@ -706,6 +706,10 @@ class TestDataset(TestCase):
         self.assertArrayEqual(data['time.dayofyear'] + 1, 2 + np.arange(20))
         self.assertArrayEqual(np.sin(data['time.dayofyear']),
                               np.sin(1 + np.arange(20)))
+        # ensure they become coordinates
+        expected = Dataset({}, {'time.dayofyear': data['time.dayofyear']})
+        actual = data[['time.dayofyear']]
+        self.assertDatasetEqual(expected, actual)
 
     def test_slice_virtual_variable(self):
         data = create_test_data()
@@ -842,6 +846,42 @@ class TestDataset(TestCase):
                             'yonly': data['yonly'].groupby(letters).mean()})
         actual = data.groupby('letters').mean()
         self.assertDatasetAllClose(expected, actual)
+
+    def test_groupby_math(self):
+        reorder_dims = lambda x: x.transpose('dim1', 'dim2', 'dim3', 'time')
+
+        ds = create_test_data()
+        for squeeze in [True, False]:
+            grouped = ds.groupby('dim1', squeeze=squeeze)
+
+            expected = reorder_dims(ds + ds.coords['dim1'])
+            actual = grouped + ds.coords['dim1']
+            self.assertDatasetIdentical(expected, reorder_dims(actual))
+
+            actual = ds.coords['dim1'] + grouped
+            self.assertDatasetIdentical(expected, reorder_dims(actual))
+
+            ds2 = 2 * ds
+            expected = reorder_dims(ds + ds2)
+            actual = grouped + ds2
+            self.assertDatasetIdentical(expected, reorder_dims(actual))
+
+            actual = ds2 + grouped
+            self.assertDatasetIdentical(expected, reorder_dims(actual))
+
+        grouped = ds.groupby('numbers')
+        zeros = DataArray([0, 0, 0, 0], [('numbers', range(4))])
+        expected = ds
+        actual = grouped + zeros
+        self.assertDatasetEqual(expected, actual)
+
+        actual = zeros + grouped
+        self.assertDatasetEqual(expected, actual)
+
+        with self.assertRaisesRegexp(TypeError, 'only support arithmetic'):
+            grouped + 1
+        with self.assertRaisesRegexp(TypeError, 'only support arithmetic'):
+            grouped + grouped
 
     def test_concat(self):
         data = create_test_data()

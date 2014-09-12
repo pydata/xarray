@@ -44,28 +44,30 @@ def allclose_or_equiv(arr1, arr2, rtol=1e-5, atol=1e-8):
     return np.isclose(arr1, arr2, rtol=rtol, atol=atol, equal_nan=True).all()
 
 
-def array_equiv(arr1, arr2):
-    """Like np.array_equal, but also allows values to be NaN in both arrays
+def isnull(obj):
+    """Like pd.isnull, but with a bug-fix for 0d object arrays.
     """
-    arr1, arr2 = np.asarray(arr1), np.asarray(arr2)
-    if arr1.shape != arr2.shape:
-        return False
-    if arr1.ndim == 0:
+    obj = np.asarray(obj)
+    if obj.ndim == 0:
         # work around for pd.isnull not working for 0-dimensional object
         # arrays: https://github.com/pydata/pandas/pull/7176 (should be fixed
         # in pandas 0.14)
         # use .item() instead of keeping around 0-dimensional arrays to avoid
         # the numpy quirk where object arrays are checked as equal by identity
         # (hence NaN in an object array is equal to itself):
-        arr1 = arr1.item()
-        arr2 = arr2.item()
-        return arr1 == arr2 or (arr1 != arr1 and arr2 != arr2)
+        obj = obj.item()
+        return obj != obj
     else:
-        # we could make this faster by not-checking for null values if the
-        # dtype does not support them, but the logic would get more convoluted.
-        # using pd.isnull lets us defer the NaN handling to pandas (and unlike
-        # np.isnan it works on every dtype).
-        return ((arr1 == arr2) | (pd.isnull(arr1) & pd.isnull(arr2))).all()
+        return pd.isnull(obj)
+
+
+def array_equiv(arr1, arr2):
+    """Like np.array_equal, but also allows values to be NaN in both arrays
+    """
+    arr1, arr2 = np.asarray(arr1), np.asarray(arr2)
+    if arr1.shape != arr2.shape:
+        return False
+    return ((arr1 == arr2) | (isnull(arr1) & isnull(arr2))).all()
 
 
 def safe_cast_to_index(array):
@@ -91,10 +93,9 @@ def safe_cast_to_index(array):
 
 
 def multi_index_from_product(iterables, names=None):
-    """Like pandas.MultiIndex.from_product, but not buggy
-
-    Contains work-around for https://github.com/pydata/pandas/issues/6439
+    """Like pandas.MultiIndex.from_product, but with a bug fix.
     """
+    # fixed in 0.14: https://github.com/pydata/pandas/issues/6439
     # note: pd.MultiIndex.from_product is new in pandas-0.13.1
     coords = [np.asarray(v) for v in iterables]
     return pd.MultiIndex.from_product(coords, names=names)

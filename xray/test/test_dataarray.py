@@ -5,7 +5,7 @@ from textwrap import dedent
 
 from xray import concat, Dataset, DataArray, Coordinate, Variable, align
 from xray.core.pycompat import iteritems, OrderedDict
-from . import TestCase, ReturnItem, source_ndarray
+from . import TestCase, ReturnItem, source_ndarray, unittest
 
 
 class TestDataArray(TestCase):
@@ -752,6 +752,21 @@ class TestDataArray(TestCase):
                                      grouped.reduce(np.sum, 'y'))
         self.assertDataArrayAllClose(expected_sum_axis1, grouped.sum('y'))
 
+    @unittest.skip('needs to be fixed for shortcut=False, keep_attrs=False')
+    def test_groupby_reduce_attrs(self):
+        array = self.make_groupby_example_array()
+        array.attrs['foo'] = 'bar'
+
+        for shortcut in [True, False]:
+            for keep_attrs in [True, False]:
+                print('shortcut=%s, keep_attrs=%s' % (shortcut, keep_attrs))
+                actual = array.groupby('abc').reduce(
+                    np.mean, keep_attrs=keep_attrs, shortcut=shortcut)
+                expected = array.groupby('abc').mean()
+                if keep_attrs:
+                    expected.attrs['foo'] = 'bar'
+                self.assertDataArrayIdentical(expected, actual)
+
     def test_groupby_apply_center(self):
         def center(x):
             return x - np.mean(x)
@@ -766,6 +781,37 @@ class TestDataArray(TestCase):
         expected_ds['foo'] = (['x', 'y'], exp_data)
         expected_centered = expected_ds['foo']
         self.assertDataArrayAllClose(expected_centered, grouped.apply(center))
+
+    def test_groupby_math(self):
+        array = self.make_groupby_example_array()
+        for squeeze in [True, False]:
+            grouped = array.groupby('x', squeeze=squeeze)
+
+            expected = array + array.coords['x']
+            actual = grouped + array.coords['x']
+            self.assertDataArrayIdentical(expected, actual)
+
+            actual = array.coords['x'] + grouped
+            self.assertDataArrayIdentical(expected, actual)
+
+            ds = array.coords['x'].to_dataset()
+            expected = array + ds
+            actual = grouped + ds
+            self.assertDatasetIdentical(expected, actual)
+
+            actual = ds + grouped
+            self.assertDatasetIdentical(expected, actual)
+
+        grouped = array.groupby('abc')
+        expected_agg = (grouped.mean() - np.arange(3)).rename(None)
+        actual = grouped - DataArray(range(3), [('abc', ['a', 'b', 'c'])])
+        actual_agg = actual.groupby('abc').mean()
+        self.assertDataArrayAllClose(expected_agg, actual_agg)
+
+        with self.assertRaisesRegexp(TypeError, 'only support arithmetic'):
+            grouped + 1
+        with self.assertRaisesRegexp(TypeError, 'only support arithmetic'):
+            grouped + grouped
 
     def test_concat(self):
         self.ds['bar'] = Variable(['x', 'y'], np.random.randn(10, 20))

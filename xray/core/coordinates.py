@@ -70,16 +70,18 @@ class AbstractCoordinates(Mapping):
         """
         self_conflicts = set()
         other_conflicts = set()
-        for k, v in iteritems(self):
-            if k in other and not v.variable.equals(other[k]):
-                in_self_dims = k in self.dims
-                in_other_dims = k in other.dims
-                if in_self_dims and in_other_dims:
-                    raise ValueError('index %r not aligned' % k)
-                if not in_self_dims:
-                    self_conflicts.add(k)
-                if not in_other_dims:
-                    other_conflicts.add(k)
+        for k in self:
+            if k in other:
+                var = self._dataset._variables[k]
+                if not var.equals(other[k]):
+                    in_self_dims = k in self.dims
+                    in_other_dims = k in other.dims
+                    if in_self_dims and in_other_dims:
+                        raise ValueError('index %r not aligned' % k)
+                    if not in_self_dims:
+                        self_conflicts.add(k)
+                    if not in_other_dims:
+                        other_conflicts.add(k)
         return self_conflicts, other_conflicts
 
     @contextmanager
