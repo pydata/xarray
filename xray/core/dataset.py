@@ -15,8 +15,8 @@ from . import indexing
 from . import variable
 from . import utils
 from . import ops
-from .coordinates import DatasetCoordinates
-from .utils import (FrozenOrderedDict, Frozen, SortedKeysDict, ChainMap,
+from .coordinates import DatasetCoordinates, Indexes
+from .utils import (Frozen, SortedKeysDict, ChainMap,
                     multi_index_from_product)
 from .pycompat import iteritems, itervalues, basestring, OrderedDict
 
@@ -247,6 +247,31 @@ def as_dataset(obj):
     return obj
 
 
+class Variables(Mapping):
+    def __init__(self, dataset):
+        self._dataset = dataset
+
+    def __iter__(self):
+        return (key for key in self._dataset._variables
+                if key not in self._dataset._coord_names)
+
+    def __len__(self):
+        return len(self._dataset._variables) - len(self._dataset._coord_names)
+
+    def __contains__(self, key):
+        return (key in self._dataset._variables
+                and key not in self._dataset._coord_names)
+
+    def __getitem__(self, key):
+        if key not in self._dataset._coord_names:
+            return self._dataset[key]
+        else:
+            raise KeyError(key)
+
+    def __repr__(self):
+        return formatting.vars_repr(self)
+
+
 class Dataset(Mapping, common.ImplementsDatasetReduce):
     """A netcdf-like data object consisting of variables and attributes which
     together form a self describing dataset.
@@ -319,7 +344,7 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
         variables = self._variables.copy() if needs_copy else self._variables
 
         if check_coord_names:
-            _assert_empty([k for k in self if k in new_coord_names],
+            _assert_empty([k for k in self.vars if k in new_coord_names],
                           'coordinates with these names already exist as '
                           'variables: %s')
 
@@ -521,28 +546,28 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
 
     def __contains__(self, key):
         """The 'in' operator will return true or false depending on whether
-        'key' is a variable in the dataset or not.
+        'key' is an array in the dataset or not.
         """
-        return key in self._variables and not key in self._coord_names
+        return key in self._variables
 
     def __len__(self):
-        return len(self._variables) - len(self._coord_names)
+        return len(self._variables)
 
     def __iter__(self):
-        return (k for k in self._variables if k not in self._coord_names)
+        return iter(self._variables)
 
     @property
     def virtual_variables(self):
-        """A frozenset of variable names that don't exist in this dataset but
-        for which could be created on demand.
+        """A frozenset of names that don't exist in this dataset but for which
+        DataArrays could be created on demand.
 
-        These variables can be derived by performing simple operations on
-        existing dataset variables. Currently, the only implemented virtual
-        variables are time/date components [1_] such as "time.month" or
-        "time.dayofyear", where "time" is the name of a index whose data
-        is a `pandas.DatetimeIndex` object. The virtual variable "time.season"
-        (for climatological season, starting with 1 for "DJF") is the only such
-        variable which is not directly implemented in pandas.
+        These arrays can be derived by performing simple operations on an
+        existing dataset variable or coordinate. Currently, the only
+        implemented virtual variables are time/date components [1_] such as
+        "time.month" or "time.dayofyear", where "time" is the name of a index
+        whose data is a `pandas.DatetimeIndex` object. The virtual variable
+        "time.season" (for climatological season, starting with 1 for "DJF") is
+        the only such variable which is not directly implemented in pandas.
 
         References
         ----------
@@ -645,19 +670,17 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
     def indexes(self):
         """OrderedDict of pandas.Index objects used for label based indexing
         """
-        return FrozenOrderedDict((k, self._variables[k].to_index())
-                                 for k in self.dims)
-
-    @property
-    def nonindexes(self):
-        return FrozenOrderedDict((k, self[k]) for k in self.variables
-                                 if k not in self.dims)
+        return Indexes(self)
 
     @property
     def coords(self):
         """Dictionary of xray.Coordinate objects used for label based indexing.
         """
         return DatasetCoordinates(self)
+
+    @property
+    def vars(self):
+        return Variables(self)
 
     @property
     def coordinates(self):
@@ -669,18 +692,18 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
         """Dictionary of DataArrays whose names do not match dimensions.
         """
         warnings.warn('the Dataset property `noncoords` has been deprecated; '
-                      'just use the Dataset object directly',
+                      'use `vars` instead',
                       FutureWarning, stacklevel=2)
-        return self
+        return self.vars
 
     @property
     def noncoordinates(self):
         """Dictionary of DataArrays whose names do not match dimensions.
         """
         warnings.warn('the Dataset property `noncoordinates` has been '
-                      'deprecated; just use the Dataset object directly',
+                      'deprecated; use `vars` instead',
                       FutureWarning, stacklevel=2)
-        return self
+        return self.vars
 
     def set_coords(self, names, inplace=False):
         """Given names of one or more variables, set them as coordinates
@@ -1295,7 +1318,7 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
             noncoordinate are dropped.
         """
         variables = OrderedDict((k, func(v, *args, **kwargs))
-                                for k, v in iteritems(self))
+                                for k, v in iteritems(self.vars))
         attrs = self.attrs if keep_attrs else None
         return type(self)(variables, attrs=attrs)
 
@@ -1330,14 +1353,15 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
                 # simple helper function which compares a variable
                 # across all datasets and indicates whether that
                 # variable differs or not.
-                return any(not ds[vname].variable.equals(v)
+                return any(not ds._variables[vname].equals(v)
                            for ds in datasets[1:])
-            non_indexes = iteritems(datasets[0].nonindexes)
+            # non_indexes = iteritems(datasets[0].nonindexes)
             # all nonindexes that are not the same in each dataset
-            concat_over.update(k for k, v in non_indexes if differs(k, v))
+            concat_over.update(k for k, v in iteritems(datasets[0]._variables)
+                               if k not in datasets[0]._dims and differs(k, v))
         elif mode == 'all':
             # concatenate all nonindexes
-            concat_over.update(set(datasets[0].nonindexes))
+            concat_over.update(set(datasets[0]) - set(datasets[0].dims))
         elif mode == 'minimal':
             # only concatenate variables in which 'dim' already
             # appears. These variables are added later.
@@ -1399,7 +1423,7 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
         DataFrame. The DataFrame is be indexed by the Cartesian product of
         this dataset's indices.
         """
-        columns = self.nonindexes.keys()
+        columns = [k for k in self if k not in self.dims]
         data = []
         # we need a template to broadcast all dataset variables against
         # using stride_tricks lets us make the ndarray for broadcasting without
@@ -1463,7 +1487,7 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
         @functools.wraps(f)
         def func(self, *args, **kwargs):
             ds = self.coords.to_dataset()
-            for k in self:
+            for k in self.vars:
                 ds._variables[k] = f(self._variables[k], *args, **kwargs)
             return ds
         return func
@@ -1493,7 +1517,8 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
                 # can rollback in case of an exception
                 # note: when/if we support automatic alignment, only copy the
                 # variables that will actually be included in the result
-                dest_vars = dict((k, self._variables[k].copy()) for k in self)
+                dest_vars = dict((k, self._variables[k].copy())
+                                 for k in self.vars)
                 _calculate_binary_op(f, dest_vars, other, dest_vars)
                 self._variables.update(dest_vars)
             return self
@@ -1501,18 +1526,20 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
 
 
 def _calculate_binary_op(f, dataset, other, dest_vars):
-    dataset_vars = getattr(dataset, '_variables', dataset)
+    dataset_raw = getattr(dataset, '_variables', dataset)
+    dataset_vars = getattr(dataset, 'vars', dataset)
     if utils.is_dict_like(other):
-        if set(dataset) != set(other):
+        other_vars = getattr(other, 'vars', other)
+        other_raw = getattr(other, '_variables', other)
+        if set(dataset_vars) != set(other_vars):
             raise ValueError('Datasets do not have the same variables: '
                              '%s, %s' % (list(dataset_vars), list(other)))
-        other_variables = getattr(other, '_variables', other)
-        for k in dataset:
-            dest_vars[k] = f(dataset_vars[k], other_variables[k])
+        for k in dataset_vars:
+            dest_vars[k] = f(dataset_raw[k], other_raw[k])
     else:
-        other_variable = getattr(other, 'variable', other)
-        for k in dataset:
-            dest_vars[k] = f(dataset_vars[k], other_variable)
+        other_raw = getattr(other, 'variable', other)
+        for k in dataset_vars:
+            dest_vars[k] = f(dataset_raw[k], other_raw)
 
 
 ops.inject_all_ops_and_reduce_methods(Dataset, array_only=False)

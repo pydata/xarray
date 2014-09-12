@@ -10,7 +10,7 @@ from . import ops
 from . import utils
 from . import variable
 from .common import AbstractArray
-from .coordinates import DataArrayCoordinates
+from .coordinates import DataArrayCoordinates, Indexes
 from .dataset import Dataset
 from .pycompat import iteritems, basestring, OrderedDict, zip
 from .utils import FrozenOrderedDict
@@ -373,8 +373,7 @@ class DataArray(AbstractArray):
     def indexes(self):
         """OrderedDict of pandas.Index objects used for label based indexing
         """
-        return FrozenOrderedDict((k, self._dataset._variables[k].to_index())
-                                 for k in self.dims)
+        return Indexes(self)
 
     @property
     def coords(self):

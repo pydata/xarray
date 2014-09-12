@@ -162,3 +162,26 @@ class DataArrayCoordinates(AbstractCoordinates):
     @property
     def dims(self):
         return self._dataarray.dims
+
+
+class Indexes(Mapping):
+    def __init__(self, source):
+        self._source = source
+
+    def __iter__(self):
+        return iter(self._source.dims)
+
+    def __len__(self):
+        return len(self._source.dims)
+
+    def __contains__(self, key):
+        return key in self._source.dims
+
+    def __getitem__(self, key):
+        if key in self:
+            return self._source[key].to_index()
+        else:
+            raise KeyError(key)
+
+    def __repr__(self):
+        return formatting.indexes_repr(self)

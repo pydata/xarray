@@ -131,6 +131,20 @@ def coords_repr(coords):
     return '\n'.join(summary)
 
 
+def vars_repr(vars):
+    summary = ['Variables:']
+    col_width = (max(len(str(k)) for k in vars) if vars else 0) + 5
+    summary.extend(_summarize_variables(vars, col_width, False))
+    return '\n'.join(summary)
+
+
+def indexes_repr(indexes):
+    summary = []
+    for k, v in indexes.items():
+        summary.append(wrap_indent(v, '%s: ' % k))
+    return '\n'.join(summary)
+
+
 def _summarize_attributes(attrs, indent='    '):
     if attrs:
         attr_summaries = ['%s%s: %s' % (indent, k, v) for k, v
@@ -185,15 +199,16 @@ def dataset_repr(ds, preview_all_values=False):
 
     max_name_length = max(len(str(k)) for k in ds.variables) if ds else 0
     first_col_width = max(6 + max_name_length, 13)
-    coords_str = pretty_print('Dimensions:', first_col_width)
+
+    dims_start = pretty_print('Dimensions:', first_col_width)
     all_dim_strings = ['%s: %s' % (k, v) for k, v in iteritems(ds.dims)]
-    summary.append('%s(%s)' % (coords_str, ', '.join(all_dim_strings)))
+    summary.append('%s(%s)' % (dims_start, ', '.join(all_dim_strings)))
 
     summary.extend(_summarize_coordinates(ds.coords, first_col_width,
                                           preview_all_values))
 
     summary.append('Variables:')
-    summary.extend(_summarize_variables(ds, first_col_width,
+    summary.extend(_summarize_variables(ds.vars, first_col_width,
                                         always_show_values=preview_all_values))
 
     if ds.attrs:

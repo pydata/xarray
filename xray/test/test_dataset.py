@@ -156,7 +156,7 @@ class TestDataset(TestCase):
             Dataset({'a': ('x', [1])}, {'a': ('x', [1])})
 
         ds = Dataset({}, {'a': ('x', [1])})
-        self.assertFalse(ds)
+        self.assertFalse(ds.vars)
         self.assertItemsEqual(ds.coords.keys(), ['x', 'a'])
 
     def test_properties(self):
@@ -164,18 +164,19 @@ class TestDataset(TestCase):
         self.assertEqual(ds.dims,
                          {'dim1': 8, 'dim2': 9, 'dim3': 10, 'time': 20})
 
-        self.assertItemsEqual(ds, ['var1', 'var2', 'var3'])
-        self.assertItemsEqual(ds.keys(), ['var1', 'var2', 'var3'])
-        self.assertIn('var1', ds)
-        self.assertNotIn('dim1', ds)
-        self.assertNotIn('numbers', ds)
-        self.assertEqual(len(ds), 3)
+        self.assertItemsEqual(ds, list(ds._variables))
+        self.assertItemsEqual(ds.keys(), list(ds._variables))
+        self.assertEqual(len(ds), 8)
+
+        self.assertItemsEqual(ds.vars, ['var1', 'var2', 'var3'])
+        self.assertItemsEqual(ds.vars.keys(), ['var1', 'var2', 'var3'])
+        self.assertIn('var1', ds.vars)
+        self.assertNotIn('dim1', ds.vars)
+        self.assertNotIn('numbers', ds.vars)
+        self.assertEqual(len(ds.vars), 3)
 
         self.assertItemsEqual(ds.indexes, ['dim1', 'dim2', 'dim3', 'time'])
         self.assertEqual(len(ds.indexes), 4)
-
-        self.assertItemsEqual(ds.nonindexes, ['var1', 'var2', 'var3', 'numbers'])
-        self.assertEqual(len(ds.nonindexes), 4)
 
         self.assertItemsEqual(ds.coords,
                               ['time', 'dim1', 'dim2', 'dim3', 'numbers'])
@@ -425,19 +426,19 @@ class TestDataset(TestCase):
 
         ret = data.isel(dim1=0)
         self.assertEqual({'time': 20, 'dim2': 9, 'dim3': 10}, ret.dims)
-        self.assertItemsEqual(data, ret)
+        self.assertItemsEqual(data.vars, ret.vars)
         self.assertItemsEqual(data.coords, ret.coords)
         self.assertItemsEqual(data.indexes, list(ret.indexes) + ['dim1'])
 
         ret = data.isel(time=slice(2), dim1=0, dim2=slice(5))
         self.assertEqual({'time': 2, 'dim2': 5, 'dim3': 10}, ret.dims)
-        self.assertItemsEqual(data, ret)
+        self.assertItemsEqual(data.vars, ret.vars)
         self.assertItemsEqual(data.coords, ret.coords)
         self.assertItemsEqual(data.indexes, list(ret.indexes) + ['dim1'])
 
         ret = data.isel(time=0, dim1=0, dim2=slice(5))
         self.assertItemsEqual({'dim2': 5, 'dim3': 10}, ret.dims)
-        self.assertItemsEqual(data, ret)
+        self.assertItemsEqual(data.vars, ret.vars)
         self.assertItemsEqual(data.coords, ret.coords)
         self.assertItemsEqual(data.indexes,
                               list(ret.indexes) + ['dim1', 'time'])
@@ -894,7 +895,7 @@ class TestDataset(TestCase):
             # return a new dataset with all variable dimensions tranposed into
             # the order in which they are found in `data`
             return Dataset(dict((k, v.transpose(*data[k].dims))
-                                for k, v in iteritems(dataset)),
+                                for k, v in iteritems(dataset.vars)),
                            dataset.coords, attrs=dataset.attrs)
 
         for dim in ['dim1', 'dim2', 'dim3']:
@@ -1039,7 +1040,7 @@ class TestDataset(TestCase):
 
         actual = data.max()
         expected = Dataset(dict((k, v.max())
-                                for k, v in iteritems(data)))
+                                for k, v in iteritems(data.vars)))
         self.assertDatasetEqual(expected, actual)
 
         self.assertDatasetEqual(data.min(dim=['dim1']),
@@ -1210,7 +1211,8 @@ class TestDataset(TestCase):
         expected = ds.apply(lambda x: 2 * x)
         self.assertDatasetIdentical(expected, 2 * ds)
         self.assertDatasetIdentical(expected, ds + ds)
-        self.assertDatasetIdentical(expected, ds + dict(ds))
+        self.assertDatasetIdentical(expected, ds + ds.vars)
+        self.assertDatasetIdentical(expected, ds + dict(ds.vars))
 
         actual = ds.copy(deep=True)
         actual += ds
