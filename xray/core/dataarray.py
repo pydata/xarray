@@ -10,7 +10,7 @@ from . import ops
 from . import utils
 from . import variable
 from .common import AbstractArray
-from .coordinates import DataArrayCoordinates
+from .coordinates import DataArrayCoordinates, Indexes
 from .dataset import Dataset
 from .pycompat import iteritems, basestring, OrderedDict, zip
 from .utils import FrozenOrderedDict
@@ -245,7 +245,7 @@ class DataArray(AbstractArray):
 
     @property
     def variable(self):
-        return self._dataset.variables[self.name]
+        return self._dataset._arrays[self.name]
 
     @property
     def dtype(self):
@@ -373,8 +373,7 @@ class DataArray(AbstractArray):
     def indexes(self):
         """OrderedDict of pandas.Index objects used for label based indexing
         """
-        return FrozenOrderedDict((k, self._dataset._variables[k].to_index())
-                                 for k in self.dims)
+        return Indexes(self)
 
     @property
     def coords(self):
@@ -704,7 +703,7 @@ class DataArray(AbstractArray):
         var = self.variable.reduce(func, dim, axis, keep_attrs, **kwargs)
         drop = set(self.dims) - set(var.dims)
         # remove all variables associated with any dropped dimensions
-        drop |= set(k for k, v in iteritems(self._dataset.variables)
+        drop |= set(k for k, v in iteritems(self._dataset._arrays)
                     if any(dim in drop for dim in v.dims))
         ds = self._dataset.drop_vars(*drop)
         ds[self.name] = var

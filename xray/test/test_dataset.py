@@ -156,7 +156,7 @@ class TestDataset(TestCase):
             Dataset({'a': ('x', [1])}, {'a': ('x', [1])})
 
         ds = Dataset({}, {'a': ('x', [1])})
-        self.assertFalse(ds)
+        self.assertFalse(ds.vars)
         self.assertItemsEqual(ds.coords.keys(), ['x', 'a'])
 
     def test_properties(self):
@@ -164,18 +164,19 @@ class TestDataset(TestCase):
         self.assertEqual(ds.dims,
                          {'dim1': 8, 'dim2': 9, 'dim3': 10, 'time': 20})
 
-        self.assertItemsEqual(ds, ['var1', 'var2', 'var3'])
-        self.assertItemsEqual(ds.keys(), ['var1', 'var2', 'var3'])
-        self.assertIn('var1', ds)
-        self.assertNotIn('dim1', ds)
-        self.assertNotIn('numbers', ds)
-        self.assertEqual(len(ds), 3)
+        self.assertItemsEqual(ds, list(ds._arrays))
+        self.assertItemsEqual(ds.keys(), list(ds._arrays))
+        self.assertEqual(len(ds), 8)
+
+        self.assertItemsEqual(ds.vars, ['var1', 'var2', 'var3'])
+        self.assertItemsEqual(ds.vars.keys(), ['var1', 'var2', 'var3'])
+        self.assertIn('var1', ds.vars)
+        self.assertNotIn('dim1', ds.vars)
+        self.assertNotIn('numbers', ds.vars)
+        self.assertEqual(len(ds.vars), 3)
 
         self.assertItemsEqual(ds.indexes, ['dim1', 'dim2', 'dim3', 'time'])
         self.assertEqual(len(ds.indexes), 4)
-
-        self.assertItemsEqual(ds.nonindexes, ['var1', 'var2', 'var3', 'numbers'])
-        self.assertEqual(len(ds.nonindexes), 4)
 
         self.assertItemsEqual(ds.coords,
                               ['time', 'dim1', 'dim2', 'dim3', 'numbers'])
@@ -188,12 +189,12 @@ class TestDataset(TestCase):
         a = Dataset()
         d = np.random.random((10, 3))
         a['foo'] = (('time', 'x',), d)
-        self.assertTrue('foo' in a.variables)
+        self.assertTrue('foo' in a._arrays)
         self.assertTrue('foo' in a)
         a['bar'] = (('time', 'x',), d)
         # order of creation is preserved
-        self.assertEqual(list(a.variables),  ['foo', 'time', 'x', 'bar'])
-        self.assertTrue(all([a.variables['foo'][i].values == d[i]
+        self.assertEqual(list(a),  ['foo', 'time', 'x', 'bar'])
+        self.assertTrue(all([a['foo'][i].values == d[i]
                              for i in np.ndindex(*d.shape)]))
         # try to add variable with dim (10,3) with data that's (3,10)
         with self.assertRaises(ValueError):
@@ -205,8 +206,9 @@ class TestDataset(TestCase):
         attributes = {'foo': 'bar'}
         a['x'] = ('x', vec, attributes)
         self.assertTrue('x' in a.coords)
-        self.assertIsInstance(a.coords['x'].to_index(), pd.Index)
-        self.assertVariableIdentical(a.coords['x'], a.variables['x'])
+        self.assertIsInstance(a.coords['x'].to_index(),
+            pd.Index)
+        self.assertVariableIdentical(a.coords['x'], a._arrays['x'])
         b = Dataset()
         b['x'] = ('x', vec, attributes)
         self.assertVariableIdentical(a['x'], b['x'])
@@ -407,7 +409,7 @@ class TestDataset(TestCase):
             else:
                 self.assertEqual(data.dims[d], ret.dims[d])
         # Verify that the data is what we expect
-        for v in data.variables:
+        for v in data:
             self.assertEqual(data[v].dims, ret[v].dims)
             self.assertEqual(data[v].attrs, ret[v].attrs)
             slice_list = [slice(None)] * data[v].values.ndim
@@ -425,19 +427,19 @@ class TestDataset(TestCase):
 
         ret = data.isel(dim1=0)
         self.assertEqual({'time': 20, 'dim2': 9, 'dim3': 10}, ret.dims)
-        self.assertItemsEqual(data, ret)
+        self.assertItemsEqual(data.vars, ret.vars)
         self.assertItemsEqual(data.coords, ret.coords)
         self.assertItemsEqual(data.indexes, list(ret.indexes) + ['dim1'])
 
         ret = data.isel(time=slice(2), dim1=0, dim2=slice(5))
         self.assertEqual({'time': 2, 'dim2': 5, 'dim3': 10}, ret.dims)
-        self.assertItemsEqual(data, ret)
+        self.assertItemsEqual(data.vars, ret.vars)
         self.assertItemsEqual(data.coords, ret.coords)
         self.assertItemsEqual(data.indexes, list(ret.indexes) + ['dim1'])
 
         ret = data.isel(time=0, dim1=0, dim2=slice(5))
         self.assertItemsEqual({'dim2': 5, 'dim3': 10}, ret.dims)
-        self.assertItemsEqual(data, ret)
+        self.assertItemsEqual(data.vars, ret.vars)
         self.assertItemsEqual(data.coords, ret.coords)
         self.assertItemsEqual(data.indexes,
                               list(ret.indexes) + ['dim1', 'time'])
@@ -573,8 +575,8 @@ class TestDataset(TestCase):
         for copied in [data.copy(deep=False), copy(data)]:
             self.assertDatasetIdentical(data, copied)
             for k in data:
-                v0 = data.variables[k]
-                v1 = copied.variables[k]
+                v0 = data._arrays[k]
+                v1 = copied._arrays[k]
                 self.assertIs(v0, v1)
             copied['foo'] = ('z', np.arange(5))
             self.assertNotIn('foo', data)
@@ -582,8 +584,8 @@ class TestDataset(TestCase):
         for copied in [data.copy(deep=True), deepcopy(data)]:
             self.assertDatasetIdentical(data, copied)
             for k in data:
-                v0 = data.variables[k]
-                v1 = copied.variables[k]
+                v0 = data._arrays[k]
+                v1 = copied._arrays[k]
                 self.assertIsNot(v0, v1)
 
     def test_rename(self):
@@ -591,7 +593,7 @@ class TestDataset(TestCase):
         newnames = {'var1': 'renamed_var1', 'dim2': 'renamed_dim2'}
         renamed = data.rename(newnames)
 
-        variables = OrderedDict(data.variables)
+        variables = OrderedDict(data._arrays)
         for k, v in iteritems(newnames):
             variables[v] = variables.pop(k)
 
@@ -602,12 +604,12 @@ class TestDataset(TestCase):
                     dims[dims.index(name)] = newname
 
             self.assertVariableEqual(Variable(dims, v.values, v.attrs),
-                                     renamed.variables[k])
-            self.assertEqual(v.encoding, renamed.variables[k].encoding)
-            self.assertEqual(type(v), type(renamed.variables[k]))
+                                     renamed[k])
+            self.assertEqual(v.encoding, renamed[k].encoding)
+            self.assertEqual(type(v), type(renamed._arrays[k]))
 
-        self.assertTrue('var1' not in renamed.variables)
-        self.assertTrue('dim2' not in renamed.variables)
+        self.assertTrue('var1' not in renamed)
+        self.assertTrue('dim2' not in renamed)
 
         with self.assertRaisesRegexp(ValueError, "cannot rename 'not_a_var'"):
             data.rename({'not_a_var': 'nada'})
@@ -679,7 +681,7 @@ class TestDataset(TestCase):
     def test_getitem(self):
         data = create_test_data()
         self.assertIsInstance(data['var1'], DataArray)
-        self.assertVariableEqual(data['var1'], data.variables['var1'])
+        self.assertVariableEqual(data['var1'], data._arrays['var1'])
         with self.assertRaises(KeyError):
             data['notfound']
         with self.assertRaises(KeyError):
@@ -700,7 +702,7 @@ class TestDataset(TestCase):
         self.assertVariableEqual(data['time.dayofyear'],
                                  Variable('time', 1 + np.arange(20)))
         self.assertArrayEqual(data['time.month'].values,
-                              data.variables['time'].to_index().month)
+                              data._arrays['time'].to_index().month)
         self.assertArrayEqual(data['time.season'].values, 1)
         # test virtual variable math
         self.assertArrayEqual(data['time.dayofyear'] + 1, 2 + np.arange(20))
@@ -754,13 +756,12 @@ class TestDataset(TestCase):
 
     def test_delitem(self):
         data = create_test_data()
-        all_items = set(data.variables)
-        self.assertItemsEqual(data.variables, all_items)
+        all_items = set(data)
+        self.assertItemsEqual(data, all_items)
         del data['var1']
-        self.assertItemsEqual(data.variables, all_items - set(['var1']))
+        self.assertItemsEqual(data, all_items - set(['var1']))
         del data['dim1']
-        self.assertItemsEqual(data.variables,
-                              set(['time', 'dim2', 'dim3', 'numbers']))
+        self.assertItemsEqual(data, set(['time', 'dim2', 'dim3', 'numbers']))
         self.assertNotIn('dim1', data.dims)
         self.assertNotIn('dim1', data.coords)
 
@@ -770,7 +771,7 @@ class TestDataset(TestCase):
             def get_args(v):
                 return [set(args[0]) & set(v.dims)] if args else []
             expected = Dataset(dict((k, v.squeeze(*get_args(v)))
-                                    for k, v in iteritems(data.variables)))
+                                    for k, v in iteritems(data._arrays)))
             expected.set_coords(data.coords, inplace=True)
             self.assertDatasetIdentical(expected, data.squeeze(*args))
         # invalid squeeze
@@ -894,7 +895,7 @@ class TestDataset(TestCase):
             # return a new dataset with all variable dimensions tranposed into
             # the order in which they are found in `data`
             return Dataset(dict((k, v.transpose(*data[k].dims))
-                                for k, v in iteritems(dataset)),
+                                for k, v in iteritems(dataset.vars)),
                            dataset.coords, attrs=dataset.attrs)
 
         for dim in ['dim1', 'dim2', 'dim3']:
@@ -906,7 +907,7 @@ class TestDataset(TestCase):
                 data, concat(datasets, data[dim], mode='minimal'))
 
             datasets = [g for _, g in data.groupby(dim, squeeze=True)]
-            concat_over = [k for k, v in iteritems(data.variables)
+            concat_over = [k for k, v in iteritems(data)
                            if dim in v.dims and k != dim]
             actual = concat(datasets, data[dim], concat_over=concat_over)
             self.assertDatasetIdentical(data, rectify_dim_order(actual))
@@ -1039,7 +1040,7 @@ class TestDataset(TestCase):
 
         actual = data.max()
         expected = Dataset(dict((k, v.max())
-                                for k, v in iteritems(data)))
+                                for k, v in iteritems(data.vars)))
         self.assertDatasetEqual(expected, actual)
 
         self.assertDatasetEqual(data.min(dim=['dim1']),
@@ -1210,7 +1211,8 @@ class TestDataset(TestCase):
         expected = ds.apply(lambda x: 2 * x)
         self.assertDatasetIdentical(expected, 2 * ds)
         self.assertDatasetIdentical(expected, ds + ds)
-        self.assertDatasetIdentical(expected, ds + dict(ds))
+        self.assertDatasetIdentical(expected, ds + ds.vars)
+        self.assertDatasetIdentical(expected, ds + dict(ds.vars))
 
         actual = ds.copy(deep=True)
         actual += ds

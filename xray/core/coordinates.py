@@ -30,7 +30,7 @@ class AbstractCoordinates(Mapping):
 
     def __iter__(self):
         # needs to be in the same order as the dataset variables
-        for k in self._dataset._variables:
+        for k in self._dataset._arrays:
             if k in self._names:
                 yield k
 
@@ -61,7 +61,7 @@ class AbstractCoordinates(Mapping):
     def to_index(self):
         """Convert all index coordinates into a :py:class:`pandas.MultiIndex`
         """
-        indexes = [self._dataset._variables[k].to_index() for k in self.dims]
+        indexes = [self._dataset._arrays[k].to_index() for k in self.dims]
         return utils.multi_index_from_product(indexes, names=list(self.dims))
 
     def _merge_validate(self, other):
@@ -72,7 +72,7 @@ class AbstractCoordinates(Mapping):
         other_conflicts = set()
         for k in self:
             if k in other:
-                var = self._dataset._variables[k]
+                var = self._dataset._arrays[k]
                 if not var.equals(other[k]):
                     in_self_dims = k in self.dims
                     in_other_dims = k in other.dims
@@ -153,7 +153,7 @@ class DataArrayCoordinates(AbstractCoordinates):
     def __setitem__(self, key, value):
         with self._dataarray._set_new_dataset() as ds:
             ds.coords[key] = value
-            bad_dims = [d for d in ds._variables[key].dims
+            bad_dims = [d for d in ds._arrays[key].dims
                         if d not in self.dims]
             if bad_dims:
                 raise ValueError('DataArray does not include all coordinate '
@@ -162,3 +162,26 @@ class DataArrayCoordinates(AbstractCoordinates):
     @property
     def dims(self):
         return self._dataarray.dims
+
+
+class Indexes(Mapping):
+    def __init__(self, source):
+        self._source = source
+
+    def __iter__(self):
+        return iter(self._source.dims)
+
+    def __len__(self):
+        return len(self._source.dims)
+
+    def __contains__(self, key):
+        return key in self._source.dims
+
+    def __getitem__(self, key):
+        if key in self:
+            return self._source[key].to_index()
+        else:
+            raise KeyError(key)
+
+    def __repr__(self):
+        return formatting.indexes_repr(self)
