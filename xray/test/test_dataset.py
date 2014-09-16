@@ -938,7 +938,7 @@ class TestDataset(TestCase):
         expected['dim1'] = dim
         self.assertDatasetIdentical(expected, concat(datasets, dim))
 
-        # TODO: factor this into several distinct tests
+    def test_concat_errors(self):
         data = create_test_data()
         split_data = [data.isel(dim1=slice(10)),
                       data.isel(dim1=slice(10, None))]

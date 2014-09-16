@@ -1341,11 +1341,20 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
     @classmethod
     def _concat(cls, datasets, dim='concat_dim', indexers=None,
                 mode='different', concat_over=None, compat='equals'):
+        from .dataarray import DataArray
+
         _assert_compat_valid(compat)
 
         # don't bother trying to work with datasets as a generator instead of a
         # list; the gains would be minimal
         datasets = list(map(as_dataset, datasets))
+
+        if not isinstance(dim, basestring) and not hasattr(dim, 'dims'):
+            # dim is not a DataArray or Coordinate
+            dim_name = getattr(dim, 'name', None)
+            if dim_name is None:
+                dim_name = 'concat_dim'
+            dim = DataArray(dim, dims=dim_name, name=dim_name)
         dim_name = getattr(dim, 'name', dim)
 
         # figure out variables to concatenate over

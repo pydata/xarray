@@ -826,6 +826,17 @@ class TestDataArray(TestCase):
         grouped = [g for _, g in foo.groupby('x')]
         stacked = concat(grouped, self.ds['x'])
         self.assertDataArrayIdentical(foo, stacked)
+        # with an index as the 'dim' argument
+        stacked = concat(grouped, self.ds.indexes['x'])
+        self.assertDataArrayIdentical(foo, stacked)
+
+        actual = concat([foo[0], foo[1]], pd.Index([0, 1])).reset_coords(drop=True)
+        expected = foo[:2].rename({'x': 'concat_dim'})
+        self.assertDataArrayIdentical(expected, actual)
+
+        actual = concat([foo[0], foo[1]], [0, 1]).reset_coords(drop=True)
+        expected = foo[:2].rename({'x': 'concat_dim'})
+        self.assertDataArrayIdentical(expected, actual)
 
         with self.assertRaisesRegexp(ValueError, 'not identical'):
             concat([foo, bar], compat='identical')
