@@ -484,7 +484,7 @@ class Variable(common.AbstractArray):
         if len(dims) == 0:
             dims = self.dims[::-1]
         axes = self.get_axis_num(dims)
-        data = self.values.transpose(*axes)
+        data = self.values.transpose(axes)
         return type(self)(dims, data, self.attrs, self.encoding)
 
     def squeeze(self, dim=None):

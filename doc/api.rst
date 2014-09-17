@@ -1,32 +1,47 @@
 .. currentmodule:: xray
 
+#############
 API reference
-=============
+#############
+
+This page provides an auto-generated summary of xray's API. For more details
+and examples, refer to the relevant chapter in the main part of the
+documentation.
+
+Top-level functions
+===================
+
+.. autosummary::
+   :toctree: generated/
+
+   align
+   concat
 
 Dataset
--------
+=======
 
 Creating a dataset
-~~~~~~~~~~~~~~~~~~
+------------------
+
 .. autosummary::
    :toctree: generated/
 
-   Dataset.__init__
+   Dataset
    open_dataset
 
-Attributes and underlying data
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Attributes
+----------
 
 .. autosummary::
    :toctree: generated/
 
-   Dataset.coords
-   Dataset.noncoords
    Dataset.dims
+   Dataset.vars
+   Dataset.coords
    Dataset.attrs
 
-Dataset contents
-~~~~~~~~~~~~~~~~
+Dictionary interface
+--------------------
 
 Datasets implement the mapping interface with keys given by variable names
 and values given by ``DataArray`` objects.
@@ -38,15 +53,24 @@ and values given by ``DataArray`` objects.
    Dataset.__setitem__
    Dataset.__delitem__
    Dataset.update
-   Dataset.merge
-   Dataset.copy
-   Dataset.load_data
    Dataset.iteritems
    Dataset.itervalues
-   Dataset.virtual_variables
+
+Dataset contents
+----------------
+
+.. autosummary::
+   :toctree: generated/
+
+   Dataset.copy
+   Dataset.merge
+   Dataset.rename
+   Dataset.drop_vars
+   Dataset.set_coords
+   Dataset.reset_coords
 
 Comparisons
-~~~~~~~~~~~
+-----------
 
 .. autosummary::
    :toctree: generated/
@@ -54,44 +78,56 @@ Comparisons
    Dataset.equals
    Dataset.identical
 
-Selecting
-~~~~~~~~~
+Indexing
+--------
 
 .. autosummary::
    :toctree: generated/
 
    Dataset.isel
    Dataset.sel
+   Dataset.squeeze
    Dataset.reindex
    Dataset.reindex_like
-   Dataset.rename
-   Dataset.drop_vars
-   Dataset.squeeze
-   Dataset.groupby
-   Dataset.set_coords
-   Dataset.reset_coords
 
-Computations
-~~~~~~~~~~~~
+Computation
+-----------
 
 .. autosummary::
    :toctree: generated/
 
    Dataset.apply
    Dataset.reduce
-   Dataset.all
-   Dataset.any
-   Dataset.argmax
-   Dataset.argmin
-   Dataset.max
-   Dataset.min
-   Dataset.mean
-   Dataset.std
-   Dataset.sum
-   Dataset.var
+   Dataset.groupby
+   Dataset.transpose
+
+**Aggregation**:
+:py:attr:`~Dataset.all`
+:py:attr:`~Dataset.any`
+:py:attr:`~Dataset.argmax`
+:py:attr:`~Dataset.argmin`
+:py:attr:`~Dataset.max`
+:py:attr:`~Dataset.mean`
+:py:attr:`~Dataset.min`
+:py:attr:`~Dataset.prod`
+:py:attr:`~Dataset.sum`
+:py:attr:`~Dataset.std`
+:py:attr:`~Dataset.var`
+
+**Missing values**:
+:py:attr:`~Dataset.isnull`
+:py:attr:`~Dataset.notnull`
+
+**ndarray methods**:
+:py:attr:`~Dataset.argsort`
+:py:attr:`~Dataset.clip`
+:py:attr:`~Dataset.conj`
+:py:attr:`~Dataset.conjugate`
+:py:attr:`~Dataset.round`
+:py:attr:`~Dataset.T`
 
 IO / Conversion
-~~~~~~~~~~~~~~~
+---------------
 
 .. autosummary::
    :toctree: generated/
@@ -100,27 +136,14 @@ IO / Conversion
    Dataset.to_dataframe
    Dataset.from_dataframe
    Dataset.close
-
-Dataset internals
-~~~~~~~~~~~~~~~~~
-
-These attributes and classes provide a low-level interface for working
-with Dataset variables. In general you should use the Dataset dictionary-
-like interface instead and working with DataArray objects:
-
-.. autosummary::
-   :toctree: generated/
-
-   Dataset.variables
-   Variable
-   Coordinate
+   Dataset.load_data
 
 Backends (experimental)
-~~~~~~~~~~~~~~~~~~~~~~~
+-----------------------
 
 These backends provide a low-level interface for lazily loading data from
 external file-formats or protocols, and can be manually invoked to create
-arguments for the `from_store` and `dump_to_store` Dataset methods.
+arguments for the ``from_store`` and ``dump_to_store`` Dataset methods.
 
 .. autosummary::
    :toctree: generated/
@@ -130,15 +153,15 @@ arguments for the `from_store` and `dump_to_store` Dataset methods.
    backends.ScipyDataStore
 
 DataArray
----------
+=========
 
 .. autosummary::
    :toctree: generated/
 
-   DataArray.__init__
+   DataArray
 
-Attributes and underlying data
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Attributes
+----------
 
 .. autosummary::
    :toctree: generated/
@@ -149,21 +172,30 @@ Attributes and underlying data
    DataArray.name
    DataArray.attrs
    DataArray.encoding
-   DataArray.variable
 
-NDArray attributes
-~~~~~~~~~~~~~~~~~~
+**ndarray attributes**:
+:py:attr:`~DataArray.ndim`
+:py:attr:`~DataArray.shape`
+:py:attr:`~DataArray.size`
+:py:attr:`~DataArray.dtype`
+
+DataArray contents
+------------------
 
 .. autosummary::
-    :toctree: generated/
+   :toctree: generated/
 
-    DataArray.ndim
-    DataArray.shape
-    DataArray.size
-    DataArray.dtype
+   DataArray.rename
+   DataArray.reset_coords
+   DataArray.copy
 
-Selecting
-~~~~~~~~~
+**ndarray methods**:
+:py:attr:`~DataArray.astype`
+:py:attr:`~DataArray.item`
+
+
+Indexing
+--------
 
 .. autosummary::
    :toctree: generated/
@@ -173,46 +205,49 @@ Selecting
    DataArray.loc
    DataArray.isel
    DataArray.sel
+   DataArray.squeeze
    DataArray.reindex
    DataArray.reindex_like
-   DataArray.rename
-   DataArray.squeeze
-   DataArray.reset_coords
 
-Group operations
-~~~~~~~~~~~~~~~~
+Computation
+-----------
 
 .. autosummary::
    :toctree: generated/
 
-   DataArray.groupby
-
-Computations
-~~~~~~~~~~~~
-
-.. autosummary::
-   :toctree: generated/
-
-   DataArray.transpose
-   DataArray.T
    DataArray.reduce
+   DataArray.groupby
+   DataArray.transpose
    DataArray.get_axis_num
-   DataArray.all
-   DataArray.any
-   DataArray.argmax
-   DataArray.argmin
-   DataArray.max
-   DataArray.min
-   DataArray.mean
-   DataArray.std
-   DataArray.sum
-   DataArray.var
-   DataArray.isnull
-   DataArray.notnull
 
+**Aggregation**:
+:py:attr:`~DataArray.all`
+:py:attr:`~DataArray.any`
+:py:attr:`~DataArray.argmax`
+:py:attr:`~DataArray.argmin`
+:py:attr:`~DataArray.max`
+:py:attr:`~DataArray.mean`
+:py:attr:`~DataArray.min`
+:py:attr:`~DataArray.prod`
+:py:attr:`~DataArray.sum`
+:py:attr:`~DataArray.std`
+:py:attr:`~DataArray.var`
+
+**Missing values**:
+:py:attr:`~DataArray.isnull`
+:py:attr:`~DataArray.notnull`
+
+**ndarray methods**:
+:py:attr:`~DataArray.argsort`
+:py:attr:`~DataArray.clip`
+:py:attr:`~DataArray.conj`
+:py:attr:`~DataArray.conjugate`
+:py:attr:`~DataArray.searchsorted`
+:py:attr:`~DataArray.round`
+:py:attr:`~DataArray.T`
 
 Comparisons
-~~~~~~~~~~~
+-----------
 
 .. autosummary::
    :toctree: generated/
@@ -221,7 +256,7 @@ Comparisons
    DataArray.identical
 
 IO / Conversion
-~~~~~~~~~~~~~~~
+---------------
 
 .. autosummary::
    :toctree: generated/
@@ -231,15 +266,4 @@ IO / Conversion
    DataArray.to_series
    DataArray.to_index
    DataArray.from_series
-   DataArray.copy
    DataArray.load_data
-
-
-Top-level functions
--------------------
-
-.. autosummary::
-   :toctree: generated/
-
-   align
-   concat

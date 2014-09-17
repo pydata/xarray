@@ -273,15 +273,17 @@ class Variables(Mapping):
 
 
 class Dataset(Mapping, common.ImplementsDatasetReduce):
-    """A netcdf-like data object consisting of variables and attributes which
-    together form a self describing dataset.
+    """A multi-dimensional, in memory, array database.
+
+    A dataset resembles an in-memory representation of a NetCDF file, and
+    consists of variables, coordinates and attributes which together form a
+    self describing dataset.
 
     Dataset implements the mapping interface with keys given by variable names
     and values given by DataArray objects for each variable name.
 
-    One dimensional variables with name equal to their dimension are
-    coordinates, which means they are saved in the dataset as
-    :py:class:`~xray.Coordinate` objects.
+    One dimensional variables with name equal to their dimension are index
+    coordinates used for label based indexing.
     """
     def __init__(self, variables=None, coords=None, attrs=None):
         """To load data from a file or file-like object, use the `open_dataset`
@@ -296,15 +298,17 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
             create a new ``Variable``. Each dimension must have the same length
             in all variables in which it appears.
         coords : dict-like, optional
-            Do not use: not yet implemented!
+            Another mapping in the same form as the `variables` argument,
+            except the each item is saved on the dataset as a "coordinate".
+            These arrays have an associated meaning: they describe
+            constant/fixed/independent quantities, unlike the
+            varying/measured/dependent quantities that belong in `variables`.
+            Coordinates values may be given by 1-dimensional arrays or scalars,
+            in which case `dims` do not need to be supplied: 1D arrays will be
+            assumed to give index values along the dimension with the same
+            name.
         attrs : dict-like, optional
             Global attributes to save on this dataset.
-
-        .. warning:: For now, if you wish to specify ``attrs``, you *must* use
-        a keyword argument: ``xray.Dataset(variables, attrs=attrs)``. The
-        ``coords`` argument is reserved for specifying coordinates
-        independently of other variables for use in a future version of xray.
-        For now, coordinates will extracted automatically from variables.
         """
         self._arrays = OrderedDict()
         self._coord_names = set()
@@ -389,7 +393,7 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
         return obj
 
     def close(self):
-        """Close any datastores linked to this dataset
+        """Close any files linked to this dataset
         """
         if self._file_obj is not None:
             self._file_obj.close()
@@ -585,8 +589,10 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
         return _list_virtual_variables(self._arrays)
 
     def __getitem__(self, key):
-        """Access the given variable name in this dataset as a `DataArray`, or
-        the given variable names as another Dataset.
+        """Access variables or coordinates this dataset as a
+        :py:class:`~xray.DataArray`.
+
+        Indexing with a list of names will return a new ``Dataset`` object.
         """
         from .dataarray import DataArray
 
@@ -803,7 +809,7 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
         return formatting.dataset_repr(self)
 
     def isel(self, **indexers):
-        """Return a new dataset with each array indexed along the specified
+        """Returns a new dataset with each array indexed along the specified
         dimension(s).
 
         This method selects values from each array using its `__getitem__`
@@ -852,7 +858,7 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
     indexed = utils.function_alias(isel, 'indexed')
 
     def sel(self, **indexers):
-        """Return a new dataset with each variable indexed by tick labels
+        """Returns a new dataset with each array indexed by tick labels
         along the specified dimension(s).
 
         In contrast to `Dataset.isel`, indexers for this method should use
@@ -1032,7 +1038,7 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
 
     def merge(self, other, inplace=False, overwrite_vars=set(),
               compat='equals'):
-        """Merge the variables of two datasets into a single new dataset.
+        """Merge the arrays of two datasets into a single dataset.
 
         This method generally not allow for overriding data, with the exception
         of attributes, which are ignored on the second dataset. Variables with
@@ -1141,7 +1147,7 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
     unselect = utils.function_alias(drop_vars, 'unselect')
 
     def groupby(self, group, squeeze=True):
-        """Group this dataset by unique values of the indicated group.
+        """Returns a GroupBy object for performing grouped operations.
 
         Parameters
         ----------
@@ -1207,7 +1213,7 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
         return self.transpose()
 
     def squeeze(self, dim=None):
-        """Return a new dataset with squeezed data.
+        """Returns a new dataset with squeezed data.
 
         Parameters
         ----------
@@ -1302,7 +1308,7 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
         return obj
 
     def apply(self, func, keep_attrs=False, args=(), **kwargs):
-        """Apply a function over noncoordinate variables in this dataset.
+        """Apply a function over the variables in this dataset.
 
         Parameters
         ----------
@@ -1311,13 +1317,13 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
             transform each DataArray `x` in this dataset into another
             DataArray.
         keep_attrs : bool, optional
-            If True, the datasets's attributes (`attrs`) will be copied from
+            If True, the dataset's attributes (`attrs`) will be copied from
             the original object to the new one. If False, the new object will
             be returned without attributes.
         args : tuple, optional
-            Position arguments passed on to `func`.
+            Positional arguments passed on to `func`.
         **kwargs : dict
-            Additional keyword arguments passed on to `func`.
+            Keyword arguments passed on to `func`.
 
         Returns
         -------

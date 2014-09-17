@@ -35,8 +35,8 @@ pandas gets a lot of things right, but scientific users need fully multi-
 dimensional data structures.
 
 
-When should I use xray instead of pandas?
------------------------------------------
+Should I use xray instead of pandas?
+------------------------------------
 
 It's not an either/or choice! xray provides robust support for converting
 back and forth between the tabular data-structures of pandas and its own
@@ -48,17 +48,7 @@ one-dimensional, stick with pandas, which is a more developed toolkit for doing
 data analysis in Python.
 
 
-How can I use xray with heterogeneous data?
--------------------------------------------
-
-All items in a :py:class:`~xray.DataArray` must have a single (homogeneous)
-data type. To work with heterogeneous or structured data types in xray, put
-separate ``DataArray`` objects in a single :py:class:`~xray.Dataset`.
-
-The ``Dataset`` object allows for most of the flexibility of heterogenerous
-data without the complexity or performance cost, because its constituent arrays
-only have a single dtype.
-
+.. _approach to metadata:
 
 What is your approach to metadata?
 ----------------------------------
@@ -118,3 +108,18 @@ and CDAT have some great domain specific functionality, and we would love to
 have support for converting their native objects to and from xray (see
 :issue:`37` and :issue:`133`)
 
+
+Does xray support out-of-core computation?
+------------------------------------------
+
+Not yet! Distributed and out-of-memory computation is certainly something we're
+excited, but for now we have focused on making xray a full-featured tool for
+in-memory analytics (like pandas).
+
+We have some ideas for what out-of-core support could look like (probably
+through an library like biggus_ or Blaze_), but we're not there yet. An
+intermediate step would be supporting incremental writes to a Dataset linked to
+a NetCDF file on disk.
+
+.. _biggus: https://github.com/SciTools/biggus
+.. _Blaze: https://github.com/continuumio/blaze

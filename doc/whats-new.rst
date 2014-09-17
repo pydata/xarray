@@ -15,6 +15,8 @@ New features:
   operations directly. Dataset-array operations map across all dataset
   variables; dataset-dataset operations act on each pair of variables with the
   same name.
+- **GroupBy math**: This provides a convenient shortcut for normalizing by the
+  average value of a group.
 - The dataset ``__repr__`` method has been entirely overhauled; dataset
   objects now show their values when printed.
 - You can now index a dataset with a list of variables to return a new dataset:
@@ -23,11 +25,6 @@ New features:
 Backwards incompatible changes
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-- The items in a ``Dataset`` for the purposes of iteration (`for v in ds`,
-  `ds.keys()` and `ds.items()`) and contents checks (`k in ds`) are now only
-  only the *variables*, formerly called *non-coordinates*. Correspondingly, the
-  ``Dataset.noncoords`` property has been deprecated (you can just use the
-  ``Dataset`` object itself).
 - ``Dataset.__eq__`` and ``Dataset.__ne__`` are now element-wise operations
   instead of comparing all values to obtain a single boolean. Use the method
   :py:meth:`~xray.Dataset.equals` instead.
@@ -35,6 +32,7 @@ Backwards incompatible changes
 Deprecations
 ~~~~~~~~~~~~
 
+- ``Dataset.noncoords`` is deprecated: use ``Dataset.vars`` instead.
 - ``Dataset.select_vars`` deprecated: index a ``Dataset`` with a list of
   variable names instead.
 - ``DataArray.select_vars`` and ``DataArray.drop_vars`` deprecated: use
