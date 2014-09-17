@@ -26,7 +26,13 @@ Documentation
 
    why-xray
    installing
-   tutorial
+   data-structures
+   indexing
+   computation
+   groupby
+   combining
+   pandas
+   io
    examples
    faq
    api

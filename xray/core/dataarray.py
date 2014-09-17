@@ -111,6 +111,8 @@ class DataArray(AbstractArray):
         Dictionary of Coordinate objects that label values along each dimension.
     name : str or None
         Name of this array.
+    attrs : OrderedDict
+        Dictionary for holding arbitrary metadata.
     """
     def __init__(self, data=None, coords=None, dims=None, name=None,
                  attrs=None, encoding=None):
@@ -223,8 +225,7 @@ class DataArray(AbstractArray):
 
     @property
     def name(self):
-        """The name of the variable in `dataset` to which array operations
-        are applied.
+        """The name of this array.
         """
         return self._name
 
@@ -268,7 +269,7 @@ class DataArray(AbstractArray):
 
     @property
     def values(self):
-        """The variables's data as a numpy.ndarray"""
+        """The array's data as a numpy.ndarray"""
         return self.variable.values
 
     @values.setter
@@ -292,6 +293,7 @@ class DataArray(AbstractArray):
 
     @property
     def dims(self):
+        """Dimension names associated with this array."""
         return self.variable.dims
 
     @dims.setter
@@ -307,6 +309,7 @@ class DataArray(AbstractArray):
 
     @property
     def dimensions(self):
+        """Deprecated; use dims instead"""
         utils.alias_warning('dimensions', 'dims')
         return self.dims
 
@@ -377,8 +380,7 @@ class DataArray(AbstractArray):
 
     @property
     def coords(self):
-        """Dictionary-like container of xray.Coordinate objects used for label
-        based indexing.
+        """Dictionary-like container of coordinate arrays.
         """
         return DataArrayCoordinates(self)
 
@@ -539,7 +541,7 @@ class DataArray(AbstractArray):
         return ds[self.name]
 
     def rename(self, new_name_or_name_dict):
-        """Returns a new DataArray with renamed variables.
+        """Returns a new DataArray with renamed coordinates and/or a new name.
 
         If the argument is dict-like, it it used as a mapping from old names to
         new names for dataset variables. Otherwise, use the argument as the new
@@ -586,7 +588,7 @@ class DataArray(AbstractArray):
     unselect = utils.function_alias(drop_vars, 'unselect')
 
     def groupby(self, group, squeeze=True):
-        """Group this dataset by unique values of the indicated group.
+        """Returns a GroupBy object for performing grouped operations.
 
         Parameters
         ----------

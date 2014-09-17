@@ -115,12 +115,12 @@ def _summarize_coordinates(coords, first_col_width,
     summary.extend(_summarize_variables(index_coords, first_col_width,
                                         always_show_values=True))
 
-    other_coords = OrderedDict((k, v) for k, v in iteritems(coords)
-                               if k not in coords.dims)
-    if other_coords:
+    nonindex_coords = OrderedDict((k, v) for k, v in iteritems(coords)
+                                  if k not in coords.dims)
+    if nonindex_coords:
         summary.append('Other Coordinates:')
         summary.extend(_summarize_variables(
-            other_coords, first_col_width,
+            nonindex_coords, first_col_width,
             always_show_values=always_show_values))
     return summary
 
@@ -141,7 +141,7 @@ def vars_repr(vars):
 def indexes_repr(indexes):
     summary = []
     for k, v in indexes.items():
-        summary.append(wrap_indent(v, '%s: ' % k))
+        summary.append(wrap_indent(repr(v), '%s: ' % k))
     return '\n'.join(summary)
 
 

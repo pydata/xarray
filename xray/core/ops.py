@@ -31,6 +31,7 @@ def _values_method_wrapper(name):
     def func(self, *args, **kwargs):
         return getattr(self.values, name)(*args, **kwargs)
     func.__name__ = name
+    func.__doc__ = getattr(np.ndarray, name).__doc__
     return func
 
 
@@ -38,6 +39,7 @@ def _method_wrapper(name):
     def func(self, *args, **kwargs):
         return getattr(self, name)(*args, **kwargs)
     func.__name__ = name
+    func.__doc__ = getattr(np.ndarray, name).__doc__
     return func
 
 
@@ -51,6 +53,7 @@ def _func_slash_method_wrapper(f, name):
         except AttributeError:
             return f(self, *args, **kwargs)
     func.__name__ = name
+    func.__doc__ = f.__doc__
     return func
 
 
