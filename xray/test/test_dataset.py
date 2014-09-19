@@ -73,12 +73,11 @@ class TestDataset(TestCase):
         expected = dedent("""\
         <xray.Dataset>
         Dimensions:  (dim1: 8, dim2: 9, dim3: 10, time: 20)
-        Index Coordinates:
-            dim1     (dim1) int64 0 1 2 3 4 5 6 7
-            dim2     (dim2) float64 0.0 0.5 1.0 1.5 2.0 2.5 3.0 3.5 4.0
-            dim3     (dim3) %s 'a' 'b' 'c' 'd' 'e' 'f' 'g' 'h' 'i' 'j'
-            time     (time) datetime64[ns] 2000-01-01 2000-01-02 2000-01-03 2000-01-04 ...
-        Other Coordinates:
+        Coordinates:
+          * dim1     (dim1) int64 0 1 2 3 4 5 6 7
+          * dim2     (dim2) float64 0.0 0.5 1.0 1.5 2.0 2.5 3.0 3.5 4.0
+          * dim3     (dim3) %s 'a' 'b' 'c' 'd' 'e' 'f' 'g' 'h' 'i' 'j'
+          * time     (time) datetime64[ns] 2000-01-01 2000-01-02 2000-01-03 2000-01-04 ...
             numbers  (dim3) int64 0 1 2 0 0 1 1 2 2 3
         Variables:
             var1     (dim1, dim2) float64 -1.086 0.9973 0.283 -1.506 -0.5786 1.651 -2.427 -0.4289 ...
@@ -92,7 +91,7 @@ class TestDataset(TestCase):
         expected = dedent("""\
         <xray.Dataset>
         Dimensions:  ()
-        Index Coordinates:
+        Coordinates:
             *empty*
         Variables:
             *empty*""")
@@ -105,7 +104,7 @@ class TestDataset(TestCase):
         expected = dedent("""\
         <xray.Dataset>
         Dimensions:  ()
-        Index Coordinates:
+        Coordinates:
             *empty*
         Variables:
             foo      float64 1.0""")
@@ -230,9 +229,10 @@ class TestDataset(TestCase):
     def test_coords_properties(self):
         # use an OrderedDict for coordinates to ensure order across python
         # versions
-        data = Dataset({'x': ('x', [-1, -2]),
-                        'y': ('y', [0, 1, 2]),
-                        'foo': (['x', 'y'], np.random.randn(2, 3))},
+        data = Dataset(OrderedDict([('x', ('x', [-1, -2])),
+                                    ('y', ('y', [0, 1, 2])),
+                                    ('foo', (['x', 'y'],
+                                             np.random.randn(2, 3)))]),
                        OrderedDict([('a', ('x', [4, 5])), ('b', -10)]))
 
         self.assertEqual(4, len(data.coords))
@@ -253,12 +253,11 @@ class TestDataset(TestCase):
             data.coords[0]
 
         expected = dedent("""\
-        Index Coordinates:
-            x (x) int64 -1 -2
-            y (y) int64 0 1 2
-        Other Coordinates:
-            a (x) int64 4 5
-            b int64 -10""")
+        Coordinates:
+          * x        (x) int64 -1 -2
+          * y        (y) int64 0 1 2
+            a        (x) int64 4 5
+            b        int64 -10""")
         actual = repr(data.coords)
         self.assertEqual(expected, actual)
 
