@@ -883,6 +883,15 @@ class TestDataset(TestCase):
         with self.assertRaisesRegexp(TypeError, 'only support arithmetic'):
             grouped + grouped
 
+    def test_groupby_math_virtual(self):
+        ds = Dataset({'x': ('t', [1, 2, 3])},
+                     {'t': pd.date_range('20100101', periods=3)})
+        grouped = ds.groupby('t.day')
+        actual = grouped - grouped.mean()
+        expected = Dataset({'x': ('t', [0, 0, 0])},
+                           {'t': ds['t'], 't.day': ds['t.day']})
+        self.assertDatasetIdentical(actual, expected)
+
     def test_concat(self):
         data = create_test_data()
 
