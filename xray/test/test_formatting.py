@@ -40,6 +40,7 @@ class TestFormatting(TestCase):
         cases = [
             (pd.Timestamp('2000-01-01T12'), '2000-01-01T12:00:00'),
             (pd.Timestamp('2000-01-01'), '2000-01-01'),
+            (pd.Timestamp('NaT'), 'NaT'),
             ('foo', "'foo'"),
             (u'foo', "'foo'" if PY3 else "u'foo'"),
             (b'foo', "b'foo'" if PY3 else "'foo'"),

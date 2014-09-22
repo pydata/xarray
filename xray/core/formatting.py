@@ -55,11 +55,17 @@ def first_n_items(x, n_desired):
 def format_item(x):
     """Returns a succinct summary of an object as a string"""
     if isinstance(x, (np.datetime64, datetime)):
-        date_str, time_str = str(pd.Timestamp(x)).split()
-        if time_str == '00:00:00':
-            return date_str
+        datetime_str = str(pd.Timestamp(x))
+        try:
+            date_str, time_str = datetime_str.split()
+        except ValueError:
+            # catch NaT and others that don't split nicely
+            return datetime_str
         else:
-            return '%sT%s' % (date_str, time_str)
+            if time_str == '00:00:00':
+                return date_str
+            else:
+                return '%sT%s' % (date_str, time_str)
     elif isinstance(x, (unicode_type, bytes_type)):
         return repr(x)
     elif isinstance(x, (float, np.float)):
