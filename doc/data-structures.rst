@@ -31,10 +31,9 @@ multi-dimensional array. It has several key properties:
 
 xray uses ``dims`` and ``coords`` to enable its core metadata aware operations.
 Dimensions provide names that xray uses instead of the ``axis`` argument found
-in many numpy functions. Coordinates (particularly "index coordinates") enable
-fast label based indexing and alignment, building on the functionality of the
-``index`` found on a pandas :py:class:`~pandas.DataFrame` or
-:py:class:`~pandas.Series`.
+in many numpy functions. Coordinates enable fast label based indexing and
+alignment, building on the functionality of the ``index`` found on a pandas
+:py:class:`~pandas.DataFrame` or :py:class:`~pandas.Series`.
 
 DataArray objects also can have a ``name`` and can hold arbitrary metadata in
 the form of their ``attrs`` property (an ordered dictionary). Names and
@@ -66,9 +65,9 @@ in with default values:
 
     xray.DataArray(data)
 
-As you can see, dimension names and index coordinates, which label tick marks
-along each dimension, are always present. This behavior is similar to pandas,
-which fills in index values in the same way.
+As you can see, dimensions and coordinate arrays corresponding to each
+dimension are always present. This behavior is similar to pandas, which fills
+in index values in the same way.
 
 The data array constructor also supports supplying ``coords`` as a list of
 ``(dim, ticks[, attrs])`` pairs with length equal to the number of dimensions:
@@ -80,7 +79,7 @@ The data array constructor also supports supplying ``coords`` as a list of
 Yet another option is to supply ``coords`` in the form of a dictionary where
 the values are scaler values, 1D arrays or tuples (in the same form as the
 `dataarray constructor`_). This form lets you supply other coordinates than
-those used for indexing (more on these later):
+those corresponding to dimensions (more on these later):
 
 .. ipython:: python
 
@@ -214,16 +213,14 @@ variables. Dictionary like access on a dataset will supply arrays found in
 either category. However, the distinction does have important implications for
 indexing and compution.
 
-Here is an example how we might structure a dataset for a weather forecast:
+Here is an example of how we might structure a dataset for a weather forecast:
 
 .. image:: _static/dataset-diagram.png
 
 In this example, it would be natural to call ``temperature`` and
 ``precipitation`` "variables" and all the other arrays "coordinates" because
-they label the points along the dimensions. ``x``, ``y`` and ``time`` are
-index coordinates (used for alignment purposes), and ``latitude``,
-``longitude`` and ``reference_time`` are other coordinates, not used for
-indexing (see [1]_ for more background on this example).
+they label the points along the dimensions. (see [1]_ for more background on
+this example).
 
 .. _dataarray constructor:
 
@@ -383,40 +380,46 @@ Another useful option is the ability to rename the variables in a dataset:
 
     ds.rename({'temperature': 'temp', 'precipitation': 'precip'})
 
+.. _coordinates:
+
 Coordinates
 -----------
 
-``DataArray`` and ``Dataset`` objects store two types of arrays in their
-``coords`` attribute:
+Coordinates are ancilliary arrays stored for ``DataArray`` and ``Dataset``
+objects in the ``coords`` attribute:
 
-* "Index" coordinates are used for label based indexing and alignment, like the
-  ``index`` found on a pandas :py:class:`~pandas.DataFrame` or
-  :py:class:`~pandas.Series`. Index coordinates must be one-dimensional, and
-  are (automatically) identified by arrays with a name equal to their (single)
-  dimension.
-* "Other" coordinates are also intended to be descriptive of points along
-  dimensions, but xray makes no any direct use of them, beyond persisting
-  through operations when it can be done unambiguously. These coordinates can
-  have any number of dimensions.
+.. ipython:: python
 
-.. note::
+    ds.coords
 
-    You cannot yet use a :py:class:`pandas.MultiIndex` as a xray index
-    coordinate (:issue:`164`).
+Unlike attributes, xray *does* interpret and persist coordinates in
+operations that transform xray objects.
+
+One dimensional coordinates with a name equal to their sole dimension (marked
+by ``*`` when printing a dataset or data array) take on a special meaning in
+xray. They are used for label based indexing and alignment,
+like the ``index`` found on a pandas :py:class:`~pandas.DataFrame` or
+:py:class:`~pandas.Series`. Indeed, these "dimension" coordinates use a
+:py:class:`pandas.Index` internally to store their values.
+
+Other than for indexing, xray does not make any direct use of the values
+associated with coordinates. Coordinates with names not matching a dimension
+are not used for alignment or indexing, nor are they required to match when
+doing arithmetic (see :ref:`alignment and coordinates`).
 
 Converting to ``pandas.Index``
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-To convert an index coordinate into an actual :py:class:`pandas.Index`, use
-the :py:meth:`~xray.DataArray.to_index` method:
+To convert a coordinate (or any ``DataArray``) into an actual
+:py:class:`pandas.Index`, use the :py:meth:`~xray.DataArray.to_index` method:
 
 .. ipython:: python
 
     ds['time'].to_index()
 
 A useful shortcut is the ``indexes`` property (on both ``DataArray`` and
-``Dataset``), which lazily constructs a dictionary where the values are
-``Index`` objects:
+``Dataset``), which lazily constructs a dictionary whose keys are given by each
+dimension and whose the values are ``Index`` objects:
 
 .. ipython:: python
 
@@ -436,18 +439,17 @@ variables, use the the :py:meth:`~xray.Dataset.set_coords` and
     ds.set_coords(['temperature', 'precipitation'])
     ds['temperature'].reset_coords(drop=True)
 
-Notice that these operations skip index coordinates.
-
-.. note::
-
-    We do not yet have a ``set_index`` method like pandas for manipulating
-    indexes. This is planned.
+Notice that these operations skip coordinates with names given by dimensions,
+as used for indexing. This mostly because we are not entirely sure how to
+design the interface around the fact that xray cannot store a coordinate and
+variable with the name but different values in the same dictionary. But we do
+recognize that supporting something like this would be useful.
 
 Converting into datasets
 ~~~~~~~~~~~~~~~~~~~~~~~~
 
-Coordinate objects also have a few useful methods, mostly for converting them
-into dataset objects:
+``Coordinates`` objects also have a few useful methods, mostly for converting
+them into dataset objects:
 
 .. ipython:: python
 
