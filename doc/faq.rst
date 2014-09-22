@@ -68,10 +68,10 @@ conventions`_. (An exception is serialization to netCDF with
 
 An implication of this choice is that we do not propagate ``attrs`` through
 most operations unless explicitly flagged (some methods have a ``keep_attrs``
-option). Similarly, xray usually drops conflicting ``attrs`` when combining arrays and
-datasets instead of raising an exception, unless explicitly requested with the
-option ``compat='identical'``. The guiding principle is that metadata should
-not be allowed to get in the way.
+option). Similarly, xray does not check for conflicts between ``attrs`` when
+combining arrays and datasets, unless explicitly requested with the option
+``compat='identical'``. The guiding principle is that metadata should not be
+allowed to get in the way.
 
 
 What other netCDF related Python libraries should I know about?
