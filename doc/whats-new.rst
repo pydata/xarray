@@ -1,8 +1,8 @@
 What's New
 ==========
 
-v0.3.0 (in development)
------------------------
+v0.3.0 (21 September 2014)
+--------------------------
 
 New features:
 
