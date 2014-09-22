@@ -21,15 +21,32 @@ that dimension:
 
     arr = xray.DataArray(np.random.randn(2, 3),
                          [('x', ['a', 'b']), ('y', [10, 20, 30])])
+    arr[:, :1]
+    # this resembles how you would use np.concatenate
     xray.concat([arr[:, :1], arr[:, 1:]], dim='y')
 
 In addition to combining along an existing dimension, ``concat`` can create a
-new dimension by stacking lower dimension arrays together:
+new dimension by stacking lower dimensional arrays together:
 
 .. ipython:: python
 
     arr[0]
+    # to combine these 1d arrays into a 2d array in numpy, you would use np.array
+    xray.concat([arr[0], arr[1]], 'x')
+
+If the second argument to ``concat`` is a new dimension name, the arrays will
+be concatenated along that new dimension, which is always inserted as the first
+dimension:
+
+.. ipython:: python
+
     xray.concat([arr[0], arr[1]], 'new_dim')
+
+This is actually the default behavior for ``concat``:
+
+.. ipython:: python
+
+    xray.concat([arr[0], arr[1]])
 
 The second argument to ``concat`` can also be an :py:class:`~pandas.Index` or
 :py:class:`~xray.DataArray` object as well as a string, in which case it is

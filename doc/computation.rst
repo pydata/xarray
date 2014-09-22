@@ -127,11 +127,14 @@ This means, for example, that you always subtract an array from its transpose:
 
     c - c.T
 
+.. _alignment and coordinates:
+
 Alignment and coordinates
 =========================
 
 For now, performing most binary operations on xray objects requires that the
-all *index* coordinates have the same values:
+all *index* :ref:`coordinates` (that is, coordinates with the same name as a
+dimension) have the same values:
 
 .. ipython::
 
@@ -157,18 +160,25 @@ See :ref:`align and reindex` for more details.
     expect to default to ``join='inner'``.
 
 Although index coordinates are required to match exactly, other coordinates are
-not. Still, xray will persist other coordinates in arithmetic, as long as there
+not, and if their values conflict, they will be dropped. This is necessary,
+for example, because indexing turns 1D coordinates into scalars:
+
+.. ipython:: python
+
+    arr[0]
+    arr[1]
+    # notice that the scalar coordinate 'x' is silently dropped
+    arr[1] - arr[0]
+
+Still, xray will persist other coordinates in arithmetic, as long as there
 are no conflicting values:
 
 .. ipython:: python
 
-    a.coords['z'] = -1
-    b.coords['z'] = 999
-    # notice that 'z' is silently dropped
-    a + b
-    b.coords['z'] = -1
-    # now 'z' is persisted, because it has a unique value
-    a + b
+    # only one argument has the 'x' coordinate
+    arr[0] + 1
+    # both arguments have the same 'x' coordinate
+    arr[0] - arr[0]
 
 Math with Datasets
 ==================

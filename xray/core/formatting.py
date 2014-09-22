@@ -1,4 +1,5 @@
 from datetime import datetime
+import functools
 import itertools
 
 import numpy as np
@@ -6,6 +7,18 @@ import pandas as pd
 
 from .pycompat import (OrderedDict, iteritems, itervalues, unicode_type,
                        bytes_type)
+
+
+def pretty_print(x, numchars):
+    """Given an object `x`, call `str(x)` and format the returned string so
+    that it is numchars long, padding with trailing spaces or truncating with
+    ellipses as necessary
+    """
+    s = str(x)
+    if len(s) > numchars:
+        return s[:(numchars - 3)] + '...'
+    else:
+        return s + ' ' * (numchars - len(s))
 
 
 def wrap_indent(text, start='', length=None):
@@ -80,8 +93,9 @@ def format_array_flat(items_ndarray, max_width):
     return pprint_str
 
 
-def summarize_var(name, var, first_col_width, max_width=100, show_values=True):
-    first_col = pretty_print('    %s ' % name, first_col_width)
+def _summarize_var_or_coord(name, var, col_width, show_values=True,
+                            marker=' ', max_width=100):
+    first_col = pretty_print('  %s %s ' % (marker, name), col_width)
     dims_str = '(%s) ' % ', '.join(map(str, var.dims)) if var.dims else ''
     front_str = first_col + dims_str + ('%s ' % var.dtype)
     if show_values:
@@ -101,41 +115,53 @@ def _not_remote(var):
     return True
 
 
-def _summarize_variables(variables, first_col_width, always_show_values):
-    return ([summarize_var(v.name, v, first_col_width,
-                           show_values=(always_show_values or _not_remote(v)))
-             for v in itervalues(variables)]
-            or ['    *empty*'])
+def summarize_var(name, var, col_width):
+    show_values = _not_remote(var)
+    return _summarize_var_or_coord(name, var, col_width, show_values)
 
 
-def _summarize_coordinates(coords, first_col_width,
-                           always_show_values=False):
-    summary = ['Index Coordinates:']
-    index_coords = OrderedDict((k, coords[k]) for k in coords.dims)
-    summary.extend(_summarize_variables(index_coords, first_col_width,
-                                        always_show_values=True))
-
-    nonindex_coords = OrderedDict((k, v) for k, v in iteritems(coords)
-                                  if k not in coords.dims)
-    if nonindex_coords:
-        summary.append('Other Coordinates:')
-        summary.extend(_summarize_variables(
-            nonindex_coords, first_col_width,
-            always_show_values=always_show_values))
-    return summary
+def summarize_coord(name, var, col_width):
+    is_index = name in var.dims
+    show_values = is_index or _not_remote(var)
+    marker = '*' if is_index else ' '
+    return _summarize_var_or_coord(name, var, col_width, show_values, marker)
 
 
-def coords_repr(coords):
-    col_width = (max(len(str(k)) for k in coords) if coords else 0) + 5
-    summary = _summarize_coordinates(coords, col_width)
+def summarize_attr(key, value, col_width=None):
+    # ignore col_width for now to more clearly distinguish attributes
+    return '    %s: %s' % (key, value)
+
+
+EMPTY_REPR = '    *empty*'
+
+
+def _calculate_col_width(mapping):
+    max_name_length = max(len(str(k)) for k in mapping) if mapping else 0
+    col_width = max(max_name_length, 7) + 6
+    return col_width
+
+
+def _mapping_repr(mapping, title, summarizer, col_width=None):
+    if col_width is None:
+        col_width = _calculate_col_width(mapping)
+    summary = ['%s:' % title]
+    if mapping:
+        summary += [summarizer(k, v, col_width) for k, v in mapping.items()]
+    else:
+        summary += [EMPTY_REPR]
     return '\n'.join(summary)
 
 
-def vars_repr(vars):
-    summary = ['Variables:']
-    col_width = (max(len(str(k)) for k in vars) if vars else 0) + 5
-    summary.extend(_summarize_variables(vars, col_width, False))
-    return '\n'.join(summary)
+coords_repr = functools.partial(_mapping_repr, title='Coordinates',
+                                summarizer=summarize_coord)
+
+
+vars_repr = functools.partial(_mapping_repr, title='Variables',
+                              summarizer=summarize_var)
+
+
+attrs_repr = functools.partial(_mapping_repr, title='Attributes',
+                               summarizer=summarize_attr)
 
 
 def indexes_repr(indexes):
@@ -143,15 +169,6 @@ def indexes_repr(indexes):
     for k, v in indexes.items():
         summary.append(wrap_indent(repr(v), '%s: ' % k))
     return '\n'.join(summary)
-
-
-def _summarize_attributes(attrs, indent='    '):
-    if attrs:
-        attr_summaries = ['%s%s: %s' % (indent, k, v) for k, v
-                          in iteritems(attrs)]
-    else:
-        attr_summaries = [indent + '*empty*']
-    return attr_summaries
 
 
 def array_repr(arr):
@@ -175,44 +192,23 @@ def array_repr(arr):
             summary.append(repr(arr.coords))
 
     if arr.attrs:
-        summary.append('Attributes:')
-        summary.extend(_summarize_attributes(arr.attrs))
+        summary.append(attrs_repr(arr.attrs))
 
     return '\n'.join(summary)
 
 
-def pretty_print(x, numchars):
-    """Given an object `x`, call `str(x)` and format the returned string so
-    that it is numchars long, padding with trailing spaces or truncating with
-    ellipses as necessary
-    """
-    s = str(x)
-    if len(s) > numchars:
-        return s[:(numchars - 3)] + '...'
-    else:
-        return s + ' ' * (numchars - len(s))
-
-
-
-def dataset_repr(ds, preview_all_values=False):
+def dataset_repr(ds):
     summary = ['<xray.%s>' % type(ds).__name__]
 
-    max_name_length = max(len(str(k)) for k in ds) if ds else 0
-    first_col_width = max(6 + max_name_length, 13)
+    col_width = _calculate_col_width(ds)
 
-    dims_start = pretty_print('Dimensions:', first_col_width)
+    dims_start = pretty_print('Dimensions:', col_width)
     all_dim_strings = ['%s: %s' % (k, v) for k, v in iteritems(ds.dims)]
     summary.append('%s(%s)' % (dims_start, ', '.join(all_dim_strings)))
 
-    summary.extend(_summarize_coordinates(ds.coords, first_col_width,
-                                          preview_all_values))
-
-    summary.append('Variables:')
-    summary.extend(_summarize_variables(ds.vars, first_col_width,
-                                        always_show_values=preview_all_values))
-
+    summary.append(coords_repr(ds.coords, col_width=col_width))
+    summary.append(vars_repr(ds.vars, col_width=col_width))
     if ds.attrs:
-        summary.append('Attributes:')
-        summary.extend(_summarize_attributes(ds.attrs))
+        summary.append(attrs_repr(ds.attrs))
 
     return '\n'.join(summary)

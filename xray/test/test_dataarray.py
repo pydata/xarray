@@ -24,11 +24,10 @@ class TestDataArray(TestCase):
         <xray.DataArray 'my_variable' (time: 2, x: 3)>
         array([[1, 2, 3],
                [4, 5, 6]])
-        Index Coordinates:
-            time  (time) int64 0 1
-            x     (x) int64 0 1 2
-        Other Coordinates:
-            other int64 0
+        Coordinates:
+            other    int64 0
+          * time     (time) int64 0 1
+          * x        (x) int64 0 1 2
         Attributes:
             foo: bar""")
         self.assertEqual(expected, repr(data_array))
@@ -376,9 +375,9 @@ class TestDataArray(TestCase):
             da.coords['foo']
 
         expected = dedent("""\
-        Index Coordinates:
-            x (x) int64 -1 -2
-            y (y) int64 0 1 2""")
+        Coordinates:
+          * x        (x) int64 -1 -2
+          * y        (y) int64 0 1 2""")
         actual = repr(da.coords)
         self.assertEquals(expected, actual)
 

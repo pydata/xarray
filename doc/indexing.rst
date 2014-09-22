@@ -1,3 +1,5 @@
+.. _indexing:
+
 Indexing and selecting data
 ===========================
 
@@ -76,12 +78,12 @@ and :py:meth:`~xray.DataArray.isel` methods:
     # index by integer array indices
     arr.isel(space=0, time=slice(None, 2))
 
-    # index by index coordinate labels
+    # index by dimension coordinate labels
     arr.sel(time=slice('2000-01-01', '2000-01-02'))
 
 The arguments to these methods can be any objects that could index the array
-along that dimension, e.g., labels for an individual value, Python ``slice``
-objects or 1-dimensional arrays.
+along the dimension given by the keyword, e.g., labels for an individual value,
+Python :py:func:`slice` objects or 1-dimensional arrays.
 
 .. note::
 
@@ -170,9 +172,10 @@ Align and reindex
 -----------------
 
 xray's ``reindex``, ``reindex_like`` and ``align`` impose a ``DataArray`` or
-``Dataset`` onto a new set of index coordinates. The original values are subset
-to the index labels still found in the new labels, and values corresponding to
-new labels not found in the original object are in-filled with `NaN`.
+``Dataset`` onto a new set of coordinates corresponding to dimensions. The
+original values are subset to the index labels still found in the new labels,
+and values corresponding to new labels not found in the original object are
+in-filled with `NaN`.
 
 To reindex a particular dimension, use :py:meth:`~xray.DataArray.reindex`:
 

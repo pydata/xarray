@@ -415,21 +415,6 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
         state['_file_obj'] = None
         return state
 
-    # @property
-    # def arrays(self):
-    #     """Dictionary of Variable objects contained in this dataset.
-
-    #     This is a low-level interface into the contents of a dataset. The
-    #     dictionary is frozen to prevent it from being modified in ways that
-    #     could create an inconsistent dataset (e.g., by setting variables with
-    #     inconsistent dimensions).
-
-    #     In general, to access and modify dataset contents, you should use
-    #     dictionary methods on the dataset itself instead of the variables
-    #     dictionary.
-    #     """
-    #     return Frozen(self._arrays)
-
     @property
     def variables(self):
         """Deprecated; do not use"""
@@ -1436,7 +1421,7 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
 
         if not isinstance(dim, basestring):
             # add dimension last to ensure that its in the final Dataset
-            concatenated[dim_name] = dim
+            concatenated.coords[dim_name] = dim
 
         return concatenated
 
