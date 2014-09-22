@@ -4,17 +4,11 @@ Data Structures
 .. ipython:: python
    :suppress:
 
-   import numpy as np
-   np.random.seed(123456)
-   np.set_printoptions(threshold=10)
-
-To get started, we will import numpy, pandas and xray:
-
-.. ipython:: python
-
     import numpy as np
     import pandas as pd
     import xray
+    np.random.seed(123456)
+    np.set_printoptions(threshold=10)
 
 DataArray
 ---------

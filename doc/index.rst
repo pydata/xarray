@@ -26,6 +26,7 @@ Documentation
 
    why-xray
    installing
+   quickstart
    data-structures
    indexing
    computation
