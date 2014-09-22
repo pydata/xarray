@@ -2,9 +2,9 @@
 Quickstart
 ##########
 
-Here is a quick overview of what xray's :py:class:`~xray.DataArray` object can
-do. For more details, refer to the relevant sections in the remainder of the
-documentation.
+Here are some quick examples of what you can do with xray's
+:py:class:`~xray.DataArray` object. Everything is explained in much more
+detail in the rest of the documentation.
 
 To begin, import numpy, pandas and xray:
 
@@ -16,6 +16,8 @@ To begin, import numpy, pandas and xray:
 
 Create a DataArray
 ------------------
+
+For more details, see :ref:`data structures`.
 
 From scratch
 ~~~~~~~~~~~~
@@ -38,8 +40,8 @@ From pandas
     foo = xray.DataArray(df, name='foo')
     foo
 
-DataArray properties
---------------------
+Properties
+----------
 
 .. ipython:: python
 
@@ -50,6 +52,8 @@ DataArray properties
 
 Indexing
 --------
+
+For more details, see :ref:`indexing`.
 
 Like numpy
 ~~~~~~~~~~
@@ -79,8 +83,10 @@ By dimension name and coordinate label
 
     foo.sel(x=['a', 'b'])
 
-Calculations
-------------
+Computation
+-----------
+
+For more details, see :ref:`comput`.
 
 Unary operations
 ~~~~~~~~~~~~~~~~
@@ -110,6 +116,8 @@ Binary operations
 GroupBy
 -------
 
+For more details, see :ref:`groupby`.
+
 .. ipython:: python
 
     labels = xray.DataArray(['E', 'F', 'E'], [foo.coords['y']], name='labels')
@@ -119,6 +127,8 @@ GroupBy
 
 Convert to pandas
 -----------------
+
+For more details, see :ref:`pandas`.
 
 .. ipython:: python
 
