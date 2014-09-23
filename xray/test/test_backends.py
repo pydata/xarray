@@ -174,6 +174,11 @@ class DatasetIOTestCases(object):
             with self.roundtrip(expected) as actual:
                 self.assertDatasetIdentical(expected, actual)
 
+    def test_roundtrip_example_1_netcdf_gz(self):
+        with open_example_dataset('example_1.nc.gz') as expected:
+            with open_example_dataset('example_1.nc') as actual:
+                self.assertDatasetIdentical(expected, actual)
+
     def test_orthogonal_indexing(self):
         in_memory = create_test_data()
         with self.roundtrip(in_memory) as on_disk:
