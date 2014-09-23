@@ -2,6 +2,7 @@ from collections import Mapping
 import functools
 from io import BytesIO
 import warnings
+import sys
 
 import numpy as np
 import pandas as pd
@@ -64,6 +65,8 @@ def open_dataset(nc, decode_cf=True, mask_and_scale=True, decode_times=True,
         if nc.endswith('.gz'):
            # the name ends with .gz, then gunzip and open as netcdf file
            # FIXME: does ScipyDataStore handle NetCDF4 files?
+           if sys.version_info[:2] < (2, 7):
+              raise ValueError('reading a gzipped netCDF not supported on Python 2.6')
            store = backends.ScipyDataStore(gzip.open(nc), *args, **kwargs)
         elif not nc.startswith('CDF'):
            # it does not appear to be the contents of a netcdf file we load

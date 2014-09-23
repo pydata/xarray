@@ -7,6 +7,7 @@ import contextlib
 import os.path
 import tempfile
 import unittest
+import sys
 
 import numpy as np
 import pandas as pd
@@ -175,9 +176,13 @@ class DatasetIOTestCases(object):
                 self.assertDatasetIdentical(expected, actual)
 
     def test_roundtrip_example_1_netcdf_gz(self):
-        with open_example_dataset('example_1.nc.gz') as expected:
-            with open_example_dataset('example_1.nc') as actual:
-                self.assertDatasetIdentical(expected, actual)
+        if sys.version_info[:2] < (2, 7):
+           with self.assertRaisesRegexp(ValueError, 'gzipped netCDF not supported'):
+                open_example_dataset('example_1.nc.gz')
+        else:
+           with open_example_dataset('example_1.nc.gz') as expected:
+                with open_example_dataset('example_1.nc') as actual:
+                    self.assertDatasetIdentical(expected, actual)
 
     def test_orthogonal_indexing(self):
         in_memory = create_test_data()
