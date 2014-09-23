@@ -20,6 +20,7 @@ from .utils import (Frozen, SortedKeysDict, ChainMap,
                     multi_index_from_product)
 from .pycompat import iteritems, itervalues, basestring, OrderedDict
 
+import gzip
 
 def open_dataset(nc, decode_cf=True, mask_and_scale=True, decode_times=True,
                  concat_characters=True, *args, **kwargs):
@@ -30,7 +31,7 @@ def open_dataset(nc, decode_cf=True, mask_and_scale=True, decode_times=True,
     nc : str or file
         Path to a netCDF4 file or an OpenDAP URL (opened with python-netCDF4)
         or a file object or string serialization of a netCDF3 file (opened with
-        scipy.io.netcdf).
+        scipy.io.netcdf). If the filename ends with .gz, the file is gunzipped
     decode_cf : bool, optional
         Whether to decode these variables, assuming they were saved according
         to CF conventions.
@@ -58,11 +59,16 @@ def open_dataset(nc, decode_cf=True, mask_and_scale=True, decode_times=True,
     # move this to a classmethod Dataset.open?
     # TODO: this check has the unfortunate side-effect that
     # paths to files cannot start with 'CDF'.
-    if isinstance(nc, basestring) and not nc.startswith('CDF'):
-        # If the initialization nc is a string and it doesn't
-        # appear to be the contents of a netcdf file we load
-        # it using the netCDF4 package
-        store = backends.NetCDF4DataStore(nc, *args, **kwargs)
+    if isinstance(nc, basestring):
+        # If the initialization nc is a string and
+        if nc.endswith('.gz'):
+           # the name ends with .gz, then gunzip and open as netcdf file
+           # FIXME: does ScipyDataStore handle NetCDF4 files?
+           store = backends.ScipyDataStore(gzip.open(nc), *args, **kwargs)
+        elif not nc.startswith('CDF'):
+           # it does not appear to be the contents of a netcdf file we load
+           # it using the netCDF4 package
+           store = backends.NetCDF4DataStore(nc, *args, **kwargs)
     else:
         # If nc is a file-like object we read it using
         # the scipy.io.netcdf package
