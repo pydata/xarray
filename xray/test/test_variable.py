@@ -90,6 +90,11 @@ class VariableSubclassTestCases(object):
         x = self.cls(['x'], pd.DatetimeIndex([d]))
         self.assertIndexedLikeNDArray(x, np.datetime64(d), 'datetime64[ns]')
 
+    def test_index_0d_not_a_time(self):
+        d = np.datetime64('NaT')
+        x = self.cls(['x'], [d])
+        self.assertIndexedLikeNDArray(x, d, None)
+
     def test_index_0d_object(self):
 
         class HashableItemWrapper(object):

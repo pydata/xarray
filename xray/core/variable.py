@@ -149,7 +149,15 @@ class PandasIndexAdapter(utils.NDArrayMixin):
             key, = key
 
         if isinstance(key, (int, np.integer)):
-            value = np.asarray(self.array[key], dtype=self.dtype)
+            value = self.array[key]
+            if value is pd.NaT:
+                # work around the impossibility of casting NaT with asarray
+                # note: it probably would be better in general to return
+                # pd.Timestamp rather np.than datetime64 but this is easier
+                # (for now)
+                value = np.datetime64('NaT', 'ns')
+            else:
+                value = np.asarray(value, dtype=self.dtype)
         else:
             arr = self.array[key]
             if arr.dtype != self.array.dtype:
