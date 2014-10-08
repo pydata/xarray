@@ -1,27 +1,27 @@
-from collections import Mapping
+import sys
+import gzip
+import warnings
 import functools
 from io import BytesIO
-import warnings
-import sys
+from collections import Mapping
 
 import numpy as np
 import pandas as pd
 
-from .. import backends, conventions
-from . import alignment
+from . import ops
+from . import utils
 from . import common
-from . import formatting
 from . import groupby
 from . import indexing
 from . import variable
-from . import utils
-from . import ops
+from . import alignment
+from . import formatting
+from .. import backends, conventions
 from .coordinates import DatasetCoordinates, Indexes
 from .utils import (Frozen, SortedKeysDict, ChainMap,
                     multi_index_from_product)
 from .pycompat import iteritems, itervalues, basestring, OrderedDict
 
-import gzip
 
 def open_dataset(nc, decode_cf=True, mask_and_scale=True, decode_times=True,
                  concat_characters=True, *args, **kwargs):
@@ -63,20 +63,29 @@ def open_dataset(nc, decode_cf=True, mask_and_scale=True, decode_times=True,
     if isinstance(nc, basestring):
         # If the initialization nc is a string and
         if nc.endswith('.gz'):
-           # the name ends with .gz, then gunzip and open as netcdf file
-           # FIXME: does ScipyDataStore handle NetCDF4 files?
-           if sys.version_info[:2] < (2, 7):
-              raise ValueError('reading a gzipped netCDF not supported on Python 2.6')
-           store = backends.ScipyDataStore(gzip.open(nc), *args, **kwargs)
+            # if the string ends with .gz, then gunzip and open as netcdf file
+            if sys.version_info[:2] < (2, 7):
+                raise ValueError('reading a gzipped netCDF not '
+                                 'supported on Python 2.6')
+            try:
+                store = backends.ScipyDataStore(gzip.open(nc), *args, **kwargs)
+            except TypeError, e:
+                # TODO: gzipped loading only works with NetCDF3 files.
+                if 'is not a valid NetCDF 3 file' in e.message:
+                    raise TypeError("xray: gzipped file loading only supports NetCDF 3 files.")
+                else:
+                    raise e
         elif not nc.startswith('CDF'):
-           # it does not appear to be the contents of a netcdf file we load
-           # it using the netCDF4 package
-           store = backends.NetCDF4DataStore(nc, *args, **kwargs)
+            # nc does not appear to be a string holding the contents of a
+            # netcdf file so we treat it as a path and load it using the
+            # netCDF4 package
+            store = backends.NetCDF4DataStore(nc, *args, **kwargs)
     else:
         # If nc is a file-like object we read it using
         # the scipy.io.netcdf package
         store = backends.ScipyDataStore(nc, *args, **kwargs)
-    return Dataset.load_store(store, decode_cf=decode_cf,
+    decoder = conventions.cf_decoder if decode_cf else None
+    return Dataset.load_store(store, decoder=decoder,
                               mask_and_scale=mask_and_scale,
                               decode_times=decode_times,
                               concat_characters=concat_characters)
@@ -394,12 +403,11 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
         """Create a new dataset from the contents of a backends.*DataStore
         object
         """
+        variables, attributes = store.load()
         if decoder:
-            # here the new 'store' name is a bit overloaded, it will
-            # typically actually be a Dataset, but still functions
-            # the way a store does.
-            store = decoder(store, *args, **kwdargs)
-        obj = cls(store.variables, attrs=store.attrs)
+            variables, attributes = decoder(variables, attributes,
+                                            *args, **kwdargs)
+        obj = cls(variables, attrs=attributes)
         obj._file_obj = store
         return obj
 
@@ -777,12 +785,14 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
                 del obj._arrays[name]
         return obj
 
-    def dump_to_store(self, store, encoder=None):
+    def dump_to_store(self, store, encoder=None,
+                      *args, **kwdargs):
         """Store dataset contents to a backends.*DataStore object."""
-        ds = self
+        variables, attributes = self, self.attrs
         if encoder:
-            ds = encoder(ds)
-        store.store(ds)
+            variables, attributes = encoder(variables, attributes,
+                                            *args, **kwdargs)
+        store.store(variables, attributes)
         store.sync()
 
     def to_netcdf(self, filepath, **kwdargs):

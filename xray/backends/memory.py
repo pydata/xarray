@@ -26,11 +26,16 @@ class InMemoryDataStore(AbstractWritableDataStore):
     def set_variable(self, k, v):
         new_var = copy.deepcopy(v)
         # we copy the variable and stuff all encodings in the
-        # attributes to imitate what happens when writting to disk.
+        # attributes to imitate what happens when writing to disk.
         new_var.attrs.update(new_var.encoding)
         new_var.encoding.clear()
+        print self.ds['variables'].keys()
         self.ds['variables'][k] = new_var
 
     def set_attribute(self, k, v):
         # copy to imitate writing to disk.
         self.ds['attributes'][k] = copy.deepcopy(v)
+
+    def set_dimension(self, d, l):
+        # in this model, dimensions are accounted for in the variables
+        pass

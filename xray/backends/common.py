@@ -1,7 +1,7 @@
 import numpy as np
-import inspect
 import itertools
-import functools
+
+from collections import Mapping
 
 from ..core.utils import FrozenOrderedDict
 from ..core.pycompat import iteritems
@@ -25,7 +25,7 @@ def _decode_variable_name(name):
 
 def is_trivial_index(var):
     """
-    Determines if in index is 'trivial' mean that it is
+    Determines if in index is 'trivial' meaning that it is
     equivalent to np.arange().  This is determined by
     checking if there are any attributes or encodings,
     if ndims is one, dtype is int and finally by comparing
@@ -45,7 +45,16 @@ def is_trivial_index(var):
     return True
 
 
-class AbstractDataStore(object):
+class AbstractDataStore(Mapping):
+
+    def __iter__(self):
+        return iter(self.variables)
+
+    def __getitem__(self, key):
+        return self.variables[key]
+
+    def __len__(self):
+        return len(self.variables)
 
     def get_attrs(self):
         raise NotImplementedError
@@ -53,18 +62,53 @@ class AbstractDataStore(object):
     def get_variables(self):
         raise NotImplementedError
 
+    def load(self):
+        """
+        This loads the variables and attributes simultaneously.
+        A centralized loading function makes it easier to create
+        data stores that do automatic encoding/decoding.
+
+        For example:
+
+            class SuffixAppendingDataStore(AbstractDataStore):
+
+                def load(self):
+                    variables, attributes = AbstractDataStore.load(self)
+                    variables = {'%s_suffix' % k: v
+                                 for k, v in iteritems(variables)}
+                    attributes = {'%s_suffix' % k: v
+                                  for k, v in iteritems(attributes)}
+                    return variables, attributes
+
+        This function will be called anytime variables or attributes
+        are requested, so care should be taken to make sure its fast.
+        """
+        variables = FrozenOrderedDict((_decode_variable_name(k), v)
+                                      for k, v in iteritems(self.get_variables()))
+        attributes = FrozenOrderedDict(self.get_attrs())
+        return variables, attributes
+
     def get_dimensions(self):
-        return list(itertools.chain(*[x.dimensions
-                                      for x in self.get_variables().values()]))
+        return list(itertools.chain(*[x.dims
+                                      for x in self.variables.values()]))
 
     @property
     def variables(self):
-        return FrozenOrderedDict((_decode_variable_name(k), v)
-                                 for k, v in iteritems(self.get_variables()))
+        # Because encoding/decoding might happen which may require both the
+        # attributes and the variables, and because a store may be updated
+        # we need to load both the attributes and variables
+        # anytime either one is requested.
+        variables, _ = self.load()
+        return variables
 
     @property
     def attrs(self):
-        return FrozenOrderedDict(self.get_attrs())
+        # Because encoding/decoding might happen which may require both the
+        # attributes and the variables, and because a store may be updated
+        # we need to load both the attributes and variables
+        # anytime either one is requested.
+        _, attributes = self.load()
+        return attributes
 
     @property
     def dimensions(self):
@@ -94,16 +138,22 @@ class AbstractWritableDataStore(AbstractDataStore):
     def sync(self):
         pass
 
-    def store(self, dataset):
-        self.set_attributes(dataset.attrs)
-        neccesary_dims = [[d for d in v.dimensions]
-                          for v in dataset.variables.values()]
+    def store_dataset(self, dataset):
+        # in stores variables are all variables AND coordinates
+        # in xray.Dataset variables are variables NOT coordinates,
+        # so here we pass the whole dataset in instead of doing
+        # dataset.variables
+        self.store(dataset, dataset.attrs)
+
+    def store(self, variables, attributes):
+        self.set_attributes(attributes)
+        neccesary_dims = [[d for d in v.dims]
+                          for v in variables.values()]
         neccesary_dims = set(itertools.chain(*neccesary_dims))
         # set all non-indexes and any index which is not trivial.
-        variables = {k: v for k, v in iteritems(dataset.variables)
+        variables = {k: v for k, v in iteritems(variables)
                      if not (k in neccesary_dims and is_trivial_index(v))}
         self.set_variables(variables)
-        #self.set_variables(dataset.variables)
 
     def set_dimensions(self, dimensions):
         for d, l in iteritems(dimensions):
@@ -122,138 +172,3 @@ class AbstractWritableDataStore(AbstractDataStore):
         for d, l in zip(variable.dims, variable.shape):
             if d not in self.dimensions:
                 self.set_dimension(d, l)
-
-
-class AbstractEncodedDataStore(AbstractWritableDataStore):
-    """
-    AbstractEncodedDataStore is an interface for making a
-    DataStore which wraps another DataStore while first passing
-    all input/output through an encoding/decoding layer.
-    This allows more modular application of things such as
-    conforming to CF Conventions.
-
-    There are no explicity restrictions requiring an
-    EncodedDataStore to be roundtrip-able, but when this is desired
-    (probably often) consider passing implementing
-    classes through test_backends:DatasetIOTestCases.
-
-    Requires Implementation
-    --------
-    encode : function(self, datastore)
-
-
-    decode : function(self, datastore)
-
-    """
-    def encode(self, datastore):
-        """
-        A function which takes an un-encoded datastore and returns
-        a new DataStore (or Dataset) which has been encoded.  Returning
-        an InMemoryDataStore for this is encouraged since it avoids
-        the xray consistency checks making it faster / more flexible.
-
-        """
-        raise NotImplementedError
-
-    def decode(self, datastore):
-        """
-        A function which takes an encoded datastore and returns
-        a new DataStore which has been decoded.  Again consider
-        using an InMemoryDataStore, though returning a Dataset
-        will work perfectly fine in most situations.
-
-        Also note that directly accessing variable data may cause
-        remote DataStores to be loaded into memory.
-        See conventions.decode_cf_variable for examples of wrapping
-        computations to make them lazy.
-        """
-        raise NotImplementedError
-
-    @property
-    def decoded(self):
-        if not hasattr(self, '_decoded'):
-            self._decoded = self.decode(self.ds)
-        return self._decoded
-
-    def get_dimensions(self):
-        return self.decoded.dimensions
-
-    def get_variables(self):
-        return self.decoded.variables
-
-    def get_attrs(self):
-        return self.decoded.attrs
-
-    def store(self, dataset):
-        self.ds.store(self.encode(dataset))
-        self.ds.sync()
-
-    def sync(self):
-        self.ds.sync()
-
-    def close(self):
-        self.ds.close()
-
-
-def encoding_decorator(encoder, decoder):
-    """
-    This is a Class decorating function which makes wrapping DataStores
-    in additional encoding layers easier.
-
-    Note that often times the encoders and decoders will require arguments
-    at class creation time.  To handle this, the encoder and decoder args
-    are first inspected.  Any arguments they require are used first, and
-    any remaining arguments are passed onto the DataStore being wrapped.
-
-    Parameters
-    ----------
-    encoder : function
-        Takes a Datastore (or Dataset) and returns an encoded Datastore.
-    decoder : function
-        Takes a Datastore (or Dataset) and returns a decoded Datastore.
-
-    Returns
-    -------
-    class_wrapper: A function which wraps a DataStore class and turns
-        it into an EncodingWrappedDataStore.
-    """
-
-    def class_wrapper(cls):
-        class EncodingWrappedDataStore(AbstractEncodedDataStore):
-
-            def __init__(self, *args, **kwdargs):
-                # NOTE: we assume that any arguments for the encoder
-                # and decoder are keyword args.  All position arguments
-                # are passed on to the DataStore.
-                encoder_argnames = set(inspect.getargspec(encoder).args[1:])
-                decoder_argnames = set(inspect.getargspec(decoder).args[1:])
-                # make sure there aren't any argument collisions, that would
-                # get pretty confusing.
-                constructor_args = set(inspect.getargspec(cls.__init__)[1:])
-                if constructor_args.intersection(encoder_argnames):
-                    bad_args = constructor_args.intersection(encoder_argnames)
-                    raise ValueError("encoder and class have overlapping args: %s"
-                                     % ', '.join(bad_args))
-                if constructor_args.intersection(decoder_argnames):
-                    bad_args = constructor_args.intersection(decoder_argnames)
-                    raise ValueError("decoder and class have overlapping args: %s"
-                                     % ', '.join(bad_args))
-                # create a set of keyword arguments for both the encoder and decoder
-                encoder_args = {}
-                decoder_args = {}
-                for k in encoder_argnames.union(decoder_argnames):
-                    if k in kwdargs:
-                        v = kwdargs.pop(k)
-                        if k in encoder_argnames:
-                            encoder_args[k] = v
-                        if k in decoder_argnames:
-                            decoder_args[k] = v
-                # create the data store.
-                self.ds = cls(*args, **kwdargs)
-                # set the encode and decode function using the provided args
-                self.encode = functools.partial(encoder, **encoder_args)
-                self.decode = functools.partial(decoder, **decoder_args)
-
-        return EncodingWrappedDataStore
-
-    return class_wrapper

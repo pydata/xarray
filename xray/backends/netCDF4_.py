@@ -3,7 +3,7 @@ import warnings
 import numpy as np
 
 from .. import Variable
-from ..conventions import encode_cf_variable, pop_to, cf_encoded
+from ..conventions import pop_to, cf_encoder
 from ..core import indexing
 from ..core.utils import FrozenOrderedDict, NDArrayMixin
 from ..core.pycompat import iteritems, basestring, OrderedDict
@@ -80,14 +80,14 @@ def _ensure_fill_value_valid(data, attributes):
         attributes['_FillValue'] = np.string_(attributes['_FillValue'])
 
 
-@cf_encoded
 class NetCDF4DataStore(AbstractWritableDataStore):
     """Store for reading and writing data via the Python-NetCDF4 library.
 
     This store supports NetCDF3, NetCDF4 and OpenDAP datasets.
     """
     def __init__(self, filename, mode='r', clobber=True, diskless=False,
-                 persist=False, format='NETCDF4', group=None):
+                 persist=False, format='NETCDF4', group=None,
+                 *args, **kwdargs):
         import netCDF4 as nc4
         ds = nc4.Dataset(filename, mode=mode, clobber=clobber,
                          diskless=diskless, persist=persist,
@@ -95,6 +95,16 @@ class NetCDF4DataStore(AbstractWritableDataStore):
         self.ds = _nc4_group(ds, group)
         self.format = format
         self._filename = filename
+        self._encoder_args = args
+        self._encoder_kwdargs = kwdargs
+
+    def store(self, variables, attributes):
+        # All NetCDF files get CF encoded by default, without this attempting
+        # to write times, for example, would fail.
+        cf_variables, cf_attrs = cf_encoder(variables, attributes,
+                                            *self._encoder_args,
+                                            **self._encoder_kwdargs)
+        AbstractWritableDataStore.store(self, cf_variables, cf_attrs)
 
     def open_store_variable(self, var):
         var.set_auto_maskandscale(False)
@@ -119,8 +129,6 @@ class NetCDF4DataStore(AbstractWritableDataStore):
         # TODO: figure out how to round-trip "endian-ness" without raising
         # warnings from netCDF4
         # encoding['endian'] = var.endian()
-        # encoding['least_significant_digit'] = \
-        #     attributes.pop('least_significant_digit', None)
         pop_to(attributes, encoding, 'least_significant_digit')
         # save source so __repr__ can detect if it's local or not
         encoding['source'] = self._filename

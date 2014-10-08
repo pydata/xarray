@@ -1,3 +1,4 @@
+from xray.conventions import cf_decoder
 try:
     import cPickle as pickle
 except ImportError:
@@ -63,14 +64,18 @@ class DatasetIOTestCases(object):
                                         {'units': 'units of awesome'})
         with self.create_store() as store:
             expected.dump_to_store(store)
-            actual = Dataset.load_store(store)
+            # the test data contains times.  In case the store
+            # cf_encodes them we need to cf_decode them.
+            actual = Dataset.load_store(store, cf_decoder)
         self.assertDatasetAllClose(expected, actual)
 
     def test_write_store(self):
         expected = create_test_data()
         with self.create_store() as store:
             expected.dump_to_store(store)
-            actual = Dataset.load_store(store)
+            # the test data contains times.  In case the store
+            # cf_encodes them we need to cf_decode them.
+            actual = Dataset.load_store(store, cf_decoder)
         self.assertDatasetAllClose(expected, actual)
 
     def test_roundtrip_test_data(self):
@@ -156,10 +161,11 @@ class DatasetIOTestCases(object):
 
     def test_roundtrip_example_1_netcdf_gz(self):
         if sys.version_info[:2] < (2, 7):
-           with self.assertRaisesRegexp(ValueError, 'gzipped netCDF not supported'):
+            with self.assertRaisesRegexp(ValueError,
+                                         'gzipped netCDF not supported'):
                 open_example_dataset('example_1.nc.gz')
         else:
-           with open_example_dataset('example_1.nc.gz') as expected:
+            with open_example_dataset('example_1.nc.gz') as expected:
                 with open_example_dataset('example_1.nc') as actual:
                     self.assertDatasetIdentical(expected, actual)
 
@@ -213,6 +219,8 @@ class CFEncodedDataTest(DatasetIOTestCases):
         with self.roundtrip(decoded) as actual:
             self.assertDatasetAllClose(decoded, actual)
         with self.roundtrip(decoded, decode_cf=False) as actual:
+            # TODO: this assumes that all roundtrips will first
+            # encode.  Is that something we want to test for?
             self.assertDatasetAllClose(encoded, actual)
         with self.roundtrip(encoded, decode_cf=False) as actual:
             self.assertDatasetAllClose(encoded, actual)

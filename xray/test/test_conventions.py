@@ -6,8 +6,10 @@ import contextlib
 from xray import conventions, Variable, Dataset
 from xray.core import utils, indexing
 from . import TestCase, requires_netCDF4
-from .test_backends import CFEncodedDataTest, DatasetIOTestCases
+from .test_backends import CFEncodedDataTest
+from xray.core.pycompat import iteritems
 from xray.backends.memory import InMemoryDataStore
+from xray.conventions import cf_encoder, cf_decoder
 
 
 class TestMaskedAndScaledArray(TestCase):
@@ -26,7 +28,8 @@ class TestMaskedAndScaledArray(TestCase):
         x = conventions.MaskedAndScaledArray(np.arange(3), scale_factor=2)
         self.assertArrayEqual(2 * np.arange(3), x)
 
-        x = conventions.MaskedAndScaledArray(np.array([-99, -1, 0, 1, 2]), -99, 0.01, 1)
+        x = conventions.MaskedAndScaledArray(np.array([-99, -1, 0, 1, 2]),
+                                             -99, 0.01, 1)
         expected = np.array([np.nan, 0.99, 1, 1.01, 1.02])
         self.assertArrayEqual(expected, x)
 
@@ -91,8 +94,10 @@ class TestDatetime(TestCase):
                 expected = nc4.num2date(num_dates, units, calendar)
                 print(num_dates, units, calendar)
                 with warnings.catch_warnings():
-                    warnings.filterwarnings('ignore', 'Unable to decode time axis')
-                    actual = conventions.decode_cf_datetime(num_dates, units, calendar)
+                    warnings.filterwarnings('ignore',
+                                            'Unable to decode time axis')
+                    actual = conventions.decode_cf_datetime(num_dates, units,
+                                                            calendar)
                 if (isinstance(actual, np.ndarray)
                         and np.issubdtype(actual.dtype, np.datetime64)):
                     self.assertEqual(actual.dtype, np.dtype('M8[ns]'))
@@ -104,7 +109,8 @@ class TestDatetime(TestCase):
                 else:
                     actual_cmp = actual
                 self.assertArrayEqual(expected, actual_cmp)
-                encoded, _, _ = conventions.encode_cf_datetime(actual, units, calendar)
+                encoded, _, _ = conventions.encode_cf_datetime(actual, units,
+                                                               calendar)
                 self.assertArrayEqual(num_dates, np.around(encoded))
                 if (hasattr(num_dates, 'ndim') and num_dates.ndim == 1
                         and '1000' not in units):
@@ -169,7 +175,8 @@ class TestDatetime(TestCase):
                          '366_day']:
             for num_time in [735368, [735368], [[735368]]]:
                 with warnings.catch_warnings():
-                    warnings.filterwarnings('ignore', 'Unable to decode time axis')
+                    warnings.filterwarnings('ignore',
+                                            'Unable to decode time axis')
                     actual = conventions.decode_cf_datetime(num_time, units,
                                                             calendar=calendar)
                 self.assertEqual(actual.dtype, np.dtype('M8[ns]'))
@@ -223,7 +230,8 @@ class TestDatetime(TestCase):
     @requires_netCDF4
     def test_decode_non_standard_calendar_fallback(self):
         import netCDF4 as nc4
-        for year in [2010, 2011, 2012, 2013, 2014]: # insure leap year doesn't matter
+        # ensure leap year doesn't matter
+        for year in [2010, 2011, 2012, 2013, 2014]:
             for calendar in ['360_day', '366_day', 'all_leap']:
                 calendar = '360_day'
                 units = 'days since {0}-01-01'.format(year)
@@ -281,21 +289,25 @@ class TestEncodeCFVariable(TestCase):
                 conventions.encode_cf_variable(var)
 
 
-@conventions.cf_encoded
 class CFEncodedInMemoryStore(InMemoryDataStore):
-    pass
 
+    def __init__(self, *args, **kwdargs):
+        InMemoryDataStore.__init__(self, dict_store=None)
+        self._args = args
+        self._kwdargs = kwdargs
 
-class TestCFEncodedDataStore(CFEncodedDataTest, TestCase):
-    @contextlib.contextmanager
-    def create_store(self):
-        yield CFEncodedInMemoryStore()
+    def store(self, variables, attributes):
+        variables, attributes = cf_encoder(variables, attributes)
+        InMemoryDataStore.store(self, variables, attributes)
 
-    @contextlib.contextmanager
-    def roundtrip(self, data, **kwargs):
-        store = CFEncodedInMemoryStore(**kwargs)
-        store.store(data)
-        yield Dataset.load_store(store, decoder=None)
+    def load(self):
+        variables, attributes = InMemoryDataStore.load(self)
+        if self._kwdargs.get('decode_cf', True):
+            kwd_args = self._kwdargs.copy()
+            kwd_args.pop('decode_cf', None)
+            variables, attributes = cf_decoder(variables, attributes,
+                                               *self._args, **kwd_args)
+        return variables, attributes
 
 
 class NullWrapper(utils.NDArrayMixin):
@@ -310,36 +322,26 @@ class NullWrapper(utils.NDArrayMixin):
         return self.array[indexing.orthogonal_indexer(key, self.shape)]
 
 
-def lazy_identity(x):
+def null_wrap(ds):
     """
     Given a data store this wraps each variable in a NullWrapper so that
     it appears to be out of memory.
     """
-    variables = {k: Variable(v.dimensions,
+    variables = {k: Variable(v.dims,
                              NullWrapper(v.values),
-                             v.attrs) for k, v in x.variables.items()}
+                             v.attrs) for k, v in iteritems(ds)}
     return InMemoryDataStore({'variables': variables,
-                              'attributes': x.attrs})
+                              'attributes': ds.attrs})
 
 
-@conventions.encoding_decorator(lambda x: x, lazy_identity)
-class IdentityEncodedInMemoryStore(InMemoryDataStore):
-    """
-    This InMemoryStore does no encoding or decoding, other than
-    wrapping all variables in NullWrappers, which lets us
-    test the trivial case of encoding and decoding.
-    """
-    pass
-
-
-class EncodedDataTest(DatasetIOTestCases, TestCase):
-
+class TestCFEncodedDataStore(CFEncodedDataTest, TestCase):
     @contextlib.contextmanager
     def create_store(self):
-        yield IdentityEncodedInMemoryStore()
+        yield CFEncodedInMemoryStore()
 
     @contextlib.contextmanager
-    def roundtrip(self, data, **kwargs):
-        store = IdentityEncodedInMemoryStore(**kwargs)
-        store.store(data)
-        yield Dataset.load_store(store, decoder=None)
+    def roundtrip(self, data, **kwdargs):
+        store = CFEncodedInMemoryStore(**kwdargs)
+        data.dump_to_store(store)
+        store.store_dataset(data)
+        yield Dataset.load_store(null_wrap(store))

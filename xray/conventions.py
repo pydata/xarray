@@ -8,9 +8,6 @@ from .core import indexing, utils
 from .core.variable import as_variable, Variable
 from .core.pycompat import iteritems, bytes_type, unicode_type, OrderedDict
 
-from .backends.common import encoding_decorator
-from .backends import InMemoryDataStore
-
 
 # standard calendars recognized by netcdftime
 _STANDARD_CALENDARS = set(['standard', 'gregorian', 'proleptic_gregorian'])
@@ -603,18 +600,20 @@ def decode_cf_variables(variables, concat_characters=True, mask_and_scale=True,
     return new_vars
 
 
-def cf_decoder(ds, concat_characters=True, mask_and_scale=True,
-               decode_times=True, decode_cf=True):
+def cf_decoder(variables, attributes,
+               concat_characters=True, mask_and_scale=True,
+               decode_times=True):
     """
-    Decode a data store or Dataset which holds CF encoded variables.
+    Decode a set of CF encoded variables and attributes.
 
     See Also, decode_cf_variable
 
     Parameters
     ----------
-    ds : Datastore
-        This can technically be any object with properties 'variables'
-        and 'attrs' and whose constructor follows type(ds)(variables, attrs)
+    variables : dict
+        A dictionary mapping from variable name to xray.Variable
+    attributes : dict
+        A dictionary mapping from attribute name to value
     concat_characters : bool
         Should character arrays be concatenated to strings, for
         example: ['h', 'e', 'l', 'l', 'o'] -> 'hello'
@@ -626,54 +625,46 @@ def cf_decoder(ds, concat_characters=True, mask_and_scale=True,
     decode_cf : bool
         If false this skips decoding.  This is around for backward
         compatibility.
+
     Returns
     -------
-    ds : DataStore
-        A DataStore holding the decoded variables and attributes
+    decoded_variables : dict
+        A dictionary mapping from variable name to xray.Variable,
+    decoded_attributes : dict
+        A dictionary mapping from attribute name to value
     """
-    # if decode_cf is false, we do nothing.
-    if not decode_cf:
-        return ds
-    new_vars = decode_cf_variables(ds.variables, concat_characters,
+    new_vars = decode_cf_variables(variables, concat_characters,
                                    mask_and_scale, decode_times)
-    # Note that we don't return a Dataset because in some (though
-    # very few) cases the backend.stores are more flexible than
-    # xray.  For example a string Index which gets expanded to a
-    # a character array during CF encoding would result in the
-    # requirement for multidimensional indexes which xray does
-    # not currently support.  Instead we store the variables as
-    # a dictionary of variables and attributes in an in memory store.
-    return InMemoryDataStore({'variables': new_vars,
-                              'attributes': ds.attrs})
+    return new_vars, attributes
 
 
-def cf_encoder(ds, encode_cf=True):
+def cf_encoder(variables, attributes):
     """
-    A function which takes a DataStore (ds) and encodes its
-    variables and attributes to conform to CF conventions as much
+    A function which takes a dicts of variables and attributes
+    and encodes them to conform to CF conventions as much
     as possible.  This includes masking, scaling, character
     array handling, and CF-time encoding.
 
+    Decode a set of CF encoded variables and attributes.
+
+    See Also, decode_cf_variable
+
+    Parameters
+    ----------
+    variables : dict
+        A dictionary mapping from variable name to xray.Variable
+    attributes : dict
+        A dictionary mapping from attribute name to value
+
+    Returns
+    -------
+    encoded_variables : dict
+        A dictionary mapping from variable name to xray.Variable,
+    encoded_attributes : dict
+        A dictionary mapping from attribute name to value
+
     See also: encode_cf_variable
     """
-    if not encode_cf:
-        return ds
     new_vars = OrderedDict((k, encode_cf_variable(v))
-                           for k, v in iteritems(ds.variables))
-    return InMemoryDataStore({'variables': new_vars,
-                              'attributes': ds.attrs})
-
-
-def cf_encoded(*args, **kwdargs):
-    """
-    This Class decorator can be used to turn a DataStore into a
-    CF encoded DataStore.  For example, to take some DataStore
-    and add a CF encoding layer you can do this:
-
-        @cf_encoded
-        CFPunchCardDataStore(PunchCardDataStore):
-            pass
-
-    See also: encoding_decorator, cf_encoder, cf_decoder
-    """
-    return encoding_decorator(cf_encoder, cf_decoder)(*args, **kwdargs)
+                           for k, v in iteritems(variables))
+    return new_vars, attributes

@@ -3,12 +3,14 @@ from io import BytesIO
 import numpy as np
 import warnings
 
-from .. import conventions, Variable
+from .. import Variable
+from ..conventions import cf_encoder
 from ..core.pycompat import iteritems, basestring, unicode_type, OrderedDict
 from ..core.utils import Frozen, FrozenOrderedDict
 
 from .common import AbstractWritableDataStore
 from .netcdf3 import is_valid_nc3_name, coerce_nc3_dtype, encode_nc3_variable
+from xray.conventions import cf_decoder
 
 
 def _decode_string(s):
@@ -23,7 +25,7 @@ def _decode_attrs(d):
     return OrderedDict((k, v if k == '_FillValue' else _decode_string(v))
                        for (k, v) in iteritems(d))
 
-@conventions.cf_encoded
+
 class ScipyDataStore(AbstractWritableDataStore):
     """Store for reading and writing data via scipy.io.netcdf.
 
@@ -32,7 +34,8 @@ class ScipyDataStore(AbstractWritableDataStore):
 
     It only supports the NetCDF3 file-format.
     """
-    def __init__(self, filename_or_obj, mode='r', mmap=None, version=1):
+    def __init__(self, filename_or_obj, mode='r', mmap=None,
+                 version=1, *args, **kwdargs):
         import scipy
         if mode != 'r' and scipy.__version__ < '0.13':
             warnings.warn('scipy %s detected; '
@@ -50,6 +53,16 @@ class ScipyDataStore(AbstractWritableDataStore):
             filename_or_obj = BytesIO(filename_or_obj)
         self.ds = scipy.io.netcdf.netcdf_file(
             filename_or_obj, mode=mode, mmap=mmap, version=version)
+        self._encoder_args = args
+        self._encoder_kwdargs = kwdargs
+
+    def store(self, variables, attributes):
+        # All Scipy objects get CF encoded by default, without this attempting
+        # to write times, for example, would fail.
+        cf_variables, cf_attrs = cf_encoder(variables, attributes,
+                                            *self._encoder_args,
+                                            **self._encoder_kwdargs)
+        AbstractWritableDataStore.store(self, cf_variables, cf_attrs)
 
     def open_store_variable(self, var):
         return Variable(var.dimensions, var.data,
