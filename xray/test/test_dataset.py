@@ -1135,6 +1135,12 @@ class TestDataset(TestCase):
         with self.assertRaisesRegexp(TypeError, 'non-integer axis'):
             ds.reduce(mean_only_one_axis, ['x', 'y'])
 
+    def test_count(self):
+        ds = Dataset({'x': ('a', [np.nan, 1]), 'y': 0, 'z': np.nan})
+        expected = Dataset({'x': 1, 'y': 1, 'z': 0})
+        actual = ds.count()
+        self.assertDatasetIdentical(expected, actual)
+
     def test_apply(self):
         data = create_test_data()
         data.attrs['foo'] = 'bar'

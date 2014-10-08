@@ -679,6 +679,11 @@ class TestDataArray(TestCase):
         self.assertVariableEqual(self.dv.reduce(np.mean, 'x'),
                                  self.v.reduce(np.mean, 'x'))
 
+        orig = DataArray([[1, 0, np.nan], [3, 0, 3]], coords, dims=['x', 'y'])
+        actual = orig.count()
+        expected = DataArray(5, {'c': -999})
+        self.assertDataArrayIdentical(expected, actual)
+
     def test_reduce_keep_attrs(self):
         # Test dropped attrs
         vm = self.va.mean()
@@ -750,6 +755,14 @@ class TestDataArray(TestCase):
         self.assertDataArrayAllClose(expected_sum_axis1,
                                      grouped.reduce(np.sum, 'y'))
         self.assertDataArrayAllClose(expected_sum_axis1, grouped.sum('y'))
+
+    def test_groupby_count(self):
+        array = DataArray([0, 0, np.nan, np.nan, 0, 0],
+                          coords={'cat': ('x', ['a', 'b', 'b', 'c', 'c', 'c'])},
+                          dims='x')
+        actual = array.groupby('cat').count()
+        expected = DataArray([1, 1, 2], coords=[('cat', ['a', 'b', 'c'])])
+        self.assertDataArrayIdentical(actual, expected)
 
     @unittest.skip('needs to be fixed for shortcut=False, keep_attrs=False')
     def test_groupby_reduce_attrs(self):
