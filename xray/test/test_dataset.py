@@ -1110,6 +1110,12 @@ class TestDataset(TestCase):
         actual = ds.argmin('x')
         self.assertDatasetIdentical(expected, actual)
 
+    def test_reduce_scalars(self):
+        ds = Dataset({'x': ('a', [2, 2]), 'y': 2, 'z': ('b', [2])})
+        expected = Dataset({'x': 0, 'y': 0, 'z': 0})
+        actual = ds.var()
+        self.assertDatasetIdentical(expected, actual)
+
     @unittest.skip('see github issue 209')
     def test_reduce_only_one_axis(self):
 
