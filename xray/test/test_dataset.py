@@ -1110,6 +1110,12 @@ class TestDataset(TestCase):
         actual = ds.argmin('x')
         self.assertDatasetIdentical(expected, actual)
 
+    def test_reduce_scalars(self):
+        ds = Dataset({'x': ('a', [2, 2]), 'y': 2, 'z': ('b', [2])})
+        expected = Dataset({'x': 0, 'y': 0, 'z': 0})
+        actual = ds.var()
+        self.assertDatasetIdentical(expected, actual)
+
     @unittest.skip('see github issue 209')
     def test_reduce_only_one_axis(self):
 
@@ -1128,6 +1134,12 @@ class TestDataset(TestCase):
 
         with self.assertRaisesRegexp(TypeError, 'non-integer axis'):
             ds.reduce(mean_only_one_axis, ['x', 'y'])
+
+    def test_count(self):
+        ds = Dataset({'x': ('a', [np.nan, 1]), 'y': 0, 'z': np.nan})
+        expected = Dataset({'x': 1, 'y': 1, 'z': 0})
+        actual = ds.count()
+        self.assertDatasetIdentical(expected, actual)
 
     def test_apply(self):
         data = create_test_data()

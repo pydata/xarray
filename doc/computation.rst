@@ -46,11 +46,13 @@ Data arrays also implement many :py:class:`numpy.ndarray` methods:
     arr.round(2)
     arr.T
 
-It also has the ``isnull`` and ``notnull`` methods from pandas:
+It also has the ``count``, ``isnull`` and ``notnull`` methods from pandas:
 
 .. ipython:: python
 
-    xray.DataArray([0, 1, np.nan, np.nan, 2]).isnull()
+    x = xray.DataArray([0, 1, np.nan, np.nan, 2])
+    x.isnull()
+    x.count()
 
 Aggregation
 ===========

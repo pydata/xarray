@@ -1275,7 +1275,7 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
         variables = OrderedDict()
         for name, var in iteritems(self._arrays):
             reduce_dims = [dim for dim in var.dims if dim in dims]
-            if reduce_dims:
+            if reduce_dims or not var.dims:
                 if name not in self.coords:
                     if len(reduce_dims) == 1:
                         # unpack dimensions for the benefit of functions like

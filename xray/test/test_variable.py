@@ -592,6 +592,23 @@ class TestVariable(TestCase, VariableSubclassTestCases):
         self.assertEqual(len(vm.attrs), len(_attrs))
         self.assertEqual(vm.attrs, _attrs)
 
+    def test_count(self):
+        expected = Variable([], 3)
+        actual = Variable(['x'], [1, 2, 3, np.nan]).count()
+        self.assertVariableIdentical(expected, actual)
+
+        v = Variable(['x'], np.array(['1', '2', '3', np.nan], dtype=object))
+        actual = v.count()
+        self.assertVariableIdentical(expected, actual)
+
+        actual = Variable(['x'], [True, False, True]).count()
+        self.assertVariableIdentical(expected, actual)
+        self.assertEqual(actual.dtype, 'int64')
+
+        expected = Variable(['x'], [2, 3])
+        actual = Variable(['x', 'y'], [[1, 0, np.nan], [1, 1, 1]]).count('y')
+        self.assertVariableIdentical(expected, actual)
+
 
 class TestCoordinate(TestCase, VariableSubclassTestCases):
     cls = staticmethod(Coordinate)

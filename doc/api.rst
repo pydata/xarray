@@ -117,6 +117,7 @@ Computation
 **Missing values**:
 :py:attr:`~Dataset.isnull`
 :py:attr:`~Dataset.notnull`
+:py:attr:`~Dataset.count`
 
 **ndarray methods**:
 :py:attr:`~Dataset.argsort`
@@ -236,6 +237,7 @@ Computation
 **Missing values**:
 :py:attr:`~DataArray.isnull`
 :py:attr:`~DataArray.notnull`
+:py:attr:`~DataArray.count`
 
 **ndarray methods**:
 :py:attr:`~DataArray.argsort`

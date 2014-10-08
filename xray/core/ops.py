@@ -3,6 +3,7 @@ import operator
 import numpy as np
 import pandas as pd
 
+from . import utils
 from .pycompat import PY3
 
 
@@ -43,10 +44,12 @@ def _method_wrapper(name):
     return func
 
 
-def _func_slash_method_wrapper(f, name):
+def _func_slash_method_wrapper(f, name=None):
     # try to wrap a method, but if not found use the function
     # this is useful when patching in a function as both a DataArray and
     # Dataset method
+    if name is None:
+        name = f.__name__
     def func(self, *args, **kwargs):
         try:
             return getattr(self, name)(*args, **kwargs)
@@ -78,13 +81,23 @@ _REDUCE_DOCSTRING_TEMPLATE = \
             indicated dimension(s) removed.
         """
 
+
+def count(self, axis=None):
+    nulls = np.asarray(utils.isnull(self))
+    not_nulls = np.logical_not(nulls, nulls)
+    return np.sum(not_nulls, axis=axis)
+
+
 def inject_reduce_methods(cls):
     # change these to use methods instead of numpy functions?
-    for name in NUMPY_REDUCE_METHODS:
-        func = cls._reduce_method(getattr(np, name))
+    methods = [(name, getattr(np, name), True)
+               for name in NUMPY_REDUCE_METHODS]
+    methods += [('count', count, False)]
+    for name, f, is_numpy_func in methods:
+        func = cls._reduce_method(f)
         func.__name__ = name
         func.__doc__ = _REDUCE_DOCSTRING_TEMPLATE.format(
-            name='numpy.' + name, cls=cls.__name__,
+            name=('numpy.' if is_numpy_func else '') + name, cls=cls.__name__,
             extra_args=cls._reduce_extra_args_docstring)
         setattr(cls, name, func)
 
@@ -117,12 +130,11 @@ def inject_all_ops_and_reduce_methods(cls, priority=50, array_only=True):
     for name in UNARY_OPS:
         setattr(cls, op_str(name), cls._unary_op(op(name)))
     inject_binary_ops(cls, inplace=True)
-    # patch in numpy methods
+    # patch in numpy/pandas methods
     for name in NUMPY_UNARY_METHODS:
         setattr(cls, name, cls._unary_op(_method_wrapper(name)))
     for name in PANDAS_UNARY_FUNCTIONS:
-        # setattr(cls, name, cls._unary_op(getattr(pd, name)))
-        f = _func_slash_method_wrapper(getattr(pd, name), name)
+        f = _func_slash_method_wrapper(getattr(pd, name))
         setattr(cls, name, cls._unary_op(f))
     if array_only:
         # these methods don't return arrays of the same shape as the input, so
