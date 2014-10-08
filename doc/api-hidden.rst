@@ -19,6 +19,7 @@
    Dataset.std
    Dataset.var
 
+   Dataset.count
    Dataset.isnull
    Dataset.notnull
 
@@ -48,6 +49,7 @@
    DataArray.std
    DataArray.var
 
+   DataArray.count
    DataArray.isnull
    DataArray.notnull
 
