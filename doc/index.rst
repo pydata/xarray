@@ -25,8 +25,8 @@ Documentation
    :maxdepth: 1
 
    why-xray
+   examples
    installing
-   quickstart
    data-structures
    indexing
    computation
@@ -34,9 +34,8 @@ Documentation
    combining
    pandas
    io
-   examples
-   faq
    api
+   faq
    whats-new
 
 Important links

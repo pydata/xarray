@@ -1,5 +1,5 @@
-Installing xray
-===============
+Installation
+============
 
 Required dependencies:
 
