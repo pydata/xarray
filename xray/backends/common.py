@@ -147,8 +147,7 @@ class AbstractWritableDataStore(AbstractDataStore):
 
     def store(self, variables, attributes):
         self.set_attributes(attributes)
-        neccesary_dims = [[d for d in v.dims]
-                          for v in variables.values()]
+        neccesary_dims = [v.dims for v in variables.values()]
         neccesary_dims = set(itertools.chain(*neccesary_dims))
         # set all non-indexes and any index which is not trivial.
         variables = {k: v for k, v in iteritems(variables)

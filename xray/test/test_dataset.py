@@ -52,7 +52,7 @@ class InaccessibleVariableDataStore(backends.InMemoryDataStore):
             data = indexing.LazilyIndexedArray(InaccessibleArray(x.values))
             return Variable(x.dimensions, data, x.attrs)
         return dict((k, lazy_inaccessible(v)) for
-                    k, v in iteritems(self.ds['variables']))
+                    k, v in iteritems(self._variables))
 
 
 class TestDataset(TestCase):

@@ -292,7 +292,7 @@ class TestEncodeCFVariable(TestCase):
 class CFEncodedInMemoryStore(InMemoryDataStore):
 
     def __init__(self, *args, **kwdargs):
-        InMemoryDataStore.__init__(self, dict_store=None)
+        InMemoryDataStore.__init__(self)
         self._args = args
         self._kwdargs = kwdargs
 
@@ -330,8 +330,8 @@ def null_wrap(ds):
     variables = {k: Variable(v.dims,
                              NullWrapper(v.values),
                              v.attrs) for k, v in iteritems(ds)}
-    return InMemoryDataStore({'variables': variables,
-                              'attributes': ds.attrs})
+    return InMemoryDataStore(variables=variables,
+                             attributes=ds.attrs)
 
 
 class TestCFEncodedDataStore(CFEncodedDataTest, TestCase):

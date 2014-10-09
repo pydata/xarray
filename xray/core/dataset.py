@@ -69,10 +69,10 @@ def open_dataset(nc, decode_cf=True, mask_and_scale=True, decode_times=True,
                                  'supported on Python 2.6')
             try:
                 store = backends.ScipyDataStore(gzip.open(nc), *args, **kwargs)
-            except TypeError, e:
+            except TypeError as e:
                 # TODO: gzipped loading only works with NetCDF3 files.
                 if 'is not a valid NetCDF 3 file' in e.message:
-                    raise TypeError("xray: gzipped file loading only supports NetCDF 3 files.")
+                    raise ValueError("xray: gzipped file loading only supports NetCDF 3 files.")
                 else:
                     raise e
         elif not nc.startswith('CDF'):

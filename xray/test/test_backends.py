@@ -136,10 +136,12 @@ class DatasetIOTestCases(object):
         with self.roundtrip(original) as actual:
             try:
                 self.assertDatasetIdentical(expected, actual)
-            except:
+            except AssertionError:
                 # Most stores use '' for nans in strings, but some don't
                 # first try the ideal case (where the store returns exactly)
                 # the original Dataset), then try a more realistic case.
+                # ScipyDataTest, NetCDF3ViaNetCDF4DataTest and NetCDF4DataTest
+                # all end up using this case.
                 expected['letters_nans'][-1] = ''
                 self.assertDatasetIdentical(expected, actual)
 
