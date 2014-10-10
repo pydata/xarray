@@ -75,7 +75,7 @@ Data arrays work very similarly to numpy ndarrays:
 .. ipython:: python
 
     foo + 10
-    np.sin(10)
+    np.sin(foo)
     foo.T
     foo.sum()
 
