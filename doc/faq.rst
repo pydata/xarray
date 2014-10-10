@@ -11,7 +11,7 @@ working with data arrays in Python?
 
 __ http://wesmckinney.com/blog/?p=77
 
-Sometimes, we really want to work with collections of higher dimensional array
+Sometimes, we really want to work with collections of higher dimensional arrays
 (`ndim > 2`), or arrays for which the order of dimensions (e.g., columns vs
 rows) shouldn't really matter. For example, climate and weather data is often
 natively expressed in 4 or more dimensions: time, x, y and z.
@@ -30,9 +30,35 @@ __ http://pandas.pydata.org/pandas-docs/stable/dsintro.html#panelnd-experimental
 
 Fundamentally, the N-dimensional panel is limited by its context in pandas's
 tabular model, which treats a 2D ``DataFrame`` as a collections of 1D
-``Series``, a 3D ``Panel`` as a collection of 2D ``DataFrame``, and so on.
-pandas gets a lot of things right, but scientific users need fully multi-
+``Series``, a 3D ``Panel`` as a collection of 2D ``DataFrame``, and so on. In
+my experience, it usually easier to work with a DataFrame with a hierarchical
+index rather than to use higher dimensional (*N > 3*) data structures in
+pandas.
+
+Another use case is handling collections of arrays with different numbers of
+dimensions. For example, suppose you have a 2D array and a handful of
+associated 1D arrays that share one of the same axes. Storing these in one
+pandas object is possible but awkward -- you can either upcast all the 1D
+arrays to 2D and store everything in a ``Panel``, or put everything in a
+``DataFrame``, where the first few columns have a different meaning than the
+other columns. In contrast, this sort of data structure fits very naturally in
+an xray ``Dataset``.
+
+Pandas gets a lot of things right, but scientific users need fully multi-
 dimensional data structures.
+
+
+How do xray data structures differ from those found in pandas?
+--------------------------------------------------------------
+
+The main distinguishing feature of xray's ``DataArray`` over labeled arrays in
+pandas is that dimensions can have names (e.g., "time", "latitude",
+"longitude"). Names are much easier to keep track of than axis numbers, and
+xray uses dimension names for indexing, aggregation and broadcasting. Not only
+can you write ``x.sel(time='2000-01-01')`` and  ``x.mean(dim='time')``, but
+operations like ``x - x.mean(dim='time')`` always work, no matter the order
+of the "time" dimension. You never need to reshape arrays (e.g., with
+``np.newaxis``) to align them for arithmetic operations in xray.
 
 
 Should I use xray instead of pandas?

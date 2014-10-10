@@ -1,6 +1,6 @@
-##########
-Quickstart
-##########
+##############
+Quick overview
+##############
 
 Here are some quick examples of what you can do with xray's
 :py:class:`~xray.DataArray` object. Everything is explained in much more
@@ -17,10 +17,8 @@ To begin, import numpy, pandas and xray:
 Create a DataArray
 ------------------
 
-For more details, see :ref:`data structures`.
-
-From scratch
-~~~~~~~~~~~~
+You can make a DataArray from scratch by supplying data in the form of a numpy
+array or list, with optional *dimensions* and *coordinates*:
 
 .. ipython:: python
 
@@ -28,8 +26,7 @@ From scratch
    xray.DataArray(np.random.randn(2, 3), dims=['x', 'y'])
    xray.DataArray(np.random.randn(2, 3), [('x', ['a', 'b']), ('y', [-2, 0, 2])])
 
-From pandas
-~~~~~~~~~~~
+Or you can pass in a pandas data structure:
 
 .. ipython:: python
 
@@ -40,11 +37,11 @@ From pandas
     foo = xray.DataArray(df, name='foo')
     foo
 
-Properties
-----------
+Here are the key properties for a ``DataArray``:
 
 .. ipython:: python
 
+    # like in pandas, values is a numpy array that you can modify in-place
     foo.values
     foo.dims
     foo.coords['y']
@@ -53,54 +50,44 @@ Properties
 Indexing
 --------
 
-For more details, see :ref:`indexing`.
-
-Like numpy
-~~~~~~~~~~
+xray supports four kind of indexing. These operations are just as fast as in
+pandas, because we borrow pandas' indexing machinery.
 
 .. ipython:: python
 
-    foo[[0, 1], 0]
+    # positional and by integer label, like numpy
+    foo[[0, 1]]
 
-Like pandas
-~~~~~~~~~~~
+    # positional and by coordinate label, like pandas
+    foo.loc['a':'b']
 
-.. ipython:: python
-
-    foo.loc['a':'b', -2]
-
-By dimension name and integer label
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-.. ipython:: python
-
+    # by dimension name and integer label
     foo.isel(x=slice(2))
 
-By dimension name and coordinate label
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-.. ipython:: python
-
+    # by dimension name and coordinate label
     foo.sel(x=['a', 'b'])
 
 Computation
 -----------
 
-For more details, see :ref:`comput`.
-
-Unary operations
-~~~~~~~~~~~~~~~~
+Data arrays work very similarly to numpy ndarrays:
 
 .. ipython:: python
 
-    foo.sum()
-    foo.mean(dim=['x'])
     foo + 10
     np.sin(10)
     foo.T
+    foo.sum()
 
-Binary operations
-~~~~~~~~~~~~~~~~~
+However, aggregation operations can use dimension names instead of axis
+numbers:
+
+.. ipython:: python
+
+    foo.mean(dim='x')
+
+Arithmetic operations broadcast based on dimension name, so you don't need to
+insert dummy dimensions for alignment:
 
 .. ipython:: python
 
@@ -111,24 +98,23 @@ Binary operations
     zzz
 
     bar + zzz
-    foo / bar
 
 GroupBy
 -------
 
-For more details, see :ref:`groupby`.
+xray supports grouped operations using a very similar API to pandas:
 
 .. ipython:: python
 
     labels = xray.DataArray(['E', 'F', 'E'], [foo.coords['y']], name='labels')
     labels
     foo.groupby(labels).mean('y')
-    foo.groupby(labels).apply(lambda x: x.max() - x.min())
+    foo.groupby(labels).apply(lambda x: x - x.min())
 
 Convert to pandas
 -----------------
 
-For more details, see :ref:`pandas`.
+A key feature of xray is robust conversion to and from pandas objects:
 
 .. ipython:: python
 
