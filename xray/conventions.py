@@ -558,15 +558,15 @@ def decode_cf_variable(var, concat_characters=True, mask_and_scale=True,
             data = CharToStringArray(data)
 
     if mask_and_scale:
-        # missing_value is deprecated, but we still want to support it.
-        missing_value = pop_to(attributes, encoding, 'missing_value')
+        if 'missing_value' in attributes:
+            # missing_value is deprecated, but we still want to support it as
+            # an alias for _FillValue.
+            assert ('_FillValue' not in attributes
+                    or utils.equivalent(attributes['_FillValue'],
+                                        attributes['missing_value']))
+            attributes['_FillValue'] = attributes.pop('missing_value')
+
         fill_value = pop_to(attributes, encoding, '_FillValue')
-        # if missing_value is given but not fill_value we use missing_value
-        if fill_value is None and missing_value is not None:
-            fill_value = missing_value
-        # if both were given we make sure they are the same.
-        if fill_value is not None and missing_value is not None:
-            assert fill_value == missing_value
         scale_factor = pop_to(attributes, encoding, 'scale_factor')
         add_offset = pop_to(attributes, encoding, 'add_offset')
         if ((fill_value is not None and not pd.isnull(fill_value))
