@@ -84,11 +84,14 @@ def open_dataset(nc, decode_cf=True, mask_and_scale=True, decode_times=True,
         # If nc is a file-like object we read it using
         # the scipy.io.netcdf package
         store = backends.ScipyDataStore(nc, *args, **kwargs)
-    decoder = conventions.cf_decoder if decode_cf else None
-    return Dataset.load_store(store, decoder=decoder,
-                              mask_and_scale=mask_and_scale,
-                              decode_times=decode_times,
-                              concat_characters=concat_characters)
+    if decode_cf:
+        decoder = functools.partial(conventions.cf_decoder,
+                                    mask_and_scale=mask_and_scale,
+                                    decode_times=decode_times,
+                                    concat_characters=concat_characters)
+    else:
+        decoder = None
+    return Dataset.load_store(store, decoder=decoder)
 
 
 # list of attributes of pd.DatetimeIndex that are ndarrays of time info
@@ -399,14 +402,13 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
                                      check_coord_names=False)
 
     @classmethod
-    def load_store(cls, store, decoder=None, *args, **kwdargs):
+    def load_store(cls, store, decoder=None):
         """Create a new dataset from the contents of a backends.*DataStore
         object
         """
         variables, attributes = store.load()
         if decoder:
-            variables, attributes = decoder(variables, attributes,
-                                            *args, **kwdargs)
+            variables, attributes = decoder(variables, attributes)
         obj = cls(variables, attrs=attributes)
         obj._file_obj = store
         return obj
@@ -785,13 +787,11 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
                 del obj._arrays[name]
         return obj
 
-    def dump_to_store(self, store, encoder=None,
-                      *args, **kwdargs):
+    def dump_to_store(self, store, encoder=None):
         """Store dataset contents to a backends.*DataStore object."""
         variables, attributes = self, self.attrs
         if encoder:
-            variables, attributes = encoder(variables, attributes,
-                                            *args, **kwdargs)
+            variables, attributes = encoder(variables, attributes)
         store.store(variables, attributes)
         store.sync()
 

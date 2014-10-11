@@ -8,7 +8,8 @@ except ImportError:
 import numpy as np
 import pandas as pd
 
-from xray import align, concat, backends, Dataset, DataArray, Variable
+from xray import (align, concat, conventions, backends, Dataset, DataArray,
+                  Variable)
 from xray.core import indexing, utils
 from xray.core.pycompat import iteritems, OrderedDict
 
@@ -1020,8 +1021,8 @@ class TestDataset(TestCase):
         store = InaccessibleVariableDataStore()
         create_test_data().dump_to_store(store)
 
-        for decode_cf in [False, True]:
-            ds = Dataset.load_store(store, decode_cf=decode_cf)
+        for decoder in [None, conventions.cf_decoder]:
+            ds = Dataset.load_store(store, decoder=decoder)
             with self.assertRaises(UnexpectedDataAccess):
                 ds.load_data()
             with self.assertRaises(UnexpectedDataAccess):
