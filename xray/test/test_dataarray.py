@@ -329,6 +329,10 @@ class TestDataArray(TestCase):
         self.assertDataArrayIdentical(da[:3], da.sel(x=slice('c')))
         self.assertDataArrayIdentical(da[:3], da.sel(x=['a', 'b', 'c']))
         self.assertDataArrayIdentical(da[:, :4], da.sel(y=(self.ds['y'] < 4)))
+        # verify that indexing with a dataarray works
+        b = DataArray('b')
+        self.assertDataArrayIdentical(da[1], da.sel(x=b))
+        self.assertDataArrayIdentical(da[[1]], da.sel(x=slice(b, b)))
 
     def test_loc(self):
         self.ds['x'] = ('x', np.array(list('abcdefghij')))

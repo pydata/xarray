@@ -107,13 +107,22 @@ def orthogonal_indexer(key, shape):
     return tuple(key)
 
 
+def _get_item(x):
+    try:
+        return x.item()
+    except AttributeError:
+        return x
+
+
 def convert_label_indexer(index, label, index_name=''):
     """Given a pandas.Index (or xray.Coordinate) and labels (e.g., from
     __getitem__) for one dimension, return an indexer suitable for indexing an
     ndarray along that dimension
     """
     if isinstance(label, slice):
-        indexer = index.slice_indexer(label.start, label.stop, label.step)
+        indexer = index.slice_indexer(_get_item(label.start),
+                                      _get_item(label.stop),
+                                      _get_item(label.step))
     else:
         label = np.asarray(label)
         if label.ndim == 0:
