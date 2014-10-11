@@ -11,15 +11,8 @@ class InMemoryDataStore(AbstractWritableDataStore):
     fast compared to stores which save to disk.
     """
     def __init__(self, variables=None, attributes=None):
-        if variables is None:
-            self._variables = OrderedDict()
-        else:
-            self._variables = variables
-
-        if attributes is None:
-            self._attributes = OrderedDict()
-        else:
-            self._attributes = attributes
+        self._variables = OrderedDict() if variables is None else variables
+        self._attributes = OrderedDict() if attributes is None else attributes
 
     def get_attrs(self):
         return self._attributes
