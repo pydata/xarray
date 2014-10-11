@@ -1,3 +1,4 @@
+import functools
 import numpy as np
 import pandas as pd
 import warnings
@@ -372,6 +373,69 @@ def pop_to(source, dest, key, default=None):
     return value
 
 
+def _var_as_tuple(var):
+    return var.dims, var.values, var.attrs.copy(), var.encoding.copy()
+
+
+def maybe_encode_datetime(var):
+    if (np.issubdtype(var.dtype, np.datetime64)
+            or (var.dtype.kind == 'O'
+                and isinstance(var.values.flat[0], datetime))):
+
+        dims, values, attrs, encoding = _var_as_tuple(var)
+        if 'units' in attrs or 'calendar' in attrs:
+            raise ValueError(
+                "Failed hard to prevent overwriting 'units' or 'calendar'")
+
+        (values, units, calendar) = encode_cf_datetime(
+            values, encoding.pop('units', None), encoding.pop('calendar', None))
+        attrs['units'] = units
+        attrs['calendar'] = calendar
+        var = Variable(dims, values, attrs, encoding)
+    return var
+
+
+def maybe_encode_mask(var):
+    if any(k in var.encoding for k in ['add_offset', 'scale_factor']):
+        dims, values, attrs, encoding = _var_as_tuple(var)
+        values = np.array(values, dtype=float, copy=True)
+        if 'add_offset' in encoding:
+            values -= pop_to(encoding, attrs, 'add_offset')
+        if 'scale_factor' in encoding:
+            values /= pop_to(encoding, attrs, 'scale_factor')
+        var = Variable(dims, values, attrs, encoding)
+    return var
+
+
+def maybe_encode_fill_value(var):
+    # replace NaN with the fill value
+    if '_FillValue' in var.encoding:
+        dims, values, attrs, encoding = _var_as_tuple(var)
+        fill_value = pop_to(encoding, attrs, '_FillValue')
+        if not pd.isnull(fill_value):
+            missing = pd.isnull(values)
+            if missing.any():
+                values = values.copy()
+                values[missing] = fill_value
+        var = Variable(dims, values, attrs, encoding)
+    return var
+
+
+def maybe_encode_dtype(var):
+    if 'dtype' in var.encoding:
+        dims, values, attrs, encoding = _var_as_tuple(var)
+        dtype = np.dtype(encoding.pop('dtype'))
+        if dtype.kind != 'O':
+            if np.issubdtype(dtype, int):
+                values = values.round()
+            if dtype == 'S1' and values.dtype != 'S1':
+                values = string_to_char(np.asarray(values, 'S'))
+                dims = dims + ('string%s' % values.shape[-1],)
+            values = np.asarray(values, dtype=dtype)
+            var = Variable(dims, values, attrs, encoding)
+    return var
+
+
 def _infer_dtype(array):
     """Given an object array with no missing values, infer its dtype from its
     first element
@@ -388,6 +452,35 @@ def _infer_dtype(array):
             raise ValueError('unable to infer dtype; xray cannot '
                              'serialize arbitrary Python objects')
     return dtype
+
+
+def ensure_dtype_not_object(var):
+    # TODO: move this from conventions to backends? (it's not CF related)
+    if var.dtype.kind == 'O':
+        dims, values, attrs, encoding = _var_as_tuple(var)
+        missing = pd.isnull(values)
+        if missing.any():
+            non_missing_values = values[~missing]
+            inferred_dtype = _infer_dtype(non_missing_values)
+
+            if inferred_dtype.kind in ['S', 'U']:
+                # There is no safe bit-pattern for NA in typical binary string
+                # formats, we so can't set a fill_value. Unfortunately, this
+                # means we won't be able to restore string arrays with missing
+                # values.
+                fill_value = ''
+            else:
+                # insist on using float for numeric values
+                if not np.issubdtype(inferred_dtype, float):
+                    inferred_dtype = np.dtype(float)
+                fill_value = np.nan
+
+            values = np.array(values, dtype=inferred_dtype, copy=True)
+            values[missing] = fill_value
+        else:
+            values = np.asarray(values, dtype=_infer_dtype(values))
+        var = Variable(dims, values, attrs, encoding)
+    return var
 
 
 def encode_cf_variable(var):
@@ -410,86 +503,12 @@ def encode_cf_variable(var):
     out : xray.Variable
         A variable which has been encoded as described above.
     """
-    dimensions = var.dims
-    data = var.values
-    attributes = var.attrs.copy()
-    encoding = var.encoding.copy()
-
-    # convert datetimes into numbers
-    if (np.issubdtype(data.dtype, np.datetime64)
-            or (data.dtype.kind == 'O'
-                and isinstance(data.reshape(-1)[0], datetime))):
-        if 'units' in attributes or 'calendar' in attributes:
-            raise ValueError(
-                "Failed hard to prevent overwriting 'units' or 'calendar'")
-        (data, units, calendar) = encode_cf_datetime(
-            data, encoding.pop('units', None), encoding.pop('calendar', None))
-        attributes['units'] = units
-        attributes['calendar'] = calendar
-
-    # unscale/mask
-    if any(k in encoding for k in ['add_offset', 'scale_factor']):
-        data = np.array(data, dtype=float, copy=True)
-        if 'add_offset' in encoding:
-            data -= pop_to(encoding, attributes, 'add_offset')
-        if 'scale_factor' in encoding:
-            data /= pop_to(encoding, attributes, 'scale_factor')
-
-    # replace NaN with the fill value
-    if '_FillValue' in encoding:
-        fill_value = pop_to(encoding, attributes, '_FillValue')
-        if not pd.isnull(fill_value):
-            missing = pd.isnull(data)
-            if missing.any():
-                data = data.copy()
-                data[missing] = fill_value
-
-    # replace NaN with the missing_value
-    if 'missing_value' in encoding:
-        missing_value = pop_to(encoding, attributes, 'missing_value')
-        if not pd.isnull(missing_value):
-            missing = pd.isnull(data)
-            if missing.any():
-                data = data.copy()
-                data[missing] = missing_value
-
-    # cast to encoded dtype
-    if 'dtype' in encoding:
-        dtype = np.dtype(encoding.pop('dtype'))
-        if dtype.kind != 'O':
-            if np.issubdtype(dtype, int):
-                data = data.round()
-            if dtype == 'S1' and data.dtype != 'S1':
-                data = string_to_char(np.asarray(data, 'S'))
-                dimensions = dimensions + ('string%s' % data.shape[-1],)
-            data = np.asarray(data, dtype=dtype)
-
-    # infer a valid dtype if necessary
-    # TODO: move this from conventions to backends (it's not CF related)
-    if data.dtype.kind == 'O':
-        missing = pd.isnull(data)
-        if missing.any():
-            non_missing_data = data[~missing]
-            inferred_dtype = _infer_dtype(non_missing_data)
-
-            if inferred_dtype.kind in ['S', 'U']:
-                # There is no safe bit-pattern for NA in typical binary string
-                # formats, we so can't set a fill_value. Unfortunately, this
-                # means we won't be able to restore string arrays with missing
-                # values.
-                fill_value = ''
-            else:
-                # insist on using float for numeric data
-                if not np.issubdtype(inferred_dtype, float):
-                    inferred_dtype = np.dtype(float)
-                fill_value = np.nan
-
-            data = np.array(data, dtype=inferred_dtype, copy=True)
-            data[missing] = fill_value
-        else:
-            data = np.asarray(data, dtype=_infer_dtype(data))
-
-    return Variable(dimensions, data, attributes, encoding=encoding)
+    var = maybe_encode_datetime(var)
+    var = maybe_encode_mask(var)
+    var = maybe_encode_fill_value(var)
+    var = maybe_encode_dtype(var)
+    var = ensure_dtype_not_object(var)
+    return var
 
 
 def decode_cf_variable(var, concat_characters=True, mask_and_scale=True,
