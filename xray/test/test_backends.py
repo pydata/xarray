@@ -43,7 +43,7 @@ def create_encoded_masked_and_scaled_data():
     return Dataset({'x': ('t', [-1, -1, 0, 1, 2], attributes)})
 
 
-class CastUnicodeToBytes(object):
+class CastsUnicodeToBytes(object):
     pass
 
 
@@ -148,7 +148,7 @@ class DatasetIOTestCases(object):
     def test_roundtrip_string_data(self):
         expected = Dataset({'x': ('t', ['ab', 'cdef'])})
         with self.roundtrip(expected) as actual:
-            if isinstance(self, CastUnicodeToBytes):
+            if isinstance(self, CastsUnicodeToBytes):
                 expected['x'] = expected['x'].astype('S')
             self.assertDatasetIdentical(expected, actual)
 
@@ -202,9 +202,10 @@ class CFEncodedDataTest(DatasetIOTestCases):
             self.assertDatasetIdentical(expected, actual)
 
         original = Dataset({'x': ('t', values, {}, {'_FillValue': '\x00'})})
-        if type(self) is NetCDF4DataTest:
-            # NetCDF4 should still write a VLEN (unicode) string
+        if not isinstance(self, CastsUnicodeToBytes):
+            # these stores can save unicode strings
             expected = original.copy(deep=True)
+        if type(self) is NetCDF4DataTest:
             # the netCDF4 library can't keep track of an empty _FillValue for
             # VLEN variables:
             expected['x'][-1] = ''
@@ -456,8 +457,9 @@ class NetCDF4DataTest(CFEncodedDataTest, TestCase):
             actual = open_dataset(tmp_file)
 
             self.assertVariableEqual(actual['time'], expected['time'])
-            actual_encoding = {k: v for k, v in iteritems(actual['time'].encoding)
-                               if k in expected['time'].encoding}
+            actual_encoding = dict((k, v) for k, v
+                                   in iteritems(actual['time'].encoding)
+                                   if k in expected['time'].encoding)
             self.assertDictEqual(actual_encoding, expected['time'].encoding)
 
     def test_dump_and_open_encodings(self):
@@ -484,7 +486,7 @@ class NetCDF4DataTest(CFEncodedDataTest, TestCase):
 
 @requires_netCDF4
 @requires_scipy
-class ScipyDataTest(CFEncodedDataTest, CastUnicodeToBytes, TestCase):
+class ScipyDataTest(CFEncodedDataTest, CastsUnicodeToBytes, TestCase):
     @contextlib.contextmanager
     def create_store(self):
         fobj = BytesIO()
@@ -498,7 +500,7 @@ class ScipyDataTest(CFEncodedDataTest, CastUnicodeToBytes, TestCase):
 
 
 @requires_netCDF4
-class NetCDF3ViaNetCDF4DataTest(CFEncodedDataTest, CastUnicodeToBytes, TestCase):
+class NetCDF3ViaNetCDF4DataTest(CFEncodedDataTest, CastsUnicodeToBytes, TestCase):
     @contextlib.contextmanager
     def create_store(self):
         with create_tmp_file() as tmp_file:

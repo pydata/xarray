@@ -150,8 +150,8 @@ class AbstractWritableDataStore(AbstractDataStore):
         neccesary_dims = [v.dims for v in variables.values()]
         neccesary_dims = set(itertools.chain(*neccesary_dims))
         # set all non-indexes and any index which is not trivial.
-        variables = {k: v for k, v in iteritems(variables)
-                     if not (k in neccesary_dims and is_trivial_index(v))}
+        variables = dict((k, v) for k, v in iteritems(variables)
+                         if not (k in neccesary_dims and is_trivial_index(v)))
         self.set_variables(variables)
 
     def set_dimensions(self, dimensions):

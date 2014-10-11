@@ -327,13 +327,12 @@ def null_wrap(ds):
     Given a data store this wraps each variable in a NullWrapper so that
     it appears to be out of memory.
     """
-    variables = {k: Variable(v.dims,
-                             NullWrapper(v.values),
-                             v.attrs) for k, v in iteritems(ds)}
-    return InMemoryDataStore(variables=variables,
-                             attributes=ds.attrs)
+    variables = dict((k, Variable(v.dims, NullWrapper(v.values), v.attrs))
+                     for k, v in iteritems(ds))
+    return InMemoryDataStore(variables=variables, attributes=ds.attrs)
 
 
+@requires_netCDF4
 class TestCFEncodedDataStore(CFEncodedDataTest, TestCase):
     @contextlib.contextmanager
     def create_store(self):
