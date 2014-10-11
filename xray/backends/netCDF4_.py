@@ -3,7 +3,7 @@ import warnings
 import numpy as np
 
 from .. import Variable
-from ..conventions import encode_cf_variable
+from ..conventions import pop_to, cf_encoder
 from ..core import indexing
 from ..core.utils import FrozenOrderedDict, NDArrayMixin
 from ..core.pycompat import iteritems, basestring, OrderedDict
@@ -86,7 +86,8 @@ class NetCDF4DataStore(AbstractWritableDataStore):
     This store supports NetCDF3, NetCDF4 and OpenDAP datasets.
     """
     def __init__(self, filename, mode='r', clobber=True, diskless=False,
-                 persist=False, format='NETCDF4', group=None):
+                 persist=False, format='NETCDF4', group=None,
+                 *args, **kwdargs):
         import netCDF4 as nc4
         ds = nc4.Dataset(filename, mode=mode, clobber=clobber,
                          diskless=diskless, persist=persist,
@@ -94,6 +95,16 @@ class NetCDF4DataStore(AbstractWritableDataStore):
         self.ds = _nc4_group(ds, group)
         self.format = format
         self._filename = filename
+        self._encoder_args = args
+        self._encoder_kwdargs = kwdargs
+
+    def store(self, variables, attributes):
+        # All NetCDF files get CF encoded by default, without this attempting
+        # to write times, for example, would fail.
+        cf_variables, cf_attrs = cf_encoder(variables, attributes,
+                                            *self._encoder_args,
+                                            **self._encoder_kwdargs)
+        AbstractWritableDataStore.store(self, cf_variables, cf_attrs)
 
     def open_store_variable(self, var):
         var.set_auto_maskandscale(False)
@@ -118,19 +129,20 @@ class NetCDF4DataStore(AbstractWritableDataStore):
         # TODO: figure out how to round-trip "endian-ness" without raising
         # warnings from netCDF4
         # encoding['endian'] = var.endian()
-        encoding['least_significant_digit'] = \
-            attributes.pop('least_significant_digit', None)
+        pop_to(attributes, encoding, 'least_significant_digit')
         # save source so __repr__ can detect if it's local or not
         encoding['source'] = self._filename
         return Variable(dimensions, data, attributes, encoding)
 
-    @property
-    def attrs(self):
+    def get_variables(self):
+        return FrozenOrderedDict((k, self.open_store_variable(v))
+                                 for k, v in iteritems(self.ds.variables))
+
+    def get_attrs(self):
         return FrozenOrderedDict((k, self.ds.getncattr(k))
                                  for k in self.ds.ncattrs())
 
-    @property
-    def dimensions(self):
+    def get_dimensions(self):
         return FrozenOrderedDict((k, len(v))
                                  for k, v in iteritems(self.ds.dimensions))
 
@@ -141,7 +153,7 @@ class NetCDF4DataStore(AbstractWritableDataStore):
         self.ds.setncattr(key, value)
 
     def set_variable(self, name, variable):
-        variable = encode_cf_variable(variable)
+        attrs = variable.attrs.copy()
         if self.format == 'NETCDF4':
             variable, datatype = _nc4_values_and_dtype(variable)
         else:
@@ -150,7 +162,7 @@ class NetCDF4DataStore(AbstractWritableDataStore):
 
         self.set_necessary_dimensions(variable)
 
-        fill_value = variable.attrs.pop('_FillValue', None)
+        fill_value = attrs.pop('_FillValue', None)
         if fill_value in ['', '\x00']:
             # these are equivalent to the default FillValue, but netCDF4
             # doesn't like setting fill_value to an empty string
@@ -172,7 +184,7 @@ class NetCDF4DataStore(AbstractWritableDataStore):
             fill_value=fill_value)
         nc4_var.set_auto_maskandscale(False)
         nc4_var[:] = variable.values
-        for k, v in iteritems(variable.attrs):
+        for k, v in iteritems(attrs):
             # set attributes one-by-one since netCDF4<1.0.10 can't handle
             # OrderedDict as the input to setncatts
             nc4_var.setncattr(k, v)
