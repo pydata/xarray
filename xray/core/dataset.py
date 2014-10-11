@@ -1521,8 +1521,7 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
         template = variable.Variable(self.dims.keys(), empty_data)
         for k in columns:
             _, var = variable.broadcast_variables(template, self._arrays[k])
-            _, var_data = np.broadcast_arrays(template.values, var.values)
-            data.append(var_data.reshape(-1))
+            data.append(var.values.reshape(-1))
 
         index = self.coords.to_index()
         return pd.DataFrame(OrderedDict(zip(columns, data)), index=index)
