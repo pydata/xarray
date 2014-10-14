@@ -395,19 +395,20 @@ def maybe_encode_datetime(var):
     return var
 
 
-def maybe_encode_mask(var):
+def maybe_encode_offset_and_scale(var, needs_copy=True):
     if any(k in var.encoding for k in ['add_offset', 'scale_factor']):
         dims, values, attrs, encoding = _var_as_tuple(var)
-        values = np.array(values, dtype=float, copy=True)
+        values = np.array(values, dtype=float, copy=needs_copy)
+        needs_copy = False
         if 'add_offset' in encoding:
             values -= pop_to(encoding, attrs, 'add_offset')
         if 'scale_factor' in encoding:
             values /= pop_to(encoding, attrs, 'scale_factor')
         var = Variable(dims, values, attrs, encoding)
-    return var
+    return var, needs_copy
 
 
-def maybe_encode_fill_value(var):
+def maybe_encode_fill_value(var, needs_copy=True):
     # replace NaN with the fill value
     if '_FillValue' in var.encoding:
         dims, values, attrs, encoding = _var_as_tuple(var)
@@ -415,19 +416,22 @@ def maybe_encode_fill_value(var):
         if not pd.isnull(fill_value):
             missing = pd.isnull(values)
             if missing.any():
-                values = values.copy()
+                if needs_copy:
+                    values = values.copy()
+                    needs_copy = False
                 values[missing] = fill_value
         var = Variable(dims, values, attrs, encoding)
-    return var
+    return var, needs_copy
 
 
-def maybe_encode_dtype(var):
+def maybe_encode_dtype(var, needs_copy=True):
     if 'dtype' in var.encoding:
         dims, values, attrs, encoding = _var_as_tuple(var)
         dtype = np.dtype(encoding.pop('dtype'))
         if dtype.kind != 'O':
             if np.issubdtype(dtype, int):
-                values = values.round()
+                out = np.empty_like(values) if needs_copy else values
+                np.around(values, out=out)
             if dtype == 'S1' and values.dtype != 'S1':
                 values = string_to_char(np.asarray(values, 'S'))
                 dims = dims + ('string%s' % values.shape[-1],)
@@ -483,7 +487,7 @@ def ensure_dtype_not_object(var):
     return var
 
 
-def encode_cf_variable(var):
+def encode_cf_variable(var, needs_copy=True):
     """
     Converts an Variable into an Variable which follows some
     of the CF conventions:
@@ -504,9 +508,9 @@ def encode_cf_variable(var):
         A variable which has been encoded as described above.
     """
     var = maybe_encode_datetime(var)
-    var = maybe_encode_mask(var)
-    var = maybe_encode_fill_value(var)
-    var = maybe_encode_dtype(var)
+    var, needs_copy = maybe_encode_offset_and_scale(var, needs_copy)
+    var, needs_copy = maybe_encode_fill_value(var, needs_copy)
+    var = maybe_encode_dtype(var, needs_copy)
     var = ensure_dtype_not_object(var)
     return var
 
