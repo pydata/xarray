@@ -34,8 +34,7 @@ class ScipyDataStore(AbstractWritableDataStore):
 
     It only supports the NetCDF3 file-format.
     """
-    def __init__(self, filename_or_obj, mode='r', mmap=None,
-                 version=1, *args, **kwdargs):
+    def __init__(self, filename_or_obj, mode='r', mmap=None, version=1):
         import scipy
         if mode != 'r' and scipy.__version__ < '0.13':
             warnings.warn('scipy %s detected; '
@@ -53,15 +52,11 @@ class ScipyDataStore(AbstractWritableDataStore):
             filename_or_obj = BytesIO(filename_or_obj)
         self.ds = scipy.io.netcdf.netcdf_file(
             filename_or_obj, mode=mode, mmap=mmap, version=version)
-        self._encoder_args = args
-        self._encoder_kwdargs = kwdargs
 
     def store(self, variables, attributes):
         # All Scipy objects get CF encoded by default, without this attempting
         # to write times, for example, would fail.
-        cf_variables, cf_attrs = cf_encoder(variables, attributes,
-                                            *self._encoder_args,
-                                            **self._encoder_kwdargs)
+        cf_variables, cf_attrs = cf_encoder(variables, attributes)
         AbstractWritableDataStore.store(self, cf_variables, cf_attrs)
 
     def open_store_variable(self, var):
