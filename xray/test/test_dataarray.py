@@ -663,7 +663,16 @@ class TestDataArray(TestCase):
 
         actual = arr.dropna('a')
         expected = arr[1::2]
+        self.assertDataArrayIdentical(actual, expected)
 
+        actual = arr.dropna('b', how='all')
+        self.assertDataArrayIdentical(actual, arr)
+
+        actual = arr.dropna('a', thresh=1)
+        self.assertDataArrayIdentical(actual, arr)
+
+        actual = arr.dropna('b', thresh=3)
+        expected = arr[:, 1:]
         self.assertDataArrayIdentical(actual, expected)
 
     def test_reduce(self):
