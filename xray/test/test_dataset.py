@@ -1085,6 +1085,13 @@ class TestDataset(TestCase):
         expected = ds.isel(a=[1, 3])
         self.assertDatasetIdentical(actual, ds)
 
+        with self.assertRaisesRegexp(ValueError, 'a single dataset dimension'):
+            ds.dropna('foo')
+        with self.assertRaisesRegexp(ValueError, 'invalid how'):
+            ds.dropna('a', how='somehow')
+        with self.assertRaisesRegexp(TypeError, 'must specify how or thresh'):
+            ds.dropna('a', how=None)
+
     def test_reduce(self):
         data = create_test_data()
 
