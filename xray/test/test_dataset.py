@@ -1064,6 +1064,27 @@ class TestDataset(TestCase):
         actual = ds.dropna('a', subset=['bar'])
         self.assertDatasetIdentical(actual, ds)
 
+        actual = ds.dropna('a', how='all')
+        self.assertDatasetIdentical(actual, ds)
+
+        actual = ds.dropna('b', how='all', subset=['bar'])
+        expected = ds.isel(b=[0, 1, 2])
+        self.assertDatasetIdentical(actual, expected)
+
+        actual = ds.dropna('b', thresh=1, subset=['bar'])
+        self.assertDatasetIdentical(actual, expected)
+
+        actual = ds.dropna('b', thresh=2)
+        self.assertDatasetIdentical(actual, ds)
+
+        actual = ds.dropna('b', thresh=4)
+        expected = ds.isel(b=[1, 2, 3])
+        self.assertDatasetIdentical(actual, expected)
+
+        actual = ds.dropna('a', thresh=3)
+        expected = ds.isel(a=[1, 3])
+        self.assertDatasetIdentical(actual, ds)
+
     def test_reduce(self):
         data = create_test_data()
 
