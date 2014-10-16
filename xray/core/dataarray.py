@@ -195,6 +195,19 @@ class DataArray(AbstractArray):
             obj._dataset._coord_names.discard(name)
         return obj
 
+    @classmethod
+    def _new_from_dataset_no_copy(cls, dataset, name):
+        obj = object.__new__(cls)
+        obj._dataset = dataset
+        obj._name = name
+        return obj
+
+    def _with_replaced_dataset(self, dataset):
+        obj = object.__new__(type(self))
+        obj._name = self.name
+        obj._dataset = dataset
+        return obj
+
     @property
     def dataset(self):
         """The dataset with which this DataArray is associated.
@@ -439,7 +452,7 @@ class DataArray(AbstractArray):
         array's dataset is also a variable in this array's dataset.
         """
         ds = self._dataset.copy(deep=deep)
-        return ds[self.name]
+        return self._with_replaced_dataset(ds)
 
     def __copy__(self):
         return self.copy(deep=False)
@@ -462,7 +475,7 @@ class DataArray(AbstractArray):
         DataArray.sel
         """
         ds = self._dataset.isel(**indexers)
-        return ds[self.name]
+        return self._with_replaced_dataset(ds)
 
     indexed = utils.function_alias(isel, 'indexed')
 
@@ -538,7 +551,7 @@ class DataArray(AbstractArray):
         align
         """
         ds = self._dataset.reindex(copy=copy, **indexers)
-        return ds[self.name]
+        return self._with_replaced_dataset(ds)
 
     def rename(self, new_name_or_name_dict):
         """Returns a new DataArray with renamed coordinates and/or a new name.
@@ -573,7 +586,7 @@ class DataArray(AbstractArray):
                       FutureWarning, stacklevel=2)
         names = names + (self.name,)
         ds = self._dataset.select_vars(*names)
-        return ds[self.name]
+        return self._with_replaced_dataset(ds)
 
     select = utils.function_alias(select_vars, 'select')
 
@@ -639,7 +652,7 @@ class DataArray(AbstractArray):
         """
         ds = self._dataset.copy()
         ds[self.name] = self.variable.transpose(*dims)
-        return ds[self.name]
+        return self._with_replaced_dataset(ds)
 
     def squeeze(self, dim=None):
         """Return a new DataArray object with squeezed data.
@@ -667,7 +680,7 @@ class DataArray(AbstractArray):
         numpy.squeeze
         """
         ds = self._dataset.squeeze(dim)
-        return ds[self.name]
+        return self._with_replaced_dataset(ds)
 
     def dropna(self, dim, how='any'):
         """Returns a new array with dropped labels for missing values along
@@ -687,7 +700,7 @@ class DataArray(AbstractArray):
         DataArray
         """
         ds = self._dataset.dropna(dim, how=how)
-        return ds[self.name]
+        return self._with_replaced_dataset(ds)
 
     def reduce(self, func, dim=None, axis=None, keep_attrs=False, **kwargs):
         """Reduce this array by applying `func` along some dimension(s).
@@ -730,7 +743,7 @@ class DataArray(AbstractArray):
         ds = self._dataset.drop_vars(*drop)
         ds[self.name] = var
 
-        return ds[self.name]
+        return self._with_replaced_dataset(ds)
 
     @classmethod
     def concat(cls, *args, **kwargs):
@@ -760,7 +773,7 @@ class DataArray(AbstractArray):
         concat_over = set(concat_over) | set([name])
 
         ds = Dataset._concat(datasets, dim, indexers, concat_over=concat_over)
-        return ds[name]
+        return cls._new_from_dataset_no_copy(ds, name)
 
     def to_dataframe(self):
         """Convert this array into a pandas.DataFrame.
@@ -794,7 +807,7 @@ class DataArray(AbstractArray):
         # TODO: add a 'name' parameter
         df = pd.DataFrame({series.name: series})
         ds = Dataset.from_dataframe(df)
-        return ds[series.name]
+        return cls._new_from_dataset_no_copy(ds, series.name)
 
     def _all_compat(self, other, compat_str):
         """Helper function for equals and identical"""
@@ -850,7 +863,7 @@ class DataArray(AbstractArray):
         ds = self.coords.to_dataset()
         name = self._result_name()
         ds[name] = new_var
-        return ds[name]
+        return self._new_from_dataset_no_copy(ds, name)
 
     @staticmethod
     def _unary_op(f):
@@ -872,7 +885,7 @@ class DataArray(AbstractArray):
             ds[name] = (f(self.variable, other_variable)
                         if not reflexive
                         else f(other_variable, self.variable))
-            return ds[name]
+            return self._new_from_dataset_no_copy(ds, name)
         return func
 
     @staticmethod
