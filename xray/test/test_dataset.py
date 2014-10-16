@@ -1032,6 +1032,38 @@ class TestDataset(TestCase):
             ds.isel(time=10)
             ds.isel(time=slice(10), dim1=[0]).isel(dim1=0, dim2=-1)
 
+    def test_dropna(self):
+        x = np.random.randn(4, 4)
+        x[::2, 0] = np.nan
+        y = np.random.randn(4)
+        y[-1] = np.nan
+        ds = Dataset({'foo': (('a', 'b'), x), 'bar': (('b', y))})
+
+        expected = ds.isel(a=slice(1, None, 2))
+        actual = ds.dropna('a')
+        self.assertDatasetIdentical(actual, expected)
+
+        expected = ds.isel(b=slice(1, 3))
+        actual = ds.dropna('b')
+        self.assertDatasetIdentical(actual, expected)
+
+        actual = ds.dropna('b', vars=['foo', 'bar'])
+        self.assertDatasetIdentical(actual, expected)
+
+        expected = ds.isel(b=slice(1, None))
+        actual = ds.dropna('b', vars=['foo'])
+        self.assertDatasetIdentical(actual, expected)
+
+        expected = ds.isel(b=slice(3))
+        actual = ds.dropna('b', vars=['bar'])
+        self.assertDatasetIdentical(actual, expected)
+
+        actual = ds.dropna('a', vars=[])
+        self.assertDatasetIdentical(actual, ds)
+
+        actual = ds.dropna('a', vars=['bar'])
+        self.assertDatasetIdentical(actual, ds)
+
     def test_reduce(self):
         data = create_test_data()
 
