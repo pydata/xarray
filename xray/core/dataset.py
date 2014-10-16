@@ -1247,7 +1247,7 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
         """
         return common.squeeze(self, self.dims, dim)
 
-    def dropna(self, dim, how='any', vars=None):
+    def dropna(self, dim, how='any', subset=None):
         """Returns a new dataset with dropped labels for missing values along
         the provided dimension.
 
@@ -1259,8 +1259,8 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
         how : {'any',}, optional
             How to choose values to drop. The only currently supported choice
             is 'any'.
-        vars : sequence, optional
-            Which variables to check for missing values. By default, all
+        subset : sequence, optional
+            Subset of variables to check for missing values. By default, all
             variables in the dataset are checked.
 
         Returns
@@ -1270,7 +1270,7 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
         # TODO: consider supporting multiple dimensions? Or not, given that
         # there are some ugly edge cases, e.g., pandas's dropna differs
         # depending on the order of the supplied axes.
-        # TODO: support the thresh argument?
+        # TODO: support how='all' and the thresh argument
 
         if dim not in self.dims:
             raise ValueError('%s must be a single dataset dimension' % dim)
@@ -1278,11 +1278,11 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
         if how != 'any':
             raise NotImplementedError("how only implemented for 'any'")
 
-        if vars is None:
-            vars = list(self.vars)
+        if subset is None:
+            subset = list(self.vars)
 
         drop = np.zeros(self.dims[dim], dtype=bool)
-        for k in vars:
+        for k in subset:
             array = self._arrays[k]
             if dim in array.dims:
                 dims = [d for d in array.dims if d != dim]
