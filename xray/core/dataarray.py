@@ -669,6 +669,26 @@ class DataArray(AbstractArray):
         ds = self._dataset.squeeze(dim)
         return ds[self.name]
 
+    def dropna(self, dim, how='any'):
+        """Returns a new array with dropped labels for missing values along
+        the provided dimension.
+
+        Parameters
+        ----------
+        dim : str
+            Dimension along which to drop missing values. Dropping along
+            multiple dimensions simultaneously is not yet supported.
+        how : {'any',}, optional
+            How to choose values to drop. The only currently supported choice
+            is 'any'.
+
+        Returns
+        -------
+        DataArray
+        """
+        ds = self._dataset.dropna(dim, how=how)
+        return ds[self.name]
+
     def reduce(self, func, dim=None, axis=None, keep_attrs=False, **kwargs):
         """Reduce this array by applying `func` along some dimension(s).
 

@@ -656,6 +656,16 @@ class TestDataArray(TestCase):
     def test_squeeze(self):
         self.assertVariableEqual(self.dv.variable.squeeze(), self.dv.squeeze())
 
+    def test_dropna(self):
+        x = np.random.randn(4, 4)
+        x[::2, 0] = np.nan
+        arr = DataArray(x, dims=['a', 'b'])
+
+        actual = arr.dropna('a')
+        expected = arr[1::2]
+
+        self.assertDataArrayIdentical(actual, expected)
+
     def test_reduce(self):
         coords = {'x': [-1, -2], 'y': ['ab', 'cd', 'ef'],
                   'lat': (['x', 'y'], [[1, 2, 3], [-1, -2, -3]]),
