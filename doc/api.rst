@@ -118,6 +118,7 @@ Computation
 :py:attr:`~Dataset.isnull`
 :py:attr:`~Dataset.notnull`
 :py:attr:`~Dataset.count`
+:py:attr:`~Dataset.dropna`
 
 **ndarray methods**:
 :py:attr:`~Dataset.argsort`
@@ -238,6 +239,7 @@ Computation
 :py:attr:`~DataArray.isnull`
 :py:attr:`~DataArray.notnull`
 :py:attr:`~DataArray.count`
+:py:attr:`~DataArray.dropna`
 
 **ndarray methods**:
 :py:attr:`~DataArray.argsort`
