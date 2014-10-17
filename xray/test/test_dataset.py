@@ -1032,6 +1032,66 @@ class TestDataset(TestCase):
             ds.isel(time=10)
             ds.isel(time=slice(10), dim1=[0]).isel(dim1=0, dim2=-1)
 
+    def test_dropna(self):
+        x = np.random.randn(4, 4)
+        x[::2, 0] = np.nan
+        y = np.random.randn(4)
+        y[-1] = np.nan
+        ds = Dataset({'foo': (('a', 'b'), x), 'bar': (('b', y))})
+
+        expected = ds.isel(a=slice(1, None, 2))
+        actual = ds.dropna('a')
+        self.assertDatasetIdentical(actual, expected)
+
+        expected = ds.isel(b=slice(1, 3))
+        actual = ds.dropna('b')
+        self.assertDatasetIdentical(actual, expected)
+
+        actual = ds.dropna('b', subset=['foo', 'bar'])
+        self.assertDatasetIdentical(actual, expected)
+
+        expected = ds.isel(b=slice(1, None))
+        actual = ds.dropna('b', subset=['foo'])
+        self.assertDatasetIdentical(actual, expected)
+
+        expected = ds.isel(b=slice(3))
+        actual = ds.dropna('b', subset=['bar'])
+        self.assertDatasetIdentical(actual, expected)
+
+        actual = ds.dropna('a', subset=[])
+        self.assertDatasetIdentical(actual, ds)
+
+        actual = ds.dropna('a', subset=['bar'])
+        self.assertDatasetIdentical(actual, ds)
+
+        actual = ds.dropna('a', how='all')
+        self.assertDatasetIdentical(actual, ds)
+
+        actual = ds.dropna('b', how='all', subset=['bar'])
+        expected = ds.isel(b=[0, 1, 2])
+        self.assertDatasetIdentical(actual, expected)
+
+        actual = ds.dropna('b', thresh=1, subset=['bar'])
+        self.assertDatasetIdentical(actual, expected)
+
+        actual = ds.dropna('b', thresh=2)
+        self.assertDatasetIdentical(actual, ds)
+
+        actual = ds.dropna('b', thresh=4)
+        expected = ds.isel(b=[1, 2, 3])
+        self.assertDatasetIdentical(actual, expected)
+
+        actual = ds.dropna('a', thresh=3)
+        expected = ds.isel(a=[1, 3])
+        self.assertDatasetIdentical(actual, ds)
+
+        with self.assertRaisesRegexp(ValueError, 'a single dataset dimension'):
+            ds.dropna('foo')
+        with self.assertRaisesRegexp(ValueError, 'invalid how'):
+            ds.dropna('a', how='somehow')
+        with self.assertRaisesRegexp(TypeError, 'must specify how or thresh'):
+            ds.dropna('a', how=None)
+
     def test_reduce(self):
         data = create_test_data()
 

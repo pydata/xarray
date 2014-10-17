@@ -19,9 +19,10 @@
    Dataset.std
    Dataset.var
 
-   Dataset.count
    Dataset.isnull
    Dataset.notnull
+   Dataset.count
+   Dataset.dropna
 
    Dataset.argsort
    Dataset.clip
@@ -49,9 +50,10 @@
    DataArray.std
    DataArray.var
 
-   DataArray.count
    DataArray.isnull
    DataArray.notnull
+   DataArray.count
+   DataArray.dropna
 
    DataArray.argsort
    DataArray.clip

@@ -46,13 +46,21 @@ Data arrays also implement many :py:class:`numpy.ndarray` methods:
     arr.round(2)
     arr.T
 
-It also has the ``count``, ``isnull`` and ``notnull`` methods from pandas:
+Missing values
+==============
+
+xray objects borrow the :py:meth:`~xray.DataArray.isnull`,
+:py:meth:`~xray.DataArray.notnull`, :py:meth:`~xray.DataArray.count` and
+:py:meth:`~xray.DataArray.dropna` methods for working with missing data from
+pandas:
 
 .. ipython:: python
 
-    x = xray.DataArray([0, 1, np.nan, np.nan, 2])
+    x = xray.DataArray([0, 1, np.nan, np.nan, 2], dims=['x'])
     x.isnull()
+    x.notnull()
     x.count()
+    x.dropna(dim='x')
 
 Aggregation
 ===========

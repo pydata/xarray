@@ -46,6 +46,11 @@ def first_n_items(x, n_desired):
     # get them in a single call to __getitem__ using only slices.
     if n_desired < 1:
         raise ValueError('must request at least one item')
+
+    if x.size == 0:
+        # work around for https://github.com/numpy/numpy/issues/5195
+        return []
+
     if n_desired < x.size:
         indexer = _get_indexer_at_least_n_items(x.shape, n_desired)
         x = x[indexer]

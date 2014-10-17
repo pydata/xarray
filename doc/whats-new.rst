@@ -1,6 +1,12 @@
 What's New
 ==========
 
+v0.3.1 (not yet released)
+--------------------------
+
+- Added :py:math:`~xray.Dataset.count` and :py:math:`~xray.Dataset.dropna`
+  methods for dealing with missing values.
+
 v0.3.0 (21 September 2014)
 --------------------------
 
