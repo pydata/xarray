@@ -266,8 +266,9 @@ IO / Conversion
    :toctree: generated/
 
    DataArray.to_dataset
-   DataArray.to_dataframe
+   DataArray.to_pandas
    DataArray.to_series
+   DataArray.to_dataframe
    DataArray.to_index
    DataArray.from_series
    DataArray.load_data
