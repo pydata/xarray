@@ -68,8 +68,7 @@ Important links
 - PyData talk: https://www.youtube.com/watch?v=T5CZyNwBa9c
 """
 
-# code to extract and write the version copied from pandas, which is available
-# under the BSD license:
+# code to extract and write the version copied from pandas
 FULLVERSION = VERSION
 write_version = True
 
@@ -147,4 +146,5 @@ setup(name=DISTNAME,
       tests_require=TESTS_REQUIRE,
       url=URL,
       test_suite='nose.collector',
-      packages=find_packages())
+      packages=find_packages(),
+      package_data={'xray': ['test/data/*']})
