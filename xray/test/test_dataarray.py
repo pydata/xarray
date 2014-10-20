@@ -607,6 +607,14 @@ class TestDataArray(TestCase):
         expected = DataArray(1 + np.arange(3), coords=[('x', range(3))])
         self.assertDataArrayIdentical(expected, actual)
 
+        # regression tests for #254
+        actual = orig[0] < orig
+        expected = DataArray([False, True, True], coords=[('x', range(3))])
+        self.assertDataArrayIdentical(expected, actual)
+
+        actual = orig > orig[0]
+        self.assertDataArrayIdentical(expected, actual)
+
     def test_dataset_math(self):
         # more comprehensive tests with multiple dataset variables
         obs = Dataset({'tmin': ('x', np.arange(5)),
