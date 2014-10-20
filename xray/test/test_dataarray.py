@@ -884,6 +884,40 @@ class TestDataArray(TestCase):
         self.assertDataArrayIdentical(dv1, self.dv[:5])
         self.assertDataArrayIdentical(dv2, self.dv[:5])
 
+    def test_to_pandas(self):
+        # 0d
+        actual = DataArray(42).to_pandas()
+        expected = np.array(42)
+        self.assertArrayEqual(actual, expected)
+
+        # 1d
+        values = np.random.randn(3)
+        index = pd.Index(['a', 'b', 'c'], name='x')
+        da = DataArray(values, coords=[index])
+        actual = da.to_pandas()
+        self.assertArrayEqual(actual.values, values)
+        self.assertArrayEqual(actual.index, index)
+        self.assertArrayEqual(actual.index.name, 'x')
+
+        # 2d
+        values = np.random.randn(3, 2)
+        da = DataArray(values, coords=[('x', ['a', 'b', 'c']), ('y', [0, 1])],
+                       name='foo')
+        actual = da.to_pandas()
+        self.assertArrayEqual(actual.values, values)
+        self.assertArrayEqual(actual.index, ['a', 'b', 'c'])
+        self.assertArrayEqual(actual.columns, [0, 1])
+
+        # roundtrips
+        for shape in [(3,), (3, 4), (3, 4, 5)]:
+            dims = list('abc')[:len(shape)]
+            da = DataArray(np.random.randn(*shape), dims=dims)
+            roundtripped = DataArray(da.to_pandas())
+            self.assertDataArrayIdentical(da, roundtripped)
+
+        with self.assertRaisesRegexp(ValueError, 'cannot convert'):
+            DataArray(np.random.randn(1, 2, 3, 4, 5)).to_pandas()
+
     def test_to_and_from_series(self):
         expected = self.dv.to_dataframe()['foo']
         actual = self.dv.to_series()

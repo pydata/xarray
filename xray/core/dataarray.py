@@ -777,8 +777,34 @@ class DataArray(AbstractArray):
         ds = Dataset._concat(datasets, dim, indexers, concat_over=concat_over)
         return cls._new_from_dataset_no_copy(ds, name)
 
+    def to_pandas(self):
+        """Convert this array into a pandas object with the same shape.
+
+        The type of the returned object depends on the number of DataArray
+        dimensions:
+        * 1D -> `pandas.Series`
+        * 2D -> `pandas.DataFrame`
+        * 3D -> `pandas.Panel`
+
+        Only works for arrays with 3 or fewer dimensions.
+
+        The DataArray constructor performs the inverse transformation.
+        """
+        # TODO: consolidate the info about pandas constructors and the
+        # attributes that correspond to their indexes into a separate module?
+        constructors = {0: lambda x: x,
+                        1: pd.Series,
+                        2: pd.DataFrame,
+                        3: pd.Panel}
+        try:
+            constructor = constructors[self.ndim]
+        except KeyError:
+            raise ValueError('cannot convert arrays with %s dimensions into '
+                             'pandas objects' % self.ndim)
+        return constructor(self.values, *self.indexes.values())
+
     def to_dataframe(self):
-        """Convert this array into a pandas.DataFrame.
+        """Convert this array and its coordinates into a tidy pandas.DataFrame.
 
         The DataFrame is indexed by the Cartesian product of index coordinates
         (in the form of a :py:class:`pandas.MultiIndex`).
@@ -799,7 +825,7 @@ class DataArray(AbstractArray):
 
     @classmethod
     def from_series(cls, series):
-        """Convert a pandas.Series into an xray.DataArray
+        """Convert a pandas.Series into an xray.DataArray.
 
         If the series's index is a MultiIndex, it will be expanded into a
         tensor product of one-dimensional coordinates (filling in missing values
