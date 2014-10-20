@@ -16,13 +16,10 @@ Optional dependencies:
 The easiest way to get all these dependencies installed is to use the
 `Anaconda python distribution <https://store.continuum.io/cshop/anaconda/>`__.
 
-To install xray, use pip::
+To install xray, first make sure you have new enough versions of numpy and
+pandas installed. Then, use pip::
 
     pip install xray
 
-.. warning::
-
-    If you don't already have recent versions of numpy and pandas installed,
-    installing xray will attempt to automatically update them. This may or may
-    not succeed: you probably want to ensure you have an up-to-date installs
-    of numpy and pandas before attempting to install xray.
+To run the test suite after installing xray, install
+`nose <https://nose.readthedocs.org>` and run ``nosetests xray``.
