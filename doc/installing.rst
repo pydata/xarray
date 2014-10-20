@@ -13,13 +13,13 @@ Optional dependencies:
 - `pydap <http://www.pydap.org/>`__
 - `scipy <http://scipy.org/>`__
 
-The easiest way to get all these dependencies installed is to use the
+Before you install xray, be sure you have the required dependencies installed.
+The easiest way to do so is to use the
 `Anaconda python distribution <https://store.continuum.io/cshop/anaconda/>`__.
 
-To install xray, first make sure you have new enough versions of numpy and
-pandas installed. Then, use pip::
+To install xray, use pip::
 
     pip install xray
 
 To run the test suite after installing xray, install
-`nose <https://nose.readthedocs.org>` and run ``nosetests xray``.
+`nose <https://nose.readthedocs.org>`__ and run ``nosetests xray``.
