@@ -872,15 +872,15 @@ def _set_data_directly(var, values):
     var._data = NumpyArrayAdapter(values)
 
 
-def broadcast_variables(first, second):
+def broadcast_variables(*variables):
     """Given two Variables, return two Variables with identical dimensions and
     broadcast data.
     """
-    first, second = _broadcast_compatible_variables(first, second)
-    first_data, second_data = np.broadcast_arrays(first.values, second.values)
-    _set_data_directly(first, first_data)
-    _set_data_directly(second, second_data)
-    return first, second
+    variables = _broadcast_compatible_variables(*variables)
+    broadcast_data = np.broadcast_arrays(*[v.values for v in variables])
+    for var, data in zip(variables, broadcast_data):
+        _set_data_directly(var, data)
+    return variables
 
 
 def _broadcast_variable_data(self, other):
