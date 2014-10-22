@@ -1511,18 +1511,9 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
         this dataset's indices.
         """
         columns = [k for k in self if k not in self.dims]
-        data = []
-        # we need a template to broadcast all dataset variables against
-        # using stride_tricks lets us make the ndarray for broadcasting without
-        # having to allocate memory
-        shape = tuple(self.dims.values())
-        empty_data = np.lib.stride_tricks.as_strided(np.array(0), shape=shape,
-                                                     strides=[0] * len(shape))
-        template = variable.Variable(self.dims.keys(), empty_data)
-        for k in columns:
-            _, var = variable.broadcast_variables(template, self._arrays[k])
-            data.append(var.values.reshape(-1))
-
+        orig_arrays = (self._arrays[k] for k in columns)
+        broadcast_arrays = variable.broadcast_variables(*orig_arrays)
+        data = (arr.values.reshape(-1) for arr in broadcast_arrays)
         index = self.coords.to_index()
         return pd.DataFrame(OrderedDict(zip(columns, data)), index=index)
 
