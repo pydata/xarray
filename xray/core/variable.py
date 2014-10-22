@@ -833,61 +833,61 @@ class Coordinate(Variable):
         return self.to_index().is_numeric()
 
 
-def broadcast_variables(first, second):
-    """Given two Variables, return two Variables with matching dimensions and
-    numpy broadcast compatible data.
+def _broadcast_compatible_variables(*variables):
+    """Given any number of variables, return variables with matching dimensions
+    and numpy broadcast compatible data.
 
-    Parameters
-    ----------
-    first, second : Variable
-        Variable objects to broadcast.
-
-    Returns
-    -------
-    first_broadcast, second_broadcast : Variable
-        Broadcast arrays. The data on each variable will be a view of the
-        data on the corresponding original arrays, but dimensions will be
-        reordered and inserted so that both broadcast arrays have the same
-        dimensions. The new dimensions are sorted in order of appearence in the
-        first variable's dimensions followed by the second variable's
-        dimensions.
+    The data on the returned variables will be a view of the data on the
+    corresponding original arrays, but dimensions will be reordered and
+    inserted so that both broadcast arrays have the same dimensions. The new
+    dimensions are sorted in order of appearence in the first variable's
+    dimensions followed by the second variable's dimensions.
     """
-    # TODO: add unit tests specifically for this function
     # validate dimensions
-    dim_lengths = dict(zip(first.dims, first.shape))
-    for k, v in zip(second.dims, second.shape):
-        if k in dim_lengths and dim_lengths[k] != v:
-            raise ValueError('operands could not be broadcast together '
-                             'with mismatched lengths for dimension %r: %s'
-                             % (k, (dim_lengths[k], v)))
-    for dims in [first.dims, second.dims]:
-        if len(set(dims)) < len(dims):
-            raise ValueError('broadcasting requires that neither operand '
-                             'has duplicate dimensions: %r' % list(dims))
+    all_dims = OrderedDict()
+    for var in variables:
+        var_dims = var.dims
+        if len(set(var_dims)) < len(var_dims):
+            raise ValueError('broadcasting cannot handle duplicate '
+                             'dimensions: %r' % list(var_dims))
+        for d, s in zip(var_dims, var.shape):
+            if d not in all_dims:
+                all_dims[d] = s
+            elif all_dims[d] != s:
+                raise ValueError('operands cannot be broadcast together '
+                                 'with mismatched lengths for dimension %r: %s'
+                                 % (d, (all_dims[d], s)))
 
-    # build dimensions for new Array
-    second_only_dims = [d for d in second.dims
-                        if d not in first.dims]
-    dims = list(first.dims) + second_only_dims
+    broadcast_vars = []
+    for var in variables:
+        data = var.values[(Ellipsis,) + (None,) * (len(all_dims) - var.ndim)]
+        var_dims = set(var.dims)
+        dims = var.dims + tuple(d for d in all_dims if d not in var_dims)
+        expanded_var = Variable(dims, data, var.attrs, var.encoding)
+        broadcast_vars.append(expanded_var.transpose(*all_dims))
+    return tuple(broadcast_vars)
 
-    # expand first_data's dimensions so it's broadcast compatible after
-    # adding second's dimensions at the end
-    first_data = first.values[(Ellipsis,) + (None,) * len(second_only_dims)]
-    new_first = Variable(dims, first_data, first.attrs, first.encoding)
-    # expand and reorder second_data so the dimensions line up
-    first_only_dims = [d for d in dims if d not in second.dims]
-    second_dims = list(second.dims) + first_only_dims
-    second_data = second.values[(Ellipsis,) + (None,) * len(first_only_dims)]
-    new_second = Variable(second_dims, second_data, second.attrs,
-                          second.encoding).transpose(*dims)
-    return new_first, new_second
+
+def _set_data_directly(var, values):
+    var._data = NumpyArrayAdapter(values)
+
+
+def broadcast_variables(*variables):
+    """Given any number of variables, return variables with matching dimensions
+    and broadcast data.
+    """
+    variables = _broadcast_compatible_variables(*variables)
+    broadcast_data = np.broadcast_arrays(*[v.values for v in variables])
+    for var, data in zip(variables, broadcast_data):
+        _set_data_directly(var, data)
+    return variables
 
 
 def _broadcast_variable_data(self, other):
     if all(hasattr(other, attr) for attr
              in ['dims', 'values', 'shape', 'encoding']):
         # `other` satisfies the necessary Variable API for broadcast_variables
-        new_self, new_other = broadcast_variables(self, other)
+        new_self, new_other = _broadcast_compatible_variables(self, other)
         self_data = new_self.values
         other_data = new_other.values
         dims = new_self.dims

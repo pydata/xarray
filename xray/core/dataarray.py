@@ -816,7 +816,7 @@ class DataArray(AbstractArray):
         Other coordinates are included as columns in the DataFrame.
         """
         # TODO: add a 'name' parameter
-        return self._dataset.to_dataframe()
+        return self._dataset._to_dataframe(self.dims)
 
     def to_series(self):
         """Convert this array into a pandas.Series.

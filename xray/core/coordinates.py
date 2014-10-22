@@ -58,11 +58,14 @@ class AbstractCoordinates(Mapping):
         """
         return self._dataset._copy_listed(self._names)
 
-    def to_index(self):
+    def to_index(self, ordered_dims=None):
         """Convert all index coordinates into a :py:class:`pandas.MultiIndex`
         """
-        indexes = [self._dataset._arrays[k].to_index() for k in self.dims]
-        return utils.multi_index_from_product(indexes, names=list(self.dims))
+        if ordered_dims is None:
+            ordered_dims = self.dims
+        indexes = [self._dataset._arrays[k].to_index() for k in ordered_dims]
+        return utils.multi_index_from_product(indexes,
+                                              names=list(ordered_dims))
 
     def _merge_validate(self, other):
         """Determine conflicting variables to be dropped from either self or

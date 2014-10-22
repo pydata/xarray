@@ -15,6 +15,7 @@ Top-level functions
    :toctree: generated/
 
    align
+   broadcast_arrays
    concat
 
 Dataset

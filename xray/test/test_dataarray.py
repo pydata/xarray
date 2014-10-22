@@ -3,7 +3,8 @@ import pandas as pd
 from copy import deepcopy
 from textwrap import dedent
 
-from xray import concat, Dataset, DataArray, Coordinate, Variable, align
+from xray import (align, concat, broadcast_arrays, Dataset, DataArray,
+                  Coordinate, Variable)
 from xray.core.pycompat import iteritems, OrderedDict
 from . import TestCase, ReturnItem, source_ndarray, unittest
 
@@ -892,6 +893,28 @@ class TestDataArray(TestCase):
         self.assertDataArrayIdentical(dv1, self.dv[:5])
         self.assertDataArrayIdentical(dv2, self.dv[:5])
 
+    def test_broadcast_arrays(self):
+        x = DataArray([1, 2], coords=[('a', [-1, -2])], name='x')
+        y = DataArray([1, 2], coords=[('b', [3, 4])], name='y')
+        x2, y2 = broadcast_arrays(x, y)
+        expected_coords = [('a', [-1, -2]), ('b', [3, 4])]
+        expected_x2 = DataArray([[1, 1], [2, 2]], expected_coords, name='x')
+        expected_y2 = DataArray([[1, 2], [1, 2]], expected_coords, name='y')
+        self.assertDataArrayIdentical(expected_x2, x2)
+        self.assertDataArrayIdentical(expected_y2, y2)
+
+        x = DataArray(np.random.randn(2, 3), dims=['a', 'b'])
+        y = DataArray(np.random.randn(3, 2), dims=['b', 'a'])
+        x2, y2 = broadcast_arrays(x, y)
+        expected_x2 = x
+        expected_y2 = y.T
+        self.assertDataArrayIdentical(expected_x2, x2)
+        self.assertDataArrayIdentical(expected_y2, y2)
+
+        with self.assertRaisesRegexp(ValueError, 'cannot broadcast'):
+            z = DataArray([1, 2], coords=[('a', [-10, 20])])
+            broadcast_arrays(x, z)
+
     def test_to_pandas(self):
         # 0d
         actual = DataArray(42).to_pandas()
@@ -925,6 +948,15 @@ class TestDataArray(TestCase):
 
         with self.assertRaisesRegexp(ValueError, 'cannot convert'):
             DataArray(np.random.randn(1, 2, 3, 4, 5)).to_pandas()
+
+    def test_to_dataframe(self):
+        # regression test for #260
+        arr = DataArray(np.random.randn(3, 4),
+                        [('B', [1, 2, 3]), ('A', list('cdef'))])
+        expected = arr.to_series()
+        actual = arr.to_dataframe()[None]
+        self.assertArrayEqual(expected.values, actual.values)
+        self.assertArrayEqual(expected.index.values, actual.index.values)
 
     def test_to_and_from_series(self):
         expected = self.dv.to_dataframe()['foo']

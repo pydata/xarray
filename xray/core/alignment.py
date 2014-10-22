@@ -7,7 +7,15 @@ import numpy as np
 
 from . import utils
 from .pycompat import iteritems, OrderedDict
-from .variable import as_variable, Variable, Coordinate
+from .variable import as_variable, Variable, Coordinate, broadcast_variables
+
+
+def _get_all_indexes(objects):
+    all_indexes = defaultdict(list)
+    for obj in objects:
+        for k, v in iteritems(obj.indexes):
+            all_indexes[k].append(v)
+    return all_indexes
 
 
 def align(*objects, **kwargs):
@@ -55,10 +63,7 @@ def align(*objects, **kwargs):
     elif join == 'right':
         join_indices = operator.itemgetter(-1)
 
-    all_indexes = defaultdict(list)
-    for obj in objects:
-        for k, v in iteritems(obj.indexes):
-            all_indexes[k].append(v)
+    all_indexes = _get_all_indexes(objects)
 
     # Exclude dimensions with all equal indices to avoid unnecessary reindexing
     # work.
@@ -231,3 +236,46 @@ def concat(objs, dim='concat_dim', indexers=None, mode='different',
         raise ValueError('must supply at least one object to concatenate')
     cls = type(first_obj)
     return cls._concat(objs, dim, indexers, mode, concat_over, compat)
+
+
+def broadcast_arrays(*args):
+    """Explicitly broadcast any number of DataArrays against one another.
+
+    xray objects automatically broadcast against each other in arithmetic
+    operations, so this function should not be necessary for normal use.
+
+    Parameters
+    ----------
+    *args: DataArray
+        Arrays to broadcast against each other.
+
+    Returns
+    -------
+    broadcast: tuple of DataArray
+        The same data as the input arrays, but with additional dimensions
+        inserted so that all arrays have the same dimensions and shape.
+
+    Raises
+    ------
+    ValueError
+        If indexes on the different arrays are not aligned.
+    """
+    from .dataarray import DataArray
+
+    all_indexes = _get_all_indexes(args)
+    for k, v in all_indexes.items():
+        if not all(v[0].equals(vi) for vi in v[1:]):
+            raise ValueError('cannot broadcast arrays: the %s index is not '
+                             'aligned (use xray.align first)' % k)
+
+    vars = broadcast_variables(*[a.variable for a in args])
+    indexes = dict((k, all_indexes[k][0]) for k in vars[0].dims)
+
+    arrays = []
+    for a, v in zip(args, vars):
+        arr = DataArray(v.values, indexes, v.dims, a.name, a.attrs, a.encoding)
+        for k, v in a.coords.items():
+            arr.coords[k] = v
+        arrays.append(arr)
+
+    return tuple(arrays)
