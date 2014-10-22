@@ -1503,6 +1503,15 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
 
         return concatenated
 
+    def _to_dataframe(self, ordered_dims):
+        columns = [k for k in self if k not in self.dims]
+        orig_arrays = (self._arrays[k] for k in columns)
+        broadcast_arrays = variable.broadcast_variables(*orig_arrays)
+        data = [arr.transpose(*ordered_dims).values.reshape(-1)
+                for arr in broadcast_arrays]
+        index = self.coords.to_index(ordered_dims)
+        return pd.DataFrame(OrderedDict(zip(columns, data)), index=index)
+
     def to_dataframe(self):
         """Convert this dataset into a pandas.DataFrame.
 
@@ -1510,12 +1519,7 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
         DataFrame. The DataFrame is be indexed by the Cartesian product of
         this dataset's indices.
         """
-        columns = [k for k in self if k not in self.dims]
-        orig_arrays = (self._arrays[k] for k in columns)
-        broadcast_arrays = variable.broadcast_variables(*orig_arrays)
-        data = (arr.values.reshape(-1) for arr in broadcast_arrays)
-        index = self.coords.to_index()
-        return pd.DataFrame(OrderedDict(zip(columns, data)), index=index)
+        return self._to_dataframe(self.dims)
 
     @classmethod
     def from_dataframe(cls, dataframe):

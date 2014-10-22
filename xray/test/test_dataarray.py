@@ -926,6 +926,15 @@ class TestDataArray(TestCase):
         with self.assertRaisesRegexp(ValueError, 'cannot convert'):
             DataArray(np.random.randn(1, 2, 3, 4, 5)).to_pandas()
 
+    def test_to_dataframe(self):
+        # regression test for #260
+        arr = DataArray(np.random.randn(3, 4),
+                        [('B', [1, 2, 3]), ('A', list('cdef'))])
+        expected = arr.to_series()
+        actual = arr.to_dataframe()[None]
+        self.assertArrayEqual(expected.values, actual.values)
+        self.assertArrayEqual(expected.index.values, actual.index.values)
+
     def test_to_and_from_series(self):
         expected = self.dv.to_dataframe()['foo']
         actual = self.dv.to_series()
