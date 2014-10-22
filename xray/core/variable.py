@@ -834,8 +834,8 @@ class Coordinate(Variable):
 
 
 def _broadcast_compatible_variables(*variables):
-    """Given two Variables, return two Variables with matching dimensions and
-    numpy broadcast compatible data.
+    """Given any number of variables, return variables with matching dimensions
+    and numpy broadcast compatible data.
 
     The data on the returned variables will be a view of the data on the
     corresponding original arrays, but dimensions will be reordered and
@@ -873,8 +873,8 @@ def _set_data_directly(var, values):
 
 
 def broadcast_variables(*variables):
-    """Given two Variables, return two Variables with identical dimensions and
-    broadcast data.
+    """Given any number of variables, return variables with matching dimensions
+    and broadcast data.
     """
     variables = _broadcast_compatible_variables(*variables)
     broadcast_data = np.broadcast_arrays(*[v.values for v in variables])
