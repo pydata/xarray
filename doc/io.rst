@@ -206,10 +206,10 @@ __ http://iri.columbia.edu/
     Out[4]:
     <xray.Dataset>
     Dimensions:  (T: 1422, X: 1405, Y: 621)
-    Index Coordinates:
-        T        (T) float32 -779.5 -778.5 -777.5 -776.5 -775.5 -774.5 -773.5 -772.5 -771.5 ...
-        X        (X) float32 -125.0 -124.958 -124.917 -124.875 -124.833 -124.792 -124.75 ...
-        Y        (Y) float32 49.9167 49.875 49.8333 49.7917 49.75 49.7083 49.6667 49.625 ...
+    Coordinates:
+      * X        (X) float32 -125.0 -124.958 -124.917 -124.875 -124.833 -124.792 -124.75 ...
+      * T        (T) float32 -779.5 -778.5 -777.5 -776.5 -775.5 -774.5 -773.5 -772.5 -771.5 ...
+      * Y        (Y) float32 49.9167 49.875 49.8333 49.7917 49.75 49.7083 49.6667 49.625 ...
     Variables:
         ppt      (T, Y, X) float64 ...
         tdmean   (T, Y, X) float64 ...
@@ -243,38 +243,22 @@ over the network until we look at particular values:
     Out[5]:
     <xray.DataArray 'tmax' (T: 500, Y: 207, X: 469)>
     [48541500 values with dtype=float64]
-    Index Coordinates:
-        T (T) float32 -779.5 -778.5 -777.5 -776.5 -775.5 -774.5 -773.5 -772.5 -771.5 -770.5 ...
-        Y (Y) float32 49.9167 49.7917 49.6667 49.5417 49.4167 49.2917 49.1667 49.0417 ...
-        X (X) float32 -125.0 -124.875 -124.75 -124.625 -124.5 -124.375 -124.25 -124.125 ...
+    Coordinates:
+      * Y        (Y) float32 49.9167 49.7917 49.6667 49.5417 49.4167 49.2917 49.1667 ...
+      * X        (X) float32 -125.0 -124.875 -124.75 -124.625 -124.5 -124.375 -124.25 ...
+      * T        (T) float32 -779.5 -778.5 -777.5 -776.5 -775.5 -774.5 -773.5 -772.5 -771.5 ...
     Attributes:
         pointwidth: 120
-        missing_value: -9999
-        units: Celsius_scale
         standard_name: air_temperature
+        units: Celsius_scale
         expires: 1375315200
 
-Now, let's access and plot a small subset:
+Finally, let's plot a small subset with matplotlib:
 
 .. ipython::
     :verbatim:
 
     In [6]: tmax_ss = tmax[0]
-
-For this dataset, we still need to manually fill in some of the values with
-`NaN` to indicate that they are missing. As soon as we access
-``tmax_ss.values``, the values are loaded over the network and cached on the
-DataArray so they can be manipulated:
-
-.. ipython::
-    :verbatim:
-
-    In [7]: tmax_ss.values[tmax_ss.values < -99] = np.nan
-
-Finally, we can plot the values with matplotlib:
-
-.. ipython::
-    :verbatim:
 
     In [8]: import matplotlib.pyplot as plt
 
@@ -288,3 +272,8 @@ Finally, we can plot the values with matplotlib:
     In [113]: plt.colorbar(label='tmax (deg C)')
 
 .. image:: _static/opendap-prism-tmax.png
+
+.. note::
+
+    We do hope to eventually add plotting methods to xray to make this easier
+    (:issue:`185`).

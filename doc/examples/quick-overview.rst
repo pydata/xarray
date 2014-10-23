@@ -23,17 +23,15 @@ array or list, with optional *dimensions* and *coordinates*:
 .. ipython:: python
 
    xray.DataArray(np.random.randn(2, 3))
-   xray.DataArray(np.random.randn(2, 3), dims=['x', 'y'])
    xray.DataArray(np.random.randn(2, 3), [('x', ['a', 'b']), ('y', [-2, 0, 2])])
 
-Or you can pass in a pandas data structure:
+You can also pass in pandas data structures directly:
 
 .. ipython:: python
 
     df = pd.DataFrame(np.random.randn(2, 3), index=['a', 'b'], columns=[-2, 0, 2])
     df.index.name = 'x'
     df.columns.name = 'y'
-    df
     foo = xray.DataArray(df, name='foo')
     foo
 
@@ -45,6 +43,7 @@ Here are the key properties for a ``DataArray``:
     foo.values
     foo.dims
     foo.coords['y']
+    # you can use this dictionary to store arbitrary metadata
     foo.attrs
 
 Indexing
@@ -118,5 +117,5 @@ A key feature of xray is robust conversion to and from pandas objects:
 
 .. ipython:: python
 
-    foo.to_dataframe()
     foo.to_series()
+    foo.to_pandas()
