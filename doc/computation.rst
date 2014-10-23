@@ -144,7 +144,7 @@ Alignment and coordinates
 
 For now, performing most binary operations on xray objects requires that the
 all *index* :ref:`coordinates` (that is, coordinates with the same name as a
-dimension) have the same values:
+dimension, marked by ``*``) have the same values:
 
 .. ipython::
 
