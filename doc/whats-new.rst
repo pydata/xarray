@@ -1,8 +1,8 @@
 What's New
 ==========
 
-v0.3.1 (not yet released)
---------------------------
+v0.3.1 (22 October, 2014)
+-------------------------
 
 This is mostly a bug-fix release to make xray compatible with the latest
 release of pandas (v0.15).
