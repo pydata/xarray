@@ -19,16 +19,17 @@ New features
 ~~~~~~~~~~~~
 
 - Added :py:meth:`~xray.Dataset.count` and :py:meth:`~xray.Dataset.dropna`
-  methods, copied from pandas, for dealing with missing values.
+  methods, copied from pandas, for working with missing values (:issue:`247`,
+  :issue:`58`).
 - Added :py:meth:`DataArray.to_pandas <xray.DataArray.to_pandas>` for
   converting a data array into the pandas object with the same dimensionality
-  (1D -> ``Series``, 2D -> ``DataFrame``, etc.).
+  (1D to Series, 2D to DataFrame, etc.) (:issue:`255`).
 - Support for reading gzipped netCDF3 files (:issue:`239`).
 - Reduced memory usage when writing netCDF files (:issue:`251`).
 - 'missing_value' is now supported as an alias for the '_FillValue' attribute
   on netCDF variables (:issue:`245`).
 - Trivial indexes, equivalent to ``range(n)`` where ``n`` is the length of the
-  dimension, are no longer written to disk.
+  dimension, are no longer written to disk (:issue:`245`).
 
 Bug fixes
 ~~~~~~~~~
