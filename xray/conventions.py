@@ -155,9 +155,9 @@ def guess_time_units(dates):
     """
     dates = pd.DatetimeIndex(np.asarray(dates).reshape(-1))
     unique_timedeltas = np.unique(np.diff(dates.values))
-    for time_unit, delta in [('days', '1 days'), ('hours', '3600s'),
-                             ('minutes', '60s'), ('seconds', '1s')]:
-        unit_delta = pd.to_timedelta(delta)
+    for time_unit, delta in [('days', 86400), ('hours', 3600),
+                             ('minutes', 60), ('seconds', 1)]:
+        unit_delta = np.timedelta64(10 ** 9 * delta, 'ns')
         diffs = unique_timedeltas / unit_delta
         if np.all(diffs == diffs.astype(int)):
             break
@@ -189,17 +189,19 @@ def encode_cf_datetime(dates, units=None, calendar=None):
     netCDF4.date2num
     """
     import netCDF4 as nc4
+
+    dates = np.asarray(dates)
+
     if units is None:
         units = guess_time_units(dates)
     if calendar is None:
         calendar = 'proleptic_gregorian'
 
-    if (isinstance(dates, np.ndarray)
-            and np.issubdtype(dates.dtype, np.datetime64)):
+    if np.issubdtype(dates.dtype, np.datetime64):
         # for now, don't bother doing any trickery like decode_cf_datetime to
         # convert dates to numbers faster
         # note: numpy's broken datetime conversion only works for us precision
-        dates = np.asarray(dates).astype('M8[us]').astype(datetime)
+        dates = dates.astype('M8[us]').astype(datetime)
 
     if hasattr(dates, 'ndim') and dates.ndim == 0:
         # unpack dates because date2num doesn't like 0-dimensional arguments
