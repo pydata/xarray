@@ -4,13 +4,49 @@ What's New
 v0.3.1 (not yet released)
 --------------------------
 
-- Added :py:math:`~xray.Dataset.count` and :py:math:`~xray.Dataset.dropna`
-  methods for dealing with missing values.
+This is mostly a bug-fix release to make xray compatible with the latest
+release of pandas (v0.15).
+
+We added several features to better support working with missing values and
+exporting xray objects to pandas. We also reorganized the internal API for
+serializing and deserializing datasets, but this change should be almost
+entirely transparent to users.
+
+Other than breaking the experimental DataStore API, there should be no
+backwards incompatible changes.
+
+New features
+~~~~~~~~~~~~
+
+- Added :py:meth:`~xray.Dataset.count` and :py:meth:`~xray.Dataset.dropna`
+  methods, copied from pandas, for dealing with missing values.
+- Added :py:meth:`DataArray.to_pandas <xray.DataArray.to_pandas>` for
+  converting a data array into the pandas object with the same dimensionality
+  (1D -> ``Series``, 2D -> ``DataFrame``, etc.).
+- Support for reading gzipped netCDF3 files (:issue:`239`).
+- Reduced memory usage when writing netCDF files (:issue:`251`).
+- 'missing_value' is now supported as an alias for the '_FillValue' attribute
+  on netCDF variables (:issue:`245`).
+- Trivial indexes, equivalent to ``range(n)`` where ``n`` is the length of the
+  dimension, are no longer written to disk.
+
+Bug fixes
+~~~~~~~~~
+
+- Compatibility fixes for pandas v0.15 (:issue:`262`).
+- Fixes for display and indexing of ``NaT`` (not-a-time) (:issue:`238`,
+  :issue:`240`)
+- Fix slicing by label was an argument is a data array (:issue:`250`).
+- Test data is now shipped with the source distribution (:issue:`253`).
+- Ensure order does not matter when doing arithemtic with scalar data arrays
+  (:issue:`254`).
+- Order of dimensions preserved with ``DataArray.to_dataframe`` (:issue:`260`).
 
 v0.3.0 (21 September 2014)
 --------------------------
 
-New features:
+New features
+~~~~~~~~~~~~
 
 - **Revamped coordinates**: "coordinates" now refer to all arrays that are not
   used to index a dimension. Coordinates are intended to allow for keeping track
