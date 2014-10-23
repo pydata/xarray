@@ -65,6 +65,11 @@ def _as_compatible_data(data):
     - NumpyArrayAdapter, PandasIndexAdapter and LazilyIndexedArray should
       all pass through unmodified.
     """
+    if isinstance(data, pd.MultiIndex):
+        raise NotImplementedError(
+            'no support yet for using a pandas.MultiIndex in an '
+            'xray.Coordinate')
+
     # don't check for __len__ or __iter__ so as not to cast if data is a numpy
     # numeric type like np.float32
     required = ['dtype', 'shape', 'size', 'ndim']
@@ -79,11 +84,7 @@ def _as_compatible_data(data):
         # we don't want nested self-described arrays
         data = getattr(data, 'values', data)
 
-    if isinstance(data, pd.MultiIndex):
-        raise NotImplementedError(
-            'no support yet for using a pandas.MultiIndex in an '
-            'xray.Coordinate')
-    elif isinstance(data, pd.Index):
+    if isinstance(data, pd.Index):
         # check pd.Index first since it's (currently) an ndarray subclass
         data = PandasIndexAdapter(data)
     elif isinstance(data, np.ndarray):

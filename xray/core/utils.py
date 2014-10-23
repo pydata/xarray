@@ -86,7 +86,7 @@ def safe_cast_to_index(array):
     else:
         kwargs = {}
         if hasattr(array, 'dtype'):
-            if array.dtype == object or array.dtype == np.timedelta64:
+            if array.dtype == object or array.dtype.kind == 'm':
                 kwargs['dtype'] = object
         index = pd.Index(np.asarray(array), **kwargs)
     return index
