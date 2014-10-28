@@ -6,6 +6,7 @@ from collections import defaultdict
 import numpy as np
 
 from . import utils
+from .common import _maybe_promote
 from .pycompat import iteritems, OrderedDict
 from .variable import as_variable, Variable, Coordinate, broadcast_variables
 
@@ -133,19 +134,6 @@ def reindex_variables(variables, indexes, indexers, copy=True):
     def var_indexers(var, indexers):
         return tuple(indexers.get(d, slice(None)) for d in var.dims)
 
-    def get_fill_value_and_dtype(dtype):
-        # N.B. these casting rules should match pandas
-        if np.issubdtype(dtype, np.datetime64):
-            fill_value = np.datetime64('NaT')
-        elif any(np.issubdtype(dtype, t) for t in (int, float)):
-            # convert to floating point so NaN is valid
-            dtype = float
-            fill_value = np.nan
-        else:
-            dtype = object
-            fill_value = np.nan
-        return fill_value, dtype
-
     # create variables for the new dataset
     reindexed = OrderedDict()
     for name, var in iteritems(variables):
@@ -162,7 +150,7 @@ def reindex_variables(variables, indexes, indexers, copy=True):
 
             if any_not_full_slices(assign_to):
                 # there are missing values to in-fill
-                fill_value, dtype = get_fill_value_and_dtype(var.dtype)
+                dtype, fill_value = _maybe_promote(var.dtype)
                 shape = tuple(length if is_full_slice(idx) else idx.size
                               for idx, length in zip(assign_to, var.shape))
                 data = np.empty(shape, dtype=dtype)
