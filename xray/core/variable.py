@@ -89,6 +89,16 @@ def _as_compatible_data(data):
     else:
         # we don't want nested self-described arrays
         data = getattr(data, 'values', data)
+
+        if isinstance(data, np.ma.MaskedArray):
+            mask = np.ma.getmaskarray(data)
+            if mask.any():
+                dtype, fill_value = common._maybe_promote(data.dtype)
+                data = np.asarray(data, dtype=dtype)
+                data[mask] = fill_value
+            else:
+                data = np.asarray(data)
+
         if isinstance(data, np.ndarray):
             if data.dtype.kind == 'M':
                 # TODO: automatically cast arrays of datetime objects as well

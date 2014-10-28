@@ -672,6 +672,20 @@ class TestAsCompatibleData(TestCase):
             self.assertEqual(NumpyArrayAdapter, type(actual))
             self.assertEqual(np.dtype(int), actual.dtype)
 
+    def test_masked_array(self):
+        original = np.ma.MaskedArray(np.arange(5))
+        expected = np.arange(5)
+        actual = _as_compatible_data(original)
+        self.assertArrayEqual(expected, actual)
+        self.assertEqual(np.dtype(int), actual.dtype)
+
+        original = np.ma.MaskedArray(np.arange(5), mask=4 * [False] + [True])
+        expected = np.arange(5.0)
+        expected[-1] = np.nan
+        actual = _as_compatible_data(original)
+        self.assertArrayEqual(expected, actual)
+        self.assertEqual(np.dtype(float), actual.dtype)
+
     def test_datetime(self):
         expected = np.datetime64('2000-01-01T00')
         actual = _as_compatible_data(expected)
