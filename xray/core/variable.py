@@ -70,27 +70,40 @@ def _as_compatible_data(data):
             'no support yet for using a pandas.MultiIndex in an '
             'xray.Coordinate')
 
+    if isinstance(data, pd.Timestamp):
+        # TODO: convert, handle datetime objects, too
+        data = np.datetime64(data, 'ns')
+
     # don't check for __len__ or __iter__ so as not to cast if data is a numpy
     # numeric type like np.float32
     required = ['dtype', 'shape', 'size', 'ndim']
-    if isinstance(data, (np.datetime64, pd.Timestamp)):
-        # note: np.datetime64 is ndarray-like
-        data = np.datetime64(data, 'ns')
-    elif (any(not hasattr(data, attr) for attr in required)
-            or isinstance(data, np.string_)):
+    if (any(not hasattr(data, attr) for attr in required)
+            or isinstance(data, (np.string_, np.datetime64))):
         # data must be ndarray-like
         data = np.asarray(data)
-    elif not isinstance(data, pd.Index):
+
+    # ensure data is properly wrapped up
+    if isinstance(data, pd.Index):
+        # check pd.Index first since it may be an ndarray subclass
+        data = PandasIndexAdapter(data)
+    else:
         # we don't want nested self-described arrays
         data = getattr(data, 'values', data)
 
-    if isinstance(data, pd.Index):
-        # check pd.Index first since it's (currently) an ndarray subclass
-        data = PandasIndexAdapter(data)
-    elif isinstance(data, np.ndarray):
-        if data.dtype.kind == 'M':
-            data = np.asarray(data, 'datetime64[ns]')
-        data = NumpyArrayAdapter(data)
+        if isinstance(data, np.ma.MaskedArray):
+            mask = np.ma.getmaskarray(data)
+            if mask.any():
+                dtype, fill_value = common._maybe_promote(data.dtype)
+                data = np.asarray(data, dtype=dtype)
+                data[mask] = fill_value
+            else:
+                data = np.asarray(data)
+
+        if isinstance(data, np.ndarray):
+            if data.dtype.kind == 'M':
+                # TODO: automatically cast arrays of datetime objects as well
+                data = np.asarray(data, 'datetime64[ns]')
+            data = NumpyArrayAdapter(data)
 
     return data
 

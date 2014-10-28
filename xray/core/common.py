@@ -110,3 +110,20 @@ def squeeze(xray_obj, dims, dim=None):
             raise ValueError('cannot select a dimension to squeeze out '
                              'which has length greater than one')
     return xray_obj.isel(**dict((d, 0) for d in dim))
+
+
+def _maybe_promote(dtype):
+    """Simpler equivalent of pandas.core.common._maybe_promote"""
+    # N.B. these casting rules should match pandas
+    if np.issubdtype(dtype, float):
+        fill_value = np.nan
+    elif np.issubdtype(dtype, int):
+        # convert to floating point so NaN is valid
+        dtype = float
+        fill_value = np.nan
+    elif np.issubdtype(dtype, np.datetime64):
+        fill_value = np.datetime64('NaT')
+    else:
+        dtype = object
+        fill_value = np.nan
+    return dtype, fill_value
