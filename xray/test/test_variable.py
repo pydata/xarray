@@ -676,7 +676,7 @@ class TestAsCompatibleData(TestCase):
         expected = np.datetime64('2000-01-01T00')
         actual = _as_compatible_data(expected)
         self.assertEqual(expected, actual)
-        self.assertEqual(np.datetime64, type(actual))
+        self.assertEqual(NumpyArrayAdapter, type(actual))
         self.assertEqual(np.dtype('datetime64[ns]'), actual.dtype)
 
         expected = np.array([np.datetime64('2000-01-01T00')])
