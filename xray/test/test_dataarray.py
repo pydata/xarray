@@ -893,6 +893,15 @@ class TestDataArray(TestCase):
         self.assertDataArrayIdentical(dv1, self.dv[:5])
         self.assertDataArrayIdentical(dv2, self.dv[:5])
 
+    def test_align_dtype(self):
+        # regression test for #264
+        x1 = np.arange(30)
+        x2 = np.arange(5, 35)
+        a = DataArray(np.random.random((30,)).astype('f32'), {'x': x1})
+        b = DataArray(np.random.random((30,)).astype('f32'), {'x': x2})
+        c, d = align(a, b, join='outer')
+        self.assertEqual(c.dtype, np.float32)
+
     def test_broadcast_arrays(self):
         x = DataArray([1, 2], coords=[('a', [-1, -2])], name='x')
         y = DataArray([1, 2], coords=[('b', [3, 4])], name='y')
