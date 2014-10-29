@@ -154,7 +154,7 @@ def guess_time_units(dates):
     (the first one that can evenly divide all unique time deltas in `dates`)
     """
     dates = pd.DatetimeIndex(np.asarray(dates).reshape(-1))
-    unique_timedeltas = np.unique(np.diff(dates.values))
+    unique_timedeltas = np.unique(np.diff(dates.values[pd.notnull(dates)]))
     for time_unit, delta in [('days', 86400), ('hours', 3600),
                              ('minutes', 60), ('seconds', 1)]:
         unit_delta = np.timedelta64(10 ** 9 * delta, 'ns')

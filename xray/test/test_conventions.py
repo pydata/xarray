@@ -272,7 +272,9 @@ class TestDatetime(TestCase):
                                  'hours since 1900-01-01 12:00:00'),
                                 (['1900-01-01', '1900-01-02',
                                   '1900-01-02 00:00:01'],
-                                 'seconds since 1900-01-01 00:00:00')]:
+                                 'seconds since 1900-01-01 00:00:00'),
+                                (pd.to_datetime(['1900-01-01', '1900-01-02', 'NaT']),
+                                 'days since 1900-01-01 00:00:00')]:
             self.assertEqual(expected, conventions.guess_time_units(dates))
 
 
