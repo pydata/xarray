@@ -152,6 +152,12 @@ class DatasetIOTestCases(object):
                 expected['x'] = expected['x'].astype('S')
             self.assertDatasetIdentical(expected, actual)
 
+    def test_roundtrip_datetime_data(self):
+        times = pd.to_datetime(['2000-01-01', '2000-01-02', 'NaT'])
+        expected = Dataset({'t': ('t', times)})
+        with self.roundtrip(expected) as actual:
+            self.assertDatasetIdentical(expected, actual)
+
     def test_roundtrip_example_1_netcdf(self):
         expected = open_example_dataset('example_1.nc')
         with self.roundtrip(expected) as actual:

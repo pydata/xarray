@@ -203,11 +203,11 @@ def encode_cf_datetime(dates, units=None, calendar=None):
         # note: numpy's broken datetime conversion only works for us precision
         dates = dates.astype('M8[us]').astype(datetime)
 
-    if hasattr(dates, 'ndim') and dates.ndim == 0:
-        # unpack dates because date2num doesn't like 0-dimensional arguments
-        dates = dates.item()
+    def encode_datetime(d):
+        return np.nan if d is None else nc4.date2num(d, units, calendar)
 
-    num = nc4.date2num(dates, units, calendar)
+    num = np.array([encode_datetime(d) for d in dates.flat])
+    num = num.reshape(dates.shape)
     return (num, units, calendar)
 
 
