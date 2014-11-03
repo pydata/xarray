@@ -39,7 +39,7 @@ def align(*objects, **kwargs):
         Method for joining the indexes of the passed objects along each
         dimension:
          - 'outer': use the union of object indexes
-         - 'outer': use the intersection of object indexes
+         - 'inner': use the intersection of object indexes
          - 'left': use indexes from the first object with each dimension
          - 'right': use indexes from the last object with each dimension
     copy : bool, optional
