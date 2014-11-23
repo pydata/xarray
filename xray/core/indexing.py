@@ -44,7 +44,7 @@ def canonicalize_indexer(key, ndim):
             indexer = np.asarray(indexer)
             if indexer.ndim == 0:
                 indexer = int(np.asscalar(indexer))
-            if isinstance(indexer, np.ndarray):
+            else:
                 if indexer.ndim != 1:
                     raise ValueError('orthogonal array indexing only supports '
                                      '1d arrays')
