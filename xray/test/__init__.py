@@ -83,30 +83,18 @@ class TestCase(unittest.TestCase):
     def assertArrayEqual(self, a1, a2):
         assert_array_equal(a1, a2)
 
+    # TODO: write a generic "assertEqual" that uses the equals method, or just
+    # switch to py.test and add an appropriate hook.
+
     def assertDatasetEqual(self, d1, d2):
         # this method is functionally equivalent to `assert d1 == d2`, but it
         # checks each aspect of equality separately for easier debugging
-        self.assertEqual(sorted(d1.vars, key=str),
-                         sorted(d2.vars, key=str))
-        self.assertEqual(sorted(d1.coords, key=str),
-                         sorted(d2.coords, key=str))
-        for k in d1:
-            v1 = d1._arrays[k]
-            v2 = d2._arrays[k]
-            self.assertVariableEqual(v1, v2)
+        assert d1.equals(d2), (d1, d2)
 
     def assertDatasetIdentical(self, d1, d2):
         # this method is functionally equivalent to `assert d1.identical(d2)`,
         # but it checks each aspect of equality separately for easier debugging
-        assert utils.dict_equiv(d1.attrs, d2.attrs), (d1.attrs, d2.attrs)
-        self.assertEqual(sorted(d1.vars, key=str),
-                         sorted(d2.vars, key=str))
-        self.assertEqual(sorted(d1.coords, key=str),
-                         sorted(d2.coords, key=str))
-        for k in d1:
-            v1 = d1._arrays[k]
-            v2 = d2._arrays[k]
-            self.assertVariableIdentical(v1, v2)
+        assert d1.identical(d2), (d1, d2)
 
     def assertDatasetAllClose(self, d1, d2, rtol=1e-05, atol=1e-08):
         # for now, *don't* check coordinates vs variables

@@ -16,6 +16,7 @@ Top-level functions
 
    align
    concat
+   decode_cf
 
 Dataset
 =======
