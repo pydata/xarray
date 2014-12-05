@@ -61,7 +61,7 @@ class DatasetIOTestCases(object):
 
         expected = create_test_data()
         expected['float_var'] = ([], 1.0e9, {'units': 'units of awesome'})
-        expected['string_var'] = ([], 'foobar')
+        expected['string_var'] = ([], np.array('foobar', dtype='S'))
         with self.create_store() as store:
             expected.dump_to_store(store)
             # the test data contains times.  In case the store
