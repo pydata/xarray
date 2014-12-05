@@ -60,8 +60,8 @@ class DatasetIOTestCases(object):
             raise unittest.SkipTest('scipy.io.netcdf is broken on Python 3')
 
         expected = create_test_data()
-        expected['xray_awesomeness'] = ([], np.array(1.e9),
-                                        {'units': 'units of awesome'})
+        expected['float_var'] = ([], 1.0e9, {'units': 'units of awesome'})
+        expected['string_var'] = ([], 'foobar')
         with self.create_store() as store:
             expected.dump_to_store(store)
             # the test data contains times.  In case the store

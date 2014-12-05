@@ -343,7 +343,8 @@ def string_to_char(arr):
     kind = arr.dtype.kind
     if kind not in ['U', 'S']:
         raise ValueError('argument must be a string')
-    return arr.view(kind + '1').reshape(*[arr.shape + (-1,)])
+    # TODO: handle cases where this fails (for non-contiguous arrays?)
+    return arr.reshape(arr.shape + (1,)).view(kind + '1')
 
 
 def char_to_string(arr):
