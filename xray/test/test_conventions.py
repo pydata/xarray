@@ -1,11 +1,11 @@
+import contextlib
 import numpy as np
 import pandas as pd
 import warnings
-import contextlib
 
 from xray import conventions, Variable, Dataset
 from xray.core import utils, indexing
-from . import TestCase, requires_netCDF4
+from . import TestCase, requires_netCDF4, unittest
 from .test_backends import CFEncodedDataTest
 from xray.core.pycompat import iteritems
 from xray.backends.memory import InMemoryDataStore
@@ -291,6 +291,21 @@ class TestEncodeCFVariable(TestCase):
                 conventions.encode_cf_variable(var)
 
 
+@requires_netCDF4
+class TestDecodeCF(TestCase):
+    def test_dataset(self):
+        original = Dataset({
+            't': ('t', [0, 1, 2], {'units': 'days since 2000-01-01'}),
+            'foo': ('t', [0, 0, 0], {'coordinates': 'y', 'units': 'bar'}),
+            'y': ('t', [5, 10, -999], {'_FillValue': -999})
+        })
+        expected = Dataset({'foo': ('t', [0, 0, 0], {'units': 'bar'})},
+                           {'t': pd.date_range('2000-01-01', periods=3),
+                            'y': ('t', [5.0, 10.0, np.nan])})
+        actual = conventions.cf_decode(original)
+        self.assertDatasetIdentical(expected, actual)
+
+
 class CFEncodedInMemoryStore(InMemoryDataStore):
 
     def __init__(self, *args, **kwdargs):
@@ -346,3 +361,7 @@ class TestCFEncodedDataStore(CFEncodedDataTest, TestCase):
         data.dump_to_store(store)
         store.store_dataset(data)
         yield Dataset.load_store(null_wrap(store))
+
+    def test_roundtrip_coordinates(self):
+        raise unittest.SkipTest('cannot roundtrip coordinates yet for '
+                                'CFEncodedInMemoryStore')

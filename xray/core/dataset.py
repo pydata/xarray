@@ -23,16 +23,19 @@ from .utils import (Frozen, SortedKeysDict, ChainMap,
 from .pycompat import iteritems, itervalues, basestring, OrderedDict
 
 
-def open_dataset(nc, decode_cf=True, mask_and_scale=True, decode_times=True,
-                 concat_characters=True, *args, **kwargs):
-    """Load a dataset from a file or file-like object.
+def open_dataset(filename_or_obj, decode_cf=True, mask_and_scale=True,
+                 decode_times=True, concat_characters=True, decode_coords=True,
+                 group=None):
+    """Load and decode a dataset from a file or file-like object.
 
     Parameters
     ----------
-    nc : str or file
-        Path to a netCDF4 file or an OpenDAP URL (opened with python-netCDF4)
-        or a file object or string serialization of a netCDF3 file (opened with
-        scipy.io.netcdf). If the filename ends with .gz, the file is gunzipped
+    filename_or_obj : str or file
+        Strings are intrepreted as a path to a netCDF file or an OpenDAP URL
+        and opened with python-netCDF4, unless the filename ends with .gz, in
+        which case the file is gunzipped and opened with scipy.io.netcdf (only
+        netCDF3 supported). File-like objects are opened with scipy.io.netcdf
+        (only netCDF3 supported).
     decode_cf : bool, optional
         Whether to decode these variables, assuming they were saved according
         to CF conventions.
@@ -49,49 +52,45 @@ def open_dataset(nc, decode_cf=True, mask_and_scale=True, decode_times=True,
         form string arrays. Dimensions will only be concatenated over (and
         removed) if they have no corresponding variable and if they are only
         used as the last dimension of character arrays.
-    *args, **kwargs : optional
-        Format specific loading options passed on to the datastore.
+    decode_coords : bool, optional
+        If True, decode the 'coordinates' attribute to identify coordinates in
+        the resulting dataset.
+    group : str, optional
+        NetCDF4 group in the given file to open (only works for netCDF4).
 
     Returns
     -------
     dataset : Dataset
         The newly created dataset.
     """
-    # move this to a classmethod Dataset.open?
-    # TODO: this check has the unfortunate side-effect that
-    # paths to files cannot start with 'CDF'.
-    if isinstance(nc, basestring):
-        # If the initialization nc is a string and
-        if nc.endswith('.gz'):
+    if isinstance(filename_or_obj, basestring):
+        if filename_or_obj.endswith('.gz'):
             # if the string ends with .gz, then gunzip and open as netcdf file
             if sys.version_info[:2] < (2, 7):
                 raise ValueError('reading a gzipped netCDF not '
                                  'supported on Python 2.6')
             try:
-                store = backends.ScipyDataStore(gzip.open(nc), *args, **kwargs)
+                store = backends.ScipyDataStore(gzip.open(filename_or_obj))
             except TypeError as e:
                 # TODO: gzipped loading only works with NetCDF3 files.
                 if 'is not a valid NetCDF 3 file' in e.message:
-                    raise ValueError("xray: gzipped file loading only supports NetCDF 3 files.")
+                    raise ValueError('gzipped file loading only supports '
+                                     'NetCDF 3 files.')
                 else:
-                    raise e
-        elif not nc.startswith('CDF'):
-            # nc does not appear to be a string holding the contents of a
-            # netcdf file so we treat it as a path and load it using the
-            # netCDF4 package
-            store = backends.NetCDF4DataStore(nc, *args, **kwargs)
+                    raise
+        else:
+            store = backends.NetCDF4DataStore(filename_or_obj, group=group)
     else:
-        # If nc is a file-like object we read it using
-        # the scipy.io.netcdf package
-        store = backends.ScipyDataStore(nc, *args, **kwargs)
+        # assume filename_or_obj is a file-like object
+        store = backends.ScipyDataStore(filename_or_obj)
+
     if decode_cf:
-        decoder = functools.partial(conventions.cf_decoder,
-                                    mask_and_scale=mask_and_scale,
-                                    decode_times=decode_times,
-                                    concat_characters=concat_characters)
+        return conventions.cf_decode(
+            store, mask_and_scale=mask_and_scale,
+            decode_times=decode_times, concat_characters=concat_characters,
+            decode_coords=decode_coords)
     else:
-        decoder = None
-    return Dataset.load_store(store, decoder=decoder)
+        return Dataset.load_store(store)
 
 
 # list of attributes of pd.DatetimeIndex that are ndarrays of time info
@@ -789,10 +788,10 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
 
     def dump_to_store(self, store, encoder=None):
         """Store dataset contents to a backends.*DataStore object."""
-        variables, attributes = self, self.attrs
+        variables, attrs = conventions.encode_dataset_coordinates(self)
         if encoder:
-            variables, attributes = encoder(variables, attributes)
-        store.store(variables, attributes)
+            variables, attrs = encoder(variables, attrs)
+        store.store(variables, attrs)
         store.sync()
 
     def to_netcdf(self, filepath, **kwdargs):

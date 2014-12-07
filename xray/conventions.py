@@ -595,8 +595,9 @@ def decode_cf_variable(var, concat_characters=True, mask_and_scale=True,
                     attributes, encoding=encoding)
 
 
-def decode_cf_variables(variables, concat_characters=True, mask_and_scale=True,
-                        decode_times=True):
+def decode_cf_variables(variables, attributes, concat_characters=True,
+                        mask_and_scale=True, decode_times=True,
+                        decode_coords=True):
     """
     Decode a several CF encoded variables.
 
@@ -616,6 +617,8 @@ def decode_cf_variables(variables, concat_characters=True, mask_and_scale=True,
                 return False
         return True
 
+    coord_names = set()
+
     new_vars = OrderedDict()
     for k, v in iteritems(variables):
         concat = (concat_characters and v.dtype.kind == 'S' and v.ndim > 0 and
@@ -623,7 +626,65 @@ def decode_cf_variables(variables, concat_characters=True, mask_and_scale=True,
         new_vars[k] = decode_cf_variable(
             v, concat_characters=concat, mask_and_scale=mask_and_scale,
             decode_times=decode_times)
-    return new_vars
+        if decode_coords:
+            coordinates = new_vars[k].attrs.pop('coordinates', None)
+            if coordinates is not None:
+                coord_names.update(coordinates.split())
+
+    if decode_coords and 'coordinates' in attributes:
+        attributes = OrderedDict(attributes)
+        coord_names.update(attributes.pop('coordinates').split())
+
+    return new_vars, attributes, coord_names
+
+
+def cf_decode(obj, concat_characters=True, mask_and_scale=True,
+              decode_times=True, decode_coords=True):
+    """Decode the given object according to CF conventions into a new Dataset.
+
+    Parameters
+    ----------
+    obj : Dataset or DataStore
+        Object to decode.
+    concat_characters : bool, optional
+        Should character arrays be concatenated to strings, for
+        example: ['h', 'e', 'l', 'l', 'o'] -> 'hello'
+    mask_and_scale: bool, optional
+        Lazily scale (using scale_factor and add_offset) and mask
+        (using _FillValue).
+    decode_times : bool, optional
+        Decode cf times (e.g., integers since 'hours since 2000-01-01') to
+        np.datetime64.
+    decode_coords : bool, optional
+        Use the 'coordinates' attribute on variable (or the dataset itself) to
+        identify coordinates.
+
+    Returns
+    -------
+    decoded : Dataset
+    """
+    from .core.dataset import Dataset
+    from .backends.common import AbstractDataStore
+
+    if isinstance(obj, Dataset):
+        vars = obj._arrays
+        attrs = obj.attrs
+        extra_coords = set(obj.coords)
+        file_obj = obj._file_obj
+    elif isinstance(obj, AbstractDataStore):
+        vars, attrs = obj.load()
+        extra_coords = set()
+        file_obj = obj
+    else:
+        raise TypeError('can only decode Dataset or DataStore objects')
+
+    vars, attrs, coord_names = decode_cf_variables(
+        vars, attrs, concat_characters, mask_and_scale, decode_times,
+        decode_coords)
+    ds = Dataset(vars, attrs=attrs)
+    ds = ds.set_coords(coord_names.union(extra_coords))
+    ds._file_obj = file_obj
+    return ds
 
 
 def cf_decoder(variables, attributes,
@@ -648,20 +709,79 @@ def cf_decoder(variables, attributes,
         (using _FillValue).
     decode_times : bool
         Decode cf times ('hours since 2000-01-01') to np.datetime64.
-    decode_cf : bool
-        If false this skips decoding.  This is around for backward
-        compatibility.
 
     Returns
     -------
     decoded_variables : dict
-        A dictionary mapping from variable name to xray.Variable,
+        A dictionary mapping from variable name to xray.Variable objects.
     decoded_attributes : dict
-        A dictionary mapping from attribute name to value
+        A dictionary mapping from attribute name to values.
     """
-    new_vars = decode_cf_variables(variables, concat_characters,
-                                   mask_and_scale, decode_times)
-    return new_vars, attributes
+    variables, attributes, _ = decode_cf_variables(
+        variables, attributes, concat_characters, mask_and_scale, decode_times)
+    return variables, attributes
+
+
+def _encode_coordinates(variables, attributes, non_dim_coord_names):
+    # calculate global and variable specific coordinates
+    non_dim_coord_names = set(non_dim_coord_names)
+    global_coordinates = non_dim_coord_names.copy()
+    variable_coordinates = defaultdict(set)
+    for coord_name in non_dim_coord_names:
+        target_dims = variables[coord_name].dims
+        for k, v in variables.items():
+            if (k not in non_dim_coord_names and k not in v.dims
+                    and any(d in target_dims for d in v.dims)):
+                variable_coordinates[k].add(coord_name)
+                global_coordinates.discard(coord_name)
+
+    variables = OrderedDict((k, v.copy(deep=False))
+                            for k, v in variables.items())
+
+    # These coordinates are saved according to CF conventions
+    for var_name, coord_names in variable_coordinates.items():
+        attrs = variables[var_name].attrs
+        if 'coordinates' in attrs:
+            raise ValueError('cannot serialize coordinates because variable '
+                             "%s already has an attribute 'coordinates'"
+                             % var_name)
+        attrs['coordinates'] = ' '.join(map(str, coord_names))
+
+    # These coordinates are not associated with any particular variables, so we
+    # save them under a global 'coordinates' attribute so xray can roundtrip
+    # the dataset faithfully. Because this serialization goes beyond CF
+    # conventions, only do it if necessary.
+    # Reference discussion:
+    # http://mailman.cgd.ucar.edu/pipermail/cf-metadata/2014/057771.html
+    if global_coordinates:
+        attributes = OrderedDict(attributes)
+        if 'coordinates' in attributes:
+            raise ValueError('cannot serialize coordinates because the global '
+                             "attribute 'coordinates' already exists")
+        attributes['coordinates'] = ' '.join(map(str, global_coordinates))
+
+    return variables, attributes
+
+
+def encode_dataset_coordinates(dataset):
+    """Encode coordinates on the given dataset object into variable specific
+    and global attributes.
+
+    When possible, this is done according to CF conventions.
+
+    Parameters
+    ----------
+    dataset : Dataset
+        Object to encode.
+
+    Returns
+    -------
+    variables : dict
+    attrs : dict
+    """
+    non_dim_coord_names = set(dataset.coords) - set(dataset.dims)
+    return _encode_coordinates(dataset._arrays, dataset.attrs,
+                               non_dim_coord_names=non_dim_coord_names)
 
 
 def cf_encoder(variables, attributes):

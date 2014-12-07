@@ -177,6 +177,29 @@ class DatasetIOTestCases(object):
                 with open_example_dataset('example_1.nc') as actual:
                     self.assertDatasetIdentical(expected, actual)
 
+    def test_roundtrip_coordinates(self):
+        original = Dataset({'foo': ('x', [0, 1])},
+                           {'x': [2, 3], 'y': ('a', [42]), 'z': ('x', [4, 5])})
+
+        with self.roundtrip(original) as actual:
+            self.assertDatasetIdentical(original, actual)
+
+        expected = original.drop_vars('foo')
+        with self.roundtrip(expected) as actual:
+            self.assertDatasetIdentical(expected, actual)
+
+        expected = original.copy()
+        expected.attrs['coordinates'] = 'something random'
+        with self.assertRaisesRegexp(ValueError, 'cannot serialize'):
+            with self.roundtrip(expected):
+                pass
+
+        expected = original.copy(deep=True)
+        expected['foo'].attrs['coordinates'] = 'something random'
+        with self.assertRaisesRegexp(ValueError, 'cannot serialize'):
+            with self.roundtrip(expected):
+                pass
+
     def test_orthogonal_indexing(self):
         in_memory = create_test_data()
         with self.roundtrip(in_memory) as on_disk:
@@ -365,7 +388,7 @@ class NetCDF4DataTest(CFEncodedDataTest, TestCase):
                 self.assertEqual(v, actual['var2'].encoding[k])
 
         # regression test for #156
-        expected = data.isel(dim1=0).reset_coords()
+        expected = data.isel(dim1=0)
         with self.roundtrip(expected) as actual:
             self.assertDatasetEqual(expected, actual)
 
@@ -488,6 +511,33 @@ class NetCDF4DataTest(CFEncodedDataTest, TestCase):
                 with nc4.Dataset(tmp_file2, 'r') as ds:
                     self.assertEqual(ds.variables['time'].getncattr('units'), units)
                     self.assertArrayEqual(ds.variables['time'], np.arange(10) + 4)
+
+    def test_coordinates_encoding(self):
+        def equals_latlon(obj):
+            return obj == 'lat lon' or obj == 'lon lat'
+
+        original = Dataset({'temp': ('x', [0, 1]), 'precip': ('x', [0, -1])},
+                           {'lat': ('x', [2, 3]), 'lon': ('x', [4, 5])})
+        with self.roundtrip(original) as actual:
+            self.assertDatasetIdentical(actual, original)
+        with create_tmp_file() as tmp_file:
+            original.to_netcdf(tmp_file)
+            with open_dataset(tmp_file, decode_coords=False) as ds:
+                self.assertTrue(equals_latlon(ds['temp'].attrs['coordinates']))
+                self.assertTrue(equals_latlon(ds['precip'].attrs['coordinates']))
+                self.assertNotIn('coordinates', ds.attrs)
+                self.assertNotIn('coordinates', ds['lat'].attrs)
+                self.assertNotIn('coordinates', ds['lon'].attrs)
+
+        modified = original.drop_vars('temp', 'precip')
+        with self.roundtrip(modified) as actual:
+            self.assertDatasetIdentical(actual, modified)
+        with create_tmp_file() as tmp_file:
+            modified.to_netcdf(tmp_file)
+            with open_dataset(tmp_file, decode_coords=False) as ds:
+                self.assertTrue(equals_latlon(ds.attrs['coordinates']))
+                self.assertNotIn('coordinates', ds['lat'].attrs)
+                self.assertNotIn('coordinates', ds['lon'].attrs)
 
 
 @requires_netCDF4

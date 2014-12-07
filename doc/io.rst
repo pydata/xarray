@@ -99,13 +99,6 @@ We can load netCDF files to create a new Dataset using the
         foo      (x, y) float64 0.127 0.9667 0.2605 0.8972 0.3767 0.3362 0.4514 0.8403 0.1231 ...
         z        (x) |S1 'a' 'b' 'c' 'd'
 
-.. note::
-
-    Dataset serialization does not yet faithfully preserve all coordinates; as
-    you can see, "other" coordinates will be converted into variables
-    (:issue:`231`). Use :py:meth:`~xray.Dataset.set_coords` to manually set
-    coordinates.
-
 A dataset can also be loaded from a specific group within a netCDF
 file. To load from a group, pass a ``group`` keyword argument to the
 ``open_dataset`` function. The group can be specified as a path-like
