@@ -1010,6 +1010,20 @@ class TestDataset(TestCase):
         expected = Dataset()
         self.assertDatasetIdentical(expected, actual)
 
+        # regression test for GH278
+        ds = Dataset({'x': pd.Index(['bar']), 'a': ('y', [1])}).isel(x=0)
+        # use .loc to ensure consistent results on Python 3
+        actual = ds.to_dataframe().loc[:, ['a', 'x']]
+        expected = pd.DataFrame([[1, 'bar']], index=pd.Index([0], name='y'),
+                                columns=['a', 'x'])
+        assert expected.equals(actual), (expected, actual)
+
+        ds = Dataset({'x': [0], 'y': [1]})
+        actual = ds.to_dataframe()
+        idx = pd.MultiIndex.from_arrays([[0], [1]], names=['x', 'y'])
+        expected = pd.DataFrame([[]], index=idx)
+        assert expected.equals(actual), (expected, actual)
+
     def test_pickle(self):
         data = create_test_data()
         roundtripped = pickle.loads(pickle.dumps(data))

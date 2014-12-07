@@ -508,6 +508,27 @@ class TestVariable(TestCase, VariableSubclassTestCases):
         with self.assertRaisesRegexp(ValueError, 'not found in array dim'):
             v.get_axis_num('foobar')
 
+    def test_set_dims(self):
+        v = Variable(['x'], [0, 1])
+        actual = v.set_dims(['x', 'y'])
+        expected = Variable(['x', 'y'], [[0], [1]])
+        self.assertVariableIdentical(actual, expected)
+
+        actual = v.set_dims(['y', 'x'])
+        self.assertVariableIdentical(actual, expected.T)
+
+        actual = v.set_dims(OrderedDict([('x', 2), ('y', 2)]))
+        expected = Variable(['x', 'y'], [[0, 0], [1, 1]])
+        self.assertVariableIdentical(actual, expected)
+
+        v = Variable(['foo'], [0, 1])
+        actual = v.set_dims('foo')
+        expected = v
+        self.assertVariableIdentical(actual, expected)
+
+        with self.assertRaisesRegexp(ValueError, 'must be a superset'):
+            v.set_dims(['z'])
+
     def test_broadcasting_math(self):
         x = np.random.randn(2, 3)
         v = Variable(['a', 'b'], x)

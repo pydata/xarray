@@ -32,6 +32,28 @@ class TestArrayEquiv(TestCase):
             utils.array_equiv(0, np.array(1, dtype=object)))
 
 
+class TestAsShape(TestCase):
+    def test_expand(self):
+        for array, shape in [
+                (np.arange(3), (3,)),
+                (np.arange(3), (1, 3,)),
+                (np.arange(3), (2, 3,)),
+                (np.arange(3), (1, 2, 3,)),
+                (1, (3, 2, 1,)),
+                (np.empty((3, 4), order='C'), (2, 3, 4)),
+                (np.empty((3, 4), order='F'), (2, 3, 4)),
+                ]:
+            _, expected = np.broadcast_arrays(np.empty(shape), array)
+            actual = utils.as_shape(array, shape)
+            self.assertArrayEqual(expected, actual)
+
+    def test_errors(self):
+        with self.assertRaisesRegexp(ValueError, 'shape must be greater'):
+            utils.as_shape(np.arange(3), ())
+        with self.assertRaisesRegexp(ValueError, 'shape mismatch'):
+            utils.as_shape(np.arange(3), (2,))
+
+
 class TestDictionaries(TestCase):
     def setUp(self):
         self.x = {'a': 'A', 'b': 'B'}
