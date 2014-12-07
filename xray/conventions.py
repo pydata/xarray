@@ -595,7 +595,8 @@ def decode_cf_variable(var, concat_characters=True, mask_and_scale=True,
 
 
 def decode_cf_variables(variables, attributes, concat_characters=True,
-                        mask_and_scale=True, decode_times=True):
+                        mask_and_scale=True, decode_times=True,
+                        decode_coords=True):
     """
     Decode a several CF encoded variables.
 
@@ -624,11 +625,12 @@ def decode_cf_variables(variables, attributes, concat_characters=True,
         new_vars[k] = decode_cf_variable(
             v, concat_characters=concat, mask_and_scale=mask_and_scale,
             decode_times=decode_times)
-        coordinates = new_vars[k].attrs.pop('coordinates', None)
-        if coordinates is not None:
-            coord_names.update(coordinates.split())
+        if decode_coords:
+            coordinates = new_vars[k].attrs.pop('coordinates', None)
+            if coordinates is not None:
+                coord_names.update(coordinates.split())
 
-    if 'coordinates' in attributes:
+    if decode_coords and 'coordinates' in attributes:
         attributes = OrderedDict(attributes)
         coord_names.update(attributes.pop('coordinates').split())
 
@@ -636,21 +638,25 @@ def decode_cf_variables(variables, attributes, concat_characters=True,
 
 
 def cf_decode(obj, concat_characters=True, mask_and_scale=True,
-              decode_times=True):
+              decode_times=True, decode_coords=True):
     """Decode the given object according to CF conventions into a new Dataset.
 
     Parameters
     ----------
     obj : Dataset or DataStore
         Object to decode.
-    concat_characters : bool
+    concat_characters : bool, optional
         Should character arrays be concatenated to strings, for
         example: ['h', 'e', 'l', 'l', 'o'] -> 'hello'
-    mask_and_scale: bool
+    mask_and_scale: bool, optional
         Lazily scale (using scale_factor and add_offset) and mask
         (using _FillValue).
-    decode_times : bool
-        Decode cf times ('hours since 2000-01-01') to np.datetime64.
+    decode_times : bool, optional
+        Decode cf times (e.g., integers since 'hours since 2000-01-01') to
+        np.datetime64.
+    decode_coords : bool, optional
+        Use the 'coordinates' attribute on variable (or the dataset itself) to
+        identify coordinates.
 
     Returns
     -------
@@ -672,7 +678,8 @@ def cf_decode(obj, concat_characters=True, mask_and_scale=True,
         raise TypeError('can only decode Dataset or DataStore objects')
 
     vars, attrs, coord_names = decode_cf_variables(
-        vars, attrs, concat_characters, mask_and_scale, decode_times)
+        vars, attrs, concat_characters, mask_and_scale, decode_times,
+        decode_coords)
     ds = Dataset(vars, attrs=attrs)
     ds = ds.set_coords(coord_names.union(extra_coords))
     ds._file_obj = file_obj

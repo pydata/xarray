@@ -522,22 +522,22 @@ class NetCDF4DataTest(CFEncodedDataTest, TestCase):
             self.assertDatasetIdentical(actual, original)
         with create_tmp_file() as tmp_file:
             original.to_netcdf(tmp_file)
-            with nc4.Dataset(tmp_file) as ds:
-                self.assertTrue(equals_latlon(ds.variables['temp'].coordinates))
-                self.assertTrue(equals_latlon(ds.variables['precip'].coordinates))
-                self.assertFalse(hasattr(ds, 'coordinates'))
-                self.assertFalse(hasattr(ds.variables['lat'], 'coordinates'))
-                self.assertFalse(hasattr(ds.variables['lon'], 'coordinates'))
+            with open_dataset(tmp_file, decode_coords=False) as ds:
+                self.assertTrue(equals_latlon(ds['temp'].attrs['coordinates']))
+                self.assertTrue(equals_latlon(ds['precip'].attrs['coordinates']))
+                self.assertNotIn('coordinates', ds.attrs)
+                self.assertNotIn('coordinates', ds['lat'].attrs)
+                self.assertNotIn('coordinates', ds['lon'].attrs)
 
         modified = original.drop_vars('temp', 'precip')
         with self.roundtrip(modified) as actual:
             self.assertDatasetIdentical(actual, modified)
         with create_tmp_file() as tmp_file:
             modified.to_netcdf(tmp_file)
-            with nc4.Dataset(tmp_file) as ds:
-                self.assertTrue(equals_latlon(ds.coordinates))
-                self.assertFalse(hasattr(ds.variables['lat'], 'coordinates'))
-                self.assertFalse(hasattr(ds.variables['lon'], 'coordinates'))
+            with open_dataset(tmp_file, decode_coords=False) as ds:
+                self.assertTrue(equals_latlon(ds.attrs['coordinates']))
+                self.assertNotIn('coordinates', ds['lat'].attrs)
+                self.assertNotIn('coordinates', ds['lon'].attrs)
 
 
 @requires_netCDF4

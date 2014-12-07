@@ -24,7 +24,8 @@ from .pycompat import iteritems, itervalues, basestring, OrderedDict
 
 
 def open_dataset(filename_or_obj, decode_cf=True, mask_and_scale=True,
-                 decode_times=True, concat_characters=True, group=None):
+                 decode_times=True, concat_characters=True, decode_coords=True,
+                 group=None):
     """Load and decode a dataset from a file or file-like object.
 
     Parameters
@@ -51,6 +52,9 @@ def open_dataset(filename_or_obj, decode_cf=True, mask_and_scale=True,
         form string arrays. Dimensions will only be concatenated over (and
         removed) if they have no corresponding variable and if they are only
         used as the last dimension of character arrays.
+    decode_coords : bool, optional
+        If True, decode the 'coordinates' attribute to identify coordinates in
+        the resulting dataset.
     group : str, optional
         NetCDF4 group in the given file to open (only works for netCDF4).
 
@@ -83,7 +87,8 @@ def open_dataset(filename_or_obj, decode_cf=True, mask_and_scale=True,
     if decode_cf:
         return conventions.cf_decode(
             store, mask_and_scale=mask_and_scale,
-            decode_times=decode_times, concat_characters=concat_characters)
+            decode_times=decode_times, concat_characters=concat_characters,
+            decode_coords=decode_coords)
     else:
         return Dataset.load_store(store)
 
