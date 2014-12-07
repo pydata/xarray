@@ -1018,6 +1018,12 @@ class TestDataset(TestCase):
                                 columns=['a', 'x'])
         assert expected.equals(actual), (expected, actual)
 
+        ds = Dataset({'x': [0], 'y': [1]})
+        actual = ds.to_dataframe()
+        idx = pd.MultiIndex.from_arrays([[0], [1]], names=['x', 'y'])
+        expected = pd.DataFrame([[]], index=idx)
+        assert expected.equals(actual), (expected, actual)
+
     def test_pickle(self):
         data = create_test_data()
         roundtripped = pickle.loads(pickle.dumps(data))
