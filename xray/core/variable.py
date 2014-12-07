@@ -537,6 +537,40 @@ class Variable(common.AbstractArray):
         dims = dict(zip(self.dims, self.shape))
         return common.squeeze(self, dims, dim)
 
+    def set_dims(self, dims):
+        """Return a new variable with expanded dimensions.
+
+        When possible, this operation does not copy this variable's data.
+
+        Parameters
+        ----------
+        dims : str or sequence of str or dict
+            Dimensions to include on the new variable. If a dict, values are
+            used to provide the sizes of new dimensions; otherwise, new
+            dimensions are inserted with length 1.
+
+        Returns
+        -------
+        Variable
+        """
+        if isinstance(dims, basestring):
+            dims = [dims]
+
+        if not utils.is_dict_like(dims):
+            dims_map = dict(zip(self.dims, self.shape))
+            dims = OrderedDict((d, dims_map.get(d, 1)) for d in dims)
+
+        missing_dims = set(self.dims) - set(dims)
+        if missing_dims:
+            raise ValueError('new dimensions must be a superset of existing '
+                             'dimensions')
+
+        self_dims = set(self.dims)
+        exp_dims = tuple(d for d in dims if d not in self_dims) + self.dims
+        exp_data = utils.as_shape(self, [dims[d] for d in exp_dims])
+        expanded_var = Variable(exp_dims, exp_data, self.attrs, self.encoding)
+        return expanded_var.transpose(*dims)
+
     def reduce(self, func, dim=None, axis=None, keep_attrs=False,
                **kwargs):
         """Reduce this array by applying `func` along some dimension(s).
@@ -871,16 +905,7 @@ def _broadcast_compatible_variables(*variables):
                 raise ValueError('operands cannot be broadcast together '
                                  'with mismatched lengths for dimension %r: %s'
                                  % (d, (all_dims[d], s)))
-
-    broadcast_vars = []
-    for var in variables:
-        orig_data = np.asarray(var)
-        data = orig_data[(Ellipsis,) + (None,) * (len(all_dims) - var.ndim)]
-        var_dims = set(var.dims)
-        dims = var.dims + tuple(d for d in all_dims if d not in var_dims)
-        expanded_var = Variable(dims, data, var.attrs, var.encoding)
-        broadcast_vars.append(expanded_var.transpose(*all_dims))
-    return tuple(broadcast_vars)
+    return tuple(var.set_dims(all_dims) for var in variables)
 
 
 def _set_data_directly(var, values):
