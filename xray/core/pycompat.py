@@ -12,7 +12,6 @@ if PY3:
         return iter(d.values())
     range = range
     zip = zip
-    from collections import OrderedDict
 else:
     # Python 2
     basestring = basestring
@@ -24,6 +23,10 @@ else:
         return d.itervalues()
     range = xrange
     from itertools import izip as zip
+
+try:
+    from cyordereddict import OrderedDict
+except ImportError:
     try:
         from collections import OrderedDict
     except ImportError:
