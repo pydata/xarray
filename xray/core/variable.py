@@ -874,7 +874,8 @@ def _broadcast_compatible_variables(*variables):
 
     broadcast_vars = []
     for var in variables:
-        data = var.values[(Ellipsis,) + (None,) * (len(all_dims) - var.ndim)]
+        orig_data = np.asarray(var)
+        data = orig_data[(Ellipsis,) + (None,) * (len(all_dims) - var.ndim)]
         var_dims = set(var.dims)
         dims = var.dims + tuple(d for d in all_dims if d not in var_dims)
         expanded_var = Variable(dims, data, var.attrs, var.encoding)
