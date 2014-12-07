@@ -178,9 +178,10 @@ def remove_incompatible_items(first_dict, second_dict, compat=equivalent):
         Binary operator to determine if two values are compatible. By default,
         checks for equivalence.
     """
-    for k, v in iteritems(first_dict):
+    for k in list(first_dict):
         if (k not in second_dict
-                or (k in second_dict and not compat(v, second_dict[k]))):
+                or (k in second_dict and
+                    not compat(first_dict[k], second_dict[k]))):
             del first_dict[k]
 
 
