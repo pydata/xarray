@@ -10,13 +10,14 @@ matrix:
     env: UPDATE_ENV="conda install unittest2 pandas==0.13.1"
   # Test on Python 2.7 with and without netCDF4/scipy
   - python: 2.7
-    env: UPDATE_ENV=""
+    env: UPDATE_ENV="pip install cyordereddict"
   - python: 2.7
     # nb. we have to remove scipy because conda install pandas brings it in:
     # https://github.com/ContinuumIO/anaconda-issues/issues/145
     env: UPDATE_ENV="conda remove scipy netCDF4"
   - python: 3.3
   - python: 3.4
+    env: UPDATE_ENV="pip install cyordereddict"
   # don't require pydap tests to pass because the dap test server is unreliable
   - python: 2.7
     env: UPDATE_ENV="pip install pydap"
