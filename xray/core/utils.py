@@ -70,6 +70,28 @@ def array_equiv(arr1, arr2):
     return ((arr1 == arr2) | (isnull(arr1) & isnull(arr2))).all()
 
 
+def as_shape(array, shape):
+    """Expand a numpy.ndarray to a new shape according to broadcasting rules
+    """
+    array = np.asarray(array)
+    if len(shape) < array.ndim:
+        raise ValueError('new shape must be greater than or equal to the '
+                         'number of array dimensions')
+
+    # based on numpy.lib.stride_tricks.broadcast_arrays
+    strides = [0] * (len(shape) - array.ndim) + list(array.strides)
+    for n, (new_size, old_size) in enumerate(zip(shape[-array.ndim:],
+                                                 array.shape)):
+        if new_size != old_size:
+            axis = array.ndim + n
+            if old_size != 1:
+                raise ValueError('shape mismatch: new shape differs from the '
+                                 'original shape on axis %r, but the original '
+                                 'shape is not 1 on that axis' % axis)
+            strides[axis] = 0
+    return np.lib.stride_tricks.as_strided(array, shape=shape, strides=strides)
+
+
 def safe_cast_to_index(array):
     """Given an array, safely cast it to a pandas.Index.
 
