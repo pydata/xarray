@@ -454,6 +454,9 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
         utils.alias_warning('attributes', 'attrs', 3)
         self.attrs = value
 
+    def _attrs_copy(self):
+        return None if self._attrs is None else OrderedDict(self._attrs)
+
     @property
     def attrs(self):
         """Dictionary of global attributes on this dataset
@@ -507,6 +510,36 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
         obj._file_obj = file_obj
         return obj
 
+    __default_attrs = object()
+
+    def _replace_vars_and_dims(self, variables, coord_names=None,
+                               attrs=__default_attrs):
+        """Fastpath constructor for internal use.
+
+        Preserves coord names and attributes; dimensions are recalculated from
+        the supplied variables.
+
+        The arguments are *not* copied when placed on the new dataset. It is up
+        to the caller to ensure that they have the right type and are not used
+        elsewhere.
+
+        Parameters
+        ----------
+        variables : OrderedDict
+        coord_names : set or None, optional
+        attrs : OrderedDict or None, optional
+
+        Returns
+        -------
+        new : Dataset
+        """
+        dims = _calculate_dims(variables)
+        if coord_names is None:
+            coord_names = self._coord_names.copy()
+        if attrs is self.__default_attrs:
+            attrs = self._attrs_copy()
+        return self._construct_direct(variables, coord_names, dims, attrs)
+
     def copy(self, deep=False):
         """Returns a copy of this dataset.
 
@@ -520,9 +553,8 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
         else:
             variables = self._arrays.copy()
         # skip __init__ to avoid costly validation
-        attrs = None if self._attrs is None else self._attrs.copy()
         return self._construct_direct(variables, self._coord_names.copy(),
-                                      self._dims.copy(), attrs)
+                                      self._dims.copy(), self._attrs_copy())
 
     def _copy_listed(self, names, keep_attrs=True):
         """Create a new Dataset with the listed variables from this dataset and
@@ -858,9 +890,7 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
         for name, var in iteritems(self._arrays):
             var_indexers = dict((k, v) for k, v in indexers if k in var.dims)
             variables[name] = var.isel(**var_indexers)
-        obj = type(self)(variables, attrs=self.attrs)
-        obj._coord_names.update(self.coords)
-        return obj
+        return self._replace_vars_and_dims(variables)
 
     indexed = utils.function_alias(isel, 'indexed')
 
@@ -969,9 +999,7 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
 
         variables = alignment.reindex_variables(
             self._arrays, self.indexes, indexers, copy=copy)
-        obj = type(self)(variables, attrs=self.attrs)
-        obj._coord_names.update(self.coords)
-        return obj
+        return self._replace_vars_and_dims(variables)
 
     def rename(self, name_dict, inplace=False):
         """Returns a new object with renamed variables and dimensions.
@@ -1008,10 +1036,10 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
         if inplace:
             self._dims = _calculate_dims(variables)
             self._arrays = variables
+            self._coord_names = coord_names
             obj = self
         else:
-            obj = type(self)(variables, attrs=self.attrs)
-        obj._coord_names = coord_names
+            obj = self._replace_vars_and_dims(variables, coord_names)
         return obj
 
     def update(self, other, inplace=True):
@@ -1147,9 +1175,7 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
         variables = OrderedDict((k, v) for k, v in iteritems(self._arrays)
                                 if k not in drop)
         coord_names = set(k for k in self._coord_names if k in variables)
-        obj = type(self)(variables, attrs=self.attrs)
-        obj._coord_names = coord_names
-        return obj
+        return self._replace_vars_and_dims(variables, coord_names)
 
     unselect = utils.function_alias(drop_vars, 'unselect')
 
@@ -1364,10 +1390,8 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
                 variables[name] = var
 
         coord_names = set(k for k in self.coords if k in variables)
-        attrs = self.attrs if keep_attrs else {}
-        obj = type(self)(variables, attrs=attrs)
-        obj._coord_names = coord_names
-        return obj
+        attrs = self.attrs if keep_attrs else None
+        return self._replace_vars_and_dims(variables, coord_names, attrs)
 
     def apply(self, func, keep_attrs=False, args=(), **kwargs):
         """Apply a function over the variables in this dataset.
