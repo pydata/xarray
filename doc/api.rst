@@ -85,6 +85,7 @@ Indexing
 .. autosummary::
    :toctree: generated/
 
+   Dataset.loc
    Dataset.isel
    Dataset.sel
    Dataset.squeeze

@@ -28,8 +28,8 @@ By name          By integer   ``arr.isel(space=0)``   ``ds.isel(space=0)``
 By name          By label     ``arr.sel(space='IA')`` ``ds.sel(space='IA')``
 ================ ============ ======================= ======================
 
-Array indexing
---------------
+Positional indexing
+-------------------
 
 Indexing a :py:class:`~xray.DataArray` directly works (mostly) just like it
 does for numpy arrays, except that the returned object is always another
@@ -70,16 +70,29 @@ Indexing with labeled dimensions
 --------------------------------
 
 With labeled dimensions, we do not have to rely on dimension order and can
-use them explicitly to slice data with the :py:meth:`~xray.DataArray.sel`
-and :py:meth:`~xray.DataArray.isel` methods:
+use them explicitly to slice data. There are two ways to do this:
 
-.. ipython:: python
+1. Use a dictionary as the argument for array positional or label based array
+   indexing:
 
-    # index by integer array indices
-    arr.isel(space=0, time=slice(None, 2))
+    .. ipython:: python
 
-    # index by dimension coordinate labels
-    arr.sel(time=slice('2000-01-01', '2000-01-02'))
+        # index by integer array indices
+        arr[dict(space=0, time=slice(None, 2))]
+
+        # index by dimension coordinate labels
+        arr.loc[dict(time=slice('2000-01-01', '2000-01-02'))]
+
+2. Use the :py:meth:`~xray.DataArray.sel` and :py:meth:`~xray.DataArray.isel`
+   convenience methods:
+
+    .. ipython:: python
+
+        # index by integer array indices
+        arr.isel(space=0, time=slice(None, 2))
+
+        # index by dimension coordinate labels
+        arr.sel(time=slice('2000-01-01', '2000-01-02'))
 
 The arguments to these methods can be any objects that could index the array
 along the dimension given by the keyword, e.g., labels for an individual value,
@@ -88,10 +101,8 @@ Python :py:func:`slice` objects or 1-dimensional arrays.
 .. note::
 
     We would love to be able to do indexing with labeled dimension names inside
-    brackets, but Python `does yet not support`__ indexing with keyword
-    arguments like ``arr[space=0]``. One alternative we are considering is
-    allowing for indexing with a dictionary, ``arr[{'space': 0}]``
-    (see :issue:`187`.
+    brackets, but unfortunately, Python `does yet not support`__ indexing with
+    keyword arguments like ``arr[space=0]``
 
 __ http://legacy.python.org/dev/peps/pep-0472/
 
@@ -100,17 +111,14 @@ __ http://legacy.python.org/dev/peps/pep-0472/
     Do not try to assign values when using ``isel`` or ``sel``::
 
         # DO NOT do this
-        arr.isel(space='0') = 0
+        arr.isel(space=0) = 0
 
     Depending on whether the underlying numpy indexing returns a copy or a
     view, the method will fail, and when it fails, **it will fail
-    silently**. Until we support indexing with dictionaries (see the note
-    above), you should explicitly construct a tuple to do positional indexing
-    if you want to do assignment with labeled dimensions::
+    silently**. Instead, you should use normal index assignment::
 
-        # this is safer
-        indexer = tuple(0 if d == 'space' else slice(None) for d in arr.dims)
-        arr[indexer] = 0
+        # this is safe
+        arr[dict(space=0)] = 0
 
 Dataset indexing
 ----------------
@@ -126,7 +134,15 @@ simultaneously, returning a new dataset:
 
 Positional indexing on a dataset is not supported because the ordering of
 dimensions in a dataset is somewhat ambiguous (it can vary between different
-arrays).
+arrays). However, you can do normal indexing with labeled dimensions:
+
+.. ipython:: python
+
+    ds[dict(space=[0], time=[0])]
+    ds.loc[dict(time='2000-01-01')]
+
+Using indexing to *assign* values to a subset of dataset (e.g.,
+``ds[dict(space=0)] = 1``) is not yet supported.
 
 Indexing details
 ----------------
