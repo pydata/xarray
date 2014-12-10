@@ -967,21 +967,23 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
         """
         return self.reindex(copy=copy, **other.indexes)
 
-    def reindex(self, copy=True, **indexers):
+    def reindex(self, indexers=None, copy=True, **kw_indexers):
         """Conform this object onto a new set of indexes, filling in
         missing values with NaN.
 
         Parameters
         ----------
-        copy : bool, optional
-            If `copy=True`, the returned dataset contains only copied
-            variables. If `copy=False` and no reindexing is required then
-            original variables from this dataset are returned.
-        **indexers : dict
+        indexers : dict. optional
             Dictionary with keys given by dimension names and values given by
             arrays of coordinates tick labels. Any mis-matched coordinate values
             will be filled in with NaN, and any mis-matched dimension names will
             simply be ignored.
+        copy : bool, optional
+            If `copy=True`, the returned dataset contains only copied
+            variables. If `copy=False` and no reindexing is required then
+            original variables from this dataset are returned.
+        **kw_indexers : optional
+            Keyword arguments in the same form as ``indexers``.
 
         Returns
         -------
@@ -993,6 +995,8 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
         Dataset.reindex_like
         align
         """
+        indexers = utils.combine_pos_and_kw_args(indexers, kw_indexers,
+                                                 'reindex')
         if not indexers:
             # shortcut
             return self.copy(deep=True) if copy else self

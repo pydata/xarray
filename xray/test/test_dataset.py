@@ -491,6 +491,14 @@ class TestDataset(TestCase):
         actual = data.reindex(dim1=data['dim1'][:10].to_index())
         self.assertDatasetIdentical(actual, expected)
 
+        # test dict-like argument
+        actual = data.reindex({'dim1': data['dim1'][:10]})
+        self.assertDatasetIdentical(actual, expected)
+        with self.assertRaisesRegexp(ValueError, 'cannot specify both'):
+            data.reindex({'x': 0}, x=0)
+        with self.assertRaisesRegexp(ValueError, 'dictionary'):
+            data.reindex('foo')
+
     def test_align(self):
         left = create_test_data()
         right = left.copy(deep=True)
