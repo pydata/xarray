@@ -357,6 +357,12 @@ class Variable(common.AbstractArray):
     def dims(self, value):
         self._dims = self._parse_dimensions(value)
 
+    def _item_key_to_tuple(self, key):
+        if utils.is_dict_like(key):
+            return tuple(key.get(dim, slice(None)) for dim in self.dims)
+        else:
+            return key
+
     def __getitem__(self, key):
         """Return a new Array object whose contents are consistent with
         getting the provided key from the underlying data.
@@ -374,9 +380,10 @@ class Variable(common.AbstractArray):
         If you really want to do indexing like `x[x > 0]`, manipulate the numpy
         array `x.values` directly.
         """
+        key = self._item_key_to_tuple(key)
         key = indexing.expanded_indexer(key, self.ndim)
         dims = [dim for k, dim in zip(key, self.dims)
-                      if not isinstance(k, (int, np.integer))]
+                if not isinstance(k, (int, np.integer))]
         values = self._data[key]
         # orthogonal indexing should ensure the dimensionality is consistent
         if hasattr(values, 'ndim'):
@@ -391,6 +398,7 @@ class Variable(common.AbstractArray):
 
         See __getitem__ for more details.
         """
+        key = self._item_key_to_tuple(key)
         self._data_cached()[key] = value
 
     @property
@@ -817,6 +825,7 @@ class Coordinate(Variable):
                              type(self).__name__)
 
     def __getitem__(self, key):
+        key = self._item_key_to_tuple(key)
         values = self._data[key]
         if not hasattr(values, 'ndim') or values.ndim == 0:
             return Variable((), values, self.attrs, self.encoding)

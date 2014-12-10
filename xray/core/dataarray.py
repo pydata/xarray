@@ -62,16 +62,20 @@ class _LocIndexer(object):
         self.data_array = data_array
 
     def _remap_key(self, key):
-        if not isinstance(key, tuple):
-            key = (key,)
-        new_key = []
-        for dim, label in zip(self.data_array.dims, key):
-            # it's OK if there are fewer keys than dimensions: zip will finish
-            # early in that case (we don't need to insert colons)
+        def lookup_positions(dim, labels):
             index = self.data_array.indexes[dim]
-            positions = indexing.convert_label_indexer(index, label)
-            new_key.append(positions)
-        return tuple(new_key)
+            return indexing.convert_label_indexer(index, labels)
+
+        if utils.is_dict_like(key):
+            return dict((dim, lookup_positions(dim, labels))
+                        for dim, labels in iteritems(key))
+        else:
+            if not isinstance(key, tuple):
+                key = (key,)
+            # note: it's OK if there are fewer keys than dimensions: zip will
+            # finish early in that case (we don't need to insert colons)
+            return tuple(lookup_positions(dim, labels) for dim, labels
+                         in zip(self.data_array.dims, key))
 
     def __getitem__(self, key):
         return self.data_array[self._remap_key(key)]
@@ -330,15 +334,19 @@ class DataArray(AbstractArray):
         utils.alias_warning('dimensions', 'dims')
         return self.dims
 
-    def _key_to_indexers(self, key):
-        return dict(zip(self.dims, indexing.expanded_indexer(key, self.ndim)))
+    def _item_key_to_dict(self, key):
+        if utils.is_dict_like(key):
+            return key
+        else:
+            key = indexing.expanded_indexer(key, self.ndim)
+            return dict(zip(self.dims, key))
 
     def __getitem__(self, key):
         if isinstance(key, basestring):
             return self.coords[key]
         else:
             # orthogonal array indexing
-            return self.isel(**self._key_to_indexers(key))
+            return self.isel(**self._item_key_to_dict(key))
 
     def __setitem__(self, key, value):
         if isinstance(key, basestring):
