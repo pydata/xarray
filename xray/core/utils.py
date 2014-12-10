@@ -189,6 +189,19 @@ def is_dict_like(value):
     return hasattr(value, '__getitem__') and hasattr(value, 'keys')
 
 
+def combine_pos_and_kw_args(pos_kwargs, kw_kwargs, func_name):
+    if pos_kwargs is not None:
+        if not is_dict_like(pos_kwargs):
+            raise ValueError('the first argument to .%s must be a dictionary'
+                             % func_name)
+        if kw_kwargs:
+            raise ValueError('cannot specify both keyword and positional '
+                             'arguments to .%s' % func_name)
+        return pos_kwargs
+    else:
+        return kw_kwargs
+
+
 def is_scalar(value):
     """np.isscalar only work on primitive numeric types and (bizarrely)
     excludes 0-d ndarrays; this version does more comprehensive checks

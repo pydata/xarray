@@ -449,7 +449,7 @@ class TestDataset(TestCase):
                                 data.sel(time='2000-01-01'))
         self.assertDatasetEqual(data.isel(time=slice(10)),
                                 data.sel(time=slice('2000-01-01',
-                                                   '2000-01-10')))
+                                                    '2000-01-10')))
         self.assertDatasetEqual(data, data.sel(time=slice('1999', '2005')))
         times = pd.date_range('2000-01-01', periods=3)
         self.assertDatasetEqual(data.isel(time=slice(3)),

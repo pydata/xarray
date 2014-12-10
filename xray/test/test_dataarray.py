@@ -316,11 +316,11 @@ class TestDataArray(TestCase):
         self.assertDataArrayIdentical(expected, actual)
 
     def test_isel(self):
-        self.assertDatasetIdentical(self.dv[0].to_dataset(), self.ds.isel(x=0))
-        self.assertDatasetIdentical(self.dv[:3, :5].to_dataset(),
-                                    self.ds.isel(x=slice(3), y=slice(5)))
+        self.assertDataArrayIdentical(self.dv[0], self.dv.isel(x=0))
         self.assertDataArrayIdentical(self.dv, self.dv.isel(x=slice(None)))
         self.assertDataArrayIdentical(self.dv[:3], self.dv.isel(x=slice(3)))
+        self.assertDataArrayIdentical(self.dv[:3, :5],
+                                      self.dv.isel(x=slice(3), y=slice(5)))
 
     def test_sel(self):
         self.ds['x'] = ('x', np.array(list('abcdefghij')))
