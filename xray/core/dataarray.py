@@ -76,10 +76,6 @@ class _LocIndexer(object):
         self.data_array[self._remap_key(key)] = value
 
 
-# singleton object for checking
-UNNAMED = object()
-
-
 class DataArray(AbstractArray):
     """N-dimensional array with labeled coordinates and dimensions.
 
@@ -880,6 +876,8 @@ class DataArray(AbstractArray):
         except (TypeError, AttributeError):
             return False
 
+    __default_name = object()
+
     def _result_name(self, other=None):
 
         if self.name in self.dims:
@@ -891,7 +889,7 @@ class DataArray(AbstractArray):
             # shortcut
             return self.name
 
-        other_name = getattr(other, 'name', UNNAMED)
+        other_name = getattr(other, 'name', self.__default_name)
         other_dims = getattr(other, 'dims', ())
 
         if other_name in other_dims:
@@ -900,7 +898,7 @@ class DataArray(AbstractArray):
 
         # use the same naming heuristics as pandas:
         # https://github.com/ContinuumIO/blaze/issues/458#issuecomment-51936356
-        if other_name is UNNAMED or other_name == self.name:
+        if other_name is self.__default_name or other_name == self.name:
             return self.name
 
         return None
