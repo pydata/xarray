@@ -62,12 +62,16 @@ class _LocIndexer(object):
         self.data_array = data_array
 
     def _remap_key(self, key):
-        label_indexers = self.data_array._key_to_indexers(key)
-        indexers = []
-        for dim, label in iteritems(label_indexers):
+        if not isinstance(key, tuple):
+            key = (key,)
+        new_key = []
+        for dim, label in zip(self.data_array.dims, key):
+            # it's OK if there are fewer keys than dimensions: zip will finish
+            # early in that case (we don't need to insert colons)
             index = self.data_array.indexes[dim]
-            indexers.append(indexing.convert_label_indexer(index, label))
-        return tuple(indexers)
+            positions = indexing.convert_label_indexer(index, label)
+            new_key.append(positions)
+        return tuple(new_key)
 
     def __getitem__(self, key):
         return self.data_array[self._remap_key(key)]
@@ -327,8 +331,7 @@ class DataArray(AbstractArray):
         return self.dims
 
     def _key_to_indexers(self, key):
-        return OrderedDict(
-            zip(self.dims, indexing.expanded_indexer(key, self.ndim)))
+        return dict(zip(self.dims, indexing.expanded_indexer(key, self.ndim)))
 
     def __getitem__(self, key):
         if isinstance(key, basestring):
