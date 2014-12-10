@@ -633,6 +633,9 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
         """
         from .dataarray import DataArray
 
+        if utils.is_dict_like(key):
+            return self.isel(**key)
+
         key = np.asarray(key)
         if key.ndim == 0:
             return DataArray._new_from_dataset(self, key.item())
@@ -650,6 +653,9 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
         ``(dims, data[, attrs])``), add it to this dataset as a new
         variable.
         """
+        if utils.is_dict_like(key):
+            raise NotImplementedError('cannot yet use a dictionary as a key '
+                                      'to set Dataset values')
         self.merge({key: value}, inplace=True, overwrite_vars=[key])
 
     def __delitem__(self, key):

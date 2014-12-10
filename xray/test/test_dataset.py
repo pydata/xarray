@@ -694,6 +694,10 @@ class TestDataset(TestCase):
                              name='numbers')
         self.assertDataArrayIdentical(expected, actual)
 
+        actual = data[dict(dim1=0)]
+        expected = data.isel(dim1=0)
+        self.assertDatasetIdentical(expected, actual)
+
     def test_virtual_variables(self):
         # access virtual variables
         data = create_test_data()
@@ -751,6 +755,9 @@ class TestDataset(TestCase):
         # override an existing value
         data1['A'] = 3 * data2['A']
         self.assertVariableEqual(data1['A'], 3 * data2['A'])
+
+        with self.assertRaises(NotImplementedError):
+            data1[{'x': 0}] = 0
 
     def test_delitem(self):
         data = create_test_data()
