@@ -85,7 +85,7 @@ def open_dataset(filename_or_obj, decode_cf=True, mask_and_scale=True,
         store = backends.ScipyDataStore(filename_or_obj)
 
     if decode_cf:
-        return conventions.cf_decode(
+        return conventions.decode_cf(
             store, mask_and_scale=mask_and_scale,
             decode_times=decode_times, concat_characters=concat_characters,
             decode_coords=decode_coords)

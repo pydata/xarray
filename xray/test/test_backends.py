@@ -62,12 +62,8 @@ class DatasetIOTestCases(object):
         expected = create_test_data()
         expected['float_var'] = ([], 1.0e9, {'units': 'units of awesome'})
         expected['string_var'] = ([], np.array('foobar', dtype='S'))
-        with self.create_store() as store:
-            expected.dump_to_store(store)
-            # the test data contains times.  In case the store
-            # cf_encodes them we need to cf_decode them.
-            actual = Dataset.load_store(store, cf_decoder)
-        self.assertDatasetAllClose(expected, actual)
+        with self.roundtrip(expected) as actual:
+            self.assertDatasetAllClose(expected, actual)
 
     def test_write_store(self):
         expected = create_test_data()

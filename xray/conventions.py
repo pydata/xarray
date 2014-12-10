@@ -638,9 +638,10 @@ def decode_cf_variables(variables, attributes, concat_characters=True,
     return new_vars, attributes, coord_names
 
 
-def cf_decode(obj, concat_characters=True, mask_and_scale=True,
+def decode_cf(obj, concat_characters=True, mask_and_scale=True,
               decode_times=True, decode_coords=True):
-    """Decode the given object according to CF conventions into a new Dataset.
+    """Decode the given Dataset or Datastore according to CF conventions into
+    a new Dataset.
 
     Parameters
     ----------

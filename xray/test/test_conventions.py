@@ -302,7 +302,7 @@ class TestDecodeCF(TestCase):
         expected = Dataset({'foo': ('t', [0, 0, 0], {'units': 'bar'})},
                            {'t': pd.date_range('2000-01-01', periods=3),
                             'y': ('t', [5.0, 10.0, np.nan])})
-        actual = conventions.cf_decode(original)
+        actual = conventions.decode_cf(original)
         self.assertDatasetIdentical(expected, actual)
 
 
