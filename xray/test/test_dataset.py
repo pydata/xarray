@@ -457,6 +457,16 @@ class TestDataset(TestCase):
         self.assertDatasetEqual(data.isel(time=slice(3)),
                                 data.sel(time=(data['time.dayofyear'] <= 3)))
 
+    def test_loc(self):
+        data = create_test_data()
+        expected = data.sel(dim3='a')
+        actual = data.loc[dict(dim3='a')]
+        self.assertDatasetIdentical(expected, actual)
+        with self.assertRaisesRegexp(TypeError, 'can only lookup dict'):
+            data.loc['a']
+        with self.assertRaises(TypeError):
+            data.loc[dict(dim3='a')] = 0
+
     def test_reindex_like(self):
         data = create_test_data()
         data['letters'] = ('dim3', 10 * ['a'])

@@ -363,7 +363,7 @@ class DataArray(AbstractArray):
 
     @property
     def loc(self):
-        """Attribute for location based indexing like pandas..
+        """Attribute for location based indexing like pandas.
         """
         return _LocIndexer(self)
 

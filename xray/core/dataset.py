@@ -292,6 +292,16 @@ class Variables(Mapping):
         return formatting.vars_repr(self)
 
 
+class _LocIndexer(object):
+    def __init__(self, dataset):
+        self.dataset = dataset
+
+    def __getitem__(self, key):
+        if not utils.is_dict_like(key):
+            raise TypeError('can only lookup dictionaries from Dataset.loc')
+        return self.dataset.sel(**key)
+
+
 class Dataset(Mapping, common.ImplementsDatasetReduce):
     """A multi-dimensional, in memory, array database.
 
@@ -605,6 +615,13 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
 
     def __iter__(self):
         return iter(self._arrays)
+
+    @property
+    def loc(self):
+        """Attribute for location based indexing. Only supports __getitem__,
+        and only when the key is a dict of the form {dim: labels}.
+        """
+        return _LocIndexer(self)
 
     @property
     def virtual_variables(self):
