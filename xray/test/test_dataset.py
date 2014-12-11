@@ -449,13 +449,23 @@ class TestDataset(TestCase):
                                 data.sel(time='2000-01-01'))
         self.assertDatasetEqual(data.isel(time=slice(10)),
                                 data.sel(time=slice('2000-01-01',
-                                                   '2000-01-10')))
+                                                    '2000-01-10')))
         self.assertDatasetEqual(data, data.sel(time=slice('1999', '2005')))
         times = pd.date_range('2000-01-01', periods=3)
         self.assertDatasetEqual(data.isel(time=slice(3)),
                                 data.sel(time=times))
         self.assertDatasetEqual(data.isel(time=slice(3)),
                                 data.sel(time=(data['time.dayofyear'] <= 3)))
+
+    def test_loc(self):
+        data = create_test_data()
+        expected = data.sel(dim3='a')
+        actual = data.loc[dict(dim3='a')]
+        self.assertDatasetIdentical(expected, actual)
+        with self.assertRaisesRegexp(TypeError, 'can only lookup dict'):
+            data.loc['a']
+        with self.assertRaises(TypeError):
+            data.loc[dict(dim3='a')] = 0
 
     def test_reindex_like(self):
         data = create_test_data()
@@ -490,6 +500,14 @@ class TestDataset(TestCase):
 
         actual = data.reindex(dim1=data['dim1'][:10].to_index())
         self.assertDatasetIdentical(actual, expected)
+
+        # test dict-like argument
+        actual = data.reindex({'dim1': data['dim1'][:10]})
+        self.assertDatasetIdentical(actual, expected)
+        with self.assertRaisesRegexp(ValueError, 'cannot specify both'):
+            data.reindex({'x': 0}, x=0)
+        with self.assertRaisesRegexp(ValueError, 'dictionary'):
+            data.reindex('foo')
 
     def test_align(self):
         left = create_test_data()
@@ -686,6 +704,10 @@ class TestDataset(TestCase):
                              name='numbers')
         self.assertDataArrayIdentical(expected, actual)
 
+        actual = data[dict(dim1=0)]
+        expected = data.isel(dim1=0)
+        self.assertDatasetIdentical(expected, actual)
+
     def test_virtual_variables(self):
         # access virtual variables
         data = create_test_data()
@@ -743,6 +765,9 @@ class TestDataset(TestCase):
         # override an existing value
         data1['A'] = 3 * data2['A']
         self.assertVariableEqual(data1['A'], 3 * data2['A'])
+
+        with self.assertRaises(NotImplementedError):
+            data1[{'x': 0}] = 0
 
     def test_delitem(self):
         data = create_test_data()

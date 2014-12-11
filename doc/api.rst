@@ -16,7 +16,6 @@ Top-level functions
 
    align
    concat
-   decode_cf
 
 Dataset
 =======
@@ -29,6 +28,7 @@ Creating a dataset
 
    Dataset
    open_dataset
+   decode_cf
 
 Attributes
 ----------
@@ -85,6 +85,7 @@ Indexing
 .. autosummary::
    :toctree: generated/
 
+   Dataset.loc
    Dataset.isel
    Dataset.sel
    Dataset.squeeze

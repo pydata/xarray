@@ -282,6 +282,11 @@ class TestDataArray(TestCase):
                   I[x.values > 3], I[x.variable > 3], I[x > 3], I[x > 3, y > 3]]:
             self.assertVariableEqual(self.v[i], self.dv[i])
 
+    def test_getitem_dict(self):
+        actual = self.dv[{'x': slice(3), 'y': 0}]
+        expected = self.dv.isel(x=slice(3), y=0)
+        self.assertDataArrayIdentical(expected, actual)
+
     def test_getitem_coords(self):
         orig = DataArray([[10], [20]],
                          {'x': [1, 2], 'y': [3], 'z': 4,
@@ -316,11 +321,11 @@ class TestDataArray(TestCase):
         self.assertDataArrayIdentical(expected, actual)
 
     def test_isel(self):
-        self.assertDatasetIdentical(self.dv[0].to_dataset(), self.ds.isel(x=0))
-        self.assertDatasetIdentical(self.dv[:3, :5].to_dataset(),
-                                    self.ds.isel(x=slice(3), y=slice(5)))
+        self.assertDataArrayIdentical(self.dv[0], self.dv.isel(x=0))
         self.assertDataArrayIdentical(self.dv, self.dv.isel(x=slice(None)))
         self.assertDataArrayIdentical(self.dv[:3], self.dv.isel(x=slice(3)))
+        self.assertDataArrayIdentical(self.dv[:3, :5],
+                                      self.dv.isel(x=slice(3), y=slice(5)))
 
     def test_sel(self):
         self.ds['x'] = ('x', np.array(list('abcdefghij')))
@@ -340,12 +345,15 @@ class TestDataArray(TestCase):
         da = self.ds['foo']
         self.assertDataArrayIdentical(da[:3], da.loc[:'c'])
         self.assertDataArrayIdentical(da[1], da.loc['b'])
+        self.assertDataArrayIdentical(da[1], da.loc[{'x': 'b'}])
         self.assertDataArrayIdentical(da[:3], da.loc[['a', 'b', 'c']])
         self.assertDataArrayIdentical(da[:3, :4],
                                       da.loc[['a', 'b', 'c'], np.arange(4)])
         self.assertDataArrayIdentical(da[:, :4], da.loc[:, self.ds['y'] < 4])
         da.loc['a':'j'] = 0
         self.assertTrue(np.all(da.values == 0))
+        da.loc[{'x': slice('a', 'j')}] = 2
+        self.assertTrue(np.all(da.values == 2))
 
     def test_loc_single_boolean(self):
         data = DataArray([0, 1], coords=[[True, False]])

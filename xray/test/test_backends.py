@@ -13,7 +13,7 @@ import sys
 import numpy as np
 import pandas as pd
 
-from xray import Dataset, open_dataset, backends
+from xray import Dataset, open_dataset, backends, decode_cf
 from xray.core.pycompat import iteritems, PY3
 
 from . import TestCase, requires_scipy, requires_netCDF4, requires_pydap
@@ -62,21 +62,17 @@ class DatasetIOTestCases(object):
         expected = create_test_data()
         expected['float_var'] = ([], 1.0e9, {'units': 'units of awesome'})
         expected['string_var'] = ([], np.array('foobar', dtype='S'))
-        with self.create_store() as store:
-            expected.dump_to_store(store)
-            # the test data contains times.  In case the store
-            # cf_encodes them we need to cf_decode them.
-            actual = Dataset.load_store(store, cf_decoder)
-        self.assertDatasetAllClose(expected, actual)
+        with self.roundtrip(expected) as actual:
+            self.assertDatasetAllClose(expected, actual)
 
     def test_write_store(self):
         expected = create_test_data()
         with self.create_store() as store:
             expected.dump_to_store(store)
-            # the test data contains times.  In case the store
-            # cf_encodes them we need to cf_decode them.
-            actual = Dataset.load_store(store, cf_decoder)
-        self.assertDatasetAllClose(expected, actual)
+            # we need to cf decode the store because it has time and
+            # non-dimension coordinates
+            actual = decode_cf(store)
+            self.assertDatasetAllClose(expected, actual)
 
     def test_roundtrip_test_data(self):
         expected = create_test_data()

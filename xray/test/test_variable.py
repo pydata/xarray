@@ -38,6 +38,12 @@ class VariableSubclassTestCases(object):
         v.attrs['foo'] = 'baz'
         self.assertEqual(v.attrs['foo'], 'baz')
 
+    def test_getitem_dict(self):
+        v = self.cls(['x'], np.random.randn(5))
+        actual = v[{'x': 0}]
+        expected = v[0]
+        self.assertVariableIdentical(expected, actual)
+
     def assertIndexedLikeNDArray(self, variable, expected_value0,
                                  expected_dtype=None):
         """Given a 1-dimensional variable, verify that the variable is indexed

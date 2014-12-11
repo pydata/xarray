@@ -302,29 +302,14 @@ class TestDecodeCF(TestCase):
         expected = Dataset({'foo': ('t', [0, 0, 0], {'units': 'bar'})},
                            {'t': pd.date_range('2000-01-01', periods=3),
                             'y': ('t', [5.0, 10.0, np.nan])})
-        actual = conventions.cf_decode(original)
+        actual = conventions.decode_cf(original)
         self.assertDatasetIdentical(expected, actual)
 
 
 class CFEncodedInMemoryStore(InMemoryDataStore):
-
-    def __init__(self, *args, **kwdargs):
-        InMemoryDataStore.__init__(self)
-        self._args = args
-        self._kwdargs = kwdargs
-
     def store(self, variables, attributes):
         variables, attributes = cf_encoder(variables, attributes)
         InMemoryDataStore.store(self, variables, attributes)
-
-    def load(self):
-        variables, attributes = InMemoryDataStore.load(self)
-        if self._kwdargs.get('decode_cf', True):
-            kwd_args = self._kwdargs.copy()
-            kwd_args.pop('decode_cf', None)
-            variables, attributes = cf_decoder(variables, attributes,
-                                               *self._args, **kwd_args)
-        return variables, attributes
 
 
 class NullWrapper(utils.NDArrayMixin):
@@ -356,11 +341,13 @@ class TestCFEncodedDataStore(CFEncodedDataTest, TestCase):
         yield CFEncodedInMemoryStore()
 
     @contextlib.contextmanager
-    def roundtrip(self, data, **kwdargs):
-        store = CFEncodedInMemoryStore(**kwdargs)
+    def roundtrip(self, data, decode_cf=True):
+        store = CFEncodedInMemoryStore()
         data.dump_to_store(store)
-        store.store_dataset(data)
-        yield Dataset.load_store(null_wrap(store))
+        if decode_cf:
+            yield conventions.decode_cf(store)
+        else:
+            yield Dataset.load_store(store)
 
     def test_roundtrip_coordinates(self):
         raise unittest.SkipTest('cannot roundtrip coordinates yet for '

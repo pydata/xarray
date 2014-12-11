@@ -85,7 +85,7 @@ def open_dataset(filename_or_obj, decode_cf=True, mask_and_scale=True,
         store = backends.ScipyDataStore(filename_or_obj)
 
     if decode_cf:
-        return conventions.cf_decode(
+        return conventions.decode_cf(
             store, mask_and_scale=mask_and_scale,
             decode_times=decode_times, concat_characters=concat_characters,
             decode_coords=decode_coords)
@@ -290,6 +290,16 @@ class Variables(Mapping):
 
     def __repr__(self):
         return formatting.vars_repr(self)
+
+
+class _LocIndexer(object):
+    def __init__(self, dataset):
+        self.dataset = dataset
+
+    def __getitem__(self, key):
+        if not utils.is_dict_like(key):
+            raise TypeError('can only lookup dictionaries from Dataset.loc')
+        return self.dataset.sel(**key)
 
 
 class Dataset(Mapping, common.ImplementsDatasetReduce):
@@ -607,6 +617,13 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
         return iter(self._arrays)
 
     @property
+    def loc(self):
+        """Attribute for location based indexing. Only supports __getitem__,
+        and only when the key is a dict of the form {dim: labels}.
+        """
+        return _LocIndexer(self)
+
+    @property
     def virtual_variables(self):
         """A frozenset of names that don't exist in this dataset but for which
         DataArrays could be created on demand.
@@ -633,6 +650,9 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
         """
         from .dataarray import DataArray
 
+        if utils.is_dict_like(key):
+            return self.isel(**key)
+
         key = np.asarray(key)
         if key.ndim == 0:
             return DataArray._new_from_dataset(self, key.item())
@@ -650,6 +670,9 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
         ``(dims, data[, attrs])``), add it to this dataset as a new
         variable.
         """
+        if utils.is_dict_like(key):
+            raise NotImplementedError('cannot yet use a dictionary as a key '
+                                      'to set Dataset values')
         self.merge({key: value}, inplace=True, overwrite_vars=[key])
 
     def __delitem__(self, key):
@@ -967,21 +990,23 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
         """
         return self.reindex(copy=copy, **other.indexes)
 
-    def reindex(self, copy=True, **indexers):
+    def reindex(self, indexers=None, copy=True, **kw_indexers):
         """Conform this object onto a new set of indexes, filling in
         missing values with NaN.
 
         Parameters
         ----------
-        copy : bool, optional
-            If `copy=True`, the returned dataset contains only copied
-            variables. If `copy=False` and no reindexing is required then
-            original variables from this dataset are returned.
-        **indexers : dict
+        indexers : dict. optional
             Dictionary with keys given by dimension names and values given by
             arrays of coordinates tick labels. Any mis-matched coordinate values
             will be filled in with NaN, and any mis-matched dimension names will
             simply be ignored.
+        copy : bool, optional
+            If `copy=True`, the returned dataset contains only copied
+            variables. If `copy=False` and no reindexing is required then
+            original variables from this dataset are returned.
+        **kw_indexers : optional
+            Keyword arguments in the same form as ``indexers``.
 
         Returns
         -------
@@ -993,6 +1018,8 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
         Dataset.reindex_like
         align
         """
+        indexers = utils.combine_pos_and_kw_args(indexers, kw_indexers,
+                                                 'reindex')
         if not indexers:
             # shortcut
             return self.copy(deep=True) if copy else self
