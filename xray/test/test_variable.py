@@ -1,6 +1,6 @@
 from collections import namedtuple
 from copy import copy, deepcopy
-from datetime import datetime
+from datetime import datetime, timedelta
 from textwrap import dedent
 
 import numpy as np
@@ -95,6 +95,15 @@ class VariableSubclassTestCases(object):
 
         x = self.cls(['x'], pd.DatetimeIndex([d]))
         self.assertIndexedLikeNDArray(x, np.datetime64(d), 'datetime64[ns]')
+
+    def test_index_0d_timedelta64(self):
+        td = timedelta(hours=1)
+
+        x = self.cls(['x'], [np.timedelta64(td)])
+        self.assertIndexedLikeNDArray(x, np.timedelta64(td), 'timedelta64[ns]')
+
+        x = self.cls(['x'], pd.to_timedelta([td]))
+        self.assertIndexedLikeNDArray(x, np.timedelta64(td), 'timedelta64[ns]')
 
     def test_index_0d_not_a_time(self):
         d = np.datetime64('NaT')
@@ -361,6 +370,12 @@ class TestVariable(TestCase, VariableSubclassTestCases):
         v = Variable([], pd.Timestamp('2000-01-01'))
         self.assertEqual(v.dtype, np.dtype('datetime64[ns]'))
         self.assertEqual(v.values, np.datetime64('2000-01-01T00Z', 'ns'))
+
+    def test_0d_timedelta(self):
+        for td in [pd.to_timedelta('1s'), np.timedelta64(1, 's')]:
+            v = Variable([], td)
+            self.assertEqual(v.dtype, np.dtype('timedelta64[ns]'))
+            self.assertEqual(v.values, np.timedelta64(10 ** 9, 'ns'))
 
     def test_equals_and_identical(self):
         d = np.random.rand(10, 3)

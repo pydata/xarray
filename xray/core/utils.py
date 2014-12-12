@@ -107,9 +107,8 @@ def safe_cast_to_index(array):
         index = array.to_index()
     else:
         kwargs = {}
-        if hasattr(array, 'dtype'):
-            if array.dtype == object or array.dtype.kind == 'm':
-                kwargs['dtype'] = object
+        if hasattr(array, 'dtype') and array.dtype.kind == 'O':
+            kwargs['dtype'] = object
         index = pd.Index(np.asarray(array), **kwargs)
     return index
 

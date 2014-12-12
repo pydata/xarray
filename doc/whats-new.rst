@@ -1,6 +1,12 @@
 What's New
 ==========
 
+v0.3.2 (in development)
+-----------------------
+
+This is another release to fix bugs and inconsistencies. **xray now requires
+pandas v0.15.0 or later.**
+
 v0.3.1 (22 October, 2014)
 -------------------------
 

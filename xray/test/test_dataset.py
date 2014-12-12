@@ -457,6 +457,15 @@ class TestDataset(TestCase):
         self.assertDatasetEqual(data.isel(time=slice(3)),
                                 data.sel(time=(data['time.dayofyear'] <= 3)))
 
+        td = pd.to_timedelta(np.arange(3), unit='days')
+        data = Dataset({'x': ('td', np.arange(3)), 'td': td})
+        self.assertDatasetEqual(data, data.sel(td=td))
+        self.assertDatasetEqual(data, data.sel(td=slice('3 days')))
+        self.assertDatasetEqual(data.isel(td=0), data.sel(td='0 days'))
+        self.assertDatasetEqual(data.isel(td=0), data.sel(td='0h'))
+        self.assertDatasetEqual(data.isel(td=slice(1, 3)),
+                                data.sel(td=slice('1 days', '2 days')))
+
     def test_loc(self):
         data = create_test_data()
         expected = data.sel(dim3='a')

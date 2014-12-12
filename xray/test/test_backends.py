@@ -1,11 +1,7 @@
-from xray.conventions import cf_decoder
-try:
-    import cPickle as pickle
-except ImportError:
-    import pickle
 from io import BytesIO
 import contextlib
 import os.path
+import pickle
 import tempfile
 import unittest
 import sys
@@ -151,6 +147,12 @@ class DatasetIOTestCases(object):
     def test_roundtrip_datetime_data(self):
         times = pd.to_datetime(['2000-01-01', '2000-01-02', 'NaT'])
         expected = Dataset({'t': ('t', times)})
+        with self.roundtrip(expected) as actual:
+            self.assertDatasetIdentical(expected, actual)
+
+    def test_roundtrip_timedelta_data(self):
+        time_deltas = pd.to_timedelta(['1h', '2h', 'NaT'])
+        expected = Dataset({'td': ('td', time_deltas)})
         with self.roundtrip(expected) as actual:
             self.assertDatasetIdentical(expected, actual)
 

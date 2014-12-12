@@ -1,3 +1,4 @@
+from datetime import timedelta
 import functools
 
 import numpy as np
@@ -72,13 +73,15 @@ def _as_compatible_data(data):
 
     if isinstance(data, pd.Timestamp):
         # TODO: convert, handle datetime objects, too
-        data = np.datetime64(data, 'ns')
+        data = np.datetime64(data.value, 'ns')
+    if isinstance(data, timedelta):
+        data = np.timedelta64(getattr(data, 'value', data), 'ns')
 
     # don't check for __len__ or __iter__ so as not to cast if data is a numpy
     # numeric type like np.float32
     required = ['dtype', 'shape', 'size', 'ndim']
     if (any(not hasattr(data, attr) for attr in required)
-            or isinstance(data, (np.string_, np.datetime64))):
+            or isinstance(data, (np.string_, np.datetime64, np.timedelta64))):
         # data must be ndarray-like
         data = np.asarray(data)
 
@@ -103,6 +106,8 @@ def _as_compatible_data(data):
             if data.dtype.kind == 'M':
                 # TODO: automatically cast arrays of datetime objects as well
                 data = np.asarray(data, 'datetime64[ns]')
+            if data.dtype.kind == 'm':
+                data = np.asarray(data, 'timedelta64[ns]')
             data = NumpyArrayAdapter(data)
 
     return data
@@ -170,6 +175,8 @@ class PandasIndexAdapter(utils.NDArrayMixin):
                 # pd.Timestamp rather np.than datetime64 but this is easier
                 # (for now)
                 value = np.datetime64('NaT', 'ns')
+            elif isinstance(value, timedelta):
+                value = np.timedelta64(getattr(value, 'value', value), 'ns')
             else:
                 value = np.asarray(value, dtype=self.dtype)
         else:
@@ -205,6 +212,8 @@ def _as_array_or_item(data):
             # convert to a np.datetime64 object, because 0-dimensional ndarrays
             # with dtype=datetime64 are broken :(
             data = np.datetime64(data, 'ns')
+        elif data.dtype.kind == 'm':
+            data = np.timedelta64(data, 'ns')
     return data
 
 

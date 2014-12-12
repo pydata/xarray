@@ -264,7 +264,7 @@ class TestDatetime(TestCase):
             expected = np.array(expected_list, dtype='datetime64[ns]')
             self.assertArrayEqual(expected, actual)
 
-    def test_guess_time_units(self):
+    def test_infer_datetime_units(self):
         for dates, expected in [(pd.date_range('1900-01-01', periods=5),
                                  'days since 1900-01-01 00:00:00'),
                                 (pd.date_range('1900-01-01 12:00:00', freq='H',
@@ -275,14 +275,24 @@ class TestDatetime(TestCase):
                                  'seconds since 1900-01-01 00:00:00'),
                                 (pd.to_datetime(['1900-01-01', '1900-01-02', 'NaT']),
                                  'days since 1900-01-01 00:00:00')]:
-            self.assertEqual(expected, conventions.guess_time_units(dates))
+            self.assertEqual(expected, conventions.infer_datetime_units(dates))
+
+    def test_infer_timedelta_units(self):
+        for deltas, expected in [
+                (pd.to_timedelta(['1 day', '2 days']), 'days'),
+                (pd.to_timedelta(['1h', '1 day 1 hour']), 'hours'),
+                (pd.to_timedelta(['1m', '2m', np.nan]), 'minutes'),
+                (pd.to_timedelta(['1m3s', '1m4s']), 'seconds')]:
+            self.assertEqual(expected, conventions.infer_timedelta_units(deltas))
 
 
+@requires_netCDF4
 class TestEncodeCFVariable(TestCase):
     def test_incompatible_attributes(self):
         invalid_vars = [
             Variable(['t'], pd.date_range('2000-01-01', periods=3),
                      {'units': 'foobar'}),
+            Variable(['t'], pd.to_timedelta(['1 day']), {'units': 'foobar'}),
             Variable(['t'], [0, 1, 2], {'add_offset': 0}, {'add_offset': 2}),
             Variable(['t'], [0, 1, 2], {'_FillValue': 0}, {'_FillValue': 2}),
             ]

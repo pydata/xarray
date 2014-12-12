@@ -34,7 +34,7 @@ CLASSIFIERS = [
     'Topic :: Scientific/Engineering',
 ]
 
-INSTALL_REQUIRES = ['numpy >= 1.7', 'pandas >= 0.13.1']
+INSTALL_REQUIRES = ['numpy >= 1.7', 'pandas >= 0.15.0']
 TESTS_REQUIRE = ['nose >= 1.0']
 
 if sys.version_info[:2] < (2, 7):
