@@ -147,23 +147,48 @@ def decode_cf_datetime(num_dates, units, calendar=None):
     return dates
 
 
-def guess_time_units(dates):
-    """Given an array of dates suitable for input to `pandas.DatetimeIndex`,
-    returns a CF compatible time-unit string of the form "{time_unit} since
-    {date[0]}", where `time_unit` is 'days', 'hours', 'minutes' or 'seconds'
-    (the first one that can evenly divide all unique time deltas in `dates`)
+def decode_cf_timedelta(num_timedeltas, units):
+    """Given an array of numeric timedeltas in netCDF format, convert it into a
+    numpy timedelta64[ns] array.
     """
-    dates = pd.DatetimeIndex(np.asarray(dates).reshape(-1))
-    unique_timedeltas = np.unique(np.diff(dates.values[pd.notnull(dates)]))
+    # rename 'seconds', 'minutes' and 'hours' to formats pandas recognizes
+    units = {'seconds': 's', 'minutes': 'm', 'hours': 'h'}.get(units, units)
+    return pd.to_timedelta(np.asarray(num_timedeltas), unit=units, box=False)
+
+
+TIME_UNITS = set(['days', 'hours', 'minutes', 'seconds'])
+
+def _infer_time_units_from_diff(unique_timedeltas):
     for time_unit, delta in [('days', 86400), ('hours', 3600),
                              ('minutes', 60), ('seconds', 1)]:
         unit_delta = np.timedelta64(10 ** 9 * delta, 'ns')
         diffs = unique_timedeltas / unit_delta
         if np.all(diffs == diffs.astype(int)):
-            break
-    else:
-        raise ValueError('could not automatically determine time units')
-    return '%s since %s' % (time_unit, dates[0])
+            return time_unit
+    raise ValueError('could not automatically determine time units')
+
+
+def infer_datetime_units(dates):
+    """Given an array of datetimes, returns a CF compatible time-unit string of
+    the form "{time_unit} since {date[0]}", where `time_unit` is 'days',
+    'hours', 'minutes' or 'seconds' (the first one that can evenly divide all
+    unique time deltas in `dates`)
+    """
+    dates = pd.to_datetime(dates, box=False)
+    unique_timedeltas = np.unique(np.diff(dates[pd.notnull(dates)]))
+    units = _infer_time_units_from_diff(unique_timedeltas)
+    return '%s since %s' % (units, pd.Timestamp(dates[0]))
+
+
+def infer_timedelta_units(deltas):
+    """Given an array of timedeltas, returns a CF compatible time-unit from
+    {'days', 'hours', 'minutes' 'seconds'} (the first one that can evenly
+    divide all unique time deltas in `deltas`)
+    """
+    deltas = pd.to_timedelta(deltas, box=False)
+    unique_timedeltas = np.unique(deltas[pd.notnull(deltas)])
+    units = _infer_time_units_from_diff(unique_timedeltas)
+    return units
 
 
 def nctime_to_nptime(times):
@@ -193,7 +218,7 @@ def encode_cf_datetime(dates, units=None, calendar=None):
     dates = np.asarray(dates)
 
     if units is None:
-        units = guess_time_units(dates)
+        units = infer_datetime_units(dates)
     if calendar is None:
         calendar = 'proleptic_gregorian'
 
@@ -209,6 +234,21 @@ def encode_cf_datetime(dates, units=None, calendar=None):
     num = np.array([encode_datetime(d) for d in dates.flat])
     num = num.reshape(dates.shape)
     return (num, units, calendar)
+
+
+def encode_cf_timedelta(timedeltas, units=None):
+    if units is None:
+        units = infer_timedelta_units(timedeltas)
+
+    np_unit = {'seconds': 's', 'minutes': 'm', 'hours': 'h', 'days': 'D'}[units]
+    num = timedeltas.astype('timedelta64[%s]' % np_unit).view(np.int64)
+
+    missing = pd.isnull(timedeltas)
+    if np.any(missing):
+        num = num.astype(float)
+        num[missing] = np.nan
+
+    return (num, units)
 
 
 class MaskedAndScaledArray(utils.NDArrayMixin):
@@ -288,6 +328,23 @@ class DecodedCFDatetimeArray(utils.NDArrayMixin):
                                   calendar=self.calendar)
 
 
+class DecodedCFTimedeltaArray(utils.NDArrayMixin):
+    """Wrapper around array-like objects to create a new indexable object where
+    values, when accessesed, are automatically converted into timedelta objects
+    using decode_cf_timedelta.
+    """
+    def __init__(self, array, units):
+        self.array = array
+        self.units = units
+
+    @property
+    def dtype(self):
+        return np.dtype('timedelta64[ns]')
+
+    def __getitem__(self, key):
+        return decode_cf_timedelta(self.array[key], units=self.units)
+
+
 class CharToStringArray(utils.NDArrayMixin):
     """Wrapper around array-like objects to create a new indexable object where
     values, when accessesed, are automatically concatenated along the last
@@ -358,7 +415,7 @@ def char_to_string(arr):
     return arr.view(kind + str(arr.shape[-1]))[..., 0]
 
 
-def _safe_setitem(dest, key, value):
+def safe_setitem(dest, key, value):
     if key in dest:
         raise ValueError('Failed hard to prevent overwriting key %r' % key)
     dest[key] = value
@@ -370,9 +427,9 @@ def pop_to(source, dest, key, default=None):
     None values are not passed on.  If k already exists in dest an
     error is raised.
     """
-    value = source.pop(key, default)
+    value = source.pop(key, None)
     if value is not None:
-        _safe_setitem(dest, key, value)
+        safe_setitem(dest, key, value)
     return value
 
 
@@ -384,16 +441,21 @@ def maybe_encode_datetime(var):
     if (np.issubdtype(var.dtype, np.datetime64)
             or (var.dtype.kind == 'O'
                 and isinstance(var.values.flat[0], datetime))):
-
         dims, values, attrs, encoding = _var_as_tuple(var)
-        if 'units' in attrs or 'calendar' in attrs:
-            raise ValueError(
-                "Failed hard to prevent overwriting 'units' or 'calendar'")
-
         (values, units, calendar) = encode_cf_datetime(
             values, encoding.pop('units', None), encoding.pop('calendar', None))
-        attrs['units'] = units
-        attrs['calendar'] = calendar
+        safe_setitem(attrs, 'units', units)
+        safe_setitem(attrs, 'calendar', calendar)
+        var = Variable(dims, values, attrs, encoding)
+    return var
+
+
+def maybe_encode_timedelta(var):
+    if np.issubdtype(var.dtype, np.timedelta64):
+        dims, values, attrs, encoding = _var_as_tuple(var)
+        values, units = encode_cf_timedelta(
+            values, encoding.pop('units', None))
+        safe_setitem(attrs, 'units', units)
         var = Variable(dims, values, attrs, encoding)
     return var
 
@@ -452,7 +514,7 @@ def _infer_dtype(array):
     else:
         dtype = np.array(array.flat[0]).dtype
         if dtype.kind in ['S', 'U']:
-            # don't just use inferred_dtype to avoid truncating arrays to
+            # don't just use inferred dtype to avoid truncating arrays to
             # the length of their first element
             dtype = np.dtype(dtype.kind)
         elif dtype.kind == 'O':
@@ -511,6 +573,7 @@ def encode_cf_variable(var, needs_copy=True):
         A variable which has been encoded as described above.
     """
     var = maybe_encode_datetime(var)
+    var = maybe_encode_timedelta(var)
     var, needs_copy = maybe_encode_offset_and_scale(var, needs_copy)
     var, needs_copy = maybe_encode_fill_value(var, needs_copy)
     var = maybe_encode_dtype(var, needs_copy)
@@ -585,11 +648,16 @@ def decode_cf_variable(var, concat_characters=True, mask_and_scale=True,
             data = MaskedAndScaledArray(data, fill_value, scale_factor,
                                         add_offset, dtype)
 
-    if decode_times:
-        if 'units' in attributes and 'since' in attributes['units']:
+    if decode_times and 'units' in attributes:
+        if 'since' in attributes['units']:
+            # datetime
             units = pop_to(attributes, encoding, 'units')
             calendar = pop_to(attributes, encoding, 'calendar')
             data = DecodedCFDatetimeArray(data, units, calendar)
+        elif attributes['units'] in TIME_UNITS:
+            # timedelta
+            units = pop_to(attributes, encoding, 'units')
+            data = DecodedCFTimedeltaArray(data, units)
 
     return Variable(dimensions, indexing.LazilyIndexedArray(data),
                     attributes, encoding=encoding)
