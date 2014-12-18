@@ -518,6 +518,11 @@ class TestDataset(TestCase):
         with self.assertRaisesRegexp(ValueError, 'dictionary'):
             data.reindex('foo')
 
+        # out of order
+        expected = data.sel(dim1=data['dim1'][:10:-1])
+        actual = data.reindex(dim1=data['dim1'][:10:-1])
+        self.assertDatasetIdentical(actual, expected)
+
     def test_align(self):
         left = create_test_data()
         right = left.copy(deep=True)
