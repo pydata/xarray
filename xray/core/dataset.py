@@ -18,8 +18,7 @@ from . import alignment
 from . import formatting
 from .. import backends, conventions
 from .coordinates import DatasetCoordinates, Indexes
-from .utils import (Frozen, SortedKeysDict, ChainMap,
-                    multi_index_from_product)
+from .utils import Frozen, SortedKeysDict, ChainMap
 from .pycompat import iteritems, itervalues, basestring, OrderedDict
 
 
@@ -1591,7 +1590,7 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
         if hasattr(idx, 'levels'):
             # it's a multi-index
             # expand the DataFrame to include the product of all levels
-            full_idx = multi_index_from_product(idx.levels, idx.names)
+            full_idx = pd.MultiIndex.from_product(idx.levels, names=idx.names)
             dataframe = dataframe.reindex(full_idx)
             dims = [name if name is not None else 'level_%i' % n
                     for n, name in enumerate(idx.names)]

@@ -1,5 +1,6 @@
 from collections import Mapping
 from contextlib import contextmanager
+import pandas as pd
 
 from .pycompat import iteritems, basestring
 from . import formatting
@@ -64,8 +65,7 @@ class AbstractCoordinates(Mapping):
         if ordered_dims is None:
             ordered_dims = self.dims
         indexes = [self._dataset._arrays[k].to_index() for k in ordered_dims]
-        return utils.multi_index_from_product(indexes,
-                                              names=list(ordered_dims))
+        return pd.MultiIndex.from_product(indexes, names=list(ordered_dims))
 
     def _merge_validate(self, other):
         """Determine conflicting variables to be dropped from either self or
