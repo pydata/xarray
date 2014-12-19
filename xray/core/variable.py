@@ -50,26 +50,43 @@ def as_variable(obj, key=None, strict=True):
     return obj
 
 
-def _as_compatible_data(data):
+def _maybe_wrap_data(data):
+    """
+    Put pandas.Index and numpy.ndarray arguments in adapter objects to ensure
+    they can be indexed properly.
+
+    NumpyArrayAdapter, PandasIndexAdapter and LazilyIndexedArray should
+    all pass through unmodified.
+    """
+    if isinstance(data, pd.Index):
+        # check pd.Index first since it may be an ndarray subclass
+        return PandasIndexAdapter(data)
+    if isinstance(data, np.ndarray):
+        return NumpyArrayAdapter(data)
+    return data
+
+
+def _as_compatible_data(data, fastpath=False):
     """Prepare and wrap data to put in a Variable.
 
-    Prepare the data:
     - If data does not have the necessary attributes, convert it to ndarray.
     - If data has dtype=datetime64, ensure that it has ns precision. If it's a
       pandas.Timestamp, convert it to datetime64.
     - If data is already a pandas or xray object (other than an Index), just
       use the values.
 
-    Wrap it up:
-    - Finally, put pandas.Index and numpy.ndarray arguments in adapter objects
-      to ensure they can be indexed properly.
-    - NumpyArrayAdapter, PandasIndexAdapter and LazilyIndexedArray should
-      all pass through unmodified.
+    Finally, wrap it up with an adapter if necessary.
     """
-    if isinstance(data, pd.MultiIndex):
-        raise NotImplementedError(
-            'no support yet for using a pandas.MultiIndex in an '
-            'xray.Coordinate')
+    if fastpath and getattr(data, 'ndim', 0) > 0:
+        # can't use fastpath (yet) for scalars
+        return _maybe_wrap_data(data)
+
+    if isinstance(data, pd.Index):
+        if isinstance(data, pd.MultiIndex):
+            raise NotImplementedError(
+                'no support yet for using a pandas.MultiIndex in an '
+                'xray.Coordinate')
+        return _maybe_wrap_data(data)
 
     if isinstance(data, pd.Timestamp):
         # TODO: convert, handle datetime objects, too
@@ -85,32 +102,27 @@ def _as_compatible_data(data):
         # data must be ndarray-like
         data = np.asarray(data)
 
-    # ensure data is properly wrapped up
-    if isinstance(data, pd.Index):
-        # check pd.Index first since it may be an ndarray subclass
-        data = PandasIndexAdapter(data)
-    else:
-        # we don't want nested self-described arrays
-        data = getattr(data, 'values', data)
+    # we don't want nested self-described arrays
+    data = getattr(data, 'values', data)
 
-        if isinstance(data, np.ma.MaskedArray):
-            mask = np.ma.getmaskarray(data)
-            if mask.any():
-                dtype, fill_value = common._maybe_promote(data.dtype)
-                data = np.asarray(data, dtype=dtype)
-                data[mask] = fill_value
-            else:
-                data = np.asarray(data)
+    if isinstance(data, np.ma.MaskedArray):
+        mask = np.ma.getmaskarray(data)
+        if mask.any():
+            dtype, fill_value = common._maybe_promote(data.dtype)
+            data = np.asarray(data, dtype=dtype)
+            data[mask] = fill_value
+        else:
+            data = np.asarray(data)
 
-        if isinstance(data, np.ndarray):
-            if data.dtype.kind == 'M':
-                # TODO: automatically cast arrays of datetime objects as well
-                data = np.asarray(data, 'datetime64[ns]')
-            if data.dtype.kind == 'm':
-                data = np.asarray(data, 'timedelta64[ns]')
-            data = NumpyArrayAdapter(data)
+    if isinstance(data, np.ndarray):
+        data = common._possibly_convert_objects(data)
+        if data.dtype.kind == 'M':
+            # TODO: automatically cast arrays of datetime objects as well
+            data = np.asarray(data, 'datetime64[ns]')
+        if data.dtype.kind == 'm':
+            data = np.asarray(data, 'timedelta64[ns]')
 
-    return data
+    return _maybe_wrap_data(data)
 
 
 class NumpyArrayAdapter(utils.NDArrayMixin):
@@ -237,7 +249,7 @@ class Variable(common.AbstractArray):
     form of a Dataset or DataArray should almost always be preferred, because
     they can use more complete metadata in context of coordinate labels.
     """
-    def __init__(self, dims, data, attrs=None, encoding=None):
+    def __init__(self, dims, data, attrs=None, encoding=None, fastpath=False):
         """
         Parameters
         ----------
@@ -257,7 +269,7 @@ class Variable(common.AbstractArray):
             Well behaviored code to serialize a Variable should ignore
             unrecognized encoding items.
         """
-        self._data = _as_compatible_data(data)
+        self._data = _as_compatible_data(data, fastpath=fastpath)
         self._dims = self._parse_dimensions(dims)
         self._attrs = None
         self._encoding = None
@@ -329,8 +341,8 @@ class Variable(common.AbstractArray):
 
     def to_coord(self):
         """Return this variable as an xray.Coordinate"""
-        return Coordinate(self.dims, self._data, self.attrs,
-                          encoding=self.encoding)
+        return Coordinate(self.dims, self._data, self._attrs,
+                          encoding=self._encoding, fastpath=True)
 
     @property
     def as_index(self):
@@ -391,15 +403,15 @@ class Variable(common.AbstractArray):
         """
         key = self._item_key_to_tuple(key)
         key = indexing.expanded_indexer(key, self.ndim)
-        dims = [dim for k, dim in zip(key, self.dims)
-                if not isinstance(k, (int, np.integer))]
+        dims = tuple(dim for k, dim in zip(key, self.dims)
+                     if not isinstance(k, (int, np.integer)))
         values = self._data[key]
         # orthogonal indexing should ensure the dimensionality is consistent
         if hasattr(values, 'ndim'):
             assert values.ndim == len(dims), (values.ndim, len(dims))
         else:
             assert len(dims) == 0, len(dims)
-        return type(self)(dims, values, self.attrs)
+        return type(self)(dims, values, self._attrs, fastpath=True)
 
     def __setitem__(self, key, value):
         """__setitem__ is overloaded to access the underlying numpy values with
@@ -454,7 +466,8 @@ class Variable(common.AbstractArray):
         # note:
         # dims is already an immutable tuple
         # attributes and encoding will be copied when the new Array is created
-        return type(self)(self.dims, data, self.attrs, self.encoding)
+        return type(self)(self.dims, data, self._attrs, self._encoding,
+                          fastpath=True)
 
     def __copy__(self):
         return self.copy(deep=False)
@@ -524,7 +537,7 @@ class Variable(common.AbstractArray):
             dims = self.dims[::-1]
         axes = self.get_axis_num(dims)
         data = self.values.transpose(axes)
-        return type(self)(dims, data, self.attrs, self.encoding)
+        return type(self)(dims, data, self._attrs, self._encoding, fastpath=True)
 
     def squeeze(self, dim=None):
         """Return a new Variable object with squeezed data.
@@ -585,7 +598,8 @@ class Variable(common.AbstractArray):
         self_dims = set(self.dims)
         exp_dims = tuple(d for d in dims if d not in self_dims) + self.dims
         exp_data = utils.as_shape(self, [dims[d] for d in exp_dims])
-        expanded_var = Variable(exp_dims, exp_data, self.attrs, self.encoding)
+        expanded_var = Variable(exp_dims, exp_data, self._attrs,
+                                self._encoding, fastpath=True)
         return expanded_var.transpose(*dims)
 
     def reduce(self, func, dim=None, axis=None, keep_attrs=False,
@@ -634,7 +648,7 @@ class Variable(common.AbstractArray):
         dims = [dim for n, dim in enumerate(self.dims)
                 if n not in removed_axes]
 
-        attrs = self.attrs if keep_attrs else None
+        attrs = self._attrs if keep_attrs else None
 
         return Variable(dims, data, attrs=attrs)
 
@@ -827,8 +841,8 @@ class Coordinate(Variable):
     """
     _cache_data_class = PandasIndexAdapter
 
-    def __init__(self, name, data, attrs=None, encoding=None):
-        super(Coordinate, self).__init__(name, data, attrs, encoding)
+    def __init__(self, name, data, attrs=None, encoding=None, fastpath=False):
+        super(Coordinate, self).__init__(name, data, attrs, encoding, fastpath)
         if self.ndim != 1:
             raise ValueError('%s objects must be 1-dimensional' %
                              type(self).__name__)
@@ -837,9 +851,10 @@ class Coordinate(Variable):
         key = self._item_key_to_tuple(key)
         values = self._data[key]
         if not hasattr(values, 'ndim') or values.ndim == 0:
-            return Variable((), values, self.attrs, self.encoding)
+            return Variable((), values, self._attrs, self._encoding)
         else:
-            return type(self)(self.dims, values, self.attrs, self.encoding)
+            return type(self)(self.dims, values, self._attrs, self._encoding,
+                              fastpath=True)
 
     def __setitem__(self, key, value):
         raise TypeError('%s values cannot be modified' % type(self).__name__)
@@ -853,7 +868,8 @@ class Coordinate(Variable):
         # there is no need to copy the index values here even if deep=True
         # since pandas.Index objects are immutable
         data = PandasIndexAdapter(self) if deep else self._data
-        return type(self)(self.dims, data, self.attrs, self.encoding)
+        return type(self)(self.dims, data, self._attrs, self._encoding,
+                          fastpath=True)
 
     def _data_equals(self, other):
         return self.to_index().equals(other.to_index())

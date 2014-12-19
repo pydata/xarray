@@ -88,7 +88,7 @@ class VariableSubclassTestCases(object):
     def test_index_0d_datetime(self):
         d = datetime(2000, 1, 1)
         x = self.cls(['x'], [d])
-        self.assertIndexedLikeNDArray(x, d)
+        self.assertIndexedLikeNDArray(x, np.datetime64(d))
 
         x = self.cls(['x'], [np.datetime64(d)])
         self.assertIndexedLikeNDArray(x, np.datetime64(d), 'datetime64[ns]')
@@ -147,6 +147,42 @@ class VariableSubclassTestCases(object):
         x = self.cls('time', pd.date_range('2000-01-01', periods=5))
         expected = np.datetime64('2000-01-01T00Z', 'ns')
         self.assertEqual(x[0].values, expected)
+
+    def test_datetime64_conversion(self):
+        times = pd.date_range('2000-01-01', periods=3)
+        for values, preserve_source in [
+                (times, False),
+                (times.values, True),
+                (times.values.astype('datetime64[s]'), False),
+                (times.to_pydatetime(), False),
+               ]:
+            v = self.cls(['t'], values)
+            self.assertEqual(v.dtype, np.dtype('datetime64[ns]'))
+            self.assertArrayEqual(v.values, times.values)
+            self.assertEqual(v.values.dtype, np.dtype('datetime64[ns]'))
+            same_source = source_ndarray(v.values) is source_ndarray(values)
+            if preserve_source and self.cls is Variable:
+                self.assertTrue(same_source)
+            else:
+                self.assertFalse(same_source)
+
+    def test_timedelta64_conversion(self):
+        times = pd.timedelta_range(start=0, periods=3)
+        for values, preserve_source in [
+                (times, False),
+                (times.values, True),
+                (times.values.astype('timedelta64[s]'), False),
+                (times.to_pytimedelta(), False),
+               ]:
+            v = self.cls(['t'], values)
+            self.assertEqual(v.dtype, np.dtype('timedelta64[ns]'))
+            self.assertArrayEqual(v.values, times.values)
+            self.assertEqual(v.values.dtype, np.dtype('timedelta64[ns]'))
+            same_source = source_ndarray(v.values) is source_ndarray(values)
+            if preserve_source and self.cls is Variable:
+                self.assertTrue(same_source)
+            else:
+                self.assertFalse(same_source)
 
     def test_pandas_data(self):
         v = self.cls(['x'], pd.Series([0, 1, 2], index=[3, 2, 1]))
@@ -333,29 +369,29 @@ class TestVariable(TestCase, VariableSubclassTestCases):
         v = Coordinate('x', np.arange(5))
         self.assertEqual(2, v.searchsorted(2))
 
-    def test_datetime64_conversion(self):
-        # verify that datetime64 is always converted to ns precision with
-        # sources preserved
-        values = np.datetime64('2000-01-01T00')
-        v = Variable([], values)
-        self.assertEqual(v.dtype, np.dtype('datetime64[ns]'))
-        self.assertEqual(v.values, values)
-        self.assertEqual(v.values.dtype, np.dtype('datetime64[ns]'))
+    def test_datetime64_conversion_scalar(self):
+        expected = np.datetime64('2000-01-01T00:00:00Z', 'ns')
+        for values in [
+                 np.datetime64('2000-01-01T00Z'),
+                 pd.Timestamp('2000-01-01T00'),
+                 datetime(2000, 1, 1),
+                ]:
+            v = Variable([], values)
+            self.assertEqual(v.dtype, np.dtype('datetime64[ns]'))
+            self.assertEqual(v.values, expected)
+            self.assertEqual(v.values.dtype, np.dtype('datetime64[ns]'))
 
-        values = pd.date_range('2000-01-01', periods=3).values.astype(
-            'datetime64[s]')
-        v = Variable(['t'], values)
-        self.assertEqual(v.dtype, np.dtype('datetime64[ns]'))
-        self.assertArrayEqual(v.values, values)
-        self.assertEqual(v.values.dtype, np.dtype('datetime64[ns]'))
-        self.assertIsNot(source_ndarray(v.values), values)
-
-        values = pd.date_range('2000-01-01', periods=3).values.copy()
-        v = Variable(['t'], values)
-        self.assertEqual(v.dtype, np.dtype('datetime64[ns]'))
-        self.assertArrayEqual(v.values, values)
-        self.assertEqual(v.values.dtype, np.dtype('datetime64[ns]'))
-        self.assertIs(source_ndarray(v.values), values)
+    def test_timedelta64_conversion_scalar(self):
+        expected = np.timedelta64(24 * 60 * 60 * 10 ** 9, 'ns')
+        for values in [
+                 np.timedelta64(1, 'D'),
+                 pd.Timedelta('1 day'),
+                 timedelta(days=1),
+                ]:
+            v = Variable([], values)
+            self.assertEqual(v.dtype, np.dtype('timedelta64[ns]'))
+            self.assertEqual(v.values, expected)
+            self.assertEqual(v.values.dtype, np.dtype('timedelta64[ns]'))
 
     def test_0d_str(self):
         v = Variable([], u'foo')
@@ -676,18 +712,6 @@ class TestCoordinate(TestCase, VariableSubclassTestCases):
         with self.assertRaisesRegexp(TypeError, 'cannot be modified'):
             x[:] = 0
 
-    def test_avoid_index_dtype_inference(self):
-        # verify our work-around for (pandas<0.14):
-        # https://github.com/pydata/pandas/issues/6370
-        data = pd.date_range('2000-01-01', periods=3).to_pydatetime()
-        t = Coordinate('t', data)
-        self.assertArrayEqual(t.values[:2], data[:2])
-        self.assertArrayEqual(t[:2].values, data[:2])
-        self.assertArrayEqual(t.values[:2], data[:2])
-        self.assertArrayEqual(t[:2].values, data[:2])
-        self.assertEqual(t.dtype, object)
-        self.assertEqual(t[:2].dtype, object)
-
     def test_name(self):
         coord = Coordinate('x', [10.0])
         self.assertEqual(coord.name, 'x')
@@ -729,27 +753,27 @@ class TestAsCompatibleData(TestCase):
         self.assertEqual(np.dtype(float), actual.dtype)
 
     def test_datetime(self):
-        expected = np.datetime64('2000-01-01T00')
+        expected = np.datetime64('2000-01-01T00Z')
         actual = _as_compatible_data(expected)
         self.assertEqual(expected, actual)
         self.assertEqual(NumpyArrayAdapter, type(actual))
         self.assertEqual(np.dtype('datetime64[ns]'), actual.dtype)
 
-        expected = np.array([np.datetime64('2000-01-01T00')])
+        expected = np.array([np.datetime64('2000-01-01T00Z')])
         actual = _as_compatible_data(expected)
         self.assertEqual(np.asarray(expected), actual)
         self.assertEqual(NumpyArrayAdapter, type(actual))
         self.assertEqual(np.dtype('datetime64[ns]'), actual.dtype)
 
-        expected = np.array([np.datetime64('2000-01-01T00', 'ns')])
+        expected = np.array([np.datetime64('2000-01-01T00Z', 'ns')])
         actual = _as_compatible_data(expected)
         self.assertEqual(np.asarray(expected), actual)
         self.assertEqual(NumpyArrayAdapter, type(actual))
         self.assertEqual(np.dtype('datetime64[ns]'), actual.dtype)
         self.assertIs(expected, source_ndarray(np.asarray(actual)))
 
-        expected = pd.Timestamp('2000-01-01T00').to_datetime()
-        actual = _as_compatible_data(expected)
+        expected = np.datetime64('2000-01-01T00Z', 'ns')
+        actual = _as_compatible_data(datetime(2000, 1, 1))
         self.assertEqual(np.asarray(expected), actual)
         self.assertEqual(NumpyArrayAdapter, type(actual))
-        self.assertEqual(np.dtype('O'), actual.dtype)
+        self.assertEqual(np.dtype('datetime64[ns]'), actual.dtype)
