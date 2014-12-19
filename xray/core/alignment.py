@@ -156,7 +156,7 @@ def reindex_variables(variables, indexes, indexers, copy=True):
                 data = np.empty(shape, dtype=dtype)
                 data[:] = fill_value
                 # create a new Variable so we can use orthogonal indexing
-                new_var = Variable(var.dims, data, var.attrs)
+                new_var = Variable(var.dims, data, var.attrs, fastpath=True)
                 new_var[assign_to] = var[assign_from].values
             elif any_not_full_slices(assign_from):
                 # type coercion is not necessary as there are no missing

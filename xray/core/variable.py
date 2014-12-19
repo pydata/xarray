@@ -115,6 +115,7 @@ def _as_compatible_data(data, fastpath=False):
             data = np.asarray(data)
 
     if isinstance(data, np.ndarray):
+        data = common._possibly_convert_objects(data)
         if data.dtype.kind == 'M':
             # TODO: automatically cast arrays of datetime objects as well
             data = np.asarray(data, 'datetime64[ns]')

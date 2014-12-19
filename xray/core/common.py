@@ -1,4 +1,5 @@
 import numpy as np
+import pandas as pd
 
 from .pycompat import basestring, iteritems
 from . import formatting
@@ -127,3 +128,13 @@ def _maybe_promote(dtype):
         dtype = object
         fill_value = np.nan
     return dtype, fill_value
+
+
+def _possibly_convert_objects(values):
+    try:
+        converter = pd.core.common._possibly_convert_objects
+    except AttributeError:
+        # our fault for using a private pandas API that has gone missing
+        # this should do the same coercion (though it will be slower)
+        converter = lambda x: np.asarray(pd.Series(x))
+    return converter(values.ravel()).reshape(values.shape)
