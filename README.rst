@@ -3,7 +3,7 @@ xray: N-D labeled arrays and datasets in Python
 
 .. image:: https://travis-ci.org/xray/xray.svg?branch=master
     :target: https://travis-ci.org/xray/xray
-.. image:: https://badge.fury.io/py/xray.svg
+.. image:: http://img.shields.io/pypi/v/xray.svg?style=flat
     :target: https://pypi.python.org/pypi/xray/
 
 **xray** is an open source project and Python package that aims to bring the
