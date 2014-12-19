@@ -1002,17 +1002,23 @@ class TestDataArray(TestCase):
             raise unittest.SkipTest('cdms2 not installed')
 
         original = DataArray(np.arange(6).reshape(2, 3),
-                             [('xxx', [-2, 2], {'units': 'meters'}),
-                              ('yyy', [3, 4, 5])],
+                             [('distance', [-2, 2], {'units': 'meters'}),
+                              ('time', pd.date_range('2000-01-01', periods=3))],
                              name='foo', attrs={'baz': 123})
+        expected_coords = [Coordinate('distance', [-2, 2]),
+                           Coordinate('time', [0, 1, 2])]
         actual = original.to_cdms2()
         self.assertArrayEqual(actual, original)
         self.assertEqual(actual.id, original.name)
         self.assertItemsEqual(actual.getAxisIds(), original.dims)
-        for axis, coord in zip(actual.getAxisList(), original.coords.values()):
+        for axis, coord in zip(actual.getAxisList(), expected_coords):
             self.assertEqual(axis.id, coord.name)
-            self.assertArrayEqual(axis, coord)
+            self.assertArrayEqual(axis, coord.values)
         self.assertEqual(actual.baz, original.attrs['baz'])
+
+        component_times = actual.getAxis(1).asComponentTime()
+        self.assertEqual(len(component_times), 3)
+        self.assertEqual(str(component_times[0]), '2000-1-1 0:0:0.0')
 
         roundtripped = DataArray.from_cdms2(actual)
         self.assertDataArrayIdentical(original, roundtripped)
