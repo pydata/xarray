@@ -83,9 +83,7 @@ _REDUCE_DOCSTRING_TEMPLATE = \
 
 
 def count(self, axis=None):
-    nulls = np.asarray(utils.isnull(self))
-    not_nulls = np.logical_not(nulls, nulls)
-    return np.sum(not_nulls, axis=axis)
+    return np.sum(~pd.isnull(self), axis=axis)
 
 
 def inject_reduce_methods(cls):

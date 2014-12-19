@@ -523,6 +523,12 @@ class TestDataset(TestCase):
         actual = data.reindex(dim1=data['dim1'][:10:-1])
         self.assertDatasetIdentical(actual, expected)
 
+        # regression test for #279
+        expected = Dataset({'x': ('time', np.random.randn(5))})
+        time2 = DataArray(np.arange(5), dims="time2")
+        actual = expected.reindex(time=time2)
+        self.assertDatasetIdentical(actual, expected)
+
     def test_align(self):
         left = create_test_data()
         right = left.copy(deep=True)

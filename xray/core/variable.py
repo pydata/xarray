@@ -192,14 +192,7 @@ class PandasIndexAdapter(utils.NDArrayMixin):
             else:
                 value = np.asarray(value, dtype=self.dtype)
         else:
-            arr = self.array[key]
-            if arr.dtype != self.array.dtype:
-                # pandas<0.14 does dtype inference when slicing:
-                # https://github.com/pydata/pandas/issues/6370
-                # To avoid this, slice values instead if necessary and accept
-                # that we will need to rebuild the index:
-                arr = self.array.values[key]
-            value = PandasIndexAdapter(arr, dtype=self.dtype)
+            value = PandasIndexAdapter(self.array[key], dtype=self.dtype)
 
         return value
 

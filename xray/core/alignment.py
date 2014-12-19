@@ -138,12 +138,9 @@ def reindex_variables(variables, indexes, indexers, copy=True):
     reindexed = OrderedDict()
     for name, var in iteritems(variables):
         if name in indexers:
-            new_var = indexers[name]
-            if not hasattr(new_var, 'dims') or not hasattr(new_var, 'values'):
-                new_var = Coordinate(var.dims, new_var, var.attrs,
-                                     var.encoding)
-            elif copy:
-                new_var = as_variable(new_var).copy()
+            # no need to copy, because index data is immutable
+            new_var = Coordinate(var.dims, indexers[name], var.attrs,
+                                 var.encoding)
         else:
             assign_to = var_indexers(var, to_indexers)
             assign_from = var_indexers(var, from_indexers)
@@ -156,6 +153,7 @@ def reindex_variables(variables, indexes, indexers, copy=True):
                 data = np.empty(shape, dtype=dtype)
                 data[:] = fill_value
                 # create a new Variable so we can use orthogonal indexing
+                # use fastpath=True to avoid dtype inference
                 new_var = Variable(var.dims, data, var.attrs, fastpath=True)
                 new_var[assign_to] = var[assign_from].values
             elif any_not_full_slices(assign_from):
