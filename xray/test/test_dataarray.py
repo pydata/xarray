@@ -995,6 +995,28 @@ class TestDataArray(TestCase):
         self.assertDataArrayIdentical(expected_da,
                                       DataArray.from_series(actual))
 
+    def test_to_and_from_cdms2(self):
+        try:
+            import cdms2
+        except ImportError:
+            raise unittest.SkipTest('cdms2 not installed')
+
+        original = DataArray(np.arange(6).reshape(2, 3),
+                             [('xxx', [-2, 2], {'units': 'meters'}),
+                              ('yyy', [3, 4, 5])],
+                             name='foo', attrs={'baz': 123})
+        actual = original.to_cdms2()
+        self.assertArrayEqual(actual, original)
+        self.assertEqual(actual.id, original.name)
+        self.assertItemsEqual(actual.getAxisIds(), original.dims)
+        for axis, coord in zip(actual.getAxisList(), original.coords.values()):
+            self.assertEqual(axis.id, coord.name)
+            self.assertArrayEqual(axis, coord)
+        self.assertEqual(actual.baz, original.attrs['baz'])
+
+        roundtripped = DataArray.from_cdms2(actual)
+        self.assertDataArrayIdentical(original, roundtripped)
+
     def test_to_dataset(self):
         unnamed = DataArray([1, 2], dims='x')
         actual = unnamed.to_dataset()

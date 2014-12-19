@@ -8,9 +8,9 @@ matrix:
   include:
   - python: 2.6
     env: UPDATE_ENV="conda install unittest2 pandas==0.15.0"
-  # Test on Python 2.7 with and without netCDF4/scipy
+  # Test on Python 2.7 with and without netCDF4/scipy/cdat-lite
   - python: 2.7
-    env: UPDATE_ENV="pip install cyordereddict"
+    env: UPDATE_ENV="pip install cyordereddict && conda install -c ajdawson cdat-lite"
   - python: 2.7
     # nb. we have to remove scipy because conda install pandas brings it in:
     # https://github.com/ContinuumIO/anaconda-issues/issues/145
@@ -42,7 +42,7 @@ before_install:
 install:
   - conda create --yes -n test_env python=$TRAVIS_PYTHON_VERSION pip nose numpy pandas scipy netCDF4
   - source activate test_env
-  - echo $UPDATE_ENV; $UPDATE_ENV
+  - echo $UPDATE_ENV; eval $UPDATE_ENV
   - python setup.py install
 
 script:

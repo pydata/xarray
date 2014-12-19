@@ -174,7 +174,7 @@ def infer_datetime_units(dates):
     'hours', 'minutes' or 'seconds' (the first one that can evenly divide all
     unique time deltas in `dates`)
     """
-    dates = pd.to_datetime(dates, box=False)
+    dates = pd.to_datetime(np.asarray(dates), box=False)
     unique_timedeltas = np.unique(np.diff(dates[pd.notnull(dates)]))
     units = _infer_time_units_from_diff(unique_timedeltas)
     return '%s since %s' % (units, pd.Timestamp(dates[0]))
@@ -185,7 +185,7 @@ def infer_timedelta_units(deltas):
     {'days', 'hours', 'minutes' 'seconds'} (the first one that can evenly
     divide all unique time deltas in `deltas`)
     """
-    deltas = pd.to_timedelta(deltas, box=False)
+    deltas = pd.to_timedelta(np.asarray(deltas), box=False)
     unique_timedeltas = np.unique(deltas[pd.notnull(deltas)])
     units = _infer_time_units_from_diff(unique_timedeltas)
     return units

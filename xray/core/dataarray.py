@@ -848,6 +848,19 @@ class DataArray(AbstractArray):
         ds = Dataset.from_dataframe(df)
         return cls._new_from_dataset_no_copy(ds, series.name)
 
+    def to_cdms2(self):
+        """Convert this array into a cdms2.Variable
+        """
+        from ..convert import to_cdms2
+        return to_cdms2(self)
+
+    @classmethod
+    def from_cdms2(cls, variable):
+        """Convert a cdms2.Variable into an xray.DataArray
+        """
+        from ..convert import from_cdms2
+        return from_cdms2(variable)
+
     def _all_compat(self, other, compat_str):
         """Helper function for equals and identical"""
         compat = lambda x, y: getattr(x.variable, compat_str)(y.variable)

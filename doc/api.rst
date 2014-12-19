@@ -272,5 +272,7 @@ IO / Conversion
    DataArray.to_series
    DataArray.to_dataframe
    DataArray.to_index
+   DataArray.to_cdms2
    DataArray.from_series
+   DataArray.from_cdms2
    DataArray.load_data
