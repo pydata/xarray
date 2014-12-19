@@ -470,6 +470,12 @@ class TestDataArray(TestCase):
         expected[:2, :2] = bar
         self.assertDataArrayIdentical(bar.reindex_like(foo), expected)
 
+        # regression test for #279
+        expected = DataArray(np.random.randn(5), dims=["time"])
+        time2 = DataArray(np.arange(5), dims="time2")
+        actual = expected.reindex(time=time2)
+        self.assertDataArrayIdentical(actual, expected)
+
     def test_rename(self):
         renamed = self.dv.rename('bar')
         self.assertDatasetIdentical(
