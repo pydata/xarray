@@ -88,7 +88,7 @@ class TestDatetime(TestCase):
                 ([0], 'days since 1000-01-01'),
                 ([[0]], 'days since 1000-01-01'),
                 (np.arange(20), 'days since 1000-01-01'),
-                (np.arange(0, 100000, 10000), 'days since 1900-01-01')
+                (np.arange(0, 100000, 10000), 'days since 1900-01-01'),
                 ]:
             for calendar in ['standard', 'gregorian', 'proleptic_gregorian']:
                 expected = nc4.num2date(num_dates, units, calendar)
@@ -100,7 +100,7 @@ class TestDatetime(TestCase):
                                                             calendar)
                 if (isinstance(actual, np.ndarray)
                         and np.issubdtype(actual.dtype, np.datetime64)):
-                    self.assertEqual(actual.dtype, np.dtype('M8[ns]'))
+                    # self.assertEqual(actual.dtype.kind, 'M')
                     # For some reason, numpy 1.8 does not compare ns precision
                     # datetime64 arrays as equal to arrays of datetime objects,
                     # but it works for us precision. Thus, convert to us
@@ -121,7 +121,6 @@ class TestDatetime(TestCase):
                         pd.Index(actual), units, calendar)
                     self.assertArrayEqual(num_dates, np.around(encoded))
 
-    @requires_netCDF4
     def test_decoded_cf_datetime_array(self):
         actual = conventions.DecodedCFDatetimeArray(
             np.array([0, 1, 2]), 'days since 1900-01-01', 'standard')
@@ -135,7 +134,6 @@ class TestDatetime(TestCase):
         self.assertEqual(actual.dtype, np.dtype('datetime64[ns]'))
         self.assertArrayEqual(actual, expected)
 
-    @requires_netCDF4
     def test_slice_decoded_cf_datetime_array(self):
         actual = conventions.DecodedCFDatetimeArray(
             np.array([0, 1, 2]), 'days since 1900-01-01', 'standard')
@@ -148,6 +146,14 @@ class TestDatetime(TestCase):
         expected = pd.date_range('1900-01-01', periods=3).values
         self.assertEqual(actual.dtype, np.dtype('datetime64[ns]'))
         self.assertArrayEqual(actual[[0, 2]], expected[[0, 2]])
+
+    def test_decode_cf_datetime_non_standard_units(self):
+        expected = pd.date_range(periods=100, start='1970-01-01', freq='h')
+        # netCDFs from madis.noaa.gov use this format for their time units
+        # they cannot be parsed by netcdftime, but pd.Timestamp works
+        units = 'hours since 1-1-1970'
+        actual = conventions.decode_cf_datetime(np.arange(100), units)
+        self.assertArrayEqual(actual, expected)
 
     @requires_netCDF4
     def test_decode_non_standard_calendar(self):
@@ -249,7 +255,6 @@ class TestDatetime(TestCase):
                 self.assertEqual(actual.dtype, np.dtype('O'))
                 self.assertArrayEqual(actual, expected)
 
-    @requires_netCDF4
     def test_cf_datetime_nan(self):
         for num_dates, units, expected_list in [
                 ([np.nan], 'days since 2000-01-01', ['NaT']),
