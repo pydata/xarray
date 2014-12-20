@@ -396,11 +396,11 @@ class CharToStringArray(utils.NDArrayMixin):
 def string_to_char(arr):
     """Like netCDF4.stringtochar, but faster and more flexible.
     """
-    arr = np.asarray(arr)
+    # ensure the array is contiguous
+    arr = np.array(arr, copy=False, order='C')
     kind = arr.dtype.kind
     if kind not in ['U', 'S']:
         raise ValueError('argument must be a string')
-    # TODO: handle cases where this fails (for non-contiguous arrays?)
     return arr.reshape(arr.shape + (1,)).view(kind + '1')
 
 
@@ -408,7 +408,7 @@ def char_to_string(arr):
     """Like netCDF4.chartostring, but faster and more flexible.
     """
     # based on: http://stackoverflow.com/a/10984878/809705
-    arr = np.asarray(arr)
+    arr = np.array(arr, copy=False, order='C')
     kind = arr.dtype.kind
     if kind not in ['U', 'S']:
         raise ValueError('argument must be a string')

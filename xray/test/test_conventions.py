@@ -43,7 +43,7 @@ class TestMaskedAndScaledArray(TestCase):
 
 
 class TestCharToStringArray(TestCase):
-    def test(self):
+    def test_wrapper_class(self):
         array = np.array(list('abc'), dtype='S')
         actual = conventions.CharToStringArray(array)
         expected = np.array('abc', dtype='S')
@@ -70,6 +70,28 @@ class TestCharToStringArray(TestCase):
         self.assertArrayEqual(expected[:1], actual[:1])
         with self.assertRaises(IndexError):
             actual[:, :2]
+
+    def test_char_to_string(self):
+        array = np.array([['a', 'b', 'c'], ['d', 'e', 'f']])
+        expected = np.array(['abc', 'def'])
+        actual = conventions.char_to_string(array)
+        self.assertArrayEqual(actual, expected)
+
+        expected = np.array(['ad', 'be', 'cf'])
+        actual = conventions.char_to_string(array.T) # non-contiguous
+        self.assertArrayEqual(actual, expected)
+
+    def test_string_to_char(self):
+        array = np.array([['ab', 'cd'], ['ef', 'gh']])
+        expected = np.array([[['a', 'b'], ['c', 'd']],
+                             [['e', 'f'], ['g', 'h']]])
+        actual = conventions.string_to_char(array)
+        self.assertArrayEqual(actual, expected)
+
+        expected = np.array([[['a', 'b'], ['e', 'f']],
+                             [['c', 'd'], ['g', 'h']]])
+        actual = conventions.string_to_char(array.T)
+        self.assertArrayEqual(actual, expected)
 
 
 class TestDatetime(TestCase):
