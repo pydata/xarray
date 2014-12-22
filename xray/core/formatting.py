@@ -57,20 +57,25 @@ def first_n_items(x, n_desired):
     return np.asarray(x).flat[:n_desired]
 
 
+def format_timestamp(t):
+    """Cast given object to a Timestamp and return a nicely formatted string"""
+    datetime_str = str(pd.Timestamp(t))
+    try:
+        date_str, time_str = datetime_str.split()
+    except ValueError:
+        # catch NaT and others that don't split nicely
+        return datetime_str
+    else:
+        if time_str == '00:00:00':
+            return date_str
+        else:
+            return '%sT%s' % (date_str, time_str)
+
+
 def format_item(x):
     """Returns a succinct summary of an object as a string"""
     if isinstance(x, (np.datetime64, datetime)):
-        datetime_str = str(pd.Timestamp(x))
-        try:
-            date_str, time_str = datetime_str.split()
-        except ValueError:
-            # catch NaT and others that don't split nicely
-            return datetime_str
-        else:
-            if time_str == '00:00:00':
-                return date_str
-            else:
-                return '%sT%s' % (date_str, time_str)
+        return format_timestamp(x)
     elif isinstance(x, (unicode_type, bytes_type)):
         return repr(x)
     elif isinstance(x, (float, np.float)):

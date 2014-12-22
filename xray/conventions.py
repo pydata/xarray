@@ -1,11 +1,14 @@
 import functools
 import numpy as np
 import pandas as pd
+import re
 import warnings
 from collections import defaultdict
 from datetime import datetime
+from pandas.tslib import OutOfBoundsDatetime
 
 from .core import indexing, utils
+from .core.formatting import format_timestamp
 from .core.variable import as_variable, Variable
 from .core.pycompat import iteritems, bytes_type, unicode_type, OrderedDict
 
@@ -60,6 +63,39 @@ def mask_and_scale(array, fill_value=None, scale_factor=None, add_offset=None,
     return values
 
 
+def _netcdf_to_numpy_timeunit(units):
+    return {'seconds': 's', 'minutes': 'm', 'hours': 'h', 'days': 'D'}[units]
+
+
+def _unpack_netcdf_time_units(units):
+    matches = re.match('(\S+) since (.+)', units).groups()
+    if not matches:
+        raise ValueError('invalid time units: %s' % units)
+    delta, ref_date = matches
+    return delta, ref_date
+
+
+def _decode_netcdf_datetime(num_dates, units, calendar):
+    import netCDF4 as nc4
+
+    dates = np.asarray(nc4.num2date(num_dates, units, calendar))
+    if (dates[np.nanargmin(num_dates)].year < 1678
+            or dates[np.nanargmax(num_dates)].year >= 2262):
+        warnings.warn('Unable to decode time axis into full '
+                      'numpy.datetime64 objects, continuing using dummy '
+                      'netCDF4.datetime objects instead, reason: dates out'
+                      ' of range', RuntimeWarning, stacklevel=3)
+    else:
+        try:
+            dates = nctime_to_nptime(dates)
+        except ValueError as e:
+            warnings.warn('Unable to decode time axis into full '
+                          'numpy.datetime64 objects, continuing using '
+                          'dummy netCDF4.datetime objects instead, reason:'
+                          '{0}'.format(e), RuntimeWarning, stacklevel=3)
+    return dates
+
+
 def decode_cf_datetime(num_dates, units, calendar=None):
     """Given an array of numeric dates in netCDF format, convert it into a
     numpy array of date time objects.
@@ -72,87 +108,33 @@ def decode_cf_datetime(num_dates, units, calendar=None):
     --------
     netCDF4.num2date
     """
-    import netCDF4 as nc4
-    num_dates = np.asarray(num_dates).astype(float)
+    num_dates = np.asarray(num_dates, dtype=float)
+    flat_num_dates = num_dates.ravel()
+    orig_shape = num_dates.shape
     if calendar is None:
         calendar = 'standard'
 
-    def nan_safe_num2date(num):
-        return pd.NaT if np.isnan(num) else nc4.num2date(num, units, calendar)
+    delta, ref_date = _unpack_netcdf_time_units(units)
 
-    min_num = np.nanmin(num_dates)
-    max_num = np.nanmax(num_dates)
-    min_date = nan_safe_num2date(min_num)
-    if num_dates.size > 1:
-        max_date = nan_safe_num2date(max_num)
-    else:
-        max_date = min_date
+    try:
+        if calendar not in _STANDARD_CALENDARS:
+            raise OutOfBoundsDatetime
 
-    if ((calendar not in _STANDARD_CALENDARS
-            or min_date.year < 1678 or max_date.year >= 2262)
-            and min_date is not pd.NaT):
+        delta = _netcdf_to_numpy_timeunit(delta)
+        ref_date = pd.Timestamp(ref_date)
 
-        dates = nc4.num2date(num_dates, units, calendar)
+        dates = (pd.to_timedelta(num_dates.ravel(), delta) + ref_date).values
+    except OutOfBoundsDatetime:
+        dates = _decode_netcdf_datetime(flat_num_dates, units, calendar)
 
-        if min_date.year >= 1678 and max_date.year < 2262:
-            try:
-                dates = nctime_to_nptime(dates)
-            except ValueError as e:
-                warnings.warn('Unable to decode time axis into full '
-                              'numpy.datetime64 objects, continuing using '
-                              'dummy netCDF4.datetime objects instead, reason:'
-                              '{0}'.format(e), RuntimeWarning, stacklevel=2)
-                dates = np.asarray(dates)
-        else:
-            warnings.warn('Unable to decode time axis into full '
-                          'numpy.datetime64 objects, continuing using dummy '
-                          'netCDF4.datetime objects instead, reason: dates out'
-                          ' of range', RuntimeWarning, stacklevel=2)
-            dates = np.asarray(dates)
-
-    else:
-        # we can safely use np.datetime64 with nanosecond precision (pandas
-        # likes ns precision so it can directly make DatetimeIndex objects)
-        if pd.isnull(min_num):
-            # pandas.NaT doesn't cast to numpy.datetime64('NaT'), so handle it
-            # separately
-            dates = np.repeat(np.datetime64('NaT'), num_dates.size)
-        elif min_num == max_num:
-            # we can't safely divide by max_num - min_num
-            dates = np.repeat(np.datetime64(min_date), num_dates.size)
-            if dates.size > 1:
-                # don't bother with one element, since it will be fixed at
-                # min_date and isn't indexable anyways
-                dates[np.isnan(num_dates)] = np.datetime64('NaT')
-        else:
-            # Calculate the date as a np.datetime64 array from linear scaling
-            # of the max and min dates calculated via num2date.
-            flat_num_dates = num_dates.reshape(-1)
-            # Use second precision for the timedelta to decrease the chance of
-            # a numeric overflow
-            time_delta = np.timedelta64(max_date - min_date).astype('m8[s]')
-            if time_delta != max_date - min_date:
-                raise ValueError('unable to exactly represent max_date minus'
-                                 'min_date with second precision')
-            # apply the numerator and denominator separately so we don't need
-            # to cast to floating point numbers under the assumption that all
-            # dates can be given exactly with ns precision
-            numerator = flat_num_dates - min_num
-            denominator = max_num - min_num
-            dates = (time_delta * numerator / denominator
-                     + np.datetime64(min_date))
-        # restore original shape and ensure dates are given in ns
-        dates = dates.reshape(num_dates.shape).astype('M8[ns]')
-
-    return dates
+    return dates.reshape(num_dates.shape)
 
 
 def decode_cf_timedelta(num_timedeltas, units):
     """Given an array of numeric timedeltas in netCDF format, convert it into a
     numpy timedelta64[ns] array.
     """
-    # rename 'seconds', 'minutes' and 'hours' to formats pandas recognizes
-    units = {'seconds': 's', 'minutes': 'm', 'hours': 'h'}.get(units, units)
+    units = _netcdf_to_numpy_timeunit(units)
     return pd.to_timedelta(np.asarray(num_timedeltas), unit=units, box=False)
 
 
@@ -201,6 +183,17 @@ def nctime_to_nptime(times):
     return new
 
 
+def _cleanup_netcdf_time_units(units):
+    delta, ref_date = _unpack_netcdf_time_units(units)
+    try:
+        units = '%s since %s' % (delta, format_timestamp(ref_date))
+    except OutOfBoundsDatetime:
+        # don't worry about reifying the units if they're out of bounds
+        pass
+    return units
+
+
+
 def encode_cf_datetime(dates, units=None, calendar=None):
     """Given an array of datetime objects, returns the tuple `(num, units,
     calendar)` suitable for a CF complient time variable.
@@ -219,6 +212,9 @@ def encode_cf_datetime(dates, units=None, calendar=None):
 
     if units is None:
         units = infer_datetime_units(dates)
+    else:
+        units = _cleanup_netcdf_time_units(units)
+
     if calendar is None:
         calendar = 'proleptic_gregorian'
 
@@ -240,7 +236,7 @@ def encode_cf_timedelta(timedeltas, units=None):
     if units is None:
         units = infer_timedelta_units(timedeltas)
 
-    np_unit = {'seconds': 's', 'minutes': 'm', 'hours': 'h', 'days': 'D'}[units]
+    np_unit = _netcdf_to_numpy_timeunit(units)
     num = timedeltas.astype('timedelta64[%s]' % np_unit).view(np.int64)
 
     missing = pd.isnull(timedeltas)
