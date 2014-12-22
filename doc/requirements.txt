@@ -1,8 +1,8 @@
 # only the dependencies required to build xray's docs which are not already
 # available in RTD's system site-packages
-ipython==2.2.0
-matplotlib==1.4.0
-pandas==0.14.1
-seaborn==0.4
+ipython==2.3.0
+matplotlib==1.4.2
+pandas==0.15.2
+seaborn==0.5.1
 python-dateutil
 numpydoc==0.5
