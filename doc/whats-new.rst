@@ -1,11 +1,82 @@
 What's New
 ==========
 
+.. ipython:: python
+   :suppress:
+
+    import numpy as np
+    import pandas as pd
+    import xray
+    np.random.seed(123456)
+
 v0.3.2 (in development)
 -----------------------
 
-This is another release to fix bugs and inconsistencies. **xray now requires
-pandas v0.15.0 or later.**
+This release focused on bug-fixes, speedups and resolving some niggling
+inconsistencies.
+
+There are a few cases where the behavior of xray differs from the previous
+version. However, I expect that in almost all cases your code will continue to
+run unmodified.
+
+The next version of xray (0.4) will remove deprecated features whose use
+currently raises a warning.
+
+.. warning::
+
+    xray now requires pandas v0.15.0 or later. This was required for supporting
+    TimedeltaIndex without too many painful hacks.
+
+Backwards incompatible changes
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+- Arrays of :py:class:`datetime.datetime` objects are now automatically cast to
+  ``datetime64[ns]`` arrays when stored in an xray object, using machinery
+  borrowed from pandas:
+
+  .. ipython:: python
+
+      from datetime import datetime
+      xray.Dataset({'t': [datetime(2000, 1, 1)]})
+
+- xray now has support (including serialization to netCDF) for
+  :py:class:`~pandas.TimedeltaIndex`. :py:class:`datetime.timedelta` objects
+  are thus accordingly cast to ``timedelta64[ns]`` objects when appropriate.
+- Masked arrays are now properly coerced to use ``NaN`` as a sentinel value
+  (:issue:`259`).
+
+Enhancements
+~~~~~~~~~~~~
+
+- You can now use a dictionary for indexing with labeled dimensions. This
+  provides a safe way to do assignment with labeled dimensions:
+
+  .. ipython:: python
+
+      array = xray.DataArray(np.zeros(5), dims=['x'])
+      array[dict(x=slice(3))] = 1
+      array
+
+- Non-index coordinates can now be faithfully written to and restored from
+  netCDF files. This is done according to CF conventions when possible by
+  using the ``coordinates`` attribute on a data variable. When not possible, we
+  define a global ``coordinates`` attribute.
+- Preliminary support for converting ``xray.DataArray`` objects to and from
+  CDAT_ ``cdms2`` variables.
+- We sped up any operation that involves creating a new Dataset or DataArray
+  (e.g., indexing, aggregation, arithmetic) by a factor of 30 to 50%. The full
+  speed requires cyordereddict_ to be installed.
+
+.. _CDAT: http://uvcdat.llnl.gov/
+.. _cyordereddict: https://github.com/shoyer/cyordereddict
+
+Bug fixes
+~~~~~~~~~
+
+- Fix for ``to_dataframe()`` with 0d string/object coordinates (:issue:`287`)
+- Fix for ``to_netcdf`` with 0d string variable (:issue:`284`)
+- Fix writing datetime64 arrays to netcdf if NaT is present (:issue:`270`)
+- Fix align silently upcasts data arrays when NaNs are inserted (:issue:`264`)
 
 v0.3.1 (22 October, 2014)
 -------------------------
