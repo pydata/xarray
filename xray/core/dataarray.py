@@ -21,7 +21,7 @@ def _infer_coords_and_dims(shape, coords, dims):
     """All the logic for creating a new DataArray"""
 
     if (coords is not None and not utils.is_dict_like(coords)
-            and not len(coords) == len(shape)):
+            and len(coords) != len(shape)):
         raise ValueError('coords is not dict-like, but it has %s items, '
                          'which does not match the %s dimensions of the '
                          'data' % (len(coords), len(shape)))
@@ -122,17 +122,16 @@ class DataArray(AbstractArray):
     attrs : OrderedDict
         Dictionary for holding arbitrary metadata.
     """
-    def __init__(self, data=None, coords=None, dims=None, name=None,
+    def __init__(self, data, coords=None, dims=None, name=None,
                  attrs=None, encoding=None):
         """
         Parameters
         ----------
-        data : array_like, optional
+        data : array_like
             Values for this array. Must be a ``numpy.ndarray``, ndarray like,
             or castable to an ``ndarray``. If a self-described xray or pandas
             object, attempst are made to use this array's metadata to fill in
-            other unspecified arguments. This argument is required unless the
-            'dataset' argument is provided.
+            other unspecified arguments.
         coords : sequence or dict of array_like objects, optional
             Coordinates (tick labels) to use for indexing along each dimension.
             If dict-like, should be a mapping from dimension names to the
