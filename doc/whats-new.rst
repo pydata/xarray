@@ -45,7 +45,7 @@ Backwards incompatible changes
 Enhancements
 ~~~~~~~~~~~~
 
-- Due to popular demand, I have added experimental attribute style access as
+- Due to popular demand, we have added experimental attribute style access as
   a shortcut for dataset variables, coordinates and attributes:
 
   .. ipython:: python
@@ -89,7 +89,7 @@ Bug fixes
 Future plans
 ~~~~~~~~~~~~
 
-- I am comtemplating switching to the terms "coordinate variables" and "data
+- I am contemplating switching to the terms "coordinate variables" and "data
   variables" instead of the (currently used) "coordinates" and "variables",
   following their use in `CF Conventions`_ (:issue:`293`). This would mostly
   have implications for the documentation, but I would also change the
@@ -99,7 +99,7 @@ Future plans
   (:issue:`186`).
 - The main API breakage that I *do* anticipate in the next release is finally
   making all aggregation operations skip missing values by default
-  (:issue:`130`). I'm pretty sick of writing `ds.reduce(np.nanmean, 'time')`.
+  (:issue:`130`). I'm pretty sick of writing ``ds.reduce(np.nanmean, 'time')``.
 - The next version of xray (0.4) will remove deprecated features and aliases
   whose use currently raises a warning.
 
