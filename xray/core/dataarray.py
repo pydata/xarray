@@ -9,7 +9,7 @@ from . import groupby
 from . import ops
 from . import utils
 from . import variable
-from .common import AbstractArray
+from .common import AbstractArray, AttrAccessMixin
 from .coordinates import DataArrayCoordinates, Indexes
 from .dataset import Dataset
 from .pycompat import iteritems, basestring, OrderedDict, zip
@@ -84,7 +84,7 @@ class _LocIndexer(object):
         self.data_array[self._remap_key(key)] = value
 
 
-class DataArray(AbstractArray):
+class DataArray(AbstractArray, AttrAccessMixin):
     """N-dimensional array with labeled coordinates and dimensions.
 
     DataArray provides a wrapper around numpy ndarrays that uses labeled
@@ -356,6 +356,11 @@ class DataArray(AbstractArray):
 
     def __delitem__(self, key):
         del self._dataset[key]
+
+    @property
+    def __attr_sources__(self):
+        """List of places to look-up items for attribute-style access"""
+        return [self.coords, self.attrs]
 
     def __contains__(self, key):
         return key in self._dataset

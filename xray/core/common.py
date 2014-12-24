@@ -99,6 +99,31 @@ class AbstractArray(ImplementsArrayReduce):
                              (dim, self.dims))
 
 
+class AttrAccessMixin(object):
+    """Mixin class that allow getting keys with attribute access
+    """
+    @property
+    def __attr_sources__(self):
+        """List of places to look-up items for attribute-style access"""
+        return [self, self.attrs]
+
+    def __getattr__(self, name):
+        for source in self.__attr_sources__:
+            try:
+                return source[name]
+            except KeyError:
+                pass
+        raise AttributeError("%r object has no attribute %r" %
+                             (type(self).__name__, name))
+
+    def __dir__(self):
+        """Provide method name lookup and completion. Only provide 'public'
+        methods.
+        """
+        extra_attrs = [item for sublist in self.__attr_sources__
+                       for item in sublist]
+        return sorted(set(dir(type(self)) + extra_attrs))
+
 
 def squeeze(xray_obj, dims, dim=None):
     """Squeeze the dims of an xray object."""
