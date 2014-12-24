@@ -19,13 +19,10 @@ There are a few cases where the behavior of xray differs from the previous
 version. However, I expect that in almost all cases your code will continue to
 run unmodified.
 
-The next version of xray (0.4) will remove deprecated features whose use
-currently raises a warning.
-
 .. warning::
 
-    xray now requires pandas v0.15.0 or later. This was required for supporting
-    TimedeltaIndex without too many painful hacks.
+    xray now requires pandas v0.15.0 or later. This was necessary for
+    supporting TimedeltaIndex without too many painful hacks.
 
 Backwards incompatible changes
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -48,6 +45,17 @@ Backwards incompatible changes
 Enhancements
 ~~~~~~~~~~~~
 
+- Due to popular demand, I have added experimental attribute style access as
+  a shortcut for dataset variables, coordinates and attributes:
+
+  .. ipython:: python
+
+     ds = xray.Dataset({'tmin': ([], 25, {'units': 'celcius'})})
+     ds.tmin.units
+
+  Tab-completion for these variables should work in editors such as IPython.
+  However, setting variables or attributes in this fashion is not yet
+  supported because there are some unresolved ambiguities (:issue:`300`).
 - You can now use a dictionary for indexing with labeled dimensions. This
   provides a safe way to do assignment with labeled dimensions:
 
@@ -59,13 +67,13 @@ Enhancements
 
 - Non-index coordinates can now be faithfully written to and restored from
   netCDF files. This is done according to CF conventions when possible by
-  using the ``coordinates`` attribute on a data variable. When not possible, we
-  define a global ``coordinates`` attribute.
+  using the ``coordinates`` attribute on a data variable. When not possible,
+  xray defines a global ``coordinates`` attribute.
 - Preliminary support for converting ``xray.DataArray`` objects to and from
   CDAT_ ``cdms2`` variables.
 - We sped up any operation that involves creating a new Dataset or DataArray
   (e.g., indexing, aggregation, arithmetic) by a factor of 30 to 50%. The full
-  speed requires cyordereddict_ to be installed.
+  speed up requires cyordereddict_ to be installed.
 
 .. _CDAT: http://uvcdat.llnl.gov/
 .. _cyordereddict: https://github.com/shoyer/cyordereddict
@@ -77,6 +85,28 @@ Bug fixes
 - Fix for ``to_netcdf`` with 0d string variable (:issue:`284`)
 - Fix writing datetime64 arrays to netcdf if NaT is present (:issue:`270`)
 - Fix align silently upcasts data arrays when NaNs are inserted (:issue:`264`)
+
+Future plans
+~~~~~~~~~~~~
+
+- I am comtemplating switching to the terms "coordinate variables" and "data
+  variables" instead of the (currently used) "coordinates" and "variables",
+  following their use in `CF Conventions`_ (:issue:`293`). This would mostly
+  have implications for the documentation, but I would also change the
+  ``Dataset`` attribute ``vars`` to ``data``.
+- I no longer certain that automatic label alignment for arithmetic would be a
+  good idea for xray -- it is a feature from pandas that I have not missed
+  (:issue:`186`).
+- The main API breakage that I *do* anticipate in the next release is finally
+  making all aggregation operations skip missing values by default
+  (:issue:`130`). I'm pretty sick of writing `ds.reduce(np.nanmean, 'time')`.
+- The next version of xray (0.4) will remove deprecated features and aliases
+  whose use currently raises a warning.
+
+If you have opinions about any of these anticipated changes, I would love to
+hear them -- please add a note to any of the referenced GitHub issues.
+
+.. _CF Conventions: http://cfconventions.org/Data/cf-conventions/cf-conventions-1.6/build/cf-conventions.html
 
 v0.3.1 (22 October, 2014)
 -------------------------
