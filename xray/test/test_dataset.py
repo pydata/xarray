@@ -175,6 +175,23 @@ class TestDataset(TestCase):
         self.assertNotIn('var1', ds.coords)
         self.assertEqual(len(ds.coords), 5)
 
+    def test_attr_access(self):
+        ds = Dataset({'tmin': ('x', [42], {'units': 'Celcius'})},
+                     attrs={'title': 'My test data'})
+        self.assertDataArrayIdentical(ds.tmin, ds['tmin'])
+        self.assertDataArrayIdentical(ds.tmin.x, ds.x)
+
+        self.assertEqual(ds.title, ds.attrs['title'])
+        self.assertEqual(ds.tmin.units, ds['tmin'].attrs['units'])
+
+        self.assertLessEqual(set(['tmin', 'title']), set(dir(ds)))
+        self.assertIn('units', set(dir(ds.tmin)))
+
+        # should defer to variable of same name
+        ds.attrs['tmin'] = -999
+        self.assertEqual(ds.attrs['tmin'], -999)
+        self.assertDataArrayIdentical(ds.tmin, ds['tmin'])
+
     def test_variable(self):
         a = Dataset()
         d = np.random.random((10, 3))

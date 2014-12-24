@@ -18,6 +18,7 @@ from . import alignment
 from . import formatting
 from .. import backends, conventions
 from .coordinates import DatasetCoordinates, Indexes
+from .common import ImplementsDatasetReduce, AttrAccessMixin
 from .utils import Frozen, SortedKeysDict, ChainMap
 from .pycompat import iteritems, itervalues, basestring, OrderedDict
 
@@ -301,7 +302,7 @@ class _LocIndexer(object):
         return self.dataset.sel(**key)
 
 
-class Dataset(Mapping, common.ImplementsDatasetReduce):
+class Dataset(Mapping, ImplementsDatasetReduce, AttrAccessMixin):
     """A multi-dimensional, in memory, array database.
 
     A dataset resembles an in-memory representation of a NetCDF file, and
@@ -314,6 +315,11 @@ class Dataset(Mapping, common.ImplementsDatasetReduce):
     One dimensional variables with name equal to their dimension are index
     coordinates used for label based indexing.
     """
+    # class properties defined for the benefit of __setstate__, which otherwise
+    # runs into trouble because we overrode __getattr__
+    _attrs = None
+    _arrays = Frozen({})
+
     def __init__(self, variables=None, coords=None, attrs=None):
         """To load data from a file or file-like object, use the `open_dataset`
         function.
