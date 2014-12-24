@@ -9,8 +9,8 @@ What's New
     import xray
     np.random.seed(123456)
 
-v0.3.2 (in development)
------------------------
+v0.3.2 (23 December, 2014)
+--------------------------
 
 This release focused on bug-fixes, speedups and resolving some niggling
 inconsistencies.
