@@ -98,7 +98,7 @@ class AbstractCoordinates(Mapping):
             if k in other:
                 self_var = self._dataset._arrays[k]
                 other_var = other[k].variable
-                if (self_var != other_var).any():
+                if not self_var.broadcast_equals(other_var):
                     if k in self.dims and k in other.dims:
                         raise ValueError('index %r not aligned' % k)
                     if k not in self.dims:

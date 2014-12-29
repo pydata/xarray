@@ -772,6 +772,19 @@ class Variable(common.AbstractArray):
         except (TypeError, AttributeError):
             return False
 
+    def broadcast_equals(self, other):
+        """True if two Variables have the values after being broadcast against
+        each other; otherwise False.
+
+        Variables can still be equal (like pandas objects) if they have NaN
+        values in the same locations.
+        """
+        try:
+            self, other = broadcast_variables(self, other)
+        except (ValueError, AttributeError):
+            return False
+        return self.equals(other)
+
     def identical(self, other):
         """Like equals, but also checks attributes.
         """

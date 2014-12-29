@@ -358,11 +358,14 @@ class TestDataset(TestCase):
         actual = other_coords.merge(orig_coords)
         self.assertDatasetIdentical(expected, actual)
 
+        other_coords = Dataset(coords={'x': ('x', ['a'])}).coords
+        with self.assertRaisesRegexp(ValueError, 'not aligned'):
+            orig_coords.merge(other_coords)
         other_coords = Dataset(coords={'x': ('x', ['a', 'b'])}).coords
         with self.assertRaisesRegexp(ValueError, 'not aligned'):
             orig_coords.merge(other_coords)
-        other_coords = Dataset(coords={'x': ('x', ['a'])}).coords
-        with self.assertRaisesRegexp(ValueError, 'cannot be broadcast'):
+        other_coords = Dataset(coords={'x': ('x', ['a', 'b', 'c'])}).coords
+        with self.assertRaisesRegexp(ValueError, 'not aligned'):
             orig_coords.merge(other_coords)
 
         other_coords = Dataset(coords={'a': ('x', [8, 9])}).coords
@@ -392,6 +395,12 @@ class TestDataset(TestCase):
 
         actual = other_coords.merge(orig_coords)
         self.assertDatasetIdentical(expected.T, actual)
+
+        orig_coords = Dataset(coords={'a': ('x', [np.nan])}).coords
+        other_coords = Dataset(coords={'a': np.nan}).coords
+        expected = orig_coords.to_dataset()
+        actual = orig_coords.merge(other_coords)
+        self.assertDatasetIdentical(expected, actual)
 
     def test_equals_and_identical(self):
         data = create_test_data(seed=42)
@@ -752,6 +761,11 @@ class TestDataset(TestCase):
 
         actual = ds1.copy()
         actual.update(ds2)
+        self.assertDatasetIdentical(ds2, actual)
+
+        ds1 = Dataset({'x': np.nan})
+        ds2 = Dataset({'x': ('y', [np.nan, np.nan])})
+        actual = ds1.merge(ds2)
         self.assertDatasetIdentical(ds2, actual)
 
     def test_merge_compat(self):

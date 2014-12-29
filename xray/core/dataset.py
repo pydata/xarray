@@ -187,22 +187,19 @@ def _expand_arrays(raw_variables, old_variables={}, compat='identical'):
     variables = ChainMap(new_variables, old_variables)
 
     def add_variable(name, var):
-        def _conflict():
-            raise ValueError('conflicting value for variable %s:\n'
-                             'first value: %r\nsecond value: %r'
-                             % (name, variables[name], var))
         if name not in variables:
             variables[name] = _as_dataset_variable(name, var)
-        elif compat == 'broadcast_equals':
-            if (variables[name] != var).any():
-                _conflict()
-            new_dims = _as_dataset_variable(name, var).dims
-            common_dims = OrderedDict(zip(variables[name].dims,
-                                          variables[name].shape))
-            common_dims.update(zip(var.dims, var.shape))
-            variables[name] = variables[name].set_dims(common_dims)
-        elif not getattr(variables[name], compat)(var):
-            _conflict()
+        else:
+            if not getattr(variables[name], compat)(var):
+                raise ValueError('conflicting value for variable %s:\n'
+                                 'first value: %r\nsecond value: %r'
+                                 % (name, variables[name], var))
+            if compat == 'broadcast_equals':
+                new_dims = _as_dataset_variable(name, var).dims
+                common_dims = OrderedDict(zip(variables[name].dims,
+                                              variables[name].shape))
+                common_dims.update(zip(var.dims, var.shape))
+                variables[name] = variables[name].set_dims(common_dims)
 
     for name, var in iteritems(raw_variables):
         if hasattr(var, 'coords'):

@@ -450,6 +450,23 @@ class TestVariable(TestCase, VariableSubclassTestCases):
         self.assertFalse(v1.identical(None))
         self.assertFalse(v1.identical(d))
 
+    def test_broadcast_equals(self):
+        v1 = Variable((), np.nan)
+        v2 = Variable(('x'), [np.nan, np.nan])
+        self.assertTrue(v1.broadcast_equals(v2))
+        self.assertFalse(v1.equals(v2))
+        self.assertFalse(v1.identical(v2))
+
+        v3 = Variable(('x'), [np.nan])
+        self.assertTrue(v1.broadcast_equals(v3))
+        self.assertFalse(v1.equals(v3))
+        self.assertFalse(v1.identical(v3))
+
+        self.assertFalse(v1.broadcast_equals(None))
+
+        v4 = Variable(('x'), [np.nan] * 3)
+        self.assertFalse(v2.broadcast_equals(v4))
+
     def test_as_variable(self):
         data = np.arange(10)
         expected = Variable('x', data)
