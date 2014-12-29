@@ -1078,6 +1078,7 @@ class TestDataset(TestCase):
             concat([data0, data1], 'dim1')
 
     def test_concat_promote_shape(self):
+        # mixed dims within variables
         objs = [Dataset({'x': 0}), Dataset({'x': [1]})]
         actual = concat(objs, 'x')
         expected = Dataset({'x': [0, 1]})
@@ -1087,12 +1088,20 @@ class TestDataset(TestCase):
         actual = concat(objs, 'x')
         self.assertDatasetIdentical(actual, expected)
 
+        # mixed dims between variables
+        objs = [Dataset({'x': [2], 'y': 3}), Dataset({'x': [4], 'y': 5})]
+        actual = concat(objs, 'x')
+        expected = Dataset({'x': [2, 4], 'y': ('x', [3, 5])})
+        self.assertDatasetIdentical(actual, expected)
+
+        # mixed dims in coord variable
         objs = [Dataset({'x': [0]}, {'y': -1}),
                 Dataset({'x': [1]}, {'y': ('x', [-2])})]
         actual = concat(objs, 'x')
         expected = Dataset({'x': [0, 1]}, {'y': ('x', [-1, -2])})
         self.assertDatasetIdentical(actual, expected)
 
+        # broadcast 1d x 1d -> 2d
         objs = [Dataset({'z': ('x', [-1])}, {'x': [0], 'y': [0]}),
                 Dataset({'z': ('y', [1])}, {'x': [1], 'y': [0]})]
         actual = concat(objs, 'x')
