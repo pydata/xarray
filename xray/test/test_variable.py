@@ -278,6 +278,16 @@ class VariableSubclassTestCases(object):
             self.assertTrue(v[:2].equals(v2[:2]))
             self.assertTrue(v[:2].identical(v2[:2]))
 
+    def test_eq_all_dtypes(self):
+        # ensure that we don't choke on comparisons for which numpy returns
+        # scalars
+        expected = self.cls('x', 3 * [False])
+        for v, _ in self.example_1d_objects():
+            actual = 'z' == v
+            self.assertVariableIdentical(expected, actual)
+            actual = ~('z' != v)
+            self.assertVariableIdentical(expected, actual)
+
     def test_concat(self):
         x = np.arange(5)
         y = np.ones(5)

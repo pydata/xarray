@@ -8,7 +8,7 @@ from .pycompat import PY3
 
 
 UNARY_OPS = ['neg', 'pos', 'abs', 'invert']
-CMP_BINARY_OPS = ['lt', 'le', 'eq', 'ne', 'ge', 'gt']
+CMP_BINARY_OPS = ['lt', 'le', 'ge', 'gt']
 NUM_BINARY_OPS = ['add', 'sub', 'mul', 'truediv', 'floordiv', 'mod',
                   'pow', 'and', 'xor', 'or']
 if not PY3:
@@ -86,6 +86,28 @@ def count(self, axis=None):
     return np.sum(~pd.isnull(self), axis=axis)
 
 
+def _ensure_bool_is_ndarray(result, *args):
+    # numpy will sometimes return a scalar value from binary comparisons if it
+    # can't handle the comparison instead of broadcasting, e.g.,
+    # In [10]: 1 == np.array(['a', 'b'])
+    # Out[10]: False
+    # This function ensures that the result is the appropriate shape in these
+    # cases
+    if isinstance(result, bool):
+        shape = np.broadcast(*args).shape
+        constructor = np.ones if result else np.zeros
+        result = constructor(shape, dtype=bool)
+    return result
+
+
+def array_eq(self, other):
+    return _ensure_bool_is_ndarray(self == other, self, other)
+
+
+def array_ne(self, other):
+    return _ensure_bool_is_ndarray(self != other, self, other)
+
+
 def inject_reduce_methods(cls):
     # change these to use methods instead of numpy functions?
     methods = [(name, getattr(np, name), True)
@@ -111,6 +133,8 @@ def op(name):
 def inject_binary_ops(cls, inplace=False):
     for name in CMP_BINARY_OPS + NUM_BINARY_OPS:
         setattr(cls, op_str(name), cls._binary_op(op(name)))
+    for name, f in [('eq', array_eq), ('ne', array_ne)]:
+        setattr(cls, op_str(name), cls._binary_op(f))
     for name in NUM_BINARY_OPS:
         # only numeric operations have in-place and reflexive variants
         setattr(cls, op_str('r' + name),
