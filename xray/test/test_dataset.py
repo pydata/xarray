@@ -741,6 +741,38 @@ class TestDataset(TestCase):
         with self.assertRaisesRegexp(ValueError, 'variables with these'):
             data.merge(data.reset_coords())
 
+    def test_merge_broadcast_equals(self):
+        ds1 = Dataset({'x': 0})
+        ds2 = Dataset({'x': ('y', [0, 0])})
+        actual = ds1.merge(ds2)
+        self.assertDatasetIdentical(ds2, actual)
+
+        actual = ds2.merge(ds1)
+        self.assertDatasetIdentical(ds2, actual)
+
+        actual = ds1.copy()
+        actual.update(ds2)
+        self.assertDatasetIdentical(ds2, actual)
+
+    def test_merge_compat(self):
+        ds1 = Dataset({'x': 0})
+        ds2 = Dataset({'x': 1})
+        for compat in ['broadcast_equals', 'equals', 'identical']:
+            with self.assertRaisesRegexp(ValueError, 'conflicting value'):
+                ds1.merge(ds2, compat=compat)
+
+        ds2 = Dataset({'x': [0, 0]})
+        for compat in ['equals', 'identical']:
+            with self.assertRaisesRegexp(ValueError, 'conflicting value'):
+                ds1.merge(ds2, compat=compat)
+
+        ds2 = Dataset({'x': ((), 0, {'foo': 'bar'})})
+        with self.assertRaisesRegexp(ValueError, 'conflicting value'):
+            ds1.merge(ds2, compat='identical')
+
+        with self.assertRaisesRegexp(ValueError, 'compat=\S+ invalid'):
+            ds1.merge(ds2, compat='foobar')
+
     def test_getitem(self):
         data = create_test_data()
         self.assertIsInstance(data['var1'], DataArray)
