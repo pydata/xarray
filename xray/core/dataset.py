@@ -189,10 +189,17 @@ def _expand_arrays(raw_variables, old_variables={}, compat='identical'):
     def add_variable(name, var):
         if name not in variables:
             variables[name] = _as_dataset_variable(name, var)
-        elif not getattr(variables[name], compat)(var):
-            raise ValueError('conflicting value for variable %s:\n'
-                             'first value: %r\nsecond value: %r'
-                             % (name, variables[name], var))
+        else:
+            if not getattr(variables[name], compat)(var):
+                raise ValueError('conflicting value for variable %s:\n'
+                                 'first value: %r\nsecond value: %r'
+                                 % (name, variables[name], var))
+            if compat == 'broadcast_equals':
+                new_dims = _as_dataset_variable(name, var).dims
+                common_dims = OrderedDict(zip(variables[name].dims,
+                                              variables[name].shape))
+                common_dims.update(zip(var.dims, var.shape))
+                variables[name] = variables[name].set_dims(common_dims)
 
     for name, var in iteritems(raw_variables):
         if hasattr(var, 'coords'):
@@ -242,12 +249,6 @@ class _DatasetLike(object):
         self._arrays = getattr(obj, '_arrays', obj)
         self._coord_names = getattr(obj, '_coord_names', set())
         self.attrs = getattr(obj, 'attrs', {})
-
-
-def _assert_compat_valid(compat):
-    if compat not in ['equals', 'identical']:
-        raise ValueError("compat=%r invalid: must be 'equals' or "
-                         "'identical'" % compat)
 
 
 def _assert_empty(args, msg='%s'):
@@ -1104,7 +1105,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, AttrAccessMixin):
         return obj
 
     def merge(self, other, inplace=False, overwrite_vars=set(),
-              compat='equals'):
+              compat='broadcast_equals'):
         """Merge the arrays of two datasets into a single dataset.
 
         This method generally not allow for overriding data, with the exception
@@ -1122,10 +1123,15 @@ class Dataset(Mapping, ImplementsDatasetReduce, AttrAccessMixin):
         overwrite_vars : str or sequence, optional
             If provided, update variables of these name(s) without checking for
             conflicts in this dataset.
-        compat : {'equals', 'identical'}, optional
+        compat : {'broadcast_equals', 'equals', 'identical'}, optional
             String indicating how to compare variables of the same name for
-            potential conflicts. 'equals' means that all values and dimensions
-            must be the same; 'identical' means attributes must also be equal.
+            potential conflicts:
+
+            - 'broadcast_equals': all values must be equal when variables are
+              broadcast against each other to ensure common dimensions.
+            - 'equals': all values and dimensions must be the same.
+            - 'identical': all values, dimensions and attributes must be the
+              same.
 
         Returns
         -------
@@ -1137,7 +1143,9 @@ class Dataset(Mapping, ImplementsDatasetReduce, AttrAccessMixin):
         ValueError
             If any variables conflict (see ``compat``).
         """
-        _assert_compat_valid(compat)
+        if compat not in ['broadcast_equals', 'equals', 'identical']:
+            raise ValueError("compat=%r invalid: must be 'broadcast_equals', "
+                             "'equals' or 'identical'" % compat)
         other = _DatasetLike(other)
 
         # determine variables to check for conflicts
@@ -1467,7 +1475,9 @@ class Dataset(Mapping, ImplementsDatasetReduce, AttrAccessMixin):
                 mode='different', concat_over=None, compat='equals'):
         from .dataarray import DataArray
 
-        _assert_compat_valid(compat)
+        if compat not in ['equals', 'identical']:
+            raise ValueError("compat=%r invalid: must be 'equals' "
+                             "or 'identical'" % compat)
 
         # don't bother trying to work with datasets as a generator instead of a
         # list; the gains would be minimal
@@ -1545,10 +1555,17 @@ class Dataset(Mapping, ImplementsDatasetReduce, AttrAccessMixin):
                     raise ValueError(
                         'variable %r not %s across datasets' % (k, verb))
 
+        def _ensure_common_dims(vars):
+            # ensure shared common dimensions by inserting dimensions with size
+            # 1 if necessary
+            common_dims = tuple(pd.unique([d for v in vars for d in v.dims]))
+            return [v.set_dims(common_dims) if v.dims != common_dims else v
+                    for v in vars]
+
         # stack up each variable to fill-out the dataset
         for k in concat_over:
-            concatenated[k] = variable.Variable.concat(
-                [ds[k] for ds in datasets], dim, indexers)
+            vars = _ensure_common_dims([ds._arrays[k] for ds in datasets])
+            concatenated[k] = variable.Variable.concat(vars, dim, indexers)
 
         concatenated._coord_names.update(datasets[0].coords)
 

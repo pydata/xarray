@@ -278,6 +278,16 @@ class VariableSubclassTestCases(object):
             self.assertTrue(v[:2].equals(v2[:2]))
             self.assertTrue(v[:2].identical(v2[:2]))
 
+    def test_eq_all_dtypes(self):
+        # ensure that we don't choke on comparisons for which numpy returns
+        # scalars
+        expected = self.cls('x', 3 * [False])
+        for v, _ in self.example_1d_objects():
+            actual = 'z' == v
+            self.assertVariableIdentical(expected, actual)
+            actual = ~('z' != v)
+            self.assertVariableIdentical(expected, actual)
+
     def test_concat(self):
         x = np.arange(5)
         y = np.ones(5)
@@ -439,6 +449,23 @@ class TestVariable(TestCase, VariableSubclassTestCases):
 
         self.assertFalse(v1.identical(None))
         self.assertFalse(v1.identical(d))
+
+    def test_broadcast_equals(self):
+        v1 = Variable((), np.nan)
+        v2 = Variable(('x'), [np.nan, np.nan])
+        self.assertTrue(v1.broadcast_equals(v2))
+        self.assertFalse(v1.equals(v2))
+        self.assertFalse(v1.identical(v2))
+
+        v3 = Variable(('x'), [np.nan])
+        self.assertTrue(v1.broadcast_equals(v3))
+        self.assertFalse(v1.equals(v3))
+        self.assertFalse(v1.identical(v3))
+
+        self.assertFalse(v1.broadcast_equals(None))
+
+        v4 = Variable(('x'), [np.nan] * 3)
+        self.assertFalse(v2.broadcast_equals(v4))
 
     def test_as_variable(self):
         data = np.arange(10)

@@ -772,6 +772,19 @@ class Variable(common.AbstractArray):
         except (TypeError, AttributeError):
             return False
 
+    def broadcast_equals(self, other):
+        """True if two Variables have the values after being broadcast against
+        each other; otherwise False.
+
+        Variables can still be equal (like pandas objects) if they have NaN
+        values in the same locations.
+        """
+        try:
+            self, other = broadcast_variables(self, other)
+        except (ValueError, AttributeError):
+            return False
+        return self.equals(other)
+
     def identical(self, other):
         """Like equals, but also checks attributes.
         """
@@ -908,9 +921,9 @@ class Coordinate(Variable):
         return self.to_index().is_numeric()
 
 
-def _broadcast_compatible_variables(*variables):
+def broadcast_variables(*variables):
     """Given any number of variables, return variables with matching dimensions
-    and numpy broadcast compatible data.
+    and broadcast data.
 
     The data on the returned variables will be a view of the data on the
     corresponding original arrays, but dimensions will be reordered and
@@ -932,29 +945,16 @@ def _broadcast_compatible_variables(*variables):
                 raise ValueError('operands cannot be broadcast together '
                                  'with mismatched lengths for dimension %r: %s'
                                  % (d, (all_dims[d], s)))
-    return tuple(var.set_dims(all_dims) for var in variables)
-
-
-def _set_data_directly(var, values):
-    var._data = NumpyArrayAdapter(values)
-
-
-def broadcast_variables(*variables):
-    """Given any number of variables, return variables with matching dimensions
-    and broadcast data.
-    """
-    variables = _broadcast_compatible_variables(*variables)
-    broadcast_data = np.broadcast_arrays(*[v.values for v in variables])
-    for var, data in zip(variables, broadcast_data):
-        _set_data_directly(var, data)
-    return variables
+    dims = tuple(all_dims)
+    return tuple(var.set_dims(all_dims) if var.dims != dims else var
+                 for var in variables)
 
 
 def _broadcast_variable_data(self, other):
     if all(hasattr(other, attr) for attr
              in ['dims', 'values', 'shape', 'encoding']):
         # `other` satisfies the necessary Variable API for broadcast_variables
-        new_self, new_other = _broadcast_compatible_variables(self, other)
+        new_self, new_other = broadcast_variables(self, other)
         self_data = new_self.values
         other_data = new_other.values
         dims = new_self.dims

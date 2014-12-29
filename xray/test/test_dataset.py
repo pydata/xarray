@@ -358,7 +358,13 @@ class TestDataset(TestCase):
         actual = other_coords.merge(orig_coords)
         self.assertDatasetIdentical(expected, actual)
 
+        other_coords = Dataset(coords={'x': ('x', ['a'])}).coords
+        with self.assertRaisesRegexp(ValueError, 'not aligned'):
+            orig_coords.merge(other_coords)
         other_coords = Dataset(coords={'x': ('x', ['a', 'b'])}).coords
+        with self.assertRaisesRegexp(ValueError, 'not aligned'):
+            orig_coords.merge(other_coords)
+        other_coords = Dataset(coords={'x': ('x', ['a', 'b', 'c'])}).coords
         with self.assertRaisesRegexp(ValueError, 'not aligned'):
             orig_coords.merge(other_coords)
 
@@ -374,6 +380,27 @@ class TestDataset(TestCase):
         self.assertDatasetIdentical(orig_coords.to_dataset(), actual)
         actual = other_coords.merge(orig_coords)
         self.assertDatasetIdentical(orig_coords.to_dataset(), actual)
+
+    def test_coords_merge_mismatched_shape(self):
+        orig_coords = Dataset(coords={'a': ('x', [1, 1])}).coords
+        other_coords = Dataset(coords={'a': 1}).coords
+        expected = orig_coords.to_dataset()
+        actual = orig_coords.merge(other_coords)
+        self.assertDatasetIdentical(expected, actual)
+
+        other_coords = Dataset(coords={'a': ('y', [1])}).coords
+        expected = Dataset(coords={'a': (['x', 'y'], [[1], [1]])})
+        actual = orig_coords.merge(other_coords)
+        self.assertDatasetIdentical(expected, actual)
+
+        actual = other_coords.merge(orig_coords)
+        self.assertDatasetIdentical(expected.T, actual)
+
+        orig_coords = Dataset(coords={'a': ('x', [np.nan])}).coords
+        other_coords = Dataset(coords={'a': np.nan}).coords
+        expected = orig_coords.to_dataset()
+        actual = orig_coords.merge(other_coords)
+        self.assertDatasetIdentical(expected, actual)
 
     def test_equals_and_identical(self):
         data = create_test_data(seed=42)
@@ -723,6 +750,43 @@ class TestDataset(TestCase):
         with self.assertRaisesRegexp(ValueError, 'variables with these'):
             data.merge(data.reset_coords())
 
+    def test_merge_broadcast_equals(self):
+        ds1 = Dataset({'x': 0})
+        ds2 = Dataset({'x': ('y', [0, 0])})
+        actual = ds1.merge(ds2)
+        self.assertDatasetIdentical(ds2, actual)
+
+        actual = ds2.merge(ds1)
+        self.assertDatasetIdentical(ds2, actual)
+
+        actual = ds1.copy()
+        actual.update(ds2)
+        self.assertDatasetIdentical(ds2, actual)
+
+        ds1 = Dataset({'x': np.nan})
+        ds2 = Dataset({'x': ('y', [np.nan, np.nan])})
+        actual = ds1.merge(ds2)
+        self.assertDatasetIdentical(ds2, actual)
+
+    def test_merge_compat(self):
+        ds1 = Dataset({'x': 0})
+        ds2 = Dataset({'x': 1})
+        for compat in ['broadcast_equals', 'equals', 'identical']:
+            with self.assertRaisesRegexp(ValueError, 'conflicting value'):
+                ds1.merge(ds2, compat=compat)
+
+        ds2 = Dataset({'x': [0, 0]})
+        for compat in ['equals', 'identical']:
+            with self.assertRaisesRegexp(ValueError, 'conflicting value'):
+                ds1.merge(ds2, compat=compat)
+
+        ds2 = Dataset({'x': ((), 0, {'foo': 'bar'})})
+        with self.assertRaisesRegexp(ValueError, 'conflicting value'):
+            ds1.merge(ds2, compat='identical')
+
+        with self.assertRaisesRegexp(ValueError, 'compat=\S+ invalid'):
+            ds1.merge(ds2, compat='foobar')
+
     def test_getitem(self):
         data = create_test_data()
         self.assertIsInstance(data['var1'], DataArray)
@@ -1026,6 +1090,37 @@ class TestDataset(TestCase):
             data0, data1 = deepcopy(split_data)
             data1['dim2'] = 2 * data1['dim2']
             concat([data0, data1], 'dim1')
+
+    def test_concat_promote_shape(self):
+        # mixed dims within variables
+        objs = [Dataset({'x': 0}), Dataset({'x': [1]})]
+        actual = concat(objs, 'x')
+        expected = Dataset({'x': [0, 1]})
+        self.assertDatasetIdentical(actual, expected)
+
+        objs = [Dataset({'x': [0]}), Dataset({'x': 1})]
+        actual = concat(objs, 'x')
+        self.assertDatasetIdentical(actual, expected)
+
+        # mixed dims between variables
+        objs = [Dataset({'x': [2], 'y': 3}), Dataset({'x': [4], 'y': 5})]
+        actual = concat(objs, 'x')
+        expected = Dataset({'x': [2, 4], 'y': ('x', [3, 5])})
+        self.assertDatasetIdentical(actual, expected)
+
+        # mixed dims in coord variable
+        objs = [Dataset({'x': [0]}, {'y': -1}),
+                Dataset({'x': [1]}, {'y': ('x', [-2])})]
+        actual = concat(objs, 'x')
+        expected = Dataset({'x': [0, 1]}, {'y': ('x', [-1, -2])})
+        self.assertDatasetIdentical(actual, expected)
+
+        # broadcast 1d x 1d -> 2d
+        objs = [Dataset({'z': ('x', [-1])}, {'x': [0], 'y': [0]}),
+                Dataset({'z': ('y', [1])}, {'x': [1], 'y': [0]})]
+        actual = concat(objs, 'x')
+        expected = Dataset({'z': (('x', 'y'), [[-1], [1]])})
+        self.assertDatasetIdentical(actual, expected)
 
     def test_to_and_from_dataframe(self):
         x = np.random.randn(10)
