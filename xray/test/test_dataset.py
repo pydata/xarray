@@ -361,6 +361,9 @@ class TestDataset(TestCase):
         other_coords = Dataset(coords={'x': ('x', ['a', 'b'])}).coords
         with self.assertRaisesRegexp(ValueError, 'not aligned'):
             orig_coords.merge(other_coords)
+        other_coords = Dataset(coords={'x': ('x', ['a'])}).coords
+        with self.assertRaisesRegexp(ValueError, 'cannot be broadcast'):
+            orig_coords.merge(other_coords)
 
         other_coords = Dataset(coords={'a': ('x', [8, 9])}).coords
         expected = Dataset(coords={'x': range(2)})
@@ -374,6 +377,21 @@ class TestDataset(TestCase):
         self.assertDatasetIdentical(orig_coords.to_dataset(), actual)
         actual = other_coords.merge(orig_coords)
         self.assertDatasetIdentical(orig_coords.to_dataset(), actual)
+
+    def test_coords_merge_mismatched_shape(self):
+        orig_coords = Dataset(coords={'a': ('x', [1, 1])}).coords
+        other_coords = Dataset(coords={'a': 1}).coords
+        expected = orig_coords.to_dataset()
+        actual = orig_coords.merge(other_coords)
+        self.assertDatasetIdentical(expected, actual)
+
+        other_coords = Dataset(coords={'a': ('y', [1])}).coords
+        expected = Dataset(coords={'a': (['x', 'y'], [[1], [1]])})
+        actual = orig_coords.merge(other_coords)
+        self.assertDatasetIdentical(expected, actual)
+
+        actual = other_coords.merge(orig_coords)
+        self.assertDatasetIdentical(expected.T, actual)
 
     def test_equals_and_identical(self):
         data = create_test_data(seed=42)

@@ -134,14 +134,11 @@ class GroupBy(object):
         @functools.wraps(f)
         def func(self, other):
             g = f if not reflexive else lambda x, y: f(y, x)
-            return self._apply_binary(g, other)
+            applied = self._yield_binary_applied(g, other)
+            return self._concat(applied)
         return func
 
-    def _apply_binary(self, func, other):
-        applied = self._iter_binary_applied(func, other)
-        return self._concat(applied)
-
-    def _iter_binary_applied(self, func, other):
+    def _yield_binary_applied(self, func, other):
         for group_value, obj in self:
             try:
                 other_sel = other.sel(**{self.group.name: group_value})
@@ -149,20 +146,6 @@ class GroupBy(object):
                 raise TypeError('GroupBy objects only support arithmetic '
                                 'when the other argument is a Dataset or '
                                 'DataArray')
-            # rather awkward work around to handle dataarrays where values are
-            # also coordinates (e.g., name appears as a dimension):
-            if self.group.name != getattr(other_sel, 'name', None):
-                # work around the fact that indexing an individual element
-                # results in a scalar value that is likely to be incompatible
-                # with the corresponding coordinate in self.obj (because they
-                # have different shape)
-                # TODO: figure out some less hacky solution that will also work
-                # for other scalar values collapsed to a point by sel that are
-                # also some constant value in self.obj. Maybe we should relax
-                # the compatibility rules for binary operations to allow for
-                # different shapes, but still all equivalent values?
-                other_sel.reset_coords(
-                    self.group.name, drop=True, inplace=True)
             yield func(obj, other_sel)
 
 

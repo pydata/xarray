@@ -2,17 +2,37 @@ from collections import Mapping
 from contextlib import contextmanager
 import pandas as pd
 
-from .pycompat import iteritems, basestring
+from .pycompat import iteritems, basestring, OrderedDict
 from . import formatting
 from . import utils
 
 
-def _coord_merge_finalize(target, other, target_conflicts, other_conflicts):
+def _coord_merge_finalize(target, other, target_conflicts, other_conflicts,
+                          promote_dims={}):
     for k in target_conflicts:
         del target[k]
     for k, v in iteritems(other):
         if k not in other_conflicts:
-            target[k] = v.variable
+            var = v.variable
+            if k in promote_dims:
+                var = var.set_dims(promote_dims[k])
+            target[k] = var
+
+
+def _common_shape(*args):
+    dims = OrderedDict()
+    for arg in args:
+        for dim in arg.dims:
+            size = arg.shape[arg.get_axis_num(dim)]
+            if dim in dims and size != dims[dim]:
+                # sometimes we may not have checked the index first
+                raise ValueError('index %r not aligned' % dim)
+            dims[dim] = size
+    return dims
+
+
+def _dim_shape(var):
+    return [(dim, size) for dim, size in zip(var.dims, var.shape)]
 
 
 class AbstractCoordinates(Mapping):
@@ -73,19 +93,22 @@ class AbstractCoordinates(Mapping):
         """
         self_conflicts = set()
         other_conflicts = set()
+        promote_dims = {}
         for k in self:
             if k in other:
-                var = self._dataset._arrays[k]
-                if not var.equals(other[k]):
-                    in_self_dims = k in self.dims
-                    in_other_dims = k in other.dims
-                    if in_self_dims and in_other_dims:
+                self_var = self._dataset._arrays[k]
+                other_var = other[k].variable
+                if (self_var != other_var).any():
+                    if k in self.dims and k in other.dims:
                         raise ValueError('index %r not aligned' % k)
-                    if not in_self_dims:
+                    if k not in self.dims:
                         self_conflicts.add(k)
-                    if not in_other_dims:
+                    if k not in other.dims:
                         other_conflicts.add(k)
-        return self_conflicts, other_conflicts
+                elif _dim_shape(self_var) != _dim_shape(other_var):
+                    promote_dims[k] = _common_shape(self_var, other_var)
+                    self_conflicts.add(k)
+        return self_conflicts, other_conflicts, promote_dims
 
     @contextmanager
     def _merge_inplace(self, other):
@@ -94,7 +117,10 @@ class AbstractCoordinates(Mapping):
         else:
             # ignore conflicts in self because we don't want to remove
             # existing coords in an in-place update
-            _, other_conflicts = self._merge_validate(other)
+            _, other_conflicts, promote_dims = self._merge_validate(other)
+            # treat promoted dimensions as a conflict, also because we don't
+            # want to modify existing coords
+            other_conflicts.update(promote_dims)
             yield
             _coord_merge_finalize(self, other, {}, other_conflicts)
 
