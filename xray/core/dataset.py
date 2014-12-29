@@ -1545,10 +1545,17 @@ class Dataset(Mapping, ImplementsDatasetReduce, AttrAccessMixin):
                     raise ValueError(
                         'variable %r not %s across datasets' % (k, verb))
 
+        def _ensure_common_dims(vars):
+            # ensure shared common dimensions by inserting dimensions with size
+            # 1 if necessary
+            common_dims = tuple(pd.unique([d for v in vars for d in v.dims]))
+            return [v.set_dims(common_dims) if v.dims != common_dims else v
+                    for v in vars]
+
         # stack up each variable to fill-out the dataset
         for k in concat_over:
-            concatenated[k] = variable.Variable.concat(
-                [ds[k] for ds in datasets], dim, indexers)
+            vars = _ensure_common_dims([ds._arrays[k] for ds in datasets])
+            concatenated[k] = variable.Variable.concat(vars, dim, indexers)
 
         concatenated._coord_names.update(datasets[0].coords)
 

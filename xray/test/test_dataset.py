@@ -1045,6 +1045,28 @@ class TestDataset(TestCase):
             data1['dim2'] = 2 * data1['dim2']
             concat([data0, data1], 'dim1')
 
+    def test_concat_promote_shape(self):
+        objs = [Dataset({'x': 0}), Dataset({'x': [1]})]
+        actual = concat(objs, 'x')
+        expected = Dataset({'x': [0, 1]})
+        self.assertDatasetIdentical(actual, expected)
+
+        objs = [Dataset({'x': [0]}), Dataset({'x': 1})]
+        actual = concat(objs, 'x')
+        self.assertDatasetIdentical(actual, expected)
+
+        objs = [Dataset({'x': [0]}, {'y': -1}),
+                Dataset({'x': [1]}, {'y': ('x', [-2])})]
+        actual = concat(objs, 'x')
+        expected = Dataset({'x': [0, 1]}, {'y': ('x', [-1, -2])})
+        self.assertDatasetIdentical(actual, expected)
+
+        objs = [Dataset({'z': ('x', [-1])}, {'x': [0], 'y': [0]}),
+                Dataset({'z': ('y', [1])}, {'x': [1], 'y': [0]})]
+        actual = concat(objs, 'x')
+        expected = Dataset({'z': (('x', 'y'), [[-1], [1]])})
+        self.assertDatasetIdentical(actual, expected)
+
     def test_to_and_from_dataframe(self):
         x = np.random.randn(10)
         y = np.random.randn(10)
