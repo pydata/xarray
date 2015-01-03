@@ -18,7 +18,7 @@ matrix:
     env: UPDATE_ENV="conda remove scipy netCDF4"
   - python: 3.3
   - python: 3.4
-    env: UPDATE_ENV="pip install cyordereddict"
+    env: UPDATE_ENV="pip install cyordereddict && conda install -c pandas bottleneck"
   # don't require pydap tests to pass because the dap test server is unreliable
   - python: 2.7
     env: UPDATE_ENV="pip install pydap"

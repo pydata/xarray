@@ -7,10 +7,16 @@ from . import formatting
 
 class ImplementsArrayReduce(object):
     @classmethod
-    def _reduce_method(cls, func):
-        def wrapped_func(self, dim=None, axis=None, keep_attrs=False,
-                         **kwargs):
-            return self.reduce(func, dim, axis, keep_attrs, **kwargs)
+    def _reduce_method(cls, func, include_skipna, numeric_only):
+        if include_skipna:
+            def wrapped_func(self, dim=None, axis=None, skipna=None,
+                             keep_attrs=False, **kwargs):
+                return self.reduce(func, dim, axis, keep_attrs, skipna=skipna,
+                                   **kwargs)
+        else:
+            def wrapped_func(self, dim=None, axis=None, keep_attrs=False,
+                             **kwargs):
+                return self.reduce(func, dim, axis, keep_attrs, **kwargs)
         return wrapped_func
 
     _reduce_extra_args_docstring = \
@@ -19,20 +25,27 @@ class ImplementsArrayReduce(object):
         axis : int or sequence of int, optional
             Axis(es) over which to apply `{name}`. Only one of the 'dim'
             and 'axis' arguments can be supplied. If neither are supplied, then
-            `{name}` is calculated over axes.\n"""
+            `{name}` is calculated over axes."""
 
 
 class ImplementsDatasetReduce(object):
     @classmethod
-    def _reduce_method(cls, func):
-        def wrapped_func(self, dim=None, keep_attrs=False, **kwargs):
-            return self.reduce(func, dim, keep_attrs, **kwargs)
+    def _reduce_method(cls, func, include_skipna, numeric_only):
+        if include_skipna:
+            def wrapped_func(self, dim=None, keep_attrs=False, skipna=None,
+                             **kwargs):
+                return self.reduce(func, dim, keep_attrs, skipna=skipna,
+                                   numeric_only=numeric_only, **kwargs)
+        else:
+            def wrapped_func(self, dim=None, keep_attrs=False, **kwargs):
+                return self.reduce(func, dim, keep_attrs,
+                                   numeric_only=numeric_only, **kwargs)
         return wrapped_func
 
     _reduce_extra_args_docstring = \
         """dim : str or sequence of str, optional
             Dimension(s) over which to apply `func`.  By default `func` is
-            applied over all dimensions.\n"""
+            applied over all dimensions."""
 
 
 class AbstractArray(ImplementsArrayReduce):

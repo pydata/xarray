@@ -3,6 +3,7 @@ from copy import copy, deepcopy
 from datetime import datetime, timedelta
 from textwrap import dedent
 
+from distutils.version import LooseVersion
 import numpy as np
 import pandas as pd
 
@@ -681,6 +682,37 @@ class TestVariable(TestCase, VariableSubclassTestCases):
 
         with self.assertRaisesRegexp(ValueError, 'cannot supply both'):
             v.mean(dim='x', axis=0)
+
+    def test_reduce_funcs(self):
+        v = Variable('x', np.array([1, np.nan, 2, 3]))
+        self.assertVariableIdentical(v.mean(), Variable([], 2))
+        self.assertVariableIdentical(v.mean(skipna=True), Variable([], 2))
+        self.assertVariableIdentical(v.mean(skipna=False), Variable([], np.nan))
+        self.assertVariableIdentical(np.mean(v), Variable([], 2))
+
+        self.assertVariableIdentical(v.prod(), Variable([], 6))
+        self.assertVariableIdentical(v.var(), Variable([], 2.0 / 3))
+
+        try:
+            import bottleneck
+            bottleneck_available = True
+        except ImportError:
+            bottleneck_available = False
+        if LooseVersion(np.__version__) < '1.9' and not bottleneck_available:
+            with self.assertRaises(NotImplementedError):
+                v.median()
+        else:
+            self.assertVariableIdentical(v.median(), Variable([], 2))
+
+        v = Variable('x', [True, False, False])
+        self.assertVariableIdentical(v.any(), Variable([], True))
+        self.assertVariableIdentical(v.all(dim='x'), Variable([], False))
+
+        v = Variable('t', pd.date_range('2000-01-01', periods=3))
+        with self.assertRaises(NotImplementedError):
+            v.max(skipna=True)
+        self.assertVariableIdentical(
+            v.max(), Variable([], pd.Timestamp('2000-01-03')))
 
     def test_reduce_keep_attrs(self):
         _attrs = {'units': 'test', 'long_name': 'testing'}
