@@ -6,6 +6,12 @@ import pandas as pd
 from . import utils
 from .pycompat import PY3
 
+try:
+    import bottleneck as bn
+except ImportError:
+    # use numpy methods instead
+    bn = np
+
 
 UNARY_OPS = ['neg', 'pos', 'abs', 'invert']
 CMP_BINARY_OPS = ['lt', 'le', 'ge', 'gt']
@@ -23,8 +29,9 @@ NUMPY_UNARY_METHODS = ['astype', 'argsort', 'clip', 'conj', 'conjugate',
                        'round']
 PANDAS_UNARY_FUNCTIONS = ['isnull', 'notnull']
 # methods which remove an axis
-NUMPY_REDUCE_METHODS = ['all', 'any', 'argmax', 'argmin', 'max', 'mean', 'min',
-                        'prod', 'ptp', 'std', 'sum', 'var']
+NUMPY_REDUCE_METHODS = ['all', 'any']
+NAN_REDUCE_METHODS = ['argmax', 'argmin', 'max', 'min', 'mean', 'sum',
+                      'std', 'var', 'median']
 # TODO: wrap cumprod/cumsum, take, dot, sort
 
 
@@ -67,6 +74,11 @@ _REDUCE_DOCSTRING_TEMPLATE = \
         Parameters
         ----------
         {extra_args}
+        skipna : bool, optional
+            If True, skip missing values (as marked by NaN). By default, only
+            skips missing values for float dtypes; other dtypes either do not
+            have a sentinel missing value (int) or skipna=True has not been
+            implemented (object, datetime64 or timedelta64).
         keep_attrs : bool, optional
             If True, the attributes (`attrs`) will be copied from the original
             object to the new one.  If False (default), the new object will be
@@ -82,8 +94,82 @@ _REDUCE_DOCSTRING_TEMPLATE = \
         """
 
 
-def count(self, axis=None):
-    return np.sum(~pd.isnull(self), axis=axis)
+def count(values, axis=None):
+    return np.sum(~pd.isnull(values), axis=axis)
+
+
+def _create_nan_agg_method(name, numeric_only=False):
+    def f(values, axis=None, skipna=None, **kwargs):
+        # ignore keyword args inserted by np.mean and other numpy aggreagators
+        # automatically:
+        kwargs.pop('dtype', None)
+        kwargs.pop('out', None)
+
+        if skipna or (skipna is None and values.dtype.kind == 'f'):
+            if values.dtype.kind not in ['i', 'f']:
+                raise NotImplementedError(
+                    'skipna=True not yet implemented for %s with dtype %s'
+                    % (name, values.dtype))
+            nanname = 'nan' + name
+            try:
+                if isinstance(axis, tuple):
+                    func = getattr(np, nanname)
+                else:
+                    func = getattr(bn, nanname)
+            except AttributeError:
+                raise NotImplementedError(
+                    '%s is only available with skipna=False with the '
+                    'installed version of numpy; upgrade to numpy 1.9 or '
+                    'newer to use skipna=True or skipna=None' % name)
+        else:
+            func = getattr(np, name)
+        return func(values, axis=axis, **kwargs)
+    f.numeric_only = numeric_only
+    return f
+
+
+argmax = _create_nan_agg_method('argmax')
+argmin = _create_nan_agg_method('argmin')
+max = _create_nan_agg_method('max')
+min = _create_nan_agg_method('min')
+sum = _create_nan_agg_method('sum', numeric_only=True)
+mean = _create_nan_agg_method('mean', numeric_only=True)
+std = _create_nan_agg_method('std', numeric_only=True)
+var = _create_nan_agg_method('var', numeric_only=True)
+median = _create_nan_agg_method('median', numeric_only=True)
+
+
+def numeric_only(f):
+    f.numeric_only = True
+    return f
+
+
+def _replace_nan(a, val):
+    # copied from np.lib.nanfunctions
+    # remove this if/when https://github.com/numpy/numpy/pull/5418 is merged
+    is_new = not isinstance(a, np.ndarray)
+    if is_new:
+        a = np.array(a)
+    if not issubclass(a.dtype.type, np.inexact):
+        return a, None
+    if not is_new:
+        # need copy
+        a = np.array(a, subok=True)
+
+    mask = np.isnan(a)
+    np.copyto(a, val, where=mask)
+    return a, mask
+
+
+@numeric_only
+def prod(values, axis=None, skipna=None, **kwargs):
+    if skipna or (skipna is None and values.dtype.kind == 'f'):
+        if values.dtype.kind not in ['i', 'f']:
+            raise NotImplementedError(
+                'skipna=True not yet implemented for prod with dtype %s'
+                % values.dtype)
+        values, mask = _replace_nan(values, 1)
+    return np.prod(values, axis=axis, **kwargs)
 
 
 def _ensure_bool_is_ndarray(result, *args):
@@ -109,15 +195,17 @@ def array_ne(self, other):
 
 
 def inject_reduce_methods(cls):
-    # change these to use methods instead of numpy functions?
-    methods = [(name, getattr(np, name), True)
-               for name in NUMPY_REDUCE_METHODS]
-    methods += [('count', count, False)]
-    for name, f, is_numpy_func in methods:
-        func = cls._reduce_method(f)
+    methods = ([(name, getattr(np, name), False) for name
+               in NUMPY_REDUCE_METHODS]
+               + [(name, globals()[name], True) for name
+                  in ['prod'] + NAN_REDUCE_METHODS]
+               + [('count', count, False)])
+    for name, f, include_skipna in methods:
+        numeric_only = getattr(f, 'numeric_only', False)
+        func = cls._reduce_method(f, include_skipna, numeric_only)
         func.__name__ = name
         func.__doc__ = _REDUCE_DOCSTRING_TEMPLATE.format(
-            name=('numpy.' if is_numpy_func else '') + name, cls=cls.__name__,
+            name=name, cls=cls.__name__,
             extra_args=cls._reduce_extra_args_docstring)
         setattr(cls, name, func)
 

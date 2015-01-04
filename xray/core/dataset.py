@@ -1367,7 +1367,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, AttrAccessMixin):
 
         return self.isel(**{dim: mask})
 
-    def reduce(self, func, dim=None, keep_attrs=False, **kwargs):
+    def reduce(self, func, dim=None, keep_attrs=False, numeric_only=False,
+               **kwargs):
         """Reduce this dataset by applying `func` along some dimension(s).
 
         Parameters
@@ -1383,8 +1384,10 @@ class Dataset(Mapping, ImplementsDatasetReduce, AttrAccessMixin):
             If True, the datasets's attributes (`attrs`) will be copied from
             the original object to the new one.  If False (default), the new
             object will be returned without attributes.
+        numeric_only : bool, optional
+            If True, only apply ``func`` to variables with a numeric dtype.
         **kwargs : dict
-            Additional keyword arguments passed on to `func`.
+            Additional keyword arguments passed on to ``func``.
 
         Returns
         -------
@@ -1411,21 +1414,18 @@ class Dataset(Mapping, ImplementsDatasetReduce, AttrAccessMixin):
             reduce_dims = [dim for dim in var.dims if dim in dims]
             if reduce_dims or not var.dims:
                 if name not in self.coords:
-                    if len(reduce_dims) == 1:
-                        # unpack dimensions for the benefit of functions like
-                        # np.argmin which can't handle tuple arguments
-                        reduce_dims, = reduce_dims
-                    try:
-                        variables[name] = var.reduce(func,
-                                                     dim=reduce_dims,
+                    if not numeric_only or var.dtype.kind in 'ifc':
+                        if len(reduce_dims) == var.ndim:
+                            # prefer to aggregate over axis=None rather than
+                            # axis=(0, 1) if they will be equivalent, because
+                            # the former is often more efficient
+                            reduce_dims = None
+                        elif len(reduce_dims) == 1:
+                            # unpack dimensions for the benefit of functions
+                            # like np.argmin which can't handle tuple arguments
+                            reduce_dims, = reduce_dims
+                        variables[name] = var.reduce(func, dim=reduce_dims,
                                                      **kwargs)
-                    except TypeError:
-                        # array (e.g., string) does not support this reduction,
-                        # so skip it
-                        # TODO: rethink silently passing, because the problem
-                        # may be the dimensions and kwargs arguments, not the
-                        # dtype of the array
-                        pass
             else:
                 variables[name] = var
 
