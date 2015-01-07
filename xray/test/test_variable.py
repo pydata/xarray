@@ -185,6 +185,11 @@ class VariableSubclassTestCases(object):
             else:
                 self.assertFalse(same_source)
 
+    def test_object_conversion(self):
+        data = np.arange(5).astype(str).astype(object)
+        actual = self.cls('x', data)
+        self.assertEqual(actual.dtype, data.dtype)
+
     def test_pandas_data(self):
         v = self.cls(['x'], pd.Series([0, 1, 2], index=[3, 2, 1]))
         self.assertVariableIdentical(v, v[[0, 1, 2]])
@@ -337,6 +342,16 @@ class VariableSubclassTestCases(object):
             expected = Variable(
                 'animal', np.array(['horse', 'aardvark'], dtype=kind))
             self.assertVariableEqual(expected, actual)
+
+    def test_concat_number_strings(self):
+        # regression test for #305
+        a = self.cls('x', ['0', '1', '2'])
+        b = self.cls('x', ['3', '4'])
+        actual = Variable.concat([a, b], dim='x')
+        expected = Variable('x', np.arange(5).astype(str).astype(object))
+        self.assertVariableIdentical(expected, actual)
+        self.assertEqual(expected.dtype, object)
+        self.assertEqual(type(expected.values[0]), str)
 
     def test_copy(self):
         v = self.cls('x', 0.5 * np.arange(10), {'foo': 'bar'})
