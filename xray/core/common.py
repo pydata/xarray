@@ -1,3 +1,5 @@
+import functools
+
 import numpy as np
 import pandas as pd
 
@@ -169,8 +171,12 @@ def _maybe_promote(dtype):
 
 
 def _possibly_convert_objects(values):
+    """Convert arrays of datetime.datetime and datetime.timedelta objects into
+    datetime64 and timedelta64
+    """
     try:
-        converter = pd.core.common._possibly_convert_objects
+        converter = functools.partial(pd.core.common._possibly_convert_objects,
+                                      convert_numeric=False)
     except AttributeError:
         # our fault for using a private pandas API that has gone missing
         # this should do the same coercion (though it will be slower)
