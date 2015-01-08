@@ -1009,6 +1009,14 @@ class TestDataset(TestCase):
                            {'t': ds['t'], 't.day': ds['t.day']})
         self.assertDatasetIdentical(actual, expected)
 
+    def test_groupby_nan(self):
+        # nan should be excluded from groupby
+        ds = Dataset({'foo': ('x', [1, 2, 3, 4])},
+                     {'bar': ('x', [1, 1, 2, np.nan])})
+        actual = ds.groupby('bar').mean()
+        expected = Dataset({'foo': ('bar', [1.5, 3]), 'bar': [1, 2]})
+        self.assertDatasetIdentical(actual, expected)
+
     def test_concat(self):
         data = create_test_data()
 

@@ -1,5 +1,6 @@
 import functools
 import numpy as np
+import pandas as pd
 
 from . import ops
 from .alignment import concat
@@ -25,10 +26,12 @@ def unique_value_groups(ar):
         Each element provides the integer indices in `ar` with values given by
         the corresponding value in `unique_values`.
     """
-    values, inverse = np.unique(ar, return_inverse=True)
+    inverse, values = pd.factorize(ar, sort=True)
     groups = [[] for _ in range(len(values))]
     for n, g in enumerate(inverse):
-        groups[g].append(n)
+        if g >= 0:
+            # pandas uses -1 to mark NaN, but doesn't include them in values
+            groups[g].append(n)
     return values, groups
 
 
