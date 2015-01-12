@@ -86,7 +86,7 @@ and coordinates, xray supports arbitrary metadata in the form of global
 Automatic interpretation of labels is powerful but also reduces flexibility.
 With xray, we draw a firm line between labels that the library understands
 (``dims`` and ``coords``) and labels for users and user code (``attrs``). For
-example, we do not automatically intrepret and enforce units or `CF
+example, we do not automatically interpret and enforce units or `CF
 conventions`_. (An exception is serialization to netCDF with
 ``cf_conventions=True``.)
 
@@ -106,7 +106,7 @@ What other netCDF related Python libraries should I know about?
 `netCDF4-python`__ provides a lower level interface for working with
 netCDF and OpenDAP datasets in Python. We use netCDF4-python internally in
 xray, and have contributed a number of improvements and fixes upstream. xray
-deos not yet support all of netCDF4-python's features, such as writing to
+does not yet support all of netCDF4-python's features, such as writing to
 netCDF groups or modifying files on-disk.
 
 __ https://github.com/Unidata/netcdf4-python
@@ -139,11 +139,11 @@ Does xray support out-of-core computation?
 ------------------------------------------
 
 Not yet! Distributed and out-of-memory computation is certainly something we're
-excited, but for now we have focused on making xray a full-featured tool for
+excited about, but for now we have focused on making xray a full-featured tool for
 in-memory analytics (like pandas).
 
 We have some ideas for what out-of-core support could look like (probably
-through an library like biggus_ or Blaze_), but we're not there yet. An
+through a library like biggus_ or Blaze_), but we're not there yet. An
 intermediate step would be supporting incremental writes to a Dataset linked to
 a NetCDF file on disk.
 

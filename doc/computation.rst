@@ -6,13 +6,13 @@ Computation
 
 The labels associated with :py:class:`~xray.DataArray` and
 :py:class:`~xray.Dataset` objects enables some powerful shortcuts for
-computation, noteably including aggregation and broadcasting by dimension
+computation, notably including aggregation and broadcasting by dimension
 names.
 
 Basic array math
 ================
 
-Arithemtic operations with a single DataArray automatically vectorize (like
+Arithmetic operations with a single DataArray automatically vectorize (like
 numpy) over all array values:
 
 .. ipython:: python
@@ -228,14 +228,14 @@ limitation, by applying the given function to each variable in the dataset:
     ds.apply(np.sin)
 
 Datasets also use looping over variables for *broadcasting* in binary
-arithemtic. You can do arithemtic between any ``DataArray`` and a dataset as
+arithmetic. You can do arithmetic between any ``DataArray`` and a dataset as
 long as they have aligned indexes:
 
 .. ipython:: python
 
     ds + arr
 
-Arithemtic between two datasets requires that the datasets also have the same
+Arithmetic between two datasets requires that the datasets also have the same
 variables:
 
 .. ipython:: python

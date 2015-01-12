@@ -4,7 +4,7 @@ Serialization and IO
 ====================
 
 xray supports direct serialization and IO to several file formats. For more
-options, consider exporting your objects to pandas (see the preceeding section)
+options, consider exporting your objects to pandas (see the preceding section)
 and using its broad range of `IO tools`__.
 
 __ http://pandas.pydata.org/pandas-docs/stable/io.html
@@ -40,7 +40,7 @@ module:
 
 Pickle support is important because it doesn't require any external libraries
 and lets you use xray objects with Python modules like
-:py:mod:`multiprocessing`. However, there are two important cavaets:
+:py:mod:`multiprocessing`. However, there are two important caveats:
 
 1. To simplify serialization, xray's support for pickle currently loads all
    array values into memory before dumping an object. This means it is not
@@ -181,7 +181,7 @@ lets us access large datasets over HTTP.
 
 __ http://www.opendap.org/
 
-For example, we can open a connetion to GBs of weather data produced by the
+For example, we can open a connection to GBs of weather data produced by the
 `PRISM`__ project, and hosted by
 `International Research Institute for Climate and Society`__ at Columbia:
 
