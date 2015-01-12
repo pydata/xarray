@@ -146,7 +146,7 @@ Bug fixes
   :issue:`240`)
 - Fix slicing by label was an argument is a data array (:issue:`250`).
 - Test data is now shipped with the source distribution (:issue:`253`).
-- Ensure order does not matter when doing arithemtic with scalar data arrays
+- Ensure order does not matter when doing arithmetic with scalar data arrays
   (:issue:`254`).
 - Order of dimensions preserved with ``DataArray.to_dataframe`` (:issue:`260`).
 

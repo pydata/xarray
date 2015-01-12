@@ -207,7 +207,7 @@ The distinction between whether an array falls in variables or coordinates is
 quantities, unlike the varying/measured/dependent quantities that belong in
 variables. Dictionary like access on a dataset will supply arrays found in
 either category. However, the distinction does have important implications for
-indexing and compution.
+indexing and computation.
 
 Here is an example of how we might structure a dataset for a weather forecast:
 
@@ -381,7 +381,7 @@ Another useful option is the ability to rename the variables in a dataset:
 Coordinates
 -----------
 
-Coordinates are ancilliary arrays stored for ``DataArray`` and ``Dataset``
+Coordinates are ancillary arrays stored for ``DataArray`` and ``Dataset``
 objects in the ``coords`` attribute:
 
 .. ipython:: python
@@ -463,7 +463,7 @@ logic used for merging coordinates in arithmetic operations
 The ``coords.merge`` method may be useful if you want to implement your own
 binary operations that act on xray objects. In the future, we hope to write
 more helper functions so that you can easily make your functions act like
-xray's built-in arithemtic.
+xray's built-in arithmetic.
 
 
 .. [1] Latitude and longitude are 2D arrays because the dataset uses
