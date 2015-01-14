@@ -27,8 +27,7 @@ def align(*objects, **kwargs):
     objects with aligned indexes.
 
     Array from the aligned objects are suitable as input to mathematical
-    operators, because along each dimension they are indexed by the same
-    indexes.
+    operators, because along each dimension they have the same indexes.
 
     Missing values (if ``join != 'inner'``) are filled with NaN.
 
@@ -44,8 +43,8 @@ def align(*objects, **kwargs):
          - 'left': use indexes from the first object with each dimension
          - 'right': use indexes from the last object with each dimension
     copy : bool, optional
-        If `copy=True`, the returned objects contain all new variables. If
-        `copy=False` and no reindexing is required then the aligned objects
+        If ``copy=True``, the returned objects contain all new variables. If
+        ``copy=False`` and no reindexing is required then the aligned objects
         will include original variables.
 
     Returns
@@ -55,6 +54,9 @@ def align(*objects, **kwargs):
     """
     join = kwargs.pop('join', 'inner')
     copy = kwargs.pop('copy', True)
+    if kwargs:
+        raise TypeError('align() got unexpected keyword arguments: %s'
+                        % list(kwargs))
 
     if join == 'outer':
         join_indices = functools.partial(functools.reduce, operator.or_)

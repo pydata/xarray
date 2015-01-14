@@ -1481,6 +1481,21 @@ class TestDataset(TestCase):
 
         self.assertDatasetIdentical(ds == ds, ds.notnull())
 
+        subsampled = ds.isel(y=slice(2))
+        expected = 2 * subsampled
+        self.assertDatasetIdentical(expected, subsampled + ds)
+        self.assertDatasetIdentical(expected, ds + subsampled)
+
+    def test_dataset_math_automatic_alignment(self):
+        ds = self.make_example_math_dataset()
+        subset = ds.isel(x=slice(2), y=[1, 3])
+        expected = 2 * subset
+        actual = ds + subset
+        self.assertDatasetIdentical(expected, actual)
+
+        with self.assertRaisesRegexp(ValueError, 'no overlapping labels'):
+            ds.isel(x=slice(1)) + ds.isel(x=slice(1, None))
+
     def test_dataset_math_errors(self):
         ds = self.make_example_math_dataset()
 

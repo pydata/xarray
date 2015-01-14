@@ -530,13 +530,15 @@ class TestDataArray(TestCase):
         self.assertDataArrayEqual(a, 0 * x + a)
         self.assertDataArrayEqual(a, a + 0 * a)
         self.assertDataArrayEqual(a, 0 * a + a)
-        # test different indices
-        b = a.copy()
-        b.coords['x'] = 3 + np.arange(10)
-        with self.assertRaisesRegexp(ValueError, 'not aligned'):
-            a + b
-        with self.assertRaisesRegexp(ValueError, 'not aligned'):
-            b + a
+
+    def test_math_automatic_alignment(self):
+        a = DataArray(range(5), [('x', range(5))])
+        b = DataArray(range(5), [('x', range(1, 6))])
+        expected = DataArray(np.ones(4), [('x', [1, 2, 3, 4])])
+        self.assertDataArrayIdentical(a - b, expected)
+
+        with self.assertRaisesRegexp(ValueError, 'no overlapping labels'):
+            a.isel(x=slice(2)) + a.isel(x=slice(2, None))
 
     def test_inplace_math_basics(self):
         x = self.x
@@ -549,6 +551,14 @@ class TestDataArray(TestCase):
         self.assertArrayEqual(b.values, x)
         self.assertIs(source_ndarray(b.values), x)
         self.assertDatasetIdentical(b._dataset, self.ds)
+
+    def test_inplace_math_automatic_alignment(self):
+        a = DataArray(range(5), [('x', range(5))])
+        b = DataArray(range(1, 6), [('x', range(1, 6))])
+        with self.assertRaisesRegexp(ValueError, 'not aligned'):
+            a += b
+        with self.assertRaisesRegexp(ValueError, 'not aligned'):
+            b += a
 
     def test_math_name(self):
         # Verify that name is preserved only when it can be done unambiguously.
@@ -902,8 +912,6 @@ class TestDataArray(TestCase):
 
     def test_align(self):
         self.ds['x'] = ('x', np.array(list('abcdefghij')))
-        with self.assertRaises(ValueError):
-            self.dv + self.dv[:5]
         dv1, dv2 = align(self.dv, self.dv[:5], join='inner')
         self.assertDataArrayIdentical(dv1, self.dv[:5])
         self.assertDataArrayIdentical(dv2, self.dv[:5])

@@ -17,6 +17,7 @@ from . import variable
 from . import alignment
 from . import formatting
 from .. import backends, conventions
+from .alignment import align
 from .coordinates import DatasetCoordinates, Indexes
 from .common import ImplementsDatasetReduce, AttrAccessMixin
 from .utils import Frozen, SortedKeysDict, ChainMap
@@ -1651,6 +1652,12 @@ class Dataset(Mapping, ImplementsDatasetReduce, AttrAccessMixin):
         def func(self, other):
             if isinstance(other, groupby.GroupBy):
                 return NotImplemented
+            if hasattr(other, 'indexes'):
+                self, other = align(self, other, join='inner', copy=False)
+                empty_indexes = [d for d, s in self.dims.items() if s == 0]
+                if empty_indexes:
+                    raise ValueError('no overlapping labels for some '
+                                     'dimensions: %s' % empty_indexes)
             other_coords = getattr(other, 'coords', None)
             ds = self.coords.merge(other_coords)
             g = f if not reflexive else lambda x, y: f(y, x)

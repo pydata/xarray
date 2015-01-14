@@ -9,6 +9,7 @@ from . import groupby
 from . import ops
 from . import utils
 from . import variable
+from .alignment import align
 from .common import AbstractArray, AttrAccessMixin
 from .coordinates import DataArrayCoordinates, Indexes
 from .dataset import Dataset
@@ -950,6 +951,13 @@ class DataArray(AbstractArray, AttrAccessMixin):
         def func(self, other):
             if isinstance(other, (Dataset, groupby.GroupBy)):
                 return NotImplemented
+            if hasattr(other, 'indexes'):
+                self, other = align(self, other, join='inner', copy=False)
+                empty_indexes = [d for d, s in zip(self.dims, self.shape)
+                                 if s == 0]
+                if empty_indexes:
+                    raise ValueError('no overlapping labels for some '
+                                     'dimensions: %s' % empty_indexes)
             other_coords = getattr(other, 'coords', None)
             other_variable = getattr(other, 'variable', other)
             ds = self.coords.merge(other_coords)
