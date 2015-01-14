@@ -1,10 +1,9 @@
-import functools
-import numpy as np
-import pandas as pd
 import re
 import warnings
-from collections import defaultdict
+import numpy as np
+import pandas as pd
 from datetime import datetime
+from collections import defaultdict
 from pandas.tslib import OutOfBoundsDatetime
 
 from .core import indexing, utils
@@ -74,11 +73,11 @@ def _unpack_netcdf_time_units(units):
     # CF datetime units follow the format: "UNIT since DATE"
     # this parses out the unit and date allowing for extraneous
     # whitespace.
-    matches = re.match('\s*(\S+)\s+since\s+(.+)\s*', units).groups()
+    matches = re.match('(.+) since (.+)', units)
     if not matches:
         raise ValueError('invalid time units: %s' % units)
-    delta, ref_date = matches
-    return delta, ref_date
+    delta_units, ref_date = [s.strip() for s in matches.groups()]
+    return delta_units, ref_date
 
 
 def _decode_netcdf_datetime(num_dates, units, calendar):

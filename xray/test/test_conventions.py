@@ -105,7 +105,7 @@ class TestDatetime(TestCase):
                 # here we add a couple minor formatting errors to test
                 # the robustness of the parsing algorithm.
                 (12300 + np.arange(50), 'hour since 1680-01-01  00:00:00'),
-                (12300 + np.arange(50), 'Hour  since 1680-01-01 00:00:00'),
+                (12300 + np.arange(50), u'Hour  since 1680-01-01 00:00:00'),
                 (12300 + np.arange(50), ' Hour  since  1680-01-01 00:00:00 '),
                 (10, 'days since 2000-01-01'),
                 ([10], 'daYs  since 2000-01-01'),
