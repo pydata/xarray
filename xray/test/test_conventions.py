@@ -102,8 +102,13 @@ class TestDatetime(TestCase):
                 (np.arange(100), 'days since 2000-01-01'),
                 (np.arange(100).reshape(10, 10), 'days since 2000-01-01'),
                 (12300 + np.arange(50), 'hours since 1680-01-01 00:00:00'),
+                # here we add a couple minor formatting errors to test
+                # the robustness of the parsing algorithm.
+                (12300 + np.arange(50), 'hour since 1680-01-01  00:00:00'),
+                (12300 + np.arange(50), 'Hour  since 1680-01-01 00:00:00'),
+                (12300 + np.arange(50), ' Hour  since  1680-01-01 00:00:00 '),
                 (10, 'days since 2000-01-01'),
-                ([10], 'days since 2000-01-01'),
+                ([10], 'daYs  since 2000-01-01'),
                 ([[10]], 'days since 2000-01-01'),
                 ([10, 10], 'days since 2000-01-01'),
                 (0, 'days since 1000-01-01'),

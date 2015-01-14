@@ -64,11 +64,14 @@ def mask_and_scale(array, fill_value=None, scale_factor=None, add_offset=None,
 
 
 def _netcdf_to_numpy_timeunit(units):
+    units = units.lower()
+    if not units.endswith('s'):
+        units = '%ss' % units
     return {'seconds': 's', 'minutes': 'm', 'hours': 'h', 'days': 'D'}[units]
 
 
 def _unpack_netcdf_time_units(units):
-    matches = re.match('(\S+) since (.+)', units).groups()
+    matches = re.match('\s*(\S+)\s+since\s+(.+)\s*', units).groups()
     if not matches:
         raise ValueError('invalid time units: %s' % units)
     delta, ref_date = matches
@@ -110,7 +113,6 @@ def decode_cf_datetime(num_dates, units, calendar=None):
     """
     num_dates = np.asarray(num_dates, dtype=float)
     flat_num_dates = num_dates.ravel()
-    orig_shape = num_dates.shape
     if calendar is None:
         calendar = 'standard'
 
@@ -139,6 +141,7 @@ def decode_cf_timedelta(num_timedeltas, units):
 
 
 TIME_UNITS = set(['days', 'hours', 'minutes', 'seconds'])
+
 
 def _infer_time_units_from_diff(unique_timedeltas):
     for time_unit, delta in [('days', 86400), ('hours', 3600),
