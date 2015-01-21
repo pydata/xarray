@@ -52,7 +52,7 @@ def _infer_coords_and_dims(shape, coords, dims):
     if coords is None:
         coords = {}
     elif not utils.is_dict_like(coords):
-        coords = OrderedDict((k, v) for k, v in zip(dims, coords))
+        coords = OrderedDict(zip(dims, coords))
 
     return coords, dims
 
@@ -827,7 +827,8 @@ class DataArray(AbstractArray, AttrAccessMixin):
         Other coordinates are included as columns in the DataFrame.
         """
         # TODO: add a 'name' parameter
-        return self._dataset._to_dataframe(self.dims)
+        dims = OrderedDict(zip(self.dims, self.shape))
+        return self._dataset._to_dataframe(dims)
 
     def to_series(self):
         """Convert this array into a pandas.Series.
