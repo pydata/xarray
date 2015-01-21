@@ -979,6 +979,17 @@ class TestDataArray(TestCase):
         expected = arr.to_series()
         actual = arr.to_dataframe()[None]
         self.assertArrayEqual(expected.values, actual.values)
+        self.assertArrayEqual(expected.name, actual.name)
+        self.assertArrayEqual(expected.index.values, actual.index.values)
+
+        # regression test for coords with different dimensions
+        arr.coords['C'] = ('B', [-1, -2, -3])
+        expected = arr.to_series().to_frame()
+        expected['C'] = [-1] * 4 + [-2] * 4 + [-3] * 4
+        expected.columns = [None, 'C']
+        actual = arr.to_dataframe()
+        self.assertArrayEqual(expected.values, actual.values)
+        self.assertArrayEqual(expected.columns.values, actual.columns.values)
         self.assertArrayEqual(expected.index.values, actual.index.values)
 
     def test_to_and_from_series(self):
