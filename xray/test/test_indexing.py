@@ -33,7 +33,8 @@ class TestIndexers(TestCase):
         # use at most one array and it never in between two slice objects
         # (i.e., we try to avoid numpy's mind-boggling "partial indexing"
         # http://docs.scipy.org/doc/numpy/reference/arrays.indexing.html)
-        for i in [I[:], I[0], I[0, 0], I[:5], I[2:5], I[2:5:-1], I[:3, :4],
+        for i in [I[:], I[0], I[0, 0], I[:5], I[5:], I[2:5], I[3:-3], I[::-1],
+                  I[::-2], I[5::-2], I[:3:-2], I[2:5:-1], I[7:3:-2], I[:3, :4],
                   I[:3, 0, :4], I[:3, 0, :4, 0], I[y], I[:, y], I[0, y],
                   I[:2, :3, y], I[0, y, :, :4, 0]]:
             j = indexing.orthogonal_indexer(i, x.shape)

@@ -2,6 +2,7 @@ import numpy as np
 
 from . import utils
 from .pycompat import iteritems, range
+from .utils import is_full_slice
 
 
 def expanded_indexer(key, ndim):
@@ -60,16 +61,14 @@ def canonicalize_indexer(key, ndim):
     return tuple(canonicalize(k) for k in expanded_indexer(key, ndim))
 
 
+def _expand_slice(slice_, size):
+    return np.arange(*slice_.indices(size))
+
+
 def orthogonal_indexer(key, shape):
     """Given a key for orthogonal array indexing, returns an equivalent key
     suitable for indexing a numpy.ndarray with fancy indexing.
     """
-    def expand_key(k, length):
-        if isinstance(k, slice):
-            return np.arange(k.start or 0, k.stop or length, k.step or 1)
-        else:
-            return k
-
     # replace Ellipsis objects with slices
     key = list(canonicalize_indexer(key, len(shape)))
     # replace 1d arrays and slices with broadcast compatible arrays
@@ -80,8 +79,7 @@ def orthogonal_indexer(key, shape):
 
     def full_slices_unselected(n_list):
         def all_full_slices(key_index):
-            return all(isinstance(key[n], slice) and key[n] == slice(None)
-                       for n in key_index)
+            return all(is_full_slice(key[n]) for n in key_index)
         if not n_list:
             return n_list
         elif all_full_slices(range(n_list[0] + 1)):
@@ -100,14 +98,17 @@ def orthogonal_indexer(key, shape):
     # the admittedly mind-boggling ways of numpy's advanced indexing.)
     array_keys = full_slices_unselected(non_int_keys)
 
-    array_indexers = np.ix_(*(expand_key(key[n], shape[n])
+    def maybe_expand_slice(k, length):
+        return _expand_slice(k, length) if isinstance(k, slice) else k
+
+    array_indexers = np.ix_(*(maybe_expand_slice(key[n], shape[n])
                               for n in array_keys))
     for i, n in enumerate(array_keys):
         key[n] = array_indexers[i]
     return tuple(key)
 
 
-def _get_item(x):
+def _try_get_item(x):
     try:
         return x.item()
     except AttributeError:
@@ -120,9 +121,9 @@ def convert_label_indexer(index, label, index_name=''):
     ndarray along that dimension
     """
     if isinstance(label, slice):
-        indexer = index.slice_indexer(_get_item(label.start),
-                                      _get_item(label.stop),
-                                      _get_item(label.step))
+        indexer = index.slice_indexer(_try_get_item(label.start),
+                                      _try_get_item(label.stop),
+                                      _try_get_item(label.step))
     else:
         label = np.asarray(label)
         if label.ndim == 0:
@@ -143,11 +144,6 @@ def remap_label_indexers(data_obj, indexers):
     """
     return dict((dim, convert_label_indexer(data_obj[dim].to_index(), label, dim))
                 for dim, label in iteritems(indexers))
-
-
-def _expand_slice(slice_, size):
-    return np.arange(*slice_.indices(size))
-
 
 def slice_slice(old_slice, applied_slice, size):
     """Given a slice and the size of the dimension to which it will be applied,

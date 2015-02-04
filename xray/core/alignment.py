@@ -8,6 +8,7 @@ import numpy as np
 from . import utils
 from .common import _maybe_promote
 from .pycompat import iteritems, OrderedDict
+from .utils import is_full_slice
 from .variable import as_variable, Variable, Coordinate, broadcast_variables
 
 
@@ -124,9 +125,6 @@ def reindex_variables(variables, indexes, indexers, copy=True):
                 # slice object to speed up selection and so we can avoid
                 # unnecessary copies
                 from_indexers[name] = slice(None)
-
-    def is_full_slice(idx):
-        return isinstance(idx, slice) and idx == slice(None)
 
     def any_not_full_slices(indexers):
         return any(not is_full_slice(idx) for idx in indexers)
