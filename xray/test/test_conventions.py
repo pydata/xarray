@@ -347,6 +347,12 @@ class TestDecodeCF(TestCase):
         actual = conventions.decode_cf(original)
         self.assertDatasetIdentical(expected, actual)
 
+    def test_invalid_coordinates(self):
+        # regression test for GH308
+        original = Dataset({'foo': ('t', [1, 2], {'coordinates': 'invalid'})})
+        actual = conventions.decode_cf(original)
+        self.assertDatasetIdentical(original, actual)
+
 
 class CFEncodedInMemoryStore(InMemoryDataStore):
     def store(self, variables, attributes):
