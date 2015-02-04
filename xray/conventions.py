@@ -696,9 +696,12 @@ def decode_cf_variables(variables, attributes, concat_characters=True,
             v, concat_characters=concat, mask_and_scale=mask_and_scale,
             decode_times=decode_times)
         if decode_coords:
-            coordinates = new_vars[k].attrs.pop('coordinates', None)
-            if coordinates is not None:
-                coord_names.update(coordinates.split())
+            var_attrs = new_vars[k].attrs
+            if 'coordinates' in var_attrs:
+                var_coord_names = var_attrs['coordinates'].split()
+                if all(k in variables for k in var_coord_names):
+                    coord_names.update(var_coord_names)
+                    del var_attrs['coordinates']
 
     if decode_coords and 'coordinates' in attributes:
         attributes = OrderedDict(attributes)
