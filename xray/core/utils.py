@@ -162,6 +162,10 @@ def is_dict_like(value):
     return hasattr(value, '__getitem__') and hasattr(value, 'keys')
 
 
+def is_full_slice(value):
+    return isinstance(value, slice) and value == slice(None)
+
+
 def combine_pos_and_kw_args(pos_kwargs, kw_kwargs, func_name):
     if pos_kwargs is not None:
         if not is_dict_like(pos_kwargs):
