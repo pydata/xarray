@@ -573,6 +573,14 @@ class TestDataset(TestCase):
         actual = expected.reindex(time=time2)
         self.assertDatasetIdentical(actual, expected)
 
+        # another regression test
+        ds = Dataset({'foo': (['x', 'y'], np.zeros((3, 4)))})
+        expected = Dataset({'foo': (['x', 'y'], np.zeros((3, 2))),
+                            'x': [0, 1, 3]})
+        expected['foo'][-1] = np.nan
+        actual = ds.reindex(x=[0, 1, 3], y=[0, 1])
+        self.assertDatasetIdentical(expected, actual)
+
     def test_align(self):
         left = create_test_data()
         right = left.copy(deep=True)

@@ -76,8 +76,10 @@ def align(*objects, **kwargs):
 
 
 def reindex_variables(variables, indexes, indexers, copy=True):
-    """Conform a dictionary of variables onto a new set of coordinates, filling
-    in missing values with NaN.
+    """Conform a dictionary of aligned variables onto a new set of variables,
+    filling in missing values with NaN.
+
+    WARNING: This method is not public API. Don't use it directly.
 
     Parameters
     ----------
@@ -102,13 +104,15 @@ def reindex_variables(variables, indexes, indexers, copy=True):
     """
     # build up indexers for assignment along each index
     to_indexers = {}
+    to_shape = {}
     from_indexers = {}
     for name, index in iteritems(indexes):
-        index = utils.safe_cast_to_index(index)
+        to_shape[name] = index.size
         if name in indexers:
             target = utils.safe_cast_to_index(indexers[name])
             indexer = index.get_indexer(target)
 
+            to_shape[name] = len(target)
             # Note pandas uses negative values from get_indexer to signify
             # values that are missing in the index
             # The non-negative values thus indicate the non-missing values
@@ -146,8 +150,7 @@ def reindex_variables(variables, indexes, indexers, copy=True):
             if any_not_full_slices(assign_to):
                 # there are missing values to in-fill
                 dtype, fill_value = _maybe_promote(var.dtype)
-                shape = tuple(length if is_full_slice(idx) else idx.size
-                              for idx, length in zip(assign_to, var.shape))
+                shape = tuple(to_shape[dim] for dim in var.dims)
                 data = np.empty(shape, dtype=dtype)
                 data[:] = fill_value
                 # create a new Variable so we can use orthogonal indexing
