@@ -183,6 +183,18 @@ class TestDatetime(TestCase):
         self.assertArrayEqual(actual, expected)
 
     @requires_netCDF4
+    def test_decode_cf_datetime_non_iso_strings(self):
+        # datetime strings that are _almost_ ISO compliant but not quite,
+        # but which netCDF4.num2date can still parse correctly
+        expected = pd.date_range(periods=100, start='2000-01-01', freq='h')
+        cases = [(np.arange(100), 'hours since 2000-01-01 0'),
+                 (np.arange(100), 'hours since 2000-1-1 0'),
+                 (np.arange(100), 'hours since 2000-01-01 0:00')]
+        for num_dates, units in cases:
+            actual = conventions.decode_cf_datetime(num_dates, units)
+            self.assertArrayEqual(actual, expected)
+
+    @requires_netCDF4
     def test_decode_non_standard_calendar(self):
         import netCDF4 as nc4
 
