@@ -346,6 +346,7 @@ class TestDataArray(TestCase):
         self.assertDataArrayIdentical(da[:3], da.loc[:'c'])
         self.assertDataArrayIdentical(da[1], da.loc['b'])
         self.assertDataArrayIdentical(da[1], da.loc[{'x': 'b'}])
+        self.assertDataArrayIdentical(da[1], da.loc['b', ...])
         self.assertDataArrayIdentical(da[:3], da.loc[['a', 'b', 'c']])
         self.assertDataArrayIdentical(da[:3, :4],
                                       da.loc[['a', 'b', 'c'], np.arange(4)])
