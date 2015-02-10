@@ -70,10 +70,8 @@ class _LocIndexer(object):
             return dict((dim, lookup_positions(dim, labels))
                         for dim, labels in iteritems(key))
         else:
-            if not isinstance(key, tuple):
-                key = (key,)
-            # note: it's OK if there are fewer keys than dimensions: zip will
-            # finish early in that case (we don't need to insert colons)
+            # expand the indexer so we can handle Ellipsis
+            key = indexing.expanded_indexer(key, self.data_array.ndim)
             return tuple(lookup_positions(dim, labels) for dim, labels
                          in zip(self.data_array.dims, key))
 
