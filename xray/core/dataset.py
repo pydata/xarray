@@ -138,10 +138,12 @@ def _get_virtual_variable(variables, key):
 
     ref_var_name, suffix = split_key
     ref_var = variables[ref_var_name]
-    if isinstance(ref_var, variable.Coordinate):
+    if ref_var.ndim == 1:
         date = ref_var.to_index()
     elif ref_var.ndim == 0:
         date = pd.Timestamp(ref_var.values)
+    else:
+        raise KeyError(key)
 
     if suffix == 'season':
         # seasons = np.array(['DJF', 'MAM', 'JJA', 'SON'])
