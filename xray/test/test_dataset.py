@@ -833,6 +833,9 @@ class TestDataset(TestCase):
         expected = Dataset({}, {'time.dayofyear': data['time.dayofyear']})
         actual = data[['time.dayofyear']]
         self.assertDatasetEqual(expected, actual)
+        # non-coordinate variables
+        ds = Dataset({'t': ('x', pd.date_range('2000-01-01', periods=3))})
+        self.assertTrue((ds['t.year'] == 2000).all())
 
     def test_slice_virtual_variable(self):
         data = create_test_data()
