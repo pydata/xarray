@@ -9,6 +9,14 @@ What's New
     import xray
     np.random.seed(123456)
 
+v0.4 (unreleased)
+-----------------
+
+.. These need tests:
+.. ``Dataset.update`` no longer updates attributes as well as variables.
+.. ``Dataset.__init__`` is not longer as strict by default
+.. TODO: auto-align Dataset arithmetic
+
 v0.3.2 (23 December, 2014)
 --------------------------
 

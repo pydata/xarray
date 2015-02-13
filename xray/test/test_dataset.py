@@ -141,6 +141,46 @@ class TestDataset(TestCase):
             actual = Dataset({'x': arg})
             self.assertDatasetIdentical(expected, actual)
 
+    def test_constructor_auto_align(self):
+        a = DataArray([1, 2], [('x', [0, 1])])
+        b = DataArray([3, 4], [('x', [1, 2])])
+
+        # verify align uses outer join
+        expected = Dataset({'a': ('x', [1, 2, np.nan]),
+                            'b': ('x', [np.nan, 3, 4])})
+        actual = Dataset({'a': a, 'b': b})
+        self.assertDatasetIdentical(expected, actual)
+
+        # var with different dimensions
+        c = ('y', [3, 4])
+        expected2 = expected.merge({'c': c})
+        actual = Dataset({'a': a, 'b': b, 'c': c})
+        self.assertDatasetIdentical(expected2, actual)
+
+        # var that is only aligned against the aligned variables
+        d = ('x', [3, 2, 1])
+        expected3 = expected.merge({'d': d})
+        actual = Dataset({'a': a, 'b': b, 'd': d})
+        self.assertDatasetIdentical(expected3, actual)
+
+        e = ('x', [0, 0])
+        with self.assertRaisesRegexp(ValueError, 'conflicting sizes'):
+            Dataset({'a': a, 'b': b, 'e': e})
+
+    def test_constructor_compat(self):
+        data = {'x': DataArray(0, coords={'y': 1}), 'y': ('z', [1, 1, 1])}
+        with self.assertRaisesRegexp(ValueError, 'conflicting value'):
+            Dataset(data, compat='equals')
+        expected = Dataset({'x': 0}, {'y': ('z', [1, 1, 1])})
+        actual = Dataset(data)
+        self.assertDatasetIdentical(expected, actual)
+        actual = Dataset(data, compat='broadcast_equals')
+        self.assertDatasetIdentical(expected, actual)
+
+        data = {'x': DataArray(0, coords={'y': 3}), 'y': ('z', [1, 1, 1])}
+        with self.assertRaisesRegexp(ValueError, 'conflicting value'):
+            Dataset(data)
+
     def test_constructor_with_coords(self):
         with self.assertRaisesRegexp(ValueError, 'redundant variables and co'):
             Dataset({'a': ('x', [1])}, {'a': ('x', [1])})
@@ -731,6 +771,28 @@ class TestDataset(TestCase):
         self.assertIsNot(actual, expected)
         self.assertDatasetIdentical(expected, actual)
 
+        other = Dataset(attrs={'new': 'attr'})
+        actual = data.copy()
+        actual.update(other)
+        self.assertDatasetIdentical(expected, actual)
+
+    def test_update_auto_align(self):
+        ds = Dataset({'x': ('t', [3, 4])})
+
+        expected = Dataset({'x': ('t', [3, 4]), 'y': ('t', [np.nan, 5])})
+        actual = ds.copy()
+        other = {'y': ('t', [5]), 't': [1]}
+        with self.assertRaisesRegexp(ValueError, 'conflicting sizes'):
+            actual.update(other)
+        actual.update(Dataset(other))
+        self.assertDatasetIdentical(expected, actual)
+
+        actual = ds.copy()
+        other = Dataset({'y': ('t', [5]), 't': [100]})
+        actual.update(other)
+        expected = Dataset({'x': ('t', [3, 4]), 'y': ('t', [np.nan] * 2)})
+        self.assertDatasetIdentical(expected, actual)
+
     def test_merge(self):
         data = create_test_data()
         ds1 = data[['var1']]
@@ -750,12 +812,10 @@ class TestDataset(TestCase):
         self.assertDatasetIdentical(data, actual)
 
         with self.assertRaises(ValueError):
-            ds1.merge(ds2.isel(dim1=slice(2)))
-        with self.assertRaises(ValueError):
             ds1.merge(ds2.rename({'var3': 'var1'}))
-        with self.assertRaisesRegexp(ValueError, 'coordinates with these'):
+        with self.assertRaisesRegexp(ValueError, 'cannot merge'):
             data.reset_coords().merge(data)
-        with self.assertRaisesRegexp(ValueError, 'variables with these'):
+        with self.assertRaisesRegexp(ValueError, 'cannot merge'):
             data.merge(data.reset_coords())
 
     def test_merge_broadcast_equals(self):
@@ -794,6 +854,22 @@ class TestDataset(TestCase):
 
         with self.assertRaisesRegexp(ValueError, 'compat=\S+ invalid'):
             ds1.merge(ds2, compat='foobar')
+
+    def test_merge_auto_align(self):
+        ds1 = Dataset({'a': ('x', [1, 2])})
+        ds2 = Dataset({'b': ('x', [3, 4]), 'x': [1, 2]})
+        expected = Dataset({'a': ('x', [1, 2, np.nan]),
+                            'b': ('x', [np.nan, 3, 4])})
+        self.assertDatasetIdentical(expected, ds1.merge(ds2))
+        self.assertDatasetIdentical(expected, ds2.merge(ds1))
+
+        expected = expected.isel(x=slice(2))
+        self.assertDatasetIdentical(expected, ds1.merge(ds2, join='left'))
+        self.assertDatasetIdentical(expected, ds2.merge(ds1, join='right'))
+
+        expected = expected.isel(x=slice(1, 2))
+        self.assertDatasetIdentical(expected, ds1.merge(ds2, join='inner'))
+        self.assertDatasetIdentical(expected, ds2.merge(ds1, join='inner'))
 
     def test_getitem(self):
         data = create_test_data()
@@ -869,7 +945,7 @@ class TestDataset(TestCase):
         data2['scalar'] = ([], 0)
         self.assertDatasetIdentical(data1, data2)
         # can't use the same dimension name as a scalar var
-        with self.assertRaisesRegexp(ValueError, 'already exists as a scalar'):
+        with self.assertRaisesRegexp(ValueError, 'cannot merge'):
             data1['newvar'] = ('scalar', [3, 4, 5])
         # can't resize a used dimension
         with self.assertRaisesRegexp(ValueError, 'conflicting sizes'):
@@ -880,6 +956,29 @@ class TestDataset(TestCase):
 
         with self.assertRaises(NotImplementedError):
             data1[{'x': 0}] = 0
+
+    def test_setitem_auto_align(self):
+        ds = Dataset()
+        ds['x'] = ('y', range(3))
+        ds['y'] = 1 + np.arange(3)
+        expected = Dataset({'x': ('y', range(3)), 'y': 1 + np.arange(3)})
+        self.assertDatasetIdentical(ds, expected)
+
+        ds['y'] = DataArray(range(3), dims='y')
+        expected = Dataset({'x': ('y', range(3))})
+        self.assertDatasetIdentical(ds, expected)
+
+        ds['x'] = DataArray([1, 2], dims='y')
+        expected = Dataset({'x': ('y', [1, 2, np.nan])})
+        self.assertDatasetIdentical(ds, expected)
+
+        ds['x'] = 42
+        expected = Dataset({'x': 42, 'y': range(3)})
+        self.assertDatasetIdentical(ds, expected)
+
+        ds['x'] = DataArray([4, 5, 6, 7], dims='y')
+        expected = Dataset({'x': ('y', [4, 5, 6])})
+        self.assertDatasetIdentical(ds, expected)
 
     def test_delitem(self):
         data = create_test_data()
@@ -1486,7 +1585,7 @@ class TestDataset(TestCase):
         self.assertDatasetIdentical(expected, subsampled + ds)
         self.assertDatasetIdentical(expected, ds + subsampled)
 
-    def test_dataset_math_automatic_alignment(self):
+    def test_dataset_math_auto_align(self):
         ds = self.make_example_math_dataset()
         subset = ds.isel(x=slice(2), y=[1, 3])
         expected = 2 * subset
