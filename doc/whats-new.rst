@@ -12,10 +12,13 @@ What's New
 v0.4 (unreleased)
 -----------------
 
-.. These need tests:
-.. ``Dataset.update`` no longer updates attributes as well as variables.
-.. ``Dataset.__init__`` is not longer as strict by default
-.. TODO: auto-align Dataset arithmetic
+Highlights
+~~~~~~~~~~
+
+- Automatic alignment of index labels in arithmetic, dataset cosntruction and
+  merging.
+- Aggregation operations skip missing values by default.
+- Lots of bug fixes.
 
 v0.3.2 (23 December, 2014)
 --------------------------

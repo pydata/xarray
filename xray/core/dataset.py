@@ -215,6 +215,7 @@ def _expand_variables(raw_variables, old_variables={}, compat='identical'):
                                               variables[name].shape))
                 common_dims.update(zip(var.dims, var.shape))
                 variables[name] = variables[name].set_dims(common_dims)
+                new_coord_names.update(var.dims)
 
     for name, var in iteritems(raw_variables):
         if hasattr(var, 'coords'):
@@ -1718,15 +1719,23 @@ def _calculate_binary_op(f, dataset, other, dest_vars):
     if utils.is_dict_like(other):
         other_arrays = getattr(other, '_arrays', other)
         other_vars = getattr(other, 'vars', other)
-        if set(dataset_vars) != set(other_vars):
-            raise ValueError('Datasets do not have the same variables: '
-                             '%s, %s' % (list(dataset_vars), list(other_vars)))
+        performed_op = False
         for k in dataset_vars:
-            dest_vars[k] = f(dataset_arrays[k], other_arrays[k])
+            if k in other_vars:
+                dest_vars[k] = f(dataset_arrays[k], other_arrays[k])
+                performed_op = True
+            elif k in dest_vars:
+                # we are doing an in-place operation
+                raise ValueError('datasets must have the same variables for '
+                                 'in-place arithmetic operations: %s, %s'
+                                 % (list(dataset_vars), list(other_vars)))
+        if not performed_op:
+            raise ValueError('datasets have no overlapping variables: %s, %s'
+                             % (list(dataset_vars), list(other_vars)))
     else:
-        other_arrays = getattr(other, 'variable', other)
+        other_variable = getattr(other, 'variable', other)
         for k in dataset_vars:
-            dest_vars[k] = f(dataset_arrays[k], other_arrays)
+            dest_vars[k] = f(dataset_arrays[k], other_variable)
 
 
 ops.inject_all_ops_and_reduce_methods(Dataset, array_only=False)

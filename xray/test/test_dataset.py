@@ -1595,6 +1595,19 @@ class TestDataset(TestCase):
         with self.assertRaisesRegexp(ValueError, 'no overlapping labels'):
             ds.isel(x=slice(1)) + ds.isel(x=slice(1, None))
 
+        actual = ds + ds[['bar']]
+        expected = (2 * ds[['bar']]).merge(ds.coords)
+        self.assertDatasetIdentical(expected, actual)
+
+        with self.assertRaisesRegexp(ValueError, 'no overlapping variables'):
+            ds + Dataset()
+
+        with self.assertRaisesRegexp(ValueError, 'no overlapping variables'):
+            Dataset() + Dataset()
+
+        # maybe unary arithmetic with empty datasets should raise instead?
+        self.assertDatasetIdentical(Dataset() + 1, Dataset())
+
     def test_dataset_math_errors(self):
         ds = self.make_example_math_dataset()
 
@@ -1602,8 +1615,8 @@ class TestDataset(TestCase):
             ds['foo'] += ds
         with self.assertRaises(TypeError):
             ds['foo'].variable += ds
-        with self.assertRaisesRegexp(ValueError, 'do not have the same'):
-            ds + ds[['bar']]
+        with self.assertRaisesRegexp(ValueError, 'must have the same'):
+            ds += ds[['bar']]
 
         # verify we can rollback in-place operations if something goes wrong
         # nb. inplace datetime64 math actually will work with an integer array
