@@ -9,6 +9,17 @@ What's New
     import xray
     np.random.seed(123456)
 
+v0.4 (unreleased)
+-----------------
+
+Highlights
+~~~~~~~~~~
+
+- Automatic alignment of index labels in arithmetic, dataset cosntruction and
+  merging.
+- Aggregation operations skip missing values by default.
+- Lots of bug fixes.
+
 v0.3.2 (23 December, 2014)
 --------------------------
 

@@ -12,12 +12,37 @@ from .utils import is_full_slice
 from .variable import as_variable, Variable, Coordinate, broadcast_variables
 
 
-def _get_all_indexes(objects):
+def _get_joiner(join):
+    if join == 'outer':
+        return functools.partial(functools.reduce, operator.or_)
+    elif join == 'inner':
+        return functools.partial(functools.reduce, operator.and_)
+    elif join == 'left':
+        return operator.itemgetter(0)
+    elif join == 'right':
+        return operator.itemgetter(-1)
+    else:
+        raise ValueError('invalid value for join: %s' % join)
+
+
+def _get_all_indexes(objects, exclude=set()):
     all_indexes = defaultdict(list)
     for obj in objects:
         for k, v in iteritems(obj.indexes):
-            all_indexes[k].append(v)
+            if k not in exclude:
+                all_indexes[k].append(v)
     return all_indexes
+
+
+def _join_indexes(join, objects, exclude=set()):
+    joiner = _get_joiner(join)
+    indexes = _get_all_indexes(objects, exclude=exclude)
+    # exclude dimensions with all equal indices (the usual case) to avoid
+    # unnecessary reindexing work.
+    # TODO: don't bother to check equals for left or right joins
+    joined_indexes = dict((k, joiner(v)) for k, v in iteritems(indexes)
+                          if any(not v[0].equals(idx) for idx in v[1:]))
+    return joined_indexes
 
 
 def align(*objects, **kwargs):
@@ -27,8 +52,7 @@ def align(*objects, **kwargs):
     objects with aligned indexes.
 
     Array from the aligned objects are suitable as input to mathematical
-    operators, because along each dimension they are indexed by the same
-    indexes.
+    operators, because along each dimension they have the same indexes.
 
     Missing values (if ``join != 'inner'``) are filled with NaN.
 
@@ -39,13 +63,13 @@ def align(*objects, **kwargs):
     join : {'outer', 'inner', 'left', 'right'}, optional
         Method for joining the indexes of the passed objects along each
         dimension:
-         - 'outer': use the union of object indexes
-         - 'inner': use the intersection of object indexes
-         - 'left': use indexes from the first object with each dimension
-         - 'right': use indexes from the last object with each dimension
+        - 'outer': use the union of object indexes
+        - 'inner': use the intersection of object indexes
+        - 'left': use indexes from the first object with each dimension
+        - 'right': use indexes from the last object with each dimension
     copy : bool, optional
-        If `copy=True`, the returned objects contain all new variables. If
-        `copy=False` and no reindexing is required then the aligned objects
+        If ``copy=True``, the returned objects contain all new variables. If
+        ``copy=False`` and no reindexing is required then the aligned objects
         will include original variables.
 
     Returns
@@ -55,23 +79,27 @@ def align(*objects, **kwargs):
     """
     join = kwargs.pop('join', 'inner')
     copy = kwargs.pop('copy', True)
+    if kwargs:
+        raise TypeError('align() got unexpected keyword arguments: %s'
+                        % list(kwargs))
 
-    if join == 'outer':
-        join_indices = functools.partial(functools.reduce, operator.or_)
-    elif join == 'inner':
-        join_indices = functools.partial(functools.reduce, operator.and_)
-    elif join == 'left':
-        join_indices = operator.itemgetter(0)
-    elif join == 'right':
-        join_indices = operator.itemgetter(-1)
+    joined_indexes = _join_indexes(join, objects)
+    return tuple(obj.reindex(copy=copy, **joined_indexes) for obj in objects)
 
-    all_indexes = _get_all_indexes(objects)
 
-    # Exclude dimensions with all equal indices to avoid unnecessary reindexing
-    # work.
-    joined_indexes = dict((k, join_indices(v)) for k, v in iteritems(all_indexes)
-                          if any(not v[0].equals(idx) for idx in v[1:]))
+def partial_align(*objects, **kwargs):
+    """partial_align(*objects, join='inner', copy=True, exclude=set()
 
+    Like align, but don't align along dimensions in exclude. Not public API.
+    """
+    join = kwargs.pop('join', 'inner')
+    copy = kwargs.pop('copy', True)
+    exclude = kwargs.pop('exclude', set())
+    if kwargs:
+        raise TypeError('align() got unexpected keyword arguments: %s'
+                        % list(kwargs))
+
+    joined_indexes = _join_indexes(join, objects, exclude=exclude)
     return tuple(obj.reindex(copy=copy, **joined_indexes) for obj in objects)
 
 
