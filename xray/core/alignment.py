@@ -103,7 +103,7 @@ def partial_align(*objects, **kwargs):
     return tuple(obj.reindex(copy=copy, **joined_indexes) for obj in objects)
 
 
-def reindex_variables(variables, indexes, indexers, copy=True):
+def reindex_variables(variables, indexes, indexers, method=None, copy=True):
     """Conform a dictionary of aligned variables onto a new set of variables,
     filling in missing values with NaN.
 
@@ -120,6 +120,13 @@ def reindex_variables(variables, indexes, indexers, copy=True):
         arrays of coordinates tick labels. Any mis-matched coordinate values
         will be filled in with NaN, and any mis-matched dimension names will
         simply be ignored.
+    method : {None, 'nearest', 'pad'/'ffill', 'backfill'/'bfill'}, optional
+        Method to use for filling index values in ``indexers`` not found in
+        this dataset:
+          * default: don't fill gaps
+          * pad / ffill: propgate last valid index value forward
+          * backfill / bfill: propagate next valid index value backward
+          * nearest: use nearest valid index value
     copy : bool, optional
         If `copy=True`, the returned dataset contains only copied
         variables. If `copy=False` and no reindexing is required then
@@ -138,7 +145,7 @@ def reindex_variables(variables, indexes, indexers, copy=True):
         to_shape[name] = index.size
         if name in indexers:
             target = utils.safe_cast_to_index(indexers[name])
-            indexer = index.get_indexer(target)
+            indexer = index.get_indexer(target, method=method)
 
             to_shape[name] = len(target)
             # Note pandas uses negative values from get_indexer to signify

@@ -621,6 +621,21 @@ class TestDataset(TestCase):
         actual = ds.reindex(x=[0, 1, 3], y=[0, 1])
         self.assertDatasetIdentical(expected, actual)
 
+    def test_reindex_method(self):
+        ds = Dataset({'x': ('y', [10, 20])})
+        y = [-0.5, 0.5, 1.5]
+        actual = ds.reindex(y=y, method='backfill')
+        expected = Dataset({'x': ('y', [10, 20, np.nan]), 'y': y})
+        self.assertDatasetIdentical(expected, actual)
+
+        actual = ds.reindex(y=y, method='pad')
+        expected = Dataset({'x': ('y', [np.nan, 10, 20]), 'y': y})
+        self.assertDatasetIdentical(expected, actual)
+
+        alt = Dataset({'y': y})
+        actual = ds.reindex_like(alt, method='pad')
+        self.assertDatasetIdentical(expected, actual)
+
     def test_align(self):
         left = create_test_data()
         right = left.copy(deep=True)
