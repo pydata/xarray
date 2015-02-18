@@ -477,6 +477,17 @@ class TestDataArray(TestCase):
         actual = expected.reindex(time=time2)
         self.assertDataArrayIdentical(actual, expected)
 
+    def test_reindex_method(self):
+        x = DataArray([10, 20], dims='y')
+        y = [-0.5, 0.5, 1.5]
+        actual = x.reindex(y=y, method='backfill')
+        expected = DataArray([10, 20, np.nan], coords=[('y', y)])
+        self.assertDataArrayIdentical(expected, actual)
+
+        alt = Dataset({'y': y})
+        actual = x.reindex_like(alt, method='backfill')
+        self.assertDatasetIdentical(expected, actual)
+
     def test_rename(self):
         renamed = self.dv.rename('bar')
         self.assertDatasetIdentical(

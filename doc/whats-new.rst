@@ -19,6 +19,8 @@ Highlights
   merging.
 - Aggregation operations skip missing values by default.
 - Lots of bug fixes.
+- Support for reindexing with a fill method. This will especially useful with
+  pandas 0.16, which will support a fill method of ``'nearest'``.
 
 v0.3.2 (23 December, 2014)
 --------------------------

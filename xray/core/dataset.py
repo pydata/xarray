@@ -1001,7 +1001,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, AttrAccessMixin):
 
     labeled = utils.function_alias(sel, 'labeled')
 
-    def reindex_like(self, other, copy=True):
+    def reindex_like(self, other, method=None, copy=True):
         """Conform this object onto the indexes of another object, filling
         in missing values with NaN.
 
@@ -1014,6 +1014,13 @@ class Dataset(Mapping, ImplementsDatasetReduce, AttrAccessMixin):
             other object need not be the same as the indexes on this
             dataset. Any mis-matched index values will be filled in with
             NaN, and any mis-matched dimension names will simply be ignored.
+        method : {None, 'nearest', 'pad'/'ffill', 'backfill'/'bfill'}, optional
+            Method to use for filling index values in ``indexers`` not found in
+            this dataset:
+              * default: don't fill gaps
+              * pad / ffill: propgate last valid index value forward
+              * backfill / bfill: propagate next valid index value backward
+              * nearest: use nearest valid index value (requires pandas>=0.16)
         copy : bool, optional
             If `copy=True`, the returned dataset contains only copied
             variables. If `copy=False` and no reindexing is required then
@@ -1030,9 +1037,9 @@ class Dataset(Mapping, ImplementsDatasetReduce, AttrAccessMixin):
         Dataset.reindex
         align
         """
-        return self.reindex(copy=copy, **other.indexes)
+        return self.reindex(method=method, copy=copy, **other.indexes)
 
-    def reindex(self, indexers=None, copy=True, **kw_indexers):
+    def reindex(self, indexers=None, method=None, copy=True, **kw_indexers):
         """Conform this object onto a new set of indexes, filling in
         missing values with NaN.
 
@@ -1043,6 +1050,13 @@ class Dataset(Mapping, ImplementsDatasetReduce, AttrAccessMixin):
             arrays of coordinates tick labels. Any mis-matched coordinate values
             will be filled in with NaN, and any mis-matched dimension names will
             simply be ignored.
+        method : {None, 'nearest', 'pad'/'ffill', 'backfill'/'bfill'}, optional
+            Method to use for filling index values in ``indexers`` not found in
+            this dataset:
+              * default: don't fill gaps
+              * pad / ffill: propgate last valid index value forward
+              * backfill / bfill: propagate next valid index value backward
+              * nearest: use nearest valid index value (requires pandas>=0.16)
         copy : bool, optional
             If `copy=True`, the returned dataset contains only copied
             variables. If `copy=False` and no reindexing is required then
@@ -1059,6 +1073,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, AttrAccessMixin):
         --------
         Dataset.reindex_like
         align
+        pandas.Index.get_indexer
         """
         indexers = utils.combine_pos_and_kw_args(indexers, kw_indexers,
                                                  'reindex')
@@ -1067,7 +1082,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, AttrAccessMixin):
             return self.copy(deep=True) if copy else self
 
         variables = alignment.reindex_variables(
-            self._arrays, self.indexes, indexers, copy=copy)
+            self._arrays, self.indexes, indexers, method, copy=copy)
         return self._replace_vars_and_dims(variables)
 
     def rename(self, name_dict, inplace=False):

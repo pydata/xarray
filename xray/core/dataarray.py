@@ -506,7 +506,7 @@ class DataArray(AbstractArray, AttrAccessMixin):
 
     labeled = utils.function_alias(sel, 'labeled')
 
-    def reindex_like(self, other, copy=True):
+    def reindex_like(self, other, method=None, copy=True):
         """Conform this object onto the indexes of another object, filling
         in missing values with NaN.
 
@@ -519,6 +519,13 @@ class DataArray(AbstractArray, AttrAccessMixin):
             other object need not be the same as the indexes on this
             dataset. Any mis-matched index values will be filled in with
             NaN, and any mis-matched dimension names will simply be ignored.
+        method : {None, 'nearest', 'pad'/'ffill', 'backfill'/'bfill'}, optional
+            Method to use for filling index values in ``indexers`` not found in
+            this dataset:
+              * default: don't fill gaps
+              * pad / ffill: propgate last valid index value forward
+              * backfill / bfill: propagate next valid index value backward
+              * nearest: use nearest valid index value (requires pandas>=0.16)
         copy : bool, optional
             If `copy=True`, the returned array's dataset contains only copied
             variables. If `copy=False` and no reindexing is required then
@@ -535,9 +542,9 @@ class DataArray(AbstractArray, AttrAccessMixin):
         DataArray.reindex
         align
         """
-        return self.reindex(copy=copy, **other.indexes)
+        return self.reindex(method=method, copy=copy, **other.indexes)
 
-    def reindex(self, copy=True, **indexers):
+    def reindex(self, method=None, copy=True, **indexers):
         """Conform this object onto a new set of indexes, filling in
         missing values with NaN.
 
@@ -547,6 +554,13 @@ class DataArray(AbstractArray, AttrAccessMixin):
             If `copy=True`, the returned array's dataset contains only copied
             variables. If `copy=False` and no reindexing is required then
             original variables from this array's dataset are returned.
+        method : {None, 'nearest', 'pad'/'ffill', 'backfill'/'bfill'}, optional
+            Method to use for filling index values in ``indexers`` not found in
+            this dataset:
+              * default: don't fill gaps
+              * pad / ffill: propgate last valid index value forward
+              * backfill / bfill: propagate next valid index value backward
+              * nearest: use nearest valid index value (requires pandas>=0.16)
         **indexers : dict
             Dictionary with keys given by dimension names and values given by
             arrays of coordinates tick labels. Any mis-matched coordinate values
@@ -564,7 +578,7 @@ class DataArray(AbstractArray, AttrAccessMixin):
         DataArray.reindex_like
         align
         """
-        ds = self._dataset.reindex(copy=copy, **indexers)
+        ds = self._dataset.reindex(method=method, copy=copy, **indexers)
         return self._with_replaced_dataset(ds)
 
     def rename(self, new_name_or_name_dict):
