@@ -489,22 +489,10 @@ class Dataset(Mapping, ImplementsDatasetReduce, AttrAccessMixin):
 
     @property
     def variables(self):
-        """Deprecated; do not use"""
-        warnings.warn('the Dataset property `variables` has been deprecated; '
-                      'use the dataset itself instead',
-                      FutureWarning, stacklevel=2)
+        """Frozen dictionary of xray.Variable objects constituting this
+        dataset's data
+        """
         return Frozen(self._arrays)
-
-    @property
-    def attributes(self):
-        """Deprecated; do not use"""
-        utils.alias_warning('attributes', 'attrs', 3)
-        return self.attrs
-
-    @attributes.setter
-    def attributes(self, value):
-        utils.alias_warning('attributes', 'attrs', 3)
-        self.attrs = value
 
     def _attrs_copy(self):
         return None if self._attrs is None else OrderedDict(self._attrs)
@@ -529,11 +517,6 @@ class Dataset(Mapping, ImplementsDatasetReduce, AttrAccessMixin):
         new variables.
         """
         return Frozen(SortedKeysDict(self._dims))
-
-    @property
-    def dimensions(self):
-        utils.alias_warning('dimensions', 'dims')
-        return self.dims
 
     def load_data(self):
         """Manually trigger loading of this dataset's data from disk or a
@@ -809,29 +792,6 @@ class Dataset(Mapping, ImplementsDatasetReduce, AttrAccessMixin):
                       FutureWarning, stacklevel=2)
         return self.data_vars
 
-    @property
-    def coordinates(self):
-        utils.alias_warning('coordinates', 'coords')
-        return self.coords
-
-    @property
-    def noncoords(self):
-        """Dictionary of DataArrays whose names do not match dimensions.
-        """
-        warnings.warn('the Dataset property `noncoords` has been deprecated; '
-                      'use `vars` instead',
-                      FutureWarning, stacklevel=2)
-        return self.data_vars
-
-    @property
-    def noncoordinates(self):
-        """Dictionary of DataArrays whose names do not match dimensions.
-        """
-        warnings.warn('the Dataset property `noncoordinates` has been '
-                      'deprecated; use `vars` instead',
-                      FutureWarning, stacklevel=2)
-        return self.data_vars
-
     def set_coords(self, names, inplace=False):
         """Given names of one or more variables, set them as coordinates
 
@@ -967,8 +927,6 @@ class Dataset(Mapping, ImplementsDatasetReduce, AttrAccessMixin):
             variables[name] = var.isel(**var_indexers)
         return self._replace_vars_and_dims(variables)
 
-    indexed = utils.function_alias(isel, 'indexed')
-
     def sel(self, **indexers):
         """Returns a new dataset with each array indexed by tick labels
         along the specified dimension(s).
@@ -1008,8 +966,6 @@ class Dataset(Mapping, ImplementsDatasetReduce, AttrAccessMixin):
         DataArray.sel
         """
         return self.isel(**indexing.remap_label_indexers(self, indexers))
-
-    labeled = utils.function_alias(sel, 'labeled')
 
     def reindex_like(self, other, method=None, copy=True):
         """Conform this object onto the indexes of another object, filling
@@ -1240,16 +1196,6 @@ class Dataset(Mapping, ImplementsDatasetReduce, AttrAccessMixin):
             raise ValueError('One or more of the specified variables '
                              'cannot be found in this dataset')
 
-    def select_vars(self, *names):
-        """Deprecated. Index with a list instead: ``ds[['var1', 'var2']]``
-        """
-        warnings.warn('select_vars has been deprecated; index the dataset '
-                      'with a list of variables instead',
-                      FutureWarning, stacklevel=2)
-        return self._copy_listed(names)
-
-    select = utils.function_alias(select_vars, 'select')
-
     def drop_vars(self, *names):
         """Returns a new dataset without the named variables.
 
@@ -1272,8 +1218,6 @@ class Dataset(Mapping, ImplementsDatasetReduce, AttrAccessMixin):
                                 if k not in drop)
         coord_names = set(k for k in self._coord_names if k in variables)
         return self._replace_vars_and_dims(variables, coord_names)
-
-    unselect = utils.function_alias(drop_vars, 'unselect')
 
     def groupby(self, group, squeeze=True):
         """Returns a GroupBy object for performing grouped operations.
@@ -1451,10 +1395,6 @@ class Dataset(Mapping, ImplementsDatasetReduce, AttrAccessMixin):
             Dataset with this object's DataArrays replaced with new DataArrays
             of summarized data and the indicated dimension(s) removed.
         """
-        if 'dimension' in kwargs and dim is None:
-            dim = kwargs.pop('dimension')
-            utils.alias_warning('dimension', 'dim')
-
         if isinstance(dim, basestring):
             dims = set([dim])
         elif dim is None:
@@ -1518,13 +1458,6 @@ class Dataset(Mapping, ImplementsDatasetReduce, AttrAccessMixin):
                                 for k, v in iteritems(self.data_vars))
         attrs = self.attrs if keep_attrs else None
         return type(self)(variables, attrs=attrs)
-
-    @classmethod
-    def concat(cls, *args, **kwargs):
-        """Deprecated; use xray.concat instead"""
-        warnings.warn('xray.Dataset.concat has been deprecated; use '
-                      'xray.concat instead', FutureWarning, stacklevel=2)
-        return cls._concat(*args, **kwargs)
 
     @classmethod
     def _concat(cls, datasets, dim='concat_dim', indexers=None,

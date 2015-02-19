@@ -1,6 +1,5 @@
 import contextlib
 import functools
-import warnings
 
 import pandas as pd
 
@@ -214,17 +213,6 @@ class DataArray(AbstractArray, AttrAccessMixin):
         obj._dataset = dataset
         return obj
 
-    @property
-    def dataset(self):
-        """The dataset with which this DataArray is associated.
-        """
-        warnings.warn("the 'dataset' property has been deprecated; "
-                      'to convert a DataArray into a Dataset, use '
-                      'to_dataset(), or to modify DataArray coordiantes in '
-                      "place, use the 'coords' property",
-                      FutureWarning, stacklevel=2)
-        return self._dataset
-
     def to_dataset(self, name=None):
         """Convert a DataArray to a Dataset
 
@@ -299,11 +287,6 @@ class DataArray(AbstractArray, AttrAccessMixin):
     def _in_memory(self):
         return self.variable._in_memory
 
-    @property
-    def as_index(self):
-        utils.alias_warning('as_index', 'to_index()')
-        return self.to_index()
-
     def to_index(self):
         """Convert this variable to a pandas.Index. Only possible for 1D
         arrays.
@@ -325,12 +308,6 @@ class DataArray(AbstractArray, AttrAccessMixin):
             ds.rename(name_map, inplace=True)
         if self.name in name_map:
             self._name = name_map[self.name]
-
-    @property
-    def dimensions(self):
-        """Deprecated; use dims instead"""
-        utils.alias_warning('dimensions', 'dims')
-        return self.dims
 
     def _item_key_to_dict(self, key):
         if utils.is_dict_like(key):
@@ -371,16 +348,6 @@ class DataArray(AbstractArray, AttrAccessMixin):
         return _LocIndexer(self)
 
     @property
-    def attributes(self):
-        utils.alias_warning('attributes', 'attrs')
-        return self.variable.attrs
-
-    @attributes.setter
-    def attributes(self, value):
-        utils.alias_warning('attributes', 'attrs')
-        self.variable.attrs = value
-
-    @property
     def attrs(self):
         """Dictionary storing arbitrary metadata with this array."""
         return self.variable.attrs
@@ -410,11 +377,6 @@ class DataArray(AbstractArray, AttrAccessMixin):
         """Dictionary-like container of coordinate arrays.
         """
         return DataArrayCoordinates(self)
-
-    @property
-    def coordinates(self):
-        utils.alias_warning('coordinates', 'coords')
-        return self.coords
 
     def reset_coords(self, names=None, drop=False, inplace=False):
         """Given names of coordinates, reset them to become variables.
@@ -491,8 +453,6 @@ class DataArray(AbstractArray, AttrAccessMixin):
         ds = self._dataset.isel(**indexers)
         return self._with_replaced_dataset(ds)
 
-    indexed = utils.function_alias(isel, 'indexed')
-
     def sel(self, **indexers):
         """Return a new DataArray whose dataset is given by selecting
         index labels along the specified dimension(s).
@@ -503,8 +463,6 @@ class DataArray(AbstractArray, AttrAccessMixin):
         DataArray.isel
         """
         return self.isel(**indexing.remap_label_indexers(self, indexers))
-
-    labeled = utils.function_alias(sel, 'labeled')
 
     def reindex_like(self, other, method=None, copy=True):
         """Conform this object onto the indexes of another object, filling
@@ -600,33 +558,6 @@ class DataArray(AbstractArray, AttrAccessMixin):
             name_dict = {self.name: new_name}
         renamed_dataset = self._dataset.rename(name_dict)
         return renamed_dataset[new_name]
-
-    def select_vars(self, *names):
-        """Returns a new DataArray with only the named variables, as well
-        as this DataArray's array variable (and all associated coordinates).
-
-        See Also
-        --------
-        Dataset.select_vars
-        """
-        warnings.warn('select_vars has been deprecated; use '
-                      'reset_coords(drop=True) instead',
-                      FutureWarning, stacklevel=2)
-        names = names + (self.name,)
-        ds = self._dataset.select_vars(*names)
-        return self._with_replaced_dataset(ds)
-
-    select = utils.function_alias(select_vars, 'select')
-
-    def drop_vars(self, *names):
-        """Deprecated; use reset_coords(names, drop=True) instead
-        """
-        warnings.warn('DataArray.drop_vars has been deprecated; use '
-                      'reset_coords(names, drop=True) instead',
-                      FutureWarning, stacklevel=2)
-        return self.reset_coords(names, drop=True)
-
-    unselect = utils.function_alias(drop_vars, 'unselect')
 
     def groupby(self, group, squeeze=True):
         """Returns a GroupBy object for performing grouped operations.
@@ -761,10 +692,6 @@ class DataArray(AbstractArray, AttrAccessMixin):
             DataArray with this object's array replaced with an array with
             summarized data and the indicated dimension(s) removed.
         """
-        if 'dimension' in kwargs and dim is None:
-            dim = kwargs.pop('dimension')
-            utils.alias_warning('dimension', 'dim')
-
         var = self.variable.reduce(func, dim, axis, keep_attrs, **kwargs)
         drop = set(self.dims) - set(var.dims)
         # remove all variables associated with any dropped dimensions
@@ -774,13 +701,6 @@ class DataArray(AbstractArray, AttrAccessMixin):
         ds[self.name] = var
 
         return self._with_replaced_dataset(ds)
-
-    @classmethod
-    def concat(cls, *args, **kwargs):
-        """Deprecated; use xray.concat instead"""
-        warnings.warn('xray.DataArray.concat has been deprecated; use '
-                      'xray.concat instead', FutureWarning, stacklevel=2)
-        return cls._concat(*args, **kwargs)
 
     @classmethod
     def _concat(cls, arrays, dim='concat_dim', indexers=None,

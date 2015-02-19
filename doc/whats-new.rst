@@ -18,6 +18,9 @@ Highlights
 - Automatic alignment of index labels in arithmetic, dataset cosntruction and
   merging.
 - Aggregation operations skip missing values by default.
+- You will need to update your code if you have been ignoring deprecation
+  warnings: methods and attributes that were deprecated in xray v0.3 or earlier
+  have gone away.
 - Lots of bug fixes.
 - Support for reindexing with a fill method. This will especially useful with
   pandas 0.16, which will support a fill method of ``'nearest'``.
