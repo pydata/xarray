@@ -16,12 +16,23 @@ Highlights
 ~~~~~~~~~~
 
 - Automatic alignment of index labels in arithmetic, dataset cosntruction and
-  merging.
-- Aggregation operations skip missing values by default.
+  merging. TODO: finish documenting.
+- Aggregation operations now skip missing values by default:
+
+  .. ipython:: python
+
+      DataArray([1, 2, np.nan, 3]).mean()
+
+  You can turn this behavior off by supplying the keyword arugment
+  ``skip_na=False``.
 - You will need to update your code if you have been ignoring deprecation
   warnings: methods and attributes that were deprecated in xray v0.3 or earlier
   have gone away.
 - Lots of bug fixes.
+
+Enhancements
+~~~~~~~~~~~~
+
 - Support for reindexing with a fill method. This will especially useful with
   pandas 0.16, which will support a fill method of ``'nearest'``.
 
