@@ -253,7 +253,7 @@ class DataArray(AbstractArray, AttrAccessMixin):
 
     @property
     def variable(self):
-        return self._dataset._arrays[self.name]
+        return self._dataset._variables[self.name]
 
     @property
     def dtype(self):
@@ -695,7 +695,7 @@ class DataArray(AbstractArray, AttrAccessMixin):
         var = self.variable.reduce(func, dim, axis, keep_attrs, **kwargs)
         drop = set(self.dims) - set(var.dims)
         # remove all variables associated with any dropped dimensions
-        drop |= set(k for k, v in iteritems(self._dataset._arrays)
+        drop |= set(k for k, v in iteritems(self._dataset._variables)
                     if any(dim in drop for dim in v.dims))
         ds = self._dataset.drop_vars(*drop)
         ds[self.name] = var

@@ -100,8 +100,8 @@ class TestCase(unittest.TestCase):
         self.assertEqual(sorted(d1, key=str), sorted(d2, key=str))
         self.assertItemsEqual(d1.coords, d2.coords)
         for k in d1:
-            v1 = d1._arrays[k]
-            v2 = d2._arrays[k]
+            v1 = d1.variables[k]
+            v2 = d2.variables[k]
             self.assertVariableAllClose(v1, v2, rtol=rtol, atol=atol)
 
     def assertCoordinatesEqual(self, d1, d2):

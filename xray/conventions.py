@@ -742,7 +742,7 @@ def decode_cf(obj, concat_characters=True, mask_and_scale=True,
     from .backends.common import AbstractDataStore
 
     if isinstance(obj, Dataset):
-        vars = obj._arrays
+        vars = obj._variables
         attrs = obj.attrs
         extra_coords = set(obj.coords)
         file_obj = obj._file_obj
@@ -855,7 +855,7 @@ def encode_dataset_coordinates(dataset):
     attrs : dict
     """
     non_dim_coord_names = set(dataset.coords) - set(dataset.dims)
-    return _encode_coordinates(dataset._arrays, dataset.attrs,
+    return _encode_coordinates(dataset._variables, dataset.attrs,
                                non_dim_coord_names=non_dim_coord_names)
 
 

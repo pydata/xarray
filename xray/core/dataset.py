@@ -172,22 +172,22 @@ def _as_dataset_variable(name, var):
     return var
 
 
-def _align_variables(arrays, join='outer'):
+def _align_variables(variables, join='outer'):
     """Align all DataArrays in the provided dict, leaving other values alone.
     """
-    alignable = [k for k, v in arrays.items() if hasattr(v, 'indexes')]
-    aligned = align(*[arrays[a] for a in alignable],
+    alignable = [k for k, v in variables.items() if hasattr(v, 'indexes')]
+    aligned = align(*[variables[a] for a in alignable],
                     join=join, copy=False)
-    new_arrays = OrderedDict(arrays)
-    new_arrays.update(zip(alignable, aligned))
-    return new_arrays
+    new_variables = OrderedDict(variables)
+    new_variables.update(zip(alignable, aligned))
+    return new_variables
 
 
 def _expand_variables(raw_variables, old_variables={}, compat='identical'):
     """Expand a dictionary of variables.
 
     Returns a dictionary of Variable objects suitable for inserting into a
-    Dataset._arrays dictionary.
+    Dataset._variables dictionary.
 
     This includes converting tuples (dims, data) into Variable objects,
     converting coordinate variables into Coordinate objects and expanding
@@ -255,10 +255,10 @@ def _calculate_dims(variables):
 
 
 def _merge_expand(aligned_self, other, overwrite_vars, compat):
-    possible_conflicts = dict((k, v) for k, v in aligned_self._arrays.items()
+    possible_conflicts = dict((k, v) for k, v in aligned_self._variables.items()
                               if k not in overwrite_vars)
     new_vars, new_coord_names = _expand_variables(other, possible_conflicts, compat)
-    replace_vars = aligned_self._arrays.copy()
+    replace_vars = aligned_self._variables.copy()
     replace_vars.update(new_vars)
     return replace_vars, new_vars, new_coord_names
 
@@ -267,7 +267,7 @@ def _merge_dataset(self, other, overwrite_vars, compat, join):
     aligned_self, other = partial_align(self, other, join=join, copy=False)
 
     replace_vars, new_vars, new_coord_names = _merge_expand(
-        aligned_self, other._arrays, overwrite_vars, compat)
+        aligned_self, other._variables, overwrite_vars, compat)
     new_coord_names.update(other._coord_names)
 
     return replace_vars, new_vars, new_coord_names
@@ -310,14 +310,14 @@ class Variables(Mapping):
         self._dataset = dataset
 
     def __iter__(self):
-        return (key for key in self._dataset._arrays
+        return (key for key in self._dataset._variables
                 if key not in self._dataset._coord_names)
 
     def __len__(self):
-        return len(self._dataset._arrays) - len(self._dataset._coord_names)
+        return len(self._dataset._variables) - len(self._dataset._coord_names)
 
     def __contains__(self, key):
-        return (key in self._dataset._arrays
+        return (key in self._dataset._variables
                 and key not in self._dataset._coord_names)
 
     def __getitem__(self, key):
@@ -356,7 +356,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, AttrAccessMixin):
     # class properties defined for the benefit of __setstate__, which otherwise
     # runs into trouble because we overrode __getattr__
     _attrs = None
-    _arrays = Frozen({})
+    _variables = Frozen({})
 
     def __init__(self, variables=None, coords=None, attrs=None,
                  compat='broadcast_equals'):
@@ -374,7 +374,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, AttrAccessMixin):
         coords : dict-like, optional
             Another mapping in the same form as the `variables` argument,
             except the each item is saved on the dataset as a "coordinate".
-            These arrays have an associated meaning: they describe
+            These variables have an associated meaning: they describe
             constant/fixed/independent quantities, unlike the
             varying/measured/dependent quantities that belong in `variables`.
             Coordinates values may be given by 1-dimensional arrays or scalars,
@@ -384,7 +384,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, AttrAccessMixin):
         attrs : dict-like, optional
             Global attributes to save on this dataset.
         """
-        self._arrays = OrderedDict()
+        self._variables = OrderedDict()
         self._coord_names = set()
         self._dims = {}
         self._attrs = None
@@ -399,52 +399,52 @@ class Dataset(Mapping, ImplementsDatasetReduce, AttrAccessMixin):
             self.attrs = attrs
 
     def _add_missing_coords_inplace(self):
-        """Add missing coordinates to self._arrays
+        """Add missing coordinates to self._variables
         """
         for dim, size in iteritems(self.dims):
-            if dim not in self._arrays:
+            if dim not in self._variables:
                 # This is equivalent to np.arange(size), but
                 # waits to create the array until its actually accessed.
                 data = indexing.LazyIntegerRange(size)
                 coord = variable.Coordinate(dim, data)
-                self._arrays[dim] = coord
+                self._variables[dim] = coord
 
-    def _update_vars_and_coords(self, new_arrays, new_coord_names={},
+    def _update_vars_and_coords(self, new_variables, new_coord_names={},
                                 needs_copy=True, check_coord_names=True):
         """Add a dictionary of new variables to this dataset.
 
         Raises a ValueError if any dimensions have conflicting lengths in the
-        new dataset. Otherwise will update this dataset's _arrays and
+        new dataset. Otherwise will update this dataset's _variables and
         _dims attributes in-place.
 
         Set `needs_copy=False` only if this dataset is brand-new and hence
         can be thrown away if this method fails.
         """
-        # default to creating another copy of arrays so can unroll if we end
+        # default to creating another copy of variables so can unroll if we end
         # up with inconsistent dimensions
-        arrays = self._arrays.copy() if needs_copy else self._arrays
+        variables = self._variables.copy() if needs_copy else self._variables
 
         if check_coord_names:
             _assert_empty([k for k in self.data_vars if k in new_coord_names],
                           'coordinates with these names already exist as '
                           'variables: %s')
 
-        arrays.update(new_arrays)
-        dims = _calculate_dims(arrays)
+        variables.update(new_variables)
+        dims = _calculate_dims(variables)
         # all checks are complete: it's safe to update
-        self._arrays = arrays
+        self._variables = variables
         self._dims = dims
         self._add_missing_coords_inplace()
         self._coord_names.update(new_coord_names)
 
     def _set_init_vars_and_dims(self, vars, coords, compat):
-        """Set the initial value of Dataset arrays and dimensions
+        """Set the initial value of Dataset variables and dimensions
         """
         _assert_empty([k for k in vars if k in coords],
                       'redundant variables and coordinates: %s')
-        arrays = ChainMap(vars, coords)
+        variables = ChainMap(vars, coords)
 
-        aligned = _align_variables(arrays)
+        aligned = _align_variables(variables)
         new_variables, new_coord_names = _expand_variables(aligned,
                                                            compat=compat)
 
@@ -492,7 +492,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, AttrAccessMixin):
         """Frozen dictionary of xray.Variable objects constituting this
         dataset's data
         """
-        return Frozen(self._arrays)
+        return Frozen(self._variables)
 
     def _attrs_copy(self):
         return None if self._attrs is None else OrderedDict(self._attrs)
@@ -527,7 +527,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, AttrAccessMixin):
         load data automatically. However, this method can be necessary when
         working with many file objects on disk.
         """
-        for v in itervalues(self._arrays):
+        for v in itervalues(self._variables):
             v.load_data()
         return self
 
@@ -538,7 +538,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, AttrAccessMixin):
         costly validation
         """
         obj = object.__new__(cls)
-        obj._arrays = variables
+        obj._variables = variables
         obj._coord_names = coord_names
         obj._dims = dims
         obj._attrs = attrs
@@ -584,9 +584,9 @@ class Dataset(Mapping, ImplementsDatasetReduce, AttrAccessMixin):
         """
         if deep:
             variables = OrderedDict((k, v.copy(deep=True))
-                                    for k, v in iteritems(self._arrays))
+                                    for k, v in iteritems(self._variables))
         else:
-            variables = self._arrays.copy()
+            variables = self._variables.copy()
         # skip __init__ to avoid costly validation
         return self._construct_direct(variables, self._coord_names.copy(),
                                       self._dims.copy(), self._attrs_copy())
@@ -595,31 +595,31 @@ class Dataset(Mapping, ImplementsDatasetReduce, AttrAccessMixin):
         """Create a new Dataset with the listed variables from this dataset and
         the all relevant coordinates. Skips all validation.
         """
-        arrays = OrderedDict()
+        variables = OrderedDict()
         coord_names = set()
 
         for name in names:
             try:
-                arrays[name] = self._arrays[name]
+                variables[name] = self._variables[name]
             except KeyError:
-                ref_name, var = _get_virtual_variable(self._arrays, name)
-                arrays[name] = var
+                ref_name, var = _get_virtual_variable(self._variables, name)
+                variables[name] = var
                 if ref_name in self._coord_names:
                     coord_names.add(name)
 
         needed_dims = set()
-        for v in arrays.values():
+        for v in variables.values():
             needed_dims.update(v._dims)
         for k in self._coord_names:
-            if set(self._arrays[k]._dims) <= needed_dims:
-                arrays[k] = self._arrays[k]
+            if set(self._variables[k]._dims) <= needed_dims:
+                variables[k] = self._variables[k]
                 coord_names.add(k)
 
         dims = dict((k, self._dims[k]) for k in needed_dims)
 
         attrs = self.attrs.copy() if keep_attrs else None
 
-        return self._construct_direct(arrays, coord_names, dims, attrs)
+        return self._construct_direct(variables, coord_names, dims, attrs)
 
     def __copy__(self):
         return self.copy(deep=False)
@@ -633,13 +633,13 @@ class Dataset(Mapping, ImplementsDatasetReduce, AttrAccessMixin):
         """The 'in' operator will return true or false depending on whether
         'key' is an array in the dataset or not.
         """
-        return key in self._arrays
+        return key in self._variables
 
     def __len__(self):
-        return len(self._arrays)
+        return len(self._variables)
 
     def __iter__(self):
-        return iter(self._arrays)
+        return iter(self._variables)
 
     @property
     def loc(self):
@@ -653,7 +653,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, AttrAccessMixin):
         """A frozenset of names that don't exist in this dataset but for which
         DataArrays could be created on demand.
 
-        These arrays can be derived by performing simple operations on an
+        These variables can be derived by performing simple operations on an
         existing dataset variable or coordinate. Currently, the only
         implemented virtual variables are time/date components [1_] such as
         "time.month" or "time.dayofyear", where "time" is the name of a index
@@ -665,7 +665,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, AttrAccessMixin):
         ----------
         .. [1] http://pandas.pydata.org/pandas-docs/stable/api.html#time-date-components
         """
-        return _list_virtual_variables(self._arrays)
+        return _list_virtual_variables(self._variables)
 
     def __getitem__(self, key):
         """Access variables or coordinates this dataset as a
@@ -706,17 +706,15 @@ class Dataset(Mapping, ImplementsDatasetReduce, AttrAccessMixin):
         If this variable is a dimension, all variables containing this
         dimension are also removed.
         """
-        # nb. this method is intrinsically not very efficient because removing
-        # items from variables (an OrderedDict) takes O(n) time.
         def remove(k):
-            del self._arrays[k]
+            del self._variables[k]
             self._coord_names.discard(k)
 
         remove(key)
 
         if key in self._dims:
             del self._dims[key]
-            also_delete = [k for k, v in iteritems(self._arrays)
+            also_delete = [k for k, v in iteritems(self._variables)
                            if key in v.dims]
             for key in also_delete:
                 remove(key)
@@ -730,7 +728,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, AttrAccessMixin):
         # require matching order for equality
         compat = lambda x, y: getattr(x, compat_str)(y)
         return (self._coord_names == other._coord_names
-                and utils.dict_equiv(self._arrays, other._arrays,
+                and utils.dict_equiv(self._variables, other._variables,
                                      compat=compat))
 
     def equals(self, other):
@@ -809,7 +807,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, AttrAccessMixin):
         """
         # TODO: allow inserting new coordinates with this method, like
         # DataFrame.set_index?
-        # nb. check in self._arrays, not self.noncoords to insure that the
+        # nb. check in self._variables, not self.data_vars to insure that the
         # operation is idempotent
         if isinstance(names, basestring):
             names = [names]
@@ -850,7 +848,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, AttrAccessMixin):
         obj._coord_names.difference_update(names)
         if drop:
             for name in names:
-                del obj._arrays[name]
+                del obj._variables[name]
         return obj
 
     def dump_to_store(self, store, encoder=None):
@@ -922,7 +920,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, AttrAccessMixin):
                     for k, v in iteritems(indexers)]
 
         variables = OrderedDict()
-        for name, var in iteritems(self._arrays):
+        for name, var in iteritems(self._variables):
             var_indexers = dict((k, v) for k, v in indexers if k in var.dims)
             variables[name] = var.isel(**var_indexers)
         return self._replace_vars_and_dims(variables)
@@ -1048,7 +1046,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, AttrAccessMixin):
             return self.copy(deep=True) if copy else self
 
         variables = alignment.reindex_variables(
-            self._arrays, self.indexes, indexers, method, copy=copy)
+            self.variables, self.indexes, indexers, method, copy=copy)
         return self._replace_vars_and_dims(variables)
 
     def rename(self, name_dict, inplace=False):
@@ -1069,12 +1067,12 @@ class Dataset(Mapping, ImplementsDatasetReduce, AttrAccessMixin):
             Dataset with renamed variables and dimensions.
         """
         for k in name_dict:
-            if k not in self._arrays:
+            if k not in self:
                 raise ValueError("cannot rename %r because it is not a "
                                  "variable in this dataset" % k)
         variables = OrderedDict()
         coord_names = set()
-        for k, v in iteritems(self._arrays):
+        for k, v in iteritems(self._variables):
             name = name_dict.get(k, k)
             dims = tuple(name_dict.get(dim, dim) for dim in v.dims)
             var = v.copy(deep=False)
@@ -1085,7 +1083,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, AttrAccessMixin):
 
         if inplace:
             self._dims = _calculate_dims(variables)
-            self._arrays = variables
+            self._variables = variables
             self._coord_names = coord_names
             obj = self
         else:
@@ -1189,7 +1187,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, AttrAccessMixin):
         return obj
 
     def _assert_all_in_dataset(self, names, virtual_okay=False):
-        bad_names = set(names) - set(self._arrays)
+        bad_names = set(names) - set(self._variables)
         if virtual_okay:
             bad_names -= self.virtual_variables
         if bad_names:
@@ -1212,9 +1210,9 @@ class Dataset(Mapping, ImplementsDatasetReduce, AttrAccessMixin):
         """
         self._assert_all_in_dataset(names)
         drop = set(names)
-        drop |= set(k for k, v in iteritems(self._arrays)
+        drop |= set(k for k, v in iteritems(self._variables)
                     if any(name in v.dims for name in names))
-        variables = OrderedDict((k, v) for k, v in iteritems(self._arrays)
+        variables = OrderedDict((k, v) for k, v in iteritems(self._variables)
                                 if k not in drop)
         coord_names = set(k for k in self._coord_names if k in variables)
         return self._replace_vars_and_dims(variables, coord_names)
@@ -1276,9 +1274,9 @@ class Dataset(Mapping, ImplementsDatasetReduce, AttrAccessMixin):
                                  'permuted dataset dimensions (%s)'
                                  % (dims, tuple(self.dims)))
         ds = self.copy()
-        for name, var in iteritems(self._arrays):
+        for name, var in iteritems(self._variables):
             var_dims = tuple(dim for dim in dims if dim in var.dims)
-            ds._arrays[name] = var.transpose(*var_dims)
+            ds._variables[name] = var.transpose(*var_dims)
         return ds
 
     @property
@@ -1348,7 +1346,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, AttrAccessMixin):
         size = 0
 
         for k in subset:
-            array = self._arrays[k]
+            array = self._variables[k]
             if dim in array.dims:
                 dims = [d for d in array.dims if d != dim]
                 count += array.count(dims)
@@ -1406,7 +1404,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, AttrAccessMixin):
                       'Dataset does not contain the dimensions: %s')
 
         variables = OrderedDict()
-        for name, var in iteritems(self._arrays):
+        for name, var in iteritems(self._variables):
             reduce_dims = [dim for dim in var.dims if dim in dims]
             if reduce_dims or not var.dims:
                 if name not in self.coords:
@@ -1494,11 +1492,11 @@ class Dataset(Mapping, ImplementsDatasetReduce, AttrAccessMixin):
                 # simple helper function which compares a variable
                 # across all datasets and indicates whether that
                 # variable differs or not.
-                return any(not ds._arrays[vname].equals(v)
+                return any(not ds._variables[vname].equals(v)
                            for ds in datasets[1:])
             # non_indexes = iteritems(datasets[0].nonindexes)
             # all nonindexes that are not the same in each dataset
-            concat_over.update(k for k, v in iteritems(datasets[0]._arrays)
+            concat_over.update(k for k, v in iteritems(datasets[0]._variables)
                                if k not in datasets[0]._dims and differs(k, v))
         elif mode == 'all':
             # concatenate all nonindexes
@@ -1510,7 +1508,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, AttrAccessMixin):
         else:
             raise ValueError("Unexpected value for mode: %s" % mode)
 
-        if any(v not in datasets[0]._arrays for v in concat_over):
+        if any(v not in datasets[0]._variables for v in concat_over):
             raise ValueError('not all elements in concat_over %r found '
                              'in the first dataset %r'
                              % (concat_over, datasets[0]))
@@ -1519,13 +1517,13 @@ class Dataset(Mapping, ImplementsDatasetReduce, AttrAccessMixin):
         auto_concat_dims = set([dim_name])
         if hasattr(dim, 'dims'):
             auto_concat_dims |= set(dim.dims)
-        for k, v in iteritems(datasets[0]._arrays):
+        for k, v in iteritems(datasets[0]._variables):
             if k == dim_name or auto_concat_dims.intersection(v.dims):
                 concat_over.add(k)
 
         # create the new dataset and add constant variables
         concatenated = cls({}, attrs=datasets[0].attrs)
-        for k, v in iteritems(datasets[0]._arrays):
+        for k, v in iteritems(datasets[0]._variables):
             if k not in concat_over:
                 concatenated[k] = v
 
@@ -1535,10 +1533,10 @@ class Dataset(Mapping, ImplementsDatasetReduce, AttrAccessMixin):
             if (compat == 'identical'
                     and not utils.dict_equiv(ds.attrs, concatenated.attrs)):
                 raise ValueError('dataset global attributes not equal')
-            for k, v in iteritems(ds._arrays):
-                if k not in concatenated._arrays and k not in concat_over:
+            for k, v in iteritems(ds._variables):
+                if k not in concatenated._variables and k not in concat_over:
                     raise ValueError('encountered unexpected variable %r' % k)
-                elif (k in concatenated._arrays and k != dim_name and
+                elif (k in concatenated._variables and k != dim_name and
                           not getattr(v, compat)(concatenated[k])):
                     verb = 'equal' if compat == 'equals' else compat
                     raise ValueError(
@@ -1553,7 +1551,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, AttrAccessMixin):
 
         # stack up each variable to fill-out the dataset
         for k in concat_over:
-            vars = _ensure_common_dims([ds._arrays[k] for ds in datasets])
+            vars = _ensure_common_dims([ds._variables[k] for ds in datasets])
             concatenated[k] = variable.Variable.concat(vars, dim, indexers)
 
         concatenated._coord_names.update(datasets[0].coords)
@@ -1566,7 +1564,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, AttrAccessMixin):
 
     def _to_dataframe(self, ordered_dims):
         columns = [k for k in self if k not in self.dims]
-        data = [self._arrays[k].set_dims(ordered_dims).values.reshape(-1)
+        data = [self._variables[k].set_dims(ordered_dims).values.reshape(-1)
                 for k in columns]
         index = self.coords.to_index(ordered_dims)
         return pd.DataFrame(OrderedDict(zip(columns, data)), index=index)
@@ -1628,7 +1626,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, AttrAccessMixin):
         def func(self, *args, **kwargs):
             ds = self.coords.to_dataset()
             for k in self.data_vars:
-                ds._arrays[k] = f(self._arrays[k], *args, **kwargs)
+                ds._variables[k] = f(self._variables[k], *args, **kwargs)
             return ds
         return func
 
@@ -1647,7 +1645,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, AttrAccessMixin):
             other_coords = getattr(other, 'coords', None)
             ds = self.coords.merge(other_coords)
             g = f if not reflexive else lambda x, y: f(y, x)
-            _calculate_binary_op(g, self, other, ds._arrays)
+            _calculate_binary_op(g, self, other, ds._variables)
             return ds
         return func
 
@@ -1663,37 +1661,39 @@ class Dataset(Mapping, ImplementsDatasetReduce, AttrAccessMixin):
                 # can rollback in case of an exception
                 # note: when/if we support automatic alignment, only copy the
                 # variables that will actually be included in the result
-                dest_vars = dict((k, self._arrays[k].copy())
+                dest_vars = dict((k, self._variables[k].copy())
                                  for k in self.data_vars)
                 _calculate_binary_op(f, dest_vars, other, dest_vars)
-                self._arrays.update(dest_vars)
+                self._variables.update(dest_vars)
             return self
         return func
 
 
 def _calculate_binary_op(f, dataset, other, dest_vars):
-    dataset_arrays = getattr(dataset, '_arrays', dataset)
-    dataset_vars = getattr(dataset, 'data_vars', dataset)
+    dataset_variables = getattr(dataset, 'variables', dataset)
+    dataset_data_vars = getattr(dataset, 'data_vars', dataset)
     if utils.is_dict_like(other):
-        other_arrays = getattr(other, '_arrays', other)
-        other_vars = getattr(other, 'data_vars', other)
+        other_variables = getattr(other, 'variables', other)
+        other_data_vars = getattr(other, 'data_vars', other)
         performed_op = False
-        for k in dataset_vars:
-            if k in other_vars:
-                dest_vars[k] = f(dataset_arrays[k], other_arrays[k])
+        for k in dataset_data_vars:
+            if k in other_data_vars:
+                dest_vars[k] = f(dataset_variables[k], other_variables[k])
                 performed_op = True
             elif k in dest_vars:
                 # we are doing an in-place operation
-                raise ValueError('datasets must have the same variables for '
-                                 'in-place arithmetic operations: %s, %s'
-                                 % (list(dataset_vars), list(other_vars)))
+                raise ValueError('datasets must have the same data variables '
+                                 'for in-place arithmetic operations: %s, %s'
+                                 % (list(dataset_data_vars),
+                                    list(other_data_vars)))
         if not performed_op:
             raise ValueError('datasets have no overlapping variables: %s, %s'
-                             % (list(dataset_vars), list(other_vars)))
+                             % (list(dataset_data_vars),
+                                list(other_data_vars)))
     else:
         other_variable = getattr(other, 'variable', other)
-        for k in dataset_vars:
-            dest_vars[k] = f(dataset_arrays[k], other_variable)
+        for k in dataset_data_vars:
+            dest_vars[k] = f(dataset_variables[k], other_variable)
 
 
 ops.inject_all_ops_and_reduce_methods(Dataset, array_only=False)
