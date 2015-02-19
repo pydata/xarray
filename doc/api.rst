@@ -37,7 +37,7 @@ Attributes
    :toctree: generated/
 
    Dataset.dims
-   Dataset.vars
+   Dataset.data_vars
    Dataset.coords
    Dataset.attrs
 

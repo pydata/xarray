@@ -425,7 +425,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, AttrAccessMixin):
         arrays = self._arrays.copy() if needs_copy else self._arrays
 
         if check_coord_names:
-            _assert_empty([k for k in self.vars if k in new_coord_names],
+            _assert_empty([k for k in self.data_vars if k in new_coord_names],
                           'coordinates with these names already exist as '
                           'variables: %s')
 
@@ -791,13 +791,23 @@ class Dataset(Mapping, ImplementsDatasetReduce, AttrAccessMixin):
 
     @property
     def coords(self):
-        """Dictionary of xray.Coordinate objects used for label based indexing.
+        """Dictionary of xray.DataArray objects corresponding to coordinate
+        variables
         """
         return DatasetCoordinates(self)
 
     @property
-    def vars(self):
+    def data_vars(self):
+        """Dictionary of xray.DataArray objects corresponding to data variables
+        """
         return Variables(self)
+
+    @property
+    def vars(self):
+        warnings.warn('the Dataset property `vars` has been deprecated; '
+                      'use `data_vars` instead',
+                      FutureWarning, stacklevel=2)
+        return self.data_vars
 
     @property
     def coordinates(self):
@@ -811,7 +821,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, AttrAccessMixin):
         warnings.warn('the Dataset property `noncoords` has been deprecated; '
                       'use `vars` instead',
                       FutureWarning, stacklevel=2)
-        return self.vars
+        return self.data_vars
 
     @property
     def noncoordinates(self):
@@ -820,7 +830,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, AttrAccessMixin):
         warnings.warn('the Dataset property `noncoordinates` has been '
                       'deprecated; use `vars` instead',
                       FutureWarning, stacklevel=2)
-        return self.vars
+        return self.data_vars
 
     def set_coords(self, names, inplace=False):
         """Given names of one or more variables, set them as coordinates
@@ -1388,7 +1398,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, AttrAccessMixin):
             raise ValueError('%s must be a single dataset dimension' % dim)
 
         if subset is None:
-            subset = list(self.vars)
+            subset = list(self.data_vars)
 
         count = np.zeros(self.dims[dim], dtype=int)
         size = 0
@@ -1505,7 +1515,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, AttrAccessMixin):
             noncoordinate are dropped.
         """
         variables = OrderedDict((k, func(v, *args, **kwargs))
-                                for k, v in iteritems(self.vars))
+                                for k, v in iteritems(self.data_vars))
         attrs = self.attrs if keep_attrs else None
         return type(self)(variables, attrs=attrs)
 
@@ -1684,7 +1694,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, AttrAccessMixin):
         @functools.wraps(f)
         def func(self, *args, **kwargs):
             ds = self.coords.to_dataset()
-            for k in self.vars:
+            for k in self.data_vars:
                 ds._arrays[k] = f(self._arrays[k], *args, **kwargs)
             return ds
         return func
@@ -1721,7 +1731,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, AttrAccessMixin):
                 # note: when/if we support automatic alignment, only copy the
                 # variables that will actually be included in the result
                 dest_vars = dict((k, self._arrays[k].copy())
-                                 for k in self.vars)
+                                 for k in self.data_vars)
                 _calculate_binary_op(f, dest_vars, other, dest_vars)
                 self._arrays.update(dest_vars)
             return self
@@ -1730,10 +1740,10 @@ class Dataset(Mapping, ImplementsDatasetReduce, AttrAccessMixin):
 
 def _calculate_binary_op(f, dataset, other, dest_vars):
     dataset_arrays = getattr(dataset, '_arrays', dataset)
-    dataset_vars = getattr(dataset, 'vars', dataset)
+    dataset_vars = getattr(dataset, 'data_vars', dataset)
     if utils.is_dict_like(other):
         other_arrays = getattr(other, '_arrays', other)
-        other_vars = getattr(other, 'vars', other)
+        other_vars = getattr(other, 'data_vars', other)
         performed_op = False
         for k in dataset_vars:
             if k in other_vars:

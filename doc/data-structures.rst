@@ -192,31 +192,34 @@ from the `netCDF`__ file format.
 __ http://www.unidata.ucar.edu/software/netcdf/
 
 In addition to the dict-like interface of the dataset itself, which can be used
-to access any array in a dataset, datasets have four key properties:
+to access any variable in a dataset, datasets have four key properties:
 
 - ``dims``: a dictionary mapping from dimension names to the fixed length of
   each dimension (e.g., ``{'x': 6, 'y': 6, 'time': 8}``)
-- ``vars``: a dict-like container of arrays (`variables`)
-- ``coords``: another dict-like container of arrays intended to label points
-  used in ``vars`` (e.g., 1-dimensional arrays of numbers, datetime objects or
-  strings)
+- ``data_vars``: a dict-like container of DataArrays corresponding to variables
+- ``coords``: another dict-like container of DataArrays intended to label points
+  used in ``data_vars`` (e.g., 1-dimensional arrays of numbers, datetime
+  objects or strings)
 - ``attrs``: an ``OrderedDict`` to hold arbitrary metadata
 
-The distinction between whether an array falls in variables or coordinates is
-**mostly semantic**: coordinates are intended for constant/fixed/independent
-quantities, unlike the varying/measured/dependent quantities that belong in
-variables. Dictionary like access on a dataset will supply arrays found in
-either category. However, the distinction does have important implications for
-indexing and computation.
+The distinction between whether a variables falls in data or coordinates
+(borrowed from `CF conventions`_) is mostly semantic, and you can probably get
+away with ignoring it if you like: dictionary like access on a dataset will
+supply variables found in either category. However, xray does make use of the
+distinction for indexing and computations. Coordinates indicate
+constant/fixed/independent quantities, unlike the varying/measured/dependent
+quantities that belong in data.
+
+.. _CF conventions: http://cfconventions.org/
 
 Here is an example of how we might structure a dataset for a weather forecast:
 
 .. image:: _static/dataset-diagram.png
 
 In this example, it would be natural to call ``temperature`` and
-``precipitation`` "variables" and all the other arrays "coordinates" because
-they label the points along the dimensions. (see [1]_ for more background on
-this example).
+``precipitation`` "data variables" and all the other arrays "coordinate
+variables" because they label the points along the dimensions. (see [1]_ for
+more background on this example).
 
 .. _dataarray constructor:
 
@@ -224,12 +227,12 @@ Creating a Dataset
 ~~~~~~~~~~~~~~~~~~
 
 To make an :py:class:`~xray.Dataset` from scratch, supply dictionaries for any
-variables coordinates and attributes you  would like to insert into the
+variables, coordinates and attributes you would like to insert into the
 dataset.
 
 For the ``vars`` and ``coords`` arguments, keys should be the name of the
-variable or coordinate, and values should be scalars, 1d arrays or tuples of
-the form ``(dims, data[, attrs])`` sufficient to label each array:
+variable and values should be scalars, 1d arrays or tuples of the form
+``(dims, data[, attrs])`` sufficient to label each array:
 
 - ``dims`` should be a sequence of strings.
 - ``data`` should be a numpy.ndarray (or array-like object) that has a
@@ -292,15 +295,15 @@ values given by :py:class:`xray.DataArray` objects:
 
     ds['temperature']
 
-The valid keys include each listed coordinate and variable.
+The valid keys include each listed coordinate and data variable.
 
-Variables and coordinates are also contained separately in the
-:py:attr:`~xray.Dataset.vars` and :py:attr:`~xray.Dataset.coords`
+Data and coordinate variables are also contained separately in the
+:py:attr:`~xray.Dataset.data_vars` and :py:attr:`~xray.Dataset.coords`
 dictionary-like attributes:
 
 .. ipython:: python
 
-    ds.vars
+    ds.data_vars
     ds.coords
 
 Finally, like data arrays, datasets also store arbitrary metadata in the form
@@ -316,6 +319,16 @@ of `attributes`:
 xray does not enforce any restrictions on attributes, but serialization to
 some file formats may fail if you use objects that are not strings, numbers
 or :py:class:`numpy.ndarray` objects.
+
+As a useful shortcut, you can use attribute style access for reading (but not
+setting) variables and attributes:
+
+.. ipython:: python
+
+    ds.temperature
+
+This is particularly useful in an exploratory context, because you can
+tab-complete these variable names with tools like IPython.
 
 Dictionary like methods
 ~~~~~~~~~~~~~~~~~~~~~~~
@@ -381,7 +394,7 @@ Another useful option is the ability to rename the variables in a dataset:
 Coordinates
 -----------
 
-Coordinates are ancillary arrays stored for ``DataArray`` and ``Dataset``
+Coordinates are ancillary variables stored for ``DataArray`` and ``Dataset``
 objects in the ``coords`` attribute:
 
 .. ipython:: python
@@ -421,12 +434,12 @@ dimension and whose the values are ``Index`` objects:
 
     ds.indexes
 
-Switching between coordinates and variables
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Switching between data and coordinate variables
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 To entirely add or removing coordinate arrays, you can use dictionary like
-syntax, as shown above. To convert back and forth between coordinates and
-variables, use the the :py:meth:`~xray.Dataset.set_coords` and
+syntax, as shown above. To convert back and forth between data and
+coordinates, use the the :py:meth:`~xray.Dataset.set_coords` and
 :py:meth:`~xray.Dataset.reset_coords` methods:
 
 .. ipython:: python
