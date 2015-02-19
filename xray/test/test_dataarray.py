@@ -44,7 +44,7 @@ class TestDataArray(TestCase):
         for k, v in iteritems(self.dv.coords):
             self.assertArrayEqual(v, self.ds.coords[k])
         with self.assertRaises(AttributeError):
-            self.dv.dataset = self.ds
+            self.dv.dataset
         self.assertIsInstance(self.ds['x'].to_index(), pd.Index)
         with self.assertRaisesRegexp(ValueError, 'must be 1-dimensional'):
             self.ds['foo'].to_index()

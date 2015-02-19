@@ -172,7 +172,7 @@ coords_repr = functools.partial(_mapping_repr, title='Coordinates',
                                 summarizer=summarize_coord)
 
 
-vars_repr = functools.partial(_mapping_repr, title='Variables',
+vars_repr = functools.partial(_mapping_repr, title='Data variables',
                               summarizer=summarize_var)
 
 
@@ -223,7 +223,7 @@ def dataset_repr(ds):
     summary.append('%s(%s)' % (dims_start, ', '.join(all_dim_strings)))
 
     summary.append(coords_repr(ds.coords, col_width=col_width))
-    summary.append(vars_repr(ds.vars, col_width=col_width))
+    summary.append(vars_repr(ds.data_vars, col_width=col_width))
     if ds.attrs:
         summary.append(attrs_repr(ds.attrs))
 

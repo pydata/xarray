@@ -337,11 +337,6 @@ class Variable(common.AbstractArray):
         return Coordinate(self.dims, self._data, self._attrs,
                           encoding=self._encoding, fastpath=True)
 
-    @property
-    def as_index(self):
-        utils.alias_warning('as_index', 'to_index()')
-        return self.to_index()
-
     def to_index(self):
         """Convert this variable to a pandas.Index"""
         return self.to_coord().to_index()
@@ -351,11 +346,6 @@ class Variable(common.AbstractArray):
         """Tuple of dimension names with which this variable is associated.
         """
         return self._dims
-
-    @property
-    def dimensions(self):
-        utils.alias_warning('dimensions', 'dims')
-        return self.dims
 
     def _parse_dimensions(self, dims):
         if isinstance(dims, basestring):
@@ -414,16 +404,6 @@ class Variable(common.AbstractArray):
         """
         key = self._item_key_to_tuple(key)
         self._data_cached()[key] = value
-
-    @property
-    def attributes(self):
-        utils.alias_warning('attributes', 'attrs', 3)
-        return self._attributes
-
-    @attributes.setter
-    def attributes(self, value):
-        utils.alias_warning('attributes', 'attrs', 3)
-        self._attributes = OrderedDict(value)
 
     @property
     def attrs(self):
@@ -499,8 +479,6 @@ class Variable(common.AbstractArray):
             if dim in indexers:
                 key[i] = indexers[dim]
         return self[tuple(key)]
-
-    indexed = utils.function_alias(isel, 'indexed')
 
     def transpose(self, *dims):
         """Return a new Variable object with transposed dimensions.
@@ -625,10 +603,6 @@ class Variable(common.AbstractArray):
             Array with summarized data and the indicated dimension(s)
             removed.
         """
-        if 'dimension' in kwargs and dim is None:
-            dim = kwargs.pop('dimension')
-            utils.alias_warning('dimension', 'dim')
-
         if dim is not None and axis is not None:
             raise ValueError("cannot supply both 'axis' and 'dim' arguments")
 

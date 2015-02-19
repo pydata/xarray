@@ -36,7 +36,7 @@ Examine a dataset with pandas_ and seaborn_
 
     @savefig examples_pairplot.png
     sns.pairplot(ds[['tmin', 'tmax', 'time.month']].to_dataframe(),
-                 vars=ds.vars, hue='time.month')
+                 vars=ds.data_vars, hue='time.month')
 
 
 Probability of freeze by calendar month

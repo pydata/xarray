@@ -51,7 +51,7 @@ class AbstractCoordinates(Mapping):
 
     def __iter__(self):
         # needs to be in the same order as the dataset variables
-        for k in self._dataset._arrays:
+        for k in self._dataset._variables:
             if k in self._names:
                 yield k
 
@@ -84,7 +84,7 @@ class AbstractCoordinates(Mapping):
         """
         if ordered_dims is None:
             ordered_dims = self.dims
-        indexes = [self._dataset._arrays[k].to_index() for k in ordered_dims]
+        indexes = [self._dataset._variables[k].to_index() for k in ordered_dims]
         return pd.MultiIndex.from_product(indexes, names=list(ordered_dims))
 
     def _merge_validate(self, other):
@@ -96,7 +96,7 @@ class AbstractCoordinates(Mapping):
         promote_dims = {}
         for k in self:
             if k in other:
-                self_var = self._dataset._arrays[k]
+                self_var = self._dataset._variables[k]
                 other_var = other[k].variable
                 if not self_var.broadcast_equals(other_var):
                     if k in self.dims and k in other.dims:
@@ -182,7 +182,7 @@ class DataArrayCoordinates(AbstractCoordinates):
     def __setitem__(self, key, value):
         with self._dataarray._set_new_dataset() as ds:
             ds.coords[key] = value
-            bad_dims = [d for d in ds._arrays[key].dims
+            bad_dims = [d for d in ds._variables[key].dims
                         if d not in self.dims]
             if bad_dims:
                 raise ValueError('DataArray does not include all coordinate '

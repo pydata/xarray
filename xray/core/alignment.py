@@ -1,6 +1,5 @@
 import functools
 import operator
-import warnings
 from collections import defaultdict
 
 import numpy as np
