@@ -862,6 +862,26 @@ class TestDataArray(TestCase):
         expected_centered = expected_ds['foo']
         self.assertDataArrayAllClose(expected_centered, grouped.apply(center))
 
+    def test_groupby_apply_ndarray(self):
+        # regression test for #326
+        array = self.make_groupby_example_array()
+        grouped = array.groupby('abc')
+        actual = grouped.apply(np.asarray)
+        self.assertDataArrayEqual(array, actual)
+
+    def test_groupby_apply_changes_metadata(self):
+        def change_metadata(x):
+            x.coords['x'] = x.coords['x'] * 2
+            x.attrs['fruit'] = 'lemon'
+            return x
+
+        array = self.make_groupby_example_array()
+        grouped = array.groupby('abc')
+        actual = grouped.apply(change_metadata)
+        expected = array.copy()
+        expected = change_metadata(expected)
+        self.assertDataArrayEqual(expected, actual)
+
     def test_groupby_math(self):
         array = self.make_groupby_example_array()
         for squeeze in [True, False]:

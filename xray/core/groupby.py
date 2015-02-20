@@ -242,11 +242,17 @@ class ArrayGroupBy(GroupBy, ImplementsArrayReduce):
         applied : DataArray
             The result of splitting, applying and combining this array.
         """
+        def maybe_wrap_array(arr, f):
+            # in case func lost array's metadata
+            if isinstance(f, np.ndarray) and f.shape == arr.shape:
+                return arr.__array_wrap__(f)
+            else:
+                return f
         if shortcut:
             grouped = self._iter_grouped_shortcut()
         else:
             grouped = self._iter_grouped()
-        applied = (func(arr, **kwargs) for arr in grouped)
+        applied = (maybe_wrap_array(arr, func(arr, **kwargs)) for arr in grouped)
         return self._concat(applied, shortcut=shortcut)
 
     def _concat(self, applied, shortcut=False):
