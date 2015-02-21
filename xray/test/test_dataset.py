@@ -1514,6 +1514,10 @@ class TestDataset(TestCase):
         self.assertDataArrayEqual(actual['var1'], 2 * data['var1'])
         self.assertDataArrayIdentical(actual['numbers'], data['numbers'])
 
+        actual = data.apply(np.asarray)
+        expected = data.drop_vars('time') # time is not used on a data var
+        self.assertDatasetEqual(expected, actual)
+
     def make_example_math_dataset(self):
         variables = OrderedDict(
             [('bar', ('x', np.arange(100, 400, 100))),

@@ -96,6 +96,19 @@ def safe_cast_to_index(array):
     return index
 
 
+def maybe_wrap_array(original, new_array):
+    """Wrap a transformed array with __array_wrap__ is it can be done safely.
+
+    This lets us treat arbitrary functions that take and return ndarray objects
+    like ufuncs, as long as they return an array with the same shape.
+    """
+    # in case func lost array's metadata
+    if isinstance(new_array, np.ndarray) and new_array.shape == original.shape:
+        return original.__array_wrap__(new_array)
+    else:
+        return new_array
+
+
 def equivalent(first, second):
     """Compare two objects for equivalence (identity or equality), using
     array_equiv if either object is an ndarray
