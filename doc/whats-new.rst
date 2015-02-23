@@ -71,8 +71,16 @@ Breaking changes
 - You will need to update your code if you have been ignoring deprecation
   warnings: methods and attributes that were deprecated in xray v0.3 or earlier
   (e.g., ``dimensions``, ``attributes```) have gone away.
-- TODO: season to use text labels. ``broadcast_equals`` method? ``drop``
-  method?
+- The ``season`` datetime shortcut now returns an array of string labels
+  such `'DJF'`:
+
+  .. ipython:: python
+
+      ds = Dataset({'t': pd.date_range('2000-01-01', periods=12, freq='M')})
+      ds['t.season']
+
+  Previously, it returned numbered seasons 1 through 4.
+- TODO: ``broadcast_equals`` method? ``drop`` method?
 
 .. _bottleneck: https://github.com/kwgoodman/bottleneck
 

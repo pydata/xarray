@@ -915,7 +915,7 @@ class TestDataset(TestCase):
                                  Variable('time', 1 + np.arange(20)))
         self.assertArrayEqual(data['time.month'].values,
                               data.variables['time'].to_index().month)
-        self.assertArrayEqual(data['time.season'].values, 1)
+        self.assertArrayEqual(data['time.season'].values, 'DJF')
         # test virtual variable math
         self.assertArrayEqual(data['time.dayofyear'] + 1, 2 + np.arange(20))
         self.assertArrayEqual(np.sin(data['time.dayofyear']),
@@ -927,6 +927,11 @@ class TestDataset(TestCase):
         # non-coordinate variables
         ds = Dataset({'t': ('x', pd.date_range('2000-01-01', periods=3))})
         self.assertTrue((ds['t.year'] == 2000).all())
+
+    def test_time_season(self):
+        ds = Dataset({'t': pd.date_range('2000-01-01', periods=12, freq='M')})
+        expected = ['DJF'] * 2 + ['MAM'] * 3 + ['JJA'] * 3 + ['SON'] * 3 + ['DJF']
+        self.assertArrayEqual(expected, ds['t.season'])
 
     def test_slice_virtual_variable(self):
         data = create_test_data()
