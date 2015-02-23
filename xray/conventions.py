@@ -1,15 +1,18 @@
+from datetime import datetime
 import re
+import traceback
 import warnings
+
 import numpy as np
 import pandas as pd
-from datetime import datetime
 from collections import defaultdict
 from pandas.tslib import OutOfBoundsDatetime
 
 from .core import indexing, utils
-from .core.formatting import format_timestamp
+from .core.formatting import format_timestamp, first_n_items
 from .core.variable import as_variable, Variable
-from .core.pycompat import iteritems, bytes_type, unicode_type, OrderedDict
+from .core.pycompat import (iteritems, bytes_type, unicode_type, OrderedDict,
+                            PY3)
 
 
 # standard calendars recognized by netcdftime
@@ -130,7 +133,7 @@ def decode_cf_datetime(num_dates, units, calendar=None):
         dates = (pd.to_timedelta(num_dates.ravel(), delta) + ref_date).values
     # ValueError is raised by pd.Timestamp for non-ISO timestamp strings,
     # in which case we fall back to using netCDF4
-    except (OutOfBoundsDatetime, ValueError):
+    except (OutOfBoundsDatetime, ValueError, OverflowError):
         dates = _decode_netcdf_datetime(flat_num_dates, units, calendar)
 
     return dates.reshape(num_dates.shape)
@@ -198,7 +201,6 @@ def _cleanup_netcdf_time_units(units):
         # don't worry about reifying the units if they're out of bounds
         pass
     return units
-
 
 
 def encode_cf_datetime(dates, units=None, calendar=None):
@@ -314,13 +316,28 @@ class MaskedAndScaledArray(utils.NDArrayMixin):
 
 class DecodedCFDatetimeArray(utils.NDArrayMixin):
     """Wrapper around array-like objects to create a new indexable object where
-    values, when accessesed, are automatically converted into datetime objects
+    values, when accessed, are automatically converted into datetime objects
     using decode_cf_datetime.
     """
     def __init__(self, array, units, calendar=None):
         self.array = array
         self.units = units
         self.calendar = calendar
+        # Verify at least one date can be decoded successfully.
+        # Otherwise, tracebacks end up swallowed by Dataset.__repr__ when users
+        # try to view their lazily decoded array.
+        example_value = first_n_items(array, 1) or 0
+        try:
+            decode_cf_datetime(example_value, units, calendar)
+        except Exception:
+            calendar_msg = ('the default calendar' if calendar is None
+                            else 'calendar %r' % calendar)
+            msg = ('unable to decode time units %r with %s. Try '
+                   'opening your dataset with decode_times=False.'
+                   % (units, calendar_msg))
+            if not PY3:
+                msg += ' Full traceback:\n' + traceback.format_exc()
+            raise ValueError(msg)
 
     @property
     def dtype(self):
@@ -333,7 +350,7 @@ class DecodedCFDatetimeArray(utils.NDArrayMixin):
 
 class DecodedCFTimedeltaArray(utils.NDArrayMixin):
     """Wrapper around array-like objects to create a new indexable object where
-    values, when accessesed, are automatically converted into timedelta objects
+    values, when accessed, are automatically converted into timedelta objects
     using decode_cf_timedelta.
     """
     def __init__(self, array, units):
@@ -350,7 +367,7 @@ class DecodedCFTimedeltaArray(utils.NDArrayMixin):
 
 class CharToStringArray(utils.NDArrayMixin):
     """Wrapper around array-like objects to create a new indexable object where
-    values, when accessesed, are automatically concatenated along the last
+    values, when accessed, are automatically concatenated along the last
     dimension.
 
     >>> CharToStringArray(np.array(['a', 'b', 'c']))[:]

@@ -3,7 +3,7 @@ import numpy as np
 import pandas as pd
 import warnings
 
-from xray import conventions, Variable, Dataset
+from xray import conventions, Variable, Dataset, decode_cf
 from xray.core import utils, indexing
 from . import TestCase, requires_netCDF4, unittest
 from .test_backends import CFEncodedDataTest
@@ -116,6 +116,7 @@ class TestDatetime(TestCase):
                 ([[0]], 'days since 1000-01-01'),
                 (np.arange(20), 'days since 1000-01-01'),
                 (np.arange(0, 100000, 10000), 'days since 1900-01-01'),
+                (17093352.0, 'hours since 1-1-1 00:00:0.0'),
                 ]:
             for calendar in ['standard', 'gregorian', 'proleptic_gregorian']:
                 expected = nc4.num2date(num_dates, units, calendar)
@@ -138,15 +139,20 @@ class TestDatetime(TestCase):
                 self.assertArrayEqual(expected, actual_cmp)
                 encoded, _, _ = conventions.encode_cf_datetime(actual, units,
                                                                calendar)
-                self.assertArrayEqual(num_dates, np.around(encoded))
-                if (hasattr(num_dates, 'ndim') and num_dates.ndim == 1
-                        and '1000' not in units):
-                    # verify that wrapping with a pandas.Index works
-                    # note that it *does not* currently work to even put
-                    # non-datetime64 compatible dates into a pandas.Index :(
-                    encoded, _, _ = conventions.encode_cf_datetime(
-                        pd.Index(actual), units, calendar)
+                if '1-1-1' not in units:
+                    # pandas parses this date very strangely, so the original
+                    # units/encoding cannot be preserved in this case:
+                    # (Pdb) pd.to_datetime('1-1-1 00:00:0.0')
+                    # Timestamp('2001-01-01 00:00:00')
                     self.assertArrayEqual(num_dates, np.around(encoded))
+                    if (hasattr(num_dates, 'ndim') and num_dates.ndim == 1
+                            and '1000' not in units):
+                        # verify that wrapping with a pandas.Index works
+                        # note that it *does not* currently work to even put
+                        # non-datetime64 compatible dates into a pandas.Index :(
+                        encoded, _, _ = conventions.encode_cf_datetime(
+                            pd.Index(actual), units, calendar)
+                        self.assertArrayEqual(num_dates, np.around(encoded))
 
     def test_decoded_cf_datetime_array(self):
         actual = conventions.DecodedCFDatetimeArray(
@@ -328,6 +334,11 @@ class TestDatetime(TestCase):
                 (pd.to_timedelta(['1m', '2m', np.nan]), 'minutes'),
                 (pd.to_timedelta(['1m3s', '1m4s']), 'seconds')]:
             self.assertEqual(expected, conventions.infer_timedelta_units(deltas))
+
+    def test_invalid_units_raises_eagerly(self):
+        ds = Dataset({'time': ('time', [0, 1], {'units': 'foobar since 123'})})
+        with self.assertRaisesRegexp(ValueError, 'unable to decode time'):
+            decode_cf(ds)
 
 
 @requires_netCDF4
