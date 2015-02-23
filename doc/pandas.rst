@@ -8,11 +8,10 @@ One of the most important features of xray is the ability to convert to and
 from :py:mod:`pandas` objects to interact with the rest of the PyData
 ecosystem. For example, for plotting labeled data, we highly recommend
 using the visualization `built in to pandas itself`__ or provided by the pandas
-aware libraries such as `Seaborn`__ and `ggplot`__.
+aware libraries such as `Seaborn`__.
 
 __ http://pandas.pydata.org/pandas-docs/stable/visualization.html
 __ http://stanford.edu/~mwaskom/software/seaborn/
-__ http://ggplot.yhathq.com/
 
 .. ipython:: python
    :suppress:

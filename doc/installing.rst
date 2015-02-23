@@ -13,8 +13,10 @@ Optional dependencies:
   want to use xray for reading or writing files
 - `scipy <http://scipy.org/>`__: used as a fallback for reading/writing netCDF3
 - `pydap <http://www.pydap.org/>`__: used as a fallback for accessing OPeNDAP
+- `bottleneck <https://github.com/kwgoodman/bottleneck>`__: speeds up
+  NaN-skipping aggregations by a large factor
 - `cyordereddict <https://github.com/shoyer/cyordereddict>`__: speeds up most
-  internal operations
+  internal operations with xray data structures
 
 Before you install xray, be sure you have the required dependencies (numpy and
 pandas) installed. The easiest way to do so is to use the

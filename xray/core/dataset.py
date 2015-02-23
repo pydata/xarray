@@ -383,6 +383,15 @@ class Dataset(Mapping, ImplementsDatasetReduce, AttrAccessMixin):
             name.
         attrs : dict-like, optional
             Global attributes to save on this dataset.
+        compat : {'broadcast_equals', 'equals', 'identical'}, optional
+            String indicating how to compare variables of the same name for
+            potential conflicts:
+
+            - 'broadcast_equals': all values must be equal when variables are
+              broadcast against each other to ensure common dimensions.
+            - 'equals': all values and dimensions must be the same.
+            - 'identical': all values, dimensions and attributes must be the
+              same.
         """
         self._variables = OrderedDict()
         self._coord_names = set()
@@ -979,12 +988,13 @@ class Dataset(Mapping, ImplementsDatasetReduce, AttrAccessMixin):
             dataset. Any mis-matched index values will be filled in with
             NaN, and any mis-matched dimension names will simply be ignored.
         method : {None, 'nearest', 'pad'/'ffill', 'backfill'/'bfill'}, optional
-            Method to use for filling index values in ``indexers`` not found in
-            this dataset:
-              * default: don't fill gaps
-              * pad / ffill: propgate last valid index value forward
-              * backfill / bfill: propagate next valid index value backward
-              * nearest: use nearest valid index value (requires pandas>=0.16)
+            Method to use for filling index values from other not found in this
+            dataset:
+
+            * default: don't fill gaps
+            * pad / ffill: propgate last valid index value forward
+            * backfill / bfill: propagate next valid index value backward
+            * nearest: use nearest valid index value (requires pandas>=0.16)
         copy : bool, optional
             If `copy=True`, the returned dataset contains only copied
             variables. If `copy=False` and no reindexing is required then
@@ -1017,10 +1027,11 @@ class Dataset(Mapping, ImplementsDatasetReduce, AttrAccessMixin):
         method : {None, 'nearest', 'pad'/'ffill', 'backfill'/'bfill'}, optional
             Method to use for filling index values in ``indexers`` not found in
             this dataset:
-              * default: don't fill gaps
-              * pad / ffill: propgate last valid index value forward
-              * backfill / bfill: propagate next valid index value backward
-              * nearest: use nearest valid index value (requires pandas>=0.16)
+
+            * default: don't fill gaps
+            * pad / ffill: propgate last valid index value forward
+            * backfill / bfill: propagate next valid index value backward
+            * nearest: use nearest valid index value (requires pandas>=0.16)
         copy : bool, optional
             If `copy=True`, the returned dataset contains only copied
             variables. If `copy=False` and no reindexing is required then

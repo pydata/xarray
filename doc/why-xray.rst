@@ -61,7 +61,7 @@ xray with a natural and portable serialization format. NetCDF is very popular
 in the geosciences, and there are existing libraries for reading and writing
 netCDF in many programming languages, including Python.
 
-xray distinguishes itself from most other tools for working with netCDF data
+xray distinguishes itself from many tools for working with netCDF data
 in-so-far as it provides data structures for in-memory analytics that both
 utilize and preserve labels. You only need to do the tedious work of adding
 metadata once, not every time you save a file.
@@ -95,5 +95,4 @@ especially geoscientists who already know and love netCDF_.
     xray is a relatively new project and is still under heavy development.
     Although we will make a best effort to maintain compatibility with the
     current API, inevitably the API will change in future versions as xray
-    matures. Already anticipated changes are called out in the relevant section
-    of the documentation.
+    matures.

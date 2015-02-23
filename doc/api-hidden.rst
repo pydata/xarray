@@ -14,6 +14,7 @@
    Dataset.max
    Dataset.min
    Dataset.mean
+   Dataset.median
    Dataset.prod
    Dataset.sum
    Dataset.std
@@ -45,6 +46,7 @@
    DataArray.max
    DataArray.min
    DataArray.mean
+   DataArray.median
    DataArray.prod
    DataArray.sum
    DataArray.std

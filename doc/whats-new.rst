@@ -12,29 +12,91 @@ What's New
 v0.4 (unreleased)
 -----------------
 
-Highlights
-~~~~~~~~~~
+This is one of the biggest releases yet for xray: it includes some major
+changes that may break existing code, along with the usual collection of minor
+enhancements and bug fixes. On the plus side, this release includes all
+hitherto planned breaking changes, so the upgrade path for xray should be
+smoother going forward.
 
-- Automatic alignment of index labels in arithmetic, dataset cosntruction and
-  merging. TODO: finish documenting.
-- Aggregation operations now skip missing values by default:
+Breaking changes
+~~~~~~~~~~~~~~~~
+
+- We now automatically align index labels in arithmetic, dataset construction,
+  merging and updating. This means the need for manually invoking methods like
+  :py:func:`~xray.align` and :py:meth:`~xray.Dataset.reindex_like` should be
+  vastly reduced.
+
+  :ref:`For arithmetic<math automatic alignment>`, we align
+  based on the **intersection** of labels:
 
   .. ipython:: python
 
-      DataArray([1, 2, np.nan, 3]).mean()
+      lhs = xray.DataArray([1, 2, 3], [('x', [0, 1, 2])])
+      rhs = xray.DataArray([2, 3, 4], [('x', [1, 2, 3])])
+      lhs + rhs
+
+  For :ref:`data construction and merging<merge>`, we align based on the
+  **union** of labels:
+
+  .. ipython:: python
+
+      xray.Dataset({'foo': lhs, 'bar': rhs})
+
+  For :ref:`update and __setitem__<update>`, we align based on the **original**
+  object:
+
+  .. ipython:: python
+
+      lhs.coords['rhs'] = rhs
+      lhs
+
+- Aggregations like ``mean`` or ``median`` now skip missing values by default:
+
+  .. ipython:: python
+
+      xray.DataArray([1, 2, np.nan, 3]).mean()
 
   You can turn this behavior off by supplying the keyword arugment
-  ``skip_na=False``.
+  ``skipna=False``.
+
+  These operations are lightning fast thanks to integration with bottleneck_,
+  which is a new optional dependency for xray (numpy is used if bottleneck is
+  not installed).
+- We have updated our use of the terms of "coordinates" and "variables". What
+  were known in previous versions of xray as "coordinates" and "variables" are
+  now referred to throughout the documentation as "coordinate variables" and
+  "data variables". This brings xray in closer alignment to `CF Conventions`_.
+  The only visible change besides the documentation is that ``Dataset.vars``
+  has been renamed ``Dataset.data_vars``.
 - You will need to update your code if you have been ignoring deprecation
   warnings: methods and attributes that were deprecated in xray v0.3 or earlier
-  have gone away.
-- Lots of bug fixes.
+  (e.g., ``dimensions``, ``attributes```) have gone away.
+- TODO: season to use text labels.
+
+.. _bottleneck: https://github.com/kwgoodman/bottleneck
 
 Enhancements
 ~~~~~~~~~~~~
 
 - Support for reindexing with a fill method. This will especially useful with
-  pandas 0.16, which will support a fill method of ``'nearest'``.
+  pandas 0.16, which will support ``method='nearest'``.
+
+Bug fixes
+~~~~~~~~~
+
+- TODO
+
+Future plans
+~~~~~~~~~~~~
+
+The biggest feature I'm excited about working toward in the immediate future
+is supporting out-of-core operations in xray using Dask_, a part of the Blaze_
+project. For a preview of using Dask with weather data, read
+`this blog post`_ by Matthew Rocklin. See :issue:`328` for more details.
+
+.. _Dask: https://github.com/continuumio/dask
+.. _Blaze: http://blaze.pydata.org
+.. _this blog post: http://matthewrocklin.com/blog/work/2015/02/13/Towards-OOC-Slicing-and-Stacking/
 
 v0.3.2 (23 December, 2014)
 --------------------------
