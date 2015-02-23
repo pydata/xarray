@@ -147,9 +147,10 @@ def _get_virtual_variable(variables, key):
         raise KeyError(key)
 
     if suffix == 'season':
-        # seasons = np.array(['DJF', 'MAM', 'JJA', 'SON'])
+        # TODO: move 'season' into pandas itself
+        seasons = np.array(['DJF', 'MAM', 'JJA', 'SON'])
         month = date.month
-        data = (month // 3) % 4 + 1
+        data = seasons[(month // 3) % 4]
     else:
         data = getattr(date, suffix)
     return ref_var_name, variable.Variable(ref_var.dims, data)
