@@ -27,7 +27,6 @@ Creating a dataset
    :toctree: generated/
 
    Dataset
-   open_dataset
    decode_cf
 
 Attributes
@@ -110,6 +109,7 @@ Computation
 :py:attr:`~Dataset.argmin`
 :py:attr:`~Dataset.max`
 :py:attr:`~Dataset.mean`
+:py:attr:`~Dataset.median`
 :py:attr:`~Dataset.min`
 :py:attr:`~Dataset.prod`
 :py:attr:`~Dataset.sum`
@@ -129,32 +129,6 @@ Computation
 :py:attr:`~Dataset.conjugate`
 :py:attr:`~Dataset.round`
 :py:attr:`~Dataset.T`
-
-IO / Conversion
----------------
-
-.. autosummary::
-   :toctree: generated/
-
-   Dataset.to_netcdf
-   Dataset.to_dataframe
-   Dataset.from_dataframe
-   Dataset.close
-   Dataset.load_data
-
-Backends (experimental)
------------------------
-
-These backends provide a low-level interface for lazily loading data from
-external file-formats or protocols, and can be manually invoked to create
-arguments for the ``from_store`` and ``dump_to_store`` Dataset methods.
-
-.. autosummary::
-   :toctree: generated/
-
-   backends.NetCDF4DataStore
-   backends.PydapDataStore
-   backends.ScipyDataStore
 
 DataArray
 =========
@@ -231,6 +205,7 @@ Computation
 :py:attr:`~DataArray.argmin`
 :py:attr:`~DataArray.max`
 :py:attr:`~DataArray.mean`
+:py:attr:`~DataArray.median`
 :py:attr:`~DataArray.min`
 :py:attr:`~DataArray.prod`
 :py:attr:`~DataArray.sum`
@@ -262,7 +237,23 @@ Comparisons
    DataArray.identical
 
 IO / Conversion
+===============
+
+Dataset methods
 ---------------
+
+.. autosummary::
+   :toctree: generated/
+
+   open_dataset
+   Dataset.to_netcdf
+   Dataset.to_dataframe
+   Dataset.from_dataframe
+   Dataset.close
+   Dataset.load_data
+
+DataArray methods
+-----------------
 
 .. autosummary::
    :toctree: generated/
@@ -276,3 +267,17 @@ IO / Conversion
    DataArray.from_series
    DataArray.from_cdms2
    DataArray.load_data
+
+Backends (experimental)
+-----------------------
+
+These backends provide a low-level interface for lazily loading data from
+external file-formats or protocols, and can be manually invoked to create
+arguments for the ``from_store`` and ``dump_to_store`` Dataset methods.
+
+.. autosummary::
+   :toctree: generated/
+
+   backends.NetCDF4DataStore
+   backends.PydapDataStore
+   backends.ScipyDataStore

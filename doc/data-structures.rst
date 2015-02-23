@@ -272,7 +272,7 @@ instead of tuples:
 
 Or directly convert a data array into a dataset:
 
-.. ipython::
+.. ipython:: python
 
     foo.to_dataset(name='bar')
 
@@ -348,10 +348,13 @@ example, to create this example dataset from scratch, we could have written:
 
 To change the variables in a ``Dataset``, you can use all the standard dictionary
 methods, including ``values``, ``items``, ``__delitem__``, ``get`` and
-:py:meth:`~xray.Dataset.update``.
+:py:meth:`~xray.Dataset.update`. Note that assigning a ``DataArray`` object to
+a ``Dataset`` variable using ``__setitem__`` or ``update`` will
+:ref:`automatically align<update>` the array(s) to the original
+dataset's indexes.
 
-Creating modified modified datasets
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Creating modified datasets
+~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 You can copy a ``Dataset`` by using the :py:meth:`~xray.Dataset.copy` method:
 
@@ -414,7 +417,7 @@ like the ``index`` found on a pandas :py:class:`~pandas.DataFrame` or
 Other than for indexing, xray does not make any direct use of the values
 associated with coordinates. Coordinates with names not matching a dimension
 are not used for alignment or indexing, nor are they required to match when
-doing arithmetic (see :ref:`alignment and coordinates`).
+doing arithmetic (see :ref:`coordinates math`).
 
 Converting to ``pandas.Index``
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

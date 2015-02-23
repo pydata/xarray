@@ -87,8 +87,7 @@ Automatic interpretation of labels is powerful but also reduces flexibility.
 With xray, we draw a firm line between labels that the library understands
 (``dims`` and ``coords``) and labels for users and user code (``attrs``). For
 example, we do not automatically interpret and enforce units or `CF
-conventions`_. (An exception is serialization to netCDF with
-``cf_conventions=True``.)
+conventions`_. (An exception is serialization to and from netCDF files.)
 
 .. _CF conventions: http://cf-pcmdi.llnl.gov/documents/cf-conventions/1.6/cf-conventions.html
 

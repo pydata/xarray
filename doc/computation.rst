@@ -62,18 +62,22 @@ pandas:
     x.count()
     x.dropna(dim='x')
 
+Like pandas, xray uses the float value ``np.nan`` (not-a-number) to represent
+missing values.
+
 Aggregation
 ===========
 
-Aggregation methods from ndarray have been updated to take a `dim`
-argument instead of `axis`. This allows for very intuitive syntax for
-aggregation methods that are applied along particular dimension(s):
+Aggregation methods have been updated to take a `dim` argument instead of
+`axis`. This allows for very intuitive syntax for aggregation methods that are
+applied along particular dimension(s):
 
 .. ipython:: python
 
     arr.sum(dim='x')
     arr.std(['x', 'y'])
     arr.min()
+
 
 If you need to figure out the axis number for a dimension yourself (say,
 for wrapping code designed to work with numpy arrays), you can use the
@@ -83,18 +87,14 @@ for wrapping code designed to work with numpy arrays), you can use the
 
     arr.get_axis_num('y')
 
-To perform a NA skipping aggregations, pass the NA aware numpy functions
-directly to :py:attr:`~xray.DataArray.reduce` method:
+These operations automatically skip missing values, like in pandas:
 
 .. ipython:: python
 
-    arr.reduce(np.nanmean, dim='y')
+    xray.DataArray([1, 2, np.nan, 3]).median()
 
-.. warning::
-
-    Currently, xray uses the standard ndarray methods which do not
-    automatically skip missing values, but we expect to switch the default
-    to NA skipping versions (like pandas) in a future version (:issue:`130`).
+If desired, you can disable this behavior by invoking the aggregation method
+with ``skipna=False``.
 
 Broadcasting by dimension name
 ==============================
@@ -137,41 +137,51 @@ This means, for example, that you always subtract an array from its transpose:
 
     c - c.T
 
-.. _alignment and coordinates:
+.. _math automatic alignment:
 
-Alignment and coordinates
-=========================
+Automatic alignment
+===================
 
-For now, performing most binary operations on xray objects requires that the
-all *index* :ref:`coordinates` (that is, coordinates with the same name as a
-dimension, marked by ``*``) have the same values:
+xray enforces alignment between *index* :ref:`coordinates` (that is,
+coordinates with the same name as a dimension, marked by ``*``) on objects used
+in binary operations.
+
+Similarly to pandas, this alignment is automatic for arithmetic on binary
+operations. Note that unlike pandas, this the result of a binary operation is
+by the *intersection* (not the union) of coordinate labels:
+
+.. ipython:: python
+
+    arr + arr[:1]
+
+If the result would be empty, an error is raised instead:
 
 .. ipython::
 
     @verbatim
-    In [1]: arr + arr[:1]
-    ValueError: coordinate 'x' is not aligned
+    In [1]: arr[:2] + arr[2:]
+    ValueError: no overlapping labels for some dimensions: ['x']
 
-However, xray does have shortcuts (copied from pandas) that make aligning
-``DataArray`` and ``Dataset`` objects easy and fast.
+Before loops or performance critical code, it's a good idea to align arrays
+explicitly (e.g., by putting them in the same Dataset or using
+:py:func:`~xray.align`) to avoid the overhead of repeated alignment with each
+operation. See :ref:`align and reindex` for more details.
 
-.. ipython:: python
+.. note::
 
-    a, b = xray.align(arr, arr[:1])
-    a + b
+    There is no automatic alignment between arguments when performing in-place
+    arithmetic operations such as ``+=``. You will need to use
+    :ref:`manual alignment<align and reindex>`. This ensures in-place
+    arithmetic never needs to modify data types.
 
-See :ref:`align and reindex` for more details.
+.. _coordinates math:
 
-.. warning::
+Coordinates
+===========
 
-    pandas does index based alignment automatically when doing math, using
-    ``join='outer'``. xray doesn't have automatic alignment yet, but we do
-    intend to enable it in a future version (:issue:`186`). Unlike pandas, we
-    expect to default to ``join='inner'``.
-
-Although index coordinates are required to match exactly, other coordinates are
-not, and if their values conflict, they will be dropped. This is necessary,
-for example, because indexing turns 1D coordinates into scalars:
+Although index coordinates are aligned, other coordinates are not, and if their
+values conflict, they will be dropped. This is necessary, for example, because
+indexing turns 1D coordinates into scalar coordinates:
 
 .. ipython:: python
 
@@ -193,8 +203,8 @@ are no conflicting values:
 Math with Datasets
 ==================
 
-Datasets support arithmetic operations by automatically looping over all
-variables as well as dimensions:
+Datasets support arithmetic operations by automatically looping over all data
+variables:
 
 .. ipython:: python
 
@@ -202,13 +212,12 @@ variables as well as dimensions:
                        'x_only': ('x', np.random.randn(2))},
                        coords=arr.coords)
     ds > 0
-    ds.mean(dim='x')
 
-Datasets have most of the same ndarray methods found on data arrays. Again,
-these operations loop over all dataset variables:
+Datasets support most of the same methods found on data arrays:
 
 .. ipython:: python
 
+    ds.mean(dim='x')
     abs(ds)
 
 :py:meth:`~xray.Dataset.transpose` can also be used to reorder dimensions on
@@ -228,29 +237,21 @@ limitation, by applying the given function to each variable in the dataset:
     ds.apply(np.sin)
 
 Datasets also use looping over variables for *broadcasting* in binary
-arithmetic. You can do arithmetic between any ``DataArray`` and a dataset as
-long as they have aligned indexes:
+arithmetic. You can do arithmetic between any ``DataArray`` and a dataset:
 
 .. ipython:: python
 
     ds + arr
 
-Arithmetic between two datasets requires that the datasets also have the same
-variables:
+Arithmetic between two datasets matches data variables of the same name:
 
 .. ipython:: python
 
     ds2 = xray.Dataset({'x_and_y': 0, 'x_only': 100})
     ds - ds2
 
-There is no shortcut similar to ``align`` for aligning variable names, but you
-may find :py:meth:`~xray.Dataset.rename` and
-:py:meth:`~xray.Dataset.drop_vars` useful.
-
-.. note::
-
-    When we enable automatic alignment over indexes, we will probably enable
-    automatic alignment between dataset variables as well.
+Similarly to index based alignment, the result has the intersection of all
+matching variables, and ``ValueError`` is raised if the result would be empty.
 
 .. [1] When numpy 1.10 is released, we should be able to override ufuncs for
        datasets by making use of ``__numpy_ufunc__``.

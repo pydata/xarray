@@ -68,17 +68,42 @@ over which variables and coordinates are concatenated and how it handles
 conflicting variables between datasets. However, these should rarely be
 necessary.
 
-Merge and update
-~~~~~~~~~~~~~~~~
+.. _merge:
+
+Merge and ``Dataset.__init__``
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 To combine variables and coordinates between multiple Datasets, you can use the
 :py:meth:`~xray.Dataset.merge` and :py:meth:`~xray.Dataset.update` methods.
-Merge checks for conflicting variables before merging and by
-default it returns a new Dataset:
+Merge checks for conflicting variables before merging and by default it returns
+a new Dataset:
 
 .. ipython:: python
 
     ds.merge({'hello': ('space', np.arange(3) + 10)})
+
+If you merge another dataset (or a dictionary including data array objects), by
+default the resulting dataset will be aligned on the **union** of all index
+coordinates:
+
+.. ipython:: python
+
+    other = xray.Dataset({'bar': ('x', [1, 2, 3, 4]), 'x': list('abcd')})
+    ds.merge(other)
+
+This ensures that the ``merge`` is non-destructive.
+
+The same non-destructive merging between ``DataArray`` index coordinates is
+used in the :py:class:`~xray.Dataset` constructor:
+
+.. ipython:: python
+
+    xray.Dataset({'a': arr[:-1], 'b': arr[1:]})
+
+.. _update:
+
+Update and ``__setitem__``
+~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 In contrast, update modifies a dataset in-place without checking for conflicts,
 and will overwrite any existing variables with new values:
@@ -90,6 +115,21 @@ and will overwrite any existing variables with new values:
 However, dimensions are still required to be consistent between different
 Dataset variables, so you cannot change the size of a dimension unless you
 replace all dataset variables that use it.
+
+``update`` also performs automatic alignment if necessary. Unlike ``merge``, it
+maintains the alignment of the original array instead of merging indexes:
+
+.. ipython:: python
+
+    ds.update(other)
+
+The exact same alignment logic when setting a variable with ``__setitem__``
+syntax:
+
+.. ipython:: python
+
+    ds['baz'] = xray.DataArray([9, 9, 9, 9, 9], coords=[('x', list('abcde'))])
+    ds.baz
 
 Equals and identical
 ~~~~~~~~~~~~~~~~~~~~

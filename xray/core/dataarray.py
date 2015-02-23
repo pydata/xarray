@@ -478,12 +478,13 @@ class DataArray(AbstractArray, AttrAccessMixin):
             dataset. Any mis-matched index values will be filled in with
             NaN, and any mis-matched dimension names will simply be ignored.
         method : {None, 'nearest', 'pad'/'ffill', 'backfill'/'bfill'}, optional
-            Method to use for filling index values in ``indexers`` not found in
-            this dataset:
-              * default: don't fill gaps
-              * pad / ffill: propgate last valid index value forward
-              * backfill / bfill: propagate next valid index value backward
-              * nearest: use nearest valid index value (requires pandas>=0.16)
+            Method to use for filling index values from other not found on this
+            data array:
+
+            * default: don't fill gaps
+            * pad / ffill: propgate last valid index value forward
+            * backfill / bfill: propagate next valid index value backward
+            * nearest: use nearest valid index value (requires pandas>=0.16)
         copy : bool, optional
             If `copy=True`, the returned array's dataset contains only copied
             variables. If `copy=False` and no reindexing is required then
@@ -513,12 +514,13 @@ class DataArray(AbstractArray, AttrAccessMixin):
             variables. If `copy=False` and no reindexing is required then
             original variables from this array's dataset are returned.
         method : {None, 'nearest', 'pad'/'ffill', 'backfill'/'bfill'}, optional
-            Method to use for filling index values in ``indexers`` not found in
-            this dataset:
-              * default: don't fill gaps
-              * pad / ffill: propgate last valid index value forward
-              * backfill / bfill: propagate next valid index value backward
-              * nearest: use nearest valid index value (requires pandas>=0.16)
+            Method to use for filling index values in ``indexers`` not found on
+            this data array:
+
+            * default: don't fill gaps
+            * pad / ffill: propgate last valid index value forward
+            * backfill / bfill: propagate next valid index value backward
+            * nearest: use nearest valid index value (requires pandas>=0.16)
         **indexers : dict
             Dictionary with keys given by dimension names and values given by
             arrays of coordinates tick labels. Any mis-matched coordinate values
