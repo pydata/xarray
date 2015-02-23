@@ -100,7 +100,7 @@ Bug fixes
   (:issue:`316`, :issue:`330`). Thanks Stefan Pfenninger!
 - xray no longer requires ``decode_coords=False`` when reading datasets with
   unparseable coordinate attributes (:issue:`308`).
-- `DataArray.loc` indexing with ``...`` (:issue:`318`).
+- Fixed ``DataArray.loc`` indexing with ``...`` (:issue:`318`).
 - Fixed an edge case that resulting in an error when reindexing
   multi-dimensional variables (:issue:`315`).
 - Slicing with negative step sizes (:issue:`312`).
