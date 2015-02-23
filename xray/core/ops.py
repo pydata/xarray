@@ -120,8 +120,7 @@ def _create_nan_agg_method(name, numeric_only=False):
                 raise NotImplementedError(
                     '%s is not available with skipna=False with the '
                     'installed version of numpy; upgrade to numpy 1.9 or '
-                    'newer (or install bottleneck) to use skipna=True or '
-                    'skipna=None' % name)
+                    'newer to use skipna=True or skipna=None' % name)
         else:
             func = getattr(np, name)
         return func(values, axis=axis, **kwargs)

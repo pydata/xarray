@@ -91,7 +91,7 @@ These operations automatically skip missing values, like in pandas:
 
 .. ipython:: python
 
-    xray.DataArray([1, 2, np.nan, 3]).median()
+    xray.DataArray([1, 2, np.nan, 3]).mean()
 
 If desired, you can disable this behavior by invoking the aggregation method
 with ``skipna=False``.

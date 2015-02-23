@@ -7,5 +7,3 @@ pandas==0.15.2
 seaborn==0.5.1
 python-dateutil
 numpydoc==0.5
-# use to enable nanmedian, etc:
-bottleneck==1.0.0
