@@ -71,7 +71,8 @@ Breaking changes
 - You will need to update your code if you have been ignoring deprecation
   warnings: methods and attributes that were deprecated in xray v0.3 or earlier
   (e.g., ``dimensions``, ``attributes```) have gone away.
-- TODO: season to use text labels.
+- TODO: season to use text labels. ``broadcast_equals`` method? ``drop``
+  method?
 
 .. _bottleneck: https://github.com/kwgoodman/bottleneck
 
@@ -80,11 +81,22 @@ Enhancements
 
 - Support for reindexing with a fill method. This will especially useful with
   pandas 0.16, which will support ``method='nearest'``.
+- Use functions that return generic ndarrays with DataArray.groupby.apply and
+  Dataset.apply (:issue:`327` and :issue:`329`). Thanks Jeff Gerard!
+- TODO: added a documentation example by Joe Hamman.
 
 Bug fixes
 ~~~~~~~~~
 
-- TODO
+- Several bug fixes related to decoding time units from netCDF files
+  (:issue:`316`, :issue:`330`). Thanks Stefan Pfenninger!
+- xray no longer requires ``decode_coords=False`` when reading datasets with
+  unparseable coordinate attributes (:issue:`308`).
+- `DataArray.loc` indexing with ``...`` (:issue:`318`).
+- Fixed an edge case that resulting in an error when reindexing
+  multi-dimensional variables (:issue:`315`).
+- Slicing with negative step sizes (:issue:`312`).
+- Invalid conversion of string arrays to numeric dtype (:issue:`305`).
 
 Future plans
 ~~~~~~~~~~~~
