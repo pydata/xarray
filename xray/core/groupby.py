@@ -6,7 +6,7 @@ from . import ops
 from .alignment import concat
 from .common import ImplementsArrayReduce, ImplementsDatasetReduce
 from .pycompat import zip
-from .utils import peek_at
+from .utils import peek_at, maybe_wrap_array
 from .variable import Variable, Coordinate
 
 
@@ -242,12 +242,6 @@ class ArrayGroupBy(GroupBy, ImplementsArrayReduce):
         applied : DataArray
             The result of splitting, applying and combining this array.
         """
-        def maybe_wrap_array(arr, f):
-            # in case func lost array's metadata
-            if isinstance(f, np.ndarray) and f.shape == arr.shape:
-                return arr.__array_wrap__(f)
-            else:
-                return f
         if shortcut:
             grouped = self._iter_grouped_shortcut()
         else:

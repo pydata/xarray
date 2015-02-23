@@ -20,7 +20,7 @@ from .. import backends, conventions
 from .alignment import align, partial_align
 from .coordinates import DatasetCoordinates, Indexes
 from .common import ImplementsDatasetReduce, AttrAccessMixin
-from .utils import Frozen, SortedKeysDict, ChainMap
+from .utils import Frozen, SortedKeysDict, ChainMap, maybe_wrap_array
 from .pycompat import iteritems, itervalues, basestring, OrderedDict
 
 
@@ -1452,8 +1452,9 @@ class Dataset(Mapping, ImplementsDatasetReduce, AttrAccessMixin):
             Coordinates which are no longer used as the dimension of a
             noncoordinate are dropped.
         """
-        variables = OrderedDict((k, func(v, *args, **kwargs))
-                                for k, v in iteritems(self.data_vars))
+        variables = OrderedDict(
+            (k, maybe_wrap_array(v, func(v, *args, **kwargs)))
+            for k, v in iteritems(self.data_vars))
         attrs = self.attrs if keep_attrs else None
         return type(self)(variables, attrs=attrs)
 
