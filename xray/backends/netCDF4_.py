@@ -89,10 +89,10 @@ def _ensure_fill_value_valid(data, attributes):
 
 def _force_native_endianness(var):
     # possible values for byteorder are:
-    #     ‘=’    native
-    #     ‘<’    little-endian
-    #     ‘>’    big-endian
-    #     ‘|’    not applicable
+    #     =    native
+    #     <    little-endian
+    #     >    big-endian
+    #     |    not applicable
     # Below we check if the data type is not native or NA
     if var.dtype.byteorder not in ['=', '|']:
         # if endianness is specified explicitly, convert to the native type
