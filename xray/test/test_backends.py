@@ -12,7 +12,8 @@ import pandas as pd
 from xray import Dataset, open_dataset, backends, decode_cf
 from xray.core.pycompat import iteritems, PY3
 
-from . import TestCase, requires_scipy, requires_netCDF4, requires_pydap
+from . import (TestCase, requires_scipy, requires_netCDF4, requires_pydap,
+               has_netCDF4)
 from .test_dataset import create_test_data
 
 try:
@@ -39,7 +40,7 @@ def create_encoded_masked_and_scaled_data():
     return Dataset({'x': ('t', [-1, -1, 0, 1, 2], attributes)})
 
 
-class CastsUnicodeToBytes(object):
+class Only32BitTypes(object):
     pass
 
 
@@ -114,7 +115,7 @@ class DatasetIOTestCases(object):
                             'all_nans': ('c', all_nans),
                             'nan': ([], np.nan)})
         expected = original.copy(deep=True)
-        if type(self) in [NetCDF3ViaNetCDF4DataTest, ScipyDataTest]:
+        if isinstance(self, Only32BitTypes):
             # for netCDF3 tests, expect the results to come back as characters
             expected['letters_nans'] = expected['letters_nans'].astype('S')
             expected['letters'] = expected['letters'].astype('S')
@@ -133,7 +134,7 @@ class DatasetIOTestCases(object):
     def test_roundtrip_string_data(self):
         expected = Dataset({'x': ('t', ['ab', 'cdef'])})
         with self.roundtrip(expected) as actual:
-            if isinstance(self, CastsUnicodeToBytes):
+            if isinstance(self, Only32BitTypes):
                 expected['x'] = expected['x'].astype('S')
             self.assertDatasetIdentical(expected, actual)
 
@@ -222,7 +223,7 @@ class CFEncodedDataTest(DatasetIOTestCases):
             self.assertDatasetIdentical(expected, actual)
 
         original = Dataset({'x': ('t', values, {}, {'_FillValue': '\x00'})})
-        if not isinstance(self, CastsUnicodeToBytes):
+        if not isinstance(self, Only32BitTypes):
             # these stores can save unicode strings
             expected = original.copy(deep=True)
         if type(self) is NetCDF4DataTest:
@@ -543,7 +544,7 @@ class NetCDF4DataTest(CFEncodedDataTest, TestCase):
 
 
 @requires_scipy
-class ScipyInMemoryDataTest(CFEncodedDataTest, CastsUnicodeToBytes, TestCase):
+class ScipyInMemoryDataTest(CFEncodedDataTest, Only32BitTypes, TestCase):
     @contextlib.contextmanager
     def create_store(self):
         fobj = BytesIO()
@@ -557,7 +558,7 @@ class ScipyInMemoryDataTest(CFEncodedDataTest, CastsUnicodeToBytes, TestCase):
 
 
 @requires_scipy
-class ScipyOnDiskDataTest(CFEncodedDataTest, CastsUnicodeToBytes, TestCase):
+class ScipyOnDiskDataTest(CFEncodedDataTest, Only32BitTypes, TestCase):
     @contextlib.contextmanager
     def create_store(self):
         with create_tmp_file() as tmp_file:
@@ -565,16 +566,19 @@ class ScipyOnDiskDataTest(CFEncodedDataTest, CastsUnicodeToBytes, TestCase):
 
     @contextlib.contextmanager
     def roundtrip(self, data, **kwargs):
+        if has_netCDF4:
+            # this test is redundant with NetCDF4DataTest, but will fail
+            # because it assumes only 32-bit types are available
+            self.skipTest('only valid if netCDF4 is not installed')
+
         with create_tmp_file() as tmp_file:
-            # if netCDF4-python is installed, this will use that instead, but
-            # this will still let us test scipy-only setups on Travis
             serialized = data.to_netcdf(tmp_file)
             with open_dataset(tmp_file, **kwargs) as ds:
                 yield ds
 
 
 @requires_netCDF4
-class NetCDF3ViaNetCDF4DataTest(CFEncodedDataTest, CastsUnicodeToBytes, TestCase):
+class NetCDF3ViaNetCDF4DataTest(CFEncodedDataTest, Only32BitTypes, TestCase):
     @contextlib.contextmanager
     def create_store(self):
         with create_tmp_file() as tmp_file:

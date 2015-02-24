@@ -215,8 +215,6 @@ def encode_cf_datetime(dates, units=None, calendar=None):
     --------
     netCDF4.date2num
     """
-    import netCDF4 as nc4
-
     dates = np.asarray(dates)
 
     if units is None:
@@ -227,17 +225,28 @@ def encode_cf_datetime(dates, units=None, calendar=None):
     if calendar is None:
         calendar = 'proleptic_gregorian'
 
-    if np.issubdtype(dates.dtype, np.datetime64):
-        # for now, don't bother doing any trickery like decode_cf_datetime to
-        # convert dates to numbers faster
-        # note: numpy's broken datetime conversion only works for us precision
-        dates = dates.astype('M8[us]').astype(datetime)
+    delta, ref_date = _unpack_netcdf_time_units(units)
+    try:
+        if calendar not in _STANDARD_CALENDARS or dates.dtype.kind == 'O':
+            raise OutOfBoundsDatetime
+        assert dates.dtype == 'datetime64[ns]'
 
-    def encode_datetime(d):
-        return np.nan if d is None else nc4.date2num(d, units, calendar)
+        delta_units = _netcdf_to_numpy_timeunit(delta)
+        time_delta = np.timedelta64(1, delta_units).astype('timedelta64[ns]')
+        ref_date = np.datetime64(pd.Timestamp(ref_date))
+        num = (dates - ref_date) / time_delta
 
-    num = np.array([encode_datetime(d) for d in dates.flat])
-    num = num.reshape(dates.shape)
+    except (OutOfBoundsDatetime, ValueError, OverflowError):
+        import netCDF4 as nc4
+
+        if np.issubdtype(dates.dtype, np.datetime64):
+            # numpy's broken datetime conversion only works for us precision
+            dates = dates.astype('M8[us]').astype(datetime)
+
+        def encode_datetime(d):
+            return np.nan if d is None else nc4.date2num(d, units, calendar)
+
+        num = np.vectorize(encode_datetime)(dates)
     return (num, units, calendar)
 
 
