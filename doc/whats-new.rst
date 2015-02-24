@@ -91,6 +91,11 @@ Enhancements
   pandas 0.16, which will support ``method='nearest'``.
 - Use functions that return generic ndarrays with DataArray.groupby.apply and
   Dataset.apply (:issue:`327` and :issue:`329`). Thanks Jeff Gerard!
+- Consolidated the functionality of `dumps` (writing a dataset to a netCDF file
+  as a bytestring) into the `to_netcdf` method (:issue:`333`).
+- `to_netcdf` now supports writing to groups in netCDF4 files (:issue:`333`).
+- `to_netcdf` now works when netcdf4-python is not installed as long as scipy
+  is available (:issue:`333`).
 - TODO: added a documentation example by Joe Hamman.
 
 Bug fixes

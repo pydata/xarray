@@ -284,7 +284,7 @@ class NetCDF4DataTest(CFEncodedDataTest, TestCase):
     @contextlib.contextmanager
     def roundtrip(self, data, **kwargs):
         with create_tmp_file() as tmp_file:
-            data.dump(tmp_file)
+            data.to_netcdf(tmp_file)
             with open_dataset(tmp_file, **kwargs) as ds:
                 yield ds
 
@@ -356,6 +356,17 @@ class NetCDF4DataTest(CFEncodedDataTest, TestCase):
             for group in 'foo/bar', '/foo/bar', 'foo/bar/', '/foo/bar/':
                 with open_dataset(tmp_file, group=group) as actual:
                     self.assertVariableEqual(actual['x'], expected['x'])
+
+    def test_write_groups(self):
+        data1 = create_test_data()
+        data2 = data1 * 2
+        with create_tmp_file() as tmp_file:
+            data1.to_netcdf(tmp_file, group='data/1')
+            data2.to_netcdf(tmp_file, group='data/2', mode='a')
+            actual1 = open_dataset(tmp_file, group='data/1')
+            actual2 = open_dataset(tmp_file, group='data/2')
+            self.assertDatasetIdentical(data1, actual1)
+            self.assertDatasetIdentical(data2, actual2)
 
     def test_dump_and_open_encodings(self):
         # Create a netCDF file with explicit time units
@@ -504,7 +515,7 @@ class NetCDF4DataTest(CFEncodedDataTest, TestCase):
             xray_dataset = open_dataset(tmp_file)
 
             with create_tmp_file() as tmp_file2:
-                xray_dataset.dump(tmp_file2)
+                xray_dataset.to_netcdf(tmp_file2)
 
                 with nc4.Dataset(tmp_file2, 'r') as ds:
                     self.assertEqual(ds.variables['time'].getncattr('units'), units)
@@ -548,7 +559,7 @@ class ScipyDataTest(CFEncodedDataTest, CastsUnicodeToBytes, TestCase):
 
     @contextlib.contextmanager
     def roundtrip(self, data, **kwargs):
-        serialized = data.dumps()
+        serialized = data.to_netcdf()
         with open_dataset(BytesIO(serialized), **kwargs) as ds:
             yield ds
 
@@ -564,7 +575,7 @@ class NetCDF3ViaNetCDF4DataTest(CFEncodedDataTest, CastsUnicodeToBytes, TestCase
     @contextlib.contextmanager
     def roundtrip(self, data, **kwargs):
         with create_tmp_file() as tmp_file:
-            data.dump(tmp_file, format='NETCDF3_CLASSIC')
+            data.to_netcdf(tmp_file, format='NETCDF3_CLASSIC')
             with open_dataset(tmp_file, **kwargs) as ds:
                 yield ds
 
