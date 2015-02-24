@@ -603,5 +603,5 @@ class PydapTest(TestCase):
             # don't check attributes since pydap doesn't serialize them correctly
             # also skip the "bears" variable since the test DAP server incorrectly
             # concatenates it.
-            self.assertDatasetEqual(actual.unselect('bears'),
-                                    expected.unselect('bears'))
+            self.assertDatasetEqual(actual.drop_vars('bears'),
+                                    expected.drop_vars('bears'))
