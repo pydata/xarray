@@ -877,9 +877,9 @@ class Dataset(Mapping, ImplementsDatasetReduce, AttrAccessMixin):
         ----------
         path : str, optional
             Path to which to save this dataset. If no path is provided, this
-            function returns the resulting netCDF file as a bytes object (this
-            option only works with the scipy.io.netcdf interface, not with
-            netCDF4-python, so the file cannot be saved with format='NETCDF4').
+            function returns the resulting netCDF file as a bytes object; in
+            this case, we need to use scipy.io.netcdf, which does not support
+            netCDF version 4 (the default format becomes NETCDF3_64BIT).
         mode : {'w', 'a'}, optional
             Write ('w') or append ('a') mode. If mode='w', any existing file at
             this location will be overwritten.
@@ -888,22 +888,25 @@ class Dataset(Mapping, ImplementsDatasetReduce, AttrAccessMixin):
             File format for the resulting netCDF file:
 
             * NETCDF4: Data is stored in an HDF5 file, using netCDF4 API
-              features. This is the default if you are saving a file to disk
-              and have the netCDF4-python library available.
+              features.
             * NETCDF4_CLASSIC: Data is stored in an HDF5 file, using only
               netCDF 3 compatibile API features.
             * NETCDF3_64BIT: 64-bit offset version of the netCDF 3 file format,
               which fully supports 2+ GB files, but is only compatible with
-              clients linked against netCDF version 3.6.0 or later. This is the
-              default if you only have scipy available to write netCDF files.
+              clients linked against netCDF version 3.6.0 or later.
             * NETCDF3_CLASSIC: The classic netCDF 3 file format. It does not
               handle 2+ GB files very well.
 
             All formats are supported by the netCDF4-python library.
             scipy.io.netcdf only supports the last two formats.
+
+            The default format is NETCDF4 if you are saving a file to disk and
+            have the netCDF4-python library available. Otherwise, xray falls
+            back to using scipy to write netCDF files and defaults to the
+            NETCDF3_64BIT format (scipy does not support netCDF4).
         group : str, optional
             Path to the netCDF4 group in the given file to open (only works for
-            format='NETCDF4').
+            format='NETCDF4'). The group(s) will be created if necessary.
         """
         if path is None:
             fobj = BytesIO()
