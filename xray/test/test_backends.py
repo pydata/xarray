@@ -51,10 +51,6 @@ class DatasetIOTestCases(object):
         raise NotImplementedError
 
     def test_zero_dimensional_variable(self):
-        if PY3 and type(self) is ScipyDataTest:
-            # see the fix: https://github.com/scipy/scipy/pull/3617
-            raise unittest.SkipTest('scipy.io.netcdf is broken on Python 3')
-
         expected = create_test_data()
         expected['float_var'] = ([], 1.0e9, {'units': 'units of awesome'})
         expected['string_var'] = ([], np.array('foobar', dtype='S'))
@@ -117,9 +113,6 @@ class DatasetIOTestCases(object):
                             'letters_nans': ('b', letters_nans),
                             'all_nans': ('c', all_nans),
                             'nan': ([], np.nan)})
-        if PY3 and type(self) is ScipyDataTest:
-            # see the note under test_zero_dimensional_variable
-            del original['nan']
         expected = original.copy(deep=True)
         if type(self) in [NetCDF3ViaNetCDF4DataTest, ScipyDataTest]:
             # for netCDF3 tests, expect the results to come back as characters
@@ -549,9 +542,8 @@ class NetCDF4DataTest(CFEncodedDataTest, TestCase):
                 self.assertNotIn('coordinates', ds['lon'].attrs)
 
 
-@requires_netCDF4
 @requires_scipy
-class ScipyDataTest(CFEncodedDataTest, CastsUnicodeToBytes, TestCase):
+class ScipyInMemoryDataTest(CFEncodedDataTest, CastsUnicodeToBytes, TestCase):
     @contextlib.contextmanager
     def create_store(self):
         fobj = BytesIO()
@@ -562,6 +554,23 @@ class ScipyDataTest(CFEncodedDataTest, CastsUnicodeToBytes, TestCase):
         serialized = data.to_netcdf()
         with open_dataset(BytesIO(serialized), **kwargs) as ds:
             yield ds
+
+
+@requires_scipy
+class ScipyOnDiskDataTest(CFEncodedDataTest, CastsUnicodeToBytes, TestCase):
+    @contextlib.contextmanager
+    def create_store(self):
+        with create_tmp_file() as tmp_file:
+            yield backends.ScipyDataStore(tmp_file, mode='w')
+
+    @contextlib.contextmanager
+    def roundtrip(self, data, **kwargs):
+        with create_tmp_file() as tmp_file:
+            # if netCDF4-python is installed, this will use that instead, but
+            # this will still let us test scipy-only setups on Travis
+            serialized = data.to_netcdf(tmp_file)
+            with open_dataset(tmp_file, **kwargs) as ds:
+                yield ds
 
 
 @requires_netCDF4

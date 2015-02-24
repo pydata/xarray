@@ -24,19 +24,22 @@ from .utils import Frozen, SortedKeysDict, ChainMap, maybe_wrap_array
 from .pycompat import iteritems, itervalues, basestring, OrderedDict
 
 
-def open_dataset(filename_or_obj, decode_cf=True, mask_and_scale=True,
-                 decode_times=True, concat_characters=True, decode_coords=True,
-                 group=None):
+def open_dataset(filename_or_obj, group=None, decode_cf=True,
+                 mask_and_scale=True, decode_times=True,
+                 concat_characters=True, decode_coords=True):
     """Load and decode a dataset from a file or file-like object.
 
     Parameters
     ----------
     filename_or_obj : str or file
-        Strings are intrepreted as a path to a netCDF file or an OpenDAP URL
+        Strings are interpreted as a path to a netCDF file or an OpenDAP URL
         and opened with python-netCDF4, unless the filename ends with .gz, in
         which case the file is gunzipped and opened with scipy.io.netcdf (only
         netCDF3 supported). File-like objects are opened with scipy.io.netcdf
         (only netCDF3 supported).
+    group : str, optional
+        Path to the netCDF4 group in the given file to open (only works for
+        netCDF4 files).
     decode_cf : bool, optional
         Whether to decode these variables, assuming they were saved according
         to CF conventions.
@@ -56,9 +59,6 @@ def open_dataset(filename_or_obj, decode_cf=True, mask_and_scale=True,
     decode_coords : bool, optional
         If True, decode the 'coordinates' attribute to identify coordinates in
         the resulting dataset.
-    group : str, optional
-        Path to the netCDF4 group in the given file to open (only works for
-        netCDF4).
 
     Returns
     -------
@@ -81,7 +81,10 @@ def open_dataset(filename_or_obj, decode_cf=True, mask_and_scale=True,
                 else:
                     raise
         else:
-            store = backends.NetCDF4DataStore(filename_or_obj, group=group)
+            try:
+                store = backends.NetCDF4DataStore(filename_or_obj, group=group)
+            except ImportError:
+                store = backends.ScipyDataStore(filename_or_obj)
     else:
         # assume filename_or_obj is a file-like object
         store = backends.ScipyDataStore(filename_or_obj)
