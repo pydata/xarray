@@ -173,7 +173,7 @@ class NetCDF4DataStore(AbstractWritableDataStore):
         encoding = variable.encoding
         endian = encoding.get('endian', _endian_lookup[datatype.byteorder])
         data = variable.values
-        if endian is not 'native':
+        if endian == 'big':
             # netCDF4 doesn't seem to support writing of
             # big endian dtypes, so we convert all to little
             # endian.
