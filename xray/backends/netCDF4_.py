@@ -87,6 +87,27 @@ def _ensure_fill_value_valid(data, attributes):
         attributes['_FillValue'] = np.string_(attributes['_FillValue'])
 
 
+def _force_native_endianness(var):
+    # possible values for byteorder are:
+    #     ‘=’    native
+    #     ‘<’    little-endian
+    #     ‘>’    big-endian
+    #     ‘|’    not applicable
+    # Below we check if the data type is not native or NA
+    if var.dtype.byteorder not in ['=', '|']:
+        # if endianness is specified explicitly, convert to the native type
+        data = var.values.astype(var.dtype.newbyteorder('='))
+        var = Variable(var.dims, data, var.attrs, var.encoding)
+        # if endian exists, remove it from the encoding.
+        var.encoding.pop('endian', None)
+    # check to see if encoding has a value for endian its 'native'
+    if not var.encoding.get('endian', 'native') is 'native':
+        raise NotImplementedError("Attempt to write non-native endian type, "
+                                  "this is not supported by the netCDF4 python "
+                                  "library.")
+    return var
+
+
 class NetCDF4DataStore(AbstractWritableDataStore):
     """Store for reading and writing data via the Python-NetCDF4 library.
 
@@ -156,6 +177,9 @@ class NetCDF4DataStore(AbstractWritableDataStore):
 
     def set_variable(self, name, variable):
         attrs = variable.attrs.copy()
+
+        variable = _force_native_endianness(variable)
+
         if self.format == 'NETCDF4':
             variable, datatype = _nc4_values_and_dtype(variable)
         else:
@@ -171,17 +195,7 @@ class NetCDF4DataStore(AbstractWritableDataStore):
             fill_value = None
 
         encoding = variable.encoding
-        endian = encoding.get('endian', _endian_lookup[datatype.byteorder])
         data = variable.values
-        if endian == 'big':
-            # netCDF4 doesn't seem to support writing of
-            # big endian dtypes, so we convert all to little
-            # endian.
-            #
-            # https://github.com/Unidata/netcdf4-python/issues/346
-            non_endian_specific_type = variable.values.dtype.type
-            data = variable.values.astype(non_endian_specific_type)
-            endian = 'native'
 
         nc4_var = self.ds.createVariable(
             varname=name,
@@ -193,7 +207,7 @@ class NetCDF4DataStore(AbstractWritableDataStore):
             fletcher32=encoding.get('fletcher32', False),
             contiguous=encoding.get('contiguous', False),
             chunksizes=encoding.get('chunksizes'),
-            endian=endian,
+            endian='native',
             least_significant_digit=encoding.get('least_significant_digit'),
             fill_value=fill_value)
         nc4_var.set_auto_maskandscale(False)
