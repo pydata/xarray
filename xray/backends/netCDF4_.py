@@ -11,6 +11,13 @@ from ..core.pycompat import iteritems, basestring, OrderedDict
 from .common import AbstractWritableDataStore
 from .netcdf3 import encode_nc3_variable, maybe_convert_to_char_array
 
+# This lookup table maps from dtype.byteorder to a readable endian
+# string used by netCDF4.
+_endian_lookup = {'=': 'native',
+                  '>': 'big',
+                  '<': 'little',
+                  '|': 'native'}
+
 
 class NetCDF4ArrayWrapper(NDArrayMixin):
     def __init__(self, array):
@@ -164,6 +171,18 @@ class NetCDF4DataStore(AbstractWritableDataStore):
             fill_value = None
 
         encoding = variable.encoding
+        endian = encoding.get('endian', _endian_lookup[datatype.byteorder])
+        data = variable.values
+        if endian is not 'native':
+            # netCDF4 doesn't seem to support writing of
+            # big endian dtypes, so we convert all to little
+            # endian.
+            #
+            # https://github.com/Unidata/netcdf4-python/issues/346
+            non_endian_specific_type = variable.values.dtype.type
+            data = variable.values.astype(non_endian_specific_type)
+            endian = 'native'
+
         nc4_var = self.ds.createVariable(
             varname=name,
             datatype=datatype,
@@ -174,11 +193,11 @@ class NetCDF4DataStore(AbstractWritableDataStore):
             fletcher32=encoding.get('fletcher32', False),
             contiguous=encoding.get('contiguous', False),
             chunksizes=encoding.get('chunksizes'),
-            endian=encoding.get('endian', 'native'),
+            endian=endian,
             least_significant_digit=encoding.get('least_significant_digit'),
             fill_value=fill_value)
         nc4_var.set_auto_maskandscale(False)
-        nc4_var[:] = variable.values
+        nc4_var[:] = data
         for k, v in iteritems(attrs):
             # set attributes one-by-one since netCDF4<1.0.10 can't handle
             # OrderedDict as the input to setncatts
