@@ -144,6 +144,18 @@ arrays). However, you can do normal indexing with labeled dimensions:
 Using indexing to *assign* values to a subset of dataset (e.g.,
 ``ds[dict(space=0)] = 1``) is not yet supported.
 
+Dropping labels
+---------------
+
+The :py:meth:`~xray.Dataset.drop` method returns a new object with the listed
+index labels along a dimension dropped:
+
+.. ipython:: python
+
+    ds.drop(['IN', 'IL'], dim='space')
+
+``drop`` is both a ``Dataset`` and ``DataArray`` method.
+
 Indexing details
 ----------------
 

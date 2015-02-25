@@ -371,7 +371,7 @@ argument ``deep=True``.
 
 You also can select and drop an explicit list of variables by using the
 by indexing with a list of names or using the
-:py:meth:`~xray.Dataset.drop_vars` methods to return a new ``Dataset``. These
+:py:meth:`~xray.Dataset.drop` methods to return a new ``Dataset``. These
 operations keep around coordinates:
 
 .. ipython:: python
@@ -379,12 +379,12 @@ operations keep around coordinates:
     ds[['temperature']]
     ds[['x']]
 
-If a dimension name is given as an argument to `drop_vars`, it also drops all
+If a dimension name is given as an argument to `drop`, it also drops all
 variables that use that dimension:
 
 .. ipython:: python
 
-    ds.drop_vars('time')
+    ds.drop('time')
 
 Another useful option is the ability to rename the variables in a dataset:
 

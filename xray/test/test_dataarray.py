@@ -701,6 +701,29 @@ class TestDataArray(TestCase):
     def test_squeeze(self):
         self.assertVariableEqual(self.dv.variable.squeeze(), self.dv.squeeze())
 
+    def test_drop_coordinates(self):
+        expected = DataArray(np.random.randn(2, 3), dims=['x', 'y'])
+        arr = expected.copy()
+        arr.coords['z'] = 2
+        actual = arr.drop('z')
+        self.assertDataArrayIdentical(expected, actual)
+
+        with self.assertRaises(ValueError):
+            arr.drop('not found')
+
+        with self.assertRaisesRegexp(ValueError, 'cannot drop'):
+            arr.drop(None)
+
+        renamed = arr.rename('foo')
+        with self.assertRaisesRegexp(ValueError, 'cannot drop'):
+            renamed.drop('foo')
+
+    def test_drop_index_labels(self):
+        arr = DataArray(np.random.randn(2, 3), dims=['x', 'y'])
+        actual = arr.drop([0, 1], dim='y')
+        expected = arr[:, 2:]
+        self.assertDataArrayIdentical(expected, actual)
+
     def test_dropna(self):
         x = np.random.randn(4, 4)
         x[::2, 0] = np.nan
