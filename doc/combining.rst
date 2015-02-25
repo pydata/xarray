@@ -134,21 +134,37 @@ syntax:
 Equals and identical
 ~~~~~~~~~~~~~~~~~~~~
 
-xray objects can be compared by using the :py:meth:`~xray.DataArray.equals`
-and :py:meth:`~xray.DataArray.identical` methods. These methods are used by
+xray objects can be compared by using the :py:meth:`~xray.Dataset.equals`,
+:py:meth:`~xray.Dataset.identical` and
+:py:meth:`~xray.Dataset.broadcast_equals` methods. These methods are used by
 the optional ``compat`` argument on ``concat`` and ``merge``.
 
-``equals`` checks dimension names, indexes and array values:
+:py:attr:`~xray.Dataset.equals` checks dimension names, indexes and array
+values:
 
 .. ipython:: python
 
     arr.equals(arr.copy())
 
-``identical`` also checks attributes, and the name of each object:
+:py:attr:`~xray.Dataset.identical` also checks attributes, and the name of each
+object:
 
 .. ipython:: python
 
     arr.identical(arr.rename('bar'))
+
+:py:attr:`~xray.Dataset.broadcast_equals` does a more relaxed form of equality
+check that allows variables to have different dimensions, as long as values
+are constant along those new dimensions:
+
+.. ipython:: python
+
+    left = Dataset(coords={'x': 0})
+    right = Dataset({'x': [0, 0, 0]})
+    left.broadcast_equals(right)
+
+Like pandas objects, two xray objects are still equal or identical if they have
+missing values marked by ``NaN`` in the same locations.
 
 In contrast, the ``==`` operation performs element-wise comparison (like
 numpy):
@@ -157,5 +173,5 @@ numpy):
 
     arr == arr.copy()
 
-Like pandas objects, two xray objects are still equal or identical if they have
-missing values marked by `NaN` in the same locations.
+Note that ``NaN`` does not compare equal to ``NaN`` in element-wise comparison;
+you may need to deal with missing values explicitly.

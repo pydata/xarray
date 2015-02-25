@@ -463,6 +463,13 @@ class TestDataset(TestCase):
         self.assertFalse(data2.equals(data))
         self.assertFalse(data2.identical(data))
 
+    def test_broadcast_equals(self):
+        data1 = Dataset(coords={'x': 0})
+        data2 = Dataset(coords={'x': [0]})
+        self.assertTrue(data1.broadcast_equals(data2))
+        self.assertFalse(data1.equals(data2))
+        self.assertFalse(data1.identical(data2))
+
     def test_attrs(self):
         data = create_test_data(seed=42)
         data.attrs = {'foobar': 'baz'}

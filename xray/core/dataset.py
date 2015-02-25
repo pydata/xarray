@@ -741,6 +741,24 @@ class Dataset(Mapping, ImplementsDatasetReduce, AttrAccessMixin):
                 and utils.dict_equiv(self._variables, other._variables,
                                      compat=compat))
 
+    def broadcast_equals(self, other):
+        """Two Datasets are broadcast equal if they are equal after
+        broadcasting all variables against each other.
+
+        For example, variables that are scalar in one dataset but non-scalar in
+        the other dataset can still be broadcast equal if the the non-scalar
+        variable is a constant.
+
+        See Also
+        --------
+        Dataset.equals
+        Dataset.identical
+        """
+        try:
+            return self._all_compat(other, 'broadcast_equals')
+        except (TypeError, AttributeError):
+            return False
+
     def equals(self, other):
         """Two Datasets are equal if they have matching variables and
         coordinates, all of which are equal.
@@ -753,6 +771,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, AttrAccessMixin):
 
         See Also
         --------
+        Dataset.broadcast_equals
         Dataset.identical
         """
         try:
@@ -766,6 +785,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, AttrAccessMixin):
 
         See Also
         --------
+        Dataset.broadcast_equals
         Dataset.equals
         """
         try:
