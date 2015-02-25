@@ -83,7 +83,7 @@ def _unpack_netcdf_time_units(units):
     return delta_units, ref_date
 
 
-def _decode_netcdf_datetime(num_dates, units, calendar):
+def _decode_datetime_with_netcdf4(num_dates, units, calendar):
     import netCDF4 as nc4
 
     dates = np.asarray(nc4.num2date(num_dates, units, calendar))
@@ -134,7 +134,7 @@ def decode_cf_datetime(num_dates, units, calendar=None):
     # ValueError is raised by pd.Timestamp for non-ISO timestamp strings,
     # in which case we fall back to using netCDF4
     except (OutOfBoundsDatetime, ValueError, OverflowError):
-        dates = _decode_netcdf_datetime(flat_num_dates, units, calendar)
+        dates = _decode_datetime_with_netcdf4(flat_num_dates, units, calendar)
 
     return dates.reshape(num_dates.shape)
 
@@ -203,6 +203,24 @@ def _cleanup_netcdf_time_units(units):
     return units
 
 
+def _encode_datetime_with_netcdf4(dates, units, calendar):
+    """Fallback method for encoding dates using netCDF4-python.
+
+    This method is more flexible than xray's parsing using datetime64[ns]
+    arrays but also slower because it loops over each element.
+    """
+    import netCDF4 as nc4
+
+    if np.issubdtype(dates.dtype, np.datetime64):
+        # numpy's broken datetime conversion only works for us precision
+        dates = dates.astype('M8[us]').astype(datetime)
+
+    def encode_datetime(d):
+        return np.nan if d is None else nc4.date2num(d, units, calendar)
+
+    return np.vectorize(encode_datetime)(dates)
+
+
 def encode_cf_datetime(dates, units=None, calendar=None):
     """Given an array of datetime objects, returns the tuple `(num, units,
     calendar)` suitable for a CF complient time variable.
@@ -228,6 +246,7 @@ def encode_cf_datetime(dates, units=None, calendar=None):
     delta, ref_date = _unpack_netcdf_time_units(units)
     try:
         if calendar not in _STANDARD_CALENDARS or dates.dtype.kind == 'O':
+            # parse with netCDF4 instead
             raise OutOfBoundsDatetime
         assert dates.dtype == 'datetime64[ns]'
 
@@ -237,16 +256,8 @@ def encode_cf_datetime(dates, units=None, calendar=None):
         num = (dates - ref_date) / time_delta
 
     except (OutOfBoundsDatetime, ValueError, OverflowError):
-        import netCDF4 as nc4
+        num = _encode_datetime_with_netcdf4(dates, units, calendar)
 
-        if np.issubdtype(dates.dtype, np.datetime64):
-            # numpy's broken datetime conversion only works for us precision
-            dates = dates.astype('M8[us]').astype(datetime)
-
-        def encode_datetime(d):
-            return np.nan if d is None else nc4.date2num(d, units, calendar)
-
-        num = np.vectorize(encode_datetime)(dates)
     return (num, units, calendar)
 
 
