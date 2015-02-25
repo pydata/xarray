@@ -76,7 +76,7 @@ Breaking changes
 
   .. ipython:: python
 
-      ds = Dataset({'t': pd.date_range('2000-01-01', periods=12, freq='M')})
+      ds = xray.Dataset({'t': pd.date_range('2000-01-01', periods=12, freq='M')})
       ds['t.season']
 
   Previously, it returned numbered seasons 1 through 4.
@@ -96,6 +96,19 @@ Enhancements
 - `to_netcdf` now supports writing to groups in netCDF4 files (:issue:`333`).
 - `to_netcdf` now works when netcdf4-python is not installed as long as scipy
   is available (:issue:`333`).
+- The new :py:meth:`~xray.Dataset.drop` method makes it easy to drop explicitly
+  listed variables or index labels:
+
+  .. ipython:: python
+
+      # drop variables
+      ds = xray.Dataset({'x': 0, 'y': 1})
+      ds.drop('x')
+
+      # drop index labels
+      arr = xray.DataArray([1, 2, 3], coords=[('x', list('abc'))])
+      arr.drop(['a', 'c'], dim='x')
+
 - TODO: added a documentation example by Joe Hamman.
 
 Bug fixes
@@ -110,6 +123,13 @@ Bug fixes
   multi-dimensional variables (:issue:`315`).
 - Slicing with negative step sizes (:issue:`312`).
 - Invalid conversion of string arrays to numeric dtype (:issue:`305`).
+
+Deprecations
+~~~~~~~~~~~~
+
+- ``dump`` and ``dumps`` have been deprecated in favor of
+  :py:meth:`~xray.Dataset.to_netcdf`.
+- ``drop_vars`` has been deprecated in favor of :py:meth:`~xray.Dataset.drop`.
 
 Future plans
 ~~~~~~~~~~~~

@@ -1268,20 +1268,33 @@ class Dataset(Mapping, ImplementsDatasetReduce, AttrAccessMixin):
             raise ValueError('One or more of the specified variables '
                              'cannot be found in this dataset')
 
-    def drop_vars(self, *names):
-        """Returns a new dataset without the named variables.
+    def drop(self, labels, dim=None):
+        """Drop variables or index labels from this dataset.
+
+        If a variable corresponding to a dimension is dropped, all variables
+        that use that dimension are also dropped.
 
         Parameters
         ----------
-        *names : str
-            Names of the variables to omit from the returned object.
+        labels : str
+            Names of variables or index labels to drop.
+        dim : None or str, optional
+            Dimension along which to drop index labels. By default (if
+            ``dim is None``), drops variables rather than index labels.
 
         Returns
         -------
-        Dataset
-            New dataset based on this dataset. Only the named variables are
-            removed.
+        dropped : Dataset
         """
+        if utils.is_scalar(labels):
+            labels = [labels]
+        if dim is None:
+            return self._drop_vars(labels)
+        else:
+            new_index = self.indexes[dim].drop(labels)
+            return self.loc[{dim: new_index}]
+
+    def _drop_vars(self, names):
         self._assert_all_in_dataset(names)
         drop = set(names)
         drop |= set(k for k, v in iteritems(self._variables)
@@ -1290,6 +1303,12 @@ class Dataset(Mapping, ImplementsDatasetReduce, AttrAccessMixin):
                                 if k not in drop)
         coord_names = set(k for k in self._coord_names if k in variables)
         return self._replace_vars_and_dims(variables, coord_names)
+
+    def drop_vars(self, *names):
+        warnings.warn('the Dataset method `drop_vars` has been deprecated; '
+                      'use `drop` instead',
+                      FutureWarning, stacklevel=2)
+        return self.drop(names)
 
     def groupby(self, group, squeeze=True):
         """Returns a GroupBy object for performing grouped operations.

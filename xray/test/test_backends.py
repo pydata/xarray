@@ -176,7 +176,7 @@ class DatasetIOTestCases(object):
         with self.roundtrip(original) as actual:
             self.assertDatasetIdentical(original, actual)
 
-        expected = original.drop_vars('foo')
+        expected = original.drop('foo')
         with self.roundtrip(expected) as actual:
             self.assertDatasetIdentical(expected, actual)
 
@@ -532,7 +532,7 @@ class NetCDF4DataTest(CFEncodedDataTest, TestCase):
                 self.assertNotIn('coordinates', ds['lat'].attrs)
                 self.assertNotIn('coordinates', ds['lon'].attrs)
 
-        modified = original.drop_vars('temp', 'precip')
+        modified = original.drop(['temp', 'precip'])
         with self.roundtrip(modified) as actual:
             self.assertDatasetIdentical(actual, modified)
         with create_tmp_file() as tmp_file:
@@ -603,5 +603,5 @@ class PydapTest(TestCase):
             # don't check attributes since pydap doesn't serialize them correctly
             # also skip the "bears" variable since the test DAP server incorrectly
             # concatenates it.
-            self.assertDatasetEqual(actual.drop_vars('bears'),
-                                    expected.drop_vars('bears'))
+            self.assertDatasetEqual(actual.drop('bears'),
+                                    expected.drop('bears'))

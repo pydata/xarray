@@ -643,6 +643,28 @@ class DataArray(AbstractArray, AttrAccessMixin):
         ds = self._dataset.squeeze(dim)
         return self._with_replaced_dataset(ds)
 
+    def drop(self, labels, dim=None):
+        """Drop coordinates or index labels from this DataArray.
+
+        Parameters
+        ----------
+        labels : str
+            Names of coordinate variables or index labels to drop.
+        dim : str, optional
+            Dimension along which to drop index labels. By default (if
+            ``dim is None``), drops coordinates rather than index labels.
+
+        Returns
+        -------
+        dropped : DataArray
+        """
+        if utils.is_scalar(labels):
+            labels = [labels]
+        if dim is None and self.name in labels:
+            raise ValueError('cannot drop this DataArray from itself')
+        ds = self._dataset.drop(labels, dim)
+        return self._with_replaced_dataset(ds)
+
     def dropna(self, dim, how='any', thresh=None):
         """Returns a new array with dropped labels for missing values along
         the provided dimension.
@@ -695,13 +717,8 @@ class DataArray(AbstractArray, AttrAccessMixin):
             summarized data and the indicated dimension(s) removed.
         """
         var = self.variable.reduce(func, dim, axis, keep_attrs, **kwargs)
-        drop = set(self.dims) - set(var.dims)
-        # remove all variables associated with any dropped dimensions
-        drop |= set(k for k, v in iteritems(self._dataset._variables)
-                    if any(dim in drop for dim in v.dims))
-        ds = self._dataset.drop_vars(*drop)
+        ds = self._dataset.drop(set(self.dims) - set(var.dims))
         ds[self.name] = var
-
         return self._with_replaced_dataset(ds)
 
     @classmethod
@@ -732,6 +749,7 @@ class DataArray(AbstractArray, AttrAccessMixin):
 
         The type of the returned object depends on the number of DataArray
         dimensions:
+
         * 1D -> `pandas.Series`
         * 2D -> `pandas.DataFrame`
         * 3D -> `pandas.Panel`

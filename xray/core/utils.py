@@ -192,17 +192,17 @@ def combine_pos_and_kw_args(pos_kwargs, kw_kwargs, func_name):
         return kw_kwargs
 
 
+_SCALAR_TYPES = (datetime.datetime, datetime.date, datetime.timedelta)
+
 def is_scalar(value):
-    """np.isscalar only work on primitive numeric types and (bizarrely)
+    """np.isscalar only works on primitive numeric types and (bizarrely)
     excludes 0-d ndarrays; this version does more comprehensive checks
     """
-    if np.isscalar(value):
-        return True
     if hasattr(value, 'ndim'):
         return value.ndim == 0
-    if isinstance(value, datetime.datetime) or value is None:
-        return True
-    return False
+    return (np.isscalar(value) or
+            isinstance(value, _SCALAR_TYPES) or
+            value is None)
 
 
 def dict_equiv(first, second, compat=equivalent):

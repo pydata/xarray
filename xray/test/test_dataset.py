@@ -377,9 +377,9 @@ class TestDataset(TestCase):
             one_coord.reset_coords('x')
 
         actual = all_coords.reset_coords('zzz', drop=True)
-        expected = all_coords.drop_vars('zzz')
+        expected = all_coords.drop('zzz')
         self.assertDatasetIdentical(expected, actual)
-        expected = two_coords.drop_vars('zzz')
+        expected = two_coords.drop('zzz')
         self.assertDatasetIdentical(expected, actual)
 
     def test_coords_to_dataset(self):
@@ -687,22 +687,44 @@ class TestDataset(TestCase):
         self.assertVariableEqual(v[:3, :2], v[range(3), range(2)])
         self.assertVariableEqual(v[:3, :2], v.loc[d1[:3], d2[:2]])
 
-    def test_drop_vars(self):
+    def test_drop_variables(self):
         data = create_test_data()
 
-        self.assertDatasetIdentical(data, data.drop_vars())
+        self.assertDatasetIdentical(data, data.drop([]))
 
         expected = Dataset(dict((k, data[k]) for k in data if k != 'time'))
-        actual = data.drop_vars('time')
+        actual = data.drop('time')
+        self.assertDatasetIdentical(expected, actual)
+        actual = data.drop(['time'])
         self.assertDatasetIdentical(expected, actual)
 
         expected = Dataset(dict((k, data[k]) for
                                 k in ['dim2', 'dim3', 'time', 'numbers']))
-        actual = data.drop_vars('dim1')
+        actual = data.drop('dim1')
         self.assertDatasetIdentical(expected, actual)
 
         with self.assertRaisesRegexp(ValueError, 'cannot be found'):
-            data.drop_vars('not_found_here')
+            data.drop('not_found_here')
+
+    def test_drop_index_labels(self):
+        data = Dataset({'A': (['x', 'y'], np.random.randn(2, 3)),
+                        'x': ['a', 'b']})
+
+        actual = data.drop(1, 'y')
+        expected = data.isel(y=[0, 2])
+        self.assertDatasetIdentical(expected, actual)
+
+        actual = data.drop(['a'], 'x')
+        expected = data.isel(x=[1])
+        self.assertDatasetIdentical(expected, actual)
+
+        actual = data.drop(['a', 'b'], 'x')
+        expected = data.isel(x=slice(0, 0))
+        self.assertDatasetIdentical(expected, actual)
+
+        with self.assertRaises(ValueError):
+            # not contained in axis
+            data.drop(['c'], dim='x')
 
     def test_copy(self):
         data = create_test_data()
@@ -1510,7 +1532,7 @@ class TestDataset(TestCase):
                                     data.mean(keep_attrs=True))
 
         self.assertDatasetIdentical(data.apply(lambda x: x, keep_attrs=True),
-                                    data.drop_vars('time'))
+                                    data.drop('time'))
 
         def scale(x, multiple=1):
             return multiple * x
@@ -1520,7 +1542,7 @@ class TestDataset(TestCase):
         self.assertDataArrayIdentical(actual['numbers'], data['numbers'])
 
         actual = data.apply(np.asarray)
-        expected = data.drop_vars('time') # time is not used on a data var
+        expected = data.drop('time') # time is not used on a data var
         self.assertDatasetEqual(expected, actual)
 
     def make_example_math_dataset(self):
