@@ -24,19 +24,22 @@ from .utils import Frozen, SortedKeysDict, ChainMap, maybe_wrap_array
 from .pycompat import iteritems, itervalues, basestring, OrderedDict
 
 
-def open_dataset(filename_or_obj, decode_cf=True, mask_and_scale=True,
-                 decode_times=True, concat_characters=True, decode_coords=True,
-                 group=None):
+def open_dataset(filename_or_obj, group=None, decode_cf=True,
+                 mask_and_scale=True, decode_times=True,
+                 concat_characters=True, decode_coords=True):
     """Load and decode a dataset from a file or file-like object.
 
     Parameters
     ----------
     filename_or_obj : str or file
-        Strings are intrepreted as a path to a netCDF file or an OpenDAP URL
+        Strings are interpreted as a path to a netCDF file or an OpenDAP URL
         and opened with python-netCDF4, unless the filename ends with .gz, in
         which case the file is gunzipped and opened with scipy.io.netcdf (only
         netCDF3 supported). File-like objects are opened with scipy.io.netcdf
         (only netCDF3 supported).
+    group : str, optional
+        Path to the netCDF4 group in the given file to open (only works for
+        netCDF4 files).
     decode_cf : bool, optional
         Whether to decode these variables, assuming they were saved according
         to CF conventions.
@@ -56,8 +59,6 @@ def open_dataset(filename_or_obj, decode_cf=True, mask_and_scale=True,
     decode_coords : bool, optional
         If True, decode the 'coordinates' attribute to identify coordinates in
         the resulting dataset.
-    group : str, optional
-        NetCDF4 group in the given file to open (only works for netCDF4).
 
     Returns
     -------
@@ -80,7 +81,10 @@ def open_dataset(filename_or_obj, decode_cf=True, mask_and_scale=True,
                 else:
                     raise
         else:
-            store = backends.NetCDF4DataStore(filename_or_obj, group=group)
+            try:
+                store = backends.NetCDF4DataStore(filename_or_obj, group=group)
+            except ImportError:
+                store = backends.ScipyDataStore(filename_or_obj)
     else:
         # assume filename_or_obj is a file-like object
         store = backends.ScipyDataStore(filename_or_obj)
@@ -869,23 +873,81 @@ class Dataset(Mapping, ImplementsDatasetReduce, AttrAccessMixin):
         store.store(variables, attrs)
         store.sync()
 
-    def to_netcdf(self, filepath, **kwdargs):
-        """Dump dataset contents to a location on disk using the netCDF4
-        package.
+    def to_netcdf(self, path=None, mode='w', format=None, group=None):
+        """Write dataset contents to a netCDF file.
+
+        Parameters
+        ----------
+        path : str, optional
+            Path to which to save this dataset. If no path is provided, this
+            function returns the resulting netCDF file as a bytes object; in
+            this case, we need to use scipy.io.netcdf, which does not support
+            netCDF version 4 (the default format becomes NETCDF3_64BIT).
+        mode : {'w', 'a'}, optional
+            Write ('w') or append ('a') mode. If mode='w', any existing file at
+            this location will be overwritten.
+        format : {'NETCDF4', 'NETCDF4_CLASSIC', 'NETCDF3_64BIT',
+                  'NETCDF3_CLASSIC'}, optional
+            File format for the resulting netCDF file:
+
+            * NETCDF4: Data is stored in an HDF5 file, using netCDF4 API
+              features.
+            * NETCDF4_CLASSIC: Data is stored in an HDF5 file, using only
+              netCDF 3 compatibile API features.
+            * NETCDF3_64BIT: 64-bit offset version of the netCDF 3 file format,
+              which fully supports 2+ GB files, but is only compatible with
+              clients linked against netCDF version 3.6.0 or later.
+            * NETCDF3_CLASSIC: The classic netCDF 3 file format. It does not
+              handle 2+ GB files very well.
+
+            All formats are supported by the netCDF4-python library.
+            scipy.io.netcdf only supports the last two formats.
+
+            The default format is NETCDF4 if you are saving a file to disk and
+            have the netCDF4-python library available. Otherwise, xray falls
+            back to using scipy to write netCDF files and defaults to the
+            NETCDF3_64BIT format (scipy does not support netCDF4).
+        group : str, optional
+            Path to the netCDF4 group in the given file to open (only works for
+            format='NETCDF4'). The group(s) will be created if necessary.
         """
-        with backends.NetCDF4DataStore(filepath, mode='w', **kwdargs) as store:
+        if path is None:
+            fobj = BytesIO()
+            return self._to_scipy_netcdf(fobj, mode, format, group)
+
+        try:
+            self._to_netcdf4(path, mode, format, group)
+        except ImportError:
+            self._to_scipy_netcdf(path, mode, format, group)
+
+    def _to_netcdf4(self, path, mode, format, group):
+        if format is None:
+            format = 'NETCDF4'
+        with backends.NetCDF4DataStore(path, mode=mode, format=format,
+                                       group=group) as store:
             self.dump_to_store(store)
 
-    dump = to_netcdf
+    def _to_scipy_netcdf(self, path, mode, format, group):
+        if group is not None:
+            raise ValueError('cannot save to a group with the '
+                             'scipy.io.netcdf backend')
 
-    def dumps(self, **kwargs):
-        """Serialize dataset contents to a string. The serialization creates an
-        in memory netcdf version 3 string using the scipy.io.netcdf package.
-        """
-        fobj = BytesIO()
-        store = backends.ScipyDataStore(fobj, mode='w', **kwargs)
-        self.dump_to_store(store)
-        return fobj.getvalue()
+        if format is None or format == 'NETCDF3_64BIT':
+            version = 2
+        elif format == 'NETCDF3_CLASSIC':
+            version = 1
+        else:
+            raise ValueError('invalid format for scipy.io.netcdf backend: %r'
+                             % format)
+
+        with backends.ScipyDataStore(path, mode='w', version=version) as store:
+            self.dump_to_store(store)
+
+            if isinstance(path, BytesIO):
+                return path.getvalue()
+
+    dump = utils.function_alias(to_netcdf, 'dumps')
+    dumps = utils.function_alias(to_netcdf, 'dumps')
 
     def __repr__(self):
         return formatting.dataset_repr(self)

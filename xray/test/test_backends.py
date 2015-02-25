@@ -12,7 +12,8 @@ import pandas as pd
 from xray import Dataset, open_dataset, backends, decode_cf
 from xray.core.pycompat import iteritems, PY3
 
-from . import TestCase, requires_scipy, requires_netCDF4, requires_pydap
+from . import (TestCase, requires_scipy, requires_netCDF4, requires_pydap,
+               has_netCDF4)
 from .test_dataset import create_test_data
 
 try:
@@ -39,7 +40,7 @@ def create_encoded_masked_and_scaled_data():
     return Dataset({'x': ('t', [-1, -1, 0, 1, 2], attributes)})
 
 
-class CastsUnicodeToBytes(object):
+class Only32BitTypes(object):
     pass
 
 
@@ -51,10 +52,6 @@ class DatasetIOTestCases(object):
         raise NotImplementedError
 
     def test_zero_dimensional_variable(self):
-        if PY3 and type(self) is ScipyDataTest:
-            # see the fix: https://github.com/scipy/scipy/pull/3617
-            raise unittest.SkipTest('scipy.io.netcdf is broken on Python 3')
-
         expected = create_test_data()
         expected['float_var'] = ([], 1.0e9, {'units': 'units of awesome'})
         expected['string_var'] = ([], np.array('foobar', dtype='S'))
@@ -117,11 +114,8 @@ class DatasetIOTestCases(object):
                             'letters_nans': ('b', letters_nans),
                             'all_nans': ('c', all_nans),
                             'nan': ([], np.nan)})
-        if PY3 and type(self) is ScipyDataTest:
-            # see the note under test_zero_dimensional_variable
-            del original['nan']
         expected = original.copy(deep=True)
-        if type(self) in [NetCDF3ViaNetCDF4DataTest, ScipyDataTest]:
+        if isinstance(self, Only32BitTypes):
             # for netCDF3 tests, expect the results to come back as characters
             expected['letters_nans'] = expected['letters_nans'].astype('S')
             expected['letters'] = expected['letters'].astype('S')
@@ -140,7 +134,7 @@ class DatasetIOTestCases(object):
     def test_roundtrip_string_data(self):
         expected = Dataset({'x': ('t', ['ab', 'cdef'])})
         with self.roundtrip(expected) as actual:
-            if isinstance(self, CastsUnicodeToBytes):
+            if isinstance(self, Only32BitTypes):
                 expected['x'] = expected['x'].astype('S')
             self.assertDatasetIdentical(expected, actual)
 
@@ -229,7 +223,7 @@ class CFEncodedDataTest(DatasetIOTestCases):
             self.assertDatasetIdentical(expected, actual)
 
         original = Dataset({'x': ('t', values, {}, {'_FillValue': '\x00'})})
-        if not isinstance(self, CastsUnicodeToBytes):
+        if not isinstance(self, Only32BitTypes):
             # these stores can save unicode strings
             expected = original.copy(deep=True)
         if type(self) is NetCDF4DataTest:
@@ -284,7 +278,7 @@ class NetCDF4DataTest(CFEncodedDataTest, TestCase):
     @contextlib.contextmanager
     def roundtrip(self, data, **kwargs):
         with create_tmp_file() as tmp_file:
-            data.dump(tmp_file)
+            data.to_netcdf(tmp_file)
             with open_dataset(tmp_file, **kwargs) as ds:
                 yield ds
 
@@ -356,6 +350,17 @@ class NetCDF4DataTest(CFEncodedDataTest, TestCase):
             for group in 'foo/bar', '/foo/bar', 'foo/bar/', '/foo/bar/':
                 with open_dataset(tmp_file, group=group) as actual:
                     self.assertVariableEqual(actual['x'], expected['x'])
+
+    def test_write_groups(self):
+        data1 = create_test_data()
+        data2 = data1 * 2
+        with create_tmp_file() as tmp_file:
+            data1.to_netcdf(tmp_file, group='data/1')
+            data2.to_netcdf(tmp_file, group='data/2', mode='a')
+            actual1 = open_dataset(tmp_file, group='data/1')
+            actual2 = open_dataset(tmp_file, group='data/2')
+            self.assertDatasetIdentical(data1, actual1)
+            self.assertDatasetIdentical(data2, actual2)
 
     def test_dump_and_open_encodings(self):
         # Create a netCDF file with explicit time units
@@ -504,7 +509,7 @@ class NetCDF4DataTest(CFEncodedDataTest, TestCase):
             xray_dataset = open_dataset(tmp_file)
 
             with create_tmp_file() as tmp_file2:
-                xray_dataset.dump(tmp_file2)
+                xray_dataset.to_netcdf(tmp_file2)
 
                 with nc4.Dataset(tmp_file2, 'r') as ds:
                     self.assertEqual(ds.variables['time'].getncattr('units'), units)
@@ -538,9 +543,8 @@ class NetCDF4DataTest(CFEncodedDataTest, TestCase):
                 self.assertNotIn('coordinates', ds['lon'].attrs)
 
 
-@requires_netCDF4
 @requires_scipy
-class ScipyDataTest(CFEncodedDataTest, CastsUnicodeToBytes, TestCase):
+class ScipyInMemoryDataTest(CFEncodedDataTest, Only32BitTypes, TestCase):
     @contextlib.contextmanager
     def create_store(self):
         fobj = BytesIO()
@@ -548,13 +552,33 @@ class ScipyDataTest(CFEncodedDataTest, CastsUnicodeToBytes, TestCase):
 
     @contextlib.contextmanager
     def roundtrip(self, data, **kwargs):
-        serialized = data.dumps()
+        serialized = data.to_netcdf()
         with open_dataset(BytesIO(serialized), **kwargs) as ds:
             yield ds
 
 
+@requires_scipy
+class ScipyOnDiskDataTest(CFEncodedDataTest, Only32BitTypes, TestCase):
+    @contextlib.contextmanager
+    def create_store(self):
+        with create_tmp_file() as tmp_file:
+            yield backends.ScipyDataStore(tmp_file, mode='w')
+
+    @contextlib.contextmanager
+    def roundtrip(self, data, **kwargs):
+        if has_netCDF4:
+            # this test is redundant with NetCDF4DataTest, but will fail
+            # because it assumes only 32-bit types are available
+            self.skipTest('only valid if netCDF4 is not installed')
+
+        with create_tmp_file() as tmp_file:
+            serialized = data.to_netcdf(tmp_file)
+            with open_dataset(tmp_file, **kwargs) as ds:
+                yield ds
+
+
 @requires_netCDF4
-class NetCDF3ViaNetCDF4DataTest(CFEncodedDataTest, CastsUnicodeToBytes, TestCase):
+class NetCDF3ViaNetCDF4DataTest(CFEncodedDataTest, Only32BitTypes, TestCase):
     @contextlib.contextmanager
     def create_store(self):
         with create_tmp_file() as tmp_file:
@@ -564,7 +588,7 @@ class NetCDF3ViaNetCDF4DataTest(CFEncodedDataTest, CastsUnicodeToBytes, TestCase
     @contextlib.contextmanager
     def roundtrip(self, data, **kwargs):
         with create_tmp_file() as tmp_file:
-            data.dump(tmp_file, format='NETCDF3_CLASSIC')
+            data.to_netcdf(tmp_file, format='NETCDF3_CLASSIC')
             with open_dataset(tmp_file, **kwargs) as ds:
                 yield ds
 
@@ -579,5 +603,5 @@ class PydapTest(TestCase):
             # don't check attributes since pydap doesn't serialize them correctly
             # also skip the "bears" variable since the test DAP server incorrectly
             # concatenates it.
-            self.assertDatasetEqual(actual.unselect('bears'),
-                                    expected.unselect('bears'))
+            self.assertDatasetEqual(actual.drop_vars('bears'),
+                                    expected.drop_vars('bears'))

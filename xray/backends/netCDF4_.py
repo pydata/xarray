@@ -54,7 +54,7 @@ def _nc4_values_and_dtype(var):
     return var, dtype
 
 
-def _nc4_group(ds, group):
+def _nc4_group(ds, group, mode):
     if group in set([None, '', '/']):
         # use the root group
         return ds
@@ -68,8 +68,11 @@ def _nc4_group(ds, group):
             try:
                 ds = ds.groups[key]
             except KeyError as e:
-                # wrap error to provide slightly more helpful message
-                raise IOError('group not found: %s' % key, e)
+                if mode != 'r':
+                    ds = ds.createGroup(key)
+                else:
+                    # wrap error to provide slightly more helpful message
+                    raise IOError('group not found: %s' % key, e)
         return ds
 
 
@@ -91,7 +94,7 @@ class NetCDF4DataStore(AbstractWritableDataStore):
         ds = nc4.Dataset(filename, mode=mode, clobber=clobber,
                          diskless=diskless, persist=persist,
                          format=format)
-        self.ds = _nc4_group(ds, group)
+        self.ds = _nc4_group(ds, group, mode)
         self.format = format
         self._filename = filename
 
