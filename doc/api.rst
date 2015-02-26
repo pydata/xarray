@@ -77,6 +77,7 @@ Comparisons
 
    Dataset.equals
    Dataset.identical
+   Dataset.broadcast_equals
 
 Indexing
 --------
@@ -236,6 +237,7 @@ Comparisons
 
    DataArray.equals
    DataArray.identical
+   DataArray.broadcast_equals
 
 IO / Conversion
 ===============

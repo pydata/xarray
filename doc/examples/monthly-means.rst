@@ -1,3 +1,5 @@
+.. _monthly means example:
+
 Calculating Seasonal Averages from Timeseries of Monthly Means
 ==============================================================
 
