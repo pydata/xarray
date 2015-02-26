@@ -116,12 +116,13 @@ Enhancements
 - Consolidated the functionality of ``dumps`` (writing a dataset to a netCDF3
   bytestring) into :py:meth:`~xray.Dataset.to_netcdf` (:issue:`333`).
 - :py:meth:`~xray.Dataset.to_netcdf` now supports writing to groups in netCDF4
-  files (:issue:`333`). It also now has a full docstring -- you should read it!
+  files (:issue:`333`). It also finally has a full docstring -- you should read
+  it!
 - :py:func:`~xray.open_dataset` and :py:meth:`~xray.Dataset.to_netcdf` now
   work on netCDF4 files when netcdf4-python is not installed as long as scipy
   is available (:issue:`333`).
-- The new :py:meth:`xray.Dataset.drop <Dataset.drop>` and
-  :py:meth:`xray.DataArray.drop <DataArray.drop>` methods makes it easy to drop
+- The new :py:meth:`Dataset.drop <xray.Dataset.drop>` and
+  :py:meth:`DataArray.drop <xray.DataArray.drop>` methods makes it easy to drop
   explicitly listed variables or index labels:
 
   .. ipython:: python
@@ -134,13 +135,13 @@ Enhancements
       arr = xray.DataArray([1, 2, 3], coords=[('x', list('abc'))])
       arr.drop(['a', 'c'], dim='x')
 
-- The :py:meth:`~xray.Dataset.broadcast_equals` has been added to correspond to
+- :py:meth:`~xray.Dataset.broadcast_equals` has been added to correspond to
   the new ``compat`` option.
 - Long attributes are now truncated at 500 characters when printing a dataset
   (:issue:`337`). This should make things more convenient for working with
   datasets interactively.
-- Added a new `documentation example <examples/monthly-means>`_ on calculating
-  properly weighted seasonal means. Thanks Joe Hamman!
+- Added a new documentation example, :ref:`monthly means example`. Thanks Joe
+  Hamman!
 
 Bug fixes
 ~~~~~~~~~
