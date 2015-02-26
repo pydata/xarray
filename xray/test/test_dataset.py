@@ -103,6 +103,10 @@ class TestDataset(TestCase):
         print(actual)
         self.assertEqual(expected, actual)
 
+        # verify long attributes are truncated
+        data = Dataset(attrs={'foo': 'bar' * 1000})
+        self.assertTrue(len(repr(data)) < 1000)
+
     def test_constructor(self):
         x1 = ('x', 2 * np.arange(100))
         x2 = ('x', np.arange(1000))

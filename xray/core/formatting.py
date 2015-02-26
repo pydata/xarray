@@ -143,9 +143,16 @@ def summarize_coord(name, var, col_width):
     return _summarize_var_or_coord(name, var, col_width, show_values, marker)
 
 
+def _maybe_truncate(obj, maxlen=500):
+    s = str(obj)
+    if len(s) > maxlen:
+        s = s[:(maxlen - 3)] + '...'
+    return s
+
+
 def summarize_attr(key, value, col_width=None):
     # ignore col_width for now to more clearly distinguish attributes
-    return '    %s: %s' % (key, value)
+    return '    %s: %s' % (key, _maybe_truncate(value))
 
 
 EMPTY_REPR = '    *empty*'

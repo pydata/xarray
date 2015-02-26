@@ -136,7 +136,11 @@ Enhancements
 
 - The :py:meth:`~xray.Dataset.broadcast_equals` has been added to correspond to
   the new ``compat`` option.
-- TODO: added a documentation example by Joe Hamman.
+- Long attributes are now truncated at 500 characters when printing a dataset
+  (:issue:`337`). This should make things more convenient for working with
+  datasets interactively.
+- Added a new `documentation example <examples/monthly-means>`_ on calculating
+  properly weighted seasonal means. Thanks Joe Hamman!
 
 Bug fixes
 ~~~~~~~~~
