@@ -444,6 +444,24 @@ class NetCDF4DataTest(CFEncodedDataTest, TestCase):
                 with open_dataset(tmp_file, **kwargs) as actual:
                     self.assertDatasetIdentical(expected, actual)
 
+    def test_roundtrip_endian(self):
+        ds = Dataset({'x': np.arange(3, 10, dtype='>i2'),
+                      'y': np.arange(3, 20, dtype='<i4'),
+                      'z': np.arange(3, 30, dtype='=i8'),
+                      'w': ('x', np.arange(3, 10, dtype=np.float))})
+
+        with self.roundtrip(ds) as actual:
+            # technically these datasets are slightly different,
+            # one hold mixed endian data (ds) the other should be
+            # all big endian (actual).  assertDatasetIdentical
+            # should still pass though.
+            self.assertDatasetIdentical(ds, actual)
+
+        ds['z'].encoding['endian'] = 'big'
+        with self.assertRaises(NotImplementedError):
+            with self.roundtrip(ds) as actual:
+                pass
+
     def test_roundtrip_character_array(self):
         with create_tmp_file() as tmp_file:
             values = np.array([['a', 'b', 'c'], ['d', 'e', 'f']], dtype='S')
