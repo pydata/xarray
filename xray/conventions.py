@@ -130,7 +130,7 @@ def decode_cf_datetime(num_dates, units, calendar=None):
         delta = _netcdf_to_numpy_timeunit(delta)
         ref_date = pd.Timestamp(ref_date)
 
-        dates = (pd.to_timedelta(num_dates.ravel(), delta) + ref_date).values
+        dates = (pd.to_timedelta(flat_num_dates, delta) + ref_date).values
     # ValueError is raised by pd.Timestamp for non-ISO timestamp strings,
     # in which case we fall back to using netCDF4
     except (OutOfBoundsDatetime, ValueError, OverflowError):
