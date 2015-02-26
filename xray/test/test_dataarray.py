@@ -264,6 +264,18 @@ class TestDataArray(TestCase):
         self.assertFalse(expected.equals(actual))
         self.assertFalse(expected.identical(actual))
 
+    def test_broadcast_equals(self):
+        a = DataArray([0, 0], {'y': 0}, dims='x')
+        b = DataArray([0, 0], {'y': ('x', [0, 0])}, dims='x')
+        self.assertTrue(a.broadcast_equals(b))
+        self.assertTrue(b.broadcast_equals(a))
+        self.assertFalse(a.equals(b))
+        self.assertFalse(a.identical(b))
+
+        c = DataArray([0], coords={'x': 0}, dims='y')
+        self.assertFalse(a.broadcast_equals(c))
+        self.assertFalse(c.broadcast_equals(a))
+
     def test_getitem(self):
         # strings pull out dataarrays
         self.assertDataArrayIdentical(self.dv, self.ds['foo'])

@@ -825,6 +825,21 @@ class DataArray(AbstractArray, AttrAccessMixin):
         return (utils.dict_equiv(self.coords, other.coords, compat=compat)
                 and compat(self, other))
 
+    def broadcast_equals(self, other):
+        """Two DataArrays are broadcast equal if they are equal after
+        broadcasting them against each other such that they have the same
+        dimensions.
+
+        See Also
+        --------
+        DataArray.equals
+        DataArray.identical
+        """
+        try:
+            return self._all_compat(other, 'broadcast_equals')
+        except (TypeError, AttributeError):
+            return False
+
     def equals(self, other):
         """True if two DataArrays have the same dimensions, coordinates and
         values; otherwise False.
@@ -837,6 +852,7 @@ class DataArray(AbstractArray, AttrAccessMixin):
 
         See Also
         --------
+        DataArray.broadcast_equals
         DataArray.identical
         """
         try:
@@ -850,6 +866,7 @@ class DataArray(AbstractArray, AttrAccessMixin):
 
         See Also
         --------
+        DataArray.broadcast_equals
         DataArray.equal
         """
         try:
