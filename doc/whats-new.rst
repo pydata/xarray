@@ -62,6 +62,20 @@ Breaking changes
   These operations are lightning fast thanks to integration with bottleneck_,
   which is a new optional dependency for xray (numpy is used if bottleneck is
   not installed).
+- Scalar coordinates no longer conflict with constant arrays with the same
+  value (e.g., in arithmetic, merging datasets and concat), even if they have
+  different shape (:issue:`243`). For example, the coordinate ``c`` here
+  persists through arithmetic, even though it has different shapes on each
+  DataArray:
+
+  .. ipython:: python
+
+      a = xray.DataArray([1, 2], coords={'c': 0}, dims='x')
+      b = xray.DataArray([1, 2], coords={'c': ('x', [0, 0])}, dims='x')
+      (a + b).coords
+
+  This functionality can be controlled through the ``compat`` option, which
+  has also been added to the :py:class:`~xray.Dataset` constructor.
 - We have updated our use of the terms of "coordinates" and "variables". What
   were known in previous versions of xray as "coordinates" and "variables" are
   now referred to throughout the documentation as "coordinate variables" and
@@ -80,24 +94,35 @@ Breaking changes
       ds['t.season']
 
   Previously, it returned numbered seasons 1 through 4.
-- TODO: ``broadcast_equals`` method? ``drop`` method?
 
 .. _bottleneck: https://github.com/kwgoodman/bottleneck
 
 Enhancements
 ~~~~~~~~~~~~
 
-- Support for reindexing with a fill method. This will especially useful with
-  pandas 0.16, which will support ``method='nearest'``.
+- Support for :py:meth:`~xray.Dataset.reindex` with a fill method. This
+  provides a useful shortcut for upsampling:
+
+  .. ipython:: python
+
+      data = xray.DataArray([1, 2, 3], dims='x')
+      data.reindex(x=[0.5, 1, 1.5, 2, 2.5], method='pad')
+
+  This will be especially useful once pandas 0.16 is released, at which point
+  xray will immediately support reindexing with
+  `method='nearest' <https://github.com/pydata/pandas/pull/9258>`_.
 - Use functions that return generic ndarrays with DataArray.groupby.apply and
   Dataset.apply (:issue:`327` and :issue:`329`). Thanks Jeff Gerard!
-- Consolidated the functionality of `dumps` (writing a dataset to a netCDF file
-  as a bytestring) into the `to_netcdf` method (:issue:`333`).
-- `to_netcdf` now supports writing to groups in netCDF4 files (:issue:`333`).
-- `to_netcdf` now works when netcdf4-python is not installed as long as scipy
+- Consolidated the functionality of ``dumps`` (writing a dataset to a netCDF3
+  bytestring) into :py:meth:`~xray.Dataset.to_netcdf` (:issue:`333`).
+- :py:meth:`~xray.Dataset.to_netcdf` now supports writing to groups in netCDF4
+  files (:issue:`333`). It also now has a full docstring -- you should read it!
+- :py:func:`~xray.open_dataset` and :py:meth:`~xray.Dataset.to_netcdf` now
+  work on netCDF4 files when netcdf4-python is not installed as long as scipy
   is available (:issue:`333`).
-- The new :py:meth:`~xray.Dataset.drop` method makes it easy to drop explicitly
-  listed variables or index labels:
+- The new :py:meth:`xray.Dataset.drop <Dataset.drop>` and
+  :py:meth:`xray.DataArray.drop <DataArray.drop>` methods makes it easy to drop
+  explicitly listed variables or index labels:
 
   .. ipython:: python
 
@@ -109,6 +134,8 @@ Enhancements
       arr = xray.DataArray([1, 2, 3], coords=[('x', list('abc'))])
       arr.drop(['a', 'c'], dim='x')
 
+- The :py:meth:`~xray.Dataset.broadcast_equals` has been added to correspond to
+  the new ``compat`` option.
 - TODO: added a documentation example by Joe Hamman.
 
 Bug fixes

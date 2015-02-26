@@ -97,6 +97,11 @@ class DatasetIOTestCases(object):
         with assert_loads(['var1', 'dim1', 'dim2']) as ds:
             ds['var1'].load_data()
 
+        # verify we can read data even after closing the file
+        with self.roundtrip(expected) as ds:
+            actual = ds.load_data()
+        self.assertDatasetAllClose(expected, actual)
+
     def test_roundtrip_None_variable(self):
         expected = Dataset({None: (('x', 'y'), [[0, 1], [2, 3]])})
         with self.roundtrip(expected) as actual:

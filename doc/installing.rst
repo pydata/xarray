@@ -19,7 +19,8 @@ Optional dependencies:
   internal operations with xray data structures
 
 Before you install xray, be sure you have the required dependencies (numpy and
-pandas) installed. The easiest way to do so is to use the
+pandas) installed. xray is a pure Python package, but its dependencies are not.
+The easiest way to get them installed is to use the
 `Anaconda python distribution <https://store.continuum.io/cshop/anaconda/>`__.
 
 To install xray, use pip::

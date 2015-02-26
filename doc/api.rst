@@ -65,7 +65,7 @@ Dataset contents
    Dataset.copy
    Dataset.merge
    Dataset.rename
-   Dataset.drop_vars
+   Dataset.drop
    Dataset.set_coords
    Dataset.reset_coords
 
@@ -164,6 +164,7 @@ DataArray contents
    :toctree: generated/
 
    DataArray.rename
+   DataArray.drop
    DataArray.reset_coords
    DataArray.copy
 
