@@ -1,5 +1,5 @@
-Working with weather data
-=========================
+Toy weather data
+================
 
 Here is an example of how to easily manipulate a toy weather dataset using
 xray and other recommended Python libraries:
