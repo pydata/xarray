@@ -138,7 +138,7 @@ Enhancements
 - :py:meth:`~xray.Dataset.broadcast_equals` has been added to correspond to
   the new ``compat`` option.
 - Long attributes are now truncated at 500 characters when printing a dataset
-  (:issue:`337`). This should make things more convenient for working with
+  (:issue:`338`). This should make things more convenient for working with
   datasets interactively.
 - Added a new documentation example, :ref:`monthly means example`. Thanks Joe
   Hamman!
