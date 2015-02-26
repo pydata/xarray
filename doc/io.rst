@@ -73,31 +73,19 @@ We can save a Dataset to disk using the
 
 .. use verbatim because readthedocs doesn't have netCDF4 support
 
-.. ipython::
-    :verbatim:
+.. ipython:: python
 
-    In [1]: ds.to_netcdf('saved_on_disk.nc')
+    ds.to_netcdf('saved_on_disk.nc')
 
 By default, the file is saved as netCDF4.
 
 We can load netCDF files to create a new Dataset using the
 :py:func:`~xray.open_dataset` function:
 
-.. ipython::
-    :verbatim:
+.. ipython:: python
 
-    In [1]: ds_disk = xray.open_dataset('saved_on_disk.nc')
-
-    In [2]: ds_disk
-    Out[2]:
-    <xray.Dataset>
-    Dimensions:  (x: 4, y: 5)
-    Index Coordinates:
-        x        (x) int64 10 20 30 40
-        y        (y) datetime64[ns] 2000-01-01 2000-01-02 2000-01-03 2000-01-04 2000-01-05
-    Variables:
-        foo      (x, y) float64 0.127 0.9667 0.2605 0.8972 0.3767 0.3362 0.4514 0.8403 0.1231 ...
-        z        (x) |S1 'a' 'b' 'c' 'd'
+    ds_disk = xray.open_dataset('saved_on_disk.nc')
+    ds_disk
 
 A dataset can also be loaded from a specific group within a netCDF
 file. To load from a group, pass a ``group`` keyword argument to the
@@ -114,24 +102,22 @@ section below.
 
     xray's lazy loading of remote or on-disk datasets is often but not always
     desirable. Before performing computationally intense operations, it is
-    usually a good idea to load a dataset entirely into memory by using the
-    :py:meth:`~xray.Dataset.load_data` method:
-
-    .. ipython::
-        :verbatim:
-
-        In [1]: ds_disk.load_data()
+    usually a good idea to load a dataset entirely into memory by invoking the
+    :py:meth:`~xray.Dataset.load_data` method.
 
 Datasets have a :py:meth:`~xray.Dataset.close` method to close the associated
 netCDF file. However, it's often cleaner to use a ``with`` statement:
 
-.. ipython::
-    :verbatim:
+.. ipython:: python
+    :suppress:
+
+    ds_disk.close()
+
+.. ipython:: python
 
     # this automatically closes the dataset after use
-    In [100]: with xray.open_dataset('saved_on_disk.nc') as ds:
-    ...           print(ds.keys())
-    Out[100]: [u'foo', u'y', u'x', u'z']
+    with xray.open_dataset('saved_on_disk.nc') as ds:
+        print(ds.keys())
 
 .. note::
 
@@ -203,7 +189,7 @@ __ http://iri.columbia.edu/
       * X        (X) float32 -125.0 -124.958 -124.917 -124.875 -124.833 -124.792 -124.75 ...
       * T        (T) float32 -779.5 -778.5 -777.5 -776.5 -775.5 -774.5 -773.5 -772.5 -771.5 ...
       * Y        (Y) float32 49.9167 49.875 49.8333 49.7917 49.75 49.7083 49.6667 49.625 ...
-    Variables:
+    Data variables:
         ppt      (T, Y, X) float64 ...
         tdmean   (T, Y, X) float64 ...
         tmax     (T, Y, X) float64 ...

@@ -109,7 +109,7 @@ This last line is roughly equivalent to the following::
 
     results = []
     for label, group in ds.groupby('letters'):
-        results.append(group - alt.sel(label))
+        results.append(group - alt.sel(x=label))
     xray.concat(results, dim='x')
 
 Squeezing

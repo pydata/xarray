@@ -70,8 +70,8 @@ necessary.
 
 .. _merge:
 
-Merge and ``Dataset.__init__``
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Merge
+~~~~~
 
 To combine variables and coordinates between multiple Datasets, you can use the
 :py:meth:`~xray.Dataset.merge` and :py:meth:`~xray.Dataset.update` methods.
@@ -102,8 +102,8 @@ used in the :py:class:`~xray.Dataset` constructor:
 
 .. _update:
 
-Update and ``__setitem__``
-~~~~~~~~~~~~~~~~~~~~~~~~~~
+Update
+~~~~~~
 
 In contrast, update modifies a dataset in-place without checking for conflicts,
 and will overwrite any existing variables with new values:
@@ -159,8 +159,8 @@ are constant along those new dimensions:
 
 .. ipython:: python
 
-    left = Dataset(coords={'x': 0})
-    right = Dataset({'x': [0, 0, 0]})
+    left = xray.Dataset(coords={'x': 0})
+    right = xray.Dataset({'x': [0, 0, 0]})
     left.broadcast_equals(right)
 
 Like pandas objects, two xray objects are still equal or identical if they have

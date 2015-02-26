@@ -2,9 +2,9 @@
 Quick overview
 ##############
 
-Here are some quick examples of what you can do with xray's
-:py:class:`~xray.DataArray` object. Everything is explained in much more
-detail in the rest of the documentation.
+Here are some quick examples of what you can do with :py:class:`xray.DataArray`
+objects. Everything is explained in much more detail in the rest of the
+documentation.
 
 To begin, import numpy, pandas and xray:
 
@@ -22,29 +22,27 @@ array or list, with optional *dimensions* and *coordinates*:
 
 .. ipython:: python
 
-   xray.DataArray(np.random.randn(2, 3))
-   xray.DataArray(np.random.randn(2, 3), [('x', ['a', 'b']), ('y', [-2, 0, 2])])
+    xray.DataArray(np.random.randn(2, 3))
+    data = xray.DataArray(np.random.randn(2, 3), [('x', ['a', 'b']), ('y', [-2, 0, 2])])
+    data
 
-You can also pass in pandas data structures directly:
+If you supply a pandas :py:class:`~pandas.Series` or
+:py:class:`~pandas.DataFrame`, metadata is copied directly:
 
 .. ipython:: python
 
-    df = pd.DataFrame(np.random.randn(2, 3), index=['a', 'b'], columns=[-2, 0, 2])
-    df.index.name = 'x'
-    df.columns.name = 'y'
-    foo = xray.DataArray(df, name='foo')
-    foo
+    xray.DataArray(pd.Series(range(3), index=list('abc'), name='foo'))
 
 Here are the key properties for a ``DataArray``:
 
 .. ipython:: python
 
     # like in pandas, values is a numpy array that you can modify in-place
-    foo.values
-    foo.dims
-    foo.coords['y']
+    data.values
+    data.dims
+    data.coords
     # you can use this dictionary to store arbitrary metadata
-    foo.attrs
+    data.attrs
 
 Indexing
 --------
@@ -55,16 +53,16 @@ pandas, because we borrow pandas' indexing machinery.
 .. ipython:: python
 
     # positional and by integer label, like numpy
-    foo[[0, 1]]
+    data[[0, 1]]
 
     # positional and by coordinate label, like pandas
-    foo.loc['a':'b']
+    data.loc['a':'b']
 
     # by dimension name and integer label
-    foo.isel(x=slice(2))
+    data.isel(x=slice(2))
 
     # by dimension name and coordinate label
-    foo.sel(x=['a', 'b'])
+    data.sel(x=['a', 'b'])
 
 Computation
 -----------
@@ -73,30 +71,43 @@ Data arrays work very similarly to numpy ndarrays:
 
 .. ipython:: python
 
-    foo + 10
-    np.sin(foo)
-    foo.T
-    foo.sum()
+    data + 10
+    np.sin(data)
+    data.T
+    data.sum()
 
 However, aggregation operations can use dimension names instead of axis
 numbers:
 
 .. ipython:: python
 
-    foo.mean(dim='x')
+    data.mean(dim='x')
 
-Arithmetic operations broadcast based on dimension name, so you don't need to
-insert dummy dimensions for alignment:
+Arithmetic operations broadcast based on dimension name. This means you don't
+need to insert dummy dimensions for alignment:
 
 .. ipython:: python
 
-    bar = xray.DataArray(np.random.randn(3), [foo.coords['y']])
-    zzz = xray.DataArray(np.random.randn(4), dims='z')
+    a = xray.DataArray(np.random.randn(3), [data.coords['y']])
+    b = xray.DataArray(np.random.randn(4), dims='z')
 
-    bar
-    zzz
+    a
+    b
 
-    bar + zzz
+    a + b
+
+It also means that in most cases you do not need to worry about the order of
+dimensions:
+
+.. ipython:: python
+
+    data - data.T
+
+Operations also align based on index labels:
+
+.. ipython:: python
+
+    data[:-1] - data[:1]
 
 GroupBy
 -------
@@ -105,10 +116,10 @@ xray supports grouped operations using a very similar API to pandas:
 
 .. ipython:: python
 
-    labels = xray.DataArray(['E', 'F', 'E'], [foo.coords['y']], name='labels')
+    labels = xray.DataArray(['E', 'F', 'E'], [data.coords['y']], name='labels')
     labels
-    foo.groupby(labels).mean('y')
-    foo.groupby(labels).apply(lambda x: x - x.min())
+    data.groupby(labels).mean('y')
+    data.groupby(labels).apply(lambda x: x - x.min())
 
 Convert to pandas
 -----------------
@@ -117,5 +128,26 @@ A key feature of xray is robust conversion to and from pandas objects:
 
 .. ipython:: python
 
-    foo.to_series()
-    foo.to_pandas()
+    data.to_series()
+    data.to_pandas()
+
+Datasets and NetCDF
+-------------------
+
+:py:class:`xray.Dataset` is a dict-like container of ``DataArray`` objects that share
+index labels and dimensions. It looks a lot like a netCDF file:
+
+.. ipython:: python
+
+    ds = data.to_dataset()
+    ds
+
+You can do almost everything you can do with ``DataArray`` objects with
+``Dataset`` objects if you prefer to work with multiple variables at once.
+
+Datasets also let you easily read and write netCDF files:
+
+.. ipython:: python
+
+    ds.to_netcdf('example.nc')
+    xray.open_dataset('example.nc')
