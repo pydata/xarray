@@ -155,7 +155,7 @@ class TestDataset(TestCase):
         actual = Dataset({'a': a, 'b': b})
         self.assertDatasetIdentical(expected, actual)
 
-        # regression test for GH???
+        # regression test for GH346
         self.assertIsInstance(actual.variables['x'], Coordinate)
 
         # variable with different dimensions
@@ -195,8 +195,11 @@ class TestDataset(TestCase):
         expected = Dataset({'a': ('x', np.ones(2)),
                             'b': ('y', np.ones(3))},
                            {'c': (('x', 'y'), np.zeros((2, 3)))})
-        actual = Dataset({'a': original['a'][:, 0].drop('y'),
-                          'b': original['a'][0].drop('x')})
+        # use an OrderedDict to ensure test results are reproducible; otherwise
+        # the order of appearance of x and y matters for the order of
+        # dimensions in 'c'
+        actual = Dataset(OrderedDict([('a', original['a'][:, 0].drop('y')),
+                                      ('b', original['a'][0].drop('x'))]))
         self.assertDatasetIdentical(expected, actual)
 
         data = {'x': DataArray(0, coords={'y': 3}), 'y': ('z', [1, 1, 1])}
