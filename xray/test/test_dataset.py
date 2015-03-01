@@ -9,7 +9,7 @@ import numpy as np
 import pandas as pd
 
 from xray import (align, concat, conventions, backends, Dataset, DataArray,
-                  Variable)
+                  Variable, Coordinate)
 from xray.core import indexing, utils
 from xray.core.pycompat import iteritems, OrderedDict
 
@@ -155,13 +155,16 @@ class TestDataset(TestCase):
         actual = Dataset({'a': a, 'b': b})
         self.assertDatasetIdentical(expected, actual)
 
-        # var with different dimensions
+        # regression test for GH346
+        self.assertIsInstance(actual.variables['x'], Coordinate)
+
+        # variable with different dimensions
         c = ('y', [3, 4])
         expected2 = expected.merge({'c': c})
         actual = Dataset({'a': a, 'b': b, 'c': c})
         self.assertDatasetIdentical(expected2, actual)
 
-        # var that is only aligned against the aligned variables
+        # variable that is only aligned against the aligned variables
         d = ('x', [3, 2, 1])
         expected3 = expected.merge({'d': d})
         actual = Dataset({'a': a, 'b': b, 'd': d})
@@ -172,13 +175,31 @@ class TestDataset(TestCase):
             Dataset({'a': a, 'b': b, 'e': e})
 
     def test_constructor_compat(self):
-        data = {'x': DataArray(0, coords={'y': 1}), 'y': ('z', [1, 1, 1])}
+        data = OrderedDict([('x', DataArray(0, coords={'y': 1})),
+                            ('y', ('z', [1, 1, 1]))])
         with self.assertRaisesRegexp(ValueError, 'conflicting value'):
             Dataset(data, compat='equals')
         expected = Dataset({'x': 0}, {'y': ('z', [1, 1, 1])})
         actual = Dataset(data)
         self.assertDatasetIdentical(expected, actual)
         actual = Dataset(data, compat='broadcast_equals')
+        self.assertDatasetIdentical(expected, actual)
+
+        data = OrderedDict([('y', ('z', [1, 1, 1])),
+                            ('x', DataArray(0, coords={'y': 1}))])
+        actual = Dataset(data)
+        self.assertDatasetIdentical(expected, actual)
+
+        original = Dataset({'a': (('x', 'y'), np.ones((2, 3)))},
+                           {'c': (('x', 'y'), np.zeros((2, 3)))})
+        expected = Dataset({'a': ('x', np.ones(2)),
+                            'b': ('y', np.ones(3))},
+                           {'c': (('x', 'y'), np.zeros((2, 3)))})
+        # use an OrderedDict to ensure test results are reproducible; otherwise
+        # the order of appearance of x and y matters for the order of
+        # dimensions in 'c'
+        actual = Dataset(OrderedDict([('a', original['a'][:, 0].drop('y')),
+                                      ('b', original['a'][0].drop('x'))]))
         self.assertDatasetIdentical(expected, actual)
 
         data = {'x': DataArray(0, coords={'y': 3}), 'y': ('z', [1, 1, 1])}

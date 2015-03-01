@@ -53,26 +53,91 @@ def array_equiv(arr1, arr2):
     return ((arr1 == arr2) | (pd.isnull(arr1) & pd.isnull(arr2))).all()
 
 
-def as_shape(array, shape):
-    """Expand a numpy.ndarray to a new shape according to broadcasting rules
-    """
-    array = np.asarray(array)
-    if len(shape) < array.ndim:
-        raise ValueError('new shape must be greater than or equal to the '
-                         'number of array dimensions')
+def _maybe_view_as_subclass(original_array, new_array):
+    if type(original_array) is not type(new_array):
+        # if input was an ndarray subclass and subclasses were OK,
+        # then view the result as that subclass.
+        new_array = new_array.view(type=type(original_array))
+        # Since we have done something akin to a view from original_array, we
+        # should let the subclass finalize (if it has it implemented, i.e., is
+        # not None).
+        if new_array.__array_finalize__:
+            new_array.__array_finalize__(original_array)
+    return new_array
 
-    # based on numpy.lib.stride_tricks.broadcast_arrays
-    strides = [0] * (len(shape) - array.ndim) + list(array.strides)
-    for n, (new_size, old_size) in enumerate(zip(shape[-array.ndim:],
-                                                 array.shape)):
-        if new_size != old_size:
-            axis = array.ndim + n
-            if old_size != 1:
-                raise ValueError('shape mismatch: new shape differs from the '
-                                 'original shape on axis %r, but the original '
-                                 'shape is not 1 on that axis' % axis)
-            strides[axis] = 0
-    return np.lib.stride_tricks.as_strided(array, shape=shape, strides=strides)
+
+def as_strided(x, shape=None, strides=None, subok=False):
+    """ Make an ndarray from the given array with the given shape and strides.
+    """
+    # first convert input to array, possibly keeping subclass
+    x = np.array(x, copy=False, subok=subok)
+    interface = dict(x.__array_interface__)
+    if shape is not None:
+        interface['shape'] = tuple(shape)
+    if strides is not None:
+        interface['strides'] = tuple(strides)
+    array = np.asarray(DummyArray(interface, base=x))
+    # Make sure dtype is correct in case of custom dtype
+    if array.dtype.kind == 'V':
+        array.dtype = x.dtype
+    return _maybe_view_as_subclass(x, array)
+
+
+def _broadcast_to(array, shape, subok, readonly):
+    shape = tuple(shape) if np.iterable(shape) else (shape,)
+    array = np.array(array, copy=False, subok=subok)
+    if not shape and array.shape:
+        raise ValueError('cannot broadcast a non-scalar to a scalar array')
+    if any(size < 0 for size in shape):
+        raise ValueError('all elements of broadcast shape must be non-'
+                         'negative')
+    broadcast = np.nditer(
+        (array,), flags=['multi_index', 'zerosize_ok', 'refs_ok'],
+        op_flags=['readonly'], itershape=shape, order='C').itviews[0]
+    result = _maybe_view_as_subclass(array, broadcast)
+    if not readonly and array.flags.writeable:
+        result.flags.writeable = True
+    return result
+
+
+def broadcast_to(array, shape, subok=False):
+    """Broadcast an array to a new shape.
+
+    NOTE: I wrote this for numpy, where it should appear in numpy 1.10. Switch
+    to np.broadcast_to when numpy 1.10 is the lowest supported version.
+
+    Parameters
+    ----------
+    array : array_like
+        The array to broadcast.
+    shape : tuple
+        The shape of the desired array.
+    subok : bool, optional
+        If True, then sub-classes will be passed-through, otherwise
+        the returned array will be forced to be a base-class array (default).
+
+    Returns
+    -------
+    broadcast : array
+        A readonly view on the original array with the given shape. It is
+        typically not contiguous. Furthermore, more than one element of a
+        broadcasted array may refer to a single memory location.
+
+    Raises
+    ------
+    ValueError
+        If the array is not compatible with the new shape according to NumPy's
+        broadcasting rules.
+
+    Examples
+    --------
+    >>> x = np.array([1, 2, 3])
+    >>> np.broadcast_to(x, (3, 3))
+    array([[1, 2, 3],
+           [1, 2, 3],
+           [1, 2, 3]])
+    """
+    return _broadcast_to(array, shape, subok=subok, readonly=True)
 
 
 def safe_cast_to_index(array):

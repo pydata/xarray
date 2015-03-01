@@ -205,6 +205,18 @@ def _expand_variables(raw_variables, old_variables={}, compat='identical'):
     new_coord_names = set()
     variables = ChainMap(new_variables, old_variables)
 
+    def maybe_promote_or_replace(name, var):
+        existing_var = variables[name]
+        if name not in existing_var.dims:
+            if name in var.dims:
+                variables[name] = var
+            else:
+                common_dims = OrderedDict(zip(existing_var.dims,
+                                              existing_var.shape))
+                common_dims.update(zip(var.dims, var.shape))
+                variables[name] = existing_var.set_dims(common_dims)
+                new_coord_names.update(var.dims)
+
     def add_variable(name, var):
         var = _as_dataset_variable(name, var)
         if name not in variables:
@@ -216,11 +228,7 @@ def _expand_variables(raw_variables, old_variables={}, compat='identical'):
                                  'first value: %r\nsecond value: %r'
                                  % (name, variables[name], var))
             if compat == 'broadcast_equals':
-                common_dims = OrderedDict(zip(variables[name].dims,
-                                              variables[name].shape))
-                common_dims.update(zip(var.dims, var.shape))
-                variables[name] = variables[name].set_dims(common_dims)
-                new_coord_names.update(var.dims)
+                maybe_promote_or_replace(name, var)
 
     for name, var in iteritems(raw_variables):
         if hasattr(var, 'coords'):

@@ -568,7 +568,7 @@ class Variable(common.AbstractArray):
 
         self_dims = set(self.dims)
         exp_dims = tuple(d for d in dims if d not in self_dims) + self.dims
-        exp_data = utils.as_shape(self, [dims[d] for d in exp_dims])
+        exp_data = utils.broadcast_to(self, [dims[d] for d in exp_dims])
         expanded_var = Variable(exp_dims, exp_data, self._attrs,
                                 self._encoding, fastpath=True)
         return expanded_var.transpose(*dims)

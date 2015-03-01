@@ -33,7 +33,7 @@ class TestArrayEquiv(TestCase):
             utils.array_equiv(0, np.array(1, dtype=object)))
 
 
-class TestAsShape(TestCase):
+class TestBroadcastTo(TestCase):
     def test_expand(self):
         for array, shape in [
                 (np.arange(3), (3,)),
@@ -45,14 +45,14 @@ class TestAsShape(TestCase):
                 (np.empty((3, 4), order='F'), (2, 3, 4)),
                 ]:
             _, expected = np.broadcast_arrays(np.empty(shape), array)
-            actual = utils.as_shape(array, shape)
+            actual = utils.broadcast_to(array, shape)
             self.assertArrayEqual(expected, actual)
 
     def test_errors(self):
-        with self.assertRaisesRegexp(ValueError, 'shape must be greater'):
-            utils.as_shape(np.arange(3), ())
-        with self.assertRaisesRegexp(ValueError, 'shape mismatch'):
-            utils.as_shape(np.arange(3), (2,))
+        with self.assertRaises(ValueError):
+            utils.broadcast_to(np.arange(3), ())
+        with self.assertRaises(ValueError):
+            utils.broadcast_to(np.arange(3), (2,))
 
 
 class TestDictionaries(TestCase):

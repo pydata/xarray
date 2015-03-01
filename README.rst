@@ -107,5 +107,5 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 
-xray includes portions of pandas. The license for pandas is included in the
+xray includes portions of pandas and numpy. Their licenses are included in the
 licenses directory.

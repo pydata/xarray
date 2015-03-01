@@ -38,11 +38,8 @@ def is_trivial_index(var):
     # if the index is not a 1d integer array
     if var.ndim > 1 or not var.dtype.kind == 'i':
         return False
-    if isinstance(var, Coordinate):
-        arange = np.arange(var.size, dtype=var.dtype)
-        if np.any(var.values != arange):
-            return False
-    return True
+    arange = np.arange(var.size, dtype=var.dtype)
+    return np.all(var.values == arange)
 
 
 class AbstractDataStore(Mapping):
