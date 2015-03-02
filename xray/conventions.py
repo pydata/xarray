@@ -348,7 +348,7 @@ class DecodedCFDatetimeArray(utils.NDArrayMixin):
         # try to view their lazily decoded array.
         example_value = first_n_items(array, 1) or 0
         try:
-            decode_cf_datetime(example_value, units, calendar)
+            result = decode_cf_datetime(example_value, units, calendar)
         except Exception:
             calendar_msg = ('the default calendar' if calendar is None
                             else 'calendar %r' % calendar)
@@ -358,10 +358,12 @@ class DecodedCFDatetimeArray(utils.NDArrayMixin):
             if not PY3:
                 msg += ' Full traceback:\n' + traceback.format_exc()
             raise ValueError(msg)
+        else:
+            self._dtype = getattr(result, 'dtype', np.dtype('object'))
 
     @property
     def dtype(self):
-        return np.dtype('datetime64[ns]')
+        return self._dtype
 
     def __getitem__(self, key):
         return decode_cf_datetime(self.array[key], units=self.units,
