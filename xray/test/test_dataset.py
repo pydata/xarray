@@ -1497,6 +1497,12 @@ class TestDataset(TestCase):
         self.assertDatasetEqual(data1.mean(dim='dim1'),
                                 data2.mean(dim='dim1'))
 
+    def test_reduce_dtype_bool(self):
+        # regression test for GH342
+        expected = Dataset({'x': 1})
+        actual = Dataset({'x': True}).sum()
+        self.assertDatasetIdentical(expected, actual)
+
     def test_reduce_keep_attrs(self):
         data = create_test_data()
         _attrs = {'attr1': 'value1', 'attr2': 2929}
