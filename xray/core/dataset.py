@@ -1529,7 +1529,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, AttrAccessMixin):
             reduce_dims = [dim for dim in var.dims if dim in dims]
             if reduce_dims or not var.dims:
                 if name not in self.coords:
-                    if not numeric_only or var.dtype.kind in 'ifc':
+                    if not numeric_only or var.dtype.kind in 'ifcb':
                         if len(reduce_dims) == var.ndim:
                             # prefer to aggregate over axis=None rather than
                             # axis=(0, 1) if they will be equivalent, because
