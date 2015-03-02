@@ -137,12 +137,12 @@ def _get_virtual_variable(variables, key):
     if not isinstance(key, basestring):
         raise KeyError(key)
 
-    split_key = key.split('.')
+    split_key = key.split('.', 1)
     if len(split_key) != 2:
         raise KeyError(key)
 
-    ref_var_name, suffix = split_key
-    ref_var = variables[ref_var_name]
+    ref_name, var_name = split_key
+    ref_var = variables[ref_name]
     if ref_var.ndim == 1:
         date = ref_var.to_index()
     elif ref_var.ndim == 0:
@@ -150,14 +150,14 @@ def _get_virtual_variable(variables, key):
     else:
         raise KeyError(key)
 
-    if suffix == 'season':
+    if var_name == 'season':
         # TODO: move 'season' into pandas itself
         seasons = np.array(['DJF', 'MAM', 'JJA', 'SON'])
         month = date.month
         data = seasons[(month // 3) % 4]
     else:
-        data = getattr(date, suffix)
-    return ref_var_name, variable.Variable(ref_var.dims, data)
+        data = getattr(date, var_name)
+    return ref_name, var_name, variable.Variable(ref_var.dims, data)
 
 
 def _as_dataset_variable(name, var):
@@ -624,10 +624,11 @@ class Dataset(Mapping, ImplementsDatasetReduce, AttrAccessMixin):
             try:
                 variables[name] = self._variables[name]
             except KeyError:
-                ref_name, var = _get_virtual_variable(self._variables, name)
-                variables[name] = var
+                ref_name, var_name, var = _get_virtual_variable(
+                    self._variables, name)
+                variables[var_name] = var
                 if ref_name in self._coord_names:
-                    coord_names.add(name)
+                    coord_names.add(var_name)
 
         needed_dims = set()
         for v in variables.values():
@@ -647,7 +648,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, AttrAccessMixin):
         return self.copy(deep=False)
 
     def __deepcopy__(self, memo=None):
-        # memo does nothing but is required for compatability with
+        # memo does nothing but is required for compatibility with
         # copy.deepcopy
         return self.copy(deep=True)
 

@@ -35,14 +35,14 @@ Breaking changes
       rhs = xray.DataArray([2, 3, 4], [('x', [1, 2, 3])])
       lhs + rhs
 
-  For :ref:`data construction and merging<merge>`, we align based on the
+  :ref:`For dataset construction and merging<merge>`, we align based on the
   **union** of labels:
 
   .. ipython:: python
 
       xray.Dataset({'foo': lhs, 'bar': rhs})
 
-  For :ref:`update and __setitem__<update>`, we align based on the **original**
+  :ref:`For update and __setitem__<update>`, we align based on the **original**
   object:
 
   .. ipython:: python
@@ -76,15 +76,19 @@ Breaking changes
 
   This functionality can be controlled through the ``compat`` option, which
   has also been added to the :py:class:`~xray.Dataset` constructor.
-- We have updated our use of the terms of "coordinates" and "variables". What
-  were known in previous versions of xray as "coordinates" and "variables" are
-  now referred to throughout the documentation as "coordinate variables" and
-  "data variables". This brings xray in closer alignment to `CF Conventions`_.
-  The only visible change besides the documentation is that ``Dataset.vars``
-  has been renamed ``Dataset.data_vars``.
-- You will need to update your code if you have been ignoring deprecation
-  warnings: methods and attributes that were deprecated in xray v0.3 or earlier
-  (e.g., ``dimensions``, ``attributes```) have gone away.
+- Datetime shortcuts such as ``'time.month'`` now return a ``DataArray`` with
+  the name ``'month'``, not ``'time.month'`` (:issue:`345`). This makes it
+  easier to index the resulting arrays when they are used with ``groupby``:
+
+  .. ipython:: python
+
+      time = xray.DataArray(pd.date_range('2000-01-01', periods=365),
+                            dims='time', name='time')
+      counts = time.groupby('time.month').count()
+      counts.sel(month=2)
+
+  Previously, you would need to use something like
+  ``counts.sel(**{'time.month': 2}})``, which is much more awkward.
 - The ``season`` datetime shortcut now returns an array of string labels
   such `'DJF'`:
 
@@ -94,6 +98,15 @@ Breaking changes
       ds['t.season']
 
   Previously, it returned numbered seasons 1 through 4.
+- We have updated our use of the terms of "coordinates" and "variables". What
+  were known in previous versions of xray as "coordinates" and "variables" are
+  now referred to throughout the documentation as "coordinate variables" and
+  "data variables". This brings xray in closer alignment to `CF Conventions`_.
+  The only visible change besides the documentation is that ``Dataset.vars``
+  has been renamed ``Dataset.data_vars``.
+- You will need to update your code if you have been ignoring deprecation
+  warnings: methods and attributes that were deprecated in xray v0.3 or earlier
+  (e.g., ``dimensions``, ``attributes```) have gone away.
 
 .. _bottleneck: https://github.com/kwgoodman/bottleneck
 

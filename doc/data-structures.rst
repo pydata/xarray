@@ -179,6 +179,14 @@ __ http://pandas.pydata.org/pandas-docs/stable/api.html#time-date-components
     foo['time.month']
     foo['time.dayofyear']
 
+xray adds ``'season'`` to the list of datetime components supported by pandas:
+
+.. ipython:: python
+
+    foo['time.season']
+
+The set of valid seasons consists of 'DJF', 'MAM', 'JJA' and 'SON', labeled by
+the first letters of the corresponding months.
 
 Dataset
 -------
