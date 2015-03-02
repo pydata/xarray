@@ -195,6 +195,12 @@ class DataArray(AbstractArray, AttrAccessMixin):
         """
         obj = object.__new__(cls)
         obj._dataset = dataset._copy_listed([name], keep_attrs=False)
+        if name not in obj._dataset:
+            # handle virtual variables
+            try:
+                _, name = name.split('.', 1)
+            except Exception:
+                raise KeyError(name)
         obj._name = name
         if name not in dataset._dims:
             obj._dataset._coord_names.discard(name)

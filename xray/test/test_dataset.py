@@ -965,8 +965,9 @@ class TestDataset(TestCase):
     def test_virtual_variables(self):
         # access virtual variables
         data = create_test_data()
-        self.assertVariableEqual(data['time.dayofyear'],
-                                 Variable('time', 1 + np.arange(20)))
+        expected = DataArray(1 + np.arange(20), coords=[data['time']],
+                             dims='time', name='dayofyear')
+        self.assertDataArrayIdentical(expected, data['time.dayofyear'])
         self.assertArrayEqual(data['time.month'].values,
                               data.variables['time'].to_index().month)
         self.assertArrayEqual(data['time.season'].values, 'DJF')
@@ -975,7 +976,7 @@ class TestDataset(TestCase):
         self.assertArrayEqual(np.sin(data['time.dayofyear']),
                               np.sin(1 + np.arange(20)))
         # ensure they become coordinates
-        expected = Dataset({}, {'time.dayofyear': data['time.dayofyear']})
+        expected = Dataset({}, {'dayofyear': data['time.dayofyear']})
         actual = data[['time.dayofyear']]
         self.assertDatasetEqual(expected, actual)
         # non-coordinate variables
@@ -1190,7 +1191,7 @@ class TestDataset(TestCase):
         grouped = ds.groupby('t.day')
         actual = grouped - grouped.mean()
         expected = Dataset({'x': ('t', [0, 0, 0])},
-                           {'t': ds['t'], 't.day': ds['t.day']})
+                           ds[['t', 't.day']])
         self.assertDatasetIdentical(actual, expected)
 
     def test_groupby_nan(self):
