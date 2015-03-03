@@ -94,6 +94,14 @@ class TestCharToStringArray(TestCase):
         self.assertArrayEqual(actual, expected)
 
 
+@np.vectorize
+def _ensure_naive_tz(dt):
+    if hasattr(dt, 'tzinfo'):
+        return dt.replace(tzinfo=None)
+    else:
+        return dt
+
+
 class TestDatetime(TestCase):
     @requires_netCDF4
     def test_cf_datetime(self):
@@ -119,7 +127,7 @@ class TestDatetime(TestCase):
                 (17093352.0, 'hours since 1-1-1 00:00:0.0'),
                 ]:
             for calendar in ['standard', 'gregorian', 'proleptic_gregorian']:
-                expected = nc4.num2date(num_dates, units, calendar)
+                expected = _ensure_naive_tz(nc4.num2date(num_dates, units, calendar))
                 print(num_dates, units, calendar)
                 with warnings.catch_warnings():
                     warnings.filterwarnings('ignore',

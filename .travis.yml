@@ -11,7 +11,7 @@ matrix:
     env: UPDATE_ENV="conda install unittest2 pandas==0.15.0"
   # Test on Python 2.7 with and without netCDF4/scipy/cdat-lite
   - python: 2.7
-    env: UPDATE_ENV="pip install cyordereddict && conda install -c ajdawson cdat-lite"
+    env: UPDATE_ENV="pip install cyordereddict && conda install -c scitools cdat-lite"
   - python: 2.7
     # nb. we have to remove scipy because conda install pandas brings it in:
     # https://github.com/ContinuumIO/anaconda-issues/issues/145
@@ -23,9 +23,24 @@ matrix:
   # don't require pydap tests to pass because the dap test server is unreliable
   - python: 2.7
     env: UPDATE_ENV="pip install pydap"
+  # test netCDF4-python master
+  - python: 2.7
+    addons:
+      apt_packages:
+        - libhdf5-serial-dev
+        - netcdf-bin
+        - libnetcdf-dev
+    env: UPDATE_ENV="conda install cython && pip install https://github.com/Unidata/netcdf4-python/archive/master.zip"
   allow_failures:
   - python: 2.7
     env: UPDATE_ENV="pip install pydap"
+  - python: 2.7
+    addons:
+      apt_packages:
+        - libhdf5-serial-dev
+        - netcdf-bin
+        - libnetcdf-dev
+    env: UPDATE_ENV="conda install cython && pip install https://github.com/Unidata/netcdf4-python/archive/master.zip"
 
 before_install:
   - if [[ "$TRAVIS_PYTHON_VERSION" == "2.7" ]]; then
