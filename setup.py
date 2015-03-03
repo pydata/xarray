@@ -7,9 +7,9 @@ import warnings
 from setuptools import setup, find_packages
 
 MAJOR = 0
-MINOR = 3
-MICRO = 2
-ISRELEASED = False
+MINOR = 4
+MICRO = 0
+ISRELEASED = True
 VERSION = '%d.%d.%d' % (MAJOR, MINOR, MICRO)
 QUALIFIER = ''
 

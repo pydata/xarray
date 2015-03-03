@@ -9,8 +9,8 @@ What's New
     import xray
     np.random.seed(123456)
 
-v0.4 (unreleased)
------------------
+v0.4 (2 March, 2015)
+--------------------
 
 This is one of the biggest releases yet for xray: it includes some major
 changes that may break existing code, along with the usual collection of minor
