@@ -9,6 +9,11 @@ Combining data
     import xray
     np.random.seed(123456)
 
+* For combining datasets or data arrays along a dimension, see concatenate_.
+* For combining datasets with different variables, see merge_.
+
+.. _concatenate:
+
 Concatenate
 ~~~~~~~~~~~
 
@@ -41,12 +46,6 @@ dimension:
 .. ipython:: python
 
     xray.concat([arr[0], arr[1]], 'new_dim')
-
-This is actually the default behavior for ``concat``:
-
-.. ipython:: python
-
-    xray.concat([arr[0], arr[1]])
 
 The second argument to ``concat`` can also be an :py:class:`~pandas.Index` or
 :py:class:`~xray.DataArray` object as well as a string, in which case it is
@@ -105,8 +104,9 @@ used in the :py:class:`~xray.Dataset` constructor:
 Update
 ~~~~~~
 
-In contrast, update modifies a dataset in-place without checking for conflicts,
-and will overwrite any existing variables with new values:
+In contrast to ``merge``, ``update`` modifies a dataset in-place without
+checking for conflicts, and will overwrite any existing variables with new
+values:
 
 .. ipython:: python
 

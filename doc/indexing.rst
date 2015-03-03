@@ -16,17 +16,26 @@ based lookups along each dimension. However, xray objects also have named
 dimensions, so you can optionally use dimension names instead of relying on the
 positional ordering of dimensions.
 
-This in total, xray supports four different kinds of indexing, as described
+Thus in total, xray supports four different kinds of indexing, as described
 below and summarized in this table:
 
-================ ============ ======================= ======================
-Dimension lookup Index lookup ``DataArray`` syntax    ``Dataset`` syntax
-================ ============ ======================= ======================
-Positional       By integer   ``arr[:, 0]``           *not available*
-Positional       By label     ``arr.loc[:, 'IA']``    *not available*
-By name          By integer   ``arr.isel(space=0)``   ``ds.isel(space=0)``
-By name          By label     ``arr.sel(space='IA')`` ``ds.sel(space='IA')``
-================ ============ ======================= ======================
+.. |br| raw:: html
+
+   <br />
+
++------------------+--------------+---------------------------------+--------------------------------+
+| Dimension lookup | Index lookup | ``DataArray`` syntax            | ``Dataset`` syntax             |
++==================+==============+=================================+================================+
+| Positional       | By integer   | ``arr[:, 0]``                   | *not available*                |
++------------------+--------------+---------------------------------+--------------------------------+
+| Positional       | By label     | ``arr.loc[:, 'IA']``            | *not available*                |
++------------------+--------------+---------------------------------+--------------------------------+
+| By name          | By integer   | ``arr.isel(space=0)`` or |br|   | ``ds.isel(space=0)`` or |br|   |
+|                  |              | ``arr[dict(space=0)]``          | ``ds[dict(space=0)]``          |
++------------------+--------------+---------------------------------+--------------------------------+
+| By name          | By label     | ``arr.sel(space='IA')`` or |br| | ``ds.sel(space='IA')`` or |br| |
+|                  |              | ``arr.loc[dict(space='IA')]``   | ``ds.loc[dict(space='IA')]``   |
++------------------+--------------+---------------------------------+--------------------------------+
 
 Positional indexing
 -------------------

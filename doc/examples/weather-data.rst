@@ -36,7 +36,7 @@ Examine a dataset with pandas_ and seaborn_
 
     @savefig examples_pairplot.png
     sns.pairplot(ds[['tmin', 'tmax', 'time.month']].to_dataframe(),
-                 vars=ds.data_vars, hue='time.month')
+                 vars=ds.data_vars, hue='month')
 
 
 Probability of freeze by calendar month
@@ -68,6 +68,8 @@ Monthly averaging
     @savefig examples_tmin_tmax_plot_mean.png
     monthly_avg.to_dataframe().plot(style='s-')
 
+We do plan to eventually add a ``resample`` method like pandas to make this
+more convenient (:issue:`354`).
 
 Calculate monthly anomalies
 ---------------------------
@@ -82,5 +84,5 @@ not show any seasonal cycle.
     anomalies = ds.groupby('time.month') - climatology
 
     @savefig examples_anomalies_plot.png
-    anomalies.mean('location').reset_coords(drop=True).to_dataframe().plot()
+    anomalies.mean('location').to_dataframe()[['tmin', 'tmax']].plot()
 
