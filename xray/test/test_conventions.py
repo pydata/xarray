@@ -225,7 +225,11 @@ class TestDatetime(TestCase):
                 actual = conventions.decode_cf_datetime(noleap_time, units,
                                                         calendar=calendar)
             self.assertEqual(actual.dtype, np.dtype('M8[ns]'))
-            self.assertArrayEqual(actual, expected)
+            abs_diff = abs(actual - expected)
+            # once we no longer support versions of netCDF4 older than 1.1.5,
+            # we could do this check with near microsecond accuracy:
+            # https://github.com/Unidata/netcdf4-python/issues/355
+            self.assertTrue((abs_diff <= np.timedelta64(1, 's')).all())
 
     @requires_netCDF4
     def test_decode_non_standard_calendar_single_element(self):

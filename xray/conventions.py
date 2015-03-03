@@ -189,7 +189,8 @@ def nctime_to_nptime(times):
     times = np.asarray(times)
     new = np.empty(times.shape, dtype='M8[ns]')
     for i, t in np.ndenumerate(times):
-        new[i] = np.datetime64(datetime(*t.timetuple()[:6]))
+        dt = datetime(t.year, t.month, t.day, t.hour, t.minute, t.second)
+        new[i] = np.datetime64(dt)
     return new
 
 
