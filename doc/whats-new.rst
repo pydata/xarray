@@ -132,7 +132,7 @@ Enhancements
   files (:issue:`333`). It also finally has a full docstring -- you should read
   it!
 - :py:func:`~xray.open_dataset` and :py:meth:`~xray.Dataset.to_netcdf` now
-  work on netCDF4 files when netcdf4-python is not installed as long as scipy
+  work on netCDF3 files when netcdf4-python is not installed as long as scipy
   is available (:issue:`333`).
 - The new :py:meth:`Dataset.drop <xray.Dataset.drop>` and
   :py:meth:`DataArray.drop <xray.DataArray.drop>` methods makes it easy to drop
