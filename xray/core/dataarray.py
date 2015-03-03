@@ -96,7 +96,7 @@ class DataArray(AbstractArray, AttrAccessMixin):
     - Apply operations over dimensions by name: ``x.sum('time')``.
     - Select or assign values by integer location (like numpy): ``x[:10]``
       or by label (like pandas): ``x.loc['2014-01-01']`` or
-      ``x.labeled(time='2014-01-01')``.
+      ``x.sel(time='2014-01-01')``.
     - Mathematical operations (e.g., ``x - y``) vectorize across multiple
       dimensions (known in numpy as "broadcasting") based on dimension names,
       regardless of their original order.
@@ -126,10 +126,11 @@ class DataArray(AbstractArray, AttrAccessMixin):
         Parameters
         ----------
         data : array_like
-            Values for this array. Must be a ``numpy.ndarray``, ndarray like,
+            Values for this array. Must be an ``numpy.ndarray``, ndarray like,
             or castable to an ``ndarray``. If a self-described xray or pandas
-            object, attempst are made to use this array's metadata to fill in
-            other unspecified arguments.
+            object, attempts are made to use this array's metadata to fill in
+            other unspecified arguments. A view of the array's data is used
+            instead of a copy if possible.
         coords : sequence or dict of array_like objects, optional
             Coordinates (tick labels) to use for indexing along each dimension.
             If dict-like, should be a mapping from dimension names to the
