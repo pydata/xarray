@@ -17,29 +17,41 @@ The release contains bug fixes and backwards compatible changes.
 New features
 ~~~~~~~~~~~~
 
-- ``resample`` lets you resample a dataset or array along a time axis to a
-  coarser resolution. The syntax is the `same as pandas`_, except you need to
-  supply the time dimension explicitly:
+- ``resample`` lets you resample a new temporal resolution. The syntax is the
+  `same as pandas`_, except you need to supply the time dimension explicitly:
 
   .. ipython:: python
 
-    time = pd.date_range('2000-01-01', freq='6H', periods=10)
-    array = xray.DataArray(np.arange(10), [('time', time)])
-    array.resample('1D', dim='time')
+      time = pd.date_range('2000-01-01', freq='6H', periods=10)
+      array = xray.DataArray(np.arange(10), [('time', time)])
+      array.resample('1D', dim='time')
 
   You can specify how to do the resampling with the ``how`` argument and other
   options such as ``closed`` and ``label`` let you control labeling:
 
   .. ipython:: python
 
-    array.resample('1D', dim='time', how='sum', label='right')
+      array.resample('1D', dim='time', how='sum', label='right')
+
+  If the desired temporal resolution is higher than the original data
+  (upsampling), xray will insert missing values:
+
+  .. ipython:: python
+
+      array.resample('3H', 'time')
 
 - ``first`` and ``last`` methods on groupby objects let you take the first or
   last examples from each group along the grouped axis:
 
   .. ipython:: python
 
-    array.groupby('time.day').first()
+      array.groupby('time.day').first()
+
+  These methods combine well with ``resample``:
+
+  .. ipython:: python
+
+      array.resample('1D', dim='time', how='first')
 
 .. _same as pandas: http://pandas.pydata.org/pandas-docs/stable/timeseries.html#up-and-downsampling
 

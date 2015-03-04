@@ -1213,6 +1213,13 @@ class TestDataset(TestCase):
         expected = ds.isel(time=[0, 4, 8])
         self.assertDatasetIdentical(expected, actual)
 
+        # upsampling
+        expected_time = pd.date_range('2000-01-01', freq='3H', periods=19)
+        expected = ds.reindex(time=expected_time)
+        for how in ['mean', 'sum', 'first', 'last', np.mean]:
+            actual = ds.resample('3H', 'time', how=how)
+            self.assertDatasetEqual(expected, actual)
+
     def test_concat(self):
         data = create_test_data()
 

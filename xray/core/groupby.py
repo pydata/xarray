@@ -4,7 +4,8 @@ import pandas as pd
 
 from . import ops
 from .alignment import concat
-from .common import ImplementsArrayReduce, ImplementsDatasetReduce
+from .common import (ImplementsArrayReduce, ImplementsDatasetReduce,
+                     _maybe_promote)
 from .pycompat import zip
 from .utils import peek_at, maybe_wrap_array, safe_cast_to_index
 from .variable import Variable, Coordinate
@@ -51,7 +52,7 @@ class GroupBy(object):
     Dataset.groupby
     DataArray.groupby
     """
-    def __init__(self, obj, group, squeeze=False, time_grouper=None):
+    def __init__(self, obj, group, squeeze=False, grouper=None):
         """Create a GroupBy object
 
         Parameters
@@ -81,14 +82,18 @@ class GroupBy(object):
             raise ValueError('the group variable\'s length does not '
                              'match the length of this variable along its '
                              'dimension')
+        full_index = None
 
-        if time_grouper is not None:
+        if grouper is not None:
             index = safe_cast_to_index(group)
             if not index.is_monotonic:
                 # TODO: sort instead of raising an error
                 raise ValueError('index must be monotonic for resampling')
             s = pd.Series(np.arange(index.size), index)
-            first_items = s.groupby(time_grouper).first()
+            first_items = s.groupby(grouper).first()
+            if first_items.isnull().any():
+                full_index = first_items.index
+                first_items = first_items.dropna()
             bins = first_items.values
             group_indices = ([slice(i, j) for i, j in zip(bins[:-1], bins[1:])]
                              + [slice(bins[-1], None)])
@@ -115,6 +120,7 @@ class GroupBy(object):
         self.group_indices = group_indices
         self.unique_coord = unique_coord
         self._groups = None
+        self._full_index = full_index
 
     @property
     def groups(self):
@@ -163,11 +169,28 @@ class GroupBy(object):
                                 'DataArray')
             yield func(obj, other_sel)
 
+    def _maybe_restore_empty_groups(self, combined):
+        """Our index contained empty groups (e.g., from a resampling). If we
+        reduced on that dimension, we want to restore the full index.
+        """
+        if (self._full_index is not None
+                and self.group.name in combined.dims):
+            indexers = {self.group.name: self._full_index}
+            combined = combined.reindex(**indexers)
+        return combined
+
     def _get_element(self, n):
         sl = {self.group_dim: n}
-        # drop group_dim to ensure those labels don't get used
-        # (they get inserted later)
-        return self.apply(lambda x: x.isel(**sl).drop(self.group_dim))
+
+        def f(x):
+            res = x.isel(**sl)
+            if not isinstance(res, Variable):
+                # drop group_dim to ensure those labels don't get used
+                # (they get inserted again later)
+                res = res.drop(self.group_dim)
+            return res
+
+        return self.apply(f, shortcut=True)
 
     def first(self):
         """Return the first element of each group along the group dimension
@@ -275,7 +298,9 @@ class ArrayGroupBy(GroupBy, ImplementsArrayReduce):
         else:
             grouped = self._iter_grouped()
         applied = (maybe_wrap_array(arr, func(arr, **kwargs)) for arr in grouped)
-        return self._concat(applied, shortcut=shortcut)
+        combined = self._concat(applied, shortcut=shortcut)
+        result = self._maybe_restore_empty_groups(combined)
+        return result
 
     def _concat(self, applied, shortcut=False):
         # peek at applied to determine which coordinate to stack over
@@ -359,7 +384,9 @@ class DatasetGroupBy(GroupBy, ImplementsDatasetReduce):
         """
         kwargs.pop('shortcut', None) # ignore shortcut if set (for now)
         applied = (func(ds, **kwargs) for ds in self._iter_grouped())
-        return self._concat(applied)
+        combined = self._concat(applied)
+        result = self._maybe_restore_empty_groups(combined)
+        return result
 
     def _concat(self, applied):
         applied_example, applied = peek_at(applied)

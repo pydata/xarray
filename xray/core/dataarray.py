@@ -570,32 +570,6 @@ class DataArray(AbstractArray, BaseDataObject):
         renamed_dataset = self._dataset.rename(name_dict)
         return renamed_dataset[new_name]
 
-    # def groupby(self, group, squeeze=True):
-    #     """Returns a GroupBy object for performing grouped operations.
-
-    #     Parameters
-    #     ----------
-    #     group : str, DataArray or Coordinate
-    #         Array whose unique values should be used to group this array. If a
-    #         string, must be the name of a variable contained in this dataset.
-    #     squeeze : boolean, optional
-    #         If "group" is a diension of this array, `squeeze` controls
-    #         whether the subarrays have a dimension of length 1 along that
-    #         dimension or if the dimension is squeezed out.
-
-    #     Returns
-    #     -------
-    #     grouped : GroupBy
-    #         A `GroupBy` object patterned after `pandas.GroupBy` that can be
-    #         iterated over in the form of `(unique_value, grouped_array)` pairs
-    #         or over which grouped operations can be applied with the `apply`
-    #         and `reduce` methods (and the associated aliases `mean`, `sum`,
-    #         `std`, etc.).
-    #     """
-    #     if isinstance(group, basestring):
-    #         group = self.coords[group]
-    #     return groupby.ArrayGroupBy(self, group, squeeze=squeeze)
-
     def transpose(self, *dims):
         """Return a new DataArray object with transposed dimensions.
 

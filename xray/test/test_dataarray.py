@@ -968,9 +968,19 @@ class TestDataArray(TestCase):
         times = pd.date_range('2000-01-01', freq='6H', periods=10)
         array = DataArray(np.arange(10), [('time', times)])
 
+        actual = array.resample('6H', dim='time')
+        self.assertDataArrayIdentical(array, actual)
+
         actual = array.resample('24H', dim='time')
         expected = DataArray(array.to_series().resample('24H'))
         self.assertDataArrayIdentical(expected, actual)
+
+        actual = array.resample('24H', dim='time', how=np.mean)
+        self.assertDataArrayIdentical(expected, actual)
+
+    def test_resample_first(self):
+        times = pd.date_range('2000-01-01', freq='6H', periods=10)
+        array = DataArray(np.arange(10), [('time', times)])
 
         actual = array.resample('1D', dim='time', how='first')
         expected = DataArray([0, 4, 8], [('time', times[::4])])
@@ -980,6 +990,25 @@ class TestDataArray(TestCase):
         actual = array.resample('24H', dim='time', how='first')
         expected = DataArray(array.to_series().resample('24H', how='first'))
         self.assertDataArrayIdentical(expected, actual)
+
+    def test_resample_skipna(self):
+        times = pd.date_range('2000-01-01', freq='6H', periods=10)
+        array = DataArray(np.arange(10.0), [('time', times)])
+        array[0] = np.nan
+
+        actual = array.resample('1D', dim='time', how='first', skipna=False)
+        expected = DataArray([np.nan, 4, 8], [('time', times[::4])])
+        self.assertDataArrayIdentical(expected, actual)
+
+    def test_resample_upsampling(self):
+        times = pd.date_range('2000-01-01', freq='1D', periods=5)
+        array = DataArray(np.arange(5), [('time', times)])
+
+        expected_time = pd.date_range('2000-01-01', freq='12H', periods=9)
+        expected = array.reindex(time=expected_time)
+        for how in ['mean', 'median', 'sum', 'first', 'last', np.mean]:
+            actual = array.resample('12H', 'time', how=how)
+            self.assertDataArrayIdentical(expected, actual)
 
     def test_concat(self):
         self.ds['bar'] = Variable(['x', 'y'], np.random.randn(10, 20))

@@ -166,10 +166,17 @@ class BaseDataObject(AttrAccessMixin):
 
     def resample(self, freq, dim, how='mean', skipna=None, closed=None,
                  label=None, base=0):
-        """
+        """Resample this object to a new temporal resolution
+
+        Parameters
+        ----------
         freq : pandas date offset or offset alias for identifying bin edges
+        dim : name of the dimension to aggregate along
+        how : str (any valid groupby aggregation method) or func
+        skipna : whether to skip missing values in aggregations
         closed : closed end of interval; left or right
         label : interval boundary to use for labeling; left or right
+        base : offset from the start frequency, in units of freq
         """
         from .dataarray import DataArray
 
@@ -179,12 +186,15 @@ class BaseDataObject(AttrAccessMixin):
         group = DataArray(dim, name=RESAMPLE_DIM)
         time_grouper = pd.TimeGrouper(freq=freq, how=how, closed=closed,
                                       label=label, base=base)
-        gb = self.groupby_cls(self, group, time_grouper=time_grouper)
-        f = getattr(gb, how)
-        if how in ['first', 'last']:
-            result = f()
+        gb = self.groupby_cls(self, group, grouper=time_grouper)
+        if isinstance(how, basestring):
+            f = getattr(gb, how)
+            if how in ['first', 'last']:
+                result = f()
+            else:
+                result = f(dim=dim.name, skipna=skipna)
         else:
-            result = f(dim=dim.name, skipna=None)
+            result = gb.reduce(how, dim=dim.name)
         result = result.rename({RESAMPLE_DIM: dim.name})
         return result
 
