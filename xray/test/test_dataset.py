@@ -1202,6 +1202,17 @@ class TestDataset(TestCase):
         expected = Dataset({'foo': ('bar', [1.5, 3]), 'bar': [1, 2]})
         self.assertDatasetIdentical(actual, expected)
 
+    def test_resample_and_first(self):
+        times = pd.date_range('2000-01-01', freq='6H', periods=10)
+        ds = Dataset({'foo': (['time', 'x', 'y'], np.random.randn(10, 5, 3)),
+                      'bar': ('time', np.random.randn(10), {'meta': 'data'}),
+                      'baz': ('x', np.random.randn(5)),
+                      'time': times})
+
+        actual = ds.resample('1D', dim='time', how='first')
+        expected = ds.isel(time=[0, 4, 8])
+        self.assertDatasetIdentical(expected, actual)
+
     def test_concat(self):
         data = create_test_data()
 

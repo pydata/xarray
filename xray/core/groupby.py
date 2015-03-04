@@ -6,7 +6,7 @@ from . import ops
 from .alignment import concat
 from .common import ImplementsArrayReduce, ImplementsDatasetReduce
 from .pycompat import zip
-from .utils import peek_at, maybe_wrap_array
+from .utils import peek_at, maybe_wrap_array, safe_cast_to_index
 from .variable import Variable, Coordinate
 
 
@@ -51,7 +51,7 @@ class GroupBy(object):
     Dataset.groupby
     DataArray.groupby
     """
-    def __init__(self, obj, group, squeeze=True):
+    def __init__(self, obj, group, squeeze=False, time_grouper=None):
         """Create a GroupBy object
 
         Parameters
@@ -65,6 +65,8 @@ class GroupBy(object):
             the subarrays have a dimension of length 1 along that coordinate or
             if the dimension is squeezed out.
         """
+        from .dataset import as_dataset
+
         if group.ndim != 1:
             # TODO: remove this limitation?
             raise ValueError('`group` must be 1 dimensional')
@@ -72,19 +74,26 @@ class GroupBy(object):
             raise ValueError('`group` must have a name')
         if not hasattr(group, 'dims'):
             raise ValueError("`group` must have a 'dims' attribute")
+        group_dim, = group.dims
 
-        self.obj = obj
-        self.group = group
-        self.group_dim, = group.dims
-
-        from .dataset import as_dataset
-        expected_size = as_dataset(obj).dims[self.group_dim]
+        expected_size = as_dataset(obj).dims[group_dim]
         if group.size != expected_size:
             raise ValueError('the group variable\'s length does not '
                              'match the length of this variable along its '
                              'dimension')
 
-        if group.name in obj.dims:
+        if time_grouper is not None:
+            index = safe_cast_to_index(group)
+            if not index.is_monotonic:
+                # TODO: sort instead of raising an error
+                raise ValueError('index must be monotonic for resampling')
+            s = pd.Series(np.arange(index.size), index)
+            first_items = s.groupby(time_grouper).first()
+            bins = first_items.values
+            group_indices = ([slice(i, j) for i, j in zip(bins[:-1], bins[1:])]
+                             + [slice(bins[-1], None)])
+            unique_coord = Coordinate(group.name, first_items.index)
+        elif group.name in obj.dims:
             # assume that group already has sorted, unique values
             if group.dims != (group.name,):
                 raise ValueError('`group` is required to be a coordinate if '
@@ -100,6 +109,9 @@ class GroupBy(object):
             unique_values, group_indices = unique_value_groups(group)
             unique_coord = Coordinate(group.name, unique_values)
 
+        self.obj = obj
+        self.group = group
+        self.group_dim = group_dim
         self.group_indices = group_indices
         self.unique_coord = unique_coord
         self._groups = None
@@ -150,6 +162,22 @@ class GroupBy(object):
                                 'when the other argument is a Dataset or '
                                 'DataArray')
             yield func(obj, other_sel)
+
+    def _get_element(self, n):
+        sl = {self.group_dim: n}
+        # drop group_dim to ensure those labels don't get used
+        # (they get inserted later)
+        return self.apply(lambda x: x.isel(**sl).drop(self.group_dim))
+
+    def first(self):
+        """Return the first element of each group along the group dimension
+        """
+        return self._get_element(0)
+
+    def last(self):
+        """Return the last element of each group along the group dimension
+        """
+        return self._get_element(-1)
 
 
 class ArrayGroupBy(GroupBy, ImplementsArrayReduce):

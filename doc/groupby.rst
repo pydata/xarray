@@ -90,6 +90,16 @@ dimensions *other than* the provided one:
 
     ds.groupby('x').reduce(np.nanmean)
 
+First and last
+~~~~~~~~~~~~~~
+
+TODO
+
+Resampling
+~~~~~~~~~~
+
+TODO
+
 Grouped arithmetic
 ~~~~~~~~~~~~~~~~~~
 

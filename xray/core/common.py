@@ -140,6 +140,55 @@ class AttrAccessMixin(object):
         return sorted(set(dir(type(self)) + extra_attrs))
 
 
+class BaseDataObject(AttrAccessMixin):
+    def groupby(self, group, squeeze=True):
+        """Returns a GroupBy object for performing grouped operations.
+
+        Parameters
+        ----------
+        group : str, DataArray or Coordinate
+            Array whose unique values should be used to group this array. If a
+            string, must be the name of a variable contained in this dataset.
+        squeeze : boolean, optional
+            If "group" is a dimension of any arrays in this dataset, `squeeze`
+            controls whether the subarrays have a dimension of length 1 along
+            that dimension or if the dimension is squeezed out.
+
+        Returns
+        -------
+        grouped : GroupBy
+            A `GroupBy` object patterned after `pandas.GroupBy` that can be
+            iterated over in the form of `(unique_value, grouped_array)` pairs.
+        """
+        if isinstance(group, basestring):
+            group = self[group]
+        return self.groupby_cls(self, group, squeeze=squeeze)
+
+    def resample(self, freq, dim, how='mean', skipna=None, closed=None,
+                 label=None, base=0):
+        """
+        freq : pandas date offset or offset alias for identifying bin edges
+        closed : closed end of interval; left or right
+        label : interval boundary to use for labeling; left or right
+        """
+        from .dataarray import DataArray
+
+        RESAMPLE_DIM = '__resample_dim__'
+        if isinstance(dim, basestring):
+            dim = self[dim]
+        group = DataArray(dim, name=RESAMPLE_DIM)
+        time_grouper = pd.TimeGrouper(freq=freq, how=how, closed=closed,
+                                      label=label, base=base)
+        gb = self.groupby_cls(self, group, time_grouper=time_grouper)
+        f = getattr(gb, how)
+        if how in ['first', 'last']:
+            result = f()
+        else:
+            result = f(dim=dim.name, skipna=None)
+        result = result.rename({RESAMPLE_DIM: dim.name})
+        return result
+
+
 def squeeze(xray_obj, dims, dim=None):
     """Squeeze the dims of an xray object."""
     if dim is None:

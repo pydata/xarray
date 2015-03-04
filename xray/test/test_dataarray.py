@@ -948,6 +948,39 @@ class TestDataArray(TestCase):
         with self.assertRaisesRegexp(TypeError, 'only support arithmetic'):
             grouped + grouped
 
+    def test_groupby_first_and_last(self):
+        array = DataArray([1, 2, 3, 4, 5], dims='x')
+        by = DataArray(['a'] * 2 + ['b'] * 3, dims='x', name='ab')
+
+        expected = DataArray([1, 3], [('ab', ['a', 'b'])])
+        actual = array.groupby(by).first()
+        self.assertDataArrayIdentical(expected, actual)
+
+        expected = DataArray([2, 5], [('ab', ['a', 'b'])])
+        actual = array.groupby(by).last()
+        self.assertDataArrayIdentical(expected, actual)
+
+        array = DataArray(np.random.randn(5, 3), dims=['x', 'y'])
+        expected = DataArray(array[[0, 2]], {'ab': ['a', 'b']}, ['ab', 'y'])
+        actual = array.groupby(by).first()
+
+    def test_resample(self):
+        times = pd.date_range('2000-01-01', freq='6H', periods=10)
+        array = DataArray(np.arange(10), [('time', times)])
+
+        actual = array.resample('24H', dim='time')
+        expected = DataArray(array.to_series().resample('24H'))
+        self.assertDataArrayIdentical(expected, actual)
+
+        actual = array.resample('1D', dim='time', how='first')
+        expected = DataArray([0, 4, 8], [('time', times[::4])])
+        self.assertDataArrayIdentical(expected, actual)
+
+        # verify that labels don't use the first value
+        actual = array.resample('24H', dim='time', how='first')
+        expected = DataArray(array.to_series().resample('24H', how='first'))
+        self.assertDataArrayIdentical(expected, actual)
+
     def test_concat(self):
         self.ds['bar'] = Variable(['x', 'y'], np.random.randn(10, 20))
         foo = self.ds['foo']

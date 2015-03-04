@@ -9,6 +9,42 @@ What's New
     import xray
     np.random.seed(123456)
 
+v0.4.1 (unreleased)
+-------------------
+
+The release contains bug fixes and backwards compatible changes.
+
+New features
+~~~~~~~~~~~~
+
+- ``resample`` lets you resample a dataset or array along a time axis to a
+  coarser resolution. The syntax is the `same as pandas`_, except you need to
+  supply the time dimension explicitly:
+
+  .. ipython:: python
+
+    time = pd.date_range('2000-01-01', freq='6H', periods=10)
+    array = xray.DataArray(np.arange(10), [('time', time)])
+    array.resample('1D', dim='time')
+
+  You can specify how to do the resampling with the ``how`` argument and other
+  options such as ``closed`` and ``label`` let you control labeling:
+
+  .. ipython:: python
+
+    array.resample('1D', dim='time', how='sum', label='right')
+
+- ``first`` and ``last`` methods on groupby objects let you take the first or
+  last examples from each group along the grouped axis:
+
+  .. ipython:: python
+
+    array.groupby('time.day').first()
+
+.. _same as pandas: http://pandas.pydata.org/pandas-docs/stable/timeseries.html#up-and-downsampling
+
+TODO: write full docs on time-series!
+
 v0.4 (2 March, 2015)
 --------------------
 
@@ -330,8 +366,8 @@ Bug fixes
   (:issue:`254`).
 - Order of dimensions preserved with ``DataArray.to_dataframe`` (:issue:`260`).
 
-v0.3.0 (21 September 2014)
---------------------------
+v0.3 (21 September 2014)
+------------------------
 
 New features
 ~~~~~~~~~~~~
@@ -368,8 +404,8 @@ Deprecations
 - ``DataArray.select_vars`` and ``DataArray.drop_vars`` deprecated: use
   :py:meth:`~xray.DataArray.reset_coords` instead.
 
-v0.2.0 (14 August 2014)
------------------------
+v0.2 (14 August 2014)
+---------------------
 
 This is major release that includes some new features and quite a few bug
 fixes. Here are the highlights:
