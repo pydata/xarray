@@ -30,7 +30,7 @@ NUMPY_UNARY_METHODS = ['astype', 'argsort', 'clip', 'conj', 'conjugate',
 PANDAS_UNARY_FUNCTIONS = ['isnull', 'notnull']
 # methods which remove an axis
 NUMPY_REDUCE_METHODS = ['all', 'any']
-NAN_REDUCE_METHODS = ['argmax', 'argmin', 'max', 'min', 'mean', 'sum',
+NAN_REDUCE_METHODS = ['argmax', 'argmin', 'max', 'min', 'mean', 'prod', 'sum',
                       'std', 'var', 'median']
 # TODO: wrap cumprod/cumsum, take, dot, sort
 
@@ -95,6 +95,8 @@ _REDUCE_DOCSTRING_TEMPLATE = \
 
 
 def count(values, axis=None):
+    """Count the number of non-NA in this array along the given axis or axes
+    """
     return np.sum(~pd.isnull(values), axis=axis)
 
 
@@ -172,6 +174,51 @@ def prod(values, axis=None, skipna=None, **kwargs):
     return np.prod(values, axis=axis, **kwargs)
 
 
+def _sel_axis(values, idx, axis):
+    other_ind = np.ix_(*[np.arange(s) for s in idx.shape])
+    sl = other_ind[:axis] + (idx,) + other_ind[axis:]
+    return values[sl]
+
+
+def _validate_axis(values, axis):
+    if not -values.ndim <= axis < values.ndim:
+        raise ValueError('invalid axis: %s' % axis)
+    if axis < 0:
+        axis += values.ndim
+    return axis
+
+
+def nanfirst(values, axis):
+    axis = _validate_axis(values, axis)
+    idx_first = np.argmax(~pd.isnull(values), axis=axis)
+    return _sel_axis(values, idx_first, axis)
+
+
+def nanlast(values, axis):
+    axis = _validate_axis(values, axis)
+    rev = (slice(None),) * axis + (slice(None, None, -1),)
+    idx_last = -1 - np.argmax(~pd.isnull(values)[rev], axis=axis)
+    return _sel_axis(values, idx_last, axis)
+
+
+def first(values, axis, skipna=None):
+    """Return the first non-NA elements in this array along the given axis
+    """
+    if (skipna or skipna is None) and values.dtype.kind not in 'iSU':
+        # only bother for dtypes that can hold NaN
+        return nanfirst(values, axis)
+    return np.take(values, 0, axis=axis)
+
+
+def last(values, axis, skipna=None):
+    """Return the last non-NA elements in this array along the given axis
+    """
+    if (skipna or skipna is None) and values.dtype.kind not in 'iSU':
+        # only bother for dtypes that can hold NaN
+        return nanlast(values, axis)
+    return np.take(values, -1, axis=axis)
+
+
 def _ensure_bool_is_ndarray(result, *args):
     # numpy will sometimes return a scalar value from binary comparisons if it
     # can't handle the comparison instead of broadcasting, e.g.,
@@ -198,7 +245,7 @@ def inject_reduce_methods(cls):
     methods = ([(name, getattr(np, name), False) for name
                in NUMPY_REDUCE_METHODS]
                + [(name, globals()[name], True) for name
-                  in ['prod'] + NAN_REDUCE_METHODS]
+                  in NAN_REDUCE_METHODS]
                + [('count', count, False)])
     for name, f, include_skipna in methods:
         numeric_only = getattr(f, 'numeric_only', False)

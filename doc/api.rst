@@ -101,6 +101,7 @@ Computation
    Dataset.apply
    Dataset.reduce
    Dataset.groupby
+   Dataset.resample
    Dataset.transpose
 
 **Aggregation**:
@@ -197,6 +198,7 @@ Computation
 
    DataArray.reduce
    DataArray.groupby
+   DataArray.resample
    DataArray.transpose
    DataArray.get_axis_num
 

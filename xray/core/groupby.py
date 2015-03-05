@@ -4,9 +4,10 @@ import pandas as pd
 
 from . import ops
 from .alignment import concat
-from .common import ImplementsArrayReduce, ImplementsDatasetReduce
+from .common import (ImplementsArrayReduce, ImplementsDatasetReduce,
+                     _maybe_promote)
 from .pycompat import zip
-from .utils import peek_at, maybe_wrap_array
+from .utils import peek_at, maybe_wrap_array, safe_cast_to_index
 from .variable import Variable, Coordinate
 
 
@@ -51,7 +52,7 @@ class GroupBy(object):
     Dataset.groupby
     DataArray.groupby
     """
-    def __init__(self, obj, group, squeeze=True):
+    def __init__(self, obj, group, squeeze=False, grouper=None):
         """Create a GroupBy object
 
         Parameters
@@ -64,7 +65,11 @@ class GroupBy(object):
             If "group" is a coordinate of object, `squeeze` controls whether
             the subarrays have a dimension of length 1 along that coordinate or
             if the dimension is squeezed out.
+        grouper : pd.Grouper, optional
+            Used for grouping values along the `group` array.
         """
+        from .dataset import as_dataset
+
         if group.ndim != 1:
             # TODO: remove this limitation?
             raise ValueError('`group` must be 1 dimensional')
@@ -72,19 +77,30 @@ class GroupBy(object):
             raise ValueError('`group` must have a name')
         if not hasattr(group, 'dims'):
             raise ValueError("`group` must have a 'dims' attribute")
+        group_dim, = group.dims
 
-        self.obj = obj
-        self.group = group
-        self.group_dim, = group.dims
-
-        from .dataset import as_dataset
-        expected_size = as_dataset(obj).dims[self.group_dim]
+        expected_size = as_dataset(obj).dims[group_dim]
         if group.size != expected_size:
             raise ValueError('the group variable\'s length does not '
                              'match the length of this variable along its '
                              'dimension')
+        full_index = None
 
-        if group.name in obj.dims:
+        if grouper is not None:
+            index = safe_cast_to_index(group)
+            if not index.is_monotonic:
+                # TODO: sort instead of raising an error
+                raise ValueError('index must be monotonic for resampling')
+            s = pd.Series(np.arange(index.size), index)
+            first_items = s.groupby(grouper).first()
+            if first_items.isnull().any():
+                full_index = first_items.index
+                first_items = first_items.dropna()
+            bins = first_items.values
+            group_indices = ([slice(i, j) for i, j in zip(bins[:-1], bins[1:])]
+                             + [slice(bins[-1], None)])
+            unique_coord = Coordinate(group.name, first_items.index)
+        elif group.name in obj.dims:
             # assume that group already has sorted, unique values
             if group.dims != (group.name,):
                 raise ValueError('`group` is required to be a coordinate if '
@@ -100,9 +116,13 @@ class GroupBy(object):
             unique_values, group_indices = unique_value_groups(group)
             unique_coord = Coordinate(group.name, unique_values)
 
+        self.obj = obj
+        self.group = group
+        self.group_dim = group_dim
         self.group_indices = group_indices
         self.unique_coord = unique_coord
         self._groups = None
+        self._full_index = full_index
 
     @property
     def groups(self):
@@ -150,6 +170,28 @@ class GroupBy(object):
                                 'when the other argument is a Dataset or '
                                 'DataArray')
             yield func(obj, other_sel)
+
+    def _maybe_restore_empty_groups(self, combined):
+        """Our index contained empty groups (e.g., from a resampling). If we
+        reduced on that dimension, we want to restore the full index.
+        """
+        if (self._full_index is not None
+                and self.group.name in combined.dims):
+            indexers = {self.group.name: self._full_index}
+            combined = combined.reindex(**indexers)
+        return combined
+
+    def first(self, skipna=None, keep_attrs=True):
+        """Return the first element of each group along the group dimension
+        """
+        return self.reduce(ops.first, self.group_dim, skipna=skipna,
+                           keep_attrs=keep_attrs)
+
+    def last(self, skipna=None, keep_attrs=True):
+        """Return the last element of each group along the group dimension
+        """
+        return self.reduce(ops.last, self.group_dim, skipna=skipna,
+                           keep_attrs=keep_attrs)
 
 
 class ArrayGroupBy(GroupBy, ImplementsArrayReduce):
@@ -247,7 +289,9 @@ class ArrayGroupBy(GroupBy, ImplementsArrayReduce):
         else:
             grouped = self._iter_grouped()
         applied = (maybe_wrap_array(arr, func(arr, **kwargs)) for arr in grouped)
-        return self._concat(applied, shortcut=shortcut)
+        combined = self._concat(applied, shortcut=shortcut)
+        result = self._maybe_restore_empty_groups(combined)
+        return result
 
     def _concat(self, applied, shortcut=False):
         # peek at applied to determine which coordinate to stack over
@@ -331,7 +375,9 @@ class DatasetGroupBy(GroupBy, ImplementsDatasetReduce):
         """
         kwargs.pop('shortcut', None) # ignore shortcut if set (for now)
         applied = (func(ds, **kwargs) for ds in self._iter_grouped())
-        return self._concat(applied)
+        combined = self._concat(applied)
+        result = self._maybe_restore_empty_groups(combined)
+        return result
 
     def _concat(self, applied):
         applied_example, applied = peek_at(applied)

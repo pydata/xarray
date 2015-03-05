@@ -48,28 +48,24 @@ Probability of freeze by calendar month
     freeze
 
     @savefig examples_freeze_prob.png
-    freeze.to_series().unstack('location').plot()
-
+    freeze.to_pandas().T.plot()
 
 Monthly averaging
 -----------------
 
-.. literalinclude:: _code/monthly_averaging.py
-
-.. ipython:: python
-   :suppress:
-
-   execfile("examples/_code/monthly_averaging.py")
-
 .. ipython:: python
 
-    monthly_avg = ds.groupby(year_month(ds)).mean()
+    monthly_avg = ds.resample('1MS', dim='time', how='mean')
 
     @savefig examples_tmin_tmax_plot_mean.png
-    monthly_avg.to_dataframe().plot(style='s-')
+    monthly_avg.sel(location='IA').to_dataframe().plot(style='s-')
 
-We do plan to eventually add a ``resample`` method like pandas to make this
-more convenient (:issue:`354`).
+Resample uses the `same api`_ as ``resample`` in pandas. Note that ``MS`` here
+refers to Month-Start; ``M`` labels Month-End (the last day of the month). The
+full of these offset aliases is `documented in pandas`_.
+
+.. _same api: http://pandas.pydata.org/pandas-docs/stable/timeseries.html#up-and-downsampling
+.. _documented in pandas: http://pandas.pydata.org/pandas-docs/stable/timeseries.html#offset-aliases
 
 Calculate monthly anomalies
 ---------------------------

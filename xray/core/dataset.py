@@ -19,7 +19,7 @@ from . import formatting
 from .. import backends, conventions
 from .alignment import align, partial_align
 from .coordinates import DatasetCoordinates, Indexes
-from .common import ImplementsDatasetReduce, AttrAccessMixin
+from .common import ImplementsDatasetReduce, BaseDataObject
 from .utils import Frozen, SortedKeysDict, ChainMap, maybe_wrap_array
 from .pycompat import iteritems, itervalues, basestring, OrderedDict
 
@@ -353,7 +353,7 @@ class _LocIndexer(object):
         return self.dataset.sel(**key)
 
 
-class Dataset(Mapping, ImplementsDatasetReduce, AttrAccessMixin):
+class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject):
     """A multi-dimensional, in memory, array database.
 
     A dataset resembles an in-memory representation of a NetCDF file, and
@@ -370,6 +370,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, AttrAccessMixin):
     # runs into trouble because we overrode __getattr__
     _attrs = None
     _variables = Frozen({})
+
+    groupby_cls = groupby.DatasetGroupBy
 
     def __init__(self, variables=None, coords=None, attrs=None,
                  compat='broadcast_equals'):
@@ -1339,29 +1341,6 @@ class Dataset(Mapping, ImplementsDatasetReduce, AttrAccessMixin):
                       FutureWarning, stacklevel=2)
         return self.drop(names)
 
-    def groupby(self, group, squeeze=True):
-        """Returns a GroupBy object for performing grouped operations.
-
-        Parameters
-        ----------
-        group : str, DataArray or Coordinate
-            Array whose unique values should be used to group this array. If a
-            string, must be the name of a variable contained in this dataset.
-        squeeze : boolean, optional
-            If "group" is a dimension of any arrays in this dataset, `squeeze`
-            controls whether the subarrays have a dimension of length 1 along
-            that dimension or if the dimension is squeezed out.
-
-        Returns
-        -------
-        grouped : GroupBy
-            A `GroupBy` object patterned after `pandas.GroupBy` that can be
-            iterated over in the form of `(unique_value, grouped_array)` pairs.
-        """
-        if isinstance(group, basestring):
-            group = self[group]
-        return groupby.DatasetGroupBy(self, group, squeeze=squeeze)
-
     def transpose(self, *dims):
         """Return a new Dataset object with all array dimensions transposed.
 
@@ -1531,16 +1510,17 @@ class Dataset(Mapping, ImplementsDatasetReduce, AttrAccessMixin):
             if reduce_dims or not var.dims:
                 if name not in self.coords:
                     if not numeric_only or var.dtype.kind in 'ifcb':
-                        if len(reduce_dims) == var.ndim:
+                        if len(reduce_dims) == 1:
+                            # unpack dimensions for the benefit of functions
+                            # like np.argmin which can't handle tuple arguments
+                            reduce_dims, = reduce_dims
+                        elif len(reduce_dims) == var.ndim:
                             # prefer to aggregate over axis=None rather than
                             # axis=(0, 1) if they will be equivalent, because
                             # the former is often more efficient
                             reduce_dims = None
-                        elif len(reduce_dims) == 1:
-                            # unpack dimensions for the benefit of functions
-                            # like np.argmin which can't handle tuple arguments
-                            reduce_dims, = reduce_dims
                         variables[name] = var.reduce(func, dim=reduce_dims,
+                                                     keep_attrs=keep_attrs,
                                                      **kwargs)
             else:
                 variables[name] = var

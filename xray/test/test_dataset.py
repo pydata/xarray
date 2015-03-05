@@ -1202,6 +1202,24 @@ class TestDataset(TestCase):
         expected = Dataset({'foo': ('bar', [1.5, 3]), 'bar': [1, 2]})
         self.assertDatasetIdentical(actual, expected)
 
+    def test_resample_and_first(self):
+        times = pd.date_range('2000-01-01', freq='6H', periods=10)
+        ds = Dataset({'foo': (['time', 'x', 'y'], np.random.randn(10, 5, 3)),
+                      'bar': ('time', np.random.randn(10), {'meta': 'data'}),
+                      'baz': ('x', np.random.randn(5)),
+                      'time': times})
+
+        actual = ds.resample('1D', dim='time', how='first')
+        expected = ds.isel(time=[0, 4, 8])
+        self.assertDatasetIdentical(expected, actual)
+
+        # upsampling
+        expected_time = pd.date_range('2000-01-01', freq='3H', periods=19)
+        expected = ds.reindex(time=expected_time)
+        for how in ['mean', 'sum', 'first', 'last', np.mean]:
+            actual = ds.resample('3H', 'time', how=how)
+            self.assertDatasetEqual(expected, actual)
+
     def test_concat(self):
         data = create_test_data()
 
@@ -1513,13 +1531,15 @@ class TestDataset(TestCase):
 
         # Test dropped attrs
         ds = data.mean()
-        self.assertEqual(len(ds.attrs), 0)
-        self.assertEqual(ds.attrs, OrderedDict())
+        self.assertEqual(ds.attrs, {})
+        for v in ds.data_vars.values():
+            self.assertEqual(v.attrs, {})
 
         # Test kept attrs
         ds = data.mean(keep_attrs=True)
-        self.assertEqual(len(ds.attrs), len(_attrs))
-        self.assertTrue(ds.attrs, attrs)
+        self.assertEqual(ds.attrs, attrs)
+        for k, v in ds.data_vars.items():
+            self.assertEqual(v.attrs, data[k].attrs)
 
     def test_reduce_argmin(self):
         # regression test for #205
@@ -1567,8 +1587,10 @@ class TestDataset(TestCase):
         data.attrs['foo'] = 'bar'
 
         self.assertDatasetIdentical(data.apply(np.mean), data.mean())
-        self.assertDatasetIdentical(data.apply(np.mean, keep_attrs=True),
-                                    data.mean(keep_attrs=True))
+
+        expected = data.mean(keep_attrs=True)
+        actual = data.apply(lambda x: x.mean(keep_attrs=True), keep_attrs=True)
+        self.assertDatasetIdentical(expected, actual)
 
         self.assertDatasetIdentical(data.apply(lambda x: x, keep_attrs=True),
                                     data.drop('time'))

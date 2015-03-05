@@ -9,7 +9,7 @@ from . import ops
 from . import utils
 from . import variable
 from .alignment import align
-from .common import AbstractArray, AttrAccessMixin
+from .common import AbstractArray, BaseDataObject
 from .coordinates import DataArrayCoordinates, Indexes
 from .dataset import Dataset
 from .pycompat import iteritems, basestring, OrderedDict, zip
@@ -82,7 +82,7 @@ class _LocIndexer(object):
         self.data_array[self._remap_key(key)] = value
 
 
-class DataArray(AbstractArray, AttrAccessMixin):
+class DataArray(AbstractArray, BaseDataObject):
     """N-dimensional array with labeled coordinates and dimensions.
 
     DataArray provides a wrapper around numpy ndarrays that uses labeled
@@ -120,6 +120,8 @@ class DataArray(AbstractArray, AttrAccessMixin):
     attrs : OrderedDict
         Dictionary for holding arbitrary metadata.
     """
+    groupby_cls = groupby.ArrayGroupBy
+
     def __init__(self, data, coords=None, dims=None, name=None,
                  attrs=None, encoding=None):
         """
@@ -567,32 +569,6 @@ class DataArray(AbstractArray, AttrAccessMixin):
             name_dict = {self.name: new_name}
         renamed_dataset = self._dataset.rename(name_dict)
         return renamed_dataset[new_name]
-
-    def groupby(self, group, squeeze=True):
-        """Returns a GroupBy object for performing grouped operations.
-
-        Parameters
-        ----------
-        group : str, DataArray or Coordinate
-            Array whose unique values should be used to group this array. If a
-            string, must be the name of a variable contained in this dataset.
-        squeeze : boolean, optional
-            If "group" is a diension of this array, `squeeze` controls
-            whether the subarrays have a dimension of length 1 along that
-            dimension or if the dimension is squeezed out.
-
-        Returns
-        -------
-        grouped : GroupBy
-            A `GroupBy` object patterned after `pandas.GroupBy` that can be
-            iterated over in the form of `(unique_value, grouped_array)` pairs
-            or over which grouped operations can be applied with the `apply`
-            and `reduce` methods (and the associated aliases `mean`, `sum`,
-            `std`, etc.).
-        """
-        if isinstance(group, basestring):
-            group = self.coords[group]
-        return groupby.ArrayGroupBy(self, group, squeeze=squeeze)
 
     def transpose(self, *dims):
         """Return a new DataArray object with transposed dimensions.
