@@ -17,8 +17,9 @@ The release contains bug fixes and backwards compatible changes.
 New features
 ~~~~~~~~~~~~
 
-- ``resample`` lets you resample a new temporal resolution. The syntax is the
-  `same as pandas`_, except you need to supply the time dimension explicitly:
+- :py:meth`~xray.Dataset.resample` lets you resample a dataset or data array to
+  a new temporal resolution. The syntax is the `same as pandas`_, except you
+  need to supply the time dimension explicitly:
 
   .. ipython:: python
 

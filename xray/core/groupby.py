@@ -65,6 +65,8 @@ class GroupBy(object):
             If "group" is a coordinate of object, `squeeze` controls whether
             the subarrays have a dimension of length 1 along that coordinate or
             if the dimension is squeezed out.
+        grouper : pd.Grouper, optional
+            Used for grouping values along the `group` array.
         """
         from .dataset import as_dataset
 

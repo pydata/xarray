@@ -978,6 +978,9 @@ class TestDataArray(TestCase):
         actual = array.resample('24H', dim='time', how=np.mean)
         self.assertDataArrayIdentical(expected, actual)
 
+        with self.assertRaisesRegexp(ValueError, 'index must be monotonic'):
+            array[[2, 0, 1]].resample('1D', dim='time')
+
     def test_resample_first(self):
         times = pd.date_range('2000-01-01', freq='6H', periods=10)
         array = DataArray(np.arange(10), [('time', times)])
@@ -993,11 +996,11 @@ class TestDataArray(TestCase):
 
     def test_resample_skipna(self):
         times = pd.date_range('2000-01-01', freq='6H', periods=10)
-        array = DataArray(np.arange(10.0), [('time', times)])
-        array[0] = np.nan
+        array = DataArray(np.ones(10), [('time', times)])
+        array[1] = np.nan
 
-        actual = array.resample('1D', dim='time', how='first', skipna=False)
-        expected = DataArray([np.nan, 4, 8], [('time', times[::4])])
+        actual = array.resample('1D', dim='time', skipna=False)
+        expected = DataArray([np.nan, 1, 1], [('time', times[::4])])
         self.assertDataArrayIdentical(expected, actual)
 
     def test_resample_upsampling(self):
