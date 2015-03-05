@@ -181,28 +181,17 @@ class GroupBy(object):
             combined = combined.reindex(**indexers)
         return combined
 
-    def _get_element(self, n):
-        sl = {self.group_dim: n}
-
-        def f(x):
-            res = x.isel(**sl)
-            if not isinstance(res, Variable):
-                # drop group_dim to ensure those labels don't get used
-                # (they get inserted again later)
-                res = res.drop(self.group_dim)
-            return res
-
-        return self.apply(f, shortcut=True)
-
-    def first(self):
+    def first(self, skipna=None, keep_attrs=True):
         """Return the first element of each group along the group dimension
         """
-        return self._get_element(0)
+        return self.reduce(ops.first, self.group_dim, skipna=skipna,
+                           keep_attrs=keep_attrs)
 
-    def last(self):
+    def last(self, skipna=None, keep_attrs=True):
         """Return the last element of each group along the group dimension
         """
-        return self._get_element(-1)
+        return self.reduce(ops.last, self.group_dim, skipna=skipna,
+                           keep_attrs=keep_attrs)
 
 
 class ArrayGroupBy(GroupBy, ImplementsArrayReduce):

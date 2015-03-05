@@ -1531,13 +1531,15 @@ class TestDataset(TestCase):
 
         # Test dropped attrs
         ds = data.mean()
-        self.assertEqual(len(ds.attrs), 0)
-        self.assertEqual(ds.attrs, OrderedDict())
+        self.assertEqual(ds.attrs, {})
+        for v in ds.data_vars.values():
+            self.assertEqual(v.attrs, {})
 
         # Test kept attrs
         ds = data.mean(keep_attrs=True)
-        self.assertEqual(len(ds.attrs), len(_attrs))
-        self.assertTrue(ds.attrs, attrs)
+        self.assertEqual(ds.attrs, attrs)
+        for k, v in ds.data_vars.items():
+            self.assertEqual(v.attrs, data[k].attrs)
 
     def test_reduce_argmin(self):
         # regression test for #205
@@ -1585,8 +1587,10 @@ class TestDataset(TestCase):
         data.attrs['foo'] = 'bar'
 
         self.assertDatasetIdentical(data.apply(np.mean), data.mean())
-        self.assertDatasetIdentical(data.apply(np.mean, keep_attrs=True),
-                                    data.mean(keep_attrs=True))
+
+        expected = data.mean(keep_attrs=True)
+        actual = data.apply(lambda x: x.mean(keep_attrs=True), keep_attrs=True)
+        self.assertDatasetIdentical(expected, actual)
 
         self.assertDatasetIdentical(data.apply(lambda x: x, keep_attrs=True),
                                     data.drop('time'))

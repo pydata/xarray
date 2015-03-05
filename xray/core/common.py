@@ -190,7 +190,7 @@ class BaseDataObject(AttrAccessMixin):
         if isinstance(how, basestring):
             f = getattr(gb, how)
             if how in ['first', 'last']:
-                result = f()
+                result = f(skipna=skipna)
             else:
                 result = f(dim=dim.name, skipna=skipna)
         else:

@@ -1510,16 +1510,17 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject):
             if reduce_dims or not var.dims:
                 if name not in self.coords:
                     if not numeric_only or var.dtype.kind in 'ifcb':
-                        if len(reduce_dims) == var.ndim:
+                        if len(reduce_dims) == 1:
+                            # unpack dimensions for the benefit of functions
+                            # like np.argmin which can't handle tuple arguments
+                            reduce_dims, = reduce_dims
+                        elif len(reduce_dims) == var.ndim:
                             # prefer to aggregate over axis=None rather than
                             # axis=(0, 1) if they will be equivalent, because
                             # the former is often more efficient
                             reduce_dims = None
-                        elif len(reduce_dims) == 1:
-                            # unpack dimensions for the benefit of functions
-                            # like np.argmin which can't handle tuple arguments
-                            reduce_dims, = reduce_dims
                         variables[name] = var.reduce(func, dim=reduce_dims,
+                                                     keep_attrs=keep_attrs,
                                                      **kwargs)
             else:
                 variables[name] = var

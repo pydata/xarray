@@ -58,6 +58,12 @@ New features
 
 TODO: write full docs on time-series!
 
+Bug fixes
+~~~~~~~~~
+
+- Dataset aggregations with ``keep_attrs=True`` now preserve attributes on
+  data variables, not just the dataset itself.
+
 v0.4 (2 March, 2015)
 --------------------
 

@@ -994,6 +994,17 @@ class TestDataArray(TestCase):
         expected = DataArray(array.to_series().resample('24H', how='first'))
         self.assertDataArrayIdentical(expected, actual)
 
+        # missing values
+        array = array.astype(float)
+        array[:2] = np.nan
+        actual = array.resample('1D', dim='time', how='first')
+        expected = DataArray([2, 4, 8], [('time', times[::4])])
+        self.assertDataArrayIdentical(expected, actual)
+
+        actual = array.resample('1D', dim='time', how='first', skipna=False)
+        expected = DataArray([np.nan, 4, 8], [('time', times[::4])])
+        self.assertDataArrayIdentical(expected, actual)
+
     def test_resample_skipna(self):
         times = pd.date_range('2000-01-01', freq='6H', periods=10)
         array = DataArray(np.ones(10), [('time', times)])
