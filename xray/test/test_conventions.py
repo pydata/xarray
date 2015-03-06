@@ -355,13 +355,13 @@ class TestDatetime(TestCase):
     @requires_netCDF4
     def test_dataset_repr_with_netcdf4_datetimes(self):
         # regression test for #347
-        attrs = {'units': 'days since 0001-00-00', 'calendar': 'noleap'}
+        attrs = {'units': 'days since 0001-01-01', 'calendar': 'noleap'}
         with warnings.catch_warnings():
             warnings.filterwarnings('ignore', 'unable to decode time')
             ds = decode_cf(Dataset({'time': ('time', [0, 1], attrs)}))
             self.assertIn('(time) object', repr(ds))
 
-        attrs = {'units': 'days since 1900-00-00'}
+        attrs = {'units': 'days since 1900-01-01'}
         ds = decode_cf(Dataset({'time': ('time', [0, 1], attrs)}))
         self.assertIn('(time) datetime64[ns]', repr(ds))
 
