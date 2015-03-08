@@ -302,11 +302,13 @@ class TestDataset(TestCase):
     def test_coords_properties(self):
         # use an OrderedDict for coordinates to ensure order across python
         # versions
-        data = Dataset(OrderedDict([('x', ('x', [-1, -2])),
-                                    ('y', ('y', [0, 1, 2])),
+        # use int64 for repr consistency on windows
+        data = Dataset(OrderedDict([('x', ('x', np.array([-1, -2], 'int64'))),
+                                    ('y', ('y', np.array([0, 1, 2], 'int64'))),
                                     ('foo', (['x', 'y'],
                                              np.random.randn(2, 3)))]),
-                       OrderedDict([('a', ('x', [4, 5])), ('b', -10)]))
+                       OrderedDict([('a', ('x', np.array([4, 5], 'int64'))),
+                                    ('b', np.int64(-10))]))
 
         self.assertEqual(4, len(data.coords))
 
@@ -1379,14 +1381,18 @@ class TestDataset(TestCase):
         self.assertDatasetIdentical(expected, actual)
 
         # regression test for GH278
-        ds = Dataset({'x': pd.Index(['bar']), 'a': ('y', [1])}).isel(x=0)
+        # use int64 to ensure consistent results for the pandas .equals method
+        # on windows (which requires the same dtype)
+        ds = Dataset({'x': pd.Index(['bar']),
+                      'a': ('y', np.array([1], 'int64'))}).isel(x=0)
         # use .loc to ensure consistent results on Python 3
         actual = ds.to_dataframe().loc[:, ['a', 'x']]
         expected = pd.DataFrame([[1, 'bar']], index=pd.Index([0], name='y'),
                                 columns=['a', 'x'])
         assert expected.equals(actual), (expected, actual)
 
-        ds = Dataset({'x': [0], 'y': [1]})
+        ds = Dataset({'x': np.array([0], 'int64'),
+                      'y': np.array([1], 'int64')})
         actual = ds.to_dataframe()
         idx = pd.MultiIndex.from_arrays([[0], [1]], names=['x', 'y'])
         expected = pd.DataFrame([[]], index=idx)

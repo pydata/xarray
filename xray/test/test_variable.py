@@ -810,7 +810,7 @@ class TestAsCompatibleData(TestCase):
             actual = _as_compatible_data(input_array)
             self.assertArrayEqual(np.asarray(input_array), actual)
             self.assertEqual(NumpyArrayAdapter, type(actual))
-            self.assertEqual(np.dtype(int), actual.dtype)
+            self.assertEqual(np.dtype(np.int64), actual.dtype)
 
     def test_masked_array(self):
         original = np.ma.MaskedArray(np.arange(5))

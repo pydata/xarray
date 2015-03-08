@@ -278,7 +278,8 @@ class NetCDF4DataTest(CFEncodedDataTest, TestCase):
     @contextlib.contextmanager
     def create_store(self):
         with create_tmp_file() as tmp_file:
-            yield backends.NetCDF4DataStore(tmp_file, mode='w')
+            with backends.NetCDF4DataStore(tmp_file, mode='w') as store:
+                yield store
 
     @contextlib.contextmanager
     def roundtrip(self, data, **kwargs):
@@ -314,14 +315,13 @@ class NetCDF4DataTest(CFEncodedDataTest, TestCase):
     def test_open_group(self):
         # Create a netCDF file with a dataset stored within a group
         with create_tmp_file() as tmp_file:
-            rootgrp = nc4.Dataset(tmp_file, 'w')
-            foogrp = rootgrp.createGroup('foo')
-            ds = foogrp
-            ds.createDimension('time', size=10)
-            x = np.arange(10)
-            ds.createVariable('x', np.int32, dimensions=('time',))
-            ds.variables['x'][:] = x
-            rootgrp.close()
+            with nc4.Dataset(tmp_file, 'w') as rootgrp:
+                foogrp = rootgrp.createGroup('foo')
+                ds = foogrp
+                ds.createDimension('time', size=10)
+                x = np.arange(10)
+                ds.createVariable('x', np.int32, dimensions=('time',))
+                ds.variables['x'][:] = x
 
             expected = Dataset()
             expected['x'] = ('time', x)
@@ -362,10 +362,10 @@ class NetCDF4DataTest(CFEncodedDataTest, TestCase):
         with create_tmp_file() as tmp_file:
             data1.to_netcdf(tmp_file, group='data/1')
             data2.to_netcdf(tmp_file, group='data/2', mode='a')
-            actual1 = open_dataset(tmp_file, group='data/1')
-            actual2 = open_dataset(tmp_file, group='data/2')
-            self.assertDatasetIdentical(data1, actual1)
-            self.assertDatasetIdentical(data2, actual2)
+            with open_dataset(tmp_file, group='data/1') as actual1:
+                self.assertDatasetIdentical(data1, actual1)
+            with open_dataset(tmp_file, group='data/2') as actual2:
+                self.assertDatasetIdentical(data2, actual2)
 
     def test_dump_and_open_encodings(self):
         # Create a netCDF file with explicit time units
@@ -509,13 +509,13 @@ class NetCDF4DataTest(CFEncodedDataTest, TestCase):
             encoding = {'units': units, 'dtype': np.dtype('int32')}
             expected['time'] = ('time', time, {}, encoding)
 
-            actual = open_dataset(tmp_file)
-
-            self.assertVariableEqual(actual['time'], expected['time'])
-            actual_encoding = dict((k, v) for k, v
-                                   in iteritems(actual['time'].encoding)
-                                   if k in expected['time'].encoding)
-            self.assertDictEqual(actual_encoding, expected['time'].encoding)
+            with open_dataset(tmp_file) as actual:
+                self.assertVariableEqual(actual['time'], expected['time'])
+                actual_encoding = dict((k, v) for k, v
+                                       in iteritems(actual['time'].encoding)
+                                       if k in expected['time'].encoding)
+                self.assertDictEqual(actual_encoding,
+                                     expected['time'].encoding)
 
     def test_dump_and_open_encodings(self):
         # Create a netCDF file with explicit time units
@@ -585,7 +585,8 @@ class ScipyOnDiskDataTest(CFEncodedDataTest, Only32BitTypes, TestCase):
     @contextlib.contextmanager
     def create_store(self):
         with create_tmp_file() as tmp_file:
-            yield backends.ScipyDataStore(tmp_file, mode='w')
+            with backends.ScipyDataStore(tmp_file, mode='w') as store:
+                yield store
 
     @contextlib.contextmanager
     def roundtrip(self, data, **kwargs):
@@ -595,7 +596,7 @@ class ScipyOnDiskDataTest(CFEncodedDataTest, Only32BitTypes, TestCase):
             self.skipTest('only valid if netCDF4 is not installed')
 
         with create_tmp_file() as tmp_file:
-            serialized = data.to_netcdf(tmp_file)
+            data.to_netcdf(tmp_file)
             with open_dataset(tmp_file, **kwargs) as ds:
                 yield ds
 
@@ -605,8 +606,9 @@ class NetCDF3ViaNetCDF4DataTest(CFEncodedDataTest, Only32BitTypes, TestCase):
     @contextlib.contextmanager
     def create_store(self):
         with create_tmp_file() as tmp_file:
-            yield backends.NetCDF4DataStore(tmp_file, mode='w',
-                                            format='NETCDF3_CLASSIC')
+            with backends.NetCDF4DataStore(tmp_file, mode='w',
+                                           format='NETCDF3_CLASSIC') as store:
+                yield store
 
     @contextlib.contextmanager
     def roundtrip(self, data, **kwargs):

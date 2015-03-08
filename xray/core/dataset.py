@@ -20,7 +20,8 @@ from .. import backends, conventions
 from .alignment import align, partial_align
 from .coordinates import DatasetCoordinates, Indexes
 from .common import ImplementsDatasetReduce, BaseDataObject
-from .utils import Frozen, SortedKeysDict, ChainMap, maybe_wrap_array
+from .utils import (Frozen, SortedKeysDict, ChainMap, maybe_wrap_array,
+                    close_on_error)
 from .pycompat import iteritems, itervalues, basestring, OrderedDict
 
 
@@ -65,6 +66,15 @@ def open_dataset(filename_or_obj, group=None, decode_cf=True,
     dataset : Dataset
         The newly created dataset.
     """
+    def _decode_store(store):
+        if decode_cf:
+            return conventions.decode_cf(
+                store, mask_and_scale=mask_and_scale,
+                decode_times=decode_times, concat_characters=concat_characters,
+                decode_coords=decode_coords)
+        else:
+            return Dataset.load_store(store)
+
     if isinstance(filename_or_obj, basestring):
         if filename_or_obj.endswith('.gz'):
             # if the string ends with .gz, then gunzip and open as netcdf file
@@ -85,17 +95,13 @@ def open_dataset(filename_or_obj, group=None, decode_cf=True,
                 store = backends.NetCDF4DataStore(filename_or_obj, group=group)
             except ImportError:
                 store = backends.ScipyDataStore(filename_or_obj)
+
+        with close_on_error(store):
+            return _decode_store(store)
     else:
         # assume filename_or_obj is a file-like object
         store = backends.ScipyDataStore(filename_or_obj)
-
-    if decode_cf:
-        return conventions.decode_cf(
-            store, mask_and_scale=mask_and_scale,
-            decode_times=decode_times, concat_characters=concat_characters,
-            decode_coords=decode_coords)
-    else:
-        return Dataset.load_store(store)
+        return _decode_store(store)
 
 
 # list of attributes of pd.DatetimeIndex that are ndarrays of time info
@@ -1443,7 +1449,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject):
         if subset is None:
             subset = list(self.data_vars)
 
-        count = np.zeros(self.dims[dim], dtype=int)
+        count = np.zeros(self.dims[dim], dtype=np.int64)
         size = 0
 
         for k in subset:

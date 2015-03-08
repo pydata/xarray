@@ -34,7 +34,7 @@ class ScipyDataStore(AbstractWritableDataStore):
 
     It only supports the NetCDF3 file-format.
     """
-    def __init__(self, filename_or_obj, mode='r', mmap=None, version=1):
+    def __init__(self, filename_or_obj, mode='r', mmap=None, version=2):
         import scipy
         if mode != 'r' and scipy.__version__ < '0.13':
             warnings.warn('scipy %s detected; '
