@@ -5,7 +5,7 @@ import numpy as np
 from .. import Variable
 from ..conventions import pop_to, cf_encoder
 from ..core import indexing
-from ..core.utils import FrozenOrderedDict, NDArrayMixin
+from ..core.utils import FrozenOrderedDict, NDArrayMixin, close_on_error
 from ..core.pycompat import iteritems, basestring, OrderedDict
 
 from .common import AbstractWritableDataStore
@@ -122,7 +122,8 @@ class NetCDF4DataStore(AbstractWritableDataStore):
         ds = nc4.Dataset(filename, mode=mode, clobber=clobber,
                          diskless=diskless, persist=persist,
                          format=format)
-        self.ds = _nc4_group(ds, group, mode)
+        with close_on_error(ds):
+            self.ds = _nc4_group(ds, group, mode)
         self.format = format
         self._filename = filename
 

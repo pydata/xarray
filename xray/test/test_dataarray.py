@@ -20,7 +20,7 @@ class TestDataArray(TestCase):
 
     def test_repr(self):
         v = Variable(['time', 'x'], [[1, 2, 3], [4, 5, 6]], {'foo': 'bar'})
-        data_array = DataArray(v, {'other': ([], 0)}, name='my_variable')
+        data_array = DataArray(v, {'other': np.int64(0)}, name='my_variable')
         expected = dedent("""\
         <xray.DataArray 'my_variable' (time: 2, x: 3)>
         array([[1, 2, 3],
@@ -381,7 +381,9 @@ class TestDataArray(TestCase):
         self.assertArrayEqual(da.coords['time.dayofyear'], da.values)
 
     def test_coords(self):
-        coords = [Coordinate('x', [-1, -2]), Coordinate('y', [0, 1, 2])]
+        # use int64 to ensure repr() consistency on windows
+        coords = [Coordinate('x', np.array([-1, -2], 'int64')),
+                  Coordinate('y', np.array([0, 1, 2], 'int64'))]
         da = DataArray(np.random.randn(2, 3), coords, name='foo')
 
         self.assertEquals(2, len(da.coords))

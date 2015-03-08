@@ -1,5 +1,6 @@
 """Internal utilties; not for external use
 """
+import contextlib
 import datetime
 import functools
 import itertools
@@ -471,3 +472,15 @@ class NDArrayMixin(object):
 
     def __repr__(self):
         return '%s(array=%r)' % (type(self).__name__, self.array)
+
+
+@contextlib.contextmanager
+def close_on_error(f):
+    """Context manager to ensure that a file opened by xray is closed if an
+    exception is raised before the user sees the file object.
+    """
+    try:
+        yield
+    except Exception:
+        f.close()
+        raise
