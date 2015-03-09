@@ -1,5 +1,6 @@
+import numpy as np
 from numpy import array, nan
-from xray.core.ops import first, last, count
+from xray.core.ops import first, last, count, mean
 
 from . import TestCase
 
@@ -67,3 +68,6 @@ class TestOps(TestCase):
 
         expected = array([[1, 2, 3], [3, 2, 1]])
         self.assertArrayEqual(expected, count(self.x, axis=-1))
+
+    def test_all_nan_arrays(self):
+        assert np.isnan(mean([np.nan, np.nan]))
