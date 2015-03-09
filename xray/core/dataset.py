@@ -31,7 +31,7 @@ def _get_default_netcdf_engine(engine):
         engine = 'netcdf4'
     except ImportError:
         try:
-            import scipy.io.netcdf_file
+            import scipy.io.netcdf
             engine = 'scipy'
         except ImportError:
             raise ValueError('cannot read or write netCDF files without '

@@ -58,11 +58,23 @@ New features
 
 TODO: write full docs on time-series!
 
+Enhancements
+~~~~~~~~~~~~
+
+- :py:func:`~xray.open_dataset` and :py:meth:`~xray.Dataset.to_netcdf` now
+  accept an ``engine`` argument to explicitly select which underlying library
+  (netcdf4 or scipy) is used for reading/writing a netCDF file.
+
 Bug fixes
 ~~~~~~~~~
 
+- Fixed a bug where data netCDF variables read from disk with
+  ``engine='scipy'`` could still be associated with the file on disk, even
+  after closing the file (`issue`:341:). This manifested itself in warnings
+  about mmapped arrays and segmentation faults (if the data was accessed).
 - Dataset aggregations with ``keep_attrs=True`` now preserve attributes on
   data variables, not just the dataset itself.
+- Tests for xray now pass when run on windows. DOUBLE CHECK THIS.
 
 v0.4 (2 March, 2015)
 --------------------

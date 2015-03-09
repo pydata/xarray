@@ -78,12 +78,14 @@ class DatasetIOTestCases(object):
 
         @contextlib.contextmanager
         def assert_loads(vars=None):
+            if vars is None:
+                vars = expected
             with self.roundtrip(expected) as actual:
                 for v in actual.values():
                     self.assertFalse(v._in_memory)
                 yield actual
                 for k, v in actual.items():
-                    if vars is None or k in vars:
+                    if k in vars:
                         self.assertTrue(v._in_memory)
                 self.assertDatasetAllClose(expected, actual)
 
@@ -98,11 +100,10 @@ class DatasetIOTestCases(object):
         with assert_loads(['var1', 'dim1', 'dim2']) as ds:
             ds['var1'].load_data()
 
-        # not working yet:
-        # # verify we can read data even after closing the file
-        # with self.roundtrip(expected) as ds:
-        #     actual = ds.load_data()
-        # self.assertDatasetAllClose(expected, actual)
+        # verify we can read data even after closing the file
+        with self.roundtrip(expected) as ds:
+            actual = ds.load_data()
+        self.assertDatasetAllClose(expected, actual)
 
     def test_roundtrip_None_variable(self):
         expected = Dataset({None: (('x', 'y'), [[0, 1], [2, 3]])})
@@ -649,7 +650,6 @@ class GenericNetCDFDataTest(CFEncodedDataTest, Only32BitTypes, TestCase):
         with self.assertRaisesRegexp(ValueError, 'can only read'):
             open_dataset(BytesIO(netcdf_bytes), engine='foobar')
 
-    @unittest.skip('not working yet')
     def test_cross_engine_read_write(self):
         data = create_test_data()
         valid_engines = set()
@@ -657,16 +657,16 @@ class GenericNetCDFDataTest(CFEncodedDataTest, Only32BitTypes, TestCase):
             valid_engines.add('netcdf4')
         if has_scipy:
             valid_engines.add('scipy')
+
         for write_engine in valid_engines:
             for format in ['NETCDF3_CLASSIC', 'NETCDF3_64BIT']:
                 with create_tmp_file() as tmp_file:
-                    print('writing %r with %r' % (format, write_engine))
                     data.to_netcdf(tmp_file, format=format,
                                    engine=write_engine)
                     for read_engine in valid_engines:
-                        print('reading with %r' % read_engine)
-                        with open_dataset(tmp_file, engine=read_engine) as actual:
-                            self.assertDatasetIdentical(data, actual)
+                        with open_dataset(tmp_file,
+                                          engine=read_engine) as actual:
+                            self.assertDatasetAllClose(data, actual)
 
 
 @requires_netCDF4
