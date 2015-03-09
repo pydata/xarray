@@ -126,7 +126,7 @@ You can even modify ``values`` inplace:
     The array values in a :py:class:`~xray.DataArray` have a single
     (homogeneous) data type. To work with heterogeneous or structured data
     types in xray, use coordinates, or put separate ``DataArray`` objects in a
-    single :py:class:`~xray.Dataset`.
+    single :py:class:`~xray.Dataset` (see below).
 
 Now fill in some of that missing metadata:
 
@@ -166,27 +166,6 @@ Coordinates can also be set or removed by using the dictionary like syntax:
     foo.coords
     del foo['ranking']
     foo.coords
-
-xray also supports a notion of "virtual" or "derived" coordinates for
-`datetime components`__ implemented by pandas, including "year", "month",
-"day", "hour", "minute", "second", "dayofyear", "week", "dayofweek", "weekday"
-and "quarter":
-
-__ http://pandas.pydata.org/pandas-docs/stable/api.html#time-date-components
-
-.. ipython:: python
-
-    foo['time.month']
-    foo['time.dayofyear']
-
-xray adds ``'season'`` to the list of datetime components supported by pandas:
-
-.. ipython:: python
-
-    foo['time.season']
-
-The set of valid seasons consists of 'DJF', 'MAM', 'JJA' and 'SON', labeled by
-the first letters of the corresponding months.
 
 Dataset
 -------

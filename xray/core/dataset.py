@@ -715,7 +715,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject):
 
         These variables can be derived by performing simple operations on an
         existing dataset variable or coordinate. Currently, the only
-        implemented virtual variables are time/date components [1_] such as
+        implemented virtual variables are time/date components [1] such as
         "time.month" or "time.dayofyear", where "time" is the name of a index
         whose data is a `pandas.DatetimeIndex` object. The virtual variable
         "time.season" (for climatological season, starting with 1 for "DJF") is

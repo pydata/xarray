@@ -18,7 +18,7 @@ __ http://pandas.pydata.org/pandas-docs/stable/io.html
     np.random.seed(123456)
 
 Pickle
-~~~~~~
+------
 
 The simplest way to serialize an xray object is to use Python's built-in pickle
 module:
@@ -52,7 +52,7 @@ and lets you use xray objects with Python modules like
    this version of xray will work in future versions.
 
 netCDF
-~~~~~~
+------
 
 Currently, the only disk based serialization format that xray directly supports
 is `netCDF`__. netCDF is a file format for fully self-described datasets that
@@ -64,7 +64,7 @@ netCDF are based on the even more widely used HDF5 file-format.
 __ http://www.unidata.ucar.edu/software/netcdf/
 
 Reading and writing netCDF files with xray requires the
-`Python-netCDF4`__ library.
+`netCDF4-Python`__ library or scipy to be installed.
 
 __ https://github.com/Unidata/netcdf4-python
 
@@ -77,26 +77,34 @@ We can save a Dataset to disk using the
 
     ds.to_netcdf('saved_on_disk.nc')
 
-By default, the file is saved as netCDF4.
+By default, the file is saved as netCDF4 (assuming netCDF4-Python is
+installed). You can control the format and engine used to write the file with
+the ``format`` and ``engine`` arguments.
 
-We can load netCDF files to create a new Dataset using the
-:py:func:`~xray.open_dataset` function:
+We can load netCDF files to create a new Dataset using
+:py:func:`~xray.open_dataset`:
 
 .. ipython:: python
 
     ds_disk = xray.open_dataset('saved_on_disk.nc')
     ds_disk
 
-A dataset can also be loaded from a specific group within a netCDF
+A dataset can also be loaded or written to a specific group within a netCDF
 file. To load from a group, pass a ``group`` keyword argument to the
 ``open_dataset`` function. The group can be specified as a path-like
 string, e.g., to access subgroup 'bar' within group 'foo' pass
-'/foo/bar' as the ``group`` argument.
+'/foo/bar' as the ``group`` argument. When writing multiple groups in one file,
+pass ``mode='a'`` to ``to_netcdf`` to ensure that each call does not delete the
+file.
 
 Data is loaded lazily from netCDF files. You can manipulate, slice and subset
 Dataset and DataArray objects, and no array values are loaded into memory until
-necessary. For an example of how these lazy arrays work, see the OPeNDAP
-section below.
+you try to perform some sort of actual computation. For an example of how these
+lazy arrays work, see the OPeNDAP section below.
+
+It is important to note that when you modify values of a Dataset, even one
+linked to files on disk, only the in-memory copy you are manipulating in xray
+is modified: the original file on disk is never touched.
 
 .. tip::
 
@@ -160,7 +168,7 @@ serializes objects, by viewing and manipulating the
      'zlib': False}
 
 OPeNDAP
-~~~~~~~
+-------
 
 xray includes support for `OPeNDAP`__ (via the netCDF4 library or Pydap), which
 lets us access large datasets over HTTP.
@@ -168,8 +176,7 @@ lets us access large datasets over HTTP.
 __ http://www.opendap.org/
 
 For example, we can open a connection to GBs of weather data produced by the
-`PRISM`__ project, and hosted by
-`International Research Institute for Climate and Society`__ at Columbia:
+`PRISM`__ project, and hosted by `IRI`__ at Columbia:
 
 __ http://www.prism.oregonstate.edu/
 __ http://iri.columbia.edu/
@@ -197,6 +204,8 @@ __ http://iri.columbia.edu/
     Attributes:
         Conventions: IRIDL
         expires: 1375315200
+
+.. TODO: update this example to show off decode_cf
 
 .. note::
 
@@ -256,3 +265,75 @@ Finally, let's plot a small subset with matplotlib:
 
     We do hope to eventually add plotting methods to xray to make this easier
     (:issue:`185`).
+
+.. _combining multiple files:
+
+Combining multiple files
+------------------------
+
+NetCDF files are often encountered in collections, e.g., with different files
+corresponding to different model runs. xray can straightforwardly combine such
+files into a single Dataset by making use of :py:func:`~xray.concat`.
+
+For example, here's how we could approximate ``MFDataset`` from the netCDF4
+library::
+
+    from glob import glob
+    import xray
+
+    def read_netcdfs(files, dim):
+        # glob expands paths with * to a list of files, like the unix shell
+        paths = sorted(glob(files))
+        datasets = [xray.open_dataset(p) for p in paths]
+        return xray.concat(dataset, dim)
+
+    read_netcdfs('/all/my/files/*.nc', dim='time')
+
+This function will work in many cases, but it's not very robust. First, it
+never closes files, which means it will fail one you need to load more than
+a few thousands file. Second, it assumes that you want all the data from each
+file and that it can all fit into memory. In many situations, you only need
+a small subset or an aggregated summary of the data from each file.
+
+Here's a slightly more sophisticated example of how to remedy these
+deficiencies::
+
+    def read_netcdfs(files, dim, transform_func=None):
+        def process_one_path(path):
+            # use a context manager, to ensure the file gets closed after use
+            with xray.open_dataset(path) as ds:
+                # transform_func should do some sort of selection or
+                # aggregation
+                if transform_func is not None:
+                    ds = transform_func(ds)
+                # load all data from the transformed dataset, to ensure we can
+                # use it after closing each original file
+                ds.load_data()
+                return ds
+
+        paths = sorted(glob(files))
+        datasets = [process_one_path(p) for p in paths]
+        xray.concat(dataset, dim)
+
+    # here we suppose we only care about the combined mean of each file;
+    # you might also use indexing operations like .sel to subset datasets
+    read_netcdfs('/all/my/files/*.nc', dim='time',
+                 transform_func=lambda ds: ds.mean())
+
+This pattern works well and is very robust. We've used similar code to process
+tens of thousands of files constituting 100s of GB of data.
+
+Unfortunately, it's not always possible to process each of your files
+individually and combine them later. For example, you might want to take the
+mean along the ``time`` axis for hundreds of GB of data. Ideally, you could
+write something as simple as::
+
+    ds = read_netcdfs('/all/my/files/*.nc', dim='time')
+    ds.mean('time')
+
+Unfortunately, this doesn't yet work in xray if your data is too big to fit
+into memory. We hope to address this deficiency by integrating xray with Dask_,
+a part of the Blaze_ project.
+
+.. _Dask: https://github.com/continuumio/dask
+.. _Blaze: http://blaze.pydata.org
