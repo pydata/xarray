@@ -25,9 +25,23 @@ from .utils import (Frozen, SortedKeysDict, ChainMap, maybe_wrap_array,
 from .pycompat import iteritems, itervalues, basestring, OrderedDict
 
 
+def _get_default_netcdf_engine(engine):
+    try:
+        import netCDF4
+        engine = 'netcdf4'
+    except ImportError:
+        try:
+            import scipy.io.netcdf
+            engine = 'scipy'
+        except ImportError:
+            raise ValueError('cannot read or write netCDF files without '
+                             'netCDF4-python or scipy installed')
+    return engine
+
+
 def open_dataset(filename_or_obj, group=None, decode_cf=True,
                  mask_and_scale=True, decode_times=True,
-                 concat_characters=True, decode_coords=True):
+                 concat_characters=True, decode_coords=True, engine=None):
     """Load and decode a dataset from a file or file-like object.
 
     Parameters
@@ -60,13 +74,17 @@ def open_dataset(filename_or_obj, group=None, decode_cf=True,
     decode_coords : bool, optional
         If True, decode the 'coordinates' attribute to identify coordinates in
         the resulting dataset.
+    engine : 'netcdf4' or 'scipy', optional
+        Engine to use when reading netCDF files. If not provided, the default
+        engine is chosen based on available dependencies, with a preference for
+        'netcdf4' if reading a file on disk.
 
     Returns
     -------
     dataset : Dataset
         The newly created dataset.
     """
-    def _decode_store(store):
+    def maybe_decode_store(store):
         if decode_cf:
             return conventions.decode_cf(
                 store, mask_and_scale=mask_and_scale,
@@ -77,6 +95,9 @@ def open_dataset(filename_or_obj, group=None, decode_cf=True,
 
     if isinstance(filename_or_obj, basestring):
         if filename_or_obj.endswith('.gz'):
+            if engine is not None and engine != 'scipy':
+                raise ValueError('can only read gzipped netCDF files with '
+                                 "default engine or engine='scipy'")
             # if the string ends with .gz, then gunzip and open as netcdf file
             if sys.version_info[:2] < (2, 7):
                 raise ValueError('reading a gzipped netCDF not '
@@ -91,17 +112,25 @@ def open_dataset(filename_or_obj, group=None, decode_cf=True,
                 else:
                     raise
         else:
-            try:
+            if engine is None:
+                engine = _get_default_netcdf_engine(engine)
+            if engine == 'netcdf4':
                 store = backends.NetCDF4DataStore(filename_or_obj, group=group)
-            except ImportError:
+            elif engine == 'scipy':
                 store = backends.ScipyDataStore(filename_or_obj)
+            else:
+                raise ValueError('unrecognized engine for open_dataset: %r'
+                                 % engine)
 
         with close_on_error(store):
-            return _decode_store(store)
+            return maybe_decode_store(store)
     else:
+        if engine is not None and engine != 'scipy':
+            raise ValueError('can only read file-like objects with '
+                             "default engine or engine='scipy'")
         # assume filename_or_obj is a file-like object
         store = backends.ScipyDataStore(filename_or_obj)
-        return _decode_store(store)
+        return maybe_decode_store(store)
 
 
 # list of attributes of pd.DatetimeIndex that are ndarrays of time info
@@ -910,7 +939,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject):
         store.store(variables, attrs)
         store.sync()
 
-    def to_netcdf(self, path=None, mode='w', format=None, group=None):
+    def to_netcdf(self, path=None, mode='w', format=None, group=None,
+                  engine=None):
         """Write dataset contents to a netCDF file.
 
         Parameters
@@ -947,15 +977,30 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject):
         group : str, optional
             Path to the netCDF4 group in the given file to open (only works for
             format='NETCDF4'). The group(s) will be created if necessary.
+        engine : 'netcdf4' or 'scipy', optional
+            Engine to use when writing netCDF files. If not provided, the
+            default engine is chosen based on available dependencies, with
+            a preference for 'netcdf4' if writing to a file on disk.
         """
         if path is None:
-            fobj = BytesIO()
-            return self._to_scipy_netcdf(fobj, mode, format, group)
+            path = BytesIO()
+            if engine is None:
+                engine = 'scipy'
+            elif engine is not None:
+                raise ValueError('invalid engine for creating bytes with '
+                                 'to_netcdf: %r. Only the default engine '
+                                 "or engine='scipy' is supported" % engine)
+        elif engine is None:
+            engine = _get_default_netcdf_engine(engine)
 
-        try:
-            self._to_netcdf4(path, mode, format, group)
-        except ImportError:
-            self._to_scipy_netcdf(path, mode, format, group)
+        if engine == 'netcdf4':
+            to_netcdf_method = self._to_netcdf4
+        elif engine == 'scipy':
+            to_netcdf_method = self._to_scipy_netcdf
+        else:
+            raise ValueError('unrecognized engine for to_netcdf: %r' % engine)
+
+        return to_netcdf_method(path, mode, format, group)
 
     def _to_netcdf4(self, path, mode, format, group):
         if format is None:

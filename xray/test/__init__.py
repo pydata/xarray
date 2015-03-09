@@ -41,6 +41,11 @@ def requires_netCDF4(test):
     return test if has_netCDF4 else unittest.skip('requires netCDF4')(test)
 
 
+def requires_scipy_or_netCDF4(test):
+    return (test if has_scipy or has_netCDF4
+            else unittest.skip('requires scipy or netCDF4')(test))
+
+
 def decode_string_data(data):
     if data.dtype.kind == 'S':
         return np.core.defchararray.decode(data, 'utf-8', 'replace')

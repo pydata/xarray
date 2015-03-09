@@ -7,6 +7,7 @@ from .. import Variable
 from ..conventions import cf_encoder
 from ..core.pycompat import iteritems, basestring, unicode_type, OrderedDict
 from ..core.utils import Frozen, FrozenOrderedDict
+from ..core.variable import NumpyArrayAdapter
 
 from .common import AbstractWritableDataStore
 from .netcdf3 import is_valid_nc3_name, coerce_nc3_dtype, encode_nc3_variable
@@ -24,6 +25,29 @@ def _decode_attrs(d):
     # that its type matches the data exactly
     return OrderedDict((k, v if k == '_FillValue' else _decode_string(v))
                        for (k, v) in iteritems(d))
+
+
+class ScipyArrayWrapper(NumpyArrayAdapter):
+    def __init__(self, netcdf_file, variable_name):
+        self.netcdf_file = netcdf_file
+        self.variable_name = variable_name
+
+    @property
+    def array(self):
+        # We can't store the actual netcdf_variable object or its data array,
+        # because otherwise scipy complains about variables or files still
+        # referencing mmapped arrays when we try to close datasets without
+        # having read all data in the file.
+        return self.netcdf_file.variables[self.variable_name].data
+
+    def __getitem__(self, key):
+        data = super(ScipyArrayWrapper, self).__getitem__(key)
+        if self.netcdf_file.use_mmap:
+            # Always copy data if the source file is mmapped. This makes things
+            # consistent with the netCDF4 library by ensuring we can safely
+            # read arrays even after closing associated files.
+            data = data.copy()
+        return data
 
 
 class ScipyDataStore(AbstractWritableDataStore):
@@ -50,7 +74,7 @@ class ScipyDataStore(AbstractWritableDataStore):
             # TODO: this check has the unfortunate side-effect that
             # paths to files cannot start with 'CDF'.
             filename_or_obj = BytesIO(filename_or_obj)
-        self.ds = scipy.io.netcdf.netcdf_file(
+        self.ds = scipy.io.netcdf_file(
             filename_or_obj, mode=mode, mmap=mmap, version=version)
 
     def store(self, variables, attributes):
@@ -59,12 +83,12 @@ class ScipyDataStore(AbstractWritableDataStore):
         cf_variables, cf_attrs = cf_encoder(variables, attributes)
         AbstractWritableDataStore.store(self, cf_variables, cf_attrs)
 
-    def open_store_variable(self, var):
-        return Variable(var.dimensions, var.data,
+    def open_store_variable(self, name, var):
+        return Variable(var.dimensions, ScipyArrayWrapper(self.ds, name),
                         _decode_attrs(var._attributes))
 
     def get_variables(self):
-        return FrozenOrderedDict((k, self.open_store_variable(v))
+        return FrozenOrderedDict((k, self.open_store_variable(k, v))
                                  for k, v in iteritems(self.ds.variables))
 
     def get_attrs(self):
