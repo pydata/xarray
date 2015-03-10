@@ -1,4 +1,6 @@
+import contextlib
 import operator
+import warnings
 
 import numpy as np
 import pandas as pd
@@ -100,6 +102,16 @@ def count(values, axis=None):
     return np.sum(~pd.isnull(values), axis=axis)
 
 
+@contextlib.contextmanager
+def _ignore_warnings_if(condition):
+    if condition:
+        with warnings.catch_warnings():
+            warnings.simplefilter('ignore')
+            yield
+    else:
+        yield
+
+
 def _create_nan_agg_method(name, numeric_only=False):
     def f(values, axis=None, skipna=None, **kwargs):
         # ignore keyword args inserted by np.mean and other numpy aggreagators
@@ -107,6 +119,7 @@ def _create_nan_agg_method(name, numeric_only=False):
         kwargs.pop('dtype', None)
         kwargs.pop('out', None)
 
+        values = np.asarray(values)
         if skipna or (skipna is None and values.dtype.kind == 'f'):
             if values.dtype.kind not in ['i', 'f']:
                 raise NotImplementedError(
@@ -123,9 +136,12 @@ def _create_nan_agg_method(name, numeric_only=False):
                     '%s is not available with skipna=False with the '
                     'installed version of numpy; upgrade to numpy 1.9 or '
                     'newer to use skipna=True or skipna=None' % name)
+            using_numpy_nan_func = func is getattr(np, nanname)
         else:
             func = getattr(np, name)
-        return func(values, axis=axis, **kwargs)
+            using_numpy_nan_func = False
+        with _ignore_warnings_if(using_numpy_nan_func):
+            return func(values, axis=axis, **kwargs)
     f.numeric_only = numeric_only
     return f
 

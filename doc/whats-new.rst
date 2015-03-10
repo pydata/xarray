@@ -72,9 +72,11 @@ Bug fixes
   ``engine='scipy'`` could still be associated with the file on disk, even
   after closing the file (`issue`:341:). This manifested itself in warnings
   about mmapped arrays and segmentation faults (if the data was accessed).
+- Silenced spurious warnings about all-NaN slices when using nan-aware
+  aggregation methods (`issue`:344:).
 - Dataset aggregations with ``keep_attrs=True`` now preserve attributes on
   data variables, not just the dataset itself.
-- Tests for xray now pass when run on windows. DOUBLE CHECK THIS.
+- Tests for xray now pass when run on Windows. DOUBLE CHECK THIS.
 
 v0.4 (2 March, 2015)
 --------------------
