@@ -674,9 +674,15 @@ def decode_cf_variable(var, concat_characters=True, mask_and_scale=True,
         if 'missing_value' in attributes:
             # missing_value is deprecated, but we still want to support it as
             # an alias for _FillValue.
-            assert ('_FillValue' not in attributes
-                    or utils.equivalent(attributes['_FillValue'],
-                                        attributes['missing_value']))
+            if ('_FillValue' in attributes
+                and not utils.equivalent(attributes['_FillValue'],
+                                         attributes['missing_value'])):
+                raise ValueError("Discovered conflicting _FillValue "
+                                 "and missing_value.  Considering "
+                                 "opening the offending dataset using "
+                                 "decode_cf=False, corrected the attributes",
+                                 "and decoding explicitly using "
+                                 "xray.conventions.decode_cf(ds)")
             attributes['_FillValue'] = attributes.pop('missing_value')
 
         fill_value = pop_to(attributes, encoding, '_FillValue')

@@ -196,6 +196,14 @@ class TestDatetime(TestCase):
         actual = conventions.decode_cf_datetime(np.arange(100), units)
         self.assertArrayEqual(actual, expected)
 
+    def test_decode_cf_with_conflicting_fill_missing_value(self):
+        var = Variable(['t'], np.arange(10),
+                       {'units': 'foobar',
+                        'missing_value': 0,
+                        '_FillValue': 1})
+        self.assertRaisesRegexp(ValueError, "_FillValue and missing_value",
+                                lambda: conventions.decode_cf_variable(var))
+
     @requires_netCDF4
     def test_decode_cf_datetime_non_iso_strings(self):
         # datetime strings that are _almost_ ISO compliant but not quite,
