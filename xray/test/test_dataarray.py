@@ -513,6 +513,14 @@ class TestDataArray(TestCase):
             renamed.to_dataset(), self.ds.rename({'foo': 'bar'}))
         self.assertEqual(renamed.name, 'bar')
 
+    def test_swap_dims(self):
+        array = DataArray(np.random.randn(3), {'y': ('x', list('abc'))}, 'x')
+        expected = DataArray(array.values,
+                             {'y': list('abc'), 'x': ('y', range(3))},
+                             dims='y')
+        actual = array.swap_dims({'x': 'y'})
+        self.assertDataArrayIdentical(expected, actual)
+
     def test_dataset_getitem(self):
         dv = self.ds['foo']
         self.assertDataArrayIdentical(dv, self.dv)

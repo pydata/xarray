@@ -332,6 +332,11 @@ class Variable(common.AbstractArray):
                 "replacement values must match the Variable's shape")
         self._data = values
 
+    def to_variable(self):
+        """Return this variable as a base xray.Variable"""
+        return Variable(self.dims, self._data, self._attrs,
+                        encoding=self._encoding, fastpath=True)
+
     def to_coord(self):
         """Return this variable as an xray.Coordinate"""
         return Coordinate(self.dims, self._data, self._attrs,
