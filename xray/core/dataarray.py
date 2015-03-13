@@ -309,14 +309,8 @@ class DataArray(AbstractArray, BaseDataObject):
 
     @dims.setter
     def dims(self, value):
-        with self._set_new_dataset() as ds:
-            if not len(value) == self.ndim:
-                raise ValueError('%s dimensions supplied but data has ndim=%s'
-                                 % (len(value), self.ndim))
-            name_map = dict(zip(self.dims, value))
-            ds.rename(name_map, inplace=True)
-        if self.name in name_map:
-            self._name = name_map[self.name]
+        raise AttributeError('you cannot assign dims on a DataArray. Use '
+                             '.rename() or .swap_dims() instead.')
 
     def _item_key_to_dict(self, key):
         if utils.is_dict_like(key):

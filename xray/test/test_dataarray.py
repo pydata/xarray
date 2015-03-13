@@ -69,13 +69,8 @@ class TestDataArray(TestCase):
         arr = self.dv
         self.assertEqual(arr.dims, ('x', 'y'))
 
-        arr.dims = ('w', 'z')
-        self.assertEqual(arr.dims, ('w', 'z'))
-
-        x = Dataset({'x': ('x', np.arange(5))})['x']
-        x.dims = ('y',)
-        self.assertEqual(x.dims, ('y',))
-        self.assertEqual(x.name, 'y')
+        with self.assertRaisesRegexp(AttributeError, 'you cannot assign'):
+            arr.dims = ('w', 'z')
 
     def test_encoding(self):
         expected = {'foo': 'bar'}
