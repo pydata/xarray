@@ -181,17 +181,23 @@ class GroupBy(object):
             combined = combined.reindex(**indexers)
         return combined
 
+    def _first_or_last(self, op, skipna, keep_attrs):
+        if isinstance(self.group_indices[0], (int, np.integer)):
+            # NB. this is currently only used for reductions along an existing
+            # dimension
+            return self.obj
+        return self.reduce(op, self.group_dim, skipna=skipna,
+                           keep_attrs=keep_attrs)
+
     def first(self, skipna=None, keep_attrs=True):
         """Return the first element of each group along the group dimension
         """
-        return self.reduce(ops.first, self.group_dim, skipna=skipna,
-                           keep_attrs=keep_attrs)
+        return self._first_or_last(ops.first, skipna, keep_attrs)
 
     def last(self, skipna=None, keep_attrs=True):
         """Return the last element of each group along the group dimension
         """
-        return self.reduce(ops.last, self.group_dim, skipna=skipna,
-                           keep_attrs=keep_attrs)
+        return self._first_or_last(ops.last, skipna, keep_attrs)
 
 
 class ArrayGroupBy(GroupBy, ImplementsArrayReduce):
@@ -234,10 +240,10 @@ class ArrayGroupBy(GroupBy, ImplementsArrayReduce):
         ds[name] = stacked
         return ds[name]
 
-    def _restore_dim_order(self, stacked, concat_dim):
+    def _restore_dim_order(self, stacked):
         def lookup_order(dimension):
             if dimension == self.group.name:
-                dimension, = concat_dim.dims
+                dimension, = self.group.dims
             if dimension in self.obj.dims:
                 axis = self.obj.get_axis_num(dimension)
             else:
@@ -304,7 +310,7 @@ class ArrayGroupBy(GroupBy, ImplementsArrayReduce):
             combined = concat(applied, concat_dim, indexers=indexers)
 
         if type(combined) is type(self.obj):
-            combined = self._restore_dim_order(combined, concat_dim)
+            combined = self._restore_dim_order(combined)
         return combined
 
     def reduce(self, func, dim=None, axis=None, keep_attrs=False,

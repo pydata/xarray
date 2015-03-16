@@ -88,17 +88,20 @@ dimensions *other than* the provided one:
 
 .. ipython:: python
 
-    ds.groupby('x').reduce(np.nanmean)
+    ds.groupby('x').std()
 
 First and last
 ~~~~~~~~~~~~~~
 
-TODO
+There are two special aggregation operations that are currently only found on
+groupby objects: first and last. These provide the first or last example of
+values for group along the grouped dimension:
 
-Resampling
-~~~~~~~~~~
+.. ipython:: python
 
-TODO
+    ds.groupby('letters').first()
+
+By default, they skip missing values (control this with ``skipna``).
 
 Grouped arithmetic
 ~~~~~~~~~~~~~~~~~~

@@ -168,15 +168,52 @@ class BaseDataObject(AttrAccessMixin):
                  label=None, base=0):
         """Resample this object to a new temporal resolution
 
+        Handles both downsampling and upsampling. Upsampling with filling is
+        not yet supported; if any intervals contain no values in the original
+        object, they will be given the value ``NaN``.
+
         Parameters
         ----------
-        freq : pandas date offset or offset alias for identifying bin edges
-        dim : name of the dimension to aggregate along
-        how : str (any valid groupby aggregation method) or func
-        skipna : whether to skip missing values in aggregations
-        closed : closed end of interval; left or right
-        label : interval boundary to use for labeling; left or right
-        base : offset from the start frequency, in units of freq
+        freq : str
+            String in the '#offset' to specify the step-size along the
+            resampled dimension, where '#' is an (optional) integer multipler
+            (default 1) and 'offset' is any pandas date offset alias. Examples
+            of valid offsets include:
+
+            * 'AS': year start
+            * 'Q-DEC': quarter, starting on December 1
+            * 'MS': month start
+            * 'D': day
+            * 'H': hour
+            * 'Min': minute
+
+            The full list of these offset aliases is documented in pandas [1]_.
+        dim : str
+            Name of the dimension to resample along (e.g., 'time').
+        how : str or func, optional
+            Used for downsampling. If a string, ``how`` must be a valid
+            aggregation operation supported by xray. Otherwise, ``how`` must be
+            a function that can be called like ``how(values, axis)`` to reduce
+            ndarray values along the given axis. Valid choices that can be
+            provided as a string include all the usual Dataset/DataArray
+            aggregations (``all``, ``any``, ``argmax``, ``argmin``, ``max``,
+            ``mean``, ``median``, ``min``, ``prod``, ``sum``, ``std`` and
+            ``var``), as well as ``first`` and ``last``.
+        skipna : bool, optional
+            Whether to skip missing values when aggregating in downsampling.
+        closed : 'left' or 'right', optional
+            Side of each interval to treat as closed.
+        label : 'left or 'right', optional
+            Side of each interval to use for labeling.
+        base : int, optionalt
+            For frequencies that evenly subdivide 1 day, the "origin" of the
+            aggregated intervals. For example, for '24H' frequency, base could
+            range from 0 through 23.
+
+        References
+        ----------
+
+        .. [1] http://pandas.pydata.org/pandas-docs/stable/timeseries.html#offset-aliases
         """
         from .dataarray import DataArray
 

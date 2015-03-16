@@ -32,6 +32,7 @@ Documentation
    computation
    groupby
    combining
+   time-series
    pandas
    io
    api

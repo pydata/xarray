@@ -1,3 +1,5 @@
+.. _toy weather data:
+
 Toy weather data
 ================
 
@@ -34,10 +36,13 @@ Examine a dataset with pandas_ and seaborn_
     @savefig examples_tmin_tmax_plot.png
     ds.mean(dim='location').to_dataframe().plot()
 
-    @savefig examples_pairplot.png
-    sns.pairplot(ds[['tmin', 'tmax', 'time.month']].to_dataframe(),
-                 vars=ds.data_vars, hue='month')
+.. ipython:: python
 
+    @savefig examples_pairplot.png
+    for var in ['tmin', 'tmax']:
+        sns.kdeplot(ds[var].to_series())
+
+.. _average by month:
 
 Probability of freeze by calendar month
 ---------------------------------------
@@ -50,6 +55,8 @@ Probability of freeze by calendar month
     @savefig examples_freeze_prob.png
     freeze.to_pandas().T.plot()
 
+.. _monthly average:
+
 Monthly averaging
 -----------------
 
@@ -60,12 +67,10 @@ Monthly averaging
     @savefig examples_tmin_tmax_plot_mean.png
     monthly_avg.sel(location='IA').to_dataframe().plot(style='s-')
 
-Resample uses the `same api`_ as ``resample`` in pandas. Note that ``MS`` here
-refers to Month-Start; ``M`` labels Month-End (the last day of the month). The
-full of these offset aliases is `documented in pandas`_.
+Note that ``MS`` here refers to Month-Start; ``M`` labels Month-End (the last
+day of the month).
 
-.. _same api: http://pandas.pydata.org/pandas-docs/stable/timeseries.html#up-and-downsampling
-.. _documented in pandas: http://pandas.pydata.org/pandas-docs/stable/timeseries.html#offset-aliases
+.. _monthly anomalies:
 
 Calculate monthly anomalies
 ---------------------------

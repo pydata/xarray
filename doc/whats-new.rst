@@ -12,11 +12,14 @@ What's New
 v0.4.1 (unreleased)
 -------------------
 
-The release contains bug fixes and backwards compatible changes.
+The release contains bug fixes and several new features. All chnages should be
+fully backwards compatible.
 
-New features
+Enhancements
 ~~~~~~~~~~~~
 
+- New documentation sections on :ref:`time-series` and
+  :ref:`combining multiple files`.
 - :py:meth`~xray.Dataset.resample` lets you resample a dataset or data array to
   a new temporal resolution. The syntax is the `same as pandas`_, except you
   need to supply the time dimension explicitly:
@@ -54,16 +57,14 @@ New features
 
       array.resample('1D', dim='time', how='first')
 
-.. _same as pandas: http://pandas.pydata.org/pandas-docs/stable/timeseries.html#up-and-downsampling
-
-TODO: write full docs on time-series!
-
-Enhancements
-~~~~~~~~~~~~
-
 - :py:func:`~xray.open_dataset` and :py:meth:`~xray.Dataset.to_netcdf` now
   accept an ``engine`` argument to explicitly select which underlying library
   (netcdf4 or scipy) is used for reading/writing a netCDF file.
+- New documentation section on :ref:`combining multiple files`.
+
+TODO: write full docs on time-series!
+
+.. _same as pandas: http://pandas.pydata.org/pandas-docs/stable/timeseries.html#up-and-downsampling
 
 Bug fixes
 ~~~~~~~~~

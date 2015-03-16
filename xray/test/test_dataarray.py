@@ -950,6 +950,17 @@ class TestDataArray(TestCase):
         with self.assertRaisesRegexp(TypeError, 'only support arithmetic'):
             grouped + grouped
 
+    def test_groupby_restore_dim_order(self):
+        array = DataArray(np.random.randn(5, 3),
+                          coords={'a': ('x', range(5)), 'b': ('y', range(3))},
+                          dims=['x', 'y'])
+        for by, expected_dims in [('x', ('x', 'y')),
+                                  ('y', ('x', 'y')),
+                                  ('a', ('a', 'y')),
+                                  ('b', ('x', 'b'))]:
+            result = array.groupby(by).apply(lambda x: x.squeeze())
+            self.assertEqual(result.dims, expected_dims)
+
     def test_groupby_first_and_last(self):
         array = DataArray([1, 2, 3, 4, 5], dims='x')
         by = DataArray(['a'] * 2 + ['b'] * 3, dims='x', name='ab')
@@ -965,6 +976,11 @@ class TestDataArray(TestCase):
         array = DataArray(np.random.randn(5, 3), dims=['x', 'y'])
         expected = DataArray(array[[0, 2]], {'ab': ['a', 'b']}, ['ab', 'y'])
         actual = array.groupby(by).first()
+        self.assertDataArrayIdentical(expected, actual)
+
+        actual = array.groupby('x').first()
+        expected = array # should be a no-op
+        self.assertDataArrayIdentical(expected, actual)
 
     def test_resample(self):
         times = pd.date_range('2000-01-01', freq='6H', periods=10)
