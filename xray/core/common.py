@@ -176,9 +176,9 @@ class BaseDataObject(AttrAccessMixin):
         ----------
         freq : str
             String in the '#offset' to specify the step-size along the
-            replacement time coordinate, where '#' is an (optional) integer
-            multipler (default 1) and 'offset' is any pandas date offset alias.
-            Examples of valid offsets include:
+            resampled dimension, where '#' is an (optional) integer multipler
+            (default 1) and 'offset' is any pandas date offset alias. Examples
+            of valid offsets include:
 
             * 'AS': year start
             * 'Q-DEC': quarter, starting on December 1
@@ -187,14 +187,14 @@ class BaseDataObject(AttrAccessMixin):
             * 'H': hour
             * 'Min': minute
 
-            The full of these offset aliases is documented in pandas [1]_.
+            The full list of these offset aliases is documented in pandas [1]_.
         dim : str
             Name of the dimension to resample along (e.g., 'time').
         how : str or func, optional
             Used for downsampling. If a string, ``how`` must be a valid
             aggregation operation supported by xray. Otherwise, ``how`` must be
             a function that can be called like ``how(values, axis)`` to reduce
-            the ndarray values along the given axis. Valid choices that can be
+            ndarray values along the given axis. Valid choices that can be
             provided as a string include all the usual Dataset/DataArray
             aggregations (``all``, ``any``, ``argmax``, ``argmin``, ``max``,
             ``mean``, ``median``, ``min``, ``prod``, ``sum``, ``std`` and
@@ -205,7 +205,7 @@ class BaseDataObject(AttrAccessMixin):
             Side of each interval to treat as closed.
         label : 'left or 'right', optional
             Side of each interval to use for labeling.
-        base : int,
+        base : int, optionalt
             For frequencies that evenly subdivide 1 day, the "origin" of the
             aggregated intervals. For example, for '24H' frequency, base could
             range from 0 through 23.
