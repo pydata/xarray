@@ -385,7 +385,7 @@ class NetCDF4DataTest(CFEncodedDataTest, TestCase):
 
             with open_dataset(tmp_file) as xray_dataset:
                 with create_tmp_file() as tmp_file2:
-                    xray_dataset.dump(tmp_file2)
+                    xray_dataset.to_netcdf(tmp_file2)
                     with nc4.Dataset(tmp_file2, 'r') as ds:
                         self.assertEqual(ds.variables['time'].getncattr('units'), units)
                         self.assertArrayEqual(ds.variables['time'], np.arange(10) + 4)
@@ -494,53 +494,6 @@ class NetCDF4DataTest(CFEncodedDataTest, TestCase):
         with self.roundtrip(data) as actual:
             self.assertDatasetIdentical(data, actual)
             self.assertEqual(actual['x'].dtype, np.dtype('S4'))
-
-    def test_open_encodings(self):
-        # Create a netCDF file with explicit time units
-        # and make sure it makes it into the encodings
-        # and survives a round trip
-        with create_tmp_file() as tmp_file:
-            with nc4.Dataset(tmp_file, 'w') as ds:
-                ds.createDimension('time', size=10)
-                ds.createVariable('time', np.int32, dimensions=('time',))
-                units = 'days since 1999-01-01'
-                ds.variables['time'].setncattr('units', units)
-                ds.variables['time'][:] = np.arange(10) + 4
-
-            expected = Dataset()
-
-            time = pd.date_range('1999-01-05', periods=10)
-            encoding = {'units': units, 'dtype': np.dtype('int32')}
-            expected['time'] = ('time', time, {}, encoding)
-
-            with open_dataset(tmp_file) as actual:
-                self.assertVariableEqual(actual['time'], expected['time'])
-                actual_encoding = dict((k, v) for k, v
-                                       in iteritems(actual['time'].encoding)
-                                       if k in expected['time'].encoding)
-                self.assertDictEqual(actual_encoding,
-                                     expected['time'].encoding)
-
-    def test_dump_and_open_encodings(self):
-        # Create a netCDF file with explicit time units
-        # and make sure it makes it into the encodings
-        # and survives a round trip
-        with create_tmp_file() as tmp_file:
-            with nc4.Dataset(tmp_file, 'w') as ds:
-                ds.createDimension('time', size=10)
-                ds.createVariable('time', np.int32, dimensions=('time',))
-                units = 'days since 1999-01-01'
-                ds.variables['time'].setncattr('units', units)
-                ds.variables['time'][:] = np.arange(10) + 4
-
-            xray_dataset = open_dataset(tmp_file)
-
-            with create_tmp_file() as tmp_file2:
-                xray_dataset.to_netcdf(tmp_file2)
-
-                with nc4.Dataset(tmp_file2, 'r') as ds:
-                    self.assertEqual(ds.variables['time'].getncattr('units'), units)
-                    self.assertArrayEqual(ds.variables['time'], np.arange(10) + 4)
 
     def test_coordinates_encoding(self):
         def equals_latlon(obj):

@@ -86,7 +86,7 @@ Bug fixes
   aggregation methods (:issue:`344`).
 - Dataset aggregations with ``keep_attrs=True`` now preserve attributes on
   data variables, not just the dataset itself.
-- Tests for xray now pass when run on Windows. DOUBLE CHECK THIS.
+- Tests for xray now pass when run on Windows (:issue:`360`).
 - Fixed a regression in v0.4 where saving to netCDF could fail with the error
   ``ValueError: could not automatically determine time units``.
 

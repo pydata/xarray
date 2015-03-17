@@ -755,7 +755,7 @@ class TestVariable(TestCase, VariableSubclassTestCases):
 
         actual = Variable(['x'], [True, False, True]).count()
         self.assertVariableIdentical(expected, actual)
-        self.assertEqual(actual.dtype, 'int64')
+        self.assertEqual(actual.dtype, int)
 
         expected = Variable(['x'], [2, 3])
         actual = Variable(['x', 'y'], [[1, 0, np.nan], [1, 1, 1]]).count('y')
@@ -810,7 +810,7 @@ class TestAsCompatibleData(TestCase):
             actual = _as_compatible_data(input_array)
             self.assertArrayEqual(np.asarray(input_array), actual)
             self.assertEqual(NumpyArrayAdapter, type(actual))
-            self.assertEqual(np.dtype(np.int64), actual.dtype)
+            self.assertEqual(np.asarray(input_array).dtype, actual.dtype)
 
     def test_masked_array(self):
         original = np.ma.MaskedArray(np.arange(5))
