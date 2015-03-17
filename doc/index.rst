@@ -1,11 +1,8 @@
 
-|
-
 .. image:: _static/dataset-diagram-logo.png
    :width: 300 px
    :align: center
 
-|
 |
 
 N-D labeled arrays and datasets in Python
