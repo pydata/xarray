@@ -60,7 +60,6 @@ Enhancements
 - :py:func:`~xray.open_dataset` and :py:meth:`~xray.Dataset.to_netcdf` now
   accept an ``engine`` argument to explicitly select which underlying library
   (netcdf4 or scipy) is used for reading/writing a netCDF file.
-- New documentation section on :ref:`combining multiple files`.
 
 TODO: write full docs on time-series!
 
@@ -71,13 +70,15 @@ Bug fixes
 
 - Fixed a bug where data netCDF variables read from disk with
   ``engine='scipy'`` could still be associated with the file on disk, even
-  after closing the file (`issue`:341:). This manifested itself in warnings
+  after closing the file (:issue:`341`). This manifested itself in warnings
   about mmapped arrays and segmentation faults (if the data was accessed).
 - Silenced spurious warnings about all-NaN slices when using nan-aware
-  aggregation methods (`issue`:344:).
+  aggregation methods (:issue:`344`).
 - Dataset aggregations with ``keep_attrs=True`` now preserve attributes on
   data variables, not just the dataset itself.
 - Tests for xray now pass when run on Windows. DOUBLE CHECK THIS.
+- Fixed a regression in v0.4 where saving to netCDF could fail with the error
+  ``ValueError: could not automatically determine time units``.
 
 v0.4 (2 March, 2015)
 --------------------

@@ -157,7 +157,7 @@ def _infer_time_units_from_diff(unique_timedeltas):
         diffs = unique_timedeltas / unit_delta
         if np.all(diffs == diffs.astype(int)):
             return time_unit
-    raise ValueError('could not automatically determine time units')
+    return 'seconds'
 
 
 def infer_datetime_units(dates):
@@ -226,9 +226,7 @@ def encode_cf_datetime(dates, units=None, calendar=None):
     """Given an array of datetime objects, returns the tuple `(num, units,
     calendar)` suitable for a CF complient time variable.
 
-    Unlike encode_cf_datetime, this function does not (yet) speedup encoding
-    of datetime64 arrays. However, unlike `date2num`, it can handle datetime64
-    arrays.
+    Unlike `date2num`, this function can handle datetime64 arrays.
 
     See also
     --------
