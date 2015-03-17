@@ -1,4 +1,4 @@
-\documentclass[class=minimal,border=0pt,convert={density=300,outext=.png}]{standalone}
+\documentclass[class=minimal,border=0pt,convert={size=600,outext=.png}]{standalone}
 % \documentclass[class=minimal,border=0pt]{standalone}
 \usepackage[scaled]{helvet}
 \renewcommand*\familydefault{\sfdefault}
@@ -151,7 +151,7 @@
         filltop=purple!50!white,%
         fillright=purple!75!white,%
         emphedge=Y,%
-        emphstyle=very thick,
+        emphstyle=ultra thick,
     }
     \tikzcuboid{%
         shiftx=21cm,%
@@ -171,7 +171,7 @@
         filltop=teal!50!white,%
         fillright=teal!75!white,%
         emphedge=Y,%
-        emphstyle=very thick,
+        emphstyle=ultra thick,
     }
     \tikzcuboid{%
         shiftx=26.2cm,%
@@ -191,7 +191,7 @@
         filltop=orange!50!white,%
         fillright=orange!100!white,%
         emphedge=Y,%
-        emphstyle=very thick,
+        emphstyle=ultra thick,
     }
     \tikzcuboid{%
         shiftx=27.6cm,%
@@ -211,7 +211,7 @@
         filltop=purple!50!white,%
         fillright=red!75!white,%
         emphedge=Y,%
-        emphstyle=very thick,
+        emphstyle=ultra thick,
     }
     % \tikzcuboid{%
     %     shiftx=25.8cm,%
@@ -226,7 +226,7 @@
     %     dimy=0,%
     %     dimz=0,%
     %     emphedge=Y,%
-    %     emphstyle=very thick,
+    %     emphstyle=ultra thick,
     % }
     \tikzcuboid{%
         shiftx=25.8cm,%
@@ -240,7 +240,7 @@
         dimy=3,%
         dimz=0,%
         emphedge=Y,%
-        emphstyle=very thick,
+        emphstyle=ultra thick,
     }
     \tikzcuboid{%
         shiftx=25.8cm,%
@@ -254,9 +254,10 @@
         dimy=0,%
         dimz=3,%
         emphedge=Y,%
-        emphstyle=very thick,
+        emphstyle=ultra thick,
     }
     \fill (27,11.6) circle[radius=2pt];
+    \node [font=\bfseries\fontsize{100}{100}\selectfont, anchor=west, text width=8cm] at (29,10.25) {xray};
 \end{tikzpicture}
 
 \end{document}

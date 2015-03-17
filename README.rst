@@ -8,15 +8,18 @@ xray: N-D labeled arrays and datasets in Python
 
 **xray** is an open source project and Python package that aims to bring the
 labeled data power of pandas_ to the physical sciences, by providing
-N-dimensional variants of the core pandas_ data structures, ``Series`` and
-``DataFrame``: the xray ``DataArray`` and ``Dataset``.
+N-dimensional variants of the core pandas data structures.
 
 Our goal is to provide a pandas-like and pandas-compatible toolkit for
 analytics on multi-dimensional arrays, rather than the tabular data for which
 pandas excels. Our approach adopts the `Common Data Model`_ for self-
-describing scientific data in widespread use in the Earth sciences (e.g.,
-netCDF_ and OPeNDAP_): ``xray.Dataset`` is an in-memory representation of a
-netCDF file.
+describing scientific data in widespread use in the Earth sciences:
+``xray.Dataset`` is an in-memory representation of a netCDF file.
+
+.. _pandas: http://pandas.pydata.org
+.. _Common Data Model: http://www.unidata.ucar.edu/software/thredds/current/netcdf-java/CDM
+.. _netCDF: http://www.unidata.ucar.edu/software/netcdf
+.. _OPeNDAP: http://www.opendap.org/
 
 .. _pandas: http://pandas.pydata.org
 .. _Common Data Model: http://www.unidata.ucar.edu/software/thredds/current/netcdf-java/CDM
@@ -78,8 +81,7 @@ Get in touch
 - Mailing list: https://groups.google.com/forum/#!forum/xray-dev
 - Twitter: http://twitter.com/shoyer
 
-xray is an ambitious project and we have a lot of work to do make it as
-powerful as it should be. We would love to hear your thoughts!
+We would love to hear your thoughts and ideas for xray!
 
 History
 -------

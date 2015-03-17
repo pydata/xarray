@@ -1,17 +1,25 @@
-xray: N-D labeled arrays and datasets in Python
-===============================================
+
+|
+
+.. image:: _static/dataset-diagram-logo.png
+   :width: 300 px
+   :align: center
+
+|
+|
+
+N-D labeled arrays and datasets in Python
+=========================================
 
 **xray** is an open source project and Python package that aims to bring the
 labeled data power of pandas_ to the physical sciences, by providing
-N-dimensional variants of the core pandas_ data structures, ``Series`` and
-``DataFrame``: the xray ``DataArray`` and ``Dataset``.
+N-dimensional variants of the core pandas data structures.
 
 Our goal is to provide a pandas-like and pandas-compatible toolkit for
 analytics on multi-dimensional arrays, rather than the tabular data for which
 pandas excels. Our approach adopts the `Common Data Model`_ for self-
-describing scientific data in widespread use in the Earth sciences (e.g.,
-netCDF_ and OPeNDAP_): ``xray.Dataset`` is an in-memory representation of a
-netCDF file.
+describing scientific data in widespread use in the Earth sciences:
+``xray.Dataset`` is an in-memory representation of a netCDF file.
 
 .. _pandas: http://pandas.pydata.org
 .. _Common Data Model: http://www.unidata.ucar.edu/software/thredds/current/netcdf-java/CDM
@@ -39,22 +47,25 @@ Documentation
    faq
    whats-new
 
-Important links
----------------
+See also
+--------
 
-- HTML documentation: http://xray.readthedocs.org
-- Issue tracker: http://github.com/xray/xray/issues
-- Source code: http://github.com/xray/xray
-- PyData talk: https://www.youtube.com/watch?v=T5CZyNwBa9c
+- `Stephan Hoyer's PyData talk`_ introducing the original version of xray.
+- `Nicolas Fauchereau's tutorial`_ on xray.
+
+.. _Stephan Hoyer's PyData talk: https://www.youtube.com/watch?v=T5CZyNwBa9c
+.. _Nicolas Fauchereau's tutorial: http://nbviewer.ipython.org/github/nicolasfauchereau/metocean/blob/master/notebooks/xray.ipynb
 
 Get in touch
 ------------
 
-- Mailing list: https://groups.google.com/forum/#!forum/xray-dev
-- Twitter: http://twitter.com/shoyer
+- To ask questions or discuss xray, use the `mailing list`_.
+- Report bugs or view the source code `on GitHub`_.
+- You can also get in touch `on Twitter`_.
 
-xray is an ambitious project and we have a lot of work to do make it as
-powerful as it should be. We would love to hear your thoughts!
+.. _mailing list: https://groups.google.com/forum/#!forum/xray-dev
+.. _on GitHub: http://github.com/xray/xray
+.. _on Twitter: http://twitter.com/shoyer
 
 License
 -------

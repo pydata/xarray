@@ -151,3 +151,9 @@ Datasets also let you easily read and write netCDF files:
 
     ds.to_netcdf('example.nc')
     xray.open_dataset('example.nc')
+
+.. ipython:: python
+   :suppress:
+
+    import os
+    os.remove('example.nc')
