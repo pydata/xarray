@@ -107,14 +107,14 @@ class TestDatetime(TestCase):
     def test_cf_datetime(self):
         import netCDF4 as nc4
         for num_dates, units in [
-                (np.arange(100), 'days since 2000-01-01'),
-                (np.arange(100).reshape(10, 10), 'days since 2000-01-01'),
-                (12300 + np.arange(50), 'hours since 1680-01-01 00:00:00'),
+                (np.arange(10), 'days since 2000-01-01'),
+                (np.arange(10).reshape(2, 5), 'days since 2000-01-01'),
+                (12300 + np.arange(5), 'hours since 1680-01-01 00:00:00'),
                 # here we add a couple minor formatting errors to test
                 # the robustness of the parsing algorithm.
-                (12300 + np.arange(50), 'hour since 1680-01-01  00:00:00'),
-                (12300 + np.arange(50), u'Hour  since 1680-01-01 00:00:00'),
-                (12300 + np.arange(50), ' Hour  since  1680-01-01 00:00:00 '),
+                (12300 + np.arange(5), 'hour since 1680-01-01  00:00:00'),
+                (12300 + np.arange(5), u'Hour  since 1680-01-01 00:00:00'),
+                (12300 + np.arange(5), ' Hour  since  1680-01-01 00:00:00 '),
                 (10, 'days since 2000-01-01'),
                 ([10], 'daYs  since 2000-01-01'),
                 ([[10]], 'days since 2000-01-01'),
@@ -122,9 +122,10 @@ class TestDatetime(TestCase):
                 (0, 'days since 1000-01-01'),
                 ([0], 'days since 1000-01-01'),
                 ([[0]], 'days since 1000-01-01'),
-                (np.arange(20), 'days since 1000-01-01'),
-                (np.arange(0, 100000, 10000), 'days since 1900-01-01'),
+                (np.arange(2), 'days since 1000-01-01'),
+                (np.arange(0, 100000, 20000), 'days since 1900-01-01'),
                 (17093352.0, 'hours since 1-1-1 00:00:0.0'),
+                ([0.5, 1.5], 'hours since 1900-01-01T00:00:00'),
                 ]:
             for calendar in ['standard', 'gregorian', 'proleptic_gregorian']:
                 expected = _ensure_naive_tz(nc4.num2date(num_dates, units, calendar))
@@ -152,7 +153,7 @@ class TestDatetime(TestCase):
                     # units/encoding cannot be preserved in this case:
                     # (Pdb) pd.to_datetime('1-1-1 00:00:0.0')
                     # Timestamp('2001-01-01 00:00:00')
-                    self.assertArrayEqual(num_dates, np.around(encoded))
+                    self.assertArrayEqual(num_dates, np.around(encoded, 1))
                     if (hasattr(num_dates, 'ndim') and num_dates.ndim == 1
                             and '1000' not in units):
                         # verify that wrapping with a pandas.Index works
@@ -160,7 +161,7 @@ class TestDatetime(TestCase):
                         # non-datetime64 compatible dates into a pandas.Index :(
                         encoded, _, _ = conventions.encode_cf_datetime(
                             pd.Index(actual), units, calendar)
-                        self.assertArrayEqual(num_dates, np.around(encoded))
+                        self.assertArrayEqual(num_dates, np.around(encoded, 1))
 
     def test_decoded_cf_datetime_array(self):
         actual = conventions.DecodedCFDatetimeArray(
@@ -344,7 +345,10 @@ class TestDatetime(TestCase):
                                   '1900-01-02 00:00:01'],
                                  'seconds since 1900-01-01 00:00:00'),
                                 (pd.to_datetime(['1900-01-01', '1900-01-02', 'NaT']),
-                                 'days since 1900-01-01 00:00:00')]:
+                                 'days since 1900-01-01 00:00:00'),
+                                (pd.to_datetime(['1900-01-01',
+                                                 '1900-01-02T00:00:00.005']),
+                                 'seconds since 1900-01-01 00:00:00')]:
             self.assertEqual(expected, conventions.infer_datetime_units(dates))
 
     def test_infer_timedelta_units(self):
