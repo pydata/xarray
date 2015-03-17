@@ -120,6 +120,8 @@ netCDF file. However, it's often cleaner to use a ``with`` statement:
     :suppress:
 
     ds_disk.close()
+    import os
+    os.remove('saved_on_disk.nc')
 
 .. ipython:: python
 
