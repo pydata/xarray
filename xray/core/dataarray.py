@@ -309,14 +309,8 @@ class DataArray(AbstractArray, BaseDataObject):
 
     @dims.setter
     def dims(self, value):
-        with self._set_new_dataset() as ds:
-            if not len(value) == self.ndim:
-                raise ValueError('%s dimensions supplied but data has ndim=%s'
-                                 % (len(value), self.ndim))
-            name_map = dict(zip(self.dims, value))
-            ds.rename(name_map, inplace=True)
-        if self.name in name_map:
-            self._name = name_map[self.name]
+        raise AttributeError('you cannot assign dims on a DataArray. Use '
+                             '.rename() or .swap_dims() instead.')
 
     def _item_key_to_dict(self, key):
         if utils.is_dict_like(key):
@@ -553,13 +547,23 @@ class DataArray(AbstractArray, BaseDataObject):
     def rename(self, new_name_or_name_dict):
         """Returns a new DataArray with renamed coordinates and/or a new name.
 
-        If the argument is dict-like, it it used as a mapping from old names to
-        new names for dataset variables. Otherwise, use the argument as the new
-        name for this array.
+
+        Parameters
+        ----------
+        new_name_or_name_dict : str or dict-like
+            If the argument is dict-like, it it used as a mapping from old
+            names to new names for coordinates (and/or this array itself).
+            Otherwise, use the argument as the new name for this array.
+
+        Returns
+        -------
+        renamed : DataArray
+            Renamed array or array with renamed coordinates.
 
         See Also
         --------
         Dataset.rename
+        DataArray.swap_dims
         """
         if utils.is_dict_like(new_name_or_name_dict):
             name_dict = new_name_or_name_dict
@@ -569,6 +573,32 @@ class DataArray(AbstractArray, BaseDataObject):
             name_dict = {self.name: new_name}
         renamed_dataset = self._dataset.rename(name_dict)
         return renamed_dataset[new_name]
+
+    def swap_dims(self, dims_dict):
+        """Returns a new DataArray with swapped dimensions.
+
+        Parameters
+        ----------
+        dims_dict : dict-like
+            Dictionary whose keys are current dimension names and whose values
+            are new names. Each value must already be a coordinate on this
+            array.
+        inplace : bool, optional
+            If True, swap dimensions in-place. Otherwise, return a new object.
+
+        Returns
+        -------
+        renamed : Dataset
+            DataArray with swapped dimensions.
+
+        See Also
+        --------
+
+        DataArray.rename
+        Dataset.swap_dims
+        """
+        ds = self._dataset.swap_dims(dims_dict)
+        return self._with_replaced_dataset(ds)
 
     def transpose(self, *dims):
         """Return a new DataArray object with transposed dimensions.

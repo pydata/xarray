@@ -824,6 +824,26 @@ class TestDataset(TestCase):
         # check virtual variables
         self.assertArrayEqual(data['t.dayofyear'], [1, 2, 3])
 
+    def test_swap_dims(self):
+        original = Dataset({'x': [1, 2, 3], 'y': ('x', list('abc')), 'z': 42})
+        expected = Dataset({'z': 42}, {'x': ('y', [1, 2, 3]), 'y': list('abc')})
+        actual = original.swap_dims({'x': 'y'})
+        self.assertDatasetIdentical(expected, actual)
+        self.assertIsInstance(actual.variables['y'], Coordinate)
+        self.assertIsInstance(actual.variables['x'], Variable)
+
+        roundtripped = actual.swap_dims({'y': 'x'})
+        self.assertDatasetIdentical(original.set_coords('y'), roundtripped)
+
+        actual = original.copy()
+        actual.swap_dims({'x': 'y'}, inplace=True)
+        self.assertDatasetIdentical(expected, actual)
+
+        with self.assertRaisesRegexp(ValueError, 'cannot swap'):
+            original.swap_dims({'y': 'x'})
+        with self.assertRaisesRegexp(ValueError, 'replacement dimension'):
+            original.swap_dims({'x': 'z'})
+
     def test_update(self):
         data = create_test_data(seed=0)
         expected = data.copy()

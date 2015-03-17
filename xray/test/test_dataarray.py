@@ -69,13 +69,8 @@ class TestDataArray(TestCase):
         arr = self.dv
         self.assertEqual(arr.dims, ('x', 'y'))
 
-        arr.dims = ('w', 'z')
-        self.assertEqual(arr.dims, ('w', 'z'))
-
-        x = Dataset({'x': ('x', np.arange(5))})['x']
-        x.dims = ('y',)
-        self.assertEqual(x.dims, ('y',))
-        self.assertEqual(x.name, 'y')
+        with self.assertRaisesRegexp(AttributeError, 'you cannot assign'):
+            arr.dims = ('w', 'z')
 
     def test_encoding(self):
         expected = {'foo': 'bar'}
@@ -512,6 +507,14 @@ class TestDataArray(TestCase):
         self.assertDatasetIdentical(
             renamed.to_dataset(), self.ds.rename({'foo': 'bar'}))
         self.assertEqual(renamed.name, 'bar')
+
+    def test_swap_dims(self):
+        array = DataArray(np.random.randn(3), {'y': ('x', list('abc'))}, 'x')
+        expected = DataArray(array.values,
+                             {'y': list('abc'), 'x': ('y', range(3))},
+                             dims='y')
+        actual = array.swap_dims({'x': 'y'})
+        self.assertDataArrayIdentical(expected, actual)
 
     def test_dataset_getitem(self):
         dv = self.ds['foo']

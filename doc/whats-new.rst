@@ -20,7 +20,7 @@ Enhancements
 
 - New documentation sections on :ref:`time-series` and
   :ref:`combining multiple files`.
-- :py:meth`~xray.Dataset.resample` lets you resample a dataset or data array to
+- :py:meth:`~xray.Dataset.resample` lets you resample a dataset or data array to
   a new temporal resolution. The syntax is the `same as pandas`_, except you
   need to supply the time dimension explicitly:
 
@@ -57,12 +57,22 @@ Enhancements
 
       array.resample('1D', dim='time', how='first')
 
+.. _same as pandas: http://pandas.pydata.org/pandas-docs/stable/timeseries.html#up-and-downsampling
+
+- :py:meth:`~xray.Dataset.swap_dims` allows for easily swapping one dimension
+  out for another:
+
+  .. ipython:: python
+
+       ds = xray.Dataset({'x': range(3), 'y': ('x', list('abc'))})
+       ds
+       ds.swap_dims({'x': 'y'})
+
+  This was possible in earlier versions of xray, but required some contortions.
 - :py:func:`~xray.open_dataset` and :py:meth:`~xray.Dataset.to_netcdf` now
   accept an ``engine`` argument to explicitly select which underlying library
   (netcdf4 or scipy) is used for reading/writing a netCDF file.
 - New documentation section on :ref:`combining multiple files`.
-
-TODO: write full docs on time-series!
 
 .. _same as pandas: http://pandas.pydata.org/pandas-docs/stable/timeseries.html#up-and-downsampling
 

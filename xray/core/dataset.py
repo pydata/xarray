@@ -607,7 +607,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject):
     __default_attrs = object()
 
     def _replace_vars_and_dims(self, variables, coord_names=None,
-                               attrs=__default_attrs):
+                               attrs=__default_attrs, inplace=False):
         """Fastpath constructor for internal use.
 
         Preserves coord names and attributes; dimensions are recalculated from
@@ -628,11 +628,21 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject):
         new : Dataset
         """
         dims = _calculate_dims(variables)
-        if coord_names is None:
-            coord_names = self._coord_names.copy()
-        if attrs is self.__default_attrs:
-            attrs = self._attrs_copy()
-        return self._construct_direct(variables, coord_names, dims, attrs)
+        if inplace:
+            self._dims = dims
+            self._variables = variables
+            if coord_names is not None:
+                self._coord_names = coord_names
+            if attrs is not self.__default_attrs:
+                self._attrs = attrs
+            obj = self
+        else:
+            if coord_names is None:
+                coord_names = self._coord_names.copy()
+            if attrs is self.__default_attrs:
+                attrs = self._attrs_copy()
+            obj = self._construct_direct(variables, coord_names, dims, attrs)
+        return obj
 
     def copy(self, deep=False):
         """Returns a copy of this dataset.
@@ -1221,6 +1231,12 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject):
         -------
         renamed : Dataset
             Dataset with renamed variables and dimensions.
+
+        See Also
+        --------
+
+        Dataset.swap_dims
+        DataArray.rename
         """
         for k in name_dict:
             if k not in self:
@@ -1237,14 +1253,57 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject):
             if k in self._coord_names:
                 coord_names.add(name)
 
-        if inplace:
-            self._dims = _calculate_dims(variables)
-            self._variables = variables
-            self._coord_names = coord_names
-            obj = self
-        else:
-            obj = self._replace_vars_and_dims(variables, coord_names)
-        return obj
+        return self._replace_vars_and_dims(variables, coord_names,
+                                           inplace=inplace)
+
+    def swap_dims(self, dims_dict, inplace=False):
+        """Returns a new object with swapped dimensions.
+
+        Parameters
+        ----------
+        dims_dict : dict-like
+            Dictionary whose keys are current dimension names and whose values
+            are new names. Each value must already be a variable in the
+            dataset.
+        inplace : bool, optional
+            If True, swap dimensions in-place. Otherwise, return a new dataset
+            object.
+
+        Returns
+        -------
+        renamed : Dataset
+            Dataset with swapped dimensions.
+
+        See Also
+        --------
+
+        Dataset.rename
+        DataArray.swap_dims
+        """
+        for k, v in dims_dict.items():
+            if k not in self.dims:
+                raise ValueError('cannot swap from dimension %r because it is '
+                                 'not an existing dimension' % k)
+            if self.variables[v].dims != (k,):
+                raise ValueError('replacement dimension %r is not a 1D '
+                                 'variable along the old dimension %r'
+                                 % (v, k))
+
+        result_dims = set(dims_dict.get(dim, dim) for dim in self.dims)
+
+        variables = OrderedDict()
+
+        coord_names = self._coord_names.copy()
+        coord_names.update(dims_dict.values())
+
+        for k, v in iteritems(self.variables):
+            dims = tuple(dims_dict.get(dim, dim) for dim in v.dims)
+            var = v.to_coord() if k in result_dims else v.to_variable()
+            var.dims = dims
+            variables[k] = var
+
+        return self._replace_vars_and_dims(variables, coord_names,
+                                           inplace=inplace)
 
     def update(self, other, inplace=True):
         """Update this dataset's variables with those from another dataset.
