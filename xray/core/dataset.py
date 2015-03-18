@@ -1844,13 +1844,13 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject):
         return func
 
     @staticmethod
-    def _binary_op(f, reflexive=False):
+    def _binary_op(f, reflexive=False, join='inner', drop_missing_vars=True):
         @functools.wraps(f)
         def func(self, other):
             if isinstance(other, groupby.GroupBy):
                 return NotImplemented
             if hasattr(other, 'indexes'):
-                self, other = align(self, other, join='inner', copy=False)
+                self, other = align(self, other, join=join, copy=False)
                 empty_indexes = [d for d, s in self.dims.items() if s == 0]
                 if empty_indexes:
                     raise ValueError('no overlapping labels for some '
@@ -1858,7 +1858,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject):
             other_coords = getattr(other, 'coords', None)
             ds = self.coords.merge(other_coords)
             g = f if not reflexive else lambda x, y: f(y, x)
-            _calculate_binary_op(g, self, other, ds._variables)
+            _calculate_binary_op(g, self, other, ds._variables,
+                                 drop_missing_vars=drop_missing_vars)
             return ds
         return func
 
@@ -1882,7 +1883,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject):
         return func
 
 
-def _calculate_binary_op(f, dataset, other, dest_vars):
+def _calculate_binary_op(f, dataset, other, dest_vars, drop_missing_vars=True):
     dataset_variables = getattr(dataset, 'variables', dataset)
     dataset_data_vars = getattr(dataset, 'data_vars', dataset)
     if utils.is_dict_like(other):
@@ -1899,6 +1900,8 @@ def _calculate_binary_op(f, dataset, other, dest_vars):
                                  'for in-place arithmetic operations: %s, %s'
                                  % (list(dataset_data_vars),
                                     list(other_data_vars)))
+            elif not drop_missing_vars:
+                dest_vars[k] = dataset_variables[k]
         if not performed_op:
             raise ValueError('datasets have no overlapping variables: %s, %s'
                              % (list(dataset_data_vars),

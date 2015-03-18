@@ -153,7 +153,7 @@ class GroupBy(object):
         return concat_dim, indexers
 
     @staticmethod
-    def _binary_op(f, reflexive=False):
+    def _binary_op(f, reflexive=False, **ignored_kwargs):
         @functools.wraps(f)
         def func(self, other):
             g = f if not reflexive else lambda x, y: f(y, x)

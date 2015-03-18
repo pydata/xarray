@@ -930,13 +930,13 @@ class DataArray(AbstractArray, BaseDataObject):
         return func
 
     @staticmethod
-    def _binary_op(f, reflexive=False):
+    def _binary_op(f, reflexive=False, join='inner', **ignored_kwargs):
         @functools.wraps(f)
         def func(self, other):
             if isinstance(other, (Dataset, groupby.GroupBy)):
                 return NotImplemented
             if hasattr(other, 'indexes'):
-                self, other = align(self, other, join='inner', copy=False)
+                self, other = align(self, other, join=join, copy=False)
                 empty_indexes = [d for d, s in zip(self.dims, self.shape)
                                  if s == 0]
                 if empty_indexes:

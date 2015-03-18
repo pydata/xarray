@@ -784,7 +784,7 @@ class Variable(common.AbstractArray):
         return func
 
     @staticmethod
-    def _binary_op(f, reflexive=False):
+    def _binary_op(f, reflexive=False, **ignored_kwargs):
         @functools.wraps(f)
         def func(self, other):
             if isinstance(other, (xray.DataArray, xray.Dataset)):
