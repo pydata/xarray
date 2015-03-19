@@ -21,11 +21,6 @@ describing scientific data in widespread use in the Earth sciences:
 .. _netCDF: http://www.unidata.ucar.edu/software/netcdf
 .. _OPeNDAP: http://www.opendap.org/
 
-.. _pandas: http://pandas.pydata.org
-.. _Common Data Model: http://www.unidata.ucar.edu/software/thredds/current/netcdf-java/CDM
-.. _netCDF: http://www.unidata.ucar.edu/software/netcdf
-.. _OPeNDAP: http://www.opendap.org/
-
 Important links
 ---------------
 
