@@ -298,7 +298,7 @@ def inject_binary_ops(cls, inplace=False):
     # patch in fillna
     f = _func_slash_method_wrapper(fillna)
     method = cls._binary_op(f, join='left', drop_missing_vars=False)
-    setattr(cls, 'fillna', method)
+    setattr(cls, '_fillna', method)
 
     for name in NUM_BINARY_OPS:
         # only numeric operations have in-place and reflexive variants

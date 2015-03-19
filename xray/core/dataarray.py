@@ -700,6 +700,12 @@ class DataArray(AbstractArray, BaseDataObject):
         ds = self._dataset.dropna(dim, how=how, thresh=thresh)
         return self._with_replaced_dataset(ds)
 
+    def fillna(self, value):
+        if utils.is_dict_like(value):
+            raise TypeError('cannot provide fill value as a dictionary with '
+                            'fillna on a DataArray')
+        return self._fillna(value)
+
     def reduce(self, func, dim=None, axis=None, keep_attrs=False, **kwargs):
         """Reduce this array by applying `func` along some dimension(s).
 

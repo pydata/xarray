@@ -803,6 +803,37 @@ class TestDataArray(TestCase):
         self.assertEqual(len(vm.attrs), len(self.attrs))
         self.assertEqual(vm.attrs, self.attrs)
 
+    def test_fillna(self):
+        a = DataArray([np.nan, 1, np.nan, 3], dims='x')
+        actual = a.fillna(-1)
+        expected = DataArray([-1, 1, -1, 3], dims='x')
+        self.assertDataArrayIdentical(expected, actual)
+
+        b = DataArray(range(4), dims='x')
+        actual = a.fillna(b)
+        expected = b.copy()
+        self.assertDataArrayIdentical(expected, actual)
+
+        actual = a.fillna(range(4))
+        self.assertDataArrayIdentical(expected, actual)
+
+        actual = a.fillna(b[:3])
+        self.assertDataArrayIdentical(expected, actual)
+
+        actual = a.fillna(b[:0])
+        self.assertDataArrayIdentical(a, actual)
+
+        with self.assertRaisesRegexp(TypeError, 'fillna on a DataArray'):
+            a.fillna({0: 0})
+
+        with self.assertRaisesRegexp(ValueError, 'broadcast'):
+            a.fillna([1, 2])
+
+        for target in [a, expected]:
+            target.coords['b'] = ('x', [0, 0, 1, 1])
+        actual = a.groupby('b').fillna(DataArray([0, 2], dims='b'))
+        self.assertDataArrayIdentical(expected, actual)
+
     def test_groupby_iter(self):
         for ((act_x, act_dv), (exp_x, exp_ds)) in \
                 zip(self.dv.groupby('y'), self.ds.groupby('y')):

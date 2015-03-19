@@ -578,6 +578,9 @@ class Variable(common.AbstractArray):
                                 self._encoding, fastpath=True)
         return expanded_var.transpose(*dims)
 
+    def fillna(self, value):
+        return self._fillna(value)
+
     def reduce(self, func, dim=None, axis=None, keep_attrs=False,
                **kwargs):
         """Reduce this array by applying `func` along some dimension(s).

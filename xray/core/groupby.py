@@ -181,6 +181,9 @@ class GroupBy(object):
             combined = combined.reindex(**indexers)
         return combined
 
+    def fillna(self, value):
+        return self._fillna(value)
+
     def _first_or_last(self, op, skipna, keep_attrs):
         if isinstance(self.group_indices[0], (int, np.integer)):
             # NB. this is currently only used for reductions along an existing

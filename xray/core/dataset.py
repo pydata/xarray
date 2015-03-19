@@ -1576,6 +1576,9 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject):
 
         return self.isel(**{dim: mask})
 
+    def fillna(self, value):
+        return self._fillna(value)
+
     def reduce(self, func, dim=None, keep_attrs=False, numeric_only=False,
                **kwargs):
         """Reduce this dataset by applying `func` along some dimension(s).
