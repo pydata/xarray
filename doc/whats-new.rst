@@ -9,10 +9,10 @@ What's New
     import xray
     np.random.seed(123456)
 
-v0.4.1 (unreleased)
--------------------
+v0.4.1 (18 March 2015)
+----------------------
 
-The release contains bug fixes and several new features. All chnages should be
+The release contains bug fixes and several new features. All changes should be
 fully backwards compatible.
 
 Enhancements
