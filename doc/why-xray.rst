@@ -1,5 +1,5 @@
-Why xray?
-=========
+Introduction: Why xray?
+=======================
 
 Features
 --------

@@ -24,6 +24,11 @@
    Dataset.notnull
    Dataset.count
    Dataset.dropna
+   Dataset.fillna
+
+   core.groupby.DatasetGroupBy.first
+   core.groupby.DatasetGroupBy.last
+   core.groupby.DatasetGroupBy.fillna
 
    Dataset.argsort
    Dataset.clip
@@ -56,6 +61,11 @@
    DataArray.notnull
    DataArray.count
    DataArray.dropna
+   DataArray.fillna
+
+   core.groupby.DataArrayGroupBy.first
+   core.groupby.DataArrayGroupBy.last
+   core.groupby.DataArrayGroupBy.fillna
 
    DataArray.argsort
    DataArray.clip

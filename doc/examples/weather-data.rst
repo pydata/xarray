@@ -87,3 +87,21 @@ not show any seasonal cycle.
     @savefig examples_anomalies_plot.png
     anomalies.mean('location').to_dataframe()[['tmin', 'tmax']].plot()
 
+.. _fill with climatology:
+
+Fill missing values with climatology
+------------------------------------
+
+The :py:func:`~xray.Dataset.fillna` method on grouped objects lets you easily
+fill missing values by group:
+
+.. ipython:: python
+
+    some_missing = ds.tmin.sel(time=ds['time.dayofweek'] > 3).reindex_like(ds)
+    filled = some_missing.groupby('time.month').fillna(climatology.tmin)
+
+    both = xray.Dataset({'some_missing': some_missing, 'filled': filled})
+    both
+
+    @savefig examples_filled.png
+    both.sel(time='2000').mean('location').reset_coords(drop=True).to_dataframe().plot()

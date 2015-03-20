@@ -1500,6 +1500,58 @@ class TestDataset(TestCase):
         with self.assertRaisesRegexp(TypeError, 'must specify how or thresh'):
             ds.dropna('a', how=None)
 
+    def test_fillna(self):
+        ds = Dataset({'a': ('x', [np.nan, 1, np.nan, 3])})
+
+        # fill with -1
+        actual = ds.fillna(-1)
+        expected = Dataset({'a': ('x', [-1, 1, -1, 3])})
+        self.assertDatasetIdentical(expected, actual)
+
+        actual = ds.fillna({'a': -1})
+        self.assertDatasetIdentical(expected, actual)
+
+        actual = ds.fillna(Dataset({'a': -1}))
+        self.assertDatasetIdentical(expected, actual)
+
+        # fill with range(4)
+        b = DataArray(range(4), dims='x')
+        actual = ds.fillna(b)
+        expected = b.rename('a').to_dataset()
+        self.assertDatasetIdentical(expected, actual)
+
+        actual = ds.fillna(expected)
+        self.assertDatasetIdentical(expected, actual)
+
+        actual = ds.fillna(range(4))
+        self.assertDatasetIdentical(expected, actual)
+
+        actual = ds.fillna(b[:3])
+        self.assertDatasetIdentical(expected, actual)
+
+        # left align variables
+        ds['b'] = np.nan
+        actual = ds.fillna({'a': -1, 'c': 'foobar'})
+        expected = Dataset({'a': ('x', [-1, 1, -1, 3]), 'b': np.nan})
+        self.assertDatasetIdentical(expected, actual)
+
+        with self.assertRaisesRegexp(ValueError, 'no overlapping'):
+            ds.fillna({'x': 0})
+
+        with self.assertRaisesRegexp(ValueError, 'no overlapping'):
+            ds.fillna(Dataset(coords={'a': 0}))
+
+        # groupby
+        expected = Dataset({'a': ('x', range(4))})
+        for target in [ds, expected]:
+            target.coords['b'] = ('x', [0, 0, 1, 1])
+        actual = ds.groupby('b').fillna(DataArray([0, 2], dims='b'))
+        self.assertDatasetIdentical(expected, actual)
+
+        actual = ds.groupby('b').fillna(Dataset({'a': ('b', [0, 2])}))
+        self.assertDatasetIdentical(expected, actual)
+
+
     def test_reduce(self):
         data = create_test_data()
 
@@ -1732,11 +1784,15 @@ class TestDataset(TestCase):
         expected = (2 * ds[['bar']]).merge(ds.coords)
         self.assertDatasetIdentical(expected, actual)
 
-        with self.assertRaisesRegexp(ValueError, 'no overlapping variables'):
+        with self.assertRaisesRegexp(ValueError, 'no overlapping data'):
             ds + Dataset()
 
-        with self.assertRaisesRegexp(ValueError, 'no overlapping variables'):
+        with self.assertRaisesRegexp(ValueError, 'no overlapping data'):
             Dataset() + Dataset()
+
+        ds2 = Dataset(coords={'bar': 42})
+        with self.assertRaisesRegexp(ValueError, 'no overlapping data'):
+            ds + ds2
 
         # maybe unary arithmetic with empty datasets should raise instead?
         self.assertDatasetIdentical(Dataset() + 1, Dataset())

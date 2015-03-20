@@ -9,6 +9,25 @@ What's New
     import xray
     np.random.seed(123456)
 
+v0.4.2 (unreleased)
+-------------------
+
+Enhancements
+~~~~~~~~~~~~
+
+- New :py:meth:`~xray.Dataset.fillna` to fill missing values, modeled off the
+  pandas method of the same name:
+
+  .. ipython:: python
+
+      array = xray.DataArray([np.nan, 1, np.nan, 3], dims='x')
+      array.fillna(0)
+
+  ``fillna`` works on both ``Dataset`` and ``DataArray`` objects, and uses
+  index based alignment and broadcasting like standard binary operations. It
+  also can be applied by group, as illustrated in
+  :ref:`fill with climatology`.
+
 v0.4.1 (18 March 2015)
 ----------------------
 

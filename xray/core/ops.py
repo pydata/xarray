@@ -102,6 +102,13 @@ def count(values, axis=None):
     return np.sum(~pd.isnull(values), axis=axis)
 
 
+def fillna(values, other):
+    """Fill missing values in this object with values from the other object.
+    Follows normal broadcasting and alignment rules.
+    """
+    return np.where(pd.isnull(values), other, values)
+
+
 @contextlib.contextmanager
 def _ignore_warnings_if(condition):
     if condition:
@@ -284,8 +291,15 @@ def op(name):
 def inject_binary_ops(cls, inplace=False):
     for name in CMP_BINARY_OPS + NUM_BINARY_OPS:
         setattr(cls, op_str(name), cls._binary_op(op(name)))
+
     for name, f in [('eq', array_eq), ('ne', array_ne)]:
         setattr(cls, op_str(name), cls._binary_op(f))
+
+    # patch in fillna
+    f = _func_slash_method_wrapper(fillna)
+    method = cls._binary_op(f, join='left', drop_missing_vars=False)
+    setattr(cls, '_fillna', method)
+
     for name in NUM_BINARY_OPS:
         # only numeric operations have in-place and reflexive variants
         setattr(cls, op_str('r' + name),

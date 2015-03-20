@@ -1576,6 +1576,29 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject):
 
         return self.isel(**{dim: mask})
 
+    def fillna(self, value):
+        """Fill missing values in this object.
+
+        This operation follows the normal broadcasting and alignment rules that
+        xray uses for binary arithmetic, except the result is aligned to this
+        object (``join='left'``) instead of aligned to the intersection of
+        index coordinates (``join='inner'``).
+
+        Parameters
+        ----------
+        value : scalar, ndarray, DataArray, dict or Dataset
+            Used to fill all matching missing values in this dataset's data
+            variables. Scalars, ndarrays or DataArrays arguments are used to
+            fill all data with aligned coordinates (for DataArrays).
+            Dictionaries or datasets match data variables and then align
+            coordinates if necessary.
+
+        Returns
+        -------
+        Dataset
+        """
+        return self._fillna(value)
+
     def reduce(self, func, dim=None, keep_attrs=False, numeric_only=False,
                **kwargs):
         """Reduce this dataset by applying `func` along some dimension(s).
@@ -1844,13 +1867,13 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject):
         return func
 
     @staticmethod
-    def _binary_op(f, reflexive=False):
+    def _binary_op(f, reflexive=False, join='inner', drop_missing_vars=True):
         @functools.wraps(f)
         def func(self, other):
             if isinstance(other, groupby.GroupBy):
                 return NotImplemented
             if hasattr(other, 'indexes'):
-                self, other = align(self, other, join='inner', copy=False)
+                self, other = align(self, other, join=join, copy=False)
                 empty_indexes = [d for d, s in self.dims.items() if s == 0]
                 if empty_indexes:
                     raise ValueError('no overlapping labels for some '
@@ -1858,7 +1881,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject):
             other_coords = getattr(other, 'coords', None)
             ds = self.coords.merge(other_coords)
             g = f if not reflexive else lambda x, y: f(y, x)
-            _calculate_binary_op(g, self, other, ds._variables)
+            _calculate_binary_op(g, self, other, ds._variables,
+                                 drop_missing_vars=drop_missing_vars)
             return ds
         return func
 
@@ -1876,13 +1900,15 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject):
                 # variables that will actually be included in the result
                 dest_vars = dict((k, self._variables[k].copy())
                                  for k in self.data_vars)
-                _calculate_binary_op(f, dest_vars, other, dest_vars)
+                _calculate_binary_op(f, dest_vars, other, dest_vars,
+                                     inplace=True)
                 self._variables.update(dest_vars)
             return self
         return func
 
 
-def _calculate_binary_op(f, dataset, other, dest_vars):
+def _calculate_binary_op(f, dataset, other, dest_vars, inplace=False,
+                         drop_missing_vars=True):
     dataset_variables = getattr(dataset, 'variables', dataset)
     dataset_data_vars = getattr(dataset, 'data_vars', dataset)
     if utils.is_dict_like(other):
@@ -1893,16 +1919,18 @@ def _calculate_binary_op(f, dataset, other, dest_vars):
             if k in other_data_vars:
                 dest_vars[k] = f(dataset_variables[k], other_variables[k])
                 performed_op = True
-            elif k in dest_vars:
-                # we are doing an in-place operation
+            elif inplace and k in dest_vars:
                 raise ValueError('datasets must have the same data variables '
                                  'for in-place arithmetic operations: %s, %s'
                                  % (list(dataset_data_vars),
                                     list(other_data_vars)))
+            elif not drop_missing_vars:
+                # this shortcuts left alignment of variables for fillna
+                dest_vars[k] = dataset_variables[k]
         if not performed_op:
-            raise ValueError('datasets have no overlapping variables: %s, %s'
-                             % (list(dataset_data_vars),
-                                list(other_data_vars)))
+            raise ValueError('datasets have no overlapping data variables: '
+                             '%s, %s' % (list(dataset_data_vars),
+                                         list(other_data_vars)))
     else:
         other_variable = getattr(other, 'variable', other)
         for k in dataset_data_vars:
