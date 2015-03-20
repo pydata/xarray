@@ -50,9 +50,9 @@ Missing values
 ==============
 
 xray objects borrow the :py:meth:`~xray.DataArray.isnull`,
-:py:meth:`~xray.DataArray.notnull`, :py:meth:`~xray.DataArray.count` and
-:py:meth:`~xray.DataArray.dropna` methods for working with missing data from
-pandas:
+:py:meth:`~xray.DataArray.notnull`, :py:meth:`~xray.DataArray.count`,
+:py:meth:`~xray.DataArray.dropna` and :py:meth:`~xray.DataArray.fillna` methods
+for working with missing data from pandas:
 
 .. ipython:: python
 
@@ -61,6 +61,7 @@ pandas:
     x.notnull()
     x.count()
     x.dropna(dim='x')
+    x.fillna(-1)
 
 Like pandas, xray uses the float value ``np.nan`` (not-a-number) to represent
 missing values.

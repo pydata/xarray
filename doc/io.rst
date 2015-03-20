@@ -117,13 +117,6 @@ Datasets have a :py:meth:`~xray.Dataset.close` method to close the associated
 netCDF file. However, it's often cleaner to use a ``with`` statement:
 
 .. ipython:: python
-    :suppress:
-
-    ds_disk.close()
-    import os
-    os.remove('saved_on_disk.nc')
-
-.. ipython:: python
 
     # this automatically closes the dataset after use
     with xray.open_dataset('saved_on_disk.nc') as ds:
@@ -168,6 +161,13 @@ serializes objects, by viewing and manipulating the
      'source': 'saved_on_disk.nc',
      'units': u'days since 2000-01-01 00:00:00',
      'zlib': False}
+
+.. ipython:: python
+    :suppress:
+
+    ds_disk.close()
+    import os
+    os.remove('saved_on_disk.nc')
 
 OPeNDAP
 -------

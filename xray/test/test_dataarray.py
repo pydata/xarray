@@ -829,6 +829,12 @@ class TestDataArray(TestCase):
         with self.assertRaisesRegexp(ValueError, 'broadcast'):
             a.fillna([1, 2])
 
+        fill_value = DataArray([0, 1], dims='y')
+        actual = a.fillna(fill_value)
+        expected = DataArray([[0, 1], [1, 1], [0, 1], [3, 3]], dims=('x', 'y'))
+        self.assertDataArrayIdentical(expected, actual)
+
+        expected = b.copy()
         for target in [a, expected]:
             target.coords['b'] = ('x', [0, 0, 1, 1])
         actual = a.groupby('b').fillna(DataArray([0, 2], dims='b'))
@@ -983,6 +989,17 @@ class TestDataArray(TestCase):
             grouped + 1
         with self.assertRaisesRegexp(TypeError, 'only support arithmetic'):
             grouped + grouped
+
+    @unittest.skip
+    def test_groupby_math_not_aligned(self):
+        # We need to fix Variable.concat to infer dtypes properly before this
+        # will pass. For now, raising KeyError when labels are missing (instead
+        # of aligning) is a reasonable fallback.
+        array = DataArray(range(4), {'b': ('x', [0, 0, 1, 1])}, dims='x')
+        other = DataArray([10], dims='b')
+        actual = array.groupby('b') + other
+        expected = DataArray([10, 11, np.nan, np.nan], array.coords)
+        self.assertDataArrayIdentical(expected, actual)
 
     def test_groupby_restore_dim_order(self):
         array = DataArray(np.random.randn(5, 3),

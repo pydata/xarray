@@ -124,6 +124,7 @@ Computation
 :py:attr:`~Dataset.notnull`
 :py:attr:`~Dataset.count`
 :py:attr:`~Dataset.dropna`
+:py:attr:`~Dataset.fillna`
 
 **ndarray methods**:
 :py:attr:`~Dataset.argsort`
@@ -132,6 +133,11 @@ Computation
 :py:attr:`~Dataset.conjugate`
 :py:attr:`~Dataset.round`
 :py:attr:`~Dataset.T`
+
+**Grouped operations**:
+:py:attr:`~core.groupby.DatasetGroupBy.first`
+:py:attr:`~core.groupby.DatasetGroupBy.last`
+:py:attr:`~core.groupby.DatasetGroupBy.fillna`
 
 DataArray
 =========
@@ -223,6 +229,7 @@ Computation
 :py:attr:`~DataArray.notnull`
 :py:attr:`~DataArray.count`
 :py:attr:`~DataArray.dropna`
+:py:attr:`~DataArray.fillna`
 
 **ndarray methods**:
 :py:attr:`~DataArray.argsort`
@@ -232,6 +239,11 @@ Computation
 :py:attr:`~DataArray.searchsorted`
 :py:attr:`~DataArray.round`
 :py:attr:`~DataArray.T`
+
+**Grouped operations**:
+:py:attr:`~core.groupby.DataArrayGroupBy.first`
+:py:attr:`~core.groupby.DataArrayGroupBy.last`
+:py:attr:`~core.groupby.DataArrayGroupBy.fillna`
 
 Comparisons
 -----------

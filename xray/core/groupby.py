@@ -4,8 +4,7 @@ import pandas as pd
 
 from . import ops
 from .alignment import concat
-from .common import (ImplementsArrayReduce, ImplementsDatasetReduce,
-                     _maybe_promote)
+from .common import ImplementsArrayReduce, ImplementsDatasetReduce
 from .pycompat import zip
 from .utils import peek_at, maybe_wrap_array, safe_cast_to_index
 from .variable import Variable, Coordinate
@@ -169,6 +168,11 @@ class GroupBy(object):
                 raise TypeError('GroupBy objects only support arithmetic '
                                 'when the other argument is a Dataset or '
                                 'DataArray')
+            # TDOO: we would love to fall-back to using missing values if there
+            # are missing labels, but unfortunately this isn't possible until
+            # concat infers dtypes from more than the first variable
+            # except KeyError:
+            #     other_sel = np.nan
             yield func(obj, other_sel)
 
     def _maybe_restore_empty_groups(self, combined):
@@ -182,6 +186,27 @@ class GroupBy(object):
         return combined
 
     def fillna(self, value):
+        """Fill missing values in this object by group.
+
+        This operation follows the normal broadcasting and alignment rules that
+        xray uses for binary arithmetic, except the result is aligned to this
+        object (``join='left'``) instead of aligned to the intersection of
+        index coordinates (``join='inner'``).
+
+        Parameters
+        ----------
+        value : valid type for the grouped object's fillna method
+            Used to fill all matching missing values by group.
+
+        Returns
+        -------
+        same type as the grouped object
+
+        See also
+        --------
+        Dataset.fillna
+        DataArray.fillna
+        """
         return self._fillna(value)
 
     def _first_or_last(self, op, skipna, keep_attrs):
@@ -203,7 +228,7 @@ class GroupBy(object):
         return self._first_or_last(ops.last, skipna, keep_attrs)
 
 
-class ArrayGroupBy(GroupBy, ImplementsArrayReduce):
+class DataArrayGroupBy(GroupBy, ImplementsArrayReduce):
     """GroupBy object specialized to grouping DataArray objects
     """
     def _iter_grouped_shortcut(self):
@@ -350,8 +375,8 @@ class ArrayGroupBy(GroupBy, ImplementsArrayReduce):
             return ar.reduce(func, dim, axis, keep_attrs=keep_attrs, **kwargs)
         return self.apply(reduce_array, shortcut=shortcut)
 
-ops.inject_reduce_methods(ArrayGroupBy)
-ops.inject_binary_ops(ArrayGroupBy)
+ops.inject_reduce_methods(DataArrayGroupBy)
+ops.inject_binary_ops(DataArrayGroupBy)
 
 
 class DatasetGroupBy(GroupBy, ImplementsDatasetReduce):

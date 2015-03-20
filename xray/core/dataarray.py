@@ -120,7 +120,7 @@ class DataArray(AbstractArray, BaseDataObject):
     attrs : OrderedDict
         Dictionary for holding arbitrary metadata.
     """
-    groupby_cls = groupby.ArrayGroupBy
+    groupby_cls = groupby.DataArrayGroupBy
 
     def __init__(self, data, coords=None, dims=None, name=None,
                  attrs=None, encoding=None):
@@ -701,6 +701,24 @@ class DataArray(AbstractArray, BaseDataObject):
         return self._with_replaced_dataset(ds)
 
     def fillna(self, value):
+        """Fill missing values in this object.
+
+        This operation follows the normal broadcasting and alignment rules that
+        xray uses for binary arithmetic, except the result is aligned to this
+        object (``join='left'``) instead of aligned to the intersection of
+        index coordinates (``join='inner'``).
+
+        Parameters
+        ----------
+        value : scalar, ndarray or DataArray
+            Used to fill all matching missing values in this array. If the
+            argument is a DataArray, it is first aligned with (reindexed to)
+            this array.
+
+        Returns
+        -------
+        DataArray
+        """
         if utils.is_dict_like(value):
             raise TypeError('cannot provide fill value as a dictionary with '
                             'fillna on a DataArray')
