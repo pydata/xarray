@@ -49,6 +49,9 @@ class AbstractCoordinates(Mapping):
         else:
             raise KeyError(key)
 
+    def __setitem__(self, key, value):
+        self.update({key: value})
+
     def __iter__(self):
         # needs to be in the same order as the dataset variables
         for k in self._dataset._variables:
@@ -163,9 +166,9 @@ class DatasetCoordinates(AbstractCoordinates):
     def __init__(self, dataset):
         self._dataset = dataset
 
-    def __setitem__(self, key, value):
-        self._dataset[key] = value
-        self._names.add(key)
+    def update(self, other):
+        self._dataset.update(other)
+        self._names.update(other.keys())
 
 
 class DataArrayCoordinates(AbstractCoordinates):
@@ -179,11 +182,10 @@ class DataArrayCoordinates(AbstractCoordinates):
         self._dataarray = dataarray
         self._dataset = dataarray._dataset
 
-    def __setitem__(self, key, value):
+    def update(self, other):
         with self._dataarray._set_new_dataset() as ds:
-            ds.coords[key] = value
-            bad_dims = [d for d in ds._variables[key].dims
-                        if d not in self.dims]
+            ds.coords.update(other)
+            bad_dims = [d for d in ds.dims if d not in self.dims]
             if bad_dims:
                 raise ValueError('DataArray does not include all coordinate '
                                  'dimensions: %s' % bad_dims)

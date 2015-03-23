@@ -470,6 +470,18 @@ class TestDataArray(TestCase):
         with self.assertRaisesRegexp(ValueError, 'cannot remove index'):
             data.reset_coords('y')
 
+    def test_assign_coords(self):
+        array = DataArray(10)
+        actual = array.assign_coords(c = 42)
+        expected = DataArray(10, {'c': 42})
+        self.assertDataArrayIdentical(actual, expected)
+
+        array = DataArray([1, 2, 3, 4], {'c': ('x', [0, 0, 1, 1])}, dims='x')
+        actual = array.groupby('c').assign_coords(d = lambda a: a.mean())
+        expected = array.copy()
+        expected.coords['d'] = ('x', [1.5, 1.5, 3.5, 3.5])
+        self.assertDataArrayIdentical(actual, expected)
+
     def test_reindex(self):
         foo = self.dv
         bar = self.dv[:2, :2]

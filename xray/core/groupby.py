@@ -227,6 +227,15 @@ class GroupBy(object):
         """
         return self._first_or_last(ops.last, skipna, keep_attrs)
 
+    def assign_coords(self, **kwargs):
+        """Assign coordinates by group.
+
+        See also
+        --------
+        Dataset.assign_coords
+        """
+        return self.apply(lambda ds: ds.assign_coords(**kwargs))
+
 
 class DataArrayGroupBy(GroupBy, ImplementsArrayReduce):
     """GroupBy object specialized to grouping DataArray objects
@@ -451,6 +460,15 @@ class DatasetGroupBy(GroupBy, ImplementsDatasetReduce):
         def reduce_dataset(ds):
             return ds.reduce(func, dim, keep_attrs, **kwargs)
         return self.apply(reduce_dataset)
+
+    def assign(self, **kwargs):
+        """Assign data variables by group.
+
+        See also
+        --------
+        Dataset.assign
+        """
+        return self.apply(lambda ds: ds.assign(**kwargs))
 
 ops.inject_reduce_methods(DatasetGroupBy)
 ops.inject_binary_ops(DatasetGroupBy)

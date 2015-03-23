@@ -26,6 +26,8 @@
    Dataset.dropna
    Dataset.fillna
 
+   core.groupby.DatasetGroupBy.assign
+   core.groupby.DatasetGroupBy.assign_coords
    core.groupby.DatasetGroupBy.first
    core.groupby.DatasetGroupBy.last
    core.groupby.DatasetGroupBy.fillna
@@ -63,6 +65,7 @@
    DataArray.dropna
    DataArray.fillna
 
+   core.groupby.DataArrayGroupBy.assign_coords
    core.groupby.DataArrayGroupBy.first
    core.groupby.DataArrayGroupBy.last
    core.groupby.DataArrayGroupBy.fillna

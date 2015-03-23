@@ -366,6 +366,11 @@ class TestDataset(TestCase):
         with self.assertRaises(KeyError):
             del data.coords['foo']
 
+        actual = data.copy(deep=True)
+        actual.coords.update({'c': 11})
+        expected = data.merge({'c': 11}).set_coords('c')
+        self.assertDatasetIdentical(expected, actual)
+
     def test_coords_set(self):
         one_coord = Dataset({'x': ('x', [0]),
                              'yy': ('x', [1]),
@@ -1076,6 +1081,34 @@ class TestDataset(TestCase):
         ds['x'] = DataArray([4, 5, 6, 7], dims='y')
         expected = Dataset({'x': ('y', [4, 5, 6])})
         self.assertDatasetIdentical(ds, expected)
+
+    def test_assign(self):
+        ds = Dataset()
+        actual = ds.assign(x = [0, 1, 2])
+        expected = Dataset({'x': [0, 1, 2]})
+        self.assertDatasetIdentical(actual, expected)
+        self.assertDatasetIdentical(ds, Dataset())
+
+        actual = actual.assign(y = lambda ds: ds.x ** 2)
+        expected = Dataset({'y': ('x', [0, 1, 4])})
+        self.assertDatasetIdentical(actual, expected)
+
+        actual = actual.assign_coords(z = 2)
+        expected = Dataset({'y': ('x', [0, 1, 4])}, {'z': 2})
+        self.assertDatasetIdentical(actual, expected)
+
+        ds = Dataset({'a': ('x', range(3))}, {'b': ('x', ['A'] * 2 + ['B'])})
+        actual = ds.groupby('b').assign(c = lambda ds: 2 * ds.a)
+        expected = ds.merge({'c': ('x', [0, 2, 4])})
+        self.assertDatasetIdentical(actual, expected)
+
+        actual = ds.groupby('b').assign(c = lambda ds: ds.a.sum())
+        expected = ds.merge({'c': ('x', [1, 1, 2])})
+        self.assertDatasetIdentical(actual, expected)
+
+        actual = ds.groupby('b').assign_coords(c = lambda ds: ds.a.sum())
+        expected = expected.set_coords('c')
+        self.assertDatasetIdentical(actual, expected)
 
     def test_delitem(self):
         data = create_test_data()
