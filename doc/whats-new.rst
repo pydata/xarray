@@ -27,6 +27,18 @@ Enhancements
   index based alignment and broadcasting like standard binary operations. It
   also can be applied by group, as illustrated in
   :ref:`fill with climatology`.
+- New :py:meth:`~xray.Dataset.assign` and :py:meth:`~xray.Dataset.assign_coords`
+  methods patterned off the new :py:meth:`DataFrame.assign <pandas.DataFrame.assign>`
+  method in pandas:
+
+  .. ipython:: python
+
+      ds = xray.Dataset({'y': ('x', [1, 2, 3])})
+      ds.assign(z = lambda x: x.y ** 2)
+      ds.assign_coords(z = ('x', ['a', 'b', 'c']))
+
+  These methods return a new Dataset (or DataArray) with updated data or
+  coordinate variables.
 
 v0.4.1 (18 March 2015)
 ----------------------

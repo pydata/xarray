@@ -63,6 +63,8 @@ Dataset contents
    :toctree: generated/
 
    Dataset.copy
+   Dataset.assign
+   Dataset.assign_coords
    Dataset.merge
    Dataset.rename
    Dataset.swap_dims
@@ -135,6 +137,8 @@ Computation
 :py:attr:`~Dataset.T`
 
 **Grouped operations**:
+:py:attr:`~core.groupby.DatasetGroupBy.assign`
+:py:attr:`~core.groupby.DatasetGroupBy.assign_coords`
 :py:attr:`~core.groupby.DatasetGroupBy.first`
 :py:attr:`~core.groupby.DatasetGroupBy.last`
 :py:attr:`~core.groupby.DatasetGroupBy.fillna`
@@ -172,6 +176,7 @@ DataArray contents
 .. autosummary::
    :toctree: generated/
 
+   DataArray.assign_coords
    DataArray.rename
    DataArray.swap_dims
    DataArray.drop
@@ -241,6 +246,7 @@ Computation
 :py:attr:`~DataArray.T`
 
 **Grouped operations**:
+:py:attr:`~core.groupby.DataArrayGroupBy.assign_coords`
 :py:attr:`~core.groupby.DataArrayGroupBy.first`
 :py:attr:`~core.groupby.DataArrayGroupBy.last`
 :py:attr:`~core.groupby.DataArrayGroupBy.fillna`

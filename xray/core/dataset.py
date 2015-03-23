@@ -1663,7 +1663,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject):
         return self._replace_vars_and_dims(variables, coord_names, attrs)
 
     def apply(self, func, keep_attrs=False, args=(), **kwargs):
-        """Apply a function over the variables in this dataset.
+        """Apply a function over the data variables in this dataset.
 
         Parameters
         ----------
@@ -1683,15 +1683,46 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject):
         Returns
         -------
         applied : Dataset
-            Resulting dataset from applying over each noncoordinate.
-            Coordinates which are no longer used as the dimension of a
-            noncoordinate are dropped.
+            Resulting dataset from applying ``func`` over each data variable.
         """
         variables = OrderedDict(
             (k, maybe_wrap_array(v, func(v, *args, **kwargs)))
             for k, v in iteritems(self.data_vars))
         attrs = self.attrs if keep_attrs else None
         return type(self)(variables, attrs=attrs)
+
+    def assign(self, **kwargs):
+        """Assign new data variables to a Dataset, returning a new object
+        with all the original variables in addition to the new ones.
+
+        Parameters
+        ----------
+        kwargs : keyword, value pairs
+            keywords are the variables names. If the values are callable, they
+            are computed on the Dataset and assigned to new data variables. If
+            the values are not callable, (e.g. a DataArray, scalar, or array),
+            they are simply assigned.
+
+        Returns
+        -------
+        ds : Dataset
+            A new Dataset with the new variables in addition to all the
+            existing variables.
+
+        Notes
+        -----
+        Since ``kwargs`` is a dictionary, the order of your arguments may not
+        be preserved, and so the order of the new variables is not well
+        defined. Assigning multiple variables within the same ``assign`` is
+        possible, but you cannot reference other variables created within the
+        same ``assign`` call.
+        """
+        data = self.copy()
+        # do all calculations first...
+        results = data._calc_assign_results(kwargs)
+        # ... and then assign
+        data.update(results)
+        return data
 
     @classmethod
     def _concat(cls, datasets, dim='concat_dim', indexers=None,

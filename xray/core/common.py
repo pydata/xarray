@@ -141,6 +141,50 @@ class AttrAccessMixin(object):
 
 
 class BaseDataObject(AttrAccessMixin):
+    def _calc_assign_results(self, kwargs):
+        results = {}
+        for k, v in kwargs.items():
+            if callable(v):
+                results[k] = v(self)
+            else:
+                results[k] = v
+        return results
+
+    def assign_coords(self, **kwargs):
+        """Assign new coordinates to this object, returning a new object
+        with all the original data in addition to the new coordinates.
+
+        Parameters
+        ----------
+        kwargs : keyword, value pairs
+            keywords are the variables names. If the values are callable, they
+            are computed on this object and assigned to new coordinate
+            variables. If the values are not callable, (e.g. a DataArray,
+            scalar, or array), they are simply assigned.
+
+        Returns
+        -------
+        assigned : same type as caller
+            A new object with the new coordinates in addition to the existing
+            data.
+
+        Notes
+        -----
+        Since ``kwargs`` is a dictionary, the order of your arguments may not
+        be preserved, and so the order of the new variables is not well
+        defined. Assigning multiple variables within the same ``assign_coords``
+        is possible, but you cannot reference other variables created within
+        the same ``assign_coords`` call.
+
+        See also
+        --------
+        Dataset.assign
+        """
+        data = self.copy(deep=False)
+        results = data._calc_assign_results(kwargs)
+        data.coords.update(results)
+        return data
+
     def groupby(self, group, squeeze=True):
         """Returns a GroupBy object for performing grouped operations.
 
@@ -166,7 +210,7 @@ class BaseDataObject(AttrAccessMixin):
 
     def resample(self, freq, dim, how='mean', skipna=None, closed=None,
                  label=None, base=0):
-        """Resample this object to a new temporal resolution
+        """Resample this object to a new temporal resolution.
 
         Handles both downsampling and upsampling. Upsampling with filling is
         not yet supported; if any intervals contain no values in the original
@@ -209,6 +253,11 @@ class BaseDataObject(AttrAccessMixin):
             For frequencies that evenly subdivide 1 day, the "origin" of the
             aggregated intervals. For example, for '24H' frequency, base could
             range from 0 through 23.
+
+        Returns
+        -------
+        resampled : same type as caller
+            This object resampled.
 
         References
         ----------
