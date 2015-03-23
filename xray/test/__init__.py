@@ -29,6 +29,13 @@ except ImportError:
     has_netCDF4 = False
 
 
+try:
+    import dask.array
+    has_dask = True
+except ImportError:
+    has_dask = False
+
+
 def requires_scipy(test):
     return test if has_scipy else unittest.skip('requires scipy')(test)
 
@@ -44,6 +51,10 @@ def requires_netCDF4(test):
 def requires_scipy_or_netCDF4(test):
     return (test if has_scipy or has_netCDF4
             else unittest.skip('requires scipy or netCDF4')(test))
+
+
+def requires_dask(test):
+    return test if has_dask else unittest.skip('requires dask')(test)
 
 
 def decode_string_data(data):

@@ -13,6 +13,13 @@ from .pycompat import basestring, OrderedDict, zip
 import xray # only for Dataset and DataArray
 
 
+try:
+    import dask.array
+    lazy_types = (dask.array.Array,)
+except ImportError:
+    lazy_types = ()
+
+
 def as_variable(obj, key=None, strict=True):
     """Convert an object into an Variable
 
@@ -81,6 +88,11 @@ def _as_compatible_data(data, fastpath=False):
         # can't use fastpath (yet) for scalars
         return _maybe_wrap_data(data)
 
+    # add a custom fast-path for dask.array to avoid expensive checks for the
+    # dtype attribute
+    if isinstance(data, lazy_types):
+        return data
+
     if isinstance(data, pd.Index):
         if isinstance(data, pd.MultiIndex):
             raise NotImplementedError(
@@ -94,10 +106,7 @@ def _as_compatible_data(data, fastpath=False):
     if isinstance(data, timedelta):
         data = np.timedelta64(getattr(data, 'value', data), 'ns')
 
-    # don't check for __len__ or __iter__ so as not to cast if data is a numpy
-    # numeric type like np.float32
-    required = ['dtype', 'shape', 'size', 'ndim']
-    if (any(not hasattr(data, attr) for attr in required)
+    if (not hasattr(data, 'dtype') or not hasattr(data, 'shape')
             or isinstance(data, (np.string_, np.datetime64, np.timedelta64))):
         # data must be ndarray-like
         data = np.asarray(data)
@@ -222,7 +231,7 @@ def _as_array_or_item(data):
     return data
 
 
-class Variable(common.AbstractArray):
+class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
     """A netcdf-like variable consisting of dimensions, data and attributes
     which describe a single Array. A single Variable object is not fully
     described outside the context of its parent Dataset (if you want such a
@@ -280,19 +289,15 @@ class Variable(common.AbstractArray):
         return self._data.shape
 
     @property
-    def size(self):
-        return self._data.size
-
-    @property
-    def ndim(self):
-        return self._data.ndim
-
-    def __len__(self):
-        return len(self._data)
-
-    @property
     def _in_memory(self):
         return isinstance(self._data, (NumpyArrayAdapter, PandasIndexAdapter))
+
+    @property
+    def data(self):
+        if isinstance(self._data, lazy_types):
+            return self._data
+        else:
+            return self.values
 
     _cache_data_class = NumpyArrayAdapter
 
@@ -512,7 +517,7 @@ class Variable(common.AbstractArray):
         if len(dims) == 0:
             dims = self.dims[::-1]
         axes = self.get_axis_num(dims)
-        data = self.values.transpose(axes)
+        data = ops.transpose(self.data, axes)
         return type(self)(dims, data, self._attrs, self._encoding, fastpath=True)
 
     def squeeze(self, dim=None):
@@ -578,11 +583,29 @@ class Variable(common.AbstractArray):
                                 self._encoding, fastpath=True)
         return expanded_var.transpose(*dims)
 
+    def expand_dims(self, dims):
+        if isinstance(dims, basestring):
+            dims = [dims]
+
+        assert not utils.is_dict_like(dims)
+
+        missing_dims = set(self.dims) - set(dims)
+        if missing_dims:
+            raise ValueError('new dimensions must be a superset of existing '
+                             'dimensions')
+
+        self_dims = set(self.dims)
+        expanded_dims = tuple(d for d in dims if d not in self_dims) + self.dims
+        expanded_data = self.data[(None,) * (len(expanded_dims) - self.ndim)]
+        expanded_var = Variable(expanded_dims, expanded_data, self._attrs,
+                                self._encoding, fastpath=True)
+        return expanded_var.transpose(*dims)
+
     def fillna(self, value):
         return self._fillna(value)
 
     def reduce(self, func, dim=None, axis=None, keep_attrs=False,
-               **kwargs):
+               allow_lazy=False, **kwargs):
         """Reduce this array by applying `func` along some dimension(s).
 
         Parameters
@@ -616,7 +639,8 @@ class Variable(common.AbstractArray):
 
         if dim is not None:
             axis = self.get_axis_num(dim)
-        data = func(self.values, axis=axis, **kwargs)
+        data = func(self.data if allow_lazy else self.values,
+                    axis=axis, **kwargs)
 
         removed_axes = (range(self.ndim) if axis is None
                         else np.atleast_1d(axis) % self.ndim)
@@ -783,7 +807,7 @@ class Variable(common.AbstractArray):
     def _unary_op(f):
         @functools.wraps(f)
         def func(self, *args, **kwargs):
-            return self.__array_wrap__(f(self.values, *args, **kwargs))
+            return self.__array_wrap__(f(self.data, *args, **kwargs))
         return func
 
     @staticmethod
@@ -792,7 +816,7 @@ class Variable(common.AbstractArray):
         def func(self, other):
             if isinstance(other, (xray.DataArray, xray.Dataset)):
                 return NotImplemented
-            self_data, other_data, dims = _broadcast_variable_data(self, other)
+            self_data, other_data, dims = _broadcast_compat_data(self, other)
             new_data = (f(self_data, other_data)
                         if not reflexive
                         else f(other_data, self_data))
@@ -805,7 +829,7 @@ class Variable(common.AbstractArray):
         def func(self, other):
             if isinstance(other, xray.Dataset):
                 raise TypeError('cannot add a Dataset to a Variable in-place')
-            self_data, other_data, dims = _broadcast_variable_data(self, other)
+            self_data, other_data, dims = _broadcast_compat_data(self, other)
             if dims != self.dims:
                 raise ValueError('dimensions cannot change for in-place '
                                  'operations')
@@ -903,16 +927,7 @@ class Coordinate(Variable):
         return self.to_index().is_numeric()
 
 
-def broadcast_variables(*variables):
-    """Given any number of variables, return variables with matching dimensions
-    and broadcast data.
-
-    The data on the returned variables will be a view of the data on the
-    corresponding original arrays, but dimensions will be reordered and
-    inserted so that both broadcast arrays have the same dimensions. The new
-    dimensions are sorted in order of appearence in the first variable's
-    dimensions followed by the second variable's dimensions.
-    """
+def _unified_dims(variables):
     # validate dimensions
     all_dims = OrderedDict()
     for var in variables:
@@ -927,22 +942,42 @@ def broadcast_variables(*variables):
                 raise ValueError('operands cannot be broadcast together '
                                  'with mismatched lengths for dimension %r: %s'
                                  % (d, (all_dims[d], s)))
-    dims = tuple(all_dims)
-    return tuple(var.set_dims(all_dims) if var.dims != dims else var
+    return all_dims
+
+
+def _broadcast_compat_variables(*variables):
+    dims = tuple(_unified_dims(variables))
+    return tuple(var.expand_dims(dims) if var.dims != dims else var
                  for var in variables)
 
 
-def _broadcast_variable_data(self, other):
+def broadcast_variables(*variables):
+    """Given any number of variables, return variables with matching dimensions
+    and broadcast data.
+
+    The data on the returned variables will be a view of the data on the
+    corresponding original arrays, but dimensions will be reordered and
+    inserted so that both broadcast arrays have the same dimensions. The new
+    dimensions are sorted in order of appearence in the first variable's
+    dimensions followed by the second variable's dimensions.
+    """
+    dims_map = _unified_dims(variables)
+    dims_tuple = tuple(dims_map)
+    return tuple(var.set_dims(dims_map) if var.dims != dims_tuple else var
+                 for var in variables)
+
+
+def _broadcast_compat_data(self, other):
     if all(hasattr(other, attr) for attr
-             in ['dims', 'values', 'shape', 'encoding']):
+             in ['dims', 'data', 'shape', 'encoding']):
         # `other` satisfies the necessary Variable API for broadcast_variables
-        new_self, new_other = broadcast_variables(self, other)
-        self_data = new_self.values
-        other_data = new_other.values
+        new_self, new_other = _broadcast_compat_variables(self, other)
+        self_data = new_self.data
+        other_data = new_other.data
         dims = new_self.dims
     else:
         # rely on numpy broadcasting rules
-        self_data = self.values
+        self_data = self.data
         other_data = other
         dims = self.dims
     return self_data, other_data, dims

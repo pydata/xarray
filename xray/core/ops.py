@@ -37,6 +37,21 @@ NAN_REDUCE_METHODS = ['argmax', 'argmin', 'max', 'min', 'mean', 'prod', 'sum',
 # TODO: wrap cumprod/cumsum, take, dot, sort
 
 
+def _dask_or_numpy_func(name, eager_module=np):
+    try:
+        import dask.array as da
+    except ImportError:
+        return getattr(eager_module, name)
+    else:
+        def f(data, *args, **kwargs):
+            module = da if isinstance(data, da.Array) else eager_module
+            return getattr(module, name)(data, *args, **kwargs)
+        return f
+
+
+transpose = _dask_or_numpy_func('transpose')
+
+
 def _values_method_wrapper(name):
     def func(self, *args, **kwargs):
         return getattr(self.values, name)(*args, **kwargs)
@@ -119,6 +134,11 @@ def _ignore_warnings_if(condition):
         yield
 
 
+def as_computable_array(data):
+    from .variable import lazy_types
+    return data if isinstance(data, lazy_types) else np.asarray(data)
+
+
 def _create_nan_agg_method(name, numeric_only=False):
     def f(values, axis=None, skipna=None, **kwargs):
         # ignore keyword args inserted by np.mean and other numpy aggreagators
@@ -126,18 +146,16 @@ def _create_nan_agg_method(name, numeric_only=False):
         kwargs.pop('dtype', None)
         kwargs.pop('out', None)
 
-        values = np.asarray(values)
+        values = as_computable_array(values)
         if skipna or (skipna is None and values.dtype.kind == 'f'):
             if values.dtype.kind not in ['i', 'f']:
                 raise NotImplementedError(
                     'skipna=True not yet implemented for %s with dtype %s'
                     % (name, values.dtype))
             nanname = 'nan' + name
+            eager_module = np if isinstance(axis, tuple) else bn
             try:
-                if isinstance(axis, tuple):
-                    func = getattr(np, nanname)
-                else:
-                    func = getattr(bn, nanname)
+                func = _dask_or_numpy_func(nanname, eager_module)
             except AttributeError:
                 raise NotImplementedError(
                     '%s is not available with skipna=False with the '
@@ -145,7 +163,7 @@ def _create_nan_agg_method(name, numeric_only=False):
                     'newer to use skipna=True or skipna=None' % name)
             using_numpy_nan_func = func is getattr(np, nanname)
         else:
-            func = getattr(np, name)
+            func = _dask_or_numpy_func(name)
             using_numpy_nan_func = False
         with _ignore_warnings_if(using_numpy_nan_func):
             return func(values, axis=axis, **kwargs)
@@ -284,13 +302,13 @@ def op_str(name):
     return '__%s__' % name
 
 
-def op(name):
+def get_op(name):
     return getattr(operator, op_str(name))
 
 
 def inject_binary_ops(cls, inplace=False):
     for name in CMP_BINARY_OPS + NUM_BINARY_OPS:
-        setattr(cls, op_str(name), cls._binary_op(op(name)))
+        setattr(cls, op_str(name), cls._binary_op(get_op(name)))
 
     for name, f in [('eq', array_eq), ('ne', array_ne)]:
         setattr(cls, op_str(name), cls._binary_op(f))
@@ -303,10 +321,10 @@ def inject_binary_ops(cls, inplace=False):
     for name in NUM_BINARY_OPS:
         # only numeric operations have in-place and reflexive variants
         setattr(cls, op_str('r' + name),
-                cls._binary_op(op(name), reflexive=True))
+                cls._binary_op(get_op(name), reflexive=True))
         if inplace:
             setattr(cls, op_str('i' + name),
-                    cls._inplace_binary_op(op('i' + name)))
+                    cls._inplace_binary_op(get_op('i' + name)))
 
 
 def inject_all_ops_and_reduce_methods(cls, priority=50, array_only=True):
@@ -315,7 +333,7 @@ def inject_all_ops_and_reduce_methods(cls, priority=50, array_only=True):
     cls.__array_priority__ = priority
     # patch in standard special operations
     for name in UNARY_OPS:
-        setattr(cls, op_str(name), cls._unary_op(op(name)))
+        setattr(cls, op_str(name), cls._unary_op(get_op(name)))
     inject_binary_ops(cls, inplace=True)
     # patch in numpy/pandas methods
     for name in NUMPY_UNARY_METHODS:

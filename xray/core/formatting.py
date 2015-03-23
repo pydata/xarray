@@ -195,6 +195,8 @@ def indexes_repr(indexes):
 
 
 def array_repr(arr):
+    from .variable import lazy_types
+
     # used for DataArray, Variable and Coordinate
     if hasattr(arr, 'name') and arr.name is not None:
         name_str = '%r ' % arr.name
@@ -205,7 +207,9 @@ def array_repr(arr):
 
     summary = ['<xray.%s %s(%s)>'% (type(arr).__name__, name_str, dim_summary)]
 
-    if arr.size < 1e5 or arr._in_memory:
+    if isinstance(arr._data, lazy_types):
+        summary.append(repr(arr._data))
+    elif arr._in_memory or arr.size < 1e5:
         summary.append(repr(arr.values))
     else:
         summary.append('[%s values with dtype=%s]' % (arr.size, arr.dtype))

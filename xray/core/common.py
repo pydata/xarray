@@ -14,10 +14,10 @@ class ImplementsArrayReduce(object):
             def wrapped_func(self, dim=None, axis=None, skipna=None,
                              keep_attrs=False, **kwargs):
                 return self.reduce(func, dim, axis, keep_attrs, skipna=skipna,
-                                   **kwargs)
+                                   allow_lazy=True, **kwargs)
         else:
             def wrapped_func(self, dim=None, axis=None, keep_attrs=False,
-                             **kwargs):
+                             allow_lazy=True, **kwargs):
                 return self.reduce(func, dim, axis, keep_attrs, **kwargs)
         return wrapped_func
 

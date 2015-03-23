@@ -284,6 +284,10 @@ class DataArray(AbstractArray, BaseDataObject):
         return len(self.variable)
 
     @property
+    def _data(self):
+        return self.variable._data
+
+    @property
     def values(self):
         """The array's data as a numpy.ndarray"""
         return self.variable.values
