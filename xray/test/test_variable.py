@@ -296,7 +296,7 @@ class VariableSubclassTestCases(object):
 
     def test_concat(self):
         x = np.arange(5)
-        y = np.ones(5)
+        y = np.arange(5, 10)
         v = self.cls(['a'], x)
         w = self.cls(['a'], y)
         self.assertVariableIdentical(Variable(['b', 'a'], np.array([x, y])),
@@ -305,21 +305,21 @@ class VariableSubclassTestCases(object):
                                      Variable.concat((v, w), 'b'))
         self.assertVariableIdentical(Variable(['b', 'a'], np.array([x, y])),
                                      Variable.concat((v, w), 'b', length=2))
-        with self.assertRaisesRegexp(ValueError, 'actual length'):
-            Variable.concat([v, w], 'b', length=1)
-        with self.assertRaisesRegexp(ValueError, 'actual length'):
-            Variable.concat([v, w, w], 'b', length=4)
         with self.assertRaisesRegexp(ValueError, 'inconsistent dimensions'):
             Variable.concat([v, Variable(['c'], y)], 'b')
+        # test indexers
+        actual = Variable.concat([v, w], indexers=[range(0, 10, 2), range(1, 10, 2)], dim='a')
+        expected = Variable('a', np.array([x, y]).ravel(order='F'))
+        self.assertVariableIdentical(expected, actual)
         # test concatenating along a dimension
         v = Variable(['time', 'x'], np.random.random((10, 8)))
         self.assertVariableIdentical(v, Variable.concat([v[:5], v[5:]], 'time'))
-        self.assertVariableIdentical(v, Variable.concat([v[:5], v[5], v[6:]], 'time'))
-        self.assertVariableIdentical(v, Variable.concat([v[0], v[1:]], 'time'))
+        self.assertVariableIdentical(v, Variable.concat([v[:5], v[5:6], v[6:]], 'time'))
+        self.assertVariableIdentical(v, Variable.concat([v[:1], v[1:]], 'time'))
         # test dimension order
         self.assertVariableIdentical(v, Variable.concat([v[:, :5], v[:, 5:]], 'x'))
-        self.assertVariableIdentical(v.transpose(),
-                                     Variable.concat([v[:, 0], v[:, 1:]], 'x'))
+        with self.assertRaisesRegexp(ValueError, 'same number of dimensions'):
+            Variable.concat([v[:, 0], v[:, 1:]], 'x')
 
     def test_concat_attrs(self):
         # different or conflicting attributes should be removed
@@ -608,26 +608,26 @@ class TestVariable(TestCase, VariableSubclassTestCases):
         with self.assertRaisesRegexp(ValueError, 'not found in array dim'):
             v.get_axis_num('foobar')
 
-    def test_set_dims(self):
+    def test_expand_dims(self):
         v = Variable(['x'], [0, 1])
-        actual = v.set_dims(['x', 'y'])
+        actual = v.expand_dims(['x', 'y'])
         expected = Variable(['x', 'y'], [[0], [1]])
         self.assertVariableIdentical(actual, expected)
 
-        actual = v.set_dims(['y', 'x'])
+        actual = v.expand_dims(['y', 'x'])
         self.assertVariableIdentical(actual, expected.T)
 
-        actual = v.set_dims(OrderedDict([('x', 2), ('y', 2)]))
+        actual = v.expand_dims(OrderedDict([('x', 2), ('y', 2)]))
         expected = Variable(['x', 'y'], [[0, 0], [1, 1]])
         self.assertVariableIdentical(actual, expected)
 
         v = Variable(['foo'], [0, 1])
-        actual = v.set_dims('foo')
+        actual = v.expand_dims('foo')
         expected = v
         self.assertVariableIdentical(actual, expected)
 
         with self.assertRaisesRegexp(ValueError, 'must be a superset'):
-            v.set_dims(['z'])
+            v.expand_dims(['z'])
 
     def test_broadcasting_math(self):
         x = np.random.randn(2, 3)

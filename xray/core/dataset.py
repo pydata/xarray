@@ -13,7 +13,6 @@ from . import utils
 from . import common
 from . import groupby
 from . import indexing
-from . import variable
 from . import alignment
 from . import formatting
 from .. import backends, conventions
@@ -22,6 +21,7 @@ from .coordinates import DatasetCoordinates, Indexes
 from .common import ImplementsDatasetReduce, BaseDataObject
 from .utils import (Frozen, SortedKeysDict, ChainMap, maybe_wrap_array,
                     close_on_error)
+from .variable import as_variable, Variable, Coordinate
 from .pycompat import iteritems, itervalues, basestring, OrderedDict
 
 
@@ -29,7 +29,7 @@ def _get_default_netcdf_engine(engine):
     try:
         import netCDF4
         engine = 'netcdf4'
-    except ImportError:
+    except ImportError: # pragma: no cover
         try:
             import scipy.io.netcdf
             engine = 'scipy'
@@ -155,7 +155,7 @@ def _list_virtual_variables(variables):
 
     virtual_vars = []
     for k, v in iteritems(variables):
-        if ((v.dtype.kind == 'M' and isinstance(v, variable.Coordinate))
+        if ((v.dtype.kind == 'M' and isinstance(v, Coordinate))
                 or (v.ndim == 0 and _castable_to_timestamp(v.values))):
             # nb. dtype.kind == 'M' is datetime64
             for suffix in _DATETIMEINDEX_COMPONENTS + ['season']:
@@ -192,14 +192,14 @@ def _get_virtual_variable(variables, key):
         data = seasons[(month // 3) % 4]
     else:
         data = getattr(date, var_name)
-    return ref_name, var_name, variable.Variable(ref_var.dims, data)
+    return ref_name, var_name, Variable(ref_var.dims, data)
 
 
 def _as_dataset_variable(name, var):
     """Prepare a variable for adding it to a Dataset
     """
     try:
-        var = variable.as_variable(var, key=name)
+        var = as_variable(var, key=name)
     except TypeError:
         raise TypeError('Dataset variables must be an arrays or a tuple of '
                         'the form (dims, data[, attrs, encoding])')
@@ -249,7 +249,7 @@ def _expand_variables(raw_variables, old_variables={}, compat='identical'):
                 common_dims = OrderedDict(zip(existing_var.dims,
                                               existing_var.shape))
                 common_dims.update(zip(var.dims, var.shape))
-                variables[name] = existing_var.set_dims(common_dims)
+                variables[name] = existing_var.expand_dims(common_dims)
                 new_coord_names.update(var.dims)
 
     def add_variable(name, var):
@@ -465,7 +465,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject):
                 # This is equivalent to np.arange(size), but
                 # waits to create the array until its actually accessed.
                 data = indexing.LazyIntegerRange(size)
-                coord = variable.Coordinate(dim, data)
+                coord = Coordinate(dim, data)
                 self._variables[dim] = coord
 
     def _update_vars_and_coords(self, new_variables, new_coord_names={},
@@ -1737,13 +1737,18 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject):
         # list; the gains would be minimal
         datasets = list(map(as_dataset, datasets))
 
-        if not isinstance(dim, basestring) and not hasattr(dim, 'dims'):
+        if isinstance(dim, basestring):
+            coord = None
+        elif not hasattr(dim, 'dims'):
             # dim is not a DataArray or Coordinate
             dim_name = getattr(dim, 'name', None)
             if dim_name is None:
                 dim_name = 'concat_dim'
-            dim = DataArray(dim, dims=dim_name, name=dim_name)
-        dim_name = getattr(dim, 'name', dim)
+            coord = DataArray(dim, dims=dim_name, name=dim_name)
+            dim = dim_name
+        else:
+            coord = dim
+            dim, = coord.dims
 
         # figure out variables to concatenate over
         if concat_over is None:
@@ -1781,11 +1786,9 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject):
                              % (concat_over, datasets[0]))
 
         # automatically concatenate over variables along the dimension
-        auto_concat_dims = set([dim_name])
-        if hasattr(dim, 'dims'):
-            auto_concat_dims |= set(dim.dims)
+        auto_concat_dims = set([dim])
         for k, v in iteritems(datasets[0]._variables):
-            if k == dim_name or auto_concat_dims.intersection(v.dims):
+            if k == dim or auto_concat_dims.intersection(v.dims):
                 concat_over.add(k)
 
         # create the new dataset and add constant variables
@@ -1803,35 +1806,50 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject):
             for k, v in iteritems(ds._variables):
                 if k not in concatenated._variables and k not in concat_over:
                     raise ValueError('encountered unexpected variable %r' % k)
-                elif (k in concatenated._variables and k != dim_name and
+                elif (k in concatenated._variables and k != dim and
                           not getattr(v, compat)(concatenated[k])):
                     verb = 'equal' if compat == 'equals' else compat
                     raise ValueError(
                         'variable %r not %s across datasets' % (k, verb))
 
-        def _ensure_common_dims(vars):
-            # ensure shared common dimensions by inserting dimensions with size
-            # 1 if necessary
+        # we've already verified everything is consistent; now, calculate
+        # shared dimension sizes so we can expand the necessary variables
+        dim_lengths = [ds.dims.get(dim, 1) for ds in datasets]
+        non_concat_dims = {}
+        for ds in datasets:
+            non_concat_dims.update(ds.dims)
+        non_concat_dims.pop(dim, None)
+
+        def ensure_common_dims(vars):
+            # ensure each variable with the given name shares the same
+            # dimensions and the same shape for all of them except along the
+            # concat dimension
             common_dims = tuple(pd.unique([d for v in vars for d in v.dims]))
-            return [v.set_dims(common_dims) if v.dims != common_dims else v
-                    for v in vars]
+            if dim not in common_dims:
+                common_dims = (dim,) + common_dims
+            for var, dim_len in zip(vars, dim_lengths):
+                if var.dims != common_dims:
+                    common_shape = tuple(non_concat_dims.get(d, dim_len)
+                                         for d in common_dims)
+                    var = var.expand_dims(common_dims, common_shape)
+                yield var
 
         # stack up each variable to fill-out the dataset
         for k in concat_over:
-            vars = _ensure_common_dims([ds._variables[k] for ds in datasets])
-            concatenated[k] = variable.Variable.concat(vars, dim, indexers)
+            vars = ensure_common_dims([ds._variables[k] for ds in datasets])
+            concatenated[k] = Variable.concat(vars, dim, indexers)
 
         concatenated._coord_names.update(datasets[0].coords)
 
-        if not isinstance(dim, basestring):
+        if coord is not None:
             # add dimension last to ensure that its in the final Dataset
-            concatenated.coords[dim_name] = dim
+            concatenated[coord.name] = coord
 
         return concatenated
 
     def _to_dataframe(self, ordered_dims):
         columns = [k for k in self if k not in self.dims]
-        data = [self._variables[k].set_dims(ordered_dims).values.reshape(-1)
+        data = [self._variables[k].expand_dims(ordered_dims).values.reshape(-1)
                 for k in columns]
         index = self.coords.to_index(ordered_dims)
         return pd.DataFrame(OrderedDict(zip(columns, data)), index=index)

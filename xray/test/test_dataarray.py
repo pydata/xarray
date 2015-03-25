@@ -1002,16 +1002,23 @@ class TestDataArray(TestCase):
         with self.assertRaisesRegexp(TypeError, 'only support arithmetic'):
             grouped + grouped
 
-    @unittest.skip
     def test_groupby_math_not_aligned(self):
-        # We need to fix Variable.concat to infer dtypes properly before this
-        # will pass. For now, raising KeyError when labels are missing (instead
-        # of aligning) is a reasonable fallback.
         array = DataArray(range(4), {'b': ('x', [0, 0, 1, 1])}, dims='x')
         other = DataArray([10], dims='b')
         actual = array.groupby('b') + other
         expected = DataArray([10, 11, np.nan, np.nan], array.coords)
         self.assertDataArrayIdentical(expected, actual)
+
+        other = DataArray([10], coords={'c': 123}, dims='b')
+        actual = array.groupby('b') + other
+        expected.coords['c'] = (['x'], [123] * 2 + [np.nan] * 2)
+        self.assertDataArrayIdentical(expected, actual)
+
+        other = Dataset({'a': ('b', [10])})
+        actual = array.groupby('b') + other
+        expected = Dataset({'a': ('x', [10, 11, np.nan, np.nan])},
+                           array.coords)
+        self.assertDatasetIdentical(expected, actual)
 
     def test_groupby_restore_dim_order(self):
         array = DataArray(np.random.randn(5, 3),

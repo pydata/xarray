@@ -8,7 +8,8 @@ from . import common
 from . import indexing
 from . import ops
 from . import utils
-from .pycompat import basestring, OrderedDict, zip
+from .pycompat import basestring, OrderedDict, zip, reduce
+from .npcompat import broadcast_to, stack
 
 import xray # only for Dataset and DataArray
 
@@ -16,7 +17,7 @@ import xray # only for Dataset and DataArray
 try:
     import dask.array
     lazy_types = (dask.array.Array,)
-except ImportError:
+except ImportError: # pragma: no cover
     lazy_types = ()
 
 
@@ -548,7 +549,7 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
         dims = dict(zip(self.dims, self.shape))
         return common.squeeze(self, dims, dim)
 
-    def set_dims(self, dims):
+    def expand_dims(self, dims, shape=None):
         """Return a new variable with expanded dimensions.
 
         When possible, this operation does not copy this variable's data.
@@ -567,27 +568,8 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
         if isinstance(dims, basestring):
             dims = [dims]
 
-        if not utils.is_dict_like(dims):
-            dims_map = dict(zip(self.dims, self.shape))
-            dims = OrderedDict((d, dims_map.get(d, 1)) for d in dims)
-
-        missing_dims = set(self.dims) - set(dims)
-        if missing_dims:
-            raise ValueError('new dimensions must be a superset of existing '
-                             'dimensions')
-
-        self_dims = set(self.dims)
-        exp_dims = tuple(d for d in dims if d not in self_dims) + self.dims
-        exp_data = utils.broadcast_to(self, [dims[d] for d in exp_dims])
-        expanded_var = Variable(exp_dims, exp_data, self._attrs,
-                                self._encoding, fastpath=True)
-        return expanded_var.transpose(*dims)
-
-    def expand_dims(self, dims):
-        if isinstance(dims, basestring):
-            dims = [dims]
-
-        assert not utils.is_dict_like(dims)
+        if shape is None and utils.is_dict_like(dims):
+            shape = dims.values()
 
         missing_dims = set(self.dims) - set(dims)
         if missing_dims:
@@ -596,7 +578,12 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
 
         self_dims = set(self.dims)
         expanded_dims = tuple(d for d in dims if d not in self_dims) + self.dims
-        expanded_data = self.data[(None,) * (len(expanded_dims) - self.ndim)]
+        if shape is not None:
+            dims_map = dict(zip(dims, shape))
+            tmp_shape = [dims_map[d] for d in expanded_dims]
+            expanded_data = broadcast_to(self, tmp_shape)
+        else:
+            expanded_data = self.data[(None,) * (len(expanded_dims) - self.ndim)]
         expanded_var = Variable(expanded_dims, expanded_data, self._attrs,
                                 self._encoding, fastpath=True)
         return expanded_var.transpose(*dims)
@@ -695,65 +682,33 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
             length = dim.size
             dim, = dim.dims
 
-        if length is None or indexers is None:
-            # so much for lazy evaluation! we need to look at all the variables
-            # to figure out the indexers and/or dimensions of the stacked
-            # variable
-            variables = list(variables)
-            steps = [var.shape[var.get_axis_num(dim)]
-                     if dim in var.dims else 1
-                     for var in variables]
-            if length is None:
-                length = sum(steps)
-            if indexers is None:
-                indexers = []
-                i = 0
-                for step in steps:
-                    indexers.append(slice(i, i + step))
-                    i += step
-                if i != length:
-                    raise ValueError('actual length of stacked variables '
-                                     'along %s is %r but expected length was '
-                                     '%s' % (dim, i, length))
+        # can't do this lazily: we need to loop through variables at least
+        # twice
+        variables = list(variables)
+        first_var = variables[0]
 
-        # initialize the stacked variable with empty data
-        first_var, variables = utils.peek_at(variables)
+        arrays = [v.values for v in variables]
+
+        # TODO: use our own type promotion rules to ensure that
+        # [str, float] -> object, not str like numpy
         if dim in first_var.dims:
             axis = first_var.get_axis_num(dim)
-            shape = tuple(length if n == axis else s
-                          for n, s in enumerate(first_var.shape))
             dims = first_var.dims
+            if indexers is None:
+                data = np.concatenate(arrays, axis=axis)
+            else:
+                data = ops.interleaved_concat(arrays, indexers, axis=axis)
         else:
             axis = 0
-            shape = (length,) + first_var.shape
             dims = (dim,) + first_var.dims
+            data = stack(arrays, axis=axis)
 
-        dtype = first_var.dtype
-        if dtype.kind in ['S', 'U']:
-            # use an object array instead of a fixed length strings to avoid
-            # possible truncation
-            dtype = object
-
-        data = np.empty(shape, dtype=dtype)
         attrs = OrderedDict(first_var.attrs)
-
-        alt_dims = tuple(d for d in dims if d != dim)
-        key = [slice(None)] * len(dims)
-
-        # copy in the data from the variables
-        for var, indexer in zip(variables, indexers):
-            if not shortcut:
-                # do sanity checks & attributes clean-up
-                if dim in var.dims:
-                    # transpose verifies that the dims are equivalent
-                    if var.dims != dims:
-                        var = var.transpose(*dims)
-                elif var.dims != alt_dims:
+        if not shortcut:
+            for var in variables:
+                if var.dims != first_var.dims:
                     raise ValueError('inconsistent dimensions')
                 utils.remove_incompatible_items(attrs, var.attrs)
-
-            key[axis] = indexer
-            data[key] = var.values
 
         return cls(dims, data, attrs)
 
@@ -963,7 +918,7 @@ def broadcast_variables(*variables):
     """
     dims_map = _unified_dims(variables)
     dims_tuple = tuple(dims_map)
-    return tuple(var.set_dims(dims_map) if var.dims != dims_tuple else var
+    return tuple(var.expand_dims(dims_map) if var.dims != dims_tuple else var
                  for var in variables)
 
 

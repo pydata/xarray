@@ -4,7 +4,9 @@ import pandas as pd
 
 from . import ops
 from .alignment import concat
-from .common import ImplementsArrayReduce, ImplementsDatasetReduce
+from .common import (
+    ImplementsArrayReduce, ImplementsDatasetReduce, _maybe_promote,
+)
 from .pycompat import zip
 from .utils import peek_at, maybe_wrap_array, safe_cast_to_index
 from .variable import Variable, Coordinate
@@ -33,6 +35,36 @@ def unique_value_groups(ar):
             # pandas uses -1 to mark NaN, but doesn't include them in values
             groups[g].append(n)
     return values, groups
+
+
+def _get_fill_value(dtype):
+    """Return a fill value that appropriately promotes types when used with
+    np.concatenate
+    """
+    dtype, fill_value = _maybe_promote(dtype)
+    return fill_value
+
+
+def _dummy_copy(xray_obj):
+    from .dataset import Dataset
+    from .dataarray import DataArray
+    if isinstance(xray_obj, Dataset):
+        res = Dataset(dict((k, _get_fill_value(v.dtype))
+                           for k, v in xray_obj.data_vars.items()),
+                      dict((k, _get_fill_value(v.dtype))
+                           for k, v in xray_obj.coords.items()
+                           if k not in xray_obj.dims),
+                      xray_obj.attrs)
+    elif isinstance(xray_obj, DataArray):
+        res = DataArray(_get_fill_value(xray_obj.dtype),
+                        dict((k, _get_fill_value(v.dtype))
+                             for k, v in xray_obj.coords.items()
+                             if k not in xray_obj.dims),
+                        name=xray_obj.name,
+                        attrs=xray_obj.attrs)
+    else: # pragma: no cover
+        raise AssertionError
+    return res
 
 
 class GroupBy(object):
@@ -148,7 +180,7 @@ class GroupBy(object):
             indexers = self.group_indices
         else:
             concat_dim = self.unique_coord
-            indexers = np.arange(self.unique_coord.size)
+            indexers = None
         return concat_dim, indexers
 
     @staticmethod
@@ -161,6 +193,7 @@ class GroupBy(object):
         return func
 
     def _yield_binary_applied(self, func, other):
+        dummy = None
         for group_value, obj in self:
             try:
                 other_sel = other.sel(**{self.group.name: group_value})
@@ -171,8 +204,10 @@ class GroupBy(object):
             # TDOO: we would love to fall-back to using missing values if there
             # are missing labels, but unfortunately this isn't possible until
             # concat infers dtypes from more than the first variable
-            # except KeyError:
-            #     other_sel = np.nan
+            except KeyError:
+                if dummy is None:
+                    dummy = _dummy_copy(other)
+                other_sel = dummy
             yield func(obj, other_sel)
 
     def _maybe_restore_empty_groups(self, combined):

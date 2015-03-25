@@ -1381,6 +1381,13 @@ class TestDataset(TestCase):
         expected = Dataset({'x': [0, 1]}, {'y': ('x', [-1, -2])})
         self.assertDatasetIdentical(actual, expected)
 
+        # scalars with mixed lengths along concat dim -- values should repeat
+        objs = [Dataset({'x': [0]}, {'y': -1}),
+                Dataset({'x': [1, 2]}, {'y': -2})]
+        actual = concat(objs, 'x')
+        expected = Dataset({}, {'y': ('x', [-1, -2, -2])})
+        self.assertDatasetIdentical(actual, expected)
+
         # broadcast 1d x 1d -> 2d
         objs = [Dataset({'z': ('x', [-1])}, {'x': [0], 'y': [0]}),
                 Dataset({'z': ('y', [1])}, {'x': [1], 'y': [0]})]
@@ -1668,7 +1675,6 @@ class TestDataset(TestCase):
         actual = ds.var()
         self.assertDatasetIdentical(expected, actual)
 
-    @unittest.skip('see github issue 209')
     def test_reduce_only_one_axis(self):
 
         def mean_only_one_axis(x, axis):

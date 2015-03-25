@@ -6,7 +6,7 @@ import numpy as np
 import pandas as pd
 
 from . import utils
-from .pycompat import PY3
+from .pycompat import PY3, builtins, reduce
 
 try:
     import bottleneck as bn
@@ -258,6 +258,30 @@ def last(values, axis, skipna=None):
         # only bother for dtypes that can hold NaN
         return nanlast(values, axis)
     return np.take(values, -1, axis=axis)
+
+
+def _calc_concat_shape(arrays, axis=0):
+    shape = arrays[0].shape
+    ndim = arrays[0].ndim
+    if not -ndim <= axis < ndim:
+        raise IndexError('axis %r out of bounds [-%r, %r)'
+                         % (axis, ndim, ndim))
+    if axis < 0:
+        axis += ndim
+    length = builtins.sum(a.shape[axis] for a in arrays)
+    new_shape = shape[:axis] + (length,) + shape[(axis + 1):]
+    return new_shape
+
+
+def interleaved_concat(arrays, indices, axis=0):
+    shape = _calc_concat_shape(arrays, axis=axis)
+    dtype = reduce(np.promote_types, [a.dtype for a in arrays])
+    result = np.empty(shape, dtype)
+    key = [slice(None)] * result.ndim
+    for a, ind in zip(arrays, indices):
+        key[axis] = ind
+        result[key] = a
+    return result
 
 
 def _ensure_bool_is_ndarray(result, *args):
