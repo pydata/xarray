@@ -3,6 +3,8 @@ xray: N-D labeled arrays and datasets in Python
 
 .. image:: https://travis-ci.org/xray/xray.svg?branch=master
     :target: https://travis-ci.org/xray/xray
+.. image:: https://coveralls.io/repos/xray/xray/badge.svg
+    :target: https://coveralls.io/r/xray/xray
 .. image:: https://badge.fury.io/py/xray.svg
     :target: https://pypi.python.org/pypi/xray/
 
