@@ -11,7 +11,7 @@ matrix:
     env: UPDATE_ENV="conda install unittest2 pandas==0.15.0"
   # Test on Python 2.7 with and without netCDF4/scipy/cdat-lite
   - python: 2.7
-    env: UPDATE_ENV="pip install cyordereddict && conda install -c scitools cdat-lite"
+    env: UPDATE_ENV="pip install cyordereddict && conda install -c scitools cdat-lite && ./ci/install_dask.sh"
   - python: 2.7
     # nb. we have to remove scipy because conda install pandas brings it in:
     # https://github.com/ContinuumIO/anaconda-issues/issues/145
@@ -19,7 +19,7 @@ matrix:
   - python: 3.3
     env: UPDATE_ENV="conda remove netCDF4"
   - python: 3.4
-    env: UPDATE_ENV="pip install cyordereddict && conda install -c pandas bottleneck"
+    env: UPDATE_ENV="pip install cyordereddict && conda install -c pandas bottleneck && ./ci/install_dask.sh"
   # don't require pydap tests to pass because the dap test server is unreliable
   - python: 2.7
     env: UPDATE_ENV="pip install pydap"
@@ -60,7 +60,6 @@ install:
   - source activate test_env
   - echo $UPDATE_ENV; eval $UPDATE_ENV
   - pip install coveralls
-  - ./ci/install_dask.sh
   - python setup.py install
 
 script:

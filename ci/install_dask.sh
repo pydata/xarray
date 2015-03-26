@@ -1,5 +1,3 @@
 conda install toolz psutil dill
-# chest currently does a bad job of dependency resolution
-pip install heapdict
-pip install git+https://github.com/ContinuumIO/chest.git
-pip install git+https://github.com/ContinuumIO/dask.git
+# currently, install dask from master to get the latest fixes
+pip install https://github.com/ContinuumIO/dask/archive/master.zip
