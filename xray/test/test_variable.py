@@ -708,12 +708,7 @@ class TestVariable(TestCase, VariableSubclassTestCases):
         self.assertVariableIdentical(v.prod(), Variable([], 6))
         self.assertVariableIdentical(v.var(), Variable([], 2.0 / 3))
 
-        try:
-            import bottleneck
-            bottleneck_available = True
-        except ImportError:
-            bottleneck_available = False
-        if LooseVersion(np.__version__) < '1.9' and not bottleneck_available:
+        if LooseVersion(np.__version__) < '1.9':
             with self.assertRaises(NotImplementedError):
                 v.median()
         else:

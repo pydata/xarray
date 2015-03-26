@@ -60,10 +60,11 @@ install:
   - source activate test_env
   - echo $UPDATE_ENV; eval $UPDATE_ENV
   - pip install coveralls
+  - ./ci/install_dask.sh
   - python setup.py install
 
 script:
   - nosetests --with-coverage --cover-package xray
 
 after_success:
-  coveralls
+  - coveralls

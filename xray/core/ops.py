@@ -154,19 +154,19 @@ def _create_nan_agg_method(name, numeric_only=False):
                     % (name, values.dtype))
             nanname = 'nan' + name
             eager_module = np if isinstance(axis, tuple) else bn
+            func = _dask_or_numpy_func(nanname, eager_module)
+            using_numpy_nan_func = eager_module is np
+        else:
+            func = _dask_or_numpy_func(name)
+            using_numpy_nan_func = False
+        with _ignore_warnings_if(using_numpy_nan_func):
             try:
-                func = _dask_or_numpy_func(nanname, eager_module)
+                return func(values, axis=axis, **kwargs)
             except AttributeError:
                 raise NotImplementedError(
                     '%s is not available with skipna=False with the '
                     'installed version of numpy; upgrade to numpy 1.9 or '
                     'newer to use skipna=True or skipna=None' % name)
-            using_numpy_nan_func = func is getattr(np, nanname)
-        else:
-            func = _dask_or_numpy_func(name)
-            using_numpy_nan_func = False
-        with _ignore_warnings_if(using_numpy_nan_func):
-            return func(values, axis=axis, **kwargs)
     f.numeric_only = numeric_only
     return f
 
