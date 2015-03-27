@@ -87,6 +87,9 @@ def allclose_or_equiv(arr1, arr2, rtol=1e-5, atol=1e-8):
 def array_equiv(arr1, arr2):
     """Like np.array_equal, but also allows values to be NaN in both arrays
     """
+    if (hasattr(arr1, 'shape') and hasattr(arr2, 'shape')
+            and arr1.shape != arr2.shape):
+        return False
     arr1, arr2 = np.asarray(arr1), np.asarray(arr2)
     if arr1.shape != arr2.shape:
         return False

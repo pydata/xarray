@@ -13,7 +13,7 @@ from xray import (align, concat, conventions, backends, Dataset, DataArray,
 from xray.core import indexing, utils
 from xray.core.pycompat import iteritems, OrderedDict
 
-from . import TestCase, unittest
+from . import TestCase, unittest, InaccessibleArray, UnexpectedDataAccess
 
 
 def create_test_data(seed=None):
@@ -33,18 +33,6 @@ def create_test_data(seed=None):
         obj[v] = (dims, data, {'foo': 'variable'})
     obj.coords['numbers'] = ('dim3', [0, 1, 2, 0, 0, 1, 1, 2, 2, 3])
     return obj
-
-
-class UnexpectedDataAccess(Exception):
-    pass
-
-
-class InaccessibleArray(utils.NDArrayMixin):
-    def __init__(self, array):
-        self.array = array
-
-    def __getitem__(self, key):
-        raise UnexpectedDataAccess("Tried accessing data")
 
 
 class InaccessibleVariableDataStore(backends.InMemoryDataStore):

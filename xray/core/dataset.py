@@ -1764,36 +1764,34 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject):
                 # simple helper function which compares a variable
                 # across all datasets and indicates whether that
                 # variable differs or not.
-                return any(not ds._variables[vname].equals(v)
+                return any(not ds.variables[vname].equals(v)
                            for ds in datasets[1:])
-            # non_indexes = iteritems(datasets[0].nonindexes)
             # all nonindexes that are not the same in each dataset
-            concat_over.update(k for k, v in iteritems(datasets[0]._variables)
-                               if k not in datasets[0]._dims and differs(k, v))
+            concat_over.update(k for k, v in datasets[0].variables.items()
+                               if k not in datasets[0].dims
+                               and k not in concat_over and differs(k, v))
         elif mode == 'all':
-            # concatenate all nonindexes
+            # concatenate all non-dimensions
             concat_over.update(set(datasets[0]) - set(datasets[0].dims))
         elif mode == 'minimal':
             # only concatenate variables in which 'dim' already
-            # appears. These variables are added later.
+            # appears. These variables are added below.
             pass
         else:
             raise ValueError("Unexpected value for mode: %s" % mode)
 
-        if any(v not in datasets[0]._variables for v in concat_over):
+        # automatically concatenate over variables along the dimension
+        concat_over.update(k for k, v in datasets[0].variables.items()
+                           if dim in v.dims)
+
+        if any(v not in datasets[0].variables for v in concat_over):
             raise ValueError('not all elements in concat_over %r found '
                              'in the first dataset %r'
                              % (concat_over, datasets[0]))
 
-        # automatically concatenate over variables along the dimension
-        auto_concat_dims = set([dim])
-        for k, v in iteritems(datasets[0]._variables):
-            if k == dim or auto_concat_dims.intersection(v.dims):
-                concat_over.add(k)
-
         # create the new dataset and add constant variables
         concatenated = cls({}, attrs=datasets[0].attrs)
-        for k, v in iteritems(datasets[0]._variables):
+        for k, v in datasets[0].variables.items():
             if k not in concat_over:
                 concatenated[k] = v
 
@@ -1803,10 +1801,10 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject):
             if (compat == 'identical'
                     and not utils.dict_equiv(ds.attrs, concatenated.attrs)):
                 raise ValueError('dataset global attributes not equal')
-            for k, v in iteritems(ds._variables):
-                if k not in concatenated._variables and k not in concat_over:
+            for k, v in iteritems(ds.variables):
+                if k not in concatenated.variables and k not in concat_over:
                     raise ValueError('encountered unexpected variable %r' % k)
-                elif (k in concatenated._variables and k != dim and
+                elif (k in concatenated.variables and k != dim and
                           not getattr(v, compat)(concatenated[k])):
                     verb = 'equal' if compat == 'equals' else compat
                     raise ValueError(

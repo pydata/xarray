@@ -140,6 +140,19 @@ class TestCase(unittest.TestCase):
         self.assertCoordinatesEqual(ar1, ar2)
 
 
+
+class UnexpectedDataAccess(Exception):
+    pass
+
+
+class InaccessibleArray(utils.NDArrayMixin):
+    def __init__(self, array):
+        self.array = array
+
+    def __getitem__(self, key):
+        raise UnexpectedDataAccess("Tried accessing data")
+
+
 class ReturnItem(object):
     def __getitem__(self, key):
         return key

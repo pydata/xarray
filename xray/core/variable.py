@@ -707,7 +707,7 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
 
     def _data_equals(self, other):
         return (self._data is other._data
-                or utils.array_equiv(self.values, other.values))
+                or utils.array_equiv(self.data, other.data))
 
     def equals(self, other):
         """True if two Variables have the same dimensions and values;

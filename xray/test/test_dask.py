@@ -1,7 +1,7 @@
 import numpy as np
 
-from xray import Variable, DataArray, Dataset
-from . import TestCase, requires_dask, unittest
+from xray import Variable, DataArray, Dataset, concat
+from . import TestCase, requires_dask, unittest, InaccessibleArray
 
 try:
     import dask
@@ -151,6 +151,9 @@ class TestDataArray(DaskTestCase):
         self.assertLazyAndAllClose(eager_array.T, lazy_array.T)
         self.assertLazyAndAllClose(eager_array.mean(), lazy_array.mean())
         self.assertLazyAndAllClose(1 + eager_array, 1 + lazy_array)
+
+        actual = concat([lazy_array[:2], lazy_array[2:]], 'x')
+        self.assertLazyAndAllClose(eager_array, actual)
 
     @unittest.skip('currently broken')
     def test_groupby(self):
