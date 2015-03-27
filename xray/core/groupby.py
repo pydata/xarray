@@ -279,23 +279,9 @@ class DataArrayGroupBy(GroupBy, ImplementsArrayReduce):
         """Fast version of `_iter_grouped` that yields Variables without
         metadata
         """
-        from .variable import as_variable
-        array = as_variable(self.obj)
-
-        # build the new dimensions
-        if isinstance(self.group_indices[0], (int, np.integer)):
-            # group_dim is squeezed out
-            dims = tuple(d for d in array.dims if d != self.group_dim)
-        else:
-            dims = array.dims
-
-        # slice the data and build the new Arrays directly
-        indexer = [slice(None)] * array.ndim
-        group_axis = array.get_axis_num(self.group_dim)
+        var = self.obj.variable
         for indices in self.group_indices:
-            indexer[group_axis] = indices
-            data = array.data[tuple(indexer)]
-            yield Variable(dims, data)
+            yield var[{self.group_dim: indices}]
 
     def _concat_shortcut(self, applied, concat_dim, indexers):
         stacked = Variable.concat(
