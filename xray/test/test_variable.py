@@ -304,7 +304,7 @@ class VariableSubclassTestCases(object):
         self.assertVariableIdentical(Variable(['b', 'a'], np.array([x, y])),
                                      Variable.concat((v, w), 'b'))
         self.assertVariableIdentical(Variable(['b', 'a'], np.array([x, y])),
-                                     Variable.concat((v, w), 'b', length=2))
+                                     Variable.concat((v, w), 'b'))
         with self.assertRaisesRegexp(ValueError, 'inconsistent dimensions'):
             Variable.concat([v, Variable(['c'], y)], 'b')
         # test indexers

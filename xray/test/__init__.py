@@ -1,7 +1,7 @@
 import numpy as np
 from numpy.testing import assert_array_equal
 
-from xray.core import utils
+from xray.core import utils, nputils
 from xray.core.variable import as_variable
 from xray.core.pycompat import PY3
 
@@ -69,9 +69,9 @@ def data_allclose_or_equiv(arr1, arr2, rtol=1e-05, atol=1e-08):
         arr2 = decode_string_data(arr2)
     exact_dtypes = ['M', 'm', 'O', 'U']
     if any(arr.dtype.kind in exact_dtypes for arr in [arr1, arr2]):
-        return utils.array_equiv(arr1, arr2)
+        return nputils.array_equiv(arr1, arr2)
     else:
-        return utils.allclose_or_equiv(arr1, arr2, rtol=rtol, atol=atol)
+        return nputils.allclose_or_equiv(arr1, arr2, rtol=rtol, atol=atol)
 
 
 class TestCase(unittest.TestCase):

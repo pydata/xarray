@@ -10,7 +10,8 @@ from collections import Mapping, MutableMapping
 import numpy as np
 import pandas as pd
 
-from .pycompat import basestring, iteritems, PY3, OrderedDict
+from .nputils import array_equiv
+from .pycompat import iteritems, OrderedDict
 
 
 def alias_warning(old_name, new_name, stacklevel=3): # pragma: no cover
@@ -34,24 +35,6 @@ def class_alias(obj, old_name): # pragma: no cover
             return super(Wrapper, cls).__new__(cls, *args, **kwargs)
     Wrapper.__name__ = obj.__name__
     return Wrapper
-
-
-def allclose_or_equiv(arr1, arr2, rtol=1e-5, atol=1e-8):
-    """Like np.allclose, but also allows values to be NaN in both arrays
-    """
-    arr1, arr2 = np.asarray(arr1), np.asarray(arr2)
-    if arr1.shape != arr2.shape:
-        return False
-    return np.isclose(arr1, arr2, rtol=rtol, atol=atol, equal_nan=True).all()
-
-
-def array_equiv(arr1, arr2):
-    """Like np.array_equal, but also allows values to be NaN in both arrays
-    """
-    arr1, arr2 = np.asarray(arr1), np.asarray(arr2)
-    if arr1.shape != arr2.shape:
-        return False
-    return ((arr1 == arr2) | (pd.isnull(arr1) & pd.isnull(arr2))).all()
 
 
 def safe_cast_to_index(array):

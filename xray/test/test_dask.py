@@ -77,3 +77,21 @@ class TestVariable(TestCase):
         u = self.eager_var
         v = self.lazy_var
         self.assertLazyAndAllClose(u.mean(), v.mean())
+
+    def test_missing_values(self):
+        values = np.array([0, 1, np.nan, 3])
+        data = da.from_array(values, blockshape=(2,))
+
+        eager_var = Variable('x', values)
+        lazy_var = Variable('x', data)
+        self.assertLazyAndIdentical(eager_var, lazy_var.fillna(lazy_var))
+        self.assertLazyAndIdentical(Variable('x', range(4)), lazy_var.fillna(2))
+        self.assertLazyAndIdentical(eager_var.count(), lazy_var.count())
+
+    def test_concat(self):
+        u = self.eager_var
+        v = self.lazy_var
+        self.assertLazyAndIdentical(u, Variable.concat([v[:2], v[2:]], 'x'))
+        self.assertLazyAndIdentical(u[:2], Variable.concat([v[0], v[1]], 'x'))
+        self.assertLazyAndIdentical(
+            u[:3], Variable.concat([v[[0, 2]], v[[1]]], 'x', indexers=[[0, 2], [1]]))

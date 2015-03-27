@@ -17,8 +17,9 @@ class ImplementsArrayReduce(object):
                                    allow_lazy=True, **kwargs)
         else:
             def wrapped_func(self, dim=None, axis=None, keep_attrs=False,
-                             allow_lazy=True, **kwargs):
-                return self.reduce(func, dim, axis, keep_attrs, **kwargs)
+                             **kwargs):
+                return self.reduce(func, dim, axis, keep_attrs,
+                                   allow_lazy=True, **kwargs)
         return wrapped_func
 
     _reduce_extra_args_docstring = \

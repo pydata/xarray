@@ -1,7 +1,11 @@
 import numpy as np
 from numpy import array, nan
 from xray.core.ops import (
-    first, last, count, mean, interleaved_concat, _calc_concat_shape,
+    first, last, count, mean, _interleaved_indices_required,
+    _interleaved_concat_slow,
+)
+from xray.core.nputils import (
+    interleaved_concat as interleaved_concat_numpy, _calc_concat_shape,
 )
 
 from . import TestCase
@@ -38,7 +42,7 @@ class TestOps(TestCase):
         actual = first(self.x, axis=-1, skipna=False)
         self.assertArrayEqual(expected, actual)
 
-        with self.assertRaisesRegexp(ValueError, 'invalid axis'):
+        with self.assertRaisesRegexp(IndexError, 'out of bounds'):
             first(self.x, 3)
 
     def test_last(self):
@@ -62,7 +66,7 @@ class TestOps(TestCase):
         actual = last(self.x, axis=-1, skipna=False)
         self.assertArrayEqual(expected, actual)
 
-        with self.assertRaisesRegexp(ValueError, 'invalid axis'):
+        with self.assertRaisesRegexp(IndexError, 'out of bounds'):
             last(self.x, 3)
 
     def test_count(self):
@@ -75,41 +79,55 @@ class TestOps(TestCase):
         assert np.isnan(mean([np.nan, np.nan]))
 
     def test_interleaved_concat(self):
-        x = np.arange(5)
-        self.assertArrayEqual(x, interleaved_concat([x], [x]))
+        for interleaved_concat in [interleaved_concat_numpy,
+                                   _interleaved_concat_slow]:
+            x = np.arange(5)
+            self.assertArrayEqual(x, interleaved_concat([x], [x]))
 
-        arrays = np.arange(10).reshape(2, -1)
-        indices = np.arange(10).reshape(2, -1, order='F')
-        actual = interleaved_concat(arrays, indices)
-        expected = np.array([0, 5, 1, 6, 2, 7, 3, 8, 4, 9])
-        self.assertArrayEqual(expected, actual)
+            arrays = np.arange(10).reshape(2, -1)
+            indices = np.arange(10).reshape(2, -1, order='F')
+            actual = interleaved_concat(arrays, indices)
+            expected = np.array([0, 5, 1, 6, 2, 7, 3, 8, 4, 9])
+            self.assertArrayEqual(expected, actual)
 
-        arrays2 = arrays.reshape(2, 5, 1)
+            arrays2 = arrays.reshape(2, 5, 1)
 
-        actual = interleaved_concat(arrays2, indices, axis=0)
-        self.assertArrayEqual(expected.reshape(10, 1), actual)
+            actual = interleaved_concat(arrays2, indices, axis=0)
+            self.assertArrayEqual(expected.reshape(10, 1), actual)
 
-        actual = interleaved_concat(arrays2, [[0], [1]], axis=1)
-        self.assertArrayEqual(arrays.T, actual)
+            actual = interleaved_concat(arrays2, [[0], [1]], axis=1)
+            self.assertArrayEqual(arrays.T, actual)
 
-        actual = interleaved_concat(arrays2, [slice(1), slice(1, 2)], axis=-1)
-        self.assertArrayEqual(arrays.T, actual)
+            actual = interleaved_concat(arrays2, [slice(1), slice(1, 2)], axis=-1)
+            self.assertArrayEqual(arrays.T, actual)
 
-        with self.assertRaises(IndexError):
-            interleaved_concat(arrays, indices, axis=1)
-        with self.assertRaises(IndexError):
-            interleaved_concat(arrays, indices, axis=-2)
-        with self.assertRaises(IndexError):
-            interleaved_concat(arrays2, [0, 1], axis=2)
+            with self.assertRaises(IndexError):
+                interleaved_concat(arrays, indices, axis=1)
+            with self.assertRaises(IndexError):
+                interleaved_concat(arrays, indices, axis=-2)
+            with self.assertRaises(IndexError):
+                interleaved_concat(arrays2, [0, 1], axis=2)
 
     def test_interleaved_concat_dtypes(self):
-        a = np.array(['a'])
-        b = np.array(['bc'])
-        actual = interleaved_concat([a, b], [[0], [1]])
-        expected = np.array(['a', 'bc'])
-        self.assertArrayEqual(expected, actual)
+        for interleaved_concat in [interleaved_concat_numpy,
+                                   _interleaved_concat_slow]:
+            a = np.array(['a'])
+            b = np.array(['bc'])
+            actual = interleaved_concat([a, b], [[0], [1]])
+            expected = np.array(['a', 'bc'])
+            self.assertArrayEqual(expected, actual)
 
-        c = np.array([np.nan], dtype=object)
-        actual = interleaved_concat([a, b, c], [[0], [1], [2]])
-        expected = np.array(['a', 'bc', np.nan], dtype=object)
-        self.assertArrayEqual(expected, actual)
+            c = np.array([np.nan], dtype=object)
+            actual = interleaved_concat([a, b, c], [[0], [1], [2]])
+            expected = np.array(['a', 'bc', np.nan], dtype=object)
+            self.assertArrayEqual(expected, actual)
+
+    def test_interleaved_indices_required(self):
+        self.assertFalse(_interleaved_indices_required([[0]]))
+        self.assertFalse(_interleaved_indices_required([[0, 1], [2, 3, 4]]))
+        self.assertFalse(_interleaved_indices_required([slice(3), slice(3, 4)]))
+        self.assertFalse(_interleaved_indices_required([slice(0, 2, 1)]))
+        self.assertTrue(_interleaved_indices_required([[0], [2]]))
+        self.assertTrue(_interleaved_indices_required([[1], [2, 3]]))
+        self.assertTrue(_interleaved_indices_required([[0, 1], [2, 4]]))
+        self.assertTrue(_interleaved_indices_required([[0, 1], [3.5, 4]]))

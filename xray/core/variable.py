@@ -9,7 +9,7 @@ from . import indexing
 from . import ops
 from . import utils
 from .pycompat import basestring, OrderedDict, zip, reduce
-from .npcompat import broadcast_to, stack
+from .npcompat import broadcast_to
 
 import xray # only for Dataset and DataArray
 
@@ -639,7 +639,7 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
         return Variable(dims, data, attrs=attrs)
 
     @classmethod
-    def concat(cls, variables, dim='concat_dim', indexers=None, length=None,
+    def concat(cls, variables, dim='concat_dim', indexers=None,
                shortcut=False):
         """Concatenate variables along a new or existing dimension.
 
@@ -661,12 +661,6 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
             not supplied, indexers is inferred from the length of each
             variable along the dimension, and the variables are stacked in the
             given order.
-        length : int, optional
-            Length of the new dimension. This is used to allocate the new data
-            array for the stacked variable data before iterating over all
-            items, which is thus more memory efficient and a bit faster. If
-            dimension is provided as a DataArray, length is calculated
-            automatically.
         shortcut : bool, optional
             This option is used internally to speed-up groupby operations.
             If `shortcut` is True, some checks of internal consistency between
@@ -679,7 +673,6 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
             along the given dimension.
         """
         if not isinstance(dim, basestring):
-            length = dim.size
             dim, = dim.dims
 
         # can't do this lazily: we need to loop through variables at least
@@ -687,7 +680,7 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
         variables = list(variables)
         first_var = variables[0]
 
-        arrays = [v.values for v in variables]
+        arrays = [v.data for v in variables]
 
         # TODO: use our own type promotion rules to ensure that
         # [str, float] -> object, not str like numpy
@@ -695,13 +688,13 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
             axis = first_var.get_axis_num(dim)
             dims = first_var.dims
             if indexers is None:
-                data = np.concatenate(arrays, axis=axis)
+                data = ops.concatenate(arrays, axis=axis)
             else:
                 data = ops.interleaved_concat(arrays, indexers, axis=axis)
         else:
             axis = 0
             dims = (dim,) + first_var.dims
-            data = stack(arrays, axis=axis)
+            data = ops.stack(arrays, axis=axis)
 
         attrs = OrderedDict(first_var.attrs)
         if not shortcut:
