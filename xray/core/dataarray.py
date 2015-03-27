@@ -954,7 +954,7 @@ class DataArray(AbstractArray, BaseDataObject):
     def _unary_op(f):
         @functools.wraps(f)
         def func(self, *args, **kwargs):
-            return self.__array_wrap__(f(self.values, *args, **kwargs))
+            return self.__array_wrap__(f(self.variable.data, *args, **kwargs))
         return func
 
     @staticmethod

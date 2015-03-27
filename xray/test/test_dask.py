@@ -1,7 +1,7 @@
 import numpy as np
 
-from xray.core.variable import Variable
-from . import TestCase, requires_dask
+from xray import Variable, DataArray, Dataset
+from . import TestCase, requires_dask, unittest
 
 try:
     import dask
@@ -10,14 +10,43 @@ except ImportError:
     pass
 
 
+def _copy_at_variable_level(arg):
+    """We need to copy the argument at the level of xray.Variable objects, so
+    that viewing its values does not trigger lazy loading.
+    """
+    if isinstance(arg, Variable):
+        return arg.copy(deep=False)
+    elif isinstance(arg, DataArray):
+        ds = arg.to_dataset('__copied__')
+        return _copy_at_variable_level(ds)['__copied__']
+    elif isinstance(arg, Dataset):
+        ds = arg.copy()
+        for k in list(ds):
+            ds._variables[k] = ds._variables[k].copy(deep=False)
+        return ds
+    else:
+        assert False
+
+
+class DaskTestCase(TestCase):
+    def assertLazyAnd(self, expected, actual, test):
+        expected_copy = _copy_at_variable_level(expected)
+        actual_copy = _copy_at_variable_level(actual)
+        with dask.set_options(get=dask.get):
+            test(actual_copy, expected_copy)
+        var = getattr(actual, 'variable', actual)
+        self.assertIsInstance(var.data, da.Array)
+
+
 @requires_dask
-class TestVariable(TestCase):
+class TestVariable(DaskTestCase):
     def assertLazyAnd(self, expected, actual, test):
         expected_copy = expected.copy(deep=False)
         actual_copy = actual.copy(deep=False)
         with dask.set_options(get=dask.get):
             test(actual_copy, expected_copy)
-        self.assertIsInstance(actual.data, da.Array)
+        var = getattr(actual, 'variable', actual)
+        self.assertIsInstance(var.data, da.Array)
 
     def assertLazyAndIdentical(self, expected, actual):
         self.assertLazyAnd(expected, actual, self.assertVariableIdentical)
@@ -95,3 +124,39 @@ class TestVariable(TestCase):
         self.assertLazyAndIdentical(u[:2], Variable.concat([v[0], v[1]], 'x'))
         self.assertLazyAndIdentical(
             u[:3], Variable.concat([v[[0, 2]], v[[1]]], 'x', indexers=[[0, 2], [1]]))
+
+
+@requires_dask
+class TestDataArray(DaskTestCase):
+    def assertLazyAndIdentical(self, expected, actual):
+        self.assertLazyAnd(expected, actual, self.assertDataArrayIdentical)
+
+    def assertLazyAndAllClose(self, expected, actual):
+        self.assertLazyAnd(expected, actual, self.assertDataArrayAllClose)
+
+    def setUp(self):
+        self.values = np.random.randn(4, 6)
+        self.data = da.from_array(self.values, blockshape=(2, 2))
+
+    def test_lazy_dataset(self):
+        lazy_ds = Dataset({'foo': (('x', 'y'), self.data)})
+        self.assertIsInstance(lazy_ds.foo.variable.data, da.Array)
+
+    def test_lazy_array(self):
+        eager_array = DataArray(self.values, dims=('x', 'y'))
+        lazy_array = DataArray(self.data, dims=('x', 'y'))
+
+        self.assertLazyAndAllClose(eager_array, lazy_array)
+        self.assertLazyAndAllClose(-eager_array, -lazy_array)
+        self.assertLazyAndAllClose(eager_array.T, lazy_array.T)
+        self.assertLazyAndAllClose(eager_array.mean(), lazy_array.mean())
+        self.assertLazyAndAllClose(1 + eager_array, 1 + lazy_array)
+
+    @unittest.skip('currently broken')
+    def test_groupby(self):
+        eager_array = DataArray(self.values, dims=('x', 'y'))
+        lazy_array = DataArray(self.data, dims=('x', 'y'))
+
+        actual = lazy_array.groupby('x').mean()
+        expected = eager_array.groupby('x').mean()
+        self.assertLazyAndAllClose(expected, actual)

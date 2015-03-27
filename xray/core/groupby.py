@@ -294,7 +294,7 @@ class DataArrayGroupBy(GroupBy, ImplementsArrayReduce):
         group_axis = array.get_axis_num(self.group_dim)
         for indices in self.group_indices:
             indexer[group_axis] = indices
-            data = array.values[tuple(indexer)]
+            data = array.data[tuple(indexer)]
             yield Variable(dims, data)
 
     def _concat_shortcut(self, applied, concat_dim, indexers):
