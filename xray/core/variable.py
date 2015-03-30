@@ -9,7 +9,6 @@ from . import indexing
 from . import ops
 from . import utils
 from .pycompat import basestring, OrderedDict, zip, reduce
-from .npcompat import broadcast_to
 
 import xray # only for Dataset and DataArray
 
@@ -581,7 +580,7 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
         if shape is not None:
             dims_map = dict(zip(dims, shape))
             tmp_shape = [dims_map[d] for d in expanded_dims]
-            expanded_data = broadcast_to(self, tmp_shape)
+            expanded_data = ops.broadcast_to(self.data, tmp_shape)
         else:
             expanded_data = self.data[(None,) * (len(expanded_dims) - self.ndim)]
         expanded_var = Variable(expanded_dims, expanded_data, self._attrs,

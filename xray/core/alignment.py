@@ -247,6 +247,10 @@ def concat(objs, dim='concat_dim', indexers=None, mode='different',
     Returns
     -------
     concatenated : type of objs
+
+    See also
+    --------
+    auto_concat_and_merge
     """
     # TODO: add join and ignore_index arguments copied from pandas.concat
     # TODO: support concatenating scaler coordinates even if the concatenated
@@ -257,6 +261,78 @@ def concat(objs, dim='concat_dim', indexers=None, mode='different',
         raise ValueError('must supply at least one object to concatenate')
     cls = type(first_obj)
     return cls._concat(objs, dim, indexers, mode, concat_over, compat)
+
+
+def _auto_concat(datasets, dim=None):
+    if len(datasets) == 1:
+        return datasets[0]
+    else:
+        if dim is None:
+            ds0 = datasets[0]
+            ds1 = datasets[1]
+            concat_dims = set(ds0.dims)
+            if ds0.dims != ds1.dims:
+                dim_tuples = set(ds0.dims.items()) - set(ds1.dims.items())
+                concat_dims = set(i for i, _ in dim_tuples)
+            if len(concat_dims) > 1:
+                concat_dims = set(d for d in concat_dims
+                                  if not ds0[d].equals(ds1[d]))
+            if len(concat_dims) > 1:
+                raise ValueError('too many different dimensions to '
+                                 'concatenate: %s' % concat_dims)
+            elif len(concat_dims) == 0:
+                raise ValueError('cannot infer dimension to concatenate: '
+                                 'supply the ``concat_dim`` argument '
+                                 'explicitly')
+            dim, = concat_dims
+        return concat(datasets, dim=dim)
+
+
+def auto_combine(datasets, concat_dim=None):
+    """Attempt to auto-magically combine the given datasets into one.
+
+    This method attempts to combine a list of datasets into a single entity by
+    inspecting metadata and using a combination of concat and merge.
+
+    It does not concatenate along more than one dimension or align or sort data
+    under any circumstances. It will fail in complex cases, for which you
+    should use ``concat`` and ``merge`` explicitly.
+
+    Example of when ``auto_combine`` works:
+
+    * You have N years of data and M data variables. Each combination of a
+      distinct time period and test of data variables is saved its own dataset.
+
+    Examples of when ``auto_combine`` fails:
+
+    * In the above scenario, one file is missing, containing the data for one
+      year's data for one variable.
+    * In the most recent year, there is an additional data variable.
+    * Your data includes "time" and "station" dimensions, and each year's data
+      has a different set of stations.
+
+    Parameters
+    ----------
+    datasets : sequence of xray.Dataset
+        Dataset objects to merge.
+    concat_dim : str or DataArray or Index, optional
+        Dimension along which to concatenate variables.
+
+    Returns
+    -------
+    combined : xray.Dataset
+
+    See also
+    --------
+    concat
+    Dataset.merge
+    """
+    from toolz import itertoolz
+    grouped = itertoolz.groupby(lambda ds: tuple(ds.data_vars),
+                                datasets).values()
+    concatenated = [_auto_concat(ds, dim=concat_dim) for ds in grouped]
+    merged = reduce(lambda ds, other: ds.merge(other), concatenated)
+    return merged
 
 
 def broadcast_arrays(*args):

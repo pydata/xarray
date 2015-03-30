@@ -140,7 +140,6 @@ class TestCase(unittest.TestCase):
         self.assertCoordinatesEqual(ar1, ar2)
 
 
-
 class UnexpectedDataAccess(Exception):
     pass
 

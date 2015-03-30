@@ -155,7 +155,6 @@ class TestDataArray(DaskTestCase):
         actual = concat([lazy_array[:2], lazy_array[2:]], 'x')
         self.assertLazyAndAllClose(eager_array, actual)
 
-    @unittest.skip('currently broken')
     def test_groupby(self):
         eager_array = DataArray(self.values, dims=('x', 'y'))
         lazy_array = DataArray(self.data, dims=('x', 'y'))

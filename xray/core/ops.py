@@ -64,6 +64,7 @@ transpose = _dask_or_eager_func('transpose')
 isnull = _dask_or_eager_func('isnull', pd)
 notnull = _dask_or_eager_func('notnull', pd)
 where = _dask_or_eager_func('where')
+broadcast_to = _dask_or_eager_func('broadcast_to', npcompat)
 
 concatenate = _dask_or_eager_func('concatenate', dispatch_elemwise=True)
 stack = _dask_or_eager_func('stack', npcompat, dispatch_elemwise=True)
