@@ -6,7 +6,7 @@ import numpy as np
 
 from . import utils
 from .common import _maybe_promote
-from .pycompat import iteritems, OrderedDict
+from .pycompat import iteritems, OrderedDict, reduce
 from .utils import is_full_slice
 from .variable import as_variable, Variable, Coordinate, broadcast_variables
 

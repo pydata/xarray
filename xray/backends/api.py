@@ -4,12 +4,14 @@ import itertools
 from glob import glob
 from io import BytesIO
 
+import numpy as np
+
 from .. import backends, conventions
 from ..core.dataset import Dataset
 from ..core.alignment import auto_combine
 from ..core.utils import close_on_error
 from ..core.variable import Variable
-from ..core.pycompat import basestring, OrderedDict
+from ..core.pycompat import basestring, OrderedDict, range
 
 
 def _get_default_netcdf_engine(engine):
@@ -45,6 +47,9 @@ def _lazify_dataset(dataset, blockshapes):
     for k, v in dataset.variables.items():
         if v.ndim > 0:
             array = v._data.array  # undo the LazilyIndexedArray
+            if isinstance(array, range):
+                # dask can't handle range objects, currently
+                array = np.asarray(array)
             blockshape = tuple(blockshapes[d] for d in v.dims)
             name = 'xray::%s_%s' % (k, next(counter))
             data = da.from_array(array, blockshape=blockshape, name=name)

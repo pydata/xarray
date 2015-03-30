@@ -26,7 +26,7 @@ else: # pragma: no cover
         return d.itervalues()
     range = xrange
     from itertools import izip as zip, imap as map
-    reduce =reduce
+    reduce = reduce
     import __builtin__ as builtins
 
 try:

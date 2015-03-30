@@ -10,15 +10,20 @@ import numpy as np
 import pandas as pd
 
 import xray
-from xray import Dataset, open_dataset, backends
+from xray import Dataset, open_dataset, open_mfdataset, backends
 from xray.core.pycompat import iteritems, PY3
 
 from . import (TestCase, requires_scipy, requires_netCDF4, requires_pydap,
-               requires_scipy_or_netCDF4, has_netCDF4, has_scipy)
+               requires_scipy_or_netCDF4, requires_dask, has_netCDF4, has_scipy)
 from .test_dataset import create_test_data
 
 try:
     import netCDF4 as nc4
+except ImportError:
+    pass
+
+try:
+    import dask.array as da
 except ImportError:
     pass
 
@@ -620,6 +625,20 @@ class GenericNetCDFDataTest(CFEncodedDataTest, Only32BitTypes, TestCase):
                         with open_dataset(tmp_file,
                                           engine=read_engine) as actual:
                             self.assertDatasetAllClose(data, actual)
+
+
+@requires_dask
+@requires_scipy_or_netCDF4
+class DaskTest(TestCase):
+    def test_open_mfdataset(self):
+        original = Dataset({'foo': ('x', np.random.randn(10))})
+        with create_tmp_file() as tmp1:
+            with create_tmp_file() as tmp2:
+                original.isel(x=slice(5)).to_netcdf(tmp1)
+                original.isel(x=slice(5, 10)).to_netcdf(tmp2)
+                actual = open_mfdataset([tmp1, tmp2])
+                self.assertIsInstance(actual.foo.variable.data, da.Array)
+                self.assertDatasetAllClose(original, actual)
 
 
 @requires_netCDF4
