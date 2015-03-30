@@ -640,6 +640,15 @@ class DaskTest(TestCase):
                 self.assertIsInstance(actual.foo.variable.data, da.Array)
                 self.assertDatasetAllClose(original, actual)
 
+    def test_open_dataset(self):
+        original = Dataset({'foo': ('x', np.random.randn(10))})
+        with create_tmp_file() as tmp:
+            original.to_netcdf(tmp)
+            with open_dataset(tmp, blockshapes={'x': 5}) as actual:
+                self.assertIsInstance(actual.foo.variable.data, da.Array)
+                self.assertEqual(actual.foo.variable.data.blockdims, ((5, 5),))
+                self.assertDatasetAllClose(original, actual)
+
 
 @requires_netCDF4
 @requires_pydap
