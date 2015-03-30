@@ -121,20 +121,20 @@ class ScipyDataStore(AbstractWritableDataStore):
         self._validate_attr_key(key)
         setattr(self.ds, key, self._cast_attr_value(value))
 
-    def set_variable(self, name, variable):
+    def prepare_variable(self, name, variable):
         # TODO, create a netCDF3 encoder
         variable = encode_nc3_variable(variable)
         self.set_necessary_dimensions(variable)
-        data = variable.values
+        data = variable.data
+        # nb. this still creates a numpy array in all memory, even though we
+        # don't write the data yet; scipy.io.netcdf does not not support
+        # incremental writes.
         self.ds.createVariable(name, data.dtype, variable.dims)
         scipy_var = self.ds.variables[name]
-        if data.ndim == 0:
-            scipy_var.assignValue(data)
-        else:
-            scipy_var[:] = data[:]
         for k, v in iteritems(variable.attrs):
             self._validate_attr_key(k)
             setattr(scipy_var, k, self._cast_attr_value(v))
+        return scipy_var, data
 
     def del_attribute(self, key):
         delattr(self.ds, key)

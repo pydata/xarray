@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
 
-from xray.core import utils
+from xray.core import ops, utils
 from xray.core.pycompat import OrderedDict
 from . import TestCase
 
@@ -26,11 +26,11 @@ class TestArrayEquiv(TestCase):
     def test_0d(self):
         # verify our work around for pd.isnull not working for 0-dimensional
         # object arrays
-        self.assertTrue(utils.array_equiv(0, np.array(0, dtype=object)))
+        self.assertTrue(ops.array_equiv(0, np.array(0, dtype=object)))
         self.assertTrue(
-            utils.array_equiv(np.nan, np.array(np.nan, dtype=object)))
+            ops.array_equiv(np.nan, np.array(np.nan, dtype=object)))
         self.assertFalse(
-            utils.array_equiv(0, np.array(1, dtype=object)))
+            ops.array_equiv(0, np.array(1, dtype=object)))
 
 
 class TestDictionaries(TestCase):

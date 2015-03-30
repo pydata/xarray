@@ -37,8 +37,9 @@ def as_variable(obj, key=None, strict=True):
         # extract the primary Variable from DataArrays
         obj = obj.variable
     if not isinstance(obj, (Variable, xray.DataArray)):
-        if hasattr(obj, 'dims') and hasattr(obj, 'values'):
-            obj = Variable(obj.dims, obj.values,
+        if hasattr(obj, 'dims') and (hasattr(obj, 'data')
+                                     or hasattr(obj, 'values')):
+            obj = Variable(obj.dims, getattr(obj, 'data', obj.values),
                            getattr(obj, 'attrs', None),
                            getattr(obj, 'encoding', None))
         elif isinstance(obj, tuple):
@@ -706,7 +707,7 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
 
     def _data_equals(self, other):
         return (self._data is other._data
-                or utils.array_equiv(self.data, other.data))
+                or ops.array_equiv(self.data, other.data))
 
     def equals(self, other):
         """True if two Variables have the same dimensions and values;

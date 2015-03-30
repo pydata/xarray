@@ -3,7 +3,7 @@ import unicodedata
 import numpy as np
 
 from .. import conventions, Variable
-from ..core import nputils
+from ..core import ops
 from ..core.pycompat import basestring, unicode_type
 
 
@@ -41,9 +41,9 @@ def coerce_nc3_dtype(arr):
         # TODO: raise a warning whenever casting the data-type instead?
         cast_arr = arr.astype(new_dtype)
         if ((('int' in dtype or 'U' in dtype) and
-                    not np.array_equal(cast_arr, arr))
+                    not (cast_arr == arr).all())
                 or ('float' in dtype and
-                    not nputils.allclose_or_equiv(cast_arr, arr))):
+                    not ops.allclose_or_equiv(cast_arr, arr))):
             raise ValueError('could not safely cast array from dtype %s to %s'
                              % (dtype, new_dtype))
         arr = cast_arr
@@ -60,7 +60,7 @@ def maybe_convert_to_char_array(data, dims):
 
 
 def encode_nc3_variable(var):
-    data = coerce_nc3_dtype(var.values)
+    data = coerce_nc3_dtype(var.data)
     data, dims = maybe_convert_to_char_array(data, var.dims)
     return Variable(dims, data, var.attrs, var.encoding)
 

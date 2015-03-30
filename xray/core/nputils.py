@@ -73,24 +73,3 @@ def array_eq(self, other):
 
 def array_ne(self, other):
     return _ensure_bool_is_ndarray(self != other, self, other)
-
-
-def allclose_or_equiv(arr1, arr2, rtol=1e-5, atol=1e-8):
-    """Like np.allclose, but also allows values to be NaN in both arrays
-    """
-    arr1, arr2 = np.asarray(arr1), np.asarray(arr2)
-    if arr1.shape != arr2.shape:
-        return False
-    return np.isclose(arr1, arr2, rtol=rtol, atol=atol, equal_nan=True).all()
-
-
-def array_equiv(arr1, arr2):
-    """Like np.array_equal, but also allows values to be NaN in both arrays
-    """
-    if (hasattr(arr1, 'shape') and hasattr(arr2, 'shape')
-            and arr1.shape != arr2.shape):
-        return False
-    arr1, arr2 = np.asarray(arr1), np.asarray(arr2)
-    if arr1.shape != arr2.shape:
-        return False
-    return ((arr1 == arr2) | (pd.isnull(arr1) & pd.isnull(arr2))).all()

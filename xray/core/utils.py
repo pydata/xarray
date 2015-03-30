@@ -10,7 +10,7 @@ from collections import Mapping, MutableMapping
 import numpy as np
 import pandas as pd
 
-from .nputils import array_equiv
+from . import ops
 from .pycompat import iteritems, OrderedDict
 
 
@@ -76,7 +76,7 @@ def equivalent(first, second):
     array_equiv if either object is an ndarray
     """
     if isinstance(first, np.ndarray) or isinstance(second, np.ndarray):
-        return array_equiv(first, second)
+        return ops.array_equiv(first, second)
     else:
         return first is second or first == second
 

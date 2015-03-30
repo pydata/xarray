@@ -8,7 +8,7 @@ import pandas as pd
 from collections import defaultdict
 from pandas.tslib import OutOfBoundsDatetime
 
-from .core import indexing, utils
+from .core import indexing, ops, utils
 from .core.formatting import format_timestamp, first_n_items
 from .core.variable import as_variable, Variable
 from .core.pycompat import (iteritems, bytes_type, unicode_type, OrderedDict,
@@ -475,74 +475,67 @@ def pop_to(source, dest, key, default=None):
 
 
 def _var_as_tuple(var):
-    return var.dims, var.values, var.attrs.copy(), var.encoding.copy()
+    return var.dims, var.data, var.attrs.copy(), var.encoding.copy()
 
 
 def maybe_encode_datetime(var):
-    if (np.issubdtype(var.dtype, np.datetime64)
-            or (var.dtype.kind == 'O'
-                and isinstance(var.values.flat[0], datetime))):
-        dims, values, attrs, encoding = _var_as_tuple(var)
-        (values, units, calendar) = encode_cf_datetime(
-            values, encoding.pop('units', None), encoding.pop('calendar', None))
+    if np.issubdtype(var.dtype, np.datetime64):
+        dims, data, attrs, encoding = _var_as_tuple(var)
+        (data, units, calendar) = encode_cf_datetime(
+            data, encoding.pop('units', None), encoding.pop('calendar', None))
         safe_setitem(attrs, 'units', units)
         safe_setitem(attrs, 'calendar', calendar)
-        var = Variable(dims, values, attrs, encoding)
+        var = Variable(dims, data, attrs, encoding)
     return var
 
 
 def maybe_encode_timedelta(var):
     if np.issubdtype(var.dtype, np.timedelta64):
-        dims, values, attrs, encoding = _var_as_tuple(var)
-        values, units = encode_cf_timedelta(
-            values, encoding.pop('units', None))
+        dims, data, attrs, encoding = _var_as_tuple(var)
+        data, units = encode_cf_timedelta(
+            data, encoding.pop('units', None))
         safe_setitem(attrs, 'units', units)
-        var = Variable(dims, values, attrs, encoding)
+        var = Variable(dims, data, attrs, encoding)
     return var
 
 
 def maybe_encode_offset_and_scale(var, needs_copy=True):
     if any(k in var.encoding for k in ['add_offset', 'scale_factor']):
-        dims, values, attrs, encoding = _var_as_tuple(var)
-        values = np.array(values, dtype=float, copy=needs_copy)
+        dims, data, attrs, encoding = _var_as_tuple(var)
+        data = data.astype(dtype=float, copy=needs_copy)
         needs_copy = False
         if 'add_offset' in encoding:
-            values -= pop_to(encoding, attrs, 'add_offset')
+            data -= pop_to(encoding, attrs, 'add_offset')
         if 'scale_factor' in encoding:
-            values /= pop_to(encoding, attrs, 'scale_factor')
-        var = Variable(dims, values, attrs, encoding)
+            data /= pop_to(encoding, attrs, 'scale_factor')
+        var = Variable(dims, data, attrs, encoding)
     return var, needs_copy
 
 
 def maybe_encode_fill_value(var, needs_copy=True):
     # replace NaN with the fill value
     if '_FillValue' in var.encoding:
-        dims, values, attrs, encoding = _var_as_tuple(var)
+        dims, data, attrs, encoding = _var_as_tuple(var)
         fill_value = pop_to(encoding, attrs, '_FillValue')
         if not pd.isnull(fill_value):
-            missing = pd.isnull(values)
-            if missing.any():
-                if needs_copy:
-                    values = values.copy()
-                    needs_copy = False
-                values[missing] = fill_value
-        var = Variable(dims, values, attrs, encoding)
+            data = ops.fillna(data, fill_value)
+            needs_copy = False
+        var = Variable(dims, data, attrs, encoding)
     return var, needs_copy
 
 
-def maybe_encode_dtype(var, needs_copy=True):
+def maybe_encode_dtype(var):
     if 'dtype' in var.encoding:
-        dims, values, attrs, encoding = _var_as_tuple(var)
+        dims, data, attrs, encoding = _var_as_tuple(var)
         dtype = np.dtype(encoding.pop('dtype'))
-        if dtype.kind != 'O':
+        if dtype != var.dtype and dtype.kind != 'O':
             if np.issubdtype(dtype, int):
-                out = np.empty_like(values) if needs_copy else values
-                np.around(values, out=out)
-            if dtype == 'S1' and values.dtype != 'S1':
-                values = string_to_char(np.asarray(values, 'S'))
-                dims = dims + ('string%s' % values.shape[-1],)
-            values = np.asarray(values, dtype=dtype)
-            var = Variable(dims, values, attrs, encoding)
+                data = ops.around(data)
+            if dtype == 'S1' and data.dtype != 'S1':
+                data = string_to_char(np.asarray(data, 'S'))
+                dims = dims + ('string%s' % data.shape[-1],)
+            data = data.astype(dtype=dtype)
+            var = Variable(dims, data, attrs, encoding)
     return var
 
 
@@ -553,7 +546,7 @@ def _infer_dtype(array):
     if array.size == 0:
         dtype = np.dtype(float)
     else:
-        dtype = np.array(array.flat[0]).dtype
+        dtype = np.array(array[(0,) * array.ndim]).dtype
         if dtype.kind in ['S', 'U']:
             # don't just use inferred dtype to avoid truncating arrays to
             # the length of their first element
@@ -567,10 +560,11 @@ def _infer_dtype(array):
 def ensure_dtype_not_object(var):
     # TODO: move this from conventions to backends? (it's not CF related)
     if var.dtype.kind == 'O':
-        dims, values, attrs, encoding = _var_as_tuple(var)
-        missing = pd.isnull(values)
+        dims, data, attrs, encoding = _var_as_tuple(var)
+        missing = pd.isnull(data)
         if missing.any():
-            non_missing_values = values[~missing]
+            # nb. this will fail for dask.array data
+            non_missing_values = data[~missing]
             inferred_dtype = _infer_dtype(non_missing_values)
 
             if inferred_dtype.kind in ['S', 'U']:
@@ -585,11 +579,11 @@ def ensure_dtype_not_object(var):
                     inferred_dtype = np.dtype(float)
                 fill_value = np.nan
 
-            values = np.array(values, dtype=inferred_dtype, copy=True)
-            values[missing] = fill_value
+            data = np.array(data, dtype=inferred_dtype, copy=True)
+            data[missing] = fill_value
         else:
-            values = np.asarray(values, dtype=_infer_dtype(values))
-        var = Variable(dims, values, attrs, encoding)
+            data = data.astype(dtype=_infer_dtype(data))
+        var = Variable(dims, data, attrs, encoding)
     return var
 
 
@@ -617,7 +611,7 @@ def encode_cf_variable(var, needs_copy=True):
     var = maybe_encode_timedelta(var)
     var, needs_copy = maybe_encode_offset_and_scale(var, needs_copy)
     var, needs_copy = maybe_encode_fill_value(var, needs_copy)
-    var = maybe_encode_dtype(var, needs_copy)
+    var = maybe_encode_dtype(var)
     var = ensure_dtype_not_object(var)
     return var
 

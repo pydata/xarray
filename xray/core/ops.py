@@ -60,10 +60,13 @@ def _dask_or_eager_func(name, eager_module=np, dispatch_elemwise=False):
     return f
 
 
-transpose = _dask_or_eager_func('transpose')
+around = _dask_or_eager_func('around')
+isclose = _dask_or_eager_func('isclose')
 isnull = _dask_or_eager_func('isnull', pd)
 notnull = _dask_or_eager_func('notnull', pd)
+transpose = _dask_or_eager_func('transpose')
 where = _dask_or_eager_func('where')
+
 broadcast_to = _dask_or_eager_func('broadcast_to', npcompat)
 
 concatenate = _dask_or_eager_func('concatenate', dispatch_elemwise=True)
@@ -129,6 +132,37 @@ def interleaved_concat(arrays, indices, axis=0):
             return _interleaved_concat_slow(arrays, indices, axis)
     else:
         return _interleaved_concat_numpy(arrays, indices, axis)
+
+
+def asarray(data):
+    from .variable import lazy_types
+    return data if isinstance(data, lazy_types) else np.asarray(data)
+
+
+def as_like_arrays(*data):
+    from .variable import lazy_types
+    if all(isinstance(d, lazy_types) for d in data):
+        return data
+    else:
+        return tuple(np.asarray(d) for d in data)
+
+
+def allclose_or_equiv(arr1, arr2, rtol=1e-5, atol=1e-8):
+    """Like np.allclose, but also allows values to be NaN in both arrays
+    """
+    arr1, arr2 = as_like_arrays(arr1, arr2)
+    if arr1.shape != arr2.shape:
+        return False
+    return bool(isclose(arr1, arr2, rtol=rtol, atol=atol, equal_nan=True).all())
+
+
+def array_equiv(arr1, arr2):
+    """Like np.array_equal, but also allows values to be NaN in both arrays
+    """
+    arr1, arr2 = as_like_arrays(arr1, arr2)
+    if arr1.shape != arr2.shape:
+        return False
+    return bool(((arr1 == arr2) | (isnull(arr1) & isnull(arr2))).all())
 
 
 def _values_method_wrapper(name):
@@ -213,11 +247,6 @@ def _ignore_warnings_if(condition):
         yield
 
 
-def as_computable_array(data):
-    from .variable import lazy_types
-    return data if isinstance(data, lazy_types) else np.asarray(data)
-
-
 def _create_nan_agg_method(name, numeric_only=False):
     def f(values, axis=None, skipna=None, **kwargs):
         # ignore keyword args inserted by np.mean and other numpy aggreagators
@@ -225,7 +254,7 @@ def _create_nan_agg_method(name, numeric_only=False):
         kwargs.pop('dtype', None)
         kwargs.pop('out', None)
 
-        values = as_computable_array(values)
+        values = asarray(values)
         if skipna or (skipna is None and values.dtype.kind == 'f'):
             if values.dtype.kind not in ['i', 'f']:
                 raise NotImplementedError(

@@ -5,7 +5,7 @@ from collections import Mapping
 
 from ..core.utils import FrozenOrderedDict
 from ..core.pycompat import iteritems
-from ..core.variable import Coordinate
+from ..core.variable import Coordinate, lazy_types
 
 
 NONE_VAR_NAME = '__values__'
@@ -121,6 +121,26 @@ class AbstractDataStore(Mapping):
         self.close()
 
 
+class ArrayWriter(object):
+    def __init__(self):
+        self.sources = []
+        self.targets = []
+
+    def add(self, source, target):
+        if isinstance(source, lazy_types):
+            self.sources.append(source)
+            self.targets.append(target)
+        else:
+            target[...] = source
+
+    def sync(self):
+        if self.sources:
+            import dask.array as da
+            da.store(self.sources, self.targets)
+            self.sources = []
+            self.targets = []
+
+
 class AbstractWritableDataStore(AbstractDataStore):
 
     def set_dimension(self, d, l):
@@ -160,9 +180,12 @@ class AbstractWritableDataStore(AbstractDataStore):
             self.set_attribute(k, v)
 
     def set_variables(self, variables):
+        writer = ArrayWriter()
         for vn, v in iteritems(variables):
-            self.set_variable(_encode_variable_name(vn), v)
-            self.set_necessary_dimensions(v)
+            name = _encode_variable_name(vn)
+            target, source = self.prepare_variable(name, v)
+            writer.add(source, target)
+        writer.sync()
 
     def set_necessary_dimensions(self, variable):
         for d, l in zip(variable.dims, variable.shape):

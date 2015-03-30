@@ -54,11 +54,11 @@ class ImplementsDatasetReduce(object):
 
 
 class AbstractArray(ImplementsArrayReduce):
-    def __nonzero__(self):
+    def __bool__(self):
         return bool(self.values)
 
     # Python 3 uses __bool__, Python 2 uses __nonzero__
-    __bool__ = __nonzero__
+    __nonzero__ = __bool__
 
     def __float__(self):
         return float(self.values)

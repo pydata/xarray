@@ -53,7 +53,7 @@ def _nc4_values_and_dtype(var):
     elif var.dtype.kind in ['i', 'u', 'f', 'S']:
         # use character arrays instead of unicode, because unicode suppot in
         # netCDF4 is still rather buggy
-        data, dims = maybe_convert_to_char_array(var.values, var.dims)
+        data, dims = maybe_convert_to_char_array(var.data, var.dims)
         var = Variable(dims, data, var.attrs, var.encoding)
         dtype = var.dtype
     else:
@@ -99,7 +99,7 @@ def _force_native_endianness(var):
     # Below we check if the data type is not native or NA
     if var.dtype.byteorder not in ['=', '|']:
         # if endianness is specified explicitly, convert to the native type
-        data = var.values.astype(var.dtype.newbyteorder('='))
+        data = var.data.astype(var.dtype.newbyteorder('='))
         var = Variable(var.dims, data, var.attrs, var.encoding)
         # if endian exists, remove it from the encoding.
         var.encoding.pop('endian', None)
@@ -179,7 +179,7 @@ class NetCDF4DataStore(AbstractWritableDataStore):
     def set_attribute(self, key, value):
         self.ds.setncattr(key, value)
 
-    def set_variable(self, name, variable):
+    def prepare_variable(self, name, variable):
         attrs = variable.attrs.copy()
 
         variable = _force_native_endianness(variable)
@@ -199,8 +199,6 @@ class NetCDF4DataStore(AbstractWritableDataStore):
             fill_value = None
 
         encoding = variable.encoding
-        data = variable.values
-
         nc4_var = self.ds.createVariable(
             varname=name,
             datatype=datatype,
@@ -215,11 +213,11 @@ class NetCDF4DataStore(AbstractWritableDataStore):
             least_significant_digit=encoding.get('least_significant_digit'),
             fill_value=fill_value)
         nc4_var.set_auto_maskandscale(False)
-        nc4_var[:] = data
         for k, v in iteritems(attrs):
             # set attributes one-by-one since netCDF4<1.0.10 can't handle
             # OrderedDict as the input to setncatts
             nc4_var.setncattr(k, v)
+        return nc4_var, variable.data
 
     def del_attribute(self, key):
         self.ds.delncattr(key)
