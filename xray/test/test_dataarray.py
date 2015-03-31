@@ -6,7 +6,7 @@ from textwrap import dedent
 from xray import (align, concat, broadcast_arrays, Dataset, DataArray,
                   Coordinate, Variable)
 from xray.core.pycompat import iteritems, OrderedDict
-from . import TestCase, ReturnItem, source_ndarray, unittest
+from . import TestCase, ReturnItem, source_ndarray, unittest, requires_dask
 
 
 class TestDataArray(TestCase):
@@ -332,6 +332,20 @@ class TestDataArray(TestCase):
                        'y2': 'c', 'xy': ('x', ['d', 'e'])},
             dims='x')
         self.assertDataArrayIdentical(expected, actual)
+
+    @requires_dask
+    def test_reblock(self):
+        unblocked = DataArray(np.ones((3, 4)))
+        self.assertIsNone(unblocked.blockdims)
+
+        blocked = unblocked.reblock()
+        self.assertEqual(blocked.blockdims, ((3,), (4,)))
+
+        blocked = unblocked.reblock(blockdims=((2, 1), (2, 2)))
+        self.assertEqual(blocked.blockdims, ((2, 1), (2, 2)))
+
+        blocked = unblocked.reblock(blockshape=(3, 3))
+        self.assertEqual(blocked.blockdims, ((3,), (3, 1)))
 
     def test_isel(self):
         self.assertDataArrayIdentical(self.dv[0], self.dv.isel(x=0))

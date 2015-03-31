@@ -639,9 +639,6 @@ class GenericNetCDFDataTest(CFEncodedDataTest, Only32BitTypes, TestCase):
 @requires_dask
 @requires_netCDF4
 class DaskTest(TestCase):
-    def setUp(self):
-        dask.set_options(get=dask.get)
-
     def test_open_mfdataset(self):
         original = Dataset({'foo': ('x', np.random.randn(10))})
         with create_tmp_file() as tmp1:
@@ -654,7 +651,7 @@ class DaskTest(TestCase):
                                      ((5, 5),))
                     self.assertDatasetAllClose(original, actual)
                 with open_mfdataset([tmp1, tmp2],
-                                    blockshapes={'x': 3}) as actual:
+                                    blockshape={'x': 3}) as actual:
                     self.assertEqual(actual.foo.variable.data.blockdims,
                                      ((3, 2, 3, 2),))
 
@@ -665,7 +662,7 @@ class DaskTest(TestCase):
         original = Dataset({'foo': ('x', np.random.randn(10))})
         with create_tmp_file() as tmp:
             original.to_netcdf(tmp)
-            with open_dataset(tmp, blockshapes={'x': 5}) as actual:
+            with open_dataset(tmp, blockshape={'x': 5}) as actual:
                 self.assertIsInstance(actual.foo.variable.data, da.Array)
                 self.assertEqual(actual.foo.variable.data.blockdims, ((5, 5),))
                 self.assertDatasetAllClose(original, actual)
@@ -678,7 +675,7 @@ class DaskTest(TestCase):
             data = create_test_data()
             data.to_netcdf(tmp)
             blockshapes = {'dim1': 4, 'dim2': 4, 'dim3': 4, 'time': 10}
-            with open_dataset(tmp, blockshapes=blockshapes) as dask_ds:
+            with open_dataset(tmp, blockshape=blockshapes) as dask_ds:
                 self.assertDatasetIdentical(data, dask_ds)
                 with create_tmp_file() as tmp2:
                     dask_ds.to_netcdf(tmp2)

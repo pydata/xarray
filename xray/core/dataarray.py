@@ -284,8 +284,9 @@ class DataArray(AbstractArray, BaseDataObject):
         return len(self.variable)
 
     @property
-    def _data(self):
-        return self.variable._data
+    def data(self):
+        """The array's data as a dask or numpy array"""
+        return self.variable.data
 
     @property
     def values(self):
@@ -447,6 +448,43 @@ class DataArray(AbstractArray, BaseDataObject):
 
     # mutable objects should not be hashable
     __hash__ = None
+
+    @property
+    def blockdims(self):
+        """Block dimensions for this array's data or None if it's not a dask
+        array.
+        """
+        return self.variable.blockdims
+
+    def reblock(self, blockdims=None, blockshape=None):
+        """Coerce this array's data into dask with the given block dimensions.
+
+        If neither blockdims nor blockshape is provided, the array will be
+        reblocked into a single dask array.
+
+        Parameters
+        ----------
+        blockdims : tuple or dict, optional
+            Dimensions for each block, e.g., ``((3, 2), (5, 5, 5))`` or
+            ``{'x': (3, 2), 'y': (5, 5, 5)}``.
+        blockshape : tuple or dict, optional
+            Shapes for each block, e.g., ``(3, 5)`` or ``{'x': 3, 'y': 5}``.
+            These are expanded into block dimensions. This argument is mutually
+            exclusive with ``blockdims``.
+
+        Returns
+        -------
+        reblocked : xray.DataArray
+        """
+        def coerce_to_dict(arg):
+            if arg is not None and not utils.is_dict_like(arg):
+                arg = dict(zip(self.dims, arg))
+            return arg
+
+        blockdims = coerce_to_dict(blockdims)
+        blockshape = coerce_to_dict(blockshape)
+        ds = self._dataset.reblock(blockdims=blockdims, blockshape=blockshape)
+        return self._with_replaced_dataset(ds)
 
     def isel(self, **indexers):
         """Return a new DataArray whose dataset is given by integer indexing

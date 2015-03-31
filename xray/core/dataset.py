@@ -845,6 +845,63 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject):
     def __repr__(self):
         return formatting.dataset_repr(self)
 
+    @property
+    def blockdims(self):
+        """Block dimensions for this dataset's data or None if it's not a dask
+        array.
+        """
+        blockdims = {}
+        for v in self.variables.values():
+            if v.blockdims is not None:
+                new_blockdims = list(zip(v.dims, v.blockdims))
+                if any(bd != blockdims[d] for d, bd in new_blockdims
+                       if d in blockdims):
+                    raise ValueError('inconsistent blockdims!')
+                blockdims.update(new_blockdims)
+        return Frozen(SortedKeysDict(blockdims))
+
+    def reblock(self, blockdims=None, blockshape=None):
+        """Coerce all arrays in this dataset into dask arrays with the given
+        block dimensions.
+
+        If neither blockdims nor blockshape is provided, each array in the
+        dataset will be reblocked into a single dask array.
+
+        Parameters
+        ----------
+        blockdims : dict, optional
+            Dimensions for each block, e.g., ``{'x': (3, 2), 'y': (5, 5, 5)}``.
+        blockshape : dict, optional
+            Shapes for each block, e.g.,``{'x': 3, 'y': 5}``. These are
+            expanded into block dimensions. This argument is mutually exclusive
+            with ``blockdims``.
+
+        Returns
+        -------
+        reblocked : xray.Dataset
+        """
+        def check_arg_keys(arg):
+            if arg:
+                bad_dims = [d for d in arg if d not in self.dims]
+                if bad_dims:
+                    raise ValueError('some blockdims or blockshape keys '
+                                     'are not dimensions on this object: %s'
+                                     % bad_dims)
+        check_arg_keys(blockdims)
+        check_arg_keys(blockshape)
+
+        def selkeys(dict_, keys):
+            if dict_ is None:
+                return None
+            return dict((d, dict_[d]) for d in keys if d in dict_)
+
+        variables = OrderedDict([(k, (v.reblock(selkeys(blockdims, v.dims),
+                                                selkeys(blockshape, v.dims),
+                                                name=k)
+                                      if v.ndim > 0 else v))
+                                 for k, v in self.variables.items()])
+        return self._replace_vars_and_dims(variables)
+
     def isel(self, **indexers):
         """Returns a new dataset with each array indexed along the specified
         dimension(s).

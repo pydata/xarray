@@ -31,6 +31,8 @@ except ImportError:
 
 try:
     import dask.array
+    import dask
+    dask.set_options(get=dask.get)
     has_dask = True
 except ImportError:
     has_dask = False

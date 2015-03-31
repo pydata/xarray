@@ -28,41 +28,10 @@ def _get_default_netcdf_engine(engine):
     return engine
 
 
-counter = itertools.count()
-
-
-def _lazify_dataset(dataset, blockshapes):
-    """Make a dataset lazy by converting all its arrays into dask arrays
-
-    Currently only tested for converting datasets opened from disk.
-    """
-    import dask.array as da
-
-    if set(blockshapes) != set(dataset.dims):
-        raise ValueError('one blockshape for each dimension is required. '
-                         'In general, these should divide the dimensions of '
-                         'each dataset: %s' % dict(dataset.dims))
-
-    variables = OrderedDict()
-    for k, v in dataset.variables.items():
-        if v.ndim > 0:
-            array = v._data.array  # undo the LazilyIndexedArray
-            if isinstance(array, range):
-                # dask can't handle range objects, currently
-                array = np.asarray(array)
-            blockshape = tuple(blockshapes[d] for d in v.dims)
-            name = 'xray_%s_%s' % (k, next(counter))
-            data = da.from_array(array, blockshape=blockshape, name=name)
-            variables[k] = Variable(v.dims, data, v.attrs, v.encoding)
-        else:
-            variables[k] = v
-    return Dataset(variables, attrs=dataset.attrs).set_coords(dataset.coords)
-
-
 def open_dataset(filename_or_obj, group=None, decode_cf=True,
                  mask_and_scale=True, decode_times=True,
                  concat_characters=True, decode_coords=True, engine=None,
-                 blockshapes=None):
+                 blockdims=None, blockshape=None):
     """Load and decode a dataset from a file or file-like object.
 
     Parameters
@@ -99,9 +68,10 @@ def open_dataset(filename_or_obj, group=None, decode_cf=True,
         Engine to use when reading netCDF files. If not provided, the default
         engine is chosen based on available dependencies, with a preference for
         'netcdf4' if reading a file on disk.
-    blockshapes : dict, optional
-        If blockshapes are provided, they are used to load the new dataset
-        into dask arrays. See the documentation for more details.
+    blockdims, blockshape : dict, optional
+        If blockdims or blockshape is provided, it used to load the new dataset
+        into dask arrays. This is an experimental feature; see the
+        documentation for more details.
 
     Returns
     -------
@@ -118,8 +88,8 @@ def open_dataset(filename_or_obj, group=None, decode_cf=True,
         ds = conventions.decode_cf(
             store, mask_and_scale=mask_and_scale, decode_times=decode_times,
             concat_characters=concat_characters, decode_coords=decode_coords)
-        if blockshapes is not None:
-            ds = _lazify_dataset(ds, blockshapes)
+        if blockdims is not None or blockshape is not None:
+            ds = ds.reblock(blockdims=blockdims, blockshape=blockshape)
         return ds
 
     if isinstance(filename_or_obj, basestring):
@@ -162,7 +132,7 @@ def open_dataset(filename_or_obj, group=None, decode_cf=True,
         return maybe_decode_store(store)
 
 
-class _FileCloser(object):
+class _MultiFileCloser(object):
     def __init__(self, file_objs):
         self.file_objs = file_objs
 
@@ -171,7 +141,7 @@ class _FileCloser(object):
             f.close()
 
 
-def open_mfdataset(paths, blockshapes={}, concat_dim=None, **kwargs):
+def open_mfdataset(paths, blockshape=None, concat_dim=None, **kwargs):
     """Open multiple files as a single dataset.
 
     Experimental. Requires dask to be installed.
@@ -181,11 +151,11 @@ def open_mfdataset(paths, blockshapes={}, concat_dim=None, **kwargs):
     paths : str or sequence
         Either a str glob in the form "path/to/my/files/*.nc" or an explicit
         list of files to open.
-    blockshapes : dict, optional
+    blockshape : dict, optional
         Dictionary with keys given by dimension names and values given by
         blockshapes. In general, these should divide the dimensions of each
-        dataset. By default, blockshapes will be chosen to load an entire
-        input file into memory at once. This has a major impact on performance:
+        dataset. By default, blockshapes will be chosen to load entire
+        input files into memory at once. This has a major impact on performance:
         please see the full documentation for more details.
     concat_dim : str or DataArray or Index, optional
         Dimension to concatenate files along. This argument is passed on to
@@ -202,15 +172,10 @@ def open_mfdataset(paths, blockshapes={}, concat_dim=None, **kwargs):
     if not paths:
         raise IOError('no files to open')
     datasets = [open_dataset(p, **kwargs) for p in paths]
-
-    blockshapes = dict(blockshapes)
-    for k, v in datasets[0].dims.items():
-        blockshapes.setdefault(k, v)
-
     file_objs = [ds._file_obj for ds in datasets]
-    datasets = [_lazify_dataset(ds, blockshapes) for ds in datasets]
+    datasets = [ds.reblock(blockshape=blockshape) for ds in datasets]
     combined = auto_combine(datasets, concat_dim=concat_dim)
-    combined._file_obj = _FileCloser(file_objs)
+    combined._file_obj = _MultiFileCloser(file_objs)
     return combined
 
 

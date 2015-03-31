@@ -4,6 +4,10 @@ try:
     import cPickle as pickle
 except ImportError:
     import pickle
+try:
+    import dask.array as da
+except ImportError:
+    pass
 
 import numpy as np
 import pandas as pd
@@ -514,6 +518,33 @@ class TestDataset(TestCase):
         data.attrs = {'foobar': 'baz'}
         self.assertTrue(data.attrs['foobar'], 'baz')
         self.assertIsInstance(data.attrs, OrderedDict)
+
+    @requires_dask
+    def test_reblock(self):
+        data = create_test_data()
+        for v in data.variables.values():
+            self.assertIsInstance(v.data, np.ndarray)
+        self.assertEqual(data.blockdims, {})
+
+        reblocked = data.reblock()
+        for v in reblocked.variables.values():
+            self.assertIsInstance(v.data, da.Array)
+        expected_blockdims = dict((d, (s,)) for d, s in data.dims.items())
+        self.assertEqual(reblocked.blockdims, expected_blockdims)
+
+        reblocked = data.reblock(blockshape={'time': 5, 'dim1': 5,
+                                             'dim2': 5, 'dim3': 5})
+        expected_blockdims = {'time': (5,) * 4, 'dim1': (5, 3),
+                              'dim2': (5, 4), 'dim3': (5, 5)}
+        self.assertEqual(reblocked.blockdims, expected_blockdims)
+
+        reblocked = data.reblock(expected_blockdims)
+        self.assertEqual(reblocked.blockdims, expected_blockdims)
+
+        # reblock on already blocked data
+        reblocked = reblocked.reblock(expected_blockdims)
+        self.assertEqual(reblocked.blockdims, expected_blockdims)
+        self.assertDatasetIdentical(reblocked, data)
 
     def test_isel(self):
         data = create_test_data()

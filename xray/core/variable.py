@@ -1,5 +1,6 @@
 from datetime import timedelta
 import functools
+import itertools
 
 import numpy as np
 import pandas as pd
@@ -463,6 +464,71 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
 
     # mutable objects should not be hashable
     __hash__ = None
+
+    @property
+    def blockdims(self):
+        """Block dimensions for this array's data or None if it's not a dask
+        array.
+        """
+        return getattr(self._data, 'blockdims', None)
+
+    _array_counter = itertools.count()
+
+    def reblock(self, blockdims=None, blockshape=None, name=''):
+        """Coerce this array's data into dask with the given block dimensions.
+
+        If neither blockdims nor blockshape is provided, the variable will be
+        reblocked into a single dask array.
+
+        Does *not* validate that all blockdims or blockshape keys (if they are
+        provided as dicts) are variable dimensions. That is the responsibility
+        of the caller (e.g., Dataset.reblock or DataArray.reblock).
+
+        Parameters
+        ----------
+        blockdims : tuple or dict, optional
+            Dimensions for each block, e.g., ``((3, 2), (5, 5, 5))`` or
+            ``{'x': (3, 2), 'y': (5, 5, 5)}``.
+        blockshape : tuple or dict, optional
+            Shapes for each block, e.g., ``(3, 5)`` or ``{'x': 3, 'y': 5}``.
+            These are expanded into block dimensions. This argument is mutually
+            exclusive with ``blockdims``.
+        name : str, optional
+            Name of this variable. Does not need to be unique.
+
+        Returns
+        -------
+        reblocked : xray.Variable
+        """
+        import dask.array as da
+
+        def coerce_to_tuple(arg, default):
+            if utils.is_dict_like(arg):
+                arg = tuple(arg.get(d, s)
+                            for d, s in zip(self.dims, default))
+            return arg
+
+        # TODO: needs a fix to properly handle partially missing dimensions:
+        # https://github.com/ContinuumIO/dask/issues/117
+        blockdims = coerce_to_tuple(blockdims,
+                                    self.blockdims or
+                                    tuple((s,) for s in self.shape))
+        blockshape = coerce_to_tuple(blockshape, self.shape)
+
+        if blockdims is None and blockshape is None:
+            blockshape = self.shape
+
+        data = self.data
+        if isinstance(data, da.Array):
+            data = data.reblock(blockdims=blockdims, blockshape=blockshape)
+        else:
+            if name:
+                name += '_'
+            name = 'xray_%s%s' % (name, next(self._array_counter))
+            data = da.from_array(data, blockdims=blockdims,
+                                 blockshape=blockshape, name=name)
+        return type(self)(self.dims, data, self._attrs, self._encoding,
+                          fastpath=True)
 
     def isel(self, **indexers):
         """Return a new array indexed along the specified dimension(s).
