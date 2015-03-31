@@ -328,7 +328,7 @@ def auto_combine(datasets, concat_dim=None):
     Dataset.merge
     """
     from toolz import itertoolz
-    grouped = itertoolz.groupby(lambda ds: tuple(ds.data_vars),
+    grouped = itertoolz.groupby(lambda ds: tuple(sorted(ds.data_vars)),
                                 datasets).values()
     concatenated = [_auto_concat(ds, dim=concat_dim) for ds in grouped]
     merged = reduce(lambda ds, other: ds.merge(other), concatenated)

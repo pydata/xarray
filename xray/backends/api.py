@@ -51,7 +51,7 @@ def _lazify_dataset(dataset, blockshapes):
                 # dask can't handle range objects, currently
                 array = np.asarray(array)
             blockshape = tuple(blockshapes[d] for d in v.dims)
-            name = 'xray::%s_%s' % (k, next(counter))
+            name = 'xray_%s_%s' % (k, next(counter))
             data = da.from_array(array, blockshape=blockshape, name=name)
             variables[k] = Variable(v.dims, data, v.attrs, v.encoding)
         else:
@@ -162,6 +162,15 @@ def open_dataset(filename_or_obj, group=None, decode_cf=True,
         return maybe_decode_store(store)
 
 
+class _FileCloser(object):
+    def __init__(self, file_objs):
+        self.file_objs = file_objs
+
+    def close(self):
+        for f in self.file_objs:
+            f.close()
+
+
 def open_mfdataset(paths, blockshapes={}, concat_dim=None, **kwargs):
     """Open multiple files as a single dataset.
 
@@ -198,8 +207,11 @@ def open_mfdataset(paths, blockshapes={}, concat_dim=None, **kwargs):
     for k, v in datasets[0].dims.items():
         blockshapes.setdefault(k, v)
 
+    file_objs = [ds._file_obj for ds in datasets]
     datasets = [_lazify_dataset(ds, blockshapes) for ds in datasets]
-    return auto_combine(datasets, concat_dim=concat_dim)
+    combined = auto_combine(datasets, concat_dim=concat_dim)
+    combined._file_obj = _FileCloser(file_objs)
+    return combined
 
 
 def to_netcdf(dataset, path=None, mode='w', format=None, group=None,

@@ -9,11 +9,12 @@ import numpy as np
 import pandas as pd
 
 from xray import (align, concat, conventions, backends, Dataset, DataArray,
-                  Variable, Coordinate)
+                  Variable, Coordinate, auto_combine)
 from xray.core import indexing, utils
 from xray.core.pycompat import iteritems, OrderedDict
 
-from . import TestCase, unittest, InaccessibleArray, UnexpectedDataAccess
+from . import (TestCase, unittest, InaccessibleArray, UnexpectedDataAccess,
+               requires_dask)
 
 
 def create_test_data(seed=None):
@@ -1382,6 +1383,40 @@ class TestDataset(TestCase):
         actual = concat(objs, 'x')
         expected = Dataset({'z': (('x', 'y'), [[-1], [1]])})
         self.assertDatasetIdentical(actual, expected)
+
+    @requires_dask  # only for toolz
+    def test_auto_combine(self):
+        objs = [Dataset({'x': [0]}), Dataset({'x': [1]})]
+        actual = auto_combine(objs)
+        expected = Dataset({'x': [0, 1]})
+        self.assertDatasetIdentical(expected, actual)
+
+        actual = auto_combine([actual])
+        self.assertDatasetIdentical(expected, actual)
+
+        objs = [Dataset({'x': [0, 1]}), Dataset({'x': [2]})]
+        actual = auto_combine(objs)
+        expected = Dataset({'x': [0, 1, 2]})
+        self.assertDatasetIdentical(expected, actual)
+
+        # ensure auto_combine handles non-sorted dimensions
+        objs = [Dataset(OrderedDict([('x', ('a', [0])), ('y', ('a', [0]))])),
+                Dataset(OrderedDict([('y', ('a', [1])), ('x', ('a', [1]))]))]
+        actual = auto_combine(objs)
+        expected = Dataset({'x': ('a', [0, 1]), 'y': ('a', [0, 1]), 'a': [0, 0]})
+        self.assertDatasetIdentical(expected, actual)
+
+        objs = [Dataset({'x': [0], 'y': [0]}), Dataset({'y': [1], 'x': [1]})]
+        with self.assertRaisesRegexp(ValueError, 'too many .* dimensions'):
+            auto_combine(objs)
+
+        objs = [Dataset({'x': 0}), Dataset({'x': 1})]
+        with self.assertRaisesRegexp(ValueError, 'cannot infer dimension'):
+            auto_combine(objs)
+
+        objs = [Dataset({'x': [0], 'y': [0]}), Dataset({'x': [0]})]
+        with self.assertRaises(KeyError):
+            auto_combine(objs)
 
     def test_to_and_from_dataframe(self):
         x = np.random.randn(10)

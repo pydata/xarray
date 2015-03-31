@@ -23,6 +23,7 @@ except ImportError:
     pass
 
 try:
+    import dask
     import dask.array as da
 except ImportError:
     pass
@@ -628,17 +629,29 @@ class GenericNetCDFDataTest(CFEncodedDataTest, Only32BitTypes, TestCase):
 
 
 @requires_dask
-@requires_scipy_or_netCDF4
+@requires_netCDF4
 class DaskTest(TestCase):
+    def setUp(self):
+        dask.set_options(get=dask.get)
+
     def test_open_mfdataset(self):
         original = Dataset({'foo': ('x', np.random.randn(10))})
         with create_tmp_file() as tmp1:
             with create_tmp_file() as tmp2:
                 original.isel(x=slice(5)).to_netcdf(tmp1)
                 original.isel(x=slice(5, 10)).to_netcdf(tmp2)
-                actual = open_mfdataset([tmp1, tmp2])
-                self.assertIsInstance(actual.foo.variable.data, da.Array)
-                self.assertDatasetAllClose(original, actual)
+                with open_mfdataset([tmp1, tmp2]) as actual:
+                    self.assertIsInstance(actual.foo.variable.data, da.Array)
+                    self.assertEqual(actual.foo.variable.data.blockdims,
+                                     ((5, 5),))
+                    self.assertDatasetAllClose(original, actual)
+                with open_mfdataset([tmp1, tmp2],
+                                    blockshapes={'x': 3}) as actual:
+                    self.assertEqual(actual.foo.variable.data.blockdims,
+                                     ((3, 2, 3, 2),))
+
+        with self.assertRaisesRegexp(IOError, 'no files to open'):
+            open_mfdataset('foo-bar-baz-*.nc')
 
     def test_open_dataset(self):
         original = Dataset({'foo': ('x', np.random.randn(10))})
@@ -648,6 +661,21 @@ class DaskTest(TestCase):
                 self.assertIsInstance(actual.foo.variable.data, da.Array)
                 self.assertEqual(actual.foo.variable.data.blockdims, ((5, 5),))
                 self.assertDatasetAllClose(original, actual)
+            with open_dataset(tmp) as actual:
+                self.assertIsInstance(actual.foo.variable.data, np.ndarray)
+                self.assertDatasetAllClose(original, actual)
+
+    def test_dask_roundtrip(self):
+        with create_tmp_file() as tmp:
+            data = create_test_data()
+            data.to_netcdf(tmp)
+            blockshapes = {'dim1': 4, 'dim2': 4, 'dim3': 4, 'time': 10}
+            with open_dataset(tmp, blockshapes=blockshapes) as dask_ds:
+                self.assertDatasetIdentical(data, dask_ds)
+                with create_tmp_file() as tmp2:
+                    dask_ds.to_netcdf(tmp2)
+                    with open_dataset(tmp2) as on_disk:
+                        self.assertDatasetIdentical(data, on_disk)
 
 
 @requires_netCDF4
