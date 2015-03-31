@@ -67,3 +67,6 @@ class TestFormatting(TestCase):
         actual = formatting.format_array_flat(np.arange(3), 5),
         expected = '0 1 2'
         self.assertEqual(expected, actual)
+
+    def test_pretty_print(self):
+        self.assertEqual(formatting.pretty_print('abcdefghij', 8), 'abcde...')

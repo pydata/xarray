@@ -315,7 +315,7 @@ class ChainMap(MutableMapping, SingleSlotPickleMixin):
     def __setitem__(self, key, value):
         self.maps[0][key] = value
 
-    def __delitem__(self, value):
+    def __delitem__(self, value):  # pragma: no cover
         raise NotImplementedError
 
     def __iter__(self):

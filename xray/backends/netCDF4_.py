@@ -9,7 +9,8 @@ from ..core.utils import FrozenOrderedDict, NDArrayMixin, close_on_error
 from ..core.pycompat import iteritems, basestring, OrderedDict
 
 from .common import AbstractWritableDataStore
-from .netcdf3 import encode_nc3_variable, maybe_convert_to_char_array
+from .netcdf3 import (encode_nc3_attr_value, encode_nc3_variable,
+                      maybe_convert_to_char_array)
 
 # This lookup table maps from dtype.byteorder to a readable endian
 # string used by netCDF4.
@@ -177,6 +178,8 @@ class NetCDF4DataStore(AbstractWritableDataStore):
         self.ds.createDimension(name, size=length)
 
     def set_attribute(self, key, value):
+        if self.format != 'NETCDF4':
+            value = encode_nc3_attr_value(value)
         self.ds.setncattr(key, value)
 
     def prepare_variable(self, name, variable):
@@ -213,14 +216,12 @@ class NetCDF4DataStore(AbstractWritableDataStore):
             least_significant_digit=encoding.get('least_significant_digit'),
             fill_value=fill_value)
         nc4_var.set_auto_maskandscale(False)
+
         for k, v in iteritems(attrs):
             # set attributes one-by-one since netCDF4<1.0.10 can't handle
             # OrderedDict as the input to setncatts
             nc4_var.setncattr(k, v)
         return nc4_var, variable.data
-
-    def del_attribute(self, key):
-        self.ds.delncattr(key)
 
     def sync(self):
         self.ds.sync()

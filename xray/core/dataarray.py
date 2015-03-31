@@ -985,7 +985,8 @@ class DataArray(AbstractArray, BaseDataObject):
         @functools.wraps(f)
         def func(self, other):
             if isinstance(other, groupby.GroupBy):
-                return NotImplemented
+                raise TypeError('in-place operations between a DataArray and '
+                                'a grouped object are not permitted')
             other_coords = getattr(other, 'coords', None)
             other_variable = getattr(other, 'variable', other)
             with self.coords._merge_inplace(other_coords):

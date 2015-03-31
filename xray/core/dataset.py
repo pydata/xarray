@@ -28,31 +28,6 @@ _DATETIMEINDEX_COMPONENTS = ['year', 'month', 'day', 'hour', 'minute',
                              'quarter']
 
 
-def _list_virtual_variables(variables):
-    """A frozenset of variable names that don't exist in this dataset but
-    for which could be created on demand (because they can be calculated
-    from other dataset variables)
-    """
-    def _castable_to_timestamp(obj):
-        try:
-            pd.Timestamp(obj)
-        except:
-            return False
-        else:
-            return True
-
-    virtual_vars = []
-    for k, v in iteritems(variables):
-        if ((v.dtype.kind == 'M' and isinstance(v, Coordinate))
-                or (v.ndim == 0 and _castable_to_timestamp(v.values))):
-            # nb. dtype.kind == 'M' is datetime64
-            for suffix in _DATETIMEINDEX_COMPONENTS + ['season']:
-                name = '%s.%s' % (k, suffix)
-                if name not in variables:
-                    virtual_vars.append(name)
-    return frozenset(virtual_vars)
-
-
 def _get_virtual_variable(variables, key):
     """Get a virtual variable (e.g., 'time.year') from a dict of xray.Variable
     objects (if possible)
@@ -89,7 +64,7 @@ def _as_dataset_variable(name, var):
     try:
         var = as_variable(var, key=name)
     except TypeError:
-        raise TypeError('Dataset variables must be an arrays or a tuple of '
+        raise TypeError('Dataset variables must be an array or a tuple of '
                         'the form (dims, data[, attrs, encoding])')
     if name in var.dims:
         # convert the into an Index
@@ -606,25 +581,6 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject):
         """
         return _LocIndexer(self)
 
-    @property
-    def virtual_variables(self):
-        """A frozenset of names that don't exist in this dataset but for which
-        DataArrays could be created on demand.
-
-        These variables can be derived by performing simple operations on an
-        existing dataset variable or coordinate. Currently, the only
-        implemented virtual variables are time/date components [1] such as
-        "time.month" or "time.dayofyear", where "time" is the name of a index
-        whose data is a `pandas.DatetimeIndex` object. The virtual variable
-        "time.season" (for climatological season, starting with 1 for "DJF") is
-        the only such variable which is not directly implemented in pandas.
-
-        References
-        ----------
-        .. [1] http://pandas.pydata.org/pandas-docs/stable/api.html#time-date-components
-        """
-        return _list_virtual_variables(self._variables)
-
     def __getitem__(self, key):
         """Access variables or coordinates this dataset as a
         :py:class:`~xray.DataArray`.
@@ -762,7 +718,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject):
         return Variables(self)
 
     @property
-    def vars(self):
+    def vars(self):  # pragma: no cover
         warnings.warn('the Dataset property `vars` has been deprecated; '
                       'use `data_vars` instead',
                       FutureWarning, stacklevel=2)
@@ -1290,7 +1246,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject):
         coord_names = set(k for k in self._coord_names if k in variables)
         return self._replace_vars_and_dims(variables, coord_names)
 
-    def drop_vars(self, *names):
+    def drop_vars(self, *names):  # pragma: no cover
         warnings.warn('the Dataset method `drop_vars` has been deprecated; '
                       'use `drop` instead',
                       FutureWarning, stacklevel=2)
@@ -1625,7 +1581,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject):
             # appears. These variables are added below.
             pass
         else:
-            raise ValueError("Unexpected value for mode: %s" % mode)
+            raise ValueError("unexpected value for mode: %s" % mode)
 
         # automatically concatenate over variables along the dimension
         concat_over.update(k for k, v in datasets[0].variables.items()
@@ -1785,7 +1741,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject):
         @functools.wraps(f)
         def func(self, other):
             if isinstance(other, groupby.GroupBy):
-                return NotImplemented
+                raise TypeError('in-place operations between a Dataset and '
+                                'a grouped object are not permitted')
             other_coords = getattr(other, 'coords', None)
             with self.coords._merge_inplace(other_coords):
                 # make a defensive copy of variables to modify in-place so we

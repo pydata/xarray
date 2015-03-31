@@ -94,10 +94,7 @@ def partial_align(*objects, **kwargs):
     join = kwargs.pop('join', 'inner')
     copy = kwargs.pop('copy', True)
     exclude = kwargs.pop('exclude', set())
-    if kwargs:
-        raise TypeError('align() got unexpected keyword arguments: %s'
-                        % list(kwargs))
-
+    assert not kwargs
     joined_indexes = _join_indexes(join, objects, exclude=exclude)
     return tuple(obj.reindex(copy=copy, **joined_indexes) for obj in objects)
 

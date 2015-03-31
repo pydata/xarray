@@ -1,8 +1,8 @@
 import numpy as np
 from numpy import array, nan
+from xray.core import ops
 from xray.core.ops import (
-    first, last, count, mean, _interleaved_indices_required,
-    _interleaved_concat_slow,
+    first, last, count, mean
 )
 from xray.core.nputils import (
     interleaved_concat as interleaved_concat_numpy, _calc_concat_shape,
@@ -80,7 +80,8 @@ class TestOps(TestCase):
 
     def test_interleaved_concat(self):
         for interleaved_concat in [interleaved_concat_numpy,
-                                   _interleaved_concat_slow]:
+                                   ops._interleaved_concat_slow,
+                                   ops.interleaved_concat]:
             x = np.arange(5)
             self.assertArrayEqual(x, interleaved_concat([x], [x]))
 
@@ -110,7 +111,8 @@ class TestOps(TestCase):
 
     def test_interleaved_concat_dtypes(self):
         for interleaved_concat in [interleaved_concat_numpy,
-                                   _interleaved_concat_slow]:
+                                   ops._interleaved_concat_slow,
+                                   ops.interleaved_concat]:
             a = np.array(['a'])
             b = np.array(['bc'])
             actual = interleaved_concat([a, b], [[0], [1]])
@@ -123,11 +125,12 @@ class TestOps(TestCase):
             self.assertArrayEqual(expected, actual)
 
     def test_interleaved_indices_required(self):
-        self.assertFalse(_interleaved_indices_required([[0]]))
-        self.assertFalse(_interleaved_indices_required([[0, 1], [2, 3, 4]]))
-        self.assertFalse(_interleaved_indices_required([slice(3), slice(3, 4)]))
-        self.assertFalse(_interleaved_indices_required([slice(0, 2, 1)]))
-        self.assertTrue(_interleaved_indices_required([[0], [2]]))
-        self.assertTrue(_interleaved_indices_required([[1], [2, 3]]))
-        self.assertTrue(_interleaved_indices_required([[0, 1], [2, 4]]))
-        self.assertTrue(_interleaved_indices_required([[0, 1], [3.5, 4]]))
+        self.assertFalse(ops._interleaved_indices_required([[0]]))
+        self.assertFalse(ops._interleaved_indices_required([[0, 1], [2, 3, 4]]))
+        self.assertFalse(ops._interleaved_indices_required([slice(3), slice(3, 4)]))
+        self.assertFalse(ops._interleaved_indices_required([slice(0, 2, 1)]))
+        self.assertTrue(ops._interleaved_indices_required([[0], [2]]))
+        self.assertTrue(ops._interleaved_indices_required([[1], [2, 3]]))
+        self.assertTrue(ops._interleaved_indices_required([[0, 1], [2, 4]]))
+        self.assertTrue(ops._interleaved_indices_required([[0, 1], [3.5, 4]]))
+        self.assertTrue(ops._interleaved_indices_required([slice(None, None, 2)]))

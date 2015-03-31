@@ -53,10 +53,10 @@ class AbstractDataStore(Mapping):
     def __len__(self):
         return len(self.variables)
 
-    def get_attrs(self):
+    def get_attrs(self):  # pragma: no cover
         raise NotImplementedError
 
-    def get_variables(self):
+    def get_variables(self):  # pragma: no cover
         raise NotImplementedError
 
     def load(self):
@@ -84,10 +84,6 @@ class AbstractDataStore(Mapping):
                                       for k, v in iteritems(self.get_variables()))
         attributes = FrozenOrderedDict(self.get_attrs())
         return variables, attributes
-
-    def get_dimensions(self):
-        return list(itertools.chain(*[x.dims
-                                      for x in self.variables.values()]))
 
     @property
     def variables(self):
@@ -143,13 +139,13 @@ class ArrayWriter(object):
 
 class AbstractWritableDataStore(AbstractDataStore):
 
-    def set_dimension(self, d, l):
+    def set_dimension(self, d, l):  # pragma: no cover
         raise NotImplementedError
 
-    def set_attribute(self, k, v):
+    def set_attribute(self, k, v):  # pragma: no cover
         raise NotImplementedError
 
-    def set_variable(self, k, v):
+    def set_variable(self, k, v):  # pragma: no cover
         raise NotImplementedError
 
     def sync(self):
@@ -170,10 +166,6 @@ class AbstractWritableDataStore(AbstractDataStore):
         variables = dict((k, v) for k, v in iteritems(variables)
                          if not (k in neccesary_dims and is_trivial_index(v)))
         self.set_variables(variables)
-
-    def set_dimensions(self, dimensions):
-        for d, l in iteritems(dimensions):
-            self.set_dimension(d, l)
 
     def set_attributes(self, attributes):
         for k, v in iteritems(attributes):

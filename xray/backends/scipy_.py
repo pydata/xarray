@@ -10,7 +10,8 @@ from ..core.utils import Frozen, FrozenOrderedDict
 from ..core.variable import NumpyArrayAdapter
 
 from .common import AbstractWritableDataStore
-from .netcdf3 import is_valid_nc3_name, coerce_nc3_dtype, encode_nc3_variable
+from .netcdf3 import (is_valid_nc3_name, coerce_nc3_dtype,
+                      encode_nc3_attr_value, encode_nc3_variable)
 from xray.conventions import cf_decoder
 
 
@@ -60,7 +61,7 @@ class ScipyDataStore(AbstractWritableDataStore):
     """
     def __init__(self, filename_or_obj, mode='r', mmap=None, version=2):
         import scipy
-        if mode != 'r' and scipy.__version__ < '0.13':
+        if mode != 'r' and scipy.__version__ < '0.13':  # pragma: no cover
             warnings.warn('scipy %s detected; '
                           'the minimal recommended version is 0.13. '
                           'Older version of this library do not reliably '
@@ -107,19 +108,10 @@ class ScipyDataStore(AbstractWritableDataStore):
         if not is_valid_nc3_name(key):
             raise ValueError("Not a valid attribute name")
 
-    def _cast_attr_value(self, value):
-        if isinstance(value, basestring):
-            if not isinstance(value, unicode_type):
-                value = value.decode('utf-8')
-        else:
-            value = coerce_nc3_dtype(np.atleast_1d(value))
-            if value.ndim > 1:
-                raise ValueError("netCDF attributes must be 1-dimensional")
-        return value
-
     def set_attribute(self, key, value):
         self._validate_attr_key(key)
-        setattr(self.ds, key, self._cast_attr_value(value))
+        value = encode_nc3_attr_value(value)
+        setattr(self.ds, key, value)
 
     def prepare_variable(self, name, variable):
         # TODO, create a netCDF3 encoder
@@ -133,11 +125,8 @@ class ScipyDataStore(AbstractWritableDataStore):
         scipy_var = self.ds.variables[name]
         for k, v in iteritems(variable.attrs):
             self._validate_attr_key(k)
-            setattr(scipy_var, k, self._cast_attr_value(v))
+            setattr(scipy_var, k, v)
         return scipy_var, data
-
-    def del_attribute(self, key):
-        delattr(self.ds, key)
 
     def sync(self):
         self.ds.flush()

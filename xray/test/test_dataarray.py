@@ -259,6 +259,12 @@ class TestDataArray(TestCase):
         self.assertFalse(expected.equals(actual))
         self.assertFalse(expected.identical(actual))
 
+    def test_equals_failures(self):
+        orig = DataArray(np.arange(5.0), {'a': 42}, dims='x')
+        self.assertFalse(orig.equals(np.arange(5)))
+        self.assertFalse(orig.identical(123))
+        self.assertFalse(orig.broadcast_equals({1: 2}))
+
     def test_broadcast_equals(self):
         a = DataArray([0, 0], {'y': 0}, dims='x')
         b = DataArray([0, 0], {'y': ('x', [0, 0])}, dims='x')
@@ -1001,6 +1007,8 @@ class TestDataArray(TestCase):
             grouped + 1
         with self.assertRaisesRegexp(TypeError, 'only support arithmetic'):
             grouped + grouped
+        with self.assertRaisesRegexp(TypeError, 'in-place operations'):
+            array += grouped
 
     def test_groupby_math_not_aligned(self):
         array = DataArray(range(4), {'b': ('x', [0, 0, 1, 1])}, dims='x')

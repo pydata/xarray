@@ -344,6 +344,8 @@ class NetCDF4DataTest(CFEncodedDataTest, TestCase):
             # check that missing group raises appropriate exception
             with self.assertRaises(IOError):
                 open_dataset(tmp_file, group='bar')
+            with self.assertRaisesRegexp(ValueError, 'must be a string'):
+                open_dataset(tmp_file, group=(1, 2, 3))
 
     def test_open_subgroup(self):
         # Create a netCDF file with a dataset stored within a group within a group
@@ -557,6 +559,12 @@ class ScipyOnDiskDataTest(CFEncodedDataTest, Only32BitTypes, TestCase):
             data.to_netcdf(tmp_file, engine='scipy')
             with open_dataset(tmp_file, engine='scipy', **kwargs) as ds:
                 yield ds
+
+    def test_array_attrs(self):
+        ds = Dataset(attrs={'foo': [[1, 2], [3, 4]]})
+        with self.assertRaisesRegexp(ValueError, 'must be 1-dimensional'):
+            with self.roundtrip(ds) as roundtripped:
+                pass
 
 
 @requires_netCDF4

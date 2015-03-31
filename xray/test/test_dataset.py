@@ -105,6 +105,10 @@ class TestDataset(TestCase):
             Dataset({'a': x1, 'b': x2})
         with self.assertRaisesRegexp(ValueError, 'must be defined with 1-d'):
             Dataset({'a': x1, 'x': z})
+        with self.assertRaisesRegexp(TypeError, 'must be an array or'):
+            Dataset({'x': (1, 2, 3, 4, 5, 6, 7)})
+        with self.assertRaisesRegexp(ValueError, 'already exists as a scalar'):
+            Dataset({'x': 0, 'y': ('x', [1, 2, 3])})
 
         # verify handling of DataArrays
         expected = Dataset({'x': x1, 'z': z})
@@ -195,6 +199,11 @@ class TestDataset(TestCase):
         with self.assertRaisesRegexp(ValueError, 'conflicting value'):
             Dataset(data)
 
+        data = {'x': DataArray(0, coords={'y': 1}), 'y': [1, 1]}
+        actual = Dataset(data)
+        expected = Dataset({'x': 0}, {'y': [1, 1]})
+        self.assertDatasetIdentical(expected, actual)
+
     def test_constructor_with_coords(self):
         with self.assertRaisesRegexp(ValueError, 'redundant variables and co'):
             Dataset({'a': ('x', [1])}, {'a': ('x', [1])})
@@ -210,6 +219,8 @@ class TestDataset(TestCase):
 
         self.assertItemsEqual(ds, list(ds.variables))
         self.assertItemsEqual(ds.keys(), list(ds.variables))
+        self.assertNotIn('aasldfjalskdfj', ds.variables)
+        self.assertIn('dim1', repr(ds.variables))
         self.assertEqual(len(ds), 8)
 
         self.assertItemsEqual(ds.data_vars, ['var1', 'var2', 'var3'])
@@ -221,6 +232,7 @@ class TestDataset(TestCase):
 
         self.assertItemsEqual(ds.indexes, ['dim1', 'dim2', 'dim3', 'time'])
         self.assertEqual(len(ds.indexes), 4)
+        self.assertIn('dim1', repr(ds.indexes))
 
         self.assertItemsEqual(ds.coords,
                               ['time', 'dim1', 'dim2', 'dim3', 'numbers'])
@@ -484,6 +496,12 @@ class TestDataset(TestCase):
         self.assertFalse(data2.equals(data))
         self.assertFalse(data2.identical(data))
 
+    def test_equals_failures(self):
+        data = create_test_data()
+        self.assertFalse(data.equals('foo'))
+        self.assertFalse(data.identical(123))
+        self.assertFalse(data.broadcast_equals({1: 2}))
+
     def test_broadcast_equals(self):
         data1 = Dataset(coords={'x': 0})
         data2 = Dataset(coords={'x': [0]})
@@ -701,6 +719,11 @@ class TestDataset(TestCase):
         self.assertDatasetIdentical(left2.sel(dim3=intersection),
                                     right2.sel(dim3=intersection))
         self.assertTrue(np.isnan(left2['var3'][-2:]).all())
+
+        with self.assertRaisesRegexp(ValueError, 'invalid value for join'):
+            align(left, right, join='foobar')
+        with self.assertRaises(TypeError):
+            align(left, right, foo='bar')
 
     def test_variable_indexing(self):
         data = create_test_data()
@@ -1228,6 +1251,8 @@ class TestDataset(TestCase):
             grouped + 1
         with self.assertRaisesRegexp(TypeError, 'only support arithmetic'):
             grouped + grouped
+        with self.assertRaisesRegexp(TypeError, 'in-place operations'):
+            ds += grouped
 
     def test_groupby_math_virtual(self):
         ds = Dataset({'x': ('t', [1, 2, 3])},
@@ -1345,6 +1370,12 @@ class TestDataset(TestCase):
             data0, data1 = deepcopy(split_data)
             data1['dim2'] = 2 * data1['dim2']
             concat([data0, data1], 'dim1')
+
+        with self.assertRaisesRegexp(ValueError, 'compat.* invalid'):
+            concat(split_data, 'dim1', compat='foobar')
+
+        with self.assertRaisesRegexp(ValueError, 'unexpected value for mode'):
+            concat(split_data, 'dim1', mode='foobar')
 
     def test_concat_promote_shape(self):
         # mixed dims within variables
