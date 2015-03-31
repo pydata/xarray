@@ -546,6 +546,9 @@ class TestDataset(TestCase):
         self.assertEqual(reblocked.blockdims, expected_blockdims)
         self.assertDatasetIdentical(reblocked, data)
 
+        with self.assertRaisesRegexp(ValueError, 'some blockdims or block'):
+            data.reblock(blockshape={'foo': 10})
+
     def test_isel(self):
         data = create_test_data()
         slicers = {'dim1': slice(None, None, 2), 'dim2': slice(0, 2)}
