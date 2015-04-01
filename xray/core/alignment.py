@@ -4,11 +4,12 @@ from collections import defaultdict
 
 import numpy as np
 
-from . import utils
+from . import ops, utils
 from .common import _maybe_promote
 from .pycompat import iteritems, OrderedDict, reduce
 from .utils import is_full_slice
-from .variable import as_variable, Variable, Coordinate, broadcast_variables
+from .variable import (as_variable, Variable, Coordinate, broadcast_variables,
+                       lazy_types)
 
 
 def _get_joiner(join):
@@ -180,23 +181,40 @@ def reindex_variables(variables, indexes, indexers, method=None, copy=True):
 
             if any_not_full_slices(assign_to):
                 # there are missing values to in-fill
+                data = var[assign_from].data
                 dtype, fill_value = _maybe_promote(var.dtype)
-                shape = tuple(to_shape[dim] for dim in var.dims)
-                data = np.empty(shape, dtype=dtype)
-                data[:] = fill_value
-                # create a new Variable so we can use orthogonal indexing
-                # use fastpath=True to avoid dtype inference
-                new_var = Variable(var.dims, data, var.attrs, fastpath=True)
-                new_var[assign_to] = var[assign_from].values
+
+                if isinstance(data, np.ndarray):
+                    shape = tuple(to_shape[dim] for dim in var.dims)
+                    new_data = np.empty(shape, dtype=dtype)
+                    new_data[...] = fill_value
+                    # create a new Variable so we can use orthogonal indexing
+                    # use fastpath=True to avoid dtype inference
+                    new_var = Variable(var.dims, new_data, var.attrs,
+                                       fastpath=True)
+                    new_var[assign_to] = data
+
+                else:  # dask array
+                    data = data.astype(dtype, copy=False)
+                    for axis, indexer in enumerate(assign_to):
+                        if not is_full_slice(indexer):
+                            indices = np.cumsum(indexer)[~indexer]
+                            data = ops.insert(data, indices, fill_value,
+                                              axis=axis)
+                    new_var = Variable(var.dims, data, var.attrs,
+                                       fastpath=True)
+
             elif any_not_full_slices(assign_from):
                 # type coercion is not necessary as there are no missing
                 # values
                 new_var = var[assign_from]
+
             else:
                 # no reindexing is necessary
                 # here we need to manually deal with copying data, since
                 # we neither created a new ndarray nor used fancy indexing
                 new_var = var.copy() if copy else var
+
         reindexed[name] = new_var
     return reindexed
 

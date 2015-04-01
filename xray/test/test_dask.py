@@ -143,8 +143,8 @@ class TestDataArray(DaskTestCase):
         self.assertIsInstance(lazy_ds.foo.variable.data, da.Array)
 
     def test_lazy_array(self):
-        eager_array = DataArray(self.values, dims=('x', 'y'))
-        lazy_array = DataArray(self.data, dims=('x', 'y'))
+        eager_array = DataArray(self.values, dims=('x', 'y'), name='foo')
+        lazy_array = DataArray(self.data, dims=('x', 'y'), name='foo')
 
         self.assertLazyAndAllClose(eager_array, lazy_array)
         self.assertLazyAndAllClose(-eager_array, -lazy_array)
@@ -156,9 +156,20 @@ class TestDataArray(DaskTestCase):
         self.assertLazyAndAllClose(eager_array, actual)
 
     def test_groupby(self):
-        eager_array = DataArray(self.values, dims=('x', 'y'))
-        lazy_array = DataArray(self.data, dims=('x', 'y'))
+        eager_array = DataArray(self.values, dims=('x', 'y'), name='foo')
+        lazy_array = DataArray(self.data, dims=('x', 'y'), name='foo')
 
         actual = lazy_array.groupby('x').mean()
         expected = eager_array.groupby('x').mean()
         self.assertLazyAndAllClose(expected, actual)
+
+    def test_reindex(self):
+        eager_array = DataArray(self.values, dims=('x', 'y'), name='foo')
+        lazy_array = DataArray(self.data, dims=('x', 'y'), name='foo')
+
+        for kwargs in [{'x': [3, 4, 5]},
+                       {'x': [4, 100, 6, 101, 7]},
+                       {'x': [5.5, 5, 4.5], 'y': [2, 2.5, 3]}]:
+            expected = eager_array.reindex(**kwargs)
+            actual = lazy_array.reindex(**kwargs)
+            self.assertLazyAndAllClose(expected, actual)

@@ -64,9 +64,10 @@ around = _dask_or_eager_func('around')
 isclose = _dask_or_eager_func('isclose')
 isnull = _dask_or_eager_func('isnull', pd)
 notnull = _dask_or_eager_func('notnull', pd)
+
 transpose = _dask_or_eager_func('transpose')
 where = _dask_or_eager_func('where')
-
+insert = _dask_or_eager_func('insert')
 broadcast_to = _dask_or_eager_func('broadcast_to', npcompat)
 
 concatenate = _dask_or_eager_func('concatenate', dispatch_elemwise=True)

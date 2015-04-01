@@ -72,6 +72,8 @@ def _maybe_wrap_data(data):
         return PandasIndexAdapter(data)
     if isinstance(data, np.ndarray):
         return NumpyArrayAdapter(data)
+    if isinstance(data, lazy_types):
+        return DaskArrayAdapter(data)
     return data
 
 
@@ -92,8 +94,8 @@ def _as_compatible_data(data, fastpath=False):
 
     # add a custom fast-path for dask.array to avoid expensive checks for the
     # dtype attribute
-    if isinstance(data, lazy_types):
-        return data
+    if isinstance(data, (lazy_types, DaskArrayAdapter)):
+        return _maybe_wrap_data(data)
 
     if isinstance(data, pd.Index):
         if isinstance(data, pd.MultiIndex):
@@ -163,6 +165,26 @@ class NumpyArrayAdapter(utils.NDArrayMixin):
     def __setitem__(self, key, value):
         key = self._convert_key(key)
         self.array[key] = value
+
+
+class DaskArrayAdapter(utils.NDArrayMixin):
+    """Wrap a dask array to support orthogonal indexing
+    """
+    def __init__(self, array):
+        self.array = array
+
+    def __getitem__(self, key):
+        key = indexing.expanded_indexer(key, self.ndim)
+        if any(not isinstance(k, (int, np.integer, slice)) for k in key):
+            value = self.array
+            for axis, subkey in reversed(list(enumerate(key))):
+                value = value[(slice(None),) * axis + (subkey,)]
+        else:
+            value = self.array[key]
+        return value
+
+    def __getattr__(self, name):
+        return getattr(self.array, name)
 
 
 class PandasIndexAdapter(utils.NDArrayMixin):
@@ -296,8 +318,8 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
 
     @property
     def data(self):
-        if isinstance(self._data, lazy_types):
-            return self._data
+        if isinstance(self._data, DaskArrayAdapter):
+            return self._data.array
         else:
             return self.values
 
@@ -519,7 +541,7 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
             blockshape = self.shape
 
         data = self._data
-        if isinstance(data, da.Array):
+        if isinstance(data, DaskArrayAdapter):
             data = data.reblock(blockdims=blockdims, blockshape=blockshape)
         else:
             if name:
