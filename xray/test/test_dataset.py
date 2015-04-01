@@ -13,7 +13,7 @@ import numpy as np
 import pandas as pd
 
 from xray import (align, concat, conventions, backends, Dataset, DataArray,
-                  Variable, Coordinate, auto_combine)
+                  Variable, Coordinate, auto_combine, open_dataset)
 from xray.core import indexing, utils
 from xray.core.pycompat import iteritems, OrderedDict
 
@@ -548,6 +548,28 @@ class TestDataset(TestCase):
 
         with self.assertRaisesRegexp(ValueError, 'some blockdims or block'):
             data.reblock(blockshape={'foo': 10})
+
+    @requires_dask
+    def test_dask_is_lazy(self):
+        store = InaccessibleVariableDataStore()
+        create_test_data().dump_to_store(store)
+        ds = open_dataset(store).reblock()
+
+        with self.assertRaises(UnexpectedDataAccess):
+            ds.load_data()
+        with self.assertRaises(UnexpectedDataAccess):
+            ds['var1'].values
+
+        # these should not raise UnexpectedDataAccess:
+        ds.var1.data
+        ds.isel(time=10)
+        ds.isel(time=slice(10), dim1=[0]).isel(dim1=0, dim2=-1)
+        ds.transpose()
+        ds.mean()
+        ds.fillna(0)
+        ds.rename({'dim1': 'foobar'})
+        ds.set_coords('var1')
+        ds.drop('var1')
 
     def test_isel(self):
         data = create_test_data()
@@ -1557,8 +1579,8 @@ class TestDataset(TestCase):
         store = InaccessibleVariableDataStore()
         create_test_data().dump_to_store(store)
 
-        for decoder in [None, conventions.cf_decoder]:
-            ds = Dataset.load_store(store, decoder=decoder)
+        for decode_cf in [True, False]:
+            ds = open_dataset(store, decode_cf=decode_cf)
             with self.assertRaises(UnexpectedDataAccess):
                 ds.load_data()
             with self.assertRaises(UnexpectedDataAccess):

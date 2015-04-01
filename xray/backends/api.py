@@ -36,7 +36,7 @@ def open_dataset(filename_or_obj, group=None, decode_cf=True,
 
     Parameters
     ----------
-    filename_or_obj : str or file
+    filename_or_obj : str, file or xray.backends.*DataStore
         Strings are interpreted as a path to a netCDF file or an OpenDAP URL
         and opened with python-netCDF4, unless the filename ends with .gz, in
         which case the file is gunzipped and opened with scipy.io.netcdf (only
@@ -92,7 +92,9 @@ def open_dataset(filename_or_obj, group=None, decode_cf=True,
             ds = ds.reblock(blockdims=blockdims, blockshape=blockshape)
         return ds
 
-    if isinstance(filename_or_obj, basestring):
+    if isinstance(filename_or_obj, backends.AbstractDataStore):
+        store = filename_or_obj
+    elif isinstance(filename_or_obj, basestring):
         if filename_or_obj.endswith('.gz'):
             if engine is not None and engine != 'scipy':
                 raise ValueError('can only read gzipped netCDF files with '
@@ -129,7 +131,7 @@ def open_dataset(filename_or_obj, group=None, decode_cf=True,
                              "default engine or engine='scipy'")
         # assume filename_or_obj is a file-like object
         store = backends.ScipyDataStore(filename_or_obj)
-        return maybe_decode_store(store)
+    return maybe_decode_store(store)
 
 
 class _MultiFileCloser(object):

@@ -518,7 +518,7 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
         if blockdims is None and blockshape is None:
             blockshape = self.shape
 
-        data = self.data
+        data = self._data
         if isinstance(data, da.Array):
             data = data.reblock(blockdims=blockdims, blockshape=blockshape)
         else:
