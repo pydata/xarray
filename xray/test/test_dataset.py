@@ -1661,7 +1661,11 @@ class TestDataset(TestCase):
         actual = ds.fillna({'a': -1})
         self.assertDatasetIdentical(expected, actual)
 
-        actual = ds.fillna(Dataset({'a': -1}))
+        other = Dataset({'a': -1})
+        actual = ds.fillna(other)
+        self.assertDatasetIdentical(expected, actual)
+
+        actual = ds.fillna({'a': other.a})
         self.assertDatasetIdentical(expected, actual)
 
         # fill with range(4)
@@ -1883,8 +1887,9 @@ class TestDataset(TestCase):
         self.assertDatasetIdentical(expected, ds['foo'] + ds)
         self.assertDatasetIdentical(expected, ds + ds['foo'].variable)
         self.assertDatasetIdentical(expected, ds['foo'].variable + ds)
-        with self.assertRaisesRegexp(ValueError, 'dimensions cannot change'):
-            ds += ds['foo']
+        actual = ds.copy(deep=True)
+        actual += ds['foo']
+        self.assertDatasetIdentical(expected, actual)
 
         expected = ds.apply(lambda x: x + ds['bar'])
         self.assertDatasetIdentical(expected, ds + ds['bar'])
@@ -1909,8 +1914,10 @@ class TestDataset(TestCase):
         self.assertDatasetIdentical(expected, ds + dict(ds.data_vars))
 
         actual = ds.copy(deep=True)
+        expected_id = id(actual)
         actual += ds
         self.assertDatasetIdentical(expected, actual)
+        self.assertEqual(expected_id, id(actual))
 
         self.assertDatasetIdentical(ds == ds, ds.notnull())
 
@@ -1945,6 +1952,13 @@ class TestDataset(TestCase):
 
         # maybe unary arithmetic with empty datasets should raise instead?
         self.assertDatasetIdentical(Dataset() + 1, Dataset())
+
+        for other in [ds.isel(x=slice(2)), ds.bar.isel(x=slice(0))]:
+            actual = ds.copy(deep=True)
+            other = ds.isel(x=slice(2))
+            actual += other
+            expected = ds + other.reindex_like(ds)
+            self.assertDatasetIdentical(expected, actual)
 
     def test_dataset_math_errors(self):
         ds = self.make_example_math_dataset()

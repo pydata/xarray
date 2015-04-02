@@ -1774,7 +1774,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject):
         return func
 
     @staticmethod
-    def _binary_op(f, reflexive=False, join='inner', drop_missing_vars=True):
+    def _binary_op(f, reflexive=False, join='inner', drop_na_vars=True):
         @functools.wraps(f)
         def func(self, other):
             if isinstance(other, groupby.GroupBy):
@@ -1785,11 +1785,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject):
                 if empty_indexes:
                     raise ValueError('no overlapping labels for some '
                                      'dimensions: %s' % empty_indexes)
-            other_coords = getattr(other, 'coords', None)
-            ds = self.coords.merge(other_coords)
             g = f if not reflexive else lambda x, y: f(y, x)
-            _calculate_binary_op(g, self, other, ds._variables,
-                                 drop_missing_vars=drop_missing_vars)
+            ds = self._calculate_binary_op(g, other, drop_na_vars=drop_na_vars)
             return ds
         return func
 
@@ -1800,49 +1797,59 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject):
             if isinstance(other, groupby.GroupBy):
                 raise TypeError('in-place operations between a Dataset and '
                                 'a grouped object are not permitted')
-            other_coords = getattr(other, 'coords', None)
-            with self.coords._merge_inplace(other_coords):
-                # make a defensive copy of variables to modify in-place so we
-                # can rollback in case of an exception
-                # note: when/if we support automatic alignment, only copy the
-                # variables that will actually be included in the result
-                dest_vars = dict((k, self._variables[k].copy())
-                                 for k in self.data_vars)
-                _calculate_binary_op(f, dest_vars, other, dest_vars,
-                                     inplace=True)
-                self._variables.update(dest_vars)
+            if hasattr(other, 'indexes'):
+                other = other.reindex_like(self, copy=False)
+            # we don't want to actually modify arrays in-place
+            g = ops.inplace_to_noninplace_op(f)
+            ds = self._calculate_binary_op(g, other, inplace=True)
+            self._replace_vars_and_dims(ds._variables, ds._coord_names,
+                                        ds._attrs, inplace=True)
             return self
         return func
 
+    def _calculate_binary_op(self, f, other, inplace=False, drop_na_vars=True):
 
-def _calculate_binary_op(f, dataset, other, dest_vars, inplace=False,
-                         drop_missing_vars=True):
-    dataset_variables = getattr(dataset, 'variables', dataset)
-    dataset_data_vars = getattr(dataset, 'data_vars', dataset)
-    if utils.is_dict_like(other):
-        other_variables = getattr(other, 'variables', other)
-        other_data_vars = getattr(other, 'data_vars', other)
-        performed_op = False
-        for k in dataset_data_vars:
-            if k in other_data_vars:
-                dest_vars[k] = f(dataset_variables[k], other_variables[k])
-                performed_op = True
-            elif inplace and k in dest_vars:
-                raise ValueError('datasets must have the same data variables '
-                                 'for in-place arithmetic operations: %s, %s'
-                                 % (list(dataset_data_vars),
-                                    list(other_data_vars)))
-            elif not drop_missing_vars:
-                # this shortcuts left alignment of variables for fillna
-                dest_vars[k] = dataset_variables[k]
-        if not performed_op:
-            raise ValueError('datasets have no overlapping data variables: '
-                             '%s, %s' % (list(dataset_data_vars),
-                                         list(other_data_vars)))
-    else:
-        other_variable = getattr(other, 'variable', other)
-        for k in dataset_data_vars:
-            dest_vars[k] = f(dataset_variables[k], other_variable)
+        def apply_over_both(lhs_data_vars, rhs_data_vars, lhs_vars, rhs_vars):
+            dest_vars = OrderedDict()
+            performed_op = False
+            for k in lhs_data_vars:
+                if k in rhs_data_vars:
+                    dest_vars[k] = f(lhs_vars[k], rhs_vars[k])
+                    performed_op = True
+                elif inplace:
+                    raise ValueError(
+                        'datasets must have the same data variables '
+                        'for in-place arithmetic operations: %s, %s'
+                        % (list(lhs_data_vars), list(rhs_data_vars)))
+                elif not drop_na_vars:
+                    # this shortcuts left alignment of variables for fillna
+                    dest_vars[k] = lhs_vars[k]
+            if not performed_op:
+                raise ValueError(
+                    'datasets have no overlapping data variables: %s, %s'
+                    % (list(lhs_data_vars), list(rhs_data_vars)))
+            return dest_vars
+
+        if utils.is_dict_like(other) and not isinstance(other, Dataset):
+            # can't use our shortcut of doing the binary operation with
+            # Variable objects, so apply over our data vars instead.
+            new_data_vars = apply_over_both(self.data_vars, other,
+                                            self.data_vars, other)
+            return Dataset(new_data_vars)
+
+        other_coords = getattr(other, 'coords', None)
+        ds = self.coords.merge(other_coords)
+
+        if isinstance(other, Dataset):
+            new_vars = apply_over_both(self.data_vars, other.data_vars,
+                                       self.variables, other.variables)
+        else:
+            other_variable = getattr(other, 'variable', other)
+            new_vars = OrderedDict((k, f(self.variables[k], other_variable))
+                                   for k in self.data_vars)
+
+        ds._variables.update(new_vars)
+        return ds
 
 
 ops.inject_all_ops_and_reduce_methods(Dataset, array_only=False)
