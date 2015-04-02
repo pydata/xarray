@@ -1,6 +1,7 @@
 import numpy as np
 
 from xray import Variable, DataArray, Dataset, concat
+import xray.ufuncs as xu
 from . import TestCase, requires_dask, unittest, InaccessibleArray
 
 try:
@@ -144,6 +145,11 @@ class TestVariable(DaskTestCase):
         with self.assertRaisesRegexp(NotImplementedError, 'dask'):
             v[0].item()
 
+    def test_ufuncs(self):
+        u = self.eager_var
+        v = self.lazy_var
+        self.assertLazyAndAllClose(np.sin(u), xu.sin(v))
+
 
 @requires_dask
 class TestDataArray(DaskTestCase):
@@ -156,52 +162,59 @@ class TestDataArray(DaskTestCase):
     def setUp(self):
         self.values = np.random.randn(4, 6)
         self.data = da.from_array(self.values, blockshape=(2, 2))
+        self.eager_array = DataArray(self.values, dims=('x', 'y'), name='foo')
+        self.lazy_array = DataArray(self.data, dims=('x', 'y'), name='foo')
 
     def test_lazy_dataset(self):
         lazy_ds = Dataset({'foo': (('x', 'y'), self.data)})
         self.assertIsInstance(lazy_ds.foo.variable.data, da.Array)
 
     def test_lazy_array(self):
-        eager_array = DataArray(self.values, dims=('x', 'y'), name='foo')
-        lazy_array = DataArray(self.data, dims=('x', 'y'), name='foo')
+        u = self.eager_array
+        v = self.lazy_array
 
-        self.assertLazyAndAllClose(eager_array, lazy_array)
-        self.assertLazyAndAllClose(-eager_array, -lazy_array)
-        self.assertLazyAndAllClose(eager_array.T, lazy_array.T)
-        self.assertLazyAndAllClose(eager_array.mean(), lazy_array.mean())
-        self.assertLazyAndAllClose(1 + eager_array, 1 + lazy_array)
+        self.assertLazyAndAllClose(u, v)
+        self.assertLazyAndAllClose(-u, -v)
+        self.assertLazyAndAllClose(u.T, v.T)
+        self.assertLazyAndAllClose(u.mean(), v.mean())
+        self.assertLazyAndAllClose(1 + u, 1 + v)
 
-        actual = concat([lazy_array[:2], lazy_array[2:]], 'x')
-        self.assertLazyAndAllClose(eager_array, actual)
+        actual = concat([v[:2], v[2:]], 'x')
+        self.assertLazyAndAllClose(u, actual)
 
     def test_groupby(self):
-        eager_array = DataArray(self.values, dims=('x', 'y'), name='foo')
-        lazy_array = DataArray(self.data, dims=('x', 'y'), name='foo')
+        u = self.eager_array
+        v = self.lazy_array
 
-        actual = lazy_array.groupby('x').mean()
-        expected = eager_array.groupby('x').mean()
+        expected = u.groupby('x').mean()
+        actual = v.groupby('x').mean()
         self.assertLazyAndAllClose(expected, actual)
 
     @unittest.skip('needs a dask fix')
     def test_groupby_first(self):
-        eager_array = DataArray(self.values, dims=('x', 'y'), name='foo')
-        lazy_array = DataArray(self.data, dims=('x', 'y'), name='foo')
+        u = self.eager_array
+        v = self.lazy_array
 
-        for coords in [eager_array.coords, lazy_array.coords]:
+        for coords in [u.coords, v.coords]:
             coords['ab'] = ('x', ['a', 'a', 'b', 'b'])
         with self.assertRaisesRegexp(NotImplementedError, 'dask'):
-            lazy_array.groupby('ab').first()
-        actual = lazy_array.groupby('ab').first(skipna=False)
-        expected = eager_array.groupby('ab').first()
+            v.groupby('ab').first()
+        expected = u.groupby('ab').first()
+        actual = v.groupby('ab').first(skipna=False)
         self.assertLazyAndAllClose(expected, actual)
 
     def test_reindex(self):
-        eager_array = DataArray(self.values, dims=('x', 'y'), name='foo')
-        lazy_array = DataArray(self.data, dims=('x', 'y'), name='foo')
+        u = self.eager_array
+        v = self.lazy_array
 
         for kwargs in [{'x': [3, 4, 5]},
                        {'x': [4, 100, 6, 101, 7]},
                        {'x': [5.5, 5, 4.5], 'y': [2, 2.5, 3]}]:
-            expected = eager_array.reindex(**kwargs)
-            actual = lazy_array.reindex(**kwargs)
+            expected = u.reindex(**kwargs)
+            actual = v.reindex(**kwargs)
             self.assertLazyAndAllClose(expected, actual)
+
+    def test_ufuncs(self):
+        u = self.eager_array
+        v = self.lazy_array
+        self.assertLazyAndAllClose(np.sin(u), xu.sin(v))
