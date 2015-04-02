@@ -8,8 +8,7 @@ from . import ops, utils
 from .common import _maybe_promote
 from .pycompat import iteritems, OrderedDict, reduce
 from .utils import is_full_slice
-from .variable import (as_variable, Variable, Coordinate, broadcast_variables,
-                       lazy_types)
+from .variable import as_variable, Variable, Coordinate, broadcast_variables
 
 
 def _get_joiner(join):

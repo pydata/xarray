@@ -9,16 +9,10 @@ from . import common
 from . import indexing
 from . import ops
 from . import utils
-from .pycompat import basestring, OrderedDict, zip, reduce
+from .pycompat import basestring, OrderedDict, zip, reduce, dask_array_type
+from .indexing import PandasIndexAdapter, orthogonally_indexable
 
 import xray # only for Dataset and DataArray
-
-
-try:
-    import dask.array
-    lazy_types = (dask.array.Array,)
-except ImportError: # pragma: no cover
-    lazy_types = ()
 
 
 def as_variable(obj, key=None, strict=True):
@@ -68,12 +62,7 @@ def _maybe_wrap_data(data):
     all pass through unmodified.
     """
     if isinstance(data, pd.Index):
-        # check pd.Index first since it may be an ndarray subclass
         return PandasIndexAdapter(data)
-    if isinstance(data, np.ndarray):
-        return NumpyArrayAdapter(data)
-    if isinstance(data, lazy_types):
-        return DaskArrayAdapter(data)
     return data
 
 
@@ -94,8 +83,8 @@ def _as_compatible_data(data, fastpath=False):
 
     # add a custom fast-path for dask.array to avoid expensive checks for the
     # dtype attribute
-    if isinstance(data, (lazy_types, DaskArrayAdapter)):
-        return _maybe_wrap_data(data)
+    if isinstance(data, dask_array_type):
+        return data
 
     if isinstance(data, pd.Index):
         if isinstance(data, pd.MultiIndex):
@@ -136,102 +125,6 @@ def _as_compatible_data(data, fastpath=False):
             data = np.asarray(data, 'timedelta64[ns]')
 
     return _maybe_wrap_data(data)
-
-
-class NumpyArrayAdapter(utils.NDArrayMixin):
-    """Wrap a NumPy array to use orthogonal indexing (array indexing
-    accesses different dimensions independently, like netCDF4-python variables)
-    """
-    # note: this object is somewhat similar to biggus.NumpyArrayAdapter in that
-    # it implements orthogonal indexing, except it casts to a numpy array,
-    # isn't lazy and supports writing values.
-    def __init__(self, array):
-        self.array = np.asarray(array)
-
-    def __array__(self, dtype=None):
-        return np.asarray(self.array, dtype=dtype)
-
-    def _convert_key(self, key):
-        key = indexing.expanded_indexer(key, self.ndim)
-        if any(not isinstance(k, (int, np.integer, slice)) for k in key):
-            # key would trigger fancy indexing
-            key = indexing.orthogonal_indexer(key, self.shape)
-        return key
-
-    def __getitem__(self, key):
-        key = self._convert_key(key)
-        return self.array[key]
-
-    def __setitem__(self, key, value):
-        key = self._convert_key(key)
-        self.array[key] = value
-
-
-class DaskArrayAdapter(utils.NDArrayMixin):
-    """Wrap a dask array to support orthogonal indexing
-    """
-    def __init__(self, array):
-        self.array = array
-
-    def __getitem__(self, key):
-        key = indexing.expanded_indexer(key, self.ndim)
-        if any(not isinstance(k, (int, np.integer, slice)) for k in key):
-            value = self.array
-            for axis, subkey in reversed(list(enumerate(key))):
-                value = value[(slice(None),) * axis + (subkey,)]
-        else:
-            value = self.array[key]
-        return value
-
-    def __getattr__(self, name):
-        return getattr(self.array, name)
-
-
-class PandasIndexAdapter(utils.NDArrayMixin):
-    """Wrap a pandas.Index to be better about preserving dtypes and to handle
-    indexing by length 1 tuples like numpy
-    """
-    def __init__(self, array, dtype=None):
-        self.array = utils.safe_cast_to_index(array)
-        if dtype is None:
-            dtype = array.dtype
-        self._dtype = dtype
-
-    @property
-    def dtype(self):
-        return self._dtype
-
-    def __array__(self, dtype=None):
-        if dtype is None:
-            dtype = self.dtype
-        return self.array.values.astype(dtype)
-
-    def __getitem__(self, key):
-        if isinstance(key, tuple) and len(key) == 1:
-            # unpack key so it can index a pandas.Index object (pandas.Index
-            # objects don't like tuples)
-            key, = key
-
-        if isinstance(key, (int, np.integer)):
-            value = self.array[key]
-            if value is pd.NaT:
-                # work around the impossibility of casting NaT with asarray
-                # note: it probably would be better in general to return
-                # pd.Timestamp rather np.than datetime64 but this is easier
-                # (for now)
-                value = np.datetime64('NaT', 'ns')
-            elif isinstance(value, timedelta):
-                value = np.timedelta64(getattr(value, 'value', value), 'ns')
-            else:
-                value = np.asarray(value, dtype=self.dtype)
-        else:
-            value = PandasIndexAdapter(self.array[key], dtype=self.dtype)
-
-        return value
-
-    def __repr__(self):
-        return ('%s(array=%r, dtype=%r)'
-                % (type(self).__name__, self.array, self.dtype))
 
 
 def _as_array_or_item(data):
@@ -314,21 +207,23 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
 
     @property
     def _in_memory(self):
-        return isinstance(self._data, (NumpyArrayAdapter, PandasIndexAdapter))
+        return isinstance(self._data, (np.ndarray, PandasIndexAdapter))
 
     @property
     def data(self):
-        if isinstance(self._data, DaskArrayAdapter):
-            return self._data.array
+        if isinstance(self._data, dask_array_type):
+            return self._data
         else:
             return self.values
 
-    _cache_data_class = NumpyArrayAdapter
-
     def _data_cached(self):
-        if not isinstance(self._data, self._cache_data_class):
-            self._data = self._cache_data_class(self._data)
+        if not isinstance(self._data, np.ndarray):
+            self._data = np.asarray(self._data)
         return self._data
+
+    @property
+    def _indexable_data(self):
+        return orthogonally_indexable(self._data)
 
     def load_data(self):
         """Manually trigger loading of this variable's data from disk or a
@@ -422,7 +317,7 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
         key = indexing.expanded_indexer(key, self.ndim)
         dims = tuple(dim for k, dim in zip(key, self.dims)
                      if not isinstance(k, (int, np.integer)))
-        values = self._data[key]
+        values = self._indexable_data[key]
         # orthogonal indexing should ensure the dimensionality is consistent
         if hasattr(values, 'ndim'):
             assert values.ndim == len(dims), (values.ndim, len(dims))
@@ -437,7 +332,14 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
         See __getitem__ for more details.
         """
         key = self._item_key_to_tuple(key)
-        self._data_cached()[key] = value
+        if isinstance(self._data, dask_array_type):
+            raise TypeError("this variable's data is stored in a dask array, "
+                            'which does not support item assignment. To '
+                            'assign to this variable, you must first load it '
+                            'into memory explicitly using the .load_data() '
+                            'method or accessing its .values attribute.')
+        data = orthogonally_indexable(self._data_cached())
+        data[key] = value
 
     @property
     def attrs(self):
@@ -541,7 +443,7 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
             blockshape = self.shape
 
         data = self._data
-        if isinstance(data, DaskArrayAdapter):
+        if isinstance(data, dask_array_type):
             data = data.reblock(blockdims=blockdims, blockshape=blockshape)
         else:
             if name:
@@ -887,17 +789,20 @@ class Coordinate(Variable):
     pandas.Index methods directly (e.g., get_indexer), even though pandas does
     not (yet) support duck-typing for indexes.
     """
-    _cache_data_class = PandasIndexAdapter
-
     def __init__(self, name, data, attrs=None, encoding=None, fastpath=False):
         super(Coordinate, self).__init__(name, data, attrs, encoding, fastpath)
         if self.ndim != 1:
             raise ValueError('%s objects must be 1-dimensional' %
                              type(self).__name__)
 
+    def _data_cached(self):
+        if not isinstance(self._data, PandasIndexAdapter):
+            self._data = PandasIndexAdapter(self._data)
+        return self._data
+
     def __getitem__(self, key):
         key = self._item_key_to_tuple(key)
-        values = self._data[key]
+        values = self._indexable_data[key]
         if not hasattr(values, 'ndim') or values.ndim == 0:
             return Variable((), values, self._attrs, self._encoding)
         else:

@@ -97,7 +97,7 @@ class TestLazyArray(TestCase):
                 self.assertArrayEqual(expected, actual)
 
     def test_lazily_indexed_array(self):
-        x = variable.NumpyArrayAdapter(np.random.rand(10, 20, 30))
+        x = indexing.NumpyIndexingAdapter(np.random.rand(10, 20, 30))
         lazy = indexing.LazilyIndexedArray(x)
         I = ReturnItem()
         # test orthogonally applied indexers

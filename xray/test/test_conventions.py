@@ -3,13 +3,13 @@ import numpy as np
 import pandas as pd
 import warnings
 
-from xray import conventions, Variable, Dataset, decode_cf
+from xray import conventions, Variable, Dataset, open_dataset
 from xray.core import utils, indexing
 from . import TestCase, requires_netCDF4, unittest
 from .test_backends import CFEncodedDataTest
 from xray.core.pycompat import iteritems
 from xray.backends.memory import InMemoryDataStore
-from xray.conventions import cf_encoder, cf_decoder
+from xray.conventions import cf_encoder, cf_decoder, decode_cf
 
 
 class TestMaskedAndScaledArray(TestCase):
@@ -452,10 +452,7 @@ class TestCFEncodedDataStore(CFEncodedDataTest, TestCase):
     def roundtrip(self, data, decode_cf=True):
         store = CFEncodedInMemoryStore()
         data.dump_to_store(store)
-        if decode_cf:
-            yield conventions.decode_cf(store)
-        else:
-            yield Dataset.load_store(store)
+        yield open_dataset(store, decode_cf=decode_cf)
 
     def test_roundtrip_coordinates(self):
         raise unittest.SkipTest('cannot roundtrip coordinates yet for '

@@ -4,8 +4,8 @@ import itertools
 from collections import Mapping
 
 from ..core.utils import FrozenOrderedDict
-from ..core.pycompat import iteritems
-from ..core.variable import Coordinate, lazy_types
+from ..core.pycompat import iteritems, dask_array_type
+from ..core.variable import Coordinate
 
 
 NONE_VAR_NAME = '__values__'
@@ -123,7 +123,7 @@ class ArrayWriter(object):
         self.targets = []
 
     def add(self, source, target):
-        if isinstance(source, lazy_types):
+        if isinstance(source, dask_array_type):
             self.sources.append(source)
             self.targets.append(target)
         else:

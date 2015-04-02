@@ -6,7 +6,7 @@ import numpy as np
 import pandas as pd
 
 from . import npcompat
-from .pycompat import PY3, range
+from .pycompat import PY3, range, dask_array_type
 from .nputils import (
     nanfirst, nanlast, interleaved_concat as _interleaved_concat_numpy,
     array_eq, array_ne, _validate_axis, _calc_concat_shape
@@ -136,13 +136,11 @@ def interleaved_concat(arrays, indices, axis=0):
 
 
 def asarray(data):
-    from .variable import lazy_types
-    return data if isinstance(data, lazy_types) else np.asarray(data)
+    return data if isinstance(data, dask_array_type) else np.asarray(data)
 
 
 def as_like_arrays(*data):
-    from .variable import lazy_types
-    if all(isinstance(d, lazy_types) for d in data):
+    if all(isinstance(d, dask_array_type) for d in data):
         return data
     else:
         return tuple(np.asarray(d) for d in data)

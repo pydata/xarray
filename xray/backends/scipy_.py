@@ -7,7 +7,7 @@ from .. import Variable
 from ..conventions import cf_encoder
 from ..core.pycompat import iteritems, basestring, unicode_type, OrderedDict
 from ..core.utils import Frozen, FrozenOrderedDict
-from ..core.variable import NumpyArrayAdapter
+from ..core.indexing import NumpyIndexingAdapter
 
 from .common import AbstractWritableDataStore
 from .netcdf3 import (is_valid_nc3_name, coerce_nc3_dtype,
@@ -28,7 +28,7 @@ def _decode_attrs(d):
                        for (k, v) in iteritems(d))
 
 
-class ScipyArrayWrapper(NumpyArrayAdapter):
+class ScipyArrayWrapper(NumpyIndexingAdapter):
     def __init__(self, netcdf_file, variable_name):
         self.netcdf_file = netcdf_file
         self.variable_name = variable_name

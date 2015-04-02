@@ -71,6 +71,9 @@ class TestVariable(DaskTestCase):
         v = self.lazy_var
         self.assertLazyAndIdentical(u[0], v[0])
         self.assertLazyAndIdentical(u[:1], v[:1])
+        self.assertLazyAndIdentical(u[[0, 1], [0, 1, 2]], v[[0, 1], [0, 1, 2]])
+        with self.assertRaisesRegexp(TypeError, 'stored in a dask array'):
+            v[:1] = 0
 
     def test_squeeze(self):
         u = self.eager_var

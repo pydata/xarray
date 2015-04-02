@@ -163,7 +163,7 @@ def source_ndarray(array):
     """Given an ndarray, return the base object which holds its memory, or the
     object itself.
     """
-    base = array.base
+    base = getattr(array, 'base', np.asarray(array).base)
     if base is None:
         base = array
     return base
