@@ -250,7 +250,7 @@ class GroupBy(object):
             # dimension
             return self.obj
         return self.reduce(op, self.group_dim, skipna=skipna,
-                           keep_attrs=keep_attrs)
+                           keep_attrs=keep_attrs, allow_lazy=True)
 
     def first(self, skipna=None, keep_attrs=True):
         """Return the first element of each group along the group dimension

@@ -1,4 +1,6 @@
+from functools import partial
 import contextlib
+import inspect
 import operator
 import warnings
 
@@ -38,8 +40,7 @@ if not PY3:
 NUMPY_SAME_METHODS = ['item', 'searchsorted']
 # methods which don't modify the data shape, so the result should still be
 # wrapped in an Variable/DataArray
-NUMPY_UNARY_METHODS = ['astype', 'argsort', 'clip', 'conj', 'conjugate',
-                       'round']
+NUMPY_UNARY_METHODS = ['astype', 'argsort', 'clip', 'conj', 'conjugate']
 PANDAS_UNARY_FUNCTIONS = ['isnull', 'notnull']
 # methods which remove an axis
 NUMPY_REDUCE_METHODS = ['all', 'any']
@@ -60,6 +61,15 @@ def _dask_or_eager_func(name, eager_module=np, dispatch_elemwise=False):
     return f
 
 
+def _fail_on_dask_array_input(values, msg=None, func_name=None):
+    if isinstance(values, dask_array_type):
+        if msg is None:
+            msg = '%r is not a valid method on dask arrays'
+        if func_name is None:
+            func_name = inspect.stack()[1][3]
+        raise NotImplementedError(msg % func_name)
+
+
 around = _dask_or_eager_func('around')
 isclose = _dask_or_eager_func('isclose')
 isnull = _dask_or_eager_func('isnull', pd)
@@ -68,6 +78,7 @@ notnull = _dask_or_eager_func('notnull', pd)
 transpose = _dask_or_eager_func('transpose')
 where = _dask_or_eager_func('where')
 insert = _dask_or_eager_func('insert')
+take = _dask_or_eager_func('take')
 broadcast_to = _dask_or_eager_func('broadcast_to', npcompat)
 
 concatenate = _dask_or_eager_func('concatenate', dispatch_elemwise=True)
@@ -164,9 +175,21 @@ def array_equiv(arr1, arr2):
     return bool(((arr1 == arr2) | (isnull(arr1) & isnull(arr2))).all())
 
 
+def _call_possibly_missing_method(arg, name, args, kwargs):
+    try:
+        method = getattr(arg, name)
+    except AttributeError:
+        _fail_on_dask_array_input(arg, func_name=name)
+        if hasattr(arg, 'data'):
+            _fail_on_dask_array_input(arg.data, func_name=name)
+        raise
+    else:
+        return method(*args, **kwargs)
+
+
 def _values_method_wrapper(name):
     def func(self, *args, **kwargs):
-        return getattr(self.values, name)(*args, **kwargs)
+        return _call_possibly_missing_method(self.data, name, args, kwargs)
     func.__name__ = name
     func.__doc__ = getattr(np.ndarray, name).__doc__
     return func
@@ -174,7 +197,7 @@ def _values_method_wrapper(name):
 
 def _method_wrapper(name):
     def func(self, *args, **kwargs):
-        return getattr(self, name)(*args, **kwargs)
+        return _call_possibly_missing_method(self, name, args, kwargs)
     func.__name__ = name
     func.__doc__ = getattr(np.ndarray, name).__doc__
     return func
@@ -270,10 +293,14 @@ def _create_nan_agg_method(name, numeric_only=False):
             try:
                 return func(values, axis=axis, **kwargs)
             except AttributeError:
-                raise NotImplementedError(
-                    '%s is not available with skipna=False with the '
-                    'installed version of numpy; upgrade to numpy 1.9 or '
-                    'newer to use skipna=True or skipna=None' % name)
+                if isinstance(values, dask_array_type):
+                    msg = '%s is not yet implemented on dask arrays' % name
+                else:
+                    assert using_numpy_nan_func
+                    msg = ('%s is not available with skipna=False with the '
+                           'installed version of numpy; upgrade to numpy 1.9 '
+                           'or newer to use skipna=True or skipna=None' % name)
+                raise NotImplementedError(msg)
     f.numeric_only = numeric_only
     return f
 
@@ -289,37 +316,23 @@ var = _create_nan_agg_method('var', numeric_only=True)
 median = _create_nan_agg_method('median', numeric_only=True)
 
 
-def numeric_only(f):
-    f.numeric_only = True
-    return f
+_fail_on_dask_array_input_skipna = partial(
+    _fail_on_dask_array_input,
+    msg='%r with skipna=True is not yet implemented on dask arrays')
 
 
-def _replace_nan(a, val):
-    # copied from np.lib.nanfunctions
-    # remove this if/when https://github.com/numpy/numpy/pull/5418 is merged
-    is_new = not isinstance(a, np.ndarray)
-    if is_new:
-        a = np.array(a)
-    if not issubclass(a.dtype.type, np.inexact):
-        return a, None
-    if not is_new:
-        # need copy
-        a = np.array(a, subok=True)
+_prod = _dask_or_eager_func('prod')
 
-    mask = np.isnan(a)
-    np.copyto(a, val, where=mask)
-    return a, mask
-
-
-@numeric_only
 def prod(values, axis=None, skipna=None, **kwargs):
     if skipna or (skipna is None and values.dtype.kind == 'f'):
         if values.dtype.kind not in ['i', 'f']:
             raise NotImplementedError(
                 'skipna=True not yet implemented for prod with dtype %s'
                 % values.dtype)
-        values, mask = _replace_nan(values, 1)
-    return np.prod(values, axis=axis, **kwargs)
+        _fail_on_dask_array_input_skipna(values)
+        return npcompat.nanprod(values, axis=axis, **kwargs)
+    return _prod(values, axis=axis, **kwargs)
+prod.numeric_only = True
 
 
 def first(values, axis, skipna=None):
@@ -327,8 +340,9 @@ def first(values, axis, skipna=None):
     """
     if (skipna or skipna is None) and values.dtype.kind not in 'iSU':
         # only bother for dtypes that can hold NaN
+        _fail_on_dask_array_input_skipna(values)
         return nanfirst(values, axis)
-    return np.take(values, 0, axis=axis)
+    return take(values, 0, axis=axis)
 
 
 def last(values, axis, skipna=None):
@@ -336,8 +350,9 @@ def last(values, axis, skipna=None):
     """
     if (skipna or skipna is None) and values.dtype.kind not in 'iSU':
         # only bother for dtypes that can hold NaN
+        _fail_on_dask_array_input_skipna(values)
         return nanlast(values, axis)
-    return np.take(values, -1, axis=axis)
+    return take(values, -1, axis=axis)
 
 
 def inject_reduce_methods(cls):
@@ -389,19 +404,27 @@ def inject_all_ops_and_reduce_methods(cls, priority=50, array_only=True):
     # priortize our operations over those of numpy.ndarray (priority=1)
     # and numpy.matrix (priority=10)
     cls.__array_priority__ = priority
+
     # patch in standard special operations
     for name in UNARY_OPS:
         setattr(cls, op_str(name), cls._unary_op(get_op(name)))
     inject_binary_ops(cls, inplace=True)
+
     # patch in numpy/pandas methods
     for name in NUMPY_UNARY_METHODS:
         setattr(cls, name, cls._unary_op(_method_wrapper(name)))
+
     for name in PANDAS_UNARY_FUNCTIONS:
         f = _func_slash_method_wrapper(getattr(pd, name))
         setattr(cls, name, cls._unary_op(f))
+
+    f = _func_slash_method_wrapper(around, name='round')
+    setattr(cls, 'round', cls._unary_op(f))
+
     if array_only:
         # these methods don't return arrays of the same shape as the input, so
         # don't try to patch these in for Dataset objects
         for name in NUMPY_SAME_METHODS:
             setattr(cls, name, _values_method_wrapper(name))
+
     inject_reduce_methods(cls)

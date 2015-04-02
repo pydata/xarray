@@ -97,6 +97,7 @@ class TestVariable(DaskTestCase):
         v = self.lazy_var
         self.assertLazyAndIdentical(-u, -v)
         self.assertLazyAndIdentical(abs(u), abs(v))
+        self.assertLazyAndIdentical(u.round(), v.round())
 
     def test_binary_op(self):
         u = self.eager_var
@@ -109,6 +110,12 @@ class TestVariable(DaskTestCase):
         u = self.eager_var
         v = self.lazy_var
         self.assertLazyAndAllClose(u.mean(), v.mean())
+        self.assertLazyAndAllClose(u.std(), v.std())
+        self.assertLazyAndAllClose(u.argmax(dim='x'), v.argmax(dim='x'))
+        with self.assertRaisesRegexp(NotImplementedError, 'dask'):
+            v.prod()
+        with self.assertRaisesRegexp(NotImplementedError, 'dask'):
+            v.median()
 
     def test_missing_values(self):
         values = np.array([0, 1, np.nan, 3])
@@ -127,6 +134,15 @@ class TestVariable(DaskTestCase):
         self.assertLazyAndIdentical(u[:2], Variable.concat([v[0], v[1]], 'x'))
         self.assertLazyAndIdentical(
             u[:3], Variable.concat([v[[0, 2]], v[[1]]], 'x', indexers=[[0, 2], [1]]))
+
+    def test_missing_methods(self):
+        v = self.lazy_var
+        with self.assertRaisesRegexp(NotImplementedError, 'dask'):
+            v.conj()
+        with self.assertRaisesRegexp(NotImplementedError, 'dask'):
+            v.argsort()
+        with self.assertRaisesRegexp(NotImplementedError, 'dask'):
+            v[0].item()
 
 
 @requires_dask
@@ -164,6 +180,19 @@ class TestDataArray(DaskTestCase):
 
         actual = lazy_array.groupby('x').mean()
         expected = eager_array.groupby('x').mean()
+        self.assertLazyAndAllClose(expected, actual)
+
+    @unittest.skip('needs a dask fix')
+    def test_groupby_first(self):
+        eager_array = DataArray(self.values, dims=('x', 'y'), name='foo')
+        lazy_array = DataArray(self.data, dims=('x', 'y'), name='foo')
+
+        for coords in [eager_array.coords, lazy_array.coords]:
+            coords['ab'] = ('x', ['a', 'a', 'b', 'b'])
+        with self.assertRaisesRegexp(NotImplementedError, 'dask'):
+            lazy_array.groupby('ab').first()
+        actual = lazy_array.groupby('ab').first(skipna=False)
+        expected = eager_array.groupby('ab').first()
         self.assertLazyAndAllClose(expected, actual)
 
     def test_reindex(self):
