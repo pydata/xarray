@@ -758,7 +758,8 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
             new_data = (f(self_data, other_data)
                         if not reflexive
                         else f(other_data, self_data))
-            return Variable(dims, new_data)
+            result = Variable(dims, new_data)
+            return result
         return func
 
     @staticmethod

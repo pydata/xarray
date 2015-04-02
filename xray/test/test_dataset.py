@@ -1303,9 +1303,9 @@ class TestDataset(TestCase):
         actual = zeros + grouped
         self.assertDatasetEqual(expected, actual)
 
-        with self.assertRaisesRegexp(TypeError, 'only support arithmetic'):
+        with self.assertRaisesRegexp(TypeError, 'only support binary ops'):
             grouped + 1
-        with self.assertRaisesRegexp(TypeError, 'only support arithmetic'):
+        with self.assertRaisesRegexp(TypeError, 'only support binary ops'):
             grouped + grouped
         with self.assertRaisesRegexp(TypeError, 'in-place operations'):
             ds += grouped
@@ -1882,13 +1882,13 @@ class TestDataset(TestCase):
     def test_dataset_array_math(self):
         ds = self.make_example_math_dataset()
 
-        expected = ds.apply(lambda x: x + ds['foo'])
-        self.assertDatasetIdentical(expected, ds + ds['foo'])
-        self.assertDatasetIdentical(expected, ds['foo'] + ds)
-        self.assertDatasetIdentical(expected, ds + ds['foo'].variable)
-        self.assertDatasetIdentical(expected, ds['foo'].variable + ds)
+        expected = ds.apply(lambda x: x - ds['foo'])
+        self.assertDatasetIdentical(expected, ds - ds['foo'])
+        self.assertDatasetIdentical(expected, -ds['foo'] + ds)
+        self.assertDatasetIdentical(expected, ds - ds['foo'].variable)
+        self.assertDatasetIdentical(expected, -ds['foo'].variable + ds)
         actual = ds.copy(deep=True)
-        actual += ds['foo']
+        actual -= ds['foo']
         self.assertDatasetIdentical(expected, actual)
 
         expected = ds.apply(lambda x: x + ds['bar'])

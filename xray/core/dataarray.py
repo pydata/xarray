@@ -1015,7 +1015,8 @@ class DataArray(AbstractArray, BaseDataObject):
             ds[name] = (f(self.variable, other_variable)
                         if not reflexive
                         else f(other_variable, self.variable))
-            return self._new_from_dataset_no_copy(ds, name)
+            result = self._new_from_dataset_no_copy(ds, name)
+            return result
         return func
 
     @staticmethod

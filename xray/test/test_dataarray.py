@@ -1017,9 +1017,9 @@ class TestDataArray(TestCase):
         actual_agg = actual.groupby('abc').mean()
         self.assertDataArrayAllClose(expected_agg, actual_agg)
 
-        with self.assertRaisesRegexp(TypeError, 'only support arithmetic'):
+        with self.assertRaisesRegexp(TypeError, 'only support binary ops'):
             grouped + 1
-        with self.assertRaisesRegexp(TypeError, 'only support arithmetic'):
+        with self.assertRaisesRegexp(TypeError, 'only support binary ops'):
             grouped + grouped
         with self.assertRaisesRegexp(TypeError, 'in-place operations'):
             array += grouped

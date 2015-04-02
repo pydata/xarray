@@ -189,7 +189,8 @@ class GroupBy(object):
         def func(self, other):
             g = f if not reflexive else lambda x, y: f(y, x)
             applied = self._yield_binary_applied(g, other)
-            return self._concat(applied)
+            combined = self._concat(applied)
+            return combined
         return func
 
     def _yield_binary_applied(self, func, other):
@@ -198,7 +199,7 @@ class GroupBy(object):
             try:
                 other_sel = other.sel(**{self.group.name: group_value})
             except AttributeError:
-                raise TypeError('GroupBy objects only support arithmetic '
+                raise TypeError('GroupBy objects only support binary ops '
                                 'when the other argument is a Dataset or '
                                 'DataArray')
             # TDOO: we would love to fall-back to using missing values if there
@@ -208,7 +209,8 @@ class GroupBy(object):
                 if dummy is None:
                     dummy = _dummy_copy(other)
                 other_sel = dummy
-            yield func(obj, other_sel)
+            result = func(obj, other_sel)
+            yield result
 
     def _maybe_restore_empty_groups(self, combined):
         """Our index contained empty groups (e.g., from a resampling). If we
