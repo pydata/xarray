@@ -29,9 +29,11 @@ Examine a dataset with pandas_ and seaborn_
 
     ds
 
-    ds.to_dataframe().head()
+    df = ds.to_dataframe()
 
-    ds.to_dataframe().describe()
+    df.head()
+
+    df.describe()
 
     @savefig examples_tmin_tmax_plot.png
     ds.mean(dim='location').to_dataframe().plot()
@@ -39,8 +41,7 @@ Examine a dataset with pandas_ and seaborn_
 .. ipython:: python
 
     @savefig examples_pairplot.png
-    for var in ['tmin', 'tmax']:
-        sns.kdeplot(ds[var].to_series())
+    sns.pairplot(df.reset_index(), vars=ds.data_vars)
 
 .. _average by month:
 
@@ -53,7 +54,7 @@ Probability of freeze by calendar month
     freeze
 
     @savefig examples_freeze_prob.png
-    freeze.to_pandas().T.plot()
+    freeze.to_pandas().plot()
 
 .. _monthly average:
 
@@ -97,7 +98,8 @@ fill missing values by group:
 
 .. ipython:: python
 
-    some_missing = ds.tmin.sel(time=ds['time.dayofweek'] > 3).reindex_like(ds)
+    # throw away the first half of every month
+    some_missing = ds.tmin.sel(time=ds['time.day'] > 15).reindex_like(ds)
     filled = some_missing.groupby('time.month').fillna(climatology.tmin)
 
     both = xray.Dataset({'some_missing': some_missing, 'filled': filled})
