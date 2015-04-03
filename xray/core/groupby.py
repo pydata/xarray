@@ -195,22 +195,27 @@ class GroupBy(object):
 
     def _yield_binary_applied(self, func, other):
         dummy = None
+        found_some_values = False
+
         for group_value, obj in self:
             try:
                 other_sel = other.sel(**{self.group.name: group_value})
+                found_some_values = True
             except AttributeError:
                 raise TypeError('GroupBy objects only support binary ops '
                                 'when the other argument is a Dataset or '
                                 'DataArray')
-            # TDOO: we would love to fall-back to using missing values if there
-            # are missing labels, but unfortunately this isn't possible until
-            # concat infers dtypes from more than the first variable
             except KeyError:
                 if dummy is None:
                     dummy = _dummy_copy(other)
                 other_sel = dummy
+
             result = func(obj, other_sel)
             yield result
+
+        if not found_some_values:
+            raise ValueError('no overlapping labels %r dimension'
+                             % self.group.name)
 
     def _maybe_restore_empty_groups(self, combined):
         """Our index contained empty groups (e.g., from a resampling). If we

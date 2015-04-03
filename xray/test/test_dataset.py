@@ -1306,12 +1306,21 @@ class TestDataset(TestCase):
         actual = zeros + grouped
         self.assertDatasetEqual(expected, actual)
 
+        with self.assertRaisesRegexp(ValueError, 'dimensions .* do not exist'):
+            grouped + ds
+        with self.assertRaisesRegexp(ValueError, 'dimensions .* do not exist'):
+            ds + grouped
         with self.assertRaisesRegexp(TypeError, 'only support binary ops'):
             grouped + 1
         with self.assertRaisesRegexp(TypeError, 'only support binary ops'):
             grouped + grouped
         with self.assertRaisesRegexp(TypeError, 'in-place operations'):
             ds += grouped
+
+        ds = Dataset({'x': ('time', np.arange(100)),
+                      'time': pd.date_range('2000-01-01', periods=100)})
+        with self.assertRaisesRegexp(ValueError, 'no overlapping labels'):
+            ds + ds.groupby('time.month')
 
     def test_groupby_math_virtual(self):
         ds = Dataset({'x': ('t', [1, 2, 3])},
