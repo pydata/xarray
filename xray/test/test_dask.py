@@ -190,7 +190,6 @@ class TestDataArray(DaskTestCase):
         actual = v.groupby('x').mean()
         self.assertLazyAndAllClose(expected, actual)
 
-    @unittest.skip('needs a dask fix')
     def test_groupby_first(self):
         u = self.eager_array
         v = self.lazy_array
