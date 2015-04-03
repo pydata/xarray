@@ -250,7 +250,8 @@ def concat(objs, dim='concat_dim', indexers=None, mode='different',
         variables are concatenated.
     concat_over : None or str or iterable of str, optional
         Names of additional variables to concatenate, in which the provided
-        parameter ``dim`` does not already appear as a dimension.
+        parameter ``dim`` does not already appear as a dimension. The default
+        value includes all data variables.
     compat : {'equals', 'identical'}, optional
         String indicating how to compare non-concatenated variables and
         dataset global attributes for potential conflicts. 'equals' means

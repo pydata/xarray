@@ -48,11 +48,12 @@ class TestOps(TestCase):
         self.assertIdentical(ds, xu.maximum(arr_grouped, group_mean))
         self.assertIdentical(ds, xu.maximum(group_mean, arr_grouped))
 
+        self.assertIdentical(ds, xu.maximum(ds_grouped, group_mean['a']))
+        self.assertIdentical(ds, xu.maximum(group_mean['a'], ds_grouped))
+
+        self.assertIdentical(ds.a, xu.maximum(arr_grouped, group_mean.a))
+        self.assertIdentical(ds.a, xu.maximum(group_mean.a, arr_grouped))
+
         with self.assertRaisesRegexp(TypeError, 'only support binary ops'):
             xu.maximum(ds.a.variable, ds_grouped)
 
-        # reenable once we do breaking changes for concat
-        # self.assertIdentical(ds, xu.maximum(grouped, group_mean['a']))
-        # self.assertIdentical(ds, xu.maximum(group_mean['a'], grouped))
-        # self.assertIdentical(ds.a, xu.maximum(arr_grouped, group_mean.a))
-        # self.assertIdentical(ds.a, xu.maximum(group_mean.a, arr_grouped))

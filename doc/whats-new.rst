@@ -12,11 +12,47 @@ What's New
 v0.4.2 (unreleased)
 -------------------
 
+Backwards incompatible changes
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+- The logic used for choosing which variables are concatenated with
+  :py:func:`~xray.concat` has changed. Previously, by default any variables
+  which were equal across a dimension were not concatenated. This lead to some
+  surprising behavior, where the behavior of groupby and concat operations
+  could depend on runtime values (:issue:`268`). For example:
+
+  .. ipython::
+    :verbatim:
+
+    In [1]: ds = xray.Dataset({'x': 0})
+
+    In [2]: xray.concat([ds, ds], dim='y')
+    Out[2]:
+    <xray.Dataset>
+    Dimensions:  ()
+    Coordinates:
+        *empty*
+    Data variables:
+        x        int64 0
+
+  Now, the default always concatenates data variables:
+
+  .. ipython:: python
+    :suppress:
+
+    ds = xray.Dataset({'x': 0})
+
+  .. ipython:: python
+
+    xray.concat([ds, ds], dim='y')
+
+  To obtain the old behavior, supply the argument ``concat_over=[]``.
+
 Enhancements
 ~~~~~~~~~~~~
 
-- New :py:meth:`~xray.Dataset.fillna` to fill missing values, modeled off the
-  pandas method of the same name:
+- New :py:meth:`~xray.Dataset.fillna` method to fill missing values, modeled
+  off the pandas method of the same name:
 
   .. ipython:: python
 
@@ -34,7 +70,7 @@ Enhancements
   .. ipython:: python
 
       ds = xray.Dataset({'y': ('x', [1, 2, 3])})
-      ds.assign(z = lambda x: x.y ** 2)
+      ds.assign(z = lambda ds: ds.y ** 2)
       ds.assign_coords(z = ('x', ['a', 'b', 'c']))
 
   These methods return a new Dataset (or DataArray) with updated data or

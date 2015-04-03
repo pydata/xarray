@@ -1611,8 +1611,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject):
 
         # figure out variables to concatenate over
         if concat_over is None:
-            concat_over = set()
-            # concat_over = set(datasets[0].data_vars)
+            concat_over = set(datasets[0].data_vars)
         elif isinstance(concat_over, basestring):
             concat_over = set([concat_over])
         else:

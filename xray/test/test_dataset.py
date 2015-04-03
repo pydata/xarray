@@ -1259,6 +1259,7 @@ class TestDataset(TestCase):
                         'letters': ('y', ['a', 'a', 'b', 'b'])})
 
         expected = data.mean('y')
+        expected['yonly'] = expected['yonly'].variable.expand_dims({'x': 3})
         actual = data.groupby('x').mean()
         self.assertDatasetAllClose(expected, actual)
 
@@ -1267,7 +1268,8 @@ class TestDataset(TestCase):
 
         letters = data['letters']
         expected = Dataset({'xy': data['xy'].groupby(letters).mean(),
-                            'xonly': data['xonly'].mean(),
+                            'xonly': (data['xonly'].mean().variable
+                                      .expand_dims({'letters': 2})),
                             'yonly': data['yonly'].groupby(letters).mean()})
         actual = data.groupby('letters').mean()
         self.assertDatasetAllClose(expected, actual)
@@ -1296,7 +1298,8 @@ class TestDataset(TestCase):
 
         grouped = ds.groupby('numbers')
         zeros = DataArray([0, 0, 0, 0], [('numbers', range(4))])
-        expected = ds
+        expected = ((ds + Variable('dim3', np.zeros(10)))
+                    .transpose('dim3', 'dim1', 'dim2', 'time'))
         actual = grouped + zeros
         self.assertDatasetEqual(expected, actual)
 
@@ -1331,7 +1334,6 @@ class TestDataset(TestCase):
         times = pd.date_range('2000-01-01', freq='6H', periods=10)
         ds = Dataset({'foo': (['time', 'x', 'y'], np.random.randn(10, 5, 3)),
                       'bar': ('time', np.random.randn(10), {'meta': 'data'}),
-                      'baz': ('x', np.random.randn(5)),
                       'time': times})
 
         actual = ds.resample('1D', dim='time', how='first')
@@ -1346,7 +1348,8 @@ class TestDataset(TestCase):
             self.assertDatasetEqual(expected, actual)
 
     def test_concat(self):
-        data = create_test_data()
+        # drop the third dimension to keep things relatively understandable
+        data = create_test_data().drop('dim3')
 
         split_data = [data.isel(dim1=slice(10)),
                       data.isel(dim1=slice(10, None))]
@@ -1359,7 +1362,7 @@ class TestDataset(TestCase):
                                 for k, v in iteritems(dataset.data_vars)),
                            dataset.coords, attrs=dataset.attrs)
 
-        for dim in ['dim1', 'dim2', 'dim3']:
+        for dim in ['dim1', 'dim2']:
             datasets = [g for _, g in data.groupby(dim, squeeze=False)]
             self.assertDatasetIdentical(data, concat(datasets, dim))
             self.assertDatasetIdentical(
@@ -1376,20 +1379,19 @@ class TestDataset(TestCase):
             actual = concat(datasets, data[dim], mode='different')
             self.assertDatasetIdentical(data, rectify_dim_order(actual))
 
-        # Now add a new variable that doesn't depend on any of the current
-        # dims and make sure the mode argument behaves as expected
-        data['var4'] = ('dim4', np.arange(data.dims['dim3']))
-        for dim in ['dim1', 'dim2', 'dim3']:
+        # make sure the mode argument behaves as expected
+        data.coords['extra'] = ('dim4', np.arange(3))
+        for dim in ['dim1', 'dim2']:
             datasets = [g for _, g in data.groupby(dim, squeeze=False)]
             actual = concat(datasets, data[dim], mode='all')
-            expected = np.array([data['var4'].values
+            expected = np.array([data['extra'].values
                                  for _ in range(data.dims[dim])])
-            self.assertArrayEqual(actual['var4'].values, expected)
+            self.assertArrayEqual(actual['extra'].values, expected)
 
             actual = concat(datasets, data[dim], mode='different')
-            self.assertDataArrayEqual(data['var4'], actual['var4'])
+            self.assertDataArrayEqual(data['extra'], actual['extra'])
             actual = concat(datasets, data[dim], mode='minimal')
-            self.assertDataArrayEqual(data['var4'], actual['var4'])
+            self.assertDataArrayEqual(data['extra'], actual['extra'])
 
         # verify that the dim argument takes precedence over
         # concatenating dataset variables of the same name
