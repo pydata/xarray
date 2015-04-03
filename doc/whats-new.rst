@@ -9,8 +9,13 @@ What's New
     import xray
     np.random.seed(123456)
 
-v0.4.2 (unreleased)
--------------------
+v0.5 (unreleased)
+-----------------
+
+The headline feature in this release is experimental support for out-of-core
+computing (data that doesn't fit into memory) with dask_.
+
+_dask: http://dask.pydata.org/
 
 Backwards incompatible changes
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -124,7 +129,6 @@ Enhancements
 
       array.resample('1D', dim='time', how='first')
 
-.. _same as pandas: http://pandas.pydata.org/pandas-docs/stable/timeseries.html#up-and-downsampling
 
 - :py:meth:`~xray.Dataset.swap_dims` allows for easily swapping one dimension
   out for another:
