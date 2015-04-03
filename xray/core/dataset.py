@@ -18,7 +18,8 @@ from .coordinates import DatasetCoordinates, Indexes
 from .common import ImplementsDatasetReduce, BaseDataObject
 from .utils import (Frozen, SortedKeysDict, ChainMap, maybe_wrap_array)
 from .variable import as_variable, Variable, Coordinate
-from .pycompat import iteritems, itervalues, basestring, OrderedDict
+from .pycompat import (iteritems, itervalues, basestring, OrderedDict,
+                       dask_array_type)
 
 
 # list of attributes of pd.DatetimeIndex that are ndarrays of time info
@@ -449,8 +450,29 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject):
         load data automatically. However, this method can be necessary when
         working with many file objects on disk.
         """
-        for v in itervalues(self._variables):
-            v.load_data()
+        # access .data to coerce everything to numpy or dask arrays
+        all_data = dict((k, v.data) for k, v in self.variables.items())
+        lazy_data = dict((k, v) for k, v in all_data.items()
+                         if isinstance(v, dask_array_type))
+        if lazy_data:
+            import dask.array as da
+
+            # evaluate all the dask arrays simultaneously
+            evaluated_data = da.compute(*lazy_data.values())
+
+            evaluated_variables = {}
+            for k, data in zip(lazy_data, evaluated_data):
+                v = self.variables[k].copy(deep=False)
+                v._data = data
+                # dask will not coerce data that was supplied as a lazy array
+                # https://github.com/ContinuumIO/dask/issues/139
+                evaluated_variables[k] = v.load_data()
+
+            # update at the end to ensure atomic updates if anything goes
+            # wrong with load_data
+            for k, v in evaluated_variables.items():
+                self.variables[k]._data = v.values
+
         return self
 
     @classmethod

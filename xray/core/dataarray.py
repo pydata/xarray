@@ -423,9 +423,7 @@ class DataArray(AbstractArray, BaseDataObject):
         load data automatically. However, this method can be necessary when
         working with many file objects on disk.
         """
-        self.variable.load_data()
-        for coord in self.coords.values():
-            coord.variable.load_data()
+        self._dataset.load_data()
         return self
 
     def copy(self, deep=True):

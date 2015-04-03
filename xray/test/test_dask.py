@@ -152,7 +152,7 @@ class TestVariable(DaskTestCase):
 
 
 @requires_dask
-class TestDataArray(DaskTestCase):
+class TestDataArrayAndDataset(DaskTestCase):
     def assertLazyAndIdentical(self, expected, actual):
         self.assertLazyAnd(expected, actual, self.assertDataArrayIdentical)
 
@@ -217,3 +217,16 @@ class TestDataArray(DaskTestCase):
         u = self.eager_array
         v = self.lazy_array
         self.assertLazyAndAllClose(np.sin(u), xu.sin(v))
+
+    def test_simultaneous_compute(self):
+        ds = Dataset({'foo': ('x', range(5)),
+                      'bar': ('x', range(5))}).reblock()
+
+        get_count = np.array(0)
+        def counting_get(*args, **kwargs):
+            get_count[...] += 1
+            return dask.get(*args, **kwargs)
+
+        with dask.set_options(get=counting_get):
+            ds.load_data()
+        self.assertEqual(get_count, 1)
