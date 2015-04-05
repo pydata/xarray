@@ -216,6 +216,14 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
         else:
             return self.values
 
+    @data.setter
+    def data(self, data):
+        data = _as_compatible_data(data)
+        if data.shape != self.shape:
+            raise ValueError(
+                "replacement data must match the Variable's shape")
+        self._data = data
+
     def _data_cached(self):
         if not isinstance(self._data, np.ndarray):
             self._data = np.asarray(self._data)
@@ -250,11 +258,7 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
 
     @values.setter
     def values(self, values):
-        values = _as_compatible_data(values)
-        if values.shape != self.shape:
-            raise ValueError(
-                "replacement values must match the Variable's shape")
-        self._data = values
+        self.data = values
 
     def to_variable(self):
         """Return this variable as a base xray.Variable"""

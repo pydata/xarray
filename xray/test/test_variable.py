@@ -376,8 +376,9 @@ class TestVariable(TestCase, VariableSubclassTestCases):
     def setUp(self):
         self.d = np.random.random((10, 3)).astype(np.float64)
 
-    def test_data(self):
+    def test_data_and_values(self):
         v = Variable(['time', 'x'], self.d)
+        self.assertArrayEqual(v.data, self.d)
         self.assertArrayEqual(v.values, self.d)
         self.assertIs(source_ndarray(v.values), self.d)
         with self.assertRaises(ValueError):
@@ -386,6 +387,9 @@ class TestVariable(TestCase, VariableSubclassTestCases):
         d2 = np.random.random((10, 3))
         v.values = d2
         self.assertIs(source_ndarray(v.values), d2)
+        d3 = np.random.random((10, 3))
+        v.data = d3
+        self.assertIs(source_ndarray(v.data), d3)
 
     def test_numpy_same_methods(self):
         v = Variable([], np.float32(0.0))
