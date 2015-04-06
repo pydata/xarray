@@ -886,8 +886,9 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject):
         """Coerce all arrays in this dataset into dask arrays with the given
         block dimensions.
 
-        If neither blockdims nor blockshape is provided, each array in the
-        dataset will be reblocked into a single dask array.
+        If neither blockdims nor blockshape is provided for one or more
+        dimensions, block sizes along that dimension will not be updated;
+        non-dask arrays will be converted into dask arrays with a single block.
 
         Parameters
         ----------

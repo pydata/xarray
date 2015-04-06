@@ -65,7 +65,13 @@ class TestVariable(DaskTestCase):
     def test_basics(self):
         v = self.lazy_var
         self.assertIs(self.data, v.data)
+        self.assertEqual(self.data.blockdims, v.blockdims)
         self.assertArrayEqual(self.values, v)
+
+    def test_reblock(self):
+        reblocked = self.lazy_var.reblock(blockshape={'x': 3})
+        self.assertEqual(reblocked.blockdims, ((3, 1), (2, 2, 2)))
+        self.assertLazyAndIdentical(self.eager_var, reblocked)
 
     def test_indexing(self):
         u = self.eager_var
@@ -222,11 +228,11 @@ class TestDataArrayAndDataset(DaskTestCase):
         ds = Dataset({'foo': ('x', range(5)),
                       'bar': ('x', range(5))}).reblock()
 
-        get_count = np.array(0)
+        count = np.array(0)
         def counting_get(*args, **kwargs):
-            get_count[...] += 1
+            count[...] += 1
             return dask.get(*args, **kwargs)
 
         with dask.set_options(get=counting_get):
             ds.load_data()
-        self.assertEqual(get_count, 1)
+        self.assertEqual(count, 1)

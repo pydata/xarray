@@ -457,8 +457,9 @@ class DataArray(AbstractArray, BaseDataObject):
     def reblock(self, blockdims=None, blockshape=None):
         """Coerce this array's data into dask with the given block dimensions.
 
-        If neither blockdims nor blockshape is provided, the array will be
-        reblocked into a single dask array.
+        If neither blockdims nor blockshape is provided for one or more
+        dimensions, block sizes along that dimension will not be updated;
+        non-dask arrays will be converted into dask arrays with a single block.
 
         Parameters
         ----------

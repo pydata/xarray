@@ -430,18 +430,19 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
         """
         import dask.array as da
 
-        def coerce_to_tuple(arg, default):
+        def remap_dim_to_axis(arg):
             if utils.is_dict_like(arg):
-                arg = tuple(arg.get(d, s)
-                            for d, s in zip(self.dims, default))
+                arg = dict((self.get_axis_num(dim), arg_value)
+                           for dim, arg_value in arg.items())
             return arg
 
-        # TODO: needs a fix to properly handle partially missing dimensions:
-        # https://github.com/ContinuumIO/dask/issues/117
-        blockdims = coerce_to_tuple(blockdims,
-                                    self.blockdims or
-                                    tuple((s,) for s in self.shape))
-        blockshape = coerce_to_tuple(blockshape, self.shape)
+        def coerce_to_tuple(arg, default):
+            if utils.is_dict_like(arg):
+                arg = tuple(arg.get(n, s) for n, s in enumerate(default))
+            return arg
+
+        blockdims = remap_dim_to_axis(blockdims)
+        blockshape = remap_dim_to_axis(blockshape)
 
         if blockdims is None and blockshape is None:
             blockshape = self.shape
@@ -453,8 +454,14 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
             if name:
                 name += '_'
             name = 'xray_%s%s' % (name, next(self._array_counter))
+
+            default_blockdims = tuple((s,) for s in self.shape)
+            blockdims = coerce_to_tuple(blockdims, default_blockdims)
+            blockshape = coerce_to_tuple(blockshape, self.shape)
+
             data = da.from_array(data, blockdims=blockdims,
                                  blockshape=blockshape, name=name)
+
         return type(self)(self.dims, data, self._attrs, self._encoding,
                           fastpath=True)
 
