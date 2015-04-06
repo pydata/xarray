@@ -40,6 +40,7 @@ Documentation
    time-series
    pandas
    io
+   dask
    api
    faq
    whats-new
@@ -48,7 +49,7 @@ See also
 --------
 
 - `Stephan Hoyer's PyData talk`_ introducing the original version of xray.
-- `Nicolas Fauchereau's tutorial`_ on xray.
+- `Nicolas Fauchereau's tutorial`_ on xray for netCDF users.
 
 .. _Stephan Hoyer's PyData talk: https://www.youtube.com/watch?v=T5CZyNwBa9c
 .. _Nicolas Fauchereau's tutorial: http://nbviewer.ipython.org/github/nicolasfauchereau/metocean/blob/master/notebooks/xray.ipynb

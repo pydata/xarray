@@ -265,7 +265,7 @@ def concat(objs, dim='concat_dim', indexers=None, mode='different',
 
     See also
     --------
-    auto_concat_and_merge
+    auto_combine
     """
     # TODO: add join and ignore_index arguments copied from pandas.concat
     # TODO: support concatenating scaler coordinates even if the concatenated

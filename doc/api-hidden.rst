@@ -7,6 +7,8 @@
 .. autosummary::
    :toctree: generated/
 
+   auto_combine
+
    Dataset.all
    Dataset.any
    Dataset.argmax

@@ -73,6 +73,8 @@ class TestVariable(DaskTestCase):
         self.assertEqual(reblocked.blockdims, ((3, 1), (2, 2, 2)))
         self.assertLazyAndIdentical(self.eager_var, reblocked)
 
+    @unittest.skip('indexing with dask arrays is currently broken: see '
+                   'https://github.com/ContinuumIO/dask/pull/149')
     def test_indexing(self):
         u = self.eager_var
         v = self.lazy_var

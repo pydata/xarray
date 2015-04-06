@@ -158,6 +158,7 @@ Attributes
    :toctree: generated/
 
    DataArray.values
+   DataArray.data
    DataArray.coords
    DataArray.dims
    DataArray.name
@@ -338,11 +339,13 @@ Dataset methods
    :toctree: generated/
 
    open_dataset
+   open_mfdataset
    Dataset.to_netcdf
    Dataset.to_dataframe
    Dataset.from_dataframe
    Dataset.close
    Dataset.load_data
+   Dataset.reblock
 
 DataArray methods
 -----------------
@@ -359,6 +362,7 @@ DataArray methods
    DataArray.from_series
    DataArray.from_cdms2
    DataArray.load_data
+   DataArray.reblock
 
 Backends (experimental)
 -----------------------

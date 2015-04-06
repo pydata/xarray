@@ -13,9 +13,16 @@ v0.5 (unreleased)
 -----------------
 
 The headline feature in this release is experimental support for out-of-core
-computing (data that doesn't fit into memory) with dask_.
+computing (data that doesn't fit into memory) with dask_. For more on dask,
+read the new documentation section :doc:`dask`.
 
-_dask: http://dask.pydata.org/
+We also added new top-level function :py:func:`~xray.open_mfdataset` to make it
+easy to open a collection of files (using dask) as a single `xray.Dataset`
+object.
+
+The combination of these features makes it possible to manipulate gigantic
+datasets with xray. Dask is currently an optional dependency of xray, but it
+is likely to become a requirement at some point in the future.
 
 Backwards incompatible changes
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -337,7 +344,7 @@ is supporting out-of-core operations in xray using Dask_, a part of the Blaze_
 project. For a preview of using Dask with weather data, read
 `this blog post`_ by Matthew Rocklin. See :issue:`328` for more details.
 
-.. _Dask: https://github.com/continuumio/dask
+.. _Dask: http://dask.pydata.org
 .. _Blaze: http://blaze.pydata.org
 .. _this blog post: http://matthewrocklin.com/blog/work/2015/02/13/Towards-OOC-Slicing-and-Stacking/
 
