@@ -14,7 +14,8 @@ from xray import Dataset, open_dataset, open_mfdataset, backends
 from xray.core.pycompat import iteritems, PY3
 
 from . import (TestCase, requires_scipy, requires_netCDF4, requires_pydap,
-               requires_scipy_or_netCDF4, requires_dask, has_netCDF4, has_scipy)
+               requires_scipy_or_netCDF4, requires_dask, requires_h5netcdf,
+               has_netCDF4, has_scipy)
 from .test_dataset import create_test_data
 
 try:
@@ -240,9 +241,9 @@ class CFEncodedDataTest(DatasetIOTestCases):
         if not isinstance(self, Only32BitTypes):
             # these stores can save unicode strings
             expected = original.copy(deep=True)
-        if type(self) is NetCDF4DataTest:
-            # the netCDF4 library can't keep track of an empty _FillValue for
-            # VLEN variables:
+        if type(self) in [NetCDF4DataTest, H5NetCDFDataTest]:
+            # netCDF4 can't keep track of an empty _FillValue for VLEN
+            # variables
             expected['x'][-1] = ''
         elif (type(self) is NetCDF3ViaNetCDF4DataTest
               or (has_netCDF4 and type(self) is GenericNetCDFDataTest)):
@@ -272,6 +273,52 @@ class CFEncodedDataTest(DatasetIOTestCases):
         with self.roundtrip(encoded, decode_cf=False) as actual:
             self.assertDatasetAllClose(encoded, actual)
 
+    def test_coordinates_encoding(self):
+        def equals_latlon(obj):
+            return obj == 'lat lon' or obj == 'lon lat'
+
+        original = Dataset({'temp': ('x', [0, 1]), 'precip': ('x', [0, -1])},
+                           {'lat': ('x', [2, 3]), 'lon': ('x', [4, 5])})
+        with self.roundtrip(original) as actual:
+            self.assertDatasetIdentical(actual, original)
+        with create_tmp_file() as tmp_file:
+            original.to_netcdf(tmp_file)
+            with open_dataset(tmp_file, decode_coords=False) as ds:
+                self.assertTrue(equals_latlon(ds['temp'].attrs['coordinates']))
+                self.assertTrue(equals_latlon(ds['precip'].attrs['coordinates']))
+                self.assertNotIn('coordinates', ds.attrs)
+                self.assertNotIn('coordinates', ds['lat'].attrs)
+                self.assertNotIn('coordinates', ds['lon'].attrs)
+
+        modified = original.drop(['temp', 'precip'])
+        with self.roundtrip(modified) as actual:
+            self.assertDatasetIdentical(actual, modified)
+        with create_tmp_file() as tmp_file:
+            modified.to_netcdf(tmp_file)
+            with open_dataset(tmp_file, decode_coords=False) as ds:
+                self.assertTrue(equals_latlon(ds.attrs['coordinates']))
+                self.assertNotIn('coordinates', ds['lat'].attrs)
+                self.assertNotIn('coordinates', ds['lon'].attrs)
+
+    def test_roundtrip_endian(self):
+        ds = Dataset({'x': np.arange(3, 10, dtype='>i2'),
+                      'y': np.arange(3, 20, dtype='<i4'),
+                      'z': np.arange(3, 30, dtype='=i8'),
+                      'w': ('x', np.arange(3, 10, dtype=np.float))})
+
+        with self.roundtrip(ds) as actual:
+            # technically these datasets are slightly different,
+            # one hold mixed endian data (ds) the other should be
+            # all big endian (actual).  assertDatasetIdentical
+            # should still pass though.
+            self.assertDatasetIdentical(ds, actual)
+
+        if type(self) is NetCDF4DataTest:
+            ds['z'].encoding['endian'] = 'big'
+            with self.assertRaises(NotImplementedError):
+                with self.roundtrip(ds) as actual:
+                    pass
+
 
 @contextlib.contextmanager
 def create_tmp_file(suffix='.nc'):
@@ -283,45 +330,7 @@ def create_tmp_file(suffix='.nc'):
         os.remove(path)
 
 
-@requires_netCDF4
-class NetCDF4DataTest(CFEncodedDataTest, TestCase):
-    @contextlib.contextmanager
-    def create_store(self):
-        with create_tmp_file() as tmp_file:
-            with backends.NetCDF4DataStore(tmp_file, mode='w') as store:
-                yield store
-
-    @contextlib.contextmanager
-    def roundtrip(self, data, **kwargs):
-        with create_tmp_file() as tmp_file:
-            data.to_netcdf(tmp_file)
-            with open_dataset(tmp_file, **kwargs) as ds:
-                yield ds
-
-    def test_open_encodings(self):
-        # Create a netCDF file with explicit time units
-        # and make sure it makes it into the encodings
-        # and survives a round trip
-        with create_tmp_file() as tmp_file:
-            with nc4.Dataset(tmp_file, 'w') as ds:
-                ds.createDimension('time', size=10)
-                ds.createVariable('time', np.int32, dimensions=('time',))
-                units = 'days since 1999-01-01'
-                ds.variables['time'].setncattr('units', units)
-                ds.variables['time'][:] = np.arange(10) + 4
-
-            expected = Dataset()
-
-            time = pd.date_range('1999-01-05', periods=10)
-            encoding = {'units': units, 'dtype': np.dtype('int32')}
-            expected['time'] = ('time', time, {}, encoding)
-
-            with open_dataset(tmp_file) as actual:
-                self.assertVariableEqual(actual['time'], expected['time'])
-                actual_encoding = dict((k, v) for k, v in iteritems(actual['time'].encoding)
-                                       if k in expected['time'].encoding)
-                self.assertDictEqual(actual_encoding, expected['time'].encoding)
-
+class BaseNetCDF4Test(CFEncodedDataTest):
     def test_open_group(self):
         # Create a netCDF file with a dataset stored within a group
         with create_tmp_file() as tmp_file:
@@ -378,6 +387,70 @@ class NetCDF4DataTest(CFEncodedDataTest, TestCase):
                 self.assertDatasetIdentical(data1, actual1)
             with open_dataset(tmp_file, group='data/2') as actual2:
                 self.assertDatasetIdentical(data2, actual2)
+
+    def test_roundtrip_character_array(self):
+        with create_tmp_file() as tmp_file:
+            values = np.array([['a', 'b', 'c'], ['d', 'e', 'f']], dtype='S')
+
+            with nc4.Dataset(tmp_file, mode='w') as nc:
+                nc.createDimension('x', 2)
+                nc.createDimension('string3', 3)
+                v = nc.createVariable('x', np.dtype('S1'), ('x', 'string3'))
+                v[:] = values
+
+            values = np.array(['abc', 'def'], dtype='S')
+            expected = Dataset({'x': ('x', values)})
+            with open_dataset(tmp_file) as actual:
+                self.assertDatasetIdentical(expected, actual)
+                # regression test for #157
+                with self.roundtrip(actual) as roundtripped:
+                    self.assertDatasetIdentical(expected, roundtripped)
+
+    def test_default_to_char_arrays(self):
+        data = Dataset({'x': np.array(['foo', 'zzzz'], dtype='S')})
+        with self.roundtrip(data) as actual:
+            self.assertDatasetIdentical(data, actual)
+            self.assertEqual(actual['x'].dtype, np.dtype('S4'))
+
+
+@requires_netCDF4
+class NetCDF4DataTest(BaseNetCDF4Test, TestCase):
+    @contextlib.contextmanager
+    def create_store(self):
+        with create_tmp_file() as tmp_file:
+            with backends.NetCDF4DataStore(tmp_file, mode='w') as store:
+                yield store
+
+    @contextlib.contextmanager
+    def roundtrip(self, data, **kwargs):
+        with create_tmp_file() as tmp_file:
+            data.to_netcdf(tmp_file)
+            with open_dataset(tmp_file, **kwargs) as ds:
+                yield ds
+
+    def test_open_encodings(self):
+        # Create a netCDF file with explicit time units
+        # and make sure it makes it into the encodings
+        # and survives a round trip
+        with create_tmp_file() as tmp_file:
+            with nc4.Dataset(tmp_file, 'w') as ds:
+                ds.createDimension('time', size=10)
+                ds.createVariable('time', np.int32, dimensions=('time',))
+                units = 'days since 1999-01-01'
+                ds.variables['time'].setncattr('units', units)
+                ds.variables['time'][:] = np.arange(10) + 4
+
+            expected = Dataset()
+
+            time = pd.date_range('1999-01-05', periods=10)
+            encoding = {'units': units, 'dtype': np.dtype('int32')}
+            expected['time'] = ('time', time, {}, encoding)
+
+            with open_dataset(tmp_file) as actual:
+                self.assertVariableEqual(actual['time'], expected['time'])
+                actual_encoding = dict((k, v) for k, v in iteritems(actual['time'].encoding)
+                                       if k in expected['time'].encoding)
+                self.assertDictEqual(actual_encoding, expected['time'].encoding)
 
     def test_dump_and_open_encodings(self):
         # Create a netCDF file with explicit time units
@@ -460,75 +533,6 @@ class NetCDF4DataTest(CFEncodedDataTest, TestCase):
             for kwargs in [{}, {'decode_cf': True}]:
                 with open_dataset(tmp_file, **kwargs) as actual:
                     self.assertDatasetIdentical(expected, actual)
-
-    def test_roundtrip_endian(self):
-        ds = Dataset({'x': np.arange(3, 10, dtype='>i2'),
-                      'y': np.arange(3, 20, dtype='<i4'),
-                      'z': np.arange(3, 30, dtype='=i8'),
-                      'w': ('x', np.arange(3, 10, dtype=np.float))})
-
-        with self.roundtrip(ds) as actual:
-            # technically these datasets are slightly different,
-            # one hold mixed endian data (ds) the other should be
-            # all big endian (actual).  assertDatasetIdentical
-            # should still pass though.
-            self.assertDatasetIdentical(ds, actual)
-
-        ds['z'].encoding['endian'] = 'big'
-        with self.assertRaises(NotImplementedError):
-            with self.roundtrip(ds) as actual:
-                pass
-
-    def test_roundtrip_character_array(self):
-        with create_tmp_file() as tmp_file:
-            values = np.array([['a', 'b', 'c'], ['d', 'e', 'f']], dtype='S')
-
-            with nc4.Dataset(tmp_file, mode='w') as nc:
-                nc.createDimension('x', 2)
-                nc.createDimension('string3', 3)
-                v = nc.createVariable('x', np.dtype('S1'), ('x', 'string3'))
-                v[:] = values
-
-            values = np.array(['abc', 'def'], dtype='S')
-            expected = Dataset({'x': ('x', values)})
-            with open_dataset(tmp_file) as actual:
-                self.assertDatasetIdentical(expected, actual)
-                # regression test for #157
-                with self.roundtrip(actual) as roundtripped:
-                    self.assertDatasetIdentical(expected, roundtripped)
-
-    def test_default_to_char_arrays(self):
-        data = Dataset({'x': np.array(['foo', 'zzzz'], dtype='S')})
-        with self.roundtrip(data) as actual:
-            self.assertDatasetIdentical(data, actual)
-            self.assertEqual(actual['x'].dtype, np.dtype('S4'))
-
-    def test_coordinates_encoding(self):
-        def equals_latlon(obj):
-            return obj == 'lat lon' or obj == 'lon lat'
-
-        original = Dataset({'temp': ('x', [0, 1]), 'precip': ('x', [0, -1])},
-                           {'lat': ('x', [2, 3]), 'lon': ('x', [4, 5])})
-        with self.roundtrip(original) as actual:
-            self.assertDatasetIdentical(actual, original)
-        with create_tmp_file() as tmp_file:
-            original.to_netcdf(tmp_file)
-            with open_dataset(tmp_file, decode_coords=False) as ds:
-                self.assertTrue(equals_latlon(ds['temp'].attrs['coordinates']))
-                self.assertTrue(equals_latlon(ds['precip'].attrs['coordinates']))
-                self.assertNotIn('coordinates', ds.attrs)
-                self.assertNotIn('coordinates', ds['lat'].attrs)
-                self.assertNotIn('coordinates', ds['lon'].attrs)
-
-        modified = original.drop(['temp', 'precip'])
-        with self.roundtrip(modified) as actual:
-            self.assertDatasetIdentical(actual, modified)
-        with create_tmp_file() as tmp_file:
-            modified.to_netcdf(tmp_file)
-            with open_dataset(tmp_file, decode_coords=False) as ds:
-                self.assertTrue(equals_latlon(ds.attrs['coordinates']))
-                self.assertNotIn('coordinates', ds['lat'].attrs)
-                self.assertNotIn('coordinates', ds['lon'].attrs)
 
 
 @requires_scipy
@@ -634,6 +638,25 @@ class GenericNetCDFDataTest(CFEncodedDataTest, Only32BitTypes, TestCase):
                         with open_dataset(tmp_file,
                                           engine=read_engine) as actual:
                             self.assertDatasetAllClose(data, actual)
+
+
+@requires_h5netcdf
+class H5NetCDFDataTest(BaseNetCDF4Test, TestCase):
+    @contextlib.contextmanager
+    def create_store(self):
+        with create_tmp_file() as tmp_file:
+            yield backends.H5NetCDFStore(tmp_file, 'w')
+
+    @contextlib.contextmanager
+    def roundtrip(self, data, **kwargs):
+        with create_tmp_file() as tmp_file:
+            data.to_netcdf(tmp_file, engine='h5netcdf')
+            with open_dataset(tmp_file, engine='h5netcdf', **kwargs) as ds:
+                yield ds
+
+    def test_orthogonal_indexing(self):
+        # doesn't work for h5py
+        pass
 
 
 @requires_dask

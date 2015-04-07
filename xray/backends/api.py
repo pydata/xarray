@@ -119,6 +119,8 @@ def open_dataset(filename_or_obj, group=None, decode_cf=True,
                 store = backends.NetCDF4DataStore(filename_or_obj, group=group)
             elif engine == 'scipy':
                 store = backends.ScipyDataStore(filename_or_obj)
+            elif engine == 'h5netcdf':
+                store = backends.H5NetCDFStore(filename_or_obj, group=group)
             else:
                 raise ValueError('unrecognized engine for open_dataset: %r'
                                  % engine)
@@ -194,11 +196,12 @@ def to_netcdf(dataset, path=None, mode='w', format=None, group=None,
     elif engine is None:
         engine = _get_default_netcdf_engine(engine)
 
-    if engine == 'netcdf4':
-        to_netcdf_func = _to_netcdf4
-    elif engine == 'scipy':
-        to_netcdf_func = _to_scipy_netcdf
-    else:
+    write_funcs = {'netcdf4': _to_netcdf4,
+                   'scipy': _to_scipy_netcdf,
+                   'h5netcdf': _to_h5netcdf}
+    try:
+        to_netcdf_func = write_funcs[engine]
+    except KeyError:
         raise ValueError('unrecognized engine for to_netcdf: %r' % engine)
 
     return to_netcdf_func(dataset, path, mode, format, group)
@@ -209,6 +212,13 @@ def _to_netcdf4(dataset, path, mode, format, group):
         format = 'NETCDF4'
     with backends.NetCDF4DataStore(path, mode=mode, format=format,
                                    group=group) as store:
+        dataset.dump_to_store(store)
+
+
+def _to_h5netcdf(dataset, path, mode, format, group):
+    if format not in [None, 'NETCDF4']:
+        raise ValueError('invalid format for h5netcdf backend')
+    with backends.H5NetCDFStore(path, mode=mode, group=group) as store:
         dataset.dump_to_store(store)
 
 

@@ -8,3 +8,4 @@ from .memory import InMemoryDataStore
 from .netCDF4_ import NetCDF4DataStore
 from .pydap_ import PydapDataStore
 from .scipy_ import ScipyDataStore
+from .h5netcdf_ import H5NetCDFStore

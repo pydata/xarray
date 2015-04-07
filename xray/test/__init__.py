@@ -30,6 +30,13 @@ except ImportError:
 
 
 try:
+    import h5netcdf
+    has_h5netcdf = True
+except ImportError:
+    has_h5netcdf = False
+
+
+try:
     import dask.array
     import dask
     dask.set_options(get=dask.get)
@@ -48,6 +55,10 @@ def requires_pydap(test):
 
 def requires_netCDF4(test):
     return test if has_netCDF4 else unittest.skip('requires netCDF4')(test)
+
+
+def requires_h5netcdf(test):
+    return test if has_h5netcdf else unittest.skip('requires h5netcdf')(test)
 
 
 def requires_scipy_or_netCDF4(test):
