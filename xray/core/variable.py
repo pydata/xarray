@@ -10,7 +10,8 @@ from . import indexing
 from . import ops
 from . import utils
 from .pycompat import basestring, OrderedDict, zip, reduce, dask_array_type
-from .indexing import PandasIndexAdapter, orthogonally_indexable
+from .indexing import (PandasIndexAdapter, LazilyIndexedArray,
+                       orthogonally_indexable)
 
 import xray # only for Dataset and DataArray
 
@@ -458,6 +459,10 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
             default_blockdims = tuple((s,) for s in self.shape)
             blockdims = coerce_to_tuple(blockdims, default_blockdims)
             blockshape = coerce_to_tuple(blockshape, self.shape)
+
+            # temporary fix for https://github.com/ContinuumIO/dask/issues/105
+            while isinstance(data, LazilyIndexedArray):
+                data = data.array
 
             data = da.from_array(data, blockdims=blockdims,
                                  blockshape=blockshape, name=name)
