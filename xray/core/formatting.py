@@ -88,24 +88,22 @@ def format_array_flat(items_ndarray, max_width):
     """Return a formatted string for as many items in the flattened version of
     items_ndarray that will fit within max_width characters
     """
-    # every item will take up at least two characters
-    max_possibly_relevant = int(np.ceil(max_width / 2.0))
+    # every item will take up at least two characters, but we always want to
+    # print at least one item
+    max_possibly_relevant = max(int(np.ceil(max_width / 2.0)), 1)
     relevant_items = first_n_items(items_ndarray, max_possibly_relevant)
     pprint_items = list(map(format_item, relevant_items))
 
-    end_padding = ' ...'
-
-    cum_len = np.cumsum([len(s) + 1 for s in pprint_items])
-    gt_max_width = cum_len > (max_width - len(end_padding))
-    if not gt_max_width.any():
-        num_to_print = len(pprint_items)
+    cum_len = np.cumsum([len(s) + 1 for s in pprint_items]) - 1
+    if (max_possibly_relevant < items_ndarray.size
+            or (cum_len > max_width).any()):
+        end_padding = ' ...'
+        count = max(np.argmax((cum_len + len(end_padding)) > max_width), 1)
+        pprint_items = pprint_items[:count]
     else:
-        num_to_print = max(np.argmax(gt_max_width) - 1, 1)
+        end_padding = ''
 
-    pprint_str = ' '.join(itertools.islice(pprint_items, int(num_to_print)))
-    remaining_chars = max_width - len(pprint_str) - len(end_padding)
-    if remaining_chars > 0 and num_to_print < items_ndarray.size:
-        pprint_str += end_padding
+    pprint_str = ' '.join(pprint_items) + end_padding
     return pprint_str
 
 
