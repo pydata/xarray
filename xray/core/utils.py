@@ -10,16 +10,17 @@ from collections import Mapping, MutableMapping
 import numpy as np
 import pandas as pd
 
-from .pycompat import basestring, iteritems, PY3, OrderedDict
+from . import ops
+from .pycompat import iteritems, OrderedDict
 
 
-def alias_warning(old_name, new_name, stacklevel=3):
+def alias_warning(old_name, new_name, stacklevel=3): # pragma: no cover
     warnings.warn('%s has been deprecated and renamed to %s'
                   % (old_name, new_name),
                   FutureWarning, stacklevel=stacklevel)
 
 
-def function_alias(obj, old_name):
+def function_alias(obj, old_name): # pragma: no cover
     @functools.wraps(obj)
     def wrapper(*args, **kwargs):
         alias_warning(old_name, obj.__name__)
@@ -27,118 +28,13 @@ def function_alias(obj, old_name):
     return wrapper
 
 
-def class_alias(obj, old_name):
+def class_alias(obj, old_name): # pragma: no cover
     class Wrapper(obj):
         def __new__(cls, *args, **kwargs):
             alias_warning(old_name, obj.__name__)
             return super(Wrapper, cls).__new__(cls, *args, **kwargs)
     Wrapper.__name__ = obj.__name__
     return Wrapper
-
-
-def allclose_or_equiv(arr1, arr2, rtol=1e-5, atol=1e-8):
-    """Like np.allclose, but also allows values to be NaN in both arrays
-    """
-    arr1, arr2 = np.asarray(arr1), np.asarray(arr2)
-    if arr1.shape != arr2.shape:
-        return False
-    return np.isclose(arr1, arr2, rtol=rtol, atol=atol, equal_nan=True).all()
-
-
-def array_equiv(arr1, arr2):
-    """Like np.array_equal, but also allows values to be NaN in both arrays
-    """
-    arr1, arr2 = np.asarray(arr1), np.asarray(arr2)
-    if arr1.shape != arr2.shape:
-        return False
-    return ((arr1 == arr2) | (pd.isnull(arr1) & pd.isnull(arr2))).all()
-
-
-def _maybe_view_as_subclass(original_array, new_array):
-    if type(original_array) is not type(new_array):
-        # if input was an ndarray subclass and subclasses were OK,
-        # then view the result as that subclass.
-        new_array = new_array.view(type=type(original_array))
-        # Since we have done something akin to a view from original_array, we
-        # should let the subclass finalize (if it has it implemented, i.e., is
-        # not None).
-        if new_array.__array_finalize__:
-            new_array.__array_finalize__(original_array)
-    return new_array
-
-
-def as_strided(x, shape=None, strides=None, subok=False):
-    """ Make an ndarray from the given array with the given shape and strides.
-    """
-    # first convert input to array, possibly keeping subclass
-    x = np.array(x, copy=False, subok=subok)
-    interface = dict(x.__array_interface__)
-    if shape is not None:
-        interface['shape'] = tuple(shape)
-    if strides is not None:
-        interface['strides'] = tuple(strides)
-    array = np.asarray(DummyArray(interface, base=x))
-    # Make sure dtype is correct in case of custom dtype
-    if array.dtype.kind == 'V':
-        array.dtype = x.dtype
-    return _maybe_view_as_subclass(x, array)
-
-
-def _broadcast_to(array, shape, subok, readonly):
-    shape = tuple(shape) if np.iterable(shape) else (shape,)
-    array = np.array(array, copy=False, subok=subok)
-    if not shape and array.shape:
-        raise ValueError('cannot broadcast a non-scalar to a scalar array')
-    if any(size < 0 for size in shape):
-        raise ValueError('all elements of broadcast shape must be non-'
-                         'negative')
-    broadcast = np.nditer(
-        (array,), flags=['multi_index', 'zerosize_ok', 'refs_ok'],
-        op_flags=['readonly'], itershape=shape, order='C').itviews[0]
-    result = _maybe_view_as_subclass(array, broadcast)
-    if not readonly and array.flags.writeable:
-        result.flags.writeable = True
-    return result
-
-
-def broadcast_to(array, shape, subok=False):
-    """Broadcast an array to a new shape.
-
-    NOTE: I wrote this for numpy, where it should appear in numpy 1.10. Switch
-    to np.broadcast_to when numpy 1.10 is the lowest supported version.
-
-    Parameters
-    ----------
-    array : array_like
-        The array to broadcast.
-    shape : tuple
-        The shape of the desired array.
-    subok : bool, optional
-        If True, then sub-classes will be passed-through, otherwise
-        the returned array will be forced to be a base-class array (default).
-
-    Returns
-    -------
-    broadcast : array
-        A readonly view on the original array with the given shape. It is
-        typically not contiguous. Furthermore, more than one element of a
-        broadcasted array may refer to a single memory location.
-
-    Raises
-    ------
-    ValueError
-        If the array is not compatible with the new shape according to NumPy's
-        broadcasting rules.
-
-    Examples
-    --------
-    >>> x = np.array([1, 2, 3])
-    >>> np.broadcast_to(x, (3, 3))
-    array([[1, 2, 3],
-           [1, 2, 3],
-           [1, 2, 3]])
-    """
-    return _broadcast_to(array, shape, subok=subok, readonly=True)
 
 
 def safe_cast_to_index(array):
@@ -180,7 +76,7 @@ def equivalent(first, second):
     array_equiv if either object is an ndarray
     """
     if isinstance(first, np.ndarray) or isinstance(second, np.ndarray):
-        return array_equiv(first, second)
+        return ops.array_equiv(first, second)
     else:
         return first is second or first == second
 
@@ -419,7 +315,7 @@ class ChainMap(MutableMapping, SingleSlotPickleMixin):
     def __setitem__(self, key, value):
         self.maps[0][key] = value
 
-    def __delitem__(self, value):
+    def __delitem__(self, value):  # pragma: no cover
         raise NotImplementedError
 
     def __iter__(self):
@@ -434,21 +330,10 @@ class ChainMap(MutableMapping, SingleSlotPickleMixin):
         raise len(iter(self))
 
 
-class NDArrayMixin(object):
-    """Mixin class for making wrappers of N-dimensional arrays that conform to
-    the ndarray interface required for the data argument to Variable objects.
-
-    A subclass should set the `array` property and override one or more of
-    `dtype`, `shape` and `__getitem__`.
+class NdimSizeLenMixin(object):
+    """Mixin class that extends a class that defines a ``shape`` property to
+    one that also defines ``ndim``, ``size`` and ``__len__``.
     """
-    @property
-    def dtype(self):
-        return self.array.dtype
-
-    @property
-    def shape(self):
-        return self.array.shape
-
     @property
     def ndim(self):
         return len(self.shape)
@@ -463,6 +348,22 @@ class NDArrayMixin(object):
             return self.shape[0]
         except IndexError:
             raise TypeError('len() of unsized object')
+
+
+class NDArrayMixin(NdimSizeLenMixin):
+    """Mixin class for making wrappers of N-dimensional arrays that conform to
+    the ndarray interface required for the data argument to Variable objects.
+
+    A subclass should set the `array` property and override one or more of
+    `dtype`, `shape` and `__getitem__`.
+    """
+    @property
+    def dtype(self):
+        return self.array.dtype
+
+    @property
+    def shape(self):
+        return self.array.shape
 
     def __array__(self, dtype=None):
         return np.asarray(self[...], dtype=dtype)

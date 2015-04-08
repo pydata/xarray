@@ -32,7 +32,7 @@ def to_cdms2(dataarray):
     import cdms2
 
     def encode(var):
-        return maybe_encode_timedelta(maybe_encode_datetime(var))
+        return maybe_encode_timedelta(maybe_encode_datetime(var.variable))
 
     def set_cdms2_attrs(var, attrs):
         for k, v in attrs.items():

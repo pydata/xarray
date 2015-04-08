@@ -50,6 +50,7 @@ class TestIndexers(TestCase):
                 (I[0, y, y], I[0, :5, :5], (5, 5, 13, 14)),
                 (I[y, 0, z], I[:5, 0, 2:8:2], (5, 3, 13, 14)),
                 (I[y, :, z], I[:5, :, 2:8:2], (5, 11, 3, 13, 14)),
+                (I[0, :, z], I[0, :, 2:8:2], (11, 3, 13, 14)),
                 (I[0, :2, y, y, 0], I[0, :2, :5, :5, 0], (2, 5, 5)),
                 (I[0, :, y, :, 0], I[0, :, :5, :, 0], (11, 5, 13)),
                 (I[:, :, y, :, 0], I[:, :, :5, :, 0], (10, 11, 5, 13)),
@@ -97,7 +98,7 @@ class TestLazyArray(TestCase):
                 self.assertArrayEqual(expected, actual)
 
     def test_lazily_indexed_array(self):
-        x = variable.NumpyArrayAdapter(np.random.rand(10, 20, 30))
+        x = indexing.NumpyIndexingAdapter(np.random.rand(10, 20, 30))
         lazy = indexing.LazilyIndexedArray(x)
         I = ReturnItem()
         # test orthogonally applied indexers

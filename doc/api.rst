@@ -158,6 +158,7 @@ Attributes
    :toctree: generated/
 
    DataArray.values
+   DataArray.data
    DataArray.coords
    DataArray.dims
    DataArray.name
@@ -261,6 +262,73 @@ Comparisons
    DataArray.identical
    DataArray.broadcast_equals
 
+Universal functions
+===================
+
+This functions are copied from NumPy, but extended to work on NumPy arrays,
+dask arrays and all xray objects. You can find them in the ``xray.ufuncs``
+module:
+
+:py:attr:`~ufuncs.angle`
+:py:attr:`~ufuncs.arccos`
+:py:attr:`~ufuncs.arccosh`
+:py:attr:`~ufuncs.arcsin`
+:py:attr:`~ufuncs.arcsinh`
+:py:attr:`~ufuncs.arctan`
+:py:attr:`~ufuncs.arctan2`
+:py:attr:`~ufuncs.arctanh`
+:py:attr:`~ufuncs.ceil`
+:py:attr:`~ufuncs.conj`
+:py:attr:`~ufuncs.copysign`
+:py:attr:`~ufuncs.cos`
+:py:attr:`~ufuncs.cosh`
+:py:attr:`~ufuncs.deg2rad`
+:py:attr:`~ufuncs.degrees`
+:py:attr:`~ufuncs.exp`
+:py:attr:`~ufuncs.expm1`
+:py:attr:`~ufuncs.fabs`
+:py:attr:`~ufuncs.fix`
+:py:attr:`~ufuncs.floor`
+:py:attr:`~ufuncs.fmax`
+:py:attr:`~ufuncs.fmin`
+:py:attr:`~ufuncs.fmod`
+:py:attr:`~ufuncs.fmod`
+:py:attr:`~ufuncs.frexp`
+:py:attr:`~ufuncs.hypot`
+:py:attr:`~ufuncs.imag`
+:py:attr:`~ufuncs.iscomplex`
+:py:attr:`~ufuncs.isfinite`
+:py:attr:`~ufuncs.isinf`
+:py:attr:`~ufuncs.isnan`
+:py:attr:`~ufuncs.isreal`
+:py:attr:`~ufuncs.ldexp`
+:py:attr:`~ufuncs.log`
+:py:attr:`~ufuncs.log10`
+:py:attr:`~ufuncs.log1p`
+:py:attr:`~ufuncs.log2`
+:py:attr:`~ufuncs.logaddexp`
+:py:attr:`~ufuncs.logaddexp2`
+:py:attr:`~ufuncs.logical_and`
+:py:attr:`~ufuncs.logical_not`
+:py:attr:`~ufuncs.logical_or`
+:py:attr:`~ufuncs.logical_xor`
+:py:attr:`~ufuncs.maximum`
+:py:attr:`~ufuncs.minimum`
+:py:attr:`~ufuncs.nextafter`
+:py:attr:`~ufuncs.rad2deg`
+:py:attr:`~ufuncs.radians`
+:py:attr:`~ufuncs.real`
+:py:attr:`~ufuncs.rint`
+:py:attr:`~ufuncs.sign`
+:py:attr:`~ufuncs.signbit`
+:py:attr:`~ufuncs.sin`
+:py:attr:`~ufuncs.sinh`
+:py:attr:`~ufuncs.sqrt`
+:py:attr:`~ufuncs.square`
+:py:attr:`~ufuncs.tan`
+:py:attr:`~ufuncs.tanh`
+:py:attr:`~ufuncs.trunc`
+
 IO / Conversion
 ===============
 
@@ -271,11 +339,13 @@ Dataset methods
    :toctree: generated/
 
    open_dataset
+   open_mfdataset
    Dataset.to_netcdf
    Dataset.to_dataframe
    Dataset.from_dataframe
    Dataset.close
    Dataset.load_data
+   Dataset.reblock
 
 DataArray methods
 -----------------
@@ -292,6 +362,7 @@ DataArray methods
    DataArray.from_series
    DataArray.from_cdms2
    DataArray.load_data
+   DataArray.reblock
 
 Backends (experimental)
 -----------------------

@@ -4,16 +4,21 @@ try:
     import cPickle as pickle
 except ImportError:
     import pickle
+try:
+    import dask.array as da
+except ImportError:
+    pass
 
 import numpy as np
 import pandas as pd
 
 from xray import (align, concat, conventions, backends, Dataset, DataArray,
-                  Variable, Coordinate)
+                  Variable, Coordinate, auto_combine, open_dataset)
 from xray.core import indexing, utils
 from xray.core.pycompat import iteritems, OrderedDict
 
-from . import TestCase, unittest
+from . import (TestCase, unittest, InaccessibleArray, UnexpectedDataAccess,
+               requires_dask)
 
 
 def create_test_data(seed=None):
@@ -33,18 +38,6 @@ def create_test_data(seed=None):
         obj[v] = (dims, data, {'foo': 'variable'})
     obj.coords['numbers'] = ('dim3', [0, 1, 2, 0, 0, 1, 1, 2, 2, 3])
     return obj
-
-
-class UnexpectedDataAccess(Exception):
-    pass
-
-
-class InaccessibleArray(utils.NDArrayMixin):
-    def __init__(self, array):
-        self.array = array
-
-    def __getitem__(self, key):
-        raise UnexpectedDataAccess("Tried accessing data")
 
 
 class InaccessibleVariableDataStore(backends.InMemoryDataStore):
@@ -116,6 +109,10 @@ class TestDataset(TestCase):
             Dataset({'a': x1, 'b': x2})
         with self.assertRaisesRegexp(ValueError, 'must be defined with 1-d'):
             Dataset({'a': x1, 'x': z})
+        with self.assertRaisesRegexp(TypeError, 'must be an array or'):
+            Dataset({'x': (1, 2, 3, 4, 5, 6, 7)})
+        with self.assertRaisesRegexp(ValueError, 'already exists as a scalar'):
+            Dataset({'x': 0, 'y': ('x', [1, 2, 3])})
 
         # verify handling of DataArrays
         expected = Dataset({'x': x1, 'z': z})
@@ -206,6 +203,11 @@ class TestDataset(TestCase):
         with self.assertRaisesRegexp(ValueError, 'conflicting value'):
             Dataset(data)
 
+        data = {'x': DataArray(0, coords={'y': 1}), 'y': [1, 1]}
+        actual = Dataset(data)
+        expected = Dataset({'x': 0}, {'y': [1, 1]})
+        self.assertDatasetIdentical(expected, actual)
+
     def test_constructor_with_coords(self):
         with self.assertRaisesRegexp(ValueError, 'redundant variables and co'):
             Dataset({'a': ('x', [1])}, {'a': ('x', [1])})
@@ -221,6 +223,8 @@ class TestDataset(TestCase):
 
         self.assertItemsEqual(ds, list(ds.variables))
         self.assertItemsEqual(ds.keys(), list(ds.variables))
+        self.assertNotIn('aasldfjalskdfj', ds.variables)
+        self.assertIn('dim1', repr(ds.variables))
         self.assertEqual(len(ds), 8)
 
         self.assertItemsEqual(ds.data_vars, ['var1', 'var2', 'var3'])
@@ -232,6 +236,7 @@ class TestDataset(TestCase):
 
         self.assertItemsEqual(ds.indexes, ['dim1', 'dim2', 'dim3', 'time'])
         self.assertEqual(len(ds.indexes), 4)
+        self.assertIn('dim1', repr(ds.indexes))
 
         self.assertItemsEqual(ds.coords,
                               ['time', 'dim1', 'dim2', 'dim3', 'numbers'])
@@ -495,6 +500,12 @@ class TestDataset(TestCase):
         self.assertFalse(data2.equals(data))
         self.assertFalse(data2.identical(data))
 
+    def test_equals_failures(self):
+        data = create_test_data()
+        self.assertFalse(data.equals('foo'))
+        self.assertFalse(data.identical(123))
+        self.assertFalse(data.broadcast_equals({1: 2}))
+
     def test_broadcast_equals(self):
         data1 = Dataset(coords={'x': 0})
         data2 = Dataset(coords={'x': [0]})
@@ -507,6 +518,58 @@ class TestDataset(TestCase):
         data.attrs = {'foobar': 'baz'}
         self.assertTrue(data.attrs['foobar'], 'baz')
         self.assertIsInstance(data.attrs, OrderedDict)
+
+    @requires_dask
+    def test_reblock(self):
+        data = create_test_data()
+        for v in data.variables.values():
+            self.assertIsInstance(v.data, np.ndarray)
+        self.assertEqual(data.blockdims, {})
+
+        reblocked = data.reblock()
+        for v in reblocked.variables.values():
+            self.assertIsInstance(v.data, da.Array)
+        expected_blockdims = dict((d, (s,)) for d, s in data.dims.items())
+        self.assertEqual(reblocked.blockdims, expected_blockdims)
+
+        reblocked = data.reblock(blockshape={'time': 5, 'dim1': 5,
+                                             'dim2': 5, 'dim3': 5})
+        expected_blockdims = {'time': (5,) * 4, 'dim1': (5, 3),
+                              'dim2': (5, 4), 'dim3': (5, 5)}
+        self.assertEqual(reblocked.blockdims, expected_blockdims)
+
+        reblocked = data.reblock(expected_blockdims)
+        self.assertEqual(reblocked.blockdims, expected_blockdims)
+
+        # reblock on already blocked data
+        reblocked = reblocked.reblock(expected_blockdims)
+        self.assertEqual(reblocked.blockdims, expected_blockdims)
+        self.assertDatasetIdentical(reblocked, data)
+
+        with self.assertRaisesRegexp(ValueError, 'some blockdims or block'):
+            data.reblock(blockshape={'foo': 10})
+
+    @requires_dask
+    def test_dask_is_lazy(self):
+        store = InaccessibleVariableDataStore()
+        create_test_data().dump_to_store(store)
+        ds = open_dataset(store).reblock()
+
+        with self.assertRaises(UnexpectedDataAccess):
+            ds.load_data()
+        with self.assertRaises(UnexpectedDataAccess):
+            ds['var1'].values
+
+        # these should not raise UnexpectedDataAccess:
+        ds.var1.data
+        ds.isel(time=10)
+        ds.isel(time=slice(10), dim1=[0]).isel(dim1=0, dim2=-1)
+        ds.transpose()
+        ds.mean()
+        ds.fillna(0)
+        ds.rename({'dim1': 'foobar'})
+        ds.set_coords('var1')
+        ds.drop('var1')
 
     def test_isel(self):
         data = create_test_data()
@@ -712,6 +775,11 @@ class TestDataset(TestCase):
         self.assertDatasetIdentical(left2.sel(dim3=intersection),
                                     right2.sel(dim3=intersection))
         self.assertTrue(np.isnan(left2['var3'][-2:]).all())
+
+        with self.assertRaisesRegexp(ValueError, 'invalid value for join'):
+            align(left, right, join='foobar')
+        with self.assertRaises(TypeError):
+            align(left, right, foo='bar')
 
     def test_variable_indexing(self):
         data = create_test_data()
@@ -1191,6 +1259,7 @@ class TestDataset(TestCase):
                         'letters': ('y', ['a', 'a', 'b', 'b'])})
 
         expected = data.mean('y')
+        expected['yonly'] = expected['yonly'].variable.expand_dims({'x': 3})
         actual = data.groupby('x').mean()
         self.assertDatasetAllClose(expected, actual)
 
@@ -1199,7 +1268,8 @@ class TestDataset(TestCase):
 
         letters = data['letters']
         expected = Dataset({'xy': data['xy'].groupby(letters).mean(),
-                            'xonly': data['xonly'].mean(),
+                            'xonly': (data['xonly'].mean().variable
+                                      .expand_dims({'letters': 2})),
                             'yonly': data['yonly'].groupby(letters).mean()})
         actual = data.groupby('letters').mean()
         self.assertDatasetAllClose(expected, actual)
@@ -1228,17 +1298,29 @@ class TestDataset(TestCase):
 
         grouped = ds.groupby('numbers')
         zeros = DataArray([0, 0, 0, 0], [('numbers', range(4))])
-        expected = ds
+        expected = ((ds + Variable('dim3', np.zeros(10)))
+                    .transpose('dim3', 'dim1', 'dim2', 'time'))
         actual = grouped + zeros
         self.assertDatasetEqual(expected, actual)
 
         actual = zeros + grouped
         self.assertDatasetEqual(expected, actual)
 
-        with self.assertRaisesRegexp(TypeError, 'only support arithmetic'):
+        with self.assertRaisesRegexp(ValueError, 'dimensions .* do not exist'):
+            grouped + ds
+        with self.assertRaisesRegexp(ValueError, 'dimensions .* do not exist'):
+            ds + grouped
+        with self.assertRaisesRegexp(TypeError, 'only support binary ops'):
             grouped + 1
-        with self.assertRaisesRegexp(TypeError, 'only support arithmetic'):
+        with self.assertRaisesRegexp(TypeError, 'only support binary ops'):
             grouped + grouped
+        with self.assertRaisesRegexp(TypeError, 'in-place operations'):
+            ds += grouped
+
+        ds = Dataset({'x': ('time', np.arange(100)),
+                      'time': pd.date_range('2000-01-01', periods=100)})
+        with self.assertRaisesRegexp(ValueError, 'no overlapping labels'):
+            ds + ds.groupby('time.month')
 
     def test_groupby_math_virtual(self):
         ds = Dataset({'x': ('t', [1, 2, 3])},
@@ -1261,7 +1343,6 @@ class TestDataset(TestCase):
         times = pd.date_range('2000-01-01', freq='6H', periods=10)
         ds = Dataset({'foo': (['time', 'x', 'y'], np.random.randn(10, 5, 3)),
                       'bar': ('time', np.random.randn(10), {'meta': 'data'}),
-                      'baz': ('x', np.random.randn(5)),
                       'time': times})
 
         actual = ds.resample('1D', dim='time', how='first')
@@ -1276,7 +1357,8 @@ class TestDataset(TestCase):
             self.assertDatasetEqual(expected, actual)
 
     def test_concat(self):
-        data = create_test_data()
+        # drop the third dimension to keep things relatively understandable
+        data = create_test_data().drop('dim3')
 
         split_data = [data.isel(dim1=slice(10)),
                       data.isel(dim1=slice(10, None))]
@@ -1289,7 +1371,7 @@ class TestDataset(TestCase):
                                 for k, v in iteritems(dataset.data_vars)),
                            dataset.coords, attrs=dataset.attrs)
 
-        for dim in ['dim1', 'dim2', 'dim3']:
+        for dim in ['dim1', 'dim2']:
             datasets = [g for _, g in data.groupby(dim, squeeze=False)]
             self.assertDatasetIdentical(data, concat(datasets, dim))
             self.assertDatasetIdentical(
@@ -1306,20 +1388,19 @@ class TestDataset(TestCase):
             actual = concat(datasets, data[dim], mode='different')
             self.assertDatasetIdentical(data, rectify_dim_order(actual))
 
-        # Now add a new variable that doesn't depend on any of the current
-        # dims and make sure the mode argument behaves as expected
-        data['var4'] = ('dim4', np.arange(data.dims['dim3']))
-        for dim in ['dim1', 'dim2', 'dim3']:
+        # make sure the mode argument behaves as expected
+        data.coords['extra'] = ('dim4', np.arange(3))
+        for dim in ['dim1', 'dim2']:
             datasets = [g for _, g in data.groupby(dim, squeeze=False)]
             actual = concat(datasets, data[dim], mode='all')
-            expected = np.array([data['var4'].values
+            expected = np.array([data['extra'].values
                                  for _ in range(data.dims[dim])])
-            self.assertArrayEqual(actual['var4'].values, expected)
+            self.assertArrayEqual(actual['extra'].values, expected)
 
             actual = concat(datasets, data[dim], mode='different')
-            self.assertDataArrayEqual(data['var4'], actual['var4'])
+            self.assertDataArrayEqual(data['extra'], actual['extra'])
             actual = concat(datasets, data[dim], mode='minimal')
-            self.assertDataArrayEqual(data['var4'], actual['var4'])
+            self.assertDataArrayEqual(data['extra'], actual['extra'])
 
         # verify that the dim argument takes precedence over
         # concatenating dataset variables of the same name
@@ -1357,6 +1438,12 @@ class TestDataset(TestCase):
             data1['dim2'] = 2 * data1['dim2']
             concat([data0, data1], 'dim1')
 
+        with self.assertRaisesRegexp(ValueError, 'compat.* invalid'):
+            concat(split_data, 'dim1', compat='foobar')
+
+        with self.assertRaisesRegexp(ValueError, 'unexpected value for mode'):
+            concat(split_data, 'dim1', mode='foobar')
+
     def test_concat_promote_shape(self):
         # mixed dims within variables
         objs = [Dataset({'x': 0}), Dataset({'x': [1]})]
@@ -1381,12 +1468,53 @@ class TestDataset(TestCase):
         expected = Dataset({'x': [0, 1]}, {'y': ('x', [-1, -2])})
         self.assertDatasetIdentical(actual, expected)
 
+        # scalars with mixed lengths along concat dim -- values should repeat
+        objs = [Dataset({'x': [0]}, {'y': -1}),
+                Dataset({'x': [1, 2]}, {'y': -2})]
+        actual = concat(objs, 'x')
+        expected = Dataset({}, {'y': ('x', [-1, -2, -2])})
+        self.assertDatasetIdentical(actual, expected)
+
         # broadcast 1d x 1d -> 2d
         objs = [Dataset({'z': ('x', [-1])}, {'x': [0], 'y': [0]}),
                 Dataset({'z': ('y', [1])}, {'x': [1], 'y': [0]})]
         actual = concat(objs, 'x')
         expected = Dataset({'z': (('x', 'y'), [[-1], [1]])})
         self.assertDatasetIdentical(actual, expected)
+
+    @requires_dask  # only for toolz
+    def test_auto_combine(self):
+        objs = [Dataset({'x': [0]}), Dataset({'x': [1]})]
+        actual = auto_combine(objs)
+        expected = Dataset({'x': [0, 1]})
+        self.assertDatasetIdentical(expected, actual)
+
+        actual = auto_combine([actual])
+        self.assertDatasetIdentical(expected, actual)
+
+        objs = [Dataset({'x': [0, 1]}), Dataset({'x': [2]})]
+        actual = auto_combine(objs)
+        expected = Dataset({'x': [0, 1, 2]})
+        self.assertDatasetIdentical(expected, actual)
+
+        # ensure auto_combine handles non-sorted dimensions
+        objs = [Dataset(OrderedDict([('x', ('a', [0])), ('y', ('a', [0]))])),
+                Dataset(OrderedDict([('y', ('a', [1])), ('x', ('a', [1]))]))]
+        actual = auto_combine(objs)
+        expected = Dataset({'x': ('a', [0, 1]), 'y': ('a', [0, 1]), 'a': [0, 0]})
+        self.assertDatasetIdentical(expected, actual)
+
+        objs = [Dataset({'x': [0], 'y': [0]}), Dataset({'y': [1], 'x': [1]})]
+        with self.assertRaisesRegexp(ValueError, 'too many .* dimensions'):
+            auto_combine(objs)
+
+        objs = [Dataset({'x': 0}), Dataset({'x': 1})]
+        with self.assertRaisesRegexp(ValueError, 'cannot infer dimension'):
+            auto_combine(objs)
+
+        objs = [Dataset({'x': [0], 'y': [0]}), Dataset({'x': [0]})]
+        with self.assertRaises(KeyError):
+            auto_combine(objs)
 
     def test_to_and_from_dataframe(self):
         x = np.random.randn(10)
@@ -1462,8 +1590,8 @@ class TestDataset(TestCase):
         store = InaccessibleVariableDataStore()
         create_test_data().dump_to_store(store)
 
-        for decoder in [None, conventions.cf_decoder]:
-            ds = Dataset.load_store(store, decoder=decoder)
+        for decode_cf in [True, False]:
+            ds = open_dataset(store, decode_cf=decode_cf)
             with self.assertRaises(UnexpectedDataAccess):
                 ds.load_data()
             with self.assertRaises(UnexpectedDataAccess):
@@ -1544,7 +1672,11 @@ class TestDataset(TestCase):
         actual = ds.fillna({'a': -1})
         self.assertDatasetIdentical(expected, actual)
 
-        actual = ds.fillna(Dataset({'a': -1}))
+        other = Dataset({'a': -1})
+        actual = ds.fillna(other)
+        self.assertDatasetIdentical(expected, actual)
+
+        actual = ds.fillna({'a': other.a})
         self.assertDatasetIdentical(expected, actual)
 
         # fill with range(4)
@@ -1668,7 +1800,6 @@ class TestDataset(TestCase):
         actual = ds.var()
         self.assertDatasetIdentical(expected, actual)
 
-    @unittest.skip('see github issue 209')
     def test_reduce_only_one_axis(self):
 
         def mean_only_one_axis(x, axis):
@@ -1762,13 +1893,14 @@ class TestDataset(TestCase):
     def test_dataset_array_math(self):
         ds = self.make_example_math_dataset()
 
-        expected = ds.apply(lambda x: x + ds['foo'])
-        self.assertDatasetIdentical(expected, ds + ds['foo'])
-        self.assertDatasetIdentical(expected, ds['foo'] + ds)
-        self.assertDatasetIdentical(expected, ds + ds['foo'].variable)
-        self.assertDatasetIdentical(expected, ds['foo'].variable + ds)
-        with self.assertRaisesRegexp(ValueError, 'dimensions cannot change'):
-            ds += ds['foo']
+        expected = ds.apply(lambda x: x - ds['foo'])
+        self.assertDatasetIdentical(expected, ds - ds['foo'])
+        self.assertDatasetIdentical(expected, -ds['foo'] + ds)
+        self.assertDatasetIdentical(expected, ds - ds['foo'].variable)
+        self.assertDatasetIdentical(expected, -ds['foo'].variable + ds)
+        actual = ds.copy(deep=True)
+        actual -= ds['foo']
+        self.assertDatasetIdentical(expected, actual)
 
         expected = ds.apply(lambda x: x + ds['bar'])
         self.assertDatasetIdentical(expected, ds + ds['bar'])
@@ -1793,8 +1925,10 @@ class TestDataset(TestCase):
         self.assertDatasetIdentical(expected, ds + dict(ds.data_vars))
 
         actual = ds.copy(deep=True)
+        expected_id = id(actual)
         actual += ds
         self.assertDatasetIdentical(expected, actual)
+        self.assertEqual(expected_id, id(actual))
 
         self.assertDatasetIdentical(ds == ds, ds.notnull())
 
@@ -1829,6 +1963,13 @@ class TestDataset(TestCase):
 
         # maybe unary arithmetic with empty datasets should raise instead?
         self.assertDatasetIdentical(Dataset() + 1, Dataset())
+
+        for other in [ds.isel(x=slice(2)), ds.bar.isel(x=slice(0))]:
+            actual = ds.copy(deep=True)
+            other = ds.isel(x=slice(2))
+            actual += other
+            expected = ds + other.reindex_like(ds)
+            self.assertDatasetIdentical(expected, actual)
 
     def test_dataset_math_errors(self):
         ds = self.make_example_math_dataset()

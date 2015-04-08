@@ -13,12 +13,13 @@ class ImplementsArrayReduce(object):
         if include_skipna:
             def wrapped_func(self, dim=None, axis=None, skipna=None,
                              keep_attrs=False, **kwargs):
-                return self.reduce(func, dim, axis, keep_attrs, skipna=skipna,
-                                   **kwargs)
+                return self.reduce(func, dim, axis, keep_attrs=keep_attrs,
+                                   skipna=skipna, allow_lazy=True, **kwargs)
         else:
             def wrapped_func(self, dim=None, axis=None, keep_attrs=False,
                              **kwargs):
-                return self.reduce(func, dim, axis, keep_attrs, **kwargs)
+                return self.reduce(func, dim, axis, keep_attrs=keep_attrs,
+                                   allow_lazy=True, **kwargs)
         return wrapped_func
 
     _reduce_extra_args_docstring = \
@@ -37,11 +38,13 @@ class ImplementsDatasetReduce(object):
             def wrapped_func(self, dim=None, keep_attrs=False, skipna=None,
                              **kwargs):
                 return self.reduce(func, dim, keep_attrs, skipna=skipna,
-                                   numeric_only=numeric_only, **kwargs)
+                                   numeric_only=numeric_only, allow_lazy=True,
+                                   **kwargs)
         else:
             def wrapped_func(self, dim=None, keep_attrs=False, **kwargs):
                 return self.reduce(func, dim, keep_attrs,
-                                   numeric_only=numeric_only, **kwargs)
+                                   numeric_only=numeric_only, allow_lazy=True,
+                                   **kwargs)
         return wrapped_func
 
     _reduce_extra_args_docstring = \
@@ -51,11 +54,11 @@ class ImplementsDatasetReduce(object):
 
 
 class AbstractArray(ImplementsArrayReduce):
-    def __nonzero__(self):
+    def __bool__(self):
         return bool(self.values)
 
     # Python 3 uses __bool__, Python 2 uses __nonzero__
-    __bool__ = __nonzero__
+    __nonzero__ = __bool__
 
     def __float__(self):
         return float(self.values)
@@ -309,10 +312,12 @@ def _maybe_promote(dtype):
         fill_value = np.nan
     elif np.issubdtype(dtype, np.datetime64):
         fill_value = np.datetime64('NaT')
+    elif np.issubdtype(dtype, np.timedelta64):
+        fill_value = np.timedelta64('NaT')
     else:
         dtype = object
         fill_value = np.nan
-    return dtype, fill_value
+    return np.dtype(dtype), fill_value
 
 
 def _possibly_convert_objects(values):

@@ -9,14 +9,62 @@ What's New
     import xray
     np.random.seed(123456)
 
-v0.4.2 (unreleased)
--------------------
+v0.5 (unreleased)
+-----------------
+
+The headline feature in this release is experimental support for out-of-core
+computing (data that doesn't fit into memory) with dask_. For more on dask,
+read the new documentation section :doc:`dask`.
+
+We also added new top-level function :py:func:`~xray.open_mfdataset` to make it
+easy to open a collection of files (using dask) as a single `xray.Dataset`
+object.
+
+The combination of these features makes it possible to manipulate gigantic
+datasets with xray. Dask is currently an optional dependency of xray, but it
+is likely to become a requirement at some point in the future.
+
+Backwards incompatible changes
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+- The logic used for choosing which variables are concatenated with
+  :py:func:`~xray.concat` has changed. Previously, by default any variables
+  which were equal across a dimension were not concatenated. This lead to some
+  surprising behavior, where the behavior of groupby and concat operations
+  could depend on runtime values (:issue:`268`). For example:
+
+  .. ipython::
+    :verbatim:
+
+    In [1]: ds = xray.Dataset({'x': 0})
+
+    In [2]: xray.concat([ds, ds], dim='y')
+    Out[2]:
+    <xray.Dataset>
+    Dimensions:  ()
+    Coordinates:
+        *empty*
+    Data variables:
+        x        int64 0
+
+  Now, the default always concatenates data variables:
+
+  .. ipython:: python
+    :suppress:
+
+    ds = xray.Dataset({'x': 0})
+
+  .. ipython:: python
+
+    xray.concat([ds, ds], dim='y')
+
+  To obtain the old behavior, supply the argument ``concat_over=[]``.
 
 Enhancements
 ~~~~~~~~~~~~
 
-- New :py:meth:`~xray.Dataset.fillna` to fill missing values, modeled off the
-  pandas method of the same name:
+- New :py:meth:`~xray.Dataset.fillna` method to fill missing values, modeled
+  off the pandas method of the same name:
 
   .. ipython:: python
 
@@ -34,7 +82,7 @@ Enhancements
   .. ipython:: python
 
       ds = xray.Dataset({'y': ('x', [1, 2, 3])})
-      ds.assign(z = lambda x: x.y ** 2)
+      ds.assign(z = lambda ds: ds.y ** 2)
       ds.assign_coords(z = ('x', ['a', 'b', 'c']))
 
   These methods return a new Dataset (or DataArray) with updated data or
@@ -88,7 +136,6 @@ Enhancements
 
       array.resample('1D', dim='time', how='first')
 
-.. _same as pandas: http://pandas.pydata.org/pandas-docs/stable/timeseries.html#up-and-downsampling
 
 - :py:meth:`~xray.Dataset.swap_dims` allows for easily swapping one dimension
   out for another:
@@ -297,7 +344,7 @@ is supporting out-of-core operations in xray using Dask_, a part of the Blaze_
 project. For a preview of using Dask with weather data, read
 `this blog post`_ by Matthew Rocklin. See :issue:`328` for more details.
 
-.. _Dask: https://github.com/continuumio/dask
+.. _Dask: http://dask.pydata.org
 .. _Blaze: http://blaze.pydata.org
 .. _this blog post: http://matthewrocklin.com/blog/work/2015/02/13/Towards-OOC-Slicing-and-Stacking/
 

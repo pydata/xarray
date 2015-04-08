@@ -9,8 +9,8 @@ import pandas as pd
 
 from xray import Variable, Dataset, DataArray
 from xray.core import indexing
-from xray.core.variable import (Coordinate, as_variable, NumpyArrayAdapter,
-                                PandasIndexAdapter, _as_compatible_data)
+from xray.core.variable import (Coordinate, as_variable, _as_compatible_data)
+from xray.core.indexing import NumpyIndexingAdapter, PandasIndexAdapter
 from xray.core.pycompat import PY3, OrderedDict
 
 from . import TestCase, source_ndarray
@@ -296,7 +296,7 @@ class VariableSubclassTestCases(object):
 
     def test_concat(self):
         x = np.arange(5)
-        y = np.ones(5)
+        y = np.arange(5, 10)
         v = self.cls(['a'], x)
         w = self.cls(['a'], y)
         self.assertVariableIdentical(Variable(['b', 'a'], np.array([x, y])),
@@ -304,22 +304,22 @@ class VariableSubclassTestCases(object):
         self.assertVariableIdentical(Variable(['b', 'a'], np.array([x, y])),
                                      Variable.concat((v, w), 'b'))
         self.assertVariableIdentical(Variable(['b', 'a'], np.array([x, y])),
-                                     Variable.concat((v, w), 'b', length=2))
-        with self.assertRaisesRegexp(ValueError, 'actual length'):
-            Variable.concat([v, w], 'b', length=1)
-        with self.assertRaisesRegexp(ValueError, 'actual length'):
-            Variable.concat([v, w, w], 'b', length=4)
+                                     Variable.concat((v, w), 'b'))
         with self.assertRaisesRegexp(ValueError, 'inconsistent dimensions'):
             Variable.concat([v, Variable(['c'], y)], 'b')
+        # test indexers
+        actual = Variable.concat([v, w], indexers=[range(0, 10, 2), range(1, 10, 2)], dim='a')
+        expected = Variable('a', np.array([x, y]).ravel(order='F'))
+        self.assertVariableIdentical(expected, actual)
         # test concatenating along a dimension
         v = Variable(['time', 'x'], np.random.random((10, 8)))
         self.assertVariableIdentical(v, Variable.concat([v[:5], v[5:]], 'time'))
-        self.assertVariableIdentical(v, Variable.concat([v[:5], v[5], v[6:]], 'time'))
-        self.assertVariableIdentical(v, Variable.concat([v[0], v[1:]], 'time'))
+        self.assertVariableIdentical(v, Variable.concat([v[:5], v[5:6], v[6:]], 'time'))
+        self.assertVariableIdentical(v, Variable.concat([v[:1], v[1:]], 'time'))
         # test dimension order
         self.assertVariableIdentical(v, Variable.concat([v[:, :5], v[:, 5:]], 'x'))
-        self.assertVariableIdentical(v.transpose(),
-                                     Variable.concat([v[:, 0], v[:, 1:]], 'x'))
+        with self.assertRaisesRegexp(ValueError, 'same number of dimensions'):
+            Variable.concat([v[:, 0], v[:, 1:]], 'x')
 
     def test_concat_attrs(self):
         # different or conflicting attributes should be removed
@@ -376,8 +376,9 @@ class TestVariable(TestCase, VariableSubclassTestCases):
     def setUp(self):
         self.d = np.random.random((10, 3)).astype(np.float64)
 
-    def test_data(self):
+    def test_data_and_values(self):
         v = Variable(['time', 'x'], self.d)
+        self.assertArrayEqual(v.data, self.d)
         self.assertArrayEqual(v.values, self.d)
         self.assertIs(source_ndarray(v.values), self.d)
         with self.assertRaises(ValueError):
@@ -386,6 +387,9 @@ class TestVariable(TestCase, VariableSubclassTestCases):
         d2 = np.random.random((10, 3))
         v.values = d2
         self.assertIs(source_ndarray(v.values), d2)
+        d3 = np.random.random((10, 3))
+        v.data = d3
+        self.assertIs(source_ndarray(v.data), d3)
 
     def test_numpy_same_methods(self):
         v = Variable([], np.float32(0.0))
@@ -608,26 +612,26 @@ class TestVariable(TestCase, VariableSubclassTestCases):
         with self.assertRaisesRegexp(ValueError, 'not found in array dim'):
             v.get_axis_num('foobar')
 
-    def test_set_dims(self):
+    def test_expand_dims(self):
         v = Variable(['x'], [0, 1])
-        actual = v.set_dims(['x', 'y'])
+        actual = v.expand_dims(['x', 'y'])
         expected = Variable(['x', 'y'], [[0], [1]])
         self.assertVariableIdentical(actual, expected)
 
-        actual = v.set_dims(['y', 'x'])
+        actual = v.expand_dims(['y', 'x'])
         self.assertVariableIdentical(actual, expected.T)
 
-        actual = v.set_dims(OrderedDict([('x', 2), ('y', 2)]))
+        actual = v.expand_dims(OrderedDict([('x', 2), ('y', 2)]))
         expected = Variable(['x', 'y'], [[0, 0], [1, 1]])
         self.assertVariableIdentical(actual, expected)
 
         v = Variable(['foo'], [0, 1])
-        actual = v.set_dims('foo')
+        actual = v.expand_dims('foo')
         expected = v
         self.assertVariableIdentical(actual, expected)
 
         with self.assertRaisesRegexp(ValueError, 'must be a superset'):
-            v.set_dims(['z'])
+            v.expand_dims(['z'])
 
     def test_broadcasting_math(self):
         x = np.random.randn(2, 3)
@@ -708,12 +712,7 @@ class TestVariable(TestCase, VariableSubclassTestCases):
         self.assertVariableIdentical(v.prod(), Variable([], 6))
         self.assertVariableIdentical(v.var(), Variable([], 2.0 / 3))
 
-        try:
-            import bottleneck
-            bottleneck_available = True
-        except ImportError:
-            bottleneck_available = False
-        if LooseVersion(np.__version__) < '1.9' and not bottleneck_available:
+        if LooseVersion(np.__version__) < '1.9':
             with self.assertRaises(NotImplementedError):
                 v.median()
         else:
@@ -777,7 +776,7 @@ class TestCoordinate(TestCase, VariableSubclassTestCases):
     def test_data(self):
         x = Coordinate('x', np.arange(3.0))
         # data should be initially saved as an ndarray
-        self.assertIs(type(x._data), NumpyArrayAdapter)
+        self.assertIs(type(x._data), np.ndarray)
         self.assertEqual(float, x.dtype)
         self.assertArrayEqual(np.arange(3), x)
         self.assertEqual(float, x.values.dtype)
@@ -796,20 +795,20 @@ class TestCoordinate(TestCase, VariableSubclassTestCases):
 
 class TestAsCompatibleData(TestCase):
     def test_unchanged_types(self):
-        types = (NumpyArrayAdapter, PandasIndexAdapter,
-                 indexing.LazilyIndexedArray)
+        types = (np.asarray, PandasIndexAdapter, indexing.LazilyIndexedArray)
         for t in types:
             for data in [np.arange(3),
                          pd.date_range('2000-01-01', periods=3),
                          pd.date_range('2000-01-01', periods=3).values]:
                 x = t(data)
-                self.assertIs(x, _as_compatible_data(x))
+                self.assertIs(source_ndarray(x),
+                              source_ndarray(_as_compatible_data(x)))
 
     def test_converted_types(self):
         for input_array in [[[0, 1, 2]], pd.DataFrame([[0, 1, 2]])]:
             actual = _as_compatible_data(input_array)
             self.assertArrayEqual(np.asarray(input_array), actual)
-            self.assertEqual(NumpyArrayAdapter, type(actual))
+            self.assertEqual(np.ndarray, type(actual))
             self.assertEqual(np.asarray(input_array).dtype, actual.dtype)
 
     def test_masked_array(self):
@@ -830,24 +829,24 @@ class TestAsCompatibleData(TestCase):
         expected = np.datetime64('2000-01-01T00Z')
         actual = _as_compatible_data(expected)
         self.assertEqual(expected, actual)
-        self.assertEqual(NumpyArrayAdapter, type(actual))
+        self.assertEqual(np.ndarray, type(actual))
         self.assertEqual(np.dtype('datetime64[ns]'), actual.dtype)
 
         expected = np.array([np.datetime64('2000-01-01T00Z')])
         actual = _as_compatible_data(expected)
         self.assertEqual(np.asarray(expected), actual)
-        self.assertEqual(NumpyArrayAdapter, type(actual))
+        self.assertEqual(np.ndarray, type(actual))
         self.assertEqual(np.dtype('datetime64[ns]'), actual.dtype)
 
         expected = np.array([np.datetime64('2000-01-01T00Z', 'ns')])
         actual = _as_compatible_data(expected)
         self.assertEqual(np.asarray(expected), actual)
-        self.assertEqual(NumpyArrayAdapter, type(actual))
+        self.assertEqual(np.ndarray, type(actual))
         self.assertEqual(np.dtype('datetime64[ns]'), actual.dtype)
         self.assertIs(expected, source_ndarray(np.asarray(actual)))
 
         expected = np.datetime64('2000-01-01T00Z', 'ns')
         actual = _as_compatible_data(datetime(2000, 1, 1))
         self.assertEqual(np.asarray(expected), actual)
-        self.assertEqual(NumpyArrayAdapter, type(actual))
+        self.assertEqual(np.ndarray, type(actual))
         self.assertEqual(np.dtype('datetime64[ns]'), actual.dtype)

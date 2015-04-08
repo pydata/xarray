@@ -7,10 +7,11 @@ from .. import Variable
 from ..conventions import cf_encoder
 from ..core.pycompat import iteritems, basestring, unicode_type, OrderedDict
 from ..core.utils import Frozen, FrozenOrderedDict
-from ..core.variable import NumpyArrayAdapter
+from ..core.indexing import NumpyIndexingAdapter
 
 from .common import AbstractWritableDataStore
-from .netcdf3 import is_valid_nc3_name, coerce_nc3_dtype, encode_nc3_variable
+from .netcdf3 import (is_valid_nc3_name, coerce_nc3_dtype,
+                      encode_nc3_attr_value, encode_nc3_variable)
 from xray.conventions import cf_decoder
 
 
@@ -27,7 +28,7 @@ def _decode_attrs(d):
                        for (k, v) in iteritems(d))
 
 
-class ScipyArrayWrapper(NumpyArrayAdapter):
+class ScipyArrayWrapper(NumpyIndexingAdapter):
     def __init__(self, netcdf_file, variable_name):
         self.netcdf_file = netcdf_file
         self.variable_name = variable_name
@@ -60,7 +61,7 @@ class ScipyDataStore(AbstractWritableDataStore):
     """
     def __init__(self, filename_or_obj, mode='r', mmap=None, version=2):
         import scipy
-        if mode != 'r' and scipy.__version__ < '0.13':
+        if mode != 'r' and scipy.__version__ < '0.13':  # pragma: no cover
             warnings.warn('scipy %s detected; '
                           'the minimal recommended version is 0.13. '
                           'Older version of this library do not reliably '
@@ -107,37 +108,25 @@ class ScipyDataStore(AbstractWritableDataStore):
         if not is_valid_nc3_name(key):
             raise ValueError("Not a valid attribute name")
 
-    def _cast_attr_value(self, value):
-        if isinstance(value, basestring):
-            if not isinstance(value, unicode_type):
-                value = value.decode('utf-8')
-        else:
-            value = coerce_nc3_dtype(np.atleast_1d(value))
-            if value.ndim > 1:
-                raise ValueError("netCDF attributes must be 1-dimensional")
-        return value
-
     def set_attribute(self, key, value):
         self._validate_attr_key(key)
-        setattr(self.ds, key, self._cast_attr_value(value))
+        value = encode_nc3_attr_value(value)
+        setattr(self.ds, key, value)
 
-    def set_variable(self, name, variable):
+    def prepare_variable(self, name, variable):
         # TODO, create a netCDF3 encoder
         variable = encode_nc3_variable(variable)
         self.set_necessary_dimensions(variable)
-        data = variable.values
+        data = variable.data
+        # nb. this still creates a numpy array in all memory, even though we
+        # don't write the data yet; scipy.io.netcdf does not not support
+        # incremental writes.
         self.ds.createVariable(name, data.dtype, variable.dims)
         scipy_var = self.ds.variables[name]
-        if data.ndim == 0:
-            scipy_var.assignValue(data)
-        else:
-            scipy_var[:] = data[:]
         for k, v in iteritems(variable.attrs):
             self._validate_attr_key(k)
-            setattr(scipy_var, k, self._cast_attr_value(v))
-
-    def del_attribute(self, key):
-        delattr(self.ds, key)
+            setattr(scipy_var, k, v)
+        return scipy_var, data
 
     def sync(self):
         self.ds.flush()

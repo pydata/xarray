@@ -284,6 +284,11 @@ class DataArray(AbstractArray, BaseDataObject):
         return len(self.variable)
 
     @property
+    def data(self):
+        """The array's data as a dask or numpy array"""
+        return self.variable.data
+
+    @property
     def values(self):
         """The array's data as a numpy.ndarray"""
         return self.variable.values
@@ -418,9 +423,7 @@ class DataArray(AbstractArray, BaseDataObject):
         load data automatically. However, this method can be necessary when
         working with many file objects on disk.
         """
-        self.variable.load_data()
-        for coord in self.coords.values():
-            coord.variable.load_data()
+        self._dataset.load_data()
         return self
 
     def copy(self, deep=True):
@@ -443,6 +446,44 @@ class DataArray(AbstractArray, BaseDataObject):
 
     # mutable objects should not be hashable
     __hash__ = None
+
+    @property
+    def blockdims(self):
+        """Block dimensions for this array's data or None if it's not a dask
+        array.
+        """
+        return self.variable.blockdims
+
+    def reblock(self, blockdims=None, blockshape=None):
+        """Coerce this array's data into dask with the given block dimensions.
+
+        If neither blockdims nor blockshape is provided for one or more
+        dimensions, block sizes along that dimension will not be updated;
+        non-dask arrays will be converted into dask arrays with a single block.
+
+        Parameters
+        ----------
+        blockdims : tuple or dict, optional
+            Dimensions for each block, e.g., ``((3, 2), (5, 5, 5))`` or
+            ``{'x': (3, 2), 'y': (5, 5, 5)}``.
+        blockshape : tuple or dict, optional
+            Shapes for each block, e.g., ``(3, 5)`` or ``{'x': 3, 'y': 5}``.
+            These are expanded into block dimensions. This argument is mutually
+            exclusive with ``blockdims``.
+
+        Returns
+        -------
+        reblocked : xray.DataArray
+        """
+        def coerce_to_dict(arg):
+            if arg is not None and not utils.is_dict_like(arg):
+                arg = dict(zip(self.dims, arg))
+            return arg
+
+        blockdims = coerce_to_dict(blockdims)
+        blockshape = coerce_to_dict(blockshape)
+        ds = self._dataset.reblock(blockdims=blockdims, blockshape=blockshape)
+        return self._with_replaced_dataset(ds)
 
     def isel(self, **indexers):
         """Return a new DataArray whose dataset is given by integer indexing
@@ -950,7 +991,7 @@ class DataArray(AbstractArray, BaseDataObject):
     def _unary_op(f):
         @functools.wraps(f)
         def func(self, *args, **kwargs):
-            return self.__array_wrap__(f(self.values, *args, **kwargs))
+            return self.__array_wrap__(f(self.variable.data, *args, **kwargs))
         return func
 
     @staticmethod
@@ -973,7 +1014,8 @@ class DataArray(AbstractArray, BaseDataObject):
             ds[name] = (f(self.variable, other_variable)
                         if not reflexive
                         else f(other_variable, self.variable))
-            return self._new_from_dataset_no_copy(ds, name)
+            result = self._new_from_dataset_no_copy(ds, name)
+            return result
         return func
 
     @staticmethod
@@ -981,7 +1023,8 @@ class DataArray(AbstractArray, BaseDataObject):
         @functools.wraps(f)
         def func(self, other):
             if isinstance(other, groupby.GroupBy):
-                return NotImplemented
+                raise TypeError('in-place operations between a DataArray and '
+                                'a grouped object are not permitted')
             other_coords = getattr(other, 'coords', None)
             other_variable = getattr(other, 'variable', other)
             with self.coords._merge_inplace(other_coords):

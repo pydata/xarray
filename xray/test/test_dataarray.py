@@ -6,7 +6,7 @@ from textwrap import dedent
 from xray import (align, concat, broadcast_arrays, Dataset, DataArray,
                   Coordinate, Variable)
 from xray.core.pycompat import iteritems, OrderedDict
-from . import TestCase, ReturnItem, source_ndarray, unittest
+from . import TestCase, ReturnItem, source_ndarray, unittest, requires_dask
 
 
 class TestDataArray(TestCase):
@@ -259,6 +259,12 @@ class TestDataArray(TestCase):
         self.assertFalse(expected.equals(actual))
         self.assertFalse(expected.identical(actual))
 
+    def test_equals_failures(self):
+        orig = DataArray(np.arange(5.0), {'a': 42}, dims='x')
+        self.assertFalse(orig.equals(np.arange(5)))
+        self.assertFalse(orig.identical(123))
+        self.assertFalse(orig.broadcast_equals({1: 2}))
+
     def test_broadcast_equals(self):
         a = DataArray([0, 0], {'y': 0}, dims='x')
         b = DataArray([0, 0], {'y': ('x', [0, 0])}, dims='x')
@@ -326,6 +332,20 @@ class TestDataArray(TestCase):
                        'y2': 'c', 'xy': ('x', ['d', 'e'])},
             dims='x')
         self.assertDataArrayIdentical(expected, actual)
+
+    @requires_dask
+    def test_reblock(self):
+        unblocked = DataArray(np.ones((3, 4)))
+        self.assertIsNone(unblocked.blockdims)
+
+        blocked = unblocked.reblock()
+        self.assertEqual(blocked.blockdims, ((3,), (4,)))
+
+        blocked = unblocked.reblock(blockdims=((2, 1), (2, 2)))
+        self.assertEqual(blocked.blockdims, ((2, 1), (2, 2)))
+
+        blocked = unblocked.reblock(blockshape=(3, 3))
+        self.assertEqual(blocked.blockdims, ((3,), (3, 1)))
 
     def test_isel(self):
         self.assertDataArrayIdentical(self.dv[0], self.dv.isel(x=0))
@@ -997,21 +1017,30 @@ class TestDataArray(TestCase):
         actual_agg = actual.groupby('abc').mean()
         self.assertDataArrayAllClose(expected_agg, actual_agg)
 
-        with self.assertRaisesRegexp(TypeError, 'only support arithmetic'):
+        with self.assertRaisesRegexp(TypeError, 'only support binary ops'):
             grouped + 1
-        with self.assertRaisesRegexp(TypeError, 'only support arithmetic'):
+        with self.assertRaisesRegexp(TypeError, 'only support binary ops'):
             grouped + grouped
+        with self.assertRaisesRegexp(TypeError, 'in-place operations'):
+            array += grouped
 
-    @unittest.skip
     def test_groupby_math_not_aligned(self):
-        # We need to fix Variable.concat to infer dtypes properly before this
-        # will pass. For now, raising KeyError when labels are missing (instead
-        # of aligning) is a reasonable fallback.
         array = DataArray(range(4), {'b': ('x', [0, 0, 1, 1])}, dims='x')
         other = DataArray([10], dims='b')
         actual = array.groupby('b') + other
         expected = DataArray([10, 11, np.nan, np.nan], array.coords)
         self.assertDataArrayIdentical(expected, actual)
+
+        other = DataArray([10], coords={'c': 123}, dims='b')
+        actual = array.groupby('b') + other
+        expected.coords['c'] = (['x'], [123] * 2 + [np.nan] * 2)
+        self.assertDataArrayIdentical(expected, actual)
+
+        other = Dataset({'a': ('b', [10])})
+        actual = array.groupby('b') + other
+        expected = Dataset({'a': ('x', [10, 11, np.nan, np.nan])},
+                           array.coords)
+        self.assertDatasetIdentical(expected, actual)
 
     def test_groupby_restore_dim_order(self):
         array = DataArray(np.random.randn(5, 3),

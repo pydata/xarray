@@ -3,8 +3,8 @@ import unicodedata
 import numpy as np
 
 from .. import conventions, Variable
-from ..core import utils
-from ..core.pycompat import basestring, unicode_type
+from ..core import ops
+from ..core.pycompat import basestring, unicode_type, OrderedDict
 
 
 # Special characters that are permitted in netCDF names except in the
@@ -41,9 +41,9 @@ def coerce_nc3_dtype(arr):
         # TODO: raise a warning whenever casting the data-type instead?
         cast_arr = arr.astype(new_dtype)
         if ((('int' in dtype or 'U' in dtype) and
-                    not np.array_equal(cast_arr, arr))
+                    not (cast_arr == arr).all())
                 or ('float' in dtype and
-                    not utils.allclose_or_equiv(cast_arr, arr))):
+                    not ops.allclose_or_equiv(cast_arr, arr))):
             raise ValueError('could not safely cast array from dtype %s to %s'
                              % (dtype, new_dtype))
         arr = cast_arr
@@ -59,10 +59,27 @@ def maybe_convert_to_char_array(data, dims):
     return data, dims
 
 
+def encode_nc3_attr_value(value):
+    if isinstance(value, basestring):
+        if not isinstance(value, unicode_type):
+            value = value.decode('utf-8')
+    else:
+        value = coerce_nc3_dtype(np.atleast_1d(value))
+        if value.ndim > 1:
+            raise ValueError("netCDF attributes must be 1-dimensional")
+    return value
+
+
+def encode_nc3_attrs(attrs):
+    return OrderedDict([(k, encode_nc3_attr_value(v))
+                        for k, v in attrs.items()])
+
+
 def encode_nc3_variable(var):
-    data = coerce_nc3_dtype(var.values)
+    data = coerce_nc3_dtype(var.data)
     data, dims = maybe_convert_to_char_array(data, var.dims)
-    return Variable(dims, data, var.attrs, var.encoding)
+    attrs = encode_nc3_attrs(var.attrs)
+    return Variable(dims, data, attrs, var.encoding)
 
 
 def _isalnumMUTF8(c):

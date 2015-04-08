@@ -1,7 +1,9 @@
+from datetime import timedelta
 import numpy as np
+import pandas as pd
 
 from . import utils
-from .pycompat import iteritems, range
+from .pycompat import iteritems, range, dask_array_type
 from .utils import is_full_slice
 
 
@@ -262,7 +264,8 @@ class LazilyIndexedArray(utils.NDArrayMixin):
         return tuple(shape)
 
     def __array__(self, dtype=None):
-        return np.asarray(self.array[self.key], dtype=None)
+        array = orthogonally_indexable(self.array)
+        return np.asarray(array[self.key], dtype=None)
 
     def __getitem__(self, key):
         return type(self)(self.array, self._updated_key(key))
@@ -274,3 +277,106 @@ class LazilyIndexedArray(utils.NDArrayMixin):
     def __repr__(self):
         return ('%s(array=%r, key=%r)' %
                 (type(self).__name__, self.array, self.key))
+
+
+def orthogonally_indexable(array):
+    if isinstance(array, np.ndarray):
+        return NumpyIndexingAdapter(array)
+    if isinstance(array, pd.Index):
+        return PandasIndexAdapter(array)
+    if isinstance(array, dask_array_type):
+        return DaskIndexingAdapter(array)
+    return array
+
+
+class NumpyIndexingAdapter(utils.NDArrayMixin):
+    """Wrap a NumPy array to use orthogonal indexing (array indexing
+    accesses different dimensions independently, like netCDF4-python variables)
+    """
+    # note: this object is somewhat similar to biggus.NumpyArrayAdapter in that
+    # it implements orthogonal indexing, except it casts to a numpy array,
+    # isn't lazy and supports writing values.
+    def __init__(self, array):
+        self.array = np.asarray(array)
+
+    def __array__(self, dtype=None):
+        return np.asarray(self.array, dtype=dtype)
+
+    def _convert_key(self, key):
+        key = expanded_indexer(key, self.ndim)
+        if any(not isinstance(k, (int, np.integer, slice)) for k in key):
+            # key would trigger fancy indexing
+            key = orthogonal_indexer(key, self.shape)
+        return key
+
+    def __getitem__(self, key):
+        key = self._convert_key(key)
+        return self.array[key]
+
+    def __setitem__(self, key, value):
+        key = self._convert_key(key)
+        self.array[key] = value
+
+
+class DaskIndexingAdapter(utils.NDArrayMixin):
+    """Wrap a dask array to support orthogonal indexing
+    """
+    def __init__(self, array):
+        self.array = array
+
+    def __getitem__(self, key):
+        key = expanded_indexer(key, self.ndim)
+        if any(not isinstance(k, (int, np.integer, slice)) for k in key):
+            value = self.array
+            for axis, subkey in reversed(list(enumerate(key))):
+                value = value[(slice(None),) * axis + (subkey,)]
+        else:
+            value = self.array[key]
+        return value
+
+
+class PandasIndexAdapter(utils.NDArrayMixin):
+    """Wrap a pandas.Index to be better about preserving dtypes and to handle
+    indexing by length 1 tuples like numpy
+    """
+    def __init__(self, array, dtype=None):
+        self.array = utils.safe_cast_to_index(array)
+        if dtype is None:
+            dtype = array.dtype
+        self._dtype = dtype
+
+    @property
+    def dtype(self):
+        return self._dtype
+
+    def __array__(self, dtype=None):
+        if dtype is None:
+            dtype = self.dtype
+        return self.array.values.astype(dtype)
+
+    def __getitem__(self, key):
+        if isinstance(key, tuple) and len(key) == 1:
+            # unpack key so it can index a pandas.Index object (pandas.Index
+            # objects don't like tuples)
+            key, = key
+
+        if isinstance(key, (int, np.integer)):
+            value = self.array[key]
+            if value is pd.NaT:
+                # work around the impossibility of casting NaT with asarray
+                # note: it probably would be better in general to return
+                # pd.Timestamp rather np.than datetime64 but this is easier
+                # (for now)
+                value = np.datetime64('NaT', 'ns')
+            elif isinstance(value, timedelta):
+                value = np.timedelta64(getattr(value, 'value', value), 'ns')
+            else:
+                value = np.asarray(value, dtype=self.dtype)
+        else:
+            value = PandasIndexAdapter(self.array[key], dtype=self.dtype)
+
+        return value
+
+    def __repr__(self):
+        return ('%s(array=%r, dtype=%r)'
+                % (type(self).__name__, self.array, self.dtype))

@@ -15,7 +15,7 @@ def _coord_merge_finalize(target, other, target_conflicts, other_conflicts,
         if k not in other_conflicts:
             var = v.variable
             if k in promote_dims:
-                var = var.set_dims(promote_dims[k])
+                var = var.expand_dims(promote_dims[k])
             target[k] = var
 
 

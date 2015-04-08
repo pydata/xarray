@@ -4,7 +4,7 @@ import itertools
 from collections import Mapping
 
 from ..core.utils import FrozenOrderedDict
-from ..core.pycompat import iteritems
+from ..core.pycompat import iteritems, dask_array_type
 from ..core.variable import Coordinate
 
 
@@ -53,10 +53,10 @@ class AbstractDataStore(Mapping):
     def __len__(self):
         return len(self.variables)
 
-    def get_attrs(self):
+    def get_attrs(self):  # pragma: no cover
         raise NotImplementedError
 
-    def get_variables(self):
+    def get_variables(self):  # pragma: no cover
         raise NotImplementedError
 
     def load(self):
@@ -84,10 +84,6 @@ class AbstractDataStore(Mapping):
                                       for k, v in iteritems(self.get_variables()))
         attributes = FrozenOrderedDict(self.get_attrs())
         return variables, attributes
-
-    def get_dimensions(self):
-        return list(itertools.chain(*[x.dims
-                                      for x in self.variables.values()]))
 
     @property
     def variables(self):
@@ -121,15 +117,35 @@ class AbstractDataStore(Mapping):
         self.close()
 
 
+class ArrayWriter(object):
+    def __init__(self):
+        self.sources = []
+        self.targets = []
+
+    def add(self, source, target):
+        if isinstance(source, dask_array_type):
+            self.sources.append(source)
+            self.targets.append(target)
+        else:
+            target[...] = source
+
+    def sync(self):
+        if self.sources:
+            import dask.array as da
+            da.store(self.sources, self.targets)
+            self.sources = []
+            self.targets = []
+
+
 class AbstractWritableDataStore(AbstractDataStore):
 
-    def set_dimension(self, d, l):
+    def set_dimension(self, d, l):  # pragma: no cover
         raise NotImplementedError
 
-    def set_attribute(self, k, v):
+    def set_attribute(self, k, v):  # pragma: no cover
         raise NotImplementedError
 
-    def set_variable(self, k, v):
+    def set_variable(self, k, v):  # pragma: no cover
         raise NotImplementedError
 
     def sync(self):
@@ -151,18 +167,17 @@ class AbstractWritableDataStore(AbstractDataStore):
                          if not (k in neccesary_dims and is_trivial_index(v)))
         self.set_variables(variables)
 
-    def set_dimensions(self, dimensions):
-        for d, l in iteritems(dimensions):
-            self.set_dimension(d, l)
-
     def set_attributes(self, attributes):
         for k, v in iteritems(attributes):
             self.set_attribute(k, v)
 
     def set_variables(self, variables):
+        writer = ArrayWriter()
         for vn, v in iteritems(variables):
-            self.set_variable(_encode_variable_name(vn), v)
-            self.set_necessary_dimensions(v)
+            name = _encode_variable_name(vn)
+            target, source = self.prepare_variable(name, v)
+            writer.add(source, target)
+        writer.sync()
 
     def set_necessary_dimensions(self, variable):
         for d, l in zip(variable.dims, variable.shape):

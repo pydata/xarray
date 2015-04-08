@@ -1,5 +1,9 @@
-from ..core.pycompat import OrderedDict
 import copy
+
+import numpy as np
+
+from ..core.variable import Variable
+from ..core.pycompat import OrderedDict
 
 from .common import AbstractWritableDataStore
 
@@ -20,13 +24,13 @@ class InMemoryDataStore(AbstractWritableDataStore):
     def get_variables(self):
         return self._variables
 
-    def set_variable(self, k, v):
-        new_var = copy.deepcopy(v)
+    def prepare_variable(self, k, v):
+        new_var = Variable(v.dims, np.empty_like(v), v.attrs)
         # we copy the variable and stuff all encodings in the
         # attributes to imitate what happens when writing to disk.
-        new_var.attrs.update(new_var.encoding)
-        new_var.encoding.clear()
+        new_var.attrs.update(v.encoding)
         self._variables[k] = new_var
+        return new_var, v.data
 
     def set_attribute(self, k, v):
         # copy to imitate writing to disk.

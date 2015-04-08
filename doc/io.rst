@@ -277,6 +277,21 @@ NetCDF files are often encountered in collections, e.g., with different files
 corresponding to different model runs. xray can straightforwardly combine such
 files into a single Dataset by making use of :py:func:`~xray.concat`.
 
+.. note::
+
+    Version 0.5 includes experimental support for manipulating datasets that
+    don't fit into memory with dask_. If you have dask installed, you can open
+    multiple files simultaneously using :py:func:`~xray.open_mfdataset`::
+
+        xray.open_mfdataset('my/files/*.nc')
+
+    This function will automatically concatenate and merge dataset into one in
+    the simple cases that it understands (see :py:func:`~xray.auto_combine`
+    for the full disclaimer). For more on using dask arrays with xray,
+    see :doc:`dask`.
+
+.. _dask: http://dask.pydata.org
+
 For example, here's how we could approximate ``MFDataset`` from the netCDF4
 library::
 
@@ -287,7 +302,8 @@ library::
         # glob expands paths with * to a list of files, like the unix shell
         paths = sorted(glob(files))
         datasets = [xray.open_dataset(p) for p in paths]
-        return xray.concat(dataset, dim)
+        combined = xray.concat(dataset, dim)
+        return combined
 
     read_netcdfs('/all/my/files/*.nc', dim='time')
 
@@ -324,18 +340,3 @@ deficiencies::
 
 This pattern works well and is very robust. We've used similar code to process
 tens of thousands of files constituting 100s of GB of data.
-
-Unfortunately, it's not always possible to process each of your files
-individually and combine them later. For example, you might want to take the
-mean along the ``time`` axis for hundreds of GB of data. Ideally, you could
-write something as simple as::
-
-    ds = read_netcdfs('/all/my/files/*.nc', dim='time')
-    ds.mean('time')
-
-Unfortunately, this doesn't yet work in xray if your data is too big to fit
-into memory. We hope to address this deficiency by integrating xray with Dask_,
-a part of the Blaze_ project.
-
-.. _Dask: https://github.com/continuumio/dask
-.. _Blaze: http://blaze.pydata.org

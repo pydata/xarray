@@ -6,7 +6,7 @@ import numpy as np
 import pandas as pd
 
 from .pycompat import (OrderedDict, iteritems, itervalues, unicode_type,
-                       bytes_type)
+                       bytes_type, dask_array_type)
 
 
 def pretty_print(x, numchars):
@@ -205,7 +205,9 @@ def array_repr(arr):
 
     summary = ['<xray.%s %s(%s)>'% (type(arr).__name__, name_str, dim_summary)]
 
-    if arr.size < 1e5 or arr._in_memory:
+    if isinstance(arr.data, dask_array_type):
+        summary.append(repr(arr.data))
+    elif arr._in_memory or arr.size < 1e5:
         summary.append(repr(arr.values))
     else:
         summary.append('[%s values with dtype=%s]' % (arr.size, arr.dtype))

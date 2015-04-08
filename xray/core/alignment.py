@@ -4,9 +4,9 @@ from collections import defaultdict
 
 import numpy as np
 
-from . import utils
+from . import ops, utils
 from .common import _maybe_promote
-from .pycompat import iteritems, OrderedDict
+from .pycompat import iteritems, OrderedDict, reduce
 from .utils import is_full_slice
 from .variable import as_variable, Variable, Coordinate, broadcast_variables
 
@@ -94,10 +94,7 @@ def partial_align(*objects, **kwargs):
     join = kwargs.pop('join', 'inner')
     copy = kwargs.pop('copy', True)
     exclude = kwargs.pop('exclude', set())
-    if kwargs:
-        raise TypeError('align() got unexpected keyword arguments: %s'
-                        % list(kwargs))
-
+    assert not kwargs
     joined_indexes = _join_indexes(join, objects, exclude=exclude)
     return tuple(obj.reindex(copy=copy, **joined_indexes) for obj in objects)
 
@@ -183,23 +180,40 @@ def reindex_variables(variables, indexes, indexers, method=None, copy=True):
 
             if any_not_full_slices(assign_to):
                 # there are missing values to in-fill
+                data = var[assign_from].data
                 dtype, fill_value = _maybe_promote(var.dtype)
-                shape = tuple(to_shape[dim] for dim in var.dims)
-                data = np.empty(shape, dtype=dtype)
-                data[:] = fill_value
-                # create a new Variable so we can use orthogonal indexing
-                # use fastpath=True to avoid dtype inference
-                new_var = Variable(var.dims, data, var.attrs, fastpath=True)
-                new_var[assign_to] = var[assign_from].values
+
+                if isinstance(data, np.ndarray):
+                    shape = tuple(to_shape[dim] for dim in var.dims)
+                    new_data = np.empty(shape, dtype=dtype)
+                    new_data[...] = fill_value
+                    # create a new Variable so we can use orthogonal indexing
+                    # use fastpath=True to avoid dtype inference
+                    new_var = Variable(var.dims, new_data, var.attrs,
+                                       fastpath=True)
+                    new_var[assign_to] = data
+
+                else:  # dask array
+                    data = data.astype(dtype, copy=False)
+                    for axis, indexer in enumerate(assign_to):
+                        if not is_full_slice(indexer):
+                            indices = np.cumsum(indexer)[~indexer]
+                            data = ops.insert(data, indices, fill_value,
+                                              axis=axis)
+                    new_var = Variable(var.dims, data, var.attrs,
+                                       fastpath=True)
+
             elif any_not_full_slices(assign_from):
                 # type coercion is not necessary as there are no missing
                 # values
                 new_var = var[assign_from]
+
             else:
                 # no reindexing is necessary
                 # here we need to manually deal with copying data, since
                 # we neither created a new ndarray nor used fancy indexing
                 new_var = var.copy() if copy else var
+
         reindexed[name] = new_var
     return reindexed
 
@@ -236,7 +250,8 @@ def concat(objs, dim='concat_dim', indexers=None, mode='different',
         variables are concatenated.
     concat_over : None or str or iterable of str, optional
         Names of additional variables to concatenate, in which the provided
-        parameter ``dim`` does not already appear as a dimension.
+        parameter ``dim`` does not already appear as a dimension. The default
+        value includes all data variables.
     compat : {'equals', 'identical'}, optional
         String indicating how to compare non-concatenated variables and
         dataset global attributes for potential conflicts. 'equals' means
@@ -247,6 +262,10 @@ def concat(objs, dim='concat_dim', indexers=None, mode='different',
     Returns
     -------
     concatenated : type of objs
+
+    See also
+    --------
+    auto_combine
     """
     # TODO: add join and ignore_index arguments copied from pandas.concat
     # TODO: support concatenating scaler coordinates even if the concatenated
@@ -257,6 +276,78 @@ def concat(objs, dim='concat_dim', indexers=None, mode='different',
         raise ValueError('must supply at least one object to concatenate')
     cls = type(first_obj)
     return cls._concat(objs, dim, indexers, mode, concat_over, compat)
+
+
+def _auto_concat(datasets, dim=None):
+    if len(datasets) == 1:
+        return datasets[0]
+    else:
+        if dim is None:
+            ds0 = datasets[0]
+            ds1 = datasets[1]
+            concat_dims = set(ds0.dims)
+            if ds0.dims != ds1.dims:
+                dim_tuples = set(ds0.dims.items()) - set(ds1.dims.items())
+                concat_dims = set(i for i, _ in dim_tuples)
+            if len(concat_dims) > 1:
+                concat_dims = set(d for d in concat_dims
+                                  if not ds0[d].equals(ds1[d]))
+            if len(concat_dims) > 1:
+                raise ValueError('too many different dimensions to '
+                                 'concatenate: %s' % concat_dims)
+            elif len(concat_dims) == 0:
+                raise ValueError('cannot infer dimension to concatenate: '
+                                 'supply the ``concat_dim`` argument '
+                                 'explicitly')
+            dim, = concat_dims
+        return concat(datasets, dim=dim)
+
+
+def auto_combine(datasets, concat_dim=None):
+    """Attempt to auto-magically combine the given datasets into one.
+
+    This method attempts to combine a list of datasets into a single entity by
+    inspecting metadata and using a combination of concat and merge.
+
+    It does not concatenate along more than one dimension or align or sort data
+    under any circumstances. It will fail in complex cases, for which you
+    should use ``concat`` and ``merge`` explicitly.
+
+    Example of when ``auto_combine`` works:
+
+    * You have N years of data and M data variables. Each combination of a
+      distinct time period and test of data variables is saved its own dataset.
+
+    Examples of when ``auto_combine`` fails:
+
+    * In the above scenario, one file is missing, containing the data for one
+      year's data for one variable.
+    * In the most recent year, there is an additional data variable.
+    * Your data includes "time" and "station" dimensions, and each year's data
+      has a different set of stations.
+
+    Parameters
+    ----------
+    datasets : sequence of xray.Dataset
+        Dataset objects to merge.
+    concat_dim : str or DataArray or Index, optional
+        Dimension along which to concatenate variables.
+
+    Returns
+    -------
+    combined : xray.Dataset
+
+    See also
+    --------
+    concat
+    Dataset.merge
+    """
+    from toolz import itertoolz
+    grouped = itertoolz.groupby(lambda ds: tuple(sorted(ds.data_vars)),
+                                datasets).values()
+    concatenated = [_auto_concat(ds, dim=concat_dim) for ds in grouped]
+    merged = reduce(lambda ds, other: ds.merge(other), concatenated)
+    return merged
 
 
 def broadcast_arrays(*args):

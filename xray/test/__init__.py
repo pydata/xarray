@@ -1,7 +1,7 @@
 import numpy as np
 from numpy.testing import assert_array_equal
 
-from xray.core import utils
+from xray.core import utils, nputils, ops
 from xray.core.variable import as_variable
 from xray.core.pycompat import PY3
 
@@ -29,6 +29,22 @@ except ImportError:
     has_netCDF4 = False
 
 
+try:
+    import h5netcdf
+    has_h5netcdf = True
+except ImportError:
+    has_h5netcdf = False
+
+
+try:
+    import dask.array
+    import dask
+    dask.set_options(get=dask.get)
+    has_dask = True
+except ImportError:
+    has_dask = False
+
+
 def requires_scipy(test):
     return test if has_scipy else unittest.skip('requires scipy')(test)
 
@@ -41,9 +57,17 @@ def requires_netCDF4(test):
     return test if has_netCDF4 else unittest.skip('requires netCDF4')(test)
 
 
+def requires_h5netcdf(test):
+    return test if has_h5netcdf else unittest.skip('requires h5netcdf')(test)
+
+
 def requires_scipy_or_netCDF4(test):
     return (test if has_scipy or has_netCDF4
             else unittest.skip('requires scipy or netCDF4')(test))
+
+
+def requires_dask(test):
+    return test if has_dask else unittest.skip('requires dask')(test)
 
 
 def decode_string_data(data):
@@ -58,9 +82,9 @@ def data_allclose_or_equiv(arr1, arr2, rtol=1e-05, atol=1e-08):
         arr2 = decode_string_data(arr2)
     exact_dtypes = ['M', 'm', 'O', 'U']
     if any(arr.dtype.kind in exact_dtypes for arr in [arr1, arr2]):
-        return utils.array_equiv(arr1, arr2)
+        return ops.array_equiv(arr1, arr2)
     else:
-        return utils.allclose_or_equiv(arr1, arr2, rtol=rtol, atol=atol)
+        return ops.allclose_or_equiv(arr1, arr2, rtol=rtol, atol=atol)
 
 
 class TestCase(unittest.TestCase):
@@ -129,6 +153,18 @@ class TestCase(unittest.TestCase):
         self.assertCoordinatesEqual(ar1, ar2)
 
 
+class UnexpectedDataAccess(Exception):
+    pass
+
+
+class InaccessibleArray(utils.NDArrayMixin):
+    def __init__(self, array):
+        self.array = array
+
+    def __getitem__(self, key):
+        raise UnexpectedDataAccess("Tried accessing data")
+
+
 class ReturnItem(object):
     def __getitem__(self, key):
         return key
@@ -138,7 +174,7 @@ def source_ndarray(array):
     """Given an ndarray, return the base object which holds its memory, or the
     object itself.
     """
-    base = array.base
+    base = getattr(array, 'base', np.asarray(array).base)
     if base is None:
         base = array
     return base

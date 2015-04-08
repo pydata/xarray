@@ -1,8 +1,5 @@
-import sys
-import gzip
 import warnings
 import functools
-from io import BytesIO
 from collections import Mapping
 
 import numpy as np
@@ -13,124 +10,16 @@ from . import utils
 from . import common
 from . import groupby
 from . import indexing
-from . import variable
 from . import alignment
 from . import formatting
-from .. import backends, conventions
+from .. import conventions
 from .alignment import align, partial_align
 from .coordinates import DatasetCoordinates, Indexes
 from .common import ImplementsDatasetReduce, BaseDataObject
-from .utils import (Frozen, SortedKeysDict, ChainMap, maybe_wrap_array,
-                    close_on_error)
-from .pycompat import iteritems, itervalues, basestring, OrderedDict
-
-
-def _get_default_netcdf_engine(engine):
-    try:
-        import netCDF4
-        engine = 'netcdf4'
-    except ImportError:
-        try:
-            import scipy.io.netcdf
-            engine = 'scipy'
-        except ImportError:
-            raise ValueError('cannot read or write netCDF files without '
-                             'netCDF4-python or scipy installed')
-    return engine
-
-
-def open_dataset(filename_or_obj, group=None, decode_cf=True,
-                 mask_and_scale=True, decode_times=True,
-                 concat_characters=True, decode_coords=True, engine=None):
-    """Load and decode a dataset from a file or file-like object.
-
-    Parameters
-    ----------
-    filename_or_obj : str or file
-        Strings are interpreted as a path to a netCDF file or an OpenDAP URL
-        and opened with python-netCDF4, unless the filename ends with .gz, in
-        which case the file is gunzipped and opened with scipy.io.netcdf (only
-        netCDF3 supported). File-like objects are opened with scipy.io.netcdf
-        (only netCDF3 supported).
-    group : str, optional
-        Path to the netCDF4 group in the given file to open (only works for
-        netCDF4 files).
-    decode_cf : bool, optional
-        Whether to decode these variables, assuming they were saved according
-        to CF conventions.
-    mask_and_scale : bool, optional
-        If True, replace array values equal to `_FillValue` with NA and scale
-        values according to the formula `original_values * scale_factor +
-        add_offset`, where `_FillValue`, `scale_factor` and `add_offset` are
-        taken from variable attributes (if they exist).
-    decode_times : bool, optional
-        If True, decode times encoded in the standard NetCDF datetime format
-        into datetime objects. Otherwise, leave them encoded as numbers.
-    concat_characters : bool, optional
-        If True, concatenate along the last dimension of character arrays to
-        form string arrays. Dimensions will only be concatenated over (and
-        removed) if they have no corresponding variable and if they are only
-        used as the last dimension of character arrays.
-    decode_coords : bool, optional
-        If True, decode the 'coordinates' attribute to identify coordinates in
-        the resulting dataset.
-    engine : 'netcdf4' or 'scipy', optional
-        Engine to use when reading netCDF files. If not provided, the default
-        engine is chosen based on available dependencies, with a preference for
-        'netcdf4' if reading a file on disk.
-
-    Returns
-    -------
-    dataset : Dataset
-        The newly created dataset.
-    """
-    def maybe_decode_store(store):
-        if decode_cf:
-            return conventions.decode_cf(
-                store, mask_and_scale=mask_and_scale,
-                decode_times=decode_times, concat_characters=concat_characters,
-                decode_coords=decode_coords)
-        else:
-            return Dataset.load_store(store)
-
-    if isinstance(filename_or_obj, basestring):
-        if filename_or_obj.endswith('.gz'):
-            if engine is not None and engine != 'scipy':
-                raise ValueError('can only read gzipped netCDF files with '
-                                 "default engine or engine='scipy'")
-            # if the string ends with .gz, then gunzip and open as netcdf file
-            if sys.version_info[:2] < (2, 7):
-                raise ValueError('reading a gzipped netCDF not '
-                                 'supported on Python 2.6')
-            try:
-                store = backends.ScipyDataStore(gzip.open(filename_or_obj))
-            except TypeError as e:
-                # TODO: gzipped loading only works with NetCDF3 files.
-                if 'is not a valid NetCDF 3 file' in e.message:
-                    raise ValueError('gzipped file loading only supports '
-                                     'NetCDF 3 files.')
-                else:
-                    raise
-        else:
-            if engine is None:
-                engine = _get_default_netcdf_engine(engine)
-            if engine == 'netcdf4':
-                store = backends.NetCDF4DataStore(filename_or_obj, group=group)
-            elif engine == 'scipy':
-                store = backends.ScipyDataStore(filename_or_obj)
-            else:
-                raise ValueError('unrecognized engine for open_dataset: %r'
-                                 % engine)
-
-        with close_on_error(store):
-            return maybe_decode_store(store)
-    else:
-        if engine is not None and engine != 'scipy':
-            raise ValueError('can only read file-like objects with '
-                             "default engine or engine='scipy'")
-        # assume filename_or_obj is a file-like object
-        store = backends.ScipyDataStore(filename_or_obj)
-        return maybe_decode_store(store)
+from .utils import (Frozen, SortedKeysDict, ChainMap, maybe_wrap_array)
+from .variable import as_variable, Variable, Coordinate
+from .pycompat import (iteritems, itervalues, basestring, OrderedDict,
+                       dask_array_type)
 
 
 # list of attributes of pd.DatetimeIndex that are ndarrays of time info
@@ -138,31 +27,6 @@ _DATETIMEINDEX_COMPONENTS = ['year', 'month', 'day', 'hour', 'minute',
                              'second', 'microsecond', 'nanosecond', 'date',
                              'time', 'dayofyear', 'weekofyear', 'dayofweek',
                              'quarter']
-
-
-def _list_virtual_variables(variables):
-    """A frozenset of variable names that don't exist in this dataset but
-    for which could be created on demand (because they can be calculated
-    from other dataset variables)
-    """
-    def _castable_to_timestamp(obj):
-        try:
-            pd.Timestamp(obj)
-        except:
-            return False
-        else:
-            return True
-
-    virtual_vars = []
-    for k, v in iteritems(variables):
-        if ((v.dtype.kind == 'M' and isinstance(v, variable.Coordinate))
-                or (v.ndim == 0 and _castable_to_timestamp(v.values))):
-            # nb. dtype.kind == 'M' is datetime64
-            for suffix in _DATETIMEINDEX_COMPONENTS + ['season']:
-                name = '%s.%s' % (k, suffix)
-                if name not in variables:
-                    virtual_vars.append(name)
-    return frozenset(virtual_vars)
 
 
 def _get_virtual_variable(variables, key):
@@ -192,16 +56,16 @@ def _get_virtual_variable(variables, key):
         data = seasons[(month // 3) % 4]
     else:
         data = getattr(date, var_name)
-    return ref_name, var_name, variable.Variable(ref_var.dims, data)
+    return ref_name, var_name, Variable(ref_var.dims, data)
 
 
 def _as_dataset_variable(name, var):
     """Prepare a variable for adding it to a Dataset
     """
     try:
-        var = variable.as_variable(var, key=name)
+        var = as_variable(var, key=name)
     except TypeError:
-        raise TypeError('Dataset variables must be an arrays or a tuple of '
+        raise TypeError('Dataset variables must be an array or a tuple of '
                         'the form (dims, data[, attrs, encoding])')
     if name in var.dims:
         # convert the into an Index
@@ -249,7 +113,7 @@ def _expand_variables(raw_variables, old_variables={}, compat='identical'):
                 common_dims = OrderedDict(zip(existing_var.dims,
                                               existing_var.shape))
                 common_dims.update(zip(var.dims, var.shape))
-                variables[name] = existing_var.set_dims(common_dims)
+                variables[name] = existing_var.expand_dims(common_dims)
                 new_coord_names.update(var.dims)
 
     def add_variable(name, var):
@@ -465,7 +329,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject):
                 # This is equivalent to np.arange(size), but
                 # waits to create the array until its actually accessed.
                 data = indexing.LazyIntegerRange(size)
-                coord = variable.Coordinate(dim, data)
+                coord = Coordinate(dim, data)
                 self._variables[dim] = coord
 
     def _update_vars_and_coords(self, new_variables, new_coord_names={},
@@ -586,8 +450,29 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject):
         load data automatically. However, this method can be necessary when
         working with many file objects on disk.
         """
-        for v in itervalues(self._variables):
-            v.load_data()
+        # access .data to coerce everything to numpy or dask arrays
+        all_data = dict((k, v.data) for k, v in self.variables.items())
+        lazy_data = dict((k, v) for k, v in all_data.items()
+                         if isinstance(v, dask_array_type))
+        if lazy_data:
+            import dask.array as da
+
+            # evaluate all the dask arrays simultaneously
+            evaluated_data = da.compute(*lazy_data.values())
+
+            evaluated_variables = {}
+            for k, data in zip(lazy_data, evaluated_data):
+                v = self.variables[k].copy(deep=False)
+                v._data = data
+                # dask will not coerce data that was supplied as a lazy array
+                # https://github.com/ContinuumIO/dask/issues/139
+                evaluated_variables[k] = v.load_data()
+
+            # update at the end to ensure atomic updates if anything goes
+            # wrong with load_data
+            for k, v in evaluated_variables.items():
+                self.variables[k]._data = v.values
+
         return self
 
     @classmethod
@@ -717,25 +602,6 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject):
         and only when the key is a dict of the form {dim: labels}.
         """
         return _LocIndexer(self)
-
-    @property
-    def virtual_variables(self):
-        """A frozenset of names that don't exist in this dataset but for which
-        DataArrays could be created on demand.
-
-        These variables can be derived by performing simple operations on an
-        existing dataset variable or coordinate. Currently, the only
-        implemented virtual variables are time/date components [1] such as
-        "time.month" or "time.dayofyear", where "time" is the name of a index
-        whose data is a `pandas.DatetimeIndex` object. The virtual variable
-        "time.season" (for climatological season, starting with 1 for "DJF") is
-        the only such variable which is not directly implemented in pandas.
-
-        References
-        ----------
-        .. [1] http://pandas.pydata.org/pandas-docs/stable/api.html#time-date-components
-        """
-        return _list_virtual_variables(self._variables)
 
     def __getitem__(self, key):
         """Access variables or coordinates this dataset as a
@@ -874,7 +740,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject):
         return Variables(self)
 
     @property
-    def vars(self):
+    def vars(self):  # pragma: no cover
         warnings.warn('the Dataset property `vars` has been deprecated; '
                       'use `data_vars` instead',
                       FutureWarning, stacklevel=2)
@@ -992,57 +858,72 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject):
             default engine is chosen based on available dependencies, with
             a preference for 'netcdf4' if writing to a file on disk.
         """
-        if path is None:
-            path = BytesIO()
-            if engine is None:
-                engine = 'scipy'
-            elif engine is not None:
-                raise ValueError('invalid engine for creating bytes with '
-                                 'to_netcdf: %r. Only the default engine '
-                                 "or engine='scipy' is supported" % engine)
-        elif engine is None:
-            engine = _get_default_netcdf_engine(engine)
-
-        if engine == 'netcdf4':
-            to_netcdf_method = self._to_netcdf4
-        elif engine == 'scipy':
-            to_netcdf_method = self._to_scipy_netcdf
-        else:
-            raise ValueError('unrecognized engine for to_netcdf: %r' % engine)
-
-        return to_netcdf_method(path, mode, format, group)
-
-    def _to_netcdf4(self, path, mode, format, group):
-        if format is None:
-            format = 'NETCDF4'
-        with backends.NetCDF4DataStore(path, mode=mode, format=format,
-                                       group=group) as store:
-            self.dump_to_store(store)
-
-    def _to_scipy_netcdf(self, path, mode, format, group):
-        if group is not None:
-            raise ValueError('cannot save to a group with the '
-                             'scipy.io.netcdf backend')
-
-        if format is None or format == 'NETCDF3_64BIT':
-            version = 2
-        elif format == 'NETCDF3_CLASSIC':
-            version = 1
-        else:
-            raise ValueError('invalid format for scipy.io.netcdf backend: %r'
-                             % format)
-
-        with backends.ScipyDataStore(path, mode='w', version=version) as store:
-            self.dump_to_store(store)
-
-            if isinstance(path, BytesIO):
-                return path.getvalue()
+        from ..backends.api import to_netcdf
+        return to_netcdf(self, path, mode, format, group, engine)
 
     dump = utils.function_alias(to_netcdf, 'dumps')
     dumps = utils.function_alias(to_netcdf, 'dumps')
 
     def __repr__(self):
         return formatting.dataset_repr(self)
+
+    @property
+    def blockdims(self):
+        """Block dimensions for this dataset's data or None if it's not a dask
+        array.
+        """
+        blockdims = {}
+        for v in self.variables.values():
+            if v.blockdims is not None:
+                new_blockdims = list(zip(v.dims, v.blockdims))
+                if any(bd != blockdims[d] for d, bd in new_blockdims
+                       if d in blockdims):
+                    raise ValueError('inconsistent blockdims!')
+                blockdims.update(new_blockdims)
+        return Frozen(SortedKeysDict(blockdims))
+
+    def reblock(self, blockdims=None, blockshape=None):
+        """Coerce all arrays in this dataset into dask arrays with the given
+        block dimensions.
+
+        If neither blockdims nor blockshape is provided for one or more
+        dimensions, block sizes along that dimension will not be updated;
+        non-dask arrays will be converted into dask arrays with a single block.
+
+        Parameters
+        ----------
+        blockdims : dict, optional
+            Dimensions for each block, e.g., ``{'x': (3, 2), 'y': (5, 5, 5)}``.
+        blockshape : dict, optional
+            Shapes for each block, e.g.,``{'x': 3, 'y': 5}``. These are
+            expanded into block dimensions. This argument is mutually exclusive
+            with ``blockdims``.
+
+        Returns
+        -------
+        reblocked : xray.Dataset
+        """
+        def check_arg_keys(arg):
+            if arg:
+                bad_dims = [d for d in arg if d not in self.dims]
+                if bad_dims:
+                    raise ValueError('some blockdims or blockshape keys '
+                                     'are not dimensions on this object: %s'
+                                     % bad_dims)
+        check_arg_keys(blockdims)
+        check_arg_keys(blockshape)
+
+        def selkeys(dict_, keys):
+            if dict_ is None:
+                return None
+            return dict((d, dict_[d]) for d in keys if d in dict_)
+
+        variables = OrderedDict([(k, (v.reblock(selkeys(blockdims, v.dims),
+                                                selkeys(blockshape, v.dims),
+                                                name=k)
+                                      if v.ndim > 0 else v))
+                                 for k, v in self.variables.items()])
+        return self._replace_vars_and_dims(variables)
 
     def isel(self, **indexers):
         """Returns a new dataset with each array indexed along the specified
@@ -1445,7 +1326,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject):
         coord_names = set(k for k in self._coord_names if k in variables)
         return self._replace_vars_and_dims(variables, coord_names)
 
-    def drop_vars(self, *names):
+    def drop_vars(self, *names):  # pragma: no cover
         warnings.warn('the Dataset method `drop_vars` has been deprecated; '
                       'use `drop` instead',
                       FutureWarning, stacklevel=2)
@@ -1600,7 +1481,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject):
         return self._fillna(value)
 
     def reduce(self, func, dim=None, keep_attrs=False, numeric_only=False,
-               **kwargs):
+               allow_lazy=False, **kwargs):
         """Reduce this dataset by applying `func` along some dimension(s).
 
         Parameters
@@ -1654,6 +1535,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject):
                             reduce_dims = None
                         variables[name] = var.reduce(func, dim=reduce_dims,
                                                      keep_attrs=keep_attrs,
+                                                     allow_lazy=allow_lazy,
                                                      **kwargs)
             else:
                 variables[name] = var
@@ -1737,17 +1619,22 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject):
         # list; the gains would be minimal
         datasets = list(map(as_dataset, datasets))
 
-        if not isinstance(dim, basestring) and not hasattr(dim, 'dims'):
+        if isinstance(dim, basestring):
+            coord = None
+        elif not hasattr(dim, 'dims'):
             # dim is not a DataArray or Coordinate
             dim_name = getattr(dim, 'name', None)
             if dim_name is None:
                 dim_name = 'concat_dim'
-            dim = DataArray(dim, dims=dim_name, name=dim_name)
-        dim_name = getattr(dim, 'name', dim)
+            coord = DataArray(dim, dims=dim_name, name=dim_name)
+            dim = dim_name
+        else:
+            coord = dim
+            dim, = coord.dims
 
         # figure out variables to concatenate over
         if concat_over is None:
-            concat_over = set()
+            concat_over = set(datasets[0].data_vars)
         elif isinstance(concat_over, basestring):
             concat_over = set([concat_over])
         else:
@@ -1759,38 +1646,34 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject):
                 # simple helper function which compares a variable
                 # across all datasets and indicates whether that
                 # variable differs or not.
-                return any(not ds._variables[vname].equals(v)
+                return any(not ds.variables[vname].equals(v)
                            for ds in datasets[1:])
-            # non_indexes = iteritems(datasets[0].nonindexes)
             # all nonindexes that are not the same in each dataset
-            concat_over.update(k for k, v in iteritems(datasets[0]._variables)
-                               if k not in datasets[0]._dims and differs(k, v))
+            concat_over.update(k for k, v in datasets[0].variables.items()
+                               if k not in datasets[0].dims
+                               and k not in concat_over and differs(k, v))
         elif mode == 'all':
-            # concatenate all nonindexes
+            # concatenate all non-dimensions
             concat_over.update(set(datasets[0]) - set(datasets[0].dims))
         elif mode == 'minimal':
             # only concatenate variables in which 'dim' already
-            # appears. These variables are added later.
+            # appears. These variables are added below.
             pass
         else:
-            raise ValueError("Unexpected value for mode: %s" % mode)
+            raise ValueError("unexpected value for mode: %s" % mode)
 
-        if any(v not in datasets[0]._variables for v in concat_over):
+        # automatically concatenate over variables along the dimension
+        concat_over.update(k for k, v in datasets[0].variables.items()
+                           if dim in v.dims)
+
+        if any(v not in datasets[0].variables for v in concat_over):
             raise ValueError('not all elements in concat_over %r found '
                              'in the first dataset %r'
                              % (concat_over, datasets[0]))
 
-        # automatically concatenate over variables along the dimension
-        auto_concat_dims = set([dim_name])
-        if hasattr(dim, 'dims'):
-            auto_concat_dims |= set(dim.dims)
-        for k, v in iteritems(datasets[0]._variables):
-            if k == dim_name or auto_concat_dims.intersection(v.dims):
-                concat_over.add(k)
-
         # create the new dataset and add constant variables
         concatenated = cls({}, attrs=datasets[0].attrs)
-        for k, v in iteritems(datasets[0]._variables):
+        for k, v in datasets[0].variables.items():
             if k not in concat_over:
                 concatenated[k] = v
 
@@ -1800,38 +1683,53 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject):
             if (compat == 'identical'
                     and not utils.dict_equiv(ds.attrs, concatenated.attrs)):
                 raise ValueError('dataset global attributes not equal')
-            for k, v in iteritems(ds._variables):
-                if k not in concatenated._variables and k not in concat_over:
+            for k, v in iteritems(ds.variables):
+                if k not in concatenated.variables and k not in concat_over:
                     raise ValueError('encountered unexpected variable %r' % k)
-                elif (k in concatenated._variables and k != dim_name and
+                elif (k in concatenated.variables and k != dim and
                           not getattr(v, compat)(concatenated[k])):
                     verb = 'equal' if compat == 'equals' else compat
                     raise ValueError(
                         'variable %r not %s across datasets' % (k, verb))
 
-        def _ensure_common_dims(vars):
-            # ensure shared common dimensions by inserting dimensions with size
-            # 1 if necessary
+        # we've already verified everything is consistent; now, calculate
+        # shared dimension sizes so we can expand the necessary variables
+        dim_lengths = [ds.dims.get(dim, 1) for ds in datasets]
+        non_concat_dims = {}
+        for ds in datasets:
+            non_concat_dims.update(ds.dims)
+        non_concat_dims.pop(dim, None)
+
+        def ensure_common_dims(vars):
+            # ensure each variable with the given name shares the same
+            # dimensions and the same shape for all of them except along the
+            # concat dimension
             common_dims = tuple(pd.unique([d for v in vars for d in v.dims]))
-            return [v.set_dims(common_dims) if v.dims != common_dims else v
-                    for v in vars]
+            if dim not in common_dims:
+                common_dims = (dim,) + common_dims
+            for var, dim_len in zip(vars, dim_lengths):
+                if var.dims != common_dims:
+                    common_shape = tuple(non_concat_dims.get(d, dim_len)
+                                         for d in common_dims)
+                    var = var.expand_dims(common_dims, common_shape)
+                yield var
 
         # stack up each variable to fill-out the dataset
         for k in concat_over:
-            vars = _ensure_common_dims([ds._variables[k] for ds in datasets])
-            concatenated[k] = variable.Variable.concat(vars, dim, indexers)
+            vars = ensure_common_dims([ds._variables[k] for ds in datasets])
+            concatenated[k] = Variable.concat(vars, dim, indexers)
 
         concatenated._coord_names.update(datasets[0].coords)
 
-        if not isinstance(dim, basestring):
+        if coord is not None:
             # add dimension last to ensure that its in the final Dataset
-            concatenated.coords[dim_name] = dim
+            concatenated[coord.name] = coord
 
         return concatenated
 
     def _to_dataframe(self, ordered_dims):
         columns = [k for k in self if k not in self.dims]
-        data = [self._variables[k].set_dims(ordered_dims).values.reshape(-1)
+        data = [self._variables[k].expand_dims(ordered_dims).values.reshape(-1)
                 for k in columns]
         index = self.coords.to_index(ordered_dims)
         return pd.DataFrame(OrderedDict(zip(columns, data)), index=index)
@@ -1898,7 +1796,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject):
         return func
 
     @staticmethod
-    def _binary_op(f, reflexive=False, join='inner', drop_missing_vars=True):
+    def _binary_op(f, reflexive=False, join='inner', drop_na_vars=True):
         @functools.wraps(f)
         def func(self, other):
             if isinstance(other, groupby.GroupBy):
@@ -1909,11 +1807,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject):
                 if empty_indexes:
                     raise ValueError('no overlapping labels for some '
                                      'dimensions: %s' % empty_indexes)
-            other_coords = getattr(other, 'coords', None)
-            ds = self.coords.merge(other_coords)
             g = f if not reflexive else lambda x, y: f(y, x)
-            _calculate_binary_op(g, self, other, ds._variables,
-                                 drop_missing_vars=drop_missing_vars)
+            ds = self._calculate_binary_op(g, other, drop_na_vars=drop_na_vars)
             return ds
         return func
 
@@ -1922,50 +1817,61 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject):
         @functools.wraps(f)
         def func(self, other):
             if isinstance(other, groupby.GroupBy):
-                return NotImplemented
-            other_coords = getattr(other, 'coords', None)
-            with self.coords._merge_inplace(other_coords):
-                # make a defensive copy of variables to modify in-place so we
-                # can rollback in case of an exception
-                # note: when/if we support automatic alignment, only copy the
-                # variables that will actually be included in the result
-                dest_vars = dict((k, self._variables[k].copy())
-                                 for k in self.data_vars)
-                _calculate_binary_op(f, dest_vars, other, dest_vars,
-                                     inplace=True)
-                self._variables.update(dest_vars)
+                raise TypeError('in-place operations between a Dataset and '
+                                'a grouped object are not permitted')
+            if hasattr(other, 'indexes'):
+                other = other.reindex_like(self, copy=False)
+            # we don't want to actually modify arrays in-place
+            g = ops.inplace_to_noninplace_op(f)
+            ds = self._calculate_binary_op(g, other, inplace=True)
+            self._replace_vars_and_dims(ds._variables, ds._coord_names,
+                                        ds._attrs, inplace=True)
             return self
         return func
 
+    def _calculate_binary_op(self, f, other, inplace=False, drop_na_vars=True):
 
-def _calculate_binary_op(f, dataset, other, dest_vars, inplace=False,
-                         drop_missing_vars=True):
-    dataset_variables = getattr(dataset, 'variables', dataset)
-    dataset_data_vars = getattr(dataset, 'data_vars', dataset)
-    if utils.is_dict_like(other):
-        other_variables = getattr(other, 'variables', other)
-        other_data_vars = getattr(other, 'data_vars', other)
-        performed_op = False
-        for k in dataset_data_vars:
-            if k in other_data_vars:
-                dest_vars[k] = f(dataset_variables[k], other_variables[k])
-                performed_op = True
-            elif inplace and k in dest_vars:
-                raise ValueError('datasets must have the same data variables '
-                                 'for in-place arithmetic operations: %s, %s'
-                                 % (list(dataset_data_vars),
-                                    list(other_data_vars)))
-            elif not drop_missing_vars:
-                # this shortcuts left alignment of variables for fillna
-                dest_vars[k] = dataset_variables[k]
-        if not performed_op:
-            raise ValueError('datasets have no overlapping data variables: '
-                             '%s, %s' % (list(dataset_data_vars),
-                                         list(other_data_vars)))
-    else:
-        other_variable = getattr(other, 'variable', other)
-        for k in dataset_data_vars:
-            dest_vars[k] = f(dataset_variables[k], other_variable)
+        def apply_over_both(lhs_data_vars, rhs_data_vars, lhs_vars, rhs_vars):
+            dest_vars = OrderedDict()
+            performed_op = False
+            for k in lhs_data_vars:
+                if k in rhs_data_vars:
+                    dest_vars[k] = f(lhs_vars[k], rhs_vars[k])
+                    performed_op = True
+                elif inplace:
+                    raise ValueError(
+                        'datasets must have the same data variables '
+                        'for in-place arithmetic operations: %s, %s'
+                        % (list(lhs_data_vars), list(rhs_data_vars)))
+                elif not drop_na_vars:
+                    # this shortcuts left alignment of variables for fillna
+                    dest_vars[k] = lhs_vars[k]
+            if not performed_op:
+                raise ValueError(
+                    'datasets have no overlapping data variables: %s, %s'
+                    % (list(lhs_data_vars), list(rhs_data_vars)))
+            return dest_vars
+
+        if utils.is_dict_like(other) and not isinstance(other, Dataset):
+            # can't use our shortcut of doing the binary operation with
+            # Variable objects, so apply over our data vars instead.
+            new_data_vars = apply_over_both(self.data_vars, other,
+                                            self.data_vars, other)
+            return Dataset(new_data_vars)
+
+        other_coords = getattr(other, 'coords', None)
+        ds = self.coords.merge(other_coords)
+
+        if isinstance(other, Dataset):
+            new_vars = apply_over_both(self.data_vars, other.data_vars,
+                                       self.variables, other.variables)
+        else:
+            other_variable = getattr(other, 'variable', other)
+            new_vars = OrderedDict((k, f(self.variables[k], other_variable))
+                                   for k in self.data_vars)
+
+        ds._variables.update(new_vars)
+        return ds
 
 
 ops.inject_all_ops_and_reduce_methods(Dataset, array_only=False)
