@@ -41,6 +41,10 @@ class TestFormatting(TestCase):
             (pd.Timestamp('2000-01-01T12'), '2000-01-01T12:00:00'),
             (pd.Timestamp('2000-01-01'), '2000-01-01'),
             (pd.Timestamp('NaT'), 'NaT'),
+            (pd.Timedelta('10 days 1 hour'), '10 days 01:00:00'),
+            (pd.Timedelta('-3 days'), '-3 days +00:00:00'),
+            (pd.Timedelta('3 hours'), '0 days 03:00:00'),
+            (pd.Timedelta('NaT'), 'NaT'),
             ('foo', "'foo'"),
             (u'foo', "'foo'" if PY3 else "u'foo'"),
             (b'foo', "b'foo'" if PY3 else "'foo'"),
@@ -53,13 +57,16 @@ class TestFormatting(TestCase):
 
     def test_format_items(self):
         cases = [
-            (np.arange(4) * np.timedelta64(1, 'D').astype('timedelta64[ns]'),
-             '0D 1D 2D 3D'),
-            (np.arange(4) * np.timedelta64(3, 'h').astype('timedelta64[ns]'),
-             '0h 3h 6h 9h'),
-            (np.arange(4) * np.timedelta64(500, 'ms').astype('timedelta64[ns]'),
-             '0.0s 0.5s 1.0s 1.5s'),
-            (pd.to_timedelta(['NaT', '1s', '2s', 'NaT']), 'NaT 1s 2s NaT'),
+            (np.arange(4) * np.timedelta64(1, 'D'),
+             '0 days 1 days 2 days 3 days'),
+            (np.arange(4) * np.timedelta64(3, 'h'),
+             '00:00:00 03:00:00 06:00:00 09:00:00'),
+            (np.arange(4) * np.timedelta64(500, 'ms'),
+             '00:00:00 00:00:00.500000 00:00:01 00:00:01.500000'),
+            (pd.to_timedelta(['NaT', '0s', '1s', 'NaT']),
+             'NaT 00:00:00 00:00:01 NaT'),
+            (pd.to_timedelta(['1 day 1 hour', '1 day', '0 hours']),
+             '1 days 01:00:00 1 days 00:00:00 0 days 00:00:00'),
             ([1, 2, 3], '1 2 3'),
         ]
         for item, expected in cases:
