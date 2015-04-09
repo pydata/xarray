@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 import functools
 import itertools
 
@@ -72,10 +72,29 @@ def format_timestamp(t):
             return '%sT%s' % (date_str, time_str)
 
 
-def format_item(x):
+def format_timedelta(t, timedelta_format=None):
+    """Cast given object to a Timestamp and return a nicely formatted string"""
+    timedelta_str = str(pd.Timedelta(t))
+    try:
+        days_str, time_str = timedelta_str.split(' days ')
+    except ValueError:
+        # catch NaT and others that don't split nicely
+        return timedelta_str
+    else:
+        if timedelta_format == 'date':
+            return days_str + ' days'
+        elif timedelta_format == 'time':
+            return time_str
+        else:
+            return timedelta_str
+
+
+def format_item(x, timedelta_format=None):
     """Returns a succinct summary of an object as a string"""
     if isinstance(x, (np.datetime64, datetime)):
         return format_timestamp(x)
+    if isinstance(x, (np.timedelta64, timedelta)):
+        return format_timedelta(x, timedelta_format=timedelta_format)
     elif isinstance(x, (unicode_type, bytes_type)):
         return repr(x)
     elif isinstance(x, (float, np.float)):
@@ -85,20 +104,22 @@ def format_item(x):
 
 
 def format_items(x):
-    """Returns a succinct summary of a 1D numpy array as a string"""
-    from ..conventions import encode_cf_timedelta, _netcdf_to_numpy_timeunit
+    """Returns a succinct summaries of all items in a sequence as strings"""
     x = np.asarray(x)
+    timedelta_format = 'datetime'
     if np.issubdtype(x.dtype, np.timedelta64):
-        # format timedeltas all at once to ensure we use appropriate units
-        nulls = pd.isnull(x)
-        if nulls.any():
-            x[nulls] = np.timedelta64(0, 'ns')
-        num, units = encode_cf_timedelta(x)
-        units = _netcdf_to_numpy_timeunit(units)
-        formatted = ['NaT' if isnull else ('%s%s' % (format_item(i), units))
-                     for isnull, i in zip(nulls, num)]
-    else:
-        formatted = [format_item(i) for i in x]
+        x = np.asarray(x, dtype='timedelta64[ns]')
+        day_part = (x[~pd.isnull(x)]
+                    .astype('timedelta64[D]')
+                    .astype('timedelta64[ns]'))
+        time_needed = x != day_part
+        day_needed = day_part != np.timedelta64(0, 'ns')
+        if np.logical_not(day_needed).all():
+            timedelta_format = 'time'
+        elif np.logical_not(time_needed).all():
+            timedelta_format = 'date'
+
+    formatted = [format_item(xi, timedelta_format) for xi in x]
     return formatted
 
 
