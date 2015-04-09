@@ -265,12 +265,16 @@ def encode_cf_timedelta(timedeltas, units=None):
         units = infer_timedelta_units(timedeltas)
 
     np_unit = _netcdf_to_numpy_timeunit(units)
-    num = timedeltas.astype('timedelta64[%s]' % np_unit).view(np.int64)
+    num = 1.0 * timedeltas / np.timedelta64(1, np_unit)
 
     missing = pd.isnull(timedeltas)
     if np.any(missing):
-        num = num.astype(float)
+        num = np.asarray(num, dtype=float)
         num[missing] = np.nan
+
+    int_num = np.asarray(num, dtype=np.int64)
+    if (num == int_num).all():
+        num = int_num
 
     return (num, units)
 

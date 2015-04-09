@@ -351,6 +351,19 @@ class TestDatetime(TestCase):
                                  'seconds since 1900-01-01 00:00:00')]:
             self.assertEqual(expected, conventions.infer_datetime_units(dates))
 
+    def test_cf_timedelta(self):
+        for timedeltas, units, expected in [
+                (['NaT'], 'days', [np.nan]),
+                (['1D', '2D', '3D'], 'days', np.array([1, 2, 3], 'int64')),
+                (['NaT', '0s', '1s'], None, [np.nan, 0, 1]),
+                (['30m', '60m'], 'hours', [0.5, 1.0]),
+                ]:
+            timedeltas = pd.to_timedelta(timedeltas)
+            expected = np.array(expected)
+            actual, _ = conventions.encode_cf_timedelta(timedeltas, units)
+            self.assertArrayEqual(expected, actual)
+            self.assertEqual(expected.dtype, actual.dtype)
+
     def test_infer_timedelta_units(self):
         for deltas, expected in [
                 (pd.to_timedelta(['1 day', '2 days']), 'days'),
