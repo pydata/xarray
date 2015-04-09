@@ -51,6 +51,22 @@ class TestFormatting(TestCase):
             actual = formatting.format_item(item)
             self.assertEqual(expected, actual)
 
+    def test_format_items(self):
+        cases = [
+            (np.arange(4) * np.timedelta64(1, 'D').astype('timedelta64[ns]'),
+             '0D 1D 2D 3D'),
+            (np.arange(4) * np.timedelta64(3, 'h').astype('timedelta64[ns]'),
+             '0h 3h 6h 9h'),
+            (np.arange(4) * np.timedelta64(500, 'ms').astype('timedelta64[ns]'),
+             '0.0s 0.5s 1.0s 1.5s'),
+            (pd.to_timedelta(['NaT', '1s', '2s', 'NaT']), 'NaT 1s 2s NaT'),
+            ([1, 2, 3], '1 2 3'),
+        ]
+        for item, expected in cases:
+            actual = ' '.join(formatting.format_items(item))
+            self.assertEqual(expected, actual)
+
+
     def test_format_array_flat(self):
         actual = formatting.format_array_flat(np.arange(100), 13)
         expected = '0 1 2 3 4 ...'
