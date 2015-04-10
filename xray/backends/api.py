@@ -64,7 +64,7 @@ def open_dataset(filename_or_obj, group=None, decode_cf=True,
     decode_coords : bool, optional
         If True, decode the 'coordinates' attribute to identify coordinates in
         the resulting dataset.
-    engine : 'netcdf4' or 'scipy', optional
+    engine : {'netcdf4', 'scipy', 'pydap', 'h5netcdf'}, optional
         Engine to use when reading netCDF files. If not provided, the default
         engine is chosen based on available dependencies, with a preference for
         'netcdf4' if reading a file on disk.
@@ -113,12 +113,16 @@ def open_dataset(filename_or_obj, group=None, decode_cf=True,
                 else:
                     raise
         else:
+            # TODO: automatically fall back to using pydap if given a URL and
+            # netCDF4 is not available
             if engine is None:
                 engine = _get_default_netcdf_engine(engine)
             if engine == 'netcdf4':
                 store = backends.NetCDF4DataStore(filename_or_obj, group=group)
             elif engine == 'scipy':
                 store = backends.ScipyDataStore(filename_or_obj)
+            elif engine == 'pydap':
+                store = backends.PydapDataStore(filename_or_obj)
             elif engine == 'h5netcdf':
                 store = backends.H5NetCDFStore(filename_or_obj, group=group)
             else:

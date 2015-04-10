@@ -719,7 +719,7 @@ class DaskTest(TestCase):
 class PydapTest(TestCase):
     def test_cmp_local_file(self):
         url = 'http://test.opendap.org/opendap/hyrax/data/nc/bears.nc'
-        actual = Dataset.load_store(backends.PydapDataStore(url))
+        actual = open_dataset(url, engine='pydap')
         with open_example_dataset('bears.nc') as expected:
             # don't check attributes since pydap doesn't serialize them correctly
             # also skip the "bears" variable since the test DAP server incorrectly
