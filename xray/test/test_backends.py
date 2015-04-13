@@ -714,15 +714,29 @@ class DaskTest(TestCase):
                         self.assertDatasetIdentical(data, on_disk)
 
 
-@requires_netCDF4
+@requires_scipy_or_netCDF4
 @requires_pydap
 class PydapTest(TestCase):
     def test_cmp_local_file(self):
         url = 'http://test.opendap.org/opendap/hyrax/data/nc/bears.nc'
-        actual = open_dataset(url, engine='pydap')
-        with open_example_dataset('bears.nc') as expected:
-            # don't check attributes since pydap doesn't serialize them correctly
-            # also skip the "bears" variable since the test DAP server incorrectly
-            # concatenates it.
-            self.assertDatasetEqual(actual.drop('bears'),
-                                    expected.drop('bears'))
+
+        @contextlib.contextmanager
+        def create_datasets():
+            actual = open_dataset(url, engine='pydap')
+            with open_example_dataset('bears.nc') as expected:
+                # don't check attributes since pydap doesn't serialize them
+                # correctly also skip the "bears" variable since the test DAP
+                # server incorrectly concatenates it.
+                actual = actual.drop('bears')
+                expected = expected.drop('bears')
+                yield actual, expected
+
+        with create_datasets() as (actual, expected):
+            self.assertDatasetEqual(actual, expected)
+
+        with create_datasets() as (actual, expected):
+            self.assertDatasetEqual(actual.isel(i=0), expected.isel(i=0))
+
+        with create_datasets() as (actual, expected):
+            self.assertDatasetEqual(actual.isel(j=slice(1, 2)),
+                                    expected.isel(j=slice(1, 2)))

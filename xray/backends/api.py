@@ -1,6 +1,7 @@
 import sys
 import gzip
 import itertools
+import re
 from glob import glob
 from io import BytesIO
 
@@ -14,17 +15,29 @@ from ..core.variable import Variable
 from ..core.pycompat import basestring, OrderedDict, range
 
 
-def _get_default_netcdf_engine(engine):
-    try:
-        import netCDF4
-        engine = 'netcdf4'
-    except ImportError: # pragma: no cover
+def _get_default_engine(path, allow_remote=False):
+    if allow_remote and re.search('^https?\://', path):  # pragma: no cover
         try:
-            import scipy.io.netcdf
-            engine = 'scipy'
+            import netCDF4
+            engine = 'netcdf4'
         except ImportError:
-            raise ValueError('cannot read or write netCDF files without '
-                             'netCDF4-python or scipy installed')
+            try:
+                import pydap
+                engine = 'pydap'
+            except ImportError:
+                raise ValueError('netCDF4 or pydap is required for accessing '
+                                 'remote datasets via OPeNDAP')
+    else:
+        try:
+            import netCDF4
+            engine = 'netcdf4'
+        except ImportError: # pragma: no cover
+            try:
+                import scipy.io.netcdf
+                engine = 'scipy'
+            except ImportError:
+                raise ValueError('cannot read or write netCDF files without '
+                                 'netCDF4-python or scipy installed')
     return engine
 
 
@@ -67,7 +80,7 @@ def open_dataset(filename_or_obj, group=None, decode_cf=True,
     engine : {'netcdf4', 'scipy', 'pydap', 'h5netcdf'}, optional
         Engine to use when reading netCDF files. If not provided, the default
         engine is chosen based on available dependencies, with a preference for
-        'netcdf4' if reading a file on disk.
+        'netcdf4'.
     blockdims, blockshape : dict, optional
         If blockdims or blockshape is provided, it used to load the new dataset
         into dask arrays. This is an experimental feature; see the
@@ -116,7 +129,8 @@ def open_dataset(filename_or_obj, group=None, decode_cf=True,
             # TODO: automatically fall back to using pydap if given a URL and
             # netCDF4 is not available
             if engine is None:
-                engine = _get_default_netcdf_engine(engine)
+                engine = _get_default_engine(filename_or_obj,
+                                             allow_remote=True)
             if engine == 'netcdf4':
                 store = backends.NetCDF4DataStore(filename_or_obj, group=group)
             elif engine == 'scipy':
@@ -198,7 +212,7 @@ def to_netcdf(dataset, path=None, mode='w', format=None, group=None,
                              'to_netcdf: %r. Only the default engine '
                              "or engine='scipy' is supported" % engine)
     elif engine is None:
-        engine = _get_default_netcdf_engine(engine)
+        engine = _get_default_engine(path)
 
     write_funcs = {'netcdf4': _to_netcdf4,
                    'scipy': _to_scipy_netcdf,

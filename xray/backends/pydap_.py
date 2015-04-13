@@ -26,14 +26,17 @@ class PydapArrayWrapper(NDArrayMixin):
         if not isinstance(key, tuple):
             key = (key,)
         for k in key:
-            if not (isinstance(k, int)
-                    or isinstance(k, slice)
-                    or k is Ellipsis):
+            if not (isinstance(k, (int, np.integer, slice)) or k is Ellipsis):
                 raise IndexError('pydap only supports indexing with int, '
                                  'slice and Ellipsis objects')
         # pull the data from the array attribute if possible, to avoid
         # downloading coordinate data twice
-        return getattr(self.array, 'array', self.array)[key]
+        array = getattr(self.array, 'array', self.array)
+        result = array[key]
+        # pydap doesn't squeeze axes automatically like numpy
+        axis = tuple(k for k in key if isinstance(k, (int, np.integer)))
+        result = np.squeeze(result, axis=axis)
+        return result
 
 
 class PydapDataStore(AbstractDataStore):
