@@ -119,6 +119,7 @@ class TestDatetime(TestCase):
                 ([10], 'daYs  since 2000-01-01'),
                 ([[10]], 'days since 2000-01-01'),
                 ([10, 10], 'days since 2000-01-01'),
+                (np.array(10), 'days since 2000-01-01'),
                 (0, 'days since 1000-01-01'),
                 ([0], 'days since 1000-01-01'),
                 ([[0]], 'days since 1000-01-01'),
@@ -352,17 +353,35 @@ class TestDatetime(TestCase):
             self.assertEqual(expected, conventions.infer_datetime_units(dates))
 
     def test_cf_timedelta(self):
-        for timedeltas, units, expected in [
-                (['NaT'], 'days', [np.nan]),
-                (['1D', '2D', '3D'], 'days', np.array([1, 2, 3], 'int64')),
-                (['NaT', '0s', '1s'], None, [np.nan, 0, 1]),
-                (['30m', '60m'], 'hours', [0.5, 1.0]),
-                ]:
-            timedeltas = pd.to_timedelta(timedeltas)
-            expected = np.array(expected)
+        examples = [
+            ('1D', 'days', np.int64(1)),
+            (['1D', '2D', '3D'], 'days', np.array([1, 2, 3], 'int64')),
+            (['NaT', '0s', '1s'], None, [np.nan, 0, 1]),
+            (['30m', '60m'], 'hours', [0.5, 1.0]),
+        ]
+        if pd.__version__ >= '0.16':
+            # not quite sure why, but these examples don't work on older pandas
+            examples.extend([(np.timedelta64('NaT', 'ns'), 'days', np.nan),
+                             (['NaT', 'NaT'], 'days', [np.nan, np.nan])])
+
+        for timedeltas, units, numbers in examples:
+            timedeltas = pd.to_timedelta(timedeltas, box=False)
+            numbers = np.array(numbers)
+
+            expected = numbers
             actual, _ = conventions.encode_cf_timedelta(timedeltas, units)
             self.assertArrayEqual(expected, actual)
             self.assertEqual(expected.dtype, actual.dtype)
+
+            if units is not None:
+                expected = timedeltas
+                actual = conventions.decode_cf_timedelta(numbers, units)
+                self.assertArrayEqual(expected, actual)
+                self.assertEqual(expected.dtype, actual.dtype)
+
+        expected = np.timedelta64('NaT', 'ns')
+        actual = conventions.decode_cf_timedelta(np.array(np.nan), 'days')
+        self.assertArrayEqual(expected, actual)
 
     def test_infer_timedelta_units(self):
         for deltas, expected in [
