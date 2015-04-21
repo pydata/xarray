@@ -88,6 +88,12 @@ Enhancements
   These methods return a new Dataset (or DataArray) with updated data or
   coordinate variables.
 
+Deprecations
+~~~~~~~~~~~~
+
+- The method ``load_data()`` has been renamed to the more succinct
+  :py:meth:`~xray.Dataset.load`.
+
 v0.4.1 (18 March 2015)
 ----------------------
 

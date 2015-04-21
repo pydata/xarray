@@ -522,43 +522,42 @@ class TestDataset(TestCase):
         self.assertIsInstance(data.attrs, OrderedDict)
 
     @requires_dask
-    def test_chunk_data(self):
+    def test_chunk(self):
         data = create_test_data()
         for v in data.variables.values():
             self.assertIsInstance(v.data, np.ndarray)
         self.assertEqual(data.chunks, {})
 
-        reblocked = data.chunk_data()
+        reblocked = data.chunk()
         for v in reblocked.variables.values():
             self.assertIsInstance(v.data, da.Array)
         expected_chunks = dict((d, (s,)) for d, s in data.dims.items())
         self.assertEqual(reblocked.chunks, expected_chunks)
 
-        reblocked = data.chunk_data(chunks={'time': 5, 'dim1': 5,
-                                            'dim2': 5, 'dim3': 5})
+        reblocked = data.chunk({'time': 5, 'dim1': 5, 'dim2': 5, 'dim3': 5})
         expected_chunks = {'time': (5,) * 4, 'dim1': (5, 3),
                            'dim2': (5, 4), 'dim3': (5, 5)}
         self.assertEqual(reblocked.chunks, expected_chunks)
 
-        reblocked = data.chunk_data(expected_chunks)
+        reblocked = data.chunk(expected_chunks)
         self.assertEqual(reblocked.chunks, expected_chunks)
 
         # reblock on already blocked data
-        reblocked = reblocked.chunk_data(expected_chunks)
+        reblocked = reblocked.chunk(expected_chunks)
         self.assertEqual(reblocked.chunks, expected_chunks)
         self.assertDatasetIdentical(reblocked, data)
 
         with self.assertRaisesRegexp(ValueError, 'some chunks'):
-            data.chunk_data(chunks={'foo': 10})
+            data.chunk({'foo': 10})
 
     @requires_dask
     def test_dask_is_lazy(self):
         store = InaccessibleVariableDataStore()
         create_test_data().dump_to_store(store)
-        ds = open_dataset(store).chunk_data()
+        ds = open_dataset(store).chunk()
 
         with self.assertRaises(UnexpectedDataAccess):
-            ds.load_data()
+            ds.load()
         with self.assertRaises(UnexpectedDataAccess):
             ds['var1'].values
 
@@ -1595,7 +1594,7 @@ class TestDataset(TestCase):
         for decode_cf in [True, False]:
             ds = open_dataset(store, decode_cf=decode_cf)
             with self.assertRaises(UnexpectedDataAccess):
-                ds.load_data()
+                ds.load()
             with self.assertRaises(UnexpectedDataAccess):
                 ds['var1'].values
 

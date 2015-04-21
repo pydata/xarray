@@ -68,13 +68,13 @@ class TestVariable(DaskTestCase):
         self.assertEqual(self.data.chunks, v.chunks)
         self.assertArrayEqual(self.values, v)
 
-    def test_chunk_data(self):
+    def test_chunk(self):
         for chunks, expected in [(None, ((2, 2), (2, 2, 2))),
                                  (3, ((3, 1), (3, 3))),
                                  ({'x': 3, 'y': 3}, ((3, 1), (3, 3))),
                                  ({'x': 3}, ((3, 1), (2, 2, 2))),
                                  ({'x': (3, 1)}, ((3, 1), (2, 2, 2)))]:
-            rechunked = self.lazy_var.chunk_data(chunks)
+            rechunked = self.lazy_var.chunk(chunks)
             self.assertEqual(rechunked.chunks, expected)
             self.assertLazyAndIdentical(self.eager_var, rechunked)
 
@@ -231,13 +231,13 @@ class TestDataArrayAndDataset(DaskTestCase):
 
     def test_simultaneous_compute(self):
         ds = Dataset({'foo': ('x', range(5)),
-                      'bar': ('x', range(5))}).chunk_data()
+                      'bar': ('x', range(5))}).chunk()
 
-        count = np.array(0)
+        count = [0]
         def counting_get(*args, **kwargs):
-            count[...] += 1
+            count[0] += 1
             return dask.get(*args, **kwargs)
 
         with dask.set_options(get=counting_get):
-            ds.load_data()
-        self.assertEqual(count, 1)
+            ds.load()
+        self.assertEqual(count[0], 1)

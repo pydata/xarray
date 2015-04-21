@@ -9,13 +9,13 @@ to support streaming computation on datasets that don't fit into memory.
 TOOD: briefly summarize the dask data model.
 
 To create a dataset filled with dask arrays, either use :py:func:`~xray.open_mfdataset`
-to open a collection of files from disk or the :py:meth:`~xray.Dataset.chunk_data`
+to open a collection of files from disk or the :py:meth:`~xray.Dataset.chunk`
 method to convert an existing dataset.
 
 In the dask computation work, actual calculations are only performed on
 demand, when computed data is requested. Printing a ``Dataset`` will show the
 first few computed values. To load a dataset from dask array entirely into memory as
-numpy arrays, use the :py:meth:`~xray.Dataset.load_data` method. You can also write
+numpy arrays, use the :py:meth:`~xray.Dataset.load` method. You can also write
 datasets too big to fit into memory directly to disk with
 :py:meth:`~xray.Dataset.to_netcdf`.
 
@@ -29,8 +29,8 @@ concatenating and grouped operations) have been extended to work automatically
 with dask arrays. However, there are a few caveats:
 
 1. Operations between dask arrays with different ``chunks`` or between dask arrays
-   and numpy arrays are not currently supported by dask. You'll need to use ``chunk_data``
-   to manual coerce input into dask arrays with the same ``chunks``.
+   and numpy arrays are not currently supported by dask. You'll need to use the
+   ``chunk`` method to manually coerce input into dask arrays with the same ``chunks``.
 2. NumPy ufuncs like ``np.sin`` currently only work on eagerly evaluated arrays. We've
    provided replacements that also work on all xray objects, including those that
    store lazy dask arrays, in the ``xray.ufuncs`` module::
