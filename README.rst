@@ -5,7 +5,7 @@ xray: N-D labeled arrays and datasets in Python
    :target: https://travis-ci.org/xray/xray
 .. image:: https://coveralls.io/repos/xray/xray/badge.svg
    :target: https://coveralls.io/r/xray/xray
-.. image:: https://img.shields.io/pypi/xray/xray.svg
+.. image:: https://img.shields.io/pypi/v/xray.svg
    :target: https://pypi.python.org/pypi/xray/
 .. image:: https://img.shields.io/pypi/l/xray.svg
    :target: https://github.com/xray/xray/blob/master/LICENSE
