@@ -277,6 +277,10 @@ class DataArray(AbstractArray, BaseDataObject):
         return self.variable.size
 
     @property
+    def nbytes(self):
+        return self.variable.nbytes
+
+    @property
     def ndim(self):
         return self.variable.ndim
 

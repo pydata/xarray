@@ -207,6 +207,10 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
         return self._data.shape
 
     @property
+    def nbytes(self):
+        return self.size * self.dtype.itemsize
+
+    @property
     def _in_memory(self):
         return isinstance(self._data, (np.ndarray, PandasIndexAdapter))
 

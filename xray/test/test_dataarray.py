@@ -36,7 +36,7 @@ class TestDataArray(TestCase):
     def test_properties(self):
         self.assertVariableEqual(self.dv.variable, self.v)
         self.assertArrayEqual(self.dv.values, self.v.values)
-        for attr in ['dims', 'dtype', 'shape', 'size', 'ndim', 'attrs']:
+        for attr in ['dims', 'dtype', 'shape', 'size', 'nbytes', 'ndim', 'attrs']:
             self.assertEqual(getattr(self.dv, attr), getattr(self.v, attr))
         self.assertEqual(len(self.dv), len(self.v))
         self.assertVariableEqual(self.dv, self.v)

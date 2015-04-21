@@ -598,6 +598,10 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject):
         return iter(self._variables)
 
     @property
+    def nbytes(self):
+        return sum(v.nbytes for v in self.variables.values())
+
+    @property
     def loc(self):
         """Attribute for location based indexing. Only supports __getitem__,
         and only when the key is a dict of the form {dim: labels}.
