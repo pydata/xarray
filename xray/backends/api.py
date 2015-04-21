@@ -44,7 +44,7 @@ def _get_default_engine(path, allow_remote=False):
 def open_dataset(filename_or_obj, group=None, decode_cf=True,
                  mask_and_scale=True, decode_times=True,
                  concat_characters=True, decode_coords=True, engine=None,
-                 blockdims=None, blockshape=None):
+                 chunks=None):
     """Load and decode a dataset from a file or file-like object.
 
     Parameters
@@ -81,10 +81,10 @@ def open_dataset(filename_or_obj, group=None, decode_cf=True,
         Engine to use when reading netCDF files. If not provided, the default
         engine is chosen based on available dependencies, with a preference for
         'netcdf4'.
-    blockdims, blockshape : dict, optional
-        If blockdims or blockshape is provided, it used to load the new dataset
-        into dask arrays. This is an experimental feature; see the
-        documentation for more details.
+    chunks : dict, optional
+        If chunks is provided, it used to load the new dataset into dask
+        arrays. This is an experimental feature; see the documentation for more
+        details.
 
     Returns
     -------
@@ -101,8 +101,8 @@ def open_dataset(filename_or_obj, group=None, decode_cf=True,
         ds = conventions.decode_cf(
             store, mask_and_scale=mask_and_scale, decode_times=decode_times,
             concat_characters=concat_characters, decode_coords=decode_coords)
-        if blockdims is not None or blockshape is not None:
-            ds = ds.reblock(blockdims=blockdims, blockshape=blockshape)
+        if chunks is not None:
+            ds = ds.chunk_data(chunks)
         return ds
 
     if isinstance(filename_or_obj, backends.AbstractDataStore):
@@ -163,7 +163,7 @@ class _MultiFileCloser(object):
             f.close()
 
 
-def open_mfdataset(paths, blockshape=None, concat_dim=None, **kwargs):
+def open_mfdataset(paths, chunks=None, concat_dim=None, **kwargs):
     """Open multiple files as a single dataset.
 
     Experimental. Requires dask to be installed.
@@ -173,12 +173,12 @@ def open_mfdataset(paths, blockshape=None, concat_dim=None, **kwargs):
     paths : str or sequence
         Either a str glob in the form "path/to/my/files/*.nc" or an explicit
         list of files to open.
-    blockshape : dict, optional
-        Dictionary with keys given by dimension names and values given by
-        blockshapes. In general, these should divide the dimensions of each
-        dataset. By default, blockshapes will be chosen to load entire
-        input files into memory at once. This has a major impact on performance:
-        please see the full documentation for more details.
+    chunks : dict, optional
+        Dictionary with keys given by dimension names and values given by chunk
+        sizes. In general, these should divide the dimensions of each dataset.
+        By default, chunks will be chosen to load entire input files into
+        memory at once. This has a major impact on performance: please see the
+        full documentation for more details.
     concat_dim : str or DataArray or Index, optional
         Dimension to concatenate files along. This argument is passed on to
         ``auto_combine`` along with the dataset objects.
@@ -195,7 +195,7 @@ def open_mfdataset(paths, blockshape=None, concat_dim=None, **kwargs):
         raise IOError('no files to open')
     datasets = [open_dataset(p, **kwargs) for p in paths]
     file_objs = [ds._file_obj for ds in datasets]
-    datasets = [ds.reblock(blockshape=blockshape) for ds in datasets]
+    datasets = [ds.chunk_data(chunks) for ds in datasets]
     combined = auto_combine(datasets, concat_dim=concat_dim)
     combined._file_obj = _MultiFileCloser(file_objs)
     return combined

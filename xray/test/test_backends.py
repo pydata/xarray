@@ -670,12 +670,11 @@ class DaskTest(TestCase):
                 original.isel(x=slice(5, 10)).to_netcdf(tmp2)
                 with open_mfdataset([tmp1, tmp2]) as actual:
                     self.assertIsInstance(actual.foo.variable.data, da.Array)
-                    self.assertEqual(actual.foo.variable.data.blockdims,
+                    self.assertEqual(actual.foo.variable.data.chunks,
                                      ((5, 5),))
                     self.assertDatasetAllClose(original, actual)
-                with open_mfdataset([tmp1, tmp2],
-                                    blockshape={'x': 3}) as actual:
-                    self.assertEqual(actual.foo.variable.data.blockdims,
+                with open_mfdataset([tmp1, tmp2], chunks={'x': 3}) as actual:
+                    self.assertEqual(actual.foo.variable.data.chunks,
                                      ((3, 2, 3, 2),))
 
         with self.assertRaisesRegexp(IOError, 'no files to open'):
@@ -693,9 +692,9 @@ class DaskTest(TestCase):
         original = Dataset({'foo': ('x', np.random.randn(10))})
         with create_tmp_file() as tmp:
             original.to_netcdf(tmp)
-            with open_dataset(tmp, blockshape={'x': 5}) as actual:
+            with open_dataset(tmp, chunks={'x': 5}) as actual:
                 self.assertIsInstance(actual.foo.variable.data, da.Array)
-                self.assertEqual(actual.foo.variable.data.blockdims, ((5, 5),))
+                self.assertEqual(actual.foo.variable.data.chunks, ((5, 5),))
                 self.assertDatasetAllClose(original, actual)
             with open_dataset(tmp) as actual:
                 self.assertIsInstance(actual.foo.variable.data, np.ndarray)
@@ -705,8 +704,8 @@ class DaskTest(TestCase):
         with create_tmp_file() as tmp:
             data = create_test_data()
             data.to_netcdf(tmp)
-            blockshapes = {'dim1': 4, 'dim2': 4, 'dim3': 4, 'time': 10}
-            with open_dataset(tmp, blockshape=blockshapes) as dask_ds:
+            chunks = {'dim1': 4, 'dim2': 4, 'dim3': 4, 'time': 10}
+            with open_dataset(tmp, chunks=chunks) as dask_ds:
                 self.assertDatasetIdentical(data, dask_ds)
                 with create_tmp_file() as tmp2:
                     dask_ds.to_netcdf(tmp2)

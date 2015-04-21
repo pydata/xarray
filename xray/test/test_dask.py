@@ -57,7 +57,7 @@ class TestVariable(DaskTestCase):
 
     def setUp(self):
         self.values = np.random.randn(4, 6)
-        self.data = da.from_array(self.values, blockshape=(2, 2))
+        self.data = da.from_array(self.values, chunks=(2, 2))
 
         self.eager_var = Variable(('x', 'y'), self.values)
         self.lazy_var = Variable(('x', 'y'), self.data)
@@ -65,16 +65,19 @@ class TestVariable(DaskTestCase):
     def test_basics(self):
         v = self.lazy_var
         self.assertIs(self.data, v.data)
-        self.assertEqual(self.data.blockdims, v.blockdims)
+        self.assertEqual(self.data.chunks, v.chunks)
         self.assertArrayEqual(self.values, v)
 
-    def test_reblock(self):
-        reblocked = self.lazy_var.reblock(blockshape={'x': 3})
-        self.assertEqual(reblocked.blockdims, ((3, 1), (2, 2, 2)))
-        self.assertLazyAndIdentical(self.eager_var, reblocked)
+    def test_chunk_data(self):
+        for chunks, expected in [(None, ((2, 2), (2, 2, 2))),
+                                 (3, ((3, 1), (3, 3))),
+                                 ({'x': 3, 'y': 3}, ((3, 1), (3, 3))),
+                                 ({'x': 3}, ((3, 1), (2, 2, 2))),
+                                 ({'x': (3, 1)}, ((3, 1), (2, 2, 2)))]:
+            rechunked = self.lazy_var.chunk_data(chunks)
+            self.assertEqual(rechunked.chunks, expected)
+            self.assertLazyAndIdentical(self.eager_var, rechunked)
 
-    @unittest.skip('indexing with dask arrays is currently broken: see '
-                   'https://github.com/ContinuumIO/dask/pull/149')
     def test_indexing(self):
         u = self.eager_var
         v = self.lazy_var
@@ -128,7 +131,7 @@ class TestVariable(DaskTestCase):
 
     def test_missing_values(self):
         values = np.array([0, 1, np.nan, 3])
-        data = da.from_array(values, blockshape=(2,))
+        data = da.from_array(values, chunks=(2,))
 
         eager_var = Variable('x', values)
         lazy_var = Variable('x', data)
@@ -169,7 +172,7 @@ class TestDataArrayAndDataset(DaskTestCase):
 
     def setUp(self):
         self.values = np.random.randn(4, 6)
-        self.data = da.from_array(self.values, blockshape=(2, 2))
+        self.data = da.from_array(self.values, chunks=(2, 2))
         self.eager_array = DataArray(self.values, dims=('x', 'y'), name='foo')
         self.lazy_array = DataArray(self.data, dims=('x', 'y'), name='foo')
 
@@ -214,9 +217,9 @@ class TestDataArrayAndDataset(DaskTestCase):
         u = self.eager_array
         v = self.lazy_array
 
-        for kwargs in [{'x': [3, 4, 5]},
-                       {'x': [4, 100, 6, 101, 7]},
-                       {'x': [5.5, 5, 4.5], 'y': [2, 2.5, 3]}]:
+        for kwargs in [{'x': [2, 3, 4]},
+                       {'x': [1, 100, 2, 101, 3]},
+                       {'x': [2.5, 3, 3.5], 'y': [2, 2.5, 3]}]:
             expected = u.reindex(**kwargs)
             actual = v.reindex(**kwargs)
             self.assertLazyAndAllClose(expected, actual)
@@ -228,7 +231,7 @@ class TestDataArrayAndDataset(DaskTestCase):
 
     def test_simultaneous_compute(self):
         ds = Dataset({'foo': ('x', range(5)),
-                      'bar': ('x', range(5))}).reblock()
+                      'bar': ('x', range(5))}).chunk_data()
 
         count = np.array(0)
         def counting_get(*args, **kwargs):
