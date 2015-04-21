@@ -520,40 +520,40 @@ class TestDataset(TestCase):
         self.assertIsInstance(data.attrs, OrderedDict)
 
     @requires_dask
-    def test_reblock(self):
+    def test_chunk_data(self):
         data = create_test_data()
         for v in data.variables.values():
             self.assertIsInstance(v.data, np.ndarray)
-        self.assertEqual(data.blockdims, {})
+        self.assertEqual(data.chunks, {})
 
-        reblocked = data.reblock()
+        reblocked = data.chunk_data()
         for v in reblocked.variables.values():
             self.assertIsInstance(v.data, da.Array)
-        expected_blockdims = dict((d, (s,)) for d, s in data.dims.items())
-        self.assertEqual(reblocked.blockdims, expected_blockdims)
+        expected_chunks = dict((d, (s,)) for d, s in data.dims.items())
+        self.assertEqual(reblocked.chunks, expected_chunks)
 
-        reblocked = data.reblock(blockshape={'time': 5, 'dim1': 5,
-                                             'dim2': 5, 'dim3': 5})
-        expected_blockdims = {'time': (5,) * 4, 'dim1': (5, 3),
-                              'dim2': (5, 4), 'dim3': (5, 5)}
-        self.assertEqual(reblocked.blockdims, expected_blockdims)
+        reblocked = data.chunk_data(chunks={'time': 5, 'dim1': 5,
+                                            'dim2': 5, 'dim3': 5})
+        expected_chunks = {'time': (5,) * 4, 'dim1': (5, 3),
+                           'dim2': (5, 4), 'dim3': (5, 5)}
+        self.assertEqual(reblocked.chunks, expected_chunks)
 
-        reblocked = data.reblock(expected_blockdims)
-        self.assertEqual(reblocked.blockdims, expected_blockdims)
+        reblocked = data.chunk_data(expected_chunks)
+        self.assertEqual(reblocked.chunks, expected_chunks)
 
         # reblock on already blocked data
-        reblocked = reblocked.reblock(expected_blockdims)
-        self.assertEqual(reblocked.blockdims, expected_blockdims)
+        reblocked = reblocked.chunk_data(expected_chunks)
+        self.assertEqual(reblocked.chunks, expected_chunks)
         self.assertDatasetIdentical(reblocked, data)
 
-        with self.assertRaisesRegexp(ValueError, 'some blockdims or block'):
-            data.reblock(blockshape={'foo': 10})
+        with self.assertRaisesRegexp(ValueError, 'some chunks'):
+            data.chunk_data(chunks={'foo': 10})
 
     @requires_dask
     def test_dask_is_lazy(self):
         store = InaccessibleVariableDataStore()
         create_test_data().dump_to_store(store)
-        ds = open_dataset(store).reblock()
+        ds = open_dataset(store).chunk_data()
 
         with self.assertRaises(UnexpectedDataAccess):
             ds.load_data()

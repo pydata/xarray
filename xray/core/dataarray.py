@@ -448,41 +448,37 @@ class DataArray(AbstractArray, BaseDataObject):
     __hash__ = None
 
     @property
-    def blockdims(self):
+    def chunks(self):
         """Block dimensions for this array's data or None if it's not a dask
         array.
         """
-        return self.variable.blockdims
+        return self.variable.chunks
 
-    def reblock(self, blockdims=None, blockshape=None):
-        """Coerce this array's data into dask with the given block dimensions.
+    def chunk_data(self, chunks=None):
+        """Coerce this array's data into a dask arrays with the given chunks.
 
-        If neither blockdims nor blockshape is provided for one or more
-        dimensions, block sizes along that dimension will not be updated;
-        non-dask arrays will be converted into dask arrays with a single block.
+        If this variable is a non-dask array, it will be converted to dask
+        array. If it's a dask array, it will be rechunked to the given chunk
+        sizes.
+
+        If neither chunks is not provided for one or more dimensions, chunk
+        sizes along that dimension will not be updated; non-dask arrays will be
+        converted into dask arrays with a single block.
 
         Parameters
         ----------
-        blockdims : tuple or dict, optional
-            Dimensions for each block, e.g., ``((3, 2), (5, 5, 5))`` or
-            ``{'x': (3, 2), 'y': (5, 5, 5)}``.
-        blockshape : tuple or dict, optional
-            Shapes for each block, e.g., ``(3, 5)`` or ``{'x': 3, 'y': 5}``.
-            These are expanded into block dimensions. This argument is mutually
-            exclusive with ``blockdims``.
+        chunks : int, tuple or dict, optional
+            Chunk sizes along each dimension, e.g., ``5``, ``(5, 5)`` or
+            ``{'x': 5, 'y': 5}``.
 
         Returns
         -------
-        reblocked : xray.DataArray
+        chunked : xray.DataArray
         """
-        def coerce_to_dict(arg):
-            if arg is not None and not utils.is_dict_like(arg):
-                arg = dict(zip(self.dims, arg))
-            return arg
+        if isinstance(chunks, (list, tuple)):
+            chunks = dict(zip(self.dims, chunks))
 
-        blockdims = coerce_to_dict(blockdims)
-        blockshape = coerce_to_dict(blockshape)
-        ds = self._dataset.reblock(blockdims=blockdims, blockshape=blockshape)
+        ds = self._dataset.chunk_data(chunks)
         return self._with_replaced_dataset(ds)
 
     def isel(self, **indexers):

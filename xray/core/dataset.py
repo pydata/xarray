@@ -1,6 +1,7 @@
 import warnings
 import functools
 from collections import Mapping
+from numbers import Number
 
 import numpy as np
 import pandas as pd
@@ -868,59 +869,57 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject):
         return formatting.dataset_repr(self)
 
     @property
-    def blockdims(self):
+    def chunks(self):
         """Block dimensions for this dataset's data or None if it's not a dask
         array.
         """
-        blockdims = {}
+        chunks = {}
         for v in self.variables.values():
-            if v.blockdims is not None:
-                new_blockdims = list(zip(v.dims, v.blockdims))
-                if any(bd != blockdims[d] for d, bd in new_blockdims
-                       if d in blockdims):
-                    raise ValueError('inconsistent blockdims!')
-                blockdims.update(new_blockdims)
-        return Frozen(SortedKeysDict(blockdims))
+            if v.chunks is not None:
+                new_chunks = list(zip(v.dims, v.chunks))
+                if any(chunk != chunks[d] for d, chunk in new_chunks
+                       if d in chunks):
+                    raise ValueError('inconsistent chunks')
+                chunks.update(new_chunks)
+        return Frozen(SortedKeysDict(chunks))
 
-    def reblock(self, blockdims=None, blockshape=None):
+    def chunk_data(self, chunks=None):
         """Coerce all arrays in this dataset into dask arrays with the given
-        block dimensions.
+        chunks.
 
-        If neither blockdims nor blockshape is provided for one or more
-        dimensions, block sizes along that dimension will not be updated;
-        non-dask arrays will be converted into dask arrays with a single block.
+        Non-dask arrays in this dataset will be converted to dask arrays. Dask
+        arrays will be rechunked to the given chunk sizes.
+
+        If neither chunks is not provided for one or more dimensions, chunk
+        sizes along that dimension will not be updated; non-dask arrays will be
+        converted into dask arrays with a single block.
 
         Parameters
         ----------
-        blockdims : dict, optional
-            Dimensions for each block, e.g., ``{'x': (3, 2), 'y': (5, 5, 5)}``.
-        blockshape : dict, optional
-            Shapes for each block, e.g.,``{'x': 3, 'y': 5}``. These are
-            expanded into block dimensions. This argument is mutually exclusive
-            with ``blockdims``.
+        chunks : int or dict, optional
+            Chunk sizes along each dimension, e.g., ``5`` or
+            ``{'x': 5, 'y': 5}``.
 
         Returns
         -------
-        reblocked : xray.Dataset
+        chunked : xray.Dataset
         """
-        def check_arg_keys(arg):
-            if arg:
-                bad_dims = [d for d in arg if d not in self.dims]
-                if bad_dims:
-                    raise ValueError('some blockdims or blockshape keys '
-                                     'are not dimensions on this object: %s'
-                                     % bad_dims)
-        check_arg_keys(blockdims)
-        check_arg_keys(blockshape)
+        if isinstance(chunks, Number):
+            chunks = dict.fromkeys(chunks, chunks)
+
+        if chunks is not None:
+            bad_dims = [d for d in chunks if d not in self.dims]
+            if bad_dims:
+                raise ValueError('some chunks keys are not dimensions on this '
+                                 'object: %s' % bad_dims)
 
         def selkeys(dict_, keys):
             if dict_ is None:
                 return None
             return dict((d, dict_[d]) for d in keys if d in dict_)
 
-        variables = OrderedDict([(k, (v.reblock(selkeys(blockdims, v.dims),
-                                                selkeys(blockshape, v.dims),
-                                                name=k)
+        variables = OrderedDict([(k, (v.chunk_data(selkeys(chunks, v.dims),
+                                                   name=k)
                                       if v.ndim > 0 else v))
                                  for k, v in self.variables.items()])
         return self._replace_vars_and_dims(variables)

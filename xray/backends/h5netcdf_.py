@@ -13,8 +13,8 @@ class H5NetCDFStore(AbstractWritableDataStore):
     """Store for reading and writing data via h5netcdf
     """
     def __init__(self, filename, mode='r', group=None):
-        import h5netcdf
-        ds = h5netcdf.Dataset(filename, mode=mode)
+        import h5netcdf.legacyapi
+        ds = h5netcdf.legacyapi.Dataset(filename, mode=mode)
         with close_on_error(ds):
             self.ds = _nc4_group(ds, group, mode)
         self.format = format
@@ -63,10 +63,7 @@ class H5NetCDFStore(AbstractWritableDataStore):
             del attrs['_FillValue']
 
         # encoding = variable.encoding
-        nc4_var = self.ds.createVariable(
-            name=name,
-            dtype=dtype,
-            dimensions=variable.dims)
+        nc4_var = self.ds.createVariable(name, dtype, variable.dims)
             # zlib=encoding.get('zlib', False),
             # complevel=encoding.get('complevel', 4),
             # shuffle=encoding.get('shuffle', True),
