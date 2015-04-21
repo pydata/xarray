@@ -463,16 +463,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject):
 
             evaluated_variables = {}
             for k, data in zip(lazy_data, evaluated_data):
-                v = self.variables[k].copy(deep=False)
-                v._data = data
-                # dask will not coerce data that was supplied as a lazy array
-                # https://github.com/ContinuumIO/dask/issues/139
-                evaluated_variables[k] = v.load_data()
-
-            # update at the end to ensure atomic updates if anything goes
-            # wrong with load_data
-            for k, v in evaluated_variables.items():
-                self.variables[k]._data = v.values
+                self.variables[k].data = data
 
         return self
 
