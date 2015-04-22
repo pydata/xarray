@@ -25,41 +25,34 @@ describing scientific data in widespread use in the Earth sciences:
 .. _netCDF: http://www.unidata.ucar.edu/software/netcdf
 .. _OPeNDAP: http://www.opendap.org/
 
-To learn more about xray, `read the documentation`_.
+Documentation:
+   http://xray.readthedocs.org/
 
-.. _read the documentation: http://xray.readthedocs.org/
+Get in touch:
+   - Mailing list: https://groups.google.com/forum/#!forum/xray-dev
+   - Twitter: http://twitter.com/shoyer
 
-Get in touch
-------------
-
-- Mailing list: https://groups.google.com/forum/#!forum/xray-dev
-- Twitter: http://twitter.com/shoyer
-
-History
--------
-
-xray is an evolution of an internal tool developed at `The Climate
-Corporation`__, and was originally written by current and former Climate Corp
-researchers Stephan Hoyer, Alex Kleeman and Eugene Brevdo.
+History:
+   xray is an evolution of an internal tool developed at `The Climate
+   Corporation`__, and was originally written by current and former Climate Corp
+   researchers Stephan Hoyer, Alex Kleeman and Eugene Brevdo.
 
 __ http://climate.com/
 
-License
--------
+License:
+   Copyright 2014, xray Developers
 
-Copyright 2014, xray Developers
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-  http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-
-xray includes portions of pandas and numpy. Their licenses are included in the
-licenses directory.
+   Licensed under the Apache License, Version 2.0 (the "License");
+   you may not use this file except in compliance with the License.
+   You may obtain a copy of the License at
+   
+     http://www.apache.org/licenses/LICENSE-2.0
+   
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+   
+   xray includes portions of pandas and numpy. Their licenses are included in the
+   licenses directory.
