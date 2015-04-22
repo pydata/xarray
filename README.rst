@@ -3,6 +3,8 @@ xray: N-D labeled arrays and datasets
 
 .. image:: https://travis-ci.org/xray/xray.svg?branch=master
    :target: https://travis-ci.org/xray/xray
+.. image:: https://ci.appveyor.com/api/projects/status/github/xray/xray?svg=true&passingText=passing&failingText=failing&pendingText=pending
+   :target: https://ci.appveyor.com/project/shoyer/xray
 .. image:: https://coveralls.io/repos/xray/xray/badge.svg
    :target: https://coveralls.io/r/xray/xray
 .. image:: https://img.shields.io/pypi/v/xray.svg
