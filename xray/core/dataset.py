@@ -18,7 +18,7 @@ from .alignment import align, partial_align
 from .coordinates import DatasetCoordinates, Indexes
 from .common import ImplementsDatasetReduce, BaseDataObject
 from .utils import (Frozen, SortedKeysDict, ChainMap, maybe_wrap_array)
-from .variable import as_variable, Variable, Coordinate
+from .variable import as_variable, Variable, Coordinate, broadcast_variables
 from .pycompat import (iteritems, itervalues, basestring, OrderedDict,
                        dask_array_type)
 
@@ -1725,6 +1725,35 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject):
             concatenated[coord.name] = coord
 
         return concatenated
+
+    def to_array(self, dim='variables'):
+        """Convert this dataset into an xray.DataArray
+
+        The data variables of this dataset will be stacked along the first
+        axis of the new array. All coordinates of this dataset will remain
+        coordinates.
+
+        Parameters
+        ----------
+        dim : str, optional
+            Name of the new dimension.
+
+        Returns
+        -------
+        array : xray.DataArray
+        """
+        from .dataarray import DataArray
+
+        data_vars = [self.variables[k] for k in self.data_vars]
+        broadcast_vars = broadcast_variables(*data_vars)
+        data = ops.stack([b.data for b in broadcast_vars], axis=0)
+
+        coords = dict(self.coords)
+        coords[dim] = list(self.data_vars)
+
+        dims = (dim,) + broadcast_vars[0].dims
+
+        return DataArray(data, coords, dims, attrs=self.attrs)
 
     def _to_dataframe(self, ordered_dims):
         columns = [k for k in self if k not in self.dims]
