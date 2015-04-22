@@ -7,8 +7,8 @@ xray: N-D labeled arrays and datasets
    :target: https://coveralls.io/r/xray/xray
 .. image:: https://img.shields.io/pypi/v/xray.svg
    :target: https://pypi.python.org/pypi/xray/
-.. image:: https://readthedocs.org/projects/xray/badge/?version=stable
-   :target: https://readthedocs.org/projects/xray/?badge=stable
+.. image:: https://img.shields.io/pypi/l/xray.svg
+   :target: https://github.com/xray/xray/blob/master/LICENSE
 
 **xray** is an open source project and Python package that aims to bring the
 labeled data power of pandas_ to the physical sciences, by providing
