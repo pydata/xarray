@@ -1,5 +1,6 @@
-xray
-====
+.. image:: https://raw.githubusercontent.com/xray/xray/master/doc/_static/dataset-diagram-logo.png
+   :scale: 50
+   :align: center
 
 .. image:: https://travis-ci.org/xray/xray.svg?branch=master
    :target: https://travis-ci.org/xray/xray
