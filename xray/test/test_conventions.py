@@ -262,13 +262,9 @@ class TestDatetime(TestCase):
         dt = nc4.netcdftime.datetime(2001, 2, 29)
         for calendar in ['360_day', 'all_leap', '366_day']:
             num_time = nc4.date2num(dt, units, calendar)
-            with warnings.catch_warnings(record=True) as w:
-                warnings.simplefilter('always')
+            with self.assertWarns('Unable to decode time axis'):
                 actual = conventions.decode_cf_datetime(num_time, units,
                                                         calendar=calendar)
-                self.assertEqual(len(w), 1)
-                self.assertIn('Unable to decode time axis',
-                              str(w[0].message))
             expected = np.asarray(nc4.num2date(num_time, units, calendar))
             print(num_time, calendar, actual, expected)
             self.assertEqual(actual.dtype, np.dtype('O'))
