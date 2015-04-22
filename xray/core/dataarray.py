@@ -223,22 +223,55 @@ class DataArray(AbstractArray, BaseDataObject):
         obj._dataset = dataset
         return obj
 
-    def to_dataset(self, name=None):
-        """Convert a DataArray to a Dataset
+    def _to_dataset_split(self, dim):
+        def subset(dim, label):
+            array = self.loc[{dim: label}].drop(dim)
+            array.attrs = {}
+            return array
+
+        variables = OrderedDict([(str(label), subset(dim, label))
+                                 for label in self.indexes[dim]])
+        coords = self.coords.to_dataset()
+        del coords[dim]
+        return Dataset(variables, coords, self.attrs)
+
+    def _to_dataset_whole(self, name):
+        if name is None:
+            return self._dataset.copy()
+        else:
+            return self.rename(name)._dataset
+
+    def to_dataset(self, dim=None, name=None):
+        """Convert a DataArray to a Dataset.
 
         Parameters
         ----------
+        dim : str, optional
+            Name of the dimension on this array along which to split this array
+            into separate variables. If not provided, this array is converted
+            into a Dataset of one variable.
         name : str, optional
-            Name to substitute for this array's name (if it has one).
+            Name to substitute for this array's name. Only valid is ``dim`` is
+            not provided.
 
         Returns
         -------
         dataset : Dataset
         """
-        if name is None:
-            return self._dataset.copy()
+        if dim is not None and dim not in self.dims:
+            warnings.warn('the order of the arguments on DataArray.to_dataset '
+                          'has changed; you now need to supply ``name`` as '
+                          'a keyword argument',
+                          FutureWarning, stacklevel=2)
+            name = dim
+            dim = None
+
+        if dim is not None:
+            if name is not None:
+                raise TypeError('cannot supply both dim and name arguments')
+            return self._to_dataset_split(dim)
         else:
-            return self.rename(name)._dataset
+            return self._to_dataset_whole(name)
 
     @property
     def name(self):

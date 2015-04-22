@@ -1518,6 +1518,20 @@ class TestDataset(TestCase):
         with self.assertRaises(KeyError):
             auto_combine(objs)
 
+    def test_to_array(self):
+        ds = Dataset(OrderedDict([('a', 1), ('b', ('x', [1, 2, 3]))]),
+                     coords={'c': 42}, attrs={'Conventions': 'None'})
+        data = [[1, 1, 1], [1, 2, 3]]
+        coords = {'x': range(3), 'c': 42, 'variables': ['a', 'b']}
+        dims = ('variables', 'x')
+        expected = DataArray(data, coords, dims, attrs=ds.attrs)
+        actual = ds.to_array()
+        self.assertDataArrayIdentical(expected, actual)
+
+        actual = ds.to_array('abc')
+        expected = expected.rename({'variables': 'abc'})
+        self.assertDataArrayIdentical(expected, actual)
+
     def test_to_and_from_dataframe(self):
         x = np.random.randn(10)
         y = np.random.randn(10)

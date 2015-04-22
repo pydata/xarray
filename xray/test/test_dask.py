@@ -18,7 +18,7 @@ def _copy_at_variable_level(arg):
     if isinstance(arg, Variable):
         return arg.copy(deep=False)
     elif isinstance(arg, DataArray):
-        ds = arg.to_dataset('__copied__')
+        ds = arg.to_dataset(name='__copied__')
         return _copy_at_variable_level(ds)['__copied__']
     elif isinstance(arg, Dataset):
         ds = arg.copy()
@@ -223,6 +223,13 @@ class TestDataArrayAndDataset(DaskTestCase):
             expected = u.reindex(**kwargs)
             actual = v.reindex(**kwargs)
             self.assertLazyAndAllClose(expected, actual)
+
+    def test_to_dataset_roundtrip(self):
+        u = self.eager_array
+        v = self.lazy_array
+
+        expected = u.assign_coords(x=u['x'].astype(str))
+        self.assertLazyAndIdentical(expected, v.to_dataset('x').to_array('x'))
 
     def test_ufuncs(self):
         u = self.eager_array

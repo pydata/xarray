@@ -63,6 +63,17 @@ Backwards incompatible changes
 Enhancements
 ~~~~~~~~~~~~
 
+- New :py:meth:`~xray.Dataset.to_array` and enhanced
+  :py:meth:`~xray.DataArray.to_dataset` methods make it easy to switch back
+  and forth between arrays and datasets:
+
+  .. ipython:: python
+
+      ds = xray.Dataset({'a': 1, 'b': ('x', [1, 2, 3])},
+                        coords={'c': 42}, attrs={'Conventions': 'None'})
+      ds.to_array()
+      ds.to_array().to_dataset(dim='variables')
+
 - New :py:meth:`~xray.Dataset.fillna` method to fill missing values, modeled
   off the pandas method of the same name:
 

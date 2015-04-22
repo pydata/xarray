@@ -1297,14 +1297,14 @@ class TestDataArray(TestCase):
         roundtripped = DataArray.from_cdms2(actual)
         self.assertDataArrayIdentical(original, roundtripped)
 
-    def test_to_dataset(self):
+    def test_to_dataset_whole(self):
         unnamed = DataArray([1, 2], dims='x')
         actual = unnamed.to_dataset()
         expected = Dataset({None: ('x', [1, 2])})
         self.assertDatasetIdentical(expected, actual)
         self.assertIsNot(unnamed._dataset, actual)
 
-        actual = unnamed.to_dataset('foo')
+        actual = unnamed.to_dataset(name='foo')
         expected = Dataset({'foo': ('x', [1, 2])})
         self.assertDatasetIdentical(expected, actual)
 
@@ -1313,6 +1313,26 @@ class TestDataArray(TestCase):
         expected = Dataset({'foo': ('x', [1, 2])})
         self.assertDatasetIdentical(expected, actual)
 
-        actual = named.to_dataset('bar')
         expected = Dataset({'bar': ('x', [1, 2])})
+        with self.assertWarns('order of the arguments'):
+            actual = named.to_dataset('bar')
+        self.assertDatasetIdentical(expected, actual)
+
+    def test_to_dataset_split(self):
+        array = DataArray([1, 2, 3], coords=[('x', list('abc'))],
+                          attrs={'a': 1})
+        expected = Dataset(OrderedDict([('a', 1), ('b', 2), ('c', 3)]),
+                           attrs={'a': 1})
+        actual = array.to_dataset('x')
+        self.assertDatasetIdentical(expected, actual)
+
+        with self.assertRaises(TypeError):
+            array.to_dataset('x', name='foo')
+
+        roundtriped = actual.to_array(dim='x')
+        self.assertDataArrayIdentical(array, roundtriped)
+
+        array = DataArray([1, 2, 3], dims='x')
+        expected = Dataset(OrderedDict([('0', 1), ('1', 2), ('2', 3)]))
+        actual = array.to_dataset('x')
         self.assertDatasetIdentical(expected, actual)
