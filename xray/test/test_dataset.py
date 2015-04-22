@@ -1522,14 +1522,14 @@ class TestDataset(TestCase):
         ds = Dataset(OrderedDict([('a', 1), ('b', ('x', [1, 2, 3]))]),
                      coords={'c': 42}, attrs={'Conventions': 'None'})
         data = [[1, 1, 1], [1, 2, 3]]
-        coords = {'x': range(3), 'c': 42, 'variables': ['a', 'b']}
-        dims = ('variables', 'x')
+        coords = {'x': range(3), 'c': 42, 'variable': ['a', 'b']}
+        dims = ('variable', 'x')
         expected = DataArray(data, coords, dims, attrs=ds.attrs)
         actual = ds.to_array()
         self.assertDataArrayIdentical(expected, actual)
 
         actual = ds.to_array('abc')
-        expected = expected.rename({'variables': 'abc'})
+        expected = expected.rename({'variable': 'abc'})
         self.assertDataArrayIdentical(expected, actual)
 
     def test_to_and_from_dataframe(self):

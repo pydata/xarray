@@ -1726,7 +1726,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject):
 
         return concatenated
 
-    def to_array(self, dim='variables'):
+    def to_array(self, dim='variable'):
         """Convert this dataset into an xray.DataArray
 
         The data variables of this dataset will be stacked along the first
