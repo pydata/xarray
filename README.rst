@@ -25,40 +25,77 @@ describing scientific data in widespread use in the Earth sciences:
 .. _netCDF: http://www.unidata.ucar.edu/software/netcdf
 .. _OPeNDAP: http://www.opendap.org/
 
-Documentation:
-   To learn more about xray, `read the documentation`_.
-   
-.. _read the documentation: http://xray.readthedocs.org/
+Why xray?
+---------
 
-Get in touch:
-   Create a new `GitHub issue`_, write to the `mailing list`_ or tweet at Stephan on Twitter_.
-   We'd love to hear from you!
-   
-.. _GitHub issue: https://github.com/xray/xray/issues/
-.. _mailing list: https://groups.google.com/forum/#!forum/xray-dev
-.. _Twitter: http://twitter.com/shoyer
+Adding dimensions names and coordinate indexes to numpy's ndarray_ makes many
+powerful array operations possible:
 
-History:
-   xray is an evolution of an internal tool developed at `The Climate
-   Corporation`__, and was originally written by current and former Climate Corp
-   researchers Stephan Hoyer, Alex Kleeman and Eugene Brevdo.
+-  Apply operations over dimensions by name: ``x.sum('time')``.
+-  Select values by label instead of integer location:
+   ``x.loc['2014-01-01']`` or ``x.sel(time='2014-01-01')``.
+-  Mathematical operations (e.g., ``x - y``) vectorize across multiple
+   dimensions (array broadcasting) based on dimension names, not shape.
+-  Flexible split-apply-combine operations with groupby:
+   ``x.groupby('time.dayofyear').mean()``.
+-  Database like alignment based on coordinate labels that smoothly
+   handles missing values: ``x, y = xray.align(x, y, join='outer')``.
+-  Keep track of arbitrary metadata in the form of a Python dictionary:
+   ``x.attrs``.
+
+pandas_ provides many of these features, but it does not make use of dimension
+names, and its core data structures are fixed dimensional arrays.
+
+The N-dimensional nature of xray's data structures makes it suitable for dealing
+with multi-dimensional scientific data, and its use of dimension names
+instead of axis labels (``dim='time'`` instead of ``axis=0``) makes such
+arrays much more manageable than the raw numpy ndarray: with xray, you don't
+need to keep track of the order of arrays dimensions or insert dummy dimensions
+(e.g., ``np.newaxis``) to align arrays.
+
+Our target audience is anyone who needs N-dimensional labeled arrays, but we
+are particularly focused on the data analysis needs of physical scientists --
+especially geoscientists who already know and love netCDF_.
+
+.. _netCDF: http://www.unidata.ucar.edu/software/netcdf
+
+Documentation
+-------------
+
+The official documentation is hosted on ReadTheDocs: http://xray.readthedocs.org/
+
+Get in touch
+------------
+
+- GitHub issue tracker: https://github.com/xray/xray/issues/
+- Mailing list: https://groups.google.com/forum/#!forum/xray-dev
+- Twitter: http://twitter.com/shoyer
+
+History
+-------
+
+xray is an evolution of an internal tool developed at `The Climate
+Corporation`__, and was originally written by current and former Climate Corp
+researchers Stephan Hoyer, Alex Kleeman and Eugene Brevdo.
 
 __ http://climate.com/
 
-License:
-   Copyright 2014, xray Developers
+License
+-------
 
-   Licensed under the Apache License, Version 2.0 (the "License");
-   you may not use this file except in compliance with the License.
-   You may obtain a copy of the License at
-   
-     http://www.apache.org/licenses/LICENSE-2.0
-   
-   Unless required by applicable law or agreed to in writing, software
-   distributed under the License is distributed on an "AS IS" BASIS,
-   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-   See the License for the specific language governing permissions and
-   limitations under the License.
-   
-   xray includes portions of pandas and numpy. Their licenses are included in the
-   licenses directory.
+Copyright 2014, xray Developers
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+  http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+
+xray includes portions of pandas and numpy. Their licenses are included in the
+licenses directory.
