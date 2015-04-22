@@ -26,11 +26,17 @@ describing scientific data in widespread use in the Earth sciences:
 .. _OPeNDAP: http://www.opendap.org/
 
 Documentation:
-   http://xray.readthedocs.org/
+   To learn more about xray, `read the documentation`_.
+   
+.. _read the documentation: http://xray.readthedocs.org/
 
 Get in touch:
-   - Mailing list: https://groups.google.com/forum/#!forum/xray-dev
-   - Twitter: http://twitter.com/shoyer
+   Create a new `GitHub issue`_, write to the `mailing list`_ or tweet at Stephan on Twitter_.
+   We'd love to hear from you!
+   
+.. _GitHub issue: https://github.com/xray/xray/issues/
+.. _mailing list: https://groups.google.com/forum/#!forum/xray-dev
+.. _Twitter: http://twitter.com/shoyer
 
 History:
    xray is an evolution of an internal tool developed at `The Climate
