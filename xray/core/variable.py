@@ -238,7 +238,7 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
     def _indexable_data(self):
         return orthogonally_indexable(self._data)
 
-    def load_data(self):
+    def load(self):
         """Manually trigger loading of this variable's data from disk or a
         remote source into memory and return this variable.
 
@@ -248,6 +248,12 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
         """
         self._data_cached()
         return self
+
+    def load_data(self):  # pragma: no cover
+        warnings.warn('the Variable method `load_data` has been deprecated; '
+                      'use `load` instead',
+                      FutureWarning, stacklevel=2)
+        return self.load()
 
     def __getstate__(self):
         """Always cache data as an in-memory array before pickling"""
@@ -407,7 +413,7 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
 
     _array_counter = itertools.count()
 
-    def chunk_data(self, chunks=None, name=''):
+    def chunk(self, chunks=None, name=''):
         """Coerce this array's data into a dask arrays with the given chunks.
 
         If this variable is a non-dask array, it will be converted to dask
@@ -423,6 +429,9 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
         chunks : int, tuple or dict, optional
             Chunk sizes along each dimension, e.g., ``5``, ``(5, 5)`` or
             ``{'x': 5, 'y': 5}``.
+        name : str, optional
+            Used to generate the name for this array in the internal dask
+            graph. Does not need not be unique.
 
         Returns
         -------

@@ -1,5 +1,5 @@
-import warnings
 import functools
+import warnings
 from collections import Mapping
 from numbers import Number
 
@@ -403,7 +403,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject):
 
     def __getstate__(self):
         """Always load data in-memory before pickling"""
-        self.load_data()
+        self.load()
         # self.__dict__ is the default pickle object, we don't need to
         # implement our own __setstate__ method to make pickle work
         state = self.__dict__.copy()
@@ -442,7 +442,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject):
         """
         return Frozen(SortedKeysDict(self._dims))
 
-    def load_data(self):
+    def load(self):
         """Manually trigger loading of this dataset's data from disk or a
         remote source into memory and return this dataset.
 
@@ -466,6 +466,12 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject):
                 self.variables[k].data = data
 
         return self
+
+    def load_data(self):  # pragma: no cover
+        warnings.warn('the Dataset method `load_data` has been deprecated; '
+                      'use `load` instead',
+                      FutureWarning, stacklevel=2)
+        return self.load()
 
     @classmethod
     def _construct_direct(cls, variables, coord_names, dims, attrs,
@@ -878,7 +884,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject):
                 chunks.update(new_chunks)
         return Frozen(SortedKeysDict(chunks))
 
-    def chunk_data(self, chunks=None):
+    def chunk(self, chunks=None):
         """Coerce all arrays in this dataset into dask arrays with the given
         chunks.
 
@@ -913,8 +919,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject):
                 return None
             return dict((d, dict_[d]) for d in keys if d in dict_)
 
-        variables = OrderedDict([(k, (v.chunk_data(selkeys(chunks, v.dims),
-                                                   name=k)
+        variables = OrderedDict([(k, (v.chunk(selkeys(chunks, v.dims), name=k)
                                       if v.ndim > 0 else v))
                                  for k, v in self.variables.items()])
         return self._replace_vars_and_dims(variables)

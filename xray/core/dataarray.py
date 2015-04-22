@@ -1,5 +1,6 @@
 import contextlib
 import functools
+import warnings
 
 import pandas as pd
 
@@ -418,7 +419,7 @@ class DataArray(AbstractArray, BaseDataObject):
         ds = self._dataset.reset_coords(names, drop, inplace)
         return ds[self.name] if drop else ds
 
-    def load_data(self):
+    def load(self):
         """Manually trigger loading of this array's data from disk or a
         remote source into memory and return this array.
 
@@ -427,8 +428,14 @@ class DataArray(AbstractArray, BaseDataObject):
         load data automatically. However, this method can be necessary when
         working with many file objects on disk.
         """
-        self._dataset.load_data()
+        self._dataset.load()
         return self
+
+    def load_data(self):  # pragma: no cover
+        warnings.warn('the DataArray method `load_data` has been deprecated; '
+                      'use `load` instead',
+                      FutureWarning, stacklevel=2)
+        return self.load()
 
     def copy(self, deep=True):
         """Returns a copy of this array.
@@ -458,7 +465,7 @@ class DataArray(AbstractArray, BaseDataObject):
         """
         return self.variable.chunks
 
-    def chunk_data(self, chunks=None):
+    def chunk(self, chunks=None):
         """Coerce this array's data into a dask arrays with the given chunks.
 
         If this variable is a non-dask array, it will be converted to dask
@@ -482,7 +489,7 @@ class DataArray(AbstractArray, BaseDataObject):
         if isinstance(chunks, (list, tuple)):
             chunks = dict(zip(self.dims, chunks))
 
-        ds = self._dataset.chunk_data(chunks)
+        ds = self._dataset.chunk(chunks)
         return self._with_replaced_dataset(ds)
 
     def isel(self, **indexers):

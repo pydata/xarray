@@ -80,7 +80,7 @@ class DatasetIOTestCases(object):
         with self.roundtrip(expected) as actual:
             self.assertDatasetAllClose(expected, actual)
 
-    def test_load_data(self):
+    def test_load(self):
         expected = create_test_data()
 
         @contextlib.contextmanager
@@ -102,14 +102,14 @@ class DatasetIOTestCases(object):
                 pass
 
         with assert_loads() as ds:
-            ds.load_data()
+            ds.load()
 
         with assert_loads(['var1', 'dim1', 'dim2']) as ds:
-            ds['var1'].load_data()
+            ds['var1'].load()
 
         # verify we can read data even after closing the file
         with self.roundtrip(expected) as ds:
-            actual = ds.load_data()
+            actual = ds.load()
         self.assertDatasetAllClose(expected, actual)
 
     def test_roundtrip_None_variable(self):

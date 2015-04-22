@@ -102,7 +102,7 @@ def open_dataset(filename_or_obj, group=None, decode_cf=True,
             store, mask_and_scale=mask_and_scale, decode_times=decode_times,
             concat_characters=concat_characters, decode_coords=decode_coords)
         if chunks is not None:
-            ds = ds.chunk_data(chunks)
+            ds = ds.chunk(chunks)
         return ds
 
     if isinstance(filename_or_obj, backends.AbstractDataStore):
@@ -195,7 +195,7 @@ def open_mfdataset(paths, chunks=None, concat_dim=None, **kwargs):
         raise IOError('no files to open')
     datasets = [open_dataset(p, **kwargs) for p in paths]
     file_objs = [ds._file_obj for ds in datasets]
-    datasets = [ds.chunk_data(chunks) for ds in datasets]
+    datasets = [ds.chunk(chunks) for ds in datasets]
     combined = auto_combine(datasets, concat_dim=concat_dim)
     combined._file_obj = _MultiFileCloser(file_objs)
     return combined

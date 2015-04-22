@@ -334,18 +334,20 @@ class TestDataArray(TestCase):
         self.assertDataArrayIdentical(expected, actual)
 
     @requires_dask
-    def test_chunk_data(self):
+    def test_chunk(self):
         unblocked = DataArray(np.ones((3, 4)))
         self.assertIsNone(unblocked.chunks)
 
-        blocked = unblocked.chunk_data()
+        blocked = unblocked.chunk()
         self.assertEqual(blocked.chunks, ((3,), (4,)))
 
-        blocked = unblocked.chunk_data(chunks=((2, 1), (2, 2)))
+        blocked = unblocked.chunk(chunks=((2, 1), (2, 2)))
         self.assertEqual(blocked.chunks, ((2, 1), (2, 2)))
 
-        blocked = unblocked.chunk_data(chunks=(3, 3))
+        blocked = unblocked.chunk(chunks=(3, 3))
         self.assertEqual(blocked.chunks, ((3,), (3, 1)))
+
+        self.assertIsNone(blocked.load().chunks)
 
     def test_isel(self):
         self.assertDataArrayIdentical(self.dv[0], self.dv.isel(x=0))

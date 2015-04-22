@@ -111,7 +111,7 @@ is modified: the original file on disk is never touched.
     xray's lazy loading of remote or on-disk datasets is often but not always
     desirable. Before performing computationally intense operations, it is
     usually a good idea to load a dataset entirely into memory by invoking the
-    :py:meth:`~xray.Dataset.load_data` method.
+    :py:meth:`~xray.Dataset.load` method.
 
 Datasets have a :py:meth:`~xray.Dataset.close` method to close the associated
 netCDF file. However, it's often cleaner to use a ``with`` statement:
@@ -326,7 +326,7 @@ deficiencies::
                     ds = transform_func(ds)
                 # load all data from the transformed dataset, to ensure we can
                 # use it after closing each original file
-                ds.load_data()
+                ds.load()
                 return ds
 
         paths = sorted(glob(files))
