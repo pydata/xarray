@@ -245,7 +245,8 @@ class TestDataset(TestCase):
         self.assertNotIn('var1', ds.coords)
         self.assertEqual(len(ds.coords), 5)
 
-        self.assertEqual(Dataset({'x': 1, 'y': [1, 2]}).nbytes, 24)
+        self.assertEqual(Dataset({'x': np.int64(1),
+                                  'y': np.float32([1, 2])}).nbytes, 16)
 
     def test_attr_access(self):
         ds = Dataset({'tmin': ('x', [42], {'units': 'Celcius'})},
