@@ -46,17 +46,33 @@ powerful array operations possible:
 pandas_ provides many of these features, but it does not make use of dimension
 names, and its core data structures are fixed dimensional arrays.
 
-The N-dimensional nature of xray's data structures makes it suitable for dealing
-with multi-dimensional scientific data, and its use of dimension names
-instead of axis labels (``dim='time'`` instead of ``axis=0``) makes such
-arrays much more manageable than the raw numpy ndarray: with xray, you don't
-need to keep track of the order of arrays dimensions or insert dummy dimensions
-(e.g., ``np.newaxis``) to align arrays.
+Why isn't pandas enough?
+------------------------
+
+pandas_ excels at working with tabular data. That suffices for many statistical
+analyses, but physical scientists rely on N-dimensional arrays -- which is
+where xray comes in.
+
+xray aims to provide a data analysis toolkit as powerful as pandas_ but
+designed for working with homogeneous N-dimensional arrays
+instead of tabular data. When possible, we copy the pandas API and rely on
+pandas's highly optimized internals (in particular, for fast indexing).
+
+Why netCDF?
+-----------
+
+Because xray implements the same data model as the netCDF_ file format,
+xray datasets have a natural and portable serialization format. But it is also
+easy to robustly convert an xray ``DataArray`` to and from a numpy ``ndarray``
+or a pandas ``DataFrame`` or ``Series``, providing compatibility with the full
+`PyData ecosystem <http://pydata.org/>`__.
 
 Our target audience is anyone who needs N-dimensional labeled arrays, but we
 are particularly focused on the data analysis needs of physical scientists --
 especially geoscientists who already know and love netCDF_.
 
+.. _ndarray: http://docs.scipy.org/doc/numpy/reference/arrays.ndarray.html
+.. _pandas: http://pandas.pydata.org
 .. _netCDF: http://www.unidata.ucar.edu/software/netcdf
 
 Documentation
