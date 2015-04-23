@@ -412,22 +412,6 @@ class BaseNetCDF4Test(CFEncodedDataTest):
             self.assertDatasetIdentical(data, actual)
             self.assertEqual(actual['x'].dtype, np.dtype('S4'))
 
-
-@requires_netCDF4
-class NetCDF4DataTest(BaseNetCDF4Test, TestCase):
-    @contextlib.contextmanager
-    def create_store(self):
-        with create_tmp_file() as tmp_file:
-            with backends.NetCDF4DataStore(tmp_file, mode='w') as store:
-                yield store
-
-    @contextlib.contextmanager
-    def roundtrip(self, data, **kwargs):
-        with create_tmp_file() as tmp_file:
-            data.to_netcdf(tmp_file)
-            with open_dataset(tmp_file, **kwargs) as ds:
-                yield ds
-
     def test_open_encodings(self):
         # Create a netCDF file with explicit time units
         # and make sure it makes it into the encodings
@@ -475,7 +459,7 @@ class NetCDF4DataTest(BaseNetCDF4Test, TestCase):
         data = create_test_data()
         data['var2'].encoding.update({'zlib': True,
                                       'chunksizes': (5, 5),
-                                      'least_significant_digit': 2})
+                                      'fletcher32': True})
         with self.roundtrip(data) as actual:
             for k, v in iteritems(data['var2'].encoding):
                 self.assertEqual(v, actual['var2'].encoding[k])
@@ -533,6 +517,22 @@ class NetCDF4DataTest(BaseNetCDF4Test, TestCase):
             for kwargs in [{}, {'decode_cf': True}]:
                 with open_dataset(tmp_file, **kwargs) as actual:
                     self.assertDatasetIdentical(expected, actual)
+
+
+@requires_netCDF4
+class NetCDF4DataTest(BaseNetCDF4Test, TestCase):
+    @contextlib.contextmanager
+    def create_store(self):
+        with create_tmp_file() as tmp_file:
+            with backends.NetCDF4DataStore(tmp_file, mode='w') as store:
+                yield store
+
+    @contextlib.contextmanager
+    def roundtrip(self, data, **kwargs):
+        with create_tmp_file() as tmp_file:
+            data.to_netcdf(tmp_file)
+            with open_dataset(tmp_file, **kwargs) as ds:
+                yield ds
 
 
 @requires_scipy
@@ -655,7 +655,7 @@ class H5NetCDFDataTest(BaseNetCDF4Test, TestCase):
                 yield ds
 
     def test_orthogonal_indexing(self):
-        # doesn't work for h5py
+        # doesn't work for h5py (without using dask as an intermediate layer)
         pass
 
 
