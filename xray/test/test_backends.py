@@ -601,7 +601,7 @@ class GenericNetCDFDataTest(CFEncodedDataTest, Only32BitTypes, TestCase):
     @contextlib.contextmanager
     def roundtrip(self, data, **kwargs):
         with create_tmp_file() as tmp_file:
-            data.to_netcdf(tmp_file, format='NETCDF3_64BIT')
+            data.to_netcdf(tmp_file, format='netcdf3_64bit')
             with open_dataset(tmp_file, **kwargs) as ds:
                 yield ds
 
