@@ -222,6 +222,9 @@ def to_netcdf(dataset, path=None, mode='w', format=None, group=None,
     except KeyError:
         raise ValueError('unrecognized engine for to_netcdf: %r' % engine)
 
+    if format is not None:
+        format = format.upper()
+
     return to_netcdf_func(dataset, path, mode, format, group)
 
 
