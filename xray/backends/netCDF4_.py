@@ -57,6 +57,10 @@ def _nc4_values_and_dtype(var):
         data, dims = maybe_convert_to_char_array(var.data, var.dims)
         var = Variable(dims, data, var.attrs, var.encoding)
         dtype = var.dtype
+    elif var.dtype.kind == 'b':
+        # store bool as 1-byte integer
+        var = var.astype('i1')
+        dtype = 'i1'
     else:
         raise ValueError('cannot infer dtype for netCDF4 variable')
     return var, dtype
