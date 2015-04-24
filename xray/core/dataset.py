@@ -1,6 +1,7 @@
-import warnings
 import functools
+import warnings
 from collections import Mapping
+from numbers import Number
 
 import numpy as np
 import pandas as pd
@@ -17,7 +18,7 @@ from .alignment import align, partial_align
 from .coordinates import DatasetCoordinates, Indexes
 from .common import ImplementsDatasetReduce, BaseDataObject
 from .utils import (Frozen, SortedKeysDict, ChainMap, maybe_wrap_array)
-from .variable import as_variable, Variable, Coordinate
+from .variable import as_variable, Variable, Coordinate, broadcast_variables
 from .pycompat import (iteritems, itervalues, basestring, OrderedDict,
                        dask_array_type)
 
@@ -402,7 +403,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject):
 
     def __getstate__(self):
         """Always load data in-memory before pickling"""
-        self.load_data()
+        self.load()
         # self.__dict__ is the default pickle object, we don't need to
         # implement our own __setstate__ method to make pickle work
         state = self.__dict__.copy()
@@ -441,7 +442,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject):
         """
         return Frozen(SortedKeysDict(self._dims))
 
-    def load_data(self):
+    def load(self):
         """Manually trigger loading of this dataset's data from disk or a
         remote source into memory and return this dataset.
 
@@ -462,18 +463,15 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject):
 
             evaluated_variables = {}
             for k, data in zip(lazy_data, evaluated_data):
-                v = self.variables[k].copy(deep=False)
-                v._data = data
-                # dask will not coerce data that was supplied as a lazy array
-                # https://github.com/ContinuumIO/dask/issues/139
-                evaluated_variables[k] = v.load_data()
-
-            # update at the end to ensure atomic updates if anything goes
-            # wrong with load_data
-            for k, v in evaluated_variables.items():
-                self.variables[k]._data = v.values
+                self.variables[k].data = data
 
         return self
+
+    def load_data(self):  # pragma: no cover
+        warnings.warn('the Dataset method `load_data` has been deprecated; '
+                      'use `load` instead',
+                      FutureWarning, stacklevel=2)
+        return self.load()
 
     @classmethod
     def _construct_direct(cls, variables, coord_names, dims, attrs,
@@ -595,6 +593,10 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject):
 
     def __iter__(self):
         return iter(self._variables)
+
+    @property
+    def nbytes(self):
+        return sum(v.nbytes for v in self.variables.values())
 
     @property
     def loc(self):
@@ -868,59 +870,56 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject):
         return formatting.dataset_repr(self)
 
     @property
-    def blockdims(self):
+    def chunks(self):
         """Block dimensions for this dataset's data or None if it's not a dask
         array.
         """
-        blockdims = {}
+        chunks = {}
         for v in self.variables.values():
-            if v.blockdims is not None:
-                new_blockdims = list(zip(v.dims, v.blockdims))
-                if any(bd != blockdims[d] for d, bd in new_blockdims
-                       if d in blockdims):
-                    raise ValueError('inconsistent blockdims!')
-                blockdims.update(new_blockdims)
-        return Frozen(SortedKeysDict(blockdims))
+            if v.chunks is not None:
+                new_chunks = list(zip(v.dims, v.chunks))
+                if any(chunk != chunks[d] for d, chunk in new_chunks
+                       if d in chunks):
+                    raise ValueError('inconsistent chunks')
+                chunks.update(new_chunks)
+        return Frozen(SortedKeysDict(chunks))
 
-    def reblock(self, blockdims=None, blockshape=None):
+    def chunk(self, chunks=None):
         """Coerce all arrays in this dataset into dask arrays with the given
-        block dimensions.
+        chunks.
 
-        If neither blockdims nor blockshape is provided for one or more
-        dimensions, block sizes along that dimension will not be updated;
-        non-dask arrays will be converted into dask arrays with a single block.
+        Non-dask arrays in this dataset will be converted to dask arrays. Dask
+        arrays will be rechunked to the given chunk sizes.
+
+        If neither chunks is not provided for one or more dimensions, chunk
+        sizes along that dimension will not be updated; non-dask arrays will be
+        converted into dask arrays with a single block.
 
         Parameters
         ----------
-        blockdims : dict, optional
-            Dimensions for each block, e.g., ``{'x': (3, 2), 'y': (5, 5, 5)}``.
-        blockshape : dict, optional
-            Shapes for each block, e.g.,``{'x': 3, 'y': 5}``. These are
-            expanded into block dimensions. This argument is mutually exclusive
-            with ``blockdims``.
+        chunks : int or dict, optional
+            Chunk sizes along each dimension, e.g., ``5`` or
+            ``{'x': 5, 'y': 5}``.
 
         Returns
         -------
-        reblocked : xray.Dataset
+        chunked : xray.Dataset
         """
-        def check_arg_keys(arg):
-            if arg:
-                bad_dims = [d for d in arg if d not in self.dims]
-                if bad_dims:
-                    raise ValueError('some blockdims or blockshape keys '
-                                     'are not dimensions on this object: %s'
-                                     % bad_dims)
-        check_arg_keys(blockdims)
-        check_arg_keys(blockshape)
+        if isinstance(chunks, Number):
+            chunks = dict.fromkeys(chunks, chunks)
+
+        if chunks is not None:
+            bad_dims = [d for d in chunks if d not in self.dims]
+            if bad_dims:
+                raise ValueError('some chunks keys are not dimensions on this '
+                                 'object: %s' % bad_dims)
 
         def selkeys(dict_, keys):
             if dict_ is None:
                 return None
             return dict((d, dict_[d]) for d in keys if d in dict_)
 
-        variables = OrderedDict([(k, (v.reblock(selkeys(blockdims, v.dims),
-                                                selkeys(blockshape, v.dims),
-                                                name=k)
+        variables = OrderedDict([(k, (v.chunk(selkeys(chunks, v.dims), name=k)
                                       if v.ndim > 0 else v))
                                  for k, v in self.variables.items()])
         return self._replace_vars_and_dims(variables)
@@ -1726,6 +1725,35 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject):
             concatenated[coord.name] = coord
 
         return concatenated
+
+    def to_array(self, dim='variable'):
+        """Convert this dataset into an xray.DataArray
+
+        The data variables of this dataset will be stacked along the first
+        axis of the new array. All coordinates of this dataset will remain
+        coordinates.
+
+        Parameters
+        ----------
+        dim : str, optional
+            Name of the new dimension.
+
+        Returns
+        -------
+        array : xray.DataArray
+        """
+        from .dataarray import DataArray
+
+        data_vars = [self.variables[k] for k in self.data_vars]
+        broadcast_vars = broadcast_variables(*data_vars)
+        data = ops.stack([b.data for b in broadcast_vars], axis=0)
+
+        coords = dict(self.coords)
+        coords[dim] = list(self.data_vars)
+
+        dims = (dim,) + broadcast_vars[0].dims
+
+        return DataArray(data, coords, dims, attrs=self.attrs)
 
     def _to_dataframe(self, ordered_dims):
         columns = [k for k in self if k not in self.dims]

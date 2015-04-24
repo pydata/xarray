@@ -341,11 +341,12 @@ Dataset methods
    open_dataset
    open_mfdataset
    Dataset.to_netcdf
+   Dataset.to_array
    Dataset.to_dataframe
    Dataset.from_dataframe
    Dataset.close
-   Dataset.load_data
-   Dataset.reblock
+   Dataset.load
+   Dataset.chunk
 
 DataArray methods
 -----------------
@@ -361,8 +362,8 @@ DataArray methods
    DataArray.to_cdms2
    DataArray.from_series
    DataArray.from_cdms2
-   DataArray.load_data
-   DataArray.reblock
+   DataArray.load
+   DataArray.chunk
 
 Backends (experimental)
 -----------------------

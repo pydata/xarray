@@ -207,6 +207,10 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
         return self._data.shape
 
     @property
+    def nbytes(self):
+        return self.size * self.dtype.itemsize
+
+    @property
     def _in_memory(self):
         return isinstance(self._data, (np.ndarray, PandasIndexAdapter))
 
@@ -234,7 +238,7 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
     def _indexable_data(self):
         return orthogonally_indexable(self._data)
 
-    def load_data(self):
+    def load(self):
         """Manually trigger loading of this variable's data from disk or a
         remote source into memory and return this variable.
 
@@ -244,6 +248,12 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
         """
         self._data_cached()
         return self
+
+    def load_data(self):  # pragma: no cover
+        warnings.warn('the Variable method `load_data` has been deprecated; '
+                      'use `load` instead',
+                      FutureWarning, stacklevel=2)
+        return self.load()
 
     def __getstate__(self):
         """Always cache data as an in-memory array before pickling"""
@@ -395,77 +405,60 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
     __hash__ = None
 
     @property
-    def blockdims(self):
+    def chunks(self):
         """Block dimensions for this array's data or None if it's not a dask
         array.
         """
-        return getattr(self._data, 'blockdims', None)
+        return getattr(self._data, 'chunks', None)
 
     _array_counter = itertools.count()
 
-    def reblock(self, blockdims=None, blockshape=None, name=''):
-        """Coerce this array's data into dask with the given block dimensions.
+    def chunk(self, chunks=None, name=''):
+        """Coerce this array's data into a dask arrays with the given chunks.
 
-        If neither blockdims nor blockshape is provided, the variable will be
-        reblocked into a single dask array.
+        If this variable is a non-dask array, it will be converted to dask
+        array. If it's a dask array, it will be rechunked to the given chunk
+        sizes.
 
-        Does *not* validate that all blockdims or blockshape keys (if they are
-        provided as dicts) are variable dimensions. That is the responsibility
-        of the caller (e.g., Dataset.reblock or DataArray.reblock).
+        If neither chunks is not provided for one or more dimensions, chunk
+        sizes along that dimension will not be updated; non-dask arrays will be
+        converted into dask arrays with a single block.
 
         Parameters
         ----------
-        blockdims : tuple or dict, optional
-            Dimensions for each block, e.g., ``((3, 2), (5, 5, 5))`` or
-            ``{'x': (3, 2), 'y': (5, 5, 5)}``.
-        blockshape : tuple or dict, optional
-            Shapes for each block, e.g., ``(3, 5)`` or ``{'x': 3, 'y': 5}``.
-            These are expanded into block dimensions. This argument is mutually
-            exclusive with ``blockdims``.
+        chunks : int, tuple or dict, optional
+            Chunk sizes along each dimension, e.g., ``5``, ``(5, 5)`` or
+            ``{'x': 5, 'y': 5}``.
         name : str, optional
-            Name of this variable. Does not need to be unique.
+            Used to generate the name for this array in the internal dask
+            graph. Does not need not be unique.
 
         Returns
         -------
-        reblocked : xray.Variable
+        chunked : xray.Variable
         """
         import dask.array as da
 
-        def remap_dim_to_axis(arg):
-            if utils.is_dict_like(arg):
-                arg = dict((self.get_axis_num(dim), arg_value)
-                           for dim, arg_value in arg.items())
-            return arg
+        if utils.is_dict_like(chunks):
+            chunks = dict((self.get_axis_num(dim), chunk)
+                          for dim, chunk in chunks.items())
 
-        def coerce_to_tuple(arg, default):
-            if utils.is_dict_like(arg):
-                arg = tuple(arg.get(n, s) for n, s in enumerate(default))
-            return arg
-
-        blockdims = remap_dim_to_axis(blockdims)
-        blockshape = remap_dim_to_axis(blockshape)
-
-        if blockdims is None and blockshape is None:
-            blockshape = self.shape
+        if chunks is None:
+            chunks = self.chunks or self.shape
 
         data = self._data
         if isinstance(data, dask_array_type):
-            data = data.reblock(blockdims=blockdims, blockshape=blockshape)
+            data = data.rechunk(chunks)
         else:
             if name:
                 name += '_'
             name = 'xray_%s%s' % (name, next(self._array_counter))
 
-            default_blockdims = tuple((s,) for s in self.shape)
-            blockdims = coerce_to_tuple(blockdims, default_blockdims)
-            blockshape = coerce_to_tuple(blockshape, self.shape)
+            if utils.is_dict_like(chunks):
+                chunks = tuple(chunks.get(n, s)
+                               for n, s in enumerate(self.shape))
 
-            # temporary fix for https://github.com/ContinuumIO/dask/issues/105
-            while isinstance(data, LazilyIndexedArray):
-                data = data.array
-
-            data = da.from_array(data, blockdims=blockdims,
-                                 blockshape=blockshape, name=name)
+            data = da.from_array(data, chunks, name=name)
 
         return type(self)(self.dims, data, self._attrs, self._encoding,
                           fastpath=True)

@@ -1,3 +1,6 @@
+import warnings
+from contextlib import contextmanager
+
 import numpy as np
 from numpy.testing import assert_array_equal
 
@@ -93,6 +96,13 @@ class TestCase(unittest.TestCase):
         # assertItemsEqual
         def assertItemsEqual(self, first, second, msg=None):
             return self.assertCountEqual(first, second, msg)
+
+    @contextmanager
+    def assertWarns(self, message):
+        with warnings.catch_warnings(record=True) as w:
+            warnings.filterwarnings('always', message)
+            yield
+            self.assertTrue(any(message in str(wi.message) for wi in w))
 
     def assertVariableEqual(self, v1, v2):
         assert as_variable(v1).equals(v2), (v1, v2)

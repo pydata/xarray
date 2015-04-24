@@ -245,6 +245,9 @@ class TestDataset(TestCase):
         self.assertNotIn('var1', ds.coords)
         self.assertEqual(len(ds.coords), 5)
 
+        self.assertEqual(Dataset({'x': np.int64(1),
+                                  'y': np.float32([1, 2])}).nbytes, 16)
+
     def test_attr_access(self):
         ds = Dataset({'tmin': ('x', [42], {'units': 'Celcius'})},
                      attrs={'title': 'My test data'})
@@ -520,43 +523,42 @@ class TestDataset(TestCase):
         self.assertIsInstance(data.attrs, OrderedDict)
 
     @requires_dask
-    def test_reblock(self):
+    def test_chunk(self):
         data = create_test_data()
         for v in data.variables.values():
             self.assertIsInstance(v.data, np.ndarray)
-        self.assertEqual(data.blockdims, {})
+        self.assertEqual(data.chunks, {})
 
-        reblocked = data.reblock()
+        reblocked = data.chunk()
         for v in reblocked.variables.values():
             self.assertIsInstance(v.data, da.Array)
-        expected_blockdims = dict((d, (s,)) for d, s in data.dims.items())
-        self.assertEqual(reblocked.blockdims, expected_blockdims)
+        expected_chunks = dict((d, (s,)) for d, s in data.dims.items())
+        self.assertEqual(reblocked.chunks, expected_chunks)
 
-        reblocked = data.reblock(blockshape={'time': 5, 'dim1': 5,
-                                             'dim2': 5, 'dim3': 5})
-        expected_blockdims = {'time': (5,) * 4, 'dim1': (5, 3),
-                              'dim2': (5, 4), 'dim3': (5, 5)}
-        self.assertEqual(reblocked.blockdims, expected_blockdims)
+        reblocked = data.chunk({'time': 5, 'dim1': 5, 'dim2': 5, 'dim3': 5})
+        expected_chunks = {'time': (5,) * 4, 'dim1': (5, 3),
+                           'dim2': (5, 4), 'dim3': (5, 5)}
+        self.assertEqual(reblocked.chunks, expected_chunks)
 
-        reblocked = data.reblock(expected_blockdims)
-        self.assertEqual(reblocked.blockdims, expected_blockdims)
+        reblocked = data.chunk(expected_chunks)
+        self.assertEqual(reblocked.chunks, expected_chunks)
 
         # reblock on already blocked data
-        reblocked = reblocked.reblock(expected_blockdims)
-        self.assertEqual(reblocked.blockdims, expected_blockdims)
+        reblocked = reblocked.chunk(expected_chunks)
+        self.assertEqual(reblocked.chunks, expected_chunks)
         self.assertDatasetIdentical(reblocked, data)
 
-        with self.assertRaisesRegexp(ValueError, 'some blockdims or block'):
-            data.reblock(blockshape={'foo': 10})
+        with self.assertRaisesRegexp(ValueError, 'some chunks'):
+            data.chunk({'foo': 10})
 
     @requires_dask
     def test_dask_is_lazy(self):
         store = InaccessibleVariableDataStore()
         create_test_data().dump_to_store(store)
-        ds = open_dataset(store).reblock()
+        ds = open_dataset(store).chunk()
 
         with self.assertRaises(UnexpectedDataAccess):
-            ds.load_data()
+            ds.load()
         with self.assertRaises(UnexpectedDataAccess):
             ds['var1'].values
 
@@ -1516,6 +1518,20 @@ class TestDataset(TestCase):
         with self.assertRaises(KeyError):
             auto_combine(objs)
 
+    def test_to_array(self):
+        ds = Dataset(OrderedDict([('a', 1), ('b', ('x', [1, 2, 3]))]),
+                     coords={'c': 42}, attrs={'Conventions': 'None'})
+        data = [[1, 1, 1], [1, 2, 3]]
+        coords = {'x': range(3), 'c': 42, 'variable': ['a', 'b']}
+        dims = ('variable', 'x')
+        expected = DataArray(data, coords, dims, attrs=ds.attrs)
+        actual = ds.to_array()
+        self.assertDataArrayIdentical(expected, actual)
+
+        actual = ds.to_array('abc')
+        expected = expected.rename({'variable': 'abc'})
+        self.assertDataArrayIdentical(expected, actual)
+
     def test_to_and_from_dataframe(self):
         x = np.random.randn(10)
         y = np.random.randn(10)
@@ -1593,7 +1609,7 @@ class TestDataset(TestCase):
         for decode_cf in [True, False]:
             ds = open_dataset(store, decode_cf=decode_cf)
             with self.assertRaises(UnexpectedDataAccess):
-                ds.load_data()
+                ds.load()
             with self.assertRaises(UnexpectedDataAccess):
                 ds['var1'].values
 

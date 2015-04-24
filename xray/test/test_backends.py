@@ -80,7 +80,7 @@ class DatasetIOTestCases(object):
         with self.roundtrip(expected) as actual:
             self.assertDatasetAllClose(expected, actual)
 
-    def test_load_data(self):
+    def test_load(self):
         expected = create_test_data()
 
         @contextlib.contextmanager
@@ -102,14 +102,14 @@ class DatasetIOTestCases(object):
                 pass
 
         with assert_loads() as ds:
-            ds.load_data()
+            ds.load()
 
         with assert_loads(['var1', 'dim1', 'dim2']) as ds:
-            ds['var1'].load_data()
+            ds['var1'].load()
 
         # verify we can read data even after closing the file
         with self.roundtrip(expected) as ds:
-            actual = ds.load_data()
+            actual = ds.load()
         self.assertDatasetAllClose(expected, actual)
 
     def test_roundtrip_None_variable(self):
@@ -412,22 +412,6 @@ class BaseNetCDF4Test(CFEncodedDataTest):
             self.assertDatasetIdentical(data, actual)
             self.assertEqual(actual['x'].dtype, np.dtype('S4'))
 
-
-@requires_netCDF4
-class NetCDF4DataTest(BaseNetCDF4Test, TestCase):
-    @contextlib.contextmanager
-    def create_store(self):
-        with create_tmp_file() as tmp_file:
-            with backends.NetCDF4DataStore(tmp_file, mode='w') as store:
-                yield store
-
-    @contextlib.contextmanager
-    def roundtrip(self, data, **kwargs):
-        with create_tmp_file() as tmp_file:
-            data.to_netcdf(tmp_file)
-            with open_dataset(tmp_file, **kwargs) as ds:
-                yield ds
-
     def test_open_encodings(self):
         # Create a netCDF file with explicit time units
         # and make sure it makes it into the encodings
@@ -475,7 +459,7 @@ class NetCDF4DataTest(BaseNetCDF4Test, TestCase):
         data = create_test_data()
         data['var2'].encoding.update({'zlib': True,
                                       'chunksizes': (5, 5),
-                                      'least_significant_digit': 2})
+                                      'fletcher32': True})
         with self.roundtrip(data) as actual:
             for k, v in iteritems(data['var2'].encoding):
                 self.assertEqual(v, actual['var2'].encoding[k])
@@ -533,6 +517,22 @@ class NetCDF4DataTest(BaseNetCDF4Test, TestCase):
             for kwargs in [{}, {'decode_cf': True}]:
                 with open_dataset(tmp_file, **kwargs) as actual:
                     self.assertDatasetIdentical(expected, actual)
+
+
+@requires_netCDF4
+class NetCDF4DataTest(BaseNetCDF4Test, TestCase):
+    @contextlib.contextmanager
+    def create_store(self):
+        with create_tmp_file() as tmp_file:
+            with backends.NetCDF4DataStore(tmp_file, mode='w') as store:
+                yield store
+
+    @contextlib.contextmanager
+    def roundtrip(self, data, **kwargs):
+        with create_tmp_file() as tmp_file:
+            data.to_netcdf(tmp_file)
+            with open_dataset(tmp_file, **kwargs) as ds:
+                yield ds
 
 
 @requires_scipy
@@ -601,7 +601,7 @@ class GenericNetCDFDataTest(CFEncodedDataTest, Only32BitTypes, TestCase):
     @contextlib.contextmanager
     def roundtrip(self, data, **kwargs):
         with create_tmp_file() as tmp_file:
-            data.to_netcdf(tmp_file, format='NETCDF3_64BIT')
+            data.to_netcdf(tmp_file, format='netcdf3_64bit')
             with open_dataset(tmp_file, **kwargs) as ds:
                 yield ds
 
@@ -655,7 +655,7 @@ class H5NetCDFDataTest(BaseNetCDF4Test, TestCase):
                 yield ds
 
     def test_orthogonal_indexing(self):
-        # doesn't work for h5py
+        # doesn't work for h5py (without using dask as an intermediate layer)
         pass
 
 
@@ -670,12 +670,11 @@ class DaskTest(TestCase):
                 original.isel(x=slice(5, 10)).to_netcdf(tmp2)
                 with open_mfdataset([tmp1, tmp2]) as actual:
                     self.assertIsInstance(actual.foo.variable.data, da.Array)
-                    self.assertEqual(actual.foo.variable.data.blockdims,
+                    self.assertEqual(actual.foo.variable.data.chunks,
                                      ((5, 5),))
                     self.assertDatasetAllClose(original, actual)
-                with open_mfdataset([tmp1, tmp2],
-                                    blockshape={'x': 3}) as actual:
-                    self.assertEqual(actual.foo.variable.data.blockdims,
+                with open_mfdataset([tmp1, tmp2], chunks={'x': 3}) as actual:
+                    self.assertEqual(actual.foo.variable.data.chunks,
                                      ((3, 2, 3, 2),))
 
         with self.assertRaisesRegexp(IOError, 'no files to open'):
@@ -693,9 +692,9 @@ class DaskTest(TestCase):
         original = Dataset({'foo': ('x', np.random.randn(10))})
         with create_tmp_file() as tmp:
             original.to_netcdf(tmp)
-            with open_dataset(tmp, blockshape={'x': 5}) as actual:
+            with open_dataset(tmp, chunks={'x': 5}) as actual:
                 self.assertIsInstance(actual.foo.variable.data, da.Array)
-                self.assertEqual(actual.foo.variable.data.blockdims, ((5, 5),))
+                self.assertEqual(actual.foo.variable.data.chunks, ((5, 5),))
                 self.assertDatasetAllClose(original, actual)
             with open_dataset(tmp) as actual:
                 self.assertIsInstance(actual.foo.variable.data, np.ndarray)
@@ -705,8 +704,8 @@ class DaskTest(TestCase):
         with create_tmp_file() as tmp:
             data = create_test_data()
             data.to_netcdf(tmp)
-            blockshapes = {'dim1': 4, 'dim2': 4, 'dim3': 4, 'time': 10}
-            with open_dataset(tmp, blockshape=blockshapes) as dask_ds:
+            chunks = {'dim1': 4, 'dim2': 4, 'dim3': 4, 'time': 10}
+            with open_dataset(tmp, chunks=chunks) as dask_ds:
                 self.assertDatasetIdentical(data, dask_ds)
                 with create_tmp_file() as tmp2:
                     dask_ds.to_netcdf(tmp2)

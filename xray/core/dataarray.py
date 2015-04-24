@@ -1,5 +1,6 @@
 import contextlib
 import functools
+import warnings
 
 import pandas as pd
 
@@ -222,22 +223,55 @@ class DataArray(AbstractArray, BaseDataObject):
         obj._dataset = dataset
         return obj
 
-    def to_dataset(self, name=None):
-        """Convert a DataArray to a Dataset
+    def _to_dataset_split(self, dim):
+        def subset(dim, label):
+            array = self.loc[{dim: label}].drop(dim)
+            array.attrs = {}
+            return array
+
+        variables = OrderedDict([(str(label), subset(dim, label))
+                                 for label in self.indexes[dim]])
+        coords = self.coords.to_dataset()
+        del coords[dim]
+        return Dataset(variables, coords, self.attrs)
+
+    def _to_dataset_whole(self, name):
+        if name is None:
+            return self._dataset.copy()
+        else:
+            return self.rename(name)._dataset
+
+    def to_dataset(self, dim=None, name=None):
+        """Convert a DataArray to a Dataset.
 
         Parameters
         ----------
+        dim : str, optional
+            Name of the dimension on this array along which to split this array
+            into separate variables. If not provided, this array is converted
+            into a Dataset of one variable.
         name : str, optional
-            Name to substitute for this array's name (if it has one).
+            Name to substitute for this array's name. Only valid is ``dim`` is
+            not provided.
 
         Returns
         -------
         dataset : Dataset
         """
-        if name is None:
-            return self._dataset.copy()
+        if dim is not None and dim not in self.dims:
+            warnings.warn('the order of the arguments on DataArray.to_dataset '
+                          'has changed; you now need to supply ``name`` as '
+                          'a keyword argument',
+                          FutureWarning, stacklevel=2)
+            name = dim
+            dim = None
+
+        if dim is not None:
+            if name is not None:
+                raise TypeError('cannot supply both dim and name arguments')
+            return self._to_dataset_split(dim)
         else:
-            return self.rename(name)._dataset
+            return self._to_dataset_whole(name)
 
     @property
     def name(self):
@@ -275,6 +309,10 @@ class DataArray(AbstractArray, BaseDataObject):
     @property
     def size(self):
         return self.variable.size
+
+    @property
+    def nbytes(self):
+        return self.variable.nbytes
 
     @property
     def ndim(self):
@@ -414,7 +452,7 @@ class DataArray(AbstractArray, BaseDataObject):
         ds = self._dataset.reset_coords(names, drop, inplace)
         return ds[self.name] if drop else ds
 
-    def load_data(self):
+    def load(self):
         """Manually trigger loading of this array's data from disk or a
         remote source into memory and return this array.
 
@@ -423,8 +461,14 @@ class DataArray(AbstractArray, BaseDataObject):
         load data automatically. However, this method can be necessary when
         working with many file objects on disk.
         """
-        self._dataset.load_data()
+        self._dataset.load()
         return self
+
+    def load_data(self):  # pragma: no cover
+        warnings.warn('the DataArray method `load_data` has been deprecated; '
+                      'use `load` instead',
+                      FutureWarning, stacklevel=2)
+        return self.load()
 
     def copy(self, deep=True):
         """Returns a copy of this array.
@@ -448,41 +492,37 @@ class DataArray(AbstractArray, BaseDataObject):
     __hash__ = None
 
     @property
-    def blockdims(self):
+    def chunks(self):
         """Block dimensions for this array's data or None if it's not a dask
         array.
         """
-        return self.variable.blockdims
+        return self.variable.chunks
 
-    def reblock(self, blockdims=None, blockshape=None):
-        """Coerce this array's data into dask with the given block dimensions.
+    def chunk(self, chunks=None):
+        """Coerce this array's data into a dask arrays with the given chunks.
 
-        If neither blockdims nor blockshape is provided for one or more
-        dimensions, block sizes along that dimension will not be updated;
-        non-dask arrays will be converted into dask arrays with a single block.
+        If this variable is a non-dask array, it will be converted to dask
+        array. If it's a dask array, it will be rechunked to the given chunk
+        sizes.
+
+        If neither chunks is not provided for one or more dimensions, chunk
+        sizes along that dimension will not be updated; non-dask arrays will be
+        converted into dask arrays with a single block.
 
         Parameters
         ----------
-        blockdims : tuple or dict, optional
-            Dimensions for each block, e.g., ``((3, 2), (5, 5, 5))`` or
-            ``{'x': (3, 2), 'y': (5, 5, 5)}``.
-        blockshape : tuple or dict, optional
-            Shapes for each block, e.g., ``(3, 5)`` or ``{'x': 3, 'y': 5}``.
-            These are expanded into block dimensions. This argument is mutually
-            exclusive with ``blockdims``.
+        chunks : int, tuple or dict, optional
+            Chunk sizes along each dimension, e.g., ``5``, ``(5, 5)`` or
+            ``{'x': 5, 'y': 5}``.
 
         Returns
         -------
-        reblocked : xray.DataArray
+        chunked : xray.DataArray
         """
-        def coerce_to_dict(arg):
-            if arg is not None and not utils.is_dict_like(arg):
-                arg = dict(zip(self.dims, arg))
-            return arg
+        if isinstance(chunks, (list, tuple)):
+            chunks = dict(zip(self.dims, chunks))
 
-        blockdims = coerce_to_dict(blockdims)
-        blockshape = coerce_to_dict(blockshape)
-        ds = self._dataset.reblock(blockdims=blockdims, blockshape=blockshape)
+        ds = self._dataset.chunk(chunks)
         return self._with_replaced_dataset(ds)
 
     def isel(self, **indexers):

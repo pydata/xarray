@@ -13,8 +13,8 @@ class H5NetCDFStore(AbstractWritableDataStore):
     """Store for reading and writing data via h5netcdf
     """
     def __init__(self, filename, mode='r', group=None):
-        import h5netcdf
-        ds = h5netcdf.Dataset(filename, mode=mode)
+        import h5netcdf.legacyapi
+        ds = h5netcdf.legacyapi.Dataset(filename, mode=mode)
         with close_on_error(ds):
             self.ds = _nc4_group(ds, group, mode)
         self.format = format
@@ -31,7 +31,16 @@ class H5NetCDFStore(AbstractWritableDataStore):
         data = indexing.LazilyIndexedArray(var)
         attributes = OrderedDict((k, var.getncattr(k))
                                  for k in var.ncattrs())
-        return Variable(dimensions, data, attributes)
+
+        # netCDF4 specific encoding
+        encoding = dict(var.filters())
+        chunking = var.chunking()
+        encoding['chunksizes'] = chunking if chunking != 'contiguous' else None
+
+        # save source so __repr__ can detect if it's local or not
+        encoding['source'] = self._filename
+
+        return Variable(dimensions, data, attributes, encoding)
 
     def get_variables(self):
         return FrozenOrderedDict((k, self.open_store_variable(v))
@@ -51,31 +60,29 @@ class H5NetCDFStore(AbstractWritableDataStore):
         self.ds.setncattr(key, value)
 
     def prepare_variable(self, name, variable):
+        import h5py
+
         attrs = variable.attrs.copy()
         variable, dtype = _nc4_values_and_dtype(variable)
         if dtype is str:
-            import h5py
             dtype = h5py.special_dtype(vlen=unicode_type)
 
         self.set_necessary_dimensions(variable)
 
-        if '_FillValue' in attrs and attrs['_FillValue'] == '\x00':
-            del attrs['_FillValue']
+        fill_value = attrs.pop('_FillValue', None)
+        if fill_value in ['\x00']:
+            fill_value = None
 
-        # encoding = variable.encoding
-        nc4_var = self.ds.createVariable(
-            name=name,
-            dtype=dtype,
-            dimensions=variable.dims)
-            # zlib=encoding.get('zlib', False),
-            # complevel=encoding.get('complevel', 4),
-            # shuffle=encoding.get('shuffle', True),
-            # fletcher32=encoding.get('fletcher32', False),
-            # contiguous=encoding.get('contiguous', False),
-            # chunksizes=encoding.get('chunksizes'),
-            # endian='native',
-            # least_significant_digit=encoding.get('least_significant_digit'),
-            # fill_value=fill_value)
+        encoding = variable.encoding
+        kwargs = {}
+
+        for key in ['zlib', 'complevel', 'shuffle',
+                    'chunksizes', 'fletcher32']:
+            if key in encoding:
+                kwargs[key] = encoding[key]
+
+        nc4_var = self.ds.createVariable(name, dtype, variable.dims,
+                                         fill_value=fill_value, **kwargs)
 
         for k, v in iteritems(attrs):
             nc4_var.setncattr(k, v)

@@ -1,12 +1,14 @@
-xray: N-D labeled arrays and datasets in Python
-===============================================
+xray: N-D labeled arrays and datasets
+=====================================
 
 .. image:: https://travis-ci.org/xray/xray.svg?branch=master
-    :target: https://travis-ci.org/xray/xray
+   :target: https://travis-ci.org/xray/xray
+.. image:: https://ci.appveyor.com/api/projects/status/github/xray/xray?svg=true&passingText=passing&failingText=failing&pendingText=pending
+   :target: https://ci.appveyor.com/project/shoyer/xray
 .. image:: https://coveralls.io/repos/xray/xray/badge.svg
-    :target: https://coveralls.io/r/xray/xray
-.. image:: https://badge.fury.io/py/xray.svg
-    :target: https://pypi.python.org/pypi/xray/
+   :target: https://coveralls.io/r/xray/xray
+.. image:: https://img.shields.io/pypi/v/xray.svg
+   :target: https://pypi.python.org/pypi/xray/
 
 **xray** is an open source project and Python package that aims to bring the
 labeled data power of pandas_ to the physical sciences, by providing
@@ -23,14 +25,6 @@ describing scientific data in widespread use in the Earth sciences:
 .. _netCDF: http://www.unidata.ucar.edu/software/netcdf
 .. _OPeNDAP: http://www.opendap.org/
 
-Important links
----------------
-
-- HTML documentation: http://xray.readthedocs.org
-- Issue tracker: http://github.com/xray/xray/issues
-- Source code: http://github.com/xray/xray
-- PyData talk: https://www.youtube.com/watch?v=T5CZyNwBa9c
-
 Why xray?
 ---------
 
@@ -41,25 +35,33 @@ powerful array operations possible:
 -  Select values by label instead of integer location:
    ``x.loc['2014-01-01']`` or ``x.sel(time='2014-01-01')``.
 -  Mathematical operations (e.g., ``x - y``) vectorize across multiple
-   dimensions (known in numpy as "broadcasting") based on dimension
-   names, not array shape.
+   dimensions (array broadcasting) based on dimension names, not shape.
 -  Flexible split-apply-combine operations with groupby:
    ``x.groupby('time.dayofyear').mean()``.
--  Database like aligment based on coordinate labels that smoothly
+-  Database like alignment based on coordinate labels that smoothly
    handles missing values: ``x, y = xray.align(x, y, join='outer')``.
 -  Keep track of arbitrary metadata in the form of a Python dictionary:
    ``x.attrs``.
 
+pandas_ provides many of these features, but it does not make use of dimension
+names, and its core data structures are fixed dimensional arrays.
+
+Why isn't pandas enough?
+------------------------
+
 pandas_ excels at working with tabular data. That suffices for many statistical
 analyses, but physical scientists rely on N-dimensional arrays -- which is
-where **xray** comes in.
+where xray comes in.
 
-**xray** aims to provide a data analysis toolkit as powerful as pandas_ but
+xray aims to provide a data analysis toolkit as powerful as pandas_ but
 designed for working with homogeneous N-dimensional arrays
 instead of tabular data. When possible, we copy the pandas API and rely on
 pandas's highly optimized internals (in particular, for fast indexing).
 
-Because **xray** implements the same data model as the netCDF_ file format,
+Why netCDF?
+-----------
+
+Because xray implements the same data model as the netCDF_ file format,
 xray datasets have a natural and portable serialization format. But it is also
 easy to robustly convert an xray ``DataArray`` to and from a numpy ``ndarray``
 or a pandas ``DataFrame`` or ``Series``, providing compatibility with the full
@@ -67,18 +69,23 @@ or a pandas ``DataFrame`` or ``Series``, providing compatibility with the full
 
 Our target audience is anyone who needs N-dimensional labeled arrays, but we
 are particularly focused on the data analysis needs of physical scientists --
-especially geoscientists who already know and love netCDF.
+especially geoscientists who already know and love netCDF_.
 
 .. _ndarray: http://docs.scipy.org/doc/numpy/reference/arrays.ndarray.html
 .. _pandas: http://pandas.pydata.org
+.. _netCDF: http://www.unidata.ucar.edu/software/netcdf
+
+Documentation
+-------------
+
+The official documentation is hosted on ReadTheDocs: http://xray.readthedocs.org/
 
 Get in touch
 ------------
 
+- GitHub issue tracker: https://github.com/xray/xray/issues/
 - Mailing list: https://groups.google.com/forum/#!forum/xray-dev
 - Twitter: http://twitter.com/shoyer
-
-We would love to hear your thoughts and ideas for xray!
 
 History
 -------

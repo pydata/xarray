@@ -36,7 +36,7 @@ class TestDataArray(TestCase):
     def test_properties(self):
         self.assertVariableEqual(self.dv.variable, self.v)
         self.assertArrayEqual(self.dv.values, self.v.values)
-        for attr in ['dims', 'dtype', 'shape', 'size', 'ndim', 'attrs']:
+        for attr in ['dims', 'dtype', 'shape', 'size', 'nbytes', 'ndim', 'attrs']:
             self.assertEqual(getattr(self.dv, attr), getattr(self.v, attr))
         self.assertEqual(len(self.dv), len(self.v))
         self.assertVariableEqual(self.dv, self.v)
@@ -334,18 +334,20 @@ class TestDataArray(TestCase):
         self.assertDataArrayIdentical(expected, actual)
 
     @requires_dask
-    def test_reblock(self):
+    def test_chunk(self):
         unblocked = DataArray(np.ones((3, 4)))
-        self.assertIsNone(unblocked.blockdims)
+        self.assertIsNone(unblocked.chunks)
 
-        blocked = unblocked.reblock()
-        self.assertEqual(blocked.blockdims, ((3,), (4,)))
+        blocked = unblocked.chunk()
+        self.assertEqual(blocked.chunks, ((3,), (4,)))
 
-        blocked = unblocked.reblock(blockdims=((2, 1), (2, 2)))
-        self.assertEqual(blocked.blockdims, ((2, 1), (2, 2)))
+        blocked = unblocked.chunk(chunks=((2, 1), (2, 2)))
+        self.assertEqual(blocked.chunks, ((2, 1), (2, 2)))
 
-        blocked = unblocked.reblock(blockshape=(3, 3))
-        self.assertEqual(blocked.blockdims, ((3,), (3, 1)))
+        blocked = unblocked.chunk(chunks=(3, 3))
+        self.assertEqual(blocked.chunks, ((3,), (3, 1)))
+
+        self.assertIsNone(blocked.load().chunks)
 
     def test_isel(self):
         self.assertDataArrayIdentical(self.dv[0], self.dv.isel(x=0))
@@ -1295,14 +1297,14 @@ class TestDataArray(TestCase):
         roundtripped = DataArray.from_cdms2(actual)
         self.assertDataArrayIdentical(original, roundtripped)
 
-    def test_to_dataset(self):
+    def test_to_dataset_whole(self):
         unnamed = DataArray([1, 2], dims='x')
         actual = unnamed.to_dataset()
         expected = Dataset({None: ('x', [1, 2])})
         self.assertDatasetIdentical(expected, actual)
         self.assertIsNot(unnamed._dataset, actual)
 
-        actual = unnamed.to_dataset('foo')
+        actual = unnamed.to_dataset(name='foo')
         expected = Dataset({'foo': ('x', [1, 2])})
         self.assertDatasetIdentical(expected, actual)
 
@@ -1311,6 +1313,26 @@ class TestDataArray(TestCase):
         expected = Dataset({'foo': ('x', [1, 2])})
         self.assertDatasetIdentical(expected, actual)
 
-        actual = named.to_dataset('bar')
         expected = Dataset({'bar': ('x', [1, 2])})
+        with self.assertWarns('order of the arguments'):
+            actual = named.to_dataset('bar')
+        self.assertDatasetIdentical(expected, actual)
+
+    def test_to_dataset_split(self):
+        array = DataArray([1, 2, 3], coords=[('x', list('abc'))],
+                          attrs={'a': 1})
+        expected = Dataset(OrderedDict([('a', 1), ('b', 2), ('c', 3)]),
+                           attrs={'a': 1})
+        actual = array.to_dataset('x')
+        self.assertDatasetIdentical(expected, actual)
+
+        with self.assertRaises(TypeError):
+            array.to_dataset('x', name='foo')
+
+        roundtriped = actual.to_array(dim='x')
+        self.assertDataArrayIdentical(array, roundtriped)
+
+        array = DataArray([1, 2, 3], dims='x')
+        expected = Dataset(OrderedDict([('0', 1), ('1', 2), ('2', 3)]))
+        actual = array.to_dataset('x')
         self.assertDatasetIdentical(expected, actual)
