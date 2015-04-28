@@ -919,8 +919,16 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject):
                 return None
             return dict((d, dict_[d]) for d in keys if d in dict_)
 
-        variables = OrderedDict([(k, (v.chunk(selkeys(chunks, v.dims), name=k)
-                                      if v.ndim > 0 else v))
+        def maybe_chunk(name, var, chunks):
+            chunks = selkeys(chunks, var.dims)
+            if not chunks:
+                chunks = None
+            if var.ndim > 0:
+                return var.chunk(chunks, name=name)
+            else:
+                return var
+
+        variables = OrderedDict([(k, maybe_chunk(k, v, chunks))
                                  for k, v in self.variables.items()])
         return self._replace_vars_and_dims(variables)
 
