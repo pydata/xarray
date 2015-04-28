@@ -242,7 +242,7 @@ def array_repr(arr):
 
     summary = ['<xray.%s %s(%s)>'% (type(arr).__name__, name_str, dim_summary)]
 
-    if isinstance(arr.data, dask_array_type):
+    if isinstance(getattr(arr, 'variable', arr)._data, dask_array_type):
         summary.append(repr(arr.data))
     elif arr._in_memory or arr.size < 1e5:
         summary.append(repr(arr.values))
