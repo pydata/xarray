@@ -1,14 +1,16 @@
-import warnings
+import operator
+from functools import partial
 
 import numpy as np
 
 from .. import Variable
 from ..conventions import pop_to, cf_encoder
 from ..core import indexing
-from ..core.utils import FrozenOrderedDict, NDArrayMixin, close_on_error
+from ..core.utils import (FrozenOrderedDict, NDArrayMixin,
+                          close_on_error, is_remote_uri)
 from ..core.pycompat import iteritems, basestring, OrderedDict
 
-from .common import AbstractWritableDataStore
+from .common import AbstractWritableDataStore, robust_getitem
 from .netcdf3 import (encode_nc3_attr_value, encode_nc3_variable,
                       maybe_convert_to_char_array)
 
@@ -21,8 +23,9 @@ _endian_lookup = {'=': 'native',
 
 
 class NetCDF4ArrayWrapper(NDArrayMixin):
-    def __init__(self, array):
+    def __init__(self, array, is_remote=False):
         self.array = array
+        self.is_remote = is_remote
 
     @property
     def dtype(self):
@@ -35,13 +38,16 @@ class NetCDF4ArrayWrapper(NDArrayMixin):
         return dtype
 
     def __getitem__(self, key):
+        if self.is_remote:
+            getitem = partial(robust_getitem, catch=RuntimeError)
+        else:
+            getitem = operator.getitem
+        data = getitem(self.array, key)
         if self.ndim == 0:
             # work around for netCDF4-python's broken handling of 0-d
             # arrays (slicing them always returns a 1-dimensional array):
             # https://github.com/Unidata/netcdf4-python/pull/220
-            data = np.asscalar(self.array[key])
-        else:
-            data = self.array[key]
+            data = np.asscalar(data)
         return data
 
 
@@ -126,6 +132,7 @@ class NetCDF4DataStore(AbstractWritableDataStore):
         with close_on_error(ds):
             self.ds = _nc4_group(ds, group, mode)
         self.format = format
+        self.is_remote = is_remote_uri(filename)
         self._filename = filename
 
     def store(self, variables, attributes):
@@ -137,7 +144,8 @@ class NetCDF4DataStore(AbstractWritableDataStore):
     def open_store_variable(self, var):
         var.set_auto_maskandscale(False)
         dimensions = var.dimensions
-        data = indexing.LazilyIndexedArray(NetCDF4ArrayWrapper(var))
+        data = indexing.LazilyIndexedArray(NetCDF4ArrayWrapper(
+            var, self.is_remote))
         attributes = OrderedDict((k, var.getncattr(k))
                                  for k in var.ncattrs())
         _ensure_fill_value_valid(data, attributes)

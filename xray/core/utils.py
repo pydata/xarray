@@ -4,6 +4,8 @@ import contextlib
 import datetime
 import functools
 import itertools
+import re
+import traceback
 import warnings
 from collections import Mapping, MutableMapping
 
@@ -11,7 +13,7 @@ import numpy as np
 import pandas as pd
 
 from . import ops
-from .pycompat import iteritems, OrderedDict
+from .pycompat import iteritems, OrderedDict, PY3
 
 
 def alias_warning(old_name, new_name, stacklevel=3): # pragma: no cover
@@ -385,3 +387,7 @@ def close_on_error(f):
     except Exception:
         f.close()
         raise
+
+
+def is_remote_uri(path):
+    return bool(re.search('^https?\://', path))

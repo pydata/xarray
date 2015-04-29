@@ -1,11 +1,15 @@
 import numpy as np
 import itertools
-
+import logging
+import time
+import traceback
 from collections import Mapping
 
 from ..core.utils import FrozenOrderedDict
 from ..core.pycompat import iteritems, dask_array_type
 from ..core.variable import Coordinate
+
+logger = logging.getLogger(__name__)
 
 
 NONE_VAR_NAME = '__values__'
@@ -40,6 +44,28 @@ def is_trivial_index(var):
         return False
     arange = np.arange(var.size, dtype=var.dtype)
     return np.all(var.values == arange)
+
+
+def robust_getitem(array, key, catch=Exception, max_retries=6,
+                   initial_delay=500):
+    """
+    Robustly index an array, using retry logic with exponential backoff if any
+    of the errors ``catch`` are raised. The initial_delay is measured in ms.
+    """
+    assert max_retries >= 0
+    for n in range(max_retries + 1):
+        try:
+            return array[key]
+        except catch:
+            if n == max_retries:
+                raise
+            base_delay = initial_delay * 2 ** n
+            next_delay = base_delay + np.random.randint(base_delay)
+            msg = ('getitem failed, waiting %s ms before trying again '
+                   '(%s tries remaining). Full traceback: %s' %
+                   (next_delay, max_retries - n, traceback.format_exc()))
+            logger.debug(msg)
+            time.sleep(1e-3 * next_delay)
 
 
 class AbstractDataStore(Mapping):
