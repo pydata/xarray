@@ -10,7 +10,8 @@ import pandas as pd
 from xray import Variable, Dataset, DataArray
 from xray.core import indexing
 from xray.core.variable import (Coordinate, as_variable, _as_compatible_data)
-from xray.core.indexing import NumpyIndexingAdapter, PandasIndexAdapter
+from xray.core.indexing import (NumpyIndexingAdapter, PandasIndexAdapter,
+                                LazilyIndexedArray)
 from xray.core.pycompat import PY3, OrderedDict
 
 from . import TestCase, source_ndarray
@@ -529,6 +530,11 @@ class TestVariable(TestCase, VariableSubclassTestCases):
             foo: bar
         """).strip()
         self.assertEqual(expected, repr(v))
+
+    def test_repr_lazy_data(self):
+        v = Variable('x', LazilyIndexedArray(np.arange(2e5)))
+        self.assertIn('200000 values with dtype', repr(v))
+        self.assertIsInstance(v._data, LazilyIndexedArray)
 
     def test_items(self):
         data = np.random.random((10, 11))
