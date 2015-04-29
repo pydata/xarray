@@ -174,16 +174,6 @@ class DatasetIOTestCases(object):
             # a dtype attribute.
             self.assertDatasetEqual(expected, actual)
 
-    def test_roundtrip_example_1_netcdf_gz(self):
-        if sys.version_info[:2] < (2, 7):
-            with self.assertRaisesRegexp(ValueError,
-                                         'gzipped netCDF not supported'):
-                open_example_dataset('example_1.nc.gz')
-        else:
-            with open_example_dataset('example_1.nc.gz') as expected:
-                with open_example_dataset('example_1.nc') as actual:
-                    self.assertDatasetIdentical(expected, actual)
-
     def test_roundtrip_coordinates(self):
         original = Dataset({'foo': ('x', [0, 1])},
                            {'x': [2, 3], 'y': ('a', [42]), 'z': ('x', [4, 5])})
@@ -570,6 +560,16 @@ class ScipyOnDiskDataTest(CFEncodedDataTest, Only32BitTypes, TestCase):
             with self.roundtrip(ds) as roundtripped:
                 pass
 
+    def test_roundtrip_example_1_netcdf_gz(self):
+        if sys.version_info[:2] < (2, 7):
+            with self.assertRaisesRegexp(ValueError,
+                                         'gzipped netCDF not supported'):
+                open_example_dataset('example_1.nc.gz')
+        else:
+            with open_example_dataset('example_1.nc.gz') as expected:
+                with open_example_dataset('example_1.nc') as actual:
+                    self.assertDatasetIdentical(expected, actual)
+
 
 @requires_netCDF4
 class NetCDF3ViaNetCDF4DataTest(CFEncodedDataTest, Only32BitTypes, TestCase):
@@ -734,7 +734,11 @@ class PydapTest(TestCase):
             self.assertDatasetEqual(actual, expected)
 
         with create_datasets() as (actual, expected):
-            self.assertDatasetEqual(actual.isel(i=0), expected.isel(i=0))
+            self.assertDatasetEqual(actual.isel(l=2), expected.isel(l=2))
+
+        with create_datasets() as (actual, expected):
+            self.assertDatasetEqual(actual.isel(i=0, j=-1),
+                                    expected.isel(i=0, j=-1))
 
         with create_datasets() as (actual, expected):
             self.assertDatasetEqual(actual.isel(j=slice(1, 2)),

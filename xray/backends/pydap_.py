@@ -34,8 +34,9 @@ class PydapArrayWrapper(NDArrayMixin):
         array = getattr(self.array, 'array', self.array)
         result = array[key]
         # pydap doesn't squeeze axes automatically like numpy
-        axis = tuple(k for k in key if isinstance(k, (int, np.integer)))
-        result = np.squeeze(result, axis=axis)
+        axis = tuple(n for n, k in enumerate(key)
+                     if isinstance(k, (int, np.integer)))
+        result = np.squeeze(result, axis)
         return result
 
 
