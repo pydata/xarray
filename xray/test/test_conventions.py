@@ -354,9 +354,9 @@ class TestDatetime(TestCase):
         examples = [
             ('1D', 'days', np.int64(1)),
             (['1D', '2D', '3D'], 'days', np.array([1, 2, 3], 'int64')),
-            ('1h', 'hours', 1),
-            ('1ms', 'milliseconds', 1),
-            ('1us', 'microseconds', 1),
+            ('1h', 'hours', np.int64(1)),
+            ('1ms', 'milliseconds', np.int64(1)),
+            ('1us', 'microseconds', np.int64(1)),
             (['NaT', '0s', '1s'], None, [np.nan, 0, 1]),
             (['30m', '60m'], 'hours', [0.5, 1.0]),
         ]
