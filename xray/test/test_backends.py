@@ -11,6 +11,7 @@ import pandas as pd
 
 import xray
 from xray import Dataset, open_dataset, open_mfdataset, backends
+from xray.backends.common import robust_getitem
 from xray.core.pycompat import iteritems, PY3
 
 from . import (TestCase, requires_scipy, requires_netCDF4, requires_pydap,
@@ -46,6 +47,33 @@ def create_encoded_masked_and_scaled_data():
     attributes = {'_FillValue': -1, 'add_offset': 10,
                   'scale_factor': np.float32(0.1)}
     return Dataset({'x': ('t', [-1, -1, 0, 1, 2], attributes)})
+
+
+class TestCommon(TestCase):
+    def test_robust_getitem(self):
+
+        class UnreliableArrayFailure(Exception):
+            pass
+
+        class UnreliableArray(object):
+            def __init__(self, array, failures=1):
+                self.array = array
+                self.failures = failures
+
+            def __getitem__(self, key):
+                if self.failures > 0:
+                    self.failures -= 1
+                    raise UnreliableArrayFailure
+                return self.array[key]
+
+        array = UnreliableArray([0])
+        with self.assertRaises(UnreliableArrayFailure):
+            array[0]
+        self.assertEqual(array[0], 0)
+
+        actual = robust_getitem(array, 0, catch=UnreliableArrayFailure,
+                                initial_delay=0)
+        self.assertEqual(actual, 0)
 
 
 class Only32BitTypes(object):

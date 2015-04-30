@@ -38,7 +38,7 @@ class NetCDF4ArrayWrapper(NDArrayMixin):
         return dtype
 
     def __getitem__(self, key):
-        if self.is_remote:
+        if self.is_remote:  # pragma: no cover
             getitem = partial(robust_getitem, catch=RuntimeError)
         else:
             getitem = operator.getitem
