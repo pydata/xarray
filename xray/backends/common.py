@@ -9,6 +9,7 @@ from ..core.utils import FrozenOrderedDict
 from ..core.pycompat import iteritems, dask_array_type
 from ..core.variable import Coordinate
 
+# Create a logger object, but don't add any handlers. Leave that to user code.
 logger = logging.getLogger(__name__)
 
 
@@ -51,6 +52,9 @@ def robust_getitem(array, key, catch=Exception, max_retries=6,
     """
     Robustly index an array, using retry logic with exponential backoff if any
     of the errors ``catch`` are raised. The initial_delay is measured in ms.
+
+    With the default settings, the maximum delay will be in the range of 32-64
+    seconds.
     """
     assert max_retries >= 0
     for n in range(max_retries + 1):
