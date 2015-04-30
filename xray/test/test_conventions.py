@@ -127,6 +127,8 @@ class TestDatetime(TestCase):
                 (np.arange(0, 100000, 20000), 'days since 1900-01-01'),
                 (17093352.0, 'hours since 1-1-1 00:00:0.0'),
                 ([0.5, 1.5], 'hours since 1900-01-01T00:00:00'),
+                (0, 'milliseconds since 2000-01-01T00:00:00'),
+                (0, 'microseconds since 2000-01-01T00:00:00'),
                 ]:
             for calendar in ['standard', 'gregorian', 'proleptic_gregorian']:
                 expected = _ensure_naive_tz(nc4.num2date(num_dates, units, calendar))
@@ -352,6 +354,9 @@ class TestDatetime(TestCase):
         examples = [
             ('1D', 'days', np.int64(1)),
             (['1D', '2D', '3D'], 'days', np.array([1, 2, 3], 'int64')),
+            ('1h', 'hours', 1),
+            ('1ms', 'milliseconds', 1),
+            ('1us', 'microseconds', 1),
             (['NaT', '0s', '1s'], None, [np.nan, 0, 1]),
             (['30m', '60m'], 'hours', [0.5, 1.0]),
         ]

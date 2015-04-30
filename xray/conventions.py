@@ -69,7 +69,8 @@ def _netcdf_to_numpy_timeunit(units):
     units = units.lower()
     if not units.endswith('s'):
         units = '%ss' % units
-    return {'seconds': 's', 'minutes': 'm', 'hours': 'h', 'days': 'D'}[units]
+    return {'microseconds': 'us', 'milliseconds': 'ms', 'seconds': 's',
+            'minutes': 'm', 'hours': 'h', 'days': 'D'}[units]
 
 
 def _unpack_netcdf_time_units(units):
@@ -160,7 +161,8 @@ def decode_cf_timedelta(num_timedeltas, units):
     return result
 
 
-TIME_UNITS = set(['days', 'hours', 'minutes', 'seconds'])
+TIME_UNITS = frozenset(['days', 'hours', 'minutes', 'seconds',
+                        'milliseconds', 'microseconds'])
 
 
 def _infer_time_units_from_diff(unique_timedeltas):
