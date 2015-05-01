@@ -1,22 +1,16 @@
 import sys
 import gzip
-import itertools
-import re
 from glob import glob
 from io import BytesIO
 
-import numpy as np
-
 from .. import backends, conventions
-from ..core.dataset import Dataset
 from ..core.alignment import auto_combine
-from ..core.utils import close_on_error
-from ..core.variable import Variable
+from ..core.utils import close_on_error, is_remote_uri
 from ..core.pycompat import basestring, OrderedDict, range
 
 
 def _get_default_engine(path, allow_remote=False):
-    if allow_remote and re.search('^https?\://', path):  # pragma: no cover
+    if allow_remote and is_remote_uri(path):  # pragma: no cover
         try:
             import netCDF4
             engine = 'netcdf4'

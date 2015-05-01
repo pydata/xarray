@@ -98,6 +98,12 @@ Enhancements
 
   These methods return a new Dataset (or DataArray) with updated data or
   coordinate variables.
+- You can now control the underlying backend used for accessing remote
+  datasets (via OPeNDAP) by specifying ``engine='netcdf4'`` or
+  ``engine='pydap'``.
+- Accessing data from remote datasets now has retrying logic (with exponential
+  backoff) that should make it robust to occasional bad responses from DAP
+  servers.
 
 Deprecations
 ~~~~~~~~~~~~

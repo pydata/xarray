@@ -4,7 +4,7 @@ from .. import Variable
 from ..core.utils import FrozenOrderedDict, Frozen, NDArrayMixin
 from ..core import indexing
 
-from .common import AbstractDataStore
+from .common import AbstractDataStore, robust_getitem
 
 
 class PydapArrayWrapper(NDArrayMixin):
@@ -32,7 +32,7 @@ class PydapArrayWrapper(NDArrayMixin):
         # pull the data from the array attribute if possible, to avoid
         # downloading coordinate data twice
         array = getattr(self.array, 'array', self.array)
-        result = array[key]
+        result = robust_getitem(array, key, catch=ValueError)
         # pydap doesn't squeeze axes automatically like numpy
         axis = tuple(n for n, k in enumerate(key)
                      if isinstance(k, (int, np.integer)))
