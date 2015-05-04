@@ -176,6 +176,10 @@ class TestDataArrayAndDataset(DaskTestCase):
         self.eager_array = DataArray(self.values, dims=('x', 'y'), name='foo')
         self.lazy_array = DataArray(self.data, dims=('x', 'y'), name='foo')
 
+    def test_chunk(self):
+        chunked = self.eager_array.chunk({'x': 2}).chunk({'y': 2})
+        self.assertEqual(chunked.chunks, ((2,) * 2, (2,) * 3))
+
     def test_lazy_dataset(self):
         lazy_ds = Dataset({'foo': (('x', 'y'), self.data)})
         self.assertIsInstance(lazy_ds.foo.variable.data, da.Array)
