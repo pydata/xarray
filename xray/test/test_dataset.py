@@ -13,7 +13,8 @@ import numpy as np
 import pandas as pd
 
 from xray import (align, concat, conventions, backends, Dataset, DataArray,
-                  Variable, Coordinate, auto_combine, open_dataset)
+                  Variable, Coordinate, auto_combine, open_dataset,
+                  set_options)
 from xray.core import indexing, utils
 from xray.core.pycompat import iteritems, OrderedDict
 
@@ -30,13 +31,14 @@ def create_test_data(seed=None):
 
     obj = Dataset()
     obj['time'] = ('time', pd.date_range('2000-01-01', periods=20))
-    obj['dim1'] = ('dim1', np.arange(_dims['dim1']))
+    obj['dim1'] = ('dim1', np.arange(_dims['dim1'], dtype='int64'))
     obj['dim2'] = ('dim2', 0.5 * np.arange(_dims['dim2']))
     obj['dim3'] = ('dim3', list('abcdefghij'))
     for v, dims in sorted(_vars.items()):
         data = rs.normal(size=tuple(_dims[d] for d in dims))
         obj[v] = (dims, data, {'foo': 'variable'})
-    obj.coords['numbers'] = ('dim3', [0, 1, 2, 0, 0, 1, 1, 2, 2, 3])
+    obj.coords['numbers'] = ('dim3', np.array([0, 1, 2, 0, 0, 1, 1, 2, 2, 3],
+                                              dtype='int64'))
     return obj
 
 
@@ -58,19 +60,24 @@ class TestDataset(TestCase):
         <xray.Dataset>
         Dimensions:  (dim1: 8, dim2: 9, dim3: 10, time: 20)
         Coordinates:
+          * time     (time) datetime64[ns] 2000-01-01 2000-01-02 2000-01-03 ...
           * dim1     (dim1) int64 0 1 2 3 4 5 6 7
           * dim2     (dim2) float64 0.0 0.5 1.0 1.5 2.0 2.5 3.0 3.5 4.0
           * dim3     (dim3) %s 'a' 'b' 'c' 'd' 'e' 'f' 'g' 'h' 'i' 'j'
-          * time     (time) datetime64[ns] 2000-01-01 2000-01-02 2000-01-03 2000-01-04 ...
             numbers  (dim3) int64 0 1 2 0 0 1 1 2 2 3
         Data variables:
-            var1     (dim1, dim2) float64 -1.086 0.9973 0.283 -1.506 -0.5786 1.651 -2.427 -0.4289 ...
-            var2     (dim1, dim2) float64 1.162 -1.097 -2.123 1.04 -0.4034 -0.126 -0.8375 -1.606 ...
-            var3     (dim3, dim1) float64 0.5565 -0.2121 0.4563 1.545 -0.2397 0.1433 0.2538 ...
+            var1     (dim1, dim2) float64 -1.086 0.9973 0.283 -1.506 -0.5786 1.651 ...
+            var2     (dim1, dim2) float64 1.162 -1.097 -2.123 1.04 -0.4034 -0.126 ...
+            var3     (dim3, dim1) float64 0.5565 -0.2121 0.4563 1.545 -0.2397 0.1433 ...
         Attributes:
             foo: bar""") % data['dim3'].dtype
         actual = '\n'.join(x.rstrip() for x in repr(data).split('\n'))
         print(actual)
+        self.assertEqual(expected, actual)
+
+        with set_options(display_width=100):
+            max_len = max(map(len, repr(data).split('\n')))
+            assert 90 < max_len < 100
 
         expected = dedent("""\
         <xray.Dataset>
