@@ -98,6 +98,16 @@ Enhancements
 
   These methods return a new Dataset (or DataArray) with updated data or
   coordinate variables.
+- :py:meth:`~xray.Dataset.sel` now supports the ``method`` parameter, which works
+  like the paramter of the same name on :py:meth:`~xray.Dataset.reindex`. It
+  provides a simple interface for doing nearest-neighbor interpolation:
+
+  .. ipython:: python
+
+      ds.sel(x=1.1, method='nearest')
+      ds.sel(x=[1.1, 2.1], method='pad')
+
+  See :ref:`nearest neighbor lookups` for more details.
 - You can now control the underlying backend used for accessing remote
   datasets (via OPeNDAP) by specifying ``engine='netcdf4'`` or
   ``engine='pydap'``.

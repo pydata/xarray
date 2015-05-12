@@ -977,7 +977,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject):
             variables[name] = var.isel(**var_indexers)
         return self._replace_vars_and_dims(variables)
 
-    def sel(self, **indexers):
+    def sel(self, method=None, **indexers):
         """Returns a new dataset with each array indexed by tick labels
         along the specified dimension(s).
 
@@ -996,9 +996,16 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject):
 
         Parameters
         ----------
+        method : {None, 'nearest', 'pad'/'ffill', 'backfill'/'bfill'}, optional
+            Method to use for inexact matches (requires pandas>=0.16):
+
+            * default: only exact matches
+            * pad / ffill: propgate last valid index value forward
+            * backfill / bfill: propagate next valid index value backward
+            * nearest: use nearest valid index value
         **indexers : {dim: indexer, ...}
             Keyword arguments with names matching dimensions and values given
-            by individual, slices or arrays of tick labels.
+            by scalars, slices or arrays of tick labels.
 
         Returns
         -------
@@ -1015,7 +1022,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject):
         DataArray.isel
         DataArray.sel
         """
-        return self.isel(**indexing.remap_label_indexers(self, indexers))
+        return self.isel(**indexing.remap_label_indexers(self, indexers,
+                                                         method=method))
 
     def reindex_like(self, other, method=None, copy=True):
         """Conform this object onto the indexes of another object, filling

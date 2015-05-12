@@ -369,6 +369,18 @@ class TestDataArray(TestCase):
         self.assertDataArrayIdentical(da[1], da.sel(x=b))
         self.assertDataArrayIdentical(da[[1]], da.sel(x=slice(b, b)))
 
+    def test_sel_method(self):
+        data = DataArray(np.random.randn(3, 4),
+                         [('x', [0, 1, 2]), ('y', list('abcd'))])
+
+        expected = data.sel(y=['a', 'b'])
+        actual = data.sel(y=['ab', 'ba'], method='pad')
+        self.assertDataArrayIdentical(expected, actual)
+
+        expected = data.sel(x=[1, 2])
+        actual = data.sel(x=[0.9, 1.9], method='backfill')
+        self.assertDataArrayIdentical(expected, actual)
+
     def test_loc(self):
         self.ds['x'] = ('x', np.array(list('abcdefghij')))
         da = self.ds['foo']

@@ -261,3 +261,35 @@ Both ``reindex_like`` and ``align`` work interchangeably between
     other = xray.DataArray(['a', 'b', 'c'], dims='other')
     # this is a no-op, because there are no shared dimension names
     ds.reindex_like(other)
+
+.. _nearest neighbor lookups:
+
+Nearest neighbor lookups
+------------------------
+
+The label based selection methods :py:meth:`~xray.Dataset.sel`,
+:py:meth:`~xray.Dataset.reindex` and :py:meth:`~xray.Dataset.reindex_like` all
+support a ``method`` keyword argument. The method parameter allows for
+enabling nearest neighbor (inexact) lookups by use of the methods ``'pad'``,
+``'backfill'`` or ``'nearest'``:
+
+.. ipython:: python
+
+      data = xray.DataArray([1, 2, 3], dims='x')
+      data.sel(x=[1.1, 1.9], method='nearest')
+      data.sel(x=0.1, method='backfill')
+      data.reindex(x=[0.5, 1, 1.5, 2, 2.5], method='pad')
+
+Using ``method='nearest'`` or a scalar argument with ``.sel()`` requires pandas
+version 0.16 or newer.
+
+.. note::
+
+    The method parameter is not yet supported if any of the arguments
+    to ``.sel()`` is a ``slice`` object:
+
+    .. ipython::
+        :verbatim:
+
+        In [1]: data.sel(x=slice(1, 3), method='nearest')
+        NotImplementedError

@@ -117,35 +117,51 @@ def _try_get_item(x):
         return x
 
 
-def convert_label_indexer(index, label, index_name=''):
+def _get_loc(index, label, method=None):
+    """Backwards compatible wrapper for Index.get_loc, which only added the
+    method argument in pandas 0.16
+    """
+    if method is not None:
+        return index.get_loc(label, method=method)
+    else:
+        return index.get_loc(label)
+
+
+def convert_label_indexer(index, label, index_name='', method=None):
     """Given a pandas.Index (or xray.Coordinate) and labels (e.g., from
     __getitem__) for one dimension, return an indexer suitable for indexing an
     ndarray along that dimension
     """
     if isinstance(label, slice):
+        if method is not None:
+            raise NotImplementedError(
+                'cannot yet use the ``method`` argument if any indexers are '
+                'slice objects')
         indexer = index.slice_indexer(_try_get_item(label.start),
                                       _try_get_item(label.stop),
                                       _try_get_item(label.step))
     else:
         label = np.asarray(label)
         if label.ndim == 0:
-            indexer = index.get_loc(np.asscalar(label))
+            indexer = _get_loc(index, np.asscalar(label), method=method)
         elif label.dtype.kind == 'b':
             indexer, = np.nonzero(label)
         else:
-            indexer = index.get_indexer(label)
+            indexer = index.get_indexer(label, method=method)
             if np.any(indexer < 0):
                 raise ValueError('not all values found in index %r'
                                  % index_name)
     return indexer
 
 
-def remap_label_indexers(data_obj, indexers):
+def remap_label_indexers(data_obj, indexers, method=None):
     """Given an xray data object and label based indexers, return a mapping
     of equivalent location based indexers.
     """
-    return dict((dim, convert_label_indexer(data_obj[dim].to_index(), label, dim))
+    return dict((dim, convert_label_indexer(data_obj[dim].to_index(), label,
+                                            dim, method))
                 for dim, label in iteritems(indexers))
+
 
 def slice_slice(old_slice, applied_slice, size):
     """Given a slice and the size of the dimension to which it will be applied,
