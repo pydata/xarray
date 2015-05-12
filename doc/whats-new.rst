@@ -17,7 +17,7 @@ computing (data that doesn't fit into memory) with dask_. For more on dask,
 read the new documentation section :doc:`dask`.
 
 We also added new top-level function :py:func:`~xray.open_mfdataset` to make it
-easy to open a collection of files (using dask) as a single `xray.Dataset`
+easy to open a collection of files (using dask) as a single ``xray.Dataset``
 object.
 
 The combination of these features makes it possible to manipulate gigantic
@@ -104,6 +104,26 @@ Enhancements
 - Accessing data from remote datasets now has retrying logic (with exponential
   backoff) that should make it robust to occasional bad responses from DAP
   servers.
+- You can control the width of the Dataset repr with :py:class:`xray.set_options`.
+  It can be used either as a context manager, in which case the default is restored
+  outside the context:
+
+  .. ipython:: python
+
+      ds = xray.Dataset({'x': np.arange(1000)})
+      with xray.set_options(display_width=40):
+          print(ds)
+      with xray.set_options(display_width=60):
+          print(ds)
+
+  Or to set a global option:
+
+  .. ipython:: python
+
+      xray.set_options(display_width=80)
+      ds
+
+  The default value for the ``display_width`` option is 80.
 
 Deprecations
 ~~~~~~~~~~~~

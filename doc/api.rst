@@ -16,6 +16,7 @@ Top-level functions
 
    align
    concat
+   set_options
 
 Dataset
 =======
