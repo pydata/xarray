@@ -661,6 +661,21 @@ class TestDataset(TestCase):
         self.assertDatasetEqual(data.isel(td=slice(1, 3)),
                                 data.sel(td=slice('1 days', '2 days')))
 
+    def test_sel_method(self):
+        data = create_test_data()
+
+        if pd.__version__ >= '0.16':
+            expected = data.sel(dim1=1)
+            actual = data.sel(dim1=0.95, method='nearest')
+            self.assertDatasetIdentical(expected, actual)
+
+        expected = data.sel(dim2=[1.5])
+        actual = data.sel(dim2=[1.45], method='backfill')
+        self.assertDatasetIdentical(expected, actual)
+
+        with self.assertRaisesRegexp(NotImplementedError, 'slice objects'):
+            data.sel(dim2=slice(1, 3), method='ffill')
+
     def test_loc(self):
         data = create_test_data()
         expected = data.sel(dim3='a')

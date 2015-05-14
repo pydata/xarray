@@ -1,4 +1,5 @@
 import numpy as np
+import pandas as pd
 
 from xray import Dataset, Variable, Coordinate
 from xray.core import indexing, variable
@@ -68,11 +69,11 @@ class TestIndexers(TestCase):
 
     def test_convert_label_indexer(self):
         # TODO: add tests that aren't just for edge cases
-        coord = Coordinate('x', [1, 2, 3])
+        index = pd.Index([1, 2, 3])
         with self.assertRaisesRegexp(ValueError, 'not all values found'):
-            indexing.convert_label_indexer(coord, [0])
+            indexing.convert_label_indexer(index, [0])
         with self.assertRaises(KeyError):
-            indexing.convert_label_indexer(coord, 0)
+            indexing.convert_label_indexer(index, 0)
 
     def test_remap_label_indexers(self):
         # TODO: fill in more tests!

@@ -537,7 +537,7 @@ class DataArray(AbstractArray, BaseDataObject):
         ds = self._dataset.isel(**indexers)
         return self._with_replaced_dataset(ds)
 
-    def sel(self, **indexers):
+    def sel(self, method=None, **indexers):
         """Return a new DataArray whose dataset is given by selecting
         index labels along the specified dimension(s).
 
@@ -546,7 +546,8 @@ class DataArray(AbstractArray, BaseDataObject):
         Dataset.sel
         DataArray.isel
         """
-        return self.isel(**indexing.remap_label_indexers(self, indexers))
+        return self.isel(**indexing.remap_label_indexers(self, indexers,
+                                                         method=method))
 
     def reindex_like(self, other, method=None, copy=True):
         """Conform this object onto the indexes of another object, filling
