@@ -132,19 +132,3 @@ pandas) make it a faster and more flexible data analysis tool. That said, Iris
 and CDAT have some great domain specific functionality, and we would love to
 have support for converting their native objects to and from xray (see
 :issue:`37` and :issue:`133`)
-
-
-Does xray support out-of-core computation?
-------------------------------------------
-
-Not yet! Distributed and out-of-memory computation is certainly something we're
-excited about, but for now we have focused on making xray a full-featured tool for
-in-memory analytics (like pandas).
-
-We have some ideas for what out-of-core support could look like (probably
-through a library like biggus_ or Blaze_), but we're not there yet. An
-intermediate step would be supporting incremental writes to a Dataset linked to
-a NetCDF file on disk.
-
-.. _biggus: https://github.com/SciTools/biggus
-.. _Blaze: https://github.com/continuumio/blaze
