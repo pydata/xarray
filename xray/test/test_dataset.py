@@ -1550,8 +1550,8 @@ class TestDataset(TestCase):
         actual = ds.to_array()
         self.assertDataArrayIdentical(expected, actual)
 
-        actual = ds.to_array('abc')
-        expected = expected.rename({'variable': 'abc'})
+        actual = ds.to_array('abc', name='foo')
+        expected = expected.rename({'variable': 'abc'}).rename('foo')
         self.assertDataArrayIdentical(expected, actual)
 
     def test_to_and_from_dataframe(self):
