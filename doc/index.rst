@@ -37,6 +37,7 @@ Documentation
    computation
    groupby
    combining
+   reshaping
    time-series
    pandas
    io
