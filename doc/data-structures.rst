@@ -257,12 +257,6 @@ instead of tuples:
 
     xray.Dataset({'bar': foo})
 
-Or directly convert a data array into a dataset:
-
-.. ipython:: python
-
-    foo.to_dataset(name='bar')
-
 You can also create an dataset from a :py:class:`pandas.DataFrame` with
 :py:meth:`Dataset.from_dataframe <xray.Dataset.from_dataframe>` or from a
 netCDF file on disk with :py:func:`~xray.open_dataset`. See
@@ -340,16 +334,14 @@ a ``Dataset`` variable using ``__setitem__`` or ``update`` will
 :ref:`automatically align<update>` the array(s) to the original
 dataset's indexes.
 
-Creating modified datasets
-~~~~~~~~~~~~~~~~~~~~~~~~~~
+Modifying datasets
+~~~~~~~~~~~~~~~~~~
 
 You can copy a ``Dataset`` by using the :py:meth:`~xray.Dataset.copy` method:
 
 .. ipython:: python
 
-    ds2 = ds.copy()
-    del ds2['time']
-    ds2
+    ds.copy()
 
 By default, the copy is shallow, so only the container will be copied: the
 arrays in the ``Dataset`` will still be stored in the same underlying
@@ -366,7 +358,7 @@ operations keep around coordinates:
     ds[['temperature']]
     ds[['x']]
 
-If a dimension name is given as an argument to `drop`, it also drops all
+If a dimension name is given as an argument to ``drop``, it also drops all
 variables that use that dimension:
 
 .. ipython:: python
@@ -378,6 +370,13 @@ Another useful option is the ability to rename the variables in a dataset:
 .. ipython:: python
 
     ds.rename({'temperature': 'temp', 'precipitation': 'precip'})
+
+Finally, you can use :py:meth:`~xray.Dataset.swap_dims` to swap dimension and non-dimension variables:
+
+.. ipython:: python
+
+    ds.coords['day'] = ('time', [6, 7, 8])
+    ds.swap_dims({'time': 'day'})
 
 .. _coordinates:
 
@@ -406,8 +405,8 @@ associated with coordinates. Coordinates with names not matching a dimension
 are not used for alignment or indexing, nor are they required to match when
 doing arithmetic (see :ref:`coordinates math`).
 
-Converting to ``pandas.Index``
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Indexes
+~~~~~~~
 
 To convert a coordinate (or any ``DataArray``) into an actual
 :py:class:`pandas.Index`, use the :py:meth:`~xray.DataArray.to_index` method:
@@ -423,56 +422,3 @@ dimension and whose the values are ``Index`` objects:
 .. ipython:: python
 
     ds.indexes
-
-Switching between data and coordinate variables
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-To entirely add or removing coordinate arrays, you can use dictionary like
-syntax, as shown above. To convert back and forth between data and
-coordinates, use the the :py:meth:`~xray.Dataset.set_coords` and
-:py:meth:`~xray.Dataset.reset_coords` methods:
-
-.. ipython:: python
-
-    ds.reset_coords()
-    ds.set_coords(['temperature', 'precipitation'])
-    ds['temperature'].reset_coords(drop=True)
-
-Notice that these operations skip coordinates with names given by dimensions,
-as used for indexing. This mostly because we are not entirely sure how to
-design the interface around the fact that xray cannot store a coordinate and
-variable with the name but different values in the same dictionary. But we do
-recognize that supporting something like this would be useful.
-
-Converting into datasets
-~~~~~~~~~~~~~~~~~~~~~~~~
-
-``Coordinates`` objects also have a few useful methods, mostly for converting
-them into dataset objects:
-
-.. ipython:: python
-
-    ds.coords.to_dataset()
-
-The merge method is particularly interesting, because it implements the same
-logic used for merging coordinates in arithmetic operations
-(see :ref:`comput`):
-
-.. ipython:: python
-
-    alt = xray.Dataset(coords={'z': [10], 'lat': 0, 'lon': 0})
-    ds.coords.merge(alt.coords)
-
-The ``coords.merge`` method may be useful if you want to implement your own
-binary operations that act on xray objects. In the future, we hope to write
-more helper functions so that you can easily make your functions act like
-xray's built-in arithmetic.
-
-
-.. [1] Latitude and longitude are 2D arrays because the dataset uses
-   `projected coordinates`__. ``reference_time`` refers to the reference time
-   at which the forecast was made, rather than ``time`` which is the valid time
-   for which the forecast applies.
-
-__ http://en.wikipedia.org/wiki/Map_projection
-

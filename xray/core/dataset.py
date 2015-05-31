@@ -1742,17 +1742,19 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject):
 
         return concatenated
 
-    def to_array(self, dim='variable'):
+    def to_array(self, dim='variable', name=None):
         """Convert this dataset into an xray.DataArray
 
-        The data variables of this dataset will be stacked along the first
-        axis of the new array. All coordinates of this dataset will remain
-        coordinates.
+        The data variables of this dataset will be broadcast against each other
+        and stacked along the first axis of the new array. All coordinates of
+        this dataset will remain coordinates.
 
         Parameters
         ----------
         dim : str, optional
             Name of the new dimension.
+        name : str, optional
+            Name of the new data array.
 
         Returns
         -------
@@ -1769,7 +1771,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject):
 
         dims = (dim,) + broadcast_vars[0].dims
 
-        return DataArray(data, coords, dims, attrs=self.attrs)
+        return DataArray(data, coords, dims, attrs=self.attrs, name=name)
 
     def _to_dataframe(self, ordered_dims):
         columns = [k for k in self if k not in self.dims]
