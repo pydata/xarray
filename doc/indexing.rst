@@ -53,6 +53,11 @@ DataArray:
     arr[0, 0]
     arr[:, [2, 1]]
 
+.. warning::
+
+    Positional indexing deviates from the NumPy when indexing with multiple
+    arrays like ``arr[[0, 1], [0, 1]]``, as described in :ref:`indexing details`.
+
 xray also supports label-based indexing, just like pandas. Because
 we use a :py:class:`pandas.Index` under the hood, label based indexing is very
 fast. To do label based indexing, use the :py:attr:`~xray.DataArray.loc` attribute:
@@ -164,6 +169,8 @@ index labels along a dimension dropped:
     ds.drop(['IN', 'IL'], dim='space')
 
 ``drop`` is both a ``Dataset`` and ``DataArray`` method.
+
+.. _indexing details:
 
 Indexing details
 ----------------
