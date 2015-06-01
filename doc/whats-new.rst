@@ -130,15 +130,13 @@ Enhancements
       ds = xray.Dataset({'x': np.arange(1000)})
       with xray.set_options(display_width=40):
           print(ds)
-      with xray.set_options(display_width=60):
-          print(ds)
 
   Or to set a global option:
 
-  .. ipython:: python
+  .. ipython::
+      :verbatim:
 
-      xray.set_options(display_width=80)
-      ds
+      In [1]: xray.set_options(display_width=80)
 
   The default value for the ``display_width`` option is 80.
 

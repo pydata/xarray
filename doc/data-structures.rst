@@ -427,6 +427,9 @@ design the interface around the fact that xray cannot store a coordinate and
 variable with the name but different values in the same dictionary. But we do
 recognize that supporting something like this would be useful.
 
+Coordinates methods
+~~~~~~~~~~~~~~~~~~~
+
 ``Coordinates`` objects also have a few useful methods, mostly for converting
 them into dataset objects:
 
@@ -466,8 +469,8 @@ dimension and whose the values are ``Index`` objects:
 
     ds.indexes
 
-Converting between Dataset and DataArray
-----------------------------------------
+Converting datasets and arrays
+------------------------------
 
 To convert from a Dataset to a DataArray, use :py:meth:`~xray.Dataset.to_array`:
 
