@@ -285,10 +285,8 @@ files into a single Dataset by making use of :py:func:`~xray.concat`.
 
         xray.open_mfdataset('my/files/*.nc')
 
-    This function will automatically concatenate and merge dataset into one in
-    the simple cases that it understands (see :py:func:`~xray.auto_combine`
-    for the full disclaimer). For more on using dask arrays with xray,
-    see :doc:`dask`.
+    This function automatically concatenates and merges into a single xray datasets.
+    For more details, see :ref:`dask.io`.
 
 .. _dask: http://dask.pydata.org
 

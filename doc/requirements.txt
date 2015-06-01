@@ -8,3 +8,5 @@ seaborn==0.5.1
 python-dateutil
 numpydoc==0.5
 dask==0.4
+# pin to avoid https://github.com/sphinx-doc/sphinx/issues/1822
+sphinx==1.2.3

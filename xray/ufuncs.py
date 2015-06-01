@@ -13,19 +13,19 @@ priority order:
 Once NumPy 1.10 comes out with support for overriding ufuncs, this module will
 hopefully no longer be necessary.
 """
-import numpy as np
+import numpy as _np
 
-from .core.variable import Variable
-from .core.dataset import Dataset
-from .core.dataarray import DataArray
-from .core.groupby import GroupBy
+from .core.variable import Variable as _Variable
+from .core.dataset import Dataset as _Dataset
+from .core.dataarray import DataArray as _DataArray
+from .core.groupby import GroupBy as _GroupBy
 
-from .core.pycompat import dask_array_type
+from .core.pycompat import dask_array_type as _dask_array_type
 from .core.ops import _dask_or_eager_func
 
 
-_xray_types = (Variable, DataArray, Dataset, GroupBy)
-_dispatch_order = (np.ndarray, dask_array_type) + _xray_types
+_xray_types = (_Variable, _DataArray, _Dataset, _GroupBy)
+_dispatch_order = (_np.ndarray, _dask_array_type) + _xray_types
 
 
 def _dispatch_priority(obj):
@@ -62,7 +62,7 @@ def _create_op(name):
         return res
 
     func.__name__ = name
-    doc = getattr(np, name).__doc__
+    doc = getattr(_np, name).__doc__
     func.__doc__ = ('xray specific variant of numpy.%s. Handles '
                     'xray.Dataset, xray.DataArray, xray.Variable, '
                     'numpy.ndarray and dask.array.Array objects with '

@@ -1,3 +1,5 @@
+.. _combining data:
+
 Combining data
 --------------
 
