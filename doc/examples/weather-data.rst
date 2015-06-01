@@ -112,5 +112,7 @@ fill missing values by group:
     both = xray.Dataset({'some_missing': some_missing, 'filled': filled})
     both
 
+    df = both.sel(time='2000').mean('location').reset_coords(drop=True).to_dataframe()
+
     @savefig examples_filled.png
-    both.sel(time='2000').mean('location').reset_coords(drop=True).to_dataframe().plot()
+    df[['filled', 'some_missing']].plot()
