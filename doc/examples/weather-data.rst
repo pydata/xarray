@@ -39,7 +39,14 @@ Examine a dataset with pandas_ and seaborn_
     ds.mean(dim='location').to_dataframe().plot()
 
 .. ipython:: python
+    :verbatim:
 
+    In [6]: sns.pairplot(df.reset_index(), vars=ds.data_vars)
+    Out[6]: <seaborn.axisgrid.PairGrid at 0x7f0fd2368a10>
+
+.. image:: ../_static/examples_pairplot.png
+
+.. .. ipython:: python
     @savefig examples_pairplot.png
     sns.pairplot(df.reset_index(), vars=ds.data_vars)
 
