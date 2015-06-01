@@ -201,7 +201,7 @@ are no conflicting values:
     # both arguments have the same 'x' coordinate
     arr[0] - arr[0]
 
-Math with Datasets
+Math with datasets
 ==================
 
 Datasets support arithmetic operations by automatically looping over all data

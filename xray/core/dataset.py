@@ -831,8 +831,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject):
         mode : {'w', 'a'}, optional
             Write ('w') or append ('a') mode. If mode='w', any existing file at
             this location will be overwritten.
-        format : {'NETCDF4', 'NETCDF4_CLASSIC', 'NETCDF3_64BIT',
-                  'NETCDF3_CLASSIC'}, optional
+        format : {'NETCDF4', 'NETCDF4_CLASSIC', 'NETCDF3_64BIT', 'NETCDF3_CLASSIC'}, optional
             File format for the resulting netCDF file:
 
             * NETCDF4: Data is stored in an HDF5 file, using netCDF4 API
@@ -855,10 +854,10 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject):
         group : str, optional
             Path to the netCDF4 group in the given file to open (only works for
             format='NETCDF4'). The group(s) will be created if necessary.
-        engine : 'netcdf4' or 'scipy', optional
+        engine : {'netcdf4', 'scipy', 'h5netcdf'}, optional
             Engine to use when writing netCDF files. If not provided, the
-            default engine is chosen based on available dependencies, with
-            a preference for 'netcdf4' if writing to a file on disk.
+            default engine is chosen based on available dependencies, with a
+            preference for 'netcdf4' if writing to a file on disk.
         """
         from ..backends.api import to_netcdf
         return to_netcdf(self, path, mode, format, group, engine)

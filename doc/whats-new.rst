@@ -9,23 +9,21 @@ What's New
     import xray
     np.random.seed(123456)
 
-v0.5 (unreleased)
------------------
+v0.5 (31 May 2005)
+------------------
 
 Highlights
 ~~~~~~~~~~
 
 The headline feature in this release is experimental support for out-of-core
-computing (data that doesn't fit into memory) with dask_. For more on dask,
-read the new documentation section :doc:`dask`.
+computing (data that doesn't fit into memory) with dask_. This includes a new
+top-level function :py:func:`~xray.open_mfdataset` that makes it easy to open
+a collection of netCDF (using dask) as a single ``xray.Dataset`` object. For
+more on dask, read the new documentation section :doc:`dask`.
 
-This includes a new top-level function :py:func:`~xray.open_mfdataset` that
-makes it easy to open a collection of netCDF (using dask) as a single
-``xray.Dataset`` object.
-
-Dask makes it possible to manipulate gigantic datasets with xray. It is
-currently an optional dependency, but it is likely to become a requirement
-in some future version of xray.
+Dask makes it possible to harness parallelism and manipulate gigantic datasets
+with xray. It is currently an optional dependency, but it may become required
+in the future.
 
 Backwards incompatible changes
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -130,15 +128,13 @@ Enhancements
       ds = xray.Dataset({'x': np.arange(1000)})
       with xray.set_options(display_width=40):
           print(ds)
-      with xray.set_options(display_width=60):
-          print(ds)
 
   Or to set a global option:
 
-  .. ipython:: python
+  .. ipython::
+      :verbatim:
 
-      xray.set_options(display_width=80)
-      ds
+      In [1]: xray.set_options(display_width=80)
 
   The default value for the ``display_width`` option is 80.
 
