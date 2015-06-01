@@ -12,17 +12,20 @@ What's New
 v0.5 (unreleased)
 -----------------
 
+Highlights
+~~~~~~~~~~
+
 The headline feature in this release is experimental support for out-of-core
 computing (data that doesn't fit into memory) with dask_. For more on dask,
 read the new documentation section :doc:`dask`.
 
-We also added new top-level function :py:func:`~xray.open_mfdataset` to make it
-easy to open a collection of files (using dask) as a single ``xray.Dataset``
-object.
+This includes a new top-level function :py:func:`~xray.open_mfdataset` that
+makes it easy to open a collection of netCDF (using dask) as a single
+``xray.Dataset`` object.
 
-The combination of these features makes it possible to manipulate gigantic
-datasets with xray. Dask is currently an optional dependency of xray, but it
-is likely to become a requirement at some point in the future.
+Dask makes it possible to manipulate gigantic datasets with xray. It is
+currently an optional dependency, but it is likely to become a requirement
+in some future version of xray.
 
 Backwards incompatible changes
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -72,7 +75,7 @@ Enhancements
       ds = xray.Dataset({'a': 1, 'b': ('x', [1, 2, 3])},
                         coords={'c': 42}, attrs={'Conventions': 'None'})
       ds.to_array()
-      ds.to_array().to_dataset(dim='variables')
+      ds.to_array().to_dataset(dim='variable')
 
 - New :py:meth:`~xray.Dataset.fillna` method to fill missing values, modeled
   off the pandas method of the same name:
@@ -111,6 +114,10 @@ Enhancements
 - You can now control the underlying backend used for accessing remote
   datasets (via OPeNDAP) by specifying ``engine='netcdf4'`` or
   ``engine='pydap'``.
+- xray now provides experimental support for reading and writing netCDF4 files directly
+  via `h5py`_ with the `h5netcdf`_ package, avoiding the netCDF4-Python package. You
+  will need to install h5netcdf and specify ``engine='h5netcdf'`` to try this
+  feature.
 - Accessing data from remote datasets now has retrying logic (with exponential
   backoff) that should make it robust to occasional bad responses from DAP
   servers.
@@ -134,6 +141,9 @@ Enhancements
       ds
 
   The default value for the ``display_width`` option is 80.
+
+.. _h5py: http://www.h5py.org/
+.. _h5netcdf: https://github.com/shoyer/h5netcdf
 
 Deprecations
 ~~~~~~~~~~~~

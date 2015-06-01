@@ -13,21 +13,33 @@ become a requirement for a future version of xray.
 What is a dask array?
 ---------------------
 
+.. image:: _static/dask_array.png
+   :width: 40 %
+   :align: right
+   :alt: A dask array
+
 Dask divides arrays into many small pieces, called *chunks*, each of which is
-presumed to be small enough to fit into memory. Unlike NumPy, which has eager
-evaluation, operations on dask arrays are lazy. Operations queue up a series of
-taks mapped over blocks, and no computation is performed until you
-actually ask values to be computed (e.g., to print results to your screen or
-write to disk). At that point, data is loaded into memory and computation proceeds
-in a streaming fashion, block-by-block. The actual computation is controlled
-by a multi-processing or thread pool, which allows dask to take full advantage
-of multiple processers available on most modern computers.
+presumed to be small enough to fit into memory.
+
+Unlike NumPy, which has eager evaluation, operations on dask arrays are lazy.
+Operations queue up a series of taks mapped over blocks, and no computation is
+performed until you actually ask values to be computed (e.g., to print results
+to your screen or write to disk). At that point, data is loaded into memory
+and computation proceeds in a streaming fashion, block-by-block.
+
+The actual computation is controlled by a multi-processing or thread pool,
+which allows dask to take full advantage of multiple processers available on
+most modern computers.
+
+For more details on dask, read `its documentation <http://dask.pydata.org/>`__.
+
+.. _dask.io:
 
 Reading and writing data
 ------------------------
 
 The usual way to create a dataset filled with dask arrays is to load the data
-from a netCDF file or files, by supplying a ``chunks`` argument to
+from a netCDF file or files. You can by supplying a ``chunks`` argument to
 :py:func:`~xray.open_dataset` or using the :py:func:`~xray.open_mfdataset`
 function.
 
@@ -47,11 +59,27 @@ function.
                        'latitude': np.arange(89.5, -90.5, -1)})
     ds.to_netcdf('example-data.nc')
 
-
 .. ipython:: python
 
     ds = xray.open_dataset('example-data.nc', chunks={'time': 10})
     ds
+
+If you don't supply a dimension in ``chunks``, only one chunk will be used along
+that dimension for all dask arrays in the dataset. It is also entirely equivalent
+to open a dataset using ``open_dataset`` and then chunk the data use the ``chunk``
+method, e.g., ``xray.open_dataset('example-data.nc').chunk({'time': 10})``.
+
+To open multiple files simultaneously, use :py:func:`~xray.open_mfdataset`::
+
+    xray.open_mfdataset('my/files/*.nc')
+
+This function will automatically concatenate and merge dataset into one in
+the simple cases that it understands (see :py:func:`~xray.auto_combine`
+for the full disclaimer). By default, ``open_mfdataset`` will chunk each
+netCDF file into a single dask array; again, supply the ``chunks`` argument to
+control the size of the resulting dask arrays. In more complex cases, you can
+open each file individually using ``open_dataset`` and merge the result, as
+described in :ref:`combining data`.
 
 You'll notice that printing a dataset still shows a preview of array values,
 even if they are actually dask arrays. We can do this quickly
@@ -147,7 +175,7 @@ along a particular dimension, an exception is raised when you try to access
 NumPy ufuncs like ``np.sin`` currently only work on eagerly evaluated arrays
 (this will change with the next major NumPy release). We have provided
 replacements that also work on all xray objects, including those that store
-lazy dask arrays, in the ``xray.ufuncs`` module:
+lazy dask arrays, in the :ref:`xray.ufuncs <api.ufuncs>` module:
 
 .. ipython:: python
 
@@ -162,6 +190,11 @@ loaded into dask or not:
 .. ipython:: python
 
     ds.temperature.data
+
+.. note::
+
+    In the future, we may extend ``.data`` to support other "computable" array
+    backends beyond dask and numpy (e.g., to support sparse arrays).
 
 Chunking and performance
 ------------------------

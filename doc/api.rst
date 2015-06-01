@@ -263,6 +263,8 @@ Comparisons
    DataArray.identical
    DataArray.broadcast_equals
 
+.. _api.ufuncs:
+
 Universal functions
 ===================
 
@@ -377,5 +379,6 @@ arguments for the ``from_store`` and ``dump_to_store`` Dataset methods.
    :toctree: generated/
 
    backends.NetCDF4DataStore
+   backends.H5NetCDF4DataStore
    backends.PydapDataStore
    backends.ScipyDataStore
