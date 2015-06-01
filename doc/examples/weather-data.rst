@@ -38,7 +38,7 @@ Examine a dataset with pandas_ and seaborn_
     @savefig examples_tmin_tmax_plot.png
     ds.mean(dim='location').to_dataframe().plot()
 
-.. ipython:: python
+.. ipython::
     :verbatim:
 
     In [6]: sns.pairplot(df.reset_index(), vars=ds.data_vars)
