@@ -10,3 +10,5 @@ seaborn==0.5.1
 python-dateutil
 numpydoc==0.5
 dask==0.5
+# required for dask.array
+toolz
