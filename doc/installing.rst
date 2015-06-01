@@ -1,29 +1,58 @@
 Installation
 ============
 
-Required dependencies:
+Required dependencies
+---------------------
 
 - Python 2.6, 2.7, 3.3 or 3.4
 - `numpy <http://www.numpy.org/>`__ (1.7 or later)
 - `pandas <http://pandas.pydata.org/>`__ (0.15.0 or later)
 
-Optional dependencies:
+Optional dependencies
+---------------------
+
+netCDF and IO
+~~~~~~~~~~~~~
 
 - `netCDF4 <https://github.com/Unidata/netcdf4-python>`__: recommended if you
   want to use xray for reading or writing files
 - `scipy <http://scipy.org/>`__: used as a fallback for reading/writing netCDF3
 - `pydap <http://www.pydap.org/>`__: used as a fallback for accessing OPeNDAP
+- `h5netcdf <https://github.com/shoyer/h5netcdf>`__: an alternative library for
+  reading and writing netCDF4 files that does not use the netCDF-C libraries
+
+Accelerating xray
+~~~~~~~~~~~~~~~~~
+
 - `bottleneck <https://github.com/kwgoodman/bottleneck>`__: speeds up
   NaN-skipping aggregations by a large factor
 - `cyordereddict <https://github.com/shoyer/cyordereddict>`__: speeds up most
   internal operations with xray data structures
 
-Before you install xray, be sure you have the required dependencies (numpy and
-pandas) installed. xray is a pure Python package, but its dependencies are not.
-The easiest way to get them installed is to use the
-`Anaconda python distribution <https://store.continuum.io/cshop/anaconda/>`__.
+Parallel computing
+~~~~~~~~~~~~~~~~~~
 
-To install xray, use pip::
+- `dask.array <http://dask.pydata.org>`__: required for :ref:`dask`.
+
+Instructions
+------------
+
+Before you install xray, be sure you have the required dependencies (numpy and
+pandas) installed. xray itself is a pure Python package, but its dependencies
+are not. The easiest way to get them installed is to use conda_.
+
+.. _conda: http://conda.io/
+
+You can install xray either with conda (recommended):
+
+.. code::
+
+    conda install xray  # minimal install
+    conda install xray dask netCDF4  # recommended dependencies
+
+or with pip:
+
+.. code::
 
     pip install xray
 
