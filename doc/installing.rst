@@ -37,24 +37,18 @@ Parallel computing
 Instructions
 ------------
 
-Before you install xray, be sure you have the required dependencies (numpy and
-pandas) installed. xray itself is a pure Python package, but its dependencies
-are not. The easiest way to get them installed is to use conda_.
+xray itself is a pure Python package, but its dependencies are not. The
+easiest way to get them installed is to use conda_. You can then install xray
+with its recommended dependencies with the conda command line tool::
+
+    $ conda install xray dask netCDF4
 
 .. _conda: http://conda.io/
 
-You can install xray either with conda (recommended):
+If you don't use conda, be sure you have the required dependencies (numpy and
+pandas) installed first. Then, install xray with pip::
 
-.. code::
-
-    conda install xray  # minimal install
-    conda install xray dask netCDF4  # recommended dependencies
-
-or with pip:
-
-.. code::
-
-    pip install xray
+    $ pip install xray
 
 To run the test suite after installing xray, install
 `nose <https://nose.readthedocs.org>`__ and run ``nosetests xray``.
