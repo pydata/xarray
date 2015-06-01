@@ -405,6 +405,49 @@ associated with coordinates. Coordinates with names not matching a dimension
 are not used for alignment or indexing, nor are they required to match when
 doing arithmetic (see :ref:`coordinates math`).
 
+Modifying coordinates
+~~~~~~~~~~~~~~~~~~~~~
+
+To entirely add or removing coordinate arrays, you can use dictionary like
+syntax, as shown above.
+
+To convert back and forth between data and coordinates, you can use the
+:py:meth:`~xray.Dataset.set_coords` and
+:py:meth:`~xray.Dataset.reset_coords` methods:
+
+.. ipython:: python
+
+    ds.reset_coords()
+    ds.set_coords(['temperature', 'precipitation'])
+    ds['temperature'].reset_coords(drop=True)
+
+Notice that these operations skip coordinates with names given by dimensions,
+as used for indexing. This mostly because we are not entirely sure how to
+design the interface around the fact that xray cannot store a coordinate and
+variable with the name but different values in the same dictionary. But we do
+recognize that supporting something like this would be useful.
+
+``Coordinates`` objects also have a few useful methods, mostly for converting
+them into dataset objects:
+
+.. ipython:: python
+
+    ds.coords.to_dataset()
+
+The merge method is particularly interesting, because it implements the same
+logic used for merging coordinates in arithmetic operations
+(see :ref:`comput`):
+
+.. ipython:: python
+
+    alt = xray.Dataset(coords={'z': [10], 'lat': 0, 'lon': 0})
+    ds.coords.merge(alt.coords)
+
+The ``coords.merge`` method may be useful if you want to implement your own
+binary operations that act on xray objects. In the future, we hope to write
+more helper functions so that you can easily make your functions act like
+xray's built-in arithmetic.
+
 Indexes
 ~~~~~~~
 
@@ -422,3 +465,53 @@ dimension and whose the values are ``Index`` objects:
 .. ipython:: python
 
     ds.indexes
+
+Converting between Dataset and DataArray
+----------------------------------------
+
+To convert from a Dataset to a DataArray, use :py:meth:`~xray.Dataset.to_array`:
+
+.. ipython:: python
+
+    arr = ds.to_array()
+    arr
+
+This method broadcasts all data variables in the dataset against each other,
+then concatenates them along a new dimension into a new array while preserving
+coordinates.
+
+To convert back from a DataArray to a Dataset, use
+:py:meth:`~xray.DataArray.to_dataset`:
+
+.. ipython:: python
+
+    arr.to_dataset(dim='variable')
+
+The broadcasting behavior of ``to_array`` means that the resulting array
+includes the union of data variable dimensions:
+
+.. ipython:: python
+
+    ds2 = xray.Dataset({'a': 0, 'b': ('x', [3, 4, 5])})
+
+    # the input dataset has 4 elements
+    ds2
+
+    # the resulting array has 6 elements
+    ds2.to_array()
+
+Otherwise, the result could not be represented as an orthogonal array.
+
+If you use ``to_dataset`` without supplying the ``dim`` argument, the DataArray will be converted into a Dataset of one variable:
+
+.. ipython:: python
+
+    arr.to_dataset(name='combined')
+
+
+.. [1] Latitude and longitude are 2D arrays because the dataset uses
+   `projected coordinates`__. ``reference_time`` refers to the reference time
+   at which the forecast was made, rather than ``time`` which is the valid time
+   for which the forecast applies.
+
+__ http://en.wikipedia.org/wiki/Map_projection

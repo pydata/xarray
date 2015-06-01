@@ -27,8 +27,7 @@ Hierarchical and tidy data
 Tabular data is easiest to work with when it meets the criteria for
 `tidy data`__:
 
-* Each column holds a different variable (coordinates and variables in xray's
-  terminology).
+* Each column holds a different variable.
 * Each rows holds a different observation.
 
 __ http://www.jstatsoft.org/v59/i10/
