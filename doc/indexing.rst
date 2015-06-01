@@ -280,9 +280,35 @@ support a ``method`` keyword argument. The method parameter allows for
 enabling nearest neighbor (inexact) lookups by use of the methods ``'pad'``,
 ``'backfill'`` or ``'nearest'``:
 
-.. ipython:: python
+.. use verbatim because I can't seem to install pandas 0.16.1 on RTD :(
 
-      data = xray.DataArray([1, 2, 3], dims='x')
+.. ipython::
+    :verbatim:
+
+    In [35]: data = xray.DataArray([1, 2, 3], dims='x')
+
+    In [36]: data.sel(x=[1.1, 1.9], method='nearest')
+    Out[36]:
+    <xray.DataArray (x: 2)>
+    array([2, 3])
+    Coordinates:
+      * x        (x) int64 1 2
+
+    In [37]: data.sel(x=0.1, method='backfill')
+    Out[37]:
+    <xray.DataArray ()>
+    array(2)
+    Coordinates:
+        x        int64 1
+
+    In [38]: data.reindex(x=[0.5, 1, 1.5, 2, 2.5], method='pad')
+    Out[38]:
+    <xray.DataArray (x: 5)>
+    array([1, 2, 2, 3, 3])
+    Coordinates:
+      * x        (x) float64 0.5 1.0 1.5 2.0 2.5
+
+..    data = xray.DataArray([1, 2, 3], dims='x')
       data.sel(x=[1.1, 1.9], method='nearest')
       data.sel(x=0.1, method='backfill')
       data.reindex(x=[0.5, 1, 1.5, 2, 2.5], method='pad')

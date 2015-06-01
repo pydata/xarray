@@ -9,7 +9,7 @@ What's New
     import xray
     np.random.seed(123456)
 
-v0.5 (31 May 2005)
+v0.5 (1 June 2005)
 ------------------
 
 Highlights
@@ -103,10 +103,28 @@ Enhancements
   like the paramter of the same name on :py:meth:`~xray.Dataset.reindex`. It
   provides a simple interface for doing nearest-neighbor interpolation:
 
-  .. ipython:: python
+  .. use verbatim because I can't seem to install pandas 0.16.1 on RTD :(
 
-      ds.sel(x=1.1, method='nearest')
-      ds.sel(x=[1.1, 2.1], method='pad')
+  .. ipython::
+      :verbatim:
+
+      In [12]: ds.sel(x=1.1, method='nearest')
+      Out[12]:
+      <xray.Dataset>
+      Dimensions:  ()
+      Coordinates:
+          x        int64 1
+      Data variables:
+          y        int64 2
+
+      In [13]: ds.sel(x=[1.1, 2.1], method='pad')
+      Out[13]:
+      <xray.Dataset>
+      Dimensions:  (x: 2)
+      Coordinates:
+        * x        (x) int64 1 2
+      Data variables:
+          y        (x) int64 2 3
 
   See :ref:`nearest neighbor lookups` for more details.
 - You can now control the underlying backend used for accessing remote
