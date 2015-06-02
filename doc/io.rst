@@ -329,7 +329,7 @@ deficiencies::
 
         paths = sorted(glob(files))
         datasets = [process_one_path(p) for p in paths]
-        xray.concat(dataset, dim)
+        xray.concat(datasets, dim)
 
     # here we suppose we only care about the combined mean of each file;
     # you might also use indexing operations like .sel to subset datasets
