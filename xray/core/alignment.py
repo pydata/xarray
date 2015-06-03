@@ -313,7 +313,7 @@ def auto_combine(datasets, concat_dim=None):
     under any circumstances. It will fail in complex cases, for which you
     should use ``concat`` and ``merge`` explicitly.
 
-    Example of when ``auto_combine`` works:
+    When ``auto_combine`` may succeed:
 
     * You have N years of data and M data variables. Each combination of a
       distinct time period and test of data variables is saved its own dataset.
@@ -331,7 +331,11 @@ def auto_combine(datasets, concat_dim=None):
     datasets : sequence of xray.Dataset
         Dataset objects to merge.
     concat_dim : str or DataArray or Index, optional
-        Dimension along which to concatenate variables.
+        Dimension along which to concatenate variables, as used by
+        :py:func:`xray.concat`. You only need to provide this argument if the
+        dimension along which you want to concatenate is not a dimension in
+        the original datasets, e.g., if you want to stack a collection of
+        2D arrays along a third dimension.
 
     Returns
     -------
