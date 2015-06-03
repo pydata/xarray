@@ -84,6 +84,10 @@ def open_dataset(filename_or_obj, group=None, decode_cf=True,
     -------
     dataset : Dataset
         The newly created dataset.
+
+    See Also
+    --------
+    open_mfdataset
     """
     if not decode_cf:
         mask_and_scale = False
@@ -165,7 +169,7 @@ def open_mfdataset(paths, chunks=None, concat_dim=None, **kwargs):
     Parameters
     ----------
     paths : str or sequence
-        Either a str glob in the form "path/to/my/files/*.nc" or an explicit
+        Either a string glob in the form "path/to/my/files/*.nc" or an explicit
         list of files to open.
     chunks : dict, optional
         Dictionary with keys given by dimension names and values given by chunk
@@ -175,13 +179,21 @@ def open_mfdataset(paths, chunks=None, concat_dim=None, **kwargs):
         full documentation for more details.
     concat_dim : str or DataArray or Index, optional
         Dimension to concatenate files along. This argument is passed on to
-        ``auto_combine`` along with the dataset objects.
+        :py:func:`xray.auto_combine` along with the dataset objects. You only
+        need to provide this argument if the dimension along which you want to
+        concatenate is not a dimension in the original datasets, e.g., if you
+        want to stack a collection of 2D arrays along a third dimension.
     **kwargs : optional
-        Additional arguments passed on to ``open_dataset``.
+        Additional arguments passed on to :py:func:`xray.open_dataset`.
 
     Returns
     -------
     xray.Dataset
+
+    See Also
+    --------
+    auto_combine
+    open_dataset
     """
     if isinstance(paths, basestring):
         paths = sorted(glob(paths))
