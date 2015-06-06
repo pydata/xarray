@@ -449,6 +449,35 @@ class CharToStringArray(utils.NDArrayMixin):
         return values
 
 
+class NativeEndiannessArray(utils.NDArrayMixin):
+    """Decode arrays on the fly from non-native to native endianness
+
+    This is useful for decoding arrays from netCDF3 files (which are all
+    big endian) into native endianness, so they can be used with Cython
+    functions, such as those found in bottleneck and pandas.
+
+    >>> x = np.arange(5, dtype='>i2')
+
+    >>> x.dtype
+    dtype('>i2')
+
+    >>> NativeEndianArray(x).dtype
+    dtype('int16')
+
+    >>> NativeEndianArray(x)[:].dtype
+    dtype('int16')
+    """
+    def __init__(self, array):
+        self.array = array
+
+    @property
+    def dtype(self):
+        return np.dtype(self.array.dtype.kind + str(self.array.dtype.itemsize))
+
+    def __getitem__(self, key):
+        return np.asarray(self.array[key], dtype=self.dtype)
+
+
 def string_to_char(arr):
     """Like netCDF4.stringtochar, but faster and more flexible.
     """
@@ -632,7 +661,7 @@ def encode_cf_variable(var, needs_copy=True):
 
 
 def decode_cf_variable(var, concat_characters=True, mask_and_scale=True,
-                       decode_times=True):
+                       decode_times=True, decode_endianness=True):
     """
     Decodes a variable which may hold CF encoded information.
 
@@ -653,6 +682,8 @@ def decode_cf_variable(var, concat_characters=True, mask_and_scale=True,
         (using _FillValue).
     decode_times : bool
         Decode cf times ('hours since 2000-01-01') to np.datetime64.
+    decode_endianness : bool
+        Decode arrays from non-native to native endianness.
 
     Returns
     -------
@@ -666,11 +697,7 @@ def decode_cf_variable(var, concat_characters=True, mask_and_scale=True,
     attributes = var.attrs.copy()
     encoding = var.encoding.copy()
 
-    if 'dtype' in encoding:
-        if data.dtype != encoding['dtype']:
-            warnings.warn("CF decoding is overwriting dtype")
-    else:
-        encoding['dtype'] = data.dtype
+    original_dtype = data.dtype
 
     if concat_characters:
         if data.dtype.kind == 'S' and data.dtype.itemsize == 1:
@@ -714,6 +741,18 @@ def decode_cf_variable(var, concat_characters=True, mask_and_scale=True,
             # timedelta
             units = pop_to(attributes, encoding, 'units')
             data = DecodedCFTimedeltaArray(data, units)
+
+    if decode_endianness and not data.dtype.isnative:
+        # do this last, so it's only done if we didn't already unmask/scale
+        data = NativeEndiannessArray(data)
+        original_dtype = data.dtype
+
+    if 'dtype' in encoding:
+        if original_dtype != encoding['dtype']:
+            warnings.warn("CF decoding is overwriting dtype")
+    else:
+        encoding['dtype'] = original_dtype
+
 
     return Variable(dimensions, indexing.LazilyIndexedArray(data),
                     attributes, encoding=encoding)
