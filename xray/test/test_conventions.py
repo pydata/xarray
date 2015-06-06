@@ -411,6 +411,16 @@ class TestDatetime(TestCase):
         self.assertIn('(time) datetime64[ns]', repr(ds))
 
 
+class TestNativeEndiannessArray(TestCase):
+    def test(self):
+        x = np.arange(5, dtype='>i8')
+        expected = np.arange(5, dtype='int64')
+        a = conventions.NativeEndiannessArray(x)
+        assert a.dtype == expected.dtype
+        assert a.dtype == expected[:].dtype
+        self.assertArrayEqual(a, expected)
+
+
 @requires_netCDF4
 class TestEncodeCFVariable(TestCase):
     def test_incompatible_attributes(self):

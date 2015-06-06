@@ -598,6 +598,12 @@ class ScipyOnDiskDataTest(CFEncodedDataTest, Only32BitTypes, TestCase):
                 with open_example_dataset('example_1.nc') as actual:
                     self.assertDatasetIdentical(expected, actual)
 
+    def test_netcdf3_endianness(self):
+        # regression test for GH416
+        expected = open_example_dataset('bears.nc', engine='scipy')
+        for var in expected.values():
+            self.assertTrue(var.dtype.isnative)
+
 
 @requires_netCDF4
 class NetCDF3ViaNetCDF4DataTest(CFEncodedDataTest, Only32BitTypes, TestCase):
