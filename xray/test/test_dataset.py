@@ -1434,6 +1434,15 @@ class TestDataset(TestCase):
         expected['dim1'] = dim
         self.assertDatasetIdentical(expected, concat(datasets, dim))
 
+    def test_concat_constant_index(self):
+        # GH425
+        ds1 = Dataset({'foo': 1.5}, {'y': 1})
+        ds2 = Dataset({'foo': 2.5}, {'y': 1})
+        expected = Dataset({'foo': ('y', [1.5, 2.5]), 'y': [1, 1]})
+        for mode in ['different', 'all', 'minimal']:
+            actual = concat([ds1, ds2], 'y', mode=mode)
+            self.assertDatasetIdentical(expected, actual)
+
     def test_concat_errors(self):
         data = create_test_data()
         split_data = [data.isel(dim1=slice(10)),

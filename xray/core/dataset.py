@@ -1664,8 +1664,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject):
                            for ds in datasets[1:])
             # all nonindexes that are not the same in each dataset
             concat_over.update(k for k, v in datasets[0].variables.items()
-                               if k not in datasets[0].dims
-                               and k not in concat_over and differs(k, v))
+                               if k not in datasets[0].dims and differs(k, v))
         elif mode == 'all':
             # concatenate all non-dimensions
             concat_over.update(set(datasets[0]) - set(datasets[0].dims))
@@ -1677,6 +1676,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject):
             raise ValueError("unexpected value for mode: %s" % mode)
 
         # automatically concatenate over variables along the dimension
+        if dim in datasets[0]:
+            concat_over.add(dim)
         concat_over.update(k for k, v in datasets[0].variables.items()
                            if dim in v.dims)
 
