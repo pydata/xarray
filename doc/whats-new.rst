@@ -9,7 +9,7 @@ What's New
     import xray
     np.random.seed(123456)
 
-v0.5 (1 June 2005)
+v0.5 (1 June 2015)
 ------------------
 
 Highlights
