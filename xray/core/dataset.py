@@ -1612,6 +1612,10 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject):
         defined. Assigning multiple variables within the same ``assign`` is
         possible, but you cannot reference other variables created within the
         same ``assign`` call.
+
+        See Also
+        --------
+        pandas.DataFrame.assign
         """
         data = self.copy()
         # do all calculations first...
