@@ -134,12 +134,19 @@ def convert_label_indexer(index, label, index_name='', method=None):
     """
     if isinstance(label, slice):
         if method is not None:
-            raise NotImplementedError(
-                'cannot yet use the ``method`` argument if any indexers are '
-                'slice objects')
-        indexer = index.slice_indexer(_try_get_item(label.start),
-                                      _try_get_item(label.stop),
-                                      _try_get_item(label.step))
+            if method is 'nearest':
+                start = _get_loc(index, label.start, method=method)
+                stop = _get_loc(index, label.stop, method=method)
+                # python indexing excludes the last item
+                indexer = slice(start, stop + 1, label.step)
+            else:
+                raise NotImplementedError(
+                    'cannot only use the ``nearest`` argument if any indexers '
+                    'are slice objects')
+        else:
+            indexer = index.slice_indexer(_try_get_item(label.start),
+                                          _try_get_item(label.stop),
+                                          _try_get_item(label.step))
     else:
         label = np.asarray(label)
         if label.ndim == 0:
