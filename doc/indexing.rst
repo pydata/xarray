@@ -314,13 +314,27 @@ enabling nearest neighbor (inexact) lookups by use of the methods ``'pad'``,
 Using ``method='nearest'`` or a scalar argument with ``.sel()`` requires pandas
 version 0.16 or newer.
 
-.. note::
+The method parameter is not yet supported if any of the arguments
+to ``.sel()`` is a ``slice`` object:
 
-    The method parameter is not yet supported if any of the arguments
-    to ``.sel()`` is a ``slice`` object:
+.. ipython::
+    :verbatim:
 
-    .. ipython::
-        :verbatim:
+    In [1]: data.sel(x=slice(1, 3), method='nearest')
+    NotImplementedError
 
-        In [1]: data.sel(x=slice(1, 3), method='nearest')
-        NotImplementedError
+However, you don't need to use ``method`` to do inexact slicing. Slicing
+already returns all values inside the range (inclusive), as long as the index
+labels are monotonic increasing:
+
+.. ipython:: python
+
+    data.sel(x=slice(0.9, 3.1))
+
+Indexing axes with monotonic decreasing labels also works, as long as the
+``slice`` or ``.loc`` arguments are also decreasing:
+
+.. ipython:: python
+
+    reversed_data = data[::-1]
+    reversed_data.loc[3.1:0.9]
