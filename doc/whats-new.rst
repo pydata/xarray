@@ -37,7 +37,10 @@ The headline feature in this release is experimental support for out-of-core
 computing (data that doesn't fit into memory) with dask_. This includes a new
 top-level function :py:func:`~xray.open_mfdataset` that makes it easy to open
 a collection of netCDF (using dask) as a single ``xray.Dataset`` object. For
-more on dask, read the new documentation section :doc:`dask`.
+more on dask, read the `blog post introducing xray + dask`_ and the new
+documentation section :doc:`dask`.
+
+.. _blog post introducing xray + dask: http://continuum.io/blog/xray-dask
 
 Dask makes it possible to harness parallelism and manipulate gigantic datasets
 with xray. It is currently an optional dependency, but it may become required
