@@ -188,6 +188,65 @@ class BaseDataObject(AttrAccessMixin):
         data.coords.update(results)
         return data
 
+    def pipe(self, func, *args, **kwargs):
+        """
+        Apply func(self, *args, **kwargs)
+
+        This method replicates the pandas method of the same name.
+
+        Parameters
+        ----------
+        func : function
+            function to apply to this xray object (Dataset/DataArray).
+            ``args``, and ``kwargs`` are passed into ``func``.
+            Alternatively a ``(callable, data_keyword)`` tuple where
+            ``data_keyword`` is a string indicating the keyword of
+            ``callable`` that expects the xray object.
+        args : positional arguments passed into ``func``.
+        kwargs : a dictionary of keyword arguments passed into ``func``.
+
+        Returns
+        -------
+        object : the return type of ``func``.
+
+        Notes
+        -----
+
+        Use ``.pipe`` when chaining together functions that expect
+        xray or pandas objects, e.g., instead of writing
+
+        >>> f(g(h(ds), arg1=a), arg2=b, arg3=c)
+
+        You can write
+
+        >>> (ds.pipe(h)
+        ...    .pipe(g, arg1=a)
+        ...    .pipe(f, arg2=b, arg3=c)
+        ... )
+
+        If you have a function that takes the data as (say) the second
+        argument, pass a tuple indicating which keyword expects the
+        data. For example, suppose ``f`` takes its data as ``arg2``:
+
+        >>> (ds.pipe(h)
+        ...    .pipe(g, arg1=a)
+        ...    .pipe((f, 'arg2'), arg1=a, arg3=c)
+        ...  )
+
+        See Also
+        --------
+        pandas.DataFrame.pipe
+        """
+        if isinstance(func, tuple):
+            func, target = func
+            if target in kwargs:
+                msg = '%s is both the pipe target and a keyword argument' % target
+                raise ValueError(msg)
+            kwargs[target] = self
+            return func(*args, **kwargs)
+        else:
+            return func(self, *args, **kwargs)
+
     def groupby(self, group, squeeze=True):
         """Returns a GroupBy object for performing grouped operations.
 

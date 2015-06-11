@@ -334,44 +334,82 @@ a ``Dataset`` variable using ``__setitem__`` or ``update`` will
 :ref:`automatically align<update>` the array(s) to the original
 dataset's indexes.
 
-Modifying datasets
-~~~~~~~~~~~~~~~~~~
+You can copy a ``Dataset`` by calling the :py:meth:`~xray.Dataset.copy`
+method. By default, the copy is shallow, so only the container will be copied:
+the arrays in the ``Dataset`` will still be stored in the same underlying
+:py:class:`numpy.ndarray` objects. You can copy all data by calling
+``ds.copy(deep=True)``.
 
-You can copy a ``Dataset`` by using the :py:meth:`~xray.Dataset.copy` method:
+.. _transforming datasets:
 
-.. ipython:: python
+Transforming datasets
+~~~~~~~~~~~~~~~~~~~~~
 
-    ds.copy()
+In addition to dictionary-like methods (described above), xray has additional
+methods (like pandas) for transforming datasets into new objects.
 
-By default, the copy is shallow, so only the container will be copied: the
-arrays in the ``Dataset`` will still be stored in the same underlying
-:py:class:`numpy.ndarray` objects. You can copy all data by supplying the
-argument ``deep=True``.
-
-You also can select and drop an explicit list of variables by using the
-by indexing with a list of names or using the
+For removing variables, you can select and drop an explicit list of
+variables by using the by indexing with a list of names or using the
 :py:meth:`~xray.Dataset.drop` methods to return a new ``Dataset``. These
 operations keep around coordinates:
 
 .. ipython:: python
 
-    ds[['temperature']]
-    ds[['x']]
+    list(ds[['temperature']])
+    list(ds[['x']])
+    list(ds.drop('temperature'))
 
 If a dimension name is given as an argument to ``drop``, it also drops all
 variables that use that dimension:
 
 .. ipython:: python
 
-    ds.drop('time')
+    list(ds.drop('time'))
 
-Another useful option is the ability to rename the variables in a dataset:
+As an alternate to dictionary-like modifications, you can use
+:py:meth:`~xray.Dataset.assign` and :py:meth:`~xray.Dataset.assign_coords`.
+These methods return a new dataset with additional (or replaced) or values:
+
+.. ipython:: python
+
+    ds.assign(temperature2 = 2 * ds.temperature)
+
+There is also the :py:meth:`~xray.Dataset.pipe` method that allows you to use
+a method call with an external function (e.g., ``ds.pipe(func)``) instead of
+simply calling it (e.g., ``func(ds)``). This allows you to write pipelines for
+transforming you data (using "method chaining") instead of writing hard to
+follow nested function calls:
+
+.. ipython:: python
+
+    # these lines are equivalent, but with pipe we can make the logic flow
+    # entirely from left to right
+    plt.plot((2 * ds.temperature.sel(x=0)).mean('y'))
+    (ds.temperature
+     .sel(x=0)
+     .pipe(lambda x: 2 * x)
+     .mean('y')
+     .pipe(plt.plot))
+
+Both ``pipe`` and ``assign`` replicate the pandas methods of the same name.
+
+With xray, there is no performance penalty for creating new datasets, even if
+variables are lazily loaded from a file on disk. Creating new objects instead
+of mutating existing objects often results in easier to understand code, so we
+encourage using this approach.
+
+Renaming variables
+~~~~~~~~~~~~~~~~~~
+
+Another useful option is the :py:meth:`~xray.Dataset.rename` method to rename
+dataset variables:
 
 .. ipython:: python
 
     ds.rename({'temperature': 'temp', 'precipitation': 'precip'})
 
-Finally, you can use :py:meth:`~xray.Dataset.swap_dims` to swap dimension and non-dimension variables:
+Finally, you can use :py:meth:`~xray.Dataset.swap_dims` to swap dimension and
+non-dimension variables:
 
 .. ipython:: python
 
