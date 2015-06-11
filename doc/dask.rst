@@ -10,6 +10,11 @@ Currently, dask is an entirely optional feature for xray. However, the
 benefits of using dask are sufficiently strong that we expect that dask may
 become a requirement for a future version of xray.
 
+For a full example of how to use xray's dask integration, read the
+`blog post introducing xray + dask`_.
+
+.. _blog post introducing xray + dask: http://continuum.io/blog/xray-dask
+
 What is a dask array?
 ---------------------
 
