@@ -391,7 +391,9 @@ follow nested function calls:
      .mean('y')
      .pipe(plt.plot))
 
-Both ``pipe`` and ``assign`` replicate the pandas methods of the same name.
+Both ``pipe`` and ``assign`` replicate the pandas methods of the same names
+(:py:meth:`DataFrame.pipe <pandas.DataFrame.pipe>` and
+:py:meth:`DataFrame.assign <pandas.DataFrame.assign>`).
 
 With xray, there is no performance penalty for creating new datasets, even if
 variables are lazily loaded from a file on disk. Creating new objects instead

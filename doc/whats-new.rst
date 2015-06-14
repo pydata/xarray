@@ -15,11 +15,13 @@ v0.5.1 (unreleased)
 Enhancements
 ~~~~~~~~~~~~
 
-- Added :py:meth:`~xray.Dataset.pipe`, replicating the new pandas method in version
+- Added :py:meth:`~xray.Dataset.pipe`, replicating the `new pandas method`_ in version
   0.16.2. See :doc:`transforming datasets` for more details.
 - :py:meth:`~xray.Dataset.assign` and :py:meth:`~xray.Dataset.assign_coords`
   now assign new variables in sorted (alphabetical) order, mirroring the
   behavior in pandas. Previously, the order was arbitrary.
+
+.. _new pandas method: http://pandas.pydata.org/pandas-docs/version/0.16.2/whatsnew.html#pipe
 
 Bug fixes
 ~~~~~~~~~
