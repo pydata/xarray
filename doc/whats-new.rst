@@ -9,8 +9,11 @@ What's New
     import xray
     np.random.seed(123456)
 
-v0.5.1 (unreleased)
--------------------
+v0.5.1 (15 June 2015)
+---------------------
+
+This minor release fixes a few bugs and inconsistencies with pandas. It adds the
+``pipe``, copied from pandas.
 
 Enhancements
 ~~~~~~~~~~~~
@@ -26,11 +29,10 @@ Enhancements
 Bug fixes
 ~~~~~~~~~
 
-- `xray.concat` fails in an edge case involving identical coordinate variables (:issue:`425`)
+- ``xray.concat`` fails in an edge case involving identical coordinate variables (:issue:`425`)
 - We now decode variables loaded from netCDF3 files with the scipy engine using native
-  endianness (:issue:`416`). This eliminates some strange errors that occured
-  when performing aggregations with bottleneck or after converting an xray
-  dataset to pandas.
+  endianness (:issue:`416`). This resolves an issue when aggregating these arrays with
+  bottleneck installed.
 
 v0.5 (1 June 2015)
 ------------------
