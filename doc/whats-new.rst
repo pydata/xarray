@@ -12,8 +12,8 @@ What's New
 v0.5.1 (15 June 2015)
 ---------------------
 
-This minor release fixes a few bugs and inconsistencies with pandas. It adds the
-``pipe``, copied from pandas.
+This minor release fixes a few bugs and an inconsistency with pandas. It also
+adds the ``pipe`` method, copied from pandas.
 
 Enhancements
 ~~~~~~~~~~~~
