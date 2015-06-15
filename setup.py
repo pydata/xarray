@@ -8,8 +8,8 @@ from setuptools import setup, find_packages
 
 MAJOR = 0
 MINOR = 5
-MICRO = 0
-ISRELEASED = False
+MICRO = 1
+ISRELEASED = True
 VERSION = '%d.%d.%d' % (MAJOR, MINOR, MICRO)
 QUALIFIER = ''
 
@@ -20,7 +20,7 @@ AUTHOR = 'xray Developers'
 AUTHOR_EMAIL = 'xray-dev@googlegroups.com'
 URL = 'https://github.com/xray/xray'
 CLASSIFIERS = [
-    'Development Status :: 3 - Alpha',
+    'Development Status :: 4 - Beta',
     'License :: OSI Approved :: Apache Software License',
     'Operating System :: OS Independent',
     'Intended Audience :: Science/Research',
