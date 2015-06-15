@@ -41,13 +41,18 @@ class ScipyArrayWrapper(NumpyIndexingAdapter):
         # having read all data in the file.
         return self.netcdf_file.variables[self.variable_name].data
 
+    @property
+    def dtype(self):
+        # always use native endianness
+        return np.dtype(self.array.dtype.kind + str(self.array.dtype.itemsize))
+
     def __getitem__(self, key):
         data = super(ScipyArrayWrapper, self).__getitem__(key)
-        if self.netcdf_file.use_mmap:
-            # Always copy data if the source file is mmapped. This makes things
-            # consistent with the netCDF4 library by ensuring we can safely
-            # read arrays even after closing associated files.
-            data = data.copy()
+        # Copy data if the source file is mmapped. This makes things consistent
+        # with the netCDF4 library by ensuring we can safely read arrays even
+        # after closing associated files.
+        copy = self.netcdf_file.use_mmap
+        data = np.array(data, dtype=self.dtype, copy=copy)
         return data
 
 
