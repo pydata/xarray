@@ -1176,9 +1176,10 @@ class TestDataset(TestCase):
 
     def test_assign(self):
         ds = Dataset()
-        actual = ds.assign(x = [0, 1, 2])
-        expected = Dataset({'x': [0, 1, 2]})
+        actual = ds.assign(x = [0, 1, 2], y = 2)
+        expected = Dataset({'x': [0, 1, 2], 'y': 2})
         self.assertDatasetIdentical(actual, expected)
+        self.assertEqual(list(actual), ['x', 'y'])
         self.assertDatasetIdentical(ds, Dataset())
 
         actual = actual.assign(y = lambda ds: ds.x ** 2)

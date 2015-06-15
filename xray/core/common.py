@@ -5,6 +5,7 @@ import pandas as pd
 
 from .pycompat import basestring, iteritems
 from . import formatting
+from .utils import SortedKeysDict
 
 
 class ImplementsArrayReduce(object):
@@ -145,7 +146,7 @@ class AttrAccessMixin(object):
 
 class BaseDataObject(AttrAccessMixin):
     def _calc_assign_results(self, kwargs):
-        results = {}
+        results = SortedKeysDict()
         for k, v in kwargs.items():
             if callable(v):
                 results[k] = v(self)

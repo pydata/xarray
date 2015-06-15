@@ -66,6 +66,7 @@ Dataset contents
    Dataset.copy
    Dataset.assign
    Dataset.assign_coords
+   Dataset.pipe
    Dataset.merge
    Dataset.rename
    Dataset.swap_dims
