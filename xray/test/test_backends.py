@@ -675,6 +675,7 @@ class GenericNetCDFDataTest(CFEncodedDataTest, Only32BitTypes, TestCase):
 
 
 @requires_h5netcdf
+@requires_netCDF4
 class H5NetCDFDataTest(BaseNetCDF4Test, TestCase):
     @contextlib.contextmanager
     def create_store(self):
