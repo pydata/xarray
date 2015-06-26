@@ -391,3 +391,15 @@ def close_on_error(f):
 
 def is_remote_uri(path):
     return bool(re.search('^https?\://', path))
+
+
+def plotmethod(func):
+    """Decorator to lazily import matplotlib.
+    """
+    import matplotlib.pyplot as plt
+
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        return func(*args, **kwargs)
+
+    return wrapper
