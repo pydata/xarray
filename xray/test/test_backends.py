@@ -715,6 +715,15 @@ class DaskTest(TestCase):
         with self.assertRaisesRegexp(IOError, 'no files to open'):
             open_mfdataset('foo-bar-baz-*.nc')
 
+    def test_preprocess_mfdataset(self):
+        original = Dataset({'foo': ('x', np.random.randn(10))})
+        with create_tmp_file() as tmp:
+            original.to_netcdf(tmp)
+            preprocess = lambda ds: ds.assign_coords(z=0)
+            expected = preprocess(original)
+            with open_mfdataset(tmp, preprocess=preprocess) as actual:
+                self.assertDatasetIdentical(expected, actual)
+
     def test_open_and_do_math(self):
         original = Dataset({'foo': ('x', np.random.randn(10))})
         with create_tmp_file() as tmp:

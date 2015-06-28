@@ -9,6 +9,17 @@ What's New
     import xray
     np.random.seed(123456)
 
+v0.5.2 (unreleased)
+-------------------
+
+Enhancements
+~~~~~~~~~~~~
+
+- :py:func:`~xray.open_mfdataset` now supports a ``preprocess`` argument for
+  preprocessing datasets prior to concatenaton. This is useful if datasets
+  cannot be otherwise merged automatically, e.g., if the original datasets
+  have conflicting index coordinates.
+
 v0.5.1 (15 June 2015)
 ---------------------
 

@@ -161,7 +161,8 @@ class _MultiFileCloser(object):
             f.close()
 
 
-def open_mfdataset(paths, chunks=None, concat_dim=None, **kwargs):
+def open_mfdataset(paths, chunks=None, concat_dim=None, preprocess=None,
+                   **kwargs):
     """Open multiple files as a single dataset.
 
     Experimental. Requires dask to be installed.
@@ -183,6 +184,8 @@ def open_mfdataset(paths, chunks=None, concat_dim=None, **kwargs):
         need to provide this argument if the dimension along which you want to
         concatenate is not a dimension in the original datasets, e.g., if you
         want to stack a collection of 2D arrays along a third dimension.
+    preprocess : callable, optional
+        If provided, call this function on each dataset prior to concatenation.
     **kwargs : optional
         Additional arguments passed on to :py:func:`xray.open_dataset`.
 
@@ -202,6 +205,8 @@ def open_mfdataset(paths, chunks=None, concat_dim=None, **kwargs):
     datasets = [open_dataset(p, **kwargs) for p in paths]
     file_objs = [ds._file_obj for ds in datasets]
     datasets = [ds.chunk(chunks) for ds in datasets]
+    if preprocess is not None:
+        datasets = [preprocess(ds) for ds in datasets]
     combined = auto_combine(datasets, concat_dim=concat_dim)
     combined._file_obj = _MultiFileCloser(file_objs)
     return combined
