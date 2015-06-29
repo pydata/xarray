@@ -9,27 +9,20 @@ from xray import (Dataset, DataArray)
 from . import TestCase
 
 
-class PlotTestCase(TestCase):
+class TestDataArray(TestCase):
 
     def setUp(self):
         d = [0, 1, 0, 2]
-        self.dv = DataArray(d, coords={'period': range(len(d))})
+        self.darray = DataArray(d, coords={'period': range(len(d))})
 
     def tearDown(self):
         # Remove all matplotlib figures
-        pass
-
-
-class TestBasics(PlotTestCase):
-
-    # Not sure how to test this
-    def test_matplotlib_not_imported(self):
-        # Doesn't work. Keeping so I remember to change it.
-        #self.assertFalse('matplotlib' in sys.modules)
-        pass
-
-
-class TestDataArray(PlotTestCase):
+        plt.close('all')
 
     def test_plot_exists_and_callable(self):
-        self.assertTrue(callable(self.dv.plot))
+        self.assertTrue(callable(self.darray.plot))
+
+    def test_xlabel_is_coordinate_name(self):
+        self.darray.plot()
+        xlabel = plt.gca().get_xlabel()
+        self.assertEqual(xlabel, 'period')

@@ -13,7 +13,7 @@ from .alignment import align
 from .common import AbstractArray, BaseDataObject
 from .coordinates import DataArrayCoordinates, Indexes
 from .dataset import Dataset
-from .plotting import _plot
+from .plotting import _plot_dataarray
 from .pycompat import iteritems, basestring, OrderedDict, zip
 from .utils import FrozenOrderedDict
 from .variable import as_variable, _as_compatible_data, Coordinate
@@ -1075,8 +1075,9 @@ class DataArray(AbstractArray, BaseDataObject):
         return func
 
 
-DataArray.plot = _plot
+# Add plotting methods
 
+DataArray.plot = _plot_dataarray
 
 # priority most be higher than Variable to properly work with binary ufuncs
 ops.inject_all_ops_and_reduce_methods(DataArray, priority=60)
