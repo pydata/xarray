@@ -1,14 +1,14 @@
 Plotting
 ========
 
-xray tries to create reasonable plots based on metadata and the array
+xray tries to create reasonable labeled plots based on metadata and the array
 dimensions.
 
 But it's not always obvious what to plot. A wise man once said:
 'In the face of ambiguity, refuse the temptation to guess.'
-So try to use the ``plot`` methods, and if you see 
-a ``ValueError`` then 
-hopefully the error message will point you in the right direction.
+So don't be scared if you see some ``ValueError``'s when 
+trying to plot, it just means you may need to get the data into a form
+where plotting is more natural.
 
 Examples
 --------
@@ -22,19 +22,23 @@ To begin, import numpy, pandas and xray:
     import xray
     import matplotlib.pyplot as plt
 
-Simple
-~~~~~~
+Sin Function
+~~~~~~~~~~~~
 
-This is as basic as it comes. xray uses the coordinate name to label the x
-axis.
+Here is a simple example of plotting. 
+Xray uses the coordinate name to label the x axis.
 
 .. ipython:: python
 
+    x = np.linspace(0, 2*np.pi)
+    a = xray.DataArray(np.sin(x), {'x': x}, name='sin(x)')
+
+    # TODO- use xray method
     @savefig plotting_example_simple.png
     plt.plot((0, 1), (0, 1))
 
-Multivariate Normal
-~~~~~~~~~~~~~~~~~~~
+Multivariate Normal Density
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Consider the density for a two dimensional normal distribution
 evaluated on a square grid.
