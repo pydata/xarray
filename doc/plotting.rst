@@ -15,6 +15,7 @@ To begin, import numpy, pandas and xray:
     import xray
     import matplotlib.pyplot as plt
 
+    @savefig plotting_example1.png
     plt.plot((0, 1), (0, 1))
 
 Rules
