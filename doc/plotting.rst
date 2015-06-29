@@ -34,8 +34,8 @@ Xray uses the coordinate name to label the x axis.
     a = xray.DataArray(np.sin(x), {'x': x}, name='sin(x)')
 
     # TODO- use xray method
-    @savefig plotting_example_simple.png
-    plt.plot((0, 1), (0, 1))
+    @savefig plotting_example_sin.png
+    a.plot()
 
 Multivariate Normal Density
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
