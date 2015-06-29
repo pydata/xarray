@@ -38,7 +38,7 @@ def _get_default_engine(path, allow_remote=False):
 def open_dataset(filename_or_obj, group=None, decode_cf=True,
                  mask_and_scale=True, decode_times=True,
                  concat_characters=True, decode_coords=True, engine=None,
-                 chunks=None):
+                 chunks=None, lock=True):
     """Load and decode a dataset from a file or file-like object.
 
     Parameters
@@ -79,6 +79,10 @@ def open_dataset(filename_or_obj, group=None, decode_cf=True,
         If chunks is provided, it used to load the new dataset into dask
         arrays. This is an experimental feature; see the documentation for more
         details.
+    lock : optional
+        If chunks is provided, this argument is passed on to
+        :py:func:`dask.array.from_array`. By default, a lock is used to avoid
+        issues with concurrent access with dask's multithreaded backend.
 
     Returns
     -------
@@ -100,7 +104,7 @@ def open_dataset(filename_or_obj, group=None, decode_cf=True,
             store, mask_and_scale=mask_and_scale, decode_times=decode_times,
             concat_characters=concat_characters, decode_coords=decode_coords)
         if chunks is not None:
-            ds = ds.chunk(chunks)
+            ds = ds.chunk(chunks, lock=lock)
         return ds
 
     if isinstance(filename_or_obj, backends.AbstractDataStore):
@@ -161,7 +165,8 @@ class _MultiFileCloser(object):
             f.close()
 
 
-def open_mfdataset(paths, chunks=None, concat_dim=None, **kwargs):
+def open_mfdataset(paths, chunks=None, concat_dim=None, preprocess=None,
+                   lock=True, **kwargs):
     """Open multiple files as a single dataset.
 
     Experimental. Requires dask to be installed.
@@ -183,6 +188,12 @@ def open_mfdataset(paths, chunks=None, concat_dim=None, **kwargs):
         need to provide this argument if the dimension along which you want to
         concatenate is not a dimension in the original datasets, e.g., if you
         want to stack a collection of 2D arrays along a third dimension.
+    preprocess : callable, optional
+        If provided, call this function on each dataset prior to concatenation.
+    lock : optional
+        This argument is passed on to :py:func:`dask.array.from_array`. By
+        default, a lock is used to avoid issues with concurrent access with
+        dask's multithreaded backend.
     **kwargs : optional
         Additional arguments passed on to :py:func:`xray.open_dataset`.
 
@@ -201,7 +212,9 @@ def open_mfdataset(paths, chunks=None, concat_dim=None, **kwargs):
         raise IOError('no files to open')
     datasets = [open_dataset(p, **kwargs) for p in paths]
     file_objs = [ds._file_obj for ds in datasets]
-    datasets = [ds.chunk(chunks) for ds in datasets]
+    datasets = [ds.chunk(chunks, lock=lock) for ds in datasets]
+    if preprocess is not None:
+        datasets = [preprocess(ds) for ds in datasets]
     combined = auto_combine(datasets, concat_dim=concat_dim)
     combined._file_obj = _MultiFileCloser(file_objs)
     return combined

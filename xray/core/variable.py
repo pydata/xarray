@@ -413,7 +413,7 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
 
     _array_counter = itertools.count()
 
-    def chunk(self, chunks=None, name=''):
+    def chunk(self, chunks=None, name='', lock=False):
         """Coerce this array's data into a dask arrays with the given chunks.
 
         If this variable is a non-dask array, it will be converted to dask
@@ -432,6 +432,9 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
         name : str, optional
             Used to generate the name for this array in the internal dask
             graph. Does not need not be unique.
+        lock : optional
+            Passed on to :py:func:`dask.array.from_array`, if the array is not
+            already as dask array.
 
         Returns
         -------
@@ -458,7 +461,7 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
                 chunks = tuple(chunks.get(n, s)
                                for n, s in enumerate(self.shape))
 
-            data = da.from_array(data, chunks, name=name)
+            data = da.from_array(data, chunks, name=name, lock=lock)
 
         return type(self)(self.dims, data, self._attrs, self._encoding,
                           fastpath=True)

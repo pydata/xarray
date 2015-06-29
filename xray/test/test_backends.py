@@ -1,4 +1,5 @@
 from io import BytesIO
+from threading import Lock
 import contextlib
 import os.path
 import pickle
@@ -715,6 +716,26 @@ class DaskTest(TestCase):
         with self.assertRaisesRegexp(IOError, 'no files to open'):
             open_mfdataset('foo-bar-baz-*.nc')
 
+    def test_preprocess_mfdataset(self):
+        original = Dataset({'foo': ('x', np.random.randn(10))})
+        with create_tmp_file() as tmp:
+            original.to_netcdf(tmp)
+            preprocess = lambda ds: ds.assign_coords(z=0)
+            expected = preprocess(original)
+            with open_mfdataset(tmp, preprocess=preprocess) as actual:
+                self.assertDatasetIdentical(expected, actual)
+
+    def test_lock(self):
+        original = Dataset({'foo': ('x', np.random.randn(10))})
+        with create_tmp_file() as tmp:
+            original.to_netcdf(tmp)
+            with open_dataset(tmp, chunks=10) as ds:
+                task = ds.foo.data.dask[ds.foo.data.name, 0]
+                self.assertIsInstance(task[-1], type(Lock()))
+            with open_mfdataset(tmp) as ds:
+                task = ds.foo.data.dask[ds.foo.data.name, 0]
+                self.assertIsInstance(task[-1], type(Lock()))
+
     def test_open_and_do_math(self):
         original = Dataset({'foo': ('x', np.random.randn(10))})
         with create_tmp_file() as tmp:
@@ -730,10 +751,12 @@ class DaskTest(TestCase):
             with open_dataset(tmp, chunks={'x': 5}) as actual:
                 self.assertIsInstance(actual.foo.variable.data, da.Array)
                 self.assertEqual(actual.foo.variable.data.chunks, ((5, 5),))
-                self.assertDatasetAllClose(original, actual)
+                self.assertDatasetIdentical(original, actual)
+            with open_dataset(tmp, chunks=5) as actual:
+                self.assertDatasetIdentical(original, actual)
             with open_dataset(tmp) as actual:
                 self.assertIsInstance(actual.foo.variable.data, np.ndarray)
-                self.assertDatasetAllClose(original, actual)
+                self.assertDatasetIdentical(original, actual)
 
     def test_dask_roundtrip(self):
         with create_tmp_file() as tmp:

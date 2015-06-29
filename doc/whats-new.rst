@@ -9,6 +9,27 @@ What's New
     import xray
     np.random.seed(123456)
 
+v0.5.2 (unreleased)
+-------------------
+
+Enhancements
+~~~~~~~~~~~~
+
+- :py:func:`~xray.open_mfdataset` now supports a ``preprocess`` argument for
+  preprocessing datasets prior to concatenaton. This is useful if datasets
+  cannot be otherwise merged automatically, e.g., if the original datasets
+  have conflicting index coordinates (:issue:`443`).
+- :py:func:`~xray.open_dataset` and :py:func:`~xray.open_mfdataset` now use a
+  thread lock by default for reading from netCDF files. This avoids possible
+  segmentation faults for reading from netCDF4 files when HDF5 is not
+  configured properly for concurrent access (:issue:`444`).
+
+Bug fixes
+~~~~~~~~~
+
+- :py:func:`~xray.open_dataset` and :py:func:`~xray.open_mfdataset` support
+  supplying chunks as a single integer.
+
 v0.5.1 (15 June 2015)
 ---------------------
 
