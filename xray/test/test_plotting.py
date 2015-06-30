@@ -9,8 +9,9 @@ from . import TestCase, requires_matplotlib
 
 try:
     import matplotlib
-    # Allows use of Travis CI. Order of imports is important here
+    # Using a different backend makes Travis CI work.
     matplotlib.use('Agg')
+    # Order of imports is important here.
     import matplotlib.pyplot as plt
 except ImportError:
     pass
@@ -50,12 +51,12 @@ class Test2dDataArray(PlotTestCase):
 
     def setUp(self):
         self.darray = DataArray(np.random.randn(10, 15), 
-                dims=['long', 'lat'])
+                dims=['y', 'x'])
 
     @requires_matplotlib
     def test_label_names(self):
         self.darray.plot_contourf()
         xlabel = plt.gca().get_xlabel()
         ylabel = plt.gca().get_ylabel()
-        self.assertEqual(xlabel, 'long')
-        self.assertEqual(ylabel, 'lat')
+        self.assertEqual(xlabel, 'x')
+        self.assertEqual(ylabel, 'y')
