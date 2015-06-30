@@ -27,6 +27,12 @@ class TestSimpleDataArray(PlotTestCase):
         xlabel = plt.gca().get_xlabel()
         self.assertEqual(xlabel, 'period')
 
+    def test_ylabel_is_data_name(self):
+        self.darray.name = 'temperature'
+        self.darray.plot()
+        ylabel = plt.gca().get_ylabel()
+        self.assertEqual(ylabel, self.darray.name)
+
 
 class Test2dDataArray(PlotTestCase):
 
