@@ -9,20 +9,34 @@ from xray import (Dataset, DataArray)
 from . import TestCase
 
 
-class TestDataArray(TestCase):
-
-    def setUp(self):
-        d = [0, 1, 0, 2]
-        self.darray = DataArray(d, coords={'period': range(len(d))})
+class PlotTestCase(TestCase):
 
     def tearDown(self):
         # Remove all matplotlib figures
         plt.close('all')
 
-    def test_plot_exists_and_callable(self):
-        self.assertTrue(callable(self.darray.plot))
 
-    def test_xlabel_is_coordinate_name(self):
+class TestSimpleDataArray(PlotTestCase):
+
+    def setUp(self):
+        d = [0, 1, 0, 2]
+        self.darray = DataArray(d, coords={'period': range(len(d))})
+
+    def test_xlabel_is_index_name(self):
         self.darray.plot()
         xlabel = plt.gca().get_xlabel()
         self.assertEqual(xlabel, 'period')
+
+
+class Test2dDataArray(PlotTestCase):
+
+    def setUp(self):
+        self.darray = DataArray(np.random.randn(10, 15), 
+                dims=['long', 'lat'])
+
+    def test_label_names(self):
+        self.darray.plot_contourf()
+        xlabel = plt.gca().get_xlabel()
+        ylabel = plt.gca().get_ylabel()
+        self.assertEqual(xlabel, 'long')
+        self.assertEqual(ylabel, 'lat')
