@@ -26,8 +26,13 @@ class PlotTestCase(TestCase):
         # Remove all matplotlib figures
         plt.close('all')
 
+    @requires_matplotlib
+    def test_can_pass_in_axis(self):
+        # TODO
+        pass
 
-class TestSimpleDataArray(PlotTestCase):
+
+class TestPlot(PlotTestCase):
 
     def setUp(self):
         d = [0, 1, 0, 2]
@@ -47,7 +52,19 @@ class TestSimpleDataArray(PlotTestCase):
         self.assertEqual(ylabel, self.darray.name)
 
 
-class Test2dDataArray(PlotTestCase):
+class TestPlotLine(PlotTestCase):
+
+    def setUp(self):
+        d = [0, 1, 0, 2]
+        self.darray = DataArray(d, coords={'period': range(len(d))})
+
+    @requires_matplotlib
+    def test_wrong_dims_raises_valueerror(self):
+        # TODO
+        pass
+
+
+class TestPlotContourf(PlotTestCase):
 
     def setUp(self):
         self.darray = DataArray(np.random.randn(10, 15), 
