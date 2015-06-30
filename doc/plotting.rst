@@ -22,6 +22,13 @@ To begin, import numpy, pandas and xray:
     import xray
     import matplotlib.pyplot as plt
 
+The following line is not necessary, but it makes for a nice style.
+
+.. ipython:: python
+
+    plt.style.use('ggplot')
+
+
 Sin Function
 ~~~~~~~~~~~~
 
@@ -31,9 +38,8 @@ Xray uses the coordinate name to label the x axis.
 .. ipython:: python
 
     x = np.linspace(0, 2*np.pi)
-    a = xray.DataArray(np.sin(x), {'x': x}, name='sin(x)')
+    a = xray.DataArray(np.sin(x), {'time': x}, name='sin(x)')
 
-    # TODO- use xray method
     @savefig plotting_example_sin.png
     a.plot()
 
@@ -41,9 +47,9 @@ Multivariate Normal Density
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Consider the density for a two dimensional normal distribution
-evaluated on a square grid.
-
-.. ipython:: python
+evaluated on a square grid::
+    
+    # TODO this requires scipy as a dependency for docs to build
 
     from scipy.stats import multivariate_normal
 
@@ -58,7 +64,6 @@ evaluated on a square grid.
     # TODO- use xray method
     @savefig plotting_example_2dnormal.png
     plt.contourf(normal.x, normal.y, normal.data)
-
 
 Rules
 -----
