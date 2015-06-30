@@ -2,12 +2,19 @@ import sys
 
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
 
-from xray import (Dataset, DataArray)
+from xray import Dataset, DataArray
 
-from . import TestCase
+from . import TestCase, requires_matplotlib
 
+try:
+    import matplotlib.pyplot as plt
+except ImportError:
+    pass
+
+# TODO - Every test in this file requires matplotlib
+# Hence it's redundant to have to use the decorator on every test
+# How to refactor?
 
 class PlotTestCase(TestCase):
 
@@ -22,11 +29,13 @@ class TestSimpleDataArray(PlotTestCase):
         d = [0, 1, 0, 2]
         self.darray = DataArray(d, coords={'period': range(len(d))})
 
+    @requires_matplotlib
     def test_xlabel_is_index_name(self):
         self.darray.plot()
         xlabel = plt.gca().get_xlabel()
         self.assertEqual(xlabel, 'period')
 
+    @requires_matplotlib
     def test_ylabel_is_data_name(self):
         self.darray.name = 'temperature'
         self.darray.plot()
@@ -40,6 +49,7 @@ class Test2dDataArray(PlotTestCase):
         self.darray = DataArray(np.random.randn(10, 15), 
                 dims=['long', 'lat'])
 
+    @requires_matplotlib
     def test_label_names(self):
         self.darray.plot_contourf()
         xlabel = plt.gca().get_xlabel()

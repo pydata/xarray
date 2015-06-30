@@ -48,6 +48,13 @@ except ImportError:
     has_dask = False
 
 
+try:
+    import matplotlib
+    has_matplotlib = True
+except ImportError:
+    has_matplotlib = False
+
+
 def requires_scipy(test):
     return test if has_scipy else unittest.skip('requires scipy')(test)
 
@@ -71,6 +78,10 @@ def requires_scipy_or_netCDF4(test):
 
 def requires_dask(test):
     return test if has_dask else unittest.skip('requires dask')(test)
+
+
+def requires_matplotlib(test):
+    return test if has_matplotlib else unittest.skip('requires matplotlib')(test)
 
 
 def decode_string_data(data):
