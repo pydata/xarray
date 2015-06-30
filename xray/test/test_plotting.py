@@ -8,6 +8,9 @@ from xray import Dataset, DataArray
 from . import TestCase, requires_matplotlib
 
 try:
+    import matplotlib
+    # Allows use of Travis CI. Order of imports is important here
+    matplotlib.use('Agg')
     import matplotlib.pyplot as plt
 except ImportError:
     pass
