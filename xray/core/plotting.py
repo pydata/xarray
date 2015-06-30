@@ -13,7 +13,7 @@ def _plot_line(darray, *args, **kwargs):
     """
     import matplotlib.pyplot as plt
 
-    xlabel, x = darray.indexes.items()[0]
+    xlabel, x = list(darray.indexes.items())[0]
 
     # Probably should be using the lower level matplotlib API
     plt.plot(x, darray.values, *args, **kwargs)
@@ -31,8 +31,8 @@ def _plot_contourf(darray, *args, **kwargs):
     import matplotlib.pyplot as plt
 
     # x axis is by default the one corresponding to the 0th axis
-    xlabel, x = darray[0].indexes.items()[0]
-    ylabel, y = darray[:, 0].indexes.items()[0]
+    xlabel, x = list(darray[0].indexes.items())[0]
+    ylabel, y = list(darray[:, 0].indexes.items())[0]
 
     # TODO - revisit needing the transpose here
     plt.contourf(x, y, darray.values, *args, **kwargs)

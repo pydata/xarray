@@ -264,6 +264,16 @@ Comparisons
    DataArray.identical
    DataArray.broadcast_equals
 
+Plotting
+--------
+
+.. autosummary::
+   :toctree: generated/
+
+   DataArray.plot
+   DataArray.plot_contourf
+
+
 .. _api.ufuncs:
 
 Universal functions
