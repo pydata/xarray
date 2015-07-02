@@ -1,10 +1,14 @@
 """
-Plotting functions are implemented here and then monkeypatched in to
+Plotting functions are implemented here and also monkeypatched in to
 DataArray and DataSet classes
 """
 
 # TODO - Is there a better way to import matplotlib in the function?
 # Decorators don't preserve the argument names
+
+
+class FacetGrid():
+    pass
 
 
 def _plot_line(darray, *args, **kwargs):
