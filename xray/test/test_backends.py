@@ -751,6 +751,13 @@ class DaskTest(TestCase):
                 with open_mfdataset([tmp1, tmp2]) as actual:
                     self.assertDatasetIdentical(actual, original)
 
+    def test_save_mfdataset_invalid(self):
+        ds = Dataset()
+        with self.assertRaisesRegexp(ValueError, 'cannot use mode'):
+            save_mfdataset([ds, ds], ['same', 'same'])
+        with self.assertRaisesRegexp(ValueError, 'same length'):
+            save_mfdataset([ds, ds], ['only one path'])
+
     def test_open_and_do_math(self):
         original = Dataset({'foo': ('x', np.random.randn(10))})
         with create_tmp_file() as tmp:
