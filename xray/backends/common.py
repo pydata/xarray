@@ -168,6 +168,10 @@ class ArrayWriter(object):
 
 
 class AbstractWritableDataStore(AbstractDataStore):
+    def __init__(self, writer=None):
+        if writer is None:
+            writer = ArrayWriter()
+        self.writer = writer
 
     def set_dimension(self, d, l):  # pragma: no cover
         raise NotImplementedError
@@ -179,7 +183,7 @@ class AbstractWritableDataStore(AbstractDataStore):
         raise NotImplementedError
 
     def sync(self):
-        pass
+        self.writer.sync()
 
     def store_dataset(self, dataset):
         # in stores variables are all variables AND coordinates
@@ -202,12 +206,10 @@ class AbstractWritableDataStore(AbstractDataStore):
             self.set_attribute(k, v)
 
     def set_variables(self, variables):
-        writer = ArrayWriter()
         for vn, v in iteritems(variables):
             name = _encode_variable_name(vn)
             target, source = self.prepare_variable(name, v)
-            writer.add(source, target)
-        writer.sync()
+            self.writer.add(source, target)
 
     def set_necessary_dimensions(self, variable):
         for d, l in zip(variable.dims, variable.shape):

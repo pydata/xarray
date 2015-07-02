@@ -12,13 +12,17 @@ from .netCDF4_ import _nc4_group, _nc4_values_and_dtype
 class H5NetCDFStore(AbstractWritableDataStore):
     """Store for reading and writing data via h5netcdf
     """
-    def __init__(self, filename, mode='r', group=None):
+    def __init__(self, filename, mode='r', format=None, group=None,
+                 writer=None):
         import h5netcdf.legacyapi
+        if format not in [None, 'NETCDF4']:
+            raise ValueError('invalid format for h5netcdf backend')
         ds = h5netcdf.legacyapi.Dataset(filename, mode=mode)
         with close_on_error(ds):
             self.ds = _nc4_group(ds, group, mode)
         self.format = format
         self._filename = filename
+        super(H5NetCDFStore, self).__init__(writer)
 
     def store(self, variables, attributes):
         # All NetCDF files get CF encoded by default, without this attempting
@@ -89,6 +93,7 @@ class H5NetCDFStore(AbstractWritableDataStore):
         return nc4_var, variable.data
 
     def sync(self):
+        super(H5NetCDFStore, self).sync()
         self.ds.sync()
 
     def close(self):

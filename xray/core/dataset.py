@@ -809,13 +809,14 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject):
                 del obj._variables[name]
         return obj
 
-    def dump_to_store(self, store, encoder=None):
+    def dump_to_store(self, store, encoder=None, sync=True):
         """Store dataset contents to a backends.*DataStore object."""
         variables, attrs = conventions.encode_dataset_coordinates(self)
         if encoder:
             variables, attrs = encoder(variables, attrs)
         store.store(variables, attrs)
-        store.sync()
+        if sync:
+            store.sync()
 
     def to_netcdf(self, path=None, mode='w', format=None, group=None,
                   engine=None):

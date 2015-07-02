@@ -1,8 +1,10 @@
 from io import BytesIO
 from threading import Lock
 import contextlib
+import itertools
 import os.path
 import pickle
+import shutil
 import tempfile
 import unittest
 import sys
@@ -11,7 +13,7 @@ import numpy as np
 import pandas as pd
 
 import xray
-from xray import Dataset, open_dataset, open_mfdataset, backends
+from xray import Dataset, open_dataset, open_mfdataset, backends, save_mfdataset
 from xray.backends.common import robust_getitem
 from xray.core.pycompat import iteritems, PY3
 
@@ -339,14 +341,17 @@ class CFEncodedDataTest(DatasetIOTestCases):
                     pass
 
 
+_counter = itertools.count()
+
+
 @contextlib.contextmanager
 def create_tmp_file(suffix='.nc'):
-    f, path = tempfile.mkstemp(suffix=suffix)
-    os.close(f)
+    temp_dir = tempfile.mkdtemp()
+    path = os.path.join(temp_dir, 'temp-%s.%s' % (next(_counter), suffix))
     try:
         yield path
     finally:
-        os.remove(path)
+        shutil.rmtree(temp_dir)
 
 
 class BaseNetCDF4Test(CFEncodedDataTest):
@@ -735,6 +740,16 @@ class DaskTest(TestCase):
             with open_mfdataset(tmp) as ds:
                 task = ds.foo.data.dask[ds.foo.data.name, 0]
                 self.assertIsInstance(task[-1], type(Lock()))
+
+    def test_save_mfdataset_roundtrip(self):
+        original = Dataset({'foo': ('x', np.random.randn(10))})
+        datasets = [original.isel(x=slice(5)),
+                    original.isel(x=slice(5, 10))]
+        with create_tmp_file() as tmp1:
+            with create_tmp_file() as tmp2:
+                save_mfdataset(datasets, [tmp1, tmp2])
+                with open_mfdataset([tmp1, tmp2]) as actual:
+                    self.assertDatasetIdentical(actual, original)
 
     def test_open_and_do_math(self):
         original = Dataset({'foo': ('x', np.random.randn(10))})

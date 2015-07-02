@@ -345,6 +345,7 @@ Dataset methods
    open_dataset
    open_mfdataset
    Dataset.to_netcdf
+   save_mfdataset
    Dataset.to_array
    Dataset.to_dataframe
    Dataset.from_dataframe
