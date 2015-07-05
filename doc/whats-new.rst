@@ -29,6 +29,7 @@ Bug fixes
 
 - :py:func:`~xray.open_dataset` and :py:func:`~xray.open_mfdataset` support
   supplying chunks as a single integer.
+- Fixed a bug in serializing scalar datetime variable to netCDF.
 
 v0.5.1 (15 June 2015)
 ---------------------

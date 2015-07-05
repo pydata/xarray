@@ -184,13 +184,13 @@ class DatasetIOTestCases(object):
 
     def test_roundtrip_datetime_data(self):
         times = pd.to_datetime(['2000-01-01', '2000-01-02', 'NaT'])
-        expected = Dataset({'t': ('t', times)})
+        expected = Dataset({'t': ('t', times), 't0': times[0]})
         with self.roundtrip(expected) as actual:
             self.assertDatasetIdentical(expected, actual)
 
     def test_roundtrip_timedelta_data(self):
         time_deltas = pd.to_timedelta(['1h', '2h', 'NaT'])
-        expected = Dataset({'td': ('td', time_deltas)})
+        expected = Dataset({'td': ('td', time_deltas), 'td0': time_deltas[0]})
         with self.roundtrip(expected) as actual:
             self.assertDatasetIdentical(expected, actual)
 
