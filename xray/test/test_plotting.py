@@ -27,7 +27,7 @@ class PlotTestCase(TestCase):
         plt.close('all')
 
 
-class TestPlot(PlotTestCase):
+class TestPlot1D(PlotTestCase):
 
     def setUp(self):
         d = [0, 1, 0, 2]
@@ -53,13 +53,6 @@ class TestPlot(PlotTestCase):
         self.darray.plot(axes[0])
         self.assertTrue(axes[0].has_data())
 
-
-class TestPlotLine(PlotTestCase):
-
-    def setUp(self):
-        d = [0, 1, 0, 2]
-        self.darray = DataArray(d, coords={'period': range(len(d))})
-
     @requires_matplotlib
     def test_wrong_dims_raises_valueerror(self):
         twodims = DataArray(np.arange(10).reshape(2, 5))
@@ -67,16 +60,48 @@ class TestPlotLine(PlotTestCase):
             twodims.plot_line()
 
 
-class TestPlotContourf(PlotTestCase):
+class TestPlot2D(PlotTestCase):
 
     def setUp(self):
         self.darray = DataArray(np.random.randn(10, 15), 
                 dims=['y', 'x'])
 
     @requires_matplotlib
-    def test_label_names(self):
+    def test_contour_label_names(self):
         self.darray.plot_contourf()
         xlabel = plt.gca().get_xlabel()
         ylabel = plt.gca().get_ylabel()
         self.assertEqual(xlabel, 'x')
         self.assertEqual(ylabel, 'y')
+
+    @requires_matplotlib
+    def test_imshow_label_names(self):
+        self.darray.plot_imshow()
+        xlabel = plt.gca().get_xlabel()
+        ylabel = plt.gca().get_ylabel()
+        self.assertEqual(xlabel, 'x')
+        self.assertEqual(ylabel, 'y')
+
+
+class TestPlotHist(PlotTestCase):
+
+    def setUp(self):
+        self.darray = DataArray(np.random.randn(2, 3, 4))
+
+    @requires_matplotlib
+    def test_3d_array(self):
+        self.darray.plot_hist()
+
+    @requires_matplotlib
+    def test_title_uses_name(self):
+        nm = 'randompoints'
+        self.darray.name = nm
+        self.darray.plot_hist()
+        title = plt.gca().get_title()
+        self.assertIn(nm, title)
+
+    @requires_matplotlib
+    def test_ylabel_is_count(self):
+        self.darray.plot_hist()
+        ylabel = plt.gca().get_ylabel()
+        self.assertEqual(ylabel, 'Count')

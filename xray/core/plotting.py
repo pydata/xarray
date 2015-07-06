@@ -3,6 +3,9 @@ Plotting functions are implemented here and also monkeypatched in to
 DataArray and DataSet classes
 """
 
+import numpy as np
+
+
 # TODO - Is there a better way to import matplotlib in the function?
 # Decorators don't preserve the argument names
 
@@ -58,7 +61,49 @@ def plot_line(darray, ax=None, *args, **kwargs):
     return ax
 
 
-def plot_contourf(darray, ax=None, *args, **kwargs):
+def plot_imshow(darray, ax=None, add_colorbar=True, *args, **kwargs):
+    """
+    Image plot of 2d DataArray using matplotlib / pylab.
+
+    Parameters
+    ----------
+    darray : DataArray
+        Must be 1 dimensional
+    ax : matplotlib axes object
+        If not passed, uses plt.gca()
+    add_colorbar : Boolean
+        Adds colorbar to axis
+    args, kwargs
+        Additional arguments to matplotlib
+
+    """
+    import matplotlib.pyplot as plt
+
+    if not ax:
+        ax = plt.gca()
+
+    # Seems strange that ylab comes first
+    ylab, xlab = darray.dims
+
+    # Need these as Numpy arrays
+    x = darray[xlab].values
+    y = darray[ylab].values
+    z = darray.values
+
+    ax.imshow(x, y, z, *args, **kwargs)
+    ax.set_xlabel(xlab)
+    ax.set_ylabel(ylab)
+
+    if add_colorbar:
+        # Contains color mapping
+        mesh = ax.pcolormesh(x, y, z)
+        plt.colorbar(mesh, ax=ax)
+
+    return ax
+
+
+# TODO - Could refactor this to avoid duplicating plot_image logic above
+def plot_contourf(darray, ax=None, add_colorbar=True, *args, **kwargs):
     """
     Contour plot
     """
@@ -67,14 +112,22 @@ def plot_contourf(darray, ax=None, *args, **kwargs):
     if not ax:
         ax = plt.gca()
 
-    # x axis is by default the one corresponding to the 0th axis
-    xlabel, x = list(darray[0].indexes.items())[0]
-    ylabel, y = list(darray[:, 0].indexes.items())[0]
+    # Seems strange that ylab comes first
+    ylab, xlab = darray.dims
 
-    # TODO - revisit needing the transpose here
-    ax.contourf(x, y, darray.values, *args, **kwargs)
-    ax.set_xlabel(xlabel)
-    ax.set_ylabel(ylabel)
+    # Need these as Numpy arrays
+    x = darray[xlab].values
+    y = darray[ylab].values
+    z = darray.values
+
+    ax.contourf(x, y, z, *args, **kwargs)
+    ax.set_xlabel(xlab)
+    ax.set_ylabel(ylab)
+
+    if add_colorbar:
+        # Contains color mapping
+        mesh = ax.pcolormesh(x, y, z)
+        plt.colorbar(mesh, ax=ax)
 
     return ax
 
@@ -82,11 +135,13 @@ def plot_contourf(darray, ax=None, *args, **kwargs):
 def plot_hist(darray, ax=None, *args, **kwargs):
     """
     Histogram of DataArray using matplotlib / pylab.
+    
+    Uses numpy.ravel to first flatten the array.
 
     Parameters
     ----------
     darray : DataArray
-        Can be 
+        Can be any dimensions
     ax : matplotlib axes object
         If not passed, uses plt.gca()
     """
@@ -96,5 +151,8 @@ def plot_hist(darray, ax=None, *args, **kwargs):
         ax = plt.gca()
 
     ax.hist(np.ravel(darray))
+
+    ax.set_ylabel('Count')
+    ax.set_title('Histogram of {}'.format(darray.name))
 
     return ax

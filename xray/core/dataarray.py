@@ -9,11 +9,13 @@ from . import groupby
 from . import ops
 from . import utils
 from . import variable
+from . import plotting
 from .alignment import align
 from .common import AbstractArray, BaseDataObject
 from .coordinates import DataArrayCoordinates, Indexes
 from .dataset import Dataset
-from .plotting import plot, plot_line, plot_contourf
+from .plotting import (plot, plot_line, plot_contourf, plot_hist,
+        plot_imshow)
 from .pycompat import iteritems, basestring, OrderedDict, zip
 from .utils import FrozenOrderedDict
 from .variable import as_variable, _as_compatible_data, Coordinate
@@ -1077,9 +1079,11 @@ class DataArray(AbstractArray, BaseDataObject):
 
 # Add plotting methods
 
-DataArray.plot = plot
-DataArray.plot_line = plot_line
-DataArray.plot_contourf = plot_contourf
+DataArray.plot = plotting.plot
+DataArray.plot_line = plotting.plot_line
+DataArray.plot_contourf = plotting.plot_contourf
+DataArray.plot_hist = plotting.plot_hist
+DataArray.plot_imshow = plotting.plot_imshow
 
 # priority most be higher than Variable to properly work with binary ufuncs
 ops.inject_all_ops_and_reduce_methods(DataArray, priority=60)

@@ -45,9 +45,49 @@ Xray uses the coordinate name to label the x axis.
     x = np.linspace(0, 2*np.pi)
     sinpts = xray.DataArray(np.sin(x), {'time': x}, name='sin(x)')
 
-    @savefig plotting_example_sin.png
+    @savefig plotting_example_sin.png width=4in
     sinpts.plot()
 
+
+Histogram
+~~~~~~~~~
+
+A histogram of the same data.
+
+.. ipython:: python
+
+    @savefig plotting_example_hist.png width=4in
+    sinpts.plot_hist()
+
+
+Contour Plot
+~~~~~~~~~~~~
+
+We can compute the distance from the origin for some two dimensional data.
+
+.. ipython:: python
+
+    g = np.linspace(-3, 3)
+    xy = np.dstack(np.meshgrid(g, g))
+
+    distance = np.linalg.norm(xy, axis=2)
+
+    distance = xray.DataArray(distance, {'x': g, 'y': g})
+
+    @savefig plotting_example_contour.png width=4in
+    distance.plot_contourf()
+ 
+
+Image Plot
+~~~~~~~~~~
+
+This data can also be visualized using the `image` function.
+
+.. ipython:: python
+
+    @savefig plotting_example_image.png width=4in
+    distance.plot_image()
+   
 
 Multivariate Normal Density
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -70,6 +110,7 @@ evaluated on a square grid::
     # TODO- use xray method
     @savefig plotting_example_2dnormal.png
     plt.contourf(normal.x, normal.y, normal.data)
+
 
 Rules
 -----
