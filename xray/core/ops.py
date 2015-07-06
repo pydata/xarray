@@ -269,7 +269,7 @@ def _ignore_warnings_if(condition):
         yield
 
 
-def _create_nan_agg_method(name, numeric_only=False):
+def _create_nan_agg_method(name, numeric_only=False, coerce_strings=False):
     def f(values, axis=None, skipna=None, **kwargs):
         # ignore keyword args inserted by np.mean and other numpy aggreagators
         # automatically:
@@ -277,6 +277,10 @@ def _create_nan_agg_method(name, numeric_only=False):
         kwargs.pop('out', None)
 
         values = asarray(values)
+
+        if coerce_strings and values.dtype.kind in 'SU':
+            values = values.astype(object)
+
         if skipna or (skipna is None and values.dtype.kind == 'f'):
             if values.dtype.kind not in ['i', 'f']:
                 raise NotImplementedError(
@@ -305,10 +309,10 @@ def _create_nan_agg_method(name, numeric_only=False):
     return f
 
 
-argmax = _create_nan_agg_method('argmax')
-argmin = _create_nan_agg_method('argmin')
-max = _create_nan_agg_method('max')
-min = _create_nan_agg_method('min')
+argmax = _create_nan_agg_method('argmax', coerce_strings=True)
+argmin = _create_nan_agg_method('argmin', coerce_strings=True)
+max = _create_nan_agg_method('max', coerce_strings=True)
+min = _create_nan_agg_method('min', coerce_strings=True)
 sum = _create_nan_agg_method('sum', numeric_only=True)
 mean = _create_nan_agg_method('mean', numeric_only=True)
 std = _create_nan_agg_method('std', numeric_only=True)

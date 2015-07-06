@@ -1807,6 +1807,34 @@ class TestDataset(TestCase):
         self.assertDatasetEqual(data1.mean(dim='dim1'),
                                 data2.mean(dim='dim1'))
 
+    def test_reduce_strings(self):
+        expected = Dataset({'x': 'a'})
+        ds = Dataset({'x': ('y', ['a', 'b'])})
+        actual = ds.min()
+        self.assertDatasetIdentical(expected, actual)
+
+        expected = Dataset({'x': 'b'})
+        actual = ds.max()
+        self.assertDatasetIdentical(expected, actual)
+
+        expected = Dataset({'x': 0})
+        actual = ds.argmin()
+        self.assertDatasetIdentical(expected, actual)
+
+        expected = Dataset({'x': 1})
+        actual = ds.argmax()
+        self.assertDatasetIdentical(expected, actual)
+
+        expected = Dataset({'x': b'a'})
+        ds = Dataset({'x': ('y', np.array(['a', 'b'], 'S1'))})
+        actual = ds.min()
+        self.assertDatasetIdentical(expected, actual)
+
+        expected = Dataset({'x': u'a'})
+        ds = Dataset({'x': ('y', np.array(['a', 'b'], 'U1'))})
+        actual = ds.min()
+        self.assertDatasetIdentical(expected, actual)
+
     def test_reduce_dtype_bool(self):
         # regression test for GH342
         expected = Dataset({'x': 1})
