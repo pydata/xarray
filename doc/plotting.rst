@@ -1,6 +1,11 @@
 Plotting
 ========
 
+xray plotting functionality is a thin wrapper around the popular
+`matplotlib <http://matplotlib.org/>`__ library. Hence matplotlib is a
+dependency for plotting. The metadata is used to
+add informative labels.
+
 xray tries to create reasonable labeled plots based on metadata and the array
 dimensions.
 
@@ -38,10 +43,11 @@ Xray uses the coordinate name to label the x axis.
 .. ipython:: python
 
     x = np.linspace(0, 2*np.pi)
-    a = xray.DataArray(np.sin(x), {'time': x}, name='sin(x)')
+    sinpts = xray.DataArray(np.sin(x), {'time': x}, name='sin(x)')
 
     @savefig plotting_example_sin.png
-    a.plot()
+    sinpts.plot()
+
 
 Multivariate Normal Density
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~

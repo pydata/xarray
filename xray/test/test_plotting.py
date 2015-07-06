@@ -26,11 +26,6 @@ class PlotTestCase(TestCase):
         # Remove all matplotlib figures
         plt.close('all')
 
-    @requires_matplotlib
-    def test_can_pass_in_axis(self):
-        # TODO
-        pass
-
 
 class TestPlot(PlotTestCase):
 
@@ -51,6 +46,13 @@ class TestPlot(PlotTestCase):
         ylabel = plt.gca().get_ylabel()
         self.assertEqual(ylabel, self.darray.name)
 
+    @requires_matplotlib
+    def test_can_pass_in_axis(self):
+        # TODO - add this test to for other plotting methods
+        fig, axes = plt.subplots(ncols=2)
+        self.darray.plot(axes[0])
+        self.assertTrue(axes[0].has_data())
+
 
 class TestPlotLine(PlotTestCase):
 
@@ -60,8 +62,9 @@ class TestPlotLine(PlotTestCase):
 
     @requires_matplotlib
     def test_wrong_dims_raises_valueerror(self):
-        # TODO
-        pass
+        twodims = DataArray(np.arange(10).reshape(2, 5))
+        with self.assertRaises(ValueError):
+            twodims.plot_line()
 
 
 class TestPlotContourf(PlotTestCase):

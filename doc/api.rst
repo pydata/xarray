@@ -264,15 +264,6 @@ Comparisons
    DataArray.identical
    DataArray.broadcast_equals
 
-Plotting
---------
-
-.. autosummary::
-   :toctree: generated/
-
-   DataArray.plot
-   DataArray.plot_contourf
-
 
 .. _api.ufuncs:
 
@@ -393,3 +384,13 @@ arguments for the ``from_store`` and ``dump_to_store`` Dataset methods.
    backends.H5NetCDFStore
    backends.PydapDataStore
    backends.ScipyDataStore
+
+
+Plotting
+========
+
+.. autosummary::
+   :toctree: generated/
+
+   DataArray.plot
+   DataArray.plot_contourf

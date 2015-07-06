@@ -13,7 +13,7 @@ from .alignment import align
 from .common import AbstractArray, BaseDataObject
 from .coordinates import DataArrayCoordinates, Indexes
 from .dataset import Dataset
-from .plotting import _plot_line, _plot_contourf
+from .plotting import plot, plot_line, plot_contourf
 from .pycompat import iteritems, basestring, OrderedDict, zip
 from .utils import FrozenOrderedDict
 from .variable import as_variable, _as_compatible_data, Coordinate
@@ -1077,8 +1077,9 @@ class DataArray(AbstractArray, BaseDataObject):
 
 # Add plotting methods
 
-DataArray.plot = _plot_line
-DataArray.plot_contourf = _plot_contourf
+DataArray.plot = plot
+DataArray.plot_line = plot_line
+DataArray.plot_contourf = plot_contourf
 
 # priority most be higher than Variable to properly work with binary ufuncs
 ops.inject_all_ops_and_reduce_methods(DataArray, priority=60)
