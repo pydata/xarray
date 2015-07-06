@@ -23,6 +23,19 @@ Enhancements
   thread lock by default for reading from netCDF files. This avoids possible
   segmentation faults for reading from netCDF4 files when HDF5 is not
   configured properly for concurrent access (:issue:`444`).
+- The new :py:func:`~xray.save_mfdataset` function allows for saving multiple
+  datasets to disk simultaneously. This is useful when processing large datasets
+  with dask.array. For example, to save a dataset too big to fit into memory
+  to one file per year, we could write:
+
+  .. ipython::
+    :verbatim:
+
+    In [1]: years, datasets = zip(*ds.groupby('time.year'))
+
+    In [2]: paths = ['%s.nc' % y for y in years]
+
+    In [3]: xray.save_mfdataset(datasets, paths)
 
 Bug fixes
 ~~~~~~~~~

@@ -14,9 +14,10 @@ class InMemoryDataStore(AbstractWritableDataStore):
     in ordered dictionaries, making this store
     fast compared to stores which save to disk.
     """
-    def __init__(self, variables=None, attributes=None):
+    def __init__(self, variables=None, attributes=None, writer=None):
         self._variables = OrderedDict() if variables is None else variables
         self._attributes = OrderedDict() if attributes is None else attributes
+        super(InMemoryDataStore, self).__init__(writer)
 
     def get_attrs(self):
         return self._attributes
