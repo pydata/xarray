@@ -27,6 +27,25 @@ class PlotTestCase(TestCase):
         plt.close('all')
 
 
+class TestPlot(PlotTestCase):
+
+    def setUp(self):
+        d = np.arange(24).reshape(2, 3, 4)
+        self.darray = DataArray(d)
+
+    @requires_matplotlib
+    def test3d(self):
+        self.darray[0, 0, :].plot()
+
+    @requires_matplotlib
+    def test2d(self):
+        self.darray[0, :, :].plot()
+
+    @requires_matplotlib
+    def test3d(self):
+        self.darray.plot()
+
+
 class TestPlot1D(PlotTestCase):
 
     def setUp(self):
@@ -81,6 +100,17 @@ class TestPlot2D(PlotTestCase):
         ylabel = plt.gca().get_ylabel()
         self.assertEqual(xlabel, 'x')
         self.assertEqual(ylabel, 'y')
+
+    @requires_matplotlib
+    def test_too_few_dims_raises_valueerror(self):
+        with self.assertRaisesRegexp(ValueError, r'[Dd]im'):
+            self.darray[0, :].plot_imshow()
+
+    @requires_matplotlib
+    def test_too_many_dims_raises_valueerror(self):
+        da = DataArray(np.random.randn(2, 3, 4))
+        with self.assertRaisesRegexp(ValueError, r'[Dd]im'):
+            da.plot_imshow()
 
 
 class TestPlotHist(PlotTestCase):

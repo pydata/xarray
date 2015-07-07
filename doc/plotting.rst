@@ -77,16 +77,17 @@ We can compute the distance from the origin for some two dimensional data.
     @savefig plotting_example_contour.png width=4in
     distance.plot_contourf()
  
+TODO- This  is the same plot as ``imshow``.
 
 Image Plot
 ~~~~~~~~~~
 
-This data can also be visualized using the `image` function.
+This data can also be visualized using the ``imshow`` method.
 
 .. ipython:: python
 
     @savefig plotting_example_image.png width=4in
-    distance.plot_image()
+    distance.plot_imshow()
    
 
 Multivariate Normal Density
@@ -117,3 +118,14 @@ Rules
 
 The following is a more complete description of how xray determines what
 and how to plot.
+
+The method :py:meth:`xray.DataArray.plot` dispatches to an appropriate
+plotting function based on the dimensions of the ``DataArray``.
+
+=============== ======================================
+Dimensions      Plotting function
+--------------- --------------------------------------
+1               :py:meth:`xray.DataArray.plot_line` 
+2               :py:meth:`xray.DataArray.plot_imshow` 
+Anything else   :py:meth:`xray.DataArray.plot_hist` 
+=============== ======================================

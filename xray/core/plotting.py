@@ -8,6 +8,7 @@ import numpy as np
 
 # TODO - Is there a better way to import matplotlib in the function?
 # Decorators don't preserve the argument names
+# But if all the plotting methods have same signature...
 
 
 class FacetGrid():
@@ -27,7 +28,15 @@ def plot(darray, ax=None, *args, **kwargs):
     args, kwargs
         Additional arguments to matplotlib
     """
-    return plot_line(darray, ax)
+    defaults = {1: plot_line, 2: plot_image}
+    ndims = len(darray.dims)
+
+    if ndims in defaults:
+        plotfunc = defaults[ndims]
+    else:
+        plotfunc = plot_hist
+
+    return plotfunc(darray, ax, *args, **kwargs)
 
 
 def plot_line(darray, ax=None, *args, **kwargs):
@@ -48,7 +57,7 @@ def plot_line(darray, ax=None, *args, **kwargs):
         raise ValueError('Line plots are for 1 dimensional DataArrays. '
         'Passed DataArray has {} dimensions'.format(ndims))
 
-    if not ax:
+    if ax is None:
         ax = plt.gca()
 
     xlabel, x = list(darray.indexes.items())[0]
@@ -79,23 +88,28 @@ def plot_imshow(darray, ax=None, add_colorbar=True, *args, **kwargs):
     """
     import matplotlib.pyplot as plt
 
-    if not ax:
+    if ax is None:
         ax = plt.gca()
 
     # Seems strange that ylab comes first
-    ylab, xlab = darray.dims
+    try:
+        ylab, xlab = darray.dims
+    except ValueError:
+        raise ValueError('Line plots are for 2 dimensional DataArrays. '
+        'Passed DataArray has {} dimensions'.format(len(darray.dims)))
 
-    # Need these as Numpy arrays
+    # Need these as Numpy arrays for colormesh
     x = darray[xlab].values
     y = darray[ylab].values
     z = darray.values
 
-    ax.imshow(x, y, z, *args, **kwargs)
+    ax.imshow(z, extent=[x.min(), x.max(), y.min(), y.max()],
+            *args, **kwargs)
     ax.set_xlabel(xlab)
     ax.set_ylabel(ylab)
 
     if add_colorbar:
-        # Contains color mapping
+        # mesh contains color mapping
         mesh = ax.pcolormesh(x, y, z)
         plt.colorbar(mesh, ax=ax)
 
@@ -109,13 +123,17 @@ def plot_contourf(darray, ax=None, add_colorbar=True, *args, **kwargs):
     """
     import matplotlib.pyplot as plt
 
-    if not ax:
+    if ax is None:
         ax = plt.gca()
 
     # Seems strange that ylab comes first
-    ylab, xlab = darray.dims
+    try:
+        ylab, xlab = darray.dims
+    except ValueError:
+        raise ValueError('Contour plots are for 2 dimensional DataArrays. '
+        'Passed DataArray has {} dimensions'.format(len(darray.dims)))
 
-    # Need these as Numpy arrays
+    # Need these as Numpy arrays for colormesh
     x = darray[xlab].values
     y = darray[ylab].values
     z = darray.values
@@ -147,7 +165,7 @@ def plot_hist(darray, ax=None, *args, **kwargs):
     """
     import matplotlib.pyplot as plt
 
-    if not ax:
+    if ax is None:
         ax = plt.gca()
 
     ax.hist(np.ravel(darray))
