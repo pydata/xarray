@@ -1,10 +1,17 @@
 Plotting
 ========
 
-xray plotting functionality is a thin wrapper around the popular
-`matplotlib <http://matplotlib.org/>`__ library. Hence matplotlib is a
-dependency for plotting. The metadata is used to
-add informative labels.
+Introduction
+------------
+
+Xray plotting functionality is a thin wrapper around the popular
+`matplotlib <http://matplotlib.org/>`__ library. 
+The metadata from :py:class:`xray.DataArray` objects are used to add
+informative labels.
+We copy matplotlib syntax and function names as much as possible.
+
+Hence matplotlib is a
+dependency for plotting. 
 
 xray tries to create reasonable labeled plots based on metadata and the array
 dimensions.
@@ -14,9 +21,6 @@ But it's not always obvious what to plot. A wise man once said:
 So don't be scared if you see some ``ValueError``'s when 
 trying to plot, it just means you may need to get the data into a form
 where plotting is more natural.
-
-Examples
---------
 
 To begin, import numpy, pandas and xray:
 
@@ -33,9 +37,8 @@ The following line is not necessary, but it makes for a nice style.
 
     plt.style.use('ggplot')
 
-
-Sin Function
-~~~~~~~~~~~~
+1 Dimension
+-----------
 
 Here is a simple example of plotting. 
 Xray uses the coordinate name to label the x axis.
@@ -43,7 +46,7 @@ Xray uses the coordinate name to label the x axis.
 .. ipython:: python
 
     x = np.linspace(0, 2*np.pi)
-    sinpts = xray.DataArray(np.sin(x), {'time': x}, name='sin(x)')
+    sinpts = xray.DataArray(np.sin(x), {'t': x}, name='sin(t)')
 
     @savefig plotting_example_sin.png width=4in
     sinpts.plot()
@@ -59,36 +62,74 @@ A histogram of the same data.
     @savefig plotting_example_hist.png width=4in
     sinpts.plot_hist()
 
+Additional arguments are passed directly to ``matplotlib.pyplot.hist``,
+which handles the plotting.
+
+.. ipython:: python
+
+    @savefig plotting_example_hist2.png width=4in
+    sinpts.plot_hist(bins=3)
+
+2 Dimensions
+------------
+
+For these examples we generate two dimensional data by computing the distance
+from a 2d grid point to the origin
+
+.. ipython:: python
+
+    x = np.linspace(-5, 10, num=6)
+    y = np.logspace(0, 1.2, num=7)
+    xy = np.dstack(np.meshgrid(x, y))
+
+    distance = np.linalg.norm(xy, axis=2)
+
+    distance = xray.DataArray(distance, {'x': x, 'y': y})
+    distance
+
+The default :py:meth:`xray.DataArray.plot` sees that the data is 2 dimenstional
+and calls :py:meth:`xray.DataArray.plot_imshow`. This was chosen as a
+default
+since it does not perform any smoothing or interpolation; it just shows the
+raw data.
+
+.. ipython:: python
+
+    @savefig plotting_example_2d.png width=4in
+    distance.plot()
+
+The y grid points were generated from a log scale, so we can use matplotlib
+to adjust the scale on y:
+
+.. ipython:: python
+
+    plt.yscale('log')
+
+    @savefig plotting_example_2d3.png width=4in
+    distance.plot()
+
+Swap the variables plotted on vertical and horizontal axes by transposing the array.
+
+TODO: This is easy, but is it better to have an argument for which variable
+should appear on x and y axis?
+
+.. ipython:: python
+
+    @savefig plotting_example_2d2.png width=4in
+    distance.T.plot()
+
 
 Contour Plot
 ~~~~~~~~~~~~
 
-We can compute the distance from the origin for some two dimensional data.
+Visualization is 
 
 .. ipython:: python
-
-    g = np.linspace(-3, 3)
-    xy = np.dstack(np.meshgrid(g, g))
-
-    distance = np.linalg.norm(xy, axis=2)
-
-    distance = xray.DataArray(distance, {'x': g, 'y': g})
 
     @savefig plotting_example_contour.png width=4in
     distance.plot_contourf()
  
 TODO- This  is the same plot as ``imshow``.
-
-Image Plot
-~~~~~~~~~~
-
-This data can also be visualized using the ``imshow`` method.
-
-.. ipython:: python
-
-    @savefig plotting_example_image.png width=4in
-    distance.plot_imshow()
-   
 
 Multivariate Normal Density
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
