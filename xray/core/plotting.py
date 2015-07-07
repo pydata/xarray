@@ -28,7 +28,7 @@ def plot(darray, ax=None, *args, **kwargs):
     args, kwargs
         Additional arguments to matplotlib
     """
-    defaults = {1: plot_line, 2: plot_image}
+    defaults = {1: plot_line, 2: plot_imshow}
     ndims = len(darray.dims)
 
     if ndims in defaults:
@@ -168,9 +168,11 @@ def plot_hist(darray, ax=None, *args, **kwargs):
     if ax is None:
         ax = plt.gca()
 
-    ax.hist(np.ravel(darray))
+    ax.hist(np.ravel(darray), *args, **kwargs)
 
     ax.set_ylabel('Count')
-    ax.set_title('Histogram of {}'.format(darray.name))
+
+    if darray.name is not None:
+        ax.set_title('Histogram of {}'.format(darray.name))
 
     return ax
