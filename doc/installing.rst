@@ -34,6 +34,12 @@ For parallel computing
 
 - `dask.array <http://dask.pydata.org>`__: required for :ref:`dask`.
 
+For plotting
+~~~~~~~~~~~~
+
+- `matplotlib <http://matplotlib.org/>`__: required for :ref:`plotting`.
+
+
 Instructions
 ------------
 

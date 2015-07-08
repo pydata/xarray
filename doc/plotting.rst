@@ -4,12 +4,26 @@ Plotting
 Introduction
 ------------
 
+The goal of xray's plotting is to make exploratory plotting quick
+and easy by using metadata from :py:class:`xray.DataArray` objects to add
+informative labels. 
+
 Xray plotting functionality is a thin wrapper around the popular
 `matplotlib <http://matplotlib.org/>`__ library. 
-Metadata from :py:class:`xray.DataArray` objects are used to add
-informative labels. Matplotlib is required for plotting with xray.
 Matplotlib syntax and function names were copied as much as possible, which
 makes for an easy transition between the two.
+
+For more specialized plotting applications consider the following packages:
+
+- `Seaborn <http://stanford.edu/~mwaskom/software/seaborn/>`__: "provides
+  a high-level interface for drawing attractive statistical graphics."
+  Integrates well with pandas.
+
+- `Cartopy <http://scitools.org.uk/cartopy/>`__: provides cartographic
+  tools
+
+Imports
+~~~~~~~
 
 Begin by importing the necessary modules:
 
@@ -43,16 +57,25 @@ Additional Arguments
 ~~~~~~~~~~~~~~~~~~~~~
 
 Additional arguments are passed directly to the matplotlib function which
-does the work. For example,
-for a plot with blue triangles marking the data points one can use a
-matplotlib format string:
+does the work. 
+For example, for a 1 dimensional DataArray, :py:meth:`xray.DataArray.plot_line` calls ``plt.plot``,
+passing in the index and the array values as x and y, respectively.
+So to make a line plot with blue triangles a `matplotlib format string
+<http://matplotlib.org/api/pyplot_api.html#matplotlib.pyplot.plot>`__ 
+can be used:
 
 .. ipython:: python
 
     @savefig plotting_example_sin2.png width=4in
-    sinpts.plot('b-^')
+    sinpts.plot_line('b-^')
 
-Keyword arguments work the same way.
+Keyword arguments work the same way:
+
+.. ipython:: python
+
+    @savefig plotting_example_sin3.png width=4in
+    sinpts.plot_line(color='purple', marker='o')
+
 
 Adding to Existing Axis
 ~~~~~~~~~~~~~~~~~~~~~~~
