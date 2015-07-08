@@ -7,6 +7,7 @@ import numpy as np
 
 
 # TODO - Is there a better way to import matplotlib in the function?
+# Other piece of duplicated logic is the checking for axes.
 # Decorators don't preserve the argument names
 # But if all the plotting methods have same signature...
 
@@ -15,16 +16,26 @@ class FacetGrid():
     pass
 
 
-def plot(darray, ax=None, *args, **kwargs):
+def plot(darray, *args, **kwargs):
     """
     Default plot of DataArray using matplotlib / pylab.
+
+    Calls a plotting function based on the dimensions of
+    the array:
+
+    =============== ======================================
+    Dimensions      Plotting function
+    --------------- --------------------------------------
+    1               :py:meth:`xray.DataArray.plot_line` 
+    2               :py:meth:`xray.DataArray.plot_imshow` 
+    Anything else   :py:meth:`xray.DataArray.plot_hist` 
+    =============== ======================================
 
     Parameters
     ----------
     darray : DataArray
-        Must be 1 dimensional
     ax : matplotlib axes object
-        If not passed, uses plt.gca()
+        If not passed, uses the current axis
     args, kwargs
         Additional arguments to matplotlib
     """
@@ -36,19 +47,27 @@ def plot(darray, ax=None, *args, **kwargs):
     else:
         plotfunc = plot_hist
 
-    return plotfunc(darray, ax, *args, **kwargs)
+    return plotfunc(darray, *args, **kwargs)
 
 
-def plot_line(darray, ax=None, *args, **kwargs):
+def plot_line(darray, *args, **kwargs):
     """
-    Line plot of DataArray using matplotlib / pylab.
+    Line plot of 1 dimensional darray index against values
+
+    Wraps matplotlib.pyplot.plot
 
     Parameters
     ----------
     darray : DataArray
         Must be 1 dimensional
     ax : matplotlib axes object
-        If not passed, uses plt.gca()
+        If not passed, uses the current axis
+    args, kwargs
+        Additional arguments to matplotlib.pyplot.plot
+
+    Examples
+    --------
+
     """
     import matplotlib.pyplot as plt
 
@@ -57,7 +76,10 @@ def plot_line(darray, ax=None, *args, **kwargs):
         raise ValueError('Line plots are for 1 dimensional DataArrays. '
         'Passed DataArray has {} dimensions'.format(ndims))
 
-    if ax is None:
+    # Was an axis passed in?
+    try:
+        ax = kwargs.pop('ax')
+    except KeyError:
         ax = plt.gca()
 
     xlabel, x = list(darray.indexes.items())[0]
@@ -70,25 +92,33 @@ def plot_line(darray, ax=None, *args, **kwargs):
     return ax
 
 
-def plot_imshow(darray, ax=None, add_colorbar=True, *args, **kwargs):
+def plot_imshow(darray, add_colorbar=True, *args, **kwargs):
     """
     Image plot of 2d DataArray using matplotlib / pylab.
+
+    Wraps matplotlib.pyplot.imshow
 
     Parameters
     ----------
     darray : DataArray
-        Must be 1 dimensional
+        Must be 2 dimensional
     ax : matplotlib axes object
-        If not passed, uses plt.gca()
+        If not passed, uses the current axis
+    args, kwargs
+        Additional arguments to matplotlib.pyplot.imshow
     add_colorbar : Boolean
         Adds colorbar to axis
-    args, kwargs
-        Additional arguments to matplotlib
+
+    Examples
+    --------
 
     """
     import matplotlib.pyplot as plt
 
-    if ax is None:
+    # Was an axis passed in?
+    try:
+        ax = kwargs.pop('ax')
+    except KeyError:
         ax = plt.gca()
 
     # Seems strange that ylab comes first
@@ -117,13 +147,16 @@ def plot_imshow(darray, ax=None, add_colorbar=True, *args, **kwargs):
 
 
 # TODO - Could refactor this to avoid duplicating plot_image logic above
-def plot_contourf(darray, ax=None, add_colorbar=True, *args, **kwargs):
+def plot_contourf(darray, add_colorbar=True, *args, **kwargs):
     """
     Contour plot
     """
     import matplotlib.pyplot as plt
 
-    if ax is None:
+    # Was an axis passed in?
+    try:
+        ax = kwargs.pop('ax')
+    except KeyError:
         ax = plt.gca()
 
     # Seems strange that ylab comes first
@@ -150,22 +183,32 @@ def plot_contourf(darray, ax=None, add_colorbar=True, *args, **kwargs):
     return ax
 
 
-def plot_hist(darray, ax=None, *args, **kwargs):
+def plot_hist(darray, *args, **kwargs):
     """
     Histogram of DataArray using matplotlib / pylab.
-    
-    Uses numpy.ravel to first flatten the array.
+    Plots N dimensional arrays by first flattening the array.
+
+    Wraps matplotlib.pyplot.hist
 
     Parameters
     ----------
     darray : DataArray
-        Can be any dimensions
+        Must be 2 dimensional
     ax : matplotlib axes object
-        If not passed, uses plt.gca()
+        If not passed, uses the current axis
+    args, kwargs
+        Additional arguments to matplotlib.pyplot.imshow
+
+    Examples
+    --------
+
     """
     import matplotlib.pyplot as plt
 
-    if ax is None:
+    # Was an axis passed in?
+    try:
+        ax = kwargs.pop('ax')
+    except KeyError:
         ax = plt.gca()
 
     ax.hist(np.ravel(darray), *args, **kwargs)

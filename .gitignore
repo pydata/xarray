@@ -34,10 +34,12 @@ nosetests.xml
 .project
 .pydevproject
 
-# PyCharm
+# PyCharm and Vim
 .idea
+*.swp
 
 # xray specific
 doc/_build
 doc/generated
+doc/_static/*.png
 xray/version.py

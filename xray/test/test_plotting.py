@@ -1,5 +1,3 @@
-import sys
-
 import numpy as np
 import pandas as pd
 
@@ -24,6 +22,11 @@ class PlotTestCase(TestCase):
         # Remove all matplotlib figures
         plt.close('all')
 
+    def pass_in_axis(self, plotfunc):
+        fig, axes = plt.subplots(ncols=2)
+        plotfunc(ax=axes[0])
+        self.assertTrue(axes[0].has_data())
+
 
 class TestPlot(PlotTestCase):
 
@@ -39,6 +42,12 @@ class TestPlot(PlotTestCase):
 
     def test3d(self):
         self.darray.plot()
+
+    def test_format_string(self):
+        self.darray[0, 0, :].plot('ro')
+
+    def test_can_pass_in_axis(self):
+        self.pass_in_axis(self.darray.plot)
 
 
 class TestPlot1D(PlotTestCase):
@@ -56,16 +65,13 @@ class TestPlot1D(PlotTestCase):
         ax = self.darray.plot()
         self.assertEqual(self.darray.name, ax.get_ylabel())
 
-    def test_can_pass_in_axis(self):
-        # TODO - add this test to for other plotting methods
-        fig, axes = plt.subplots(ncols=2)
-        self.darray.plot(axes[0])
-        self.assertTrue(axes[0].has_data())
-
     def test_wrong_dims_raises_valueerror(self):
         twodims = DataArray(np.arange(10).reshape(2, 5))
         with self.assertRaises(ValueError):
             twodims.plot_line()
+
+    def test_can_pass_in_axis(self):
+        self.pass_in_axis(self.darray.plot_line)
 
 
 class TestPlot2D(PlotTestCase):
@@ -93,6 +99,10 @@ class TestPlot2D(PlotTestCase):
         with self.assertRaisesRegexp(ValueError, r'[Dd]im'):
             da.plot_imshow()
 
+    def test_can_pass_in_axis(self):
+        self.pass_in_axis(self.darray.plot_imshow)
+        self.pass_in_axis(self.darray.plot_contourf)
+
 
 class TestPlotHist(PlotTestCase):
 
@@ -119,3 +129,11 @@ class TestPlotHist(PlotTestCase):
         nbins = 5
         ax = self.darray.plot_hist(bins=nbins)
         self.assertEqual(nbins, len(ax.patches))
+
+    def test_can_pass_in_positional_args(self):
+        nbins = 5
+        ax = self.darray.plot_hist(nbins)
+        self.assertEqual(nbins, len(ax.patches))
+
+    def test_can_pass_in_axis(self):
+        self.pass_in_axis(self.darray.plot_hist)
