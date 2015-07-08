@@ -87,7 +87,9 @@ def plot_line(darray, *args, **kwargs):
     ax.plot(x, darray.values, *args, **kwargs)
 
     ax.set_xlabel(xlabel)
-    ax.set_ylabel(darray.name)
+
+    if darray.name is not None:
+        ax.set_ylabel(darray.name)
 
     return ax
 
@@ -128,20 +130,22 @@ def plot_imshow(darray, add_colorbar=True, *args, **kwargs):
         raise ValueError('Line plots are for 2 dimensional DataArrays. '
         'Passed DataArray has {} dimensions'.format(len(darray.dims)))
 
-    # Need these as Numpy arrays for colormesh
-    x = darray[xlab].values
-    y = darray[ylab].values
-    z = darray.values
+    x = darray[xlab]
+    y = darray[ylab]
 
-    ax.imshow(z, extent=[x.min(), x.max(), y.min(), y.max()],
-            *args, **kwargs)
+    image = ax.imshow(darray, extent=[x.min(), x.max(), y.min(), y.max()],
+            interpolation='nearest', *args, **kwargs)
+
     ax.set_xlabel(xlab)
     ax.set_ylabel(ylab)
 
+    plt.colorbar(image, ax=ax)
+    '''
     if add_colorbar:
         # mesh contains color mapping
         mesh = ax.pcolormesh(x, y, z)
         plt.colorbar(mesh, ax=ax)
+    '''
 
     return ax
 

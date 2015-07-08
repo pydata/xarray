@@ -60,6 +60,10 @@ class TestPlot1D(PlotTestCase):
         ax = self.darray.plot()
         self.assertEqual('period', ax.get_xlabel())
 
+    def test_no_label_name_on_y_axis(self):
+        ax = self.darray.plot()
+        self.assertEqual('', ax.get_ylabel())
+
     def test_ylabel_is_data_name(self):
         self.darray.name = 'temperature'
         ax = self.darray.plot()

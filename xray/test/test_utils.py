@@ -117,3 +117,12 @@ class TestDictionaries(TestCase):
         self.assertEqual(m['x'], 100)
         self.assertEqual(m.maps[0]['x'], 100)
         self.assertItemsEqual(['x', 'y', 'z'], m)
+
+
+class Test_is_uniform_and_sorted(TestCase):
+
+    def test_range_sorted(self):
+        self.assertTrue(utils.is_uniform_spaced(np.arange(5)))
+
+    def test_not_sorted(self):
+        self.assertFalse(utils.is_uniform_spaced([4, 1, 89]))

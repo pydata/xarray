@@ -42,6 +42,9 @@ The following line is not necessary, but it makes for a nice style.
 One Dimension
 -------------
 
+Simple Example
+~~~~~~~~~~~~~~
+
 Here is a simple example of plotting.
 Xray uses the coordinate name to label the x axis:
 
@@ -100,16 +103,54 @@ axes created by ``plt.subplots``.
 Instead of using the default :py:meth:`xray.DataArray.plot` we see a
 histogram created by :py:meth:`xray.DataArray.plot_hist`.
 
+Time Series
+~~~~~~~~~~~
+
+The index may be a time series.
+
+.. ipython:: python
+
+    import pandas as pd
+    npts = 50
+    time = pd.date_range('2015-01-01', periods=npts)
+    noise = xray.DataArray(np.random.randn(npts), {'time': time})
+
+    @savefig plotting_example_time.png width=6in
+    noise.plot_line()
+
+
 Two Dimensions
 --------------
 
-For these examples we generate two dimensional data by computing the distance
-from a 2d grid point to the origin
+Simple Example
+~~~~~~~~~~~~~~
+
+The default :py:meth:`xray.DataArray.plot` sees that the data is 2 dimensional
+and calls :py:meth:`xray.DataArray.plot_imshow`. 
+
+.. ipython:: python
+
+    a = np.zeros((5, 3))
+    a[0, 0] = 1
+    xa = xray.DataArray(a)
+    xa
+
+    @savefig plotting_example_2d.png width=4in
+    xa.plot()
+
+The top left pixel is 1, and the others are 0.
+
+Simulated Data
+~~~~~~~~~~~~~~
+
+For further examples we generate two dimensional data by computing the distance
+from a 2d grid point to the origin.
+It's not necessary for the grid to be evenly spaced.
 
 .. ipython:: python
 
     x = np.linspace(-5, 10, num=6)
-    y = np.logspace(0, 1.2, num=7)
+    y = np.logspace(1.2, 0, num=7)
     xy = np.dstack(np.meshgrid(x, y))
 
     distance = np.linalg.norm(xy, axis=2)
@@ -117,34 +158,36 @@ from a 2d grid point to the origin
     distance = xray.DataArray(distance, {'x': x, 'y': y})
     distance
 
-The default :py:meth:`xray.DataArray.plot` sees that the data is 2 dimenstional
-and calls :py:meth:`xray.DataArray.plot_imshow`. 
+Note the coordinate ``y`` here is decreasing. 
+This makes the axes of the image plot in the expected way.
 
-.. ipython:: python
+# TODO- Edge case- what if the coordinates are not sorted? Is this
+possible? What if coordinates increasing?
 
-    @savefig plotting_example_2d.png width=4in
-    distance.plot()
+Calling Matplotlib
+~~~~~~~~~~~~~~~~~~
 
-The y grid points were generated from a log scale, so we can use matplotlib
+Use matplotlib to adjust plot parameters. For example, the
+y grid points were generated from a log scale, so we can use matplotlib
 to adjust the scale on y:
 
 .. ipython:: python
 
-    plt.yscale('log')
+    #plt.yscale('log')
 
     @savefig plotting_example_2d3.png width=4in
     distance.plot()
 
-Swap the variables plotted on vertical and horizontal axes by transposing the array.
+Changing Axes
+~~~~~~~~~~~~~
 
-TODO: This is easy, but is it better to have an argument for which variable
-should appear on x and y axis?
+Two dimensional plotting in xray uses the 
+Swap the variables plotted on vertical and horizontal axes by transposing the array.
 
 .. ipython:: python
 
     @savefig plotting_example_2d2.png width=4in
     distance.T.plot()
-
 
 Contour Plot
 ~~~~~~~~~~~~
@@ -169,13 +212,15 @@ There are two ways to use the xray plotting functionality:
     import xray.plotting as xplt
 
 The convenience method :py:meth:`xray.DataArray.plot` dispatches to an appropriate
-plotting function based on the dimensions of the ``DataArray``. This table
+plotting function based on the dimensions of the ``DataArray`` and whether
+the coordinates are sorted and uniformly spaced. This table
 describes what gets plotted:
 
-=============== ======================================
-Dimensions      Plotting function
---------------- --------------------------------------
-1               :py:meth:`xray.DataArray.plot_line` 
-2               :py:meth:`xray.DataArray.plot_imshow` 
-Anything else   :py:meth:`xray.DataArray.plot_hist` 
-=============== ======================================
+=============== =========== ===========================
+Dimensions      Coordinates Plotting function
+--------------- ----------- ---------------------------
+1                           :py:meth:`xray.DataArray.plot_line` 
+2               Uniform     :py:meth:`xray.DataArray.plot_imshow` 
+2               Irregular   :py:meth:`xray.DataArray.plot_contourf` 
+Anything else               :py:meth:`xray.DataArray.plot_hist` 
+=============== =========== ===========================

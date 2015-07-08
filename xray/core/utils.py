@@ -391,3 +391,8 @@ def close_on_error(f):
 
 def is_remote_uri(path):
     return bool(re.search('^https?\://', path))
+
+def is_uniform_spaced(arr):
+    """Return True if values of an array are uniformly spaced and sorted
+    """
+    pass
