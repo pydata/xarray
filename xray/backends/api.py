@@ -138,6 +138,8 @@ def open_dataset(filename_or_obj, group=None, decode_cf=True,
                 store = backends.NetCDF4DataStore(filename_or_obj, group=group)
             elif engine == 'scipy':
                 store = backends.ScipyDataStore(filename_or_obj)
+            elif engine == 'pynio':
+                store = backends.NioDataStore(filename_or_obj, group=group)
             elif engine == 'pydap':
                 store = backends.PydapDataStore(filename_or_obj)
             elif engine == 'h5netcdf':
