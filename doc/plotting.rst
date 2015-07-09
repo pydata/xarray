@@ -19,6 +19,10 @@ For more specialized plotting applications consider the following packages:
   a high-level interface for drawing attractive statistical graphics."
   Integrates well with pandas.
 
+- `Holoviews <http://ioam.github.io/holoviews/`__: "Composable, declarative
+  data structures for building even complex visualizations easily."
+  Also works for higher dimensional datasets.
+
 - `Cartopy <http://scitools.org.uk/cartopy/>`__: provides cartographic
   tools
 
@@ -125,20 +129,53 @@ Two Dimensions
 Simple Example
 ~~~~~~~~~~~~~~
 
-The default :py:meth:`xray.DataArray.plot` sees that the data is 2 dimensional
-and calls :py:meth:`xray.DataArray.plot_imshow`. 
+The default :py:meth:`xray.DataArray.plot` sees that the data is 
+2 dimensional. If the coordinates are uniformly spaced then it
+calls :py:meth:`xray.DataArray.plot_imshow`. 
 
 .. ipython:: python
 
-    a = np.zeros((5, 3))
+    a = xray.DataArray(np.zeros((4, 3)), ('xaxis', 'yaxis'))
     a[0, 0] = 1
-    xa = xray.DataArray(a)
-    xa
+    a
 
-    @savefig plotting_example_2d.png width=4in
+    @savefig plotting_example_2d_simple.png width=4in
+    a.plot()
+
+The top left pixel is 1, and the others are 0. This corresponds to the
+printed array. It may seem unintuitive that
+the the values on the y axis are decreasing with 0 on the top. This is because the
+axis labels and ranges correspond to the values of the
+coordinates.
+
+An `extended slice` <http://docs.scipy.org/doc/numpy/reference/arrays.indexing.html> `
+can be used to reverse the order of the rows, producing a
+more conventional plot where the coordinates increase in the y axis.
+
+.. ipython:: python
+
+    a = xray.DataArray(np.zeros((4, 3)), ('xaxis', 'yaxis'))
+    a[0, 0] = 1
+    a
+
+    @savefig plotting_example_2d_simple.png width=4in
+    a.plot()
+
+
+Nonuniform Coordinates
+~~~~~~~~~~~~~~~~~~~~~~
+
+If the coordinates are not uniformly spaced then 
+:py:meth:`xray.DataArray.plot` produces a filled contour plot by calling
+:py:meth:`xray.DataArray.plot_contourf`. 
+
+.. ipython:: python
+
+    xa.coords['dim_0'] = [0, 1, 4]
+
+    @savefig plotting_example_2d_nonuniform.png width=4in
     xa.plot()
 
-The top left pixel is 1, and the others are 0.
 
 Simulated Data
 ~~~~~~~~~~~~~~
