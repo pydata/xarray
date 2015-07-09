@@ -41,8 +41,8 @@ def plot(darray, ax=None, rtol=0.01, **kwargs):
     rtol : relative tolerance
         Relative tolerance used to determine if the indexes
         are uniformly spaced
-    args, kwargs
-        Additional arguments to matplotlib
+    kwargs
+        Additional keyword arguments to matplotlib
     """
     kwargs['ax'] = ax
     ndims = len(darray.dims)
@@ -57,7 +57,7 @@ def plot(darray, ax=None, rtol=0.01, **kwargs):
     else:
         plotfunc = plot_hist
 
-    return plotfunc(darray, *args, **kwargs)
+    return plotfunc(darray, **kwargs)
 
 
 # This function signature should not change so that it can pass format
@@ -179,12 +179,12 @@ def plot_contourf(darray, ax=None, add_colorbar=True, **kwargs):
     x = darray[xlab]
     y = darray[ylab]
 
-    ax.contourf(x, y, darray, **kwargs)
+    contours = ax.contourf(x, y, darray, **kwargs)
     ax.set_xlabel(xlab)
     ax.set_ylabel(ylab)
 
     if add_colorbar:
-        ax.colorbar()
+        plt.colorbar(contours)
 
     return ax
 

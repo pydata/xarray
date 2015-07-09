@@ -160,10 +160,5 @@ class TestPlotHist(PlotTestCase):
         ax = self.darray.plot_hist(bins=nbins)
         self.assertEqual(nbins, len(ax.patches))
 
-    def test_can_pass_in_positional_args(self):
-        nbins = 5
-        ax = self.darray.plot_hist(nbins)
-        self.assertEqual(nbins, len(ax.patches))
-
     def test_can_pass_in_axis(self):
         self.pass_in_axis(self.darray.plot_hist)
