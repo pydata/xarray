@@ -392,7 +392,17 @@ def close_on_error(f):
 def is_remote_uri(path):
     return bool(re.search('^https?\://', path))
 
-def is_uniform_spaced(arr):
-    """Return True if values of an array are uniformly spaced and sorted
+
+def is_uniform_spaced(arr, **kwargs):
+    """Return True if values of an array are uniformly spaced and sorted.
+
+    >>> is_uniform_spaced(range(5))
+    True
+    >>> is_uniform_spaced([-4, 0, 100])
+    False
+
+    kwargs are additional arguments to ``np.isclose``
     """
-    pass
+    arr = np.array(arr)
+    diffs = np.diff(arr)
+    return np.isclose(diffs.min(), diffs.max(), **kwargs)
