@@ -37,6 +37,8 @@ class TestPlot(PlotTestCase):
     def test1d(self):
         self.darray[0, 0, :].plot()
 
+    # TODO - test for 2d dispatching to imshow versus contourf
+    # Can use mock for this
     def test2d(self):
         self.darray[0, :, :].plot()
 

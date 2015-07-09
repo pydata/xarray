@@ -37,12 +37,6 @@ Begin by importing the necessary modules:
     import xray
     import matplotlib.pyplot as plt
 
-The following line is not necessary, but it makes for a nice style.
-
-.. ipython:: python
-
-    plt.style.use('ggplot')
-
 One Dimension
 -------------
 
@@ -110,12 +104,12 @@ histogram created by :py:meth:`xray.DataArray.plot_hist`.
 Time Series
 ~~~~~~~~~~~
 
-The index may be a time series.
+The index may be a date.
 
 .. ipython:: python
 
     import pandas as pd
-    npts = 50
+    npts = 20
     time = pd.date_range('2015-01-01', periods=npts)
     noise = xray.DataArray(np.random.randn(npts), {'time': time})
 
@@ -135,7 +129,7 @@ calls :py:meth:`xray.DataArray.plot_imshow`.
 
 .. ipython:: python
 
-    a = xray.DataArray(np.zeros((4, 3)), ('xaxis', 'yaxis'))
+    a = xray.DataArray(np.zeros((4, 3)), dims=('y', 'x'))
     a[0, 0] = 1
     a
 
@@ -148,18 +142,16 @@ the the values on the y axis are decreasing with 0 on the top. This is because t
 axis labels and ranges correspond to the values of the
 coordinates.
 
-An `extended slice` <http://docs.scipy.org/doc/numpy/reference/arrays.indexing.html> `
+An `extended slice <http://docs.scipy.org/doc/numpy/reference/arrays.indexing.html>` __
 can be used to reverse the order of the rows, producing a
 more conventional plot where the coordinates increase in the y axis.
 
 .. ipython:: python
 
-    a = xray.DataArray(np.zeros((4, 3)), ('xaxis', 'yaxis'))
-    a[0, 0] = 1
-    a
+    a[::-1, :]
 
     @savefig plotting_example_2d_simple.png width=4in
-    a.plot()
+    a[::-1, :].plot()
 
 
 Nonuniform Coordinates
@@ -171,10 +163,10 @@ If the coordinates are not uniformly spaced then
 
 .. ipython:: python
 
-    xa.coords['dim_0'] = [0, 1, 4]
+    a.coords['x'] = [0, 1, 4]
 
     @savefig plotting_example_2d_nonuniform.png width=4in
-    xa.plot()
+    a.plot()
 
 
 Simulated Data
