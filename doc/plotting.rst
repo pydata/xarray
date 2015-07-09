@@ -19,9 +19,9 @@ For more specialized plotting applications consider the following packages:
   a high-level interface for drawing attractive statistical graphics."
   Integrates well with pandas.
 
-- `Holoviews <http://ioam.github.io/holoviews/`__: "Composable, declarative
+- `Holoviews <http://ioam.github.io/holoviews/>`__: "Composable, declarative
   data structures for building even complex visualizations easily."
-  Also works for higher dimensional datasets.
+  Works for 2d datasets.
 
 - `Cartopy <http://scitools.org.uk/cartopy/>`__: provides cartographic
   tools
@@ -137,12 +137,12 @@ calls :py:meth:`xray.DataArray.plot_imshow`.
     a.plot()
 
 The top left pixel is 1, and the others are 0. This corresponds to the
-printed array. It may seem unintuitive that
+printed array. It may seem strange that
 the the values on the y axis are decreasing with 0 on the top. This is because the
 axis labels and ranges correspond to the values of the
 coordinates.
 
-An `extended slice <http://docs.scipy.org/doc/numpy/reference/arrays.indexing.html>` __
+An `extended slice <http://docs.scipy.org/doc/numpy/reference/arrays.indexing.html>`__
 can be used to reverse the order of the rows, producing a
 more conventional plot where the coordinates increase in the y axis.
 

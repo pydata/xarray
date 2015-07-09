@@ -3,8 +3,10 @@ Plotting functions are implemented here and also monkeypatched in to
 DataArray and DataSet classes
 """
 
+import functools
 import numpy as np
 
+from .utils import is_uniform_spaced
 
 # TODO - Is there a better way to import matplotlib in the function?
 # Other piece of duplicated logic is the checking for axes.
@@ -16,7 +18,7 @@ class FacetGrid():
     pass
 
 
-def plot(darray, *args, **kwargs):
+def plot(darray, ax=None, rtol=0.01, **kwargs):
     """
     Default plot of DataArray using matplotlib / pylab.
 
@@ -35,21 +37,31 @@ def plot(darray, *args, **kwargs):
     ----------
     darray : DataArray
     ax : matplotlib axes object
-        If not passed, uses the current axis
+        If None, uses the current axis
+    rtol : relative tolerance
+        Relative tolerance used to determine if the indexes
+        are uniformly spaced
     args, kwargs
         Additional arguments to matplotlib
     """
-    defaults = {1: plot_line, 2: plot_imshow}
+    kwargs['ax'] = ax
     ndims = len(darray.dims)
 
-    if ndims in defaults:
-        plotfunc = defaults[ndims]
+    if ndims == 1:
+        plotfunc = plot_line
+    elif ndims == 2:
+        if all(is_uniform_spaced(i, rtol=rtol) for i in darray.indexes.values()):
+            plotfunc = plot_imshow
+        else:
+            plotfunc = plot_contourf
     else:
         plotfunc = plot_hist
 
     return plotfunc(darray, *args, **kwargs)
 
 
+# This function signature should not change so that it can pass format
+# strings
 def plot_line(darray, *args, **kwargs):
     """
     Line plot of 1 dimensional darray index against values
@@ -94,7 +106,7 @@ def plot_line(darray, *args, **kwargs):
     return ax
 
 
-def plot_imshow(darray, add_colorbar=True, *args, **kwargs):
+def plot_imshow(darray, ax=None, add_colorbar=True, *args, **kwargs):
     """
     Image plot of 2d DataArray using matplotlib / pylab.
 
@@ -105,7 +117,7 @@ def plot_imshow(darray, add_colorbar=True, *args, **kwargs):
     darray : DataArray
         Must be 2 dimensional
     ax : matplotlib axes object
-        If not passed, uses the current axis
+        If None, uses the current axis
     args, kwargs
         Additional arguments to matplotlib.pyplot.imshow
     add_colorbar : Boolean
@@ -117,17 +129,14 @@ def plot_imshow(darray, add_colorbar=True, *args, **kwargs):
     """
     import matplotlib.pyplot as plt
 
-    # Was an axis passed in?
-    try:
-        ax = kwargs.pop('ax')
-    except KeyError:
+    if ax is None:
         ax = plt.gca()
 
     # Seems strange that ylab comes first
     try:
         ylab, xlab = darray.dims
     except ValueError:
-        raise ValueError('Line plots are for 2 dimensional DataArrays. '
+        raise ValueError('Image plots are for 2 dimensional DataArrays. '
         'Passed DataArray has {} dimensions'.format(len(darray.dims)))
 
     x = darray[xlab]
@@ -140,54 +149,47 @@ def plot_imshow(darray, add_colorbar=True, *args, **kwargs):
     ax.set_ylabel(ylab)
 
     plt.colorbar(image, ax=ax)
-    '''
-    if add_colorbar:
-        # mesh contains color mapping
-        mesh = ax.pcolormesh(x, y, z)
-        plt.colorbar(mesh, ax=ax)
-    '''
 
     return ax
 
 
 # TODO - Could refactor this to avoid duplicating plot_image logic above
-def plot_contourf(darray, add_colorbar=True, *args, **kwargs):
+def plot_contourf(darray, ax=None, add_colorbar=True, **kwargs):
     """
     Contour plot
     """
     import matplotlib.pyplot as plt
 
-    # Was an axis passed in?
-    try:
-        ax = kwargs.pop('ax')
-    except KeyError:
+    if ax is None:
         ax = plt.gca()
 
-    # Seems strange that ylab comes first
     try:
         ylab, xlab = darray.dims
     except ValueError:
         raise ValueError('Contour plots are for 2 dimensional DataArrays. '
         'Passed DataArray has {} dimensions'.format(len(darray.dims)))
 
-    # Need these as Numpy arrays for colormesh
-    x = darray[xlab].values
-    y = darray[ylab].values
-    z = darray.values
+    # Need arrays here?
+    #x = darray[xlab].values
+    #y = darray[ylab].values
+    #z = darray.values
 
-    ax.contourf(x, y, z, *args, **kwargs)
+    #ax.contourf(x, y, z, *args, **kwargs)
+
+    x = darray[xlab]
+    y = darray[ylab]
+
+    ax.contourf(x, y, darray, **kwargs)
     ax.set_xlabel(xlab)
     ax.set_ylabel(ylab)
 
     if add_colorbar:
-        # Contains color mapping
-        mesh = ax.pcolormesh(x, y, z)
-        plt.colorbar(mesh, ax=ax)
+        ax.colorbar()
 
     return ax
 
 
-def plot_hist(darray, *args, **kwargs):
+def plot_hist(darray, ax=None, **kwargs):
     """
     Histogram of DataArray using matplotlib / pylab.
     Plots N dimensional arrays by first flattening the array.
@@ -200,8 +202,8 @@ def plot_hist(darray, *args, **kwargs):
         Must be 2 dimensional
     ax : matplotlib axes object
         If not passed, uses the current axis
-    args, kwargs
-        Additional arguments to matplotlib.pyplot.imshow
+    kwargs
+        Additional arguments to matplotlib.pyplot.hist
 
     Examples
     --------
@@ -209,13 +211,10 @@ def plot_hist(darray, *args, **kwargs):
     """
     import matplotlib.pyplot as plt
 
-    # Was an axis passed in?
-    try:
-        ax = kwargs.pop('ax')
-    except KeyError:
+    if ax is None:
         ax = plt.gca()
 
-    ax.hist(np.ravel(darray), *args, **kwargs)
+    ax.hist(np.ravel(darray), **kwargs)
 
     ax.set_ylabel('Count')
 
