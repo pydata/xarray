@@ -6,9 +6,9 @@ from xray import Dataset, DataArray
 from . import TestCase, requires_matplotlib
 
 try:
-    import matplotlib
+    import matplotlib as mpl
     # Using a different backend makes Travis CI work.
-    matplotlib.use('Agg')
+    mpl.use('Agg')
     # Order of imports is important here.
     import matplotlib.pyplot as plt
 except ImportError:
@@ -27,6 +27,16 @@ class PlotTestCase(TestCase):
         plotfunc(ax=axes[0])
         self.assertTrue(axes[0].has_data())
 
+    def imshow_called(self, plotfunc):
+        ax = plotfunc()
+        images = ax.findobj(mpl.image.AxesImage)
+        return len(images) > 0
+
+    def contourf_called(self, plotfunc):
+        ax = plotfunc()
+        paths = ax.findobj(mpl.collections.PathCollection)
+        return len(paths) > 0
+
 
 class TestPlot(PlotTestCase):
 
@@ -37,10 +47,14 @@ class TestPlot(PlotTestCase):
     def test1d(self):
         self.darray[0, 0, :].plot()
 
-    # TODO - test for 2d dispatching to imshow versus contourf
-    # Can use mock for this
-    def test2d(self):
-        self.darray[0, :, :].plot()
+    def test2d_uniform_calls_imshow(self):
+        a = self.darray[0, :, :]
+        self.assertTrue(self.imshow_called(a.plot))
+
+    def test2d_nonuniform_calls_contourf(self):
+        a = self.darray[0, :, :]
+        a.coords['dim_1'] = [0, 10, 2]
+        self.assertTrue(self.contourf_called(a.plot))
 
     def test3d(self):
         self.darray.plot()
@@ -108,6 +122,16 @@ class TestPlot2D(PlotTestCase):
     def test_can_pass_in_axis(self):
         self.pass_in_axis(self.darray.plot_imshow)
         self.pass_in_axis(self.darray.plot_contourf)
+
+    def test_imshow_called(self):
+        # Having both statements ensures the test works properly
+        self.assertFalse(self.imshow_called(self.darray.plot_contourf))
+        self.assertTrue(self.imshow_called(self.darray.plot_imshow))
+
+    def test_contourf_called(self):
+        # Having both statements ensures the test works properly
+        self.assertFalse(self.contourf_called(self.darray.plot_imshow))
+        self.assertTrue(self.contourf_called(self.darray.plot_contourf))
 
 
 class TestPlotHist(PlotTestCase):
