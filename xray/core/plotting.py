@@ -44,7 +44,6 @@ def plot(darray, ax=None, rtol=0.01, **kwargs):
     kwargs
         Additional keyword arguments to matplotlib
     """
-    kwargs['ax'] = ax
     ndims = len(darray.dims)
 
     if ndims == 1:
@@ -57,6 +56,7 @@ def plot(darray, ax=None, rtol=0.01, **kwargs):
     else:
         plotfunc = plot_hist
 
+    kwargs['ax'] = ax
     return plotfunc(darray, **kwargs)
 
 
@@ -88,10 +88,13 @@ def plot_line(darray, *args, **kwargs):
         raise ValueError('Line plots are for 1 dimensional DataArrays. '
         'Passed DataArray has {} dimensions'.format(ndims))
 
-    # Was an axis passed in?
+    # Ensures consistency with .plot method
     try:
         ax = kwargs.pop('ax')
     except KeyError:
+        ax = None
+
+    if ax is None:
         ax = plt.gca()
 
     xlabel, x = list(darray.indexes.items())[0]
@@ -184,7 +187,7 @@ def plot_contourf(darray, ax=None, add_colorbar=True, **kwargs):
     ax.set_ylabel(ylab)
 
     if add_colorbar:
-        plt.colorbar(contours)
+        plt.colorbar(contours, ax=ax)
 
     return ax
 
