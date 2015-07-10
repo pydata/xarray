@@ -93,6 +93,7 @@ class TestPlot1D(PlotTestCase):
     def test_can_pass_in_axis(self):
         self.pass_in_axis(self.darray.plot_line)
 
+# TODO - Add NaN handling and tests
 
 class TestPlot2D(PlotTestCase):
 

@@ -1,9 +1,8 @@
 """
-Plotting functions are implemented here and also monkeypatched in to
-DataArray and DataSet classes
+Plotting functions are implemented here and also monkeypatched into
+the DataArray class
 """
 
-import functools
 import numpy as np
 
 from .utils import is_uniform_spaced
@@ -14,6 +13,7 @@ from .utils import is_uniform_spaced
 # But if all the plotting methods have same signature...
 
 
+# TODO - implement this
 class FacetGrid():
     pass
 
@@ -22,16 +22,17 @@ def plot(darray, ax=None, rtol=0.01, **kwargs):
     """
     Default plot of DataArray using matplotlib / pylab.
 
-    Calls a plotting function based on the dimensions of
+    Calls xray plotting function based on the dimensions of
     the array:
 
-    =============== ======================================
-    Dimensions      Plotting function
-    --------------- --------------------------------------
-    1               :py:meth:`xray.DataArray.plot_line` 
-    2               :py:meth:`xray.DataArray.plot_imshow` 
-    Anything else   :py:meth:`xray.DataArray.plot_hist` 
-    =============== ======================================
+    =============== =========== ===========================
+    Dimensions      Coordinates Plotting function
+    --------------- ----------- ---------------------------
+    1                           :py:meth:`xray.DataArray.plot_line` 
+    2               Uniform     :py:meth:`xray.DataArray.plot_imshow` 
+    2               Irregular   :py:meth:`xray.DataArray.plot_contourf` 
+    Anything else               :py:meth:`xray.DataArray.plot_hist` 
+    =============== =========== ===========================
 
     Parameters
     ----------
@@ -43,6 +44,7 @@ def plot(darray, ax=None, rtol=0.01, **kwargs):
         are uniformly spaced
     kwargs
         Additional keyword arguments to matplotlib
+
     """
     ndims = len(darray.dims)
 
@@ -60,11 +62,11 @@ def plot(darray, ax=None, rtol=0.01, **kwargs):
     return plotfunc(darray, **kwargs)
 
 
-# This function signature should not change so that it can pass format
-# strings
+# This function signature should not change so that it can use
+# matplotlib format strings
 def plot_line(darray, *args, **kwargs):
     """
-    Line plot of 1 dimensional darray index against values
+    Line plot of 1 dimensional DataArray index against values
 
     Wraps matplotlib.pyplot.plot
 
@@ -79,6 +81,16 @@ def plot_line(darray, *args, **kwargs):
 
     Examples
     --------
+
+    >>> from numpy import sin, linspace
+    >>> a = DataArray(sin(linspace(0, 10)))
+
+    @savefig plotting_plot_line_doc1.png width=4in
+    >>> a.plot_line()
+
+    Use matplotlib arguments:
+    @savefig plotting_plot_line_doc2.png width=4in
+    >>> a.plot_line(color='purple', shape='x')
 
     """
     import matplotlib.pyplot as plt
@@ -99,7 +111,7 @@ def plot_line(darray, *args, **kwargs):
 
     xlabel, x = list(darray.indexes.items())[0]
 
-    ax.plot(x, darray.values, *args, **kwargs)
+    ax.plot(x, darray, *args, **kwargs)
 
     ax.set_xlabel(xlabel)
 
@@ -109,14 +121,16 @@ def plot_line(darray, *args, **kwargs):
     return ax
 
 
-def plot_imshow(darray, ax=None, add_colorbar=True, *args, **kwargs):
+def plot_imshow(darray, ax=None, add_colorbar=True, **kwargs):
     """
-    Image plot of 2d DataArray using matplotlib / pylab.
-
-    Warning: This function needs sorted, uniformly spaced coordinates to
-    properly label the axes.
+    Image plot of 2d DataArray using matplotlib / pylab
 
     Wraps matplotlib.pyplot.imshow
+
+    Warning::
+    
+        This function needs sorted, uniformly spaced coordinates to
+        properly label the axes.
 
     Parameters
     ----------
@@ -126,7 +140,7 @@ def plot_imshow(darray, ax=None, add_colorbar=True, *args, **kwargs):
         If None, uses the current axis
     add_colorbar : Boolean
         Adds colorbar to axis
-    kwargs
+    kwargs :
         Additional arguments to matplotlib.pyplot.imshow
 
     Details
@@ -134,16 +148,12 @@ def plot_imshow(darray, ax=None, add_colorbar=True, *args, **kwargs):
     The pixels are centered on the coordinates values. Ie, if the coordinate
     value is 3.2 then the pixels for those coordinates will be centered on 3.2.
 
-    Examples
-    --------
-
     """
     import matplotlib.pyplot as plt
 
     if ax is None:
         ax = plt.gca()
 
-    # Seems strange that ylab comes first
     try:
         ylab, xlab = darray.dims
     except ValueError:
@@ -153,7 +163,7 @@ def plot_imshow(darray, ax=None, add_colorbar=True, *args, **kwargs):
     x = darray[xlab]
     y = darray[ylab]
 
-    # Use to center the pixels- Assumes uniform spacing
+    # Centering the pixels- Assumes uniform spacing
     xstep = (x[1] - x[0]) / 2.0
     ystep = (y[1] - y[0]) / 2.0
     left, right = x[0] - xstep, x[-1] + xstep
@@ -162,7 +172,7 @@ def plot_imshow(darray, ax=None, add_colorbar=True, *args, **kwargs):
     defaults = {'extent': [left, right, bottom, top],
             'aspect': 'auto',
             'interpolation': 'nearest',
-            }
+    }
 
     # Allow user to override these defaults
     defaults.update(kwargs)
@@ -178,10 +188,25 @@ def plot_imshow(darray, ax=None, add_colorbar=True, *args, **kwargs):
     return ax
 
 
-# TODO - Could refactor this to avoid duplicating plot_image logic above
+# TODO - Could refactor this to avoid duplicating plot_imshow logic.
+# There's also some similar tests for the two.
 def plot_contourf(darray, ax=None, add_colorbar=True, **kwargs):
     """
-    Contour plot
+    Filled contour plot of 2d DataArray
+
+    Wraps matplotlib.pyplot.contourf
+
+    Parameters
+    ----------
+    darray : DataArray
+        Must be 2 dimensional
+    ax : matplotlib axes object
+        If None, uses the current axis
+    add_colorbar : Boolean
+        Adds colorbar to axis
+    kwargs :
+        Additional arguments to matplotlib.pyplot.imshow
+
     """
     import matplotlib.pyplot as plt
 
@@ -194,17 +219,7 @@ def plot_contourf(darray, ax=None, add_colorbar=True, **kwargs):
         raise ValueError('Contour plots are for 2 dimensional DataArrays. '
         'Passed DataArray has {} dimensions'.format(len(darray.dims)))
 
-    # Need arrays here?
-    #x = darray[xlab].values
-    #y = darray[ylab].values
-    #z = darray.values
-
-    #ax.contourf(x, y, z, *args, **kwargs)
-
-    x = darray[xlab]
-    y = darray[ylab]
-
-    contours = ax.contourf(x, y, darray, **kwargs)
+    contours = ax.contourf(darray[xlab], darray[ylab], darray, **kwargs)
 
     ax.set_xlabel(xlab)
     ax.set_ylabel(ylab)
@@ -217,22 +232,20 @@ def plot_contourf(darray, ax=None, add_colorbar=True, **kwargs):
 
 def plot_hist(darray, ax=None, **kwargs):
     """
-    Histogram of DataArray using matplotlib / pylab.
-    Plots N dimensional arrays by first flattening the array.
-
+    Histogram of DataArray 
+    
     Wraps matplotlib.pyplot.hist
+
+    Plots N dimensional arrays by first flattening the array.
 
     Parameters
     ----------
     darray : DataArray
-        Must be 2 dimensional
+        Can be any dimension
     ax : matplotlib axes object
         If not passed, uses the current axis
-    kwargs
-        Additional arguments to matplotlib.pyplot.hist
-
-    Examples
-    --------
+    kwargs :
+        Additional keyword arguments to matplotlib.pyplot.hist
 
     """
     import matplotlib.pyplot as plt

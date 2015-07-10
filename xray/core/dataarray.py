@@ -1079,9 +1079,6 @@ class DataArray(AbstractArray, BaseDataObject):
 
 # Add plotting methods
 # Alternatively these could be added using a Mixin
-# Wondering if it's better to only expose plot and plot_hist here, since
-# those always work.
-
 DataArray.plot = plotting.plot
 DataArray.plot_line = plotting.plot_line
 DataArray.plot_contourf = plotting.plot_contourf
