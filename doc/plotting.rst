@@ -275,6 +275,26 @@ Faceting
 Maps
 ----
 
+To follow this section you'll need to have Cartopy installed and working.
+
+Plot an image over the Atlantic ocean.
+
+.. ipython:: python
+
+    import cartopy.crs as ccrs
+
+    n = 30
+    atlantic = xray.DataArray(np.random.randn(n, n),
+            coords = (np.linspace(50, 20, n), np.linspace(10, 60, n)),
+            dims = ('latitude', 'longitude'))
+
+    ax = plt.axes(projection=ccrs.PlateCarree())
+    ax.stock_img()
+
+    atlantic.plot(ax=ax)
+
+    @savefig simple_map.png width=6in
+    plt.show()
 
 Details
 -------
