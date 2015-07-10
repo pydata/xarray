@@ -283,15 +283,20 @@ Plot an image over the Atlantic ocean.
 
     import cartopy.crs as ccrs
 
-    n = 30
-    atlantic = xray.DataArray(np.random.randn(n, n),
-            coords = (np.linspace(50, 20, n), np.linspace(10, 60, n)),
+    nlat = 15
+    nlon = 5
+    atlantic = xray.DataArray(np.random.randn(nlat, nlon),
+            coords = (np.linspace(50, 20, nlat), np.linspace(-60, -20, nlon)),
             dims = ('latitude', 'longitude'))
 
     ax = plt.axes(projection=ccrs.PlateCarree())
-    ax.stock_img()
 
     atlantic.plot(ax=ax)
+
+    ax.set_ylim(0, 90)
+    ax.set_xlim(-180, 30)
+
+    ax.coastlines()
 
     @savefig simple_map.png width=6in
     plt.show()
