@@ -1,7 +1,6 @@
 import numpy as np
-import pandas as pd
 
-from xray import Dataset, DataArray
+from xray import DataArray
 
 from . import TestCase, requires_matplotlib
 
@@ -14,6 +13,8 @@ try:
 except ImportError:
     pass
 
+
+# TODO - Add NaN handling and tests
 
 @requires_matplotlib
 class PlotTestCase(TestCase):
@@ -93,13 +94,12 @@ class TestPlot1D(PlotTestCase):
     def test_can_pass_in_axis(self):
         self.pass_in_axis(self.darray.plot_line)
 
-# TODO - Add NaN handling and tests
 
 class TestPlot2D(PlotTestCase):
 
     def setUp(self):
-        self.darray = DataArray(np.random.randn(10, 15), 
-                dims=['y', 'x'])
+        self.darray = DataArray(np.random.randn(10, 15),
+                                dims=['y', 'x'])
 
     def test_contour_label_names(self):
         ax = self.darray.plot_contourf()

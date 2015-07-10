@@ -28,10 +28,10 @@ def plot(darray, ax=None, rtol=0.01, **kwargs):
     =============== =========== ===========================
     Dimensions      Coordinates Plotting function
     --------------- ----------- ---------------------------
-    1                           :py:meth:`xray.DataArray.plot_line` 
-    2               Uniform     :py:meth:`xray.DataArray.plot_imshow` 
-    2               Irregular   :py:meth:`xray.DataArray.plot_contourf` 
-    Anything else               :py:meth:`xray.DataArray.plot_hist` 
+    1                           :py:meth:`xray.DataArray.plot_line`
+    2               Uniform     :py:meth:`xray.DataArray.plot_imshow`
+    2               Irregular   :py:meth:`xray.DataArray.plot_contourf`
+    Anything else               :py:meth:`xray.DataArray.plot_hist`
     =============== =========== ===========================
 
     Parameters
@@ -51,7 +51,8 @@ def plot(darray, ax=None, rtol=0.01, **kwargs):
     if ndims == 1:
         plotfunc = plot_line
     elif ndims == 2:
-        if all(is_uniform_spaced(i, rtol=rtol) for i in darray.indexes.values()):
+        indexes = darray.indexes.values()
+        if all(is_uniform_spaced(i, rtol=rtol) for i in indexes):
             plotfunc = plot_imshow
         else:
             plotfunc = plot_contourf
@@ -98,7 +99,7 @@ def plot_line(darray, *args, **kwargs):
     ndims = len(darray.dims)
     if ndims != 1:
         raise ValueError('Line plots are for 1 dimensional DataArrays. '
-        'Passed DataArray has {} dimensions'.format(ndims))
+                         'Passed DataArray has {} dimensions'.format(ndims))
 
     # Ensures consistency with .plot method
     try:
@@ -128,7 +129,7 @@ def plot_imshow(darray, ax=None, add_colorbar=True, **kwargs):
     Wraps matplotlib.pyplot.imshow
 
     Warning::
-    
+
         This function needs sorted, uniformly spaced coordinates to
         properly label the axes.
 
@@ -158,7 +159,8 @@ def plot_imshow(darray, ax=None, add_colorbar=True, **kwargs):
         ylab, xlab = darray.dims
     except ValueError:
         raise ValueError('Image plots are for 2 dimensional DataArrays. '
-        'Passed DataArray has {} dimensions'.format(len(darray.dims)))
+                         'Passed DataArray has {} dimensions'
+                         .format(len(darray.dims)))
 
     x = darray[xlab]
     y = darray[ylab]
@@ -170,9 +172,9 @@ def plot_imshow(darray, ax=None, add_colorbar=True, **kwargs):
     bottom, top = y[-1] + ystep, y[0] - ystep
 
     defaults = {'extent': [left, right, bottom, top],
-            'aspect': 'auto',
-            'interpolation': 'nearest',
-    }
+                'aspect': 'auto',
+                'interpolation': 'nearest',
+                }
 
     # Allow user to override these defaults
     defaults.update(kwargs)
@@ -217,7 +219,8 @@ def plot_contourf(darray, ax=None, add_colorbar=True, **kwargs):
         ylab, xlab = darray.dims
     except ValueError:
         raise ValueError('Contour plots are for 2 dimensional DataArrays. '
-        'Passed DataArray has {} dimensions'.format(len(darray.dims)))
+                         'Passed DataArray has {} dimensions'
+                         .format(len(darray.dims)))
 
     contours = ax.contourf(darray[xlab], darray[ylab], darray, **kwargs)
 
@@ -232,8 +235,8 @@ def plot_contourf(darray, ax=None, add_colorbar=True, **kwargs):
 
 def plot_hist(darray, ax=None, **kwargs):
     """
-    Histogram of DataArray 
-    
+    Histogram of DataArray
+
     Wraps matplotlib.pyplot.hist
 
     Plots N dimensional arrays by first flattening the array.
