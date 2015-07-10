@@ -59,7 +59,7 @@ Additional Arguments
 
 Additional arguments are passed directly to the matplotlib function which
 does the work. 
-For example, for a 1 dimensional DataArray, :py:meth:`xray.DataArray.plot_line` calls ``plt.plot``,
+For example, :py:meth:`xray.DataArray.plot_line` calls ``plt.plot``,
 passing in the index and the array values as x and y, respectively.
 So to make a line plot with blue triangles a `matplotlib format string
 <http://matplotlib.org/api/pyplot_api.html#matplotlib.pyplot.plot>`__ 
@@ -70,13 +70,18 @@ can be used:
     @savefig plotting_example_sin2.png width=4in
     sinpts.plot_line('b-^')
 
+.. warning:: 
+    Not all xray plotting methods support passing positional arguments 
+    to the underlying matplotlib functions, but they do all
+    support keyword arguments. Check the documentation for each
+    function to make sure.
+
 Keyword arguments work the same way:
 
 .. ipython:: python
 
     @savefig plotting_example_sin3.png width=4in
     sinpts.plot_line(color='purple', marker='o')
-
 
 Adding to Existing Axis
 ~~~~~~~~~~~~~~~~~~~~~~~
@@ -133,14 +138,21 @@ calls :py:meth:`xray.DataArray.plot_imshow`.
     a[0, 0] = 1
     a
 
+The plot will produce an image corresponding to the values of the array. 
+Hence the top left pixel will be a different color than the others. 
+Before reading on, you may want to look at the coordinates and 
+think carefully about what the limits, labels, and orientation for 
+each of the axes should be.
+
+.. ipython:: python
+
     @savefig plotting_example_2d_simple.png width=4in
     a.plot()
 
-The top left pixel is 1, and the others are 0. This corresponds to the
-printed array. It may seem strange that
+It may seem strange that
 the the values on the y axis are decreasing with 0 on the top. This is because the
 axis labels and ranges correspond to the values of the
-coordinates.
+coordinates. The pixels are centered over their coordinates.
 
 An `extended slice <http://docs.scipy.org/doc/numpy/reference/arrays.indexing.html>`__
 can be used to reverse the order of the rows, producing a
@@ -150,36 +162,19 @@ more conventional plot where the coordinates increase in the y axis.
 
     a[::-1, :]
 
-    @savefig plotting_example_2d_simple.png width=4in
+    @savefig plotting_example_2d_simple_reversed.png width=4in
     a[::-1, :].plot()
-
-
-Nonuniform Coordinates
-~~~~~~~~~~~~~~~~~~~~~~
-
-If the coordinates are not uniformly spaced then 
-:py:meth:`xray.DataArray.plot` produces a filled contour plot by calling
-:py:meth:`xray.DataArray.plot_contourf`. 
-
-.. ipython:: python
-
-    a.coords['x'] = [0, 1, 4]
-
-    @savefig plotting_example_2d_nonuniform.png width=4in
-    a.plot()
-
 
 Simulated Data
 ~~~~~~~~~~~~~~
 
 For further examples we generate two dimensional data by computing the distance
 from a 2d grid point to the origin.
-It's not necessary for the grid to be evenly spaced.
 
 .. ipython:: python
 
     x = np.linspace(-5, 10, num=6)
-    y = np.logspace(1.2, 0, num=7)
+    y = np.linspace(1.2, 0, num=7)
     xy = np.dstack(np.meshgrid(x, y))
 
     distance = np.linalg.norm(xy, axis=2)
@@ -190,8 +185,32 @@ It's not necessary for the grid to be evenly spaced.
 Note the coordinate ``y`` here is decreasing. 
 This makes the axes of the image plot in the expected way.
 
-# TODO- Edge case- what if the coordinates are not sorted? Is this
-possible? What if coordinates increasing?
+TODO- need proper scaling for y axis.
+
+.. ipython:: python
+
+    @savefig plotting_2d_simulated.png width=4in
+    distance.plot()
+
+Nonuniform Coordinates
+~~~~~~~~~~~~~~~~~~~~~~
+
+It's not necessary for the coordinates to be evenly spaced. If not, then
+:py:meth:`xray.DataArray.plot` produces a filled contour plot by calling
+:py:meth:`xray.DataArray.plot_contourf`. This example demonstrates that by
+using coordinates with logarithmic spacing.
+
+.. ipython:: python
+
+    x = np.logspace(0, 2, num=3)
+    y = np.logspace(0, 2, num=4)
+    xy = np.dstack(np.meshgrid(x, y))
+    d2 = np.linalg.norm(xy, axis=2)
+    d2 = xray.DataArray(d2, {'x': x, 'y': y})
+    d2
+
+    @savefig plotting_nonuniform_coords.png width=4in
+    d2.plot()
 
 Calling Matplotlib
 ~~~~~~~~~~~~~~~~~~

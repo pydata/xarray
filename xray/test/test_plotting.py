@@ -133,6 +133,10 @@ class TestPlot2D(PlotTestCase):
         self.assertFalse(self.contourf_called(self.darray.plot_imshow))
         self.assertTrue(self.contourf_called(self.darray.plot_contourf))
 
+    def test_imshow_xy_pixel_centered(self):
+        ax = self.darray.plot_contourf()
+        self.assertTrue(np.allclose([-0.5, 14.5], ax.get_xlim()))
+
 
 class TestPlotHist(PlotTestCase):
 

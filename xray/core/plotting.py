@@ -113,6 +113,9 @@ def plot_imshow(darray, ax=None, add_colorbar=True, *args, **kwargs):
     """
     Image plot of 2d DataArray using matplotlib / pylab.
 
+    Warning: This function needs sorted, uniformly spaced coordinates to
+    properly label the axes.
+
     Wraps matplotlib.pyplot.imshow
 
     Parameters
@@ -125,6 +128,11 @@ def plot_imshow(darray, ax=None, add_colorbar=True, *args, **kwargs):
         Additional arguments to matplotlib.pyplot.imshow
     add_colorbar : Boolean
         Adds colorbar to axis
+
+    Details
+    -------
+    The pixels are centered on the coordinates values. Ie, if the coordinate
+    value is 3.2 then the pixel for that data point will be centered on 3.2.
 
     Examples
     --------
@@ -145,13 +153,19 @@ def plot_imshow(darray, ax=None, add_colorbar=True, *args, **kwargs):
     x = darray[xlab]
     y = darray[ylab]
 
-    image = ax.imshow(darray, extent=[x.min(), x.max(), y.min(), y.max()],
+    # Use to center the pixels- Assumes uniform spacing
+    xstep = (x[1] - x[0]) / 2.0
+    ystep = (y[1] - y[0]) / 2.0
+    left, right = x[0] - xstep, x[-1] + xstep
+    bottom, top = y[-1] + ystep, y[0] - ystep
+
+    ax.imshow(darray, extent=[left, right, bottom, top],
             interpolation='nearest', *args, **kwargs)
 
     ax.set_xlabel(xlab)
     ax.set_ylabel(ylab)
 
-    plt.colorbar(image, ax=ax)
+    #plt.colorbar(image, ax=ax)
 
     return ax
 
@@ -183,6 +197,7 @@ def plot_contourf(darray, ax=None, add_colorbar=True, **kwargs):
     y = darray[ylab]
 
     contours = ax.contourf(x, y, darray, **kwargs)
+
     ax.set_xlabel(xlab)
     ax.set_ylabel(ylab)
 
