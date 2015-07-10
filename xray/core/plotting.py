@@ -124,15 +124,15 @@ def plot_imshow(darray, ax=None, add_colorbar=True, *args, **kwargs):
         Must be 2 dimensional
     ax : matplotlib axes object
         If None, uses the current axis
-    args, kwargs
-        Additional arguments to matplotlib.pyplot.imshow
     add_colorbar : Boolean
         Adds colorbar to axis
+    kwargs
+        Additional arguments to matplotlib.pyplot.imshow
 
     Details
     -------
     The pixels are centered on the coordinates values. Ie, if the coordinate
-    value is 3.2 then the pixel for that data point will be centered on 3.2.
+    value is 3.2 then the pixels for those coordinates will be centered on 3.2.
 
     Examples
     --------
@@ -159,13 +159,21 @@ def plot_imshow(darray, ax=None, add_colorbar=True, *args, **kwargs):
     left, right = x[0] - xstep, x[-1] + xstep
     bottom, top = y[-1] + ystep, y[0] - ystep
 
-    ax.imshow(darray, extent=[left, right, bottom, top],
-            interpolation='nearest', *args, **kwargs)
+    defaults = {'extent': [left, right, bottom, top],
+            'aspect': 'auto',
+            'interpolation': 'nearest',
+            }
+
+    # Allow user to override these defaults
+    defaults.update(kwargs)
+
+    image = ax.imshow(darray, **defaults)
 
     ax.set_xlabel(xlab)
     ax.set_ylabel(ylab)
 
-    #plt.colorbar(image, ax=ax)
+    if add_colorbar:
+        plt.colorbar(image, ax=ax)
 
     return ax
 

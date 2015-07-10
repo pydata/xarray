@@ -134,8 +134,17 @@ class TestPlot2D(PlotTestCase):
         self.assertTrue(self.contourf_called(self.darray.plot_contourf))
 
     def test_imshow_xy_pixel_centered(self):
-        ax = self.darray.plot_contourf()
+        ax = self.darray.plot_imshow()
         self.assertTrue(np.allclose([-0.5, 14.5], ax.get_xlim()))
+        self.assertTrue(np.allclose([9.5, -0.5], ax.get_ylim()))
+
+    def test_default_aspect_is_auto(self):
+        ax = self.darray.plot_imshow()
+        self.assertEqual('auto', ax.get_aspect())
+
+    def test_can_change_aspect(self):
+        ax = self.darray.plot_imshow(aspect='equal')
+        self.assertEqual('equal', ax.get_aspect())
 
 
 class TestPlotHist(PlotTestCase):
