@@ -6,36 +6,37 @@ Introduction
 
 The goal of xray's plotting is to make exploratory plotting quick
 and easy by using metadata from :py:class:`xray.DataArray` objects to add
-informative labels. 
+informative labels.
 
 Xray plotting functionality is a thin wrapper around the popular
-`matplotlib <http://matplotlib.org/>`__ library. 
+`matplotlib <http://matplotlib.org/>`_ library.
 Matplotlib syntax and function names were copied as much as possible, which
 makes for an easy transition between the two.
+Matplotlib must be installed and working before trying to plot with xray.
 
-For more specialized plotting applications consider the following packages:
+For more extensive plotting applications consider the following projects:
 
-- `Seaborn <http://stanford.edu/~mwaskom/software/seaborn/>`__: "provides
+- `Seaborn <http://stanford.edu/~mwaskom/software/seaborn/>`_: "provides
   a high-level interface for drawing attractive statistical graphics."
   Integrates well with pandas.
 
-- `Holoviews <http://ioam.github.io/holoviews/>`__: "Composable, declarative
+- `Holoviews <http://ioam.github.io/holoviews/>`_: "Composable, declarative
   data structures for building even complex visualizations easily."
   Works for 2d datasets.
 
-- `Cartopy <http://scitools.org.uk/cartopy/>`__: provides cartographic
-  tools
+- `Cartopy <http://scitools.org.uk/cartopy/>`_: Provides cartographic
+  tools.
 
 Imports
 ~~~~~~~
 
-Begin by importing the necessary modules:
+These imports are necessary for all of the examples.
 
 .. ipython:: python
 
     import numpy as np
-    import xray
     import matplotlib.pyplot as plt
+    import xray
 
 One Dimension
 -------------
@@ -43,40 +44,40 @@ One Dimension
 Simple Example
 ~~~~~~~~~~~~~~
 
-Here is a simple example of plotting.
 Xray uses the coordinate name to label the x axis:
 
 .. ipython:: python
 
-    t = np.linspace(0, 2*np.pi)
+    t = np.linspace(0, np.pi, num=20)
     sinpts = xray.DataArray(np.sin(t), {'t': t}, name='sin(t)')
+    sinpts
 
     @savefig plotting_example_sin.png width=4in
     sinpts.plot()
 
-Additional Arguments 
+Additional Arguments
 ~~~~~~~~~~~~~~~~~~~~~
 
 Additional arguments are passed directly to the matplotlib function which
-does the work. 
-For example, :py:meth:`xray.DataArray.plot_line` calls ``plt.plot``,
-passing in the index and the array values as x and y, respectively.
-So to make a line plot with blue triangles a `matplotlib format string
-<http://matplotlib.org/api/pyplot_api.html#matplotlib.pyplot.plot>`__ 
+does the work.
+For example, :py:meth:`xray.DataArray.plot_line` calls 
+matplotlib.pyplot.plot_ passing in the index and the array values as x and y, respectively.
+So to make a line plot with blue triangles a matplotlib format string
 can be used:
+
+.. _matplotlib.pyplot.plot: http://matplotlib.org/api/pyplot_api.html#matplotlib.pyplot.plot
 
 .. ipython:: python
 
     @savefig plotting_example_sin2.png width=4in
     sinpts.plot_line('b-^')
 
-.. warning:: 
-    Not all xray plotting methods support passing positional arguments 
-    to the underlying matplotlib functions, but they do all
-    support keyword arguments. Check the documentation for each
-    function to make sure.
+.. warning::
+    Not all xray plotting methods support passing positional arguments
+    to the wrapped matplotlib functions, but they do all
+    support keyword arguments.
 
-Keyword arguments work the same way:
+Keyword arguments work the same way, and are more explicit.
 
 .. ipython:: python
 
@@ -103,8 +104,7 @@ axes created by ``plt.subplots``.
     @savefig plotting_example_existing_axes.png width=6in
     plt.show()
 
-Instead of using the default :py:meth:`xray.DataArray.plot` we see a
-histogram created by :py:meth:`xray.DataArray.plot_hist`.
+On the right is a histogram created by :py:meth:`xray.DataArray.plot_hist`.
 
 Time Series
 ~~~~~~~~~~~
@@ -123,15 +123,16 @@ The index may be a date.
 
 TODO- rotate dates printed on x axis.
 
+
 Two Dimensions
 --------------
 
 Simple Example
 ~~~~~~~~~~~~~~
 
-The default method :py:meth:`xray.DataArray.plot` sees that the data is 
+The default method :py:meth:`xray.DataArray.plot` sees that the data is
 2 dimensional. If the coordinates are uniformly spaced then it
-calls :py:meth:`xray.DataArray.plot_imshow`. 
+calls :py:meth:`xray.DataArray.plot_imshow`.
 
 .. ipython:: python
 
@@ -139,10 +140,10 @@ calls :py:meth:`xray.DataArray.plot_imshow`.
     a[0, 0] = 1
     a
 
-The plot will produce an image corresponding to the values of the array. 
-Hence the top left pixel will be a different color than the others. 
-Before reading on, you may want to look at the coordinates and 
-think carefully about what the limits, labels, and orientation for 
+The plot will produce an image corresponding to the values of the array.
+Hence the top left pixel will be a different color than the others.
+Before reading on, you may want to look at the coordinates and
+think carefully about what the limits, labels, and orientation for
 each of the axes should be.
 
 .. ipython:: python
@@ -151,10 +152,10 @@ each of the axes should be.
     a.plot()
 
 It may seem strange that
-the the values on the y axis are decreasing with -0.5 on the top. This is because 
+the the values on the y axis are decreasing with -0.5 on the top. This is because
 the pixels are centered over their coordinates, and the
 axis labels and ranges correspond to the values of the
-coordinates. 
+coordinates.
 
 An `extended slice <http://docs.scipy.org/doc/numpy/reference/arrays.indexing.html>`__
 can be used to reverse the order of the rows, producing a
@@ -170,8 +171,8 @@ more conventional plot where the coordinates increase in the y axis.
 Simulated Data
 ~~~~~~~~~~~~~~
 
-For further examples we generate two dimensional data by computing the distance
-from a 2d grid point to the origin.
+For further examples we generate two dimensional data by computing the Euclidean
+distance from a 2d grid point to the origin.
 
 .. ipython:: python
 
@@ -184,18 +185,18 @@ from a 2d grid point to the origin.
     distance = xray.DataArray(distance, {'x': x, 'y': y})
     distance
 
-Note the coordinate ``y`` here is decreasing. 
+Note the coordinate ``y`` here is decreasing.
 This makes the y axes appear in the conventional way.
 
 .. ipython:: python
 
     @savefig plotting_2d_simulated.png width=4in
     distance.plot()
- 
+
 Changing Axes
 ~~~~~~~~~~~~~
 
-To swap the variables plotted on vertical and horizontal axes one can 
+To swap the variables plotted on vertical and horizontal axes one can
 transpose the array.
 
 .. ipython:: python
@@ -206,12 +207,12 @@ transpose the array.
 TODO: Feedback here please. This requires the user to put the array into
 the order they want for plotting. To plot with sorted coordinates they
 would have to write something
-like this: ``distance.T[::-1, ::-1].plot()``. 
+like this: ``distance.T[::-1, ::-1].plot()``.
 This requires the user to be aware of how the array is organized.
 
 Alternatively, this could be implemented in
 xray plotting as: ``distance.plot(xvar='y', sortx=True,
-sorty=True)``. 
+sorty=True)``.
 This allows the use of the dimension
 name to describe which coordinate should appear as the x variable on the
 plot, and is probably more convenient.
@@ -238,7 +239,7 @@ using one coordinate with logarithmic spacing.
 Calling Matplotlib
 ~~~~~~~~~~~~~~~~~~
 
-Since this is a thin wrapper around matplotlib, all the functionality of 
+Since this is a thin wrapper around matplotlib, all the functionality of
 matplotlib is available. For example, use a different color map and add a title.
 
 .. ipython:: python
@@ -277,36 +278,20 @@ Maps
 
 To follow this section you'll need to have Cartopy installed and working.
 
-Plot an image over the Atlantic ocean.
+This script will plot an image over the Atlantic ocean.
 
-.. ipython:: python
+.. literalinclude:: examples/cartopy_atlantic.py
 
-    import cartopy.crs as ccrs
+Here is the resulting image:
 
-    nlat = 15
-    nlon = 5
-    atlantic = xray.DataArray(np.random.randn(nlat, nlon),
-            coords = (np.linspace(50, 20, nlat), np.linspace(-60, -20, nlon)),
-            dims = ('latitude', 'longitude'))
-
-    ax = plt.axes(projection=ccrs.PlateCarree())
-
-    atlantic.plot(ax=ax)
-
-    ax.set_ylim(0, 90)
-    ax.set_xlim(-180, 30)
-
-    ax.coastlines()
-
-    @savefig simple_map.png width=6in
-    plt.show()
+.. image:: examples/atlantic_noise.png
 
 Details
 -------
 
 There are two ways to use the xray plotting functionality:
 
-1. Use the ``plot`` convenience methods of :py:class:`xray.DataArray` 
+1. Use the ``plot`` convenience methods of :py:class:`xray.DataArray`
 2. Directly from the xray plotting submodule::
 
     import xray.plotting as xplt
@@ -319,8 +304,20 @@ describes what gets plotted:
 =============== =========== ===========================
 Dimensions      Coordinates Plotting function
 --------------- ----------- ---------------------------
-1                           :py:meth:`xray.DataArray.plot_line` 
-2               Uniform     :py:meth:`xray.DataArray.plot_imshow` 
-2               Irregular   :py:meth:`xray.DataArray.plot_contourf` 
-Anything else               :py:meth:`xray.DataArray.plot_hist` 
+1                           :py:meth:`xray.DataArray.plot_line`
+2               Uniform     :py:meth:`xray.DataArray.plot_imshow`
+2               Irregular   :py:meth:`xray.DataArray.plot_contourf`
+Anything else               :py:meth:`xray.DataArray.plot_hist`
 =============== =========== ===========================
+
+Non Numeric Indexes
+~~~~~~~~~~~~~~~~~~~
+
+If the coordinates are not numeric.
+
+.. ipython:: python
+
+    a = xray.DataArray([1, 2, 3], {'letter': ['a', 'b', 'c']})
+
+    @savefig plotting_nonnumeric.png width=4in
+    a.plot_line()

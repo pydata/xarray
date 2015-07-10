@@ -80,19 +80,6 @@ def plot_line(darray, *args, **kwargs):
     args, kwargs
         Additional arguments to matplotlib.pyplot.plot
 
-    Examples
-    --------
-
-    >>> from numpy import sin, linspace
-    >>> a = DataArray(sin(linspace(0, 10)))
-
-    @savefig plotting_plot_line_doc1.png width=4in
-    >>> a.plot_line()
-
-    Use matplotlib arguments:
-    @savefig plotting_plot_line_doc2.png width=4in
-    >>> a.plot_line(color='purple', shape='x')
-
     """
     import matplotlib.pyplot as plt
 
@@ -128,10 +115,8 @@ def plot_imshow(darray, ax=None, add_colorbar=True, **kwargs):
 
     Wraps matplotlib.pyplot.imshow
 
-    Warning::
-
-        This function needs sorted, uniformly spaced coordinates to
-        properly label the axes.
+    WARNING: This function needs uniformly spaced coordinates to
+    properly label the axes. Call DataArray.plot() to check.
 
     Parameters
     ----------
