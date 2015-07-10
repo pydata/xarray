@@ -121,6 +121,7 @@ The index may be a date.
     @savefig plotting_example_time.png width=6in
     noise.plot_line()
 
+TODO- rotate dates printed on x axis.
 
 Two Dimensions
 --------------
@@ -128,7 +129,7 @@ Two Dimensions
 Simple Example
 ~~~~~~~~~~~~~~
 
-The default :py:meth:`xray.DataArray.plot` sees that the data is 
+The default method :py:meth:`xray.DataArray.plot` sees that the data is 
 2 dimensional. If the coordinates are uniformly spaced then it
 calls :py:meth:`xray.DataArray.plot_imshow`. 
 
@@ -150,9 +151,10 @@ each of the axes should be.
     a.plot()
 
 It may seem strange that
-the the values on the y axis are decreasing with 0 on the top. This is because the
+the the values on the y axis are decreasing with -0.5 on the top. This is because 
+the pixels are centered over their coordinates, and the
 axis labels and ranges correspond to the values of the
-coordinates. The pixels are centered over their coordinates.
+coordinates. 
 
 An `extended slice <http://docs.scipy.org/doc/numpy/reference/arrays.indexing.html>`__
 can be used to reverse the order of the rows, producing a
@@ -173,8 +175,8 @@ from a 2d grid point to the origin.
 
 .. ipython:: python
 
-    x = np.linspace(-5, 10, num=6)
-    y = np.linspace(1.2, 0, num=7)
+    x = np.arange(start=0, stop=10, step=2)
+    y = np.arange(start=9, stop=-7, step=-3)
     xy = np.dstack(np.meshgrid(x, y))
 
     distance = np.linalg.norm(xy, axis=2)
@@ -183,14 +185,36 @@ from a 2d grid point to the origin.
     distance
 
 Note the coordinate ``y`` here is decreasing. 
-This makes the axes of the image plot in the expected way.
-
-TODO- need proper scaling for y axis.
+This makes the y axes appear in the conventional way.
 
 .. ipython:: python
 
     @savefig plotting_2d_simulated.png width=4in
     distance.plot()
+ 
+Changing Axes
+~~~~~~~~~~~~~
+
+To swap the variables plotted on vertical and horizontal axes one can 
+transpose the array.
+
+.. ipython:: python
+
+    @savefig plotting_changing_axes.png width=4in
+    distance.T.plot()
+
+TODO: Feedback here please. This requires the user to put the array into
+the order they want for plotting. To plot with sorted coordinates they
+would have to write something
+like this: ``distance.T[::-1, ::-1].plot()``. 
+This requires the user to be aware of how the array is organized.
+
+Alternatively, this could be implemented in
+xray plotting as: ``distance.plot(xvar='y', sortx=True,
+sorty=True)``. 
+This allows the use of the dimension
+name to describe which coordinate should appear as the x variable on the
+plot, and is probably more convenient.
 
 Nonuniform Coordinates
 ~~~~~~~~~~~~~~~~~~~~~~
@@ -198,56 +222,59 @@ Nonuniform Coordinates
 It's not necessary for the coordinates to be evenly spaced. If not, then
 :py:meth:`xray.DataArray.plot` produces a filled contour plot by calling
 :py:meth:`xray.DataArray.plot_contourf`. This example demonstrates that by
-using coordinates with logarithmic spacing.
+using one coordinate with logarithmic spacing.
 
 .. ipython:: python
 
-    x = np.logspace(0, 2, num=3)
-    y = np.logspace(0, 2, num=4)
+    x = np.linspace(0, 500)
+    y = np.logspace(0, 3)
     xy = np.dstack(np.meshgrid(x, y))
-    d2 = np.linalg.norm(xy, axis=2)
-    d2 = xray.DataArray(d2, {'x': x, 'y': y})
-    d2
+    d_ylog = np.linalg.norm(xy, axis=2)
+    d_ylog = xray.DataArray(d_ylog, {'x': x, 'y': y})
 
     @savefig plotting_nonuniform_coords.png width=4in
-    d2.plot()
+    d_ylog.plot()
 
 Calling Matplotlib
 ~~~~~~~~~~~~~~~~~~
 
-Use matplotlib to adjust plot parameters. For example, the
-y grid points were generated from a log scale, so we can use matplotlib
-to adjust the scale on y:
+Since this is a thin wrapper around matplotlib, all the functionality of 
+matplotlib is available. For example, use a different color map and add a title.
 
 .. ipython:: python
 
-    #plt.yscale('log')
+    d_ylog.plot(cmap=plt.cm.Blues)
+    plt.title('Euclidean distance from point to origin')
 
-    @savefig plotting_example_2d3.png width=4in
-    distance.plot()
+    @savefig plotting_2d_call_matplotlib.png width=4in
+    plt.show()
 
-Changing Axes
-~~~~~~~~~~~~~
+Colormaps
+~~~~~~~~~
 
-Two dimensional plotting in xray uses the 
-Swap the variables plotted on vertical and horizontal axes by transposing the array.
+Suppose we want two plots to share the same color scale. This can be
+achieved by passing in a color map.
 
-.. ipython:: python
-
-    @savefig plotting_example_2d2.png width=4in
-    distance.T.plot()
-
-Contour Plot
-~~~~~~~~~~~~
-
-Visualization is 
+TODO- Don't actually know how to do this yet. Will probably want it for the
+Faceting
 
 .. ipython:: python
 
-    @savefig plotting_example_contour.png width=4in
-    distance.plot_contourf()
- 
-TODO- This  is the same plot as ``imshow``.
+    colors = plt.cm.Blues
+
+    fig, axes = plt.subplots(ncols=2)
+
+    distance.plot(ax=axes[0], cmap=colors, )
+
+    halfd = distance / 2
+    halfd.plot(ax=axes[1], cmap=colors)
+
+    @savefig plotting_same_color_scale.png width=6in
+    plt.show()
+
+Maps
+----
+
 
 Details
 -------
