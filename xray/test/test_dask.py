@@ -197,6 +197,7 @@ class TestDataArrayAndDataset(DaskTestCase):
         actual = concat([v[:2], v[2:]], 'x')
         self.assertLazyAndAllClose(u, actual)
 
+    @unittest.skip('broken on dask 0.6.0')
     def test_groupby(self):
         u = self.eager_array
         v = self.lazy_array
