@@ -68,7 +68,10 @@ class ScipyArrayWrapper(NumpyIndexingAdapter):
         # because otherwise scipy complains about variables or files still
         # referencing mmapped arrays when we try to close datasets without
         # having read all data in the file.
-        return self.netcdf_file.variables[self.variable_name].data
+        a = self.netcdf_file.variables[self.variable_name].data
+        if self.netcdf_file.close_files:
+            self.netcdf_file.close()
+        return a
 
     @property
     def dtype(self):
