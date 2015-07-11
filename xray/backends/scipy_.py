@@ -3,6 +3,8 @@ from io import BytesIO
 import numpy as np
 import warnings
 
+import scipy.io
+
 from .. import Variable
 from ..conventions import cf_encoder
 from ..core.pycompat import iteritems, basestring, unicode_type, OrderedDict
@@ -27,6 +29,33 @@ def _decode_attrs(d):
     return OrderedDict((k, v if k == '_FillValue' else _decode_string(v))
                        for (k, v) in iteritems(d))
 
+
+class ScipyNetcdfWrapper(scipy.io.netcdf_file):
+    # wrap scipy.io.netcdf_file object in a class that
+    # can open or close the underlying file as needed
+    def __init__(self, *args, **kwargs):
+        self._is_open = True
+        self._variables = dict()
+        self._init_args = args
+        self._init_kwargs = kwargs.copy()
+        self.close_files = kwargs.pop('close_files')
+        super(ScipyNetcdfWrapper, self).__init__(*args, **kwargs)
+
+    def close(self):
+        super(ScipyNetcdfWrapper, self).close()
+        self._is_open = False
+
+    @property
+    def variables(self):
+        # check to see if the underlying file is closed
+        if not self._is_open:
+            # if so, reinitialize it
+            self.__init__(*self._init_args, **self._init_kwargs)
+        return self._variables
+
+    @variables.setter
+    def variables(self, value):
+        self._variables = value
 
 class ScipyArrayWrapper(NumpyIndexingAdapter):
     def __init__(self, netcdf_file, variable_name):
@@ -53,6 +82,8 @@ class ScipyArrayWrapper(NumpyIndexingAdapter):
         # after closing associated files.
         copy = self.netcdf_file.use_mmap
         data = np.array(data, dtype=self.dtype, copy=copy)
+        if self.netcdf_file.close_files:
+            self.netcdf_file.close()
         return data
 
 
@@ -65,9 +96,8 @@ class ScipyDataStore(AbstractWritableDataStore):
     It only supports the NetCDF3 file-format.
     """
     def __init__(self, filename_or_obj, mode='r', format=None, group=None,
-                 writer=None, mmap=None):
+                 writer=None, mmap=None, close_files=False):
         import scipy
-        import scipy.io
         if mode != 'r' and scipy.__version__ < '0.13':  # pragma: no cover
             warnings.warn('scipy %s detected; '
                           'the minimal recommended version is 0.13. '
@@ -87,15 +117,24 @@ class ScipyDataStore(AbstractWritableDataStore):
             raise ValueError('invalid format for scipy.io.netcdf backend: %r'
                              % format)
 
+        # can't use mmap with close_files
+        if close_files:
+            mmap = False
+
         # if filename is a NetCDF3 bytestring we store it in a StringIO
         if (isinstance(filename_or_obj, basestring)
                 and filename_or_obj.startswith('CDF')):
             # TODO: this check has the unfortunate side-effect that
             # paths to files cannot start with 'CDF'.
             filename_or_obj = BytesIO(filename_or_obj)
-        self.ds = scipy.io.netcdf_file(
-            filename_or_obj, mode=mode, mmap=mmap, version=version)
+        self.ds = ScipyNetcdfWrapper(
+            filename_or_obj, mode=mode, mmap=mmap, version=version,
+            close_files=close_files)
         super(ScipyDataStore, self).__init__(writer)
+
+        if close_files:
+            self.ds.close()
+        
 
     def store(self, variables, attributes):
         # All Scipy objects get CF encoded by default, without this attempting

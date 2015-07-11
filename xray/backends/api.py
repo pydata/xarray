@@ -39,7 +39,7 @@ def _get_default_engine(path, allow_remote=False):
 def open_dataset(filename_or_obj, group=None, decode_cf=True,
                  mask_and_scale=True, decode_times=True,
                  concat_characters=True, decode_coords=True, engine=None,
-                 chunks=None, lock=True):
+                 chunks=None, lock=True, close_files=False):
     """Load and decode a dataset from a file or file-like object.
 
     Parameters
@@ -84,6 +84,9 @@ def open_dataset(filename_or_obj, group=None, decode_cf=True,
         If chunks is provided, this argument is passed on to
         :py:func:`dask.array.from_array`. By default, a lock is used to avoid
         issues with concurrent access with dask's multithreaded backend.
+    close_files: bool, optional
+        If True, the engine should try to keep the underlying files closed.
+        Currently only supported for engine='scipy'.
 
     Returns
     -------
@@ -107,6 +110,9 @@ def open_dataset(filename_or_obj, group=None, decode_cf=True,
         if chunks is not None:
             ds = ds.chunk(chunks, lock=lock)
         return ds
+
+    if close_files and engine != 'scipy':
+        raise ValueError('close_files only supported for scipy engine')
 
     if isinstance(filename_or_obj, backends.AbstractDataStore):
         store = filename_or_obj
@@ -137,7 +143,7 @@ def open_dataset(filename_or_obj, group=None, decode_cf=True,
             if engine == 'netcdf4':
                 store = backends.NetCDF4DataStore(filename_or_obj, group=group)
             elif engine == 'scipy':
-                store = backends.ScipyDataStore(filename_or_obj)
+                store = backends.ScipyDataStore(filename_or_obj, close_files=close_files)
             elif engine == 'pydap':
                 store = backends.PydapDataStore(filename_or_obj)
             elif engine == 'h5netcdf':
@@ -147,7 +153,10 @@ def open_dataset(filename_or_obj, group=None, decode_cf=True,
                                  % engine)
 
         with close_on_error(store):
-            return maybe_decode_store(store)
+            ds = maybe_decode_store(store)
+            if close_files:
+                store.ds.close()
+            return ds
     else:
         if engine is not None and engine != 'scipy':
             raise ValueError('can only read file-like objects with '
