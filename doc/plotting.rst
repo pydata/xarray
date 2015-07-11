@@ -309,15 +309,3 @@ Dimensions      Coordinates Plotting function
 2               Irregular   :py:meth:`xray.DataArray.plot_contourf`
 Anything else               :py:meth:`xray.DataArray.plot_hist`
 =============== =========== ===========================
-
-Non Numeric Indexes
-~~~~~~~~~~~~~~~~~~~
-
-If the coordinates are not numeric.
-
-.. ipython:: python
-
-    a = xray.DataArray([1, 2, 3], {'letter': ['a', 'b', 'c']})
-
-    @savefig plotting_nonnumeric.png width=4in
-    a.plot_line()

@@ -94,6 +94,11 @@ class TestPlot1D(PlotTestCase):
     def test_can_pass_in_axis(self):
         self.pass_in_axis(self.darray.plot_line)
 
+    def test_nonnumeric_index_raises_typeerror(self):
+        a = DataArray([1, 2, 3], {'letter': ['a', 'b', 'c']})
+        with self.assertRaisesRegexp(TypeError, r'[Ii]ndex'):
+            a.plot_line()
+
 
 class TestPlot2D(PlotTestCase):
 
@@ -119,6 +124,13 @@ class TestPlot2D(PlotTestCase):
         da = DataArray(np.random.randn(2, 3, 4))
         with self.assertRaisesRegexp(ValueError, r'[Dd]im'):
             da.plot_imshow()
+
+    def test_nonnumeric_index_raises_typeerror(self):
+        a = DataArray(np.random.randn(3, 2), coords=[['a', 'b', 'c'],
+            ['d', 'e']])
+        with self.assertRaisesRegexp(TypeError, r'[Ii]ndex'):
+            a.plot_imshow()
+            a.plot_contourf()
 
     def test_can_pass_in_axis(self):
         self.pass_in_axis(self.darray.plot_imshow)
