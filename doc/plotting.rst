@@ -35,6 +35,7 @@ These imports are necessary for all of the examples.
 .. ipython:: python
 
     import numpy as np
+    import matplotlib as mpl
     import matplotlib.pyplot as plt
     import xray
 
@@ -254,21 +255,25 @@ Colormaps
 ~~~~~~~~~
 
 Suppose we want two plots to share the same color scale. This can be
-achieved by passing in a color map.
+achieved by passing in the appropriate arguments and adding the color bar
+later.
 
-TODO- Don't actually know how to do this yet. Will probably want it for the
-Faceting
+TODO: All xray plot methods return axes for consistency- is this necessary?
+Now to make this particular plot we need to access ``.images[0]`` to get
+the color mapping.
 
 .. ipython:: python
 
-    colors = plt.cm.Blues
-
     fig, axes = plt.subplots(ncols=2)
 
-    distance.plot(ax=axes[0], cmap=colors, )
+    kwargs = {'cmap': plt.cm.Blues, 'vmin': distance.min(), 'vmax': distance.max(), 'add_colorbar': False}
+
+    distance.plot(ax=axes[0], **kwargs)
 
     halfd = distance / 2
-    halfd.plot(ax=axes[1], cmap=colors)
+    im = halfd.plot(ax=axes[1], **kwargs)
+
+    plt.colorbar(im.images[0], ax=axes.tolist())
 
     @savefig plotting_same_color_scale.png width=6in
     plt.show()
