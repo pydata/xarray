@@ -104,10 +104,7 @@ def plot_line(darray, *args, **kwargs):
                          'Passed DataArray has {} dimensions'.format(ndims))
 
     # Ensures consistency with .plot method
-    try:
-        ax = kwargs.pop('ax')
-    except KeyError:
-        ax = None
+    ax = kwargs.pop('ax', None)
 
     if ax is None:
         ax = plt.gca()

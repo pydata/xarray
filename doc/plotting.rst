@@ -183,7 +183,7 @@ distance from a 2d grid point to the origin.
 
     distance = np.linalg.norm(xy, axis=2)
 
-    distance = xray.DataArray(distance, {'x': x, 'y': y})
+    distance = xray.DataArray(distance, zip(('y', 'x'), (y, x)))
     distance
 
 Note the coordinate ``y`` here is decreasing.
@@ -232,7 +232,7 @@ using one coordinate with logarithmic spacing.
     y = np.logspace(0, 3)
     xy = np.dstack(np.meshgrid(x, y))
     d_ylog = np.linalg.norm(xy, axis=2)
-    d_ylog = xray.DataArray(d_ylog, {'x': x, 'y': y})
+    d_ylog = xray.DataArray(d_ylog, zip(('y', 'x'), (y, x)))
 
     @savefig plotting_nonuniform_coords.png width=4in
     d_ylog.plot()
