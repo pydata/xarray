@@ -14,8 +14,6 @@ from .alignment import align
 from .common import AbstractArray, BaseDataObject
 from .coordinates import DataArrayCoordinates, Indexes
 from .dataset import Dataset
-from .plotting import (plot, plot_line, plot_contourf, plot_hist,
-        plot_imshow)
 from .pycompat import iteritems, basestring, OrderedDict, zip
 from .utils import FrozenOrderedDict
 from .variable import as_variable, _as_compatible_data, Coordinate

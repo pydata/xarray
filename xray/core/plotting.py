@@ -23,10 +23,12 @@ def _ensure_numeric(*args):
     Raise exception if there is anything in args that can't be plotted on
     an axis.
     """
-    #plottypes = [np.number, np.datetime64]
+    plottypes = [np.floating, np.integer, np.timedelta64, np.datetime64]
 
-    # TODO come back here- this just tests for complex arrays
-    if not all(np.isrealobj(x) for x in args):
+    righttype = lambda x: any(np.issubdtype(x.dtype, t) for t in plottypes)
+
+    # Lists need to be converted to np.arrays here.
+    if not any(righttype(np.array(x)) for x in args):
         raise TypeError('Plotting requires coordinates to be numeric '
                         'or dates. Try DataArray.reindex() to convert.')
 
@@ -112,7 +114,7 @@ def plot_line(darray, *args, **kwargs):
 
     xlabel, x = list(darray.indexes.items())[0]
 
-    #_ensure_numeric([x])
+    _ensure_numeric([x])
 
     ax.plot(x, darray, *args, **kwargs)
 
@@ -130,7 +132,8 @@ def plot_imshow(darray, ax=None, add_colorbar=True, **kwargs):
 
     Wraps matplotlib.pyplot.imshow
 
-    WARNING: This function needs uniformly spaced coordinates to
+..warning::
+    This function needs uniformly spaced coordinates to
     properly label the axes. Call DataArray.plot() to check.
 
     Parameters
@@ -165,7 +168,7 @@ def plot_imshow(darray, ax=None, add_colorbar=True, **kwargs):
     x = darray[xlab]
     y = darray[ylab]
 
-    #_ensure_numeric(x, y)
+    _ensure_numeric(x, y)
 
     # Centering the pixels- Assumes uniform spacing
     xstep = (x[1] - x[0]) / 2.0
@@ -226,7 +229,7 @@ def plot_contourf(darray, ax=None, add_colorbar=True, **kwargs):
 
     x = darray[xlab]
     y = darray[ylab]
-    #_ensure_numeric(x, y)
+    _ensure_numeric(x, y)
 
     contours = ax.contourf(x, y, darray, **kwargs)
 
