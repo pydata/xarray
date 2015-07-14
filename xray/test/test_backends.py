@@ -699,6 +699,11 @@ class H5NetCDFDataTest(BaseNetCDF4Test, TestCase):
         # doesn't work for h5py (without using dask as an intermediate layer)
         pass
 
+    def test_complex(self):
+        expected = Dataset({'x': ('y', np.ones(5) + 1j * np.ones(5))})
+        with self.roundtrip(expected) as actual:
+            self.assertDatasetEqual(expected, actual)
+
 
 @requires_dask
 @requires_netCDF4
