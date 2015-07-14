@@ -3,6 +3,8 @@ Plotting functions are implemented here and also monkeypatched into
 the DataArray class
 """
 
+import functools
+
 import numpy as np
 
 from .utils import is_uniform_spaced
@@ -18,7 +20,7 @@ class FacetGrid():
     pass
 
 
-def _ensure_numeric(*args):
+def _ensure_plottable(*args):
     """
     Raise exception if there is anything in args that can't be plotted on
     an axis.
@@ -111,7 +113,7 @@ def plot_line(darray, *args, **kwargs):
 
     xlabel, x = list(darray.indexes.items())[0]
 
-    _ensure_numeric([x])
+    _ensure_plottable([x])
 
     ax.plot(x, darray, *args, **kwargs)
 
@@ -121,6 +123,44 @@ def plot_line(darray, *args, **kwargs):
         ax.set_ylabel(darray.name)
 
     return ax
+
+
+def _plot2d(plotfunc):
+    """
+    Decorator for common 2d plotting logic. 
+
+    All 2d plots in xray will share the function signature below.
+    """
+    @functools.wraps
+    def wrapped(darray, ax=None, add_colorbar=True, **kwargs):
+
+        import matplotlib.pyplot as plt
+
+        if ax is None:
+            ax = plt.gca()
+
+        try:
+            ylab, xlab = darray.dims
+        except ValueError:
+            raise ValueError('{} plots are for 2 dimensional DataArrays. '
+                             'Passed DataArray has {} dimensions'
+                             .format(plotfunc.name, len(darray.dims)))
+
+        x = darray[xlab]
+        y = darray[ylab]
+
+        _ensure_plottable(x, y)
+
+        ax = plotfunc(x, y, z, ax=ax, add_colorbar=add_colorbar, **kwargs):
+
+        ax.set_xlabel(xlab)
+        ax.set_ylabel(ylab)
+
+        if add_colorbar:
+            plt.colorbar(image, ax=ax)
+
+        return ax
+    return wrapped
 
 
 def plot_imshow(darray, ax=None, add_colorbar=True, **kwargs):
@@ -165,7 +205,7 @@ def plot_imshow(darray, ax=None, add_colorbar=True, **kwargs):
     x = darray[xlab]
     y = darray[ylab]
 
-    _ensure_numeric(x, y)
+    _ensure_plottable(x, y)
 
     # Centering the pixels- Assumes uniform spacing
     xstep = (x[1] - x[0]) / 2.0
@@ -226,7 +266,7 @@ def plot_contourf(darray, ax=None, add_colorbar=True, **kwargs):
 
     x = darray[xlab]
     y = darray[ylab]
-    _ensure_numeric(x, y)
+    _ensure_plottable(x, y)
 
     contours = ax.contourf(x, y, darray, **kwargs)
 

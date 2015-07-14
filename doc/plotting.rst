@@ -39,6 +39,7 @@ These imports are necessary for all of the examples.
     # Avoids gridlines in generated docs
     #mpl.rcParams['axes.grid'] = False
     mpl.rcdefaults()
+
     import matplotlib.pyplot as plt
     import xray
 
