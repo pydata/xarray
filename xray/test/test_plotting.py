@@ -13,7 +13,6 @@ try:
 except ImportError:
     pass
 
-
 # TODO - Add NaN handling and tests
 
 @requires_matplotlib
@@ -42,19 +41,17 @@ class PlotTestCase(TestCase):
 class TestPlot(PlotTestCase):
 
     def setUp(self):
-        d = np.arange(24).reshape(2, 3, 4)
-        self.darray = DataArray(d)
+        self.darray = DataArray(np.random.randn(2, 3, 4))
 
     def test1d(self):
-        self.darray[0, 0, :].plot()
+        self.darray[:, 0, 0].plot()
 
     def test2d_uniform_calls_imshow(self):
-        a = self.darray[0, :, :]
-        self.assertTrue(self.imshow_called(a.plot))
+        self.assertTrue(self.imshow_called(self.darray[:, :, 0].plot))
 
     def test2d_nonuniform_calls_contourf(self):
-        a = self.darray[0, :, :]
-        a.coords['dim_1'] = [0, 10, 2]
+        a = self.darray[:, :, 0]
+        a.coords['dim_1'] = [2, 1, 89]
         self.assertTrue(self.contourf_called(a.plot))
 
     def test3d(self):
@@ -100,12 +97,53 @@ class TestPlot1D(PlotTestCase):
             a.plot_line()
 
 
-class TestPlot2D(PlotTestCase):
+class TestPlotHistogram(PlotTestCase):
 
     def setUp(self):
-        self.darray = DataArray(np.random.randn(10, 15),
-                                dims=['y', 'x'])
+        self.darray = DataArray(np.random.randn(2, 3, 4))
 
+    def test_3d_array(self):
+        self.darray.plot_hist()
+
+    def test_title_no_name(self):
+        ax = self.darray.plot_hist()
+        self.assertEqual('', ax.get_title())
+
+    def test_title_uses_name(self):
+        self.darray.name = 'randompoints'
+        ax = self.darray.plot_hist()
+        self.assertIn(self.darray.name, ax.get_title())
+
+    def test_ylabel_is_count(self):
+        ax = self.darray.plot_hist()
+        self.assertEqual('Count', ax.get_ylabel())
+
+    def test_can_pass_in_kwargs(self):
+        nbins = 5
+        ax = self.darray.plot_hist(bins=nbins)
+        self.assertEqual(nbins, len(ax.patches))
+
+    def test_can_pass_in_axis(self):
+        self.pass_in_axis(self.darray.plot_hist)
+
+class Common2dMixin:
+    """
+    Common tests for 2d plotting go here
+    """
+    def test_label_names(self):
+        ax = self.plotfunc()
+        self.assertEqual('x', ax.get_xlabel())
+        self.assertEqual('y', ax.get_ylabel())
+
+
+class TestContourf(Common2dMixin, PlotTestCase):
+    def setUp(self):
+        self.darray = DataArray(np.random.randn(3, 4), dims=['y', 'x'])
+        self.plotfunc = self.darray.plot_contourf
+
+
+'''
+class TestPlot2D(Common2dMixin, PlotTestCase):
     def test_contour_label_names(self):
         ax = self.darray.plot_contourf()
         self.assertEqual('x', ax.get_xlabel())
@@ -158,33 +196,4 @@ class TestPlot2D(PlotTestCase):
     def test_can_change_aspect(self):
         ax = self.darray.plot_imshow(aspect='equal')
         self.assertEqual('equal', ax.get_aspect())
-
-
-class TestPlotHist(PlotTestCase):
-
-    def setUp(self):
-        self.darray = DataArray(np.random.randn(2, 3, 4))
-
-    def test_3d_array(self):
-        self.darray.plot_hist()
-
-    def test_title_no_name(self):
-        ax = self.darray.plot_hist()
-        self.assertEqual('', ax.get_title())
-
-    def test_title_uses_name(self):
-        self.darray.name = 'randompoints'
-        ax = self.darray.plot_hist()
-        self.assertIn(self.darray.name, ax.get_title())
-
-    def test_ylabel_is_count(self):
-        ax = self.darray.plot_hist()
-        self.assertEqual('Count', ax.get_ylabel())
-
-    def test_can_pass_in_kwargs(self):
-        nbins = 5
-        ax = self.darray.plot_hist(bins=nbins)
-        self.assertEqual(nbins, len(ax.patches))
-
-    def test_can_pass_in_axis(self):
-        self.pass_in_axis(self.darray.plot_hist)
+'''

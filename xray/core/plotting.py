@@ -151,7 +151,7 @@ def _plot2d(plotfunc):
 
         _ensure_plottable(x, y)
 
-        ax = plotfunc(x, y, z, ax=ax, add_colorbar=add_colorbar, **kwargs):
+        ax = plotfunc(x, y, z, ax=ax, add_colorbar=add_colorbar, **kwargs)
 
         ax.set_xlabel(xlab)
         ax.set_ylabel(ylab)

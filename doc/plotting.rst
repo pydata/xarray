@@ -36,8 +36,7 @@ These imports are necessary for all of the examples.
 
     import numpy as np
     import matplotlib as mpl
-    # Avoids gridlines in generated docs
-    #mpl.rcParams['axes.grid'] = False
+    # Use defaults so we don't get gridlines in generated docs
     mpl.rcdefaults()
 
     import matplotlib.pyplot as plt
