@@ -125,6 +125,59 @@ def plot_line(darray, *args, **kwargs):
     return ax
 
 
+def plot_hist(darray, ax=None, **kwargs):
+    """
+    Histogram of DataArray
+
+    Wraps matplotlib.pyplot.hist
+
+    Plots N dimensional arrays by first flattening the array.
+
+    Parameters
+    ----------
+    darray : DataArray
+        Can be any dimension
+    ax : matplotlib axes object
+        If not passed, uses the current axis
+    kwargs :
+        Additional keyword arguments to matplotlib.pyplot.hist
+
+    """
+    import matplotlib.pyplot as plt
+
+    if ax is None:
+        ax = plt.gca()
+
+    ax.hist(np.ravel(darray), **kwargs)
+
+    ax.set_ylabel('Count')
+
+    if darray.name is not None:
+        ax.set_title('Histogram of {}'.format(darray.name))
+
+    return ax
+
+
+def _update_axes_limits(ax, xincrease, yincrease):
+    """
+    Update axes in place to increase or decrease
+    For use in _plot2d
+    """
+    if xincrease is None:
+        pass
+    elif xincrease:
+        ax.set_xlim(sorted(ax.get_xlim()))
+    elif not xincrease:
+        ax.set_xlim(sorted(ax.get_xlim(), reverse=True))
+
+    if yincrease is None:
+        pass
+    elif yincrease:
+        ax.set_ylim(sorted(ax.get_ylim()))
+    elif not yincrease:
+        ax.set_ylim(sorted(ax.get_ylim(), reverse=True))
+
+
 def _plot2d(plotfunc):
     """
     Decorator for common 2d plotting logic. 
@@ -136,12 +189,20 @@ def _plot2d(plotfunc):
         Must be 2 dimensional
     ax : matplotlib axes object
         If None, uses the current axis
-    xincrease : None, True, or False
-        If None, uses 
+    xincrease : None (default), True, or False
+        Should the values on the x axes be increasing from left to right?
+        if None, use the default for the matplotlib function
+    yincrease : None (default), True, or False
+        Should the values on the y axes be increasing from top to bottom?
+        if None, use the default for the matplotlib function
     add_colorbar : Boolean
         Adds colorbar to axis
     kwargs :
         Additional arguments to wrapped matplotlib function
+
+    Returns
+    -------
+    ax : plotted matplotlib axis object
     '''
 
     # Build on the original docstring
@@ -176,6 +237,8 @@ def _plot2d(plotfunc):
 
         if add_colorbar:
             plt.colorbar(cmap, ax=ax)
+
+        _update_axes_limits(ax, xincrease, yincrease)
 
         return ax
     return wrapper
@@ -223,152 +286,3 @@ def plot_contourf(x, y, z, ax, **kwargs):
     """
     cmap = ax.contourf(x, y, z, **kwargs)
     return ax, cmap
-
-
-def old_plot_imshow(darray, ax=None, add_colorbar=True, **kwargs):
-    """
-    Image plot of 2d DataArray using matplotlib / pylab
-
-    Wraps matplotlib.pyplot.imshow
-
-..warning::
-    This function needs uniformly spaced coordinates to
-    properly label the axes. Call DataArray.plot() to check.
-
-    Parameters
-    ----------
-    darray : DataArray
-        Must be 2 dimensional
-    ax : matplotlib axes object
-        If None, uses the current axis
-    add_colorbar : Boolean
-        Adds colorbar to axis
-    kwargs :
-        Additional arguments to matplotlib.pyplot.imshow
-
-    Details
-    -------
-    The pixels are centered on the coordinates values. Ie, if the coordinate
-    value is 3.2 then the pixels for those coordinates will be centered on 3.2.
-
-    """
-    import matplotlib.pyplot as plt
-
-    if ax is None:
-        ax = plt.gca()
-
-    try:
-        ylab, xlab = darray.dims
-    except ValueError:
-        raise ValueError('Image plots are for 2 dimensional DataArrays. '
-                         'Passed DataArray has {} dimensions'
-                         .format(len(darray.dims)))
-
-    x = darray[xlab]
-    y = darray[ylab]
-
-    _ensure_plottable(x, y)
-
-    # Centering the pixels- Assumes uniform spacing
-    xstep = (x[1] - x[0]) / 2.0
-    ystep = (y[1] - y[0]) / 2.0
-    left, right = x[0] - xstep, x[-1] + xstep
-    bottom, top = y[-1] + ystep, y[0] - ystep
-
-    defaults = {'extent': [left, right, bottom, top],
-                'aspect': 'auto',
-                'interpolation': 'nearest',
-                }
-
-    # Allow user to override these defaults
-    defaults.update(kwargs)
-
-    image = ax.imshow(darray, **defaults)
-
-    ax.set_xlabel(xlab)
-    ax.set_ylabel(ylab)
-
-    if add_colorbar:
-        plt.colorbar(image, ax=ax)
-
-    return ax
-
-
-# TODO - Could refactor this to avoid duplicating plot_imshow logic.
-# There's also some similar tests for the two.
-def old_plot_contourf(darray, ax=None, add_colorbar=True, **kwargs):
-    """
-    Filled contour plot of 2d DataArray
-
-    Wraps matplotlib.pyplot.contourf
-
-    Parameters
-    ----------
-    darray : DataArray
-        Must be 2 dimensional
-    ax : matplotlib axes object
-        If None, uses the current axis
-    add_colorbar : Boolean
-        Adds colorbar to axis
-    kwargs :
-        Additional arguments to matplotlib.pyplot.imshow
-
-    """
-    import matplotlib.pyplot as plt
-
-    if ax is None:
-        ax = plt.gca()
-
-    try:
-        ylab, xlab = darray.dims
-    except ValueError:
-        raise ValueError('Contour plots are for 2 dimensional DataArrays. '
-                         'Passed DataArray has {} dimensions'
-                         .format(len(darray.dims)))
-
-    x = darray[xlab]
-    y = darray[ylab]
-    _ensure_plottable(x, y)
-
-    contours = ax.contourf(x, y, darray, **kwargs)
-
-    ax.set_xlabel(xlab)
-    ax.set_ylabel(ylab)
-
-    if add_colorbar:
-        plt.colorbar(contours, ax=ax)
-
-    return ax
-
-
-def plot_hist(darray, ax=None, **kwargs):
-    """
-    Histogram of DataArray
-
-    Wraps matplotlib.pyplot.hist
-
-    Plots N dimensional arrays by first flattening the array.
-
-    Parameters
-    ----------
-    darray : DataArray
-        Can be any dimension
-    ax : matplotlib axes object
-        If not passed, uses the current axis
-    kwargs :
-        Additional keyword arguments to matplotlib.pyplot.hist
-
-    """
-    import matplotlib.pyplot as plt
-
-    if ax is None:
-        ax = plt.gca()
-
-    ax.hist(np.ravel(darray), **kwargs)
-
-    ax.set_ylabel('Count')
-
-    if darray.name is not None:
-        ax.set_title('Histogram of {}'.format(darray.name))
-
-    return ax

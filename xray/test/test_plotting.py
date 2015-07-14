@@ -138,6 +138,10 @@ class Common2dMixin:
     plotfunc    |   plot as a function that takes DataArray as an arg
     plotmethod  |   the method on DataArray
     """
+    def setUp(self):
+        self.darray = DataArray(np.random.randn(10, 15), dims=['y', 'x'])
+        self.plotmethod = getattr(self.darray, self.plotfunc.__name__)
+
     def test_label_names(self):
         ax = self.plotmethod()
         self.assertEqual('x', ax.get_xlabel())
@@ -161,13 +165,26 @@ class Common2dMixin:
     def test_can_pass_in_axis(self):
         self.pass_in_axis(self.plotmethod)
 
+    def test_xyincrease_false_changes_axes(self):
+        ax = self.plotmethod(xincrease=False, yincrease=False)
+        xlim = ax.get_xlim()
+        ylim = ax.get_ylim()
+        diffs = xlim[0] - 14, xlim[1] - 0, ylim[0] - 9, ylim[1] - 0
+        self.assertTrue(all(abs(x) < 1 for x in diffs))
+
+    def test_xyincrease_true_changes_axes(self):
+        ax = self.plotmethod(xincrease=True, yincrease=True)
+        xlim = ax.get_xlim()
+        ylim = ax.get_ylim()
+        diffs = xlim[0] - 0, xlim[1] - 14, ylim[0] - 0, ylim[1] - 9
+        self.assertTrue(all(abs(x) < 1 for x in diffs))
+
 
 class TestContourf(Common2dMixin, PlotTestCase):
 
     def setUp(self):
-        self.darray = DataArray(np.random.randn(3, 4), dims=['y', 'x'])
         self.plotfunc = plot_contourf
-        self.plotmethod = getattr(self.darray, self.plotfunc.__name__)
+        super(TestContourf, self).setUp()
 
     def test_contourf_called(self):
         # Having both statements ensures the test works properly
@@ -178,9 +195,8 @@ class TestContourf(Common2dMixin, PlotTestCase):
 class TestImshow(Common2dMixin, PlotTestCase):
 
     def setUp(self):
-        self.darray = DataArray(np.random.randn(10, 15), dims=['y', 'x'])
         self.plotfunc = plot_imshow
-        self.plotmethod = getattr(self.darray, self.plotfunc.__name__)
+        super(TestImshow, self).setUp()
 
     def test_imshow_called(self):
         # Having both statements ensures the test works properly

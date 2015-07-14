@@ -162,16 +162,15 @@ the pixels are centered over their coordinates, and the
 axis labels and ranges correspond to the values of the
 coordinates.
 
-An `extended slice <http://docs.scipy.org/doc/numpy/reference/arrays.indexing.html>`__
-can be used to reverse the order of the rows, producing a
+All 2d plots in xray allow the use of the keyword arguments ``yincrease=True``
+to produce a
 more conventional plot where the coordinates increase in the y axis.
+``xincrease`` works similarly.
 
 .. ipython:: python
 
-    a[::-1, :]
-
-    @savefig plotting_example_2d_simple_reversed.png width=4in
-    a[::-1, :].plot()
+    @savefig 2d_simple_yincrease.png width=4in
+    a.plot(yincrease=True)
 
 Simulated Data
 ~~~~~~~~~~~~~~
@@ -208,19 +207,6 @@ transpose the array.
 
     @savefig plotting_changing_axes.png width=4in
     distance.T.plot()
-
-TODO: Feedback here please. This requires the user to put the array into
-the order they want for plotting. To plot with sorted coordinates they
-would have to write something
-like this: ``distance.T[::-1, ::-1].plot()``.
-This requires the user to be aware of how the array is organized.
-
-Alternatively, this could be implemented in
-xray plotting as: ``distance.plot(xvar='y', sortx=True,
-sorty=True)``.
-This allows the use of the dimension
-name to describe which coordinate should appear as the x variable on the
-plot, and is probably more convenient.
 
 Nonuniform Coordinates
 ~~~~~~~~~~~~~~~~~~~~~~
