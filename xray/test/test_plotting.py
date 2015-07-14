@@ -1,6 +1,9 @@
+import functools
 import numpy as np
 
 from xray import DataArray
+# Shouldn't need the core here
+from xray.core.plotting import plot_imshow, plot_contourf
 
 from . import TestCase, requires_matplotlib
 
@@ -22,18 +25,18 @@ class PlotTestCase(TestCase):
         # Remove all matplotlib figures
         plt.close('all')
 
-    def pass_in_axis(self, plotfunc):
+    def pass_in_axis(self, plotmethod):
         fig, axes = plt.subplots(ncols=2)
-        plotfunc(ax=axes[0])
+        plotmethod(ax=axes[0])
         self.assertTrue(axes[0].has_data())
 
-    def imshow_called(self, plotfunc):
-        ax = plotfunc()
+    def imshow_called(self, plotmethod):
+        ax = plotmethod()
         images = ax.findobj(mpl.image.AxesImage)
         return len(images) > 0
 
-    def contourf_called(self, plotfunc):
-        ax = plotfunc()
+    def contourf_called(self, plotmethod):
+        ax = plotmethod()
         paths = ax.findobj(mpl.collections.PathCollection)
         return len(paths) > 0
 
@@ -126,65 +129,66 @@ class TestPlotHistogram(PlotTestCase):
     def test_can_pass_in_axis(self):
         self.pass_in_axis(self.darray.plot_hist)
 
+
 class Common2dMixin:
     """
-    Common tests for 2d plotting go here
+    Common tests for 2d plotting go here. These tests assume that the
+    following attributes exist (define them in setUp):
+
+    darray      |   2 dimensional DataArray
+    plotfunc    |   plot as a function that takes DataArray as an arg
+    plotmethod  |   the method on DataArray
     """
     def test_label_names(self):
-        ax = self.plotfunc()
-        self.assertEqual('x', ax.get_xlabel())
-        self.assertEqual('y', ax.get_ylabel())
-
-
-class TestContourf(Common2dMixin, PlotTestCase):
-    def setUp(self):
-        self.darray = DataArray(np.random.randn(3, 4), dims=['y', 'x'])
-        self.plotfunc = self.darray.plot_contourf
-
-
-'''
-class TestPlot2D(Common2dMixin, PlotTestCase):
-    def test_contour_label_names(self):
-        ax = self.darray.plot_contourf()
-        self.assertEqual('x', ax.get_xlabel())
-        self.assertEqual('y', ax.get_ylabel())
-
-    def test_imshow_label_names(self):
-        ax = self.darray.plot_imshow()
+        ax = self.plotmethod()
         self.assertEqual('x', ax.get_xlabel())
         self.assertEqual('y', ax.get_ylabel())
 
     def test_1d_raises_valueerror(self):
         with self.assertRaisesRegexp(ValueError, r'[Dd]im'):
-            self.darray[0, :].plot_imshow()
+            self.plotfunc(self.darray[0, :])
 
     def test_3d_raises_valueerror(self):
-        da = DataArray(np.random.randn(2, 3, 4))
+        a = DataArray(np.random.randn(2, 3, 4))
         with self.assertRaisesRegexp(ValueError, r'[Dd]im'):
-            da.plot_imshow()
+            self.plotfunc(a)
 
     def test_nonnumeric_index_raises_typeerror(self):
         a = DataArray(np.random.randn(3, 2), coords=[['a', 'b', 'c'],
             ['d', 'e']])
         with self.assertRaisesRegexp(TypeError, r'[Ii]ndex'):
-            a.plot_imshow()
-            a.plot_contourf()
+            self.plotfunc(a)
 
     def test_can_pass_in_axis(self):
-        self.pass_in_axis(self.darray.plot_imshow)
-        self.pass_in_axis(self.darray.plot_contourf)
+        self.pass_in_axis(self.plotmethod)
 
-    def test_imshow_called(self):
-        # Having both statements ensures the test works properly
-        self.assertFalse(self.imshow_called(self.darray.plot_contourf))
-        self.assertTrue(self.imshow_called(self.darray.plot_imshow))
+
+class TestContourf(Common2dMixin, PlotTestCase):
+
+    def setUp(self):
+        self.darray = DataArray(np.random.randn(3, 4), dims=['y', 'x'])
+        self.plotfunc = plot_contourf
+        self.plotmethod = getattr(self.darray, self.plotfunc.__name__)
 
     def test_contourf_called(self):
         # Having both statements ensures the test works properly
         self.assertFalse(self.contourf_called(self.darray.plot_imshow))
         self.assertTrue(self.contourf_called(self.darray.plot_contourf))
 
-    def test_imshow_xy_pixel_centered(self):
+
+class TestImshow(Common2dMixin, PlotTestCase):
+
+    def setUp(self):
+        self.darray = DataArray(np.random.randn(10, 15), dims=['y', 'x'])
+        self.plotfunc = plot_imshow
+        self.plotmethod = getattr(self.darray, self.plotfunc.__name__)
+
+    def test_imshow_called(self):
+        # Having both statements ensures the test works properly
+        self.assertFalse(self.imshow_called(self.darray.plot_contourf))
+        self.assertTrue(self.imshow_called(self.darray.plot_imshow))
+
+    def test_xy_pixel_centered(self):
         ax = self.darray.plot_imshow()
         self.assertTrue(np.allclose([-0.5, 14.5], ax.get_xlim()))
         self.assertTrue(np.allclose([9.5, -0.5], ax.get_ylim()))
@@ -196,4 +200,3 @@ class TestPlot2D(Common2dMixin, PlotTestCase):
     def test_can_change_aspect(self):
         ax = self.darray.plot_imshow(aspect='equal')
         self.assertEqual('equal', ax.get_aspect())
-'''
