@@ -128,11 +128,28 @@ def plot_line(darray, *args, **kwargs):
 def _plot2d(plotfunc):
     """
     Decorator for common 2d plotting logic. 
-
-    All 2d plots in xray will share the function signature below.
     """
+    commondoc = '''
+    Parameters
+    ----------
+    darray : DataArray
+        Must be 2 dimensional
+    ax : matplotlib axes object
+        If None, uses the current axis
+    xincrease : None, True, or False
+        If None, uses 
+    add_colorbar : Boolean
+        Adds colorbar to axis
+    kwargs :
+        Additional arguments to wrapped matplotlib function
+    '''
+
+    # Build on the original docstring
+    plotfunc.__doc__ = '\n'.join((plotfunc.__doc__, commondoc))
+
     @functools.wraps(plotfunc)
     def wrapper(darray, ax=None, xincrease=None, yincrease=None, add_colorbar=True, **kwargs):
+        # All 2d plots in xray share this function signature
 
         import matplotlib.pyplot as plt
 
@@ -175,22 +192,8 @@ def plot_imshow(x, y, z, ax, **kwargs):
         This function needs uniformly spaced coordinates to
         properly label the axes. Call DataArray.plot() to check.
 
-    Parameters
-    ----------
-    darray : DataArray
-        Must be 2 dimensional
-    ax : matplotlib axes object
-        If None, uses the current axis
-    add_colorbar : Boolean
-        Adds colorbar to axis
-    kwargs :
-        Additional arguments to matplotlib.pyplot.imshow
-
-    Details
-    -------
     The pixels are centered on the coordinates values. Ie, if the coordinate
     value is 3.2 then the pixels for those coordinates will be centered on 3.2.
-
     """
     # Centering the pixels- Assumes uniform spacing
     xstep = (x[1] - x[0]) / 2.0
@@ -208,6 +211,17 @@ def plot_imshow(x, y, z, ax, **kwargs):
 
     cmap = ax.imshow(z, **defaults)
 
+    return ax, cmap
+
+
+@_plot2d
+def plot_contourf(x, y, z, ax, **kwargs):
+    """
+    Filled contour plot of 2d DataArray
+
+    Wraps matplotlib.pyplot.contourf
+    """
+    cmap = ax.contourf(x, y, z, **kwargs)
     return ax, cmap
 
 
@@ -282,8 +296,7 @@ def old_plot_imshow(darray, ax=None, add_colorbar=True, **kwargs):
 
 # TODO - Could refactor this to avoid duplicating plot_imshow logic.
 # There's also some similar tests for the two.
-#def old_plot_contourf(darray, ax=None, add_colorbar=True, **kwargs):
-def plot_contourf(darray, ax=None, add_colorbar=True, **kwargs):
+def old_plot_contourf(darray, ax=None, add_colorbar=True, **kwargs):
     """
     Filled contour plot of 2d DataArray
 
