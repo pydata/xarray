@@ -131,8 +131,8 @@ def _plot2d(plotfunc):
 
     All 2d plots in xray will share the function signature below.
     """
-    @functools.wraps
-    def wrapped(darray, ax=None, add_colorbar=True, **kwargs):
+    @functools.wraps(plotfunc)
+    def wrapper(darray, ax=None, xincrease=None, yincrease=None, add_colorbar=True, **kwargs):
 
         import matplotlib.pyplot as plt
 
@@ -144,26 +144,74 @@ def _plot2d(plotfunc):
         except ValueError:
             raise ValueError('{} plots are for 2 dimensional DataArrays. '
                              'Passed DataArray has {} dimensions'
-                             .format(plotfunc.name, len(darray.dims)))
+                             .format(plotfunc.__name__, len(darray.dims)))
 
         x = darray[xlab]
         y = darray[ylab]
+        z = darray
 
         _ensure_plottable(x, y)
 
-        ax = plotfunc(x, y, z, ax=ax, add_colorbar=add_colorbar, **kwargs)
+        ax, cmap = plotfunc(x, y, z, ax=ax, **kwargs)
 
         ax.set_xlabel(xlab)
         ax.set_ylabel(ylab)
 
         if add_colorbar:
-            plt.colorbar(image, ax=ax)
+            plt.colorbar(cmap, ax=ax)
 
         return ax
-    return wrapped
+    return wrapper
 
 
-def plot_imshow(darray, ax=None, add_colorbar=True, **kwargs):
+@_plot2d
+def plot_imshow(x, y, z, ax, **kwargs):
+    """
+    Image plot of 2d DataArray using matplotlib / pylab
+
+    Wraps matplotlib.pyplot.imshow
+
+    ..warning::
+        This function needs uniformly spaced coordinates to
+        properly label the axes. Call DataArray.plot() to check.
+
+    Parameters
+    ----------
+    darray : DataArray
+        Must be 2 dimensional
+    ax : matplotlib axes object
+        If None, uses the current axis
+    add_colorbar : Boolean
+        Adds colorbar to axis
+    kwargs :
+        Additional arguments to matplotlib.pyplot.imshow
+
+    Details
+    -------
+    The pixels are centered on the coordinates values. Ie, if the coordinate
+    value is 3.2 then the pixels for those coordinates will be centered on 3.2.
+
+    """
+    # Centering the pixels- Assumes uniform spacing
+    xstep = (x[1] - x[0]) / 2.0
+    ystep = (y[1] - y[0]) / 2.0
+    left, right = x[0] - xstep, x[-1] + xstep
+    bottom, top = y[-1] + ystep, y[0] - ystep
+
+    defaults = {'extent': [left, right, bottom, top],
+                'aspect': 'auto',
+                'interpolation': 'nearest',
+                }
+
+    # Allow user to override these defaults
+    defaults.update(kwargs)
+
+    cmap = ax.imshow(z, **defaults)
+
+    return ax, cmap
+
+
+def old_plot_imshow(darray, ax=None, add_colorbar=True, **kwargs):
     """
     Image plot of 2d DataArray using matplotlib / pylab
 
@@ -234,6 +282,7 @@ def plot_imshow(darray, ax=None, add_colorbar=True, **kwargs):
 
 # TODO - Could refactor this to avoid duplicating plot_imshow logic.
 # There's also some similar tests for the two.
+#def old_plot_contourf(darray, ax=None, add_colorbar=True, **kwargs):
 def plot_contourf(darray, ax=None, add_colorbar=True, **kwargs):
     """
     Filled contour plot of 2d DataArray

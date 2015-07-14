@@ -1,8 +1,7 @@
-import functools
 import numpy as np
 
 from xray import DataArray
-# Shouldn't need the core here
+# Shouldn't need the core here?
 from xray.core.plotting import plot_imshow, plot_contourf
 
 from . import TestCase, requires_matplotlib
