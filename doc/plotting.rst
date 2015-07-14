@@ -160,7 +160,7 @@ It may seem strange that
 the the values on the y axis are decreasing with -0.5 on the top. This is because
 the pixels are centered over their coordinates, and the
 axis labels and ranges correspond to the values of the
-coordinates.
+coordinates. 
 
 All 2d plots in xray allow the use of the keyword arguments ``yincrease=True``
 to produce a
@@ -207,6 +207,13 @@ transpose the array.
 
     @savefig plotting_changing_axes.png width=4in
     distance.T.plot()
+
+To make x and y increase:
+
+.. ipython:: python
+
+    @savefig plotting_changing_axes2.png width=4in
+    distance.T.plot(xincrease=True, yincrease=True)
 
 Nonuniform Coordinates
 ~~~~~~~~~~~~~~~~~~~~~~
