@@ -23,6 +23,7 @@ Enhancements
   thread lock by default for reading from netCDF files. This avoids possible
   segmentation faults for reading from netCDF4 files when HDF5 is not
   configured properly for concurrent access (:issue:`444`).
+- Added support for serializing arrays of complex numbers with `engine='h5netcdf'`.
 - The new :py:func:`~xray.save_mfdataset` function allows for saving multiple
   datasets to disk simultaneously. This is useful when processing large datasets
   with dask.array. For example, to save a dataset too big to fit into memory
