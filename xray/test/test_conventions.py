@@ -456,6 +456,12 @@ class TestDecodeCF(TestCase):
         actual = conventions.decode_cf(original)
         self.assertDatasetIdentical(original, actual)
 
+    def test_0d_int32_encoding(self):
+        original = Variable((), np.int32(0), encoding={'dtype': 'int64'})
+        expected = Variable((), np.int64(0))
+        actual = conventions.maybe_encode_dtype(original)
+        self.assertDatasetIdentical(expected, actual)
+
 
 class CFEncodedInMemoryStore(InMemoryDataStore):
     def store(self, variables, attributes):
