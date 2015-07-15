@@ -6,7 +6,8 @@ from textwrap import dedent
 from xray import (align, concat, broadcast_arrays, Dataset, DataArray,
                   Coordinate, Variable)
 from xray.core.pycompat import iteritems, OrderedDict
-from . import TestCase, ReturnItem, source_ndarray, unittest, requires_dask
+from . import (TestCase, ReturnItem, source_ndarray, unittest, requires_dask,
+               InaccessibleArray)
 
 
 class TestDataArray(TestCase):
@@ -1174,7 +1175,24 @@ class TestDataArray(TestCase):
         self.assertDataArrayIdentical(expected, actual)
 
         with self.assertRaisesRegexp(ValueError, 'not identical'):
-            concat([foo, bar], compat='identical')
+            concat([foo, bar], dim='w', compat='identical')
+
+        with self.assertRaisesRegexp(ValueError, 'not a valid argument'):
+            concat([foo, bar], dim='w', data_vars='minimal')
+
+    @requires_dask
+    def test_concat_lazy(self):
+        import dask.array as da
+        from xray import DataArray, concat
+        from xray.test import InaccessibleArray
+        import numpy as np
+        arrays = [DataArray(
+            da.from_array(InaccessibleArray(np.zeros((3, 3))), 3),
+            dims=['x', 'y']) for _ in range(2)]
+        # should not raise
+        combined = concat(arrays, dim='z')
+        self.assertEqual(combined.shape, (2, 3, 3))
+        self.assertEqual(combined.dims, ('z', 'x', 'y'))
 
     def test_align(self):
         self.ds['x'] = ('x', np.array(list('abcdefghij')))

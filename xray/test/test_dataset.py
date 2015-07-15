@@ -1385,8 +1385,8 @@ class TestDataset(TestCase):
         # drop the third dimension to keep things relatively understandable
         data = create_test_data().drop('dim3')
 
-        split_data = [data.isel(dim1=slice(10)),
-                      data.isel(dim1=slice(10, None))]
+        split_data = [data.isel(dim1=slice(3)),
+                      data.isel(dim1=slice(3, None))]
         self.assertDatasetIdentical(data, concat(split_data, 'dim1'))
 
         def rectify_dim_order(dataset):
@@ -1402,29 +1402,29 @@ class TestDataset(TestCase):
             self.assertDatasetIdentical(
                 data, concat(datasets, data[dim]))
             self.assertDatasetIdentical(
-                data, concat(datasets, data[dim], mode='minimal'))
+                data, concat(datasets, data[dim], coords='minimal'))
 
             datasets = [g for _, g in data.groupby(dim, squeeze=True)]
-            concat_over = [k for k, v in iteritems(data)
+            concat_over = [k for k, v in iteritems(data.coords)
                            if dim in v.dims and k != dim]
-            actual = concat(datasets, data[dim], concat_over=concat_over)
+            actual = concat(datasets, data[dim], coords=concat_over)
             self.assertDatasetIdentical(data, rectify_dim_order(actual))
 
-            actual = concat(datasets, data[dim], mode='different')
+            actual = concat(datasets, data[dim], coords='different')
             self.assertDatasetIdentical(data, rectify_dim_order(actual))
 
-        # make sure the mode argument behaves as expected
+        # make sure the coords argument behaves as expected
         data.coords['extra'] = ('dim4', np.arange(3))
         for dim in ['dim1', 'dim2']:
-            datasets = [g for _, g in data.groupby(dim, squeeze=False)]
-            actual = concat(datasets, data[dim], mode='all')
+            datasets = [g for _, g in data.groupby(dim, squeeze=True)]
+            actual = concat(datasets, data[dim], coords='all')
             expected = np.array([data['extra'].values
                                  for _ in range(data.dims[dim])])
             self.assertArrayEqual(actual['extra'].values, expected)
 
-            actual = concat(datasets, data[dim], mode='different')
+            actual = concat(datasets, data[dim], coords='different')
             self.assertDataArrayEqual(data['extra'], actual['extra'])
-            actual = concat(datasets, data[dim], mode='minimal')
+            actual = concat(datasets, data[dim], coords='minimal')
             self.assertDataArrayEqual(data['extra'], actual['extra'])
 
         # verify that the dim argument takes precedence over
@@ -1440,20 +1440,31 @@ class TestDataset(TestCase):
         ds1 = Dataset({'foo': 1.5}, {'y': 1})
         ds2 = Dataset({'foo': 2.5}, {'y': 1})
         expected = Dataset({'foo': ('y', [1.5, 2.5]), 'y': [1, 1]})
-        for mode in ['different', 'all', 'minimal']:
-            actual = concat([ds1, ds2], 'y', mode=mode)
+        for mode in ['different', 'all', ['foo']]:
+            actual = concat([ds1, ds2], 'y', data_vars=mode)
             self.assertDatasetIdentical(expected, actual)
+        with self.assertRaisesRegexp(ValueError, 'not equal across datasets'):
+            concat([ds1, ds2], 'y', data_vars='minimal')
+
+    def test_concat_0d(self):
+        data = create_test_data()
+        split_data = [data.isel(dim1=slice(0, 0)), data]
+        actual = concat(split_data, 'dim1')
+        self.assertDatasetIdentical(data, actual)
+
+        actual = concat(split_data[::-1], 'dim1')
+        self.assertDatasetIdentical(data, actual)
 
     def test_concat_errors(self):
         data = create_test_data()
-        split_data = [data.isel(dim1=slice(10)),
-                      data.isel(dim1=slice(10, None))]
+        split_data = [data.isel(dim1=slice(3)),
+                      data.isel(dim1=slice(3, None))]
 
         with self.assertRaisesRegexp(ValueError, 'must supply at least one'):
             concat([], 'dim1')
 
-        with self.assertRaisesRegexp(ValueError, 'not all elements in'):
-            concat(split_data, 'dim1', concat_over=['not_found'])
+        with self.assertRaisesRegexp(ValueError, 'are not coordinates'):
+            concat([data, data], 'new_dim', coords=['not_found'])
 
         with self.assertRaisesRegexp(ValueError, 'global attributes not'):
             data0, data1 = deepcopy(split_data)
@@ -1470,22 +1481,33 @@ class TestDataset(TestCase):
         with self.assertRaisesRegexp(ValueError, 'not equal across datasets'):
             data0, data1 = deepcopy(split_data)
             data1['dim2'] = 2 * data1['dim2']
+            concat([data0, data1], 'dim1', coords='minimal')
+
+        with self.assertRaisesRegexp(ValueError, 'must be defined with 1-d'):
             concat([data0, data1], 'dim1')
 
         with self.assertRaisesRegexp(ValueError, 'compat.* invalid'):
             concat(split_data, 'dim1', compat='foobar')
 
-        with self.assertRaisesRegexp(ValueError, 'unexpected value for mode'):
-            concat(split_data, 'dim1', mode='foobar')
+        with self.assertRaisesRegexp(ValueError, 'unexpected value for'):
+            concat([data, data], 'new_dim', coords='foobar')
+
+        with self.assertRaisesRegexp(ValueError,
+                'coordinate in some datasets but not others'):
+            concat([Dataset({'x': 0}), Dataset({'x': [1]})], dim='z')
+
+        with self.assertRaisesRegexp(ValueError,
+                'coordinate in some datasets but not others'):
+            concat([Dataset({'x': 0}), Dataset({}, {'x': 1})], dim='z')
 
     def test_concat_promote_shape(self):
         # mixed dims within variables
-        objs = [Dataset({'x': 0}), Dataset({'x': [1]})]
+        objs = [Dataset({}, {'x': 0}), Dataset({'x': [1]})]
         actual = concat(objs, 'x')
         expected = Dataset({'x': [0, 1]})
         self.assertDatasetIdentical(actual, expected)
 
-        objs = [Dataset({'x': [0]}), Dataset({'x': 1})]
+        objs = [Dataset({'x': [0]}), Dataset({}, {'x': 1})]
         actual = concat(objs, 'x')
         self.assertDatasetIdentical(actual, expected)
 
@@ -1515,6 +1537,19 @@ class TestDataset(TestCase):
         actual = concat(objs, 'x')
         expected = Dataset({'z': (('x', 'y'), [[-1], [1]])})
         self.assertDatasetIdentical(actual, expected)
+
+    def test_concat_do_not_promote(self):
+        # GH438
+        objs = [Dataset({'y': ('t', [1])}, {'x': 1}),
+                Dataset({'y': ('t', [2])}, {'x': 1})]
+        expected = Dataset({'y': ('t', [1, 2])}, {'x': 1, 't': [0, 0]})
+        actual = concat(objs, 't')
+        self.assertDatasetIdentical(expected, actual)
+
+        objs = [Dataset({'y': ('t', [1])}, {'x': 1}),
+                Dataset({'y': ('t', [2])}, {'x': 2})]
+        with self.assertRaises(ValueError):
+            concat(objs, 't', coords='minimal')
 
     @requires_dask  # only for toolz
     def test_auto_combine(self):

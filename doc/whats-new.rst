@@ -12,6 +12,13 @@ What's New
 v0.5.2 (unreleased)
 -------------------
 
+Backwards incompatible changes
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+- The optional arguments ``concat_over`` and ``mode`` in :py:func:`~xray.concat` have
+  been removed and replaced by ``data_vars`` and ``coords``. The new arguments are both
+  more easily understood and more robustly implemented.
+
 Enhancements
 ~~~~~~~~~~~~
 
@@ -47,6 +54,7 @@ Bug fixes
   supplying chunks as a single integer.
 - Fixed a bug in serializing scalar datetime variable to netCDF.
 - Fixed a bug that could occur in serialization of 0-dimensional integer arrays.
+- Fixed a bug where concatenating DataArrays was not always lazy (:issue:`464`).
 
 v0.5.1 (15 June 2015)
 ---------------------

@@ -3,7 +3,7 @@ import numpy as np
 import pandas as pd
 
 from . import ops
-from .alignment import concat
+from .combine import concat
 from .common import (
     ImplementsArrayReduce, ImplementsDatasetReduce, _maybe_promote,
 )
@@ -118,6 +118,7 @@ class GroupBy(object):
         full_index = None
 
         if grouper is not None:
+            # time-series resampling
             index = safe_cast_to_index(group)
             if not index.is_monotonic:
                 # TODO: sort instead of raising an error
@@ -177,11 +178,11 @@ class GroupBy(object):
     def _infer_concat_args(self, applied_example):
         if self.group_dim in applied_example.dims:
             concat_dim = self.group
-            indexers = self.group_indices
+            positions = self.group_indices
         else:
             concat_dim = self.unique_coord
-            indexers = None
-        return concat_dim, indexers
+            positions = None
+        return concat_dim, positions
 
     @staticmethod
     def _binary_op(f, reflexive=False, **ignored_kwargs):
@@ -290,9 +291,9 @@ class DataArrayGroupBy(GroupBy, ImplementsArrayReduce):
         for indices in self.group_indices:
             yield var[{self.group_dim: indices}]
 
-    def _concat_shortcut(self, applied, concat_dim, indexers):
+    def _concat_shortcut(self, applied, concat_dim, positions):
         stacked = Variable.concat(
-            applied, concat_dim, indexers, shortcut=True)
+            applied, concat_dim, positions, shortcut=True)
         stacked.attrs.update(self.obj.attrs)
 
         name = self.obj.name
@@ -367,12 +368,12 @@ class DataArrayGroupBy(GroupBy, ImplementsArrayReduce):
     def _concat(self, applied, shortcut=False):
         # peek at applied to determine which coordinate to stack over
         applied_example, applied = peek_at(applied)
-        concat_dim, indexers = self._infer_concat_args(applied_example)
+        concat_dim, positions = self._infer_concat_args(applied_example)
 
         if shortcut:
-            combined = self._concat_shortcut(applied, concat_dim, indexers)
+            combined = self._concat_shortcut(applied, concat_dim, positions)
         else:
-            combined = concat(applied, concat_dim, indexers=indexers)
+            combined = concat(applied, concat_dim, positions=positions)
 
         if type(combined) is type(self.obj):
             combined = self._restore_dim_order(combined)
@@ -452,8 +453,8 @@ class DatasetGroupBy(GroupBy, ImplementsDatasetReduce):
 
     def _concat(self, applied):
         applied_example, applied = peek_at(applied)
-        concat_dim, indexers = self._infer_concat_args(applied_example)
-        combined = concat(applied, concat_dim, indexers=indexers)
+        concat_dim, positions = self._infer_concat_args(applied_example)
+        combined = concat(applied, concat_dim, positions=positions)
         return combined
 
     def reduce(self, func, dim=None, keep_attrs=False, **kwargs):
