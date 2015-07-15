@@ -58,6 +58,8 @@ Bug fixes
 - Fixed a bug in serializing scalar datetime variable to netCDF.
 - Fixed a bug that could occur in serialization of 0-dimensional integer arrays.
 - Fixed a bug where concatenating DataArrays was not always lazy (:issue:`464`).
+- When reading datasets with h5netcdf, bytes attributes are decoded to strings.
+  This allows conventions decoding to work properly on Python 3 (:issue:`451`).
 
 v0.5.1 (15 June 2015)
 ---------------------

@@ -2,11 +2,31 @@
 from .. import Variable
 from ..conventions import cf_encoder
 from ..core import indexing
-from ..core.utils import FrozenOrderedDict, close_on_error
-from ..core.pycompat import iteritems, basestring, unicode_type, OrderedDict
+from ..core.utils import FrozenOrderedDict, close_on_error, Frozen
+from ..core.pycompat import iteritems, bytes_type, unicode_type, OrderedDict
 
 from .common import AbstractWritableDataStore
 from .netCDF4_ import _nc4_group, _nc4_values_and_dtype
+
+
+def maybe_decode_bytes(txt):
+    if isinstance(txt, bytes_type):
+        return txt.decode('utf-8')
+    else:
+        return txt
+
+
+def _read_attributes(h5netcdf_var):
+    # GH451
+    # to ensure conventions decoding works properly on Python 3, decode all
+    # bytes attributes to strings
+    attrs = OrderedDict()
+    for k in h5netcdf_var.ncattrs():
+        v = h5netcdf_var.getncattr(k)
+        if k not in ['_FillValue', 'missing_value']:
+            v = maybe_decode_bytes(v)
+        attrs[k] = v
+    return attrs
 
 
 class H5NetCDFStore(AbstractWritableDataStore):
@@ -33,8 +53,7 @@ class H5NetCDFStore(AbstractWritableDataStore):
     def open_store_variable(self, var):
         dimensions = var.dimensions
         data = indexing.LazilyIndexedArray(var)
-        attributes = OrderedDict((k, var.getncattr(k))
-                                 for k in var.ncattrs())
+        attrs = _read_attributes(var)
 
         # netCDF4 specific encoding
         encoding = dict(var.filters())
@@ -44,15 +63,14 @@ class H5NetCDFStore(AbstractWritableDataStore):
         # save source so __repr__ can detect if it's local or not
         encoding['source'] = self._filename
 
-        return Variable(dimensions, data, attributes, encoding)
+        return Variable(dimensions, data, attrs, encoding)
 
     def get_variables(self):
         return FrozenOrderedDict((k, self.open_store_variable(v))
                                  for k, v in iteritems(self.ds.variables))
 
     def get_attrs(self):
-        return FrozenOrderedDict((k, self.ds.getncattr(k))
-                                 for k in self.ds.ncattrs())
+        return Frozen(_read_attributes(self.ds))
 
     def get_dimensions(self):
         return self.ds.dimensions
