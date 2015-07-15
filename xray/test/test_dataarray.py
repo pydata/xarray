@@ -1149,51 +1149,6 @@ class TestDataArray(TestCase):
             actual = array.resample('12H', 'time', how=how)
             self.assertDataArrayIdentical(expected, actual)
 
-    def test_concat(self):
-        self.ds['bar'] = Variable(['x', 'y'], np.random.randn(10, 20))
-        foo = self.ds['foo']
-        bar = self.ds['bar']
-        # from dataset array:
-        expected = DataArray(np.array([foo.values, bar.values]),
-                             dims=['w', 'x', 'y'])
-        actual = concat([foo, bar], 'w')
-        self.assertDataArrayEqual(expected, actual)
-        # from iteration:
-        grouped = [g for _, g in foo.groupby('x')]
-        stacked = concat(grouped, self.ds['x'])
-        self.assertDataArrayIdentical(foo, stacked)
-        # with an index as the 'dim' argument
-        stacked = concat(grouped, self.ds.indexes['x'])
-        self.assertDataArrayIdentical(foo, stacked)
-
-        actual = concat([foo[0], foo[1]], pd.Index([0, 1])).reset_coords(drop=True)
-        expected = foo[:2].rename({'x': 'concat_dim'})
-        self.assertDataArrayIdentical(expected, actual)
-
-        actual = concat([foo[0], foo[1]], [0, 1]).reset_coords(drop=True)
-        expected = foo[:2].rename({'x': 'concat_dim'})
-        self.assertDataArrayIdentical(expected, actual)
-
-        with self.assertRaisesRegexp(ValueError, 'not identical'):
-            concat([foo, bar], dim='w', compat='identical')
-
-        with self.assertRaisesRegexp(ValueError, 'not a valid argument'):
-            concat([foo, bar], dim='w', data_vars='minimal')
-
-    @requires_dask
-    def test_concat_lazy(self):
-        import dask.array as da
-        from xray import DataArray, concat
-        from xray.test import InaccessibleArray
-        import numpy as np
-        arrays = [DataArray(
-            da.from_array(InaccessibleArray(np.zeros((3, 3))), 3),
-            dims=['x', 'y']) for _ in range(2)]
-        # should not raise
-        combined = concat(arrays, dim='z')
-        self.assertEqual(combined.shape, (2, 3, 3))
-        self.assertEqual(combined.dims, ('z', 'x', 'y'))
-
     def test_align(self):
         self.ds['x'] = ('x', np.array(list('abcdefghij')))
         dv1, dv2 = align(self.dv, self.dv[:5], join='inner')

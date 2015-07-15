@@ -17,7 +17,10 @@ Backwards incompatible changes
 
 - The optional arguments ``concat_over`` and ``mode`` in :py:func:`~xray.concat` have
   been removed and replaced by ``data_vars`` and ``coords``. The new arguments are both
-  more easily understood and more robustly implemented.
+  more easily understood and more robustly implemented, and allowed us to fix a bug
+  where ``concat`` accidentally loaded data into memory. If you set values for
+  these optional arguments manually, you will need to update your code. The default
+  behavior should be unchanged.
 
 Enhancements
 ~~~~~~~~~~~~
