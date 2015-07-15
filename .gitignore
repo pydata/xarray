@@ -41,3 +41,5 @@ nosetests.xml
 doc/_build
 doc/generated
 xray/version.py
+
+.ipynb_checkpoints
