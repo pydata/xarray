@@ -5,6 +5,8 @@ Calculating Seasonal Averages from Timeseries of Monthly Means
 
 Author: `Joe Hamman <http://uw-hydro.github.io/current_member/joe_hamman/>`_
 
+The data for this example can be found in the `xray-data <https://github.com/xray/xray-data>`_ repository. This example is also available in an IPython Notebook that is available `here <https://github.com/xray/xray/tree/master/examples/xray_seasonal_means.ipynb>`_.
+
 Suppose we have a netCDF or xray Dataset of monthly mean data and we
 want to calculate the seasonal average. To do this properly, we need to
 calculate the weighted average considering that each month has a
