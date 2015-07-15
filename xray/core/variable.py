@@ -641,7 +641,7 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
         return Variable(dims, data, attrs=attrs)
 
     @classmethod
-    def concat(cls, variables, dim='concat_dim', indexers=None,
+    def concat(cls, variables, dim='concat_dim', positions=None,
                shortcut=False):
         """Concatenate variables along a new or existing dimension.
 
@@ -657,12 +657,10 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
             existing dimension name, in which case the location of the
             dimension is unchanged. Where to insert the new dimension is
             determined by the first variable.
-        indexers : iterable of indexers, optional
-            Iterable of indexers of the same length as variables which
-            specifies how to assign variables along the given dimension. If
-            not supplied, indexers is inferred from the length of each
-            variable along the dimension, and the variables are stacked in the
-            given order.
+        positions : None or list of integer arrays, optional
+            List of integer arrays which specifies the integer positions to which
+            to assign each dataset along the concatenated dimension. If not
+            supplied, objects are concatenated in the provided order.
         shortcut : bool, optional
             This option is used internally to speed-up groupby operations.
             If `shortcut` is True, some checks of internal consistency between
@@ -689,10 +687,10 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
         if dim in first_var.dims:
             axis = first_var.get_axis_num(dim)
             dims = first_var.dims
-            if indexers is None:
+            if positions is None:
                 data = ops.concatenate(arrays, axis=axis)
             else:
-                data = ops.interleaved_concat(arrays, indexers, axis=axis)
+                data = ops.interleaved_concat(arrays, positions, axis=axis)
         else:
             axis = 0
             dims = (dim,) + first_var.dims
