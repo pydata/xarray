@@ -98,6 +98,10 @@ class TestPlot1D(PlotTestCase):
         with self.assertRaisesRegexp(TypeError, r'[Ii]ndex'):
             a.plot_line()
 
+    def test_primitive_returned(self):
+        p = self.darray.plot_line()
+        self.assertTrue(isinstance(p, mpl.lines.Line2D))
+
 
 class TestPlotHistogram(PlotTestCase):
 
@@ -127,6 +131,10 @@ class TestPlotHistogram(PlotTestCase):
 
     def test_can_pass_in_axis(self):
         self.pass_in_axis(self.darray.plot_hist)
+
+    def test_primitive_returned(self):
+        h = self.darray.plot_hist()
+        self.assertTrue(isinstance(h[-1][0], plt.patches.Rectangle))
 
 
 class Common2dMixin:
@@ -191,6 +199,10 @@ class TestContourf(Common2dMixin, PlotTestCase):
         self.assertFalse(self.contourf_called(self.darray.plot_imshow))
         self.assertTrue(self.contourf_called(self.darray.plot_contourf))
 
+    def test_primitive_artist_returned(self):
+        artist = self.plotmethod()
+        self.assertTrue(isinstance(artist, mpl.contour.QuadContourSet))
+
 
 class TestImshow(Common2dMixin, PlotTestCase):
 
@@ -215,3 +227,7 @@ class TestImshow(Common2dMixin, PlotTestCase):
     def test_can_change_aspect(self):
         self.darray.plot_imshow(aspect='equal')
         self.assertEqual('equal', plt.gca().get_aspect())
+
+    def test_primitive_artist_returned(self):
+        artist = self.plotmethod()
+        self.assertTrue(isinstance(artist, mpl.image.AxesImage))

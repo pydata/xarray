@@ -255,10 +255,6 @@ Suppose we want two plots to share the same color scale. This can be
 achieved by passing in the appropriate arguments and adding the color bar
 later.
 
-TODO: All xray plot methods return axes for consistency- is this necessary?
-Now to make this particular plot we need to access ``.images[0]`` to get
-the color mapping.
-
 .. ipython:: python
 
     fig, axes = plt.subplots(ncols=2)
@@ -270,7 +266,7 @@ the color mapping.
     halfd = distance / 2
     im = halfd.plot(ax=axes[1], **kwargs)
 
-    plt.colorbar(im.images[0], ax=axes.tolist())
+    plt.colorbar(im, ax=axes.tolist())
 
     @savefig plotting_same_color_scale.png width=6in
     plt.show()

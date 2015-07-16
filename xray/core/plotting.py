@@ -230,16 +230,17 @@ def _plot2d(plotfunc):
 
         _ensure_plottable(x, y)
 
-        ax, cmap = plotfunc(x, y, z, ax=ax, **kwargs)
+        ax, primitive = plotfunc(x, y, z, ax=ax, **kwargs)
 
         ax.set_xlabel(xlab)
         ax.set_ylabel(ylab)
 
         if add_colorbar:
-            plt.colorbar(cmap, ax=ax)
+            plt.colorbar(primitive, ax=ax)
 
         _update_axes_limits(ax, xincrease, yincrease)
 
+        #return primitive
         return ax
     return wrapper
 
