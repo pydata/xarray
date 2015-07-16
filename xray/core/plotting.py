@@ -202,7 +202,9 @@ def _plot2d(plotfunc):
 
     Returns
     -------
-    ax : plotted matplotlib axis object
+    artist :
+        The same type of primitive artist that the wrapped matplotlib 
+        function returns
     '''
 
     # Build on the original docstring

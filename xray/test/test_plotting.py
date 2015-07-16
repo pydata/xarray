@@ -185,6 +185,10 @@ class Common2dMixin:
         diffs = xlim[0] - 0, xlim[1] - 14, ylim[0] - 0, ylim[1] - 9
         self.assertTrue(all(abs(x) < 1 for x in diffs))
 
+    def test_plot_nans(self):
+        self.darray[0, 0] = np.nan
+        self.plotmethod()
+
 
 class TestContourf(Common2dMixin, PlotTestCase):
 

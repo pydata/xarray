@@ -172,6 +172,21 @@ more conventional plot where the coordinates increase in the y axis.
     @savefig 2d_simple_yincrease.png width=4in
     a.plot(yincrease=True)
 
+Missing Values
+~~~~~~~~~~~~~~
+
+Xray plots data with missing values.
+Xray uses ``np.nan`` for missing values. 
+TODO link. 
+
+.. ipython:: python
+
+    # This data has holes in it!
+    a[1, 1] = np.nan
+
+    @savefig plotting_missing_values.png width=6in
+    a.plot()
+
 Simulated Data
 ~~~~~~~~~~~~~~
 
@@ -238,15 +253,51 @@ Calling Matplotlib
 ~~~~~~~~~~~~~~~~~~
 
 Since this is a thin wrapper around matplotlib, all the functionality of
-matplotlib is available. For example, use a different color map and add a title.
+matplotlib is available. 
 
 .. ipython:: python
 
     d_ylog.plot(cmap=plt.cm.Blues)
     plt.title('Euclidean distance from point to origin')
+    plt.xlabel('temperature (C)')
 
     @savefig plotting_2d_call_matplotlib.png width=4in
     plt.show()
+
+.. warning::
+
+    Xray methods update label information and generally play around with the
+    axes. So any kind of updates to the plot 
+    should be done *after* the call to the xray's plot.
+    In the example below, ``plt.xlabel`` effectively does nothing, since 
+    ``d_ylog.plot()`` updates the xlabel.
+
+.. ipython:: python
+
+    plt.xlabel('temperature (C)')
+    d_ylog.plot()
+
+    @savefig plotting_2d_call_matplotlib2.png width=4in
+    plt.show()
+
+Contour plots can have missing values also.
+
+.. ipython:: python
+
+    d_ylog[30:48, 10:30] = np.nan
+
+    d_ylog.plot()
+
+    plt.text(100, 600, 'So common...')
+
+    @savefig plotting_nonuniform_coords_missing.png width=4in
+    plt.show()
+
+Return Values
+~~~~~~~~~~~~~
+
+Xray's plotting functions all return the same objects that the equivalent
+matplotlib functions return.
 
 Colormaps
 ~~~~~~~~~
@@ -261,10 +312,10 @@ later.
 
     kwargs = {'cmap': plt.cm.Blues, 'vmin': distance.min(), 'vmax': distance.max(), 'add_colorbar': False}
 
-    distance.plot(ax=axes[0], **kwargs)
+    im = distance.plot(ax=axes[0], **kwargs)
 
     halfd = distance / 2
-    im = halfd.plot(ax=axes[1], **kwargs)
+    halfd.plot(ax=axes[1], **kwargs)
 
     plt.colorbar(im, ax=axes.tolist())
 
