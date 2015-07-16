@@ -115,14 +115,14 @@ def plot_line(darray, *args, **kwargs):
 
     _ensure_plottable([x])
 
-    ax.plot(x, darray, *args, **kwargs)
+    primitive = ax.plot(x, darray, *args, **kwargs)
 
     ax.set_xlabel(xlabel)
 
     if darray.name is not None:
         ax.set_ylabel(darray.name)
 
-    return ax
+    return primitive
 
 
 def plot_hist(darray, ax=None, **kwargs):
@@ -148,14 +148,14 @@ def plot_hist(darray, ax=None, **kwargs):
     if ax is None:
         ax = plt.gca()
 
-    ax.hist(np.ravel(darray), **kwargs)
+    primitive = ax.hist(np.ravel(darray), **kwargs)
 
     ax.set_ylabel('Count')
 
     if darray.name is not None:
         ax.set_title('Histogram of {}'.format(darray.name))
 
-    return ax
+    return primitive
 
 
 def _update_axes_limits(ax, xincrease, yincrease):
@@ -240,8 +240,7 @@ def _plot2d(plotfunc):
 
         _update_axes_limits(ax, xincrease, yincrease)
 
-        #return primitive
-        return ax
+        return primitive
     return wrapper
 
 
@@ -273,9 +272,9 @@ def plot_imshow(x, y, z, ax, **kwargs):
     # Allow user to override these defaults
     defaults.update(kwargs)
 
-    cmap = ax.imshow(z, **defaults)
+    primitive = ax.imshow(z, **defaults)
 
-    return ax, cmap
+    return ax, primitive
 
 
 @_plot2d
@@ -285,5 +284,5 @@ def plot_contourf(x, y, z, ax, **kwargs):
 
     Wraps matplotlib.pyplot.contourf
     """
-    cmap = ax.contourf(x, y, z, **kwargs)
-    return ax, cmap
+    primitive = ax.contourf(x, y, z, **kwargs)
+    return ax, primitive

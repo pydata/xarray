@@ -100,7 +100,7 @@ class TestPlot1D(PlotTestCase):
 
     def test_primitive_returned(self):
         p = self.darray.plot_line()
-        self.assertTrue(isinstance(p, mpl.lines.Line2D))
+        self.assertTrue(isinstance(p[0], mpl.lines.Line2D))
 
 
 class TestPlotHistogram(PlotTestCase):
@@ -134,17 +134,15 @@ class TestPlotHistogram(PlotTestCase):
 
     def test_primitive_returned(self):
         h = self.darray.plot_hist()
-        self.assertTrue(isinstance(h[-1][0], plt.patches.Rectangle))
+        self.assertTrue(isinstance(h[-1][0], mpl.patches.Rectangle))
 
 
 class Common2dMixin:
     """
-    Common tests for 2d plotting go here. These tests assume that the
-    following attributes exist (define them in setUp):
+    Common tests for 2d plotting go here. 
 
-    darray      |   2 dimensional DataArray
-    plotfunc    |   plot as a function that takes DataArray as an arg
-    plotmethod  |   the method on DataArray
+    These tests assume that `self.plotfunc` exists and is defined in the
+    setUp. Should have the same name as the method.
     """
     def setUp(self):
         self.darray = DataArray(np.random.randn(10, 15), dims=['y', 'x'])
