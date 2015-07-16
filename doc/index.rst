@@ -63,10 +63,12 @@ Get in touch
 ------------
 
 - To ask questions or discuss xray, use the `mailing list`_.
-- Report bugs or view the source code `on GitHub`_.
+- Report bugs, suggest feature ideas or view the source code `on GitHub`_.
+- For interactive discussion, we have a chatroom `on Gitter`_.
 - You can also get in touch `on Twitter`_.
 
 .. _mailing list: https://groups.google.com/forum/#!forum/xray-dev
+.. _on Gitter: https://gitter.im/xray/xray
 .. _on GitHub: http://github.com/xray/xray
 .. _on Twitter: http://twitter.com/shoyer
 
