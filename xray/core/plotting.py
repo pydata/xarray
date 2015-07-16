@@ -148,7 +148,9 @@ def plot_hist(darray, ax=None, **kwargs):
     if ax is None:
         ax = plt.gca()
 
-    primitive = ax.hist(np.ravel(darray), **kwargs)
+    no_nan = np.ravel(darray)
+    no_nan = no_nan[np.logical_not(np.isnan(no_nan))]
+    primitive = ax.hist(no_nan, **kwargs)
 
     ax.set_ylabel('Count')
 

@@ -66,7 +66,7 @@ class TestPlot(PlotTestCase):
 class TestPlot1D(PlotTestCase):
 
     def setUp(self):
-        d = [0, 1, 0, 2]
+        d = [0, 1.1, 0, 2]
         self.darray = DataArray(d, coords={'period': range(len(d))})
 
     def test_xlabel_is_index_name(self):
@@ -102,6 +102,10 @@ class TestPlot1D(PlotTestCase):
         p = self.darray.plot_line()
         self.assertTrue(isinstance(p[0], mpl.lines.Line2D))
 
+    def test_plot_nans(self):
+        self.darray[1] = np.nan
+        self.darray.plot_line()
+
 
 class TestPlotHistogram(PlotTestCase):
 
@@ -135,6 +139,10 @@ class TestPlotHistogram(PlotTestCase):
     def test_primitive_returned(self):
         h = self.darray.plot_hist()
         self.assertTrue(isinstance(h[-1][0], mpl.patches.Rectangle))
+
+    def test_plot_nans(self):
+        self.darray[0, 0, :] = np.nan
+        self.darray.plot_hist()
 
 
 class Common2dMixin:
