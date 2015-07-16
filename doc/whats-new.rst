@@ -9,8 +9,12 @@ What's New
     import xray
     np.random.seed(123456)
 
-v0.5.2 (unreleased)
--------------------
+v0.5.2 (16 July 2015)
+---------------------
+
+This release contains bug fixes, several additional options for opening and
+saving netCDF files, and a backwards incompatible rewrite of the advanced
+options for ``xray.concat``.
 
 Backwards incompatible changes
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

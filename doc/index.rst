@@ -48,10 +48,15 @@ Documentation
 See also
 --------
 
-- `Stephan Hoyer's PyData talk`_ introducing the original version of xray.
+- Stephan Hoyer's `SciPy2015 talk`_ introducing xray to a general audience.
+- Stephan Hoyer's `2015 Unidata Users Workshop talk`_ and `tutorial`_ (`with answers`_) introducing
+  xray to users familiar with netCDF.
 - `Nicolas Fauchereau's tutorial`_ on xray for netCDF users.
 
-.. _Stephan Hoyer's PyData talk: https://www.youtube.com/watch?v=T5CZyNwBa9c
+.. _SciPy2015 talk: https://www.youtube.com/watch?v=X0pAhJgySxk
+.. _2015 Unidata Users Workshop talk: https://www.youtube.com/watch?v=J9ypQOnt5l8
+.. _tutorial: https://github.com/Unidata/unidata-users-workshop/blob/master/notebooks/xray-tutorial.ipynb
+.. _with answers: https://github.com/Unidata/unidata-users-workshop/blob/master/notebooks/xray-tutorial-with-answers.ipynb
 .. _Nicolas Fauchereau's tutorial: http://nbviewer.ipython.org/github/nicolasfauchereau/metocean/blob/master/notebooks/xray.ipynb
 
 Get in touch
