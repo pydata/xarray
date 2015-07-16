@@ -15,7 +15,6 @@ try:
 except ImportError:
     pass
 
-# TODO - Add NaN handling and tests
 
 @requires_matplotlib
 class PlotTestCase(TestCase):
@@ -147,7 +146,7 @@ class TestPlotHistogram(PlotTestCase):
 
 class Common2dMixin:
     """
-    Common tests for 2d plotting go here. 
+    Common tests for 2d plotting go here.
 
     These tests assume that `self.plotfunc` exists and is defined in the
     setUp. Should have the same name as the method.
@@ -171,8 +170,8 @@ class Common2dMixin:
             self.plotfunc(a)
 
     def test_nonnumeric_index_raises_typeerror(self):
-        a = DataArray(np.random.randn(3, 2), coords=[['a', 'b', 'c'],
-            ['d', 'e']])
+        a = DataArray(np.random.randn(3, 2),
+                      coords=[['a', 'b', 'c'], ['d', 'e']])
         with self.assertRaisesRegexp(TypeError, r'[Ii]ndex'):
             self.plotfunc(a)
 

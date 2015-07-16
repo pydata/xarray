@@ -9,15 +9,18 @@ import numpy as np
 
 from .utils import is_uniform_spaced
 
-# TODO - Is there a better way to import matplotlib in the function?
-# Other piece of duplicated logic is the checking for axes.
-# Decorators don't preserve the argument names
-# But if all the plotting methods have same signature...
-
 
 # TODO - implement this
 class FacetGrid():
     pass
+
+
+# Maybe more appropriate to keep this in .utils
+def _right_dtype(x, types):
+    """
+    Is x a sub dtype of anything in types?
+    """
+    return any(np.issubdtype(x.dtype, t) for t in types)
 
 
 def _ensure_plottable(*args):
@@ -27,10 +30,8 @@ def _ensure_plottable(*args):
     """
     plottypes = [np.floating, np.integer, np.timedelta64, np.datetime64]
 
-    righttype = lambda x: any(np.issubdtype(x.dtype, t) for t in plottypes)
-
     # Lists need to be converted to np.arrays here.
-    if not any(righttype(np.array(x)) for x in args):
+    if not any(_right_dtype(np.array(x), plottypes) for x in args):
         raise TypeError('Plotting requires coordinates to be numeric '
                         'or dates. Try DataArray.reindex() to convert.')
 
@@ -150,6 +151,7 @@ def plot_hist(darray, ax=None, **kwargs):
 
     no_nan = np.ravel(darray)
     no_nan = no_nan[np.logical_not(np.isnan(no_nan))]
+
     primitive = ax.hist(no_nan, **kwargs)
 
     ax.set_ylabel('Count')
@@ -182,7 +184,7 @@ def _update_axes_limits(ax, xincrease, yincrease):
 
 def _plot2d(plotfunc):
     """
-    Decorator for common 2d plotting logic. 
+    Decorator for common 2d plotting logic.
     """
     commondoc = '''
     Parameters
@@ -205,7 +207,7 @@ def _plot2d(plotfunc):
     Returns
     -------
     artist :
-        The same type of primitive artist that the wrapped matplotlib 
+        The same type of primitive artist that the wrapped matplotlib
         function returns
     '''
 
@@ -213,7 +215,8 @@ def _plot2d(plotfunc):
     plotfunc.__doc__ = '\n'.join((plotfunc.__doc__, commondoc))
 
     @functools.wraps(plotfunc)
-    def wrapper(darray, ax=None, xincrease=None, yincrease=None, add_colorbar=True, **kwargs):
+    def wrapper(darray, ax=None, xincrease=None, yincrease=None,
+                add_colorbar=True, **kwargs):
         # All 2d plots in xray share this function signature
 
         import matplotlib.pyplot as plt
