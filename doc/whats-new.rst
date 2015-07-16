@@ -55,7 +55,7 @@ Enhancements
 Bug fixes
 ~~~~~~~~~
 
-- Fixed ``min``, ``max``, ``argmin`` and ``argmax``for arrays with string or
+- Fixed ``min``, ``max``, ``argmin`` and ``argmax`` for arrays with string or
   unicode types (:issue:`453`).
 - :py:func:`~xray.open_dataset` and :py:func:`~xray.open_mfdataset` support
   supplying chunks as a single integer.
