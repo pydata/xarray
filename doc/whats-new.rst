@@ -30,9 +30,9 @@ Enhancements
   cannot be otherwise merged automatically, e.g., if the original datasets
   have conflicting index coordinates (:issue:`443`).
 - :py:func:`~xray.open_dataset` and :py:func:`~xray.open_mfdataset` now use a
-  thread lock by default for reading from netCDF files. This avoids possible
-  segmentation faults for reading from netCDF4 files when HDF5 is not
-  configured properly for concurrent access (:issue:`444`).
+  global thread lock by default for reading from netCDF files with dask. This
+  avoids possible segmentation faults for reading from netCDF4 files when HDF5
+  is not configured properly for concurrent access (:issue:`444`).
 - Added support for serializing arrays of complex numbers with `engine='h5netcdf'`.
 - The new :py:func:`~xray.save_mfdataset` function allows for saving multiple
   datasets to disk simultaneously. This is useful when processing large datasets
@@ -51,7 +51,7 @@ Enhancements
 Bug fixes
 ~~~~~~~~~
 
-- Fix ``min``, ``max``, ``argmin`` and ``argmax``for arrays with string or
+- Fixed ``min``, ``max``, ``argmin`` and ``argmax``for arrays with string or
   unicode types (:issue:`453`).
 - :py:func:`~xray.open_dataset` and :py:func:`~xray.open_mfdataset` support
   supplying chunks as a single integer.
