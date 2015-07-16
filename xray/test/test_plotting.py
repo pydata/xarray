@@ -30,13 +30,13 @@ class PlotTestCase(TestCase):
         self.assertTrue(axes[0].has_data())
 
     def imshow_called(self, plotmethod):
-        ax = plotmethod()
-        images = ax.findobj(mpl.image.AxesImage)
+        plotmethod()
+        images = plt.gca().findobj(mpl.image.AxesImage)
         return len(images) > 0
 
     def contourf_called(self, plotmethod):
-        ax = plotmethod()
-        paths = ax.findobj(mpl.collections.PathCollection)
+        plotmethod()
+        paths = plt.gca().findobj(mpl.collections.PathCollection)
         return len(paths) > 0
 
 
@@ -70,17 +70,17 @@ class TestPlot1D(PlotTestCase):
         self.darray = DataArray(d, coords={'period': range(len(d))})
 
     def test_xlabel_is_index_name(self):
-        ax = self.darray.plot()
-        self.assertEqual('period', ax.get_xlabel())
+        self.darray.plot()
+        self.assertEqual('period', plt.gca().get_xlabel())
 
     def test_no_label_name_on_y_axis(self):
-        ax = self.darray.plot()
-        self.assertEqual('', ax.get_ylabel())
+        self.darray.plot()
+        self.assertEqual('', plt.gca().get_ylabel())
 
     def test_ylabel_is_data_name(self):
         self.darray.name = 'temperature'
-        ax = self.darray.plot()
-        self.assertEqual(self.darray.name, ax.get_ylabel())
+        self.darray.plot()
+        self.assertEqual(self.darray.name, plt.gca().get_ylabel())
 
     def test_wrong_dims_raises_valueerror(self):
         twodims = DataArray(np.arange(10).reshape(2, 5))
@@ -108,22 +108,22 @@ class TestPlotHistogram(PlotTestCase):
         self.darray.plot_hist()
 
     def test_title_no_name(self):
-        ax = self.darray.plot_hist()
-        self.assertEqual('', ax.get_title())
+        self.darray.plot_hist()
+        self.assertEqual('', plt.gca().get_title())
 
     def test_title_uses_name(self):
         self.darray.name = 'randompoints'
-        ax = self.darray.plot_hist()
-        self.assertIn(self.darray.name, ax.get_title())
+        self.darray.plot_hist()
+        self.assertIn(self.darray.name, plt.gca().get_title())
 
     def test_ylabel_is_count(self):
-        ax = self.darray.plot_hist()
-        self.assertEqual('Count', ax.get_ylabel())
+        self.darray.plot_hist()
+        self.assertEqual('Count', plt.gca().get_ylabel())
 
     def test_can_pass_in_kwargs(self):
         nbins = 5
-        ax = self.darray.plot_hist(bins=nbins)
-        self.assertEqual(nbins, len(ax.patches))
+        self.darray.plot_hist(bins=nbins)
+        self.assertEqual(nbins, len(plt.gca().patches))
 
     def test_can_pass_in_axis(self):
         self.pass_in_axis(self.darray.plot_hist)
@@ -143,9 +143,9 @@ class Common2dMixin:
         self.plotmethod = getattr(self.darray, self.plotfunc.__name__)
 
     def test_label_names(self):
-        ax = self.plotmethod()
-        self.assertEqual('x', ax.get_xlabel())
-        self.assertEqual('y', ax.get_ylabel())
+        self.plotmethod()
+        self.assertEqual('x', plt.gca().get_xlabel())
+        self.assertEqual('y', plt.gca().get_ylabel())
 
     def test_1d_raises_valueerror(self):
         with self.assertRaisesRegexp(ValueError, r'[Dd]im'):
@@ -166,16 +166,16 @@ class Common2dMixin:
         self.pass_in_axis(self.plotmethod)
 
     def test_xyincrease_false_changes_axes(self):
-        ax = self.plotmethod(xincrease=False, yincrease=False)
-        xlim = ax.get_xlim()
-        ylim = ax.get_ylim()
+        self.plotmethod(xincrease=False, yincrease=False)
+        xlim = plt.gca().get_xlim()
+        ylim = plt.gca().get_ylim()
         diffs = xlim[0] - 14, xlim[1] - 0, ylim[0] - 9, ylim[1] - 0
         self.assertTrue(all(abs(x) < 1 for x in diffs))
 
     def test_xyincrease_true_changes_axes(self):
-        ax = self.plotmethod(xincrease=True, yincrease=True)
-        xlim = ax.get_xlim()
-        ylim = ax.get_ylim()
+        self.plotmethod(xincrease=True, yincrease=True)
+        xlim = plt.gca().get_xlim()
+        ylim = plt.gca().get_ylim()
         diffs = xlim[0] - 0, xlim[1] - 14, ylim[0] - 0, ylim[1] - 9
         self.assertTrue(all(abs(x) < 1 for x in diffs))
 
@@ -204,14 +204,14 @@ class TestImshow(Common2dMixin, PlotTestCase):
         self.assertTrue(self.imshow_called(self.darray.plot_imshow))
 
     def test_xy_pixel_centered(self):
-        ax = self.darray.plot_imshow()
-        self.assertTrue(np.allclose([-0.5, 14.5], ax.get_xlim()))
-        self.assertTrue(np.allclose([9.5, -0.5], ax.get_ylim()))
+        self.darray.plot_imshow()
+        self.assertTrue(np.allclose([-0.5, 14.5], plt.gca().get_xlim()))
+        self.assertTrue(np.allclose([9.5, -0.5], plt.gca().get_ylim()))
 
     def test_default_aspect_is_auto(self):
-        ax = self.darray.plot_imshow()
-        self.assertEqual('auto', ax.get_aspect())
+        self.darray.plot_imshow()
+        self.assertEqual('auto', plt.gca().get_aspect())
 
     def test_can_change_aspect(self):
-        ax = self.darray.plot_imshow(aspect='equal')
-        self.assertEqual('equal', ax.get_aspect())
+        self.darray.plot_imshow(aspect='equal')
+        self.assertEqual('equal', plt.gca().get_aspect())
