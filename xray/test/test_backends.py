@@ -705,6 +705,9 @@ class H5NetCDFDataTest(BaseNetCDF4Test, TestCase):
             self.assertDatasetEqual(expected, actual)
 
     def test_cross_engine_read_write_netcdf4(self):
+        # Drop dim3, because its labels include strings. These appear to be
+        # not properly read with python-netCDF4, which converts them into
+        # unicode instead of leaving them as bytes.
         data = create_test_data().drop('dim3')
         data.attrs['foo'] = 'bar'
         valid_engines = ['netcdf4', 'h5netcdf']
