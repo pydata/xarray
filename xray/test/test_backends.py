@@ -661,7 +661,7 @@ class GenericNetCDFDataTest(CFEncodedDataTest, Only32BitTypes, TestCase):
         with self.assertRaisesRegexp(ValueError, 'can only read'):
             open_dataset(BytesIO(netcdf_bytes), engine='foobar')
 
-    def test_cross_engine_read_write(self):
+    def test_cross_engine_read_write_netcdf3(self):
         data = create_test_data()
         valid_engines = set()
         if has_netCDF4:
@@ -703,6 +703,25 @@ class H5NetCDFDataTest(BaseNetCDF4Test, TestCase):
         expected = Dataset({'x': ('y', np.ones(5) + 1j * np.ones(5))})
         with self.roundtrip(expected) as actual:
             self.assertDatasetEqual(expected, actual)
+
+    def test_cross_engine_read_write_netcdf4(self):
+        data = create_test_data().drop('dim3')
+        data.attrs['foo'] = 'bar'
+        valid_engines = ['netcdf4', 'h5netcdf']
+        for write_engine in valid_engines:
+            with create_tmp_file() as tmp_file:
+                data.to_netcdf(tmp_file, engine=write_engine)
+                for read_engine in valid_engines:
+                    with open_dataset(tmp_file, engine=read_engine) as actual:
+                        self.assertDatasetIdentical(data, actual)
+
+    def test_read_byte_attrs_as_unicode(self):
+        with create_tmp_file() as tmp_file:
+            with nc4.Dataset(tmp_file, 'w') as nc:
+                nc.foo = b'bar'
+            actual = open_dataset(tmp_file)
+            expected = Dataset(attrs={'foo': 'bar'})
+            self.assertDatasetIdentical(expected, actual)
 
 
 @requires_dask
