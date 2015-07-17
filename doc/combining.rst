@@ -65,9 +65,10 @@ Of course, ``concat`` also works on ``Dataset`` objects:
     xray.concat([ds.sel(x='a'), ds.sel(x='b')], 'x')
 
 :py:func:`~xray.concat` has a number of options which provide deeper control
-over which variables and coordinates are concatenated and how it handles
-conflicting variables between datasets. However, these should rarely be
-necessary.
+over which variables are concatenated and how it handles conflicting variables
+between datasets. With the default parameters, xray will load some coordinate
+variables into memory to compare them between datasets. This may be prohibitively
+expensive if you are manipulating your dataset lazily using :ref:`dask`.
 
 .. _merge:
 

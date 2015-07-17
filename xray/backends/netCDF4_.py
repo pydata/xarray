@@ -57,11 +57,13 @@ def _nc4_values_and_dtype(var):
         if len(var) > 0:
             var = var.astype('O')
         dtype = str
-    elif var.dtype.kind in ['i', 'u', 'f', 'S']:
+    elif var.dtype.kind == 'S':
         # use character arrays instead of unicode, because unicode suppot in
         # netCDF4 is still rather buggy
         data, dims = maybe_convert_to_char_array(var.data, var.dims)
         var = Variable(dims, data, var.attrs, var.encoding)
+        dtype = var.dtype
+    elif var.dtype.kind in ['i', 'u', 'f', 'c']:
         dtype = var.dtype
     else:
         raise ValueError('cannot infer dtype for netCDF4 variable')
@@ -123,9 +125,11 @@ class NetCDF4DataStore(AbstractWritableDataStore):
 
     This store supports NetCDF3, NetCDF4 and OpenDAP datasets.
     """
-    def __init__(self, filename, mode='r', clobber=True, diskless=False,
-                 persist=False, format='NETCDF4', group=None):
+    def __init__(self, filename, mode='r', format='NETCDF4', group=None,
+                 writer=None, clobber=True, diskless=False, persist=False):
         import netCDF4 as nc4
+        if format is None:
+            format = 'NETCDF4'
         ds = nc4.Dataset(filename, mode=mode, clobber=clobber,
                          diskless=diskless, persist=persist,
                          format=format)
@@ -134,6 +138,7 @@ class NetCDF4DataStore(AbstractWritableDataStore):
         self.format = format
         self.is_remote = is_remote_uri(filename)
         self._filename = filename
+        super(NetCDF4DataStore, self).__init__(writer)
 
     def store(self, variables, attributes):
         # All NetCDF files get CF encoded by default, without this attempting
@@ -232,6 +237,7 @@ class NetCDF4DataStore(AbstractWritableDataStore):
         return nc4_var, variable.data
 
     def sync(self):
+        super(NetCDF4DataStore, self).sync()
         self.ds.sync()
 
     def close(self):

@@ -181,7 +181,7 @@ def infer_datetime_units(dates):
     'hours', 'minutes' or 'seconds' (the first one that can evenly divide all
     unique time deltas in `dates`)
     """
-    dates = pd.to_datetime(np.asarray(dates), box=False)
+    dates = pd.to_datetime(np.asarray(dates).ravel(), box=False)
     unique_timedeltas = np.unique(np.diff(dates[pd.notnull(dates)]))
     units = _infer_time_units_from_diff(unique_timedeltas)
     return '%s since %s' % (units, pd.Timestamp(dates[0]))
@@ -192,7 +192,7 @@ def infer_timedelta_units(deltas):
     {'days', 'hours', 'minutes' 'seconds'} (the first one that can evenly
     divide all unique time deltas in `deltas`)
     """
-    deltas = pd.to_timedelta(np.asarray(deltas), box=False)
+    deltas = pd.to_timedelta(np.asarray(deltas).ravel(), box=False)
     unique_timedeltas = np.unique(deltas[pd.notnull(deltas)])
     units = _infer_time_units_from_diff(unique_timedeltas)
     return units
@@ -574,7 +574,7 @@ def maybe_encode_dtype(var):
         dtype = np.dtype(encoding.pop('dtype'))
         if dtype != var.dtype and dtype.kind != 'O':
             if np.issubdtype(dtype, int):
-                data = ops.around(data)
+                data = ops.around(data)[...]
             if dtype == 'S1' and data.dtype != 'S1':
                 data = string_to_char(np.asarray(data, 'S'))
                 dims = dims + ('string%s' % data.shape[-1],)

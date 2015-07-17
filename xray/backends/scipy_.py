@@ -64,8 +64,10 @@ class ScipyDataStore(AbstractWritableDataStore):
 
     It only supports the NetCDF3 file-format.
     """
-    def __init__(self, filename_or_obj, mode='r', mmap=None, version=2):
+    def __init__(self, filename_or_obj, mode='r', format=None, group=None,
+                 writer=None, mmap=None):
         import scipy
+        import scipy.io
         if mode != 'r' and scipy.__version__ < '0.13':  # pragma: no cover
             warnings.warn('scipy %s detected; '
                           'the minimal recommended version is 0.13. '
@@ -73,7 +75,18 @@ class ScipyDataStore(AbstractWritableDataStore):
                           'read and write files.'
                           % scipy.__version__, ImportWarning)
 
-        import scipy.io
+        if group is not None:
+            raise ValueError('cannot save to a group with the '
+                             'scipy.io.netcdf backend')
+
+        if format is None or format == 'NETCDF3_64BIT':
+            version = 2
+        elif format == 'NETCDF3_CLASSIC':
+            version = 1
+        else:
+            raise ValueError('invalid format for scipy.io.netcdf backend: %r'
+                             % format)
+
         # if filename is a NetCDF3 bytestring we store it in a StringIO
         if (isinstance(filename_or_obj, basestring)
                 and filename_or_obj.startswith('CDF')):
@@ -82,6 +95,7 @@ class ScipyDataStore(AbstractWritableDataStore):
             filename_or_obj = BytesIO(filename_or_obj)
         self.ds = scipy.io.netcdf_file(
             filename_or_obj, mode=mode, mmap=mmap, version=version)
+        super(ScipyDataStore, self).__init__(writer)
 
     def store(self, variables, attributes):
         # All Scipy objects get CF encoded by default, without this attempting
@@ -134,6 +148,7 @@ class ScipyDataStore(AbstractWritableDataStore):
         return scipy_var, data
 
     def sync(self):
+        super(ScipyDataStore, self).sync()
         self.ds.flush()
 
     def close(self):

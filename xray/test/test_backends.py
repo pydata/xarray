@@ -1,7 +1,10 @@
 from io import BytesIO
+from threading import Lock
 import contextlib
+import itertools
 import os.path
 import pickle
+import shutil
 import tempfile
 import unittest
 import sys
@@ -10,7 +13,7 @@ import numpy as np
 import pandas as pd
 
 import xray
-from xray import Dataset, open_dataset, open_mfdataset, backends
+from xray import Dataset, open_dataset, open_mfdataset, backends, save_mfdataset
 from xray.backends.common import robust_getitem
 from xray.core.pycompat import iteritems, PY3
 
@@ -183,13 +186,13 @@ class DatasetIOTestCases(object):
 
     def test_roundtrip_datetime_data(self):
         times = pd.to_datetime(['2000-01-01', '2000-01-02', 'NaT'])
-        expected = Dataset({'t': ('t', times)})
+        expected = Dataset({'t': ('t', times), 't0': times[0]})
         with self.roundtrip(expected) as actual:
             self.assertDatasetIdentical(expected, actual)
 
     def test_roundtrip_timedelta_data(self):
         time_deltas = pd.to_timedelta(['1h', '2h', 'NaT'])
-        expected = Dataset({'td': ('td', time_deltas)})
+        expected = Dataset({'td': ('td', time_deltas), 'td0': time_deltas[0]})
         with self.roundtrip(expected) as actual:
             self.assertDatasetIdentical(expected, actual)
 
@@ -338,14 +341,17 @@ class CFEncodedDataTest(DatasetIOTestCases):
                     pass
 
 
+_counter = itertools.count()
+
+
 @contextlib.contextmanager
 def create_tmp_file(suffix='.nc'):
-    f, path = tempfile.mkstemp(suffix=suffix)
-    os.close(f)
+    temp_dir = tempfile.mkdtemp()
+    path = os.path.join(temp_dir, 'temp-%s.%s' % (next(_counter), suffix))
     try:
         yield path
     finally:
-        os.remove(path)
+        shutil.rmtree(temp_dir)
 
 
 class BaseNetCDF4Test(CFEncodedDataTest):
@@ -655,7 +661,7 @@ class GenericNetCDFDataTest(CFEncodedDataTest, Only32BitTypes, TestCase):
         with self.assertRaisesRegexp(ValueError, 'can only read'):
             open_dataset(BytesIO(netcdf_bytes), engine='foobar')
 
-    def test_cross_engine_read_write(self):
+    def test_cross_engine_read_write_netcdf3(self):
         data = create_test_data()
         valid_engines = set()
         if has_netCDF4:
@@ -693,8 +699,36 @@ class H5NetCDFDataTest(BaseNetCDF4Test, TestCase):
         # doesn't work for h5py (without using dask as an intermediate layer)
         pass
 
+    def test_complex(self):
+        expected = Dataset({'x': ('y', np.ones(5) + 1j * np.ones(5))})
+        with self.roundtrip(expected) as actual:
+            self.assertDatasetEqual(expected, actual)
+
+    def test_cross_engine_read_write_netcdf4(self):
+        # Drop dim3, because its labels include strings. These appear to be
+        # not properly read with python-netCDF4, which converts them into
+        # unicode instead of leaving them as bytes.
+        data = create_test_data().drop('dim3')
+        data.attrs['foo'] = 'bar'
+        valid_engines = ['netcdf4', 'h5netcdf']
+        for write_engine in valid_engines:
+            with create_tmp_file() as tmp_file:
+                data.to_netcdf(tmp_file, engine=write_engine)
+                for read_engine in valid_engines:
+                    with open_dataset(tmp_file, engine=read_engine) as actual:
+                        self.assertDatasetIdentical(data, actual)
+
+    def test_read_byte_attrs_as_unicode(self):
+        with create_tmp_file() as tmp_file:
+            with nc4.Dataset(tmp_file, 'w') as nc:
+                nc.foo = b'bar'
+            actual = open_dataset(tmp_file)
+            expected = Dataset(attrs={'foo': 'bar'})
+            self.assertDatasetIdentical(expected, actual)
+
 
 @requires_dask
+@requires_scipy
 @requires_netCDF4
 class DaskTest(TestCase):
     def test_open_mfdataset(self):
@@ -715,6 +749,46 @@ class DaskTest(TestCase):
         with self.assertRaisesRegexp(IOError, 'no files to open'):
             open_mfdataset('foo-bar-baz-*.nc')
 
+    def test_preprocess_mfdataset(self):
+        original = Dataset({'foo': ('x', np.random.randn(10))})
+        with create_tmp_file() as tmp:
+            original.to_netcdf(tmp)
+            preprocess = lambda ds: ds.assign_coords(z=0)
+            expected = preprocess(original)
+            with open_mfdataset(tmp, preprocess=preprocess) as actual:
+                self.assertDatasetIdentical(expected, actual)
+
+    def test_lock(self):
+        original = Dataset({'foo': ('x', np.random.randn(10))})
+        with create_tmp_file() as tmp:
+            original.to_netcdf(tmp, format='NETCDF3_CLASSIC')
+            with open_dataset(tmp, chunks=10) as ds:
+                task = ds.foo.data.dask[ds.foo.data.name, 0]
+                self.assertIsInstance(task[-1], type(Lock()))
+            with open_mfdataset(tmp) as ds:
+                task = ds.foo.data.dask[ds.foo.data.name, 0]
+                self.assertIsInstance(task[-1], type(Lock()))
+            with open_mfdataset(tmp, engine='scipy') as ds:
+                task = ds.foo.data.dask[ds.foo.data.name, 0]
+                self.assertNotIsInstance(task[-1], type(Lock()))
+
+    def test_save_mfdataset_roundtrip(self):
+        original = Dataset({'foo': ('x', np.random.randn(10))})
+        datasets = [original.isel(x=slice(5)),
+                    original.isel(x=slice(5, 10))]
+        with create_tmp_file() as tmp1:
+            with create_tmp_file() as tmp2:
+                save_mfdataset(datasets, [tmp1, tmp2])
+                with open_mfdataset([tmp1, tmp2]) as actual:
+                    self.assertDatasetIdentical(actual, original)
+
+    def test_save_mfdataset_invalid(self):
+        ds = Dataset()
+        with self.assertRaisesRegexp(ValueError, 'cannot use mode'):
+            save_mfdataset([ds, ds], ['same', 'same'])
+        with self.assertRaisesRegexp(ValueError, 'same length'):
+            save_mfdataset([ds, ds], ['only one path'])
+
     def test_open_and_do_math(self):
         original = Dataset({'foo': ('x', np.random.randn(10))})
         with create_tmp_file() as tmp:
@@ -730,10 +804,12 @@ class DaskTest(TestCase):
             with open_dataset(tmp, chunks={'x': 5}) as actual:
                 self.assertIsInstance(actual.foo.variable.data, da.Array)
                 self.assertEqual(actual.foo.variable.data.chunks, ((5, 5),))
-                self.assertDatasetAllClose(original, actual)
+                self.assertDatasetIdentical(original, actual)
+            with open_dataset(tmp, chunks=5) as actual:
+                self.assertDatasetIdentical(original, actual)
             with open_dataset(tmp) as actual:
                 self.assertIsInstance(actual.foo.variable.data, np.ndarray)
-                self.assertDatasetAllClose(original, actual)
+                self.assertDatasetIdentical(original, actual)
 
     def test_dask_roundtrip(self):
         with create_tmp_file() as tmp:

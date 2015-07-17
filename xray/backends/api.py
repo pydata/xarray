@@ -1,10 +1,12 @@
 import sys
 import gzip
+import threading
 from glob import glob
 from io import BytesIO
 
 from .. import backends, conventions
-from ..core.alignment import auto_combine
+from .common import ArrayWriter
+from ..core.combine import auto_combine
 from ..core.utils import close_on_error, is_remote_uri
 from ..core.pycompat import basestring, OrderedDict, range
 
@@ -35,10 +37,34 @@ def _get_default_engine(path, allow_remote=False):
     return engine
 
 
+_global_lock = threading.Lock()
+
+
+def _default_lock(filename, engine):
+    if filename.endswith('.gz'):
+        lock = False
+    else:
+        if engine is None:
+            engine = _get_default_engine(filename, allow_remote=True)
+
+        if engine == 'netcdf4':
+            if is_remote_uri(filename):
+                lock = False
+            else:
+                # TODO: identify netcdf3 files and don't use the global lock
+                # for them
+                lock = _global_lock
+        elif engine == 'h5netcdf':
+            lock = _global_lock
+        else:
+            lock = False
+    return lock
+
+
 def open_dataset(filename_or_obj, group=None, decode_cf=True,
                  mask_and_scale=True, decode_times=True,
                  concat_characters=True, decode_coords=True, engine=None,
-                 chunks=None):
+                 chunks=None, lock=None):
     """Load and decode a dataset from a file or file-like object.
 
     Parameters
@@ -79,6 +105,12 @@ def open_dataset(filename_or_obj, group=None, decode_cf=True,
         If chunks is provided, it used to load the new dataset into dask
         arrays. This is an experimental feature; see the documentation for more
         details.
+    lock : False, True or threading.Lock, optional
+        If chunks is provided, this argument is passed on to
+        :py:func:`dask.array.from_array`. By default, a per-variable lock is
+        used when reading data from netCDF files with the netcdf4 and h5netcdf
+        engines to avoid issues with concurrent access when using dask's
+        multithreaded backend.
 
     Returns
     -------
@@ -95,12 +127,12 @@ def open_dataset(filename_or_obj, group=None, decode_cf=True,
         concat_characters = False
         decode_coords = False
 
-    def maybe_decode_store(store):
+    def maybe_decode_store(store, lock=False):
         ds = conventions.decode_cf(
             store, mask_and_scale=mask_and_scale, decode_times=decode_times,
             concat_characters=concat_characters, decode_coords=decode_coords)
         if chunks is not None:
-            ds = ds.chunk(chunks)
+            ds = ds.chunk(chunks, lock=lock)
         return ds
 
     if isinstance(filename_or_obj, backends.AbstractDataStore):
@@ -124,8 +156,6 @@ def open_dataset(filename_or_obj, group=None, decode_cf=True,
                 else:
                     raise
         else:
-            # TODO: automatically fall back to using pydap if given a URL and
-            # netCDF4 is not available
             if engine is None:
                 engine = _get_default_engine(filename_or_obj,
                                              allow_remote=True)
@@ -140,15 +170,17 @@ def open_dataset(filename_or_obj, group=None, decode_cf=True,
             else:
                 raise ValueError('unrecognized engine for open_dataset: %r'
                                  % engine)
-
+        if lock is None:
+            lock = _default_lock(filename_or_obj, engine)
         with close_on_error(store):
-            return maybe_decode_store(store)
+            return maybe_decode_store(store, lock)
     else:
         if engine is not None and engine != 'scipy':
             raise ValueError('can only read file-like objects with '
                              "default engine or engine='scipy'")
         # assume filename_or_obj is a file-like object
         store = backends.ScipyDataStore(filename_or_obj)
+
     return maybe_decode_store(store)
 
 
@@ -161,7 +193,8 @@ class _MultiFileCloser(object):
             f.close()
 
 
-def open_mfdataset(paths, chunks=None, concat_dim=None, **kwargs):
+def open_mfdataset(paths, chunks=None, concat_dim=None, preprocess=None,
+                   engine=None, lock=None, **kwargs):
     """Open multiple files as a single dataset.
 
     Experimental. Requires dask to be installed.
@@ -183,6 +216,17 @@ def open_mfdataset(paths, chunks=None, concat_dim=None, **kwargs):
         need to provide this argument if the dimension along which you want to
         concatenate is not a dimension in the original datasets, e.g., if you
         want to stack a collection of 2D arrays along a third dimension.
+    preprocess : callable, optional
+        If provided, call this function on each dataset prior to concatenation.
+    engine : {'netcdf4', 'scipy', 'pydap', 'h5netcdf'}, optional
+        Engine to use when reading netCDF files. If not provided, the default
+        engine is chosen based on available dependencies, with a preference for
+        'netcdf4'.
+    lock : False, True or threading.Lock, optional
+        This argument is passed on to :py:func:`dask.array.from_array`. By
+        default, a per-variable lock is used when reading data from netCDF
+        files with the netcdf4 and h5netcdf engines to avoid issues with
+        concurrent access when using dask's multithreaded backend.
     **kwargs : optional
         Additional arguments passed on to :py:func:`xray.open_dataset`.
 
@@ -199,16 +243,35 @@ def open_mfdataset(paths, chunks=None, concat_dim=None, **kwargs):
         paths = sorted(glob(paths))
     if not paths:
         raise IOError('no files to open')
-    datasets = [open_dataset(p, **kwargs) for p in paths]
+
+    datasets = [open_dataset(p, engine=engine, **kwargs) for p in paths]
+    if lock is None:
+        lock = _default_lock(paths[0], engine)
     file_objs = [ds._file_obj for ds in datasets]
-    datasets = [ds.chunk(chunks) for ds in datasets]
+    datasets = [ds.chunk(chunks, lock=lock) for ds in datasets]
+
+    if preprocess is not None:
+        datasets = [preprocess(ds) for ds in datasets]
+
     combined = auto_combine(datasets, concat_dim=concat_dim)
     combined._file_obj = _MultiFileCloser(file_objs)
     return combined
 
 
+WRITEABLE_STORES = {'netcdf4': backends.NetCDF4DataStore,
+                    'scipy': backends.ScipyDataStore,
+                    'h5netcdf': backends.H5NetCDFStore}
+
+
 def to_netcdf(dataset, path=None, mode='w', format=None, group=None,
-              engine=None):
+              engine=None, writer=None):
+    """This function creates an appropriate datastore for writing a dataset to
+    disk as a netCDF file
+
+    See `Dataset.to_netcdf` for full API docs.
+
+    The ``writer`` argument is only for the private use of save_mfdataset.
+    """
     if path is None:
         path = BytesIO()
         if engine is None:
@@ -220,50 +283,107 @@ def to_netcdf(dataset, path=None, mode='w', format=None, group=None,
     elif engine is None:
         engine = _get_default_engine(path)
 
-    write_funcs = {'netcdf4': _to_netcdf4,
-                   'scipy': _to_scipy_netcdf,
-                   'h5netcdf': _to_h5netcdf}
     try:
-        to_netcdf_func = write_funcs[engine]
+        store_cls = WRITEABLE_STORES[engine]
     except KeyError:
         raise ValueError('unrecognized engine for to_netcdf: %r' % engine)
 
     if format is not None:
         format = format.upper()
 
-    return to_netcdf_func(dataset, path, mode, format, group)
+    # if a writer is provided, store asynchronously
+    sync = writer is None
 
-
-def _to_netcdf4(dataset, path, mode, format, group):
-    if format is None:
-        format = 'NETCDF4'
-    with backends.NetCDF4DataStore(path, mode=mode, format=format,
-                                   group=group) as store:
-        dataset.dump_to_store(store)
-
-
-def _to_h5netcdf(dataset, path, mode, format, group):
-    if format not in [None, 'NETCDF4']:
-        raise ValueError('invalid format for h5netcdf backend')
-    with backends.H5NetCDFStore(path, mode=mode, group=group) as store:
-        dataset.dump_to_store(store)
-
-
-def _to_scipy_netcdf(dataset, path, mode, format, group):
-    if group is not None:
-        raise ValueError('cannot save to a group with the '
-                         'scipy.io.netcdf backend')
-
-    if format is None or format == 'NETCDF3_64BIT':
-        version = 2
-    elif format == 'NETCDF3_CLASSIC':
-        version = 1
-    else:
-        raise ValueError('invalid format for scipy.io.netcdf backend: %r'
-                         % format)
-
-    with backends.ScipyDataStore(path, mode='w', version=version) as store:
-        dataset.dump_to_store(store)
-
+    store = store_cls(path, mode, format, group, writer)
+    try:
+        dataset.dump_to_store(store, sync=sync)
         if isinstance(path, BytesIO):
             return path.getvalue()
+    finally:
+        if sync:
+            store.close()
+
+    if not sync:
+        return store
+
+
+def save_mfdataset(datasets, paths, mode='w', format=None, groups=None,
+                   engine=None):
+    """Write multiple datasets to disk as netCDF files simultaneously.
+
+    This function is intended for use with datasets consisting of dask.array
+    objects, in which case it can write the multiple datasets to disk
+    simultaneously using a shared thread pool.
+
+    When not using dask, it is no different than calling ``to_netcdf``
+    repeatedly.
+
+    Parameters
+    ----------
+    datasets : list of xray.Dataset
+        List of datasets to save.
+    paths : list of str
+        List of paths to which to save each corresponding dataset.
+    mode : {'w', 'a'}, optional
+        Write ('w') or append ('a') mode. If mode='w', any existing file at
+        these locations will be overwritten.
+    format : {'NETCDF4', 'NETCDF4_CLASSIC', 'NETCDF3_64BIT', 'NETCDF3_CLASSIC'}, optional
+        File format for the resulting netCDF file:
+
+        * NETCDF4: Data is stored in an HDF5 file, using netCDF4 API
+          features.
+        * NETCDF4_CLASSIC: Data is stored in an HDF5 file, using only
+          netCDF 3 compatibile API features.
+        * NETCDF3_64BIT: 64-bit offset version of the netCDF 3 file format,
+          which fully supports 2+ GB files, but is only compatible with
+          clients linked against netCDF version 3.6.0 or later.
+        * NETCDF3_CLASSIC: The classic netCDF 3 file format. It does not
+          handle 2+ GB files very well.
+
+        All formats are supported by the netCDF4-python library.
+        scipy.io.netcdf only supports the last two formats.
+
+        The default format is NETCDF4 if you are saving a file to disk and
+        have the netCDF4-python library available. Otherwise, xray falls
+        back to using scipy to write netCDF files and defaults to the
+        NETCDF3_64BIT format (scipy does not support netCDF4).
+    groups : list of str, optional
+        Paths to the netCDF4 group in each corresponding file to which to save
+        datasets (only works for format='NETCDF4'). The groups will be created
+        if necessary.
+    engine : {'netcdf4', 'scipy', 'h5netcdf'}, optional
+        Engine to use when writing netCDF files. If not provided, the
+        default engine is chosen based on available dependencies, with a
+        preference for 'netcdf4' if writing to a file on disk.
+
+    Examples
+    --------
+
+    Save a dataset into one netCDF per year of data:
+
+    >>> years, datasets = zip(*ds.groupby('time.year'))
+    >>> paths = ['%s.nc' % y for y in years]
+    >>> xray.save_mfdataset(datasets, paths)
+    """
+    if mode == 'w' and len(set(paths)) < len(paths):
+        raise ValueError("cannot use mode='w' when writing multiple "
+                         'datasets to the same path')
+
+    if groups is None:
+        groups = [None] * len(datasets)
+
+    if len(set([len(datasets), len(paths), len(groups)])) > 1:
+        raise ValueError('must supply lists of the same length for the '
+                         'datasets, paths and groups arguments to '
+                         'save_mfdataset')
+
+    writer = ArrayWriter()
+    stores = [to_netcdf(ds, path, mode, format, group, engine, writer)
+              for ds, path, group in zip(datasets, paths, groups)]
+    try:
+        writer.sync()
+        for store in stores:
+            store.sync()
+    finally:
+        for store in stores:
+            store.close()

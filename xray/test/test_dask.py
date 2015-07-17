@@ -145,7 +145,7 @@ class TestVariable(DaskTestCase):
         self.assertLazyAndIdentical(u, Variable.concat([v[:2], v[2:]], 'x'))
         self.assertLazyAndIdentical(u[:2], Variable.concat([v[0], v[1]], 'x'))
         self.assertLazyAndIdentical(
-            u[:3], Variable.concat([v[[0, 2]], v[[1]]], 'x', indexers=[[0, 2], [1]]))
+            u[:3], Variable.concat([v[[0, 2]], v[[1]]], 'x', positions=[[0, 2], [1]]))
 
     def test_missing_methods(self):
         v = self.lazy_var
@@ -197,6 +197,7 @@ class TestDataArrayAndDataset(DaskTestCase):
         actual = concat([v[:2], v[2:]], 'x')
         self.assertLazyAndAllClose(u, actual)
 
+    @unittest.skip('broken on dask 0.6.0')
     def test_groupby(self):
         u = self.eager_array
         v = self.lazy_array

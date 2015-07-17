@@ -809,13 +809,14 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject):
                 del obj._variables[name]
         return obj
 
-    def dump_to_store(self, store, encoder=None):
+    def dump_to_store(self, store, encoder=None, sync=True):
         """Store dataset contents to a backends.*DataStore object."""
         variables, attrs = conventions.encode_dataset_coordinates(self)
         if encoder:
             variables, attrs = encoder(variables, attrs)
         store.store(variables, attrs)
-        store.sync()
+        if sync:
+            store.sync()
 
     def to_netcdf(self, path=None, mode='w', format=None, group=None,
                   engine=None):
@@ -883,7 +884,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject):
                 chunks.update(new_chunks)
         return Frozen(SortedKeysDict(chunks))
 
-    def chunk(self, chunks=None):
+    def chunk(self, chunks=None, lock=False):
         """Coerce all arrays in this dataset into dask arrays with the given
         chunks.
 
@@ -899,13 +900,16 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject):
         chunks : int or dict, optional
             Chunk sizes along each dimension, e.g., ``5`` or
             ``{'x': 5, 'y': 5}``.
+        lock : optional
+            Passed on to :py:func:`dask.array.from_array`, if the array is not
+            already as dask array.
 
         Returns
         -------
         chunked : xray.Dataset
         """
         if isinstance(chunks, Number):
-            chunks = dict.fromkeys(chunks, chunks)
+            chunks = dict.fromkeys(self.dims, chunks)
 
         if chunks is not None:
             bad_dims = [d for d in chunks if d not in self.dims]
@@ -923,7 +927,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject):
             if not chunks:
                 chunks = None
             if var.ndim > 0:
-                return var.chunk(chunks, name=name)
+                return var.chunk(chunks, name=name, lock=lock)
             else:
                 return var
 
@@ -1623,128 +1627,6 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject):
         # ... and then assign
         data.update(results)
         return data
-
-    @classmethod
-    def _concat(cls, datasets, dim='concat_dim', indexers=None,
-                mode='different', concat_over=None, compat='equals'):
-        from .dataarray import DataArray
-
-        if compat not in ['equals', 'identical']:
-            raise ValueError("compat=%r invalid: must be 'equals' "
-                             "or 'identical'" % compat)
-
-        # don't bother trying to work with datasets as a generator instead of a
-        # list; the gains would be minimal
-        datasets = list(map(as_dataset, datasets))
-
-        if isinstance(dim, basestring):
-            coord = None
-        elif not hasattr(dim, 'dims'):
-            # dim is not a DataArray or Coordinate
-            dim_name = getattr(dim, 'name', None)
-            if dim_name is None:
-                dim_name = 'concat_dim'
-            coord = DataArray(dim, dims=dim_name, name=dim_name)
-            dim = dim_name
-        else:
-            coord = dim
-            dim, = coord.dims
-
-        # figure out variables to concatenate over
-        if concat_over is None:
-            concat_over = set(datasets[0].data_vars)
-        elif isinstance(concat_over, basestring):
-            concat_over = set([concat_over])
-        else:
-            concat_over = set(concat_over)
-
-        # add variables to concat_over depending on the mode
-        if mode == 'different':
-            def differs(vname, v):
-                # simple helper function which compares a variable
-                # across all datasets and indicates whether that
-                # variable differs or not.
-                return any(not ds.variables[vname].equals(v)
-                           for ds in datasets[1:])
-            # all nonindexes that are not the same in each dataset
-            concat_over.update(k for k, v in datasets[0].variables.items()
-                               if k not in datasets[0].dims and differs(k, v))
-        elif mode == 'all':
-            # concatenate all non-dimensions
-            concat_over.update(set(datasets[0]) - set(datasets[0].dims))
-        elif mode == 'minimal':
-            # only concatenate variables in which 'dim' already
-            # appears. These variables are added below.
-            pass
-        else:
-            raise ValueError("unexpected value for mode: %s" % mode)
-
-        # automatically concatenate over variables along the dimension
-        if dim in datasets[0]:
-            concat_over.add(dim)
-        concat_over.update(k for k, v in datasets[0].variables.items()
-                           if dim in v.dims)
-
-        if any(v not in datasets[0].variables for v in concat_over):
-            raise ValueError('not all elements in concat_over %r found '
-                             'in the first dataset %r'
-                             % (concat_over, datasets[0]))
-
-        # create the new dataset and add constant variables
-        concatenated = cls({}, attrs=datasets[0].attrs)
-        for k, v in datasets[0].variables.items():
-            if k not in concat_over:
-                concatenated[k] = v
-
-        # check that global attributes and non-concatenated variables are fixed
-        # across all datasets
-        for ds in datasets[1:]:
-            if (compat == 'identical'
-                    and not utils.dict_equiv(ds.attrs, concatenated.attrs)):
-                raise ValueError('dataset global attributes not equal')
-            for k, v in iteritems(ds.variables):
-                if k not in concatenated.variables and k not in concat_over:
-                    raise ValueError('encountered unexpected variable %r' % k)
-                elif (k in concatenated.variables and k != dim and
-                          not getattr(v, compat)(concatenated[k])):
-                    verb = 'equal' if compat == 'equals' else compat
-                    raise ValueError(
-                        'variable %r not %s across datasets' % (k, verb))
-
-        # we've already verified everything is consistent; now, calculate
-        # shared dimension sizes so we can expand the necessary variables
-        dim_lengths = [ds.dims.get(dim, 1) for ds in datasets]
-        non_concat_dims = {}
-        for ds in datasets:
-            non_concat_dims.update(ds.dims)
-        non_concat_dims.pop(dim, None)
-
-        def ensure_common_dims(vars):
-            # ensure each variable with the given name shares the same
-            # dimensions and the same shape for all of them except along the
-            # concat dimension
-            common_dims = tuple(pd.unique([d for v in vars for d in v.dims]))
-            if dim not in common_dims:
-                common_dims = (dim,) + common_dims
-            for var, dim_len in zip(vars, dim_lengths):
-                if var.dims != common_dims:
-                    common_shape = tuple(non_concat_dims.get(d, dim_len)
-                                         for d in common_dims)
-                    var = var.expand_dims(common_dims, common_shape)
-                yield var
-
-        # stack up each variable to fill-out the dataset
-        for k in concat_over:
-            vars = ensure_common_dims([ds._variables[k] for ds in datasets])
-            concatenated[k] = Variable.concat(vars, dim, indexers)
-
-        concatenated._coord_names.update(datasets[0].coords)
-
-        if coord is not None:
-            # add dimension last to ensure that its in the final Dataset
-            concatenated[coord.name] = coord
-
-        return concatenated
 
     def to_array(self, dim='variable', name=None):
         """Convert this dataset into an xray.DataArray

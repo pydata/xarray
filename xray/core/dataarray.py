@@ -841,29 +841,6 @@ class DataArray(AbstractArray, BaseDataObject):
         ds[self.name] = var
         return self._with_replaced_dataset(ds)
 
-    @classmethod
-    def _concat(cls, arrays, dim='concat_dim', indexers=None,
-                mode='different', concat_over=None, compat='equals'):
-        datasets = []
-        for n, arr in enumerate(arrays):
-            if n == 0:
-                name = arr.name
-            elif name != arr.name:
-                if compat == 'identical':
-                    raise ValueError('array names not identical')
-                else:
-                    arr = arr.rename(name)
-            datasets.append(arr._dataset)
-
-        if concat_over is None:
-            concat_over = set()
-        elif isinstance(concat_over, basestring):
-            concat_over = set([concat_over])
-        concat_over = set(concat_over) | set([name])
-
-        ds = Dataset._concat(datasets, dim, indexers, concat_over=concat_over)
-        return cls._new_from_dataset_no_copy(ds, name)
-
     def to_pandas(self):
         """Convert this array into a pandas object with the same shape.
 

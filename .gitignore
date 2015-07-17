@@ -43,3 +43,5 @@ doc/_build
 doc/generated
 doc/_static/*.png
 xray/version.py
+
+.ipynb_checkpoints
