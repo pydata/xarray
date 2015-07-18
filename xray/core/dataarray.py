@@ -4,12 +4,13 @@ import warnings
 
 import pandas as pd
 
+from .. import plotting
+
 from . import indexing
 from . import groupby
 from . import ops
 from . import utils
 from . import variable
-from . import plotting
 from .alignment import align
 from .common import AbstractArray, BaseDataObject
 from .coordinates import DataArrayCoordinates, Indexes
@@ -1054,11 +1055,10 @@ class DataArray(AbstractArray, BaseDataObject):
 
 # Add plotting methods
 # Alternatively these could be added using a Mixin
-DataArray.plot = plotting.plot
-DataArray.plot_line = plotting.plot_line
-DataArray.plot_contourf = plotting.plot_contourf
-DataArray.plot_hist = plotting.plot_hist
-DataArray.plot_imshow = plotting.plot_imshow
+for name in ('plot', 'plot_line', 'plot_contourf', 'plot_contour',
+             'plot_hist', 'plot_imshow'):
+    setattr(DataArray, name, getattr(plotting, name))
+
 
 # priority most be higher than Variable to properly work with binary ufuncs
 ops.inject_all_ops_and_reduce_methods(DataArray, priority=60)

@@ -395,6 +395,7 @@ Plotting
 
    DataArray.plot
    DataArray.plot_contourf
+   DataArray.plot_contour
    DataArray.plot_hist
    DataArray.plot_imshow
    DataArray.plot_line

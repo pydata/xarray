@@ -6,8 +6,9 @@ the DataArray class
 import functools
 
 import numpy as np
+import pandas as pd
 
-from .utils import is_uniform_spaced
+from .core.utils import is_uniform_spaced
 
 
 # TODO - implement this
@@ -16,11 +17,11 @@ class FacetGrid():
 
 
 # Maybe more appropriate to keep this in .utils
-def _right_dtype(x, types):
+def _right_dtype(arr, types):
     """
-    Is x a sub dtype of anything in types?
+    Is the numpy array a sub dtype of anything in types?
     """
-    return any(np.issubdtype(x.dtype, t) for t in types)
+    return any(np.issubdtype(arr.dtype, t) for t in types)
 
 
 def _ensure_plottable(*args):
@@ -33,7 +34,7 @@ def _ensure_plottable(*args):
     # Lists need to be converted to np.arrays here.
     if not any(_right_dtype(np.array(x), plottypes) for x in args):
         raise TypeError('Plotting requires coordinates to be numeric '
-                        'or dates. Try DataArray.reindex() to convert.')
+                        'or dates.')
 
 
 def plot(darray, ax=None, rtol=0.01, **kwargs):
@@ -55,12 +56,12 @@ def plot(darray, ax=None, rtol=0.01, **kwargs):
     Parameters
     ----------
     darray : DataArray
-    ax : matplotlib axes object
+    ax : matplotlib axes, optional
         If None, uses the current axis
-    rtol : relative tolerance
+    rtol : number, optional
         Relative tolerance used to determine if the indexes
-        are uniformly spaced
-    kwargs
+        are uniformly spaced. Usually a small positive number.
+    **kwargs : optional
         Additional keyword arguments to matplotlib
 
     """
@@ -93,9 +94,9 @@ def plot_line(darray, *args, **kwargs):
     ----------
     darray : DataArray
         Must be 1 dimensional
-    ax : matplotlib axes object
+    ax : matplotlib axes, optional
         If not passed, uses the current axis
-    args, kwargs
+    *args, **kwargs : optional
         Additional arguments to matplotlib.pyplot.plot
 
     """
@@ -123,6 +124,11 @@ def plot_line(darray, *args, **kwargs):
     if darray.name is not None:
         ax.set_ylabel(darray.name)
 
+    # Rotate dates on xlabels
+    if np.issubdtype(x.dtype, np.datetime64):
+        for label in ax.get_xticklabels():
+            label.set_rotation(35)
+
     return primitive
 
 
@@ -138,9 +144,9 @@ def plot_hist(darray, ax=None, **kwargs):
     ----------
     darray : DataArray
         Can be any dimension
-    ax : matplotlib axes object
+    ax : matplotlib axes, optional
         If not passed, uses the current axis
-    kwargs :
+    **kwargs : optional
         Additional keyword arguments to matplotlib.pyplot.hist
 
     """
@@ -150,7 +156,7 @@ def plot_hist(darray, ax=None, **kwargs):
         ax = plt.gca()
 
     no_nan = np.ravel(darray)
-    no_nan = no_nan[np.logical_not(np.isnan(no_nan))]
+    no_nan = no_nan[pd.notnull(no_nan)]
 
     primitive = ax.hist(no_nan, **kwargs)
 
@@ -191,17 +197,17 @@ def _plot2d(plotfunc):
     ----------
     darray : DataArray
         Must be 2 dimensional
-    ax : matplotlib axes object
+    ax : matplotlib axes object, optional
         If None, uses the current axis
-    xincrease : None (default), True, or False
+    xincrease : None, True, or False, optional
         Should the values on the x axes be increasing from left to right?
         if None, use the default for the matplotlib function
-    yincrease : None (default), True, or False
+    yincrease : None, True, or False, optional
         Should the values on the y axes be increasing from top to bottom?
         if None, use the default for the matplotlib function
-    add_colorbar : Boolean
+    add_colorbar : Boolean, optional
         Adds colorbar to axis
-    kwargs :
+    **kwargs : optional
         Additional arguments to wrapped matplotlib function
 
     Returns
@@ -281,6 +287,17 @@ def plot_imshow(x, y, z, ax, **kwargs):
 
     primitive = ax.imshow(z, **defaults)
 
+    return ax, primitive
+
+
+@_plot2d
+def plot_contour(x, y, z, ax, **kwargs):
+    """
+    Contour plot of 2d DataArray
+
+    Wraps matplotlib.pyplot.contour
+    """
+    primitive = ax.contour(x, y, z, **kwargs)
     return ax, primitive
 
 

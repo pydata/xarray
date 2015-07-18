@@ -12,7 +12,7 @@ Xray plotting functionality is a thin wrapper around the popular
 `matplotlib <http://matplotlib.org/>`_ library.
 Matplotlib syntax and function names were copied as much as possible, which
 makes for an easy transition between the two.
-Matplotlib must be installed and working before trying to plot with xray.
+Matplotlib must be installed and working before plotting with xray.
 
 For more extensive plotting applications consider the following projects:
 
@@ -21,8 +21,8 @@ For more extensive plotting applications consider the following projects:
   Integrates well with pandas.
 
 - `Holoviews <http://ioam.github.io/holoviews/>`_: "Composable, declarative
-  data structures for building even complex visualizations easily."
-  Works for 2d datasets.
+  data structures for building even complex visualizations easily." Works
+  for 2d datasets.
 
 - `Cartopy <http://scitools.org.uk/cartopy/>`_: Provides cartographic
   tools.
@@ -30,18 +30,19 @@ For more extensive plotting applications consider the following projects:
 Imports
 ~~~~~~~
 
-These imports are necessary for all of the examples.
+.. ipython:: python
+
+    # Use defaults so we don't get gridlines in generated docs
+    import matplotlib as mpl
+    mpl.rcdefaults()
+
+The following imports are necessary for all of the examples.
 
 .. ipython:: python
 
     import numpy as np
-    import matplotlib as mpl
-    # Use defaults so we don't get gridlines in generated docs
-    mpl.rcdefaults()
-
     import matplotlib.pyplot as plt
     import xray
-
 
 One Dimension
 -------------
@@ -157,7 +158,7 @@ each of the axes should be.
     a.plot()
 
 It may seem strange that
-the the values on the y axis are decreasing with -0.5 on the top. This is because
+the values on the y axis are decreasing with -0.5 on the top. This is because
 the pixels are centered over their coordinates, and the
 axis labels and ranges correspond to the values of the
 coordinates. 
@@ -175,16 +176,14 @@ more conventional plot where the coordinates increase in the y axis.
 Missing Values
 ~~~~~~~~~~~~~~
 
-Xray plots data with missing values.
-Xray uses ``np.nan`` for missing values. 
-TODO link. 
+Xray plots data with :ref:`missing_values`.
 
 .. ipython:: python
 
     # This data has holes in it!
     a[1, 1] = np.nan
 
-    @savefig plotting_missing_values.png width=6in
+    @savefig plotting_missing_values.png width=4in
     a.plot()
 
 Simulated Data
@@ -293,12 +292,6 @@ Contour plots can have missing values also.
     @savefig plotting_nonuniform_coords_missing.png width=4in
     plt.show()
 
-Return Values
-~~~~~~~~~~~~~
-
-Xray's plotting functions all return the same objects that the equivalent
-matplotlib functions return.
-
 Colormaps
 ~~~~~~~~~
 
@@ -321,6 +314,19 @@ later.
 
     @savefig plotting_same_color_scale.png width=6in
     plt.show()
+
+Here we've used the object returned by :py:meth:`xray.DataArray.plot` to
+pass in as an argument to
+`plt.colorbar <http://matplotlib.org/api/pyplot_api.html#matplotlib.pyplot.colorbar>`_.
+Take a closer look:
+
+.. ipython:: python
+    
+    im
+
+In general xray's plotting functions modify the axes and
+return the same objects that the wrapped
+matplotlib functions return.
 
 Maps
 ----

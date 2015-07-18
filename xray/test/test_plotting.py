@@ -1,8 +1,8 @@
 import numpy as np
+import pandas as pd
 
 from xray import DataArray
-# Shouldn't need the core here?
-from xray.core.plotting import plot_imshow, plot_contourf
+from xray.plotting import plot_imshow, plot_contourf, plot_contour
 
 from . import TestCase, requires_matplotlib
 
@@ -94,7 +94,7 @@ class TestPlot1D(PlotTestCase):
 
     def test_nonnumeric_index_raises_typeerror(self):
         a = DataArray([1, 2, 3], {'letter': ['a', 'b', 'c']})
-        with self.assertRaisesRegexp(TypeError, r'[Ii]ndex'):
+        with self.assertRaisesRegexp(TypeError, r'[Pp]lot'):
             a.plot_line()
 
     def test_primitive_returned(self):
@@ -104,6 +104,13 @@ class TestPlot1D(PlotTestCase):
     def test_plot_nans(self):
         self.darray[1] = np.nan
         self.darray.plot_line()
+
+    def test_x_ticks_are_rotated_for_time(self):
+        time = pd.date_range('2000-01-01', '2000-01-10')
+        a = DataArray(np.arange(len(time)), {'t': time})
+        a.plot_line()
+        rotation = plt.gca().get_xticklabels()[0].get_rotation()
+        self.assertFalse(rotation == 0)
 
 
 class TestPlotHistogram(PlotTestCase):
@@ -140,7 +147,7 @@ class TestPlotHistogram(PlotTestCase):
         self.assertTrue(isinstance(h[-1][0], mpl.patches.Rectangle))
 
     def test_plot_nans(self):
-        self.darray[0, 0, :] = np.nan
+        self.darray[0, 0, 0] = np.nan
         self.darray.plot_hist()
 
 
@@ -148,8 +155,8 @@ class Common2dMixin:
     """
     Common tests for 2d plotting go here.
 
-    These tests assume that `self.plotfunc` exists and is defined in the
-    setUp. Should have the same name as the method.
+    These tests assume that a staticmethod for `self.plotfunc` exists.
+    Should have the same name as the method.
     """
     def setUp(self):
         self.darray = DataArray(np.random.randn(10, 15), dims=['y', 'x'])
@@ -172,7 +179,7 @@ class Common2dMixin:
     def test_nonnumeric_index_raises_typeerror(self):
         a = DataArray(np.random.randn(3, 2),
                       coords=[['a', 'b', 'c'], ['d', 'e']])
-        with self.assertRaisesRegexp(TypeError, r'[Ii]ndex'):
+        with self.assertRaisesRegexp(TypeError, r'[Pp]lot'):
             self.plotfunc(a)
 
     def test_can_pass_in_axis(self):
@@ -199,9 +206,7 @@ class Common2dMixin:
 
 class TestContourf(Common2dMixin, PlotTestCase):
 
-    def setUp(self):
-        self.plotfunc = plot_contourf
-        super(TestContourf, self).setUp()
+    plotfunc = staticmethod(plot_contourf)
 
     def test_contourf_called(self):
         # Having both statements ensures the test works properly
@@ -213,11 +218,14 @@ class TestContourf(Common2dMixin, PlotTestCase):
         self.assertTrue(isinstance(artist, mpl.contour.QuadContourSet))
 
 
+class TestContour(Common2dMixin, PlotTestCase):
+
+    plotfunc = staticmethod(plot_contour)
+
+
 class TestImshow(Common2dMixin, PlotTestCase):
 
-    def setUp(self):
-        self.plotfunc = plot_imshow
-        super(TestImshow, self).setUp()
+    plotfunc = staticmethod(plot_imshow)
 
     def test_imshow_called(self):
         # Having both statements ensures the test works properly
