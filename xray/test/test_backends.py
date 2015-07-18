@@ -558,6 +558,17 @@ class NetCDF4DataTest(BaseNetCDF4Test, TestCase):
             with open_dataset(tmp_file, **kwargs) as ds:
                 yield ds
 
+    def test_variable_order(self):
+        # doesn't work with scipy or h5py :(
+        ds = Dataset()
+        ds['a'] = 1
+        ds['z'] = 2
+        ds['b'] = 3
+        ds.coords['c'] = 4
+
+        with self.roundtrip(ds) as actual:
+            self.assertEqual(list(ds), list(actual))
+
 
 @requires_scipy
 class ScipyInMemoryDataTest(CFEncodedDataTest, Only32BitTypes, TestCase):

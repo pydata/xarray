@@ -9,6 +9,12 @@ What's New
     import xray
     np.random.seed(123456)
 
+v0.5.3 (unreleased)
+-------------------
+
+- Dataset variables are now written to netCDF files in order of appearance
+  when using the netcdf4 backend (:issue:`479`).
+
 v0.5.2 (16 July 2015)
 ---------------------
 
