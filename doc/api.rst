@@ -399,3 +399,4 @@ Plotting
    DataArray.plot_hist
    DataArray.plot_imshow
    DataArray.plot_line
+   DataArray.plot_pcolormesh

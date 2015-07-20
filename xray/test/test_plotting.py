@@ -2,7 +2,8 @@ import numpy as np
 import pandas as pd
 
 from xray import DataArray
-from xray.plotting import plot_imshow, plot_contourf, plot_contour
+from xray.plotting import (plot_imshow, plot_contourf, plot_contour,
+                           plot_pcolormesh)
 
 from . import TestCase, requires_matplotlib
 
@@ -36,6 +37,11 @@ class PlotTestCase(TestCase):
     def contourf_called(self, plotmethod):
         plotmethod()
         paths = plt.gca().findobj(mpl.collections.PathCollection)
+        return len(paths) > 0
+
+    def pcolormesh_called(self, plotmethod):
+        plotmethod()
+        paths = plt.gca().findobj(mpl.collections.QuadMesh)
         return len(paths) > 0
 
 
@@ -159,7 +165,8 @@ class Common2dMixin:
     Should have the same name as the method.
     """
     def setUp(self):
-        self.darray = DataArray(np.random.randn(10, 15), dims=['y', 'x'])
+        rs = np.random.RandomState(123)
+        self.darray = DataArray(rs.randn(10, 15), dims=['y', 'x'])
         self.plotmethod = getattr(self.darray, self.plotfunc.__name__)
 
     def test_label_names(self):
@@ -201,7 +208,10 @@ class Common2dMixin:
 
     def test_plot_nans(self):
         self.darray[0, 0] = np.nan
-        self.plotmethod()
+        result = self.plotmethod()
+        clim = result.get_clim()
+        self.assertTrue(clim[0] <= -2)
+        self.assertTrue(clim[1] >= 2)
 
 
 class TestContourf(Common2dMixin, PlotTestCase):
@@ -221,6 +231,23 @@ class TestContourf(Common2dMixin, PlotTestCase):
 class TestContour(Common2dMixin, PlotTestCase):
 
     plotfunc = staticmethod(plot_contour)
+
+
+class TestPcolormesh(Common2dMixin, PlotTestCase):
+
+    plotfunc = staticmethod(plot_pcolormesh)
+
+    def test_pcolormesh_called(self):
+        # Having both statements ensures the test works properly
+        self.assertTrue(self.pcolormesh_called(self.darray.plot_pcolormesh))
+
+    def test_primitive_artist_returned(self):
+        artist = self.plotmethod()
+        self.assertTrue(isinstance(artist, mpl.collections.QuadMesh))
+
+    def test_everything_plotted(self):
+        artist = self.plotmethod()
+        self.assertEqual(artist.get_array().size, self.darray.size)
 
 
 class TestImshow(Common2dMixin, PlotTestCase):
