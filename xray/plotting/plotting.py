@@ -3,12 +3,13 @@ Plotting functions are implemented here and also monkeypatched into
 the DataArray class
 """
 
+import pkg_resources
 import functools
 
 import numpy as np
 import pandas as pd
 
-from .core.utils import is_uniform_spaced
+from ..core.utils import is_uniform_spaced
 
 
 # TODO - implement this
@@ -35,6 +36,19 @@ def _ensure_plottable(*args):
     if not any(_right_dtype(np.array(x), plottypes) for x in args):
         raise TypeError('Plotting requires coordinates to be numeric '
                         'or dates.')
+
+
+def _load_default_cmap(fname='default_colormap.csv'):
+    """
+    Returns viridis color map
+    """
+    from matplotlib.colors import LinearSegmentedColormap
+
+    # Not sure what the first arg here should be
+    f = pkg_resources.resource_stream(__name__, fname)
+    cm_data = pd.read_csv(f, header=None).values
+
+    return LinearSegmentedColormap.from_list('viridis', cm_data)
 
 
 def plot(darray, ax=None, rtol=0.01, **kwargs):
@@ -127,7 +141,7 @@ def plot_line(darray, *args, **kwargs):
     # Rotate dates on xlabels
     if np.issubdtype(x.dtype, np.datetime64):
         for label in ax.get_xticklabels():
-            label.set_rotation(35)
+            label.set_rotation('vertical')
 
     return primitive
 
@@ -244,7 +258,9 @@ def _plot2d(plotfunc):
 
         _ensure_plottable(x, y)
 
-        ax, primitive = plotfunc(x, y, z, ax=ax, **kwargs)
+        cmap = kwargs.pop('cmap', _load_default_cmap())
+
+        ax, primitive = plotfunc(x, y, z, ax=ax, cmap=cmap, **kwargs)
 
         ax.set_xlabel(xlab)
         ax.set_ylabel(ylab)
