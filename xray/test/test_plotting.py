@@ -3,7 +3,7 @@ import pandas as pd
 
 from xray import DataArray
 from xray.plotting import (plot_imshow, plot_contourf, plot_contour,
-                           plot_pcolormesh)
+                           plot_pcolormesh, _infer_interval_breaks)
 
 from . import TestCase, requires_matplotlib
 
@@ -39,11 +39,6 @@ class PlotTestCase(TestCase):
         paths = plt.gca().findobj(mpl.collections.PathCollection)
         return len(paths) > 0
 
-    def pcolormesh_called(self, plotmethod):
-        plotmethod()
-        paths = plt.gca().findobj(mpl.collections.QuadMesh)
-        return len(paths) > 0
-
 
 class TestPlot(PlotTestCase):
 
@@ -66,6 +61,13 @@ class TestPlot(PlotTestCase):
 
     def test_can_pass_in_axis(self):
         self.pass_in_axis(self.darray.plot)
+
+    def test__infer_interval_breaks(self):
+        self.assertArrayEqual([-0.5, 0.5, 1.5], _infer_interval_breaks([0, 1]))
+        self.assertArrayEqual([-0.5, 0.5, 5.0, 9.5, 10.5],
+                              _infer_interval_breaks([0, 1, 9, 10]))
+        self.assertArrayEqual(pd.date_range('20000101', periods=4) - np.timedelta64(12, 'h'),
+                              _infer_interval_breaks(pd.date_range('20000101', periods=3)))
 
 
 class TestPlot1D(PlotTestCase):
@@ -210,8 +212,7 @@ class Common2dMixin:
         self.darray[0, 0] = np.nan
         result = self.plotmethod()
         clim = result.get_clim()
-        self.assertTrue(clim[0] <= -2)
-        self.assertTrue(clim[1] >= 2)
+        self.assertFalse(pd.isnull(np.array(clim)).any())
 
 
 class TestContourf(Common2dMixin, PlotTestCase):
@@ -236,10 +237,6 @@ class TestContour(Common2dMixin, PlotTestCase):
 class TestPcolormesh(Common2dMixin, PlotTestCase):
 
     plotfunc = staticmethod(plot_pcolormesh)
-
-    def test_pcolormesh_called(self):
-        # Having both statements ensures the test works properly
-        self.assertTrue(self.pcolormesh_called(self.darray.plot_pcolormesh))
 
     def test_primitive_artist_returned(self):
         artist = self.plotmethod()
