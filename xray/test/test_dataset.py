@@ -661,6 +661,47 @@ class TestDataset(TestCase):
         self.assertDatasetEqual(data.isel(td=slice(1, 3)),
                                 data.sel(td=slice('1 days', '2 days')))
 
+    def test_isel_points(self):
+        data = create_test_data()
+
+        pdim1 = [1, 2, 3]
+        pdim2 = [4, 5, 1]
+        pdim3 = [1, 2, 3]
+
+        actual = data.isel_points(dim1=pdim1, dim2=pdim2, dim3=pdim3,
+                                  dim='test_coord')
+        assert 'test_coord' in actual.coords
+        assert actual.coords['test_coord'].shape == (len(pdim1), )
+
+        actual = data.isel_points(dim1=pdim1, dim2=pdim2)
+        assert 'points' in actual.coords
+        np.testing.assert_array_equal(pdim1, actual['dim1'])
+
+        # # test scalars (should match isel but will have points dim)
+        pdim1 = 1
+        pdim2 = 3
+
+        actual = data.isel_points(dim1=pdim1, dim2=pdim2)
+        # squeeze to drop "points" dim
+        assert 'points' in actual.coords
+        self.assertDatasetEqual(actual.squeeze().drop(['points']),
+                                data.isel(dim1=pdim1, dim2=pdim2))
+
+        # test that leaving out a dim is the same as slice(None)
+        self.assertDatasetIdentical(
+            data.isel_points(time=slice(None), dim1=pdim1, dim2=pdim2),
+            data.isel_points(dim1=pdim1, dim2=pdim2))
+
+        # test that the order of the indexers doesn't matter
+        self.assertDatasetIdentical(data.isel_points(dim1=pdim1, dim2=pdim2),
+                                    data.isel_points(dim2=pdim2, dim1=pdim1))
+
+        # make sure we're raising errors in the right places
+        with self.assertRaises(ValueError):
+            data.isel_points(dim1=[1, 2], dim2=[1, 2, 3])
+        with self.assertRaises(ValueError):
+            data.isel_points(bad_key=[1, 2])
+
     def test_sel_method(self):
         data = create_test_data()
 

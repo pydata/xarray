@@ -382,6 +382,64 @@ class TestDataArray(TestCase):
         actual = data.sel(x=[0.9, 1.9], method='backfill')
         self.assertDataArrayIdentical(expected, actual)
 
+    def test_isel_points_method(self):
+        shape = (10, 5, 6)
+        np_array = np.random.random(shape)
+        da = DataArray(np_array, dims=['time', 'y', 'x'])
+        y = [1, 3]
+        x = [3, 0]
+
+        expected = da.values[:, y, x]
+
+        actual = da.isel_points(y=y, x=x, dim='test_coord')
+        assert 'test_coord' in actual.coords
+        assert actual.coords['test_coord'].shape == (len(y), )
+
+        actual = da.isel_points(y=y, x=x)
+        assert 'points' in actual.coords
+        # not sure why actual needs to be transposed
+        np.testing.assert_equal(actual.T, expected)
+
+        # test scalars (should match isel but will have points dim)
+        y = 1
+        x = 3
+        expected = da.values[:, y, x]
+
+        actual = da.isel_points(y=y, x=x)
+        # squeeze to drop "points" dim
+        assert 'points' in actual.coords
+        np.testing.assert_allclose(actual.squeeze().values, expected)
+        self.assertDataArrayIdentical(actual.squeeze().drop(['points']),
+                                      da.isel(y=y, x=x))
+
+        # a few corner cases
+        da.isel_points(time=[1, 2], x=[2, 2], y=[3, 4])
+        np.testing.assert_allclose(
+            da.isel_points(time=1, x=2, y=4).values.squeeze(),
+            np_array[1, 4, 2].squeeze())
+
+        da.isel_points(time=1)
+        da.isel_points(time=[1, 2])
+
+        # test that leaving out a dim is the same as slice(None)
+        self.assertDataArrayIdentical(
+            da.isel_points(time=slice(None), y=y, x=x),
+            da.isel_points(time=np.arange(len(da['time'])), y=y, x=x))
+        self.assertDataArrayIdentical(
+            da.isel_points(time=slice(None), y=y, x=x),
+            da.isel_points(y=y, x=x))
+
+        # test that the order of the indexers doesn't matter
+        self.assertDataArrayIdentical(
+            da.isel_points(y=y, x=x),
+            da.isel_points(x=x, y=y))
+
+        # make sure we're raising errors in the right places
+        with self.assertRaises(ValueError):
+            da.isel_points(y=[1, 2], x=[1, 2, 3])
+        with self.assertRaises(ValueError):
+            da.isel_points(bad_key=[1, 2])
+
     def test_loc(self):
         self.ds['x'] = ('x', np.array(list('abcdefghij')))
         da = self.ds['foo']

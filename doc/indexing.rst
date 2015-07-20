@@ -36,6 +36,8 @@ below and summarized in this table:
 | By name          | By label     | ``arr.sel(space='IA')`` or |br| | ``ds.sel(space='IA')`` or |br| |
 |                  |              | ``arr.loc[dict(space='IA')]``   | ``ds.loc[dict(space='IA')]``   |
 +------------------+--------------+---------------------------------+--------------------------------+
+| By name          | By integers  | ``arr.isel_points(x=[0, 1])``   | ``ds.isel_points(x=[0, 1])``   |
++------------------+--------------+---------------------------------+--------------------------------+
 
 Positional indexing
 -------------------
@@ -57,6 +59,7 @@ DataArray:
 
     Positional indexing deviates from the NumPy when indexing with multiple
     arrays like ``arr[[0, 1], [0, 1]]``, as described in :ref:`indexing details`.
+    Use :py:meth:`~xray.Dataset.isel_points` to achieve this functionality.
 
 xray also supports label-based indexing, just like pandas. Because
 we use a :py:class:`pandas.Index` under the hood, label based indexing is very
@@ -108,6 +111,13 @@ use them explicitly to slice data. There are two ways to do this:
         # index by dimension coordinate labels
         arr.sel(time=slice('2000-01-01', '2000-01-02'))
 
+3. Use the :py:meth:`~xray.DataArray.isel_points` method:
+
+    .. ipython:: python
+
+        # index by integer array indices
+        arr.isel_points(space=[0, 1], dim='points')
+
 The arguments to these methods can be any objects that could index the array
 along the dimension given by the keyword, e.g., labels for an individual value,
 Python :py:func:`slice` objects or 1-dimensional arrays.
@@ -122,7 +132,7 @@ __ http://legacy.python.org/dev/peps/pep-0472/
 
 .. warning::
 
-    Do not try to assign values when using ``isel`` or ``sel``::
+    Do not try to assign values when using ``isel``, ``isel_points`` or ``sel``::
 
         # DO NOT do this
         arr.isel(space=0) = 0
@@ -145,6 +155,7 @@ simultaneously, returning a new dataset:
     ds = arr.to_dataset()
     ds.isel(space=[0], time=[0])
     ds.sel(time='2000-01-01')
+    ds.isel_points(space=[0, 1], dim='points')
 
 Positional indexing on a dataset is not supported because the ordering of
 dimensions in a dataset is somewhat ambiguous (it can vary between different

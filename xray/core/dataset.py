@@ -1,6 +1,6 @@
 import functools
 import warnings
-from collections import Mapping
+from collections import Mapping, Sequence
 from numbers import Number
 
 import numpy as np
@@ -21,6 +21,7 @@ from .utils import (Frozen, SortedKeysDict, ChainMap, maybe_wrap_array)
 from .variable import as_variable, Variable, Coordinate, broadcast_variables
 from .pycompat import (iteritems, itervalues, basestring, OrderedDict,
                        dask_array_type)
+from .combine import concat
 
 
 # list of attributes of pd.DatetimeIndex that are ndarrays of time info
@@ -1027,6 +1028,58 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject):
         """
         return self.isel(**indexing.remap_label_indexers(self, indexers,
                                                          method=method))
+
+    def isel_points(self, dim='points', **indexers):
+        """Returns a new dataset with each array indexed pointwise along the
+        specified dimension(s).
+
+        This method selects pointwise values from each array and is akin to
+        the NumPy indexing behavior of `arr[[0, 1], [0, 1]]`, except this
+        method does not require knowing the order of each array's dimensions.
+
+        Parameters
+        ----------
+        dim : str, optional
+            Dimension name for which the points will be added to.
+        **indexers : {dim: indexer, ...}
+            Keyword arguments with names matching dimensions and values given
+            by integers, slice objects or arrays. All indexers must be the same
+            length.
+
+        Returns
+        -------
+        obj : Dataset
+            A new Dataset with the same contents as this dataset, except each
+            array and dimension is indexed by the appropriate indexers. In
+            general, each array's data will be a view of the array's data
+            in this dataset, unless numpy fancy indexing was triggered by using
+            an array indexer, in which case the data will be a copy.
+
+        See Also
+        --------
+        Dataset.sel
+        DataArray.isel
+        DataArray.sel
+        DataArray.isel_points
+        """
+        invalid = [k for k in indexers if k not in self.dims]
+        if invalid:
+            raise ValueError("dimensions %r do not exist" % invalid)
+
+        # all the indexers should be iterables
+        keys = indexers.keys()
+        indexers = [(k, ([v] if not isinstance(v, Sequence) else v))
+                    for k, v in iteritems(indexers)]
+
+        # all the indexers should have the same length
+        lengths = set([len(v) for k, v in indexers])
+        if len(lengths) > 1:
+            raise ValueError('All indexers must be the same length')
+
+        return concat([self.isel(**d) for d in
+                       [dict(zip(keys, inds)) for inds in
+                        zip(*[v for k, v in indexers])]],
+                      dim=dim)
 
     def reindex_like(self, other, method=None, copy=True):
         """Conform this object onto the indexes of another object, filling
