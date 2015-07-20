@@ -41,6 +41,7 @@ Documentation
    pandas
    io
    dask
+   plotting
    api
    faq
    whats-new

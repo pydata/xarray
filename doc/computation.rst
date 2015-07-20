@@ -46,6 +46,8 @@ Data arrays also implement many :py:class:`numpy.ndarray` methods:
     arr.round(2)
     arr.T
 
+.. _missing_values:
+
 Missing values
 ==============
 

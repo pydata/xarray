@@ -264,6 +264,7 @@ Comparisons
    DataArray.identical
    DataArray.broadcast_equals
 
+
 .. _api.ufuncs:
 
 Universal functions
@@ -384,3 +385,17 @@ arguments for the ``from_store`` and ``dump_to_store`` Dataset methods.
    backends.H5NetCDFStore
    backends.PydapDataStore
    backends.ScipyDataStore
+
+
+Plotting
+========
+
+.. autosummary::
+   :toctree: generated/
+
+   DataArray.plot
+   DataArray.plot_contourf
+   DataArray.plot_contour
+   DataArray.plot_hist
+   DataArray.plot_imshow
+   DataArray.plot_line

@@ -117,3 +117,24 @@ class TestDictionaries(TestCase):
         self.assertEqual(m['x'], 100)
         self.assertEqual(m.maps[0]['x'], 100)
         self.assertItemsEqual(['x', 'y', 'z'], m)
+
+
+class Test_is_uniform_and_sorted(TestCase):
+
+    def test_sorted_uniform(self):
+        self.assertTrue(utils.is_uniform_spaced(np.arange(5)))
+
+    def test_sorted_not_uniform(self):
+        self.assertEqual(False, utils.is_uniform_spaced([-2, 1, 89]))
+
+    def test_not_sorted_uniform(self):
+        self.assertEqual(False, utils.is_uniform_spaced([1, -1, 3]))
+
+    def test_not_sorted_not_uniform(self):
+        self.assertEqual(False, utils.is_uniform_spaced([4, 1, 89]))
+
+    def test_two_numbers(self):
+        self.assertTrue(utils.is_uniform_spaced([0, 1.7]))
+
+    def test_relative_tolerance(self):
+        self.assertTrue(utils.is_uniform_spaced([0, 0.97, 2], rtol=0.1))

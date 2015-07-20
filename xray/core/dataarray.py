@@ -4,6 +4,8 @@ import warnings
 
 import pandas as pd
 
+from .. import plotting
+
 from . import indexing
 from . import groupby
 from . import ops
@@ -1049,6 +1051,13 @@ class DataArray(AbstractArray, BaseDataObject):
                 f(self.variable, other_variable)
             return self
         return func
+
+
+# Add plotting methods
+# Alternatively these could be added using a Mixin
+for name in ('plot', 'plot_line', 'plot_contourf', 'plot_contour',
+             'plot_hist', 'plot_imshow'):
+    setattr(DataArray, name, getattr(plotting, name))
 
 
 # priority most be higher than Variable to properly work with binary ufuncs
