@@ -42,17 +42,14 @@ class TestMaskedAndScaledArray(TestCase):
         self.assertEqual(0, x[...])
 
     def test_multiple_fill_value(self):
-        with warnings.catch_warnings():
-            warnings.filterwarnings('ignore',
-                                    'fill_value contains multiple')
-            x = conventions.MaskedAndScaledArray(
-                np.arange(4), fill_value=np.array([0, 1]))
-            self.assertArrayEqual([np.nan, np.nan, 2, 3], x)
+        x = conventions.MaskedAndScaledArray(
+            np.arange(4), fill_value=np.array([0, 1]))
+        self.assertArrayEqual([np.nan, np.nan, 2, 3], x)
 
-            x = conventions.MaskedAndScaledArray(
-                np.array(0), fill_value=np.array([0, 1]))
-            self.assertTrue(np.isnan(x))
-            self.assertTrue(np.isnan(x[...]))
+        x = conventions.MaskedAndScaledArray(
+            np.array(0), fill_value=np.array([0, 1]))
+        self.assertTrue(np.isnan(x))
+        self.assertTrue(np.isnan(x[...]))
 
 
 class TestCharToStringArray(TestCase):

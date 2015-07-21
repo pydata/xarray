@@ -58,8 +58,6 @@ def mask_and_scale(array, fill_value=None, scale_factor=None, add_offset=None,
     if fill_value is not None and not np.all(pd.isnull(fill_value)):
         if isinstance(fill_value, np.ndarray) and len(fill_value) != 1:
             # multiple values in fill_value
-            warnings.warn('fill_value contains multiple values, decoding all '
-                          'values to NaN.', RuntimeWarning, stacklevel=3)
             for f_value in fill_value:
                 values[values == f_value] = np.nan
         else:
@@ -729,6 +727,10 @@ def decode_cf_variable(var, concat_characters=True, mask_and_scale=True,
             attributes['_FillValue'] = attributes.pop('missing_value')
 
         fill_value = pop_to(attributes, encoding, '_FillValue')
+        if isinstance(fill_value, np.ndarray) and len(fill_value) != 1:
+            warnings.warn("variable has multiple fill values {0}, decoding "
+                          "all values to NaN.".format(str(fill_value)),
+                          RuntimeWarning, stacklevel=3)
         scale_factor = pop_to(attributes, encoding, 'scale_factor')
         add_offset = pop_to(attributes, encoding, 'add_offset')
         if ((fill_value is not None and not np.any(pd.isnull(fill_value)))
