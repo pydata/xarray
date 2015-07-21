@@ -214,6 +214,14 @@ class Common2dMixin:
         clim = result.get_clim()
         self.assertFalse(pd.isnull(np.array(clim)).any())
 
+    def test_default_cmap_viridis(self):
+        cmap_name = self.plotmethod().get_cmap().name
+        self.assertEqual('viridis', cmap_name)
+
+    def test_can_change_default_cmap(self):
+        cmap_name = self.plotmethod(cmap='jet').get_cmap().name
+        self.assertEqual('jet', cmap_name)
+
 
 class TestContourf(Common2dMixin, PlotTestCase):
 
