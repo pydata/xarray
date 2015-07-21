@@ -155,7 +155,7 @@ def plot_hist(darray, ax=None, **kwargs):
     if ax is None:
         ax = plt.gca()
 
-    no_nan = np.ravel(darray)
+    no_nan = np.ravel(darray.values)
     no_nan = no_nan[pd.notnull(no_nan)]
 
     primitive = ax.hist(no_nan, **kwargs)
@@ -237,9 +237,10 @@ def _plot2d(plotfunc):
                              'Passed DataArray has {} dimensions'
                              .format(plotfunc.__name__, len(darray.dims)))
 
-        x = darray[xlab]
-        y = darray[ylab]
-        z = darray
+        # some plotting functions only know how to handle ndarrays
+        x = darray[xlab].values
+        y = darray[ylab].values
+        z = np.ma.MaskedArray(darray.values, pd.isnull(darray.values))
 
         _ensure_plottable(x, y)
 
@@ -265,6 +266,7 @@ def plot_imshow(x, y, z, ax, **kwargs):
     Wraps matplotlib.pyplot.imshow
 
     ..warning::
+
         This function needs uniformly spaced coordinates to
         properly label the axes. Call DataArray.plot() to check.
 
@@ -309,4 +311,36 @@ def plot_contourf(x, y, z, ax, **kwargs):
     Wraps matplotlib.pyplot.contourf
     """
     primitive = ax.contourf(x, y, z, **kwargs)
+    return ax, primitive
+
+
+def _infer_interval_breaks(coord):
+    """
+    >>> _infer_interval_breaks(np.arange(5))
+    array([-0.5,  0.5,  1.5,  2.5,  3.5,  4.5])
+    """
+    coord = np.asarray(coord)
+    deltas = 0.5 * (coord[1:] - coord[:-1])
+    first = coord[0] - deltas[0]
+    last = coord[-1] + deltas[-1]
+    return np.r_[[first], coord[:-1] + deltas, [last]]
+
+
+@_plot2d
+def plot_pcolormesh(x, y, z, ax, **kwargs):
+    """
+    Pseudocolor plot of 2d DataArray
+
+    Wraps matplotlib.pyplot.pcolormesh
+    """
+    x = _infer_interval_breaks(x)
+    y = _infer_interval_breaks(y)
+
+    primitive = ax.pcolormesh(x, y, z, **kwargs)
+
+    # by default, pcolormesh picks "round" values for bounds
+    # this results in ugly looking plots with lots of surrounding whitespace
+    ax.set_xlim(x[0], x[-1])
+    ax.set_ylim(y[0], y[-1])
+
     return ax, primitive

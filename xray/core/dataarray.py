@@ -1056,7 +1056,7 @@ class DataArray(AbstractArray, BaseDataObject):
 # Add plotting methods
 # Alternatively these could be added using a Mixin
 for name in ('plot', 'plot_line', 'plot_contourf', 'plot_contour',
-             'plot_hist', 'plot_imshow'):
+             'plot_hist', 'plot_imshow', 'plot_pcolormesh'):
     setattr(DataArray, name, getattr(plotting, name))
 
 

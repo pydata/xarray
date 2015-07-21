@@ -2,7 +2,8 @@ import numpy as np
 import pandas as pd
 
 from xray import DataArray
-from xray.plotting import plot_imshow, plot_contourf, plot_contour
+from xray.plotting import (plot_imshow, plot_contourf, plot_contour,
+                           plot_pcolormesh, _infer_interval_breaks)
 
 from . import TestCase, requires_matplotlib
 
@@ -60,6 +61,13 @@ class TestPlot(PlotTestCase):
 
     def test_can_pass_in_axis(self):
         self.pass_in_axis(self.darray.plot)
+
+    def test__infer_interval_breaks(self):
+        self.assertArrayEqual([-0.5, 0.5, 1.5], _infer_interval_breaks([0, 1]))
+        self.assertArrayEqual([-0.5, 0.5, 5.0, 9.5, 10.5],
+                              _infer_interval_breaks([0, 1, 9, 10]))
+        self.assertArrayEqual(pd.date_range('20000101', periods=4) - np.timedelta64(12, 'h'),
+                              _infer_interval_breaks(pd.date_range('20000101', periods=3)))
 
 
 class TestPlot1D(PlotTestCase):
@@ -159,7 +167,8 @@ class Common2dMixin:
     Should have the same name as the method.
     """
     def setUp(self):
-        self.darray = DataArray(np.random.randn(10, 15), dims=['y', 'x'])
+        rs = np.random.RandomState(123)
+        self.darray = DataArray(rs.randn(10, 15), dims=['y', 'x'])
         self.plotmethod = getattr(self.darray, self.plotfunc.__name__)
 
     def test_label_names(self):
@@ -201,7 +210,9 @@ class Common2dMixin:
 
     def test_plot_nans(self):
         self.darray[0, 0] = np.nan
-        self.plotmethod()
+        result = self.plotmethod()
+        clim = result.get_clim()
+        self.assertFalse(pd.isnull(np.array(clim)).any())
 
 
 class TestContourf(Common2dMixin, PlotTestCase):
@@ -221,6 +232,19 @@ class TestContourf(Common2dMixin, PlotTestCase):
 class TestContour(Common2dMixin, PlotTestCase):
 
     plotfunc = staticmethod(plot_contour)
+
+
+class TestPcolormesh(Common2dMixin, PlotTestCase):
+
+    plotfunc = staticmethod(plot_pcolormesh)
+
+    def test_primitive_artist_returned(self):
+        artist = self.plotmethod()
+        self.assertTrue(isinstance(artist, mpl.collections.QuadMesh))
+
+    def test_everything_plotted(self):
+        artist = self.plotmethod()
+        self.assertEqual(artist.get_array().size, self.darray.size)
 
 
 class TestImshow(Common2dMixin, PlotTestCase):
