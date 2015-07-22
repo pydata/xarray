@@ -472,6 +472,15 @@ class TestDecodeCF(TestCase):
         actual = conventions.maybe_encode_dtype(original)
         self.assertDatasetIdentical(expected, actual)
 
+    def test_decode_cf_with_multiple_missing_values(self):
+        original = Variable(['t'], [0, 1, 2],
+                            {'missing_value': np.array([0, 1])})
+        expected = Variable(['t'], [np.nan, np.nan, 2], {})
+        with warnings.catch_warnings(record=True) as w:
+            actual = conventions.decode_cf_variable(original)
+            self.assertDatasetIdentical(expected, actual)
+            self.assertIn('variable has multiple fill', str(w[0].message))
+
 
 class CFEncodedInMemoryStore(InMemoryDataStore):
     def store(self, variables, attributes):
