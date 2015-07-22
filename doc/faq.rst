@@ -89,7 +89,7 @@ With xray, we draw a firm line between labels that the library understands
 example, we do not automatically interpret and enforce units or `CF
 conventions`_. (An exception is serialization to and from netCDF files.)
 
-.. _CF conventions: http://cf-pcmdi.llnl.gov/documents/cf-conventions/1.6/cf-conventions.html
+.. _CF conventions: http://cfconventions.org/latest.html
 
 An implication of this choice is that we do not propagate ``attrs`` through
 most operations unless explicitly flagged (some methods have a ``keep_attrs``
