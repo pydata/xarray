@@ -12,6 +12,9 @@ What's New
 v0.5.3 (unreleased)
 -------------------
 
+- Variables in netCDF files with multiple missing values are now decoded as NaN
+  after issuing a warning if open_dataset is called with mask_and_scale=True.
+
 - Dataset variables are now written to netCDF files in order of appearance
   when using the netcdf4 backend (:issue:`479`).
 
