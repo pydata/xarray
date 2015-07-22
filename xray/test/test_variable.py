@@ -295,6 +295,18 @@ class VariableSubclassTestCases(object):
             actual = ~('z' != v)
             self.assertVariableIdentical(expected, actual)
 
+    def test_encoding_preserved(self):
+        expected = self.cls('x', range(3), {'foo': 1}, {'bar': 2})
+        for actual in [expected.T,
+                       expected[...],
+                       expected.squeeze(),
+                       expected.isel(x=slice(None)),
+                       expected.expand_dims({'x': 3}),
+                       expected.copy(deep=True),
+                       expected.copy(deep=False)]:
+            self.assertVariableIdentical(expected, actual)
+            self.assertEqual(expected.encoding, actual.encoding)
+
     def test_concat(self):
         x = np.arange(5)
         y = np.arange(5, 10)

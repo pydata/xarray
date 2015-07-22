@@ -1,4 +1,5 @@
-# TODO: handle encoding of netCDF4 specific options
+import functools
+
 from .. import Variable
 from ..conventions import cf_encoder
 from ..core import indexing
@@ -6,7 +7,7 @@ from ..core.utils import FrozenOrderedDict, close_on_error, Frozen
 from ..core.pycompat import iteritems, bytes_type, unicode_type, OrderedDict
 
 from .common import AbstractWritableDataStore
-from .netCDF4_ import _nc4_group, _nc4_values_and_dtype
+from .netCDF4_ import _nc4_group, _nc4_values_and_dtype, _extract_nc4_encoding
 
 
 def maybe_decode_bytes(txt):
@@ -27,6 +28,10 @@ def _read_attributes(h5netcdf_var):
             v = maybe_decode_bytes(v)
         attrs[k] = v
     return attrs
+
+
+_extract_h5nc_encoding = functools.partial(_extract_nc4_encoding,
+                                           lsd_okay=False)
 
 
 class H5NetCDFStore(AbstractWritableDataStore):
@@ -62,6 +67,7 @@ class H5NetCDFStore(AbstractWritableDataStore):
 
         # save source so __repr__ can detect if it's local or not
         encoding['source'] = self._filename
+        encoding['original_shape'] = var.shape
 
         return Variable(dimensions, data, attrs, encoding)
 
@@ -95,7 +101,7 @@ class H5NetCDFStore(AbstractWritableDataStore):
         if fill_value in ['\x00']:
             fill_value = None
 
-        encoding = variable.encoding
+        encoding = _extract_h5nc_encoding(variable)
         kwargs = {}
 
         for key in ['zlib', 'complevel', 'shuffle',

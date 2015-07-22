@@ -15,6 +15,8 @@ import pandas as pd
 import xray
 from xray import Dataset, open_dataset, open_mfdataset, backends, save_mfdataset
 from xray.backends.common import robust_getitem
+from xray.backends.netCDF4_ import _extract_nc4_encoding
+from xray.backends.h5netcdf_ import _extract_h5nc_encoding
 from xray.core.pycompat import iteritems, PY3
 
 from . import (TestCase, requires_scipy, requires_netCDF4, requires_pydap,
@@ -500,7 +502,8 @@ class BaseNetCDF4Test(CFEncodedDataTest):
         data = create_test_data()
         data['var2'].encoding.update({'zlib': True,
                                       'chunksizes': (5, 5),
-                                      'fletcher32': True})
+                                      'fletcher32': True,
+                                      'original_shape': data.var2.shape})
         with self.roundtrip(data) as actual:
             for k, v in iteritems(data['var2'].encoding):
                 self.assertEqual(v, actual['var2'].encoding[k])
@@ -938,3 +941,22 @@ class PydapTest(TestCase):
     def test_dask(self):
         with self.create_datasets(chunks={'j': 2}) as (actual, expected):
             self.assertDatasetEqual(actual, expected)
+
+
+class TestEncodingInvalid(TestCase):
+
+    def test_extract_nc4_encoding(self):
+        var = xray.Variable(('x',), [1, 2, 3], {}, {'foo': 'bar'})
+        with self.assertRaisesRegexp(ValueError, 'unexpected encoding'):
+            _extract_nc4_encoding(var, raise_on_invalid=True)
+
+        var = xray.Variable(('x',), [1, 2, 3], {}, {'chunking': (2, 1)})
+        encoding = _extract_nc4_encoding(var)
+        self.assertEqual({}, encoding)
+
+    def test_extract_h5nc_encoding(self):
+        # not supported with h5netcdf (yet)
+        var = xray.Variable(('x',), [1, 2, 3], {},
+                            {'least_sigificant_digit': 2})
+        with self.assertRaisesRegexp(ValueError, 'unexpected encoding'):
+            _extract_nc4_encoding(var, raise_on_invalid=True)

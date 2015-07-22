@@ -341,7 +341,8 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
             assert values.ndim == len(dims), (values.ndim, len(dims))
         else:
             assert len(dims) == 0, len(dims)
-        return type(self)(dims, values, self._attrs, fastpath=True)
+        return type(self)(dims, values, self._attrs, self._encoding,
+                          fastpath=True)
 
     def __setitem__(self, key, value):
         """__setitem__ is overloaded to access the underlying numpy values with

@@ -120,6 +120,37 @@ def _force_native_endianness(var):
     return var
 
 
+def _extract_nc4_encoding(variable, raise_on_invalid=False, lsd_okay=True):
+    encoding = variable.encoding.copy()
+
+    safe_to_drop = set(['source', 'original_shape'])
+    valid_encodings = set(['zlib', 'complevel', 'fletcher32', 'contiguous',
+                           'chunksizes'])
+    if lsd_okay:
+        valid_encodings.add('least_significant_digit')
+
+    print encoding
+    if (encoding.get('chunksizes') is not None
+            and encoding.get('original_shape', variable.shape) != variable.shape
+            and not raise_on_invalid):
+        del encoding['chunksizes']
+
+    for k in safe_to_drop:
+        if k in encoding:
+            del encoding[k]
+
+    if raise_on_invalid:
+        invalid = [k for k in encoding if k not in valid_encodings]
+        if invalid:
+            raise ValueError('unexpected encoding parameters: %s' % invalid)
+    else:
+        for k in list(encoding):
+            if k not in valid_encodings:
+                del encoding[k]
+
+    return encoding
+
+
 class NetCDF4DataStore(AbstractWritableDataStore):
     """Store for reading and writing data via the Python-NetCDF4 library.
 
@@ -173,6 +204,7 @@ class NetCDF4DataStore(AbstractWritableDataStore):
         pop_to(attributes, encoding, 'least_significant_digit')
         # save source so __repr__ can detect if it's local or not
         encoding['source'] = self._filename
+        encoding['original_shape'] = var.shape
         return Variable(dimensions, data, attributes, encoding)
 
     def get_variables(self):
@@ -214,7 +246,7 @@ class NetCDF4DataStore(AbstractWritableDataStore):
             # doesn't like setting fill_value to an empty string
             fill_value = None
 
-        encoding = variable.encoding
+        encoding = _extract_nc4_encoding(variable)
         nc4_var = self.ds.createVariable(
             varname=name,
             datatype=datatype,
