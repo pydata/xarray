@@ -59,7 +59,10 @@ def mask_and_scale(array, fill_value=None, scale_factor=None, add_offset=None,
         if getattr(fill_value, 'size', 1) > 1:
             # multiple values in fill_value
             for f_value in fill_value:
-                values[values == f_value] = np.nan
+                if values.ndim > 0:
+                    values[values == f_value] = np.nan
+                elif values == f_value:
+                    values = np.array(np.nan)
         else:
             if values.ndim > 0:
                 values[values == fill_value] = np.nan
