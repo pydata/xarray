@@ -41,6 +41,16 @@ class TestMaskedAndScaledArray(TestCase):
         x = conventions.MaskedAndScaledArray(np.array(0), fill_value=10)
         self.assertEqual(0, x[...])
 
+    def test_multiple_fill_value(self):
+        x = conventions.MaskedAndScaledArray(
+            np.arange(4), fill_value=np.array([0, 1]))
+        self.assertArrayEqual([np.nan, np.nan, 2, 3], x)
+
+        x = conventions.MaskedAndScaledArray(
+            np.array(0), fill_value=np.array([0, 1]))
+        self.assertTrue(np.isnan(x))
+        self.assertTrue(np.isnan(x[...]))
+
 
 class TestCharToStringArray(TestCase):
     def test_wrapper_class(self):
@@ -461,6 +471,15 @@ class TestDecodeCF(TestCase):
         expected = Variable((), np.int64(0))
         actual = conventions.maybe_encode_dtype(original)
         self.assertDatasetIdentical(expected, actual)
+
+    def test_decode_cf_with_multiple_missing_values(self):
+        original = Variable(['t'], [0, 1, 2],
+                            {'missing_value': np.array([0, 1])})
+        expected = Variable(['t'], [np.nan, np.nan, 2], {})
+        with warnings.catch_warnings(record=True) as w:
+            actual = conventions.decode_cf_variable(original)
+            self.assertDatasetIdentical(expected, actual)
+            self.assertIn('variable has multiple fill', str(w[0].message))
 
 
 class CFEncodedInMemoryStore(InMemoryDataStore):

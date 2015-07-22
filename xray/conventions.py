@@ -35,7 +35,9 @@ def mask_and_scale(array, fill_value=None, scale_factor=None, add_offset=None,
         Original array of values to wrap
     fill_value : number, optional
         All values equal to fill_value in the original array are replaced
-        by NaN.
+        by NaN.  If an array of multiple values is provided a warning will be
+        issued and all array elements matching an value in the fill_value array
+        will be replaced by NaN.
     scale_factor : number, optional
         Multiply entries in the original array by this number.
     add_offset : number, optional
@@ -53,11 +55,16 @@ def mask_and_scale(array, fill_value=None, scale_factor=None, add_offset=None,
     """
     # by default, cast to float to ensure NaN is meaningful
     values = np.array(array, dtype=dtype, copy=True)
-    if fill_value is not None and not pd.isnull(fill_value):
-        if values.ndim > 0:
-            values[values == fill_value] = np.nan
-        elif values == fill_value:
-            values = np.array(np.nan)
+    if fill_value is not None and not np.all(pd.isnull(fill_value)):
+        if getattr(fill_value, 'size', 1) > 1:
+            fill_values = fill_value  # multiple fill values
+        else:
+            fill_values = [fill_value]
+        for f_value in fill_values:
+            if values.ndim > 0:
+                values[values == f_value] = np.nan
+            elif values == f_value:
+                values = np.array(np.nan)
     if scale_factor is not None:
         values *= scale_factor
     if add_offset is not None:
@@ -720,9 +727,13 @@ def decode_cf_variable(var, concat_characters=True, mask_and_scale=True,
             attributes['_FillValue'] = attributes.pop('missing_value')
 
         fill_value = pop_to(attributes, encoding, '_FillValue')
+        if getattr(fill_value, 'size', 1) > 1:
+            warnings.warn("variable has multiple fill values {0}, decoding "
+                          "all values to NaN.".format(str(fill_value)),
+                          RuntimeWarning, stacklevel=3)
         scale_factor = pop_to(attributes, encoding, 'scale_factor')
         add_offset = pop_to(attributes, encoding, 'add_offset')
-        if ((fill_value is not None and not pd.isnull(fill_value))
+        if ((fill_value is not None and not np.any(pd.isnull(fill_value)))
                 or scale_factor is not None or add_offset is not None):
             if isinstance(fill_value, (bytes_type, unicode_type)):
                 dtype = object
