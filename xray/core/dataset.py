@@ -1942,5 +1942,82 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject):
         ds._variables.update(new_vars)
         return ds
 
+    def diff(self, dim, n=1, label='upper'):
+        """Calculate the n-th order discrete difference along given axis.
+
+        Parameters
+        ----------
+        dim : str, optional
+            Dimension over which to calculate the finite difference.
+        n : int, optional
+            The number of times values are differenced.
+        label : str, optional
+            The new coordinate in dimension ``dim`` will have the
+            values of either the minuend's or subtrahend's coordinate
+            for values 'upper' and 'lower', respectively.  Other
+            values are not supported.
+
+        Returns
+        -------
+        difference : same type as caller
+            The n-th order finite differnce of this object.
+
+        Examples
+        --------
+        >>> ds = xray.Dataset({'foo': ('x', [5, 5, 6, 6])})
+        >>> ds.diff('x')
+        <xray.Dataset>
+        Dimensions:  (x: 3)
+        Coordinates:
+          * x        (x) int64 1 2 3
+        Data variables:
+            foo      (x) int64 0 1 0
+        >>> ds.diff('x', 2)
+        <xray.Dataset>
+        Dimensions:  (x: 2)
+        Coordinates:
+        * x        (x) int64 2 3
+        Data variables:
+        foo      (x) int64 1 -1
+
+        """
+        if n == 0:
+            return self
+        if n < 0:
+            raise ValueError('order `n` must be non-negative but got {0}'
+                             ''.format(n))
+
+        # prepare slices
+        kwargs_start = {dim: slice(None, -1)}
+        kwargs_end = {dim: slice(1, None)}
+
+        # prepare new coordinate
+        if label == 'upper':
+            kwargs_new = kwargs_end
+        elif label == 'lower':
+            kwargs_new = kwargs_start
+        else:
+            raise ValueError('The \'label\' argument has to be either '
+                             '\'upper\' or \'lower\'')
+
+        variables = OrderedDict()
+
+        for name, var in iteritems(self.variables):
+            if dim in var.dims:
+                if name in self.data_vars:
+                    variables[name] = (var.isel(**kwargs_end)
+                                       - var.isel(**kwargs_start))
+                else:
+                    variables[name] = var.isel(**kwargs_new)
+            else:
+                variables[name] = var
+
+        difference = self._replace_vars_and_dims(variables)
+
+        if n > 1:
+            return difference.diff(dim, n - 1)
+        else:
+            return difference
+
 
 ops.inject_all_ops_and_reduce_methods(Dataset, array_only=False)

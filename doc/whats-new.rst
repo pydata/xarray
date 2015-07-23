@@ -12,6 +12,10 @@ What's New
 v0.6.0 (unreleased)
 -------------------
 
+- Added new methods :py:meth:`DataArray.diff <xray.DataArray.diff>`
+  and :py:meth:`Dataset.diff <xray.Dataset.diff>` for finite
+  difference calculations along a given axis.
+
 Bug fixes
 ~~~~~~~~~
 
