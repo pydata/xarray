@@ -287,7 +287,12 @@ def _create_nan_agg_method(name, numeric_only=False, coerce_strings=False):
                     'skipna=True not yet implemented for %s with dtype %s'
                     % (name, values.dtype))
             nanname = 'nan' + name
-            eager_module = np if isinstance(axis, tuple) else bn
+            if isinstance(axis, tuple) or not values.dtype.isnative:
+                # bottleneck can't handle multiple axis arguments or non-native
+                # endianness
+                eager_module = np
+            else:
+                eager_module = bn
             func = _dask_or_eager_func(nanname, eager_module)
             using_numpy_nan_func = eager_module is np
         else:

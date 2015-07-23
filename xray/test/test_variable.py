@@ -709,6 +709,13 @@ class TestVariable(TestCase, VariableSubclassTestCases):
         with self.assertRaisesRegexp(ValueError, 'cannot supply both'):
             v.mean(dim='x', axis=0)
 
+    def test_big_endian_reduce(self):
+        # regression test for GH489
+        data = np.ones(5, dtype='>f4')
+        v = Variable(['x'], data)
+        expected = Variable([], 5)
+        self.assertVariableIdentical(expected, v.sum())
+
     def test_reduce_funcs(self):
         v = Variable('x', np.array([1, np.nan, 2, 3]))
         self.assertVariableIdentical(v.mean(), Variable([], 2))
