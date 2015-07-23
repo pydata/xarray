@@ -1039,21 +1039,25 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject):
 
         Parameters
         ----------
-        dim : str, optional
-            Dimension name for which the points will be added to.
+        dim : str or DataArray or pandas.Index, optinal
+            Name of the dimension to concatenate along. This can either be a
+            new dimension name, in which case it is added along axis=0, or an
+            existing dimension name, in which case the location of the
+            dimension is unchanged. If dimension is provided as a DataArray or
+            Index, its name is used as the dimension to concatenate along and
+            the values are added as a coordinate.
         **indexers : {dim: indexer, ...}
             Keyword arguments with names matching dimensions and values given
-            by integers, slice objects or arrays. All indexers must be the same
-            length.
+            by array-like objects. All indexers must be the same length and
+            1 dimensional.
 
         Returns
         -------
         obj : Dataset
             A new Dataset with the same contents as this dataset, except each
-            array and dimension is indexed by the appropriate indexers. In
-            general, each array's data will be a view of the array's data
-            in this dataset, unless numpy fancy indexing was triggered by using
-            an array indexer, in which case the data will be a copy.
+            array and dimension is indexed by the appropriate indexers. With
+            pointwise indexing, the new Dataset will always be a copy of the
+            original.
 
         See Also
         --------
@@ -1062,24 +1066,38 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject):
         DataArray.sel
         DataArray.isel_points
         """
-        invalid = [k for k in indexers if k not in self.dims]
-        if invalid:
-            raise ValueError("dimensions %r do not exist" % invalid)
+        indexer_dims = set(indexers)
+
+        def relevant_keys(mapping):
+            return [k for k, v in mapping.items()
+                    if any(d in indexer_dims for d in v.dims)]
+
+        data_vars = relevant_keys(self.data_vars)
+        coords = relevant_keys(self.coords)
 
         # all the indexers should be iterables
         keys = indexers.keys()
-        indexers = [(k, ([v] if not isinstance(v, Sequence) else v))
-                    for k, v in iteritems(indexers)]
+        indexers = [(k, np.asarray(v)) for k, v in iteritems(indexers)]
+        # Check that indexers are valid dims, integers, and 1D
+        for k, v in indexers:
+            if k not in self.dims:
+                raise ValueError("dimension %s does not exist" % k)
+            if v.dtype.kind != 'i':
+                raise TypeError('Indexers must be integers')
+            if v.ndim != 1:
+                raise ValueError('Indexers must be 1 dimensional')
 
         # all the indexers should have the same length
-        lengths = set([len(v) for k, v in indexers])
+        lengths = set(len(v) for k, v in indexers)
         if len(lengths) > 1:
             raise ValueError('All indexers must be the same length')
 
+        # TODO: This would be sped up with vectorized indexing. This will
+        # require dask to support pointwise indexing as well.
         return concat([self.isel(**d) for d in
                        [dict(zip(keys, inds)) for inds in
                         zip(*[v for k, v in indexers])]],
-                      dim=dim)
+                      dim=dim, coords=coords, data_vars=data_vars)
 
     def reindex_like(self, other, method=None, copy=True):
         """Conform this object onto the indexes of another object, filling

@@ -677,30 +677,28 @@ class TestDataset(TestCase):
         assert 'points' in actual.coords
         np.testing.assert_array_equal(pdim1, actual['dim1'])
 
-        # # test scalars (should match isel but will have points dim)
-        pdim1 = 1
-        pdim2 = 3
-
-        actual = data.isel_points(dim1=pdim1, dim2=pdim2)
-        # squeeze to drop "points" dim
-        assert 'points' in actual.coords
-        self.assertDatasetEqual(actual.squeeze().drop(['points']),
-                                data.isel(dim1=pdim1, dim2=pdim2))
-
-        # test that leaving out a dim is the same as slice(None)
-        self.assertDatasetIdentical(
-            data.isel_points(time=slice(None), dim1=pdim1, dim2=pdim2),
-            data.isel_points(dim1=pdim1, dim2=pdim2))
-
         # test that the order of the indexers doesn't matter
         self.assertDatasetIdentical(data.isel_points(dim1=pdim1, dim2=pdim2),
                                     data.isel_points(dim2=pdim2, dim1=pdim1))
 
         # make sure we're raising errors in the right places
-        with self.assertRaises(ValueError):
+        with self.assertRaisesRegexp(ValueError,
+                                     'All indexers must be the same length'):
             data.isel_points(dim1=[1, 2], dim2=[1, 2, 3])
-        with self.assertRaises(ValueError):
+        with self.assertRaisesRegexp(ValueError,
+                                     'dimension bad_key does not exist'):
             data.isel_points(bad_key=[1, 2])
+        with self.assertRaisesRegexp(TypeError, 'Indexers must be integers'):
+            data.isel_points(dim1=[1.5, 2.2])
+        with self.assertRaisesRegexp(TypeError, 'Indexers must be integers'):
+            data.isel_points(dim1=[1, 2, 3], dim2=slice(3))
+        with self.assertRaisesRegexp(ValueError,
+                                     'Indexers must be 1 dimensional'):
+            data.isel_points(dim1=1, dim2=2)
+        # test to be sure we keep around variables that were not indexed
+        ds = Dataset({'x': [1, 2, 3, 4], 'y': 0})
+        actual = ds.isel_points(x=[0, 1, 2])
+        self.assertDataArrayIdentical(ds['y'], actual['y'])
 
     def test_sel_method(self):
         data = create_test_data()
