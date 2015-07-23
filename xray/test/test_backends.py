@@ -262,7 +262,7 @@ class CFEncodedDataTest(DatasetIOTestCases):
         if not isinstance(self, Only32BitTypes):
             # these stores can save unicode strings
             expected = original.copy(deep=True)
-        if type(self) in [NetCDF4DataTest, H5NetCDFDataTest]:
+        if isinstance(self, BaseNetCDF4Test):
             # netCDF4 can't keep track of an empty _FillValue for VLEN
             # variables
             expected['x'][-1] = ''
@@ -568,6 +568,17 @@ class NetCDF4DataTest(BaseNetCDF4Test, TestCase):
 
         with self.roundtrip(ds) as actual:
             self.assertEqual(list(ds), list(actual))
+
+
+@requires_netCDF4
+@requires_dask
+class NetCDF4ViaDaskDataTest(NetCDF4DataTest):
+    @contextlib.contextmanager
+    def roundtrip(self, data, **kwargs):
+        with create_tmp_file() as tmp_file:
+            data.to_netcdf(tmp_file)
+            with open_dataset(tmp_file, **kwargs) as ds:
+                yield ds.chunk()
 
 
 @requires_scipy
