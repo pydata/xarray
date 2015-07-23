@@ -18,6 +18,13 @@ v0.5.3 (unreleased)
 - Dataset variables are now written to netCDF files in order of appearance
   when using the netcdf4 backend (:issue:`479`).
 
+
+Bug fixes
+~~~~~~~~~
+
+- Fixed aggregation functions (e.g., sum and mean) on big-endian arrays when
+  bottleneck is installed (:issue:`489`).
+
 v0.5.2 (16 July 2015)
 ---------------------
 
