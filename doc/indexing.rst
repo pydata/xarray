@@ -36,8 +36,6 @@ below and summarized in this table:
 | By name          | By label     | ``arr.sel(space='IA')`` or |br| | ``ds.sel(space='IA')`` or |br| |
 |                  |              | ``arr.loc[dict(space='IA')]``   | ``ds.loc[dict(space='IA')]``   |
 +------------------+--------------+---------------------------------+--------------------------------+
-| By name          | By integers  | ``arr.isel_points(x=[0, 1])``   | ``ds.isel_points(x=[0, 1])``   |
-+------------------+--------------+---------------------------------+--------------------------------+
 
 Positional indexing
 -------------------
@@ -111,13 +109,6 @@ use them explicitly to slice data. There are two ways to do this:
         # index by dimension coordinate labels
         arr.sel(time=slice('2000-01-01', '2000-01-02'))
 
-3. Use the :py:meth:`~xray.DataArray.isel_points` method:
-
-    .. ipython:: python
-
-        # index by integer array indices
-        arr.isel_points(space=[0, 1], dim='points')
-
 The arguments to these methods can be any objects that could index the array
 along the dimension given by the keyword, e.g., labels for an individual value,
 Python :py:func:`slice` objects or 1-dimensional arrays.
@@ -144,6 +135,21 @@ __ http://legacy.python.org/dev/peps/pep-0472/
         # this is safe
         arr[dict(space=0)] = 0
 
+Pointwise indexing
+--------------------------------
+
+xray pointwise indexing supports the indexing along multiple labeled dimensions
+using list-like objects. While :py:meth:`~xray.DataArray.isel` performs
+orthogonal indexing, the :py:meth:`~xray.DataArray.isel_points` method
+provides similar numpy indexing behavior as if you were using multiple lists to index an array (e.g. `arr[[0, 1], [0, 1]]` ):
+
+.. ipython:: python
+
+    # index by integer array indices
+    da = xray.DataArray(np.arange(56).reshape((7, 8)), dims=['x', 'y'])
+    da
+    da.isel_points(x=[0, 1, 6], y=[0, 1, 0])
+
 Dataset indexing
 ----------------
 
@@ -155,13 +161,15 @@ simultaneously, returning a new dataset:
     ds = arr.to_dataset()
     ds.isel(space=[0], time=[0])
     ds.sel(time='2000-01-01')
-    ds.isel_points(space=[0, 1], dim='points')
+    ds2 = da.to_dataset()
+    ds2.isel_points(x=[0, 1, 6], y=[0, 1, 0], dim='points')
 
 Positional indexing on a dataset is not supported because the ordering of
 dimensions in a dataset is somewhat ambiguous (it can vary between different
 arrays). However, you can do normal indexing with labeled dimensions:
 
 .. ipython:: python
+
 
     ds[dict(space=[0], time=[0])]
     ds.loc[dict(time='2000-01-01')]

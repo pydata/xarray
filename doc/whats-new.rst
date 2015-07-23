@@ -16,6 +16,35 @@ v0.5.3 (unreleased)
   when using the netcdf4 backend (:issue:`479`).
 - Added :py:meth:`~xray.Dataset.isel_points` and :py:meth:`~xray.DataArray.isel_points` to support pointwise indexing of Datasets and DataArrays (:issue:`475`).
 
+  .. ipython::
+    :verbatim:
+
+    In [1]: da = xray.DataArray(np.arange(56).reshape((7, 8)),
+                                dims=['x', 'y'])
+
+    In [2]: da
+    Out[2]:
+    <xray.DataArray (x: 7, y: 8)>
+    array([[ 0,  1,  2,  3,  4,  5,  6,  7],
+           [ 8,  9, 10, 11, 12, 13, 14, 15],
+           [16, 17, 18, 19, 20, 21, 22, 23],
+           [24, 25, 26, 27, 28, 29, 30, 31],
+           [32, 33, 34, 35, 36, 37, 38, 39],
+           [40, 41, 42, 43, 44, 45, 46, 47],
+           [48, 49, 50, 51, 52, 53, 54, 55]])
+    Coordinates:
+      * x        (x) int64 0 1 2 3 4 5 6
+      * y        (y) int64 0 1 2 3 4 5 6 7
+
+    In [3]: da.isel_points(x=[0, 1, 6], y=[0, 1, 0], dim='points')
+    Out[3]:
+    <xray.DataArray (points: 3)>
+    array([ 0,  9, 48])
+    Coordinates:
+        x        (points) int64 0 1 6
+        y        (points) int64 0 1 0
+      * points   (points) int64 0 1 2
+
 v0.5.2 (16 July 2015)
 ---------------------
 
