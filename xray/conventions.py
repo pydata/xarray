@@ -574,7 +574,7 @@ def maybe_encode_dtype(var):
         dtype = np.dtype(encoding.pop('dtype'))
         if dtype != var.dtype and dtype.kind != 'O':
             if np.issubdtype(dtype, int):
-                data = ops.around(data)
+                data = ops.around(data)[...]
             if dtype == 'S1' and data.dtype != 'S1':
                 data = string_to_char(np.asarray(data, 'S'))
                 dims = dims + ('string%s' % data.shape[-1],)

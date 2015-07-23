@@ -8,7 +8,7 @@ from setuptools import setup, find_packages
 
 MAJOR = 0
 MINOR = 5
-MICRO = 1
+MICRO = 2
 ISRELEASED = False
 VERSION = '%d.%d.%d' % (MAJOR, MINOR, MICRO)
 QUALIFIER = ''
@@ -63,7 +63,7 @@ Important links
 - HTML documentation: http://xray.readthedocs.org
 - Issue tracker: http://github.com/xray/xray/issues
 - Source code: http://github.com/xray/xray
-- PyData talk: https://www.youtube.com/watch?v=T5CZyNwBa9c
+- SciPy2015 talk: https://www.youtube.com/watch?v=X0pAhJgySxk
 """
 
 # code to extract and write the version copied from pandas

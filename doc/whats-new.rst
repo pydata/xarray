@@ -9,8 +9,22 @@ What's New
     import xray
     np.random.seed(123456)
 
-v0.5.2 (unreleased)
--------------------
+v0.5.2 (16 July 2015)
+---------------------
+
+This release contains bug fixes, several additional options for opening and
+saving netCDF files, and a backwards incompatible rewrite of the advanced
+options for ``xray.concat``.
+
+Backwards incompatible changes
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+- The optional arguments ``concat_over`` and ``mode`` in :py:func:`~xray.concat` have
+  been removed and replaced by ``data_vars`` and ``coords``. The new arguments are both
+  more easily understood and more robustly implemented, and allowed us to fix a bug
+  where ``concat`` accidentally loaded data into memory. If you set values for
+  these optional arguments manually, you will need to update your code. The default
+  behavior should be unchanged.
 
 Enhancements
 ~~~~~~~~~~~~
@@ -20,9 +34,10 @@ Enhancements
   cannot be otherwise merged automatically, e.g., if the original datasets
   have conflicting index coordinates (:issue:`443`).
 - :py:func:`~xray.open_dataset` and :py:func:`~xray.open_mfdataset` now use a
-  thread lock by default for reading from netCDF files. This avoids possible
-  segmentation faults for reading from netCDF4 files when HDF5 is not
-  configured properly for concurrent access (:issue:`444`).
+  global thread lock by default for reading from netCDF files with dask. This
+  avoids possible segmentation faults for reading from netCDF4 files when HDF5
+  is not configured properly for concurrent access (:issue:`444`).
+- Added support for serializing arrays of complex numbers with `engine='h5netcdf'`.
 - The new :py:func:`~xray.save_mfdataset` function allows for saving multiple
   datasets to disk simultaneously. This is useful when processing large datasets
   with dask.array. For example, to save a dataset too big to fit into memory
@@ -40,11 +55,15 @@ Enhancements
 Bug fixes
 ~~~~~~~~~
 
-- Fix ``min``, ``max``, ``argmin`` and ``argmax``for arrays with string or
+- Fixed ``min``, ``max``, ``argmin`` and ``argmax`` for arrays with string or
   unicode types (:issue:`453`).
 - :py:func:`~xray.open_dataset` and :py:func:`~xray.open_mfdataset` support
   supplying chunks as a single integer.
 - Fixed a bug in serializing scalar datetime variable to netCDF.
+- Fixed a bug that could occur in serialization of 0-dimensional integer arrays.
+- Fixed a bug where concatenating DataArrays was not always lazy (:issue:`464`).
+- When reading datasets with h5netcdf, bytes attributes are decoded to strings.
+  This allows conventions decoding to work properly on Python 3 (:issue:`451`).
 
 v0.5.1 (15 June 2015)
 ---------------------

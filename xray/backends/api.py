@@ -1,11 +1,12 @@
 import sys
 import gzip
+import threading
 from glob import glob
 from io import BytesIO
 
 from .. import backends, conventions
 from .common import ArrayWriter
-from ..core.alignment import auto_combine
+from ..core.combine import auto_combine
 from ..core.utils import close_on_error, is_remote_uri
 from ..core.pycompat import basestring, OrderedDict, range
 
@@ -36,10 +37,34 @@ def _get_default_engine(path, allow_remote=False):
     return engine
 
 
+_global_lock = threading.Lock()
+
+
+def _default_lock(filename, engine):
+    if filename.endswith('.gz'):
+        lock = False
+    else:
+        if engine is None:
+            engine = _get_default_engine(filename, allow_remote=True)
+
+        if engine == 'netcdf4':
+            if is_remote_uri(filename):
+                lock = False
+            else:
+                # TODO: identify netcdf3 files and don't use the global lock
+                # for them
+                lock = _global_lock
+        elif engine == 'h5netcdf':
+            lock = _global_lock
+        else:
+            lock = False
+    return lock
+
+
 def open_dataset(filename_or_obj, group=None, decode_cf=True,
                  mask_and_scale=True, decode_times=True,
                  concat_characters=True, decode_coords=True, engine=None,
-                 chunks=None, lock=True, close_files=False):
+                 chunks=None, lock=None):
     """Load and decode a dataset from a file or file-like object.
 
     Parameters
@@ -80,13 +105,20 @@ def open_dataset(filename_or_obj, group=None, decode_cf=True,
         If chunks is provided, it used to load the new dataset into dask
         arrays. This is an experimental feature; see the documentation for more
         details.
-    lock : optional
+    lock : False, True or threading.Lock, optional
         If chunks is provided, this argument is passed on to
+<<<<<<< HEAD
         :py:func:`dask.array.from_array`. By default, a lock is used to avoid
         issues with concurrent access with dask's multithreaded backend.
     close_files: bool, optional
         If True, the engine should try to keep the underlying files closed.
         Currently only supported for engine='scipy'.
+=======
+        :py:func:`dask.array.from_array`. By default, a per-variable lock is
+        used when reading data from netCDF files with the netcdf4 and h5netcdf
+        engines to avoid issues with concurrent access when using dask's
+        multithreaded backend.
+>>>>>>> upstream/master
 
     Returns
     -------
@@ -103,7 +135,7 @@ def open_dataset(filename_or_obj, group=None, decode_cf=True,
         concat_characters = False
         decode_coords = False
 
-    def maybe_decode_store(store):
+    def maybe_decode_store(store, lock=False):
         ds = conventions.decode_cf(
             store, mask_and_scale=mask_and_scale, decode_times=decode_times,
             concat_characters=concat_characters, decode_coords=decode_coords)
@@ -135,8 +167,6 @@ def open_dataset(filename_or_obj, group=None, decode_cf=True,
                 else:
                     raise
         else:
-            # TODO: automatically fall back to using pydap if given a URL and
-            # netCDF4 is not available
             if engine is None:
                 engine = _get_default_engine(filename_or_obj,
                                              allow_remote=True)
@@ -151,18 +181,24 @@ def open_dataset(filename_or_obj, group=None, decode_cf=True,
             else:
                 raise ValueError('unrecognized engine for open_dataset: %r'
                                  % engine)
-
+        if lock is None:
+            lock = _default_lock(filename_or_obj, engine)
         with close_on_error(store):
+<<<<<<< HEAD
             ds = maybe_decode_store(store)
             if close_files:
                 store.ds.close()
             return ds
+=======
+            return maybe_decode_store(store, lock)
+>>>>>>> upstream/master
     else:
         if engine is not None and engine != 'scipy':
             raise ValueError('can only read file-like objects with '
                              "default engine or engine='scipy'")
         # assume filename_or_obj is a file-like object
         store = backends.ScipyDataStore(filename_or_obj)
+
     return maybe_decode_store(store)
 
 
@@ -176,7 +212,7 @@ class _MultiFileCloser(object):
 
 
 def open_mfdataset(paths, chunks=None, concat_dim=None, preprocess=None,
-                   lock=True, **kwargs):
+                   engine=None, lock=None, **kwargs):
     """Open multiple files as a single dataset.
 
     Experimental. Requires dask to be installed.
@@ -200,10 +236,15 @@ def open_mfdataset(paths, chunks=None, concat_dim=None, preprocess=None,
         want to stack a collection of 2D arrays along a third dimension.
     preprocess : callable, optional
         If provided, call this function on each dataset prior to concatenation.
-    lock : optional
+    engine : {'netcdf4', 'scipy', 'pydap', 'h5netcdf'}, optional
+        Engine to use when reading netCDF files. If not provided, the default
+        engine is chosen based on available dependencies, with a preference for
+        'netcdf4'.
+    lock : False, True or threading.Lock, optional
         This argument is passed on to :py:func:`dask.array.from_array`. By
-        default, a lock is used to avoid issues with concurrent access with
-        dask's multithreaded backend.
+        default, a per-variable lock is used when reading data from netCDF
+        files with the netcdf4 and h5netcdf engines to avoid issues with
+        concurrent access when using dask's multithreaded backend.
     **kwargs : optional
         Additional arguments passed on to :py:func:`xray.open_dataset`.
 
@@ -220,11 +261,16 @@ def open_mfdataset(paths, chunks=None, concat_dim=None, preprocess=None,
         paths = sorted(glob(paths))
     if not paths:
         raise IOError('no files to open')
-    datasets = [open_dataset(p, **kwargs) for p in paths]
+
+    datasets = [open_dataset(p, engine=engine, **kwargs) for p in paths]
+    if lock is None:
+        lock = _default_lock(paths[0], engine)
     file_objs = [ds._file_obj for ds in datasets]
     datasets = [ds.chunk(chunks, lock=lock) for ds in datasets]
+
     if preprocess is not None:
         datasets = [preprocess(ds) for ds in datasets]
+
     combined = auto_combine(datasets, concat_dim=concat_dim)
     combined._file_obj = _MultiFileCloser(file_objs)
     return combined

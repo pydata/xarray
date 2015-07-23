@@ -310,7 +310,7 @@ class VariableSubclassTestCases(object):
         with self.assertRaisesRegexp(ValueError, 'inconsistent dimensions'):
             Variable.concat([v, Variable(['c'], y)], 'b')
         # test indexers
-        actual = Variable.concat([v, w], indexers=[range(0, 10, 2), range(1, 10, 2)], dim='a')
+        actual = Variable.concat([v, w], positions=[range(0, 10, 2), range(1, 10, 2)], dim='a')
         expected = Variable('a', np.array([x, y]).ravel(order='F'))
         self.assertVariableIdentical(expected, actual)
         # test concatenating along a dimension

@@ -48,20 +48,27 @@ Documentation
 See also
 --------
 
-- `Stephan Hoyer's PyData talk`_ introducing the original version of xray.
+- Stephan Hoyer's `SciPy2015 talk`_ introducing xray to a general audience.
+- Stephan Hoyer's `2015 Unidata Users Workshop talk`_ and `tutorial`_ (`with answers`_) introducing
+  xray to users familiar with netCDF.
 - `Nicolas Fauchereau's tutorial`_ on xray for netCDF users.
 
-.. _Stephan Hoyer's PyData talk: https://www.youtube.com/watch?v=T5CZyNwBa9c
+.. _SciPy2015 talk: https://www.youtube.com/watch?v=X0pAhJgySxk
+.. _2015 Unidata Users Workshop talk: https://www.youtube.com/watch?v=J9ypQOnt5l8
+.. _tutorial: https://github.com/Unidata/unidata-users-workshop/blob/master/notebooks/xray-tutorial.ipynb
+.. _with answers: https://github.com/Unidata/unidata-users-workshop/blob/master/notebooks/xray-tutorial-with-answers.ipynb
 .. _Nicolas Fauchereau's tutorial: http://nbviewer.ipython.org/github/nicolasfauchereau/metocean/blob/master/notebooks/xray.ipynb
 
 Get in touch
 ------------
 
 - To ask questions or discuss xray, use the `mailing list`_.
-- Report bugs or view the source code `on GitHub`_.
+- Report bugs, suggest feature ideas or view the source code `on GitHub`_.
+- For interactive discussion, we have a chatroom `on Gitter`_.
 - You can also get in touch `on Twitter`_.
 
 .. _mailing list: https://groups.google.com/forum/#!forum/xray-dev
+.. _on Gitter: https://gitter.im/xray/xray
 .. _on GitHub: http://github.com/xray/xray
 .. _on Twitter: http://twitter.com/shoyer
 

@@ -6,9 +6,9 @@ import numpy as np
 
 from . import ops, utils
 from .common import _maybe_promote
-from .pycompat import iteritems, OrderedDict, reduce
+from .pycompat import iteritems, OrderedDict
 from .utils import is_full_slice
-from .variable import as_variable, Variable, Coordinate, broadcast_variables
+from .variable import Variable, Coordinate, broadcast_variables
 
 
 def _get_joiner(join):
@@ -218,142 +218,6 @@ def reindex_variables(variables, indexes, indexers, method=None, copy=True):
     return reindexed
 
 
-def concat(objs, dim='concat_dim', indexers=None, mode='different',
-           concat_over=None, compat='equals'):
-    """Concatenate xray objects along a new or existing dimension.
-
-    Parameters
-    ----------
-    objs : sequence of Dataset and DataArray objects
-        xray objects to concatenate together. Each object is expected to
-        consist of variables and coordinates with matching shapes except for
-        along the concatenated dimension.
-    dim : str or DataArray or Index, optional
-        Name of the dimension to concatenate along. This can either be a new
-        dimension name, in which case it is added along axis=0, or an existing
-        dimension name, in which case the location of the dimension is
-        unchanged. If dimension is provided as a DataArray or Index, its name
-        is used as the dimension to concatenate along and the values are added
-        as a coordinate.
-    indexers : None or iterable of indexers, optional
-        Iterable of indexers of the same length as datasets which
-        specifies how to assign variables from each dataset along the given
-        dimension. If not supplied, indexers is inferred from the length of
-        each variable along the dimension, and the variables are stacked in
-        the given order.
-    mode : {'minimal', 'different', 'all'}, optional
-        Decides which variables are concatenated.  Choices are 'minimal'
-        in which only variables in which dimension already appears are
-        included, 'different' in which all variables which are not equal
-        (ignoring attributes) across all datasets are concatenated (as well
-        as all for which dimension already appears), and 'all' for which all
-        variables are concatenated.
-    concat_over : None or str or iterable of str, optional
-        Names of additional variables to concatenate, in which the provided
-        parameter ``dim`` does not already appear as a dimension. The default
-        value includes all data variables.
-    compat : {'equals', 'identical'}, optional
-        String indicating how to compare non-concatenated variables and
-        dataset global attributes for potential conflicts. 'equals' means
-        that all variable values and dimensions must be the same;
-        'identical' means that variable attributes and global attributes
-        must also be equal.
-
-    Returns
-    -------
-    concatenated : type of objs
-
-    See also
-    --------
-    auto_combine
-    """
-    # TODO: add join and ignore_index arguments copied from pandas.concat
-    # TODO: support concatenating scaler coordinates even if the concatenated
-    # dimension already exists
-    try:
-        first_obj, objs = utils.peek_at(objs)
-    except StopIteration:
-        raise ValueError('must supply at least one object to concatenate')
-    cls = type(first_obj)
-    return cls._concat(objs, dim, indexers, mode, concat_over, compat)
-
-
-def _auto_concat(datasets, dim=None):
-    if len(datasets) == 1:
-        return datasets[0]
-    else:
-        if dim is None:
-            ds0 = datasets[0]
-            ds1 = datasets[1]
-            concat_dims = set(ds0.dims)
-            if ds0.dims != ds1.dims:
-                dim_tuples = set(ds0.dims.items()) - set(ds1.dims.items())
-                concat_dims = set(i for i, _ in dim_tuples)
-            if len(concat_dims) > 1:
-                concat_dims = set(d for d in concat_dims
-                                  if not ds0[d].equals(ds1[d]))
-            if len(concat_dims) > 1:
-                raise ValueError('too many different dimensions to '
-                                 'concatenate: %s' % concat_dims)
-            elif len(concat_dims) == 0:
-                raise ValueError('cannot infer dimension to concatenate: '
-                                 'supply the ``concat_dim`` argument '
-                                 'explicitly')
-            dim, = concat_dims
-        return concat(datasets, dim=dim)
-
-
-def auto_combine(datasets, concat_dim=None):
-    """Attempt to auto-magically combine the given datasets into one.
-
-    This method attempts to combine a list of datasets into a single entity by
-    inspecting metadata and using a combination of concat and merge.
-
-    It does not concatenate along more than one dimension or align or sort data
-    under any circumstances. It will fail in complex cases, for which you
-    should use ``concat`` and ``merge`` explicitly.
-
-    When ``auto_combine`` may succeed:
-
-    * You have N years of data and M data variables. Each combination of a
-      distinct time period and test of data variables is saved its own dataset.
-
-    Examples of when ``auto_combine`` fails:
-
-    * In the above scenario, one file is missing, containing the data for one
-      year's data for one variable.
-    * In the most recent year, there is an additional data variable.
-    * Your data includes "time" and "station" dimensions, and each year's data
-      has a different set of stations.
-
-    Parameters
-    ----------
-    datasets : sequence of xray.Dataset
-        Dataset objects to merge.
-    concat_dim : str or DataArray or Index, optional
-        Dimension along which to concatenate variables, as used by
-        :py:func:`xray.concat`. You only need to provide this argument if the
-        dimension along which you want to concatenate is not a dimension in
-        the original datasets, e.g., if you want to stack a collection of
-        2D arrays along a third dimension.
-
-    Returns
-    -------
-    combined : xray.Dataset
-
-    See also
-    --------
-    concat
-    Dataset.merge
-    """
-    from toolz import itertoolz
-    grouped = itertoolz.groupby(lambda ds: tuple(sorted(ds.data_vars)),
-                                datasets).values()
-    concatenated = [_auto_concat(ds, dim=concat_dim) for ds in grouped]
-    merged = reduce(lambda ds, other: ds.merge(other), concatenated)
-    return merged
-
-
 def broadcast_arrays(*args):
     """Explicitly broadcast any number of DataArrays against one another.
 
@@ -376,6 +240,8 @@ def broadcast_arrays(*args):
     ValueError
         If indexes on the different arrays are not aligned.
     """
+    # TODO: fixme for coordinate arrays
+
     from .dataarray import DataArray
 
     all_indexes = _get_all_indexes(args)

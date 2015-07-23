@@ -1,4 +1,5 @@
-from .core.alignment import align, broadcast_arrays, concat, auto_combine
+from .core.alignment import align, broadcast_arrays
+from .core.combine import concat, auto_combine
 from .core.variable import Variable, Coordinate
 from .core.dataset import Dataset
 from .core.dataarray import DataArray

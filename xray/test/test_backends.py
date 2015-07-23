@@ -661,7 +661,7 @@ class GenericNetCDFDataTest(CFEncodedDataTest, Only32BitTypes, TestCase):
         with self.assertRaisesRegexp(ValueError, 'can only read'):
             open_dataset(BytesIO(netcdf_bytes), engine='foobar')
 
-    def test_cross_engine_read_write(self):
+    def test_cross_engine_read_write_netcdf3(self):
         data = create_test_data()
         valid_engines = set()
         if has_netCDF4:
@@ -699,8 +699,36 @@ class H5NetCDFDataTest(BaseNetCDF4Test, TestCase):
         # doesn't work for h5py (without using dask as an intermediate layer)
         pass
 
+    def test_complex(self):
+        expected = Dataset({'x': ('y', np.ones(5) + 1j * np.ones(5))})
+        with self.roundtrip(expected) as actual:
+            self.assertDatasetEqual(expected, actual)
+
+    def test_cross_engine_read_write_netcdf4(self):
+        # Drop dim3, because its labels include strings. These appear to be
+        # not properly read with python-netCDF4, which converts them into
+        # unicode instead of leaving them as bytes.
+        data = create_test_data().drop('dim3')
+        data.attrs['foo'] = 'bar'
+        valid_engines = ['netcdf4', 'h5netcdf']
+        for write_engine in valid_engines:
+            with create_tmp_file() as tmp_file:
+                data.to_netcdf(tmp_file, engine=write_engine)
+                for read_engine in valid_engines:
+                    with open_dataset(tmp_file, engine=read_engine) as actual:
+                        self.assertDatasetIdentical(data, actual)
+
+    def test_read_byte_attrs_as_unicode(self):
+        with create_tmp_file() as tmp_file:
+            with nc4.Dataset(tmp_file, 'w') as nc:
+                nc.foo = b'bar'
+            actual = open_dataset(tmp_file)
+            expected = Dataset(attrs={'foo': 'bar'})
+            self.assertDatasetIdentical(expected, actual)
+
 
 @requires_dask
+@requires_scipy
 @requires_netCDF4
 class DaskTest(TestCase):
     def test_open_mfdataset(self):
@@ -733,13 +761,16 @@ class DaskTest(TestCase):
     def test_lock(self):
         original = Dataset({'foo': ('x', np.random.randn(10))})
         with create_tmp_file() as tmp:
-            original.to_netcdf(tmp)
+            original.to_netcdf(tmp, format='NETCDF3_CLASSIC')
             with open_dataset(tmp, chunks=10) as ds:
                 task = ds.foo.data.dask[ds.foo.data.name, 0]
                 self.assertIsInstance(task[-1], type(Lock()))
             with open_mfdataset(tmp) as ds:
                 task = ds.foo.data.dask[ds.foo.data.name, 0]
                 self.assertIsInstance(task[-1], type(Lock()))
+            with open_mfdataset(tmp, engine='scipy') as ds:
+                task = ds.foo.data.dask[ds.foo.data.name, 0]
+                self.assertNotIsInstance(task[-1], type(Lock()))
 
     def test_save_mfdataset_roundtrip(self):
         original = Dataset({'foo': ('x', np.random.randn(10))})
