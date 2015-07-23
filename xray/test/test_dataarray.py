@@ -394,7 +394,8 @@ class TestDataArray(TestCase):
         actual = da.isel_points(y=y, x=x, dim='test_coord')
         assert 'test_coord' in actual.coords
         assert actual.coords['test_coord'].shape == (len(y), )
-
+        assert all(x in actual for x in ['time', 'x', 'y', 'test_coord'])
+        assert actual.dims == ('test_coord', 'time')
         actual = da.isel_points(y=y, x=x)
         assert 'points' in actual.coords
         # Note that because xray always concatenates along the first dimension,
@@ -408,6 +409,11 @@ class TestDataArray(TestCase):
             da.isel_points(time=[1], x=[2], y=[4]).values.squeeze(),
             np_array[1, 4, 2].squeeze())
         da.isel_points(time=[1, 2])
+        y = [-1, 0]
+        x = [-2, 2]
+        expected = da.values[:, y, x]
+        actual = da.isel_points(x=x, y=y).values
+        np.testing.assert_equal(actual.T, expected)
 
         # test that the order of the indexers doesn't matter
         self.assertDataArrayIdentical(
@@ -428,6 +434,9 @@ class TestDataArray(TestCase):
         with self.assertRaisesRegexp(ValueError,
                                      'Indexers must be 1 dimensional'):
             da.isel_points(y=1, x=2)
+        with self.assertRaisesRegexp(ValueError,
+                                     'Existing dimensions are not valid'):
+            da.isel_points(y=[1, 2], x=[1, 2], dim='x')
 
     def test_loc(self):
         self.ds['x'] = ('x', np.array(list('abcdefghij')))

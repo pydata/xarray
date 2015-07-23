@@ -1045,7 +1045,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject):
             existing dimension name, in which case the location of the
             dimension is unchanged. If dimension is provided as a DataArray or
             Index, its name is used as the dimension to concatenate along and
-            the values are added as a coordinate.
+            the values are added as a coordinate. Existing dimension names are
+            not valid choices.
         **indexers : {dim: indexer, ...}
             Keyword arguments with names matching dimensions and values given
             by array-like objects. All indexers must be the same length and
@@ -1091,6 +1092,11 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject):
         lengths = set(len(v) for k, v in indexers)
         if len(lengths) > 1:
             raise ValueError('All indexers must be the same length')
+
+        # Existing dimensions are not valid choices for the dim argument
+        if dim in self.dims:
+            raise ValueError('Existing dimensions are not valid choices for '
+                             'the dim argument in sel_points')
 
         # TODO: This would be sped up with vectorized indexing. This will
         # require dask to support pointwise indexing as well.

@@ -695,6 +695,9 @@ class TestDataset(TestCase):
         with self.assertRaisesRegexp(ValueError,
                                      'Indexers must be 1 dimensional'):
             data.isel_points(dim1=1, dim2=2)
+        with self.assertRaisesRegexp(ValueError,
+                                     'Existing dimensions are not valid'):
+            data.isel_points(dim1=[1, 2], dim2=[1, 2], dim='dim2')
         # test to be sure we keep around variables that were not indexed
         ds = Dataset({'x': [1, 2, 3, 4], 'y': 0})
         actual = ds.isel_points(x=[0, 1, 2])
