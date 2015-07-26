@@ -1039,14 +1039,13 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject):
 
         Parameters
         ----------
-        dim : str or DataArray or pandas.Index, optinal
-            Name of the dimension to concatenate along. This can either be a
-            new dimension name, in which case it is added along axis=0, or an
-            existing dimension name, in which case the location of the
-            dimension is unchanged. If dimension is provided as a DataArray or
-            Index, its name is used as the dimension to concatenate along and
-            the values are added as a coordinate. Existing dimension names are
-            not valid choices.
+        dim : str or DataArray or pandas.Index or other list-like object, optinal
+            Name of the dimension to concatenate along. If dim is provided as a
+            string, it must be a new dimension name, in which case it is added
+            along axis=0. If dim is provided as a DataArray or Index or
+            list-like object, its name, which must not be present in the
+            dataset, is used as the dimension to concatenate along and the
+            values are added as a coordinate.
         **indexers : {dim: indexer, ...}
             Keyword arguments with names matching dimensions and values given
             by array-like objects. All indexers must be the same length and
@@ -1094,9 +1093,21 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject):
             raise ValueError('All indexers must be the same length')
 
         # Existing dimensions are not valid choices for the dim argument
-        if dim in self.dims:
-            raise ValueError('Existing dimensions are not valid choices for '
-                             'the dim argument in sel_points')
+        if isinstance(dim, basestring):
+            if dim in self.dims:
+                # dim is an invalid string
+                raise ValueError('Existing dimension names are not valid '
+                                 'choices for the dim argument in sel_points')
+        elif hasattr(dim, 'dims'):
+            # dim is a DataArray or Coordinate
+            if dim.name in self.dims:
+                # dim already exists
+                raise ValueError('Existing dimensions are not valid choices '
+                                 'for the dim argument in sel_points')
+        else:
+            # try to cast dim to DataArray with name = points
+            from .dataarray import DataArray
+            dim = DataArray(dim, dims='points', name='points')
 
         # TODO: This would be sped up with vectorized indexing. This will
         # require dask to support pointwise indexing as well.

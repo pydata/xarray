@@ -435,8 +435,12 @@ class TestDataArray(TestCase):
                                      'Indexers must be 1 dimensional'):
             da.isel_points(y=1, x=2)
         with self.assertRaisesRegexp(ValueError,
-                                     'Existing dimensions are not valid'):
+                                     'Existing dimension names are not'):
             da.isel_points(y=[1, 2], x=[1, 2], dim='x')
+
+        # using non string dims
+        acutal = da.isel_points(y=[1, 2], x=[1, 2], dim=['A', 'B'])
+        assert 'points' in actual.coords
 
     def test_loc(self):
         self.ds['x'] = ('x', np.array(list('abcdefghij')))
