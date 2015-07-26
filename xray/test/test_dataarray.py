@@ -439,7 +439,7 @@ class TestDataArray(TestCase):
             da.isel_points(y=[1, 2], x=[1, 2], dim='x')
 
         # using non string dims
-        acutal = da.isel_points(y=[1, 2], x=[1, 2], dim=['A', 'B'])
+        actual = da.isel_points(y=[1, 2], x=[1, 2], dim=['A', 'B'])
         assert 'points' in actual.coords
 
     def test_loc(self):
