@@ -558,7 +558,6 @@ class DataArray(AbstractArray, BaseDataObject):
         See Also
         --------
         Dataset.isel_points
-        DataArray.sel_points
         """
         ds = self._dataset.isel_points(dim=dim, **indexers)
         return self._with_replaced_dataset(ds)

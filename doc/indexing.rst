@@ -57,7 +57,7 @@ DataArray:
 
     Positional indexing deviates from the NumPy when indexing with multiple
     arrays like ``arr[[0, 1], [0, 1]]``, as described in :ref:`indexing details`.
-    Use :py:meth:`~xray.Dataset.isel_points` to achieve this functionality.
+    See :ref:`pointwise indexing` and :py:meth:`~xray.Dataset.isel_points` for more on this functionality.
 
 xray also supports label-based indexing, just like pandas. Because
 we use a :py:class:`pandas.Index` under the hood, label based indexing is very
@@ -135,8 +135,10 @@ __ http://legacy.python.org/dev/peps/pep-0472/
         # this is safe
         arr[dict(space=0)] = 0
 
+.. _pointwise indexing:
+
 Pointwise indexing
---------------------------------
+------------------
 
 xray pointwise indexing supports the indexing along multiple labeled dimensions
 using list-like objects. While :py:meth:`~xray.DataArray.isel` performs

@@ -1039,7 +1039,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject):
 
         Parameters
         ----------
-        dim : str or DataArray or pandas.Index or other list-like object, optinal
+        dim : str or DataArray or pandas.Index or other list-like object, optional
             Name of the dimension to concatenate along. If dim is provided as a
             string, it must be a new dimension name, in which case it is added
             along axis=0. If dim is provided as a DataArray or Index or
