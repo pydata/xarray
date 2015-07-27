@@ -57,6 +57,7 @@ DataArray:
 
     Positional indexing deviates from the NumPy when indexing with multiple
     arrays like ``arr[[0, 1], [0, 1]]``, as described in :ref:`indexing details`.
+    See :ref:`pointwise indexing` and :py:meth:`~xray.Dataset.isel_points` for more on this functionality.
 
 xray also supports label-based indexing, just like pandas. Because
 we use a :py:class:`pandas.Index` under the hood, label based indexing is very
@@ -122,7 +123,7 @@ __ http://legacy.python.org/dev/peps/pep-0472/
 
 .. warning::
 
-    Do not try to assign values when using ``isel`` or ``sel``::
+    Do not try to assign values when using ``isel``, ``isel_points`` or ``sel``::
 
         # DO NOT do this
         arr.isel(space=0) = 0
@@ -133,6 +134,23 @@ __ http://legacy.python.org/dev/peps/pep-0472/
 
         # this is safe
         arr[dict(space=0)] = 0
+
+.. _pointwise indexing:
+
+Pointwise indexing
+------------------
+
+xray pointwise indexing supports the indexing along multiple labeled dimensions
+using list-like objects. While :py:meth:`~xray.DataArray.isel` performs
+orthogonal indexing, the :py:meth:`~xray.DataArray.isel_points` method
+provides similar numpy indexing behavior as if you were using multiple lists to index an array (e.g. `arr[[0, 1], [0, 1]]` ):
+
+.. ipython:: python
+
+    # index by integer array indices
+    da = xray.DataArray(np.arange(56).reshape((7, 8)), dims=['x', 'y'])
+    da
+    da.isel_points(x=[0, 1, 6], y=[0, 1, 0])
 
 Dataset indexing
 ----------------
@@ -145,12 +163,15 @@ simultaneously, returning a new dataset:
     ds = arr.to_dataset()
     ds.isel(space=[0], time=[0])
     ds.sel(time='2000-01-01')
+    ds2 = da.to_dataset()
+    ds2.isel_points(x=[0, 1, 6], y=[0, 1, 0], dim='points')
 
 Positional indexing on a dataset is not supported because the ordering of
 dimensions in a dataset is somewhat ambiguous (it can vary between different
 arrays). However, you can do normal indexing with labeled dimensions:
 
 .. ipython:: python
+
 
     ds[dict(space=[0], time=[0])]
     ds.loc[dict(time='2000-01-01')]

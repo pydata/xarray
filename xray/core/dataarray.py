@@ -551,6 +551,17 @@ class DataArray(AbstractArray, BaseDataObject):
         return self.isel(**indexing.remap_label_indexers(self, indexers,
                                                          method=method))
 
+    def isel_points(self, dim='points', **indexers):
+        """Return a new DataArray whose dataset is given by pointwise integer
+        indexing along the specified dimension(s).
+
+        See Also
+        --------
+        Dataset.isel_points
+        """
+        ds = self._dataset.isel_points(dim=dim, **indexers)
+        return self._with_replaced_dataset(ds)
+
     def reindex_like(self, other, method=None, copy=True):
         """Conform this object onto the indexes of another object, filling
         in missing values with NaN.

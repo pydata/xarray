@@ -661,6 +661,74 @@ class TestDataset(TestCase):
         self.assertDatasetEqual(data.isel(td=slice(1, 3)),
                                 data.sel(td=slice('1 days', '2 days')))
 
+    def test_isel_points(self):
+        data = create_test_data()
+
+        pdim1 = [1, 2, 3]
+        pdim2 = [4, 5, 1]
+        pdim3 = [1, 2, 3]
+
+        actual = data.isel_points(dim1=pdim1, dim2=pdim2, dim3=pdim3,
+                                  dim='test_coord')
+        assert 'test_coord' in actual.coords
+        assert actual.coords['test_coord'].shape == (len(pdim1), )
+
+        actual = data.isel_points(dim1=pdim1, dim2=pdim2)
+        assert 'points' in actual.coords
+        np.testing.assert_array_equal(pdim1, actual['dim1'])
+
+        # test that the order of the indexers doesn't matter
+        self.assertDatasetIdentical(data.isel_points(dim1=pdim1, dim2=pdim2),
+                                    data.isel_points(dim2=pdim2, dim1=pdim1))
+
+        # make sure we're raising errors in the right places
+        with self.assertRaisesRegexp(ValueError,
+                                     'All indexers must be the same length'):
+            data.isel_points(dim1=[1, 2], dim2=[1, 2, 3])
+        with self.assertRaisesRegexp(ValueError,
+                                     'dimension bad_key does not exist'):
+            data.isel_points(bad_key=[1, 2])
+        with self.assertRaisesRegexp(TypeError, 'Indexers must be integers'):
+            data.isel_points(dim1=[1.5, 2.2])
+        with self.assertRaisesRegexp(TypeError, 'Indexers must be integers'):
+            data.isel_points(dim1=[1, 2, 3], dim2=slice(3))
+        with self.assertRaisesRegexp(ValueError,
+                                     'Indexers must be 1 dimensional'):
+            data.isel_points(dim1=1, dim2=2)
+        with self.assertRaisesRegexp(ValueError,
+                                     'Existing dimension names are not valid'):
+            data.isel_points(dim1=[1, 2], dim2=[1, 2], dim='dim2')
+
+        # test to be sure we keep around variables that were not indexed
+        ds = Dataset({'x': [1, 2, 3, 4], 'y': 0})
+        actual = ds.isel_points(x=[0, 1, 2])
+        self.assertDataArrayIdentical(ds['y'], actual['y'])
+
+        # tests using index or DataArray as a dim
+        stations = Dataset()
+        stations['station'] = ('station', ['A', 'B', 'C'])
+        stations['dim1s'] = ('station', [1, 2, 3])
+        stations['dim2s'] = ('station', [4, 5, 1])
+
+        actual = data.isel_points(dim1=stations['dim1s'],
+                                  dim2=stations['dim2s'],
+                                  dim=stations['station'])
+        assert 'station' in actual.coords
+        assert 'station' in actual.dims
+        self.assertDataArrayIdentical(actual['station'].drop(['dim1', 'dim2']),
+                                      stations['station'])
+
+        # make sure we get the default points coordinate when a list is passed
+        actual = data.isel_points(dim1=stations['dim1s'],
+                                  dim2=stations['dim2s'],
+                                  dim=['A', 'B', 'C'])
+        assert 'points' in actual.coords
+
+        # can pass a numpy array
+        data.isel_points(dim1=stations['dim1s'],
+                         dim2=stations['dim2s'],
+                         dim=np.array([4, 5, 6]))
+
     def test_sel_method(self):
         data = create_test_data()
 
