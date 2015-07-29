@@ -202,6 +202,61 @@ def _update_axes_limits(ax, xincrease, yincrease):
         ax.set_ylim(sorted(ax.get_ylim(), reverse=True))
 
 
+def _determine_cmap_params(plot_data, vmin=None, vmax=None, cmap=None,
+                           center=None, robust=False, extend=None):
+    """
+    Use some heuristics to set good defaults for colorbar and range.
+
+    Adapted from Seaborn:
+    https://github.com/mwaskom/seaborn/blob/v0.6/seaborn/matrix.py#L158
+    """
+    calc_data = plot_data[~pd.isnull(plot_data)]
+    if vmin is None:
+        vmin = np.percentile(calc_data, 2) if robust else calc_data.min()
+    if vmax is None:
+        vmax = np.percentile(calc_data, 98) if robust else calc_data.max()
+
+    # Simple heuristics for whether these data should  have a divergent map
+    divergent = ((vmin < 0) and (vmax > 0)) or center is not None
+
+    # Now set center to 0 so math below makes sense
+    if center is None:
+        center = 0
+
+    # A divergent map should be symmetric around the center value
+    if divergent:
+        vlim = max(abs(vmin - center), abs(vmax - center))
+        vmin, vmax = -vlim, vlim
+
+    # Now add in the centering value and set the limits
+    vmin += center
+    vmax += center
+
+    # Choose default colormaps if not provided
+    if cmap is None:
+        if divergent:
+            cmap = "RdBu_r"
+        else:
+            cmap = "viridis"
+
+    if cmap == "viridis":
+        cmap = _load_default_cmap()
+
+    if extend is None:
+        extend_min = calc_data.min() < vmin
+        extend_max = calc_data.max() > vmax
+        if extend_min and extend_max:
+            extend = 'both'
+        elif extend_min:
+            extend = 'min'
+        elif extend_max:
+            extend = 'max'
+        else:
+            extend = 'neither'
+
+    return vmin, vmax, cmap, extend
+
+
 def _plot2d(plotfunc):
     """
     Decorator for common 2d plotting logic.
@@ -221,6 +276,23 @@ def _plot2d(plotfunc):
         if None, use the default for the matplotlib function
     add_colorbar : Boolean, optional
         Adds colorbar to axis
+    vmin, vmax : floats, optional
+        Values to anchor the colormap, otherwise they are inferred from the
+        data and other keyword arguments. When a diverging dataset is inferred,
+        one of these values may be ignored.
+    cmap : matplotlib colormap name or object, optional
+        The mapping from data values to color space. If not provided, this
+        will be either be ``viridis`` (if the function infers a sequential
+        dataset) or ``RdBu_r`` (if the function infers a diverging dataset).
+    center : float, optional
+        The value at which to center the colormap. Passing this value implies
+        use of a diverging colormap.
+    robust : bool, optional
+        If True and ``vmin`` or ``vmax`` are absent, the colormap range is
+        computed with robust quantiles instead of the extreme values.
+    extend : {'neither', 'both', 'min', 'max'}, optional
+        How to draw arrows extending the colorbar beyond its limits. If not
+        provided, extend is inferred from vmin, vmax and the data limits.
     **kwargs : optional
         Additional arguments to wrapped matplotlib function
 
@@ -236,7 +308,8 @@ def _plot2d(plotfunc):
 
     @functools.wraps(plotfunc)
     def wrapper(darray, ax=None, xincrease=None, yincrease=None,
-                add_colorbar=True, **kwargs):
+                add_colorbar=True, vmin=None, vmax=None, cmap=None,
+                center=None, robust=False, extend=None, **kwargs):
         # All 2d plots in xray share this function signature
 
         import matplotlib.pyplot as plt
@@ -258,15 +331,23 @@ def _plot2d(plotfunc):
 
         _ensure_plottable(x, y)
 
-        cmap = kwargs.pop('cmap', _load_default_cmap())
+        vmin, vmax, cmap, extend = _determine_cmap_params(
+            z.data, vmin, vmax, cmap, center, robust, extend)
 
-        ax, primitive = plotfunc(x, y, z, ax=ax, cmap=cmap, **kwargs)
+        if 'contour' in plotfunc.__name__:
+            # extend is a keyword argument only for contour and contourf, but
+            # passing it to the colorbar is sufficient for imshow and
+            # pcolormesh
+            kwargs['extend'] = extend
+
+        ax, primitive = plotfunc(x, y, z, ax=ax, cmap=cmap, vmin=vmin,
+                                 vmax=vmax, **kwargs)
 
         ax.set_xlabel(xlab)
         ax.set_ylabel(ylab)
 
         if add_colorbar:
-            plt.colorbar(primitive, ax=ax)
+            plt.colorbar(primitive, ax=ax, extend=extend)
 
         _update_axes_limits(ax, xincrease, yincrease)
 
