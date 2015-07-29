@@ -2,8 +2,7 @@ import numpy as np
 import pandas as pd
 
 from xray import DataArray
-from xray.plotting import (plot_imshow, plot_contourf, plot_contour,
-                           plot_pcolormesh, _infer_interval_breaks)
+import xray.plotting as xplt
 
 from . import TestCase, requires_matplotlib
 
@@ -92,31 +91,31 @@ class TestPlot1D(PlotTestCase):
     def test_wrong_dims_raises_valueerror(self):
         twodims = DataArray(np.arange(10).reshape(2, 5))
         with self.assertRaises(ValueError):
-            twodims.plot_line()
+            twodims.plot.line()
 
     def test_format_string(self):
-        self.darray.plot_line('ro')
+        self.darray.plot.line('ro')
 
     def test_can_pass_in_axis(self):
-        self.pass_in_axis(self.darray.plot_line)
+        self.pass_in_axis(self.darray.plot.line)
 
     def test_nonnumeric_index_raises_typeerror(self):
         a = DataArray([1, 2, 3], {'letter': ['a', 'b', 'c']})
         with self.assertRaisesRegexp(TypeError, r'[Pp]lot'):
-            a.plot_line()
+            a.plot.line()
 
     def test_primitive_returned(self):
-        p = self.darray.plot_line()
+        p = self.darray.plot.line()
         self.assertTrue(isinstance(p[0], mpl.lines.Line2D))
 
     def test_plot_nans(self):
         self.darray[1] = np.nan
-        self.darray.plot_line()
+        self.darray.plot.line()
 
     def test_x_ticks_are_rotated_for_time(self):
         time = pd.date_range('2000-01-01', '2000-01-10')
         a = DataArray(np.arange(len(time)), {'t': time})
-        a.plot_line()
+        a.plot.line()
         rotation = plt.gca().get_xticklabels()[0].get_rotation()
         self.assertFalse(rotation == 0)
 
@@ -127,36 +126,36 @@ class TestPlotHistogram(PlotTestCase):
         self.darray = DataArray(np.random.randn(2, 3, 4))
 
     def test_3d_array(self):
-        self.darray.plot_hist()
+        self.darray.plot.hist()
 
     def test_title_no_name(self):
-        self.darray.plot_hist()
+        self.darray.plot.hist()
         self.assertEqual('', plt.gca().get_title())
 
     def test_title_uses_name(self):
         self.darray.name = 'randompoints'
-        self.darray.plot_hist()
+        self.darray.plot.hist()
         self.assertIn(self.darray.name, plt.gca().get_title())
 
     def test_ylabel_is_count(self):
-        self.darray.plot_hist()
+        self.darray.plot.hist()
         self.assertEqual('Count', plt.gca().get_ylabel())
 
     def test_can_pass_in_kwargs(self):
         nbins = 5
-        self.darray.plot_hist(bins=nbins)
+        self.darray.plot.hist(bins=nbins)
         self.assertEqual(nbins, len(plt.gca().patches))
 
     def test_can_pass_in_axis(self):
-        self.pass_in_axis(self.darray.plot_hist)
+        self.pass_in_axis(self.darray.plot.hist)
 
     def test_primitive_returned(self):
-        h = self.darray.plot_hist()
+        h = self.darray.plot.hist()
         self.assertTrue(isinstance(h[-1][0], mpl.patches.Rectangle))
 
     def test_plot_nans(self):
         self.darray[0, 0, 0] = np.nan
-        self.darray.plot_hist()
+        self.darray.plot.hist()
 
 
 class Common2dMixin:
@@ -169,7 +168,7 @@ class Common2dMixin:
     def setUp(self):
         rs = np.random.RandomState(123)
         self.darray = DataArray(rs.randn(10, 15), dims=['y', 'x'])
-        self.plotmethod = getattr(self.darray, self.plotfunc.__name__)
+        self.plotmethod = getattr(self.darray.plot, self.plotfunc.__name__)
 
     def test_label_names(self):
         self.plotmethod()
@@ -225,12 +224,12 @@ class Common2dMixin:
 
 class TestContourf(Common2dMixin, PlotTestCase):
 
-    plotfunc = staticmethod(plot_contourf)
+    plotfunc = staticmethod(xplt.contourf)
 
     def test_contourf_called(self):
         # Having both statements ensures the test works properly
-        self.assertFalse(self.contourf_called(self.darray.plot_imshow))
-        self.assertTrue(self.contourf_called(self.darray.plot_contourf))
+        self.assertFalse(self.contourf_called(self.darray.plot.imshow))
+        self.assertTrue(self.contourf_called(self.darray.plot.contourf))
 
     def test_primitive_artist_returned(self):
         artist = self.plotmethod()
@@ -239,12 +238,12 @@ class TestContourf(Common2dMixin, PlotTestCase):
 
 class TestContour(Common2dMixin, PlotTestCase):
 
-    plotfunc = staticmethod(plot_contour)
+    plotfunc = staticmethod(xplt.contour)
 
 
 class TestPcolormesh(Common2dMixin, PlotTestCase):
 
-    plotfunc = staticmethod(plot_pcolormesh)
+    plotfunc = staticmethod(xplt.pcolormesh)
 
     def test_primitive_artist_returned(self):
         artist = self.plotmethod()
@@ -257,24 +256,24 @@ class TestPcolormesh(Common2dMixin, PlotTestCase):
 
 class TestImshow(Common2dMixin, PlotTestCase):
 
-    plotfunc = staticmethod(plot_imshow)
+    plotfunc = staticmethod(xplt.imshow)
 
     def test_imshow_called(self):
         # Having both statements ensures the test works properly
-        self.assertFalse(self.imshow_called(self.darray.plot_contourf))
-        self.assertTrue(self.imshow_called(self.darray.plot_imshow))
+        self.assertFalse(self.imshow_called(self.darray.plot.contourf))
+        self.assertTrue(self.imshow_called(self.darray.plot.imshow))
 
     def test_xy_pixel_centered(self):
-        self.darray.plot_imshow()
+        self.darray.plot.imshow()
         self.assertTrue(np.allclose([-0.5, 14.5], plt.gca().get_xlim()))
         self.assertTrue(np.allclose([9.5, -0.5], plt.gca().get_ylim()))
 
     def test_default_aspect_is_auto(self):
-        self.darray.plot_imshow()
+        self.darray.plot.imshow()
         self.assertEqual('auto', plt.gca().get_aspect())
 
     def test_can_change_aspect(self):
-        self.darray.plot_imshow(aspect='equal')
+        self.darray.plot.imshow(aspect='equal')
         self.assertEqual('equal', plt.gca().get_aspect())
 
     def test_primitive_artist_returned(self):

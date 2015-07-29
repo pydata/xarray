@@ -61,10 +61,10 @@ def plot(darray, ax=None, rtol=0.01, **kwargs):
     =============== =========== ===========================
     Dimensions      Coordinates Plotting function
     --------------- ----------- ---------------------------
-    1                           :py:meth:`xray.DataArray.plot_line`
-    2               Uniform     :py:meth:`xray.DataArray.plot_imshow`
-    2               Irregular   :py:meth:`xray.DataArray.plot_contourf`
-    Anything else               :py:meth:`xray.DataArray.plot_hist`
+    1                           :py:meth:`xray.DataArray.line`
+    2               Uniform     :py:meth:`xray.DataArray.imshow`
+    2               Irregular   :py:meth:`xray.DataArray.contourf`
+    Anything else               :py:meth:`xray.DataArray.hist`
     =============== =========== ===========================
 
     Parameters
@@ -82,15 +82,15 @@ def plot(darray, ax=None, rtol=0.01, **kwargs):
     ndims = len(darray.dims)
 
     if ndims == 1:
-        plotfunc = plot_line
+        plotfunc = line
     elif ndims == 2:
         indexes = darray.indexes.values()
         if all(is_uniform_spaced(i, rtol=rtol) for i in indexes):
-            plotfunc = plot_imshow
+            plotfunc = imshow
         else:
-            plotfunc = plot_contourf
+            plotfunc = contourf
     else:
-        plotfunc = plot_hist
+        plotfunc = hist
 
     kwargs['ax'] = ax
     return plotfunc(darray, **kwargs)
@@ -98,7 +98,7 @@ def plot(darray, ax=None, rtol=0.01, **kwargs):
 
 # This function signature should not change so that it can use
 # matplotlib format strings
-def plot_line(darray, *args, **kwargs):
+def line(darray, *args, **kwargs):
     """
     Line plot of 1 dimensional DataArray index against values
 
@@ -146,7 +146,7 @@ def plot_line(darray, *args, **kwargs):
     return primitive
 
 
-def plot_hist(darray, ax=None, **kwargs):
+def hist(darray, ax=None, **kwargs):
     """
     Histogram of DataArray
 
@@ -202,6 +202,9 @@ def _update_axes_limits(ax, xincrease, yincrease):
         ax.set_ylim(sorted(ax.get_ylim(), reverse=True))
 
 
+# Decorator will fill this list
+_plot2dlist = []
+
 def _plot2d(plotfunc):
     """
     Decorator for common 2d plotting logic.
@@ -233,6 +236,9 @@ def _plot2d(plotfunc):
 
     # Build on the original docstring
     plotfunc.__doc__ = '\n'.join((plotfunc.__doc__, commondoc))
+
+    # global list of 2d plotting functions
+    _plot2dlist.append(plotfunc)
 
     @functools.wraps(plotfunc)
     def wrapper(darray, ax=None, xincrease=None, yincrease=None,
@@ -275,7 +281,7 @@ def _plot2d(plotfunc):
 
 
 @_plot2d
-def plot_imshow(x, y, z, ax, **kwargs):
+def imshow(x, y, z, ax, **kwargs):
     """
     Image plot of 2d DataArray using matplotlib / pylab
 
@@ -309,7 +315,7 @@ def plot_imshow(x, y, z, ax, **kwargs):
 
 
 @_plot2d
-def plot_contour(x, y, z, ax, **kwargs):
+def contour(x, y, z, ax, **kwargs):
     """
     Contour plot of 2d DataArray
 
@@ -320,7 +326,7 @@ def plot_contour(x, y, z, ax, **kwargs):
 
 
 @_plot2d
-def plot_contourf(x, y, z, ax, **kwargs):
+def contourf(x, y, z, ax, **kwargs):
     """
     Filled contour plot of 2d DataArray
 
@@ -343,7 +349,7 @@ def _infer_interval_breaks(coord):
 
 
 @_plot2d
-def plot_pcolormesh(x, y, z, ax, **kwargs):
+def pcolormesh(x, y, z, ax, **kwargs):
     """
     Pseudocolor plot of 2d DataArray
 
@@ -360,3 +366,35 @@ def plot_pcolormesh(x, y, z, ax, **kwargs):
     ax.set_ylim(y[0], y[-1])
 
     return ax, primitive
+
+
+class _PlotMethods(object):
+    '''
+    Plotmethods class
+    '''
+
+    def __init__(self, DataArray_instance):
+        self._da = DataArray_instance
+        for f in _plot2dlist:
+            setattr(self, f.__name__, self._2dplot(f))
+
+    def __call__(self, *args, **kwargs):
+        return plot(self._da, *args, **kwargs)
+
+    def _2dplot(self, plotfunc):
+        @functools.wraps(plotfunc)
+        def inner(cmap='blue'):
+            return plotfunc(self._da, cmap=cmap)
+        return inner
+
+    @functools.wraps(hist)
+    def hist(self, ax=None, **kwargs):
+        return hist(self._da, ax=None, **kwargs)
+
+    @functools.wraps(line)
+    def line(self, *args, **kwargs):
+        return line(self._da, *args, **kwargs)
+
+    @functools.wraps(plot)
+    def plot(darray, ax=None, rtol=0.01, **kwargs):
+        return plot(self._da, ax=ax, rtol=rtol, **kwargs)

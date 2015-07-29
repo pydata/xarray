@@ -4,7 +4,7 @@ import warnings
 
 import pandas as pd
 
-from .. import plotting
+from ..plotting import _PlotMethods
 
 from . import indexing
 from . import groupby
@@ -1063,12 +1063,21 @@ class DataArray(AbstractArray, BaseDataObject):
             return self
         return func
 
+    @property
+    def plot(self):
+        '''
+        Access plot methods with this, or just call it
+        '''
+        return _PlotMethods(self)
+
 
 # Add plotting methods
 # Alternatively these could be added using a Mixin
+'''
 for name in ('plot', 'plot_line', 'plot_contourf', 'plot_contour',
              'plot_hist', 'plot_imshow', 'plot_pcolormesh'):
     setattr(DataArray, name, getattr(plotting, name))
+'''
 
 
 # priority most be higher than Variable to properly work with binary ufuncs

@@ -1,3 +1,3 @@
-from .plotting import (plot, plot_line, plot_contourf, plot_contour,
-                       plot_hist, plot_imshow, plot_pcolormesh,
-                       _infer_interval_breaks)
+from .plotting import (plot, line, contourf, contour,
+                       hist, imshow, pcolormesh,
+                       _infer_interval_breaks, _PlotMethods)
