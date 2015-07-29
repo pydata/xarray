@@ -202,7 +202,8 @@ def _update_axes_limits(ax, xincrease, yincrease):
         ax.set_ylim(sorted(ax.get_ylim(), reverse=True))
 
 
-def _determine_cmap_params(plot_data, vmin, vmax, cmap, center, robust):
+def _determine_cmap_params(plot_data, vmin=None, vmax=None, cmap=None,
+                           center=None, robust=False, extend=None):
     """
     Use some heuristics to set good defaults for colorbar and range.
 
@@ -241,7 +242,19 @@ def _determine_cmap_params(plot_data, vmin, vmax, cmap, center, robust):
     if cmap == "viridis":
         cmap = _load_default_cmap()
 
-    return vmin, vmax, cmap
+    if extend is None:
+        extend_min = calc_data.min() < vmin
+        extend_max = calc_data.max() > vmax
+        if extend_min and extend_max:
+            extend = 'both'
+        elif extend_min:
+            extend = 'min'
+        elif extend_max:
+            extend = 'max'
+        else:
+            extend = 'neither'
+
+    return vmin, vmax, cmap, extend
 
 
 def _plot2d(plotfunc):
@@ -277,6 +290,9 @@ def _plot2d(plotfunc):
     robust : bool, optional
         If True and ``vmin`` or ``vmax`` are absent, the colormap range is
         computed with robust quantiles instead of the extreme values.
+    extend : {'neither', 'both', 'min', 'max'}, optional
+        How to draw arrows extending the colorbar beyond its limits. If not
+        provided, extend is inferred from vmin, vmax and the data limits.
     **kwargs : optional
         Additional arguments to wrapped matplotlib function
 
@@ -293,7 +309,7 @@ def _plot2d(plotfunc):
     @functools.wraps(plotfunc)
     def wrapper(darray, ax=None, xincrease=None, yincrease=None,
                 add_colorbar=True, vmin=None, vmax=None, cmap=None,
-                center=None, robust=False, **kwargs):
+                center=None, robust=False, extend=None, **kwargs):
         # All 2d plots in xray share this function signature
 
         import matplotlib.pyplot as plt
@@ -315,8 +331,14 @@ def _plot2d(plotfunc):
 
         _ensure_plottable(x, y)
 
-        vmin, vmax, cmap = _determine_cmap_params(z.data, vmin, vmax, cmap,
-                                                  center, robust)
+        vmin, vmax, cmap, extend = _determine_cmap_params(
+            z.data, vmin, vmax, cmap, center, robust, extend)
+
+        if 'contour' in plotfunc.__name__:
+            # extend is a keyword argument only for contour and contourf, but
+            # passing it to the colorbar is sufficient for imshow and
+            # pcolormesh
+            kwargs['extend'] = extend
 
         ax, primitive = plotfunc(x, y, z, ax=ax, cmap=cmap, vmin=vmin,
                                  vmax=vmax, **kwargs)
@@ -325,7 +347,7 @@ def _plot2d(plotfunc):
         ax.set_ylabel(ylab)
 
         if add_colorbar:
-            plt.colorbar(primitive, ax=ax)
+            plt.colorbar(primitive, ax=ax, extend=extend)
 
         _update_axes_limits(ax, xincrease, yincrease)
 

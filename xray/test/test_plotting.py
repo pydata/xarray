@@ -165,18 +165,18 @@ class TestPlotHistogram(PlotTestCase):
 class TestDetermineCmapParams(TestCase):
     def test_robust(self):
         data = np.random.RandomState(1).rand(100)
-        vmin, vmax, cmap = _determine_cmap_params(
-            data, vmin=None, vmax=None, cmap=None, center=None, robust=True)
+        vmin, vmax, cmap, extend = _determine_cmap_params(data, robust=True)
         self.assertEqual(vmin, np.percentile(data, 2))
         self.assertEqual(vmax, np.percentile(data, 98))
         self.assertEqual(cmap.name, 'viridis')
+        self.assertEqual(extend, 'both')
 
     def test_center(self):
         data = np.random.RandomState(2).rand(100)
-        vmin, vmax, cmap = _determine_cmap_params(
-            data, vmin=None, vmax=None, cmap=None, center=0.5, robust=False)
+        vmin, vmax, cmap, extend = _determine_cmap_params(data, center=0.5)
         self.assertEqual(vmax - 0.5, 0.5 - vmin)
         self.assertEqual(cmap, 'RdBu_r')
+        self.assertEqual(extend, 'neither')
 
 
 class Common2dMixin:
@@ -270,6 +270,19 @@ class TestContourf(Common2dMixin, PlotTestCase):
     def test_primitive_artist_returned(self):
         artist = self.plotmethod()
         self.assertTrue(isinstance(artist, mpl.contour.QuadContourSet))
+
+    def test_extend(self):
+        artist = self.plotmethod()
+        self.assertEqual(artist.extend, 'neither')
+
+        artist = self.plotmethod(robust=True)
+        self.assertEqual(artist.extend, 'both')
+
+        artist = self.plotmethod(vmin=-0, vmax=10)
+        self.assertEqual(artist.extend, 'min')
+
+        artist = self.plotmethod(vmin=-10, vmax=0)
+        self.assertEqual(artist.extend, 'max')
 
 
 class TestContour(Common2dMixin, PlotTestCase):
