@@ -395,10 +395,10 @@ Plotting
 .. autosummary::
    :toctree: generated/
 
-   plotting.plot
-   plotting.contourf
-   plotting.contour
-   plotting.hist
-   plotting.imshow
-   plotting.line
-   plotting.pcolormesh
+   plot.plot
+   plot.contourf
+   plot.contour
+   plot.hist
+   plot.imshow
+   plot.line
+   plot.pcolormesh

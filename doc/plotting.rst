@@ -6,13 +6,14 @@ Introduction
 
 The goal of xray's plotting is to make exploratory plotting quick
 and easy by using metadata from :py:class:`xray.DataArray` objects to add
-informative labels.
+informative labels. To plot :py:class:`xray.Dataset` objects 
+simply select the relevant DataArrays, ie ``dset['var1']``.
 
 Xray plotting functionality is a thin wrapper around the popular
 `matplotlib <http://matplotlib.org/>`_ library.
 Matplotlib syntax and function names were copied as much as possible, which
 makes for an easy transition between the two.
-Matplotlib must be installed and working before plotting with xray.
+Matplotlib must be installed before xray can plot.
 
 For more extensive plotting applications consider the following projects:
 
@@ -66,7 +67,7 @@ Additional Arguments
 
 Additional arguments are passed directly to the matplotlib function which
 does the work.
-For example, :py:meth:`xray.DataArray.plot.line` calls 
+For example, :py:func:`xray.plot.line` calls 
 matplotlib.pyplot.plot_ passing in the index and the array values as x and y, respectively.
 So to make a line plot with blue triangles a matplotlib format string
 can be used:
@@ -110,7 +111,7 @@ axes created by ``plt.subplots``.
     @savefig plotting_example_existing_axes.png width=6in
     plt.show()
 
-On the right is a histogram created by :py:meth:`xray.DataArray.plot.hist`.
+On the right is a histogram created by :py:func:`xray.plot.hist`.
 
 Time Series
 ~~~~~~~~~~~
@@ -138,7 +139,7 @@ Simple Example
 
 The default method :py:meth:`xray.DataArray.plot` sees that the data is
 2 dimensional. If the coordinates are uniformly spaced then it
-calls :py:function:`xray.plotting.imshow`.
+calls :py:function:`xray.plot.imshow`.
 
 .. ipython:: python
 
@@ -234,7 +235,7 @@ Nonuniform Coordinates
 
 It's not necessary for the coordinates to be evenly spaced. If not, then
 :py:meth:`xray.DataArray.plot` produces a filled contour plot by calling
-:py:meth:`xray.DataArray.plot.contourf`. This example demonstrates that by
+:py:func:`xray.plot.contourf`. This example demonstrates that by
 using one coordinate with logarithmic spacing.
 
 .. ipython:: python
@@ -296,7 +297,7 @@ Colormaps
 ~~~~~~~~~
 
 Suppose we want two plots to share the same color scale. This can be
-achieved by passing in the appropriate arguments and adding the color bar
+achieved by passing in axes and adding the color bar
 later.
 
 .. ipython:: python
@@ -347,9 +348,9 @@ Details
 There are two ways to use the xray plotting functionality:
 
 1. Use the ``plot`` convenience methods of :py:class:`xray.DataArray`
-2. Directly from the xray plotting submodule::
+2. Directly from the xray plot submodule::
 
-    import xray.plotting as xplt
+    import xray.plot as xplt
 
 The convenience method :py:meth:`xray.DataArray.plot` dispatches to an appropriate
 plotting function based on the dimensions of the ``DataArray`` and whether
@@ -359,8 +360,8 @@ describes what gets plotted:
 =============== =========== ===========================
 Dimensions      Coordinates Plotting function
 --------------- ----------- ---------------------------
-1                           :py:meth:`xray.DataArray.plot.line`
-2               Uniform     :py:meth:`xray.DataArray.plot.imshow`
-2               Irregular   :py:meth:`xray.DataArray.plot.contourf`
-Anything else               :py:meth:`xray.DataArray.plot.hist`
+1                           :py:func:`xray.plot.line`
+2               Uniform     :py:func:`xray.plot.imshow`
+2               Irregular   :py:func:`xray.plot.contourf`
+Anything else               :py:func:`xray.plot.hist`
 =============== =========== ===========================

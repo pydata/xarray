@@ -4,7 +4,7 @@ import warnings
 
 import pandas as pd
 
-from ..plotting.plotting import _PlotMethods
+from ..plot.plot import _PlotMethods
 
 from . import indexing
 from . import groupby

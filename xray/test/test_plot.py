@@ -3,9 +3,9 @@ import pandas as pd
 
 from xray import DataArray
 
-import xray.plotting as xplt
-from xray.plotting.plotting import (_infer_interval_breaks,
-                                    _determine_cmap_params)
+import xray.plot as xplt
+from xray.plot.plot import (_infer_interval_breaks,
+                            _determine_cmap_params)
 
 from . import TestCase, requires_matplotlib
 

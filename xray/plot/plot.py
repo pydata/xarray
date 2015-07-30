@@ -1,6 +1,9 @@
 """
-Plotting functions are implemented here and also monkeypatched into
-the DataArray class
+Use this module directly:
+    import xray.plot as xplt
+
+Or use the methods on a DataArray:
+    DataArray.plot._____
 """
 
 import pkg_resources
@@ -257,9 +260,34 @@ def _determine_cmap_params(plot_data, vmin=None, vmax=None, cmap=None,
     return vmin, vmax, cmap, extend
 
 
+# MUST run before any 2d plotting functions are defined since
+# _plot2d decorator adds them as methods here.
+class _PlotMethods(object):
+    '''
+    Enables use of xray.plot functions as attributes on a DataArray.
+    For example, DataArray.plot.imshow
+    '''
+
+    def __init__(self, DataArray_instance):
+        self._da = DataArray_instance
+
+    def __call__(self, ax=None, rtol=0.01, **kwargs):
+        return plot(self._da, ax=ax, rtol=rtol, **kwargs)
+
+    @functools.wraps(hist)
+    def hist(self, ax=None, **kwargs):
+        return hist(self._da, ax=ax, **kwargs)
+
+    @functools.wraps(line)
+    def line(self, *args, **kwargs):
+        return line(self._da, *args, **kwargs)
+
+
 def _plot2d(plotfunc):
     """
-    Decorator for common 2d plotting logic.
+    Decorator for common 2d plotting logic
+
+    Also adds the 2d plot method to class _PlotMethods
     """
     commondoc = '''
     Parameters
@@ -307,10 +335,11 @@ def _plot2d(plotfunc):
     plotfunc.__doc__ = '\n'.join((plotfunc.__doc__, commondoc))
 
     @functools.wraps(plotfunc)
-    def wrapper(darray, ax=None, xincrease=None, yincrease=None,
-                add_colorbar=True, vmin=None, vmax=None, cmap=None,
-                center=None, robust=False, extend=None, **kwargs):
-        # All 2d plots in xray share this function signature
+    def newplotfunc(darray, ax=None, xincrease=None, yincrease=None,
+                    add_colorbar=True, vmin=None, vmax=None, cmap=None,
+                    center=None, robust=False, extend=None, **kwargs):
+        # All 2d plots in xray share this function signature.
+        # Method signature below should be consistent.
 
         import matplotlib.pyplot as plt
 
@@ -352,7 +381,22 @@ def _plot2d(plotfunc):
         _update_axes_limits(ax, xincrease, yincrease)
 
         return primitive
-    return wrapper
+
+    # For use as DataArray.plot.plotmethod
+    @functools.wraps(newplotfunc)
+    def plotmethod(_PlotMethods_obj, ax=None, xincrease=None, yincrease=None,
+                   add_colorbar=True, vmin=None, vmax=None, cmap=None,
+                   center=None, robust=False, extend=None, **kwargs):
+        return newplotfunc(_PlotMethods_obj._da, ax=ax, xincrease=xincrease,
+                           yincrease=yincrease, add_colorbar=add_colorbar,
+                           vmin=vmin, vmax=vmax, cmap=cmap,
+                           center=center, robust=robust, extend=extend,
+                           **kwargs)
+
+    # Add to class _PlotMethods
+    setattr(_PlotMethods, plotmethod.__name__, plotmethod)
+
+    return newplotfunc
 
 
 @_plot2d
@@ -441,69 +485,3 @@ def pcolormesh(x, y, z, ax, **kwargs):
     ax.set_ylim(y[0], y[-1])
 
     return ax, primitive
-
-
-class _PlotMethods(object):
-    '''
-    Plotmethods class
-    '''
-
-    # Basically this is a bunch of hacking to put in the dataarray as the
-    # first arg.
-
-    def __init__(self, DataArray_instance):
-        self._da = DataArray_instance
-        #for f in _plot2dlist:
-        #    setattr(self, f.__name__, self._2dplot(f))
-
-    def __call__(self, *args, **kwargs):
-        return plot(self._da, *args, **kwargs)
-
-    def _2dplot(self, plotfunc):
-        @functools.wraps(plotfunc)
-        def inner(self, ax=None, xincrease=None, yincrease=None,
-                  add_colorbar=True, **kwargs):
-            return plotfunc(self._da, ax=ax, xincrease=xincrease,
-                    yincrease=yincrease, add_colorbar=add_colorbar,
-                    **kwargs)
-        return inner
-
-    @functools.wraps(hist)
-    def hist(self, ax=None, **kwargs):
-        return hist(self._da, ax=ax, **kwargs)
-
-    @functools.wraps(line)
-    def line(self, *args, **kwargs):
-        return line(self._da, *args, **kwargs)
-
-    @functools.wraps(plot)
-    def plot(darray, ax=None, rtol=0.01, **kwargs):
-        return plot(self._da, ax=ax, rtol=rtol, **kwargs)
-
-    @functools.wraps(contour)
-    def contour(self, ax=None, xincrease=None, yincrease=None,
-              add_colorbar=True, **kwargs):
-        return contour(self._da, ax=ax, xincrease=xincrease,
-                    yincrease=yincrease, add_colorbar=add_colorbar,
-                    **kwargs)
-
-    @functools.wraps(contourf)
-    def contourf(self, ax=None, xincrease=None, yincrease=None,
-              add_colorbar=True, **kwargs):
-        return contourf(self._da, ax=ax, xincrease=xincrease,
-                    yincrease=yincrease, add_colorbar=add_colorbar,
-                    **kwargs)
-
-    @functools.wraps(imshow)
-    def imshow(self, ax=None, xincrease=None, yincrease=None,
-              add_colorbar=True, **kwargs):
-        return imshow(self._da, ax=ax, xincrease=xincrease,
-                    yincrease=yincrease, add_colorbar=add_colorbar,
-                    **kwargs)
-
-    @functools.wraps(pcolormesh)
-    def pcolormesh(self, ax=None, xincrease=None, yincrease=None,
-              add_colorbar=True, **kwargs):
-        return pcolormesh(self._da, ax=ax, xincrease=xincrease,
-                    yincrease=yincrease, add_colorbar=add_colorbar,
-                    **kwargs)
