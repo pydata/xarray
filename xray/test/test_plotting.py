@@ -62,11 +62,11 @@ class TestPlot(PlotTestCase):
         self.pass_in_axis(self.darray.plot)
 
     def test__infer_interval_breaks(self):
-        self.assertArrayEqual([-0.5, 0.5, 1.5], _infer_interval_breaks([0, 1]))
+        self.assertArrayEqual([-0.5, 0.5, 1.5], xplt._infer_interval_breaks([0, 1]))
         self.assertArrayEqual([-0.5, 0.5, 5.0, 9.5, 10.5],
-                              _infer_interval_breaks([0, 1, 9, 10]))
+                              xplt._infer_interval_breaks([0, 1, 9, 10]))
         self.assertArrayEqual(pd.date_range('20000101', periods=4) - np.timedelta64(12, 'h'),
-                              _infer_interval_breaks(pd.date_range('20000101', periods=3)))
+                              xplt._infer_interval_breaks(pd.date_range('20000101', periods=3)))
 
 
 class TestPlot1D(PlotTestCase):

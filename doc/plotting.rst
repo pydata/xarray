@@ -66,7 +66,7 @@ Additional Arguments
 
 Additional arguments are passed directly to the matplotlib function which
 does the work.
-For example, :py:meth:`xray.DataArray.plot_line` calls 
+For example, :py:meth:`xray.DataArray.plot.line` calls 
 matplotlib.pyplot.plot_ passing in the index and the array values as x and y, respectively.
 So to make a line plot with blue triangles a matplotlib format string
 can be used:
@@ -76,7 +76,7 @@ can be used:
 .. ipython:: python
 
     @savefig plotting_example_sin2.png width=4in
-    sinpts.plot_line('b-^')
+    sinpts.plot.line('b-^')
 
 .. warning::
     Not all xray plotting methods support passing positional arguments
@@ -88,7 +88,7 @@ Keyword arguments work the same way, and are more explicit.
 .. ipython:: python
 
     @savefig plotting_example_sin3.png width=4in
-    sinpts.plot_line(color='purple', marker='o')
+    sinpts.plot.line(color='purple', marker='o')
 
 Adding to Existing Axis
 ~~~~~~~~~~~~~~~~~~~~~~~
@@ -105,12 +105,12 @@ axes created by ``plt.subplots``.
     axes
 
     sinpts.plot(ax=axes[0])
-    sinpts.plot_hist(ax=axes[1])
+    sinpts.plot.hist(ax=axes[1])
 
     @savefig plotting_example_existing_axes.png width=6in
     plt.show()
 
-On the right is a histogram created by :py:meth:`xray.DataArray.plot_hist`.
+On the right is a histogram created by :py:meth:`xray.DataArray.plot.hist`.
 
 Time Series
 ~~~~~~~~~~~
@@ -125,7 +125,7 @@ The index may be a date.
     noise = xray.DataArray(np.random.randn(npts), {'time': time})
 
     @savefig plotting_example_time.png width=6in
-    noise.plot_line()
+    noise.plot.line()
 
 TODO- rotate dates printed on x axis.
 
@@ -138,7 +138,7 @@ Simple Example
 
 The default method :py:meth:`xray.DataArray.plot` sees that the data is
 2 dimensional. If the coordinates are uniformly spaced then it
-calls :py:meth:`xray.DataArray.plot_imshow`.
+calls :py:function:`xray.plotting.imshow`.
 
 .. ipython:: python
 
@@ -234,7 +234,7 @@ Nonuniform Coordinates
 
 It's not necessary for the coordinates to be evenly spaced. If not, then
 :py:meth:`xray.DataArray.plot` produces a filled contour plot by calling
-:py:meth:`xray.DataArray.plot_contourf`. This example demonstrates that by
+:py:meth:`xray.DataArray.plot.contourf`. This example demonstrates that by
 using one coordinate with logarithmic spacing.
 
 .. ipython:: python
@@ -359,8 +359,8 @@ describes what gets plotted:
 =============== =========== ===========================
 Dimensions      Coordinates Plotting function
 --------------- ----------- ---------------------------
-1                           :py:meth:`xray.DataArray.plot_line`
-2               Uniform     :py:meth:`xray.DataArray.plot_imshow`
-2               Irregular   :py:meth:`xray.DataArray.plot_contourf`
-Anything else               :py:meth:`xray.DataArray.plot_hist`
+1                           :py:meth:`xray.DataArray.plot.line`
+2               Uniform     :py:meth:`xray.DataArray.plot.imshow`
+2               Irregular   :py:meth:`xray.DataArray.plot.contourf`
+Anything else               :py:meth:`xray.DataArray.plot.hist`
 =============== =========== ===========================

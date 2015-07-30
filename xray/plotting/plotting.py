@@ -395,7 +395,7 @@ class _PlotMethods(object):
 
     @functools.wraps(hist)
     def hist(self, ax=None, **kwargs):
-        return hist(self._da, ax=None, **kwargs)
+        return hist(self._da, ax=ax, **kwargs)
 
     @functools.wraps(line)
     def line(self, *args, **kwargs):

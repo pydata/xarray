@@ -1066,18 +1066,19 @@ class DataArray(AbstractArray, BaseDataObject):
     @property
     def plot(self):
         '''
-        Access plot methods with this, or just call it
+        Access plotting functions
+
+        >>> d = DataArray([[1, 2], [3, 4]])
+
+        For convenience just call this directly
+        >>> d.plot()
+
+        Or use it as a namespace to use xray.plotting functions as
+        DataArray methods
+        >>> d.plot.imshow()  # equivalent to xray.plotting.imshow(d)
+
         '''
         return _PlotMethods(self)
-
-
-# Add plotting methods
-# Alternatively these could be added using a Mixin
-'''
-for name in ('plot', 'plot_line', 'plot_contourf', 'plot_contour',
-             'plot_hist', 'plot_imshow', 'plot_pcolormesh'):
-    setattr(DataArray, name, getattr(plotting, name))
-'''
 
 
 # priority most be higher than Variable to properly work with binary ufuncs
