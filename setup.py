@@ -145,4 +145,4 @@ setup(name=DISTNAME,
       url=URL,
       test_suite='nose.collector',
       packages=find_packages(),
-      package_data={'xray': ['test/data/*', 'plotting/default_colormap.csv']})
+      package_data={'xray': ['test/data/*', 'plot/default_colormap.csv']})

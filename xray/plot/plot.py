@@ -64,10 +64,10 @@ def plot(darray, ax=None, rtol=0.01, **kwargs):
     =============== =========== ===========================
     Dimensions      Coordinates Plotting function
     --------------- ----------- ---------------------------
-    1                           :py:meth:`xray.DataArray.line`
-    2               Uniform     :py:meth:`xray.DataArray.imshow`
-    2               Irregular   :py:meth:`xray.DataArray.contourf`
-    Anything else               :py:meth:`xray.DataArray.hist`
+    1                           :py:func:`xray.plot.line`
+    2               Uniform     :py:func:`xray.plot.imshow`
+    2               Irregular   :py:func:`xray.plot.contourf`
+    Anything else               :py:func:`xray.plot.hist`
     =============== =========== ===========================
 
     Parameters
