@@ -373,18 +373,24 @@ class _PlotMethods(object):
     Plotmethods class
     '''
 
+    # Basically this is a bunch of hacking to put in the dataarray as the
+    # first arg.
+
     def __init__(self, DataArray_instance):
         self._da = DataArray_instance
-        for f in _plot2dlist:
-            setattr(self, f.__name__, self._2dplot(f))
+        #for f in _plot2dlist:
+        #    setattr(self, f.__name__, self._2dplot(f))
 
     def __call__(self, *args, **kwargs):
         return plot(self._da, *args, **kwargs)
 
     def _2dplot(self, plotfunc):
         @functools.wraps(plotfunc)
-        def inner(cmap='blue'):
-            return plotfunc(self._da, cmap=cmap)
+        def inner(self, ax=None, xincrease=None, yincrease=None,
+                  add_colorbar=True, **kwargs):
+            return plotfunc(self._da, ax=ax, xincrease=xincrease,
+                    yincrease=yincrease, add_colorbar=add_colorbar,
+                    **kwargs)
         return inner
 
     @functools.wraps(hist)
@@ -398,3 +404,31 @@ class _PlotMethods(object):
     @functools.wraps(plot)
     def plot(darray, ax=None, rtol=0.01, **kwargs):
         return plot(self._da, ax=ax, rtol=rtol, **kwargs)
+
+    @functools.wraps(contour)
+    def contour(self, ax=None, xincrease=None, yincrease=None,
+              add_colorbar=True, **kwargs):
+        return contour(self._da, ax=ax, xincrease=xincrease,
+                    yincrease=yincrease, add_colorbar=add_colorbar,
+                    **kwargs)
+
+    @functools.wraps(contourf)
+    def contourf(self, ax=None, xincrease=None, yincrease=None,
+              add_colorbar=True, **kwargs):
+        return contourf(self._da, ax=ax, xincrease=xincrease,
+                    yincrease=yincrease, add_colorbar=add_colorbar,
+                    **kwargs)
+
+    @functools.wraps(imshow)
+    def imshow(self, ax=None, xincrease=None, yincrease=None,
+              add_colorbar=True, **kwargs):
+        return imshow(self._da, ax=ax, xincrease=xincrease,
+                    yincrease=yincrease, add_colorbar=add_colorbar,
+                    **kwargs)
+
+    @functools.wraps(pcolormesh)
+    def pcolormesh(self, ax=None, xincrease=None, yincrease=None,
+              add_colorbar=True, **kwargs):
+        return pcolormesh(self._da, ax=ax, xincrease=xincrease,
+                    yincrease=yincrease, add_colorbar=add_colorbar,
+                    **kwargs)
