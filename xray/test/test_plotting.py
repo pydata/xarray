@@ -2,7 +2,10 @@ import numpy as np
 import pandas as pd
 
 from xray import DataArray
+
 import xray.plotting as xplt
+from xray.plotting.plotting import (_infer_interval_breaks,
+                                    _determine_cmap_params)
 
 from . import TestCase, requires_matplotlib
 
@@ -62,11 +65,11 @@ class TestPlot(PlotTestCase):
         self.pass_in_axis(self.darray.plot)
 
     def test__infer_interval_breaks(self):
-        self.assertArrayEqual([-0.5, 0.5, 1.5], xplt._infer_interval_breaks([0, 1]))
+        self.assertArrayEqual([-0.5, 0.5, 1.5], _infer_interval_breaks([0, 1]))
         self.assertArrayEqual([-0.5, 0.5, 5.0, 9.5, 10.5],
-                              xplt._infer_interval_breaks([0, 1, 9, 10]))
+                              _infer_interval_breaks([0, 1, 9, 10]))
         self.assertArrayEqual(pd.date_range('20000101', periods=4) - np.timedelta64(12, 'h'),
-                              xplt._infer_interval_breaks(pd.date_range('20000101', periods=3)))
+                              _infer_interval_breaks(pd.date_range('20000101', periods=3)))
 
 
 class TestPlot1D(PlotTestCase):
@@ -158,6 +161,24 @@ class TestPlotHistogram(PlotTestCase):
         self.darray.plot.hist()
 
 
+@requires_matplotlib
+class TestDetermineCmapParams(TestCase):
+    def test_robust(self):
+        data = np.random.RandomState(1).rand(100)
+        vmin, vmax, cmap, extend = _determine_cmap_params(data, robust=True)
+        self.assertEqual(vmin, np.percentile(data, 2))
+        self.assertEqual(vmax, np.percentile(data, 98))
+        self.assertEqual(cmap.name, 'viridis')
+        self.assertEqual(extend, 'both')
+
+    def test_center(self):
+        data = np.random.RandomState(2).rand(100)
+        vmin, vmax, cmap, extend = _determine_cmap_params(data, center=0.5)
+        self.assertEqual(vmax - 0.5, 0.5 - vmin)
+        self.assertEqual(cmap, 'RdBu_r')
+        self.assertEqual(extend, 'neither')
+
+
 class Common2dMixin:
     """
     Common tests for 2d plotting go here.
@@ -208,18 +229,33 @@ class Common2dMixin:
         self.assertTrue(all(abs(x) < 1 for x in diffs))
 
     def test_plot_nans(self):
-        self.darray[0, 0] = np.nan
-        result = self.plotmethod()
-        clim = result.get_clim()
-        self.assertFalse(pd.isnull(np.array(clim)).any())
+        x1 = self.darray[:5]
+        x2 = self.darray.copy()
+        x2[5:] = np.nan
 
-    def test_default_cmap_viridis(self):
+        clim1 = self.plotfunc(x1).get_clim()
+        clim2 = self.plotfunc(x2).get_clim()
+        self.assertEqual(clim1, clim2)
+
+    def test_viridis_cmap(self):
+        cmap_name = self.plotmethod(cmap='viridis').get_cmap().name
+        self.assertEqual('viridis', cmap_name)
+
+    def test_default_cmap(self):
         cmap_name = self.plotmethod().get_cmap().name
+        self.assertEqual('RdBu_r', cmap_name)
+
+        cmap_name = self.plotfunc(abs(self.darray)).get_cmap().name
         self.assertEqual('viridis', cmap_name)
 
     def test_can_change_default_cmap(self):
         cmap_name = self.plotmethod(cmap='jet').get_cmap().name
         self.assertEqual('jet', cmap_name)
+
+    def test_diverging_color_limits(self):
+        artist = self.plotmethod()
+        vmin, vmax = artist.get_clim()
+        self.assertAlmostEqual(-vmin, vmax)
 
 
 class TestContourf(Common2dMixin, PlotTestCase):
@@ -234,6 +270,19 @@ class TestContourf(Common2dMixin, PlotTestCase):
     def test_primitive_artist_returned(self):
         artist = self.plotmethod()
         self.assertTrue(isinstance(artist, mpl.contour.QuadContourSet))
+
+    def test_extend(self):
+        artist = self.plotmethod()
+        self.assertEqual(artist.extend, 'neither')
+
+        artist = self.plotmethod(robust=True)
+        self.assertEqual(artist.extend, 'both')
+
+        artist = self.plotmethod(vmin=-0, vmax=10)
+        self.assertEqual(artist.extend, 'min')
+
+        artist = self.plotmethod(vmin=-10, vmax=0)
+        self.assertEqual(artist.extend, 'max')
 
 
 class TestContour(Common2dMixin, PlotTestCase):
