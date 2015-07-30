@@ -7,7 +7,7 @@ Introduction
 The goal of xray's plotting is to make exploratory plotting quick
 and easy by using metadata from :py:class:`xray.DataArray` objects to add
 informative labels. To plot :py:class:`xray.Dataset` objects 
-simply select the relevant DataArrays, ie ``dset['var1']``.
+simply access the relevant DataArrays, ie ``dset['var1']``.
 
 Xray plotting functionality is a thin wrapper around the popular
 `matplotlib <http://matplotlib.org/>`_ library.
@@ -139,7 +139,7 @@ Simple Example
 
 The default method :py:meth:`xray.DataArray.plot` sees that the data is
 2 dimensional. If the coordinates are uniformly spaced then it
-calls :py:function:`xray.plot.imshow`.
+calls :py:func:`xray.plot.imshow`.
 
 .. ipython:: python
 
@@ -345,12 +345,34 @@ Here is the resulting image:
 Details
 -------
 
-There are two ways to use the xray plotting functionality:
+Ways to Use
+~~~~~~~~~~~
 
-1. Use the ``plot`` convenience methods of :py:class:`xray.DataArray`
-2. Directly from the xray plot submodule::
+There are three ways to use the xray plotting functionality:
+
+1. Use ``plot`` as a convenience method for a DataArray.
+
+2. Access a specific plotting method from the ``plot`` attribute of a
+   DataArray.
+
+3. Directly from the xray plot submodule.
+
+These are provided for user convenience; they all call the same code.
+
+.. ipython:: python
 
     import xray.plot as xplt
+    da = xray.DataArray(range(5))
+    fig, axes = plt.subplots(ncols=2, nrows=2)
+    da.plot(ax=axes[0, 0])
+    da.plot.line(ax=axes[0, 1])
+    xplt.plot(da, ax=axes[1, 0])
+    xplt.line(da, ax=axes[1, 1])
+    @savefig plotting_ways_to_use.png width=6in
+    plt.show()
+
+Here the output is the same. Since the data is 1 dimensional the line plot
+was used.
 
 The convenience method :py:meth:`xray.DataArray.plot` dispatches to an appropriate
 plotting function based on the dimensions of the ``DataArray`` and whether
