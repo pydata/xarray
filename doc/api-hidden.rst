@@ -27,12 +27,14 @@
    Dataset.count
    Dataset.dropna
    Dataset.fillna
+   Dataset.where
 
    core.groupby.DatasetGroupBy.assign
    core.groupby.DatasetGroupBy.assign_coords
    core.groupby.DatasetGroupBy.first
    core.groupby.DatasetGroupBy.last
    core.groupby.DatasetGroupBy.fillna
+   core.groupby.DatasetGroupBy.where
 
    Dataset.argsort
    Dataset.clip
@@ -66,11 +68,13 @@
    DataArray.count
    DataArray.dropna
    DataArray.fillna
+   DataArray.where
 
    core.groupby.DataArrayGroupBy.assign_coords
    core.groupby.DataArrayGroupBy.first
    core.groupby.DataArrayGroupBy.last
    core.groupby.DataArrayGroupBy.fillna
+   core.groupby.DataArrayGroupBy.where
 
    DataArray.argsort
    DataArray.clip

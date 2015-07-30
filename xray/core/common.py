@@ -347,6 +347,39 @@ class BaseDataObject(AttrAccessMixin):
         result = result.rename({RESAMPLE_DIM: dim.name})
         return result
 
+    def where(self, cond):
+        """Return an object of the same shape with all entries where cond is
+        True and all other entries masked.
+
+        This operation follows the normal broadcasting and alignment rules that
+        xray uses for binary arithmetic.
+
+        Parameters
+        ----------
+        cond : boolean DataArray or Dataset
+
+        Returns
+        -------
+        same type as caller
+
+        Examples
+        --------
+
+        >>> import numpy as np
+        >>> a = xray.DataArray(np.arange(25).reshape(5, 5), dims=('x', 'y'))
+        >>> a.where((a > 6) & (a < 18))
+        <xray.DataArray (x: 5, y: 5)>
+        array([[ nan,  nan,  nan,  nan,  nan],
+               [ nan,  nan,   7.,   8.,   9.],
+               [ 10.,  11.,  12.,  13.,  14.],
+               [ 15.,  16.,  17.,  nan,  nan],
+               [ nan,  nan,  nan,  nan,  nan]])
+        Coordinates:
+          * y        (y) int64 0 1 2 3 4
+          * x        (x) int64 0 1 2 3 4
+        """
+        return self._where(cond)
+
 
 def squeeze(xray_obj, dims, dim=None):
     """Squeeze the dims of an xray object."""

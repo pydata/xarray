@@ -1663,6 +1663,39 @@ class TestDataset(TestCase):
         actual = ds.groupby('b').fillna(Dataset({'a': ('b', [0, 2])}))
         self.assertDatasetIdentical(expected, actual)
 
+    def test_where(self):
+        ds = Dataset({'a': ('x', range(5))})
+        expected = Dataset({'a': ('x', [np.nan, np.nan, 2, 3, 4])})
+        actual = ds.where(ds > 1)
+        self.assertDatasetIdentical(expected, actual)
+
+        actual = ds.where(ds.a > 1)
+        self.assertDatasetIdentical(expected, actual)
+
+        actual = ds.where(ds.a.values > 1)
+        self.assertDatasetIdentical(expected, actual)
+
+        actual = ds.where(True)
+        self.assertDatasetIdentical(ds, actual)
+
+        expected = ds.copy(deep=True)
+        expected['a'].values = [np.nan] * 5
+        actual = ds.where(False)
+        self.assertDatasetIdentical(expected, actual)
+
+        # 2d
+        ds = Dataset({'a': (('x', 'y'), [[0, 1], [2, 3]])})
+        expected = Dataset({'a': (('x', 'y'), [[np.nan, 1], [2, 3]])})
+        actual = ds.where(ds > 0)
+        self.assertDatasetIdentical(expected, actual)
+
+        # groupby
+        ds = Dataset({'a': ('x', range(5))}, {'c': ('x', [0, 0, 1, 1, 1])})
+        cond = Dataset({'a': ('c', [True, False])})
+        expected = ds.copy(deep=True)
+        expected['a'].values = [0, 1] + [np.nan] * 3
+        actual = ds.groupby('c').where(cond)
+        self.assertDatasetIdentical(expected, actual)
 
     def test_reduce(self):
         data = create_test_data()

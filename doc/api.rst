@@ -130,6 +130,7 @@ Computation
 :py:attr:`~Dataset.count`
 :py:attr:`~Dataset.dropna`
 :py:attr:`~Dataset.fillna`
+:py:attr:`~Dataset.where`
 
 **ndarray methods**:
 :py:attr:`~Dataset.argsort`
@@ -145,6 +146,7 @@ Computation
 :py:attr:`~core.groupby.DatasetGroupBy.first`
 :py:attr:`~core.groupby.DatasetGroupBy.last`
 :py:attr:`~core.groupby.DatasetGroupBy.fillna`
+:py:attr:`~core.groupby.DatasetGroupBy.where`
 
 DataArray
 =========
@@ -240,6 +242,7 @@ Computation
 :py:attr:`~DataArray.count`
 :py:attr:`~DataArray.dropna`
 :py:attr:`~DataArray.fillna`
+:py:attr:`~DataArray.where`
 
 **ndarray methods**:
 :py:attr:`~DataArray.argsort`
@@ -255,6 +258,7 @@ Computation
 :py:attr:`~core.groupby.DataArrayGroupBy.first`
 :py:attr:`~core.groupby.DataArrayGroupBy.last`
 :py:attr:`~core.groupby.DataArrayGroupBy.fillna`
+:py:attr:`~core.groupby.DataArrayGroupBy.where`
 
 Comparisons
 -----------

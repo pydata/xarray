@@ -48,6 +48,17 @@ v0.5.3 (unreleased)
         y        (points) int64 0 1 0
       * points   (points) int64 0 1 2
 
+- New :py:meth:`~xray.Dataset.where` method for masking xray objects according
+  to some criteria. This works particularly well with multi-dimensional data:
+
+  .. ipython:: python
+
+    ds = xray.Dataset(coords={'x': range(100), 'y': range(100)})
+    ds['distance'] = np.sqrt(ds.x ** 2 + ds.y ** 2)
+
+    @savefig where_example.png width=4in height=4in
+    ds.distance.where(ds.distance < 100).plot()
+
 
 Bug fixes
 ~~~~~~~~~
