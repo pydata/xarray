@@ -1734,10 +1734,19 @@ class TestDataset(TestCase):
         actual = ds.min()
         self.assertDatasetIdentical(expected, actual)
 
-    def test_reduce_dtype_bool(self):
+    def test_reduce_dtypes(self):
         # regression test for GH342
         expected = Dataset({'x': 1})
         actual = Dataset({'x': True}).sum()
+        self.assertDatasetIdentical(expected, actual)
+
+        # regression test for GH505
+        expected = Dataset({'x': 3})
+        actual = Dataset({'x': ('y', np.array([1, 2], 'uint16'))}).sum()
+        self.assertDatasetIdentical(expected, actual)
+
+        expected = Dataset({'x': 1 + 1j})
+        actual = Dataset({'x': ('y', [1, 1j])}).sum()
         self.assertDatasetIdentical(expected, actual)
 
     def test_reduce_keep_attrs(self):

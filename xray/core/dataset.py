@@ -1629,7 +1629,9 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject):
             reduce_dims = [dim for dim in var.dims if dim in dims]
             if reduce_dims or not var.dims:
                 if name not in self.coords:
-                    if not numeric_only or var.dtype.kind in 'ifcb':
+                    if (not numeric_only
+                            or np.issubdtype(var.dtype, np.number)
+                            or var.dtype == np.bool_):
                         if len(reduce_dims) == 1:
                             # unpack dimensions for the benefit of functions
                             # like np.argmin which can't handle tuple arguments
