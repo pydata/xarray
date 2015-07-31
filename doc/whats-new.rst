@@ -54,6 +54,8 @@ Bug fixes
 
 - Fixed aggregation functions (e.g., sum and mean) on big-endian arrays when
   bottleneck is installed (:issue:`489`).
+- Dataset aggregation functions dropped variables with unsigned integer dtype
+  (:issue:`505`).
 
 v0.5.2 (16 July 2015)
 ---------------------
