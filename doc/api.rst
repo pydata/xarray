@@ -395,10 +395,10 @@ Plotting
 .. autosummary::
    :toctree: generated/
 
-   DataArray.plot
-   DataArray.plot_contourf
-   DataArray.plot_contour
-   DataArray.plot_hist
-   DataArray.plot_imshow
-   DataArray.plot_line
-   DataArray.plot_pcolormesh
+   plot.plot
+   plot.contourf
+   plot.contour
+   plot.hist
+   plot.imshow
+   plot.line
+   plot.pcolormesh

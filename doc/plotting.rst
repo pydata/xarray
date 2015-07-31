@@ -6,13 +6,14 @@ Introduction
 
 The goal of xray's plotting is to make exploratory plotting quick
 and easy by using metadata from :py:class:`xray.DataArray` objects to add
-informative labels.
+informative labels. To plot :py:class:`xray.Dataset` objects 
+simply access the relevant DataArrays, ie ``dset['var1']``.
 
 Xray plotting functionality is a thin wrapper around the popular
 `matplotlib <http://matplotlib.org/>`_ library.
 Matplotlib syntax and function names were copied as much as possible, which
 makes for an easy transition between the two.
-Matplotlib must be installed and working before plotting with xray.
+Matplotlib must be installed before xray can plot.
 
 For more extensive plotting applications consider the following projects:
 
@@ -66,7 +67,7 @@ Additional Arguments
 
 Additional arguments are passed directly to the matplotlib function which
 does the work.
-For example, :py:meth:`xray.DataArray.plot_line` calls 
+For example, :py:func:`xray.plot.line` calls 
 matplotlib.pyplot.plot_ passing in the index and the array values as x and y, respectively.
 So to make a line plot with blue triangles a matplotlib format string
 can be used:
@@ -76,7 +77,7 @@ can be used:
 .. ipython:: python
 
     @savefig plotting_example_sin2.png width=4in
-    sinpts.plot_line('b-^')
+    sinpts.plot.line('b-^')
 
 .. warning::
     Not all xray plotting methods support passing positional arguments
@@ -88,7 +89,7 @@ Keyword arguments work the same way, and are more explicit.
 .. ipython:: python
 
     @savefig plotting_example_sin3.png width=4in
-    sinpts.plot_line(color='purple', marker='o')
+    sinpts.plot.line(color='purple', marker='o')
 
 Adding to Existing Axis
 ~~~~~~~~~~~~~~~~~~~~~~~
@@ -105,12 +106,12 @@ axes created by ``plt.subplots``.
     axes
 
     sinpts.plot(ax=axes[0])
-    sinpts.plot_hist(ax=axes[1])
+    sinpts.plot.hist(ax=axes[1])
 
     @savefig plotting_example_existing_axes.png width=6in
     plt.show()
 
-On the right is a histogram created by :py:meth:`xray.DataArray.plot_hist`.
+On the right is a histogram created by :py:func:`xray.plot.hist`.
 
 Time Series
 ~~~~~~~~~~~
@@ -125,7 +126,7 @@ The index may be a date.
     noise = xray.DataArray(np.random.randn(npts), {'time': time})
 
     @savefig plotting_example_time.png width=6in
-    noise.plot_line()
+    noise.plot.line()
 
 TODO- rotate dates printed on x axis.
 
@@ -138,7 +139,7 @@ Simple Example
 
 The default method :py:meth:`xray.DataArray.plot` sees that the data is
 2 dimensional. If the coordinates are uniformly spaced then it
-calls :py:meth:`xray.DataArray.plot_imshow`.
+calls :py:func:`xray.plot.imshow`.
 
 .. ipython:: python
 
@@ -234,7 +235,7 @@ Nonuniform Coordinates
 
 It's not necessary for the coordinates to be evenly spaced. If not, then
 :py:meth:`xray.DataArray.plot` produces a filled contour plot by calling
-:py:meth:`xray.DataArray.plot_contourf`. This example demonstrates that by
+:py:func:`xray.plot.contourf`. This example demonstrates that by
 using one coordinate with logarithmic spacing.
 
 .. ipython:: python
@@ -296,7 +297,7 @@ Colormaps
 ~~~~~~~~~
 
 Suppose we want two plots to share the same color scale. This can be
-achieved by passing in the appropriate arguments and adding the color bar
+achieved by passing in axes and adding the color bar
 later.
 
 .. ipython:: python
@@ -344,12 +345,34 @@ Here is the resulting image:
 Details
 -------
 
-There are two ways to use the xray plotting functionality:
+Ways to Use
+~~~~~~~~~~~
 
-1. Use the ``plot`` convenience methods of :py:class:`xray.DataArray`
-2. Directly from the xray plotting submodule::
+There are three ways to use the xray plotting functionality:
 
-    import xray.plotting as xplt
+1. Use ``plot`` as a convenience method for a DataArray.
+
+2. Access a specific plotting method from the ``plot`` attribute of a
+   DataArray.
+
+3. Directly from the xray plot submodule.
+
+These are provided for user convenience; they all call the same code.
+
+.. ipython:: python
+
+    import xray.plot as xplt
+    da = xray.DataArray(range(5))
+    fig, axes = plt.subplots(ncols=2, nrows=2)
+    da.plot(ax=axes[0, 0])
+    da.plot.line(ax=axes[0, 1])
+    xplt.plot(da, ax=axes[1, 0])
+    xplt.line(da, ax=axes[1, 1])
+    @savefig plotting_ways_to_use.png width=6in
+    plt.show()
+
+Here the output is the same. Since the data is 1 dimensional the line plot
+was used.
 
 The convenience method :py:meth:`xray.DataArray.plot` dispatches to an appropriate
 plotting function based on the dimensions of the ``DataArray`` and whether
@@ -359,8 +382,8 @@ describes what gets plotted:
 =============== =========== ===========================
 Dimensions      Coordinates Plotting function
 --------------- ----------- ---------------------------
-1                           :py:meth:`xray.DataArray.plot_line`
-2               Uniform     :py:meth:`xray.DataArray.plot_imshow`
-2               Irregular   :py:meth:`xray.DataArray.plot_contourf`
-Anything else               :py:meth:`xray.DataArray.plot_hist`
+1                           :py:func:`xray.plot.line`
+2               Uniform     :py:func:`xray.plot.imshow`
+2               Irregular   :py:func:`xray.plot.contourf`
+Anything else               :py:func:`xray.plot.hist`
 =============== =========== ===========================
