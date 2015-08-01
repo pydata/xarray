@@ -252,6 +252,27 @@ class GroupBy(object):
         """
         return self._fillna(value)
 
+    def where(self, cond):
+        """Return an object of the same shape with all entries where cond is
+        True and all other entries masked.
+
+        This operation follows the normal broadcasting and alignment rules that
+        xray uses for binary arithmetic.
+
+        Parameters
+        ----------
+        cond : DataArray or Dataset
+
+        Returns
+        -------
+        same type as the grouped object
+
+        See also
+        --------
+        Dataset.where
+        """
+        return self._where(cond)
+
     def _first_or_last(self, op, skipna, keep_attrs):
         if isinstance(self.group_indices[0], (int, np.integer)):
             # NB. this is currently only used for reductions along an existing

@@ -593,6 +593,9 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
     def fillna(self, value):
         return self._fillna(value)
 
+    def where(self, cond):
+        return self._where(cond)
+
     def reduce(self, func, dim=None, axis=None, keep_attrs=False,
                allow_lazy=False, **kwargs):
         """Reduce this array by applying `func` along some dimension(s).
