@@ -359,3 +359,33 @@ Indexing axes with monotonic decreasing labels also works, as long as the
 
     reversed_data = data[::-1]
     reversed_data.loc[3.1:0.9]
+
+Masking with ``where``
+----------------------
+
+Indexing methods on xray objects generally return a subset of the original data.
+However, it is sometimes useful to select an object with the same shape as the
+original data, but with some elements masked. To do this type of selection in
+xray, use :py:meth:`~xray.DataArray.where`:
+
+.. ipython:: python
+
+    arr = xray.DataArray(np.arange(16).reshape(4, 4), dims=['x', 'y'])
+    arr.where(arr.x + arr.y < 4)
+
+This is particularly useful for ragged indexing of multi-dimensional data,
+e.g., to apply a 2D mask to an image. Note that ``where`` follows all the
+usual xray broadcasting and alignment rules for binary operations (e.g.,
+``+``) between the object being indexed and the condition, as described in
+:ref:`comput`:
+
+.. ipython:: python
+
+    arr.where(arr.y < 2)
+
+Multi-dimensional indexing
+--------------------------
+
+Xray does not yet support efficient routines for generalized multi-dimensional
+indexing or regridding. However, we are definitely interested in adding support
+for this in the future (see :issue:`475` for the ongoing discussion).

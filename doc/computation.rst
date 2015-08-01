@@ -68,13 +68,6 @@ for working with missing data from pandas:
 Like pandas, xray uses the float value ``np.nan`` (not-a-number) to represent
 missing values.
 
-To create your own mask of missing values, use :py:meth:`~xray.DataArray.where`:
-
-.. ipython:: python
-
-    x = xray.DataArray(np.arange(9).reshape(3, 3), dims=['x', 'y'])
-    x.where(x > 4)
-
 Aggregation
 ===========
 
