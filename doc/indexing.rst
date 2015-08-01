@@ -162,6 +162,9 @@ allows you to do point-wise indexing by label:
     times = pd.to_datetime(['2000-01-03', '2000-01-02', '2000-01-01'])
     arr.sel_points(space=['IA', 'IL', 'IN'], time=times)
 
+The equivalent pandas method to ``sel_points`` is
+:py:meth:`~pandas.DataFrame.lookup`.
+
 Dataset indexing
 ----------------
 
