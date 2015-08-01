@@ -962,8 +962,9 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject):
         See Also
         --------
         Dataset.sel
+        Dataset.sel_points
+        Dataset.isel_points
         DataArray.isel
-        DataArray.sel
         """
         invalid = [k for k in indexers if not k in self.dims]
         if invalid:
@@ -988,7 +989,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject):
         In contrast to `Dataset.isel`, indexers for this method should use
         labels instead of integers.
 
-        Under the hood, this method is powered by using Panda's powerful Index
+        Under the hood, this method is powered by using pandas's powerful Index
         objects. This makes label based indexing essentially just as fast as
         using integer indexing.
 
@@ -1023,7 +1024,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject):
         See Also
         --------
         Dataset.isel
-        DataArray.isel
+        Dataset.sel_points
+        Dataset.isel_points
         DataArray.sel
         """
         return self.isel(**indexing.remap_label_indexers(self, indexers,
@@ -1062,8 +1064,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject):
         See Also
         --------
         Dataset.sel
-        DataArray.isel
-        DataArray.sel
+        Dataset.isel
+        Dataset.sel_points
         DataArray.isel_points
         """
         indexer_dims = set(indexers)
@@ -1115,6 +1117,56 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject):
                        [dict(zip(keys, inds)) for inds in
                         zip(*[v for k, v in indexers])]],
                       dim=dim, coords=coords, data_vars=data_vars)
+
+    def sel_points(self, dim='points', method=None, **indexers):
+        """Returns a new dataset with each array indexed pointwise by tick
+        labels along the specified dimension(s).
+
+        In contrast to `Dataset.isel_points`, indexers for this method should
+        use labels instead of integers.
+
+        In contrast to `Dataset.sel`, this method selects points along the
+        diagonal of multi-dimensional arrays, not the intersection.
+
+        Parameters
+        ----------
+        dim : str or DataArray or pandas.Index or other list-like object, optional
+            Name of the dimension to concatenate along. If dim is provided as a
+            string, it must be a new dimension name, in which case it is added
+            along axis=0. If dim is provided as a DataArray or Index or
+            list-like object, its name, which must not be present in the
+            dataset, is used as the dimension to concatenate along and the
+            values are added as a coordinate.
+        method : {None, 'nearest', 'pad'/'ffill', 'backfill'/'bfill'}, optional
+            Method to use for inexact matches (requires pandas>=0.16):
+
+            * default: only exact matches
+            * pad / ffill: propgate last valid index value forward
+            * backfill / bfill: propagate next valid index value backward
+            * nearest: use nearest valid index value
+        **indexers : {dim: indexer, ...}
+            Keyword arguments with names matching dimensions and values given
+            by array-like objects. All indexers must be the same length and
+            1 dimensional.
+
+        Returns
+        -------
+        obj : Dataset
+            A new Dataset with the same contents as this dataset, except each
+            array and dimension is indexed by the appropriate indexers. With
+            pointwise indexing, the new Dataset will always be a copy of the
+            original.
+
+        See Also
+        --------
+        Dataset.sel
+        Dataset.isel
+        Dataset.isel_points
+        DataArray.sel_points
+        """
+        pos_indexers = indexing.remap_label_indexers(self, indexers,
+                                                     method=method)
+        return self.isel_points(dim=dim, **pos_indexers)
 
     def reindex_like(self, other, method=None, copy=True):
         """Conform this object onto the indexes of another object, filling

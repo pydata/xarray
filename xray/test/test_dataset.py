@@ -729,6 +729,26 @@ class TestDataset(TestCase):
                          dim2=stations['dim2s'],
                          dim=np.array([4, 5, 6]))
 
+    def test_sel_points(self):
+        data = create_test_data()
+
+        pdim1 = [1, 2, 3]
+        pdim2 = [4, 5, 1]
+        pdim3 = [1, 2, 3]
+        expected = data.isel_points(dim1=pdim1, dim2=pdim2, dim3=pdim3,
+                                    dim='test_coord')
+        actual = data.sel_points(dim1=data.dim1[pdim1], dim2=data.dim2[pdim2],
+                                 dim3=data.dim3[pdim3], dim='test_coord')
+        self.assertDatasetIdentical(expected, actual)
+
+        data = Dataset({'foo': (('x', 'y'), np.arange(9).reshape(3, 3))})
+        expected = Dataset({'foo': ('points', [0, 4, 8])},
+                           {'x': ('points', range(3)),
+                            'y': ('points', range(3))})
+        actual = data.sel_points(x=[0.1, 1.1, 2.5], y=[0, 1.2, 2.0],
+                                 method='pad')
+        self.assertDatasetIdentical(expected, actual)
+
     def test_sel_method(self):
         data = create_test_data()
 
