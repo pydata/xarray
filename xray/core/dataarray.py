@@ -590,7 +590,7 @@ class DataArray(AbstractArray, BaseDataObject):
             Method to use for filling index values from other not found on this
             data array:
 
-            * default: don't fill gaps
+            * None (default): don't fill gaps
             * pad / ffill: propgate last valid index value forward
             * backfill / bfill: propagate next valid index value backward
             * nearest: use nearest valid index value (requires pandas>=0.16)
@@ -626,7 +626,7 @@ class DataArray(AbstractArray, BaseDataObject):
             Method to use for filling index values in ``indexers`` not found on
             this data array:
 
-            * default: don't fill gaps
+            * None (default): don't fill gaps
             * pad / ffill: propgate last valid index value forward
             * backfill / bfill: propagate next valid index value backward
             * nearest: use nearest valid index value (requires pandas>=0.16)

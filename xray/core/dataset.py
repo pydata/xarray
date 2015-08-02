@@ -1004,7 +1004,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject):
         method : {None, 'nearest', 'pad'/'ffill', 'backfill'/'bfill'}, optional
             Method to use for inexact matches (requires pandas>=0.16):
 
-            * default: only exact matches
+            * None (default): only exact matches
             * pad / ffill: propgate last valid index value forward
             * backfill / bfill: propagate next valid index value backward
             * nearest: use nearest valid index value
@@ -1140,7 +1140,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject):
         method : {None, 'nearest', 'pad'/'ffill', 'backfill'/'bfill'}, optional
             Method to use for inexact matches (requires pandas>=0.16):
 
-            * default: only exact matches
+            * None (default): only exact matches
             * pad / ffill: propgate last valid index value forward
             * backfill / bfill: propagate next valid index value backward
             * nearest: use nearest valid index value
@@ -1185,7 +1185,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject):
             Method to use for filling index values from other not found in this
             dataset:
 
-            * default: don't fill gaps
+            * None (default): don't fill gaps
             * pad / ffill: propgate last valid index value forward
             * backfill / bfill: propagate next valid index value backward
             * nearest: use nearest valid index value (requires pandas>=0.16)
@@ -1222,7 +1222,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject):
             Method to use for filling index values in ``indexers`` not found in
             this dataset:
 
-            * default: don't fill gaps
+            * None (default): don't fill gaps
             * pad / ffill: propgate last valid index value forward
             * backfill / bfill: propagate next valid index value backward
             * nearest: use nearest valid index value (requires pandas>=0.16)
