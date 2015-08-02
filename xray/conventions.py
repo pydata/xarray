@@ -579,7 +579,7 @@ def maybe_encode_fill_value(var, needs_copy=True):
     return var, needs_copy
 
 
-def maybe_encode_dtype(var):
+def maybe_encode_dtype(var, name=None):
     if 'dtype' in var.encoding:
         dims, data, attrs, encoding = _var_as_tuple(var)
         dtype = np.dtype(encoding.pop('dtype'))
@@ -587,9 +587,10 @@ def maybe_encode_dtype(var):
             if np.issubdtype(dtype, np.integer):
                 if (np.issubdtype(var.dtype, np.floating)
                         and '_FillValue' not in var.attrs):
-                    raise ValueError('cannot save variable with floating '
-                                     'point data as integers without '
-                                     'providing a _FillValue to use for NaNs')
+                    warnings.warn('saving variable %s with floating '
+                                  'point data as an integer dtype without '
+                                  'any _FillValue to use for NaNs' % name,
+                                  RuntimeWarning, stacklevel=3)
                 data = ops.around(data)[...]
             if dtype == 'S1' and data.dtype != 'S1':
                 data = string_to_char(np.asarray(data, 'S'))
@@ -647,7 +648,7 @@ def ensure_dtype_not_object(var):
     return var
 
 
-def encode_cf_variable(var, needs_copy=True):
+def encode_cf_variable(var, needs_copy=True, name=None):
     """
     Converts an Variable into an Variable which follows some
     of the CF conventions:
@@ -671,7 +672,7 @@ def encode_cf_variable(var, needs_copy=True):
     var = maybe_encode_timedelta(var)
     var, needs_copy = maybe_encode_offset_and_scale(var, needs_copy)
     var, needs_copy = maybe_encode_fill_value(var, needs_copy)
-    var = maybe_encode_dtype(var)
+    var = maybe_encode_dtype(var, name)
     var = ensure_dtype_not_object(var)
     return var
 
@@ -998,6 +999,6 @@ def cf_encoder(variables, attributes):
 
     See also: encode_cf_variable
     """
-    new_vars = OrderedDict((k, encode_cf_variable(v))
+    new_vars = OrderedDict((k, encode_cf_variable(v, name=k))
                            for k, v in iteritems(variables))
     return new_vars, attributes
