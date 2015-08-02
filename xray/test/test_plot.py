@@ -193,7 +193,7 @@ class TestDetermineDiscreteCmapParams(TestCase):
         self.assertEqual(cmap.N, levels)
         self.assertEqual(cnorm.N, levels + 1)
         self.assertEqual(cnorm.vmin, vmin)
-        self.assertEqual(cnorm.vmax, vmax)
+        self.assertEqual(cnorm.vmax, vmax + 10 * np.finfo(float).eps)
 
         cmap, cnorm = _determine_discrete_cmap_params('Blues', levels,
                                                       vmin, vmax, 'both')
@@ -201,7 +201,7 @@ class TestDetermineDiscreteCmapParams(TestCase):
         self.assertEqual(cmap.N, levels)
         self.assertEqual(cnorm.N, levels + 1)
         self.assertEqual(cnorm.vmin, vmin)
-        self.assertEqual(cnorm.vmax, vmax)
+        self.assertEqual(cnorm.vmax, vmax + 10 * np.finfo(float).eps)
 
     def test_list_levels(self):
         levels = [-4, -2, 0, 2, 4]

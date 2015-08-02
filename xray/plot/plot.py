@@ -272,7 +272,7 @@ def _determine_cmap_params(plot_data, vmin=None, vmax=None, cmap=None,
 
 def _determine_discrete_cmap_params(cmap, levels, vmin, vmax, extend):
     """
-    Build a descrete colormap and normalization of the data.
+    Build a discrete colormap and normalization of the data.
     """
     import matplotlib as mpl
     import matplotlib.pyplot as plt
@@ -285,7 +285,9 @@ def _determine_discrete_cmap_params(cmap, levels, vmin, vmax, extend):
         ext_n = 0
 
     if isinstance(levels, int):
-        cticks = np.linspace(vmin, vmax, num=levels + 1, endpoint=True)
+        vmax += 10 * np.finfo(float).eps  # Add small epison to include vmax
+        cticks = np.linspace(vmin, vmax, num=levels + 1, endpoint=True,
+                             dtype=float)
         n_colors = levels + ext_n
     elif isinstance(levels, Sequence):
         cticks = np.asarray(levels)
@@ -373,7 +375,7 @@ def _plot2d(plotfunc):
         How to draw arrows extending the colorbar beyond its limits. If not
         provided, extend is inferred from vmin, vmax and the data limits.
     levels : int or list-like object, optional
-        Split the colormap (cmap) into descrete color intervals.
+        Split the colormap (cmap) into discrete color intervals.
     **kwargs : optional
         Additional arguments to wrapped matplotlib function
 
@@ -396,6 +398,7 @@ def _plot2d(plotfunc):
         # Method signature below should be consistent.
 
         import matplotlib.pyplot as plt
+        import matplotlib as mpl
 
         if ax is None:
             ax = plt.gca()
@@ -424,11 +427,11 @@ def _plot2d(plotfunc):
             kwargs['extend'] = extend
             kwargs['levels'] = levels
 
-        elif cnorm is not None:
-            kwargs['norm'] = cnorm
+        if cnorm is None:
+            cnorm = mpl.colors.Normalize(vmin=vmin, vmax=vmax)
 
-        ax, primitive = plotfunc(x, y, z, ax=ax, cmap=cmap, vmin=vmin,
-                                 vmax=vmax, **kwargs)
+        ax, primitive = plotfunc(x, y, z, ax=ax, cmap=cmap, norm=cnorm,
+                                 **kwargs)
 
         ax.set_xlabel(xlab)
         ax.set_ylabel(ylab)
