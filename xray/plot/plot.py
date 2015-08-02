@@ -8,11 +8,13 @@ Or use the methods on a DataArray:
 
 import pkg_resources
 import functools
+from collections import Sequence
 
 import numpy as np
 import pandas as pd
 
 from ..core.utils import is_uniform_spaced
+from ..core.pycompat import basestring
 
 
 # TODO - implement this
@@ -206,7 +208,8 @@ def _update_axes_limits(ax, xincrease, yincrease):
 
 
 def _determine_cmap_params(plot_data, vmin=None, vmax=None, cmap=None,
-                           center=None, robust=False, extend=None):
+                           center=None, robust=False, extend=None,
+                           levels=None):
     """
     Use some heuristics to set good defaults for colorbar and range.
 
@@ -257,7 +260,55 @@ def _determine_cmap_params(plot_data, vmin=None, vmax=None, cmap=None,
         else:
             extend = 'neither'
 
-    return vmin, vmax, cmap, extend
+    if levels:
+        cmap, cnorm = _determine_discrete_cmap_params(cmap, levels,
+                                                      vmin, vmax,
+                                                      extend)
+    else:
+        cnorm = None
+
+    return vmin, vmax, cmap, extend, cnorm
+
+
+def _determine_discrete_cmap_params(cmap, levels, vmin, vmax, extend):
+    """
+    Build a descrete colormap and normalization of the data.
+    """
+    import matplotlib as mpl
+    import matplotlib.pyplot as plt
+
+    if extend == 'both':
+        ext_n = 2
+    elif extend in ['min', 'max']:
+        ext_n = 1
+    else:
+        ext_n = 0
+
+    if isinstance(levels, int):
+        cticks = np.linspace(vmin, vmax, num=levels + 1, endpoint=True)
+        n_colors = levels + ext_n
+    elif isinstance(levels, Sequence):
+        cticks = np.asarray(levels)
+        n_colors = len(levels) + ext_n - 1
+    else:
+        TypeError('Unexpected type (%s) given for levels' % type(levels))
+
+    try:
+        from seaborn.apionly import color_palette
+        pal = color_palette(cmap, n_colors=n_colors)
+    except (TypeError, ImportError):
+        # TypeError is raised when LinearSegmentedColormap (viridis) is used
+        # Import Error is raised when seaborn is not installed
+        # Use homegrown solution if you don't have seaborn or are using viridis
+        if isinstance(cmap, basestring):
+            cmap = plt.get_cmap(cmap)
+
+        colors_i = np.linspace(0, 1., n_colors)
+        pal = cmap(colors_i)
+
+    cmap, cnorm = mpl.colors.from_levels_and_colors(cticks, pal, extend=extend)
+
+    return cmap, cnorm
 
 
 # MUST run before any 2d plotting functions are defined since
@@ -321,6 +372,8 @@ def _plot2d(plotfunc):
     extend : {'neither', 'both', 'min', 'max'}, optional
         How to draw arrows extending the colorbar beyond its limits. If not
         provided, extend is inferred from vmin, vmax and the data limits.
+    levels : int or list-like object, optional
+        Split the colormap (cmap) into descrete color intervals.
     **kwargs : optional
         Additional arguments to wrapped matplotlib function
 
@@ -337,7 +390,8 @@ def _plot2d(plotfunc):
     @functools.wraps(plotfunc)
     def newplotfunc(darray, ax=None, xincrease=None, yincrease=None,
                     add_colorbar=True, vmin=None, vmax=None, cmap=None,
-                    center=None, robust=False, extend=None, **kwargs):
+                    center=None, robust=False, extend=None, levels=None,
+                    **kwargs):
         # All 2d plots in xray share this function signature.
         # Method signature below should be consistent.
 
@@ -360,14 +414,18 @@ def _plot2d(plotfunc):
 
         _ensure_plottable(x, y)
 
-        vmin, vmax, cmap, extend = _determine_cmap_params(
-            z.data, vmin, vmax, cmap, center, robust, extend)
+        vmin, vmax, cmap, extend, cnorm = _determine_cmap_params(
+            z.data, vmin, vmax, cmap, center, robust, extend, levels)
 
         if 'contour' in plotfunc.__name__:
             # extend is a keyword argument only for contour and contourf, but
             # passing it to the colorbar is sufficient for imshow and
             # pcolormesh
             kwargs['extend'] = extend
+            kwargs['levels'] = levels
+
+        elif cnorm is not None:
+            kwargs['norm'] = cnorm
 
         ax, primitive = plotfunc(x, y, z, ax=ax, cmap=cmap, vmin=vmin,
                                  vmax=vmax, **kwargs)
