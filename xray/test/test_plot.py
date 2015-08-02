@@ -222,6 +222,15 @@ class TestDetermineDiscreteCmapParams(TestCase):
         self.assertEqual(cnorm.vmin, min(levels))
         self.assertEqual(cnorm.vmax, max(levels))
 
+        # levels as an array
+        cmap, cnorm = _determine_discrete_cmap_params('Greens_r',
+                                                      np.array(levels),
+                                                      vmin, vmax, 'both')
+        # levels as a DataArray
+        cmap, cnorm = _determine_discrete_cmap_params('Greens_r',
+                                                      DataArray(levels),
+                                                      vmin, vmax, 'both')
+
 
 class Common2dMixin:
     """

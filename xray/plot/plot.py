@@ -8,7 +8,6 @@ Or use the methods on a DataArray:
 
 import pkg_resources
 import functools
-from collections import Sequence
 
 import numpy as np
 import pandas as pd
@@ -216,6 +215,8 @@ def _determine_cmap_params(plot_data, vmin=None, vmax=None, cmap=None,
     Adapted from Seaborn:
     https://github.com/mwaskom/seaborn/blob/v0.6/seaborn/matrix.py#L158
     """
+    import matplotlib as mpl
+
     calc_data = plot_data[~pd.isnull(plot_data)]
     if vmin is None:
         vmin = np.percentile(calc_data, 2) if robust else calc_data.min()
@@ -260,12 +261,12 @@ def _determine_cmap_params(plot_data, vmin=None, vmax=None, cmap=None,
         else:
             extend = 'neither'
 
-    if levels:
+    if levels is not None:
         cmap, cnorm = _determine_discrete_cmap_params(cmap, levels,
                                                       vmin, vmax,
                                                       extend)
     else:
-        cnorm = None
+        cnorm = mpl.colors.Normalize(vmin=vmin, vmax=vmax)
 
     return vmin, vmax, cmap, extend, cnorm
 
@@ -286,15 +287,15 @@ def _determine_discrete_cmap_params(cmap, levels, vmin, vmax, extend):
 
     if isinstance(levels, int):
         vmax += 10 * np.finfo(float).eps  # Add small epison to include vmax
-        cticks = np.linspace(vmin, vmax, num=levels + 1, endpoint=True,
-                             dtype=float)
+        cticks = np.linspace(vmin, vmax, num=levels + 1, endpoint=True)
         n_colors = levels + ext_n
-    elif isinstance(levels, Sequence):
-        cticks = np.asarray(levels)
-        n_colors = len(levels) + ext_n - 1
     else:
-        TypeError('Unexpected type (%s) given for levels' % type(levels))
-
+        try:
+            n_colors = len(levels) + ext_n - 1
+            cticks = np.asarray(levels)
+        except TypeError as e:
+            print('Unexpected type (%s) given for levels' % type(levels))
+            raise e
     try:
         from seaborn.apionly import color_palette
         pal = color_palette(cmap, n_colors=n_colors)
@@ -398,7 +399,6 @@ def _plot2d(plotfunc):
         # Method signature below should be consistent.
 
         import matplotlib.pyplot as plt
-        import matplotlib as mpl
 
         if ax is None:
             ax = plt.gca()
@@ -426,9 +426,6 @@ def _plot2d(plotfunc):
             # pcolormesh
             kwargs['extend'] = extend
             kwargs['levels'] = levels
-
-        if cnorm is None:
-            cnorm = mpl.colors.Normalize(vmin=vmin, vmax=vmax)
 
         ax, primitive = plotfunc(x, y, z, ax=ax, cmap=cmap, norm=cnorm,
                                  **kwargs)
