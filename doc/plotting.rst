@@ -1,6 +1,7 @@
 Plotting
 ========
 
+
 Introduction
 ------------
 
@@ -8,6 +9,9 @@ The goal of xray's plotting is to make exploratory plotting quick
 and easy by using metadata from :py:class:`xray.DataArray` objects to add
 informative labels. To plot :py:class:`xray.Dataset` objects 
 simply access the relevant DataArrays, ie ``dset['var1']``.
+Here we focus mostly on arrays 2d or larger. If your data fits
+nicely into a pandas DataFrame then you're better off using one of the more
+developed tools there.
 
 Xray plotting functionality is a thin wrapper around the popular
 `matplotlib <http://matplotlib.org/>`_ library.
@@ -45,6 +49,123 @@ The following imports are necessary for all of the examples.
     import matplotlib.pyplot as plt
     import xray
 
+Faceting
+--------
+
+Xray's basic plotting is useful for plotting two dimensional arrays. What
+about three or four dimensional arrays?
+
+Consider the temperature data set. There are 4 observations per day for two
+years. Let's use a slice to pick 6 times throughout the first year.
+
+.. ipython:: python
+
+    # TODO- define and use function load_dataset
+    temperature = xray.open_dataset('/users/clark.fitzgerald/dev/xray-data/ncep_temperature_north-america_2013-14.nc')
+    air = temperature['air']
+
+    t = air.isel(time=slice(0, 365 * 4, 250))
+    t
+
+
+One way to visualize this data is to make a
+seperate plot for each time period. This is what we call faceting; splitting an
+array along one dimension into different facets and plotting each one.
+
+Simple Example
+~~~~~~~~~~~~~~
+
+Here's one way to do it in matplotlib:
+
+.. ipython:: python
+
+    fig, axes = plt.subplots(nrows=2, ncols=3, sharex=True, sharey=True)
+
+    kwargs = {'vmin': t.min(), 'vmax': t.max(), 'add_colorbar': False}
+
+    for i in range(len(t.time)):
+        ax = axes.flat[i]
+        im = t[i].plot(ax=ax, **kwargs)
+        #** hack fix for Vim syntax highlight
+        ax.set_xlabel('')
+        ax.set_ylabel('')
+        ax.set_title(t.time.values[i])
+
+    #plt.colorbar(im, ax=axes.tolist())
+
+    @savefig plot_facet_simple.png height=12in
+    plt.show()
+
+We can use ``map_dataarray`` on a DataArray:
+
+.. ipython:: python
+
+    g = xray.plot.FacetGrid(t, col='time', col_wrap=2)
+    
+    @savefig plot_facet_dataarray.png height=12in 
+    g.map_dataarray(xray.plot.contourf, 'lon', 'lat')
+
+Iterating over the FacetGrid iterates over the individual axes.
+
+.. ipython:: python
+
+    g = xray.plot.FacetGrid(t, col='time', col_wrap=2)
+    g.map_dataarray(xray.plot.contourf, 'lon', 'lat')
+
+    for i, ax in enumerate(g):
+        ax.set_title('Air Temperature %d' % i)
+
+    @savefig plot_facet_iterator.png height=12in 
+    plt.show()
+
+In this case we don't actually need to pass these args in:
+
+.. ipython:: python
+
+    g = xray.plot.FacetGrid(t, col='time', col_wrap=2)
+
+    @savefig plot_facet_dataarray2.png height=12in
+    g.map_dataarray(xray.plot.contourf)
+
+This design picks out the data args and lets us use any matplotlib
+function with a Dataset:
+
+.. ipython:: python
+
+    tds = t.to_dataset()
+    g = xray.plot.FacetGrid(tds, 'time', col_wrap=2)
+
+    @savefig plot_facet_mapds.png height=12in
+    g.map(plt.contourf, 'lon', 'lat', 'air')
+
+But this really isn't possible for a DataArray since what would the last
+arg be here?
+
+.. ipython:: python
+
+    g = xray.plot.FacetGrid(t, 'time', col_wrap=2)
+
+    @savefig plot_facet_mpl_contourf.png height=12in
+    g.map(plt.contourf, 'lon', 'lat', Ellipsis)
+
+In this interest of getting something useful that's internally consistent
+and bounded in scope here's
+a rough proposal- Get it all working nicely for DataArrays now, and then
+revisit the question of whether and how to provide support for Datasets.
+
+Implement the 
+``map_dataarray`` method that requires the plotting function to accept a
+DataArray as the first arg.
+
+
+More
+~~~~~~~~~~~~~~
+
+Xray faceted plotting uses an API and code from `Seaborn
+<http://stanford.edu/~mwaskom/software/seaborn/tutorial/axis_grids.html>`_
+
+
+
 One Dimension
 -------------
 
@@ -59,7 +180,7 @@ Xray uses the coordinate name to label the x axis:
     sinpts = xray.DataArray(np.sin(t), {'t': t}, name='sin(t)')
     sinpts
 
-    @savefig plotting_example_sin.png width=4in
+    @savefig plot_sin.png width=4in
     sinpts.plot()
 
 Additional Arguments
@@ -76,10 +197,10 @@ can be used:
 
 .. ipython:: python
 
-    @savefig plotting_example_sin2.png width=4in
+    @savefig plot_sin2.png width=4in
     sinpts.plot.line('b-^')
 
-.. warning::
+.. note::
     Not all xray plotting methods support passing positional arguments
     to the wrapped matplotlib functions, but they do all
     support keyword arguments.
@@ -88,7 +209,7 @@ Keyword arguments work the same way, and are more explicit.
 
 .. ipython:: python
 
-    @savefig plotting_example_sin3.png width=4in
+    @savefig plot_sin3.png width=4in
     sinpts.plot.line(color='purple', marker='o')
 
 Adding to Existing Axis
@@ -143,8 +264,10 @@ calls :py:func:`xray.plot.imshow`.
 
 .. ipython:: python
 
-    a = xray.DataArray(np.zeros((4, 3)), dims=('y', 'x'))
-    a[0, 0] = 1
+    a0 = xray.DataArray(np.zeros((4, 3, 2)), dims=('y', 'x', 'z'),
+            name='temperature')
+    a0[0, 0, 0] = 1
+    a = a0.isel(z=0)
     a
 
 The plot will produce an image corresponding to the values of the array.
@@ -216,19 +339,13 @@ Changing Axes
 ~~~~~~~~~~~~~
 
 To swap the variables plotted on vertical and horizontal axes one can
-transpose the array.
+pass in the names of the coordinates to be plotted on x and y axis.
 
 .. ipython:: python
 
+    # TODO - verify works
     @savefig plotting_changing_axes.png width=4in
-    distance.T.plot()
-
-To make x and y increase:
-
-.. ipython:: python
-
-    @savefig plotting_changing_axes2.png width=4in
-    distance.T.plot(xincrease=True, yincrease=True)
+    distance.plot(x='y')
 
 Nonuniform Coordinates
 ~~~~~~~~~~~~~~~~~~~~~~
@@ -264,7 +381,7 @@ matplotlib is available.
     @savefig plotting_2d_call_matplotlib.png width=4in
     plt.show()
 
-.. warning::
+.. note::
 
     Xray methods update label information and generally play around with the
     axes. So any kind of updates to the plot 
@@ -310,6 +427,7 @@ later.
 
     halfd = distance / 2
     halfd.plot(ax=axes[1], **kwargs)
+    #** hack vim syntax highlight
 
     plt.colorbar(im, ax=axes.tolist())
 

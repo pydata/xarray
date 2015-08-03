@@ -6,19 +6,18 @@ Or use the methods on a DataArray:
     DataArray.plot._____
 """
 
+from __future__ import division
 import pkg_resources
 import functools
+from textwrap import dedent
+from itertools import cycle
+from distutils.version import LooseVersion
 
 import numpy as np
 import pandas as pd
 
 from ..core.utils import is_uniform_spaced
 from ..core.pycompat import basestring
-
-
-# TODO - implement this
-class FacetGrid():
-    pass
 
 
 # Maybe more appropriate to keep this in .utils
@@ -53,6 +52,17 @@ def _load_default_cmap(fname='default_colormap.csv'):
     cm_data = pd.read_csv(f, header=None).values
 
     return LinearSegmentedColormap.from_list('viridis', cm_data)
+
+
+def _title_for_slice(darray):
+    '''
+    If the dataarray comes from a slice we can show that info in the title
+    '''
+    title = []
+    for dim, coord in darray.coords.items():
+        if coord.size == 1:
+            title.append('{dim} = {v}'.format(dim=dim, v=coord.values))
+    return ', '.join(title)
 
 
 def plot(darray, ax=None, rtol=0.01, **kwargs):
@@ -123,7 +133,8 @@ def line(darray, *args, **kwargs):
     ndims = len(darray.dims)
     if ndims != 1:
         raise ValueError('Line plots are for 1 dimensional DataArrays. '
-                         'Passed DataArray has {} dimensions'.format(ndims))
+                         'Passed DataArray has {ndims} '
+                         'dimensions'.format(ndims=ndims))
 
     # Ensures consistency with .plot method
     ax = kwargs.pop('ax', None)
@@ -181,7 +192,7 @@ def hist(darray, ax=None, **kwargs):
     ax.set_ylabel('Count')
 
     if darray.name is not None:
-        ax.set_title('Histogram of {}'.format(darray.name))
+        ax.set_title('Histogram of {0}'.format(darray.name))
 
     return primitive
 
@@ -361,6 +372,10 @@ def _plot2d(plotfunc):
     ----------
     darray : DataArray
         Must be 2 dimensional
+    x : string, optional
+        Coordinate for x axis. If None use darray.dims[1]
+    y : string, optional
+        Coordinate for y axis. If None use darray.dims[0]
     ax : matplotlib axes object, optional
         If None, uses the current axis
     xincrease : None, True, or False, optional
@@ -371,6 +386,8 @@ def _plot2d(plotfunc):
         if None, use the default for the matplotlib function
     add_colorbar : Boolean, optional
         Adds colorbar to axis
+    add_labels : Boolean, optional
+        Use xray metadata to label axes
     vmin, vmax : floats, optional
         Values to anchor the colormap, otherwise they are inferred from the
         data and other keyword arguments. When a diverging dataset is inferred,
@@ -407,8 +424,8 @@ def _plot2d(plotfunc):
     plotfunc.__doc__ = '\n'.join((plotfunc.__doc__, commondoc))
 
     @functools.wraps(plotfunc)
-    def newplotfunc(darray, ax=None, xincrease=None, yincrease=None,
-                    add_colorbar=True, vmin=None, vmax=None, cmap=None,
+    def newplotfunc(darray, x=None, y=None, ax=None, xincrease=None, yincrease=None,
+                    add_colorbar=True, add_labels=True, vmin=None, vmax=None, cmap=None,
                     center=None, robust=False, extend=None, levels=None,
                     **kwargs):
         # All 2d plots in xray share this function signature.
@@ -419,25 +436,53 @@ def _plot2d(plotfunc):
         if ax is None:
             ax = plt.gca()
 
-        try:
-            ylab, xlab = darray.dims
-        except ValueError:
+        dims = list(darray.dims)
+
+        if len(dims) != 2:
             raise ValueError('{} plots are for 2 dimensional DataArrays. '
                              'Passed DataArray has {} dimensions'
-                             .format(plotfunc.__name__, len(darray.dims)))
+                             .format(plotfunc.__name__, len(dims)))
+
+        if x and x not in darray:
+            raise KeyError('{} is not a dimension of this DataArray. Use {} or {} for x'
+                           .format(x, *darray.dims))
+
+        if y and y not in darray:
+            raise KeyError('{} is not a dimension of this DataArray. Use {} or {} for y'
+                           .format(y, *darray.dims))
+
+        # Get label names
+        if x and y:
+            xlab = x
+            ylab = y
+        elif x and not y:
+            xlab = x
+            del dims[dims.index(x)]
+            ylab = dims.pop()
+        elif y and not x:
+            ylab = y
+            del dims[dims.index(y)]
+            xlab = dims.pop()
+        else:
+            ylab, xlab = dims
 
         # some plotting functions only know how to handle ndarrays
-        x = darray[xlab].values
-        y = darray[ylab].values
-        z = darray.to_masked_array(copy=False)
+        xval = darray[xlab].values
+        yval = darray[ylab].values
+        zval = darray.to_masked_array(copy=False)
 
-        _ensure_plottable(x, y)
+        # May need to transpose for correct x, y labels
+        if xlab == darray.dims[0]:
+            zval = zval.T
+
+        _ensure_plottable(xval, yval)
 
         if 'contour' in plotfunc.__name__ and levels is None:
             levels = 7  # this is the matplotlib default
+
         filled = plotfunc.__name__ != 'contour'
 
-        cmap_params = _determine_cmap_params(z.data, vmin, vmax, cmap, center,
+        cmap_params = _determine_cmap_params(zval.data, vmin, vmax, cmap, center,
                                              robust, extend, levels, filled)
 
         if 'contour' in plotfunc.__name__:
@@ -450,17 +495,22 @@ def _plot2d(plotfunc):
         # This allows the user to pass in a custom norm coming via kwargs
         kwargs.setdefault('norm', cmap_params['cnorm'])
 
-        ax, primitive = plotfunc(x, y, z, ax=ax,
+        ax, primitive = plotfunc(xval, yval, zval, ax=ax,
                                  cmap=cmap_params['cmap'],
                                  vmin=cmap_params['vmin'],
                                  vmax=cmap_params['vmax'],
                                  **kwargs)
 
-        ax.set_xlabel(xlab)
-        ax.set_ylabel(ylab)
+        # Label the plot with metadata
+        if add_labels:
+            ax.set_xlabel(xlab)
+            ax.set_ylabel(ylab)
+            ax.set_title(_title_for_slice(darray))
 
         if add_colorbar:
-            plt.colorbar(primitive, ax=ax, extend=cmap_params['extend'])
+            cbar = plt.colorbar(primitive, ax=ax, extend=cmap_params['extend'])
+            if darray.name and add_labels:
+                cbar.set_label(darray.name)
 
         _update_axes_limits(ax, xincrease, yincrease)
 
@@ -468,13 +518,13 @@ def _plot2d(plotfunc):
 
     # For use as DataArray.plot.plotmethod
     @functools.wraps(newplotfunc)
-    def plotmethod(_PlotMethods_obj, ax=None, xincrease=None, yincrease=None,
-                   add_colorbar=True, vmin=None, vmax=None, cmap=None,
+    def plotmethod(_PlotMethods_obj, x=None, y=None, ax=None, xincrease=None, yincrease=None,
+                   add_colorbar=True, add_labels=True, vmin=None, vmax=None, cmap=None,
                    center=None, robust=False, extend=None, levels=None,
                    **kwargs):
-        return newplotfunc(_PlotMethods_obj._da, ax=ax, xincrease=xincrease,
+        return newplotfunc(_PlotMethods_obj._da, x=x, y=y, ax=ax, xincrease=xincrease,
                            yincrease=yincrease, add_colorbar=add_colorbar,
-                           vmin=vmin, vmax=vmax, cmap=cmap,
+                           add_labels=add_labels, vmin=vmin, vmax=vmax, cmap=cmap,
                            center=center, robust=robust, extend=extend,
                            levels=levels, **kwargs)
 

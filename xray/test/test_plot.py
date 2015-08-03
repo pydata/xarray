@@ -375,6 +375,50 @@ class Common2dMixin:
         vmin, vmax = artist.get_clim()
         self.assertAlmostEqual(-vmin, vmax)
 
+    def test_xy_strings(self):
+        self.plotmethod('y', 'x')
+        ax = plt.gca()
+        self.assertEqual('y', ax.get_xlabel())
+        self.assertEqual('x', ax.get_ylabel())
+
+    def test_positional_x_string(self):
+        self.plotmethod('y')
+        ax = plt.gca()
+        self.assertEqual('y', ax.get_xlabel())
+        self.assertEqual('x', ax.get_ylabel())
+
+    def test_y_string(self):
+        self.plotmethod(y='x')
+        ax = plt.gca()
+        self.assertEqual('y', ax.get_xlabel())
+        self.assertEqual('x', ax.get_ylabel())
+
+    def test_bad_x_string_exception(self):
+        with self.assertRaisesRegexp(KeyError, r'y'):
+            self.plotmethod('not_a_real_dim')
+
+    def test_default_title(self):
+        a = DataArray(np.random.randn(4, 3, 2, 1), dims=['a', 'b', 'c', 'd'])
+        self.plotfunc(a.isel(c=1))
+        title = plt.gca().get_title()
+        self.assertEqual('c = 1, d = 0', title)
+
+    def test_colorbar_label(self):
+        self.darray.name = 'testvar'
+        self.plotmethod()
+        alltxt = [t.get_text() for t in plt.gcf().findobj(mpl.text.Text)]
+        # Set comprehension not compatible with Python 2.6
+        alltxt = set(alltxt)
+        self.assertIn(self.darray.name, alltxt)
+
+    def test_no_labels(self):
+        self.darray.name = 'testvar'
+        self.plotmethod(add_labels=False)
+        alltxt = [t.get_text() for t in plt.gcf().findobj(mpl.text.Text)]
+        alltxt = set(alltxt)
+        for string in ['x', 'y', 'testvar']:
+            self.assertNotIn(string, alltxt)
+
 
 class TestContourf(Common2dMixin, PlotTestCase):
 
@@ -453,3 +497,20 @@ class TestImshow(Common2dMixin, PlotTestCase):
     def test_primitive_artist_returned(self):
         artist = self.plotmethod()
         self.assertTrue(isinstance(artist, mpl.image.AxesImage))
+
+
+class TestFacetGrid(PlotTestCase):
+
+    def setUp(self):
+        d = np.arange(10 * 15 * 3).reshape(10, 15, 3)
+        self.darray = DataArray(d, dims=['y', 'x', 'z'])
+        self.g = xplt.FacetGrid(self.darray, col='z')
+
+    def test_loop_over_axes(self):
+        self.g.map_dataarray(xplt.contourf, 'x', 'y')
+        for ax in self.g:
+            self.assertTrue(ax.has_data())
+
+    def test_colorbar_same_scale(self):
+        self.g.map_dataarray(xplt.contourf, 'x', 'y')
+        pass
