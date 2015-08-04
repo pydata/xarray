@@ -218,10 +218,13 @@ def _determine_cmap_params(plot_data, vmin=None, vmax=None, cmap=None,
     import matplotlib as mpl
 
     calc_data = plot_data[~pd.isnull(plot_data)]
+    bounds_set = True
     if vmin is None:
         vmin = np.percentile(calc_data, 2) if robust else calc_data.min()
+        bounds_set = False
     if vmax is None:
         vmax = np.percentile(calc_data, 98) if robust else calc_data.max()
+        bounds_set = False
 
     # Simple heuristics for whether these data should  have a divergent map
     divergent = ((vmin < 0) and (vmax > 0)) or center is not None
@@ -250,6 +253,7 @@ def _determine_cmap_params(plot_data, vmin=None, vmax=None, cmap=None,
         cmap = _load_default_cmap()
 
     if extend is None:
+        extend_set = False
         extend_min = calc_data.min() < vmin
         extend_max = calc_data.max() > vmax
         if extend_min and extend_max:
@@ -260,39 +264,67 @@ def _determine_cmap_params(plot_data, vmin=None, vmax=None, cmap=None,
             extend = 'max'
         else:
             extend = 'neither'
+    else:
+        extend_set = True
 
     if levels is not None:
-        cmap, cnorm = _determine_discrete_cmap_params(cmap, levels,
-                                                      vmin, vmax,
-                                                      extend)
+        cmap, cnorm, extend = _determine_discrete_cmap_params(cmap, levels,
+                                                              vmin, vmax,
+                                                              extend,
+                                                              bounds_set,
+                                                              extend_set)
     else:
         cnorm = mpl.colors.Normalize(vmin=vmin, vmax=vmax)
 
     return vmin, vmax, cmap, extend, cnorm
 
 
-def _determine_discrete_cmap_params(cmap, levels, vmin, vmax, extend):
+def _determine_discrete_cmap_params(cmap, levels, vmin, vmax, extend,
+                                    bounds_set, extend_set):
     """
     Build a discrete colormap and normalization of the data.
     """
     import matplotlib as mpl
     import matplotlib.pyplot as plt
 
-    if extend == 'both':
-        ext_n = 2
-    elif extend in ['min', 'max']:
-        ext_n = 1
-    else:
-        ext_n = 0
+    def extension_colors(extend):
+        if extend == 'both':
+            ext_n = 2
+        elif extend in ['min', 'max']:
+            ext_n = 1
+        else:
+            ext_n = 0
+        return ext_n
 
     if isinstance(levels, int):
         vmax += 10 * np.finfo(float).eps  # Add small epison to include vmax
-        cticks = np.linspace(vmin, vmax, num=levels + 1, endpoint=True)
-        n_colors = levels + ext_n
+        if not bounds_set:
+            # if there were not user provided bounds, use MaxNLocator to pick
+            # a nice set of ticks
+            ticker = mpl.ticker.MaxNLocator(levels)
+            cticks = ticker.tick_values(vmin, vmax)
+            print(cticks)
+        else:
+            # otherwise, use the user provided vmin/vmax
+            cticks = np.linspace(vmin, vmax, num=levels + 1, endpoint=True)
+        ext_n = extension_colors(extend)
+        n_colors = len(cticks) + ext_n - 1
     else:
         try:
-            n_colors = len(levels) + ext_n - 1
             cticks = np.asarray(levels)
+            if not extend_set:
+                extend_min = cticks[0] > vmin
+                extend_max = cticks[-1] < vmax
+                if extend_min and extend_max:
+                    extend = 'both'
+                elif extend_min:
+                    extend = 'min'
+                elif extend_max:
+                    extend = 'max'
+                else:
+                    extend = 'neither'
+            ext_n = extension_colors(extend)
+            n_colors = len(levels) + ext_n - 1
         except TypeError as e:
             print('Unexpected type (%s) given for levels' % type(levels))
             raise e
@@ -311,7 +343,7 @@ def _determine_discrete_cmap_params(cmap, levels, vmin, vmax, extend):
 
     cmap, cnorm = mpl.colors.from_levels_and_colors(cticks, pal, extend=extend)
 
-    return cmap, cnorm
+    return cmap, cnorm, extend
 
 
 # MUST run before any 2d plotting functions are defined since
@@ -425,10 +457,12 @@ def _plot2d(plotfunc):
             # passing it to the colorbar is sufficient for imshow and
             # pcolormesh
             kwargs['extend'] = extend
-            kwargs['levels'] = levels
 
-        ax, primitive = plotfunc(x, y, z, ax=ax, cmap=cmap, norm=cnorm,
-                                 **kwargs)
+        if 'norm' not in kwargs:
+            # This allows the user to pass in a custom norm coming via kwargs
+            kwargs['norm'] = cnorm
+
+        ax, primitive = plotfunc(x, y, z, ax=ax, cmap=cmap, **kwargs)
 
         ax.set_xlabel(xlab)
         ax.set_ylabel(ylab)

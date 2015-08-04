@@ -188,48 +188,57 @@ class TestDetermineDiscreteCmapParams(TestCase):
         levels = 8
         vmin = -5
         vmax = 5
-        cmap, cnorm = _determine_discrete_cmap_params('Spectral', levels,
-                                                      vmin, vmax, 'neither')
+        cmap, cnorm, extend = _determine_discrete_cmap_params(
+            'Spectral', levels, vmin, vmax, 'neither', True, True)
         self.assertEqual(cmap.N, levels)
         self.assertEqual(cnorm.N, levels + 1)
         self.assertEqual(cnorm.vmin, vmin)
         self.assertEqual(cnorm.vmax, vmax + 10 * np.finfo(float).eps)
 
-        cmap, cnorm = _determine_discrete_cmap_params('Blues', levels,
-                                                      vmin, vmax, 'both')
+        cmap, cnorm, extend = _determine_discrete_cmap_params(
+            'Blues', levels, vmin, vmax, 'both', True, True)
         # extension colors are not included here
         self.assertEqual(cmap.N, levels)
         self.assertEqual(cnorm.N, levels + 1)
         self.assertEqual(cnorm.vmin, vmin)
         self.assertEqual(cnorm.vmax, vmax + 10 * np.finfo(float).eps)
 
+        # heuristics for picking nice ticks
+        cmap, cnorm, extend = _determine_discrete_cmap_params(
+            'Spectral', levels, vmin, vmax, 'neither', False, True)
+        self.assertGreaterEqual(cnorm.vmax, vmax)
+        self.assertLessEqual(cnorm.vmin, vmin)
+
     def test_list_levels(self):
         levels = [-4, -2, 0, 2, 4]
         vmin = -5
         vmax = 5
 
-        cmap, cnorm = _determine_discrete_cmap_params('Spectral', levels,
-                                                      vmin, vmax, 'neither')
+        cmap, cnorm, extend = _determine_discrete_cmap_params(
+            'Spectral', levels, vmin, vmax, 'neither', True, True)
         self.assertEqual(cmap.N, len(levels) - 1)
         self.assertEqual(cnorm.N, len(levels))
         self.assertEqual(cnorm.vmin, min(levels))
         self.assertEqual(cnorm.vmax, max(levels))
 
-        cmap, cnorm = _determine_discrete_cmap_params('Greens_r', levels,
-                                                      vmin, vmax, 'both')
+        cmap, cnorm, extend = _determine_discrete_cmap_params(
+            'Greens_r', levels, vmin, vmax, 'both', True, True)
         self.assertEqual(cmap.N, len(levels) - 1)
         self.assertEqual(cnorm.N, len(levels))
         self.assertEqual(cnorm.vmin, min(levels))
         self.assertEqual(cnorm.vmax, max(levels))
 
         # levels as an array
-        cmap, cnorm = _determine_discrete_cmap_params('Greens_r',
-                                                      np.array(levels),
-                                                      vmin, vmax, 'both')
+        cmap, cnorm, extend = _determine_discrete_cmap_params(
+            'Greens_r', np.array(levels), vmin, vmax, 'both', True, True)
         # levels as a DataArray
-        cmap, cnorm = _determine_discrete_cmap_params('Greens_r',
-                                                      DataArray(levels),
-                                                      vmin, vmax, 'both')
+        cmap, cnorm, extend = _determine_discrete_cmap_params(
+            'Greens_r', DataArray(levels), vmin, vmax, 'both', True, True)
+
+        # heuristics for picking extend when using list of levels
+        cmap, cnorm, extend = _determine_discrete_cmap_params(
+            'Greens_r', DataArray(levels), -5, 3, 'both', True, False)
+        self.assertEqual(extend, 'min')
 
 
 class Common2dMixin:
@@ -336,6 +345,13 @@ class TestContourf(Common2dMixin, PlotTestCase):
 
         artist = self.plotmethod(vmin=-10, vmax=0)
         self.assertEqual(artist.extend, 'max')
+
+    def test_levels(self):
+        artist = self.plotmethod(levels=[-0.5, -0.4, 0.1])
+        self.assertEqual(artist.extend, 'both')
+
+        artist = self.plotmethod(levels=3)
+        self.assertEqual(artist.extend, 'neither')
 
 
 class TestContour(Common2dMixin, PlotTestCase):
