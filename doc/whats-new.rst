@@ -14,7 +14,8 @@ v0.5.3 (unreleased)
 
 - Variables in netCDF files with multiple missing values are now decoded as NaN
   after issuing a warning if open_dataset is called with mask_and_scale=True.
-
+- We clarified our rules for when the result from an xray operation is a copy
+  vs. a view (see :ref:`copies vs views` for more details).
 - Dataset variables are now written to netCDF files in order of appearance
   when using the netcdf4 backend (:issue:`479`).
 - Added :py:meth:`~xray.Dataset.isel_points` and :py:meth:`~xray.Dataset.sel_points`
