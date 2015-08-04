@@ -6,7 +6,7 @@ from xray import DataArray
 import xray.plot as xplt
 from xray.plot.plot import (_infer_interval_breaks,
                             _determine_cmap_params,
-                            _determine_discrete_cmap_params)
+                            _build_discrete_cmap)
 
 from . import TestCase, requires_matplotlib
 
@@ -166,79 +166,57 @@ class TestPlotHistogram(PlotTestCase):
 class TestDetermineCmapParams(TestCase):
     def test_robust(self):
         data = np.random.RandomState(1).rand(100)
-        vmin, vmax, cmap, extend, cnorm = _determine_cmap_params(data,
-                                                                 robust=True)
+        vmin, vmax, cmap, extend, levels, cnorm = _determine_cmap_params(
+            data, robust=True)
         self.assertEqual(vmin, np.percentile(data, 2))
         self.assertEqual(vmax, np.percentile(data, 98))
         self.assertEqual(cmap.name, 'viridis')
         self.assertEqual(extend, 'both')
+        self.assertIsNone(levels)
+        self.assertIsNone(cnorm)
 
     def test_center(self):
         data = np.random.RandomState(2).rand(100)
-        vmin, vmax, cmap, extend, cnorm = _determine_cmap_params(data,
-                                                                 center=0.5)
+        vmin, vmax, cmap, extend, levels, cnorm = _determine_cmap_params(
+            data, center=0.5)
         self.assertEqual(vmax - 0.5, 0.5 - vmin)
         self.assertEqual(cmap, 'RdBu_r')
         self.assertEqual(extend, 'neither')
+        self.assertIsNone(levels)
+        self.assertIsNone(cnorm)
 
-
-@requires_matplotlib
-class TestDetermineDiscreteCmapParams(TestCase):
     def test_integer_levels(self):
-        levels = 8
-        vmin = -5
-        vmax = 5
-        cmap, cnorm, extend = _determine_discrete_cmap_params(
-            'Spectral', levels, vmin, vmax, 'neither', True, True)
-        self.assertEqual(cmap.N, levels)
-        self.assertEqual(cnorm.N, levels + 1)
-        self.assertEqual(cnorm.vmin, vmin)
-        self.assertEqual(cnorm.vmax, vmax + 10 * np.finfo(float).eps)
+        data = 1 + np.random.RandomState(3).rand(100)
+        vmin, vmax, cmap, extend, levels, cnorm = _determine_cmap_params(
+            data, levels=5, vmin=0, vmax=5, cmap='Blues')
+        self.assertEqual(vmin, levels[0])
+        self.assertEqual(vmax, levels[-1])
+        self.assertEqual(cmap.name, 'Blues')
+        self.assertEqual(extend, 'neither')
+        self.assertEqual(cmap.N, 5)
+        self.assertEqual(cnorm.N, 6)
 
-        cmap, cnorm, extend = _determine_discrete_cmap_params(
-            'Blues', levels, vmin, vmax, 'both', True, True)
-        # extension colors are not included here
-        self.assertEqual(cmap.N, levels)
-        self.assertEqual(cnorm.N, levels + 1)
-        self.assertEqual(cnorm.vmin, vmin)
-        self.assertEqual(cnorm.vmax, vmax + 10 * np.finfo(float).eps)
-
-        # heuristics for picking nice ticks
-        cmap, cnorm, extend = _determine_discrete_cmap_params(
-            'Spectral', levels, vmin, vmax, 'neither', False, True)
-        self.assertGreaterEqual(cnorm.vmax, vmax)
-        self.assertLessEqual(cnorm.vmin, vmin)
+        vmin, vmax, cmap, extend, levels, cnorm = _determine_cmap_params(
+            data, levels=5, vmin=0.5, vmax=1.5)
+        self.assertEqual(cmap.name, 'viridis')
+        self.assertEqual(extend, 'max')
 
     def test_list_levels(self):
-        levels = [-4, -2, 0, 2, 4]
-        vmin = -5
-        vmax = 5
+        data = 1 + np.random.RandomState(3).rand(100)
 
-        cmap, cnorm, extend = _determine_discrete_cmap_params(
-            'Spectral', levels, vmin, vmax, 'neither', True, True)
-        self.assertEqual(cmap.N, len(levels) - 1)
-        self.assertEqual(cnorm.N, len(levels))
-        self.assertEqual(cnorm.vmin, min(levels))
-        self.assertEqual(cnorm.vmax, max(levels))
+        orig_levels = [0, 1, 2, 3, 4, 5]
+        # vmin and vmax should be ignored if levels are explicitly provided
+        vmin, vmax, cmap, extend, levels, cnorm = _determine_cmap_params(
+            data, levels=orig_levels, vmin=0, vmax=3)
+        self.assertEqual(vmin, 0)
+        self.assertEqual(vmax, 5)
+        self.assertEqual(cmap.N, 5)
+        self.assertEqual(cnorm.N, 6)
 
-        cmap, cnorm, extend = _determine_discrete_cmap_params(
-            'Greens_r', levels, vmin, vmax, 'both', True, True)
-        self.assertEqual(cmap.N, len(levels) - 1)
-        self.assertEqual(cnorm.N, len(levels))
-        self.assertEqual(cnorm.vmin, min(levels))
-        self.assertEqual(cnorm.vmax, max(levels))
-
-        # levels as an array
-        cmap, cnorm, extend = _determine_discrete_cmap_params(
-            'Greens_r', np.array(levels), vmin, vmax, 'both', True, True)
-        # levels as a DataArray
-        cmap, cnorm, extend = _determine_discrete_cmap_params(
-            'Greens_r', DataArray(levels), vmin, vmax, 'both', True, True)
-
-        # heuristics for picking extend when using list of levels
-        cmap, cnorm, extend = _determine_discrete_cmap_params(
-            'Greens_r', DataArray(levels), -5, 3, 'both', True, False)
-        self.assertEqual(extend, 'min')
+        for wrap_levels in [list, np.array, pd.Index, DataArray]:
+            vmin, vmax, cmap, extend, levels, cnorm = _determine_cmap_params(
+                data, levels=wrap_levels(orig_levels))
+            self.assertArrayEqual(levels, orig_levels)
 
 
 class Common2dMixin:
@@ -311,8 +289,8 @@ class Common2dMixin:
         self.assertEqual('viridis', cmap_name)
 
     def test_can_change_default_cmap(self):
-        cmap_name = self.plotmethod(cmap='jet').get_cmap().name
-        self.assertEqual('jet', cmap_name)
+        cmap_name = self.plotmethod(cmap='Blues').get_cmap().name
+        self.assertEqual('Blues', cmap_name)
 
     def test_diverging_color_limits(self):
         artist = self.plotmethod()

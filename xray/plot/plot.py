@@ -208,7 +208,7 @@ def _update_axes_limits(ax, xincrease, yincrease):
 
 def _determine_cmap_params(plot_data, vmin=None, vmax=None, cmap=None,
                            center=None, robust=False, extend=None,
-                           levels=None):
+                           levels=None, filled=True, cnorm=None):
     """
     Use some heuristics to set good defaults for colorbar and range.
 
@@ -218,13 +218,10 @@ def _determine_cmap_params(plot_data, vmin=None, vmax=None, cmap=None,
     import matplotlib as mpl
 
     calc_data = plot_data[~pd.isnull(plot_data)]
-    bounds_set = True
     if vmin is None:
         vmin = np.percentile(calc_data, 2) if robust else calc_data.min()
-        bounds_set = False
     if vmax is None:
         vmax = np.percentile(calc_data, 98) if robust else calc_data.max()
-        bounds_set = False
 
     # Simple heuristics for whether these data should  have a divergent map
     divergent = ((vmin < 0) and (vmax > 0)) or center is not None
@@ -249,85 +246,42 @@ def _determine_cmap_params(plot_data, vmin=None, vmax=None, cmap=None,
         else:
             cmap = "viridis"
 
+    # Allow viridis before matplotlib 1.5
     if cmap == "viridis":
         cmap = _load_default_cmap()
 
+    # Handle discrete levels
+    if levels is not None:
+        if isinstance(levels, int):
+            ticker = mpl.ticker.MaxNLocator(levels)
+            levels = ticker.tick_values(vmin, vmax)
+        vmin, vmax = levels[0], levels[-1]
+
     if extend is None:
-        extend_set = False
-        extend_min = calc_data.min() < vmin
-        extend_max = calc_data.max() > vmax
-        if extend_min and extend_max:
-            extend = 'both'
-        elif extend_min:
-            extend = 'min'
-        elif extend_max:
-            extend = 'max'
-        else:
-            extend = 'neither'
-    else:
-        extend_set = True
+        extend = _determine_extend(calc_data, vmin, vmax)
 
     if levels is not None:
-        cmap, cnorm, extend = _determine_discrete_cmap_params(cmap, levels,
-                                                              vmin, vmax,
-                                                              extend,
-                                                              bounds_set,
-                                                              extend_set)
+        cmap, cnorm = _build_discrete_cmap(cmap, levels, extend, filled)
+
+    return vmin, vmax, cmap, extend, levels, cnorm
+
+
+def _determine_extend(calc_data, vmin, vmax):
+    extend_min = calc_data.min() < vmin
+    extend_max = calc_data.max() > vmax
+    if extend_min and extend_max:
+        extend = 'both'
+    elif extend_min:
+        extend = 'min'
+    elif extend_max:
+        extend = 'max'
     else:
-        cnorm = mpl.colors.Normalize(vmin=vmin, vmax=vmax)
+        extend = 'neither'
+    return extend
 
-    return vmin, vmax, cmap, extend, cnorm
 
-
-def _determine_discrete_cmap_params(cmap, levels, vmin, vmax, extend,
-                                    bounds_set, extend_set):
-    """
-    Build a discrete colormap and normalization of the data.
-    """
-    import matplotlib as mpl
+def _color_palette(cmap, n_colors):
     import matplotlib.pyplot as plt
-
-    def extension_colors(extend):
-        if extend == 'both':
-            ext_n = 2
-        elif extend in ['min', 'max']:
-            ext_n = 1
-        else:
-            ext_n = 0
-        return ext_n
-
-    if isinstance(levels, int):
-        vmax += 10 * np.finfo(float).eps  # Add small epison to include vmax
-        if not bounds_set:
-            # if there were not user provided bounds, use MaxNLocator to pick
-            # a nice set of ticks
-            ticker = mpl.ticker.MaxNLocator(levels)
-            cticks = ticker.tick_values(vmin, vmax)
-            print(cticks)
-        else:
-            # otherwise, use the user provided vmin/vmax
-            cticks = np.linspace(vmin, vmax, num=levels + 1, endpoint=True)
-        ext_n = extension_colors(extend)
-        n_colors = len(cticks) + ext_n - 1
-    else:
-        try:
-            cticks = np.asarray(levels)
-            if not extend_set:
-                extend_min = cticks[0] > vmin
-                extend_max = cticks[-1] < vmax
-                if extend_min and extend_max:
-                    extend = 'both'
-                elif extend_min:
-                    extend = 'min'
-                elif extend_max:
-                    extend = 'max'
-                else:
-                    extend = 'neither'
-            ext_n = extension_colors(extend)
-            n_colors = len(levels) + ext_n - 1
-        except TypeError as e:
-            print('Unexpected type (%s) given for levels' % type(levels))
-            raise e
     try:
         from seaborn.apionly import color_palette
         pal = color_palette(cmap, n_colors=n_colors)
@@ -340,10 +294,38 @@ def _determine_discrete_cmap_params(cmap, levels, vmin, vmax, extend,
 
         colors_i = np.linspace(0, 1., n_colors)
         pal = cmap(colors_i)
+    return pal
 
-    cmap, cnorm = mpl.colors.from_levels_and_colors(cticks, pal, extend=extend)
 
-    return cmap, cnorm, extend
+def _build_discrete_cmap(cmap, levels, extend, filled):
+    """
+    Build a discrete colormap and normalization of the data.
+    """
+    import matplotlib as mpl
+
+    def extension_colors(extend):
+        if extend == 'both':
+            ext_n = 2
+        elif extend in ['min', 'max']:
+            ext_n = 1
+        else:
+            ext_n = 0
+        return ext_n
+
+    if not filled:
+        # non-filled contour plots
+        extend = 'neither'
+
+    ext_n = extension_colors(extend)
+    n_colors = len(levels) + ext_n - 1
+    pal = _color_palette(cmap, n_colors)
+
+    new_cmap, cnorm = mpl.colors.from_levels_and_colors(
+        levels, pal, extend=extend)
+    # copy the old cmap name, for easier testing
+    new_cmap.name = getattr(cmap, 'name', cmap)
+
+    return new_cmap, cnorm
 
 
 # MUST run before any 2d plotting functions are defined since
@@ -393,7 +375,8 @@ def _plot2d(plotfunc):
     vmin, vmax : floats, optional
         Values to anchor the colormap, otherwise they are inferred from the
         data and other keyword arguments. When a diverging dataset is inferred,
-        one of these values may be ignored.
+        one of these values may be ignored. If discrete levels are provided as
+        an explicit list, both of these values are ignored.
     cmap : matplotlib colormap name or object, optional
         The mapping from data values to color space. If not provided, this
         will be either be ``viridis`` (if the function infers a sequential
@@ -449,20 +432,25 @@ def _plot2d(plotfunc):
 
         _ensure_plottable(x, y)
 
-        vmin, vmax, cmap, extend, cnorm = _determine_cmap_params(
-            z.data, vmin, vmax, cmap, center, robust, extend, levels)
+        if 'contour' in plotfunc.__name__ and levels is None:
+            levels = 7  # this is the matplotlib default
+        filled = plotfunc.__name__ != 'contour'
+
+        vmin, vmax, cmap, extend, levels, cnorm = _determine_cmap_params(
+            z.data, vmin, vmax, cmap, center, robust, extend, levels, filled)
 
         if 'contour' in plotfunc.__name__:
             # extend is a keyword argument only for contour and contourf, but
             # passing it to the colorbar is sufficient for imshow and
             # pcolormesh
             kwargs['extend'] = extend
+            kwargs['levels'] = levels
 
-        if 'norm' not in kwargs:
-            # This allows the user to pass in a custom norm coming via kwargs
-            kwargs['norm'] = cnorm
+        # This allows the user to pass in a custom norm coming via kwargs
+        kwargs.setdefault('norm', cnorm)
 
-        ax, primitive = plotfunc(x, y, z, ax=ax, cmap=cmap, **kwargs)
+        ax, primitive = plotfunc(x, y, z, ax=ax, cmap=cmap, vmin=vmin,
+                                 vmax=vmax, **kwargs)
 
         ax.set_xlabel(xlab)
         ax.set_ylabel(ylab)
