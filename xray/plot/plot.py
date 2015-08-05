@@ -285,9 +285,10 @@ def _color_palette(cmap, n_colors):
     try:
         from seaborn.apionly import color_palette
         pal = color_palette(cmap, n_colors=n_colors)
-    except (TypeError, ImportError):
+    except (TypeError, ImportError, ValueError):
         # TypeError is raised when LinearSegmentedColormap (viridis) is used
-        # Import Error is raised when seaborn is not installed
+        # ImportError is raised when seaborn is not installed
+        # ValueError is raised when seaborn doesn't like a colormap (e.g. jet)
         # Use homegrown solution if you don't have seaborn or are using viridis
         if isinstance(cmap, basestring):
             cmap = plt.get_cmap(cmap)
