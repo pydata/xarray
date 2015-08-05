@@ -201,7 +201,7 @@ distance from a 2d grid point to the origin.
 
     distance = np.linalg.norm(xy, axis=2)
 
-    distance = xray.DataArray(distance, zip(('y', 'x'), (y, x))))
+    distance = xray.DataArray(distance, zip(('y', 'x'), (y, x)))
     distance
 
 Note the coordinate ``y`` here is decreasing.
