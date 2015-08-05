@@ -57,7 +57,7 @@ DataArray:
 
     Positional indexing deviates from the NumPy when indexing with multiple
     arrays like ``arr[[0, 1], [0, 1]]``, as described in :ref:`indexing details`.
-    See :ref:`pointwise indexing` and :py:meth:`~xray.Dataset.isel_points` for more on this functionality.
+    See :ref:`pointwise indexing` for how to achieve this functionality in xray.
 
 xray also supports label-based indexing, just like pandas. Because
 we use a :py:class:`pandas.Index` under the hood, label based indexing is very
@@ -123,7 +123,8 @@ __ http://legacy.python.org/dev/peps/pep-0472/
 
 .. warning::
 
-    Do not try to assign values when using ``isel``, ``isel_points`` or ``sel``::
+    Do not try to assign values when using any of the indexing methods ``isel``,
+    ``isel_points``, ``sel`` or ``sel_points``::
 
         # DO NOT do this
         arr.isel(space=0) = 0
@@ -143,7 +144,8 @@ Pointwise indexing
 xray pointwise indexing supports the indexing along multiple labeled dimensions
 using list-like objects. While :py:meth:`~xray.DataArray.isel` performs
 orthogonal indexing, the :py:meth:`~xray.DataArray.isel_points` method
-provides similar numpy indexing behavior as if you were using multiple lists to index an array (e.g. `arr[[0, 1], [0, 1]]` ):
+provides similar numpy indexing behavior as if you were using multiple
+lists to index an array (e.g. ``arr[[0, 1], [0, 1]]`` ):
 
 .. ipython:: python
 
@@ -151,6 +153,17 @@ provides similar numpy indexing behavior as if you were using multiple lists to 
     da = xray.DataArray(np.arange(56).reshape((7, 8)), dims=['x', 'y'])
     da
     da.isel_points(x=[0, 1, 6], y=[0, 1, 0])
+
+There is also :py:meth:`~xray.DataArray.sel_points`, which analogously
+allows you to do point-wise indexing by label:
+
+.. ipython:: python
+
+    times = pd.to_datetime(['2000-01-03', '2000-01-02', '2000-01-01'])
+    arr.sel_points(space=['IA', 'IL', 'IN'], time=times)
+
+The equivalent pandas method to ``sel_points`` is
+:py:meth:`~pandas.DataFrame.lookup`.
 
 Dataset indexing
 ----------------

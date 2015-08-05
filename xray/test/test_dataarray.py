@@ -382,7 +382,7 @@ class TestDataArray(TestCase):
         actual = data.sel(x=[0.9, 1.9], method='backfill')
         self.assertDataArrayIdentical(expected, actual)
 
-    def test_isel_points_method(self):
+    def test_isel_points(self):
         shape = (10, 5, 6)
         np_array = np.random.random(shape)
         da = DataArray(np_array, dims=['time', 'y', 'x'])
@@ -441,6 +441,16 @@ class TestDataArray(TestCase):
         # using non string dims
         actual = da.isel_points(y=[1, 2], x=[1, 2], dim=['A', 'B'])
         assert 'points' in actual.coords
+
+    def test_isel_points(self):
+        shape = (10, 5, 6)
+        np_array = np.random.random(shape)
+        da = DataArray(np_array, dims=['time', 'y', 'x'])
+        y = [1, 3]
+        x = [3, 0]
+        expected = da.isel_points(x=x, y=y)
+        actual = da.sel_points(x=x, y=y)
+        self.assertDataArrayIdentical(expected, actual)
 
     def test_loc(self):
         self.ds['x'] = ('x', np.array(list('abcdefghij')))

@@ -562,6 +562,17 @@ class DataArray(AbstractArray, BaseDataObject):
         ds = self._dataset.isel_points(dim=dim, **indexers)
         return self._with_replaced_dataset(ds)
 
+    def sel_points(self, dim='points', method=None, **indexers):
+        """Return a new DataArray whose dataset is given by pointwise selection
+        of index labels along the specified dimension(s).
+
+        See Also
+        --------
+        Dataset.sel_points
+        """
+        ds = self._dataset.sel_points(dim=dim, method=method, **indexers)
+        return self._with_replaced_dataset(ds)
+
     def reindex_like(self, other, method=None, copy=True):
         """Conform this object onto the indexes of another object, filling
         in missing values with NaN.
@@ -579,7 +590,7 @@ class DataArray(AbstractArray, BaseDataObject):
             Method to use for filling index values from other not found on this
             data array:
 
-            * default: don't fill gaps
+            * None (default): don't fill gaps
             * pad / ffill: propgate last valid index value forward
             * backfill / bfill: propagate next valid index value backward
             * nearest: use nearest valid index value (requires pandas>=0.16)
@@ -615,7 +626,7 @@ class DataArray(AbstractArray, BaseDataObject):
             Method to use for filling index values in ``indexers`` not found on
             this data array:
 
-            * default: don't fill gaps
+            * None (default): don't fill gaps
             * pad / ffill: propgate last valid index value forward
             * backfill / bfill: propagate next valid index value backward
             * nearest: use nearest valid index value (requires pandas>=0.16)
