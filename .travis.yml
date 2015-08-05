@@ -11,7 +11,7 @@ matrix:
     env: UPDATE_ENV="conda install unittest2 pandas==0.15.0 h5py cython && pip install h5netcdf"
   # Test on Python 2.7 with and without netCDF4/scipy/cdat-lite
   - python: 2.7
-    env: UPDATE_ENV="conda install -c scitools cdat-lite h5py cython matplotlib && pip install cyordereddict h5netcdf"
+    env: UPDATE_ENV="conda install -c scitools cdat-lite h5py cython matplotlib seaborn && pip install cyordereddict h5netcdf"
   - python: 2.7
     # nb. we have to remove scipy because conda install pandas brings it in:
     # https://github.com/ContinuumIO/anaconda-issues/issues/145
@@ -19,7 +19,7 @@ matrix:
   - python: 3.3
     env: UPDATE_ENV="conda remove netCDF4"
   - python: 3.4
-    env: UPDATE_ENV="conda install -c pandas bottleneck h5py cython dask matplotlib && pip install cyordereddict h5netcdf"
+    env: UPDATE_ENV="conda install -c pandas bottleneck h5py cython dask matplotlib seaborn && pip install cyordereddict h5netcdf"
   # don't require pydap tests to pass because the dap test server is unreliable
   - python: 2.7
     env: UPDATE_ENV="pip install pydap"

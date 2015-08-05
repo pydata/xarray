@@ -382,6 +382,8 @@ def _plot2d(plotfunc):
         The mapping from data values to color space. If not provided, this
         will be either be ``viridis`` (if the function infers a sequential
         dataset) or ``RdBu_r`` (if the function infers a diverging dataset).
+        When ``levels`` is provided and when `Seaborn` is installed, ``cmap``
+        may also be a `seaborn` color palette or a list of colors.
     center : float, optional
         The value at which to center the colormap. Passing this value implies
         use of a diverging colormap.

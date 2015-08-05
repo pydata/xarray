@@ -201,7 +201,7 @@ distance from a 2d grid point to the origin.
 
     distance = np.linalg.norm(xy, axis=2)
 
-    distance = xray.DataArray(distance, zip(('y', 'x'), (y, x)))
+    distance = xray.DataArray(distance, zip(('y', 'x'), (y, x))))
     distance
 
 Note the coordinate ``y`` here is decreasing.
@@ -328,6 +328,35 @@ Take a closer look:
 In general xray's plotting functions modify the axes and
 return the same objects that the wrapped
 matplotlib functions return.
+
+Discrete Colormaps
+~~~~~~~~~~~~~~~~~~
+
+It is often useful, when visualizing 2d data, to use a discrete colormap,
+rather than the default continuous colormaps that matplotlib uses. The
+``levels`` keyword argument can be used to generate plots with discrete
+colormaps. For example, to make a plot with 8 discrete color intervals:
+
+.. ipython:: python
+
+    @savefig plotting_discrete_levels.png width=4in
+    distance.plot(levels=8)
+
+It is also possible to use a list of levels to specify the boundaries of the
+discrete colormap:
+
+.. ipython:: python
+
+    @savefig plotting_listed_levels.png width=4in
+    distance.plot(levels=[2, 5, 10, 11])
+
+Finally, if you are have `Seaborn <http://stanford.edu/~mwaskom/software/seaborn/>`_ installed, you can also specify a `seaborn` color palete or a list of colors as the ``cmap`` argument:
+
+.. ipython:: python
+
+    flatui = ["#9b59b6", "#3498db", "#95a5a6", "#e74c3c", "#34495e", "#2ecc71"]
+    @savefig plotting_custom_colors_levels.png width=4in
+    distance.plot(levels=[1, 2, 4, 5, 7], cmap=flatui)
 
 Maps
 ----
