@@ -445,6 +445,12 @@ class TestEncodeCFVariable(TestCase):
             with self.assertRaises(ValueError):
                 conventions.encode_cf_variable(var)
 
+    def test_missing_fillvalue(self):
+        v = Variable(['x'], np.array([np.nan, 1, 2, 3]))
+        v.encoding = {'dtype': 'int16'}
+        with self.assertWarns('floating point data as an integer'):
+            conventions.encode_cf_variable(v)
+
 
 @requires_netCDF4
 class TestDecodeCF(TestCase):
