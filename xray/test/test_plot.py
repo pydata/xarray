@@ -257,15 +257,15 @@ class TestDiscreteColorMap(TestCase):
                                ('neither', [0, 5, 10, 15]),
                                ('min', [2, 5, 10, 15])]:
             for kind in ['imshow', 'pcolormesh', 'contourf', 'contour']:
-                primative = getattr(self.darray.plot, kind)(levels=levels)
-                self.assertArrayEqual(levels, primative.norm.boundaries)
-                self.assertEqual(max(levels), primative.norm.vmax)
-                self.assertEqual(min(levels), primative.norm.vmin)
+                primitive = getattr(self.darray.plot, kind)(levels=levels)
+                self.assertArrayEqual(levels, primitive.norm.boundaries)
+                self.assertEqual(max(levels), primitive.norm.vmax)
+                self.assertEqual(min(levels), primitive.norm.vmin)
                 if kind != 'contour':
-                    self.assertEqual(extend, primative.cmap.colorbar_extend)
+                    self.assertEqual(extend, primitive.cmap.colorbar_extend)
                 else:
-                    self.assertEqual('neither', primative.cmap.colorbar_extend)
-                self.assertEqual(len(levels) - 1, len(primative.cmap.colors))
+                    self.assertEqual('neither', primitive.cmap.colorbar_extend)
+                self.assertEqual(len(levels) - 1, len(primitive.cmap.colors))
 
     def test_discrete_colormap_int_levels(self):
         for extend, levels, vmin, vmax in [('neither', 7, None, None),
@@ -273,30 +273,30 @@ class TestDiscreteColorMap(TestCase):
                                            ('both', 7, 4, 8),
                                            ('min', 10, 4, 15)]:
             for kind in ['imshow', 'pcolormesh', 'contourf', 'contour']:
-                primative = getattr(self.darray.plot, kind)(levels=levels,
+                primitive = getattr(self.darray.plot, kind)(levels=levels,
                                                             vmin=vmin,
                                                             vmax=vmax)
                 self.assertGreaterEqual(levels,
-                                        len(primative.norm.boundaries) - 1)
+                                        len(primitive.norm.boundaries) - 1)
                 if vmax is None:
-                    self.assertGreaterEqual(primative.norm.vmax, self.data_max)
+                    self.assertGreaterEqual(primitive.norm.vmax, self.data_max)
                 else:
-                    self.assertGreaterEqual(primative.norm.vmax, vmax)
+                    self.assertGreaterEqual(primitive.norm.vmax, vmax)
                 if vmin is None:
-                    self.assertLessEqual(primative.norm.vmin, self.data_min)
+                    self.assertLessEqual(primitive.norm.vmin, self.data_min)
                 else:
-                    self.assertLessEqual(primative.norm.vmin, vmin)
+                    self.assertLessEqual(primitive.norm.vmin, vmin)
                 if kind != 'contour':
-                    self.assertEqual(extend, primative.cmap.colorbar_extend)
+                    self.assertEqual(extend, primitive.cmap.colorbar_extend)
                 else:
-                    self.assertEqual('neither', primative.cmap.colorbar_extend)
-                self.assertGreaterEqual(levels, len(primative.cmap.colors))
+                    self.assertEqual('neither', primitive.cmap.colorbar_extend)
+                self.assertGreaterEqual(levels, len(primitive.cmap.colors))
 
     def test_discrete_colormap_list_levels_and_vmin_or_vmax(self):
         levels = [0, 5, 10, 15]
-        primative = self.darray.plot(levels=levels, vmin=-3, vmax=20)
-        self.assertEqual(primative.norm.vmax, max(levels))
-        self.assertEqual(primative.norm.vmin, min(levels))
+        primitive = self.darray.plot(levels=levels, vmin=-3, vmax=20)
+        self.assertEqual(primitive.norm.vmax, max(levels))
+        self.assertEqual(primitive.norm.vmin, min(levels))
 
 
 class Common2dMixin:

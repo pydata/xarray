@@ -304,20 +304,17 @@ def _build_discrete_cmap(cmap, levels, extend, filled):
     """
     import matplotlib as mpl
 
-    def extension_colors(extend):
-        if extend == 'both':
-            ext_n = 2
-        elif extend in ['min', 'max']:
-            ext_n = 1
-        else:
-            ext_n = 0
-        return ext_n
-
     if not filled:
         # non-filled contour plots
         extend = 'neither'
 
-    ext_n = extension_colors(extend)
+    if extend == 'both':
+        ext_n = 2
+    elif extend in ['min', 'max']:
+        ext_n = 1
+    else:
+        ext_n = 0
+
     n_colors = len(levels) + ext_n - 1
     pal = _color_palette(cmap, n_colors)
 
@@ -469,12 +466,13 @@ def _plot2d(plotfunc):
     @functools.wraps(newplotfunc)
     def plotmethod(_PlotMethods_obj, ax=None, xincrease=None, yincrease=None,
                    add_colorbar=True, vmin=None, vmax=None, cmap=None,
-                   center=None, robust=False, extend=None, **kwargs):
+                   center=None, robust=False, extend=None, levels=None,
+                   **kwargs):
         return newplotfunc(_PlotMethods_obj._da, ax=ax, xincrease=xincrease,
                            yincrease=yincrease, add_colorbar=add_colorbar,
                            vmin=vmin, vmax=vmax, cmap=cmap,
                            center=center, robust=robust, extend=extend,
-                           **kwargs)
+                           levels=levels, **kwargs)
 
     # Add to class _PlotMethods
     setattr(_PlotMethods, plotmethod.__name__, plotmethod)
