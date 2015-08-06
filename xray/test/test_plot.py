@@ -375,6 +375,8 @@ class Common2dMixin:
         vmin, vmax = artist.get_clim()
         self.assertAlmostEqual(-vmin, vmax)
 
+    def test_default_title(self):
+        pass
 
 class TestContourf(Common2dMixin, PlotTestCase):
 
