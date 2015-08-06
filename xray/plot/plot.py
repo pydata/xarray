@@ -263,7 +263,8 @@ def _determine_cmap_params(plot_data, vmin=None, vmax=None, cmap=None,
     if levels is not None:
         cmap, cnorm = _build_discrete_cmap(cmap, levels, extend, filled)
 
-    return vmin, vmax, cmap, extend, levels, cnorm
+    return dict(vmin=vmin, vmax=vmax, cmap=cmap, extend=extend,
+                levels=levels, cnorm=cnorm)
 
 
 def _determine_extend(calc_data, vmin, vmax):
@@ -436,27 +437,30 @@ def _plot2d(plotfunc):
             levels = 7  # this is the matplotlib default
         filled = plotfunc.__name__ != 'contour'
 
-        vmin, vmax, cmap, extend, levels, cnorm = _determine_cmap_params(
-            z.data, vmin, vmax, cmap, center, robust, extend, levels, filled)
+        cmap_params = _determine_cmap_params(z.data, vmin, vmax, cmap, center,
+                                             robust, extend, levels, filled)
 
         if 'contour' in plotfunc.__name__:
             # extend is a keyword argument only for contour and contourf, but
             # passing it to the colorbar is sufficient for imshow and
             # pcolormesh
-            kwargs['extend'] = extend
-            kwargs['levels'] = levels
+            kwargs['extend'] = cmap_params['extend']
+            kwargs['levels'] = cmap_params['levels']
 
         # This allows the user to pass in a custom norm coming via kwargs
-        kwargs.setdefault('norm', cnorm)
+        kwargs.setdefault('norm', cmap_params['cnorm'])
 
-        ax, primitive = plotfunc(x, y, z, ax=ax, cmap=cmap, vmin=vmin,
-                                 vmax=vmax, **kwargs)
+        ax, primitive = plotfunc(x, y, z, ax=ax,
+                                 cmap=cmap_params['cmap'],
+                                 vmin=cmap_params['vmin'],
+                                 vmax=cmap_params['vmax'],
+                                 **kwargs)
 
         ax.set_xlabel(xlab)
         ax.set_ylabel(ylab)
 
         if add_colorbar:
-            plt.colorbar(primitive, ax=ax, extend=extend)
+            plt.colorbar(primitive, ax=ax, extend=cmap_params['extend'])
 
         _update_axes_limits(ax, xincrease, yincrease)
 

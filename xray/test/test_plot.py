@@ -167,57 +167,55 @@ class TestPlotHistogram(PlotTestCase):
 class TestDetermineCmapParams(TestCase):
     def test_robust(self):
         data = np.random.RandomState(1).rand(100)
-        vmin, vmax, cmap, extend, levels, cnorm = _determine_cmap_params(
-            data, robust=True)
-        self.assertEqual(vmin, np.percentile(data, 2))
-        self.assertEqual(vmax, np.percentile(data, 98))
-        self.assertEqual(cmap.name, 'viridis')
-        self.assertEqual(extend, 'both')
-        self.assertIsNone(levels)
-        self.assertIsNone(cnorm)
+        cmap_params = _determine_cmap_params(data, robust=True)
+        self.assertEqual(cmap_params['vmin'], np.percentile(data, 2))
+        self.assertEqual(cmap_params['vmax'], np.percentile(data, 98))
+        self.assertEqual(cmap_params['cmap'].name, 'viridis')
+        self.assertEqual(cmap_params['extend'], 'both')
+        self.assertIsNone(cmap_params['levels'])
+        self.assertIsNone(cmap_params['cnorm'])
 
     def test_center(self):
         data = np.random.RandomState(2).rand(100)
-        vmin, vmax, cmap, extend, levels, cnorm = _determine_cmap_params(
-            data, center=0.5)
-        self.assertEqual(vmax - 0.5, 0.5 - vmin)
-        self.assertEqual(cmap, 'RdBu_r')
-        self.assertEqual(extend, 'neither')
-        self.assertIsNone(levels)
-        self.assertIsNone(cnorm)
+        cmap_params = _determine_cmap_params(data, center=0.5)
+        self.assertEqual(cmap_params['vmax'] - 0.5, 0.5 - cmap_params['vmin'])
+        self.assertEqual(cmap_params['cmap'], 'RdBu_r')
+        self.assertEqual(cmap_params['extend'], 'neither')
+        self.assertIsNone(cmap_params['levels'])
+        self.assertIsNone(cmap_params['cnorm'])
 
     def test_integer_levels(self):
         data = 1 + np.random.RandomState(3).rand(100)
-        vmin, vmax, cmap, extend, levels, cnorm = _determine_cmap_params(
-            data, levels=5, vmin=0, vmax=5, cmap='Blues')
-        self.assertEqual(vmin, levels[0])
-        self.assertEqual(vmax, levels[-1])
-        self.assertEqual(cmap.name, 'Blues')
-        self.assertEqual(extend, 'neither')
-        self.assertEqual(cmap.N, 5)
-        self.assertEqual(cnorm.N, 6)
+        cmap_params = _determine_cmap_params(data, levels=5, vmin=0, vmax=5,
+                                             cmap='Blues')
+        self.assertEqual(cmap_params['vmin'], cmap_params['levels'][0])
+        self.assertEqual(cmap_params['vmax'], cmap_params['levels'][-1])
+        self.assertEqual(cmap_params['cmap'].name, 'Blues')
+        self.assertEqual(cmap_params['extend'], 'neither')
+        self.assertEqual(cmap_params['cmap'].N, 5)
+        self.assertEqual(cmap_params['cnorm'].N, 6)
 
-        vmin, vmax, cmap, extend, levels, cnorm = _determine_cmap_params(
-            data, levels=5, vmin=0.5, vmax=1.5)
-        self.assertEqual(cmap.name, 'viridis')
-        self.assertEqual(extend, 'max')
+        cmap_params = _determine_cmap_params(data, levels=5,
+                                             vmin=0.5, vmax=1.5)
+        self.assertEqual(cmap_params['cmap'].name, 'viridis')
+        self.assertEqual(cmap_params['extend'], 'max')
 
     def test_list_levels(self):
         data = 1 + np.random.RandomState(3).rand(100)
 
         orig_levels = [0, 1, 2, 3, 4, 5]
         # vmin and vmax should be ignored if levels are explicitly provided
-        vmin, vmax, cmap, extend, levels, cnorm = _determine_cmap_params(
-            data, levels=orig_levels, vmin=0, vmax=3)
-        self.assertEqual(vmin, 0)
-        self.assertEqual(vmax, 5)
-        self.assertEqual(cmap.N, 5)
-        self.assertEqual(cnorm.N, 6)
+        cmap_params = _determine_cmap_params(data, levels=orig_levels,
+                                             vmin=0, vmax=3)
+        self.assertEqual(cmap_params['vmin'], 0)
+        self.assertEqual(cmap_params['vmax'], 5)
+        self.assertEqual(cmap_params['cmap'].N, 5)
+        self.assertEqual(cmap_params['cnorm'].N, 6)
 
         for wrap_levels in [list, np.array, pd.Index, DataArray]:
-            vmin, vmax, cmap, extend, levels, cnorm = _determine_cmap_params(
+            cmap_params = _determine_cmap_params(
                 data, levels=wrap_levels(orig_levels))
-            self.assertArrayEqual(levels, orig_levels)
+            self.assertArrayEqual(cmap_params['levels'], orig_levels)
 
 
 @requires_matplotlib
