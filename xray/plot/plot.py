@@ -13,6 +13,7 @@ import numpy as np
 import pandas as pd
 
 from ..core.utils import is_uniform_spaced
+from ..core.pycompat import basestring
 
 
 # TODO - implement this
@@ -206,13 +207,16 @@ def _update_axes_limits(ax, xincrease, yincrease):
 
 
 def _determine_cmap_params(plot_data, vmin=None, vmax=None, cmap=None,
-                           center=None, robust=False, extend=None):
+                           center=None, robust=False, extend=None,
+                           levels=None, filled=True, cnorm=None):
     """
     Use some heuristics to set good defaults for colorbar and range.
 
     Adapted from Seaborn:
     https://github.com/mwaskom/seaborn/blob/v0.6/seaborn/matrix.py#L158
     """
+    import matplotlib as mpl
+
     calc_data = plot_data[~pd.isnull(plot_data)]
     if vmin is None:
         vmin = np.percentile(calc_data, 2) if robust else calc_data.min()
@@ -242,22 +246,85 @@ def _determine_cmap_params(plot_data, vmin=None, vmax=None, cmap=None,
         else:
             cmap = "viridis"
 
+    # Allow viridis before matplotlib 1.5
     if cmap == "viridis":
         cmap = _load_default_cmap()
 
-    if extend is None:
-        extend_min = calc_data.min() < vmin
-        extend_max = calc_data.max() > vmax
-        if extend_min and extend_max:
-            extend = 'both'
-        elif extend_min:
-            extend = 'min'
-        elif extend_max:
-            extend = 'max'
-        else:
-            extend = 'neither'
+    # Handle discrete levels
+    if levels is not None:
+        if isinstance(levels, int):
+            ticker = mpl.ticker.MaxNLocator(levels)
+            levels = ticker.tick_values(vmin, vmax)
+        vmin, vmax = levels[0], levels[-1]
 
-    return vmin, vmax, cmap, extend
+    if extend is None:
+        extend = _determine_extend(calc_data, vmin, vmax)
+
+    if levels is not None:
+        cmap, cnorm = _build_discrete_cmap(cmap, levels, extend, filled)
+
+    return dict(vmin=vmin, vmax=vmax, cmap=cmap, extend=extend,
+                levels=levels, cnorm=cnorm)
+
+
+def _determine_extend(calc_data, vmin, vmax):
+    extend_min = calc_data.min() < vmin
+    extend_max = calc_data.max() > vmax
+    if extend_min and extend_max:
+        extend = 'both'
+    elif extend_min:
+        extend = 'min'
+    elif extend_max:
+        extend = 'max'
+    else:
+        extend = 'neither'
+    return extend
+
+
+def _color_palette(cmap, n_colors):
+    import matplotlib.pyplot as plt
+    try:
+        from seaborn.apionly import color_palette
+        pal = color_palette(cmap, n_colors=n_colors)
+    except (TypeError, ImportError, ValueError):
+        # TypeError is raised when LinearSegmentedColormap (viridis) is used
+        # ImportError is raised when seaborn is not installed
+        # ValueError is raised when seaborn doesn't like a colormap (e.g. jet)
+        # Use homegrown solution if you don't have seaborn or are using viridis
+        if isinstance(cmap, basestring):
+            cmap = plt.get_cmap(cmap)
+
+        colors_i = np.linspace(0, 1., n_colors)
+        pal = cmap(colors_i)
+    return pal
+
+
+def _build_discrete_cmap(cmap, levels, extend, filled):
+    """
+    Build a discrete colormap and normalization of the data.
+    """
+    import matplotlib as mpl
+
+    if not filled:
+        # non-filled contour plots
+        extend = 'neither'
+
+    if extend == 'both':
+        ext_n = 2
+    elif extend in ['min', 'max']:
+        ext_n = 1
+    else:
+        ext_n = 0
+
+    n_colors = len(levels) + ext_n - 1
+    pal = _color_palette(cmap, n_colors)
+
+    new_cmap, cnorm = mpl.colors.from_levels_and_colors(
+        levels, pal, extend=extend)
+    # copy the old cmap name, for easier testing
+    new_cmap.name = getattr(cmap, 'name', cmap)
+
+    return new_cmap, cnorm
 
 
 # MUST run before any 2d plotting functions are defined since
@@ -307,11 +374,14 @@ def _plot2d(plotfunc):
     vmin, vmax : floats, optional
         Values to anchor the colormap, otherwise they are inferred from the
         data and other keyword arguments. When a diverging dataset is inferred,
-        one of these values may be ignored.
+        one of these values may be ignored. If discrete levels are provided as
+        an explicit list, both of these values are ignored.
     cmap : matplotlib colormap name or object, optional
         The mapping from data values to color space. If not provided, this
         will be either be ``viridis`` (if the function infers a sequential
         dataset) or ``RdBu_r`` (if the function infers a diverging dataset).
+        When ``levels`` is provided and when `Seaborn` is installed, ``cmap``
+        may also be a `seaborn` color palette or a list of colors.
     center : float, optional
         The value at which to center the colormap. Passing this value implies
         use of a diverging colormap.
@@ -321,6 +391,8 @@ def _plot2d(plotfunc):
     extend : {'neither', 'both', 'min', 'max'}, optional
         How to draw arrows extending the colorbar beyond its limits. If not
         provided, extend is inferred from vmin, vmax and the data limits.
+    levels : int or list-like object, optional
+        Split the colormap (cmap) into discrete color intervals.
     **kwargs : optional
         Additional arguments to wrapped matplotlib function
 
@@ -337,7 +409,8 @@ def _plot2d(plotfunc):
     @functools.wraps(plotfunc)
     def newplotfunc(darray, ax=None, xincrease=None, yincrease=None,
                     add_colorbar=True, vmin=None, vmax=None, cmap=None,
-                    center=None, robust=False, extend=None, **kwargs):
+                    center=None, robust=False, extend=None, levels=None,
+                    **kwargs):
         # All 2d plots in xray share this function signature.
         # Method signature below should be consistent.
 
@@ -360,23 +433,34 @@ def _plot2d(plotfunc):
 
         _ensure_plottable(x, y)
 
-        vmin, vmax, cmap, extend = _determine_cmap_params(
-            z.data, vmin, vmax, cmap, center, robust, extend)
+        if 'contour' in plotfunc.__name__ and levels is None:
+            levels = 7  # this is the matplotlib default
+        filled = plotfunc.__name__ != 'contour'
+
+        cmap_params = _determine_cmap_params(z.data, vmin, vmax, cmap, center,
+                                             robust, extend, levels, filled)
 
         if 'contour' in plotfunc.__name__:
             # extend is a keyword argument only for contour and contourf, but
             # passing it to the colorbar is sufficient for imshow and
             # pcolormesh
-            kwargs['extend'] = extend
+            kwargs['extend'] = cmap_params['extend']
+            kwargs['levels'] = cmap_params['levels']
 
-        ax, primitive = plotfunc(x, y, z, ax=ax, cmap=cmap, vmin=vmin,
-                                 vmax=vmax, **kwargs)
+        # This allows the user to pass in a custom norm coming via kwargs
+        kwargs.setdefault('norm', cmap_params['cnorm'])
+
+        ax, primitive = plotfunc(x, y, z, ax=ax,
+                                 cmap=cmap_params['cmap'],
+                                 vmin=cmap_params['vmin'],
+                                 vmax=cmap_params['vmax'],
+                                 **kwargs)
 
         ax.set_xlabel(xlab)
         ax.set_ylabel(ylab)
 
         if add_colorbar:
-            plt.colorbar(primitive, ax=ax, extend=extend)
+            plt.colorbar(primitive, ax=ax, extend=cmap_params['extend'])
 
         _update_axes_limits(ax, xincrease, yincrease)
 
@@ -386,12 +470,13 @@ def _plot2d(plotfunc):
     @functools.wraps(newplotfunc)
     def plotmethod(_PlotMethods_obj, ax=None, xincrease=None, yincrease=None,
                    add_colorbar=True, vmin=None, vmax=None, cmap=None,
-                   center=None, robust=False, extend=None, **kwargs):
+                   center=None, robust=False, extend=None, levels=None,
+                   **kwargs):
         return newplotfunc(_PlotMethods_obj._da, ax=ax, xincrease=xincrease,
                            yincrease=yincrease, add_colorbar=add_colorbar,
                            vmin=vmin, vmax=vmax, cmap=cmap,
                            center=center, robust=robust, extend=extend,
-                           **kwargs)
+                           levels=levels, **kwargs)
 
     # Add to class _PlotMethods
     setattr(_PlotMethods, plotmethod.__name__, plotmethod)

@@ -5,7 +5,9 @@ from xray import DataArray
 
 import xray.plot as xplt
 from xray.plot.plot import (_infer_interval_breaks,
-                            _determine_cmap_params)
+                            _determine_cmap_params,
+                            _build_discrete_cmap,
+                            _color_palette)
 
 from . import TestCase, requires_matplotlib
 
@@ -165,18 +167,134 @@ class TestPlotHistogram(PlotTestCase):
 class TestDetermineCmapParams(TestCase):
     def test_robust(self):
         data = np.random.RandomState(1).rand(100)
-        vmin, vmax, cmap, extend = _determine_cmap_params(data, robust=True)
-        self.assertEqual(vmin, np.percentile(data, 2))
-        self.assertEqual(vmax, np.percentile(data, 98))
-        self.assertEqual(cmap.name, 'viridis')
-        self.assertEqual(extend, 'both')
+        cmap_params = _determine_cmap_params(data, robust=True)
+        self.assertEqual(cmap_params['vmin'], np.percentile(data, 2))
+        self.assertEqual(cmap_params['vmax'], np.percentile(data, 98))
+        self.assertEqual(cmap_params['cmap'].name, 'viridis')
+        self.assertEqual(cmap_params['extend'], 'both')
+        self.assertIsNone(cmap_params['levels'])
+        self.assertIsNone(cmap_params['cnorm'])
 
     def test_center(self):
         data = np.random.RandomState(2).rand(100)
-        vmin, vmax, cmap, extend = _determine_cmap_params(data, center=0.5)
-        self.assertEqual(vmax - 0.5, 0.5 - vmin)
-        self.assertEqual(cmap, 'RdBu_r')
-        self.assertEqual(extend, 'neither')
+        cmap_params = _determine_cmap_params(data, center=0.5)
+        self.assertEqual(cmap_params['vmax'] - 0.5, 0.5 - cmap_params['vmin'])
+        self.assertEqual(cmap_params['cmap'], 'RdBu_r')
+        self.assertEqual(cmap_params['extend'], 'neither')
+        self.assertIsNone(cmap_params['levels'])
+        self.assertIsNone(cmap_params['cnorm'])
+
+    def test_integer_levels(self):
+        data = 1 + np.random.RandomState(3).rand(100)
+        cmap_params = _determine_cmap_params(data, levels=5, vmin=0, vmax=5,
+                                             cmap='Blues')
+        self.assertEqual(cmap_params['vmin'], cmap_params['levels'][0])
+        self.assertEqual(cmap_params['vmax'], cmap_params['levels'][-1])
+        self.assertEqual(cmap_params['cmap'].name, 'Blues')
+        self.assertEqual(cmap_params['extend'], 'neither')
+        self.assertEqual(cmap_params['cmap'].N, 5)
+        self.assertEqual(cmap_params['cnorm'].N, 6)
+
+        cmap_params = _determine_cmap_params(data, levels=5,
+                                             vmin=0.5, vmax=1.5)
+        self.assertEqual(cmap_params['cmap'].name, 'viridis')
+        self.assertEqual(cmap_params['extend'], 'max')
+
+    def test_list_levels(self):
+        data = 1 + np.random.RandomState(3).rand(100)
+
+        orig_levels = [0, 1, 2, 3, 4, 5]
+        # vmin and vmax should be ignored if levels are explicitly provided
+        cmap_params = _determine_cmap_params(data, levels=orig_levels,
+                                             vmin=0, vmax=3)
+        self.assertEqual(cmap_params['vmin'], 0)
+        self.assertEqual(cmap_params['vmax'], 5)
+        self.assertEqual(cmap_params['cmap'].N, 5)
+        self.assertEqual(cmap_params['cnorm'].N, 6)
+
+        for wrap_levels in [list, np.array, pd.Index, DataArray]:
+            cmap_params = _determine_cmap_params(
+                data, levels=wrap_levels(orig_levels))
+            self.assertArrayEqual(cmap_params['levels'], orig_levels)
+
+
+@requires_matplotlib
+class TestDiscreteColorMap(TestCase):
+    def setUp(self):
+        x = np.arange(start=0, stop=10, step=2)
+        y = np.arange(start=9, stop=-7, step=-3)
+        xy = np.dstack(np.meshgrid(x, y))
+        distance = np.linalg.norm(xy, axis=2)
+        self.darray = DataArray(distance, list(zip(('y', 'x'), (y, x))))
+        self.data_min = distance.min()
+        self.data_max = distance.max()
+
+    def test_recover_from_seaborn_jet_exception(self):
+        pal = _color_palette('jet', 4)
+        self.assertTrue(type(pal) == np.ndarray)
+        self.assertEqual(len(pal), 4)
+
+    def test_build_discrete_cmap(self):
+        for (cmap, levels, extend, filled) in [('jet', [0, 1], 'both', False),
+                                               ('hot', [-4, 4], 'max', True)]:
+            ncmap, cnorm = _build_discrete_cmap(cmap, levels, extend, filled)
+            self.assertEqual(ncmap.N, len(levels) - 1)
+            self.assertEqual(len(ncmap.colors), len(levels) - 1)
+            self.assertEqual(cnorm.N, len(levels))
+            self.assertArrayEqual(cnorm.boundaries, levels)
+            self.assertEqual(max(levels), cnorm.vmax)
+            self.assertEqual(min(levels), cnorm.vmin)
+            if filled:
+                self.assertEqual(ncmap.colorbar_extend, extend)
+            else:
+                self.assertEqual(ncmap.colorbar_extend, 'neither')
+
+    def test_discrete_colormap_list_of_levels(self):
+        for extend, levels in [('max', [-1, 2, 4, 8, 10]),
+                               ('both', [2, 5, 10, 11]),
+                               ('neither', [0, 5, 10, 15]),
+                               ('min', [2, 5, 10, 15])]:
+            for kind in ['imshow', 'pcolormesh', 'contourf', 'contour']:
+                primitive = getattr(self.darray.plot, kind)(levels=levels)
+                self.assertArrayEqual(levels, primitive.norm.boundaries)
+                self.assertEqual(max(levels), primitive.norm.vmax)
+                self.assertEqual(min(levels), primitive.norm.vmin)
+                if kind != 'contour':
+                    self.assertEqual(extend, primitive.cmap.colorbar_extend)
+                else:
+                    self.assertEqual('neither', primitive.cmap.colorbar_extend)
+                self.assertEqual(len(levels) - 1, len(primitive.cmap.colors))
+
+    def test_discrete_colormap_int_levels(self):
+        for extend, levels, vmin, vmax in [('neither', 7, None, None),
+                                           ('neither', 7, None, 20),
+                                           ('both', 7, 4, 8),
+                                           ('min', 10, 4, 15)]:
+            for kind in ['imshow', 'pcolormesh', 'contourf', 'contour']:
+                primitive = getattr(self.darray.plot, kind)(levels=levels,
+                                                            vmin=vmin,
+                                                            vmax=vmax)
+                self.assertGreaterEqual(levels,
+                                        len(primitive.norm.boundaries) - 1)
+                if vmax is None:
+                    self.assertGreaterEqual(primitive.norm.vmax, self.data_max)
+                else:
+                    self.assertGreaterEqual(primitive.norm.vmax, vmax)
+                if vmin is None:
+                    self.assertLessEqual(primitive.norm.vmin, self.data_min)
+                else:
+                    self.assertLessEqual(primitive.norm.vmin, vmin)
+                if kind != 'contour':
+                    self.assertEqual(extend, primitive.cmap.colorbar_extend)
+                else:
+                    self.assertEqual('neither', primitive.cmap.colorbar_extend)
+                self.assertGreaterEqual(levels, len(primitive.cmap.colors))
+
+    def test_discrete_colormap_list_levels_and_vmin_or_vmax(self):
+        levels = [0, 5, 10, 15]
+        primitive = self.darray.plot(levels=levels, vmin=-3, vmax=20)
+        self.assertEqual(primitive.norm.vmax, max(levels))
+        self.assertEqual(primitive.norm.vmin, min(levels))
 
 
 class Common2dMixin:
@@ -249,8 +367,8 @@ class Common2dMixin:
         self.assertEqual('viridis', cmap_name)
 
     def test_can_change_default_cmap(self):
-        cmap_name = self.plotmethod(cmap='jet').get_cmap().name
-        self.assertEqual('jet', cmap_name)
+        cmap_name = self.plotmethod(cmap='Blues').get_cmap().name
+        self.assertEqual('Blues', cmap_name)
 
     def test_diverging_color_limits(self):
         artist = self.plotmethod()
@@ -283,6 +401,13 @@ class TestContourf(Common2dMixin, PlotTestCase):
 
         artist = self.plotmethod(vmin=-10, vmax=0)
         self.assertEqual(artist.extend, 'max')
+
+    def test_levels(self):
+        artist = self.plotmethod(levels=[-0.5, -0.4, 0.1])
+        self.assertEqual(artist.extend, 'both')
+
+        artist = self.plotmethod(levels=3)
+        self.assertEqual(artist.extend, 'neither')
 
 
 class TestContour(Common2dMixin, PlotTestCase):
