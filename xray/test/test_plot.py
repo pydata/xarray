@@ -7,8 +7,7 @@ import xray.plot as xplt
 from xray.plot.plot import (_infer_interval_breaks,
                             _determine_cmap_params,
                             _build_discrete_cmap,
-                            _color_palette,
-                            _title_for_slice)
+                            _color_palette)
 
 from . import TestCase, requires_matplotlib
 
