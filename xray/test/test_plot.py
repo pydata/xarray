@@ -384,7 +384,9 @@ class Common2dMixin:
     def test_colorbar_label(self):
         self.darray.name = 'testvar'
         self.plotmethod()
-        alltxt = {t.get_text() for t in plt.gcf().findobj(mpl.text.Text)}
+        alltxt = [t.get_text() for t in plt.gcf().findobj(mpl.text.Text)]
+        # Set comprehension not compatible with Python 2.6
+        alltxt = set(alltxt)
         self.assertIn(self.darray.name, alltxt)
 
 
