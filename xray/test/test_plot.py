@@ -8,7 +8,7 @@ from xray.plot.plot import (_infer_interval_breaks,
                             _determine_cmap_params,
                             _build_discrete_cmap,
                             _color_palette,
-                            _title_from_slice)
+                            _title_for_slice)
 
 from . import TestCase, requires_matplotlib
 
@@ -377,10 +377,10 @@ class Common2dMixin:
         self.assertAlmostEqual(-vmin, vmax)
 
     def test_default_title(self):
-        a = DataArray(np.random.randn(4, 3, 2), dims=['a', 'b', 'c'])
-        self.plotfunc(a.isel(c=0))
+        a = DataArray(np.random.randn(4, 3, 2, 1), dims=['a', 'b', 'c', 'd'])
+        self.plotfunc(a.isel(c=1, d=0))
         title = plt.gca().get_title()
-        self.assertEqual('c = 0', title)
+        self.assertEqual('c = 1, d = 0', title)
 
 
 class TestContourf(Common2dMixin, PlotTestCase):

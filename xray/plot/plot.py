@@ -55,12 +55,15 @@ def _load_default_cmap(fname='default_colormap.csv'):
     return LinearSegmentedColormap.from_list('viridis', cm_data)
 
 
-def _title_from_slice(darray):
+def _title_for_slice(darray):
     '''
     If the dataarray comes from a slice we can show that info in the title
     '''
-    ['{} = {}'.format(k, v) for k, v in darray.coords if v.size == 1]
-    pass
+    title = []
+    for key, value in darray.coords.items():
+        if value.size == 1:
+            title.append('{} = {}'.format(key, value.values))
+    return ', '.join(title)
 
 
 def plot(darray, ax=None, rtol=0.01, **kwargs):
@@ -464,8 +467,10 @@ def _plot2d(plotfunc):
                                  vmax=cmap_params['vmax'],
                                  **kwargs)
 
+        # Label the plot with metadata
         ax.set_xlabel(xlab)
         ax.set_ylabel(ylab)
+        ax.set_title(_title_for_slice(darray))
 
         if add_colorbar:
             plt.colorbar(primitive, ax=ax, extend=cmap_params['extend'])
