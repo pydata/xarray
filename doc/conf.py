@@ -34,6 +34,7 @@ except ImportError:
     print "no pandas"
 try:
     import matplotlib
+    matplotlib.use('Agg')
     print "matplotlib: %s, %s" % (matplotlib.__version__, matplotlib.__file__)
 except ImportError:
     print "no matplotlib"
