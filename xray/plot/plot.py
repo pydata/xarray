@@ -473,7 +473,9 @@ def _plot2d(plotfunc):
         ax.set_title(_title_for_slice(darray))
 
         if add_colorbar:
-            plt.colorbar(primitive, ax=ax, extend=cmap_params['extend'])
+            cbar = plt.colorbar(primitive, ax=ax, extend=cmap_params['extend'])
+            if darray.name:
+                cbar.set_label(darray.name)
 
         _update_axes_limits(ax, xincrease, yincrease)
 

@@ -382,6 +382,12 @@ class Common2dMixin:
         title = plt.gca().get_title()
         self.assertEqual('c = 1, d = 0', title)
 
+    def test_colorbar_label(self):
+        self.darray.name = 'testvar'
+        self.plotmethod()
+        alltxt = {t.get_text() for t in plt.gcf().findobj(mpl.text.Text)}
+        self.assertIn(self.darray.name, alltxt)
+
 
 class TestContourf(Common2dMixin, PlotTestCase):
 
