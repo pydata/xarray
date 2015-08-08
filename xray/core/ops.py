@@ -246,17 +246,24 @@ _REDUCE_DOCSTRING_TEMPLATE = \
         """
 
 
-def count(values, axis=None):
+def count(data, axis=None):
     """Count the number of non-NA in this array along the given axis or axes
     """
-    return sum(~isnull(values), axis=axis)
+    return sum(~isnull(data), axis=axis)
 
 
-def fillna(values, other):
-    """Fill missing values in this object with values from the other object.
+def fillna(data, other):
+    """Fill missing values in this object with data from the other object.
     Follows normal broadcasting and alignment rules.
     """
-    return where(isnull(values), other, values)
+    return where(isnull(data), other, data)
+
+
+def where_method(data, cond, other=np.nan):
+    """Select values from this object that are True in cond. Everything else
+    gets masked with other. Follows normal broadcasting and alignment rules.
+    """
+    return where(cond, data, other)
 
 
 @contextlib.contextmanager
@@ -287,7 +294,12 @@ def _create_nan_agg_method(name, numeric_only=False, coerce_strings=False):
                     'skipna=True not yet implemented for %s with dtype %s'
                     % (name, values.dtype))
             nanname = 'nan' + name
-            eager_module = np if isinstance(axis, tuple) else bn
+            if isinstance(axis, tuple) or not values.dtype.isnative:
+                # bottleneck can't handle multiple axis arguments or non-native
+                # endianness
+                eager_module = np
+            else:
+                eager_module = bn
             func = _dask_or_eager_func(nanname, eager_module)
             using_numpy_nan_func = eager_module is np
         else:
@@ -401,6 +413,10 @@ def inject_binary_ops(cls, inplace=False):
     f = _func_slash_method_wrapper(fillna)
     method = cls._binary_op(f, join='left', drop_na_vars=False)
     setattr(cls, '_fillna', method)
+
+    # patch in where
+    f = _func_slash_method_wrapper(where_method, 'where')
+    setattr(cls, '_where', cls._binary_op(f))
 
     for name in NUM_BINARY_OPS:
         # only numeric operations have in-place and reflexive variants

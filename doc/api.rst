@@ -93,6 +93,8 @@ Indexing
    Dataset.loc
    Dataset.isel
    Dataset.sel
+   Dataset.isel_points
+   Dataset.sel_points
    Dataset.squeeze
    Dataset.reindex
    Dataset.reindex_like
@@ -129,6 +131,7 @@ Computation
 :py:attr:`~Dataset.count`
 :py:attr:`~Dataset.dropna`
 :py:attr:`~Dataset.fillna`
+:py:attr:`~Dataset.where`
 
 **ndarray methods**:
 :py:attr:`~Dataset.argsort`
@@ -144,6 +147,7 @@ Computation
 :py:attr:`~core.groupby.DatasetGroupBy.first`
 :py:attr:`~core.groupby.DatasetGroupBy.last`
 :py:attr:`~core.groupby.DatasetGroupBy.fillna`
+:py:attr:`~core.groupby.DatasetGroupBy.where`
 
 DataArray
 =========
@@ -202,6 +206,8 @@ Indexing
    DataArray.loc
    DataArray.isel
    DataArray.sel
+   DataArray.isel_points
+   DataArray.sel_points
    DataArray.squeeze
    DataArray.reindex
    DataArray.reindex_like
@@ -238,6 +244,7 @@ Computation
 :py:attr:`~DataArray.count`
 :py:attr:`~DataArray.dropna`
 :py:attr:`~DataArray.fillna`
+:py:attr:`~DataArray.where`
 
 **ndarray methods**:
 :py:attr:`~DataArray.argsort`
@@ -253,6 +260,7 @@ Computation
 :py:attr:`~core.groupby.DataArrayGroupBy.first`
 :py:attr:`~core.groupby.DataArrayGroupBy.last`
 :py:attr:`~core.groupby.DataArrayGroupBy.fillna`
+:py:attr:`~core.groupby.DataArrayGroupBy.where`
 
 Comparisons
 -----------
@@ -393,10 +401,10 @@ Plotting
 .. autosummary::
    :toctree: generated/
 
-   DataArray.plot
-   DataArray.plot_contourf
-   DataArray.plot_contour
-   DataArray.plot_hist
-   DataArray.plot_imshow
-   DataArray.plot_line
-   DataArray.plot_pcolormesh
+   plot.plot
+   plot.contourf
+   plot.contour
+   plot.hist
+   plot.imshow
+   plot.line
+   plot.pcolormesh

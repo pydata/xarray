@@ -382,6 +382,76 @@ class TestDataArray(TestCase):
         actual = data.sel(x=[0.9, 1.9], method='backfill')
         self.assertDataArrayIdentical(expected, actual)
 
+    def test_isel_points(self):
+        shape = (10, 5, 6)
+        np_array = np.random.random(shape)
+        da = DataArray(np_array, dims=['time', 'y', 'x'])
+        y = [1, 3]
+        x = [3, 0]
+
+        expected = da.values[:, y, x]
+
+        actual = da.isel_points(y=y, x=x, dim='test_coord')
+        assert 'test_coord' in actual.coords
+        assert actual.coords['test_coord'].shape == (len(y), )
+        assert all(x in actual for x in ['time', 'x', 'y', 'test_coord'])
+        assert actual.dims == ('test_coord', 'time')
+        actual = da.isel_points(y=y, x=x)
+        assert 'points' in actual.coords
+        # Note that because xray always concatenates along the first dimension,
+        # We must transpose the result to match the numpy style of
+        # concatentation.
+        np.testing.assert_equal(actual.T, expected)
+
+        # a few corner cases
+        da.isel_points(time=[1, 2], x=[2, 2], y=[3, 4])
+        np.testing.assert_allclose(
+            da.isel_points(time=[1], x=[2], y=[4]).values.squeeze(),
+            np_array[1, 4, 2].squeeze())
+        da.isel_points(time=[1, 2])
+        y = [-1, 0]
+        x = [-2, 2]
+        expected = da.values[:, y, x]
+        actual = da.isel_points(x=x, y=y).values
+        np.testing.assert_equal(actual.T, expected)
+
+        # test that the order of the indexers doesn't matter
+        self.assertDataArrayIdentical(
+            da.isel_points(y=y, x=x),
+            da.isel_points(x=x, y=y))
+
+        # make sure we're raising errors in the right places
+        with self.assertRaisesRegexp(ValueError,
+                                     'All indexers must be the same length'):
+            da.isel_points(y=[1, 2], x=[1, 2, 3])
+        with self.assertRaisesRegexp(ValueError,
+                                     'dimension bad_key does not exist'):
+            da.isel_points(bad_key=[1, 2])
+        with self.assertRaisesRegexp(TypeError, 'Indexers must be integers'):
+            da.isel_points(y=[1.5, 2.2])
+        with self.assertRaisesRegexp(TypeError, 'Indexers must be integers'):
+            da.isel_points(x=[1, 2, 3], y=slice(3))
+        with self.assertRaisesRegexp(ValueError,
+                                     'Indexers must be 1 dimensional'):
+            da.isel_points(y=1, x=2)
+        with self.assertRaisesRegexp(ValueError,
+                                     'Existing dimension names are not'):
+            da.isel_points(y=[1, 2], x=[1, 2], dim='x')
+
+        # using non string dims
+        actual = da.isel_points(y=[1, 2], x=[1, 2], dim=['A', 'B'])
+        assert 'points' in actual.coords
+
+    def test_isel_points(self):
+        shape = (10, 5, 6)
+        np_array = np.random.random(shape)
+        da = DataArray(np_array, dims=['time', 'y', 'x'])
+        y = [1, 3]
+        x = [3, 0]
+        expected = da.isel_points(x=x, y=y)
+        actual = da.sel_points(x=x, y=y)
+        self.assertDataArrayIdentical(expected, actual)
+
     def test_loc(self):
         self.ds['x'] = ('x', np.array(list('abcdefghij')))
         da = self.ds['foo']

@@ -4,7 +4,7 @@ import warnings
 
 import pandas as pd
 
-from .. import plotting
+from ..plot.plot import _PlotMethods
 
 from . import indexing
 from . import groupby
@@ -551,6 +551,28 @@ class DataArray(AbstractArray, BaseDataObject):
         return self.isel(**indexing.remap_label_indexers(self, indexers,
                                                          method=method))
 
+    def isel_points(self, dim='points', **indexers):
+        """Return a new DataArray whose dataset is given by pointwise integer
+        indexing along the specified dimension(s).
+
+        See Also
+        --------
+        Dataset.isel_points
+        """
+        ds = self._dataset.isel_points(dim=dim, **indexers)
+        return self._with_replaced_dataset(ds)
+
+    def sel_points(self, dim='points', method=None, **indexers):
+        """Return a new DataArray whose dataset is given by pointwise selection
+        of index labels along the specified dimension(s).
+
+        See Also
+        --------
+        Dataset.sel_points
+        """
+        ds = self._dataset.sel_points(dim=dim, method=method, **indexers)
+        return self._with_replaced_dataset(ds)
+
     def reindex_like(self, other, method=None, copy=True):
         """Conform this object onto the indexes of another object, filling
         in missing values with NaN.
@@ -568,7 +590,7 @@ class DataArray(AbstractArray, BaseDataObject):
             Method to use for filling index values from other not found on this
             data array:
 
-            * default: don't fill gaps
+            * None (default): don't fill gaps
             * pad / ffill: propgate last valid index value forward
             * backfill / bfill: propagate next valid index value backward
             * nearest: use nearest valid index value (requires pandas>=0.16)
@@ -604,7 +626,7 @@ class DataArray(AbstractArray, BaseDataObject):
             Method to use for filling index values in ``indexers`` not found on
             this data array:
 
-            * default: don't fill gaps
+            * None (default): don't fill gaps
             * pad / ffill: propgate last valid index value forward
             * backfill / bfill: propagate next valid index value backward
             * nearest: use nearest valid index value (requires pandas>=0.16)
@@ -1052,12 +1074,22 @@ class DataArray(AbstractArray, BaseDataObject):
             return self
         return func
 
+    @property
+    def plot(self):
+        '''
+        Access plotting functions
 
-# Add plotting methods
-# Alternatively these could be added using a Mixin
-for name in ('plot', 'plot_line', 'plot_contourf', 'plot_contour',
-             'plot_hist', 'plot_imshow', 'plot_pcolormesh'):
-    setattr(DataArray, name, getattr(plotting, name))
+        >>> d = DataArray([[1, 2], [3, 4]])
+
+        For convenience just call this directly
+        >>> d.plot()
+
+        Or use it as a namespace to use xray.plotting functions as
+        DataArray methods
+        >>> d.plot.imshow()  # equivalent to xray.plotting.imshow(d)
+
+        '''
+        return _PlotMethods(self)
 
 
 # priority most be higher than Variable to properly work with binary ufuncs

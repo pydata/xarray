@@ -244,6 +244,13 @@ def _encode_datetime_with_netcdf4(dates, units, calendar):
     return np.vectorize(encode_datetime)(dates)
 
 
+def cast_to_int_if_safe(num):
+    int_num = np.array(num, dtype=np.int64)
+    if (num == int_num).all():
+        num = int_num
+    return num
+
+
 def encode_cf_datetime(dates, units=None, calendar=None):
     """Given an array of datetime objects, returns the tuple `(num, units,
     calendar)` suitable for a CF complient time variable.
@@ -279,6 +286,7 @@ def encode_cf_datetime(dates, units=None, calendar=None):
     except (OutOfBoundsDatetime, ValueError, OverflowError):
         num = _encode_datetime_with_netcdf4(dates, units, calendar)
 
+    num = cast_to_int_if_safe(num)
     return (num, units, calendar)
 
 
@@ -289,11 +297,7 @@ def encode_cf_timedelta(timedeltas, units=None):
     np_unit = _netcdf_to_numpy_timeunit(units)
     num = 1.0 * timedeltas / np.timedelta64(1, np_unit)
     num = np.where(pd.isnull(timedeltas), np.nan, num)
-
-    int_num = np.asarray(num, dtype=np.int64)
-    if (num == int_num).all():
-        num = int_num
-
+    num = cast_to_int_if_safe(num)
     return (num, units)
 
 
@@ -575,12 +579,18 @@ def maybe_encode_fill_value(var, needs_copy=True):
     return var, needs_copy
 
 
-def maybe_encode_dtype(var):
+def maybe_encode_dtype(var, name=None):
     if 'dtype' in var.encoding:
         dims, data, attrs, encoding = _var_as_tuple(var)
         dtype = np.dtype(encoding.pop('dtype'))
         if dtype != var.dtype and dtype.kind != 'O':
-            if np.issubdtype(dtype, int):
+            if np.issubdtype(dtype, np.integer):
+                if (np.issubdtype(var.dtype, np.floating)
+                        and '_FillValue' not in var.attrs):
+                    warnings.warn('saving variable %s with floating '
+                                  'point data as an integer dtype without '
+                                  'any _FillValue to use for NaNs' % name,
+                                  RuntimeWarning, stacklevel=3)
                 data = ops.around(data)[...]
             if dtype == 'S1' and data.dtype != 'S1':
                 data = string_to_char(np.asarray(data, 'S'))
@@ -638,7 +648,7 @@ def ensure_dtype_not_object(var):
     return var
 
 
-def encode_cf_variable(var, needs_copy=True):
+def encode_cf_variable(var, needs_copy=True, name=None):
     """
     Converts an Variable into an Variable which follows some
     of the CF conventions:
@@ -662,7 +672,7 @@ def encode_cf_variable(var, needs_copy=True):
     var = maybe_encode_timedelta(var)
     var, needs_copy = maybe_encode_offset_and_scale(var, needs_copy)
     var, needs_copy = maybe_encode_fill_value(var, needs_copy)
-    var = maybe_encode_dtype(var)
+    var = maybe_encode_dtype(var, name)
     var = ensure_dtype_not_object(var)
     return var
 
@@ -989,6 +999,6 @@ def cf_encoder(variables, attributes):
 
     See also: encode_cf_variable
     """
-    new_vars = OrderedDict((k, encode_cf_variable(v))
+    new_vars = OrderedDict((k, encode_cf_variable(v, name=k))
                            for k, v in iteritems(variables))
     return new_vars, attributes

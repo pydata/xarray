@@ -84,7 +84,7 @@ def concat(objs, dim=None, data_vars='all', coords='different',
         raise ValueError('must supply at least one object to concatenate')
 
     if dim is None:
-        warnings.warn('the `dim` argument to `concat` is will be required '
+        warnings.warn('the `dim` argument to `concat` will be required '
                       'in a future version of xray; for now, setting it to '
                       "the old default of 'concat_dim'",
                       FutureWarning, stacklevel=2)

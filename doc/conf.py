@@ -34,6 +34,7 @@ except ImportError:
     print "no pandas"
 try:
     import matplotlib
+    matplotlib.use('Agg')
     print "matplotlib: %s, %s" % (matplotlib.__version__, matplotlib.__file__)
 except ImportError:
     print "no matplotlib"
@@ -42,6 +43,11 @@ try:
     print "ipython: %s, %s" % (IPython.__version__, IPython.__file__)
 except ImportError:
     print "no ipython"
+try:
+    import seaborn
+    print "seaborn: %s, %s" % (seaborn.__version__, seaborn.__file__)
+except ImportError:
+    print "no seaborn"
 
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the

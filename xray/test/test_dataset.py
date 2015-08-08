@@ -661,6 +661,94 @@ class TestDataset(TestCase):
         self.assertDatasetEqual(data.isel(td=slice(1, 3)),
                                 data.sel(td=slice('1 days', '2 days')))
 
+    def test_isel_points(self):
+        data = create_test_data()
+
+        pdim1 = [1, 2, 3]
+        pdim2 = [4, 5, 1]
+        pdim3 = [1, 2, 3]
+
+        actual = data.isel_points(dim1=pdim1, dim2=pdim2, dim3=pdim3,
+                                  dim='test_coord')
+        assert 'test_coord' in actual.coords
+        assert actual.coords['test_coord'].shape == (len(pdim1), )
+
+        actual = data.isel_points(dim1=pdim1, dim2=pdim2)
+        assert 'points' in actual.coords
+        np.testing.assert_array_equal(pdim1, actual['dim1'])
+
+        # test that the order of the indexers doesn't matter
+        self.assertDatasetIdentical(data.isel_points(dim1=pdim1, dim2=pdim2),
+                                    data.isel_points(dim2=pdim2, dim1=pdim1))
+
+        # make sure we're raising errors in the right places
+        with self.assertRaisesRegexp(ValueError,
+                                     'All indexers must be the same length'):
+            data.isel_points(dim1=[1, 2], dim2=[1, 2, 3])
+        with self.assertRaisesRegexp(ValueError,
+                                     'dimension bad_key does not exist'):
+            data.isel_points(bad_key=[1, 2])
+        with self.assertRaisesRegexp(TypeError, 'Indexers must be integers'):
+            data.isel_points(dim1=[1.5, 2.2])
+        with self.assertRaisesRegexp(TypeError, 'Indexers must be integers'):
+            data.isel_points(dim1=[1, 2, 3], dim2=slice(3))
+        with self.assertRaisesRegexp(ValueError,
+                                     'Indexers must be 1 dimensional'):
+            data.isel_points(dim1=1, dim2=2)
+        with self.assertRaisesRegexp(ValueError,
+                                     'Existing dimension names are not valid'):
+            data.isel_points(dim1=[1, 2], dim2=[1, 2], dim='dim2')
+
+        # test to be sure we keep around variables that were not indexed
+        ds = Dataset({'x': [1, 2, 3, 4], 'y': 0})
+        actual = ds.isel_points(x=[0, 1, 2])
+        self.assertDataArrayIdentical(ds['y'], actual['y'])
+
+        # tests using index or DataArray as a dim
+        stations = Dataset()
+        stations['station'] = ('station', ['A', 'B', 'C'])
+        stations['dim1s'] = ('station', [1, 2, 3])
+        stations['dim2s'] = ('station', [4, 5, 1])
+
+        actual = data.isel_points(dim1=stations['dim1s'],
+                                  dim2=stations['dim2s'],
+                                  dim=stations['station'])
+        assert 'station' in actual.coords
+        assert 'station' in actual.dims
+        self.assertDataArrayIdentical(actual['station'].drop(['dim1', 'dim2']),
+                                      stations['station'])
+
+        # make sure we get the default points coordinate when a list is passed
+        actual = data.isel_points(dim1=stations['dim1s'],
+                                  dim2=stations['dim2s'],
+                                  dim=['A', 'B', 'C'])
+        assert 'points' in actual.coords
+
+        # can pass a numpy array
+        data.isel_points(dim1=stations['dim1s'],
+                         dim2=stations['dim2s'],
+                         dim=np.array([4, 5, 6]))
+
+    def test_sel_points(self):
+        data = create_test_data()
+
+        pdim1 = [1, 2, 3]
+        pdim2 = [4, 5, 1]
+        pdim3 = [1, 2, 3]
+        expected = data.isel_points(dim1=pdim1, dim2=pdim2, dim3=pdim3,
+                                    dim='test_coord')
+        actual = data.sel_points(dim1=data.dim1[pdim1], dim2=data.dim2[pdim2],
+                                 dim3=data.dim3[pdim3], dim='test_coord')
+        self.assertDatasetIdentical(expected, actual)
+
+        data = Dataset({'foo': (('x', 'y'), np.arange(9).reshape(3, 3))})
+        expected = Dataset({'foo': ('points', [0, 4, 8])},
+                           {'x': ('points', range(3)),
+                            'y': ('points', range(3))})
+        actual = data.sel_points(x=[0.1, 1.1, 2.5], y=[0, 1.2, 2.0],
+                                 method='pad')
+        self.assertDatasetIdentical(expected, actual)
+
     def test_sel_method(self):
         data = create_test_data()
 
@@ -1595,6 +1683,39 @@ class TestDataset(TestCase):
         actual = ds.groupby('b').fillna(Dataset({'a': ('b', [0, 2])}))
         self.assertDatasetIdentical(expected, actual)
 
+    def test_where(self):
+        ds = Dataset({'a': ('x', range(5))})
+        expected = Dataset({'a': ('x', [np.nan, np.nan, 2, 3, 4])})
+        actual = ds.where(ds > 1)
+        self.assertDatasetIdentical(expected, actual)
+
+        actual = ds.where(ds.a > 1)
+        self.assertDatasetIdentical(expected, actual)
+
+        actual = ds.where(ds.a.values > 1)
+        self.assertDatasetIdentical(expected, actual)
+
+        actual = ds.where(True)
+        self.assertDatasetIdentical(ds, actual)
+
+        expected = ds.copy(deep=True)
+        expected['a'].values = [np.nan] * 5
+        actual = ds.where(False)
+        self.assertDatasetIdentical(expected, actual)
+
+        # 2d
+        ds = Dataset({'a': (('x', 'y'), [[0, 1], [2, 3]])})
+        expected = Dataset({'a': (('x', 'y'), [[np.nan, 1], [2, 3]])})
+        actual = ds.where(ds > 0)
+        self.assertDatasetIdentical(expected, actual)
+
+        # groupby
+        ds = Dataset({'a': ('x', range(5))}, {'c': ('x', [0, 0, 1, 1, 1])})
+        cond = Dataset({'a': ('c', [True, False])})
+        expected = ds.copy(deep=True)
+        expected['a'].values = [0, 1] + [np.nan] * 3
+        actual = ds.groupby('c').where(cond)
+        self.assertDatasetIdentical(expected, actual)
 
     def test_reduce(self):
         data = create_test_data()
@@ -1666,10 +1787,19 @@ class TestDataset(TestCase):
         actual = ds.min()
         self.assertDatasetIdentical(expected, actual)
 
-    def test_reduce_dtype_bool(self):
+    def test_reduce_dtypes(self):
         # regression test for GH342
         expected = Dataset({'x': 1})
         actual = Dataset({'x': True}).sum()
+        self.assertDatasetIdentical(expected, actual)
+
+        # regression test for GH505
+        expected = Dataset({'x': 3})
+        actual = Dataset({'x': ('y', np.array([1, 2], 'uint16'))}).sum()
+        self.assertDatasetIdentical(expected, actual)
+
+        expected = Dataset({'x': 1 + 1j})
+        actual = Dataset({'x': ('y', [1, 1j])}).sum()
         self.assertDatasetIdentical(expected, actual)
 
     def test_reduce_keep_attrs(self):
