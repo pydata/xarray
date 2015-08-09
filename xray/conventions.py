@@ -94,7 +94,20 @@ def _unpack_netcdf_time_units(units):
 def _decode_datetime_with_netcdf4(num_dates, units, calendar):
     import netCDF4 as nc4
 
-    dates = np.asarray(nc4.num2date(num_dates, units, calendar))
+    try:
+        dates = np.asarray(nc4.num2date(num_dates, units, calendar))
+    except ValueError:
+        # num2date needs calendar year start >= 0001 C.E. (bug submitted
+        # to unidata about this)
+        since_yr_idx = units.index('since ') + 6
+        year = int(units[since_yr_idx:since_yr_idx+4])
+        assert year==0, 'this fix only works for days since year 0'
+        year_diff = year - 0001
+        new_units = units[:since_yr_idx] + '0001-01-01 00:00:00'
+        time = nc4.num2date(num_dates, new_units, calendar)
+        dates = np.asarray([datetime(d.year + year_diff, d.month, d.day,
+                         d.hour, d.minute, d.second)
+                for d in time])
     if (dates[np.nanargmin(num_dates)].year < 1678
             or dates[np.nanargmax(num_dates)].year >= 2262):
         warnings.warn('Unable to decode time axis into full '
