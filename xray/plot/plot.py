@@ -372,7 +372,7 @@ def _plot2d(plotfunc):
     Parameters
     ----------
     darray : DataArray
-        Must be 2 dimensional
+        darray.squeeze() must be 2 dimensional.
     ax : matplotlib axes object, optional
         If None, uses the current axis
     xincrease : None, True, or False, optional
@@ -383,6 +383,8 @@ def _plot2d(plotfunc):
         if None, use the default for the matplotlib function
     add_colorbar : Boolean, optional
         Adds colorbar to axis
+    add_labels : Boolean, optional
+        Use xray metadata to label axes
     vmin, vmax : floats, optional
         Values to anchor the colormap, otherwise they are inferred from the
         data and other keyword arguments. When a diverging dataset is inferred,
@@ -420,7 +422,7 @@ def _plot2d(plotfunc):
 
     @functools.wraps(plotfunc)
     def newplotfunc(darray, ax=None, xincrease=None, yincrease=None,
-                    add_colorbar=True, vmin=None, vmax=None, cmap=None,
+                    add_colorbar=True, add_labels=True, vmin=None, vmax=None, cmap=None,
                     center=None, robust=False, extend=None, levels=None,
                     **kwargs):
         # All 2d plots in xray share this function signature.
@@ -471,13 +473,14 @@ def _plot2d(plotfunc):
                                  **kwargs)
 
         # Label the plot with metadata
-        ax.set_xlabel(xlab)
-        ax.set_ylabel(ylab)
-        ax.set_title(_title_for_slice(darray))
+        if add_labels:
+            ax.set_xlabel(xlab)
+            ax.set_ylabel(ylab)
+            ax.set_title(_title_for_slice(darray))
 
         if add_colorbar:
             cbar = plt.colorbar(primitive, ax=ax, extend=cmap_params['extend'])
-            if darray.name:
+            if darray.name and add_labels:
                 cbar.set_label(darray.name)
 
         _update_axes_limits(ax, xincrease, yincrease)
@@ -487,12 +490,12 @@ def _plot2d(plotfunc):
     # For use as DataArray.plot.plotmethod
     @functools.wraps(newplotfunc)
     def plotmethod(_PlotMethods_obj, ax=None, xincrease=None, yincrease=None,
-                   add_colorbar=True, vmin=None, vmax=None, cmap=None,
+                   add_colorbar=True, add_labels=True, vmin=None, vmax=None, cmap=None,
                    center=None, robust=False, extend=None, levels=None,
                    **kwargs):
         return newplotfunc(_PlotMethods_obj._da, ax=ax, xincrease=xincrease,
                            yincrease=yincrease, add_colorbar=add_colorbar,
-                           vmin=vmin, vmax=vmax, cmap=cmap,
+                           add_labels=add_labels, vmin=vmin, vmax=vmax, cmap=cmap,
                            center=center, robust=robust, extend=extend,
                            levels=levels, **kwargs)
 

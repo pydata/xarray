@@ -389,6 +389,14 @@ class Common2dMixin:
         alltxt = set(alltxt)
         self.assertIn(self.darray.name, alltxt)
 
+    def test_no_labels(self):
+        self.darray.name = 'testvar'
+        self.plotmethod(add_labels=False)
+        alltxt = [t.get_text() for t in plt.gcf().findobj(mpl.text.Text)]
+        alltxt = set(alltxt)
+        for string in ['x', 'y', 'testvar']:
+            self.assertNotIn(string, alltxt)
+
 
 class TestContourf(Common2dMixin, PlotTestCase):
 
