@@ -429,7 +429,7 @@ def _plot2d(plotfunc):
         # some plotting functions only know how to handle ndarrays
         x = darray[xlab].values
         y = darray[ylab].values
-        z = np.ma.MaskedArray(darray.values, pd.isnull(darray.values))
+        z = darray.masked_array
 
         _ensure_plottable(x, y)
 
