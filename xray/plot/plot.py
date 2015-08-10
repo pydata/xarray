@@ -60,9 +60,9 @@ def _title_for_slice(darray):
     If the dataarray comes from a slice we can show that info in the title
     '''
     title = []
-    for key, value in darray.coords.items():
-        if value.size == 1:
-            title.append('{} = {}'.format(key, value.values))
+    for dim, coord in darray.coords.items():
+        if coord.size == 1:
+            title.append('{dim} = {v}'.format(dim=dim, v=coord.values))
     return ', '.join(title)
 
 
@@ -134,7 +134,8 @@ def line(darray, *args, **kwargs):
     ndims = len(darray.dims)
     if ndims != 1:
         raise ValueError('Line plots are for 1 dimensional DataArrays. '
-                         'Passed DataArray has {} dimensions'.format(ndims))
+                         'Passed DataArray has {ndims} '
+                         'dimensions'.format(ndims=ndims))
 
     # Ensures consistency with .plot method
     ax = kwargs.pop('ax', None)
@@ -192,7 +193,7 @@ def hist(darray, ax=None, **kwargs):
     ax.set_ylabel('Count')
 
     if darray.name is not None:
-        ax.set_title('Histogram of {}'.format(darray.name))
+        ax.set_title('Histogram of {0}'.format(darray.name))
 
     return primitive
 
@@ -433,9 +434,9 @@ def _plot2d(plotfunc):
         try:
             ylab, xlab = darray.dims
         except ValueError:
-            raise ValueError('{} plots are for 2 dimensional DataArrays. '
-                             'Passed DataArray has {} dimensions'
-                             .format(plotfunc.__name__, len(darray.dims)))
+            raise ValueError('{name} plots are for 2 dimensional DataArrays. '
+                             'Passed DataArray has {ndim} dimensions'
+                             .format(name=plotfunc.__name__, ndim=len(darray.dims)))
 
         # some plotting functions only know how to handle ndarrays
         x = darray[xlab].values
