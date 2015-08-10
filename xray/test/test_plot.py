@@ -377,7 +377,7 @@ class Common2dMixin:
 
     def test_default_title(self):
         a = DataArray(np.random.randn(4, 3, 2, 1), dims=['a', 'b', 'c', 'd'])
-        self.plotfunc(a.isel(c=1, d=0))
+        self.plotfunc(a.isel(c=1))
         title = plt.gca().get_title()
         self.assertEqual('c = 1, d = 0', title)
 

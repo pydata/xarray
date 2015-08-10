@@ -431,6 +431,8 @@ def _plot2d(plotfunc):
         if ax is None:
             ax = plt.gca()
 
+        # Handle the dimensions
+        darray = darray.squeeze()
         try:
             ylab, xlab = darray.dims
         except ValueError:
