@@ -138,6 +138,3 @@ class Test_is_uniform_and_sorted(TestCase):
 
     def test_relative_tolerance(self):
         self.assertTrue(utils.is_uniform_spaced([0, 0.97, 2], rtol=0.1))
-
-
-class Test
