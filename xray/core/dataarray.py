@@ -1091,6 +1091,16 @@ class DataArray(AbstractArray, BaseDataObject):
         '''
         return _PlotMethods(self)
 
+    def _title_for_slice(self):
+        '''
+        If the dataarray comes from a slice we can show that info in the title
+        '''
+        title = []
+        for dim, coord in iteritems(self.coords):
+            if coord.size == 1:
+                title.append('{dim} = {v}'.format(dim=dim, v=coord.values))
+        return ', '.join(title)
+
 
 # priority most be higher than Variable to properly work with binary ufuncs
 ops.inject_all_ops_and_reduce_methods(DataArray, priority=60)
