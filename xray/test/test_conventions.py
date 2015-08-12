@@ -357,7 +357,12 @@ class TestDatetime(TestCase):
                                  'days since 1900-01-01 00:00:00'),
                                 (pd.to_datetime(['1900-01-01',
                                                  '1900-01-02T00:00:00.005']),
-                                 'seconds since 1900-01-01 00:00:00')]:
+                                 'seconds since 1900-01-01 00:00:00'),
+                                (pd.to_datetime(['NaT', '1900-01-01']),
+                                 'days since 1900-01-01 00:00:00'),
+                                (pd.to_datetime(['NaT']),
+                                 'days since 1970-01-01 00:00:00'),
+                                ]:
             self.assertEqual(expected, conventions.infer_datetime_units(dates))
 
     def test_cf_timedelta(self):
