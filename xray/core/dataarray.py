@@ -1091,15 +1091,31 @@ class DataArray(AbstractArray, BaseDataObject):
         '''
         return _PlotMethods(self)
 
-    def _title_for_slice(self):
+    def _title_for_slice(self, truncate=50):
         '''
-        If the dataarray comes from a slice we can show that info in the title
+        If the dataarray has 1 dimensional coordiantes or comes from a slice
+        we can show that info in the title
+
+        Parameters
+        ----------
+        truncate : integer
+            maximum number of characters for title
+
+        Returns
+        -------
+        title : string
+            Can be used for plot titles
         '''
-        title = []
+        one_dims = []
         for dim, coord in iteritems(self.coords):
             if coord.size == 1:
-                title.append('{dim} = {v}'.format(dim=dim, v=coord.values))
-        return ', '.join(title)
+                one_dims.append('{dim} = {v}'.format(dim=dim, v=coord.values))
+
+        title = ', '.join(one_dims)
+        if len(title) > truncate:
+            title = title[:(truncate - 3)] + '...'
+
+        return title
 
 
 # priority most be higher than Variable to properly work with binary ufuncs

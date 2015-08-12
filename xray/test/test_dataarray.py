@@ -1400,3 +1400,14 @@ class TestDataArray(TestCase):
 
         a2 = DataArray(np.ones((4, 1)), dims=['a', 'b'])
         self.assertEqual('b = [0]', a2._title_for_slice())
+
+    def test__title_for_slice_truncate(self):
+        array = DataArray(np.ones((4)))
+        array.coords['a'] = 'a' * 100
+        array.coords['b'] = 'b' * 100
+
+        nchar = 80
+        title = array._title_for_slice(truncate=nchar)
+
+        self.assertEqual(nchar, len(title))
+        self.assertTrue(title.endswith('...'))

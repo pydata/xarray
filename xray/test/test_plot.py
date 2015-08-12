@@ -380,10 +380,11 @@ class Common2dMixin:
         self.assertAlmostEqual(-vmin, vmax)
 
     def test_default_title(self):
-        a = DataArray(np.random.randn(4, 3, 2, 1), dims=['a', 'b', 'c', 'd'])
+        a = DataArray(np.random.randn(4, 3, 2), dims=['a', 'b', 'c'])
+        a.coords['d'] = 10
         self.plotfunc(a.isel(c=1))
         title = plt.gca().get_title()
-        self.assertEqual('c = 1, d = 0', title)
+        self.assertEqual('c = 1, d = 10', title)
 
     def test_colorbar_label(self):
         self.darray.name = 'testvar'

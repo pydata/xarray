@@ -363,7 +363,7 @@ def _plot2d(plotfunc):
     Parameters
     ----------
     darray : DataArray
-        darray.squeeze() must be 2 dimensional.
+        must be 2 dimensional.
     ax : matplotlib axes object, optional
         If None, uses the current axis
     xincrease : None, True, or False, optional
@@ -425,7 +425,6 @@ def _plot2d(plotfunc):
             ax = plt.gca()
 
         # Handle the dimensions
-        darray = darray.squeeze()
         try:
             ylab, xlab = darray.dims
         except ValueError:
