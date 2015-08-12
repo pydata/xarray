@@ -373,6 +373,7 @@ DataArray methods
    DataArray.to_series
    DataArray.to_dataframe
    DataArray.to_index
+   DataArray.to_masked_array
    DataArray.to_cdms2
    DataArray.from_series
    DataArray.from_cdms2

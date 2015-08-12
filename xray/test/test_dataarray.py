@@ -1324,6 +1324,41 @@ class TestDataArray(TestCase):
         self.assertDataArrayIdentical(expected_da,
                                       DataArray.from_series(actual))
 
+    def test_to_masked_array(self):
+        rs = np.random.RandomState(44)
+        x = rs.random_sample(size=(10, 20))
+        x_masked = np.ma.masked_where(x < 0.5, x)
+        da = DataArray(x_masked)
+
+        # Test round trip
+        x_masked_2 = da.to_masked_array()
+        da_2 = DataArray(x_masked_2)
+        self.assertArrayEqual(x_masked, x_masked_2)
+        self.assertDataArrayEqual(da, da_2)
+
+        da_masked_array = da.to_masked_array(copy=True)
+        self.assertTrue(isinstance(da_masked_array, np.ma.MaskedArray))
+        # Test masks
+        self.assertArrayEqual(da_masked_array.mask, x_masked.mask)
+        # Test that mask is unpacked correctly
+        self.assertArrayEqual(da.values, x_masked.filled(np.nan))
+        # Test that the underlying data (including nans) hasn't changed
+        self.assertArrayEqual(da_masked_array, x_masked.filled(np.nan))
+
+        # Test that copy=False gives access to values
+        masked_array = da.to_masked_array(copy=False)
+        masked_array[0, 0] = 10.
+        self.assertEqual(masked_array[0, 0], 10.)
+        self.assertEqual(da[0, 0].values, 10.)
+        self.assertTrue(masked_array.base is da.values)
+        self.assertIsInstance(masked_array, np.ma.MaskedArray)
+
+        # Test with some odd arrays
+        for v in [4, np.nan, True, '4', 'four']:
+            da = DataArray(v)
+            ma = da.to_masked_array()
+            self.assertIsInstance(ma, np.ma.MaskedArray)
+
     def test_to_and_from_cdms2(self):
         try:
             import cdms2

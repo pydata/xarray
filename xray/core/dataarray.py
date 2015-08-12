@@ -2,6 +2,7 @@ import contextlib
 import functools
 import warnings
 
+import numpy as np
 import pandas as pd
 
 from ..plot.plot import _PlotMethods
@@ -911,6 +912,23 @@ class DataArray(AbstractArray, BaseDataObject):
         """
         index = self.coords.to_index()
         return pd.Series(self.values.reshape(-1), index=index, name=self.name)
+
+    def to_masked_array(self, copy=True):
+        """Convert this array into a numpy.ma.MaskedArray
+
+        Parameters
+        ----------
+        copy : bool
+            If True (default) make a copy of the array in the result. If False,
+            a MaskedArray view of DataArray.values is returned.
+
+        Returns
+        -------
+        result : MaskedArray
+            Masked where invalid values (nan or inf) occur.
+        """
+        isnull = pd.isnull(self.values)
+        return np.ma.masked_where(isnull, self.values, copy=copy)
 
     @classmethod
     def from_series(cls, series):

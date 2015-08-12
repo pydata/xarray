@@ -73,6 +73,16 @@ v0.5.3 (unreleased)
     @savefig where_example.png width=4in height=4in
     ds.distance.where(ds.distance < 100).plot()
 
+- New :py:meth:`~xray.DataArray.to_masked_array` convenience method for
+  returning a numpy.ma.MaskedArray.
+
+  .. ipython:: python
+
+    da = xray.DataArray(np.random.random_sample(size=(5, 4)))
+    da.where(da < 0.5)
+    da.where(da < 0.5).to_masked_array(copy=True)
+
+
 Bug fixes
 ~~~~~~~~~
 
