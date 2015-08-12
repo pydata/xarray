@@ -52,6 +52,10 @@ class TestPlot(PlotTestCase):
     def test1d(self):
         self.darray[:, 0, 0].plot()
 
+    def test_2d_before_squeeze(self):
+        a = DataArray(np.arange(5).reshape(1, 5))
+        a.plot()
+
     def test2d_uniform_calls_imshow(self):
         self.assertTrue(self.imshow_called(self.darray[:, :, 0].plot))
 
@@ -374,6 +378,29 @@ class Common2dMixin:
         artist = self.plotmethod()
         vmin, vmax = artist.get_clim()
         self.assertAlmostEqual(-vmin, vmax)
+
+    def test_default_title(self):
+        a = DataArray(np.random.randn(4, 3, 2), dims=['a', 'b', 'c'])
+        a.coords['d'] = 10
+        self.plotfunc(a.isel(c=1))
+        title = plt.gca().get_title()
+        self.assertEqual('c = 1, d = 10', title)
+
+    def test_colorbar_label(self):
+        self.darray.name = 'testvar'
+        self.plotmethod()
+        alltxt = [t.get_text() for t in plt.gcf().findobj(mpl.text.Text)]
+        # Set comprehension not compatible with Python 2.6
+        alltxt = set(alltxt)
+        self.assertIn(self.darray.name, alltxt)
+
+    def test_no_labels(self):
+        self.darray.name = 'testvar'
+        self.plotmethod(add_labels=False)
+        alltxt = [t.get_text() for t in plt.gcf().findobj(mpl.text.Text)]
+        alltxt = set(alltxt)
+        for string in ['x', 'y', 'testvar']:
+            self.assertNotIn(string, alltxt)
 
 
 class TestContourf(Common2dMixin, PlotTestCase):

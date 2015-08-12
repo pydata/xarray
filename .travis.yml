@@ -8,7 +8,7 @@ matrix:
   fast_finish: true
   include:
   - python: 2.6
-    env: UPDATE_ENV="conda install unittest2 pandas==0.15.0 h5py cython && pip install h5netcdf"
+    env: UPDATE_ENV="conda install unittest2 pandas==0.15.0 h5py cython matplotlib && pip install h5netcdf"
   # Test on Python 2.7 with and without netCDF4/scipy/cdat-lite
   - python: 2.7
     env: UPDATE_ENV="conda install -c scitools cdat-lite h5py cython matplotlib && pip install cyordereddict h5netcdf"

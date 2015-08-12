@@ -60,7 +60,7 @@ def plot(darray, ax=None, rtol=0.01, **kwargs):
     Default plot of DataArray using matplotlib / pylab.
 
     Calls xray plotting function based on the dimensions of
-    the array:
+    darray.squeeze()
 
     =============== =========== ===========================
     Dimensions      Coordinates Plotting function
@@ -83,6 +83,8 @@ def plot(darray, ax=None, rtol=0.01, **kwargs):
         Additional keyword arguments to matplotlib
 
     """
+    darray = darray.squeeze()
+
     ndims = len(darray.dims)
 
     if ndims == 1:
@@ -123,7 +125,8 @@ def line(darray, *args, **kwargs):
     ndims = len(darray.dims)
     if ndims != 1:
         raise ValueError('Line plots are for 1 dimensional DataArrays. '
-                         'Passed DataArray has {} dimensions'.format(ndims))
+                         'Passed DataArray has {ndims} '
+                         'dimensions'.format(ndims=ndims))
 
     # Ensures consistency with .plot method
     ax = kwargs.pop('ax', None)
@@ -181,7 +184,7 @@ def hist(darray, ax=None, **kwargs):
     ax.set_ylabel('Count')
 
     if darray.name is not None:
-        ax.set_title('Histogram of {}'.format(darray.name))
+        ax.set_title('Histogram of {0}'.format(darray.name))
 
     return primitive
 
@@ -360,7 +363,7 @@ def _plot2d(plotfunc):
     Parameters
     ----------
     darray : DataArray
-        Must be 2 dimensional
+        must be 2 dimensional.
     ax : matplotlib axes object, optional
         If None, uses the current axis
     xincrease : None, True, or False, optional
@@ -371,6 +374,8 @@ def _plot2d(plotfunc):
         if None, use the default for the matplotlib function
     add_colorbar : Boolean, optional
         Adds colorbar to axis
+    add_labels : Boolean, optional
+        Use xray metadata to label axes
     vmin, vmax : floats, optional
         Values to anchor the colormap, otherwise they are inferred from the
         data and other keyword arguments. When a diverging dataset is inferred,
@@ -408,7 +413,7 @@ def _plot2d(plotfunc):
 
     @functools.wraps(plotfunc)
     def newplotfunc(darray, ax=None, xincrease=None, yincrease=None,
-                    add_colorbar=True, vmin=None, vmax=None, cmap=None,
+                    add_colorbar=True, add_labels=True, vmin=None, vmax=None, cmap=None,
                     center=None, robust=False, extend=None, levels=None,
                     **kwargs):
         # All 2d plots in xray share this function signature.
@@ -419,12 +424,13 @@ def _plot2d(plotfunc):
         if ax is None:
             ax = plt.gca()
 
+        # Handle the dimensions
         try:
             ylab, xlab = darray.dims
         except ValueError:
-            raise ValueError('{} plots are for 2 dimensional DataArrays. '
-                             'Passed DataArray has {} dimensions'
-                             .format(plotfunc.__name__, len(darray.dims)))
+            raise ValueError('{name} plots are for 2 dimensional DataArrays. '
+                             'Passed DataArray has {ndim} dimensions'
+                             .format(name=plotfunc.__name__, ndim=len(darray.dims)))
 
         # some plotting functions only know how to handle ndarrays
         x = darray[xlab].values
@@ -456,11 +462,16 @@ def _plot2d(plotfunc):
                                  vmax=cmap_params['vmax'],
                                  **kwargs)
 
-        ax.set_xlabel(xlab)
-        ax.set_ylabel(ylab)
+        # Label the plot with metadata
+        if add_labels:
+            ax.set_xlabel(xlab)
+            ax.set_ylabel(ylab)
+            ax.set_title(darray._title_for_slice())
 
         if add_colorbar:
-            plt.colorbar(primitive, ax=ax, extend=cmap_params['extend'])
+            cbar = plt.colorbar(primitive, ax=ax, extend=cmap_params['extend'])
+            if darray.name and add_labels:
+                cbar.set_label(darray.name)
 
         _update_axes_limits(ax, xincrease, yincrease)
 
@@ -469,14 +480,21 @@ def _plot2d(plotfunc):
     # For use as DataArray.plot.plotmethod
     @functools.wraps(newplotfunc)
     def plotmethod(_PlotMethods_obj, ax=None, xincrease=None, yincrease=None,
-                   add_colorbar=True, vmin=None, vmax=None, cmap=None,
+                   add_colorbar=True, add_labels=True, vmin=None, vmax=None, cmap=None,
                    center=None, robust=False, extend=None, levels=None,
                    **kwargs):
-        return newplotfunc(_PlotMethods_obj._da, ax=ax, xincrease=xincrease,
-                           yincrease=yincrease, add_colorbar=add_colorbar,
-                           vmin=vmin, vmax=vmax, cmap=cmap,
-                           center=center, robust=robust, extend=extend,
-                           levels=levels, **kwargs)
+        '''
+        The method should have the same signature as the function.
+
+        This just makes the method work on Plotmethods objects,
+        and passes all the other arguments straight through.
+        '''
+        allargs = locals()
+        allargs['darray'] = _PlotMethods_obj._da
+        allargs.update(kwargs)
+        for arg in ['_PlotMethods_obj', 'newplotfunc', 'kwargs']:
+            del allargs[arg]
+        return newplotfunc(**allargs)
 
     # Add to class _PlotMethods
     setattr(_PlotMethods, plotmethod.__name__, plotmethod)
@@ -491,7 +509,7 @@ def imshow(x, y, z, ax, **kwargs):
 
     Wraps matplotlib.pyplot.imshow
 
-    ..warning::
+    ..note::
 
         This function needs uniformly spaced coordinates to
         properly label the axes. Call DataArray.plot() to check.

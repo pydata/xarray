@@ -143,8 +143,10 @@ calls :py:func:`xray.plot.imshow`.
 
 .. ipython:: python
 
-    a = xray.DataArray(np.zeros((4, 3)), dims=('y', 'x'))
-    a[0, 0] = 1
+    a0 = xray.DataArray(np.zeros((4, 3, 2)), dims=('y', 'x', 'z'),
+            name='temperature')
+    a0[0, 0, 0] = 1
+    a = a0.isel(z=0)
     a
 
 The plot will produce an image corresponding to the values of the array.
