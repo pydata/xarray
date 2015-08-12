@@ -70,7 +70,7 @@ def plot(darray, ax=None, rtol=0.01, **kwargs):
     Default plot of DataArray using matplotlib / pylab.
 
     Calls xray plotting function based on the dimensions of
-    the array:
+    darray.squeeze()
 
     =============== =========== ===========================
     Dimensions      Coordinates Plotting function
@@ -93,6 +93,8 @@ def plot(darray, ax=None, rtol=0.01, **kwargs):
         Additional keyword arguments to matplotlib
 
     """
+    darray = darray.squeeze()
+
     ndims = len(darray.dims)
 
     if ndims == 1:
@@ -505,7 +507,7 @@ def _plot2d(plotfunc):
         if add_labels:
             ax.set_xlabel(xlab)
             ax.set_ylabel(ylab)
-            ax.set_title(_title_for_slice(darray))
+            ax.set_title(darray._title_for_slice())
 
         if add_colorbar:
             cbar = plt.colorbar(primitive, ax=ax, extend=cmap_params['extend'])
@@ -522,11 +524,18 @@ def _plot2d(plotfunc):
                    add_colorbar=True, add_labels=True, vmin=None, vmax=None, cmap=None,
                    center=None, robust=False, extend=None, levels=None,
                    **kwargs):
-        return newplotfunc(_PlotMethods_obj._da, x=x, y=y, ax=ax, xincrease=xincrease,
-                           yincrease=yincrease, add_colorbar=add_colorbar,
-                           add_labels=add_labels, vmin=vmin, vmax=vmax, cmap=cmap,
-                           center=center, robust=robust, extend=extend,
-                           levels=levels, **kwargs)
+        '''
+        The method should have the same signature as the function.
+
+        This just makes the method work on Plotmethods objects,
+        and passes all the other arguments straight through.
+        '''
+        allargs = locals()
+        allargs['darray'] = _PlotMethods_obj._da
+        allargs.update(kwargs)
+        for arg in ['_PlotMethods_obj', 'newplotfunc', 'kwargs']:
+            del allargs[arg]
+        return newplotfunc(**allargs)
 
     # Add to class _PlotMethods
     setattr(_PlotMethods, plotmethod.__name__, plotmethod)
@@ -541,7 +550,7 @@ def imshow(x, y, z, ax, **kwargs):
 
     Wraps matplotlib.pyplot.imshow
 
-    ..warning::
+    ..note::
 
         This function needs uniformly spaced coordinates to
         properly label the axes. Call DataArray.plot() to check.

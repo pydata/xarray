@@ -1426,3 +1426,23 @@ class TestDataArray(TestCase):
         expected = Dataset(OrderedDict([('0', 1), ('1', 2), ('2', 3)]))
         actual = array.to_dataset('x')
         self.assertDatasetIdentical(expected, actual)
+
+    def test__title_for_slice(self):
+        array = DataArray(np.ones((4, 3, 2)), dims=['a', 'b', 'c'])
+        self.assertEqual('', array._title_for_slice())
+        self.assertEqual('c = 0', array.isel(c=0)._title_for_slice())
+        self.assertEqual('b = 1, c = 0', array.isel(b=1, c=0)._title_for_slice())
+
+        a2 = DataArray(np.ones((4, 1)), dims=['a', 'b'])
+        self.assertEqual('b = [0]', a2._title_for_slice())
+
+    def test__title_for_slice_truncate(self):
+        array = DataArray(np.ones((4)))
+        array.coords['a'] = 'a' * 100
+        array.coords['b'] = 'b' * 100
+
+        nchar = 80
+        title = array._title_for_slice(truncate=nchar)
+
+        self.assertEqual(nchar, len(title))
+        self.assertTrue(title.endswith('...'))

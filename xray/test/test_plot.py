@@ -52,6 +52,10 @@ class TestPlot(PlotTestCase):
     def test1d(self):
         self.darray[:, 0, 0].plot()
 
+    def test_2d_before_squeeze(self):
+        a = DataArray(np.arange(5).reshape(1, 5))
+        a.plot()
+
     def test2d_uniform_calls_imshow(self):
         self.assertTrue(self.imshow_called(self.darray[:, :, 0].plot))
 
@@ -402,6 +406,13 @@ class Common2dMixin:
         self.plotfunc(a.isel(c=1))
         title = plt.gca().get_title()
         self.assertEqual('c = 1, d = 0', title)
+
+    def test_default_title(self):
+        a = DataArray(np.random.randn(4, 3, 2), dims=['a', 'b', 'c'])
+        a.coords['d'] = 10
+        self.plotfunc(a.isel(c=1))
+        title = plt.gca().get_title()
+        self.assertEqual('c = 1, d = 10', title)
 
     def test_colorbar_label(self):
         self.darray.name = 'testvar'
