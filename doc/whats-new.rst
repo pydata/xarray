@@ -74,7 +74,7 @@ v0.5.3 (unreleased)
     ds.distance.where(ds.distance < 100).plot()
 
 - New :py:meth:`~xray.DataArray.to_masked_array` convenience method for
-  returning a numpy.ma.MaskedArray.  The :py:attr:`~xray.DataArray.masked_array` property was also added yielding a view of the DataArray via a MaskedArray.
+  returning a numpy.ma.MaskedArray.
 
   .. ipython:: python
 

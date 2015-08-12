@@ -165,7 +165,6 @@ Attributes
 
    DataArray.values
    DataArray.data
-   DataArray.masked_array
    DataArray.coords
    DataArray.dims
    DataArray.name

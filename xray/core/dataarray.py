@@ -919,8 +919,8 @@ class DataArray(AbstractArray, BaseDataObject):
         Parameters
         ----------
         copy : bool
-            If True (default) make a copy of the array in the result. If False
-            modify array in place and return a view.
+            If True (default) make a copy of the array in the result. If False,
+            a MaskedArray view of DataArray.values is returned.
 
         Returns
         -------
