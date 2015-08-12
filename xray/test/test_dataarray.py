@@ -1351,13 +1351,13 @@ class TestDataArray(TestCase):
         self.assertEqual(masked_array[0, 0], 10.)
         self.assertEqual(da[0, 0].values, 10.)
         self.assertTrue(masked_array.base is da.values)
-        self.assertTrue(isinstance(masked_array, np.ma.MaskedArray))
+        self.assertIsInstance(masked_array, np.ma.MaskedArray)
 
         # Test with some odd arrays
         for v in [4, np.nan, True, '4', 'four']:
             da = DataArray(v)
             ma = da.to_masked_array()
-            self.assertTrue(isinstance(ma, np.ma.MaskedArray))
+            self.assertIsInstance(ma, np.ma.MaskedArray)
 
     def test_to_and_from_cdms2(self):
         try:
