@@ -334,11 +334,6 @@ class DataArray(AbstractArray, BaseDataObject):
         """The array's data as a numpy.ndarray"""
         return self.variable.values
 
-    @property
-    def masked_array(self):
-        """The array's data as a numpy.ma.MaskedArray"""
-        return self.to_masked_array(copy=False)
-
     @values.setter
     def values(self, value):
         self.variable.values = value
@@ -932,7 +927,8 @@ class DataArray(AbstractArray, BaseDataObject):
         result : MaskedArray
             Masked where invalid values (nan or inf) occur.
         """
-        return np.ma.masked_invalid(self.values, copy=copy)
+        isnull = pd.isnull(self.values)
+        return np.ma.masked_where(isnull, self.values, copy=copy)
 
     @classmethod
     def from_series(cls, series):

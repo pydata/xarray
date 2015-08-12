@@ -51,8 +51,6 @@ class TestDataArray(TestCase):
             self.ds['foo'].to_index()
         with self.assertRaises(AttributeError):
             self.dv.variable = self.v
-        self.assertTrue(self.dv.masked_array.base is self.dv.values)
-        self.assertTrue(isinstance(self.dv.masked_array, np.ma.MaskedArray))
 
     def test_name(self):
         arr = self.dv
@@ -1356,14 +1354,10 @@ class TestDataArray(TestCase):
         self.assertTrue(isinstance(masked_array, np.ma.MaskedArray))
 
         # Test with some odd arrays
-        for v in [4, np.nan, True]:
+        for v in [4, np.nan, True, '4', 'four']:
             da = DataArray(v)
             ma = da.to_masked_array()
             self.assertTrue(isinstance(ma, np.ma.MaskedArray))
-        for v in ['4', 'four']:
-            da = DataArray(v)
-            with self.assertRaisesRegexp(TypeError, 'Not implemented for'):
-                ma = da.to_masked_array()
 
     def test_to_and_from_cdms2(self):
         try:
