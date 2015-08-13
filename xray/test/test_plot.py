@@ -430,6 +430,14 @@ class Common2dMixin:
         for string in ['x', 'y', 'testvar']:
             self.assertNotIn(string, alltxt)
 
+    def test_facetgrid(self):
+        a = np.arange(10 * 15 * 3).reshape(10, 15, 3)
+        d = DataArray(a, dims=['y', 'x', 'z'])
+        g = xplt.FacetGrid(d, col='z')
+        g.map_dataarray(self.plotfunc, 'x', 'y')
+        for ax in g:
+            self.assertTrue(ax.has_data())
+
 
 class TestContourf(Common2dMixin, PlotTestCase):
 
@@ -527,15 +535,28 @@ class TestFacetGrid(PlotTestCase):
         for i, ax in enumerate(self.g):
             self.assertEqual('z = {0}'.format(i), ax.get_title())
 
-    def test_colors_same_scale(self):
+    def test_colorbar(self):
         self.g.map_dataarray(xplt.imshow, 'x', 'y')
-        contours = plt.gcf().findobj(mpl.image.AxesImage)
+        images = plt.gcf().findobj(mpl.image.AxesImage)
 
         # They should all have the same color limits
-        clims = set((ax.get_clim() for ax in contours))
+        clims = set([ax.get_clim() for ax in images])
         self.assertEqual(1, len(clims))
 
-    def test_row_and_col(self):
-        a = np.arange(10 * 15 * 3 * 2).reshape(10, 15, 3, 2)
-        d = DataArray(a)
+        # One colorbar
+        cbar = plt.gcf().findobj(mpl.collections.QuadMesh)
+        self.assertEqual(1, len(cbar))
 
+    def test_row_and_col_shape(self):
+        a = np.arange(10 * 15 * 3 * 2).reshape(10, 15, 3, 2)
+        d = DataArray(a, dims=['y', 'x', 'col', 'row'])
+        g = xplt.FacetGrid(d, col='col', row='row')
+        self.assertEqual((2, 3), g.axes.shape)
+
+    def test_norow_nocol_error(self):
+        with self.assertRaisesRegexp(ValueError, r'[Rr]ow'):
+            xplt.FacetGrid(self.darray)
+
+    def test_colwrap_error(self):
+        with self.assertRaisesRegexp(ValueError, r'[Rr]ow'):
+            xplt.FacetGrid(self.darray)

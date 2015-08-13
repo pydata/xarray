@@ -135,12 +135,22 @@ class FacetGrid(object):
     Mostly copied from Seaborn
     '''
 
-    def __init__(self, darray, col=None, col_wrap=None):
+    def __init__(self, darray, col=None, row=None, col_wrap=None):
         import matplotlib.pyplot as plt
         self.darray = darray
-        #self.row = row
+        self.row = row
         self.col = col
         self.col_wrap = col_wrap
+
+        if col and row:
+            if col_wrap is not None:
+                pass
+        elif col and not row:
+            pass
+        elif not col and row:
+            pass
+        else:
+            raise ValueError('Pass a coordinate name as an argument for row or col')
 
         self.nfacet = len(darray[col])
 
