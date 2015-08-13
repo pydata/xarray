@@ -91,7 +91,7 @@ Here's one way to do it in matplotlib:
         ax.set_ylabel('')
         ax.set_title(t.time.values[i])
 
-    #plt.colorbar(im, ax=axes.tolist())
+    plt.colorbar(im)
 
     @savefig plot_facet_simple.png height=12in
     plt.show()
@@ -118,15 +118,6 @@ Iterating over the FacetGrid iterates over the individual axes.
     @savefig plot_facet_iterator.png height=12in 
     plt.show()
 
-In this case we don't actually need to pass these args in:
-
-.. ipython:: python
-
-    g = xray.plot.FacetGrid(t, col='time', col_wrap=2)
-
-    @savefig plot_facet_dataarray2.png height=12in
-    g.map_dataarray(xray.plot.contourf)
-
 This design picks out the data args and lets us use any matplotlib
 function with a Dataset:
 
@@ -138,16 +129,6 @@ function with a Dataset:
     @savefig plot_facet_mapds.png height=12in
     g.map(plt.contourf, 'lon', 'lat', 'air')
 
-But this really isn't possible for a DataArray since what would the last
-arg be here?
-
-.. ipython:: python
-
-    g = xray.plot.FacetGrid(t, 'time', col_wrap=2)
-
-    @savefig plot_facet_mpl_contourf.png height=12in
-    g.map(plt.contourf, 'lon', 'lat', Ellipsis)
-
 In this interest of getting something useful that's internally consistent
 and bounded in scope here's
 a rough proposal- Get it all working nicely for DataArrays now, and then
@@ -156,6 +137,23 @@ revisit the question of whether and how to provide support for Datasets.
 Implement the 
 ``map_dataarray`` method that requires the plotting function to accept a
 DataArray as the first arg.
+
+4 dimensional
+~~~~~~~~~~~~~~
+
+For 4 dimensional arrays we can use the rows and columns.
+
+.. ipython:: python
+
+    # Make a 4d array
+    t3 = t.isel(time=slice(0, 3))
+    t4d = xray.concat([t3, t3 + 10], 'fourth_dim')
+    t4d.coords
+
+    g = xray.plot.FacetGrid(t4d, col='time', row='fouth_dim')
+    
+    @savefig plot_facet_4d.png height=12in 
+    g.map_dataarray(xray.plot.contourf, 'lon', 'lat')
 
 
 More

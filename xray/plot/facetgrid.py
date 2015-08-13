@@ -166,6 +166,9 @@ class FacetGrid(object):
         Differs from Seaborn style - requires the func to know how to plot a
         dataarray.
         
+        For now I'm going to write this assuming func is an xray 2d
+        plotting function
+
         Parameters
         ----------
         func : callable
@@ -183,13 +186,22 @@ class FacetGrid(object):
         """
         import matplotlib.pyplot as plt
 
+        defaults = dict(add_colorbar=False,
+                add_labels=False,
+                vmin=float(self.darray.min()),
+                vmax=float(self.darray.max()),
+                )
+
+        defaults.update(kwargs)
+
         for ax, (name, data) in zip(self, self.darray.groupby(self.col)):
 
             plt.sca(ax)
 
-            # For now I'm going to write this assuming func is an xray 2d
-            # plotting function
-            func(data, *args, add_colorbar=False, **kwargs)
+            func(data, *args, **defaults)
+
+            plt.title('{coord} = {val}'.format(coord=self.col,
+                val=str(name)[:10]))
 
         return self
 

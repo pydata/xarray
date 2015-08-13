@@ -517,11 +517,20 @@ class TestFacetGrid(PlotTestCase):
         self.darray = DataArray(d, dims=['y', 'x', 'z'])
         self.g = xplt.FacetGrid(self.darray, col='z')
 
-    def test_loop_over_axes(self):
-        self.g.map_dataarray(xplt.contourf, 'x', 'y')
+    def test_no_args(self):
+        self.g.map_dataarray(xplt.contourf)
         for ax in self.g:
             self.assertTrue(ax.has_data())
 
-    def test_colorbar_same_scale(self):
+    def test_names_in_title(self):
         self.g.map_dataarray(xplt.contourf, 'x', 'y')
-        pass
+        for i, ax in enumerate(self.g):
+            self.assertEqual('z = {0}'.format(i), ax.get_title())
+
+    def test_colorbar_same_scale(self):
+        self.g.map_dataarray(xplt.imshow, 'x', 'y')
+        contours = plt.gcf().findobj(mpl.image.AxesImage)
+
+        # They should all have the same color limits
+        clims = set((ax.get_clim() for ax in contours))
+        self.assertEqual(1, len(clims))

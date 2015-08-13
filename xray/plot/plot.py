@@ -441,16 +441,18 @@ def _plot2d(plotfunc):
         dims = list(darray.dims)
 
         if len(dims) != 2:
-            raise ValueError('{} plots are for 2 dimensional DataArrays. '
-                             'Passed DataArray has {} dimensions'
-                             .format(plotfunc.__name__, len(dims)))
+            raise ValueError('{type} plots are for 2 dimensional DataArrays. '
+                             'Passed DataArray has {ndim} dimensions'
+                             .format(type=plotfunc.__name__, ndim=len(dims)))
 
         if x and x not in darray:
-            raise KeyError('{} is not a dimension of this DataArray. Use {} or {} for x'
+            raise KeyError('{0} is not a dimension of this DataArray. Use '
+                           '{1} or {2} for x'
                            .format(x, *darray.dims))
 
         if y and y not in darray:
-            raise KeyError('{} is not a dimension of this DataArray. Use {} or {} for y'
+            raise KeyError('{0} is not a dimension of this DataArray. Use '
+                           '{1} or {2} for y'
                            .format(y, *darray.dims))
 
         # Get label names
