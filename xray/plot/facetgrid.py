@@ -198,11 +198,12 @@ class FacetGrid(object):
 
             plt.sca(ax)
 
-            func(data, *args, **defaults)
+            mappable = func(data, *args, **defaults)
 
             plt.title('{coord} = {val}'.format(coord=self.col,
                 val=str(name)[:10]))
 
+        plt.colorbar(mappable, ax=self.axes.ravel().tolist())
         return self
 
     def map(self, func, *args, **kwargs):

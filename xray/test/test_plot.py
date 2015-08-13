@@ -527,10 +527,15 @@ class TestFacetGrid(PlotTestCase):
         for i, ax in enumerate(self.g):
             self.assertEqual('z = {0}'.format(i), ax.get_title())
 
-    def test_colorbar_same_scale(self):
+    def test_colors_same_scale(self):
         self.g.map_dataarray(xplt.imshow, 'x', 'y')
         contours = plt.gcf().findobj(mpl.image.AxesImage)
 
         # They should all have the same color limits
         clims = set((ax.get_clim() for ax in contours))
         self.assertEqual(1, len(clims))
+
+    def test_row_and_col(self):
+        a = np.arange(10 * 15 * 3 * 2).reshape(10, 15, 3, 2)
+        d = DataArray(a)
+
