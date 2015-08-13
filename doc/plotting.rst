@@ -46,6 +46,7 @@ The following imports are necessary for all of the examples.
 .. ipython:: python
 
     import numpy as np
+    import pandas as pd
     import matplotlib.pyplot as plt
     import xray
 
@@ -145,15 +146,17 @@ For 4 dimensional arrays we can use the rows and columns.
 
 .. ipython:: python
 
-    # Make a 4d array
-    t3 = t.isel(time=slice(0, 3))
-    t4d = xray.concat([t3, t3 + 10], 'fourth_dim')
+    t2 = t.isel(time=slice(0, 2))
+    t4d = xray.concat([t2, t2 + 50], pd.Index(['normal', 'hot'], name='fourth_dim'))
+    # This is a 4d array
     t4d.coords
 
-    g = xray.plot.FacetGrid(t4d, col='time', row='fouth_dim')
+    g = xray.plot.FacetGrid(t4d, col='time', row='fourth_dim')
     
+    g.map_dataarray(xray.plot.imshow, 'lon', 'lat')
+
     @savefig plot_facet_4d.png height=12in 
-    g.map_dataarray(xray.plot.contourf, 'lon', 'lat')
+    g.set_titles()
 
 
 More

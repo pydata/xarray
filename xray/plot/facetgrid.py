@@ -1,3 +1,5 @@
+import warnings
+
 import numpy as np
 
 
@@ -7,16 +9,11 @@ class FacetGrid_seaborn(object):
     '''
 
     def __init__(self, data, row=None, col=None, col_wrap=None,
-                 sharex=True, sharey=True, size=3, aspect=1,
-                 dropna=True, legend_out=True, despine=True,
                  margin_titles=False, xlim=None, ylim=None, subplot_kws=None,
                  gridspec_kws=None):
 
         import matplotlib as mpl
         import matplotlib.pyplot as plt
-
-        MPL_GRIDSPEC_VERSION = LooseVersion('1.4')
-        OLD_MPL = LooseVersion(mpl.__version__) < MPL_GRIDSPEC_VERSION
 
         if row:
             row_names = data[row].values
@@ -43,66 +40,29 @@ class FacetGrid_seaborn(object):
         self._ncol = ncol
         self._nrow = nrow
 
-        # Calculate the base figure size
-        # This can get stretched later by a legend
-        figsize = (ncol * size * aspect, nrow * size)
-
         # Validate some inputs
         if col_wrap is not None:
             margin_titles = False
 
-        # Build the subplot keyword dictionary
-        subplot_kws = {} if subplot_kws is None else subplot_kws.copy()
-        gridspec_kws = {} if gridspec_kws is None else gridspec_kws.copy()
-        if xlim is not None:
-            subplot_kws["xlim"] = xlim
-        if ylim is not None:
-            subplot_kws["ylim"] = ylim
-
         # Initialize the subplot grid
         if col_wrap is None:
             kwargs = dict(figsize=figsize, squeeze=False,
-                          sharex=sharex, sharey=sharey,
-                          subplot_kw=subplot_kws,
-                          gridspec_kw=gridspec_kws)
-
-            if OLD_MPL:
-                _ = kwargs.pop('gridspec_kw', None)
-                if gridspec_kws:
-                    msg = "gridspec module only available in mpl >= {}"
-                    warnings.warn(msg.format(MPL_GRIDSPEC_VERSION))
+                          sharex=True, sharey=True,
+                          )
 
             fig, axes = plt.subplots(nrow, ncol, **kwargs)
             self.axes = axes
 
         else:
             # If wrapping the col variable we need to make the grid ourselves
-            if gridspec_kws:
-                warnings.warn("`gridspec_kws` ignored when using `col_wrap`")
-
             n_axes = len(col_names)
             fig = plt.figure(figsize=figsize)
             axes = np.empty(n_axes, object)
             axes[0] = fig.add_subplot(nrow, ncol, 1, **subplot_kws)
-            if sharex:
-                subplot_kws["sharex"] = axes[0]
-            if sharey:
-                subplot_kws["sharey"] = axes[0]
+
             for i in range(1, n_axes):
                 axes[i] = fig.add_subplot(nrow, ncol, i + 1, **subplot_kws)
             self.axes = axes
-
-            # Now we turn off labels on the inner axes
-            if sharex:
-                for ax in self._not_bottom_axes:
-                    for label in ax.get_xticklabels():
-                        label.set_visible(False)
-                    ax.xaxis.offsetText.set_visible(False)
-            if sharey:
-                for ax in self._not_left_axes:
-                    for label in ax.get_yticklabels():
-                        label.set_visible(False)
-                    ax.yaxis.offsetText.set_visible(False)
 
         # Set up the class attributes
         # ---------------------------
@@ -142,33 +102,74 @@ class FacetGrid(object):
         self.col = col
         self.col_wrap = col_wrap
 
+        # _group is the grouping variable, if there is only one
         if col and row:
+            self._group = False
+            self.nrow = len(darray[row])
+            self.ncol = len(darray[col])
             if col_wrap is not None:
-                pass
-        elif col and not row:
-            pass
-        elif not col and row:
-            pass
+                warnings.warn("Can't use col_wrap when both col and row are passed")
+        elif row and not col:
+            self._group = row
+        elif not row and col:
+            self._group = col
         else:
             raise ValueError('Pass a coordinate name as an argument for row or col')
 
-        self.nfacet = len(darray[col])
-
         # Compute grid shape
-        if col_wrap is not None:
-            self.ncol = col_wrap
-        else:
-            # TODO- add heuristic for inference here to get a nice shape
-            # like 3 x 4
-            self.ncol = self.nfacet
-
-        self.nrow = int(np.ceil(self.nfacet / self.ncol))
+        if self._group:
+            self.nfacet = len(darray[self._group])
+            if col:
+                # TODO - could add heuristic for nice shape like 3x4
+                self.ncol = self.nfacet
+            if row:
+                self.ncol = 1
+            if col_wrap is not None:
+                # Overrides previous settings
+                self.ncol = col_wrap
+            self.nrow = int(np.ceil(self.nfacet / self.ncol))
 
         self.fig, self.axes = plt.subplots(self.nrow, self.ncol,
                 sharex=True, sharey=True)
 
+        # Next the private variables
+        '''
+        self._nrow = nrow
+        self._row_var = row
+        self._ncol = ncol
+        self._col_var = col
+
+        self._margin_titles = margin_titles
+        self._col_wrap = col_wrap
+        '''
+
     def __iter__(self):
         return self.axes.flat
+
+    def map_dataarray2(self, func, *args, **kwargs):
+        """Experimenting with row and col
+        """
+        import matplotlib.pyplot as plt
+
+        defaults = dict(add_colorbar=False,
+                add_labels=False,
+                vmin=float(self.darray.min()),
+                vmax=float(self.darray.max()),
+                )
+
+        defaults.update(kwargs)
+
+        # Looping over the indices helps keep sanity
+        for col in range(ncol):
+            for row in range(nrow):
+                plt.sca(axes[row, col])
+                # Similar to groupby
+                group = darray[{self.row: row, self.col: col}]
+                mappable = func(group, *args, **defaults)
+
+        plt.colorbar(mappable, ax=self.axes.ravel().tolist())
+        return self
+
 
     def map_dataarray(self, func, *args, **kwargs):
         """Apply a plotting function to each facet's subset of the data.
@@ -204,17 +205,108 @@ class FacetGrid(object):
 
         defaults.update(kwargs)
 
-        for ax, (name, data) in zip(self, self.darray.groupby(self.col)):
-
-            plt.sca(ax)
-
-            mappable = func(data, *args, **defaults)
-
-            plt.title('{coord} = {val}'.format(coord=self.col,
-                val=str(name)[:10]))
+        if self._group:
+            # TODO - bug should groupby _group
+            for ax, (name, data) in zip(self, self.darray.groupby(self.col)):
+                plt.sca(ax)
+                mappable = func(data, *args, **defaults)
+                plt.title('{coord} = {val}'.format(coord=self.col,
+                    val=str(name)[:10]))
+        else:
+            # Looping over the indices helps keep sanity
+            for col in range(self.ncol):
+                for row in range(self.nrow):
+                    plt.sca(self.axes[row, col])
+                    # Similar to groupby
+                    group = self.darray[{self.row: row, self.col: col}]
+                    mappable = func(group, *args, **defaults)
 
         plt.colorbar(mappable, ax=self.axes.ravel().tolist())
+
+        #self.set_titles()
+
         return self
+
+    def set_titles(self, template=None, row_template=None,  col_template=None,
+                   **kwargs):
+        """Draw titles either above each facet or on the grid margins.
+
+        Parameters
+        ----------
+        template : string
+            Template for all titles with the formatting keys {col_var} and
+            {col_name} (if using a `col` faceting variable) and/or {row_var}
+            and {row_name} (if using a `row` faceting variable).
+        row_template:
+            Template for the row variable when titles are drawn on the grid
+            margins. Must have {row_var} and {row_name} formatting keys.
+        col_template:
+            Template for the row variable when titles are drawn on the grid
+            margins. Must have {col_var} and {col_name} formatting keys.
+
+        Returns
+        -------
+        self: object
+            Returns self.
+
+        """
+        args = dict(row_var=self._row_var, col_var=self._col_var)
+        kwargs["size"] = kwargs.pop("size", mpl.rcParams["axes.labelsize"])
+
+        # Establish default templates
+        if row_template is None:
+            row_template = "{row_var} = {row_name}"
+        if col_template is None:
+            col_template = "{col_var} = {col_name}"
+        if template is None:
+            if self._row_var is None:
+                template = col_template
+            elif self._col_var is None:
+                template = row_template
+            else:
+                template = " | ".join([row_template, col_template])
+
+        if self._margin_titles:
+            if self.row_names is not None:
+                # Draw the row titles on the right edge of the grid
+                for i, row_name in enumerate(self.row_names):
+                    ax = self.axes[i, -1]
+                    args.update(dict(row_name=row_name))
+                    title = row_template.format(**args)
+                    bgcolor = self.fig.get_facecolor()
+                    ax.annotate(title, xy=(1.02, .5), xycoords="axes fraction",
+                                rotation=270, ha="left", va="center",
+                                backgroundcolor=bgcolor, **kwargs)
+
+            if self.col_names is not None:
+                # Draw the column titles  as normal titles
+                for j, col_name in enumerate(self.col_names):
+                    args.update(dict(col_name=col_name))
+                    title = col_template.format(**args)
+                    self.axes[0, j].set_title(title, **kwargs)
+
+            return self
+
+        # Otherwise title each facet with all the necessary information
+        if (self._row_var is not None) and (self._col_var is not None):
+            for i, row_name in enumerate(self.row_names):
+                for j, col_name in enumerate(self.col_names):
+                    args.update(dict(row_name=row_name, col_name=col_name))
+                    title = template.format(**args)
+                    self.axes[i, j].set_title(title, **kwargs)
+        elif self.row_names is not None and len(self.row_names):
+            for i, row_name in enumerate(self.row_names):
+                args.update(dict(row_name=row_name))
+                title = template.format(**args)
+                self.axes[i, 0].set_title(title, **kwargs)
+        elif self.col_names is not None and len(self.col_names):
+            for i, col_name in enumerate(self.col_names):
+                args.update(dict(col_name=col_name))
+                title = template.format(**args)
+                # Index the flat array so col_wrap works
+                self.axes.flat[i].set_title(title, **kwargs)
+        return self
+
 
     def map(self, func, *args, **kwargs):
         """Apply a plotting function to each facet's subset of the data.

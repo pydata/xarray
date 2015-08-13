@@ -552,6 +552,7 @@ class TestFacetGrid(PlotTestCase):
         d = DataArray(a, dims=['y', 'x', 'col', 'row'])
         g = xplt.FacetGrid(d, col='col', row='row')
         self.assertEqual((2, 3), g.axes.shape)
+        g.map_dataarray(xplt.imshow, 'x', 'y')
 
     def test_norow_nocol_error(self):
         with self.assertRaisesRegexp(ValueError, r'[Rr]ow'):
