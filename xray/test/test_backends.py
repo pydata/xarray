@@ -659,7 +659,7 @@ class NetCDF3ViaNetCDF4DataTest(CFEncodedDataTest, Only32BitTypes, TestCase):
 
 
 @requires_netCDF4
-class NetCDF4ClassicViaNetCDF4DataTest(CFEncodedDataTest, TestCase):
+class NetCDF4ClassicViaNetCDF4DataTest(CFEncodedDataTest, Only32BitTypes, TestCase):
     @contextlib.contextmanager
     def create_store(self):
         with create_tmp_file() as tmp_file:
