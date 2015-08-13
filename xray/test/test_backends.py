@@ -111,6 +111,13 @@ class DatasetIOTestCases(object):
         with self.roundtrip(expected) as actual:
             self.assertDatasetAllClose(expected, actual)
 
+    def test_roundtrip_test_f64_data(self):
+        expected = create_test_data()
+        with self.roundtrip(expected) as actual:
+            self.assertDatasetAllClose(expected, actual)
+            self.assertEqual(expected.var1.dtype, 'float64')
+            self.assertEqual(actual.var1.dtype, 'float64')
+
     def test_load(self):
         expected = create_test_data()
 
@@ -266,7 +273,7 @@ class CFEncodedDataTest(DatasetIOTestCases):
             # netCDF4 can't keep track of an empty _FillValue for VLEN
             # variables
             expected['x'][-1] = ''
-        elif (type(self) is NetCDF3ViaNetCDF4DataTest
+        elif (isinstance(self, (NetCDF3ViaNetCDF4DataTest, NetCDF4ClassicViaNetCDF4DataTest))
               or (has_netCDF4 and type(self) is GenericNetCDFDataTest)):
             # netCDF4 can't keep track of an empty _FillValue for nc3, either:
             # https://github.com/Unidata/netcdf4-python/issues/273
@@ -646,6 +653,24 @@ class NetCDF3ViaNetCDF4DataTest(CFEncodedDataTest, Only32BitTypes, TestCase):
     def roundtrip(self, data, **kwargs):
         with create_tmp_file() as tmp_file:
             data.to_netcdf(tmp_file, format='NETCDF3_CLASSIC',
+                           engine='netcdf4')
+            with open_dataset(tmp_file, engine='netcdf4', **kwargs) as ds:
+                yield ds
+
+
+@requires_netCDF4
+class NetCDF4ClassicViaNetCDF4DataTest(CFEncodedDataTest, TestCase):
+    @contextlib.contextmanager
+    def create_store(self):
+        with create_tmp_file() as tmp_file:
+            with backends.NetCDF4DataStore(tmp_file, mode='w',
+                                           format='NETCDF4_CLASSIC') as store:
+                yield store
+
+    @contextlib.contextmanager
+    def roundtrip(self, data, **kwargs):
+        with create_tmp_file() as tmp_file:
+            data.to_netcdf(tmp_file, format='NETCDF4_CLASSIC',
                            engine='netcdf4')
             with open_dataset(tmp_file, engine='netcdf4', **kwargs) as ds:
                 yield ds
