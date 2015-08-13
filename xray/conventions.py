@@ -189,9 +189,11 @@ def infer_datetime_units(dates):
     unique time deltas in `dates`)
     """
     dates = pd.to_datetime(np.asarray(dates).ravel(), box=False)
-    unique_timedeltas = np.unique(np.diff(dates[pd.notnull(dates)]))
+    dates = dates[pd.notnull(dates)]
+    unique_timedeltas = np.unique(np.diff(dates))
     units = _infer_time_units_from_diff(unique_timedeltas)
-    return '%s since %s' % (units, pd.Timestamp(dates[0]))
+    reference_date = dates[0] if len(dates) > 0 else '1970-01-01'
+    return '%s since %s' % (units, pd.Timestamp(reference_date))
 
 
 def infer_timedelta_units(deltas):
@@ -253,7 +255,7 @@ def cast_to_int_if_safe(num):
 
 def encode_cf_datetime(dates, units=None, calendar=None):
     """Given an array of datetime objects, returns the tuple `(num, units,
-    calendar)` suitable for a CF complient time variable.
+    calendar)` suitable for a CF compliant time variable.
 
     Unlike `date2num`, this function can handle datetime64 arrays.
 
