@@ -122,16 +122,19 @@ class AttrAccessMixin(object):
     """Mixin class that allow getting keys with attribute access
     """
     @property
-    def __attr_sources__(self):
+    def _attr_sources(self):
         """List of places to look-up items for attribute-style access"""
         return [self, self.attrs]
 
     def __getattr__(self, name):
-        for source in self.__attr_sources__:
-            try:
-                return source[name]
-            except KeyError:
-                pass
+        if name != '__setstate__':
+            # this avoids an infinite loop when pickle looks for the
+            # __setstate__ attribute before the xray object is initialized
+            for source in self._attr_sources:
+                try:
+                    return source[name]
+                except KeyError:
+                    pass
         raise AttributeError("%r object has no attribute %r" %
                              (type(self).__name__, name))
 
@@ -139,7 +142,7 @@ class AttrAccessMixin(object):
         """Provide method name lookup and completion. Only provide 'public'
         methods.
         """
-        extra_attrs = [item for sublist in self.__attr_sources__
+        extra_attrs = [item for sublist in self._attr_sources
                        for item in sublist]
         return sorted(set(dir(type(self)) + extra_attrs))
 

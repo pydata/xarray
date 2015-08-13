@@ -191,27 +191,25 @@ class DataArray(AbstractArray, BaseDataObject):
                                  'are not a subset of the DataArray '
                                  'dimensions %s' % (k, v.dims, dims))
 
-        # these fully describe a DataArray:
+        # these fully describe a DataArray
         self._dataset = dataset
         self._name = name
 
     @classmethod
-    def _new_from_dataset(cls, dataset, name):
+    def _new_from_dataset(cls, original_dataset, name):
         """Private constructor for the benefit of Dataset.__getitem__ (skips
         all validation)
         """
-        obj = object.__new__(cls)
-        obj._dataset = dataset._copy_listed([name], keep_attrs=False)
-        if name not in obj._dataset:
+        dataset = original_dataset._copy_listed([name], keep_attrs=False)
+        if name not in dataset:
             # handle virtual variables
             try:
                 _, name = name.split('.', 1)
             except Exception:
                 raise KeyError(name)
-        obj._name = name
         if name not in dataset._dims:
-            obj._dataset._coord_names.discard(name)
-        return obj
+            dataset._coord_names.discard(name)
+        return cls._new_from_dataset_no_copy(dataset, name)
 
     @classmethod
     def _new_from_dataset_no_copy(cls, dataset, name):
@@ -221,10 +219,7 @@ class DataArray(AbstractArray, BaseDataObject):
         return obj
 
     def _with_replaced_dataset(self, dataset):
-        obj = object.__new__(type(self))
-        obj._name = self.name
-        obj._dataset = dataset
-        return obj
+        return self._new_from_dataset_no_copy(dataset, self.name)
 
     def _to_dataset_split(self, dim):
         def subset(dim, label):
@@ -383,7 +378,7 @@ class DataArray(AbstractArray, BaseDataObject):
         del self._dataset[key]
 
     @property
-    def __attr_sources__(self):
+    def _attr_sources(self):
         """List of places to look-up items for attribute-style access"""
         return [self.coords, self.attrs]
 

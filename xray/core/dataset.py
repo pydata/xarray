@@ -267,11 +267,6 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject):
     One dimensional variables with name equal to their dimension are index
     coordinates used for label based indexing.
     """
-    # class properties defined for the benefit of __setstate__, which otherwise
-    # runs into trouble because we overrode __getattr__
-    _attrs = None
-    _variables = Frozen({})
-
     groupby_cls = groupby.DatasetGroupBy
 
     def __init__(self, variables=None, coords=None, attrs=None,

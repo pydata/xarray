@@ -91,7 +91,8 @@ Bug fixes
 - Dataset aggregation functions dropped variables with unsigned integer dtype
   (:issue:`505`).
 - Fixed an error when attempting to saving datetime64 variables to netCDF
-  files when the first element is ``NaT``.
+  files when the first element is ``NaT`` (:issue:`528`).
+- Fix pickle on DataArray objects (:issue:`515`).
 
 v0.5.2 (16 July 2015)
 ---------------------
