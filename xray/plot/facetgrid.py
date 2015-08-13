@@ -95,7 +95,8 @@ class FacetGrid(object):
     Mostly copied from Seaborn
     '''
 
-    def __init__(self, darray, col=None, row=None, col_wrap=None):
+    def __init__(self, darray, col=None, row=None, col_wrap=None,
+            margin_titles=True):
         import matplotlib.pyplot as plt
         self.darray = darray
         self.row = row
@@ -105,8 +106,8 @@ class FacetGrid(object):
         # _group is the grouping variable, if there is only one
         if col and row:
             self._group = False
-            self.nrow = len(darray[row])
-            self.ncol = len(darray[col])
+            self._nrow = len(darray[row])
+            self._ncol = len(darray[col])
             if col_wrap is not None:
                 warnings.warn("Can't use col_wrap when both col and row are passed")
         elif row and not col:
@@ -121,55 +122,40 @@ class FacetGrid(object):
             self.nfacet = len(darray[self._group])
             if col:
                 # TODO - could add heuristic for nice shape like 3x4
-                self.ncol = self.nfacet
+                self._ncol = self.nfacet
             if row:
-                self.ncol = 1
+                self._ncol = 1
             if col_wrap is not None:
                 # Overrides previous settings
-                self.ncol = col_wrap
-            self.nrow = int(np.ceil(self.nfacet / self.ncol))
+                self._ncol = col_wrap
+            self._nrow = int(np.ceil(self.nfacet / self._ncol))
 
-        self.fig, self.axes = plt.subplots(self.nrow, self.ncol,
+        self.fig, self.axes = plt.subplots(self._nrow, self._ncol,
                 sharex=True, sharey=True)
 
+        # Set up the lists of names for the row and column facet variables
+        if row is None:
+            row_names = []
+        else:
+            row_names = list(darray[row].values)
+
+        if col is None:
+            col_names = []
+        else:
+            col_names = list(darray[col].values)
+
+        self.row_names = row_names
+        self.col_names = col_names
+
         # Next the private variables
-        '''
-        self._nrow = nrow
         self._row_var = row
-        self._ncol = ncol
         self._col_var = col
 
         self._margin_titles = margin_titles
         self._col_wrap = col_wrap
-        '''
 
     def __iter__(self):
         return self.axes.flat
-
-    def map_dataarray2(self, func, *args, **kwargs):
-        """Experimenting with row and col
-        """
-        import matplotlib.pyplot as plt
-
-        defaults = dict(add_colorbar=False,
-                add_labels=False,
-                vmin=float(self.darray.min()),
-                vmax=float(self.darray.max()),
-                )
-
-        defaults.update(kwargs)
-
-        # Looping over the indices helps keep sanity
-        for col in range(ncol):
-            for row in range(nrow):
-                plt.sca(axes[row, col])
-                # Similar to groupby
-                group = darray[{self.row: row, self.col: col}]
-                mappable = func(group, *args, **defaults)
-
-        plt.colorbar(mappable, ax=self.axes.ravel().tolist())
-        return self
-
 
     def map_dataarray(self, func, *args, **kwargs):
         """Apply a plotting function to each facet's subset of the data.
@@ -214,16 +200,17 @@ class FacetGrid(object):
                     val=str(name)[:10]))
         else:
             # Looping over the indices helps keep sanity
-            for col in range(self.ncol):
-                for row in range(self.nrow):
+            for col in range(self._ncol):
+                for row in range(self._nrow):
                     plt.sca(self.axes[row, col])
                     # Similar to groupby
                     group = self.darray[{self.row: row, self.col: col}]
                     mappable = func(group, *args, **defaults)
 
-        plt.colorbar(mappable, ax=self.axes.ravel().tolist())
+            if self._margin_titles:
+                self.set_titles()
 
-        #self.set_titles()
+        plt.colorbar(mappable, ax=self.axes.ravel().tolist())
 
         return self
 
@@ -250,6 +237,7 @@ class FacetGrid(object):
             Returns self.
 
         """
+        import matplotlib as mpl
         args = dict(row_var=self._row_var, col_var=self._col_var)
         kwargs["size"] = kwargs.pop("size", mpl.rcParams["axes.labelsize"])
 
@@ -344,3 +332,31 @@ class FacetGrid(object):
             func(*innerargs, **kwargs)
 
         return self
+
+
+
+def map_dataarray2(self, func, *args, **kwargs):
+    """Experimenting with row and col
+    """
+    import matplotlib.pyplot as plt
+
+    defaults = dict(add_colorbar=False,
+            add_labels=False,
+            vmin=float(self.darray.min()),
+            vmax=float(self.darray.max()),
+            )
+
+    defaults.update(kwargs)
+
+    # Looping over the indices helps keep sanity
+    for col in range(ncol):
+        for row in range(nrow):
+            plt.sca(axes[row, col])
+            # Similar to groupby
+            group = darray[{self.row: row, self.col: col}]
+            mappable = func(group, *args, **defaults)
+
+    plt.colorbar(mappable, ax=self.axes.ravel().tolist())
+    return self
+
+
