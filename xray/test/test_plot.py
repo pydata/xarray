@@ -21,6 +21,15 @@ except ImportError:
     pass
 
 
+def text_in_fig():
+    '''
+    Return the set of all text in the figure
+    '''
+    alltxt = [t.get_text() for t in plt.gcf().findobj(mpl.text.Text)]
+    # Set comprehension not compatible with Python 2.6
+    return set(alltxt)
+
+
 @requires_matplotlib
 class PlotTestCase(TestCase):
 
@@ -417,16 +426,12 @@ class Common2dMixin:
     def test_colorbar_label(self):
         self.darray.name = 'testvar'
         self.plotmethod()
-        alltxt = [t.get_text() for t in plt.gcf().findobj(mpl.text.Text)]
-        # Set comprehension not compatible with Python 2.6
-        alltxt = set(alltxt)
-        self.assertIn(self.darray.name, alltxt)
+        self.assertIn(self.darray.name, text_in_fig())
 
     def test_no_labels(self):
         self.darray.name = 'testvar'
         self.plotmethod(add_labels=False)
-        alltxt = [t.get_text() for t in plt.gcf().findobj(mpl.text.Text)]
-        alltxt = set(alltxt)
+        alltxt = text_in_fig()
         for string in ['x', 'y', 'testvar']:
             self.assertNotIn(string, alltxt)
 
@@ -530,15 +535,16 @@ class TestFacetGrid(PlotTestCase):
         for ax in self.g:
             self.assertTrue(ax.has_data())
 
-    def test_names_in_title(self):
+    def test_names_appear_somewhere(self):
         self.darray.name = 'testvar'
         self.g.map_dataarray(xplt.contourf, 'x', 'y')
         for i, ax in enumerate(self.g):
             self.assertEqual('z = {0}'.format(i), ax.get_title())
 
-        alltxt = [t.get_text() for t in plt.gcf().findobj(mpl.text.Text)]
-        # Set comprehension not compatible with Python 2.6
+        alltxt = text_in_fig()
         self.assertIn(self.darray.name, alltxt)
+        for label in ['x', 'y']:
+            self.assertIn(label, alltxt)
 
     def test_colorbar(self):
         self.g.map_dataarray(xplt.imshow, 'x', 'y')
@@ -560,9 +566,5 @@ class TestFacetGrid(PlotTestCase):
         g.map_dataarray(xplt.imshow, 'x', 'y')
 
     def test_norow_nocol_error(self):
-        with self.assertRaisesRegexp(ValueError, r'[Rr]ow'):
-            xplt.FacetGrid(self.darray)
-
-    def test_colwrap_error(self):
         with self.assertRaisesRegexp(ValueError, r'[Rr]ow'):
             xplt.FacetGrid(self.darray)

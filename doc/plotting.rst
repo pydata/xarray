@@ -117,6 +117,7 @@ We can use ``map_dataarray`` on a DataArray:
     g.map_dataarray(xray.plot.contourf, 'lon', 'lat')
 
 Iterating over the FacetGrid iterates over the individual axes.
+Pick out individual axes using the ``.axes`` attribute.
 
 .. ipython:: python
 
@@ -125,6 +126,9 @@ Iterating over the FacetGrid iterates over the individual axes.
 
     for i, ax in enumerate(g):
         ax.set_title('Air Temperature %d' % i)
+
+    bottomright = g.axes[-1, -1]
+    bottomright.annotate('America', (240, 40))
 
     @savefig plot_facet_iterator.png height=12in 
     plt.show()
