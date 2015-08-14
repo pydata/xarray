@@ -95,8 +95,7 @@ class FacetGrid(object):
     Mostly copied from Seaborn
     '''
 
-    def __init__(self, darray, col=None, row=None, col_wrap=None,
-            margin_titles=True):
+    def __init__(self, darray, col=None, row=None, col_wrap=None):
         import matplotlib.pyplot as plt
         self.darray = darray
         self.row = row
@@ -108,12 +107,15 @@ class FacetGrid(object):
             self._group = False
             self._nrow = len(darray[row])
             self._ncol = len(darray[col])
+            self._margin_titles = True
             if col_wrap is not None:
                 warnings.warn("Can't use col_wrap when both col and row are passed")
         elif row and not col:
             self._group = row
+            self._margin_titles = False
         elif not row and col:
             self._group = col
+            self._margin_titles = False
         else:
             raise ValueError('Pass a coordinate name as an argument for row or col')
 
@@ -150,9 +152,9 @@ class FacetGrid(object):
         # Next the private variables
         self._row_var = row
         self._col_var = col
-
-        self._margin_titles = margin_titles
         self._col_wrap = col_wrap
+
+        self.set_titles()
 
     def __iter__(self):
         return self.axes.flat
@@ -196,8 +198,8 @@ class FacetGrid(object):
             for ax, (name, data) in zip(self, self.darray.groupby(self.col)):
                 plt.sca(ax)
                 mappable = func(data, *args, **defaults)
-                plt.title('{coord} = {val}'.format(coord=self.col,
-                    val=str(name)[:10]))
+                #plt.title('{coord} = {val}'.format(coord=self.col,
+                #    val=str(name)[:10]))
         else:
             # Looping over the indices helps keep sanity
             for col in range(self._ncol):
@@ -207,16 +209,16 @@ class FacetGrid(object):
                     group = self.darray[{self.row: row, self.col: col}]
                     mappable = func(group, *args, **defaults)
 
-            if self._margin_titles:
-                self.set_titles()
-
-        plt.colorbar(mappable, ax=self.axes.ravel().tolist())
+        cbar = plt.colorbar(mappable, ax=self.axes.ravel().tolist())
+        cbar.set_label(self.darray.name, rotation=270)
 
         return self
 
-    def set_titles(self, template=None, row_template=None,  col_template=None,
+    def set_titles(self, template=None, row_template="{row_var} = {row_name}",
+                   col_template="{col_var} = {col_name}", maxchar=10,
                    **kwargs):
-        """Draw titles either above each facet or on the grid margins.
+        '''
+        Draw titles either above each facet or on the grid margins.
 
         Parameters
         ----------
@@ -230,22 +232,21 @@ class FacetGrid(object):
         col_template:
             Template for the row variable when titles are drawn on the grid
             margins. Must have {col_var} and {col_name} formatting keys.
+        maxchar : int
+            Truncate strings at maxchar
 
         Returns
         -------
         self: object
             Returns self.
 
-        """
+        '''
         import matplotlib as mpl
+
         args = dict(row_var=self._row_var, col_var=self._col_var)
         kwargs["size"] = kwargs.pop("size", mpl.rcParams["axes.labelsize"])
 
         # Establish default templates
-        if row_template is None:
-            row_template = "{row_var} = {row_name}"
-        if col_template is None:
-            col_template = "{col_var} = {col_name}"
         if template is None:
             if self._row_var is None:
                 template = col_template
@@ -254,22 +255,22 @@ class FacetGrid(object):
             else:
                 template = " | ".join([row_template, col_template])
 
+        def shorten(name, maxchar=maxchar):
+            return str(name)[:maxchar]
+
         if self._margin_titles:
-            if self.row_names is not None:
+            if self.row_names:
                 # Draw the row titles on the right edge of the grid
                 for i, row_name in enumerate(self.row_names):
                     ax = self.axes[i, -1]
-                    args.update(dict(row_name=row_name))
+                    args['row_name'] = shorten(row_name)
                     title = row_template.format(**args)
-                    bgcolor = self.fig.get_facecolor()
                     ax.annotate(title, xy=(1.02, .5), xycoords="axes fraction",
-                                rotation=270, ha="left", va="center",
-                                backgroundcolor=bgcolor, **kwargs)
-
-            if self.col_names is not None:
-                # Draw the column titles  as normal titles
+                                rotation=270, ha="left", va="center", **kwargs)
+            if self.col_names:
+                # Draw the column titles as normal titles
                 for j, col_name in enumerate(self.col_names):
-                    args.update(dict(col_name=col_name))
+                    args['col_name'] = shorten(col_name)
                     title = col_template.format(**args)
                     self.axes[0, j].set_title(title, **kwargs)
 
@@ -279,17 +280,18 @@ class FacetGrid(object):
         if (self._row_var is not None) and (self._col_var is not None):
             for i, row_name in enumerate(self.row_names):
                 for j, col_name in enumerate(self.col_names):
-                    args.update(dict(row_name=row_name, col_name=col_name))
+                    args['row_name'] = shorten(row_name)
+                    args['col_name'] = shorten(col_name)
                     title = template.format(**args)
                     self.axes[i, j].set_title(title, **kwargs)
         elif self.row_names is not None and len(self.row_names):
             for i, row_name in enumerate(self.row_names):
-                args.update(dict(row_name=row_name))
+                args['row_name'] = shorten(row_name)
                 title = template.format(**args)
                 self.axes[i, 0].set_title(title, **kwargs)
         elif self.col_names is not None and len(self.col_names):
             for i, col_name in enumerate(self.col_names):
-                args.update(dict(col_name=col_name))
+                args['col_name'] = shorten(col_name)
                 title = template.format(**args)
                 # Index the flat array so col_wrap works
                 self.axes.flat[i].set_title(title, **kwargs)
@@ -358,5 +360,3 @@ def map_dataarray2(self, func, *args, **kwargs):
 
     plt.colorbar(mappable, ax=self.axes.ravel().tolist())
     return self
-
-

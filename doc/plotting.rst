@@ -153,10 +153,8 @@ For 4 dimensional arrays we can use the rows and columns.
 
     g = xray.plot.FacetGrid(t4d, col='time', row='fourth_dim')
     
-    g.map_dataarray(xray.plot.imshow, 'lon', 'lat')
-
     @savefig plot_facet_4d.png height=12in 
-    g.set_titles()
+    g.map_dataarray(xray.plot.imshow, 'lon', 'lat')
 
 
 More

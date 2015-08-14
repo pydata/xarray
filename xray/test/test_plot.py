@@ -531,9 +531,14 @@ class TestFacetGrid(PlotTestCase):
             self.assertTrue(ax.has_data())
 
     def test_names_in_title(self):
+        self.darray.name = 'testvar'
         self.g.map_dataarray(xplt.contourf, 'x', 'y')
         for i, ax in enumerate(self.g):
             self.assertEqual('z = {0}'.format(i), ax.get_title())
+
+        alltxt = [t.get_text() for t in plt.gcf().findobj(mpl.text.Text)]
+        # Set comprehension not compatible with Python 2.6
+        self.assertIn(self.darray.name, alltxt)
 
     def test_colorbar(self):
         self.g.map_dataarray(xplt.imshow, 'x', 'y')
