@@ -94,7 +94,26 @@ def _unpack_netcdf_time_units(units):
 def _decode_datetime_with_netcdf4(num_dates, units, calendar):
     import netCDF4 as nc4
 
-    dates = np.asarray(nc4.num2date(num_dates, units, calendar))
+    try:
+        dates = np.asarray(nc4.num2date(num_dates, units, calendar))
+    except ValueError:
+        # num2date needs calendar year start >= 0001 C.E. 
+        _, ref_date = _unpack_netcdf_time_units(units)
+        year = int(ref_date.split('-')[0])
+        if year != 0:
+            raise ValueError('This fix only works for days since year 0.')
+        year_diff = year - 1
+        new_units = re.sub('0000', '0001', units)
+        time = nc4.num2date(num_dates, new_units, calendar)
+        dates = np.asarray([datetime(d.year + year_diff, d.month, d.day,
+                         d.hour, d.minute, d.second)
+                for d in time])
+        warnings.warn('Detected time units with reference date of year 0. '
+                      'This is not valid according to CF convetions. '
+                      'http://cfconventions.org/Data/cf-conventions'  
+                      '/cf-conventions-1.6/build/cf-conventions.html'
+                      '#climatological-statistics',
+                      RuntimeWarning, stacklevel=3)
     if (dates[np.nanargmin(num_dates)].year < 1678
             or dates[np.nanargmax(num_dates)].year >= 2262):
         warnings.warn('Unable to decode time axis into full '
