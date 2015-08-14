@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+import pickle
 from copy import deepcopy
 from textwrap import dedent
 
@@ -333,6 +334,11 @@ class TestDataArray(TestCase):
                        'y2': 'c', 'xy': ('x', ['d', 'e'])},
             dims='x')
         self.assertDataArrayIdentical(expected, actual)
+
+    def test_pickle(self):
+        data = DataArray(np.random.random((3, 3)), dims=('id', 'time'))
+        roundtripped = pickle.loads(pickle.dumps(data))
+        self.assertDataArrayIdentical(data, roundtripped)
 
     @requires_dask
     def test_chunk(self):
