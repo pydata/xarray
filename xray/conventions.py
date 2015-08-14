@@ -828,7 +828,7 @@ def decode_cf_variables(variables, attributes, concat_characters=True,
 
 
 def decode_cf(obj, concat_characters=True, mask_and_scale=True,
-              decode_times=True, decode_coords=True):
+              decode_times=True, decode_coords=True, drop_variables=None):
     """Decode the given Dataset or Datastore according to CF conventions into
     a new Dataset.
 
@@ -848,7 +848,10 @@ def decode_cf(obj, concat_characters=True, mask_and_scale=True,
     decode_coords : bool, optional
         Use the 'coordinates' attribute on variable (or the dataset itself) to
         identify coordinates.
-
+    drop_variables: iterable, optional 
+        A list of variables to exclude from being parsed from the dataset. This
+        may be useful to drop variables with problems or inconsistent values. 
+    
     Returns
     -------
     decoded : Dataset
@@ -871,6 +874,9 @@ def decode_cf(obj, concat_characters=True, mask_and_scale=True,
     vars, attrs, coord_names = decode_cf_variables(
         vars, attrs, concat_characters, mask_and_scale, decode_times,
         decode_coords)
+    if drop_variables is not None:
+        for var_to_drop in drop_variables:
+            del vars[var_to_drop]
     ds = Dataset(vars, attrs=attrs)
     ds = ds.set_coords(coord_names.union(extra_coords))
     ds._file_obj = file_obj
