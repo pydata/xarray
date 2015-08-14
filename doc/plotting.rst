@@ -55,9 +55,19 @@ Faceting
 
 Xray's basic plotting is useful for plotting two dimensional arrays. What
 about three or four dimensional arrays?
+Once the data is stored in an appropriate form, the code to visualize 
+it should be clear, natural, and not too verbose.
 
 Consider the temperature data set. There are 4 observations per day for two
-years. Let's use a slice to pick 6 times throughout the first year.
+years which makes for 2920 values along the time dimension. 
+Note that the faceted dimension should not have too many values; 
+faceting on the time dimension will produce 2920 plots. That's
+too much to be helpful. To handle this situation try performing
+an operation that reduces the size of the data in some way. For example, we
+could compute the average air temperature for each month and reduce the
+size of this dimension from 2920 -> 12. A simpler way is
+to just take a slice on that dimension.
+So let's use a slice to pick 6 times throughout the first year.
 
 .. ipython:: python
 

@@ -210,7 +210,10 @@ class FacetGrid(object):
                     mappable = func(group, *args, **defaults)
 
         cbar = plt.colorbar(mappable, ax=self.axes.ravel().tolist())
-        cbar.set_label(self.darray.name, rotation=270)
+
+        #label=self.darray.name, orientation='horizontal')
+        cbar.set_label(self.darray.name, rotation=270,
+                verticalalignment='bottom')
 
         return self
 
