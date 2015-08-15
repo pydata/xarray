@@ -111,13 +111,6 @@ class DatasetIOTestCases(object):
         with self.roundtrip(expected) as actual:
             self.assertDatasetAllClose(expected, actual)
 
-    def test_roundtrip_test_f64_data(self):
-        expected = create_test_data()
-        with self.roundtrip(expected) as actual:
-            self.assertDatasetAllClose(expected, actual)
-            self.assertEqual(expected.var1.dtype, 'float64')
-            self.assertEqual(actual.var1.dtype, 'float64')
-
     def test_load(self):
         expected = create_test_data()
 
@@ -200,6 +193,11 @@ class DatasetIOTestCases(object):
     def test_roundtrip_timedelta_data(self):
         time_deltas = pd.to_timedelta(['1h', '2h', 'NaT'])
         expected = Dataset({'td': ('td', time_deltas), 'td0': time_deltas[0]})
+        with self.roundtrip(expected) as actual:
+            self.assertDatasetIdentical(expected, actual)
+
+    def test_roundtrip_float64_data(self):
+        expected = Dataset({'x': ('x', np.array([1.0, 2.0], dtype='float64'))})
         with self.roundtrip(expected) as actual:
             self.assertDatasetIdentical(expected, actual)
 
