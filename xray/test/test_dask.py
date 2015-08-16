@@ -124,6 +124,8 @@ class TestVariable(DaskTestCase):
         self.assertLazyAndAllClose(u.mean(), v.mean())
         self.assertLazyAndAllClose(u.std(), v.std())
         self.assertLazyAndAllClose(u.argmax(dim='x'), v.argmax(dim='x'))
+        self.assertLazyAndAllClose((u > 1).any(), (v > 1).any())
+        self.assertLazyAndAllClose((u < 1).all('x'), (v < 1).all('x'))
         with self.assertRaisesRegexp(NotImplementedError, 'dask'):
             v.prod()
         with self.assertRaisesRegexp(NotImplementedError, 'dask'):

@@ -90,6 +90,8 @@ Bug fixes
   bottleneck is installed (:issue:`489`).
 - Dataset aggregation functions dropped variables with unsigned integer dtype
   (:issue:`505`).
+- ``.any()`` and ``.all()`` were not lazy when used on xray objects containing
+  dask arrays.
 - Fixed an error when attempting to saving datetime64 variables to netCDF
   files when the first element is ``NaT`` (:issue:`528`).
 - Fix pickle on DataArray objects (:issue:`515`).
