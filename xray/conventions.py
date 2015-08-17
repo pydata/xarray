@@ -12,7 +12,7 @@ from .core import indexing, ops, utils
 from .core.formatting import format_timestamp, first_n_items
 from .core.variable import as_variable, Variable
 from .core.pycompat import (iteritems, bytes_type, unicode_type, OrderedDict,
-                            PY3)
+                            PY3, basestring)
 
 
 # standard calendars recognized by netcdftime
