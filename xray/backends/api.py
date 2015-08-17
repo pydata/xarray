@@ -114,9 +114,10 @@ def open_dataset(filename_or_obj, group=None, decode_cf=True,
         used when reading data from netCDF files with the netcdf4 and h5netcdf
         engines to avoid issues with concurrent access when using dask's
         multithreaded backend.
-    drop_variables: iterable, optional 
-        A list of variables to exclude from being parsed from the dataset. This
-        may be useful to drop variables with problems or inconsistent values. 
+    drop_variables: string or iterable, optional 
+        A variable or list of variables to exclude from being parsed from the
+        dataset.This may be useful to drop variables with problems or
+        inconsistent values. 
 
     Returns
     -------
