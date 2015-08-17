@@ -197,7 +197,7 @@ class DatasetIOTestCases(object):
             self.assertDatasetIdentical(expected, actual)
 
     def test_roundtrip_float64_data(self):
-        expected = Dataset({'x': ('x', np.array([1.0, 2.0], dtype='float64'))})
+        expected = Dataset({'x': ('y', np.array([1.0, 2.0, np.pi], dtype='float64'))})
         with self.roundtrip(expected) as actual:
             self.assertDatasetIdentical(expected, actual)
 
