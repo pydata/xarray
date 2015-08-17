@@ -347,7 +347,7 @@ _counter = itertools.count()
 @contextlib.contextmanager
 def create_tmp_file(suffix='.nc'):
     temp_dir = tempfile.mkdtemp()
-    path = os.path.join(temp_dir, 'temp-%s.%s' % (next(_counter), suffix))
+    path = os.path.join(temp_dir, 'temp-%s%s' % (next(_counter), suffix))
     try:
         yield path
     finally:
@@ -730,6 +730,9 @@ class H5NetCDFDataTest(BaseNetCDF4Test, TestCase):
         # Drop dim3, because its labels include strings. These appear to be
         # not properly read with python-netCDF4, which converts them into
         # unicode instead of leaving them as bytes.
+        if PY3:
+            raise unittest.SkipTest('see https://github.com/xray/xray/issues/535')
+
         data = create_test_data().drop('dim3')
         data.attrs['foo'] = 'bar'
         valid_engines = ['netcdf4', 'h5netcdf']
