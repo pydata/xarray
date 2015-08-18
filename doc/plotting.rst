@@ -1,12 +1,20 @@
+.. _plotting:
+
 Plotting
 ========
+
+.. note::
+    Plotting will be under active development for August and September 2015.
 
 Introduction
 ------------
 
-The goal of xray's plotting is to make exploratory plotting quick
-and easy by using metadata from :py:class:`xray.DataArray` objects to add
-informative labels. To plot :py:class:`xray.Dataset` objects 
+Labeled data enables expressive computations. These same
+labels can also be used to easily create informative plots.
+
+Xray's plotting capabilities are centered around
+:py:class:`xray.DataArray` objects.
+To plot :py:class:`xray.Dataset` objects 
 simply access the relevant DataArrays, ie ``dset['var1']``.
 
 Xray plotting functionality is a thin wrapper around the popular
@@ -32,6 +40,7 @@ Imports
 ~~~~~~~
 
 .. ipython:: python
+    :suppress:
 
     # Use defaults so we don't get gridlines in generated docs
     import matplotlib as mpl
@@ -79,7 +88,7 @@ can be used:
     @savefig plotting_example_sin2.png width=4in
     sinpts.plot.line('b-^')
 
-.. warning::
+.. note::
     Not all xray plotting methods support passing positional arguments
     to the wrapped matplotlib functions, but they do all
     support keyword arguments.
@@ -266,7 +275,7 @@ matplotlib is available.
     @savefig plotting_2d_call_matplotlib.png width=4in
     plt.show()
 
-.. warning::
+.. note::
 
     Xray methods update label information and generally play around with the
     axes. So any kind of updates to the plot 
