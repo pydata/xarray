@@ -116,7 +116,7 @@ def open_dataset(filename_or_obj, group=None, decode_cf=True,
         multithreaded backend.
     drop_variables: string or iterable, optional 
         A variable or list of variables to exclude from being parsed from the
-        dataset.This may be useful to drop variables with problems or
+        dataset. This may be useful to drop variables with problems or
         inconsistent values. 
 
     Returns
