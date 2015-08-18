@@ -804,11 +804,11 @@ def decode_cf_variables(variables, attributes, concat_characters=True,
         return True
 
     coord_names = set()
+    if isinstance(drop_variables, basestring):
+        drop_variables = set([drop_variables,])
 
     new_vars = OrderedDict()
     for k, v in iteritems(variables):
-        if isinstance(drop_variables, basestring):
-            drop_variables = (drop_variables,)
         if (drop_variables is not None) and (k in drop_variables):
             continue
         concat = (concat_characters and v.dtype.kind == 'S' and v.ndim > 0 and

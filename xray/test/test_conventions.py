@@ -505,8 +505,9 @@ class TestDecodeCF(TestCase):
             'y': ('t', [5, 10, np.nan])
         })
         actual = conventions.decode_cf(original, drop_variables=("x",))
+        actual2 = conventions.decode_cf(original, drop_variables="x")
         self.assertDatasetIdentical(expected, actual)
-
+        self.assertDatasetIdentical(expected, actual2)
 
 class CFEncodedInMemoryStore(InMemoryDataStore):
     def store(self, variables, attributes):
