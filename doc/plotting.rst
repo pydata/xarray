@@ -286,13 +286,25 @@ discrete colormap:
     @savefig plotting_listed_levels.png width=4in
     air2d.plot(levels=[0, 12, 18, 30])
 
-Finally, if you have `Seaborn <http://stanford.edu/~mwaskom/software/seaborn/>`_ installed, you can also specify a `seaborn` color palete or a list of colors as the ``cmap`` argument:
+You can also specify a list of discrete colors through the ``colors`` argument:
 
 .. ipython:: python
 
     flatui = ["#9b59b6", "#3498db", "#95a5a6", "#e74c3c", "#34495e", "#2ecc71"]
     @savefig plotting_custom_colors_levels.png width=4in
-    air2d.plot(levels=[0, 12, 18, 30], cmap=flatui)
+    air2d.plot(levels=[0, 12, 18, 30], colors=flatui)
+
+Finally, if you have `Seaborn <http://stanford.edu/~mwaskom/software/seaborn/>`_
+installed, you can also specify a `seaborn` color palette to the ``cmap``
+argument. Note that ``levels`` *must* be specified with seaborn color palettes
+if using ``imshow`` or ``pcolormesh`` (but not with ``contour`` or ``contourf``,
+since levels are chosen automatically).
+
+.. ipython:: python
+
+    @savefig plotting_seaborn_palette.png width=4in
+    air2d.plot(levels=10, cmap='husl')
+
 
 Maps
 ----

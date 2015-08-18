@@ -8,6 +8,7 @@ Or use the methods on a DataArray:
 
 import pkg_resources
 import functools
+import warnings
 
 import numpy as np
 import pandas as pd
@@ -287,21 +288,40 @@ def _determine_extend(calc_data, vmin, vmax):
 
 def _color_palette(cmap, n_colors):
     import matplotlib.pyplot as plt
-    try:
-        from seaborn.apionly import color_palette
-        pal = color_palette(cmap, n_colors=n_colors)
-    except (TypeError, ImportError, ValueError):
-        # TypeError is raised when LinearSegmentedColormap (viridis) is used
-        # ImportError is raised when seaborn is not installed
-        # ValueError is raised when seaborn doesn't like a colormap (e.g. jet)
-        # Use homegrown solution if you don't have seaborn or are using viridis
-        if isinstance(cmap, basestring):
-            cmap = plt.get_cmap(cmap)
-
-        colors_i = np.linspace(0, 1., n_colors)
+    from matplotlib.colors import ListedColormap
+    colors_i = np.linspace(0, 1., n_colors)
+    if isinstance(cmap, (list, tuple)):
+        # we have a list of colors
+        try:
+            # first try to turn it into a palette with seaborn
+            from seaborn.apionly import color_palette
+            pal = color_palette(cmap, n_colors=n_colors)
+        except ImportError:
+            # if that fails, use matplotlib
+            # in this case, is there any difference between mpl and seaborn?
+            cmap = ListedColormap(cmap, N=n_colors)
+            pal = cmap(colors_i)
+    elif isinstance(cmap, basestring):
+        # we have some sort of named palette
+        try:
+            # first try to turn it into a palette with seaborn                    
+            from seaborn.apionly import color_palette
+            pal = color_palette(cmap, n_colors=n_colors)
+        except (ImportError, ValueError):
+            # ValueError is raised when seaborn doesn't like a colormap (e.g. jet)
+            # if that fails, use matplotlib
+            try:
+                # is this a matplotlib cmap?
+                cmap = plt.get_cmap(cmap)
+            except ValueError:
+                # or maybe we just got a single color as a string
+                cmap = ListedColormap([cmap], N=n_colors)
+            pal = cmap(colors_i)
+    else:
+        # cmap better be a LinearSegmentedColormap (e.g. viridis)
         pal = cmap(colors_i)
-    return pal
 
+    return pal
 
 def _build_discrete_cmap(cmap, levels, extend, filled):
     """
@@ -386,8 +406,12 @@ def _plot2d(plotfunc):
         The mapping from data values to color space. If not provided, this
         will be either be ``viridis`` (if the function infers a sequential
         dataset) or ``RdBu_r`` (if the function infers a diverging dataset).
-        When ``levels`` is provided and when `Seaborn` is installed, ``cmap``
-        may also be a `seaborn` color palette or a list of colors.
+        When when `Seaborn` is installed, ``cmap`` may also be a `seaborn` 
+        color palette. If ``cmap`` is seaborn color palette and the plot type
+        is not ``contour`` or ``contourf``, ``levels`` must also be specified.
+    colors : discrete colors to plot, optional
+        A single color or a list of colors. If the plot type is not ``contour``
+        or ``contourf``, the ``levels`` argument is required.
     center : float, optional
         The value at which to center the colormap. Passing this value implies
         use of a diverging colormap.
@@ -415,12 +439,26 @@ def _plot2d(plotfunc):
     @functools.wraps(plotfunc)
     def newplotfunc(darray, ax=None, xincrease=None, yincrease=None,
                     add_colorbar=True, add_labels=True, vmin=None, vmax=None, cmap=None,
-                    center=None, robust=False, extend=None, levels=None,
+                    center=None, robust=False, extend=None, levels=None, colors=None,
                     **kwargs):
         # All 2d plots in xray share this function signature.
         # Method signature below should be consistent.
 
         import matplotlib.pyplot as plt
+
+        # colors is mutually exclusive with cmap
+        if cmap and colors:
+            raise ValueError("Can't specify both cmap and colors.")
+        # colors is only valid when levels is supplied or the plot is of type
+        # contour or contourf
+        if colors and (('contour' not in plotfunc.__name__) and (not levels)):
+            raise ValueError("Can only specify colors with contour or levels")
+        # we should not be getting a list of colors in cmap anymore
+        # is there a better way to do this test?
+        if isinstance(cmap, (list, tuple)):
+            warnings.warn("Specifying a list of colors in cmap is deprecated. "
+                          "Use colors keyword instead.",
+                          DeprecationWarning, stacklevel=3)
 
         if ax is None:
             ax = plt.gca()
@@ -444,9 +482,9 @@ def _plot2d(plotfunc):
             levels = 7  # this is the matplotlib default
         filled = plotfunc.__name__ != 'contour'
 
+        cmap = colors if colors else cmap
         cmap_params = _determine_cmap_params(z.data, vmin, vmax, cmap, center,
                                              robust, extend, levels, filled)
-
         if 'contour' in plotfunc.__name__:
             # extend is a keyword argument only for contour and contourf, but
             # passing it to the colorbar is sufficient for imshow and
@@ -482,7 +520,7 @@ def _plot2d(plotfunc):
     @functools.wraps(newplotfunc)
     def plotmethod(_PlotMethods_obj, ax=None, xincrease=None, yincrease=None,
                    add_colorbar=True, add_labels=True, vmin=None, vmax=None, cmap=None,
-                   center=None, robust=False, extend=None, levels=None,
+                   colors=None, center=None, robust=False, extend=None, levels=None,
                    **kwargs):
         '''
         The method should have the same signature as the function.
