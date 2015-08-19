@@ -303,7 +303,13 @@ The rules for label based indexing are more complex:
 * Label-based indexing with arrays returns a copy.
 * Label-based indexing with scalars returns a view or a copy, depending
   upon if the corresponding positional indexer can be represented as an
-  integer or a slice object.
+  integer or a slice object. The exact rules are determined by pandas.
+
+Whether data is a copy or a view is more predictable in xray than in pandas, so
+unlike pandas, xray does not produce `SettingWithCopy warnings`_. However, you
+should still avoid assignment with chained indexing.
+
+.. _SettingWithCopy warnings: http://pandas.pydata.org/pandas-docs/stable/indexing.html#returning-a-view-versus-a-copy
 
 .. _orthogonal:
 
@@ -345,9 +351,9 @@ original values are subset to the index labels still found in the new labels,
 and values corresponding to new labels not found in the original object are
 in-filled with `NaN`.
 
-Xray operations that combine multiple xray objects generally automatically
-align their arguments. However, manual alignment can be useful for greater
-control.
+Xray operations that combine multiple objects generally automatically align
+their arguments to share the same indexes. However, manual alignment can be
+useful for greater control and for increased performance.
 
 To reindex a particular dimension, use :py:meth:`~xray.DataArray.reindex`:
 
