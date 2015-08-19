@@ -64,7 +64,7 @@ def _default_lock(filename, engine):
 def open_dataset(filename_or_obj, group=None, decode_cf=True,
                  mask_and_scale=True, decode_times=True,
                  concat_characters=True, decode_coords=True, engine=None,
-                 chunks=None, lock=None):
+                 chunks=None, lock=None, drop_variables=None):
     """Load and decode a dataset from a file or file-like object.
 
     Parameters
@@ -114,6 +114,10 @@ def open_dataset(filename_or_obj, group=None, decode_cf=True,
         used when reading data from netCDF files with the netcdf4 and h5netcdf
         engines to avoid issues with concurrent access when using dask's
         multithreaded backend.
+    drop_variables: string or iterable, optional 
+        A variable or list of variables to exclude from being parsed from the
+        dataset. This may be useful to drop variables with problems or
+        inconsistent values. 
 
     Returns
     -------
@@ -133,7 +137,8 @@ def open_dataset(filename_or_obj, group=None, decode_cf=True,
     def maybe_decode_store(store, lock=False):
         ds = conventions.decode_cf(
             store, mask_and_scale=mask_and_scale, decode_times=decode_times,
-            concat_characters=concat_characters, decode_coords=decode_coords)
+            concat_characters=concat_characters, decode_coords=decode_coords,
+            drop_variables=drop_variables)
         if chunks is not None:
             ds = ds.chunk(chunks, lock=lock)
         return ds

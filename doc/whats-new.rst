@@ -87,7 +87,9 @@ v0.5.3 (unreleased)
     da = xray.DataArray(np.random.random_sample(size=(5, 4)))
     da.where(da < 0.5)
     da.where(da < 0.5).to_masked_array(copy=True)
-
+- Added new flag "drop_variables" to :py:meth:`~xray.open_dataset` for
+  excluding variables from being parsed. This may be useful to drop 
+  variables with problems or inconsistent values.
 
 Bug fixes
 ~~~~~~~~~

@@ -12,7 +12,7 @@ from .core import indexing, ops, utils
 from .core.formatting import format_timestamp, first_n_items
 from .core.variable import as_variable, Variable
 from .core.pycompat import (iteritems, bytes_type, unicode_type, OrderedDict,
-                            PY3)
+                            PY3, basestring)
 
 
 # standard calendars recognized by netcdftime
@@ -783,7 +783,7 @@ def decode_cf_variable(var, concat_characters=True, mask_and_scale=True,
 
 def decode_cf_variables(variables, attributes, concat_characters=True,
                         mask_and_scale=True, decode_times=True,
-                        decode_coords=True):
+                        decode_coords=True, drop_variables=None):
     """
     Decode a several CF encoded variables.
 
@@ -805,8 +805,16 @@ def decode_cf_variables(variables, attributes, concat_characters=True,
 
     coord_names = set()
 
+    if isinstance(drop_variables, basestring):
+        drop_variables = [drop_variables]
+    elif drop_variables is None:
+        drop_variables = []
+    drop_variables = set(drop_variables)
+
     new_vars = OrderedDict()
     for k, v in iteritems(variables):
+        if k in drop_variables:
+            continue
         concat = (concat_characters and v.dtype.kind == 'S' and v.ndim > 0 and
                   stackable(v.dims[-1]))
         new_vars[k] = decode_cf_variable(
@@ -828,7 +836,7 @@ def decode_cf_variables(variables, attributes, concat_characters=True,
 
 
 def decode_cf(obj, concat_characters=True, mask_and_scale=True,
-              decode_times=True, decode_coords=True):
+              decode_times=True, decode_coords=True, drop_variables=None):
     """Decode the given Dataset or Datastore according to CF conventions into
     a new Dataset.
 
@@ -848,7 +856,11 @@ def decode_cf(obj, concat_characters=True, mask_and_scale=True,
     decode_coords : bool, optional
         Use the 'coordinates' attribute on variable (or the dataset itself) to
         identify coordinates.
-
+    drop_variables: string or iterable, optional 
+        A variable or list of variables to exclude from being parsed from the
+        dataset.This may be useful to drop variables with problems or
+        inconsistent values. 
+    
     Returns
     -------
     decoded : Dataset
@@ -870,7 +882,7 @@ def decode_cf(obj, concat_characters=True, mask_and_scale=True,
 
     vars, attrs, coord_names = decode_cf_variables(
         vars, attrs, concat_characters, mask_and_scale, decode_times,
-        decode_coords)
+        decode_coords, drop_variables=drop_variables)
     ds = Dataset(vars, attrs=attrs)
     ds = ds.set_coords(coord_names.union(extra_coords))
     ds._file_obj = file_obj

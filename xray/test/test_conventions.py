@@ -491,7 +491,23 @@ class TestDecodeCF(TestCase):
             actual = conventions.decode_cf_variable(original)
             self.assertDatasetIdentical(expected, actual)
             self.assertIn('variable has multiple fill', str(w[0].message))
-
+    def test_decode_cf_with_drop_variables(self):
+        original = Dataset({
+            't': ('t', [0, 1, 2], {'units': 'days since 2000-01-01'}),
+            'x' : ("x", [9, 8, 7], {'units' : 'km'}),
+            'foo': (('t', 'x'), [[0, 0, 0], [1, 1, 1], [2, 2, 2]], {'units': 'bar'}),
+            'y': ('t', [5, 10, -999], {'_FillValue': -999})
+        })
+        expected = Dataset({
+            't': pd.date_range('2000-01-01', periods=3),
+            'x' : ("x", [0, 1, 2]),
+            'foo': (('t', 'x'), [[0, 0, 0], [1, 1, 1], [2, 2, 2]], {'units': 'bar'}),
+            'y': ('t', [5, 10, np.nan])
+        })
+        actual = conventions.decode_cf(original, drop_variables=("x",))
+        actual2 = conventions.decode_cf(original, drop_variables="x")
+        self.assertDatasetIdentical(expected, actual)
+        self.assertDatasetIdentical(expected, actual2)
 
 class CFEncodedInMemoryStore(InMemoryDataStore):
     def store(self, variables, attributes):
