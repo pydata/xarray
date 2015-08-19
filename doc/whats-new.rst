@@ -9,6 +9,15 @@ What's New
     import xray
     np.random.seed(123456)
 
+v0.6.0 (unreleased)
+-------------------
+
+Bug fixes
+~~~~~~~~~
+
+- Fixed unnecessary coercion of float64 to float32 when using netcdf3 and
+  netcdf4_classic formats (:issue:`526`).
+
 v0.5.3 (unreleased)
 -------------------
 
