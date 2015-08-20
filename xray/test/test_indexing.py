@@ -70,10 +70,18 @@ class TestIndexers(TestCase):
     def test_convert_label_indexer(self):
         # TODO: add tests that aren't just for edge cases
         index = pd.Index([1, 2, 3])
-        with self.assertRaisesRegexp(ValueError, 'not all values found'):
+        with self.assertRaisesRegexp(KeyError, 'not all values found'):
             indexing.convert_label_indexer(index, [0])
         with self.assertRaises(KeyError):
             indexing.convert_label_indexer(index, 0)
+
+    def test_convert_unsorted_datetime_index_raises(self):
+        index = pd.to_datetime(['2001', '2000', '2002'])
+        with self.assertRaises(KeyError):
+            # pandas will try to convert this into an array indexer. We should
+            # raise instead, so we can be sure the result of indexing with a
+            # slice is always a view.
+            indexing.convert_label_indexer(index, slice('2001', '2002'))
 
     def test_remap_label_indexers(self):
         # TODO: fill in more tests!

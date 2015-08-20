@@ -53,10 +53,12 @@ DataArray:
     arr[0, 0]
     arr[:, [2, 1]]
 
+Attributes are persisted in all indexing operations.
+
 .. warning::
 
     Positional indexing deviates from the NumPy when indexing with multiple
-    arrays like ``arr[[0, 1], [0, 1]]``, as described in :ref:`indexing details`.
+    arrays like ``arr[[0, 1], [0, 1]]``, as described in :ref:`orthogonal`.
     See :ref:`pointwise indexing` for how to achieve this functionality in xray.
 
 xray also supports label-based indexing, just like pandas. Because
@@ -80,6 +82,7 @@ Setting values with label based indexing is also supported:
 
     arr.loc['2000-01-01', ['IL', 'IN']] = -10
     arr
+
 
 Indexing with labeled dimensions
 --------------------------------
@@ -204,39 +207,132 @@ index labels along a dimension dropped:
 
 ``drop`` is both a ``Dataset`` and ``DataArray`` method.
 
-.. _indexing details:
+.. _nearest neighbor lookups:
 
-Indexing details
-----------------
+Nearest neighbor lookups
+------------------------
 
-Like pandas, whether array indexing returns a view or a copy of the underlying
-data depends entirely on numpy:
-
-* Indexing with a single label or a slice returns a view.
-* Indexing with a vector of array labels returns a copy.
-
-Attributes are persisted in array indexing:
+The label based selection methods :py:meth:`~xray.Dataset.sel`,
+:py:meth:`~xray.Dataset.reindex` and :py:meth:`~xray.Dataset.reindex_like` all
+support a ``method`` keyword argument. The method parameter allows for
+enabling nearest neighbor (inexact) lookups by use of the methods ``'pad'``,
+``'backfill'`` or ``'nearest'``:
 
 .. ipython:: python
 
-    arr2 = arr.copy()
-    arr2.attrs['units'] = 'meters'
-    arr2[0, 0].attrs
+    data = xray.DataArray([1, 2, 3], dims='x')
+    data.sel(x=[1.1, 1.9], method='nearest')
+    data.sel(x=0.1, method='backfill')
+    data.reindex(x=[0.5, 1, 1.5, 2, 2.5], method='pad')
+
+Using ``method='nearest'`` or a scalar argument with ``.sel()`` requires pandas
+version 0.16 or newer.
+
+The method parameter is not yet supported if any of the arguments
+to ``.sel()`` is a ``slice`` object:
+
+.. ipython::
+    :verbatim:
+
+    In [1]: data.sel(x=slice(1, 3), method='nearest')
+    NotImplementedError
+
+However, you don't need to use ``method`` to do inexact slicing. Slicing
+already returns all values inside the range (inclusive), as long as the index
+labels are monotonic increasing:
+
+.. ipython:: python
+
+    data.sel(x=slice(0.9, 3.1))
+
+Indexing axes with monotonic decreasing labels also works, as long as the
+``slice`` or ``.loc`` arguments are also decreasing:
+
+.. ipython:: python
+
+    reversed_data = data[::-1]
+    reversed_data.loc[3.1:0.9]
+
+.. _masking with where:
+
+Masking with ``where``
+----------------------
+
+Indexing methods on xray objects generally return a subset of the original data.
+However, it is sometimes useful to select an object with the same shape as the
+original data, but with some elements masked. To do this type of selection in
+xray, use :py:meth:`~xray.DataArray.where`:
+
+.. ipython:: python
+
+    arr = xray.DataArray(np.arange(16).reshape(4, 4), dims=['x', 'y'])
+    arr.where(arr.x + arr.y < 4)
+
+This is particularly useful for ragged indexing of multi-dimensional data,
+e.g., to apply a 2D mask to an image. Note that ``where`` follows all the
+usual xray broadcasting and alignment rules for binary operations (e.g.,
+``+``) between the object being indexed and the condition, as described in
+:ref:`comput`:
+
+.. ipython:: python
+
+    arr.where(arr.y < 2)
+
+Multi-dimensional indexing
+--------------------------
+
+Xray does not yet support efficient routines for generalized multi-dimensional
+indexing or regridding. However, we are definitely interested in adding support
+for this in the future (see :issue:`475` for the ongoing discussion).
+
+.. _copies vs views:
+
+Copies vs. views
+----------------
+
+Whether array indexing returns a view or a copy of the underlying
+data depends on the nature of the labels. For positional (integer)
+indexing, xray follows the same rules as NumPy:
+
+* Positional indexing with only integers and slices returns a view.
+* Positional indexing with arrays or lists returns a copy.
+
+The rules for label based indexing are more complex:
+
+* Label-based indexing with only slices returns a view.
+* Label-based indexing with arrays returns a copy.
+* Label-based indexing with scalars returns a view or a copy, depending
+  upon if the corresponding positional indexer can be represented as an
+  integer or a slice object. The exact rules are determined by pandas.
+
+Whether data is a copy or a view is more predictable in xray than in pandas, so
+unlike pandas, xray does not produce `SettingWithCopy warnings`_. However, you
+should still avoid assignment with chained indexing.
+
+.. _SettingWithCopy warnings: http://pandas.pydata.org/pandas-docs/stable/indexing.html#returning-a-view-versus-a-copy
+
+.. _orthogonal:
+
+Orthogonal (outer) vs. vectorized indexing
+------------------------------------------
 
 Indexing with xray objects has one important difference from indexing numpy
 arrays: you can only use one-dimensional arrays to index xray objects, and
 each indexer is applied "orthogonally" along independent axes, instead of
-using numpy's advanced broadcasting. This means you can do indexing like this,
-which would require slightly more awkward syntax with numpy arrays:
+using numpy's broadcasting rules to vectorize indexers. This means you can do
+indexing like this, which would require slightly more awkward syntax with
+numpy arrays:
 
 .. ipython:: python
 
     arr[arr['time.day'] > 1, arr['space'] != 'IL']
 
-This is a much simpler model than numpy's `advanced indexing`__,
-and is basically the only model that works for labeled arrays. If you would
-like to do array indexing, you can always index ``.values`` directly
-instead:
+This is a much simpler model than numpy's `advanced indexing`__. If you would
+like to do advanced-style array indexing in xray, you have several options:
+
+* :ref:`pointwise indexing`
+* :ref:`masking with where`
+* Index the underlying NumPy directly array using ``.values``:
 
 __ http://docs.scipy.org/doc/numpy/reference/arrays.indexing.html
 
@@ -254,6 +350,10 @@ xray's ``reindex``, ``reindex_like`` and ``align`` impose a ``DataArray`` or
 original values are subset to the index labels still found in the new labels,
 and values corresponding to new labels not found in the original object are
 in-filled with `NaN`.
+
+Xray operations that combine multiple objects generally automatically align
+their arguments to share the same indexes. However, manual alignment can be
+useful for greater control and for increased performance.
 
 To reindex a particular dimension, use :py:meth:`~xray.DataArray.reindex`:
 
@@ -302,103 +402,3 @@ Both ``reindex_like`` and ``align`` work interchangeably between
     other = xray.DataArray(['a', 'b', 'c'], dims='other')
     # this is a no-op, because there are no shared dimension names
     ds.reindex_like(other)
-
-.. _nearest neighbor lookups:
-
-Nearest neighbor lookups
-------------------------
-
-The label based selection methods :py:meth:`~xray.Dataset.sel`,
-:py:meth:`~xray.Dataset.reindex` and :py:meth:`~xray.Dataset.reindex_like` all
-support a ``method`` keyword argument. The method parameter allows for
-enabling nearest neighbor (inexact) lookups by use of the methods ``'pad'``,
-``'backfill'`` or ``'nearest'``:
-
-.. use verbatim because I can't seem to install pandas 0.16.1 on RTD :(
-
-.. .. ipython::
-    :verbatim:
-    In [35]: data = xray.DataArray([1, 2, 3], dims='x')
-    In [36]: data.sel(x=[1.1, 1.9], method='nearest')
-    Out[36]:
-    <xray.DataArray (x: 2)>
-    array([2, 3])
-    Coordinates:
-      * x        (x) int64 1 2
-    In [37]: data.sel(x=0.1, method='backfill')
-    Out[37]:
-    <xray.DataArray ()>
-    array(2)
-    Coordinates:
-        x        int64 1
-    In [38]: data.reindex(x=[0.5, 1, 1.5, 2, 2.5], method='pad')
-    Out[38]:
-    <xray.DataArray (x: 5)>
-    array([1, 2, 2, 3, 3])
-    Coordinates:
-      * x        (x) float64 0.5 1.0 1.5 2.0 2.5
-
-.. ipython:: python
-
-    data = xray.DataArray([1, 2, 3], dims='x')
-    data.sel(x=[1.1, 1.9], method='nearest')
-    data.sel(x=0.1, method='backfill')
-    data.reindex(x=[0.5, 1, 1.5, 2, 2.5], method='pad')
-
-Using ``method='nearest'`` or a scalar argument with ``.sel()`` requires pandas
-version 0.16 or newer.
-
-The method parameter is not yet supported if any of the arguments
-to ``.sel()`` is a ``slice`` object:
-
-.. ipython::
-    :verbatim:
-
-    In [1]: data.sel(x=slice(1, 3), method='nearest')
-    NotImplementedError
-
-However, you don't need to use ``method`` to do inexact slicing. Slicing
-already returns all values inside the range (inclusive), as long as the index
-labels are monotonic increasing:
-
-.. ipython:: python
-
-    data.sel(x=slice(0.9, 3.1))
-
-Indexing axes with monotonic decreasing labels also works, as long as the
-``slice`` or ``.loc`` arguments are also decreasing:
-
-.. ipython:: python
-
-    reversed_data = data[::-1]
-    reversed_data.loc[3.1:0.9]
-
-Masking with ``where``
-----------------------
-
-Indexing methods on xray objects generally return a subset of the original data.
-However, it is sometimes useful to select an object with the same shape as the
-original data, but with some elements masked. To do this type of selection in
-xray, use :py:meth:`~xray.DataArray.where`:
-
-.. ipython:: python
-
-    arr = xray.DataArray(np.arange(16).reshape(4, 4), dims=['x', 'y'])
-    arr.where(arr.x + arr.y < 4)
-
-This is particularly useful for ragged indexing of multi-dimensional data,
-e.g., to apply a 2D mask to an image. Note that ``where`` follows all the
-usual xray broadcasting and alignment rules for binary operations (e.g.,
-``+``) between the object being indexed and the condition, as described in
-:ref:`comput`:
-
-.. ipython:: python
-
-    arr.where(arr.y < 2)
-
-Multi-dimensional indexing
---------------------------
-
-Xray does not yet support efficient routines for generalized multi-dimensional
-indexing or regridding. However, we are definitely interested in adding support
-for this in the future (see :issue:`475` for the ongoing discussion).
