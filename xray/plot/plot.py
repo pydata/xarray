@@ -141,6 +141,7 @@ def line(darray, *args, **kwargs):
     primitive = ax.plot(x, darray, *args, **kwargs)
 
     ax.set_xlabel(xlabel)
+    ax.set_title(darray._title_for_slice())
 
     if darray.name is not None:
         ax.set_ylabel(darray.name)

@@ -54,22 +54,32 @@ The following imports are necessary for all of the examples.
     import matplotlib.pyplot as plt
     import xray
 
+We'll use the North American air temperature dataset.
+
+.. ipython:: python
+
+    airtemps = xray.tutorial.load_dataset()
+    airtemps
+
+    # Use the DataArray for plotting
+    air = airtemps.air
+
+
 One Dimension
 -------------
 
 Simple Example
 ~~~~~~~~~~~~~~
 
-Xray uses the coordinate name to label the x axis:
+Xray uses the coordinate name to label the x axis.
 
 .. ipython:: python
 
-    t = np.linspace(0, np.pi, num=20)
-    sinpts = xray.DataArray(np.sin(t), {'t': t}, name='sin(t)')
-    sinpts
+    air1d = air.isel(lat=10, lon=10)
 
-    @savefig plotting_example_sin.png width=4in
-    sinpts.plot()
+    plt.tight_layout()
+    @savefig plotting_1d_simple.png width=4in
+    air1d.plot()
 
 Additional Arguments
 ~~~~~~~~~~~~~~~~~~~~~
@@ -321,6 +331,7 @@ later.
 
     halfd = distance / 2
     halfd.plot(ax=axes[1], **kwargs)
+    #** hack to fix Vim syntax highlight
 
     plt.colorbar(im, ax=axes.tolist())
 
@@ -408,6 +419,7 @@ These are provided for user convenience; they all call the same code.
     da.plot.line(ax=axes[0, 1])
     xplt.plot(da, ax=axes[1, 0])
     xplt.line(da, ax=axes[1, 1])
+    plt.tight_layout()
     @savefig plotting_ways_to_use.png width=6in
     plt.show()
 

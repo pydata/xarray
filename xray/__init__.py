@@ -9,3 +9,5 @@ from .backends.api import open_dataset, open_mfdataset, save_mfdataset
 from .conventions import decode_cf
 
 from .version import version as __version__
+
+import tutorial

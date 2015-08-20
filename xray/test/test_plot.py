@@ -128,6 +128,12 @@ class TestPlot1D(PlotTestCase):
         rotation = plt.gca().get_xticklabels()[0].get_rotation()
         self.assertFalse(rotation == 0)
 
+    def test_slice_in_title(self):
+        self.darray.coords['d'] = 10
+        self.darray.plot.line()
+        title = plt.gca().get_title()
+        self.assertEqual('d = 10', title)
+
 
 class TestPlotHistogram(PlotTestCase):
 
@@ -401,7 +407,6 @@ class Common2dMixin:
         alltxt = set(alltxt)
         for string in ['x', 'y', 'testvar']:
             self.assertNotIn(string, alltxt)
-
 
 class TestContourf(Common2dMixin, PlotTestCase):
 
