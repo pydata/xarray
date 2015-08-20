@@ -19,6 +19,7 @@ from .dataset import Dataset
 from .pycompat import iteritems, basestring, OrderedDict, zip
 from .utils import FrozenOrderedDict
 from .variable import as_variable, _as_compatible_data, Coordinate
+from .formatting import format_item
 
 
 def _infer_coords_and_dims(shape, coords, dims):
@@ -1106,7 +1107,7 @@ class DataArray(AbstractArray, BaseDataObject):
 
     def _title_for_slice(self, truncate=50):
         '''
-        If the dataarray has 1 dimensional coordiantes or comes from a slice
+        If the dataarray has 1 dimensional coordinates or comes from a slice
         we can show that info in the title
 
         Parameters
@@ -1118,11 +1119,13 @@ class DataArray(AbstractArray, BaseDataObject):
         -------
         title : string
             Can be used for plot titles
+
         '''
         one_dims = []
         for dim, coord in iteritems(self.coords):
             if coord.size == 1:
-                one_dims.append('{dim} = {v}'.format(dim=dim, v=coord.values))
+                one_dims.append('{dim} = {v}'.format(dim=dim,
+                    v=format_item(coord.values)))
 
         title = ', '.join(one_dims)
         if len(title) > truncate:
