@@ -234,37 +234,6 @@ example, consider the original data in Kelvins rather than Celsius:
 The Celsius data contain 0, so a diverging color map was used. The
 Kelvins do not have 0, so the default color map was used.
 
-Suppose we want two plots to share the same color scale. This can be
-achieved by passing in axes and adding the color bar
-later. 
-
-.. note::
-
-    This task can be done more simply with facets. That functionality
-    should be available in September 2015.
-
-In this example we compare the difference in air temperature for one day in
-the summer and one day in the winter.
-
-.. ipython:: python
-
-    fig, axes = plt.subplots(ncols=2)
-
-    winter = air.sel(time='2014-01-01T06:00:00')
-    summer = air.sel(time='2014-07-01T06:00:00')
-
-    kwargs = {'vmin': winter.min().values,
-    'vmax': summer.max().values, 'add_colorbar': False}
-
-    im = winter.plot.contourf(ax=axes[0], **kwargs)
-
-    summer.plot.contourf(ax=axes[1], **kwargs)
-
-    plt.colorbar(im, ax=axes.tolist())
-
-    @savefig plotting_same_color_scale.png height=2in
-    plt.show()
-
 Discrete Colormaps
 ~~~~~~~~~~~~~~~~~~
 
