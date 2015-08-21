@@ -1452,3 +1452,11 @@ class TestDataArray(TestCase):
 
         self.assertEqual(nchar, len(title))
         self.assertTrue(title.endswith('...'))
+
+    def test_dataarray_diff_n1(self):
+        da = self.ds['foo']
+        actual = da.diff('y')
+        expected = DataArray(np.diff(da.values, axis=1),
+                             [da['x'].values, da['y'].values[1:]],
+                             ['x', 'y'])
+        self.assertDataArrayEqual(expected, actual)
