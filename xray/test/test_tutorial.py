@@ -1,10 +1,8 @@
 import os
-import unittest
 
 from xray import tutorial
 
-from . import TestCase
-
+from . import TestCase, unittest
 
 @unittest.skip('TODO: make this conditional on network availability')
 class Test_load_dataset(TestCase):
