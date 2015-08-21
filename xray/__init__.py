@@ -10,4 +10,4 @@ from .conventions import decode_cf
 
 from .version import version as __version__
 
-import tutorial
+from . import tutorial

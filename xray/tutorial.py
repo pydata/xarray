@@ -6,11 +6,10 @@ Useful for:
 
 '''
 
-import os
+import os as _os
 
-import requests
-
-from .backends.api import open_dataset
+from .backends.api import open_dataset as _open_dataset
+from .core.pycompat import urlretrieve as _urlretrieve
 
 
 # Borrowed from Seaborn
@@ -37,25 +36,22 @@ def load_dataset(name='ncep_temperature_north-america_2013-14.nc',
         Passed to xray.open_dataset
 
     """
-    longdir = os.path.expanduser(os.sep.join(('~', cache_dir)))
-    localfile = os.sep.join((longdir, name))
+    longdir = _os.path.expanduser(_os.sep.join(('~', cache_dir)))
+    localfile = _os.sep.join((longdir, name))
 
-    if not os.path.exists(localfile):
-
-        url = '/'.join((github_url, 'raw', 'master', name))
-        response = requests.get(url)
+    if not _os.path.exists(localfile):
 
         # This will always leave this directory on disk.
         # May want to add an option to remove it.
-        if not os.path.isdir(longdir):
-            os.mkdir(longdir)
+        if not _os.path.isdir(longdir):
+            _os.mkdir(longdir)
 
-        with open(localfile, 'wb') as f:
-            f.write(response.content)
+        url = '/'.join((github_url, 'raw', 'master', name))
+        _urlretrieve(url, localfile)
 
-    ds = open_dataset(localfile, **kws)
+    ds = _open_dataset(localfile, **kws).load()
 
     if not cache:
-        os.remove(localfile)
+        _os.remove(localfile)
 
     return ds
