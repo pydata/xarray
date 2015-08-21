@@ -15,7 +15,8 @@ v0.6.0 (21 August 2015)
 This release includes numerous bug fixes and enhancements. Highlights
 include the introduction of a plotting module and the new Dataset and DataArray
 methods :py:meth:`~xray.Dataset.isel_points`, :py:meth:`~xray.Dataset.sel_points`,
-:py:meth:`~xray.Dataset.where` and :py:meth:`~xray.Dataset.diff`.
+:py:meth:`~xray.Dataset.where` and :py:meth:`~xray.Dataset.diff`. There are no
+breaking changes from v0.5.2.
 
 Enhancements
 ~~~~~~~~~~~~
