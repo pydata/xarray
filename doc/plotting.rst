@@ -77,7 +77,6 @@ Xray uses the coordinate name to label the x axis.
 
     air1d = air.isel(lat=10, lon=10)
 
-    # TODO - cutting off dates
     @savefig plotting_1d_simple.png width=4in
     air1d.plot()
 
@@ -260,7 +259,6 @@ the summer and one day in the winter.
     im = winter.plot.contourf(ax=axes[0], **kwargs)
 
     summer.plot.contourf(ax=axes[1], **kwargs)
-    #** hack to fix Vim syntax highlight
 
     plt.colorbar(im, ax=axes.tolist())
 
@@ -299,7 +297,7 @@ Finally, if you have `Seaborn <http://stanford.edu/~mwaskom/software/seaborn/>`_
 Maps
 ----
 
-TODO - Update this example to use the tutorial data.
+.. TODO - Update this example to use the tutorial data.
 
 To follow this section you'll need to have Cartopy installed and working.
 
