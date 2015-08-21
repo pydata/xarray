@@ -58,7 +58,7 @@ We'll use the North American air temperature dataset.
 
 .. ipython:: python
 
-    airtemps = xray.tutorial.load_dataset()
+    airtemps = xray.tutorial.load_dataset('air_temperature')
     airtemps
 
     # Convert to celsius
@@ -297,7 +297,7 @@ Finally, if you have `Seaborn <http://stanford.edu/~mwaskom/software/seaborn/>`_
 Maps
 ----
 
-.. TODO - Update this example to use the tutorial data.
+TODO - Update this example to use the tutorial data.
 
 To follow this section you'll need to have Cartopy installed and working.
 

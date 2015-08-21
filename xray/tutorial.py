@@ -13,8 +13,7 @@ from .core.pycompat import urlretrieve as _urlretrieve
 
 
 # Borrowed from Seaborn
-def load_dataset(name='ncep_temperature_north-america_2013-14.nc',
-                 cache=True, cache_dir='.xray_tutorial_data',
+def load_dataset(name, cache=True, cache_dir='.xray_tutorial_data',
                  github_url='https://github.com/xray/xray-data',  **kws):
     """
     Load a dataset from the online repository (requires internet).
@@ -25,6 +24,7 @@ def load_dataset(name='ncep_temperature_north-america_2013-14.nc',
     ----------
     name : str, optional
         Name of the netcdf file containing the dataset
+        ie. 'air_temperature'
     cache_dir : string, optional
         The directory in which to search for and write cached data.
         Relative to user's home directory
@@ -37,7 +37,7 @@ def load_dataset(name='ncep_temperature_north-america_2013-14.nc',
 
     """
     longdir = _os.path.expanduser(_os.sep.join(('~', cache_dir)))
-    localfile = _os.sep.join((longdir, name))
+    localfile = _os.sep.join((longdir, name + '.nc'))
 
     if not _os.path.exists(localfile):
 
