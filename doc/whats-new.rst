@@ -9,27 +9,20 @@ What's New
     import xray
     np.random.seed(123456)
 
-v0.6.0 (unreleased)
--------------------
+v0.6.0 (21 August 2015)
+-----------------------
 
-- Added new methods :py:meth:`DataArray.diff <xray.DataArray.diff>`
-  and :py:meth:`Dataset.diff <xray.Dataset.diff>` for finite
-  difference calculations along a given axis.
+This release includes numerous bug fixes and enhancements. Highlights
+include the introduction of a plotting module and the new Dataset and DataArray
+methods :py:meth:`~xray.Dataset.isel_points`, :py:meth:`~xray.Dataset.sel_points`,
+:py:meth:`~xray.Dataset.where` and :py:meth:`~xray.Dataset.diff`.
 
-Bug fixes
-~~~~~~~~~
-
-- Fixed unnecessary coercion of float64 to float32 when using netcdf3 and
-  netcdf4_classic formats (:issue:`526`).
-
-v0.5.3 (unreleased)
--------------------
+Enhancements
+~~~~~~~~~~~~
 
 - Plotting methods have been implemented on DataArray objects
   :py:meth:`~xray.DataArray.plot` through integration with matplotlib
-  (:issue:`185`). For an introduction see the new section of the
-  documentation: :ref:`plotting`.
-
+  (:issue:`185`). For an introduction, see :ref:`plotting`.
 - Variables in netCDF files with multiple missing values are now decoded as NaN
   after issuing a warning if open_dataset is called with mask_and_scale=True.
 - We clarified our rules for when the result from an xray operation is a copy
@@ -93,6 +86,10 @@ v0.5.3 (unreleased)
     @savefig where_example.png width=4in height=4in
     ds.distance.where(ds.distance < 100).plot()
 
+- Added new methods :py:meth:`DataArray.diff <xray.DataArray.diff>`
+  and :py:meth:`Dataset.diff <xray.Dataset.diff>` for finite
+  difference calculations along a given axis.
+
 - New :py:meth:`~xray.DataArray.to_masked_array` convenience method for
   returning a numpy.ma.MaskedArray.
 
@@ -101,8 +98,9 @@ v0.5.3 (unreleased)
     da = xray.DataArray(np.random.random_sample(size=(5, 4)))
     da.where(da < 0.5)
     da.where(da < 0.5).to_masked_array(copy=True)
+
 - Added new flag "drop_variables" to :py:meth:`~xray.open_dataset` for
-  excluding variables from being parsed. This may be useful to drop 
+  excluding variables from being parsed. This may be useful to drop
   variables with problems or inconsistent values.
 
 Bug fixes
@@ -117,6 +115,8 @@ Bug fixes
 - Fixed an error when attempting to saving datetime64 variables to netCDF
   files when the first element is ``NaT`` (:issue:`528`).
 - Fix pickle on DataArray objects (:issue:`515`).
+- Fixed unnecessary coercion of float64 to float32 when using netcdf3 and
+  netcdf4_classic formats (:issue:`526`).
 
 v0.5.2 (16 July 2015)
 ---------------------
