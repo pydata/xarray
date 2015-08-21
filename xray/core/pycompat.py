@@ -15,6 +15,7 @@ if PY3: # pragma: no cover
     zip = zip
     from functools import reduce
     import builtins
+    from urllib.request import urlretrieve
 else: # pragma: no cover
     # Python 2
     basestring = basestring
@@ -28,6 +29,7 @@ else: # pragma: no cover
     from itertools import izip as zip, imap as map
     reduce = reduce
     import __builtin__ as builtins
+    from urllib import urlretrieve
 
 try:
     from cyordereddict import OrderedDict

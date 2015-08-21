@@ -54,22 +54,31 @@ The following imports are necessary for all of the examples.
     import matplotlib.pyplot as plt
     import xray
 
+We'll use the North American air temperature dataset.
+
+.. ipython:: python
+
+    airtemps = xray.tutorial.load_dataset('air_temperature')
+    airtemps
+
+    # Convert to celsius
+    air = airtemps.air - 273.15
+
+
 One Dimension
 -------------
 
 Simple Example
 ~~~~~~~~~~~~~~
 
-Xray uses the coordinate name to label the x axis:
+Xray uses the coordinate name to label the x axis.
 
 .. ipython:: python
 
-    t = np.linspace(0, np.pi, num=20)
-    sinpts = xray.DataArray(np.sin(t), {'t': t}, name='sin(t)')
-    sinpts
+    air1d = air.isel(lat=10, lon=10)
 
-    @savefig plotting_example_sin.png width=4in
-    sinpts.plot()
+    @savefig plotting_1d_simple.png width=4in
+    air1d.plot()
 
 Additional Arguments
 ~~~~~~~~~~~~~~~~~~~~~
@@ -85,8 +94,8 @@ can be used:
 
 .. ipython:: python
 
-    @savefig plotting_example_sin2.png width=4in
-    sinpts.plot.line('b-^')
+    @savefig plotting_1d_additional_args.png width=4in
+    air1d[:200].plot.line('b-^')
 
 .. note::
     Not all xray plotting methods support passing positional arguments
@@ -98,14 +107,14 @@ Keyword arguments work the same way, and are more explicit.
 .. ipython:: python
 
     @savefig plotting_example_sin3.png width=4in
-    sinpts.plot.line(color='purple', marker='o')
+    air1d[:200].plot.line(color='purple', marker='o')
 
 Adding to Existing Axis
 ~~~~~~~~~~~~~~~~~~~~~~~
 
 To add the plot to an existing axis pass in the axis as a keyword argument
 ``ax``. This works for all xray plotting methods.
-In this example ``axes`` is a tuple consisting of the left and right
+In this example ``axes`` is an array consisting of the left and right
 axes created by ``plt.subplots``.
 
 .. ipython:: python
@@ -114,31 +123,15 @@ axes created by ``plt.subplots``.
 
     axes
 
-    sinpts.plot(ax=axes[0])
-    sinpts.plot.hist(ax=axes[1])
+    air1d.plot(ax=axes[0])
+    air1d.plot.hist(ax=axes[1])
+
+    plt.tight_layout()
 
     @savefig plotting_example_existing_axes.png width=6in
     plt.show()
 
 On the right is a histogram created by :py:func:`xray.plot.hist`.
-
-Time Series
-~~~~~~~~~~~
-
-The index may be a date.
-
-.. ipython:: python
-
-    import pandas as pd
-    npts = 20
-    time = pd.date_range('2015-01-01', periods=npts)
-    noise = xray.DataArray(np.random.randn(npts), {'time': time})
-
-    @savefig plotting_example_time.png width=6in
-    noise.plot.line()
-
-TODO- rotate dates printed on x axis.
-
 
 Two Dimensions
 --------------
@@ -152,38 +145,18 @@ calls :py:func:`xray.plot.imshow`.
 
 .. ipython:: python
 
-    a0 = xray.DataArray(np.zeros((4, 3, 2)), dims=('y', 'x', 'z'),
-            name='temperature')
-    a0[0, 0, 0] = 1
-    a = a0.isel(z=0)
-    a
+    air2d = air.isel(time=500)
 
-The plot will produce an image corresponding to the values of the array.
-Hence the top left pixel will be a different color than the others.
-Before reading on, you may want to look at the coordinates and
-think carefully about what the limits, labels, and orientation for
-each of the axes should be.
+    @savefig 2d_simple.png width=4in
+    air2d.plot()
 
-.. ipython:: python
-
-    @savefig plotting_example_2d_simple.png width=4in
-    a.plot()
-
-It may seem strange that
-the values on the y axis are decreasing with -0.5 on the top. This is because
-the pixels are centered over their coordinates, and the
-axis labels and ranges correspond to the values of the
-coordinates. 
-
-All 2d plots in xray allow the use of the keyword arguments ``yincrease=True``
-to produce a
-more conventional plot where the coordinates increase in the y axis.
-``xincrease`` works similarly.
+All 2d plots in xray allow the use of the keyword arguments ``yincrease``
+and ``xincrease``.
 
 .. ipython:: python
 
     @savefig 2d_simple_yincrease.png width=4in
-    a.plot(yincrease=True)
+    air2d.plot(yincrease=False)
 
 Missing Values
 ~~~~~~~~~~~~~~
@@ -192,73 +165,28 @@ Xray plots data with :ref:`missing_values`.
 
 .. ipython:: python
 
-    # This data has holes in it!
-    a[1, 1] = np.nan
+    bad_air2d = air2d.copy()
+
+    bad_air2d[dict(lat=slice(0, 10), lon=slice(0, 25))] = np.nan
 
     @savefig plotting_missing_values.png width=4in
-    a.plot()
-
-Simulated Data
-~~~~~~~~~~~~~~
-
-For further examples we generate two dimensional data by computing the Euclidean
-distance from a 2d grid point to the origin.
-
-.. ipython:: python
-
-    x = np.arange(start=0, stop=10, step=2)
-    y = np.arange(start=9, stop=-7, step=-3)
-    xy = np.dstack(np.meshgrid(x, y))
-
-    distance = np.linalg.norm(xy, axis=2)
-
-    distance = xray.DataArray(distance, zip(('y', 'x'), (y, x)))
-    distance
-
-Note the coordinate ``y`` here is decreasing.
-This makes the y axes appear in the conventional way.
-
-.. ipython:: python
-
-    @savefig plotting_2d_simulated.png width=4in
-    distance.plot()
-
-Changing Axes
-~~~~~~~~~~~~~
-
-To swap the variables plotted on vertical and horizontal axes one can
-transpose the array.
-
-.. ipython:: python
-
-    @savefig plotting_changing_axes.png width=4in
-    distance.T.plot()
-
-To make x and y increase:
-
-.. ipython:: python
-
-    @savefig plotting_changing_axes2.png width=4in
-    distance.T.plot(xincrease=True, yincrease=True)
+    bad_air2d.plot()
 
 Nonuniform Coordinates
 ~~~~~~~~~~~~~~~~~~~~~~
 
 It's not necessary for the coordinates to be evenly spaced. If not, then
 :py:meth:`xray.DataArray.plot` produces a filled contour plot by calling
-:py:func:`xray.plot.contourf`. This example demonstrates that by
-using one coordinate with logarithmic spacing.
+:py:func:`xray.plot.contourf`. 
 
 .. ipython:: python
 
-    x = np.linspace(0, 500)
-    y = np.logspace(0, 3)
-    xy = np.dstack(np.meshgrid(x, y))
-    d_ylog = np.linalg.norm(xy, axis=2)
-    d_ylog = xray.DataArray(d_ylog, zip(('y', 'x'), (y, x)))
+    b = air2d.copy()
+    # Apply a nonlinear transformation to one of the coords
+    b.coords['lat'] = np.log(b.coords['lat'])
 
     @savefig plotting_nonuniform_coords.png width=4in
-    d_ylog.plot()
+    b.plot()
 
 Calling Matplotlib
 ~~~~~~~~~~~~~~~~~~
@@ -268,9 +196,10 @@ matplotlib is available.
 
 .. ipython:: python
 
-    d_ylog.plot(cmap=plt.cm.Blues)
-    plt.title('Euclidean distance from point to origin')
-    plt.xlabel('temperature (C)')
+    air2d.plot(cmap=plt.cm.Blues)
+    plt.title('These colors prove North America\nhas fallen in the ocean')
+    plt.ylabel('latitude')
+    plt.xlabel('longitude')
 
     @savefig plotting_2d_call_matplotlib.png width=4in
     plt.show()
@@ -283,62 +212,58 @@ matplotlib is available.
     In the example below, ``plt.xlabel`` effectively does nothing, since 
     ``d_ylog.plot()`` updates the xlabel.
 
-.. ipython:: python
+    .. ipython:: python
 
-    plt.xlabel('temperature (C)')
-    d_ylog.plot()
+        plt.xlabel('Never gonna see this.')
+        air2d.plot()
 
-    @savefig plotting_2d_call_matplotlib2.png width=4in
-    plt.show()
-
-Contour plots can have missing values also.
-
-.. ipython:: python
-
-    d_ylog[30:48, 10:30] = np.nan
-
-    d_ylog.plot()
-
-    plt.text(100, 600, 'So common...')
-
-    @savefig plotting_nonuniform_coords_missing.png width=4in
-    plt.show()
+        @savefig plotting_2d_call_matplotlib2.png width=4in
+        plt.show()
 
 Colormaps
 ~~~~~~~~~
 
+Xray borrows logic from Seaborn to infer what kind of color map to use. For
+example, consider the original data in Kelvins rather than Celsius:
+
+.. ipython:: python
+
+    @savefig plotting_kelvin.png width=4in
+    airtemps.air.isel(time=0).plot()
+ 
+The Celsius data contain 0, so a diverging color map was used. The
+Kelvins do not have 0, so the default color map was used.
+
 Suppose we want two plots to share the same color scale. This can be
 achieved by passing in axes and adding the color bar
-later.
+later. 
+
+.. note::
+
+    This task can be done more simply with facets. That functionality
+    should be available in September 2015.
+
+In this example we compare the difference in air temperature for one day in
+the summer and one day in the winter.
 
 .. ipython:: python
 
     fig, axes = plt.subplots(ncols=2)
 
-    kwargs = {'cmap': plt.cm.Blues, 'vmin': distance.min(), 'vmax': distance.max(), 'add_colorbar': False}
+    winter = air.sel(time='2014-01-01T06:00:00')
+    summer = air.sel(time='2014-07-01T06:00:00')
 
-    im = distance.plot(ax=axes[0], **kwargs)
+    kwargs = {'vmin': winter.min().values,
+    'vmax': summer.max().values, 'add_colorbar': False}
 
-    halfd = distance / 2
-    halfd.plot(ax=axes[1], **kwargs)
+    im = winter.plot.contourf(ax=axes[0], **kwargs)
+
+    summer.plot.contourf(ax=axes[1], **kwargs)
 
     plt.colorbar(im, ax=axes.tolist())
 
-    @savefig plotting_same_color_scale.png width=6in
+    @savefig plotting_same_color_scale.png height=2in
     plt.show()
-
-Here we've used the object returned by :py:meth:`xray.DataArray.plot` to
-pass in as an argument to
-`plt.colorbar <http://matplotlib.org/api/pyplot_api.html#matplotlib.pyplot.colorbar>`_.
-Take a closer look:
-
-.. ipython:: python
-    
-    im
-
-In general xray's plotting functions modify the axes and
-return the same objects that the wrapped
-matplotlib functions return.
 
 Discrete Colormaps
 ~~~~~~~~~~~~~~~~~~
@@ -351,7 +276,7 @@ colormaps. For example, to make a plot with 8 discrete color intervals:
 .. ipython:: python
 
     @savefig plotting_discrete_levels.png width=4in
-    distance.plot(levels=8)
+    air2d.plot(levels=8)
 
 It is also possible to use a list of levels to specify the boundaries of the
 discrete colormap:
@@ -359,18 +284,20 @@ discrete colormap:
 .. ipython:: python
 
     @savefig plotting_listed_levels.png width=4in
-    distance.plot(levels=[2, 5, 10, 11])
+    air2d.plot(levels=[0, 12, 18, 30])
 
-Finally, if you are have `Seaborn <http://stanford.edu/~mwaskom/software/seaborn/>`_ installed, you can also specify a `seaborn` color palete or a list of colors as the ``cmap`` argument:
+Finally, if you have `Seaborn <http://stanford.edu/~mwaskom/software/seaborn/>`_ installed, you can also specify a `seaborn` color palete or a list of colors as the ``cmap`` argument:
 
 .. ipython:: python
 
     flatui = ["#9b59b6", "#3498db", "#95a5a6", "#e74c3c", "#34495e", "#2ecc71"]
     @savefig plotting_custom_colors_levels.png width=4in
-    distance.plot(levels=[1, 2, 4, 5, 7], cmap=flatui)
+    air2d.plot(levels=[0, 12, 18, 30], cmap=flatui)
 
 Maps
 ----
+
+TODO - Update this example to use the tutorial data.
 
 To follow this section you'll need to have Cartopy installed and working.
 
@@ -408,6 +335,7 @@ These are provided for user convenience; they all call the same code.
     da.plot.line(ax=axes[0, 1])
     xplt.plot(da, ax=axes[1, 0])
     xplt.line(da, ax=axes[1, 1])
+    plt.tight_layout()
     @savefig plotting_ways_to_use.png width=6in
     plt.show()
 
@@ -427,3 +355,34 @@ Dimensions      Coordinates Plotting function
 2               Irregular   :py:func:`xray.plot.contourf`
 Anything else               :py:func:`xray.plot.hist`
 =============== =========== ===========================
+
+Coordinates
+~~~~~~~~~~~
+
+If you'd like to find out what's really going on in the coordinate system,
+read on.
+
+.. ipython:: python
+
+    a0 = xray.DataArray(np.zeros((4, 3, 2)), dims=('y', 'x', 'z'),
+            name='temperature')
+    a0[0, 0, 0] = 1
+    a = a0.isel(z=0)
+    a
+
+The plot will produce an image corresponding to the values of the array.
+Hence the top left pixel will be a different color than the others.
+Before reading on, you may want to look at the coordinates and
+think carefully about what the limits, labels, and orientation for
+each of the axes should be.
+
+.. ipython:: python
+
+    @savefig plotting_example_2d_simple.png width=4in
+    a.plot()
+
+It may seem strange that
+the values on the y axis are decreasing with -0.5 on the top. This is because
+the pixels are centered over their coordinates, and the
+axis labels and ranges correspond to the values of the
+coordinates. 
