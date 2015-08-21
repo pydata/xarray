@@ -1,6 +1,6 @@
 import os
 
-from xray import tutorial
+from xray import tutorial, DataArray
 
 from . import TestCase, unittest
 
@@ -8,7 +8,7 @@ from . import TestCase, unittest
 class Test_load_dataset(TestCase):
 
     def setUp(self):
-        self.testfile = 'tiny.nc'
+        self.testfile = 'tiny'
         self.testfilepath = os.path.expanduser(os.sep.join(('~',
                 '.xray_tutorial_data', self.testfile)))
         try:
@@ -18,5 +18,5 @@ class Test_load_dataset(TestCase):
 
     def test_download_from_github(self):
         ds = tutorial.load_dataset(self.testfile)
-        tiny = xray.DataArray(range(5), name='tiny').to_dataset()
+        tiny = DataArray(range(5), name='tiny').to_dataset()
         self.assertDatasetIdentical(ds, tiny)

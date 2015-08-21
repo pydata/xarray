@@ -12,8 +12,11 @@ from .backends.api import open_dataset as _open_dataset
 from .core.pycompat import urlretrieve as _urlretrieve
 
 
-# Borrowed from Seaborn
-def load_dataset(name, cache=True, cache_dir='.xray_tutorial_data',
+_default_cache_dir = _os.sep.join(('~', '.xray_tutorial_data'))
+
+
+# idea borrowed from Seaborn
+def load_dataset(name, cache=True, cache_dir=_default_cache_dir,
                  github_url='https://github.com/xray/xray-data',  **kws):
     """
     Load a dataset from the online repository (requires internet).
@@ -22,12 +25,11 @@ def load_dataset(name, cache=True, cache_dir='.xray_tutorial_data',
 
     Parameters
     ----------
-    name : str, optional
+    name : str
         Name of the netcdf file containing the dataset
         ie. 'air_temperature'
     cache_dir : string, optional
         The directory in which to search for and write cached data.
-        Relative to user's home directory
     cache : boolean, optional
         If True, then cache data locally for use on subsequent calls
     github_url : string
@@ -36,8 +38,9 @@ def load_dataset(name, cache=True, cache_dir='.xray_tutorial_data',
         Passed to xray.open_dataset
 
     """
-    longdir = _os.path.expanduser(_os.sep.join(('~', cache_dir)))
-    localfile = _os.sep.join((longdir, name + '.nc'))
+    longdir = _os.path.expanduser(cache_dir)
+    fullname = name + '.nc'
+    localfile = _os.sep.join((longdir, fullname))
 
     if not _os.path.exists(localfile):
 
@@ -46,7 +49,7 @@ def load_dataset(name, cache=True, cache_dir='.xray_tutorial_data',
         if not _os.path.isdir(longdir):
             _os.mkdir(longdir)
 
-        url = '/'.join((github_url, 'raw', 'master', name))
+        url = '/'.join((github_url, 'raw', 'master', fullname))
         _urlretrieve(url, localfile)
 
     ds = _open_dataset(localfile, **kws).load()
