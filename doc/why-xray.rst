@@ -89,10 +89,3 @@ especially geoscientists who already know and love netCDF_.
 .. _ndarray: http://docs.scipy.org/doc/numpy/reference/arrays.ndarray.html
 .. _netCDF: http://www.unidata.ucar.edu/software/netcdf
 .. _pandas: http://pandas.pydata.org
-
-.. warning::
-
-    xray is a relatively new project and is still under heavy development.
-    Although we will make a best effort to maintain compatibility with the
-    current API, inevitably the API will change in future versions as xray
-    matures.

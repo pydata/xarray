@@ -19,8 +19,7 @@ _reserved_names = set(['byte', 'char', 'short', 'ushort', 'int', 'uint',
 
 # These data-types aren't supported by netCDF3, so they are automatically
 # coerced instead as indicated by the "coerce_nc3_dtype" function
-_nc3_dtype_coercions = {'int64': 'int32', 'float64': 'float32',
-                        'bool': 'int8'}
+_nc3_dtype_coercions = {'int64': 'int32', 'bool': 'int8'}
 
 
 def coerce_nc3_dtype(arr):

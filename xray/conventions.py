@@ -12,7 +12,7 @@ from .core import indexing, ops, utils
 from .core.formatting import format_timestamp, first_n_items
 from .core.variable import as_variable, Variable
 from .core.pycompat import (iteritems, bytes_type, unicode_type, OrderedDict,
-                            PY3)
+                            PY3, basestring)
 
 
 # standard calendars recognized by netcdftime
@@ -189,9 +189,11 @@ def infer_datetime_units(dates):
     unique time deltas in `dates`)
     """
     dates = pd.to_datetime(np.asarray(dates).ravel(), box=False)
-    unique_timedeltas = np.unique(np.diff(dates[pd.notnull(dates)]))
+    dates = dates[pd.notnull(dates)]
+    unique_timedeltas = np.unique(np.diff(dates))
     units = _infer_time_units_from_diff(unique_timedeltas)
-    return '%s since %s' % (units, pd.Timestamp(dates[0]))
+    reference_date = dates[0] if len(dates) > 0 else '1970-01-01'
+    return '%s since %s' % (units, pd.Timestamp(reference_date))
 
 
 def infer_timedelta_units(deltas):
@@ -253,7 +255,7 @@ def cast_to_int_if_safe(num):
 
 def encode_cf_datetime(dates, units=None, calendar=None):
     """Given an array of datetime objects, returns the tuple `(num, units,
-    calendar)` suitable for a CF complient time variable.
+    calendar)` suitable for a CF compliant time variable.
 
     Unlike `date2num`, this function can handle datetime64 arrays.
 
@@ -781,7 +783,7 @@ def decode_cf_variable(var, concat_characters=True, mask_and_scale=True,
 
 def decode_cf_variables(variables, attributes, concat_characters=True,
                         mask_and_scale=True, decode_times=True,
-                        decode_coords=True):
+                        decode_coords=True, drop_variables=None):
     """
     Decode a several CF encoded variables.
 
@@ -803,8 +805,16 @@ def decode_cf_variables(variables, attributes, concat_characters=True,
 
     coord_names = set()
 
+    if isinstance(drop_variables, basestring):
+        drop_variables = [drop_variables]
+    elif drop_variables is None:
+        drop_variables = []
+    drop_variables = set(drop_variables)
+
     new_vars = OrderedDict()
     for k, v in iteritems(variables):
+        if k in drop_variables:
+            continue
         concat = (concat_characters and v.dtype.kind == 'S' and v.ndim > 0 and
                   stackable(v.dims[-1]))
         new_vars[k] = decode_cf_variable(
@@ -826,7 +836,7 @@ def decode_cf_variables(variables, attributes, concat_characters=True,
 
 
 def decode_cf(obj, concat_characters=True, mask_and_scale=True,
-              decode_times=True, decode_coords=True):
+              decode_times=True, decode_coords=True, drop_variables=None):
     """Decode the given Dataset or Datastore according to CF conventions into
     a new Dataset.
 
@@ -846,7 +856,11 @@ def decode_cf(obj, concat_characters=True, mask_and_scale=True,
     decode_coords : bool, optional
         Use the 'coordinates' attribute on variable (or the dataset itself) to
         identify coordinates.
-
+    drop_variables: string or iterable, optional 
+        A variable or list of variables to exclude from being parsed from the
+        dataset.This may be useful to drop variables with problems or
+        inconsistent values. 
+    
     Returns
     -------
     decoded : Dataset
@@ -868,7 +882,7 @@ def decode_cf(obj, concat_characters=True, mask_and_scale=True,
 
     vars, attrs, coord_names = decode_cf_variables(
         vars, attrs, concat_characters, mask_and_scale, decode_times,
-        decode_coords)
+        decode_coords, drop_variables=drop_variables)
     ds = Dataset(vars, attrs=attrs)
     ds = ds.set_coords(coord_names.union(extra_coords))
     ds._file_obj = file_obj

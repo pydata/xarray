@@ -110,6 +110,7 @@ Computation
    Dataset.groupby
    Dataset.resample
    Dataset.transpose
+   Dataset.diff
 
 **Aggregation**:
 :py:attr:`~Dataset.all`
@@ -223,6 +224,7 @@ Computation
    DataArray.resample
    DataArray.transpose
    DataArray.get_axis_num
+   DataArray.diff
 
 **Aggregation**:
 :py:attr:`~DataArray.all`

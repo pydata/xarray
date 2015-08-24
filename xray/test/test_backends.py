@@ -196,6 +196,11 @@ class DatasetIOTestCases(object):
         with self.roundtrip(expected) as actual:
             self.assertDatasetIdentical(expected, actual)
 
+    def test_roundtrip_float64_data(self):
+        expected = Dataset({'x': ('y', np.array([1.0, 2.0, np.pi], dtype='float64'))})
+        with self.roundtrip(expected) as actual:
+            self.assertDatasetIdentical(expected, actual)
+
     def test_roundtrip_example_1_netcdf(self):
         expected = open_example_dataset('example_1.nc')
         with self.roundtrip(expected) as actual:
@@ -266,7 +271,7 @@ class CFEncodedDataTest(DatasetIOTestCases):
             # netCDF4 can't keep track of an empty _FillValue for VLEN
             # variables
             expected['x'][-1] = ''
-        elif (type(self) is NetCDF3ViaNetCDF4DataTest
+        elif (isinstance(self, (NetCDF3ViaNetCDF4DataTest, NetCDF4ClassicViaNetCDF4DataTest))
               or (has_netCDF4 and type(self) is GenericNetCDFDataTest)):
             # netCDF4 can't keep track of an empty _FillValue for nc3, either:
             # https://github.com/Unidata/netcdf4-python/issues/273
@@ -347,7 +352,7 @@ _counter = itertools.count()
 @contextlib.contextmanager
 def create_tmp_file(suffix='.nc'):
     temp_dir = tempfile.mkdtemp()
-    path = os.path.join(temp_dir, 'temp-%s.%s' % (next(_counter), suffix))
+    path = os.path.join(temp_dir, 'temp-%s%s' % (next(_counter), suffix))
     try:
         yield path
     finally:
@@ -651,6 +656,24 @@ class NetCDF3ViaNetCDF4DataTest(CFEncodedDataTest, Only32BitTypes, TestCase):
                 yield ds
 
 
+@requires_netCDF4
+class NetCDF4ClassicViaNetCDF4DataTest(CFEncodedDataTest, Only32BitTypes, TestCase):
+    @contextlib.contextmanager
+    def create_store(self):
+        with create_tmp_file() as tmp_file:
+            with backends.NetCDF4DataStore(tmp_file, mode='w',
+                                           format='NETCDF4_CLASSIC') as store:
+                yield store
+
+    @contextlib.contextmanager
+    def roundtrip(self, data, **kwargs):
+        with create_tmp_file() as tmp_file:
+            data.to_netcdf(tmp_file, format='NETCDF4_CLASSIC',
+                           engine='netcdf4')
+            with open_dataset(tmp_file, engine='netcdf4', **kwargs) as ds:
+                yield ds
+
+
 @requires_scipy_or_netCDF4
 class GenericNetCDFDataTest(CFEncodedDataTest, Only32BitTypes, TestCase):
     # verify that we can read and write netCDF3 files as long as we have scipy
@@ -730,6 +753,9 @@ class H5NetCDFDataTest(BaseNetCDF4Test, TestCase):
         # Drop dim3, because its labels include strings. These appear to be
         # not properly read with python-netCDF4, which converts them into
         # unicode instead of leaving them as bytes.
+        if PY3:
+            raise unittest.SkipTest('see https://github.com/xray/xray/issues/535')
+
         data = create_test_data().drop('dim3')
         data.attrs['foo'] = 'bar'
         valid_engines = ['netcdf4', 'h5netcdf']

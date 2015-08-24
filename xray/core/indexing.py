@@ -140,6 +140,12 @@ def convert_label_indexer(index, label, index_name='', method=None):
         indexer = index.slice_indexer(_try_get_item(label.start),
                                       _try_get_item(label.stop),
                                       _try_get_item(label.step))
+        if not isinstance(indexer, slice):
+            # unlike pandas, in xray we never want to silently convert a slice
+            # indexer into an array indexer
+            raise KeyError('cannot represent labeled-based slice indexer for '
+                           'dimension %r with a slice over integer positions; '
+                           'the index is unsorted or non-unique')
     else:
         label = np.asarray(label)
         if label.ndim == 0:
@@ -149,8 +155,8 @@ def convert_label_indexer(index, label, index_name='', method=None):
         else:
             indexer = index.get_indexer(label, method=method)
             if np.any(indexer < 0):
-                raise ValueError('not all values found in index %r'
-                                 % index_name)
+                raise KeyError('not all values found in index %r'
+                               % index_name)
     return indexer
 
 

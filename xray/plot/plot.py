@@ -151,14 +151,14 @@ def line(darray, *args, **kwargs):
     primitive = ax.plot(x, darray, *args, **kwargs)
 
     ax.set_xlabel(xlabel)
+    ax.set_title(darray._title_for_slice())
 
     if darray.name is not None:
         ax.set_ylabel(darray.name)
 
     # Rotate dates on xlabels
     if np.issubdtype(x.dtype, np.datetime64):
-        for label in ax.get_xticklabels():
-            label.set_rotation('vertical')
+        plt.gcf().autofmt_xdate()
 
     return primitive
 

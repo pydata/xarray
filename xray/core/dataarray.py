@@ -19,6 +19,7 @@ from .dataset import Dataset
 from .pycompat import iteritems, basestring, OrderedDict, zip
 from .utils import FrozenOrderedDict
 from .variable import as_variable, _as_compatible_data, Coordinate
+from .formatting import format_item
 
 
 def _infer_coords_and_dims(shape, coords, dims):
@@ -191,27 +192,25 @@ class DataArray(AbstractArray, BaseDataObject):
                                  'are not a subset of the DataArray '
                                  'dimensions %s' % (k, v.dims, dims))
 
-        # these fully describe a DataArray:
+        # these fully describe a DataArray
         self._dataset = dataset
         self._name = name
 
     @classmethod
-    def _new_from_dataset(cls, dataset, name):
+    def _new_from_dataset(cls, original_dataset, name):
         """Private constructor for the benefit of Dataset.__getitem__ (skips
         all validation)
         """
-        obj = object.__new__(cls)
-        obj._dataset = dataset._copy_listed([name], keep_attrs=False)
-        if name not in obj._dataset:
+        dataset = original_dataset._copy_listed([name], keep_attrs=False)
+        if name not in dataset:
             # handle virtual variables
             try:
                 _, name = name.split('.', 1)
             except Exception:
                 raise KeyError(name)
-        obj._name = name
         if name not in dataset._dims:
-            obj._dataset._coord_names.discard(name)
-        return obj
+            dataset._coord_names.discard(name)
+        return cls._new_from_dataset_no_copy(dataset, name)
 
     @classmethod
     def _new_from_dataset_no_copy(cls, dataset, name):
@@ -221,10 +220,7 @@ class DataArray(AbstractArray, BaseDataObject):
         return obj
 
     def _with_replaced_dataset(self, dataset):
-        obj = object.__new__(type(self))
-        obj._name = self.name
-        obj._dataset = dataset
-        return obj
+        return self._new_from_dataset_no_copy(dataset, self.name)
 
     def _to_dataset_split(self, dim):
         def subset(dim, label):
@@ -383,7 +379,7 @@ class DataArray(AbstractArray, BaseDataObject):
         del self._dataset[key]
 
     @property
-    def __attr_sources__(self):
+    def _attr_sources(self):
         """List of places to look-up items for attribute-style access"""
         return [self.coords, self.attrs]
 
@@ -1111,7 +1107,7 @@ class DataArray(AbstractArray, BaseDataObject):
 
     def _title_for_slice(self, truncate=50):
         '''
-        If the dataarray has 1 dimensional coordiantes or comes from a slice
+        If the dataarray has 1 dimensional coordinates or comes from a slice
         we can show that info in the title
 
         Parameters
@@ -1123,11 +1119,13 @@ class DataArray(AbstractArray, BaseDataObject):
         -------
         title : string
             Can be used for plot titles
+
         '''
         one_dims = []
         for dim, coord in iteritems(self.coords):
             if coord.size == 1:
-                one_dims.append('{dim} = {v}'.format(dim=dim, v=coord.values))
+                one_dims.append('{dim} = {v}'.format(dim=dim,
+                    v=format_item(coord.values)))
 
         title = ', '.join(one_dims)
         if len(title) > truncate:
@@ -1135,6 +1133,43 @@ class DataArray(AbstractArray, BaseDataObject):
 
         return title
 
+    def diff(self, dim, n=1, label='upper'):
+        """Calculate the n-th order discrete difference along given axis.
+
+        Parameters
+        ----------
+        dim : str, optional
+            Dimension over which to calculate the finite difference.
+        n : int, optional
+            The number of times values are differenced.
+        label : str, optional
+            The new coordinate in dimension ``dim`` will have the
+            values of either the minuend's or subtrahend's coordinate
+            for values 'upper' and 'lower', respectively.  Other
+            values are not supported.
+
+        Returns
+        -------
+        difference : same type as caller
+            The n-th order finite differnce of this object.
+
+        Examples
+        --------
+        >>> arr = xray.DataArray([5, 5, 6, 6], [[1, 2, 3, 4]], ['x'])
+        >>> arr.diff('x')
+        <xray.DataArray (x: 3)>
+        array([0, 1, 0])
+        Coordinates:
+        * x        (x) int64 2 3 4
+        >>> arr.diff('x', 2)
+        <xray.DataArray (x: 2)>
+        array([ 1, -1])
+        Coordinates:
+        * x        (x) int64 3 4
+
+        """
+        ds = self._dataset.diff(n=n, dim=dim, label=label)
+        return self._with_replaced_dataset(ds)
 
 # priority most be higher than Variable to properly work with binary ufuncs
 ops.inject_all_ops_and_reduce_methods(DataArray, priority=60)

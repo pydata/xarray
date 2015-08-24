@@ -43,7 +43,7 @@ NUMPY_SAME_METHODS = ['item', 'searchsorted']
 NUMPY_UNARY_METHODS = ['astype', 'argsort', 'clip', 'conj', 'conjugate']
 PANDAS_UNARY_FUNCTIONS = ['isnull', 'notnull']
 # methods which remove an axis
-NUMPY_REDUCE_METHODS = ['all', 'any']
+REDUCE_METHODS = ['all', 'any']
 NAN_REDUCE_METHODS = ['argmax', 'argmin', 'max', 'min', 'mean', 'prod', 'sum',
                       'std', 'var', 'median']
 # TODO: wrap cumprod/cumsum, take, dot, sort
@@ -83,6 +83,10 @@ broadcast_to = _dask_or_eager_func('broadcast_to', npcompat)
 
 concatenate = _dask_or_eager_func('concatenate', dispatch_elemwise=True)
 stack = _dask_or_eager_func('stack', npcompat, dispatch_elemwise=True)
+
+array_all = _dask_or_eager_func('all')
+array_any = _dask_or_eager_func('any')
+
 
 
 def _interleaved_indices_required(indices):
@@ -372,8 +376,8 @@ def last(values, axis, skipna=None):
 
 
 def inject_reduce_methods(cls):
-    methods = ([(name, getattr(np, name), False) for name
-               in NUMPY_REDUCE_METHODS]
+    methods = ([(name, globals()['array_%s' % name], False) for name
+               in REDUCE_METHODS]
                + [(name, globals()[name], True) for name
                   in NAN_REDUCE_METHODS]
                + [('count', count, False)])
