@@ -62,6 +62,13 @@ def _infer_coords_and_dims(shape, coords, dims):
     return coords, dims
 
 
+def _cast_name_to_string(name):
+    """name is cast to a string if not None"""
+    if name is not None and not isinstance(name, basestring):
+        name = basestring(name)
+    return name
+
+
 class _LocIndexer(object):
     def __init__(self, data_array):
         self.data_array = data_array
@@ -180,6 +187,8 @@ class DataArray(AbstractArray, BaseDataObject):
         if encoding is None:
             encoding = getattr(data, 'encoding', None)
 
+        name = _cast_name_to_string(name)
+
         data = _as_compatible_data(data)
         coords, dims = _infer_coords_and_dims(data.shape, coords, dims)
         dataset = Dataset(coords=coords)
@@ -265,6 +274,8 @@ class DataArray(AbstractArray, BaseDataObject):
             name = dim
             dim = None
 
+        name = _cast_name_to_string(name)
+
         if dim is not None:
             if name is not None:
                 raise TypeError('cannot supply both dim and name arguments')
@@ -289,6 +300,7 @@ class DataArray(AbstractArray, BaseDataObject):
 
     @name.setter
     def name(self, value):
+        value = _cast_name_to_string(value)
         with self._set_new_dataset() as ds:
             ds.rename({self.name: value}, inplace=True)
         self._name = value

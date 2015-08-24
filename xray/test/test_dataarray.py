@@ -67,6 +67,20 @@ class TestDataArray(TestCase):
         expected = DataArray(Coordinate('y', [3]))
         self.assertDataArrayIdentical(actual, expected)
 
+        for name, name_str in [('y', 'y'), (0, '0'), ((4, ), '(4,)'),
+                               (True, 'True'), (None, None)]:
+            da = DataArray(np.random.random((2, 2)), name=name)
+            self.assertEqual(da.name, name_str)
+
+            da = DataArray(np.random.random((2, 2)))
+            da.name = name
+            self.assertEqual(da.name, name_str)
+
+            da = DataArray(np.random.random((2, 2)))
+            actual = da.to_dataset(name=name)
+            expected = da.to_dataset(name=name_str)
+            self.assertDatasetEqual(actual, expected)
+
     def test_dims(self):
         arr = self.dv
         self.assertEqual(arr.dims, ('x', 'y'))
