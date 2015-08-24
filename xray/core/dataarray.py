@@ -65,7 +65,7 @@ def _infer_coords_and_dims(shape, coords, dims):
 def _cast_name_to_string(name):
     """name is cast to a string if not None"""
     if name is not None and not isinstance(name, basestring):
-        name = basestring(name)
+        name = str(name)
     return name
 
 
