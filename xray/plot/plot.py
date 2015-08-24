@@ -211,7 +211,8 @@ def _update_axes_limits(ax, xincrease, yincrease):
 
 def _determine_cmap_params(plot_data, vmin=None, vmax=None, cmap=None,
                            center=None, robust=False, extend=None,
-                           levels=None, filled=True, cnorm=None):
+                           levels=None, filled=True, cnorm=None,
+                           robust_percentile=2):
     """
     Use some heuristics to set good defaults for colorbar and range.
 
@@ -222,9 +223,9 @@ def _determine_cmap_params(plot_data, vmin=None, vmax=None, cmap=None,
 
     calc_data = plot_data[~pd.isnull(plot_data)]
     if vmin is None:
-        vmin = np.percentile(calc_data, 2) if robust else calc_data.min()
+        vmin = np.percentile(calc_data, robust_percentile) if robust else calc_data.min()
     if vmax is None:
-        vmax = np.percentile(calc_data, 98) if robust else calc_data.max()
+        vmax = np.percentile(calc_data, 100 - robust_percentile) if robust else calc_data.max()
 
     # Simple heuristics for whether these data should  have a divergent map
     divergent = ((vmin < 0) and (vmax > 0)) or center is not None
@@ -392,7 +393,7 @@ def _plot2d(plotfunc):
         use of a diverging colormap.
     robust : bool, optional
         If True and ``vmin`` or ``vmax`` are absent, the colormap range is
-        computed with robust quantiles instead of the extreme values.
+        computed with 2nd and 98th percentiles instead of the extreme values.
     extend : {'neither', 'both', 'min', 'max'}, optional
         How to draw arrows extending the colorbar beyond its limits. If not
         provided, extend is inferred from vmin, vmax and the data limits.
@@ -444,7 +445,8 @@ def _plot2d(plotfunc):
         filled = plotfunc.__name__ != 'contour'
 
         cmap_params = _determine_cmap_params(z.data, vmin, vmax, cmap, center,
-                                             robust, extend, levels, filled)
+                                             robust, extend, levels,
+                                             filled, robust_percentile=2)
 
         if 'contour' in plotfunc.__name__:
             # extend is a keyword argument only for contour and contourf, but

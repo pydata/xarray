@@ -234,6 +234,31 @@ example, consider the original data in Kelvins rather than Celsius:
 The Celsius data contain 0, so a diverging color map was used. The
 Kelvins do not have 0, so the default color map was used.
 
+Robust
+~~~~~~
+
+Outliers often have an extreme effect on the output of the plot.
+Here we add two bad data points. This affects the color scale,
+washing out the plot.
+
+.. ipython:: python
+
+    air_outliers = airtemps.air.isel(time=0).copy()
+    air_outliers[0, 0] = 100
+    air_outliers[-1, -1] = 400
+
+    @savefig plotting_robust1.png width=4in
+    air_outliers.plot()
+
+To remedy this use the parameter ``robust=True`` to use robust percentiles
+for computing the color limits.
+
+.. ipython:: python
+
+    @savefig plotting_robust2.png width=4in
+    air_outliers.plot(robust=True)
+
+
 Discrete Colormaps
 ~~~~~~~~~~~~~~~~~~
 
