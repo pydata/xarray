@@ -173,8 +173,8 @@ DataArray as the first arg.
 
 For 4 dimensional arrays we can use the rows and columns.
 Here we create a 4 dimensional array by taking the original data and adding
-a fixed amount. Now we can see what the temperature map would look like if
-it were much hotter.
+a fixed amount. Now we can see how the temperature maps would compare if
+one were 30 degrees hotter.
 
 .. ipython:: python
 
@@ -185,9 +185,10 @@ it were much hotter.
 
     g = xray.plot.FacetGrid(t4d, col='time', row='fourth_dim')
     
-    @savefig plot_facet_4d.png height=12in 
     g.map_dataarray(xray.plot.imshow, 'lon', 'lat')
 
+    @savefig plot_facet_4d.png height=12in 
+    plt.show()
 
 More
 ~~~~~~~~~~~~~~

@@ -30,6 +30,17 @@ def text_in_fig():
     return set(alltxt)
 
 
+def substring_in_axes(substring, ax):
+    '''
+    Return True if a substring is found anywhere in an axes
+    '''
+    alltxt = set([t.get_text() for t in ax.findobj(mpl.text.Text)])
+    for txt in alltxt:
+        if substring in txt:
+            return True
+    return False
+
+
 @requires_matplotlib
 class PlotTestCase(TestCase):
 
@@ -552,6 +563,14 @@ class TestFacetGrid(PlotTestCase):
         for label in ['x', 'y']:
             self.assertIn(label, alltxt)
 
+    def test_text_not_super_long(self):
+        self.darray.coords['z'] = [100 * letter for letter in 'abc']
+        g = xplt.FacetGrid(self.darray, col='z')
+        g.map_dataarray(xplt.contour, 'x', 'y')
+        alltxt = text_in_fig()
+        maxlen = max(len(txt) for txt in alltxt)
+        self.assertLess(maxlen, 50)
+
     def test_colorbar(self):
         self.g.map_dataarray(xplt.imshow, 'x', 'y')
         images = plt.gcf().findobj(mpl.image.AxesImage)
@@ -567,9 +586,24 @@ class TestFacetGrid(PlotTestCase):
     def test_row_and_col_shape(self):
         a = np.arange(10 * 15 * 3 * 2).reshape(10, 15, 3, 2)
         d = DataArray(a, dims=['y', 'x', 'col', 'row'])
+
+        d.coords['col'] = np.array(['col' + str(x) for x in
+            d.coords['col'].values])
+        d.coords['row'] = np.array(['row' + str(x) for x in
+            d.coords['row'].values])
+
         g = xplt.FacetGrid(d, col='col', row='row')
         self.assertEqual((2, 3), g.axes.shape)
+
         g.map_dataarray(xplt.imshow, 'x', 'y')
+
+        # Rightmost column should be labeled
+        for label, ax in zip(d.coords['row'].values, g.axes[:, -1]):
+            self.assertTrue(substring_in_axes(label, ax))
+
+        # Top row should be labeled
+        for label, ax in zip(d.coords['col'].values, g.axes[0, :]):
+            self.assertTrue(substring_in_axes(label, ax))
 
     def test_norow_nocol_error(self):
         with self.assertRaisesRegexp(ValueError, r'[Rr]ow'):
