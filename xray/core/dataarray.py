@@ -62,6 +62,16 @@ def _infer_coords_and_dims(shape, coords, dims):
     return coords, dims
 
 
+def _validate_dataarray_name(name):
+    """name is cast to a string if not None"""
+    if isinstance(name, basestring):
+        if not name:
+            raise ValueError('Invalid name for DataArray: string must be '
+                             'length 1 or greater')
+    elif name is not None:
+        raise TypeError('DataArray.name must be either a string or NoneType')
+
+
 class _LocIndexer(object):
     def __init__(self, data_array):
         self.data_array = data_array
@@ -180,6 +190,8 @@ class DataArray(AbstractArray, BaseDataObject):
         if encoding is None:
             encoding = getattr(data, 'encoding', None)
 
+        _validate_dataarray_name(name)
+
         data = _as_compatible_data(data)
         coords, dims = _infer_coords_and_dims(data.shape, coords, dims)
         dataset = Dataset(coords=coords)
@@ -265,6 +277,8 @@ class DataArray(AbstractArray, BaseDataObject):
             name = dim
             dim = None
 
+        _validate_dataarray_name(name)
+
         if dim is not None:
             if name is not None:
                 raise TypeError('cannot supply both dim and name arguments')
@@ -289,6 +303,7 @@ class DataArray(AbstractArray, BaseDataObject):
 
     @name.setter
     def name(self, value):
+        _validate_dataarray_name(value)
         with self._set_new_dataset() as ds:
             ds.rename({self.name: value}, inplace=True)
         self._name = value

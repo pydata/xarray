@@ -67,6 +67,18 @@ class TestDataArray(TestCase):
         expected = DataArray(Coordinate('y', [3]))
         self.assertDataArrayIdentical(actual, expected)
 
+        te = (TypeError, 'string or NoneType')
+        ve = (ValueError, 'string must be length 1 or')
+        for name, e in zip([0, (4, ), True], [te, te, te, ve]):
+            with self.assertRaisesRegexp(*e):
+                DataArray(np.random.random((2, 2)), name=name)
+
+            da = DataArray(np.random.random((2, 2)))
+            with self.assertRaisesRegexp(*e):
+                da.name = name
+            with self.assertRaisesRegexp(*e):
+                da.to_dataset(name=name)
+
     def test_dims(self):
         arr = self.dv
         self.assertEqual(arr.dims, ('x', 'y'))
