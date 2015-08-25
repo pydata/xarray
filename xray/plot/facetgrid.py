@@ -137,6 +137,9 @@ class FacetGrid(object):
         self.fig, self.axes = plt.subplots(self._nrow, self._ncol,
                 sharex=True, sharey=True)
 
+        # subplots flattens this array if one dimension
+        self.axes.shape = self._nrow, self._ncol
+
 
         # Set up the lists of names for the row and column facet variables
         if row is None:
@@ -214,8 +217,12 @@ class FacetGrid(object):
         defaults.update(kwargs)
 
         for d, ax in zip(self.name_dicts.flat, self.axes.flat):
-            group = self.darray[d]
-            mappable = func(group, ax=ax, *args, **defaults)
+            func(self.darray[d], ax=ax, *args, **defaults)
+
+        # Add the labels to the bottom left plot
+        defaults['add_labels'] = True
+        mappable = func(self.darray[self.name_dicts[0, -1]],
+                ax=self.axes[0, -1], *args, **defaults)
 
         # All this could potentially be a post processing step
         cbar = plt.colorbar(mappable, ax=self.axes.ravel().tolist())

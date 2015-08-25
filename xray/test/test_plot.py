@@ -584,3 +584,8 @@ class TestFacetGrid(PlotTestCase):
         self.assertDataArrayEqual(upperleft_array, z0)
         # Not sure if we need to expose this in this way
         #self.assertDataArrayEqual(self.facet_data[0, 0], z0)
+
+    def test_float_index(self):
+        self.darray.coords['z'] = [0.1, 0.2, 0.4]
+        g = xplt.FacetGrid(self.darray, col='z')
+        g.map_dataarray(xplt.imshow, 'x', 'y')
