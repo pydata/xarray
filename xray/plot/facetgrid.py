@@ -217,12 +217,18 @@ class FacetGrid(object):
         defaults.update(kwargs)
 
         for d, ax in zip(self.name_dicts.flat, self.axes.flat):
-            func(self.darray[d], ax=ax, *args, **defaults)
+            func(self.darray.loc[d], ax=ax, *args, **defaults)
 
         # Add the labels to the bottom left plot
+        # => plotting this one twice
+        # This would be easier to implement if there were separate args to
+        # add titles and to add axis labels
         defaults['add_labels'] = True
-        mappable = func(self.darray[self.name_dicts[0, -1]],
-                ax=self.axes[0, -1], *args, **defaults)
+        bottomleft = self.axes[-1, 0]
+        oldtitle = bottomleft.get_title()
+        mappable = func(self.darray.loc[self.name_dicts[-1, 0]],
+                ax=bottomleft, *args, **defaults)
+        bottomleft.set_title(oldtitle)
 
         # All this could potentially be a post processing step
         cbar = plt.colorbar(mappable, ax=self.axes.ravel().tolist())

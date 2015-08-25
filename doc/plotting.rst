@@ -172,11 +172,14 @@ DataArray as the first arg.
 ~~~~~~~~~~~~~~
 
 For 4 dimensional arrays we can use the rows and columns.
+Here we create a 4 dimensional array by taking the original data and adding
+a fixed amount. Now we can see what the temperature map would look like if
+it were much hotter.
 
 .. ipython:: python
 
     t2 = t.isel(time=slice(0, 2))
-    t4d = xray.concat([t2, t2 + 50], pd.Index(['normal', 'hot'], name='fourth_dim'))
+    t4d = xray.concat([t2, t2 + 40], pd.Index(['normal', 'hot'], name='fourth_dim'))
     # This is a 4d array
     t4d.coords
 
