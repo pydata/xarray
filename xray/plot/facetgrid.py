@@ -121,11 +121,19 @@ class FacetGrid(object):
         else:
             raise ValueError('Pass a coordinate name as an argument for row or col')
 
+        # Relying on short circuit behavior
+        # Not sure when nonunique coordinates are a problem
+        rep_col = col is not None and not self.darray[col].to_index().is_unique
+        rep_row = row is not None and not self.darray[row].to_index().is_unique
+        if rep_col or rep_row:
+            raise ValueError('Coordinates used for faceting cannot '
+                             'contain repeated (nonunique) values.')
+
         # Compute grid shape
         if self._single_group:
             self.nfacet = len(darray[self._single_group])
             if col:
-                # TODO - could add heuristic for nice shape like 3x4
+                # TODO - could add heuristic for nice shapes like 3x4
                 self._ncol = self.nfacet
             if row:
                 self._ncol = 1
@@ -139,7 +147,6 @@ class FacetGrid(object):
 
         # subplots flattens this array if one dimension
         self.axes.shape = self._nrow, self._ncol
-
 
         # Set up the lists of names for the row and column facet variables
         if row is None:
@@ -230,16 +237,10 @@ class FacetGrid(object):
                 ax=bottomleft, *args, **defaults)
         bottomleft.set_title(oldtitle)
 
-        # All this could potentially be a post processing step
+        # The colorbar
         cbar = plt.colorbar(mappable, ax=self.axes.ravel().tolist())
-
-        #label=self.darray.name, orientation='horizontal')
         cbar.set_label(self.darray.name, rotation=270,
                 verticalalignment='bottom')
-
-        # Label x, y axes
-        #self.fig.text(0.5, 0.04, 'bottom', ha='center', va='top')
-        #self.fig.text(0.04, 0.5, '', ha='left', va='center', rotation='vertical')
 
         return self
 

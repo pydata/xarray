@@ -592,6 +592,5 @@ class TestFacetGrid(PlotTestCase):
 
     def test_nonunique_index_error(self):
         self.darray.coords['z'] = [0.1, 0.2, 0.2]
-        g = xplt.FacetGrid(self.darray, col='z')
         with self.assertRaisesRegexp(ValueError, r'[Uu]nique'):
-            g.map_dataarray(xplt.imshow, 'x', 'y')
+            g = xplt.FacetGrid(self.darray, col='z')
