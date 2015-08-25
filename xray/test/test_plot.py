@@ -574,3 +574,13 @@ class TestFacetGrid(PlotTestCase):
     def test_norow_nocol_error(self):
         with self.assertRaisesRegexp(ValueError, r'[Rr]ow'):
             xplt.FacetGrid(self.darray)
+
+    def test_groups(self):
+        self.g.map_dataarray(xplt.imshow, 'x', 'y')
+        upperleft_dict = self.g.name_dicts[0, 0]
+        upperleft_array = self.darray[upperleft_dict]
+        z0 = self.darray.isel(z=0)
+
+        self.assertDataArrayEqual(upperleft_array, z0)
+        # Not sure if we need to expose this in this way
+        #self.assertDataArrayEqual(self.facet_data[0, 0], z0)

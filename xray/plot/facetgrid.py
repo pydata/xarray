@@ -1,4 +1,5 @@
 import warnings
+import itertools
 
 import numpy as np
 
@@ -102,26 +103,27 @@ class FacetGrid(object):
         self.col = col
         self.col_wrap = col_wrap
 
-        # _group is the grouping variable, if there is only one
+        # _single_group is the grouping variable, if there is only one
         if col and row:
-            self._group = False
+            self._single_group = False
             self._nrow = len(darray[row])
             self._ncol = len(darray[col])
+            self.nfacet = self._nrow * self._ncol
             self._margin_titles = True
             if col_wrap is not None:
                 warnings.warn("Can't use col_wrap when both col and row are passed")
         elif row and not col:
-            self._group = row
+            self._single_group = row
             self._margin_titles = False
         elif not row and col:
-            self._group = col
+            self._single_group = col
             self._margin_titles = False
         else:
             raise ValueError('Pass a coordinate name as an argument for row or col')
 
         # Compute grid shape
-        if self._group:
-            self.nfacet = len(darray[self._group])
+        if self._single_group:
+            self.nfacet = len(darray[self._single_group])
             if col:
                 # TODO - could add heuristic for nice shape like 3x4
                 self._ncol = self.nfacet
@@ -135,6 +137,7 @@ class FacetGrid(object):
         self.fig, self.axes = plt.subplots(self._nrow, self._ncol,
                 sharex=True, sharey=True)
 
+
         # Set up the lists of names for the row and column facet variables
         if row is None:
             row_names = []
@@ -145,6 +148,23 @@ class FacetGrid(object):
             col_names = []
         else:
             col_names = list(darray[col].values)
+
+
+        # Build a 2d array of dictionaries mapping names to coordinates.
+
+        if self._single_group:
+            full = [{self._single_group: x} for x in
+                      self.darray[self._single_group].values]
+            empty = [None for x in range(self.nfacet - len(full))]
+            # We could potentially used a masked array instead of None as
+            # the sentinel value here
+            name_dicts = full + empty
+        else:
+            rowcols = itertools.product(row_names, col_names)
+            name_dicts = [{row: r, col: c} for r, c in rowcols]
+
+        self.name_dicts = np.array(name_dicts).reshape(self._nrow, self._ncol)
+
 
         self.row_names = row_names
         self.col_names = col_names
@@ -193,27 +213,20 @@ class FacetGrid(object):
 
         defaults.update(kwargs)
 
-        if self._group:
-            # TODO - bug should groupby _group
-            for ax, (name, data) in zip(self, self.darray.groupby(self.col)):
-                plt.sca(ax)
-                mappable = func(data, *args, **defaults)
-                #plt.title('{coord} = {val}'.format(coord=self.col,
-                #    val=str(name)[:10]))
-        else:
-            # Looping over the indices helps keep sanity
-            for col in range(self._ncol):
-                for row in range(self._nrow):
-                    plt.sca(self.axes[row, col])
-                    # Similar to groupby
-                    group = self.darray[{self.row: row, self.col: col}]
-                    mappable = func(group, *args, **defaults)
+        for d, ax in zip(self.name_dicts.flat, self.axes.flat):
+            group = self.darray[d]
+            mappable = func(group, ax=ax, *args, **defaults)
 
+        # All this could potentially be a post processing step
         cbar = plt.colorbar(mappable, ax=self.axes.ravel().tolist())
 
         #label=self.darray.name, orientation='horizontal')
         cbar.set_label(self.darray.name, rotation=270,
                 verticalalignment='bottom')
+
+        # Label x, y axes
+        #self.fig.text(0.5, 0.04, 'bottom', ha='center', va='top')
+        #self.fig.text(0.04, 0.5, '', ha='left', va='center', rotation='vertical')
 
         return self
 
