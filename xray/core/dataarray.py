@@ -17,7 +17,7 @@ from .common import AbstractArray, BaseDataObject
 from .coordinates import DataArrayCoordinates, Indexes
 from .dataset import Dataset
 from .pycompat import iteritems, basestring, OrderedDict, zip
-from .utils import FrozenOrderedDict
+from .utils import FrozenOrderedDict, validate_dataarray_name
 from .variable import as_variable, _as_compatible_data, Coordinate
 from .formatting import format_item
 
@@ -60,16 +60,6 @@ def _infer_coords_and_dims(shape, coords, dims):
         coords = OrderedDict(zip(dims, coords))
 
     return coords, dims
-
-
-def _validate_dataarray_name(name):
-    """DataArray.name must be a string or NoneType"""
-    if isinstance(name, basestring):
-        if not name:
-            raise ValueError('Invalid name for DataArray: string must be '
-                             'length 1 or greater')
-    elif name is not None:
-        raise TypeError('DataArray.name must be either a string or NoneType')
 
 
 class _LocIndexer(object):
@@ -190,7 +180,7 @@ class DataArray(AbstractArray, BaseDataObject):
         if encoding is None:
             encoding = getattr(data, 'encoding', None)
 
-        _validate_dataarray_name(name)
+        validate_dataarray_name(name)
 
         data = _as_compatible_data(data)
         coords, dims = _infer_coords_and_dims(data.shape, coords, dims)
@@ -277,7 +267,7 @@ class DataArray(AbstractArray, BaseDataObject):
             name = dim
             dim = None
 
-        _validate_dataarray_name(name)
+        validate_dataarray_name(name)
 
         if dim is not None:
             if name is not None:
@@ -303,7 +293,7 @@ class DataArray(AbstractArray, BaseDataObject):
 
     @name.setter
     def name(self, value):
-        _validate_dataarray_name(value)
+        validate_dataarray_name(value)
         with self._set_new_dataset() as ds:
             ds.rename({self.name: value}, inplace=True)
         self._name = value

@@ -126,6 +126,13 @@ class TestDataset(TestCase):
         actual = Dataset({'z': expected['z']})
         self.assertDatasetIdentical(expected, actual)
 
+    def test_constructor_valid_keys(self):
+        te = (TypeError, 'string or NoneType')
+        ve = (ValueError, 'string must be length 1 or')
+        for name, e in zip([0, (4, ), True, ''], [te, te, te, ve]):
+            with self.assertRaisesRegexp(*e):
+                Dataset({name: ([name], 5.0 + np.arange(5))})
+
     def test_constructor_1d(self):
         expected = Dataset({'x': (['x'], 5.0 + np.arange(5))})
         actual = Dataset({'x': 5.0 + np.arange(5)})
@@ -1239,6 +1246,12 @@ class TestDataset(TestCase):
         with self.assertRaises(NotImplementedError):
             data1[{'x': 0}] = 0
 
+        te = (TypeError, 'string or NoneType')
+        ve = (ValueError, 'string must be length 1 or')
+        for name, e in zip([0, (4, ), True, ''], [te, te, te, ve]):
+            with self.assertRaisesRegexp(*e):
+                data1[name] = var
+
     def test_setitem_auto_align(self):
         ds = Dataset()
         ds['x'] = ('y', range(3))
@@ -1518,9 +1531,9 @@ class TestDataset(TestCase):
         self.assertDatasetIdentical(ds, Dataset.from_dataframe(actual))
 
         # check pathological cases
-        df = pd.DataFrame([1])
+        df = pd.DataFrame([1], columns=['A'])
         actual = Dataset.from_dataframe(df)
-        expected = Dataset({0: ('index', [1])})
+        expected = Dataset({'A': ('index', [1])})
         self.assertDatasetIdentical(expected, actual)
 
         df = pd.DataFrame()

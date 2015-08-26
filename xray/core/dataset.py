@@ -17,7 +17,8 @@ from .. import conventions
 from .alignment import align, partial_align
 from .coordinates import DatasetCoordinates, Indexes
 from .common import ImplementsDatasetReduce, BaseDataObject
-from .utils import (Frozen, SortedKeysDict, ChainMap, maybe_wrap_array)
+from .utils import (Frozen, SortedKeysDict, ChainMap, maybe_wrap_array,
+                    validate_dataarray_name)
 from .variable import as_variable, Variable, Coordinate, broadcast_variables
 from .pycompat import (iteritems, itervalues, basestring, OrderedDict,
                        dask_array_type)
@@ -369,6 +370,13 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject):
                                                            compat=compat)
 
         new_coord_names.update(coords)
+
+        # validate variable names and keys
+        for name in new_variables:
+            validate_dataarray_name(name)
+        for name in new_coord_names:
+            validate_dataarray_name(name)
+
         self._update_vars_and_coords(new_variables, new_coord_names,
                                      needs_copy=False, check_coord_names=False)
 
@@ -632,6 +640,9 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject):
         if utils.is_dict_like(key):
             raise NotImplementedError('cannot yet use a dictionary as a key '
                                       'to set Dataset values')
+
+        validate_dataarray_name(key)
+
         self.update({key: value})
 
     def __delitem__(self, key):

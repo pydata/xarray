@@ -13,7 +13,7 @@ import numpy as np
 import pandas as pd
 
 from . import ops
-from .pycompat import iteritems, OrderedDict, PY3
+from .pycompat import iteritems, OrderedDict, PY3, basestring
 
 
 def alias_warning(old_name, new_name, stacklevel=3): # pragma: no cover
@@ -406,3 +406,14 @@ def is_uniform_spaced(arr, **kwargs):
     arr = np.array(arr)
     diffs = np.diff(arr)
     return np.isclose(diffs.min(), diffs.max(), **kwargs)
+
+
+def validate_dataarray_name(name):
+    """DataArray.name and Dataset keys must be a string or NoneType"""
+    if isinstance(name, basestring):
+        if not name:
+            raise ValueError('Invalid name for DataArray or Dataset key: '
+                             'string must be length 1 or greater')
+    elif name is not None:
+        raise TypeError('DataArray.name or Dataset key must be either a '
+                        'string or NoneType')
