@@ -63,7 +63,7 @@ def _infer_coords_and_dims(shape, coords, dims):
 
 
 def _validate_dataarray_name(name):
-    """name is cast to a string if not None"""
+    """DataArray.name must be a string or NoneType"""
     if isinstance(name, basestring):
         if not name:
             raise ValueError('Invalid name for DataArray: string must be '

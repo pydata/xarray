@@ -9,6 +9,19 @@ What's New
     import xray
     np.random.seed(123456)
 
+v0.6.1 (unreleased)
+-------------------
+
+This release includes several bug fixes and enhancements.
+
+Enhancements
+~~~~~~~~~~~~
+
+Bug fixes
+~~~~~~~~~
+
+- Enforce that the ``DataArray.name`` attribute is a string or a NoneType (:issue:`533`). This guarantees that the ``DataArray`` can be properly written to a netCDF.
+
 v0.6.0 (21 August 2015)
 -----------------------
 
