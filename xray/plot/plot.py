@@ -218,13 +218,14 @@ def _determine_cmap_params(plot_data, vmin=None, vmax=None, cmap=None,
     Adapted from Seaborn:
     https://github.com/mwaskom/seaborn/blob/v0.6/seaborn/matrix.py#L158
     """
+    ROBUST_PERCENTILE = 2.0
     import matplotlib as mpl
 
     calc_data = plot_data[~pd.isnull(plot_data)]
     if vmin is None:
-        vmin = np.percentile(calc_data, 2) if robust else calc_data.min()
+        vmin = np.percentile(calc_data, ROBUST_PERCENTILE) if robust else calc_data.min()
     if vmax is None:
-        vmax = np.percentile(calc_data, 98) if robust else calc_data.max()
+        vmax = np.percentile(calc_data, 100 - ROBUST_PERCENTILE) if robust else calc_data.max()
 
     # Simple heuristics for whether these data should  have a divergent map
     divergent = ((vmin < 0) and (vmax > 0)) or center is not None
@@ -392,7 +393,7 @@ def _plot2d(plotfunc):
         use of a diverging colormap.
     robust : bool, optional
         If True and ``vmin`` or ``vmax`` are absent, the colormap range is
-        computed with robust quantiles instead of the extreme values.
+        computed with 2nd and 98th percentiles instead of the extreme values.
     extend : {'neither', 'both', 'min', 'max'}, optional
         How to draw arrows extending the colorbar beyond its limits. If not
         provided, extend is inferred from vmin, vmax and the data limits.
