@@ -143,7 +143,7 @@ Pick out individual axes using the ``.axes`` attribute.
         ax.set_title('Air Temperature %d' % i)
 
     bottomright = g.axes[-1, -1]
-    bottomright.annotate('America', (240, 40))
+    bottomright.annotate('bottom right', (240, 40))
 
     @savefig plot_facet_iterator.png height=12in 
     plt.show()
@@ -158,15 +158,6 @@ function with a Dataset:
 
     @savefig plot_facet_mapds.png height=12in
     g.map(plt.contourf, 'lon', 'lat', 'air')
-
-In this interest of getting something useful that's internally consistent
-and bounded in scope here's
-a rough proposal- Get it all working nicely for DataArrays now, and then
-revisit the question of whether and how to provide support for Datasets.
-
-Implement the 
-``map_dataarray`` method that requires the plotting function to accept a
-DataArray as the first arg.
 
 4 dimensional
 ~~~~~~~~~~~~~~
@@ -189,6 +180,24 @@ one were 30 degrees hotter.
 
     @savefig plot_facet_4d.png height=12in 
     plt.show()
+
+Other features
+~~~~~~~~~~~~~~
+
+Faceted plotting supports other arguments common to xray 2d plots.
+
+.. ipython:: python
+
+    hasoutliers = t.isel(time=slice(0, 2)).copy()
+    hasoutliers[0, 0, 0] = -100
+    hasoutliers[-1, -1, -1] = 400
+
+    g = xray.plot.FacetGrid(hasoutliers, col='time')
+
+    @savefig plot_facet_robust.png height=12in 
+    g.map_dataarray(xray.plot.contourf, robust=True, cmap='viridis')
+
+TODO - Make sure robust arg is working.
 
 More
 ~~~~~~~~~~~~~~

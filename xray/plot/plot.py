@@ -54,17 +54,6 @@ def _load_default_cmap(fname='default_colormap.csv'):
     return LinearSegmentedColormap.from_list('viridis', cm_data)
 
 
-def _title_for_slice(darray):
-    '''
-    If the dataarray comes from a slice we can show that info in the title
-    '''
-    title = []
-    for dim, coord in darray.coords.items():
-        if coord.size == 1:
-            title.append('{dim} = {v}'.format(dim=dim, v=coord.values))
-    return ', '.join(title)
-
-
 def plot(darray, ax=None, rtol=0.01, **kwargs):
     """
     Default plot of DataArray using matplotlib / pylab.

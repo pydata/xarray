@@ -4,6 +4,7 @@ import itertools
 import numpy as np
 
 from ..core.formatting import format_item
+from .plot import _determine_cmap_params
 
 
 class FacetGrid_seaborn(object):

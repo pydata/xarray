@@ -628,3 +628,25 @@ class TestFacetGrid(PlotTestCase):
         self.darray.coords['z'] = [0.1, 0.2, 0.2]
         with self.assertRaisesRegexp(ValueError, r'[Uu]nique'):
             g = xplt.FacetGrid(self.darray, col='z')
+
+    def test_robust(self):
+
+        z = np.zeros((20, 20, 2))
+        darray = DataArray(z, dims=['y', 'x', 'z'])
+        darray[:, :, 1] = 1
+        darray[2, 0, 0] = -1000
+        darray[3, 0, 0] = 1000
+        g = xplt.FacetGrid(darray, col='z')
+        g.map_dataarray(xplt.imshow, 'x', 'y', robust=True)
+
+        # Color limits should be 0, 1
+        # The largest number in the figure should be less than 21
+        numbers = set()
+        alltxt = text_in_fig()
+        for txt in alltxt:
+            try:
+                numbers.add(float(txt))
+            except ValueError:
+                pass
+        largest = max(abs(x) for x in numbers)
+        self.assertLess(largest, 21)
