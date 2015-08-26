@@ -69,7 +69,7 @@ class TestDataArray(TestCase):
 
         te = (TypeError, 'string or NoneType')
         ve = (ValueError, 'string must be length 1 or')
-        for name, e in zip([0, (4, ), True], [te, te, te, ve]):
+        for name, e in zip([0, (4, ), True, ''], [te, te, te, ve]):
             with self.assertRaisesRegexp(*e):
                 DataArray(np.random.random((2, 2)), name=name)
 
