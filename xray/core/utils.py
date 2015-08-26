@@ -409,11 +409,11 @@ def is_uniform_spaced(arr, **kwargs):
 
 
 def validate_dataarray_name(name):
-    """DataArray.name and Dataset keys must be a string or NoneType"""
+    """DataArray.name and Dataset keys must be a string or None"""
     if isinstance(name, basestring):
         if not name:
             raise ValueError('Invalid name for DataArray or Dataset key: '
                              'string must be length 1 or greater')
     elif name is not None:
         raise TypeError('DataArray.name or Dataset key must be either a '
-                        'string or NoneType')
+                        'string or None')

@@ -127,7 +127,7 @@ class TestDataset(TestCase):
         self.assertDatasetIdentical(expected, actual)
 
     def test_constructor_valid_keys(self):
-        te = (TypeError, 'string or NoneType')
+        te = (TypeError, 'string or None')
         ve = (ValueError, 'string must be length 1 or')
         for name, e in zip([0, (4, ), True, ''], [te, te, te, ve]):
             with self.assertRaisesRegexp(*e):
@@ -1246,7 +1246,7 @@ class TestDataset(TestCase):
         with self.assertRaises(NotImplementedError):
             data1[{'x': 0}] = 0
 
-        te = (TypeError, 'string or NoneType')
+        te = (TypeError, 'string or None')
         ve = (ValueError, 'string must be length 1 or')
         for name, e in zip([0, (4, ), True, ''], [te, te, te, ve]):
             with self.assertRaisesRegexp(*e):

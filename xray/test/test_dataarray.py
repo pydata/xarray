@@ -67,7 +67,7 @@ class TestDataArray(TestCase):
         expected = DataArray(Coordinate('y', [3]))
         self.assertDataArrayIdentical(actual, expected)
 
-        te = (TypeError, 'string or NoneType')
+        te = (TypeError, 'string or None')
         ve = (ValueError, 'string must be length 1 or')
         for name, e in zip([0, (4, ), True, ''], [te, te, te, ve]):
             with self.assertRaisesRegexp(*e):

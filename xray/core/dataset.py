@@ -350,6 +350,10 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject):
                           'coordinates with these names already exist as '
                           'variables: %s')
 
+        # validate variable names and keys
+        for name in new_variables:
+            validate_dataarray_name(name)
+
         variables.update(new_variables)
         dims = _calculate_dims(variables)
         # all checks are complete: it's safe to update
@@ -370,12 +374,6 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject):
                                                            compat=compat)
 
         new_coord_names.update(coords)
-
-        # validate variable names and keys
-        for name in new_variables:
-            validate_dataarray_name(name)
-        for name in new_coord_names:
-            validate_dataarray_name(name)
 
         self._update_vars_and_coords(new_variables, new_coord_names,
                                      needs_copy=False, check_coord_names=False)
