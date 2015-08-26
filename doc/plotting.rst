@@ -250,8 +250,11 @@ washing out the plot.
     @savefig plotting_robust1.png width=4in
     air_outliers.plot()
 
-To remedy this use the parameter ``robust=True`` to use robust percentiles
-for computing the color limits.
+This plot shows that we have outliers. The easy way to visualize
+the data without the outliers is to pass the parameter
+``robust=True``.
+This will use the 2nd and 98th
+percentiles of the data to compute the color limits.
 
 .. ipython:: python
 
