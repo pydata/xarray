@@ -261,6 +261,9 @@ percentiles of the data to compute the color limits.
     @savefig plotting_robust2.png width=4in
     air_outliers.plot(robust=True)
 
+Observe that the ranges of the color bar have changed. The arrows on the
+color bar indicate
+that the colors include data points outside the bounds.
 
 Discrete Colormaps
 ~~~~~~~~~~~~~~~~~~
