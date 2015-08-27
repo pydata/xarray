@@ -17,7 +17,7 @@ from .common import AbstractArray, BaseDataObject
 from .coordinates import DataArrayCoordinates, Indexes
 from .dataset import Dataset
 from .pycompat import iteritems, basestring, OrderedDict, zip
-from .utils import FrozenOrderedDict
+from .utils import FrozenOrderedDict, validate_dataarray_name
 from .variable import as_variable, _as_compatible_data, Coordinate
 from .formatting import format_item
 
@@ -180,6 +180,8 @@ class DataArray(AbstractArray, BaseDataObject):
         if encoding is None:
             encoding = getattr(data, 'encoding', None)
 
+        validate_dataarray_name(name)
+
         data = _as_compatible_data(data)
         coords, dims = _infer_coords_and_dims(data.shape, coords, dims)
         dataset = Dataset(coords=coords)
@@ -265,6 +267,8 @@ class DataArray(AbstractArray, BaseDataObject):
             name = dim
             dim = None
 
+        validate_dataarray_name(name)
+
         if dim is not None:
             if name is not None:
                 raise TypeError('cannot supply both dim and name arguments')
@@ -289,6 +293,7 @@ class DataArray(AbstractArray, BaseDataObject):
 
     @name.setter
     def name(self, value):
+        validate_dataarray_name(value)
         with self._set_new_dataset() as ds:
             ds.rename({self.name: value}, inplace=True)
         self._name = value
