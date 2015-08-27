@@ -639,8 +639,6 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject):
             raise NotImplementedError('cannot yet use a dictionary as a key '
                                       'to set Dataset values')
 
-        validate_dataarray_name(key)
-
         self.update({key: value})
 
     def __delitem__(self, key):
