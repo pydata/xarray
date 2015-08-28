@@ -542,7 +542,6 @@ class TestImshow(Common2dMixin, PlotTestCase):
         self.assertTrue(isinstance(artist, mpl.image.AxesImage))
 
 
-@unittest.skip
 class TestFacetGrid(PlotTestCase):
 
     def setUp(self):
@@ -655,3 +654,7 @@ class TestFacetGrid(PlotTestCase):
                 pass
         largest = max(abs(x) for x in numbers)
         self.assertLess(largest, 21)
+
+    @unittest.skip
+    def test_can_set_vmin_vmax(self):
+        raise NotImplementedError

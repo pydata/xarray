@@ -194,18 +194,15 @@ class FacetGrid(object):
         return self.axes.flat
 
     def map_dataarray(self, plotfunc, *args, **kwargs):
-        """Apply a plotting function to each facet's subset of the data.
+        """Apply a plotting function to a 2d facet's subset of the data.
 
-        Differs from Seaborn style - requires the plotfunc to know how to plot a
-        dataarray.
-        
-        For now I'm going to write this assuming plotfunc is an xray 2d
-        plotting function
+        This is more convenient and less general than the map method.
 
         Parameters
         ----------
         plotfunc : callable
-            A plotting function with the first argument an xray dataarray 
+            A plotting function with the same signature as a 2d xray
+            plotting method such as `xray.plot.imshow`
         args :
             positional arguments to plotfunc
         kwargs :
@@ -213,34 +210,68 @@ class FacetGrid(object):
 
         Returns
         -------
-        self : object
-            Returns self.
+        self : FacetGrid object
+            the same FacetGrid on which the method was called
 
         """
         import matplotlib.pyplot as plt
 
-        # defaults should be consistent with the 2d plot functions, except for
-        # add_colorbar and add_labels
-        defaults = {
-                'plotfunc': plotfunc,
-                'add_colorbar': False,
-                'add_labels': False,
+        # These should be consistent with xray.plot._plot2d
+        cmap_kwargs = {'plot_data': self.darray.values,
+                'vmin': None,
+                'vmax': None,
+                'cmap': None,
+                'center': None,
                 'robust': False,
+                'extend': None,
+                'levels': 7 if 'contour' in plotfunc.__name__ else None, # MPL default
+                'filled': plotfunc.__name__ != 'contour',
                 }
 
-        # Keyword args will override the defaults
+        # Allow kwargs to override these defaults
+        for param in kwargs:
+            if param in cmap_kwargs:
+                cmap_kwargs[param] = kwargs[param]
+
+        # colormap inference has to happen here since all the data in self.darray
+        # is required to make the right choice
+        cmap_params = _determine_cmap_params(**cmap_kwargs)
+
+        if 'contour' in plotfunc.__name__:
+            # extend is a keyword argument only for contour and contourf, but
+            # passing it to the colorbar is sufficient for imshow and
+            # pcolormesh
+            kwargs['extend'] = cmap_params['extend']
+            kwargs['levels'] = cmap_params['levels']
+
+        '''
+            return dict(vmin=vmin, vmax=vmax, cmap=cmap, extend=extend,
+                        levels=levels, cnorm=cnorm)
+        def _determine_cmap_params(plot_data, vmin=None, vmax=None, cmap=None,
+                                   center=None, robust=False, extend=None,
+                                   levels=None, filled=True, cnorm=None):
+        '''
+
+        defaults = {
+                'add_colorbar': False,
+                'add_labels': False,
+                'norm': cmap_params.pop('cnorm'),
+                }
+
+        # Order is important
+        defaults.update(cmap_params)
         defaults.update(kwargs)
 
-        # Color limit calculations
-        robust = defaults['robust']
-        calc_data = self.darray.values
-        calc_data = calc_data[~pd.isnull(calc_data)]
+        ## Color limit calculations
+        #robust = defaults['robust']
+        #calc_data = self.darray.values
+        #calc_data = calc_data[~pd.isnull(calc_data)]
 
-        # TODO - use percentile as global variable from other module
-        vmin = np.percentile(calc_data, 2) if robust else calc_data.min()
-        vmax = np.percentile(calc_data, 98) if robust else calc_data.max()
-        defaults.setdefault('vmin', vmin)
-        defaults.setdefault('vmax', vmax)
+        ## TODO - use percentile as global variable from other module
+        #vmin = np.percentile(calc_data, 2) if robust else calc_data.min()
+        #vmax = np.percentile(calc_data, 98) if robust else calc_data.max()
+        #defaults.setdefault('vmin', vmin)
+        #defaults.setdefault('vmax', vmax)
 
         for d, ax in zip(self.name_dicts.flat, self.axes.flat):
             subset = self.darray.loc[d]
@@ -255,8 +286,8 @@ class FacetGrid(object):
                 ax=bottomleft, *args, **defaults)
         bottomleft.set_title(oldtitle)
 
-        # The colorbar
-        if defaults['add_colorbar']:
+        # colorbar
+        if kwargs.get('add_colorbar', True):
             cbar = plt.colorbar(mappable, ax=self.axes.ravel().tolist(),
                     extend=cmap_params['extend'])
             cbar.set_label(self.darray.name, rotation=270,
@@ -289,7 +320,7 @@ class FacetGrid(object):
 
         if self._single_group:
             for d, ax in zip(self.name_dicts.flat, self.axes.flat):
-                coord, value = d.items()[0]
+                coord, value = list(d.items()).pop()
                 prettyvalue = format_item(value)
                 title = template.format(coord=coord, value=prettyvalue)
                 title = title[:maxchar]
