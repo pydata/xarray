@@ -574,19 +574,20 @@ class TestFacetGrid(PlotTestCase):
         self.assertLess(maxlen, 50)
 
     def test_colorbar(self):
+        vmin = self.darray.values.min()
+        vmax = self.darray.values.max()
+        expected = np.array((vmin, vmax))
+
         self.g.map_dataarray(xplt.imshow, 'x', 'y')
-        images = plt.gcf().findobj(mpl.image.AxesImage)
 
-        # They should all have the same color limits
-        clims = [ax.get_clim() for ax in images]
-        # Can't be Numpy arrays
-        clims = [(float(a), float(b)) for a, b in clims]
-        clims = set(clims)
-        self.assertEqual(1, len(clims))
+        for image in plt.gcf().findobj(mpl.image.AxesImage):
+            clim = np.array(image.get_clim())
+            self.assertTrue(np.allclose(expected, clim))
 
-        # One colorbar
+        # There's only one colorbar
         cbar = plt.gcf().findobj(mpl.collections.QuadMesh)
         self.assertEqual(1, len(cbar))
+        
 
     def test_row_and_col_shape(self):
         a = np.arange(10 * 15 * 3 * 2).reshape(10, 15, 3, 2)
@@ -655,6 +656,11 @@ class TestFacetGrid(PlotTestCase):
         largest = max(abs(x) for x in numbers)
         self.assertLess(largest, 21)
 
-    @unittest.skip
     def test_can_set_vmin_vmax(self):
-        raise NotImplementedError
+        vmin, vmax = 50.0, 1000.0
+        expected = np.array((vmin, vmax))
+        self.g.map_dataarray(xplt.imshow, 'x', 'y', vmin=vmin, vmax=vmax)
+
+        for image in plt.gcf().findobj(mpl.image.AxesImage):
+            clim = np.array(image.get_clim())
+            self.assertTrue(np.allclose(expected, clim))
