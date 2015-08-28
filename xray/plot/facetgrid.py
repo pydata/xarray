@@ -1,3 +1,5 @@
+from __future__ import division
+
 import warnings
 import itertools
 
@@ -163,22 +165,22 @@ class FacetGrid(object):
         else:
             col_names = list(darray[col].values)
 
-        # Build a 2d array of dictionaries mapping names to coordinates.
+        # TODO-
+        # Refactor to have two data structures 
+        # name_dicts - a list of dicts corresponding to the flattened axes arrays
+        # allows iterating through without hitting the sentinel value
+        # name_array - an array of dicts corresponding to axes
 
         if self._single_group:
             full = [{self._single_group: x} for x in
                       self.darray[self._single_group].values]
-            empty = [None for x in range(self.nfacet - len(full))]
-            # We could potentially used a masked array instead of None as
-            # the sentinel value here
-            #raise ValueError
+            empty = [None for x in range(self._nrow * self._ncol - len(full))]
             name_dicts = full + empty
         else:
             rowcols = itertools.product(row_names, col_names)
             name_dicts = [{row: r, col: c} for r, c in rowcols]
 
         self.name_dicts = np.array(name_dicts).reshape(self._nrow, self._ncol)
-
 
         self.row_names = row_names
         self.col_names = col_names
@@ -244,14 +246,6 @@ class FacetGrid(object):
             kwargs['extend'] = cmap_params['extend']
             kwargs['levels'] = cmap_params['levels']
 
-        '''
-            return dict(vmin=vmin, vmax=vmax, cmap=cmap, extend=extend,
-                        levels=levels, cnorm=cnorm)
-        def _determine_cmap_params(plot_data, vmin=None, vmax=None, cmap=None,
-                                   center=None, robust=False, extend=None,
-                                   levels=None, filled=True, cnorm=None):
-        '''
-
         defaults = {
                 'add_colorbar': False,
                 'add_labels': False,
@@ -274,8 +268,10 @@ class FacetGrid(object):
         #defaults.setdefault('vmax', vmax)
 
         for d, ax in zip(self.name_dicts.flat, self.axes.flat):
-            subset = self.darray.loc[d]
-            plotfunc(subset, ax=ax, *args, **defaults)
+            # Handle the sentinel value
+            if d is not None:
+                subset = self.darray.loc[d]
+                plotfunc(subset, ax=ax, *args, **defaults)
 
         # Add the labels to the bottom left plot
         # => plotting this one twice
@@ -320,13 +316,15 @@ class FacetGrid(object):
 
         if self._single_group:
             for d, ax in zip(self.name_dicts.flat, self.axes.flat):
-                coord, value = list(d.items()).pop()
-                prettyvalue = format_item(value)
-                title = template.format(coord=coord, value=prettyvalue)
-                title = title[:maxchar]
-                ax.set_title(title)
+                # TODO Remove check for sentinel value
+                if d is not None:
+                    coord, value = list(d.items()).pop()
+                    prettyvalue = format_item(value)
+                    title = template.format(coord=coord, value=prettyvalue)
+                    title = title[:maxchar]
+                    ax.set_title(title)
         else:
-            # The row titles on the right edge of the grid
+            # The row titles on the left edge of the grid
             for ax, row_name in zip(self.axes[:, -1], self.row_names):
                 title = template.format(coord=self.row, value=format_item(row_name))
                 title = title[:maxchar]

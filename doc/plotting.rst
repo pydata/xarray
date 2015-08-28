@@ -197,7 +197,17 @@ Faceted plotting supports other arguments common to xray 2d plots.
     @savefig plot_facet_robust.png height=12in 
     g.map_dataarray(xray.plot.contourf, robust=True, cmap='viridis')
 
-TODO - Make sure robust arg is working.
+Pass in some optional parameters.
+
+.. ipython:: python
+
+    t5 = t.isel(time=slice(0, 5))
+    g = xray.plot.FacetGrid(t5, col='time', col_wrap=2)
+    
+    @savefig plot_contour_color.png height=12in 
+    g.map_dataarray(xray.plot.contour, color='k')
+
+TODO - reconcile this behavior with color kwargs - Github 537.
 
 More
 ~~~~~~~~~~~~~~

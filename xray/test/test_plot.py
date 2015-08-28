@@ -588,6 +588,12 @@ class TestFacetGrid(PlotTestCase):
         cbar = plt.gcf().findobj(mpl.collections.QuadMesh)
         self.assertEqual(1, len(cbar))
         
+    def test_empty_cell(self):
+        g = xplt.FacetGrid(self.darray, col='z', col_wrap=2)
+        g.map_dataarray(xplt.imshow, 'x', 'y')
+        
+        bottomright = g.axes[-1, -1]
+        self.assertFalse(bottomright.has_data())
 
     def test_row_and_col_shape(self):
         a = np.arange(10 * 15 * 3 * 2).reshape(10, 15, 3, 2)
