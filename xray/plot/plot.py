@@ -216,9 +216,20 @@ def _determine_cmap_params(plot_data, vmin=None, vmax=None, cmap=None,
 
     Adapted from Seaborn:
     https://github.com/mwaskom/seaborn/blob/v0.6/seaborn/matrix.py#L158
+
+    Parameters
+    ==========
+    plot_data: Numpy array
+        Doesn't handle xray objects
+
+    Returns
+    =======
+    cmap_params : dict
+        Use depends on the type of the plotting function
     """
     import matplotlib as mpl
 
+    #calc_data = np.ravel(plot_data[~pd.isnull(plot_data)])
     calc_data = plot_data[~pd.isnull(plot_data)]
     if vmin is None:
         vmin = np.percentile(calc_data, 2) if robust else calc_data.min()
@@ -416,8 +427,8 @@ def _plot2d(plotfunc):
 
     @functools.wraps(plotfunc)
     def newplotfunc(darray, x=None, y=None, ax=None, xincrease=None, yincrease=None,
-                    add_colorbar=True, add_labels=True, vmin=None, vmax=None, cmap=None,
-                    center=None, robust=False, extend=None, levels=None,
+                    add_colorbar=True, add_labels=True, vmin=None, vmax=None,
+                    cmap=None, center=None, robust=False, extend=None, levels=None,
                     **kwargs):
         # All 2d plots in xray share this function signature.
         # Method signature below should be consistent.
@@ -437,12 +448,12 @@ def _plot2d(plotfunc):
         if x and x not in darray:
             raise KeyError('{0} is not a dimension of this DataArray. Use '
                            '{1} or {2} for x'
-                           .format(x, *darray.dims))
+                           .format(x, *dims))
 
         if y and y not in darray:
             raise KeyError('{0} is not a dimension of this DataArray. Use '
                            '{1} or {2} for y'
-                           .format(y, *darray.dims))
+                           .format(y, *dims))
 
         # Get label names
         if x and y:
@@ -459,7 +470,7 @@ def _plot2d(plotfunc):
         else:
             ylab, xlab = dims
 
-        # some plotting functions only know how to handle ndarrays
+        # better to pass the ndarrays directly to plotting functions
         xval = darray[xlab].values
         yval = darray[ylab].values
         zval = darray.to_masked_array(copy=False)
@@ -473,10 +484,17 @@ def _plot2d(plotfunc):
         if 'contour' in plotfunc.__name__ and levels is None:
             levels = 7  # this is the matplotlib default
 
-        filled = plotfunc.__name__ != 'contour'
-
-        cmap_params = _determine_cmap_params(zval.data, vmin, vmax, cmap, center,
-                                             robust, extend, levels, filled)
+        cmap_kwargs = {'plot_data': zval.data,
+                'vmin': vmin,
+                'vmax': vmax,
+                'cmap': cmap,
+                'center': center,
+                'robust': robust,
+                'extend': extend,
+                'levels': levels,
+                'filled': plotfunc.__name__ != 'contour',
+                }
+        cmap_params = _determine_cmap_params(**cmap_kwargs)
 
         if 'contour' in plotfunc.__name__:
             # extend is a keyword argument only for contour and contourf, but

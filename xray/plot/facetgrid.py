@@ -2,6 +2,7 @@ import warnings
 import itertools
 
 import numpy as np
+import pandas as pd
 
 from ..core.formatting import format_item
 from .plot import _determine_cmap_params
@@ -192,23 +193,23 @@ class FacetGrid(object):
     def __iter__(self):
         return self.axes.flat
 
-    def map_dataarray(self, func, *args, **kwargs):
+    def map_dataarray(self, plotfunc, *args, **kwargs):
         """Apply a plotting function to each facet's subset of the data.
 
-        Differs from Seaborn style - requires the func to know how to plot a
+        Differs from Seaborn style - requires the plotfunc to know how to plot a
         dataarray.
         
-        For now I'm going to write this assuming func is an xray 2d
+        For now I'm going to write this assuming plotfunc is an xray 2d
         plotting function
 
         Parameters
         ----------
-        func : callable
+        plotfunc : callable
             A plotting function with the first argument an xray dataarray 
         args :
-            positional arguments to func
+            positional arguments to plotfunc
         kwargs :
-            keyword arguments to func
+            keyword arguments to plotfunc
 
         Returns
         -------
@@ -218,33 +219,48 @@ class FacetGrid(object):
         """
         import matplotlib.pyplot as plt
 
-        defaults = dict(add_colorbar=False,
-                add_labels=False,
-                vmin=float(self.darray.min()),
-                vmax=float(self.darray.max()),
-                )
+        # defaults should be consistent with the 2d plot functions, except for
+        # add_colorbar and add_labels
+        defaults = {
+                'plotfunc': plotfunc,
+                'add_colorbar': False,
+                'add_labels': False,
+                'robust': False,
+                }
 
+        # Keyword args will override the defaults
         defaults.update(kwargs)
+
+        # Color limit calculations
+        robust = defaults['robust']
+        calc_data = self.darray.values
+        calc_data = calc_data[~pd.isnull(calc_data)]
+
+        # TODO - use percentile as global variable from other module
+        vmin = np.percentile(calc_data, 2) if robust else calc_data.min()
+        vmax = np.percentile(calc_data, 98) if robust else calc_data.max()
+        defaults.setdefault('vmin', vmin)
+        defaults.setdefault('vmax', vmax)
 
         for d, ax in zip(self.name_dicts.flat, self.axes.flat):
             subset = self.darray.loc[d]
-            func(subset, ax=ax, *args, **defaults)
+            plotfunc(subset, ax=ax, *args, **defaults)
 
         # Add the labels to the bottom left plot
         # => plotting this one twice
-        # This would be easier to implement if there were separate args to
-        # add titles and to add axis labels
         defaults['add_labels'] = True
         bottomleft = self.axes[-1, 0]
         oldtitle = bottomleft.get_title()
-        mappable = func(self.darray.loc[self.name_dicts[-1, 0]],
+        mappable = plotfunc(self.darray.loc[self.name_dicts[-1, 0]],
                 ax=bottomleft, *args, **defaults)
         bottomleft.set_title(oldtitle)
 
         # The colorbar
-        cbar = plt.colorbar(mappable, ax=self.axes.ravel().tolist())
-        cbar.set_label(self.darray.name, rotation=270,
-                verticalalignment='bottom')
+        if defaults['add_colorbar']:
+            cbar = plt.colorbar(mappable, ax=self.axes.ravel().tolist(),
+                    extend=cmap_params['extend'])
+            cbar.set_label(self.darray.name, rotation=270,
+                    verticalalignment='bottom')
 
         return self
 
