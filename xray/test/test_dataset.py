@@ -2115,3 +2115,13 @@ class TestDataset(TestCase):
         ds = create_test_data(seed=1)
         with self.assertRaisesRegexp(ValueError, '\'label\' argument has to'):
             ds.diff('dim2', label='raise_me')
+
+    def test_real_and_imag(self):
+        attrs = {'foo': 'bar'}
+        ds = Dataset({'x': ((), 1 + 2j, attrs)}, attrs=attrs)
+
+        expected_re = Dataset({'x': ((), 1, attrs)}, attrs=attrs)
+        self.assertDatasetIdentical(ds.real, expected_re)
+
+        expected_im = Dataset({'x': ((), 2, attrs)}, attrs=attrs)
+        self.assertDatasetIdentical(ds.imag, expected_im)

@@ -1855,12 +1855,14 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject):
         return obj
 
     @staticmethod
-    def _unary_op(f):
+    def _unary_op(f, keep_attrs=False):
         @functools.wraps(f)
         def func(self, *args, **kwargs):
             ds = self.coords.to_dataset()
             for k in self.data_vars:
                 ds._variables[k] = f(self._variables[k], *args, **kwargs)
+            if keep_attrs:
+                ds._attrs = self._attrs
             return ds
         return func
 
@@ -2018,6 +2020,14 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject):
             return difference.diff(dim, n - 1)
         else:
             return difference
+
+    @property
+    def real(self):
+        return self._unary_op(lambda x: x.real, keep_attrs=True)(self)
+
+    @property
+    def imag(self):
+        return self._unary_op(lambda x: x.imag, keep_attrs=True)(self)
 
 
 ops.inject_all_ops_and_reduce_methods(Dataset, array_only=False)
