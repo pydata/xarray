@@ -382,6 +382,12 @@ class VariableSubclassTestCases(object):
         expected_abs = self.cls('x', np.sqrt(2 * np.arange(3) ** 2))
         self.assertVariableAllClose(abs(v), expected_abs)
 
+    def test_aggregate_complex(self):
+        # should skip NaNs
+        v = self.cls('x', [1, 2j, np.nan])
+        expected = Variable((), 0.5 + 1j)
+        self.assertVariableAllClose(v.mean(), expected)
+
 
 class TestVariable(TestCase, VariableSubclassTestCases):
     cls = staticmethod(Variable)
