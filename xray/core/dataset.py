@@ -880,7 +880,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject):
                 chunks.update(new_chunks)
         return Frozen(SortedKeysDict(chunks))
 
-    def chunk(self, chunks=None, lock=False):
+    def chunk(self, chunks=None, name_prefix='xray-', token=None, lock=False):
         """Coerce all arrays in this dataset into dask arrays with the given
         chunks.
 
@@ -896,6 +896,10 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject):
         chunks : int or dict, optional
             Chunk sizes along each dimension, e.g., ``5`` or
             ``{'x': 5, 'y': 5}``.
+        name_prefix : str, optional
+            Prefix for the name of any new dask arrays.
+        token : str, optional
+            Token uniquely identifying this dataset.
         lock : optional
             Passed on to :py:func:`dask.array.from_array`, if the array is not
             already as dask array.
@@ -904,6 +908,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject):
         -------
         chunked : xray.Dataset
         """
+        from dask.base import tokenize
+
         if isinstance(chunks, Number):
             chunks = dict.fromkeys(self.dims, chunks)
 
@@ -923,7 +929,9 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject):
             if not chunks:
                 chunks = None
             if var.ndim > 0:
-                return var.chunk(chunks, name=name, lock=lock)
+                token2 = tokenize(name, token if token else var._data)
+                name2 = '%s%s-%s' % (name_prefix, name, token2)
+                return var.chunk(chunks, name=name2, lock=lock)
             else:
                 return var
 
