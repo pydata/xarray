@@ -577,6 +577,9 @@ class TestFacetGrid(PlotTestCase):
         maxlen = max(len(txt) for txt in alltxt)
         self.assertLess(maxlen, 50)
 
+        t0 = g.axes[0, 0].get_title()
+        self.assertTrue(t0.endswith('...'))
+
     def test_colorbar(self):
         vmin = self.darray.values.min()
         vmax = self.darray.values.max()

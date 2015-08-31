@@ -11,91 +11,9 @@ from ..core.formatting import format_item
 from .plot import _determine_cmap_params
 
 
-class FacetGrid_seaborn(object):
-    '''
-    Copied from Seaborn
-    '''
-
-    def __init__(self, data, row=None, col=None, col_wrap=None,
-                 margin_titles=False, xlim=None, ylim=None, subplot_kws=None,
-                 gridspec_kws=None):
-
-        import matplotlib as mpl
-        import matplotlib.pyplot as plt
-
-        if row:
-            row_names = data[row].values
-            nrow = len(row_names)
-        else:
-            nrow = 1
-
-        if col:
-            col_names = data[col].values
-            ncol = len(col_names)
-        else:
-            ncol = 1
-
-        # Compute the grid shape
-        self._n_facets = ncol * nrow
-
-        self._col_wrap = col_wrap
-        if col_wrap is not None:
-            if row is not None:
-                err = "Cannot use `row` and `col_wrap` together."
-                raise ValueError(err)
-            ncol = col_wrap
-            nrow = int(np.ceil(len(data[col].unique()) / col_wrap))
-        self._ncol = ncol
-        self._nrow = nrow
-
-        # Validate some inputs
-        if col_wrap is not None:
-            margin_titles = False
-
-        # Initialize the subplot grid
-        if col_wrap is None:
-            kwargs = dict(figsize=figsize, squeeze=False,
-                          sharex=True, sharey=True,
-                          )
-
-            fig, axes = plt.subplots(nrow, ncol, **kwargs)
-            self.axes = axes
-
-        else:
-            # If wrapping the col variable we need to make the grid ourselves
-            n_axes = len(col_names)
-            fig = plt.figure(figsize=figsize)
-            axes = np.empty(n_axes, object)
-            axes[0] = fig.add_subplot(nrow, ncol, 1, **subplot_kws)
-
-            for i in range(1, n_axes):
-                axes[i] = fig.add_subplot(nrow, ncol, i + 1, **subplot_kws)
-            self.axes = axes
-
-        # Set up the class attributes
-        # ---------------------------
-
-        # First the public API
-        self.data = data
-        self.fig = fig
-        self.axes = axes
-
-        #self.row_names = row_names
-        #self.col_names = col_names
-
-        # Next the private variables
-        self._nrow = nrow
-        self._row_var = row
-        self._ncol = ncol
-        self._col_var = col
-
-        self._margin_titles = margin_titles
-        self._col_wrap = col_wrap
-        self._legend_out = legend_out
-        self._legend = None
-        self._legend_data = {}
-        self._x_var = None
-        self._y_var = None
+# Using this over mpl.rcParams["axes.labelsize"] since there are many of
+# these strings, and they can get long
+_TITLESIZE = 'small'
 
 
 def _nicetitle(coord, value, maxchar, template):
@@ -104,8 +22,11 @@ def _nicetitle(coord, value, maxchar, template):
     '''
     prettyvalue = format_item(value)
     title = template.format(coord=coord, value=prettyvalue)
-    # TODO - may want to append '...' to show this happened
-    return title[:maxchar]
+
+    if len(title) > maxchar:
+        title = title[:(maxchar - 3)] + '...'
+
+    return title
 
 
 class FacetGrid(object):
@@ -114,43 +35,37 @@ class FacetGrid(object):
     '''
 
     def __init__(self, darray, col=None, row=None, col_wrap=None):
-        import matplotlib.pyplot as plt
-        self.darray = darray
-        self.row = row
-        self.col = col
-        self.col_wrap = col_wrap
 
-        # _single_group is the grouping variable, if there is only one
+        import matplotlib.pyplot as plt
+
+        # Handle corner case of nonunique coordinates
+        rep_col = col is not None and not darray[col].to_index().is_unique
+        rep_row = row is not None and not darray[row].to_index().is_unique
+        if rep_col or rep_row:
+            raise ValueError('Coordinates used for faceting cannot '
+                             'contain repeated (nonunique) values.')
+
+        # self._single_group is the grouping variable, if there is exactly one
         if col and row:
             self._single_group = False
             self._nrow = len(darray[row])
             self._ncol = len(darray[col])
             self.nfacet = self._nrow * self._ncol
-            self._margin_titles = True
             if col_wrap is not None:
-                warnings.warn("Can't use col_wrap when both col and row are passed")
+                warnings.warn('Ignoring col_wrap since both col and row '
+                              'were passed')
         elif row and not col:
             self._single_group = row
-            self._margin_titles = False
         elif not row and col:
             self._single_group = col
-            self._margin_titles = False
         else:
             raise ValueError('Pass a coordinate name as an argument for row or col')
-
-        # Relying on short circuit behavior
-        # Not sure when nonunique coordinates are a problem
-        rep_col = col is not None and not self.darray[col].to_index().is_unique
-        rep_row = row is not None and not self.darray[row].to_index().is_unique
-        if rep_col or rep_row:
-            raise ValueError('Coordinates used for faceting cannot '
-                             'contain repeated (nonunique) values.')
 
         # Compute grid shape
         if self._single_group:
             self.nfacet = len(darray[self._single_group])
             if col:
-                # TODO - could add heuristic for nice shapes like 3x4
+                # idea - could add heuristic for nice shapes like 3x4
                 self._ncol = self.nfacet
             if row:
                 self._ncol = 1
@@ -166,25 +81,12 @@ class FacetGrid(object):
         self.axes.shape = self._nrow, self._ncol
 
         # Set up the lists of names for the row and column facet variables
-        if row is None:
-            row_names = []
-        else:
-            row_names = list(darray[row].values)
-
-        if col is None:
-            col_names = []
-        else:
-            col_names = list(darray[col].values)
-
-        # TODO-
-        # Refactor to have two data structures 
-        # name_dicts - a list of dicts corresponding to the flattened axes arrays
-        # allows iterating through without hitting the sentinel value
-        # name_array - an array of dicts corresponding to axes
+        col_names = list(darray[col].values) if col else []
+        row_names = list(darray[row].values) if row else []
 
         if self._single_group:
             full = [{self._single_group: x} for x in
-                      self.darray[self._single_group].values]
+                      darray[self._single_group].values]
             empty = [None for x in range(self._nrow * self._ncol - len(full))]
             name_dicts = full + empty
         else:
@@ -195,6 +97,11 @@ class FacetGrid(object):
 
         self.row_names = row_names
         self.col_names = col_names
+        self.darray = darray
+        self.row = row
+        self.col = col
+        self.col_wrap = col_wrap
+
 
         # Next the private variables
         self._row_var = row
@@ -284,14 +191,25 @@ class FacetGrid(object):
                 subset = self.darray.loc[d]
                 plotfunc(subset, ax=ax, *args, **defaults)
 
-        # Add the labels to the bottom left plot
-        # => plotting this one twice
-        defaults['add_labels'] = True
-        bottomleft = self.axes[-1, 0]
-        oldtitle = bottomleft.get_title()
-        mappable = plotfunc(self.darray.loc[self.name_dicts[-1, 0]],
-                ax=bottomleft, *args, **defaults)
-        bottomleft.set_title(oldtitle)
+        # Plot the last subset again to determine x and y values
+        try:
+            dummyfig = plt.figure()
+            dummyax = dummyfig.add_axes((0, 0, 0, 0))
+            defaults['add_labels'] = True
+
+            mappable = plotfunc(subset,
+                    ax=dummyax, *args, **defaults)
+
+            xlab, ylab = dummyax.get_xlabel(), dummyax.get_ylabel()
+            bottomleft = self.axes[-1, 0]
+            bottomleft.set_xlabel(xlab)
+            bottomleft.set_ylabel(ylab)
+            # Something to discuss- these labels could be centered on the
+            # whole figure instead of the bottom left axes
+            #self.fig.text(0.5, 0, xlab)
+            #self.fig.text(0, 0.5, ylab)
+        finally:
+            plt.close(dummyfig)
 
         # colorbar
         if kwargs.get('add_colorbar', True):
@@ -324,14 +242,13 @@ class FacetGrid(object):
         '''
         import matplotlib as mpl
 
-        kwargs.setdefault('size', 'small')
+        kwargs.setdefault('size', _TITLESIZE)
 
         nicetitle = functools.partial(_nicetitle, maxchar=maxchar,
                 template=template)
 
         if self._single_group:
             for d, ax in zip(self.name_dicts.flat, self.axes.flat):
-                # TODO Remove check for sentinel value
                 if d is not None:
                     coord, value = list(d.items()).pop()
                     title = nicetitle(coord, value, maxchar=maxchar)
