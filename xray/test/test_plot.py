@@ -554,6 +554,10 @@ class TestFacetGrid(PlotTestCase):
         for ax in self.g:
             self.assertTrue(ax.has_data())
 
+            # Font size should be small
+            fontsize = ax.title.get_size()
+            self.assertLessEqual(fontsize, 12)
+
     def test_names_appear_somewhere(self):
         self.darray.name = 'testvar'
         self.g.map_dataarray(xplt.contourf, 'x', 'y')

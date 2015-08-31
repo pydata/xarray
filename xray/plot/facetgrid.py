@@ -2,6 +2,7 @@ from __future__ import division
 
 import warnings
 import itertools
+import functools
 
 import numpy as np
 import pandas as pd
@@ -95,6 +96,16 @@ class FacetGrid_seaborn(object):
         self._legend_data = {}
         self._x_var = None
         self._y_var = None
+
+
+def _nicetitle(coord, value, maxchar, template):
+    '''
+    Put coord, value in template and truncate
+    '''
+    prettyvalue = format_item(value)
+    title = template.format(coord=coord, value=prettyvalue)
+    # TODO - may want to append '...' to show this happened
+    return title[:maxchar]
 
 
 class FacetGrid(object):
@@ -302,7 +313,8 @@ class FacetGrid(object):
             Template for plot titles
         maxchar : int
             Truncate titles at maxchar
-            # TODO - may want to append '...' to indicate
+        kwargs : keyword args
+            additional arguments to matplotlib.text
 
         Returns
         -------
@@ -312,30 +324,29 @@ class FacetGrid(object):
         '''
         import matplotlib as mpl
 
-        kwargs["size"] = kwargs.pop("size", mpl.rcParams["axes.labelsize"])
+        kwargs.setdefault('size', 'small')
+
+        nicetitle = functools.partial(_nicetitle, maxchar=maxchar,
+                template=template)
 
         if self._single_group:
             for d, ax in zip(self.name_dicts.flat, self.axes.flat):
                 # TODO Remove check for sentinel value
                 if d is not None:
                     coord, value = list(d.items()).pop()
-                    prettyvalue = format_item(value)
-                    title = template.format(coord=coord, value=prettyvalue)
-                    title = title[:maxchar]
-                    ax.set_title(title)
+                    title = nicetitle(coord, value, maxchar=maxchar)
+                    ax.set_title(title, **kwargs)
         else:
             # The row titles on the left edge of the grid
             for ax, row_name in zip(self.axes[:, -1], self.row_names):
-                title = template.format(coord=self.row, value=format_item(row_name))
-                title = title[:maxchar]
+                title = nicetitle(coord=self.row, value=row_name, maxchar=maxchar)
                 ax.annotate(title, xy=(1.02, .5), xycoords="axes fraction",
                             rotation=270, ha="left", va="center", **kwargs)
 
             # The column titles on the top row
             for ax, col_name in zip(self.axes[0, :], self.col_names):
-                title = template.format(coord=self.col, value=format_item(col_name))
-                title = title[:maxchar]
-                ax.set_title(title)
+                title = nicetitle(coord=self.col, value=col_name, maxchar=maxchar)
+                ax.set_title(title, **kwargs)
 
         return self
 
