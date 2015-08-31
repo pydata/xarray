@@ -32,6 +32,19 @@ def _nicetitle(coord, value, maxchar, template):
 class FacetGrid(object):
     '''
     Mostly copied from Seaborn
+
+    Attributes
+    ----------
+    axes : numpy object array
+        Contains axes in corresponding position, as returned from
+        plt.subplots
+    fig : matplotlib.Figure
+        containing figure
+    name_dicts : numpy object array
+        Contains dictionaries mapping coordinate names to values. None is
+        used as a sentinel value for axes which should remain empty, ie.
+        sometimes the bottom right
+
     '''
 
     def __init__(self, darray, col=None, row=None, col_wrap=None):
@@ -101,7 +114,6 @@ class FacetGrid(object):
         self.row = row
         self.col = col
         self.col_wrap = col_wrap
-
 
         # Next the private variables
         self._row_var = row
@@ -173,17 +185,6 @@ class FacetGrid(object):
         # Order is important
         defaults.update(cmap_params)
         defaults.update(kwargs)
-
-        ## Color limit calculations
-        #robust = defaults['robust']
-        #calc_data = self.darray.values
-        #calc_data = calc_data[~pd.isnull(calc_data)]
-
-        ## TODO - use percentile as global variable from other module
-        #vmin = np.percentile(calc_data, 2) if robust else calc_data.min()
-        #vmax = np.percentile(calc_data, 98) if robust else calc_data.max()
-        #defaults.setdefault('vmin', vmin)
-        #defaults.setdefault('vmax', vmax)
 
         for d, ax in zip(self.name_dicts.flat, self.axes.flat):
             # Handle the sentinel value
