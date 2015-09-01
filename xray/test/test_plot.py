@@ -408,6 +408,15 @@ class Common2dMixin:
         cmap_name = self.plotfunc(abs(self.darray)).get_cmap().name
         self.assertEqual('viridis', cmap_name)
 
+    def test_seaborn_palette_as_cmap(self):
+        try:
+            import seaborn
+            cmap_name = self.plotmethod(
+                    levels=2, cmap='husl').get_cmap().name
+            self.assertEqual('husl', cmap_name)
+        except ImportError:
+            pass
+
     def test_can_change_default_cmap(self):
         cmap_name = self.plotmethod(cmap='Blues').get_cmap().name
         self.assertEqual('Blues', cmap_name)
@@ -515,6 +524,28 @@ class TestContour(Common2dMixin, PlotTestCase):
 
     plotfunc = staticmethod(xplt.contour)
 
+    def test_colors(self):
+        # matplotlib cmap.colors gives an rgbA ndarray
+        # when seaborn is used, instead we get an rgb tuble
+        def _color_as_tuple(c):
+            return tuple(c[:3])
+        artist = self.plotmethod(colors='k')
+        self.assertEqual(
+                _color_as_tuple(artist.cmap.colors[0]),
+                (0.0,0.0,0.0))
+
+        artist = self.plotmethod(colors=['k','b'])
+        self.assertEqual(
+                _color_as_tuple(artist.cmap.colors[1]),
+                (0.0,0.0,1.0))
+
+    def test_cmap_and_color_both(self):
+        with self.assertRaises(ValueError):  
+            self.plotmethod(colors='k', cmap='RdBu')
+
+    def list_of_colors_in_cmap_deprecated(self):
+        with self.assertRaises(DeprecationError):
+            self.plotmethod(cmap=['k','b'])
 
 class TestPcolormesh(Common2dMixin, PlotTestCase):
 
@@ -554,6 +585,14 @@ class TestImshow(Common2dMixin, PlotTestCase):
     def test_primitive_artist_returned(self):
         artist = self.plotmethod()
         self.assertTrue(isinstance(artist, mpl.image.AxesImage))
+
+    def test_seaborn_palette_needs_levels(self):
+        try:
+            import seaborn
+            with self.assertRaises(ValueError):
+                self.plotmethod(cmap='husl')
+        except ImportError:
+            pass
 
 
 class TestFacetGrid(PlotTestCase):

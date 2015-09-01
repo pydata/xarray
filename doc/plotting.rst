@@ -238,6 +238,37 @@ example, consider the original data in Kelvins rather than Celsius:
 The Celsius data contain 0, so a diverging color map was used. The
 Kelvins do not have 0, so the default color map was used.
 
+Robust
+~~~~~~
+
+Outliers often have an extreme effect on the output of the plot.
+Here we add two bad data points. This affects the color scale,
+washing out the plot.
+
+.. ipython:: python
+
+    air_outliers = airtemps.air.isel(time=0).copy()
+    air_outliers[0, 0] = 100
+    air_outliers[-1, -1] = 400
+
+    @savefig plotting_robust1.png width=4in
+    air_outliers.plot()
+
+This plot shows that we have outliers. The easy way to visualize
+the data without the outliers is to pass the parameter
+``robust=True``.
+This will use the 2nd and 98th
+percentiles of the data to compute the color limits.
+
+.. ipython:: python
+
+    @savefig plotting_robust2.png width=4in
+    air_outliers.plot(robust=True)
+
+Observe that the ranges of the color bar have changed. The arrows on the
+color bar indicate
+that the colors include data points outside the bounds.
+
 Discrete Colormaps
 ~~~~~~~~~~~~~~~~~~
 
@@ -259,13 +290,25 @@ discrete colormap:
     @savefig plotting_listed_levels.png width=4in
     air2d.plot(levels=[0, 12, 18, 30])
 
-Finally, if you have `Seaborn <http://stanford.edu/~mwaskom/software/seaborn/>`_ installed, you can also specify a `seaborn` color palete or a list of colors as the ``cmap`` argument:
+You can also specify a list of discrete colors through the ``colors`` argument:
 
 .. ipython:: python
 
     flatui = ["#9b59b6", "#3498db", "#95a5a6", "#e74c3c", "#34495e", "#2ecc71"]
     @savefig plotting_custom_colors_levels.png width=4in
-    air2d.plot(levels=[0, 12, 18, 30], cmap=flatui)
+    air2d.plot(levels=[0, 12, 18, 30], colors=flatui)
+
+Finally, if you have `Seaborn <http://stanford.edu/~mwaskom/software/seaborn/>`_
+installed, you can also specify a `seaborn` color palette to the ``cmap``
+argument. Note that ``levels`` *must* be specified with seaborn color palettes
+if using ``imshow`` or ``pcolormesh`` (but not with ``contour`` or ``contourf``,
+since levels are chosen automatically).
+
+.. ipython:: python
+
+    @savefig plotting_seaborn_palette.png width=4in
+    air2d.plot(levels=10, cmap='husl')
+
 
 Faceting
 --------
