@@ -139,7 +139,9 @@ Computation
 :py:attr:`~Dataset.clip`
 :py:attr:`~Dataset.conj`
 :py:attr:`~Dataset.conjugate`
+:py:attr:`~Dataset.imag`
 :py:attr:`~Dataset.round`
+:py:attr:`~Dataset.real`
 :py:attr:`~Dataset.T`
 
 **Grouped operations**:
@@ -253,8 +255,10 @@ Computation
 :py:attr:`~DataArray.clip`
 :py:attr:`~DataArray.conj`
 :py:attr:`~DataArray.conjugate`
+:py:attr:`~DataArray.imag`
 :py:attr:`~DataArray.searchsorted`
 :py:attr:`~DataArray.round`
+:py:attr:`~DataArray.real`
 :py:attr:`~DataArray.T`
 
 **Grouped operations**:
