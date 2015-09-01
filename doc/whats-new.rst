@@ -9,6 +9,18 @@ What's New
     import xray
     np.random.seed(123456)
 
+v0.6.1
+------
+
+API Changes
+~~~~~~~~~~~
+
+- The handling of colormaps and discrete color lists for 2D plots in
+  :py:meth:`~xray.DataArray.plot` was changed to provide more compatibility
+  with matplotlib's `contour` and `contourf` functions (:issue:`538`).
+  Now discrete lists of colors should be specified using `colors` keyword,
+  rather than `cmap`. 
+
 v0.6.0 (21 August 2015)
 -----------------------
 
