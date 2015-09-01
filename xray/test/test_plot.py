@@ -43,6 +43,16 @@ def substring_in_axes(substring, ax):
     return False
 
 
+def easy_array(shape, start=0, stop=1):
+    '''
+    Make an array with desired shape using np.linspace
+
+    shape is a tuple like (2, 3)
+    '''
+    a = np.linspace(start, stop, num=np.prod(shape))
+    return a.reshape(shape)
+
+
 @requires_matplotlib
 class PlotTestCase(TestCase):
 
@@ -69,7 +79,7 @@ class PlotTestCase(TestCase):
 class TestPlot(PlotTestCase):
 
     def setUp(self):
-        self.darray = DataArray(np.random.randn(2, 3, 4))
+        self.darray = DataArray(np.arange(2*3*4).reshape(2, 3, 4))
 
     def test1d(self):
         self.darray[:, 0, 0].plot()
@@ -160,7 +170,7 @@ class TestPlot1D(PlotTestCase):
 class TestPlotHistogram(PlotTestCase):
 
     def setUp(self):
-        self.darray = DataArray(np.random.randn(2, 3, 4))
+        self.darray = DataArray(easy_array((2, 3, 4)))
 
     def test_3d_array(self):
         self.darray.plot.hist()
@@ -170,7 +180,7 @@ class TestPlotHistogram(PlotTestCase):
         self.assertEqual('', plt.gca().get_title())
 
     def test_title_uses_name(self):
-        self.darray.name = 'randompoints'
+        self.darray.name = 'testpoints'
         self.darray.plot.hist()
         self.assertIn(self.darray.name, plt.gca().get_title())
 
@@ -197,19 +207,20 @@ class TestPlotHistogram(PlotTestCase):
 
 @requires_matplotlib
 class TestDetermineCmapParams(TestCase):
+    def setUp(self):
+        self.data = np.linspace(0, 1, num=100)
+
     def test_robust(self):
-        data = np.random.RandomState(1).rand(100)
-        cmap_params = _determine_cmap_params(data, robust=True)
-        self.assertEqual(cmap_params['vmin'], np.percentile(data, 2))
-        self.assertEqual(cmap_params['vmax'], np.percentile(data, 98))
+        cmap_params = _determine_cmap_params(self.data, robust=True)
+        self.assertEqual(cmap_params['vmin'], np.percentile(self.data, 2))
+        self.assertEqual(cmap_params['vmax'], np.percentile(self.data, 98))
         self.assertEqual(cmap_params['cmap'].name, 'viridis')
         self.assertEqual(cmap_params['extend'], 'both')
         self.assertIsNone(cmap_params['levels'])
         self.assertIsNone(cmap_params['cnorm'])
 
     def test_center(self):
-        data = np.random.RandomState(2).rand(100)
-        cmap_params = _determine_cmap_params(data, center=0.5)
+        cmap_params = _determine_cmap_params(self.data, center=0.5)
         self.assertEqual(cmap_params['vmax'] - 0.5, 0.5 - cmap_params['vmin'])
         self.assertEqual(cmap_params['cmap'], 'RdBu_r')
         self.assertEqual(cmap_params['extend'], 'neither')
@@ -217,7 +228,7 @@ class TestDetermineCmapParams(TestCase):
         self.assertIsNone(cmap_params['cnorm'])
 
     def test_integer_levels(self):
-        data = 1 + np.random.RandomState(3).rand(100)
+        data = self.data + 1
         cmap_params = _determine_cmap_params(data, levels=5, vmin=0, vmax=5,
                                              cmap='Blues')
         self.assertEqual(cmap_params['vmin'], cmap_params['levels'][0])
@@ -233,7 +244,7 @@ class TestDetermineCmapParams(TestCase):
         self.assertEqual(cmap_params['extend'], 'max')
 
     def test_list_levels(self):
-        data = 1 + np.random.RandomState(3).rand(100)
+        data = self.data + 1
 
         orig_levels = [0, 1, 2, 3, 4, 5]
         # vmin and vmax should be ignored if levels are explicitly provided
@@ -337,8 +348,7 @@ class Common2dMixin:
     Should have the same name as the method.
     """
     def setUp(self):
-        rs = np.random.RandomState(123)
-        self.darray = DataArray(rs.randn(10, 15), dims=['y', 'x'])
+        self.darray = DataArray(easy_array((10, 15), start=-1), dims=['y', 'x'])
         self.plotmethod = getattr(self.darray.plot, self.plotfunc.__name__)
 
     def test_label_names(self):
@@ -351,12 +361,12 @@ class Common2dMixin:
             self.plotfunc(self.darray[0, :])
 
     def test_3d_raises_valueerror(self):
-        a = DataArray(np.random.randn(2, 3, 4))
+        a = DataArray(easy_array((2, 3, 4)))
         with self.assertRaisesRegexp(ValueError, r'[Dd]im'):
             self.plotfunc(a)
 
     def test_nonnumeric_index_raises_typeerror(self):
-        a = DataArray(np.random.randn(3, 2),
+        a = DataArray(easy_array((3, 2)),
                       coords=[['a', 'b', 'c'], ['d', 'e']])
         with self.assertRaisesRegexp(TypeError, r'[Pp]lot'):
             self.plotfunc(a)
@@ -430,13 +440,13 @@ class Common2dMixin:
             self.plotmethod('not_a_real_dim')
 
     def test_default_title(self):
-        a = DataArray(np.random.randn(4, 3, 2, 1), dims=['a', 'b', 'c', 'd'])
+        a = DataArray(easy_array((4, 3, 2, 1)), dims=['a', 'b', 'c', 'd'])
         self.plotfunc(a.isel(c=1))
         title = plt.gca().get_title()
         self.assertEqual('c = 1, d = 0', title)
 
     def test_default_title(self):
-        a = DataArray(np.random.randn(4, 3, 2), dims=['a', 'b', 'c'])
+        a = DataArray(easy_array((4, 3, 2)), dims=['a', 'b', 'c'])
         a.coords['d'] = 10
         self.plotfunc(a.isel(c=1))
         title = plt.gca().get_title()
@@ -455,7 +465,7 @@ class Common2dMixin:
             self.assertNotIn(string, alltxt)
 
     def test_facetgrid(self):
-        a = np.arange(10 * 15 * 3).reshape(10, 15, 3)
+        a = easy_array((10, 15, 3))
         d = DataArray(a, dims=['y', 'x', 'z'])
         g = xplt.FacetGrid(d, col='z')
         g.map_dataarray(self.plotfunc, 'x', 'y')
@@ -480,9 +490,13 @@ class TestContourf(Common2dMixin, PlotTestCase):
         artist = self.plotmethod()
         self.assertEqual(artist.extend, 'neither')
 
+        self.darray[0, 0] = -100
+        self.darray[-1, -1] = 100
         artist = self.plotmethod(robust=True)
         self.assertEqual(artist.extend, 'both')
 
+        self.darray[0, 0] = 0
+        self.darray[-1, -1] = 0
         artist = self.plotmethod(vmin=-0, vmax=10)
         self.assertEqual(artist.extend, 'min')
 

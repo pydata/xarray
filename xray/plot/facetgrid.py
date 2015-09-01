@@ -88,10 +88,10 @@ class FacetGrid(object):
             self._nrow = int(np.ceil(self.nfacet / self._ncol))
 
         self.fig, self.axes = plt.subplots(self._nrow, self._ncol,
-                sharex=True, sharey=True)
+                sharex=True, sharey=True, squeeze=False)
 
         # subplots flattens this array if one dimension
-        self.axes.shape = self._nrow, self._ncol
+        #self.axes.shape = self._nrow, self._ncol
 
         # Set up the lists of names for the row and column facet variables
         col_names = list(darray[col].values) if col else []
