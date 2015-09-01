@@ -1828,6 +1828,10 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject):
         # are constant, to enable consistent serialization to/from a dataframe,
         # even if some variables have different dimensionality.
 
+        if not dataframe.columns.is_unique:
+            raise ValueError(
+                'cannot convert DataFrame with non-unique columns')
+
         idx = dataframe.index
         obj = cls()
 

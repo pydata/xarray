@@ -26,6 +26,8 @@ Enhancements
 
 - Add :py:attr:`~xray.Dataset.real` and :py:attr:`~xray.Dataset.imag`
   attributes to Dataset and DataArray (:issue:`553`).
+- More informative error message with :py:meth:`~xray.Dataset.from_dataframe`
+  if the frame has duplicate columns.
 
 Bug fixes
 ~~~~~~~~~

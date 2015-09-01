@@ -1546,6 +1546,12 @@ class TestDataset(TestCase):
         expected = pd.DataFrame([[]], index=idx)
         assert expected.equals(actual), (expected, actual)
 
+        # regression test for GH449
+        df = pd.DataFrame(np.zeros((2, 2)))
+        df.columns = ['foo', 'foo']
+        with self.assertRaisesRegexp(ValueError, 'non-unique columns'):
+            Dataset.from_dataframe(df)
+
     def test_pickle(self):
         data = create_test_data()
         roundtripped = pickle.loads(pickle.dumps(data))
