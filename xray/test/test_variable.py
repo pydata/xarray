@@ -371,6 +371,23 @@ class VariableSubclassTestCases(object):
                                   source_ndarray(w.values))
         self.assertVariableIdentical(v, copy(v))
 
+    def test_real_and_imag(self):
+        v = self.cls('x', np.arange(3) - 1j * np.arange(3), {'foo': 'bar'})
+        expected_re = self.cls('x', np.arange(3), {'foo': 'bar'})
+        self.assertVariableIdentical(v.real, expected_re)
+
+        expected_im = self.cls('x', -np.arange(3), {'foo': 'bar'})
+        self.assertVariableIdentical(v.imag, expected_im)
+
+        expected_abs = self.cls('x', np.sqrt(2 * np.arange(3) ** 2))
+        self.assertVariableAllClose(abs(v), expected_abs)
+
+    def test_aggregate_complex(self):
+        # should skip NaNs
+        v = self.cls('x', [1, 2j, np.nan])
+        expected = Variable((), 0.5 + 1j)
+        self.assertVariableAllClose(v.mean(), expected)
+
 
 class TestVariable(TestCase, VariableSubclassTestCases):
     cls = staticmethod(Variable)

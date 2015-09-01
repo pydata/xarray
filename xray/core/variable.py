@@ -751,6 +751,14 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
         except (TypeError, AttributeError):
             return False
 
+    @property
+    def real(self):
+        return type(self)(self.dims, self.data.real, self._attrs)
+
+    @property
+    def imag(self):
+        return type(self)(self.dims, self.data.imag, self._attrs)
+
     def __array_wrap__(self, obj, context=None):
         return Variable(self.dims, obj)
 

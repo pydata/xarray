@@ -40,7 +40,9 @@
    Dataset.clip
    Dataset.conj
    Dataset.conjugate
+   Dataset.imag
    Dataset.round
+   Dataset.real
    Dataset.T
 
    DataArray.ndim
@@ -80,8 +82,10 @@
    DataArray.clip
    DataArray.conj
    DataArray.conjugate
+   DataArray.imag
    DataArray.searchsorted
    DataArray.round
+   DataArray.real
    DataArray.T
 
    ufuncs.angle

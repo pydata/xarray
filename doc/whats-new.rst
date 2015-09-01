@@ -19,7 +19,19 @@ API Changes
   :py:meth:`~xray.DataArray.plot` was changed to provide more compatibility
   with matplotlib's `contour` and `contourf` functions (:issue:`538`).
   Now discrete lists of colors should be specified using `colors` keyword,
-  rather than `cmap`. 
+  rather than `cmap`.
+
+Enhancements
+~~~~~~~~~~~~
+
+- Add :py:attr:`~xray.Dataset.real` and :py:attr:`~xray.Dataset.imag`
+  attributes to Dataset and DataArray (:issue:`553`).
+
+Bug fixes
+~~~~~~~~~
+
+- Aggregation functions now correctly skip ``NaN`` for data for ``complex128``
+  dtype (:issue:`554`).
 
 v0.6.0 (21 August 2015)
 -----------------------

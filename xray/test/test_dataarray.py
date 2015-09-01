@@ -1460,3 +1460,8 @@ class TestDataArray(TestCase):
                              [da['x'].values, da['y'].values[1:]],
                              ['x', 'y'])
         self.assertDataArrayEqual(expected, actual)
+
+    def test_real_and_imag(self):
+        array = DataArray(1 + 2j)
+        self.assertDataArrayIdentical(array.real, DataArray(1))
+        self.assertDataArrayIdentical(array.imag, DataArray(2))

@@ -1171,5 +1171,13 @@ class DataArray(AbstractArray, BaseDataObject):
         ds = self._dataset.diff(n=n, dim=dim, label=label)
         return self._with_replaced_dataset(ds)
 
+    @property
+    def real(self):
+        return self._with_replaced_dataset(self._dataset.real)
+
+    @property
+    def imag(self):
+        return self._with_replaced_dataset(self._dataset.imag)
+
 # priority most be higher than Variable to properly work with binary ufuncs
 ops.inject_all_ops_and_reduce_methods(DataArray, priority=60)
