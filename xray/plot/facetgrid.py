@@ -90,9 +90,6 @@ class FacetGrid(object):
         self.fig, self.axes = plt.subplots(self._nrow, self._ncol,
                 sharex=True, sharey=True, squeeze=False)
 
-        # subplots flattens this array if one dimension
-        #self.axes.shape = self._nrow, self._ncol
-
         # Set up the lists of names for the row and column facet variables
         col_names = list(darray[col].values) if col else []
         row_names = list(darray[row].values) if row else []
@@ -125,7 +122,7 @@ class FacetGrid(object):
     def __iter__(self):
         return self.axes.flat
 
-    def map_dataarray(self, plotfunc, *args, **kwargs):
+    def map_dataarray(self, plotfunc, x, y, *args, **kwargs):
         """Apply a plotting function to a 2d facet's subset of the data.
 
         This is more convenient and less general than the map method.
@@ -135,6 +132,8 @@ class FacetGrid(object):
         plotfunc : callable
             A plotting function with the same signature as a 2d xray
             plotting method such as `xray.plot.imshow`
+        x, y : string
+            Names of the coordinates to plot on x, y axes
         args :
             positional arguments to plotfunc
         kwargs :
@@ -190,27 +189,16 @@ class FacetGrid(object):
             # Handle the sentinel value
             if d is not None:
                 subset = self.darray.loc[d]
-                plotfunc(subset, ax=ax, *args, **defaults)
+                mappable = plotfunc(subset, x, y, ax=ax, *args, **defaults)
 
-        # Plot the last subset again to determine x and y values
-        try:
-            dummyfig = plt.figure()
-            dummyax = dummyfig.add_axes((0, 0, 0, 0))
-            defaults['add_labels'] = True
+        bottomleft = self.axes[-1, 0]
+        bottomleft.set_xlabel(x)
+        bottomleft.set_ylabel(y)
 
-            mappable = plotfunc(subset,
-                    ax=dummyax, *args, **defaults)
-
-            xlab, ylab = dummyax.get_xlabel(), dummyax.get_ylabel()
-            bottomleft = self.axes[-1, 0]
-            bottomleft.set_xlabel(xlab)
-            bottomleft.set_ylabel(ylab)
-            # Something to discuss- these labels could be centered on the
-            # whole figure instead of the bottom left axes
-            #self.fig.text(0.5, 0, xlab)
-            #self.fig.text(0, 0.5, ylab)
-        finally:
-            plt.close(dummyfig)
+        # Something to discuss- these labels could be centered on the
+        # whole figure instead of the bottom left axes
+        #self.fig.text(0.5, 0, x)
+        #self.fig.text(0, 0.5, y)
 
         # colorbar
         if kwargs.get('add_colorbar', True):

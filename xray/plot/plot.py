@@ -55,6 +55,47 @@ def _load_default_cmap(fname='default_colormap.csv'):
     return LinearSegmentedColormap.from_list('viridis', cm_data)
 
 
+def _infer_xy_labels(plotfunc, darray, x, y):
+    '''
+    Determine x and y labels when some are missing. For use in _plot2d
+
+    darray is a 2 dimensional data array.
+    '''
+    dims = list(darray.dims)
+
+    if len(dims) != 2:
+        raise ValueError('{type} plots are for 2 dimensional DataArrays. '
+                         'Passed DataArray has {ndim} dimensions'
+                         .format(type=plotfunc.__name__, ndim=len(dims)))
+
+    if x and x not in dims:
+        raise KeyError('{0} is not a dimension of this DataArray. Use '
+                       '{1} or {2} for x'
+                       .format(x, *dims))
+
+    if y and y not in dims:
+        raise KeyError('{0} is not a dimension of this DataArray. Use '
+                       '{1} or {2} for y'
+                       .format(y, *dims))
+
+    # Get label names
+    if x and y:
+        xlab = x
+        ylab = y
+    elif x and not y:
+        xlab = x
+        del dims[dims.index(x)]
+        ylab = dims.pop()
+    elif y and not x:
+        ylab = y
+        del dims[dims.index(y)]
+        xlab = dims.pop()
+    else:
+        ylab, xlab = dims
+
+    return xlab, ylab
+
+
 def plot(darray, ax=None, rtol=0.01, **kwargs):
     """
     Default plot of DataArray using matplotlib / pylab.
@@ -477,37 +518,7 @@ def _plot2d(plotfunc):
         if ax is None:
             ax = plt.gca()
 
-        dims = list(darray.dims)
-
-        if len(dims) != 2:
-            raise ValueError('{type} plots are for 2 dimensional DataArrays. '
-                             'Passed DataArray has {ndim} dimensions'
-                             .format(type=plotfunc.__name__, ndim=len(dims)))
-
-        if x and x not in darray:
-            raise KeyError('{0} is not a dimension of this DataArray. Use '
-                           '{1} or {2} for x'
-                           .format(x, *dims))
-
-        if y and y not in darray:
-            raise KeyError('{0} is not a dimension of this DataArray. Use '
-                           '{1} or {2} for y'
-                           .format(y, *dims))
-
-        # Get label names
-        if x and y:
-            xlab = x
-            ylab = y
-        elif x and not y:
-            xlab = x
-            del dims[dims.index(x)]
-            ylab = dims.pop()
-        elif y and not x:
-            ylab = y
-            del dims[dims.index(y)]
-            xlab = dims.pop()
-        else:
-            ylab, xlab = dims
+        xlab, ylab = _infer_xy_labels(plotfunc=plotfunc, darray=darray, x=x, y=y)
 
         # better to pass the ndarrays directly to plotting functions
         xval = darray[xlab].values

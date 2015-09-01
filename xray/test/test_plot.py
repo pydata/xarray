@@ -448,6 +448,10 @@ class Common2dMixin:
         with self.assertRaisesRegexp(KeyError, r'y'):
             self.plotmethod('not_a_real_dim')
 
+        self.darray.coords['z'] = 100
+        with self.assertRaisesRegexp(KeyError, r'y'):
+            self.plotmethod('z')
+
     def test_default_title(self):
         a = DataArray(easy_array((4, 3, 2, 1)), dims=['a', 'b', 'c', 'd'])
         self.plotfunc(a.isel(c=1))
@@ -603,7 +607,7 @@ class TestFacetGrid(PlotTestCase):
         self.g = xplt.FacetGrid(self.darray, col='z')
 
     def test_no_args(self):
-        self.g.map_dataarray(xplt.contourf)
+        self.g.map_dataarray(xplt.contourf, 'x', 'y')
         for ax in self.g:
             self.assertTrue(ax.has_data())
 
