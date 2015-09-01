@@ -422,7 +422,7 @@ Faceted plotting supports other arguments common to xray 2d plots.
     g = xray.plot.FacetGrid(hasoutliers, col='time', col_wrap=2)
 
     @savefig plot_facet_robust.png height=12in 
-    g.map_dataarray(xray.plot.contourf, robust=True, cmap='viridis')
+    g.map_dataarray(xray.plot.contourf, 'lon', 'lat', robust=True, cmap='viridis')
 
 
 Maps

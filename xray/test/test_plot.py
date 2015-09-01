@@ -658,6 +658,7 @@ class TestFacetGrid(PlotTestCase):
         
         bottomright = g.axes[-1, -1]
         self.assertFalse(bottomright.has_data())
+        self.assertFalse(bottomright.get_visible())
 
     def test_row_and_col_shape(self):
         a = np.arange(10 * 15 * 3 * 2).reshape(10, 15, 3, 2)

@@ -186,7 +186,7 @@ class FacetGrid(object):
         defaults.update(kwargs)
 
         for d, ax in zip(self.name_dicts.flat, self.axes.flat):
-            # Handle the sentinel value
+            # None is the sentinel value
             if d is not None:
                 subset = self.darray.loc[d]
                 mappable = plotfunc(subset, x, y, ax=ax, *args, **defaults)
@@ -238,10 +238,13 @@ class FacetGrid(object):
 
         if self._single_group:
             for d, ax in zip(self.name_dicts.flat, self.axes.flat):
+                # Only plot the ones with data
                 if d is not None:
                     coord, value = list(d.items()).pop()
                     title = nicetitle(coord, value, maxchar=maxchar)
                     ax.set_title(title, **kwargs)
+                else:
+                    ax.set_visible(False)
         else:
             # The row titles on the left edge of the grid
             for ax, row_name in zip(self.axes[:, -1], self.row_names):
