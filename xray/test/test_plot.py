@@ -79,13 +79,13 @@ class PlotTestCase(TestCase):
 class TestPlot(PlotTestCase):
 
     def setUp(self):
-        self.darray = DataArray(np.arange(2*3*4).reshape(2, 3, 4))
+        self.darray = DataArray(easy_array((2, 3, 4)))
 
     def test1d(self):
         self.darray[:, 0, 0].plot()
 
     def test_2d_before_squeeze(self):
-        a = DataArray(np.arange(5).reshape(1, 5))
+        a = DataArray(easy_array((1, 5)))
         a.plot()
 
     def test2d_uniform_calls_imshow(self):
@@ -130,7 +130,7 @@ class TestPlot1D(PlotTestCase):
         self.assertEqual(self.darray.name, plt.gca().get_ylabel())
 
     def test_wrong_dims_raises_valueerror(self):
-        twodims = DataArray(np.arange(10).reshape(2, 5))
+        twodims = DataArray(easy_array((2, 5)))
         with self.assertRaises(ValueError):
             twodims.plot.line()
 
@@ -602,7 +602,7 @@ class TestImshow(Common2dMixin, PlotTestCase):
 class TestFacetGrid(PlotTestCase):
 
     def setUp(self):
-        d = np.arange(10 * 15 * 3).reshape(10, 15, 3)
+        d = easy_array((10, 15, 3))
         self.darray = DataArray(d, dims=['y', 'x', 'z'])
         self.g = xplt.FacetGrid(self.darray, col='z')
 
@@ -660,28 +660,6 @@ class TestFacetGrid(PlotTestCase):
         self.assertFalse(bottomright.has_data())
         self.assertFalse(bottomright.get_visible())
 
-    def test_row_and_col_shape(self):
-        a = np.arange(10 * 15 * 3 * 2).reshape(10, 15, 3, 2)
-        d = DataArray(a, dims=['y', 'x', 'col', 'row'])
-
-        d.coords['col'] = np.array(['col' + str(x) for x in
-            d.coords['col'].values])
-        d.coords['row'] = np.array(['row' + str(x) for x in
-            d.coords['row'].values])
-
-        g = xplt.FacetGrid(d, col='col', row='row')
-        self.assertEqual((2, 3), g.axes.shape)
-
-        g.map_dataarray(xplt.imshow, 'x', 'y')
-
-        # Rightmost column should be labeled
-        for label, ax in zip(d.coords['row'].values, g.axes[:, -1]):
-            self.assertTrue(substring_in_axes(label, ax))
-
-        # Top row should be labeled
-        for label, ax in zip(d.coords['col'].values, g.axes[0, :]):
-            self.assertTrue(substring_in_axes(label, ax))
-
     def test_norow_nocol_error(self):
         with self.assertRaisesRegexp(ValueError, r'[Rr]ow'):
             xplt.FacetGrid(self.darray)
@@ -735,3 +713,48 @@ class TestFacetGrid(PlotTestCase):
         for image in plt.gcf().findobj(mpl.image.AxesImage):
             clim = np.array(image.get_clim())
             self.assertTrue(np.allclose(expected, clim))
+
+    def test_figure_size(self):
+
+        self.assertArrayEqual(self.g.fig.get_size_inches(), (10, 3))
+
+        g = xplt.FacetGrid(self.darray, col='z', size=6)
+        self.assertArrayEqual(g.fig.get_size_inches(), (19, 6))
+
+        g = xplt.FacetGrid(self.darray, col='z', size=4, aspect=0.5)
+        self.assertArrayEqual(g.fig.get_size_inches(), (7, 4))
+
+
+class TestFacetGrid4d(PlotTestCase):
+    
+    def setUp(self):
+        a = easy_array((10, 15, 3, 2))
+        darray = DataArray(a, dims=['y', 'x', 'col', 'row'])
+        darray.coords['col'] = np.array(['col' + str(x) for x in
+            darray.coords['col'].values])
+        darray.coords['row'] = np.array(['row' + str(x) for x in
+            darray.coords['row'].values])
+
+        self.darray = darray
+
+    def test_default_labels(self):
+        g = xplt.FacetGrid(self.darray, col='col', row='row')
+        self.assertEqual((2, 3), g.axes.shape)
+
+        g.map_dataarray(xplt.imshow, 'x', 'y')
+
+        # Rightmost column should be labeled
+        for label, ax in zip(self.darray.coords['row'].values, g.axes[:, -1]):
+            self.assertTrue(substring_in_axes(label, ax))
+
+        # Top row should be labeled
+        for label, ax in zip(self.darray.coords['col'].values, g.axes[0, :]):
+            self.assertTrue(substring_in_axes(label, ax))
+
+    def test_margin_titles_false(self):
+        g = xplt.FacetGrid(self.darray, col='col', row='row',
+                margin_titles=False)
+
+        # Rightmost column should not be labeled
+        for label, ax in zip(self.darray.coords['row'].values, g.axes[:, -1]):
+            self.assertFalse(substring_in_axes(label, ax))

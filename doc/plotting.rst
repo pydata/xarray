@@ -48,6 +48,7 @@ Imports
     # Use defaults so we don't get gridlines in generated docs
     import matplotlib as mpl
     mpl.rcdefaults()
+    mpl.rcParams.update({'figure.autolayout': True})
 
 The following imports are necessary for all of the examples.
 
@@ -346,7 +347,7 @@ We can use :py:meth:`xray.FacetGrid.map_dataarray` on a DataArray:
 
 .. ipython:: python
 
-    g = xray.plot.FacetGrid(t, col='time', col_wrap=2)
+    g = xray.plot.FacetGrid(t, col='time', col_wrap=3)
     
     @savefig plot_facet_dataarray.png height=12in 
     g.map_dataarray(xray.plot.contourf, 'lon', 'lat')
@@ -364,7 +365,7 @@ Pick out individual axes using the ``.axes`` attribute.
 
 .. ipython:: python
 
-    g = xray.plot.FacetGrid(t, col='time', col_wrap=2)
+    g = xray.plot.FacetGrid(t, col='time', col_wrap=3)
     g.map_dataarray(xray.plot.contourf, 'lon', 'lat')
 
     for i, ax in enumerate(g):
@@ -381,7 +382,7 @@ Pick out individual axes using the ``.axes`` attribute.
 .. ipython:: python
 
     tds = t.to_dataset()
-    g = xray.plot.FacetGrid(tds, 'time', col_wrap=2)
+    g = xray.plot.FacetGrid(tds, 'time', col_wrap=3)
 
     @savefig plot_facet_mapds.png height=12in
     g.map(plt.contourf, 'lon', 'lat', 'air')
@@ -403,10 +404,18 @@ one were 30 degrees hotter.
 
     g = xray.plot.FacetGrid(t4d, col='time', row='fourth_dim')
     
+    @savefig plot_facet_4d.png height=12in 
     g.map_dataarray(xray.plot.imshow, 'lon', 'lat')
 
-    @savefig plot_facet_4d.png height=12in 
-    plt.show()
+Just for comparison, should remove this.
+
+.. ipython:: python
+
+    g2 = xray.plot.FacetGrid(t4d, col='time', row='fourth_dim',
+    margin_titles=False)
+
+    @savefig plot_facet_4d2.png height=12in 
+    g2.map_dataarray(xray.plot.imshow, 'lon', 'lat')
 
 Other features
 ~~~~~~~~~~~~~~
@@ -419,7 +428,7 @@ Faceted plotting supports other arguments common to xray 2d plots.
     hasoutliers[0, 0, 0] = -100
     hasoutliers[-1, -1, -1] = 400
 
-    g = xray.plot.FacetGrid(hasoutliers, col='time', col_wrap=2)
+    g = xray.plot.FacetGrid(hasoutliers, col='time', col_wrap=3)
 
     @savefig plot_facet_robust.png height=12in 
     g.map_dataarray(xray.plot.contourf, 'lon', 'lat', robust=True, cmap='viridis')

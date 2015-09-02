@@ -10,10 +10,18 @@ import pandas as pd
 from ..core.formatting import format_item
 from .plot import _determine_cmap_params
 
+import matplotlib as mpl
 
 # Using this over mpl.rcParams["axes.labelsize"] since there are many of
 # these strings, and they can get long
-_TITLESIZE = 'small'
+# Overrides axes.labelsize, xtick.major.size, ytick.major.size
+# from mpl.rcParams
+_FONTSIZE = 'small'
+
+# experimenting - lines below don't seem to have any effect on poorly
+# formatted FacetGrid's
+#import matplotlib
+#matplotlib.rcParams.update({'figure.autolayout': True})
 
 
 def _nicetitle(coord, value, maxchar, template):
@@ -47,7 +55,11 @@ class FacetGrid(object):
 
     '''
 
-    def __init__(self, darray, col=None, row=None, col_wrap=None):
+    def __init__(self, darray, col=None, row=None, col_wrap=None,
+            aspect=1, size=3, max_xticks=4, max_yticks=4, margin_titles=True):
+        '''
+        TODO- fill these in
+        '''
 
         import matplotlib.pyplot as plt
 
@@ -80,6 +92,7 @@ class FacetGrid(object):
             if col:
                 # idea - could add heuristic for nice shapes like 3x4
                 self._ncol = self.nfacet
+                margin_titles = False
             if row:
                 self._ncol = 1
             if col_wrap is not None:
@@ -87,8 +100,12 @@ class FacetGrid(object):
                 self._ncol = col_wrap
             self._nrow = int(np.ceil(self.nfacet / self._ncol))
 
+        # Calculate the base figure size with extra horizontal space for a colorbar
+        self._cbar_space = 1
+        figsize = (self._ncol * size * aspect + self._cbar_space, self._nrow * size)
+
         self.fig, self.axes = plt.subplots(self._nrow, self._ncol,
-                sharex=True, sharey=True, squeeze=False)
+                sharex=True, sharey=True, squeeze=False, figsize=figsize)
 
         # Set up the lists of names for the row and column facet variables
         col_names = list(darray[col].values) if col else []
@@ -113,10 +130,12 @@ class FacetGrid(object):
         self.col_wrap = col_wrap
 
         # Next the private variables
+        self._margin_titles = margin_titles
         self._row_var = row
         self._col_var = col
         self._col_wrap = col_wrap
 
+        self.set_font()
         self.set_titles()
 
     def __iter__(self):
@@ -191,21 +210,39 @@ class FacetGrid(object):
                 subset = self.darray.loc[d]
                 mappable = plotfunc(subset, x, y, ax=ax, *args, **defaults)
 
-        bottomleft = self.axes[-1, 0]
-        bottomleft.set_xlabel(x)
-        bottomleft.set_ylabel(y)
+        #bottomleft = self.axes[-1, 0]
+        #bottomleft.set_xlabel(x)
+        #bottomleft.set_ylabel(y)
+        self.x = x
+        self.y = y
+
+        # Left side labels
+        for ax in self.axes[:, 0]:
+            ax.set_ylabel(self.y)
+
+        # Bottom labels
+        for ax in self.axes[-1, :]:
+            ax.set_xlabel(self.x)
 
         # Something to discuss- these labels could be centered on the
         # whole figure instead of the bottom left axes
-        #self.fig.text(0.5, 0, x)
-        #self.fig.text(0, 0.5, y)
+        #self.fig.text(0.3, 0, x, ha='center', va='top')
+        #self.fig.text(0.5, 0, x, va='bottom')
+        #self.fig.text(0, 0.3, y, rotation='vertical')
 
         # colorbar
+        # Must create new space for the colorbar, since resizing axes will
+        # make for bad formatting.
         if kwargs.get('add_colorbar', True):
-            cbar = plt.colorbar(mappable, ax=self.axes.ravel().tolist(),
+
+            self.fig.subplots_adjust(right=0.8)
+            #cbar = plt.colorbar(mappable, ax=self.axes.ravel().tolist(),
+            cbar_ax = self.fig.add_axes([0.85, 0.15, 0.05, 0.7])
+            cbar = self.fig.colorbar(mappable, cax=cbar_ax,
                     extend=cmap_params['extend'])
             cbar.set_label(self.darray.name, rotation=270,
                     verticalalignment='bottom')
+
 
         return self
 
@@ -231,7 +268,7 @@ class FacetGrid(object):
         '''
         import matplotlib as mpl
 
-        kwargs.setdefault('size', _TITLESIZE)
+        kwargs.setdefault('size', _FONTSIZE)
 
         nicetitle = functools.partial(_nicetitle, maxchar=maxchar,
                 template=template)
@@ -246,11 +283,12 @@ class FacetGrid(object):
                 else:
                     ax.set_visible(False)
         else:
-            # The row titles on the left edge of the grid
-            for ax, row_name in zip(self.axes[:, -1], self.row_names):
-                title = nicetitle(coord=self.row, value=row_name, maxchar=maxchar)
-                ax.annotate(title, xy=(1.02, .5), xycoords="axes fraction",
-                            rotation=270, ha="left", va="center", **kwargs)
+            # The row titles on the right edge of the grid
+            if self._margin_titles:
+                for ax, row_name in zip(self.axes[:, -1], self.row_names):
+                    title = nicetitle(coord=self.row, value=row_name, maxchar=maxchar)
+                    ax.annotate(title, xy=(1.02, .5), xycoords="axes fraction",
+                                rotation=270, ha="left", va="center", **kwargs)
 
             # The column titles on the top row
             for ax, col_name in zip(self.axes[0, :], self.col_names):
@@ -258,6 +296,21 @@ class FacetGrid(object):
                 ax.set_title(title, **kwargs)
 
         return self
+
+    def set_font(self, max_xticks=4, max_yticks=4, fontsize=_FONTSIZE):
+        '''
+        
+        '''
+        # Both are necessary
+        x_major_locator = mpl.ticker.MaxNLocator(nbins=max_xticks)
+        y_major_locator = mpl.ticker.MaxNLocator(nbins=max_yticks)
+
+        for ax in self.axes.flat:
+            ax.xaxis.set_major_locator(x_major_locator)
+            ax.yaxis.set_major_locator(y_major_locator)
+            for tick in itertools.chain(ax.xaxis.get_major_ticks(),
+                    ax.yaxis.get_major_ticks()):
+                tick.label.set_fontsize(fontsize)
 
 
     def map(self, func, *args, **kwargs):
