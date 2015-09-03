@@ -53,7 +53,7 @@ class FacetGrid(object):
     The basic workflow is to initialize the :class:`FacetGrid` object with
     the DataArray and the variable names that are used to structure the grid. Then
     one or more plotting functions can be applied to each subset by calling
-    :meth:`FacetGrid.map_dataarray` or :meth:`FacetGrid.map`. 
+    :meth:`FacetGrid.map_dataarray` or :meth:`FacetGrid.map`.
 
     Attributes
     ----------
@@ -78,7 +78,7 @@ class FacetGrid(object):
             xray DataArray to be plotted
         row, col : strings
             Dimesion names that define subsets of the data, which will be drawn on
-            separate facets in the grid. 
+            separate facets in the grid.
         col_wrap : int, optional
             "Wrap" the column variable at this width, so that the column facets
         aspect : scalar, optional
@@ -257,19 +257,23 @@ class FacetGrid(object):
         for ax in self.axes[-1, :]:
             ax.set_xlabel(self.x)
 
+        self.fig.tight_layout()
+
+        if self._single_group:
+            for d, ax in zip(self.name_dicts.flat, self.axes.flat):
+                if d is None:
+                    ax.set_visible(False)
+
         # colorbar
         if kwargs.get('add_colorbar', True):
-
-            self.fig.subplots_adjust(right=0.8)
-
-            cbar_ax = self.fig.add_axes([0.85, 0.15, 0.05, 0.7])
-            cbar = self.fig.colorbar(mappable, cax=cbar_ax,
-                    extend=cmap_params['extend'])
+            cbar = self.fig.colorbar(mappable,
+                                     ax=list(self.axes.flat),
+                                     extend=cmap_params['extend'])
 
             if self.darray.name:
                 cbar.set_label(self.darray.name, rotation=270,
                         verticalalignment='bottom')
-        
+
         # This happens here rather than __init__ since FacetGrid.map should
         # use default ticks
         self.set_ticks(max_xticks, max_yticks, fontsize)
@@ -307,13 +311,11 @@ class FacetGrid(object):
 
         if self._single_group:
             for d, ax in zip(self.name_dicts.flat, self.axes.flat):
-                # Only plot the ones with data
+                # Only label the ones with data
                 if d is not None:
                     coord, value = list(d.items()).pop()
                     title = nicetitle(coord, value, maxchar=maxchar)
                     ax.set_title(title, **kwargs)
-                else:
-                    ax.set_visible(False)
         else:
             # The row titles on the right edge of the grid
             if self._margin_titles:
@@ -333,7 +335,7 @@ class FacetGrid(object):
         '''
         Sets tick behavior.
 
-        Refer to documentation in :meth:`FacetGrid.map_dataarray` 
+        Refer to documentation in :meth:`FacetGrid.map_dataarray`
         '''
         from matplotlib.ticker import MaxNLocator
 
