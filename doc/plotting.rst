@@ -309,17 +309,15 @@ since levels are chosen automatically).
 Maps
 ----
 
-TODO - Update this example to use the tutorial data.
-
 To follow this section you'll need to have Cartopy installed and working.
 
-This script will plot an image over the Atlantic ocean.
+This script will plot the air temperature on a map.
 
-.. literalinclude:: examples/cartopy_atlantic.py
+.. literalinclude:: examples/cartopy_example.py
 
 Here is the resulting image:
 
-.. image:: examples/atlantic_noise.png
+.. image:: examples/cartopy_example.png
 
 Details
 -------
