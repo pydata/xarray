@@ -623,7 +623,9 @@ def pcolormesh(x, y, z, ax, **kwargs):
 
     # by default, pcolormesh picks "round" values for bounds
     # this results in ugly looking plots with lots of surrounding whitespace
-    ax.set_xlim(x[0], x[-1])
-    ax.set_ylim(y[0], y[-1])
+    if not hasattr(ax, 'projection'):
+        # not a cartopy geoaxis
+        ax.set_xlim(x[0], x[-1])
+        ax.set_ylim(y[0], y[-1])
 
     return ax, primitive
