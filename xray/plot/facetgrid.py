@@ -11,21 +11,16 @@ from ..core.formatting import format_item
 from .plot import _determine_cmap_params
 
 
-# Using this over mpl.rcParams["axes.labelsize"] since there are many of
-# these strings, and they can get long
 # Overrides axes.labelsize, xtick.major.size, ytick.major.size
 # from mpl.rcParams
 _FONTSIZE = 'small'
-
-# experimenting - lines below don't seem to have any effect on poorly
-# formatted FacetGrid's
-#import matplotlib
-#matplotlib.rcParams.update({'figure.autolayout': True})
+# For major ticks on x, y axes
+_NTICKS = 5
 
 
 def _nicetitle(coord, value, maxchar, template):
     '''
-    Put coord, value in template and truncate
+    Put coord, value in template and truncate at maxchar
     '''
     prettyvalue = format_item(value)
     title = template.format(coord=coord, value=prettyvalue)
@@ -38,7 +33,27 @@ def _nicetitle(coord, value, maxchar, template):
 
 class FacetGrid(object):
     '''
-    Mostly copied from Seaborn
+    Initialize the matplotlib figure and FacetGrid object.
+
+    The :class:`FacetGrid` is an object that links a xray DataArray to
+    a matplotlib figure with a particular structure.
+
+    In particular, :class:`FacetGrid` is used to draw plots with multiple
+    Axes where each Axes shows the same relationship conditioned on
+    different levels of some dimension. It's possible to condition on up to
+    two variables by assigning variables to the rows and columns of the
+    grid.
+
+    The general approach to plotting here is called "small multiples",
+    where the same kind of plot is repeated multiple times, and the
+    specific use of small multiples to display the same relationship
+    conditioned on one ore more other variables is often called a "trellis
+    plot".
+
+    The basic workflow is to initialize the :class:`FacetGrid` object with
+    the DataArray and the variable names that are used to structure the grid. Then
+    one or more plotting functions can be applied to each subset by calling
+    :meth:`FacetGrid.map_dataarray` or :meth:`FacetGrid.map`. 
 
     Attributes
     ----------
@@ -46,18 +61,36 @@ class FacetGrid(object):
         Contains axes in corresponding position, as returned from
         plt.subplots
     fig : matplotlib.Figure
-        containing figure
+        The figure containing all the axes
     name_dicts : numpy object array
         Contains dictionaries mapping coordinate names to values. None is
         used as a sentinel value for axes which should remain empty, ie.
-        sometimes the bottom right
+        sometimes the bottom right grid
 
     '''
 
     def __init__(self, darray, col=None, row=None, col_wrap=None,
-            aspect=1, size=3, max_xticks=4, max_yticks=4, margin_titles=True):
+            aspect=1, size=3, margin_titles=True):
         '''
-        TODO- fill these in
+        Parameters
+        ----------
+        darray : DataArray
+            xray DataArray to be plotted
+        row, col : strings
+            Dimesion names that define subsets of the data, which will be drawn on
+            separate facets in the grid. 
+        col_wrap : int, optional
+            "Wrap" the column variable at this width, so that the column facets
+        aspect : scalar, optional
+            Aspect ratio of each facet, so that ``aspect * size`` gives the width
+            of each facet in inches
+        size : scalar, optional
+            Height (in inches) of each facet. See also: ``aspect``
+        margin_titles : bool, optional
+            If ``True``, the titles for the row variable are drawn to the right of
+            the last column. This option is experimental and may not work in all
+            cases.
+
         '''
 
         import matplotlib.pyplot as plt
@@ -134,16 +167,17 @@ class FacetGrid(object):
         self._col_var = col
         self._col_wrap = col_wrap
 
-        self.set_font()
         self.set_titles()
 
     def __iter__(self):
         return self.axes.flat
 
-    def map_dataarray(self, plotfunc, x, y, *args, **kwargs):
-        """Apply a plotting function to a 2d facet's subset of the data.
+    def map_dataarray(self, plotfunc, x, y, max_xticks=4, max_yticks=4,
+            fontsize=_FONTSIZE, **kwargs):
+        '''
+        Apply a plotting function to a 2d facet's subset of the data.
 
-        This is more convenient and less general than the map method.
+        This is more convenient and less general than ``FacetGrid.map``
 
         Parameters
         ----------
@@ -152,17 +186,20 @@ class FacetGrid(object):
             plotting method such as `xray.plot.imshow`
         x, y : string
             Names of the coordinates to plot on x, y axes
-        args :
-            positional arguments to plotfunc
+        max_xticks, max_yticks : int, optional
+            Maximum number of labeled ticks to plot on x, y axes
+        max_yticks : int
+            Maximum number of tick marks to place on y axis
+        fontsize : string or int
+            Font size as used by matplotlib text
         kwargs :
-            keyword arguments to plotfunc
+            additional keyword arguments to plotfunc
 
         Returns
         -------
         self : FacetGrid object
-            the same FacetGrid on which the method was called
 
-        """
+        '''
         import matplotlib.pyplot as plt
 
         # These should be consistent with xray.plot._plot2d
@@ -207,11 +244,8 @@ class FacetGrid(object):
             # None is the sentinel value
             if d is not None:
                 subset = self.darray.loc[d]
-                mappable = plotfunc(subset, x, y, ax=ax, *args, **defaults)
+                mappable = plotfunc(subset, x, y, ax=ax, **defaults)
 
-        #bottomleft = self.axes[-1, 0]
-        #bottomleft.set_xlabel(x)
-        #bottomleft.set_ylabel(y)
         self.x = x
         self.y = y
 
@@ -223,51 +257,50 @@ class FacetGrid(object):
         for ax in self.axes[-1, :]:
             ax.set_xlabel(self.x)
 
-        # Something to discuss- these labels could be centered on the
-        # whole figure instead of the bottom left axes
-        #self.fig.text(0.3, 0, x, ha='center', va='top')
-        #self.fig.text(0.5, 0, x, va='bottom')
-        #self.fig.text(0, 0.3, y, rotation='vertical')
-
         # colorbar
-        # Must create new space for the colorbar, since resizing axes will
-        # make for bad formatting.
         if kwargs.get('add_colorbar', True):
 
             self.fig.subplots_adjust(right=0.8)
-            #cbar = plt.colorbar(mappable, ax=self.axes.ravel().tolist(),
+
             cbar_ax = self.fig.add_axes([0.85, 0.15, 0.05, 0.7])
             cbar = self.fig.colorbar(mappable, cax=cbar_ax,
                     extend=cmap_params['extend'])
-            cbar.set_label(self.darray.name, rotation=270,
-                    verticalalignment='bottom')
 
+            if self.darray.name:
+                cbar.set_label(self.darray.name, rotation=270,
+                        verticalalignment='bottom')
+        
+        # This happens here rather than __init__ since FacetGrid.map should
+        # use default ticks
+        self.set_ticks(max_xticks, max_yticks, fontsize)
 
         return self
 
-
-    def set_titles(self, template="{coord} = {value}", maxchar=30, **kwargs):
+    def set_titles(self, template="{coord} = {value}", maxchar=30,
+            fontsize=_FONTSIZE, **kwargs):
         '''
         Draw titles either above each facet or on the grid margins.
 
         Parameters
         ----------
         template : string
-            Template for plot titles
+            Template for plot titles containing {coord} and {value}
         maxchar : int
             Truncate titles at maxchar
+        fontsize : string or int
+            Passed to matplotlib.text
         kwargs : keyword args
             additional arguments to matplotlib.text
 
         Returns
         -------
-        self: object
-            Returns self.
+        self: FacetGrid object
 
         '''
+
         import matplotlib as mpl
 
-        kwargs.setdefault('size', _FONTSIZE)
+        kwargs['fontsize'] = fontsize
 
         nicetitle = functools.partial(_nicetitle, maxchar=maxchar,
                 template=template)
@@ -296,14 +329,17 @@ class FacetGrid(object):
 
         return self
 
-    def set_font(self, max_xticks=4, max_yticks=4, fontsize=_FONTSIZE):
+    def set_ticks(self, max_xticks=_NTICKS, max_yticks=_NTICKS, fontsize=_FONTSIZE):
         '''
-        
+        Sets tick behavior.
+
+        Refer to documentation in :meth:`FacetGrid.map_dataarray` 
         '''
-        import matplotlib as mpl
+        from matplotlib.ticker import MaxNLocator
+
         # Both are necessary
-        x_major_locator = mpl.ticker.MaxNLocator(nbins=max_xticks)
-        y_major_locator = mpl.ticker.MaxNLocator(nbins=max_yticks)
+        x_major_locator = MaxNLocator(nbins=max_xticks)
+        y_major_locator = MaxNLocator(nbins=max_yticks)
 
         for ax in self.axes.flat:
             ax.xaxis.set_major_locator(x_major_locator)
@@ -312,11 +348,8 @@ class FacetGrid(object):
                     ax.yaxis.get_major_ticks()):
                 tick.label.set_fontsize(fontsize)
 
-
     def map(self, func, *args, **kwargs):
-        """Apply a plotting function to each facet's subset of the data.
-
-        True to Seaborn style
+        '''Apply a plotting function to each facet's subset of the data.
 
         Parameters
         ----------
@@ -334,18 +367,16 @@ class FacetGrid(object):
 
         Returns
         -------
-        self : object
-            Returns self.
+        self : FacetGrid object
 
-        """
+        '''
         import matplotlib.pyplot as plt
 
-        for ax, (name, data) in zip(self, self.darray.groupby(self.col)):
-
-            kwargs['add_colorbar'] = False
-            plt.sca(ax)
-
-            innerargs = [data[a] for a in args]
-            func(*innerargs, **kwargs)
+        for ax, namedict in zip(self, self.name_dicts.flat):
+            if namedict is not None:
+                data = self.darray[namedict]
+                plt.sca(ax)
+                innerargs = [data[a].values for a in args]
+                func(*innerargs, **kwargs)
 
         return self

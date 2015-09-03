@@ -358,15 +358,17 @@ FacetGrid Objects
 :py:class:`xray.plot.FacetGrid` is used to control the behavior of the
 multiple plots.
 It borrows an API and code from `Seaborn
-<http://stanford.edu/~mwaskom/software/seaborn/tutorial/axis_grids.html>`_
+<http://stanford.edu/~mwaskom/software/seaborn/tutorial/axis_grids.html>`_.
 
 Iterating over the FacetGrid iterates over the individual axes.
 Pick out individual axes using the ``.axes`` attribute.
 
 .. ipython:: python
 
-    g = xray.plot.FacetGrid(t, col='time', col_wrap=3)
-    g.map_dataarray(xray.plot.contourf, 'lon', 'lat')
+    g = (xray.plot
+         .FacetGrid(t, col='time', col_wrap=3)
+         .map_dataarray(xray.plot.contourf, 'lon', 'lat')
+         )
 
     for i, ax in enumerate(g):
         ax.set_title('Air Temperature %d' % i)
@@ -377,23 +379,13 @@ Pick out individual axes using the ``.axes`` attribute.
     @savefig plot_facet_iterator.png height=12in 
     plt.show()
 
-`map` is more general, but probably less convenient.
-
-.. ipython:: python
-
-    tds = t.to_dataset()
-    g = xray.plot.FacetGrid(tds, 'time', col_wrap=3)
-
-    @savefig plot_facet_mapds.png height=12in
-    g.map(plt.contourf, 'lon', 'lat', 'air')
-
 4 dimensional
 ~~~~~~~~~~~~~~
 
-For 4 dimensional arrays we can create use the rows and columns.
+For 4 dimensional arrays we can use the rows and columns of the grids.
 Here we create a 4 dimensional array by taking the original data and adding
 a fixed amount. Now we can see how the temperature maps would compare if
-one were 30 degrees hotter.
+one were much hotter.
 
 .. ipython:: python
 
@@ -406,16 +398,6 @@ one were 30 degrees hotter.
     
     @savefig plot_facet_4d.png height=12in 
     g.map_dataarray(xray.plot.imshow, 'lon', 'lat')
-
-Just for comparison, should remove this.
-
-.. ipython:: python
-
-    g2 = xray.plot.FacetGrid(t4d, col='time', row='fourth_dim',
-    margin_titles=False)
-
-    @savefig plot_facet_4d2.png height=12in 
-    g2.map_dataarray(xray.plot.imshow, 'lon', 'lat')
 
 Other features
 ~~~~~~~~~~~~~~

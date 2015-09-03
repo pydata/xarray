@@ -608,10 +608,15 @@ class TestFacetGrid(PlotTestCase):
 
     def test_no_args(self):
         self.g.map_dataarray(xplt.contourf, 'x', 'y')
+
+        # Don't want colorbar labeled with 'None'
+        alltxt = text_in_fig()
+        self.assertNotIn('None', alltxt)
+
         for ax in self.g:
             self.assertTrue(ax.has_data())
 
-            # Font size should be small
+            # default font size should be small
             fontsize = ax.title.get_size()
             self.assertLessEqual(fontsize, 12)
 
@@ -723,6 +728,22 @@ class TestFacetGrid(PlotTestCase):
 
         g = xplt.FacetGrid(self.darray, col='z', size=4, aspect=0.5)
         self.assertArrayEqual(g.fig.get_size_inches(), (7, 4))
+
+    def test_num_ticks(self):
+        nticks = 100
+        maxticks = nticks + 1
+        self.g.map_dataarray(xplt.imshow, 'x', 'y', max_xticks=nticks,
+                max_yticks=nticks)
+        for ax in self.g:
+            xticks = len(ax.get_xticks())
+            yticks = len(ax.get_yticks())
+            self.assertLessEqual(xticks, maxticks)
+            self.assertLessEqual(yticks, maxticks)
+            self.assertGreaterEqual(xticks, nticks / 2.0)
+            self.assertGreaterEqual(yticks, nticks / 2.0)
+
+    def test_map(self):
+        self.g.map(plt.contourf, 'x', 'y', Ellipsis)
 
 
 class TestFacetGrid4d(PlotTestCase):

@@ -411,3 +411,15 @@ Plotting
    plot.imshow
    plot.line
    plot.pcolormesh
+   plot.FacetGrid
+
+FacetGrid methods
+-----------------
+
+.. autosummary::
+   :toctree: generated/
+
+   plot.FacetGrid.map_dataarray
+   plot.FacetGrid.set_titles
+   plot.FacetGrid.set_ticks
+   plot.FacetGrid.map
