@@ -10,7 +10,6 @@ import pandas as pd
 from ..core.formatting import format_item
 from .plot import _determine_cmap_params
 
-import matplotlib as mpl
 
 # Using this over mpl.rcParams["axes.labelsize"] since there are many of
 # these strings, and they can get long
@@ -301,6 +300,7 @@ class FacetGrid(object):
         '''
         
         '''
+        import matplotlib as mpl
         # Both are necessary
         x_major_locator = mpl.ticker.MaxNLocator(nbins=max_xticks)
         y_major_locator = mpl.ticker.MaxNLocator(nbins=max_yticks)
