@@ -478,7 +478,7 @@ class Common2dMixin:
         d = DataArray(a, dims=['y', 'x', 'z'])
         g = xplt.FacetGrid(d, col='z')
         g.map_dataarray(self.plotfunc, 'x', 'y')
-        for ax in g:
+        for ax in g.axes.flat:
             self.assertTrue(ax.has_data())
 
 
@@ -610,7 +610,7 @@ class TestFacetGrid(PlotTestCase):
         alltxt = text_in_fig()
         self.assertNotIn('None', alltxt)
 
-        for ax in self.g:
+        for ax in self.g.axes.flat:
             self.assertTrue(ax.has_data())
 
             # default font size should be small
@@ -620,7 +620,7 @@ class TestFacetGrid(PlotTestCase):
     def test_names_appear_somewhere(self):
         self.darray.name = 'testvar'
         self.g.map_dataarray(xplt.contourf, 'x', 'y')
-        for i, ax in enumerate(self.g):
+        for i, ax in enumerate(self.g.axes.flat):
             self.assertEqual('z = {0}'.format(i), ax.get_title())
 
         alltxt = text_in_fig()
@@ -730,7 +730,7 @@ class TestFacetGrid(PlotTestCase):
         self.g.map_dataarray(xplt.imshow, 'x', 'y')
         self.g.set_ticks(max_xticks=nticks, max_yticks=nticks)
 
-        for ax in self.g:
+        for ax in self.g.axes.flat:
             xticks = len(ax.get_xticks())
             yticks = len(ax.get_yticks())
             self.assertLessEqual(xticks, maxticks)

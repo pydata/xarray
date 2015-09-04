@@ -359,9 +359,23 @@ FacetGrid Objects
 multiple plots.
 It borrows an API and code from `Seaborn
 <http://stanford.edu/~mwaskom/software/seaborn/tutorial/axis_grids.html>`_.
+The structure is contained within the ``axes`` and ``name_dicts``
+attributes, both 2d Numpy object arrays.
 
-Iterating over the FacetGrid iterates over the individual axes.
-Pick out individual axes using the ``.axes`` attribute.
+.. ipython:: python
+
+    g.axes
+
+    g.name_dicts
+
+It's possible to select the :py:class:`xray.DataArray` corresponding to the FacetGrid
+through the ``name_dicts``.
+
+.. ipython:: python
+
+   g.data.loc[g.name_dicts[0, 0]]
+
+Here is an example of modifying the axes after they have been plotted.
 
 .. ipython:: python
 
@@ -370,7 +384,7 @@ Pick out individual axes using the ``.axes`` attribute.
          .map_dataarray(xray.plot.imshow, 'lon', 'lat')
          )
 
-    for i, ax in enumerate(g):
+    for i, ax in enumerate(g.axes.flat):
         ax.set_title('Air Temperature %d' % i)
 
     bottomright = g.axes[-1, -1]

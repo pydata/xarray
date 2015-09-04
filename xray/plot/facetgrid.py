@@ -68,12 +68,12 @@ class FacetGrid(object):
 
     """
 
-    def __init__(self, darray, col=None, row=None, col_wrap=None,
+    def __init__(self, data, col=None, row=None, col_wrap=None,
                  aspect=1, size=3):
         """
         Parameters
         ----------
-        darray : DataArray
+        data : DataArray
             xray DataArray to be plotted
         row, col : strings
             Dimesion names that define subsets of the data, which will be drawn
@@ -91,8 +91,8 @@ class FacetGrid(object):
         import matplotlib.pyplot as plt
 
         # Handle corner case of nonunique coordinates
-        rep_col = col is not None and not darray[col].to_index().is_unique
-        rep_row = row is not None and not darray[row].to_index().is_unique
+        rep_col = col is not None and not data[col].to_index().is_unique
+        rep_row = row is not None and not data[row].to_index().is_unique
         if rep_col or rep_row:
             raise ValueError('Coordinates used for faceting cannot '
                              'contain repeated (nonunique) values.')
@@ -100,8 +100,8 @@ class FacetGrid(object):
         # self._single_group is the grouping variable, if there is exactly one
         if col and row:
             self._single_group = False
-            self._nrow = len(darray[row])
-            self._ncol = len(darray[col])
+            self._nrow = len(data[row])
+            self._ncol = len(data[col])
             self.nfacet = self._nrow * self._ncol
             if col_wrap is not None:
                 warnings.warn('Ignoring col_wrap since both col and row '
@@ -116,7 +116,7 @@ class FacetGrid(object):
 
         # Compute grid shape
         if self._single_group:
-            self.nfacet = len(darray[self._single_group])
+            self.nfacet = len(data[self._single_group])
             if col:
                 # idea - could add heuristic for nice shapes like 3x4
                 self._ncol = self.nfacet
@@ -138,12 +138,12 @@ class FacetGrid(object):
                                            squeeze=False, figsize=figsize)
 
         # Set up the lists of names for the row and column facet variables
-        col_names = list(darray[col].values) if col else []
-        row_names = list(darray[row].values) if row else []
+        col_names = list(data[col].values) if col else []
+        row_names = list(data[row].values) if row else []
 
         if self._single_group:
             full = [{self._single_group: x} for x in
-                    darray[self._single_group].values]
+                    data[self._single_group].values]
             empty = [None for x in range(self._nrow * self._ncol - len(full))]
             name_dicts = full + empty
         else:
@@ -154,7 +154,7 @@ class FacetGrid(object):
 
         self.row_names = row_names
         self.col_names = col_names
-        self.darray = darray
+        self.data = data
         self.row = row
         self.col = col
         self.col_wrap = col_wrap
@@ -165,9 +165,6 @@ class FacetGrid(object):
         self._col_wrap = col_wrap
 
         self.set_titles()
-
-    def __iter__(self):
-        return self.axes.flat
 
     def map_dataarray(self, plotfunc, x, y, **kwargs):
         """
@@ -192,7 +189,7 @@ class FacetGrid(object):
         """
 
         # These should be consistent with xray.plot._plot2d
-        cmap_kwargs = {'plot_data': self.darray.values,
+        cmap_kwargs = {'plot_data': self.data.values,
                        'vmin': None,
                        'vmax': None,
                        'cmap': None,
@@ -210,7 +207,7 @@ class FacetGrid(object):
                 cmap_kwargs[param] = kwargs[param]
 
         # colormap inference has to happen here since all the data in
-        # self.darray is required to make the right choice
+        # self.data is required to make the right choice
         cmap_params = _determine_cmap_params(**cmap_kwargs)
 
         if 'contour' in plotfunc.__name__:
@@ -233,7 +230,7 @@ class FacetGrid(object):
         for d, ax in zip(self.name_dicts.flat, self.axes.flat):
             # None is the sentinel value
             if d is not None:
-                subset = self.darray.loc[d]
+                subset = self.data.loc[d]
                 mappable = plotfunc(subset, x, y, ax=ax, **defaults)
 
         self.x = x
@@ -260,8 +257,8 @@ class FacetGrid(object):
                                      ax=list(self.axes.flat),
                                      extend=cmap_params['extend'])
 
-            if self.darray.name:
-                cbar.set_label(self.darray.name, rotation=270,
+            if self.data.name:
+                cbar.set_label(self.data.name, rotation=270,
                                verticalalignment='bottom')
 
         return self
@@ -373,9 +370,9 @@ class FacetGrid(object):
         """
         import matplotlib.pyplot as plt
 
-        for ax, namedict in zip(self, self.name_dicts.flat):
+        for ax, namedict in zip(self.axes.flat, self.name_dicts.flat):
             if namedict is not None:
-                data = self.darray[namedict]
+                data = self.data[namedict]
                 plt.sca(ax)
                 innerargs = [data[a].values for a in args]
                 func(*innerargs, **kwargs)
