@@ -56,11 +56,11 @@ def _load_default_cmap(fname='default_colormap.csv'):
 
 
 def _infer_xy_labels(plotfunc, darray, x, y):
-    '''
+    """
     Determine x and y labels when some are missing. For use in _plot2d
 
     darray is a 2 dimensional data array.
-    '''
+    """
     dims = list(darray.dims)
 
     if len(dims) != 2:
@@ -272,8 +272,8 @@ def _determine_cmap_params(plot_data, vmin=None, vmax=None, cmap=None,
     ROBUST_PERCENTILE = 2.0
     import matplotlib as mpl
 
-    #calc_data = np.ravel(plot_data[~pd.isnull(plot_data)])
-    calc_data = plot_data[~pd.isnull(plot_data)]
+    calc_data = np.ravel(plot_data[~pd.isnull(plot_data)])
+
     if vmin is None:
         vmin = np.percentile(calc_data, ROBUST_PERCENTILE) if robust else calc_data.min()
     if vmax is None:
@@ -405,10 +405,10 @@ def _build_discrete_cmap(cmap, levels, extend, filled):
 # MUST run before any 2d plotting functions are defined since
 # _plot2d decorator adds them as methods here.
 class _PlotMethods(object):
-    '''
+    """
     Enables use of xray.plot functions as attributes on a DataArray.
     For example, DataArray.plot.imshow
-    '''
+    """
 
     def __init__(self, DataArray_instance):
         self._da = DataArray_instance
@@ -431,7 +431,7 @@ def _plot2d(plotfunc):
 
     Also adds the 2d plot method to class _PlotMethods
     """
-    commondoc = '''
+    commondoc = """
     Parameters
     ----------
     darray : DataArray
@@ -486,7 +486,7 @@ def _plot2d(plotfunc):
     artist :
         The same type of primitive artist that the wrapped matplotlib
         function returns
-    '''
+    """
 
     # Build on the original docstring
     plotfunc.__doc__ = '\n'.join((plotfunc.__doc__, commondoc))
@@ -584,12 +584,12 @@ def _plot2d(plotfunc):
                    add_colorbar=True, add_labels=True, vmin=None, vmax=None, cmap=None,
                    colors=None, center=None, robust=False, extend=None, levels=None,
                    **kwargs):
-        '''
+        """
         The method should have the same signature as the function.
 
         This just makes the method work on Plotmethods objects,
         and passes all the other arguments straight through.
-        '''
+        """
         allargs = locals()
         allargs['darray'] = _PlotMethods_obj._da
         allargs.update(kwargs)

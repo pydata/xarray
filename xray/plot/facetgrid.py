@@ -5,7 +5,6 @@ import itertools
 import functools
 
 import numpy as np
-import pandas as pd
 
 from ..core.formatting import format_item
 from .plot import _determine_cmap_params
@@ -19,9 +18,9 @@ _NTICKS = 5
 
 
 def _nicetitle(coord, value, maxchar, template):
-    '''
+    """
     Put coord, value in template and truncate at maxchar
-    '''
+    """
     prettyvalue = format_item(value)
     title = template.format(coord=coord, value=prettyvalue)
 
@@ -32,7 +31,7 @@ def _nicetitle(coord, value, maxchar, template):
 
 
 class FacetGrid(object):
-    '''
+    """
     Initialize the matplotlib figure and FacetGrid object.
 
     The :class:`FacetGrid` is an object that links a xray DataArray to
@@ -51,8 +50,8 @@ class FacetGrid(object):
     plot".
 
     The basic workflow is to initialize the :class:`FacetGrid` object with
-    the DataArray and the variable names that are used to structure the grid. Then
-    one or more plotting functions can be applied to each subset by calling
+    the DataArray and the variable names that are used to structure the grid.
+    Then plotting functions can be applied to each subset by calling
     :meth:`FacetGrid.map_dataarray` or :meth:`FacetGrid.map`.
 
     Attributes
@@ -67,31 +66,27 @@ class FacetGrid(object):
         used as a sentinel value for axes which should remain empty, ie.
         sometimes the bottom right grid
 
-    '''
+    """
 
     def __init__(self, darray, col=None, row=None, col_wrap=None,
-            aspect=1, size=3, margin_titles=True):
-        '''
+                 aspect=1, size=3):
+        """
         Parameters
         ----------
         darray : DataArray
             xray DataArray to be plotted
         row, col : strings
-            Dimesion names that define subsets of the data, which will be drawn on
-            separate facets in the grid.
+            Dimesion names that define subsets of the data, which will be drawn
+            on separate facets in the grid.
         col_wrap : int, optional
             "Wrap" the column variable at this width, so that the column facets
         aspect : scalar, optional
-            Aspect ratio of each facet, so that ``aspect * size`` gives the width
-            of each facet in inches
+            Aspect ratio of each facet, so that ``aspect * size`` gives the
+            width of each facet in inches
         size : scalar, optional
             Height (in inches) of each facet. See also: ``aspect``
-        margin_titles : bool, optional
-            If ``True``, the titles for the row variable are drawn to the right of
-            the last column. This option is experimental and may not work in all
-            cases.
 
-        '''
+        """
 
         import matplotlib.pyplot as plt
 
@@ -116,7 +111,8 @@ class FacetGrid(object):
         elif not row and col:
             self._single_group = col
         else:
-            raise ValueError('Pass a coordinate name as an argument for row or col')
+            raise ValueError(
+                'Pass a coordinate name as an argument for row or col')
 
         # Compute grid shape
         if self._single_group:
@@ -124,7 +120,6 @@ class FacetGrid(object):
             if col:
                 # idea - could add heuristic for nice shapes like 3x4
                 self._ncol = self.nfacet
-                margin_titles = False
             if row:
                 self._ncol = 1
             if col_wrap is not None:
@@ -132,12 +127,15 @@ class FacetGrid(object):
                 self._ncol = col_wrap
             self._nrow = int(np.ceil(self.nfacet / self._ncol))
 
-        # Calculate the base figure size with extra horizontal space for a colorbar
+        # Calculate the base figure size with extra horizontal space for a
+        # colorbar
         self._cbar_space = 1
-        figsize = (self._ncol * size * aspect + self._cbar_space, self._nrow * size)
+        figsize = (self._ncol * size * aspect +
+                   self._cbar_space, self._nrow * size)
 
         self.fig, self.axes = plt.subplots(self._nrow, self._ncol,
-                sharex=True, sharey=True, squeeze=False, figsize=figsize)
+                                           sharex=True, sharey=True,
+                                           squeeze=False, figsize=figsize)
 
         # Set up the lists of names for the row and column facet variables
         col_names = list(darray[col].values) if col else []
@@ -145,7 +143,7 @@ class FacetGrid(object):
 
         if self._single_group:
             full = [{self._single_group: x} for x in
-                      darray[self._single_group].values]
+                    darray[self._single_group].values]
             empty = [None for x in range(self._nrow * self._ncol - len(full))]
             name_dicts = full + empty
         else:
@@ -162,7 +160,6 @@ class FacetGrid(object):
         self.col_wrap = col_wrap
 
         # Next the private variables
-        self._margin_titles = margin_titles
         self._row_var = row
         self._col_var = col
         self._col_wrap = col_wrap
@@ -173,8 +170,8 @@ class FacetGrid(object):
         return self.axes.flat
 
     def map_dataarray(self, plotfunc, x, y, max_xticks=4, max_yticks=4,
-            fontsize=_FONTSIZE, **kwargs):
-        '''
+                      fontsize=_FONTSIZE, **kwargs):
+        """
         Apply a plotting function to a 2d facet's subset of the data.
 
         This is more convenient and less general than ``FacetGrid.map``
@@ -199,28 +196,28 @@ class FacetGrid(object):
         -------
         self : FacetGrid object
 
-        '''
-        import matplotlib.pyplot as plt
+        """
 
         # These should be consistent with xray.plot._plot2d
         cmap_kwargs = {'plot_data': self.darray.values,
-                'vmin': None,
-                'vmax': None,
-                'cmap': None,
-                'center': None,
-                'robust': False,
-                'extend': None,
-                'levels': 7 if 'contour' in plotfunc.__name__ else None, # MPL default
-                'filled': plotfunc.__name__ != 'contour',
-                }
+                       'vmin': None,
+                       'vmax': None,
+                       'cmap': None,
+                       'center': None,
+                       'robust': False,
+                       'extend': None,
+                       # MPL default
+                       'levels': 7 if 'contour' in plotfunc.__name__ else None,
+                       'filled': plotfunc.__name__ != 'contour',
+                       }
 
         # Allow kwargs to override these defaults
         for param in kwargs:
             if param in cmap_kwargs:
                 cmap_kwargs[param] = kwargs[param]
 
-        # colormap inference has to happen here since all the data in self.darray
-        # is required to make the right choice
+        # colormap inference has to happen here since all the data in
+        # self.darray is required to make the right choice
         cmap_params = _determine_cmap_params(**cmap_kwargs)
 
         if 'contour' in plotfunc.__name__:
@@ -231,10 +228,10 @@ class FacetGrid(object):
             kwargs['levels'] = cmap_params['levels']
 
         defaults = {
-                'add_colorbar': False,
-                'add_labels': False,
-                'norm': cmap_params.pop('cnorm'),
-                }
+            'add_colorbar': False,
+            'add_labels': False,
+            'norm': cmap_params.pop('cnorm'),
+        }
 
         # Order is important
         defaults.update(cmap_params)
@@ -272,7 +269,7 @@ class FacetGrid(object):
 
             if self.darray.name:
                 cbar.set_label(self.darray.name, rotation=270,
-                        verticalalignment='bottom')
+                               verticalalignment='bottom')
 
         # This happens here rather than __init__ since FacetGrid.map should
         # use default ticks
@@ -281,8 +278,8 @@ class FacetGrid(object):
         return self
 
     def set_titles(self, template="{coord} = {value}", maxchar=30,
-            fontsize=_FONTSIZE, **kwargs):
-        '''
+                   fontsize=_FONTSIZE, **kwargs):
+        """
         Draw titles either above each facet or on the grid margins.
 
         Parameters
@@ -300,14 +297,12 @@ class FacetGrid(object):
         -------
         self: FacetGrid object
 
-        '''
-
-        import matplotlib as mpl
+        """
 
         kwargs['fontsize'] = fontsize
 
         nicetitle = functools.partial(_nicetitle, maxchar=maxchar,
-                template=template)
+                                      template=template)
 
         if self._single_group:
             for d, ax in zip(self.name_dicts.flat, self.axes.flat):
@@ -318,25 +313,27 @@ class FacetGrid(object):
                     ax.set_title(title, **kwargs)
         else:
             # The row titles on the right edge of the grid
-            if self._margin_titles:
-                for ax, row_name in zip(self.axes[:, -1], self.row_names):
-                    title = nicetitle(coord=self.row, value=row_name, maxchar=maxchar)
-                    ax.annotate(title, xy=(1.02, .5), xycoords="axes fraction",
-                                rotation=270, ha="left", va="center", **kwargs)
+            for ax, row_name in zip(self.axes[:, -1], self.row_names):
+                title = nicetitle(coord=self.row, value=row_name,
+                                  maxchar=maxchar)
+                ax.annotate(title, xy=(1.02, .5), xycoords="axes fraction",
+                            rotation=270, ha="left", va="center", **kwargs)
 
             # The column titles on the top row
             for ax, col_name in zip(self.axes[0, :], self.col_names):
-                title = nicetitle(coord=self.col, value=col_name, maxchar=maxchar)
+                title = nicetitle(coord=self.col, value=col_name,
+                                  maxchar=maxchar)
                 ax.set_title(title, **kwargs)
 
         return self
 
-    def set_ticks(self, max_xticks=_NTICKS, max_yticks=_NTICKS, fontsize=_FONTSIZE):
-        '''
+    def set_ticks(self, max_xticks=_NTICKS, max_yticks=_NTICKS,
+                  fontsize=_FONTSIZE):
+        """
         Sets tick behavior.
 
         Refer to documentation in :meth:`FacetGrid.map_dataarray`
-        '''
+        """
         from matplotlib.ticker import MaxNLocator
 
         # Both are necessary
@@ -347,11 +344,14 @@ class FacetGrid(object):
             ax.xaxis.set_major_locator(x_major_locator)
             ax.yaxis.set_major_locator(y_major_locator)
             for tick in itertools.chain(ax.xaxis.get_major_ticks(),
-                    ax.yaxis.get_major_ticks()):
+                                        ax.yaxis.get_major_ticks()):
                 tick.label.set_fontsize(fontsize)
 
+        return self
+
     def map(self, func, *args, **kwargs):
-        '''Apply a plotting function to each facet's subset of the data.
+        """
+        Apply a plotting function to each facet's subset of the data.
 
         Parameters
         ----------
@@ -371,7 +371,7 @@ class FacetGrid(object):
         -------
         self : FacetGrid object
 
-        '''
+        """
         import matplotlib.pyplot as plt
 
         for ax, namedict in zip(self, self.name_dicts.flat):

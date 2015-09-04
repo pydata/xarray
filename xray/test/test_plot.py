@@ -676,8 +676,6 @@ class TestFacetGrid(PlotTestCase):
         z0 = self.darray.isel(z=0)
 
         self.assertDataArrayEqual(upperleft_array, z0)
-        # Not sure if we need to expose this in this way
-        #self.assertDataArrayEqual(self.facet_data[0, 0], z0)
 
     def test_float_index(self):
         self.darray.coords['z'] = [0.1, 0.2, 0.4]
@@ -771,11 +769,3 @@ class TestFacetGrid4d(PlotTestCase):
         # Top row should be labeled
         for label, ax in zip(self.darray.coords['col'].values, g.axes[0, :]):
             self.assertTrue(substring_in_axes(label, ax))
-
-    def test_margin_titles_false(self):
-        g = xplt.FacetGrid(self.darray, col='col', row='row',
-                margin_titles=False)
-
-        # Rightmost column should not be labeled
-        for label, ax in zip(self.darray.coords['row'].values, g.axes[:, -1]):
-            self.assertFalse(substring_in_axes(label, ax))
