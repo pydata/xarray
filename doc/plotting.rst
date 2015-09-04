@@ -16,6 +16,9 @@ Xray's plotting capabilities are centered around
 :py:class:`xray.DataArray` objects.
 To plot :py:class:`xray.Dataset` objects 
 simply access the relevant DataArrays, ie ``dset['var1']``.
+Here we focus mostly on arrays 2d or larger. If your data fits
+nicely into a pandas DataFrame then you're better off using one of the more
+developed tools there.
 
 Xray plotting functionality is a thin wrapper around the popular
 `matplotlib <http://matplotlib.org/>`_ library.
@@ -51,10 +54,11 @@ The following imports are necessary for all of the examples.
 .. ipython:: python
 
     import numpy as np
+    import pandas as pd
     import matplotlib.pyplot as plt
     import xray
 
-We'll use the North American air temperature dataset.
+For these examples we'll use the North American air temperature dataset.
 
 .. ipython:: python
 
@@ -304,6 +308,125 @@ since levels are chosen automatically).
 
     @savefig plotting_seaborn_palette.png width=4in
     air2d.plot(levels=10, cmap='husl')
+
+
+Faceting
+--------
+
+Faceting here refers to splitting an array along one or two dimensions and
+plotting each group.
+Xray's basic plotting is useful for plotting two dimensional arrays. What
+about three or four dimensional arrays? That's where facets become helpful.
+
+Consider the temperature data set. There are 4 observations per day for two
+years which makes for 2920 values along the time dimension. 
+One way to visualize this data is to make a
+seperate plot for each time period. 
+
+The faceted dimension should not have too many values; 
+faceting on the time dimension will produce 2920 plots. That's
+too much to be helpful. To handle this situation try performing
+an operation that reduces the size of the data in some way. For example, we
+could compute the average air temperature for each month and reduce the
+size of this dimension from 2920 -> 12. A simpler way is
+to just take a slice on that dimension.
+So let's use a slice to pick 6 times throughout the first year.
+
+.. ipython:: python
+
+    t = air.isel(time=slice(0, 365 * 4, 250))
+    t.coords
+
+Simple Example
+~~~~~~~~~~~~~~
+
+TODO - replace with the convenience method from plot
+
+We can use :py:meth:`xray.plot.FacetGrid.map_dataarray` on a DataArray:
+
+.. ipython:: python
+
+    g = xray.plot.FacetGrid(t, col='time', col_wrap=3)
+    
+    @savefig plot_facet_dataarray.png height=12in 
+    g.map_dataarray(xray.plot.imshow, 'lon', 'lat')
+
+FacetGrid Objects
+~~~~~~~~~~~~~~~~~
+
+:py:class:`xray.plot.FacetGrid` is used to control the behavior of the
+multiple plots.
+It borrows an API and code from `Seaborn
+<http://stanford.edu/~mwaskom/software/seaborn/tutorial/axis_grids.html>`_.
+The structure is contained within the ``axes`` and ``name_dicts``
+attributes, both 2d Numpy object arrays.
+
+.. ipython:: python
+
+    g.axes
+
+    g.name_dicts
+
+It's possible to select the :py:class:`xray.DataArray` corresponding to the FacetGrid
+through the ``name_dicts``.
+
+.. ipython:: python
+
+   g.data.loc[g.name_dicts[0, 0]]
+
+Here is an example of modifying the axes after they have been plotted.
+
+.. ipython:: python
+
+    g = (xray.plot
+         .FacetGrid(t, col='time', col_wrap=3)
+         .map_dataarray(xray.plot.imshow, 'lon', 'lat')
+         )
+
+    for i, ax in enumerate(g.axes.flat):
+        ax.set_title('Air Temperature %d' % i)
+
+    bottomright = g.axes[-1, -1]
+    bottomright.annotate('bottom right', (240, 40))
+
+    @savefig plot_facet_iterator.png height=12in 
+    plt.show()
+
+4 dimensional
+~~~~~~~~~~~~~~
+
+For 4 dimensional arrays we can use the rows and columns of the grids.
+Here we create a 4 dimensional array by taking the original data and adding
+a fixed amount. Now we can see how the temperature maps would compare if
+one were much hotter.
+
+.. ipython:: python
+
+    t2 = t.isel(time=slice(0, 2))
+    t4d = xray.concat([t2, t2 + 40], pd.Index(['normal', 'hot'], name='fourth_dim'))
+    # This is a 4d array
+    t4d.coords
+
+    g = xray.plot.FacetGrid(t4d, col='time', row='fourth_dim')
+    
+    @savefig plot_facet_4d.png height=12in 
+    g.map_dataarray(xray.plot.imshow, 'lon', 'lat')
+
+Other features
+~~~~~~~~~~~~~~
+
+Faceted plotting supports other arguments common to xray 2d plots.
+
+.. ipython:: python
+
+    hasoutliers = t.isel(time=slice(0, 5)).copy()
+    hasoutliers[0, 0, 0] = -100
+    hasoutliers[-1, -1, -1] = 400
+
+    g = xray.plot.FacetGrid(hasoutliers, col='time', col_wrap=3)
+
+    @savefig plot_facet_robust.png height=12in 
+    g.map_dataarray(xray.plot.contourf, 'lon', 'lat', robust=True, cmap='viridis')
 
 
 Maps

@@ -6,8 +6,12 @@ Or use the methods on a DataArray:
     DataArray.plot._____
 """
 
+from __future__ import division
 import pkg_resources
 import functools
+from textwrap import dedent
+from itertools import cycle
+from distutils.version import LooseVersion
 import warnings
 
 import numpy as np
@@ -15,11 +19,6 @@ import pandas as pd
 
 from ..core.utils import is_uniform_spaced
 from ..core.pycompat import basestring
-
-
-# TODO - implement this
-class FacetGrid():
-    pass
 
 
 # Maybe more appropriate to keep this in .utils
@@ -54,6 +53,47 @@ def _load_default_cmap(fname='default_colormap.csv'):
     cm_data = pd.read_csv(f, header=None).values
 
     return LinearSegmentedColormap.from_list('viridis', cm_data)
+
+
+def _infer_xy_labels(plotfunc, darray, x, y):
+    """
+    Determine x and y labels when some are missing. For use in _plot2d
+
+    darray is a 2 dimensional data array.
+    """
+    dims = list(darray.dims)
+
+    if len(dims) != 2:
+        raise ValueError('{type} plots are for 2 dimensional DataArrays. '
+                         'Passed DataArray has {ndim} dimensions'
+                         .format(type=plotfunc.__name__, ndim=len(dims)))
+
+    if x and x not in dims:
+        raise KeyError('{0} is not a dimension of this DataArray. Use '
+                       '{1} or {2} for x'
+                       .format(x, *dims))
+
+    if y and y not in dims:
+        raise KeyError('{0} is not a dimension of this DataArray. Use '
+                       '{1} or {2} for y'
+                       .format(y, *dims))
+
+    # Get label names
+    if x and y:
+        xlab = x
+        ylab = y
+    elif x and not y:
+        xlab = x
+        del dims[dims.index(x)]
+        ylab = dims.pop()
+    elif y and not x:
+        ylab = y
+        del dims[dims.index(y)]
+        xlab = dims.pop()
+    else:
+        ylab, xlab = dims
+
+    return xlab, ylab
 
 
 def plot(darray, ax=None, rtol=0.01, **kwargs):
@@ -218,11 +258,22 @@ def _determine_cmap_params(plot_data, vmin=None, vmax=None, cmap=None,
 
     Adapted from Seaborn:
     https://github.com/mwaskom/seaborn/blob/v0.6/seaborn/matrix.py#L158
+
+    Parameters
+    ==========
+    plot_data: Numpy array
+        Doesn't handle xray objects
+
+    Returns
+    =======
+    cmap_params : dict
+        Use depends on the type of the plotting function
     """
     ROBUST_PERCENTILE = 2.0
     import matplotlib as mpl
 
-    calc_data = plot_data[~pd.isnull(plot_data)]
+    calc_data = np.ravel(plot_data[~pd.isnull(plot_data)])
+
     if vmin is None:
         vmin = np.percentile(calc_data, ROBUST_PERCENTILE) if robust else calc_data.min()
     if vmax is None:
@@ -354,10 +405,10 @@ def _build_discrete_cmap(cmap, levels, extend, filled):
 # MUST run before any 2d plotting functions are defined since
 # _plot2d decorator adds them as methods here.
 class _PlotMethods(object):
-    '''
+    """
     Enables use of xray.plot functions as attributes on a DataArray.
     For example, DataArray.plot.imshow
-    '''
+    """
 
     def __init__(self, DataArray_instance):
         self._da = DataArray_instance
@@ -380,11 +431,15 @@ def _plot2d(plotfunc):
 
     Also adds the 2d plot method to class _PlotMethods
     """
-    commondoc = '''
+    commondoc = """
     Parameters
     ----------
     darray : DataArray
-        must be 2 dimensional.
+        Must be 2 dimensional
+    x : string, optional
+        Coordinate for x axis. If None use darray.dims[1]
+    y : string, optional
+        Coordinate for y axis. If None use darray.dims[0]
     ax : matplotlib axes object, optional
         If None, uses the current axis
     xincrease : None, True, or False, optional
@@ -431,13 +486,13 @@ def _plot2d(plotfunc):
     artist :
         The same type of primitive artist that the wrapped matplotlib
         function returns
-    '''
+    """
 
     # Build on the original docstring
     plotfunc.__doc__ = '\n'.join((plotfunc.__doc__, commondoc))
 
     @functools.wraps(plotfunc)
-    def newplotfunc(darray, ax=None, xincrease=None, yincrease=None,
+    def newplotfunc(darray, x=None, y=None, ax=None, xincrease=None, yincrease=None,
                     add_colorbar=True, add_labels=True, vmin=None, vmax=None, cmap=None,
                     center=None, robust=False, extend=None, levels=None, colors=None,
                     **kwargs):
@@ -463,28 +518,35 @@ def _plot2d(plotfunc):
         if ax is None:
             ax = plt.gca()
 
-        # Handle the dimensions
-        try:
-            ylab, xlab = darray.dims
-        except ValueError:
-            raise ValueError('{name} plots are for 2 dimensional DataArrays. '
-                             'Passed DataArray has {ndim} dimensions'
-                             .format(name=plotfunc.__name__, ndim=len(darray.dims)))
+        xlab, ylab = _infer_xy_labels(plotfunc=plotfunc, darray=darray, x=x, y=y)
 
-        # some plotting functions only know how to handle ndarrays
-        x = darray[xlab].values
-        y = darray[ylab].values
-        z = darray.to_masked_array(copy=False)
+        # better to pass the ndarrays directly to plotting functions
+        xval = darray[xlab].values
+        yval = darray[ylab].values
+        zval = darray.to_masked_array(copy=False)
 
-        _ensure_plottable(x, y)
+        # May need to transpose for correct x, y labels
+        if xlab == darray.dims[0]:
+            zval = zval.T
+
+        _ensure_plottable(xval, yval)
 
         if 'contour' in plotfunc.__name__ and levels is None:
             levels = 7  # this is the matplotlib default
-        filled = plotfunc.__name__ != 'contour'
 
-        cmap = colors if colors else cmap
-        cmap_params = _determine_cmap_params(z.data, vmin, vmax, cmap, center,
-                                             robust, extend, levels, filled)
+        cmap_kwargs = {'plot_data': zval.data,
+                'vmin': vmin,
+                'vmax': vmax,
+                'cmap': colors if colors else cmap,
+                'center': center,
+                'robust': robust,
+                'extend': extend,
+                'levels': levels,
+                'filled': plotfunc.__name__ != 'contour',
+                }
+
+        cmap_params = _determine_cmap_params(**cmap_kwargs)
+
         if 'contour' in plotfunc.__name__:
             # extend is a keyword argument only for contour and contourf, but
             # passing it to the colorbar is sufficient for imshow and
@@ -495,7 +557,7 @@ def _plot2d(plotfunc):
         # This allows the user to pass in a custom norm coming via kwargs
         kwargs.setdefault('norm', cmap_params['cnorm'])
 
-        ax, primitive = plotfunc(x, y, z, ax=ax,
+        ax, primitive = plotfunc(xval, yval, zval, ax=ax,
                                  cmap=cmap_params['cmap'],
                                  vmin=cmap_params['vmin'],
                                  vmax=cmap_params['vmax'],
@@ -518,16 +580,16 @@ def _plot2d(plotfunc):
 
     # For use as DataArray.plot.plotmethod
     @functools.wraps(newplotfunc)
-    def plotmethod(_PlotMethods_obj, ax=None, xincrease=None, yincrease=None,
+    def plotmethod(_PlotMethods_obj, x=None, y=None, ax=None, xincrease=None, yincrease=None,
                    add_colorbar=True, add_labels=True, vmin=None, vmax=None, cmap=None,
                    colors=None, center=None, robust=False, extend=None, levels=None,
                    **kwargs):
-        '''
+        """
         The method should have the same signature as the function.
 
         This just makes the method work on Plotmethods objects,
         and passes all the other arguments straight through.
-        '''
+        """
         allargs = locals()
         allargs['darray'] = _PlotMethods_obj._da
         allargs.update(kwargs)

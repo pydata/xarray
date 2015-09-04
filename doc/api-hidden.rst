@@ -147,3 +147,8 @@
    ufuncs.tan
    ufuncs.tanh
    ufuncs.trunc
+
+   plot.FacetGrid.map_dataarray
+   plot.FacetGrid.set_titles
+   plot.FacetGrid.set_ticks
+   plot.FacetGrid.map

@@ -21,6 +21,36 @@ except ImportError:
     pass
 
 
+def text_in_fig():
+    '''
+    Return the set of all text in the figure
+    '''
+    alltxt = [t.get_text() for t in plt.gcf().findobj(mpl.text.Text)]
+    # Set comprehension not compatible with Python 2.6
+    return set(alltxt)
+
+
+def substring_in_axes(substring, ax):
+    '''
+    Return True if a substring is found anywhere in an axes
+    '''
+    alltxt = set([t.get_text() for t in ax.findobj(mpl.text.Text)])
+    for txt in alltxt:
+        if substring in txt:
+            return True
+    return False
+
+
+def easy_array(shape, start=0, stop=1):
+    '''
+    Make an array with desired shape using np.linspace
+
+    shape is a tuple like (2, 3)
+    '''
+    a = np.linspace(start, stop, num=np.prod(shape))
+    return a.reshape(shape)
+
+
 @requires_matplotlib
 class PlotTestCase(TestCase):
 
@@ -47,13 +77,13 @@ class PlotTestCase(TestCase):
 class TestPlot(PlotTestCase):
 
     def setUp(self):
-        self.darray = DataArray(np.random.randn(2, 3, 4))
+        self.darray = DataArray(easy_array((2, 3, 4)))
 
     def test1d(self):
         self.darray[:, 0, 0].plot()
 
     def test_2d_before_squeeze(self):
-        a = DataArray(np.arange(5).reshape(1, 5))
+        a = DataArray(easy_array((1, 5)))
         a.plot()
 
     def test2d_uniform_calls_imshow(self):
@@ -98,7 +128,7 @@ class TestPlot1D(PlotTestCase):
         self.assertEqual(self.darray.name, plt.gca().get_ylabel())
 
     def test_wrong_dims_raises_valueerror(self):
-        twodims = DataArray(np.arange(10).reshape(2, 5))
+        twodims = DataArray(easy_array((2, 5)))
         with self.assertRaises(ValueError):
             twodims.plot.line()
 
@@ -138,7 +168,7 @@ class TestPlot1D(PlotTestCase):
 class TestPlotHistogram(PlotTestCase):
 
     def setUp(self):
-        self.darray = DataArray(np.random.randn(2, 3, 4))
+        self.darray = DataArray(easy_array((2, 3, 4)))
 
     def test_3d_array(self):
         self.darray.plot.hist()
@@ -148,7 +178,7 @@ class TestPlotHistogram(PlotTestCase):
         self.assertEqual('', plt.gca().get_title())
 
     def test_title_uses_name(self):
-        self.darray.name = 'randompoints'
+        self.darray.name = 'testpoints'
         self.darray.plot.hist()
         self.assertIn(self.darray.name, plt.gca().get_title())
 
@@ -175,19 +205,21 @@ class TestPlotHistogram(PlotTestCase):
 
 @requires_matplotlib
 class TestDetermineCmapParams(TestCase):
+
+    def setUp(self):
+        self.data = np.linspace(0, 1, num=100)
+
     def test_robust(self):
-        data = np.random.RandomState(1).rand(100)
-        cmap_params = _determine_cmap_params(data, robust=True)
-        self.assertEqual(cmap_params['vmin'], np.percentile(data, 2))
-        self.assertEqual(cmap_params['vmax'], np.percentile(data, 98))
+        cmap_params = _determine_cmap_params(self.data, robust=True)
+        self.assertEqual(cmap_params['vmin'], np.percentile(self.data, 2))
+        self.assertEqual(cmap_params['vmax'], np.percentile(self.data, 98))
         self.assertEqual(cmap_params['cmap'].name, 'viridis')
         self.assertEqual(cmap_params['extend'], 'both')
         self.assertIsNone(cmap_params['levels'])
         self.assertIsNone(cmap_params['cnorm'])
 
     def test_center(self):
-        data = np.random.RandomState(2).rand(100)
-        cmap_params = _determine_cmap_params(data, center=0.5)
+        cmap_params = _determine_cmap_params(self.data, center=0.5)
         self.assertEqual(cmap_params['vmax'] - 0.5, 0.5 - cmap_params['vmin'])
         self.assertEqual(cmap_params['cmap'], 'RdBu_r')
         self.assertEqual(cmap_params['extend'], 'neither')
@@ -195,7 +227,7 @@ class TestDetermineCmapParams(TestCase):
         self.assertIsNone(cmap_params['cnorm'])
 
     def test_integer_levels(self):
-        data = 1 + np.random.RandomState(3).rand(100)
+        data = self.data + 1
         cmap_params = _determine_cmap_params(data, levels=5, vmin=0, vmax=5,
                                              cmap='Blues')
         self.assertEqual(cmap_params['vmin'], cmap_params['levels'][0])
@@ -211,7 +243,7 @@ class TestDetermineCmapParams(TestCase):
         self.assertEqual(cmap_params['extend'], 'max')
 
     def test_list_levels(self):
-        data = 1 + np.random.RandomState(3).rand(100)
+        data = self.data + 1
 
         orig_levels = [0, 1, 2, 3, 4, 5]
         # vmin and vmax should be ignored if levels are explicitly provided
@@ -230,6 +262,7 @@ class TestDetermineCmapParams(TestCase):
 
 @requires_matplotlib
 class TestDiscreteColorMap(TestCase):
+
     def setUp(self):
         x = np.arange(start=0, stop=10, step=2)
         y = np.arange(start=9, stop=-7, step=-3)
@@ -314,9 +347,10 @@ class Common2dMixin:
     These tests assume that a staticmethod for `self.plotfunc` exists.
     Should have the same name as the method.
     """
+
     def setUp(self):
-        rs = np.random.RandomState(123)
-        self.darray = DataArray(rs.randn(10, 15), dims=['y', 'x'])
+        self.darray = DataArray(easy_array(
+            (10, 15), start=-1), dims=['y', 'x'])
         self.plotmethod = getattr(self.darray.plot, self.plotfunc.__name__)
 
     def test_label_names(self):
@@ -329,12 +363,12 @@ class Common2dMixin:
             self.plotfunc(self.darray[0, :])
 
     def test_3d_raises_valueerror(self):
-        a = DataArray(np.random.randn(2, 3, 4))
+        a = DataArray(easy_array((2, 3, 4)))
         with self.assertRaisesRegexp(ValueError, r'[Dd]im'):
             self.plotfunc(a)
 
     def test_nonnumeric_index_raises_typeerror(self):
-        a = DataArray(np.random.randn(3, 2),
+        a = DataArray(easy_array((3, 2)),
                       coords=[['a', 'b', 'c'], ['d', 'e']])
         with self.assertRaisesRegexp(TypeError, r'[Pp]lot'):
             self.plotfunc(a)
@@ -380,7 +414,7 @@ class Common2dMixin:
         try:
             import seaborn
             cmap_name = self.plotmethod(
-                    levels=2, cmap='husl').get_cmap().name
+                levels=2, cmap='husl').get_cmap().name
             self.assertEqual('husl', cmap_name)
         except ImportError:
             pass
@@ -394,8 +428,34 @@ class Common2dMixin:
         vmin, vmax = artist.get_clim()
         self.assertAlmostEqual(-vmin, vmax)
 
+    def test_xy_strings(self):
+        self.plotmethod('y', 'x')
+        ax = plt.gca()
+        self.assertEqual('y', ax.get_xlabel())
+        self.assertEqual('x', ax.get_ylabel())
+
+    def test_positional_x_string(self):
+        self.plotmethod('y')
+        ax = plt.gca()
+        self.assertEqual('y', ax.get_xlabel())
+        self.assertEqual('x', ax.get_ylabel())
+
+    def test_y_string(self):
+        self.plotmethod(y='x')
+        ax = plt.gca()
+        self.assertEqual('y', ax.get_xlabel())
+        self.assertEqual('x', ax.get_ylabel())
+
+    def test_bad_x_string_exception(self):
+        with self.assertRaisesRegexp(KeyError, r'y'):
+            self.plotmethod('not_a_real_dim')
+
+        self.darray.coords['z'] = 100
+        with self.assertRaisesRegexp(KeyError, r'y'):
+            self.plotmethod('z')
+
     def test_default_title(self):
-        a = DataArray(np.random.randn(4, 3, 2), dims=['a', 'b', 'c'])
+        a = DataArray(easy_array((4, 3, 2)), dims=['a', 'b', 'c'])
         a.coords['d'] = 10
         self.plotfunc(a.isel(c=1))
         title = plt.gca().get_title()
@@ -404,18 +464,23 @@ class Common2dMixin:
     def test_colorbar_label(self):
         self.darray.name = 'testvar'
         self.plotmethod()
-        alltxt = [t.get_text() for t in plt.gcf().findobj(mpl.text.Text)]
-        # Set comprehension not compatible with Python 2.6
-        alltxt = set(alltxt)
-        self.assertIn(self.darray.name, alltxt)
+        self.assertIn(self.darray.name, text_in_fig())
 
     def test_no_labels(self):
         self.darray.name = 'testvar'
         self.plotmethod(add_labels=False)
-        alltxt = [t.get_text() for t in plt.gcf().findobj(mpl.text.Text)]
-        alltxt = set(alltxt)
+        alltxt = text_in_fig()
         for string in ['x', 'y', 'testvar']:
             self.assertNotIn(string, alltxt)
+
+    def test_facetgrid(self):
+        a = easy_array((10, 15, 3))
+        d = DataArray(a, dims=['y', 'x', 'z'])
+        g = xplt.FacetGrid(d, col='z')
+        g.map_dataarray(self.plotfunc, 'x', 'y')
+        for ax in g.axes.flat:
+            self.assertTrue(ax.has_data())
+
 
 class TestContourf(Common2dMixin, PlotTestCase):
 
@@ -434,9 +499,13 @@ class TestContourf(Common2dMixin, PlotTestCase):
         artist = self.plotmethod()
         self.assertEqual(artist.extend, 'neither')
 
+        self.darray[0, 0] = -100
+        self.darray[-1, -1] = 100
         artist = self.plotmethod(robust=True)
         self.assertEqual(artist.extend, 'both')
 
+        self.darray[0, 0] = 0
+        self.darray[-1, -1] = 0
         artist = self.plotmethod(vmin=-0, vmax=10)
         self.assertEqual(artist.extend, 'min')
 
@@ -462,21 +531,22 @@ class TestContour(Common2dMixin, PlotTestCase):
             return tuple(c[:3])
         artist = self.plotmethod(colors='k')
         self.assertEqual(
-                _color_as_tuple(artist.cmap.colors[0]),
-                (0.0,0.0,0.0))
+            _color_as_tuple(artist.cmap.colors[0]),
+            (0.0, 0.0, 0.0))
 
-        artist = self.plotmethod(colors=['k','b'])
+        artist = self.plotmethod(colors=['k', 'b'])
         self.assertEqual(
-                _color_as_tuple(artist.cmap.colors[1]),
-                (0.0,0.0,1.0))
+            _color_as_tuple(artist.cmap.colors[1]),
+            (0.0, 0.0, 1.0))
 
     def test_cmap_and_color_both(self):
-        with self.assertRaises(ValueError):  
+        with self.assertRaises(ValueError):
             self.plotmethod(colors='k', cmap='RdBu')
 
     def list_of_colors_in_cmap_deprecated(self):
-        with self.assertRaises(DeprecationError):
-            self.plotmethod(cmap=['k','b'])
+        with self.assertRaises(Exception):
+            self.plotmethod(cmap=['k', 'b'])
+
 
 class TestPcolormesh(Common2dMixin, PlotTestCase):
 
@@ -524,3 +594,176 @@ class TestImshow(Common2dMixin, PlotTestCase):
                 self.plotmethod(cmap='husl')
         except ImportError:
             pass
+
+
+class TestFacetGrid(PlotTestCase):
+
+    def setUp(self):
+        d = easy_array((10, 15, 3))
+        self.darray = DataArray(d, dims=['y', 'x', 'z'])
+        self.g = xplt.FacetGrid(self.darray, col='z')
+
+    def test_no_args(self):
+        self.g.map_dataarray(xplt.contourf, 'x', 'y')
+
+        # Don't want colorbar labeled with 'None'
+        alltxt = text_in_fig()
+        self.assertNotIn('None', alltxt)
+
+        for ax in self.g.axes.flat:
+            self.assertTrue(ax.has_data())
+
+            # default font size should be small
+            fontsize = ax.title.get_size()
+            self.assertLessEqual(fontsize, 12)
+
+    def test_names_appear_somewhere(self):
+        self.darray.name = 'testvar'
+        self.g.map_dataarray(xplt.contourf, 'x', 'y')
+        for i, ax in enumerate(self.g.axes.flat):
+            self.assertEqual('z = {0}'.format(i), ax.get_title())
+
+        alltxt = text_in_fig()
+        self.assertIn(self.darray.name, alltxt)
+        for label in ['x', 'y']:
+            self.assertIn(label, alltxt)
+
+    def test_text_not_super_long(self):
+        self.darray.coords['z'] = [100 * letter for letter in 'abc']
+        g = xplt.FacetGrid(self.darray, col='z')
+        g.map_dataarray(xplt.contour, 'x', 'y')
+        alltxt = text_in_fig()
+        maxlen = max(len(txt) for txt in alltxt)
+        self.assertLess(maxlen, 50)
+
+        t0 = g.axes[0, 0].get_title()
+        self.assertTrue(t0.endswith('...'))
+
+    def test_colorbar(self):
+        vmin = self.darray.values.min()
+        vmax = self.darray.values.max()
+        expected = np.array((vmin, vmax))
+
+        self.g.map_dataarray(xplt.imshow, 'x', 'y')
+
+        for image in plt.gcf().findobj(mpl.image.AxesImage):
+            clim = np.array(image.get_clim())
+            self.assertTrue(np.allclose(expected, clim))
+
+        # There's only one colorbar
+        cbar = plt.gcf().findobj(mpl.collections.QuadMesh)
+        self.assertEqual(1, len(cbar))
+
+    def test_empty_cell(self):
+        g = xplt.FacetGrid(self.darray, col='z', col_wrap=2)
+        g.map_dataarray(xplt.imshow, 'x', 'y')
+
+        bottomright = g.axes[-1, -1]
+        self.assertFalse(bottomright.has_data())
+        self.assertFalse(bottomright.get_visible())
+
+    def test_norow_nocol_error(self):
+        with self.assertRaisesRegexp(ValueError, r'[Rr]ow'):
+            xplt.FacetGrid(self.darray)
+
+    def test_groups(self):
+        self.g.map_dataarray(xplt.imshow, 'x', 'y')
+        upperleft_dict = self.g.name_dicts[0, 0]
+        upperleft_array = self.darray[upperleft_dict]
+        z0 = self.darray.isel(z=0)
+
+        self.assertDataArrayEqual(upperleft_array, z0)
+
+    def test_float_index(self):
+        self.darray.coords['z'] = [0.1, 0.2, 0.4]
+        g = xplt.FacetGrid(self.darray, col='z')
+        g.map_dataarray(xplt.imshow, 'x', 'y')
+
+    def test_nonunique_index_error(self):
+        self.darray.coords['z'] = [0.1, 0.2, 0.2]
+        with self.assertRaisesRegexp(ValueError, r'[Uu]nique'):
+            xplt.FacetGrid(self.darray, col='z')
+
+    def test_robust(self):
+        z = np.zeros((20, 20, 2))
+        darray = DataArray(z, dims=['y', 'x', 'z'])
+        darray[:, :, 1] = 1
+        darray[2, 0, 0] = -1000
+        darray[3, 0, 0] = 1000
+        g = xplt.FacetGrid(darray, col='z')
+        g.map_dataarray(xplt.imshow, 'x', 'y', robust=True)
+
+        # Color limits should be 0, 1
+        # The largest number displayed in the figure should be less than 21
+        numbers = set()
+        alltxt = text_in_fig()
+        for txt in alltxt:
+            try:
+                numbers.add(float(txt))
+            except ValueError:
+                pass
+        largest = max(abs(x) for x in numbers)
+        self.assertLess(largest, 21)
+
+    def test_can_set_vmin_vmax(self):
+        vmin, vmax = 50.0, 1000.0
+        expected = np.array((vmin, vmax))
+        self.g.map_dataarray(xplt.imshow, 'x', 'y', vmin=vmin, vmax=vmax)
+
+        for image in plt.gcf().findobj(mpl.image.AxesImage):
+            clim = np.array(image.get_clim())
+            self.assertTrue(np.allclose(expected, clim))
+
+    def test_figure_size(self):
+
+        self.assertArrayEqual(self.g.fig.get_size_inches(), (10, 3))
+
+        g = xplt.FacetGrid(self.darray, col='z', size=6)
+        self.assertArrayEqual(g.fig.get_size_inches(), (19, 6))
+
+        g = xplt.FacetGrid(self.darray, col='z', size=4, aspect=0.5)
+        self.assertArrayEqual(g.fig.get_size_inches(), (7, 4))
+
+    def test_num_ticks(self):
+        nticks = 100
+        maxticks = nticks + 1
+        self.g.map_dataarray(xplt.imshow, 'x', 'y')
+        self.g.set_ticks(max_xticks=nticks, max_yticks=nticks)
+
+        for ax in self.g.axes.flat:
+            xticks = len(ax.get_xticks())
+            yticks = len(ax.get_yticks())
+            self.assertLessEqual(xticks, maxticks)
+            self.assertLessEqual(yticks, maxticks)
+            self.assertGreaterEqual(xticks, nticks / 2.0)
+            self.assertGreaterEqual(yticks, nticks / 2.0)
+
+    def test_map(self):
+        self.g.map(plt.contourf, 'x', 'y', Ellipsis)
+
+
+class TestFacetGrid4d(PlotTestCase):
+
+    def setUp(self):
+        a = easy_array((10, 15, 3, 2))
+        darray = DataArray(a, dims=['y', 'x', 'col', 'row'])
+        darray.coords['col'] = np.array(['col' + str(x) for x in
+                                         darray.coords['col'].values])
+        darray.coords['row'] = np.array(['row' + str(x) for x in
+                                         darray.coords['row'].values])
+
+        self.darray = darray
+
+    def test_default_labels(self):
+        g = xplt.FacetGrid(self.darray, col='col', row='row')
+        self.assertEqual((2, 3), g.axes.shape)
+
+        g.map_dataarray(xplt.imshow, 'x', 'y')
+
+        # Rightmost column should be labeled
+        for label, ax in zip(self.darray.coords['row'].values, g.axes[:, -1]):
+            self.assertTrue(substring_in_axes(label, ax))
+
+        # Top row should be labeled
+        for label, ax in zip(self.darray.coords['col'].values, g.axes[0, :]):
+            self.assertTrue(substring_in_axes(label, ax))
