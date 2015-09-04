@@ -304,7 +304,7 @@ def _color_palette(cmap, n_colors):
     elif isinstance(cmap, basestring):
         # we have some sort of named palette
         try:
-            # first try to turn it into a palette with seaborn                    
+            # first try to turn it into a palette with seaborn
             from seaborn.apionly import color_palette
             pal = color_palette(cmap, n_colors=n_colors)
         except (ImportError, ValueError):
@@ -406,7 +406,7 @@ def _plot2d(plotfunc):
         The mapping from data values to color space. If not provided, this
         will be either be ``viridis`` (if the function infers a sequential
         dataset) or ``RdBu_r`` (if the function infers a diverging dataset).
-        When when `Seaborn` is installed, ``cmap`` may also be a `seaborn` 
+        When when `Seaborn` is installed, ``cmap`` may also be a `seaborn`
         color palette. If ``cmap`` is seaborn color palette and the plot type
         is not ``contour`` or ``contourf``, ``levels`` must also be specified.
     colors : discrete colors to plot, optional
@@ -563,9 +563,13 @@ def imshow(x, y, z, ax, **kwargs):
     bottom, top = y[-1] + ystep, y[0] - ystep
 
     defaults = {'extent': [left, right, bottom, top],
-                'aspect': 'auto',
+                'origin': 'upper',
                 'interpolation': 'nearest',
                 }
+
+    if not hasattr(ax, 'projection'):
+        # not for cartopy geoaxes
+        defaults['aspect'] = 'auto'
 
     # Allow user to override these defaults
     defaults.update(kwargs)
