@@ -350,7 +350,7 @@ We can use :py:meth:`xray.FacetGrid.map_dataarray` on a DataArray:
     g = xray.plot.FacetGrid(t, col='time', col_wrap=3)
     
     @savefig plot_facet_dataarray.png height=12in 
-    g.map_dataarray(xray.plot.contourf, 'lon', 'lat')
+    g.map_dataarray(xray.plot.imshow, 'lon', 'lat')
 
 FacetGrid Objects
 ~~~~~~~~~~~~~~~~~
@@ -367,7 +367,7 @@ Pick out individual axes using the ``.axes`` attribute.
 
     g = (xray.plot
          .FacetGrid(t, col='time', col_wrap=3)
-         .map_dataarray(xray.plot.contourf, 'lon', 'lat')
+         .map_dataarray(xray.plot.imshow, 'lon', 'lat')
          )
 
     for i, ax in enumerate(g):
