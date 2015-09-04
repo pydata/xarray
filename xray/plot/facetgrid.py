@@ -169,8 +169,7 @@ class FacetGrid(object):
     def __iter__(self):
         return self.axes.flat
 
-    def map_dataarray(self, plotfunc, x, y, max_xticks=4, max_yticks=4,
-                      fontsize=_FONTSIZE, **kwargs):
+    def map_dataarray(self, plotfunc, x, y, **kwargs):
         """
         Apply a plotting function to a 2d facet's subset of the data.
 
@@ -183,12 +182,6 @@ class FacetGrid(object):
             plotting method such as `xray.plot.imshow`
         x, y : string
             Names of the coordinates to plot on x, y axes
-        max_xticks, max_yticks : int, optional
-            Maximum number of labeled ticks to plot on x, y axes
-        max_yticks : int
-            Maximum number of tick marks to place on y axis
-        fontsize : string or int
-            Font size as used by matplotlib text
         kwargs :
             additional keyword arguments to plotfunc
 
@@ -271,10 +264,6 @@ class FacetGrid(object):
                 cbar.set_label(self.darray.name, rotation=270,
                                verticalalignment='bottom')
 
-        # This happens here rather than __init__ since FacetGrid.map should
-        # use default ticks
-        self.set_ticks(max_xticks, max_yticks, fontsize)
-
         return self
 
     def set_titles(self, template="{coord} = {value}", maxchar=30,
@@ -330,9 +319,19 @@ class FacetGrid(object):
     def set_ticks(self, max_xticks=_NTICKS, max_yticks=_NTICKS,
                   fontsize=_FONTSIZE):
         """
-        Sets tick behavior.
+        Set and control tick behavior
 
-        Refer to documentation in :meth:`FacetGrid.map_dataarray`
+        Parameters
+        ----------
+        max_xticks, max_yticks : int, optional
+            Maximum number of labeled ticks to plot on x, y axes
+        fontsize : string or int
+            Font size as used by matplotlib text
+
+        Returns
+        -------
+        self : FacetGrid object
+
         """
         from matplotlib.ticker import MaxNLocator
 

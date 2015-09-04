@@ -1,5 +1,3 @@
-import unittest
-
 import numpy as np
 import pandas as pd
 
@@ -207,6 +205,7 @@ class TestPlotHistogram(PlotTestCase):
 
 @requires_matplotlib
 class TestDetermineCmapParams(TestCase):
+
     def setUp(self):
         self.data = np.linspace(0, 1, num=100)
 
@@ -263,6 +262,7 @@ class TestDetermineCmapParams(TestCase):
 
 @requires_matplotlib
 class TestDiscreteColorMap(TestCase):
+
     def setUp(self):
         x = np.arange(start=0, stop=10, step=2)
         y = np.arange(start=9, stop=-7, step=-3)
@@ -347,8 +347,10 @@ class Common2dMixin:
     These tests assume that a staticmethod for `self.plotfunc` exists.
     Should have the same name as the method.
     """
+
     def setUp(self):
-        self.darray = DataArray(easy_array((10, 15), start=-1), dims=['y', 'x'])
+        self.darray = DataArray(easy_array(
+            (10, 15), start=-1), dims=['y', 'x'])
         self.plotmethod = getattr(self.darray.plot, self.plotfunc.__name__)
 
     def test_label_names(self):
@@ -412,7 +414,7 @@ class Common2dMixin:
         try:
             import seaborn
             cmap_name = self.plotmethod(
-                    levels=2, cmap='husl').get_cmap().name
+                levels=2, cmap='husl').get_cmap().name
             self.assertEqual('husl', cmap_name)
         except ImportError:
             pass
@@ -451,12 +453,6 @@ class Common2dMixin:
         self.darray.coords['z'] = 100
         with self.assertRaisesRegexp(KeyError, r'y'):
             self.plotmethod('z')
-
-    def test_default_title(self):
-        a = DataArray(easy_array((4, 3, 2, 1)), dims=['a', 'b', 'c', 'd'])
-        self.plotfunc(a.isel(c=1))
-        title = plt.gca().get_title()
-        self.assertEqual('c = 1, d = 0', title)
 
     def test_default_title(self):
         a = DataArray(easy_array((4, 3, 2)), dims=['a', 'b', 'c'])
@@ -535,21 +531,22 @@ class TestContour(Common2dMixin, PlotTestCase):
             return tuple(c[:3])
         artist = self.plotmethod(colors='k')
         self.assertEqual(
-                _color_as_tuple(artist.cmap.colors[0]),
-                (0.0,0.0,0.0))
+            _color_as_tuple(artist.cmap.colors[0]),
+            (0.0, 0.0, 0.0))
 
-        artist = self.plotmethod(colors=['k','b'])
+        artist = self.plotmethod(colors=['k', 'b'])
         self.assertEqual(
-                _color_as_tuple(artist.cmap.colors[1]),
-                (0.0,0.0,1.0))
+            _color_as_tuple(artist.cmap.colors[1]),
+            (0.0, 0.0, 1.0))
 
     def test_cmap_and_color_both(self):
-        with self.assertRaises(ValueError):  
+        with self.assertRaises(ValueError):
             self.plotmethod(colors='k', cmap='RdBu')
 
     def list_of_colors_in_cmap_deprecated(self):
-        with self.assertRaises(DeprecationError):
-            self.plotmethod(cmap=['k','b'])
+        with self.assertRaises(Exception):
+            self.plotmethod(cmap=['k', 'b'])
+
 
 class TestPcolormesh(Common2dMixin, PlotTestCase):
 
@@ -656,11 +653,11 @@ class TestFacetGrid(PlotTestCase):
         # There's only one colorbar
         cbar = plt.gcf().findobj(mpl.collections.QuadMesh)
         self.assertEqual(1, len(cbar))
-        
+
     def test_empty_cell(self):
         g = xplt.FacetGrid(self.darray, col='z', col_wrap=2)
         g.map_dataarray(xplt.imshow, 'x', 'y')
-        
+
         bottomright = g.axes[-1, -1]
         self.assertFalse(bottomright.has_data())
         self.assertFalse(bottomright.get_visible())
@@ -685,7 +682,7 @@ class TestFacetGrid(PlotTestCase):
     def test_nonunique_index_error(self):
         self.darray.coords['z'] = [0.1, 0.2, 0.2]
         with self.assertRaisesRegexp(ValueError, r'[Uu]nique'):
-            g = xplt.FacetGrid(self.darray, col='z')
+            xplt.FacetGrid(self.darray, col='z')
 
     def test_robust(self):
         z = np.zeros((20, 20, 2))
@@ -730,8 +727,9 @@ class TestFacetGrid(PlotTestCase):
     def test_num_ticks(self):
         nticks = 100
         maxticks = nticks + 1
-        self.g.map_dataarray(xplt.imshow, 'x', 'y', max_xticks=nticks,
-                max_yticks=nticks)
+        self.g.map_dataarray(xplt.imshow, 'x', 'y')
+        self.g.set_ticks(max_xticks=nticks, max_yticks=nticks)
+
         for ax in self.g:
             xticks = len(ax.get_xticks())
             yticks = len(ax.get_yticks())
@@ -745,14 +743,14 @@ class TestFacetGrid(PlotTestCase):
 
 
 class TestFacetGrid4d(PlotTestCase):
-    
+
     def setUp(self):
         a = easy_array((10, 15, 3, 2))
         darray = DataArray(a, dims=['y', 'x', 'col', 'row'])
         darray.coords['col'] = np.array(['col' + str(x) for x in
-            darray.coords['col'].values])
+                                         darray.coords['col'].values])
         darray.coords['row'] = np.array(['row' + str(x) for x in
-            darray.coords['row'].values])
+                                         darray.coords['row'].values])
 
         self.darray = darray
 
