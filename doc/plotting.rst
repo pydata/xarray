@@ -48,7 +48,6 @@ Imports
     # Use defaults so we don't get gridlines in generated docs
     import matplotlib as mpl
     mpl.rcdefaults()
-    mpl.rcParams.update({'figure.autolayout': True})
 
 The following imports are necessary for all of the examples.
 
@@ -343,7 +342,7 @@ Simple Example
 
 TODO - replace with the convenience method from plot
 
-We can use :py:meth:`xray.FacetGrid.map_dataarray` on a DataArray:
+We can use :py:meth:`xray.plot.FacetGrid.map_dataarray` on a DataArray:
 
 .. ipython:: python
 

@@ -175,7 +175,7 @@ class FacetGrid(object):
 
         self.set_titles()
 
-    def map_dataarray(self, plotfunc, x, y, **kwargs):
+    def map_dataarray(self, func, x, y, **kwargs):
         """
         Apply a plotting function to a 2d facet's subset of the data.
 
@@ -183,13 +183,13 @@ class FacetGrid(object):
 
         Parameters
         ----------
-        plotfunc : callable
+        func : callable
             A plotting function with the same signature as a 2d xray
             plotting method such as `xray.plot.imshow`
         x, y : string
             Names of the coordinates to plot on x, y axes
         kwargs :
-            additional keyword arguments to plotfunc
+            additional keyword arguments to func
 
         Returns
         -------
@@ -206,8 +206,8 @@ class FacetGrid(object):
                        'robust': False,
                        'extend': None,
                        # MPL default
-                       'levels': 7 if 'contour' in plotfunc.__name__ else None,
-                       'filled': plotfunc.__name__ != 'contour',
+                       'levels': 7 if 'contour' in func.__name__ else None,
+                       'filled': func.__name__ != 'contour',
                        }
 
         # Allow kwargs to override these defaults
@@ -219,7 +219,7 @@ class FacetGrid(object):
         # self.data is required to make the right choice
         cmap_params = _determine_cmap_params(**cmap_kwargs)
 
-        if 'contour' in plotfunc.__name__:
+        if 'contour' in func.__name__:
             # extend is a keyword argument only for contour and contourf, but
             # passing it to the colorbar is sufficient for imshow and
             # pcolormesh
@@ -240,7 +240,7 @@ class FacetGrid(object):
             # None is the sentinel value
             if d is not None:
                 subset = self.data.loc[d]
-                mappable = plotfunc(subset, x, y, ax=ax, **defaults)
+                mappable = func(subset, x, y, ax=ax, **defaults)
 
         # Left side labels
         for ax in self.axes[:, 0]:
