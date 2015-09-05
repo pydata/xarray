@@ -11,9 +11,9 @@ benefits of using dask are sufficiently strong that we expect that dask may
 become a requirement for a future version of xray.
 
 For a full example of how to use xray's dask integration, read the
-`blog post introducing xray + dask`_.
+`blog post introducing xray and dask`_.
 
-.. _blog post introducing xray + dask: http://continuum.io/blog/xray-dask
+.. _blog post introducing xray and dask: http://continuum.io/blog/xray-dask
 
 What is a dask array?
 ---------------------
@@ -143,10 +143,10 @@ Explicit conversion by wrapping a DataArray with ``np.asarray`` also works:
             [  1.337e+00,  -1.531e+00, ...,   8.726e-01,  -1.538e+00],
             ...
 
-With the current versions of xray and dask, there is no automatic conversion
-of eager numpy arrays to dask arrays, nor automatic alignment of chunks when
-performing operations between dask arrays with different chunk sizes. You will
-need to explicitly chunk each array to ensure compatibility. With xray, both
+With the current version of dask, there is no automatic alignment of chunks when
+performing operations between dask arrays with different chunk sizes. If your
+computation involves multiple dask arrays with different chunks, you may need to
+explicitly rechunk each array to ensure compatibility. With xray, both
 converting data to a dask arrays and converting the chunk sizes of dask arrays
 is done with the :py:meth:`~xray.Dataset.chunk` method:
 
@@ -166,16 +166,16 @@ You can view the size of existing chunks on an array by viewing the
 
     rechunked.chunks
 
-If there are not consistent chunksizes between all the ararys in a dataset
+If there are not consistent chunksizes between all the arrays in a dataset
 along a particular dimension, an exception is raised when you try to access
 ``.chunks``.
 
 .. note::
 
     In the future, we would like to enable automatic alignment of dask
-    chunksizes and automatic conversion of numpy arrays to dask (but not the
-    other way around). We might also require that all arrays in a dataset
-    share the same chunking alignment. None of these are currently done.
+    chunksizes (but not the other way around). We might also require that all
+    arrays in a dataset share the same chunking alignment. Neither of these
+    are currently done.
 
 NumPy ufuncs like ``np.sin`` currently only work on eagerly evaluated arrays
 (this will change with the next major NumPy release). We have provided
