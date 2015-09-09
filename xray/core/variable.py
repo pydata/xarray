@@ -101,7 +101,8 @@ def _as_compatible_data(data, fastpath=False):
         data = np.timedelta64(getattr(data, 'value', data), 'ns')
 
     if (not hasattr(data, 'dtype') or not hasattr(data, 'shape')
-            or isinstance(data, (np.string_, np.datetime64, np.timedelta64))):
+            or isinstance(data, (np.string_, np.unicode_,
+                                 np.datetime64, np.timedelta64))):
         # data must be ndarray-like
         data = np.asarray(data)
 
