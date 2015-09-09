@@ -1,3 +1,5 @@
+import inspect
+
 import numpy as np
 import pandas as pd
 
@@ -106,6 +108,23 @@ class TestPlot(PlotTestCase):
                               _infer_interval_breaks([0, 1, 9, 10]))
         self.assertArrayEqual(pd.date_range('20000101', periods=4) - np.timedelta64(12, 'h'),
                               _infer_interval_breaks(pd.date_range('20000101', periods=3)))
+
+    def test_convenient_facetgrid(self):
+        n = 4
+        a = easy_array((10, 15, n))
+        d = DataArray(a, dims=['y', 'x', 'z'])
+
+        g = d.plot('x', 'y', col='z', col_wrap=2)
+        for ax in g.axes.flat:
+            self.assertTrue(ax.has_data())
+
+    def test_convenient_facetgrid_4d(self):
+        a = easy_array((10, 15, 2, 3))
+        d = DataArray(a, dims=['y', 'x', 'columns', 'rows'])
+
+        g = d.plot('x', 'y', col='columns', row='rows')
+        for ax in g.axes.flat:
+            self.assertTrue(ax.has_data())
 
 
 class TestPlot1D(PlotTestCase):
@@ -481,26 +500,11 @@ class Common2dMixin:
         for ax in g.axes.flat:
             self.assertTrue(ax.has_data())
 
-    def test_convenient_facetgrid(self):
-        n = 4
-        a = easy_array((10, 15, n))
-        d = DataArray(a, dims=['y', 'x', 'z'])
-
-        g = self.plotfunc(d, 'x', 'y', col='z', col_wrap=2)
-        for ax in g.axes.flat:
-            self.assertTrue(ax.has_data())
-
-    def test_convenient_facetgrid_4d(self):
-        a = easy_array((10, 15, 2, 3))
-        d = DataArray(a, dims=['y', 'x', 'columns', 'rows'])
-
-        g = self.plotfunc(d, 'x', 'y', col='columns', row='rows')
-        for ax in g.axes.flat:
-            self.assertTrue(ax.has_data())
-
     def test_2d_function_and_method_signature_same(self):
         func_sig = inspect.getcallargs(self.plotfunc, self.darray)
-        method_sig = inspect.getcallargs(self.plotmethod, self.darray)
+        method_sig = inspect.getcallargs(self.plotmethod)
+        del method_sig['_PlotMethods_obj']
+        del func_sig['darray']
         self.assertEqual(func_sig, method_sig)
 
 
