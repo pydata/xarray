@@ -473,13 +473,35 @@ class Common2dMixin:
         for string in ['x', 'y', 'testvar']:
             self.assertNotIn(string, alltxt)
 
-    def test_facetgrid(self):
+    def test_verbose_facetgrid(self):
         a = easy_array((10, 15, 3))
         d = DataArray(a, dims=['y', 'x', 'z'])
         g = xplt.FacetGrid(d, col='z')
         g.map_dataarray(self.plotfunc, 'x', 'y')
         for ax in g.axes.flat:
             self.assertTrue(ax.has_data())
+
+    def test_convenient_facetgrid(self):
+        n = 4
+        a = easy_array((10, 15, n))
+        d = DataArray(a, dims=['y', 'x', 'z'])
+
+        g = self.plotfunc(d, 'x', 'y', col='z', col_wrap=2)
+        for ax in g.axes.flat:
+            self.assertTrue(ax.has_data())
+
+    def test_convenient_facetgrid_4d(self):
+        a = easy_array((10, 15, 2, 3))
+        d = DataArray(a, dims=['y', 'x', 'columns', 'rows'])
+
+        g = self.plotfunc(d, 'x', 'y', col='columns', row='rows')
+        for ax in g.axes.flat:
+            self.assertTrue(ax.has_data())
+
+    def test_2d_function_and_method_signature_same(self):
+        func_sig = inspect.getcallargs(self.plotfunc, self.darray)
+        method_sig = inspect.getcallargs(self.plotmethod, self.darray)
+        self.assertEqual(func_sig, method_sig)
 
 
 class TestContourf(Common2dMixin, PlotTestCase):
