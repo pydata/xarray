@@ -230,6 +230,59 @@ def hist(darray, ax=None, **kwargs):
     return primitive
 
 
+def plotter_1d(darray, *args, **kwargs):
+    """
+    Bar plot of 1 dimensional DataArray index against values
+
+    Wraps matplotlib.pyplot.plot
+
+    Parameters
+    ----------
+    darray : DataArray
+        Must be 1 dimensional
+    ax : matplotlib axes, optional
+        If not passed, uses the current axis
+    *args, **kwargs : optional
+        Additional arguments to matplotlib.pyplot.plot
+
+    """
+    import matplotlib.pyplot as plt
+
+    ndims = len(darray.dims)
+    if ndims != 1:
+        raise ValueError('Line plots are for 1 dimensional DataArrays. '
+                         'Passed DataArray has {ndims} '
+                         'dimensions'.format(ndims=ndims))
+
+    # Ensures consistency with .plot method
+    ax = kwargs.pop('ax', plt.gca())
+
+    plot_method = kwargs.pop('plot_method', None)
+
+    xlabel, x = list(darray.indexes.items())[0]
+
+    _ensure_plottable([x])
+
+    try:
+        plotter = ax.__getattribute__(plot_method)
+        primitive = plotter(x, darray, *args, **kwargs)
+    except AttributeError:
+        msg = 'Axes does not have plotting method {}'.format(plot_method)
+        raise AttributeError(msg)
+
+    ax.set_xlabel(xlabel)
+    ax.set_title(darray._title_for_slice())
+
+    if darray.name is not None:
+        ax.set_ylabel(darray.name)
+
+    # Rotate dates on xlabels
+    if np.issubdtype(x.dtype, np.datetime64):
+        plt.gcf().autofmt_xdate()
+
+    return primitive
+
+
 def _update_axes_limits(ax, xincrease, yincrease):
     """
     Update axes in place to increase or decrease
@@ -355,7 +408,7 @@ def _color_palette(cmap, n_colors):
     elif isinstance(cmap, basestring):
         # we have some sort of named palette
         try:
-            # first try to turn it into a palette with seaborn                    
+            # first try to turn it into a palette with seaborn
             from seaborn.apionly import color_palette
             pal = color_palette(cmap, n_colors=n_colors)
         except (ImportError, ValueError):
@@ -424,6 +477,10 @@ class _PlotMethods(object):
     def line(self, *args, **kwargs):
         return line(self._da, *args, **kwargs)
 
+    @functools.wraps(plotter_1d)
+    def plotter_1d(self, *args, **kwargs):
+        return plotter_1d(self._da, *args, **kwargs)
+
 
 def _plot2d(plotfunc):
     """
@@ -461,7 +518,7 @@ def _plot2d(plotfunc):
         The mapping from data values to color space. If not provided, this
         will be either be ``viridis`` (if the function infers a sequential
         dataset) or ``RdBu_r`` (if the function infers a diverging dataset).
-        When when `Seaborn` is installed, ``cmap`` may also be a `seaborn` 
+        When when `Seaborn` is installed, ``cmap`` may also be a `seaborn`
         color palette. If ``cmap`` is seaborn color palette and the plot type
         is not ``contour`` or ``contourf``, ``levels`` must also be specified.
     colors : discrete colors to plot, optional
