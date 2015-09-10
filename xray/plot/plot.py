@@ -230,7 +230,7 @@ def hist(darray, ax=None, **kwargs):
     return primitive
 
 
-def plotter_1d(darray, *args, **kwargs):
+def plotter_1d(darray, plot_method='plot', *args, **kwargs):
     """
     Bar plot of 1 dimensional DataArray index against values
 
@@ -257,18 +257,17 @@ def plotter_1d(darray, *args, **kwargs):
     # Ensures consistency with .plot method
     ax = kwargs.pop('ax', plt.gca())
 
-    plot_method = kwargs.pop('plot_method', None)
-
     xlabel, x = list(darray.indexes.items())[0]
 
     _ensure_plottable([x])
 
     try:
         plotter = ax.__getattribute__(plot_method)
-        primitive = plotter(x, darray, *args, **kwargs)
     except AttributeError:
         msg = 'Axes does not have plotting method {}'.format(plot_method)
         raise AttributeError(msg)
+
+    primitive = plotter(x, darray, *args, **kwargs)
 
     ax.set_xlabel(xlabel)
     ax.set_title(darray._title_for_slice())
@@ -279,6 +278,50 @@ def plotter_1d(darray, *args, **kwargs):
     # Rotate dates on xlabels
     if np.issubdtype(x.dtype, np.datetime64):
         plt.gcf().autofmt_xdate()
+
+    return primitive
+
+
+def plotter_data(darray, plot_method='hist', **kwargs):
+    """
+    Bar plot of 1 dimensional DataArray index against values
+
+    Wraps matplotlib.pyplot.plot
+
+    Parameters
+    ----------
+    darray : DataArray
+        Must be 1 dimensional
+    ax : matplotlib axes, optional
+        If not passed, uses the current axis
+    *args, **kwargs : optional
+        Additional arguments to matplotlib.pyplot.plot
+
+    """
+    import matplotlib.pyplot as plt
+
+    ndims = len(darray.dims)
+    if ndims != 1:
+        raise ValueError('Line plots are for 1 dimensional DataArrays. '
+                         'Passed DataArray has {ndims} '
+                         'dimensions'.format(ndims=ndims))
+
+    # Ensures consistency with .plot method
+    ax = kwargs.pop('ax', plt.gca())
+
+    try:
+        plotter = ax.__getattribute__(plot_method)
+    except AttributeError:
+        msg = 'Axes does not have plotting method {}'.format(plot_method)
+        raise AttributeError(msg)
+
+    no_nan = np.ravel(darray.values)
+    no_nan = no_nan[pd.notnull(no_nan)]
+
+    primitive = plotter(no_nan, **kwargs)
+
+    # ax.set_xlabel(xlabel)
+    ax.set_title(darray._title_for_slice())
 
     return primitive
 
@@ -412,8 +455,8 @@ def _color_palette(cmap, n_colors):
             from seaborn.apionly import color_palette
             pal = color_palette(cmap, n_colors=n_colors)
         except (ImportError, ValueError):
-            # ValueError is raised when seaborn doesn't like a colormap (e.g. jet)
-            # if that fails, use matplotlib
+            # ValueError is raised when seaborn doesn't like a colormap
+            # (e.g. jet). if that fails, use matplotlib
             try:
                 # is this a matplotlib cmap?
                 cmap = plt.get_cmap(cmap)
@@ -478,8 +521,12 @@ class _PlotMethods(object):
         return line(self._da, *args, **kwargs)
 
     @functools.wraps(plotter_1d)
-    def plotter_1d(self, *args, **kwargs):
-        return plotter_1d(self._da, *args, **kwargs)
+    def plotter_1d(self, plot_method='plot', *args, **kwargs):
+        return plotter_1d(self._da, plot_method=plot_method, *args, **kwargs)
+
+    @functools.wraps(plotter_data)
+    def plotter_data(self, plot_method='hist', **kwargs):
+        return plotter_data(self._da, plot_method=plot_method, **kwargs)
 
 
 def _plot2d(plotfunc):
@@ -549,9 +596,10 @@ def _plot2d(plotfunc):
     plotfunc.__doc__ = '\n'.join((plotfunc.__doc__, commondoc))
 
     @functools.wraps(plotfunc)
-    def newplotfunc(darray, x=None, y=None, ax=None, xincrease=None, yincrease=None,
-                    add_colorbar=True, add_labels=True, vmin=None, vmax=None, cmap=None,
-                    center=None, robust=False, extend=None, levels=None, colors=None,
+    def newplotfunc(darray, x=None, y=None, ax=None, xincrease=None,
+                    yincrease=None, add_colorbar=True, add_labels=True,
+                    vmin=None, vmax=None, cmap=None, center=None, robust=False,
+                    extend=None, levels=None, colors=None,
                     **kwargs):
         # All 2d plots in xray share this function signature.
         # Method signature below should be consistent.
