@@ -599,6 +599,15 @@ class TestVariable(TestCase, VariableSubclassTestCases):
         v = Variable([], np.string_('asdf'))
         self.assertVariableIdentical(v[()], v)
 
+        v = Variable([], np.unicode_(u'asdf'))
+        self.assertVariableIdentical(v[()], v)
+
+    def test_indexing_0d_unicode(self):
+        # regression test for GH568
+        actual = Variable(('x'), [u'tmax'])[0][()]
+        expected = Variable((), u'tmax')
+        self.assertVariableIdentical(actual, expected)
+
     def test_transpose(self):
         v = Variable(['time', 'x'], self.d)
         v2 = Variable(['x', 'time'], self.d.T)

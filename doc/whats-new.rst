@@ -34,6 +34,7 @@ Bug fixes
 
 - Aggregation functions now correctly skip ``NaN`` for data for ``complex128``
   dtype (:issue:`554`).
+- Fixed indexing 0d arrays with unicode dtype (:issue:`568`).
 
 v0.6.0 (21 August 2015)
 -----------------------
