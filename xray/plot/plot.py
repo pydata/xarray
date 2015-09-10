@@ -7,7 +7,6 @@ Or use the methods on a DataArray:
 """
 
 from __future__ import division
-import pkg_resources
 import functools
 from textwrap import dedent
 from itertools import cycle
@@ -17,6 +16,7 @@ import warnings
 import numpy as np
 import pandas as pd
 
+from .utils import _determine_cmap_params
 from ..core.utils import is_uniform_spaced
 from ..core.pycompat import basestring
 
@@ -40,19 +40,6 @@ def _ensure_plottable(*args):
     if not any(_right_dtype(np.array(x), plottypes) for x in args):
         raise TypeError('Plotting requires coordinates to be numeric '
                         'or dates.')
-
-
-def _load_default_cmap(fname='default_colormap.csv'):
-    """
-    Returns viridis color map
-    """
-    from matplotlib.colors import LinearSegmentedColormap
-
-    # Not sure what the first arg here should be
-    f = pkg_resources.resource_stream(__name__, fname)
-    cm_data = pd.read_csv(f, header=None).values
-
-    return LinearSegmentedColormap.from_list('viridis', cm_data)
 
 
 def _infer_xy_labels(plotfunc, darray, x, y):
@@ -250,156 +237,16 @@ def _update_axes_limits(ax, xincrease, yincrease):
         ax.set_ylim(sorted(ax.get_ylim(), reverse=True))
 
 
-def _determine_cmap_params(plot_data, vmin=None, vmax=None, cmap=None,
-                           center=None, robust=False, extend=None,
-                           levels=None, filled=True, cnorm=None):
+def _infer_interval_breaks(coord):
     """
-    Use some heuristics to set good defaults for colorbar and range.
-
-    Adapted from Seaborn:
-    https://github.com/mwaskom/seaborn/blob/v0.6/seaborn/matrix.py#L158
-
-    Parameters
-    ==========
-    plot_data: Numpy array
-        Doesn't handle xray objects
-
-    Returns
-    =======
-    cmap_params : dict
-        Use depends on the type of the plotting function
+    >>> _infer_interval_breaks(np.arange(5))
+    array([-0.5,  0.5,  1.5,  2.5,  3.5,  4.5])
     """
-    ROBUST_PERCENTILE = 2.0
-    import matplotlib as mpl
-
-    calc_data = np.ravel(plot_data[~pd.isnull(plot_data)])
-
-    if vmin is None:
-        vmin = np.percentile(calc_data, ROBUST_PERCENTILE) if robust else calc_data.min()
-    if vmax is None:
-        vmax = np.percentile(calc_data, 100 - ROBUST_PERCENTILE) if robust else calc_data.max()
-
-    # Simple heuristics for whether these data should  have a divergent map
-    divergent = ((vmin < 0) and (vmax > 0)) or center is not None
-
-    # Now set center to 0 so math below makes sense
-    if center is None:
-        center = 0
-
-    # A divergent map should be symmetric around the center value
-    if divergent:
-        vlim = max(abs(vmin - center), abs(vmax - center))
-        vmin, vmax = -vlim, vlim
-
-    # Now add in the centering value and set the limits
-    vmin += center
-    vmax += center
-
-    # Choose default colormaps if not provided
-    if cmap is None:
-        if divergent:
-            cmap = "RdBu_r"
-        else:
-            cmap = "viridis"
-
-    # Allow viridis before matplotlib 1.5
-    if cmap == "viridis":
-        cmap = _load_default_cmap()
-
-    # Handle discrete levels
-    if levels is not None:
-        if isinstance(levels, int):
-            ticker = mpl.ticker.MaxNLocator(levels)
-            levels = ticker.tick_values(vmin, vmax)
-        vmin, vmax = levels[0], levels[-1]
-
-    if extend is None:
-        extend = _determine_extend(calc_data, vmin, vmax)
-
-    if levels is not None:
-        cmap, cnorm = _build_discrete_cmap(cmap, levels, extend, filled)
-
-    return dict(vmin=vmin, vmax=vmax, cmap=cmap, extend=extend,
-                levels=levels, cnorm=cnorm)
-
-
-def _determine_extend(calc_data, vmin, vmax):
-    extend_min = calc_data.min() < vmin
-    extend_max = calc_data.max() > vmax
-    if extend_min and extend_max:
-        extend = 'both'
-    elif extend_min:
-        extend = 'min'
-    elif extend_max:
-        extend = 'max'
-    else:
-        extend = 'neither'
-    return extend
-
-
-def _color_palette(cmap, n_colors):
-    import matplotlib.pyplot as plt
-    from matplotlib.colors import ListedColormap
-    colors_i = np.linspace(0, 1., n_colors)
-    if isinstance(cmap, (list, tuple)):
-        # we have a list of colors
-        try:
-            # first try to turn it into a palette with seaborn
-            from seaborn.apionly import color_palette
-            pal = color_palette(cmap, n_colors=n_colors)
-        except ImportError:
-            # if that fails, use matplotlib
-            # in this case, is there any difference between mpl and seaborn?
-            cmap = ListedColormap(cmap, N=n_colors)
-            pal = cmap(colors_i)
-    elif isinstance(cmap, basestring):
-        # we have some sort of named palette
-        try:
-            # first try to turn it into a palette with seaborn                    
-            from seaborn.apionly import color_palette
-            pal = color_palette(cmap, n_colors=n_colors)
-        except (ImportError, ValueError):
-            # ValueError is raised when seaborn doesn't like a colormap (e.g. jet)
-            # if that fails, use matplotlib
-            try:
-                # is this a matplotlib cmap?
-                cmap = plt.get_cmap(cmap)
-            except ValueError:
-                # or maybe we just got a single color as a string
-                cmap = ListedColormap([cmap], N=n_colors)
-            pal = cmap(colors_i)
-    else:
-        # cmap better be a LinearSegmentedColormap (e.g. viridis)
-        pal = cmap(colors_i)
-
-    return pal
-
-def _build_discrete_cmap(cmap, levels, extend, filled):
-    """
-    Build a discrete colormap and normalization of the data.
-    """
-    import matplotlib as mpl
-
-    if not filled:
-        # non-filled contour plots
-        extend = 'neither'
-
-    if extend == 'both':
-        ext_n = 2
-    elif extend in ['min', 'max']:
-        ext_n = 1
-    else:
-        ext_n = 0
-
-    n_colors = len(levels) + ext_n - 1
-    pal = _color_palette(cmap, n_colors)
-
-    new_cmap, cnorm = mpl.colors.from_levels_and_colors(
-        levels, pal, extend=extend)
-    # copy the old cmap name, for easier testing
-    new_cmap.name = getattr(cmap, 'name', cmap)
-
-    return new_cmap, cnorm
+    coord = np.asarray(coord)
+    deltas = 0.5 * (coord[1:] - coord[:-1])
+    first = coord[0] - deltas[0]
+    last = coord[-1] + deltas[-1]
+    return np.r_[[first], coord[:-1] + deltas, [last]]
 
 
 # MUST run before any 2d plotting functions are defined since
@@ -657,18 +504,6 @@ def contourf(x, y, z, ax, **kwargs):
     """
     primitive = ax.contourf(x, y, z, **kwargs)
     return ax, primitive
-
-
-def _infer_interval_breaks(coord):
-    """
-    >>> _infer_interval_breaks(np.arange(5))
-    array([-0.5,  0.5,  1.5,  2.5,  3.5,  4.5])
-    """
-    coord = np.asarray(coord)
-    deltas = 0.5 * (coord[1:] - coord[:-1])
-    first = coord[0] - deltas[0]
-    last = coord[-1] + deltas[-1]
-    return np.r_[[first], coord[:-1] + deltas, [last]]
 
 
 @_plot2d

@@ -7,7 +7,7 @@ import functools
 import numpy as np
 
 from ..core.formatting import format_item
-from .plot import _determine_cmap_params
+from .utils import _determine_cmap_params
 
 
 # Overrides axes.labelsize, xtick.major.size, ytick.major.size

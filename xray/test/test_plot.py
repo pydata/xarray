@@ -6,10 +6,10 @@ import pandas as pd
 from xray import DataArray
 
 import xray.plot as xplt
-from xray.plot.plot import (_infer_interval_breaks,
-                            _determine_cmap_params,
-                            _build_discrete_cmap,
-                            _color_palette)
+from xray.plot.plot import _infer_interval_breaks
+from xray.plot.utils import (_determine_cmap_params,
+                             _build_discrete_cmap,
+                             _color_palette)
 
 from . import TestCase, requires_matplotlib
 
