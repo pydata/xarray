@@ -21,7 +21,7 @@ def _nicetitle(coord, value, maxchar, template):
     """
     Put coord, value in template and truncate at maxchar
     """
-    prettyvalue = format_item(value)
+    prettyvalue = format_item(value, quote_strings=False)
     title = template.format(coord=coord, value=prettyvalue)
 
     if len(title) > maxchar:
