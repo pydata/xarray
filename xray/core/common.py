@@ -418,13 +418,6 @@ def _maybe_promote(dtype):
 
 def _possibly_convert_objects(values):
     """Convert arrays of datetime.datetime and datetime.timedelta objects into
-    datetime64 and timedelta64
+    datetime64 and timedelta64, according to the pandas convention.
     """
-    try:
-        converter = functools.partial(pd.core.common._possibly_convert_objects,
-                                      convert_numeric=False)
-    except AttributeError:
-        # our fault for using a private pandas API that has gone missing
-        # this should do the same coercion (though it will be slower)
-        converter = lambda x: np.asarray(pd.Series(x))
-    return converter(values.ravel()).reshape(values.shape)
+    return np.asarray(pd.Series(values.ravel())).reshape(values.shape)
