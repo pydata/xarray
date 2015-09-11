@@ -151,12 +151,14 @@ class TestVariable(DaskTestCase):
 
     def test_missing_methods(self):
         v = self.lazy_var
-        with self.assertRaisesRegexp(NotImplementedError, 'dask'):
-            v.conj()
-        with self.assertRaisesRegexp(NotImplementedError, 'dask'):
+        try:
             v.argsort()
-        with self.assertRaisesRegexp(NotImplementedError, 'dask'):
+        except NotImplementedError as err:
+            self.assertIn('dask', err.message)
+        try:
             v[0].item()
+        except NotImplementedError as err:
+            self.assertIn('dask', err.message)
 
     def test_ufuncs(self):
         u = self.eager_var
