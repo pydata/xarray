@@ -154,11 +154,11 @@ class TestVariable(DaskTestCase):
         try:
             v.argsort()
         except NotImplementedError as err:
-            self.assertIn('dask', err.message)
+            self.assertIn('dask', str(err))
         try:
             v[0].item()
         except NotImplementedError as err:
-            self.assertIn('dask', err.message)
+            self.assertIn('dask', str(err))
 
     def test_ufuncs(self):
         u = self.eager_var
