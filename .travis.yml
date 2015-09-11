@@ -32,7 +32,9 @@ matrix:
         - libnetcdf-dev
     env: UPDATE_ENV="conda install cython && pip install https://github.com/Unidata/netcdf4-python/archive/master.zip"
   - python: 2.7
-    env: UPDATE_ENV="pip install toolz https://github.com/ContinuumIO/dask/archive/master.zip"
+    env: UPDATE_ENV="pip install toolz https://github.com/blaze/dask/archive/master.zip"
+  - python: 2.7
+    env: UPDATE_ENV="conda remove pandas && conda install cython && pip install https://github.com/pydata/pandas/archive/master.zip"
   allow_failures:
   - python: 2.7
     env: UPDATE_ENV="pip install pydap"
@@ -44,7 +46,9 @@ matrix:
         - libnetcdf-dev
     env: UPDATE_ENV="conda install cython && pip install https://github.com/Unidata/netcdf4-python/archive/master.zip"
   - python: 2.7
-    env: UPDATE_ENV="pip install toolz https://github.com/ContinuumIO/dask/archive/master.zip"
+    env: UPDATE_ENV="pip install toolz https://github.com/blaze/dask/archive/master.zip"
+  - python: 2.7
+    env: UPDATE_ENV="conda remove pandas && conda install cython && pip install https://github.com/pydata/pandas/archive/master.zip"
 
 before_install:
   - if [[ "$TRAVIS_PYTHON_VERSION" == "2.7" ]]; then

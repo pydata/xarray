@@ -119,11 +119,11 @@ def _as_compatible_data(data, fastpath=False):
             data = np.asarray(data)
 
     if isinstance(data, np.ndarray):
-        data = common._possibly_convert_objects(data)
-        if data.dtype.kind == 'M':
-            # TODO: automatically cast arrays of datetime objects as well
+        if data.dtype.kind == 'O':
+            data = common._possibly_convert_objects(data)
+        elif data.dtype.kind == 'M':
             data = np.asarray(data, 'datetime64[ns]')
-        if data.dtype.kind == 'm':
+        elif data.dtype.kind == 'm':
             data = np.asarray(data, 'timedelta64[ns]')
 
     return _maybe_wrap_data(data)
