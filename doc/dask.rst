@@ -43,10 +43,10 @@ For more details on dask, read `its documentation <http://dask.pydata.org/>`__.
 Reading and writing data
 ------------------------
 
-The usual way to create a dataset filled with dask arrays is to load the data
-from a netCDF file or files. You can by supplying a ``chunks`` argument to
-:py:func:`~xray.open_dataset` or using the :py:func:`~xray.open_mfdataset`
-function.
+The usual way to create a dataset filled with dask arrays is to load the
+data from a netCDF file or files. You can do this by supplying a ``chunks``
+argument to :py:func:`~xray.open_dataset` or using the
+:py:func:`~xray.open_mfdataset` function.
 
 .. ipython:: python
    :suppress:
@@ -69,10 +69,11 @@ function.
     ds = xray.open_dataset('example-data.nc', chunks={'time': 10})
     ds
 
-If you don't supply a dimension in ``chunks``, only one chunk will be used along
-that dimension for all dask arrays in the dataset. It is also entirely equivalent
-to open a dataset using ``open_dataset`` and then chunk the data use the ``chunk``
-method, e.g., ``xray.open_dataset('example-data.nc').chunk({'time': 10})``.
+In this example ``latitude`` and ``longitude`` do not appear in the
+``chunks`` dict, so only one chunk will be used along those dimensions.  It
+is also entirely equivalent to open a dataset using ``open_dataset`` and
+then chunk the data use the ``chunk`` method, e.g.,
+``xray.open_dataset('example-data.nc').chunk({'time': 10})``.
 
 To open multiple files simultaneously, use :py:func:`~xray.open_mfdataset`::
 
