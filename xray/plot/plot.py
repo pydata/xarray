@@ -262,7 +262,7 @@ def _plotter_1d(darray, plot_method='plot', *args, **kwargs):
     _ensure_plottable([x])
 
     try:
-        plotter = ax.__getattribute__(plot_method)
+        plotter = getattr(ax, plot_method)
     except AttributeError:
         msg = 'Axes does not have plotting method {}'.format(plot_method)
         raise AttributeError(msg)
@@ -310,7 +310,7 @@ def _plotter_data(darray, plot_method='hist', **kwargs):
     ax = kwargs.pop('ax', plt.gca())
 
     try:
-        plotter = ax.__getattribute__(plot_method)
+        plotter = getattr(ax, plot_method)
     except AttributeError:
         msg = 'Axes does not have plotting method {}'.format(plot_method)
         raise AttributeError(msg)
