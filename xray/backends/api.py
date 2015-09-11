@@ -104,7 +104,7 @@ def open_dataset(filename_or_obj, group=None, decode_cf=True,
         Engine to use when reading netCDF files. If not provided, the default
         engine is chosen based on available dependencies, with a preference for
         'netcdf4'.
-    chunks : dict, optional
+    chunks : int or dict, optional
         If chunks is provided, it used to load the new dataset into dask
         arrays. This is an experimental feature; see the documentation for more
         details.
@@ -212,9 +212,10 @@ def open_mfdataset(paths, chunks=None, concat_dim=None, preprocess=None,
     paths : str or sequence
         Either a string glob in the form "path/to/my/files/*.nc" or an explicit
         list of files to open.
-    chunks : dict, optional
+    chunks : int or dict, optional
         Dictionary with keys given by dimension names and values given by chunk
         sizes. In general, these should divide the dimensions of each dataset.
+        If int, chunk each dimension by ``chunks``.
         By default, chunks will be chosen to load entire input files into
         memory at once. This has a major impact on performance: please see the
         full documentation for more details.
