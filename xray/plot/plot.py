@@ -230,7 +230,7 @@ def hist(darray, ax=None, **kwargs):
     return primitive
 
 
-def plotter_1d(darray, plot_method='plot', *args, **kwargs):
+def _plotter_1d(darray, plot_method='plot', *args, **kwargs):
     """
     Bar plot of 1 dimensional DataArray index against values
 
@@ -282,7 +282,7 @@ def plotter_1d(darray, plot_method='plot', *args, **kwargs):
     return primitive
 
 
-def plotter_data(darray, plot_method='hist', **kwargs):
+def _plotter_data(darray, plot_method='hist', **kwargs):
     """
     Bar plot of 1 dimensional DataArray index against values
 
@@ -470,6 +470,7 @@ def _color_palette(cmap, n_colors):
 
     return pal
 
+
 def _build_discrete_cmap(cmap, levels, extend, filled):
     """
     Build a discrete colormap and normalization of the data.
@@ -512,21 +513,28 @@ class _PlotMethods(object):
     def __call__(self, ax=None, rtol=0.01, **kwargs):
         return plot(self._da, ax=ax, rtol=rtol, **kwargs)
 
-    @functools.wraps(hist)
     def hist(self, ax=None, **kwargs):
-        return hist(self._da, ax=ax, **kwargs)
+        return _plotter_data(self._da, plot_method='hist', **kwargs)
 
-    @functools.wraps(line)
+    def acorr(self, ax=None, **kwargs):
+        return _plotter_data(self._da, plot_method='acorr', **kwargs)
+
     def line(self, *args, **kwargs):
-        return line(self._da, *args, **kwargs)
+        return _plotter_1d(self._da, plot_method='plot', *args, **kwargs)
 
-    @functools.wraps(plotter_1d)
-    def plotter_1d(self, plot_method='plot', *args, **kwargs):
-        return plotter_1d(self._da, plot_method=plot_method, *args, **kwargs)
+    def bar(self, *args, **kwargs):
+        return _plotter_1d(self._da, plot_method='bar', *args, **kwargs)
 
-    @functools.wraps(plotter_data)
-    def plotter_data(self, plot_method='hist', **kwargs):
-        return plotter_data(self._da, plot_method=plot_method, **kwargs)
+    def scatter(self, *args, **kwargs):
+        return _plotter_1d(self._da, plot_method='scatter', *args, **kwargs)
+
+    @functools.wraps(_plotter_1d)
+    def _plotter_1d(self, plot_method='plot', *args, **kwargs):
+        return _plotter_1d(self._da, plot_method=plot_method, *args, **kwargs)
+
+    @functools.wraps(_plotter_data)
+    def _plotter_data(self, plot_method='hist', **kwargs):
+        return _plotter_data(self._da, plot_method=plot_method, **kwargs)
 
 
 def _plot2d(plotfunc):
@@ -623,7 +631,8 @@ def _plot2d(plotfunc):
         if ax is None:
             ax = plt.gca()
 
-        xlab, ylab = _infer_xy_labels(plotfunc=plotfunc, darray=darray, x=x, y=y)
+        xlab, ylab = _infer_xy_labels(plotfunc=plotfunc, darray=darray,
+                                      x=x, y=y)
 
         # better to pass the ndarrays directly to plotting functions
         xval = darray[xlab].values
@@ -640,15 +649,15 @@ def _plot2d(plotfunc):
             levels = 7  # this is the matplotlib default
 
         cmap_kwargs = {'plot_data': zval.data,
-                'vmin': vmin,
-                'vmax': vmax,
-                'cmap': colors if colors else cmap,
-                'center': center,
-                'robust': robust,
-                'extend': extend,
-                'levels': levels,
-                'filled': plotfunc.__name__ != 'contour',
-                }
+                       'vmin': vmin,
+                       'vmax': vmax,
+                       'cmap': colors if colors else cmap,
+                       'center': center,
+                       'robust': robust,
+                       'extend': extend,
+                       'levels': levels,
+                       'filled': plotfunc.__name__ != 'contour',
+                       }
 
         cmap_params = _determine_cmap_params(**cmap_kwargs)
 
@@ -685,10 +694,10 @@ def _plot2d(plotfunc):
 
     # For use as DataArray.plot.plotmethod
     @functools.wraps(newplotfunc)
-    def plotmethod(_PlotMethods_obj, x=None, y=None, ax=None, xincrease=None, yincrease=None,
-                   add_colorbar=True, add_labels=True, vmin=None, vmax=None, cmap=None,
-                   colors=None, center=None, robust=False, extend=None, levels=None,
-                   **kwargs):
+    def plotmethod(_PlotMethods_obj, x=None, y=None, ax=None, xincrease=None,
+                   yincrease=None, add_colorbar=True, add_labels=True,
+                   vmin=None, vmax=None, cmap=None, colors=None, center=None,
+                   robust=False, extend=None, levels=None, **kwargs):
         """
         The method should have the same signature as the function.
 
