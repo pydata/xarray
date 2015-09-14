@@ -49,6 +49,8 @@ Bug fixes
 - :py:meth:`~xray.DataArray.where` now uses dask instead of numpy if either the
   array or ``other`` is a dask array. Previously, if ``other`` was a numpy array
   the method was evaluated eagerly.
+- Global attributes are now handled more consistently when loading remote
+  datasets using ``engine='pydap'`` (:issue:`574`).
 
 v0.6.0 (21 August 2015)
 -----------------------

@@ -40,6 +40,16 @@ class PydapArrayWrapper(NDArrayMixin):
         return result
 
 
+def _fix_global_attributes(attributes):
+    attributes = dict(attributes)
+    for k in list(attributes):
+        if k.lower() == 'global' or k.lower().endswith('_global'):
+            # move global attributes to the top level, like the netcdf-C
+            # DAP client
+            attributes.update(attributes.pop(k))
+    return attributes
+
+
 class PydapDataStore(AbstractDataStore):
     """Store for accessing OpenDAP datasets with pydap.
 
@@ -59,7 +69,7 @@ class PydapDataStore(AbstractDataStore):
                                  for k, v in self.ds.iteritems())
 
     def get_attrs(self):
-        return Frozen(self.ds.attributes)
+        return Frozen(_fix_global_attributes(self.ds.attributes))
 
     def get_dimensions(self):
         return Frozen(self.ds.dimensions)
