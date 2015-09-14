@@ -1,5 +1,6 @@
 import numpy as np
 import sys
+from distutils.version import LooseVersion
 
 PY3 = sys.version_info[0] >= 3
 

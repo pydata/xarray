@@ -180,9 +180,13 @@ class TestDataArrayAndDataset(DaskTestCase):
         self.eager_array = DataArray(self.values, dims=('x', 'y'), name='foo')
         self.lazy_array = DataArray(self.data, dims=('x', 'y'), name='foo')
 
-    def test_chunk(self):
+    def test_rechunk(self):
         chunked = self.eager_array.chunk({'x': 2}).chunk({'y': 2})
         self.assertEqual(chunked.chunks, ((2,) * 2, (2,) * 3))
+
+    def test_new_chunk(self):
+        chunked = self.eager_array.chunk()
+        self.assertTrue(chunked.data.name.startswith('xray-foo-'))
 
     def test_lazy_dataset(self):
         lazy_ds = Dataset({'foo': (('x', 'y'), self.data)})

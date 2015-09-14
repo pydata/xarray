@@ -1,5 +1,6 @@
 import sys
 import gzip
+import os.path
 import threading
 from glob import glob
 from io import BytesIO
@@ -114,10 +115,10 @@ def open_dataset(filename_or_obj, group=None, decode_cf=True,
         used when reading data from netCDF files with the netcdf4 and h5netcdf
         engines to avoid issues with concurrent access when using dask's
         multithreaded backend.
-    drop_variables: string or iterable, optional 
+    drop_variables: string or iterable, optional
         A variable or list of variables to exclude from being parsed from the
         dataset. This may be useful to drop variables with problems or
-        inconsistent values. 
+        inconsistent values.
 
     Returns
     -------
@@ -139,9 +140,30 @@ def open_dataset(filename_or_obj, group=None, decode_cf=True,
             store, mask_and_scale=mask_and_scale, decode_times=decode_times,
             concat_characters=concat_characters, decode_coords=decode_coords,
             drop_variables=drop_variables)
+
         if chunks is not None:
-            ds = ds.chunk(chunks, lock=lock)
-        return ds
+            try:
+                from dask.base import tokenize
+            except ImportError:
+                import dask  # raise the usual error if dask is entirely missing
+                raise ImportError('xray requires dask version 0.6 or newer')
+
+            if isinstance(filename_or_obj, basestring):
+                file_arg = os.path.getmtime(filename_or_obj)
+            else:
+                file_arg = filename_or_obj
+            token = tokenize(file_arg, group, decode_cf, mask_and_scale,
+                             decode_times, concat_characters,
+                             decode_coords, engine, chunks, lock,
+                             drop_variables)
+            name_prefix = '%s:%s/' % (filename_or_obj, group or '')
+            ds2 = ds.chunk(chunks, name_prefix=name_prefix, token=token,
+                           lock=lock)
+            ds2._file_obj = ds._file_obj
+        else:
+            ds2 = ds
+
+        return ds2
 
     if isinstance(filename_or_obj, backends.AbstractDataStore):
         store = filename_or_obj
@@ -253,11 +275,11 @@ def open_mfdataset(paths, chunks=None, concat_dim=None, preprocess=None,
     if not paths:
         raise IOError('no files to open')
 
-    datasets = [open_dataset(p, engine=engine, **kwargs) for p in paths]
     if lock is None:
         lock = _default_lock(paths[0], engine)
+    datasets = [open_dataset(p, engine=engine, chunks=chunks or {}, lock=lock,
+                             **kwargs) for p in paths]
     file_objs = [ds._file_obj for ds in datasets]
-    datasets = [ds.chunk(chunks, lock=lock) for ds in datasets]
 
     if preprocess is not None:
         datasets = [preprocess(ds) for ds in datasets]

@@ -871,6 +871,19 @@ class DaskTest(TestCase):
                     with open_dataset(tmp2) as on_disk:
                         self.assertDatasetIdentical(data, on_disk)
 
+    def test_deterministic_names(self):
+        with create_tmp_file() as tmp:
+            data = create_test_data()
+            data.to_netcdf(tmp)
+            with open_mfdataset(tmp) as ds:
+                original_names = dict((k, v.data.name) for k, v in ds.items())
+            with open_mfdataset(tmp) as ds:
+                repeat_names = dict((k, v.data.name) for k, v in ds.items())
+            for var_name, dask_name in original_names.items():
+                self.assertIn(var_name, dask_name)
+                self.assertIn(tmp, dask_name)
+            self.assertEqual(original_names, repeat_names)
+
 
 @requires_scipy_or_netCDF4
 @requires_pydap
