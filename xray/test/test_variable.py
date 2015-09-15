@@ -730,7 +730,7 @@ class TestVariable(TestCase, VariableSubclassTestCases):
         self.assertVariableIdentical(
             v.reduce(np.mean, 'x').reduce(np.std, 'y'),
             Variable([], self.d.mean(axis=0).std()))
-        self.assertVariableIdentical(v.mean('x'), v.reduce(np.mean, 'x'))
+        self.assertVariableAllClose(v.mean('x'), v.reduce(np.mean, 'x'))
 
         with self.assertRaisesRegexp(ValueError, 'cannot supply both'):
             v.mean(dim='x', axis=0)
