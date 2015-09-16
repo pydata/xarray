@@ -17,6 +17,7 @@ import numpy as np
 import pandas as pd
 
 from .utils import _determine_cmap_params
+from .facetgrid import FacetGrid
 from ..core.utils import is_uniform_spaced
 from ..core.pycompat import basestring
 
@@ -83,7 +84,23 @@ def _infer_xy_labels(plotfunc, darray, x, y):
     return xlab, ylab
 
 
-def plot(darray, ax=None, rtol=0.01, **kwargs):
+def _easy_facetgrid(**kwargs):
+    '''
+    Convenience method to call xray.plot.FacetGrid from 2d plotting methods
+
+    kwargs are the arguments to 2d plotting method
+    '''
+    data = kwargs.pop('darray')
+    row = kwargs.pop('row')
+    col = kwargs.pop('col')
+    col_wrap = kwargs.pop('col_wrap')
+
+    g = FacetGrid(data=data, col=col, row=row, col_wrap=col_wrap)
+
+    return g.map_dataarray(**kwargs)
+
+
+def plot(darray, *args, row=None, col=None, col_wrap=None, ax=None, rtol=0.01, **kwargs):
     """
     Default plot of DataArray using matplotlib / pylab.
 
@@ -112,6 +129,9 @@ def plot(darray, ax=None, rtol=0.01, **kwargs):
 
     """
     darray = darray.squeeze()
+
+    if row or col:
+        _easy_facetgrid(darray, *args, **kwargs)
 
     ndims = len(darray.dims)
 
@@ -282,13 +302,19 @@ def _plot2d(plotfunc):
     Parameters
     ----------
     darray : DataArray
-        Must be 2 dimensional
+        Must be 2 dimensional, unless creating faceted plots
     x : string, optional
         Coordinate for x axis. If None use darray.dims[1]
     y : string, optional
         Coordinate for y axis. If None use darray.dims[0]
     ax : matplotlib axes object, optional
         If None, uses the current axis
+    row : string, optional
+        If passed, make a plot with row facets for this dimension
+    col : string, optional
+        If passed, make a plot with col facets for this dimension
+    col_wrap : integer, optional
+        Use together with ``col`` to wrap faceted plots
     xincrease : None, True, or False, optional
         Should the values on the x axes be increasing from left to right?
         if None, use the default for the matplotlib function
@@ -339,12 +365,16 @@ def _plot2d(plotfunc):
     plotfunc.__doc__ = '\n'.join((plotfunc.__doc__, commondoc))
 
     @functools.wraps(plotfunc)
-    def newplotfunc(darray, x=None, y=None, ax=None, xincrease=None, yincrease=None,
+    def newplotfunc(darray, x=None, y=None, ax=None, row=None, col=None,
+                    col_wrap=None, xincrease=None, yincrease=None,
                     add_colorbar=True, add_labels=True, vmin=None, vmax=None, cmap=None,
                     center=None, robust=False, extend=None, levels=None, colors=None,
                     **kwargs):
         # All 2d plots in xray share this function signature.
         # Method signature below should be consistent.
+
+        if row or col:
+            return _easy_facetgrid(locals())
 
         import matplotlib.pyplot as plt
 
@@ -427,7 +457,8 @@ def _plot2d(plotfunc):
 
     # For use as DataArray.plot.plotmethod
     @functools.wraps(newplotfunc)
-    def plotmethod(_PlotMethods_obj, x=None, y=None, ax=None, xincrease=None, yincrease=None,
+    def plotmethod(_PlotMethods_obj, x=None, y=None, ax=None, row=None,
+                   col=None, col_wrap=None, xincrease=None, yincrease=None,
                    add_colorbar=True, add_labels=True, vmin=None, vmax=None, cmap=None,
                    colors=None, center=None, robust=False, extend=None, levels=None,
                    **kwargs):
