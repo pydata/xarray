@@ -17,7 +17,7 @@ from .. import conventions
 from .alignment import align, partial_align
 from .coordinates import DatasetCoordinates, Indexes
 from .common import ImplementsDatasetReduce, BaseDataObject
-from .utils import (Frozen, SortedKeysDict, ChainMap, maybe_wrap_array)
+from .utils import Frozen, SortedKeysDict, ChainMap, maybe_wrap_array, hashable
 from .variable import as_variable, Variable, Coordinate, broadcast_variables
 from .pycompat import (iteritems, itervalues, basestring, OrderedDict,
                        dask_array_type)
@@ -612,11 +612,10 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject):
         if utils.is_dict_like(key):
             return self.isel(**key)
 
-        key = np.asarray(key)
-        if key.ndim == 0:
-            return DataArray._new_from_dataset(self, key.item())
+        if hashable(key):
+            return DataArray._new_from_dataset(self, key)
         else:
-            return self._copy_listed(key)
+            return self._copy_listed(np.asarray(key))
 
     def __setitem__(self, key, value):
         """Add an array to this dataset.

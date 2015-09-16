@@ -406,3 +406,12 @@ def is_uniform_spaced(arr, **kwargs):
     arr = np.array(arr)
     diffs = np.diff(arr)
     return np.isclose(diffs.min(), diffs.max(), **kwargs)
+
+
+def hashable(v):
+    """Determine whether `v` can be hashed."""
+    try:
+        hash(v)
+    except TypeError:
+        return False
+    return True

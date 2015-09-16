@@ -1169,6 +1169,15 @@ class TestDataset(TestCase):
         expected = data.isel(dim1=0)
         self.assertDatasetIdentical(expected, actual)
 
+    def test_getitem_hashable(self):
+        data = create_test_data()
+        data[(3, 4)] = data['var1'] + 1
+        expected = data['var1'] + 1
+        expected.name = (3, 4)
+        self.assertDataArrayIdentical(expected, data[(3, 4)])
+        with self.assertRaisesRegexp(KeyError, "('var1', 'var2')"):
+            data[('var1', 'var2')]
+
     def test_virtual_variables(self):
         # access virtual variables
         data = create_test_data()

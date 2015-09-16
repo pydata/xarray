@@ -345,6 +345,16 @@ class CFEncodedDataTest(DatasetIOTestCases):
                 with self.roundtrip(ds) as actual:
                     pass
 
+    def test_invalid_dataarray_names_raise(self):
+        te = (TypeError, 'string or None')
+        ve = (ValueError, 'string must be length 1 or')
+        data = np.random.random((2, 2))
+        da = xray.DataArray(data)
+        for name, e in zip([0, (4, 5), True, ''], [te, te, te, ve]):
+            ds = Dataset({name: da})
+            with self.assertRaisesRegexp(*e):
+                with self.roundtrip(ds) as actual:
+                    pass
 
 _counter = itertools.count()
 
