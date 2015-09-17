@@ -77,12 +77,12 @@ def _color_palette(cmap, n_colors):
     elif isinstance(cmap, basestring):
         # we have some sort of named palette
         try:
-            # first try to turn it into a palette with seaborn                    
+            # first try to turn it into a palette with seaborn
             from seaborn.apionly import color_palette
             pal = color_palette(cmap, n_colors=n_colors)
         except (ImportError, ValueError):
-            # ValueError is raised when seaborn doesn't like a colormap (e.g. jet)
-            # if that fails, use matplotlib
+            # ValueError is raised when seaborn doesn't like a colormap
+            # (e.g. jet). If that fails, use matplotlib
             try:
                 # is this a matplotlib cmap?
                 cmap = plt.get_cmap(cmap)
@@ -122,9 +122,16 @@ def _determine_cmap_params(plot_data, vmin=None, vmax=None, cmap=None,
     calc_data = np.ravel(plot_data[~pd.isnull(plot_data)])
 
     if vmin is None:
-        vmin = np.percentile(calc_data, ROBUST_PERCENTILE) if robust else calc_data.min()
+        if robust:
+            vmin = np.percentile(calc_data, ROBUST_PERCENTILE)
+        else:
+            vmin = calc_data.min()
+
     if vmax is None:
-        vmax = np.percentile(calc_data, 100 - ROBUST_PERCENTILE) if robust else calc_data.max()
+        if robust:
+            vmax = np.percentile(calc_data, ROBUST_PERCENTILE)
+        else:
+            vmax = calc_data.max()
 
     # Simple heuristics for whether these data should  have a divergent map
     divergent = ((vmin < 0) and (vmax > 0)) or center is not None

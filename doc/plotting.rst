@@ -3,9 +3,6 @@
 Plotting
 ========
 
-.. note::
-    Plotting will be under active development for August and September 2015.
-
 Introduction
 ------------
 
@@ -340,16 +337,47 @@ So let's use a slice to pick 6 times throughout the first year.
 Simple Example
 ~~~~~~~~~~~~~~
 
-TODO - replace with the convenience method from plot
-
-We can use :py:meth:`xray.plot.FacetGrid.map_dataarray` on a DataArray:
+The easiest way to create faceted plots is to pass in ``row`` or ``col``
+arguments to the xray plotting methods/functions. This returns a
+:py:class:`xray.plot.FacetGrid` object.
 
 .. ipython:: python
 
-    g = xray.plot.FacetGrid(t, col='time', col_wrap=3)
-    
     @savefig plot_facet_dataarray.png height=12in 
-    g.map_dataarray(xray.plot.imshow, 'lon', 'lat')
+    g_simple = t.plot(x='lon', y='lat', col='time', col_wrap=3)
+
+4 dimensional
+~~~~~~~~~~~~~~
+
+For 4 dimensional arrays we can use the rows and columns of the grids.
+Here we create a 4 dimensional array by taking the original data and adding
+a fixed amount. Now we can see how the temperature maps would compare if
+one were much hotter.
+
+.. ipython:: python
+
+    t2 = t.isel(time=slice(0, 2))
+    t4d = xray.concat([t2, t2 + 40], pd.Index(['normal', 'hot'], name='fourth_dim'))
+    # This is a 4d array
+    t4d.coords
+
+    @savefig plot_facet_4d.png height=12in 
+    t4d.plot(x='lon', y='lat', col='time', row='fourth_dim')
+
+Other features
+~~~~~~~~~~~~~~
+
+Faceted plotting supports other arguments common to xray 2d plots.
+
+.. ipython:: python
+
+    hasoutliers = t.isel(time=slice(0, 5)).copy()
+    hasoutliers[0, 0, 0] = -100
+    hasoutliers[-1, -1, -1] = 400
+
+    @savefig plot_facet_robust.png height=12in 
+    g = hasoutliers.plot.contourf('lon', 'lat', col='time', col_wrap=3,
+                                  robust=True, cmap='viridis')
 
 FacetGrid Objects
 ~~~~~~~~~~~~~~~~~
@@ -374,13 +402,14 @@ through the ``name_dicts``.
 
    g.data.loc[g.name_dicts[0, 0]]
 
-Here is an example of modifying the axes after they have been plotted.
+Here is an example of using the lower level API and then modifying the axes after 
+they have been plotted.
 
 .. ipython:: python
 
     g = (xray.plot
          .FacetGrid(t, col='time', col_wrap=3)
-         .map_dataarray(xray.plot.imshow, 'lon', 'lat')
+         .map_dataarray(xray.plot.imshow, 'lon', 'lat', robust=True)
          )
 
     for i, ax in enumerate(g.axes.flat):
@@ -391,42 +420,6 @@ Here is an example of modifying the axes after they have been plotted.
 
     @savefig plot_facet_iterator.png height=12in 
     plt.show()
-
-4 dimensional
-~~~~~~~~~~~~~~
-
-For 4 dimensional arrays we can use the rows and columns of the grids.
-Here we create a 4 dimensional array by taking the original data and adding
-a fixed amount. Now we can see how the temperature maps would compare if
-one were much hotter.
-
-.. ipython:: python
-
-    t2 = t.isel(time=slice(0, 2))
-    t4d = xray.concat([t2, t2 + 40], pd.Index(['normal', 'hot'], name='fourth_dim'))
-    # This is a 4d array
-    t4d.coords
-
-    g = xray.plot.FacetGrid(t4d, col='time', row='fourth_dim')
-    
-    @savefig plot_facet_4d.png height=12in 
-    g.map_dataarray(xray.plot.imshow, 'lon', 'lat')
-
-Other features
-~~~~~~~~~~~~~~
-
-Faceted plotting supports other arguments common to xray 2d plots.
-
-.. ipython:: python
-
-    hasoutliers = t.isel(time=slice(0, 5)).copy()
-    hasoutliers[0, 0, 0] = -100
-    hasoutliers[-1, -1, -1] = 400
-
-    g = xray.plot.FacetGrid(hasoutliers, col='time', col_wrap=3)
-
-    @savefig plot_facet_robust.png height=12in 
-    g.map_dataarray(xray.plot.contourf, 'lon', 'lat', robust=True, cmap='viridis')
 
 
 Maps

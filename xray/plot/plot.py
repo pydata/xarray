@@ -8,11 +8,7 @@ Or use the methods on a DataArray:
 
 from __future__ import division
 import functools
-from textwrap import dedent
-from itertools import cycle
-from distutils.version import LooseVersion
 import warnings
-import inspect
 
 import numpy as np
 import pandas as pd
@@ -20,7 +16,6 @@ import pandas as pd
 from .utils import _determine_cmap_params
 from .facetgrid import FacetGrid
 from ..core.utils import is_uniform_spaced
-from ..core.pycompat import basestring
 
 
 # Maybe more appropriate to keep this in .utils
@@ -85,7 +80,8 @@ def _infer_xy_labels(plotfunc, darray, x, y):
     return xlab, ylab
 
 
-def _easy_facetgrid(darray, plotfunc, x, y, row=None, col=None, col_wrap=None, **kwargs):
+def _easy_facetgrid(darray, plotfunc, x, y, row=None, col=None, col_wrap=None,
+                    **kwargs):
     '''
     Convenience method to call xray.plot.FacetGrid from 2d plotting methods
 
@@ -99,7 +95,8 @@ def _easy_facetgrid(darray, plotfunc, x, y, row=None, col=None, col_wrap=None, *
     return g.map_dataarray(plotfunc, x, y, **kwargs)
 
 
-def plot(darray, row=None, col=None, col_wrap=None, ax=None, rtol=0.01, **kwargs):
+def plot(darray, row=None, col=None, col_wrap=None, ax=None, rtol=0.01,
+         **kwargs):
     """
     Default plot of DataArray using matplotlib / pylab.
 
@@ -348,7 +345,7 @@ def _plot2d(plotfunc):
         The mapping from data values to color space. If not provided, this
         will be either be ``viridis`` (if the function infers a sequential
         dataset) or ``RdBu_r`` (if the function infers a diverging dataset).
-        When when `Seaborn` is installed, ``cmap`` may also be a `seaborn` 
+        When when `Seaborn` is installed, ``cmap`` may also be a `seaborn`
         color palette. If ``cmap`` is seaborn color palette and the plot type
         is not ``contour`` or ``contourf``, ``levels`` must also be specified.
     colors : discrete colors to plot, optional
@@ -381,19 +378,23 @@ def _plot2d(plotfunc):
     @functools.wraps(plotfunc)
     def newplotfunc(darray, x=None, y=None, ax=None, row=None, col=None,
                     col_wrap=None, xincrease=None, yincrease=None,
-                    add_colorbar=True, add_labels=True, vmin=None, vmax=None, cmap=None,
-                    center=None, robust=False, extend=None, levels=None, colors=None,
-                    **kwargs):
+                    add_colorbar=True, add_labels=True, vmin=None, vmax=None,
+                    cmap=None, center=None, robust=False, extend=None,
+                    levels=None, colors=None, **kwargs):
         # All 2d plots in xray share this function signature.
         # Method signature below should be consistent.
 
+        # Handle facetgrids first
         if row or col:
             allargs = locals().copy()
             allargs.update(kwargs)
             del allargs['kwargs']
 
-            # Need to use the decorated plotfunc
-            del allargs['plotfunc']
+            # Deleting allows us to use better FacetGrid defaults
+            del allargs['add_colorbar']
+            del allargs['add_labels']
+
+            # Need the decorated plotting function
             allargs['plotfunc'] = globals()[plotfunc.__name__]
 
             return _easy_facetgrid(**allargs)
@@ -417,7 +418,8 @@ def _plot2d(plotfunc):
         if ax is None:
             ax = plt.gca()
 
-        xlab, ylab = _infer_xy_labels(plotfunc=plotfunc, darray=darray, x=x, y=y)
+        xlab, ylab = _infer_xy_labels(
+            plotfunc=plotfunc, darray=darray, x=x, y=y)
 
         # better to pass the ndarrays directly to plotting functions
         xval = darray[xlab].values
@@ -434,15 +436,15 @@ def _plot2d(plotfunc):
             levels = 7  # this is the matplotlib default
 
         cmap_kwargs = {'plot_data': zval.data,
-                'vmin': vmin,
-                'vmax': vmax,
-                'cmap': colors if colors else cmap,
-                'center': center,
-                'robust': robust,
-                'extend': extend,
-                'levels': levels,
-                'filled': plotfunc.__name__ != 'contour',
-                }
+                       'vmin': vmin,
+                       'vmax': vmax,
+                       'cmap': colors if colors else cmap,
+                       'center': center,
+                       'robust': robust,
+                       'extend': extend,
+                       'levels': levels,
+                       'filled': plotfunc.__name__ != 'contour',
+                       }
 
         cmap_params = _determine_cmap_params(**cmap_kwargs)
 
@@ -481,9 +483,9 @@ def _plot2d(plotfunc):
     @functools.wraps(newplotfunc)
     def plotmethod(_PlotMethods_obj, x=None, y=None, ax=None, row=None,
                    col=None, col_wrap=None, xincrease=None, yincrease=None,
-                   add_colorbar=True, add_labels=True, vmin=None, vmax=None, cmap=None,
-                   colors=None, center=None, robust=False, extend=None, levels=None,
-                   **kwargs):
+                   add_colorbar=True, add_labels=True, vmin=None, vmax=None,
+                   cmap=None, colors=None, center=None, robust=False,
+                   extend=None, levels=None, **kwargs):
         """
         The method should have the same signature as the function.
 
