@@ -131,14 +131,13 @@ def plot(darray, row=None, col=None, col_wrap=None, ax=None, rtol=0.01, **kwargs
 
     if row or col:
         allargs = locals().copy()
-
         allargs.update(kwargs)
-        #raise ValueError
-        del allargs['kwargs']
 
-        #return _easy_facetgrid(darray, **allargs)
-        #return _easy_facetgrid(darray, func, x, y, row=None, col=None, col_wrap=None, **kwargs):
-        return _easy_facetgrid(func=plot, **allargs)
+        del allargs['kwargs']
+        del allargs['rtol']
+
+        # Assume that it's 2d and just do imshow.
+        return _easy_facetgrid(func=imshow, **allargs)
 
     ndims = len(darray.dims)
 

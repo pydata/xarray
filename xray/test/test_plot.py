@@ -110,11 +110,13 @@ class TestPlot(PlotTestCase):
                               _infer_interval_breaks(pd.date_range('20000101', periods=3)))
 
     def test_convenient_facetgrid(self):
-        n = 4
-        a = easy_array((10, 15, n))
+        a = easy_array((10, 15, 4))
         d = DataArray(a, dims=['y', 'x', 'z'])
 
-        g = d.plot(x='x', y='y', col='z', col_wrap=2)
+        g = d.plot(x='x', y='y', col='z', col_wrap=2, cmap='cool')
+
+        self.assertArrayEqual(g.axes.shape, [2, 2])
+
         for ax in g.axes.flat:
             self.assertTrue(ax.has_data())
 
@@ -123,6 +125,9 @@ class TestPlot(PlotTestCase):
         d = DataArray(a, dims=['y', 'x', 'columns', 'rows'])
 
         g = d.plot(x='x', y='y', col='columns', row='rows')
+
+        self.assertArrayEqual(g.axes.shape, [3, 2])
+
         for ax in g.axes.flat:
             self.assertTrue(ax.has_data())
 
