@@ -142,8 +142,10 @@ def plot(darray, row=None, col=None, col_wrap=None, ax=None, rtol=0.01, **kwargs
         del allargs['kwargs']
         del allargs['rtol']
 
-        # Assume that it's 2d and just do imshow.
-        return _easy_facetgrid(func=imshow, **allargs)
+        # Assume that it's going to be the right shape and just do imshow.
+        # Can't use plot since it must have 2d plotting signature for
+        # map_dataarray
+        return _easy_facetgrid(plotfunc=imshow, **allargs)
 
     ndims = len(darray.dims)
 
