@@ -232,14 +232,18 @@ def hist(darray, ax=None, **kwargs):
 
 def _plotter_1d(darray, plot_method='plot', *args, **kwargs):
     """
-    Bar plot of 1 dimensional DataArray index against values
+    Genralized plotting function for 1 dimensional DataArray
+    index against values.
 
-    Wraps matplotlib.pyplot.plot
+    Wraps matplotlib.Axes
 
     Parameters
     ----------
     darray : DataArray
         Must be 1 dimensional
+    plot_method : str
+        String that refers to a valid matplotlib.Axes plotting
+        method.
     ax : matplotlib axes, optional
         If not passed, uses the current axis
     *args, **kwargs : optional
@@ -284,14 +288,17 @@ def _plotter_1d(darray, plot_method='plot', *args, **kwargs):
 
 def _plotter_data(darray, plot_method='hist', **kwargs):
     """
-    Bar plot of 1 dimensional DataArray index against values
+    Generalized plotting function for DataArray values
 
-    Wraps matplotlib.pyplot.plot
+    Wraps matplotlib.Axes
 
     Parameters
     ----------
     darray : DataArray
         Must be 1 dimensional
+    plot_method : str
+        String that refers to a valid plotting method for a
+        matplotlib.Axes object.
     ax : matplotlib axes, optional
         If not passed, uses the current axis
     *args, **kwargs : optional
@@ -299,12 +306,6 @@ def _plotter_data(darray, plot_method='hist', **kwargs):
 
     """
     import matplotlib.pyplot as plt
-
-    ndims = len(darray.dims)
-    if ndims != 1:
-        raise ValueError('Line plots are for 1 dimensional DataArrays. '
-                         'Passed DataArray has {ndims} '
-                         'dimensions'.format(ndims=ndims))
 
     # Ensures consistency with .plot method
     ax = kwargs.pop('ax', plt.gca())
