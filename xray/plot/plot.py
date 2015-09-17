@@ -283,11 +283,11 @@ class _PlotMethods(object):
     For example, DataArray.plot.imshow
     """
 
-    def __init__(self, DataArray_instance):
-        self._da = DataArray_instance
+    def __init__(self, darray):
+        self._da = darray
 
-    def __call__(self, ax=None, rtol=0.01, **kwargs):
-        return plot(self._da, ax=ax, rtol=rtol, **kwargs)
+    def __call__(self, **kwargs):
+        return plot(self._da, **kwargs)
 
     @functools.wraps(hist)
     def hist(self, ax=None, **kwargs):

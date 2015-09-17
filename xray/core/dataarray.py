@@ -1098,9 +1098,9 @@ class DataArray(AbstractArray, BaseDataObject):
         For convenience just call this directly
         >>> d.plot()
 
-        Or use it as a namespace to use xray.plotting functions as
+        Or use it as a namespace to use xray.plot functions as
         DataArray methods
-        >>> d.plot.imshow()  # equivalent to xray.plotting.imshow(d)
+        >>> d.plot.imshow()  # equivalent to xray.plot.imshow(d)
 
         '''
         return _PlotMethods(self)
