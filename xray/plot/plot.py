@@ -82,15 +82,16 @@ def _infer_xy_labels(plotfunc, darray, x, y):
 
 def _easy_facetgrid(darray, plotfunc, x, y, row=None, col=None, col_wrap=None,
                     **kwargs):
-    '''
+    """
     Convenience method to call xray.plot.FacetGrid from 2d plotting methods
 
     kwargs are the arguments to 2d plotting method
-    '''
+    """
     g = FacetGrid(data=darray, col=col, row=row, col_wrap=col_wrap)
 
-    # Can't use axes for facets
-    del kwargs['ax']
+    ax = kwargs.pop('ax', None)
+    if ax is not None:
+        raise ValueError("Can't use axes when making faceted plots.")
 
     return g.map_dataarray(plotfunc, x, y, **kwargs)
 
@@ -116,9 +117,9 @@ def plot(darray, row=None, col=None, col_wrap=None, ax=None, rtol=0.01,
     ----------
     darray : DataArray
     row : string, optional
-        If passed, make a plot with row facets for this dimension
+        If passed, make row faceted plots on this dimension name
     col : string, optional
-        If passed, make a plot with col facets for this dimension
+        If passed, make column faceted plots on this dimension name
     col_wrap : integer, optional
         Use together with ``col`` to wrap faceted plots
     ax : matplotlib axes, optional
@@ -309,9 +310,9 @@ def _plot2d(plotfunc):
     ax : matplotlib axes object, optional
         If None, uses the current axis
     row : string, optional
-        If passed, make a plot with row facets for this dimension
+        If passed, make row faceted plots on this dimension name
     col : string, optional
-        If passed, make a plot with col facets for this dimension
+        If passed, make column faceted plots on this dimension name
     col_wrap : integer, optional
         Use together with ``col`` to wrap faceted plots
     xincrease : None, True, or False, optional
@@ -406,8 +407,8 @@ def _plot2d(plotfunc):
         if ax is None:
             ax = plt.gca()
 
-        xlab, ylab = _infer_xy_labels(
-            plotfunc=plotfunc, darray=darray, x=x, y=y)
+        xlab, ylab = _infer_xy_labels(plotfunc=plotfunc, darray=darray,
+                                      x=x, y=y)
 
         # better to pass the ndarrays directly to plotting functions
         xval = darray[xlab].values

@@ -118,6 +118,9 @@ class TestPlot(PlotTestCase):
         for ax in g.axes.flat:
             self.assertTrue(ax.has_data())
 
+        with self.assertRaisesRegexp(ValueError, '[Ff]acet'):
+            d.plot(x='x', y='y', col='z', ax=plt.gca())
+
     def test_convenient_facetgrid_4d(self):
         a = easy_array((10, 15, 2, 3))
         d = DataArray(a, dims=['y', 'x', 'columns', 'rows'])
@@ -502,11 +505,15 @@ class Common2dMixin:
             self.assertTrue(ax.has_data())
 
     def test_2d_function_and_method_signature_same(self):
-        func_sig = inspect.getcallargs(self.plotfunc, self.darray)
-        method_sig = inspect.getcallargs(self.plotmethod)
-        del method_sig['_PlotMethods_obj']
-        del func_sig['darray']
-        self.assertEqual(func_sig, method_sig)
+        try:
+            func_sig = inspect.getcallargs(self.plotfunc, self.darray)
+            method_sig = inspect.getcallargs(self.plotmethod)
+            del method_sig['_PlotMethods_obj']
+            del func_sig['darray']
+            self.assertEqual(func_sig, method_sig)
+        except AttributeError:
+            # Python 2.6 doesn't have inspect.getcallargs
+            pass
 
     def test_convenient_facetgrid(self):
         a = easy_array((10, 15, 4))
