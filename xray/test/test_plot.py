@@ -114,7 +114,7 @@ class TestPlot(PlotTestCase):
         a = easy_array((10, 15, n))
         d = DataArray(a, dims=['y', 'x', 'z'])
 
-        g = d.plot('x', 'y', col='z', col_wrap=2)
+        g = d.plot(x='x', y='y', col='z', col_wrap=2)
         for ax in g.axes.flat:
             self.assertTrue(ax.has_data())
 
@@ -122,7 +122,7 @@ class TestPlot(PlotTestCase):
         a = easy_array((10, 15, 2, 3))
         d = DataArray(a, dims=['y', 'x', 'columns', 'rows'])
 
-        g = d.plot('x', 'y', col='columns', row='rows')
+        g = d.plot(x='x', y='y', col='columns', row='rows')
         for ax in g.axes.flat:
             self.assertTrue(ax.has_data())
 

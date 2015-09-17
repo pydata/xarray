@@ -12,6 +12,7 @@ from textwrap import dedent
 from itertools import cycle
 from distutils.version import LooseVersion
 import warnings
+import inspect
 
 import numpy as np
 import pandas as pd
@@ -84,23 +85,21 @@ def _infer_xy_labels(plotfunc, darray, x, y):
     return xlab, ylab
 
 
-def _easy_facetgrid(**kwargs):
+def _easy_facetgrid(darray, func, x, y, row=None, col=None, col_wrap=None, **kwargs):
     '''
     Convenience method to call xray.plot.FacetGrid from 2d plotting methods
 
     kwargs are the arguments to 2d plotting method
     '''
-    data = kwargs.pop('darray')
-    row = kwargs.pop('row')
-    col = kwargs.pop('col')
-    col_wrap = kwargs.pop('col_wrap')
+    g = FacetGrid(data=darray, col=col, row=row, col_wrap=col_wrap)
 
-    g = FacetGrid(data=data, col=col, row=row, col_wrap=col_wrap)
+    # Can't use axes for facets
+    del kwargs['ax']
 
-    return g.map_dataarray(**kwargs)
+    return g.map_dataarray(func, x, y, **kwargs)
 
 
-def plot(darray, *args, row=None, col=None, col_wrap=None, ax=None, rtol=0.01, **kwargs):
+def plot(darray, row=None, col=None, col_wrap=None, ax=None, rtol=0.01, **kwargs):
     """
     Default plot of DataArray using matplotlib / pylab.
 
@@ -131,7 +130,15 @@ def plot(darray, *args, row=None, col=None, col_wrap=None, ax=None, rtol=0.01, *
     darray = darray.squeeze()
 
     if row or col:
-        _easy_facetgrid(darray, *args, **kwargs)
+        allargs = locals().copy()
+
+        allargs.update(kwargs)
+        #raise ValueError
+        del allargs['kwargs']
+
+        #return _easy_facetgrid(darray, **allargs)
+        #return _easy_facetgrid(darray, func, x, y, row=None, col=None, col_wrap=None, **kwargs):
+        return _easy_facetgrid(func=plot, **allargs)
 
     ndims = len(darray.dims)
 
