@@ -85,7 +85,7 @@ def _infer_xy_labels(plotfunc, darray, x, y):
     return xlab, ylab
 
 
-def _easy_facetgrid(darray, func, x, y, row=None, col=None, col_wrap=None, **kwargs):
+def _easy_facetgrid(darray, plotfunc, x, y, row=None, col=None, col_wrap=None, **kwargs):
     '''
     Convenience method to call xray.plot.FacetGrid from 2d plotting methods
 
@@ -96,7 +96,7 @@ def _easy_facetgrid(darray, func, x, y, row=None, col=None, col_wrap=None, **kwa
     # Can't use axes for facets
     del kwargs['ax']
 
-    return g.map_dataarray(func, x, y, **kwargs)
+    return g.map_dataarray(plotfunc, x, y, **kwargs)
 
 
 def plot(darray, row=None, col=None, col_wrap=None, ax=None, rtol=0.01, **kwargs):
@@ -118,8 +118,14 @@ def plot(darray, row=None, col=None, col_wrap=None, ax=None, rtol=0.01, **kwargs
     Parameters
     ----------
     darray : DataArray
+    row : string, optional
+        If passed, make a plot with row facets for this dimension
+    col : string, optional
+        If passed, make a plot with col facets for this dimension
+    col_wrap : integer, optional
+        Use together with ``col`` to wrap faceted plots
     ax : matplotlib axes, optional
-        If None, uses the current axis
+        If None, uses the current axis. Not applicable when using facets.
     rtol : number, optional
         Relative tolerance used to determine if the indexes
         are uniformly spaced. Usually a small positive number.
@@ -380,7 +386,15 @@ def _plot2d(plotfunc):
         # Method signature below should be consistent.
 
         if row or col:
-            return _easy_facetgrid(locals())
+            allargs = locals().copy()
+            allargs.update(kwargs)
+            del allargs['kwargs']
+
+            # Need to use the decorated plotfunc
+            del allargs['plotfunc']
+            allargs['plotfunc'] = globals()[plotfunc.__name__]
+
+            return _easy_facetgrid(**allargs)
 
         import matplotlib.pyplot as plt
 

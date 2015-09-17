@@ -512,6 +512,28 @@ class Common2dMixin:
         del func_sig['darray']
         self.assertEqual(func_sig, method_sig)
 
+    def test_convenient_facetgrid(self):
+        a = easy_array((10, 15, 4))
+        d = DataArray(a, dims=['y', 'x', 'z'])
+
+        g = self.plotfunc(d, x='x', y='y', col='z', col_wrap=2)
+
+        self.assertArrayEqual(g.axes.shape, [2, 2])
+
+        for ax in g.axes.flat:
+            self.assertTrue(ax.has_data())
+
+    def test_convenient_facetgrid_4d(self):
+        a = easy_array((10, 15, 2, 3))
+        d = DataArray(a, dims=['y', 'x', 'columns', 'rows'])
+
+        g = self.plotfunc(d, x='x', y='y', col='columns', row='rows')
+
+        self.assertArrayEqual(g.axes.shape, [3, 2])
+
+        for ax in g.axes.flat:
+            self.assertTrue(ax.has_data())
+
 
 class TestContourf(Common2dMixin, PlotTestCase):
 
