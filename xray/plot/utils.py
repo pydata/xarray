@@ -129,7 +129,7 @@ def _determine_cmap_params(plot_data, vmin=None, vmax=None, cmap=None,
 
     if vmax is None:
         if robust:
-            vmax = np.percentile(calc_data, ROBUST_PERCENTILE)
+            vmax = np.percentile(calc_data, 100 - ROBUST_PERCENTILE)
         else:
             vmax = calc_data.max()
 
