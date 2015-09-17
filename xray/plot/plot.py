@@ -230,7 +230,7 @@ def hist(darray, ax=None, **kwargs):
     return primitive
 
 
-def _plotter_1d(darray, plot_method='plot', *args, **kwargs):
+def _plotter_1d(darray, *args, **kwargs):
     """
     Genralized plotting function for 1 dimensional DataArray
     index against values.
@@ -260,6 +260,8 @@ def _plotter_1d(darray, plot_method='plot', *args, **kwargs):
 
     # Ensures consistency with .plot method
     ax = kwargs.pop('ax', plt.gca())
+    plot_method = kwargs.pop('plot_method', None)
+    print(plot_method)
 
     xlabel, x = list(darray.indexes.items())[0]
 
@@ -286,7 +288,7 @@ def _plotter_1d(darray, plot_method='plot', *args, **kwargs):
     return primitive
 
 
-def _plotter_data(darray, plot_method='hist', **kwargs):
+def _plotter_data(darray, **kwargs):
     """
     Generalized plotting function for DataArray values
 
@@ -309,6 +311,7 @@ def _plotter_data(darray, plot_method='hist', **kwargs):
 
     # Ensures consistency with .plot method
     ax = kwargs.pop('ax', plt.gca())
+    plot_method = kwargs.pop('plot_method', None)
 
     try:
         plotter = getattr(ax, plot_method)
@@ -515,27 +518,34 @@ class _PlotMethods(object):
         return plot(self._da, ax=ax, rtol=rtol, **kwargs)
 
     def hist(self, ax=None, **kwargs):
-        return _plotter_data(self._da, plot_method='hist', **kwargs)
+        kwargs['plot_method'] = 'hist'
+        return _plotter_data(self._da, **kwargs)
 
     def acorr(self, ax=None, **kwargs):
-        return _plotter_data(self._da, plot_method='acorr', **kwargs)
+        kwargs['plot_method'] = 'acorr'
+        return _plotter_data(self._da, **kwargs)
 
     def line(self, *args, **kwargs):
-        return _plotter_1d(self._da, plot_method='plot', *args, **kwargs)
+        kwargs['plot_method'] = 'plot'
+        return _plotter_1d(self._da, *args, **kwargs)
 
     def bar(self, *args, **kwargs):
-        return _plotter_1d(self._da, plot_method='bar', *args, **kwargs)
+        kwargs['plot_method'] = 'bar'
+        return _plotter_1d(self._da, *args, **kwargs)
 
     def scatter(self, *args, **kwargs):
-        return _plotter_1d(self._da, plot_method='scatter', *args, **kwargs)
+        kwargs['plot_method'] = 'scatter'
+        return _plotter_1d(self._da, *args, **kwargs)
 
     @functools.wraps(_plotter_1d)
-    def _plotter_1d(self, plot_method='plot', *args, **kwargs):
-        return _plotter_1d(self._da, plot_method=plot_method, *args, **kwargs)
+    def _plotter_1d(self, *args, **kwargs):
+        kwargs['plot_method'] = kwargs.pop('plot_method', 'plot')
+        return _plotter_1d(self._da, *args, **kwargs)
 
     @functools.wraps(_plotter_data)
-    def _plotter_data(self, plot_method='hist', **kwargs):
-        return _plotter_data(self._da, plot_method=plot_method, **kwargs)
+    def _plotter_data(self, **kwargs):
+        kwargs['plot_method'] = kwargs.pop('plot_method', 'hist')
+        return _plotter_data(self._da, **kwargs)
 
 
 def _plot2d(plotfunc):
