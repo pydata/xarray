@@ -11,9 +11,9 @@ benefits of using dask are sufficiently strong that we expect that dask may
 become a requirement for a future version of xray.
 
 For a full example of how to use xray's dask integration, read the
-`blog post introducing xray + dask`_.
+`blog post introducing xray and dask`_.
 
-.. _blog post introducing xray + dask: http://continuum.io/blog/xray-dask
+.. _blog post introducing xray and dask: http://continuum.io/blog/xray-dask
 
 What is a dask array?
 ---------------------
@@ -43,10 +43,10 @@ For more details on dask, read `its documentation <http://dask.pydata.org/>`__.
 Reading and writing data
 ------------------------
 
-The usual way to create a dataset filled with dask arrays is to load the data
-from a netCDF file or files. You can by supplying a ``chunks`` argument to
-:py:func:`~xray.open_dataset` or using the :py:func:`~xray.open_mfdataset`
-function.
+The usual way to create a dataset filled with dask arrays is to load the
+data from a netCDF file or files. You can do this by supplying a ``chunks``
+argument to :py:func:`~xray.open_dataset` or using the
+:py:func:`~xray.open_mfdataset` function.
 
 .. ipython:: python
    :suppress:
@@ -69,10 +69,11 @@ function.
     ds = xray.open_dataset('example-data.nc', chunks={'time': 10})
     ds
 
-If you don't supply a dimension in ``chunks``, only one chunk will be used along
-that dimension for all dask arrays in the dataset. It is also entirely equivalent
-to open a dataset using ``open_dataset`` and then chunk the data use the ``chunk``
-method, e.g., ``xray.open_dataset('example-data.nc').chunk({'time': 10})``.
+In this example ``latitude`` and ``longitude`` do not appear in the
+``chunks`` dict, so only one chunk will be used along those dimensions.  It
+is also entirely equivalent to open a dataset using ``open_dataset`` and
+then chunk the data use the ``chunk`` method, e.g.,
+``xray.open_dataset('example-data.nc').chunk({'time': 10})``.
 
 To open multiple files simultaneously, use :py:func:`~xray.open_mfdataset`::
 
@@ -143,10 +144,10 @@ Explicit conversion by wrapping a DataArray with ``np.asarray`` also works:
             [  1.337e+00,  -1.531e+00, ...,   8.726e-01,  -1.538e+00],
             ...
 
-With the current versions of xray and dask, there is no automatic conversion
-of eager numpy arrays to dask arrays, nor automatic alignment of chunks when
-performing operations between dask arrays with different chunk sizes. You will
-need to explicitly chunk each array to ensure compatibility. With xray, both
+With the current version of dask, there is no automatic alignment of chunks when
+performing operations between dask arrays with different chunk sizes. If your
+computation involves multiple dask arrays with different chunks, you may need to
+explicitly rechunk each array to ensure compatibility. With xray, both
 converting data to a dask arrays and converting the chunk sizes of dask arrays
 is done with the :py:meth:`~xray.Dataset.chunk` method:
 
@@ -166,16 +167,16 @@ You can view the size of existing chunks on an array by viewing the
 
     rechunked.chunks
 
-If there are not consistent chunksizes between all the ararys in a dataset
+If there are not consistent chunksizes between all the arrays in a dataset
 along a particular dimension, an exception is raised when you try to access
 ``.chunks``.
 
 .. note::
 
     In the future, we would like to enable automatic alignment of dask
-    chunksizes and automatic conversion of numpy arrays to dask (but not the
-    other way around). We might also require that all arrays in a dataset
-    share the same chunking alignment. None of these are currently done.
+    chunksizes (but not the other way around). We might also require that all
+    arrays in a dataset share the same chunking alignment. Neither of these
+    are currently done.
 
 NumPy ufuncs like ``np.sin`` currently only work on eagerly evaluated arrays
 (this will change with the next major NumPy release). We have provided

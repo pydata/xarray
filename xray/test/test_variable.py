@@ -599,6 +599,15 @@ class TestVariable(TestCase, VariableSubclassTestCases):
         v = Variable([], np.string_('asdf'))
         self.assertVariableIdentical(v[()], v)
 
+        v = Variable([], np.unicode_(u'asdf'))
+        self.assertVariableIdentical(v[()], v)
+
+    def test_indexing_0d_unicode(self):
+        # regression test for GH568
+        actual = Variable(('x'), [u'tmax'])[0][()]
+        expected = Variable((), u'tmax')
+        self.assertVariableIdentical(actual, expected)
+
     def test_transpose(self):
         v = Variable(['time', 'x'], self.d)
         v2 = Variable(['x', 'time'], self.d.T)
@@ -721,7 +730,7 @@ class TestVariable(TestCase, VariableSubclassTestCases):
         self.assertVariableIdentical(
             v.reduce(np.mean, 'x').reduce(np.std, 'y'),
             Variable([], self.d.mean(axis=0).std()))
-        self.assertVariableIdentical(v.mean('x'), v.reduce(np.mean, 'x'))
+        self.assertVariableAllClose(v.mean('x'), v.reduce(np.mean, 'x'))
 
         with self.assertRaisesRegexp(ValueError, 'cannot supply both'):
             v.mean(dim='x', axis=0)

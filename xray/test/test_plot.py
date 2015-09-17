@@ -476,10 +476,10 @@ class Common2dMixin:
 
     def test_default_title(self):
         a = DataArray(easy_array((4, 3, 2)), dims=['a', 'b', 'c'])
-        a.coords['d'] = 10
+        a.coords['d'] = u'foo'
         self.plotfunc(a.isel(c=1))
         title = plt.gca().get_title()
-        self.assertEqual('c = 1, d = 10', title)
+        self.assertEqual('c = 1, d = foo', title)
 
     def test_colorbar_label(self):
         self.darray.name = 'testvar'

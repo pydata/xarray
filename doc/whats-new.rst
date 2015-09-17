@@ -12,6 +12,8 @@ What's New
 v0.6.1
 ------
 
+The minimum required version of dask for use with xray is now version 0.6.
+
 API Changes
 ~~~~~~~~~~~
 
@@ -28,12 +30,19 @@ Enhancements
   attributes to Dataset and DataArray (:issue:`553`).
 - More informative error message with :py:meth:`~xray.Dataset.from_dataframe`
   if the frame has duplicate columns.
+- xray now uses deterministic names for dask arrays it creates or opens from
+  disk. This allows xray users to take advantage of dask's nascent support for
+  caching intermediate computation results. See :issue:`555` for an example.
 
 Bug fixes
 ~~~~~~~~~
 
+- Forwards compatibility with the next release of changes (v0.17.0).
+  We were using some internal pandas routines for datetime conversion, which
+  unfortunately have now changed upstream (:issue:`569`).
 - Aggregation functions now correctly skip ``NaN`` for data for ``complex128``
   dtype (:issue:`554`).
+- Fixed indexing 0d arrays with unicode dtype (:issue:`568`).
 
 v0.6.0 (21 August 2015)
 -----------------------

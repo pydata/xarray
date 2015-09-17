@@ -101,7 +101,8 @@ def _as_compatible_data(data, fastpath=False):
         data = np.timedelta64(getattr(data, 'value', data), 'ns')
 
     if (not hasattr(data, 'dtype') or not hasattr(data, 'shape')
-            or isinstance(data, (np.string_, np.datetime64, np.timedelta64))):
+            or isinstance(data, (np.string_, np.unicode_,
+                                 np.datetime64, np.timedelta64))):
         # data must be ndarray-like
         data = np.asarray(data)
 
@@ -118,11 +119,11 @@ def _as_compatible_data(data, fastpath=False):
             data = np.asarray(data)
 
     if isinstance(data, np.ndarray):
-        data = common._possibly_convert_objects(data)
-        if data.dtype.kind == 'M':
-            # TODO: automatically cast arrays of datetime objects as well
+        if data.dtype.kind == 'O':
+            data = common._possibly_convert_objects(data)
+        elif data.dtype.kind == 'M':
             data = np.asarray(data, 'datetime64[ns]')
-        if data.dtype.kind == 'm':
+        elif data.dtype.kind == 'm':
             data = np.asarray(data, 'timedelta64[ns]')
 
     return _maybe_wrap_data(data)
@@ -413,7 +414,7 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
 
     _array_counter = itertools.count()
 
-    def chunk(self, chunks=None, name='', lock=False):
+    def chunk(self, chunks=None, name=None, lock=False):
         """Coerce this array's data into a dask arrays with the given chunks.
 
         If this variable is a non-dask array, it will be converted to dask
@@ -450,17 +451,12 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
             chunks = self.chunks or self.shape
 
         data = self._data
-        if isinstance(data, dask_array_type):
+        if isinstance(data, da.Array):
             data = data.rechunk(chunks)
         else:
-            if name:
-                name += '_'
-            name = 'xray_%s%s' % (name, next(self._array_counter))
-
             if utils.is_dict_like(chunks):
                 chunks = tuple(chunks.get(n, s)
                                for n, s in enumerate(self.shape))
-
             data = da.from_array(data, chunks, name=name, lock=lock)
 
         return type(self)(self.dims, data, self._attrs, self._encoding,

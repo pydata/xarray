@@ -268,18 +268,6 @@ def _update_axes_limits(ax, xincrease, yincrease):
         ax.set_ylim(sorted(ax.get_ylim(), reverse=True))
 
 
-def _infer_interval_breaks(coord):
-    """
-    >>> _infer_interval_breaks(np.arange(5))
-    array([-0.5,  0.5,  1.5,  2.5,  3.5,  4.5])
-    """
-    coord = np.asarray(coord)
-    deltas = 0.5 * (coord[1:] - coord[:-1])
-    first = coord[0] - deltas[0]
-    last = coord[-1] + deltas[-1]
-    return np.r_[[first], coord[:-1] + deltas, [last]]
-
-
 # MUST run before any 2d plotting functions are defined since
 # _plot2d decorator adds them as methods here.
 class _PlotMethods(object):
@@ -527,9 +515,13 @@ def imshow(x, y, z, ax, **kwargs):
     bottom, top = y[-1] + ystep, y[0] - ystep
 
     defaults = {'extent': [left, right, bottom, top],
-                'aspect': 'auto',
+                'origin': 'upper',
                 'interpolation': 'nearest',
                 }
+
+    if not hasattr(ax, 'projection'):
+        # not for cartopy geoaxes
+        defaults['aspect'] = 'auto'
 
     # Allow user to override these defaults
     defaults.update(kwargs)
@@ -561,6 +553,18 @@ def contourf(x, y, z, ax, **kwargs):
     return ax, primitive
 
 
+def _infer_interval_breaks(coord):
+    """
+    >>> _infer_interval_breaks(np.arange(5))
+    array([-0.5,  0.5,  1.5,  2.5,  3.5,  4.5])
+    """
+    coord = np.asarray(coord)
+    deltas = 0.5 * (coord[1:] - coord[:-1])
+    first = coord[0] - deltas[0]
+    last = coord[-1] + deltas[-1]
+    return np.r_[[first], coord[:-1] + deltas, [last]]
+
+
 @_plot2d
 def pcolormesh(x, y, z, ax, **kwargs):
     """
@@ -575,7 +579,9 @@ def pcolormesh(x, y, z, ax, **kwargs):
 
     # by default, pcolormesh picks "round" values for bounds
     # this results in ugly looking plots with lots of surrounding whitespace
-    ax.set_xlim(x[0], x[-1])
-    ax.set_ylim(y[0], y[-1])
+    if not hasattr(ax, 'projection'):
+        # not a cartopy geoaxis
+        ax.set_xlim(x[0], x[-1])
+        ax.set_ylim(y[0], y[-1])
 
     return ax, primitive
