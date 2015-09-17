@@ -133,23 +133,16 @@ def plot(darray, row=None, col=None, col_wrap=None, ax=None, rtol=0.01,
     """
     darray = darray.squeeze()
 
-    if row or col:
-        allargs = locals().copy()
-        allargs.update(kwargs)
-
-        del allargs['kwargs']
-        del allargs['rtol']
-
-        # Assume that it's going to be the right shape and just do imshow.
-        # Can't use plot since it must have 2d plotting signature for
-        # map_dataarray
-        return _easy_facetgrid(plotfunc=imshow, **allargs)
-
-    ndims = len(darray.dims)
+    ndims = len(darray.dims) - bool(row) - bool(col)
 
     if ndims == 1:
         plotfunc = line
     elif ndims == 2:
+        # Only 2d can FacetGrid
+        kwargs['row'] = row
+        kwargs['col'] = col
+        kwargs['col_wrap'] = col_wrap
+
         indexes = darray.indexes.values()
         if all(is_uniform_spaced(i, rtol=rtol) for i in indexes):
             plotfunc = imshow
@@ -159,6 +152,7 @@ def plot(darray, row=None, col=None, col_wrap=None, ax=None, rtol=0.01,
         plotfunc = hist
 
     kwargs['ax'] = ax
+
     return plotfunc(darray, **kwargs)
 
 
@@ -376,12 +370,11 @@ def _plot2d(plotfunc):
         # Handle facetgrids first
         if row or col:
             allargs = locals().copy()
-            allargs.update(kwargs)
-            del allargs['kwargs']
+            allargs.update(allargs.pop('kwargs'))
 
-            # Deleting allows us to use better FacetGrid defaults
-            del allargs['add_colorbar']
-            del allargs['add_labels']
+            # Allows use of better FacetGrid defaults
+            assert allargs.pop('add_labels')
+            assert allargs.pop('add_colorbar')
 
             # Need the decorated plotting function
             allargs['plotfunc'] = globals()[plotfunc.__name__]
