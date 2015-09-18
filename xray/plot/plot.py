@@ -261,7 +261,6 @@ def _plotter_1d(darray, *args, **kwargs):
     # Ensures consistency with .plot method
     ax = kwargs.pop('ax', plt.gca())
     plot_method = kwargs.pop('plot_method', None)
-    print(plot_method)
 
     xlabel, x = list(darray.indexes.items())[0]
 
@@ -517,23 +516,28 @@ class _PlotMethods(object):
     def __call__(self, ax=None, rtol=0.01, **kwargs):
         return plot(self._da, ax=ax, rtol=rtol, **kwargs)
 
-    def hist(self, ax=None, **kwargs):
+    def hist(self, **kwargs):
+        kwargs['ax'] = kwargs.pop('ax', None)
         kwargs['plot_method'] = 'hist'
         return _plotter_data(self._da, **kwargs)
 
-    def acorr(self, ax=None, **kwargs):
+    def acorr(self, **kwargs):
+        kwargs['ax'] = kwargs.pop('ax', None)
         kwargs['plot_method'] = 'acorr'
         return _plotter_data(self._da, **kwargs)
 
     def line(self, *args, **kwargs):
+        kwargs['ax'] = kwargs.pop('ax', None)
         kwargs['plot_method'] = 'plot'
         return _plotter_1d(self._da, *args, **kwargs)
 
     def bar(self, *args, **kwargs):
+        kwargs['ax'] = kwargs.pop('ax', None)
         kwargs['plot_method'] = 'bar'
         return _plotter_1d(self._da, *args, **kwargs)
 
     def scatter(self, *args, **kwargs):
+        kwargs['ax'] = kwargs.pop('ax', None)
         kwargs['plot_method'] = 'scatter'
         return _plotter_1d(self._da, *args, **kwargs)
 
