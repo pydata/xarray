@@ -138,3 +138,12 @@ class Test_is_uniform_and_sorted(TestCase):
 
     def test_relative_tolerance(self):
         self.assertTrue(utils.is_uniform_spaced([0, 0.97, 2], rtol=0.1))
+
+
+class Test_hashable(TestCase):
+
+    def test_hashable(self):
+        for v in [False, 1, (2, ), (3, 4), 'four']:
+            self.assertTrue(utils.hashable(v))
+        for v in [[5, 6], ['seven', '8'], {9: 'ten'}]:
+            self.assertFalse(utils.hashable(v))

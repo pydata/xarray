@@ -9,7 +9,7 @@ from .. import backends, conventions
 from .common import ArrayWriter
 from ..core.combine import auto_combine
 from ..core.utils import close_on_error, is_remote_uri
-from ..core.pycompat import basestring, OrderedDict, range
+from ..core.pycompat import basestring, OrderedDict, range, iteritems
 
 
 def _get_default_engine(path, allow_remote=False):
@@ -60,6 +60,22 @@ def _default_lock(filename, engine):
         else:
             lock = False
     return lock
+
+
+def _validate_dataset_names(dataset):
+    """DataArray.name and Dataset keys must be a string or None"""
+    def check_name(name):
+        if isinstance(name, basestring):
+            if not name:
+                raise ValueError('Invalid name for DataArray or Dataset key: '
+                                 'string must be length 1 or greater for '
+                                 'serialization to netCDF files')
+        elif name is not None:
+            raise TypeError('DataArray.name or Dataset key must be either a '
+                            'string or None for serialization to netCDF files')
+
+    for k in dataset:
+        check_name(k)
 
 
 def open_dataset(filename_or_obj, group=None, decode_cf=True,
@@ -313,6 +329,9 @@ def to_netcdf(dataset, path=None, mode='w', format=None, group=None,
                              "or engine='scipy' is supported" % engine)
     elif engine is None:
         engine = _get_default_engine(path)
+
+    # validate Dataset keys and DataArray names
+    _validate_dataset_names(dataset)
 
     try:
         store_cls = WRITEABLE_STORES[engine]

@@ -552,3 +552,6 @@ class TestCFEncodedDataStore(CFEncodedDataTest, TestCase):
     def test_roundtrip_coordinates(self):
         raise unittest.SkipTest('cannot roundtrip coordinates yet for '
                                 'CFEncodedInMemoryStore')
+
+    def test_invalid_dataarray_names_raise(self):
+        pass
