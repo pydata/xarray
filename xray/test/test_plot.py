@@ -1,3 +1,4 @@
+import sys
 import inspect
 
 import numpy as np
@@ -121,6 +122,9 @@ class TestPlot(PlotTestCase):
         with self.assertRaisesRegexp(ValueError, '[Ff]acet'):
             d.plot(x='x', y='y', col='z', ax=plt.gca())
 
+        with self.assertRaisesRegexp(ValueError, '[Ff]acet'):
+            d[0].plot(x='x', y='y', col='z', ax=plt.gca())
+
     def test_convenient_facetgrid_4d(self):
         a = easy_array((10, 15, 2, 3))
         d = DataArray(a, dims=['y', 'x', 'columns', 'rows'])
@@ -129,6 +133,9 @@ class TestPlot(PlotTestCase):
         self.assertArrayEqual(g.axes.shape, [3, 2])
         for ax in g.axes.flat:
             self.assertTrue(ax.has_data())
+
+        with self.assertRaisesRegexp(ValueError, '[Ff]acet'):
+            d.plot(x='x', y='y', col='columns', ax=plt.gca())
 
 
 class TestPlot1D(PlotTestCase):
@@ -513,7 +520,8 @@ class Common2dMixin:
             self.assertEqual(func_sig, method_sig)
         except AttributeError:
             # Python 2.6 doesn't have inspect.getcallargs
-            pass
+            version = sys.version_info[0] + sys.version_info[1] * 0.1
+            assert version < 2.7
 
     def test_convenient_facetgrid(self):
         a = easy_array((10, 15, 4))

@@ -87,12 +87,11 @@ def _easy_facetgrid(darray, plotfunc, x, y, row=None, col=None, col_wrap=None,
 
     kwargs are the arguments to 2d plotting method
     """
-    g = FacetGrid(data=darray, col=col, row=row, col_wrap=col_wrap)
-
     ax = kwargs.pop('ax', None)
     if ax is not None:
         raise ValueError("Can't use axes when making faceted plots.")
 
+    g = FacetGrid(data=darray, col=col, row=row, col_wrap=col_wrap)
     return g.map_dataarray(plotfunc, x, y, **kwargs)
 
 
@@ -136,6 +135,8 @@ def plot(darray, row=None, col=None, col_wrap=None, ax=None, rtol=0.01,
     ndims = len(darray.dims) - bool(row) - bool(col)
 
     if ndims == 1:
+        if row or col:
+            raise ValueError('Facets must be 2d')
         plotfunc = line
     elif ndims == 2:
         # Only 2d can FacetGrid
@@ -149,6 +150,8 @@ def plot(darray, row=None, col=None, col_wrap=None, ax=None, rtol=0.01,
         else:
             plotfunc = contourf
     else:
+        if row or col:
+            raise ValueError('Facets must be 2d')
         plotfunc = hist
 
     kwargs['ax'] = ax
