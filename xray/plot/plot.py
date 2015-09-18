@@ -324,7 +324,10 @@ def _plotter_data(darray, **kwargs):
     primitive = plotter(no_nan, **kwargs)
 
     # ax.set_xlabel(xlabel)
-    ax.set_title(darray._title_for_slice())
+    if darray.name is not None:
+        ax.set_title('{0} of {1}'.format(plot_method, darray.name))
+    else:
+        ax.set_title(darray._title_for_slice())
 
     return primitive
 
@@ -517,27 +520,22 @@ class _PlotMethods(object):
         return plot(self._da, ax=ax, rtol=rtol, **kwargs)
 
     def hist(self, **kwargs):
-        kwargs['ax'] = kwargs.pop('ax', None)
         kwargs['plot_method'] = 'hist'
         return _plotter_data(self._da, **kwargs)
 
     def acorr(self, **kwargs):
-        kwargs['ax'] = kwargs.pop('ax', None)
         kwargs['plot_method'] = 'acorr'
         return _plotter_data(self._da, **kwargs)
 
     def line(self, *args, **kwargs):
-        kwargs['ax'] = kwargs.pop('ax', None)
         kwargs['plot_method'] = 'plot'
         return _plotter_1d(self._da, *args, **kwargs)
 
     def bar(self, *args, **kwargs):
-        kwargs['ax'] = kwargs.pop('ax', None)
         kwargs['plot_method'] = 'bar'
         return _plotter_1d(self._da, *args, **kwargs)
 
     def scatter(self, *args, **kwargs):
-        kwargs['ax'] = kwargs.pop('ax', None)
         kwargs['plot_method'] = 'scatter'
         return _plotter_1d(self._da, *args, **kwargs)
 
