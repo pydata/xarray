@@ -138,10 +138,12 @@ def plot(darray, row=None, col=None, col_wrap=None, ax=None, rtol=0.01,
 
     ndims = len(plot_dims)
 
+    error_msg = ('Only 2d plots are supported for facets in xray. '
+                 'See the package `Seaborn` for more options.')
+
     if ndims == 1:
         if row or col:
-            raise ValueError('Only 2d plots are supported for facets in '
-                    'xray. See the package `Seaborn` for more options.')
+            raise ValueError(error_msg)
         plotfunc = line
     elif ndims == 2:
         # Only 2d can FacetGrid
@@ -154,7 +156,7 @@ def plot(darray, row=None, col=None, col_wrap=None, ax=None, rtol=0.01,
         plotfunc = imshow if uniform else contourf
     else:
         if row or col:
-            raise ValueError('Facets must be 2d')
+            raise ValueError(error_msg)
         plotfunc = hist
 
     kwargs['ax'] = ax

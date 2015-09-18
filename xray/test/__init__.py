@@ -1,3 +1,4 @@
+import sys
 import warnings
 from contextlib import contextmanager
 
@@ -82,6 +83,16 @@ def requires_dask(test):
 
 def requires_matplotlib(test):
     return test if has_matplotlib else unittest.skip('requires matplotlib')(test)
+
+
+def incompatible_2_6(test):
+    """
+    Test won't work in Python 2.6
+    """
+    major = sys.version_info[0]
+    minor = sys.version_info[1]
+    py27 = major >= 2 and minor >= 7
+    return test if py27 else unittest.skip('error on Python 2.6')(test)
 
 
 def decode_string_data(data):

@@ -12,7 +12,7 @@ from xray.plot.utils import (_determine_cmap_params,
                              _build_discrete_cmap,
                              _color_palette)
 
-from . import TestCase, requires_matplotlib
+from . import TestCase, requires_matplotlib, incompatible_2_6
 
 try:
     import matplotlib as mpl
@@ -110,6 +110,7 @@ class TestPlot(PlotTestCase):
         self.assertArrayEqual(pd.date_range('20000101', periods=4) - np.timedelta64(12, 'h'),
                               _infer_interval_breaks(pd.date_range('20000101', periods=3)))
 
+    @incompatible_2_6
     def test_datetime_dimension(self):
         nrow = 3
         ncol = 4
@@ -522,17 +523,13 @@ class Common2dMixin:
         for ax in g.axes.flat:
             self.assertTrue(ax.has_data())
 
+    @incompatible_2_6
     def test_2d_function_and_method_signature_same(self):
-        try:
-            func_sig = inspect.getcallargs(self.plotfunc, self.darray)
-            method_sig = inspect.getcallargs(self.plotmethod)
-            del method_sig['_PlotMethods_obj']
-            del func_sig['darray']
-            self.assertEqual(func_sig, method_sig)
-        except AttributeError:
-            # Python 2.6 doesn't have inspect.getcallargs
-            version = sys.version_info[0] + sys.version_info[1] * 0.1
-            assert version < 2.7
+        func_sig = inspect.getcallargs(self.plotfunc, self.darray)
+        method_sig = inspect.getcallargs(self.plotmethod)
+        del method_sig['_PlotMethods_obj']
+        del func_sig['darray']
+        self.assertEqual(func_sig, method_sig)
 
     def test_convenient_facetgrid(self):
         a = easy_array((10, 15, 4))
