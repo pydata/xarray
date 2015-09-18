@@ -91,8 +91,11 @@ def incompatible_2_6(test):
     """
     major = sys.version_info[0]
     minor = sys.version_info[1]
-    py27 = major >= 2 and minor >= 7
-    return test if py27 else unittest.skip('error on Python 2.6')(test)
+    py26 = False
+    if major <= 2:
+        if minor <= 6:
+            py26 = True
+    return test if not py26 else unittest.skip('error on Python 2.6')(test)
 
 
 def decode_string_data(data):
