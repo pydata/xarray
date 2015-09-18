@@ -110,9 +110,20 @@ class TestPlot(PlotTestCase):
         self.assertArrayEqual(pd.date_range('20000101', periods=4) - np.timedelta64(12, 'h'),
                               _infer_interval_breaks(pd.date_range('20000101', periods=3)))
 
+    def test_datetime_dimension(self):
+        nrow = 3
+        ncol = 4
+        time = pd.date_range('2000-01-01', periods=nrow)
+        a = DataArray(easy_array((nrow, ncol)),
+                      coords=[('time', time), ('y', range(ncol))])
+        a.plot()
+        ax = plt.gca()
+        self.assertTrue(ax.has_data())
+
     def test_convenient_facetgrid(self):
         a = easy_array((10, 15, 4))
         d = DataArray(a, dims=['y', 'x', 'z'])
+        d.coords['z'] = list('abcd')
         g = d.plot(x='x', y='y', col='z', col_wrap=2, cmap='cool')
 
         self.assertArrayEqual(g.axes.shape, [2, 2])

@@ -33,6 +33,7 @@ Enhancements
 - xray now uses deterministic names for dask arrays it creates or opens from
   disk. This allows xray users to take advantage of dask's nascent support for
   caching intermediate computation results. See :issue:`555` for an example.
+- Faceted plotting through :py:class:`~xray.plot.FacetGrid`.
 
 Bug fixes
 ~~~~~~~~~
