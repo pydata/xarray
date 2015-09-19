@@ -16,8 +16,6 @@ matrix:
     # nb. we have to remove scipy because conda install pandas brings it in:
     # https://github.com/ContinuumIO/anaconda-issues/issues/145
     env: UPDATE_ENV="conda remove scipy netCDF4 && conda install dask"
-  - python: 3.3
-    env: UPDATE_ENV="conda remove netCDF4"
   - python: 3.4
     env: UPDATE_ENV="conda install -c pandas bottleneck h5py cython dask matplotlib seaborn && pip install cyordereddict h5netcdf"
   - python: 3.5
