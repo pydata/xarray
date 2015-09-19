@@ -49,12 +49,17 @@ NAN_REDUCE_METHODS = ['argmax', 'argmin', 'max', 'min', 'mean', 'prod', 'sum',
 # TODO: wrap cumprod/cumsum, take, dot, sort
 
 
-def _dask_or_eager_func(name, eager_module=np, dispatch_elemwise=False):
+def _dask_or_eager_func(name, eager_module=np, list_of_args=False,
+                        n_array_args=1):
     if has_dask:
-        def f(data, *args, **kwargs):
-            target = data[0] if dispatch_elemwise else data
-            module = da if isinstance(target, da.Array) else eager_module
-            return getattr(module, name)(data, *args, **kwargs)
+        def f(*args, **kwargs):
+            dispatch_args = args[0] if list_of_args else args
+            if any(isinstance(a, da.Array)
+                   for a in dispatch_args[:n_array_args]):
+                module = da
+            else:
+                module = eager_module
+            return getattr(module, name)(*args, **kwargs)
     else:
         def f(data, *args, **kwargs):
             return getattr(eager_module, name)(data, *args, **kwargs)
@@ -76,17 +81,16 @@ isnull = _dask_or_eager_func('isnull', pd)
 notnull = _dask_or_eager_func('notnull', pd)
 
 transpose = _dask_or_eager_func('transpose')
-where = _dask_or_eager_func('where')
+where = _dask_or_eager_func('where', n_array_args=3)
 insert = _dask_or_eager_func('insert')
 take = _dask_or_eager_func('take')
 broadcast_to = _dask_or_eager_func('broadcast_to', npcompat)
 
-concatenate = _dask_or_eager_func('concatenate', dispatch_elemwise=True)
-stack = _dask_or_eager_func('stack', npcompat, dispatch_elemwise=True)
+concatenate = _dask_or_eager_func('concatenate', list_of_args=True)
+stack = _dask_or_eager_func('stack', npcompat, list_of_args=True)
 
 array_all = _dask_or_eager_func('all')
 array_any = _dask_or_eager_func('any')
-
 
 
 def _interleaved_indices_required(indices):

@@ -46,6 +46,9 @@ Bug fixes
 - Fixed indexing 0d arrays with unicode dtype (:issue:`568`).
 - :py:meth:`~xray.DataArray.name` and Dataset keys must be a string or None to
   be written to netCDF (:issue:`533`).
+- :py:meth:`~xray.DataArray.where` now uses dask instead of numpy if either the
+  array or ``other`` is a dask array. Previously, if ``other`` was a numpy array
+  the method was evaluated eagerly.
 
 v0.6.0 (21 August 2015)
 -----------------------
