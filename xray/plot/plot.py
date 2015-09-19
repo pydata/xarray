@@ -230,6 +230,108 @@ def hist(darray, ax=None, **kwargs):
     return primitive
 
 
+def _plotter_1d(darray, *args, **kwargs):
+    """
+    Genralized plotting function for 1 dimensional DataArray
+    index against values.
+
+    Wraps matplotlib.Axes
+
+    Parameters
+    ----------
+    darray : DataArray
+        Must be 1 dimensional
+    plot_method : str
+        String that refers to a valid matplotlib.Axes plotting
+        method.
+    ax : matplotlib axes, optional
+        If not passed, uses the current axis
+    *args, **kwargs : optional
+        Additional arguments to matplotlib.pyplot.plot
+
+    """
+    import matplotlib.pyplot as plt
+
+    ndims = len(darray.dims)
+    if ndims != 1:
+        raise ValueError('Line plots are for 1 dimensional DataArrays. '
+                         'Passed DataArray has {ndims} '
+                         'dimensions'.format(ndims=ndims))
+
+    # Ensures consistency with .plot method
+    ax = kwargs.pop('ax', plt.gca())
+    plot_method = kwargs.pop('plot_method', None)
+
+    xlabel, x = list(darray.indexes.items())[0]
+
+    _ensure_plottable([x])
+
+    try:
+        plotter = getattr(ax, plot_method)
+    except AttributeError:
+        msg = 'Axes does not have plotting method {}'.format(plot_method)
+        raise AttributeError(msg)
+
+    primitive = plotter(x, darray, *args, **kwargs)
+
+    ax.set_xlabel(xlabel)
+    ax.set_title(darray._title_for_slice())
+
+    if darray.name is not None:
+        ax.set_ylabel(darray.name)
+
+    # Rotate dates on xlabels
+    if np.issubdtype(x.dtype, np.datetime64):
+        plt.gcf().autofmt_xdate()
+
+    return primitive
+
+
+def _plotter_data(darray, **kwargs):
+    """
+    Generalized plotting function for DataArray values
+
+    Wraps matplotlib.Axes
+
+    Parameters
+    ----------
+    darray : DataArray
+        Must be 1 dimensional
+    plot_method : str
+        String that refers to a valid plotting method for a
+        matplotlib.Axes object.
+    ax : matplotlib axes, optional
+        If not passed, uses the current axis
+    *args, **kwargs : optional
+        Additional arguments to matplotlib.pyplot.plot
+
+    """
+    import matplotlib.pyplot as plt
+
+    # Ensures consistency with .plot method
+    ax = kwargs.pop('ax', plt.gca())
+    plot_method = kwargs.pop('plot_method', None)
+
+    try:
+        plotter = getattr(ax, plot_method)
+    except AttributeError:
+        msg = 'Axes does not have plotting method {}'.format(plot_method)
+        raise AttributeError(msg)
+
+    no_nan = np.ravel(darray.values)
+    no_nan = no_nan[pd.notnull(no_nan)]
+
+    primitive = plotter(no_nan, **kwargs)
+
+    # ax.set_xlabel(xlabel)
+    if darray.name is not None:
+        ax.set_title('{0} of {1}'.format(plot_method, darray.name))
+    else:
+        ax.set_title(darray._title_for_slice())
+
+    return primitive
+
+
 def _update_axes_limits(ax, xincrease, yincrease):
     """
     Update axes in place to increase or decrease
@@ -359,8 +461,8 @@ def _color_palette(cmap, n_colors):
             from seaborn.apionly import color_palette
             pal = color_palette(cmap, n_colors=n_colors)
         except (ImportError, ValueError):
-            # ValueError is raised when seaborn doesn't like a colormap (e.g. jet)
-            # if that fails, use matplotlib
+            # ValueError is raised when seaborn doesn't like a colormap
+            # (e.g. jet). if that fails, use matplotlib
             try:
                 # is this a matplotlib cmap?
                 cmap = plt.get_cmap(cmap)
@@ -373,6 +475,7 @@ def _color_palette(cmap, n_colors):
         pal = cmap(colors_i)
 
     return pal
+
 
 def _build_discrete_cmap(cmap, levels, extend, filled):
     """
@@ -416,13 +519,35 @@ class _PlotMethods(object):
     def __call__(self, ax=None, rtol=0.01, **kwargs):
         return plot(self._da, ax=ax, rtol=rtol, **kwargs)
 
-    @functools.wraps(hist)
-    def hist(self, ax=None, **kwargs):
-        return hist(self._da, ax=ax, **kwargs)
+    def hist(self, **kwargs):
+        kwargs['plot_method'] = 'hist'
+        return _plotter_data(self._da, **kwargs)
 
-    @functools.wraps(line)
+    def acorr(self, **kwargs):
+        kwargs['plot_method'] = 'acorr'
+        return _plotter_data(self._da, **kwargs)
+
     def line(self, *args, **kwargs):
-        return line(self._da, *args, **kwargs)
+        kwargs['plot_method'] = 'plot'
+        return _plotter_1d(self._da, *args, **kwargs)
+
+    def bar(self, *args, **kwargs):
+        kwargs['plot_method'] = 'bar'
+        return _plotter_1d(self._da, *args, **kwargs)
+
+    def scatter(self, *args, **kwargs):
+        kwargs['plot_method'] = 'scatter'
+        return _plotter_1d(self._da, *args, **kwargs)
+
+    @functools.wraps(_plotter_1d)
+    def _plotter_1d(self, *args, **kwargs):
+        kwargs['plot_method'] = kwargs.pop('plot_method', 'plot')
+        return _plotter_1d(self._da, *args, **kwargs)
+
+    @functools.wraps(_plotter_data)
+    def _plotter_data(self, **kwargs):
+        kwargs['plot_method'] = kwargs.pop('plot_method', 'hist')
+        return _plotter_data(self._da, **kwargs)
 
 
 def _plot2d(plotfunc):
@@ -492,9 +617,10 @@ def _plot2d(plotfunc):
     plotfunc.__doc__ = '\n'.join((plotfunc.__doc__, commondoc))
 
     @functools.wraps(plotfunc)
-    def newplotfunc(darray, x=None, y=None, ax=None, xincrease=None, yincrease=None,
-                    add_colorbar=True, add_labels=True, vmin=None, vmax=None, cmap=None,
-                    center=None, robust=False, extend=None, levels=None, colors=None,
+    def newplotfunc(darray, x=None, y=None, ax=None, xincrease=None,
+                    yincrease=None, add_colorbar=True, add_labels=True,
+                    vmin=None, vmax=None, cmap=None, center=None, robust=False,
+                    extend=None, levels=None, colors=None,
                     **kwargs):
         # All 2d plots in xray share this function signature.
         # Method signature below should be consistent.
@@ -518,7 +644,8 @@ def _plot2d(plotfunc):
         if ax is None:
             ax = plt.gca()
 
-        xlab, ylab = _infer_xy_labels(plotfunc=plotfunc, darray=darray, x=x, y=y)
+        xlab, ylab = _infer_xy_labels(plotfunc=plotfunc, darray=darray,
+                                      x=x, y=y)
 
         # better to pass the ndarrays directly to plotting functions
         xval = darray[xlab].values
@@ -535,15 +662,15 @@ def _plot2d(plotfunc):
             levels = 7  # this is the matplotlib default
 
         cmap_kwargs = {'plot_data': zval.data,
-                'vmin': vmin,
-                'vmax': vmax,
-                'cmap': colors if colors else cmap,
-                'center': center,
-                'robust': robust,
-                'extend': extend,
-                'levels': levels,
-                'filled': plotfunc.__name__ != 'contour',
-                }
+                       'vmin': vmin,
+                       'vmax': vmax,
+                       'cmap': colors if colors else cmap,
+                       'center': center,
+                       'robust': robust,
+                       'extend': extend,
+                       'levels': levels,
+                       'filled': plotfunc.__name__ != 'contour',
+                       }
 
         cmap_params = _determine_cmap_params(**cmap_kwargs)
 
@@ -580,10 +707,10 @@ def _plot2d(plotfunc):
 
     # For use as DataArray.plot.plotmethod
     @functools.wraps(newplotfunc)
-    def plotmethod(_PlotMethods_obj, x=None, y=None, ax=None, xincrease=None, yincrease=None,
-                   add_colorbar=True, add_labels=True, vmin=None, vmax=None, cmap=None,
-                   colors=None, center=None, robust=False, extend=None, levels=None,
-                   **kwargs):
+    def plotmethod(_PlotMethods_obj, x=None, y=None, ax=None, xincrease=None,
+                   yincrease=None, add_colorbar=True, add_labels=True,
+                   vmin=None, vmax=None, cmap=None, colors=None, center=None,
+                   robust=False, extend=None, levels=None, **kwargs):
         """
         The method should have the same signature as the function.
 
