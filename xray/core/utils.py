@@ -403,7 +403,7 @@ def is_uniform_spaced(arr, **kwargs):
 
     kwargs are additional arguments to ``np.isclose``
     """
-    arr = np.array(arr)
+    arr = np.array(arr, dtype=float)
     diffs = np.diff(arr)
     return np.isclose(diffs.min(), diffs.max(), **kwargs)
 
