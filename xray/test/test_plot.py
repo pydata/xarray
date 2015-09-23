@@ -668,7 +668,8 @@ class TestFacetGrid(PlotTestCase):
 
     def setUp(self):
         d = easy_array((10, 15, 3))
-        self.darray = DataArray(d, dims=['y', 'x', 'z'])
+        self.darray = DataArray(d, dims=['y', 'x', 'z'],
+                                coords={'z': ['a', 'b', 'c']})
         self.g = xplt.FacetGrid(self.darray, col='z')
 
     def test_no_args(self):
@@ -688,8 +689,8 @@ class TestFacetGrid(PlotTestCase):
     def test_names_appear_somewhere(self):
         self.darray.name = 'testvar'
         self.g.map_dataarray(xplt.contourf, 'x', 'y')
-        for i, ax in enumerate(self.g.axes.flat):
-            self.assertEqual('z = {0}'.format(i), ax.get_title())
+        for k, ax in zip('abc', self.g.axes.flat):
+            self.assertEqual('z = {0}'.format(k), ax.get_title())
 
         alltxt = text_in_fig()
         self.assertIn(self.darray.name, alltxt)
@@ -737,7 +738,7 @@ class TestFacetGrid(PlotTestCase):
     def test_groups(self):
         self.g.map_dataarray(xplt.imshow, 'x', 'y')
         upperleft_dict = self.g.name_dicts[0, 0]
-        upperleft_array = self.darray[upperleft_dict]
+        upperleft_array = self.darray.loc[upperleft_dict]
         z0 = self.darray.isel(z=0)
 
         self.assertDataArrayEqual(upperleft_array, z0)
@@ -789,6 +790,9 @@ class TestFacetGrid(PlotTestCase):
         g = xplt.FacetGrid(self.darray, col='z', size=6)
         self.assertArrayEqual(g.fig.get_size_inches(), (19, 6))
 
+        g = self.darray.plot.imshow(col='z', size=6)
+        self.assertArrayEqual(g.fig.get_size_inches(), (19, 6))
+
         g = xplt.FacetGrid(self.darray, col='z', size=4, aspect=0.5)
         self.assertArrayEqual(g.fig.get_size_inches(), (7, 4))
 
@@ -808,6 +812,7 @@ class TestFacetGrid(PlotTestCase):
 
     def test_map(self):
         self.g.map(plt.contourf, 'x', 'y', Ellipsis)
+        self.g.map(lambda: None)
 
 
 class TestFacetGrid4d(PlotTestCase):

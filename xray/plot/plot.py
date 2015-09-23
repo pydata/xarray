@@ -81,7 +81,7 @@ def _infer_xy_labels(plotfunc, darray, x, y):
 
 
 def _easy_facetgrid(darray, plotfunc, x, y, row=None, col=None, col_wrap=None,
-                    **kwargs):
+                    aspect=1, size=3, **kwargs):
     """
     Convenience method to call xray.plot.FacetGrid from 2d plotting methods
 
@@ -91,7 +91,8 @@ def _easy_facetgrid(darray, plotfunc, x, y, row=None, col=None, col_wrap=None,
     if ax is not None:
         raise ValueError("Can't use axes when making faceted plots.")
 
-    g = FacetGrid(data=darray, col=col, row=row, col_wrap=col_wrap)
+    g = FacetGrid(data=darray, col=col, row=row, col_wrap=col_wrap,
+                  aspect=aspect, size=size)
     return g.map_dataarray(plotfunc, x, y, **kwargs)
 
 
