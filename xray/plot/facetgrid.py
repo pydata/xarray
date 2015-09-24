@@ -130,8 +130,7 @@ class FacetGrid(object):
         # Calculate the base figure size with extra horizontal space for a
         # colorbar
         cbar_space = 1
-        figsize = (ncol * size * aspect +
-                   cbar_space, nrow * size)
+        figsize = (ncol * size * aspect + cbar_space, nrow * size)
 
         fig, axes = plt.subplots(nrow, ncol,
                                  sharex=True, sharey=True,
@@ -381,7 +380,7 @@ class FacetGrid(object):
 
         for ax, namedict in zip(self.axes.flat, self.name_dicts.flat):
             if namedict is not None:
-                data = self.data[namedict]
+                data = self.data.loc[namedict]
                 plt.sca(ax)
                 innerargs = [data[a].values for a in args]
                 func(*innerargs, **kwargs)
