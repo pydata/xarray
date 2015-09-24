@@ -6,7 +6,7 @@ from ..core import indexing
 from ..core.utils import FrozenOrderedDict, close_on_error, Frozen
 from ..core.pycompat import iteritems, bytes_type, unicode_type, OrderedDict
 
-from .common import AbstractWritableDataStore
+from .common import WritableCFDataStore
 from .netCDF4_ import _nc4_group, _nc4_values_and_dtype, _extract_nc4_encoding
 
 
@@ -31,10 +31,10 @@ def _read_attributes(h5netcdf_var):
 
 
 _extract_h5nc_encoding = functools.partial(_extract_nc4_encoding,
-                                           lsd_okay=False)
+                                           lsd_okay=False, backend='h5netcdf')
 
 
-class H5NetCDFStore(AbstractWritableDataStore):
+class H5NetCDFStore(WritableCFDataStore):
     """Store for reading and writing data via h5netcdf
     """
     def __init__(self, filename, mode='r', format=None, group=None,
@@ -48,12 +48,6 @@ class H5NetCDFStore(AbstractWritableDataStore):
         self.format = format
         self._filename = filename
         super(H5NetCDFStore, self).__init__(writer)
-
-    def store(self, variables, attributes):
-        # All NetCDF files get CF encoded by default, without this attempting
-        # to write times, for example, would fail.
-        cf_variables, cf_attrs = cf_encoder(variables, attributes)
-        AbstractWritableDataStore.store(self, cf_variables, cf_attrs)
 
     def open_store_variable(self, var):
         dimensions = var.dimensions
@@ -87,7 +81,7 @@ class H5NetCDFStore(AbstractWritableDataStore):
     def set_attribute(self, key, value):
         self.ds.setncattr(key, value)
 
-    def prepare_variable(self, name, variable):
+    def prepare_variable(self, name, variable, check_encoding=False):
         import h5py
 
         attrs = variable.attrs.copy()
@@ -101,7 +95,8 @@ class H5NetCDFStore(AbstractWritableDataStore):
         if fill_value in ['\x00']:
             fill_value = None
 
-        encoding = _extract_h5nc_encoding(variable)
+        encoding = _extract_h5nc_encoding(variable,
+                                          raise_on_invalid=check_encoding)
         kwargs = {}
 
         for key in ['zlib', 'complevel', 'shuffle',

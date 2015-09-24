@@ -5,6 +5,7 @@ import time
 import traceback
 from collections import Mapping
 
+from ..conventions import cf_encoder
 from ..core.utils import FrozenOrderedDict
 from ..core.pycompat import iteritems, dask_array_type, OrderedDict
 
@@ -191,7 +192,7 @@ class AbstractWritableDataStore(AbstractDataStore):
         # dataset.variables
         self.store(dataset, dataset.attrs)
 
-    def store(self, variables, attributes):
+    def store(self, variables, attributes, check_encoding_set=set([])):
         self.set_attributes(attributes)
         neccesary_dims = [v.dims for v in variables.values()]
         neccesary_dims = set(itertools.chain(*neccesary_dims))
@@ -199,19 +200,29 @@ class AbstractWritableDataStore(AbstractDataStore):
         variables = OrderedDict((k, v) for k, v in iteritems(variables)
                                 if not (k in neccesary_dims and
                                         is_trivial_index(v)))
-        self.set_variables(variables)
+        self.set_variables(variables, check_encoding_set)
 
     def set_attributes(self, attributes):
         for k, v in iteritems(attributes):
             self.set_attribute(k, v)
 
-    def set_variables(self, variables):
+    def set_variables(self, variables, check_encoding_set):
         for vn, v in iteritems(variables):
             name = _encode_variable_name(vn)
-            target, source = self.prepare_variable(name, v)
+            check = vn in check_encoding_set
+            target, source = self.prepare_variable(name, v, check)
             self.writer.add(source, target)
 
     def set_necessary_dimensions(self, variable):
         for d, l in zip(variable.dims, variable.shape):
             if d not in self.dimensions:
                 self.set_dimension(d, l)
+
+
+class WritableCFDataStore(AbstractWritableDataStore):
+    def store(self, variables, attributes, check_encoding_set=set()):
+        # All NetCDF files get CF encoded by default, without this attempting
+        # to write times, for example, would fail.
+        cf_variables, cf_attrs = cf_encoder(variables, attributes)
+        AbstractWritableDataStore.store(self, cf_variables, cf_attrs,
+                                        check_encoding_set)

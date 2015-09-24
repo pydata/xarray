@@ -10,9 +10,10 @@ from .common import AbstractWritableDataStore
 
 class InMemoryDataStore(AbstractWritableDataStore):
     """
-    Stores dimensions, variables and attributes
-    in ordered dictionaries, making this store
-    fast compared to stores which save to disk.
+    Stores dimensions, variables and attributes in ordered dictionaries, making
+    this store fast compared to stores which save to disk.
+
+    This store exists purely for internal testing purposes.
     """
     def __init__(self, variables=None, attributes=None, writer=None):
         self._variables = OrderedDict() if variables is None else variables
@@ -25,7 +26,7 @@ class InMemoryDataStore(AbstractWritableDataStore):
     def get_variables(self):
         return self._variables
 
-    def prepare_variable(self, k, v):
+    def prepare_variable(self, k, v, check_encoding=False):
         new_var = Variable(v.dims, np.empty_like(v), v.attrs)
         # we copy the variable and stuff all encodings in the
         # attributes to imitate what happens when writing to disk.

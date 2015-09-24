@@ -804,17 +804,26 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject):
                 del obj._variables[name]
         return obj
 
-    def dump_to_store(self, store, encoder=None, sync=True):
+    def dump_to_store(self, store, encoder=None, sync=True, encoding={}):
         """Store dataset contents to a backends.*DataStore object."""
         variables, attrs = conventions.encode_dataset_coordinates(self)
+
+        check_encoding = set()
+        for k, enc in encoding.items():
+            # no need to shallow copy the variable again; that already happened
+            # in encode_dataset_coordinates
+            variables[k].encoding = enc
+            check_encoding.add(k)
+
         if encoder:
             variables, attrs = encoder(variables, attrs)
-        store.store(variables, attrs)
+
+        store.store(variables, attrs, check_encoding)
         if sync:
             store.sync()
 
     def to_netcdf(self, path=None, mode='w', format=None, group=None,
-                  engine=None):
+                  engine=None, encoding={}):
         """Write dataset contents to a netCDF file.
 
         Parameters
@@ -854,9 +863,14 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject):
             Engine to use when writing netCDF files. If not provided, the
             default engine is chosen based on available dependencies, with a
             preference for 'netcdf4' if writing to a file on disk.
+        encoding : dict, optional
+            Nested dictionary with variable names as keys and dictionaries of
+            variable specific encodings as values, e.g.,
+            ``{'my_variable': {'dtype': 'int16', 'scale_factor': 0.1, 'zlib': True}, ...}``
         """
         from ..backends.api import to_netcdf
-        return to_netcdf(self, path, mode, format, group, engine)
+        return to_netcdf(self, path, mode, format=format, group=group,
+                         engine=engine, encoding=encoding)
 
     dump = utils.function_alias(to_netcdf, 'dumps')
     dumps = utils.function_alias(to_netcdf, 'dumps')

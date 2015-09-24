@@ -382,7 +382,10 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
 
     @encoding.setter
     def encoding(self, value):
-        self._encoding = dict(value)
+        try:
+            self._encoding = dict(value)
+        except ValueError:
+            raise ValueError('encoding must be castable to a dictionary')
 
     def copy(self, deep=True):
         """Returns a copy of this object.

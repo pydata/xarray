@@ -102,6 +102,8 @@ Dataset and DataArray objects, and no array values are loaded into memory until
 you try to perform some sort of actual computation. For an example of how these
 lazy arrays work, see the OPeNDAP section below.
 
+.. todo: clarify this WRT dask.array
+
 It is important to note that when you modify values of a Dataset, even one
 linked to files on disk, only the in-memory copy you are manipulating in xray
 is modified: the original file on disk is never touched.
@@ -110,7 +112,7 @@ is modified: the original file on disk is never touched.
 
     xray's lazy loading of remote or on-disk datasets is often but not always
     desirable. Before performing computationally intense operations, it is
-    usually a good idea to load a dataset entirely into memory by invoking the
+    often a good idea to load a dataset entirely into memory by invoking the
     :py:meth:`~xray.Dataset.load` method.
 
 Datasets have a :py:meth:`~xray.Dataset.close` method to close the associated
@@ -122,17 +124,18 @@ netCDF file. However, it's often cleaner to use a ``with`` statement:
     with xray.open_dataset('saved_on_disk.nc') as ds:
         print(ds.keys())
 
-.. note::
-
-    Although xray provides reasonable support for incremental reads of files on
+..  Although xray provides reasonable support for incremental reads of files on
     disk, it does not yet support incremental writes, which is important for
     dealing with datasets that do not fit into memory. This is a significant
     shortcoming that we hope to resolve (:issue:`199`) by adding the ability to
     create ``Dataset`` objects directly linked to a netCDF file on disk.
 
+Reading encoded data
+~~~~~~~~~~~~~~~~~~~~
+
 NetCDF files follow some conventions for encoding datetime arrays (as numbers
 with a "units" attribute) and for packing and unpacking data (as
-described by the "scale_factor" and "_FillValue" attributes). If the argument
+described by the "scale_factor" and "add_offset" attributes). If the argument
 ``decode_cf=True`` (default) is given to ``open_dataset``, xray will attempt
 to automatically decode the values in the netCDF objects according to
 `CF conventions`_. Sometimes this will fail, for example, if a variable
@@ -141,8 +144,7 @@ turn this decoding off manually.
 
 .. _CF conventions: http://cfconventions.org/
 
-You can view this encoding information and control the details of how xray
-serializes objects, by viewing and manipulating the
+You can view this encoding information (among others) in the
 :py:attr:`DataArray.encoding <xray.DataArray.encoding>` attribute:
 
 .. ipython::
@@ -162,12 +164,88 @@ serializes objects, by viewing and manipulating the
      'units': u'days since 2000-01-01 00:00:00',
      'zlib': False}
 
+Note that all operations that manipulate variables other than indexing
+will remove encoding information.
+
 .. ipython:: python
     :suppress:
 
     ds_disk.close()
     import os
     os.remove('saved_on_disk.nc')
+
+.. _io.netcdf.writing_encoded:
+
+Writing encoded data
+~~~~~~~~~~~~~~~~~~~~
+
+Conversely, you can customize how xray writes netCDF files on disk by
+providing explicit encodings for each dataset variable. The ``encoding``
+argument takes a dictionary with variable names as keys and variable specific
+encodings as values. These encodings are saved as attributes on the netCDF
+variables on disk, which allows xray to faithfully read encoded data back into
+memory.
+
+It is important to note that using encodings is entirely optional: if you do not
+supply any of these encoding options, xray will write data to disk using a
+default encoding, or the options in the ``encoding`` attribute, if set.
+This works perfectly fine in most cases, but encoding can be useful for
+additional control, especially for enabling compression.
+
+In the file on disk, these encodings as saved as attributes on each variable, which
+allow xray and other CF-compliant tools for working with netCDF files to correctly
+read the data.
+
+Scaling and type conversions
+............................
+
+These encoding options work on any version of the netCDF file format:
+
+- ``dtype``: Any valid NumPy dtype or string convertable to a dtype, e.g., ``'int16'``
+  or ``'float32'``. This controls the type of the data written on disk.
+- ``_FillValue``:  Values of ``NaN`` in xray variables are remapped to this value when
+  saved on disk. This is important when converting floating point with missing values
+  to integers on disk, because ``NaN`` is not a valid dtype for integer dtypes.
+- ``scale_factor`` and ``add_offset``: Used to convert from encoded data on disk to
+  to the decoded data in memory, according to the formula
+  ``decoded = scale_factor * encoded + add_offset``.
+
+These parameters can be fruitfully combined to compress discretized data on disk. For
+example, to save the variable ``foo`` with a precision of 0.1 in 16-bit integers while
+converting ``NaN`` to ``-9999``, we would use
+``encoding={'foo': {'dtype': 'int16', 'scale_factor': 0.1, '_FillValue': -9999}}``.
+Compression and decompression with such discretization is extremely fast.
+
+Chunk based compression
+.......................
+
+``zlib``, ``complevel``, ``fletcher32``, ``continguous`` and ``chunksizes``
+can be used for enabling netCDF4/HDF5's chunk based compression, as described
+in the `documentation for createVariable`_ for netCDF4-Python. This only works
+for netCDF4 files and thus requires using ``format='netCDF4'`` and either
+``engine='netcdf4'`` or ``engine='h5netcdf'``.
+
+.. _documentation for createVariable: http://unidata.github.io/netcdf4-python/#netCDF4.Dataset.createVariable
+
+Chunk based gzip compression can yield impressive space savings, especially
+for sparse data, but it comes with significant performance overhead. HDF5
+libraries can only read complete chunks back into memory, and maximum
+decompression speed is in the range of 50-100 MB/s. Worse, HDF5's compression
+and decompression currently cannot be parallelized with dask. For these reasons, we
+recommend trying discretization based compression (described above) first.
+
+Time units
+..........
+
+The ``units`` and ``calendar`` attributes control how xray serializes ``datetime64`` and
+``timedelta64`` arrays to datasets on disk as numeric values. The ``units`` encoding
+should be a string like ``'days since 1900-01-01'`` for ``datetime64`` data or a string
+like ``'days'`` for ``timedelta64`` data. ``calendar`` should be one of the calendar types
+supported by netCDF4-python: 'standard', 'gregorian', 'proleptic_gregorian' 'noleap',
+'365_day', '360_day', 'julian', 'all_leap', '366_day'.
+
+By default, xray uses the 'proleptic_gregorian' calendar and units of the smallest time
+difference between values, with a reference time of the first time value.
 
 OPeNDAP
 -------
@@ -182,6 +260,18 @@ For example, we can open a connection to GBs of weather data produced by the
 
 __ http://www.prism.oregonstate.edu/
 __ http://iri.columbia.edu/
+
+.. ipython source code for this section
+   we don't use this to avoid hitting the DAP server on every doc build.
+
+   remote_data = xray.open_dataset(
+       'http://iridl.ldeo.columbia.edu/SOURCES/.OSU/.PRISM/.monthly/dods',
+       decode_times=False)
+   tmax = remote_data.tmax[:500, ::3, ::3]
+   tmax
+
+   @savefig opendap-prism-tmax.png
+   tmax[0].plot()
 
 .. ipython::
     :verbatim:
@@ -207,7 +297,7 @@ __ http://iri.columbia.edu/
         Conventions: IRIDL
         expires: 1375315200
 
-.. TODO: update this example to show off decode_cf
+.. TODO: update this example to show off decode_cf?
 
 .. note::
 
@@ -219,7 +309,6 @@ __ http://iri.columbia.edu/
     In this case, we set ``decode_times=False`` because the time axis here
     provides the calendar attribute in a format that xray does not expect
     (the integer ``360`` instead of a string like ``'360_day'``).
-
 
 We can select and slice this data any number of times, and nothing is loaded
 over the network until we look at particular values:
@@ -234,39 +323,19 @@ over the network until we look at particular values:
     <xray.DataArray 'tmax' (T: 500, Y: 207, X: 469)>
     [48541500 values with dtype=float64]
     Coordinates:
-      * Y        (Y) float32 49.9167 49.7917 49.6667 49.5417 49.4167 49.2917 49.1667 ...
-      * X        (X) float32 -125.0 -124.875 -124.75 -124.625 -124.5 -124.375 -124.25 ...
-      * T        (T) float32 -779.5 -778.5 -777.5 -776.5 -775.5 -774.5 -773.5 -772.5 -771.5 ...
+      * Y        (Y) float32 49.9167 49.7917 49.6667 49.5417 49.4167 49.2917 ...
+      * X        (X) float32 -125.0 -124.875 -124.75 -124.625 -124.5 -124.375 ...
+      * T        (T) float32 -779.5 -778.5 -777.5 -776.5 -775.5 -774.5 -773.5 ...
     Attributes:
         pointwidth: 120
         standard_name: air_temperature
         units: Celsius_scale
-        expires: 1375315200
+        expires: 1443657600
 
-Finally, let's plot a small subset with matplotlib:
-
-.. ipython::
-    :verbatim:
-
-    In [6]: tmax_ss = tmax[0]
-
-    In [8]: import matplotlib.pyplot as plt
-
-    In [10]: plt.figure(figsize=(9, 5))
-
-    In [11]: plt.gca().patch.set_color('0')
-
-    In [12]: plt.contourf(tmax_ss['X'], tmax_ss['Y'], tmax_ss.values, 20,
-       ....:     cmap='RdBu_r')
-
-    In [113]: plt.colorbar(label='tmax (deg C)')
+    # the data is downloaded automatically when we make the plot
+    In [6]: tmax[0].plot()
 
 .. image:: _static/opendap-prism-tmax.png
-
-.. note::
-
-    We do hope to eventually add plotting methods to xray to make this easier
-    (:issue:`185`).
 
 .. _combining multiple files:
 

@@ -189,8 +189,11 @@ class DatasetIOTestCases(object):
     def test_roundtrip_datetime_data(self):
         times = pd.to_datetime(['2000-01-01', '2000-01-02', 'NaT'])
         expected = Dataset({'t': ('t', times), 't0': times[0]})
-        with self.roundtrip(expected) as actual:
+        kwds = {'encoding': {'t0': {'units': 'days since 1950-01-01'}}}
+        with self.roundtrip(expected, save_kwargs=kwds) as actual:
             self.assertDatasetIdentical(expected, actual)
+            self.assertEquals(actual.t0.encoding['units'],
+                              'days since 1950-01-01')
 
     def test_roundtrip_timedelta_data(self):
         time_deltas = pd.to_timedelta(['1h', '2h', 'NaT'])
@@ -287,11 +290,11 @@ class CFEncodedDataTest(DatasetIOTestCases):
         encoded = create_encoded_masked_and_scaled_data()
         with self.roundtrip(decoded) as actual:
             self.assertDatasetAllClose(decoded, actual)
-        with self.roundtrip(decoded, decode_cf=False) as actual:
+        with self.roundtrip(decoded, open_kwargs=dict(decode_cf=False)) as actual:
             # TODO: this assumes that all roundtrips will first
             # encode.  Is that something we want to test for?
             self.assertDatasetAllClose(encoded, actual)
-        with self.roundtrip(encoded, decode_cf=False) as actual:
+        with self.roundtrip(encoded, open_kwargs=dict(decode_cf=False)) as actual:
             self.assertDatasetAllClose(encoded, actual)
         # make sure roundtrip encoding didn't change the
         # original dataset.
@@ -299,7 +302,7 @@ class CFEncodedDataTest(DatasetIOTestCases):
                                     create_encoded_masked_and_scaled_data())
         with self.roundtrip(encoded) as actual:
             self.assertDatasetAllClose(decoded, actual)
-        with self.roundtrip(encoded, decode_cf=False) as actual:
+        with self.roundtrip(encoded, open_kwargs=dict(decode_cf=False)) as actual:
             self.assertDatasetAllClose(encoded, actual)
 
     def test_coordinates_encoding(self):
@@ -358,6 +361,36 @@ class CFEncodedDataTest(DatasetIOTestCases):
             with self.assertRaisesRegexp(*e):
                 with self.roundtrip(ds) as actual:
                     pass
+
+    def test_encoding_kwarg(self):
+        ds = Dataset({'x': ('y', np.arange(10.0))})
+        kwargs = dict(encoding={'x': {'dtype': 'f4'}})
+        with self.roundtrip(ds, save_kwargs=kwargs) as actual:
+            self.assertEqual(actual.x.encoding['dtype'], 'f4')
+        self.assertEqual(ds.x.encoding, {})
+
+        kwargs = dict(encoding={'x': {'foo': 'bar'}})
+        with self.assertRaisesRegexp(ValueError, 'unexpected encoding'):
+            with self.roundtrip(ds, save_kwargs=kwargs) as actual:
+                pass
+
+        kwargs = dict(encoding={'x': 'foo'})
+        with self.assertRaisesRegexp(ValueError, 'must be castable'):
+            with self.roundtrip(ds, save_kwargs=kwargs) as actual:
+                pass
+
+        kwargs = dict(encoding={'invalid': {}})
+        with self.assertRaises(KeyError):
+            with self.roundtrip(ds, save_kwargs=kwargs) as actual:
+                pass
+
+        ds = Dataset({'t': pd.date_range('2000-01-01', periods=3)})
+        units = 'days since 1900-01-01'
+        kwargs = dict(encoding={'t': {'units': units}})
+        with self.roundtrip(ds, save_kwargs=kwargs) as actual:
+            self.assertEqual(actual.t.encoding['units'], units)
+            self.assertDatasetIdentical(actual, ds)
+
 
 _counter = itertools.count()
 
@@ -572,10 +605,10 @@ class NetCDF4DataTest(BaseNetCDF4Test, TestCase):
                 yield store
 
     @contextlib.contextmanager
-    def roundtrip(self, data, **kwargs):
+    def roundtrip(self, data, save_kwargs={}, open_kwargs={}):
         with create_tmp_file() as tmp_file:
-            data.to_netcdf(tmp_file)
-            with open_dataset(tmp_file, **kwargs) as ds:
+            data.to_netcdf(tmp_file, **save_kwargs)
+            with open_dataset(tmp_file, **open_kwargs) as ds:
                 yield ds
 
     def test_variable_order(self):
@@ -594,11 +627,10 @@ class NetCDF4DataTest(BaseNetCDF4Test, TestCase):
 @requires_dask
 class NetCDF4ViaDaskDataTest(NetCDF4DataTest):
     @contextlib.contextmanager
-    def roundtrip(self, data, **kwargs):
-        with create_tmp_file() as tmp_file:
-            data.to_netcdf(tmp_file)
-            with open_dataset(tmp_file, **kwargs) as ds:
-                yield ds.chunk()
+    def roundtrip(self, data, save_kwargs={}, open_kwargs={}):
+        with NetCDF4DataTest.roundtrip(
+                self, data, save_kwargs, open_kwargs) as ds:
+            yield ds.chunk()
 
 
 @requires_scipy
@@ -609,9 +641,9 @@ class ScipyInMemoryDataTest(CFEncodedDataTest, Only32BitTypes, TestCase):
         yield backends.ScipyDataStore(fobj, 'w')
 
     @contextlib.contextmanager
-    def roundtrip(self, data, **kwargs):
-        serialized = data.to_netcdf()
-        with open_dataset(BytesIO(serialized), **kwargs) as ds:
+    def roundtrip(self, data, save_kwargs={}, open_kwargs={}):
+        serialized = data.to_netcdf(**save_kwargs)
+        with open_dataset(BytesIO(serialized), **open_kwargs) as ds:
             yield ds
 
 
@@ -624,10 +656,10 @@ class ScipyOnDiskDataTest(CFEncodedDataTest, Only32BitTypes, TestCase):
                 yield store
 
     @contextlib.contextmanager
-    def roundtrip(self, data, **kwargs):
+    def roundtrip(self, data, save_kwargs={}, open_kwargs={}):
         with create_tmp_file() as tmp_file:
-            data.to_netcdf(tmp_file, engine='scipy')
-            with open_dataset(tmp_file, engine='scipy', **kwargs) as ds:
+            data.to_netcdf(tmp_file, engine='scipy', **save_kwargs)
+            with open_dataset(tmp_file, engine='scipy', **open_kwargs) as ds:
                 yield ds
 
     def test_array_attrs(self):
@@ -663,11 +695,11 @@ class NetCDF3ViaNetCDF4DataTest(CFEncodedDataTest, Only32BitTypes, TestCase):
                 yield store
 
     @contextlib.contextmanager
-    def roundtrip(self, data, **kwargs):
+    def roundtrip(self, data, save_kwargs={}, open_kwargs={}):
         with create_tmp_file() as tmp_file:
             data.to_netcdf(tmp_file, format='NETCDF3_CLASSIC',
-                           engine='netcdf4')
-            with open_dataset(tmp_file, engine='netcdf4', **kwargs) as ds:
+                           engine='netcdf4', **save_kwargs)
+            with open_dataset(tmp_file, engine='netcdf4', **open_kwargs) as ds:
                 yield ds
 
 
@@ -681,11 +713,11 @@ class NetCDF4ClassicViaNetCDF4DataTest(CFEncodedDataTest, Only32BitTypes, TestCa
                 yield store
 
     @contextlib.contextmanager
-    def roundtrip(self, data, **kwargs):
+    def roundtrip(self, data, save_kwargs={}, open_kwargs={}):
         with create_tmp_file() as tmp_file:
             data.to_netcdf(tmp_file, format='NETCDF4_CLASSIC',
-                           engine='netcdf4')
-            with open_dataset(tmp_file, engine='netcdf4', **kwargs) as ds:
+                           engine='netcdf4', **save_kwargs)
+            with open_dataset(tmp_file, engine='netcdf4', **open_kwargs) as ds:
                 yield ds
 
 
@@ -699,10 +731,10 @@ class GenericNetCDFDataTest(CFEncodedDataTest, Only32BitTypes, TestCase):
         pass
 
     @contextlib.contextmanager
-    def roundtrip(self, data, **kwargs):
+    def roundtrip(self, data, save_kwargs={}, open_kwargs={}):
         with create_tmp_file() as tmp_file:
-            data.to_netcdf(tmp_file, format='netcdf3_64bit')
-            with open_dataset(tmp_file, **kwargs) as ds:
+            data.to_netcdf(tmp_file, format='netcdf3_64bit', **save_kwargs)
+            with open_dataset(tmp_file, **open_kwargs) as ds:
                 yield ds
 
     def test_engine(self):
@@ -749,10 +781,10 @@ class H5NetCDFDataTest(BaseNetCDF4Test, TestCase):
             yield backends.H5NetCDFStore(tmp_file, 'w')
 
     @contextlib.contextmanager
-    def roundtrip(self, data, **kwargs):
+    def roundtrip(self, data, save_kwargs={}, open_kwargs={}):
         with create_tmp_file() as tmp_file:
-            data.to_netcdf(tmp_file, engine='h5netcdf')
-            with open_dataset(tmp_file, engine='h5netcdf', **kwargs) as ds:
+            data.to_netcdf(tmp_file, engine='h5netcdf', **save_kwargs)
+            with open_dataset(tmp_file, engine='h5netcdf', **open_kwargs) as ds:
                 yield ds
 
     def test_orthogonal_indexing(self):

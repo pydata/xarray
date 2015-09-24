@@ -10,7 +10,7 @@ from ..core.utils import (FrozenOrderedDict, NDArrayMixin,
                           close_on_error, is_remote_uri)
 from ..core.pycompat import iteritems, basestring, OrderedDict
 
-from .common import AbstractWritableDataStore, robust_getitem
+from .common import WritableCFDataStore, robust_getitem
 from .netcdf3 import (encode_nc3_attr_value, encode_nc3_variable,
                       maybe_convert_to_char_array)
 
@@ -120,7 +120,8 @@ def _force_native_endianness(var):
     return var
 
 
-def _extract_nc4_encoding(variable, raise_on_invalid=False, lsd_okay=True):
+def _extract_nc4_encoding(variable, raise_on_invalid=False, lsd_okay=True,
+                          backend='netCDF4'):
     encoding = variable.encoding.copy()
 
     safe_to_drop = set(['source', 'original_shape'])
@@ -129,7 +130,6 @@ def _extract_nc4_encoding(variable, raise_on_invalid=False, lsd_okay=True):
     if lsd_okay:
         valid_encodings.add('least_significant_digit')
 
-    print encoding
     if (encoding.get('chunksizes') is not None
             and encoding.get('original_shape', variable.shape) != variable.shape
             and not raise_on_invalid):
@@ -140,9 +140,11 @@ def _extract_nc4_encoding(variable, raise_on_invalid=False, lsd_okay=True):
             del encoding[k]
 
     if raise_on_invalid:
-        invalid = [k for k in encoding if k not in valid_encodings]
+        invalid = [k for enc in encoding for k in enc
+                   if k not in valid_encodings]
         if invalid:
-            raise ValueError('unexpected encoding parameters: %s' % invalid)
+            raise ValueError('unexpected encoding parameters for %r backend: '
+                             ' %r' % (backend, invalid))
     else:
         for k in list(encoding):
             if k not in valid_encodings:
@@ -151,7 +153,7 @@ def _extract_nc4_encoding(variable, raise_on_invalid=False, lsd_okay=True):
     return encoding
 
 
-class NetCDF4DataStore(AbstractWritableDataStore):
+class NetCDF4DataStore(WritableCFDataStore):
     """Store for reading and writing data via the Python-NetCDF4 library.
 
     This store supports NetCDF3, NetCDF4 and OpenDAP datasets.
@@ -170,12 +172,6 @@ class NetCDF4DataStore(AbstractWritableDataStore):
         self.is_remote = is_remote_uri(filename)
         self._filename = filename
         super(NetCDF4DataStore, self).__init__(writer)
-
-    def store(self, variables, attributes):
-        # All NetCDF files get CF encoded by default, without this attempting
-        # to write times, for example, would fail.
-        cf_variables, cf_attrs = cf_encoder(variables, attributes)
-        AbstractWritableDataStore.store(self, cf_variables, cf_attrs)
 
     def open_store_variable(self, var):
         var.set_auto_maskandscale(False)
@@ -227,7 +223,7 @@ class NetCDF4DataStore(AbstractWritableDataStore):
             value = encode_nc3_attr_value(value)
         self.ds.setncattr(key, value)
 
-    def prepare_variable(self, name, variable):
+    def prepare_variable(self, name, variable, check_encoding=False):
         attrs = variable.attrs.copy()
 
         variable = _force_native_endianness(variable)
@@ -246,7 +242,8 @@ class NetCDF4DataStore(AbstractWritableDataStore):
             # doesn't like setting fill_value to an empty string
             fill_value = None
 
-        encoding = _extract_nc4_encoding(variable)
+        encoding = _extract_nc4_encoding(variable,
+                                         raise_on_invalid=check_encoding)
         nc4_var = self.ds.createVariable(
             varname=name,
             datatype=datatype,
