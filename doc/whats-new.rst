@@ -51,6 +51,7 @@ Bug fixes
   the method was evaluated eagerly.
 - Global attributes are now handled more consistently when loading remote
   datasets using ``engine='pydap'`` (:issue:`574`).
+- It is now possible to assign to the ``.data`` attribute of DataArray objects.
 
 v0.6.0 (21 August 2015)
 -----------------------

@@ -53,6 +53,15 @@ class TestDataArray(TestCase):
         with self.assertRaises(AttributeError):
             self.dv.variable = self.v
 
+    def test_data_property(self):
+        array = DataArray(np.zeros((3, 4)))
+        actual = array.copy()
+        actual.values = np.ones((3, 4))
+        self.assertArrayEqual(np.ones((3, 4)), actual.values)
+        actual.data = 2 * np.ones((3, 4))
+        self.assertArrayEqual(2 * np.ones((3, 4)), actual.data)
+        self.assertArrayEqual(actual.data, actual.values)
+
     def test_name(self):
         arr = self.dv
         self.assertEqual(arr.name, 'foo')
