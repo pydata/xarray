@@ -248,6 +248,16 @@ class TestDataArrayAndDataset(DaskTestCase):
         v = self.lazy_array
         self.assertLazyAndAllClose(np.sin(u), xu.sin(v))
 
+    def test_where_dispatching(self):
+        a = np.arange(10)
+        b = a > 3
+        x = da.from_array(a, 5)
+        y = da.from_array(b, 5)
+        expected = DataArray(a).where(b)
+        self.assertLazyAndIdentical(expected, DataArray(a).where(y))
+        self.assertLazyAndIdentical(expected, DataArray(x).where(b))
+        self.assertLazyAndIdentical(expected, DataArray(x).where(y))
+
     def test_simultaneous_compute(self):
         ds = Dataset({'foo': ('x', range(5)),
                       'bar': ('x', range(5))}).chunk()
