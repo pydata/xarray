@@ -325,6 +325,10 @@ class DataArray(AbstractArray, BaseDataObject):
         """The array's data as a dask or numpy array"""
         return self.variable.data
 
+    @data.setter
+    def data(self, value):
+        self.variable.data = value
+
     @property
     def values(self):
         """The array's data as a numpy.ndarray"""
