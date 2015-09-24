@@ -915,6 +915,10 @@ class PydapTest(TestCase):
         with create_datasets() as (actual, expected):
             self.assertDatasetEqual(actual, expected)
 
+            # global attributes should be global attributes on the dataset
+            self.assertNotIn('NC_GLOBAL', actual.attrs)
+            self.assertIn('history', actual.attrs)
+
         with create_datasets() as (actual, expected):
             self.assertDatasetEqual(actual.isel(l=2), expected.isel(l=2))
 
