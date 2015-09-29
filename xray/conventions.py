@@ -95,8 +95,8 @@ def _decode_datetime_with_netcdf4(num_dates, units, calendar):
     import netCDF4 as nc4
 
     dates = np.asarray(nc4.num2date(num_dates, units, calendar))
-    if (dates[np.nanargmin(num_dates)].year < 1678
-            or dates[np.nanargmax(num_dates)].year >= 2262):
+    if (dates[np.nanargmin(num_dates)].year < 1678 or
+            dates[np.nanargmax(num_dates)].year >= 2262):
         warnings.warn('Unable to decode time axis into full '
                       'numpy.datetime64 objects, continuing using dummy '
                       'netCDF4.datetime objects instead, reason: dates out'
@@ -587,8 +587,8 @@ def maybe_encode_dtype(var, name=None):
         dtype = np.dtype(encoding.pop('dtype'))
         if dtype != var.dtype and dtype.kind != 'O':
             if np.issubdtype(dtype, np.integer):
-                if (np.issubdtype(var.dtype, np.floating)
-                        and '_FillValue' not in var.attrs):
+                if (np.issubdtype(var.dtype, np.floating) and
+                        '_FillValue' not in var.attrs):
                     warnings.warn('saving variable %s with floating '
                                   'point data as an integer dtype without '
                                   'any _FillValue to use for NaNs' % name,
@@ -727,9 +727,9 @@ def decode_cf_variable(var, concat_characters=True, mask_and_scale=True,
         if 'missing_value' in attributes:
             # missing_value is deprecated, but we still want to support it as
             # an alias for _FillValue.
-            if ('_FillValue' in attributes
-                and not utils.equivalent(attributes['_FillValue'],
-                                         attributes['missing_value'])):
+            if ('_FillValue' in attributes and
+                not utils.equivalent(attributes['_FillValue'],
+                                     attributes['missing_value'])):
                 raise ValueError("Discovered conflicting _FillValue "
                                  "and missing_value.  Considering "
                                  "opening the offending dataset using "
@@ -745,8 +745,8 @@ def decode_cf_variable(var, concat_characters=True, mask_and_scale=True,
                           RuntimeWarning, stacklevel=3)
         scale_factor = pop_to(attributes, encoding, 'scale_factor')
         add_offset = pop_to(attributes, encoding, 'add_offset')
-        if ((fill_value is not None and not np.any(pd.isnull(fill_value)))
-                or scale_factor is not None or add_offset is not None):
+        if ((fill_value is not None and not np.any(pd.isnull(fill_value))) or
+                scale_factor is not None or add_offset is not None):
             if isinstance(fill_value, (bytes_type, unicode_type)):
                 dtype = object
             else:
@@ -775,7 +775,6 @@ def decode_cf_variable(var, concat_characters=True, mask_and_scale=True,
             warnings.warn("CF decoding is overwriting dtype")
     else:
         encoding['dtype'] = original_dtype
-
 
     return Variable(dimensions, indexing.LazilyIndexedArray(data),
                     attributes, encoding=encoding)
@@ -856,11 +855,11 @@ def decode_cf(obj, concat_characters=True, mask_and_scale=True,
     decode_coords : bool, optional
         Use the 'coordinates' attribute on variable (or the dataset itself) to
         identify coordinates.
-    drop_variables: string or iterable, optional 
+    drop_variables: string or iterable, optional
         A variable or list of variables to exclude from being parsed from the
         dataset.This may be useful to drop variables with problems or
-        inconsistent values. 
-    
+        inconsistent values.
+
     Returns
     -------
     decoded : Dataset
@@ -932,8 +931,8 @@ def _encode_coordinates(variables, attributes, non_dim_coord_names):
     for coord_name in non_dim_coord_names:
         target_dims = variables[coord_name].dims
         for k, v in variables.items():
-            if (k not in non_dim_coord_names and k not in v.dims
-                    and any(d in target_dims for d in v.dims)):
+            if (k not in non_dim_coord_names and k not in v.dims and
+                    any(d in target_dims for d in v.dims)):
                 variable_coordinates[k].add(coord_name)
                 global_coordinates.discard(coord_name)
 

@@ -7,7 +7,6 @@ from collections import Mapping
 
 from ..core.utils import FrozenOrderedDict
 from ..core.pycompat import iteritems, dask_array_type, OrderedDict
-from ..core.variable import Coordinate
 
 # Create a logger object, but don't add any handlers. Leave that to user code.
 logger = logging.getLogger(__name__)
@@ -198,8 +197,8 @@ class AbstractWritableDataStore(AbstractDataStore):
         neccesary_dims = set(itertools.chain(*neccesary_dims))
         # set all non-indexes and any index which is not trivial.
         variables = OrderedDict((k, v) for k, v in iteritems(variables)
-                                if not (k in neccesary_dims
-                                        and is_trivial_index(v)))
+                                if not (k in neccesary_dims and
+                                        is_trivial_index(v)))
         self.set_variables(variables)
 
     def set_attributes(self, attributes):

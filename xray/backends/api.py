@@ -9,7 +9,7 @@ from .. import backends, conventions
 from .common import ArrayWriter
 from ..core.combine import auto_combine
 from ..core.utils import close_on_error, is_remote_uri
-from ..core.pycompat import basestring, OrderedDict, range, iteritems
+from ..core.pycompat import basestring
 
 
 def _get_default_engine(path, allow_remote=False):
@@ -28,7 +28,7 @@ def _get_default_engine(path, allow_remote=False):
         try:
             import netCDF4
             engine = 'netcdf4'
-        except ImportError: # pragma: no cover
+        except ImportError:  # pragma: no cover
             try:
                 import scipy.io.netcdf
                 engine = 'scipy'
