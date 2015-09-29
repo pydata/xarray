@@ -4,7 +4,6 @@ import pandas as pd
 
 from .pycompat import iteritems, basestring, OrderedDict
 from . import formatting
-from . import utils
 
 
 def _coord_merge_finalize(target, other, target_conflicts, other_conflicts,
@@ -41,9 +40,9 @@ class AbstractCoordinates(Mapping):
         return self._dataset._coord_names
 
     def __getitem__(self, key):
-        if (key in self._names
-                or (isinstance(key, basestring)
-                    and key.split('.')[0] in self._names)):
+        if (key in self._names or
+            (isinstance(key, basestring) and
+             key.split('.')[0] in self._names)):
             # allow indexing current coordinates or components
             return self._dataset[key]
         else:

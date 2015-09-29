@@ -62,7 +62,7 @@ def _dummy_copy(xray_obj):
                              if k not in xray_obj.dims),
                         name=xray_obj.name,
                         attrs=xray_obj.attrs)
-    else: # pragma: no cover
+    else:  # pragma: no cover
         raise AssertionError
     return res
 
@@ -129,8 +129,8 @@ class GroupBy(object):
                 full_index = first_items.index
                 first_items = first_items.dropna()
             bins = first_items.values
-            group_indices = ([slice(i, j) for i, j in zip(bins[:-1], bins[1:])]
-                             + [slice(bins[-1], None)])
+            group_indices = ([slice(i, j) for i, j in zip(bins[:-1], bins[1:])] +
+                             [slice(bins[-1], None)])
             unique_coord = Coordinate(group.name, first_items.index)
         elif group.name in obj.dims:
             # assume that group already has sorted, unique values
@@ -222,8 +222,7 @@ class GroupBy(object):
         """Our index contained empty groups (e.g., from a resampling). If we
         reduced on that dimension, we want to restore the full index.
         """
-        if (self._full_index is not None
-                and self.group.name in combined.dims):
+        if (self._full_index is not None and self.group.name in combined.dims):
             indexers = {self.group.name: self._full_index}
             combined = combined.reindex(**indexers)
         return combined
@@ -396,7 +395,7 @@ class DataArrayGroupBy(GroupBy, ImplementsArrayReduce):
         else:
             combined = concat(applied, concat_dim, positions=positions)
 
-        if type(combined) is type(self.obj):
+        if isinstance(combined, type(self.obj)):
             combined = self._restore_dim_order(combined)
         return combined
 
@@ -466,7 +465,7 @@ class DatasetGroupBy(GroupBy, ImplementsDatasetReduce):
         applied : Dataset
             The result of splitting, applying and combining this dataset.
         """
-        kwargs.pop('shortcut', None) # ignore shortcut if set (for now)
+        kwargs.pop('shortcut', None)  # ignore shortcut if set (for now)
         applied = (func(ds, **kwargs) for ds in self._iter_grouped())
         combined = self._concat(applied)
         result = self._maybe_restore_empty_groups(combined)

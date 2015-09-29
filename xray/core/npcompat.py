@@ -4,10 +4,9 @@ See the NumPy license in the licenses directory.
 """
 import numpy as np
 
-
 try:
     from numpy import broadcast_to, stack
-except ImportError: # pragma: no cover
+except ImportError:  # pragma: no cover
     # these functions should arrive in numpy v1.10
 
     def _maybe_view_as_subclass(original_array, new_array):

@@ -8,7 +8,7 @@ import numpy as np
 import pandas as pd
 
 from . import npcompat
-from .pycompat import PY3, range, dask_array_type
+from .pycompat import PY3, dask_array_type
 from .nputils import (
     nanfirst, nanlast, interleaved_concat as _interleaved_concat_numpy,
     array_eq, array_ne, _validate_axis, _calc_concat_shape
@@ -105,8 +105,8 @@ def _interleaved_indices_required(indices):
     next_expected = 0
     for ind in indices:
         if isinstance(ind, slice):
-            if ((ind.start or 0) != next_expected
-                    or ind.step not in (1, None)):
+            if ((ind.start or 0) != next_expected or
+                    ind.step not in (1, None)):
                 return True
             next_expected = ind.stop
         else:
@@ -217,6 +217,7 @@ def _func_slash_method_wrapper(f, name=None):
     # Dataset method
     if name is None:
         name = f.__name__
+
     def func(self, *args, **kwargs):
         try:
             return getattr(self, name)(*args, **kwargs)
@@ -347,6 +348,7 @@ _fail_on_dask_array_input_skipna = partial(
 
 _prod = _dask_or_eager_func('prod')
 
+
 def prod(values, axis=None, skipna=None, **kwargs):
     if skipna or (skipna is None and values.dtype.kind == 'f'):
         if values.dtype.kind not in ['i', 'f']:
@@ -381,10 +383,9 @@ def last(values, axis, skipna=None):
 
 def inject_reduce_methods(cls):
     methods = ([(name, globals()['array_%s' % name], False) for name
-               in REDUCE_METHODS]
-               + [(name, globals()[name], True) for name
-                  in NAN_REDUCE_METHODS]
-               + [('count', count, False)])
+               in REDUCE_METHODS] +
+               [(name, globals()[name], True) for name in NAN_REDUCE_METHODS] +
+               [('count', count, False)])
     for name, f, include_skipna in methods:
         numeric_only = getattr(f, 'numeric_only', False)
         func = cls._reduce_method(f, include_skipna, numeric_only)
@@ -405,6 +406,7 @@ def get_op(name):
 
 NON_INPLACE_OP = dict((get_op('i' + name), get_op(name))
                       for name in NUM_BINARY_OPS)
+
 
 def inplace_to_noninplace_op(f):
     return NON_INPLACE_OP[f]

@@ -5,7 +5,6 @@ import datetime
 import functools
 import itertools
 import re
-import traceback
 import warnings
 from collections import Mapping, MutableMapping
 
@@ -13,16 +12,16 @@ import numpy as np
 import pandas as pd
 
 from . import ops
-from .pycompat import iteritems, OrderedDict, PY3
+from .pycompat import iteritems, OrderedDict
 
 
-def alias_warning(old_name, new_name, stacklevel=3): # pragma: no cover
+def alias_warning(old_name, new_name, stacklevel=3):  # pragma: no cover
     warnings.warn('%s has been deprecated and renamed to %s'
                   % (old_name, new_name),
                   FutureWarning, stacklevel=stacklevel)
 
 
-def function_alias(obj, old_name): # pragma: no cover
+def function_alias(obj, old_name):  # pragma: no cover
     @functools.wraps(obj)
     def wrapper(*args, **kwargs):
         alias_warning(old_name, obj.__name__)
@@ -30,7 +29,7 @@ def function_alias(obj, old_name): # pragma: no cover
     return wrapper
 
 
-def class_alias(obj, old_name): # pragma: no cover
+def class_alias(obj, old_name):  # pragma: no cover
     class Wrapper(obj):
         def __new__(cls, *args, **kwargs):
             alias_warning(old_name, obj.__name__)
@@ -129,9 +128,9 @@ def remove_incompatible_items(first_dict, second_dict, compat=equivalent):
         checks for equivalence.
     """
     for k in list(first_dict):
-        if (k not in second_dict
-                or (k in second_dict and
-                    not compat(first_dict[k], second_dict[k]))):
+        if (k not in second_dict or
+            (k in second_dict and
+                not compat(first_dict[k], second_dict[k]))):
             del first_dict[k]
 
 
@@ -157,6 +156,7 @@ def combine_pos_and_kw_args(pos_kwargs, kw_kwargs, func_name):
 
 
 _SCALAR_TYPES = (datetime.datetime, datetime.date, datetime.timedelta)
+
 
 def is_scalar(value):
     """np.isscalar only works on primitive numeric types and (bizarrely)
