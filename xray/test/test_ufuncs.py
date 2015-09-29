@@ -56,4 +56,3 @@ class TestOps(TestCase):
 
         with self.assertRaisesRegexp(TypeError, 'only support binary ops'):
             xu.maximum(ds.a.variable, ds_grouped)
-

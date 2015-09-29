@@ -9,7 +9,7 @@ from . import TestCase, requires_netCDF4, unittest
 from .test_backends import CFEncodedDataTest
 from xray.core.pycompat import iteritems
 from xray.backends.memory import InMemoryDataStore
-from xray.conventions import cf_encoder, cf_decoder, decode_cf
+from xray.conventions import cf_encoder, decode_cf
 
 
 class TestMaskedAndScaledArray(TestCase):
@@ -88,7 +88,7 @@ class TestCharToStringArray(TestCase):
         self.assertArrayEqual(actual, expected)
 
         expected = np.array(['ad', 'be', 'cf'])
-        actual = conventions.char_to_string(array.T) # non-contiguous
+        actual = conventions.char_to_string(array.T)  # non-contiguous
         self.assertArrayEqual(actual, expected)
 
     def test_string_to_char(self):
@@ -148,8 +148,8 @@ class TestDatetime(TestCase):
                                             'Unable to decode time axis')
                     actual = conventions.decode_cf_datetime(num_dates, units,
                                                             calendar)
-                if (isinstance(actual, np.ndarray)
-                        and np.issubdtype(actual.dtype, np.datetime64)):
+                if (isinstance(actual, np.ndarray) and
+                        np.issubdtype(actual.dtype, np.datetime64)):
                     # self.assertEqual(actual.dtype.kind, 'M')
                     # For some reason, numpy 1.8 does not compare ns precision
                     # datetime64 arrays as equal to arrays of datetime objects,
@@ -167,8 +167,8 @@ class TestDatetime(TestCase):
                     # (Pdb) pd.to_datetime('1-1-1 00:00:0.0')
                     # Timestamp('2001-01-01 00:00:00')
                     self.assertArrayEqual(num_dates, np.around(encoded, 1))
-                    if (hasattr(num_dates, 'ndim') and num_dates.ndim == 1
-                            and '1000' not in units):
+                    if (hasattr(num_dates, 'ndim') and num_dates.ndim == 1 and
+                            '1000' not in units):
                         # verify that wrapping with a pandas.Index works
                         # note that it *does not* currently work to even put
                         # non-datetime64 compatible dates into a pandas.Index :(
@@ -491,16 +491,17 @@ class TestDecodeCF(TestCase):
             actual = conventions.decode_cf_variable(original)
             self.assertDatasetIdentical(expected, actual)
             self.assertIn('variable has multiple fill', str(w[0].message))
+
     def test_decode_cf_with_drop_variables(self):
         original = Dataset({
             't': ('t', [0, 1, 2], {'units': 'days since 2000-01-01'}),
-            'x' : ("x", [9, 8, 7], {'units' : 'km'}),
+            'x': ("x", [9, 8, 7], {'units': 'km'}),
             'foo': (('t', 'x'), [[0, 0, 0], [1, 1, 1], [2, 2, 2]], {'units': 'bar'}),
             'y': ('t', [5, 10, -999], {'_FillValue': -999})
         })
         expected = Dataset({
             't': pd.date_range('2000-01-01', periods=3),
-            'x' : ("x", [0, 1, 2]),
+            'x': ("x", [0, 1, 2]),
             'foo': (('t', 'x'), [[0, 0, 0], [1, 1, 1], [2, 2, 2]], {'units': 'bar'}),
             'y': ('t', [5, 10, np.nan])
         })
@@ -508,6 +509,7 @@ class TestDecodeCF(TestCase):
         actual2 = conventions.decode_cf(original, drop_variables="x")
         self.assertDatasetIdentical(expected, actual)
         self.assertDatasetIdentical(expected, actual2)
+
 
 class CFEncodedInMemoryStore(InMemoryDataStore):
     def store(self, variables, attributes):
