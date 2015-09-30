@@ -17,7 +17,6 @@ from .common import AbstractArray, BaseDataObject
 from .coordinates import DataArrayCoordinates, Indexes
 from .dataset import Dataset
 from .pycompat import iteritems, basestring, OrderedDict, zip
-from .utils import FrozenOrderedDict
 from .variable import as_variable, _as_compatible_data, Coordinate
 from .formatting import format_item
 
@@ -25,8 +24,8 @@ from .formatting import format_item
 def _infer_coords_and_dims(shape, coords, dims):
     """All the logic for creating a new DataArray"""
 
-    if (coords is not None and not utils.is_dict_like(coords)
-            and len(coords) != len(shape)):
+    if (coords is not None and not utils.is_dict_like(coords) and
+            len(coords) != len(shape)):
         raise ValueError('coords is not dict-like, but it has %s items, '
                          'which does not match the %s dimensions of the '
                          'data' % (len(coords), len(shape)))
@@ -450,8 +449,8 @@ class DataArray(AbstractArray, BaseDataObject):
             raise ValueError('cannot reset coordinates in-place on a '
                              'DataArray without ``drop == True``')
         if names is None:
-            names = (self._dataset._coord_names - set(self.dims)
-                     - set([self.name]))
+            names = (self._dataset._coord_names - set(self.dims) -
+                     set([self.name]))
         ds = self._dataset.reset_coords(names, drop, inplace)
         return ds[self.name] if drop else ds
 
@@ -959,9 +958,10 @@ class DataArray(AbstractArray, BaseDataObject):
 
     def _all_compat(self, other, compat_str):
         """Helper function for equals and identical"""
-        compat = lambda x, y: getattr(x.variable, compat_str)(y.variable)
-        return (utils.dict_equiv(self.coords, other.coords, compat=compat)
-                and compat(self, other))
+        def compat(x, y):
+            return getattr(x.variable, compat_str)(y.variable)
+        return (utils.dict_equiv(self.coords, other.coords, compat=compat) and
+                compat(self, other))
 
     def broadcast_equals(self, other):
         """Two DataArrays are broadcast equal if they are equal after
@@ -1008,8 +1008,8 @@ class DataArray(AbstractArray, BaseDataObject):
         DataArray.equal
         """
         try:
-            return (self.name == other.name
-                    and self._all_compat(other, 'identical'))
+            return (self.name == other.name and
+                    self._all_compat(other, 'identical'))
         except (TypeError, AttributeError):
             return False
 
@@ -1128,8 +1128,8 @@ class DataArray(AbstractArray, BaseDataObject):
         one_dims = []
         for dim, coord in iteritems(self.coords):
             if coord.size == 1:
-                one_dims.append('{dim} = {v}'.format(dim=dim,
-                    v=format_item(coord.values)))
+                one_dims.append('{dim} = {v}'.format(
+                    dim=dim, v=format_item(coord.values)))
 
         title = ', '.join(one_dims)
         if len(title) > truncate:

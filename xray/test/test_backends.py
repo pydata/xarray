@@ -271,8 +271,9 @@ class CFEncodedDataTest(DatasetIOTestCases):
             # netCDF4 can't keep track of an empty _FillValue for VLEN
             # variables
             expected['x'][-1] = ''
-        elif (isinstance(self, (NetCDF3ViaNetCDF4DataTest, NetCDF4ClassicViaNetCDF4DataTest))
-              or (has_netCDF4 and type(self) is GenericNetCDFDataTest)):
+        elif (isinstance(self, (NetCDF3ViaNetCDF4DataTest,
+                                NetCDF4ClassicViaNetCDF4DataTest)) or
+              (has_netCDF4 and type(self) is GenericNetCDFDataTest)):
             # netCDF4 can't keep track of an empty _FillValue for nc3, either:
             # https://github.com/Unidata/netcdf4-python/issues/273
             expected['x'][-1] = np.string_('')
@@ -471,7 +472,8 @@ class BaseNetCDF4Test(CFEncodedDataTest):
 
             with open_dataset(tmp_file) as actual:
                 self.assertVariableEqual(actual['time'], expected['time'])
-                actual_encoding = dict((k, v) for k, v in iteritems(actual['time'].encoding)
+                actual_encoding = dict((k, v) for k, v in
+                                       iteritems(actual['time'].encoding)
                                        if k in expected['time'].encoding)
                 self.assertDictEqual(actual_encoding, expected['time'].encoding)
 
@@ -811,7 +813,10 @@ class DaskTest(TestCase):
         original = Dataset({'foo': ('x', np.random.randn(10))})
         with create_tmp_file() as tmp:
             original.to_netcdf(tmp)
-            preprocess = lambda ds: ds.assign_coords(z=0)
+
+            def preprocess(ds):
+                return ds.assign_coords(z=0)
+
             expected = preprocess(original)
             with open_mfdataset(tmp, preprocess=preprocess) as actual:
                 self.assertDatasetIdentical(expected, actual)

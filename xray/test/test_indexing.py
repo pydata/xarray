@@ -1,8 +1,8 @@
 import numpy as np
 import pandas as pd
 
-from xray import Dataset, Variable, Coordinate
-from xray.core import indexing, variable
+from xray import Dataset, Variable
+from xray.core import indexing
 from . import TestCase, ReturnItem
 
 
@@ -86,7 +86,9 @@ class TestIndexers(TestCase):
     def test_remap_label_indexers(self):
         # TODO: fill in more tests!
         data = Dataset({'x': ('x', [1, 2, 3])})
-        test_indexer = lambda x: indexing.remap_label_indexers(data, {'x': x})
+
+        def test_indexer(x):
+            return indexing.remap_label_indexers(data, {'x': x})
         self.assertEqual({'x': 0}, test_indexer(1))
         self.assertEqual({'x': 0}, test_indexer(np.int32(1)))
         self.assertEqual({'x': 0}, test_indexer(Variable([], 1)))

@@ -1,6 +1,7 @@
 from datetime import timedelta
 import functools
 import itertools
+import warnings
 
 import numpy as np
 import pandas as pd
@@ -9,11 +10,10 @@ from . import common
 from . import indexing
 from . import ops
 from . import utils
-from .pycompat import basestring, OrderedDict, zip, reduce, dask_array_type
-from .indexing import (PandasIndexAdapter, LazilyIndexedArray,
-                       orthogonally_indexable)
+from .pycompat import basestring, OrderedDict, zip, dask_array_type
+from .indexing import (PandasIndexAdapter, orthogonally_indexable)
 
-import xray # only for Dataset and DataArray
+import xray  # only for Dataset and DataArray
 
 
 def as_variable(obj, key=None, strict=True):
@@ -33,8 +33,8 @@ def as_variable(obj, key=None, strict=True):
         # extract the primary Variable from DataArrays
         obj = obj.variable
     if not isinstance(obj, (Variable, xray.DataArray)):
-        if hasattr(obj, 'dims') and (hasattr(obj, 'data')
-                                     or hasattr(obj, 'values')):
+        if hasattr(obj, 'dims') and (hasattr(obj, 'data') or
+                                     hasattr(obj, 'values')):
             obj = Variable(obj.dims, getattr(obj, 'data', obj.values),
                            getattr(obj, 'attrs', None),
                            getattr(obj, 'encoding', None))
@@ -100,9 +100,9 @@ def _as_compatible_data(data, fastpath=False):
     if isinstance(data, timedelta):
         data = np.timedelta64(getattr(data, 'value', data), 'ns')
 
-    if (not hasattr(data, 'dtype') or not hasattr(data, 'shape')
-            or isinstance(data, (np.string_, np.unicode_,
-                                 np.datetime64, np.timedelta64))):
+    if (not hasattr(data, 'dtype') or not hasattr(data, 'shape') or
+            isinstance(data, (np.string_, np.unicode_,
+                              np.datetime64, np.timedelta64))):
         # data must be ndarray-like
         data = np.asarray(data)
 
@@ -151,6 +151,7 @@ def _as_array_or_item(data):
 
 
 class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
+
     """A netcdf-like variable consisting of dimensions, data and attributes
     which describe a single Array. A single Variable object is not fully
     described outside the context of its parent Dataset (if you want such a
@@ -170,6 +171,7 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
     form of a Dataset or DataArray should almost always be preferred, because
     they can use more complete metadata in context of coordinate labels.
     """
+
     def __init__(self, dims, data, attrs=None, encoding=None, fastpath=False):
         """
         Parameters
@@ -479,7 +481,7 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
             unless numpy fancy indexing was triggered by using an array
             indexer, in which case the data will be a copy.
         """
-        invalid = [k for k in indexers if not k in self.dims]
+        invalid = [k for k in indexers if k not in self.dims]
         if invalid:
             raise ValueError("dimensions %r do not exist" % invalid)
 
@@ -575,13 +577,15 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
                              'dimensions')
 
         self_dims = set(self.dims)
-        expanded_dims = tuple(d for d in dims if d not in self_dims) + self.dims
+        expanded_dims = tuple(
+            d for d in dims if d not in self_dims) + self.dims
         if shape is not None:
             dims_map = dict(zip(dims, shape))
             tmp_shape = [dims_map[d] for d in expanded_dims]
             expanded_data = ops.broadcast_to(self.data, tmp_shape)
         else:
-            expanded_data = self.data[(None,) * (len(expanded_dims) - self.ndim)]
+            expanded_data = self.data[
+                (None,) * (len(expanded_dims) - self.ndim)]
         expanded_var = Variable(expanded_dims, expanded_data, self._attrs,
                                 self._encoding, fastpath=True)
         return expanded_var.transpose(*dims)
@@ -705,8 +709,8 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
         return cls(dims, data, attrs)
 
     def _data_equals(self, other):
-        return (self._data is other._data
-                or ops.array_equiv(self.data, other.data))
+        return (self._data is other._data or
+                ops.array_equiv(self.data, other.data))
 
     def equals(self, other):
         """True if two Variables have the same dimensions and values;
@@ -720,8 +724,7 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
         """
         other = getattr(other, 'variable', other)
         try:
-            return (self.dims == other.dims
-                    and self._data_equals(other))
+            return (self.dims == other.dims and self._data_equals(other))
         except (TypeError, AttributeError):
             return False
 
@@ -742,8 +745,8 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
         """Like equals, but also checks attributes.
         """
         try:
-            return (utils.dict_equiv(self.attrs, other.attrs)
-                    and self.equals(other))
+            return (utils.dict_equiv(self.attrs, other.attrs) and
+                    self.equals(other))
         except (TypeError, AttributeError):
             return False
 
@@ -797,6 +800,7 @@ ops.inject_all_ops_and_reduce_methods(Variable)
 
 
 class Coordinate(Variable):
+
     """Wrapper around pandas.Index that adds xray specific functionality.
 
     The most important difference is that Coordinate objects must always have a
@@ -807,6 +811,7 @@ class Coordinate(Variable):
     pandas.Index methods directly (e.g., get_indexer), even though pandas does
     not (yet) support duck-typing for indexes.
     """
+
     def __init__(self, name, data, attrs=None, encoding=None, fastpath=False):
         super(Coordinate, self).__init__(name, data, attrs, encoding, fastpath)
         if self.ndim != 1:
@@ -928,7 +933,7 @@ def broadcast_variables(*variables):
 
 def _broadcast_compat_data(self, other):
     if all(hasattr(other, attr) for attr
-             in ['dims', 'data', 'shape', 'encoding']):
+            in ['dims', 'data', 'shape', 'encoding']):
         # `other` satisfies the necessary Variable API for broadcast_variables
         new_self, new_other = _broadcast_compat_variables(self, other)
         self_data = new_self.data

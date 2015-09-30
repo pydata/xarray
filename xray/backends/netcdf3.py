@@ -40,8 +40,8 @@ def coerce_nc3_dtype(arr):
         # TODO: raise a warning whenever casting the data-type instead?
         cast_arr = arr.astype(new_dtype)
         if ((('int' in dtype or 'U' in dtype) and
-                    not (cast_arr == arr).all())
-                or ('float' in dtype and
+                not (cast_arr == arr).all()) or
+                ('float' in dtype and
                     not ops.allclose_or_equiv(cast_arr, arr))):
             raise ValueError('could not safely cast array from dtype %s to %s'
                              % (dtype, new_dtype))

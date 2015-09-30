@@ -4,11 +4,10 @@ import pickle
 from copy import deepcopy
 from textwrap import dedent
 
-from xray import (align, concat, broadcast_arrays, Dataset, DataArray,
+from xray import (align, broadcast_arrays, Dataset, DataArray,
                   Coordinate, Variable)
 from xray.core.pycompat import iteritems, OrderedDict
-from . import (TestCase, ReturnItem, source_ndarray, unittest, requires_dask,
-               InaccessibleArray)
+from . import TestCase, ReturnItem, source_ndarray, unittest, requires_dask
 
 
 class TestDataArray(TestCase):
@@ -457,16 +456,6 @@ class TestDataArray(TestCase):
         actual = da.isel_points(y=[1, 2], x=[1, 2], dim=['A', 'B'])
         assert 'points' in actual.coords
 
-    def test_isel_points(self):
-        shape = (10, 5, 6)
-        np_array = np.random.random(shape)
-        da = DataArray(np_array, dims=['time', 'y', 'x'])
-        y = [1, 3]
-        x = [3, 0]
-        expected = da.isel_points(x=x, y=y)
-        actual = da.sel_points(x=x, y=y)
-        self.assertDataArrayIdentical(expected, actual)
-
     def test_loc(self):
         self.ds['x'] = ('x', np.array(list('abcdefghij')))
         da = self.ds['foo']
@@ -592,12 +581,12 @@ class TestDataArray(TestCase):
 
     def test_assign_coords(self):
         array = DataArray(10)
-        actual = array.assign_coords(c = 42)
+        actual = array.assign_coords(c=42)
         expected = DataArray(10, {'c': 42})
         self.assertDataArrayIdentical(actual, expected)
 
         array = DataArray([1, 2, 3, 4], {'c': ('x', [0, 0, 1, 1])}, dims='x')
-        actual = array.groupby('c').assign_coords(d = lambda a: a.mean())
+        actual = array.groupby('c').assign_coords(d=lambda a: a.mean())
         expected = array.copy()
         expected.coords['d'] = ('x', [1.5, 1.5, 3.5, 3.5])
         self.assertDataArrayIdentical(actual, expected)
@@ -836,7 +825,7 @@ class TestDataArray(TestCase):
         actual['tmin'] = sim['tmin'] - obs['tmin']
         expected = Dataset({'tmin': ('x', np.ones(5)),
                             'tmax': ('x', sim['tmax'].values)},
-                            obs.coords)
+                           obs.coords)
         self.assertDatasetIdentical(actual, expected)
 
         actual = sim.copy()
@@ -995,7 +984,9 @@ class TestDataArray(TestCase):
     def test_groupby_apply_identity(self):
         expected = self.make_groupby_example_array()
         idx = expected.coords['y']
-        identity = lambda x: x
+
+        def identity(x):
+            return x
         for g in ['x', 'y', 'abc', idx]:
             for shortcut in [False, True]:
                 for squeeze in [False, True]:
@@ -1171,7 +1162,7 @@ class TestDataArray(TestCase):
         self.assertDataArrayIdentical(expected, actual)
 
         actual = array.groupby('x').first()
-        expected = array # should be a no-op
+        expected = array  # should be a no-op
         self.assertDataArrayIdentical(expected, actual)
 
     def test_resample(self):

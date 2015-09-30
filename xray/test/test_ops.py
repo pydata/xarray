@@ -4,22 +4,20 @@ from xray.core import ops
 from xray.core.ops import (
     first, last, count, mean
 )
-from xray.core.nputils import (
-    interleaved_concat as interleaved_concat_numpy, _calc_concat_shape,
-)
+from xray.core.nputils import interleaved_concat as interleaved_concat_numpy
 
 from . import TestCase
 
 
 class TestOps(TestCase):
     def setUp(self):
-        self.x = array([[[ nan,  nan,   2.,  nan],
-                         [ nan,   5.,   6.,  nan],
-                         [  8.,   9.,  10.,  nan]],
+        self.x = array([[[nan,  nan,   2.,  nan],
+                         [nan,   5.,   6.,  nan],
+                         [8.,   9.,  10.,  nan]],
 
-                        [[ nan,  13.,  14.,  15.],
-                         [ nan,  17.,  18.,  nan],
-                         [ nan,  21.,  nan,  nan]]])
+                        [[nan,  13.,  14.,  15.],
+                         [nan,  17.,  18.,  nan],
+                         [nan,  21.,  nan,  nan]]])
 
     def test_first(self):
         expected_results = [array([[nan, 13, 2, 15],

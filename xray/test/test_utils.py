@@ -68,23 +68,23 @@ class TestDictionaries(TestCase):
         y = OrderedDict()
         y['b'] = np.array([1.0, 2.0, 3.0])
         y['a'] = 3
-        self.assertTrue(utils.dict_equiv(x, y)) # two nparrays are equal
-        y['b'] = [1, 2, 3] # np.array not the same as a list
-        self.assertTrue(utils.dict_equiv(x, y)) # nparray == list
+        self.assertTrue(utils.dict_equiv(x, y))  # two nparrays are equal
+        y['b'] = [1, 2, 3]  # np.array not the same as a list
+        self.assertTrue(utils.dict_equiv(x, y))  # nparray == list
         x['b'] = [1.0, 2.0, 3.0]
-        self.assertTrue(utils.dict_equiv(x, y)) # list vs. list
+        self.assertTrue(utils.dict_equiv(x, y))  # list vs. list
         x['c'] = None
-        self.assertFalse(utils.dict_equiv(x, y)) # new key in x
+        self.assertFalse(utils.dict_equiv(x, y))  # new key in x
         x['c'] = np.nan
         y['c'] = np.nan
-        self.assertTrue(utils.dict_equiv(x, y)) # as intended, nan is nan
+        self.assertTrue(utils.dict_equiv(x, y))  # as intended, nan is nan
         x['c'] = np.inf
         y['c'] = np.inf
-        self.assertTrue(utils.dict_equiv(x, y)) # inf == inf
+        self.assertTrue(utils.dict_equiv(x, y))  # inf == inf
         y = dict(y)
-        self.assertTrue(utils.dict_equiv(x, y)) # different dictionary types are fine
+        self.assertTrue(utils.dict_equiv(x, y))  # different dictionary types are fine
         y['b'] = 3 * np.arange(3)
-        self.assertFalse(utils.dict_equiv(x, y)) # not equal when arrays differ
+        self.assertFalse(utils.dict_equiv(x, y))  # not equal when arrays differ
 
     def test_frozen(self):
         x = utils.Frozen(self.x)

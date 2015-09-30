@@ -10,8 +10,7 @@ import pandas as pd
 from xray import Variable, Dataset, DataArray
 from xray.core import indexing
 from xray.core.variable import (Coordinate, as_variable, _as_compatible_data)
-from xray.core.indexing import (NumpyIndexingAdapter, PandasIndexAdapter,
-                                LazilyIndexedArray)
+from xray.core.indexing import PandasIndexAdapter, LazilyIndexedArray
 from xray.core.pycompat import PY3, OrderedDict
 
 from . import TestCase, source_ndarray
@@ -310,7 +309,8 @@ class VariableSubclassTestCases(object):
         with self.assertRaisesRegexp(ValueError, 'inconsistent dimensions'):
             Variable.concat([v, Variable(['c'], y)], 'b')
         # test indexers
-        actual = Variable.concat([v, w], positions=[range(0, 10, 2), range(1, 10, 2)], dim='a')
+        actual = Variable.concat([v, w], positions=[range(0, 10, 2),
+                                 range(1, 10, 2)], dim='a')
         expected = Variable('a', np.array([x, y]).ravel(order='F'))
         self.assertVariableIdentical(expected, actual)
         # test concatenating along a dimension
@@ -466,9 +466,9 @@ class TestVariable(TestCase, VariableSubclassTestCases):
         d = np.random.rand(10, 3)
         d[0, 0] = np.nan
         v1 = Variable(('dim1', 'dim2'), data=d,
-                       attrs={'att1': 3, 'att2': [1, 2, 3]})
+                      attrs={'att1': 3, 'att2': [1, 2, 3]})
         v2 = Variable(('dim1', 'dim2'), data=d,
-                       attrs={'att1': 3, 'att2': [1, 2, 3]})
+                      attrs={'att1': 3, 'att2': [1, 2, 3]})
         self.assertTrue(v1.equals(v2))
         self.assertTrue(v1.identical(v2))
 

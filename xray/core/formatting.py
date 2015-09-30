@@ -5,8 +5,7 @@ import numpy as np
 import pandas as pd
 
 from .options import OPTIONS
-from .pycompat import (OrderedDict, iteritems, itervalues, unicode_type,
-                       bytes_type, dask_array_type)
+from .pycompat import iteritems, unicode_type, bytes_type, dask_array_type
 
 
 def pretty_print(x, numchars):
@@ -33,8 +32,8 @@ def _get_indexer_at_least_n_items(shape, n_desired):
     cum_items = np.cumprod(shape[::-1])
     n_steps = np.argmax(cum_items >= n_desired)
     stop = int(np.ceil(float(n_desired) / np.r_[1, cum_items][n_steps]))
-    indexer = ((0,) * (len(shape) - 1 - n_steps) + (slice(stop),)
-               + (slice(None),) * n_steps)
+    indexer = ((0, ) * (len(shape) - 1 - n_steps) + (slice(stop), ) +
+               (slice(None), ) * n_steps)
     return indexer
 
 
@@ -134,8 +133,8 @@ def format_array_flat(items_ndarray, max_width):
     pprint_items = format_items(relevant_items)
 
     cum_len = np.cumsum([len(s) + 1 for s in pprint_items]) - 1
-    if (max_possibly_relevant < items_ndarray.size
-            or (cum_len > max_width).any()):
+    if (max_possibly_relevant < items_ndarray.size or
+            (cum_len > max_width).any()):
         end_padding = ' ...'
         count = max(np.argmax((cum_len + len(end_padding)) > max_width), 1)
         pprint_items = pprint_items[:count]
@@ -242,7 +241,7 @@ def array_repr(arr):
     dim_summary = ', '.join('%s: %s' % (k, v) for k, v
                             in zip(arr.dims, arr.shape))
 
-    summary = ['<xray.%s %s(%s)>'% (type(arr).__name__, name_str, dim_summary)]
+    summary = ['<xray.%s %s(%s)>' % (type(arr).__name__, name_str, dim_summary)]
 
     if isinstance(getattr(arr, 'variable', arr)._data, dask_array_type):
         summary.append(repr(arr.data))

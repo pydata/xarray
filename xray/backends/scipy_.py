@@ -5,14 +5,13 @@ import warnings
 
 from .. import Variable
 from ..conventions import cf_encoder
-from ..core.pycompat import iteritems, basestring, unicode_type, OrderedDict
+from ..core.pycompat import iteritems, basestring, OrderedDict
 from ..core.utils import Frozen, FrozenOrderedDict
 from ..core.indexing import NumpyIndexingAdapter
 
 from .common import AbstractWritableDataStore
-from .netcdf3 import (is_valid_nc3_name, coerce_nc3_dtype,
+from .netcdf3 import (is_valid_nc3_name,
                       encode_nc3_attr_value, encode_nc3_variable)
-from xray.conventions import cf_decoder
 
 
 def _decode_string(s):
@@ -88,8 +87,8 @@ class ScipyDataStore(AbstractWritableDataStore):
                              % format)
 
         # if filename is a NetCDF3 bytestring we store it in a StringIO
-        if (isinstance(filename_or_obj, basestring)
-                and filename_or_obj.startswith('CDF')):
+        if (isinstance(filename_or_obj, basestring) and
+                filename_or_obj.startswith('CDF')):
             # TODO: this check has the unfortunate side-effect that
             # paths to files cannot start with 'CDF'.
             filename_or_obj = BytesIO(filename_or_obj)

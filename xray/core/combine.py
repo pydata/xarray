@@ -4,7 +4,7 @@ import pandas as pd
 
 from . import utils
 from .pycompat import iteritems, reduce, OrderedDict, basestring
-from .variable import as_variable, Variable, Coordinate
+from .variable import Variable
 
 
 def concat(objs, dim=None, data_vars='all', coords='different',
@@ -161,8 +161,8 @@ def _calc_concat_over(datasets, dim, data_vars, coords):
                 concat_new = set(k for k in getattr(datasets[0], subset)
                                  if k not in concat_over and differs(k))
             elif opt == 'all':
-                concat_new = (set(getattr(datasets[0], subset))
-                               - set(datasets[0].dims))
+                concat_new = (set(getattr(datasets[0], subset)) -
+                              set(datasets[0].dims))
             elif opt == 'minimal':
                 concat_new = set()
             else:
@@ -224,8 +224,8 @@ def _dataset_concat(datasets, dim, data_vars, coords, compat, positions):
     # check that global attributes and non-concatenated variables are fixed
     # across all datasets
     for ds in datasets[1:]:
-        if (compat == 'identical'
-                and not utils.dict_equiv(ds.attrs, result_attrs)):
+        if (compat == 'identical' and
+                not utils.dict_equiv(ds.attrs, result_attrs)):
             raise ValueError('dataset global attributes not equal')
         for k, v in iteritems(ds.variables):
             if k not in result_vars and k not in concat_over:
@@ -234,7 +234,7 @@ def _dataset_concat(datasets, dim, data_vars, coords, compat, positions):
                 raise ValueError('%r is a coordinate in some datasets but not '
                                  'others' % k)
             elif (k in result_vars and k != dim and
-                      not getattr(v, compat)(result_vars[k])):
+                  not getattr(v, compat)(result_vars[k])):
                 verb = 'equal' if compat == 'equals' else compat
                 raise ValueError(
                     'variable %r not %s across datasets' % (k, verb))

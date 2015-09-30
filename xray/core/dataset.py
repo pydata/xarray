@@ -1,6 +1,6 @@
 import functools
 import warnings
-from collections import Mapping, Sequence
+from collections import Mapping
 from numbers import Number
 
 import numpy as np
@@ -19,7 +19,7 @@ from .coordinates import DatasetCoordinates, Indexes
 from .common import ImplementsDatasetReduce, BaseDataObject
 from .utils import Frozen, SortedKeysDict, ChainMap, maybe_wrap_array, hashable
 from .variable import as_variable, Variable, Coordinate, broadcast_variables
-from .pycompat import (iteritems, itervalues, basestring, OrderedDict,
+from .pycompat import (iteritems, basestring, OrderedDict,
                        dask_array_type)
 from .combine import concat
 
@@ -231,8 +231,8 @@ class Variables(Mapping):
         return len(self._dataset._variables) - len(self._dataset._coord_names)
 
     def __contains__(self, key):
-        return (key in self._dataset._variables
-                and key not in self._dataset._coord_names)
+        return (key in self._dataset._variables and
+                key not in self._dataset._coord_names)
 
     def __getitem__(self, key):
         if key not in self._dataset._coord_names:
@@ -457,7 +457,6 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject):
             # evaluate all the dask arrays simultaneously
             evaluated_data = da.compute(*lazy_data.values())
 
-            evaluated_variables = {}
             for k, data in zip(lazy_data, evaluated_data):
                 self.variables[k].data = data
 
@@ -659,10 +658,11 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject):
         """Helper function for equals and identical"""
         # some stores (e.g., scipy) do not seem to preserve order, so don't
         # require matching order for equality
-        compat = lambda x, y: getattr(x, compat_str)(y)
-        return (self._coord_names == other._coord_names
-                and utils.dict_equiv(self._variables, other._variables,
-                                     compat=compat))
+        def compat(x, y):
+            return getattr(x, compat_str)(y)
+        return (self._coord_names == other._coord_names and
+                utils.dict_equiv(self._variables, other._variables,
+                                 compat=compat))
 
     def broadcast_equals(self, other):
         """Two Datasets are broadcast equal if they are equal after
@@ -712,8 +712,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject):
         Dataset.equals
         """
         try:
-            return (utils.dict_equiv(self.attrs, other.attrs)
-                    and self._all_compat(other, 'identical'))
+            return (utils.dict_equiv(self.attrs, other.attrs) and
+                    self._all_compat(other, 'identical'))
         except (TypeError, AttributeError):
             return False
 
@@ -972,7 +972,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject):
         Dataset.isel_points
         DataArray.isel
         """
-        invalid = [k for k in indexers if not k in self.dims]
+        invalid = [k for k in indexers if k not in self.dims]
         if invalid:
             raise ValueError("dimensions %r do not exist" % invalid)
 
@@ -1687,9 +1687,9 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject):
             reduce_dims = [dim for dim in var.dims if dim in dims]
             if reduce_dims or not var.dims:
                 if name not in self.coords:
-                    if (not numeric_only
-                            or np.issubdtype(var.dtype, np.number)
-                            or var.dtype == np.bool_):
+                    if (not numeric_only or
+                        np.issubdtype(var.dtype, np.number) or
+                            var.dtype == np.bool_):
                         if len(reduce_dims) == 1:
                             # unpack dimensions for the benefit of functions
                             # like np.argmin which can't handle tuple arguments
@@ -2022,8 +2022,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject):
         for name, var in iteritems(self.variables):
             if dim in var.dims:
                 if name in self.data_vars:
-                    variables[name] = (var.isel(**kwargs_end)
-                                       - var.isel(**kwargs_start))
+                    variables[name] = (var.isel(**kwargs_end) -
+                                       var.isel(**kwargs_start))
                 else:
                     variables[name] = var.isel(**kwargs_new)
             else:

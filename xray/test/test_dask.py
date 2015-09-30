@@ -2,7 +2,7 @@ import numpy as np
 
 from xray import Variable, DataArray, Dataset, concat
 import xray.ufuncs as xu
-from . import TestCase, requires_dask, unittest, InaccessibleArray
+from . import TestCase, requires_dask
 
 try:
     import dask
@@ -263,6 +263,7 @@ class TestDataArrayAndDataset(DaskTestCase):
                       'bar': ('x', range(5))}).chunk()
 
         count = [0]
+
         def counting_get(*args, **kwargs):
             count[0] += 1
             return dask.get(*args, **kwargs)

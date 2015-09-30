@@ -6,8 +6,7 @@ import pandas as pd
 from xray import Dataset, DataArray, auto_combine, concat
 from xray.core.pycompat import iteritems, OrderedDict
 
-from . import (TestCase, unittest, InaccessibleArray, UnexpectedDataAccess,
-               requires_dask)
+from . import TestCase, InaccessibleArray, requires_dask
 from .test_dataset import create_test_data
 
 
@@ -144,12 +143,12 @@ class TestConcatDataset(TestCase):
         with self.assertRaisesRegexp(ValueError, 'unexpected value for'):
             concat([data, data], 'new_dim', coords='foobar')
 
-        with self.assertRaisesRegexp(ValueError,
-                'coordinate in some datasets but not others'):
+        with self.assertRaisesRegexp(
+                ValueError, 'coordinate in some datasets but not others'):
             concat([Dataset({'x': 0}), Dataset({'x': [1]})], dim='z')
 
-        with self.assertRaisesRegexp(ValueError,
-                'coordinate in some datasets but not others'):
+        with self.assertRaisesRegexp(
+                ValueError, 'coordinate in some datasets but not others'):
             concat([Dataset({'x': 0}), Dataset({}, {'x': 1})], dim='z')
 
         with self.assertRaisesRegexp(ValueError, 'no longer a valid'):
