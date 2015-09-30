@@ -12,12 +12,13 @@ if PY3:  # pragma: no cover
 
     def itervalues(d):
         return iter(d.values())
+
     range = range
     zip = zip
     from functools import reduce
     import builtins
     from urllib.request import urlretrieve
-else:  # pragma: no` cover
+else:  # pragma: no cover
     # Python 2
     basestring = basestring
     unicode_type = unicode
@@ -28,6 +29,7 @@ else:  # pragma: no` cover
 
     def itervalues(d):
         return d.itervalues()
+
     range = xrange
     from itertools import izip as zip, imap as map
     reduce = reduce
