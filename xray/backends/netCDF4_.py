@@ -8,7 +8,7 @@ from ..conventions import pop_to, cf_encoder
 from ..core import indexing
 from ..core.utils import (FrozenOrderedDict, NDArrayMixin,
                           close_on_error, is_remote_uri)
-from ..core.pycompat import iteritems, basestring, OrderedDict
+from ..core.pycompat import iteritems, basestring, OrderedDict, PY3
 
 from .common import AbstractWritableDataStore, robust_getitem
 from .netcdf3 import (encode_nc3_attr_value, encode_nc3_variable,
@@ -42,7 +42,21 @@ class NetCDF4ArrayWrapper(NDArrayMixin):
             getitem = partial(robust_getitem, catch=RuntimeError)
         else:
             getitem = operator.getitem
-        data = getitem(self.array, key)
+
+        try:
+            data = getitem(self.array, key)
+        except IndexError:
+            # Catch IndexError in netCDF4 and return a more informative error
+            # message.  This is most often called when an unsorted indexer is
+            # used before the data is loaded from disk.
+            msg = ('The indexing operation you are attempting to perform is '
+                   'not valid on netCDF4.Variable object. Try loading your '
+                   'data into memory first by calling .load().')
+            if not PY3:
+                import traceback
+                msg += '\n\nOriginal traceback:\n' + traceback.format_exc()
+            raise IndexError(msg)
+
         if self.ndim == 0:
             # work around for netCDF4-python's broken handling of 0-d
             # arrays (slicing them always returns a 1-dimensional array):
