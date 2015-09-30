@@ -7,6 +7,8 @@ xray: N-D labeled arrays and datasets
    :target: https://ci.appveyor.com/project/shoyer/xray
 .. image:: https://coveralls.io/repos/xray/xray/badge.svg
    :target: https://coveralls.io/r/xray/xray
+.. image:: https://landscape.io/github/xray/xray/master/landscape.svg?style=flat
+   :target: https://landscape.io/github/xray/xray/master
 .. image:: https://img.shields.io/pypi/v/xray.svg
    :target: https://pypi.python.org/pypi/xray/
 .. image:: https://badges.gitter.im/Join%20Chat.svg
