@@ -7,6 +7,6 @@ pandas==0.16.1
 seaborn==0.6.0
 python-dateutil
 numpydoc==0.5
-dask==0.5
+dask==0.7.3
 # required for dask.array
 toolz
