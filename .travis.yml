@@ -22,7 +22,7 @@ matrix:
     env: UPDATE_ENV="conda install -c pandas h5py cython dask matplotlib seaborn && pip install cyordereddict h5netcdf"
   # don't require pydap tests to pass because the dap test server is unreliable
   - python: 2.7
-    env: UPDATE_ENV="pip install pydap"
+    env: UPDATE_ENV="pip install pydap && conda install dask"
   # test netCDF4-python master
   - python: 2.7
     addons:
@@ -37,7 +37,7 @@ matrix:
     env: UPDATE_ENV="conda remove pandas && conda install cython && pip install https://github.com/pydata/pandas/archive/master.zip"
   allow_failures:
   - python: 2.7
-    env: UPDATE_ENV="pip install pydap"
+    env: UPDATE_ENV="pip install pydap && conda install dask"
   - python: 2.7
     addons:
       apt_packages:
