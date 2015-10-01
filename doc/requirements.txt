@@ -2,6 +2,7 @@
 sphinx==1.2.3
 # only the dependencies required to build xray's docs which are not already
 # available in RTD's system site-packages
+matplotlib>=1.4.3
 ipython==3.1.0
 pandas==0.16.1
 seaborn==0.6.0
