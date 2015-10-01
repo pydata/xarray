@@ -171,6 +171,7 @@ class FacetGrid(object):
         self._col_wrap = col_wrap
         self._x_var = None
         self._y_var = None
+        self._mappables = []
 
         self.set_titles()
 
@@ -210,9 +211,10 @@ class FacetGrid(object):
                        }
 
         # Allow kwargs to override these defaults
-        for param in kwargs:
+        # Remove cmap_kwargs from kwargs for now, we will add them back later
+        for param in list(kwargs):
             if param in cmap_kwargs:
-                cmap_kwargs[param] = kwargs[param]
+                cmap_kwargs[param] = kwargs.pop(param)
 
         # colormap inference has to happen here since all the data in
         # self.data is required to make the right choice
@@ -239,7 +241,7 @@ class FacetGrid(object):
             # None is the sentinel value
             if d is not None:
                 subset = self.data.loc[d]
-                mappable = func(subset, x, y, ax=ax, **defaults)
+                self._mappables.append(func(subset, x, y, ax=ax, **defaults))
 
         # Left side labels
         for ax in self.axes[:, 0]:
@@ -258,7 +260,7 @@ class FacetGrid(object):
 
         # colorbar
         if kwargs.get('add_colorbar', True):
-            cbar = self.fig.colorbar(mappable,
+            cbar = self.fig.colorbar(self._mappables[-1],
                                      ax=list(self.axes.flat),
                                      extend=cmap_params['extend'])
 

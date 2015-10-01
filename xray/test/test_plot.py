@@ -1,4 +1,3 @@
-import sys
 import inspect
 
 import numpy as np
@@ -548,6 +547,16 @@ class Common2dMixin:
         self.assertArrayEqual(g.axes.shape, [3, 2])
         for ax in g.axes.flat:
             self.assertTrue(ax.has_data())
+
+    def test_facetgrid_cmap(self):
+        # Regression test for GH592
+        data = (np.random.random(size=(20, 25, 12)) + np.linspace(-3, 3, 12))
+        d = DataArray(data, dims=['x', 'y', 'time'])
+        fg = d.plot.pcolormesh(col='time')
+        # check that all color limits are the same
+        self.assertTrue(len(set(m.get_clim() for m in fg._mappables)) == 1)
+        # check that all colormaps are the same
+        self.assertTrue(len(set(m.get_cmap().name for m in fg._mappables)) == 1)
 
 
 class TestContourf(Common2dMixin, PlotTestCase):
