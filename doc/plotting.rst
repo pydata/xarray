@@ -11,7 +11,7 @@ labels can also be used to easily create informative plots.
 
 Xray's plotting capabilities are centered around
 :py:class:`xray.DataArray` objects.
-To plot :py:class:`xray.Dataset` objects 
+To plot :py:class:`xray.Dataset` objects
 simply access the relevant DataArrays, ie ``dset['var1']``.
 Here we focus mostly on arrays 2d or larger. If your data fits
 nicely into a pandas DataFrame then you're better off using one of the more
@@ -86,7 +86,7 @@ Additional Arguments
 
 Additional arguments are passed directly to the matplotlib function which
 does the work.
-For example, :py:func:`xray.plot.line` calls 
+For example, :py:func:`xray.plot.line` calls
 matplotlib.pyplot.plot_ passing in the index and the array values as x and y, respectively.
 So to make a line plot with blue triangles a matplotlib format string
 can be used:
@@ -178,7 +178,7 @@ Nonuniform Coordinates
 
 It's not necessary for the coordinates to be evenly spaced. If not, then
 :py:meth:`xray.DataArray.plot` produces a filled contour plot by calling
-:py:func:`xray.plot.contourf`. 
+:py:func:`xray.plot.contourf`.
 
 .. ipython:: python
 
@@ -193,7 +193,7 @@ Calling Matplotlib
 ~~~~~~~~~~~~~~~~~~
 
 Since this is a thin wrapper around matplotlib, all the functionality of
-matplotlib is available. 
+matplotlib is available.
 
 .. ipython:: python
 
@@ -208,9 +208,9 @@ matplotlib is available.
 .. note::
 
     Xray methods update label information and generally play around with the
-    axes. So any kind of updates to the plot 
+    axes. So any kind of updates to the plot
     should be done *after* the call to the xray's plot.
-    In the example below, ``plt.xlabel`` effectively does nothing, since 
+    In the example below, ``plt.xlabel`` effectively does nothing, since
     ``d_ylog.plot()`` updates the xlabel.
 
     .. ipython:: python
@@ -231,7 +231,7 @@ example, consider the original data in Kelvins rather than Celsius:
 
     @savefig plotting_kelvin.png width=4in
     airtemps.air.isel(time=0).plot()
- 
+
 The Celsius data contain 0, so a diverging color map was used. The
 Kelvins do not have 0, so the default color map was used.
 
@@ -316,11 +316,11 @@ Xray's basic plotting is useful for plotting two dimensional arrays. What
 about three or four dimensional arrays? That's where facets become helpful.
 
 Consider the temperature data set. There are 4 observations per day for two
-years which makes for 2920 values along the time dimension. 
+years which makes for 2920 values along the time dimension.
 One way to visualize this data is to make a
-seperate plot for each time period. 
+seperate plot for each time period.
 
-The faceted dimension should not have too many values; 
+The faceted dimension should not have too many values;
 faceting on the time dimension will produce 2920 plots. That's
 too much to be helpful. To handle this situation try performing
 an operation that reduces the size of the data in some way. For example, we
@@ -343,7 +343,7 @@ arguments to the xray plotting methods/functions. This returns a
 
 .. ipython:: python
 
-    @savefig plot_facet_dataarray.png height=12in 
+    @savefig plot_facet_dataarray.png height=12in
     g_simple = t.plot(x='lon', y='lat', col='time', col_wrap=3)
 
 4 dimensional
@@ -361,7 +361,7 @@ one were much hotter.
     # This is a 4d array
     t4d.coords
 
-    @savefig plot_facet_4d.png height=12in 
+    @savefig plot_facet_4d.png height=12in
     t4d.plot(x='lon', y='lat', col='time', row='fourth_dim')
 
 Other features
@@ -375,9 +375,9 @@ Faceted plotting supports other arguments common to xray 2d plots.
     hasoutliers[0, 0, 0] = -100
     hasoutliers[-1, -1, -1] = 400
 
-    @savefig plot_facet_robust.png height=12in 
-    g = hasoutliers.plot.contourf('lon', 'lat', col='time', col_wrap=3,
-                                  robust=True, cmap='viridis')
+    @savefig plot_facet_robust.png height=12in
+    g = hasoutliers.plot.imshow('lon', 'lat', col='time', col_wrap=3,
+                                robust=True, cmap='viridis')
 
 FacetGrid Objects
 ~~~~~~~~~~~~~~~~~
@@ -402,7 +402,7 @@ through the ``name_dicts``.
 
    g.data.loc[g.name_dicts[0, 0]]
 
-Here is an example of using the lower level API and then modifying the axes after 
+Here is an example of using the lower level API and then modifying the axes after
 they have been plotted.
 
 .. ipython:: python
@@ -418,7 +418,7 @@ they have been plotted.
     bottomright = g.axes[-1, -1]
     bottomright.annotate('bottom right', (240, 40))
 
-    @savefig plot_facet_iterator.png height=12in 
+    @savefig plot_facet_iterator.png height=12in
     plt.show()
 
 
@@ -511,4 +511,4 @@ It may seem strange that
 the values on the y axis are decreasing with -0.5 on the top. This is because
 the pixels are centered over their coordinates, and the
 axis labels and ranges correspond to the values of the
-coordinates. 
+coordinates.
