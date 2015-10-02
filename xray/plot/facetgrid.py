@@ -69,7 +69,7 @@ class FacetGrid(object):
     """
 
     def __init__(self, data, col=None, row=None, col_wrap=None,
-                 aspect=1, size=3):
+                 aspect=1, size=3, subplot_kws=None):
         """
         Parameters
         ----------
@@ -85,6 +85,8 @@ class FacetGrid(object):
             width of each facet in inches
         size : scalar, optional
             Height (in inches) of each facet. See also: ``aspect``
+        subplot_kws : dict, optional
+            Dictionary of keyword arguments for matplotlib subplots
 
         """
 
@@ -127,14 +129,17 @@ class FacetGrid(object):
                 ncol = col_wrap
             nrow = int(np.ceil(nfacet / ncol))
 
+        # Set the subplot kwargs
+        subplot_kws = {} if subplot_kws is None else subplot_kws
+
         # Calculate the base figure size with extra horizontal space for a
         # colorbar
         cbar_space = 1
         figsize = (ncol * size * aspect + cbar_space, nrow * size)
 
         fig, axes = plt.subplots(nrow, ncol,
-                                 sharex=True, sharey=True,
-                                 squeeze=False, figsize=figsize)
+                                 sharex=True, sharey=True, squeeze=False,
+                                 figsize=figsize, subplot_kw=subplot_kws)
 
         # Set up the lists of names for the row and column facet variables
         col_names = list(data[col].values) if col else []

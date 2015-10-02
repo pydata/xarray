@@ -416,4 +416,3 @@ Plotting
    plot.line
    plot.pcolormesh
    plot.FacetGrid
-

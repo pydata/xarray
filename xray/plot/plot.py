@@ -81,7 +81,7 @@ def _infer_xy_labels(plotfunc, darray, x, y):
 
 
 def _easy_facetgrid(darray, plotfunc, x, y, row=None, col=None, col_wrap=None,
-                    aspect=1, size=3, **kwargs):
+                    aspect=1, size=3, subplot_kws=None, **kwargs):
     """
     Convenience method to call xray.plot.FacetGrid from 2d plotting methods
 
@@ -92,12 +92,12 @@ def _easy_facetgrid(darray, plotfunc, x, y, row=None, col=None, col_wrap=None,
         raise ValueError("Can't use axes when making faceted plots.")
 
     g = FacetGrid(data=darray, col=col, row=row, col_wrap=col_wrap,
-                  aspect=aspect, size=size)
+                  aspect=aspect, size=size, subplot_kws=subplot_kws)
     return g.map_dataarray(plotfunc, x, y, **kwargs)
 
 
 def plot(darray, row=None, col=None, col_wrap=None, ax=None, rtol=0.01,
-         **kwargs):
+         subplot_kws=None, **kwargs):
     """
     Default plot of DataArray using matplotlib / pylab.
 
@@ -127,6 +127,9 @@ def plot(darray, row=None, col=None, col_wrap=None, ax=None, rtol=0.01,
     rtol : number, optional
         Relative tolerance used to determine if the indexes
         are uniformly spaced. Usually a small positive number.
+    subplot_kws : dict, optional
+        Dictionary of keyword arguments for matplotlib subplots. Only applies
+        to FacetGrid plotting.
     **kwargs : optional
         Additional keyword arguments to matplotlib
 
@@ -151,6 +154,7 @@ def plot(darray, row=None, col=None, col_wrap=None, ax=None, rtol=0.01,
         kwargs['row'] = row
         kwargs['col'] = col
         kwargs['col_wrap'] = col_wrap
+        kwargs['subplot_kws'] = subplot_kws
 
         indexes = (darray.indexes[dim].values for dim in plot_dims)
         uniform = all(is_uniform_spaced(i, rtol=rtol) for i in indexes)
@@ -354,6 +358,9 @@ def _plot2d(plotfunc):
         provided, extend is inferred from vmin, vmax and the data limits.
     levels : int or list-like object, optional
         Split the colormap (cmap) into discrete color intervals.
+    subplot_kws : dict, optional
+        Dictionary of keyword arguments for matplotlib subplots. Only applies
+        to FacetGrid plotting.
     **kwargs : optional
         Additional arguments to wrapped matplotlib function
 
@@ -372,7 +379,7 @@ def _plot2d(plotfunc):
                     col_wrap=None, xincrease=None, yincrease=None,
                     add_colorbar=True, add_labels=True, vmin=None, vmax=None,
                     cmap=None, center=None, robust=False, extend=None,
-                    levels=None, colors=None, **kwargs):
+                    levels=None, colors=None, subplot_kws=None, **kwargs):
         # All 2d plots in xray share this function signature.
         # Method signature below should be consistent.
 
@@ -476,7 +483,7 @@ def _plot2d(plotfunc):
                    col=None, col_wrap=None, xincrease=None, yincrease=None,
                    add_colorbar=True, add_labels=True, vmin=None, vmax=None,
                    cmap=None, colors=None, center=None, robust=False,
-                   extend=None, levels=None, **kwargs):
+                   extend=None, levels=None, subplot_kws=None, **kwargs):
         """
         The method should have the same signature as the function.
 
