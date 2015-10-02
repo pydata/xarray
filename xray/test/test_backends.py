@@ -586,6 +586,20 @@ class NetCDF4DataTest(BaseNetCDF4Test, TestCase):
         with self.roundtrip(ds) as actual:
             self.assertEqual(list(ds), list(actual))
 
+    def test_unsorted_index_raises(self):
+        random_data = np.random.random(size=(4, 6))
+        dim0 = [0, 1, 2, 3]
+        dim1 = [0, 2, 1, 3, 5, 4]  # We will sort this in a later step
+        da = xray.DataArray(data=random_data, dims=('dim0', 'dim1'),
+                            coords={'dim0': dim0, 'dim1': dim1}, name='randovar')
+        ds = da.to_dataset()
+
+        with self.roundtrip(ds) as ondisk:
+            inds = np.argsort(dim1)
+            ds2 = ondisk.isel(dim1=inds)
+            with self.assertRaisesRegexp(IndexError, 'first by calling .load'):
+                print(ds2.randovar.values)  # should raise IndexError in netCDF4
+
 
 @requires_netCDF4
 @requires_dask
@@ -596,6 +610,11 @@ class NetCDF4ViaDaskDataTest(NetCDF4DataTest):
             data.to_netcdf(tmp_file)
             with open_dataset(tmp_file, **kwargs) as ds:
                 yield ds.chunk()
+
+    def test_unsorted_index_raises(self):
+        # Skip when using dask because dask rewrites indexers to getitem,
+        # dask first pulls items by block.
+        pass
 
 
 @requires_scipy
