@@ -265,8 +265,8 @@ xray, use :py:meth:`~xray.DataArray.where`:
 
 .. ipython:: python
 
-    arr = xray.DataArray(np.arange(16).reshape(4, 4), dims=['x', 'y'])
-    arr.where(arr.x + arr.y < 4)
+    arr2 = xray.DataArray(np.arange(16).reshape(4, 4), dims=['x', 'y'])
+    arr2.where(arr2.x + arr2.y < 4)
 
 This is particularly useful for ragged indexing of multi-dimensional data,
 e.g., to apply a 2D mask to an image. Note that ``where`` follows all the
@@ -276,7 +276,7 @@ usual xray broadcasting and alignment rules for binary operations (e.g.,
 
 .. ipython:: python
 
-    arr.where(arr.y < 2)
+    arr2.where(arr2.y < 2)
 
 Multi-dimensional indexing
 --------------------------
@@ -332,7 +332,7 @@ like to do advanced-style array indexing in xray, you have several options:
 
 * :ref:`pointwise indexing`
 * :ref:`masking with where`
-* Index the underlying NumPy directly array using ``.values``:
+* Index the underlying NumPy array directly using ``.values``, e.g.,
 
 __ http://docs.scipy.org/doc/numpy/reference/arrays.indexing.html
 
