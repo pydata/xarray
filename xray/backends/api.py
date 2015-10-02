@@ -164,7 +164,8 @@ def open_dataset(filename_or_obj, group=None, decode_cf=True,
                 import dask  # raise the usual error if dask is entirely missing
                 raise ImportError('xray requires dask version 0.6 or newer')
 
-            if isinstance(filename_or_obj, basestring):
+            if (isinstance(filename_or_obj, basestring) and
+                    not is_remote_uri(filename_or_obj)):
                 file_arg = os.path.getmtime(filename_or_obj)
             else:
                 file_arg = filename_or_obj

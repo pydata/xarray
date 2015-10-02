@@ -903,34 +903,38 @@ class DaskTest(TestCase):
 @requires_scipy_or_netCDF4
 @requires_pydap
 class PydapTest(TestCase):
-    def test_cmp_local_file(self):
+    @contextlib.contextmanager
+    def create_datasets(self, **kwargs):
         url = 'http://test.opendap.org/opendap/hyrax/data/nc/bears.nc'
+        actual = open_dataset(url, engine='pydap', **kwargs)
+        with open_example_dataset('bears.nc') as expected:
+            # don't check attributes since pydap doesn't serialize them
+            # correctly also skip the "bears" variable since the test DAP
+            # server incorrectly concatenates it.
+            actual = actual.drop('bears')
+            expected = expected.drop('bears')
+            yield actual, expected
 
-        @contextlib.contextmanager
-        def create_datasets():
-            actual = open_dataset(url, engine='pydap')
-            with open_example_dataset('bears.nc') as expected:
-                # don't check attributes since pydap doesn't serialize them
-                # correctly also skip the "bears" variable since the test DAP
-                # server incorrectly concatenates it.
-                actual = actual.drop('bears')
-                expected = expected.drop('bears')
-                yield actual, expected
-
-        with create_datasets() as (actual, expected):
+    def test_cmp_local_file(self):
+        with self.create_datasets() as (actual, expected):
             self.assertDatasetEqual(actual, expected)
 
             # global attributes should be global attributes on the dataset
             self.assertNotIn('NC_GLOBAL', actual.attrs)
             self.assertIn('history', actual.attrs)
 
-        with create_datasets() as (actual, expected):
+        with self.create_datasets() as (actual, expected):
             self.assertDatasetEqual(actual.isel(l=2), expected.isel(l=2))
 
-        with create_datasets() as (actual, expected):
+        with self.create_datasets() as (actual, expected):
             self.assertDatasetEqual(actual.isel(i=0, j=-1),
                                     expected.isel(i=0, j=-1))
 
-        with create_datasets() as (actual, expected):
+        with self.create_datasets() as (actual, expected):
             self.assertDatasetEqual(actual.isel(j=slice(1, 2)),
                                     expected.isel(j=slice(1, 2)))
+
+    @requires_dask
+    def test_dask(self):
+        with self.create_datasets(chunks={'j': 2}) as (actual, expected):
+            self.assertDatasetEqual(actual, expected)
