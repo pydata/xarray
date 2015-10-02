@@ -285,7 +285,7 @@ def encode_cf_datetime(dates, units=None, calendar=None):
         ref_date = np.datetime64(pd.Timestamp(ref_date))
         num = (dates - ref_date) / time_delta
 
-    except (OutOfBoundsDatetime, ValueError, OverflowError):
+    except (OutOfBoundsDatetime, OverflowError):
         num = _encode_datetime_with_netcdf4(dates, units, calendar)
 
     num = cast_to_int_if_safe(num)
