@@ -62,20 +62,31 @@ def _infer_xy_labels(plotfunc, darray, x, y):
                        '{1} or {2} for y'
                        .format(y, *dims))
 
+    cf_coords = getattr(darray, 'coordinates', None)
+
     # Get label names
     if x and y:
         xlab = x
         ylab = y
     elif x and not y:
         xlab = x
-        del dims[dims.index(x)]
-        ylab = dims.pop()
+        if cf_coords:
+            ylab = cf_coords[1]
+        else:
+            del dims[dims.index(x)]
+            ylab = dims.pop()
     elif y and not x:
         ylab = y
-        del dims[dims.index(y)]
-        xlab = dims.pop()
+        if cf_coords:
+            xlab = cf_coords[0]
+        else:
+            del dims[dims.index(y)]
+            xlab = dims.pop()
     else:
-        ylab, xlab = dims
+        if cf_coords:
+            xlab, ylab = cf_coords
+        else:
+            ylab, xlab = dims
 
     return xlab, ylab
 

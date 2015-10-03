@@ -825,7 +825,8 @@ def decode_cf_variables(variables, attributes, concat_characters=True,
                 var_coord_names = var_attrs['coordinates'].split()
                 if all(k in variables for k in var_coord_names):
                     coord_names.update(var_coord_names)
-                    del var_attrs['coordinates']
+                    # del var_attrs['coordinates']
+                    var_attrs['coordinates'] = tuple(var_coord_names)
 
     if decode_coords and 'coordinates' in attributes:
         attributes = OrderedDict(attributes)
@@ -943,9 +944,14 @@ def _encode_coordinates(variables, attributes, non_dim_coord_names):
     for var_name, coord_names in variable_coordinates.items():
         attrs = variables[var_name].attrs
         if 'coordinates' in attrs:
-            raise ValueError('cannot serialize coordinates because variable '
-                             "%s already has an attribute 'coordinates'"
-                             % var_name)
+            if (isinstance(attrs['coordinates'], tuple) and
+                    len(attrs['coordinates']) == 2):
+                # Using CF coordinates
+                coord_names = attrs['coordinates']
+            else:
+                raise ValueError('cannot serialize coordinates because variable '
+                                 "%s already has an attribute 'coordinates'"
+                                 % var_name)
         attrs['coordinates'] = ' '.join(map(str, coord_names))
 
     # These coordinates are not associated with any particular variables, so we
