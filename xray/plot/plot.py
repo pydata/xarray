@@ -45,6 +45,11 @@ def _infer_xy_labels(plotfunc, darray, x, y):
 
     darray is a 2 dimensional data array.
     """
+
+    if all(v in darray.coords for v in {x, y}):
+        # x and y are coordinates.  No need to look up dims.
+        return x, y
+
     dims = list(darray.dims)
 
     if len(dims) != 2:
