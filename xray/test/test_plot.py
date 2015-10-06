@@ -136,6 +136,15 @@ class TestPlot(PlotTestCase):
         with self.assertRaisesRegexp(ValueError, '[Ff]acet'):
             d[0].plot(x='x', y='y', col='z', ax=plt.gca())
 
+    def test_subplot_kws(self):
+        a = easy_array((10, 15, 4))
+        d = DataArray(a, dims=['y', 'x', 'z'])
+        d.coords['z'] = list('abcd')
+        g = d.plot(x='x', y='y', col='z', col_wrap=2, cmap='cool',
+                   subplot_kws=dict(axisbg='r'))
+        for ax in g.axes.flat:
+            self.assertEqual(ax.get_axis_bgcolor(), 'r')
+
     def test_convenient_facetgrid_4d(self):
         a = easy_array((10, 15, 2, 3))
         d = DataArray(a, dims=['y', 'x', 'columns', 'rows'])
