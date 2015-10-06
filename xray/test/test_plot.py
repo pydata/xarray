@@ -504,6 +504,24 @@ class Common2dMixin:
         with self.assertRaisesRegexp(KeyError, r'y'):
             self.plotmethod('z')
 
+    def test_coord_strings(self):
+        # 1d coords (same as dims)
+        self.assertIn('x', self.darray.coords)
+        self.assertIn('y', self.darray.coords)
+        self.plotmethod(y='y', x='x')
+
+        # 2d coords
+        ds = self.darray.to_dataset(name='testvar')
+        x, y = np.meshgrid(self.darray.x.values, self.darray.y.values)
+        ds['x2d'] = DataArray(x, dims=['y', 'x'])
+        ds['y2d'] = DataArray(y, dims=['y', 'x'])
+        self.assertEqual(x.ndim, 2)
+        ds.set_coords(['x2d', 'y2d'], inplace=True)
+        ds.testvar.plot.pcolormesh(x='x2d', y='y2d')
+        ax = plt.gca()
+        self.assertEqual('x2d', ax.get_xlabel())
+        self.assertEqual('y2d', ax.get_ylabel())
+
     def test_default_title(self):
         a = DataArray(easy_array((4, 3, 2)), dims=['a', 'b', 'c'])
         a.coords['d'] = u'foo'
