@@ -764,6 +764,10 @@ class TestDataset(TestCase):
         with self.assertRaisesRegexp(NotImplementedError, 'slice objects'):
             data.sel(dim2=slice(1, 3), method='ffill')
 
+        with self.assertRaisesRegexp(TypeError, '``method``'):
+            # this should not pass silently
+            data.sel(data)
+
     def test_loc(self):
         data = create_test_data()
         expected = data.sel(dim3='a')

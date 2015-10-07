@@ -136,12 +136,16 @@ def decode_cf_datetime(num_dates, units, calendar=None):
             raise OutOfBoundsDatetime
 
         delta = _netcdf_to_numpy_timeunit(delta)
-        ref_date = pd.Timestamp(ref_date)
+        try:
+            ref_date = pd.Timestamp(ref_date)
+        except ValueError:
+            # ValueError is raised by pd.Timestamp for non-ISO timestamp
+            # strings, in which case we fall back to using netCDF4
+            raise OutOfBoundsDatetime
 
         dates = (pd.to_timedelta(flat_num_dates, delta) + ref_date).values
-    # ValueError is raised by pd.Timestamp for non-ISO timestamp strings,
-    # in which case we fall back to using netCDF4
-    except (OutOfBoundsDatetime, ValueError, OverflowError):
+
+    except (OutOfBoundsDatetime, OverflowError):
         dates = _decode_datetime_with_netcdf4(flat_num_dates, units, calendar)
 
     return dates.reshape(num_dates.shape)
@@ -285,7 +289,7 @@ def encode_cf_datetime(dates, units=None, calendar=None):
         ref_date = np.datetime64(pd.Timestamp(ref_date))
         num = (dates - ref_date) / time_delta
 
-    except (OutOfBoundsDatetime, ValueError, OverflowError):
+    except (OutOfBoundsDatetime, OverflowError):
         num = _encode_datetime_with_netcdf4(dates, units, calendar)
 
     num = cast_to_int_if_safe(num)

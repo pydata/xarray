@@ -164,6 +164,8 @@ def remap_label_indexers(data_obj, indexers, method=None):
     """Given an xray data object and label based indexers, return a mapping
     of equivalent location based indexers.
     """
+    if method is not None and not isinstance(method, str):
+        raise TypeError('``method`` must be a string')
     return dict((dim, convert_label_indexer(data_obj[dim].to_index(), label,
                                             dim, method))
                 for dim, label in iteritems(indexers))
