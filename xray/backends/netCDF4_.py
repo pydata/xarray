@@ -130,9 +130,10 @@ def _extract_nc4_encoding(variable, raise_on_invalid=False, lsd_okay=True,
     if lsd_okay:
         valid_encodings.add('least_significant_digit')
 
-    if (encoding.get('chunksizes') is not None
-            and encoding.get('original_shape', variable.shape) != variable.shape
-            and not raise_on_invalid):
+    if (encoding.get('chunksizes') is not None and
+            (encoding.get('original_shape', variable.shape)
+             != variable.shape) and
+            not raise_on_invalid):
         del encoding['chunksizes']
 
     for k in safe_to_drop:
