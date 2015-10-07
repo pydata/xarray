@@ -177,3 +177,21 @@ def _determine_cmap_params(plot_data, vmin=None, vmax=None, cmap=None,
 
     return dict(vmin=vmin, vmax=vmax, cmap=cmap, extend=extend,
                 levels=levels, cnorm=cnorm)
+
+
+def _infer_xy_labels(darray, x, y):
+    """
+    Determine x and y labels. For use in _plot2d
+
+    darray must be a 2 dimensional data array.
+    """
+
+    if x is None and y is None:
+        if darray.ndim != 2:
+            raise ValueError('DataArray must be 2d')
+        y, x = darray.dims
+    elif x is None or y is None:
+        raise ValueError('cannot supply only one of x and y')
+    elif any(k not in darray.coords for k in (x, y)):
+        raise ValueError('x and y must be coordinate variables %s' % darray.coords)
+    return x, y

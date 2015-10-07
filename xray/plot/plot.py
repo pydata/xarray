@@ -13,7 +13,7 @@ import warnings
 import numpy as np
 import pandas as pd
 
-from .utils import _determine_cmap_params
+from .utils import _determine_cmap_params, _infer_xy_labels
 from .facetgrid import FacetGrid
 from ..core.utils import is_uniform_spaced
 
@@ -37,52 +37,6 @@ def _ensure_plottable(*args):
     if not any(_right_dtype(np.array(x), plottypes) for x in args):
         raise TypeError('Plotting requires coordinates to be numeric '
                         'or dates.')
-
-
-def _infer_xy_labels(plotfunc, darray, x, y):
-    """
-    Determine x and y labels when some are missing. For use in _plot2d
-
-    darray is a 2 dimensional data array.
-    """
-
-    if all(v in darray.coords for v in {x, y}):
-        # x and y are coordinates.  No need to look up dims.
-        return x, y
-
-    dims = list(darray.dims)
-
-    if len(dims) != 2:
-        raise ValueError('{type} plots are for 2 dimensional DataArrays. '
-                         'Passed DataArray has {ndim} dimensions'
-                         .format(type=plotfunc.__name__, ndim=len(dims)))
-
-    if x and x not in dims:
-        raise KeyError('{0} is not a dimension of this DataArray. Use '
-                       '{1} or {2} for x'
-                       .format(x, *dims))
-
-    if y and y not in dims:
-        raise KeyError('{0} is not a dimension of this DataArray. Use '
-                       '{1} or {2} for y'
-                       .format(y, *dims))
-
-    # Get label names
-    if x and y:
-        xlab = x
-        ylab = y
-    elif x and not y:
-        xlab = x
-        del dims[dims.index(x)]
-        ylab = dims.pop()
-    elif y and not x:
-        ylab = y
-        del dims[dims.index(y)]
-        xlab = dims.pop()
-    else:
-        ylab, xlab = dims
-
-    return xlab, ylab
 
 
 def _easy_facetgrid(darray, plotfunc, x, y, row=None, col=None, col_wrap=None,
@@ -421,8 +375,7 @@ def _plot2d(plotfunc):
         if ax is None:
             ax = plt.gca()
 
-        xlab, ylab = _infer_xy_labels(plotfunc=plotfunc, darray=darray,
-                                      x=x, y=y)
+        xlab, ylab = _infer_xy_labels(darray=darray, x=x, y=y)
 
         # better to pass the ndarrays directly to plotting functions
         xval = darray[xlab].values
@@ -523,6 +476,11 @@ def imshow(x, y, z, ax, **kwargs):
     The pixels are centered on the coordinates values. Ie, if the coordinate
     value is 3.2 then the pixels for those coordinates will be centered on 3.2.
     """
+
+    if x.ndim != 1 or y.ndim != 1:
+        raise ValueError('Imshow requires 1D coordinates, try using '
+                         'pcolormesh or contour(f)')
+
     # Centering the pixels- Assumes uniform spacing
     xstep = (x[1] - x[0]) / 2.0
     ystep = (y[1] - y[0]) / 2.0
@@ -594,7 +552,7 @@ def pcolormesh(x, y, z, ax, **kwargs):
 
     # by default, pcolormesh picks "round" values for bounds
     # this results in ugly looking plots with lots of surrounding whitespace
-    if not hasattr(ax, 'projection'):
+    if not hasattr(ax, 'projection') and x.ndim == 1 and y.ndim == 1:
         # not a cartopy geoaxis
         ax.set_xlim(x[0], x[-1])
         ax.set_ylim(y[0], y[-1])
