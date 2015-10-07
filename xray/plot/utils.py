@@ -193,5 +193,5 @@ def _infer_xy_labels(darray, x, y):
     elif x is None or y is None:
         raise ValueError('cannot supply only one of x and y')
     elif any(k not in darray.coords for k in (x, y)):
-        raise ValueError('x and y must be coordinate variables %s' % darray.coords)
+        raise ValueError('x and y must be coordinate variables')
     return x, y
