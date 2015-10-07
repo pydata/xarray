@@ -89,12 +89,12 @@ class TestPlot(PlotTestCase):
         a.plot()
 
     def test2d_uniform_calls_imshow(self):
-        self.assertTrue(self.imshow_called(self.darray[:, :, 0].plot))
+        self.assertTrue(self.imshow_called(self.darray[:, :, 0].plot.imshow))
 
     def test2d_nonuniform_calls_contourf(self):
         a = self.darray[:, :, 0]
         a.coords['dim_1'] = [2, 1, 89]
-        self.assertTrue(self.contourf_called(a.plot))
+        self.assertTrue(self.contourf_called(a.plot.contourf))
 
     def test3d(self):
         self.darray.plot()
@@ -707,7 +707,7 @@ class TestImshow(Common2dMixin, PlotTestCase):
         self.assertTrue(self.imshow_called(self.darray.plot.imshow))
 
     def test_xy_pixel_centered(self):
-        self.darray.plot.imshow()
+        self.darray.plot.imshow(yincrease=None)
         self.assertTrue(np.allclose([-0.5, 14.5], plt.gca().get_xlim()))
         self.assertTrue(np.allclose([9.5, -0.5], plt.gca().get_ylim()))
 

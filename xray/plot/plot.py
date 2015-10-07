@@ -15,7 +15,6 @@ import pandas as pd
 
 from .utils import _determine_cmap_params, _infer_xy_labels
 from .facetgrid import FacetGrid
-from ..core.utils import is_uniform_spaced
 
 
 # Maybe more appropriate to keep this in .utils
@@ -58,19 +57,18 @@ def _easy_facetgrid(darray, plotfunc, x, y, row=None, col=None, col_wrap=None,
 def plot(darray, row=None, col=None, col_wrap=None, ax=None, rtol=0.01,
          subplot_kws=None, **kwargs):
     """
-    Default plot of DataArray using matplotlib / pylab.
+    Default plot of DataArray using matplotlib.pyplot.
 
     Calls xray plotting function based on the dimensions of
     darray.squeeze()
 
-    =============== =========== ===========================
-    Dimensions      Coordinates Plotting function
-    --------------- ----------- ---------------------------
-    1                           :py:func:`xray.plot.line`
-    2               Uniform     :py:func:`xray.plot.imshow`
-    2               Irregular   :py:func:`xray.plot.contourf`
-    Anything else               :py:func:`xray.plot.hist`
-    =============== =========== ===========================
+    =============== ===========================
+    Dimensions      Plotting function
+    --------------- ---------------------------
+    1               :py:func:`xray.plot.line`
+    2               :py:func:`xray.plot.pcolormesh`
+    Anything else   :py:func:`xray.plot.hist`
+    =============== ===========================
 
     Parameters
     ----------
@@ -115,9 +113,7 @@ def plot(darray, row=None, col=None, col_wrap=None, ax=None, rtol=0.01,
         kwargs['col_wrap'] = col_wrap
         kwargs['subplot_kws'] = subplot_kws
 
-        indexes = (darray.indexes[dim].values for dim in plot_dims)
-        uniform = all(is_uniform_spaced(i, rtol=rtol) for i in indexes)
-        plotfunc = imshow if uniform else contourf
+        plotfunc = pcolormesh
     else:
         if row or col:
             raise ValueError(error_msg)
@@ -335,7 +331,7 @@ def _plot2d(plotfunc):
 
     @functools.wraps(plotfunc)
     def newplotfunc(darray, x=None, y=None, ax=None, row=None, col=None,
-                    col_wrap=None, xincrease=None, yincrease=None,
+                    col_wrap=None, xincrease=True, yincrease=True,
                     add_colorbar=True, add_labels=True, vmin=None, vmax=None,
                     cmap=None, center=None, robust=False, extend=None,
                     levels=None, colors=None, subplot_kws=None, **kwargs):
@@ -429,7 +425,7 @@ def _plot2d(plotfunc):
         if add_colorbar:
             cbar = plt.colorbar(primitive, ax=ax, extend=cmap_params['extend'])
             if darray.name and add_labels:
-                cbar.set_label(darray.name)
+                cbar.set_label(darray.name, rotation=90)
 
         _update_axes_limits(ax, xincrease, yincrease)
 
@@ -438,7 +434,7 @@ def _plot2d(plotfunc):
     # For use as DataArray.plot.plotmethod
     @functools.wraps(newplotfunc)
     def plotmethod(_PlotMethods_obj, x=None, y=None, ax=None, row=None,
-                   col=None, col_wrap=None, xincrease=None, yincrease=None,
+                   col=None, col_wrap=None, xincrease=True, yincrease=True,
                    add_colorbar=True, add_labels=True, vmin=None, vmax=None,
                    cmap=None, colors=None, center=None, robust=False,
                    extend=None, levels=None, subplot_kws=None, **kwargs):
@@ -464,7 +460,7 @@ def _plot2d(plotfunc):
 @_plot2d
 def imshow(x, y, z, ax, **kwargs):
     """
-    Image plot of 2d DataArray using matplotlib / pylab
+    Image plot of 2d DataArray using matplotlib.pyplot
 
     Wraps matplotlib.pyplot.imshow
 
@@ -478,7 +474,7 @@ def imshow(x, y, z, ax, **kwargs):
     """
 
     if x.ndim != 1 or y.ndim != 1:
-        raise ValueError('Imshow requires 1D coordinates, try using '
+        raise ValueError('imshow requires 1D coordinates, try using '
                          'pcolormesh or contour(f)')
 
     # Centering the pixels- Assumes uniform spacing

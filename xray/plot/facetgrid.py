@@ -274,7 +274,7 @@ class FacetGrid(object):
                                      extend=cmap_params['extend'])
 
             if self.data.name:
-                cbar.set_label(self.data.name, rotation=270,
+                cbar.set_label(self.data.name, rotation=90,
                                verticalalignment='bottom')
 
         self._x_var = x
