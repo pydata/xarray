@@ -192,7 +192,7 @@ class AbstractWritableDataStore(AbstractDataStore):
         # dataset.variables
         self.store(dataset, dataset.attrs)
 
-    def store(self, variables, attributes, check_encoding_set=set([])):
+    def store(self, variables, attributes, check_encoding_set=frozenset()):
         self.set_attributes(attributes)
         neccesary_dims = [v.dims for v in variables.values()]
         neccesary_dims = set(itertools.chain(*neccesary_dims))
@@ -220,7 +220,7 @@ class AbstractWritableDataStore(AbstractDataStore):
 
 
 class WritableCFDataStore(AbstractWritableDataStore):
-    def store(self, variables, attributes, check_encoding_set=set()):
+    def store(self, variables, attributes, check_encoding_set=frozenset()):
         # All NetCDF files get CF encoded by default, without this attempting
         # to write times, for example, would fail.
         cf_variables, cf_attrs = cf_encoder(variables, attributes)
