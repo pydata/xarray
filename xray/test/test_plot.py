@@ -707,7 +707,7 @@ class TestImshow(Common2dMixin, PlotTestCase):
         self.assertTrue(self.imshow_called(self.darray.plot.imshow))
 
     def test_xy_pixel_centered(self):
-        self.darray.plot.imshow(yincrease=None)
+        self.darray.plot.imshow()
         self.assertTrue(np.allclose([-0.5, 14.5], plt.gca().get_xlim()))
         self.assertTrue(np.allclose([9.5, -0.5], plt.gca().get_ylim()))
 

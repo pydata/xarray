@@ -331,7 +331,7 @@ def _plot2d(plotfunc):
 
     @functools.wraps(plotfunc)
     def newplotfunc(darray, x=None, y=None, ax=None, row=None, col=None,
-                    col_wrap=None, xincrease=True, yincrease=True,
+                    col_wrap=None, xincrease=None, yincrease=None,
                     add_colorbar=True, add_labels=True, vmin=None, vmax=None,
                     cmap=None, center=None, robust=False, extend=None,
                     levels=None, colors=None, subplot_kws=None, **kwargs):
@@ -434,7 +434,7 @@ def _plot2d(plotfunc):
     # For use as DataArray.plot.plotmethod
     @functools.wraps(newplotfunc)
     def plotmethod(_PlotMethods_obj, x=None, y=None, ax=None, row=None,
-                   col=None, col_wrap=None, xincrease=True, yincrease=True,
+                   col=None, col_wrap=None, xincrease=None, yincrease=None,
                    add_colorbar=True, add_labels=True, vmin=None, vmax=None,
                    cmap=None, colors=None, center=None, robust=False,
                    extend=None, levels=None, subplot_kws=None, **kwargs):
