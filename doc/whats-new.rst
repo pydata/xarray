@@ -19,9 +19,9 @@ API Changes
 
 - The handling of colormaps and discrete color lists for 2D plots in
   :py:meth:`~xray.DataArray.plot` was changed to provide more compatibility
-  with matplotlib's `contour` and `contourf` functions (:issue:`538`).
-  Now discrete lists of colors should be specified using `colors` keyword,
-  rather than `cmap`.
+  with matplotlib's ``contour`` and ``contourf`` functions (:issue:`538`).
+  Now discrete lists of colors should be specified using ``colors`` keyword,
+  rather than ``cmap``.
 
 Enhancements
 ~~~~~~~~~~~~
@@ -33,7 +33,11 @@ Enhancements
 - xray now uses deterministic names for dask arrays it creates or opens from
   disk. This allows xray users to take advantage of dask's nascent support for
   caching intermediate computation results. See :issue:`555` for an example.
-- Faceted plotting through :py:class:`~xray.plot.FacetGrid`.
+- Faceted plotting through :py:class:`~xray.plot.FacetGrid` and the
+  :py:meth:`~xray.plot.plot` method.
+- New ``encoding`` argument in :py:meth:`~xray.Dataset.to_netcdf` for writing
+  netCDF files with compression, as described in the new documentation
+  section on :ref:`io.netcdf.writing_encoded`.
 
 Bug fixes
 ~~~~~~~~~

@@ -9,7 +9,8 @@ from . import TestCase, requires_netCDF4, unittest
 from .test_backends import CFEncodedDataTest
 from xray.core.pycompat import iteritems
 from xray.backends.memory import InMemoryDataStore
-from xray.conventions import cf_encoder, decode_cf
+from xray.backends.common import WritableCFDataStore
+from xray.conventions import decode_cf
 
 
 class TestMaskedAndScaledArray(TestCase):
@@ -511,10 +512,8 @@ class TestDecodeCF(TestCase):
         self.assertDatasetIdentical(expected, actual2)
 
 
-class CFEncodedInMemoryStore(InMemoryDataStore):
-    def store(self, variables, attributes):
-        variables, attributes = cf_encoder(variables, attributes)
-        InMemoryDataStore.store(self, variables, attributes)
+class CFEncodedInMemoryStore(WritableCFDataStore, InMemoryDataStore):
+    pass
 
 
 class NullWrapper(utils.NDArrayMixin):
@@ -546,14 +545,17 @@ class TestCFEncodedDataStore(CFEncodedDataTest, TestCase):
         yield CFEncodedInMemoryStore()
 
     @contextlib.contextmanager
-    def roundtrip(self, data, decode_cf=True):
+    def roundtrip(self, data, save_kwargs={}, open_kwargs={}):
         store = CFEncodedInMemoryStore()
-        data.dump_to_store(store)
-        yield open_dataset(store, decode_cf=decode_cf)
+        data.dump_to_store(store, **save_kwargs)
+        yield open_dataset(store, **open_kwargs)
 
     def test_roundtrip_coordinates(self):
         raise unittest.SkipTest('cannot roundtrip coordinates yet for '
                                 'CFEncodedInMemoryStore')
 
     def test_invalid_dataarray_names_raise(self):
+        pass
+
+    def test_encoding_kwarg(self):
         pass

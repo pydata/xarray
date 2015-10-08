@@ -9,9 +9,9 @@ from ..core.pycompat import iteritems, basestring, OrderedDict
 from ..core.utils import Frozen, FrozenOrderedDict
 from ..core.indexing import NumpyIndexingAdapter
 
-from .common import AbstractWritableDataStore
-from .netcdf3 import (is_valid_nc3_name,
-                      encode_nc3_attr_value, encode_nc3_variable)
+from .common import WritableCFDataStore
+from .netcdf3 import (is_valid_nc3_name, encode_nc3_attr_value,
+                      encode_nc3_variable)
 
 
 def _decode_string(s):
@@ -55,7 +55,7 @@ class ScipyArrayWrapper(NumpyIndexingAdapter):
         return data
 
 
-class ScipyDataStore(AbstractWritableDataStore):
+class ScipyDataStore(WritableCFDataStore):
     """Store for reading and writing data via scipy.io.netcdf.
 
     This store has the advantage of being able to be initialized with a
@@ -96,12 +96,6 @@ class ScipyDataStore(AbstractWritableDataStore):
             filename_or_obj, mode=mode, mmap=mmap, version=version)
         super(ScipyDataStore, self).__init__(writer)
 
-    def store(self, variables, attributes):
-        # All Scipy objects get CF encoded by default, without this attempting
-        # to write times, for example, would fail.
-        cf_variables, cf_attrs = cf_encoder(variables, attributes)
-        AbstractWritableDataStore.store(self, cf_variables, cf_attrs)
-
     def open_store_variable(self, name, var):
         return Variable(var.dimensions, ScipyArrayWrapper(self.ds, name),
                         _decode_attrs(var._attributes))
@@ -131,9 +125,12 @@ class ScipyDataStore(AbstractWritableDataStore):
         value = encode_nc3_attr_value(value)
         setattr(self.ds, key, value)
 
-    def prepare_variable(self, name, variable):
-        # TODO, create a netCDF3 encoder
+    def prepare_variable(self, name, variable, check_encoding=False):
         variable = encode_nc3_variable(variable)
+        if check_encoding and variable.encoding:
+            raise ValueError('unexpected encoding for scipy backend: %r'
+                             % list(variable.encoding))
+
         self.set_necessary_dimensions(variable)
         data = variable.data
         # nb. this still creates a numpy array in all memory, even though we
