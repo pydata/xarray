@@ -158,6 +158,14 @@ and ``xincrease``.
     @savefig 2d_simple_yincrease.png width=4in
     air2d.plot(yincrease=False)
 
+.. note::
+
+    We use :py:func:`xray.plot.pcolormesh` as the default two-dimensional plot
+    method because it is more flexible than :py:func:`xray.plot.imshow`.
+    However, for large arrays, ``imshow`` can be much faster than ``pcolormesh``.
+    If speed is important to you and you are plotting a regular mesh, consider
+    using ``imshow``.
+
 Missing Values
 ~~~~~~~~~~~~~~
 
