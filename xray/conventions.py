@@ -826,10 +826,12 @@ def decode_cf_variables(variables, attributes, concat_characters=True,
         if decode_coords:
             var_attrs = new_vars[k].attrs
             if 'coordinates' in var_attrs:
-                var_coord_names = var_attrs['coordinates'].split()
+                coord_str = var_attrs['coordinates']
+                var_coord_names = coord_str.split()
                 if all(k in variables for k in var_coord_names):
-                    coord_names.update(var_coord_names)
+                    new_vars[k].encoding['coordinates'] = coord_str
                     del var_attrs['coordinates']
+                    coord_names.update(var_coord_names)
 
     if decode_coords and 'coordinates' in attributes:
         attributes = OrderedDict(attributes)
