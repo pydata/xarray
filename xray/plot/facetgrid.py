@@ -176,9 +176,16 @@ class FacetGrid(object):
         self._col_wrap = col_wrap
         self._x_var = None
         self._y_var = None
+        self._cmap_extend = None
         self._mappables = []
 
-        self.set_titles()
+    @property
+    def _left_axes(self):
+        return self.axes[:, 0]
+
+    @property
+    def _bottom_axes(self):
+        return self.axes[-1, :]
 
     def map_dataarray(self, func, x, y, **kwargs):
         """
@@ -250,40 +257,70 @@ class FacetGrid(object):
             # None is the sentinel value
             if d is not None:
                 subset = self.data.loc[d]
-                self._mappables.append(func(subset, x, y, ax=ax, **defaults))
+                mappable = func(subset, x, y, ax=ax, **defaults)
+                self._mappables.append(mappable)
 
-        # Left side labels
-        for ax in self.axes[:, 0]:
-            ax.set_ylabel(y)
-
-        # Bottom labels
-        for ax in self.axes[-1, :]:
-            ax.set_xlabel(x)
-
-        self.fig.tight_layout()
-
-        if self._single_group:
-            for d, ax in zip(self.name_dicts.flat, self.axes.flat):
-                if d is None:
-                    ax.set_visible(False)
+        self._cmap_extend = defaults.get('extend')
+        self._finalize_grid(x, y)
 
         # colorbar
         if kwargs.get('add_colorbar', True):
-            cbar = self.fig.colorbar(self._mappables[-1],
-                                     ax=list(self.axes.flat),
-                                     extend=cmap_params['extend'])
-
-            if self.data.name:
-                cbar.set_label(self.data.name, rotation=90,
-                               verticalalignment='bottom')
-
-        self._x_var = x
-        self._y_var = y
+            self.add_colorbar()
 
         return self
 
+    def _finalize_grid(self, *axlabels):
+        """Finalize the annotations and layout."""
+        self.set_axis_labels(*axlabels)
+        self.set_titles()
+        self.fig.tight_layout()
+
+        for ax, namedict in zip(self.axes.flat, self.name_dicts.flat):
+            if namedict is None:
+                ax.set_visible(False)
+
+    def add_colorbar(self, **kwargs):
+        """Draw a colorbar
+        """
+        kwargs = kwargs.copy()
+        if self._cmap_extend is not None:
+            kwargs.setdefault('extend', self._cmap_extend)
+        cbar = self.fig.colorbar(self._mappables[-1],
+                                 ax=list(self.axes.flat),
+                                 **kwargs)
+        if getattr(self.data, 'name', False):
+            cbar.set_label(self.data.name, rotation=90,
+                           verticalalignment='bottom')
+        return self
+
+    def set_axis_labels(self, x_var=None, y_var=None):
+        """Set axis labels on the left column and bottom row of the grid."""
+        if x_var is not None:
+            self._x_var = x_var
+            self.set_xlabels(x_var)
+        if y_var is not None:
+            self._y_var = y_var
+            self.set_ylabels(y_var)
+        return self
+
+    def set_xlabels(self, label=None, **kwargs):
+        """Label the x axis on the bottom row of the grid."""
+        if label is None:
+            label = self._x_var
+        for ax in self._bottom_axes:
+            ax.set_xlabel(label, **kwargs)
+        return self
+
+    def set_ylabels(self, label=None, **kwargs):
+        """Label the y axis on the left column of the grid."""
+        if label is None:
+            label = self._y_var
+        for ax in self._left_axes:
+            ax.set_ylabel(label, **kwargs)
+        return self
+
     def set_titles(self, template="{coord} = {value}", maxchar=30,
-                   fontsize=_FONTSIZE, **kwargs):
+                   **kwargs):
         """
         Draw titles either above each facet or on the grid margins.
 
@@ -293,8 +330,6 @@ class FacetGrid(object):
             Template for plot titles containing {coord} and {value}
         maxchar : int
             Truncate titles at maxchar
-        fontsize : string or int
-            Passed to matplotlib.text
         kwargs : keyword args
             additional arguments to matplotlib.text
 
@@ -303,8 +338,9 @@ class FacetGrid(object):
         self: FacetGrid object
 
         """
+        import matplotlib as mpl
 
-        kwargs['fontsize'] = fontsize
+        kwargs["size"] = kwargs.pop("size", mpl.rcParams["axes.labelsize"])
 
         nicetitle = functools.partial(_nicetitle, maxchar=maxchar,
                                       template=template)
@@ -394,6 +430,10 @@ class FacetGrid(object):
                 data = self.data.loc[namedict]
                 plt.sca(ax)
                 innerargs = [data[a].values for a in args]
-                func(*innerargs, **kwargs)
+                # TODO: is it possible to verify that an artist is mappable?
+                mappable = func(*innerargs, **kwargs)
+                self._mappables.append(mappable)
+
+        self._finalize_grid(*args[:2])
 
         return self

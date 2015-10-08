@@ -32,6 +32,10 @@ def text_in_fig():
     return set(alltxt)
 
 
+def find_colorbars():
+    return plt.gcf().findobj(mpl.collections.QuadMesh)
+
+
 def substring_in_axes(substring, ax):
     '''
     Return True if a substring is found anywhere in an axes
@@ -790,9 +794,7 @@ class TestFacetGrid(PlotTestCase):
             clim = np.array(image.get_clim())
             self.assertTrue(np.allclose(expected, clim))
 
-        # There's only one colorbar
-        cbar = plt.gcf().findobj(mpl.collections.QuadMesh)
-        self.assertEqual(1, len(cbar))
+        self.assertEqual(1, len(find_colorbars()))
 
     def test_empty_cell(self):
         g = xplt.FacetGrid(self.darray, col='z', col_wrap=2)
@@ -884,6 +886,31 @@ class TestFacetGrid(PlotTestCase):
     def test_map(self):
         self.g.map(plt.contourf, 'x', 'y', Ellipsis)
         self.g.map(lambda: None)
+
+    def test_map_dataset(self):
+        g = xplt.FacetGrid(self.darray.to_dataset(name='foo'), col='z')
+        g.map(plt.contourf, 'x', 'y', 'foo')
+
+        alltxt = text_in_fig()
+        for label in ['x', 'y']:
+            self.assertIn(label, alltxt)
+        # everything has a label
+        self.assertNotIn('None', alltxt)
+
+        # colorbar can't be inferred automatically
+        self.assertNotIn('foo', alltxt)
+        self.assertEqual(0, len(find_colorbars()))
+
+        g.add_colorbar(label='colors!')
+        self.assertIn('colors!', text_in_fig())
+        self.assertEqual(1, len(find_colorbars()))
+
+    def test_set_axis_labels(self):
+        g = self.g.map_dataarray(xplt.contourf, 'x', 'y')
+        g.set_axis_labels('longitude', 'latitude')
+        alltxt = text_in_fig()
+        for label in ['longitude', 'latitude']:
+            self.assertIn(label, alltxt)
 
 
 class TestFacetGrid4d(PlotTestCase):
