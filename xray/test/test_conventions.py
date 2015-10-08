@@ -478,6 +478,13 @@ class TestDecodeCF(TestCase):
         actual = conventions.decode_cf(original)
         self.assertDatasetIdentical(original, actual)
 
+    def test_decode_coordinates(self):
+        # regression test for GH610
+        original = Dataset({'foo': ('t', [1, 2], {'coordinates': 'x'}),
+                            'x': ('t', [4, 5])})
+        actual = conventions.decode_cf(original)
+        self.assertEqual(actual.foo.encoding['coordinates'], 'x')
+
     def test_0d_int32_encoding(self):
         original = Variable((), np.int32(0), encoding={'dtype': 'int64'})
         expected = Variable((), np.int64(0))

@@ -56,6 +56,8 @@ Bug fixes
 - Global attributes are now handled more consistently when loading remote
   datasets using ``engine='pydap'`` (:issue:`574`).
 - It is now possible to assign to the ``.data`` attribute of DataArray objects.
+- ``coordinates`` attribute is now kept in the encoding dictionary after
+  decoding (:issue:`610`).
 
 v0.6.0 (21 August 2015)
 -----------------------
