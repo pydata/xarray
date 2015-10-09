@@ -1,5 +1,6 @@
 from __future__ import division
 
+import inspect
 import warnings
 import itertools
 import functools
@@ -208,46 +209,26 @@ class FacetGrid(object):
         self : FacetGrid object
 
         """
-
         # These should be consistent with xray.plot._plot2d
         cmap_kwargs = {'plot_data': self.data.values,
-                       'vmin': None,
-                       'vmax': None,
-                       'cmap': None,
-                       'center': None,
-                       'robust': False,
-                       'extend': None,
                        # MPL default
                        'levels': 7 if 'contour' in func.__name__ else None,
                        'filled': func.__name__ != 'contour',
                        }
 
-        # Allow kwargs to override these defaults
-        # Remove cmap_kwargs from kwargs for now, we will add them back later
-        for param in list(kwargs):
-            if param in cmap_kwargs:
-                cmap_kwargs[param] = kwargs.pop(param)
+        cmap_args = inspect.getargspec(_determine_cmap_params).args
+        cmap_kwargs.update((a, kwargs[a]) for a in cmap_args if a in kwargs)
 
-        # colormap inference has to happen here since all the data in
-        # self.data is required to make the right choice
         cmap_params = _determine_cmap_params(**cmap_kwargs)
-
-        if 'contour' in func.__name__:
-            # extend is a keyword argument only for contour and contourf, but
-            # passing it to the colorbar is sufficient for imshow and
-            # pcolormesh
-            kwargs['extend'] = cmap_params['extend']
-            kwargs['levels'] = cmap_params['levels']
 
         defaults = {
             'add_colorbar': False,
             'add_labels': False,
-            'norm': cmap_params.pop('cnorm'),
         }
 
         # Order is important
-        defaults.update(cmap_params)
         defaults.update(kwargs)
+        defaults.update(cmap_params)
 
         # Get x, y labels for the first subplot
         x, y = _infer_xy_labels(darray=self.data.loc[self.name_dicts.flat[0]],

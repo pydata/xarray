@@ -270,7 +270,7 @@ class TestDetermineCmapParams(TestCase):
         self.assertEqual(cmap_params['cmap'].name, 'viridis')
         self.assertEqual(cmap_params['extend'], 'both')
         self.assertIsNone(cmap_params['levels'])
-        self.assertIsNone(cmap_params['cnorm'])
+        self.assertIsNone(cmap_params['norm'])
 
     def test_center(self):
         cmap_params = _determine_cmap_params(self.data, center=0.5)
@@ -278,7 +278,7 @@ class TestDetermineCmapParams(TestCase):
         self.assertEqual(cmap_params['cmap'], 'RdBu_r')
         self.assertEqual(cmap_params['extend'], 'neither')
         self.assertIsNone(cmap_params['levels'])
-        self.assertIsNone(cmap_params['cnorm'])
+        self.assertIsNone(cmap_params['norm'])
 
     def test_integer_levels(self):
         data = self.data + 1
@@ -289,7 +289,7 @@ class TestDetermineCmapParams(TestCase):
         self.assertEqual(cmap_params['cmap'].name, 'Blues')
         self.assertEqual(cmap_params['extend'], 'neither')
         self.assertEqual(cmap_params['cmap'].N, 5)
-        self.assertEqual(cmap_params['cnorm'].N, 6)
+        self.assertEqual(cmap_params['norm'].N, 6)
 
         cmap_params = _determine_cmap_params(data, levels=5,
                                              vmin=0.5, vmax=1.5)
@@ -306,7 +306,7 @@ class TestDetermineCmapParams(TestCase):
         self.assertEqual(cmap_params['vmin'], 0)
         self.assertEqual(cmap_params['vmax'], 5)
         self.assertEqual(cmap_params['cmap'].N, 5)
-        self.assertEqual(cmap_params['cnorm'].N, 6)
+        self.assertEqual(cmap_params['norm'].N, 6)
 
         for wrap_levels in [list, np.array, pd.Index, DataArray]:
             cmap_params = _determine_cmap_params(
