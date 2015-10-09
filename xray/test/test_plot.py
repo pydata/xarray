@@ -32,7 +32,8 @@ def text_in_fig():
     return set(alltxt)
 
 
-def find_colorbars():
+def find_possible_colorbars():
+    # nb. this function also matches meshes from pcolormesh
     return plt.gcf().findobj(mpl.collections.QuadMesh)
 
 
@@ -794,7 +795,7 @@ class TestFacetGrid(PlotTestCase):
             clim = np.array(image.get_clim())
             self.assertTrue(np.allclose(expected, clim))
 
-        self.assertEqual(1, len(find_colorbars()))
+        self.assertEqual(1, len(find_possible_colorbars()))
 
     def test_empty_cell(self):
         g = xplt.FacetGrid(self.darray, col='z', col_wrap=2)
@@ -899,11 +900,11 @@ class TestFacetGrid(PlotTestCase):
 
         # colorbar can't be inferred automatically
         self.assertNotIn('foo', alltxt)
-        self.assertEqual(0, len(find_colorbars()))
+        self.assertEqual(0, len(find_possible_colorbars()))
 
         g.add_colorbar(label='colors!')
         self.assertIn('colors!', text_in_fig())
-        self.assertEqual(1, len(find_colorbars()))
+        self.assertEqual(1, len(find_possible_colorbars()))
 
     def test_set_axis_labels(self):
         g = self.g.map_dataarray(xplt.contourf, 'x', 'y')
@@ -911,6 +912,19 @@ class TestFacetGrid(PlotTestCase):
         alltxt = text_in_fig()
         for label in ['longitude', 'latitude']:
             self.assertIn(label, alltxt)
+
+    def test_facetgrid_colorbar(self):
+        a = easy_array((10, 15, 4))
+        d = DataArray(a, dims=['y', 'x', 'z'], name='foo')
+
+        d.plot.imshow(x='x', y='y', col='z')
+        self.assertEqual(1, len(find_possible_colorbars()))
+
+        d.plot.imshow(x='x', y='y', col='z', add_colorbar=True)
+        self.assertEqual(1, len(find_possible_colorbars()))
+
+        d.plot.imshow(x='x', y='y', col='z', add_colorbar=False)
+        self.assertEqual(0, len(find_possible_colorbars()))
 
 
 class TestFacetGrid4d(PlotTestCase):

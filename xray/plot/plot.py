@@ -343,10 +343,6 @@ def _plot2d(plotfunc):
             allargs = locals().copy()
             allargs.update(allargs.pop('kwargs'))
 
-            # Allows use of better FacetGrid defaults
-            assert allargs.pop('add_labels')
-            assert allargs.pop('add_colorbar')
-
             # Need the decorated plotting function
             allargs['plotfunc'] = globals()[plotfunc.__name__]
 

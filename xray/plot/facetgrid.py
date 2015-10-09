@@ -221,14 +221,10 @@ class FacetGrid(object):
 
         cmap_params = _determine_cmap_params(**cmap_kwargs)
 
-        defaults = {
-            'add_colorbar': False,
-            'add_labels': False,
-        }
-
         # Order is important
-        defaults.update(kwargs)
-        defaults.update(cmap_params)
+        func_kwargs = kwargs.copy()
+        func_kwargs.update(cmap_params)
+        func_kwargs.update({'add_colorbar': False, 'add_labels': False})
 
         # Get x, y labels for the first subplot
         x, y = _infer_xy_labels(darray=self.data.loc[self.name_dicts.flat[0]],
@@ -238,13 +234,12 @@ class FacetGrid(object):
             # None is the sentinel value
             if d is not None:
                 subset = self.data.loc[d]
-                mappable = func(subset, x, y, ax=ax, **defaults)
+                mappable = func(subset, x, y, ax=ax, **func_kwargs)
                 self._mappables.append(mappable)
 
-        self._cmap_extend = defaults.get('extend')
+        self._cmap_extend = cmap_params.get('extend')
         self._finalize_grid(x, y)
 
-        # colorbar
         if kwargs.get('add_colorbar', True):
             self.add_colorbar()
 
@@ -266,12 +261,10 @@ class FacetGrid(object):
         kwargs = kwargs.copy()
         if self._cmap_extend is not None:
             kwargs.setdefault('extend', self._cmap_extend)
-        cbar = self.fig.colorbar(self._mappables[-1],
-                                 ax=list(self.axes.flat),
-                                 **kwargs)
-        if getattr(self.data, 'name', False):
-            cbar.set_label(self.data.name, rotation=90,
-                           verticalalignment='bottom')
+        if getattr(self.data, 'name', None) is not None:
+            kwargs.setdefault('label', self.data.name)
+        self.fig.colorbar(self._mappables[-1], ax=list(self.axes.flat),
+                          **kwargs)
         return self
 
     def set_axis_labels(self, x_var=None, y_var=None):
