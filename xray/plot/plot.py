@@ -13,9 +13,8 @@ import warnings
 import numpy as np
 import pandas as pd
 
-from .utils import _determine_cmap_params
+from .utils import _determine_cmap_params, _infer_xy_labels
 from .facetgrid import FacetGrid
-from ..core.utils import is_uniform_spaced
 
 
 # Maybe more appropriate to keep this in .utils
@@ -39,47 +38,6 @@ def _ensure_plottable(*args):
                         'or dates.')
 
 
-def _infer_xy_labels(plotfunc, darray, x, y):
-    """
-    Determine x and y labels when some are missing. For use in _plot2d
-
-    darray is a 2 dimensional data array.
-    """
-    dims = list(darray.dims)
-
-    if len(dims) != 2:
-        raise ValueError('{type} plots are for 2 dimensional DataArrays. '
-                         'Passed DataArray has {ndim} dimensions'
-                         .format(type=plotfunc.__name__, ndim=len(dims)))
-
-    if x and x not in dims:
-        raise KeyError('{0} is not a dimension of this DataArray. Use '
-                       '{1} or {2} for x'
-                       .format(x, *dims))
-
-    if y and y not in dims:
-        raise KeyError('{0} is not a dimension of this DataArray. Use '
-                       '{1} or {2} for y'
-                       .format(y, *dims))
-
-    # Get label names
-    if x and y:
-        xlab = x
-        ylab = y
-    elif x and not y:
-        xlab = x
-        del dims[dims.index(x)]
-        ylab = dims.pop()
-    elif y and not x:
-        ylab = y
-        del dims[dims.index(y)]
-        xlab = dims.pop()
-    else:
-        ylab, xlab = dims
-
-    return xlab, ylab
-
-
 def _easy_facetgrid(darray, plotfunc, x, y, row=None, col=None, col_wrap=None,
                     aspect=1, size=3, subplot_kws=None, **kwargs):
     """
@@ -99,19 +57,18 @@ def _easy_facetgrid(darray, plotfunc, x, y, row=None, col=None, col_wrap=None,
 def plot(darray, row=None, col=None, col_wrap=None, ax=None, rtol=0.01,
          subplot_kws=None, **kwargs):
     """
-    Default plot of DataArray using matplotlib / pylab.
+    Default plot of DataArray using matplotlib.pyplot.
 
     Calls xray plotting function based on the dimensions of
     darray.squeeze()
 
-    =============== =========== ===========================
-    Dimensions      Coordinates Plotting function
-    --------------- ----------- ---------------------------
-    1                           :py:func:`xray.plot.line`
-    2               Uniform     :py:func:`xray.plot.imshow`
-    2               Irregular   :py:func:`xray.plot.contourf`
-    Anything else               :py:func:`xray.plot.hist`
-    =============== =========== ===========================
+    =============== ===========================
+    Dimensions      Plotting function
+    --------------- ---------------------------
+    1               :py:func:`xray.plot.line`
+    2               :py:func:`xray.plot.pcolormesh`
+    Anything else   :py:func:`xray.plot.hist`
+    =============== ===========================
 
     Parameters
     ----------
@@ -156,9 +113,7 @@ def plot(darray, row=None, col=None, col_wrap=None, ax=None, rtol=0.01,
         kwargs['col_wrap'] = col_wrap
         kwargs['subplot_kws'] = subplot_kws
 
-        indexes = (darray.indexes[dim].values for dim in plot_dims)
-        uniform = all(is_uniform_spaced(i, rtol=rtol) for i in indexes)
-        plotfunc = imshow if uniform else contourf
+        plotfunc = pcolormesh
     else:
         if row or col:
             raise ValueError(error_msg)
@@ -376,7 +331,7 @@ def _plot2d(plotfunc):
 
     @functools.wraps(plotfunc)
     def newplotfunc(darray, x=None, y=None, ax=None, row=None, col=None,
-                    col_wrap=None, xincrease=None, yincrease=None,
+                    col_wrap=None, xincrease=True, yincrease=True,
                     add_colorbar=True, add_labels=True, vmin=None, vmax=None,
                     cmap=None, center=None, robust=False, extend=None,
                     levels=None, colors=None, subplot_kws=None, **kwargs):
@@ -416,8 +371,7 @@ def _plot2d(plotfunc):
         if ax is None:
             ax = plt.gca()
 
-        xlab, ylab = _infer_xy_labels(plotfunc=plotfunc, darray=darray,
-                                      x=x, y=y)
+        xlab, ylab = _infer_xy_labels(darray=darray, x=x, y=y)
 
         # better to pass the ndarrays directly to plotting functions
         xval = darray[xlab].values
@@ -471,7 +425,7 @@ def _plot2d(plotfunc):
         if add_colorbar:
             cbar = plt.colorbar(primitive, ax=ax, extend=cmap_params['extend'])
             if darray.name and add_labels:
-                cbar.set_label(darray.name)
+                cbar.set_label(darray.name, rotation=90)
 
         _update_axes_limits(ax, xincrease, yincrease)
 
@@ -480,7 +434,7 @@ def _plot2d(plotfunc):
     # For use as DataArray.plot.plotmethod
     @functools.wraps(newplotfunc)
     def plotmethod(_PlotMethods_obj, x=None, y=None, ax=None, row=None,
-                   col=None, col_wrap=None, xincrease=None, yincrease=None,
+                   col=None, col_wrap=None, xincrease=True, yincrease=True,
                    add_colorbar=True, add_labels=True, vmin=None, vmax=None,
                    cmap=None, colors=None, center=None, robust=False,
                    extend=None, levels=None, subplot_kws=None, **kwargs):
@@ -506,7 +460,7 @@ def _plot2d(plotfunc):
 @_plot2d
 def imshow(x, y, z, ax, **kwargs):
     """
-    Image plot of 2d DataArray using matplotlib / pylab
+    Image plot of 2d DataArray using matplotlib.pyplot
 
     Wraps matplotlib.pyplot.imshow
 
@@ -518,6 +472,11 @@ def imshow(x, y, z, ax, **kwargs):
     The pixels are centered on the coordinates values. Ie, if the coordinate
     value is 3.2 then the pixels for those coordinates will be centered on 3.2.
     """
+
+    if x.ndim != 1 or y.ndim != 1:
+        raise ValueError('imshow requires 1D coordinates, try using '
+                         'pcolormesh or contour(f)')
+
     # Centering the pixels- Assumes uniform spacing
     xstep = (x[1] - x[0]) / 2.0
     ystep = (y[1] - y[0]) / 2.0
@@ -589,7 +548,7 @@ def pcolormesh(x, y, z, ax, **kwargs):
 
     # by default, pcolormesh picks "round" values for bounds
     # this results in ugly looking plots with lots of surrounding whitespace
-    if not hasattr(ax, 'projection'):
+    if not hasattr(ax, 'projection') and x.ndim == 1 and y.ndim == 1:
         # not a cartopy geoaxis
         ax.set_xlim(x[0], x[-1])
         ax.set_ylim(y[0], y[-1])

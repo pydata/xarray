@@ -141,8 +141,7 @@ Simple Example
 ~~~~~~~~~~~~~~
 
 The default method :py:meth:`xray.DataArray.plot` sees that the data is
-2 dimensional. If the coordinates are uniformly spaced then it
-calls :py:func:`xray.plot.imshow`.
+2 dimensional and calls :py:func:`xray.plot.pcolormesh`.
 
 .. ipython:: python
 
@@ -158,6 +157,14 @@ and ``xincrease``.
 
     @savefig 2d_simple_yincrease.png width=4in
     air2d.plot(yincrease=False)
+
+.. note::
+
+    We use :py:func:`xray.plot.pcolormesh` as the default two-dimensional plot
+    method because it is more flexible than :py:func:`xray.plot.imshow`.
+    However, for large arrays, ``imshow`` can be much faster than ``pcolormesh``.
+    If speed is important to you and you are plotting a regular mesh, consider
+    using ``imshow``.
 
 Missing Values
 ~~~~~~~~~~~~~~
@@ -176,9 +183,9 @@ Xray plots data with :ref:`missing_values`.
 Nonuniform Coordinates
 ~~~~~~~~~~~~~~~~~~~~~~
 
-It's not necessary for the coordinates to be evenly spaced. If not, then
-:py:meth:`xray.DataArray.plot` produces a filled contour plot by calling
-:py:func:`xray.plot.contourf`.
+It's not necessary for the coordinates to be evenly spaced. Both
+:py:func:`xray.plot.pcolormesh` (default) and :py:func:`xray.plot.contourf` can
+produce plots with nonuniform coordinates.
 
 .. ipython:: python
 
@@ -201,6 +208,7 @@ matplotlib is available.
     plt.title('These colors prove North America\nhas fallen in the ocean')
     plt.ylabel('latitude')
     plt.xlabel('longitude')
+    plt.tight_layout()
 
     @savefig plotting_2d_call_matplotlib.png width=4in
     plt.show()
@@ -376,8 +384,8 @@ Faceted plotting supports other arguments common to xray 2d plots.
     hasoutliers[-1, -1, -1] = 400
 
     @savefig plot_facet_robust.png height=12in
-    g = hasoutliers.plot.imshow('lon', 'lat', col='time', col_wrap=3,
-                                robust=True, cmap='viridis')
+    g = hasoutliers.plot.pcolormesh('lon', 'lat', col='time', col_wrap=3,
+                                    robust=True, cmap='viridis')
 
 FacetGrid Objects
 ~~~~~~~~~~~~~~~~~
@@ -473,14 +481,13 @@ plotting function based on the dimensions of the ``DataArray`` and whether
 the coordinates are sorted and uniformly spaced. This table
 describes what gets plotted:
 
-=============== =========== ===========================
-Dimensions      Coordinates Plotting function
---------------- ----------- ---------------------------
-1                           :py:func:`xray.plot.line`
-2               Uniform     :py:func:`xray.plot.imshow`
-2               Irregular   :py:func:`xray.plot.contourf`
-Anything else               :py:func:`xray.plot.hist`
-=============== =========== ===========================
+=============== ===========================
+Dimensions      Plotting function
+--------------- ---------------------------
+1               :py:func:`xray.plot.line`
+2               :py:func:`xray.plot.pcolormesh`
+Anything else   :py:func:`xray.plot.hist`
+=============== ===========================
 
 Coordinates
 ~~~~~~~~~~~

@@ -89,12 +89,12 @@ class TestPlot(PlotTestCase):
         a.plot()
 
     def test2d_uniform_calls_imshow(self):
-        self.assertTrue(self.imshow_called(self.darray[:, :, 0].plot))
+        self.assertTrue(self.imshow_called(self.darray[:, :, 0].plot.imshow))
 
     def test2d_nonuniform_calls_contourf(self):
         a = self.darray[:, :, 0]
         a.coords['dim_1'] = [2, 1, 89]
-        self.assertTrue(self.contourf_called(a.plot))
+        self.assertTrue(self.contourf_called(a.plot.contourf))
 
     def test3d(self):
         self.darray.plot()
@@ -399,8 +399,16 @@ class Common2dMixin:
     """
 
     def setUp(self):
-        self.darray = DataArray(easy_array(
+        da = DataArray(easy_array(
             (10, 15), start=-1), dims=['y', 'x'])
+        # add 2d coords
+        ds = da.to_dataset(name='testvar')
+        x, y = np.meshgrid(da.x.values, da.y.values)
+        ds['x2d'] = DataArray(x, dims=['y', 'x'])
+        ds['y2d'] = DataArray(y, dims=['y', 'x'])
+        ds.set_coords(['x2d', 'y2d'], inplace=True)
+        # set darray and plot method
+        self.darray = ds.testvar
         self.plotmethod = getattr(self.darray.plot, self.plotfunc.__name__)
 
     def test_label_names(self):
@@ -409,12 +417,12 @@ class Common2dMixin:
         self.assertEqual('y', plt.gca().get_ylabel())
 
     def test_1d_raises_valueerror(self):
-        with self.assertRaisesRegexp(ValueError, r'[Dd]im'):
+        with self.assertRaisesRegexp(ValueError, r'DataArray must be 2d'):
             self.plotfunc(self.darray[0, :])
 
     def test_3d_raises_valueerror(self):
         a = DataArray(easy_array((2, 3, 4)))
-        with self.assertRaisesRegexp(ValueError, r'[Dd]im'):
+        with self.assertRaisesRegexp(ValueError, r'DataArray must be 2d'):
             self.plotfunc(a)
 
     def test_nonnumeric_index_raises_typeerror(self):
@@ -484,25 +492,24 @@ class Common2dMixin:
         self.assertEqual('y', ax.get_xlabel())
         self.assertEqual('x', ax.get_ylabel())
 
-    def test_positional_x_string(self):
-        self.plotmethod('y')
-        ax = plt.gca()
-        self.assertEqual('y', ax.get_xlabel())
-        self.assertEqual('x', ax.get_ylabel())
-
-    def test_y_string(self):
-        self.plotmethod(y='x')
-        ax = plt.gca()
-        self.assertEqual('y', ax.get_xlabel())
-        self.assertEqual('x', ax.get_ylabel())
+    def test_positional_coord_string(self):
+        with self.assertRaisesRegexp(ValueError, 'cannot supply only one'):
+            self.plotmethod('y')
+        with self.assertRaisesRegexp(ValueError, 'cannot supply only one'):
+            self.plotmethod(y='x')
 
     def test_bad_x_string_exception(self):
-        with self.assertRaisesRegexp(KeyError, r'y'):
-            self.plotmethod('not_a_real_dim')
-
+        with self.assertRaisesRegexp(ValueError, 'x and y must be coordinate'):
+            self.plotmethod('not_a_real_dim', 'y')
         self.darray.coords['z'] = 100
-        with self.assertRaisesRegexp(KeyError, r'y'):
+        with self.assertRaisesRegexp(ValueError, 'cannot supply only one'):
             self.plotmethod('z')
+
+    def test_coord_strings(self):
+        # 1d coords (same as dims)
+        self.assertIn('x', self.darray.coords)
+        self.assertIn('y', self.darray.coords)
+        self.plotmethod(y='y', x='x')
 
     def test_default_title(self):
         a = DataArray(easy_array((4, 3, 2)), dims=['a', 'b', 'c'])
@@ -545,8 +552,30 @@ class Common2dMixin:
         g = self.plotfunc(d, x='x', y='y', col='z', col_wrap=2)
 
         self.assertArrayEqual(g.axes.shape, [2, 2])
-        for ax in g.axes.flat:
+        for (y, x), ax in np.ndenumerate(g.axes):
             self.assertTrue(ax.has_data())
+            if x == 0:
+                self.assertEqual('y', ax.get_ylabel())
+            else:
+                self.assertEqual('', ax.get_ylabel())
+            if y == 1:
+                self.assertEqual('x', ax.get_xlabel())
+            else:
+                self.assertEqual('', ax.get_xlabel())
+
+        # Infering labels
+        g = self.plotfunc(d, col='z', col_wrap=2)
+        self.assertArrayEqual(g.axes.shape, [2, 2])
+        for (y, x), ax in np.ndenumerate(g.axes):
+            self.assertTrue(ax.has_data())
+            if x == 0:
+                self.assertEqual('y', ax.get_ylabel())
+            else:
+                self.assertEqual('', ax.get_ylabel())
+            if y == 1:
+                self.assertEqual('x', ax.get_xlabel())
+            else:
+                self.assertEqual('', ax.get_xlabel())
 
     def test_convenient_facetgrid_4d(self):
         a = easy_array((10, 15, 2, 3))
@@ -598,6 +627,13 @@ class TestContourf(Common2dMixin, PlotTestCase):
         artist = self.plotmethod(vmin=-10, vmax=0)
         self.assertEqual(artist.extend, 'max')
 
+    def test_2d_coord_names(self):
+        self.plotmethod(x='x2d', y='y2d')
+        # make sure labels came out ok
+        ax = plt.gca()
+        self.assertEqual('x2d', ax.get_xlabel())
+        self.assertEqual('y2d', ax.get_ylabel())
+
     def test_levels(self):
         artist = self.plotmethod(levels=[-0.5, -0.4, 0.1])
         self.assertEqual(artist.extend, 'both')
@@ -633,6 +669,13 @@ class TestContour(Common2dMixin, PlotTestCase):
         with self.assertRaises(Exception):
             self.plotmethod(cmap=['k', 'b'])
 
+    def test_2d_coord_names(self):
+        self.plotmethod(x='x2d', y='y2d')
+        # make sure labels came out ok
+        ax = plt.gca()
+        self.assertEqual('x2d', ax.get_xlabel())
+        self.assertEqual('y2d', ax.get_ylabel())
+
 
 class TestPcolormesh(Common2dMixin, PlotTestCase):
 
@@ -646,6 +689,13 @@ class TestPcolormesh(Common2dMixin, PlotTestCase):
         artist = self.plotmethod()
         self.assertEqual(artist.get_array().size, self.darray.size)
 
+    def test_2d_coord_names(self):
+        self.plotmethod(x='x2d', y='y2d')
+        # make sure labels came out ok
+        ax = plt.gca()
+        self.assertEqual('x2d', ax.get_xlabel())
+        self.assertEqual('y2d', ax.get_ylabel())
+
 
 class TestImshow(Common2dMixin, PlotTestCase):
 
@@ -657,7 +707,7 @@ class TestImshow(Common2dMixin, PlotTestCase):
         self.assertTrue(self.imshow_called(self.darray.plot.imshow))
 
     def test_xy_pixel_centered(self):
-        self.darray.plot.imshow()
+        self.darray.plot.imshow(yincrease=False)
         self.assertTrue(np.allclose([-0.5, 14.5], plt.gca().get_xlim()))
         self.assertTrue(np.allclose([9.5, -0.5], plt.gca().get_ylim()))
 
@@ -681,6 +731,9 @@ class TestImshow(Common2dMixin, PlotTestCase):
         except ImportError:
             pass
 
+    def test_2d_coord_names(self):
+        with self.assertRaisesRegexp(ValueError, 'requires 1D coordinates'):
+            self.plotmethod(x='x2d', y='y2d')
 
 class TestFacetGrid(PlotTestCase):
 
