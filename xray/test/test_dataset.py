@@ -2162,6 +2162,17 @@ class TestDataset(TestCase):
         with self.assertRaisesRegexp(ValueError, '\'label\' argument has to'):
             ds.diff('dim2', label='raise_me')
 
+    def test_shift(self):
+        coords = {'bar': ('x', list('abc')), 'x': [-4, 3, 2]}
+        attrs = {'meta': 'data'}
+        ds = Dataset({'foo': ('x', [1, 2, 3])}, coords, attrs)
+        actual = ds.shift(x=1)
+        expected = Dataset({'foo': ('x', [np.nan, 1, 2])}, coords, attrs)
+        self.assertDatasetIdentical(expected, actual)
+
+        with self.assertRaisesRegexp(ValueError, 'dimensions'):
+            ds.shift(foo=123)
+
     def test_real_and_imag(self):
         attrs = {'foo': 'bar'}
         ds = Dataset({'x': ((), 1 + 2j, attrs)}, attrs=attrs)

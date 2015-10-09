@@ -625,6 +625,38 @@ class TestVariable(TestCase, VariableSubclassTestCases):
         expected = Variable((), u'tmax')
         self.assertVariableIdentical(actual, expected)
 
+    def test_shift(self):
+        v = Variable('x', [1, 2, 3, 4, 5])
+
+        self.assertVariableIdentical(v, v.shift(x=0))
+
+        expected = Variable('x', [np.nan, 1, 2, 3, 4])
+        self.assertVariableIdentical(expected, v.shift(x=1))
+
+        expected = Variable('x', [np.nan, np.nan, 1, 2, 3])
+        self.assertVariableIdentical(expected, v.shift(x=2))
+
+        expected = Variable('x', [2, 3, 4, 5, np.nan])
+        self.assertVariableIdentical(expected, v.shift(x=-1))
+
+        expected = Variable('x', [np.nan] * 5)
+        self.assertVariableIdentical(expected, v.shift(x=5))
+        self.assertVariableIdentical(expected, v.shift(x=6))
+
+        with self.assertRaisesRegexp(ValueError, 'dimension'):
+            v.shift(z=0)
+
+        v = Variable('x', [1, 2, 3, 4, 5], {'foo': 'bar'})
+        self.assertVariableIdentical(v, v.shift(x=0))
+
+        expected = Variable('x', [np.nan, 1, 2, 3, 4], {'foo': 'bar'})
+        self.assertVariableIdentical(expected, v.shift(x=1))
+
+    def test_shift2d(self):
+        v = Variable(('x', 'y'), [[1, 2], [3, 4]])
+        expected = Variable(('x', 'y'), [[np.nan, np.nan], [np.nan, 1]])
+        self.assertVariableIdentical(expected, v.shift(x=1, y=1))
+
     def test_transpose(self):
         v = Variable(['time', 'x'], self.d)
         v2 = Variable(['x', 'time'], self.d.T)

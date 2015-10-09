@@ -1189,6 +1189,39 @@ class DataArray(AbstractArray, BaseDataObject):
         ds = self._dataset.diff(n=n, dim=dim, label=label)
         return self._with_replaced_dataset(ds)
 
+    def shift(self, **shifts):
+        """Shift this array by an offset along one or more dimensions.
+
+        Only the data is moved; coordinates stay in place. Values shifted from
+        beyond array bounds are replaced by NaN.
+
+        Parameters
+        ----------
+        **shifts : keyword arguments of the form {dim: offset}
+            Integer offset to shift along each of the given dimensions.
+            Positive offsets shift to the right; negative offsets shift to the
+            left.
+
+        Returns
+        -------
+        shifted : DataArray
+            DataArray with the same coordinates and attributes but shifted
+            data.
+
+        Examples
+        --------
+
+        >>> arr = xray.DataArray([5, 6, 7], dims='x')
+        >>> arr.shift(x=1)
+        <xray.DataArray (x: 3)>
+        array([ nan,   5.,   6.])
+        Coordinates:
+          * x        (x) int64 0 1 2
+        """
+        ds = self._dataset.copy()
+        ds[self.name] = self.variable.shift(**shifts)
+        return self._with_replaced_dataset(ds)
+
     @property
     def real(self):
         return self._with_replaced_dataset(self._dataset.real)

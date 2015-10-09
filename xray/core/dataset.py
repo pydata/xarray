@@ -2081,6 +2081,52 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject):
         else:
             return difference
 
+    def shift(self, **shifts):
+        """Shift this dataset by an offset along one or more dimensions.
+
+        Only data variables are moved; coordinates stay in place. Values
+        shifted from bounds dataset bounds are replaced by NaN.
+
+        Parameters
+        ----------
+        **shifts : keyword arguments of the form {dim: offset}
+            Integer offset to shift along each of the given dimensions.
+            Positive offsets shift to the right; negative offsets shift to the
+            left.
+
+        Returns
+        -------
+        shifted : Dataset
+            Dataset with the same coordinates and attributes but shifted data
+            variables.
+
+        Examples
+        --------
+
+        >>> ds = xray.Dataset({'foo': ('x', list('abcde'))})
+        >>> ds.shift(x=2)
+        <xray.Dataset>
+        Dimensions:  (x: 5)
+        Coordinates:
+          * x        (x) int64 0 1 2 3 4
+        Data variables:
+            foo      (x) object nan nan 'a' 'b' 'c'
+        """
+        invalid = [k for k in shifts if k not in self.dims]
+        if invalid:
+            raise ValueError("dimensions %r do not exist" % invalid)
+
+        variables = OrderedDict()
+        for name, var in iteritems(self.variables):
+            if name in self.data_vars:
+                var_shifts = dict((k, v) for k, v in shifts.items()
+                                  if k in var.dims)
+                variables[name] = var.shift(**var_shifts)
+            else:
+                variables[name] = var
+
+        return self._replace_vars_and_dims(variables)
+
     @property
     def real(self):
         return self._unary_op(lambda x: x.real, keep_attrs=True)(self)
