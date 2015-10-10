@@ -110,6 +110,8 @@ class VariableSubclassTestCases(object):
     def test_index_0d_not_a_time(self):
         d = np.datetime64('NaT')
         x = self.cls(['x'], [d])
+        # Wasn't able to figure out why this was failing.
+        # AssertionError: numpy.datetime64('NaT') != numpy.datetime64('NaT')
         self.assertIndexedLikeNDArray(x, d, None)
 
     def test_index_0d_object(self):
@@ -332,7 +334,7 @@ class VariableSubclassTestCases(object):
         self.assertVariableIdentical(v, Variable.concat([v[:1], v[1:]], 'time'))
         # test dimension order
         self.assertVariableIdentical(v, Variable.concat([v[:, :5], v[:, 5:]], 'x'))
-        with self.assertRaisesRegexp(ValueError, 'same number of dimensions'):
+        with self.assertRaisesRegexp(ValueError, 'all input arrays must have'):
             Variable.concat([v[:, 0], v[:, 1:]], 'x')
 
     def test_concat_attrs(self):

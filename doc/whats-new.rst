@@ -42,7 +42,7 @@ Enhancements
 Bug fixes
 ~~~~~~~~~
 
-- Forwards compatibility with the next release of changes (v0.17.0).
+- Forwards compatibility with the next pandas release of changes (v0.17.0).
   We were using some internal pandas routines for datetime conversion, which
   unfortunately have now changed upstream (:issue:`569`).
 - Aggregation functions now correctly skip ``NaN`` for data for ``complex128``
@@ -58,6 +58,7 @@ Bug fixes
 - It is now possible to assign to the ``.data`` attribute of DataArray objects.
 - ``coordinates`` attribute is now kept in the encoding dictionary after
   decoding (:issue:`610`).
+- Compatibility with numpy 1.10 (:issue:`617`).
 
 v0.6.0 (21 August 2015)
 -----------------------
