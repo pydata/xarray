@@ -136,8 +136,9 @@ allong the time dimension.
                                           calendar='noleap'),
                                   coords=[ds.time], name='month_length')
 
-    # Calculate the weights by grouping by 'time.season'
-    weights = month_length.groupby('time.season') / month_length.groupby('time.season').sum()
+    # Calculate the weights by grouping by 'time.season'.
+    # Conversion to float type ('astype(float)') only necessary for Python 2.x
+    weights = month_length.groupby('time.season') / month_length.astype(float).groupby('time.season').sum()
 
     # Test that the sum of the weights for each season is 1.0
     np.testing.assert_allclose(weights.groupby('time.season').sum().values, np.ones(4))
