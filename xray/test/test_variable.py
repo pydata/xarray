@@ -108,10 +108,8 @@ class VariableSubclassTestCases(object):
         self.assertIndexedLikeNDArray(x, np.timedelta64(td), 'timedelta64[ns]')
 
     def test_index_0d_not_a_time(self):
-        d = np.datetime64('NaT')
+        d = np.datetime64('NaT', 'ns')
         x = self.cls(['x'], [d])
-        # Wasn't able to figure out why this was failing.
-        # AssertionError: numpy.datetime64('NaT') != numpy.datetime64('NaT')
         self.assertIndexedLikeNDArray(x, d, None)
 
     def test_index_0d_object(self):
