@@ -1235,8 +1235,8 @@ class TestDataArray(TestCase):
         # regression test for #264
         x1 = np.arange(30)
         x2 = np.arange(5, 35)
-        a = DataArray(np.random.random((30,)).astype('f32'), {'x': x1})
-        b = DataArray(np.random.random((30,)).astype('f32'), {'x': x2})
+        a = DataArray(np.random.random((30,)).astype(np.float32), {'x': x1})
+        b = DataArray(np.random.random((30,)).astype(np.float32), {'x': x2})
         c, d = align(a, b, join='outer')
         self.assertEqual(c.dtype, np.float32)
 

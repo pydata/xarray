@@ -5,7 +5,7 @@ See the NumPy license in the licenses directory.
 import numpy as np
 
 try:
-    from numpy import broadcast_to, stack
+    from numpy import broadcast_to, stack, nanprod
 except ImportError:  # pragma: no cover
     # these functions should arrive in numpy v1.10
 
@@ -124,18 +124,20 @@ except ImportError:  # pragma: no cover
         arrays = [np.asanyarray(arr) for arr in arrays]
         if not arrays:
             raise ValueError('need at least one array to stack')
+
+        shapes = set(arr.shape for arr in arrays)
+        if len(shapes) != 1:
+            raise ValueError('all input arrays must have the same shape')
+
         result_ndim = arrays[0].ndim + 1
         if not -result_ndim <= axis < result_ndim:
-            raise IndexError('axis %r out of bounds [-%r, %r)'
-                             % (axis, result_ndim, result_ndim))
+            msg = 'axis {0} out of bounds [-{1}, {1})'.format(axis, result_ndim)
+            raise IndexError(msg)
         if axis < 0:
             axis += result_ndim
+
         sl = (slice(None),) * axis + (np.newaxis,)
-        try:
-            expanded_arrays = [arr[sl] for arr in arrays]
-        except IndexError:
-            msg = 'all the input arrays must have same number of dimensions'
-            raise ValueError(msg)
+        expanded_arrays = [arr[sl] for arr in arrays]
         return np.concatenate(expanded_arrays, axis=axis)
 
 

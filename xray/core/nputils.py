@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+import warnings
 
 from .pycompat import builtins, reduce
 
@@ -68,8 +69,12 @@ def _ensure_bool_is_ndarray(result, *args):
 
 
 def array_eq(self, other):
-    return _ensure_bool_is_ndarray(self == other, self, other)
+    with warnings.catch_warnings():
+        warnings.filterwarnings('ignore', r'elementwise comparison failed')
+        return _ensure_bool_is_ndarray(self == other, self, other)
 
 
 def array_ne(self, other):
-    return _ensure_bool_is_ndarray(self != other, self, other)
+    with warnings.catch_warnings():
+        warnings.filterwarnings('ignore', r'elementwise comparison failed')
+        return _ensure_bool_is_ndarray(self != other, self, other)

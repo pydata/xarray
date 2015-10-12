@@ -150,6 +150,9 @@ class TestCase(unittest.TestCase):
     # TODO: write a generic "assertEqual" that uses the equals method, or just
     # switch to py.test and add an appropriate hook.
 
+    def assertEqual(self, a1, a2):
+        assert a1 == a2 or (a1 != a1 and a2 != a2)
+
     def assertDatasetEqual(self, d1, d2):
         # this method is functionally equivalent to `assert d1 == d2`, but it
         # checks each aspect of equality separately for easier debugging
