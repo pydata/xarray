@@ -1,0 +1,14 @@
+name: test_env
+dependencies:
+  - python=2.7
+  - cython
+  - dask
+  - h5py
+  - nose
+  - numpy
+  - pandas
+  - scipy
+  - pip:
+    - coveralls
+    - h5netcdf
+    - git+https://github.com/Unidata/netcdf4-python.git

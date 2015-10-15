@@ -1,0 +1,8 @@
+name: test_env
+dependencies:
+  - python=2.7
+  - nose
+  - numpy==1.9.3
+  - pandas==0.15.0
+  - pip:
+    - coveralls

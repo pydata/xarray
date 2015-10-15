@@ -1,0 +1,14 @@
+name: test_env
+channels:
+  - ajdawson
+dependencies:
+  - python=2.7
+  - cdat-lite
+  - dask
+  - nose
+  - numpy
+  - pandas>=0.15.0
+  - scipy
+  - pip:
+    - coveralls
+    - cyordereddict

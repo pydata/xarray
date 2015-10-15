@@ -623,6 +623,7 @@ class NetCDF4DataTest(BaseNetCDF4Test, TestCase):
             self.assertEqual(list(ds), list(actual))
 
     def test_unsorted_index_raises(self):
+        # should be fixed in netcdf4 v1.2.1
         random_data = np.random.random(size=(4, 6))
         dim0 = [0, 1, 2, 3]
         dim1 = [0, 2, 1, 3, 5, 4]  # We will sort this in a later step
@@ -633,8 +634,10 @@ class NetCDF4DataTest(BaseNetCDF4Test, TestCase):
         with self.roundtrip(ds) as ondisk:
             inds = np.argsort(dim1)
             ds2 = ondisk.isel(dim1=inds)
-            with self.assertRaisesRegexp(IndexError, 'first by calling .load'):
+            try:
                 print(ds2.randovar.values)  # should raise IndexError in netCDF4
+            except IndexError as err:
+                self.assertIn('first by calling .load', str(err))
 
 
 @requires_netCDF4

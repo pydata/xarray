@@ -1,0 +1,12 @@
+name: test_env
+dependencies:
+  - python=3.5
+  - cython=0.23.4
+  - nose
+  - numpy=1.10.1
+  - netcdf4=1.1.9
+  - scipy=0.16.0
+  - pip:
+    - coveralls
+    - dask
+    - git+https://github.com/pydata/pandas.git
