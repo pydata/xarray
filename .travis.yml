@@ -8,53 +8,48 @@ matrix:
   fast_finish: true
   include:
   - python: 2.6
-    env: UPDATE_ENV="conda install unittest2 pandas==0.15.0 h5py cython matplotlib && pip install h5netcdf"
-  # Test on Python 2.7 with and without netCDF4/scipy/cdat-lite
+    env: CONDA_ENV=py26
   - python: 2.7
-    env: UPDATE_ENV="conda install -c scitools cdat-lite h5py cython matplotlib && pip install cyordereddict h5netcdf"
+    env: CONDA_ENV=py27-min
   - python: 2.7
-    # nb. we have to remove scipy because conda install pandas brings it in:
-    # https://github.com/ContinuumIO/anaconda-issues/issues/145
-    env: UPDATE_ENV="conda remove scipy netCDF4 && conda install dask"
+    env: CONDA_ENV=py27-cdat
   - python: 3.4
-    env: UPDATE_ENV="conda install -c pandas bottleneck h5py cython dask matplotlib seaborn && pip install cyordereddict h5netcdf"
+    env: CONDA_ENV=py34
   - python: 3.5
-    env: UPDATE_ENV="conda install -c pandas h5py cython dask matplotlib seaborn && pip install cyordereddict h5netcdf"
-  # don't require pydap tests to pass because the dap test server is unreliable
+    env: CONDA_ENV=py35
   - python: 2.7
-    env: UPDATE_ENV="pip install pydap && conda install dask"
-  # test netCDF4-python master
-  - python: 2.7
+    env: CONDA_ENV=py27-pydap
+  - python: 3.5
+    env: CONDA_ENV=py27-netcdf4-dev
     addons:
       apt_packages:
         - libhdf5-serial-dev
         - netcdf-bin
         - libnetcdf-dev
-    env: UPDATE_ENV="conda install cython && pip install https://github.com/Unidata/netcdf4-python/archive/master.zip"
-  - python: 2.7
-    env: UPDATE_ENV="pip install toolz https://github.com/blaze/dask/archive/master.zip"
-  - python: 2.7
-    env: UPDATE_ENV="conda remove pandas && conda install cython && pip install https://github.com/pydata/pandas/archive/master.zip"
+  - python: 3.5
+    env: CONDA_ENV=py35-dask-dev
+  - python: 3.5
+    env: CONDA_ENV=py35-pandas-dev
   allow_failures:
   - python: 2.7
-    env: UPDATE_ENV="pip install pydap && conda install dask"
-  - python: 2.7
+    env: CONDA_ENV=py27-pydap
+  - python: 3.5
+    env: CONDA_ENV=py27-netcdf4-dev
     addons:
       apt_packages:
         - libhdf5-serial-dev
         - netcdf-bin
         - libnetcdf-dev
-    env: UPDATE_ENV="conda install cython && pip install https://github.com/Unidata/netcdf4-python/archive/master.zip"
-  - python: 2.7
-    env: UPDATE_ENV="pip install toolz https://github.com/blaze/dask/archive/master.zip"
-  - python: 2.7
-    env: UPDATE_ENV="conda remove pandas && conda install cython && pip install https://github.com/pydata/pandas/archive/master.zip"
+  - python: 3.5
+    env: CONDA_ENV=py35-dask-dev
+  - python: 3.5
+    env: CONDA_ENV=py35-pandas-dev
 
 before_install:
   - if [[ "$TRAVIS_PYTHON_VERSION" == "2.7" ]]; then
-      wget http://repo.continuum.io/miniconda/Miniconda-3.7.3-Linux-x86_64.sh -O miniconda.sh;
+      wget http://repo.continuum.io/miniconda/Miniconda-3.16.0-Linux-x86_64.sh -O miniconda.sh;
     else
-      wget http://repo.continuum.io/miniconda/Miniconda3-3.7.3-Linux-x86_64.sh -O miniconda.sh;
+      wget http://repo.continuum.io/miniconda/Miniconda3-3.16.0-Linux-x86_64.sh -O miniconda.sh;
     fi
   - bash miniconda.sh -b -p $HOME/miniconda
   - export PATH="$HOME/miniconda/bin:$PATH"
@@ -64,10 +59,8 @@ before_install:
   - conda info -a
 
 install:
-  - conda create --yes -n test_env python=$TRAVIS_PYTHON_VERSION pip nose numpy pandas scipy netCDF4
+  - conda env create --file ci/requirements-$CONDA_ENV.yml
   - source activate test_env
-  - echo $UPDATE_ENV; eval $UPDATE_ENV
-  - pip install coveralls
   - python setup.py install
 
 script:

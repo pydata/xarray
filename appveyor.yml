@@ -26,7 +26,7 @@ install:
   - "python -c \"import struct; print(struct.calcsize('P') * 8)\""
 
   # install xray and depenencies
-  - "conda install --yes --quiet pip nose numpy pandas scipy netCDF4 matplotlib"
+  - "conda install --yes --quiet pip nose numpy pandas scipy netCDF4 matplotlib dask"
   - "python setup.py install"
 
 build: false
