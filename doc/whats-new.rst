@@ -12,7 +12,11 @@ What's New
 v0.6.1
 ------
 
-The minimum required version of dask for use with xray is now version 0.6.
+This pull request contains a number of bug and compatibility fixes, as well
+as enhancements to indexing, plotting and writing files to disk.
+
+Note that the minimum required version of dask for use with xray is now
+version 0.6.
 
 API Changes
 ~~~~~~~~~~~
@@ -26,6 +30,28 @@ API Changes
 Enhancements
 ~~~~~~~~~~~~
 
+- :py:meth:`~xray.Dataset.sel` and :py:meth:`~xray.Dataset.reindex` now support
+  the ``tolerance`` argument for controlling nearest-neighbor selection
+  (:issue:`629`)::
+
+  .. ipython::
+    :verbatim:
+
+    In [5]: array = xray.DataArray([1, 2, 3], dims='x')
+
+    In [6]: array.reindex(x=[0.9, 1.5], method='nearest', tolerance=0.2)
+    Out[6]:
+    <xray.DataArray (x: 2)>
+    array([  2.,  nan])
+    Coordinates:
+      * x        (x) float64 0.9 1.5
+
+  This feature requires pandas v0.17 or newer.
+- Faceted plotting through :py:class:`~xray.plot.FacetGrid` and the
+  :py:meth:`~xray.plot.plot` method.
+- New ``encoding`` argument in :py:meth:`~xray.Dataset.to_netcdf` for writing
+  netCDF files with compression, as described in the new documentation
+  section on :ref:`io.netcdf.writing_encoded`.
 - Add :py:attr:`~xray.Dataset.real` and :py:attr:`~xray.Dataset.imag`
   attributes to Dataset and DataArray (:issue:`553`).
 - More informative error message with :py:meth:`~xray.Dataset.from_dataframe`
@@ -33,17 +59,12 @@ Enhancements
 - xray now uses deterministic names for dask arrays it creates or opens from
   disk. This allows xray users to take advantage of dask's nascent support for
   caching intermediate computation results. See :issue:`555` for an example.
-- Faceted plotting through :py:class:`~xray.plot.FacetGrid` and the
-  :py:meth:`~xray.plot.plot` method.
-- New ``encoding`` argument in :py:meth:`~xray.Dataset.to_netcdf` for writing
-  netCDF files with compression, as described in the new documentation
-  section on :ref:`io.netcdf.writing_encoded`.
 
 Bug fixes
 ~~~~~~~~~
 
-- Forwards compatibility with the next pandas release of changes (v0.17.0).
-  We were using some internal pandas routines for datetime conversion, which
+- Forwards compatibility with the latest pandas release (v0.17.0). We were
+  using some internal pandas routines for datetime conversion, which
   unfortunately have now changed upstream (:issue:`569`).
 - Aggregation functions now correctly skip ``NaN`` for data for ``complex128``
   dtype (:issue:`554`).

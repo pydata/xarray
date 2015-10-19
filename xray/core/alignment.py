@@ -99,7 +99,8 @@ def partial_align(*objects, **kwargs):
     return tuple(obj.reindex(copy=copy, **joined_indexes) for obj in objects)
 
 
-def reindex_variables(variables, indexes, indexers, method=None, copy=True):
+def reindex_variables(variables, indexes, indexers, method=None,
+                      tolerance=None, copy=True):
     """Conform a dictionary of aligned variables onto a new set of variables,
     filling in missing values with NaN.
 
@@ -123,6 +124,10 @@ def reindex_variables(variables, indexes, indexers, method=None, copy=True):
           * pad / ffill: propgate last valid index value forward
           * backfill / bfill: propagate next valid index value backward
           * nearest: use nearest valid index value
+    tolerance : optional
+        Maximum distance between original and new labels for inexact matches.
+        The values of the index at the matching locations most satisfy the
+        equation ``abs(index[indexer] - target) <= tolerance``.
     copy : bool, optional
         If `copy=True`, the returned dataset contains only copied
         variables. If `copy=False` and no reindexing is required then
@@ -137,11 +142,18 @@ def reindex_variables(variables, indexes, indexers, method=None, copy=True):
     to_indexers = {}
     to_shape = {}
     from_indexers = {}
+
+    # for compat with older versions of pandas that don't support tolerance
+    get_indexer_kwargs = {}
+    if tolerance is not None:
+        get_indexer_kwargs['tolerance'] = tolerance
+
     for name, index in iteritems(indexes):
         to_shape[name] = index.size
         if name in indexers:
             target = utils.safe_cast_to_index(indexers[name])
-            indexer = index.get_indexer(target, method=method)
+            indexer = index.get_indexer(target, method=method,
+                                        **get_indexer_kwargs)
 
             to_shape[name] = len(target)
             # Note pandas uses negative values from get_indexer to signify

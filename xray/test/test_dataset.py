@@ -749,6 +749,10 @@ class TestDataset(TestCase):
                                  method='pad')
         self.assertDatasetIdentical(expected, actual)
 
+        if pd.__version__ >= '0.17':
+            with self.assertRaises(KeyError):
+                data.sel_points(x=[2.5], y=[2.0], method='pad', tolerance=1e-3)
+
     def test_sel_method(self):
         data = create_test_data()
 
@@ -756,6 +760,13 @@ class TestDataset(TestCase):
             expected = data.sel(dim1=1)
             actual = data.sel(dim1=0.95, method='nearest')
             self.assertDatasetIdentical(expected, actual)
+
+        if pd.__version__ >= '0.17':
+            actual = data.sel(dim1=0.95, method='nearest', tolerance=1)
+            self.assertDatasetIdentical(expected, actual)
+
+            with self.assertRaises(KeyError):
+                actual = data.sel(dim1=0.5, method='nearest', tolerance=0)
 
         expected = data.sel(dim2=[1.5])
         actual = data.sel(dim2=[1.45], method='backfill')
@@ -845,6 +856,11 @@ class TestDataset(TestCase):
         actual = ds.reindex(y=y, method='backfill')
         expected = Dataset({'x': ('y', [10, 20, np.nan]), 'y': y})
         self.assertDatasetIdentical(expected, actual)
+
+        if pd.__version__ >= '0.17':
+            actual = ds.reindex(y=y, method='backfill', tolerance=0.1)
+            expected = Dataset({'x': ('y', 3 * [np.nan]), 'y': y})
+            self.assertDatasetIdentical(expected, actual)
 
         actual = ds.reindex(y=y, method='pad')
         expected = Dataset({'x': ('y', [np.nan, 10, 20]), 'y': y})
