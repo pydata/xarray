@@ -690,7 +690,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject):
         values in the same locations.
 
         This method is necessary because `v1 == v2` for ``Dataset``
-        does element-wise comparisions (like numpy.ndarrays).
+        does element-wise comparisons (like numpy.ndarrays).
 
         See Also
         --------
@@ -842,7 +842,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject):
             * NETCDF4: Data is stored in an HDF5 file, using netCDF4 API
               features.
             * NETCDF4_CLASSIC: Data is stored in an HDF5 file, using only
-              netCDF 3 compatibile API features.
+              netCDF 3 compatible API features.
             * NETCDF3_64BIT: 64-bit offset version of the netCDF 3 file format,
               which fully supports 2+ GB files, but is only compatible with
               clients linked against netCDF version 3.6.0 or later.
@@ -872,7 +872,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject):
         return to_netcdf(self, path, mode, format=format, group=group,
                          engine=engine, encoding=encoding)
 
-    dump = utils.function_alias(to_netcdf, 'dumps')
+    dump = utils.function_alias(to_netcdf, 'dump')
     dumps = utils.function_alias(to_netcdf, 'dumps')
 
     def __repr__(self):
@@ -1161,7 +1161,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject):
             Method to use for inexact matches (requires pandas>=0.16):
 
             * None (default): only exact matches
-            * pad / ffill: propgate last valid index value forward
+            * pad / ffill: propagate last valid index value forward
             * backfill / bfill: propagate next valid index value backward
             * nearest: use nearest valid index value
         **indexers : {dim: indexer, ...}
@@ -1206,7 +1206,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject):
             dataset:
 
             * None (default): don't fill gaps
-            * pad / ffill: propgate last valid index value forward
+            * pad / ffill: propagate last valid index value forward
             * backfill / bfill: propagate next valid index value backward
             * nearest: use nearest valid index value (requires pandas>=0.16)
         copy : bool, optional
@@ -1243,7 +1243,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject):
             this dataset:
 
             * None (default): don't fill gaps
-            * pad / ffill: propgate last valid index value forward
+            * pad / ffill: propagate last valid index value forward
             * backfill / bfill: propagate next valid index value backward
             * nearest: use nearest valid index value (requires pandas>=0.16)
         copy : bool, optional
@@ -1672,7 +1672,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject):
             Dimension(s) over which to apply `func`.  By default `func` is
             applied over all dimensions.
         keep_attrs : bool, optional
-            If True, the datasets's attributes (`attrs`) will be copied from
+            If True, the dataset's attributes (`attrs`) will be copied from
             the original object to the new one.  If False (default), the new
             object will be returned without attributes.
         numeric_only : bool, optional
@@ -1991,7 +1991,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject):
         Returns
         -------
         difference : same type as caller
-            The n-th order finite differnce of this object.
+            The n-th order finite difference of this object.
 
         Examples
         --------
