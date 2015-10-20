@@ -7,7 +7,9 @@ from . import formatting
 
 
 def _coord_merge_finalize(target, other, target_conflicts, other_conflicts,
-                          promote_dims={}):
+                          promote_dims=None):
+    if promote_dims is None:
+        promote_dims = {}
     for k in target_conflicts:
         del target[k]
     for k, v in iteritems(other):

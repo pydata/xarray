@@ -89,7 +89,7 @@ def _align_variables(variables, join='outer'):
     return new_variables
 
 
-def _expand_variables(raw_variables, old_variables={}, compat='identical'):
+def _expand_variables(raw_variables, old_variables=None, compat='identical'):
     """Expand a dictionary of variables.
 
     Returns a dictionary of Variable objects suitable for inserting into a
@@ -102,6 +102,8 @@ def _expand_variables(raw_variables, old_variables={}, compat='identical'):
     Raises ValueError if any conflicting values are found, between any of the
     new or old variables.
     """
+    if old_variables is None:
+        old_variables = {}
     new_variables = OrderedDict()
     new_coord_names = set()
     variables = ChainMap(new_variables, old_variables)
@@ -329,7 +331,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject):
                 coord = Coordinate(dim, data)
                 self._variables[dim] = coord
 
-    def _update_vars_and_coords(self, new_variables, new_coord_names={},
+    def _update_vars_and_coords(self, new_variables, new_coord_names=None,
                                 needs_copy=True, check_coord_names=True):
         """Add a dictionary of new variables to this dataset.
 
@@ -340,6 +342,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject):
         Set `needs_copy=False` only if this dataset is brand-new and hence
         can be thrown away if this method fails.
         """
+        if new_coord_names is None:
+            new_coord_names = {}
         # default to creating another copy of variables so can unroll if we end
         # up with inconsistent dimensions
         variables = self._variables.copy() if needs_copy else self._variables
@@ -804,8 +808,10 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject):
                 del obj._variables[name]
         return obj
 
-    def dump_to_store(self, store, encoder=None, sync=True, encoding={}):
+    def dump_to_store(self, store, encoder=None, sync=True, encoding=None):
         """Store dataset contents to a backends.*DataStore object."""
+        if encoding is None:
+            encoding = {}
         variables, attrs = conventions.encode_dataset_coordinates(self)
 
         check_encoding = set()
@@ -823,7 +829,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject):
             store.sync()
 
     def to_netcdf(self, path=None, mode='w', format=None, group=None,
-                  engine=None, encoding={}):
+                  engine=None, encoding=None):
         """Write dataset contents to a netCDF file.
 
         Parameters
@@ -868,6 +874,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject):
             variable specific encodings as values, e.g.,
             ``{'my_variable': {'dtype': 'int16', 'scale_factor': 0.1, 'zlib': True}, ...}``
         """
+        if encoding is None:
+            encoding = {}
         from ..backends.api import to_netcdf
         return to_netcdf(self, path, mode, format=format, group=group,
                          engine=engine, encoding=encoding)

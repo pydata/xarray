@@ -312,7 +312,7 @@ WRITEABLE_STORES = {'netcdf4': backends.NetCDF4DataStore,
 
 
 def to_netcdf(dataset, path=None, mode='w', format=None, group=None,
-              engine=None, writer=None, encoding={}):
+              engine=None, writer=None, encoding=None):
     """This function creates an appropriate datastore for writing a dataset to
     disk as a netCDF file
 
@@ -320,6 +320,8 @@ def to_netcdf(dataset, path=None, mode='w', format=None, group=None,
 
     The ``writer`` argument is only for the private use of save_mfdataset.
     """
+    if encoding is None:
+        encoding = {}
     if path is None:
         path = BytesIO()
         if engine is None:
