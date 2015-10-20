@@ -861,6 +861,9 @@ class TestDataset(TestCase):
             actual = ds.reindex(y=y, method='backfill', tolerance=0.1)
             expected = Dataset({'x': ('y', 3 * [np.nan]), 'y': y})
             self.assertDatasetIdentical(expected, actual)
+        else:
+            with self.assertRaisesRegexp(NotImplementedError, 'tolerance'):
+                ds.reindex(y=y, method='backfill', tolerance=0.1)
 
         actual = ds.reindex(y=y, method='pad')
         expected = Dataset({'x': ('y', [np.nan, 10, 20]), 'y': y})

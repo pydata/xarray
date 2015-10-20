@@ -129,6 +129,9 @@ def convert_label_indexer(index, label, index_name='', method=None,
     if method is not None:
         kwargs['method'] = method
     if tolerance is not None:
+        if pd.__version__ < '0.17':
+            raise NotImplementedError(
+                'the tolerance argument requires pandas v0.17 or newer')
         kwargs['tolerance'] = tolerance
 
     if isinstance(label, slice):

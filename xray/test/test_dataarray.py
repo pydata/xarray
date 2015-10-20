@@ -396,6 +396,9 @@ class TestDataArray(TestCase):
             expected = data.sel(x=[1, 2])
             actual = data.sel(x=[0.9, 1.9], method='backfill', tolerance=1)
             self.assertDataArrayIdentical(expected, actual)
+        else:
+            with self.assertRaisesRegexp(NotImplementedError, 'tolerance'):
+                data.sel(x=[0.9, 1.9], method='backfill', tolerance=1)
 
     def test_isel_points(self):
         shape = (10, 5, 6)

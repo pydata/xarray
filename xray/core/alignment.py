@@ -1,5 +1,6 @@
 import functools
 import operator
+import pandas as pd
 from collections import defaultdict
 
 import numpy as np
@@ -146,6 +147,9 @@ def reindex_variables(variables, indexes, indexers, method=None,
     # for compat with older versions of pandas that don't support tolerance
     get_indexer_kwargs = {}
     if tolerance is not None:
+        if pd.__version__ < '0.17':
+            raise NotImplementedError(
+                'the tolerance argument requires pandas v0.17 or newer')
         get_indexer_kwargs['tolerance'] = tolerance
 
     for name, index in iteritems(indexes):
