@@ -21,7 +21,7 @@ from xray.core.pycompat import iteritems, PY3
 
 from . import (TestCase, requires_scipy, requires_netCDF4, requires_pydap,
                requires_scipy_or_netCDF4, requires_dask, requires_h5netcdf,
-               has_netCDF4, has_scipy)
+               requires_pynio, has_netCDF4, has_scipy)
 from .test_dataset import create_test_data
 
 try:
@@ -995,6 +995,36 @@ class PydapTest(TestCase):
     def test_dask(self):
         with self.create_datasets(chunks={'j': 2}) as (actual, expected):
             self.assertDatasetEqual(actual, expected)
+
+
+@requires_scipy
+@requires_pynio
+class TestPyNio(CFEncodedDataTest, Only32BitTypes, TestCase):
+    def test_write_store(self):
+        # pynio is read-only for now
+        pass
+
+    def test_orthogonal_indexing(self):
+        # pynio also does not support list-like indexing
+        pass
+
+    @contextlib.contextmanager
+    def roundtrip(self, data, save_kwargs={}, open_kwargs={}):
+        with create_tmp_file() as tmp_file:
+            data.to_netcdf(tmp_file, engine='scipy', **save_kwargs)
+            with open_dataset(tmp_file, engine='pynio', **open_kwargs) as ds:
+                yield ds
+
+    def test_weakrefs(self):
+        example = Dataset({'foo': ('x', np.arange(5.0))})
+        expected = example.rename({'foo': 'bar', 'x': 'y'})
+
+        with create_tmp_file() as tmp_file:
+            example.to_netcdf(tmp_file, engine='scipy')
+            on_disk = open_dataset(tmp_file, engine='pynio')
+            actual = on_disk.rename({'foo': 'bar', 'x': 'y'})
+            del on_disk  # trigger garbage collection
+            self.assertDatasetIdentical(actual, expected)
 
 
 class TestEncodingInvalid(TestCase):

@@ -1,6 +1,8 @@
 name: test_env
 channels:
-  - ajdawson
+  - ajdawson  # cdat
+  - dbrown  # pynio
+  - asmeurer  # gcc-4.8.5, needed for pynio
 dependencies:
   - python=2.7
   - cdat-lite
@@ -8,6 +10,7 @@ dependencies:
   - pytest
   - numpy
   - pandas>=0.15.0
+  - pynio
   - scipy
   - pip:
     - coveralls
