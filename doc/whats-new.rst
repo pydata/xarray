@@ -19,6 +19,9 @@ v0.7.2 (unreleased)
 Enhancements
 ~~~~~~~~~~~~
 
+- Add :py:meth:`~xray.DataArray.average` and :py:meth:`~xray.Dataset.plot`
+  methods (:issue:`650`).
+
 Bug fixes
 ~~~~~~~~~
 

@@ -2171,6 +2171,55 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject):
 
         return self._replace_vars_and_dims(variables)
 
+    def average(self, **kwargs):
+        """
+        Reduce this Dataset's data by applying `average` along some
+        dimension(s).
+
+        Parameters
+        ----------
+        dim : str or sequence of str, optional
+            Dimension(s) over which to apply `average`.
+        axis : int or sequence of int, optional
+            Axis(es) over which to apply `average`. Only one of the 'dim'
+            and 'axis' arguments can be supplied. If neither are supplied, then
+            `average` is calculated over axes.
+        weights : Dataset, optional
+            An array of weights associated with the values in this Dataset.
+            Each value in a contributes to the average according to its
+            associated weight. The weights array can either be 1-D (in which
+            case its length must be the size of a along the given axis or
+            dimension) or of he same shape this Dataset. If weights=None, then
+            all data in this Dataset are assumed to have a weight equal to one.
+        keep_attrs : bool, optional
+            If True, the attributes (`attrs`) will be copied from the original
+            object to the new one.  If False (default), the new object will be
+            returned without attributes.
+        **kwargs : dict
+            Additional keyword arguments passed on to `sum`.
+
+        Returns
+        -------
+        reduced : Dataset
+            New Dataset object with `average` applied to its data and the
+            indicated dimension(s) removed.
+
+        See Also
+        --------
+        DataArray.average
+        Dataset.mean
+        """
+
+        if 'returned' in kwargs:
+            raise ValueError('returned argument is not supported on '
+                             'Dataset.average')
+
+        if 'weights' in kwargs:
+            from .dataarray import DataArray
+            return self.apply(DataArray.average, **kwargs)
+        else:
+            return self.mean(**kwargs)
+
     @property
     def real(self):
         return self._unary_op(lambda x: x.real, keep_attrs=True)(self)
