@@ -392,9 +392,13 @@ class TestDataArray(TestCase):
         actual = data.sel(y=['ab', 'ba'], method='pad')
         self.assertDataArrayIdentical(expected, actual)
 
-        expected = data.sel(x=[1, 2])
-        actual = data.sel(x=[0.9, 1.9], method='backfill')
-        self.assertDataArrayIdentical(expected, actual)
+        if pd.__version__ >= '0.17':
+            expected = data.sel(x=[1, 2])
+            actual = data.sel(x=[0.9, 1.9], method='backfill', tolerance=1)
+            self.assertDataArrayIdentical(expected, actual)
+        else:
+            with self.assertRaisesRegexp(NotImplementedError, 'tolerance'):
+                data.sel(x=[0.9, 1.9], method='backfill', tolerance=1)
 
     def test_isel_points(self):
         shape = (10, 5, 6)
@@ -609,13 +613,15 @@ class TestDataArray(TestCase):
 
     def test_reindex_method(self):
         x = DataArray([10, 20], dims='y')
-        y = [-0.5, 0.5, 1.5]
-        actual = x.reindex(y=y, method='backfill')
-        expected = DataArray([10, 20, np.nan], coords=[('y', y)])
-        self.assertDataArrayIdentical(expected, actual)
+        y = [-0.1, 0.5, 1.1]
+        if pd.__version__ >= '0.17':
+            actual = x.reindex(y=y, method='backfill', tolerance=0.2)
+            expected = DataArray([10, np.nan, np.nan], coords=[('y', y)])
+            self.assertDataArrayIdentical(expected, actual)
 
         alt = Dataset({'y': y})
         actual = x.reindex_like(alt, method='backfill')
+        expected = DataArray([10, 20, np.nan], coords=[('y', y)])
         self.assertDatasetIdentical(expected, actual)
 
     def test_rename(self):

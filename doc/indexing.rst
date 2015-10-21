@@ -214,7 +214,7 @@ Nearest neighbor lookups
 
 The label based selection methods :py:meth:`~xray.Dataset.sel`,
 :py:meth:`~xray.Dataset.reindex` and :py:meth:`~xray.Dataset.reindex_like` all
-support a ``method`` keyword argument. The method parameter allows for
+support ``method`` and ``tolerance`` keyword argument. The method parameter allows for
 enabling nearest neighbor (inexact) lookups by use of the methods ``'pad'``,
 ``'backfill'`` or ``'nearest'``:
 
@@ -225,8 +225,14 @@ enabling nearest neighbor (inexact) lookups by use of the methods ``'pad'``,
     data.sel(x=0.1, method='backfill')
     data.reindex(x=[0.5, 1, 1.5, 2, 2.5], method='pad')
 
+Tolerance limits the maximum distance for valid matches with an inexact lookup:
+
+.. ipython:: python
+
+    data.reindex(x=[1.1, 1.5], method='nearest', tolerance=0.2)
+
 Using ``method='nearest'`` or a scalar argument with ``.sel()`` requires pandas
-version 0.16 or newer.
+version 0.16 or newer. Using ``tolerance`` requries pandas version 0.17 or newer.
 
 The method parameter is not yet supported if any of the arguments
 to ``.sel()`` is a ``slice`` object:

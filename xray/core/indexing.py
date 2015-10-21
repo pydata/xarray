@@ -117,25 +117,27 @@ def _try_get_item(x):
         return x
 
 
-def _get_loc(index, label, method=None):
-    """Backwards compatible wrapper for Index.get_loc, which only added the
-    method argument in pandas 0.16
-    """
-    if method is not None:
-        return index.get_loc(label, method=method)
-    else:
-        return index.get_loc(label)
-
-
-def convert_label_indexer(index, label, index_name='', method=None):
+def convert_label_indexer(index, label, index_name='', method=None,
+                          tolerance=None):
     """Given a pandas.Index (or xray.Coordinate) and labels (e.g., from
     __getitem__) for one dimension, return an indexer suitable for indexing an
     ndarray along that dimension
     """
-    if isinstance(label, slice):
-        if method is not None:
+    # backwards compatibility for pandas<0.16 (method) or pandas<0.17
+    # (tolerance)
+    kwargs = {}
+    if method is not None:
+        kwargs['method'] = method
+    if tolerance is not None:
+        if pd.__version__ < '0.17':
             raise NotImplementedError(
-                'cannot yet use the ``method`` argument if any indexers are '
+                'the tolerance argument requires pandas v0.17 or newer')
+        kwargs['tolerance'] = tolerance
+
+    if isinstance(label, slice):
+        if method is not None or tolerance is not None:
+            raise NotImplementedError(
+                'cannot use ``method`` argument if any indexers are '
                 'slice objects')
         indexer = index.slice_indexer(_try_get_item(label.start),
                                       _try_get_item(label.stop),
@@ -149,25 +151,25 @@ def convert_label_indexer(index, label, index_name='', method=None):
     else:
         label = np.asarray(label)
         if label.ndim == 0:
-            indexer = _get_loc(index, np.asscalar(label), method=method)
+            indexer = index.get_loc(np.asscalar(label), **kwargs)
         elif label.dtype.kind == 'b':
             indexer, = np.nonzero(label)
         else:
-            indexer = index.get_indexer(label, method=method)
+            indexer = index.get_indexer(label, **kwargs)
             if np.any(indexer < 0):
                 raise KeyError('not all values found in index %r'
                                % index_name)
     return indexer
 
 
-def remap_label_indexers(data_obj, indexers, method=None):
+def remap_label_indexers(data_obj, indexers, method=None, tolerance=None):
     """Given an xray data object and label based indexers, return a mapping
     of equivalent location based indexers.
     """
     if method is not None and not isinstance(method, str):
         raise TypeError('``method`` must be a string')
     return dict((dim, convert_label_indexer(data_obj[dim].to_index(), label,
-                                            dim, method))
+                                            dim, method, tolerance))
                 for dim, label in iteritems(indexers))
 
 

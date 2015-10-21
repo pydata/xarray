@@ -1010,7 +1010,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject):
             variables[name] = var.isel(**var_indexers)
         return self._replace_vars_and_dims(variables)
 
-    def sel(self, method=None, **indexers):
+    def sel(self, method=None, tolerance=None, **indexers):
         """Returns a new dataset with each array indexed by tick labels
         along the specified dimension(s).
 
@@ -1036,6 +1036,11 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject):
             * pad / ffill: propgate last valid index value forward
             * backfill / bfill: propagate next valid index value backward
             * nearest: use nearest valid index value
+        tolerance : optional
+            Maximum distance between original and new labels for inexact
+            matches. The values of the index at the matching locations most
+            satisfy the equation ``abs(index[indexer] - target) <= tolerance``.
+            Requires pandas>=0.17.
         **indexers : {dim: indexer, ...}
             Keyword arguments with names matching dimensions and values given
             by scalars, slices or arrays of tick labels.
@@ -1056,8 +1061,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject):
         Dataset.isel_points
         DataArray.sel
         """
-        return self.isel(**indexing.remap_label_indexers(self, indexers,
-                                                         method=method))
+        return self.isel(**indexing.remap_label_indexers(
+            self, indexers, method=method, tolerance=tolerance))
 
     def isel_points(self, dim='points', **indexers):
         """Returns a new dataset with each array indexed pointwise along the
@@ -1146,7 +1151,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject):
                         zip(*[v for k, v in indexers])]],
                       dim=dim, coords=coords, data_vars=data_vars)
 
-    def sel_points(self, dim='points', method=None, **indexers):
+    def sel_points(self, dim='points', method=None, tolerance=None,
+                   **indexers):
         """Returns a new dataset with each array indexed pointwise by tick
         labels along the specified dimension(s).
 
@@ -1172,6 +1178,11 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject):
             * pad / ffill: propagate last valid index value forward
             * backfill / bfill: propagate next valid index value backward
             * nearest: use nearest valid index value
+        tolerance : optional
+            Maximum distance between original and new labels for inexact
+            matches. The values of the index at the matching locations most
+            satisfy the equation ``abs(index[indexer] - target) <= tolerance``.
+            Requires pandas>=0.17.
         **indexers : {dim: indexer, ...}
             Keyword arguments with names matching dimensions and values given
             by array-like objects. All indexers must be the same length and
@@ -1192,11 +1203,11 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject):
         Dataset.isel_points
         DataArray.sel_points
         """
-        pos_indexers = indexing.remap_label_indexers(self, indexers,
-                                                     method=method)
+        pos_indexers = indexing.remap_label_indexers(
+            self, indexers, method=method, tolerance=tolerance)
         return self.isel_points(dim=dim, **pos_indexers)
 
-    def reindex_like(self, other, method=None, copy=True):
+    def reindex_like(self, other, method=None, tolerance=None, copy=True):
         """Conform this object onto the indexes of another object, filling
         in missing values with NaN.
 
@@ -1217,6 +1228,11 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject):
             * pad / ffill: propagate last valid index value forward
             * backfill / bfill: propagate next valid index value backward
             * nearest: use nearest valid index value (requires pandas>=0.16)
+        tolerance : optional
+            Maximum distance between original and new labels for inexact
+            matches. The values of the index at the matching locations most
+            satisfy the equation ``abs(index[indexer] - target) <= tolerance``.
+            Requires pandas>=0.17.
         copy : bool, optional
             If `copy=True`, the returned dataset contains only copied
             variables. If `copy=False` and no reindexing is required then
@@ -1233,9 +1249,10 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject):
         Dataset.reindex
         align
         """
-        return self.reindex(method=method, copy=copy, **other.indexes)
+        return self.reindex(method=method, copy=copy, tolerance=tolerance,
+                            **other.indexes)
 
-    def reindex(self, indexers=None, method=None, copy=True, **kw_indexers):
+    def reindex(self, indexers=None, method=None, tolerance=None, copy=True, **kw_indexers):
         """Conform this object onto a new set of indexes, filling in
         missing values with NaN.
 
@@ -1254,6 +1271,11 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject):
             * pad / ffill: propagate last valid index value forward
             * backfill / bfill: propagate next valid index value backward
             * nearest: use nearest valid index value (requires pandas>=0.16)
+        tolerance : optional
+            Maximum distance between original and new labels for inexact
+            matches. The values of the index at the matching locations most
+            satisfy the equation ``abs(index[indexer] - target) <= tolerance``.
+            Requires pandas>=0.17.
         copy : bool, optional
             If `copy=True`, the returned dataset contains only copied
             variables. If `copy=False` and no reindexing is required then
@@ -1279,7 +1301,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject):
             return self.copy(deep=True) if copy else self
 
         variables = alignment.reindex_variables(
-            self.variables, self.indexes, indexers, method, copy=copy)
+            self.variables, self.indexes, indexers, method, tolerance, copy=copy)
         return self._replace_vars_and_dims(variables)
 
     def rename(self, name_dict, inplace=False):

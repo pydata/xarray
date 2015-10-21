@@ -539,7 +539,7 @@ class DataArray(AbstractArray, BaseDataObject):
         ds = self._dataset.isel(**indexers)
         return self._with_replaced_dataset(ds)
 
-    def sel(self, method=None, **indexers):
+    def sel(self, method=None, tolerance=None, **indexers):
         """Return a new DataArray whose dataset is given by selecting
         index labels along the specified dimension(s).
 
@@ -548,8 +548,8 @@ class DataArray(AbstractArray, BaseDataObject):
         Dataset.sel
         DataArray.isel
         """
-        return self.isel(**indexing.remap_label_indexers(self, indexers,
-                                                         method=method))
+        return self.isel(**indexing.remap_label_indexers(
+            self, indexers, method=method, tolerance=tolerance))
 
     def isel_points(self, dim='points', **indexers):
         """Return a new DataArray whose dataset is given by pointwise integer
@@ -562,7 +562,8 @@ class DataArray(AbstractArray, BaseDataObject):
         ds = self._dataset.isel_points(dim=dim, **indexers)
         return self._with_replaced_dataset(ds)
 
-    def sel_points(self, dim='points', method=None, **indexers):
+    def sel_points(self, dim='points', method=None, tolerance=None,
+                   **indexers):
         """Return a new DataArray whose dataset is given by pointwise selection
         of index labels along the specified dimension(s).
 
@@ -570,10 +571,11 @@ class DataArray(AbstractArray, BaseDataObject):
         --------
         Dataset.sel_points
         """
-        ds = self._dataset.sel_points(dim=dim, method=method, **indexers)
+        ds = self._dataset.sel_points(dim=dim, method=method,
+                                      tolerance=tolerance, **indexers)
         return self._with_replaced_dataset(ds)
 
-    def reindex_like(self, other, method=None, copy=True):
+    def reindex_like(self, other, method=None, tolerance=None, copy=True):
         """Conform this object onto the indexes of another object, filling
         in missing values with NaN.
 
@@ -594,6 +596,11 @@ class DataArray(AbstractArray, BaseDataObject):
             * pad / ffill: propgate last valid index value forward
             * backfill / bfill: propagate next valid index value backward
             * nearest: use nearest valid index value (requires pandas>=0.16)
+        tolerance : optional
+            Maximum distance between original and new labels for inexact
+            matches. The values of the index at the matching locations most
+            satisfy the equation ``abs(index[indexer] - target) <= tolerance``.
+            Requires pandas>=0.17.
         copy : bool, optional
             If `copy=True`, the returned array's dataset contains only copied
             variables. If `copy=False` and no reindexing is required then
@@ -610,9 +617,10 @@ class DataArray(AbstractArray, BaseDataObject):
         DataArray.reindex
         align
         """
-        return self.reindex(method=method, copy=copy, **other.indexes)
+        return self.reindex(method=method, tolerance=tolerance, copy=copy,
+                            **other.indexes)
 
-    def reindex(self, method=None, copy=True, **indexers):
+    def reindex(self, method=None, tolerance=None, copy=True, **indexers):
         """Conform this object onto a new set of indexes, filling in
         missing values with NaN.
 
@@ -630,6 +638,11 @@ class DataArray(AbstractArray, BaseDataObject):
             * pad / ffill: propgate last valid index value forward
             * backfill / bfill: propagate next valid index value backward
             * nearest: use nearest valid index value (requires pandas>=0.16)
+        tolerance : optional
+            Maximum distance between original and new labels for inexact
+            matches. The values of the index at the matching locations most
+            satisfy the equation ``abs(index[indexer] - target) <= tolerance``.
+            Requires pandas>=0.17.
         **indexers : dict
             Dictionary with keys given by dimension names and values given by
             arrays of coordinates tick labels. Any mis-matched coordinate values
@@ -647,7 +660,8 @@ class DataArray(AbstractArray, BaseDataObject):
         DataArray.reindex_like
         align
         """
-        ds = self._dataset.reindex(method=method, copy=copy, **indexers)
+        ds = self._dataset.reindex(method=method, tolerance=tolerance,
+                                   copy=copy, **indexers)
         return self._with_replaced_dataset(ds)
 
     def rename(self, new_name_or_name_dict):

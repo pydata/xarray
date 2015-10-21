@@ -13,5 +13,6 @@ dependencies:
   - unittest2
   - pip:
     - coveralls
+    - cyordereddict
     - dask
     - h5netcdf
