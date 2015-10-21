@@ -12,8 +12,8 @@ What's New
 v0.6.1
 ------
 
-This pull request contains a number of bug and compatibility fixes, as well
-as enhancements to indexing, plotting and writing files to disk.
+This release contains a number of bug and compatibility fixes, as well
+as enhancements to plotting, indexing and writing files to disk.
 
 Note that the minimum required version of dask for use with xray is now
 version 0.6.
@@ -30,9 +30,12 @@ API Changes
 Enhancements
 ~~~~~~~~~~~~
 
+- Faceted plotting through :py:class:`~xray.plot.FacetGrid` and the
+  :py:meth:`~xray.plot.plot` method. See :ref:`plotting.faceting` for more details
+  and examples.
 - :py:meth:`~xray.Dataset.sel` and :py:meth:`~xray.Dataset.reindex` now support
   the ``tolerance`` argument for controlling nearest-neighbor selection
-  (:issue:`629`)::
+  (:issue:`629`):
 
   .. ipython::
     :verbatim:
@@ -47,8 +50,6 @@ Enhancements
       * x        (x) float64 0.9 1.5
 
   This feature requires pandas v0.17 or newer.
-- Faceted plotting through :py:class:`~xray.plot.FacetGrid` and the
-  :py:meth:`~xray.plot.plot` method.
 - New ``encoding`` argument in :py:meth:`~xray.Dataset.to_netcdf` for writing
   netCDF files with compression, as described in the new documentation
   section on :ref:`io.netcdf.writing_encoded`.
@@ -80,6 +81,18 @@ Bug fixes
 - ``coordinates`` attribute is now kept in the encoding dictionary after
   decoding (:issue:`610`).
 - Compatibility with numpy 1.10 (:issue:`617`).
+
+Acknowledgments
+~~~~~~~~~~~~~~~
+
+The following individuals contributed to this release:
+
+- Ryan Abernathey
+- Pete Cable
+- Clark Fitzgerald
+- Joe Hamman
+- Stephan Hoyer
+- Scott Sinclair
 
 v0.6.0 (21 August 2015)
 -----------------------

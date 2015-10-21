@@ -314,6 +314,7 @@ since levels are chosen automatically).
     @savefig plotting_seaborn_palette.png width=4in
     air2d.plot(levels=10, cmap='husl')
 
+.. _plotting.faceting:
 
 Faceting
 --------
@@ -415,10 +416,7 @@ they have been plotted.
 
 .. ipython:: python
 
-    g = (xray.plot
-         .FacetGrid(t, col='time', col_wrap=3)
-         .map_dataarray(xray.plot.imshow, 'lon', 'lat', robust=True)
-         )
+    g = t.plot.imshow('lon', 'lat', col='time', col_wrap=3, robust=True)
 
     for i, ax in enumerate(g.axes.flat):
         ax.set_title('Air Temperature %d' % i)
