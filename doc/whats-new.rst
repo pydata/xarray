@@ -9,8 +9,8 @@ What's New
     import xray
     np.random.seed(123456)
 
-v0.6.1
-------
+v0.6.1 (21 October 2015)
+------------------------
 
 This release contains a number of bug and compatibility fixes, as well
 as enhancements to plotting, indexing and writing files to disk.
