@@ -16,8 +16,12 @@ Enhancements
 ~~~~~~~~~~~~
 
 - Support for reading GRIB, HDF4 and other file formats via PyNIO_. See
-  :ref:`io.pynio` for more details.
+  :ref:`io.pynio` for more details (:issue:`636`).
+- ``size`` and ``aspect`` plot arguments are supported even when not
+  facetting. See :ref:`plotting.size_and_aspect` for more details
+  (:issue:`637`).
 
+.. _PyNIO: https://www.pyngl.ucar.edu/Nio.shtml
 
 v0.6.1 (21 October 2015)
 ------------------------

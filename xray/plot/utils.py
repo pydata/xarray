@@ -1,3 +1,5 @@
+from __future__ import division
+
 import pkg_resources
 
 import numpy as np
@@ -195,3 +197,24 @@ def _infer_xy_labels(darray, x, y):
     elif any(k not in darray.coords for k in (x, y)):
         raise ValueError('x and y must be coordinate variables')
     return x, y
+
+
+def get_axis(size, aspect, ax):
+    import matplotlib as mpl
+    import matplotlib.pyplot as plt
+
+    if size is not None:
+        if ax is not None:
+            raise TypeError('cannot provide both `size` and `ax` arguments')
+        if aspect is None:
+            width, height = mpl.rcParams['figure.figsize']
+            aspect = width / height
+        figsize = (size * aspect, size)
+        _, ax = plt.subplots(figsize=figsize)
+    elif aspect is not None:
+        raise TypeError('cannot provide `aspect` argument without `size`')
+
+    if ax is None:
+        ax = plt.gca()
+
+    return ax

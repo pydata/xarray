@@ -134,6 +134,31 @@ axes created by ``plt.subplots``.
 
 On the right is a histogram created by :py:func:`xray.plot.hist`.
 
+.. _plotting.size_and_aspect:
+
+Size and Aspect Ratio
+~~~~~~~~~~~~~~~~~~~~~
+
+For convenience, xray's plotting methods support ``aspect`` and ``size``
+arguments which control the size of the resulting image via the formula
+``figsize = (aspect * size, size)``:
+
+.. ipython:: python
+
+    @savefig plotting_example_size_and_aspect.png
+    air1d.plot(aspect=2, size=2)
+
+.. ipython:: python
+    :suppress:
+
+    # create a dummy figure so sphinx plots everything below normally
+    plt.figure()
+
+This feature also works with :ref:`plotting.faceting_`.
+
+Note that if ``size`` is used, a new figure is created, so this is mutually
+exclusive with the ``ax`` argument for plotting on an existing axis.
+
 Two Dimensions
 --------------
 
