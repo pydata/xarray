@@ -57,4 +57,4 @@ pandas) installed first. Then, install xray with pip::
     $ pip install xray
 
 To run the test suite after installing xray, install
-`nose <https://nose.readthedocs.org>`__ and run ``nosetests xray``.
+`py.test <https://pytest.org>`__ and run ``py.test xray``.

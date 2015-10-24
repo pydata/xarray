@@ -6,11 +6,12 @@ dependencies:
   - h5py
   - matplotlib
   - netcdf4
-  - nose
+  - pytest
   - numpy
   - pandas
   - seaborn
   - scipy
   - pip:
     - coveralls
+    - pytest-cov
     - h5netcdf

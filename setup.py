@@ -1,10 +1,11 @@
- #!/usr/bin/env python
+#!/usr/bin/env python
 import os
 import re
 import sys
 import warnings
 
 from setuptools import setup, find_packages
+from setuptools import Command
 
 MAJOR = 0
 MINOR = 6
@@ -36,7 +37,7 @@ CLASSIFIERS = [
 ]
 
 INSTALL_REQUIRES = ['numpy >= 1.7', 'pandas >= 0.15.0']
-TESTS_REQUIRE = ['nose >= 1.0']
+TESTS_REQUIRE = ['pytest >= 2.7.1']
 
 if sys.version_info[:2] < (2, 7):
     TESTS_REQUIRE += ["unittest2 == 0.5.1"]
@@ -132,7 +133,6 @@ short_version = '%s'
 if write_version:
     write_version_py()
 
-
 setup(name=DISTNAME,
       version=FULLVERSION,
       license=LICENSE,
@@ -144,6 +144,5 @@ setup(name=DISTNAME,
       install_requires=INSTALL_REQUIRES,
       tests_require=TESTS_REQUIRE,
       url=URL,
-      test_suite='nose.collector',
       packages=find_packages(),
       package_data={'xray': ['test/data/*', 'plot/default_colormap.csv']})
