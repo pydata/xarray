@@ -404,8 +404,9 @@ attributes, both 2d Numpy object arrays.
 
     g.name_dicts
 
-It's possible to select the :py:class:`xray.DataArray` corresponding to the FacetGrid
-through the ``name_dicts``.
+It's possible to select the :py:class:`xray.DataArray` or
+:py:class:`xray.Dataset` corresponding to the FacetGrid through the
+``name_dicts``.
 
 .. ipython:: python
 
@@ -427,6 +428,8 @@ they have been plotted.
     @savefig plot_facet_iterator.png height=12in
     plt.show()
 
+TODO: add an example of using the ``map`` method to plot dataset variables
+(e.g., with ``plt.quiver``).
 
 Maps
 ----

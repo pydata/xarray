@@ -176,7 +176,7 @@ def _determine_cmap_params(plot_data, vmin=None, vmax=None, cmap=None,
         cmap, cnorm = _build_discrete_cmap(cmap, levels, extend, filled)
 
     return dict(vmin=vmin, vmax=vmax, cmap=cmap, extend=extend,
-                levels=levels, cnorm=cnorm)
+                levels=levels, norm=cnorm)
 
 
 def _infer_xy_labels(darray, x, y):

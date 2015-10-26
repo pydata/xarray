@@ -343,10 +343,6 @@ def _plot2d(plotfunc):
             allargs = locals().copy()
             allargs.update(allargs.pop('kwargs'))
 
-            # Allows use of better FacetGrid defaults
-            assert allargs.pop('add_labels')
-            assert allargs.pop('add_colorbar')
-
             # Need the decorated plotting function
             allargs['plotfunc'] = globals()[plotfunc.__name__]
 
@@ -408,7 +404,7 @@ def _plot2d(plotfunc):
             kwargs['levels'] = cmap_params['levels']
 
         # This allows the user to pass in a custom norm coming via kwargs
-        kwargs.setdefault('norm', cmap_params['cnorm'])
+        kwargs.setdefault('norm', cmap_params['norm'])
 
         ax, primitive = plotfunc(xval, yval, zval, ax=ax,
                                  cmap=cmap_params['cmap'],

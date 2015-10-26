@@ -32,6 +32,11 @@ def text_in_fig():
     return set(alltxt)
 
 
+def find_possible_colorbars():
+    # nb. this function also matches meshes from pcolormesh
+    return plt.gcf().findobj(mpl.collections.QuadMesh)
+
+
 def substring_in_axes(substring, ax):
     '''
     Return True if a substring is found anywhere in an axes
@@ -266,7 +271,7 @@ class TestDetermineCmapParams(TestCase):
         self.assertEqual(cmap_params['cmap'].name, 'viridis')
         self.assertEqual(cmap_params['extend'], 'both')
         self.assertIsNone(cmap_params['levels'])
-        self.assertIsNone(cmap_params['cnorm'])
+        self.assertIsNone(cmap_params['norm'])
 
     def test_center(self):
         cmap_params = _determine_cmap_params(self.data, center=0.5)
@@ -274,7 +279,7 @@ class TestDetermineCmapParams(TestCase):
         self.assertEqual(cmap_params['cmap'], 'RdBu_r')
         self.assertEqual(cmap_params['extend'], 'neither')
         self.assertIsNone(cmap_params['levels'])
-        self.assertIsNone(cmap_params['cnorm'])
+        self.assertIsNone(cmap_params['norm'])
 
     def test_integer_levels(self):
         data = self.data + 1
@@ -285,7 +290,7 @@ class TestDetermineCmapParams(TestCase):
         self.assertEqual(cmap_params['cmap'].name, 'Blues')
         self.assertEqual(cmap_params['extend'], 'neither')
         self.assertEqual(cmap_params['cmap'].N, 5)
-        self.assertEqual(cmap_params['cnorm'].N, 6)
+        self.assertEqual(cmap_params['norm'].N, 6)
 
         cmap_params = _determine_cmap_params(data, levels=5,
                                              vmin=0.5, vmax=1.5)
@@ -302,7 +307,7 @@ class TestDetermineCmapParams(TestCase):
         self.assertEqual(cmap_params['vmin'], 0)
         self.assertEqual(cmap_params['vmax'], 5)
         self.assertEqual(cmap_params['cmap'].N, 5)
-        self.assertEqual(cmap_params['cnorm'].N, 6)
+        self.assertEqual(cmap_params['norm'].N, 6)
 
         for wrap_levels in [list, np.array, pd.Index, DataArray]:
             cmap_params = _determine_cmap_params(
@@ -790,9 +795,7 @@ class TestFacetGrid(PlotTestCase):
             clim = np.array(image.get_clim())
             self.assertTrue(np.allclose(expected, clim))
 
-        # There's only one colorbar
-        cbar = plt.gcf().findobj(mpl.collections.QuadMesh)
-        self.assertEqual(1, len(cbar))
+        self.assertEqual(1, len(find_possible_colorbars()))
 
     def test_empty_cell(self):
         g = xplt.FacetGrid(self.darray, col='z', col_wrap=2)
@@ -884,6 +887,44 @@ class TestFacetGrid(PlotTestCase):
     def test_map(self):
         self.g.map(plt.contourf, 'x', 'y', Ellipsis)
         self.g.map(lambda: None)
+
+    def test_map_dataset(self):
+        g = xplt.FacetGrid(self.darray.to_dataset(name='foo'), col='z')
+        g.map(plt.contourf, 'x', 'y', 'foo')
+
+        alltxt = text_in_fig()
+        for label in ['x', 'y']:
+            self.assertIn(label, alltxt)
+        # everything has a label
+        self.assertNotIn('None', alltxt)
+
+        # colorbar can't be inferred automatically
+        self.assertNotIn('foo', alltxt)
+        self.assertEqual(0, len(find_possible_colorbars()))
+
+        g.add_colorbar(label='colors!')
+        self.assertIn('colors!', text_in_fig())
+        self.assertEqual(1, len(find_possible_colorbars()))
+
+    def test_set_axis_labels(self):
+        g = self.g.map_dataarray(xplt.contourf, 'x', 'y')
+        g.set_axis_labels('longitude', 'latitude')
+        alltxt = text_in_fig()
+        for label in ['longitude', 'latitude']:
+            self.assertIn(label, alltxt)
+
+    def test_facetgrid_colorbar(self):
+        a = easy_array((10, 15, 4))
+        d = DataArray(a, dims=['y', 'x', 'z'], name='foo')
+
+        d.plot.imshow(x='x', y='y', col='z')
+        self.assertEqual(1, len(find_possible_colorbars()))
+
+        d.plot.imshow(x='x', y='y', col='z', add_colorbar=True)
+        self.assertEqual(1, len(find_possible_colorbars()))
+
+        d.plot.imshow(x='x', y='y', col='z', add_colorbar=False)
+        self.assertEqual(0, len(find_possible_colorbars()))
 
 
 class TestFacetGrid4d(PlotTestCase):
