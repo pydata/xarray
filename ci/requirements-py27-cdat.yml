@@ -5,10 +5,11 @@ dependencies:
   - python=2.7
   - cdat-lite
   - dask
-  - nose
+  - pytest
   - numpy
   - pandas>=0.15.0
   - scipy
   - pip:
     - coveralls
+    - pytest-cov
     - cyordereddict

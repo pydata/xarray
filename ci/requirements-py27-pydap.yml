@@ -4,10 +4,11 @@ dependencies:
   - dask
   - h5py
   - netcdf4
-  - nose
+  - pytest
   - numpy
   - pandas
   - scipy
   - pip:
     - coveralls
+    - pytest-cov
     - pydap

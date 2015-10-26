@@ -4,11 +4,12 @@ dependencies:
   - cython
   - dask
   - h5py
-  - nose
+  - pytest
   - numpy
   - pandas
   - scipy
   - pip:
     - coveralls
+    - pytest-cov
     - h5netcdf
     - git+https://github.com/Unidata/netcdf4-python.git
