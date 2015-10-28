@@ -117,9 +117,9 @@ def open_dataset(filename_or_obj, group=None, decode_cf=True,
     decode_coords : bool, optional
         If True, decode the 'coordinates' attribute to identify coordinates in
         the resulting dataset.
-    engine : {'netcdf4', 'scipy', 'pydap', 'h5netcdf'}, optional
-        Engine to use when reading netCDF files. If not provided, the default
-        engine is chosen based on available dependencies, with a preference for
+    engine : {'netcdf4', 'scipy', 'pydap', 'h5netcdf', 'pynio'}, optional
+        Engine to use when reading files. If not provided, the default engine
+        is chosen based on available dependencies, with a preference for
         'netcdf4'.
     chunks : int or dict, optional
         If chunks is provided, it used to load the new dataset into dask
@@ -268,9 +268,9 @@ def open_mfdataset(paths, chunks=None, concat_dim=None, preprocess=None,
         want to stack a collection of 2D arrays along a third dimension.
     preprocess : callable, optional
         If provided, call this function on each dataset prior to concatenation.
-    engine : {'netcdf4', 'scipy', 'pydap', 'h5netcdf'}, optional
-        Engine to use when reading netCDF files. If not provided, the default
-        engine is chosen based on available dependencies, with a preference for
+    engine : {'netcdf4', 'scipy', 'pydap', 'h5netcdf', 'pynio'}, optional
+        Engine to use when reading files. If not provided, the default engine
+        is chosen based on available dependencies, with a preference for
         'netcdf4'.
     lock : False, True or threading.Lock, optional
         This argument is passed on to :py:func:`dask.array.from_array`. By

@@ -15,10 +15,8 @@ v0.6.2 (unreleased)
 Enhancements
 ~~~~~~~~~~~~
 
-- Read-only support for reading files with PyNIO_. Use ``engine='pynio'``
-  with :py:func:`xray.open_dataset`.
-
-_PyNIO: https://www.pyngl.ucar.edu/Nio.shtml
+- Support for reading GRIB, HDF4 and other file formats via PyNIO_. See
+  :ref:`io.pynio` for more details.
 
 
 v0.6.1 (21 October 2015)

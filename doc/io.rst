@@ -337,6 +337,21 @@ over the network until we look at particular values:
 
 .. image:: _static/opendap-prism-tmax.png
 
+.. _io.pynio:
+
+Formats supported by PyNIO
+--------------------------
+
+Xray can also read GRIB, HDF4 and other file formats supported by PyNIO_,
+if PyNIO is installed. To use PyNIO to read such files, supply
+``engine='pynio'`` to :py:func:`~xray.open_dataset`.
+
+We recommend installing PyNIO via conda::
+
+    conda install -c dbrown pynio
+
+.. _PyNIO: https://www.pyngl.ucar.edu/Nio.shtml
+
 .. _combining multiple files:
 
 Combining multiple files
