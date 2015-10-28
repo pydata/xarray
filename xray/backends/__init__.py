@@ -7,5 +7,6 @@ from .common import AbstractDataStore
 from .memory import InMemoryDataStore
 from .netCDF4_ import NetCDF4DataStore
 from .pydap_ import PydapDataStore
+from .pynio_ import NioDataStore
 from .scipy_ import ScipyDataStore
 from .h5netcdf_ import H5NetCDFStore

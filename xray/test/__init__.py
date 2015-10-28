@@ -41,6 +41,13 @@ except ImportError:
 
 
 try:
+    import Nio
+    has_pynio = True
+except ImportError:
+    has_pynio = False
+
+
+try:
     import dask.array
     import dask
     dask.set_options(get=dask.get)
@@ -70,6 +77,10 @@ def requires_netCDF4(test):
 
 def requires_h5netcdf(test):
     return test if has_h5netcdf else unittest.skip('requires h5netcdf')(test)
+
+
+def requires_pynio(test):
+    return test if has_pynio else unittest.skip('requires pynio')(test)
 
 
 def requires_scipy_or_netCDF4(test):

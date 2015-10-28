@@ -742,8 +742,8 @@ def decode_cf_variable(var, concat_characters=True, mask_and_scale=True,
                                  "xray.conventions.decode_cf(ds)")
             attributes['_FillValue'] = attributes.pop('missing_value')
 
-        fill_value = pop_to(attributes, encoding, '_FillValue')
-        if getattr(fill_value, 'size', 1) > 1:
+        fill_value = np.array(pop_to(attributes, encoding, '_FillValue'))
+        if fill_value.size > 1:
             warnings.warn("variable has multiple fill values {0}, decoding "
                           "all values to NaN.".format(str(fill_value)),
                           RuntimeWarning, stacklevel=3)
@@ -751,7 +751,7 @@ def decode_cf_variable(var, concat_characters=True, mask_and_scale=True,
         add_offset = pop_to(attributes, encoding, 'add_offset')
         if ((fill_value is not None and not np.any(pd.isnull(fill_value))) or
                 scale_factor is not None or add_offset is not None):
-            if isinstance(fill_value, (bytes_type, unicode_type)):
+            if fill_value.dtype.kind in ['U', 'S']:
                 dtype = object
             else:
                 dtype = float

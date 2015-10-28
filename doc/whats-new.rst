@@ -9,6 +9,16 @@ What's New
     import xray
     np.random.seed(123456)
 
+v0.6.2 (unreleased)
+-------------------
+
+Enhancements
+~~~~~~~~~~~~
+
+- Support for reading GRIB, HDF4 and other file formats via PyNIO_. See
+  :ref:`io.pynio` for more details.
+
+
 v0.6.1 (21 October 2015)
 ------------------------
 
