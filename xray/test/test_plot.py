@@ -150,6 +150,19 @@ class TestPlot(PlotTestCase):
         for ax in g.axes.flat:
             self.assertEqual(ax.get_axis_bgcolor(), 'r')
 
+    def test_plot_size(self):
+        self.darray.plot(size=5)
+        assert plt.gcf().get_size_inches()[1] == 5
+
+        self.darray.plot(size=5, aspect=2)
+        assert tuple(plt.gcf().get_size_inches()) == (10, 5)
+
+        with self.assertRaisesRegexp(TypeError, 'cannot provide both'):
+            self.darray.plot(size=5, ax=plt.gca())
+
+        with self.assertRaisesRegexp(TypeError, 'cannot provide `aspect`'):
+            self.darray.plot(aspect=1, ax=plt.gca())
+
     def test_convenient_facetgrid_4d(self):
         a = easy_array((10, 15, 2, 3))
         d = DataArray(a, dims=['y', 'x', 'columns', 'rows'])

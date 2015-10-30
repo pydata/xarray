@@ -13,7 +13,7 @@ import warnings
 import numpy as np
 import pandas as pd
 
-from .utils import _determine_cmap_params, _infer_xy_labels
+from .utils import _determine_cmap_params, _infer_xy_labels, get_axis
 from .facetgrid import FacetGrid
 
 
@@ -39,7 +39,7 @@ def _ensure_plottable(*args):
 
 
 def _easy_facetgrid(darray, plotfunc, x, y, row=None, col=None, col_wrap=None,
-                    aspect=1, size=3, subplot_kws=None, **kwargs):
+                    aspect=None, size=None, subplot_kws=None, **kwargs):
     """
     Convenience method to call xray.plot.FacetGrid from 2d plotting methods
 
@@ -48,7 +48,10 @@ def _easy_facetgrid(darray, plotfunc, x, y, row=None, col=None, col_wrap=None,
     ax = kwargs.pop('ax', None)
     if ax is not None:
         raise ValueError("Can't use axes when making faceted plots.")
-
+    if aspect is None:
+        aspect = 1
+    if size is None:
+        size = 3
     g = FacetGrid(data=darray, col=col, row=row, col_wrap=col_wrap,
                   aspect=aspect, size=size, subplot_kws=subplot_kws)
     return g.map_dataarray(plotfunc, x, y, **kwargs)
@@ -136,8 +139,15 @@ def line(darray, *args, **kwargs):
     ----------
     darray : DataArray
         Must be 1 dimensional
-    ax : matplotlib axes, optional
-        If not passed, uses the current axis
+    aspect : scalar, optional
+        Aspect ratio of plot, so that ``aspect * size`` gives the width in
+        inches. Only used if a ``size`` is provided.
+    size : scalar, optional
+        If provided, create a new figure for the plot with the given size.
+        Height (in inches) of each plot. See also: ``aspect``.
+    ax : matplotlib axes object, optional
+        Axis on which to plot this figure. By default, use the current axis.
+        Mutually exclusive with ``size``.
     *args, **kwargs : optional
         Additional arguments to matplotlib.pyplot.plot
 
@@ -151,12 +161,13 @@ def line(darray, *args, **kwargs):
                          'dimensions'.format(ndims=ndims))
 
     # Ensures consistency with .plot method
+    size = kwargs.pop('size', None)
+    aspect = kwargs.pop('aspect', None)
     ax = kwargs.pop('ax', None)
 
-    if ax is None:
-        ax = plt.gca()
+    ax = get_axis(size, aspect, ax)
 
-    xlabel, x = list(darray.indexes.items())[0]
+    (xlabel, x), = darray.indexes.items()
 
     _ensure_plottable([x])
 
@@ -175,7 +186,7 @@ def line(darray, *args, **kwargs):
     return primitive
 
 
-def hist(darray, ax=None, **kwargs):
+def hist(darray, aspect=None, size=None, ax=None, **kwargs):
     """
     Histogram of DataArray
 
@@ -187,16 +198,22 @@ def hist(darray, ax=None, **kwargs):
     ----------
     darray : DataArray
         Can be any dimension
-    ax : matplotlib axes, optional
-        If not passed, uses the current axis
+    aspect : scalar, optional
+        Aspect ratio of plot, so that ``aspect * size`` gives the width in
+        inches. Only used if a ``size`` is provided.
+    size : scalar, optional
+        If provided, create a new figure for the plot with the given size.
+        Height (in inches) of each plot. See also: ``aspect``.
+    ax : matplotlib axes object, optional
+        Axis on which to plot this figure. By default, use the current axis.
+        Mutually exclusive with ``size``.
     **kwargs : optional
         Additional keyword arguments to matplotlib.pyplot.hist
 
     """
     import matplotlib.pyplot as plt
 
-    if ax is None:
-        ax = plt.gca()
+    ax = get_axis(size, aspect, ax)
 
     no_nan = np.ravel(darray.values)
     no_nan = no_nan[pd.notnull(no_nan)]
@@ -269,14 +286,21 @@ def _plot2d(plotfunc):
         Coordinate for x axis. If None use darray.dims[1]
     y : string, optional
         Coordinate for y axis. If None use darray.dims[0]
-    ax : matplotlib axes object, optional
-        If None, uses the current axis
     row : string, optional
         If passed, make row faceted plots on this dimension name
     col : string, optional
         If passed, make column faceted plots on this dimension name
     col_wrap : integer, optional
         Use together with ``col`` to wrap faceted plots
+    aspect : scalar, optional
+        Aspect ratio of plot, so that ``aspect * size`` gives the width in
+        inches. Only used if a ``size`` is provided.
+    size : scalar, optional
+        If provided, create a new figure for the plot with the given size.
+        Height (in inches) of each plot. See also: ``aspect``.
+    ax : matplotlib axes object, optional
+        Axis on which to plot this figure. By default, use the current axis.
+        Mutually exclusive with ``size``.
     xincrease : None, True, or False, optional
         Should the values on the x axes be increasing from left to right?
         if None, use the default for the matplotlib function
@@ -330,11 +354,12 @@ def _plot2d(plotfunc):
     plotfunc.__doc__ = '\n'.join((plotfunc.__doc__, commondoc))
 
     @functools.wraps(plotfunc)
-    def newplotfunc(darray, x=None, y=None, ax=None, row=None, col=None,
-                    col_wrap=None, xincrease=True, yincrease=True,
-                    add_colorbar=True, add_labels=True, vmin=None, vmax=None,
-                    cmap=None, center=None, robust=False, extend=None,
-                    levels=None, colors=None, subplot_kws=None, **kwargs):
+    def newplotfunc(darray, x=None, y=None, row=None, col=None, col_wrap=None,
+                    aspect=None, size=None, ax=None, xincrease=True,
+                    yincrease=True, add_colorbar=True, add_labels=True,
+                    vmin=None, vmax=None, cmap=None, center=None, robust=False,
+                    extend=None, levels=None, colors=None, subplot_kws=None,
+                    **kwargs):
         # All 2d plots in xray share this function signature.
         # Method signature below should be consistent.
 
@@ -363,9 +388,6 @@ def _plot2d(plotfunc):
             warnings.warn("Specifying a list of colors in cmap is deprecated. "
                           "Use colors keyword instead.",
                           DeprecationWarning, stacklevel=3)
-
-        if ax is None:
-            ax = plt.gca()
 
         xlab, ylab = _infer_xy_labels(darray=darray, x=x, y=y)
 
@@ -406,11 +428,10 @@ def _plot2d(plotfunc):
         # This allows the user to pass in a custom norm coming via kwargs
         kwargs.setdefault('norm', cmap_params['norm'])
 
-        ax, primitive = plotfunc(xval, yval, zval, ax=ax,
-                                 cmap=cmap_params['cmap'],
-                                 vmin=cmap_params['vmin'],
-                                 vmax=cmap_params['vmax'],
-                                 **kwargs)
+        ax = get_axis(size, aspect, ax)
+        primitive = plotfunc(xval, yval, zval, ax=ax, cmap=cmap_params['cmap'],
+                             vmin=cmap_params['vmin'],
+                             vmax=cmap_params['vmax'], **kwargs)
 
         # Label the plot with metadata
         if add_labels:
@@ -429,11 +450,12 @@ def _plot2d(plotfunc):
 
     # For use as DataArray.plot.plotmethod
     @functools.wraps(newplotfunc)
-    def plotmethod(_PlotMethods_obj, x=None, y=None, ax=None, row=None,
-                   col=None, col_wrap=None, xincrease=True, yincrease=True,
-                   add_colorbar=True, add_labels=True, vmin=None, vmax=None,
-                   cmap=None, colors=None, center=None, robust=False,
-                   extend=None, levels=None, subplot_kws=None, **kwargs):
+    def plotmethod(_PlotMethods_obj, x=None, y=None, row=None, col=None,
+                   col_wrap=None, aspect=None, size=None, ax=None,
+                   xincrease=True, yincrease=True, add_colorbar=True,
+                   add_labels=True, vmin=None, vmax=None, cmap=None,
+                   colors=None, center=None, robust=False, extend=None,
+                   levels=None, subplot_kws=None, **kwargs):
         """
         The method should have the same signature as the function.
 
@@ -493,7 +515,7 @@ def imshow(x, y, z, ax, **kwargs):
 
     primitive = ax.imshow(z, **defaults)
 
-    return ax, primitive
+    return primitive
 
 
 @_plot2d
@@ -504,7 +526,7 @@ def contour(x, y, z, ax, **kwargs):
     Wraps matplotlib.pyplot.contour
     """
     primitive = ax.contour(x, y, z, **kwargs)
-    return ax, primitive
+    return primitive
 
 
 @_plot2d
@@ -515,7 +537,7 @@ def contourf(x, y, z, ax, **kwargs):
     Wraps matplotlib.pyplot.contourf
     """
     primitive = ax.contourf(x, y, z, **kwargs)
-    return ax, primitive
+    return primitive
 
 
 def _infer_interval_breaks(coord):
@@ -549,4 +571,4 @@ def pcolormesh(x, y, z, ax, **kwargs):
         ax.set_xlim(x[0], x[-1])
         ax.set_ylim(y[0], y[-1])
 
-    return ax, primitive
+    return primitive
