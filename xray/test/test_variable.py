@@ -197,6 +197,11 @@ class VariableSubclassTestCases(object):
         v = self.cls(['x'], pd.Index([0, 1, 2]))
         self.assertEqual(v[0].values, v.values[0])
 
+    def test_pandas_period_index(self):
+        v = self.cls(['x'], pd.period_range(start='2000', periods=20, freq='B'))
+        self.assertEqual(v[0], pd.Period('2000', freq='B'))
+        repr(v)
+
     def test_1d_math(self):
         x = 1.0 * np.arange(5)
         y = np.ones(5)
