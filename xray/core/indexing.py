@@ -368,7 +368,11 @@ class PandasIndexAdapter(utils.NDArrayMixin):
     def __init__(self, array, dtype=None):
         self.array = utils.safe_cast_to_index(array)
         if dtype is None:
-            dtype = array.dtype
+            # if a PeriodIndex, force an object dtype
+            if isinstance(array, pd.PeriodIndex):
+                dtype = np.dtype('O')
+            else:
+                dtype = array.dtype
         self._dtype = dtype
 
     @property

@@ -107,6 +107,13 @@ class TestDataset(TestCase):
         data = Dataset(attrs={'foo': 'bar' * 1000})
         self.assertTrue(len(repr(data)) < 1000)
 
+    def test_repr_period_index(self):
+        data = create_test_data(seed=456)
+        data.coords['time'] = pd.period_range('2000-01-01', periods=20, freq='B')
+
+        # check that creating the repr doesn't raise an error #GH645
+        repr(data)
+
     def test_constructor(self):
         x1 = ('x', 2 * np.arange(100))
         x2 = ('x', np.arange(1000))

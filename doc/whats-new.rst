@@ -18,6 +18,10 @@ Enhancements
 - Support for reading GRIB, HDF4 and other file formats via PyNIO_. See
   :ref:`io.pynio` for more details.
 
+Bug fixes
+~~~~~~~~~
+
+- Allows for (imperfect) repr of Coords when underlying index is PeriodIndex (:issue:`645`).
 
 v0.6.1 (21 October 2015)
 ------------------------
