@@ -114,7 +114,8 @@ class TestDataset(TestCase):
 
         with self.assertRaisesRegexp(ValueError, 'conflicting sizes'):
             Dataset({'a': x1, 'b': x2})
-        with self.assertRaisesRegexp(ValueError, 'must be defined with 1-d'):
+        with self.assertRaisesRegexp(ValueError,
+                "variable 'x' has the same name"):
             Dataset({'a': x1, 'x': z})
         with self.assertRaisesRegexp(TypeError, 'must be an array or'):
             Dataset({'x': (1, 2, 3, 4, 5, 6, 7)})

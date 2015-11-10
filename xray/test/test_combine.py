@@ -134,7 +134,7 @@ class TestConcatDataset(TestCase):
             data1['dim2'] = 2 * data1['dim2']
             concat([data0, data1], 'dim1', coords='minimal')
 
-        with self.assertRaisesRegexp(ValueError, 'must be defined with 1-d'):
+        with self.assertRaisesRegexp(ValueError, 'it is not 1-dimensional'):
             concat([data0, data1], 'dim1')
 
         with self.assertRaisesRegexp(ValueError, 'compat.* invalid'):

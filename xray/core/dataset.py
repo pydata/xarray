@@ -72,8 +72,9 @@ def _as_dataset_variable(name, var):
     if name in var.dims:
         # convert the into an Index
         if var.ndim != 1:
-            raise ValueError('an index variable must be defined with '
-                             '1-dimensional data')
+            raise ValueError('the variable %r has the same name as one of its '
+                             'dimensions %r, but it is not 1-dimensional and '
+                             'thus it is not a valid index' % (name, var.dims))
         var = var.to_coord()
     return var
 

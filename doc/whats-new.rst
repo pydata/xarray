@@ -17,6 +17,8 @@ Enhancements
 
 - Support for reading GRIB, HDF4 and other file formats via PyNIO_. See
   :ref:`io.pynio` for more details.
+- Better error message when a variable is supplied with the same name as
+  one of its dimensions.
 
 
 v0.6.1 (21 October 2015)
