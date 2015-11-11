@@ -183,9 +183,9 @@ to access any variable in a dataset, datasets have four key properties:
 
 - ``dims``: a dictionary mapping from dimension names to the fixed length of
   each dimension (e.g., ``{'x': 6, 'y': 6, 'time': 8}``)
-- ``data_vars``: a dict-like container of DataArrays corresponding to variables
+- ``variables``: a dict-like container of DataArrays corresponding to variables
 - ``coords``: another dict-like container of DataArrays intended to label points
-  used in ``data_vars`` (e.g., 1-dimensional arrays of numbers, datetime
+  used in ``variables`` (e.g., 1-dimensional arrays of numbers, datetime
   objects or strings)
 - ``attrs``: an ``OrderedDict`` to hold arbitrary metadata
 
@@ -217,7 +217,7 @@ To make an :py:class:`~xray.Dataset` from scratch, supply dictionaries for any
 variables, coordinates and attributes you would like to insert into the
 dataset.
 
-For the ``vars`` and ``coords`` arguments, keys should be the name of the
+For the ``variables`` and ``coords`` arguments, keys should be the name of the
 variable and values should be scalars, 1d arrays or tuples of the form
 ``(dims, data[, attrs])`` sufficient to label each array:
 
