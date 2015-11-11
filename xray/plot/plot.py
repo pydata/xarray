@@ -290,8 +290,10 @@ def _plot2d(plotfunc):
     vmin, vmax : floats, optional
         Values to anchor the colormap, otherwise they are inferred from the
         data and other keyword arguments. When a diverging dataset is inferred,
-        one of these values may be ignored. If discrete levels are provided as
-        an explicit list, both of these values are ignored.
+        setting one of these values will fix the other by symmetry around
+        ``center``. Setting both values prevents use of a diverging colormap.
+        If discrete levels are provided as an explicit list, both of these
+        values are ignored.
     cmap : matplotlib colormap name or object, optional
         The mapping from data values to color space. If not provided, this
         will be either be ``viridis`` (if the function infers a sequential
@@ -304,7 +306,8 @@ def _plot2d(plotfunc):
         or ``contourf``, the ``levels`` argument is required.
     center : float, optional
         The value at which to center the colormap. Passing this value implies
-        use of a diverging colormap.
+        use of a diverging colormap. Setting it to ``False`` prevents use of a
+        diverging colormap.
     robust : bool, optional
         If True and ``vmin`` or ``vmax`` are absent, the colormap range is
         computed with 2nd and 98th percentiles instead of the extreme values.

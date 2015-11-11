@@ -123,28 +123,48 @@ def _determine_cmap_params(plot_data, vmin=None, vmax=None, cmap=None,
 
     calc_data = np.ravel(plot_data[~pd.isnull(plot_data)])
 
+    # Setting center=False prevents a divergent cmap
+    possibly_divergent = center is not False
+
+    # Set center to 0 so math below makes sense but remember its state
+    center_is_none = False
+    if center is None:
+        center = 0
+        center_is_none = True
+
+    # Setting both vmin and vmax prevents a divergent cmap
+    if (vmin is not None) and (vmax is not None):
+        possibly_divergent = False
+
+    # vlim might be computed below
+    vlim = None
+
     if vmin is None:
         if robust:
             vmin = np.percentile(calc_data, ROBUST_PERCENTILE)
         else:
             vmin = calc_data.min()
+    elif possibly_divergent:
+        vlim = abs(vmin - center)
 
     if vmax is None:
         if robust:
             vmax = np.percentile(calc_data, 100 - ROBUST_PERCENTILE)
         else:
             vmax = calc_data.max()
+    elif possibly_divergent:
+        vlim = abs(vmax - center)
 
-    # Simple heuristics for whether these data should  have a divergent map
-    divergent = ((vmin < 0) and (vmax > 0)) or center is not None
-
-    # Now set center to 0 so math below makes sense
-    if center is None:
-        center = 0
+    if possibly_divergent:
+        # kwargs not specific about divergent or not: infer defaults from data
+        divergent = ((vmin < 0) and (vmax > 0)) or not center_is_none
+    else:
+        divergent = False
 
     # A divergent map should be symmetric around the center value
     if divergent:
-        vlim = max(abs(vmin - center), abs(vmax - center))
+        if vlim is None:
+            vlim = max(abs(vmin - center), abs(vmax - center))
         vmin, vmax = -vlim, vlim
 
     # Now add in the centering value and set the limits
