@@ -19,6 +19,9 @@ Enhancements
   :ref:`io.pynio` for more details.
 - Better error message when a variable is supplied with the same name as
   one of its dimensions.
+- Plotting: more control on colormap parameters (:issue:`642`). ``vmin`` and
+  ``vmax`` will not be silently ignored anymore. Setting ``center=False``
+  prevents automatic selection of a divergent colormap.
 
 Bug fixes
 ~~~~~~~~~

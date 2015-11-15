@@ -314,6 +314,78 @@ class TestDetermineCmapParams(TestCase):
                 data, levels=wrap_levels(orig_levels))
             self.assertArrayEqual(cmap_params['levels'], orig_levels)
 
+    def test_divergentcontrol(self):
+        neg = self.data - 0.1
+        pos = self.data
+
+        # Default with positive data will be a normal cmap
+        cmap_params = _determine_cmap_params(pos)
+        self.assertEqual(cmap_params['vmin'], 0)
+        self.assertEqual(cmap_params['vmax'], 1)
+        self.assertEqual(cmap_params['cmap'].name, "viridis")
+
+        # Default with negative data will be a divergent cmap
+        cmap_params = _determine_cmap_params(neg)
+        self.assertEqual(cmap_params['vmin'], -0.9)
+        self.assertEqual(cmap_params['vmax'], 0.9)
+        self.assertEqual(cmap_params['cmap'], "RdBu_r")
+
+        # Setting vmin or vmax should prevent this only if center is false
+        cmap_params = _determine_cmap_params(neg, vmin=-0.1, center=False)
+        self.assertEqual(cmap_params['vmin'], -0.1)
+        self.assertEqual(cmap_params['vmax'], 0.9)
+        self.assertEqual(cmap_params['cmap'].name, "viridis")
+        cmap_params = _determine_cmap_params(neg, vmax=0.5, center=False)
+        self.assertEqual(cmap_params['vmin'], -0.1)
+        self.assertEqual(cmap_params['vmax'], 0.5)
+        self.assertEqual(cmap_params['cmap'].name, "viridis")
+
+        # Setting center=False too
+        cmap_params = _determine_cmap_params(neg, center=False)
+        self.assertEqual(cmap_params['vmin'], -0.1)
+        self.assertEqual(cmap_params['vmax'], 0.9)
+        self.assertEqual(cmap_params['cmap'].name, "viridis")
+
+        # However, I should still be able to set center and have a div cmap
+        cmap_params = _determine_cmap_params(neg, center=0)
+        self.assertEqual(cmap_params['vmin'], -0.9)
+        self.assertEqual(cmap_params['vmax'], 0.9)
+        self.assertEqual(cmap_params['cmap'], "RdBu_r")
+
+        # Setting vmin or vmax alone will force symetric bounds around center
+        cmap_params = _determine_cmap_params(neg, vmin=-0.1)
+        self.assertEqual(cmap_params['vmin'], -0.1)
+        self.assertEqual(cmap_params['vmax'], 0.1)
+        self.assertEqual(cmap_params['cmap'], "RdBu_r")
+        cmap_params = _determine_cmap_params(neg, vmax=0.5)
+        self.assertEqual(cmap_params['vmin'], -0.5)
+        self.assertEqual(cmap_params['vmax'], 0.5)
+        self.assertEqual(cmap_params['cmap'], "RdBu_r")
+        cmap_params = _determine_cmap_params(neg, vmax=0.6, center=0.1)
+        self.assertEqual(cmap_params['vmin'], -0.4)
+        self.assertEqual(cmap_params['vmax'], 0.6)
+        self.assertEqual(cmap_params['cmap'], "RdBu_r")
+
+        # But this is only true if vmin or vmax are negative
+        cmap_params = _determine_cmap_params(pos, vmin=-0.1)
+        self.assertEqual(cmap_params['vmin'], -0.1)
+        self.assertEqual(cmap_params['vmax'], 0.1)
+        self.assertEqual(cmap_params['cmap'], "RdBu_r")
+        cmap_params = _determine_cmap_params(pos, vmin=0.1)
+        self.assertEqual(cmap_params['vmin'], 0.1)
+        self.assertEqual(cmap_params['vmax'], 1)
+        self.assertEqual(cmap_params['cmap'].name, "viridis")
+        cmap_params = _determine_cmap_params(pos, vmax=0.5)
+        self.assertEqual(cmap_params['vmin'], 0)
+        self.assertEqual(cmap_params['vmax'], 0.5)
+        self.assertEqual(cmap_params['cmap'].name, "viridis")
+
+        # If both vmin and vmax are provided, output is non-divergent
+        cmap_params = _determine_cmap_params(neg, vmin=-0.2, vmax=0.6)
+        self.assertEqual(cmap_params['vmin'], -0.2)
+        self.assertEqual(cmap_params['vmax'], 0.6)
+        self.assertEqual(cmap_params['cmap'].name, "viridis")
+
 
 @requires_matplotlib
 class TestDiscreteColorMap(TestCase):
