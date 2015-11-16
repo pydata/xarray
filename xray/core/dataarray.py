@@ -144,13 +144,13 @@ class DataArray(AbstractArray, BaseDataObject):
         dims : str or sequence of str, optional
             Name(s) of the the data dimension(s). Must be either a string (only
             for 1D data) or a sequence of strings with length equal to the
-            number of dimensions. If this argument is omited, dimension names
+            number of dimensions. If this argument is omitted, dimension names
             are taken from ``coords`` (if possible) and otherwise default to
             ``['dim_0', ... 'dim_n']``.
         name : str or None, optional
             Name of this array.
         attrs : dict_like or None, optional
-            Attributes to assign to the new variable. By default, an empty
+            Attributes to assign to the new instance. By default, an empty
             attribute dictionary is initialized.
         encoding : dict_like or None, optional
             Dictionary specifying how to encode this array's data into a
