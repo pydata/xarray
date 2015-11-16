@@ -134,6 +134,19 @@ class TestDataset(TestCase):
         actual = Dataset({'z': expected['z']})
         self.assertDatasetIdentical(expected, actual)
 
+    def test_constructor_kwargs(self):
+        x1 = ('x', 2 * np.arange(100))
+
+        with self.assertRaises(TypeError):
+            Dataset(data_vars={'x1': x1}, invalid_kwarg=42)
+
+        import warnings
+        # this can be removed once the variables keyword is fully removed
+        with warnings.catch_warnings(record=False):
+            ds = Dataset(variables={'x1': x1})
+        # but assert dataset is still created
+        self.assertDatasetEqual(ds, Dataset(data_vars={'x1': x1}))
+
     def test_constructor_1d(self):
         expected = Dataset({'x': (['x'], 5.0 + np.arange(5))})
         actual = Dataset({'x': 5.0 + np.arange(5)})

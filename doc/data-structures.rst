@@ -226,7 +226,7 @@ To make an :py:class:`~xray.Dataset` from scratch, supply dictionaries for any
 variables, coordinates and attributes you would like to insert into the
 dataset.
 
-For the ``variables`` and ``coords`` arguments, keys should be the name of the
+For the ``data_vars`` and ``coords`` arguments, keys should be the name of the
 variable and values should be scalars, 1d arrays or tuples of the form
 ``(dims, data[, attrs])`` sufficient to label each array:
 
