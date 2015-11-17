@@ -15,7 +15,9 @@ __ http://www.jstatsoft.org/v40/i01/paper
 
 Group by operations work on both :py:class:`~xray.Dataset` and
 :py:class:`~xray.DataArray` objects. Currently, you can only group by a single
-one-dimensional variable (eventually, we hope to remove this limitation).
+one-dimensional variable (eventually, we hope to remove this limitation). Also,
+note that for one-dimensional data, it is usually faster to rely on pandas'
+implementation of the same pipeline.
 
 Split
 ~~~~~
