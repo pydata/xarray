@@ -532,6 +532,11 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
 
         data = ops.concatenate(arrays, axis)
 
+        if isinstance(data, dask_array_type):
+            # chunked data should come out with the same chunks; this makes
+            # it feasible to combine shifted and unshifted data
+            data = data.rechunk(self.data.chunks)
+
         return type(self)(self.dims, data, self._attrs, fastpath=True)
 
     def shift(self, **shifts):

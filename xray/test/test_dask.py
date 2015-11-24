@@ -109,6 +109,7 @@ class TestVariable(DaskTestCase):
         v = self.lazy_var
         self.assertLazyAndIdentical(u.shift(x=2), v.shift(x=2))
         self.assertLazyAndIdentical(u.shift(x=-2), v.shift(x=-2))
+        self.assertEqual(v.data.chunks, v.shift(x=1).data.chunks)
 
     def test_unary_op(self):
         u = self.eager_var
