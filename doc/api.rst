@@ -112,6 +112,7 @@ Computation
    Dataset.transpose
    Dataset.diff
    Dataset.shift
+   Dataset.roll
 
 **Aggregation**:
 :py:attr:`~Dataset.all`
@@ -229,6 +230,7 @@ Computation
    DataArray.get_axis_num
    DataArray.diff
    DataArray.shift
+   DataArray.roll
 
 **Aggregation**:
 :py:attr:`~DataArray.all`

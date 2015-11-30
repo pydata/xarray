@@ -2084,8 +2084,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject):
     def shift(self, **shifts):
         """Shift this dataset by an offset along one or more dimensions.
 
-        Only data variables are moved; coordinates stay in place. Values
-        shifted from bounds beyond dataset bounds are replaced by NaN.
+        Only data variables are moved; coordinates stay in place. This is
+        consistent with the behavior of ``shift`` in pandas.
 
         Parameters
         ----------
@@ -2134,14 +2134,14 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject):
     def roll(self, **shifts):
         """Roll this dataset by an offset along one or more dimensions.
 
-        Unlike shift, roll shifts all variables, including coordinates.
+        Unlike shift, roll rotates all variables, including coordinates. The
+        direction of rotation is consistent with :py:func:`numpy.roll`.
 
         Parameters
         ----------
         **shifts : keyword arguments of the form {dim: offset}
-            Integer offset to roll along each of the given dimensions.
-            Positive offsets roll to the right; negative offsets roll to the
-            left.
+            Integer offset to rotate each of the given dimensions. Positive
+            offsets roll to the right; negative offsets roll to the left.
 
         Returns
         -------

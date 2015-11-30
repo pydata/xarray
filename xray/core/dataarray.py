@@ -1193,7 +1193,8 @@ class DataArray(AbstractArray, BaseDataObject):
         """Shift this array by an offset along one or more dimensions.
 
         Only the data is moved; coordinates stay in place. Values shifted from
-        beyond array bounds are replaced by NaN.
+        beyond array bounds are replaced by NaN. This is consistent with the
+        behavior of ``shift`` in pandas.
 
         Parameters
         ----------
@@ -1207,6 +1208,10 @@ class DataArray(AbstractArray, BaseDataObject):
         shifted : DataArray
             DataArray with the same coordinates and attributes but shifted
             data.
+
+        See also
+        --------
+        roll
 
         Examples
         --------
@@ -1225,7 +1230,8 @@ class DataArray(AbstractArray, BaseDataObject):
     def roll(self, **shifts):
         """Roll this array by an offset along one or more dimensions.
 
-        Unlike shift, roll rotates all variables, including coordinates.
+        Unlike shift, roll rotates all variables, including coordinates. The
+        direction of rotation is consistent with :py:func:`numpy.roll`.
 
         Parameters
         ----------
@@ -1235,8 +1241,12 @@ class DataArray(AbstractArray, BaseDataObject):
 
         Returns
         -------
-        shifted : DataArray
+        rolled : DataArray
             DataArray with the same attributes but rolled data and coordinates.
+
+        See also
+        --------
+        shift
 
         Examples
         --------
