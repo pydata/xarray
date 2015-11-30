@@ -1222,6 +1222,35 @@ class DataArray(AbstractArray, BaseDataObject):
         ds[self.name] = self.variable.shift(**shifts)
         return self._with_replaced_dataset(ds)
 
+    def roll(self, **shifts):
+        """Roll this array by an offset along one or more dimensions.
+
+        Unlike shift, roll rotates all variables, including coordinates.
+
+        Parameters
+        ----------
+        **shifts : keyword arguments of the form {dim: offset}
+            Integer offset to rotate each of the given dimensions. Positive
+            offsets roll to the right; negative offsets roll to the left.
+
+        Returns
+        -------
+        shifted : DataArray
+            DataArray with the same attributes but rolled data and coordinates.
+
+        Examples
+        --------
+
+        >>> arr = xray.DataArray([5, 6, 7], dims='x')
+        >>> arr.roll(x=1)
+        <xray.DataArray (x: 3)>
+        array([7, 5, 6])
+        Coordinates:
+          * x        (x) int64 2 0 1
+        """
+        ds = self._dataset.roll(**shifts)
+        return self._with_replaced_dataset(ds)
+
     @property
     def real(self):
         return self._with_replaced_dataset(self._dataset.real)
