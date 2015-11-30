@@ -629,6 +629,7 @@ class TestVariable(TestCase, VariableSubclassTestCases):
         v = Variable('x', [1, 2, 3, 4, 5])
 
         self.assertVariableIdentical(v, v.shift(x=0))
+        self.assertIsNot(v, v.shift(x=0))
 
         expected = Variable('x', [np.nan, 1, 2, 3, 4])
         self.assertVariableIdentical(expected, v.shift(x=1))
@@ -656,6 +657,33 @@ class TestVariable(TestCase, VariableSubclassTestCases):
         v = Variable(('x', 'y'), [[1, 2], [3, 4]])
         expected = Variable(('x', 'y'), [[np.nan, np.nan], [np.nan, 1]])
         self.assertVariableIdentical(expected, v.shift(x=1, y=1))
+
+    def test_roll(self):
+        v = Variable('x', [1, 2, 3, 4, 5])
+
+        self.assertVariableIdentical(v, v.roll(x=0))
+        self.assertIsNot(v, v.roll(x=0))
+
+        expected = Variable('x', [5, 1, 2, 3, 4])
+        self.assertVariableIdentical(expected, v.roll(x=1))
+        self.assertVariableIdentical(expected, v.roll(x=-4))
+        self.assertVariableIdentical(expected, v.roll(x=6))
+
+        expected = Variable('x', [4, 5, 1, 2, 3])
+        self.assertVariableIdentical(expected, v.roll(x=2))
+        self.assertVariableIdentical(expected, v.roll(x=-3))
+
+        with self.assertRaisesRegexp(ValueError, 'dimension'):
+            v.roll(z=0)
+
+    def test_roll_consistency(self):
+        v = Variable(('x', 'y'), np.random.randn(5, 6))
+
+        for axis, dim in [(0, 'x'), (1, 'y')]:
+            for shift in [-3, 0, 1, 7, 11]:
+                expected = np.roll(v.values, shift, axis=axis)
+                actual = v.roll(**{dim: shift}).values
+                self.assertArrayEqual(expected, actual)
 
     def test_transpose(self):
         v = Variable(['time', 'x'], self.d)

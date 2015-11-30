@@ -508,7 +508,7 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
         elif count < 0:
             keep = slice(-count, None)
         else:
-            return self
+            keep = slice(None)
 
         trimmed_data = self[(slice(None),) * axis + (keep,)].data
         dtype, fill_value = common._maybe_promote(self.dtype)
@@ -535,6 +535,7 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
         if isinstance(data, dask_array_type):
             # chunked data should come out with the same chunks; this makes
             # it feasible to combine shifted and unshifted data
+            # TODO: remove this once dask.array automatically aligns chunks
             data = data.rechunk(self.data.chunks)
 
         return type(self)(self.dims, data, self._attrs, fastpath=True)
@@ -558,6 +559,49 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
         result = self
         for dim, count in shifts.items():
             result = result._shift_one_dim(dim, count)
+        return result
+
+    def _roll_one_dim(self, dim, count):
+        axis = self.get_axis_num(dim)
+
+        count %= self.shape[axis]
+        if count != 0:
+            indices = [slice(-count, None), slice(None, -count)]
+        else:
+            indices = [slice(None)]
+
+        arrays = [self[(slice(None),) * axis + (idx,)].data
+                  for idx in indices]
+
+        data = ops.concatenate(arrays, axis)
+
+        if isinstance(data, dask_array_type):
+            # chunked data should come out with the same chunks; this makes
+            # it feasible to combine shifted and unshifted data
+            # TODO: remove this once dask.array automatically aligns chunks
+            data = data.rechunk(self.data.chunks)
+
+        return type(self)(self.dims, data, self._attrs, fastpath=True)
+
+    def roll(self, **shifts):
+        """
+        Return a new Variable with rolld data.
+
+        Parameters
+        ----------
+        **shifts : keyword arguments of the form {dim: offset}
+            Integer offset to roll along each of the given dimensions.
+            Positive offsets roll to the right; negative offsets roll to the
+            left.
+
+        Returns
+        -------
+        shifted : Variable
+            Variable with the same dimensions and attributes but rolled data.
+        """
+        result = self
+        for dim, count in shifts.items():
+            result = result._roll_one_dim(dim, count)
         return result
 
     def transpose(self, *dims):
