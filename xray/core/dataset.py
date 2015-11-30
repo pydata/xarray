@@ -2085,7 +2085,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject):
         """Shift this dataset by an offset along one or more dimensions.
 
         Only data variables are moved; coordinates stay in place. Values
-        shifted from bounds dataset bounds are replaced by NaN.
+        shifted from bounds beyond dataset bounds are replaced by NaN.
 
         Parameters
         ----------
@@ -2099,6 +2099,10 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject):
         shifted : Dataset
             Dataset with the same coordinates and attributes but shifted data
             variables.
+
+        See also
+        --------
+        roll
 
         Examples
         --------
@@ -2124,6 +2128,52 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject):
                 variables[name] = var.shift(**var_shifts)
             else:
                 variables[name] = var
+
+        return self._replace_vars_and_dims(variables)
+
+    def roll(self, **shifts):
+        """Roll this dataset by an offset along one or more dimensions.
+
+        Unlike shift, roll shifts all variables, including coordinates.
+
+        Parameters
+        ----------
+        **shifts : keyword arguments of the form {dim: offset}
+            Integer offset to roll along each of the given dimensions.
+            Positive offsets roll to the right; negative offsets roll to the
+            left.
+
+        Returns
+        -------
+        rolled : Dataset
+            Dataset with the same coordinates and attributes but rolled
+            variables.
+
+        See also
+        --------
+        shift
+
+        Examples
+        --------
+
+        >>> ds = xray.Dataset({'foo': ('x', list('abcde'))})
+        >>> ds.roll(x=2)
+        <xray.Dataset>
+        Dimensions:  (x: 5)
+        Coordinates:
+          * x        (x) int64 3 4 0 1 2
+        Data variables:
+            foo      (x) object 'd' 'e' 'a' 'b' 'c'
+        """
+        invalid = [k for k in shifts if k not in self.dims]
+        if invalid:
+            raise ValueError("dimensions %r do not exist" % invalid)
+
+        variables = OrderedDict()
+        for name, var in iteritems(self.variables):
+            var_shifts = dict((k, v) for k, v in shifts.items()
+                              if k in var.dims)
+            variables[name] = var.roll(**var_shifts)
 
         return self._replace_vars_and_dims(variables)
 
