@@ -99,6 +99,49 @@ These operations automatically skip missing values, like in pandas:
 If desired, you can disable this behavior by invoking the aggregation method
 with ``skipna=False``.
 
+Rolling window operations
+=========================
+
+``DataArray`` objects include a :py:meth:`~xarray.DataArray.rolling` method. This
+method supports rolling window aggregation:
+
+.. ipython:: python
+
+    arr = xr.DataArray(np.arange(0, 7.5, 0.5).reshape(3, 5),
+                       dims=('x', 'y'))
+    arr
+
+:py:meth:`~xarray.DataArray.rolling` is applied along one dimension using the
+name of the dimension as a key (e.g. ``y``) and the window size as the value
+(e.g. ``3``).  We get back a ``Rolling`` object:
+
+.. ipython:: python
+
+    arr.rolling(y=3)
+
+The label position and minimum number of periods in the rolling window are
+controlled by the ``center`` and ``min_periods`` arguments:
+
+.. ipython:: python
+
+    arr.rolling(y=3, min_periods=2, center=True)
+
+Aggregation and summary methods can be applied directly to the ``Rolling`` object:
+
+.. ipython:: python
+
+    r = arr.rolling(y=3)
+    r.mean()
+    r.reduce(np.std)
+
+Finally, we can manually iterate through ``Rolling`` objects:
+
+.. ipython:: python
+
+   @verbatim
+   for label, arr_window in r:
+      # arr_window is a view of x
+
 Broadcasting by dimension name
 ==============================
 

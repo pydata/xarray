@@ -17,9 +17,11 @@ from .nputils import (
 
 try:
     import bottleneck as bn
+    has_bottleneck = True
 except ImportError:
     # use numpy methods instead
     bn = np
+    has_bottleneck = False
 
 try:
     import dask.array as da
@@ -46,6 +48,9 @@ PANDAS_UNARY_FUNCTIONS = ['isnull', 'notnull']
 REDUCE_METHODS = ['all', 'any']
 NAN_REDUCE_METHODS = ['argmax', 'argmin', 'max', 'min', 'mean', 'prod', 'sum',
                       'std', 'var', 'median']
+BOTTLENECK_ROLLING_METHODS = {'move_sum': 'sum', 'move_mean': 'mean',
+                              'move_std': 'std', 'move_min': 'min',
+                              'move_max': 'max'}
 # TODO: wrap cumprod/cumsum, take, dot, sort
 
 
@@ -465,3 +470,29 @@ def inject_all_ops_and_reduce_methods(cls, priority=50, array_only=True):
             setattr(cls, name, _values_method_wrapper(name))
 
     inject_reduce_methods(cls)
+
+
+def inject_bottleneck_rolling_methods(cls):
+    # standard numpy reduce methods
+    for name in NAN_REDUCE_METHODS:
+        f = getattr(np, name)
+        func = cls._reduce_method(f)
+        func.__name__ = name
+        func.__doc__ = 'todo'
+        setattr(cls, name, func)
+
+    # bottleneck rolling methods
+    if has_bottleneck:
+        for bn_name, method_name in BOTTLENECK_ROLLING_METHODS.items():
+            f = getattr(bn, bn_name)
+            func = cls._bottleneck_reduce(f)
+            func.__name__ = method_name
+            func.__doc__ = 'todo'
+            setattr(cls, method_name, func)
+
+        # bottleneck rolling methods without min_count
+        f = getattr(bn, 'move_median')
+        func = cls._bottleneck_reduce_without_min_count(f)
+        func.__name__ = 'median'
+        func.__doc__ = 'todo'
+        setattr(cls, 'median', func)
