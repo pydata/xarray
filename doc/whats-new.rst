@@ -22,6 +22,17 @@ Enhancements
 - Plotting: more control on colormap parameters (:issue:`642`). ``vmin`` and
   ``vmax`` will not be silently ignored anymore. Setting ``center=False``
   prevents automatic selection of a divergent colormap.
+- New :py:meth:`~xray.Dataset.shift` and :py:meth:`~xray.Dataset.roll` methods
+  for shifting/rotating datasets or arrays along a dimension:
+
+  .. ipython:: python
+
+      array = xray.DataArray([5, 6, 7, 8], dims='x')
+      array.shift(x=2)
+      array.roll(x=2)
+
+  Notice that ``shift`` moves data independently of coordinates, but ``roll``
+  moves both data and coordinates.
 
 Bug fixes
 ~~~~~~~~~

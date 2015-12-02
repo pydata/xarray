@@ -1467,6 +1467,23 @@ class TestDataArray(TestCase):
                              ['x', 'y'])
         self.assertDataArrayEqual(expected, actual)
 
+    def test_shift(self):
+        arr = DataArray([1, 2, 3], dims='x')
+        actual = arr.shift(x=1)
+        expected = DataArray([np.nan, 1, 2], dims='x')
+        self.assertDataArrayIdentical(expected, actual)
+
+        for offset in [-5, -2, -1, 0, 1, 2, 5]:
+            expected = DataArray(arr.to_pandas().shift(offset))
+            actual = arr.shift(x=offset)
+            self.assertDataArrayIdentical(expected, actual)
+
+    def test_roll(self):
+        arr = DataArray([1, 2, 3], dims='x')
+        actual = arr.roll(x=1)
+        expected = DataArray([3, 1, 2], coords=[('x', [2, 0, 1])])
+        self.assertDataArrayIdentical(expected, actual)
+
     def test_real_and_imag(self):
         array = DataArray(1 + 2j)
         self.assertDataArrayIdentical(array.real, DataArray(1))
