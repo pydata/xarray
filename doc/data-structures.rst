@@ -42,9 +42,15 @@ to interpret them, and propagates them only in unambiguous cases (see FAQ,
 Creating a DataArray
 ~~~~~~~~~~~~~~~~~~~~
 
-The :py:class:`~xray.DataArray` constructor takes a multi-dimensional array of
-values (e.g., a numpy ndarray), a list or dictionary of coordinates label and
-a list of dimension names:
+The :py:class:`~xray.DataArray` constructor takes:
+
+ - ``data``: a multi-dimensional array of values (e.g., a numpy ndarray,
+:py:class:`~pandas.Series`, :py:class:`~pandas.DataFrame` or :py:class:`~pandas.Panel`)
+ - ``coords``: a list or dictionary of coordinates
+ - ``dims``: a list of dimension names. If omitted, dimension names are
+ taken from ``coords`` if possible
+ - ``attrs``: a dictionary of attributes to add to the instance
+ - ``name``: a string that names the instance
 
 .. ipython:: python
 
@@ -54,7 +60,7 @@ a list of dimension names:
     foo = xray.DataArray(data, coords=[times, locs], dims=['time', 'space'])
     foo
 
-All of these arguments (except for ``data``) are optional, and will be filled
+Only ``data`` is required; all of other arguments will be filled
 in with default values:
 
 .. ipython:: python
@@ -65,17 +71,20 @@ As you can see, dimensions and coordinate arrays corresponding to each
 dimension are always present. This behavior is similar to pandas, which fills
 in index values in the same way.
 
-The data array constructor also supports supplying ``coords`` as a list of
-``(dim, ticks[, attrs])`` pairs with length equal to the number of dimensions:
+Coordinates can take the following forms:
+
+- A list of ``(dim, ticks[, attrs])`` pairs with length equal to the number of dimensions
+- A dictionary of ``{coord_name: coord}`` where the values are scaler values,
+ 1D arrays or tuples (tuples in the same form as above). This form lets you supply other
+ coordinates than those corresponding to dimensions (more on these later).
+
+As a list of tuples:
 
 .. ipython:: python
 
     xray.DataArray(data, coords=[('time', times), ('space', locs)])
 
-Yet another option is to supply ``coords`` in the form of a dictionary where
-the values are scaler values, 1D arrays or tuples (in the same form as the
-`dataarray constructor`_). This form lets you supply other coordinates than
-those corresponding to dimensions (more on these later):
+As a dictionary:
 
 .. ipython:: python
 
@@ -83,9 +92,9 @@ those corresponding to dimensions (more on these later):
                                  'ranking': ('space', [1, 2, 3])},
                    dims=['time', 'space'])
 
-You can also create a ``DataArray`` by supplying a pandas
+If you create a ``DataArray`` by supplying a pandas
 :py:class:`~pandas.Series`, :py:class:`~pandas.DataFrame` or
-:py:class:`~pandas.Panel`, in which case any non-specified arguments in the
+:py:class:`~pandas.Panel`, any non-specified arguments in the
 ``DataArray`` constructor will be filled in from the pandas object:
 
 .. ipython:: python
@@ -217,7 +226,7 @@ To make an :py:class:`~xray.Dataset` from scratch, supply dictionaries for any
 variables, coordinates and attributes you would like to insert into the
 dataset.
 
-For the ``vars`` and ``coords`` arguments, keys should be the name of the
+For the ``data_vars`` and ``coords`` arguments, keys should be the name of the
 variable and values should be scalars, 1d arrays or tuples of the form
 ``(dims, data[, attrs])`` sufficient to label each array:
 

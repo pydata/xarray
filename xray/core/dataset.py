@@ -272,14 +272,14 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject):
     """
     groupby_cls = groupby.DatasetGroupBy
 
-    def __init__(self, variables=None, coords=None, attrs=None,
-                 compat='broadcast_equals'):
+    def __init__(self, data_vars=None, coords=None, attrs=None,
+                 compat='broadcast_equals', **kwargs):
         """To load data from a file or file-like object, use the `open_dataset`
         function.
 
         Parameters
         ----------
-        variables : dict-like, optional
+        data_vars : dict-like, optional
             A mapping from variable names to :py:class:`~xray.DataArray`
             objects, :py:class:`~xray.Variable` objects or tuples of the
             form ``(dims, data[, attrs])`` which can be used as arguments to
@@ -312,12 +312,18 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject):
         self._dims = {}
         self._attrs = None
         self._file_obj = None
-        if variables is None:
-            variables = {}
+        if kwargs:
+            if 'variables' in kwargs:
+                data_vars = kwargs.pop('variables')
+                warnings.warn('Variables kwarg is deprecated. Use data_vars', stacklevel=2)
+            if kwargs:
+                raise TypeError('{0} are not valid kwargs'.format(kwargs.keys()))
+        if data_vars is None:
+            data_vars = {}
         if coords is None:
             coords = set()
-        if variables or coords:
-            self._set_init_vars_and_dims(variables, coords, compat)
+        if data_vars or coords:
+            self._set_init_vars_and_dims(data_vars, coords, compat)
         if attrs is not None:
             self.attrs = attrs
 
