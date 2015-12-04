@@ -3,7 +3,7 @@ from copy import deepcopy
 import numpy as np
 import pandas as pd
 
-from xray import Dataset, DataArray, auto_combine, concat
+from xray import Dataset, DataArray, auto_combine, concat, Variable
 from xray.core.pycompat import iteritems, OrderedDict
 
 from . import TestCase, InaccessibleArray, requires_dask
@@ -206,6 +206,13 @@ class TestConcatDataset(TestCase):
                 Dataset({'y': ('t', [2])}, {'x': 2})]
         with self.assertRaises(ValueError):
             concat(objs, 't', coords='minimal')
+
+    def test_concat_dim_is_variable(self):
+        objs = [Dataset({'x': 0}), Dataset({'x': 1})]
+        coord = Variable('y', [3, 4])
+        expected = Dataset({'x': ('y', [0, 1]), 'y': [3, 4]})
+        actual = concat(objs, coord)
+        self.assertDatasetIdentical(actual, expected)
 
     @requires_dask  # only for toolz
     def test_auto_combine(self):

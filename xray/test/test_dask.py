@@ -199,7 +199,7 @@ class TestDataArrayAndDataset(DaskTestCase):
 
     def test_new_chunk(self):
         chunked = self.eager_array.chunk()
-        self.assertTrue(chunked.data.name.startswith('xray-foo-'))
+        self.assertTrue(chunked.data.name.startswith('xray-<this-array>'))
 
     def test_lazy_dataset(self):
         lazy_ds = Dataset({'foo': (('x', 'y'), self.data)})

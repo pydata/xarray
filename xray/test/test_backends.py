@@ -121,10 +121,10 @@ class DatasetIOTestCases(object):
             if vars is None:
                 vars = expected
             with self.roundtrip(expected) as actual:
-                for v in actual.values():
+                for v in actual.variables.values():
                     self.assertFalse(v._in_memory)
                 yield actual
-                for k, v in actual.items():
+                for k, v in actual.variables.items():
                     if k in vars:
                         self.assertTrue(v._in_memory)
                 self.assertDatasetAllClose(expected, actual)

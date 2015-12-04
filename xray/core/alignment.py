@@ -100,6 +100,16 @@ def partial_align(*objects, **kwargs):
     return tuple(obj.reindex(copy=copy, **joined_indexes) for obj in objects)
 
 
+def align_variables(variables, join='outer', copy=False):
+    """Align all DataArrays in the provided dict, leaving other values alone.
+    """
+    alignable = [k for k, v in variables.items() if hasattr(v, 'indexes')]
+    aligned = align(*[variables[a] for a in alignable], join=join, copy=copy)
+    new_variables = OrderedDict(variables)
+    new_variables.update(zip(alignable, aligned))
+    return new_variables
+
+
 def reindex_variables(variables, indexes, indexers, method=None,
                       tolerance=None, copy=True):
     """Conform a dictionary of aligned variables onto a new set of variables,

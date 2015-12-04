@@ -124,7 +124,7 @@ class TestDataset(TestCase):
         with self.assertRaisesRegexp(ValueError,
                 "variable 'x' has the same name"):
             Dataset({'a': x1, 'x': z})
-        with self.assertRaisesRegexp(TypeError, 'must be an array or'):
+        with self.assertRaisesRegexp(TypeError, 'must be given by arrays or'):
             Dataset({'x': (1, 2, 3, 4, 5, 6, 7)})
         with self.assertRaisesRegexp(ValueError, 'already exists as a scalar'):
             Dataset({'x': 0, 'y': ('x', [1, 2, 3])})
@@ -1034,6 +1034,9 @@ class TestDataset(TestCase):
         with self.assertRaisesRegexp(ValueError, "cannot rename 'not_a_var'"):
             data.rename({'not_a_var': 'nada'})
 
+        with self.assertRaisesRegexp(ValueError, "'var1' already exists"):
+            data.rename({'var2': 'var1'})
+
         # verify that we can rename a variable without accessing the data
         var1 = data['var1']
         data['var1'] = (var1.dims, InaccessibleArray(var1.values))
@@ -1205,8 +1208,10 @@ class TestDataset(TestCase):
         self.assertDatasetEqual(expected, actual)
 
         actual = data['numbers']
-        expected = DataArray(data['numbers'].variable, [data['dim3']],
-                             name='numbers')
+        expected = DataArray(data['numbers'].variable,
+                             {'dim3': data['dim3'],
+                              'numbers': data['numbers']},
+                             dims='dim3', name='numbers')
         self.assertDataArrayIdentical(expected, actual)
 
         actual = data[dict(dim1=0)]
@@ -1242,6 +1247,14 @@ class TestDataset(TestCase):
         # non-coordinate variables
         ds = Dataset({'t': ('x', pd.date_range('2000-01-01', periods=3))})
         self.assertTrue((ds['t.year'] == 2000).all())
+
+    def test_virtual_variable_same_name(self):
+        # regression test for GH367
+        times = pd.date_range('2000-01-01', freq='H', periods=5)
+        data = Dataset({'time': times})
+        actual = data['time.time']
+        expected = DataArray(times.time, {'time': times}, name='time')
+        self.assertDataArrayIdentical(actual, expected)
 
     def test_time_season(self):
         ds = Dataset({'t': pd.date_range('2000-01-01', periods=12, freq='M')})

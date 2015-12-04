@@ -9,6 +9,64 @@ What's New
     import xray
     np.random.seed(123456)
 
+v0.7.0 (unreleased)
+-------------------
+
+.. _v0.7.0.breaking:
+
+Breaking changes
+~~~~~~~~~~~~~~~~
+
+- The internal data model used by :py:class:`~xray.DataArray` has been
+  rewritten to fix several outstanding issues (:issue:`367`, :issue:`634`,
+  `this stackoverflow report`_). Internally, ``DataArray`` is now implemented
+  in terms of ``._variable`` and ``._coords`` attributes instead of holding
+  variables in a ``Dataset`` object.
+
+  This refactor ensures that if a DataArray has the
+  same name as one of its coordinates, the array and the coordinate no longer
+  share the same data.
+
+  In practice, this means that creating a DataArray with the same ``name`` as
+  one of its dimensions no longer automatically uses that array to label the
+  corresponding coordinate. You will now need to provide coordinate labels
+  explicitly. Here's the old behavior:
+
+  .. ipython::
+    :verbatim:
+
+    In [2]: xray.DataArray([4, 5, 6], dims='x', name='x')
+    Out[2]:
+    <xray.DataArray 'x' (x: 3)>
+    array([4, 5, 6])
+    Coordinates:
+      * x        (x) int64 4 5 6
+
+  and the new behavior (compare the values of the ``x`` coordinate):
+
+  .. ipython::
+    :verbatim:
+
+    In [2]: xray.DataArray([4, 5, 6], dims='x', name='x')
+    Out[2]:
+    <xray.DataArray 'x' (x: 3)>
+    array([4, 5, 6])
+    Coordinates:
+      * x        (x) int64 0 1 2
+
+- It is no longer possible to convert a DataArray to a Dataset with
+  :py:meth:`xray.DataArray.to_dataset` if it is unnamed. This will now
+  raise ``ValueError``. If the array is unnamed, you need to supply the
+  ``name`` argument.
+
+.. _this stackoverflow report: http://stackoverflow.com/questions/33158558/python-xray-extract-first-and-last-time-value-within-each-month-of-a-timeseries
+
+Bug fixes
+~~~~~~~~~
+
+- Fixes for several issues found on ``DataArray`` objects with the same name
+  as one of their coordinates (see :ref:`v0.7.0.breaking` for more details).
+
 v0.6.2 (unreleased)
 -------------------
 
