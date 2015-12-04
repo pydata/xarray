@@ -9,7 +9,7 @@ from .common import (
 )
 from .pycompat import zip
 from .utils import peek_at, maybe_wrap_array, safe_cast_to_index
-from .variable import Variable, Coordinate
+from .variable import as_variable, Variable, Coordinate
 
 
 def unique_value_groups(ar):
@@ -110,7 +110,10 @@ class GroupBy(object):
             raise ValueError("`group` must have a 'dims' attribute")
         group_dim, = group.dims
 
-        expected_size = as_dataset(obj).dims[group_dim]
+        try:
+            expected_size = obj.dims[group_dim]
+        except TypeError:
+            expected_size = obj.shape[obj.get_axis_num(group_dim)]
         if group.size != expected_size:
             raise ValueError('the group variable\'s length does not '
                              'match the length of this variable along its '
@@ -312,19 +315,16 @@ class DataArrayGroupBy(GroupBy, ImplementsArrayReduce):
             yield var[{self.group_dim: indices}]
 
     def _concat_shortcut(self, applied, concat_dim, positions):
+        # nb. don't worry too much about maintaining this method -- it does
+        # speed things up, but it's not very interpretable and there are much
+        # faster alternatives (e.g., doing the grouped aggregation in a
+        # compiled language)
         stacked = Variable.concat(
             applied, concat_dim, positions, shortcut=True)
         stacked.attrs.update(self.obj.attrs)
-
-        name = self.obj.name
-        ds = self.obj._dataset.drop(name)
-        ds[concat_dim.name] = concat_dim
-        # remove extraneous dimensions
-        for dim in ds.dims:
-            if dim not in stacked.dims:
-                del ds[dim]
-        ds[name] = stacked
-        return ds[name]
+        result = self.obj._replace_maybe_drop_dims(stacked)
+        result._coords[concat_dim.name] = as_variable(concat_dim, copy=True)
+        return result
 
     def _restore_dim_order(self, stacked):
         def lookup_order(dimension):

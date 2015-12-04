@@ -9,7 +9,7 @@ import pandas as pd
 
 from xray import Variable, Dataset, DataArray
 from xray.core import indexing
-from xray.core.variable import (Coordinate, as_variable, _as_compatible_data)
+from xray.core.variable import (Coordinate, as_variable, as_compatible_data)
 from xray.core.indexing import PandasIndexAdapter, LazilyIndexedArray
 from xray.core.pycompat import PY3, OrderedDict
 
@@ -919,11 +919,11 @@ class TestAsCompatibleData(TestCase):
                          pd.date_range('2000-01-01', periods=3).values]:
                 x = t(data)
                 self.assertIs(source_ndarray(x),
-                              source_ndarray(_as_compatible_data(x)))
+                              source_ndarray(as_compatible_data(x)))
 
     def test_converted_types(self):
         for input_array in [[[0, 1, 2]], pd.DataFrame([[0, 1, 2]])]:
-            actual = _as_compatible_data(input_array)
+            actual = as_compatible_data(input_array)
             self.assertArrayEqual(np.asarray(input_array), actual)
             self.assertEqual(np.ndarray, type(actual))
             self.assertEqual(np.asarray(input_array).dtype, actual.dtype)
@@ -931,39 +931,39 @@ class TestAsCompatibleData(TestCase):
     def test_masked_array(self):
         original = np.ma.MaskedArray(np.arange(5))
         expected = np.arange(5)
-        actual = _as_compatible_data(original)
+        actual = as_compatible_data(original)
         self.assertArrayEqual(expected, actual)
         self.assertEqual(np.dtype(int), actual.dtype)
 
         original = np.ma.MaskedArray(np.arange(5), mask=4 * [False] + [True])
         expected = np.arange(5.0)
         expected[-1] = np.nan
-        actual = _as_compatible_data(original)
+        actual = as_compatible_data(original)
         self.assertArrayEqual(expected, actual)
         self.assertEqual(np.dtype(float), actual.dtype)
 
     def test_datetime(self):
         expected = np.datetime64('2000-01-01T00Z')
-        actual = _as_compatible_data(expected)
+        actual = as_compatible_data(expected)
         self.assertEqual(expected, actual)
         self.assertEqual(np.ndarray, type(actual))
         self.assertEqual(np.dtype('datetime64[ns]'), actual.dtype)
 
         expected = np.array([np.datetime64('2000-01-01T00Z')])
-        actual = _as_compatible_data(expected)
+        actual = as_compatible_data(expected)
         self.assertEqual(np.asarray(expected), actual)
         self.assertEqual(np.ndarray, type(actual))
         self.assertEqual(np.dtype('datetime64[ns]'), actual.dtype)
 
         expected = np.array([np.datetime64('2000-01-01T00Z', 'ns')])
-        actual = _as_compatible_data(expected)
+        actual = as_compatible_data(expected)
         self.assertEqual(np.asarray(expected), actual)
         self.assertEqual(np.ndarray, type(actual))
         self.assertEqual(np.dtype('datetime64[ns]'), actual.dtype)
         self.assertIs(expected, source_ndarray(np.asarray(actual)))
 
         expected = np.datetime64('2000-01-01T00Z', 'ns')
-        actual = _as_compatible_data(datetime(2000, 1, 1))
+        actual = as_compatible_data(datetime(2000, 1, 1))
         self.assertEqual(np.asarray(expected), actual)
         self.assertEqual(np.ndarray, type(actual))
         self.assertEqual(np.dtype('datetime64[ns]'), actual.dtype)

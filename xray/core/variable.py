@@ -11,7 +11,8 @@ from . import indexing
 from . import ops
 from . import utils
 from .pycompat import basestring, OrderedDict, zip, dask_array_type
-from .indexing import (PandasIndexAdapter, orthogonally_indexable)
+from .indexing import (PandasIndexAdapter, orthogonally_indexable,
+                       LazyIntegerRange)
 
 import xray  # only for Dataset and DataArray
 
@@ -21,7 +22,7 @@ except ImportError:
     pass
 
 
-def as_variable(obj, key=None, strict=True):
+def as_variable(obj, key=None, strict=True, copy=False):
     """Convert an object into an Variable
 
     - If the object is already an `Variable`, return it.
@@ -56,7 +57,18 @@ def as_variable(obj, key=None, strict=True):
             obj = Variable(key, obj)
         else:
             raise TypeError('cannot infer Variable dimensions')
+    else:
+        if copy:
+            obj = obj.copy(deep=False)
     return obj
+
+
+def default_index_coordinate(dim, size):
+    """
+    This is equivalent to np.arange(size), but waits to create the array until
+    its actually accessed.
+    """
+    return Coordinate(dim, LazyIntegerRange(size))
 
 
 def _maybe_wrap_data(data):
@@ -72,7 +84,7 @@ def _maybe_wrap_data(data):
     return data
 
 
-def _as_compatible_data(data, fastpath=False):
+def as_compatible_data(data, fastpath=False):
     """Prepare and wrap data to put in a Variable.
 
     - If data does not have the necessary attributes, convert it to ndarray.
@@ -197,7 +209,7 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
             Well behaviored code to serialize a Variable should ignore
             unrecognized encoding items.
         """
-        self._data = _as_compatible_data(data, fastpath=fastpath)
+        self._data = as_compatible_data(data, fastpath=fastpath)
         self._dims = self._parse_dimensions(dims)
         self._attrs = None
         self._encoding = None
@@ -231,7 +243,7 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
 
     @data.setter
     def data(self, data):
-        data = _as_compatible_data(data)
+        data = as_compatible_data(data)
         if data.shape != self.shape:
             raise ValueError(
                 "replacement data must match the Variable's shape")

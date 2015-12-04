@@ -195,7 +195,8 @@ class TestCase(unittest.TestCase):
 
     def assertDataArrayIdentical(self, ar1, ar2):
         self.assertEqual(ar1.name, ar2.name)
-        self.assertDatasetIdentical(ar1.to_dataset(), ar2.to_dataset())
+        self.assertDatasetIdentical(ar1._to_temp_dataset(),
+                                    ar2._to_temp_dataset())
 
     def assertDataArrayAllClose(self, ar1, ar2, rtol=1e-05, atol=1e-08):
         self.assertVariableAllClose(ar1, ar2, rtol=rtol, atol=atol)

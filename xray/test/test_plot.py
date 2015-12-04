@@ -593,7 +593,7 @@ class Common2dMixin:
         a.coords['d'] = u'foo'
         self.plotfunc(a.isel(c=1))
         title = plt.gca().get_title()
-        self.assertEqual('c = 1, d = foo', title)
+        self.assertTrue('c = 1, d = foo' == title or 'd = foo, c = 1' == title)
 
     def test_colorbar_label(self):
         self.darray.name = 'testvar'

@@ -72,7 +72,7 @@ class TestDataArray(TestCase):
 
         actual = DataArray(Coordinate('x', [3]))
         actual.name = 'y'
-        expected = DataArray(Coordinate('y', [3]))
+        expected = DataArray([3], {'x': [3]}, name='y')
         self.assertDataArrayIdentical(actual, expected)
 
     def test_dims(self):
@@ -517,13 +517,20 @@ class TestDataArray(TestCase):
         actual = repr(da.coords)
         self.assertEquals(expected, actual)
 
+        with self.assertRaisesRegexp(ValueError, 'cannot delete'):
+            del da['x']
+
+        with self.assertRaisesRegexp(ValueError, 'cannot delete'):
+            del da.coords['x']
+
     def test_coord_coords(self):
         orig = DataArray([10, 20],
                          {'x': [1, 2], 'x2': ('x', ['a', 'b']), 'z': 4},
                          dims='x')
 
         actual = orig.coords['x']
-        expected = DataArray([1, 2], {'z': 4, 'x2': ('x', ['a', 'b'])},
+        expected = DataArray([1, 2], {'z': 4, 'x2': ('x', ['a', 'b']),
+                                      'x': [1, 2]},
                              dims='x', name='x')
         self.assertDataArrayIdentical(expected, actual)
 
@@ -532,7 +539,8 @@ class TestDataArray(TestCase):
             expected.reset_coords('x2', drop=True), actual)
 
         actual.coords['x3'] = ('x', ['a', 'b'])
-        expected = DataArray([1, 2], {'z': 4, 'x3': ('x', ['a', 'b'])},
+        expected = DataArray([1, 2], {'z': 4, 'x3': ('x', ['a', 'b']),
+                                      'x': [1, 2]},
                              dims='x', name='x')
         self.assertDataArrayIdentical(expected, actual)
 
@@ -576,7 +584,7 @@ class TestDataArray(TestCase):
 
         with self.assertRaisesRegexp(ValueError, 'cannot reset coord'):
             data.reset_coords(inplace=True)
-        with self.assertRaises(KeyError):
+        with self.assertRaisesRegexp(ValueError, 'cannot be found'):
             data.reset_coords('foo', drop=True)
         with self.assertRaisesRegexp(ValueError, 'cannot be found'):
             data.reset_coords('not_found')
@@ -705,7 +713,6 @@ class TestDataArray(TestCase):
         self.assertIs(b.variable, v)
         self.assertArrayEqual(b.values, x)
         self.assertIs(source_ndarray(b.values), x)
-        self.assertDatasetIdentical(b._dataset, self.ds)
 
     def test_inplace_math_automatic_alignment(self):
         a = DataArray(range(5), [('x', range(5))])
@@ -726,8 +733,8 @@ class TestDataArray(TestCase):
         self.assertIs((a + a.rename(None)).name, None)
         self.assertIs((a + a.rename('bar')).name, None)
         self.assertEqual((a + a).name, 'foo')
-        self.assertIs((+a['x']).name, None)
-        self.assertIs((a['x'] + 0).name, None)
+        self.assertIs((+a['x']).name, 'x')
+        self.assertIs((a['x'] + 0).name, 'x')
         self.assertIs((a + a['x']).name, None)
 
     def test_math_with_coords(self):
@@ -785,12 +792,14 @@ class TestDataArray(TestCase):
     def test_index_math(self):
         orig = DataArray(range(3), dims='x', name='x')
         actual = orig + 1
-        expected = DataArray(1 + np.arange(3), coords=[('x', range(3))])
+        expected = DataArray(1 + np.arange(3), coords=[('x', range(3))],
+                             name='x')
         self.assertDataArrayIdentical(expected, actual)
 
         # regression tests for #254
         actual = orig[0] < orig
-        expected = DataArray([False, True, True], coords=[('x', range(3))])
+        expected = DataArray([False, True, True], coords=[('x', range(3))],
+                             name='x')
         self.assertDataArrayIdentical(expected, actual)
 
         actual = orig > orig[0]
@@ -855,11 +864,11 @@ class TestDataArray(TestCase):
         with self.assertRaises(ValueError):
             arr.drop('not found')
 
-        with self.assertRaisesRegexp(ValueError, 'cannot drop'):
+        with self.assertRaisesRegexp(ValueError, 'cannot be found'):
             arr.drop(None)
 
         renamed = arr.rename('foo')
-        with self.assertRaisesRegexp(ValueError, 'cannot drop'):
+        with self.assertRaisesRegexp(ValueError, 'cannot be found'):
             renamed.drop('foo')
 
     def test_drop_index_labels(self):
@@ -1100,7 +1109,7 @@ class TestDataArray(TestCase):
             actual = array.coords['x'] + grouped
             self.assertDataArrayIdentical(expected, actual)
 
-            ds = array.coords['x'].to_dataset()
+            ds = array.coords['x'].to_dataset('X')
             expected = array + ds
             actual = grouped + ds
             self.assertDatasetIdentical(expected, actual)
@@ -1212,6 +1221,15 @@ class TestDataArray(TestCase):
         expected = DataArray([np.nan, 4, 8], [('time', times[::4])])
         self.assertDataArrayIdentical(expected, actual)
 
+        # regerssion test for http://stackoverflow.com/questions/33158558/
+        array = Dataset({'time': times})['time']
+        actual = array.resample('1D', dim='time', how='last')
+        expected_times = pd.to_datetime(['2000-01-01T18', '2000-01-02T18',
+                                         '2000-01-03T06'])
+        expected = DataArray(expected_times, [('time', times[::4])],
+                             name='time')
+        self.assertDataArrayIdentical(expected, actual)
+
     def test_resample_skipna(self):
         times = pd.date_range('2000-01-01', freq='6H', periods=10)
         array = DataArray(np.ones(10), [('time', times)])
@@ -1305,9 +1323,9 @@ class TestDataArray(TestCase):
     def test_to_dataframe(self):
         # regression test for #260
         arr = DataArray(np.random.randn(3, 4),
-                        [('B', [1, 2, 3]), ('A', list('cdef'))])
+                        [('B', [1, 2, 3]), ('A', list('cdef'))], name='foo')
         expected = arr.to_series()
-        actual = arr.to_dataframe()[None]
+        actual = arr.to_dataframe()['foo']
         self.assertArrayEqual(expected.values, actual.values)
         self.assertArrayEqual(expected.name, actual.name)
         self.assertArrayEqual(expected.index.values, actual.index.values)
@@ -1316,11 +1334,28 @@ class TestDataArray(TestCase):
         arr.coords['C'] = ('B', [-1, -2, -3])
         expected = arr.to_series().to_frame()
         expected['C'] = [-1] * 4 + [-2] * 4 + [-3] * 4
-        expected.columns = [None, 'C']
+        expected = expected[['C', 'foo']]
         actual = arr.to_dataframe()
         self.assertArrayEqual(expected.values, actual.values)
         self.assertArrayEqual(expected.columns.values, actual.columns.values)
         self.assertArrayEqual(expected.index.values, actual.index.values)
+
+        arr.name = None  # unnamed
+        with self.assertRaisesRegexp(ValueError, 'unnamed'):
+            arr.to_dataframe()
+
+    def test_to_pandas_name_matches_coordinate(self):
+        # coordinate with same name as array
+        arr = DataArray([1, 2, 3], dims='x', name='x')
+        series = arr.to_series()
+        self.assertArrayEqual([1, 2, 3], series.values)
+        self.assertArrayEqual([0, 1, 2], series.index.values)
+        self.assertEqual('x', series.name)
+        self.assertEqual('x', series.index.name)
+
+        frame = arr.to_dataframe()
+        expected = series.to_frame()
+        self.assertTrue(expected.equals(frame))
 
     def test_to_and_from_series(self):
         expected = self.dv.to_dataframe()['foo']
@@ -1401,10 +1436,8 @@ class TestDataArray(TestCase):
 
     def test_to_dataset_whole(self):
         unnamed = DataArray([1, 2], dims='x')
-        actual = unnamed.to_dataset()
-        expected = Dataset({None: ('x', [1, 2])})
-        self.assertDatasetIdentical(expected, actual)
-        self.assertIsNot(unnamed._dataset, actual)
+        with self.assertRaisesRegexp(ValueError, 'unable to convert unnamed'):
+            unnamed.to_dataset()
 
         actual = unnamed.to_dataset(name='foo')
         expected = Dataset({'foo': ('x', [1, 2])})
@@ -1431,8 +1464,8 @@ class TestDataArray(TestCase):
         with self.assertRaises(TypeError):
             array.to_dataset('x', name='foo')
 
-        roundtriped = actual.to_array(dim='x')
-        self.assertDataArrayIdentical(array, roundtriped)
+        roundtripped = actual.to_array(dim='x')
+        self.assertDataArrayIdentical(array, roundtripped)
 
         array = DataArray([1, 2, 3], dims='x')
         expected = Dataset(OrderedDict([('0', 1), ('1', 2), ('2', 3)]))
@@ -1443,7 +1476,8 @@ class TestDataArray(TestCase):
         array = DataArray(np.ones((4, 3, 2)), dims=['a', 'b', 'c'])
         self.assertEqual('', array._title_for_slice())
         self.assertEqual('c = 0', array.isel(c=0)._title_for_slice())
-        self.assertEqual('b = 1, c = 0', array.isel(b=1, c=0)._title_for_slice())
+        title = array.isel(b=1, c=0)._title_for_slice()
+        self.assertTrue('b = 1, c = 0' == title or 'c = 0, b = 1' == title)
 
         a2 = DataArray(np.ones((4, 1)), dims=['a', 'b'])
         self.assertEqual('b = [0]', a2._title_for_slice())
@@ -1466,6 +1500,14 @@ class TestDataArray(TestCase):
                              [da['x'].values, da['y'].values[1:]],
                              ['x', 'y'])
         self.assertDataArrayEqual(expected, actual)
+
+    def test_coordinate_diff(self):
+        # regression test for GH634
+        arr = DataArray(range(0, 20, 2), dims=['lon'], coords=[range(10)])
+        lon = arr.coords['lon']
+        expected = DataArray([1] * 9, dims=['lon'], coords=[range(1, 10)],
+                             name='lon')
+        actual = lon.diff('lon')
 
     def test_shift(self):
         arr = DataArray([1, 2, 3], dims='x')

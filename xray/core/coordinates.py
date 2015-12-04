@@ -2,8 +2,9 @@ from collections import Mapping
 from contextlib import contextmanager
 import pandas as pd
 
-from .pycompat import iteritems, basestring, OrderedDict
 from . import formatting
+from .merge import merge_dataarray_coords
+from .pycompat import iteritems, basestring, OrderedDict
 
 
 def _coord_merge_finalize(target, other, target_conflicts, other_conflicts,
@@ -37,16 +38,12 @@ def _dim_shape(var):
 
 
 class AbstractCoordinates(Mapping):
-    @property
-    def _names(self):
-        return self._dataset._coord_names
-
     def __getitem__(self, key):
         if (key in self._names or
             (isinstance(key, basestring) and
              key.split('.')[0] in self._names)):
             # allow indexing current coordinates or components
-            return self._dataset[key]
+            return self._data[key]
         else:
             raise KeyError(key)
 
@@ -55,7 +52,7 @@ class AbstractCoordinates(Mapping):
 
     def __iter__(self):
         # needs to be in the same order as the dataset variables
-        for k in self._dataset._variables:
+        for k in self._variables:
             if k in self._names:
                 yield k
 
@@ -65,30 +62,19 @@ class AbstractCoordinates(Mapping):
     def __contains__(self, key):
         return key in self._names
 
-    def __delitem__(self, key):
-        if key in self:
-            del self._dataset[key]
-        else:
-            raise KeyError(key)
-
     def __repr__(self):
         return formatting.coords_repr(self)
 
     @property
     def dims(self):
-        return self._dataset.dims
-
-    def to_dataset(self):
-        """Convert these coordinates into a new Dataset
-        """
-        return self._dataset._copy_listed(self._names)
+        return self._data.dims
 
     def to_index(self, ordered_dims=None):
         """Convert all index coordinates into a :py:class:`pandas.MultiIndex`
         """
         if ordered_dims is None:
             ordered_dims = self.dims
-        indexes = [self._dataset._variables[k].to_index() for k in ordered_dims]
+        indexes = [self._variables[k].to_index() for k in ordered_dims]
         return pd.MultiIndex.from_product(indexes, names=list(ordered_dims))
 
     def _merge_validate(self, other):
@@ -100,7 +86,7 @@ class AbstractCoordinates(Mapping):
         promote_dims = {}
         for k in self:
             if k in other:
-                self_var = self._dataset._variables[k]
+                self_var = self._variables[k]
                 other_var = other[k].variable
                 if not self_var.broadcast_equals(other_var):
                     if k in self.dims and k in other.dims:
@@ -165,11 +151,30 @@ class DatasetCoordinates(AbstractCoordinates):
     objects.
     """
     def __init__(self, dataset):
-        self._dataset = dataset
+        self._data = dataset
+
+    @property
+    def _names(self):
+        return self._data._coord_names
+
+    @property
+    def _variables(self):
+        return self._data._variables
+
+    def to_dataset(self):
+        """Convert these coordinates into a new Dataset
+        """
+        return self._data._copy_listed(self._names)
 
     def update(self, other):
-        self._dataset.update(other)
+        self._data.update(other)
         self._names.update(other.keys())
+
+    def __delitem__(self, key):
+        if key in self:
+            del self._data[key]
+        else:
+            raise KeyError(key)
 
 
 class DataArrayCoordinates(AbstractCoordinates):
@@ -180,20 +185,38 @@ class DataArrayCoordinates(AbstractCoordinates):
     objects.
     """
     def __init__(self, dataarray):
-        self._dataarray = dataarray
-        self._dataset = dataarray._dataset
-
-    def update(self, other):
-        with self._dataarray._set_new_dataset() as ds:
-            ds.coords.update(other)
-            bad_dims = [d for d in ds.dims if d not in self.dims]
-            if bad_dims:
-                raise ValueError('DataArray does not include all coordinate '
-                                 'dimensions: %s' % bad_dims)
+        self._data = dataarray
 
     @property
-    def dims(self):
-        return self._dataarray.dims
+    def _names(self):
+        return set(self._data._coords)
+
+    @property
+    def _variables(self):
+        return self._data._coords
+
+    def _to_dataset(self, shallow_copy=True):
+        from .dataset import Dataset
+        coords = OrderedDict((k, v.copy(deep=False) if shallow_copy else v)
+                             for k, v in self._data._coords.items())
+        dims = dict(zip(self.dims, self._data.shape))
+        return Dataset._construct_direct(coords, coord_names=set(self._names),
+                                         dims=dims, attrs=None)
+
+    def to_dataset(self):
+        return self._to_dataset()
+
+    def update(self, other):
+        new_vars = merge_dataarray_coords(
+            self._data.indexes, self._data._coords, other)
+
+        self._data._coords = new_vars
+
+    def __delitem__(self, key):
+        if key in self.dims:
+            raise ValueError('cannot delete a coordinate corresponding to a '
+                             'DataArray dimension')
+        del self._data._coords[key]
 
 
 class Indexes(Mapping):

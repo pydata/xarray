@@ -186,7 +186,7 @@ class BaseDataObject(AttrAccessMixin):
         Dataset.assign
         """
         data = self.copy(deep=False)
-        results = data._calc_assign_results(kwargs)
+        results = self._calc_assign_results(kwargs)
         data.coords.update(results)
         return data
 
@@ -333,7 +333,7 @@ class BaseDataObject(AttrAccessMixin):
         RESAMPLE_DIM = '__resample_dim__'
         if isinstance(dim, basestring):
             dim = self[dim]
-        group = DataArray(dim, name=RESAMPLE_DIM)
+        group = DataArray(dim, [(RESAMPLE_DIM, dim)], name=RESAMPLE_DIM)
         time_grouper = pd.TimeGrouper(freq=freq, how=how, closed=closed,
                                       label=label, base=base)
         gb = self.groupby_cls(self, group, grouper=time_grouper)

@@ -11,13 +11,13 @@ from . import indexing
 from . import groupby
 from . import ops
 from . import utils
-from . import variable
 from .alignment import align
-from .common import AbstractArray, BaseDataObject
+from .common import AbstractArray, BaseDataObject, squeeze
 from .coordinates import DataArrayCoordinates, Indexes
 from .dataset import Dataset
 from .pycompat import iteritems, basestring, OrderedDict, zip
-from .variable import as_variable, _as_compatible_data, Coordinate
+from .variable import (as_variable, Variable, as_compatible_data, Coordinate,
+                       default_index_coordinate)
 from .formatting import format_item
 
 
@@ -31,7 +31,7 @@ def _infer_coords_and_dims(shape, coords, dims):
                          'data' % (len(coords), len(shape)))
 
     if isinstance(dims, basestring):
-        dims = [dims]
+        dims = (dims,)
 
     if dims is None:
         dims = ['dim_%s' % n for n in range(len(shape))]
@@ -41,24 +41,36 @@ def _infer_coords_and_dims(shape, coords, dims):
                 dims = list(coords.keys())
             else:
                 for n, (dim, coord) in enumerate(zip(dims, coords)):
-                    if getattr(coord, 'name', None) is None:
-                        coord = as_variable(coord, key=dim).to_coord()
+                    coord = as_variable(coord, key=dim).to_coord()
                     dims[n] = coord.name
+        dims = tuple(dims)
     else:
         for d in dims:
             if not isinstance(d, basestring):
                 raise TypeError('dimension %s is not a string' % d)
-        if coords is not None and not utils.is_dict_like(coords):
-            # ensure coordinates have the right dimensions
-            coords = [Coordinate(dim, coord, getattr(coord, 'attrs', {}))
-                      for dim, coord in zip(dims, coords)]
 
-    if coords is None:
-        coords = {}
-    elif not utils.is_dict_like(coords):
-        coords = OrderedDict(zip(dims, coords))
+    new_coords = OrderedDict()
 
-    return coords, dims
+    if utils.is_dict_like(coords):
+        for k, v in coords.items():
+            new_coords[k] = as_variable(v, key=k, copy=True)
+    elif coords is not None:
+        for dim, coord in zip(dims, coords):
+            var = as_variable(coord, key=dim, copy=True)
+            var.dims = (dim,)
+            new_coords[dim] = var
+
+    for dim, size in zip(dims, shape):
+        if dim not in new_coords:
+            new_coords[dim] = default_index_coordinate(dim, size)
+
+    for k, v in new_coords.items():
+        if any(d not in dims for d in v.dims):
+            raise ValueError('coordinate %s has dimensions %s, but these '
+                             'are not a subset of the DataArray '
+                             'dimensions %s' % (k, v.dims, dims))
+
+    return new_coords, dims
 
 
 class _LocIndexer(object):
@@ -84,6 +96,14 @@ class _LocIndexer(object):
 
     def __setitem__(self, key, value):
         self.data_array[self._remap_key(key)] = value
+
+
+class _ThisArray(object):
+    """An instance of this object is used as the key corresponding to the
+    variable when converting arbitrary DataArray objects to datasets
+    """
+    def __repr__(self):
+        return '<this-array>'
 
 
 class DataArray(AbstractArray, BaseDataObject):
@@ -127,7 +147,7 @@ class DataArray(AbstractArray, BaseDataObject):
     groupby_cls = groupby.DataArrayGroupBy
 
     def __init__(self, data, coords=None, dims=None, name=None,
-                 attrs=None, encoding=None):
+                 attrs=None, encoding=None, fastpath=False):
         """
         Parameters
         ----------
@@ -159,67 +179,71 @@ class DataArray(AbstractArray, BaseDataObject):
             'units' and 'calendar' (the later two only for datetime arrays).
             Unrecognized keys are ignored.
         """
-        # try to fill in arguments from data if they weren't supplied
-        if coords is None:
-            coords = getattr(data, 'coords', None)
-            if isinstance(data, pd.Series):
-                coords = [data.index]
-            elif isinstance(data, pd.DataFrame):
-                coords = [data.index, data.columns]
-            elif isinstance(data, (pd.Index, variable.Coordinate)):
-                coords = [data]
-            elif isinstance(data, pd.Panel):
-                coords = [data.items, data.major_axis, data.minor_axis]
-        if dims is None:
-            dims = getattr(data, 'dims', getattr(coords, 'dims', None))
-        if name is None:
-            name = getattr(data, 'name', None)
-        if attrs is None:
-            attrs = getattr(data, 'attrs', None)
-        if encoding is None:
-            encoding = getattr(data, 'encoding', None)
+        if fastpath:
+            variable = data
+            assert dims is None
+            assert attrs is None
+            assert encoding is None
+        else:
+            # try to fill in arguments from data if they weren't supplied
+            if coords is None:
+                coords = getattr(data, 'coords', None)
+                if isinstance(data, pd.Series):
+                    coords = [data.index]
+                elif isinstance(data, pd.DataFrame):
+                    coords = [data.index, data.columns]
+                elif isinstance(data, (pd.Index, Coordinate)):
+                    coords = [data]
+                elif isinstance(data, pd.Panel):
+                    coords = [data.items, data.major_axis, data.minor_axis]
+            if dims is None:
+                dims = getattr(data, 'dims', getattr(coords, 'dims', None))
+            if name is None:
+                name = getattr(data, 'name', None)
+            if attrs is None:
+                attrs = getattr(data, 'attrs', None)
+            if encoding is None:
+                encoding = getattr(data, 'encoding', None)
 
-        data = _as_compatible_data(data)
-        coords, dims = _infer_coords_and_dims(data.shape, coords, dims)
-        dataset = Dataset(coords=coords)
-        # insert data afterwards in case of redundant coords/data
-        dataset[name] = (dims, data, attrs, encoding)
+            data = as_compatible_data(data)
+            coords, dims = _infer_coords_and_dims(data.shape, coords, dims)
+            variable = Variable(dims, data, attrs, encoding, fastpath=True)
 
-        for k, v in iteritems(dataset.coords):
-            if any(d not in dims for d in v.dims):
-                raise ValueError('coordinate %s has dimensions %s, but these '
-                                 'are not a subset of the DataArray '
-                                 'dimensions %s' % (k, v.dims, dims))
-
-        # these fully describe a DataArray
-        self._dataset = dataset
+        # These fully describe a DataArray
+        self._variable = variable
+        self._coords = coords
         self._name = name
 
-    @classmethod
-    def _new_from_dataset(cls, original_dataset, name):
-        """Private constructor for the benefit of Dataset.__getitem__ (skips
-        all validation)
-        """
-        dataset = original_dataset._copy_listed([name], keep_attrs=False)
-        if name not in dataset:
-            # handle virtual variables
-            try:
-                _, name = name.split('.', 1)
-            except Exception:
-                raise KeyError(name)
-        if name not in dataset._dims:
-            dataset._coord_names.discard(name)
-        return cls._new_from_dataset_no_copy(dataset, name)
+    __default = object()
 
-    @classmethod
-    def _new_from_dataset_no_copy(cls, dataset, name):
-        obj = object.__new__(cls)
-        obj._dataset = dataset
-        obj._name = name
-        return obj
+    def _replace(self, variable=None, coords=None, name=__default):
+        if variable is None:
+            variable = self.variable
+        if coords is None:
+            coords = self._coords
+        if name is self.__default:
+            name = self.name
+        return type(self)(variable, coords, name=name, fastpath=True)
 
-    def _with_replaced_dataset(self, dataset):
-        return self._new_from_dataset_no_copy(dataset, self.name)
+    def _replace_maybe_drop_dims(self, variable, name=__default):
+        if variable.dims == self.dims:
+            coords = None
+        else:
+            allowed_dims = set(variable.dims)
+            coords = OrderedDict((k, v) for k, v in self._coords.items()
+                                 if set(v.dims) <= allowed_dims)
+        return self._replace(variable, coords, name)
+
+    __this_array = _ThisArray()
+
+    def _to_temp_dataset(self):
+        return self._to_dataset_whole(name=self.__this_array,
+                                      shallow_copy=False)
+
+    def _from_temp_dataset(self, dataset, name=__default):
+        variable = dataset._variables.pop(self.__this_array)
+        coords = dataset._variables
+        return self._replace(variable, coords, name)
 
     def _to_dataset_split(self, dim):
         def subset(dim, label):
@@ -233,11 +257,18 @@ class DataArray(AbstractArray, BaseDataObject):
         del coords[dim]
         return Dataset(variables, coords, self.attrs)
 
-    def _to_dataset_whole(self, name):
+    def _to_dataset_whole(self, name=None, shallow_copy=True):
         if name is None:
-            return self._dataset.copy()
-        else:
-            return self.rename(name)._dataset
+            name = self.name
+        if name is None:
+            raise ValueError('unable to convert unnamed DataArray to a '
+                             'Dataset without providing an explicit name')
+        if name in self.coords:
+            raise ValueError('cannot create a Dataset from a DataArray with '
+                             'the same name as one of its coordinates')
+        dataset = self.coords._to_dataset(shallow_copy=shallow_copy)
+        dataset[name] = self.variable
+        return dataset
 
     def to_dataset(self, dim=None, name=None):
         """Convert a DataArray to a Dataset.
@@ -277,24 +308,13 @@ class DataArray(AbstractArray, BaseDataObject):
         """
         return self._name
 
-    @contextlib.contextmanager
-    def _set_new_dataset(self):
-        """Context manager to use for modifying _dataset, in a manner that
-        can be safely rolled back if an error is encountered.
-        """
-        ds = self._dataset.copy(deep=False)
-        yield ds
-        self._dataset = ds
-
     @name.setter
     def name(self, value):
-        with self._set_new_dataset() as ds:
-            ds.rename({self.name: value}, inplace=True)
         self._name = value
 
     @property
     def variable(self):
-        return self._dataset._variables[self.name]
+        return self._variable
 
     @property
     def dtype(self):
@@ -366,7 +386,14 @@ class DataArray(AbstractArray, BaseDataObject):
 
     def __getitem__(self, key):
         if isinstance(key, basestring):
-            return self.coords[key]
+            from .dataset import _get_virtual_variable
+
+            try:
+                var = self._coords[key]
+            except KeyError:
+                _, key, var = _get_virtual_variable(self._coords, key)
+
+            return self._replace_maybe_drop_dims(var, name=key)
         else:
             # orthogonal array indexing
             return self.isel(**self._item_key_to_dict(key))
@@ -379,7 +406,7 @@ class DataArray(AbstractArray, BaseDataObject):
             self.variable[key] = value
 
     def __delitem__(self, key):
-        del self._dataset[key]
+        del self.coords[key]
 
     @property
     def _attr_sources(self):
@@ -387,7 +414,7 @@ class DataArray(AbstractArray, BaseDataObject):
         return [self.coords, self.attrs]
 
     def __contains__(self, key):
-        return key in self._dataset
+        return key in self._coords
 
     @property
     def loc(self):
@@ -449,10 +476,19 @@ class DataArray(AbstractArray, BaseDataObject):
             raise ValueError('cannot reset coordinates in-place on a '
                              'DataArray without ``drop == True``')
         if names is None:
-            names = (self._dataset._coord_names - set(self.dims) -
-                     set([self.name]))
-        ds = self._dataset.reset_coords(names, drop, inplace)
-        return ds[self.name] if drop else ds
+            names = set(self.coords) - set(self.dims)
+        dataset = self.coords.to_dataset().reset_coords(names, drop)
+        if drop:
+            if inplace:
+                self._coords = dataset._variables
+            else:
+                return self._replace(coords=dataset._variables)
+        else:
+            if self.name is None:
+                raise ValueError('cannot reset_coords with drop=False '
+                                 'on an unnamed DataArrray')
+            dataset[self.name] = self.variable
+            return dataset
 
     def load(self):
         """Manually trigger loading of this array's data from disk or a
@@ -463,7 +499,10 @@ class DataArray(AbstractArray, BaseDataObject):
         load data automatically. However, this method can be necessary when
         working with many file objects on disk.
         """
-        self._dataset.load()
+        ds = self._to_temp_dataset().load()
+        new = self._from_temp_dataset(ds)
+        self._variable = new._variable
+        self._coords = new._coords
         return self
 
     def load_data(self):  # pragma: no cover
@@ -479,8 +518,10 @@ class DataArray(AbstractArray, BaseDataObject):
         dataset. Otherwise, a shallow copy is made, so each variable in the new
         array's dataset is also a variable in this array's dataset.
         """
-        ds = self._dataset.copy(deep=deep)
-        return self._with_replaced_dataset(ds)
+        variable = self.variable.copy(deep=deep)
+        coords = OrderedDict((k, v.copy(deep=deep))
+                             for k, v in self._coords.items())
+        return self._replace(variable, coords)
 
     def __copy__(self):
         return self.copy(deep=False)
@@ -524,8 +565,8 @@ class DataArray(AbstractArray, BaseDataObject):
         if isinstance(chunks, (list, tuple)):
             chunks = dict(zip(self.dims, chunks))
 
-        ds = self._dataset.chunk(chunks)
-        return self._with_replaced_dataset(ds)
+        ds = self._to_temp_dataset().chunk(chunks)
+        return self._from_temp_dataset(ds)
 
     def isel(self, **indexers):
         """Return a new DataArray whose dataset is given by integer indexing
@@ -536,8 +577,8 @@ class DataArray(AbstractArray, BaseDataObject):
         Dataset.isel
         DataArray.sel
         """
-        ds = self._dataset.isel(**indexers)
-        return self._with_replaced_dataset(ds)
+        ds = self._to_temp_dataset().isel(**indexers)
+        return self._from_temp_dataset(ds)
 
     def sel(self, method=None, tolerance=None, **indexers):
         """Return a new DataArray whose dataset is given by selecting
@@ -559,8 +600,8 @@ class DataArray(AbstractArray, BaseDataObject):
         --------
         Dataset.isel_points
         """
-        ds = self._dataset.isel_points(dim=dim, **indexers)
-        return self._with_replaced_dataset(ds)
+        ds = self._to_temp_dataset().isel_points(dim=dim, **indexers)
+        return self._from_temp_dataset(ds)
 
     def sel_points(self, dim='points', method=None, tolerance=None,
                    **indexers):
@@ -571,9 +612,9 @@ class DataArray(AbstractArray, BaseDataObject):
         --------
         Dataset.sel_points
         """
-        ds = self._dataset.sel_points(dim=dim, method=method,
-                                      tolerance=tolerance, **indexers)
-        return self._with_replaced_dataset(ds)
+        ds = self._to_temp_dataset().sel_points(
+            dim=dim, method=method, tolerance=tolerance, **indexers)
+        return self._from_temp_dataset(ds)
 
     def reindex_like(self, other, method=None, tolerance=None, copy=True):
         """Conform this object onto the indexes of another object, filling
@@ -660,9 +701,9 @@ class DataArray(AbstractArray, BaseDataObject):
         DataArray.reindex_like
         align
         """
-        ds = self._dataset.reindex(method=method, tolerance=tolerance,
-                                   copy=copy, **indexers)
-        return self._with_replaced_dataset(ds)
+        ds = self._to_temp_dataset().reindex(
+            method=method, tolerance=tolerance, copy=copy, **indexers)
+        return self._from_temp_dataset(ds)
 
     def rename(self, new_name_or_name_dict):
         """Returns a new DataArray with renamed coordinates and/or a new name.
@@ -686,13 +727,12 @@ class DataArray(AbstractArray, BaseDataObject):
         DataArray.swap_dims
         """
         if utils.is_dict_like(new_name_or_name_dict):
-            name_dict = new_name_or_name_dict
-            new_name = name_dict.get(self.name, self.name)
+            name_dict = new_name_or_name_dict.copy()
+            name = name_dict.pop(self.name, self.name)
+            dataset = self._to_temp_dataset().rename(name_dict)
+            return self._from_temp_dataset(dataset, name)
         else:
-            new_name = new_name_or_name_dict
-            name_dict = {self.name: new_name}
-        renamed_dataset = self._dataset.rename(name_dict)
-        return renamed_dataset[new_name]
+            return self._replace(name=new_name_or_name_dict)
 
     def swap_dims(self, dims_dict):
         """Returns a new DataArray with swapped dimensions.
@@ -717,8 +757,8 @@ class DataArray(AbstractArray, BaseDataObject):
         DataArray.rename
         Dataset.swap_dims
         """
-        ds = self._dataset.swap_dims(dims_dict)
-        return self._with_replaced_dataset(ds)
+        ds = self._to_temp_dataset().swap_dims(dims_dict)
+        return self._from_temp_dataset(ds)
 
     def transpose(self, *dims):
         """Return a new DataArray object with transposed dimensions.
@@ -744,9 +784,8 @@ class DataArray(AbstractArray, BaseDataObject):
         numpy.transpose
         Dataset.transpose
         """
-        ds = self._dataset.copy()
-        ds[self.name] = self.variable.transpose(*dims)
-        return self._with_replaced_dataset(ds)
+        variable = self.variable.transpose(*dims)
+        return self._replace(variable)
 
     def squeeze(self, dim=None):
         """Return a new DataArray object with squeezed data.
@@ -773,8 +812,7 @@ class DataArray(AbstractArray, BaseDataObject):
         --------
         numpy.squeeze
         """
-        ds = self._dataset.squeeze(dim)
-        return self._with_replaced_dataset(ds)
+        return squeeze(self, dict(zip(self.dims, self.shape)), dim)
 
     def drop(self, labels, dim=None):
         """Drop coordinates or index labels from this DataArray.
@@ -793,10 +831,8 @@ class DataArray(AbstractArray, BaseDataObject):
         """
         if utils.is_scalar(labels):
             labels = [labels]
-        if dim is None and self.name in labels:
-            raise ValueError('cannot drop this DataArray from itself')
-        ds = self._dataset.drop(labels, dim)
-        return self._with_replaced_dataset(ds)
+        ds = self._to_temp_dataset().drop(labels, dim)
+        return self._from_temp_dataset(ds)
 
     def dropna(self, dim, how='any', thresh=None):
         """Returns a new array with dropped labels for missing values along
@@ -817,8 +853,8 @@ class DataArray(AbstractArray, BaseDataObject):
         -------
         DataArray
         """
-        ds = self._dataset.dropna(dim, how=how, thresh=thresh)
-        return self._with_replaced_dataset(ds)
+        ds = self._to_temp_dataset().dropna(dim, how=how, thresh=thresh)
+        return self._from_temp_dataset(ds)
 
     def fillna(self, value):
         """Fill missing values in this object.
@@ -874,9 +910,7 @@ class DataArray(AbstractArray, BaseDataObject):
             summarized data and the indicated dimension(s) removed.
         """
         var = self.variable.reduce(func, dim, axis, keep_attrs, **kwargs)
-        ds = self._dataset.drop(set(self.dims) - set(var.dims))
-        ds[self.name] = var
-        return self._with_replaced_dataset(ds)
+        return self._replace_maybe_drop_dims(var)
 
     def to_pandas(self):
         """Convert this array into a pandas object with the same shape.
@@ -905,7 +939,7 @@ class DataArray(AbstractArray, BaseDataObject):
                              'pandas objects' % self.ndim)
         return constructor(self.values, *self.indexes.values())
 
-    def to_dataframe(self):
+    def to_dataframe(self, name=None):
         """Convert this array and its coordinates into a tidy pandas.DataFrame.
 
         The DataFrame is indexed by the Cartesian product of index coordinates
@@ -913,9 +947,24 @@ class DataArray(AbstractArray, BaseDataObject):
 
         Other coordinates are included as columns in the DataFrame.
         """
-        # TODO: add a 'name' parameter
+        if name is None:
+            name = self.name
+        if name is None:
+            raise ValueError('cannot convert an unnamed DataArray to a '
+                             'DataFrame: use the ``name`` parameter')
+
         dims = OrderedDict(zip(self.dims, self.shape))
-        return self._dataset._to_dataframe(dims)
+        # By using a unique name, we can convert a DataArray into a DataFrame
+        # even if it shares a name with one of its coordinates.
+        # I would normally use unique_name = object() but that results in a
+        # dataframe with columns in the wrong order, for reasons I have not
+        # been able to debug (possibly a pandas bug?).
+        unique_name = '__unique_name_identifier_z98xfz98xugfg73ho__'
+        ds = self._to_dataset_whole(name=unique_name)
+        df = ds._to_dataframe(dims)
+        df.columns = [name if c == unique_name else c
+                      for c in df.columns]
+        return df
 
     def to_series(self):
         """Convert this array into a pandas.Series.
@@ -953,9 +1002,10 @@ class DataArray(AbstractArray, BaseDataObject):
         method.
         """
         # TODO: add a 'name' parameter
-        df = pd.DataFrame({series.name: series})
+        name = series.name
+        df = pd.DataFrame({name: series})
         ds = Dataset.from_dataframe(df)
-        return cls._new_from_dataset_no_copy(ds, series.name)
+        return ds[name]
 
     def to_cdms2(self):
         """Convert this array into a cdms2.Variable
@@ -1030,36 +1080,17 @@ class DataArray(AbstractArray, BaseDataObject):
     __default_name = object()
 
     def _result_name(self, other=None):
-
-        if self.name in self.dims:
-            # these names match dimension, so if we preserve them we will also
-            # rename indexes
-            return None
-
-        if other is None:
-            # shortcut
-            return self.name
-
-        other_name = getattr(other, 'name', self.__default_name)
-        other_dims = getattr(other, 'dims', ())
-
-        if other_name in other_dims:
-            # same trouble as above
-            return None
-
         # use the same naming heuristics as pandas:
         # https://github.com/ContinuumIO/blaze/issues/458#issuecomment-51936356
+        other_name = getattr(other, 'name', self.__default_name)
         if other_name is self.__default_name or other_name == self.name:
             return self.name
-
-        return None
+        else:
+            return None
 
     def __array_wrap__(self, obj, context=None):
         new_var = self.variable.__array_wrap__(obj, context)
-        ds = self.coords.to_dataset()
-        name = self._result_name()
-        ds[name] = new_var
-        return self._new_from_dataset_no_copy(ds, name)
+        return self._replace(new_var)
 
     @staticmethod
     def _unary_op(f):
@@ -1081,15 +1112,16 @@ class DataArray(AbstractArray, BaseDataObject):
                 if empty_indexes:
                     raise ValueError('no overlapping labels for some '
                                      'dimensions: %s' % empty_indexes)
-            other_coords = getattr(other, 'coords', None)
             other_variable = getattr(other, 'variable', other)
-            ds = self.coords.merge(other_coords)
-            name = self._result_name(other)
-            ds[name] = (f(self.variable, other_variable)
+            other_coords = getattr(other, 'coords', None)
+
+            variable = (f(self.variable, other_variable)
                         if not reflexive
                         else f(other_variable, self.variable))
-            result = self._new_from_dataset_no_copy(ds, name)
-            return result
+            coords = self.coords.merge(other_coords)._variables
+            name = self._result_name(other)
+
+            return self._replace(variable, coords, name)
         return func
 
     @staticmethod
@@ -1108,7 +1140,7 @@ class DataArray(AbstractArray, BaseDataObject):
 
     @property
     def plot(self):
-        '''
+        """
         Access plotting functions
 
         >>> d = DataArray([[1, 2], [3, 4]])
@@ -1120,11 +1152,11 @@ class DataArray(AbstractArray, BaseDataObject):
         DataArray methods
         >>> d.plot.imshow()  # equivalent to xray.plot.imshow(d)
 
-        '''
+        """
         return _PlotMethods(self)
 
     def _title_for_slice(self, truncate=50):
-        '''
+        """
         If the dataarray has 1 dimensional coordinates or comes from a slice
         we can show that info in the title
 
@@ -1138,7 +1170,7 @@ class DataArray(AbstractArray, BaseDataObject):
         title : string
             Can be used for plot titles
 
-        '''
+        """
         one_dims = []
         for dim, coord in iteritems(self.coords):
             if coord.size == 1:
@@ -1186,8 +1218,8 @@ class DataArray(AbstractArray, BaseDataObject):
         * x        (x) int64 3 4
 
         """
-        ds = self._dataset.diff(n=n, dim=dim, label=label)
-        return self._with_replaced_dataset(ds)
+        ds = self._to_temp_dataset().diff(n=n, dim=dim, label=label)
+        return self._from_temp_dataset(ds)
 
     def shift(self, **shifts):
         """Shift this array by an offset along one or more dimensions.
@@ -1223,9 +1255,8 @@ class DataArray(AbstractArray, BaseDataObject):
         Coordinates:
           * x        (x) int64 0 1 2
         """
-        ds = self._dataset.copy()
-        ds[self.name] = self.variable.shift(**shifts)
-        return self._with_replaced_dataset(ds)
+        variable = self.variable.shift(**shifts)
+        return self._replace(variable)
 
     def roll(self, **shifts):
         """Roll this array by an offset along one or more dimensions.
@@ -1258,16 +1289,16 @@ class DataArray(AbstractArray, BaseDataObject):
         Coordinates:
           * x        (x) int64 2 0 1
         """
-        ds = self._dataset.roll(**shifts)
-        return self._with_replaced_dataset(ds)
+        ds = self._to_temp_dataset().roll(**shifts)
+        return self._from_temp_dataset(ds)
 
     @property
     def real(self):
-        return self._with_replaced_dataset(self._dataset.real)
+        return self._replace(self.variable.real)
 
     @property
     def imag(self):
-        return self._with_replaced_dataset(self._dataset.imag)
+        return self._replace(self.variable.imag)
 
 # priority most be higher than Variable to properly work with binary ufuncs
 ops.inject_all_ops_and_reduce_methods(DataArray, priority=60)

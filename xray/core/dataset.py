@@ -14,11 +14,13 @@ from . import indexing
 from . import alignment
 from . import formatting
 from .. import conventions
-from .alignment import align, partial_align
+from .alignment import align, align_variables
 from .coordinates import DatasetCoordinates, Indexes
 from .common import ImplementsDatasetReduce, BaseDataObject
+from .merge import merge_datasets, expand_variables
 from .utils import Frozen, SortedKeysDict, ChainMap, maybe_wrap_array, hashable
-from .variable import as_variable, Variable, Coordinate, broadcast_variables
+from .variable import (as_variable, Variable, Coordinate, broadcast_variables,
+                       default_index_coordinate)
 from .pycompat import (iteritems, basestring, OrderedDict,
                        dask_array_type)
 from .combine import concat
@@ -61,92 +63,6 @@ def _get_virtual_variable(variables, key):
     return ref_name, var_name, Variable(ref_var.dims, data)
 
 
-def _as_dataset_variable(name, var):
-    """Prepare a variable for adding it to a Dataset
-    """
-    try:
-        var = as_variable(var, key=name)
-    except TypeError:
-        raise TypeError('Dataset variables must be an array or a tuple of '
-                        'the form (dims, data[, attrs, encoding])')
-    if name in var.dims:
-        # convert the into an Index
-        if var.ndim != 1:
-            raise ValueError('the variable %r has the same name as one of its '
-                             'dimensions %r, but it is not 1-dimensional and '
-                             'thus it is not a valid index' % (name, var.dims))
-        var = var.to_coord()
-    return var
-
-
-def _align_variables(variables, join='outer'):
-    """Align all DataArrays in the provided dict, leaving other values alone.
-    """
-    alignable = [k for k, v in variables.items() if hasattr(v, 'indexes')]
-    aligned = align(*[variables[a] for a in alignable],
-                    join=join, copy=False)
-    new_variables = OrderedDict(variables)
-    new_variables.update(zip(alignable, aligned))
-    return new_variables
-
-
-def _expand_variables(raw_variables, old_variables=None, compat='identical'):
-    """Expand a dictionary of variables.
-
-    Returns a dictionary of Variable objects suitable for inserting into a
-    Dataset._variables dictionary.
-
-    This includes converting tuples (dims, data) into Variable objects,
-    converting coordinate variables into Coordinate objects and expanding
-    DataArray objects into Variables plus coordinates.
-
-    Raises ValueError if any conflicting values are found, between any of the
-    new or old variables.
-    """
-    if old_variables is None:
-        old_variables = {}
-    new_variables = OrderedDict()
-    new_coord_names = set()
-    variables = ChainMap(new_variables, old_variables)
-
-    def maybe_promote_or_replace(name, var):
-        existing_var = variables[name]
-        if name not in existing_var.dims:
-            if name in var.dims:
-                variables[name] = var
-            else:
-                common_dims = OrderedDict(zip(existing_var.dims,
-                                              existing_var.shape))
-                common_dims.update(zip(var.dims, var.shape))
-                variables[name] = existing_var.expand_dims(common_dims)
-                new_coord_names.update(var.dims)
-
-    def add_variable(name, var):
-        var = _as_dataset_variable(name, var)
-        if name not in variables:
-            variables[name] = var
-            new_coord_names.update(variables[name].dims)
-        else:
-            if not getattr(variables[name], compat)(var):
-                raise ValueError('conflicting value for variable %s:\n'
-                                 'first value: %r\nsecond value: %r'
-                                 % (name, variables[name], var))
-            if compat == 'broadcast_equals':
-                maybe_promote_or_replace(name, var)
-
-    for name, var in iteritems(raw_variables):
-        if hasattr(var, 'coords'):
-            # it's a DataArray
-            new_coord_names.update(var.coords)
-            for dim, coord in iteritems(var.coords):
-                if dim != name:
-                    add_variable(dim, coord.variable)
-            var = var.variable
-        add_variable(name, var)
-
-    return new_variables, new_coord_names
-
-
 def _calculate_dims(variables):
     """Calculate the dimensions corresponding to a set of variables.
 
@@ -171,40 +87,6 @@ def _calculate_dims(variables):
     return dims
 
 
-def _merge_expand(aligned_self, other, overwrite_vars, compat):
-    possible_conflicts = dict((k, v) for k, v in aligned_self._variables.items()
-                              if k not in overwrite_vars)
-    new_vars, new_coord_names = _expand_variables(other, possible_conflicts, compat)
-    replace_vars = aligned_self._variables.copy()
-    replace_vars.update(new_vars)
-    return replace_vars, new_vars, new_coord_names
-
-
-def _merge_dataset(self, other, overwrite_vars, compat, join):
-    aligned_self, other = partial_align(self, other, join=join, copy=False)
-
-    replace_vars, new_vars, new_coord_names = _merge_expand(
-        aligned_self, other._variables, overwrite_vars, compat)
-    new_coord_names.update(other._coord_names)
-
-    return replace_vars, new_vars, new_coord_names
-
-
-def _merge_dict(self, other, overwrite_vars, compat, join):
-    other = _align_variables(other, join='outer')
-
-    alignable = [k for k, v in other.items() if hasattr(v, 'indexes')]
-    aligned = partial_align(self, *[other[a] for a in alignable],
-                            join=join, copy=False, exclude=overwrite_vars)
-
-    aligned_self = aligned[0]
-
-    other = OrderedDict(other)
-    other.update(zip(alignable, aligned[1:]))
-
-    return _merge_expand(aligned_self, other, overwrite_vars, compat)
-
-
 def _assert_empty(args, msg='%s'):
     if args:
         raise ValueError(msg % args)
@@ -213,16 +95,17 @@ def _assert_empty(args, msg='%s'):
 def as_dataset(obj):
     """Cast the given object to a Dataset.
 
-    Handles DataArrays, Datasets and dictionaries of variables. A new Dataset
-    object is only created in the last case.
+    Handles Datasets, DataArrays and dictionaries of variables. A new Dataset
+    object is only created if the provided object is not already one.
     """
-    obj = getattr(obj, '_dataset', obj)
+    if hasattr(obj, 'to_dataset'):
+        obj = obj.to_dataset()
     if not isinstance(obj, Dataset):
         obj = Dataset(obj)
     return obj
 
 
-class Variables(Mapping):
+class DataVariables(Mapping):
     def __init__(self, dataset):
         self._dataset = dataset
 
@@ -332,11 +215,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject):
         """
         for dim, size in iteritems(self.dims):
             if dim not in self._variables:
-                # This is equivalent to np.arange(size), but
-                # waits to create the array until its actually accessed.
-                data = indexing.LazyIntegerRange(size)
-                coord = Coordinate(dim, data)
-                self._variables[dim] = coord
+                self._variables[dim] = default_index_coordinate(dim, size)
 
     def _update_vars_and_coords(self, new_variables, new_coord_names=None,
                                 needs_copy=True, check_coord_names=True):
@@ -375,9 +254,9 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject):
                       'redundant variables and coordinates: %s')
         variables = ChainMap(vars, coords)
 
-        aligned = _align_variables(variables)
-        new_variables, new_coord_names = _expand_variables(aligned,
-                                                           compat=compat)
+        aligned = align_variables(variables)
+        new_variables, new_coord_names = expand_variables(aligned,
+                                                          compat=compat)
 
         new_coord_names.update(coords)
         self._update_vars_and_coords(new_variables, new_coord_names,
@@ -549,7 +428,19 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject):
         return self._construct_direct(variables, self._coord_names.copy(),
                                       self._dims.copy(), self._attrs_copy())
 
-    def _copy_listed(self, names, keep_attrs=True):
+    def _subset_with_all_valid_coords(self, variables, coord_names, attrs):
+        needed_dims = set()
+        for v in variables.values():
+            needed_dims.update(v.dims)
+        for k in self._coord_names:
+            if set(self.variables[k].dims) <= needed_dims:
+                variables[k] = self._variables[k]
+                coord_names.add(k)
+        dims = dict((k, self._dims[k]) for k in needed_dims)
+
+        return self._construct_direct(variables, coord_names, dims, attrs)
+
+    def _copy_listed(self, names):
         """Create a new Dataset with the listed variables from this dataset and
         the all relevant coordinates. Skips all validation.
         """
@@ -566,19 +457,26 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject):
                 if ref_name in self._coord_names:
                     coord_names.add(var_name)
 
-        needed_dims = set()
-        for v in variables.values():
-            needed_dims.update(v._dims)
-        for k in self._coord_names:
-            if set(self._variables[k]._dims) <= needed_dims:
-                variables[k] = self._variables[k]
-                coord_names.add(k)
+        return self._subset_with_all_valid_coords(variables, coord_names,
+                                                  attrs=self.attrs.copy())
 
-        dims = dict((k, self._dims[k]) for k in needed_dims)
+    def _construct_dataarray(self, name):
+        """Construct a DataArray by indexing this dataset
+        """
+        from .dataarray import DataArray
 
-        attrs = self.attrs.copy() if keep_attrs else None
+        try:
+            variable = self._variables[name]
+        except KeyError:
+            _, name, variable = _get_virtual_variable(self._variables, name)
 
-        return self._construct_direct(variables, coord_names, dims, attrs)
+        coords = OrderedDict()
+        needed_dims = set(variable.dims)
+        for k in self.coords:
+            if set(self.variables[k].dims) <= needed_dims:
+                coords[k] = self.variables[k]
+
+        return DataArray(variable, coords, name=name, fastpath=True)
 
     def __copy__(self):
         return self.copy(deep=False)
@@ -617,13 +515,11 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject):
 
         Indexing with a list of names will return a new ``Dataset`` object.
         """
-        from .dataarray import DataArray
-
         if utils.is_dict_like(key):
             return self.isel(**key)
 
         if hashable(key):
-            return DataArray._new_from_dataset(self, key)
+            return self._construct_dataarray(key)
         else:
             return self._copy_listed(np.asarray(key))
 
@@ -745,7 +641,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject):
     def data_vars(self):
         """Dictionary of xray.DataArray objects corresponding to data variables
         """
-        return Variables(self)
+        return DataVariables(self)
 
     @property
     def vars(self):  # pragma: no cover
@@ -1334,10 +1230,13 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject):
         Dataset.swap_dims
         DataArray.rename
         """
-        for k in name_dict:
+        for k, v in name_dict.items():
             if k not in self:
                 raise ValueError("cannot rename %r because it is not a "
                                  "variable in this dataset" % k)
+            if v in self:
+                raise ValueError('the new name %r already exists' % v)
+
         variables = OrderedDict()
         coord_names = set()
         for k, v in iteritems(self._variables):
@@ -1472,27 +1371,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject):
         ValueError
             If any variables conflict (see ``compat``).
         """
-        if compat not in ['broadcast_equals', 'equals', 'identical']:
-            raise ValueError("compat=%r invalid: must be 'broadcast_equals', "
-                             "'equals' or 'identical'" % compat)
-
-        if isinstance(overwrite_vars, basestring):
-            overwrite_vars = [overwrite_vars]
-        overwrite_vars = set(overwrite_vars)
-
-        merge = _merge_dataset if isinstance(other, Dataset) else _merge_dict
-
-        replace_vars, new_vars, new_coord_names = merge(
+        replace_vars, new_coord_names = merge_datasets(
             self, other, overwrite_vars, compat=compat, join=join)
-
-        newly_coords = new_coord_names & (set(self) - set(self.coords))
-        no_longer_coords = set(self.coords) & (set(new_vars) - new_coord_names)
-        ambiguous_coords = (newly_coords | no_longer_coords) - overwrite_vars
-        if ambiguous_coords:
-            raise ValueError('cannot merge: the following variables are '
-                             'coordinates on one dataset but not the other: %s'
-                             % list(ambiguous_coords))
-
         obj = self if inplace else self.copy()
         obj._update_vars_and_coords(replace_vars, new_coord_names)
         return obj

@@ -4,7 +4,7 @@ import pandas as pd
 
 from . import utils
 from .pycompat import iteritems, reduce, OrderedDict, basestring
-from .variable import Variable
+from .variable import Variable, as_variable, Coordinate
 
 
 def concat(objs, dim=None, data_vars='all', coords='different',
@@ -120,8 +120,6 @@ def _calc_concat_dim_coord(dim):
     Infer the dimension name and 1d coordinate variable (if appropriate)
     for concatenating along the new dimension.
     """
-    from .dataarray import DataArray
-
     if isinstance(dim, basestring):
         coord = None
     elif not hasattr(dim, 'dims'):
@@ -129,8 +127,11 @@ def _calc_concat_dim_coord(dim):
         dim_name = getattr(dim, 'name', None)
         if dim_name is None:
             dim_name = 'concat_dim'
-        coord = DataArray(dim, dims=dim_name, name=dim_name)
+        coord = Coordinate(dim_name, dim)
         dim = dim_name
+    elif not hasattr(dim, 'name'):
+        coord = as_variable(dim).to_coord()
+        dim, = coord.dims
     else:
         coord = dim
         dim, = coord.dims
@@ -207,6 +208,7 @@ def _dataset_concat(datasets, dim, data_vars, coords, compat, positions):
     concat_over = _calc_concat_over(datasets, dim, data_vars, coords)
 
     def insert_result_variable(k, v):
+        assert isinstance(v, Variable)
         if k in datasets[0].coords:
             result_coord_names.add(k)
         result_vars[k] = v
@@ -267,22 +269,19 @@ def _dataset_concat(datasets, dim, data_vars, coords, compat, positions):
         combined = Variable.concat(vars, dim, positions)
         insert_result_variable(k, combined)
 
-    # result._coord_names.update(datasets[0].coords)
+    result = Dataset(result_vars, attrs=result_attrs)
+    result = result.set_coords(result_coord_names)
 
     if coord is not None:
         # add concat dimension last to ensure that its in the final Dataset
-        insert_result_variable(coord.name, coord)
-        # result[coord.name] = coord
-
-    result = Dataset(result_vars, attrs=result_attrs)
-    result = result.set_coords(result_coord_names)
+        result[coord.name] = coord
 
     return result
 
 
 def _dataarray_concat(arrays, dim, data_vars, coords, compat,
                       positions):
-    from .dataarray import DataArray
+    arrays = list(arrays)
 
     if data_vars != 'all':
         raise ValueError('data_vars is not a valid argument when '
@@ -297,11 +296,11 @@ def _dataarray_concat(arrays, dim, data_vars, coords, compat,
                 raise ValueError('array names not identical')
             else:
                 arr = arr.rename(name)
-        datasets.append(arr._dataset)
+        datasets.append(arr._to_temp_dataset())
 
     ds = _dataset_concat(datasets, dim, data_vars, coords, compat,
                          positions)
-    return DataArray._new_from_dataset_no_copy(ds, name)
+    return arrays[0]._from_temp_dataset(ds, name)
 
 
 def _auto_concat(datasets, dim=None):
