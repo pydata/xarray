@@ -289,7 +289,7 @@ class BaseDataObject(AttrAccessMixin):
             of valid offsets include:
 
             * 'AS': year start
-            * 'Q-DEC': quarter, starting on December 1
+            * 'QS-DEC': quarterly, starting on December 1
             * 'MS': month start
             * 'D': day
             * 'H': hour
