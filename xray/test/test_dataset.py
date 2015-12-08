@@ -199,6 +199,22 @@ class TestDataset(TestCase):
         with self.assertRaisesRegexp(ValueError, 'conflicting sizes'):
             Dataset({'a': a, 'b': b, 'e': e})
 
+    def test_constructor_pandas(self):
+
+        ds = self.make_example_math_dataset()
+        pandas_objs = OrderedDict(
+            (var_name, ds[var_name].to_pandas()) for var_name in ['foo','bar']
+        )
+        ds_based_on_pandas = Dataset(data_vars=pandas_objs, coords=ds.coords, attrs=ds.attrs)
+        self.assertDatasetEqual(ds, ds_based_on_pandas)
+
+        # reindex pandas obj, check align works
+        rearranged_index = reversed(pandas_objs['foo'].index)
+        pandas_objs['foo'] = pandas_objs['foo'].reindex(rearranged_index)
+        ds_based_on_pandas = Dataset(variables=pandas_objs, coords=ds.coords, attrs=ds.attrs)
+        self.assertDatasetEqual(ds, ds_based_on_pandas)
+
+
     def test_constructor_compat(self):
         data = OrderedDict([('x', DataArray(0, coords={'y': 1})),
                             ('y', ('z', [1, 1, 1]))])
@@ -1304,6 +1320,14 @@ class TestDataset(TestCase):
 
         with self.assertRaises(NotImplementedError):
             data1[{'x': 0}] = 0
+
+    def test_setitem_pandas(self):
+
+        ds = self.make_example_math_dataset()
+        ds_copy = ds.copy()
+        ds_copy['bar'] = ds['bar'].to_pandas()
+
+        self.assertDatasetEqual(ds, ds_copy)
 
     def test_setitem_auto_align(self):
         ds = Dataset()
