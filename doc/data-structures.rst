@@ -259,12 +259,20 @@ Notice that we did not explicitly include coordinates for the "x" or "y"
 dimensions, so they were filled in array of ascending integers of the proper
 length.
 
-We can also pass :py:class:`xray.DataArray` objects as values in the dictionary
-instead of tuples:
+We can also pass :py:class:`xray.DataArray` objects or a pandas object as values
+in the dictionary instead of tuples:
 
 .. ipython:: python
 
     xray.Dataset({'bar': foo})
+
+
+.. ipython:: python
+
+    xray.Dataset({'bar': foo.to_pandas()})
+
+Where a pandas object is supplied, the names of its indexes are used as dimension
+names, and its data is aligned to any existing dimensions.
 
 You can also create an dataset from a :py:class:`pandas.DataFrame` with
 :py:meth:`Dataset.from_dataframe <xray.Dataset.from_dataframe>` or from a
@@ -338,8 +346,8 @@ example, to create this example dataset from scratch, we could have written:
 
 To change the variables in a ``Dataset``, you can use all the standard dictionary
 methods, including ``values``, ``items``, ``__delitem__``, ``get`` and
-:py:meth:`~xray.Dataset.update`. Note that assigning a ``DataArray`` object to
-a ``Dataset`` variable using ``__setitem__`` or ``update`` will
+:py:meth:`~xray.Dataset.update`. Note that assigning a ``DataArray`` or pandas
+object to a ``Dataset`` variable using ``__setitem__`` or ``update`` will
 :ref:`automatically align<update>` the array(s) to the original
 dataset's indexes.
 

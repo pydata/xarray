@@ -91,6 +91,8 @@ Enhancements
 
   Notice that ``shift`` moves data independently of coordinates, but ``roll``
   moves both data and coordinates.
+- Assigning a ``pandas`` object to a ``Dataset`` directly is now permitted. Its
+  index names correspond to the `dims`` of the ``Dataset``, and its data is aligned
 
 Bug fixes
 ~~~~~~~~~

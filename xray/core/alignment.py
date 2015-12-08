@@ -1,9 +1,9 @@
 import functools
 import operator
-import pandas as pd
 from collections import defaultdict
 
 import numpy as np
+import pandas as pd
 
 from . import ops, utils
 from .common import _maybe_promote
@@ -103,9 +103,18 @@ def partial_align(*objects, **kwargs):
 def align_variables(variables, join='outer', copy=False):
     """Align all DataArrays in the provided dict, leaving other values alone.
     """
-    alignable = [k for k, v in variables.items() if hasattr(v, 'indexes')]
-    aligned = align(*[variables[a] for a in alignable], join=join, copy=copy)
+    from .dataarray import DataArray
+    from pandas import Series, DataFrame, Panel
+
     new_variables = OrderedDict(variables)
+    # if an item is a Series / DataFrame / Panel, try and wrap it in a DataArray constructor
+    new_variables.update((
+        (k, DataArray(v)) for k, v in variables.items()
+        if isinstance(v, (Series, DataFrame, Panel))
+    ))
+
+    alignable = [k for k, v in new_variables.items() if hasattr(v, 'indexes')]
+    aligned = align(*[new_variables[a] for a in alignable], join=join, copy=copy)
     new_variables.update(zip(alignable, aligned))
     return new_variables
 
