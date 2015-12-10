@@ -205,7 +205,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject):
             data_vars = {}
         if coords is None:
             coords = set()
-        if data_vars or coords:
+        if data_vars is not None or coords is not None:
             self._set_init_vars_and_dims(data_vars, coords, compat)
         if attrs is not None:
             self.attrs = attrs
