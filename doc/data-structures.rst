@@ -44,13 +44,13 @@ Creating a DataArray
 
 The :py:class:`~xray.DataArray` constructor takes:
 
- - ``data``: a multi-dimensional array of values (e.g., a numpy ndarray,
-:py:class:`~pandas.Series`, :py:class:`~pandas.DataFrame` or :py:class:`~pandas.Panel`)
- - ``coords``: a list or dictionary of coordinates
- - ``dims``: a list of dimension names. If omitted, dimension names are
- taken from ``coords`` if possible
- - ``attrs``: a dictionary of attributes to add to the instance
- - ``name``: a string that names the instance
+- ``data``: a multi-dimensional array of values (e.g., a numpy ndarray,
+  :py:class:`~pandas.Series`, :py:class:`~pandas.DataFrame` or :py:class:`~pandas.Panel`)
+- ``coords``: a list or dictionary of coordinates
+- ``dims``: a list of dimension names. If omitted, dimension names are
+  taken from ``coords`` if possible
+- ``attrs``: a dictionary of attributes to add to the instance
+- ``name``: a string that names the instance
 
 .. ipython:: python
 
@@ -75,8 +75,8 @@ Coordinates can take the following forms:
 
 - A list of ``(dim, ticks[, attrs])`` pairs with length equal to the number of dimensions
 - A dictionary of ``{coord_name: coord}`` where the values are scaler values,
- 1D arrays or tuples (tuples in the same form as above). This form lets you supply other
- coordinates than those corresponding to dimensions (more on these later).
+  1D arrays or tuples (tuples in the same form as above). This form lets you supply other
+  coordinates than those corresponding to dimensions (more on these later).
 
 As a list of tuples:
 
