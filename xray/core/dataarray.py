@@ -990,7 +990,7 @@ class DataArray(AbstractArray, BaseDataObject):
             Masked where invalid values (nan or inf) occur.
         """
         isnull = pd.isnull(self.values)
-        return np.ma.masked_where(isnull, self.values, copy=copy)
+        return np.ma.MaskedArray(data=self.values, mask=isnull, copy=copy)
 
     @classmethod
     def from_series(cls, series):

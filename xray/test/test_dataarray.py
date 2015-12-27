@@ -1406,6 +1406,13 @@ class TestDataArray(TestCase):
             ma = da.to_masked_array()
             self.assertIsInstance(ma, np.ma.MaskedArray)
 
+        # Fix GH issue 684 - masked arrays mask should be an array not a scalar
+        N = 4
+        v = range(N)
+        da = DataArray(v)
+        ma = da.to_masked_array()
+        self.assertEqual(len(ma.mask), N)
+
     def test_to_and_from_cdms2(self):
         try:
             import cdms2
