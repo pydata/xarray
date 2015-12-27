@@ -67,6 +67,9 @@ Bug fixes
 - Fixes for several issues found on ``DataArray`` objects with the same name
   as one of their coordinates (see :ref:`v0.7.0.breaking` for more details).
 
+- ``DataArray.to_masked_array`` always returns masked array with mask being an array 
+(not a scalar value) (:issue:`684`)
+
 v0.6.2 (unreleased)
 -------------------
 
