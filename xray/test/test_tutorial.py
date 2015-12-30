@@ -1,6 +1,7 @@
 import os
 
 from xray import tutorial, DataArray
+from xray.core.pycompat import suppress
 
 from . import TestCase, unittest
 
@@ -12,10 +13,8 @@ class Test_load_dataset(TestCase):
         self.testfile = 'tiny'
         self.testfilepath = os.path.expanduser(os.sep.join(
             ('~', '.xray_tutorial_data', self.testfile)))
-        try:
+        with suppress(OSError):
             os.remove(self.testfilepath)
-        except OSError:
-            pass
 
     def test_download_from_github(self):
         ds = tutorial.load_dataset(self.testfile)

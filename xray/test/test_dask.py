@@ -2,13 +2,12 @@ import numpy as np
 
 from xray import Variable, DataArray, Dataset, concat
 import xray.ufuncs as xu
+from xray.core.pycompat import suppress
 from . import TestCase, requires_dask
 
-try:
+with suppress(ImportError):
     import dask
     import dask.array as da
-except ImportError:
-    pass
 
 
 def _copy_at_variable_level(arg):
