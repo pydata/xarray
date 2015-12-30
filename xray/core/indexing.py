@@ -3,7 +3,7 @@ import numpy as np
 import pandas as pd
 
 from . import utils
-from .pycompat import iteritems, range, dask_array_type
+from .pycompat import iteritems, range, dask_array_type, suppress
 from .utils import is_full_slice
 
 
@@ -382,7 +382,12 @@ class PandasIndexAdapter(utils.NDArrayMixin):
     def __array__(self, dtype=None):
         if dtype is None:
             dtype = self.dtype
-        return self.array.values.astype(dtype)
+        array = self.array
+        if isinstance(array, pd.PeriodIndex):
+            with suppress(AttributeError):
+                # this might not be public API
+                array = array.asobject
+        return array.values.astype(dtype)
 
     def __getitem__(self, key):
         if isinstance(key, tuple) and len(key) == 1:
