@@ -1,0 +1,10 @@
+name: xray
+dependencies:
+  - python=2.7
+  - numpy=1.10
+  - pandas=0.17.1
+  - numpydoc=0.5
+  - seaborn=0.6
+  - dask=0.7.5
+  - ipython=4.0.1
+  - sphinx=1.2.3  # pin to avoid https://github.com/sphinx-doc/sphinx/issues/1822
