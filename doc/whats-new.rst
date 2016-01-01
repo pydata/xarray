@@ -67,7 +67,7 @@ Bug fixes
 - Fixes for several issues found on ``DataArray`` objects with the same name
   as one of their coordinates (see :ref:`v0.7.0.breaking` for more details).
 
-- ``DataArray.to_masked_array`` always returns masked array with mask being an array 
+- ``DataArray.to_masked_array`` always returns masked array with mask being an array
 (not a scalar value) (:issue:`684`)
 
 v0.6.2 (unreleased)
@@ -96,6 +96,18 @@ Enhancements
   moves both data and coordinates.
 - Assigning a ``pandas`` object to a ``Dataset`` directly is now permitted. Its
   index names correspond to the `dims`` of the ``Dataset``, and its data is aligned
+- New function :py:func:`~xray.broadcast` for explicitly broadcasting
+  ``DataArray`` and ``Dataset`` objects against each other. For example:
+
+  .. ipython:: python
+
+      a = xray.DataArray([1, 2, 3], dims='x')
+      b = xray.DataArray([5, 6], dims='y')
+      a
+      b
+      a2, b2 = xray.broadcast(a, b)
+      a2
+      b2
 
 Bug fixes
 ~~~~~~~~~

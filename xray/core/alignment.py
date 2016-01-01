@@ -253,31 +253,80 @@ def reindex_variables(variables, indexes, indexers, method=None,
     return reindexed
 
 
-def broadcast_arrays(*args):
-    """Explicitly broadcast any number of DataArrays against one another.
+def broadcast(*args):
+    """Explicitly broadcast any number of DataArray or Dataset objects against
+    one another.
 
     xray objects automatically broadcast against each other in arithmetic
     operations, so this function should not be necessary for normal use.
 
     Parameters
     ----------
-    *args: DataArray
+    *args: DataArray or Dataset objects
         Arrays to broadcast against each other.
 
     Returns
     -------
-    broadcast: tuple of DataArray
+    broadcast: tuple of xray objects
         The same data as the input arrays, but with additional dimensions
-        inserted so that all arrays have the same dimensions and shape.
+        inserted so that all data arrays have the same dimensions and shape.
 
     Raises
     ------
     ValueError
-        If indexes on the different arrays are not aligned.
-    """
-    # TODO: fixme for coordinate arrays
+        If indexes on the different objects are not aligned.
 
+    Examples
+    --------
+
+    Broadcast two data arrays against one another to fill out their dimensions:
+
+    >>> a = xray.DataArray([1, 2, 3], dims='x')
+    >>> b = xray.DataArray([5, 6], dims='y')
+    >>> a
+    <xray.DataArray (x: 3)>
+    array([1, 2, 3])
+    Coordinates:
+      * x        (x) int64 0 1 2
+    >>> b
+    <xray.DataArray (y: 2)>
+    array([5, 6])
+    Coordinates:
+      * y        (y) int64 0 1
+    >>> a2, b2 = xray.broadcast(a, b)
+    >>> a2
+    <xray.DataArray (x: 3, y: 2)>
+    array([[1, 1],
+           [2, 2],
+           [3, 3]])
+    Coordinates:
+      * x        (x) int64 0 1 2
+      * y        (y) int64 0 1
+    >>> b2
+    <xray.DataArray (x: 3, y: 2)>
+    array([[5, 6],
+           [5, 6],
+           [5, 6]])
+    Coordinates:
+      * y        (y) int64 0 1
+      * x        (x) int64 0 1 2
+
+    Fill out the dimensions of all data variables in a dataset:
+
+    >>> ds = xray.Dataset({'a': a, 'b': b})
+    >>> ds2, = xray.broadcast(ds)  # use tuple unpacking to extract one dataset
+    >>> ds2
+    <xray.Dataset>
+    Dimensions:  (x: 3, y: 2)
+    Coordinates:
+      * x        (x) int64 0 1 2
+      * y        (y) int64 0 1
+    Data variables:
+        a        (x, y) int64 1 1 2 2 3 3
+        b        (x, y) int64 5 6 5 6 5 6
+    """
     from .dataarray import DataArray
+    from .dataset import Dataset
 
     all_indexes = _get_all_indexes(args)
     for k, v in all_indexes.items():
@@ -285,14 +334,45 @@ def broadcast_arrays(*args):
             raise ValueError('cannot broadcast arrays: the %s index is not '
                              'aligned (use xray.align first)' % k)
 
-    vars = broadcast_variables(*[a.variable for a in args])
-    indexes = dict((k, all_indexes[k][0]) for k in vars[0].dims)
+    common_coords = OrderedDict()
+    dims_map = OrderedDict()
+    for arg in args:
+        for dim in arg.dims:
+            if dim not in common_coords:
+                common_coords[dim] = arg.coords[dim].variable
+                dims_map[dim] = common_coords[dim].size
 
-    arrays = []
-    for a, v in zip(args, vars):
-        arr = DataArray(v.values, indexes, v.dims, a.name, a.attrs, a.encoding)
-        for k, v in a.coords.items():
-            arr.coords[k] = v
-        arrays.append(arr)
+    def _broadcast_array(array):
+        data = array.variable.expand_dims(dims_map)
+        coords = OrderedDict(array.coords)
+        coords.update(common_coords)
+        dims = tuple(common_coords)
+        return DataArray(data, coords, dims, name=array.name,
+                         attrs=array.attrs, encoding=array.encoding)
 
-    return tuple(arrays)
+    def _broadcast_dataset(ds):
+        data_vars = OrderedDict()
+        for k in ds.data_vars:
+            data_vars[k] = ds.variables[k].expand_dims(dims_map)
+
+        coords = OrderedDict(ds.coords)
+        coords.update(common_coords)
+
+        return Dataset(data_vars, coords, ds.attrs)
+
+    result = []
+    for arg in args:
+        if isinstance(arg, DataArray):
+            result.append(_broadcast_array(arg))
+        elif isinstance(arg, Dataset):
+            result.append(_broadcast_dataset(arg))
+        else:
+            raise ValueError('all input must be Dataset or DataArray objects')
+
+    return tuple(result)
+
+
+def broadcast_arrays(*args):
+    warnings.warn('xray.broadcast_arrays is deprecated: use xray.broadcast '
+                  'instead', DeprecationWarning, stacklevel=2)
+    return broadcast(*args)

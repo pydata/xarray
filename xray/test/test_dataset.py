@@ -12,8 +12,8 @@ except ImportError:
 import numpy as np
 import pandas as pd
 
-from xray import (align, concat, conventions, backends, Dataset, DataArray,
-                  Variable, Coordinate, auto_combine, open_dataset,
+from xray import (align, broadcast, concat, conventions, backends, Dataset,
+                  DataArray, Variable, Coordinate, auto_combine, open_dataset,
                   set_options)
 from xray.core import indexing, utils
 from xray.core.pycompat import iteritems, OrderedDict
@@ -952,6 +952,30 @@ class TestDataset(TestCase):
             align(left, right, join='foobar')
         with self.assertRaises(TypeError):
             align(left, right, foo='bar')
+
+    def test_broadcast(self):
+        ds = Dataset({'foo': 0, 'bar': ('x', [1]), 'baz': ('y', [2, 3])},
+                     {'c': ('x', [4])})
+        expected = Dataset({'foo': (('x', 'y'), [[0, 0]]),
+                            'bar': (('x', 'y'), [[1, 1]]),
+                            'baz': (('x', 'y'), [[2, 3]])},
+                            {'c': ('x', [4])})
+        actual, = broadcast(ds)
+        self.assertDatasetIdentical(expected, actual)
+
+        ds_x = Dataset({'foo': ('x', [1])})
+        ds_y = Dataset({'bar': ('y', [2, 3])})
+        expected_x = Dataset({'foo': (('x', 'y'), [[1, 1]])})
+        expected_y = Dataset({'bar': (('x', 'y'), [[2, 3]])})
+        actual_x, actual_y = broadcast(ds_x, ds_y)
+        self.assertDatasetIdentical(expected_x, actual_x)
+        self.assertDatasetIdentical(expected_y, actual_y)
+
+        array_y = ds_y['bar']
+        expected_y = expected_y['bar']
+        actual_x, actual_y = broadcast(ds_x, array_y)
+        self.assertDatasetIdentical(expected_x, actual_x)
+        self.assertDataArrayIdentical(expected_y, actual_y)
 
     def test_variable_indexing(self):
         data = create_test_data()
