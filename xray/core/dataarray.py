@@ -658,8 +658,10 @@ class DataArray(AbstractArray, BaseDataObject):
         DataArray.reindex
         align
         """
+        indexers = dict((k, v) for k, v in other.indexes.items()
+                        if k in self.dims)
         return self.reindex(method=method, tolerance=tolerance, copy=copy,
-                            **other.indexes)
+                            **indexers)
 
     def reindex(self, method=None, tolerance=None, copy=True, **indexers):
         """Conform this object onto a new set of indexes, filling in

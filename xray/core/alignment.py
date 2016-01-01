@@ -84,7 +84,12 @@ def align(*objects, **kwargs):
                         % list(kwargs))
 
     joined_indexes = _join_indexes(join, objects)
-    return tuple(obj.reindex(copy=copy, **joined_indexes) for obj in objects)
+    result = []
+    for obj in objects:
+        valid_indexers = dict((k, v) for k, v in joined_indexes.items()
+                              if k in obj.dims)
+        result.append(obj.reindex(copy=copy, **valid_indexers))
+    return tuple(result)
 
 
 def partial_align(*objects, **kwargs):
