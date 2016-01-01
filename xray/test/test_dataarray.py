@@ -4,7 +4,7 @@ import pickle
 from copy import deepcopy
 from textwrap import dedent
 
-from xray import (align, broadcast_arrays, Dataset, DataArray,
+from xray import (align, broadcast, Dataset, DataArray,
                   Coordinate, Variable)
 from xray.core.pycompat import iteritems, OrderedDict
 from . import TestCase, ReturnItem, source_ndarray, unittest, requires_dask
@@ -1267,7 +1267,7 @@ class TestDataArray(TestCase):
     def test_broadcast_arrays(self):
         x = DataArray([1, 2], coords=[('a', [-1, -2])], name='x')
         y = DataArray([1, 2], coords=[('b', [3, 4])], name='y')
-        x2, y2 = broadcast_arrays(x, y)
+        x2, y2 = broadcast(x, y)
         expected_coords = [('a', [-1, -2]), ('b', [3, 4])]
         expected_x2 = DataArray([[1, 1], [2, 2]], expected_coords, name='x')
         expected_y2 = DataArray([[1, 2], [1, 2]], expected_coords, name='y')
@@ -1276,15 +1276,27 @@ class TestDataArray(TestCase):
 
         x = DataArray(np.random.randn(2, 3), dims=['a', 'b'])
         y = DataArray(np.random.randn(3, 2), dims=['b', 'a'])
-        x2, y2 = broadcast_arrays(x, y)
+        x2, y2 = broadcast(x, y)
         expected_x2 = x
         expected_y2 = y.T
         self.assertDataArrayIdentical(expected_x2, x2)
         self.assertDataArrayIdentical(expected_y2, y2)
 
+        z = DataArray([1, 2], coords=[('a', [-10, 20])])
         with self.assertRaisesRegexp(ValueError, 'cannot broadcast'):
-            z = DataArray([1, 2], coords=[('a', [-10, 20])])
-            broadcast_arrays(x, z)
+            broadcast(x, z)
+
+    def test_broadcast_coordinates(self):
+        # regression test for GH649
+        ds = Dataset({'a': (['x', 'y'], np.ones((5, 6)))})
+        x_bc, y_bc, a_bc = broadcast(ds.x, ds.y, ds.a)
+        self.assertDataArrayIdentical(ds.a, a_bc)
+
+        X, Y = np.meshgrid(np.arange(5), np.arange(6), indexing='ij')
+        exp_x = DataArray(X, dims=['x', 'y'], name='x')
+        exp_y = DataArray(Y, dims=['x', 'y'], name='y')
+        self.assertDataArrayIdentical(exp_x, x_bc)
+        self.assertDataArrayIdentical(exp_y, y_bc)
 
     def test_to_pandas(self):
         # 0d
