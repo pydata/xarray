@@ -176,10 +176,10 @@ simultaneously, returning a new dataset:
 
 .. ipython:: python
 
-    ds = arr.to_dataset()
+    ds = arr.to_dataset(name='foo')
     ds.isel(space=[0], time=[0])
     ds.sel(time='2000-01-01')
-    ds2 = da.to_dataset()
+    ds2 = da.to_dataset(name='bar')
     ds2.isel_points(x=[0, 1, 6], y=[0, 1, 0], dim='points')
 
 Positional indexing on a dataset is not supported because the ordering of
