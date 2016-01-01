@@ -151,7 +151,7 @@ def _reindex_variables_against(variables, indexes, copy=False):
     """Reindex all DataArrays in the provided dict, leaving other values alone.
     """
     alignable = [k for k, v in variables.items() if hasattr(v, 'indexes')]
-    aligned = [variables[a].reindex(copy=copy, indexes=indexes)
+    aligned = [variables[a].reindex(copy=copy, **indexes)
                for a in alignable]
     new_variables = OrderedDict(variables)
     new_variables.update(zip(alignable, aligned))

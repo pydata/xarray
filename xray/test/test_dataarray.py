@@ -603,6 +603,15 @@ class TestDataArray(TestCase):
         expected.coords['d'] = ('x', [1.5, 1.5, 3.5, 3.5])
         self.assertDataArrayIdentical(actual, expected)
 
+    def test_coords_alignment(self):
+        lhs = DataArray([1, 2, 3], [('x', [0, 1, 2])])
+        rhs = DataArray([2, 3, 4], [('x', [1, 2, 3])])
+        lhs.coords['rhs'] = rhs
+
+        expected = DataArray([1, 2, 3], coords={'rhs': ('x', [np.nan, 2, 3])},
+                             dims='x')
+        self.assertDataArrayIdentical(lhs, expected)
+
     def test_reindex(self):
         foo = self.dv
         bar = self.dv[:2, :2]
