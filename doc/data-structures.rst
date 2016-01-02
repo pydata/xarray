@@ -74,9 +74,11 @@ in index values in the same way.
 Coordinates can take the following forms:
 
 - A list of ``(dim, ticks[, attrs])`` pairs with length equal to the number of dimensions
-- A dictionary of ``{coord_name: coord}`` where the values are scaler values,
-  1D arrays or tuples (tuples in the same form as above). This form lets you supply other
-  coordinates than those corresponding to dimensions (more on these later).
+- A dictionary of ``{coord_name: coord}`` where the values are each a scalar value,
+  a 1D array or a tuple. Tuples are be in the same form as the above, and
+  multiple dimensions can be supplied with the form  ``(dims, data[, attrs])``.
+  Supplying as a tuple allows other coordinates than those corresponding to
+  dimensions (more on these later).
 
 As a list of tuples:
 
@@ -90,6 +92,14 @@ As a dictionary:
 
     xray.DataArray(data, coords={'time': times, 'space': locs, 'const': 42,
                                  'ranking': ('space', [1, 2, 3])},
+                   dims=['time', 'space'])
+
+As a dictionary with coords across multiple dimensions:
+
+.. ipython:: python
+
+    xray.DataArray(data, coords={'time': times, 'space': locs, 'const': 42,
+                                 'ranking': (('space', 'time'), np.arange(12).reshape(4,3))},
                    dims=['time', 'space'])
 
 If you create a ``DataArray`` by supplying a pandas
@@ -194,8 +204,7 @@ to access any variable in a dataset, datasets have four key properties:
   each dimension (e.g., ``{'x': 6, 'y': 6, 'time': 8}``)
 - ``data_vars``: a dict-like container of DataArrays corresponding to variables
 - ``coords``: another dict-like container of DataArrays intended to label points
-  used in ``data_vars`` (e.g., 1-dimensional arrays of numbers, datetime
-  objects or strings)
+  used in ``data_vars`` (e.g., arrays of numbers, datetime objects or strings)
 - ``attrs``: an ``OrderedDict`` to hold arbitrary metadata
 
 The distinction between whether a variables falls in data or coordinates
@@ -223,18 +232,16 @@ Creating a Dataset
 ~~~~~~~~~~~~~~~~~~
 
 To make an :py:class:`~xray.Dataset` from scratch, supply dictionaries for any
-variables, coordinates and attributes you would like to insert into the
-dataset.
+variables (``data_vars``), coordinates (``coords``) and attributes (``attrs``).
 
-For the ``data_vars`` and ``coords`` arguments, keys should be the name of the
-variable and values should be scalars, 1d arrays or tuples of the form
-``(dims, data[, attrs])`` sufficient to label each array:
+``data_vars`` are supplied as a dictionary with each key as the name of the variable and each
+value as one of:
+- A :py:class:`~xray.DataArray`
+- A tuple of the form ``(dims, data[, attrs])``
+- A pandas object
 
-- ``dims`` should be a sequence of strings.
-- ``data`` should be a numpy.ndarray (or array-like object) that has a
-  dimensionality equal to the length of ``dims``.
-- ``attrs`` is an arbitrary Python dictionary for storing metadata associated
-  with a particular array.
+``coords`` are supplied as dictionary of ``{coord_name: coord}`` where the values are scalar values,
+arrays or tuples in the form of ``(dims, data[, attrs])``.
 
 Let's create some fake data for the example we show above:
 
@@ -259,8 +266,8 @@ Notice that we did not explicitly include coordinates for the "x" or "y"
 dimensions, so they were filled in array of ascending integers of the proper
 length.
 
-We can also pass :py:class:`xray.DataArray` objects or a pandas object as values
-in the dictionary instead of tuples:
+Here we pass :py:class:`xray.DataArray` objects or a pandas object as values
+in the dictionary:
 
 .. ipython:: python
 
@@ -271,13 +278,15 @@ in the dictionary instead of tuples:
 
     xray.Dataset({'bar': foo.to_pandas()})
 
-Where a pandas object is supplied, the names of its indexes are used as dimension
+Where a pandas object is supplied as a value, the names of its indexes are used as dimension
 names, and its data is aligned to any existing dimensions.
 
-You can also create an dataset from a :py:class:`pandas.DataFrame` with
-:py:meth:`Dataset.from_dataframe <xray.Dataset.from_dataframe>` or from a
-netCDF file on disk with :py:func:`~xray.open_dataset`. See
-:ref:`pandas` and :ref:`io`.
+You can also create an dataset from:
+- A :py:class:`pandas.DataFrame` or :py:class:`pandas.Panel` along its columns and items
+  respectively, by passing it into the :py:class:`xray.Dataset` directly
+- A :py:class:`pandas.DataFrame` with :py:meth:`Dataset.from_dataframe <xray.Dataset.from_dataframe>`,
+  which will additionally handle MultiIndexes See :ref:`pandas`
+- A netCDF file on disk with :py:func:`~xray.open_dataset`. See :ref:`io`.
 
 Dataset contents
 ~~~~~~~~~~~~~~~~

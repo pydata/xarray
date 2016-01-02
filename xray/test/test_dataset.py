@@ -199,7 +199,7 @@ class TestDataset(TestCase):
         with self.assertRaisesRegexp(ValueError, 'conflicting sizes'):
             Dataset({'a': a, 'b': b, 'e': e})
 
-    def test_constructor_pandas(self):
+    def test_constructor_pandas_sequence(self):
 
         ds = self.make_example_math_dataset()
         pandas_objs = OrderedDict(
@@ -213,6 +213,19 @@ class TestDataset(TestCase):
         pandas_objs['foo'] = pandas_objs['foo'].reindex(rearranged_index)
         ds_based_on_pandas = Dataset(variables=pandas_objs, coords=ds.coords, attrs=ds.attrs)
         self.assertDatasetEqual(ds, ds_based_on_pandas)
+
+    def test_constructor_pandas_single(self):
+
+        das = [
+            DataArray(np.random.rand(4,3), dims=['a', 'b']),  # df
+            DataArray(np.random.rand(4,3,2), dims=['a','b','c']), # panel
+            ]
+
+        for da in das:
+            pandas_obj = da.to_pandas()
+            ds_based_on_pandas = Dataset(pandas_obj)
+            for dim in ds_based_on_pandas.data_vars:
+                self.assertArrayEqual(ds_based_on_pandas[dim], pandas_obj[dim])
 
 
     def test_constructor_compat(self):

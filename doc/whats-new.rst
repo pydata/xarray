@@ -94,8 +94,10 @@ Enhancements
 
   Notice that ``shift`` moves data independently of coordinates, but ``roll``
   moves both data and coordinates.
-- Assigning a ``pandas`` object to a ``Dataset`` directly is now permitted. Its
-  index names correspond to the `dims`` of the ``Dataset``, and its data is aligned
+- Assigning a ``pandas`` object to the variable of ``Dataset`` directly is now permitted. Its
+  index names correspond to the ``dims`` of the ``Dataset``, and its data is aligned
+- Passing a :py:class:`pandas.DataFrame` or :py:class:`pandas.Panel` to a Dataset constructor
+  is now permitted
 - New function :py:func:`~xray.broadcast` for explicitly broadcasting
   ``DataArray`` and ``Dataset`` objects against each other. For example:
 
