@@ -139,7 +139,7 @@ index labels and dimensions. It looks a lot like a netCDF file:
 
 .. ipython:: python
 
-    ds = data.to_dataset()
+    ds = data.to_dataset(name='foo')
     ds
 
 You can do almost everything you can do with ``DataArray`` objects with
