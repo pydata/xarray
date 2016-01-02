@@ -1639,8 +1639,15 @@ class TestDataset(TestCase):
 
         df = pd.DataFrame()
         actual = Dataset.from_dataframe(df)
-        expected = Dataset()
+        expected = Dataset(coords={'index':[]})
         self.assertDatasetIdentical(expected, actual)
+
+        # GH697
+        df = pd.DataFrame({'A' : []})
+        actual = Dataset.from_dataframe(df)
+        expected = Dataset({'A': DataArray([], dims=('index',))})
+        self.assertDatasetIdentical(expected, actual)
+
 
         # regression test for GH278
         # use int64 to ensure consistent results for the pandas .equals method

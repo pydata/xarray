@@ -1788,11 +1788,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject):
                 obj[dim] = (dim, lev)
             shape = [lev.size for lev in idx.levels]
         else:
-            if idx.size:
-                dims = (idx.name if idx.name is not None else 'index',)
-                obj[dims[0]] = (dims, idx)
-            else:
-                dims = []
+            dims = (idx.name if idx.name is not None else 'index',)
+            obj[dims[0]] = (dims, idx)
             shape = -1
 
         for name, series in iteritems(dataframe):
