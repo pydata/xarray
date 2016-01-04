@@ -61,26 +61,58 @@ Breaking changes
 
 .. _this stackoverflow report: http://stackoverflow.com/questions/33158558/python-xray-extract-first-and-last-time-value-within-each-month-of-a-timeseries
 
-Bug fixes
-~~~~~~~~~
-
-- Fixes for several issues found on ``DataArray`` objects with the same name
-  as one of their coordinates (see :ref:`v0.7.0.breaking` for more details).
-- Attempting to assign a ``Dataset`` or ``DataArray`` variable/attribute using
-  attribute-style syntax (e.g., ``ds.foo = 42``) now raises an error rather
-  than silently failing (:issue:`656`, :issue:`714`).
-
-- ``DataArray.to_masked_array`` always returns masked array with mask being an array
-(not a scalar value) (:issue:`684`)
-- You can now pass pandas objects with non-numpy dtypes (e.g., ``categorical``
-  or ``datetime64`` with a timezone) into xray without an error
-  (:issue:`716`).
-
-v0.6.2 (unreleased)
--------------------
-
 Enhancements
 ~~~~~~~~~~~~
+
+- Basic support for :py:class:`~pandas.MultiIndex` coordinates on xray objects, including
+  indexing, :py:meth:`~DataArray.stack` and :py:meth:`~DataArray.unstack`:
+
+  .. ipython::
+    :verbatim:
+
+    In [7]: df = pd.DataFrame({'foo': range(3),
+       ...:                    'x': ['a', 'b', 'b'],
+       ...:                    'y': [0, 0, 1]})
+
+    In [8]: s = df.set_index(['x', 'y'])['foo']
+
+    In [12]: arr = xray.DataArray(s, dims='z')
+
+    In [13]: arr
+    Out[13]:
+    <xray.DataArray 'foo' (z: 3)>
+    array([0, 1, 2])
+    Coordinates:
+      * z        (z) object ('a', 0) ('b', 0) ('b', 1)
+
+    In [19]: arr.indexes['z']
+    Out[19]:
+    MultiIndex(levels=[[u'a', u'b'], [0, 1]],
+               labels=[[0, 1, 1], [0, 0, 1]],
+               names=[u'x', u'y'])
+
+    In [14]: arr.unstack('z')
+    Out[14]:
+    <xray.DataArray 'foo' (x: 2, y: 2)>
+    array([[  0.,  nan],
+           [  1.,   2.]])
+    Coordinates:
+      * x        (x) object 'a' 'b'
+      * y        (y) int64 0 1
+
+    In [26]: arr.unstack('z').stack(z=('x', 'y'))
+    Out[26]:
+    <xray.DataArray 'foo' (z: 4)>
+    array([  0.,  nan,   1.,   2.])
+    Coordinates:
+      * z        (z) object ('a', 0) ('a', 1) ('b', 0) ('b', 1)
+
+  .. warning::
+
+      xray's MultiIndex support is still experimental, and we have a long to-
+      do list of desired additions (:issue:`719`). For example, you cannot yet
+      save a MultiIndex to a netCDF file. User contributions in this area
+      would be greatly appreciate :).
 
 - Support for reading GRIB, HDF4 and other file formats via PyNIO_. See
   :ref:`io.pynio` for more details.
@@ -120,7 +152,26 @@ Enhancements
 Bug fixes
 ~~~~~~~~~
 
+- Fixes for several issues found on ``DataArray`` objects with the same name
+  as one of their coordinates (see :ref:`v0.7.0.breaking` for more details).
+
+- ``DataArray.to_masked_array`` always returns masked array with mask being an array
+(not a scalar value) (:issue:`684`)
+
 - Allows for (imperfect) repr of Coords when underlying index is PeriodIndex (:issue:`645`).
+
+- Fixes for several issues found on ``DataArray`` objects with the same name
+  as one of their coordinates (see :ref:`v0.7.0.breaking` for more details).
+- Attempting to assign a ``Dataset`` or ``DataArray`` variable/attribute using
+  attribute-style syntax (e.g., ``ds.foo = 42``) now raises an error rather
+  than silently failing (:issue:`656`, :issue:`714`).
+
+- ``DataArray.to_masked_array`` always returns masked array with mask being an array
+(not a scalar value) (:issue:`684`)
+
+- You can now pass pandas objects with non-numpy dtypes (e.g., ``categorical``
+  or ``datetime64`` with a timezone) into xray without an error
+  (:issue:`716`).
 
 v0.6.1 (21 October 2015)
 ------------------------
