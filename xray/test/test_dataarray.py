@@ -863,6 +863,11 @@ class TestDataArray(TestCase):
         actual['tmin'] -= obs['tmin']
         self.assertDatasetIdentical(actual, expected)
 
+    def test_stack_unstack(self):
+        orig = DataArray([[0, 1], [2, 3]], dims=['x', 'y'], attrs={'foo': 2})
+        actual = orig.stack(z=['x', 'y']).unstack('z')
+        self.assertDataArrayIdentical(orig, actual)
+
     def test_transpose(self):
         self.assertVariableEqual(self.dv.variable.transpose(),
                                  self.dv.transpose())

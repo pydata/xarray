@@ -763,6 +763,55 @@ class DataArray(AbstractArray, BaseDataObject):
         ds = self._to_temp_dataset().swap_dims(dims_dict)
         return self._from_temp_dataset(ds)
 
+    def stack(self, **dimensions):
+        """
+        Stack any number of existing dimensions into a single new dimension.
+
+        New dimensions will be added at the end, and the corresponding
+        coordinate variables will be combined into a MultiIndex.
+
+        Parameters
+        ----------
+        **dimensions : keyword arguments of the form new_name=(dim1, dim2, ...)
+            Names of new dimensions, and the existing dimensions that they
+            replace.
+
+        Returns
+        -------
+        stacked : DataArray
+            DataArray with stacked data.
+
+        See also
+        --------
+        DataArray.unstack
+        """
+        ds = self._to_temp_dataset().stack(**dimensions)
+        return self._from_temp_dataset(ds)
+
+    def unstack(self, dim):
+        """
+        Unstack an existing dimension corresponding to a MultiIndex into
+        multiple new dimensions.
+
+        New dimensions will be added at the end.
+
+        Parameters
+        ----------
+        dim : str
+            Name of the existing dimension to unstack.
+
+        Returns
+        -------
+        unstacked : DataArray
+            Array with unstacked data.
+
+        See also
+        --------
+        DataArray.stack
+        """
+        ds = self._to_temp_dataset().unstack(dim)
+        return self._from_temp_dataset(ds)
+
     def transpose(self, *dims):
         """Return a new DataArray object with transposed dimensions.
 
