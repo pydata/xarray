@@ -1386,6 +1386,9 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject):
             raise ValueError('cannot unstack a dimension that does not have '
                              'a MultiIndex')
 
+        full_idx = pd.MultiIndex.from_product(index.levels, names=index.names)
+        obj = self.reindex(copy=False, **{dim: full_idx})
+
         new_dim_names = index.names
         if any(name is None for name in new_dim_names):
             raise ValueError('cannot unstack dimension with unnamed levels')
@@ -1393,7 +1396,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject):
         new_dim_sizes = [lev.size for lev in index.levels]
 
         variables = OrderedDict()
-        for name, var in self.variables.items():
+        for name, var in obj.variables.items():
             if name != dim:
                 if dim in var.dims:
                     new_dims = OrderedDict(zip(new_dim_names, new_dim_sizes))

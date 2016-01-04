@@ -868,6 +868,15 @@ class TestDataArray(TestCase):
         actual = orig.stack(z=['x', 'y']).unstack('z')
         self.assertDataArrayIdentical(orig, actual)
 
+    def test_unstack_pandas_consistency(self):
+        df = pd.DataFrame({'foo': range(3),
+                           'x': ['a', 'b', 'b'],
+                           'y': [0, 0, 1]})
+        s = df.set_index(['x', 'y'])['foo']
+        expected = DataArray(s.unstack(), name='foo')
+        actual = DataArray(s, dims='z').unstack('z')
+        self.assertDataArrayIdentical(expected, actual)
+
     def test_transpose(self):
         self.assertVariableEqual(self.dv.variable.transpose(),
                                  self.dv.transpose())
