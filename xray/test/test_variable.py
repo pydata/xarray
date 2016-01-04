@@ -760,6 +760,28 @@ class TestVariable(TestCase, VariableSubclassTestCases):
         with self.assertRaisesRegexp(ValueError, 'must be a superset'):
             v.expand_dims(['z'])
 
+    def test_stack(self):
+        v = Variable(['x', 'y'], [[0, 1], [2, 3]], {'foo': 'bar'})
+        actual = v.stack(z=('x', 'y'))
+        expected = Variable('z', [0, 1, 2, 3], v.attrs)
+        self.assertVariableIdentical(actual, expected)
+
+        actual = v.stack(z=('x',))
+        expected = Variable(('y', 'z'), v.data.T, v.attrs)
+        self.assertVariableIdentical(actual, expected)
+
+        actual = v.stack(z=(),)
+        self.assertVariableIdentical(actual, v)
+
+        actual = v.stack(X=('x',), Y=('y',)).transpose('X', 'Y')
+        expected = Variable(('X', 'Y'), v.data, v.attrs)
+        self.assertVariableIdentical(actual, expected)
+
+        with self.assertRaisesRegexp(ValueError, 'invalid existing dim'):
+            v.stack(z=('x1',))
+        with self.assertRaisesRegexp(ValueError, 'cannot create a new dim'):
+            v.stack(x=('x',))
+
     def test_broadcasting_math(self):
         x = np.random.randn(2, 3)
         v = Variable(['a', 'b'], x)

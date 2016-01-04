@@ -720,6 +720,52 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
                                 self._encoding, fastpath=True)
         return expanded_var.transpose(*dims)
 
+    def _stack_once(self, dims, new_dim):
+        if not set(dims) <= set(self.dims):
+            raise ValueError('invalid existing dimensions: %s' % dims)
+
+        if new_dim in self.dims:
+            raise ValueError('cannot create a new dimension with the same '
+                             'name as an existing dimension')
+
+        if len(dims) == 0:
+            # don't stack
+            return self.copy(deep=False)
+
+        other_dims = [d for d in self.dims if d not in dims]
+        new_dim_order = other_dims + list(dims)
+        reordered = self.transpose(*new_dim_order)
+
+        new_shape = reordered.shape[:len(other_dims)] + (-1,)
+        new_data = reordered.data.reshape(new_shape)
+        new_dims = reordered.dims[:len(other_dims)] + (new_dim,)
+
+        return Variable(new_dims, new_data, self._attrs, self._encoding,
+                        fastpath=True)
+
+    def stack(self, **dimensions):
+        """
+        Stack any number of existing dimensions into new dimensions.
+
+        New dimensions will be added at the end, and the order of the data
+        along each new dimension will be in contiguous (C) order.
+
+        Parameters
+        ----------
+        **dimensions : keyword arguments of the form new_name=(dim1, dim2, ...)
+            Names of new dimensions, and the existing dimensions that they
+            replace.
+
+        Returns
+        -------
+        stack : Variable
+            Variable with the same attributes but stacked data.
+        """
+        result = self
+        for new_dim, dims in dimensions.items():
+            result = result._stack_once(dims, new_dim)
+        return result
+
     def fillna(self, value):
         return self._fillna(value)
 
