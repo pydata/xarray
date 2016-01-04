@@ -799,7 +799,7 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
 
     def unstack(self, **dimensions):
         """
-        Unstack an existing dimensions into multiple new dimensions.
+        Unstack an existing dimension into multiple new dimensions.
 
         New dimensions will be added at the end, and the order of the data
         along each new dimension will be in contiguous (C) order.
