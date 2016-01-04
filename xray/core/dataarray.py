@@ -781,6 +781,24 @@ class DataArray(AbstractArray, BaseDataObject):
         stacked : DataArray
             DataArray with stacked data.
 
+        Example
+        -------
+
+        >>> arr = DataArray(np.arange(6).reshape(2, 3),
+        ...                 coords=[('x', ['a', 'b']), ('y', [0, 1, 2])])
+        >>> arr
+        <xray.DataArray (x: 2, y: 3)>
+        array([[0, 1, 2],
+               [3, 4, 5]])
+        Coordinates:
+          * x        (x) |S1 'a' 'b'
+          * y        (y) int64 0 1 2
+        >>> stacked = arr.stack(z=('x', 'y'))
+        >>> stacked.indexes['z']
+        MultiIndex(levels=[[u'a', u'b'], [0, 1, 2]],
+                   labels=[[0, 0, 0, 1, 1, 1], [0, 1, 2, 0, 1, 2]],
+                   names=[u'x', u'y'])
+
         See also
         --------
         DataArray.unstack
