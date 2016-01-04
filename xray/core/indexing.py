@@ -117,6 +117,24 @@ def _try_get_item(x):
         return x
 
 
+def _asarray_tuplesafe(values):
+    """
+    Convert values into a numpy array of at most 1-dimension, while preserving
+    tuples.
+
+    Adapted from pandas.core.common._asarray_tuplesafe
+    """
+    if isinstance(values, tuple):
+        result = utils.tuple_to_0darray(values)
+    else:
+        result = np.asarray(values)
+        if result.ndim == 2:
+            result = np.empty(len(values), dtype=object)
+            result[:] = values
+
+    return result
+
+
 def convert_label_indexer(index, label, index_name='', method=None,
                           tolerance=None):
     """Given a pandas.Index (or xray.Coordinate) and labels (e.g., from
@@ -149,9 +167,9 @@ def convert_label_indexer(index, label, index_name='', method=None,
                            'dimension %r with a slice over integer positions; '
                            'the index is unsorted or non-unique')
     else:
-        label = np.asarray(label)
+        label = _asarray_tuplesafe(label)
         if label.ndim == 0:
-            indexer = index.get_loc(np.asscalar(label), **kwargs)
+            indexer = index.get_loc(label.item(), **kwargs)
         elif label.dtype.kind == 'b':
             indexer, = np.nonzero(label)
         else:
@@ -399,22 +417,22 @@ class PandasIndexAdapter(utils.NDArrayMixin):
             # objects don't like tuples)
             key, = key
 
-        if isinstance(key, (int, np.integer)):
-            value = self.array[key]
-            if value is pd.NaT:
-                # work around the impossibility of casting NaT with asarray
-                # note: it probably would be better in general to return
-                # pd.Timestamp rather np.than datetime64 but this is easier
-                # (for now)
-                value = np.datetime64('NaT', 'ns')
-            elif isinstance(value, timedelta):
-                value = np.timedelta64(getattr(value, 'value', value), 'ns')
-            else:
-                value = np.asarray(value, dtype=self.dtype)
-        else:
-            value = PandasIndexAdapter(self.array[key], dtype=self.dtype)
+        result = self.array[key]
 
-        return value
+        if isinstance(result, pd.Index):
+            result = PandasIndexAdapter(result, dtype=self.dtype)
+        elif result is pd.NaT:
+            # work around the impossibility of casting NaT with asarray
+            # note: it probably would be better in general to return
+            # pd.Timestamp rather np.than datetime64 but this is easier
+            # (for now)
+            result = np.datetime64('NaT', 'ns')
+        elif isinstance(result, timedelta):
+            result = np.timedelta64(getattr(result, 'value', result), 'ns')
+        elif self.dtype != object:
+            result = np.asarray(result, dtype=self.dtype)
+
+        return result
 
     def __repr__(self):
         return ('%s(array=%r, dtype=%r)'

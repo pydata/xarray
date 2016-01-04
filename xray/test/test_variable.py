@@ -416,6 +416,12 @@ class VariableSubclassTestCases(object):
             # pandas is new enough that it has datetime64 with timezone dtype
             assert v.dtype == 'object'
 
+    def test_multiindex(self):
+        idx = pd.MultiIndex.from_product([list('abc'), [0, 1]])
+        v = self.cls('x', idx)
+        self.assertVariableIdentical(Variable((), ('a', 0)), v[0])
+        self.assertVariableIdentical(v, v[:])
+
 
 class TestVariable(TestCase, VariableSubclassTestCases):
     cls = staticmethod(Variable)

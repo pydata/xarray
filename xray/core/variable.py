@@ -105,15 +105,15 @@ def as_compatible_data(data, fastpath=False):
         return data
 
     if isinstance(data, pd.Index):
-        if isinstance(data, pd.MultiIndex):
-            raise NotImplementedError(
-                'no support yet for using a pandas.MultiIndex in an '
-                'xray.Coordinate')
         return _maybe_wrap_data(data)
+
+    if isinstance(data, tuple):
+        data = utils.tuple_to_0darray(data)
 
     if isinstance(data, pd.Timestamp):
         # TODO: convert, handle datetime objects, too
         data = np.datetime64(data.value, 'ns')
+
     if isinstance(data, timedelta):
         data = np.timedelta64(getattr(data, 'value', data), 'ns')
 
@@ -250,7 +250,7 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
         self._data = data
 
     def _data_cached(self):
-        if not isinstance(self._data, np.ndarray):
+        if not isinstance(self._data, (np.ndarray, PandasIndexAdapter)):
             self._data = np.asarray(self._data)
         return self._data
 
@@ -989,9 +989,10 @@ class Coordinate(Variable):
         # n.b. creating a new pandas.Index from an old pandas.Index is
         # basically free as pandas.Index objects are immutable
         assert self.ndim == 1
-        return pd.Index(self._data_cached().array, name=self.dims[0])
-
-    # pandas.Index like properties:
+        index = self._data_cached().array
+        if not isinstance(index, pd.MultiIndex):
+            index = index.set_names(self.name)
+        return index
 
     @property
     def name(self):
@@ -1000,25 +1001,6 @@ class Coordinate(Variable):
     @name.setter
     def name(self, value):
         raise AttributeError('cannot modify name of Coordinate in-place')
-
-    def get_indexer(self, label):
-        return self.to_index().get_indexer(label)
-
-    def slice_indexer(self, start=None, stop=None, step=None):
-        return self.to_index().slice_indexer(start, stop, step)
-
-    def slice_locs(self, start=None, stop=None):
-        return self.to_index().slice_locs(start, stop)
-
-    def get_loc(self, label):
-        return self.to_index().get_loc(label)
-
-    @property
-    def is_monotonic(self):
-        return self.to_index().is_monotonic
-
-    def is_numeric(self):
-        return self.to_index().is_numeric()
 
 
 def _unified_dims(variables):
