@@ -733,8 +733,8 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
             return self.copy(deep=False)
 
         other_dims = [d for d in self.dims if d not in dims]
-        new_dim_order = other_dims + list(dims)
-        reordered = self.transpose(*new_dim_order)
+        dim_order = other_dims + list(dims)
+        reordered = self.transpose(*dim_order)
 
         new_shape = reordered.shape[:len(other_dims)] + (-1,)
         new_data = reordered.data.reshape(new_shape)
@@ -745,7 +745,7 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
 
     def stack(self, **dimensions):
         """
-        Stack any number of existing dimensions into new dimensions.
+        Stack any number of existing dimensions into a single new dimension.
 
         New dimensions will be added at the end, and the order of the data
         along each new dimension will be in contiguous (C) order.
@@ -758,12 +758,70 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
 
         Returns
         -------
-        stack : Variable
+        stacked : Variable
             Variable with the same attributes but stacked data.
+
+        See also
+        --------
+        Variable.unstack
         """
         result = self
         for new_dim, dims in dimensions.items():
             result = result._stack_once(dims, new_dim)
+        return result
+
+    def _unstack_once(self, dims, old_dim):
+        new_dim_names = tuple(dims.keys())
+        new_dim_sizes = tuple(dims.values())
+
+        if old_dim not in self.dims:
+            raise ValueError('invalid existing dimension: %s' % old_dim)
+
+        if set(new_dim_names).intersection(self.dims):
+            raise ValueError('cannot create a new dimension with the same '
+                             'name as an existing dimension')
+
+        axis = self.get_axis_num(old_dim)
+        if np.prod(new_dim_sizes) != self.shape[axis]:
+            raise ValueError('the product of the new dimension sizes must '
+                             'equal the size of the old dimension')
+
+        other_dims = [d for d in self.dims if d != old_dim]
+        dim_order = other_dims + [old_dim]
+        reordered = self.transpose(*dim_order)
+
+        new_shape = reordered.shape[:len(other_dims)] + new_dim_sizes
+        new_data = reordered.data.reshape(new_shape)
+        new_dims = reordered.dims[:len(other_dims)] + new_dim_names
+
+        return Variable(new_dims, new_data, self._attrs, self._encoding,
+                        fastpath=True)
+
+    def unstack(self, **dimensions):
+        """
+        Unstack an existing dimensions into multiple new dimensions.
+
+        New dimensions will be added at the end, and the order of the data
+        along each new dimension will be in contiguous (C) order.
+
+        Parameters
+        ----------
+        **dimensions : keyword arguments of the form old_dim={dim1: size1, ...}
+            Names of existing dimensions, and the new dimensions and sizes that they
+            map to.
+
+        Returns
+        -------
+        unstacked : Variable
+            Variable with the same attributes but unstacked data.
+
+        See also
+        --------
+        Variable.stack
+        """
+        result = self
+        for old_dim, dims in dimensions.items():
+            result = result._unstack_once(dims, old_dim)
         return result
 
     def fillna(self, value):
