@@ -1413,6 +1413,15 @@ class TestDataArray(TestCase):
         self.assertDataArrayIdentical(expected_da,
                                       DataArray.from_series(actual))
 
+    def test_series_categorical_index(self):
+        # regression test for GH700
+        if not hasattr(pd, 'CategoricalIndex'):
+            raise unittest.SkipTest('requires pandas with CategoricalIndex')
+
+        s = pd.Series(range(5), index=pd.CategoricalIndex(list('aabbc')))
+        arr = DataArray(s)
+        assert "'a'" in repr(arr)  # should not error
+
     def test_to_masked_array(self):
         rs = np.random.RandomState(44)
         x = rs.random_sample(size=(10, 20))
