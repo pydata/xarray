@@ -512,6 +512,13 @@ class BaseNetCDF4Test(CFEncodedDataTest):
                                        if k in expected['time'].encoding)
                 self.assertDictEqual(actual_encoding, expected['time'].encoding)
 
+    def test_dump_encodings(self):
+        # regression test for #709
+        ds = Dataset({'x': ('y', np.arange(10.0))})
+        kwargs = dict(encoding={'x': {'zlib': True}})
+        with self.roundtrip(ds, save_kwargs=kwargs) as actual:
+            self.assertTrue(actual.x.encoding['zlib'])
+
     def test_dump_and_open_encodings(self):
         # Create a netCDF file with explicit time units
         # and make sure it makes it into the encodings
