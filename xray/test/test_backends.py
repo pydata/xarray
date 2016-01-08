@@ -384,14 +384,6 @@ class CFEncodedDataTest(DatasetIOTestCases):
             with self.roundtrip(ds, save_kwargs=kwargs) as actual:
                 pass
 
-        ds = Dataset({'t': pd.date_range('2000-01-01', periods=3)})
-        units = 'days since 1900-01-01'
-        kwargs = dict(encoding={'t': {'units': units}})
-        with self.roundtrip(ds, save_kwargs=kwargs) as actual:
-            self.assertEqual(actual.t.encoding['units'], units)
-            self.assertDatasetIdentical(actual, ds)
-
-
 _counter = itertools.count()
 
 
@@ -511,6 +503,13 @@ class BaseNetCDF4Test(CFEncodedDataTest):
                                        iteritems(actual['time'].encoding)
                                        if k in expected['time'].encoding)
                 self.assertDictEqual(actual_encoding, expected['time'].encoding)
+
+    def test_dump_encodings(self):
+        # regression test for #709
+        ds = Dataset({'x': ('y', np.arange(10.0))})
+        kwargs = dict(encoding={'x': {'zlib': True}})
+        with self.roundtrip(ds, save_kwargs=kwargs) as actual:
+            self.assertTrue(actual.x.encoding['zlib'])
 
     def test_dump_and_open_encodings(self):
         # Create a netCDF file with explicit time units
