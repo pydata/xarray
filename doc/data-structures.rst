@@ -349,7 +349,7 @@ In addition to dictionary-like methods (described above), xray has additional
 methods (like pandas) for transforming datasets into new objects.
 
 For removing variables, you can select and drop an explicit list of
-variables by using the by indexing with a list of names or using the
+variables by indexing with a list of names or using the
 :py:meth:`~xray.Dataset.drop` methods to return a new ``Dataset``. These
 operations keep around coordinates:
 
