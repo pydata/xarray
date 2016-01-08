@@ -155,8 +155,7 @@ def _extract_nc4_encoding(variable, raise_on_invalid=False, lsd_okay=True,
             del encoding[k]
 
     if raise_on_invalid:
-        invalid = [k for enc in encoding for k in enc
-                   if k not in valid_encodings]
+        invalid = [k for k in encoding if k not in valid_encodings]
         if invalid:
             raise ValueError('unexpected encoding parameters for %r backend: '
                              ' %r' % (backend, invalid))
