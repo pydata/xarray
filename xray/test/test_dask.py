@@ -67,6 +67,11 @@ class TestVariable(DaskTestCase):
         self.assertEqual(self.data.chunks, v.chunks)
         self.assertArrayEqual(self.values, v)
 
+    def test_copy(self):
+        self.assertLazyAndIdentical(self.eager_var, self.lazy_var.copy())
+        self.assertLazyAndIdentical(self.eager_var,
+                                    self.lazy_var.copy(deep=True))
+
     def test_chunk(self):
         for chunks, expected in [(None, ((2, 2), (2, 2, 2))),
                                  (3, ((3, 1), (3, 3))),
