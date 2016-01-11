@@ -4,8 +4,8 @@
 Computation
 ###########
 
-The labels associated with :py:class:`~xray.DataArray` and
-:py:class:`~xray.Dataset` objects enables some powerful shortcuts for
+The labels associated with :py:class:`~xarray.DataArray` and
+:py:class:`~xarray.Dataset` objects enables some powerful shortcuts for
 computation, notably including aggregation and broadcasting by dimension
 names.
 
@@ -20,13 +20,13 @@ numpy) over all array values:
 
     import numpy as np
     import pandas as pd
-    import xray
+    import xarray as xr
     np.random.seed(123456)
 
 .. ipython:: python
 
-    arr = xray.DataArray(np.random.randn(2, 3),
-                         [('x', ['a', 'b']), ('y', [10, 20, 30])])
+    arr = xr.DataArray(np.random.randn(2, 3),
+                       [('x', ['a', 'b']), ('y', [10, 20, 30])])
     arr - 3
     abs(arr)
 
@@ -51,21 +51,21 @@ Data arrays also implement many :py:class:`numpy.ndarray` methods:
 Missing values
 ==============
 
-xray objects borrow the :py:meth:`~xray.DataArray.isnull`,
-:py:meth:`~xray.DataArray.notnull`, :py:meth:`~xray.DataArray.count`,
-:py:meth:`~xray.DataArray.dropna` and :py:meth:`~xray.DataArray.fillna` methods
+xarray objects borrow the :py:meth:`~xarray.DataArray.isnull`,
+:py:meth:`~xarray.DataArray.notnull`, :py:meth:`~xarray.DataArray.count`,
+:py:meth:`~xarray.DataArray.dropna` and :py:meth:`~xarray.DataArray.fillna` methods
 for working with missing data from pandas:
 
 .. ipython:: python
 
-    x = xray.DataArray([0, 1, np.nan, np.nan, 2], dims=['x'])
+    x = xr.DataArray([0, 1, np.nan, np.nan, 2], dims=['x'])
     x.isnull()
     x.notnull()
     x.count()
     x.dropna(dim='x')
     x.fillna(-1)
 
-Like pandas, xray uses the float value ``np.nan`` (not-a-number) to represent
+Like pandas, xarray uses the float value ``np.nan`` (not-a-number) to represent
 missing values.
 
 Aggregation
@@ -84,7 +84,7 @@ applied along particular dimension(s):
 
 If you need to figure out the axis number for a dimension yourself (say,
 for wrapping code designed to work with numpy arrays), you can use the
-:py:meth:`~xray.DataArray.get_axis_num` method:
+:py:meth:`~xarray.DataArray.get_axis_num` method:
 
 .. ipython:: python
 
@@ -94,7 +94,7 @@ These operations automatically skip missing values, like in pandas:
 
 .. ipython:: python
 
-    xray.DataArray([1, 2, np.nan, 3]).mean()
+    xr.DataArray([1, 2, np.nan, 3]).mean()
 
 If desired, you can disable this behavior by invoking the aggregation method
 with ``skipna=False``.
@@ -103,7 +103,7 @@ Broadcasting by dimension name
 ==============================
 
 ``DataArray`` objects are automatically align themselves ("broadcasting" in
-the numpy parlance) by dimension name instead of axis order. With xray, you
+the numpy parlance) by dimension name instead of axis order. With xarray, you
 do not need to transpose arrays or insert dimensions of length 1 to get array
 operations to work, as commonly done in numpy with :py:func:`np.reshape` or
 :py:const:`np.newaxis`.
@@ -113,12 +113,12 @@ arrays with different sizes aligned along different dimensions:
 
 .. ipython:: python
 
-    a = xray.DataArray([1, 2], [('x', ['a', 'b'])])
+    a = xr.DataArray([1, 2], [('x', ['a', 'b'])])
     a
-    b = xray.DataArray([-1, -2, -3], [('y', [10, 20, 30])])
+    b = xr.DataArray([-1, -2, -3], [('y', [10, 20, 30])])
     b
 
-With xray, we can apply binary mathematical operations to these arrays, and
+With xarray, we can apply binary mathematical operations to these arrays, and
 their dimensions are expanded automatically:
 
 .. ipython:: python
@@ -130,7 +130,7 @@ appeared:
 
 .. ipython:: python
 
-    c = xray.DataArray(np.arange(6).reshape(3, 2), [b['y'], a['x']])
+    c = xr.DataArray(np.arange(6).reshape(3, 2), [b['y'], a['x']])
     c
     a + c
 
@@ -152,7 +152,7 @@ You can explicitly broadcast xray data structures by using the
 Automatic alignment
 ===================
 
-xray enforces alignment between *index* :ref:`coordinates` (that is,
+xarray enforces alignment between *index* :ref:`coordinates` (that is,
 coordinates with the same name as a dimension, marked by ``*``) on objects used
 in binary operations.
 
@@ -174,7 +174,7 @@ If the result would be empty, an error is raised instead:
 
 Before loops or performance critical code, it's a good idea to align arrays
 explicitly (e.g., by putting them in the same Dataset or using
-:py:func:`~xray.align`) to avoid the overhead of repeated alignment with each
+:py:func:`~xarray.align`) to avoid the overhead of repeated alignment with each
 operation. See :ref:`align and reindex` for more details.
 
 .. note::
@@ -200,7 +200,7 @@ indexing turns 1D coordinates into scalar coordinates:
     # notice that the scalar coordinate 'x' is silently dropped
     arr[1] - arr[0]
 
-Still, xray will persist other coordinates in arithmetic, as long as there
+Still, xarray will persist other coordinates in arithmetic, as long as there
 are no conflicting values:
 
 .. ipython:: python
@@ -218,9 +218,9 @@ variables:
 
 .. ipython:: python
 
-    ds = xray.Dataset({'x_and_y': (('x', 'y'), np.random.randn(2, 3)),
-                       'x_only': ('x', np.random.randn(2))},
-                       coords=arr.coords)
+    ds = xr.Dataset({'x_and_y': (('x', 'y'), np.random.randn(2, 3)),
+                     'x_only': ('x', np.random.randn(2))},
+                     coords=arr.coords)
     ds > 0
 
 Datasets support most of the same methods found on data arrays:
@@ -232,7 +232,7 @@ Datasets support most of the same methods found on data arrays:
 
 Unfortunately, a limitation of the current version of numpy means that we
 cannot override ufuncs for datasets, because datasets cannot be written as
-a single array [1]_. :py:meth:`~xray.Dataset.apply` works around this
+a single array [1]_. :py:meth:`~xarray.Dataset.apply` works around this
 limitation, by applying the given function to each variable in the dataset:
 
 .. ipython:: python
@@ -250,11 +250,11 @@ Arithmetic between two datasets matches data variables of the same name:
 
 .. ipython:: python
 
-    ds2 = xray.Dataset({'x_and_y': 0, 'x_only': 100})
+    ds2 = xr.Dataset({'x_and_y': 0, 'x_only': 100})
     ds - ds2
 
 Similarly to index based alignment, the result has the intersection of all
 matching variables, and ``ValueError`` is raised if the result would be empty.
 
-.. [1] When numpy 1.12 is released, we should be able to override ufuncs for
+.. [1] In some future version of NumPy, we should be able to override ufuncs for
        datasets by making use of ``__numpy_ufunc__``.

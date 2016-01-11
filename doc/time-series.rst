@@ -4,9 +4,9 @@
 Time series data
 ================
 
-A major use case for xray is multi-dimensional time-series data.
+A major use case for xarray is multi-dimensional time-series data.
 Accordingly, we've copied many of features that make working with time-series
-data in pandas such a joy to xray. In most cases, we rely on pandas for the
+data in pandas such a joy to xarray. In most cases, we rely on pandas for the
 core functionality.
 
 .. ipython:: python
@@ -14,13 +14,13 @@ core functionality.
 
     import numpy as np
     import pandas as pd
-    import xray
+    import xarray as xr
     np.random.seed(123456)
 
 Creating datetime64 data
 ------------------------
 
-xray uses the numpy dtypes ``datetime64[ns]`` and ``timedelta64[ns]`` to
+xarray uses the numpy dtypes ``datetime64[ns]`` and ``timedelta64[ns]`` to
 represent datetime data, which offer vectorized (if sometimes buggy) operations
 with numpy and smooth integration with pandas.
 
@@ -33,27 +33,27 @@ using :py:func:`pandas.to_datetime` and :py:func:`pandas.date_range`:
     pd.date_range('2000-01-01', periods=365)
 
 Alternatively, you can supply arrays of Python ``datetime`` objects. These get
-converted automatically when used as arguments in xray objects:
+converted automatically when used as arguments in xarray objects:
 
 .. ipython:: python
 
     import datetime
-    xray.Dataset({'time': datetime.datetime(2000, 1, 1)})
+    xr.Dataset({'time': datetime.datetime(2000, 1, 1)})
 
-When reading or writing netCDF files, xray automatically decodes datetime and
+When reading or writing netCDF files, xarray automatically decodes datetime and
 timedelta arrays using `CF conventions`_ (that is, by using a ``units``
 attribute like ``'days since 2000-01-01'``).
 
 .. _CF conventions: http://cfconventions.org
 
 You can manual decode arrays in this form by passing a dataset to
-:py:func:`~xray.decode_cf`:
+:py:func:`~xarray.decode_cf`:
 
 .. ipython:: python
 
     attrs = {'units': 'hours since 2000-01-01'}
-    ds = xray.Dataset({'time': ('time', [0, 1, 2, 3], attrs)})
-    xray.decode_cf(ds)
+    ds = xr.Dataset({'time': ('time', [0, 1, 2, 3], attrs)})
+    xr.decode_cf(ds)
 
 One unfortunate limitation of using ``datetime64[ns]`` is that it limits the
 native representation of dates to those that fall between the years 1678 and
@@ -63,7 +63,7 @@ returned as arrays of ``netcdftime.datetime`` objects.
 Datetime indexing
 -----------------
 
-xray borrows powerful indexing machinery from pandas (see :ref:`indexing`).
+xarray borrows powerful indexing machinery from pandas (see :ref:`indexing`).
 
 This allows for several useful and suscinct forms of indexing, particularly for
 `datetime64` data. For example, we support indexing with strings for single
@@ -72,7 +72,7 @@ items and with the `slice` object:
 .. ipython:: python
 
     time = pd.date_range('2000-01-01', freq='H', periods=365 * 24)
-    ds = xray.Dataset({'foo': ('time', np.arange(365 * 24)), 'time': time})
+    ds = xr.Dataset({'foo': ('time', np.arange(365 * 24)), 'time': time})
     ds.sel(time='2000-01')
     ds.sel(time=slice('2000-06-01', '2000-06-10'))
 
@@ -88,7 +88,7 @@ For more details, read the pandas documentation.
 Datetime components
 -------------------
 
-xray supports a notion of "virtual" or "derived" coordinates for
+xarray supports a notion of "virtual" or "derived" coordinates for
 `datetime components`__ implemented by pandas, including "year", "month",
 "day", "hour", "minute", "second", "dayofyear", "week", "dayofweek", "weekday"
 and "quarter":
@@ -100,7 +100,7 @@ __ http://pandas.pydata.org/pandas-docs/stable/api.html#time-date-components
     ds['time.month']
     ds['time.dayofyear']
 
-xray adds ``'season'`` to the list of datetime components supported by pandas:
+xarray adds ``'season'`` to the list of datetime components supported by pandas:
 
 .. ipython:: python
 
@@ -122,8 +122,8 @@ calculate the mean by time of day:
 
     ds.groupby('time.hour').mean()
 
-For upsampling or downsampling temporal resolutions, xray offer a
-:py:meth:`~xray.Dataset.resample` method building on the core functionality
+For upsampling or downsampling temporal resolutions, xarray offers a
+:py:meth:`~xarray.Dataset.resample` method building on the core functionality
 offered by the pandas method of the same name. Resample uses essentialy the
 same api as ``resample`` `in pandas`_.
 

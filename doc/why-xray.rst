@@ -1,5 +1,5 @@
-Overview: Why xray?
-===================
+Overview: Why xarray?
+=====================
 
 Features
 --------
@@ -15,32 +15,32 @@ powerful array operations possible:
 -  Flexible split-apply-combine operations with groupby:
    ``x.groupby('time.dayofyear').mean()``.
 -  Database like alignment based on coordinate labels that smoothly
-   handles missing values: ``x, y = xray.align(x, y, join='outer')``.
+   handles missing values: ``x, y = xr.align(x, y, join='outer')``.
 -  Keep track of arbitrary metadata in the form of a Python dictionary:
    ``x.attrs``.
 
 pandas_ provides many of these features, but it does not make use of dimension
 names, and its core data structures are fixed dimensional arrays.
 
-The N-dimensional nature of xray's data structures makes it suitable for dealing
+The N-dimensional nature of xarray's data structures makes it suitable for dealing
 with multi-dimensional scientific data, and its use of dimension names
 instead of axis labels (``dim='time'`` instead of ``axis=0``) makes such
-arrays much more manageable than the raw numpy ndarray: with xray, you don't
+arrays much more manageable than the raw numpy ndarray: with xarray, you don't
 need to keep track of the order of arrays dimensions or insert dummy dimensions
 (e.g., ``np.newaxis``) to align arrays.
 
 Core data structures
 --------------------
 
-xray has two core data structures. Both are fundamentally N-dimensional:
+xarray has two core data structures. Both are fundamentally N-dimensional:
 
-- :py:class:`~xray.DataArray` is our implementation of a labeled, N-dimensional
+- :py:class:`~xarray.DataArray` is our implementation of a labeled, N-dimensional
   array. It is an N-D generalization of a :py:class:`pandas.Series`. The name
   ``DataArray`` itself is borrowed from Fernando Perez's datarray_ project,
   which prototyped a similar data structure.
-- :py:class:`~xray.Dataset` is a multi-dimensional, in-memory array database.
+- :py:class:`~xarray.Dataset` is a multi-dimensional, in-memory array database.
   It is a dict-like container of ``DataArray`` objects aligned along any number of
-  shared dimensions, and serves a similar purpose in xray to the
+  shared dimensions, and serves a similar purpose in xarray to the
   :py:class:`pandas.DataFrame`.
 
 .. _datarray: https://github.com/fperez/datarray
@@ -57,11 +57,11 @@ only have different data types, but can also have different numbers of
 dimensions.
 
 This data model is borrowed from the netCDF_ file format, which also provides
-xray with a natural and portable serialization format. NetCDF is very popular
+xarray with a natural and portable serialization format. NetCDF is very popular
 in the geosciences, and there are existing libraries for reading and writing
 netCDF in many programming languages, including Python.
 
-xray distinguishes itself from many tools for working with netCDF data
+xarray distinguishes itself from many tools for working with netCDF data
 in-so-far as it provides data structures for in-memory analytics that both
 utilize and preserve labels. You only need to do the tedious work of adding
 metadata once, not every time you save a file.
@@ -71,14 +71,14 @@ Goals and aspirations
 
 pandas_ excels at working with tabular data. That suffices for many statistical
 analyses, but physical scientists rely on N-dimensional arrays -- which is
-where xray comes in.
+where xarray comes in.
 
-xray aims to provide a data analysis toolkit as powerful as pandas_ but
+xarray aims to provide a data analysis toolkit as powerful as pandas_ but
 designed for working with homogeneous N-dimensional arrays
 instead of tabular data. When possible, we copy the pandas API and rely on
 pandas's highly optimized internals (in particular, for fast indexing).
 
-Importantly, xray has robust support for converting its objects to and
+Importantly, xarray has robust support for converting its objects to and
 from a numpy ``ndarray`` or a pandas ``DataFrame`` or ``Series``, providing
 compatibility with the full `PyData ecosystem <http://pydata.org/>`__.
 

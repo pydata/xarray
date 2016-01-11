@@ -39,10 +39,10 @@ nosetests.xml
 .idea
 *.swp
 
-# xray specific
+# xarray specific
 doc/_build
 doc/generated
 doc/_static/*.png
-xray/version.py
+xarray/version.py
 
 .ipynb_checkpoints

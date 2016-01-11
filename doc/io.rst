@@ -3,7 +3,7 @@
 Serialization and IO
 ====================
 
-xray supports direct serialization and IO to several file formats. For more
+xarray supports direct serialization and IO to several file formats. For more
 options, consider exporting your objects to pandas (see the preceding section)
 and using its broad range of `IO tools`__.
 
@@ -14,23 +14,23 @@ __ http://pandas.pydata.org/pandas-docs/stable/io.html
 
     import numpy as np
     import pandas as pd
-    import xray
+    import xarray as xr
     np.random.seed(123456)
 
 Pickle
 ------
 
-The simplest way to serialize an xray object is to use Python's built-in pickle
+The simplest way to serialize an xarray object is to use Python's built-in pickle
 module:
 
 .. ipython:: python
 
     import cPickle as pickle
 
-    ds = xray.Dataset({'foo': (('x', 'y'), np.random.rand(4, 5))},
-                      coords={'x': [10, 20, 30, 40],
-                              'y': pd.date_range('2000-01-01', periods=5),
-                              'z': ('x', list('abcd'))})
+    ds = xr.Dataset({'foo': (('x', 'y'), np.random.rand(4, 5))},
+                    coords={'x': [10, 20, 30, 40],
+                            'y': pd.date_range('2000-01-01', periods=5),
+                            'z': ('x', list('abcd'))})
 
     # use the highest protocol (-1) because it is way faster than the default
     # text based pickle format
@@ -39,37 +39,37 @@ module:
     pickle.loads(pkl)
 
 Pickle support is important because it doesn't require any external libraries
-and lets you use xray objects with Python modules like
+and lets you use xarray objects with Python modules like
 :py:mod:`multiprocessing`. However, there are two important caveats:
 
-1. To simplify serialization, xray's support for pickle currently loads all
+1. To simplify serialization, xarray's support for pickle currently loads all
    array values into memory before dumping an object. This means it is not
    suitable for serializing datasets too big to load into memory (e.g., from
    netCDF or OPeNDAP).
-2. Pickle will only work as long as the internal data structure of xray objects
-   remains unchanged. Because the internal design of xray is still being
+2. Pickle will only work as long as the internal data structure of xarray objects
+   remains unchanged. Because the internal design of xarray is still being
    refined, we make no guarantees (at this point) that objects pickled with
-   this version of xray will work in future versions.
+   this version of xarray will work in future versions.
 
 netCDF
 ------
 
-Currently, the only disk based serialization format that xray directly supports
+Currently, the only disk based serialization format that xarray directly supports
 is `netCDF`__. netCDF is a file format for fully self-described datasets that
 is widely used in the geosciences and supported on almost all platforms. We use
-netCDF because xray was based on the netCDF data model, so netCDF files on disk
-directly correspond to :py:class:`~xray.Dataset` objects. Recent versions
+netCDF because xarray was based on the netCDF data model, so netCDF files on disk
+directly correspond to :py:class:`~xarray.Dataset` objects. Recent versions
 netCDF are based on the even more widely used HDF5 file-format.
 
 __ http://www.unidata.ucar.edu/software/netcdf/
 
-Reading and writing netCDF files with xray requires the
+Reading and writing netCDF files with xarray requires the
 `netCDF4-Python`__ library or scipy to be installed.
 
 __ https://github.com/Unidata/netcdf4-python
 
 We can save a Dataset to disk using the
-:py:attr:`Dataset.to_netcdf <xray.Dataset.to_netcdf>` method:
+:py:attr:`Dataset.to_netcdf <xarray.Dataset.to_netcdf>` method:
 
 .. use verbatim because readthedocs doesn't have netCDF4 support
 
@@ -82,11 +82,11 @@ installed). You can control the format and engine used to write the file with
 the ``format`` and ``engine`` arguments.
 
 We can load netCDF files to create a new Dataset using
-:py:func:`~xray.open_dataset`:
+:py:func:`~xarray.open_dataset`:
 
 .. ipython:: python
 
-    ds_disk = xray.open_dataset('saved_on_disk.nc')
+    ds_disk = xr.open_dataset('saved_on_disk.nc')
     ds_disk
 
 A dataset can also be loaded or written to a specific group within a netCDF
@@ -105,26 +105,26 @@ lazy arrays work, see the OPeNDAP section below.
 .. todo: clarify this WRT dask.array
 
 It is important to note that when you modify values of a Dataset, even one
-linked to files on disk, only the in-memory copy you are manipulating in xray
+linked to files on disk, only the in-memory copy you are manipulating in xarray
 is modified: the original file on disk is never touched.
 
 .. tip::
 
-    xray's lazy loading of remote or on-disk datasets is often but not always
+    xarray's lazy loading of remote or on-disk datasets is often but not always
     desirable. Before performing computationally intense operations, it is
     often a good idea to load a dataset entirely into memory by invoking the
-    :py:meth:`~xray.Dataset.load` method.
+    :py:meth:`~xarray.Dataset.load` method.
 
-Datasets have a :py:meth:`~xray.Dataset.close` method to close the associated
+Datasets have a :py:meth:`~xarray.Dataset.close` method to close the associated
 netCDF file. However, it's often cleaner to use a ``with`` statement:
 
 .. ipython:: python
 
     # this automatically closes the dataset after use
-    with xray.open_dataset('saved_on_disk.nc') as ds:
+    with xr.open_dataset('saved_on_disk.nc') as ds:
         print(ds.keys())
 
-..  Although xray provides reasonable support for incremental reads of files on
+..  Although xarray provides reasonable support for incremental reads of files on
     disk, it does not yet support incremental writes, which is important for
     dealing with datasets that do not fit into memory. This is a significant
     shortcoming that we hope to resolve (:issue:`199`) by adding the ability to
@@ -136,7 +136,7 @@ Reading encoded data
 NetCDF files follow some conventions for encoding datetime arrays (as numbers
 with a "units" attribute) and for packing and unpacking data (as
 described by the "scale_factor" and "add_offset" attributes). If the argument
-``decode_cf=True`` (default) is given to ``open_dataset``, xray will attempt
+``decode_cf=True`` (default) is given to ``open_dataset``, xarray will attempt
 to automatically decode the values in the netCDF objects according to
 `CF conventions`_. Sometimes this will fail, for example, if a variable
 has an invalid "units" or "calendar" attribute. For these cases, you can
@@ -145,7 +145,7 @@ turn this decoding off manually.
 .. _CF conventions: http://cfconventions.org/
 
 You can view this encoding information (among others) in the
-:py:attr:`DataArray.encoding <xray.DataArray.encoding>` attribute:
+:py:attr:`DataArray.encoding <xarray.DataArray.encoding>` attribute:
 
 .. ipython::
     :verbatim:
@@ -179,21 +179,21 @@ will remove encoding information.
 Writing encoded data
 ~~~~~~~~~~~~~~~~~~~~
 
-Conversely, you can customize how xray writes netCDF files on disk by
+Conversely, you can customize how xarray writes netCDF files on disk by
 providing explicit encodings for each dataset variable. The ``encoding``
 argument takes a dictionary with variable names as keys and variable specific
 encodings as values. These encodings are saved as attributes on the netCDF
-variables on disk, which allows xray to faithfully read encoded data back into
+variables on disk, which allows xarray to faithfully read encoded data back into
 memory.
 
 It is important to note that using encodings is entirely optional: if you do not
-supply any of these encoding options, xray will write data to disk using a
+supply any of these encoding options, xarray will write data to disk using a
 default encoding, or the options in the ``encoding`` attribute, if set.
 This works perfectly fine in most cases, but encoding can be useful for
 additional control, especially for enabling compression.
 
 In the file on disk, these encodings as saved as attributes on each variable, which
-allow xray and other CF-compliant tools for working with netCDF files to correctly
+allow xarray and other CF-compliant tools for working with netCDF files to correctly
 read the data.
 
 Scaling and type conversions
@@ -203,7 +203,7 @@ These encoding options work on any version of the netCDF file format:
 
 - ``dtype``: Any valid NumPy dtype or string convertable to a dtype, e.g., ``'int16'``
   or ``'float32'``. This controls the type of the data written on disk.
-- ``_FillValue``:  Values of ``NaN`` in xray variables are remapped to this value when
+- ``_FillValue``:  Values of ``NaN`` in xarray variables are remapped to this value when
   saved on disk. This is important when converting floating point with missing values
   to integers on disk, because ``NaN`` is not a valid dtype for integer dtypes.
 - ``scale_factor`` and ``add_offset``: Used to convert from encoded data on disk to
@@ -237,20 +237,20 @@ recommend trying discretization based compression (described above) first.
 Time units
 ..........
 
-The ``units`` and ``calendar`` attributes control how xray serializes ``datetime64`` and
+The ``units`` and ``calendar`` attributes control how xarray serializes ``datetime64`` and
 ``timedelta64`` arrays to datasets on disk as numeric values. The ``units`` encoding
 should be a string like ``'days since 1900-01-01'`` for ``datetime64`` data or a string
 like ``'days'`` for ``timedelta64`` data. ``calendar`` should be one of the calendar types
 supported by netCDF4-python: 'standard', 'gregorian', 'proleptic_gregorian' 'noleap',
 '365_day', '360_day', 'julian', 'all_leap', '366_day'.
 
-By default, xray uses the 'proleptic_gregorian' calendar and units of the smallest time
+By default, xarray uses the 'proleptic_gregorian' calendar and units of the smallest time
 difference between values, with a reference time of the first time value.
 
 OPeNDAP
 -------
 
-xray includes support for `OPeNDAP`__ (via the netCDF4 library or Pydap), which
+xarray includes support for `OPeNDAP`__ (via the netCDF4 library or Pydap), which
 lets us access large datasets over HTTP.
 
 __ http://www.opendap.org/
@@ -264,7 +264,7 @@ __ http://iri.columbia.edu/
 .. ipython source code for this section
    we don't use this to avoid hitting the DAP server on every doc build.
 
-   remote_data = xray.open_dataset(
+   remote_data = xr.open_dataset(
        'http://iridl.ldeo.columbia.edu/SOURCES/.OSU/.PRISM/.monthly/dods',
        decode_times=False)
    tmax = remote_data.tmax[:500, ::3, ::3]
@@ -276,13 +276,13 @@ __ http://iri.columbia.edu/
 .. ipython::
     :verbatim:
 
-    In [3]: remote_data = xray.open_dataset(
+    In [3]: remote_data = xr.open_dataset(
        ...:     'http://iridl.ldeo.columbia.edu/SOURCES/.OSU/.PRISM/.monthly/dods',
        ...:     decode_times=False)
 
     In [4]: remote_data
     Out[4]:
-    <xray.Dataset>
+    <xarray.Dataset>
     Dimensions:  (T: 1422, X: 1405, Y: 621)
     Coordinates:
       * X        (X) float32 -125.0 -124.958 -124.917 -124.875 -124.833 -124.792 -124.75 ...
@@ -302,12 +302,12 @@ __ http://iri.columbia.edu/
 .. note::
 
     Like many real-world datasets, this dataset does not entirely follow
-    `CF conventions`_. Unexpected formats will usually cause xray's automatic
+    `CF conventions`_. Unexpected formats will usually cause xarray's automatic
     decoding to fail. The way to work around this is to either set
     ``decode_cf=False`` in ``open_dataset`` to turn off all use of CF
     conventions, or by only disabling the troublesome parser.
     In this case, we set ``decode_times=False`` because the time axis here
-    provides the calendar attribute in a format that xray does not expect
+    provides the calendar attribute in a format that xarray does not expect
     (the integer ``360`` instead of a string like ``'360_day'``).
 
 We can select and slice this data any number of times, and nothing is loaded
@@ -320,7 +320,7 @@ over the network until we look at particular values:
 
     In [5]: tmax
     Out[5]:
-    <xray.DataArray 'tmax' (T: 500, Y: 207, X: 469)>
+    <xarray.DataArray 'tmax' (T: 500, Y: 207, X: 469)>
     [48541500 values with dtype=float64]
     Coordinates:
       * Y        (Y) float32 49.9167 49.7917 49.6667 49.5417 49.4167 49.2917 ...
@@ -342,9 +342,9 @@ over the network until we look at particular values:
 Formats supported by PyNIO
 --------------------------
 
-Xray can also read GRIB, HDF4 and other file formats supported by PyNIO_,
+xarray can also read GRIB, HDF4 and other file formats supported by PyNIO_,
 if PyNIO is installed. To use PyNIO to read such files, supply
-``engine='pynio'`` to :py:func:`~xray.open_dataset`.
+``engine='pynio'`` to :py:func:`~xarray.open_dataset`.
 
 We recommend installing PyNIO via conda::
 
@@ -358,18 +358,18 @@ Combining multiple files
 ------------------------
 
 NetCDF files are often encountered in collections, e.g., with different files
-corresponding to different model runs. xray can straightforwardly combine such
-files into a single Dataset by making use of :py:func:`~xray.concat`.
+corresponding to different model runs. xarray can straightforwardly combine such
+files into a single Dataset by making use of :py:func:`~xarray.concat`.
 
 .. note::
 
     Version 0.5 includes experimental support for manipulating datasets that
     don't fit into memory with dask_. If you have dask installed, you can open
-    multiple files simultaneously using :py:func:`~xray.open_mfdataset`::
+    multiple files simultaneously using :py:func:`~xarray.open_mfdataset`::
 
-        xray.open_mfdataset('my/files/*.nc')
+        xr.open_mfdataset('my/files/*.nc')
 
-    This function automatically concatenates and merges into a single xray datasets.
+    This function automatically concatenates and merges into a single xarray datasets.
     For more details, see :ref:`dask.io`.
 
 .. _dask: http://dask.pydata.org
@@ -378,13 +378,13 @@ For example, here's how we could approximate ``MFDataset`` from the netCDF4
 library::
 
     from glob import glob
-    import xray
+    import xarray as xr
 
     def read_netcdfs(files, dim):
         # glob expands paths with * to a list of files, like the unix shell
         paths = sorted(glob(files))
-        datasets = [xray.open_dataset(p) for p in paths]
-        combined = xray.concat(dataset, dim)
+        datasets = [xr.open_dataset(p) for p in paths]
+        combined = xr.concat(dataset, dim)
         return combined
 
     read_netcdfs('/all/my/files/*.nc', dim='time')
@@ -401,7 +401,7 @@ deficiencies::
     def read_netcdfs(files, dim, transform_func=None):
         def process_one_path(path):
             # use a context manager, to ensure the file gets closed after use
-            with xray.open_dataset(path) as ds:
+            with xr.open_dataset(path) as ds:
                 # transform_func should do some sort of selection or
                 # aggregation
                 if transform_func is not None:
@@ -413,7 +413,7 @@ deficiencies::
 
         paths = sorted(glob(files))
         datasets = [process_one_path(p) for p in paths]
-        combined = xray.concat(datasets, dim)
+        combined = xr.concat(datasets, dim)
         return combined
 
     # here we suppose we only care about the combined mean of each file;

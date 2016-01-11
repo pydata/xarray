@@ -3,17 +3,17 @@
 Out of core computation with dask
 =================================
 
-xray v0.5 includes experimental integration with `dask <http://dask.pydata.org/>`__
-to support streaming computation on datasets that don't fit into memory.
+xarray integrates with `dask <http://dask.pydata.org/>`__ to support streaming
+computation on datasets that don't fit into memory.
 
-Currently, dask is an entirely optional feature for xray. However, the
-benefits of using dask are sufficiently strong that we expect that dask may
-become a requirement for a future version of xray.
+Currently, dask is an entirely optional feature for xarray. However, the
+benefits of using dask are sufficiently strong that dask may become a required
+dependency in a future version of xarray.
 
-For a full example of how to use xray's dask integration, read the
-`blog post introducing xray and dask`_.
+For a full example of how to use xarray's dask integration, read the
+`blog post introducing xarray and dask`_.
 
-.. _blog post introducing xray and dask: http://continuum.io/blog/xray-dask
+.. _blog post introducing xarray and dask: http://continuum.io/blog/xray-dask
 
 What is a dask array?
 ---------------------
@@ -45,42 +45,42 @@ Reading and writing data
 
 The usual way to create a dataset filled with dask arrays is to load the
 data from a netCDF file or files. You can do this by supplying a ``chunks``
-argument to :py:func:`~xray.open_dataset` or using the
-:py:func:`~xray.open_mfdataset` function.
+argument to :py:func:`~xarray.open_dataset` or using the
+:py:func:`~xarray.open_mfdataset` function.
 
 .. ipython:: python
    :suppress:
 
     import numpy as np
     import pandas as pd
-    import xray
+    import xarray as xr
     np.random.seed(123456)
     np.set_printoptions(precision=3, linewidth=100, threshold=100, edgeitems=3)
 
-    ds = xray.Dataset({'temperature': (('time', 'latitude', 'longitude'),
-                                       np.random.randn(365, 180, 360)),
-                       'time': pd.date_range('2015-01-01', periods=365),
-                       'longitude': np.arange(360),
-                       'latitude': np.arange(89.5, -90.5, -1)})
+    ds = xr.Dataset({'temperature': (('time', 'latitude', 'longitude'),
+                                     np.random.randn(365, 180, 360)),
+                     'time': pd.date_range('2015-01-01', periods=365),
+                     'longitude': np.arange(360),
+                     'latitude': np.arange(89.5, -90.5, -1)})
     ds.to_netcdf('example-data.nc')
 
 .. ipython:: python
 
-    ds = xray.open_dataset('example-data.nc', chunks={'time': 10})
+    ds = xr.open_dataset('example-data.nc', chunks={'time': 10})
     ds
 
 In this example ``latitude`` and ``longitude`` do not appear in the
 ``chunks`` dict, so only one chunk will be used along those dimensions.  It
 is also entirely equivalent to open a dataset using ``open_dataset`` and
 then chunk the data use the ``chunk`` method, e.g.,
-``xray.open_dataset('example-data.nc').chunk({'time': 10})``.
+``xr.open_dataset('example-data.nc').chunk({'time': 10})``.
 
-To open multiple files simultaneously, use :py:func:`~xray.open_mfdataset`::
+To open multiple files simultaneously, use :py:func:`~xarray.open_mfdataset`::
 
-    xray.open_mfdataset('my/files/*.nc')
+    xr.open_mfdataset('my/files/*.nc')
 
 This function will automatically concatenate and merge dataset into one in
-the simple cases that it understands (see :py:func:`~xray.auto_combine`
+the simple cases that it understands (see :py:func:`~xarray.auto_combine`
 for the full disclaimer). By default, ``open_mfdataset`` will chunk each
 netCDF file into a single dask array; again, supply the ``chunks`` argument to
 control the size of the resulting dask arrays. In more complex cases, you can
@@ -97,30 +97,30 @@ from the first block). To reveal the true nature of an array, print a DataArray:
     ds.temperature
 
 Once you've manipulated a dask array, you can still write a dataset too big to
-fit into memory back to disk by using :py:meth:`~xray.Dataset.to_netcdf` in the
+fit into memory back to disk by using :py:meth:`~xarray.Dataset.to_netcdf` in the
 usual way.
 
-Using dask with xray
---------------------
+Using dask with xarray
+----------------------
 
-Nearly all existing xray methods (including those for indexing, computation,
+Nearly all existing xarray methods (including those for indexing, computation,
 concatenating and grouped operations) have been extended to work automatically
-with dask arrays. When you load data as a dask array in an xray data
-structure, almost all xray operations will keep it as a dask array; when this
+with dask arrays. When you load data as a dask array in an xarray data
+structure, almost all xarray operations will keep it as a dask array; when this
 is not possible, they will raise an exception rather than unexpectedly loading
 data into memory. Converting a dask array into memory generally requires an
 explicit conversion step. One noteable exception is indexing operations: to
-enable label based indexing, xray will automatically load coordinate labels
+enable label based indexing, xarray will automatically load coordinate labels
 into memory.
 
-The easiest way to convert an xray data structure from lazy dask arrays into
-eager, in-memory numpy arrays is to use the :py:meth:`~xray.Dataset.load` method:
+The easiest way to convert an xarray data structure from lazy dask arrays into
+eager, in-memory numpy arrays is to use the :py:meth:`~xarray.Dataset.load` method:
 
 .. ipython:: python
 
     ds.load()
 
-You can also access :py:attr:`~xray.DataArray.values`, which will always be a
+You can also access :py:attr:`~xarray.DataArray.values`, which will always be a
 numpy array:
 
 .. ipython::
@@ -147,9 +147,9 @@ Explicit conversion by wrapping a DataArray with ``np.asarray`` also works:
 With the current version of dask, there is no automatic alignment of chunks when
 performing operations between dask arrays with different chunk sizes. If your
 computation involves multiple dask arrays with different chunks, you may need to
-explicitly rechunk each array to ensure compatibility. With xray, both
+explicitly rechunk each array to ensure compatibility. With xarray, both
 converting data to a dask arrays and converting the chunk sizes of dask arrays
-is done with the :py:meth:`~xray.Dataset.chunk` method:
+is done with the :py:meth:`~xarray.Dataset.chunk` method:
 
 .. ipython:: python
     :suppress:
@@ -161,7 +161,7 @@ is done with the :py:meth:`~xray.Dataset.chunk` method:
     rechunked = ds.chunk({'latitude': 100, 'longitude': 100})
 
 You can view the size of existing chunks on an array by viewing the
-:py:attr:`~xray.Dataset.chunks` attribute:
+:py:attr:`~xarray.Dataset.chunks` attribute:
 
 .. ipython:: python
 
@@ -180,16 +180,16 @@ along a particular dimension, an exception is raised when you try to access
 
 NumPy ufuncs like ``np.sin`` currently only work on eagerly evaluated arrays
 (this will change with the next major NumPy release). We have provided
-replacements that also work on all xray objects, including those that store
-lazy dask arrays, in the :ref:`xray.ufuncs <api.ufuncs>` module:
+replacements that also work on all xarray objects, including those that store
+lazy dask arrays, in the :ref:`xarray.ufuncs <api.ufuncs>` module:
 
 .. ipython:: python
 
-    import xray.ufuncs as xu
+    import xarray.ufuncs as xu
     xu.sin(rechunked)
 
 To access dask arrays directly, use the new
-:py:attr:`DataArray.data <xray.DataArray.data>` attribute. This attribute exposes
+:py:attr:`DataArray.data <xarray.DataArray.data>` attribute. This attribute exposes
 array data either as a dask array or as a numpy array, depending on whether it has been
 loaded into dask or not:
 

@@ -7,6 +7,7 @@ What's New
     import numpy as np
     import pandas as pd
     import xray
+    import xarray as xr
     np.random.seed(123456)
 
 v0.7.0 (unreleased)

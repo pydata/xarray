@@ -4,7 +4,7 @@ Toy weather data
 ================
 
 Here is an example of how to easily manipulate a toy weather dataset using
-xray and other recommended Python libraries:
+xarray and other recommended Python libraries:
 
 .. contents::
    :local:
@@ -100,7 +100,7 @@ not show any seasonal cycle.
 Fill missing values with climatology
 ------------------------------------
 
-The :py:func:`~xray.Dataset.fillna` method on grouped objects lets you easily
+The :py:func:`~xarray.Dataset.fillna` method on grouped objects lets you easily
 fill missing values by group:
 
 .. ipython:: python
@@ -109,7 +109,7 @@ fill missing values by group:
     some_missing = ds.tmin.sel(time=ds['time.day'] > 15).reindex_like(ds)
     filled = some_missing.groupby('time.month').fillna(climatology.tmin)
 
-    both = xray.Dataset({'some_missing': some_missing, 'filled': filled})
+    both = xr.Dataset({'some_missing': some_missing, 'filled': filled})
     both
 
     df = both.sel(time='2000').mean('location').reset_coords(drop=True).to_dataframe()

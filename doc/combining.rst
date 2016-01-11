@@ -8,7 +8,7 @@ Combining data
 
     import numpy as np
     import pandas as pd
-    import xray
+    import xarray as xr
     np.random.seed(123456)
 
 * For combining datasets or data arrays along a dimension, see concatenate_.
@@ -20,17 +20,17 @@ Concatenate
 ~~~~~~~~~~~
 
 To combine arrays along existing or new dimension into a larger array, you
-can use :py:func:`~xray.concat`. ``concat`` takes an iterable of ``DataArray``
+can use :py:func:`~xarray.concat`. ``concat`` takes an iterable of ``DataArray``
 or ``Dataset`` objects, as well as a dimension name, and concatenates along
 that dimension:
 
 .. ipython:: python
 
-    arr = xray.DataArray(np.random.randn(2, 3),
-                         [('x', ['a', 'b']), ('y', [10, 20, 30])])
+    arr = xr.DataArray(np.random.randn(2, 3),
+                       [('x', ['a', 'b']), ('y', [10, 20, 30])])
     arr[:, :1]
     # this resembles how you would use np.concatenate
-    xray.concat([arr[:, :1], arr[:, 1:]], dim='y')
+    xr.concat([arr[:, :1], arr[:, 1:]], dim='y')
 
 In addition to combining along an existing dimension, ``concat`` can create a
 new dimension by stacking lower dimensional arrays together:
@@ -39,7 +39,7 @@ new dimension by stacking lower dimensional arrays together:
 
     arr[0]
     # to combine these 1d arrays into a 2d array in numpy, you would use np.array
-    xray.concat([arr[0], arr[1]], 'x')
+    xr.concat([arr[0], arr[1]], 'x')
 
 If the second argument to ``concat`` is a new dimension name, the arrays will
 be concatenated along that new dimension, which is always inserted as the first
@@ -47,26 +47,26 @@ dimension:
 
 .. ipython:: python
 
-    xray.concat([arr[0], arr[1]], 'new_dim')
+    xr.concat([arr[0], arr[1]], 'new_dim')
 
 The second argument to ``concat`` can also be an :py:class:`~pandas.Index` or
-:py:class:`~xray.DataArray` object as well as a string, in which case it is
+:py:class:`~xarray.DataArray` object as well as a string, in which case it is
 used to label the values along the new dimension:
 
 .. ipython:: python
 
-    xray.concat([arr[0], arr[1]], pd.Index([-90, -100], name='new_dim'))
+    xr.concat([arr[0], arr[1]], pd.Index([-90, -100], name='new_dim'))
 
 Of course, ``concat`` also works on ``Dataset`` objects:
 
 .. ipython:: python
 
     ds = arr.to_dataset(name='foo')
-    xray.concat([ds.sel(x='a'), ds.sel(x='b')], 'x')
+    xr.concat([ds.sel(x='a'), ds.sel(x='b')], 'x')
 
-:py:func:`~xray.concat` has a number of options which provide deeper control
+:py:func:`~xarray.concat` has a number of options which provide deeper control
 over which variables are concatenated and how it handles conflicting variables
-between datasets. With the default parameters, xray will load some coordinate
+between datasets. With the default parameters, xarray will load some coordinate
 variables into memory to compare them between datasets. This may be prohibitively
 expensive if you are manipulating your dataset lazily using :ref:`dask`.
 
@@ -76,7 +76,7 @@ Merge
 ~~~~~
 
 To combine variables and coordinates between multiple Datasets, you can use the
-:py:meth:`~xray.Dataset.merge` and :py:meth:`~xray.Dataset.update` methods.
+:py:meth:`~xarray.Dataset.merge` and :py:meth:`~xarray.Dataset.update` methods.
 Merge checks for conflicting variables before merging and by default it returns
 a new Dataset:
 
@@ -90,17 +90,17 @@ coordinates:
 
 .. ipython:: python
 
-    other = xray.Dataset({'bar': ('x', [1, 2, 3, 4]), 'x': list('abcd')})
+    other = xr.Dataset({'bar': ('x', [1, 2, 3, 4]), 'x': list('abcd')})
     ds.merge(other)
 
 This ensures that the ``merge`` is non-destructive.
 
 The same non-destructive merging between ``DataArray`` index coordinates is
-used in the :py:class:`~xray.Dataset` constructor:
+used in the :py:class:`~xarray.Dataset` constructor:
 
 .. ipython:: python
 
-    xray.Dataset({'a': arr[:-1], 'b': arr[1:]})
+    xr.Dataset({'a': arr[:-1], 'b': arr[1:]})
 
 .. _update:
 
@@ -131,42 +131,42 @@ syntax:
 
 .. ipython:: python
 
-    ds['baz'] = xray.DataArray([9, 9, 9, 9, 9], coords=[('x', list('abcde'))])
+    ds['baz'] = xr.DataArray([9, 9, 9, 9, 9], coords=[('x', list('abcde'))])
     ds.baz
 
 Equals and identical
 ~~~~~~~~~~~~~~~~~~~~
 
-xray objects can be compared by using the :py:meth:`~xray.Dataset.equals`,
-:py:meth:`~xray.Dataset.identical` and
-:py:meth:`~xray.Dataset.broadcast_equals` methods. These methods are used by
+xarray objects can be compared by using the :py:meth:`~xarray.Dataset.equals`,
+:py:meth:`~xarray.Dataset.identical` and
+:py:meth:`~xarray.Dataset.broadcast_equals` methods. These methods are used by
 the optional ``compat`` argument on ``concat`` and ``merge``.
 
-:py:attr:`~xray.Dataset.equals` checks dimension names, indexes and array
+:py:attr:`~xarray.Dataset.equals` checks dimension names, indexes and array
 values:
 
 .. ipython:: python
 
     arr.equals(arr.copy())
 
-:py:attr:`~xray.Dataset.identical` also checks attributes, and the name of each
+:py:attr:`~xarray.Dataset.identical` also checks attributes, and the name of each
 object:
 
 .. ipython:: python
 
     arr.identical(arr.rename('bar'))
 
-:py:attr:`~xray.Dataset.broadcast_equals` does a more relaxed form of equality
+:py:attr:`~xarray.Dataset.broadcast_equals` does a more relaxed form of equality
 check that allows variables to have different dimensions, as long as values
 are constant along those new dimensions:
 
 .. ipython:: python
 
-    left = xray.Dataset(coords={'x': 0})
-    right = xray.Dataset({'x': [0, 0, 0]})
+    left = xr.Dataset(coords={'x': 0})
+    right = xr.Dataset({'x': [0, 0, 0]})
     left.broadcast_equals(right)
 
-Like pandas objects, two xray objects are still equal or identical if they have
+Like pandas objects, two xarray objects are still equal or identical if they have
 missing values marked by ``NaN`` in the same locations.
 
 In contrast, the ``==`` operation performs element-wise comparison (like

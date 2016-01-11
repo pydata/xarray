@@ -8,15 +8,15 @@ Indexing and selecting data
 
     import numpy as np
     import pandas as pd
-    import xray
+    import xarray as xr
     np.random.seed(123456)
 
-Similarly to pandas objects, xray objects support both integer and label
-based lookups along each dimension. However, xray objects also have named
+Similarly to pandas objects, xarray objects support both integer and label
+based lookups along each dimension. However, xarray objects also have named
 dimensions, so you can optionally use dimension names instead of relying on the
 positional ordering of dimensions.
 
-Thus in total, xray supports four different kinds of indexing, as described
+Thus in total, xarray supports four different kinds of indexing, as described
 below and summarized in this table:
 
 .. |br| raw:: html
@@ -40,15 +40,15 @@ below and summarized in this table:
 Positional indexing
 -------------------
 
-Indexing a :py:class:`~xray.DataArray` directly works (mostly) just like it
+Indexing a :py:class:`~xarray.DataArray` directly works (mostly) just like it
 does for numpy arrays, except that the returned object is always another
 DataArray:
 
 .. ipython:: python
 
-    arr = xray.DataArray(np.random.rand(4, 3),
-                         [('time', pd.date_range('2000-01-01', periods=4)),
-                          ('space', ['IA', 'IL', 'IN'])])
+    arr = xr.DataArray(np.random.rand(4, 3),
+                       [('time', pd.date_range('2000-01-01', periods=4)),
+                        ('space', ['IA', 'IL', 'IN'])])
     arr[:2]
     arr[0, 0]
     arr[:, [2, 1]]
@@ -59,11 +59,12 @@ Attributes are persisted in all indexing operations.
 
     Positional indexing deviates from the NumPy when indexing with multiple
     arrays like ``arr[[0, 1], [0, 1]]``, as described in :ref:`orthogonal`.
-    See :ref:`pointwise indexing` for how to achieve this functionality in xray.
+    See :ref:`pointwise indexing` for how to achieve this functionality in
+    xarray.
 
-xray also supports label-based indexing, just like pandas. Because
+xarray also supports label-based indexing, just like pandas. Because
 we use a :py:class:`pandas.Index` under the hood, label based indexing is very
-fast. To do label based indexing, use the :py:attr:`~xray.DataArray.loc` attribute:
+fast. To do label based indexing, use the :py:attr:`~xarray.DataArray.loc` attribute:
 
 .. ipython:: python
 
@@ -71,7 +72,7 @@ fast. To do label based indexing, use the :py:attr:`~xray.DataArray.loc` attribu
 
 You can perform any of the label indexing operations `supported by pandas`__,
 including indexing with individual, slices and arrays of labels, as well as
-indexing with boolean arrays. Like pandas, label based indexing in xray is
+indexing with boolean arrays. Like pandas, label based indexing in xarray is
 *inclusive* of both the start and stop bounds.
 
 __ http://pandas.pydata.org/pandas-docs/stable/indexing.html#indexing-label
@@ -101,7 +102,7 @@ use them explicitly to slice data. There are two ways to do this:
         # index by dimension coordinate labels
         arr.loc[dict(time=slice('2000-01-01', '2000-01-02'))]
 
-2. Use the :py:meth:`~xray.DataArray.sel` and :py:meth:`~xray.DataArray.isel`
+2. Use the :py:meth:`~xarray.DataArray.sel` and :py:meth:`~xarray.DataArray.isel`
    convenience methods:
 
     .. ipython:: python
@@ -144,20 +145,20 @@ __ http://legacy.python.org/dev/peps/pep-0472/
 Pointwise indexing
 ------------------
 
-xray pointwise indexing supports the indexing along multiple labeled dimensions
-using list-like objects. While :py:meth:`~xray.DataArray.isel` performs
-orthogonal indexing, the :py:meth:`~xray.DataArray.isel_points` method
+xarray pointwise indexing supports the indexing along multiple labeled dimensions
+using list-like objects. While :py:meth:`~xarray.DataArray.isel` performs
+orthogonal indexing, the :py:meth:`~xarray.DataArray.isel_points` method
 provides similar numpy indexing behavior as if you were using multiple
 lists to index an array (e.g. ``arr[[0, 1], [0, 1]]`` ):
 
 .. ipython:: python
 
     # index by integer array indices
-    da = xray.DataArray(np.arange(56).reshape((7, 8)), dims=['x', 'y'])
+    da = xr.DataArray(np.arange(56).reshape((7, 8)), dims=['x', 'y'])
     da
     da.isel_points(x=[0, 1, 6], y=[0, 1, 0])
 
-There is also :py:meth:`~xray.DataArray.sel_points`, which analogously
+There is also :py:meth:`~xarray.DataArray.sel_points`, which analogously
 allows you to do point-wise indexing by label:
 
 .. ipython:: python
@@ -198,7 +199,7 @@ Using indexing to *assign* values to a subset of dataset (e.g.,
 Dropping labels
 ---------------
 
-The :py:meth:`~xray.Dataset.drop` method returns a new object with the listed
+The :py:meth:`~xarray.Dataset.drop` method returns a new object with the listed
 index labels along a dimension dropped:
 
 .. ipython:: python
@@ -212,15 +213,15 @@ index labels along a dimension dropped:
 Nearest neighbor lookups
 ------------------------
 
-The label based selection methods :py:meth:`~xray.Dataset.sel`,
-:py:meth:`~xray.Dataset.reindex` and :py:meth:`~xray.Dataset.reindex_like` all
+The label based selection methods :py:meth:`~xarray.Dataset.sel`,
+:py:meth:`~xarray.Dataset.reindex` and :py:meth:`~xarray.Dataset.reindex_like` all
 support ``method`` and ``tolerance`` keyword argument. The method parameter allows for
 enabling nearest neighbor (inexact) lookups by use of the methods ``'pad'``,
 ``'backfill'`` or ``'nearest'``:
 
 .. ipython:: python
 
-    data = xray.DataArray([1, 2, 3], dims='x')
+    data = xr.DataArray([1, 2, 3], dims='x')
     data.sel(x=[1.1, 1.9], method='nearest')
     data.sel(x=0.1, method='backfill')
     data.reindex(x=[0.5, 1, 1.5, 2, 2.5], method='pad')
@@ -264,19 +265,19 @@ Indexing axes with monotonic decreasing labels also works, as long as the
 Masking with ``where``
 ----------------------
 
-Indexing methods on xray objects generally return a subset of the original data.
+Indexing methods on xarray objects generally return a subset of the original data.
 However, it is sometimes useful to select an object with the same shape as the
 original data, but with some elements masked. To do this type of selection in
-xray, use :py:meth:`~xray.DataArray.where`:
+xarray, use :py:meth:`~xarray.DataArray.where`:
 
 .. ipython:: python
 
-    arr2 = xray.DataArray(np.arange(16).reshape(4, 4), dims=['x', 'y'])
+    arr2 = xr.DataArray(np.arange(16).reshape(4, 4), dims=['x', 'y'])
     arr2.where(arr2.x + arr2.y < 4)
 
 This is particularly useful for ragged indexing of multi-dimensional data,
 e.g., to apply a 2D mask to an image. Note that ``where`` follows all the
-usual xray broadcasting and alignment rules for binary operations (e.g.,
+usual xarray broadcasting and alignment rules for binary operations (e.g.,
 ``+``) between the object being indexed and the condition, as described in
 :ref:`comput`:
 
@@ -287,7 +288,7 @@ usual xray broadcasting and alignment rules for binary operations (e.g.,
 Multi-dimensional indexing
 --------------------------
 
-Xray does not yet support efficient routines for generalized multi-dimensional
+xarray does not yet support efficient routines for generalized multi-dimensional
 indexing or regridding. However, we are definitely interested in adding support
 for this in the future (see :issue:`475` for the ongoing discussion).
 
@@ -298,7 +299,7 @@ Copies vs. views
 
 Whether array indexing returns a view or a copy of the underlying
 data depends on the nature of the labels. For positional (integer)
-indexing, xray follows the same rules as NumPy:
+indexing, xarray follows the same rules as NumPy:
 
 * Positional indexing with only integers and slices returns a view.
 * Positional indexing with arrays or lists returns a copy.
@@ -311,8 +312,8 @@ The rules for label based indexing are more complex:
   upon if the corresponding positional indexer can be represented as an
   integer or a slice object. The exact rules are determined by pandas.
 
-Whether data is a copy or a view is more predictable in xray than in pandas, so
-unlike pandas, xray does not produce `SettingWithCopy warnings`_. However, you
+Whether data is a copy or a view is more predictable in xarray than in pandas, so
+unlike pandas, xarray does not produce `SettingWithCopy warnings`_. However, you
 should still avoid assignment with chained indexing.
 
 .. _SettingWithCopy warnings: http://pandas.pydata.org/pandas-docs/stable/indexing.html#returning-a-view-versus-a-copy
@@ -322,8 +323,8 @@ should still avoid assignment with chained indexing.
 Orthogonal (outer) vs. vectorized indexing
 ------------------------------------------
 
-Indexing with xray objects has one important difference from indexing numpy
-arrays: you can only use one-dimensional arrays to index xray objects, and
+Indexing with xarray objects has one important difference from indexing numpy
+arrays: you can only use one-dimensional arrays to index xarray objects, and
 each indexer is applied "orthogonally" along independent axes, instead of
 using numpy's broadcasting rules to vectorize indexers. This means you can do
 indexing like this, which would require slightly more awkward syntax with
@@ -334,7 +335,7 @@ numpy arrays:
     arr[arr['time.day'] > 1, arr['space'] != 'IL']
 
 This is a much simpler model than numpy's `advanced indexing`__. If you would
-like to do advanced-style array indexing in xray, you have several options:
+like to do advanced-style array indexing in xarray, you have several options:
 
 * :ref:`pointwise indexing`
 * :ref:`masking with where`
@@ -351,23 +352,23 @@ __ http://docs.scipy.org/doc/numpy/reference/arrays.indexing.html
 Align and reindex
 -----------------
 
-xray's ``reindex``, ``reindex_like`` and ``align`` impose a ``DataArray`` or
+xarray's ``reindex``, ``reindex_like`` and ``align`` impose a ``DataArray`` or
 ``Dataset`` onto a new set of coordinates corresponding to dimensions. The
 original values are subset to the index labels still found in the new labels,
 and values corresponding to new labels not found in the original object are
 in-filled with `NaN`.
 
-Xray operations that combine multiple objects generally automatically align
+xarray operations that combine multiple objects generally automatically align
 their arguments to share the same indexes. However, manual alignment can be
 useful for greater control and for increased performance.
 
-To reindex a particular dimension, use :py:meth:`~xray.DataArray.reindex`:
+To reindex a particular dimension, use :py:meth:`~xarray.DataArray.reindex`:
 
 .. ipython:: python
 
     arr.reindex(space=['IA', 'CA'])
 
-The :py:meth:`~xray.DataArray.reindex_like` method is a useful shortcut.
+The :py:meth:`~xarray.DataArray.reindex_like` method is a useful shortcut.
 To demonstrate, we will make a subset DataArray with new values:
 
 .. ipython:: python
@@ -390,21 +391,21 @@ the missing values with `NaN`:
 
     baz.reindex_like(foo)
 
-The :py:func:`~xray.align` function lets us perform more flexible database-like
+The :py:func:`~xarray.align` function lets us perform more flexible database-like
 ``'inner'``, ``'outer'``, ``'left'`` and ``'right'`` joins:
 
 .. ipython:: python
 
-    xray.align(foo, baz, join='inner')
-    xray.align(foo, baz, join='outer')
+    xr.align(foo, baz, join='inner')
+    xr.align(foo, baz, join='outer')
 
 Both ``reindex_like`` and ``align`` work interchangeably between
-:py:class:`~xray.DataArray` and :py:class:`~xray.Dataset` objects, and with any number of matching dimension names:
+:py:class:`~xarray.DataArray` and :py:class:`~xarray.Dataset` objects, and with any number of matching dimension names:
 
 .. ipython:: python
 
     ds
     ds.reindex_like(baz)
-    other = xray.DataArray(['a', 'b', 'c'], dims='other')
+    other = xr.DataArray(['a', 'b', 'c'], dims='other')
     # this is a no-op, because there are no shared dimension names
     ds.reindex_like(other)
