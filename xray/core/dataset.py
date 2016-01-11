@@ -209,6 +209,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject):
             self._set_init_vars_and_dims(data_vars, coords, compat)
         if attrs is not None:
             self.attrs = attrs
+        self._initialized = True
 
     def _add_missing_coords_inplace(self):
         """Add missing coordinates to self._variables
@@ -370,6 +371,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject):
         obj._dims = dims
         obj._attrs = attrs
         obj._file_obj = file_obj
+        obj._initialized = True
         return obj
 
     __default_attrs = object()

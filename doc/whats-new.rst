@@ -66,6 +66,9 @@ Bug fixes
 
 - Fixes for several issues found on ``DataArray`` objects with the same name
   as one of their coordinates (see :ref:`v0.7.0.breaking` for more details).
+- Attempting to assign a ``Dataset`` or ``DataArray`` variable/attribute using
+  attribute-style syntax (e.g., ``ds.foo = 42``) now raises an error rather
+  than silently failing (:issue:`656`, :issue:`714`).
 
 - ``DataArray.to_masked_array`` always returns masked array with mask being an array
 (not a scalar value) (:issue:`684`)
