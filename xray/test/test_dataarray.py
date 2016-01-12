@@ -1558,3 +1558,12 @@ class TestDataArray(TestCase):
         array = DataArray(1 + 2j)
         self.assertDataArrayIdentical(array.real, DataArray(1))
         self.assertDataArrayIdentical(array.imag, DataArray(2))
+
+    def test_setattr_raises(self):
+        array = DataArray(0, coords={'scalar': 1}, attrs={'foo': 'bar'})
+        with self.assertRaisesRegexp(AttributeError, 'cannot set attr'):
+            array.scalar = 2
+        with self.assertRaisesRegexp(AttributeError, 'cannot set attr'):
+            array.foo = 2
+        with self.assertRaisesRegexp(AttributeError, 'cannot set attr'):
+            array.other = 2

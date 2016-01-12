@@ -2289,3 +2289,12 @@ class TestDataset(TestCase):
 
         expected_im = Dataset({'x': ((), 2, attrs)}, attrs=attrs)
         self.assertDatasetIdentical(ds.imag, expected_im)
+
+    def test_setattr_raises(self):
+        ds = Dataset({}, coords={'scalar': 1}, attrs={'foo': 'bar'})
+        with self.assertRaisesRegexp(AttributeError, 'cannot set attr'):
+            ds.scalar = 2
+        with self.assertRaisesRegexp(AttributeError, 'cannot set attr'):
+            ds.foo = 2
+        with self.assertRaisesRegexp(AttributeError, 'cannot set attr'):
+            ds.other = 2

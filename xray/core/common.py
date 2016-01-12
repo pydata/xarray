@@ -117,8 +117,10 @@ class AbstractArray(ImplementsArrayReduce):
 
 
 class AttrAccessMixin(object):
-    """Mixin class that allow getting keys with attribute access
+    """Mixin class that allows getting keys with attribute access
     """
+    _initialized = False
+
     @property
     def _attr_sources(self):
         """List of places to look-up items for attribute-style access"""
@@ -133,6 +135,20 @@ class AttrAccessMixin(object):
                     return source[name]
         raise AttributeError("%r object has no attribute %r" %
                              (type(self).__name__, name))
+
+    def __setattr__(self, name, value):
+        if self._initialized:
+            try:
+                # Allow setting instance variables if they already exist
+                # (e.g., _attrs). We use __getattribute__ instead of hasattr
+                # to avoid key lookups with attribute-style access.
+                self.__getattribute__(name)
+            except AttributeError:
+                raise AttributeError(
+                    "cannot set attribute %r on a %r object. Use __setitem__ "
+                    "style assignment (e.g., `ds['name'] = ...`) instead to "
+                    "assign variables." % (name, type(self).__name__))
+        object.__setattr__(self, name, value)
 
     def __dir__(self):
         """Provide method name lookup and completion. Only provide 'public'
