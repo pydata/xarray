@@ -169,6 +169,15 @@ def is_scalar(value):
             value is None)
 
 
+def is_valid_numpy_dtype(dtype):
+    try:
+        np.dtype(dtype)
+    except (TypeError, ValueError):
+        return False
+    else:
+        return True
+
+
 def dict_equiv(first, second, compat=equivalent):
     """Test equivalence of two dict-like objects. If any of the values are
     numpy arrays, compare them correctly.
