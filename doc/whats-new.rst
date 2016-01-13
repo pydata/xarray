@@ -72,6 +72,9 @@ Bug fixes
 
 - ``DataArray.to_masked_array`` always returns masked array with mask being an array
 (not a scalar value) (:issue:`684`)
+- You can now pass pandas objects with non-numpy dtypes (e.g., ``categorical``
+  or ``datetime64`` with a timezone) into xray without an error
+  (:issue:`716`).
 
 v0.6.2 (unreleased)
 -------------------

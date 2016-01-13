@@ -5,6 +5,7 @@ from textwrap import dedent
 
 from distutils.version import LooseVersion
 import numpy as np
+import pytz
 import pandas as pd
 
 from xray import Variable, Dataset, DataArray
@@ -153,7 +154,7 @@ class VariableSubclassTestCases(object):
     def test_datetime64_conversion(self):
         times = pd.date_range('2000-01-01', periods=3)
         for values, preserve_source in [
-                (times, False),
+                (times, True),
                 (times.values, True),
                 (times.values.astype('datetime64[s]'), False),
                 (times.to_pydatetime(), False),
@@ -163,15 +164,12 @@ class VariableSubclassTestCases(object):
             self.assertArrayEqual(v.values, times.values)
             self.assertEqual(v.values.dtype, np.dtype('datetime64[ns]'))
             same_source = source_ndarray(v.values) is source_ndarray(values)
-            if preserve_source and self.cls is Variable:
-                self.assertTrue(same_source)
-            else:
-                self.assertFalse(same_source)
+            assert preserve_source == same_source
 
     def test_timedelta64_conversion(self):
         times = pd.timedelta_range(start=0, periods=3)
         for values, preserve_source in [
-                (times, False),
+                (times, True),
                 (times.values, True),
                 (times.values.astype('timedelta64[s]'), False),
                 (times.to_pytimedelta(), False),
@@ -181,10 +179,7 @@ class VariableSubclassTestCases(object):
             self.assertArrayEqual(v.values, times.values)
             self.assertEqual(v.values.dtype, np.dtype('timedelta64[ns]'))
             same_source = source_ndarray(v.values) is source_ndarray(values)
-            if preserve_source and self.cls is Variable:
-                self.assertTrue(same_source)
-            else:
-                self.assertFalse(same_source)
+            assert preserve_source == same_source
 
     def test_object_conversion(self):
         data = np.arange(5).astype(str).astype(object)
@@ -404,6 +399,22 @@ class VariableSubclassTestCases(object):
         v = self.cls('x', [1, 2j, np.nan])
         expected = Variable((), 0.5 + 1j)
         self.assertVariableAllClose(v.mean(), expected)
+
+    def test_pandas_cateogrical_dtype(self):
+        data = pd.Categorical(np.arange(10, dtype='int64'))
+        v = self.cls('x', data)
+        print(v)  # should not error
+        assert v.dtype == 'int64'
+
+    def test_pandas_datetime64_with_tz(self):
+        data = pd.date_range(start='2000-01-01',
+                             tz=pytz.timezone('America/New_York'),
+                             periods=10, freq='1h')
+        v = self.cls('x', data)
+        print(v)  # should not error
+        if 'America/New_York' in str(data.dtype):
+            # pandas is new enough that it has datetime64 with timezone dtype
+            assert v.dtype == 'object'
 
 
 class TestVariable(TestCase, VariableSubclassTestCases):

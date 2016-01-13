@@ -371,6 +371,10 @@ class PandasIndexAdapter(utils.NDArrayMixin):
             # if a PeriodIndex, force an object dtype
             if isinstance(array, pd.PeriodIndex):
                 dtype = np.dtype('O')
+            elif hasattr(array, 'categories'):
+                dtype = array.categories.dtype
+            elif not utils.is_valid_numpy_dtype(array.dtype):
+                dtype = np.dtype('O')
             else:
                 dtype = array.dtype
         self._dtype = dtype
@@ -387,7 +391,7 @@ class PandasIndexAdapter(utils.NDArrayMixin):
             with suppress(AttributeError):
                 # this might not be public API
                 array = array.asobject
-        return array.values.astype(dtype)
+        return np.asarray(array, dtype)
 
     def __getitem__(self, key):
         if isinstance(key, tuple) and len(key) == 1:
