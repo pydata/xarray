@@ -881,6 +881,10 @@ class TestDataset(TestCase):
         with self.assertRaisesRegexp(ValueError, 'dictionary'):
             data.reindex('foo')
 
+        # invalid dimension
+        with self.assertRaisesRegexp(ValueError, 'invalid reindex dim'):
+            data.reindex(invalid=0)
+
         # out of order
         expected = data.sel(dim1=data['dim1'][:10:-1])
         actual = data.reindex(dim1=data['dim1'][:10:-1])

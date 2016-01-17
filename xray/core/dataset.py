@@ -1154,8 +1154,10 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject):
         Dataset.reindex
         align
         """
+        indexers = dict((k, v) for k, v in other.indexes.items()
+                        if k in self.dims)
         return self.reindex(method=method, copy=copy, tolerance=tolerance,
-                            **other.indexes)
+                            **indexers)
 
     def reindex(self, indexers=None, method=None, tolerance=None, copy=True, **kw_indexers):
         """Conform this object onto a new set of indexes, filling in
@@ -1204,6 +1206,10 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject):
         if not indexers:
             # shortcut
             return self.copy(deep=True) if copy else self
+
+        bad_dims = [d for d in indexers if d not in self.dims]
+        if bad_dims:
+            raise ValueError('invalid reindex dimensions: %s' % bad_dims)
 
         variables = alignment.reindex_variables(
             self.variables, self.indexes, indexers, method, tolerance, copy=copy)
