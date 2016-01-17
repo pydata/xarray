@@ -12,6 +12,31 @@ What's New
 v0.7.0 (unreleased)
 -------------------
 
+This major release includes redesign of :py:class:`~xray.DataArray`
+internals, as well as new methods for reshaping, rolling and shifting
+data. It includes preliminary support for :py:class:`pandas.MultiIndex`,
+as well as a number of other features and bug fixes, several of which
+offer improved compatibility with pandas.
+
+New name
+~~~~~~~~
+
+The project formerly known as "xray" is now "xarray"! This avoids a namespace
+conflict with the entirety of x-ray science. Renaming our project seemed like
+the right thing to do, especially because some scientists who work with actual
+x-rays are interested in using this project in their work. Thanks for your
+understanding and patience in this transition. You can now find our
+documentation and code repository at new URLs:
+
+- http://xarray.pydata.org
+- http://github.com/pydata/xarray/
+
+To ease the transition, we have simultaneously released v0.7.0 of both
+``xray`` and ``xarray`` on the Python Package Index. These packages are
+identical, except the former issues a deprecation warning when imported. This
+will be the last xray release. We recommend switching your imports going
+forward to ``import xarray as xr``.
+
 .. _v0.7.0.breaking:
 
 Breaking changes
