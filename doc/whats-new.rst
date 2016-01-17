@@ -107,12 +107,15 @@ Enhancements
     Coordinates:
       * z        (z) object ('a', 0) ('a', 1) ('b', 0) ('b', 1)
 
+  See :ref:`reshape.stack` for more details.
+
   .. warning::
 
       xray's MultiIndex support is still experimental, and we have a long to-
-      do list of desired additions (:issue:`719`). For example, you cannot yet
-      save a MultiIndex to a netCDF file. User contributions in this area
-      would be greatly appreciate :).
+      do list of desired additions (:issue:`719`), including better display of
+      multi-index levels when printing a ``Dataset``, and support for saving
+      datasets with a MultiIndex to a netCDF file. User contributions in this
+      area would be greatly appreciated.
 
 - Support for reading GRIB, HDF4 and other file formats via PyNIO_. See
   :ref:`io.pynio` for more details.
@@ -132,10 +135,10 @@ Enhancements
 
   Notice that ``shift`` moves data independently of coordinates, but ``roll``
   moves both data and coordinates.
-- Assigning a ``pandas`` object to the variable of ``Dataset`` directly is now permitted. Its
-  index names correspond to the ``dims`` of the ``Dataset``, and its data is aligned
+- Assigning a ``pandas`` object directly as a ``Dataset`` variable is now permitted. Its
+  index names correspond to the ``dims`` of the ``Dataset``, and its data is aligned.
 - Passing a :py:class:`pandas.DataFrame` or :py:class:`pandas.Panel` to a Dataset constructor
-  is now permitted
+  is now permitted.
 - New function :py:func:`~xray.broadcast` for explicitly broadcasting
   ``DataArray`` and ``Dataset`` objects against each other. For example:
 
@@ -154,21 +157,14 @@ Bug fixes
 
 - Fixes for several issues found on ``DataArray`` objects with the same name
   as one of their coordinates (see :ref:`v0.7.0.breaking` for more details).
-
-- ``DataArray.to_masked_array`` always returns masked array with mask being an array
-(not a scalar value) (:issue:`684`)
-
+- ``DataArray.to_masked_array`` always returns masked array with mask being an
+  array (not a scalar value) (:issue:`684`)
 - Allows for (imperfect) repr of Coords when underlying index is PeriodIndex (:issue:`645`).
-
 - Fixes for several issues found on ``DataArray`` objects with the same name
   as one of their coordinates (see :ref:`v0.7.0.breaking` for more details).
 - Attempting to assign a ``Dataset`` or ``DataArray`` variable/attribute using
   attribute-style syntax (e.g., ``ds.foo = 42``) now raises an error rather
   than silently failing (:issue:`656`, :issue:`714`).
-
-- ``DataArray.to_masked_array`` always returns masked array with mask being an array
-(not a scalar value) (:issue:`684`)
-
 - You can now pass pandas objects with non-numpy dtypes (e.g., ``categorical``
   or ``datetime64`` with a timezone) into xray without an error
   (:issue:`716`).

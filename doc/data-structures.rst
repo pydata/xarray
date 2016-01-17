@@ -436,8 +436,8 @@ dataset variables:
 
     ds.rename({'temperature': 'temp', 'precipitation': 'precip'})
 
-Finally, you can use :py:meth:`~xray.Dataset.swap_dims` to swap dimension and
-non-dimension variables:
+The related :py:meth:`~xray.Dataset.swap_dims` method allows you do to swap
+dimension and non-dimension variables:
 
 .. ipython:: python
 
@@ -534,48 +534,6 @@ dimension and whose the values are ``Index`` objects:
 .. ipython:: python
 
     ds.indexes
-
-Converting datasets and arrays
-------------------------------
-
-To convert from a Dataset to a DataArray, use :py:meth:`~xray.Dataset.to_array`:
-
-.. ipython:: python
-
-    arr = ds.to_array()
-    arr
-
-This method broadcasts all data variables in the dataset against each other,
-then concatenates them along a new dimension into a new array while preserving
-coordinates.
-
-To convert back from a DataArray to a Dataset, use
-:py:meth:`~xray.DataArray.to_dataset`:
-
-.. ipython:: python
-
-    arr.to_dataset(dim='variable')
-
-The broadcasting behavior of ``to_array`` means that the resulting array
-includes the union of data variable dimensions:
-
-.. ipython:: python
-
-    ds2 = xray.Dataset({'a': 0, 'b': ('x', [3, 4, 5])})
-
-    # the input dataset has 4 elements
-    ds2
-
-    # the resulting array has 6 elements
-    ds2.to_array()
-
-Otherwise, the result could not be represented as an orthogonal array.
-
-If you use ``to_dataset`` without supplying the ``dim`` argument, the DataArray will be converted into a Dataset of one variable:
-
-.. ipython:: python
-
-    arr.to_dataset(name='combined')
 
 
 .. [1] Latitude and longitude are 2D arrays because the dataset uses

@@ -36,6 +36,7 @@ Documentation
    indexing
    computation
    groupby
+   reshaping
    combining
    time-series
    pandas

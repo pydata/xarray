@@ -5,7 +5,7 @@ API reference
 #############
 
 This page provides an auto-generated summary of xray's API. For more details
-and examples, refer to the relevant chapter in the main part of the
+and examples, refer to the relevant chapters in the main part of the
 documentation.
 
 Top-level functions
@@ -110,10 +110,7 @@ Computation
    Dataset.reduce
    Dataset.groupby
    Dataset.resample
-   Dataset.transpose
    Dataset.diff
-   Dataset.shift
-   Dataset.roll
 
 **Aggregation**:
 :py:attr:`~Dataset.all`
@@ -154,6 +151,18 @@ Computation
 :py:attr:`~core.groupby.DatasetGroupBy.last`
 :py:attr:`~core.groupby.DatasetGroupBy.fillna`
 :py:attr:`~core.groupby.DatasetGroupBy.where`
+
+Reshaping and reorganizing
+--------------------------
+
+.. autosummary::
+   :toctree: generated/
+
+   Dataset.transpose
+   Dataset.stack
+   Dataset.unstack
+   Dataset.shift
+   Dataset.roll
 
 DataArray
 =========
@@ -218,6 +227,16 @@ Indexing
    DataArray.reindex
    DataArray.reindex_like
 
+Comparisons
+-----------
+
+.. autosummary::
+   :toctree: generated/
+
+   DataArray.equals
+   DataArray.identical
+   DataArray.broadcast_equals
+
 Computation
 -----------
 
@@ -227,11 +246,8 @@ Computation
    DataArray.reduce
    DataArray.groupby
    DataArray.resample
-   DataArray.transpose
    DataArray.get_axis_num
    DataArray.diff
-   DataArray.shift
-   DataArray.roll
 
 **Aggregation**:
 :py:attr:`~DataArray.all`
@@ -273,16 +289,18 @@ Computation
 :py:attr:`~core.groupby.DataArrayGroupBy.fillna`
 :py:attr:`~core.groupby.DataArrayGroupBy.where`
 
-Comparisons
------------
+
+Reshaping and reorganizing
+--------------------------
 
 .. autosummary::
    :toctree: generated/
 
-   DataArray.equals
-   DataArray.identical
-   DataArray.broadcast_equals
-
+   DataArray.transpose
+   DataArray.stack
+   DataArray.unstack
+   DataArray.shift
+   DataArray.roll
 
 .. _api.ufuncs:
 
