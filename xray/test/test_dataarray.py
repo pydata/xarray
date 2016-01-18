@@ -215,10 +215,6 @@ class TestDataArray(TestCase):
         actual = DataArray(Coordinate('foo', ['a', 'b']))
         self.assertDataArrayIdentical(expected, actual)
 
-        s = pd.Series(range(2), pd.MultiIndex.from_product([['a', 'b'], [0]]))
-        with self.assertRaisesRegexp(NotImplementedError, 'MultiIndex'):
-            DataArray(s)
-
     def test_constructor_from_0d(self):
         expected = Dataset({None: ([], 0)})[None]
         actual = DataArray(0)
@@ -480,6 +476,17 @@ class TestDataArray(TestCase):
         data = DataArray([0, 1], coords=[[True, False]])
         self.assertEqual(data.loc[True], 0)
         self.assertEqual(data.loc[False], 1)
+
+    def test_multiindex(self):
+        idx = pd.MultiIndex.from_product([list('abc'), [0, 1]])
+        data = DataArray(range(6), [('x', idx)])
+
+        self.assertDataArrayIdentical(data.sel(x=('a', 0)), data.isel(x=0))
+        self.assertDataArrayIdentical(data.sel(x=('c', 1)), data.isel(x=-1))
+        self.assertDataArrayIdentical(data.sel(x=[('a', 0)]), data.isel(x=[0]))
+        self.assertDataArrayIdentical(data.sel(x=[('a', 0), ('c', 1)]),
+                                      data.isel(x=[0, -1]))
+        self.assertDataArrayIdentical(data.sel(x='a'), data.isel(x=slice(2)))
 
     def test_time_components(self):
         dates = pd.date_range('2000-01-01', periods=10)
@@ -855,6 +862,20 @@ class TestDataArray(TestCase):
         actual = sim.copy()
         actual['tmin'] -= obs['tmin']
         self.assertDatasetIdentical(actual, expected)
+
+    def test_stack_unstack(self):
+        orig = DataArray([[0, 1], [2, 3]], dims=['x', 'y'], attrs={'foo': 2})
+        actual = orig.stack(z=['x', 'y']).unstack('z')
+        self.assertDataArrayIdentical(orig, actual)
+
+    def test_unstack_pandas_consistency(self):
+        df = pd.DataFrame({'foo': range(3),
+                           'x': ['a', 'b', 'b'],
+                           'y': [0, 0, 1]})
+        s = df.set_index(['x', 'y'])['foo']
+        expected = DataArray(s.unstack(), name='foo')
+        actual = DataArray(s, dims='z').unstack('z')
+        self.assertDataArrayIdentical(expected, actual)
 
     def test_transpose(self):
         self.assertVariableEqual(self.dv.variable.transpose(),
@@ -1391,6 +1412,15 @@ class TestDataArray(TestCase):
         expected_da = self.dv.rename(None)
         self.assertDataArrayIdentical(expected_da,
                                       DataArray.from_series(actual))
+
+    def test_series_categorical_index(self):
+        # regression test for GH700
+        if not hasattr(pd, 'CategoricalIndex'):
+            raise unittest.SkipTest('requires pandas with CategoricalIndex')
+
+        s = pd.Series(range(5), index=pd.CategoricalIndex(list('aabbc')))
+        arr = DataArray(s)
+        assert "'a'" in repr(arr)  # should not error
 
     def test_to_masked_array(self):
         rs = np.random.RandomState(44)

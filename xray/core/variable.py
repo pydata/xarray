@@ -105,15 +105,15 @@ def as_compatible_data(data, fastpath=False):
         return data
 
     if isinstance(data, pd.Index):
-        if isinstance(data, pd.MultiIndex):
-            raise NotImplementedError(
-                'no support yet for using a pandas.MultiIndex in an '
-                'xray.Coordinate')
         return _maybe_wrap_data(data)
+
+    if isinstance(data, tuple):
+        data = utils.tuple_to_0darray(data)
 
     if isinstance(data, pd.Timestamp):
         # TODO: convert, handle datetime objects, too
         data = np.datetime64(data.value, 'ns')
+
     if isinstance(data, timedelta):
         data = np.timedelta64(getattr(data, 'value', data), 'ns')
 
@@ -250,7 +250,7 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
         self._data = data
 
     def _data_cached(self):
-        if not isinstance(self._data, np.ndarray):
+        if not isinstance(self._data, (np.ndarray, PandasIndexAdapter)):
             self._data = np.asarray(self._data)
         return self._data
 
@@ -720,6 +720,110 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
                                 self._encoding, fastpath=True)
         return expanded_var.transpose(*dims)
 
+    def _stack_once(self, dims, new_dim):
+        if not set(dims) <= set(self.dims):
+            raise ValueError('invalid existing dimensions: %s' % dims)
+
+        if new_dim in self.dims:
+            raise ValueError('cannot create a new dimension with the same '
+                             'name as an existing dimension')
+
+        if len(dims) == 0:
+            # don't stack
+            return self.copy(deep=False)
+
+        other_dims = [d for d in self.dims if d not in dims]
+        dim_order = other_dims + list(dims)
+        reordered = self.transpose(*dim_order)
+
+        new_shape = reordered.shape[:len(other_dims)] + (-1,)
+        new_data = reordered.data.reshape(new_shape)
+        new_dims = reordered.dims[:len(other_dims)] + (new_dim,)
+
+        return Variable(new_dims, new_data, self._attrs, self._encoding,
+                        fastpath=True)
+
+    def stack(self, **dimensions):
+        """
+        Stack any number of existing dimensions into a single new dimension.
+
+        New dimensions will be added at the end, and the order of the data
+        along each new dimension will be in contiguous (C) order.
+
+        Parameters
+        ----------
+        **dimensions : keyword arguments of the form new_name=(dim1, dim2, ...)
+            Names of new dimensions, and the existing dimensions that they
+            replace.
+
+        Returns
+        -------
+        stacked : Variable
+            Variable with the same attributes but stacked data.
+
+        See also
+        --------
+        Variable.unstack
+        """
+        result = self
+        for new_dim, dims in dimensions.items():
+            result = result._stack_once(dims, new_dim)
+        return result
+
+    def _unstack_once(self, dims, old_dim):
+        new_dim_names = tuple(dims.keys())
+        new_dim_sizes = tuple(dims.values())
+
+        if old_dim not in self.dims:
+            raise ValueError('invalid existing dimension: %s' % old_dim)
+
+        if set(new_dim_names).intersection(self.dims):
+            raise ValueError('cannot create a new dimension with the same '
+                             'name as an existing dimension')
+
+        axis = self.get_axis_num(old_dim)
+        if np.prod(new_dim_sizes) != self.shape[axis]:
+            raise ValueError('the product of the new dimension sizes must '
+                             'equal the size of the old dimension')
+
+        other_dims = [d for d in self.dims if d != old_dim]
+        dim_order = other_dims + [old_dim]
+        reordered = self.transpose(*dim_order)
+
+        new_shape = reordered.shape[:len(other_dims)] + new_dim_sizes
+        new_data = reordered.data.reshape(new_shape)
+        new_dims = reordered.dims[:len(other_dims)] + new_dim_names
+
+        return Variable(new_dims, new_data, self._attrs, self._encoding,
+                        fastpath=True)
+
+    def unstack(self, **dimensions):
+        """
+        Unstack an existing dimension into multiple new dimensions.
+
+        New dimensions will be added at the end, and the order of the data
+        along each new dimension will be in contiguous (C) order.
+
+        Parameters
+        ----------
+        **dimensions : keyword arguments of the form old_dim={dim1: size1, ...}
+            Names of existing dimensions, and the new dimensions and sizes that they
+            map to.
+
+        Returns
+        -------
+        unstacked : Variable
+            Variable with the same attributes but unstacked data.
+
+        See also
+        --------
+        Variable.stack
+        """
+        result = self
+        for old_dim, dims in dimensions.items():
+            result = result._unstack_once(dims, old_dim)
+        return result
+
     def fillna(self, value):
         return self._fillna(value)
 
@@ -989,9 +1093,10 @@ class Coordinate(Variable):
         # n.b. creating a new pandas.Index from an old pandas.Index is
         # basically free as pandas.Index objects are immutable
         assert self.ndim == 1
-        return pd.Index(self._data_cached().array, name=self.dims[0])
-
-    # pandas.Index like properties:
+        index = self._data_cached().array
+        if not isinstance(index, pd.MultiIndex):
+            index = index.set_names(self.name)
+        return index
 
     @property
     def name(self):
@@ -1000,25 +1105,6 @@ class Coordinate(Variable):
     @name.setter
     def name(self, value):
         raise AttributeError('cannot modify name of Coordinate in-place')
-
-    def get_indexer(self, label):
-        return self.to_index().get_indexer(label)
-
-    def slice_indexer(self, start=None, stop=None, step=None):
-        return self.to_index().slice_indexer(start, stop, step)
-
-    def slice_locs(self, start=None, stop=None):
-        return self.to_index().slice_locs(start, stop)
-
-    def get_loc(self, label):
-        return self.to_index().get_loc(label)
-
-    @property
-    def is_monotonic(self):
-        return self.to_index().is_monotonic
-
-    def is_numeric(self):
-        return self.to_index().is_numeric()
 
 
 def _unified_dims(variables):

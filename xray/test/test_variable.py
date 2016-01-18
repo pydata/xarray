@@ -416,6 +416,12 @@ class VariableSubclassTestCases(object):
             # pandas is new enough that it has datetime64 with timezone dtype
             assert v.dtype == 'object'
 
+    def test_multiindex(self):
+        idx = pd.MultiIndex.from_product([list('abc'), [0, 1]])
+        v = self.cls('x', idx)
+        self.assertVariableIdentical(Variable((), ('a', 0)), v[0])
+        self.assertVariableIdentical(v, v[:])
+
 
 class TestVariable(TestCase, VariableSubclassTestCases):
     cls = staticmethod(Variable)
@@ -753,6 +759,70 @@ class TestVariable(TestCase, VariableSubclassTestCases):
 
         with self.assertRaisesRegexp(ValueError, 'must be a superset'):
             v.expand_dims(['z'])
+
+    def test_stack(self):
+        v = Variable(['x', 'y'], [[0, 1], [2, 3]], {'foo': 'bar'})
+        actual = v.stack(z=('x', 'y'))
+        expected = Variable('z', [0, 1, 2, 3], v.attrs)
+        self.assertVariableIdentical(actual, expected)
+
+        actual = v.stack(z=('x',))
+        expected = Variable(('y', 'z'), v.data.T, v.attrs)
+        self.assertVariableIdentical(actual, expected)
+
+        actual = v.stack(z=(),)
+        self.assertVariableIdentical(actual, v)
+
+        actual = v.stack(X=('x',), Y=('y',)).transpose('X', 'Y')
+        expected = Variable(('X', 'Y'), v.data, v.attrs)
+        self.assertVariableIdentical(actual, expected)
+
+    def test_stack_errors(self):
+        v = Variable(['x', 'y'], [[0, 1], [2, 3]], {'foo': 'bar'})
+
+        with self.assertRaisesRegexp(ValueError, 'invalid existing dim'):
+            v.stack(z=('x1',))
+        with self.assertRaisesRegexp(ValueError, 'cannot create a new dim'):
+            v.stack(x=('x',))
+
+    def test_unstack(self):
+        v = Variable('z', [0, 1, 2, 3], {'foo': 'bar'})
+        actual = v.unstack(z=OrderedDict([('x', 2), ('y', 2)]))
+        expected = Variable(('x', 'y'), [[0, 1], [2, 3]], v.attrs)
+        self.assertVariableIdentical(actual, expected)
+
+        actual = v.unstack(z=OrderedDict([('x', 4), ('y', 1)]))
+        expected = Variable(('x', 'y'), [[0], [1], [2], [3]], v.attrs)
+        self.assertVariableIdentical(actual, expected)
+
+        actual = v.unstack(z=OrderedDict([('x', 4)]))
+        expected = Variable('x', [0, 1, 2, 3], v.attrs)
+        self.assertVariableIdentical(actual, expected)
+
+    def test_unstack_errors(self):
+        v = Variable('z', [0, 1, 2, 3])
+        with self.assertRaisesRegexp(ValueError, 'invalid existing dim'):
+            v.unstack(foo={'x': 4})
+        with self.assertRaisesRegexp(ValueError, 'cannot create a new dim'):
+            v.stack(z=('z',))
+        with self.assertRaisesRegexp(ValueError, 'the product of the new dim'):
+            v.unstack(z={'x': 5})
+
+    def test_unstack_2d(self):
+        v = Variable(['x', 'y'], [[0, 1], [2, 3]])
+        actual = v.unstack(y={'z': 2})
+        expected = Variable(['x', 'z'], v.data)
+        self.assertVariableIdentical(actual, expected)
+
+        actual = v.unstack(x={'z': 2})
+        expected = Variable(['y', 'z'], v.data.T)
+        self.assertVariableIdentical(actual, expected)
+
+    def test_stack_unstack_consistency(self):
+        v = Variable(['x', 'y'], [[0, 1], [2, 3]])
+        actual = (v.stack(z=('x', 'y'))
+                  .unstack(z=OrderedDict([('x', 2), ('y', 2)])))
+        self.assertVariableIdentical(actual, v)
 
     def test_broadcasting_math(self):
         x = np.random.randn(2, 3)

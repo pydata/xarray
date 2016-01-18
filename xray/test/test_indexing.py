@@ -67,6 +67,17 @@ class TestIndexers(TestCase):
         with self.assertRaisesRegexp(ValueError, 'invalid subkey'):
             print(indexing.orthogonal_indexer((1.5 * y, 1.5 * y), x.shape))
 
+    def test_asarray_tuplesafe(self):
+        res = indexing._asarray_tuplesafe(('a', 1))
+        assert isinstance(res, np.ndarray)
+        assert res.ndim == 0
+        assert res.item() == ('a', 1)
+
+        res = indexing._asarray_tuplesafe([(0,), (1,)])
+        assert res.shape == (2,)
+        assert res[0] == (0,)
+        assert res[1] == (1,)
+
     def test_convert_label_indexer(self):
         # TODO: add tests that aren't just for edge cases
         index = pd.Index([1, 2, 3])

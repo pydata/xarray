@@ -1133,6 +1133,57 @@ class TestDataset(TestCase):
         with self.assertRaisesRegexp(ValueError, 'replacement dimension'):
             original.swap_dims({'x': 'z'})
 
+    def test_stack(self):
+        ds = Dataset({'a': ('x', [0, 1]),
+                      'b': (('x', 'y'), [[0, 1], [2, 3]]),
+                      'y': ['a', 'b']})
+
+        exp_index = pd.MultiIndex.from_product([[0, 1], ['a', 'b']],
+                                               names=['x', 'y'])
+        expected = Dataset({'a': ('z', [0, 0, 1, 1]),
+                            'b': ('z', [0, 1, 2, 3]),
+                            'z': exp_index})
+        actual = ds.stack(z=['x', 'y'])
+        self.assertDatasetIdentical(expected, actual)
+
+        exp_index = pd.MultiIndex.from_product([['a', 'b'], [0, 1]],
+                                               names=['y', 'x'])
+        expected = Dataset({'a': ('z', [0, 1, 0, 1]),
+                            'b': ('z', [0, 2, 1, 3]),
+                            'z': exp_index})
+        actual = ds.stack(z=['y', 'x'])
+        self.assertDatasetIdentical(expected, actual)
+
+    def test_unstack(self):
+        index = pd.MultiIndex.from_product([[0, 1], ['a', 'b']],
+                                           names=['x', 'y'])
+        ds = Dataset({'b': ('z', [0, 1, 2, 3]), 'z': index})
+        expected = Dataset({'b': (('x', 'y'), [[0, 1], [2, 3]]),
+                            'y': ['a', 'b']})
+        actual = ds.unstack('z')
+        self.assertDatasetIdentical(actual, expected)
+
+    def test_unstack_errors(self):
+        ds = Dataset({'x': [1, 2, 3]})
+        with self.assertRaisesRegexp(ValueError, 'invalid dimension'):
+            ds.unstack('foo')
+        with self.assertRaisesRegexp(ValueError, 'does not have a MultiIndex'):
+            ds.unstack('x')
+
+        ds2 = Dataset({'x': pd.Index([(0, 1)])})
+        with self.assertRaisesRegexp(ValueError, 'unnamed levels'):
+            ds2.unstack('x')
+
+    def test_stack_unstack(self):
+        ds = Dataset({'a': ('x', [0, 1]),
+                      'b': (('x', 'y'), [[0, 1], [2, 3]]),
+                      'y': ['a', 'b']})
+        actual = ds.stack(z=['x', 'y']).unstack('z')
+        assert actual.broadcast_equals(ds)
+
+        actual = ds[['b']].stack(z=['x', 'y']).unstack('z')
+        assert actual.identical(ds[['b']])
+
     def test_update(self):
         data = create_test_data(seed=0)
         expected = data.copy()

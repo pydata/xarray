@@ -140,6 +140,13 @@ This means, for example, that you always subtract an array from its transpose:
 
     c - c.T
 
+You can explicitly broadcast xray data structures by using the
+:py:func:`~xray.broadcast` function:
+
+    a2, b2 = xray.broadcast(a, b2)
+    a2
+    b2
+
 .. _math automatic alignment:
 
 Automatic alignment
@@ -223,13 +230,6 @@ Datasets support most of the same methods found on data arrays:
     ds.mean(dim='x')
     abs(ds)
 
-:py:meth:`~xray.Dataset.transpose` can also be used to reorder dimensions on
-all variables:
-
-.. ipython:: python
-
-    ds.transpose('y', 'x')
-
 Unfortunately, a limitation of the current version of numpy means that we
 cannot override ufuncs for datasets, because datasets cannot be written as
 a single array [1]_. :py:meth:`~xray.Dataset.apply` works around this
@@ -256,5 +256,5 @@ Arithmetic between two datasets matches data variables of the same name:
 Similarly to index based alignment, the result has the intersection of all
 matching variables, and ``ValueError`` is raised if the result would be empty.
 
-.. [1] When numpy 1.10 is released, we should be able to override ufuncs for
+.. [1] When numpy 1.12 is released, we should be able to override ufuncs for
        datasets by making use of ``__numpy_ufunc__``.

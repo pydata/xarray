@@ -12,6 +12,31 @@ What's New
 v0.7.0 (unreleased)
 -------------------
 
+This major release includes redesign of :py:class:`~xray.DataArray`
+internals, as well as new methods for reshaping, rolling and shifting
+data. It includes preliminary support for :py:class:`pandas.MultiIndex`,
+as well as a number of other features and bug fixes, several of which
+offer improved compatibility with pandas.
+
+New name
+~~~~~~~~
+
+The project formerly known as "xray" is now "xarray"! This avoids a namespace
+conflict with the entirety of x-ray science. Renaming our project seemed like
+the right thing to do, especially because some scientists who work with actual
+x-rays are interested in using this project in their work. Thanks for your
+understanding and patience in this transition. You can now find our
+documentation and code repository at new URLs:
+
+- http://xarray.pydata.org
+- http://github.com/pydata/xarray/
+
+To ease the transition, we have simultaneously released v0.7.0 of both
+``xray`` and ``xarray`` on the Python Package Index. These packages are
+identical, except the former issues a deprecation warning when imported. This
+will be the last xray release. We recommend switching your imports going
+forward to ``import xarray as xr``.
+
 .. _v0.7.0.breaking:
 
 Breaking changes
@@ -61,26 +86,61 @@ Breaking changes
 
 .. _this stackoverflow report: http://stackoverflow.com/questions/33158558/python-xray-extract-first-and-last-time-value-within-each-month-of-a-timeseries
 
-Bug fixes
-~~~~~~~~~
-
-- Fixes for several issues found on ``DataArray`` objects with the same name
-  as one of their coordinates (see :ref:`v0.7.0.breaking` for more details).
-- Attempting to assign a ``Dataset`` or ``DataArray`` variable/attribute using
-  attribute-style syntax (e.g., ``ds.foo = 42``) now raises an error rather
-  than silently failing (:issue:`656`, :issue:`714`).
-
-- ``DataArray.to_masked_array`` always returns masked array with mask being an array
-(not a scalar value) (:issue:`684`)
-- You can now pass pandas objects with non-numpy dtypes (e.g., ``categorical``
-  or ``datetime64`` with a timezone) into xray without an error
-  (:issue:`716`).
-
-v0.6.2 (unreleased)
--------------------
-
 Enhancements
 ~~~~~~~~~~~~
+
+- Basic support for :py:class:`~pandas.MultiIndex` coordinates on xray objects, including
+  indexing, :py:meth:`~DataArray.stack` and :py:meth:`~DataArray.unstack`:
+
+  .. ipython::
+    :verbatim:
+
+    In [7]: df = pd.DataFrame({'foo': range(3),
+       ...:                    'x': ['a', 'b', 'b'],
+       ...:                    'y': [0, 0, 1]})
+
+    In [8]: s = df.set_index(['x', 'y'])['foo']
+
+    In [12]: arr = xray.DataArray(s, dims='z')
+
+    In [13]: arr
+    Out[13]:
+    <xray.DataArray 'foo' (z: 3)>
+    array([0, 1, 2])
+    Coordinates:
+      * z        (z) object ('a', 0) ('b', 0) ('b', 1)
+
+    In [19]: arr.indexes['z']
+    Out[19]:
+    MultiIndex(levels=[[u'a', u'b'], [0, 1]],
+               labels=[[0, 1, 1], [0, 0, 1]],
+               names=[u'x', u'y'])
+
+    In [14]: arr.unstack('z')
+    Out[14]:
+    <xray.DataArray 'foo' (x: 2, y: 2)>
+    array([[  0.,  nan],
+           [  1.,   2.]])
+    Coordinates:
+      * x        (x) object 'a' 'b'
+      * y        (y) int64 0 1
+
+    In [26]: arr.unstack('z').stack(z=('x', 'y'))
+    Out[26]:
+    <xray.DataArray 'foo' (z: 4)>
+    array([  0.,  nan,   1.,   2.])
+    Coordinates:
+      * z        (z) object ('a', 0) ('a', 1) ('b', 0) ('b', 1)
+
+  See :ref:`reshape.stack` for more details.
+
+  .. warning::
+
+      xray's MultiIndex support is still experimental, and we have a long to-
+      do list of desired additions (:issue:`719`), including better display of
+      multi-index levels when printing a ``Dataset``, and support for saving
+      datasets with a MultiIndex to a netCDF file. User contributions in this
+      area would be greatly appreciated.
 
 - Support for reading GRIB, HDF4 and other file formats via PyNIO_. See
   :ref:`io.pynio` for more details.
@@ -100,10 +160,10 @@ Enhancements
 
   Notice that ``shift`` moves data independently of coordinates, but ``roll``
   moves both data and coordinates.
-- Assigning a ``pandas`` object to the variable of ``Dataset`` directly is now permitted. Its
-  index names correspond to the ``dims`` of the ``Dataset``, and its data is aligned
+- Assigning a ``pandas`` object directly as a ``Dataset`` variable is now permitted. Its
+  index names correspond to the ``dims`` of the ``Dataset``, and its data is aligned.
 - Passing a :py:class:`pandas.DataFrame` or :py:class:`pandas.Panel` to a Dataset constructor
-  is now permitted
+  is now permitted.
 - New function :py:func:`~xray.broadcast` for explicitly broadcasting
   ``DataArray`` and ``Dataset`` objects against each other. For example:
 
@@ -120,7 +180,32 @@ Enhancements
 Bug fixes
 ~~~~~~~~~
 
+- Fixes for several issues found on ``DataArray`` objects with the same name
+  as one of their coordinates (see :ref:`v0.7.0.breaking` for more details).
+- ``DataArray.to_masked_array`` always returns masked array with mask being an
+  array (not a scalar value) (:issue:`684`)
 - Allows for (imperfect) repr of Coords when underlying index is PeriodIndex (:issue:`645`).
+- Fixes for several issues found on ``DataArray`` objects with the same name
+  as one of their coordinates (see :ref:`v0.7.0.breaking` for more details).
+- Attempting to assign a ``Dataset`` or ``DataArray`` variable/attribute using
+  attribute-style syntax (e.g., ``ds.foo = 42``) now raises an error rather
+  than silently failing (:issue:`656`, :issue:`714`).
+- You can now pass pandas objects with non-numpy dtypes (e.g., ``categorical``
+  or ``datetime64`` with a timezone) into xray without an error
+  (:issue:`716`).
+
+Acknowledgments
+~~~~~~~~~~~~~~~
+
+The following individuals contributed to this release:
+
+- Antony Lee
+- Fabien Maussion
+- Joe Hamman
+- Maximilian Roos
+- Stephan Hoyer
+- Takeshi Kanmae
+- femtotrader
 
 v0.6.1 (21 October 2015)
 ------------------------

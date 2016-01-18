@@ -1,4 +1,5 @@
 import numpy as np
+import pandas as pd
 
 from xray import Variable, DataArray, Dataset, concat
 import xray.ufuncs as xu
@@ -288,3 +289,14 @@ class TestDataArrayAndDataset(DaskTestCase):
         with dask.set_options(get=counting_get):
             ds.load()
         self.assertEqual(count[0], 1)
+
+    def test_stack(self):
+        data = da.random.normal(size=(2, 3, 4), chunks=(1, 3, 4))
+        arr = DataArray(data, dims=('w', 'x', 'y'))
+        stacked = arr.stack(z=('x', 'y'))
+        z = pd.MultiIndex.from_product([np.arange(3), np.arange(4)],
+                                       names=['x', 'y'])
+        expected = DataArray(data.reshape(2, -1), {'w': [0, 1], 'z': z},
+                             dims=['w', 'z'])
+        assert stacked.data.chunks == expected.data.chunks
+        self.assertLazyAndIdentical(expected, stacked)

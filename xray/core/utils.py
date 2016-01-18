@@ -178,6 +178,13 @@ def is_valid_numpy_dtype(dtype):
         return True
 
 
+def tuple_to_0darray(value):
+    result = np.empty((1,), dtype=object)
+    result[:] = [value]
+    result.shape = ()
+    return result
+
+
 def dict_equiv(first, second, compat=equivalent):
     """Test equivalence of two dict-like objects. If any of the values are
     numpy arrays, compare them correctly.

@@ -1308,6 +1308,109 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject):
         return self._replace_vars_and_dims(variables, coord_names,
                                            inplace=inplace)
 
+    def _stack_once(self, dims, new_dim):
+        variables = OrderedDict()
+        for name, var in self.variables.items():
+            if name not in dims:
+                if any(d in var.dims for d in dims):
+                    add_dims = [d for d in dims if d not in var.dims]
+                    vdims = list(var.dims) + add_dims
+                    shape = [self.dims[d] for d in vdims]
+                    exp_var = var.expand_dims(vdims, shape)
+                    stacked_var = exp_var.stack(**{new_dim: dims})
+                    variables[name] = stacked_var
+                else:
+                    variables[name] = var.copy(deep=False)
+
+        idx = pd.MultiIndex.from_product([self.indexes[d] for d in dims],
+                                         names=dims)
+        variables[new_dim] = Coordinate(new_dim, idx)
+
+        coord_names = set(self._coord_names) - set(dims) | set([new_dim])
+
+        return self._replace_vars_and_dims(variables, coord_names)
+
+    def stack(self, **dimensions):
+        """
+        Stack any number of existing dimensions into a single new dimension.
+
+        New dimensions will be added at the end, and the corresponding
+        coordinate variables will be combined into a MultiIndex.
+
+        Parameters
+        ----------
+        **dimensions : keyword arguments of the form new_name=(dim1, dim2, ...)
+            Names of new dimensions, and the existing dimensions that they
+            replace.
+
+        Returns
+        -------
+        stacked : Dataset
+            Dataset with stacked data.
+
+        See also
+        --------
+        Dataset.unstack
+        """
+        result = self
+        for new_dim, dims in dimensions.items():
+            result = result._stack_once(dims, new_dim)
+        return result
+
+    def unstack(self, dim):
+        """
+        Unstack an existing dimension corresponding to a MultiIndex into
+        multiple new dimensions.
+
+        New dimensions will be added at the end.
+
+        Parameters
+        ----------
+        dim : str
+            Name of the existing dimension to unstack.
+
+        Returns
+        -------
+        unstacked : Dataset
+            Dataset with unstacked data.
+
+        See also
+        --------
+        Dataset.stack
+        """
+        if dim not in self.dims:
+            raise ValueError('invalid dimension: %s' % dim)
+
+        index = self.indexes[dim]
+        if not isinstance(index, pd.MultiIndex):
+            raise ValueError('cannot unstack a dimension that does not have '
+                             'a MultiIndex')
+
+        full_idx = pd.MultiIndex.from_product(index.levels, names=index.names)
+        obj = self.reindex(copy=False, **{dim: full_idx})
+
+        new_dim_names = index.names
+        if any(name is None for name in new_dim_names):
+            raise ValueError('cannot unstack dimension with unnamed levels')
+
+        new_dim_sizes = [lev.size for lev in index.levels]
+
+        variables = OrderedDict()
+        for name, var in obj.variables.items():
+            if name != dim:
+                if dim in var.dims:
+                    new_dims = OrderedDict(zip(new_dim_names, new_dim_sizes))
+                    variables[name] = var.unstack(**{dim: new_dims})
+                else:
+                    variables[name] = var
+
+        for name, lev in zip(new_dim_names, index.levels):
+            variables[name] = Coordinate(name, lev)
+
+        coord_names = set(self._coord_names) - set([dim]) | set(new_dim_names)
+
+        return self._replace_vars_and_dims(variables, coord_names)
+
     def update(self, other, inplace=True):
         """Update this dataset's variables with those from another dataset.
 

@@ -763,6 +763,73 @@ class DataArray(AbstractArray, BaseDataObject):
         ds = self._to_temp_dataset().swap_dims(dims_dict)
         return self._from_temp_dataset(ds)
 
+    def stack(self, **dimensions):
+        """
+        Stack any number of existing dimensions into a single new dimension.
+
+        New dimensions will be added at the end, and the corresponding
+        coordinate variables will be combined into a MultiIndex.
+
+        Parameters
+        ----------
+        **dimensions : keyword arguments of the form new_name=(dim1, dim2, ...)
+            Names of new dimensions, and the existing dimensions that they
+            replace.
+
+        Returns
+        -------
+        stacked : DataArray
+            DataArray with stacked data.
+
+        Example
+        -------
+
+        >>> arr = DataArray(np.arange(6).reshape(2, 3),
+        ...                 coords=[('x', ['a', 'b']), ('y', [0, 1, 2])])
+        >>> arr
+        <xray.DataArray (x: 2, y: 3)>
+        array([[0, 1, 2],
+               [3, 4, 5]])
+        Coordinates:
+          * x        (x) |S1 'a' 'b'
+          * y        (y) int64 0 1 2
+        >>> stacked = arr.stack(z=('x', 'y'))
+        >>> stacked.indexes['z']
+        MultiIndex(levels=[[u'a', u'b'], [0, 1, 2]],
+                   labels=[[0, 0, 0, 1, 1, 1], [0, 1, 2, 0, 1, 2]],
+                   names=[u'x', u'y'])
+
+        See also
+        --------
+        DataArray.unstack
+        """
+        ds = self._to_temp_dataset().stack(**dimensions)
+        return self._from_temp_dataset(ds)
+
+    def unstack(self, dim):
+        """
+        Unstack an existing dimension corresponding to a MultiIndex into
+        multiple new dimensions.
+
+        New dimensions will be added at the end.
+
+        Parameters
+        ----------
+        dim : str
+            Name of the existing dimension to unstack.
+
+        Returns
+        -------
+        unstacked : DataArray
+            Array with unstacked data.
+
+        See also
+        --------
+        DataArray.stack
+        """
+        ds = self._to_temp_dataset().unstack(dim)
+        return self._from_temp_dataset(ds)
+
     def transpose(self, *dims):
         """Return a new DataArray object with transposed dimensions.
 
