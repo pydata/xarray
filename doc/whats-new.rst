@@ -194,6 +194,19 @@ Bug fixes
   or ``datetime64`` with a timezone) into xray without an error
   (:issue:`716`).
 
+Acknowledgments
+~~~~~~~~~~~~~~~
+
+The following individuals contributed to this release:
+
+- Antony Lee
+- Fabien Maussion
+- Joe Hamman
+- Maximilian Roos
+- Stephan Hoyer
+- Takeshi Kanmae
+- femtotrader
+
 v0.6.1 (21 October 2015)
 ------------------------
 
