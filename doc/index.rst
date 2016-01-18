@@ -8,7 +8,7 @@
 N-D labeled arrays and datasets in Python
 =========================================
 
-**axrray** (formerly "xray") is an open source project and Python package
+**xarray** (formerly "xray") is an open source project and Python package
 that aims to bring the labeled data power of pandas_ to the physical sciences,
 by providing N-dimensional variants of the core pandas data structures.
 
