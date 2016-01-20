@@ -49,7 +49,7 @@ dimensional data structures.
 
 
 How do xarray data structures differ from those found in pandas?
---------------------------------------------------------------
+----------------------------------------------------------------
 
 The main distinguishing feature of xarray's ``DataArray`` over labeled arrays in
 pandas is that dimensions can have names (e.g., "time", "latitude",

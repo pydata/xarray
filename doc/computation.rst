@@ -140,10 +140,10 @@ This means, for example, that you always subtract an array from its transpose:
 
     c - c.T
 
-You can explicitly broadcast xray data structures by using the
-:py:func:`~xray.broadcast` function:
+You can explicitly broadcast xaray data structures by using the
+:py:func:`~xarray.broadcast` function:
 
-    a2, b2 = xray.broadcast(a, b2)
+    a2, b2 = xr.broadcast(a, b2)
     a2
     b2
 

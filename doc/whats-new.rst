@@ -10,6 +10,8 @@ What's New
     import xarray as xr
     np.random.seed(123456)
 
+.. _whats-new.0.7.0:
+
 v0.7.0 (unreleased)
 -------------------
 
@@ -22,21 +24,21 @@ offer improved compatibility with pandas.
 New name
 ~~~~~~~~
 
-The project formerly known as "xray" is now "xarray"! This avoids a namespace
-conflict with the entirety of x-ray science. Renaming our project seemed like
-the right thing to do, especially because some scientists who work with actual
-x-rays are interested in using this project in their work. Thanks for your
-understanding and patience in this transition. You can now find our
-documentation and code repository at new URLs:
+The project formerly known as "xray" is now "xarray", pronounced "x-array"!
+This avoids a namespace conflict with the entire field of x-ray science. Renaming
+our project seemed like the right thing to do, especially because some
+scientists who work with actual x-rays are interested in using this project in
+their work. Thanks for your understanding and patience in this transition. You
+can now find our documentation and code repository at new URLs:
 
 - http://xarray.pydata.org
 - http://github.com/pydata/xarray/
 
 To ease the transition, we have simultaneously released v0.7.0 of both
 ``xray`` and ``xarray`` on the Python Package Index. These packages are
-identical, except the former issues a deprecation warning when imported. This
-will be the last xray release. We recommend switching your imports going
-forward to ``import xarray as xr``.
+identical. For now, ``import xray`` still works, except it issues a
+deprecation warning. This will be the last xray release. Going forward, we
+recommend switching your import statements to ``import xarray as xr``.
 
 .. _v0.7.0.breaking:
 
@@ -177,6 +179,8 @@ Enhancements
       a2, b2 = xray.broadcast(a, b)
       a2
       b2
+
+.. _PyNIO: https://www.pyngl.ucar.edu/Nio.shtml
 
 Bug fixes
 ~~~~~~~~~
