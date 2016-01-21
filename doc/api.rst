@@ -1,10 +1,10 @@
-.. currentmodule:: xray
+.. currentmodule:: xarray
 
 #############
 API reference
 #############
 
-This page provides an auto-generated summary of xray's API. For more details
+This page provides an auto-generated summary of xarray's API. For more details
 and examples, refer to the relevant chapters in the main part of the
 documentation.
 
@@ -308,7 +308,7 @@ Universal functions
 ===================
 
 This functions are copied from NumPy, but extended to work on NumPy arrays,
-dask arrays and all xray objects. You can find them in the ``xray.ufuncs``
+dask arrays and all xarray objects. You can find them in the ``xarray.ufuncs``
 module:
 
 :py:attr:`~ufuncs.angle`

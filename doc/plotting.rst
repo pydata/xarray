@@ -9,19 +9,19 @@ Introduction
 Labeled data enables expressive computations. These same
 labels can also be used to easily create informative plots.
 
-Xray's plotting capabilities are centered around
-:py:class:`xray.DataArray` objects.
-To plot :py:class:`xray.Dataset` objects
+xarray's plotting capabilities are centered around
+:py:class:`xarray.DataArray` objects.
+To plot :py:class:`xarray.Dataset` objects
 simply access the relevant DataArrays, ie ``dset['var1']``.
 Here we focus mostly on arrays 2d or larger. If your data fits
 nicely into a pandas DataFrame then you're better off using one of the more
 developed tools there.
 
-Xray plotting functionality is a thin wrapper around the popular
+xarray plotting functionality is a thin wrapper around the popular
 `matplotlib <http://matplotlib.org/>`_ library.
 Matplotlib syntax and function names were copied as much as possible, which
 makes for an easy transition between the two.
-Matplotlib must be installed before xray can plot.
+Matplotlib must be installed before xarray can plot.
 
 For more extensive plotting applications consider the following projects:
 
@@ -53,13 +53,13 @@ The following imports are necessary for all of the examples.
     import numpy as np
     import pandas as pd
     import matplotlib.pyplot as plt
-    import xray
+    import xarray as xr
 
 For these examples we'll use the North American air temperature dataset.
 
 .. ipython:: python
 
-    airtemps = xray.tutorial.load_dataset('air_temperature')
+    airtemps = xr.tutorial.load_dataset('air_temperature')
     airtemps
 
     # Convert to celsius
@@ -72,7 +72,7 @@ One Dimension
 Simple Example
 ~~~~~~~~~~~~~~
 
-Xray uses the coordinate name to label the x axis.
+xarray uses the coordinate name to label the x axis.
 
 .. ipython:: python
 
@@ -86,7 +86,7 @@ Additional Arguments
 
 Additional arguments are passed directly to the matplotlib function which
 does the work.
-For example, :py:func:`xray.plot.line` calls
+For example, :py:func:`xarray.plot.line` calls
 matplotlib.pyplot.plot_ passing in the index and the array values as x and y, respectively.
 So to make a line plot with blue triangles a matplotlib format string
 can be used:
@@ -99,7 +99,7 @@ can be used:
     air1d[:200].plot.line('b-^')
 
 .. note::
-    Not all xray plotting methods support passing positional arguments
+    Not all xarray plotting methods support passing positional arguments
     to the wrapped matplotlib functions, but they do all
     support keyword arguments.
 
@@ -114,7 +114,7 @@ Adding to Existing Axis
 ~~~~~~~~~~~~~~~~~~~~~~~
 
 To add the plot to an existing axis pass in the axis as a keyword argument
-``ax``. This works for all xray plotting methods.
+``ax``. This works for all xarray plotting methods.
 In this example ``axes`` is an array consisting of the left and right
 axes created by ``plt.subplots``.
 
@@ -132,7 +132,7 @@ axes created by ``plt.subplots``.
     @savefig plotting_example_existing_axes.png width=6in
     plt.show()
 
-On the right is a histogram created by :py:func:`xray.plot.hist`.
+On the right is a histogram created by :py:func:`xarray.plot.hist`.
 
 Two Dimensions
 --------------
@@ -140,8 +140,8 @@ Two Dimensions
 Simple Example
 ~~~~~~~~~~~~~~
 
-The default method :py:meth:`xray.DataArray.plot` sees that the data is
-2 dimensional and calls :py:func:`xray.plot.pcolormesh`.
+The default method :py:meth:`xarray.DataArray.plot` sees that the data is
+2 dimensional and calls :py:func:`xarray.plot.pcolormesh`.
 
 .. ipython:: python
 
@@ -150,7 +150,7 @@ The default method :py:meth:`xray.DataArray.plot` sees that the data is
     @savefig 2d_simple.png width=4in
     air2d.plot()
 
-All 2d plots in xray allow the use of the keyword arguments ``yincrease``
+All 2d plots in xarray allow the use of the keyword arguments ``yincrease``
 and ``xincrease``.
 
 .. ipython:: python
@@ -160,8 +160,8 @@ and ``xincrease``.
 
 .. note::
 
-    We use :py:func:`xray.plot.pcolormesh` as the default two-dimensional plot
-    method because it is more flexible than :py:func:`xray.plot.imshow`.
+    We use :py:func:`xarray.plot.pcolormesh` as the default two-dimensional plot
+    method because it is more flexible than :py:func:`xarray.plot.imshow`.
     However, for large arrays, ``imshow`` can be much faster than ``pcolormesh``.
     If speed is important to you and you are plotting a regular mesh, consider
     using ``imshow``.
@@ -169,7 +169,7 @@ and ``xincrease``.
 Missing Values
 ~~~~~~~~~~~~~~
 
-Xray plots data with :ref:`missing_values`.
+xarray plots data with :ref:`missing_values`.
 
 .. ipython:: python
 
@@ -184,7 +184,7 @@ Nonuniform Coordinates
 ~~~~~~~~~~~~~~~~~~~~~~
 
 It's not necessary for the coordinates to be evenly spaced. Both
-:py:func:`xray.plot.pcolormesh` (default) and :py:func:`xray.plot.contourf` can
+:py:func:`xarray.plot.pcolormesh` (default) and :py:func:`xarray.plot.contourf` can
 produce plots with nonuniform coordinates.
 
 .. ipython:: python
@@ -215,9 +215,9 @@ matplotlib is available.
 
 .. note::
 
-    Xray methods update label information and generally play around with the
+    xarray methods update label information and generally play around with the
     axes. So any kind of updates to the plot
-    should be done *after* the call to the xray's plot.
+    should be done *after* the call to the xarray's plot.
     In the example below, ``plt.xlabel`` effectively does nothing, since
     ``d_ylog.plot()`` updates the xlabel.
 
@@ -232,7 +232,7 @@ matplotlib is available.
 Colormaps
 ~~~~~~~~~
 
-Xray borrows logic from Seaborn to infer what kind of color map to use. For
+xarray borrows logic from Seaborn to infer what kind of color map to use. For
 example, consider the original data in Kelvins rather than Celsius:
 
 .. ipython:: python
@@ -321,7 +321,7 @@ Faceting
 
 Faceting here refers to splitting an array along one or two dimensions and
 plotting each group.
-Xray's basic plotting is useful for plotting two dimensional arrays. What
+xarray's basic plotting is useful for plotting two dimensional arrays. What
 about three or four dimensional arrays? That's where facets become helpful.
 
 Consider the temperature data set. There are 4 observations per day for two
@@ -347,8 +347,8 @@ Simple Example
 ~~~~~~~~~~~~~~
 
 The easiest way to create faceted plots is to pass in ``row`` or ``col``
-arguments to the xray plotting methods/functions. This returns a
-:py:class:`xray.plot.FacetGrid` object.
+arguments to the xarray plotting methods/functions. This returns a
+:py:class:`xarray.plot.FacetGrid` object.
 
 .. ipython:: python
 
@@ -366,7 +366,7 @@ one were much hotter.
 .. ipython:: python
 
     t2 = t.isel(time=slice(0, 2))
-    t4d = xray.concat([t2, t2 + 40], pd.Index(['normal', 'hot'], name='fourth_dim'))
+    t4d = xr.concat([t2, t2 + 40], pd.Index(['normal', 'hot'], name='fourth_dim'))
     # This is a 4d array
     t4d.coords
 
@@ -376,7 +376,7 @@ one were much hotter.
 Other features
 ~~~~~~~~~~~~~~
 
-Faceted plotting supports other arguments common to xray 2d plots.
+Faceted plotting supports other arguments common to xarray 2d plots.
 
 .. ipython:: python
 
@@ -391,7 +391,7 @@ Faceted plotting supports other arguments common to xray 2d plots.
 FacetGrid Objects
 ~~~~~~~~~~~~~~~~~
 
-:py:class:`xray.plot.FacetGrid` is used to control the behavior of the
+:py:class:`xarray.plot.FacetGrid` is used to control the behavior of the
 multiple plots.
 It borrows an API and code from `Seaborn
 <http://stanford.edu/~mwaskom/software/seaborn/tutorial/axis_grids.html>`_.
@@ -404,8 +404,8 @@ attributes, both 2d Numpy object arrays.
 
     g.name_dicts
 
-It's possible to select the :py:class:`xray.DataArray` or
-:py:class:`xray.Dataset` corresponding to the FacetGrid through the
+It's possible to select the :py:class:`xarray.DataArray` or
+:py:class:`xarray.Dataset` corresponding to the FacetGrid through the
 ``name_dicts``.
 
 .. ipython:: python
@@ -450,21 +450,21 @@ Details
 Ways to Use
 ~~~~~~~~~~~
 
-There are three ways to use the xray plotting functionality:
+There are three ways to use the xarray plotting functionality:
 
 1. Use ``plot`` as a convenience method for a DataArray.
 
 2. Access a specific plotting method from the ``plot`` attribute of a
    DataArray.
 
-3. Directly from the xray plot submodule.
+3. Directly from the xarray plot submodule.
 
 These are provided for user convenience; they all call the same code.
 
 .. ipython:: python
 
-    import xray.plot as xplt
-    da = xray.DataArray(range(5))
+    import xarray.plot as xplt
+    da = xr.DataArray(range(5))
     fig, axes = plt.subplots(ncols=2, nrows=2)
     da.plot(ax=axes[0, 0])
     da.plot.line(ax=axes[0, 1])
@@ -477,7 +477,7 @@ These are provided for user convenience; they all call the same code.
 Here the output is the same. Since the data is 1 dimensional the line plot
 was used.
 
-The convenience method :py:meth:`xray.DataArray.plot` dispatches to an appropriate
+The convenience method :py:meth:`xarray.DataArray.plot` dispatches to an appropriate
 plotting function based on the dimensions of the ``DataArray`` and whether
 the coordinates are sorted and uniformly spaced. This table
 describes what gets plotted:
@@ -485,9 +485,9 @@ describes what gets plotted:
 =============== ===========================
 Dimensions      Plotting function
 --------------- ---------------------------
-1               :py:func:`xray.plot.line`
-2               :py:func:`xray.plot.pcolormesh`
-Anything else   :py:func:`xray.plot.hist`
+1               :py:func:`xarray.plot.line`
+2               :py:func:`xarray.plot.pcolormesh`
+Anything else   :py:func:`xarray.plot.hist`
 =============== ===========================
 
 Coordinates
@@ -498,8 +498,8 @@ read on.
 
 .. ipython:: python
 
-    a0 = xray.DataArray(np.zeros((4, 3, 2)), dims=('y', 'x', 'z'),
-            name='temperature')
+    a0 = xr.DataArray(np.zeros((4, 3, 2)), dims=('y', 'x', 'z'),
+                      name='temperature')
     a0[0, 0, 0] = 1
     a = a0.isel(z=0)
     a

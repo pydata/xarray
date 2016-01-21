@@ -3,7 +3,7 @@
 GroupBy: split-apply-combine
 ----------------------------
 
-xray supports `"group by"`__ operations with the same API as pandas to
+xarray supports `"group by"`__ operations with the same API as pandas to
 implement the `split-apply-combine`__ strategy:
 
 __ http://pandas.pydata.org/pandas-docs/stable/groupby.html
@@ -13,8 +13,8 @@ __ http://www.jstatsoft.org/v40/i01/paper
 - Apply some function to each group.
 - Combine your groups back into a single data object.
 
-Group by operations work on both :py:class:`~xray.Dataset` and
-:py:class:`~xray.DataArray` objects. Currently, you can only group by a single
+Group by operations work on both :py:class:`~xarray.Dataset` and
+:py:class:`~xarray.DataArray` objects. Currently, you can only group by a single
 one-dimensional variable (eventually, we hope to remove this limitation). Also,
 note that for one-dimensional data, it is usually faster to rely on pandas'
 implementation of the same pipeline.
@@ -29,19 +29,19 @@ Let's create a simple example dataset:
 
     import numpy as np
     import pandas as pd
-    import xray
+    import xarray as xr
     np.random.seed(123456)
 
 .. ipython:: python
 
-    ds = xray.Dataset({'foo': (('x', 'y'), np.random.rand(4, 3))},
-                      coords={'x': [10, 20, 30, 40],
-                              'letters': ('x', list('abba'))})
+    ds = xr.Dataset({'foo': (('x', 'y'), np.random.rand(4, 3))},
+                    coords={'x': [10, 20, 30, 40],
+                            'letters': ('x', list('abba'))})
     arr = ds['foo']
     ds
 
 If we groupby the name of a variable or coordinate in a dataset (we can also
-use a DataArray directly), we get back a :py:class:`xray.GroupBy` object:
+use a DataArray directly), we get back a ``GroupBy`` object:
 
 .. ipython:: python
 
@@ -67,7 +67,7 @@ Apply
 ~~~~~
 
 To apply a function to each group, you can use the flexible
-:py:meth:`xray.GroupBy.apply` method. The resulting objects are automatically
+:py:meth:`~xarray.DatasetGroupBy.apply` method. The resulting objects are automatically
 concatenated back together along the group axis:
 
 .. ipython:: python
@@ -77,8 +77,8 @@ concatenated back together along the group axis:
 
     arr.groupby('letters').apply(standardize)
 
-GroupBy objects also have a :py:meth:`~xray.GroupBy.reduce` method and
-methods like :py:meth:`~xray.GroupBy.mean` as shortcuts for applying an
+GroupBy objects also have a :py:meth:`~xarray.DatasetGroupBy.reduce` method and
+methods like :py:meth:`~xarray.DatasetGroupBy.mean` as shortcuts for applying an
 aggregation function:
 
 .. ipython:: python
@@ -125,7 +125,7 @@ This last line is roughly equivalent to the following::
     results = []
     for label, group in ds.groupby('letters'):
         results.append(group - alt.sel(x=label))
-    xray.concat(results, dim='x')
+    xr.concat(results, dim='x')
 
 Squeezing
 ~~~~~~~~~
@@ -142,10 +142,10 @@ the ``squeeze`` parameter:
 
     next(iter(arr.groupby('x', squeeze=False)))
 
-Although xray will attempt to automatically
-:py:attr:`~xray.DataArray.transpose` dimensions back into their original order
+Although xarray will attempt to automatically
+:py:attr:`~xarray.DataArray.transpose` dimensions back into their original order
 when you use apply, it is sometimes useful to set ``squeeze=False`` to
 guarantee that all original dimensions remain unchanged.
 
 You can always squeeze explicitly later with the Dataset or DataArray
-:py:meth:`~xray.DataArray.squeeze` methods.
+:py:meth:`~xarray.DataArray.squeeze` methods.

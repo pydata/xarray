@@ -8,14 +8,14 @@ Data Structures
 
     import numpy as np
     import pandas as pd
-    import xray
+    import xarray as xr
     np.random.seed(123456)
     np.set_printoptions(threshold=10)
 
 DataArray
 ---------
 
-:py:class:`xray.DataArray` is xray's implementation of a labeled,
+:py:class:`xarray.DataArray` is xarray's implementation of a labeled,
 multi-dimensional array. It has several key properties:
 
 - ``values``: a :py:class:`numpy.ndarray` holding the array's values
@@ -25,15 +25,15 @@ multi-dimensional array. It has several key properties:
   strings)
 - ``attrs``: an ``OrderedDict`` to hold arbitrary metadata (*attributes*)
 
-xray uses ``dims`` and ``coords`` to enable its core metadata aware operations.
-Dimensions provide names that xray uses instead of the ``axis`` argument found
+xarray uses ``dims`` and ``coords`` to enable its core metadata aware operations.
+Dimensions provide names that xarray uses instead of the ``axis`` argument found
 in many numpy functions. Coordinates enable fast label based indexing and
 alignment, building on the functionality of the ``index`` found on a pandas
 :py:class:`~pandas.DataFrame` or :py:class:`~pandas.Series`.
 
 DataArray objects also can have a ``name`` and can hold arbitrary metadata in
 the form of their ``attrs`` property (an ordered dictionary). Names and
-attributes are strictly for users and user-written code: xray makes no attempt
+attributes are strictly for users and user-written code: xarray makes no attempt
 to interpret them, and propagates them only in unambiguous cases (see FAQ,
 :ref:`approach to metadata`).
 
@@ -42,7 +42,7 @@ to interpret them, and propagates them only in unambiguous cases (see FAQ,
 Creating a DataArray
 ~~~~~~~~~~~~~~~~~~~~
 
-The :py:class:`~xray.DataArray` constructor takes:
+The :py:class:`~xarray.DataArray` constructor takes:
 
 - ``data``: a multi-dimensional array of values (e.g., a numpy ndarray,
   :py:class:`~pandas.Series`, :py:class:`~pandas.DataFrame` or :py:class:`~pandas.Panel`)
@@ -57,7 +57,7 @@ The :py:class:`~xray.DataArray` constructor takes:
     data = np.random.rand(4, 3)
     locs = ['IA', 'IL', 'IN']
     times = pd.date_range('2000-01-01', periods=4)
-    foo = xray.DataArray(data, coords=[times, locs], dims=['time', 'space'])
+    foo = xr.DataArray(data, coords=[times, locs], dims=['time', 'space'])
     foo
 
 Only ``data`` is required; all of other arguments will be filled
@@ -65,7 +65,7 @@ in with default values:
 
 .. ipython:: python
 
-    xray.DataArray(data)
+    xr.DataArray(data)
 
 As you can see, dimensions and coordinate arrays corresponding to each
 dimension are always present. This behavior is similar to pandas, which fills
@@ -84,23 +84,23 @@ As a list of tuples:
 
 .. ipython:: python
 
-    xray.DataArray(data, coords=[('time', times), ('space', locs)])
+    xr.DataArray(data, coords=[('time', times), ('space', locs)])
 
 As a dictionary:
 
 .. ipython:: python
 
-    xray.DataArray(data, coords={'time': times, 'space': locs, 'const': 42,
-                                 'ranking': ('space', [1, 2, 3])},
-                   dims=['time', 'space'])
+    xr.DataArray(data, coords={'time': times, 'space': locs, 'const': 42,
+                               'ranking': ('space', [1, 2, 3])},
+                 dims=['time', 'space'])
 
 As a dictionary with coords across multiple dimensions:
 
 .. ipython:: python
 
-    xray.DataArray(data, coords={'time': times, 'space': locs, 'const': 42,
-                                 'ranking': (('space', 'time'), np.arange(12).reshape(4,3))},
-                   dims=['time', 'space'])
+    xr.DataArray(data, coords={'time': times, 'space': locs, 'const': 42,
+                               'ranking': (('space', 'time'), np.arange(12).reshape(4,3))},
+                 dims=['time', 'space'])
 
 If you create a ``DataArray`` by supplying a pandas
 :py:class:`~pandas.Series`, :py:class:`~pandas.DataFrame` or
@@ -113,9 +113,9 @@ If you create a ``DataArray`` by supplying a pandas
     df.index.name = 'abc'
     df.columns.name = 'xyz'
     df
-    xray.DataArray(df)
+    xr.DataArray(df)
 
-xray does not (yet!) support labeling coordinate values with a
+xarray does not (yet!) support labeling coordinate values with a
 :py:class:`pandas.MultiIndex` (see :issue:`164`).
 However, the alternate ``from_series`` constructor will automatically unpack
 any hierarchical indexes it encounters by expanding the series into a
@@ -142,10 +142,10 @@ You can even modify ``values`` inplace:
 
 .. note::
 
-    The array values in a :py:class:`~xray.DataArray` have a single
+    The array values in a :py:class:`~xarray.DataArray` have a single
     (homogeneous) data type. To work with heterogeneous or structured data
-    types in xray, use coordinates, or put separate ``DataArray`` objects in a
-    single :py:class:`~xray.Dataset` (see below).
+    types in xarray, use coordinates, or put separate ``DataArray`` objects
+    in a single :py:class:`~xarray.Dataset` (see below).
 
 Now fill in some of that missing metadata:
 
@@ -155,7 +155,7 @@ Now fill in some of that missing metadata:
     foo.attrs['units'] = 'meters'
     foo
 
-The :py:meth:`~xray.DataArray.rename` method is another option, returning a
+The :py:meth:`~xarray.DataArray.rename` method is another option, returning a
 new data array:
 
 .. ipython:: python
@@ -174,7 +174,7 @@ itself:
     foo.coords['time']
     foo['time']
 
-These are also :py:class:`~xray.DataArray` objects, which contain tick-labels
+These are also :py:class:`~xarray.DataArray` objects, which contain tick-labels
 for each dimension.
 
 Coordinates can also be set or removed by using the dictionary like syntax:
@@ -189,9 +189,9 @@ Coordinates can also be set or removed by using the dictionary like syntax:
 Dataset
 -------
 
-:py:class:`xray.Dataset` is xray's multi-dimensional equivalent of a
+:py:class:`xarray.Dataset` is xarray's multi-dimensional equivalent of a
 :py:class:`~pandas.DataFrame`. It is a dict-like
-container of labeled arrays (:py:class:`~xray.DataArray` objects) with aligned
+container of labeled arrays (:py:class:`~xarray.DataArray` objects) with aligned
 dimensions. It is designed as an in-memory representation of the data model
 from the `netCDF`__ file format.
 
@@ -210,7 +210,7 @@ to access any variable in a dataset, datasets have four key properties:
 The distinction between whether a variables falls in data or coordinates
 (borrowed from `CF conventions`_) is mostly semantic, and you can probably get
 away with ignoring it if you like: dictionary like access on a dataset will
-supply variables found in either category. However, xray does make use of the
+supply variables found in either category. However, xarray does make use of the
 distinction for indexing and computations. Coordinates indicate
 constant/fixed/independent quantities, unlike the varying/measured/dependent
 quantities that belong in data.
@@ -231,12 +231,12 @@ more background on this example).
 Creating a Dataset
 ~~~~~~~~~~~~~~~~~~
 
-To make an :py:class:`~xray.Dataset` from scratch, supply dictionaries for any
+To make an :py:class:`~xarray.Dataset` from scratch, supply dictionaries for any
 variables (``data_vars``), coordinates (``coords``) and attributes (``attrs``).
 
 ``data_vars`` are supplied as a dictionary with each key as the name of the variable and each
 value as one of:
-- A :py:class:`~xray.DataArray`
+- A :py:class:`~xarray.DataArray`
 - A tuple of the form ``(dims, data[, attrs])``
 - A pandas object
 
@@ -254,45 +254,45 @@ Let's create some fake data for the example we show above:
 
     # for real use cases, its good practice to supply array attributes such as
     # units, but we won't bother here for the sake of brevity
-    ds = xray.Dataset({'temperature': (['x', 'y', 'time'],  temp),
-                       'precipitation': (['x', 'y', 'time'], precip)},
-                      coords={'lon': (['x', 'y'], lon),
-                              'lat': (['x', 'y'], lat),
-                              'time': pd.date_range('2014-09-06', periods=3),
-                              'reference_time': pd.Timestamp('2014-09-05')})
+    ds = xr.Dataset({'temperature': (['x', 'y', 'time'],  temp),
+                     'precipitation': (['x', 'y', 'time'], precip)},
+                    coords={'lon': (['x', 'y'], lon),
+                            'lat': (['x', 'y'], lat),
+                            'time': pd.date_range('2014-09-06', periods=3),
+                            'reference_time': pd.Timestamp('2014-09-05')})
     ds
 
 Notice that we did not explicitly include coordinates for the "x" or "y"
 dimensions, so they were filled in array of ascending integers of the proper
 length.
 
-Here we pass :py:class:`xray.DataArray` objects or a pandas object as values
+Here we pass :py:class:`xarray.DataArray` objects or a pandas object as values
 in the dictionary:
 
 .. ipython:: python
 
-    xray.Dataset({'bar': foo})
+    xr.Dataset({'bar': foo})
 
 
 .. ipython:: python
 
-    xray.Dataset({'bar': foo.to_pandas()})
+    xr.Dataset({'bar': foo.to_pandas()})
 
 Where a pandas object is supplied as a value, the names of its indexes are used as dimension
 names, and its data is aligned to any existing dimensions.
 
 You can also create an dataset from:
 - A :py:class:`pandas.DataFrame` or :py:class:`pandas.Panel` along its columns and items
-  respectively, by passing it into the :py:class:`xray.Dataset` directly
-- A :py:class:`pandas.DataFrame` with :py:meth:`Dataset.from_dataframe <xray.Dataset.from_dataframe>`,
+  respectively, by passing it into the :py:class:`xarray.Dataset` directly
+- A :py:class:`pandas.DataFrame` with :py:meth:`Dataset.from_dataframe <xarray.Dataset.from_dataframe>`,
   which will additionally handle MultiIndexes See :ref:`pandas`
-- A netCDF file on disk with :py:func:`~xray.open_dataset`. See :ref:`io`.
+- A netCDF file on disk with :py:func:`~xarray.open_dataset`. See :ref:`io`.
 
 Dataset contents
 ~~~~~~~~~~~~~~~~
 
-:py:class:`~xray.Dataset` implements the Python dictionary interface, with
-values given by :py:class:`xray.DataArray` objects:
+:py:class:`~xarray.Dataset` implements the Python dictionary interface, with
+values given by :py:class:`xarray.DataArray` objects:
 
 .. ipython:: python
 
@@ -305,7 +305,7 @@ values given by :py:class:`xray.DataArray` objects:
 The valid keys include each listed coordinate and data variable.
 
 Data and coordinate variables are also contained separately in the
-:py:attr:`~xray.Dataset.data_vars` and :py:attr:`~xray.Dataset.coords`
+:py:attr:`~xarray.Dataset.data_vars` and :py:attr:`~xarray.Dataset.coords`
 dictionary-like attributes:
 
 .. ipython:: python
@@ -323,7 +323,7 @@ of `attributes`:
     ds.attrs['title'] = 'example attribute'
     ds
 
-xray does not enforce any restrictions on attributes, but serialization to
+xarray does not enforce any restrictions on attributes, but serialization to
 some file formats may fail if you use objects that are not strings, numbers
 or :py:class:`numpy.ndarray` objects.
 
@@ -345,7 +345,7 @@ example, to create this example dataset from scratch, we could have written:
 
 .. ipython:: python
 
-    ds = xray.Dataset()
+    ds = xr.Dataset()
     ds['temperature'] = (('x', 'y', 'time'), temp)
     ds['precipitation'] = (('x', 'y', 'time'), precip)
     ds.coords['lat'] = (('x', 'y'), lat)
@@ -355,12 +355,12 @@ example, to create this example dataset from scratch, we could have written:
 
 To change the variables in a ``Dataset``, you can use all the standard dictionary
 methods, including ``values``, ``items``, ``__delitem__``, ``get`` and
-:py:meth:`~xray.Dataset.update`. Note that assigning a ``DataArray`` or pandas
+:py:meth:`~xarray.Dataset.update`. Note that assigning a ``DataArray`` or pandas
 object to a ``Dataset`` variable using ``__setitem__`` or ``update`` will
 :ref:`automatically align<update>` the array(s) to the original
 dataset's indexes.
 
-You can copy a ``Dataset`` by calling the :py:meth:`~xray.Dataset.copy`
+You can copy a ``Dataset`` by calling the :py:meth:`~xarray.Dataset.copy`
 method. By default, the copy is shallow, so only the container will be copied:
 the arrays in the ``Dataset`` will still be stored in the same underlying
 :py:class:`numpy.ndarray` objects. You can copy all data by calling
@@ -371,12 +371,12 @@ the arrays in the ``Dataset`` will still be stored in the same underlying
 Transforming datasets
 ~~~~~~~~~~~~~~~~~~~~~
 
-In addition to dictionary-like methods (described above), xray has additional
+In addition to dictionary-like methods (described above), xarray has additional
 methods (like pandas) for transforming datasets into new objects.
 
 For removing variables, you can select and drop an explicit list of
 variables by using the by indexing with a list of names or using the
-:py:meth:`~xray.Dataset.drop` methods to return a new ``Dataset``. These
+:py:meth:`~xarray.Dataset.drop` methods to return a new ``Dataset``. These
 operations keep around coordinates:
 
 .. ipython:: python
@@ -393,14 +393,14 @@ variables that use that dimension:
     list(ds.drop('time'))
 
 As an alternate to dictionary-like modifications, you can use
-:py:meth:`~xray.Dataset.assign` and :py:meth:`~xray.Dataset.assign_coords`.
+:py:meth:`~xarray.Dataset.assign` and :py:meth:`~xarray.Dataset.assign_coords`.
 These methods return a new dataset with additional (or replaced) or values:
 
 .. ipython:: python
 
     ds.assign(temperature2 = 2 * ds.temperature)
 
-There is also the :py:meth:`~xray.Dataset.pipe` method that allows you to use
+There is also the :py:meth:`~xarray.Dataset.pipe` method that allows you to use
 a method call with an external function (e.g., ``ds.pipe(func)``) instead of
 simply calling it (e.g., ``func(ds)``). This allows you to write pipelines for
 transforming you data (using "method chaining") instead of writing hard to
@@ -421,7 +421,7 @@ Both ``pipe`` and ``assign`` replicate the pandas methods of the same names
 (:py:meth:`DataFrame.pipe <pandas.DataFrame.pipe>` and
 :py:meth:`DataFrame.assign <pandas.DataFrame.assign>`).
 
-With xray, there is no performance penalty for creating new datasets, even if
+With xarray, there is no performance penalty for creating new datasets, even if
 variables are lazily loaded from a file on disk. Creating new objects instead
 of mutating existing objects often results in easier to understand code, so we
 encourage using this approach.
@@ -429,14 +429,14 @@ encourage using this approach.
 Renaming variables
 ~~~~~~~~~~~~~~~~~~
 
-Another useful option is the :py:meth:`~xray.Dataset.rename` method to rename
+Another useful option is the :py:meth:`~xarray.Dataset.rename` method to rename
 dataset variables:
 
 .. ipython:: python
 
     ds.rename({'temperature': 'temp', 'precipitation': 'precip'})
 
-The related :py:meth:`~xray.Dataset.swap_dims` method allows you do to swap
+The related :py:meth:`~xarray.Dataset.swap_dims` method allows you do to swap
 dimension and non-dimension variables:
 
 .. ipython:: python
@@ -456,17 +456,17 @@ objects in the ``coords`` attribute:
 
     ds.coords
 
-Unlike attributes, xray *does* interpret and persist coordinates in
-operations that transform xray objects.
+Unlike attributes, xarray *does* interpret and persist coordinates in
+operations that transform xarray objects.
 
 One dimensional coordinates with a name equal to their sole dimension (marked
 by ``*`` when printing a dataset or data array) take on a special meaning in
-xray. They are used for label based indexing and alignment,
+xarray. They are used for label based indexing and alignment,
 like the ``index`` found on a pandas :py:class:`~pandas.DataFrame` or
 :py:class:`~pandas.Series`. Indeed, these "dimension" coordinates use a
 :py:class:`pandas.Index` internally to store their values.
 
-Other than for indexing, xray does not make any direct use of the values
+Other than for indexing, xarray does not make any direct use of the values
 associated with coordinates. Coordinates with names not matching a dimension
 are not used for alignment or indexing, nor are they required to match when
 doing arithmetic (see :ref:`coordinates math`).
@@ -478,8 +478,8 @@ To entirely add or removing coordinate arrays, you can use dictionary like
 syntax, as shown above.
 
 To convert back and forth between data and coordinates, you can use the
-:py:meth:`~xray.Dataset.set_coords` and
-:py:meth:`~xray.Dataset.reset_coords` methods:
+:py:meth:`~xarray.Dataset.set_coords` and
+:py:meth:`~xarray.Dataset.reset_coords` methods:
 
 .. ipython:: python
 
@@ -489,7 +489,7 @@ To convert back and forth between data and coordinates, you can use the
 
 Notice that these operations skip coordinates with names given by dimensions,
 as used for indexing. This mostly because we are not entirely sure how to
-design the interface around the fact that xray cannot store a coordinate and
+design the interface around the fact that xarray cannot store a coordinate and
 variable with the name but different values in the same dictionary. But we do
 recognize that supporting something like this would be useful.
 
@@ -509,19 +509,19 @@ logic used for merging coordinates in arithmetic operations
 
 .. ipython:: python
 
-    alt = xray.Dataset(coords={'z': [10], 'lat': 0, 'lon': 0})
+    alt = xr.Dataset(coords={'z': [10], 'lat': 0, 'lon': 0})
     ds.coords.merge(alt.coords)
 
 The ``coords.merge`` method may be useful if you want to implement your own
-binary operations that act on xray objects. In the future, we hope to write
+binary operations that act on xarray objects. In the future, we hope to write
 more helper functions so that you can easily make your functions act like
-xray's built-in arithmetic.
+xarray's built-in arithmetic.
 
 Indexes
 ~~~~~~~
 
 To convert a coordinate (or any ``DataArray``) into an actual
-:py:class:`pandas.Index`, use the :py:meth:`~xray.DataArray.to_index` method:
+:py:class:`pandas.Index`, use the :py:meth:`~xarray.DataArray.to_index` method:
 
 .. ipython:: python
 
@@ -534,7 +534,6 @@ dimension and whose the values are ``Index`` objects:
 .. ipython:: python
 
     ds.indexes
-
 
 .. [1] Latitude and longitude are 2D arrays because the dataset uses
    `projected coordinates`__. ``reference_time`` refers to the reference time

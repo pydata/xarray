@@ -2,17 +2,17 @@
 Quick overview
 ##############
 
-Here are some quick examples of what you can do with :py:class:`xray.DataArray`
+Here are some quick examples of what you can do with :py:class:`xarray.DataArray`
 objects. Everything is explained in much more detail in the rest of the
 documentation.
 
-To begin, import numpy, pandas and xray:
+To begin, import numpy, pandas and xarray using their customary abbreviations:
 
 .. ipython:: python
 
     import numpy as np
     import pandas as pd
-    import xray
+    import xarray as xr
 
 Create a DataArray
 ------------------
@@ -22,8 +22,8 @@ array or list, with optional *dimensions* and *coordinates*:
 
 .. ipython:: python
 
-    xray.DataArray(np.random.randn(2, 3))
-    data = xray.DataArray(np.random.randn(2, 3), [('x', ['a', 'b']), ('y', [-2, 0, 2])])
+    xr.DataArray(np.random.randn(2, 3))
+    data = xr.DataArray(np.random.randn(2, 3), [('x', ['a', 'b']), ('y', [-2, 0, 2])])
     data
 
 If you supply a pandas :py:class:`~pandas.Series` or
@@ -31,7 +31,7 @@ If you supply a pandas :py:class:`~pandas.Series` or
 
 .. ipython:: python
 
-    xray.DataArray(pd.Series(range(3), index=list('abc'), name='foo'))
+    xr.DataArray(pd.Series(range(3), index=list('abc'), name='foo'))
 
 Here are the key properties for a ``DataArray``:
 
@@ -47,7 +47,7 @@ Here are the key properties for a ``DataArray``:
 Indexing
 --------
 
-xray supports four kind of indexing. These operations are just as fast as in
+xarray supports four kind of indexing. These operations are just as fast as in
 pandas, because we borrow pandas' indexing machinery.
 
 .. ipython:: python
@@ -88,8 +88,8 @@ need to insert dummy dimensions for alignment:
 
 .. ipython:: python
 
-    a = xray.DataArray(np.random.randn(3), [data.coords['y']])
-    b = xray.DataArray(np.random.randn(4), dims='z')
+    a = xr.DataArray(np.random.randn(3), [data.coords['y']])
+    b = xr.DataArray(np.random.randn(4), dims='z')
 
     a
     b
@@ -112,11 +112,11 @@ Operations also align based on index labels:
 GroupBy
 -------
 
-xray supports grouped operations using a very similar API to pandas:
+xarray supports grouped operations using a very similar API to pandas:
 
 .. ipython:: python
 
-    labels = xray.DataArray(['E', 'F', 'E'], [data.coords['y']], name='labels')
+    labels = xr.DataArray(['E', 'F', 'E'], [data.coords['y']], name='labels')
     labels
     data.groupby(labels).mean('y')
     data.groupby(labels).apply(lambda x: x - x.min())
@@ -124,7 +124,7 @@ xray supports grouped operations using a very similar API to pandas:
 Convert to pandas
 -----------------
 
-A key feature of xray is robust conversion to and from pandas objects:
+A key feature of xarray is robust conversion to and from pandas objects:
 
 .. ipython:: python
 
@@ -134,7 +134,7 @@ A key feature of xray is robust conversion to and from pandas objects:
 Datasets and NetCDF
 -------------------
 
-:py:class:`xray.Dataset` is a dict-like container of ``DataArray`` objects that share
+:py:class:`xarray.Dataset` is a dict-like container of ``DataArray`` objects that share
 index labels and dimensions. It looks a lot like a netCDF file:
 
 .. ipython:: python
@@ -150,7 +150,7 @@ Datasets also let you easily read and write netCDF files:
 .. ipython:: python
 
     ds.to_netcdf('example.nc')
-    xray.open_dataset('example.nc')
+    xr.open_dataset('example.nc')
 
 .. ipython:: python
    :suppress:

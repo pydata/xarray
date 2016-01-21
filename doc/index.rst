@@ -8,15 +8,21 @@
 N-D labeled arrays and datasets in Python
 =========================================
 
-**xray** is an open source project and Python package that aims to bring the
-labeled data power of pandas_ to the physical sciences, by providing
-N-dimensional variants of the core pandas data structures.
+**xarray** (formerly **xray**) is an open source project and Python package
+that aims to bring the labeled data power of pandas_ to the physical sciences,
+by providing N-dimensional variants of the core pandas data structures.
 
 Our goal is to provide a pandas-like and pandas-compatible toolkit for
 analytics on multi-dimensional arrays, rather than the tabular data for which
 pandas excels. Our approach adopts the `Common Data Model`_ for self-
 describing scientific data in widespread use in the Earth sciences:
-``xray.Dataset`` is an in-memory representation of a netCDF file.
+``xarray.Dataset`` is an in-memory representation of a netCDF file.
+
+.. note::
+
+   xray is now xarray! See :ref:`the v0.7.0 release notes<whats-new.0.7.0>`
+   for more details. The preferred URL for these docs is now
+   http://xarray.pydata.org.
 
 .. _pandas: http://pandas.pydata.org
 .. _Common Data Model: http://www.unidata.ucar.edu/software/thredds/current/netcdf-java/CDM
@@ -29,7 +35,7 @@ Documentation
 .. toctree::
    :maxdepth: 1
 
-   why-xray
+   why-xarray
    examples
    installing
    data-structures
@@ -50,10 +56,10 @@ Documentation
 See also
 --------
 
-- Stephan Hoyer's `SciPy2015 talk`_ introducing xray to a general audience.
+- Stephan Hoyer's `SciPy2015 talk`_ introducing xarray to a general audience.
 - Stephan Hoyer's `2015 Unidata Users Workshop talk`_ and `tutorial`_ (`with answers`_) introducing
-  xray to users familiar with netCDF.
-- `Nicolas Fauchereau's tutorial`_ on xray for netCDF users.
+  xarray to users familiar with netCDF.
+- `Nicolas Fauchereau's tutorial`_ on xarray for netCDF users.
 
 .. _SciPy2015 talk: https://www.youtube.com/watch?v=X0pAhJgySxk
 .. _2015 Unidata Users Workshop talk: https://www.youtube.com/watch?v=J9ypQOnt5l8
@@ -64,28 +70,27 @@ See also
 Get in touch
 ------------
 
-- To ask questions or discuss xray, use the `mailing list`_.
+- To ask questions or discuss xarray, use the `mailing list`_.
 - Report bugs, suggest feature ideas or view the source code `on GitHub`_.
 - For interactive discussion, we have a chatroom `on Gitter`_.
-- You can also get in touch `on Twitter`_.
 
-.. _mailing list: https://groups.google.com/forum/#!forum/xray-dev
-.. _on Gitter: https://gitter.im/xray/xray
-.. _on GitHub: http://github.com/xray/xray
-.. _on Twitter: http://twitter.com/shoyer
+.. _mailing list: https://groups.google.com/forum/#!forum/xarray
+.. _on Gitter: https://gitter.im/pydata/xarray
+.. _on GitHub: http://github.com/pydata/xarray
 
 License
 -------
 
-xray is available under the open source `Apache License`__.
+xarray is available under the open source `Apache License`__.
 
 __ http://www.apache.org/licenses/LICENSE-2.0.html
 
 History
 -------
 
-xray is an evolution of an internal tool developed at `The Climate
-Corporation`__, and was originally written by current and former Climate Corp
-researchers Stephan Hoyer, Alex Kleeman and Eugene Brevdo.
+xarray is an evolution of an internal tool developed at `The Climate
+Corporation`__. It was originally written by Climate Corp researchers Stephan
+Hoyer, Alex Kleeman and Eugene Brevdo and was released as open source in
+May 2014. The project was renamed from "xray" in January 2016.
 
 __ http://climate.com/

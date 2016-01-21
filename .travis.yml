@@ -64,7 +64,7 @@ install:
   - python setup.py install
 
 script:
-  - py.test xray --cov=xray --cov-report term-missing
+  - py.test xarray --cov=xarray --cov-report term-missing
 
 after_success:
   - coveralls

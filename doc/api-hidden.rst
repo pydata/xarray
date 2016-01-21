@@ -2,7 +2,7 @@
 .. This extra page is a work around for sphinx not having any support for
 .. hiding an autosummary table.
 
-.. currentmodule:: xray
+.. currentmodule:: xarray
 
 .. autosummary::
    :toctree: generated/

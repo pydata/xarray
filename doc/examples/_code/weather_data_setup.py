@@ -1,4 +1,4 @@
-import xray
+import xarray as xr
 import numpy as np
 import pandas as pd
 import seaborn as sns # pandas aware plotting library
@@ -12,6 +12,6 @@ base = 10 + 15 * annual_cycle.reshape(-1, 1)
 tmin_values = base + 3 * np.random.randn(annual_cycle.size, 3)
 tmax_values = base + 10 + 3 * np.random.randn(annual_cycle.size, 3)
 
-ds = xray.Dataset({'tmin': (('time', 'location'), tmin_values),
-                   'tmax': (('time', 'location'), tmax_values)},
-                  {'time': times, 'location': ['IA', 'IN', 'IL']})
+ds = xr.Dataset({'tmin': (('time', 'location'), tmin_values),
+                 'tmax': (('time', 'location'), tmax_values)},
+                {'time': times, 'location': ['IA', 'IN', 'IL']})

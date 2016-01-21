@@ -1,2 +1,2 @@
 [run]
-omit = xray/test/*
+omit = xarray/test/*

@@ -1,9 +1,9 @@
-import xray
+import xarray as xr
 import matplotlib.pyplot as plt
 import cartopy.crs as ccrs
 
 
-air = (xray.tutorial
+air = (xr.tutorial
        .load_dataset('air_temperature')
        .air
        .isel(time=0))
