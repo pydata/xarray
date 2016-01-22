@@ -12,8 +12,8 @@ What's New
 
 .. _whats-new.0.7.0:
 
-v0.7.0 (unreleased)
--------------------
+v0.7.0 (21 January 2016)
+------------------------
 
 This major release includes redesign of :py:class:`~xray.DataArray`
 internals, as well as new methods for reshaping, rolling and shifting
