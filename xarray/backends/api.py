@@ -160,9 +160,12 @@ def open_dataset(filename_or_obj, group=None, decode_cf=True,
         if chunks is not None:
             try:
                 from dask.base import tokenize
-            except ImportError:
+            except ImportError as err:
                 import dask  # raise the usual error if dask is entirely missing
-                raise ImportError('xarray requires dask version 0.6 or newer')
+                if dask.__version__ < '0.6':
+                    raise ImportError('xarray requires dask version 0.6 or newer')
+                else:
+                    raise ImportError(err)
 
             if (isinstance(filename_or_obj, basestring) and
                     not is_remote_uri(filename_or_obj)):
