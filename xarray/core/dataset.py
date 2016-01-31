@@ -1223,8 +1223,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject):
         ----------
         name_dict : dict-like
             Dictionary whose keys are current variable or dimension names and
-            whose values are new names (although the new name is permitted
-            to be the same as the old name).
+            whose values are the desired names.
         inplace : bool, optional
             If True, rename variables and dimensions in-place. Otherwise,
             return a new dataset object.

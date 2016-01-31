@@ -1105,8 +1105,7 @@ class TestDataset(TestCase):
         data = create_test_data()
         newnames = {'var1': 'var1', 'dim2': 'dim2'}
         renamed = data.rename(newnames)
-        self.assertTrue('var1' in renamed)
-        self.assertTrue('dim2' in renamed)
+        self.assertDatasetIdentical(renamed, data)
 
     def test_rename_inplace(self):
         times = pd.date_range('2000-01-01', periods=3)
