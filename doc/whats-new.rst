@@ -19,6 +19,7 @@ Enhancements
 ------------
 
 - ``Dataset.rename`` and ``DataArray.rename`` support the old and new names being the same.  This had been supported prior to v0.7.0 but was broken in 0.7.0.
+- ``DataArray.reindex_like`` now maintains the dtype of complex numbers when reindexing leads to na values.
 
 .. _whats-new.0.7.0:
 
