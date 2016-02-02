@@ -2182,8 +2182,10 @@ class TestDataset(TestCase):
         actual = ds + subset
         self.assertDatasetIdentical(expected, actual)
 
-        with self.assertRaisesRegexp(ValueError, 'no overlapping labels'):
-            ds.isel(x=slice(1)) + ds.isel(x=slice(1, None))
+
+        actual = ds.isel(x=slice(1)) + ds.isel(x=slice(1, None))
+        expected = ds.drop(ds.x, dim='x')
+        self.assertDatasetEqual(actual, expected)
 
         actual = ds + ds[['bar']]
         expected = (2 * ds[['bar']]).merge(ds.coords)
@@ -2191,6 +2193,7 @@ class TestDataset(TestCase):
 
         with self.assertRaisesRegexp(ValueError, 'no overlapping data'):
             ds + Dataset()
+
 
         with self.assertRaisesRegexp(ValueError, 'no overlapping data'):
             Dataset() + Dataset()

@@ -27,6 +27,7 @@ Bug fixes
 
 - Restore checks for shape consistency between data and coordinates in the
   DataArray constructor (:issue:`758`).
+- Allow numerical operations to return empty objects on no overlapping labels (:issue:`739`)
 - Single dimension variables no longer transpose as part of a broader ``.transpose``. This behavior
   was causing ``pandas.PeriodIndex`` dimensions to lose their type (:issue:`749`)
 - `~xray.Dataset` labels remain as their native type on ``.to_dataset``. Previously they were
