@@ -10,6 +10,16 @@ What's New
     import xarray as xr
     np.random.seed(123456)
 
+.. _whats-new.0.7.1:
+
+v0.7.1 (forthcoming)
+--------------------
+
+Enhancements
+------------
+
+- ``Dataset.rename`` and ``DataArray.rename`` support the old and new names being the same.  This had been supported prior to v0.7.0 but was broken in 0.7.0.
+
 .. _whats-new.0.7.0:
 
 v0.7.0 (21 January 2016)

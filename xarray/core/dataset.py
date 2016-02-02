@@ -1223,7 +1223,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject):
         ----------
         name_dict : dict-like
             Dictionary whose keys are current variable or dimension names and
-            whose values are new names.
+            whose values are the desired names.
         inplace : bool, optional
             If True, rename variables and dimensions in-place. Otherwise,
             return a new dataset object.
@@ -1243,7 +1243,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject):
             if k not in self:
                 raise ValueError("cannot rename %r because it is not a "
                                  "variable in this dataset" % k)
-            if v in self:
+            if v in self and k != v:
                 raise ValueError('the new name %r already exists' % v)
 
         variables = OrderedDict()

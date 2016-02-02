@@ -1101,6 +1101,12 @@ class TestDataset(TestCase):
         with self.assertRaises(UnexpectedDataAccess):
             renamed['renamed_var1'].values
 
+    def test_rename_same_name(self):
+        data = create_test_data()
+        newnames = {'var1': 'var1', 'dim2': 'dim2'}
+        renamed = data.rename(newnames)
+        self.assertDatasetIdentical(renamed, data)
+
     def test_rename_inplace(self):
         times = pd.date_range('2000-01-01', periods=3)
         data = Dataset({'z': ('x', [2, 3, 4]), 't': ('t', times)})
