@@ -21,6 +21,13 @@ Enhancements
 - ``Dataset.rename`` and ``DataArray.rename`` support the old and new names being the same.  This had been supported prior to v0.7.0 but was broken in 0.7.0.
 - ``DataArray.reindex_like`` now maintains the dtype of complex numbers when reindexing leads to na values.
 
+
+Bug fixes
+~~~~~~~~~
+
+- Single dimension variables no longer transpose as part of a broader ``.transpose``. This behavior
+  was causing ``pandas.PeriodIndex`` dimensions to lose their type
+
 .. _whats-new.0.7.0:
 
 v0.7.0 (21 January 2016)
