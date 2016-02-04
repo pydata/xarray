@@ -418,6 +418,8 @@ def _maybe_promote(dtype):
         # convert to floating point so NaN is valid
         dtype = float
         fill_value = np.nan
+    elif np.issubdtype(dtype, complex):
+        fill_value = np.nan + np.nan * 1j
     elif np.issubdtype(dtype, np.datetime64):
         fill_value = np.datetime64('NaT')
     elif np.issubdtype(dtype, np.timedelta64):

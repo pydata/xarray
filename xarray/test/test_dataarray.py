@@ -635,6 +635,13 @@ class TestDataArray(TestCase):
         actual = expected.reindex(time=time2)
         self.assertDataArrayIdentical(actual, expected)
 
+        # regression test for #736, reindex can not change complex nums dtype
+        x = np.array([1, 2, 3], dtype=np.complex)
+        x = DataArray(x, coords=[[0.1, 0.2, 0.3]])
+        y = DataArray([2, 5, 6, 7, 8], coords=[[-1.1, 0.21, 0.31, 0.41, 0.51]])
+        re_dtype = x.reindex_like(y, method='pad').dtype
+        self.assertEqual(x.dtype, re_dtype)
+
     def test_reindex_method(self):
         x = DataArray([10, 20], dims='y')
         y = [-0.1, 0.5, 1.1]
