@@ -16,23 +16,29 @@ v0.7.1 (forthcoming)
 --------------------
 
 Enhancements
-------------
+~~~~~~~~~~~~
 
-- ``Dataset.rename`` and ``DataArray.rename`` support the old and new names being the same.  This had been supported prior to v0.7.0 but was broken in 0.7.0.
-- ``DataArray.reindex_like`` now maintains the dtype of complex numbers when reindexing leads to na values.
-
+- Numerical operations now return empty objects on no overlapping labels rather
+  than raising ``ValueError`` (:issue:`739`).
 
 Bug fixes
 ~~~~~~~~~
 
 - Restore checks for shape consistency between data and coordinates in the
   DataArray constructor (:issue:`758`).
-- Allow numerical operations to return empty objects on no overlapping labels (:issue:`739`)
-- Single dimension variables no longer transpose as part of a broader ``.transpose``. This behavior
-  was causing ``pandas.PeriodIndex`` dimensions to lose their type (:issue:`749`)
-- `~xray.Dataset` labels remain as their native type on ``.to_dataset``. Previously they were
-  coerced to strings (:issue:`745`)
-- Compatibility fixes for the upcoming pandas v0.18 and NumPy v1.11 releases.
+- Single dimension variables no longer transpose as part of a broader
+  ``.transpose``. This  behavior was causing ``pandas.PeriodIndex`` dimensions
+  to lose their type (:issue:`749`)
+- `~xarray.Dataset` labels remain as their native type on ``.to_dataset``.
+  Previously they were coerced to strings (:issue:`745`)
+- Fixed a bug where replacing a ``DataArray`` index coordinate would improperly
+  align the coordinate (:issue:`725`).
+- ``DataArray.reindex_like`` now maintains the dtype of complex numbers when
+  reindexing leads to NaN values (:issue:`738`).
+- ``Dataset.rename`` and ``DataArray.rename`` support the old and new names
+  being the same (:issue:`724`).
+- Fixes to ensure xarray works properly after the upcoming pandas v0.18 and
+  NumPy v1.11 releases.
 
 .. _whats-new.0.7.0:
 

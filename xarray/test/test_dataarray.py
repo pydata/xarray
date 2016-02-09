@@ -625,6 +625,14 @@ class TestDataArray(TestCase):
                              dims='x')
         self.assertDataArrayIdentical(lhs, expected)
 
+    def test_coords_replacement_alignment(self):
+        # regression test for GH725
+        arr = DataArray([0, 1, 2], dims=['abc'])
+        new_coord = DataArray([1, 2, 3], dims=['abc'], coords=[[1, 2, 3]])
+        arr['abc'] = new_coord
+        expected = DataArray([0, 1, 2], coords=[('abc', [1, 2, 3])])
+        self.assertDataArrayIdentical(arr, expected)
+
     def test_reindex(self):
         foo = self.dv
         bar = self.dv[:2, :2]
