@@ -2259,6 +2259,15 @@ class TestDataset(TestCase):
         with self.assertRaisesRegexp(ValueError, 'arguments to transpose'):
             ds.transpose('dim1', 'dim2', 'dim3', 'time', 'extra_dim')
 
+    def test_dataset_retains_period_index_on_transpose(self):
+
+        ds = create_test_data()
+        ds['time'] = pd.period_range('2000-01-01', periods=20)
+
+        transposed = ds.transpose()
+
+        self.assertIsInstance(transposed.time.to_index(), pd.PeriodIndex)
+
     def test_dataset_diff_n1_simple(self):
         ds = Dataset({'foo': ('x', [5, 5, 6, 6])})
         actual = ds.diff('x')
