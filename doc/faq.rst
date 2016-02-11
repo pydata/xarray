@@ -9,7 +9,7 @@ as the premier python package for working with labeled arrays. So why are we
 contributing to further fragmentation__ in the ecosystem for
 working with data arrays in Python?
 
-__ http://wesmckinney.com/blog/?p=77
+__ http://wesmckinney.com/blog/a-roadmap-for-rich-scientific-data-structures-in-python/
 
 Sometimes, we really want to work with collections of higher dimensional arrays
 (`ndim > 2`), or arrays for which the order of dimensions (e.g., columns vs
