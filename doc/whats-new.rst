@@ -25,6 +25,8 @@ Enhancements
 Bug fixes
 ~~~~~~~~~
 
+- Restore checks for shape consistency between data and coordinates in the
+  DataArray constructor (:issue:`758`).
 - Single dimension variables no longer transpose as part of a broader ``.transpose``. This behavior
   was causing ``pandas.PeriodIndex`` dimensions to lose their type
 

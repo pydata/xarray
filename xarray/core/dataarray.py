@@ -64,11 +64,18 @@ def _infer_coords_and_dims(shape, coords, dims):
         if dim not in new_coords:
             new_coords[dim] = default_index_coordinate(dim, size)
 
+    sizes = dict(zip(dims, shape))
     for k, v in new_coords.items():
         if any(d not in dims for d in v.dims):
             raise ValueError('coordinate %s has dimensions %s, but these '
                              'are not a subset of the DataArray '
                              'dimensions %s' % (k, v.dims, dims))
+
+        for d, s in zip(v.dims, v.shape):
+            if s != sizes[d]:
+                raise ValueError('conflicting sizes for dimension %r: '
+                                 'length %s on the data but length %s on '
+                                 'coordinate %r' % (d, sizes[d], s, k))
 
     return new_coords, dims
 

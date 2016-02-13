@@ -171,6 +171,12 @@ class TestDataArray(TestCase):
         with self.assertRaisesRegexp(TypeError, 'is not a string'):
             DataArray(data, dims=['x', None])
 
+        with self.assertRaisesRegexp(ValueError, 'conflicting sizes for dim'):
+            DataArray([1, 2, 3], coords=[('x', [0, 1])])
+        with self.assertRaisesRegexp(ValueError, 'conflicting sizes for dim'):
+            DataArray([1, 2], coords={'x': [0, 1], 'y': ('x', [1])}, dims='x')
+
+
     def test_constructor_from_self_described(self):
         data = [[-0.1, 21], [0, 2]]
         expected = DataArray(data,
