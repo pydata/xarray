@@ -258,7 +258,7 @@ class TestDataArrayAndDataset(DaskTestCase):
         u = self.eager_array
         v = self.lazy_array
 
-        expected = u.assign_coords(x=u['x'].astype(str))
+        expected = u.assign_coords(x=u['x'])
         self.assertLazyAndIdentical(expected, v.to_dataset('x').to_array('x'))
 
     def test_ufuncs(self):

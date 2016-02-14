@@ -1533,9 +1533,23 @@ class TestDataArray(TestCase):
         self.assertDataArrayIdentical(array, roundtripped)
 
         array = DataArray([1, 2, 3], dims='x')
-        expected = Dataset(OrderedDict([('0', 1), ('1', 2), ('2', 3)]))
+        expected = Dataset(OrderedDict([(0, 1), (1, 2), (2, 3)]))
         actual = array.to_dataset('x')
         self.assertDatasetIdentical(expected, actual)
+
+    def test_to_dataset_retains_keys(self):
+
+        # use dates as convenient non-str objects. Not a specific date test
+        import datetime
+        dates = [datetime.date(2000,1,d) for d in range(1,4)]
+
+        array = DataArray([1, 2, 3], coords=[('x', dates)],
+                          attrs={'a': 1})
+
+        # convert to dateset and back again
+        result = array.to_dataset('x').to_array(dim='x')
+
+        self.assertDatasetEqual(array, result)
 
     def test__title_for_slice(self):
         array = DataArray(np.ones((4, 3, 2)), dims=['a', 'b', 'c'])

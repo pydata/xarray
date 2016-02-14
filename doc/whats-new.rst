@@ -26,7 +26,9 @@ Bug fixes
 ~~~~~~~~~
 
 - Single dimension variables no longer transpose as part of a broader ``.transpose``. This behavior
-  was causing ``pandas.PeriodIndex`` dimensions to lose their type
+  was causing ``pandas.PeriodIndex`` dimensions to lose their type (:issue:`749`)
+- `~xray.Dataset` labels remain as their native type on ``.to_dataset``. Previously they were
+  coerced to strings (:issue:`745`)
 
 .. _whats-new.0.7.0:
 

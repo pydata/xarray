@@ -252,7 +252,7 @@ class DataArray(AbstractArray, BaseDataObject):
             array.attrs = {}
             return array
 
-        variables = OrderedDict([(str(label), subset(dim, label))
+        variables = OrderedDict([(label, subset(dim, label))
                                  for label in self.indexes[dim]])
         coords = self.coords.to_dataset()
         del coords[dim]
