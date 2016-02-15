@@ -1374,5 +1374,64 @@ class DataArray(AbstractArray, BaseDataObject):
     def imag(self):
         return self._replace(self.variable.imag)
 
+    def dot(self, other):
+        """Perform dot product of two DataArrays along their shared dims.
+        
+        Equivalent to taking taking tensordot over all shared dims.
+
+        Parameters
+        ----------
+        other : DataArray
+            The other array with which the dot product is performed.
+            
+        Returns
+        -------
+        result : DataArray
+            Array resulting from the dot product over all shared dimensions.
+            
+        See also
+        --------
+        np.tensordot(a, b, axes)
+
+        Examples
+        --------
+
+        >>> da_vals = np.arange(6 * 5 * 4).reshape((6, 5, 4))
+        >>> da = DataArray(da_vals, dims=['x', 'y', 'z'])    
+        >>> dm_vals = np.arange(4)
+        >>> dm = DataArray(dm_vals, dims=['z'])
+                
+        >>> dm.dims
+        ('z')
+        >>> da.dims
+        ('x', 'y', 'z')
+
+        >>> dot_result = da.dot(dm)
+        >>> dot_result.dims
+        ('x', 'y')
+        """
+        if isinstance(other, Dataset):
+            raise NotImplementedError('dot products are not yet supported '
+                                      'with Dataset objects.')
+        if not isinstance(other, DataArray):
+            raise TypeError('dot only operates on DataArrays.')
+
+        # sum over the common dims
+        dims = set(self.dims) & set(other.dims)
+        if len(dims) == 0:
+            raise ValueError('DataArrays have no shared dimensions over which '
+                             'to perform dot.')
+
+        self, other = align(self, other, join='inner', copy=False)
+
+        axes = (self.get_axis_num(dims), other.get_axis_num(dims))
+        new_data = ops.tensordot(self.data, other.data, axes=axes)
+
+        new_coords = self.coords.merge(other.coords).drop(dims)
+        new_dims = ([d for d in self.dims if d not in dims] +
+                    [d for d in other.dims if d not in dims])
+
+        return type(self)(new_data, new_coords, new_dims)
+
 # priority most be higher than Variable to properly work with binary ufuncs
 ops.inject_all_ops_and_reduce_methods(DataArray, priority=60)

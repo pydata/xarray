@@ -144,6 +144,7 @@ Computation
 :py:attr:`~Dataset.round`
 :py:attr:`~Dataset.real`
 :py:attr:`~Dataset.T`
+:py:attr:`~DataArray.dot`
 
 **Grouped operations**:
 :py:attr:`~core.groupby.DatasetGroupBy.assign`
