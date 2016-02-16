@@ -1184,11 +1184,6 @@ class DataArray(AbstractArray, BaseDataObject):
                 return NotImplemented
             if hasattr(other, 'indexes'):
                 self, other = align(self, other, join=join, copy=False)
-                empty_indexes = [d for d, s in zip(self.dims, self.shape)
-                                 if s == 0]
-                if empty_indexes:
-                    raise ValueError('no overlapping labels for some '
-                                     'dimensions: %s' % empty_indexes)
             other_variable = getattr(other, 'variable', other)
             other_coords = getattr(other, 'coords', None)
 

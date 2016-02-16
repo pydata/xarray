@@ -729,8 +729,19 @@ class TestDataArray(TestCase):
         expected = DataArray(np.ones(4), [('x', [1, 2, 3, 4])])
         self.assertDataArrayIdentical(a - b, expected)
 
-        with self.assertRaisesRegexp(ValueError, 'no overlapping labels'):
-            a.isel(x=slice(2)) + a.isel(x=slice(2, None))
+    def test_non_overlapping_dataarrays_return_empty_result(self):
+
+        a = DataArray(range(5), [('x', range(5))])
+        b = DataArray(range(5), [('x', range(1, 6))])
+        result = a.isel(x=slice(2)) + a.isel(x=slice(2, None))
+        self.assertEqual(len(result['x']), 0)
+
+    def test_empty_dataarrays_return_empty_result(self):
+
+        a = DataArray(data=[])
+        result = a * a
+        self.assertEqual(len(result['dim_0']), 0)
+
 
     def test_inplace_math_basics(self):
         x = self.x
