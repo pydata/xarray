@@ -1905,7 +1905,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject):
             shape = -1
 
         for name, series in iteritems(dataframe):
-            data = series.values.reshape(shape)
+            data = np.asarray(series).reshape(shape)
             obj[name] = (dims, data)
         return obj
 

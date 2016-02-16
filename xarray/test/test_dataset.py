@@ -1722,7 +1722,6 @@ class TestDataset(TestCase):
         expected = Dataset({'A': DataArray([], dims=('index',))})
         self.assertDatasetIdentical(expected, actual)
 
-
         # regression test for GH278
         # use int64 to ensure consistent results for the pandas .equals method
         # on windows (which requires the same dtype)
@@ -1741,11 +1740,36 @@ class TestDataset(TestCase):
         expected = pd.DataFrame([[]], index=idx)
         assert expected.equals(actual), (expected, actual)
 
+    def test_from_dataframe_non_unique_columns(self):
         # regression test for GH449
         df = pd.DataFrame(np.zeros((2, 2)))
         df.columns = ['foo', 'foo']
         with self.assertRaisesRegexp(ValueError, 'non-unique columns'):
             Dataset.from_dataframe(df)
+
+    def test_convert_dataframe_with_many_types_and_multiindex(self):
+        # regression test for GH737
+        df = pd.DataFrame({'a': list('abc'),
+                           'b': list(range(1, 4)),
+                           'c': np.arange(3, 6).astype('u1'),
+                           'd': np.arange(4.0, 7.0, dtype='float64'),
+                           'e': [True, False, True],
+                           'f': pd.Categorical(list('abc')),
+                           'g': pd.date_range('20130101', periods=3),
+                           'h': pd.date_range('20130101',
+                                              periods=3,
+                                              tz='US/Eastern')})
+        df.index = pd.MultiIndex.from_product([['a'], range(3)],
+                                              names=['one', 'two'])
+        roundtripped = Dataset.from_dataframe(df).to_dataframe()
+        # we can't do perfectly, but we should be at least as faithful as
+        # np.asarray
+        expected = df.apply(np.asarray)
+        if pd.__version__ < '0.17':
+            # datetime with timezone dtype is not consistent on old pandas
+            roundtripped = roundtripped.drop(['h'], axis=1)
+            expected = expected.drop(['h'], axis=1)
+        assert roundtripped.equals(expected)
 
     def test_pickle(self):
         data = create_test_data()
