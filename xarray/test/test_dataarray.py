@@ -1231,7 +1231,7 @@ class TestDataArray(TestCase):
         self.assertDataArrayIdentical(array, actual)
 
         actual = array.resample('24H', dim='time')
-        expected = DataArray(array.to_series().resample('24H'))
+        expected = DataArray(array.to_series().resample('24H', how='mean'))
         self.assertDataArrayIdentical(expected, actual)
 
         actual = array.resample('24H', dim='time', how=np.mean)
