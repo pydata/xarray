@@ -17,7 +17,7 @@ class TestIndexers(TestCase):
         y = np.arange(5)
         I = ReturnItem()
         for i in [I[:], I[...], I[0, :, 10], I[..., 10], I[:5, ..., 0],
-                  I[..., 0, ...], I[y], I[y, y], I[..., y, y],
+                  I[..., 0, :], I[y], I[y, y], I[..., y, y],
                   I[..., 0, 1, 2, 3, 4]]:
             j = indexing.expanded_indexer(i, x.ndim)
             self.assertArrayEqual(x[i], x[j])
