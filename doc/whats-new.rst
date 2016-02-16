@@ -29,7 +29,7 @@ Bug fixes
 - Single dimension variables no longer transpose as part of a broader
   ``.transpose``. This  behavior was causing ``pandas.PeriodIndex`` dimensions
   to lose their type (:issue:`749`)
-- `~xarray.Dataset` labels remain as their native type on ``.to_dataset``.
+- :py:class:`~xarray.Dataset` labels remain as their native type on ``.to_dataset``.
   Previously they were coerced to strings (:issue:`745`)
 - Fixed a bug where replacing a ``DataArray`` index coordinate would improperly
   align the coordinate (:issue:`725`).
@@ -37,6 +37,8 @@ Bug fixes
   reindexing leads to NaN values (:issue:`738`).
 - ``Dataset.rename`` and ``DataArray.rename`` support the old and new names
   being the same (:issue:`724`).
+- Fix :py:meth:`~xarray.Dataset.from_dataset` for DataFrames with Categorical
+  column and a MultiIndex index (:issue:`737`).
 - Fixes to ensure xarray works properly after the upcoming pandas v0.18 and
   NumPy v1.11 releases.
 
