@@ -1620,7 +1620,7 @@ class TestDataset(TestCase):
 
         ds = Dataset({'x': ('time', np.arange(100)),
                       'time': pd.date_range('2000-01-01', periods=100)})
-        with self.assertRaisesRegexp(ValueError, 'no overlapping labels'):
+        with self.assertRaisesRegexp(ValueError, 'incompat.* grouped binary'):
             ds + ds.groupby('time.month')
 
     def test_groupby_math_virtual(self):
@@ -1862,17 +1862,23 @@ class TestDataset(TestCase):
         actual = ds.fillna(b[:3])
         self.assertDatasetIdentical(expected, actual)
 
-        # left align variables
+        # okay to only include some data variables
         ds['b'] = np.nan
-        actual = ds.fillna({'a': -1, 'c': 'foobar'})
+        actual = ds.fillna({'a': -1})
         expected = Dataset({'a': ('x', [-1, 1, -1, 3]), 'b': np.nan})
         self.assertDatasetIdentical(expected, actual)
 
-        with self.assertRaisesRegexp(ValueError, 'no overlapping'):
+        # but new data variables is not okay
+        with self.assertRaisesRegexp(ValueError, 'must be contained'):
             ds.fillna({'x': 0})
 
-        with self.assertRaisesRegexp(ValueError, 'no overlapping'):
-            ds.fillna(Dataset(coords={'a': 0}))
+        # empty argument should be OK
+        result = ds.fillna({})
+        self.assertDatasetIdentical(ds, result)
+
+        result = ds.fillna(Dataset(coords={'c': 42}))
+        expected = ds.assign_coords(c=42)
+        self.assertDatasetIdentical(expected, result)
 
         # groupby
         expected = Dataset({'a': ('x', range(4))})
@@ -2191,16 +2197,11 @@ class TestDataset(TestCase):
         expected = (2 * ds[['bar']]).merge(ds.coords)
         self.assertDatasetIdentical(expected, actual)
 
-        with self.assertRaisesRegexp(ValueError, 'no overlapping data'):
-            ds + Dataset()
-
-
-        with self.assertRaisesRegexp(ValueError, 'no overlapping data'):
-            Dataset() + Dataset()
+        self.assertDatasetIdentical(ds + Dataset(), ds.coords.to_dataset())
+        self.assertDatasetIdentical(Dataset() + Dataset(), Dataset())
 
         ds2 = Dataset(coords={'bar': 42})
-        with self.assertRaisesRegexp(ValueError, 'no overlapping data'):
-            ds + ds2
+        self.assertDatasetIdentical(ds + ds2, ds.coords.merge(ds2))
 
         # maybe unary arithmetic with empty datasets should raise instead?
         self.assertDatasetIdentical(Dataset() + 1, Dataset())

@@ -421,7 +421,7 @@ def inject_binary_ops(cls, inplace=False):
 
     # patch in fillna
     f = _func_slash_method_wrapper(fillna)
-    method = cls._binary_op(f, join='left', drop_na_vars=False)
+    method = cls._binary_op(f, join='left', fillna=True)
     setattr(cls, '_fillna', method)
 
     # patch in where
