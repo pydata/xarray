@@ -31,6 +31,7 @@ Bug fixes
   was causing ``pandas.PeriodIndex`` dimensions to lose their type (:issue:`749`)
 - `~xray.Dataset` labels remain as their native type on ``.to_dataset``. Previously they were
   coerced to strings (:issue:`745`)
+- Compatibility fixes for the upcoming pandas v0.18 and NumPy v1.11 releases.
 
 .. _whats-new.0.7.0:
 

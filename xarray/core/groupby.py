@@ -131,7 +131,7 @@ class GroupBy(object):
             if first_items.isnull().any():
                 full_index = first_items.index
                 first_items = first_items.dropna()
-            bins = first_items.values
+            bins = first_items.values.astype(np.int64)
             group_indices = ([slice(i, j) for i, j in zip(bins[:-1], bins[1:])] +
                              [slice(bins[-1], None)])
             unique_coord = Coordinate(group.name, first_items.index)
