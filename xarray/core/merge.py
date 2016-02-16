@@ -154,7 +154,7 @@ def _reindex_variables_against(variables, indexes, copy=False):
     aligned = []
     for a in alignable:
         valid_indexes = dict((k, v) for k, v in indexes.items()
-                             if k in variables[a].dims)
+                             if k in variables[a].dims and k != a)
         aligned.append(variables[a].reindex(copy=copy, **valid_indexes))
     new_variables = OrderedDict(variables)
     new_variables.update(zip(alignable, aligned))
