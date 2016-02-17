@@ -253,6 +253,11 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject):
         """
         _assert_empty([k for k in vars if k in coords],
                       'redundant variables and coordinates: %s')
+
+        # Need to coerce Series to a dict as it doesn't implement __iter__ like a mapping
+        # GH470
+        vars = dict(vars) if isinstance(vars, pd.Series) else vars
+
         variables = ChainMap(vars, coords)
 
         aligned = align_variables(variables)

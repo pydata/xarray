@@ -217,6 +217,7 @@ class TestDataset(TestCase):
     def test_constructor_pandas_single(self):
 
         das = [
+            DataArray(np.random.rand(4), dims=['a']),  # series
             DataArray(np.random.rand(4,3), dims=['a', 'b']),  # df
             DataArray(np.random.rand(4,3,2), dims=['a','b','c']), # panel
             ]
