@@ -7,19 +7,25 @@ What's New
     import numpy as np
     import pandas as pd
     import xray
+    import xarray
     import xarray as xr
     np.random.seed(123456)
 
 .. _whats-new.0.7.1:
 
-v0.7.1 (forthcoming)
---------------------
+v0.7.1 (16 February 2016)
+-------------------------
+
+This is a bug fix release that includes two small, backwards compatible enhancements.
+We recommend that all users upgrade.
 
 Enhancements
 ~~~~~~~~~~~~
 
 - Numerical operations now return empty objects on no overlapping labels rather
   than raising ``ValueError`` (:issue:`739`).
+- :py:class:`~pd.Series` is now supported as valid input to the ``Dataset``
+  constructor (:issue:`740`).
 
 Bug fixes
 ~~~~~~~~~
@@ -41,6 +47,17 @@ Bug fixes
   column and a MultiIndex index (:issue:`737`).
 - Fixes to ensure xarray works properly after the upcoming pandas v0.18 and
   NumPy v1.11 releases.
+
+Acknowledgments
+~~~~~~~~~~~~~~~
+
+The following individuals contributed to this release:
+
+- Edward Richards
+- Maximilian Roos
+- Rafael Guedes
+- Spencer Hill
+- Stephan Hoyer
 
 .. _whats-new.0.7.0:
 
