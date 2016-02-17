@@ -11,6 +11,17 @@ What's New
     import xarray as xr
     np.random.seed(123456)
 
+.. _whats-new.0.7.2:
+
+v0.7.2 (unreleased)
+-------------------
+
+Enhancements
+~~~~~~~~~~~~
+
+Bug fixes
+~~~~~~~~~
+
 .. _whats-new.0.7.1:
 
 v0.7.1 (16 February 2016)
