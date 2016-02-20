@@ -58,6 +58,13 @@ class Rolling(object):
         # attributes
         self.window = window
         self.min_periods = min_periods
+        if min_periods is None:
+            self._min_periods = window
+        else:
+            if min_periods <= 0:
+                raise ValueError('min_periods must be greater than zero or None')
+
+            self._min_periods = min_periods
         self.center = center
         self.dim = dim
 
@@ -68,7 +75,7 @@ class Rolling(object):
         self.window_indices = None
         self.window_labels = None
 
-        self._setup_windows(min_periods=min_periods, center=center)
+        self._setup_windows()
 
     def __repr__(self):
         """provide a nice str repr of our rolling object"""
@@ -100,7 +107,7 @@ class Rolling(object):
 
             yield (label, window)
 
-    def _setup_windows(self, min_periods=None, center=False):
+    def _setup_windows(self):
         """
         Find the indicies and labels for each window
         """
@@ -109,16 +116,14 @@ class Rolling(object):
         self.window_labels = self.obj[self.dim]
 
         window = int(self.window)
-        if min_periods is None:
-            min_periods = window
 
         dim_size = self.obj[self.dim].size
 
         stops = np.arange(dim_size) + 1
         starts = np.maximum(stops - window, 0)
 
-        if min_periods > 1:
-            valid_windows = (stops - starts) >= min_periods
+        if self._min_periods > 1:
+            valid_windows = (stops - starts) >= self._min_periods
         else:
             # No invalid windows
             valid_windows = np.ones(dim_size, dtype=bool)
@@ -151,20 +156,17 @@ class Rolling(object):
         reduced : DataArray
             Array with summarized data.
         """
-        from .dataarray import DataArray
 
-        windows = [func(window, axis=self._axis_num, **kwargs)
+        windows = [window.reduce(func, dim=self.dim, **kwargs)
                    for _, window in self]
 
-        if not isinstance(windows[0], type(self.obj)):
-            # some functions don't return DataArrays (e.g. np.median)
-            dims = list(self.obj.dims)
-            dims.remove(dims[self._axis_num])
-            windows = [DataArray(window, dims=dims) for window in windows]
+        # Find valid windows based on count
+        counts = concat([window.count(dim=self.dim) for _, window in self],
+                        dim=self.obj[self.dim])
 
         result = concat(windows, dim=self.window_labels)
 
-        result = result.where(self._valid_windows)
+        result = result.where(counts >= self._min_periods)
 
         if self.center:
             result = self._center_result(result)
