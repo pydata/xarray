@@ -19,6 +19,37 @@ v0.7.2 (unreleased)
 Enhancements
 ~~~~~~~~~~~~
 
+- Rolling window operations on DataArray objects are now supported via a new
+  :py:meth:`xarray.DataArray.rolling` method.
+
+  .. ipython::
+    :verbatim:
+
+    In [1]: import xarray as xr; import numpy as np
+
+    In [2]: arr = xr.DataArray(np.arange(0, 7.5, 0.5).reshape(3, 5),
+                               dims=('x', 'y'))
+
+    In [3]: arr
+    Out[3]:
+    <xarray.DataArray (x: 3, y: 5)>
+    array([[ 0. ,  0.5,  1. ,  1.5,  2. ],
+           [ 2.5,  3. ,  3.5,  4. ,  4.5],
+           [ 5. ,  5.5,  6. ,  6.5,  7. ]])
+    Coordinates:
+      * x        (x) int64 0 1 2
+      * y        (y) int64 0 1 2 3 4
+
+    In [4]: arr.rolling(y=3, min_periods=2).mean()
+    Out[4]:
+    <xarray.DataArray (x: 3, y: 5)>
+    array([[  nan,  0.25,  0.5 ,  1.  ,  1.5 ],
+           [  nan,  2.75,  3.  ,  3.5 ,  4.  ],
+           [  nan,  5.25,  5.5 ,  6.  ,  6.5 ]])
+    Coordinates:
+      * x        (x) int64 0 1 2
+      * y        (y) int64 0 1 2 3 4
+
 Bug fixes
 ~~~~~~~~~
 

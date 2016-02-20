@@ -63,6 +63,13 @@ except ImportError:
     has_matplotlib = False
 
 
+try:
+    import bottleneck
+    has_bottleneck = True
+except ImportError:
+    has_bottleneck = False
+
+
 def requires_scipy(test):
     return test if has_scipy else unittest.skip('requires scipy')(test)
 
@@ -94,6 +101,10 @@ def requires_dask(test):
 
 def requires_matplotlib(test):
     return test if has_matplotlib else unittest.skip('requires matplotlib')(test)
+
+
+def requires_bottleneck(test):
+    return test if has_bottleneck else unittest.skip('requires bottleneck')(test)
 
 
 def incompatible_2_6(test):

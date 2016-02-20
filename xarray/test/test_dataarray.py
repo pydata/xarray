@@ -7,7 +7,9 @@ from textwrap import dedent
 from xarray import (align, broadcast, Dataset, DataArray,
                     Coordinate, Variable)
 from xarray.core.pycompat import iteritems, OrderedDict
-from . import TestCase, ReturnItem, source_ndarray, unittest, requires_dask
+from xarray.core.common import _full_like
+from . import (TestCase, ReturnItem, source_ndarray, unittest, requires_dask,
+               requires_bottleneck)
 
 
 class TestDataArray(TestCase):
@@ -1242,6 +1244,118 @@ class TestDataArray(TestCase):
         expected = array  # should be a no-op
         self.assertDataArrayIdentical(expected, actual)
 
+    def make_rolling_example_array(self):
+        times = pd.date_range('2000-01-01', freq='1D', periods=21)
+        values = np.random.random((21, 4))
+        da = DataArray(values, dims=('time', 'x'))
+        da['time'] = times
+
+        return da
+
+    def test_rolling_iter(self):
+        da = self.make_rolling_example_array()
+
+        rolling_obj = da.rolling(time=7)
+
+        self.assertEqual(len(rolling_obj.window_labels), len(da['time']))
+        self.assertDataArrayIdentical(rolling_obj.window_labels, da['time'])
+
+        for i, (label, window_da) in enumerate(rolling_obj):
+            self.assertEqual(label, da['time'].isel(time=i))
+
+    def test_rolling_properties(self):
+        da = self.make_rolling_example_array()
+        rolling_obj = da.rolling(time=4)
+
+        self.assertEqual(rolling_obj._axis_num, 0)
+
+        # catching invalid args
+        with self.assertRaisesRegexp(ValueError, 'exactly one dim/window should'):
+            da.rolling(time=7, x=2)
+        with self.assertRaisesRegexp(ValueError, 'window must be > 0'):
+            da.rolling(time=-2)
+
+    @requires_bottleneck
+    def test_rolling_wrapped_bottleneck(self):
+        import bottleneck as bn
+
+        da = self.make_rolling_example_array()
+
+        # Test all bottleneck functions
+        rolling_obj = da.rolling(time=7)
+        for name in ('sum', 'mean', 'std', 'min', 'max', 'median'):
+            func_name = 'move_{0}'.format(name)
+            actual = getattr(rolling_obj, name)()
+            expected = getattr(bn, func_name)(da.values, window=7, axis=0)
+            self.assertArrayEqual(actual.values, expected)
+
+        # Using min_periods
+        rolling_obj = da.rolling(time=7, min_periods=1)
+        for name in ('sum', 'mean', 'std', 'min', 'max'):
+            func_name = 'move_{0}'.format(name)
+            actual = getattr(rolling_obj, name)()
+            expected = getattr(bn, func_name)(da.values, window=7, axis=0,
+                                              min_count=1)
+            self.assertArrayEqual(actual.values, expected)
+
+        # Using center=False
+        rolling_obj = da.rolling(time=7, center=False)
+        for name in ('sum', 'mean', 'std', 'min', 'max', 'median'):
+            actual = getattr(rolling_obj, name)()['time']
+            self.assertDataArrayEqual(actual, da['time'])
+
+        # Using center=True
+        rolling_obj = da.rolling(time=7, center=True)
+        for name in ('sum', 'mean', 'std', 'min', 'max', 'median'):
+            actual = getattr(rolling_obj, name)()['time']
+            self.assertDataArrayEqual(actual, da['time'])
+
+        # catching invalid args
+        with self.assertRaisesRegexp(ValueError, 'Rolling.median does not'):
+            da.rolling(time=7, min_periods=1).median()
+
+    def test_rolling_pandas_compat(self):
+        s = pd.Series(range(10))
+        da = DataArray.from_series(s)
+
+        for center in (False, True):
+            for window in [1, 2, 3, 4]:
+                for min_periods in [None, 0, 1, 2, 3]:
+                    if min_periods is not None and window < min_periods:
+                        min_periods = window
+                    s_rolling = pd.rolling_mean(s, window, center=center,
+                                                min_periods=min_periods)
+                    da_rolling = da.rolling(index=window, center=center,
+                                            min_periods=min_periods).mean()
+                    # pandas does some fancy stuff in the last position,
+                    # we're not going to do that yet!
+                    np.testing.assert_allclose(s_rolling.values[:-1],
+                                               da_rolling.values[:-1])
+                    np.testing.assert_allclose(s_rolling.index,
+                                               da_rolling['index'])
+
+    def test_rolling_reduce(self):
+        da = self.make_rolling_example_array()
+
+        for center in (False, True):
+            for window in [1, 2, 3, 4]:
+                for min_periods in [None, 0, 1, 2, 3]:
+                    if min_periods is not None and window < min_periods:
+                        min_periods = window
+                    # we can use this rolling object for all methods below
+                    rolling_obj = da.rolling(time=window, center=center,
+                                             min_periods=min_periods)
+
+                    # loop over a bunch of methods, skip std since bottleneck uses
+                    # a slightly different formulation and it results in roundoff
+                    # differences when compared to numpy
+                    for name in ('sum', 'mean', 'min', 'max', 'median'):
+                        # skip median when min_periods isset
+                        if not (name == 'median' and min_periods is not None):
+                            actual = rolling_obj.reduce(getattr(np, name))
+                            expected = getattr(rolling_obj, name)()
+                            self.assertDataArrayAllClose(actual, expected)
+
     def test_resample(self):
         times = pd.date_range('2000-01-01', freq='6H', periods=10)
         array = DataArray(np.arange(10), [('time', times)])
@@ -1643,3 +1757,37 @@ class TestDataArray(TestCase):
             array.foo = 2
         with self.assertRaisesRegexp(AttributeError, 'cannot set attr'):
             array.other = 2
+
+    def test_full_like(self):
+        da = DataArray(np.random.random(size=(4, 4)), dims=('x', 'y'),
+                       attrs={'attr1': 'value1'})
+        actual = _full_like(da)
+
+        self.assertEqual(actual.dtype, da.dtype)
+        self.assertEqual(actual.shape, da.shape)
+        self.assertEqual(actual.dims, da.dims)
+        self.assertEqual(actual.attrs, {})
+
+        for name in da.coords:
+            self.assertArrayEqual(da[name], actual[name])
+            self.assertEqual(da[name].dtype, actual[name].dtype)
+
+        # keep attrs
+        actual = _full_like(da, keep_attrs=True)
+        self.assertEqual(actual.attrs, da.attrs)
+
+        # Fill value
+        actual = _full_like(da, fill_value=True)
+        self.assertEqual(actual.dtype, da.dtype)
+        self.assertEqual(actual.shape, da.shape)
+        self.assertEqual(actual.dims, da.dims)
+        np.testing.assert_equal(actual.values, np.nan)
+
+        actual = _full_like(da, fill_value=10)
+        self.assertEqual(actual.dtype, da.dtype)
+        np.testing.assert_equal(actual.values, 10)
+
+        # make sure filling with nans promotes integer type
+        actual = _full_like(DataArray([1, 2, 3]), fill_value=np.nan)
+        self.assertEqual(actual.dtype, np.float)
+        np.testing.assert_equal(actual.values, np.nan)

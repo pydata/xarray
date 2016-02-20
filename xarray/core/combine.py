@@ -110,7 +110,7 @@ def concat(objs, dim=None, data_vars='all', coords='different',
         f = _dataset_concat
     else:
         raise TypeError('can only concatenate xarray Dataset and DataArray '
-                        'objects')
+                        'objects, got %s' % type(first_obj))
     return f(objs, dim, data_vars, coords, compat, positions)
 
 

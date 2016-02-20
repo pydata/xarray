@@ -17,6 +17,7 @@ Top-level functions
    align
    broadcast
    concat
+   empty_like
    set_options
 
 Dataset
@@ -245,6 +246,7 @@ Computation
 
    DataArray.reduce
    DataArray.groupby
+   DataArray.rolling
    DataArray.resample
    DataArray.get_axis_num
    DataArray.diff

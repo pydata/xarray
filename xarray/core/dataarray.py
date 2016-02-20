@@ -9,6 +9,7 @@ from ..plot.plot import _PlotMethods
 
 from . import indexing
 from . import groupby
+from . import rolling
 from . import ops
 from . import utils
 from .alignment import align
@@ -152,6 +153,7 @@ class DataArray(AbstractArray, BaseDataObject):
         Dictionary for holding arbitrary metadata.
     """
     groupby_cls = groupby.DataArrayGroupBy
+    rolling_cls = rolling.DataArrayRolling
 
     def __init__(self, data, coords=None, dims=None, name=None,
                  attrs=None, encoding=None, fastpath=False):
