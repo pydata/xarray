@@ -349,8 +349,6 @@ class BaseDataObject(AttrAccessMixin):
 
         Parameters
         ----------
-        obj : Dataset or DataArray
-            Object to window.
         min_periods : int, default None
             Minimum number of observations in window required to have a value
             (otherwise result is NA). The default, None, is equivalent to
