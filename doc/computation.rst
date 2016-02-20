@@ -261,8 +261,8 @@ variables:
 
 .. ipython:: python
 
-    ds = xr.Dataset({'x_and_y': (('x', 'y'), np.random.randn(2, 3)),
-                     'x_only': ('x', np.random.randn(2))},
+    ds = xr.Dataset({'x_and_y': (('x', 'y'), np.random.randn(3, 5)),
+                     'x_only': ('x', np.random.randn(3))},
                      coords=arr.coords)
     ds > 0
 
