@@ -431,3 +431,7 @@ def hashable(v):
     except TypeError:
         return False
     return True
+
+
+def not_implemented(*args, **kwargs):
+    return NotImplemented

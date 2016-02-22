@@ -3,7 +3,7 @@ import pandas as pd
 
 from .pycompat import basestring, iteritems, suppress, dask_array_type
 from . import formatting
-from .utils import SortedKeysDict
+from .utils import SortedKeysDict, not_implemented
 
 
 class ImplementsArrayReduce(object):
@@ -480,6 +480,12 @@ class BaseDataObject(AttrAccessMixin):
           * x        (x) int64 0 1 2 3 4
         """
         return self._where(cond)
+
+    # this has no runtime function - these are listed so IDEs know these methods
+    # are defined and don't warn on these operations
+    __lt__ = __le__ =__ge__ = __gt__ = __add__ = __sub__ = __mul__ = \
+    __truediv__ = __floordiv__ = __mod__ = __pow__ = __and__  = __xor__ = \
+    __or__ = __div__ = __eq__ = __ne__ = not_implemented
 
 
 def squeeze(xarray_obj, dims, dim=None):
