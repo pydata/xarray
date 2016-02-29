@@ -475,11 +475,14 @@ def inject_all_ops_and_reduce_methods(cls, priority=50, array_only=True):
 def inject_bottleneck_rolling_methods(cls):
     # standard numpy reduce methods
     for name in NAN_REDUCE_METHODS:
+        func_name = 'nan' + name
         try:
-            f = getattr(np, 'nan' + name)
+            f = getattr(np, func_name)
         except AttributeError:
-            # some versions of numpy dont have all the nan-safe methods
-            f = getattr(np, name)
+            if func_name == 'nanprod':
+                f = npcompat.nanprod
+            else:
+                raise AttributeError
         func = cls._reduce_method(f)
         func.__name__ = name
         func.__doc__ = 'todo'
