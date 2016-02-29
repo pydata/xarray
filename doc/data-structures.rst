@@ -99,7 +99,7 @@ As a dictionary with coords across multiple dimensions:
 .. ipython:: python
 
     xr.DataArray(data, coords={'time': times, 'space': locs, 'const': 42,
-                               'ranking': (('space', 'time'), np.arange(12).reshape(4,3))},
+                               'ranking': (('time', 'space'), np.arange(12).reshape(4,3))},
                  dims=['time', 'space'])
 
 If you create a ``DataArray`` by supplying a pandas
