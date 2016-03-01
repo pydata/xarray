@@ -259,6 +259,21 @@ _REDUCE_DOCSTRING_TEMPLATE = \
             indicated dimension(s) removed.
         """
 
+_ROLLING_REDUCE_DOCSTRING_TEMPLATE = \
+        """Reduce this DataArrayRolling's data windows by applying `{name}`
+        along its dimension.
+
+        Parameters
+        ----------
+        **kwargs : dict
+            Additional keyword arguments passed on to `{name}`.
+
+        Returns
+        -------
+        reduced : DataArray
+            New DataArray object with `{name}` applied along its rolling dimnension.
+        """
+
 
 def count(data, axis=None):
     """Count the number of non-NA in this array along the given axis or axes
@@ -474,18 +489,11 @@ def inject_all_ops_and_reduce_methods(cls, priority=50, array_only=True):
 
 def inject_bottleneck_rolling_methods(cls):
     # standard numpy reduce methods
-    for name in NAN_REDUCE_METHODS:
-        func_name = 'nan' + name
-        try:
-            f = getattr(np, func_name)
-        except AttributeError:
-            if func_name == 'nanprod':
-                f = npcompat.nanprod
-            else:
-                raise AttributeError
+    methods = [(name, globals()[name]) for name in NAN_REDUCE_METHODS]
+    for name, f in methods:
         func = cls._reduce_method(f)
         func.__name__ = name
-        func.__doc__ = 'todo'
+        func.__doc__ = _ROLLING_REDUCE_DOCSTRING_TEMPLATE.format(name=func.__name__)
         setattr(cls, name, func)
 
     # bottleneck rolling methods
@@ -494,12 +502,12 @@ def inject_bottleneck_rolling_methods(cls):
             f = getattr(bn, bn_name)
             func = cls._bottleneck_reduce(f)
             func.__name__ = method_name
-            func.__doc__ = 'todo'
+            func.__doc__ = _ROLLING_REDUCE_DOCSTRING_TEMPLATE.format(name=func.__name__)
             setattr(cls, method_name, func)
 
         # bottleneck rolling methods without min_count
         f = getattr(bn, 'move_median')
         func = cls._bottleneck_reduce_without_min_count(f)
         func.__name__ = 'median'
-        func.__doc__ = 'todo'
+        func.__doc__ = _ROLLING_REDUCE_DOCSTRING_TEMPLATE.format(name=func.__name__)
         setattr(cls, 'median', func)
