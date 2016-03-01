@@ -1274,6 +1274,8 @@ class TestDataArray(TestCase):
             da.rolling(time=7, x=2)
         with self.assertRaisesRegexp(ValueError, 'window must be > 0'):
             da.rolling(time=-2)
+        with self.assertRaisesRegexp(ValueError, 'min_periods must be greater'):
+            da.rolling(time=2, min_periods=0)
 
     @requires_bottleneck
     def test_rolling_wrapped_bottleneck(self):
@@ -1320,7 +1322,7 @@ class TestDataArray(TestCase):
 
         for center in (False, True):
             for window in [1, 2, 3, 4]:
-                for min_periods in [None, 0, 1, 2, 3]:
+                for min_periods in [None, 1, 2, 3]:
                     if min_periods is not None and window < min_periods:
                         min_periods = window
                     s_rolling = pd.rolling_mean(s, window, center=center,
@@ -1336,23 +1338,22 @@ class TestDataArray(TestCase):
 
     def test_rolling_reduce(self):
         da = self.make_rolling_example_array()
-
-        for center in (False, True):
-            for window in [1, 2, 3, 4]:
-                for min_periods in [None, 0, 1, 2, 3]:
-                    if min_periods is not None and window < min_periods:
-                        min_periods = window
-                    # we can use this rolling object for all methods below
-                    rolling_obj = da.rolling(time=window, center=center,
-                                             min_periods=min_periods)
-
-                    # loop over a bunch of methods, skip std since bottleneck uses
-                    # a slightly different formulation and it results in roundoff
-                    # differences when compared to numpy
-                    for name in ('sum', 'mean', 'min', 'max', 'median'):
-                        # skip median when min_periods isset
-                        if not (name == 'median' and min_periods is not None):
-                            actual = rolling_obj.reduce(getattr(np, name))
+        for da in [self.make_rolling_example_array(),
+                   DataArray([0, np.nan, 1, 2, np.nan, 3, 4, 5, np.nan, 6, 7],
+                             dims='time')]:
+            for center in (False, True):
+                for window in [1, 2, 3, 4]:
+                    for min_periods in [None, 1, 2, 3]:
+                        if min_periods is not None and window < min_periods:
+                            min_periods = window
+                        # we can use this rolling object for all methods below
+                        rolling_obj = da.rolling(time=window, center=center,
+                                                 min_periods=min_periods)
+                        for name in ['sum', 'mean', 'min', 'max']:
+                            # add nan prefix to numpy methods to get similar
+                            # behavior as bottleneck
+                            actual = rolling_obj.reduce(
+                                getattr(np, 'nan%s' % name))
                             expected = getattr(rolling_obj, name)()
                             self.assertDataArrayAllClose(actual, expected)
 
