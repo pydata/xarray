@@ -8,8 +8,8 @@ from xarray import DataArray
 import xarray.plot as xplt
 from xarray.plot.plot import _infer_interval_breaks
 from xarray.plot.utils import (_determine_cmap_params,
-                             _build_discrete_cmap,
-                             _color_palette)
+                               _build_discrete_cmap,
+                               _color_palette)
 
 from . import TestCase, requires_matplotlib, incompatible_2_6
 
@@ -772,6 +772,16 @@ class TestPcolormesh(Common2dMixin, PlotTestCase):
         ax = plt.gca()
         self.assertEqual('x2d', ax.get_xlabel())
         self.assertEqual('y2d', ax.get_ylabel())
+
+    def test_dont_infer_interval_breaks_for_cartopy(self):
+        # Regression for GH 781
+        ax = plt.gca()
+        # Simulate a Cartopy Axis
+        setattr(ax, 'projection', True)
+        artist = self.plotmethod(x='x2d', y='y2d', ax=ax)
+        self.assertTrue(isinstance(artist, mpl.collections.QuadMesh))
+        # Let cartopy handle the axis limits and artist size
+        self.assertTrue(artist.get_array().size <= self.darray.size)
 
 
 class TestImshow(Common2dMixin, PlotTestCase):
