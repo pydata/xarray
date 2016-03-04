@@ -97,6 +97,8 @@ stack = _dask_or_eager_func('stack', npcompat, list_of_args=True)
 array_all = _dask_or_eager_func('all')
 array_any = _dask_or_eager_func('any')
 
+tensordot = _dask_or_eager_func('tensordot', n_array_args=2)
+
 
 def _interleaved_indices_required(indices):
     """With dask, we care about data locality and would rather avoid splitting

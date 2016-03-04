@@ -300,3 +300,8 @@ class TestDataArrayAndDataset(DaskTestCase):
                              dims=['w', 'z'])
         assert stacked.data.chunks == expected.data.chunks
         self.assertLazyAndIdentical(expected, stacked)
+
+    def test_dot(self):
+        eager = self.eager_array.dot(self.eager_array[0])
+        lazy = self.lazy_array.dot(self.lazy_array[0])
+        self.assertLazyAndAllClose(eager, lazy)

@@ -18,6 +18,8 @@ v0.7.2 (unreleased)
 
 Enhancements
 ~~~~~~~~~~~~
+-xarray version of np.dot :py:meth:`~DataArray.dot`. Performs dot product of 
+two DataArrays along their shared dims
 
 - Rolling window operations on DataArray objects are now supported via a new
   :py:meth:`xarray.DataArray.rolling` method.
