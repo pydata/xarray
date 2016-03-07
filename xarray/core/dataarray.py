@@ -1366,6 +1366,84 @@ class DataArray(AbstractArray, BaseDataObject):
         ds = self._to_temp_dataset().roll(**shifts)
         return self._from_temp_dataset(ds)
 
+    def average(self, dim=None, axis=None, weights=None, returned=False,
+                keep_attrs=False, **kwargs):
+        """
+        Reduce this DataArray's data by applying `average` along some
+        dimension(s).
+
+        Parameters
+        ----------
+        dim : str or sequence of str, optional
+            Dimension(s) over which to apply `average`.
+        axis : int or sequence of int, optional
+            Axis(es) over which to apply `average`. Only one of the 'dim'
+            and 'axis' arguments can be supplied. If neither are supplied, then
+            `average` is calculated over axes.
+        weights : DataArray, optional
+            An array of weights associated with the values in this DataArray.
+            Each value in a contributes to the average according to its
+            associated weight. The weights array can either be 1-D (in which
+            case its length must be the size of a along the given axis or
+            dimension) or of he same shape this DataArray. If weights=None, then
+            all data in this DataArray are assumed to have a weight equal to one.
+        keep_attrs : bool, optional
+            If True, the attributes (`attrs`) will be copied from the original
+            object to the new one.  If False (default), the new object will be
+            returned without attributes.
+        returned : bool, optional
+            Default is False. If True, the tuple (average, sum_of_weights) is
+            returned, otherwise only the average is returned. If weights=None,
+            sum_of_weights is equivalent to the number of elements over which
+            the average is taken.
+
+        **kwargs : dict
+            Additional keyword arguments passed on to `sum`.
+
+        Returns
+        -------
+        reduced, [sum_of_weights] : DataArray, [DataArray]
+            New DataArray object with `average` applied to its data and the
+            indicated dimension(s) removed. When returned is True, return a
+            tuple with the average as the first element and the sum of the
+            weights as the second element. The return type is Float if a is of
+            integer type, otherwise it is of the same type as a.
+            sum_of_weights is of the same type as average.
+
+        See Also
+        --------
+        Dataset.average
+        DataArray.mean
+        """
+
+        if weights is None:
+            mean = self.mean(dim=dim, axis=axis, keep_attrs=keep_attrs)
+            if not returned:
+                return mean
+            else:
+                return (mean, DataArray(self.size))
+        elif not isinstance(weights, DataArray):
+            # TODO: coerce weights of other types to dataarray?
+            raise TypeError("weights must be a DataArray")
+
+        # check that weights.dims are in DataArray
+        invalid = set([d for d in weights.dims if d not in self.dims])
+        if invalid:
+            raise ValueError("Invalid dims in weights: %s" % " ".join(invalid))
+
+        # if NaNs are present, we need individual weights
+        valid = self.notnull()
+        sum_of_weights = weights.where(valid).sum(dim=dim, axis=axis)
+
+        w = weights / sum_of_weights
+
+        average = (self * w).sum(dim=dim, axis=axis, keep_attrs=keep_attrs)
+
+        if not returned:
+            return average
+        else:
+            return average, sum_of_weights
+
     @property
     def real(self):
         return self._replace(self.variable.real)

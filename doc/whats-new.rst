@@ -52,6 +52,9 @@ two DataArrays along their shared dims
       * x        (x) int64 0 1 2
       * y        (y) int64 0 1 2 3 4
 
+- Add :py:meth:`~xray.DataArray.average` and :py:meth:`~xray.Dataset.plot`
+  methods (:issue:`650`).
+
 Bug fixes
 ~~~~~~~~~
 

@@ -260,6 +260,7 @@ Computation
 :py:attr:`~DataArray.max`
 :py:attr:`~DataArray.mean`
 :py:attr:`~DataArray.median`
+:py:attr:`~DataArray.average`
 :py:attr:`~DataArray.min`
 :py:attr:`~DataArray.prod`
 :py:attr:`~DataArray.sum`

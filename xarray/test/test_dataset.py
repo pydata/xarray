@@ -2087,6 +2087,24 @@ class TestDataset(TestCase):
         with self.assertRaisesRegexp(TypeError, 'non-integer axis'):
             ds.reduce(mean_only_one_axis, ['x', 'y'])
 
+    def test_average(self):
+        # same as mean without weights
+        a = np.array([1.0, 2.0, 3.0])
+        da = DataArray(a, dims=('dim', ))
+        ds = da.to_dataset(name='x')
+        self.assertDatasetIdentical(ds.mean(), ds.average())
+
+        # using weights
+        weights = np.array([0.5, 0.25, 0.25])
+        dweights = DataArray(weights, dims=('dim', ))
+        actual = ds.average(weights=dweights)
+        expected = 1.75
+        self.assertEqual(actual, expected)
+
+        # raise error if trying to return sum of weights
+        with self.assertRaisesRegexp(ValueError, 'returned argument is not'):
+            ds.average(weights=dweights, returned=True)
+
     def test_count(self):
         ds = Dataset({'x': ('a', [np.nan, 1]), 'y': 0, 'z': np.nan})
         expected = Dataset({'x': 1, 'y': 1, 'z': 0})

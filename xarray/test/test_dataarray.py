@@ -992,6 +992,42 @@ class TestDataArray(TestCase):
         expected = DataArray(5, {'c': -999})
         self.assertDataArrayIdentical(expected, actual)
 
+    def test_average(self):
+        # same as mean without weights
+        a = np.array([1.0, 2.0, 3.0])
+        da = DataArray(a, dims=('dim', ))
+        self.assertDataArrayIdentical(da.mean(), da.average())
+
+        # using weights
+        weights = np.array([0.5, 0.25, 0.25])
+        dweights = DataArray(weights, dims=('dim', ))
+        actual = da.average(weights=dweights)
+        expected = 1.75
+        self.assertEqual(actual, expected)
+
+        # returns sum of weights
+        dweights = DataArray([0.5, 1.25, 0.25], dims=('dim', ))
+        actual = da.average(weights=dweights, returned=True)[1]
+        self.assertEqual(actual, 2)
+
+        # raises if weights are not a DataArray
+        with self.assertRaisesRegexp(TypeError, 'weights must be a DataArray'):
+            da.average(weights=[1, 2, 3])
+
+        # make sure dims match
+        with self.assertRaisesRegexp(ValueError, 'Invalid dims'):
+            weights = DataArray([0.5, 0.25, 0.25], dims=('notadim', ))
+            actual = da.average(weights=weights)
+
+        # case when weights has less dims than DataArray
+        a = np.random.random(size=(3, 4, 5))
+        da = DataArray(a, dims=('time', 'y', 'x'))
+        weights = np.array([1, 2, 3])
+        dweights = DataArray(weights, dims=('time', ))
+        expected = np.average(a, weights=weights, axis=0)
+        actual = da.average(weights=dweights, dim='time')
+        np.testing.assert_allclose(actual.values, expected)
+
     def test_reduce_keep_attrs(self):
         # Test dropped attrs
         vm = self.va.mean()
