@@ -540,8 +540,10 @@ def pcolormesh(x, y, z, ax, **kwargs):
 
     Wraps matplotlib.pyplot.pcolormesh
     """
-    x = _infer_interval_breaks(x)
-    y = _infer_interval_breaks(y)
+
+    if not hasattr(ax, 'projection'):
+        x = _infer_interval_breaks(x)
+        y = _infer_interval_breaks(y)
 
     primitive = ax.pcolormesh(x, y, z, **kwargs)
 

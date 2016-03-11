@@ -55,6 +55,11 @@ two DataArrays along their shared dims
 Bug fixes
 ~~~~~~~~~
 
+- Fixed an issue where plots using pcolormesh and Cartopy axes were being distorted
+  by the inference of the axis interval breaks. This change chooses not to modify
+  the coordinate variables when the axes have the attribute ``projection``, allowing
+  Cartopy to handle the extent of pcolormesh plots (:issue:`781`).
+
 .. _whats-new.0.7.1:
 
 v0.7.1 (16 February 2016)
