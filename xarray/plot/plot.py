@@ -378,7 +378,8 @@ def _plot2d(plotfunc):
         zval = darray.to_masked_array(copy=False)
 
         # May need to transpose for correct x, y labels
-        if xlab == darray.dims[0]:
+        # xlab may be the name of a coord, we have to check for dim names
+        if darray[xlab].dims[-1] == darray.dims[0]:
             zval = zval.T
 
         _ensure_plottable(xval, yval)

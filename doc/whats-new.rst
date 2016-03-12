@@ -59,6 +59,8 @@ Bug fixes
   by the inference of the axis interval breaks. This change chooses not to modify
   the coordinate variables when the axes have the attribute ``projection``, allowing
   Cartopy to handle the extent of pcolormesh plots (:issue:`781`).
+- 2D plots now better handle additional coordinates which are not linked to the
+  dimensions of ``DataArray`` (:issue:`788`).
 
 .. _whats-new.0.7.1:
 

@@ -588,6 +588,32 @@ class Common2dMixin:
         self.assertIn('y', self.darray.coords)
         self.plotmethod(y='y', x='x')
 
+    def test_non_linked_coords(self):
+        # plot with coordinate names that are not dimensions
+        self.darray.coords['newy'] = self.darray.y + 150
+        # Normal case, without transpose
+        self.plotfunc(self.darray, x='x', y='newy')
+        ax = plt.gca()
+        self.assertEqual('x', ax.get_xlabel())
+        self.assertEqual('newy', ax.get_ylabel())
+        # ax limits might change bewteen plotfuncs
+        # simply ensure that these high coords were passed over
+        self.assertTrue(np.min(ax.get_ylim()) > 100.)
+
+    def test_non_linked_coords_transpose(self):
+        # plot with coordinate names that are not dimensions,
+        # and with transposed y and x axes
+        # This used to raise an error with pcolormesh and contour
+        # https://github.com/pydata/xarray/issues/788
+        self.darray.coords['newy'] = self.darray.y + 150
+        self.plotfunc(self.darray, x='newy', y='x')
+        ax = plt.gca()
+        self.assertEqual('newy', ax.get_xlabel())
+        self.assertEqual('x', ax.get_ylabel())
+        # ax limits might change bewteen plotfuncs
+        # simply ensure that these high coords were passed over
+        self.assertTrue(np.min(ax.get_xlim()) > 100.)
+
     def test_default_title(self):
         a = DataArray(easy_array((4, 3, 2)), dims=['a', 'b', 'c'])
         a.coords['d'] = u'foo'
