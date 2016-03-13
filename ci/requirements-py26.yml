@@ -9,7 +9,6 @@ dependencies:
   - pandas=0.16.2
   - matplotlib=1.4
   - openssl
-  - toolz
   # no seaborn
   - scipy=0.16.0
   - unittest2
@@ -19,3 +18,4 @@ dependencies:
     - cyordereddict
     - dask
     - h5netcdf
+    - toolz
