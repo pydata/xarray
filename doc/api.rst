@@ -144,7 +144,6 @@ Computation
 :py:attr:`~Dataset.round`
 :py:attr:`~Dataset.real`
 :py:attr:`~Dataset.T`
-:py:attr:`~DataArray.dot`
 
 **Grouped operations**:
 :py:attr:`~core.groupby.DatasetGroupBy.assign`
@@ -251,6 +250,7 @@ Computation
    DataArray.resample
    DataArray.get_axis_num
    DataArray.diff
+   DataArray.dot
 
 **Aggregation**:
 :py:attr:`~DataArray.all`

@@ -1,3 +1,5 @@
+.. currentmodule:: xarray
+
 What's New
 ==========
 
@@ -13,16 +15,21 @@ What's New
 
 .. _whats-new.0.7.2:
 
-v0.7.2 (unreleased)
--------------------
+v0.7.2 (13 March 2016)
+----------------------
+
+This release includes two new, entirely backwards compatible features and
+several bug fixes.
 
 Enhancements
 ~~~~~~~~~~~~
--xarray version of np.dot :py:meth:`~DataArray.dot`. Performs dot product of 
-two DataArrays along their shared dims
+
+- New DataArray method :py:meth:`DataArray.dot` for calculating the dot
+  product of two DataArrays along shared dimensions. By
+  `Dean Pospisil <https://github.com/deanpospisil>`_.
 
 - Rolling window operations on DataArray objects are now supported via a new
-  :py:meth:`xarray.DataArray.rolling` method.
+  :py:meth:`DataArray.rolling` method. For example:
 
   .. ipython::
     :verbatim:
@@ -52,15 +59,21 @@ two DataArrays along their shared dims
       * x        (x) int64 0 1 2
       * y        (y) int64 0 1 2 3 4
 
+  See :ref:`comput.rolling` for more details. By
+  `Joe Hamman <https://github.com/jhamman>`_.
+
 Bug fixes
 ~~~~~~~~~
 
 - Fixed an issue where plots using pcolormesh and Cartopy axes were being distorted
   by the inference of the axis interval breaks. This change chooses not to modify
   the coordinate variables when the axes have the attribute ``projection``, allowing
-  Cartopy to handle the extent of pcolormesh plots (:issue:`781`).
-- 2D plots now better handle additional coordinates which are not linked to the
-  dimensions of ``DataArray`` (:issue:`788`).
+  Cartopy to handle the extent of pcolormesh plots (:issue:`781`). By
+  `Joe Hamman <https://github.com/jhamman>`_.
+
+- 2D plots now better handle additional coordinates which are not ``DataArray``
+  dimensions (:issue:`788`). By `Fabien Maussion <https://github.com/fmaussion>`_.
+
 
 .. _whats-new.0.7.1:
 
