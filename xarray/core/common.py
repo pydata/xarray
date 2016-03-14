@@ -345,7 +345,10 @@ class BaseDataObject(AttrAccessMixin):
 
     def rolling(self, min_periods=None, center=False, **windows):
         """
-        Moving window object.
+        Rolling window object.
+
+        Rolling window aggregations are much faster when bottleneck is
+        installed.
 
         Parameters
         ----------

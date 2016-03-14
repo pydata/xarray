@@ -25,7 +25,7 @@ For accelerating xarray
 ~~~~~~~~~~~~~~~~~~~~~~~
 
 - `bottleneck <https://github.com/kwgoodman/bottleneck>`__: speeds up
-  NaN-skipping aggregations by a large factor
+  NaN-skipping and rolling window aggregations by a large factor
 - `cyordereddict <https://github.com/shoyer/cyordereddict>`__: speeds up most
   internal operations with xarray data structures
 
