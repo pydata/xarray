@@ -3,6 +3,7 @@ import itertools
 import logging
 import time
 import traceback
+import threading
 from collections import Mapping
 
 from ..conventions import cf_encoder
@@ -162,7 +163,11 @@ class ArrayWriter(object):
     def sync(self):
         if self.sources:
             import dask.array as da
-            da.store(self.sources, self.targets)
+            import dask
+            if dask.__version__ > '0.8.1':
+                da.store(self.sources, self.targets, lock=threading.Lock())
+            else:
+                da.store(self.sources, self.targets)
             self.sources = []
             self.targets = []
 
