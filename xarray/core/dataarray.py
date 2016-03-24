@@ -600,7 +600,7 @@ class DataArray(AbstractArray, BaseDataObject):
         ds = self._to_temp_dataset().isel(**indexers)
         return self._from_temp_dataset(ds)
 
-    def sel(self, method=None, tolerance=None, drop_levels=True,  **indexers):
+    def sel(self, method=None, tolerance=None, drop_level=True,  **indexers):
         """Return a new DataArray whose dataset is given by selecting
         index labels along the specified dimension(s).
 
@@ -613,7 +613,7 @@ class DataArray(AbstractArray, BaseDataObject):
             self, indexers, method=method, tolerance=tolerance
         )
         obj = self.isel(**pos_indexers)
-        if drop_levels:
+        if drop_level:
             return obj._replace_indexes(new_indexes)
         else:
             return obj
