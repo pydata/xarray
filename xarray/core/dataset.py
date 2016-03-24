@@ -419,6 +419,20 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject):
             obj = self._construct_direct(variables, coord_names, dims, attrs)
         return obj
 
+    def _replace_indexes(self, indexes):
+        obj = self
+        for dim, idx in iteritems(indexes):
+            obj = obj.rename({dim: idx.name})
+            new_coord = Coordinate(idx.name, idx)
+            variables = OrderedDict()
+            for k, v in iteritems(obj._variables):
+                if k == idx.name:
+                    variables[k] = new_coord
+                else:
+                    variables[k] = v
+            obj = obj._replace_vars_and_dims(variables)
+        return obj
+
     def copy(self, deep=False):
         """Returns a copy of this dataset.
 
@@ -921,7 +935,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject):
             variables[name] = var.isel(**var_indexers)
         return self._replace_vars_and_dims(variables)
 
-    def sel(self, method=None, tolerance=None, **indexers):
+    def sel(self, method=None, tolerance=None, drop_levels=True, **indexers):
         """Returns a new dataset with each array indexed by tick labels
         along the specified dimension(s).
 
@@ -952,9 +966,15 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject):
             matches. The values of the index at the matching locations most
             satisfy the equation ``abs(index[indexer] - target) <= tolerance``.
             Requires pandas>=0.17.
+        drop_levels : bool
+            If True (default), rename dimension and replace coordinate
+            for multi-index reduced into a single index (only if a dict-like
+            object is provided as indexer).
         **indexers : {dim: indexer, ...}
             Keyword arguments with names matching dimensions and values given
-            by scalars, slices or arrays of tick labels.
+            by scalars, slices or arrays of tick labels. For dimensions with
+            multi-index, the indexer may also be a dict-like object with keys
+            matching index level names.
 
         Returns
         -------
@@ -972,8 +992,14 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject):
         Dataset.isel_points
         DataArray.sel
         """
-        return self.isel(**indexing.remap_label_indexers(
-            self, indexers, method=method, tolerance=tolerance))
+        pos_indexers, new_indexes = indexing.remap_label_indexers(
+            self, indexers, method=method, tolerance=tolerance
+        )
+        obj = self.isel(**pos_indexers)
+        if drop_levels:
+            return obj._replace_indexes(new_indexes)
+        else:
+            return obj
 
     def isel_points(self, dim='points', **indexers):
         """Returns a new dataset with each array indexed pointwise along the
@@ -1114,9 +1140,10 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject):
         Dataset.isel_points
         DataArray.sel_points
         """
-        pos_indexers = indexing.remap_label_indexers(
-            self, indexers, method=method, tolerance=tolerance)
-        return self.isel_points(dim=dim, **pos_indexers)
+        obj, pos_indexers = indexing.remap_label_indexers(
+            self, indexers, method=method, tolerance=tolerance
+        )
+        return obj.isel_points(dim=dim, **pos_indexers)
 
     def reindex_like(self, other, method=None, tolerance=None, copy=True):
         """Conform this object onto the indexes of another object, filling

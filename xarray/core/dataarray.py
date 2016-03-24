@@ -88,7 +88,9 @@ class _LocIndexer(object):
     def _remap_key(self, key):
         def lookup_positions(dim, labels):
             index = self.data_array.indexes[dim]
-            return indexing.convert_label_indexer(index, labels)
+            indexer, new_idx = indexing.convert_label_indexer(index, labels)
+            # don't replace indexes in this case.
+            return indexer
 
         if utils.is_dict_like(key):
             return dict((dim, lookup_positions(dim, labels))
@@ -243,6 +245,14 @@ class DataArray(AbstractArray, BaseDataObject):
             coords = OrderedDict((k, v) for k, v in self._coords.items()
                                  if set(v.dims) <= allowed_dims)
         return self._replace(variable, coords, name)
+
+    def _replace_indexes(self, indexes):
+        obj = self
+        for dim, idx in iteritems(indexes):
+            obj = obj.rename({dim: idx.name})
+            new_coord = Coordinate(idx.name, idx)
+            obj = obj._replace(coords={idx.name: new_coord})
+        return obj
 
     __this_array = _ThisArray()
 
@@ -590,7 +600,7 @@ class DataArray(AbstractArray, BaseDataObject):
         ds = self._to_temp_dataset().isel(**indexers)
         return self._from_temp_dataset(ds)
 
-    def sel(self, method=None, tolerance=None, **indexers):
+    def sel(self, method=None, tolerance=None, drop_levels=True,  **indexers):
         """Return a new DataArray whose dataset is given by selecting
         index labels along the specified dimension(s).
 
@@ -599,8 +609,14 @@ class DataArray(AbstractArray, BaseDataObject):
         Dataset.sel
         DataArray.isel
         """
-        return self.isel(**indexing.remap_label_indexers(
-            self, indexers, method=method, tolerance=tolerance))
+        pos_indexers, new_indexes = indexing.remap_label_indexers(
+            self, indexers, method=method, tolerance=tolerance
+        )
+        obj = self.isel(**pos_indexers)
+        if drop_levels:
+            return obj._replace_indexes(new_indexes)
+        else:
+            return obj
 
     def isel_points(self, dim='points', **indexers):
         """Return a new DataArray whose dataset is given by pointwise integer
