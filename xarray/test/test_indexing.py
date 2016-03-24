@@ -85,6 +85,8 @@ class TestIndexers(TestCase):
             indexing.convert_label_indexer(index, [0])
         with self.assertRaises(KeyError):
             indexing.convert_label_indexer(index, 0)
+        with self.assertRaises(ValueError):
+            indexing.convert_label_indexer(index, {'somelevel': 0})
 
     def test_convert_unsorted_datetime_index_raises(self):
         index = pd.to_datetime(['2001', '2000', '2002'])
@@ -100,9 +102,9 @@ class TestIndexers(TestCase):
 
         def test_indexer(x):
             return indexing.remap_label_indexers(data, {'x': x})
-        self.assertEqual({'x': 0}, test_indexer(1))
-        self.assertEqual({'x': 0}, test_indexer(np.int32(1)))
-        self.assertEqual({'x': 0}, test_indexer(Variable([], 1)))
+        self.assertEqual({'x': 0}, test_indexer(1)[0])
+        self.assertEqual({'x': 0}, test_indexer(np.int32(1))[0])
+        self.assertEqual({'x': 0}, test_indexer(Variable([], 1))[0])
 
 
 class TestLazyArray(TestCase):

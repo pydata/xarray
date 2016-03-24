@@ -1140,10 +1140,10 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject):
         Dataset.isel_points
         DataArray.sel_points
         """
-        obj, pos_indexers = indexing.remap_label_indexers(
+        pos_indexers, new_indexes = indexing.remap_label_indexers(
             self, indexers, method=method, tolerance=tolerance
         )
-        return obj.isel_points(dim=dim, **pos_indexers)
+        return self.isel_points(dim=dim, **pos_indexers)
 
     def reindex_like(self, other, method=None, tolerance=None, copy=True):
         """Conform this object onto the indexes of another object, filling
