@@ -89,23 +89,33 @@ class _LocIndexer(object):
         def lookup_positions(dim, labels):
             index = self.data_array.indexes[dim]
             indexer, new_idx = indexing.convert_label_indexer(index, labels)
-            # don't replace indexes in this case.
-            return indexer
+            return indexer, new_idx
 
         if utils.is_dict_like(key):
-            return dict((dim, lookup_positions(dim, labels))
-                        for dim, labels in iteritems(key))
+            pos_indexers, new_indexes = {}, {}
+            for dim, labels in iteritems(key):
+                pos_indexers[dim], idx = lookup_positions(dim, labels)
+                if idx is not None and not isinstance(idx, pd.MultiIndex):
+                    new_indexes[dim] = idx
+            return pos_indexers, new_indexes
+
         else:
             # expand the indexer so we can handle Ellipsis
+            # doesn't support dict-like key for multi-index
             key = indexing.expanded_indexer(key, self.data_array.ndim)
-            return tuple(lookup_positions(dim, labels) for dim, labels
-                         in zip(self.data_array.dims, key))
+            pos_indexers = tuple(
+                lookup_positions(dim, labels)[0] for dim, labels
+                in zip(self.data_array.dims, key)
+            )
+            return pos_indexers, {}
 
     def __getitem__(self, key):
-        return self.data_array[self._remap_key(key)]
+        pos_indexers, new_indexes = self._remap_key(key)
+        return self.data_array[pos_indexers]._replace_indexes(new_indexes)
 
     def __setitem__(self, key, value):
-        self.data_array[self._remap_key(key)] = value
+        pos_indexers, new_indexes = self._remap_key(key)
+        self.data_array[pos_indexers] = value
 
 
 class _ThisArray(object):
