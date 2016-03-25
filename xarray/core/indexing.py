@@ -199,8 +199,7 @@ def remap_label_indexers(data_obj, indexers, method=None, tolerance=None):
     if method is not None and not isinstance(method, str):
         raise TypeError('``method`` must be a string')
 
-    pos_indexers = dict()
-    new_indexes = dict()
+    pos_indexers, new_indexes = {}, {}
     for dim, label in iteritems(indexers):
         idxr, new_idx = convert_label_indexer(data_obj[dim].to_index(), label,
                                               dim, method, tolerance)
