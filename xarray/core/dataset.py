@@ -935,7 +935,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject):
             variables[name] = var.isel(**var_indexers)
         return self._replace_vars_and_dims(variables)
 
-    def sel(self, method=None, tolerance=None, drop_level=True, **indexers):
+    def sel(self, method=None, tolerance=None, **indexers):
         """Returns a new dataset with each array indexed by tick labels
         along the specified dimension(s).
 
@@ -966,10 +966,6 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject):
             matches. The values of the index at the matching locations most
             satisfy the equation ``abs(index[indexer] - target) <= tolerance``.
             Requires pandas>=0.17.
-        drop_level : bool
-            If True (default), rename dimension and replace coordinate
-            for multi-index reduced into a single index (only if a dict-like
-            object is provided as indexer).
         **indexers : {dim: indexer, ...}
             Keyword arguments with names matching dimensions and values given
             by scalars, slices or arrays of tick labels. For dimensions with
@@ -995,11 +991,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject):
         pos_indexers, new_indexes = indexing.remap_label_indexers(
             self, indexers, method=method, tolerance=tolerance
         )
-        obj = self.isel(**pos_indexers)
-        if drop_level:
-            return obj._replace_indexes(new_indexes)
-        else:
-            return obj
+        return self.isel(**pos_indexers)._replace_indexes(new_indexes)
 
     def isel_points(self, dim='points', **indexers):
         """Returns a new dataset with each array indexed pointwise along the
