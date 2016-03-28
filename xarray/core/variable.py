@@ -896,15 +896,24 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
         if dim is not None and axis is not None:
             raise ValueError("cannot supply both 'axis' and 'dim' arguments")
 
+        if getattr(func, 'keep_dims', False):
+            if dim is None and axis is None:
+                raise ValueError("must supply either single 'dim' or 'axis' argument to %s"
+                                 % (func.__name__))
+
         if dim is not None:
             axis = self.get_axis_num(dim)
         data = func(self.data if allow_lazy else self.values,
                     axis=axis, **kwargs)
 
-        removed_axes = (range(self.ndim) if axis is None
-                        else np.atleast_1d(axis) % self.ndim)
-        dims = [dim for n, dim in enumerate(self.dims)
-                if n not in removed_axes]
+        if getattr(data, 'shape', ()) == self.shape:
+            dims = self.dims
+        else:
+            removed_axes = (range(self.ndim) if axis is None
+                            else np.atleast_1d(axis) % self.ndim)
+            dims = [adim for n, adim in enumerate(self.dims)
+                    if n not in removed_axes]
+
 
         attrs = self._attrs if keep_attrs else None
 
