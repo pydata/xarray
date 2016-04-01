@@ -1949,6 +1949,63 @@ class TestDataset(TestCase):
         actual = ds.groupby('c').where(cond)
         self.assertDatasetIdentical(expected, actual)
 
+    def test_where_drop(self):
+        # if drop=True
+
+        # 1d
+        # data array case
+        array = DataArray(range(5), coords=[range(5)], dims=['x'])
+        expected = DataArray(range(5)[2:], coords=[range(5)[2:]], dims=['x'])
+        actual = array.where(array > 1, drop=True)
+        self.assertDatasetIdentical(expected, actual)
+
+        # dataset case
+        ds = Dataset({'a': array})
+        expected = Dataset({'a': expected})
+
+        actual = ds.where(ds > 1, drop=True)
+        self.assertDatasetIdentical(expected, actual)
+
+        actual = ds.where(ds.a > 1, drop=True)
+        self.assertDatasetIdentical(expected, actual)
+
+        with self.assertRaisesRegexp(TypeError, 'must be a'):
+            ds.where(np.arange(5) > 1, drop=True)
+
+        # 1d with odd coordinates
+        array = DataArray(np.array([2, 7, 1, 8, 3]), coords=[np.array([3, 1, 4, 5, 9])], dims=['x'])
+        expected = DataArray(np.array([7, 8, 3]), coords=[np.array([1, 5, 9])], dims=['x'])
+        actual = array.where(array > 2, drop=True)
+        self.assertDatasetIdentical(expected, actual)
+
+        # 1d multiple variables
+        ds = Dataset({'a': (('x'), [0, 1, 2, 3]), 'b': (('x'), [4, 5, 6, 7])})
+        expected = Dataset({'a': (('x'), [np.nan, 1, 2, 3]), 'b': (('x'), [4, 5, 6, np.nan])})
+        actual = ds.where((ds > 0) & (ds < 7), drop=True)
+        self.assertDatasetIdentical(expected, actual)
+
+        # 2d
+        ds = Dataset({'a': (('x', 'y'), [[0, 1], [2, 3]])})
+        expected = Dataset({'a': (('x', 'y'), [[np.nan, 1], [2, 3]])})
+        actual = ds.where(ds > 0, drop=True)
+        self.assertDatasetIdentical(expected, actual)
+
+        # 2d with odd coordinates
+        ds = Dataset({'a': (('x', 'y'), [[0, 1], [2, 3]])},
+                coords={'x': [4, 3], 'y': [1, 2],
+                    'z' : (['x','y'], [[np.e, np.pi], [np.pi*np.e, np.pi*3]])})
+        expected = Dataset({'a': (('x', 'y'), [[3]])},
+                coords={'x': [3], 'y': [2],
+                    'z' : (['x','y'], [[np.pi*3]])})
+        actual = ds.where(ds > 2, drop=True)
+        self.assertDatasetIdentical(expected, actual)
+
+        # 2d multiple variables
+        ds = Dataset({'a': (('x', 'y'), [[0, 1], [2, 3]]), 'b': (('x','y'), [[4, 5], [6, 7]])})
+        expected = Dataset({'a': (('x', 'y'), [[np.nan, 1], [2, 3]]), 'b': (('x', 'y'), [[4, 5], [6,7]])})
+        actual = ds.where(ds > 0, drop=True)
+        self.assertDatasetIdentical(expected, actual)
+
     def test_reduce(self):
         data = create_test_data()
 

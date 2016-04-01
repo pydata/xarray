@@ -13,6 +13,19 @@ What's New
     import xarray as xr
     np.random.seed(123456)
 
+.. _whats-new.0.7.3:
+
+v0.7.3 (unreleased)
+-------------------
+
+This release includes
+
+Enhancements
+~~~~~~~~~~~~
+- DataArray and Dataset method :py:meth:`where` now supports a ``drop=True``
+  option that clips coordinate elements that are fully masked.  By
+  `Phillip J. Wolfram <https://github.com/pwolfram>`_.
+
 .. _whats-new.0.7.2:
 
 v0.7.2 (13 March 2016)
