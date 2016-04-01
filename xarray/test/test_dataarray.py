@@ -8,6 +8,7 @@ from xarray import (align, broadcast, Dataset, DataArray,
                     Coordinate, Variable)
 from xarray.core.pycompat import iteritems, OrderedDict
 from xarray.core.common import _full_like
+from xarray.conventions import maybe_encode_datetime
 from . import (TestCase, ReturnItem, source_ndarray, unittest, requires_dask,
                requires_bottleneck)
 
@@ -1621,15 +1622,15 @@ class TestDataArray(TestCase):
                              [('distance', [-2, 2], {'units': 'meters'}),
                               ('time', pd.date_range('2000-01-01', periods=3))],
                              name='foo', attrs={'baz': 123})
-        expected_coords = [Coordinate('distance', [-2, 2]),
-                           Coordinate('time', [0, 1, 2])]
+
         actual = original.to_cdms2()
         self.assertArrayEqual(actual, original)
         self.assertEqual(actual.id, original.name)
         self.assertItemsEqual(actual.getAxisIds(), original.dims)
-        for axis, coord in zip(actual.getAxisList(), expected_coords):
+        for axis, coord_key in zip(actual.getAxisList(), original.coords):
+            coord = original.coords[coord_key]
             self.assertEqual(axis.id, coord.name)
-            self.assertArrayEqual(axis, coord.values)
+            self.assertArrayEqual(axis, maybe_encode_datetime(coord).values)
         self.assertEqual(actual.baz, original.attrs['baz'])
 
         component_times = actual.getAxis(1).asComponentTime()
@@ -1642,6 +1643,7 @@ class TestDataArray(TestCase):
     def test_to_and_from_iris(self):
         try:
             import iris
+            import cf_units
         except ImportError:
             raise unittest.SkipTest('iris not installed')
 
@@ -1649,7 +1651,7 @@ class TestDataArray(TestCase):
         coord_dict['distance'] = ('distance', [-2, 2], {'units': 'meters'})
         coord_dict['time'] = ('time', pd.date_range('2000-01-01', periods=3))
         coord_dict['height'] = 10
-        coord_dict['distance2'] = ('distance', [0, 1])
+        coord_dict['distance2'] = ('distance', [0, 1], {'foo': 'bar'})
 
         original = DataArray(np.arange(6).reshape(2, 3), coord_dict,
                              name='Temperature', attrs={'baz': 123,
@@ -1660,23 +1662,25 @@ class TestDataArray(TestCase):
                                                             'Fire Temperature'},
                              dims=('distance', 'time'))
 
-        expected_coords = [Coordinate('distance', [-2, 2]),
-                           Coordinate('time', [0, 1, 2]),
-                           Coordinate('height', [10]),
-                           Coordinate('distance2', [0, 1])]
-
         actual = original.to_iris()
         self.assertArrayEqual(actual.data, original.data)
         self.assertEqual(actual.var_name, original.name)
         self.assertItemsEqual([d.var_name for d in actual.dim_coords],
                               original.dims)
 
-        for coord, expected_coord in zip((actual.coords()), expected_coords):
-            self.assertEqual(coord.var_name, expected_coord.name)
-            self.assertArrayEqual(coord.points, expected_coord.values)
+        for coord, orginal_key in zip((actual.coords()), original.coords):
+            original_coord = original.coords[orginal_key]
+            self.assertEqual(coord.var_name, original_coord.name)
+            self.assertArrayEqual(coord.points,
+                                  maybe_encode_datetime(original_coord).values)
             self.assertEqual(actual.coord_dims(coord),
                              original.get_axis_num
                              (original.coords[coord.var_name].dims))
+
+        self.assertEqual(actual.coord('distance2').attributes['foo'],
+                         original.coords['distance2'].attrs['foo'])
+        self.assertEqual(actual.coord('distance').units,
+                         cf_units.Unit(original.coords['distance'].units))
         self.assertEqual(actual.attributes['baz'], original.attrs['baz'])
         self.assertEqual(actual.standard_name, original.attrs['standard_name'])
 
