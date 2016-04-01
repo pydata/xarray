@@ -1639,6 +1639,50 @@ class TestDataArray(TestCase):
         roundtripped = DataArray.from_cdms2(actual)
         self.assertDataArrayIdentical(original, roundtripped)
 
+    def test_to_and_from_iris(self):
+        try:
+            import iris
+        except ImportError:
+            raise unittest.SkipTest('iris not installed')
+
+        coord_dict = OrderedDict()
+        coord_dict['distance'] = ('distance', [-2, 2], {'units': 'meters'})
+        coord_dict['time'] = ('time', pd.date_range('2000-01-01', periods=3))
+        coord_dict['height'] = 10
+        coord_dict['distance2'] = ('distance', [0, 1])
+
+        original = DataArray(np.arange(6).reshape(2, 3), coord_dict,
+                             name='Temperature', attrs={'baz': 123,
+                                                        'units': 'Kelvin',
+                                                        'standard_name':
+                                                            'fire_temperature',
+                                                        'long_name':
+                                                            'Fire Temperature'},
+                             dims=('distance', 'time'))
+
+        expected_coords = [Coordinate('distance', [-2, 2]),
+                           Coordinate('time', [0, 1, 2]),
+                           Coordinate('height', [10]),
+                           Coordinate('distance2', [0, 1])]
+
+        actual = original.to_iris()
+        self.assertArrayEqual(actual.data, original.data)
+        self.assertEqual(actual.var_name, original.name)
+        self.assertItemsEqual([d.var_name for d in actual.dim_coords],
+                              original.dims)
+
+        for coord, expected_coord in zip((actual.coords()), expected_coords):
+            self.assertEqual(coord.var_name, expected_coord.name)
+            self.assertArrayEqual(coord.points, expected_coord.values)
+            self.assertEqual(actual.coord_dims(coord),
+                             original.get_axis_num
+                             (original.coords[coord.var_name].dims))
+        self.assertEqual(actual.attributes['baz'], original.attrs['baz'])
+        self.assertEqual(actual.standard_name, original.attrs['standard_name'])
+
+        roundtripped = DataArray.from_iris(actual)
+        self.assertDataArrayIdentical(original, roundtripped)
+
     def test_to_dataset_whole(self):
         unnamed = DataArray([1, 2], dims='x')
         with self.assertRaisesRegexp(ValueError, 'unable to convert unnamed'):
