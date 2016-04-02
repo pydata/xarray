@@ -1652,6 +1652,7 @@ class TestDataArray(TestCase):
         coord_dict['time'] = ('time', pd.date_range('2000-01-01', periods=3))
         coord_dict['height'] = 10
         coord_dict['distance2'] = ('distance', [0, 1], {'foo': 'bar'})
+        coord_dict['time2'] = (('distance', 'time'), [[0, 1, 2], [2, 3, 4]])
 
         original = DataArray(np.arange(6).reshape(2, 3), coord_dict,
                              name='Temperature', attrs={'baz': 123,

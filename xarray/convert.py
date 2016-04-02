@@ -7,13 +7,14 @@ from .core.pycompat import OrderedDict
 from .conventions import (
     maybe_encode_timedelta, maybe_encode_datetime, decode_cf)
 
-cdms2_ignored_attrs = {'name', 'tileIndex'}
-iris_forbidden_keys = {'standard_name', 'long_name', 'units', 'bounds', 'axis',
-                       'calendar', 'leap_month', 'leap_year', 'month_lengths',
-                       'coordinates', 'grid_mapping', 'climatology',
-                       'cell_methods', 'formula_terms', 'compress',
-                       'missing_value', 'add_offset', 'scale_factor',
-                       'valid_max', 'valid_min', 'valid_range', '_FillValue'}
+cdms2_ignored_attrs = set(['name', 'tileIndex'])
+iris_forbidden_keys = set(
+    ['standard_name', 'long_name', 'units', 'bounds', 'axis',
+     'calendar', 'leap_month', 'leap_year', 'month_lengths',
+     'coordinates', 'grid_mapping', 'climatology',
+     'cell_methods', 'formula_terms', 'compress',
+     'missing_value', 'add_offset', 'scale_factor',
+     'valid_max', 'valid_min', 'valid_range', '_FillValue'])
 
 
 def encode(var):
@@ -77,7 +78,7 @@ def to_iris(dataarray):
         _args = {'attributes': filter_attrs(attrs, iris_forbidden_keys)}
         _args.update(check_attrs(attrs, ('standard_name', 'long_name',)))
         _unit_args = check_attrs(coord.attrs, ('calendar',))
-        if attrs.has_key('units'):
+        if 'units' in attrs:
             _args['units'] = cf_units.Unit(attrs['units'], **_unit_args)
         return _args
 
@@ -88,13 +89,14 @@ def to_iris(dataarray):
         coord = encode(dataarray.coords[coord_name])
         coord_args = get_args(coord.attrs)
         coord_args['var_name'] = coord_name
-        iris_coord = iris.coords.DimCoord(coord.values, **coord_args)
         axis = None
         if coord.dims:
             axis = dataarray.get_axis_num(coord.dims)
         if coord_name in dataarray.dims:
+            iris_coord = iris.coords.DimCoord(coord.values, **coord_args)
             dim_coords.append((iris_coord, axis))
         else:
+            iris_coord = iris.coords.AuxCoord(coord.values, **coord_args)
             aux_coords.append((iris_coord, axis))
 
     args = get_args(dataarray.attrs)
@@ -125,7 +127,7 @@ def from_iris(cube):
 
     for coord in cube.coords():
         coord_attrs = get_attr(coord)
-        coord_dims = [cube.coords()[i].var_name for i in cube.coord_dims(coord)]
+        coord_dims = [dims[i] for i in cube.coord_dims(coord)]
         if coord_dims:
             coords[coord.var_name] = (coord_dims, coord.points, coord_attrs)
         else:
