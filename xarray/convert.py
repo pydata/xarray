@@ -123,6 +123,8 @@ def from_iris(cube):
 
     name = cube.var_name
     dims = [dim.var_name for dim in cube.dim_coords]
+    if not dims:
+        dims = ["dim{}".format(i) for i in range(cube.data.ndim)]
     coords = OrderedDict()
 
     for coord in cube.coords():
