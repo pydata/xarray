@@ -117,7 +117,7 @@ def open_dataset(filename_or_obj, group=None, decode_cf=True,
     decode_coords : bool, optional
         If True, decode the 'coordinates' attribute to identify coordinates in
         the resulting dataset.
-    engine : {'netcdf4', 'scipy', 'pydap', 'h5netcdf', 'pynio'}, optional
+    engine : {'netcdf4', 'scipy', 'pydap', 'h5netcdf', 'pynio', 'rasterio'}, optional
         Engine to use when reading files. If not provided, the default engine
         is chosen based on available dependencies, with a preference for
         'netcdf4'.
@@ -218,6 +218,8 @@ def open_dataset(filename_or_obj, group=None, decode_cf=True,
                 store = backends.H5NetCDFStore(filename_or_obj, group=group)
             elif engine == 'pynio':
                 store = backends.NioDataStore(filename_or_obj)
+            elif engine == 'rasterio':
+                store = backends.RasterioDataStore(filename_or_obj)
             else:
                 raise ValueError('unrecognized engine for open_dataset: %r'
                                  % engine)
