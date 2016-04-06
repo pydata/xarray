@@ -1545,8 +1545,6 @@ class TestDataset(TestCase):
 
     def test_groupby_errors(self):
         data = create_test_data()
-        with self.assertRaisesRegexp(ValueError, 'must be 1 dimensional'):
-            data.groupby('var1')
         with self.assertRaisesRegexp(ValueError, 'must have a name'):
             data.groupby(np.arange(10))
         with self.assertRaisesRegexp(ValueError, 'length does not match'):

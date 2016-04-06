@@ -1304,6 +1304,53 @@ class TestDataArray(TestCase):
         expected = array  # should be a no-op
         self.assertDataArrayIdentical(expected, actual)
 
+    def make_groupby_multidim_example_array(self):
+        return DataArray([[0,1],[2,3]],
+                        coords={'lon': (['ny','nx'], [[30,40],[40,50]] ),
+                                'lat': (['ny','nx'], [[10,10],[20,20]] ),},
+                        dims=['ny','nx'])
+
+    def test_groupby_multidim(self):
+        array = self.make_groupby_multidim_example_array()
+        for dim, expected_sum in [
+                ('lon', DataArray([0, 3, 3], coords={'lon': [30,40,50]})),
+                ('lat', DataArray([1,5], coords={'lat': [10,20]}))]:
+            actual_sum = array.groupby(dim).sum()
+            self.assertDataArrayIdentical(expected_sum, actual_sum)
+
+    def test_groupby_multidim_apply(self):
+        array = self.make_groupby_multidim_example_array()
+        actual = array.groupby('lon').apply(
+                lambda x : x - x.mean(), shortcut=False)
+        expected = DataArray([[0.,-0.5],[0.5,0.]],
+                    coords=array.coords, dims=array.dims)
+        self.assertDataArrayIdentical(expected, actual)
+
+    def test_groupby_bins(self):
+        array = DataArray(np.arange(4), dims='dim_0')
+        # bins follow conventions for pandas.cut
+        # http://pandas.pydata.org/pandas-docs/stable/generated/pandas.cut.html
+        bins = [0,1.5,5]
+        bin_coords = ['(0, 1.5]', '(1.5, 5]']
+        expected = DataArray([1,5], dims='dim_0', coords={'dim_0': bin_coords})
+        # the problem with this is that it overwrites the dimensions of array!
+        #actual = array.groupby('dim_0', bins=bins).sum()
+        actual = array.groupby('dim_0', bins=bins).apply(
+                                    lambda x : x.sum(), shortcut=False)
+        self.assertDataArrayIdentical(expected, actual)
+        # make sure original array dims are unchanged
+        # (would fail with shortcut=True above)
+        self.assertEqual(len(array.dim_0), 4)
+
+    def test_groupby_bins_multidim(self):
+        array = self.make_groupby_multidim_example_array()
+        bins = [0,15,20]
+        bin_coords = ['(0, 15]', '(15, 20]']
+        expected = DataArray([1,5], dims='lat', coords={'lat': bin_coords})
+        actual = array.groupby('lat', bins=bins).apply(
+                                    lambda x : x.sum(), shortcut=False)
+        self.assertDataArrayIdentical(expected, actual)
+
     def make_rolling_example_array(self):
         times = pd.date_range('2000-01-01', freq='1D', periods=21)
         values = np.random.random((21, 4))

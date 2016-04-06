@@ -14,10 +14,11 @@ __ http://www.jstatsoft.org/v40/i01/paper
 - Combine your groups back into a single data object.
 
 Group by operations work on both :py:class:`~xarray.Dataset` and
-:py:class:`~xarray.DataArray` objects. Currently, you can only group by a single
-one-dimensional variable (eventually, we hope to remove this limitation). Also,
-note that for one-dimensional data, it is usually faster to rely on pandas'
-implementation of the same pipeline.
+:py:class:`~xarray.DataArray` objects. Most of the examples focus on grouping by
+a single one-dimensional variable, although experimental support for grouping
+over a multi-dimensional variable has recently been implemented. Not that for
+one-dimensional data, it is usually faster to rely on pandas' implementation of
+the same pipeline.
 
 Split
 ~~~~~
@@ -149,3 +150,23 @@ guarantee that all original dimensions remain unchanged.
 
 You can always squeeze explicitly later with the Dataset or DataArray
 :py:meth:`~xarray.DataArray.squeeze` methods.
+
+Multidimensional Grouping
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Many datasets have a multidimensional coordinate variable (e.g. longitude)
+which is different from the logical grid dimensions (e.g. nx, ny). Such
+variables are valid under the `CF conventions`__. Xarray supports groupby
+operations over multidimensional coordinate variables:
+
+__ http://cfconventions.org/cf-conventions/cf-conventions.html#variables
+
+.. ipython:: python
+
+    da = xr.DataArray([[0,1],[2,3]],
+        coords={'lon': (['ny','nx'], [[30,40],[40,50]] ),
+                'lat': (['ny','nx'], [[10,10],[20,20]] ),},
+        dims=['ny','nx'])
+    da
+    da.groupby('lon').sum()
+    da.groupby('lon').apply(lambda x: x - x.mean(), shortcut=False)

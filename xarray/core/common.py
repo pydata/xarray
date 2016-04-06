@@ -320,7 +320,7 @@ class BaseDataObject(AttrAccessMixin):
         else:
             return func(self, *args, **kwargs)
 
-    def groupby(self, group, squeeze=True):
+    def groupby(self, group, squeeze=True, bins=None):
         """Returns a GroupBy object for performing grouped operations.
 
         Parameters
@@ -332,16 +332,26 @@ class BaseDataObject(AttrAccessMixin):
             If "group" is a dimension of any arrays in this dataset, `squeeze`
             controls whether the subarrays have a dimension of length 1 along
             that dimension or if the dimension is squeezed out.
+        bins : array-like, optional
+            If `bins` is specified, the groups will be discretized into the
+            specified bins determined by `pandas.cut` applied to the index of
+            `group`.
 
         Returns
         -------
         grouped : GroupBy
             A `GroupBy` object patterned after `pandas.GroupBy` that can be
             iterated over in the form of `(unique_value, grouped_array)` pairs.
+
+        See Also
+        --------
+        pandas.cut
         """
+        from .dataarray import DataArray
+
         if isinstance(group, basestring):
             group = self[group]
-        return self.groupby_cls(self, group, squeeze=squeeze)
+        return self.groupby_cls(self, group, squeeze=squeeze, group_bins=bins)
 
     def rolling(self, min_periods=None, center=False, **windows):
         """
