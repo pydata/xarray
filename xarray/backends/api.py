@@ -195,7 +195,8 @@ def open_dataset(filename_or_obj, group=None, decode_cf=True,
             else:
                 if engine is not None and engine != 'scipy':
                    raise ValueError('can only read gzipped netCDF files with '
-                                     "default engine or engine='scipy'")
+                                     "default engine, engine='pydap' or "
+                                     "engine='scipy'")
                 # if the string ends with .gz, then gunzip and open as netcdf file
             if sys.version_info[:2] < (2, 7):
                 raise ValueError('reading a gzipped netCDF not '
@@ -203,6 +204,8 @@ def open_dataset(filename_or_obj, group=None, decode_cf=True,
             try:
                 if engine == 'netcdf4':
                     store = backends.NetCDF4DataStore(filename_or_obj, group=group)
+                elif engine == 'pydap':
+                    store = backends.PydapDataStore(filename_or_obj)
                 else:
                     store = backends.ScipyDataStore(gzip.open(filename_or_obj))
             except TypeError as e:
