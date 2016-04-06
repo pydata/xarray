@@ -189,14 +189,13 @@ def open_dataset(filename_or_obj, group=None, decode_cf=True,
     elif isinstance(filename_or_obj, basestring):
         if filename_or_obj.endswith('.gz'):
             if is_remote_uri(filename_or_obj):
-                if engine !='netcdf4':
+                if engine !='netcdf4' and engine !='pydap':
                    raise ValueError('can only read remote gzipped netCDF files '
-                                     "with engine='netcdf4'")
+                                     "with engine='netcdf4' or 'pydap'")
             else:
                 if engine is not None and engine != 'scipy':
                    raise ValueError('can only read gzipped netCDF files with '
-                                     "default engine, engine='pydap' or "
-                                     "engine='scipy'")
+                                     "default engine, engine='scipy'")
                 # if the string ends with .gz, then gunzip and open as netcdf file
             if sys.version_info[:2] < (2, 7):
                 raise ValueError('reading a gzipped netCDF not '
