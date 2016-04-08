@@ -15,6 +15,9 @@ iris_forbidden_keys = set(
      'cell_methods', 'formula_terms', 'compress',
      'missing_value', 'add_offset', 'scale_factor',
      'valid_max', 'valid_min', 'valid_range', '_FillValue'])
+cell_methods_strings = set(['point', 'sum', 'maximum', 'median', 'mid_range',
+                            'minimum', 'mean', 'mode', 'standard_deviation',
+                            'variance'])
 
 
 def encode(var):
@@ -62,7 +65,6 @@ def to_cdms2(dataarray):
 
 
 # TODO: Add converting bounds from xarray to Iris and back
-# TODO: Cell methods are not converted between Iris and xarray
 def to_iris(dataarray):
     """Convert a DataArray into a Iris Cube
     """
@@ -81,6 +83,45 @@ def to_iris(dataarray):
         if 'units' in attrs:
             _args['units'] = cf_units.Unit(attrs['units'], **_unit_args)
         return _args
+
+    def get_cell_methods(cell_methods_str):
+        """Converts string to iris cell method objects"""
+        cell_methods = []
+        _cell_method_words = [w.strip() for w in cell_methods_str.split(':')]
+        cm = {'coords': [], 'method': '', 'interval': [], 'comment': []}
+        skip = False
+        for i, word in enumerate(_cell_method_words):
+            # If this value is a comment or an interval don't read
+            if skip:
+                skip = False
+                continue
+            # If this word is an axis
+            if word not in cell_methods_strings | set(['interval', 'comment']):
+                # If we already have a method this must be the next cell_method
+                if cm['method']:
+                    cell_methods.append(
+                        iris.coords.CellMethod(cm['method'],
+                                               coords=cm['coords'],
+                                               intervals=cm['interval'],
+                                               comments=cm['comment']))
+                    cm = {'coords': [], 'method': '', 'interval': [],
+                          'comment': []}
+                    cm['coords'].append(word)
+                    continue
+                else:
+                    cm['coords'].append(word)
+            elif word in ['interval', 'comment']:
+                cm[word].append(_cell_method_words[i + 1])
+                skip = True
+                continue
+            else:
+                cm['method'] = word
+        else:
+            cell_methods.append(
+                iris.coords.CellMethod(cm['method'], coords=cm['coords'],
+                                       intervals=cm['interval'],
+                                       comments=cm['comment']))
+        return cell_methods
 
     dim_coords = []
     aux_coords = []
@@ -103,6 +144,8 @@ def to_iris(dataarray):
     args['var_name'] = dataarray.name
     args['dim_coords_and_dims'] = dim_coords
     args['aux_coords_and_dims'] = aux_coords
+    if 'cell_methods' in dataarray.attrs:
+        args['cell_methods'] = get_cell_methods(dataarray.attrs['cell_methods'])
 
     cube = iris.cube.Cube(dataarray.to_masked_array(), **args)
     return cube
@@ -111,6 +154,7 @@ def to_iris(dataarray):
 def from_iris(cube):
     """Convert a Iris cube into an DataArray
     """
+
     def get_attr(_obj):
         attrs = {'standard_name': _obj.standard_name,
                  'long_name': _obj.long_name}
@@ -120,6 +164,20 @@ def from_iris(cube):
             attrs['units'] = _obj.units.origin
         attrs.update(_obj.attributes)
         return dict((k, v) for k, v in attrs.items() if v is not None)
+
+    def get_cell_methods(cell_methods_obj):
+        _cell_methods = []
+        for cell_method in cell_methods_obj:
+            names = ''.join(['{}: '.format(n) for n in cell_method.coord_names])
+            intervals = ' '.join(['interval: {}'.format(interval)
+                                  for interval in cell_method.intervals])
+            comments = ' '.join(['comment: {}'.format(comment)
+                                 for comment in cell_method.comments])
+            extra = ' '.join([intervals, comments]).strip()
+            if extra:
+                extra += ' '
+            _cell_methods.append(names + cell_method.method + extra)
+        return ' '.join(_cell_methods)
 
     name = cube.var_name
     dims = [dim.var_name for dim in cube.dim_coords]
@@ -137,6 +195,9 @@ def from_iris(cube):
                                       np.asscalar(coord.points), coord_attrs)
 
     array_attrs = get_attr(cube)
+    cell_methods = get_cell_methods(cube.cell_methods)
+    if cell_methods:
+        array_attrs['cell_methods'] = cell_methods
     dataarray = DataArray(cube.data, coords=coords, name=name,
                           attrs=array_attrs, dims=dims)
     return decode_cf(dataarray.to_dataset())[dataarray.name]
