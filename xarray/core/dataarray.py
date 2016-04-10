@@ -290,7 +290,7 @@ class DataArray(AbstractArray, BaseDataObject):
             into separate variables. If not provided, this array is converted
             into a Dataset of one variable.
         name : str, optional
-            Name to substitute for this array's name. Only valid is ``dim`` is
+            Name to substitute for this array's name. Only valid if ``dim`` is
             not provided.
 
         Returns
