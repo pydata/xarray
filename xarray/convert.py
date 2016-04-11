@@ -117,10 +117,11 @@ def to_iris(dataarray):
             else:
                 cm['method'] = word
         else:
-            cell_methods.append(
-                iris.coords.CellMethod(cm['method'], coords=cm['coords'],
-                                       intervals=cm['interval'],
-                                       comments=cm['comment']))
+            if cm['method']:
+                cell_methods.append(
+                    iris.coords.CellMethod(cm['method'], coords=cm['coords'],
+                                           intervals=cm['interval'],
+                                           comments=cm['comment']))
         return cell_methods
 
     dim_coords = []
