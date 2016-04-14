@@ -17,7 +17,6 @@ Top-level functions
    align
    broadcast
    concat
-   empty_like
    set_options
 
 Dataset
