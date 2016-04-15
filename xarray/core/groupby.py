@@ -130,7 +130,7 @@ class GroupBy(object):
     Dataset.groupby
     DataArray.groupby
     """
-    def __init__(self, obj, group, squeeze=False, grouper=None, group_bins=None):
+    def __init__(self, obj, group, squeeze=False, grouper=None, bins=None):
         """Create a GroupBy object
 
         Parameters
@@ -145,7 +145,7 @@ class GroupBy(object):
             if the dimension is squeezed out.
         grouper : pd.Grouper, optional
             Used for grouping values along the `group` array.
-        group_bins : array-like, optional
+        bins : array-like, optional
             If `bins` is specified, the groups will be discretized into the
             specified bins by `pandas.cut`.
         """
@@ -181,9 +181,9 @@ class GroupBy(object):
                              'dimension')
         full_index = None
 
-        if grouper is not None and group_bins is not None:
+        if grouper is not None and bins is not None:
             raise ValueError("Can't specify both `grouper` and `bins`.")
-        elif grouper is not None or group_bins is not None:
+        elif grouper is not None or bins is not None:
             index = safe_cast_to_index(group)
             if not index.is_monotonic:
                 # TODO: sort instead of raising an error
@@ -193,13 +193,13 @@ class GroupBy(object):
                 # probably time-series resampling
                 first_items = s.groupby(grouper).first()
             else:
-                first_items = s.groupby(pd.cut(index, group_bins)).first()
+                first_items = s.groupby(pd.cut(index, bins)).first()
             if first_items.isnull().any():
                 full_index = first_items.index
                 first_items = first_items.dropna()
-            bins = first_items.values.astype(np.int64)
-            group_indices = ([slice(i, j) for i, j in zip(bins[:-1], bins[1:])] +
-                             [slice(bins[-1], None)])
+            sbins = first_items.values.astype(np.int64)
+            group_indices = ([slice(i, j) for i, j in zip(sbins[:-1], sbins[1:])] +
+                             [slice(sbins[-1], None)])
             unique_coord = Coordinate(group.name, first_items.index)
         elif group.name in obj.dims:
             # assume that group already has sorted, unique values
@@ -466,7 +466,7 @@ class DataArrayGroupBy(GroupBy, ImplementsArrayReduce):
             grouped = self._iter_grouped_shortcut()
         else:
             grouped = self._iter_grouped()
-        applied = (maybe_wrap_array(arr,func(arr, **kwargs)) for arr in grouped)
+        applied = (maybe_wrap_array(arr, func(arr, **kwargs)) for arr in grouped)
         combined = self._concat(applied, shortcut=shortcut)
         result = self._maybe_restore_empty_groups(
                     self._maybe_unstack_array(combined))

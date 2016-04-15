@@ -351,7 +351,7 @@ class BaseDataObject(AttrAccessMixin):
 
         if isinstance(group, basestring):
             group = self[group]
-        return self.groupby_cls(self, group, squeeze=squeeze, group_bins=bins)
+        return self.groupby_cls(self, group, squeeze=squeeze, bins=bins)
 
     def rolling(self, min_periods=None, center=False, **windows):
         """

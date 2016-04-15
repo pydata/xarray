@@ -1305,16 +1305,16 @@ class TestDataArray(TestCase):
         self.assertDataArrayIdentical(expected, actual)
 
     def make_groupby_multidim_example_array(self):
-        return DataArray([[0,1],[2,3]],
-                        coords={'lon': (['ny','nx'], [[30,40],[40,50]] ),
-                                'lat': (['ny','nx'], [[10,10],[20,20]] ),},
-                        dims=['ny','nx'])
+        return DataArray([[[0,1],[2,3]],[[5,10],[15,20]]],
+                        coords={'lon': (['ny', 'nx'], [[30., 40.], [40., 50.]] ),
+                                'lat': (['ny', 'nx'], [[10., 10.], [20., 20.]] ),},
+                        dims=['time', 'ny', 'nx'])
 
     def test_groupby_multidim(self):
         array = self.make_groupby_multidim_example_array()
         for dim, expected_sum in [
-                ('lon', DataArray([0, 3, 3], coords={'lon': [30,40,50]})),
-                ('lat', DataArray([1,5], coords={'lat': [10,20]}))]:
+                ('lon', DataArray([5, 28, 23], coords={'lon': [30., 40., 50.]})),
+                ('lat', DataArray([16, 40], coords={'lat': [10., 20.]}))]:
             actual_sum = array.groupby(dim).sum()
             self.assertDataArrayIdentical(expected_sum, actual_sum)
 
@@ -1322,7 +1322,8 @@ class TestDataArray(TestCase):
         array = self.make_groupby_multidim_example_array()
         actual = array.groupby('lon').apply(
                 lambda x : x - x.mean(), shortcut=False)
-        expected = DataArray([[0.,-0.5],[0.5,0.]],
+        expected = DataArray([[[-2.5, -6.], [-5., -8.5]],
+                              [[ 2.5,  3.], [ 8.,  8.5]]],
                     coords=array.coords, dims=array.dims)
         self.assertDataArrayIdentical(expected, actual)
 
@@ -1346,7 +1347,7 @@ class TestDataArray(TestCase):
         array = self.make_groupby_multidim_example_array()
         bins = [0,15,20]
         bin_coords = ['(0, 15]', '(15, 20]']
-        expected = DataArray([1,5], dims='lat', coords={'lat': bin_coords})
+        expected = DataArray([16, 40], dims='lat', coords={'lat': bin_coords})
         actual = array.groupby('lat', bins=bins).apply(
                                     lambda x : x.sum(), shortcut=False)
         self.assertDataArrayIdentical(expected, actual)
