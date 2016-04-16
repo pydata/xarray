@@ -374,7 +374,7 @@ class BaseDataObject(AttrAccessMixin):
                                 center=center, **windows)
 
     def resample(self, freq, dim, how='mean', skipna=None, closed=None,
-                 label=None, base=0):
+                 label=None, base=0, keep_attrs=None):
         """Resample this object to a new temporal resolution.
 
         Handles both downsampling and upsampling. Upsampling with filling is
@@ -418,6 +418,11 @@ class BaseDataObject(AttrAccessMixin):
             For frequencies that evenly subdivide 1 day, the "origin" of the
             aggregated intervals. For example, for '24H' frequency, base could
             range from 0 through 23.
+        keep_attrs : bool, optional
+            If True, the object's variable attributes (`attrs`) will be copied from
+            the original object to the new one.  If False, the new
+            object will be returned without transferring attributes. By default keep_attrs
+            is True if how is 'first' or 'last', and False otherwise.
 
         Returns
         -------
@@ -438,14 +443,18 @@ class BaseDataObject(AttrAccessMixin):
         time_grouper = pd.TimeGrouper(freq=freq, how=how, closed=closed,
                                       label=label, base=base)
         gb = self.groupby_cls(self, group, grouper=time_grouper)
+        if keep_attrs is None:
+            keep_attrs_kwarg = {}
+        else:
+            keep_attrs_kwarg = {'keep_attrs': keep_attrs}
         if isinstance(how, basestring):
             f = getattr(gb, how)
             if how in ['first', 'last']:
-                result = f(skipna=skipna)
+                result = f(skipna=skipna, **keep_attrs_kwarg)
             else:
-                result = f(dim=dim.name, skipna=skipna)
+                result = f(dim=dim.name, skipna=skipna, **keep_attrs_kwarg)
         else:
-            result = gb.reduce(how, dim=dim.name)
+            result = gb.reduce(how, dim=dim.name, **keep_attrs_kwarg)
         result = result.rename({RESAMPLE_DIM: dim.name})
         return result
 

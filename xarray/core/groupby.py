@@ -338,7 +338,7 @@ class DataArrayGroupBy(GroupBy, ImplementsArrayReduce):
         new_order = sorted(stacked.dims, key=lookup_order)
         return stacked.transpose(*new_order)
 
-    def apply(self, func, shortcut=False, **kwargs):
+    def apply(self, func, shortcut=False, keep_attrs=None, **kwargs):
         """Apply a function over each array in the group and concatenate them
         together into a new array.
 
@@ -382,6 +382,8 @@ class DataArrayGroupBy(GroupBy, ImplementsArrayReduce):
         applied = (maybe_wrap_array(arr, func(arr, **kwargs)) for arr in grouped)
         combined = self._concat(applied, shortcut=shortcut)
         result = self._maybe_restore_empty_groups(combined)
+        if keep_attrs is False:
+            result.attrs.clear()
         return result
 
     def _concat(self, applied, shortcut=False):
