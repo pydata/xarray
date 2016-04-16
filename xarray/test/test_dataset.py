@@ -1647,7 +1647,7 @@ class TestDataset(TestCase):
                       'bar': ('time', np.random.randn(10), {'meta': 'data'}),
                       'time': times})
 
-        actual = ds.resample('1D', dim='time', how='first')
+        actual = ds.resample('1D', dim='time', how='first', keep_attrs=True)
         expected = ds.isel(time=[0, 4, 8])
         self.assertDatasetIdentical(expected, actual)
 
@@ -1663,10 +1663,15 @@ class TestDataset(TestCase):
         ds = Dataset({'foo': (['time', 'x', 'y'], np.random.randn(10, 5, 3)),
                       'bar': ('time', np.random.randn(10), {'meta': 'data'}),
                       'time': times})
+        ds.attrs['dsmeta'] = 'dsdata'
 
         resampled_ds = ds.resample('1D', dim='time', how='mean', keep_attrs=True)
         actual = resampled_ds['bar'].meta
         expected = 'data'
+        self.assertEqual(expected, actual)
+
+        actual = resampled_ds.dsmeta
+        expected = 'dsdata'
         self.assertEqual(expected, actual)
 
     def test_resample_by_mean_discarding_attrs(self):
@@ -1674,10 +1679,19 @@ class TestDataset(TestCase):
         ds = Dataset({'foo': (['time', 'x', 'y'], np.random.randn(10, 5, 3)),
                       'bar': ('time', np.random.randn(10), {'meta': 'data'}),
                       'time': times})
+        ds.attrs['dsmeta'] = 'dsdata'
 
         resampled_ds = ds.resample('1D', dim='time', how='mean', keep_attrs=False)
+
         try:
             resampled_ds['bar'].meta
+        except AttributeError:
+            pass
+        else:
+            self.fail('metadata should be discarded when keep_attrs=False')
+
+        try:
+            resampled_ds.dsmeta
         except AttributeError:
             pass
         else:
