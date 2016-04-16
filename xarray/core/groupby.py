@@ -431,8 +431,8 @@ class DataArrayGroupBy(GroupBy, ImplementsArrayReduce):
             removed.
         """
         def reduce_array(ar):
-            return ar.reduce(func, dim, axis, keep_attrs=keep_attrs, **kwargs)
-        return self.apply(reduce_array, shortcut=shortcut)
+            return ar.reduce(func, dim, axis, **kwargs)
+        return self.apply(reduce_array, shortcut=shortcut, keep_attrs=keep_attrs)
 
 ops.inject_reduce_methods(DataArrayGroupBy)
 ops.inject_binary_ops(DataArrayGroupBy)
