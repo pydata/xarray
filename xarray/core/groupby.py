@@ -320,7 +320,6 @@ class DataArrayGroupBy(GroupBy, ImplementsArrayReduce):
         # compiled language)
         stacked = Variable.concat(
             applied, concat_dim, positions, shortcut=True)
-        stacked.attrs.update(self.obj.attrs)
         result = self.obj._replace_maybe_drop_dims(stacked)
         result._coords[concat_dim.name] = as_variable(concat_dim, copy=True)
         return result
@@ -338,7 +337,7 @@ class DataArrayGroupBy(GroupBy, ImplementsArrayReduce):
         new_order = sorted(stacked.dims, key=lookup_order)
         return stacked.transpose(*new_order)
 
-    def apply(self, func, shortcut=False, keep_attrs=None, **kwargs):
+    def apply(self, func, shortcut=False, **kwargs):
         """Apply a function over each array in the group and concatenate them
         together into a new array.
 
@@ -382,8 +381,6 @@ class DataArrayGroupBy(GroupBy, ImplementsArrayReduce):
         applied = (maybe_wrap_array(arr, func(arr, **kwargs)) for arr in grouped)
         combined = self._concat(applied, shortcut=shortcut)
         result = self._maybe_restore_empty_groups(combined)
-        if keep_attrs is False:
-            result.attrs.clear()
         return result
 
     def _concat(self, applied, shortcut=False):
@@ -431,8 +428,8 @@ class DataArrayGroupBy(GroupBy, ImplementsArrayReduce):
             removed.
         """
         def reduce_array(ar):
-            return ar.reduce(func, dim, axis, **kwargs)
-        return self.apply(reduce_array, shortcut=shortcut, keep_attrs=keep_attrs)
+            return ar.reduce(func, dim, axis, keep_attrs=keep_attrs, **kwargs)
+        return self.apply(reduce_array, shortcut=shortcut)
 
 ops.inject_reduce_methods(DataArrayGroupBy)
 ops.inject_binary_ops(DataArrayGroupBy)
