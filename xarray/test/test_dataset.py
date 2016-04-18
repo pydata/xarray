@@ -1666,12 +1666,12 @@ class TestDataset(TestCase):
         ds.attrs['dsmeta'] = 'dsdata'
 
         resampled_ds = ds.resample('1D', dim='time', how='mean', keep_attrs=True)
-        actual = resampled_ds['bar'].meta
-        expected = 'data'
+        actual = resampled_ds['bar'].attrs
+        expected = ds['bar'].attrs
         self.assertEqual(expected, actual)
 
-        actual = resampled_ds.dsmeta
-        expected = 'dsdata'
+        actual = resampled_ds.attrs
+        expected = ds.attrs
         self.assertEqual(expected, actual)
 
     def test_resample_by_mean_discarding_attrs(self):
@@ -1683,33 +1683,20 @@ class TestDataset(TestCase):
 
         resampled_ds = ds.resample('1D', dim='time', how='mean', keep_attrs=False)
 
-        try:
-            resampled_ds['bar'].meta
-        except AttributeError:
-            pass
-        else:
-            self.fail('metadata should be discarded when keep_attrs=False')
-
-        try:
-            resampled_ds.dsmeta
-        except AttributeError:
-            pass
-        else:
-            self.fail('metadata should be discarded when keep_attrs=False')
+        assert resampled_ds['bar'].attrs == {}
+        assert resampled_ds.attrs == {}
 
     def test_resample_by_last_discarding_attrs(self):
         times = pd.date_range('2000-01-01', freq='6H', periods=10)
         ds = Dataset({'foo': (['time', 'x', 'y'], np.random.randn(10, 5, 3)),
                       'bar': ('time', np.random.randn(10), {'meta': 'data'}),
                       'time': times})
+        ds.attrs['dsmeta'] = 'dsdata'
 
         resampled_ds = ds.resample('1D', dim='time', how='last', keep_attrs=False)
-        try:
-            resampled_ds['bar'].meta
-        except AttributeError:
-            pass
-        else:
-            self.fail('metadata should be discarded when keep_attrs=False')
+
+        assert resampled_ds['bar'].attrs == {}
+        assert resampled_ds.attrs == {}
 
     def test_to_array(self):
         ds = Dataset(OrderedDict([('a', 1), ('b', ('x', [1, 2, 3]))]),

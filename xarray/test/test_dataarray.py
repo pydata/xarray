@@ -1413,17 +1413,12 @@ class TestDataArray(TestCase):
         array.attrs['meta'] = 'data'
 
         resampled_array = array.resample('1D', dim='time', how='first', keep_attrs=True)
-        actual = resampled_array.meta
-        expected = 'data'
+        actual = resampled_array.attrs
+        expected = array.attrs
         self.assertEqual(expected, actual)
 
         resampled_array = array.resample('1D', dim='time', how='first', keep_attrs=False)
-        try:
-            resampled_array.meta
-        except AttributeError:
-            pass
-        else:
-            self.fail('metadata should be discarded when keep_attrs=False')
+        assert resampled_array.attrs == {}
 
     def test_resample_mean_keep_attrs(self):
         times = pd.date_range('2000-01-01', freq='6H', periods=10)
@@ -1431,17 +1426,12 @@ class TestDataArray(TestCase):
         array.attrs['meta'] = 'data'
 
         resampled_array = array.resample('1D', dim='time', how='mean', keep_attrs=True)
-        actual = resampled_array.meta
-        expected = 'data'
+        actual = resampled_array.attrs
+        expected = array.attrs
         self.assertEqual(expected, actual)
 
         resampled_array = array.resample('1D', dim='time', how='mean', keep_attrs=False)
-        try:
-            resampled_array.meta
-        except AttributeError:
-            pass
-        else:
-            self.fail('metadata should be discarded when keep_attrs=False')
+        assert resampled_array.attrs == {}
 
     def test_resample_skipna(self):
         times = pd.date_range('2000-01-01', freq='6H', periods=10)
