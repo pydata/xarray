@@ -1407,6 +1407,32 @@ class TestDataArray(TestCase):
                              name='time')
         self.assertDataArrayIdentical(expected, actual)
 
+    def test_resample_first_keep_attrs(self):
+        times = pd.date_range('2000-01-01', freq='6H', periods=10)
+        array = DataArray(np.arange(10), [('time', times)])
+        array.attrs['meta'] = 'data'
+
+        resampled_array = array.resample('1D', dim='time', how='first', keep_attrs=True)
+        actual = resampled_array.attrs
+        expected = array.attrs
+        self.assertEqual(expected, actual)
+
+        resampled_array = array.resample('1D', dim='time', how='first', keep_attrs=False)
+        assert resampled_array.attrs == {}
+
+    def test_resample_mean_keep_attrs(self):
+        times = pd.date_range('2000-01-01', freq='6H', periods=10)
+        array = DataArray(np.arange(10), [('time', times)])
+        array.attrs['meta'] = 'data'
+
+        resampled_array = array.resample('1D', dim='time', how='mean', keep_attrs=True)
+        actual = resampled_array.attrs
+        expected = array.attrs
+        self.assertEqual(expected, actual)
+
+        resampled_array = array.resample('1D', dim='time', how='mean', keep_attrs=False)
+        assert resampled_array.attrs == {}
+
     def test_resample_skipna(self):
         times = pd.date_range('2000-01-01', freq='6H', periods=10)
         array = DataArray(np.ones(10), [('time', times)])

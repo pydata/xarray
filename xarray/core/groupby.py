@@ -320,7 +320,6 @@ class DataArrayGroupBy(GroupBy, ImplementsArrayReduce):
         # compiled language)
         stacked = Variable.concat(
             applied, concat_dim, positions, shortcut=True)
-        stacked.attrs.update(self.obj.attrs)
         result = self.obj._replace_maybe_drop_dims(stacked)
         result._coords[concat_dim.name] = as_variable(concat_dim, copy=True)
         return result

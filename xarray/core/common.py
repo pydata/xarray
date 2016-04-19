@@ -374,7 +374,7 @@ class BaseDataObject(AttrAccessMixin):
                                 center=center, **windows)
 
     def resample(self, freq, dim, how='mean', skipna=None, closed=None,
-                 label=None, base=0):
+                 label=None, base=0, keep_attrs=False):
         """Resample this object to a new temporal resolution.
 
         Handles both downsampling and upsampling. Upsampling with filling is
@@ -418,6 +418,10 @@ class BaseDataObject(AttrAccessMixin):
             For frequencies that evenly subdivide 1 day, the "origin" of the
             aggregated intervals. For example, for '24H' frequency, base could
             range from 0 through 23.
+        keep_attrs : bool, optional
+            If True, the object's attributes (`attrs`) will be copied from
+            the original object to the new one.  If False (default), the new
+            object will be returned without attributes.
 
         Returns
         -------
@@ -441,11 +445,11 @@ class BaseDataObject(AttrAccessMixin):
         if isinstance(how, basestring):
             f = getattr(gb, how)
             if how in ['first', 'last']:
-                result = f(skipna=skipna)
+                result = f(skipna=skipna, keep_attrs=keep_attrs)
             else:
-                result = f(dim=dim.name, skipna=skipna)
+                result = f(dim=dim.name, skipna=skipna, keep_attrs=keep_attrs)
         else:
-            result = gb.reduce(how, dim=dim.name)
+            result = gb.reduce(how, dim=dim.name, keep_attrs=keep_attrs)
         result = result.rename({RESAMPLE_DIM: dim.name})
         return result
 
