@@ -1663,11 +1663,17 @@ class TestDataArray(TestCase):
                                                             'Fire Temperature'},
                              dims=('distance', 'time'))
 
+        original.attrs['cell_methods'] = 'height: mean (comment: A cell method)'
         actual = original.to_iris()
         self.assertArrayEqual(actual.data, original.data)
         self.assertEqual(actual.var_name, original.name)
         self.assertItemsEqual([d.var_name for d in actual.dim_coords],
                               original.dims)
+        self.assertEqual(actual.cell_methods,
+                         (iris.coords.CellMethod(method='mean',
+                                                 coords=('height',),
+                                                 intervals=(),
+                                                 comments=('A cell method',)),))
 
         for coord, orginal_key in zip((actual.coords()), original.coords):
             original_coord = original.coords[orginal_key]

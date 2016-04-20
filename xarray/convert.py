@@ -70,6 +70,8 @@ def to_iris(dataarray):
     """
     # Iris not a hard dependency
     import iris
+    import iris.fileformats._pyke_rules.compiled_krb.fc_rules_cf_fc \
+        as iris_fc_rules_cf_fc
     # iris.unit is deprecated in Iris v1.9
     import cf_units
 
@@ -84,45 +86,7 @@ def to_iris(dataarray):
             _args['units'] = cf_units.Unit(attrs['units'], **_unit_args)
         return _args
 
-    def get_cell_methods(cell_methods_str):
-        """Converts string to iris cell method objects"""
-        cell_methods = []
-        _cell_method_words = [w.strip() for w in cell_methods_str.split(':')]
-        cm = {'coords': [], 'method': '', 'interval': [], 'comment': []}
-        skip = False
-        for i, word in enumerate(_cell_method_words):
-            # If this value is a comment or an interval don't read
-            if skip:
-                skip = False
-                continue
-            # If this word is an axis
-            if word not in cell_methods_strings | set(['interval', 'comment']):
-                # If we already have a method this must be the next cell_method
-                if cm['method']:
-                    cell_methods.append(
-                        iris.coords.CellMethod(cm['method'],
-                                               coords=cm['coords'],
-                                               intervals=cm['interval'],
-                                               comments=cm['comment']))
-                    cm = {'coords': [], 'method': '', 'interval': [],
-                          'comment': []}
-                    cm['coords'].append(word)
-                    continue
-                else:
-                    cm['coords'].append(word)
-            elif word in ['interval', 'comment']:
-                cm[word].append(_cell_method_words[i + 1])
-                skip = True
-                continue
-            else:
-                cm['method'] = word
-        else:
-            if cm['method']:
-                cell_methods.append(
-                    iris.coords.CellMethod(cm['method'], coords=cm['coords'],
-                                           intervals=cm['interval'],
-                                           comments=cm['comment']))
-        return cell_methods
+    get_cell_methods = iris_fc_rules_cf_fc._parse_cell_methods
 
     dim_coords = []
     aux_coords = []
@@ -146,7 +110,8 @@ def to_iris(dataarray):
     args['dim_coords_and_dims'] = dim_coords
     args['aux_coords_and_dims'] = aux_coords
     if 'cell_methods' in dataarray.attrs:
-        args['cell_methods'] = get_cell_methods(dataarray.attrs['cell_methods'])
+        args['cell_methods'] = get_cell_methods(dataarray.name,
+                                                dataarray.attrs['cell_methods'])
 
     cube = iris.cube.Cube(dataarray.to_masked_array(), **args)
     return cube
@@ -176,7 +141,7 @@ def from_iris(cube):
                                  for comment in cell_method.comments])
             extra = ' '.join([intervals, comments]).strip()
             if extra:
-                extra += ' '
+                extra = ' ({})'.format(extra)
             _cell_methods.append(names + cell_method.method + extra)
         return ' '.join(_cell_methods)
 
