@@ -70,8 +70,13 @@ def to_iris(dataarray):
     """
     # Iris not a hard dependency
     import iris
-    import iris.fileformats._pyke_rules.compiled_krb.fc_rules_cf_fc \
-        as iris_fc_rules_cf_fc
+    try:
+        from iris.fileformats.netcdf import parse_cell_methods
+    except ImportError:
+        # prior to v1.10
+        from iris.fileformats._pyke_rules.compiled_krb.fc_rules_cf_fc \
+            import _parse_cell_methods as parse_cell_methods
+
     # iris.unit is deprecated in Iris v1.9
     import cf_units
 
@@ -85,8 +90,6 @@ def to_iris(dataarray):
         if 'units' in attrs:
             _args['units'] = cf_units.Unit(attrs['units'], **_unit_args)
         return _args
-
-    get_cell_methods = iris_fc_rules_cf_fc._parse_cell_methods
 
     dim_coords = []
     aux_coords = []
@@ -110,8 +113,8 @@ def to_iris(dataarray):
     args['dim_coords_and_dims'] = dim_coords
     args['aux_coords_and_dims'] = aux_coords
     if 'cell_methods' in dataarray.attrs:
-        args['cell_methods'] = get_cell_methods(dataarray.name,
-                                                dataarray.attrs['cell_methods'])
+        args['cell_methods'] = \
+            parse_cell_methods(dataarray.name, dataarray.attrs['cell_methods'])
 
     cube = iris.cube.Cube(dataarray.to_masked_array(), **args)
     return cube
