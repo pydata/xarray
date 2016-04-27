@@ -187,6 +187,10 @@ def array_equiv(arr1, arr2):
     arr1, arr2 = as_like_arrays(arr1, arr2)
     if arr1.shape != arr2.shape:
         return False
+
+    flag = bool((arr1 == arr2).all())
+    if flag : return True
+
     return bool(((arr1 == arr2) | (isnull(arr1) & isnull(arr2))).all())
 
 
