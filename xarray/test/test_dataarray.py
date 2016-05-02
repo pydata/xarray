@@ -8,8 +8,6 @@ from xarray import (align, broadcast, Dataset, DataArray,
                     Coordinate, Variable)
 from xarray.core.pycompat import iteritems, OrderedDict
 from xarray.core.common import _full_like
-# from . import (TestCase, ReturnItem, source_ndarray, unittest, requires_dask,
-#                requires_bottleneck)
 
 from xarray.test import (TestCase, ReturnItem, source_ndarray, unittest, requires_dask,
                requires_bottleneck)
@@ -67,14 +65,23 @@ class TestDataArray(TestCase):
         self.assertArrayEqual(actual.data, actual.values)
 
     def test_struct_array_dims(self):
-        # -----------------test 1
+        """
+        This test checks subraction of two DataArrays for the case
+        when dimension is a structured array.
+        """
+        # checking array subraction when dims are the same
         p_data = np.array([('John', 180), ('Stacy', 150), ('Dick', 200)],
                           dtype=[('name', '|S256'), ('height', object)])
+
         p_data_1 = np.array([('John', 180), ('Stacy', 150), ('Dick', 200)],
+                            dtype=[('name', '|S256'), ('height', object)])
+
+        p_data_2 = np.array([('John', 180), ('Dick', 200)],
                             dtype=[('name', '|S256'), ('height', object)])
 
         weights_0 = DataArray([80, 56, 120], dims=['participant'],
                               coords={'participant': p_data})
+
         weights_1 = DataArray([81, 52, 115], dims=['participant'],
                               coords={'participant': p_data_1})
 
@@ -85,17 +92,10 @@ class TestDataArray(TestCase):
 
         self.assertDataArrayIdentical(actual, expected)
 
-        # -----------------test 2
-        p_data = np.array([('John', 180), ('Stacy', 150), ('Dick', 200)],
-                          dtype=[('name', '|S256'), ('height', object)])
+        # checking array subraction when dims are not the same
         p_data_1 = np.array([('John', 180), ('Stacy', 151), ('Dick', 200)],
                             dtype=[('name', '|S256'), ('height', object)])
 
-        p_data_2 = np.array([('John', 180), ('Dick', 200)],
-                            dtype=[('name', '|S256'), ('height', object)])
-
-        weights_0 = DataArray([80, 56, 120], dims=['participant'],
-                              coords={'participant': p_data})
         weights_1 = DataArray([81, 52, 115], dims=['participant'],
                               coords={'participant': p_data_1})
 
@@ -106,17 +106,11 @@ class TestDataArray(TestCase):
 
         self.assertDataArrayIdentical(actual, expected)
 
-        # -----------------test 3 - np.nan
-        p_data = np.array([('John', 180), ('Stacy', 150), ('Dick', 200)],
-                          dtype=[('name', '|S256'), ('height', object)])
+        # checking array subraction when dims are not the same and one
+        # is np.nan
         p_data_1 = np.array([('John', 180), ('Stacy', np.nan), ('Dick', 200)],
                             dtype=[('name', '|S256'), ('height', object)])
 
-        p_data_2 = np.array([('John', 180), ('Dick', 200)],
-                            dtype=[('name', '|S256'), ('height', object)])
-
-        weights_0 = DataArray([80, 56, 120], dims=['participant'],
-                              coords={'participant': p_data})
         weights_1 = DataArray([81, 52, 115], dims=['participant'],
                               coords={'participant': p_data_1})
 

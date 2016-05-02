@@ -198,8 +198,6 @@ def array_equiv(arr1, arr2):
 
     return bool(flag_array.all())
 
-    # return bool(((arr1 == arr2) | (isnull(arr1) & isnull(arr2))).all())
-
 
 def _call_possibly_missing_method(arg, name, args, kwargs):
     try:
