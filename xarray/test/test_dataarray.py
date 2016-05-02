@@ -68,51 +68,64 @@ class TestDataArray(TestCase):
 
     def test_struct_array_dims(self):
         # -----------------test 1
-        p_data = np.array([('John', 180), ('Stacy', 150), ('Dick',200)], dtype=[('name', '|S256'), ('height', object)])
-        p_data_1 = np.array([('John', 180), ('Stacy', 150), ('Dick',200)], dtype=[('name', '|S256'), ('height', object)])
+        p_data = np.array([('John', 180), ('Stacy', 150), ('Dick', 200)],
+                          dtype=[('name', '|S256'), ('height', object)])
+        p_data_1 = np.array([('John', 180), ('Stacy', 150), ('Dick', 200)],
+                            dtype=[('name', '|S256'), ('height', object)])
 
-        weights_0 = DataArray([80,56,120], dims=['participant'], coords={'participant':p_data})
-        weights_1 = DataArray([81,52,115], dims=['participant'], coords={'participant':p_data_1})
+        weights_0 = DataArray([80, 56, 120], dims=['participant'],
+                              coords={'participant': p_data})
+        weights_1 = DataArray([81, 52, 115], dims=['participant'],
+                              coords={'participant': p_data_1})
 
         actual = weights_1 - weights_0
 
-        expected = DataArray([ 1, -4, -5], dims=['participant'], coords={'participant':p_data})
+        expected = DataArray([1, -4, -5], dims=['participant'],
+                             coords={'participant': p_data})
 
         self.assertDataArrayIdentical(actual, expected)
 
-
         # -----------------test 2
-        p_data = np.array([('John', 180), ('Stacy', 150), ('Dick',200)], dtype=[('name', '|S256'), ('height', object)])
-        p_data_1 = np.array([('John', 180), ('Stacy', 151), ('Dick',200)], dtype=[('name', '|S256'), ('height', object)])
+        p_data = np.array([('John', 180), ('Stacy', 150), ('Dick', 200)],
+                          dtype=[('name', '|S256'), ('height', object)])
+        p_data_1 = np.array([('John', 180), ('Stacy', 151), ('Dick', 200)],
+                            dtype=[('name', '|S256'), ('height', object)])
 
-        p_data_2 = np.array([('John', 180),  ('Dick',200)], dtype=[('name', '|S256'), ('height', object)])
+        p_data_2 = np.array([('John', 180), ('Dick', 200)],
+                            dtype=[('name', '|S256'), ('height', object)])
 
-        weights_0 = DataArray([80,56,120], dims=['participant'], coords={'participant':p_data})
-        weights_1 = DataArray([81,52,115], dims=['participant'], coords={'participant':p_data_1})
+        weights_0 = DataArray([80, 56, 120], dims=['participant'],
+                              coords={'participant': p_data})
+        weights_1 = DataArray([81, 52, 115], dims=['participant'],
+                              coords={'participant': p_data_1})
 
         actual = weights_1 - weights_0
 
-        expected = DataArray([ 1, -5], dims=['participant'], coords={'participant':p_data_2})
+        expected = DataArray([1, -5], dims=['participant'],
+                             coords={'participant': p_data_2})
 
         self.assertDataArrayIdentical(actual, expected)
 
         # -----------------test 3 - np.nan
-        p_data = np.array([('John', 180), ('Stacy', 150), ('Dick',200)], dtype=[('name', '|S256'), ('height', object)])
-        p_data_1 = np.array([('John', 180), ('Stacy', np.nan), ('Dick',200)], dtype=[('name', '|S256'), ('height', object)])
+        p_data = np.array([('John', 180), ('Stacy', 150), ('Dick', 200)],
+                          dtype=[('name', '|S256'), ('height', object)])
+        p_data_1 = np.array([('John', 180), ('Stacy', np.nan), ('Dick', 200)],
+                            dtype=[('name', '|S256'), ('height', object)])
 
-        p_data_2 = np.array([('John', 180),  ('Dick',200)], dtype=[('name', '|S256'), ('height', object)])
+        p_data_2 = np.array([('John', 180), ('Dick', 200)],
+                            dtype=[('name', '|S256'), ('height', object)])
 
-        weights_0 = DataArray([80,56,120], dims=['participant'], coords={'participant':p_data})
-        weights_1 = DataArray([81,52,115], dims=['participant'], coords={'participant':p_data_1})
+        weights_0 = DataArray([80, 56, 120], dims=['participant'],
+                              coords={'participant': p_data})
+        weights_1 = DataArray([81, 52, 115], dims=['participant'],
+                              coords={'participant': p_data_1})
 
         actual = weights_1 - weights_0
 
-        expected = DataArray([ 1, -5], dims=['participant'], coords={'participant':p_data_2})
+        expected = DataArray([1, -5], dims=['participant'],
+                             coords={'participant': p_data_2})
 
         self.assertDataArrayIdentical(actual, expected)
-
-
-
 
     def test_name(self):
         arr = self.dv
