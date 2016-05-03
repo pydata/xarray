@@ -165,11 +165,18 @@ def decode_cf_timedelta(num_timedeltas, units):
     """
     num_timedeltas = _asarray_or_scalar(num_timedeltas)
     units = _netcdf_to_numpy_timeunit(units)
+
+    shape = None
+    if isinstance(num_timedeltas, np.ndarray):
+        if num_timedeltas.ndim > 1:
+            shape = num_timedeltas.shape
+            num_timedeltas = num_timedeltas.ravel()
+
     result = pd.to_timedelta(num_timedeltas, unit=units, box=False)
     # NaT is returned unboxed with wrong units; this should be fixed in pandas
     if result.dtype != 'timedelta64[ns]':
         result = result.astype('timedelta64[ns]')
-    return result
+    return result.reshape(shape)
 
 
 TIME_UNITS = frozenset(['days', 'hours', 'minutes', 'seconds',
