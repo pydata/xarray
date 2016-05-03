@@ -189,6 +189,8 @@ def array_equiv(arr1, arr2):
         return False
 
     flag_array = (arr1 == arr2)
+
+    # isnull fcn from pandas will throw TypeError when run on numpy structured array
     try:
 
         flag_array |= (isnull(arr1) & isnull(arr2))
