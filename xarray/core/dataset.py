@@ -2198,5 +2198,77 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject):
     def imag(self):
         return self._unary_op(lambda x: x.imag, keep_attrs=True)(self)
 
+    def get_variables_by_attributes(self, **kwargs):
+        """Returns a ``Dataset`` with variables that match specific conditions.
+        Can pass in ``key=value ``or ``key=callable``.  Variables are returned
+        that contain all of the matches or callable returns True.  If using a
+        callable note that it should accept a single parameter only,
+        the attribute value.  None is given as the attribute value when the
+        attribute does not exist on the variable.
+
+        Examples
+        --------
+        >>> import numpy as np
+        >>> import pandas as pd
+        >>> import xarray as xr
+        >>> temp = 15 + 8 * np.random.randn(2, 2, 3)
+        >>> precip = 10 * np.random.rand(2, 2, 3)
+        >>> lon = [[-99.83, -99.32], [-99.79, -99.23]]
+        >>> lat = [[42.25, 42.21], [42.63, 42.59]]
+
+        >>> ds = xr.Dataset({'temperature': (['x', 'y', 'time'],  temp, dict(standard_name='air_potential_temperature')),
+        ...                  'precipitation': (['x', 'y', 'time'], precip, dict(standard_name='convective_precipitation_flux'))},
+        ...                 coords={'lon': (['x', 'y'], lon, dict(axis='X')),
+        ...                         'lat': (['x', 'y'], lat, dict(axis='Y')),
+        ...                         'time': pd.date_range('2014-09-06', periods=3),
+        ...                         'reference_time': pd.Timestamp('2014-09-05')})
+        >>> # Get variables with matching "standard_name" attribute
+        >>> ds.get_variables_by_attributes(standard_name='convective_precipitation_flux')
+        <xarray.Dataset>
+        Dimensions:         (time: 3, x: 2, y: 2)
+        Coordinates:
+        * x               (x) int64 0 1
+        * time            (time) datetime64[ns] 2014-09-06 2014-09-07 2014-09-08
+            lat             (x, y) float64 42.25 42.21 42.63 42.59
+        * y               (y) int64 0 1
+            reference_time  datetime64[ns] 2014-09-05
+            lon             (x, y) float64 -99.83 -99.32 -99.79 -99.23
+        Data variables:
+            precipitation   (x, y, time) float64 4.178 2.307 6.041 6.046 0.06648 ...
+        >>> ds.get_variables_by_attributes(standard_name='air_potential_temperature')
+        >>> # Get variables with any axis attribute.
+        >>> ds.get_variables_by_attributes(axis=lambda v: v in ['X', 'Y', 'Z', 'T'])
+        <xarray.Dataset>
+        Dimensions:         (x: 2, y: 2)
+        Coordinates:
+            lat             (x, y) float64 42.25 42.21 42.63 42.59
+            lon             (x, y) float64 -99.83 -99.32 -99.79 -99.23
+        * x               (x) int64 0 1
+        * y               (y) int64 0 1
+            reference_time  datetime64[ns] 2014-09-05
+        Data variables:
+            *empty*
+
+        """
+        vs = []
+
+        has_value_flag  = False
+        for vname, data_array in self.items():
+            for k, v in kwargs.items():
+                if callable(v):
+                    has_value_flag = v(getattr(data_array, k, None))
+                    if has_value_flag is False:
+                        break
+                elif hasattr(data_array, k) and getattr(data_array, k) == v:
+                    has_value_flag = True
+                else:
+                    has_value_flag = False
+                    break
+
+            if has_value_flag is True:
+                vs.append(vname)
+        if len(self) < len(vs) > 1:
+            vs = [vs]
+        return self[vs]
 
 ops.inject_all_ops_and_reduce_methods(Dataset, array_only=False)
