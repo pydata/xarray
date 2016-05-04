@@ -27,7 +27,7 @@ Enhancements
   option that clips coordinate elements that are fully masked.  By
   `Phillip J. Wolfram <https://github.com/pwolfram>`_.
 
-- DataArray and Dataset method :py:meth:`resample` now supports the 
+- DataArray and Dataset method :py:meth:`resample` now supports the
   ``keep_attrs=False`` option that determines whether variable and dataset
   attributes are retained in the resampled object. By
   `Jeremy McGibbon <https://github.com/mcgibbon>`_.
@@ -41,6 +41,10 @@ Bug fixes
   with some scripts, but the attributes may be kept by adding the
   ``keep_attrs=True`` option. By
   `Jeremy McGibbon <https://github.com/mcgibbon>`_.
+
+- ``decode_cf_timedelta`` now accepts arrays with ``ndim`` >1 (:issue:`842`).
+   This fixes issue :issue:`665`.
+   `Filipe Fernandes <https://github.com/ocefpaf>`_.
 
 .. _whats-new.0.7.2:
 
