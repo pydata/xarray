@@ -151,26 +151,15 @@ def decode_cf_datetime(num_dates, units, calendar=None):
     return dates.reshape(num_dates.shape)
 
 
-def _asarray_or_scalar(x):
-    x = np.asarray(x)
-    if x.ndim > 0:
-        return x
-    else:
-        return x.item()
-
-
 def decode_cf_timedelta(num_timedeltas, units):
     """Given an array of numeric timedeltas in netCDF format, convert it into a
     numpy timedelta64[ns] array.
     """
-    num_timedeltas = _asarray_or_scalar(num_timedeltas)
+    num_timedeltas = np.asarray(num_timedeltas)
     units = _netcdf_to_numpy_timeunit(units)
 
-    shape = None
-    if isinstance(num_timedeltas, np.ndarray):
-        if num_timedeltas.ndim > 1:
-            shape = num_timedeltas.shape
-            num_timedeltas = num_timedeltas.ravel()
+    shape = num_timedeltas.shape
+    num_timedeltas = num_timedeltas.ravel()
 
     result = pd.to_timedelta(num_timedeltas, unit=units, box=False)
     # NaT is returned unboxed with wrong units; this should be fixed in pandas
