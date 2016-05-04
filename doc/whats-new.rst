@@ -69,6 +69,11 @@ Enhancements
   allowing more control on the colorbar (:issue:`872`).
   By `Fabien Maussion <https://github.com/fmaussion>`_.
 
+- New Dataset method :py:meth:`get_variables_by_attributes`, akin to
+  ``netCDF4.Dataset.get_variables_by_attributes``, to easily find variable
+  in a Dataset via its attributes information.
+  `Filipe Fernandes <https://github.com/ocefpaf>`_.
+
 Bug fixes
 ~~~~~~~~~
 
