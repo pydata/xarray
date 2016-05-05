@@ -2250,25 +2250,13 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject):
             *empty*
 
         """
-        vs = []
-
-        has_value_flag  = False
-        for vname, data_array in self.items():
-            for k, v in kwargs.items():
-                if callable(v):
-                    has_value_flag = v(getattr(data_array, k, None))
-                    if has_value_flag is False:
-                        break
-                elif hasattr(data_array, k) and getattr(data_array, k) == v:
-                    has_value_flag = True
-                else:
-                    has_value_flag = False
-                    break
-
-            if has_value_flag is True:
-                vs.append(vname)
-        if len(self) < len(vs) > 1:
-            vs = [vs]
-        return self[vs]
+        selection = []
+        for var_name, variable in self.items():
+            for attr_name, pattern in kwargs.items():
+                attr_value = variable.attrs.get(attr_name)
+                if ((callable(pattern) and pattern(attr_value))
+                        or attr_value == pattern):
+                    selection.append(var_name)
+        return self[selection]
 
 ops.inject_all_ops_and_reduce_methods(Dataset, array_only=False)
