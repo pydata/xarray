@@ -2541,13 +2541,7 @@ class TestDataset(TestCase):
         # Test return empty Dataset.
         ds.get_variables_by_attributes(standard_name='invalid_standard_name')
         new_ds = ds.get_variables_by_attributes(standard_name='invalid_standard_name')
-        self.assertIsInstance(new_ds, Dataset)
-        self.assertFalse(new_ds.data_vars)
-
-        # Test return coords only Dataset.
-        new_ds = ds.get_variables_by_attributes(axis='T')
-        self.assertEqual(new_ds.coords['time'].axis, 'T')
-        self.assertFalse(new_ds.data_vars)
+        self.assertIsNone(new_ds)
 
         # Test return one Dataset.
         new_ds = ds.get_variables_by_attributes(standard_name='convective_precipitation_flux')

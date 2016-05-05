@@ -2222,7 +2222,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject):
         ...                         'lat': (['x', 'y'], lat, dict(axis='Y')),
         ...                         'time': pd.date_range('2014-09-06', periods=3),
         ...                         'reference_time': pd.Timestamp('2014-09-05')})
-        >>> # Get variables with matching "standard_name" attribute
+        >>> # Get variables matching a specific standard_name.
         >>> ds.get_variables_by_attributes(standard_name='convective_precipitation_flux')
         <xarray.Dataset>
         Dimensions:         (time: 3, x: 2, y: 2)
@@ -2235,28 +2235,32 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject):
             lon             (x, y) float64 -99.83 -99.32 -99.79 -99.23
         Data variables:
             precipitation   (x, y, time) float64 4.178 2.307 6.041 6.046 0.06648 ...
-        >>> ds.get_variables_by_attributes(standard_name='air_potential_temperature')
-        >>> # Get variables with any axis attribute.
-        >>> ds.get_variables_by_attributes(axis=lambda v: v in ['X', 'Y', 'Z', 'T'])
+        >>> # Get all variables that have a standard_name attribute.
+        >>> ds.get_variables_by_attributes(standard_name=lambda v: v is not None)
         <xarray.Dataset>
-        Dimensions:         (x: 2, y: 2)
+        Dimensions:         (time: 3, x: 2, y: 2)
         Coordinates:
-            lat             (x, y) float64 42.25 42.21 42.63 42.59
             lon             (x, y) float64 -99.83 -99.32 -99.79 -99.23
+            lat             (x, y) float64 42.25 42.21 42.63 42.59
         * x               (x) int64 0 1
         * y               (y) int64 0 1
+        * time            (time) datetime64[ns] 2014-09-06 2014-09-07 2014-09-08
             reference_time  datetime64[ns] 2014-09-05
         Data variables:
-            *empty*
+            temperature     (x, y, time) float64 25.86 20.82 6.954 23.13 10.25 11.68 ...
+            precipitation   (x, y, time) float64 5.702 0.9422 2.075 1.178 3.284 ...
 
         """
         selection = []
-        for var_name, variable in self.items():
+        for var_name, variable in self.data_vars.items():
             for attr_name, pattern in kwargs.items():
                 attr_value = variable.attrs.get(attr_name)
                 if ((callable(pattern) and pattern(attr_value))
                         or attr_value == pattern):
                     selection.append(var_name)
-        return self[selection]
+        if selection:
+            return self[selection]
+        else:
+            return None
 
 ops.inject_all_ops_and_reduce_methods(Dataset, array_only=False)

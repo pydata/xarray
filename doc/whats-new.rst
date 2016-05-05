@@ -70,8 +70,8 @@ Enhancements
   By `Fabien Maussion <https://github.com/fmaussion>`_.
 
 - New Dataset method :py:meth:`get_variables_by_attributes`, akin to
-  ``netCDF4.Dataset.get_variables_by_attributes``, to easily filter coordinates
-  and variables using the attributes information.
+  ``netCDF4.Dataset.get_variables_by_attributes``, to easily filter
+  data variables using the its attributes.
   `Filipe Fernandes <https://github.com/ocefpaf>`_.
 
 Bug fixes
