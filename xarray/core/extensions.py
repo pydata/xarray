@@ -6,6 +6,25 @@ class AccessorRegistrationError(Exception):
     """Exception for conflicts in accessor registration."""
 
 
+class _CachedAccessor(object):
+    """Custom property-like object (descriptor) for caching accessors."""
+    def __init__(self, name, accessor):
+        self._name = name
+        self._accessor = accessor
+
+    def __get__(self, obj, cls):
+        if obj is None:
+            # we're accessing the attribute of the class, i.e., Dataset.geo
+            return self._accessor
+        accessor_obj = self._accessor(obj)
+        # Replace the property with the accessor object. Inspired by:
+        # http://www.pydanny.com/cached-property.html
+        # We need to use object.__setattr__ because we overwrite __setattr__ on
+        # AttrAccessMixin.
+        object.__setattr__(obj, self._name, accessor_obj)
+        return accessor_obj
+
+
 def _register_accessor(name, cls):
     def decorator(accessor):
         if hasattr(cls, name):
@@ -13,8 +32,7 @@ def _register_accessor(name, cls):
                 'cannot register accessor %r under name %r for type %r '
                 'because an attribute with that name already exists.'
                 % (accessor, name, cls))
-
-        setattr(cls, name, property(accessor))
+        setattr(cls, name, _CachedAccessor(name, accessor))
         return accessor
     return decorator
 

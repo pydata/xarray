@@ -78,7 +78,7 @@ xarray:
 
 .. literalinclude:: examples/_code/accessor_example.py
 
-This achieves the same result as if the ``Dataset`` class had a property
+This achieves the same result as if the ``Dataset`` class had a cached property
 defined that returns an instance of your class:
 
 .. python::
@@ -90,9 +90,14 @@ defined that returns an instance of your class:
           return GeoAccessor(self)
 
 However, using the register accessor decorators is preferable to simply adding
-your own ad-hoc property (i.e., ``Dataset.geo = property(...)``), because it
-ensures that your property does not conflict with any other attributes or
-methods.
+your own ad-hoc property (i.e., ``Dataset.geo = property(...)``), for two
+reasons:
+
+1. It ensures that the name of your property does not conflict with any other
+   attributes or methods.
+2. Instances of accessor object will be cached on the xarray object that creates
+   them. This means you can save state on them (e.g., to cache computed
+   properties).
 
 Back in an interactive IPython session, we can use these properties:
 
@@ -110,7 +115,7 @@ Back in an interactive IPython session, we can use these properties:
 
 The intent here is that libraries that extend xarray could add such an accessor
 to implement subclass specific functionality rather than using actual subclasses
-rather patching in a large number of domain specific methods.
+or patching in a large number of domain specific methods.
 
 To help users keep things straight, please `let us know
 <https://github.com/pydata/xarray/issues>`_ if you plan to write a new accessor
