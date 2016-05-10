@@ -2203,8 +2203,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject):
         Can pass in ``key=value ``or ``key=callable``.  Variables are returned
         that contain all of the matches or callable returns True.  If using a
         callable note that it should accept a single parameter only,
-        the attribute value.  None is given as the attribute value when the
-        attribute does not exist on the variable.
+        the attribute value.
 
         Examples
         --------
@@ -2258,9 +2257,6 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject):
                 if ((callable(pattern) and pattern(attr_value))
                         or attr_value == pattern):
                     selection.append(var_name)
-        if selection:
-            return self[selection]
-        else:
-            return None
+        return self[selection]
 
 ops.inject_all_ops_and_reduce_methods(Dataset, array_only=False)
