@@ -15,8 +15,8 @@ __ http://www.jstatsoft.org/v40/i01/paper
 
 Group by operations work on both :py:class:`~xarray.Dataset` and
 :py:class:`~xarray.DataArray` objects. Most of the examples focus on grouping by
-a single one-dimensional variable, although experimental support for grouping
-over a multi-dimensional variable has recently been implemented. Not that for
+a single one-dimensional variable, although support for grouping
+over a multi-dimensional variable has recently been implemented. Note that for
 one-dimensional data, it is usually faster to rely on pandas' implementation of
 the same pipeline.
 
@@ -159,7 +159,7 @@ which is different from the logical grid dimensions (e.g. nx, ny). Such
 variables are valid under the `CF conventions`__. Xarray supports groupby
 operations over multidimensional coordinate variables:
 
-__ http://cfconventions.org/cf-conventions/cf-conventions.html#variables
+__ http://cfconventions.org/cf-conventions/v1.6.0/cf-conventions.html#_two_dimensional_latitude_longitude_coordinate_variables
 
 .. ipython:: python
 
