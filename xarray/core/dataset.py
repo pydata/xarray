@@ -2205,6 +2205,18 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject):
         callable note that it should accept a single parameter only,
         the attribute value.
 
+        Parameters
+        ----------
+        **kwargs : key=value
+            key : str
+                Filter variables based on a string attribute.
+            value : str or callable
+                Filter variables based on callable False/True answer.
+
+        Returns
+        -------
+        new : Dataset
+
         Examples
         --------
         >>> import numpy as np

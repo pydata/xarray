@@ -2533,9 +2533,12 @@ class TestDataset(TestCase):
             ds.other = 2
 
     def test_get_variables_by_attributes(self):
-        ds = Dataset({'temperature_0': (['t'],  [0], dict(standard_name='air_potential_temperature', height='0 m')),
-                      'temperature_10': (['t'],  [0], dict(standard_name='air_potential_temperature', height='10 m')),
-                      'precipitation': (['t'], [0], dict(standard_name='convective_precipitation_flux'))},
+        precip = dict(standard_name='convective_precipitation_flux')
+        temp0 = dict(standard_name='air_potential_temperature', height='0 m')
+        temp10 = dict(standard_name='air_potential_temperature', height='10 m')
+        ds = Dataset({'temperature_0': (['t'], [0], temp0),
+                      'temperature_10': (['t'], [0], temp10),
+                      'precipitation': (['t'], [0], precip)},
                     coords={'time': (['t'], [0], dict(axis='T'))})
 
         # Test return empty Dataset.
@@ -2543,12 +2546,12 @@ class TestDataset(TestCase):
         new_ds = ds.get_variables_by_attributes(standard_name='invalid_standard_name')
         self.assertFalse(bool(new_ds))
 
-        # Test return one Dataset.
+        # Test return one DataArray.
         new_ds = ds.get_variables_by_attributes(standard_name='convective_precipitation_flux')
         self.assertEqual(new_ds['precipitation'].standard_name, 'convective_precipitation_flux')
         self.assertDatasetEqual(new_ds['precipitation'], ds['precipitation'])
 
-        # Test return more than one Dataset.
+        # Test return more than one DataArray.
         new_ds = ds.get_variables_by_attributes(standard_name='air_potential_temperature')
         self.assertEqual(len(new_ds.data_vars), 2)
         for var in new_ds.data_vars:
