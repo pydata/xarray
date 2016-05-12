@@ -150,6 +150,7 @@ class GroupBy(object):
             specified bins by `pandas.cut`.
         """
         from .dataset import as_dataset
+        from .dataarray import DataArray
 
         if getattr(group, 'name', None) is None:
             raise ValueError('`group` must have a name')
@@ -182,18 +183,18 @@ class GroupBy(object):
         full_index = None
 
         if grouper is not None and bins is not None:
-            raise ValueError("Can't specify both `grouper` and `bins`.")
-        elif grouper is not None or bins is not None:
+            raise TypeError("Can't specify both `grouper` and `bins`.")
+        if bins is not None:
+            group = DataArray(pd.cut(group.values, bins),
+                                group.coords, name=group.name)
+        if grouper is not None:
             index = safe_cast_to_index(group)
             if not index.is_monotonic:
                 # TODO: sort instead of raising an error
                 raise ValueError('index must be monotonic for resampling')
             s = pd.Series(np.arange(index.size), index)
             if grouper is not None:
-                # probably time-series resampling
                 first_items = s.groupby(grouper).first()
-            else:
-                first_items = s.groupby(pd.cut(index, bins)).first()
             if first_items.isnull().any():
                 full_index = first_items.index
                 first_items = first_items.dropna()
@@ -201,8 +202,11 @@ class GroupBy(object):
             group_indices = ([slice(i, j) for i, j in zip(sbins[:-1], sbins[1:])] +
                              [slice(sbins[-1], None)])
             unique_coord = Coordinate(group.name, first_items.index)
-        elif group.name in obj.dims:
+        elif group.name in obj.dims and bins is None:
             # assume that group already has sorted, unique values
+            # (if using bins, the group will have the same name as a dimension
+            # but different values)
+            print('assume that group already has sorted, unique values')
             if group.dims != (group.name,):
                 raise ValueError('`group` is required to be a coordinate if '
                                  '`group.name` is a dimension in `obj`')

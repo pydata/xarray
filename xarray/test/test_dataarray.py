@@ -1329,6 +1329,8 @@ class TestDataArray(TestCase):
 
     def test_groupby_bins(self):
         array = DataArray(np.arange(4), dims='dim_0')
+        # the first value should not be part of any group ("right" binning)
+        array[0] = 99
         # bins follow conventions for pandas.cut
         # http://pandas.pydata.org/pandas-docs/stable/generated/pandas.cut.html
         bins = [0,1.5,5]
