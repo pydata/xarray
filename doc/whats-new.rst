@@ -32,6 +32,11 @@ Enhancements
   attributes are retained in the resampled object. By
   `Jeremy McGibbon <https://github.com/mcgibbon>`_.
 
+- New (experimental) decorators :py:func:`~xarray.register_dataset_accessor` and
+  :py:func:`~xarray.register_dataarray_accessor` for registering custom xarray
+  extensions without subclassing. They are described in the new documentation
+  page on :ref:`internals`. By `Stephan Hoyer <https://github.com/shoyer>`
+
 Bug fixes
 ~~~~~~~~~
 

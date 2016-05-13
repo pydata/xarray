@@ -150,6 +150,8 @@ Finally, we can manually iterate through ``Rolling`` objects:
    for label, arr_window in r:
       # arr_window is a view of x
 
+.. _compute.broadcasting:
+
 Broadcasting by dimension name
 ==============================
 

@@ -97,12 +97,10 @@ string, e.g., to access subgroup 'bar' within group 'foo' pass
 pass ``mode='a'`` to ``to_netcdf`` to ensure that each call does not delete the
 file.
 
-Data is loaded lazily from netCDF files. You can manipulate, slice and subset
+Data is always loaded lazily from netCDF files. You can manipulate, slice and subset
 Dataset and DataArray objects, and no array values are loaded into memory until
 you try to perform some sort of actual computation. For an example of how these
 lazy arrays work, see the OPeNDAP section below.
-
-.. todo: clarify this WRT dask.array
 
 It is important to note that when you modify values of a Dataset, even one
 linked to files on disk, only the in-memory copy you are manipulating in xarray
@@ -124,11 +122,13 @@ netCDF file. However, it's often cleaner to use a ``with`` statement:
     with xr.open_dataset('saved_on_disk.nc') as ds:
         print(ds.keys())
 
-..  Although xarray provides reasonable support for incremental reads of files on
-    disk, it does not yet support incremental writes, which is important for
-    dealing with datasets that do not fit into memory. This is a significant
-    shortcoming that we hope to resolve (:issue:`199`) by adding the ability to
-    create ``Dataset`` objects directly linked to a netCDF file on disk.
+Although xarray provides reasonable support for incremental reads of files on
+disk, it does not support incremental writes, which can be a useful strategy
+for dealing with datasets too big to fit into memory. Instead, xarray integrates
+with dask.array (see :ref:`dask`), which provides a fully featured engine for
+streaming computation.
+
+.. _io.encoding:
 
 Reading encoded data
 ~~~~~~~~~~~~~~~~~~~~

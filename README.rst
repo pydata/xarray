@@ -115,5 +115,5 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 
-xarray includes portions of pandas, NumPy and Seaborn. Their licenses are
-included in the licenses directory.
+xarray includes portions of pandas, NumPy, Seaborn and Python itself. These
+licenses are included in the licenses directory.
