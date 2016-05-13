@@ -2544,7 +2544,7 @@ class TestDataset(TestCase):
         # Test return empty Dataset.
         ds.get_variables_by_attributes(standard_name='invalid_standard_name')
         new_ds = ds.get_variables_by_attributes(standard_name='invalid_standard_name')
-        self.assertFalse(bool(new_ds))
+        self.assertFalse(bool(new_ds.data_vars))
 
         # Test return one DataArray.
         new_ds = ds.get_variables_by_attributes(standard_name='convective_precipitation_flux')
