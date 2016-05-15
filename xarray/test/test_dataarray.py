@@ -1338,7 +1338,7 @@ class TestDataArray(TestCase):
         expected = DataArray([1,5], dims='dim_0', coords={'dim_0': bin_coords})
         # the problem with this is that it overwrites the dimensions of array!
         #actual = array.groupby('dim_0', bins=bins).sum()
-        actual = array.groupby('dim_0', bins=bins).apply(
+        actual = array.groupby_bins('dim_0', bins).apply(
                                     lambda x : x.sum(), shortcut=False)
         self.assertDataArrayIdentical(expected, actual)
         # make sure original array dims are unchanged
@@ -1350,7 +1350,7 @@ class TestDataArray(TestCase):
         bins = [0,15,20]
         bin_coords = ['(0, 15]', '(15, 20]']
         expected = DataArray([16, 40], dims='lat', coords={'lat': bin_coords})
-        actual = array.groupby('lat', bins=bins).apply(
+        actual = array.groupby_bins('lat', bins).apply(
                                     lambda x : x.sum(), shortcut=False)
         self.assertDataArrayIdentical(expected, actual)
 

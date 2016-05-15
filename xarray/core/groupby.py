@@ -130,7 +130,8 @@ class GroupBy(object):
     Dataset.groupby
     DataArray.groupby
     """
-    def __init__(self, obj, group, squeeze=False, grouper=None, bins=None):
+    def __init__(self, obj, group, squeeze=False, grouper=None, bins=None,
+                    cut_kwargs={}):
         """Create a GroupBy object
 
         Parameters
@@ -148,6 +149,8 @@ class GroupBy(object):
         bins : array-like, optional
             If `bins` is specified, the groups will be discretized into the
             specified bins by `pandas.cut`.
+        cut_kwargs : dict, optional
+            Extra keyword arguments to pass to `pandas.cut`
         """
         from .dataset import as_dataset
         from .dataarray import DataArray
@@ -185,7 +188,7 @@ class GroupBy(object):
         if grouper is not None and bins is not None:
             raise TypeError("Can't specify both `grouper` and `bins`.")
         if bins is not None:
-            group = DataArray(pd.cut(group.values, bins),
+            group = DataArray(pd.cut(group.values, bins, **cut_kwargs),
                                 group.coords, name=group.name)
         if grouper is not None:
             index = safe_cast_to_index(group)
