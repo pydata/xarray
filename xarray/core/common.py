@@ -345,8 +345,9 @@ class BaseDataObject(AttrAccessMixin):
 
     def groupby_bins(self, group, bins, right=True, labels=None, precision=3,
             include_lowest=False, squeeze=True):
-        """Returns a GroupBy object for performing grouped operations. Rather
-        than using all unique values of `group`, the values are discretized
+        """Returns a GroupBy object for performing grouped operations.
+
+        Rather than using all unique values of `group`, the values are discretized
         first by applying `pandas.cut` [1]_ to `group`.
 
         Parameters
@@ -361,7 +362,7 @@ class BaseDataObject(AttrAccessMixin):
             sequence it defines the bin edges allowing for non-uniform bin
             width. No extension of the range of x is done in this case.
         right : boolean, optional
-I           ndicates whether the bins include the rightmost edge or not. If
+            Indicates whether the bins include the rightmost edge or not. If
             right == True (the default), then the bins [1,2,3,4] indicate
             (1,2], (2,3], (3,4].
         labels : array or boolean, default None

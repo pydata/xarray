@@ -64,6 +64,33 @@ You can also iterate over over groups in ``(label, group)`` pairs:
 Just like in pandas, creating a GroupBy object is cheap: it does not actually
 split the data until you access particular values.
 
+Binning
+~~~~~~~
+
+Sometimes you don't want to use all the unique values to determine the groups
+but instead want to "bin" the data into coarser groups. You could always create
+a customized coordinate, but xarray facilitates this via the
+:py:meth:`~xarray.Dataset.groupby_bins` method.
+
+.. ipython:: python
+
+    x_bins = [0,25,50]
+    ds.groupby_bins('x', x_bins).groups
+
+The binning is implemented via `pandas.cut`__, whose documentation details how
+the bins are assigned. As seen in the example above, by default, the bins are
+labeled with strings using set notation to precisely identify the bin limits. To
+override this behavior, you can specify the bin labels explicitly. Here we
+choose `float` labels which identify the bin centers:
+
+.. ipython:: python
+
+    x_bin_labels = [12.5,37.5]
+    ds.groupby_bins('x', x_bins, labels=x_bin_labels).groups
+
+__ http://pandas.pydata.org/pandas-docs/version/0.17.1/generated/pandas.cut.html
+
+
 Apply
 ~~~~~
 
@@ -170,3 +197,11 @@ __ http://cfconventions.org/cf-conventions/v1.6.0/cf-conventions.html#_two_dimen
     da
     da.groupby('lon').sum()
     da.groupby('lon').apply(lambda x: x - x.mean(), shortcut=False)
+
+Because multidimensional groups have the ability to generate a very large
+number of bins, coarse-binning via :py:meth:`~xarray.Dataset.groupby_bins`
+may be desirable:
+
+.. ipython:: python
+
+    da.groupby_bins('lon', [0,45,50]).sum()
