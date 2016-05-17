@@ -105,6 +105,15 @@ class TestCharToStringArray(TestCase):
         self.assertArrayEqual(actual, expected)
 
 
+class TestBoolTypeArray(TestCase):
+    def test_booltype_array(self):
+        x = np.array([1, 0, 1, 1, 0], dtype='i1')
+        bx = conventions.BoolTypeArray(x)
+        self.assertEqual(bx.dtype, np.bool)
+        self.assertArrayEqual(bx, np.array([True, False, True, True, False],
+                                           dtype=np.bool))
+
+
 @np.vectorize
 def _ensure_naive_tz(dt):
     if hasattr(dt, 'tzinfo'):
