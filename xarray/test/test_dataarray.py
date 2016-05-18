@@ -1353,6 +1353,12 @@ class TestDataArray(TestCase):
         actual = array.groupby_bins('lat', bins).apply(
                                     lambda x : x.sum(), shortcut=False)
         self.assertDataArrayIdentical(expected, actual)
+        # modify the array coordinates to be non-monotonic after unstacking
+        array['lat'].data = np.array([[10., 20.], [20., 10.]])
+        expected = DataArray([28, 28], dims='lat', coords={'lat': bin_coords})
+        actual = array.groupby_bins('lat', bins).apply(
+                                    lambda x : x.sum(), shortcut=False)
+        self.assertDataArrayIdentical(expected, actual)
 
     def make_rolling_example_array(self):
         times = pd.date_range('2000-01-01', freq='1D', periods=21)
