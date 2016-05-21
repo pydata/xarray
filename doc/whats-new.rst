@@ -29,6 +29,10 @@ Bug fixes
 
 - Fix to ensure xarray works with h5netcdf v0.3.0 for arrays with ``dtype=str``
   (:issue:`953`). By `Stephan Hoyer <https://github.com/shoyer>`_.
+- ``Dataset.__dir__()`` (i.e. the method python calls to get autocomplete options) failed
+  if one of the dataset's keys was not a string (:issue:`852`). By
+  `Maximilian Roos <https://github.com/maximilianr>`_.
+
 
 .. _whats-new.0.8.1:
 

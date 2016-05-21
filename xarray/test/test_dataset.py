@@ -12,6 +12,7 @@ except ImportError:
 
 import numpy as np
 import pandas as pd
+import pytest
 
 from xarray import (align, broadcast, concat, merge, conventions, backends,
                     Dataset, DataArray, Variable, Coordinate, auto_combine,
@@ -2555,3 +2556,30 @@ class TestDataset(TestCase):
         self.assertEqual(len(new_ds.data_vars), 1)
         for var in new_ds.data_vars:
             self.assertEqual(new_ds[var].height, '10 m')
+
+
+### Py.test tests
+
+
+@pytest.fixture()
+def data_set(seed=None):
+    return create_test_data(seed)
+
+
+def test_dir_expected_attrs(data_set):
+
+    some_expected_attrs = {'pipe', 'mean', 'isnull', 'var1',
+                           'dim1', 'numbers'}
+    result = dir(data_set)
+    assert set(result) >= some_expected_attrs
+
+def test_dir_non_string(data_set):
+    # add a numbered key to ensure this doesn't break dir
+    data_set[5] = 'foo'
+    result = dir(data_set)
+    assert not (5 in result)
+
+def test_dir_unicode(data_set):
+    data_set[u'unicode'] = 'uni'
+    result = dir(data_set)
+    assert u'unicode' in result
