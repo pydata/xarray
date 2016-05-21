@@ -35,6 +35,7 @@ Bug fixes
 - ``Dataset.__dir__()`` (i.e. the method python calls to get autocomplete options) failed
   if one of the dataset's keys was not a string (:issue:`852`). By
   `Maximilian Roos <https://github.com/maximilianr>`_.
+- ``Dataset`` constructor can now take arbitrary objects as values (:issue:`647`)
 
 
 .. _whats-new.0.8.1:
