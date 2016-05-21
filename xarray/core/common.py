@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
 
-from .pycompat import basestring, iteritems, suppress, dask_array_type
+from .pycompat import basestring, iteritems, suppress, dask_array_type, bytes_type
 from . import formatting
 from .utils import SortedKeysDict, not_implemented
 
@@ -211,8 +211,9 @@ class AttrAccessMixin(object):
         """Provide method name lookup and completion. Only provide 'public'
         methods.
         """
-        extra_attrs = [item for sublist in self._attr_sources
-                       for item in sublist]
+        extra_attrs = [
+            item for sublist in self._attr_sources for item in sublist
+            if isinstance(item, (basestring))]
         return sorted(set(dir(type(self)) + extra_attrs))
 
 
