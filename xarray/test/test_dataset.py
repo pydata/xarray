@@ -12,8 +12,8 @@ except ImportError:
 import numpy as np
 import pandas as pd
 
-from xarray import (align, broadcast, concat, conventions, backends, Dataset,
-                    DataArray, Variable, Coordinate, auto_combine,
+from xarray import (align, broadcast, concat, merge, conventions, backends,
+                    Dataset, DataArray, Variable, Coordinate, auto_combine,
                     open_dataset, set_options)
 from xarray.core import indexing, utils
 from xarray.core.pycompat import iteritems, OrderedDict
@@ -39,6 +39,7 @@ def create_test_data(seed=None):
         obj[v] = (dims, data, {'foo': 'variable'})
     obj.coords['numbers'] = ('dim3', np.array([0, 1, 2, 0, 0, 1, 1, 2, 2, 3],
                                               dtype='int64'))
+    assert all(obj.data.flags.writeable for obj in obj.values())
     return obj
 
 
@@ -124,7 +125,7 @@ class TestDataset(TestCase):
         with self.assertRaisesRegexp(ValueError,
                 "variable 'x' has the same name"):
             Dataset({'a': x1, 'x': z})
-        with self.assertRaisesRegexp(TypeError, 'must be given by arrays or'):
+        with self.assertRaisesRegexp(TypeError, 'tuples to convert'):
             Dataset({'x': (1, 2, 3, 4, 5, 6, 7)})
         with self.assertRaisesRegexp(ValueError, 'already exists as a scalar'):
             Dataset({'x': 0, 'y': ('x', [1, 2, 3])})
@@ -267,7 +268,7 @@ class TestDataset(TestCase):
         self.assertDatasetIdentical(expected, actual)
 
     def test_constructor_with_coords(self):
-        with self.assertRaisesRegexp(ValueError, 'redundant variables and co'):
+        with self.assertRaisesRegexp(ValueError, 'found in both data_vars and'):
             Dataset({'a': ('x', [1])}, {'a': ('x', [1])})
 
         ds = Dataset({}, {'a': ('x', [1])})
@@ -418,8 +419,10 @@ class TestDataset(TestCase):
         actual.coords['z'] = ('z', ['a', 'b'])
         self.assertArrayEqual(actual['z'], ['a', 'b'])
 
+        actual = data.copy(deep=True)
         with self.assertRaisesRegexp(ValueError, 'conflicting sizes'):
-            data.coords['x'] = ('x', [-1])
+            actual.coords['x'] = ('x', [-1])
+        self.assertDatasetIdentical(actual, data)  # should not be modified
 
         actual = data.copy()
         del actual.coords['b']
@@ -435,6 +438,12 @@ class TestDataset(TestCase):
         actual = data.copy(deep=True)
         actual.coords.update({'c': 11})
         expected = data.merge({'c': 11}).set_coords('c')
+        self.assertDatasetIdentical(expected, actual)
+
+    def test_coords_setitem_with_new_dimension(self):
+        actual = Dataset()
+        actual.coords['foo'] = ('x', [1, 2, 3])
+        expected = Dataset(coords={'foo': ('x', [1, 2, 3])})
         self.assertDatasetIdentical(expected, actual)
 
     def test_coords_set(self):
@@ -497,13 +506,13 @@ class TestDataset(TestCase):
         self.assertDatasetIdentical(expected, actual)
 
         other_coords = Dataset(coords={'x': ('x', ['a'])}).coords
-        with self.assertRaisesRegexp(ValueError, 'not aligned'):
+        with self.assertRaisesRegexp(ValueError, 'conflicting value'):
             orig_coords.merge(other_coords)
         other_coords = Dataset(coords={'x': ('x', ['a', 'b'])}).coords
-        with self.assertRaisesRegexp(ValueError, 'not aligned'):
+        with self.assertRaisesRegexp(ValueError, 'conflicting value'):
             orig_coords.merge(other_coords)
         other_coords = Dataset(coords={'x': ('x', ['a', 'b', 'c'])}).coords
-        with self.assertRaisesRegexp(ValueError, 'not aligned'):
+        with self.assertRaisesRegexp(ValueError, 'conflicting value'):
             orig_coords.merge(other_coords)
 
         other_coords = Dataset(coords={'a': ('x', [8, 9])}).coords
@@ -1231,84 +1240,6 @@ class TestDataset(TestCase):
         expected = Dataset({'x': ('t', [3, 4]), 'y': ('t', [np.nan] * 2)})
         self.assertDatasetIdentical(expected, actual)
 
-    def test_merge(self):
-        data = create_test_data()
-        ds1 = data[['var1']]
-        ds2 = data[['var3']]
-        expected = data[['var1', 'var3']]
-        actual = ds1.merge(ds2)
-        self.assertDatasetIdentical(expected, actual)
-
-        actual = ds2.merge(ds1)
-        self.assertDatasetIdentical(expected, actual)
-
-        actual = data.merge(data)
-        self.assertDatasetIdentical(data, actual)
-        actual = data.reset_coords(drop=True).merge(data)
-        self.assertDatasetIdentical(data, actual)
-        actual = data.merge(data.reset_coords(drop=True))
-        self.assertDatasetIdentical(data, actual)
-
-        with self.assertRaises(ValueError):
-            ds1.merge(ds2.rename({'var3': 'var1'}))
-        with self.assertRaisesRegexp(ValueError, 'cannot merge'):
-            data.reset_coords().merge(data)
-        with self.assertRaisesRegexp(ValueError, 'cannot merge'):
-            data.merge(data.reset_coords())
-
-    def test_merge_broadcast_equals(self):
-        ds1 = Dataset({'x': 0})
-        ds2 = Dataset({'x': ('y', [0, 0])})
-        actual = ds1.merge(ds2)
-        self.assertDatasetIdentical(ds2, actual)
-
-        actual = ds2.merge(ds1)
-        self.assertDatasetIdentical(ds2, actual)
-
-        actual = ds1.copy()
-        actual.update(ds2)
-        self.assertDatasetIdentical(ds2, actual)
-
-        ds1 = Dataset({'x': np.nan})
-        ds2 = Dataset({'x': ('y', [np.nan, np.nan])})
-        actual = ds1.merge(ds2)
-        self.assertDatasetIdentical(ds2, actual)
-
-    def test_merge_compat(self):
-        ds1 = Dataset({'x': 0})
-        ds2 = Dataset({'x': 1})
-        for compat in ['broadcast_equals', 'equals', 'identical']:
-            with self.assertRaisesRegexp(ValueError, 'conflicting value'):
-                ds1.merge(ds2, compat=compat)
-
-        ds2 = Dataset({'x': [0, 0]})
-        for compat in ['equals', 'identical']:
-            with self.assertRaisesRegexp(ValueError, 'conflicting value'):
-                ds1.merge(ds2, compat=compat)
-
-        ds2 = Dataset({'x': ((), 0, {'foo': 'bar'})})
-        with self.assertRaisesRegexp(ValueError, 'conflicting value'):
-            ds1.merge(ds2, compat='identical')
-
-        with self.assertRaisesRegexp(ValueError, 'compat=\S+ invalid'):
-            ds1.merge(ds2, compat='foobar')
-
-    def test_merge_auto_align(self):
-        ds1 = Dataset({'a': ('x', [1, 2])})
-        ds2 = Dataset({'b': ('x', [3, 4]), 'x': [1, 2]})
-        expected = Dataset({'a': ('x', [1, 2, np.nan]),
-                            'b': ('x', [np.nan, 3, 4])})
-        self.assertDatasetIdentical(expected, ds1.merge(ds2))
-        self.assertDatasetIdentical(expected, ds2.merge(ds1))
-
-        expected = expected.isel(x=slice(2))
-        self.assertDatasetIdentical(expected, ds1.merge(ds2, join='left'))
-        self.assertDatasetIdentical(expected, ds2.merge(ds1, join='right'))
-
-        expected = expected.isel(x=slice(1, 2))
-        self.assertDatasetIdentical(expected, ds1.merge(ds2, join='inner'))
-        self.assertDatasetIdentical(expected, ds2.merge(ds1, join='inner'))
-
     def test_getitem(self):
         data = create_test_data()
         self.assertIsInstance(data['var1'], DataArray)
@@ -1408,7 +1339,7 @@ class TestDataset(TestCase):
         data2['scalar'] = ([], 0)
         self.assertDatasetIdentical(data1, data2)
         # can't use the same dimension name as a scalar var
-        with self.assertRaisesRegexp(ValueError, 'cannot merge'):
+        with self.assertRaisesRegexp(ValueError, 'already exists as a scalar'):
             data1['newvar'] = ('scalar', [3, 4, 5])
         # can't resize a used dimension
         with self.assertRaisesRegexp(ValueError, 'conflicting sizes'):

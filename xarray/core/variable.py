@@ -22,12 +22,10 @@ except ImportError:
     pass
 
 
-def as_variable(obj, key=None, strict=True, copy=False):
-    """Convert an object into an Variable
+def as_variable(obj, name=None, copy=False):
+    """Convert an object into an Variable.
 
-    - If the object is already an `Variable`, return it.
-    - If the object is a `DataArray`, return it if `strict=False` or return
-      its variable if `strict=True`.
+    - If the object is already an `Variable`, return a shallow copy.
     - Otherwise, if the object has 'dims' and 'data' attributes, convert
       it into a new `Variable`.
     - If all else fails, attempt to convert the object into an `Variable` by
@@ -35,31 +33,43 @@ def as_variable(obj, key=None, strict=True, copy=False):
     """
     # TODO: consider extending this method to automatically handle Iris and
     # pandas objects.
-    if strict and hasattr(obj, 'variable'):
+    if hasattr(obj, 'variable'):
         # extract the primary Variable from DataArrays
         obj = obj.variable
-    if not isinstance(obj, (Variable, xr.DataArray)):
-        if hasattr(obj, 'dims') and (hasattr(obj, 'data') or
-                                     hasattr(obj, 'values')):
-            obj = Variable(obj.dims, getattr(obj, 'data', obj.values),
-                           getattr(obj, 'attrs', None),
-                           getattr(obj, 'encoding', None))
-        elif isinstance(obj, tuple):
-            try:
-                obj = Variable(*obj)
-            except TypeError:
-                raise TypeError('cannot convert argument into an Variable')
-        elif utils.is_scalar(obj):
-            obj = Variable([], obj)
-        elif getattr(obj, 'name', None) is not None:
-            obj = Variable(obj.name, obj)
-        elif key is not None:
-            obj = Variable(key, obj)
-        else:
-            raise TypeError('cannot infer Variable dimensions')
+
+    if isinstance(obj, Variable):
+        obj = obj.copy(deep=False)
+    elif hasattr(obj, 'dims') and (hasattr(obj, 'data') or
+                                   hasattr(obj, 'values')):
+        obj = Variable(obj.dims, getattr(obj, 'data', obj.values),
+                       getattr(obj, 'attrs', None),
+                       getattr(obj, 'encoding', None))
+    elif isinstance(obj, tuple):
+        try:
+            obj = Variable(*obj)
+        except TypeError:
+            # use .format() instead of % because it handles tuples consistently
+            raise TypeError('tuples to convert into variables must be of the '
+                            'form (dims, data[, attrs, encoding]): '
+                            '{}'.format(obj))
+    elif utils.is_scalar(obj):
+        obj = Variable([], obj)
+    elif getattr(obj, 'name', None) is not None:
+        obj = Variable(obj.name, obj)
+    elif name is not None:
+        obj = Variable(name, obj)
     else:
-        if copy:
-            obj = obj.copy(deep=False)
+        raise TypeError('unable to convert object into a variable without an '
+                        'explicit list of dimensions: %r' % obj)
+
+    if name is not None and name in obj.dims:
+        # convert the into an Index
+        if obj.ndim != 1:
+            raise ValueError('the variable %r has the same name as one of its '
+                             'dimensions %r, but it is not 1-dimensional and '
+                             'thus it is not a valid index' % (name, obj.dims))
+        obj = obj.to_coord()
+
     return obj
 
 
@@ -711,15 +721,22 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
         self_dims = set(self.dims)
         expanded_dims = tuple(
             d for d in dims if d not in self_dims) + self.dims
-        if shape is not None:
+
+        if self.dims == expanded_dims:
+            # don't use broadcast_to unless necessary so the result remains
+            # writeable if possible
+            expanded_data = self.data
+        elif shape is not None:
             dims_map = dict(zip(dims, shape))
-            tmp_shape = [dims_map[d] for d in expanded_dims]
+            tmp_shape = tuple(dims_map[d] for d in expanded_dims)
             expanded_data = ops.broadcast_to(self.data, tmp_shape)
         else:
             expanded_data = self.data[
                 (None,) * (len(expanded_dims) - self.ndim)]
+
         expanded_var = Variable(expanded_dims, expanded_data, self._attrs,
                                 self._encoding, fastpath=True)
+
         return expanded_var.transpose(*dims)
 
     def _stack_once(self, dims, new_dim):

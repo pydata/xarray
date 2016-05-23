@@ -755,8 +755,8 @@ class TestDataArray(TestCase):
 
     def test_inplace_math_basics(self):
         x = self.x
-        v = self.v
         a = self.dv
+        v = a.variable
         b = a
         b += 1
         self.assertIs(b, a)
@@ -767,9 +767,9 @@ class TestDataArray(TestCase):
     def test_inplace_math_automatic_alignment(self):
         a = DataArray(range(5), [('x', range(5))])
         b = DataArray(range(1, 6), [('x', range(1, 6))])
-        with self.assertRaisesRegexp(ValueError, 'not aligned'):
+        with self.assertRaisesRegexp(ValueError, 'conflicting value'):
             a += b
-        with self.assertRaisesRegexp(ValueError, 'not aligned'):
+        with self.assertRaisesRegexp(ValueError, 'conflicting value'):
             b += a
 
     def test_math_name(self):
@@ -1818,29 +1818,29 @@ class TestDataArray(TestCase):
         actual = _full_like(DataArray([1, 2, 3]), fill_value=np.nan)
         self.assertEqual(actual.dtype, np.float)
         np.testing.assert_equal(actual.values, np.nan)
-    
+
     def test_dot(self):
         x = np.linspace(-3, 3, 6)
         y = np.linspace(-3, 3, 5)
-        z = range(4) 
+        z = range(4)
         da_vals = np.arange(6 * 5 * 4).reshape((6, 5, 4))
         da = DataArray(da_vals, coords=[x, y, z], dims=['x', 'y', 'z'])
-        
+
         dm_vals = range(4)
         dm = DataArray(dm_vals, coords=[z], dims=['z'])
-        
+
         # nd dot 1d
         actual = da.dot(dm)
         expected_vals = np.tensordot(da_vals, dm_vals, [2, 0])
         expected = DataArray(expected_vals, coords=[x, y], dims=['x', 'y'])
         self.assertDataArrayEqual(expected, actual)
-        
+
         # all shared dims
         actual = da.dot(da)
         expected_vals = np.tensordot(da_vals, da_vals, axes=([0, 1, 2], [0, 1, 2]))
         expected = DataArray(expected_vals)
         self.assertDataArrayEqual(expected, actual)
-        
+
         # multiple shared dims
         dm_vals = np.arange(20 * 5 * 4).reshape((20, 5, 4))
         j = np.linspace(-3, 3, 20)
@@ -1849,7 +1849,7 @@ class TestDataArray(TestCase):
         expected_vals = np.tensordot(da_vals, dm_vals, axes=([1, 2], [1, 2]))
         expected = DataArray(expected_vals, coords=[x, j], dims=['x', 'j'])
         self.assertDataArrayEqual(expected, actual)
-        
+
         with self.assertRaises(NotImplementedError):
             da.dot(dm.to_dataset(name='dm'))
         with self.assertRaises(TypeError):

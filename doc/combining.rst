@@ -75,14 +75,15 @@ expensive if you are manipulating your dataset lazily using :ref:`dask`.
 Merge
 ~~~~~
 
-To combine variables and coordinates between multiple Datasets, you can use the
-:py:meth:`~xarray.Dataset.merge` and :py:meth:`~xarray.Dataset.update` methods.
-Merge checks for conflicting variables before merging and by default it returns
-a new Dataset:
+To combine variables and coordinates between multiple ``DataArray`` and/or
+``Dataset`` object, use :py:func:`~xarray.merge`. It can merge a list of
+``Dataset``, ``DataArray`` or dictionaries of objects convertible to
+``DataArray`` objects:
 
 .. ipython:: python
 
-    ds.merge({'hello': ('space', np.arange(3) + 10)})
+    xr.merge([ds, ds.rename({'foo': 'bar'})])
+    xr.merge([xr.DataArray(n, name='var%d' % n) for n in range(5)])
 
 If you merge another dataset (or a dictionary including data array objects), by
 default the resulting dataset will be aligned on the **union** of all index
@@ -91,9 +92,22 @@ coordinates:
 .. ipython:: python
 
     other = xr.Dataset({'bar': ('x', [1, 2, 3, 4]), 'x': list('abcd')})
-    ds.merge(other)
+    xr.merge([ds, other])
 
-This ensures that the ``merge`` is non-destructive.
+This ensures that ``merge`` is non-destructive. ``xarray.MergeError`` is raised
+if you attempt to merge variables with conflicting values:
+
+.. ipython::
+
+    @verbatim
+    In [1]: xr.merge([ds, ds + 1])
+    MergeError: conflicting value for variable foo:
+    first value: <xarray.Variable (x: 2, y: 3)>
+    array([[ 0.4691123 , -0.28286334, -1.5090585 ],
+           [-1.13563237,  1.21211203, -0.17321465]])
+    second value: <xarray.Variable (x: 2, y: 3)>
+    array([[ 1.4691123 ,  0.71713666, -0.5090585 ],
+           [-0.13563237,  2.21211203,  0.82678535]])
 
 The same non-destructive merging between ``DataArray`` index coordinates is
 used in the :py:class:`~xarray.Dataset` constructor:

@@ -27,6 +27,10 @@ Enhancements
   option that clips coordinate elements that are fully masked.  By
   `Phillip J. Wolfram <https://github.com/pwolfram>`_.
 
+- New top level :py:func:`merge` function allows for combining variables from
+  any number of ``Dataset`` and/or ``DataArray`` variables. See :ref:`merge`
+  for more details. By `Stephan Hoyer <https://github.com/shoyer>`_.
+
 - DataArray and Dataset method :py:meth:`resample` now supports the
   ``keep_attrs=False`` option that determines whether variable and dataset
   attributes are retained in the resampled object. By
@@ -35,7 +39,7 @@ Enhancements
 - New (experimental) decorators :py:func:`~xarray.register_dataset_accessor` and
   :py:func:`~xarray.register_dataarray_accessor` for registering custom xarray
   extensions without subclassing. They are described in the new documentation
-  page on :ref:`internals`. By `Stephan Hoyer <https://github.com/shoyer>`
+  page on :ref:`internals`. By `Stephan Hoyer <https://github.com/shoyer>`_.
 
 - Round trip boolean datatypes. Previously, writing boolean datatypes to netCDF
   formats would raise an error since netCDF does not have a `bool` datatype.

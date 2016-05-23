@@ -39,11 +39,15 @@ def _infer_coords_and_dims(shape, coords, dims):
         if coords is not None and len(coords) == len(shape):
             # try to infer dimensions from coords
             if utils.is_dict_like(coords):
+                # TODO: deprecate this path
                 dims = list(coords.keys())
             else:
-                for n, (dim, coord) in enumerate(zip(dims, coords)):
-                    coord = as_variable(coord, key=dim).to_coord()
-                    dims[n] = coord.name
+                for n, coord in enumerate(coords):
+                    try:
+                        coord = as_variable(coord)
+                        dims[n], = coord.dims
+                    except (TypeError, ValueError):
+                        pass
         dims = tuple(dims)
     else:
         for d in dims:
@@ -54,10 +58,10 @@ def _infer_coords_and_dims(shape, coords, dims):
 
     if utils.is_dict_like(coords):
         for k, v in coords.items():
-            new_coords[k] = as_variable(v, key=k, copy=True)
+            new_coords[k] = as_variable(v, name=k)
     elif coords is not None:
         for dim, coord in zip(dims, coords):
-            var = as_variable(coord, key=dim, copy=True)
+            var = as_variable(coord, name=dim)
             var.dims = (dim,)
             new_coords[dim] = var
 
@@ -276,8 +280,15 @@ class DataArray(AbstractArray, BaseDataObject):
         if name in self.coords:
             raise ValueError('cannot create a Dataset from a DataArray with '
                              'the same name as one of its coordinates')
-        dataset = self.coords._to_dataset(shallow_copy=shallow_copy)
-        dataset[name] = self.variable
+        # use private APIs here for speed: this is called by _to_temp_dataset(),
+        # which is used in the guts of a lot of operations (e.g., reindex)
+        variables = self._coords.copy()
+        variables[name] = self.variable
+        if shallow_copy:
+            for k in variables:
+                variables[k] = variables[k].copy(deep=False)
+        coord_names = set(self._coords)
+        dataset = Dataset._from_vars_and_coord_names(variables, coord_names)
         return dataset
 
     def to_dataset(self, dim=None, name=None):
@@ -455,7 +466,7 @@ class DataArray(AbstractArray, BaseDataObject):
     def indexes(self):
         """OrderedDict of pandas.Index objects used for label based indexing
         """
-        return Indexes(self)
+        return Indexes(self._coords, self.dims)
 
     @property
     def coords(self):
@@ -1192,7 +1203,7 @@ class DataArray(AbstractArray, BaseDataObject):
             variable = (f(self.variable, other_variable)
                         if not reflexive
                         else f(other_variable, self.variable))
-            coords = self.coords.merge(other_coords)._variables
+            coords = self.coords._merge_raw(other_coords)
             name = self._result_name(other)
 
             return self._replace(variable, coords, name)
@@ -1205,6 +1216,10 @@ class DataArray(AbstractArray, BaseDataObject):
             if isinstance(other, groupby.GroupBy):
                 raise TypeError('in-place operations between a DataArray and '
                                 'a grouped object are not permitted')
+            # n.b. we can't align other to self (with other.reindex_like(self))
+            # because `other` may be converted into floats, which would cause
+            # in-place arithmetic to fail unpredictably. Instead, we simply
+            # don't support automatic alignment with in-place arithmetic.
             other_coords = getattr(other, 'coords', None)
             other_variable = getattr(other, 'variable', other)
             with self.coords._merge_inplace(other_coords):

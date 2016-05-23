@@ -8,7 +8,7 @@ import pandas as pd
 from . import ops, utils
 from .common import _maybe_promote
 from .pycompat import iteritems, OrderedDict
-from .utils import is_full_slice
+from .utils import is_full_slice, is_dict_like
 from .variable import Variable, Coordinate, broadcast_variables
 
 
@@ -77,13 +77,29 @@ def align(*objects, **kwargs):
     aligned : same as *objects
         Tuple of objects with aligned coordinates.
     """
+    return partial_align(*objects, exclude=None, **kwargs)
+
+
+def partial_align(*objects, **kwargs):
+    """partial_align(*objects, join='inner', copy=True, indexes=None,
+                     exclude=set())
+
+    Like align, but don't align along dimensions in exclude. Not public API.
+    """
     join = kwargs.pop('join', 'inner')
     copy = kwargs.pop('copy', True)
+    indexes = kwargs.pop('indexes', None)
+    exclude = kwargs.pop('exclude', None)
+    if exclude is None:
+        exclude = set()
     if kwargs:
         raise TypeError('align() got unexpected keyword arguments: %s'
                         % list(kwargs))
 
-    joined_indexes = _join_indexes(join, objects)
+    joined_indexes = _join_indexes(join, objects, exclude=exclude)
+    if indexes is not None:
+        joined_indexes.update(indexes)
+
     result = []
     for obj in objects:
         valid_indexers = dict((k, v) for k, v in joined_indexes.items()
@@ -92,36 +108,49 @@ def align(*objects, **kwargs):
     return tuple(result)
 
 
-def partial_align(*objects, **kwargs):
-    """partial_align(*objects, join='inner', copy=True, exclude=set()
-
-    Like align, but don't align along dimensions in exclude. Not public API.
-    """
-    join = kwargs.pop('join', 'inner')
-    copy = kwargs.pop('copy', True)
-    exclude = kwargs.pop('exclude', set())
-    assert not kwargs
-    joined_indexes = _join_indexes(join, objects, exclude=exclude)
-    return tuple(obj.reindex(copy=copy, **joined_indexes) for obj in objects)
+def is_alignable(obj):
+    return hasattr(obj, 'indexes') and hasattr(obj, 'reindex')
 
 
-def align_variables(variables, join='outer', copy=False):
-    """Align all DataArrays in the provided dict, leaving other values alone.
+def deep_align(list_of_variable_maps, join='outer', copy=True, indexes=None):
+    """Align objects, recursing into dictionary values.
     """
     from .dataarray import DataArray
-    from pandas import Series, DataFrame, Panel
 
-    new_variables = OrderedDict(variables)
-    # if an item is a Series / DataFrame / Panel, try and wrap it in a DataArray constructor
-    new_variables.update((
-        (k, DataArray(v)) for k, v in variables.items()
-        if isinstance(v, (Series, DataFrame, Panel))
-    ))
+    if indexes is None:
+        indexes = {}
 
-    alignable = [k for k, v in new_variables.items() if hasattr(v, 'indexes')]
-    aligned = align(*[new_variables[a] for a in alignable], join=join, copy=copy)
-    new_variables.update(zip(alignable, aligned))
-    return new_variables
+    keys = []
+    out = []
+    targets = []
+    for n, variables in enumerate(list_of_variable_maps):
+        if is_alignable(variables):
+            keys.append(n)
+            targets.append(variables)
+            out.append(None)
+        elif is_dict_like(variables):
+            for k, v in variables.items():
+                if is_alignable(v) and k not in indexes:
+                    # don't align dict-like variables that are already fixed
+                    # indexes: we might be overwriting these index variables
+                    keys.append((n, k))
+                    targets.append(v)
+            out.append(OrderedDict(variables))
+        else:
+            out.append(variables)
+
+    aligned = partial_align(*targets, join=join, copy=copy, indexes=indexes)
+
+    for key, aligned_obj in zip(keys, aligned):
+        if isinstance(key, tuple):
+            n, k = key
+            out[n][k] = aligned_obj
+        else:
+            out[key] = aligned_obj
+
+    assert all(arg is not None for arg in out)
+
+    return out
 
 
 def reindex_variables(variables, indexes, indexers, method=None,
