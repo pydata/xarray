@@ -11,7 +11,7 @@ from xarray.plot.utils import (_determine_cmap_params,
                                _build_discrete_cmap,
                                _color_palette)
 
-from . import TestCase, requires_matplotlib, incompatible_2_6
+from . import TestCase, requires_matplotlib
 
 try:
     import matplotlib as mpl
@@ -27,9 +27,7 @@ def text_in_fig():
     '''
     Return the set of all text in the figure
     '''
-    alltxt = [t.get_text() for t in plt.gcf().findobj(mpl.text.Text)]
-    # Set comprehension not compatible with Python 2.6
-    return set(alltxt)
+    return {t.get_text() for t in plt.gcf().findobj(mpl.text.Text)}
 
 
 def find_possible_colorbars():
@@ -114,7 +112,6 @@ class TestPlot(PlotTestCase):
         self.assertArrayEqual(pd.date_range('20000101', periods=4) - np.timedelta64(12, 'h'),
                               _infer_interval_breaks(pd.date_range('20000101', periods=3)))
 
-    @incompatible_2_6
     def test_datetime_dimension(self):
         nrow = 3
         ncol = 4
@@ -641,7 +638,6 @@ class Common2dMixin:
         for ax in g.axes.flat:
             self.assertTrue(ax.has_data())
 
-    @incompatible_2_6
     def test_2d_function_and_method_signature_same(self):
         func_sig = inspect.getcallargs(self.plotfunc, self.darray)
         method_sig = inspect.getcallargs(self.plotmethod)
