@@ -13,12 +13,19 @@ What's New
     import xarray as xr
     np.random.seed(123456)
 
-.. _whats-new.0.7.3:
+.. _whats-new.0.8.0:
 
-v0.7.3 (unreleased)
+v0.8.0 (unreleased)
 -------------------
 
 This release includes
+
+.. _v0.8.0.breaking:
+
+Breaking changes
+~~~~~~~~~~~~~~~~
+
+- Dropped support for Python 2.6 (:issue:`855`).
 
 Enhancements
 ~~~~~~~~~~~~
