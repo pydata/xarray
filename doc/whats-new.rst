@@ -37,6 +37,11 @@ Enhancements
   extensions without subclassing. They are described in the new documentation
   page on :ref:`internals`. By `Stephan Hoyer <https://github.com/shoyer>`
 
+- Round trip boolean datatypes. Previously, writing boolean datatypes to netCDF
+  formats would raise an error since netCDF does not have a `bool` datatype.
+  This feature reads/writes a `dtype` attribute to boolean variables in netCDF
+  files. By `Joe Hamman <https://github.com/jhamman>`_.
+
 Bug fixes
 ~~~~~~~~~
 
