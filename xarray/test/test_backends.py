@@ -16,7 +16,6 @@ import xarray as xr
 from xarray import Dataset, open_dataset, open_mfdataset, backends, save_mfdataset
 from xarray.backends.common import robust_getitem
 from xarray.backends.netCDF4_ import _extract_nc4_encoding
-from xarray.backends.h5netcdf_ import _extract_h5nc_encoding
 from xarray.core.pycompat import iteritems, PY3
 
 from . import (TestCase, requires_scipy, requires_netCDF4, requires_pydap,
@@ -30,7 +29,6 @@ except ImportError:
     pass
 
 try:
-    import dask
     import dask.array as da
 except ImportError:
     pass
@@ -52,6 +50,11 @@ def create_encoded_masked_and_scaled_data():
     attributes = {'_FillValue': -1, 'add_offset': 10,
                   'scale_factor': np.float32(0.1)}
     return Dataset({'x': ('t', [-1, -1, 0, 1, 2], attributes)})
+
+
+def create_boolean_data():
+    attributes = {'units': '-'}
+    return Dataset({'x': ('t', [True, False, False, True], attributes)})
 
 
 class TestCommon(TestCase):
@@ -237,6 +240,13 @@ class DatasetIOTestCases(object):
         with self.assertRaisesRegexp(ValueError, 'cannot serialize'):
             with self.roundtrip(expected):
                 pass
+
+    def test_roundtrip_boolean_dtype(self):
+        original = create_boolean_data()
+        self.assertEqual(original['x'].dtype, 'bool')
+        with self.roundtrip(original) as actual:
+            self.assertDatasetIdentical(original, actual)
+            self.assertEqual(actual['x'].dtype, 'bool')
 
     def test_orthogonal_indexing(self):
         in_memory = create_test_data()

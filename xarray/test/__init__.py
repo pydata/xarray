@@ -107,19 +107,6 @@ def requires_bottleneck(test):
     return test if has_bottleneck else unittest.skip('requires bottleneck')(test)
 
 
-def incompatible_2_6(test):
-    """
-    Test won't work in Python 2.6
-    """
-    major = sys.version_info[0]
-    minor = sys.version_info[1]
-    py26 = False
-    if major <= 2:
-        if minor <= 6:
-            py26 = True
-    return test if not py26 else unittest.skip('error on Python 2.6')(test)
-
-
 def decode_string_data(data):
     if data.dtype.kind == 'S':
         return np.core.defchararray.decode(data, 'utf-8', 'replace')

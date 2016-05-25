@@ -285,6 +285,15 @@ usual xarray broadcasting and alignment rules for binary operations (e.g.,
 
     arr2.where(arr2.y < 2)
 
+By default ``where`` maintains the original size of the data.  For cases
+where the selected data size is much smaller than the original data,
+use of the option ``drop=True`` clips coordinate
+elements that are fully masked:
+
+.. ipython:: python
+
+    arr2.where(arr2.y < 2, drop=True)
+
 Multi-dimensional indexing
 --------------------------
 

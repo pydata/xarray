@@ -374,7 +374,7 @@ class BaseDataObject(AttrAccessMixin):
                                 center=center, **windows)
 
     def resample(self, freq, dim, how='mean', skipna=None, closed=None,
-                 label=None, base=0):
+                 label=None, base=0, keep_attrs=False):
         """Resample this object to a new temporal resolution.
 
         Handles both downsampling and upsampling. Upsampling with filling is
@@ -418,6 +418,10 @@ class BaseDataObject(AttrAccessMixin):
             For frequencies that evenly subdivide 1 day, the "origin" of the
             aggregated intervals. For example, for '24H' frequency, base could
             range from 0 through 23.
+        keep_attrs : bool, optional
+            If True, the object's attributes (`attrs`) will be copied from
+            the original object to the new one.  If False (default), the new
+            object will be returned without attributes.
 
         Returns
         -------
@@ -441,15 +445,15 @@ class BaseDataObject(AttrAccessMixin):
         if isinstance(how, basestring):
             f = getattr(gb, how)
             if how in ['first', 'last']:
-                result = f(skipna=skipna)
+                result = f(skipna=skipna, keep_attrs=keep_attrs)
             else:
-                result = f(dim=dim.name, skipna=skipna)
+                result = f(dim=dim.name, skipna=skipna, keep_attrs=keep_attrs)
         else:
-            result = gb.reduce(how, dim=dim.name)
+            result = gb.reduce(how, dim=dim.name, keep_attrs=keep_attrs)
         result = result.rename({RESAMPLE_DIM: dim.name})
         return result
 
-    def where(self, cond):
+    def where(self, cond, other=None, drop=False):
         """Return an object of the same shape with all entries where cond is
         True and all other entries masked.
 
@@ -459,10 +463,15 @@ class BaseDataObject(AttrAccessMixin):
         Parameters
         ----------
         cond : boolean DataArray or Dataset
+        other : unimplemented, optional
+            Unimplemented placeholder for compatability with future numpy / pandas versions
+        drop : boolean, optional
+            Coordinate labels that only correspond to NA values should be dropped
 
         Returns
         -------
-        same type as caller
+        same type as caller or if drop=True same type as caller with dimensions
+        reduced for dim element where mask is True
 
         Examples
         --------
@@ -479,8 +488,41 @@ class BaseDataObject(AttrAccessMixin):
         Coordinates:
           * y        (y) int64 0 1 2 3 4
           * x        (x) int64 0 1 2 3 4
+        >>> a.where((a > 6) & (a < 18), drop=True)
+        <xarray.DataArray (x: 5, y: 5)>
+        array([[ nan,  nan,   7.,   8.,   9.],
+               [ 10.,  11.,  12.,  13.,  14.],
+               [ 15.,  16.,  17.,  nan,  nan],
+        Coordinates:
+          * x        (x) int64 1 2 3
+          * y        (y) int64 0 1 2 3 4
         """
-        return self._where(cond)
+        if other is not None:
+            raise NotImplementedError("The optional argument 'other' has not yet been implemented")
+
+        if drop:
+            from .dataarray import DataArray
+            from .dataset import Dataset
+            # get cond with the minimal size needed for the Dataset
+            if isinstance(cond, Dataset):
+                clipcond = cond.to_array().any('variable')
+            elif isinstance(cond, DataArray):
+                clipcond = cond
+            else:
+                raise TypeError("Cond argument is %r but must be a %r or %r" %
+                                (cond, Dataset, DataArray))
+
+            # clip the data corresponding to coordinate dims that are not used
+            clip = dict(zip(clipcond.dims, [np.unique(adim)
+                                            for adim in np.nonzero(clipcond.values)]))
+            outcond = cond.isel(**clip)
+            outobj = self.sel(**outcond.indexes)
+        else:
+            outobj = self
+            outcond = cond
+
+        return outobj._where(outcond)
+
 
     # this has no runtime function - these are listed so IDEs know these methods
     # are defined and don't warn on these operations

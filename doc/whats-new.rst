@@ -13,6 +13,56 @@ What's New
     import xarray as xr
     np.random.seed(123456)
 
+.. _whats-new.0.8.0:
+
+v0.8.0 (unreleased)
+-------------------
+
+This release includes
+
+.. _v0.8.0.breaking:
+
+Breaking changes
+~~~~~~~~~~~~~~~~
+
+- Dropped support for Python 2.6 (:issue:`855`).
+
+Enhancements
+~~~~~~~~~~~~
+
+- DataArray and Dataset method :py:meth:`where` now supports a ``drop=True``
+  option that clips coordinate elements that are fully masked.  By
+  `Phillip J. Wolfram <https://github.com/pwolfram>`_.
+
+- DataArray and Dataset method :py:meth:`resample` now supports the
+  ``keep_attrs=False`` option that determines whether variable and dataset
+  attributes are retained in the resampled object. By
+  `Jeremy McGibbon <https://github.com/mcgibbon>`_.
+
+- New (experimental) decorators :py:func:`~xarray.register_dataset_accessor` and
+  :py:func:`~xarray.register_dataarray_accessor` for registering custom xarray
+  extensions without subclassing. They are described in the new documentation
+  page on :ref:`internals`. By `Stephan Hoyer <https://github.com/shoyer>`
+
+- Round trip boolean datatypes. Previously, writing boolean datatypes to netCDF
+  formats would raise an error since netCDF does not have a `bool` datatype.
+  This feature reads/writes a `dtype` attribute to boolean variables in netCDF
+  files. By `Joe Hamman <https://github.com/jhamman>`_.
+
+Bug fixes
+~~~~~~~~~
+
+- Attributes were being retained by default for some resampling
+  operations when they should not. With the ``keep_attrs=False`` option, they
+  will no longer be retained by default. This may be backwards-incompatible
+  with some scripts, but the attributes may be kept by adding the
+  ``keep_attrs=True`` option. By
+  `Jeremy McGibbon <https://github.com/mcgibbon>`_.
+
+- ``decode_cf_timedelta`` now accepts arrays with ``ndim`` >1 (:issue:`842`).
+   This fixes issue :issue:`665`.
+   `Filipe Fernandes <https://github.com/ocefpaf>`_.
+
 .. _whats-new.0.7.2:
 
 v0.7.2 (13 March 2016)

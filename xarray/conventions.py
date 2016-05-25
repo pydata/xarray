@@ -11,8 +11,7 @@ from pandas.tslib import OutOfBoundsDatetime
 from .core import indexing, ops, utils
 from .core.formatting import format_timestamp, first_n_items
 from .core.variable import as_variable, Variable
-from .core.pycompat import (iteritems, bytes_type, unicode_type, OrderedDict,
-                            PY3, basestring)
+from .core.pycompat import iteritems, OrderedDict, PY3, basestring
 
 
 # standard calendars recognized by netcdftime
@@ -151,25 +150,21 @@ def decode_cf_datetime(num_dates, units, calendar=None):
     return dates.reshape(num_dates.shape)
 
 
-def _asarray_or_scalar(x):
-    x = np.asarray(x)
-    if x.ndim > 0:
-        return x
-    else:
-        return x.item()
-
-
 def decode_cf_timedelta(num_timedeltas, units):
     """Given an array of numeric timedeltas in netCDF format, convert it into a
     numpy timedelta64[ns] array.
     """
-    num_timedeltas = _asarray_or_scalar(num_timedeltas)
+    num_timedeltas = np.asarray(num_timedeltas)
     units = _netcdf_to_numpy_timeunit(units)
+
+    shape = num_timedeltas.shape
+    num_timedeltas = num_timedeltas.ravel()
+
     result = pd.to_timedelta(num_timedeltas, unit=units, box=False)
     # NaT is returned unboxed with wrong units; this should be fixed in pandas
     if result.dtype != 'timedelta64[ns]':
         result = result.astype('timedelta64[ns]')
-    return result
+    return result.reshape(shape)
 
 
 TIME_UNITS = frozenset(['days', 'hours', 'minutes', 'seconds',
@@ -495,6 +490,34 @@ class NativeEndiannessArray(utils.NDArrayMixin):
         return np.asarray(self.array[key], dtype=self.dtype)
 
 
+class BoolTypeArray(utils.NDArrayMixin):
+    """Decode arrays on the fly from integer to boolean datatype
+
+    This is useful for decoding boolean arrays from interger typed netCDF
+    variables.
+
+    >>> x = np.array([1, 0, 1, 1, 0], dtype='i1')
+
+    >>> x.dtype
+    dtype('>i2')
+
+    >>> BoolTypeArray(x).dtype
+    dtype('bool')
+
+    >>> BoolTypeArray(x)[:].dtype
+    dtype('bool')
+    """
+    def __init__(self, array):
+        self.array = array
+
+    @property
+    def dtype(self):
+        return np.dtype('bool')
+
+    def __getitem__(self, key):
+        return np.asarray(self.array[key], dtype=self.dtype)
+
+
 def string_to_char(arr):
     """Like netCDF4.stringtochar, but faster and more flexible.
     """
@@ -606,6 +629,16 @@ def maybe_encode_dtype(var, name=None):
     return var
 
 
+def maybe_encode_bools(var):
+    if ((var.dtype == np.bool) and
+            ('dtype' not in var.encoding) and ('dtype' not in var.attrs)):
+        dims, data, attrs, encoding = _var_as_tuple(var)
+        attrs['dtype'] = 'bool'
+        data = data.astype(dtype='i1', copy=True)
+        var = Variable(dims, data, attrs, encoding)
+    return var
+
+
 def _infer_dtype(array):
     """Given an object array with no missing values, infer its dtype from its
     first element
@@ -679,6 +712,7 @@ def encode_cf_variable(var, needs_copy=True, name=None):
     var, needs_copy = maybe_encode_offset_and_scale(var, needs_copy)
     var, needs_copy = maybe_encode_fill_value(var, needs_copy)
     var = maybe_encode_dtype(var, name)
+    var = maybe_encode_bools(var)
     var = ensure_dtype_not_object(var)
     return var
 
@@ -779,6 +813,10 @@ def decode_cf_variable(var, concat_characters=True, mask_and_scale=True,
             warnings.warn("CF decoding is overwriting dtype")
     else:
         encoding['dtype'] = original_dtype
+
+    if 'dtype' in attributes and attributes['dtype'] == 'bool':
+        del attributes['dtype']
+        data = BoolTypeArray(data)
 
     return Variable(dimensions, indexing.LazilyIndexedArray(data),
                     attributes, encoding=encoding)

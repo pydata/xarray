@@ -1647,7 +1647,7 @@ class TestDataset(TestCase):
                       'bar': ('time', np.random.randn(10), {'meta': 'data'}),
                       'time': times})
 
-        actual = ds.resample('1D', dim='time', how='first')
+        actual = ds.resample('1D', dim='time', how='first', keep_attrs=True)
         expected = ds.isel(time=[0, 4, 8])
         self.assertDatasetIdentical(expected, actual)
 
@@ -1657,6 +1657,46 @@ class TestDataset(TestCase):
         for how in ['mean', 'sum', 'first', 'last', np.mean]:
             actual = ds.resample('3H', 'time', how=how)
             self.assertDatasetEqual(expected, actual)
+
+    def test_resample_by_mean_with_keep_attrs(self):
+        times = pd.date_range('2000-01-01', freq='6H', periods=10)
+        ds = Dataset({'foo': (['time', 'x', 'y'], np.random.randn(10, 5, 3)),
+                      'bar': ('time', np.random.randn(10), {'meta': 'data'}),
+                      'time': times})
+        ds.attrs['dsmeta'] = 'dsdata'
+
+        resampled_ds = ds.resample('1D', dim='time', how='mean', keep_attrs=True)
+        actual = resampled_ds['bar'].attrs
+        expected = ds['bar'].attrs
+        self.assertEqual(expected, actual)
+
+        actual = resampled_ds.attrs
+        expected = ds.attrs
+        self.assertEqual(expected, actual)
+
+    def test_resample_by_mean_discarding_attrs(self):
+        times = pd.date_range('2000-01-01', freq='6H', periods=10)
+        ds = Dataset({'foo': (['time', 'x', 'y'], np.random.randn(10, 5, 3)),
+                      'bar': ('time', np.random.randn(10), {'meta': 'data'}),
+                      'time': times})
+        ds.attrs['dsmeta'] = 'dsdata'
+
+        resampled_ds = ds.resample('1D', dim='time', how='mean', keep_attrs=False)
+
+        assert resampled_ds['bar'].attrs == {}
+        assert resampled_ds.attrs == {}
+
+    def test_resample_by_last_discarding_attrs(self):
+        times = pd.date_range('2000-01-01', freq='6H', periods=10)
+        ds = Dataset({'foo': (['time', 'x', 'y'], np.random.randn(10, 5, 3)),
+                      'bar': ('time', np.random.randn(10), {'meta': 'data'}),
+                      'time': times})
+        ds.attrs['dsmeta'] = 'dsdata'
+
+        resampled_ds = ds.resample('1D', dim='time', how='last', keep_attrs=False)
+
+        assert resampled_ds['bar'].attrs == {}
+        assert resampled_ds.attrs == {}
 
     def test_to_array(self):
         ds = Dataset(OrderedDict([('a', 1), ('b', ('x', [1, 2, 3]))]),
@@ -1947,6 +1987,63 @@ class TestDataset(TestCase):
         expected = ds.copy(deep=True)
         expected['a'].values = [0, 1] + [np.nan] * 3
         actual = ds.groupby('c').where(cond)
+        self.assertDatasetIdentical(expected, actual)
+
+    def test_where_drop(self):
+        # if drop=True
+
+        # 1d
+        # data array case
+        array = DataArray(range(5), coords=[range(5)], dims=['x'])
+        expected = DataArray(range(5)[2:], coords=[range(5)[2:]], dims=['x'])
+        actual = array.where(array > 1, drop=True)
+        self.assertDatasetIdentical(expected, actual)
+
+        # dataset case
+        ds = Dataset({'a': array})
+        expected = Dataset({'a': expected})
+
+        actual = ds.where(ds > 1, drop=True)
+        self.assertDatasetIdentical(expected, actual)
+
+        actual = ds.where(ds.a > 1, drop=True)
+        self.assertDatasetIdentical(expected, actual)
+
+        with self.assertRaisesRegexp(TypeError, 'must be a'):
+            ds.where(np.arange(5) > 1, drop=True)
+
+        # 1d with odd coordinates
+        array = DataArray(np.array([2, 7, 1, 8, 3]), coords=[np.array([3, 1, 4, 5, 9])], dims=['x'])
+        expected = DataArray(np.array([7, 8, 3]), coords=[np.array([1, 5, 9])], dims=['x'])
+        actual = array.where(array > 2, drop=True)
+        self.assertDatasetIdentical(expected, actual)
+
+        # 1d multiple variables
+        ds = Dataset({'a': (('x'), [0, 1, 2, 3]), 'b': (('x'), [4, 5, 6, 7])})
+        expected = Dataset({'a': (('x'), [np.nan, 1, 2, 3]), 'b': (('x'), [4, 5, 6, np.nan])})
+        actual = ds.where((ds > 0) & (ds < 7), drop=True)
+        self.assertDatasetIdentical(expected, actual)
+
+        # 2d
+        ds = Dataset({'a': (('x', 'y'), [[0, 1], [2, 3]])})
+        expected = Dataset({'a': (('x', 'y'), [[np.nan, 1], [2, 3]])})
+        actual = ds.where(ds > 0, drop=True)
+        self.assertDatasetIdentical(expected, actual)
+
+        # 2d with odd coordinates
+        ds = Dataset({'a': (('x', 'y'), [[0, 1], [2, 3]])},
+                coords={'x': [4, 3], 'y': [1, 2],
+                    'z' : (['x','y'], [[np.e, np.pi], [np.pi*np.e, np.pi*3]])})
+        expected = Dataset({'a': (('x', 'y'), [[3]])},
+                coords={'x': [3], 'y': [2],
+                    'z' : (['x','y'], [[np.pi*3]])})
+        actual = ds.where(ds > 2, drop=True)
+        self.assertDatasetIdentical(expected, actual)
+
+        # 2d multiple variables
+        ds = Dataset({'a': (('x', 'y'), [[0, 1], [2, 3]]), 'b': (('x','y'), [[4, 5], [6, 7]])})
+        expected = Dataset({'a': (('x', 'y'), [[np.nan, 1], [2, 3]]), 'b': (('x', 'y'), [[4, 5], [6,7]])})
+        actual = ds.where(ds > 0, drop=True)
         self.assertDatasetIdentical(expected, actual)
 
     def test_reduce(self):

@@ -1,0 +1,8 @@
+name: test_env
+dependencies:
+  - python=3.3
+  - pytest
+  - pandas
+  - pip:
+    - coveralls
+    - pytest-cov

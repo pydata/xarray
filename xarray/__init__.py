@@ -1,5 +1,7 @@
 from .core.alignment import align, broadcast, broadcast_arrays
 from .core.combine import concat, auto_combine
+from .core.extensions import (register_dataarray_accessor,
+                              register_dataset_accessor)
 from .core.variable import Variable, Coordinate
 from .core.dataset import Dataset
 from .core.dataarray import DataArray
