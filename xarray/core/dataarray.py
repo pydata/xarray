@@ -1376,19 +1376,19 @@ class DataArray(AbstractArray, BaseDataObject):
 
     def dot(self, other):
         """Perform dot product of two DataArrays along their shared dims.
-        
+
         Equivalent to taking taking tensordot over all shared dims.
 
         Parameters
         ----------
         other : DataArray
             The other array with which the dot product is performed.
-            
+
         Returns
         -------
         result : DataArray
             Array resulting from the dot product over all shared dimensions.
-            
+
         See also
         --------
         np.tensordot(a, b, axes)
@@ -1397,10 +1397,10 @@ class DataArray(AbstractArray, BaseDataObject):
         --------
 
         >>> da_vals = np.arange(6 * 5 * 4).reshape((6, 5, 4))
-        >>> da = DataArray(da_vals, dims=['x', 'y', 'z'])    
+        >>> da = DataArray(da_vals, dims=['x', 'y', 'z'])
         >>> dm_vals = np.arange(4)
         >>> dm = DataArray(dm_vals, dims=['z'])
-                
+
         >>> dm.dims
         ('z')
         >>> da.dims

@@ -105,6 +105,15 @@ class TestCharToStringArray(TestCase):
         self.assertArrayEqual(actual, expected)
 
 
+class TestBoolTypeArray(TestCase):
+    def test_booltype_array(self):
+        x = np.array([1, 0, 1, 1, 0], dtype='i1')
+        bx = conventions.BoolTypeArray(x)
+        self.assertEqual(bx.dtype, np.bool)
+        self.assertArrayEqual(bx, np.array([True, False, True, True, False],
+                                           dtype=np.bool))
+
+
 @np.vectorize
 def _ensure_naive_tz(dt):
     if hasattr(dt, 'tzinfo'):
@@ -399,6 +408,16 @@ class TestDatetime(TestCase):
         expected = np.timedelta64('NaT', 'ns')
         actual = conventions.decode_cf_timedelta(np.array(np.nan), 'days')
         self.assertArrayEqual(expected, actual)
+
+    def test_cf_timedelta_2d(self):
+        timedeltas, units, numbers = ['1D', '2D', '3D'], 'days', np.atleast_2d([1, 2, 3])
+
+        timedeltas = np.atleast_2d(pd.to_timedelta(timedeltas, box=False))
+        expected = timedeltas
+
+        actual = conventions.decode_cf_timedelta(numbers, units)
+        self.assertArrayEqual(expected, actual)
+        self.assertEqual(expected.dtype, actual.dtype)
 
     def test_infer_timedelta_units(self):
         for deltas, expected in [

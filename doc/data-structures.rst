@@ -474,7 +474,7 @@ doing arithmetic (see :ref:`coordinates math`).
 Modifying coordinates
 ~~~~~~~~~~~~~~~~~~~~~
 
-To entirely add or removing coordinate arrays, you can use dictionary like
+To entirely add or remove coordinate arrays, you can use dictionary like
 syntax, as shown above.
 
 To convert back and forth between data and coordinates, you can use the
