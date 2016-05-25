@@ -69,6 +69,7 @@ class TestDataArray(TestCase):
         This test checks subraction of two DataArrays for the case
         when dimension is a structured array.
         """
+        # GH837, GH861
         # checking array subraction when dims are the same
         p_data = np.array([('John', 180), ('Stacy', 150), ('Dick', 200)],
                           dtype=[('name', '|S256'), ('height', object)])

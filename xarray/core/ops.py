@@ -190,7 +190,10 @@ def array_equiv(arr1, arr2):
 
     flag_array = (arr1 == arr2)
 
+    # GH837, GH861
     # isnull fcn from pandas will throw TypeError when run on numpy structured array
+    # therefore for dims that are np structured arrays we skip testing for nan
+
     try:
 
         flag_array |= (isnull(arr1) & isnull(arr2))
