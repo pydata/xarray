@@ -422,6 +422,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject):
     def _replace_indexes(self, indexes):
         obj = self
         for dim, idx in iteritems(indexes):
+            if idx.name is None:
+                idx.name = dim + "_unnamed_level"
             obj = obj.rename({dim: idx.name})
             new_coord = Coordinate(idx.name, idx)
             variables = OrderedDict()

@@ -140,7 +140,7 @@ def convert_label_indexer(index, label, index_name='', method=None,
     """Given a pandas.Index and labels (e.g., from __getitem__) for one
     dimension, return an indexer suitable for indexing an ndarray along that
     dimension. If label is a dict-like object and a pandas.MultiIndex is given,
-    also return a new pandas.Index (otherwise return None).
+    also return a new pandas.Index, otherwise return None.
     """
     # backwards compatibility for pandas<0.16 (method) or pandas<0.17
     # (tolerance)
@@ -174,8 +174,8 @@ def convert_label_indexer(index, label, index_name='', method=None,
         if not isinstance(index, pd.MultiIndex):
             raise ValueError('cannot use a dict-like object for selection on a'
                              'dimension that does not have a MultiIndex')
-        indexer, new_index = index.get_loc_level(list(label.values()),
-                                                 level=list(label.keys()))
+        indexer, new_index = index.get_loc_level(tuple(label.values()),
+                                                 level=tuple(label.keys()))
 
     else:
         label = _asarray_tuplesafe(label)
