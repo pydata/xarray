@@ -59,6 +59,10 @@ Bug fixes
   ``keep_attrs=True`` option. By
   `Jeremy McGibbon <https://github.com/mcgibbon>`_.
 
+- Fixed bug in arithmetic operations on DataArray objects whose dimensions
+  are numpy structured arrays or recarrays :issue:`861`, :issue:`837`.
+  `Maciek Swat <https://github.com/maciekswat>`_.
+
 - ``decode_cf_timedelta`` now accepts arrays with ``ndim`` >1 (:issue:`842`).
    This fixes issue :issue:`665`.
    `Filipe Fernandes <https://github.com/ocefpaf>`_.
