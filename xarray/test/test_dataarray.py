@@ -486,7 +486,8 @@ class TestDataArray(TestCase):
         self.assertEqual(data.loc[False], 1)
 
     def test_multiindex(self):
-        idx = pd.MultiIndex.from_product([list('abc'), [0, 1]])
+        idx = pd.MultiIndex.from_product([list('abc'), [0, 1]],
+                                         names=('one', 'two'))
         data = DataArray(range(6), [('x', idx)])
 
         self.assertDataArrayIdentical(data.sel(x=('a', 0)), data.isel(x=0))
@@ -495,6 +496,20 @@ class TestDataArray(TestCase):
         self.assertDataArrayIdentical(data.sel(x=[('a', 0), ('c', 1)]),
                                       data.isel(x=[0, -1]))
         self.assertDataArrayIdentical(data.sel(x='a'), data.isel(x=slice(2)))
+        self.assertVariableNotEqual(data.sel(x={'one': slice(None)}), data)
+        self.assertDataArrayIdentical(data.isel(x=[0]),
+                                      data.sel(x={'one': 'a', 'two': 0}))
+        self.assertDataArrayIdentical(data.isel(x=[0, 1]), data.sel(x='a'))
+        self.assertVariableIdentical(
+            data.sel(x={'one': 'a'}),
+            data.unstack('x').sel(one='a').dropna('two')
+        )
+
+        self.assertDataArrayIdentical(data.loc['a'], data[:2])
+        self.assertDataArrayIdentical(data.loc[{'one': 'a', 'two': 0}, ...],
+                                       data[[0]])
+        self.assertDataArrayIdentical(data.loc[{'one': 'a'}, ...],
+                                      data.sel(x={'one': 'a'}))
 
     def test_time_components(self):
         dates = pd.date_range('2000-01-01', periods=10)
@@ -1818,29 +1833,29 @@ class TestDataArray(TestCase):
         actual = _full_like(DataArray([1, 2, 3]), fill_value=np.nan)
         self.assertEqual(actual.dtype, np.float)
         np.testing.assert_equal(actual.values, np.nan)
-    
+
     def test_dot(self):
         x = np.linspace(-3, 3, 6)
         y = np.linspace(-3, 3, 5)
-        z = range(4) 
+        z = range(4)
         da_vals = np.arange(6 * 5 * 4).reshape((6, 5, 4))
         da = DataArray(da_vals, coords=[x, y, z], dims=['x', 'y', 'z'])
-        
+
         dm_vals = range(4)
         dm = DataArray(dm_vals, coords=[z], dims=['z'])
-        
+
         # nd dot 1d
         actual = da.dot(dm)
         expected_vals = np.tensordot(da_vals, dm_vals, [2, 0])
         expected = DataArray(expected_vals, coords=[x, y], dims=['x', 'y'])
         self.assertDataArrayEqual(expected, actual)
-        
+
         # all shared dims
         actual = da.dot(da)
         expected_vals = np.tensordot(da_vals, da_vals, axes=([0, 1, 2], [0, 1, 2]))
         expected = DataArray(expected_vals)
         self.assertDataArrayEqual(expected, actual)
-        
+
         # multiple shared dims
         dm_vals = np.arange(20 * 5 * 4).reshape((20, 5, 4))
         j = np.linspace(-3, 3, 20)
@@ -1849,7 +1864,7 @@ class TestDataArray(TestCase):
         expected_vals = np.tensordot(da_vals, dm_vals, axes=([1, 2], [1, 2]))
         expected = DataArray(expected_vals, coords=[x, j], dims=['x', 'j'])
         self.assertDataArrayEqual(expected, actual)
-        
+
         with self.assertRaises(NotImplementedError):
             da.dot(dm.to_dataset(name='dm'))
         with self.assertRaises(TypeError):

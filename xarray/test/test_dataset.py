@@ -840,6 +840,31 @@ class TestDataset(TestCase):
         with self.assertRaises(TypeError):
             data.loc[dict(dim3='a')] = 0
 
+    def test_multiindex(self):
+        idx = pd.MultiIndex.from_product([list('abc'), [0, 1]],
+                                         names=('one', 'two'))
+        data = Dataset(data_vars={'var': ('x', range(6))}, coords={'x': idx})
+
+        self.assertDatasetIdentical(data.sel(x=('a', 0)), data.isel(x=0))
+        self.assertDatasetIdentical(data.sel(x=('c', 1)), data.isel(x=-1))
+        self.assertDatasetIdentical(data.sel(x=[('a', 0)]), data.isel(x=[0]))
+        self.assertDatasetIdentical(data.sel(x=[('a', 0), ('c', 1)]),
+                                      data.isel(x=[0, -1]))
+        self.assertDatasetIdentical(data.sel(x='a'), data.isel(x=slice(2)))
+        self.assertVariableNotEqual(data.sel(x={'one': slice(None)})['var'],
+                                    data['var'])
+        self.assertDatasetIdentical(data.isel(x=[0]),
+                                      data.sel(x={'one': 'a', 'two': 0}))
+        self.assertDatasetIdentical(data.isel(x=[0, 1]), data.sel(x='a'))
+        self.assertVariableIdentical(
+            data.sel(x={'one': 'a'})['var'],
+            data.unstack('x').sel(one='a').dropna('two')['var']
+        )
+
+        self.assertDatasetIdentical(data.loc[{'x': 'a'}], data.sel(x='a'))
+        self.assertDatasetIdentical(data.loc[{'x': {'one': 'a', 'two': 0}}],
+                                    data.sel(x={'one': 'a', 'two': 0}))
+
     def test_reindex_like(self):
         data = create_test_data()
         data['letters'] = ('dim3', 10 * ['a'])

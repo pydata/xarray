@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
 
-from xarray import Dataset, Variable
+from xarray import Dataset, DataArray, Variable
 from xarray.core import indexing
 from . import TestCase, ReturnItem
 
@@ -85,8 +85,18 @@ class TestIndexers(TestCase):
             indexing.convert_label_indexer(index, [0])
         with self.assertRaises(KeyError):
             indexing.convert_label_indexer(index, 0)
+        with self.assertRaisesRegexp(ValueError, 'does not have a MultiIndex'):
+            indexing.convert_label_indexer(index, {'one': 0})
+
+        mindex = pd.MultiIndex(levels=[[1, 2, 3], [4, 5, 6]],
+                               labels=[[0, 1, 2], [0, 1, 2]],
+                               names=['one', 'two'])
+        with self.assertRaises(KeyError):
+            indexing.convert_label_indexer(mindex, [0])
+        with self.assertRaises(KeyError):
+            indexing.convert_label_indexer(mindex, 0)
         with self.assertRaises(ValueError):
-            indexing.convert_label_indexer(index, {'somelevel': 0})
+            indexing.convert_label_indexer(index, {'three': 0})
 
     def test_convert_unsorted_datetime_index_raises(self):
         index = pd.to_datetime(['2001', '2000', '2002'])
@@ -105,6 +115,25 @@ class TestIndexers(TestCase):
         self.assertEqual({'x': 0}, test_indexer(1)[0])
         self.assertEqual({'x': 0}, test_indexer(np.int32(1))[0])
         self.assertEqual({'x': 0}, test_indexer(Variable([], 1))[0])
+        with self.assertRaisesRegexp(ValueError, 'does not have a MultiIndex'):
+            indexing.remap_label_indexers(data, {'x': {'level': 1}})
+
+        mindex = pd.MultiIndex(levels=[[1, 2, 3], [4, 5, 6]],
+                               labels=[[0, 1, 2], [0, 1, 2]],
+                               names=['one', 'two'])
+        s = pd.Series([7, 8, 9], index=mindex)
+        data = DataArray(s, dims='x')
+
+        pos, idx = indexing.remap_label_indexers(data, {'x': {'one': 1}})
+        self.assertArrayEqual(pos['x'], [True, False, False])
+        self.assertArrayEqual(idx['x'].values, [4])
+        self.assertEqual(idx['x'].name, 'two')
+
+        pos, idx = indexing.remap_label_indexers(
+            data, {'x': {'one': 1, 'two': 4}}
+        )
+        self.assertArrayEqual(pos['x'], [True, False, False])
+        self.assertEqual(len(idx), 0)
 
 
 class TestLazyArray(TestCase):
