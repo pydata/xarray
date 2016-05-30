@@ -294,6 +294,27 @@ elements that are fully masked:
 
     arr2.where(arr2.y < 2, drop=True)
 
+.. _multi-index indexing:
+
+Multi-index indexing
+--------------------
+
+The ``loc`` and ``sel`` methods of ``Dataset`` and ``DataArray`` both accept
+dictionaries for indexing on multi-index dimensions:
+
+.. ipython:: python
+
+    idx = pd.MultiIndex.from_product([list('abc'), [0, 1]],
+                                     names=('one', 'two'))
+    da_midx = xr.DataArray(range(6), [('x', idx)])
+    da_midx
+    da_midx.sel(x={'one': 'a', 'two': 0})
+    da_midx.loc[{'one': 'a'}, ...]
+
+As shown in the last example above, xarray handles partial selection on
+pandas multi-index ; it automatically renames the dimension and replaces the
+coordinate when a single index is returned (level drop).
+
 Multi-dimensional indexing
 --------------------------
 
