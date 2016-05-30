@@ -88,15 +88,17 @@ class TestIndexers(TestCase):
         with self.assertRaisesRegexp(ValueError, 'does not have a MultiIndex'):
             indexing.convert_label_indexer(index, {'one': 0})
 
-        mindex = pd.MultiIndex(levels=[[1, 2, 3], [4, 5, 6]],
-                               labels=[[0, 1, 2], [0, 1, 2]],
+        mindex = pd.MultiIndex(levels=[[1, 2, 3], ['a', 'b']],
+                               labels=[[0, 1, 2], [0, 0, 1]],
                                names=['one', 'two'])
-        with self.assertRaises(KeyError):
+        with self.assertRaisesRegexp(KeyError, 'not all values found'):
             indexing.convert_label_indexer(mindex, [0])
         with self.assertRaises(KeyError):
             indexing.convert_label_indexer(mindex, 0)
         with self.assertRaises(ValueError):
             indexing.convert_label_indexer(index, {'three': 0})
+        with self.assertRaisesRegexp(KeyError, 'index to be fully lexsorted'):
+            indexing.convert_label_indexer(mindex, (slice(None), 'a', 0))
 
     def test_convert_unsorted_datetime_index_raises(self):
         index = pd.to_datetime(['2001', '2000', '2002'])
@@ -118,21 +120,26 @@ class TestIndexers(TestCase):
         with self.assertRaisesRegexp(ValueError, 'does not have a MultiIndex'):
             indexing.remap_label_indexers(data, {'x': {'level': 1}})
 
-        mindex = pd.MultiIndex(levels=[[1, 2, 3], [4, 5, 6]],
-                               labels=[[0, 1, 2], [0, 1, 2]],
+        mindex = pd.MultiIndex(levels=[[1, 2, 3], ['a', 'b']],
+                               labels=[[0, 1, 2], [0, 0, 1]],
                                names=['one', 'two'])
-        s = pd.Series([7, 8, 9], index=mindex)
-        data = DataArray(s, dims='x')
+        data = DataArray(range(3), [('x', mindex)])
 
         pos, idx = indexing.remap_label_indexers(data, {'x': {'one': 1}})
         self.assertArrayEqual(pos['x'], [True, False, False])
-        self.assertArrayEqual(idx['x'].values, [4])
+        self.assertArrayEqual(idx['x'].values, ['a'])
         self.assertEqual(idx['x'].name, 'two')
 
         pos, idx = indexing.remap_label_indexers(
-            data, {'x': {'one': 1, 'two': 4}}
+            data, {'x': {'one': 1, 'two': 'a'}}
         )
         self.assertArrayEqual(pos['x'], [True, False, False])
+        self.assertEqual(len(idx), 0)
+
+        pos, idx = indexing.remap_label_indexers(
+            data, {'x': ([1], 'a')}
+        )
+        self.assertArrayEqual(pos['x'], [0])
         self.assertEqual(len(idx), 0)
 
 

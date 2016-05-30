@@ -504,6 +504,8 @@ class TestDataArray(TestCase):
             data.sel(x={'one': 'a'}),
             data.unstack('x').sel(one='a').dropna('two')
         )
+        self.assertDataArrayIdentical(data.sel(x=('a', slice(None))),
+                                      data.isel(x=[0, 1]))
 
         self.assertDataArrayIdentical(data.loc['a'], data[:2])
         self.assertDataArrayIdentical(data.loc[{'one': 'a', 'two': 0}, ...],

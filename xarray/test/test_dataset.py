@@ -849,7 +849,9 @@ class TestDataset(TestCase):
         self.assertDatasetIdentical(data.sel(x=('c', 1)), data.isel(x=-1))
         self.assertDatasetIdentical(data.sel(x=[('a', 0)]), data.isel(x=[0]))
         self.assertDatasetIdentical(data.sel(x=[('a', 0), ('c', 1)]),
-                                      data.isel(x=[0, -1]))
+                                    data.isel(x=[0, -1]))
+        self.assertDatasetIdentical(data.sel(x=(['a', 'c'], [0, 1])),
+                                    data.isel(x=[0, 1, -2, -1]))
         self.assertDatasetIdentical(data.sel(x='a'), data.isel(x=slice(2)))
         self.assertVariableNotEqual(data.sel(x={'one': slice(None)})['var'],
                                     data['var'])
