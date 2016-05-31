@@ -39,10 +39,14 @@ Enhancements
   attributes are retained in the resampled object. By
   `Jeremy McGibbon <https://github.com/mcgibbon>`_.
 
+- DataArray and Dataset methods :py:meth:`sel` and :py:meth:`loc` now
+  accept dictionaries or nested tuples for indexing on multi-index dimensions.
+  By `Benoit Bovy <https://github.com/benbovy>`_.
+
 - New (experimental) decorators :py:func:`~xarray.register_dataset_accessor` and
   :py:func:`~xarray.register_dataarray_accessor` for registering custom xarray
   extensions without subclassing. They are described in the new documentation
-  page on :ref:`internals`. By `Stephan Hoyer <https://github.com/shoyer>`
+  page on :ref:`internals`. By `Stephan Hoyer <https://github.com/shoyer>`_.
 
 - Round trip boolean datatypes. Previously, writing boolean datatypes to netCDF
   formats would raise an error since netCDF does not have a `bool` datatype.
