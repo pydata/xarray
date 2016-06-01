@@ -60,6 +60,10 @@ before_install:
 
 install:
   - conda env create --file ci/requirements-$CONDA_ENV.yml
+  # scipy should not have been installed, but it's included in old pandas
+  - if [[ "$CONDA_ENV" == "py27-min" ]]; then
+      conda remove scipy;
+    fi
   - source activate test_env
   - python setup.py install
 
