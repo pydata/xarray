@@ -716,6 +716,19 @@ class TestVariable(TestCase, VariableSubclassTestCases):
         w3 = Variable(['b', 'c', 'd', 'a'], np.einsum('abcd->bcda', x))
         self.assertVariableIdentical(w, w3.transpose('a', 'b', 'c', 'd'))
 
+    def test_transpose_0d(self):
+        for value in [
+                3.5,
+                ('a', 1),
+                np.datetime64('2000-01-01'),
+                np.timedelta64(1, 'h'),
+                None,
+                object(),
+                ]:
+            variable = Variable([], value)
+            actual = variable.transpose()
+            assert actual.identical(variable)
+
     def test_squeeze(self):
         v = Variable(['x', 'y'], [[1]])
         self.assertVariableIdentical(Variable([], 1), v.squeeze())
