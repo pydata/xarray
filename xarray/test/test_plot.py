@@ -414,7 +414,7 @@ class TestDiscreteColorMap(TestCase):
             if filled:
                 self.assertEqual(ncmap.colorbar_extend, extend)
             else:
-                self.assertEqual(ncmap.colorbar_extend, 'neither')
+                self.assertEqual(ncmap.colorbar_extend, 'max')
 
     def test_discrete_colormap_list_of_levels(self):
         for extend, levels in [('max', [-1, 2, 4, 8, 10]),
@@ -429,7 +429,7 @@ class TestDiscreteColorMap(TestCase):
                 if kind != 'contour':
                     self.assertEqual(extend, primitive.cmap.colorbar_extend)
                 else:
-                    self.assertEqual('neither', primitive.cmap.colorbar_extend)
+                    self.assertEqual('max', primitive.cmap.colorbar_extend)
                 self.assertEqual(len(levels) - 1, len(primitive.cmap.colors))
 
     def test_discrete_colormap_int_levels(self):
@@ -454,7 +454,7 @@ class TestDiscreteColorMap(TestCase):
                 if kind != 'contour':
                     self.assertEqual(extend, primitive.cmap.colorbar_extend)
                 else:
-                    self.assertEqual('neither', primitive.cmap.colorbar_extend)
+                    self.assertEqual('max', primitive.cmap.colorbar_extend)
                 self.assertGreaterEqual(levels, len(primitive.cmap.colors))
 
     def test_discrete_colormap_list_levels_and_vmin_or_vmax(self):
@@ -809,6 +809,12 @@ class TestContour(Common2dMixin, PlotTestCase):
         ax = plt.gca()
         self.assertEqual('x2d', ax.get_xlabel())
         self.assertEqual('y2d', ax.get_ylabel())
+
+    def test_single_level(self):
+        self.plotmethod(levels=[0.1])
+        self.plotmethod(levels=[0.1, 0.2])
+        self.plotmethod(levels=1)
+
 
 
 class TestPcolormesh(Common2dMixin, PlotTestCase):

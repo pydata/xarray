@@ -389,8 +389,16 @@ def _plot2d(plotfunc):
 
         _ensure_plottable(xval, yval)
 
-        if 'contour' in plotfunc.__name__ and levels is None:
-            levels = 7  # this is the matplotlib default
+        if 'contour' in plotfunc.__name__:
+            if levels is None:
+                levels = 7  # this is the matplotlib default
+            # A colorbar with one level is not possible with mpl
+            try:
+                if len(levels) < 2:
+                    add_colorbar = False
+            except TypeError:
+                if levels < 2:
+                    add_colorbar = False
 
         cmap_kwargs = {'plot_data': zval.data,
                        'vmin': vmin,
