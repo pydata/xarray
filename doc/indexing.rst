@@ -316,14 +316,11 @@ pandas multi-index ; it automatically renames the dimension and replaces the
 coordinate when a single index is returned (level drop).
 
 Like pandas, it is also possible to use tuples of tuples, lists or slices
-(in that case xarray always returns the full multi-index):
+(for now xarray always returns the full multi-index in that case):
 
 .. ipython:: python
 
    da_midx.sel(x=(list('ab'), [0]))
-
-Indexing with dictionaries uses the ``MultiIndex.get_loc_level`` pandas method
-while indexing with nested tuples uses the ``MultiIndex.get_locs`` method.
 
 Multi-dimensional indexing
 --------------------------
