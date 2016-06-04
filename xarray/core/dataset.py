@@ -420,20 +420,16 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject):
         return obj
 
     def _replace_indexes(self, indexes):
-        obj = self
-        for dim, idx in iteritems(indexes):
-            if idx.name is None:
-                idx.name = dim + "_unnamed_level"
-            obj = obj.rename({dim: idx.name})
-            new_coord = Coordinate(idx.name, idx)
-            variables = OrderedDict()
-            for k, v in iteritems(obj._variables):
-                if k == idx.name:
-                    variables[k] = new_coord
-                else:
-                    variables[k] = v
-            obj = obj._replace_vars_and_dims(variables)
-        return obj
+        variables = OrderedDict()
+        for k, v in iteritems(self._variables):
+            if k in indexes.keys():
+                idx = indexes[k]
+                variables[k] = Coordinate(idx.name, idx)
+            else:
+                variables[k] = v
+        obj = self._replace_vars_and_dims(variables)
+        dim_names = {dim: idx.name for dim, idx in iteritems(indexes)}
+        return obj.rename(dim_names)
 
     def copy(self, deep=False):
         """Returns a copy of this dataset.

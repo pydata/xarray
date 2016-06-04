@@ -90,12 +90,14 @@ class _LocIndexer(object):
             # expand the indexer so we can handle Ellipsis
             labels = indexing.expanded_indexer(key, self.data_array.ndim)
             key = dict(zip(self.data_array.dims, labels))
-
         return indexing.remap_label_indexers(self.data_array, key)
 
     def __getitem__(self, key):
         pos_indexers, new_indexes = self._remap_key(key)
-        return self.data_array[pos_indexers]._replace_indexes(new_indexes)
+        ds = self.data_array[pos_indexers]._to_temp_dataset()
+        return self.data_array._from_temp_dataset(
+            ds._replace_indexes(new_indexes)
+        )
 
     def __setitem__(self, key, value):
         pos_indexers, new_indexes = self._remap_key(key)
@@ -239,16 +241,6 @@ class DataArray(AbstractArray, BaseDataObject):
             coords = OrderedDict((k, v) for k, v in self._coords.items()
                                  if set(v.dims) <= allowed_dims)
         return self._replace(variable, coords, name)
-
-    def _replace_indexes(self, indexes):
-        obj = self
-        for dim, idx in iteritems(indexes):
-            if idx.name is None:
-                idx.name = dim + "_unnamed_level"
-            obj = obj.rename({dim: idx.name})
-            new_coord = Coordinate(idx.name, idx)
-            obj = obj._replace(coords={idx.name: new_coord})
-        return obj
 
     __this_array = _ThisArray()
 
@@ -605,10 +597,10 @@ class DataArray(AbstractArray, BaseDataObject):
         Dataset.sel
         DataArray.isel
         """
-        pos_indexers, new_indexes = indexing.remap_label_indexers(
-            self, indexers, method=method, tolerance=tolerance
+        ds = self._to_temp_dataset().sel(
+            method=method, tolerance=tolerance, **indexers
         )
-        return self.isel(**pos_indexers)._replace_indexes(new_indexes)
+        return self._from_temp_dataset(ds)
 
     def isel_points(self, dim='points', **indexers):
         """Return a new DataArray whose dataset is given by pointwise integer
