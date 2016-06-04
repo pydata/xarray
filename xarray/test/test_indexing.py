@@ -113,10 +113,13 @@ class TestIndexers(TestCase):
         data = Dataset({'x': ('x', [1, 2, 3])})
 
         def test_indexer(x):
-            return indexing.remap_label_indexers(data, {'x': x})
-        self.assertEqual({'x': 0}, test_indexer(1)[0])
-        self.assertEqual({'x': 0}, test_indexer(np.int32(1))[0])
-        self.assertEqual({'x': 0}, test_indexer(Variable([], 1))[0])
+            pos, idx = indexing.remap_label_indexers(data, {'x': x})
+            return pos
+
+        self.assertEqual({'x': 0}, test_indexer(1))
+        self.assertEqual({'x': 0}, test_indexer(np.int32(1)))
+        self.assertEqual({'x': 0}, test_indexer(Variable([], 1)))
+
         with self.assertRaisesRegexp(ValueError, 'does not have a MultiIndex'):
             indexing.remap_label_indexers(data, {'x': {'level': 1}})
 
@@ -124,23 +127,15 @@ class TestIndexers(TestCase):
                                labels=[[0, 1, 2], [0, 0, 1]],
                                names=['one', 'two'])
         data = DataArray(range(3), [('x', mindex)])
-
-        pos, idx = indexing.remap_label_indexers(data, {'x': {'one': 1}})
-        self.assertArrayEqual(pos['x'], [True, False, False])
+        expected_pos = np.array([True, False, False])
+        expected_len_idx = (0, 0, 1)
+        labels = ({'one': 1, 'two': 'a'}, ([1], 'a'), {'one': 1})
+        for lbl, lidx in zip(labels, expected_len_idx):
+            pos, idx = indexing.remap_label_indexers(data, {'x': lbl})
+            self.assertTrue(expected_pos[pos['x']])
+            self.assertEqual(len(idx), lidx)
         self.assertArrayEqual(idx['x'].values, ['a'])
         self.assertEqual(idx['x'].name, 'two')
-
-        pos, idx = indexing.remap_label_indexers(
-            data, {'x': {'one': 1, 'two': 'a'}}
-        )
-        self.assertArrayEqual(pos['x'], [True, False, False])
-        self.assertEqual(len(idx), 0)
-
-        pos, idx = indexing.remap_label_indexers(
-            data, {'x': ([1], 'a')}
-        )
-        self.assertArrayEqual(pos['x'], [0])
-        self.assertEqual(len(idx), 0)
 
 
 class TestLazyArray(TestCase):
