@@ -187,7 +187,7 @@ def convert_label_indexer(index, label, index_name='', method=None,
 
     elif is_dict_like(label):
         if not isinstance(index, pd.MultiIndex):
-            raise ValueError('cannot use a dict-like object for selection on a'
+            raise ValueError('cannot use a dict-like object for selection on a '
                              'dimension that does not have a MultiIndex')
         indexer, new_index = index.get_loc_level(tuple(label.values()),
                                                  level=tuple(label.keys()))
@@ -219,7 +219,17 @@ def remap_label_indexers(data_obj, indexers, method=None, tolerance=None):
 
     pos_indexers, new_indexes = {}, {}
     for dim, label in iteritems(indexers):
-        idxr, new_idx = convert_label_indexer(data_obj[dim].to_index(), label,
+        index = data_obj[dim].to_index()
+
+        if isinstance(index, pd.MultiIndex):
+            # set default names for multi-index unnamed levels so that
+            # we can safely rename dimension / coordinate later
+            valid_level_names = [name or '{}_level_{}'.format(dim, i)
+                                 for i, name in enumerate(index.names)]
+            index = index.copy()
+            index.names = valid_level_names
+
+        idxr, new_idx = convert_label_indexer(index, label,
                                               dim, method, tolerance)
         pos_indexers[dim] = idxr
         if new_idx is not None and not isinstance(new_idx, pd.MultiIndex):
