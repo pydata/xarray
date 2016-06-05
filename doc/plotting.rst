@@ -431,6 +431,8 @@ they have been plotted.
 TODO: add an example of using the ``map`` method to plot dataset variables
 (e.g., with ``plt.quiver``).
 
+.. _plot-maps:
+
 Maps
 ----
 
