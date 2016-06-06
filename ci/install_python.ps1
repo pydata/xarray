@@ -8,10 +8,10 @@ $BASE_URL = "https://www.python.org/ftp/python/"
 
 function DownloadMiniconda ($python_version, $platform_suffix) {
     $webclient = New-Object System.Net.WebClient
-    if ($python_version -eq "3.4") {
-        $filename = "Miniconda3-3.7.3-Windows-" + $platform_suffix + ".exe"
+    if ($python_version -match "3.4") {
+        $filename = "Miniconda3-latest-Windows-" + $platform_suffix + ".exe"
     } else {
-        $filename = "Miniconda-3.7.3-Windows-" + $platform_suffix + ".exe"
+        $filename = "Miniconda-latest-Windows-" + $platform_suffix + ".exe"
     }
     $url = $MINICONDA_URL + $filename
 
@@ -50,11 +50,12 @@ function InstallMiniconda ($python_version, $architecture, $python_home) {
         Write-Host $python_home "already exists, skipping."
         return $false
     }
-    if ($architecture -eq "32") {
+    if ($architecture -match "32") {
         $platform_suffix = "x86"
     } else {
         $platform_suffix = "x86_64"
     }
+
     $filepath = DownloadMiniconda $python_version $platform_suffix
     Write-Host "Installing" $filepath "to" $python_home
     $install_log = $python_home + ".log"
@@ -71,23 +72,26 @@ function InstallMiniconda ($python_version, $architecture, $python_home) {
 }
 
 
-function InstallMinicondaPip ($python_home) {
-    $pip_path = $python_home + "\Scripts\pip.exe"
+function InstallCondaPackages ($python_home, $spec) {
     $conda_path = $python_home + "\Scripts\conda.exe"
-    if (-not(Test-Path $pip_path)) {
-        Write-Host "Installing pip..."
-        $args = "install --yes pip"
-        Write-Host $conda_path $args
-        Start-Process -FilePath "$conda_path" -ArgumentList $args -Wait -Passthru
-    } else {
-        Write-Host "pip already installed."
-    }
+    $args = "install --yes " + $spec
+    Write-Host ("conda " + $args)
+    Start-Process -FilePath "$conda_path" -ArgumentList $args -Wait -Passthru
+}
+
+function UpdateConda ($python_home) {
+    $conda_path = $python_home + "\Scripts\conda.exe"
+    Write-Host "Updating conda..."
+    $args = "update --yes conda"
+    Write-Host $conda_path $args
+    Start-Process -FilePath "$conda_path" -ArgumentList $args -Wait -Passthru
 }
 
 
 function main () {
     InstallMiniconda $env:PYTHON_VERSION $env:PYTHON_ARCH $env:PYTHON
-    InstallMinicondaPip $env:PYTHON
+    UpdateConda $env:PYTHON
+    InstallCondaPackages $env:PYTHON "conda-build jinja2 anaconda-client"
 }
 
 main
