@@ -40,6 +40,8 @@ For plotting
 ~~~~~~~~~~~~
 
 - `matplotlib <http://matplotlib.org/>`__: required for :ref:`plotting`.
+- `cartopy <http://scitools.org.uk/cartopy/>`__: recommended for
+  :ref:`plot-maps`.
 
 
 Instructions
@@ -52,6 +54,11 @@ with its recommended dependencies with the conda command line tool::
     $ conda install xarray dask netCDF4 bottleneck
 
 .. _conda: http://conda.io/
+
+.. note::
+    You might consider using the
+    `conda-forge <https://conda-forge.github.io/>`__ channel, as it has been
+    shown to be more up-to-date and to better handle package dependencies.
 
 If you don't use conda, be sure you have the required dependencies (numpy and
 pandas) installed first. Then, install xarray with pip::
