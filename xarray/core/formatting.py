@@ -145,15 +145,36 @@ def format_array_flat(items_ndarray, max_width):
     return pprint_str
 
 
+def _format_index_level_names(index):
+    return [name or '<level_%d>' % i
+            for i, name in enumerate(index.names)]
+
+
+def _summarize_index_level(name, level, col_width, max_width):
+    first_col = pretty_print('    - %s ' % name, col_width)
+    front_str = first_col + ('%s ' % level.dtype)
+    values_str = format_array_flat(level, max_width - len(front_str))
+    return front_str + values_str
+
+
 def _summarize_var_or_coord(name, var, col_width, show_values=True,
                             marker=' ', max_width=None):
     if max_width is None:
         max_width = OPTIONS['display_width']
     first_col = pretty_print('  %s %s ' % (marker, name), col_width)
     dims_str = '(%s) ' % ', '.join(map(str, var.dims)) if var.dims else ''
-    front_str = first_col + dims_str + ('%s ' % var.dtype)
+    index = var.to_index()
+    multiindex_str = 'MultiIndex\n' if isinstance(index, pd.MultiIndex) else ''
+    front_str = first_col + dims_str + ('%s %s' % (var.dtype, multiindex_str))
     if show_values:
-        values_str = format_array_flat(var, max_width - len(front_str))
+        if isinstance(index, pd.MultiIndex):
+            valid_names = _format_index_level_names(index)
+            values_str = '\n'.join(
+                _summarize_index_level(name, level, col_width, max_width)
+                for name, level in zip(valid_names, index.levels)
+            )
+        else:
+            values_str = format_array_flat(var, max_width - len(front_str))
     else:
         values_str = '...'
     return front_str + values_str
@@ -197,7 +218,13 @@ EMPTY_REPR = '    *empty*'
 
 
 def _calculate_col_width(mapping):
-    max_name_length = max(len(str(k)) for k in mapping) if mapping else 0
+    names = []
+    for k, v in mapping.items():
+        names.append(k)
+        index = v.to_index()
+        if isinstance(index, pd.MultiIndex):
+            names += ['  %s' % n for n in _format_index_level_names(index)]
+    max_name_length = max(len(n) for n in names) if names else 0
     col_width = max(max_name_length, 7) + 6
     return col_width
 
