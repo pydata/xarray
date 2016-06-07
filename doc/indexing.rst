@@ -294,19 +294,20 @@ elements that are fully masked:
 
     arr2.where(arr2.y < 2, drop=True)
 
-.. _multi-index indexing:
+.. _multi-level indexing:
 
-Multi-index indexing
+Multi-level indexing
 --------------------
 
 The ``loc`` and ``sel`` methods of ``Dataset`` and ``DataArray`` both accept
-dictionaries for indexing on multi-index dimensions:
+dictionaries for label-based indexing on multi-index dimensions:
 
 .. ipython:: python
 
     idx = pd.MultiIndex.from_product([list('abc'), [0, 1]],
                                      names=('one', 'two'))
-    da_midx = xr.DataArray(range(6), [('x', idx)])
+    da_midx = xr.DataArray(np.random.rand(6, 3),
+                           [('x', idx), ('y', range(3))])
     da_midx
     da_midx.sel(x={'one': 'a', 'two': 0})
     da_midx.loc[{'one': 'a'}, ...]
@@ -315,12 +316,37 @@ As shown in the last example above, xarray handles partial selection on
 pandas multi-index ; it automatically renames the dimension and replaces the
 coordinate when a single index is returned (level drop).
 
-Like pandas, it is also possible to use tuples of tuples, lists or slices
-(for now xarray always returns the full multi-index in that case):
+Like pandas, it is also possible to slice a multi-indexed dimension by providing
+a tuple of multiple indexers (i.e., slices, labels, list of labels, or any
+selector allowed by pandas). Note that for now xarray doesn't fully handle
+partial selection in that case (no level drop is done):
 
 .. ipython:: python
 
    da_midx.sel(x=(list('ab'), [0]))
+
+Lists or slices of tuples can be used to select several combinations of
+multi-index labels:
+
+.. ipython:: python
+
+   da_midx.sel(x=[('a', 0), ('b', 1)])
+
+A single, flat tuple can be used to select a given combination of
+multi-index labels:
+
+.. ipython:: python
+
+   da_midx.sel(x=('a', 0))
+
+Unlike pandas, xarray can't make the distinction between index levels and
+dimensions when using ``loc`` in some ambiguous cases. For example, for
+``da_midx.loc[{'one': 'a', 'two': 0}]`` and ``da_midx.loc['a', 0]`` xarray
+always interprets ('one', 'two') and ('a', 0) as the names and
+labels of the 1st and 2nd dimension, respectively. You must specify all
+dimensions or use the ellipsis in the ``loc`` specifier, e.g. in the example
+above, ``da_midx.loc[{'one': 'a', 'two': 0}, :]`` or
+``da_midx.loc[('a', 0), ...]``.
 
 Multi-dimensional indexing
 --------------------------
