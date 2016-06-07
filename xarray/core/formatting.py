@@ -150,10 +150,10 @@ def _format_index_level_names(index):
             for i, name in enumerate(index.names)]
 
 
-def _summarize_index_level(name, level, col_width, max_width):
+def _summarize_index_level(name, index, col_width, max_width):
     first_col = pretty_print('    - %s ' % name, col_width)
-    front_str = first_col + ('%s ' % level.dtype)
-    values_str = format_array_flat(level, max_width - len(front_str))
+    front_str = first_col + ('%s ' % index.dtype)
+    values_str = format_array_flat(index, max_width - len(front_str))
     return front_str + values_str
 
 
@@ -169,9 +169,11 @@ def _summarize_var_or_coord(name, var, col_width, show_values=True,
     if show_values:
         if isinstance(index, pd.MultiIndex):
             valid_names = _format_index_level_names(index)
+            index_levels = [index.get_level_values(i)
+                            for i in range(len(index.levels))]
             values_str = '\n'.join(
-                _summarize_index_level(name, level, col_width, max_width)
-                for name, level in zip(valid_names, index.levels)
+                _summarize_index_level(name, idx, col_width, max_width)
+                for name, idx in zip(valid_names, index_levels)
             )
         else:
             values_str = format_array_flat(var, max_width - len(front_str))
