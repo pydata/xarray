@@ -150,6 +150,22 @@ def _format_index_level_names(index):
             for i, name in enumerate(index.names)]
 
 
+def _get_level_values(index, level_num, max_size=50):
+    """Similar to `pd.MultiIndex.get_level_values` but
+    here truncated to `max_size`.
+    """
+    unique = index.levels[level_num]
+    labels = index.labels[level_num]
+    size = min(max_size, labels.size)
+    filled = pd.core.algorithms.take_1d(unique.values, labels[:size],
+                                        fill_value=unique._na_value)
+    _simple_new = unique._simple_new
+    values = _simple_new(filled, name=index.names[level_num],
+                         freq=getattr(unique, 'freq', None),
+                         tz=getattr(unique, 'tz', None))
+    return values
+
+
 def _summarize_index_level(name, index, col_width, max_width):
     first_col = pretty_print('    - %s ' % name, col_width)
     front_str = first_col + ('%s ' % index.dtype)
@@ -167,16 +183,18 @@ def _summarize_var_or_coord(name, var, col_width, show_values=True,
     multiindex_str = 'MultiIndex\n' if isinstance(index, pd.MultiIndex) else ''
     front_str = first_col + dims_str + ('%s %s' % (var.dtype, multiindex_str))
     if show_values:
+        values_width = max_width - len(front_str)
         if isinstance(index, pd.MultiIndex):
             valid_names = _format_index_level_names(index)
-            index_levels = [index.get_level_values(i)
-                            for i in range(len(index.levels))]
+            # get actual level values for at most the first `value_width` items
+            index_level_values = [_get_level_values(index, i, values_width)
+                                  for i in range(len(index.levels))]
             values_str = '\n'.join(
                 _summarize_index_level(name, idx, col_width, max_width)
-                for name, idx in zip(valid_names, index_levels)
+                for name, idx in zip(valid_names, index_level_values)
             )
         else:
-            values_str = format_array_flat(var, max_width - len(front_str))
+            values_str = format_array_flat(var, values_width)
     else:
         values_str = '...'
     return front_str + values_str
