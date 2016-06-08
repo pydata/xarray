@@ -94,13 +94,10 @@ class _LocIndexer(object):
 
     def __getitem__(self, key):
         pos_indexers, new_indexes = self._remap_key(key)
-        ds = self.data_array[pos_indexers]._to_temp_dataset()
-        return self.data_array._from_temp_dataset(
-            ds._replace_indexes(new_indexes)
-        )
+        return self.data_array[pos_indexers]._replace_indexes(new_indexes)
 
     def __setitem__(self, key, value):
-        pos_indexers, new_indexes = self._remap_key(key)
+        pos_indexers, _ = self._remap_key(key)
         self.data_array[pos_indexers] = value
 
 
@@ -241,6 +238,23 @@ class DataArray(AbstractArray, BaseDataObject):
             coords = OrderedDict((k, v) for k, v in self._coords.items()
                                  if set(v.dims) <= allowed_dims)
         return self._replace(variable, coords, name)
+
+    def _replace_indexes(self, indexes):
+        if not len(indexes):
+            return self
+        coords = self._coords.copy()
+        for name, idx in indexes.items():
+            coords[name] = Coordinate(name, idx)
+        obj = self._replace(coords=coords)
+
+        # switch from dimension to level names, if necessary
+        dim_names = {}
+        for dim, idx in indexes.items():
+            if idx.name != dim:
+                dim_names[dim] = idx.name
+        if dim_names:
+            obj = obj.rename(dim_names)
+        return obj
 
     __this_array = _ThisArray()
 
@@ -597,10 +611,10 @@ class DataArray(AbstractArray, BaseDataObject):
         Dataset.sel
         DataArray.isel
         """
-        ds = self._to_temp_dataset().sel(
-            method=method, tolerance=tolerance, **indexers
+        pos_indexers, new_indexes = indexing.remap_label_indexers(
+            self, indexers, method=method, tolerance=tolerance
         )
-        return self._from_temp_dataset(ds)
+        return self.isel(**pos_indexers)._replace_indexes(new_indexes)
 
     def isel_points(self, dim='points', **indexers):
         """Return a new DataArray whose dataset is given by pointwise integer
