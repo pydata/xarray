@@ -2,6 +2,7 @@ import functools
 import numpy as np
 import pandas as pd
 
+from . import nputils
 from . import ops
 from .combine import concat
 from .common import (
@@ -65,6 +66,52 @@ def _dummy_copy(xarray_obj):
     else:  # pragma: no cover
         raise AssertionError
     return res
+
+def _is_one_or_none(obj):
+    return obj == 1 or obj is None
+
+
+def _consolidate_slices(slices):
+    """Consolidate adjacent slices in a list of slices.
+    """
+    result = []
+    for slice_ in slices:
+        if not isinstance(slice_, slice):
+            raise ValueError('list element is not a slice: %r' % slice_)
+        if (result and last_slice.stop == slice_.start
+                and _is_one_or_none(last_slice.step)
+                and _is_one_or_none(slice_.step)):
+            last_slice = slice(last_slice.start, slice_.stop, slice_.step)
+            result[-1] = last_slice
+        else:
+            result.append(slice_)
+            last_slice = slice_
+    return result
+
+
+def _inverse_permutation_indices(positions):
+    """Like inverse_permutation, but also handles slices.
+
+    Parameters
+    ----------
+    positions : list of np.ndarray or slice objects.
+        If slice objects, all are assumed to be slices.
+
+    Returns
+    -------
+    np.ndarray of indices or None, if no permutation is necessary.
+    """
+    if not positions:
+        return None
+
+    if isinstance(positions[0], slice):
+        positions = _consolidate_slices(positions)
+        if positions == slice(None):
+            return None
+        positions = [np.arange(sl.start, sl.stop, sl.step) for sl in positions]
+
+    indices = nputils.inverse_permutation(np.concatenate(positions))
+    return indices
 
 
 class GroupBy(object):
@@ -302,6 +349,16 @@ class GroupBy(object):
         return self.apply(lambda ds: ds.assign_coords(**kwargs))
 
 
+def _maybe_reorder(xarray_obj, concat_dim, positions):
+    order = _inverse_permutation_indices(positions)
+
+    if order is None:
+        return xarray_obj
+    else:
+        dim, = concat_dim.dims
+        return xarray_obj[{dim: order}]
+
+
 class DataArrayGroupBy(GroupBy, ImplementsArrayReduce):
     """GroupBy object specialized to grouping DataArray objects
     """
@@ -313,14 +370,14 @@ class DataArrayGroupBy(GroupBy, ImplementsArrayReduce):
         for indices in self.group_indices:
             yield var[{self.group_dim: indices}]
 
-    def _concat_shortcut(self, applied, concat_dim, positions):
+    def _concat_shortcut(self, applied, concat_dim, positions=None):
         # nb. don't worry too much about maintaining this method -- it does
         # speed things up, but it's not very interpretable and there are much
         # faster alternatives (e.g., doing the grouped aggregation in a
         # compiled language)
-        stacked = Variable.concat(
-            applied, concat_dim, positions, shortcut=True)
-        result = self.obj._replace_maybe_drop_dims(stacked)
+        stacked = Variable.concat(applied, concat_dim, shortcut=True)
+        reordered = _maybe_reorder(stacked, concat_dim, positions)
+        result = self.obj._replace_maybe_drop_dims(reordered)
         result._coords[concat_dim.name] = as_variable(concat_dim, copy=True)
         return result
 
@@ -391,7 +448,8 @@ class DataArrayGroupBy(GroupBy, ImplementsArrayReduce):
         if shortcut:
             combined = self._concat_shortcut(applied, concat_dim, positions)
         else:
-            combined = concat(applied, concat_dim, positions=positions)
+            combined = concat(applied, concat_dim)
+            combined = _maybe_reorder(combined, concat_dim, positions)
 
         if isinstance(combined, type(self.obj)):
             combined = self._restore_dim_order(combined)
@@ -472,8 +530,10 @@ class DatasetGroupBy(GroupBy, ImplementsDatasetReduce):
     def _concat(self, applied):
         applied_example, applied = peek_at(applied)
         concat_dim, positions = self._infer_concat_args(applied_example)
-        combined = concat(applied, concat_dim, positions=positions)
-        return combined
+
+        combined = concat(applied, concat_dim)
+        reordered = _maybe_reorder(combined, concat_dim, positions)
+        return reordered
 
     def reduce(self, func, dim=None, keep_attrs=False, **kwargs):
         """Reduce the items in this group by applying `func` along some

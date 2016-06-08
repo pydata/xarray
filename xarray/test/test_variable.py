@@ -990,6 +990,27 @@ class TestCoordinate(TestCase, VariableSubclassTestCases):
         with self.assertRaises(AttributeError):
             coord.name = 'y'
 
+    def test_concat_periods(self):
+        periods = pd.period_range('2000-01-01', periods=10)
+        coords = [Coordinate('t', periods[:5]), Coordinate('t', periods[5:])]
+        expected = Coordinate('t', periods)
+        actual = Coordinate.concat(coords, dim='t')
+        assert actual.identical(expected)
+        assert isinstance(actual.to_index(), pd.PeriodIndex)
+
+        positions = [list(range(5)), list(range(5, 10))]
+        actual = Coordinate.concat(coords, dim='t', positions=positions)
+        assert actual.identical(expected)
+        assert isinstance(actual.to_index(), pd.PeriodIndex)
+
+    def test_concat_multiindex(self):
+        idx = pd.MultiIndex.from_array([[0, 1, 2], ['a', 'b']])
+        coords = [Coordinate('x', idx[:2]), Coordinate('x', idx[2:])]
+        expected = Coordinate('x', idx)
+        actual = Coordinate.concat(coords, dim='x')
+        assert actual.identical(expected)
+        assert isinstance(actual.to_index(), pd.MultiIndex)
+
 
 class TestAsCompatibleData(TestCase):
     def test_unchanged_types(self):
