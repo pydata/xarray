@@ -241,9 +241,10 @@ def _calculate_col_width(mapping):
     names = []
     for k, v in mapping.items():
         names.append(k)
-        index = v.to_index()
-        if isinstance(index, pd.MultiIndex):
-            names += ['  %s' % n for n in _format_index_level_names(index)]
+        if hasattr(v, 'to_index'):
+            index = v.to_index()
+            if isinstance(index, pd.MultiIndex):
+                names += ['  %s' % n for n in _format_index_level_names(index)]
     max_name_length = max(len(n) for n in names) if names else 0
     col_width = max(max_name_length, 7) + 6
     return col_width
