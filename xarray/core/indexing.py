@@ -135,19 +135,10 @@ def _asarray_tuplesafe(values):
     return result
 
 
-def _is_nested_tuple(tup, index):
-    """Check for a compatible nested tuple and multiindex (taken from
-    pandas.core.indexing.is_nested_tuple).
-    """
-    if not isinstance(tup, tuple):
-        return False
-
-    # are we nested tuple of: tuple,list,slice
-    for i, k in enumerate(tup):
-        if isinstance(k, (tuple, list, slice)):
-            return isinstance(index, pd.MultiIndex)
-
-    return False
+def _is_nested_tuple(possible_tuple):
+    return (isinstance(possible_tuple, tuple)
+            and any(isinstance(value, (tuple, list, slice))
+                    for value in possible_tuple))
 
 
 def convert_label_indexer(index, label, index_name='', method=None,
@@ -192,7 +183,7 @@ def convert_label_indexer(index, label, index_name='', method=None,
         indexer, new_index = index.get_loc_level(tuple(label.values()),
                                                  level=tuple(label.keys()))
 
-    elif _is_nested_tuple(label, index):
+    elif _is_nested_tuple(label) and isinstance(index, pd.MultiIndex):
         indexer = index.get_locs(label)
 
     else:
