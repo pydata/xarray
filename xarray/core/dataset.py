@@ -420,16 +420,21 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject):
         return obj
 
     def _replace_indexes(self, indexes):
-        variables = OrderedDict()
-        for k, v in iteritems(self._variables):
-            if k in indexes.keys():
-                idx = indexes[k]
-                variables[k] = Coordinate(idx.name, idx)
-            else:
-                variables[k] = v
+        if not len(indexes):
+            return self
+        variables = self._variables.copy()
+        for name, idx in indexes.items():
+            variables[name] = Coordinate(name, idx)
         obj = self._replace_vars_and_dims(variables)
-        dim_names = {dim: idx.name for dim, idx in iteritems(indexes)}
-        return obj.rename(dim_names)
+
+        # switch from dimension to level names, if necessary
+        dim_names = {}
+        for dim, idx in indexes.items():
+            if idx.name != dim:
+                dim_names[dim] = idx.name
+        if dim_names:
+            obj = obj.rename(dim_names)
+        return obj
 
     def copy(self, deep=False):
         """Returns a copy of this dataset.
@@ -1130,7 +1135,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject):
         Dataset.isel_points
         DataArray.sel_points
         """
-        pos_indexers, new_indexes = indexing.remap_label_indexers(
+        pos_indexers, _ = indexing.remap_label_indexers(
             self, indexers, method=method, tolerance=tolerance
         )
         return self.isel_points(dim=dim, **pos_indexers)
