@@ -188,7 +188,7 @@ def _summarize_var_or_coord(name, var, col_width, show_values=True,
             valid_names = _format_index_level_names(index)
             # get actual level values for at most the first `value_width` items
             index_level_values = [_get_level_values(index, i, values_width)
-                                  for i in range(len(index.levels))]
+                                  for i in range(index.nlevels)]
             values_str = '\n'.join(
                 _summarize_index_level(name, idx, col_width, max_width)
                 for name, idx in zip(valid_names, index_level_values)
