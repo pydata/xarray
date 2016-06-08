@@ -38,7 +38,7 @@ def is_trivial_index(var):
     the actual values to np.arange()
     """
     # if either attributes or encodings are defined
-    # the index is not trival.
+    # the index is not trivial.
     if len(var.attrs) or len(var.encoding):
         return False
     # if the index is not a 1d integer array

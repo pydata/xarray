@@ -309,7 +309,7 @@ def _ignore_warnings_if(condition):
 
 def _create_nan_agg_method(name, numeric_only=False, coerce_strings=False):
     def f(values, axis=None, skipna=None, **kwargs):
-        # ignore keyword args inserted by np.mean and other numpy aggreagators
+        # ignore keyword args inserted by np.mean and other numpy aggregators
         # automatically:
         kwargs.pop('dtype', None)
         kwargs.pop('out', None)
@@ -460,7 +460,7 @@ def inject_binary_ops(cls, inplace=False):
 
 
 def inject_all_ops_and_reduce_methods(cls, priority=50, array_only=True):
-    # priortize our operations over those of numpy.ndarray (priority=1)
+    # prioritize our operations over those of numpy.ndarray (priority=1)
     # and numpy.matrix (priority=10)
     cls.__array_priority__ = priority
 

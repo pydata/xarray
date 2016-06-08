@@ -206,7 +206,7 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
             Dictionary specifying how to encode this array's data into a
             serialized format like netCDF4. Currently used keys (for netCDF)
             include '_FillValue', 'scale_factor', 'add_offset' and 'dtype'.
-            Well behaviored code to serialize a Variable should ignore
+            Well-behaved code to serialize a Variable should ignore
             unrecognized encoding items.
         """
         self._data = as_compatible_data(data, fastpath=fastpath)
@@ -426,7 +426,7 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
         return self.copy(deep=False)
 
     def __deepcopy__(self, memo=None):
-        # memo does nothing but is required for compatability with
+        # memo does nothing but is required for compatibility with
         # copy.deepcopy
         return self.copy(deep=True)
 
@@ -956,7 +956,7 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
         values in the same locations.
 
         This method is necessary because `v1 == v2` for Variables
-        does element-wise comparisions (like numpy.ndarrays).
+        does element-wise comparisons (like numpy.ndarrays).
         """
         other = getattr(other, 'variable', other)
         try:
@@ -1140,7 +1140,7 @@ def broadcast_variables(*variables):
     The data on the returned variables will be a view of the data on the
     corresponding original arrays, but dimensions will be reordered and
     inserted so that both broadcast arrays have the same dimensions. The new
-    dimensions are sorted in order of appearence in the first variable's
+    dimensions are sorted in order of appearance in the first variable's
     dimensions followed by the second variable's dimensions.
     """
     dims_map = _unified_dims(variables)

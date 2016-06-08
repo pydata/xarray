@@ -117,7 +117,7 @@ class AbstractCoordinates(Mapping):
     def merge(self, other):
         """Merge two sets of coordinates to create a new Dataset
 
-        The method implments the logic used for joining coordinates in the
+        The method implements the logic used for joining coordinates in the
         result of a binary operation performed on xarray objects:
 
         - If two index coordinates conflict (are not equal), an exception is

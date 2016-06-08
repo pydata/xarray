@@ -22,7 +22,7 @@ class TestConcatDataset(TestCase):
         self.assertDatasetIdentical(data, concat(split_data, 'dim1'))
 
         def rectify_dim_order(dataset):
-            # return a new dataset with all variable dimensions tranposed into
+            # return a new dataset with all variable dimensions transposed into
             # the order in which they are found in `data`
             return Dataset(dict((k, v.transpose(*data[k].dims))
                                 for k, v in iteritems(dataset.data_vars)),

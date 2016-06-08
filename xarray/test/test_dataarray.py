@@ -422,7 +422,7 @@ class TestDataArray(TestCase):
         assert 'points' in actual.coords
         # Note that because xarray always concatenates along the first
         # dimension, We must transpose the result to match the numpy style of
-        # concatentation.
+        # concatenation.
         np.testing.assert_equal(actual.T, expected)
 
         # a few corner cases
@@ -1398,7 +1398,7 @@ class TestDataArray(TestCase):
         expected = DataArray([np.nan, 4, 8], [('time', times[::4])])
         self.assertDataArrayIdentical(expected, actual)
 
-        # regerssion test for http://stackoverflow.com/questions/33158558/
+        # regression test for http://stackoverflow.com/questions/33158558/
         array = Dataset({'time': times})['time']
         actual = array.resample('1D', dim='time', how='last')
         expected_times = pd.to_datetime(['2000-01-01T18', '2000-01-02T18',
