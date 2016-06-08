@@ -205,7 +205,7 @@ class VariableSubclassTestCases(object):
         self.assertVariableIdentical(v, +v)
         self.assertVariableIdentical(v, abs(v))
         self.assertArrayEqual((-v).values, -x)
-        # bianry ops with numbers
+        # binary ops with numbers
         self.assertVariableIdentical(v, v + 0)
         self.assertVariableIdentical(v, 0 + v)
         self.assertVariableIdentical(v, v * 1)

@@ -944,7 +944,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject):
             Method to use for inexact matches (requires pandas>=0.16):
 
             * None (default): only exact matches
-            * pad / ffill: propgate last valid index value forward
+            * pad / ffill: propagate last valid index value forward
             * backfill / bfill: propagate next valid index value backward
             * nearest: use nearest valid index value
         tolerance : optional

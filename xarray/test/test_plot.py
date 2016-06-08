@@ -349,7 +349,7 @@ class TestDetermineCmapParams(TestCase):
         self.assertEqual(cmap_params['vmax'], 0.9)
         self.assertEqual(cmap_params['cmap'], "RdBu_r")
 
-        # Setting vmin or vmax alone will force symetric bounds around center
+        # Setting vmin or vmax alone will force symmetric bounds around center
         cmap_params = _determine_cmap_params(neg, vmin=-0.1)
         self.assertEqual(cmap_params['vmin'], -0.1)
         self.assertEqual(cmap_params['vmax'], 0.1)
@@ -593,7 +593,7 @@ class Common2dMixin:
         ax = plt.gca()
         self.assertEqual('x', ax.get_xlabel())
         self.assertEqual('newy', ax.get_ylabel())
-        # ax limits might change bewteen plotfuncs
+        # ax limits might change between plotfuncs
         # simply ensure that these high coords were passed over
         self.assertTrue(np.min(ax.get_ylim()) > 100.)
 
@@ -607,7 +607,7 @@ class Common2dMixin:
         ax = plt.gca()
         self.assertEqual('newy', ax.get_xlabel())
         self.assertEqual('x', ax.get_ylabel())
-        # ax limits might change bewteen plotfuncs
+        # ax limits might change between plotfuncs
         # simply ensure that these high coords were passed over
         self.assertTrue(np.min(ax.get_xlim()) > 100.)
 
@@ -747,7 +747,7 @@ class TestContour(Common2dMixin, PlotTestCase):
 
     def test_colors(self):
         # matplotlib cmap.colors gives an rgbA ndarray
-        # when seaborn is used, instead we get an rgb tuble
+        # when seaborn is used, instead we get an rgb tuple
         def _color_as_tuple(c):
             return tuple(c[:3])
         artist = self.plotmethod(colors='k')

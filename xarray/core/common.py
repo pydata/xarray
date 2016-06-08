@@ -464,7 +464,7 @@ class BaseDataObject(AttrAccessMixin):
         ----------
         cond : boolean DataArray or Dataset
         other : unimplemented, optional
-            Unimplemented placeholder for compatability with future numpy / pandas versions
+            Unimplemented placeholder for compatibility with future numpy / pandas versions
         drop : boolean, optional
             Coordinate labels that only correspond to NA values should be dropped
 
