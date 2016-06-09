@@ -342,7 +342,7 @@ def _plot2d(plotfunc):
                     add_colorbar=True, add_labels=True, vmin=None, vmax=None,
                     cmap=None, center=None, robust=False, extend=None,
                     levels=None, colors=None, subplot_kws=None,
-                    cbar_ax=None, cbar_kwargs={}, **kwargs):
+                    cbar_ax=None, cbar_kwargs=None, **kwargs):
         # All 2d plots in xarray share this function signature.
         # Method signature below should be consistent.
 
@@ -428,7 +428,7 @@ def _plot2d(plotfunc):
             ax.set_title(darray._title_for_slice())
 
         if add_colorbar:
-            cbar_kwargs = dict(cbar_kwargs)
+            cbar_kwargs = {} if cbar_kwargs is None else dict(cbar_kwargs)
             cbar_kwargs.setdefault('extend', cmap_params['extend'])
             if cbar_ax is None:
                 cbar_kwargs.setdefault('ax', ax)
@@ -437,6 +437,10 @@ def _plot2d(plotfunc):
             cbar = plt.colorbar(primitive, **cbar_kwargs)
             if darray.name and add_labels and 'label' not in cbar_kwargs:
                 cbar.set_label(darray.name, rotation=90)
+        elif cbar_ax is not None or cbar_kwargs is not None:
+            # inform the user about keywords which aren't used
+            raise ValueError("cbar_ax and cbar_kwargs can't be used with "
+                             "add_colorbar=False.")
 
         _update_axes_limits(ax, xincrease, yincrease)
 
@@ -449,7 +453,7 @@ def _plot2d(plotfunc):
                    add_colorbar=True, add_labels=True, vmin=None, vmax=None,
                    cmap=None, colors=None, center=None, robust=False,
                    extend=None, levels=None, subplot_kws=None,
-                   cbar_ax=None, cbar_kwargs={}, **kwargs):
+                   cbar_ax=None, cbar_kwargs=None, **kwargs):
         """
         The method should have the same signature as the function.
 
