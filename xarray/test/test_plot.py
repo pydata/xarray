@@ -618,7 +618,7 @@ class Common2dMixin:
         title = plt.gca().get_title()
         self.assertTrue('c = 1, d = foo' == title or 'd = foo, c = 1' == title)
 
-    def test_colorbar_label(self):
+    def test_colorbar_default_label(self):
         self.darray.name = 'testvar'
         self.plotmethod()
         self.assertIn(self.darray.name, text_in_fig())
@@ -629,6 +629,41 @@ class Common2dMixin:
         alltxt = text_in_fig()
         for string in ['x', 'y', 'testvar']:
             self.assertNotIn(string, alltxt)
+
+    def test_colorbar_kwargs(self):
+        # replace label
+        self.darray.name = 'testvar'
+        self.plotmethod(cbar_kwargs={'label':'MyLabel'})
+        alltxt = text_in_fig()
+        self.assertIn('MyLabel', alltxt)
+        self.assertNotIn('testvar', alltxt)
+        # you can use mapping types as well
+        self.plotmethod(cbar_kwargs=(('label', 'MyLabel'),))
+        alltxt = text_in_fig()
+        self.assertIn('MyLabel', alltxt)
+        self.assertNotIn('testvar', alltxt)
+        # change cbar ax
+        fig, (ax, cax) = plt.subplots(1, 2)
+        self.plotmethod(ax=ax, cbar_ax=cax, cbar_kwargs={'label':'MyBar'})
+        self.assertTrue(ax.has_data())
+        self.assertTrue(cax.has_data())
+        alltxt = text_in_fig()
+        self.assertIn('MyBar', alltxt)
+        self.assertNotIn('testvar', alltxt)
+        # note that there are two ways to achieve this
+        fig, (ax, cax) = plt.subplots(1, 2)
+        self.plotmethod(ax=ax, cbar_kwargs={'label':'MyBar', 'cax':cax})
+        self.assertTrue(ax.has_data())
+        self.assertTrue(cax.has_data())
+        alltxt = text_in_fig()
+        self.assertIn('MyBar', alltxt)
+        self.assertNotIn('testvar', alltxt)
+        # see that no colorbar is respected
+        self.plotmethod(add_colorbar=False)
+        self.assertNotIn('testvar', text_in_fig())
+        # check that error is raised
+        self.assertRaises(ValueError, self.plotmethod,
+                          add_colorbar=False, cbar_kwargs= {'label':'label'})
 
     def test_verbose_facetgrid(self):
         a = easy_array((10, 15, 3))

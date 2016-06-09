@@ -49,6 +49,10 @@ Enhancements
   This feature reads/writes a `dtype` attribute to boolean variables in netCDF
   files. By `Joe Hamman <https://github.com/jhamman>`_.
 
+- 2D plotting methods now have two new keywords (`cbar_ax` and `cbar_kwargs`),
+  allowing more control on the colorbar (:issue:`872`).
+  By `Fabien Maussion <https://github.com/fmaussion>`_.
+
 Bug fixes
 ~~~~~~~~~
 
