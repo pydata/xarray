@@ -795,6 +795,19 @@ class TestContour(Common2dMixin, PlotTestCase):
             _color_as_tuple(artist.cmap.colors[1]),
             (0.0, 0.0, 1.0))
 
+        artist = self.darray.plot.contour(levels=[-0.5, 0., 0.5, 1.],
+                                          colors=['k', 'r', 'w', 'b'])
+        self.assertEqual(
+            _color_as_tuple(artist.cmap.colors[1]),
+            (1.0, 0.0, 0.0))
+        self.assertEqual(
+            _color_as_tuple(artist.cmap.colors[2]),
+            (1.0, 1.0, 1.0))
+        # the last color is now under "over"
+        self.assertEqual(
+             _color_as_tuple(artist.cmap._rgba_over),
+            (0.0, 0.0, 1.0))
+
     def test_cmap_and_color_both(self):
         with self.assertRaises(ValueError):
             self.plotmethod(colors='k', cmap='RdBu')
@@ -811,8 +824,8 @@ class TestContour(Common2dMixin, PlotTestCase):
         self.assertEqual('y2d', ax.get_ylabel())
 
     def test_single_level(self):
+        # this used to raise an error
         self.plotmethod(levels=[0.1])
-        self.plotmethod(levels=[0.1, 0.2])
         self.plotmethod(levels=1)
 
 
