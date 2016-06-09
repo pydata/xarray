@@ -714,17 +714,17 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
             d for d in dims if d not in self_dims) + self.dims
 
         if expanded_dims == self.dims:
-            return self.copy(deep=False)
-
-        if shape is not None:
-            dims_map = dict(zip(dims, shape))
-            tmp_shape = [dims_map[d] for d in expanded_dims]
-            expanded_data = ops.broadcast_to(self.data, tmp_shape)
+            expanded_var = self
         else:
-            expanded_data = self.data[
-                (None,) * (len(expanded_dims) - self.ndim)]
-        expanded_var = Variable(expanded_dims, expanded_data, self._attrs,
-                                self._encoding, fastpath=True)
+            if shape is not None:
+                dims_map = dict(zip(dims, shape))
+                tmp_shape = [dims_map[d] for d in expanded_dims]
+                expanded_data = ops.broadcast_to(self.data, tmp_shape)
+            else:
+                expanded_data = self.data[
+                    (None,) * (len(expanded_dims) - self.ndim)]
+            expanded_var = Variable(expanded_dims, expanded_data, self._attrs,
+                                    self._encoding, fastpath=True)
         return expanded_var.transpose(*dims)
 
     def _stack_once(self, dims, new_dim):

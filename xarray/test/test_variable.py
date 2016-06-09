@@ -1004,7 +1004,7 @@ class TestCoordinate(TestCase, VariableSubclassTestCases):
         assert isinstance(actual.to_index(), pd.PeriodIndex)
 
     def test_concat_multiindex(self):
-        idx = pd.MultiIndex.from_array([[0, 1, 2], ['a', 'b']])
+        idx = pd.MultiIndex.from_product([[0, 1, 2], ['a', 'b']])
         coords = [Coordinate('x', idx[:2]), Coordinate('x', idx[2:])]
         expected = Coordinate('x', idx)
         actual = Coordinate.concat(coords, dim='x')
