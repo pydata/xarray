@@ -299,54 +299,45 @@ elements that are fully masked:
 Multi-level indexing
 --------------------
 
-The ``loc`` and ``sel`` methods of ``Dataset`` and ``DataArray`` both accept
-dictionaries for label-based indexing on multi-index dimensions:
+Just like pandas, advanced indexing on multi-level indexes is also possible with
+``loc`` and ``sel``. You can slice a multi-index by providing multiple indexers,
+i.e., a tuple of slices, labels, list of labels, or any selector allowed by
+pandas (see :doc:`pandas`):
 
 .. ipython:: python
 
-    idx = pd.MultiIndex.from_product([list('abc'), [0, 1]],
-                                     names=('one', 'two'))
-    da_midx = xr.DataArray(np.random.rand(6, 3),
-                           [('x', idx), ('y', range(3))])
-    da_midx
-    da_midx.sel(x={'one': 'a', 'two': 0})
-    da_midx.loc[{'one': 'a'}, ...]
+    midx = pd.MultiIndex.from_product([list('abc'), [0, 1]],
+                                      names=('one', 'two'))
+    mda = xr.DataArray(np.random.rand(6, 3),
+                       [('x', midx), ('y', range(3))])
+    mda
+    mda.sel(x=(list('ab'), [0]))
 
-As shown in the last example above, xarray handles partial selection on
-pandas multi-index ; it automatically renames the dimension and replaces the
-coordinate when a single index is returned (level drop).
-
-Like pandas, it is also possible to slice a multi-indexed dimension by providing
-a tuple of multiple indexers (i.e., slices, labels, list of labels, or any
-selector allowed by pandas). Note that for now xarray doesn't fully handle
-partial selection in that case (no level drop is done):
+You can also select multiple elements by providing a list of labels or tuples or
+a slice of tuples:
 
 .. ipython:: python
 
-   da_midx.sel(x=(list('ab'), [0]))
+   mda.sel(x=[('a', 0), ('b', 1)])
 
-Lists or slices of tuples can be used to select several combinations of
-multi-index labels:
-
-.. ipython:: python
-
-   da_midx.sel(x=[('a', 0), ('b', 1)])
-
-A single, flat tuple can be used to select a given combination of
-multi-index labels:
+Additionally, xarray supports dictionaries:
 
 .. ipython:: python
 
-   da_midx.sel(x=('a', 0))
+   mda.sel(x={'one': 'a', 'two': 0})
+   mda.loc[{'one': 'a'}, ...]
 
-Unlike pandas, xarray can't make the distinction between index levels and
+Like pandas, xarray handles partial selection on multi-index (level drop).
+As shown in the last example above, it also renames the dimension / coordinate
+when the multi-index is reduced to a single index.
+
+Unlike pandas, xarray does not guess whether you provide index levels or
 dimensions when using ``loc`` in some ambiguous cases. For example, for
-``da_midx.loc[{'one': 'a', 'two': 0}]`` and ``da_midx.loc['a', 0]`` xarray
+``mda.loc[{'one': 'a', 'two': 0}]`` and ``mda.loc['a', 0]`` xarray
 always interprets ('one', 'two') and ('a', 0) as the names and
 labels of the 1st and 2nd dimension, respectively. You must specify all
 dimensions or use the ellipsis in the ``loc`` specifier, e.g. in the example
-above, ``da_midx.loc[{'one': 'a', 'two': 0}, :]`` or
-``da_midx.loc[('a', 0), ...]``.
+above, ``mda.loc[{'one': 'a', 'two': 0}, :]`` or ``mda.loc[('a', 0), ...]``.
 
 Multi-dimensional indexing
 --------------------------

@@ -26,6 +26,9 @@ Breaking changes
 ~~~~~~~~~~~~~~~~
 
 - Dropped support for Python 2.6 (:issue:`855`).
+- Indexing on multi-index now drop levels, which is consitent with pandas.
+  It also changes the name of the dimension / coordinate when the multi-index is
+  reduced to a single index.
 
 Enhancements
 ~~~~~~~~~~~~
@@ -39,9 +42,11 @@ Enhancements
   attributes are retained in the resampled object. By
   `Jeremy McGibbon <https://github.com/mcgibbon>`_.
 
-- DataArray and Dataset methods :py:meth:`sel` and :py:meth:`loc` now
-  accept dictionaries or nested tuples for indexing on multi-index dimensions.
-  By `Benoit Bovy <https://github.com/benbovy>`_.
+- Better multi-index support in DataArray and Dataset :py:meth:`sel` and
+  :py:meth:`loc` methods, which now behave more closely to pandas and which
+  also accept dictionaries for indexing based on given level names and labels
+  (see :ref:`multi-level indexing`). By
+  `Benoit Bovy <https://github.com/benbovy>`_.
 
 - New (experimental) decorators :py:func:`~xarray.register_dataset_accessor` and
   :py:func:`~xarray.register_dataarray_accessor` for registering custom xarray
