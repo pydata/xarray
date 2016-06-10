@@ -145,8 +145,8 @@ def convert_label_indexer(index, label, index_name='', method=None,
                           tolerance=None):
     """Given a pandas.Index and labels (e.g., from __getitem__) for one
     dimension, return an indexer suitable for indexing an ndarray along that
-    dimension. If label is a dict-like object and a pandas.MultiIndex is given,
-    also return a new pandas.Index, otherwise return None.
+    dimension. If `index` is a pandas.MultiIndex and depending on `label`,
+    return a new pandas.Index or pandas.MultiIndex (otherwise return None).
     """
     # backwards compatibility for pandas<0.16 (method) or pandas<0.17
     # (tolerance)
@@ -213,8 +213,8 @@ def convert_label_indexer(index, label, index_name='', method=None,
 
 def remap_label_indexers(data_obj, indexers, method=None, tolerance=None):
     """Given an xarray data object and label based indexers, return a mapping
-    of equivalent location based indexers. Also return a mapping of pandas'
-    single index objects returned from multi-index objects.
+    of equivalent location based indexers. Also return a mapping of updated
+    pandas index objects (in case of multi-index level drop).
     """
     if method is not None and not isinstance(method, str):
         raise TypeError('``method`` must be a string')

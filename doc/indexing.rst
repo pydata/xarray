@@ -299,10 +299,10 @@ elements that are fully masked:
 Multi-level indexing
 --------------------
 
-Just like pandas, advanced indexing on multi-level indexes is also possible with
+Just like pandas, advanced indexing on multi-level indexes is possible with
 ``loc`` and ``sel``. You can slice a multi-index by providing multiple indexers,
 i.e., a tuple of slices, labels, list of labels, or any selector allowed by
-pandas (see :doc:`pandas`):
+pandas:
 
 .. ipython:: python
 

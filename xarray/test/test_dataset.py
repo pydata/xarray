@@ -848,16 +848,16 @@ class TestDataset(TestCase):
 
         def test_sel(lab_indexer, pos_indexer, replaced_idx=False,
                      renamed_dim=None):
-            da = mdata.sel(x=lab_indexer)
-            expected_da = mdata.isel(x=pos_indexer)
+            ds = mdata.sel(x=lab_indexer)
+            expected_ds = mdata.isel(x=pos_indexer)
             if not replaced_idx:
-                self.assertDatasetIdentical(da, expected_da)
+                self.assertDatasetIdentical(ds, expected_ds)
             else:
                 if renamed_dim:
-                    self.assertEqual(da['var'].dims[0], renamed_dim)
-                    da = da.rename({renamed_dim: 'x'})
-                self.assertVariableIdentical(da['var'], expected_da['var'])
-                self.assertVariableNotEqual(da['x'], expected_da['x'])
+                    self.assertEqual(ds['var'].dims[0], renamed_dim)
+                    ds = ds.rename({renamed_dim: 'x'})
+                self.assertVariableIdentical(ds['var'], expected_ds['var'])
+                self.assertVariableNotEqual(ds['x'], expected_ds['x'])
 
         test_sel(('a', 1, -1), 0)
         test_sel(('b', 2, -2), -1)
