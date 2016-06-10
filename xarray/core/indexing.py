@@ -177,14 +177,25 @@ def convert_label_indexer(index, label, index_name='', method=None,
                            'the index is unsorted or non-unique')
 
     elif is_dict_like(label):
+        is_nested_vals = _is_nested_tuple(tuple(label.values()))
         if not isinstance(index, pd.MultiIndex):
             raise ValueError('cannot use a dict-like object for selection on a '
                              'dimension that does not have a MultiIndex')
-        indexer, new_index = index.get_loc_level(tuple(label.values()),
-                                                 level=tuple(label.keys()))
+        elif len(label) == index.nlevels and not is_nested_vals:
+            indexer = index.get_loc(tuple((label[k] for k in index.names)))
+        else:
+            indexer, new_index = index.get_loc_level(tuple(label.values()),
+                                                     level=tuple(label.keys()))
 
-    elif _is_nested_tuple(label) and isinstance(index, pd.MultiIndex):
-        indexer = index.get_locs(label)
+    elif isinstance(label, tuple) and isinstance(index, pd.MultiIndex):
+        if _is_nested_tuple(label):
+            indexer = index.get_locs(label)
+        elif len(label) == index.nlevels:
+            indexer = index.get_loc(label)
+        else:
+            indexer, new_index = index.get_loc_level(
+                label, level=list(range(len(label)))
+            )
 
     else:
         label = _asarray_tuplesafe(label)
@@ -223,7 +234,7 @@ def remap_label_indexers(data_obj, indexers, method=None, tolerance=None):
         idxr, new_idx = convert_label_indexer(index, label,
                                               dim, method, tolerance)
         pos_indexers[dim] = idxr
-        if new_idx is not None and not isinstance(new_idx, pd.MultiIndex):
+        if new_idx is not None:
             new_indexes[dim] = new_idx
 
     return pos_indexers, new_indexes

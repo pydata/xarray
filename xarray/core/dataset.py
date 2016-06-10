@@ -430,7 +430,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject):
         # switch from dimension to level names, if necessary
         dim_names = {}
         for dim, idx in indexes.items():
-            if idx.name != dim:
+            if not isinstance(idx, pd.MultiIndex) and idx.name != dim:
                 dim_names[dim] = idx.name
         if dim_names:
             obj = obj.rename(dim_names)

@@ -841,31 +841,40 @@ class TestDataset(TestCase):
             data.loc[dict(dim3='a')] = 0
 
     def test_multiindex(self):
-        idx = pd.MultiIndex.from_product([list('abc'), [0, 1]],
-                                         names=('one', 'two'))
-        data = Dataset(data_vars={'var': ('x', range(6))}, coords={'x': idx})
+        mindex = pd.MultiIndex.from_product([['a', 'b'], [1, 2], [-1, -2]],
+                                            names=('one', 'two', 'three'))
+        mdata = Dataset(data_vars={'var': ('x', range(8))},
+                        coords={'x': mindex})
 
-        self.assertDatasetIdentical(data.sel(x=('a', 0)), data.isel(x=0))
-        self.assertDatasetIdentical(data.sel(x=('c', 1)), data.isel(x=-1))
-        self.assertDatasetIdentical(data.sel(x=[('a', 0)]), data.isel(x=[0]))
-        self.assertDatasetIdentical(data.sel(x=[('a', 0), ('c', 1)]),
-                                    data.isel(x=[0, -1]))
-        self.assertDatasetIdentical(data.sel(x=(['a', 'c'], [0, 1])),
-                                    data.isel(x=[0, 1, -2, -1]))
-        self.assertDatasetIdentical(data.sel(x='a'), data.isel(x=slice(2)))
-        self.assertVariableNotEqual(data.sel(x={'one': slice(None)})['var'],
-                                    data['var'])
-        self.assertDatasetIdentical(data.isel(x=[0]),
-                                      data.sel(x={'one': 'a', 'two': 0}))
-        self.assertDatasetIdentical(data.isel(x=[0, 1]), data.sel(x='a'))
-        self.assertVariableIdentical(
-            data.sel(x={'one': 'a'})['var'],
-            data.unstack('x').sel(one='a').dropna('two')['var']
-        )
+        def test_sel(lab_indexer, pos_indexer, replaced_idx=False,
+                     renamed_dim=None):
+            da = mdata.sel(x=lab_indexer)
+            expected_da = mdata.isel(x=pos_indexer)
+            if not replaced_idx:
+                self.assertDatasetIdentical(da, expected_da)
+            else:
+                if renamed_dim:
+                    self.assertEqual(da['var'].dims[0], renamed_dim)
+                    da = da.rename({renamed_dim: 'x'})
+                self.assertVariableIdentical(da['var'], expected_da['var'])
+                self.assertVariableNotEqual(da['x'], expected_da['x'])
 
-        self.assertDatasetIdentical(data.loc[{'x': 'a'}], data.sel(x='a'))
-        self.assertDatasetIdentical(data.loc[{'x': {'one': 'a', 'two': 0}}],
-                                    data.sel(x={'one': 'a', 'two': 0}))
+        test_sel(('a', 1, -1), 0)
+        test_sel(('b', 2, -2), -1)
+        test_sel(('a', 1), [0, 1], replaced_idx=True, renamed_dim='three')
+        test_sel(('a',), range(4), replaced_idx=True)
+        test_sel([('a', 1, -1), ('b', 2, -2)], [0, 7])
+        test_sel(slice('a', 'b'), range(8))
+        test_sel(slice(('a', 1), ('b', 1)), range(6))
+        test_sel({'one': 'a', 'two': 1, 'three': -1}, 0)
+        test_sel({'one': 'a', 'two': 1}, [0, 1], replaced_idx=True,
+                 renamed_dim='three')
+        test_sel({'one': 'a'}, range(4), replaced_idx=True)
+
+        self.assertDatasetIdentical(mdata.loc[{'x': {'one': 'a'}}],
+                                    mdata.sel(x={'one': 'a'}))
+        with self.assertRaises(KeyError):
+            mdata.loc[{'one': 'a'}]
 
     def test_reindex_like(self):
         data = create_test_data()

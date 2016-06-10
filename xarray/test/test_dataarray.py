@@ -486,32 +486,44 @@ class TestDataArray(TestCase):
         self.assertEqual(data.loc[False], 1)
 
     def test_multiindex(self):
-        idx = pd.MultiIndex.from_product([list('abc'), [0, 1]],
-                                         names=('one', 'two'))
-        data = DataArray(range(6), [('x', idx)])
+        mindex = pd.MultiIndex.from_product([['a', 'b'], [1, 2], [-1, -2]],
+                                            names=('one', 'two', 'three'))
+        mdata = DataArray(range(8), [('x', mindex)])
 
-        self.assertDataArrayIdentical(data.sel(x=('a', 0)), data.isel(x=0))
-        self.assertDataArrayIdentical(data.sel(x=('c', 1)), data.isel(x=-1))
-        self.assertDataArrayIdentical(data.sel(x=[('a', 0)]), data.isel(x=[0]))
-        self.assertDataArrayIdentical(data.sel(x=[('a', 0), ('c', 1)]),
-                                      data.isel(x=[0, -1]))
-        self.assertDataArrayIdentical(data.sel(x='a'), data.isel(x=slice(2)))
-        self.assertVariableNotEqual(data.sel(x={'one': slice(None)}), data)
-        self.assertDataArrayIdentical(data.isel(x=[0]),
-                                      data.sel(x={'one': 'a', 'two': 0}))
-        self.assertDataArrayIdentical(data.isel(x=[0, 1]), data.sel(x='a'))
-        self.assertVariableIdentical(
-            data.sel(x={'one': 'a'}),
-            data.unstack('x').sel(one='a').dropna('two')
-        )
-        self.assertDataArrayIdentical(data.sel(x=('a', slice(None))),
-                                      data.isel(x=[0, 1]))
+        def test_sel(lab_indexer, pos_indexer, replaced_idx=False,
+                     renamed_dim=None):
+            da = mdata.sel(x=lab_indexer)
+            expected_da = mdata.isel(x=pos_indexer)
+            if not replaced_idx:
+                self.assertDataArrayIdentical(da, expected_da)
+            else:
+                if renamed_dim:
+                    self.assertEqual(da.dims[0], renamed_dim)
+                    da = da.rename({renamed_dim: 'x'})
+                self.assertVariableIdentical(da, expected_da)
+                self.assertVariableNotEqual(da['x'], expected_da['x'])
 
-        self.assertDataArrayIdentical(data.loc['a'], data[:2])
-        self.assertDataArrayIdentical(data.loc[{'one': 'a', 'two': 0}, ...],
-                                       data[[0]])
-        self.assertDataArrayIdentical(data.loc[{'one': 'a'}, ...],
-                                      data.sel(x={'one': 'a'}))
+        test_sel(('a', 1, -1), 0)
+        test_sel(('b', 2, -2), -1)
+        test_sel(('a', 1), [0, 1], replaced_idx=True, renamed_dim='three')
+        test_sel(('a',), range(4), replaced_idx=True)
+        test_sel([('a', 1, -1), ('b', 2, -2)], [0, 7])
+        test_sel(slice('a', 'b'), range(8))
+        test_sel(slice(('a', 1), ('b', 1)), range(6))
+        test_sel({'one': 'a', 'two': 1, 'three': -1}, 0)
+        test_sel({'one': 'a', 'two': 1}, [0, 1], replaced_idx=True,
+                 renamed_dim='three')
+        test_sel({'one': 'a'}, range(4), replaced_idx=True)
+
+        self.assertDataArrayIdentical(mdata.loc['a'], mdata.sel(x='a'))
+        self.assertDataArrayIdentical(mdata.loc[('a', 1), ...],
+                                      mdata.sel(x=('a', 1)))
+        self.assertDataArrayIdentical(mdata.loc[{'one': 'a'}, ...],
+                                      mdata.sel(x={'one': 'a'}))
+        with self.assertRaises(KeyError):
+            mdata.loc[{'one': 'a'}]
+        with self.assertRaises(IndexError):
+            mdata.loc[('a', 1)]
 
     def test_time_components(self):
         dates = pd.date_range('2000-01-01', periods=10)

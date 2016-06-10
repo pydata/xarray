@@ -88,9 +88,8 @@ class TestIndexers(TestCase):
         with self.assertRaisesRegexp(ValueError, 'does not have a MultiIndex'):
             indexing.convert_label_indexer(index, {'one': 0})
 
-        mindex = pd.MultiIndex(levels=[[1, 2, 3], ['a', 'b']],
-                               labels=[[0, 1, 2], [0, 0, 1]],
-                               names=['one', 'two'])
+        mindex = pd.MultiIndex.from_product([['a', 'b'], [1, 2]],
+                                            names=('one', 'two'))
         with self.assertRaisesRegexp(KeyError, 'not all values found'):
             indexing.convert_label_indexer(mindex, [0])
         with self.assertRaises(KeyError):
@@ -98,7 +97,7 @@ class TestIndexers(TestCase):
         with self.assertRaises(ValueError):
             indexing.convert_label_indexer(index, {'three': 0})
         with self.assertRaisesRegexp(KeyError, 'index to be fully lexsorted'):
-            indexing.convert_label_indexer(mindex, (slice(None), 'a', 0))
+            indexing.convert_label_indexer(mindex, (slice(None), 1, 'no_level'))
 
     def test_convert_unsorted_datetime_index_raises(self):
         index = pd.to_datetime(['2001', '2000', '2002'])
@@ -110,32 +109,39 @@ class TestIndexers(TestCase):
 
     def test_remap_label_indexers(self):
         # TODO: fill in more tests!
-        data = Dataset({'x': ('x', [1, 2, 3])})
-
-        def test_indexer(x):
+        def test_indexer(data, x, expected_pos, expected_idx=None):
             pos, idx = indexing.remap_label_indexers(data, {'x': x})
-            return pos
+            self.assertArrayEqual(pos.get('x'), expected_pos)
+            self.assertArrayEqual(idx.get('x'), expected_idx)
 
-        self.assertEqual({'x': 0}, test_indexer(1))
-        self.assertEqual({'x': 0}, test_indexer(np.int32(1)))
-        self.assertEqual({'x': 0}, test_indexer(Variable([], 1)))
+        data = Dataset({'x': ('x', [1, 2, 3])})
+        mindex = pd.MultiIndex.from_product([['a', 'b'], [1, 2], [-1, -2]],
+                                            names=('one', 'two', 'three'))
+        mdata = DataArray(range(8), [('x', mindex)])
 
-        with self.assertRaisesRegexp(ValueError, 'does not have a MultiIndex'):
-            indexing.remap_label_indexers(data, {'x': {'level': 1}})
-
-        mindex = pd.MultiIndex(levels=[[1, 2, 3], ['a', 'b']],
-                               labels=[[0, 1, 2], [0, 0, 1]],
-                               names=['one', 'two'])
-        data = DataArray(range(3), [('x', mindex)])
-        expected_pos = np.array([True, False, False])
-        expected_len_idx = (0, 0, 1)
-        labels = ({'one': 1, 'two': 'a'}, ([1], 'a'), {'one': 1})
-        for lbl, lidx in zip(labels, expected_len_idx):
-            pos, idx = indexing.remap_label_indexers(data, {'x': lbl})
-            self.assertTrue(expected_pos[pos['x']])
-            self.assertEqual(len(idx), lidx)
-        self.assertArrayEqual(idx['x'].values, ['a'])
-        self.assertEqual(idx['x'].name, 'two')
+        test_indexer(data, 1, 0)
+        test_indexer(data, np.int32(1), 0)
+        test_indexer(data, Variable([], 1), 0)
+        test_indexer(mdata, ('a', 1, -1), 0)
+        test_indexer(mdata, ('a', 1),
+                     [True,  True, False, False, False, False, False, False],
+                     [-1, -2])
+        test_indexer(mdata, ('a',),
+                     [True,  True,  True,  True, False, False, False, False],
+                     pd.MultiIndex.from_product([[1, 2], [-1, -2]]))
+        test_indexer(mdata, [('a', 1, -1), ('b', 2, -2)], [0, 7])
+        test_indexer(mdata, slice('a', 'b'), slice(0, 8, None))
+        test_indexer(mdata, slice(('a', 1), ('b', 1)), slice(0, 6, None))
+        test_indexer(mdata, {'one': 'a', 'two': 1, 'three': -1}, 0)
+        test_indexer(mdata, {'one': 'a', 'two': 1},
+                     [True,  True, False, False, False, False, False, False],
+                     [-1, -2])
+        test_indexer(mdata, {'one': 'a', 'three': -1},
+                     [True,  False, True, False, False, False, False, False],
+                     [1, 2])
+        test_indexer(mdata, {'one': 'a'},
+                     [True,  True,  True,  True, False, False, False, False],
+                     pd.MultiIndex.from_product([[1, 2], [-1, -2]]))
 
 
 class TestLazyArray(TestCase):
