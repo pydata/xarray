@@ -1213,10 +1213,6 @@ class TestDataset(TestCase):
         with self.assertRaisesRegexp(ValueError, 'does not have a MultiIndex'):
             ds.unstack('x')
 
-        ds2 = Dataset({'x': pd.Index([(0, 1)])})
-        with self.assertRaisesRegexp(ValueError, 'unnamed levels'):
-            ds2.unstack('x')
-
     def test_stack_unstack(self):
         ds = Dataset({'a': ('x', [0, 1]),
                       'b': (('x', 'y'), [[0, 1], [2, 3]]),

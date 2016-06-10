@@ -1418,9 +1418,6 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject):
         obj = self.reindex(copy=False, **{dim: full_idx})
 
         new_dim_names = index.names
-        if any(name is None for name in new_dim_names):
-            raise ValueError('cannot unstack dimension with unnamed levels')
-
         new_dim_sizes = [lev.size for lev in index.levels]
 
         variables = OrderedDict()

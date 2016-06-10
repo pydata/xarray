@@ -222,15 +222,6 @@ def remap_label_indexers(data_obj, indexers, method=None, tolerance=None):
     pos_indexers, new_indexes = {}, {}
     for dim, label in iteritems(indexers):
         index = data_obj[dim].to_index()
-
-        if isinstance(index, pd.MultiIndex):
-            # set default names for multi-index unnamed levels so that
-            # we can safely rename dimension / coordinate later
-            valid_level_names = [name or '{}_level_{}'.format(dim, i)
-                                 for i, name in enumerate(index.names)]
-            index = index.copy()
-            index.names = valid_level_names
-
         idxr, new_idx = convert_label_indexer(index, label,
                                               dim, method, tolerance)
         pos_indexers[dim] = idxr
