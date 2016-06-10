@@ -132,6 +132,14 @@ class VariableSubclassTestCases(object):
         x = self.cls('x', [item])
         self._assertIndexedLikeNDArray(x, item, expected_dtype=False)
 
+    def test_0d_object_array_with_list(self):
+        listarray = np.empty((1,), dtype=object)
+        listarray[0] = [1, 2, 3]
+        x = self.cls('x', listarray)
+        assert x.data == listarray
+        assert x[0].data == listarray.squeeze()
+        assert x.squeeze().data == listarray.squeeze()
+
     def test_index_and_concat_datetime(self):
         # regression test for #125
         date_range = pd.date_range('2011-09-01', periods=10)

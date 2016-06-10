@@ -108,7 +108,7 @@ def as_compatible_data(data, fastpath=False):
         return _maybe_wrap_data(data)
 
     if isinstance(data, tuple):
-        data = utils.tuple_to_0darray(data)
+        data = utils.to_0d_object_array(data)
 
     if isinstance(data, pd.Timestamp):
         # TODO: convert, handle datetime objects, too
