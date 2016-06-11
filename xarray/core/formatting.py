@@ -145,11 +145,6 @@ def format_array_flat(items_ndarray, max_width):
     return pprint_str
 
 
-def _format_index_level_names(index):
-    return [name or '<level_%d>' % i
-            for i, name in enumerate(index.names)]
-
-
 def _get_level_values(index, level_num, max_size=50):
     """Similar to `pd.MultiIndex.get_level_values` but
     here truncated to `max_size`.
@@ -185,13 +180,12 @@ def _summarize_var_or_coord(name, var, col_width, show_values=True,
     if show_values:
         values_width = max_width - len(front_str)
         if isinstance(index, pd.MultiIndex):
-            valid_names = _format_index_level_names(index)
             # get actual level values for at most the first `value_width` items
             index_level_values = [_get_level_values(index, i, values_width)
                                   for i in range(index.nlevels)]
             values_str = '\n'.join(
                 _summarize_index_level(name, idx, col_width, max_width)
-                for name, idx in zip(valid_names, index_level_values)
+                for name, idx in zip(index.names, index_level_values)
             )
         else:
             values_str = format_array_flat(var, values_width)
@@ -244,7 +238,7 @@ def _calculate_col_width(mapping):
         if hasattr(v, 'to_index'):
             index = v.to_index()
             if isinstance(index, pd.MultiIndex):
-                names += ['  %s' % n for n in _format_index_level_names(index)]
+                names += ['  %s' % n for n in index.names]
     max_name_length = max(len(n) for n in names) if names else 0
     col_width = max(max_name_length, 7) + 6
     return col_width
