@@ -863,6 +863,7 @@ class TestDataset(TestCase):
         test_sel(('b', 2, -2), -1)
         test_sel(('a', 1), [0, 1], replaced_idx=True, renamed_dim='three')
         test_sel(('a',), range(4), replaced_idx=True)
+        test_sel('a', range(4), replaced_idx=True)
         test_sel([('a', 1, -1), ('b', 2, -2)], [0, 7])
         test_sel(slice('a', 'b'), range(8))
         test_sel(slice(('a', 1), ('b', 1)), range(6))
@@ -873,6 +874,12 @@ class TestDataset(TestCase):
 
         self.assertDatasetIdentical(mdata.loc[{'x': {'one': 'a'}}],
                                     mdata.sel(x={'one': 'a'}))
+        self.assertDatasetIdentical(mdata.loc[{'x': 'a'}],
+                                    mdata.sel(x='a'))
+        self.assertDatasetIdentical(mdata.loc[{'x': ('a', 1)}],
+                                    mdata.sel(x=('a', 1)))
+        self.assertDatasetIdentical(mdata.loc[{'x': ('a', 1, -1)}],
+                                    mdata.sel(x=('a', 1, -1)))
         with self.assertRaises(KeyError):
             mdata.loc[{'one': 'a'}]
 

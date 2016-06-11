@@ -507,6 +507,7 @@ class TestDataArray(TestCase):
         test_sel(('b', 2, -2), -1)
         test_sel(('a', 1), [0, 1], replaced_idx=True, renamed_dim='three')
         test_sel(('a',), range(4), replaced_idx=True)
+        test_sel('a', range(4), replaced_idx=True)
         test_sel([('a', 1, -1), ('b', 2, -2)], [0, 7])
         test_sel(slice('a', 'b'), range(8))
         test_sel(slice(('a', 1), ('b', 1)), range(6))

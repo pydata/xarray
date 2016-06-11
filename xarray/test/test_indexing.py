@@ -126,6 +126,8 @@ class TestIndexers(TestCase):
         test_indexer(mdata, ('a', 1),
                      [True,  True, False, False, False, False, False, False],
                      [-1, -2])
+        test_indexer(mdata, 'a', slice(0, 4, None),
+                     pd.MultiIndex.from_product([[1, 2], [-1, -2]]))
         test_indexer(mdata, ('a',),
                      [True,  True,  True,  True, False, False, False, False],
                      pd.MultiIndex.from_product([[1, 2], [-1, -2]]))

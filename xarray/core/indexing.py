@@ -200,7 +200,10 @@ def convert_label_indexer(index, label, index_name='', method=None,
     else:
         label = _asarray_tuplesafe(label)
         if label.ndim == 0:
-            indexer = index.get_loc(label.item(), **kwargs)
+            if isinstance(index, pd.MultiIndex):
+                indexer, new_index = index.get_loc_level(label.item(), level=0)
+            else:
+                indexer = index.get_loc(label.item(), **kwargs)
         elif label.dtype.kind == 'b':
             indexer, = np.nonzero(label)
         else:
