@@ -67,6 +67,9 @@ Bug fixes
    This fixes issue :issue:`665`.
    `Filipe Fernandes <https://github.com/ocefpaf>`_.
 
+- ``Variable.copy(deep=True)`` no longer converts MultiIndex into a base Index
+  (:issue:`769`). By `Benoit Bovy <https://github.com/benbovy>`_.
+
 .. _whats-new.0.7.2:
 
 v0.7.2 (13 March 2016)

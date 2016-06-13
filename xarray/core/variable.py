@@ -410,7 +410,11 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
         If `deep=True`, the data array is loaded into memory and copied onto
         the new object. Dimensions, attributes and encodings are always copied.
         """
-        if deep and not isinstance(self.data, dask_array_type):
+        if isinstance(self._data, PandasIndexAdapter):
+            # there is no need to copy the index values here even if deep=True
+            # since pandas.Index objects are immutable
+            data = PandasIndexAdapter(self) if deep else self._data
+        elif deep and not isinstance(self.data, dask_array_type):
             # dask arrays don't have a copy method
             # https://github.com/blaze/dask/issues/911
             data = self.data.copy()
