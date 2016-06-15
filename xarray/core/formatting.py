@@ -6,6 +6,7 @@ import pandas as pd
 
 from .options import OPTIONS
 from .pycompat import iteritems, unicode_type, bytes_type, dask_array_type
+from .indexing import PandasIndexAdapter
 
 
 def pretty_print(x, numchars):
@@ -122,13 +123,17 @@ def format_items(x):
     return formatted
 
 
+def _get_max_items(max_width):
+    # every item will take up at least two characters, but we always want to
+    # print at least one item
+    return max(int(np.ceil(max_width / 2.0)), 1)
+
+
 def format_array_flat(items_ndarray, max_width):
     """Return a formatted string for as many items in the flattened version of
     items_ndarray that will fit within max_width characters
     """
-    # every item will take up at least two characters, but we always want to
-    # print at least one item
-    max_possibly_relevant = max(int(np.ceil(max_width / 2.0)), 1)
+    max_possibly_relevant = _get_max_items(max_width)
     relevant_items = first_n_items(items_ndarray, max_possibly_relevant)
     pprint_items = format_items(relevant_items)
 
@@ -145,27 +150,36 @@ def format_array_flat(items_ndarray, max_width):
     return pprint_str
 
 
-def _get_level_values(index, level_num, max_size=50):
-    """Similar to `pd.MultiIndex.get_level_values` but
-    here truncated to `max_size`.
+def _format_multiindex_levels(index, col_width, max_width):
+    """Return a formatted string for multi-index levels with
+    their name, dtype and (first) actual used values.
     """
-    unique = index.levels[level_num]
-    labels = index.labels[level_num]
-    size = min(max_size, labels.size)
-    filled = pd.core.algorithms.take_1d(unique.values, labels[:size],
-                                        fill_value=unique._na_value)
-    _simple_new = unique._simple_new
-    values = _simple_new(filled, name=index.names[level_num],
-                         freq=getattr(unique, 'freq', None),
-                         tz=getattr(unique, 'tz', None))
-    return values
+    level_str_lines = []
+    for i in range(index.nlevels):
+        idx = index.get_level_values(i)
+        first_col = pretty_print('- %s ' % idx.name, col_width)
+        front_str = first_col + ('%s ' % idx.dtype)
+        values_str = format_array_flat(idx, max_width - len(front_str))
+        level_str_lines.append(front_str + values_str)
+
+    return '\n'.join(level_str_lines)
 
 
-def _summarize_index_level(name, index, col_width, max_width):
-    first_col = pretty_print('    - %s ' % name, col_width)
-    front_str = first_col + ('%s ' % index.dtype)
-    values_str = format_array_flat(index, max_width - len(front_str))
-    return front_str + values_str
+def _maybe_summarize_multiindex(var, col_width, max_width):
+    if isinstance(var.variable._data, PandasIndexAdapter):
+        indent = 4
+        max_width -= indent
+
+        # get first relevant items before convert to a pandas.Index
+        # so that we avoid loading the whole data
+        index = var[:_get_max_items(max_width)].to_index()
+
+        if isinstance(index, pd.MultiIndex):
+            index_str = _format_multiindex_levels(index, col_width, max_width)
+            return wrap_indent(index_str, length=indent,
+                               start='MultiIndex\n' + ' ' * indent)
+
+    return ''
 
 
 def _summarize_var_or_coord(name, var, col_width, show_values=True,
@@ -174,21 +188,11 @@ def _summarize_var_or_coord(name, var, col_width, show_values=True,
         max_width = OPTIONS['display_width']
     first_col = pretty_print('  %s %s ' % (marker, name), col_width)
     dims_str = '(%s) ' % ', '.join(map(str, var.dims)) if var.dims else ''
-    index = var.to_index()
-    multiindex_str = 'MultiIndex\n' if isinstance(index, pd.MultiIndex) else ''
-    front_str = first_col + dims_str + ('%s %s' % (var.dtype, multiindex_str))
+    front_str = first_col + dims_str + ('%s ' % var.dtype)
     if show_values:
-        values_width = max_width - len(front_str)
-        if isinstance(index, pd.MultiIndex):
-            # get actual level values for at most the first `value_width` items
-            index_level_values = [_get_level_values(index, i, values_width)
-                                  for i in range(index.nlevels)]
-            values_str = '\n'.join(
-                _summarize_index_level(name, idx, col_width, max_width)
-                for name, idx in zip(index.names, index_level_values)
-            )
-        else:
-            values_str = format_array_flat(var, values_width)
+        values_str = _maybe_summarize_multiindex(var, col_width, max_width)
+        if not values_str:
+            values_str = format_array_flat(var, max_width - len(front_str))
     else:
         values_str = '...'
     return front_str + values_str
@@ -235,10 +239,11 @@ def _calculate_col_width(mapping):
     names = []
     for k, v in mapping.items():
         names.append(k)
-        if hasattr(v, 'to_index'):
-            index = v.to_index()
+        if (hasattr(v, 'variable')
+            and isinstance(v.variable._data, PandasIndexAdapter)):
+            index = v.variable.to_index()
             if isinstance(index, pd.MultiIndex):
-                names += ['  %s' % n for n in index.names]
+                names += ['- %s' % n for n in index.names]
     max_name_length = max(len(n) for n in names) if names else 0
     col_width = max(max_name_length, 7) + 6
     return col_width
