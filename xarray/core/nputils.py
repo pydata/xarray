@@ -49,7 +49,7 @@ def inverse_permutation(indices):
         permutation.
     """
     inverse_permutation = np.empty(len(indices), dtype=np.int64)
-    inverse_permutation[indices] = np.arange(len(indices))
+    inverse_permutation[indices] = np.arange(len(indices), dtype=np.int64)
     return inverse_permutation
 
 
