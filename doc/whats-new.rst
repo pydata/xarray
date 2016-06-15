@@ -60,7 +60,7 @@ Bug fixes
   `Jeremy McGibbon <https://github.com/mcgibbon>`_.
 
 - Concatenating xarray objects along an axis with a MultiIndex or PeriodIndex
-  preserves the nature of the index (:issue:`TBD`). By
+  preserves the nature of the index (:issue:`875`). By
   `Stephan Hoyer <https://github.com/shoyer>`_.
 
 - ``decode_cf_timedelta`` now accepts arrays with ``ndim`` >1 (:issue:`842`).

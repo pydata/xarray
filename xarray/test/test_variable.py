@@ -308,8 +308,8 @@ class VariableSubclassTestCases(object):
             self.assertEqual(expected.encoding, actual.encoding)
 
     def test_concat(self):
-        x = np.arange(5)
-        y = np.arange(5, 10)
+        x = np.arange(5, dtype=np.int64)
+        y = np.arange(5, 10, dtype=np.int64)
         v = self.cls(['a'], x)
         w = self.cls(['a'], y)
         self.assertVariableIdentical(Variable(['b', 'a'], np.array([x, y])),
