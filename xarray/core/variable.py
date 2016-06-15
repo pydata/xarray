@@ -1241,7 +1241,6 @@ def concat(variables, dim='concat_dim', positions=None, shortcut=False):
         along the given dimension.
     """
     variables = list(variables)
-    print(variables)
     if all(isinstance(v, Coordinate) for v in variables):
         return Coordinate.concat(variables, dim, positions, shortcut)
     else:
