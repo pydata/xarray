@@ -1510,8 +1510,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject):
 
         Parameters
         ----------
-        labels : str
-            Names of variables or index labels to drop.
+        labels : scalar or list of scalars
+            Name(s) of variables or index labels to drop.
         dim : None or str, optional
             Dimension along which to drop index labels. By default (if
             ``dim is None``), drops variables rather than index labels.
