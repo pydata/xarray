@@ -385,6 +385,15 @@ class VariableSubclassTestCases(object):
                                   source_ndarray(w.values))
         self.assertVariableIdentical(v, copy(v))
 
+    def test_copy_index(self):
+        midx = pd.MultiIndex.from_product([['a', 'b'], [1, 2], [-1, -2]],
+                                          names=('one', 'two', 'three'))
+        v = self.cls('x', midx)
+        for deep in [True, False]:
+            w = v.copy(deep=deep)
+            self.assertIsInstance(w._data, PandasIndexAdapter)
+            self.assertIs(v._data.array, w._data.array)
+
     def test_real_and_imag(self):
         v = self.cls('x', np.arange(3) - 1j * np.arange(3), {'foo': 'bar'})
         expected_re = self.cls('x', np.arange(3), {'foo': 'bar'})
