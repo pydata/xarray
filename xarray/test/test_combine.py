@@ -214,6 +214,14 @@ class TestConcatDataset(TestCase):
         actual = concat(objs, coord)
         self.assertDatasetIdentical(actual, expected)
 
+    def test_concat_multiindex(self):
+        x = pd.MultiIndex.from_product([[1, 2, 3], ['a', 'b']])
+        expected = Dataset({'x': x})
+        actual = concat([expected.isel(x=slice(2)),
+                         expected.isel(x=slice(2, None))], 'x')
+        assert expected.equals(actual)
+        assert isinstance(actual.x.to_index(), pd.MultiIndex)
+
     @requires_dask  # only for toolz
     def test_auto_combine(self):
         objs = [Dataset({'x': [0]}), Dataset({'x': [1]})]

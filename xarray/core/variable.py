@@ -10,6 +10,7 @@ from . import common
 from . import indexing
 from . import ops
 from . import utils
+from . import nputils
 from .pycompat import basestring, OrderedDict, zip, dask_array_type
 from .indexing import (PandasIndexAdapter, orthogonally_indexable,
                        LazyIntegerRange)
@@ -711,15 +712,19 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
         self_dims = set(self.dims)
         expanded_dims = tuple(
             d for d in dims if d not in self_dims) + self.dims
-        if shape is not None:
-            dims_map = dict(zip(dims, shape))
-            tmp_shape = [dims_map[d] for d in expanded_dims]
-            expanded_data = ops.broadcast_to(self.data, tmp_shape)
+
+        if expanded_dims == self.dims:
+            expanded_var = self
         else:
-            expanded_data = self.data[
-                (None,) * (len(expanded_dims) - self.ndim)]
-        expanded_var = Variable(expanded_dims, expanded_data, self._attrs,
-                                self._encoding, fastpath=True)
+            if shape is not None:
+                dims_map = dict(zip(dims, shape))
+                tmp_shape = [dims_map[d] for d in expanded_dims]
+                expanded_data = ops.broadcast_to(self.data, tmp_shape)
+            else:
+                expanded_data = self.data[
+                    (None,) * (len(expanded_dims) - self.ndim)]
+            expanded_var = Variable(expanded_dims, expanded_data, self._attrs,
+                                    self._encoding, fastpath=True)
         return expanded_var.transpose(*dims)
 
     def _stack_once(self, dims, new_dim):
@@ -926,10 +931,12 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
         if dim in first_var.dims:
             axis = first_var.get_axis_num(dim)
             dims = first_var.dims
-            if positions is None:
-                data = ops.concatenate(arrays, axis=axis)
-            else:
-                data = ops.interleaved_concat(arrays, positions, axis=axis)
+            data = ops.concatenate(arrays, axis=axis)
+            if positions is not None:
+                # TODO: deprecate this option -- we don't need it for groupby
+                # any more.
+                indices = nputils.inverse_permutation(np.concatenate(positions))
+                data = ops.take(data, indices, axis=axis)
         else:
             axis = 0
             dims = (dim,) + first_var.dims
@@ -1071,6 +1078,44 @@ class Coordinate(Variable):
     def __setitem__(self, key, value):
         raise TypeError('%s values cannot be modified' % type(self).__name__)
 
+    @classmethod
+    def concat(cls, variables, dim='concat_dim', positions=None,
+               shortcut=False):
+        """Specialized version of Variable.concat for Coordinate variables.
+
+        This exists because we want to avoid converting Index objects to NumPy
+        arrays, if possible.
+        """
+        if not isinstance(dim, basestring):
+            dim, = dim.dims
+
+        variables = list(variables)
+        first_var = variables[0]
+
+        if any(not isinstance(v, cls) for v in variables):
+            raise TypeError('Coordinate.concat requires that all input '
+                            'variables be Coordinate objects')
+
+        arrays = [v._data_cached().array for v in variables]
+
+        if not arrays:
+            data = []
+        else:
+            data = arrays[0].append(arrays[1:])
+
+            if positions is not None:
+                indices = nputils.inverse_permutation(np.concatenate(positions))
+                data = data.take(indices)
+
+        attrs = OrderedDict(first_var.attrs)
+        if not shortcut:
+            for var in variables:
+                if var.dims != first_var.dims:
+                    raise ValueError('inconsistent dimensions')
+                utils.remove_incompatible_items(attrs, var.attrs)
+
+        return cls(first_var.dims, data, attrs)
+
     def copy(self, deep=True):
         """Returns a copy of this object.
 
@@ -1163,3 +1208,40 @@ def _broadcast_compat_data(self, other):
         other_data = other
         dims = self.dims
     return self_data, other_data, dims
+
+
+def concat(variables, dim='concat_dim', positions=None, shortcut=False):
+    """Concatenate variables along a new or existing dimension.
+
+    Parameters
+    ----------
+    variables : iterable of Array
+        Arrays to stack together. Each variable is expected to have
+        matching dimensions and shape except for along the stacked
+        dimension.
+    dim : str or DataArray, optional
+        Name of the dimension to stack along. This can either be a new
+        dimension name, in which case it is added along axis=0, or an
+        existing dimension name, in which case the location of the
+        dimension is unchanged. Where to insert the new dimension is
+        determined by the first variable.
+    positions : None or list of integer arrays, optional
+        List of integer arrays which specifies the integer positions to which
+        to assign each dataset along the concatenated dimension. If not
+        supplied, objects are concatenated in the provided order.
+    shortcut : bool, optional
+        This option is used internally to speed-up groupby operations.
+        If `shortcut` is True, some checks of internal consistency between
+        arrays to concatenate are skipped.
+
+    Returns
+    -------
+    stacked : Variable
+        Concatenated Variable formed by stacking all the supplied variables
+        along the given dimension.
+    """
+    variables = list(variables)
+    if all(isinstance(v, Coordinate) for v in variables):
+        return Coordinate.concat(variables, dim, positions, shortcut)
+    else:
+        return Variable.concat(variables, dim, positions, shortcut)

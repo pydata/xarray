@@ -63,6 +63,10 @@ Bug fixes
   ``keep_attrs=True`` option. By
   `Jeremy McGibbon <https://github.com/mcgibbon>`_.
 
+- Concatenating xarray objects along an axis with a MultiIndex or PeriodIndex
+  preserves the nature of the index (:issue:`875`). By
+  `Stephan Hoyer <https://github.com/shoyer>`_.
+
 - ``decode_cf_timedelta`` now accepts arrays with ``ndim`` >1 (:issue:`842`).
    This fixes issue :issue:`665`.
    `Filipe Fernandes <https://github.com/ocefpaf>`_.
