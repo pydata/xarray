@@ -308,8 +308,8 @@ class VariableSubclassTestCases(object):
             self.assertEqual(expected.encoding, actual.encoding)
 
     def test_concat(self):
-        x = np.arange(5, dtype=np.int64)
-        y = np.arange(5, 10, dtype=np.int64)
+        x = np.arange(5)
+        y = np.arange(5, 10)
         v = self.cls(['a'], x)
         w = self.cls(['a'], y)
         self.assertVariableIdentical(Variable(['b', 'a'], np.array([x, y])),
@@ -323,8 +323,7 @@ class VariableSubclassTestCases(object):
         # test indexers
         actual = Variable.concat(
             [v, w],
-            positions=[np.arange(0, 10, 2, dtype=np.int64),
-                       np.arange(1, 10, 2, dtype=np.int64)],
+            positions=[np.arange(0, 10, 2), np.arange(1, 10, 2)],
             dim='a')
         expected = Variable('a', np.array([x, y]).ravel(order='F'))
         self.assertVariableIdentical(expected, actual)

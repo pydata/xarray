@@ -48,8 +48,9 @@ def inverse_permutation(indices):
         Integer indices to take from the original array to create the
         permutation.
     """
-    inverse_permutation = np.empty(len(indices), dtype=np.int64)
-    inverse_permutation[indices] = np.arange(len(indices), dtype=np.int64)
+    # use intp instead of int64 because of windows :(
+    inverse_permutation = np.empty(len(indices), dtype=np.intp)
+    inverse_permutation[indices] = np.arange(len(indices), dtype=np.intp)
     return inverse_permutation
 
 
