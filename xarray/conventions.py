@@ -824,7 +824,8 @@ def decode_cf_variable(var, concat_characters=True, mask_and_scale=True,
 
 def decode_cf_variables(variables, attributes, concat_characters=True,
                         mask_and_scale=True, decode_times=True,
-                        decode_coords=True, drop_variables=None):
+                        decode_coords=True, drop_variables=None,
+                        concat_dimensions=None):
     """
     Decode a several CF encoded variables.
 
@@ -837,11 +838,12 @@ def decode_cf_variables(variables, attributes, concat_characters=True,
 
     def stackable(dim):
         # figure out if a dimension can be concatenated over
-        if dim in variables:
+        if dim in variables and dim not in concat_dimensions:
             return False
         for v in dimensions_used_by[dim]:
             if v.dtype.kind != 'S' or dim != v.dims[-1]:
-                return False
+                if dim not in concat_dimensions:
+                    return False
         return True
 
     coord_names = set()
@@ -851,6 +853,13 @@ def decode_cf_variables(variables, attributes, concat_characters=True,
     elif drop_variables is None:
         drop_variables = []
     drop_variables = set(drop_variables)
+
+
+    if isinstance(concat_dimensions, basestring):
+        concat_dimensions = [concat_dimensions]
+    elif concat_dimensions is None:
+        concat_dimensions = []
+    concat_dimensions = set(concat_dimensions)
 
     new_vars = OrderedDict()
     for k, v in iteritems(variables):
@@ -879,7 +888,8 @@ def decode_cf_variables(variables, attributes, concat_characters=True,
 
 
 def decode_cf(obj, concat_characters=True, mask_and_scale=True,
-              decode_times=True, decode_coords=True, drop_variables=None):
+              decode_times=True, decode_coords=True, drop_variables=None,
+              concat_dimensions=None):
     """Decode the given Dataset or Datastore according to CF conventions into
     a new Dataset.
 
@@ -901,8 +911,14 @@ def decode_cf(obj, concat_characters=True, mask_and_scale=True,
         identify coordinates.
     drop_variables: string or iterable, optional
         A variable or list of variables to exclude from being parsed from the
-        dataset.This may be useful to drop variables with problems or
+        dataset. This may be useful to drop variables with problems or
         inconsistent values.
+    concat_dimensions : string or iterable, optional
+        A dimension or list of string-type dimensions to concatenate
+        into a single string. This is useful if decode_cf needs to
+        be run after opening a netCDF file that doesn't adhere to CF
+        conventions. Variables that use these dimensions must be
+        string type ('S') in order to be concatenated.
 
     Returns
     -------
@@ -925,7 +941,8 @@ def decode_cf(obj, concat_characters=True, mask_and_scale=True,
 
     vars, attrs, coord_names = decode_cf_variables(
         vars, attrs, concat_characters, mask_and_scale, decode_times,
-        decode_coords, drop_variables=drop_variables)
+        decode_coords, drop_variables=drop_variables,
+        concat_dimensions=concat_dimensions)
     ds = Dataset(vars, attrs=attrs)
     ds = ds.set_coords(coord_names.union(extra_coords))
     ds._file_obj = file_obj

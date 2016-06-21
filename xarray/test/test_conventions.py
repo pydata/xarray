@@ -538,6 +538,73 @@ class TestDecodeCF(TestCase):
         self.assertDatasetIdentical(expected, actual2)
 
 
+    def test_concat_strings_in_dataset(self):
+        max_character_len = 7
+        expected_strings = ['abcde', 'fghijk', 'lmn']
+        non_concat_strings = np.array(
+            [list(x) + [''] * (max_character_len - len(list(x)))
+             for x in expected_strings], dtype='S')
+        expected_strings = np.asarray(expected_strings, dtype='S')
+        original = Dataset({
+            't': ('t', [0, 1, 2], {'units': 'days since 2000-01-01'}),
+            'foo': ('t', [0, 0, 0], {'coordinates': 'y', 'units': 'bar'}),
+            'y': ('t', [5, 10, -999], {'_FillValue': -999}),
+            'station': (('t', 'max_length'), non_concat_strings)})
+
+        expected = Dataset({'foo': ('t', [0, 0, 0], {'units': 'bar'}),
+                            'station': ('t', expected_strings)},
+                           {'t': pd.date_range('2000-01-01', periods=3),
+                            'y': ('t', [5.0, 10.0, np.nan]),
+                            'max_length': np.arange(max_character_len)})
+
+        non_concat_expected = Dataset({
+            'foo': ('t', [0, 0, 0], {'units': 'bar'}),
+            'station': (('t', 'max_length'), non_concat_strings)},
+            {'t': pd.date_range('2000-01-01', periods=3),
+             'y': ('t', [5.0, 10.0, np.nan]),
+             'max_length': np.arange(max_character_len)})
+
+        actual = conventions.decode_cf(original,
+                                       concat_dimensions='max_length')
+        non_concat_actual = conventions.decode_cf(original)
+        self.assertDatasetIdentical(expected, actual)
+        self.assertDatasetIdentical(non_concat_expected, non_concat_actual)
+
+        # now test Datasets that share the dimension to concatenate but
+        # cannot be concatenated.
+        original = Dataset({
+            't': ('t', [0, 1, 2], {'units': 'days since 2000-01-01'}),
+            'foo': ('t', [0, 0, 0], {'coordinates': 'y', 'units': 'bar'}),
+            'y': ('t', [5, 10, -999], {'_FillValue': -999}),
+            'station': (('t', 'max_length'), non_concat_strings),
+            'non_string_var': (('t', 'max_length'),
+                               np.arange(21).reshape(3, 7))})
+
+        expected = Dataset({'foo': ('t', [0, 0, 0], {'units': 'bar'}),
+                            'station': ('t', expected_strings),
+                            'non_string_var':
+                                (('t', 'max_length'),
+                                 np.arange(21).reshape(3, 7))},
+                           {'t': pd.date_range('2000-01-01', periods=3),
+                            'y': ('t', [5.0, 10.0, np.nan]),
+                            'max_length': np.arange(max_character_len)})
+
+        non_concat_expected = Dataset({
+            'foo': ('t', [0, 0, 0], {'units': 'bar'}),
+            'station': (('t', 'max_length'), non_concat_strings),
+            'non_string_var': (('t', 'max_length'),
+                               np.arange(21).reshape(3, 7))},
+            {'t': pd.date_range('2000-01-01', periods=3),
+             'y': ('t', [5.0, 10.0, np.nan]),
+             'max_length': np.arange(max_character_len)})
+
+        actual = conventions.decode_cf(original,
+                                       concat_dimensions='max_length')
+        non_concat_actual = conventions.decode_cf(original)
+        self.assertDatasetIdentical(expected, actual)
+        self.assertDatasetIdentical(non_concat_expected, non_concat_actual)
+
+
 class CFEncodedInMemoryStore(WritableCFDataStore, InMemoryDataStore):
     pass
 
