@@ -8,7 +8,8 @@ from xarray import (align, broadcast, Dataset, DataArray,
                     Coordinate, Variable)
 from xarray.core.pycompat import iteritems, OrderedDict
 from xarray.core.common import _full_like
-from . import (TestCase, ReturnItem, source_ndarray, unittest, requires_dask,
+
+from xarray.test import (TestCase, ReturnItem, source_ndarray, unittest, requires_dask,
                requires_bottleneck)
 
 
@@ -62,6 +63,64 @@ class TestDataArray(TestCase):
         actual.data = 2 * np.ones((3, 4))
         self.assertArrayEqual(2 * np.ones((3, 4)), actual.data)
         self.assertArrayEqual(actual.data, actual.values)
+
+    def test_struct_array_dims(self):
+        """
+        This test checks subraction of two DataArrays for the case
+        when dimension is a structured array.
+        """
+        # GH837, GH861
+        # checking array subraction when dims are the same
+        p_data = np.array([('John', 180), ('Stacy', 150), ('Dick', 200)],
+                          dtype=[('name', '|S256'), ('height', object)])
+
+        p_data_1 = np.array([('John', 180), ('Stacy', 150), ('Dick', 200)],
+                            dtype=[('name', '|S256'), ('height', object)])
+
+        p_data_2 = np.array([('John', 180), ('Dick', 200)],
+                            dtype=[('name', '|S256'), ('height', object)])
+
+        weights_0 = DataArray([80, 56, 120], dims=['participant'],
+                              coords={'participant': p_data})
+
+        weights_1 = DataArray([81, 52, 115], dims=['participant'],
+                              coords={'participant': p_data_1})
+
+        actual = weights_1 - weights_0
+
+        expected = DataArray([1, -4, -5], dims=['participant'],
+                             coords={'participant': p_data})
+
+        self.assertDataArrayIdentical(actual, expected)
+
+        # checking array subraction when dims are not the same
+        p_data_1 = np.array([('John', 180), ('Stacy', 151), ('Dick', 200)],
+                            dtype=[('name', '|S256'), ('height', object)])
+
+        weights_1 = DataArray([81, 52, 115], dims=['participant'],
+                              coords={'participant': p_data_1})
+
+        actual = weights_1 - weights_0
+
+        expected = DataArray([1, -5], dims=['participant'],
+                             coords={'participant': p_data_2})
+
+        self.assertDataArrayIdentical(actual, expected)
+
+        # checking array subraction when dims are not the same and one
+        # is np.nan
+        p_data_1 = np.array([('John', 180), ('Stacy', np.nan), ('Dick', 200)],
+                            dtype=[('name', '|S256'), ('height', object)])
+
+        weights_1 = DataArray([81, 52, 115], dims=['participant'],
+                              coords={'participant': p_data_1})
+
+        actual = weights_1 - weights_0
+
+        expected = DataArray([1, -5], dims=['participant'],
+                             coords={'participant': p_data_2})
+
+        self.assertDataArrayIdentical(actual, expected)
 
     def test_name(self):
         arr = self.dv
