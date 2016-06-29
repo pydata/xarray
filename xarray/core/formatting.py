@@ -7,6 +7,13 @@ import pandas as pd
 from .options import OPTIONS
 from .pycompat import iteritems, unicode_type, bytes_type, dask_array_type
 
+def _str_or_unicode(obj):
+    """A drop in replacement for str() which properly handles unicode.
+    """
+    if isinstance(obj, unicode_type):
+        return obj.encode('ascii', errors='replace')
+    else:
+        return str(obj)
 
 def pretty_print(x, numchars):
     """Given an object `x`, call `str(x)` and format the returned string so
@@ -182,7 +189,7 @@ def summarize_coord(name, var, col_width):
 
 
 def _maybe_truncate(obj, maxlen=500):
-    s = str(obj)
+    s = _str_or_unicode(obj)
     if len(s) > maxlen:
         s = s[:(maxlen - 3)] + '...'
     return s
