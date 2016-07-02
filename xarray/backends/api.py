@@ -81,7 +81,7 @@ def _validate_dataset_names(dataset):
 def open_dataset(filename_or_obj, group=None, decode_cf=True,
                  mask_and_scale=True, decode_times=True,
                  concat_characters=True, decode_coords=True, engine=None,
-                 chunks=None, lock=None, drop_variables=None):
+                 chunks=None, lock=None, drop_variables=None, format=''):
     """Load and decode a dataset from a file or file-like object.
 
     Parameters
@@ -135,6 +135,10 @@ def open_dataset(filename_or_obj, group=None, decode_cf=True,
         A variable or list of variables to exclude from being parsed from the
         dataset. This may be useful to drop variables with problems or
         inconsistent values.
+    format: string, optional
+        The format of the file to open (PyNIO engine only). This may be useful 
+        for files with malformed names. Acceptable values are those formats 
+        handled by PyNIO; default is to let it autodetect the format.
 
     Returns
     -------
@@ -214,7 +218,7 @@ def open_dataset(filename_or_obj, group=None, decode_cf=True,
             elif engine == 'h5netcdf':
                 store = backends.H5NetCDFStore(filename_or_obj, group=group)
             elif engine == 'pynio':
-                store = backends.NioDataStore(filename_or_obj)
+                store = backends.NioDataStore(filename_or_obj, format=format)
             else:
                 raise ValueError('unrecognized engine for open_dataset: %r'
                                  % engine)

@@ -25,9 +25,9 @@ class NioArrayWrapper(NDArrayMixin):
 class NioDataStore(AbstractDataStore):
     """Store for accessing datasets via PyNIO
     """
-    def __init__(self, filename, mode='r'):
+    def __init__(self, filename, format=None, mode='r'):
         import Nio
-        self.ds = Nio.open_file(filename, mode=mode)
+        self.ds = Nio.open_file(filename, format=format, mode=mode)
 
     def open_store_variable(self, var):
         data = indexing.LazilyIndexedArray(NioArrayWrapper(var, self.ds))
