@@ -1,10 +1,10 @@
-from collections import Mapping, defaultdict
+from collections import Mapping
 from contextlib import contextmanager
 import pandas as pd
 
 from . import formatting
 from .utils import Frozen
-from .merge import merge_core, merge_variables, merge_coords_only, align_and_merge_coords
+from .merge import merge_coords_only, align_and_merge_coords
 from .pycompat import iteritems, basestring, OrderedDict
 from .variable import default_index_coordinate
 
@@ -63,7 +63,6 @@ class AbstractCoordinates(Mapping):
     def update(self, other):
         other_vars = getattr(other, 'variables', other)
         coords = align_and_merge_coords([self.variables, other_vars],
-                                        # priority_vars=other_vars,
                                         priority_arg=1,
                                         indexes=self.indexes)
         self._update_coords(coords)

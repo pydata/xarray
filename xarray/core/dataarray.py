@@ -42,12 +42,9 @@ def _infer_coords_and_dims(shape, coords, dims):
                 # TODO: deprecate this path
                 dims = list(coords.keys())
             else:
-                for n, coord in enumerate(coords):
-                    try:
-                        coord = as_variable(coord)
-                        dims[n], = coord.dims
-                    except (TypeError, ValueError):
-                        pass
+                for n, (dim, coord) in enumerate(zip(dims, coords)):
+                    coord = as_variable(coord, name=dims[n]).to_coord()
+                    dims[n] = coord.name
         dims = tuple(dims)
     else:
         for d in dims:

@@ -3,9 +3,8 @@ import warnings
 import pandas as pd
 
 from . import utils
-from .alignment import partial_align
 from .merge import merge
-from .pycompat import iteritems, reduce, OrderedDict, basestring
+from .pycompat import iteritems, OrderedDict, basestring
 from .variable import Variable, as_variable, Coordinate
 
 

@@ -14,13 +14,13 @@ from . import indexing
 from . import alignment
 from . import formatting
 from .. import conventions
-from .alignment import align  #, align_valid_dict
+from .alignment import align
 from .coordinates import DatasetCoordinates, Indexes
 from .common import ImplementsDatasetReduce, BaseDataObject
 from .merge import (dataset_update_method, dataset_merge_method,
                     merge_data_and_coords)
-from .utils import Frozen, SortedKeysDict, ChainMap, maybe_wrap_array, hashable
-from .variable import (as_variable, Variable, Coordinate, broadcast_variables)
+from .utils import Frozen, SortedKeysDict, maybe_wrap_array, hashable
+from .variable import (Variable, Coordinate, broadcast_variables)
 from .pycompat import (iteritems, basestring, OrderedDict,
                        dask_array_type)
 from .combine import concat

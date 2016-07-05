@@ -14,7 +14,7 @@ import pandas as pd
 
 from xarray import (align, broadcast, concat, merge, conventions, backends,
                     Dataset, DataArray, Variable, Coordinate, auto_combine,
-                    open_dataset, set_options)
+                    open_dataset, set_options, MergeError)
 from xarray.core import indexing, utils
 from xarray.core.pycompat import iteritems, OrderedDict
 
@@ -233,7 +233,7 @@ class TestDataset(TestCase):
     def test_constructor_compat(self):
         data = OrderedDict([('x', DataArray(0, coords={'y': 1})),
                             ('y', ('z', [1, 1, 1]))])
-        with self.assertRaisesRegexp(ValueError, 'conflicting value'):
+        with self.assertRaises(MergeError):
             Dataset(data, compat='equals')
         expected = Dataset({'x': 0}, {'y': ('z', [1, 1, 1])})
         actual = Dataset(data)
@@ -259,7 +259,7 @@ class TestDataset(TestCase):
         self.assertDatasetIdentical(expected, actual)
 
         data = {'x': DataArray(0, coords={'y': 3}), 'y': ('z', [1, 1, 1])}
-        with self.assertRaisesRegexp(ValueError, 'conflicting value'):
+        with self.assertRaises(MergeError):
             Dataset(data)
 
         data = {'x': DataArray(0, coords={'y': 1}), 'y': [1, 1]}
@@ -506,13 +506,13 @@ class TestDataset(TestCase):
         self.assertDatasetIdentical(expected, actual)
 
         other_coords = Dataset(coords={'x': ('x', ['a'])}).coords
-        with self.assertRaisesRegexp(ValueError, 'conflicting value'):
+        with self.assertRaises(MergeError):
             orig_coords.merge(other_coords)
         other_coords = Dataset(coords={'x': ('x', ['a', 'b'])}).coords
-        with self.assertRaisesRegexp(ValueError, 'conflicting value'):
+        with self.assertRaises(MergeError):
             orig_coords.merge(other_coords)
         other_coords = Dataset(coords={'x': ('x', ['a', 'b', 'c'])}).coords
-        with self.assertRaisesRegexp(ValueError, 'conflicting value'):
+        with self.assertRaises(MergeError):
             orig_coords.merge(other_coords)
 
         other_coords = Dataset(coords={'a': ('x', [8, 9])}).coords

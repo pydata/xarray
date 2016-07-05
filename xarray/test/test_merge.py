@@ -95,7 +95,7 @@ class TestMergeMethod(TestCase):
         ds1 = xr.Dataset({'x': 0})
         ds2 = xr.Dataset({'x': 1})
         for compat in ['broadcast_equals', 'equals', 'identical']:
-            with self.assertRaisesRegexp(ValueError, 'conflicting value'):
+            with self.assertRaises(xr.MergeError):
                 ds1.merge(ds2, compat=compat)
 
         ds2 = xr.Dataset({'x': [0, 0]})
@@ -105,7 +105,7 @@ class TestMergeMethod(TestCase):
                 ds1.merge(ds2, compat=compat)
 
         ds2 = xr.Dataset({'x': ((), 0, {'foo': 'bar'})})
-        with self.assertRaisesRegexp(ValueError, 'conflicting value'):
+        with self.assertRaises(xr.MergeError):
             ds1.merge(ds2, compat='identical')
 
         with self.assertRaisesRegexp(ValueError, 'compat=\S+ invalid'):

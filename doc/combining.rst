@@ -95,13 +95,13 @@ coordinates:
     xr.merge([ds, other])
 
 This ensures that ``merge`` is non-destructive. ``xarray.MergeError`` is raised
-if you attempt to merge variables with conflicting values:
+if you attempt to merge two variables with the same name but different values:
 
 .. ipython::
 
     @verbatim
     In [1]: xr.merge([ds, ds + 1])
-    MergeError: conflicting value for variable foo:
+    MergeError: conflicting values for variable 'foo' on objects to be combined:
     first value: <xarray.Variable (x: 2, y: 3)>
     array([[ 0.4691123 , -0.28286334, -1.5090585 ],
            [-1.13563237,  1.21211203, -0.17321465]])

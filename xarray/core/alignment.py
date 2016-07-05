@@ -84,7 +84,11 @@ def partial_align(*objects, **kwargs):
     """partial_align(*objects, join='inner', copy=True, indexes=None,
                      exclude=set())
 
-    Like align, but don't align along dimensions in exclude. Not public API.
+    Like align, but don't align along dimensions in exclude. Any indexes
+    explicitly provided with the `indexes` argument should be used in preference
+    to the aligned indexes.
+
+    Not public API.
     """
     join = kwargs.pop('join', 'inner')
     copy = kwargs.pop('copy', True)
@@ -115,19 +119,21 @@ def is_alignable(obj):
 def deep_align(list_of_variable_maps, join='outer', copy=True, indexes=None):
     """Align objects, recursing into dictionary values.
     """
-    from .dataarray import DataArray
-
     if indexes is None:
         indexes = {}
 
+    # We use keys to identify arguments to align. Integers indicate single
+    # arguments, while (int, variable_name) pairs indicate variables in ordered
+    # dictionaries.
     keys = []
     out = []
     targets = []
+    sentinel = object()
     for n, variables in enumerate(list_of_variable_maps):
         if is_alignable(variables):
             keys.append(n)
             targets.append(variables)
-            out.append(None)
+            out.append(sentinel)
         elif is_dict_like(variables):
             for k, v in variables.items():
                 if is_alignable(v) and k not in indexes:
@@ -148,7 +154,8 @@ def deep_align(list_of_variable_maps, join='outer', copy=True, indexes=None):
         else:
             out[key] = aligned_obj
 
-    assert all(arg is not None for arg in out)
+    # something went wrong: we should have replaced all sentinel values
+    assert all(arg is not sentinel for arg in out)
 
     return out
 
