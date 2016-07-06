@@ -383,6 +383,8 @@ class BaseDataObject(AttrAccessMixin):
         grouped : GroupBy
             A `GroupBy` object patterned after `pandas.GroupBy` that can be
             iterated over in the form of `(unique_value, grouped_array)` pairs.
+            The name of the group has the added suffix `_bins` in order to
+            distinguish it from the original variable.
 
         References
         ----------
