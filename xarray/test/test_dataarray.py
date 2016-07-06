@@ -1335,7 +1335,8 @@ class TestDataArray(TestCase):
         # http://pandas.pydata.org/pandas-docs/stable/generated/pandas.cut.html
         bins = [0,1.5,5]
         bin_coords = ['(0, 1.5]', '(1.5, 5]']
-        expected = DataArray([1,5], dims='dim_0', coords={'dim_0': bin_coords})
+        expected = DataArray([1,5], dims='dim_0_bins',
+                        coords={'dim_0_bins': bin_coords})
         # the problem with this is that it overwrites the dimensions of array!
         #actual = array.groupby('dim_0', bins=bins).sum()
         actual = array.groupby_bins('dim_0', bins).apply(
@@ -1349,13 +1350,15 @@ class TestDataArray(TestCase):
         array = self.make_groupby_multidim_example_array()
         bins = [0,15,20]
         bin_coords = ['(0, 15]', '(15, 20]']
-        expected = DataArray([16, 40], dims='lat', coords={'lat': bin_coords})
+        expected = DataArray([16, 40], dims='lat_bins',
+                                coords={'lat_bins': bin_coords})
         actual = array.groupby_bins('lat', bins).apply(
                                     lambda x : x.sum(), shortcut=False)
         self.assertDataArrayIdentical(expected, actual)
         # modify the array coordinates to be non-monotonic after unstacking
         array['lat'].data = np.array([[10., 20.], [20., 10.]])
-        expected = DataArray([28, 28], dims='lat', coords={'lat': bin_coords})
+        expected = DataArray([28, 28], dims='lat_bins',
+                    coords={'lat_bins': bin_coords})
         actual = array.groupby_bins('lat', bins).apply(
                                     lambda x : x.sum(), shortcut=False)
         self.assertDataArrayIdentical(expected, actual)

@@ -189,7 +189,8 @@ class GroupBy(object):
             raise TypeError("Can't specify both `grouper` and `bins`.")
         if bins is not None:
             group = DataArray(pd.cut(group.values, bins, **cut_kwargs),
-                                group.coords, name=group.name)
+                                group.coords, name=group.name + '_bins')
+            # RPA: we want to restore the original coordinates at some point!
         if grouper is not None:
             index = safe_cast_to_index(group)
             if not index.is_monotonic:
@@ -209,7 +210,6 @@ class GroupBy(object):
             # assume that group already has sorted, unique values
             # (if using bins, the group will have the same name as a dimension
             # but different values)
-            print('assume that group already has sorted, unique values')
             if group.dims != (group.name,):
                 raise ValueError('`group` is required to be a coordinate if '
                                  '`group.name` is a dimension in `obj`')
@@ -429,7 +429,8 @@ class DataArrayGroupBy(GroupBy, ImplementsArrayReduce):
 
     def _restore_multiindex(self, combined):
         if self._stacked_dim is not None and self._stacked_dim in combined.dims:
-            combined[self._stacked_dim] = self.group[self._stacked_dim]
+            stacked_dim = self.group[self._stacked_dim]
+            combined[self._stacked_dim] = stacked_dim
         return combined
 
     def apply(self, func, shortcut=False, **kwargs):
