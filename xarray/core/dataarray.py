@@ -545,7 +545,7 @@ class DataArray(AbstractArray, BaseDataObject):
         return self.copy(deep=False)
 
     def __deepcopy__(self, memo=None):
-        # memo does nothing but is required for compatability with
+        # memo does nothing but is required for compatibility with
         # copy.deepcopy
         return self.copy(deep=True)
 
@@ -652,7 +652,7 @@ class DataArray(AbstractArray, BaseDataObject):
             data array:
 
             * None (default): don't fill gaps
-            * pad / ffill: propgate last valid index value forward
+            * pad / ffill: propagate last valid index value forward
             * backfill / bfill: propagate next valid index value backward
             * nearest: use nearest valid index value (requires pandas>=0.16)
         tolerance : optional
@@ -696,7 +696,7 @@ class DataArray(AbstractArray, BaseDataObject):
             this data array:
 
             * None (default): don't fill gaps
-            * pad / ffill: propgate last valid index value forward
+            * pad / ffill: propagate last valid index value forward
             * backfill / bfill: propagate next valid index value backward
             * nearest: use nearest valid index value (requires pandas>=0.16)
         tolerance : optional
@@ -906,8 +906,8 @@ class DataArray(AbstractArray, BaseDataObject):
 
         Parameters
         ----------
-        labels : str
-            Names of coordinate variables or index labels to drop.
+        labels : scalar or list of scalars
+            Name(s) of coordinate variables or index labels to drop.
         dim : str, optional
             Dimension along which to drop index labels. By default (if
             ``dim is None``), drops coordinates rather than index labels.
@@ -1137,7 +1137,7 @@ class DataArray(AbstractArray, BaseDataObject):
         values in the same locations.
 
         This method is necessary because `v1 == v2` for ``DataArray``
-        does element-wise comparisions (like numpy.ndarrays).
+        does element-wise comparisons (like numpy.ndarrays).
 
         See Also
         --------
@@ -1287,7 +1287,7 @@ class DataArray(AbstractArray, BaseDataObject):
         Returns
         -------
         difference : same type as caller
-            The n-th order finite differnce of this object.
+            The n-th order finite difference of this object.
 
         Examples
         --------

@@ -192,9 +192,6 @@ def open_dataset(filename_or_obj, group=None, decode_cf=True,
                 raise ValueError('can only read gzipped netCDF files with '
                                  "default engine or engine='scipy'")
             # if the string ends with .gz, then gunzip and open as netcdf file
-            if sys.version_info[:2] < (2, 7):
-                raise ValueError('reading a gzipped netCDF not '
-                                 'supported on Python 2.6')
             try:
                 store = backends.ScipyDataStore(gzip.open(filename_or_obj))
             except TypeError as e:
@@ -390,7 +387,7 @@ def save_mfdataset(datasets, paths, mode='w', format=None, groups=None,
         * NETCDF4: Data is stored in an HDF5 file, using netCDF4 API
           features.
         * NETCDF4_CLASSIC: Data is stored in an HDF5 file, using only
-          netCDF 3 compatibile API features.
+          netCDF 3 compatible API features.
         * NETCDF3_64BIT: 64-bit offset version of the netCDF 3 file format,
           which fully supports 2+ GB files, but is only compatible with
           clients linked against netCDF version 3.6.0 or later.

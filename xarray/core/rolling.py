@@ -109,7 +109,7 @@ class Rolling(object):
 
     def _setup_windows(self):
         """
-        Find the indicies and labels for each window
+        Find the indices and labels for each window
         """
         from .dataarray import DataArray
 

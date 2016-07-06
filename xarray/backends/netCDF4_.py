@@ -72,7 +72,7 @@ def _nc4_values_and_dtype(var):
             var = var.astype('O')
         dtype = str
     elif var.dtype.kind == 'S':
-        # use character arrays instead of unicode, because unicode suppot in
+        # use character arrays instead of unicode, because unicode support in
         # netCDF4 is still rather buggy
         data, dims = maybe_convert_to_char_array(var.data, var.dims)
         var = Variable(dims, data, var.attrs, var.encoding)

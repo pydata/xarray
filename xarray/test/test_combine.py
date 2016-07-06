@@ -22,7 +22,7 @@ class TestConcatDataset(TestCase):
         self.assertDatasetIdentical(data, concat(split_data, 'dim1'))
 
         def rectify_dim_order(dataset):
-            # return a new dataset with all variable dimensions tranposed into
+            # return a new dataset with all variable dimensions transposed into
             # the order in which they are found in `data`
             return Dataset(dict((k, v.transpose(*data[k].dims))
                                 for k, v in iteritems(dataset.data_vars)),
@@ -213,6 +213,14 @@ class TestConcatDataset(TestCase):
         expected = Dataset({'x': ('y', [0, 1]), 'y': [3, 4]})
         actual = concat(objs, coord)
         self.assertDatasetIdentical(actual, expected)
+
+    def test_concat_multiindex(self):
+        x = pd.MultiIndex.from_product([[1, 2, 3], ['a', 'b']])
+        expected = Dataset({'x': x})
+        actual = concat([expected.isel(x=slice(2)),
+                         expected.isel(x=slice(2, None))], 'x')
+        assert expected.equals(actual)
+        assert isinstance(actual.x.to_index(), pd.MultiIndex)
 
     @requires_dask  # only for toolz
     def test_auto_combine(self):

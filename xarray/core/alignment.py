@@ -182,7 +182,7 @@ def reindex_variables(variables, indexes, indexers, method=None,
         Method to use for filling index values in ``indexers`` not found in
         this dataset:
           * None (default): don't fill gaps
-          * pad / ffill: propgate last valid index value forward
+          * pad / ffill: propagate last valid index value forward
           * backfill / bfill: propagate next valid index value backward
           * nearest: use nearest valid index value
     tolerance : optional

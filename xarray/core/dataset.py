@@ -917,7 +917,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject):
             Method to use for inexact matches (requires pandas>=0.16):
 
             * None (default): only exact matches
-            * pad / ffill: propgate last valid index value forward
+            * pad / ffill: propagate last valid index value forward
             * backfill / bfill: propagate next valid index value backward
             * nearest: use nearest valid index value
         tolerance : optional
@@ -1485,8 +1485,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject):
 
         Parameters
         ----------
-        labels : str
-            Names of variables or index labels to drop.
+        labels : scalar or list of scalars
+            Name(s) of variables or index labels to drop.
         dim : None or str, optional
             Dimension along which to drop index labels. By default (if
             ``dim is None``), drops variables rather than index labels.

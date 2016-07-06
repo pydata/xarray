@@ -304,7 +304,7 @@ def encode_cf_timedelta(timedeltas, units=None):
 
 class MaskedAndScaledArray(utils.NDArrayMixin):
     """Wrapper around array-like objects to create a new indexable object where
-    values, when accessesed, are automatically scaled and masked according to
+    values, when accessed, are automatically scaled and masked according to
     CF conventions for packed and missing data values.
 
     New values are given by the formula:
@@ -493,7 +493,7 @@ class NativeEndiannessArray(utils.NDArrayMixin):
 class BoolTypeArray(utils.NDArrayMixin):
     """Decode arrays on the fly from integer to boolean datatype
 
-    This is useful for decoding boolean arrays from interger typed netCDF
+    This is useful for decoding boolean arrays from integer typed netCDF
     variables.
 
     >>> x = np.array([1, 0, 1, 1, 0], dtype='i1')

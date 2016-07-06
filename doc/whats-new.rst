@@ -13,12 +13,19 @@ What's New
     import xarray as xr
     np.random.seed(123456)
 
-.. _whats-new.0.7.3:
+.. _whats-new.0.8.0:
 
-v0.7.3 (unreleased)
+v0.8.0 (unreleased)
 -------------------
 
 This release includes
+
+.. _v0.8.0.breaking:
+
+Breaking changes
+~~~~~~~~~~~~~~~~
+
+- Dropped support for Python 2.6 (:issue:`855`).
 
 Enhancements
 ~~~~~~~~~~~~
@@ -46,6 +53,10 @@ Enhancements
   This feature reads/writes a `dtype` attribute to boolean variables in netCDF
   files. By `Joe Hamman <https://github.com/jhamman>`_.
 
+- 2D plotting methods now have two new keywords (`cbar_ax` and `cbar_kwargs`),
+  allowing more control on the colorbar (:issue:`872`).
+  By `Fabien Maussion <https://github.com/fmaussion>`_.
+
 Bug fixes
 ~~~~~~~~~
 
@@ -56,9 +67,20 @@ Bug fixes
   ``keep_attrs=True`` option. By
   `Jeremy McGibbon <https://github.com/mcgibbon>`_.
 
+- Concatenating xarray objects along an axis with a MultiIndex or PeriodIndex
+  preserves the nature of the index (:issue:`875`). By
+  `Stephan Hoyer <https://github.com/shoyer>`_.
+
+- Fixed bug in arithmetic operations on DataArray objects whose dimensions
+  are numpy structured arrays or recarrays :issue:`861`, :issue:`837`.
+  `Maciek Swat <https://github.com/maciekswat>`_.
+
 - ``decode_cf_timedelta`` now accepts arrays with ``ndim`` >1 (:issue:`842`).
    This fixes issue :issue:`665`.
    `Filipe Fernandes <https://github.com/ocefpaf>`_.
+
+- ``Variable.copy(deep=True)`` no longer converts MultiIndex into a base Index
+  (:issue:`769`). By `Benoit Bovy <https://github.com/benbovy>`_.
 
 .. _whats-new.0.7.2:
 

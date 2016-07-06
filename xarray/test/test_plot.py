@@ -11,7 +11,7 @@ from xarray.plot.utils import (_determine_cmap_params,
                                _build_discrete_cmap,
                                _color_palette)
 
-from . import TestCase, requires_matplotlib, incompatible_2_6
+from . import TestCase, requires_matplotlib
 
 try:
     import matplotlib as mpl
@@ -27,9 +27,7 @@ def text_in_fig():
     '''
     Return the set of all text in the figure
     '''
-    alltxt = [t.get_text() for t in plt.gcf().findobj(mpl.text.Text)]
-    # Set comprehension not compatible with Python 2.6
-    return set(alltxt)
+    return {t.get_text() for t in plt.gcf().findobj(mpl.text.Text)}
 
 
 def find_possible_colorbars():
@@ -114,7 +112,6 @@ class TestPlot(PlotTestCase):
         self.assertArrayEqual(pd.date_range('20000101', periods=4) - np.timedelta64(12, 'h'),
                               _infer_interval_breaks(pd.date_range('20000101', periods=3)))
 
-    @incompatible_2_6
     def test_datetime_dimension(self):
         nrow = 3
         ncol = 4
@@ -352,7 +349,7 @@ class TestDetermineCmapParams(TestCase):
         self.assertEqual(cmap_params['vmax'], 0.9)
         self.assertEqual(cmap_params['cmap'], "RdBu_r")
 
-        # Setting vmin or vmax alone will force symetric bounds around center
+        # Setting vmin or vmax alone will force symmetric bounds around center
         cmap_params = _determine_cmap_params(neg, vmin=-0.1)
         self.assertEqual(cmap_params['vmin'], -0.1)
         self.assertEqual(cmap_params['vmax'], 0.1)
@@ -596,7 +593,7 @@ class Common2dMixin:
         ax = plt.gca()
         self.assertEqual('x', ax.get_xlabel())
         self.assertEqual('newy', ax.get_ylabel())
-        # ax limits might change bewteen plotfuncs
+        # ax limits might change between plotfuncs
         # simply ensure that these high coords were passed over
         self.assertTrue(np.min(ax.get_ylim()) > 100.)
 
@@ -610,7 +607,7 @@ class Common2dMixin:
         ax = plt.gca()
         self.assertEqual('newy', ax.get_xlabel())
         self.assertEqual('x', ax.get_ylabel())
-        # ax limits might change bewteen plotfuncs
+        # ax limits might change between plotfuncs
         # simply ensure that these high coords were passed over
         self.assertTrue(np.min(ax.get_xlim()) > 100.)
 
@@ -621,7 +618,7 @@ class Common2dMixin:
         title = plt.gca().get_title()
         self.assertTrue('c = 1, d = foo' == title or 'd = foo, c = 1' == title)
 
-    def test_colorbar_label(self):
+    def test_colorbar_default_label(self):
         self.darray.name = 'testvar'
         self.plotmethod()
         self.assertIn(self.darray.name, text_in_fig())
@@ -633,6 +630,41 @@ class Common2dMixin:
         for string in ['x', 'y', 'testvar']:
             self.assertNotIn(string, alltxt)
 
+    def test_colorbar_kwargs(self):
+        # replace label
+        self.darray.name = 'testvar'
+        self.plotmethod(cbar_kwargs={'label':'MyLabel'})
+        alltxt = text_in_fig()
+        self.assertIn('MyLabel', alltxt)
+        self.assertNotIn('testvar', alltxt)
+        # you can use mapping types as well
+        self.plotmethod(cbar_kwargs=(('label', 'MyLabel'),))
+        alltxt = text_in_fig()
+        self.assertIn('MyLabel', alltxt)
+        self.assertNotIn('testvar', alltxt)
+        # change cbar ax
+        fig, (ax, cax) = plt.subplots(1, 2)
+        self.plotmethod(ax=ax, cbar_ax=cax, cbar_kwargs={'label':'MyBar'})
+        self.assertTrue(ax.has_data())
+        self.assertTrue(cax.has_data())
+        alltxt = text_in_fig()
+        self.assertIn('MyBar', alltxt)
+        self.assertNotIn('testvar', alltxt)
+        # note that there are two ways to achieve this
+        fig, (ax, cax) = plt.subplots(1, 2)
+        self.plotmethod(ax=ax, cbar_kwargs={'label':'MyBar', 'cax':cax})
+        self.assertTrue(ax.has_data())
+        self.assertTrue(cax.has_data())
+        alltxt = text_in_fig()
+        self.assertIn('MyBar', alltxt)
+        self.assertNotIn('testvar', alltxt)
+        # see that no colorbar is respected
+        self.plotmethod(add_colorbar=False)
+        self.assertNotIn('testvar', text_in_fig())
+        # check that error is raised
+        self.assertRaises(ValueError, self.plotmethod,
+                          add_colorbar=False, cbar_kwargs= {'label':'label'})
+
     def test_verbose_facetgrid(self):
         a = easy_array((10, 15, 3))
         d = DataArray(a, dims=['y', 'x', 'z'])
@@ -641,7 +673,6 @@ class Common2dMixin:
         for ax in g.axes.flat:
             self.assertTrue(ax.has_data())
 
-    @incompatible_2_6
     def test_2d_function_and_method_signature_same(self):
         func_sig = inspect.getcallargs(self.plotfunc, self.darray)
         method_sig = inspect.getcallargs(self.plotmethod)
@@ -751,7 +782,7 @@ class TestContour(Common2dMixin, PlotTestCase):
 
     def test_colors(self):
         # matplotlib cmap.colors gives an rgbA ndarray
-        # when seaborn is used, instead we get an rgb tuble
+        # when seaborn is used, instead we get an rgb tuple
         def _color_as_tuple(c):
             return tuple(c[:3])
         artist = self.plotmethod(colors='k')

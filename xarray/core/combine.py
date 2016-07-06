@@ -5,7 +5,7 @@ import pandas as pd
 from . import utils
 from .merge import merge
 from .pycompat import iteritems, OrderedDict, basestring
-from .variable import Variable, as_variable, Coordinate
+from .variable import Variable, as_variable, Coordinate, concat as concat_vars
 
 
 def concat(objs, dim=None, data_vars='all', coords='different',
@@ -74,7 +74,7 @@ def concat(objs, dim=None, data_vars='all', coords='different',
     auto_combine
     """
     # TODO: add join and ignore_index arguments copied from pandas.concat
-    # TODO: support concatenating scaler coordinates even if the concatenated
+    # TODO: support concatenating scalar coordinates even if the concatenated
     # dimension already exists
     from .dataset import Dataset
     from .dataarray import DataArray
@@ -267,7 +267,7 @@ def _dataset_concat(datasets, dim, data_vars, coords, compat, positions):
     # stack up each variable to fill-out the dataset
     for k in concat_over:
         vars = ensure_common_dims([ds.variables[k] for ds in datasets])
-        combined = Variable.concat(vars, dim, positions)
+        combined = concat_vars(vars, dim, positions)
         insert_result_variable(k, combined)
 
     result = Dataset(result_vars, attrs=result_attrs)
