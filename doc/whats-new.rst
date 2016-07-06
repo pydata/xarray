@@ -30,6 +30,12 @@ Breaking changes
 Enhancements
 ~~~~~~~~~~~~
 
+- Groupby operations now support grouping over multidimensional variables. A new
+  method called :py:meth:`~xarray.Dataset.groupby_bins` has also been added to
+  allow users to specify bins for grouping. The new features are described in
+  :ref:`groupby.multidim` and :ref:`examples.multidim`.
+  By `Ryan Abernathey <http://github.com/rabernat>`_.
+
 - DataArray and Dataset method :py:meth:`where` now supports a ``drop=True``
   option that clips coordinate elements that are fully masked.  By
   `Phillip J. Wolfram <https://github.com/pwolfram>`_.

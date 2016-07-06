@@ -1,3 +1,4 @@
+.. _examples.multidim:
 
 Working with Multidimensional Coordinates
 =========================================
@@ -16,7 +17,7 @@ such datasets.
     import xarray as xr
     import cartopy.crs as ccrs
     from matplotlib import pyplot as plt
-    
+
     print("numpy version  : ", np.__version__)
     print("pandas version : ", pd.__version__)
     print("xarray version   : ", xr.version.version)

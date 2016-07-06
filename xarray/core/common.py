@@ -344,7 +344,7 @@ class BaseDataObject(AttrAccessMixin):
         return self.groupby_cls(self, group, squeeze=squeeze)
 
     def groupby_bins(self, group, bins, right=True, labels=None, precision=3,
-            include_lowest=False, squeeze=True):
+                     include_lowest=False, squeeze=True):
         """Returns a GroupBy object for performing grouped operations.
 
         Rather than using all unique values of `group`, the values are discretized
@@ -393,9 +393,9 @@ class BaseDataObject(AttrAccessMixin):
         if isinstance(group, basestring):
             group = self[group]
         return self.groupby_cls(self, group, squeeze=squeeze, bins=bins,
-                cut_kwargs={'right': right, 'labels': labels,
-                             'precision': precision,
-                             'include_lowest': include_lowest})
+                                cut_kwargs={'right': right, 'labels': labels,
+                                            'precision': precision,
+                                            'include_lowest': include_lowest})
 
     def rolling(self, min_periods=None, center=False, **windows):
         """

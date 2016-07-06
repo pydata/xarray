@@ -178,6 +178,8 @@ guarantee that all original dimensions remain unchanged.
 You can always squeeze explicitly later with the Dataset or DataArray
 :py:meth:`~xarray.DataArray.squeeze` methods.
 
+.. _groupby.multidim:
+
 Multidimensional Grouping
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 

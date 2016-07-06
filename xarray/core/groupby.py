@@ -166,7 +166,6 @@ class GroupBy(object):
             stacked_dim_name = 'stacked_' + '_'.join(orig_dims)
             # the copy is necessary here, otherwise read only array raises error
             # in pandas: https://github.com/pydata/pandas/issues/12813
-            # Is there a performance penalty for calling copy?
             group = group.stack(**{stacked_dim_name: orig_dims}).copy()
             obj = obj.stack(**{stacked_dim_name: orig_dims})
             self._stacked_dim = stacked_dim_name
@@ -188,9 +187,9 @@ class GroupBy(object):
         if grouper is not None and bins is not None:
             raise TypeError("Can't specify both `grouper` and `bins`.")
         if bins is not None:
-            group = DataArray(pd.cut(group.values, bins, **cut_kwargs),
-                                group.coords, name=group.name + '_bins')
-            # RPA: we want to restore the original coordinates at some point!
+            binned = pd.cut(group.values, bins, **cut_kwargs)
+            new_dim_name = group.name + '_bins'
+            group = DataArray(binned, group.coords, name=new_dim_name)
         if grouper is not None:
             index = safe_cast_to_index(group)
             if not index.is_monotonic:
