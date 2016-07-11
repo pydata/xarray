@@ -824,7 +824,8 @@ def decode_cf_variable(var, concat_characters=True, mask_and_scale=True,
 
 def decode_cf_variables(variables, attributes, concat_characters=True,
                         mask_and_scale=True, decode_times=True,
-                        decode_coords=True, drop_variables=None):
+                        decode_coords=True, drop_variables=None, 
+                        only_variables=None):
     """
     Decode a several CF encoded variables.
 
@@ -852,9 +853,15 @@ def decode_cf_variables(variables, attributes, concat_characters=True,
         drop_variables = []
     drop_variables = set(drop_variables)
 
+    if isinstance(only_variables, basestring):
+        only_variables = [only_variables]
+    elif only_variables is None:
+        only_variables = []
+    only_variables = set(only_variables)
+
     new_vars = OrderedDict()
     for k, v in iteritems(variables):
-        if k in drop_variables:
+        if (only_variables != set([]) and k not in only_variables) or k in drop_variables:
             continue
         concat = (concat_characters and v.dtype.kind == 'S' and v.ndim > 0 and
                   stackable(v.dims[-1]))
@@ -879,7 +886,8 @@ def decode_cf_variables(variables, attributes, concat_characters=True,
 
 
 def decode_cf(obj, concat_characters=True, mask_and_scale=True,
-              decode_times=True, decode_coords=True, drop_variables=None):
+              decode_times=True, decode_coords=True, drop_variables=None, 
+              only_variables=None):
     """Decode the given Dataset or Datastore according to CF conventions into
     a new Dataset.
 
@@ -903,6 +911,10 @@ def decode_cf(obj, concat_characters=True, mask_and_scale=True,
         A variable or list of variables to exclude from being parsed from the
         dataset.This may be useful to drop variables with problems or
         inconsistent values.
+    only_variables: string or iterable, optional
+        A variable or list of variables to load from the dataset. This is
+        useful if you don't need all the variables in the file and don't want
+        to spend time loading them. Default is to load all variables.
 
     Returns
     -------
@@ -925,7 +937,7 @@ def decode_cf(obj, concat_characters=True, mask_and_scale=True,
 
     vars, attrs, coord_names = decode_cf_variables(
         vars, attrs, concat_characters, mask_and_scale, decode_times,
-        decode_coords, drop_variables=drop_variables)
+        decode_coords, drop_variables=drop_variables, only_variables=only_variables)
     ds = Dataset(vars, attrs=attrs)
     ds = ds.set_coords(coord_names.union(extra_coords))
     ds._file_obj = file_obj

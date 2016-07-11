@@ -81,7 +81,8 @@ def _validate_dataset_names(dataset):
 def open_dataset(filename_or_obj, group=None, decode_cf=True,
                  mask_and_scale=True, decode_times=True,
                  concat_characters=True, decode_coords=True, engine=None,
-                 chunks=None, lock=None, drop_variables=None, format=''):
+                 chunks=None, lock=None, drop_variables=None, 
+                 only_variables=None, format=''):
     """Load and decode a dataset from a file or file-like object.
 
     Parameters
@@ -135,6 +136,10 @@ def open_dataset(filename_or_obj, group=None, decode_cf=True,
         A variable or list of variables to exclude from being parsed from the
         dataset. This may be useful to drop variables with problems or
         inconsistent values.
+    only_variables: string or iterable, optional
+        A variable or list of variables to load from the dataset. This is
+        useful if you don't need all the variables in the file and don't want
+        to spend time loading them. Default is to load all variables.
     format: string, optional
         The format of the file to open (PyNIO engine only). This may be useful 
         for files with malformed names. Acceptable values are those formats 
@@ -159,7 +164,7 @@ def open_dataset(filename_or_obj, group=None, decode_cf=True,
         ds = conventions.decode_cf(
             store, mask_and_scale=mask_and_scale, decode_times=decode_times,
             concat_characters=concat_characters, decode_coords=decode_coords,
-            drop_variables=drop_variables)
+            drop_variables=drop_variables, only_variables=only_variables)
 
         if chunks is not None:
             try:
