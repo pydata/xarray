@@ -115,11 +115,9 @@ If you create a ``DataArray`` by supplying a pandas
     df
     xr.DataArray(df)
 
-xarray does not (yet!) support labeling coordinate values with a
-:py:class:`pandas.MultiIndex` (see :issue:`164`).
-However, the alternate ``from_series`` constructor will automatically unpack
-any hierarchical indexes it encounters by expanding the series into a
-multi-dimensional array, as described in :doc:`pandas`.
+Xarray supports labeling coordinate values with a :py:class:`pandas.MultiIndex`.
+While it handles multi-indexes with unnamed levels, it is recommended that you
+explicitly set the names of the levels.
 
 DataArray properties
 ~~~~~~~~~~~~~~~~~~~~

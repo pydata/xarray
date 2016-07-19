@@ -26,6 +26,9 @@ Breaking changes
 ~~~~~~~~~~~~~~~~
 
 - Dropped support for Python 2.6 (:issue:`855`).
+- Indexing on multi-index now drop levels, which is consitent with pandas.
+  It also changes the name of the dimension / coordinate when the multi-index is
+  reduced to a single index.
 
 Enhancements
 ~~~~~~~~~~~~
@@ -45,10 +48,16 @@ Enhancements
   attributes are retained in the resampled object. By
   `Jeremy McGibbon <https://github.com/mcgibbon>`_.
 
+- Better multi-index support in DataArray and Dataset :py:meth:`sel` and
+  :py:meth:`loc` methods, which now behave more closely to pandas and which
+  also accept dictionaries for indexing based on given level names and labels
+  (see :ref:`multi-level indexing`). By
+  `Benoit Bovy <https://github.com/benbovy>`_.
+
 - New (experimental) decorators :py:func:`~xarray.register_dataset_accessor` and
   :py:func:`~xarray.register_dataarray_accessor` for registering custom xarray
   extensions without subclassing. They are described in the new documentation
-  page on :ref:`internals`. By `Stephan Hoyer <https://github.com/shoyer>`
+  page on :ref:`internals`. By `Stephan Hoyer <https://github.com/shoyer>`_.
 
 - Round trip boolean datatypes. Previously, writing boolean datatypes to netCDF
   formats would raise an error since netCDF does not have a `bool` datatype.

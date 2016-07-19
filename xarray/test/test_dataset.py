@@ -840,6 +840,49 @@ class TestDataset(TestCase):
         with self.assertRaises(TypeError):
             data.loc[dict(dim3='a')] = 0
 
+    def test_multiindex(self):
+        mindex = pd.MultiIndex.from_product([['a', 'b'], [1, 2], [-1, -2]],
+                                            names=('one', 'two', 'three'))
+        mdata = Dataset(data_vars={'var': ('x', range(8))},
+                        coords={'x': mindex})
+
+        def test_sel(lab_indexer, pos_indexer, replaced_idx=False,
+                     renamed_dim=None):
+            ds = mdata.sel(x=lab_indexer)
+            expected_ds = mdata.isel(x=pos_indexer)
+            if not replaced_idx:
+                self.assertDatasetIdentical(ds, expected_ds)
+            else:
+                if renamed_dim:
+                    self.assertEqual(ds['var'].dims[0], renamed_dim)
+                    ds = ds.rename({renamed_dim: 'x'})
+                self.assertVariableIdentical(ds['var'], expected_ds['var'])
+                self.assertVariableNotEqual(ds['x'], expected_ds['x'])
+
+        test_sel(('a', 1, -1), 0)
+        test_sel(('b', 2, -2), -1)
+        test_sel(('a', 1), [0, 1], replaced_idx=True, renamed_dim='three')
+        test_sel(('a',), range(4), replaced_idx=True)
+        test_sel('a', range(4), replaced_idx=True)
+        test_sel([('a', 1, -1), ('b', 2, -2)], [0, 7])
+        test_sel(slice('a', 'b'), range(8))
+        test_sel(slice(('a', 1), ('b', 1)), range(6))
+        test_sel({'one': 'a', 'two': 1, 'three': -1}, 0)
+        test_sel({'one': 'a', 'two': 1}, [0, 1], replaced_idx=True,
+                 renamed_dim='three')
+        test_sel({'one': 'a'}, range(4), replaced_idx=True)
+
+        self.assertDatasetIdentical(mdata.loc[{'x': {'one': 'a'}}],
+                                    mdata.sel(x={'one': 'a'}))
+        self.assertDatasetIdentical(mdata.loc[{'x': 'a'}],
+                                    mdata.sel(x='a'))
+        self.assertDatasetIdentical(mdata.loc[{'x': ('a', 1)}],
+                                    mdata.sel(x=('a', 1)))
+        self.assertDatasetIdentical(mdata.loc[{'x': ('a', 1, -1)}],
+                                    mdata.sel(x=('a', 1, -1)))
+        with self.assertRaises(KeyError):
+            mdata.loc[{'one': 'a'}]
+
     def test_reindex_like(self):
         data = create_test_data()
         data['letters'] = ('dim3', 10 * ['a'])
@@ -1176,10 +1219,6 @@ class TestDataset(TestCase):
             ds.unstack('foo')
         with self.assertRaisesRegexp(ValueError, 'does not have a MultiIndex'):
             ds.unstack('x')
-
-        ds2 = Dataset({'x': pd.Index([(0, 1)])})
-        with self.assertRaisesRegexp(ValueError, 'unnamed levels'):
-            ds2.unstack('x')
 
     def test_stack_unstack(self):
         ds = Dataset({'a': ('x', [0, 1]),

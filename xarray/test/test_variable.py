@@ -982,6 +982,11 @@ class TestCoordinate(TestCase, VariableSubclassTestCases):
         v = Coordinate(['time'], data, {'foo': 'bar'})
         self.assertTrue(pd.Index(data, name='time').identical(v.to_index()))
 
+    def test_multiindex_default_level_names(self):
+        midx = pd.MultiIndex.from_product([['a', 'b'], [1, 2]])
+        v = Coordinate(['x'], midx, {'foo': 'bar'})
+        self.assertEqual(v.to_index().names, ('x_level_0', 'x_level_1'))
+
     def test_data(self):
         x = Coordinate('x', np.arange(3.0))
         # data should be initially saved as an ndarray
