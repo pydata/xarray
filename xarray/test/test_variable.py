@@ -392,7 +392,8 @@ class VariableSubclassTestCases(object):
         for deep in [True, False]:
             w = v.copy(deep=deep)
             self.assertIsInstance(w._data, PandasIndexAdapter)
-            self.assertIs(v._data.array, w._data.array)
+            self.assertIsInstance(w.to_index(), pd.MultiIndex)
+            self.assertArrayEqual(v._data.array, w._data.array)
 
     def test_real_and_imag(self):
         v = self.cls('x', np.arange(3) - 1j * np.arange(3), {'foo': 'bar'})
