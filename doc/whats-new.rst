@@ -93,6 +93,9 @@ Bug fixes
 - ``Variable.copy(deep=True)`` no longer converts MultiIndex into a base Index
   (:issue:`769`). By `Benoit Bovy <https://github.com/benbovy>`_.
 
+- Fixed incorrect test for dask version :issue:`891`. By
+  `Stephan Hoyer <https://github.com/shoyer>`_.
+
 .. _whats-new.0.7.2:
 
 v0.7.2 (13 March 2016)
