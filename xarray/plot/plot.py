@@ -393,9 +393,8 @@ def _plot2d(plotfunc):
 
         _ensure_plottable(xval, yval)
 
-        if 'contour' in plotfunc.__name__:
-            if levels is None:
-                levels = 7  # this is the matplotlib default
+        if 'contour' in plotfunc.__name__ and levels is None:
+            levels = 7  # this is the matplotlib default
 
         cmap_kwargs = {'plot_data': zval.data,
                        'vmin': vmin,
