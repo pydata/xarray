@@ -339,12 +339,16 @@ def _plot2d(plotfunc):
     @functools.wraps(plotfunc)
     def newplotfunc(darray, x=None, y=None, ax=None, row=None, col=None,
                     col_wrap=None, xincrease=True, yincrease=True,
-                    add_colorbar=True, add_labels=True, vmin=None, vmax=None,
+                    add_colorbar=None, add_labels=True, vmin=None, vmax=None,
                     cmap=None, center=None, robust=False, extend=None,
                     levels=None, colors=None, subplot_kws=None,
                     cbar_ax=None, cbar_kwargs=None, **kwargs):
         # All 2d plots in xarray share this function signature.
         # Method signature below should be consistent.
+
+        # Decide on a default for the colorbar before facetgrids
+        if add_colorbar is None:
+            add_colorbar = plotfunc.__name__ != 'contour'
 
         # Handle facetgrids first
         if row or col:
@@ -392,13 +396,11 @@ def _plot2d(plotfunc):
         if 'contour' in plotfunc.__name__:
             if levels is None:
                 levels = 7  # this is the matplotlib default
-            # A colorbar with one level is not possible with mpl
-            try:
-                if len(levels) < 2:
-                    add_colorbar = False
-            except TypeError:
-                if levels < 2:
-                    add_colorbar = False
+
+        # # A colorbar with one level is not possible with mpl
+        # if add_colorbar:
+        #     if (isinstance(levels, int) and levels < 2) or len(levels) < 2:
+        #         add_colorbar = False
 
         cmap_kwargs = {'plot_data': zval.data,
                        'vmin': vmin,
@@ -458,7 +460,7 @@ def _plot2d(plotfunc):
     @functools.wraps(newplotfunc)
     def plotmethod(_PlotMethods_obj, x=None, y=None, ax=None, row=None,
                    col=None, col_wrap=None, xincrease=True, yincrease=True,
-                   add_colorbar=True, add_labels=True, vmin=None, vmax=None,
+                   add_colorbar=None, add_labels=True, vmin=None, vmax=None,
                    cmap=None, colors=None, center=None, robust=False,
                    extend=None, levels=None, subplot_kws=None,
                    cbar_ax=None, cbar_kwargs=None, **kwargs):

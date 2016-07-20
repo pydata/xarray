@@ -620,7 +620,7 @@ class Common2dMixin:
 
     def test_colorbar_default_label(self):
         self.darray.name = 'testvar'
-        self.plotmethod()
+        self.plotmethod(add_colorbar=True)
         self.assertIn(self.darray.name, text_in_fig())
 
     def test_no_labels(self):
@@ -633,18 +633,19 @@ class Common2dMixin:
     def test_colorbar_kwargs(self):
         # replace label
         self.darray.name = 'testvar'
-        self.plotmethod(cbar_kwargs={'label':'MyLabel'})
+        self.plotmethod(add_colorbar=True, cbar_kwargs={'label':'MyLabel'})
         alltxt = text_in_fig()
         self.assertIn('MyLabel', alltxt)
         self.assertNotIn('testvar', alltxt)
         # you can use mapping types as well
-        self.plotmethod(cbar_kwargs=(('label', 'MyLabel'),))
+        self.plotmethod(add_colorbar=True, cbar_kwargs=(('label', 'MyLabel'),))
         alltxt = text_in_fig()
         self.assertIn('MyLabel', alltxt)
         self.assertNotIn('testvar', alltxt)
         # change cbar ax
         fig, (ax, cax) = plt.subplots(1, 2)
-        self.plotmethod(ax=ax, cbar_ax=cax, cbar_kwargs={'label':'MyBar'})
+        self.plotmethod(ax=ax, cbar_ax=cax, add_colorbar=True,
+                        cbar_kwargs={'label':'MyBar'})
         self.assertTrue(ax.has_data())
         self.assertTrue(cax.has_data())
         alltxt = text_in_fig()
@@ -652,7 +653,8 @@ class Common2dMixin:
         self.assertNotIn('testvar', alltxt)
         # note that there are two ways to achieve this
         fig, (ax, cax) = plt.subplots(1, 2)
-        self.plotmethod(ax=ax, cbar_kwargs={'label':'MyBar', 'cax':cax})
+        self.plotmethod(ax=ax, add_colorbar=True,
+                        cbar_kwargs={'label':'MyBar', 'cax':cax})
         self.assertTrue(ax.has_data())
         self.assertTrue(cax.has_data())
         alltxt = text_in_fig()
