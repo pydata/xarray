@@ -5,6 +5,7 @@ import time
 import traceback
 import threading
 from collections import Mapping
+from distutils.version import StrictVersion
 
 from ..conventions import cf_encoder
 from ..core.utils import FrozenOrderedDict
@@ -164,7 +165,7 @@ class ArrayWriter(object):
         if self.sources:
             import dask.array as da
             import dask
-            if dask.__version__ > '0.8.1':
+            if StrictVersion(dask.__version__) > StrictVersion('0.8.1'):
                 da.store(self.sources, self.targets, lock=threading.Lock())
             else:
                 da.store(self.sources, self.targets)
