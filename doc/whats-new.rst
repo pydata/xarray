@@ -29,6 +29,7 @@ Breaking changes
 - Indexing on multi-index now drop levels, which is consitent with pandas.
   It also changes the name of the dimension / coordinate when the multi-index is
   reduced to a single index.
+- Contour plots no longer add a colorbar per default (:issue:`866`).
 
 Enhancements
 ~~~~~~~~~~~~
@@ -99,6 +100,9 @@ Bug fixes
 
 - Fixed incorrect test for dask version :issue:`891`. By
   `Stephan Hoyer <https://github.com/shoyer>`_.
+
+- :py:func:`~xarray.plot.contour` now plots the correct number of contours
+  (:issue:`866`). By `Fabien Maussion <https://github.com/fmaussion>`_.
 
 .. _whats-new.0.7.2:
 
