@@ -90,6 +90,10 @@ Bug fixes
    This fixes issue :issue:`665`.
    `Filipe Fernandes <https://github.com/ocefpaf>`_.
 
+- Fix a bug where `xarray.ufuncs` that take two arguments would incorrectly
+  use to numpy functions instead of dask.array functions (:issue:`876`). By
+  `Stephan Hoyer <https://github.com/shoyer>`_.
+
 - ``Variable.copy(deep=True)`` no longer converts MultiIndex into a base Index
   (:issue:`769`). By `Benoit Bovy <https://github.com/benbovy>`_.
 
