@@ -2,6 +2,7 @@ import sys
 import gzip
 import os.path
 import threading
+from distutils.version import StrictVersion
 from glob import glob
 from io import BytesIO
 
