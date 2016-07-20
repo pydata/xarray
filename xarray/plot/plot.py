@@ -397,11 +397,6 @@ def _plot2d(plotfunc):
             if levels is None:
                 levels = 7  # this is the matplotlib default
 
-        # # A colorbar with one level is not possible with mpl
-        # if add_colorbar:
-        #     if (isinstance(levels, int) and levels < 2) or len(levels) < 2:
-        #         add_colorbar = False
-
         cmap_kwargs = {'plot_data': zval.data,
                        'vmin': vmin,
                        'vmax': vmax,

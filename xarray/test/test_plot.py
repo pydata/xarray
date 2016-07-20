@@ -826,10 +826,10 @@ class TestContour(Common2dMixin, PlotTestCase):
         self.assertEqual('y2d', ax.get_ylabel())
 
     def test_single_level(self):
-        # this used to raise an error
+        # this used to raise an error, but not anymore since
+        # add_colorbar defaults to false
         self.plotmethod(levels=[0.1])
         self.plotmethod(levels=1)
-
 
 
 class TestPcolormesh(Common2dMixin, PlotTestCase):
