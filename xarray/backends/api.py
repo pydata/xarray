@@ -2,6 +2,7 @@ import sys
 import gzip
 import os.path
 import threading
+from distutils.version import StrictVersion
 from glob import glob
 from io import BytesIO
 
@@ -162,7 +163,7 @@ def open_dataset(filename_or_obj, group=None, decode_cf=True,
                 from dask.base import tokenize
             except ImportError:
                 import dask  # raise the usual error if dask is entirely missing
-                if dask.__version__ < '0.6':
+                if StrictVersion(dask.__version__) < StrictVersion('0.6'):
                     raise ImportError('xarray requires dask version 0.6 or newer')
                 else:
                     raise

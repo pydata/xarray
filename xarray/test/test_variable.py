@@ -321,8 +321,10 @@ class VariableSubclassTestCases(object):
         with self.assertRaisesRegexp(ValueError, 'inconsistent dimensions'):
             Variable.concat([v, Variable(['c'], y)], 'b')
         # test indexers
-        actual = Variable.concat([v, w], positions=[range(0, 10, 2),
-                                 range(1, 10, 2)], dim='a')
+        actual = Variable.concat(
+            [v, w],
+            positions=[np.arange(0, 10, 2), np.arange(1, 10, 2)],
+            dim='a')
         expected = Variable('a', np.array([x, y]).ravel(order='F'))
         self.assertVariableIdentical(expected, actual)
         # test concatenating along a dimension
@@ -382,6 +384,16 @@ class VariableSubclassTestCases(object):
                     self.assertIs(source_ndarray(v.values),
                                   source_ndarray(w.values))
         self.assertVariableIdentical(v, copy(v))
+
+    def test_copy_index(self):
+        midx = pd.MultiIndex.from_product([['a', 'b'], [1, 2], [-1, -2]],
+                                          names=('one', 'two', 'three'))
+        v = self.cls('x', midx)
+        for deep in [True, False]:
+            w = v.copy(deep=deep)
+            self.assertIsInstance(w._data, PandasIndexAdapter)
+            self.assertIsInstance(w.to_index(), pd.MultiIndex)
+            self.assertArrayEqual(v._data.array, w._data.array)
 
     def test_real_and_imag(self):
         v = self.cls('x', np.arange(3) - 1j * np.arange(3), {'foo': 'bar'})
@@ -971,6 +983,11 @@ class TestCoordinate(TestCase, VariableSubclassTestCases):
         v = Coordinate(['time'], data, {'foo': 'bar'})
         self.assertTrue(pd.Index(data, name='time').identical(v.to_index()))
 
+    def test_multiindex_default_level_names(self):
+        midx = pd.MultiIndex.from_product([['a', 'b'], [1, 2]])
+        v = Coordinate(['x'], midx, {'foo': 'bar'})
+        self.assertEqual(v.to_index().names, ('x_level_0', 'x_level_1'))
+
     def test_data(self):
         x = Coordinate('x', np.arange(3.0))
         # data should be initially saved as an ndarray
@@ -989,6 +1006,27 @@ class TestCoordinate(TestCase, VariableSubclassTestCases):
 
         with self.assertRaises(AttributeError):
             coord.name = 'y'
+
+    def test_concat_periods(self):
+        periods = pd.period_range('2000-01-01', periods=10)
+        coords = [Coordinate('t', periods[:5]), Coordinate('t', periods[5:])]
+        expected = Coordinate('t', periods)
+        actual = Coordinate.concat(coords, dim='t')
+        assert actual.identical(expected)
+        assert isinstance(actual.to_index(), pd.PeriodIndex)
+
+        positions = [list(range(5)), list(range(5, 10))]
+        actual = Coordinate.concat(coords, dim='t', positions=positions)
+        assert actual.identical(expected)
+        assert isinstance(actual.to_index(), pd.PeriodIndex)
+
+    def test_concat_multiindex(self):
+        idx = pd.MultiIndex.from_product([[0, 1, 2], ['a', 'b']])
+        coords = [Coordinate('x', idx[:2]), Coordinate('x', idx[2:])]
+        expected = Coordinate('x', idx)
+        actual = Coordinate.concat(coords, dim='x')
+        assert actual.identical(expected)
+        assert isinstance(actual.to_index(), pd.MultiIndex)
 
 
 class TestAsCompatibleData(TestCase):

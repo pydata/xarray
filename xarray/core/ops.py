@@ -9,10 +9,7 @@ import pandas as pd
 
 from . import npcompat
 from .pycompat import PY3, dask_array_type
-from .nputils import (
-    nanfirst, nanlast, interleaved_concat as _interleaved_concat_numpy,
-    array_eq, array_ne, _validate_axis, _calc_concat_shape
-)
+from .nputils import nanfirst, nanlast, array_eq, array_ne
 
 
 try:
@@ -100,67 +97,6 @@ array_any = _dask_or_eager_func('any')
 tensordot = _dask_or_eager_func('tensordot', n_array_args=2)
 
 
-def _interleaved_indices_required(indices):
-    """With dask, we care about data locality and would rather avoid splitting
-    splitting up each arrays into single elements. This routine checks to see
-    if we really need the "interleaved" part of interleaved_concat.
-
-    We don't use for the pure numpy version of interleaved_concat, because it's
-    just as fast or faster to directly do the interleaved concatenate rather
-    than check if we could simply it.
-    """
-    next_expected = 0
-    for ind in indices:
-        if isinstance(ind, slice):
-            if ((ind.start or 0) != next_expected or
-                    ind.step not in (1, None)):
-                return True
-            next_expected = ind.stop
-        else:
-            ind = np.asarray(ind)
-            expected = np.arange(next_expected, next_expected + ind.size)
-            if (ind != expected).any():
-                return True
-            next_expected = ind[-1] + 1
-    return False
-
-
-def _interleaved_concat_slow(arrays, indices, axis=0):
-    """A slow version of interleaved_concat that also works on dask arrays
-    """
-    axis = _validate_axis(arrays[0], axis)
-
-    result_shape = _calc_concat_shape(arrays, axis=axis)
-    length = result_shape[axis]
-    array_lookup = np.empty(length, dtype=int)
-    element_lookup = np.empty(length, dtype=int)
-
-    for n, ind in enumerate(indices):
-        if isinstance(ind, slice):
-            ind = np.arange(*ind.indices(length))
-        for m, i in enumerate(ind):
-            array_lookup[i] = n
-            element_lookup[i] = m
-
-    split_arrays = [arrays[n][(slice(None),) * axis + (slice(m, m + 1),)]
-                    for (n, m) in zip(array_lookup, element_lookup)]
-    return concatenate(split_arrays, axis)
-
-
-def interleaved_concat(arrays, indices, axis=0):
-    """Concatenate each array along the given axis, but also assign each array
-    element into the location given by indices. This operation is used for
-    groupby.transform.
-    """
-    if has_dask and isinstance(arrays[0], da.Array):
-        if not _interleaved_indices_required(indices):
-            return da.concatenate(arrays, axis)
-        else:
-            return _interleaved_concat_slow(arrays, indices, axis)
-    else:
-        return _interleaved_concat_numpy(arrays, indices, axis)
-
-
 def asarray(data):
     return data if isinstance(data, dask_array_type) else np.asarray(data)
 
@@ -187,7 +123,21 @@ def array_equiv(arr1, arr2):
     arr1, arr2 = as_like_arrays(arr1, arr2)
     if arr1.shape != arr2.shape:
         return False
-    return bool(((arr1 == arr2) | (isnull(arr1) & isnull(arr2))).all())
+
+    flag_array = (arr1 == arr2)
+
+    # GH837, GH861
+    # isnull fcn from pandas will throw TypeError when run on numpy structured array
+    # therefore for dims that are np structured arrays we skip testing for nan
+
+    try:
+
+        flag_array |= (isnull(arr1) & isnull(arr2))
+
+    except TypeError:
+        pass
+
+    return bool(flag_array.all())
 
 
 def _call_possibly_missing_method(arg, name, args, kwargs):

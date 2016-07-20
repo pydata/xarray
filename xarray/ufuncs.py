@@ -39,7 +39,7 @@ def _create_op(name):
 
     def func(*args, **kwargs):
         new_args = args
-        f = _dask_or_eager_func(name)
+        f = _dask_or_eager_func(name, n_array_args=len(args))
         if len(args) > 2 or len(args) == 0:
             raise TypeError('cannot handle %s arguments for %r' %
                             (len(args), name))

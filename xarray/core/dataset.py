@@ -419,6 +419,23 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject):
             obj = self._construct_direct(variables, coord_names, dims, attrs)
         return obj
 
+    def _replace_indexes(self, indexes):
+        if not len(indexes):
+            return self
+        variables = self._variables.copy()
+        for name, idx in indexes.items():
+            variables[name] = Coordinate(name, idx)
+        obj = self._replace_vars_and_dims(variables)
+
+        # switch from dimension to level names, if necessary
+        dim_names = {}
+        for dim, idx in indexes.items():
+            if not isinstance(idx, pd.MultiIndex) and idx.name != dim:
+                dim_names[dim] = idx.name
+        if dim_names:
+            obj = obj.rename(dim_names)
+        return obj
+
     def copy(self, deep=False):
         """Returns a copy of this dataset.
 
@@ -954,7 +971,9 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject):
             Requires pandas>=0.17.
         **indexers : {dim: indexer, ...}
             Keyword arguments with names matching dimensions and values given
-            by scalars, slices or arrays of tick labels.
+            by scalars, slices or arrays of tick labels. For dimensions with
+            multi-index, the indexer may also be a dict-like object with keys
+            matching index level names.
 
         Returns
         -------
@@ -972,8 +991,10 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject):
         Dataset.isel_points
         DataArray.sel
         """
-        return self.isel(**indexing.remap_label_indexers(
-            self, indexers, method=method, tolerance=tolerance))
+        pos_indexers, new_indexes = indexing.remap_label_indexers(
+            self, indexers, method=method, tolerance=tolerance
+        )
+        return self.isel(**pos_indexers)._replace_indexes(new_indexes)
 
     def isel_points(self, dim='points', **indexers):
         """Returns a new dataset with each array indexed pointwise along the
@@ -1114,8 +1135,9 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject):
         Dataset.isel_points
         DataArray.sel_points
         """
-        pos_indexers = indexing.remap_label_indexers(
-            self, indexers, method=method, tolerance=tolerance)
+        pos_indexers, _ = indexing.remap_label_indexers(
+            self, indexers, method=method, tolerance=tolerance
+        )
         return self.isel_points(dim=dim, **pos_indexers)
 
     def reindex_like(self, other, method=None, tolerance=None, copy=True):
@@ -1396,9 +1418,6 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject):
         obj = self.reindex(copy=False, **{dim: full_idx})
 
         new_dim_names = index.names
-        if any(name is None for name in new_dim_names):
-            raise ValueError('cannot unstack dimension with unnamed levels')
-
         new_dim_sizes = [lev.size for lev in index.levels]
 
         variables = OrderedDict()
@@ -1510,8 +1529,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject):
 
         Parameters
         ----------
-        labels : str
-            Names of variables or index labels to drop.
+        labels : scalar or list of scalars
+            Name(s) of variables or index labels to drop.
         dim : None or str, optional
             Dimension along which to drop index labels. By default (if
             ``dim is None``), drops variables rather than index labels.
