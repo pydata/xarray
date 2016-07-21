@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 from copy import copy, deepcopy
 from textwrap import dedent
 try:
@@ -113,6 +114,11 @@ class TestDataset(TestCase):
 
         # check that creating the repr doesn't raise an error #GH645
         repr(data)
+
+    def test_unicode_attr(self):
+        # regression test for GH834
+        data = Dataset({u'foø': [u'ba®']}, attrs={u'å': u'∑'})
+        repr(data)  # should not raise
 
     def test_constructor(self):
         x1 = ('x', 2 * np.arange(100))

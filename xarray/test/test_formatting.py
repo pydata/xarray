@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import numpy as np
 import pandas as pd
 
@@ -101,3 +102,7 @@ class TestFormatting(TestCase):
 
     def test_pretty_print(self):
         self.assertEqual(formatting.pretty_print('abcdefghij', 8), 'abcde...')
+        self.assertEqual(formatting.pretty_print(u'ß', 1), u'ß')
+
+    def test_maybe_truncate(self):
+        self.assertEqual(formatting.maybe_truncate(u'ß', 10), u'ß')
