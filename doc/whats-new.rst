@@ -98,7 +98,10 @@ Bug fixes
 - ``Variable.copy(deep=True)`` no longer converts MultiIndex into a base Index
   (:issue:`769`). By `Benoit Bovy <https://github.com/benbovy>`_.
 
-- Fixed incorrect test for dask version :issue:`891`. By
+- Fix printing datasets with unicode attributes on Python 2 (:issue:`892`). By
+  `Stephan Hoyer <https://github.com/shoyer>`_.
+
+- Fixed incorrect test for dask version (:issue:`891`). By
   `Stephan Hoyer <https://github.com/shoyer>`_.
 
 - :py:func:`~xarray.plot.contour` now plots the correct number of contours
