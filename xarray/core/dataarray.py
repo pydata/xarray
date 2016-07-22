@@ -1085,6 +1085,20 @@ class DataArray(AbstractArray, BaseDataObject):
         isnull = pd.isnull(self.values)
         return np.ma.MaskedArray(data=self.values, mask=isnull, copy=copy)
 
+    def to_dict(self):
+        """Convert this array to a dictionary following xarray naming conventions.
+        """
+        d = {'coords': {}, 'attrs': dict(self.attrs), 'dims': list(self.dims)}
+
+        for k in self.coords:
+            d['coords'].update({k: {'data': self[k].values.tolist(),
+                                    'dims': list(self[k].dims),
+                                    'attrs': dict(self[k].attrs)}})
+
+        d.update({'data': self.values.tolist(),
+                  'name': self.name})
+        return d
+
     @classmethod
     def from_series(cls, series):
         """Convert a pandas.Series into an xarray.DataArray.

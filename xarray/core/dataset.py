@@ -1890,6 +1890,22 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject):
         """
         return self._to_dataframe(self.dims)
 
+    def to_dict(self):
+        """Convert this dataset to a dictionary following xarray naming conventions.
+        """
+        d = {'coords': {}, 'attrs': dict(self.attrs), 'dims': list(self.dims), 
+             'data_vars': {}}
+
+        for k in self.coords:
+            d['coords'].update({k: {'data': self[k].values.tolist(),
+                                    'dims': list(self[k].dims),
+                                    'attrs': dict(self[k].attrs)}})
+        for k in self.data_vars:
+            d['data_vars'].update({k: {'data': self[k].values.tolist(),
+                                       'dims': list(self[k].dims),
+                                       'attrs': dict(self[k].attrs)}})
+        return d
+
     @classmethod
     def from_dataframe(cls, dataframe):
         """Convert a pandas.DataFrame into an xarray.Dataset
