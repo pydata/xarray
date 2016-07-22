@@ -577,6 +577,25 @@ class BaseDataObject(AttrAccessMixin):
 
         return outobj._where(outcond)
 
+    def to_dict(self):
+        """Convert xarray object to a dictionary following xarray naming conventions.
+        """
+        d = {'coords': {}, 'attrs': dict(self.attrs), 'dims': list(self.dims)}
+
+        for k in self.coords:
+            d['coords'].update({k: {'data': self[k].values.tolist(),
+                                    'dims': list(self[k].dims),
+                                    'attrs': dict(self[k].attrs)}})
+        if hasattr(self, 'data_vars'):
+            d.update({'data_vars': {}})
+            for k in self.data_vars:
+                d['data_vars'].update({k: {'data': self[k].values.tolist(),
+                                           'dims': list(self[k].dims),
+                                           'attrs': dict(self[k].attrs)}})
+        else:
+            d.update({'data': self.values.tolist(),
+                      'name': self.name})
+        return d
 
     # this has no runtime function - these are listed so IDEs know these methods
     # are defined and don't warn on these operations
