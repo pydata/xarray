@@ -2224,6 +2224,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject):
 
         Examples
         --------
+        # "Create an example dataset:
         >>> import numpy as np
         >>> import pandas as pd
         >>> import xarray as xr
