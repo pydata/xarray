@@ -2248,10 +2248,10 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject):
         <xarray.Dataset>
         Dimensions:         (time: 3, x: 2, y: 2)
         Coordinates:
-        * x               (x) int64 0 1
-        * time            (time) datetime64[ns] 2014-09-06 2014-09-07 2014-09-08
+          * x               (x) int64 0 1
+          * time            (time) datetime64[ns] 2014-09-06 2014-09-07 2014-09-08
             lat             (x, y) float64 42.25 42.21 42.63 42.59
-        * y               (y) int64 0 1
+          * y               (y) int64 0 1
             reference_time  datetime64[ns] 2014-09-05
             lon             (x, y) float64 -99.83 -99.32 -99.79 -99.23
         Data variables:
@@ -2264,9 +2264,9 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject):
         Coordinates:
             lon             (x, y) float64 -99.83 -99.32 -99.79 -99.23
             lat             (x, y) float64 42.25 42.21 42.63 42.59
-        * x               (x) int64 0 1
-        * y               (y) int64 0 1
-        * time            (time) datetime64[ns] 2014-09-06 2014-09-07 2014-09-08
+          * x               (x) int64 0 1
+          * y               (y) int64 0 1
+          * time            (time) datetime64[ns] 2014-09-06 2014-09-07 2014-09-08
             reference_time  datetime64[ns] 2014-09-05
         Data variables:
             temperature     (x, y, time) float64 25.86 20.82 6.954 23.13 10.25 11.68 ...
