@@ -109,7 +109,7 @@ class ImplementsRollingArrayReduce(object):
         return wrapped_func
 
 
-class AbstractArray(ImplementsArrayReduce):
+class AbstractArray(ImplementsArrayReduce, formatting.ReprMixin):
     def __bool__(self):
         return bool(self.values)
 

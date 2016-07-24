@@ -37,7 +37,7 @@ def _dim_shape(var):
     return [(dim, size) for dim, size in zip(var.dims, var.shape)]
 
 
-class AbstractCoordinates(Mapping):
+class AbstractCoordinates(Mapping, formatting.ReprMixin):
     def __getitem__(self, key):
         if (key in self._names or
             (isinstance(key, basestring) and
@@ -62,7 +62,7 @@ class AbstractCoordinates(Mapping):
     def __contains__(self, key):
         return key in self._names
 
-    def __repr__(self):
+    def __unicode__(self):
         return formatting.coords_repr(self)
 
     @property
@@ -219,7 +219,7 @@ class DataArrayCoordinates(AbstractCoordinates):
         del self._data._coords[key]
 
 
-class Indexes(Mapping):
+class Indexes(Mapping, formatting.ReprMixin):
     def __init__(self, source):
         self._source = source
 
@@ -238,5 +238,5 @@ class Indexes(Mapping):
         else:
             raise KeyError(key)
 
-    def __repr__(self):
+    def __unicode__(self):
         return formatting.indexes_repr(self)

@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 from copy import copy, deepcopy
 from textwrap import dedent
 try:
@@ -16,7 +17,7 @@ from xarray import (align, broadcast, concat, conventions, backends, Dataset,
                     DataArray, Variable, Coordinate, auto_combine,
                     open_dataset, set_options)
 from xarray.core import indexing, utils
-from xarray.core.pycompat import iteritems, OrderedDict
+from xarray.core.pycompat import iteritems, OrderedDict, unicode_type
 
 from . import (TestCase, unittest, InaccessibleArray, UnexpectedDataAccess,
                requires_dask)
@@ -113,6 +114,23 @@ class TestDataset(TestCase):
 
         # check that creating the repr doesn't raise an error #GH645
         repr(data)
+
+    def test_unicode_data(self):
+        # regression test for GH834
+        data = Dataset({u'foø': [u'ba®']}, attrs={u'å': u'∑'})
+        repr(data)  # should not raise
+
+        expected = dedent(u"""\
+        <xarray.Dataset>
+        Dimensions:  (foø: 1)
+        Coordinates:
+          * foø      (foø) <U3 %r
+        Data variables:
+            *empty*
+        Attributes:
+            å: ∑""" % u'ba®')
+        actual = unicode_type(data)
+        self.assertEqual(expected, actual)
 
     def test_constructor(self):
         x1 = ('x', 2 * np.arange(100))
