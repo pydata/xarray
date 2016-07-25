@@ -1,5 +1,6 @@
 import sys
 
+PY2 = sys.version_info[0] < 3
 PY3 = sys.version_info[0] >= 3
 
 if PY3:  # pragma: no cover

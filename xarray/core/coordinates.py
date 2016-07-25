@@ -9,7 +9,7 @@ from .pycompat import iteritems, basestring, OrderedDict
 from .variable import default_index_coordinate
 
 
-class AbstractCoordinates(Mapping):
+class AbstractCoordinates(Mapping, formatting.ReprMixin):
     def __getitem__(self, key):
         if (key in self._names or
             (isinstance(key, basestring) and
@@ -45,7 +45,7 @@ class AbstractCoordinates(Mapping):
     def __contains__(self, key):
         return key in self._names
 
-    def __repr__(self):
+    def __unicode__(self):
         return formatting.coords_repr(self)
 
     @property
@@ -216,7 +216,7 @@ class DataArrayCoordinates(AbstractCoordinates):
         del self._data._coords[key]
 
 
-class Indexes(Mapping):
+class Indexes(Mapping, formatting.ReprMixin):
     """Ordered Mapping[str, pandas.Index] for xarray objects.
     """
     def __init__(self, variables, dims):
@@ -248,5 +248,5 @@ class Indexes(Mapping):
         else:
             raise KeyError(key)
 
-    def __repr__(self):
+    def __unicode__(self):
         return formatting.indexes_repr(self)
