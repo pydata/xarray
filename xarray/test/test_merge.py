@@ -4,6 +4,23 @@ import xarray as xr
 from . import TestCase
 from .test_dataset import create_test_data
 
+from xarray.core import merge
+
+
+class TestMergeInternals(TestCase):
+    def test_broadcast_dimension_size(self):
+        actual = merge.broadcast_dimension_size(
+            [xr.Variable('x', [1]), xr.Variable('y', [2, 1])])
+        assert actual == {'x': 1, 'y': 2}
+
+        actual = merge.broadcast_dimension_size(
+            [xr.Variable(('x', 'y'), [[1, 2]]), xr.Variable('y', [2, 1])])
+        assert actual == {'x': 1, 'y': 2}
+
+        with self.assertRaises(ValueError):
+            actual = merge.broadcast_dimension_size(
+                [xr.Variable(('x', 'y'), [[1, 2]]), xr.Variable('y', [2])])
+
 
 class TestMergeFunction(TestCase):
     def test_merge_arrays(self):
