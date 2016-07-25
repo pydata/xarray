@@ -547,15 +547,45 @@ class TestDataArray(TestCase):
         self.assertEqual(data.loc[False], 1)
 
     def test_multiindex(self):
-        idx = pd.MultiIndex.from_product([list('abc'), [0, 1]])
-        data = DataArray(range(6), [('x', idx)])
+        mindex = pd.MultiIndex.from_product([['a', 'b'], [1, 2], [-1, -2]],
+                                            names=('one', 'two', 'three'))
+        mdata = DataArray(range(8), [('x', mindex)])
 
-        self.assertDataArrayIdentical(data.sel(x=('a', 0)), data.isel(x=0))
-        self.assertDataArrayIdentical(data.sel(x=('c', 1)), data.isel(x=-1))
-        self.assertDataArrayIdentical(data.sel(x=[('a', 0)]), data.isel(x=[0]))
-        self.assertDataArrayIdentical(data.sel(x=[('a', 0), ('c', 1)]),
-                                      data.isel(x=[0, -1]))
-        self.assertDataArrayIdentical(data.sel(x='a'), data.isel(x=slice(2)))
+        def test_sel(lab_indexer, pos_indexer, replaced_idx=False,
+                     renamed_dim=None):
+            da = mdata.sel(x=lab_indexer)
+            expected_da = mdata.isel(x=pos_indexer)
+            if not replaced_idx:
+                self.assertDataArrayIdentical(da, expected_da)
+            else:
+                if renamed_dim:
+                    self.assertEqual(da.dims[0], renamed_dim)
+                    da = da.rename({renamed_dim: 'x'})
+                self.assertVariableIdentical(da, expected_da)
+                self.assertVariableNotEqual(da['x'], expected_da['x'])
+
+        test_sel(('a', 1, -1), 0)
+        test_sel(('b', 2, -2), -1)
+        test_sel(('a', 1), [0, 1], replaced_idx=True, renamed_dim='three')
+        test_sel(('a',), range(4), replaced_idx=True)
+        test_sel('a', range(4), replaced_idx=True)
+        test_sel([('a', 1, -1), ('b', 2, -2)], [0, 7])
+        test_sel(slice('a', 'b'), range(8))
+        test_sel(slice(('a', 1), ('b', 1)), range(6))
+        test_sel({'one': 'a', 'two': 1, 'three': -1}, 0)
+        test_sel({'one': 'a', 'two': 1}, [0, 1], replaced_idx=True,
+                 renamed_dim='three')
+        test_sel({'one': 'a'}, range(4), replaced_idx=True)
+
+        self.assertDataArrayIdentical(mdata.loc['a'], mdata.sel(x='a'))
+        self.assertDataArrayIdentical(mdata.loc[('a', 1), ...],
+                                      mdata.sel(x=('a', 1)))
+        self.assertDataArrayIdentical(mdata.loc[{'one': 'a'}, ...],
+                                      mdata.sel(x={'one': 'a'}))
+        with self.assertRaises(KeyError):
+            mdata.loc[{'one': 'a'}]
+        with self.assertRaises(IndexError):
+            mdata.loc[('a', 1)]
 
     def test_time_components(self):
         dates = pd.date_range('2000-01-01', periods=10)
@@ -1304,6 +1334,65 @@ class TestDataArray(TestCase):
 
         actual = array.groupby('x').first()
         expected = array  # should be a no-op
+        self.assertDataArrayIdentical(expected, actual)
+
+    def make_groupby_multidim_example_array(self):
+        return DataArray([[[0,1],[2,3]],[[5,10],[15,20]]],
+                        coords={'lon': (['ny', 'nx'], [[30., 40.], [40., 50.]] ),
+                                'lat': (['ny', 'nx'], [[10., 10.], [20., 20.]] ),},
+                        dims=['time', 'ny', 'nx'])
+
+    def test_groupby_multidim(self):
+        array = self.make_groupby_multidim_example_array()
+        for dim, expected_sum in [
+                ('lon', DataArray([5, 28, 23], coords={'lon': [30., 40., 50.]})),
+                ('lat', DataArray([16, 40], coords={'lat': [10., 20.]}))]:
+            actual_sum = array.groupby(dim).sum()
+            self.assertDataArrayIdentical(expected_sum, actual_sum)
+
+    def test_groupby_multidim_apply(self):
+        array = self.make_groupby_multidim_example_array()
+        actual = array.groupby('lon').apply(
+                lambda x : x - x.mean(), shortcut=False)
+        expected = DataArray([[[-2.5, -6.], [-5., -8.5]],
+                              [[ 2.5,  3.], [ 8.,  8.5]]],
+                    coords=array.coords, dims=array.dims)
+        self.assertDataArrayIdentical(expected, actual)
+
+    def test_groupby_bins(self):
+        array = DataArray(np.arange(4), dims='dim_0')
+        # the first value should not be part of any group ("right" binning)
+        array[0] = 99
+        # bins follow conventions for pandas.cut
+        # http://pandas.pydata.org/pandas-docs/stable/generated/pandas.cut.html
+        bins = [0,1.5,5]
+        bin_coords = ['(0, 1.5]', '(1.5, 5]']
+        expected = DataArray([1,5], dims='dim_0_bins',
+                        coords={'dim_0_bins': bin_coords})
+        # the problem with this is that it overwrites the dimensions of array!
+        #actual = array.groupby('dim_0', bins=bins).sum()
+        actual = array.groupby_bins('dim_0', bins).apply(
+                                    lambda x : x.sum(), shortcut=False)
+        self.assertDataArrayIdentical(expected, actual)
+        # make sure original array dims are unchanged
+        # (would fail with shortcut=True above)
+        self.assertEqual(len(array.dim_0), 4)
+
+    def test_groupby_bins_multidim(self):
+        array = self.make_groupby_multidim_example_array()
+        bins = [0,15,20]
+        bin_coords = ['(0, 15]', '(15, 20]']
+        expected = DataArray([16, 40], dims='lat_bins',
+                                coords={'lat_bins': bin_coords})
+        actual = array.groupby_bins('lat', bins).apply(
+                                    lambda x : x.sum(), shortcut=False)
+        self.assertDataArrayIdentical(expected, actual)
+        # modify the array coordinates to be non-monotonic after unstacking
+        array['lat'].data = np.array([[10., 20.], [20., 10.]])
+        expected = DataArray([28, 28], dims='lat_bins',
+                    coords={'lat_bins': bin_coords})
+        actual = array.groupby_bins('lat', bins).apply(
+                                    lambda x : x.sum(), shortcut=False)
         self.assertDataArrayIdentical(expected, actual)
 
     def make_rolling_example_array(self):

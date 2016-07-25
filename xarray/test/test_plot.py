@@ -414,7 +414,7 @@ class TestDiscreteColorMap(TestCase):
             if filled:
                 self.assertEqual(ncmap.colorbar_extend, extend)
             else:
-                self.assertEqual(ncmap.colorbar_extend, 'neither')
+                self.assertEqual(ncmap.colorbar_extend, 'max')
 
     def test_discrete_colormap_list_of_levels(self):
         for extend, levels in [('max', [-1, 2, 4, 8, 10]),
@@ -429,7 +429,7 @@ class TestDiscreteColorMap(TestCase):
                 if kind != 'contour':
                     self.assertEqual(extend, primitive.cmap.colorbar_extend)
                 else:
-                    self.assertEqual('neither', primitive.cmap.colorbar_extend)
+                    self.assertEqual('max', primitive.cmap.colorbar_extend)
                 self.assertEqual(len(levels) - 1, len(primitive.cmap.colors))
 
     def test_discrete_colormap_int_levels(self):
@@ -454,7 +454,7 @@ class TestDiscreteColorMap(TestCase):
                 if kind != 'contour':
                     self.assertEqual(extend, primitive.cmap.colorbar_extend)
                 else:
-                    self.assertEqual('neither', primitive.cmap.colorbar_extend)
+                    self.assertEqual('max', primitive.cmap.colorbar_extend)
                 self.assertGreaterEqual(levels, len(primitive.cmap.colors))
 
     def test_discrete_colormap_list_levels_and_vmin_or_vmax(self):
@@ -620,7 +620,7 @@ class Common2dMixin:
 
     def test_colorbar_default_label(self):
         self.darray.name = 'testvar'
-        self.plotmethod()
+        self.plotmethod(add_colorbar=True)
         self.assertIn(self.darray.name, text_in_fig())
 
     def test_no_labels(self):
@@ -633,18 +633,19 @@ class Common2dMixin:
     def test_colorbar_kwargs(self):
         # replace label
         self.darray.name = 'testvar'
-        self.plotmethod(cbar_kwargs={'label':'MyLabel'})
+        self.plotmethod(add_colorbar=True, cbar_kwargs={'label':'MyLabel'})
         alltxt = text_in_fig()
         self.assertIn('MyLabel', alltxt)
         self.assertNotIn('testvar', alltxt)
         # you can use mapping types as well
-        self.plotmethod(cbar_kwargs=(('label', 'MyLabel'),))
+        self.plotmethod(add_colorbar=True, cbar_kwargs=(('label', 'MyLabel'),))
         alltxt = text_in_fig()
         self.assertIn('MyLabel', alltxt)
         self.assertNotIn('testvar', alltxt)
         # change cbar ax
         fig, (ax, cax) = plt.subplots(1, 2)
-        self.plotmethod(ax=ax, cbar_ax=cax, cbar_kwargs={'label':'MyBar'})
+        self.plotmethod(ax=ax, cbar_ax=cax, add_colorbar=True,
+                        cbar_kwargs={'label':'MyBar'})
         self.assertTrue(ax.has_data())
         self.assertTrue(cax.has_data())
         alltxt = text_in_fig()
@@ -652,7 +653,8 @@ class Common2dMixin:
         self.assertNotIn('testvar', alltxt)
         # note that there are two ways to achieve this
         fig, (ax, cax) = plt.subplots(1, 2)
-        self.plotmethod(ax=ax, cbar_kwargs={'label':'MyBar', 'cax':cax})
+        self.plotmethod(ax=ax, add_colorbar=True,
+                        cbar_kwargs={'label':'MyBar', 'cax':cax})
         self.assertTrue(ax.has_data())
         self.assertTrue(cax.has_data())
         alltxt = text_in_fig()
@@ -795,6 +797,19 @@ class TestContour(Common2dMixin, PlotTestCase):
             _color_as_tuple(artist.cmap.colors[1]),
             (0.0, 0.0, 1.0))
 
+        artist = self.darray.plot.contour(levels=[-0.5, 0., 0.5, 1.],
+                                          colors=['k', 'r', 'w', 'b'])
+        self.assertEqual(
+            _color_as_tuple(artist.cmap.colors[1]),
+            (1.0, 0.0, 0.0))
+        self.assertEqual(
+            _color_as_tuple(artist.cmap.colors[2]),
+            (1.0, 1.0, 1.0))
+        # the last color is now under "over"
+        self.assertEqual(
+             _color_as_tuple(artist.cmap._rgba_over),
+            (0.0, 0.0, 1.0))
+
     def test_cmap_and_color_both(self):
         with self.assertRaises(ValueError):
             self.plotmethod(colors='k', cmap='RdBu')
@@ -809,6 +824,12 @@ class TestContour(Common2dMixin, PlotTestCase):
         ax = plt.gca()
         self.assertEqual('x2d', ax.get_xlabel())
         self.assertEqual('y2d', ax.get_ylabel())
+
+    def test_single_level(self):
+        # this used to raise an error, but not anymore since
+        # add_colorbar defaults to false
+        self.plotmethod(levels=[0.1])
+        self.plotmethod(levels=1)
 
 
 class TestPcolormesh(Common2dMixin, PlotTestCase):

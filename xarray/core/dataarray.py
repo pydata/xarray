@@ -87,24 +87,19 @@ class _LocIndexer(object):
         self.data_array = data_array
 
     def _remap_key(self, key):
-        def lookup_positions(dim, labels):
-            index = self.data_array.indexes[dim]
-            return indexing.convert_label_indexer(index, labels)
-
-        if utils.is_dict_like(key):
-            return dict((dim, lookup_positions(dim, labels))
-                        for dim, labels in iteritems(key))
-        else:
+        if not utils.is_dict_like(key):
             # expand the indexer so we can handle Ellipsis
-            key = indexing.expanded_indexer(key, self.data_array.ndim)
-            return tuple(lookup_positions(dim, labels) for dim, labels
-                         in zip(self.data_array.dims, key))
+            labels = indexing.expanded_indexer(key, self.data_array.ndim)
+            key = dict(zip(self.data_array.dims, labels))
+        return indexing.remap_label_indexers(self.data_array, key)
 
     def __getitem__(self, key):
-        return self.data_array[self._remap_key(key)]
+        pos_indexers, new_indexes = self._remap_key(key)
+        return self.data_array[pos_indexers]._replace_indexes(new_indexes)
 
     def __setitem__(self, key, value):
-        self.data_array[self._remap_key(key)] = value
+        pos_indexers, _ = self._remap_key(key)
+        self.data_array[pos_indexers] = value
 
 
 class _ThisArray(object):
@@ -244,6 +239,23 @@ class DataArray(AbstractArray, BaseDataObject):
             coords = OrderedDict((k, v) for k, v in self._coords.items()
                                  if set(v.dims) <= allowed_dims)
         return self._replace(variable, coords, name)
+
+    def _replace_indexes(self, indexes):
+        if not len(indexes):
+            return self
+        coords = self._coords.copy()
+        for name, idx in indexes.items():
+            coords[name] = Coordinate(name, idx)
+        obj = self._replace(coords=coords)
+
+        # switch from dimension to level names, if necessary
+        dim_names = {}
+        for dim, idx in indexes.items():
+            if not isinstance(idx, pd.MultiIndex) and idx.name != dim:
+                dim_names[dim] = idx.name
+        if dim_names:
+            obj = obj.rename(dim_names)
+        return obj
 
     __this_array = _ThisArray()
 
@@ -607,8 +619,10 @@ class DataArray(AbstractArray, BaseDataObject):
         Dataset.sel
         DataArray.isel
         """
-        return self.isel(**indexing.remap_label_indexers(
-            self, indexers, method=method, tolerance=tolerance))
+        pos_indexers, new_indexes = indexing.remap_label_indexers(
+            self, indexers, method=method, tolerance=tolerance
+        )
+        return self.isel(**pos_indexers)._replace_indexes(new_indexes)
 
     def isel_points(self, dim='points', **indexers):
         """Return a new DataArray whose dataset is given by pointwise integer

@@ -1155,7 +1155,13 @@ class Coordinate(Variable):
         # basically free as pandas.Index objects are immutable
         assert self.ndim == 1
         index = self._data_cached().array
-        if not isinstance(index, pd.MultiIndex):
+        if isinstance(index, pd.MultiIndex):
+            # set default names for multi-index unnamed levels so that
+            # we can safely rename dimension / coordinate later
+            valid_level_names = [name or '{}_level_{}'.format(self.name, i)
+                                 for i, name in enumerate(index.names)]
+            index = index.set_names(valid_level_names)
+        else:
             index = index.set_names(self.name)
         return index
 

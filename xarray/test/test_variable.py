@@ -392,7 +392,8 @@ class VariableSubclassTestCases(object):
         for deep in [True, False]:
             w = v.copy(deep=deep)
             self.assertIsInstance(w._data, PandasIndexAdapter)
-            self.assertIs(v._data.array, w._data.array)
+            self.assertIsInstance(w.to_index(), pd.MultiIndex)
+            self.assertArrayEqual(v._data.array, w._data.array)
 
     def test_real_and_imag(self):
         v = self.cls('x', np.arange(3) - 1j * np.arange(3), {'foo': 'bar'})
@@ -982,6 +983,11 @@ class TestCoordinate(TestCase, VariableSubclassTestCases):
         data = 0.5 * np.arange(10)
         v = Coordinate(['time'], data, {'foo': 'bar'})
         self.assertTrue(pd.Index(data, name='time').identical(v.to_index()))
+
+    def test_multiindex_default_level_names(self):
+        midx = pd.MultiIndex.from_product([['a', 'b'], [1, 2]])
+        v = Coordinate(['x'], midx, {'foo': 'bar'})
+        self.assertEqual(v.to_index().names, ('x_level_0', 'x_level_1'))
 
     def test_data(self):
         x = Coordinate('x', np.arange(3.0))

@@ -57,7 +57,7 @@ class TestVariable(DaskTestCase):
         self.assertLazyAnd(expected, actual, self.assertVariableAllClose)
 
     def setUp(self):
-        self.values = np.random.randn(4, 6)
+        self.values = np.random.RandomState(0).randn(4, 6)
         self.data = da.from_array(self.values, chunks=(2, 2))
 
         self.eager_var = Variable(('x', 'y'), self.values)
@@ -179,10 +179,16 @@ class TestVariable(DaskTestCase):
         except NotImplementedError as err:
             self.assertIn('dask', str(err))
 
-    def test_ufuncs(self):
+    def test_univariate_ufunc(self):
         u = self.eager_var
         v = self.lazy_var
         self.assertLazyAndAllClose(np.sin(u), xu.sin(v))
+
+    def test_bivariate_ufunc(self):
+        u = self.eager_var
+        v = self.lazy_var
+        self.assertLazyAndAllClose(np.maximum(u, 0), xu.maximum(v, 0))
+        self.assertLazyAndAllClose(np.maximum(u, 0), xu.maximum(0, v))
 
 
 @requires_dask

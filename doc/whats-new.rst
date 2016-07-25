@@ -26,9 +26,19 @@ Breaking changes
 ~~~~~~~~~~~~~~~~
 
 - Dropped support for Python 2.6 (:issue:`855`).
+- Indexing on multi-index now drop levels, which is consitent with pandas.
+  It also changes the name of the dimension / coordinate when the multi-index is
+  reduced to a single index.
+- Contour plots no longer add a colorbar per default (:issue:`866`).
 
 Enhancements
 ~~~~~~~~~~~~
+
+- Groupby operations now support grouping over multidimensional variables. A new
+  method called :py:meth:`~xarray.Dataset.groupby_bins` has also been added to
+  allow users to specify bins for grouping. The new features are described in
+  :ref:`groupby.multidim` and :ref:`examples.multidim`.
+  By `Ryan Abernathey <http://github.com/rabernat>`_.
 
 - DataArray and Dataset method :py:meth:`where` now supports a ``drop=True``
   option that clips coordinate elements that are fully masked.  By
@@ -42,6 +52,12 @@ Enhancements
   ``keep_attrs=False`` option that determines whether variable and dataset
   attributes are retained in the resampled object. By
   `Jeremy McGibbon <https://github.com/mcgibbon>`_.
+
+- Better multi-index support in DataArray and Dataset :py:meth:`sel` and
+  :py:meth:`loc` methods, which now behave more closely to pandas and which
+  also accept dictionaries for indexing based on given level names and labels
+  (see :ref:`multi-level indexing`). By
+  `Benoit Bovy <https://github.com/benbovy>`_.
 
 - New (experimental) decorators :py:func:`~xarray.register_dataset_accessor` and
   :py:func:`~xarray.register_dataarray_accessor` for registering custom xarray
@@ -79,8 +95,18 @@ Bug fixes
    This fixes issue :issue:`665`.
    `Filipe Fernandes <https://github.com/ocefpaf>`_.
 
+- Fix a bug where `xarray.ufuncs` that take two arguments would incorrectly
+  use to numpy functions instead of dask.array functions (:issue:`876`). By
+  `Stephan Hoyer <https://github.com/shoyer>`_.
+
 - ``Variable.copy(deep=True)`` no longer converts MultiIndex into a base Index
   (:issue:`769`). By `Benoit Bovy <https://github.com/benbovy>`_.
+
+- Fixed incorrect test for dask version :issue:`891`. By
+  `Stephan Hoyer <https://github.com/shoyer>`_.
+
+- :py:func:`~xarray.plot.contour` now plots the correct number of contours
+  (:issue:`866`). By `Fabien Maussion <https://github.com/fmaussion>`_.
 
 .. _whats-new.0.7.2:
 

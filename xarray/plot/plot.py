@@ -339,12 +339,16 @@ def _plot2d(plotfunc):
     @functools.wraps(plotfunc)
     def newplotfunc(darray, x=None, y=None, ax=None, row=None, col=None,
                     col_wrap=None, xincrease=True, yincrease=True,
-                    add_colorbar=True, add_labels=True, vmin=None, vmax=None,
+                    add_colorbar=None, add_labels=True, vmin=None, vmax=None,
                     cmap=None, center=None, robust=False, extend=None,
                     levels=None, colors=None, subplot_kws=None,
                     cbar_ax=None, cbar_kwargs=None, **kwargs):
         # All 2d plots in xarray share this function signature.
         # Method signature below should be consistent.
+
+        # Decide on a default for the colorbar before facetgrids
+        if add_colorbar is None:
+            add_colorbar = plotfunc.__name__ != 'contour'
 
         # Handle facetgrids first
         if row or col:
@@ -450,7 +454,7 @@ def _plot2d(plotfunc):
     @functools.wraps(newplotfunc)
     def plotmethod(_PlotMethods_obj, x=None, y=None, ax=None, row=None,
                    col=None, col_wrap=None, xincrease=True, yincrease=True,
-                   add_colorbar=True, add_labels=True, vmin=None, vmax=None,
+                   add_colorbar=None, add_labels=True, vmin=None, vmax=None,
                    cmap=None, colors=None, center=None, robust=False,
                    extend=None, levels=None, subplot_kws=None,
                    cbar_ax=None, cbar_kwargs=None, **kwargs):

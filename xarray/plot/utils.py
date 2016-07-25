@@ -41,7 +41,7 @@ def _build_discrete_cmap(cmap, levels, extend, filled):
 
     if not filled:
         # non-filled contour plots
-        extend = 'neither'
+        extend = 'max'
 
     if extend == 'both':
         ext_n = 2
