@@ -1034,6 +1034,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         Dataset.sel_points
         DataArray.isel_points
         """
+        from .dataarray import DataArray
+
         indexer_dims = set(indexers)
 
         def relevant_keys(mapping):
@@ -1072,10 +1074,9 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
                 # dim already exists
                 raise ValueError('Existing dimensions are not valid choices '
                                  'for the dim argument in sel_points')
-        else:
-            # try to cast dim to DataArray with name = points
-            from .dataarray import DataArray
-            dim = DataArray(dim, dims='points', name='points')
+
+        if not utils.is_scalar(dim) and not isinstance(dim, DataArray):
+            dim = as_variable(dim, key='points')
 
         # TODO: This would be sped up with vectorized indexing. This will
         # require dask to support pointwise indexing as well.
