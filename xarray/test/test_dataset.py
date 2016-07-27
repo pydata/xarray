@@ -1915,6 +1915,21 @@ class TestDataset(TestCase):
         roundtripped = Dataset.from_dict(ds.to_dict())
         self.assertDatasetIdentical(ds, roundtripped)
 
+    def test_to_and_from_dict_with_nan_nat(self):
+        x = np.random.randn(10, 3)
+        y = np.random.randn(10, 3)
+        y[2] = np.nan
+        t = pd.Series(pd.date_range('20130101', periods=10))
+        t[2] = np.nan
+
+        lat = [77.7, 83.2, 76]
+        ds = Dataset(OrderedDict([('a', (['t','lat'], x)),
+                                  ('b', (['t','lat'], y)),
+                                  ('t', ('t', t)),
+                                  ('lat', ('lat', lat))]))
+        roundtripped = Dataset.from_dict(ds.to_dict())
+        self.assertDatasetIdentical(ds, roundtripped)
+
     def test_pickle(self):
         data = create_test_data()
         roundtripped = pickle.loads(pickle.dumps(data))
