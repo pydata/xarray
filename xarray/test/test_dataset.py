@@ -1850,15 +1850,13 @@ class TestDataset(TestCase):
         assert roundtripped.equals(expected)
 
     def test_to_and_from_dict(self):
-        """
-        <xarray.Dataset>
-        Dimensions:  (t: 10)
-        Coordinates:
-          * t        (t) <U1 'a' 'b' 'c' 'd' 'e' 'f' 'g' 'h' 'i' 'j'
-        Data variables:
-            a        (t) float64 0.6916 -1.056 -1.163 0.9792 -0.7865 0.7831 0.4174 ...
-            b        (t) float64 1.32 0.1954 1.91 1.39 0.519 -0.2772 -1.316 1.111 ...
-        """
+        # <xarray.Dataset>
+        # Dimensions:  (t: 10)
+        # Coordinates:
+        #   * t        (t) <U1 'a' 'b' 'c' 'd' 'e' 'f' 'g' 'h' 'i' 'j'
+        # Data variables:
+        #     a        (t) float64 0.6916 -1.056 -1.163 0.9792 -0.7865 0.7831 0.4174 ...
+        #     b        (t) float64 1.32 0.1954 1.91 1.39 0.519 -0.2772 -1.316 1.111 ...
         x = np.random.randn(10)
         y = np.random.randn(10)
         t = list('abcdefghij')
@@ -1868,21 +1866,21 @@ class TestDataset(TestCase):
         expected = {
                     'coords': {
                                't':{
-                                    'dims': ['t'],
+                                    'dims': ('t',),
                                     'data': t,
                                     'attrs': {}
                                     }
                               },
                     'attrs': {}, 
-                    'dims': ['t'],
+                    'dims': {'t': 10},
                     'data_vars': {
                                   'a':{
-                                       'dims': ['t'],
+                                       'dims': ('t',),
                                        'data': x.tolist(),
                                        'attrs': {}
                                        },
                                   'b':{
-                                       'dims': ['t'],
+                                       'dims': ('t',),
                                        'data': y.tolist(),
                                        'attrs': {}
                                        }   
@@ -1903,10 +1901,9 @@ class TestDataset(TestCase):
 
         self.assertDatasetIdentical(expected, actual)
 
+        #TODO: It would also be good to test roundtripping arrays with some NaN and NaT values as well
+
     def test_to_and_from_dict_with_time_dim(self):
-        """
-        This fails with the current to_dict functions
-        """
         x = np.random.randn(10, 3)
         y = np.random.randn(10, 3)
         t = pd.date_range('20130101', periods=10)

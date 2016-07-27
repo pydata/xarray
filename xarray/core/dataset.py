@@ -1934,18 +1934,25 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject):
         return obj
 
     def to_dict(self):
-        """Convert this dataset to a dictionary following xarray naming conventions.
         """
-        d = {'coords': {}, 'attrs': dict(self.attrs), 'dims': list(self.dims), 
+        Convert this dataset to a dictionary following xarray naming conventions.
+        """
+        d = {'coords': {}, 'attrs': dict(self.attrs), 'dims': dict(self.dims), 
              'data_vars': {}}
+        def time_check(val):
+            if np.issubdtype(val.dtype, np.datetime64):
+                val = val.astype('datetime64[us]')
+            elif np.issubdtype(val.dtype, np.timedelta64):
+                val = val.astype('timedelta64[us]')
+            return(val)
 
         for k in self.coords:
-            d['coords'].update({k: {'data': self[k].values.tolist(),
-                                    'dims': list(self[k].dims),
+            d['coords'].update({k: {'data': time_check(self[k].values).tolist(),
+                                    'dims': self[k].dims,
                                     'attrs': dict(self[k].attrs)}})
         for k in self.data_vars:
-            d['data_vars'].update({k: {'data': self[k].values.tolist(),
-                                       'dims': list(self[k].dims),
+            d['data_vars'].update({k: {'data': time_check(self[k].values).tolist(),
+                                       'dims': self[k].dims,
                                        'attrs': dict(self[k].attrs)}})
         return d
 
@@ -1953,25 +1960,29 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject):
     def from_dict(cls, d):
         """
         Convert a dictionary into an xarray.Dataset.
+
+        TODO:
+        One big thing that from_dict needs is validation. 
+        If the input dict does not match the expected format 
+        (e.g., there is a missing field), the user should get 
+        a sensible error message so they understand what went wrong
         """
-        obj = cls()
-
-        dims=OrderedDict([(k, d['coords'][k]) for k in d['dims']])
-        for dim, dim_d in dims.items():
-            obj[dim] = (dim_d['dims'], dim_d['data'], dim_d['attrs'])
-
-        for var, var_d in d['data_vars'].items():
-            obj[var] = (var_d['dims'], var_d['data'], var_d['attrs'])
-
+        OD = OrderedDict([(var[0], (var[1]['dims'], 
+                                    var[1]['data'], 
+                                    var[1]['attrs'])
+                              ) for var in d['coords'].items()])
+        for var in d['data_vars'].items():
+            OD.update(OrderedDict([(var[0], (var[1]['dims'], 
+                                             var[1]['data'], 
+                                             var[1]['attrs']))]))
+        obj = cls(OD)
+        
         # what it coords aren't dims?
         coords = (set(d['coords'].keys()) - set(d['dims']))
-        for coord in coords:
-            coord_d = d['coords'][coord]
-            obj[coord] = (coord_d['dims'], coord_d['data'], coord_d['attrs'])
         obj = obj.set_coords(coords)
 
         obj.attrs.update(d['attrs'])
-        
+
         return(obj)
 
     @staticmethod
