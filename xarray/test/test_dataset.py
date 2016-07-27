@@ -1849,6 +1849,75 @@ class TestDataset(TestCase):
             expected = expected.drop(['h'], axis=1)
         assert roundtripped.equals(expected)
 
+    def test_to_and_from_dict(self):
+        """
+        <xarray.Dataset>
+        Dimensions:  (t: 10)
+        Coordinates:
+          * t        (t) <U1 'a' 'b' 'c' 'd' 'e' 'f' 'g' 'h' 'i' 'j'
+        Data variables:
+            a        (t) float64 0.6916 -1.056 -1.163 0.9792 -0.7865 0.7831 0.4174 ...
+            b        (t) float64 1.32 0.1954 1.91 1.39 0.519 -0.2772 -1.316 1.111 ...
+        """
+        x = np.random.randn(10)
+        y = np.random.randn(10)
+        t = list('abcdefghij')
+        ds = Dataset(OrderedDict([('a', ('t', x)),
+                                  ('b', ('t', y)),
+                                  ('t', ('t', t))]))
+        expected = {
+                    'coords': {
+                               't':{
+                                    'dims': ['t'],
+                                    'data': t,
+                                    'attrs': {}
+                                    }
+                              },
+                    'attrs': {}, 
+                    'dims': ['t'],
+                    'data_vars': {
+                                  'a':{
+                                       'dims': ['t'],
+                                       'data': x.tolist(),
+                                       'attrs': {}
+                                       },
+                                  'b':{
+                                       'dims': ['t'],
+                                       'data': y.tolist(),
+                                       'attrs': {}
+                                       }   
+                                  }
+                   }
+
+        actual = ds.to_dict()
+
+        # check that they are identical
+        self.assertEqual(expected, actual)
+
+        # check roundtrip
+        self.assertDatasetIdentical(ds, Dataset.from_dict(actual))
+
+        # verify coords are included roundtrip
+        expected = ds.set_coords('b')
+        actual = Dataset.from_dict(expected.to_dict())
+
+        self.assertDatasetIdentical(expected, actual)
+
+    def test_to_and_from_dict_with_time_dim(self):
+        """
+        This fails with the current to_dict functions
+        """
+        x = np.random.randn(10, 3)
+        y = np.random.randn(10, 3)
+        t = pd.date_range('20130101', periods=10)
+        lat = [77.7, 83.2, 76]
+        ds = Dataset(OrderedDict([('a', (['t','lat'], x)),
+                                  ('b', (['t','lat'], y)),
+                                  ('t', ('t', t)),
+                                  ('lat', ('lat', lat))]))
+        roundtripped = Dataset.from_dict(ds.to_dict())
+        self.assertDatasetIdentical(ds, roundtripped)
+
     def test_pickle(self):
         data = create_test_data()
         roundtripped = pickle.loads(pickle.dumps(data))

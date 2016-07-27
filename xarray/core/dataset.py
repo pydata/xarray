@@ -1890,22 +1890,6 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject):
         """
         return self._to_dataframe(self.dims)
 
-    def to_dict(self):
-        """Convert this dataset to a dictionary following xarray naming conventions.
-        """
-        d = {'coords': {}, 'attrs': dict(self.attrs), 'dims': list(self.dims), 
-             'data_vars': {}}
-
-        for k in self.coords:
-            d['coords'].update({k: {'data': self[k].values.tolist(),
-                                    'dims': list(self[k].dims),
-                                    'attrs': dict(self[k].attrs)}})
-        for k in self.data_vars:
-            d['data_vars'].update({k: {'data': self[k].values.tolist(),
-                                       'dims': list(self[k].dims),
-                                       'attrs': dict(self[k].attrs)}})
-        return d
-
     @classmethod
     def from_dataframe(cls, dataframe):
         """Convert a pandas.DataFrame into an xarray.Dataset
@@ -1948,6 +1932,47 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject):
             data = np.asarray(series).reshape(shape)
             obj[name] = (dims, data)
         return obj
+
+    def to_dict(self):
+        """Convert this dataset to a dictionary following xarray naming conventions.
+        """
+        d = {'coords': {}, 'attrs': dict(self.attrs), 'dims': list(self.dims), 
+             'data_vars': {}}
+
+        for k in self.coords:
+            d['coords'].update({k: {'data': self[k].values.tolist(),
+                                    'dims': list(self[k].dims),
+                                    'attrs': dict(self[k].attrs)}})
+        for k in self.data_vars:
+            d['data_vars'].update({k: {'data': self[k].values.tolist(),
+                                       'dims': list(self[k].dims),
+                                       'attrs': dict(self[k].attrs)}})
+        return d
+
+    @classmethod
+    def from_dict(cls, d):
+        """
+        Convert a dictionary into an xarray.Dataset.
+        """
+        obj = cls()
+
+        dims=OrderedDict([(k, d['coords'][k]) for k in d['dims']])
+        for dim, dim_d in dims.items():
+            obj[dim] = (dim_d['dims'], dim_d['data'], dim_d['attrs'])
+
+        for var, var_d in d['data_vars'].items():
+            obj[var] = (var_d['dims'], var_d['data'], var_d['attrs'])
+
+        # what it coords aren't dims?
+        coords = (set(d['coords'].keys()) - set(d['dims']))
+        for coord in coords:
+            coord_d = d['coords'][coord]
+            obj[coord] = (coord_d['dims'], coord_d['data'], coord_d['attrs'])
+        obj = obj.set_coords(coords)
+
+        obj.attrs.update(d['attrs'])
+        
+        return(obj)
 
     @staticmethod
     def _unary_op(f, keep_attrs=False):
