@@ -4,6 +4,8 @@ import pickle
 from copy import deepcopy
 from textwrap import dedent
 
+import xarray as xr
+
 from xarray import (align, broadcast, Dataset, DataArray,
                     Coordinate, Variable)
 from xarray.core.pycompat import iteritems, OrderedDict
@@ -844,8 +846,8 @@ class TestDataArray(TestCase):
 
     def test_inplace_math_basics(self):
         x = self.x
-        v = self.v
         a = self.dv
+        v = a.variable
         b = a
         b += 1
         self.assertIs(b, a)
@@ -856,9 +858,9 @@ class TestDataArray(TestCase):
     def test_inplace_math_automatic_alignment(self):
         a = DataArray(range(5), [('x', range(5))])
         b = DataArray(range(1, 6), [('x', range(1, 6))])
-        with self.assertRaisesRegexp(ValueError, 'not aligned'):
+        with self.assertRaises(xr.MergeError):
             a += b
-        with self.assertRaisesRegexp(ValueError, 'not aligned'):
+        with self.assertRaises(xr.MergeError):
             b += a
 
     def test_math_name(self):

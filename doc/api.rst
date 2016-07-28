@@ -17,6 +17,7 @@ Top-level functions
    align
    broadcast
    concat
+   merge
    set_options
 
 Dataset

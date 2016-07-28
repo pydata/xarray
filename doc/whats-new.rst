@@ -44,6 +44,10 @@ Enhancements
   option that clips coordinate elements that are fully masked.  By
   `Phillip J. Wolfram <https://github.com/pwolfram>`_.
 
+- New top level :py:func:`merge` function allows for combining variables from
+  any number of ``Dataset`` and/or ``DataArray`` variables. See :ref:`merge`
+  for more details. By `Stephan Hoyer <https://github.com/shoyer>`_.
+
 - DataArray and Dataset method :py:meth:`resample` now supports the
   ``keep_attrs=False`` option that determines whether variable and dataset
   attributes are retained in the resampled object. By

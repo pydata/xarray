@@ -3,7 +3,8 @@ import warnings
 import pandas as pd
 
 from . import utils
-from .pycompat import iteritems, reduce, OrderedDict, basestring
+from .merge import merge
+from .pycompat import iteritems, OrderedDict, basestring
 from .variable import Variable, as_variable, Coordinate, concat as concat_vars
 
 
@@ -69,6 +70,7 @@ def concat(objs, dim=None, data_vars='all', coords='different',
 
     See also
     --------
+    merge
     auto_combine
     """
     # TODO: add join and ignore_index arguments copied from pandas.concat
@@ -204,6 +206,7 @@ def _dataset_concat(datasets, dim, data_vars, coords, compat, positions):
     # list; the gains would be minimal
     datasets = [as_dataset(ds) for ds in datasets]
     dim, coord = _calc_concat_dim_coord(dim)
+
     concat_over = _calc_concat_over(datasets, dim, data_vars, coords)
 
     def insert_result_variable(k, v):
@@ -217,7 +220,6 @@ def _dataset_concat(datasets, dim, data_vars, coords, compat, positions):
     result_coord_names = set(datasets[0].coords)
     result_attrs = datasets[0].attrs
 
-    # Dataset({}, attrs=datasets[0].attrs)
     for k, v in datasets[0].variables.items():
         if k not in concat_over:
             insert_result_variable(k, v)
@@ -374,5 +376,5 @@ def auto_combine(datasets, concat_dim=None):
     grouped = itertoolz.groupby(lambda ds: tuple(sorted(ds.data_vars)),
                                 datasets).values()
     concatenated = [_auto_concat(ds, dim=concat_dim) for ds in grouped]
-    merged = reduce(lambda ds, other: ds.merge(other), concatenated)
+    merged = merge(concatenated)
     return merged

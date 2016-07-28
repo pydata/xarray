@@ -562,7 +562,6 @@ class TestVariable(TestCase, VariableSubclassTestCases):
         self.assertVariableIdentical(expected, as_variable(ds['x']))
         self.assertNotIsInstance(ds['x'], Variable)
         self.assertIsInstance(as_variable(ds['x']), Variable)
-        self.assertIsInstance(as_variable(ds['x'], strict=False), DataArray)
 
         FakeVariable = namedtuple('FakeVariable', 'values dims')
         fake_xarray = FakeVariable(expected.values, expected.dims)
@@ -571,13 +570,15 @@ class TestVariable(TestCase, VariableSubclassTestCases):
         xarray_tuple = (expected.dims, expected.values)
         self.assertVariableIdentical(expected, as_variable(xarray_tuple))
 
-        with self.assertRaisesRegexp(TypeError, 'cannot convert arg'):
+        with self.assertRaisesRegexp(TypeError, 'tuples to convert'):
             as_variable(tuple(data))
-        with self.assertRaisesRegexp(TypeError, 'cannot infer .+ dimensions'):
+        with self.assertRaisesRegexp(
+                TypeError, 'without an explicit list of dimensions'):
             as_variable(data)
 
-        actual = as_variable(data, key='x')
+        actual = as_variable(data, name='x')
         self.assertVariableIdentical(expected, actual)
+        self.assertIsInstance(actual, Coordinate)
 
         actual = as_variable(0)
         expected = Variable([], 0)
