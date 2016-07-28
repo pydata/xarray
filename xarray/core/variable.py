@@ -10,6 +10,7 @@ from . import common
 from . import indexing
 from . import ops
 from . import utils
+from . import nputils
 from .pycompat import basestring, OrderedDict, zip, dask_array_type
 from .indexing import (PandasIndexAdapter, orthogonally_indexable,
                        LazyIntegerRange)
@@ -22,12 +23,10 @@ except ImportError:
     pass
 
 
-def as_variable(obj, key=None, strict=True, copy=False):
-    """Convert an object into an Variable
+def as_variable(obj, name=None, copy=False):
+    """Convert an object into an Variable.
 
-    - If the object is already an `Variable`, return it.
-    - If the object is a `DataArray`, return it if `strict=False` or return
-      its variable if `strict=True`.
+    - If the object is already an `Variable`, return a shallow copy.
     - Otherwise, if the object has 'dims' and 'data' attributes, convert
       it into a new `Variable`.
     - If all else fails, attempt to convert the object into an `Variable` by
@@ -35,31 +34,43 @@ def as_variable(obj, key=None, strict=True, copy=False):
     """
     # TODO: consider extending this method to automatically handle Iris and
     # pandas objects.
-    if strict and hasattr(obj, 'variable'):
+    if hasattr(obj, 'variable'):
         # extract the primary Variable from DataArrays
         obj = obj.variable
-    if not isinstance(obj, (Variable, xr.DataArray)):
-        if hasattr(obj, 'dims') and (hasattr(obj, 'data') or
-                                     hasattr(obj, 'values')):
-            obj = Variable(obj.dims, getattr(obj, 'data', obj.values),
-                           getattr(obj, 'attrs', None),
-                           getattr(obj, 'encoding', None))
-        elif isinstance(obj, tuple):
-            try:
-                obj = Variable(*obj)
-            except TypeError:
-                raise TypeError('cannot convert argument into an Variable')
-        elif utils.is_scalar(obj):
-            obj = Variable([], obj)
-        elif getattr(obj, 'name', None) is not None:
-            obj = Variable(obj.name, obj)
-        elif key is not None:
-            obj = Variable(key, obj)
-        else:
-            raise TypeError('cannot infer Variable dimensions')
+
+    if isinstance(obj, Variable):
+        obj = obj.copy(deep=False)
+    elif hasattr(obj, 'dims') and (hasattr(obj, 'data') or
+                                   hasattr(obj, 'values')):
+        obj = Variable(obj.dims, getattr(obj, 'data', obj.values),
+                       getattr(obj, 'attrs', None),
+                       getattr(obj, 'encoding', None))
+    elif isinstance(obj, tuple):
+        try:
+            obj = Variable(*obj)
+        except TypeError:
+            # use .format() instead of % because it handles tuples consistently
+            raise TypeError('tuples to convert into variables must be of the '
+                            'form (dims, data[, attrs, encoding]): '
+                            '{}'.format(obj))
+    elif utils.is_scalar(obj):
+        obj = Variable([], obj)
+    elif getattr(obj, 'name', None) is not None:
+        obj = Variable(obj.name, obj)
+    elif name is not None:
+        obj = Variable(name, obj)
     else:
-        if copy:
-            obj = obj.copy(deep=False)
+        raise TypeError('unable to convert object into a variable without an '
+                        'explicit list of dimensions: %r' % obj)
+
+    if name is not None and name in obj.dims:
+        # convert the into an Index
+        if obj.ndim != 1:
+            raise ValueError('the variable %r has the same name as one of its '
+                             'dimensions %r, but it is not 1-dimensional and '
+                             'thus it is not a valid index' % (name, obj.dims))
+        obj = obj.to_coord()
+
     return obj
 
 
@@ -208,7 +219,7 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
             Dictionary specifying how to encode this array's data into a
             serialized format like netCDF4. Currently used keys (for netCDF)
             include '_FillValue', 'scale_factor', 'add_offset' and 'dtype'.
-            Well behaviored code to serialize a Variable should ignore
+            Well-behaved code to serialize a Variable should ignore
             unrecognized encoding items.
         """
         self._data = as_compatible_data(data, fastpath=fastpath)
@@ -412,7 +423,9 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
         If `deep=True`, the data array is loaded into memory and copied onto
         the new object. Dimensions, attributes and encodings are always copied.
         """
-        if deep and not isinstance(self.data, dask_array_type):
+        if (deep and not isinstance(self.data, dask_array_type)
+            and not isinstance(self._data, PandasIndexAdapter)):
+            # pandas.Index objects are immutable
             # dask arrays don't have a copy method
             # https://github.com/blaze/dask/issues/911
             data = self.data.copy()
@@ -428,7 +441,7 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
         return self.copy(deep=False)
 
     def __deepcopy__(self, memo=None):
-        # memo does nothing but is required for compatability with
+        # memo does nothing but is required for compatibility with
         # copy.deepcopy
         return self.copy(deep=True)
 
@@ -713,13 +726,19 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
         self_dims = set(self.dims)
         expanded_dims = tuple(
             d for d in dims if d not in self_dims) + self.dims
-        if shape is not None:
+
+        if self.dims == expanded_dims:
+            # don't use broadcast_to unless necessary so the result remains
+            # writeable if possible
+            expanded_data = self.data
+        elif shape is not None:
             dims_map = dict(zip(dims, shape))
-            tmp_shape = [dims_map[d] for d in expanded_dims]
+            tmp_shape = tuple(dims_map[d] for d in expanded_dims)
             expanded_data = ops.broadcast_to(self.data, tmp_shape)
         else:
             expanded_data = self.data[
                 (None,) * (len(expanded_dims) - self.ndim)]
+
         expanded_var = Variable(expanded_dims, expanded_data, self._attrs,
                                 self._encoding, fastpath=True)
         return expanded_var.transpose(*dims)
@@ -928,10 +947,12 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
         if dim in first_var.dims:
             axis = first_var.get_axis_num(dim)
             dims = first_var.dims
-            if positions is None:
-                data = ops.concatenate(arrays, axis=axis)
-            else:
-                data = ops.interleaved_concat(arrays, positions, axis=axis)
+            data = ops.concatenate(arrays, axis=axis)
+            if positions is not None:
+                # TODO: deprecate this option -- we don't need it for groupby
+                # any more.
+                indices = nputils.inverse_permutation(np.concatenate(positions))
+                data = ops.take(data, indices, axis=axis)
         else:
             axis = 0
             dims = (dim,) + first_var.dims
@@ -958,7 +979,7 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
         values in the same locations.
 
         This method is necessary because `v1 == v2` for Variables
-        does element-wise comparisions (like numpy.ndarrays).
+        does element-wise comparisons (like numpy.ndarrays).
         """
         other = getattr(other, 'variable', other)
         try:
@@ -1073,6 +1094,44 @@ class Coordinate(Variable):
     def __setitem__(self, key, value):
         raise TypeError('%s values cannot be modified' % type(self).__name__)
 
+    @classmethod
+    def concat(cls, variables, dim='concat_dim', positions=None,
+               shortcut=False):
+        """Specialized version of Variable.concat for Coordinate variables.
+
+        This exists because we want to avoid converting Index objects to NumPy
+        arrays, if possible.
+        """
+        if not isinstance(dim, basestring):
+            dim, = dim.dims
+
+        variables = list(variables)
+        first_var = variables[0]
+
+        if any(not isinstance(v, cls) for v in variables):
+            raise TypeError('Coordinate.concat requires that all input '
+                            'variables be Coordinate objects')
+
+        arrays = [v._data_cached().array for v in variables]
+
+        if not arrays:
+            data = []
+        else:
+            data = arrays[0].append(arrays[1:])
+
+            if positions is not None:
+                indices = nputils.inverse_permutation(np.concatenate(positions))
+                data = data.take(indices)
+
+        attrs = OrderedDict(first_var.attrs)
+        if not shortcut:
+            for var in variables:
+                if var.dims != first_var.dims:
+                    raise ValueError('inconsistent dimensions')
+                utils.remove_incompatible_items(attrs, var.attrs)
+
+        return cls(first_var.dims, data, attrs)
+
     def copy(self, deep=True):
         """Returns a copy of this object.
 
@@ -1098,7 +1157,13 @@ class Coordinate(Variable):
         # basically free as pandas.Index objects are immutable
         assert self.ndim == 1
         index = self._data_cached().array
-        if not isinstance(index, pd.MultiIndex):
+        if isinstance(index, pd.MultiIndex):
+            # set default names for multi-index unnamed levels so that
+            # we can safely rename dimension / coordinate later
+            valid_level_names = [name or '{}_level_{}'.format(self.name, i)
+                                 for i, name in enumerate(index.names)]
+            index = index.set_names(valid_level_names)
+        else:
             index = index.set_names(self.name)
         return index
 
@@ -1142,7 +1207,7 @@ def broadcast_variables(*variables):
     The data on the returned variables will be a view of the data on the
     corresponding original arrays, but dimensions will be reordered and
     inserted so that both broadcast arrays have the same dimensions. The new
-    dimensions are sorted in order of appearence in the first variable's
+    dimensions are sorted in order of appearance in the first variable's
     dimensions followed by the second variable's dimensions.
     """
     dims_map = _unified_dims(variables)
@@ -1165,3 +1230,40 @@ def _broadcast_compat_data(self, other):
         other_data = other
         dims = self.dims
     return self_data, other_data, dims
+
+
+def concat(variables, dim='concat_dim', positions=None, shortcut=False):
+    """Concatenate variables along a new or existing dimension.
+
+    Parameters
+    ----------
+    variables : iterable of Array
+        Arrays to stack together. Each variable is expected to have
+        matching dimensions and shape except for along the stacked
+        dimension.
+    dim : str or DataArray, optional
+        Name of the dimension to stack along. This can either be a new
+        dimension name, in which case it is added along axis=0, or an
+        existing dimension name, in which case the location of the
+        dimension is unchanged. Where to insert the new dimension is
+        determined by the first variable.
+    positions : None or list of integer arrays, optional
+        List of integer arrays which specifies the integer positions to which
+        to assign each dataset along the concatenated dimension. If not
+        supplied, objects are concatenated in the provided order.
+    shortcut : bool, optional
+        This option is used internally to speed-up groupby operations.
+        If `shortcut` is True, some checks of internal consistency between
+        arrays to concatenate are skipped.
+
+    Returns
+    -------
+    stacked : Variable
+        Concatenated Variable formed by stacking all the supplied variables
+        along the given dimension.
+    """
+    variables = list(variables)
+    if all(isinstance(v, Coordinate) for v in variables):
+        return Coordinate.concat(variables, dim, positions, shortcut)
+    else:
+        return Variable.concat(variables, dim, positions, shortcut)
