@@ -1901,7 +1901,61 @@ class TestDataset(TestCase):
 
         self.assertDatasetIdentical(expected, actual)
 
-        #TODO: It would also be good to test roundtripping arrays with some NaN and NaT values as well
+        # test some incomplete dicts:
+        # this one has no attrs field, the dims are strings, and x, y are np.arrays
+
+        d = {
+            'coords': {
+                       't':{
+                            'dims': 't',
+                            'data': t
+                            }
+                      },
+            'dims': 't',
+            'data_vars': {
+                          'a':{
+                               'dims': 't',
+                               'data': x
+                               },
+                          'b':{
+                               'dims': 't',
+                               'data': y
+                               }   
+                          }
+           }
+        self.assertDatasetIdentical(ds, Dataset.from_dict(d))
+
+        # this is kind of a flattened version with no coords, or data_vars
+        d = {'a':{
+                   'dims': 't',
+                   'data': x
+                   },
+             't':{
+                  'data': t,
+                  'dims': 't'
+                  }, 
+             'b':{
+                   'dims': 't',
+                   'data': y
+                   }   
+              }
+        self.assertDatasetIdentical(ds, Dataset.from_dict(d))
+
+        # this one is missing some necessary information
+        d = {'a':{
+                   'data': x
+                  },
+             't':{
+                  'dims': 't',
+                  'data': t
+                  }, 
+             'b':{
+                   'dims': 't',
+                   'data': y
+                   }   
+              }
+        with self.assertRaisesRegexp(KeyError, 'cannot convert dict with missing dims'):
+            Dataset.from_dict(d)
 
     def test_to_and_from_dict_with_time_dim(self):
         x = np.random.randn(10, 3)

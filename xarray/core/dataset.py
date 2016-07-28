@@ -1959,29 +1959,40 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject):
     @classmethod
     def from_dict(cls, d):
         """
-        Convert a dictionary into an xarray.Dataset.
+        Convert a dictionary into an xarray.Dataset
 
-        TODO:
-        One big thing that from_dict needs is validation. 
-        If the input dict does not match the expected format 
-        (e.g., there is a missing field), the user should get 
-        a sensible error message so they understand what went wrong
+        Parameters
+        ----------
+        d : dict, with a minimum structure of {'var_0': {'dims': [..], 'data': [..]}, ..}
+
+        Returns
+        -------
+        obj : xarray.Dataset
+
         """
-        OD = OrderedDict([(var[0], (var[1]['dims'], 
-                                    var[1]['data'], 
-                                    var[1]['attrs'])
-                              ) for var in d['coords'].items()])
-        for var in d['data_vars'].items():
-            OD.update(OrderedDict([(var[0], (var[1]['dims'], 
-                                             var[1]['data'], 
-                                             var[1]['attrs']))]))
-        obj = cls(OD)
-        
-        # what it coords aren't dims?
-        coords = (set(d['coords'].keys()) - set(d['dims']))
-        obj = obj.set_coords(coords)
+        import itertools
 
-        obj.attrs.update(d['attrs'])
+        try:
+            vars = itertools.chain(d['coords'].items(), d['data_vars'].items())
+        except:
+            vars = d.items()
+        try:
+            OD = OrderedDict([(var[0], (var[1]['dims'], 
+                                        var[1]['data'], 
+                                        var[1].get('attrs'))) for var in vars])
+        except KeyError as e:
+            raise KeyError(
+                'cannot convert dict with missing {dims_data}'.format(
+                    dims_data=str(e.args[0])))
+        obj = cls(OD)
+
+        # what if coords aren't dims?
+        if set(['coords', 'dims']).issubset(set(d.keys())):
+            coords = (set(d['coords'].keys()) - set(d['dims']))
+            obj = obj.set_coords(coords)
+
+        if 'attrs' in d.keys():
+            obj.attrs.update(d.get('attrs'))
 
         return(obj)
 

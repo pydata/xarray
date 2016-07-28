@@ -1086,18 +1086,58 @@ class DataArray(AbstractArray, BaseDataObject):
         return np.ma.MaskedArray(data=self.values, mask=isnull, copy=copy)
 
     def to_dict(self):
-        """Convert this array to a dictionary following xarray naming conventions.
+        """Convert this xarray.DataArray into a dictionary following xarray naming conventions.
         """
-        d = {'coords': {}, 'attrs': dict(self.attrs), 'dims': list(self.dims)}
+        d = {'coords': {}, 'attrs': dict(self.attrs), 'dims': self.dims}
+
+        def time_check(val):
+            if np.issubdtype(val.dtype, np.datetime64):
+                val = val.astype('datetime64[us]')
+            elif np.issubdtype(val.dtype, np.timedelta64):
+                val = val.astype('timedelta64[us]')
+            return(val)
 
         for k in self.coords:
-            d['coords'].update({k: {'data': self[k].values.tolist(),
-                                    'dims': list(self[k].dims),
+            d['coords'].update({k: {'data': time_check(self[k].values).tolist(),
+                                    'dims': self[k].dims,
                                     'attrs': dict(self[k].attrs)}})
 
-        d.update({'data': self.values.tolist(),
+        d.update({'data': time_check(self.values).tolist(),
                   'name': self.name})
         return d
+
+    @classmethod
+    def from_dict(cls, d):
+        """
+        Convert a dictionary into an xarray.DataArray
+
+        Parameters
+        ----------
+        d : dict, with a minimum structure of {'dims': [..], 'data': [..]}
+            or optionally {'dims': [..], 
+                           'data': [..], 
+                           'coords': {'dims': [..], 'data': [..]}}
+
+        Returns
+        -------
+        obj : xarray.DataArray
+
+        """
+        coords = None
+        if 'coords' in d.keys():
+            try:
+                coords = OrderedDict([(var[0], (var[1]['dims'], 
+                                                var[1]['data'], 
+                                                var[1].get('attrs'))) for var in d['coords'].items()])
+            except KeyError as e:
+                raise KeyError(
+                    'cannot convert dict when coords are missing {dims_data}'.format(
+                        dims_data=str(e.args[0])))
+        try:
+            obj = cls(d['data'], coords, d.get('dims'), d.get('name'), d.get('attrs'))
+        except KeyError:
+            raise KeyError('cannot convert dict with missing data')
+        return(obj)
 
     @classmethod
     def from_series(cls, series):
