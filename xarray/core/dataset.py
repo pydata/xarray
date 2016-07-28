@@ -20,7 +20,7 @@ from .common import ImplementsDatasetReduce, BaseDataObject
 from .merge import (dataset_update_method, dataset_merge_method,
                     merge_data_and_coords)
 from .utils import Frozen, SortedKeysDict, maybe_wrap_array, hashable
-from .variable import (Variable, Coordinate, broadcast_variables)
+from .variable import (Variable, as_variable, Coordinate, broadcast_variables)
 from .pycompat import (iteritems, basestring, OrderedDict,
                        dask_array_type)
 from .combine import concat
@@ -1049,7 +1049,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
                                  'for the dim argument in sel_points')
 
         if not utils.is_scalar(dim) and not isinstance(dim, DataArray):
-            dim = as_variable(dim, key='points')
+            dim = as_variable(dim, name='points')
 
         # TODO: This would be sped up with vectorized indexing. This will
         # require dask to support pointwise indexing as well.
