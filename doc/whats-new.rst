@@ -108,6 +108,9 @@ Bug fixes
 - Fixed incorrect test for dask version (:issue:`891`). By
   `Stephan Hoyer <https://github.com/shoyer>`_.
 
+- Fixed `dim` argument for `isel_points`/`sel_points` when a `pandas.Index` is
+  passed. By `Stephan Hoyer <https://github.com/shoyer>`_.
+
 - :py:func:`~xarray.plot.contour` now plots the correct number of contours
   (:issue:`866`). By `Fabien Maussion <https://github.com/fmaussion>`_.
 

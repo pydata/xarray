@@ -796,11 +796,18 @@ class TestDataset(TestCase):
         self.assertDataArrayIdentical(actual['station'].drop(['dim1', 'dim2']),
                                       stations['station'])
 
-        # make sure we get the default points coordinate when a list is passed
+        # make sure we get the default 'points' coordinate when a list is passed
         actual = data.isel_points(dim1=stations['dim1s'],
                                   dim2=stations['dim2s'],
                                   dim=['A', 'B', 'C'])
         assert 'points' in actual.coords
+        assert actual.coords['points'].values.tolist() == ['A', 'B', 'C']
+
+        # test index
+        actual = data.isel_points(dim1=stations['dim1s'].values,
+                                  dim2=stations['dim2s'].values,
+                                  dim=pd.Index(['A', 'B', 'C'], name='letters'))
+        assert 'letters' in actual.coords
 
         # can pass a numpy array
         data.isel_points(dim1=stations['dim1s'],
