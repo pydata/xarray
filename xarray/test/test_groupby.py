@@ -19,7 +19,7 @@ def test_consolidate_slices():
         _consolidate_slices([slice(3), 4])
 
 
-def test_multi_index_groupby():
+def test_multi_index_groupby_apply():
     # regression test for GH873
     ds = xr.Dataset({'foo': (('x', 'y'), np.random.randn(3, 4))},
                     {'x': ['a', 'b', 'c'], 'y': [1, 2, 3, 4]})
@@ -29,5 +29,18 @@ def test_multi_index_groupby():
                      .apply(lambda x: 2 * x)
                      .unstack('space'))
     assert doubled.equals(group_doubled)
+
+
+def test_multi_index_groupby_sum():
+    # regression test for GH873
+    ds = xr.Dataset({'foo': (('x', 'y', 'z'), np.ones((3, 4, 2)))},
+                    {'x': ['a', 'b', 'c'], 'y': [1, 2, 3, 4]})
+    expected = ds.sum('z')
+    actual = (ds.stack(space=['x', 'y'])
+              .groupby('space')
+              .sum('z')
+              .unstack('space'))
+    assert expected.equals(actual)
+
 
 # TODO: move other groupby tests from test_dataset and test_dataarray over here
