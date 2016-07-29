@@ -125,7 +125,7 @@ def _asarray_tuplesafe(values):
     Adapted from pandas.core.common._asarray_tuplesafe
     """
     if isinstance(values, tuple):
-        result = utils.tuple_to_0darray(values)
+        result = utils.to_0d_object_array(values)
     else:
         result = np.asarray(values)
         if result.ndim == 2:
@@ -396,9 +396,18 @@ class NumpyIndexingAdapter(utils.NDArrayMixin):
             key = orthogonal_indexer(key, self.shape)
         return key
 
+    def _ensure_ndarray(self, value):
+        # We always want the result of indexing to be a NumPy array. If it's
+        # not, then it really should be a 0d array. Doing the coercion here
+        # instead of inside variable.as_compatible_data makes it less error
+        # prone.
+        if not isinstance(value, np.ndarray):
+            value = utils.to_0d_array(value)
+        return value
+
     def __getitem__(self, key):
         key = self._convert_key(key)
-        return self.array[key]
+        return self._ensure_ndarray(self.array[key])
 
     def __setitem__(self, key, value):
         key = self._convert_key(key)
@@ -469,16 +478,22 @@ class PandasIndexAdapter(utils.NDArrayMixin):
 
         if isinstance(result, pd.Index):
             result = PandasIndexAdapter(result, dtype=self.dtype)
-        elif result is pd.NaT:
-            # work around the impossibility of casting NaT with asarray
-            # note: it probably would be better in general to return
-            # pd.Timestamp rather np.than datetime64 but this is easier
-            # (for now)
-            result = np.datetime64('NaT', 'ns')
-        elif isinstance(result, timedelta):
-            result = np.timedelta64(getattr(result, 'value', result), 'ns')
-        elif self.dtype != object:
-            result = np.asarray(result, dtype=self.dtype)
+        else:
+            # result is a scalar
+            if result is pd.NaT:
+                # work around the impossibility of casting NaT with asarray
+                # note: it probably would be better in general to return
+                # pd.Timestamp rather np.than datetime64 but this is easier
+                # (for now)
+                result = np.datetime64('NaT', 'ns')
+            elif isinstance(result, timedelta):
+                result = np.timedelta64(getattr(result, 'value', result), 'ns')
+            elif self.dtype != object:
+                result = np.asarray(result, dtype=self.dtype)
+
+            # as for numpy.ndarray indexing, we always want the result to be
+            # a NumPy array.
+            result = utils.to_0d_array(result)
 
         return result
 

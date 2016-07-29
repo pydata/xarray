@@ -119,7 +119,7 @@ def as_compatible_data(data, fastpath=False):
         return _maybe_wrap_data(data)
 
     if isinstance(data, tuple):
-        data = utils.tuple_to_0darray(data)
+        data = utils.to_0d_object_array(data)
 
     if isinstance(data, pd.Timestamp):
         # TODO: convert, handle datetime objects, too
@@ -159,19 +159,21 @@ def as_compatible_data(data, fastpath=False):
 
 def _as_array_or_item(data):
     """Return the given values as a numpy array, or as an individual item if
-    it's a 0-dimensional object array or datetime64.
+    it's a 0d datetime64 or timedelta64 array.
 
     Importantly, this function does not copy data if it is already an ndarray -
     otherwise, it will not be possible to update Variable values in place.
+
+    This function mostly exists because 0-dimensional ndarrays with
+    dtype=datetime64 are broken :(
+    https://github.com/numpy/numpy/issues/4337
+    https://github.com/numpy/numpy/issues/7619
+
+    TODO: remove this (replace with np.asarray) once these issues are fixed
     """
     data = np.asarray(data)
     if data.ndim == 0:
-        if data.dtype.kind == 'O':
-            # unpack 0d object arrays to be consistent with numpy
-            data = data.item()
-        elif data.dtype.kind == 'M':
-            # convert to a np.datetime64 object, because 0-dimensional ndarrays
-            # with dtype=datetime64 are broken :(
+        if data.dtype.kind == 'M':
             data = np.datetime64(data, 'ns')
         elif data.dtype.kind == 'm':
             data = np.timedelta64(data, 'ns')

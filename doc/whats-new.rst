@@ -26,10 +26,16 @@ Breaking changes
 ~~~~~~~~~~~~~~~~
 
 - Dropped support for Python 2.6 (:issue:`855`).
-- Indexing on multi-index now drop levels, which is consitent with pandas.
+- Indexing on multi-index now drop levels, which is consistent with pandas.
   It also changes the name of the dimension / coordinate when the multi-index is
-  reduced to a single index.
-- Contour plots no longer add a colorbar per default (:issue:`866`).
+  reduced to a single index (:issue:`802`).
+- Contour plots no longer add a colorbar per default (:issue:`866`). Filled
+  contour plots are unchanged.
+- ``DataArray.values`` and ``.data`` now always returns an NumPy array-like
+  object, even for 0-dimensional arrays with object dtype (:issue:`867`).
+  Previously, ``.values`` returned native Python objects in such cases. To
+  convert the values of scalar arrays to Python objects, use the ``.item()``
+  method.
 
 Enhancements
 ~~~~~~~~~~~~
@@ -101,6 +107,9 @@ Bug fixes
 
 - ``Variable.copy(deep=True)`` no longer converts MultiIndex into a base Index
   (:issue:`769`). By `Benoit Bovy <https://github.com/benbovy>`_.
+
+- Fixes for groupby on dimensions with a multi-index (:issue:`867`). By
+  `Stephan Hoyer <https://github.com/shoyer>`_.
 
 - Fix printing datasets with unicode attributes on Python 2 (:issue:`892`). By
   `Stephan Hoyer <https://github.com/shoyer>`_.
