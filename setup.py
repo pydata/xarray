@@ -8,11 +8,11 @@ from setuptools import setup, find_packages
 from setuptools import Command
 
 MAJOR = 0
-MINOR = 7
-MICRO = 2
-ISRELEASED = False
+MINOR = 8
+MICRO = 0
+ISRELEASED = True
 VERSION = '%d.%d.%d' % (MAJOR, MINOR, MICRO)
-QUALIFIER = ''
+QUALIFIER = 'rc1'
 
 
 DISTNAME = 'xarray'
