@@ -18,7 +18,8 @@ What's New
 v0.8.0 (unreleased)
 -------------------
 
-This release includes
+This release includes four months of new features and bug fixes, including
+several breaking changes.
 
 .. _v0.8.0.breaking:
 
