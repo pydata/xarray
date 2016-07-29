@@ -341,14 +341,16 @@ class BaseDataObject(AttrAccessMixin):
         """
         if isinstance(group, basestring):
             group = self[group]
+        elif isinstance(group, (list, tuple)):
+            group = [self[g] if isinstance(g, basestring) else g for g in group]
         return self.groupby_cls(self, group, squeeze=squeeze)
 
     def groupby_bins(self, group, bins, right=True, labels=None, precision=3,
                      include_lowest=False, squeeze=True):
         """Returns a GroupBy object for performing grouped operations.
 
-        Rather than using all unique values of `group`, the values are discretized
-        first by applying `pandas.cut` [1]_ to `group`.
+        Rather than using all unique values of `group`, the values are
+        discretized first by applying `pandas.cut` [1]_ to `group`.
 
         Parameters
         ----------

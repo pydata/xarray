@@ -286,9 +286,11 @@ class DataArray(AbstractArray, BaseDataObject):
         if name is None:
             raise ValueError('unable to convert unnamed DataArray to a '
                              'Dataset without providing an explicit name')
-        if name in self.coords:
+        if (name in self.coords and
+                not self.variable.identical(self._coords[name])):
             raise ValueError('cannot create a Dataset from a DataArray with '
-                             'the same name as one of its coordinates')
+                             'the same name as one of its coordinates '
+                             'unless they are identical')
         # use private APIs here for speed: this is called by _to_temp_dataset(),
         # which is used in the guts of a lot of operations (e.g., reindex)
         variables = self._coords.copy()
