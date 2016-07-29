@@ -297,6 +297,13 @@ class TestDataset(TestCase):
         ds = create_test_data()
         self.assertEqual(ds.dims,
                          {'dim1': 8, 'dim2': 9, 'dim3': 10, 'time': 20})
+        self.assertEqual(list(ds.dims), sorted(ds.dims))
+
+        # These exact types aren't public API, but this makes sure we don't
+        # change them inadvertently:
+        self.assertIsInstance(ds.dims, utils.Frozen)
+        self.assertIsInstance(ds.dims.mapping, utils.SortedKeysDict)
+        self.assertIs(type(ds.dims.mapping.mapping), dict)
 
         self.assertItemsEqual(ds, list(ds.variables))
         self.assertItemsEqual(ds.keys(), list(ds.variables))
