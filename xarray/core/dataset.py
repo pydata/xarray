@@ -351,7 +351,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
 
     @classmethod
     def _from_vars_and_coord_names(cls, variables, coord_names):
-        dims = calculate_dimensions(variables)
+        dims = dict(calculate_dimensions(variables))
         return cls._construct_direct(variables, coord_names, dims)
 
     def _replace_vars_and_dims(self, variables, coord_names=None, dims=None,
