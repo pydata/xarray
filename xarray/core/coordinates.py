@@ -164,7 +164,7 @@ class DatasetCoordinates(AbstractCoordinates):
 
         self._data._variables = variables
         self._data._coord_names.update(updated_coord_names)
-        self._data._dims = dims
+        self._data._dims = dict(dims)
 
     def __delitem__(self, key):
         if key in self:

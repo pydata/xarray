@@ -69,7 +69,7 @@ def calculate_dimensions(variables):
     Returns dictionary mapping from dimension names to sizes. Raises ValueError
     if any of the dimension sizes conflict.
     """
-    dims = {}
+    dims = OrderedDict()
     last_used = {}
     scalar_vars = set(k for k, v in iteritems(variables) if not v.dims)
     for k, var in iteritems(variables):
@@ -351,7 +351,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
 
     @classmethod
     def _from_vars_and_coord_names(cls, variables, coord_names):
-        dims = calculate_dimensions(variables)
+        dims = dict(calculate_dimensions(variables))
         return cls._construct_direct(variables, coord_names, dims)
 
     def _replace_vars_and_dims(self, variables, coord_names=None, dims=None,
