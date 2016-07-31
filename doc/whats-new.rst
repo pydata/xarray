@@ -106,6 +106,9 @@ Bug fixes
   use to numpy functions instead of dask.array functions (:issue:`876`). By
   `Stephan Hoyer <https://github.com/shoyer>`_.
 
+- Support for pickling functions from  ``xarray.ufuncs`` (:issue:`901`). By
+  `Stephan Hoyer <https://github.com/shoyer>`_.
+
 - ``Variable.copy(deep=True)`` no longer converts MultiIndex into a base Index
   (:issue:`769`). By `Benoit Bovy <https://github.com/benbovy>`_.
 
