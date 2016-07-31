@@ -10,7 +10,7 @@ from .common import (
     ImplementsArrayReduce, ImplementsDatasetReduce, _maybe_promote,
 )
 from .merge import merge
-from .pycompat import zip
+from .pycompat import zip, OrderedDict
 from .utils import peek_at, maybe_wrap_array, safe_cast_to_index
 from .variable import as_variable, Variable, Coordinate
 
@@ -21,22 +21,28 @@ def unique_value_groups(ar):
     Parameters
     ----------
     ar : array-like
-        Input array. This will be flattened if it is not already 1-D.
+        One dimensional array-like.
 
     Returns
     -------
-    values : np.ndarray
-        Sorted, unique values as returned by `np.unique`.
+    values : pd.Index
+        Sorted, unique values as returned by `pd.factorize`.
     indices : list of lists of int
         Each element provides the integer indices in `ar` with values given by
         the corresponding value in `unique_values`.
     """
-    inverse, values = pd.factorize(ar, sort=True)
+    index = safe_cast_to_index(ar)
+    inverse, values = pd.factorize(index, sort=True)
     groups = [[] for _ in range(len(values))]
     for n, g in enumerate(inverse):
         if g >= 0:
             # pandas uses -1 to mark NaN, but doesn't include them in values
             groups[g].append(n)
+
+    if isinstance(values, pd.MultiIndex):
+        # restore level names
+        values = values.set_names(index.names)
+
     return values, groups
 
 
@@ -116,6 +122,11 @@ def _inverse_permutation_indices(positions):
     return indices
 
 
+def _is_monotonic_unique(group):
+    index = safe_cast_to_index(group)
+    return index.is_monotonic and index.is_unique
+
+
 class GroupBy(object):
     """A object that implements the split-apply-combine pattern.
 
@@ -164,21 +175,24 @@ class GroupBy(object):
             if getattr(group_obj, 'name', None) is None:
                 raise ValueError('each item in `group` must have a name')
 
-        def is_monotonic_unique(group_obj):
-            index = safe_cast_to_index(group)
-            return index.is_monotonic and index.is_unique
-
         if grouper is not None and bins is not None:
             raise TypeError("Can't specify both `grouper` and `bins`.")
 
         if isinstance(group, (list, tuple)):
+            if not group:
+                raise ValueError('must supply at least one item to groupby')
             for g in group:
                 check_valid_group(g)
+            group_names = [g.name for g in group]
+            # we merge multiple groupby variables into Dataset, so they can be
+            # stacked if they use multiple dimensions
             group = merge(group)
         else:
             check_valid_group(group)
+            group_names = []
 
-        self._stacked_dim = None
+        orig_dims = []
+        stacked_dim_name = None
         if len(group.dims) > 1:
             # try to stack the dims of the group into a single dim
             # TODO: figure out how to exclude dimensions from the stacking
@@ -189,23 +203,55 @@ class GroupBy(object):
             # the copy is necessary here, otherwise read only array raises error
             # in pandas: https://github.com/pydata/pandas/issues/12813
             group = group.stack(**{stacked_dim_name: orig_dims}).copy()
-
             obj = obj.stack(**{stacked_dim_name: orig_dims})
-            self._stacked_dim = stacked_dim_name
-            self._unstacked_dims = orig_dims
+
+        grouped_dim_name = None
 
         if isinstance(group, Dataset):
             # list or tuple input is now a 1-dimensional Dataset
-            group_values = pd.MultiIndex.from_arrays(
-                [v.values for v in group.values()])
-            group = DataArray(group_values, group.coords, name='__joined__')
+
+            unstacked_group_names = [g for g in group_names
+                                     if g not in orig_dims]
+            stacked_group_names = [g for g in group_names if g in orig_dims]
+
+            levels = []
+            labels = []
+            names = []
+            if unstacked_group_names:
+                if len(unstacked_group_names) == 1:
+                    # MultiIndex.from_array returns a normal Index when passed
+                    # a single argument, so we use factorize instead.
+                    unstacked_name, = unstacked_group_names
+                    label, level = pd.factorize(
+                        group[unstacked_name].to_index())
+                    levels.append(level)
+                    labels.append(label)
+                    names.append(unstacked_name)
+                else:
+                    index = pd.MultiIndex.from_arrays(
+                        [group[name].to_index()
+                         for name in unstacked_group_names],
+                        names=unstacked_group_names)
+                    levels.extend(index.levels)
+                    labels.extend(index.labels)
+                    names.extend(index.names)
+
+            if stacked_group_names:
+                index = group.coords[stacked_dim_name].to_index()
+                for level, label, name in zip(
+                        index.levels, index.labels, index.names):
+                    if name in stacked_group_names:
+                        levels.append(level)
+                        labels.append(label)
+                        names.append(name)
+
+            group_index = pd.MultiIndex(levels, labels, names=names)
+            grouped_dim_name = 'grouped_' + '_'.join(group_names)
+            group = DataArray(group_index, group.coords,
+                              dims=list(group.dims), name=grouped_dim_name)
 
         group_dim, = group.dims
-
-        try:  # Dataset
-            expected_size = obj.dims[group_dim]
-        except TypeError:  # DataArray
-            expected_size = obj.shape[obj.get_axis_num(group_dim)]
+        expected_size = obj.coords[group_dim].size
         if group.size != expected_size:
             raise ValueError('the group variable\'s length does not '
                              'match the length of this variable along its '
@@ -232,10 +278,10 @@ class GroupBy(object):
             group_indices = ([slice(i, j) for i, j in zip(sbins[:-1], sbins[1:])] +
                              [slice(sbins[-1], None)])
             unique_coord = Coordinate(group.name, first_items.index)
-        elif group.name in obj.dims and is_monotonic_unique(group):
-            # if group.dims != (group.name,):
-            #     raise ValueError('`group` is required to be a coordinate if '
-            #                      '`group.name` is a dimension in `obj`')
+        elif group.name in obj.dims and _is_monotonic_unique(group):
+            # TODO(shoyer): Figure out how to handle cases where group is a
+            # dimension coordinate, but not monotonic unique. How should we
+            # handle squeeze?
             group_indices = np.arange(group.size)
             if not squeeze:
                 # group_indices = group_indices.reshape(-1, 1)
@@ -254,6 +300,8 @@ class GroupBy(object):
         self.unique_coord = unique_coord
         self._groups = None
         self._full_index = full_index
+        self._stacked_dim = stacked_dim_name
+        self._grouped_dim = grouped_dim_name
 
     @property
     def groups(self):
@@ -320,7 +368,7 @@ class GroupBy(object):
         """Our index contained empty groups (e.g., from a resampling). If we
         reduced on that dimension, we want to restore the full index.
         """
-        if (self._full_index is not None and self.group.name in combined.dims):
+        if self._full_index is not None and self.group.name in combined.dims:
             indexers = {self.group.name: self._full_index}
             combined = combined.reindex(**indexers)
         return combined
@@ -328,8 +376,12 @@ class GroupBy(object):
     def _maybe_unstack_array(self, arr):
         """This gets called if we are applying on an array with a
         multidimensional group."""
-        if self._stacked_dim is not None and self._stacked_dim in arr.dims:
-            arr = arr.unstack(self._stacked_dim)
+        if self._stacked_dim is not None:
+            if self._stacked_dim in arr.dims:
+                arr = arr.unstack(self._stacked_dim)
+            elif (self._grouped_dim is not None
+                  and self._grouped_dim in arr.dims):
+                arr = arr.unstack(self._grouped_dim)
         return arr
 
     def fillna(self, value):
