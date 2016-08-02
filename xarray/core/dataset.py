@@ -2198,7 +2198,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject):
     def imag(self):
         return self._unary_op(lambda x: x.imag, keep_attrs=True)(self)
 
-    def get_variables_by_attributes(self, **kwargs):
+    def filter_by_attrs(self, **kwargs):
         """Returns a ``Dataset`` with variables that match specific conditions.
 
         Can pass in ``key=value ``or ``key=callable``.  Variables are returned
@@ -2244,8 +2244,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject):
         ...         'time': pd.date_range('2014-09-06', periods=3),
         ...         'reference_time': pd.Timestamp('2014-09-05')})
         >>> # Get variables matching a specific standard_name.
-        >>> ds.get_variables_by_attributes(
-        ...     standard_name='convective_precipitation_flux')
+        >>> ds.filter_by_attrs(standard_name='convective_precipitation_flux')
         <xarray.Dataset>
         Dimensions:         (time: 3, x: 2, y: 2)
         Coordinates:
@@ -2259,7 +2258,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject):
             precipitation   (x, y, time) float64 4.178 2.307 6.041 6.046 0.06648 ...
         >>> # Get all variables that have a standard_name attribute.
         >>> standard_name = lambda v: v is not None
-        >>> ds.get_variables_by_attributes(standard_name=standard_name)
+        >>> ds.filter_by_attrs(standard_name=standard_name)
         <xarray.Dataset>
         Dimensions:         (time: 3, x: 2, y: 2)
         Coordinates:

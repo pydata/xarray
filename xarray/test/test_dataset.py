@@ -2532,7 +2532,7 @@ class TestDataset(TestCase):
         with self.assertRaisesRegexp(AttributeError, 'cannot set attr'):
             ds.other = 2
 
-    def test_get_variables_by_attributes(self):
+    def test_filter_by_attrs(self):
         precip = dict(standard_name='convective_precipitation_flux')
         temp0 = dict(standard_name='air_potential_temperature', height='0 m')
         temp10 = dict(standard_name='air_potential_temperature', height='10 m')
@@ -2542,28 +2542,28 @@ class TestDataset(TestCase):
                     coords={'time': (['t'], [0], dict(axis='T'))})
 
         # Test return empty Dataset.
-        ds.get_variables_by_attributes(standard_name='invalid_standard_name')
-        new_ds = ds.get_variables_by_attributes(standard_name='invalid_standard_name')
+        ds.filter_by_attrs(standard_name='invalid_standard_name')
+        new_ds = ds.filter_by_attrs(standard_name='invalid_standard_name')
         self.assertFalse(bool(new_ds.data_vars))
 
         # Test return one DataArray.
-        new_ds = ds.get_variables_by_attributes(standard_name='convective_precipitation_flux')
+        new_ds = ds.filter_by_attrs(standard_name='convective_precipitation_flux')
         self.assertEqual(new_ds['precipitation'].standard_name, 'convective_precipitation_flux')
         self.assertDatasetEqual(new_ds['precipitation'], ds['precipitation'])
 
         # Test return more than one DataArray.
-        new_ds = ds.get_variables_by_attributes(standard_name='air_potential_temperature')
+        new_ds = ds.filter_by_attrs(standard_name='air_potential_temperature')
         self.assertEqual(len(new_ds.data_vars), 2)
         for var in new_ds.data_vars:
             self.assertEqual(new_ds[var].standard_name, 'air_potential_temperature')
 
         # Test callable.
-        new_ds = ds.get_variables_by_attributes(height=lambda v: v is not None)
+        new_ds = ds.filter_by_attrs(height=lambda v: v is not None)
         self.assertEqual(len(new_ds.data_vars), 2)
         for var in new_ds.data_vars:
             self.assertEqual(new_ds[var].standard_name, 'air_potential_temperature')
 
-        new_ds = ds.get_variables_by_attributes(height='10 m')
+        new_ds = ds.filter_by_attrs(height='10 m')
         self.assertEqual(len(new_ds.data_vars), 1)
         for var in new_ds.data_vars:
             self.assertEqual(new_ds[var].height, '10 m')

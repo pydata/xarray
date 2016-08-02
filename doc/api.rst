@@ -394,7 +394,7 @@ Dataset methods
    Dataset.close
    Dataset.load
    Dataset.chunk
-   Dataset.get_variables_by_attributes
+   Dataset.filter_by_attrs
 
 DataArray methods
 -----------------
