@@ -35,32 +35,38 @@ def _dispatch_priority(obj):
     return -1
 
 
-def _create_op(name):
+class _UFuncDispatcher(object):
+    """Wrapper for dispatching ufuncs."""
+    def __init__(self, name):
+        self._name = name
 
-    def func(*args, **kwargs):
+    def __call__(self, *args, **kwargs):
         new_args = args
-        f = _dask_or_eager_func(name, n_array_args=len(args))
+        f = _dask_or_eager_func(self._name, n_array_args=len(args))
         if len(args) > 2 or len(args) == 0:
             raise TypeError('cannot handle %s arguments for %r' %
-                            (len(args), name))
+                            (len(args), self._name))
         elif len(args) == 1:
             if isinstance(args[0], _xarray_types):
-                f = args[0]._unary_op(func)
+                f = args[0]._unary_op(self)
         else:  # len(args) = 2
             p1, p2 = map(_dispatch_priority, args)
             if p1 >= p2:
                 if isinstance(args[0], _xarray_types):
-                    f = args[0]._binary_op(func)
+                    f = args[0]._binary_op(self)
             else:
                 if isinstance(args[1], _xarray_types):
-                    f = args[1]._binary_op(func, reflexive=True)
+                    f = args[1]._binary_op(self, reflexive=True)
                     new_args = tuple(reversed(args))
         res = f(*new_args, **kwargs)
         if res is NotImplemented:
             raise TypeError('%r not implemented for types (%r, %r)'
-                            % (name, type(args[0]), type(args[1])))
+                            % (self._name, type(args[0]), type(args[1])))
         return res
 
+
+def _create_op(name):
+    func = _UFuncDispatcher(name)
     func.__name__ = name
     doc = getattr(_np, name).__doc__
     func.__doc__ = ('xarray specific variant of numpy.%s. Handles '
