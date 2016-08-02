@@ -37,6 +37,7 @@ Documentation
 
    whats-new
    why-xarray
+   faq
    examples
    installing
    data-structures
@@ -51,7 +52,6 @@ Documentation
    dask
    plotting
    api
-   faq
    internals
 
 See also
