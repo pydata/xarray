@@ -2176,5 +2176,88 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
     def imag(self):
         return self._unary_op(lambda x: x.imag, keep_attrs=True)(self)
 
+    def filter_by_attrs(self, **kwargs):
+        """Returns a ``Dataset`` with variables that match specific conditions.
+
+        Can pass in ``key=value ``or ``key=callable``.  Variables are returned
+        that contain all of the matches or callable returns True.  If using a
+        callable note that it should accept a single parameter only,
+        the attribute value.
+
+        Parameters
+        ----------
+        **kwargs : key=value
+            key : str
+                Attribute name.
+            value : callable or obj
+                If value is a callable, it should return a boolean in the form
+                of bool = func(attr) where attr is da.attrs[key].
+                Otherwise, value will be compared to the each
+                DataArray's attrs[key].
+
+        Returns
+        -------
+        new : Dataset
+            New dataset with variables filtered by attribute.
+
+        Examples
+        --------
+        # "Create an example dataset:
+        >>> import numpy as np
+        >>> import pandas as pd
+        >>> import xarray as xr
+        >>> temp = 15 + 8 * np.random.randn(2, 2, 3)
+        >>> precip = 10 * np.random.rand(2, 2, 3)
+        >>> lon = [[-99.83, -99.32], [-99.79, -99.23]]
+        >>> lat = [[42.25, 42.21], [42.63, 42.59]]
+        >>> dims = ['x', 'y', 'time']
+        >>> temp_attr = dict(standard_name='air_potential_temperature')
+        >>> precip_attr = dict(standard_name='convective_precipitation_flux')
+        >>> ds = xr.Dataset({
+        ...         'temperature': (dims,  temp, temp_attr),
+        ...         'precipitation': (dims, precip, precip_attr)},
+        ...                 coords={
+        ...         'lon': (['x', 'y'], lon),
+        ...         'lat': (['x', 'y'], lat),
+        ...         'time': pd.date_range('2014-09-06', periods=3),
+        ...         'reference_time': pd.Timestamp('2014-09-05')})
+        >>> # Get variables matching a specific standard_name.
+        >>> ds.filter_by_attrs(standard_name='convective_precipitation_flux')
+        <xarray.Dataset>
+        Dimensions:         (time: 3, x: 2, y: 2)
+        Coordinates:
+          * x               (x) int64 0 1
+          * time            (time) datetime64[ns] 2014-09-06 2014-09-07 2014-09-08
+            lat             (x, y) float64 42.25 42.21 42.63 42.59
+          * y               (y) int64 0 1
+            reference_time  datetime64[ns] 2014-09-05
+            lon             (x, y) float64 -99.83 -99.32 -99.79 -99.23
+        Data variables:
+            precipitation   (x, y, time) float64 4.178 2.307 6.041 6.046 0.06648 ...
+        >>> # Get all variables that have a standard_name attribute.
+        >>> standard_name = lambda v: v is not None
+        >>> ds.filter_by_attrs(standard_name=standard_name)
+        <xarray.Dataset>
+        Dimensions:         (time: 3, x: 2, y: 2)
+        Coordinates:
+            lon             (x, y) float64 -99.83 -99.32 -99.79 -99.23
+            lat             (x, y) float64 42.25 42.21 42.63 42.59
+          * x               (x) int64 0 1
+          * y               (y) int64 0 1
+          * time            (time) datetime64[ns] 2014-09-06 2014-09-07 2014-09-08
+            reference_time  datetime64[ns] 2014-09-05
+        Data variables:
+            temperature     (x, y, time) float64 25.86 20.82 6.954 23.13 10.25 11.68 ...
+            precipitation   (x, y, time) float64 5.702 0.9422 2.075 1.178 3.284 ...
+
+        """
+        selection = []
+        for var_name, variable in self.data_vars.items():
+            for attr_name, pattern in kwargs.items():
+                attr_value = variable.attrs.get(attr_name)
+                if ((callable(pattern) and pattern(attr_value))
+                        or attr_value == pattern):
+                    selection.append(var_name)
+        return self[selection]
 
 ops.inject_all_ops_and_reduce_methods(Dataset, array_only=False)

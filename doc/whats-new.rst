@@ -80,6 +80,11 @@ Enhancements
   allowing more control on the colorbar (:issue:`872`).
   By `Fabien Maussion <https://github.com/fmaussion>`_.
 
+- New Dataset method :py:meth:`filter_by_attrs`, akin to
+  ``netCDF4.Dataset.get_variables_by_attributes``, to easily filter
+  data variables using its attributes.
+  `Filipe Fernandes <https://github.com/ocefpaf>`_.
+
 Bug fixes
 ~~~~~~~~~
 
