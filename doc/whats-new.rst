@@ -15,8 +15,8 @@ What's New
 
 .. _whats-new.0.8.0:
 
-v0.8.0 (unreleased)
--------------------
+v0.8.0 (2 August 2016)
+----------------------
 
 This release includes four months of new features and bug fixes, including
 several breaking changes.
