@@ -74,3 +74,14 @@ class TestAccessor(TestCase):
         assert array.example_accessor is array.example_accessor
         array_restored = pickle.loads(pickle.dumps(array))
         assert array.identical(array_restored)
+
+    def test_broken_accessor(self):
+        # regression test for GH933
+
+        @xr.register_dataset_accessor('stupid_accessor')
+        class BrokenAccessor(object):
+            def __init__(self, xarray_obj):
+                raise AttributeError('broken')
+
+        with self.assertRaisesRegexp(RuntimeError, 'error initializing'):
+            xr.Dataset().stupid_accessor

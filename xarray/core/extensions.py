@@ -1,5 +1,8 @@
+import traceback
+
 from .dataarray import DataArray
 from .dataset import Dataset
+from .pycompat import PY2
 
 
 class AccessorRegistrationError(Exception):
@@ -16,7 +19,16 @@ class _CachedAccessor(object):
         if obj is None:
             # we're accessing the attribute of the class, i.e., Dataset.geo
             return self._accessor
-        accessor_obj = self._accessor(obj)
+        try:
+            accessor_obj = self._accessor(obj)
+        except AttributeError:
+            # __getattr__ on data object will swallow any AttributeErrors raised
+            # when initializing the accessor, so we need to raise as something
+            # else (GH933):
+            msg = 'error initializing %r accessor.' % self._name
+            if PY2:
+                msg += ' Full traceback:\n' + traceback.format_exc()
+            raise RuntimeError(msg)
         # Replace the property with the accessor object. Inspired by:
         # http://www.pydanny.com/cached-property.html
         # We need to use object.__setattr__ because we overwrite __setattr__ on
