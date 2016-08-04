@@ -136,8 +136,8 @@ have support for converting their native objects to and from xarray (see
 How should I cite xarray?
 -------------------------
 
-If you are using xarray and would like to cite it in a publication, we would
-certainly appreciate it. We recommend two citations.
+If you are using xarray and would like to cite it in academic publication, we
+would certainly appreciate it. We recommend two citations.
 
   1. At a minimum, we recommend citing the xarray overview journal article,
      to be submitted to the Journal of Open Research Software.
@@ -154,7 +154,7 @@ certainly appreciate it. We recommend two citations.
              year    = {2016}
            }
 
-  2. You may also want to cite a specific version of the xarray package, we
+  2. You may also want to cite a specific version of the xarray package. We
      provide a `Zenodo`__ citation and DOI for this purpose.
 
      - Hoyer, S. et al.. (2016). xarray: v0.8.0. Zenodo. 10.5281/zenodo.59499
