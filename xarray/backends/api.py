@@ -80,8 +80,9 @@ def _validate_dataset_names(dataset):
 
 
 def open_dataset(filename_or_obj, group=None, decode_cf=True,
-                 mask_and_scale=True, decode_times=True,
-                 concat_characters=True, decode_coords=True, engine=None,
+                 mask_and_scale=True, decode_datetimes=True,
+                 decode_timedeltas=False, concat_characters=True,
+                 decode_coords=True, engine=None,
                  chunks=None, lock=None, drop_variables=None):
     """Load and decode a dataset from a file or file-like object.
 
@@ -107,9 +108,12 @@ def open_dataset(filename_or_obj, group=None, decode_cf=True,
         `missing_value` attribute contains multiple values a warning will be
         issued and all array values matching one of the multiple values will
         be replaced by NA.
-    decode_times : bool, optional
+    decode_datetimes : bool, optional
         If True, decode times encoded in the standard NetCDF datetime format
         into datetime objects. Otherwise, leave them encoded as numbers.
+    decode_timedeltas : bool, optional
+        If True, decode time data encoded in the standard NetCDF datetime format
+        into timedelta objects. Otherwise, leave them encoded as numbers.
     concat_characters : bool, optional
         If True, concatenate along the last dimension of character arrays to
         form string arrays. Dimensions will only be concatenated over (and
@@ -148,15 +152,16 @@ def open_dataset(filename_or_obj, group=None, decode_cf=True,
     """
     if not decode_cf:
         mask_and_scale = False
-        decode_times = False
+        decode_datetimes = False
+        decode_timedeltas = False
         concat_characters = False
         decode_coords = False
 
     def maybe_decode_store(store, lock=False):
         ds = conventions.decode_cf(
-            store, mask_and_scale=mask_and_scale, decode_times=decode_times,
-            concat_characters=concat_characters, decode_coords=decode_coords,
-            drop_variables=drop_variables)
+            store, mask_and_scale=mask_and_scale, decode_datetimes=decode_datetimes,
+            decode_timedeltas=decode_timedeltas, concat_characters=concat_characters,
+            decode_coords=decode_coords, drop_variables=drop_variables)
 
         if chunks is not None:
             try:
@@ -174,7 +179,8 @@ def open_dataset(filename_or_obj, group=None, decode_cf=True,
             else:
                 file_arg = filename_or_obj
             token = tokenize(file_arg, group, decode_cf, mask_and_scale,
-                             decode_times, concat_characters, decode_coords,
+                             decode_datetimes, decode_timedeltas,
+                             concat_characters, decode_coords,
                              engine, chunks, drop_variables)
             name_prefix = '%s:%s/' % (filename_or_obj, group or '')
             ds2 = ds.chunk(chunks, name_prefix=name_prefix, token=token,

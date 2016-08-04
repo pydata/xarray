@@ -379,7 +379,7 @@ class DecodedCFDatetimeArray(utils.NDArrayMixin):
             calendar_msg = ('the default calendar' if calendar is None
                             else 'calendar %r' % calendar)
             msg = ('unable to decode time units %r with %s. Try '
-                   'opening your dataset with decode_times=False.'
+                   'opening your dataset with decode_datestimes=False.'
                    % (units, calendar_msg))
             if not PY3:
                 msg += ' Full traceback:\n' + traceback.format_exc()
@@ -718,7 +718,8 @@ def encode_cf_variable(var, needs_copy=True, name=None):
 
 
 def decode_cf_variable(var, concat_characters=True, mask_and_scale=True,
-                       decode_times=True, decode_endianness=True):
+                       decode_datetimes=True, decode_timedeltas=False,
+                       decode_endianness=True):
     """
     Decodes a variable which may hold CF encoded information.
 
@@ -737,8 +738,10 @@ def decode_cf_variable(var, concat_characters=True, mask_and_scale=True,
     mask_and_scale: bool
         Lazily scale (using scale_factor and add_offset) and mask
         (using _FillValue).
-    decode_times : bool
+    decode_datetimes : bool
         Decode cf times ('hours since 2000-01-01') to np.datetime64.
+    decode_timedeltas : bool
+        Decode cf time data ('seconds') to np.timedelta64.
     decode_endianness : bool
         Decode arrays from non-native to native endianness.
 
@@ -792,13 +795,13 @@ def decode_cf_variable(var, concat_characters=True, mask_and_scale=True,
             data = MaskedAndScaledArray(data, fill_value, scale_factor,
                                         add_offset, dtype)
 
-    if decode_times and 'units' in attributes:
-        if 'since' in attributes['units']:
+    if any([decode_datetimes, decode_timedeltas]) and 'units' in attributes:
+        if decode_datetimes and 'since' in attributes['units']:
             # datetime
             units = pop_to(attributes, encoding, 'units')
             calendar = pop_to(attributes, encoding, 'calendar')
             data = DecodedCFDatetimeArray(data, units, calendar)
-        elif attributes['units'] in TIME_UNITS:
+        elif decode_timedeltas and attributes['units'] in TIME_UNITS:
             # timedelta
             units = pop_to(attributes, encoding, 'units')
             data = DecodedCFTimedeltaArray(data, units)
@@ -823,8 +826,9 @@ def decode_cf_variable(var, concat_characters=True, mask_and_scale=True,
 
 
 def decode_cf_variables(variables, attributes, concat_characters=True,
-                        mask_and_scale=True, decode_times=True,
-                        decode_coords=True, drop_variables=None):
+                        mask_and_scale=True, decode_datetimes=True,
+                        decode_timedeltas=False, decode_coords=True,
+                        drop_variables=None):
     """
     Decode a several CF encoded variables.
 
@@ -860,7 +864,8 @@ def decode_cf_variables(variables, attributes, concat_characters=True,
                   stackable(v.dims[-1]))
         new_vars[k] = decode_cf_variable(
             v, concat_characters=concat, mask_and_scale=mask_and_scale,
-            decode_times=decode_times)
+            decode_datetimes=decode_datetimes,
+            decode_timedeltas=decode_timedeltas)
         if decode_coords:
             var_attrs = new_vars[k].attrs
             if 'coordinates' in var_attrs:
@@ -879,7 +884,8 @@ def decode_cf_variables(variables, attributes, concat_characters=True,
 
 
 def decode_cf(obj, concat_characters=True, mask_and_scale=True,
-              decode_times=True, decode_coords=True, drop_variables=None):
+              decode_datetimes=True, decode_timedeltas=False,
+              decode_coords=True, drop_variables=None):
     """Decode the given Dataset or Datastore according to CF conventions into
     a new Dataset.
 
@@ -893,9 +899,11 @@ def decode_cf(obj, concat_characters=True, mask_and_scale=True,
     mask_and_scale: bool, optional
         Lazily scale (using scale_factor and add_offset) and mask
         (using _FillValue).
-    decode_times : bool, optional
+    decode_datetimes : bool, optional
         Decode cf times (e.g., integers since 'hours since 2000-01-01') to
         np.datetime64.
+    decode_timedeltas : bool, optional
+        Decode cf time data (e.g., 'seconds') to np.timedelta64.
     decode_coords : bool, optional
         Use the 'coordinates' attribute on variable (or the dataset itself) to
         identify coordinates.
@@ -924,8 +932,8 @@ def decode_cf(obj, concat_characters=True, mask_and_scale=True,
         raise TypeError('can only decode Dataset or DataStore objects')
 
     vars, attrs, coord_names = decode_cf_variables(
-        vars, attrs, concat_characters, mask_and_scale, decode_times,
-        decode_coords, drop_variables=drop_variables)
+        vars, attrs, concat_characters, mask_and_scale, decode_datetimes,
+        decode_timedeltas, decode_coords, drop_variables=drop_variables)
     ds = Dataset(vars, attrs=attrs)
     ds = ds.set_coords(coord_names.union(extra_coords))
     ds._file_obj = file_obj
@@ -934,7 +942,7 @@ def decode_cf(obj, concat_characters=True, mask_and_scale=True,
 
 def cf_decoder(variables, attributes,
                concat_characters=True, mask_and_scale=True,
-               decode_times=True):
+               decode_datetimes=True, decode_timedeltas=False):
     """
     Decode a set of CF encoded variables and attributes.
 
@@ -952,8 +960,10 @@ def cf_decoder(variables, attributes,
     mask_and_scale: bool
         Lazily scale (using scale_factor and add_offset) and mask
         (using _FillValue).
-    decode_times : bool
+    decode_datetimes : bool
         Decode cf times ('hours since 2000-01-01') to np.datetime64.
+    decode_timedeltas : bool
+        Decode cf time data ('seconds') to np.timedelta64.
 
     Returns
     -------
@@ -963,7 +973,8 @@ def cf_decoder(variables, attributes,
         A dictionary mapping from attribute name to values.
     """
     variables, attributes, _ = decode_cf_variables(
-        variables, attributes, concat_characters, mask_and_scale, decode_times)
+        variables, attributes, concat_characters, mask_and_scale,
+        decode_datetimes, decode_timedeltas)
     return variables, attributes
 
 
