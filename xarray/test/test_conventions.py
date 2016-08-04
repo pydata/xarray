@@ -228,6 +228,13 @@ class TestDatetime(TestCase):
         self.assertRaisesRegexp(ValueError, "_FillValue and missing_value",
                                 lambda: conventions.decode_cf_variable(var))
 
+    def test_decoded_timedelta_array(self):
+        actual = conventions.DecodedCFTimedeltaArray(
+            np.array([0, 1, 2]), 'seconds')
+        expected = pd.to_timedelta(['0s', '1s', '2s']).values
+        self.assertEqual(actual.dtype, np.dtype('timedelta64[ns]'))
+        self.assertArrayEqual(actual, expected)
+
     @requires_netCDF4
     def test_decode_cf_datetime_non_iso_strings(self):
         # datetime strings that are _almost_ ISO compliant but not quite,
@@ -537,6 +544,41 @@ class TestDecodeCF(TestCase):
         self.assertDatasetIdentical(expected, actual)
         self.assertDatasetIdentical(expected, actual2)
 
+    def test_datetimes_true(self):
+        original = Dataset({
+            'time': ('time', [0, 1, 2], {'units': 'days since 2000-01-01'}),
+            'period': ('time', [0, 1, 2], {'coordinates': 'time', 'units': 'seconds'}),
+        })
+        expected = Dataset({
+            'time': pd.date_range('2000-01-01', periods=3),
+            'period': ('time', [0, 1, 2], {'units': 'seconds'}),
+        })
+        actual = conventions.decode_cf(original, decode_datetimes=True)
+        self.assertDatasetIdentical(expected, actual)
+
+    def test_timedeltas_true(self):
+        original = Dataset({
+            'time': ('time', [0, 1, 2], {'units': 'days since 2000-01-01'}),
+            'period': ('time', [0, 1, 2], {'coordinates': 'time', 'units': 'seconds'}),
+        })
+        expected = Dataset({
+            'time': pd.date_range('2000-01-01', periods=3),
+            'period': ('time', pd.to_timedelta(['0s', '1s', '2s'])),
+        })
+        actual = conventions.decode_cf(original, decode_timedeltas=True)
+        self.assertDatasetIdentical(expected, actual)
+
+    def test_datetimes_false(self):
+        original = Dataset({
+            'time': ('time', [0, 1, 2], {'units': 'days since 2000-01-01'}),
+            'period': ('time', [0, 1, 2], {'coordinates': 'time', 'units': 'seconds'}),
+        })
+        expected = Dataset({
+            'time': [0, 1, 2],
+            'period': ('time', [0, 1, 2], {'units': 'seconds'}),
+        })
+        actual = conventions.decode_cf(original, decode_datetimes=False)
+        self.assertArrayEqual(expected['time'], actual['time'])
 
 class CFEncodedInMemoryStore(WritableCFDataStore, InMemoryDataStore):
     pass
