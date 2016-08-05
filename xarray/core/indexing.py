@@ -214,6 +214,34 @@ def convert_label_indexer(index, label, index_name='', method=None,
     return indexer, new_index
 
 
+def _get_valid_indexers(data_obj, indexers):
+    """Ensure that the keys of the returned mapping of indexers
+    are valid dimension names (group multi-index level keys / labels into
+    dims / dict-based labels if needed).
+    """
+    dim_indexers = {}
+    for name, label in iteritems(indexers):
+        dim = data_obj[name].dims[0]
+        if name != dim:
+            # we consider this case as a multi-index level indexer
+            if not dim_indexers.get(dim, False):
+                dim_indexers[dim] = {}
+            dim_indexers[dim][name] = label
+        else:
+            index = data_obj[dim].to_index()
+            if isinstance(index, pd.MultiIndex):
+                if not dim_indexers.get(dim, False):
+                    dim_indexers[dim] = {}
+                if is_dict_like(label):
+                    dim_indexers[dim].update(label)
+                else:
+                    first_level_name = index.names[0]
+                    dim_indexers[dim].update({first_level_name: label})
+            else:
+                dim_indexers[dim] = label
+    return dim_indexers
+
+
 def remap_label_indexers(data_obj, indexers, method=None, tolerance=None):
     """Given an xarray data object and label based indexers, return a mapping
     of equivalent location based indexers. Also return a mapping of updated
@@ -223,7 +251,7 @@ def remap_label_indexers(data_obj, indexers, method=None, tolerance=None):
         raise TypeError('``method`` must be a string')
 
     pos_indexers, new_indexes = {}, {}
-    for dim, label in iteritems(indexers):
+    for dim, label in iteritems(_get_valid_indexers(data_obj, indexers)):
         index = data_obj[dim].to_index()
         idxr, new_idx = convert_label_indexer(index, label,
                                               dim, method, tolerance)
