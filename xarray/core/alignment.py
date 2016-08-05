@@ -96,19 +96,26 @@ def partial_align(*objects, **kwargs):
     exclude = kwargs.pop('exclude', None)
     if exclude is None:
         exclude = set()
+    skip_single_target = kwargs.pop('skip_single_target', False)
     if kwargs:
         raise TypeError('align() got unexpected keyword arguments: %s'
                         % list(kwargs))
 
-    joined_indexes = _join_indexes(join, objects, exclude=exclude)
-    if indexes is not None:
-        joined_indexes.update(indexes)
+    if len(objects) == 1 and (skip_single_target or indexes is None):
+        # we don't need to align, so don't bother with reindexing, which fails
+        # for non-unique indexes
+        result = (objects[0].copy(),) if copy else objects
+    else:
+        joined_indexes = _join_indexes(join, objects, exclude=exclude)
+        if indexes is not None:
+            joined_indexes.update(indexes)
 
-    result = []
-    for obj in objects:
-        valid_indexers = dict((k, v) for k, v in joined_indexes.items()
-                              if k in obj.dims)
-        result.append(obj.reindex(copy=copy, **valid_indexers))
+        result = []
+        for obj in objects:
+            valid_indexers = dict((k, v) for k, v in joined_indexes.items()
+                                  if k in obj.dims)
+            result.append(obj.reindex(copy=copy, **valid_indexers))
+
     return tuple(result)
 
 
@@ -116,7 +123,8 @@ def is_alignable(obj):
     return hasattr(obj, 'indexes') and hasattr(obj, 'reindex')
 
 
-def deep_align(list_of_variable_maps, join='outer', copy=True, indexes=None):
+def deep_align(list_of_variable_maps, join='outer', copy=True, indexes=None,
+               skip_single_target=False):
     """Align objects, recursing into dictionary values.
     """
     if indexes is None:
@@ -145,7 +153,8 @@ def deep_align(list_of_variable_maps, join='outer', copy=True, indexes=None):
         else:
             out.append(variables)
 
-    aligned = partial_align(*targets, join=join, copy=copy, indexes=indexes)
+    aligned = partial_align(*targets, join=join, copy=copy, indexes=indexes,
+                            skip_single_target=skip_single_target)
 
     for key, aligned_obj in zip(keys, aligned):
         if isinstance(key, tuple):

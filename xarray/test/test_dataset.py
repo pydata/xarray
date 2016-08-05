@@ -1482,6 +1482,24 @@ class TestDataset(TestCase):
         expected = expected.set_coords('c')
         self.assertDatasetIdentical(actual, expected)
 
+    def test_setitem_non_unique_index(self):
+        # regression test for GH943
+        original = Dataset({'data': ('x', np.arange(5))},
+                            coords={'x': [0, 1, 2, 0, 1]})
+        expected = Dataset({'data': ('x', np.arange(5))})
+
+        actual = original.copy()
+        actual['x'] = list(range(5))
+        self.assertDatasetIdentical(actual, expected)
+
+        actual = original.copy()
+        actual['x'] = ('x', list(range(5)))
+        self.assertDatasetIdentical(actual, expected)
+
+        actual = original.copy()
+        actual.coords['x'] = list(range(5))
+        self.assertDatasetIdentical(actual, expected)
+
     def test_delitem(self):
         data = create_test_data()
         all_items = set(data)
