@@ -424,6 +424,16 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
 
         return self._construct_direct(variables, coord_names, dims, attrs)
 
+    @property
+    def _level_coords(self):
+        level_coords = OrderedDict()
+        for name in self._coord_names:
+            var = self.variables[name]
+            if name != var.dims[0]:
+                continue
+            level_coords.update(var.to_coord().get_level_coords())
+        return level_coords
+
     def _copy_listed(self, names):
         """Create a new Dataset with the listed variables from this dataset and
         the all relevant coordinates. Skips all validation.
@@ -450,7 +460,9 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         from .dataarray import DataArray
 
         try:
-            variable = self._variables[name]
+            variable = self._variables.get(name)
+            if variable is None:
+                variable = self._level_coords[name]
         except KeyError:
             _, name, variable = _get_virtual_variable(self._variables, name)
 
