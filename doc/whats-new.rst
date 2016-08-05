@@ -13,6 +13,17 @@ What's New
     import xarray as xr
     np.random.seed(123456)
 
+.. _whats-new.0.8.1:
+
+v0.8.1 (unreleased)
+-------------------
+
+Bug fixes
+~~~~~~~~~
+
+- Fix regression in v0.8.0 that broke assignment to Datasets with non-unique
+  indexes (:issue:`943`).
+
 .. _whats-new.0.8.0:
 
 v0.8.0 (2 August 2016)

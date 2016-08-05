@@ -1453,6 +1453,13 @@ class TestDataset(TestCase):
         expected = Dataset({'x': ('y', [4, 5, 6])})
         self.assertDatasetIdentical(ds, expected)
 
+    def test_setitem_align_new_indexes(self):
+        ds = Dataset({'foo': ('x', [1, 2, 3])}, {'x': [0, 1, 2]})
+        ds['bar'] = DataArray([2, 3, 4], [('x', [1, 2, 3])])
+        expected = Dataset({'foo': ('x', [1, 2, 3]),
+                            'bar': ('x', [np.nan, 2, 3])})
+        self.assertDatasetIdentical(ds, expected)
+
     def test_assign(self):
         ds = Dataset()
         actual = ds.assign(x = [0, 1, 2], y = 2)
@@ -1480,6 +1487,24 @@ class TestDataset(TestCase):
 
         actual = ds.groupby('b').assign_coords(c = lambda ds: ds.a.sum())
         expected = expected.set_coords('c')
+        self.assertDatasetIdentical(actual, expected)
+
+    def test_setitem_non_unique_index(self):
+        # regression test for GH943
+        original = Dataset({'data': ('x', np.arange(5))},
+                            coords={'x': [0, 1, 2, 0, 1]})
+        expected = Dataset({'data': ('x', np.arange(5))})
+
+        actual = original.copy()
+        actual['x'] = list(range(5))
+        self.assertDatasetIdentical(actual, expected)
+
+        actual = original.copy()
+        actual['x'] = ('x', list(range(5)))
+        self.assertDatasetIdentical(actual, expected)
+
+        actual = original.copy()
+        actual.coords['x'] = list(range(5))
         self.assertDatasetIdentical(actual, expected)
 
     def test_delitem(self):

@@ -96,9 +96,22 @@ def partial_align(*objects, **kwargs):
     exclude = kwargs.pop('exclude', None)
     if exclude is None:
         exclude = set()
+    skip_single_target = kwargs.pop('skip_single_target', False)
     if kwargs:
         raise TypeError('align() got unexpected keyword arguments: %s'
                         % list(kwargs))
+
+    if len(objects) == 1:
+        obj, = objects
+        if (indexes is None or
+                (skip_single_target and
+                 all(obj.indexes[k].equals(v) for k, v in indexes.items()
+                     if k in obj.indexes))):
+            # We don't need to align, so don't bother with reindexing, which
+            # fails for non-unique indexes.
+            # `skip_single_target` is a hack so we can skip alignment of a
+            # single object in merge.
+            return (obj.copy() if copy else obj,)
 
     joined_indexes = _join_indexes(join, objects, exclude=exclude)
     if indexes is not None:
@@ -109,6 +122,7 @@ def partial_align(*objects, **kwargs):
         valid_indexers = dict((k, v) for k, v in joined_indexes.items()
                               if k in obj.dims)
         result.append(obj.reindex(copy=copy, **valid_indexers))
+
     return tuple(result)
 
 
@@ -116,7 +130,8 @@ def is_alignable(obj):
     return hasattr(obj, 'indexes') and hasattr(obj, 'reindex')
 
 
-def deep_align(list_of_variable_maps, join='outer', copy=True, indexes=None):
+def deep_align(list_of_variable_maps, join='outer', copy=True, indexes=None,
+               skip_single_target=False):
     """Align objects, recursing into dictionary values.
     """
     if indexes is None:
@@ -145,7 +160,8 @@ def deep_align(list_of_variable_maps, join='outer', copy=True, indexes=None):
         else:
             out.append(variables)
 
-    aligned = partial_align(*targets, join=join, copy=copy, indexes=indexes)
+    aligned = partial_align(*targets, join=join, copy=copy, indexes=indexes,
+                            skip_single_target=skip_single_target)
 
     for key, aligned_obj in zip(keys, aligned):
         if isinstance(key, tuple):
