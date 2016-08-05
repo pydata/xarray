@@ -417,12 +417,23 @@ class DataArray(AbstractArray, BaseDataObject):
             key = indexing.expanded_indexer(key, self.ndim)
             return dict(zip(self.dims, key))
 
+    @property
+    def _level_coords(self):
+        level_coords = OrderedDict()
+        for name, var in self._coords.items():
+            if name not in self.dims:
+                continue
+            level_coords.update(var.to_coord().get_level_coords())
+        return level_coords
+
     def __getitem__(self, key):
         if isinstance(key, basestring):
             from .dataset import _get_virtual_variable
 
             try:
-                var = self._coords[key]
+                var = self._coords.get(key)
+                if var is None:
+                    var = self._level_coords[key]
             except KeyError:
                 _, key, var = _get_virtual_variable(self._coords, key)
 
@@ -444,7 +455,7 @@ class DataArray(AbstractArray, BaseDataObject):
     @property
     def _attr_sources(self):
         """List of places to look-up items for attribute-style access"""
-        return [self.coords, self.attrs]
+        return [self.coords, self._level_coords, self.attrs]
 
     def __contains__(self, key):
         return key in self._coords

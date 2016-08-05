@@ -1071,12 +1071,17 @@ class IndexVariable(Variable):
     of a NumPy array. Hence, their values are immutable and must always be one-
     dimensional.
 
-    They also have a name property, which is the name of their sole dimension.
+    They also have a name property, which is the name of their sole dimension
+    unless another name is given.
     """
 
-    def __init__(self, name, data, attrs=None, encoding=None, fastpath=False):
-        super(IndexVariable, self).__init__(
-            name, data, attrs, encoding, fastpath)
+    def __init__(self, name, data, dim=None, attrs=None, encoding=None,
+                 fastpath=False):
+        if dim is None:
+            dim = name
+        self._name = name
+
+        super(IndexVariable, self).__init__(dim, data, attrs, encoding, fastpath)
         if self.ndim != 1:
             raise ValueError('%s objects must be 1-dimensional' %
                              type(self).__name__)
@@ -1092,8 +1097,8 @@ class IndexVariable(Variable):
         if not hasattr(values, 'ndim') or values.ndim == 0:
             return Variable((), values, self._attrs, self._encoding)
         else:
-            return type(self)(self.dims, values, self._attrs, self._encoding,
-                              fastpath=True)
+            return type(self)(self._name, values, self.dims, self._attrs,
+                              self._encoding, fastpath=True)
 
     def __setitem__(self, key, value):
         raise TypeError('%s values cannot be modified' % type(self).__name__)
@@ -1145,8 +1150,8 @@ class IndexVariable(Variable):
         # there is no need to copy the index values here even if deep=True
         # since pandas.Index objects are immutable
         data = PandasIndexAdapter(self) if deep else self._data
-        return type(self)(self.dims, data, self._attrs, self._encoding,
-                          fastpath=True)
+        return type(self)(self._name, data, self.dims, self._attrs,
+                          self._encoding, fastpath=True)
 
     def _data_equals(self, other):
         return self.to_index().equals(other.to_index())
@@ -1173,9 +1178,24 @@ class IndexVariable(Variable):
             index = index.set_names(self.name)
         return index
 
+    def get_level_coords(self):
+        """Return an OrderedDict of independent coordinates for each
+        index level, or return an empty OrderedDict if the coordinate
+        has not a MultiIndex.
+        """
+        level_coords = OrderedDict()
+        index = self.to_index()
+        if not isinstance(index, pd.MultiIndex):
+            return level_coords
+        for level_name in index.names:
+            level_coords[level_name] = type(self)(
+                level_name, index.get_level_values(level_name), dim=self.name
+            )
+        return level_coords
+
     @property
     def name(self):
-        return self.dims[0]
+        return self._name
 
     @name.setter
     def name(self, value):
