@@ -214,31 +214,41 @@ def convert_label_indexer(index, label, index_name='', method=None,
     return indexer, new_index
 
 
-def _get_valid_indexers(data_obj, indexers):
-    """Ensure that the keys of the returned mapping of indexers
-    are valid dimension names (group multi-index level keys / labels into
-    dims / dict-based labels if needed).
+def get_dim_indexers(data_obj, indexers):
+    """Given an xarray data object and label based indexers, return a mapping
+    of indexers with only dimension names as keys.
+
+    It tries to group multiple indexers given on a multi-index dimension
+    into a single, dictionary indexer for that dimension (Raise a ValueError
+    if it is not possible).
     """
+    level_indexers = {}
     dim_indexers = {}
-    for name, label in iteritems(indexers):
-        dim = data_obj[name].dims[0]
-        if name != dim:
-            # we consider this case as a multi-index level indexer
-            if not dim_indexers.get(dim, False):
-                dim_indexers[dim] = {}
-            dim_indexers[dim][name] = label
+    for key, label in iteritems(indexers):
+        dim = data_obj[key].dims[0]
+        if key != dim:
+            if not level_indexers.get(dim, False):
+                level_indexers[dim] = {}
+            level_indexers[dim][key] = label
         else:
-            index = data_obj[dim].to_index()
-            if isinstance(index, pd.MultiIndex):
-                if not dim_indexers.get(dim, False):
-                    dim_indexers[dim] = {}
-                if is_dict_like(label):
-                    dim_indexers[dim].update(label)
+            dim_indexers[key] = label
+
+    for dim, level_labels in iteritems(level_indexers):
+        dim_idx = dim_indexers.get(dim, False)
+        if dim_idx:
+            if is_dict_like(dim_idx):
+                if len(set(dim_idx.keys() & set(level_labels.keys()))):
+                    raise ValueError("Duplicate multi-index level indexer(s) "
+                                     "given for dimension %s" % dim)
                 else:
-                    first_level_name = index.names[0]
-                    dim_indexers[dim].update({first_level_name: label})
+                    dim_indexers[dim].update(level_labels)
             else:
-                dim_indexers[dim] = label
+                raise ValueError("Cannot combine multi-index level indexers "
+                                 "with a non-dict indexer for dimension %s"
+                                 % dim)
+        else:
+            dim_indexers[dim] = level_labels
+
     return dim_indexers
 
 
@@ -251,7 +261,7 @@ def remap_label_indexers(data_obj, indexers, method=None, tolerance=None):
         raise TypeError('``method`` must be a string')
 
     pos_indexers, new_indexes = {}, {}
-    for dim, label in iteritems(_get_valid_indexers(data_obj, indexers)):
+    for dim, label in iteritems(get_dim_indexers(data_obj, indexers)):
         index = data_obj[dim].to_index()
         idxr, new_idx = convert_label_indexer(index, label,
                                               dim, method, tolerance)
