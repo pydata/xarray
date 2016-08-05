@@ -1171,7 +1171,7 @@ class IndexVariable(Variable):
         if isinstance(index, pd.MultiIndex):
             # set default names for multi-index unnamed levels so that
             # we can safely rename dimension / coordinate later
-            valid_level_names = [name or '{}_level_{}'.format(self.name, i)
+            valid_level_names = [name or '{}_level_{}'.format(self.dims[0], i)
                                  for i, name in enumerate(index.names)]
             index = index.set_names(valid_level_names)
         else:
@@ -1181,7 +1181,7 @@ class IndexVariable(Variable):
     def get_level_coords(self):
         """Return an OrderedDict of independent coordinates for each
         index level, or return an empty OrderedDict if the coordinate
-        has not a MultiIndex.
+        has no MultiIndex.
         """
         level_coords = OrderedDict()
         index = self.to_index()
