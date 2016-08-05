@@ -101,20 +101,27 @@ def partial_align(*objects, **kwargs):
         raise TypeError('align() got unexpected keyword arguments: %s'
                         % list(kwargs))
 
-    if len(objects) == 1 and (skip_single_target or indexes is None):
-        # we don't need to align, so don't bother with reindexing, which fails
-        # for non-unique indexes
-        result = (objects[0].copy(),) if copy else objects
-    else:
-        joined_indexes = _join_indexes(join, objects, exclude=exclude)
-        if indexes is not None:
-            joined_indexes.update(indexes)
+    if len(objects) == 1:
+        obj, = objects
+        if (indexes is None or
+                (skip_single_target and
+                 all(obj.indexes[k].equals(v) for k, v in indexes.items()
+                     if k in obj.indexes))):
+            # We don't need to align, so don't bother with reindexing, which
+            # fails for non-unique indexes.
+            # `skip_single_target` is a hack so we can skip alignment of a
+            # single object in merge.
+            return (obj.copy() if copy else obj,)
 
-        result = []
-        for obj in objects:
-            valid_indexers = dict((k, v) for k, v in joined_indexes.items()
-                                  if k in obj.dims)
-            result.append(obj.reindex(copy=copy, **valid_indexers))
+    joined_indexes = _join_indexes(join, objects, exclude=exclude)
+    if indexes is not None:
+        joined_indexes.update(indexes)
+
+    result = []
+    for obj in objects:
+        valid_indexers = dict((k, v) for k, v in joined_indexes.items()
+                              if k in obj.dims)
+        result.append(obj.reindex(copy=copy, **valid_indexers))
 
     return tuple(result)
 

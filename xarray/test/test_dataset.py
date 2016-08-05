@@ -1453,6 +1453,13 @@ class TestDataset(TestCase):
         expected = Dataset({'x': ('y', [4, 5, 6])})
         self.assertDatasetIdentical(ds, expected)
 
+    def test_setitem_align_new_indexes(self):
+        ds = Dataset({'foo': ('x', [1, 2, 3])}, {'x': [0, 1, 2]})
+        ds['bar'] = DataArray([2, 3, 4], [('x', [1, 2, 3])])
+        expected = Dataset({'foo': ('x', [1, 2, 3]),
+                            'bar': ('x', [np.nan, 2, 3])})
+        self.assertDatasetIdentical(ds, expected)
+
     def test_assign(self):
         ds = Dataset()
         actual = ds.assign(x = [0, 1, 2], y = 2)
