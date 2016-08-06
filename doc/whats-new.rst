@@ -15,13 +15,13 @@ What's New
 
 .. _whats-new.0.8.1:
 
-v0.8.1 (unreleased)
--------------------
+v0.8.1 (5 August 2016)
+----------------------
 
 Bug fixes
 ~~~~~~~~~
 
-- Fix regression in v0.8.0 that broke assignment to Datasets with non-unique
+- Fix bug in v0.8.0 that broke assignment to Datasets with non-unique
   indexes (:issue:`943`).
 
 .. _whats-new.0.8.0:
