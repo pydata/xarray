@@ -429,9 +429,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         level_coords = OrderedDict()
         for name in self._coord_names:
             var = self.variables[name]
-            if name != var.dims[0]:
-                continue
-            level_coords.update(var.to_coord().get_level_coords())
+            if var.ndim == 1:
+                level_coords.update(var.to_coord().get_level_coords())
         return level_coords
 
     def _copy_listed(self, names):

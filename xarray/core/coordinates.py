@@ -215,6 +215,22 @@ class DataArrayCoordinates(AbstractCoordinates):
         del self._data._coords[key]
 
 
+class DataArrayLevelCoordinates(AbstractCoordinates):
+    """Dictionary like container for DataArray multi-index
+    level coordinates.
+    """
+    def __init__(self, dataarray):
+        self._data = dataarray
+
+    @property
+    def _names(self):
+        return set(self._data._level_coords)
+
+    @property
+    def variables(self):
+        return Frozen(self._data._level_coords)
+
+
 class Indexes(Mapping, formatting.ReprMixin):
     """Ordered Mapping[str, pandas.Index] for xarray objects.
     """

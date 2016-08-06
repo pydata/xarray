@@ -222,11 +222,18 @@ def get_dim_indexers(data_obj, indexers):
     into a single, dictionary indexer for that dimension (Raise a ValueError
     if it is not possible).
     """
+    invalid = [k for k in indexers
+               if k not in data_obj.dims and k not in data_obj._level_coords]
+    if invalid:
+        raise ValueError("dimensions or multi-index levels %r do not exist"
+                         % invalid)
+
     level_indexers = {}
     dim_indexers = {}
     for key, label in iteritems(indexers):
         dim = data_obj[key].dims[0]
         if key != dim:
+            # assume here multi-index level indexer
             if not level_indexers.get(dim, False):
                 level_indexers[dim] = {}
             level_indexers[dim][key] = label

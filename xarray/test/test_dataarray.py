@@ -579,8 +579,6 @@ class TestDataArray(TestCase):
                                       mdata.sel(x=('a', 1)))
         self.assertDataArrayIdentical(mdata.loc[{'one': 'a'}, ...],
                                       mdata.sel(x={'one': 'a'}))
-        with self.assertRaises(KeyError):
-            mdata.loc[{'one': 'a'}]
         with self.assertRaises(IndexError):
             mdata.loc[('a', 1)]
 

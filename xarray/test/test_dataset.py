@@ -916,8 +916,6 @@ class TestDataset(TestCase):
                                     mdata.sel(x=('a', 1)))
         self.assertDatasetIdentical(mdata.loc[{'x': ('a', 1, -1)}],
                                     mdata.sel(x=('a', 1, -1)))
-        with self.assertRaises(KeyError):
-            mdata.loc[{'one': 'a'}]
 
     def test_reindex_like(self):
         data = create_test_data()
@@ -1744,9 +1742,9 @@ class TestDataset(TestCase):
         actual = zeros + grouped
         self.assertDatasetEqual(expected, actual)
 
-        with self.assertRaisesRegexp(ValueError, 'dimensions .* do not exist'):
+        with self.assertRaisesRegexp(ValueError, 'incompat.* grouped binary'):
             grouped + ds
-        with self.assertRaisesRegexp(ValueError, 'dimensions .* do not exist'):
+        with self.assertRaisesRegexp(ValueError, 'incompat.* grouped binary'):
             ds + grouped
         with self.assertRaisesRegexp(TypeError, 'only support binary ops'):
             grouped + 1

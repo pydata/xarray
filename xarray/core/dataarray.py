@@ -14,7 +14,8 @@ from . import ops
 from . import utils
 from .alignment import align
 from .common import AbstractArray, BaseDataObject, squeeze
-from .coordinates import DataArrayCoordinates, Indexes
+from .coordinates import (DataArrayCoordinates, DataArrayLevelCoordinates,
+                          Indexes)
 from .dataset import Dataset
 from .pycompat import iteritems, basestring, OrderedDict, zip
 from .variable import (as_variable, Variable, as_compatible_data, IndexVariable,
@@ -421,9 +422,8 @@ class DataArray(AbstractArray, BaseDataObject):
     def _level_coords(self):
         level_coords = OrderedDict()
         for name, var in self._coords.items():
-            if name not in self.dims:
-                continue
-            level_coords.update(var.to_coord().get_level_coords())
+            if var.ndim == 1:
+                level_coords.update(var.to_coord().get_level_coords())
         return level_coords
 
     def __getitem__(self, key):
@@ -455,7 +455,7 @@ class DataArray(AbstractArray, BaseDataObject):
     @property
     def _attr_sources(self):
         """List of places to look-up items for attribute-style access"""
-        return [self.coords, self._level_coords, self.attrs]
+        return [self.coords, DataArrayLevelCoordinates(self), self.attrs]
 
     def __contains__(self, key):
         return key in self._coords

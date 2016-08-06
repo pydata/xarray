@@ -1075,16 +1075,20 @@ class IndexVariable(Variable):
     unless another name is given.
     """
 
-    def __init__(self, name, data, dim=None, attrs=None, encoding=None,
-                 fastpath=False):
+    def __init__(self, name, data, attrs=None, encoding=None,
+                 fastpath=False, dim=None):
         if dim is None:
             dim = name
-        self._name = name
 
         super(IndexVariable, self).__init__(dim, data, attrs, encoding, fastpath)
         if self.ndim != 1:
             raise ValueError('%s objects must be 1-dimensional' %
                              type(self).__name__)
+
+        if isinstance(name, basestring):
+            self._name = name
+        else:
+            self._name = self.dims[0]
 
     def _data_cached(self):
         if not isinstance(self._data, PandasIndexAdapter):
@@ -1097,8 +1101,8 @@ class IndexVariable(Variable):
         if not hasattr(values, 'ndim') or values.ndim == 0:
             return Variable((), values, self._attrs, self._encoding)
         else:
-            return type(self)(self._name, values, self.dims, self._attrs,
-                              self._encoding, fastpath=True)
+            return type(self)(self._name, values, self._attrs,
+                              self._encoding, fastpath=True, dim=self.dims)
 
     def __setitem__(self, key, value):
         raise TypeError('%s values cannot be modified' % type(self).__name__)
@@ -1150,8 +1154,8 @@ class IndexVariable(Variable):
         # there is no need to copy the index values here even if deep=True
         # since pandas.Index objects are immutable
         data = PandasIndexAdapter(self) if deep else self._data
-        return type(self)(self._name, data, self.dims, self._attrs,
-                          self._encoding, fastpath=True)
+        return type(self)(self._name, data, self._attrs,
+                          self._encoding, fastpath=True, dim=self.dims)
 
     def _data_equals(self, other):
         return self.to_index().equals(other.to_index())
