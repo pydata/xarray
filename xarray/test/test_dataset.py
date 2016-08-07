@@ -1065,6 +1065,13 @@ class TestDataset(TestCase):
         actual, = broadcast(ds)
         self.assertDatasetIdentical(expected, actual)
 
+        # Test copy flag
+        actual, = broadcast(expected, copy=True)
+        self.assertDatasetIdentical(expected, actual)        
+        assert actual is not expected
+        actual, = broadcast(expected, copy=False)
+        assert actual is expected
+
         ds_x = Dataset({'foo': ('x', [1])})
         ds_y = Dataset({'bar': ('y', [2, 3])})
         expected_x = Dataset({'foo': (('x', 'y'), [[1, 1]])})
@@ -1072,6 +1079,15 @@ class TestDataset(TestCase):
         actual_x, actual_y = broadcast(ds_x, ds_y)
         self.assertDatasetIdentical(expected_x, actual_x)
         self.assertDatasetIdentical(expected_y, actual_y)
+
+        # Test copy flag
+        actual_x, actual_y = broadcast(expected_x, ds_y, copy=False)
+        self.assertDatasetIdentical(expected_y, actual_y)
+        assert actual_x is expected_x
+        actual_x, actual_y = broadcast(expected_x, ds_y, copy=True)
+        self.assertDatasetIdentical(expected_x, actual_x)
+        self.assertDatasetIdentical(expected_y, actual_y)
+        assert actual_x is not expected_x
 
         array_y = ds_y['bar']
         expected_y = expected_y['bar']

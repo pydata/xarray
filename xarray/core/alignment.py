@@ -9,7 +9,7 @@ from . import ops, utils
 from .common import _maybe_promote
 from .pycompat import iteritems, OrderedDict
 from .utils import is_full_slice, is_dict_like
-from .variable import Variable, Coordinate, broadcast_variables
+from .variable import Variable, Coordinate
 
 
 def _get_joiner(join):
@@ -71,24 +71,16 @@ def align(*objects, **kwargs):
         If ``copy=True``, the returned objects contain all new variables. If
         ``copy=False`` and no reindexing is required then the aligned objects
         will include original variables.
+    exclude : sequence of str, optional
+        Dimensions that must be excluded from alignment
+    indexes : dict-like, optional
+        Any indexes explicitly provided with the `indexes` argument should be
+        used in preference to the aligned indexes.
 
     Returns
     -------
     aligned : same as *objects
         Tuple of objects with aligned coordinates.
-    """
-    return partial_align(*objects, exclude=None, **kwargs)
-
-
-def partial_align(*objects, **kwargs):
-    """partial_align(*objects, join='inner', copy=True, indexes=None,
-                     exclude=set())
-
-    Like align, but don't align along dimensions in exclude. Any indexes
-    explicitly provided with the `indexes` argument should be used in preference
-    to the aligned indexes.
-
-    Not public API.
     """
     join = kwargs.pop('join', 'inner')
     copy = kwargs.pop('copy', True)
@@ -96,6 +88,8 @@ def partial_align(*objects, **kwargs):
     exclude = kwargs.pop('exclude', None)
     if exclude is None:
         exclude = set()
+    # `skip_single_target` is a hack so we can skip alignment of a
+    # single object in merge. Not part of the public API.
     skip_single_target = kwargs.pop('skip_single_target', False)
     if kwargs:
         raise TypeError('align() got unexpected keyword arguments: %s'
@@ -109,8 +103,6 @@ def partial_align(*objects, **kwargs):
                      if k in obj.indexes))):
             # We don't need to align, so don't bother with reindexing, which
             # fails for non-unique indexes.
-            # `skip_single_target` is a hack so we can skip alignment of a
-            # single object in merge.
             return (obj.copy() if copy else obj,)
 
     joined_indexes = _join_indexes(join, objects, exclude=exclude)
@@ -121,7 +113,11 @@ def partial_align(*objects, **kwargs):
     for obj in objects:
         valid_indexers = dict((k, v) for k, v in joined_indexes.items()
                               if k in obj.dims)
-        result.append(obj.reindex(copy=copy, **valid_indexers))
+        # Hack around the fact that xarray.DataArray.reindex(copy=False) still does copy
+        if len(valid_indexers) == 0:
+            result.append(obj.copy() if copy else obj)
+        else:        
+            result.append(obj.reindex(copy=copy, **valid_indexers))
 
     return tuple(result)
 
@@ -160,8 +156,8 @@ def deep_align(list_of_variable_maps, join='outer', copy=True, indexes=None,
         else:
             out.append(variables)
 
-    aligned = partial_align(*targets, join=join, copy=copy, indexes=indexes,
-                            skip_single_target=skip_single_target)
+    aligned = align(*targets, join=join, copy=copy, indexes=indexes,
+                    skip_single_target=skip_single_target)
 
     for key, aligned_obj in zip(keys, aligned):
         if isinstance(key, tuple):
@@ -310,7 +306,7 @@ def reindex_variables(variables, indexes, indexers, method=None,
     return reindexed
 
 
-def broadcast(*args):
+def broadcast(*args, **kwargs):
     """Explicitly broadcast any number of DataArray or Dataset objects against
     one another.
 
@@ -319,12 +315,18 @@ def broadcast(*args):
 
     Parameters
     ----------
-    *args: DataArray or Dataset objects
+    *args : DataArray or Dataset objects
         Arrays to broadcast against each other.
+    copy : bool, optional
+        If ``copy=True``, the returned objects contain all new variables. If
+        ``copy=False`` and no reindexing is required then the broadcasted objects
+        will include original variables.
+    exclude : sequence of str, optional
+        Dimensions that must not be broadcasted
 
     Returns
     -------
-    broadcast: tuple of xarray objects
+    broadcast : tuple of xarray objects
         The same data as the input arrays, but with additional dimensions
         inserted so that all data arrays have the same dimensions and shape.
 
@@ -385,37 +387,60 @@ def broadcast(*args):
     from .dataarray import DataArray
     from .dataset import Dataset
 
-    all_indexes = _get_all_indexes(args)
-    for k, v in all_indexes.items():
-        if not all(v[0].equals(vi) for vi in v[1:]):
-            raise ValueError('cannot broadcast arrays: the %s index is not '
-                             'aligned (use xarray.align first)' % k)
+    copy = kwargs.pop('copy', True)
+    exclude = kwargs.pop('exclude', None)
+    if exclude is None:
+        exclude = set()
+    if kwargs:
+        raise TypeError('broadcast() got unexpected keyword arguments: %s'
+                        % list(kwargs))
+
+    args = align(*args, join='outer', copy=False, exclude=exclude)
 
     common_coords = OrderedDict()
     dims_map = OrderedDict()
     for arg in args:
         for dim in arg.dims:
-            if dim not in common_coords:
+            if dim not in common_coords and dim not in exclude:
                 common_coords[dim] = arg.coords[dim].variable
                 dims_map[dim] = common_coords[dim].size
 
     def _broadcast_array(array):
-        data = array.variable.expand_dims(dims_map)
+        # Add excluded dims to a copy of dims_map
+        array_dims_map = dims_map.copy()
+        for dim in exclude:
+            if dim in ds.dims:
+                array_dims_map[dim] = ds.shape[ds.dims.index(dim)]
+
+        dims = tuple(array_dims_map)
+        if not copy and set(dims) == set(array.dims):
+            return array
+
+        data = array.variable.expand_dims(array_dims_map)
         coords = OrderedDict(array.coords)
         coords.update(common_coords)
-        dims = tuple(common_coords)
         return DataArray(data, coords, dims, name=array.name,
                          attrs=array.attrs, encoding=array.encoding)
 
     def _broadcast_dataset(ds):
+        # Add excluded dims to a copy of dims_map    
+        ds_dims_map = dims_map.copy()
+        for dim in exclude:
+            if dim in ds.dims:
+                ds_dims_map[dim] = ds.dims[dim]
+                
+        if not copy and dict(ds.dims) == dict(ds_dims_map):
+            return ds
+
+        print "ds_dims_map = %s" % ds_dims_map
         data_vars = OrderedDict()
         for k in ds.data_vars:
-            data_vars[k] = ds.variables[k].expand_dims(dims_map)
-
+            data_vars[k] = ds.variables[k].expand_dims(ds_dims_map)
+            print "data_vars[%s] = %s" % (k, data_vars[k])
         coords = OrderedDict(ds.coords)
         coords.update(common_coords)
-
-        return Dataset(data_vars, coords, ds.attrs)
+        res = Dataset(data_vars, coords, ds.attrs)
+        return res
 
     result = []
     for arg in args:
@@ -430,6 +455,7 @@ def broadcast(*args):
 
 
 def broadcast_arrays(*args):
+    import warnings
     warnings.warn('xarray.broadcast_arrays is deprecated: use '
                   'xarray.broadcast instead', DeprecationWarning, stacklevel=2)
     return broadcast(*args)

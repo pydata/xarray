@@ -1636,9 +1636,14 @@ class TestDataArray(TestCase):
         self.assertDataArrayIdentical(expected_x2, x2)
         self.assertDataArrayIdentical(expected_y2, y2)
 
-        z = DataArray([1, 2], coords=[('a', [-10, 20])])
-        with self.assertRaisesRegexp(ValueError, 'cannot broadcast'):
-            broadcast(x, z)
+        # broadcast on misaligned coords must auto-align
+        x = DataArray([[1, 2], [3, 4]], coords=[('a', [-1, -2]), ('b', [3, 4])])
+        y = DataArray([1, 2], coords=[('a', [-1, 20])])
+        expected_x2 = DataArray([[3, 4], [1, 2], [np.nan, np.nan]], coords=[('a', [-2, -1, 20]), ('b', [3, 4])])
+        expected_y2 = DataArray([[np.nan, np.nan], [1, 1], [2, 2]], coords=[('a', [-2, -1, 20]), ('b', [3, 4])])
+        x2, y2 = broadcast(x, y)
+        self.assertDataArrayIdentical(expected_x2, x2)
+        self.assertDataArrayIdentical(expected_y2, y2)
 
     def test_broadcast_coordinates(self):
         # regression test for GH649

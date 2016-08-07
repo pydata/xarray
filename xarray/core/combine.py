@@ -4,6 +4,7 @@ import pandas as pd
 
 from . import utils
 from .merge import merge
+from .alignment import broadcast
 from .pycompat import iteritems, OrderedDict, basestring
 from .variable import Variable, as_variable, Coordinate, concat as concat_vars
 
@@ -105,6 +106,8 @@ def concat(objs, dim=None, data_vars='all', coords='different',
         raise ValueError('`concat_over` is no longer a valid argument to '
                          'xarray.concat; it has been split into the `data_vars` '
                          'and `coords` arguments')
+
+    #objs = broadcast(*objs, copy=False, exclude=[dim])
 
     if isinstance(first_obj, DataArray):
         f = _dataarray_concat
