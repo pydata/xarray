@@ -1745,24 +1745,16 @@ class TestDataArray(TestCase):
         assert "'a'" in repr(arr)  # should not error
 
     def test_to_and_from_dict(self):
-        expected = {
-                    'name': 'foo',
-                    'dims': ('x', 'y'),  
-                    'data': self.x.tolist(), 
+        expected = {'name': 'foo',
+                    'dims': ('x', 'y'),
+                    'data': self.x.tolist(),
                     'attrs': {},
-                    'coords': {
-                               'y': {
-                                     'dims': ('y',), 
+                    'coords': {'y': {'dims': ('y',),
                                      'data': list(range(20)),
-                                     'attrs': {}
-                                     }, 
-                               'x': {
-                                     'dims': ('x',), 
+                                     'attrs': {}},
+                               'x': {'dims': ('x',),
                                      'data': list(range(10)),
-                                     'attrs': {}
-                                     }
-                                }
-                    }
+                                     'attrs': {}}}}
         actual = self.dv.to_dict()
 
         # check that they are identical
@@ -1772,45 +1764,22 @@ class TestDataArray(TestCase):
         self.assertDataArrayIdentical(self.dv, DataArray.from_dict(actual))
 
         # a more bare bones representation still roundtrips
-        d = {
-            'name': 'foo',
-            'dims': ('x', 'y'),  
-            'data': self.x, 
-            'coords': {
-                       'y': {
-                             'dims': 'y', 
-                             'data': list(range(20)),
-                             }, 
-                       'x': {
-                             'dims': 'x', 
-                             'data': list(range(10)),
-                             }
-                        }
-            }
+        d = {'name': 'foo',
+             'dims': ('x', 'y'),
+             'data': self.x,
+             'coords': {'y': {'dims': 'y', 'data': list(range(20))},
+                        'x': {'dims': 'x', 'data': list(range(10))}}}
         self.assertDataArrayIdentical(self.dv, DataArray.from_dict(d))
 
         # and the most bare bones representation still roundtrips
-        d = {
-            'name': 'foo',
-            'dims': ('x', 'y'),  
-            'data': self.x
-            }
+        d = {'name': 'foo', 'dims': ('x', 'y'), 'data': self.x}
         self.assertDataArrayIdentical(self.dv, DataArray.from_dict(d))
 
         # missing a dims in the coords
-        d = {
-            'dims': ('x', 'y'),  
-            'data': self.x, 
-            'coords': {
-                       'y': {
-                             'data': list(range(20))
-                             }, 
-                       'x': {
-                             'dims': 'x', 
-                             'data': list(range(10))
-                             }
-                        }
-            }
+        d = {'dims': ('x', 'y'),
+             'data': self.x,
+             'coords': {'y': {'data': list(range(20))},
+                        'x': {'dims': 'x', 'data': list(range(10))}}}
         with self.assertRaisesRegexp(KeyError, 'cannot convert dict when coords are missing dims'):
             DataArray.from_dict(d)
 

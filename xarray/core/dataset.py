@@ -1935,23 +1935,29 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject):
 
     def to_dict(self):
         """
-        Convert this dataset to a dictionary following xarray naming conventions.
+        Convert this dataset to a dictionary following xarray naming
+        conventions.
+
+        Useful for coverting to json.
         """
-        d = {'coords': {}, 'attrs': dict(self.attrs), 'dims': dict(self.dims), 
+        d = {'coords': {}, 'attrs': dict(self.attrs), 'dims': dict(self.dims),
              'data_vars': {}}
+
         def time_check(val):
             if np.issubdtype(val.dtype, np.datetime64):
                 val = val.astype('datetime64[us]')
             elif np.issubdtype(val.dtype, np.timedelta64):
                 val = val.astype('timedelta64[us]')
-            return(val)
+            return val
 
         for k in self.coords:
-            d['coords'].update({k: {'data': time_check(self[k].values).tolist(),
+            data = time_check(self[k].values).tolist()
+            d['coords'].update({k: {'data': data,
                                     'dims': self[k].dims,
                                     'attrs': dict(self[k].attrs)}})
         for k in self.data_vars:
-            d['data_vars'].update({k: {'data': time_check(self[k].values).tolist(),
+            data = time_check(self[k].values).tolist()
+            d['data_vars'].update({k: {'data': data,
                                        'dims': self[k].dims,
                                        'attrs': dict(self[k].attrs)}})
         return d
@@ -1959,27 +1965,48 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject):
     @classmethod
     def from_dict(cls, d):
         """
-        Convert a dictionary into an xarray.Dataset
+        Convert a dictionary into an xarray.Dataset.
+
+        Input dict can take several forms:
+
+        d = {'t': {'dims': ('t'), 'data': t},
+             'a': {'dims': ('t'), 'data': x},
+             'b': {'dims': ('t'), 'data': y}}
+
+        d = {'coords': {'t': {'dims': 't', 'data': t,
+                              'attrs': {'units':'s'}}},
+             'attrs': {'title': 'air temperature'},
+             'dims': 't',
+             'data_vars': {'a': {'dims': 't', 'data': x, },
+                           'b': {'dims': 't', 'data': y}}}
+
+        where 't' is the name of the dimesion, 'a' and 'b' are names of data
+        variables and t, x, and y are lists, numpy.arrays or pandas objects.
 
         Parameters
         ----------
-        d : dict, with a minimum structure of {'var_0': {'dims': [..], 'data': [..]}, ..}
+        d : dict, with a minimum structure of {'var_0': {'dims': [..],
+                                                         'data': [..]},
+                                               ...}
 
         Returns
         -------
         obj : xarray.Dataset
 
+        See also
+        --------
+        xarray.DataArray.from_dict
         """
         import itertools
 
+        variables = itertools.chain(d.get('coords', {}).items(),
+                                    d.get('data_vars', {}).items())
+        if not set(['coords', 'data_vars']).issubset(set(d)):
+            variables = d.items()
         try:
-            vars = itertools.chain(d['coords'].items(), d['data_vars'].items())
-        except:
-            vars = d.items()
-        try:
-            OD = OrderedDict([(var[0], (var[1]['dims'], 
-                                        var[1]['data'], 
-                                        var[1].get('attrs'))) for var in vars])
+            OD = OrderedDict([(k, (v['dims'],
+                                   v['data'],
+                                   v.get('attrs'))) for k, v in variables])
         except KeyError as e:
             raise KeyError(
                 'cannot convert dict with missing {dims_data}'.format(
@@ -1987,14 +2014,12 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject):
         obj = cls(OD)
 
         # what if coords aren't dims?
-        if set(['coords', 'dims']).issubset(set(d.keys())):
-            coords = (set(d['coords'].keys()) - set(d['dims']))
-            obj = obj.set_coords(coords)
+        coords = set(d.get('coords', {})) - set(d.get('dims', {}))
+        obj = obj.set_coords(coords)
 
-        if 'attrs' in d.keys():
-            obj.attrs.update(d.get('attrs'))
+        obj.attrs.update(d.get('attrs', {}))
 
-        return(obj)
+        return obj
 
     @staticmethod
     def _unary_op(f, keep_attrs=False):
