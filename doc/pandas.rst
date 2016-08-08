@@ -125,3 +125,79 @@ xarray objects do not yet support hierarchical indexes, so if your data has
 a hierarchical index, you will either need to unstack it first or use the
 :py:meth:`~xarray.DataArray.from_series` or
 :py:meth:`~xarray.Dataset.from_dataframe` constructors described above.
+
+
+Transitioning from pandas.Panel to xarray
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+:py:class:`~pandas.Panel`, pandas's data structure for 3D arrays, has always been a second class
+data structure compared to the Series and DataFrame. To allow pandas developers to focus more on
+its core functionality built around the DataFrame, pandas plans to eventually deprecate Panel.
+
+xarray has most of ``Panel``'s features, a more explicit API (particularly around
+indexing), and the ability to scale to >3 dimensions with the same interface.
+
+As discussed in the xarray docs, there are two primary data structures in xarray:
+``DataArray`` and ``Dataset``. You can imagine a ``DataArray`` as a n-dimensional pandas
+``Series`` (i.e. a single typed array), and a ``Dataset`` as the ``DataFrame``-equivalent
+(i.e. a dict of aligned ``DataArray``s).
+
+So you can represent a Panel, in two ways:
+- A 3-dimenional ``DataArray``
+- A ``Dataset`` containing a number of 2-dimensional DataArray-s
+
+.. ipython:: python
+    panel = pd.Panel(np.random.rand(2, 3, 4), items=list('ab'), major_axis=list('mno'),
+                     minor_axis=pd.date_range(start='2000', periods=4, name='date'))
+
+    panel
+
+
+As a DataArray:
+
+
+.. ipython:: python
+
+    xr.DataArray(panel)
+
+Or:
+
+
+.. ipython:: python
+
+    panel.to_xarray()
+
+
+As you can see, there are three dimensions (each is also a coordinate). Two of the
+axes of the panel were unnamed, so have been assigned `dim_0` & `dim_1` respectively,
+while the third retains its name `date`.
+
+
+As a Dataset:
+
+.. ipython:: python
+    xr.Dataset(panel)
+
+Here, there are two data variables, each representing a DataFrame on panel's `items`
+axis, and labelled as such. Each variable is a 2D array of the respective values along
+the `items` dimension.
+
+While the xarray docs are relatively complete, a few items stand out for Panel users:
+- A DataArray's data is stored as a numpy array, and so can only contain a single
+  type. As a result, a Panel that contains :py:class:`~pandas.DataFrame`s with
+  multiple types will be converted to `object` types. A ``Dataset`` of multiple ``DataArray``s
+  each with its own dtype will allow original types to be preserved
+- Indexing is similar to pandas, but more explicit and leverages xarray's naming
+  of dimensions
+- Because of those features, making much higher dimension-ed data is very practical
+- Variables in ``Dataset``s can use a subset of its dimensions. For example, you can
+  have one dataset with Person x Score x Time, and another with Person x Score
+- You can use coordinates are used for both dimensions and for variables which
+  _label_ the data variables, so you could have a coordinate Age, that labelled the
+  `Person` dimension of a DataSet of Person x Score x Time
+
+
+While xarray may take some getting used to, it's worth it! If anything is unclear,
+please post an issue on `GitHub <https://github.com/pydata/xarray>`__ or
+`StackOverflow <http://stackoverflow.com/questions/tagged/python-xarray>`__,
+and we'll endeavor to respond to the specific case or improve the general docs.
