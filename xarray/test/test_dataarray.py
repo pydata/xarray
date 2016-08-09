@@ -10,7 +10,7 @@ from xarray import (align, broadcast, Dataset, DataArray,
                     Coordinate, Variable)
 from xarray.core.pycompat import iteritems, OrderedDict
 from xarray.core.common import _full_like
-
+from xarray.conventions import maybe_encode_datetime
 from xarray.test import (TestCase, ReturnItem, source_ndarray, unittest, requires_dask,
                requires_bottleneck)
 
