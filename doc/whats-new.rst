@@ -21,6 +21,9 @@ v0.8.2 (unreleased)
 Enhancements
 ~~~~~~~~~~~~
 
+- New documentation on :ref:`panel transition`. By
+  `Maximilian Roos <https://github.com/MaximilianR>`_.
+
 Bug fixes
 ~~~~~~~~~
 
