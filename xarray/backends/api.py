@@ -2,6 +2,7 @@ import sys
 import gzip
 import os.path
 import threading
+from distutils.version import StrictVersion
 from glob import glob
 from io import BytesIO
 
@@ -162,7 +163,7 @@ def open_dataset(filename_or_obj, group=None, decode_cf=True,
                 from dask.base import tokenize
             except ImportError:
                 import dask  # raise the usual error if dask is entirely missing
-                if dask.__version__ < '0.6':
+                if StrictVersion(dask.__version__) < StrictVersion('0.6'):
                     raise ImportError('xarray requires dask version 0.6 or newer')
                 else:
                     raise
@@ -387,7 +388,7 @@ def save_mfdataset(datasets, paths, mode='w', format=None, groups=None,
         * NETCDF4: Data is stored in an HDF5 file, using netCDF4 API
           features.
         * NETCDF4_CLASSIC: Data is stored in an HDF5 file, using only
-          netCDF 3 compatibile API features.
+          netCDF 3 compatible API features.
         * NETCDF3_64BIT: 64-bit offset version of the netCDF 3 file format,
           which fully supports 2+ GB files, but is only compatible with
           clients linked against netCDF version 3.6.0 or later.

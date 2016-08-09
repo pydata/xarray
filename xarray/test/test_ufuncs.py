@@ -1,3 +1,5 @@
+import pickle
+
 import numpy as np
 
 import xarray.ufuncs as xu
@@ -56,3 +58,8 @@ class TestOps(TestCase):
 
         with self.assertRaisesRegexp(TypeError, 'only support binary ops'):
             xu.maximum(ds.a.variable, ds_grouped)
+
+    def test_pickle(self):
+        a = 1.0
+        cos_pickled = pickle.loads(pickle.dumps(xu.cos))
+        self.assertIdentical(cos_pickled(a), xu.cos(a))

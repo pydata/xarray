@@ -11,6 +11,8 @@ xarray: N-D labeled arrays and datasets
    :target: https://pypi.python.org/pypi/xarray/
 .. image:: https://badges.gitter.im/Join%20Chat.svg
    :target: https://gitter.im/pydata/xarray
+.. image:: https://zenodo.org/badge/doi/10.5281/zenodo.59499.svg
+   :target: http://dx.doi.org/10.5281/zenodo.59499
 
 **xarray** (formerly **xray**) is an open source project and Python package that aims to bring the
 labeled data power of pandas_ to the physical sciences, by providing
@@ -85,8 +87,15 @@ The official documentation is hosted on ReadTheDocs at http://xarray.pydata.org/
 Get in touch
 ------------
 
-- GitHub issue tracker: https://github.com/pydata/xarray/issues/
-- Mailing list: https://groups.google.com/forum/#!forum/xarray
+- Ask usage questions on `StackOverflow`_.
+- Report bugs, suggest features or view the source code `on GitHub`_.
+- For less well defined questions or ideas, use the `mailing list`_.
+- You can also try our chatroom `on Gitter`_.
+
+.. _StackOverFlow: http://stackoverflow.com/questions/tagged/python-xarray
+.. _mailing list: https://groups.google.com/forum/#!forum/xarray
+.. _on Gitter: https://gitter.im/pydata/xarray
+.. _on GitHub: http://github.com/pydata/xarray
 
 History
 -------

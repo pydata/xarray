@@ -39,10 +39,11 @@ def _infer_coords_and_dims(shape, coords, dims):
         if coords is not None and len(coords) == len(shape):
             # try to infer dimensions from coords
             if utils.is_dict_like(coords):
+                # TODO: deprecate this path
                 dims = list(coords.keys())
             else:
                 for n, (dim, coord) in enumerate(zip(dims, coords)):
-                    coord = as_variable(coord, key=dim).to_coord()
+                    coord = as_variable(coord, name=dims[n]).to_coord()
                     dims[n] = coord.name
         dims = tuple(dims)
     else:
@@ -54,10 +55,10 @@ def _infer_coords_and_dims(shape, coords, dims):
 
     if utils.is_dict_like(coords):
         for k, v in coords.items():
-            new_coords[k] = as_variable(v, key=k, copy=True)
+            new_coords[k] = as_variable(v, name=k)
     elif coords is not None:
         for dim, coord in zip(dims, coords):
-            var = as_variable(coord, key=dim, copy=True)
+            var = as_variable(coord, name=dim)
             var.dims = (dim,)
             new_coords[dim] = var
 
@@ -86,24 +87,19 @@ class _LocIndexer(object):
         self.data_array = data_array
 
     def _remap_key(self, key):
-        def lookup_positions(dim, labels):
-            index = self.data_array.indexes[dim]
-            return indexing.convert_label_indexer(index, labels)
-
-        if utils.is_dict_like(key):
-            return dict((dim, lookup_positions(dim, labels))
-                        for dim, labels in iteritems(key))
-        else:
+        if not utils.is_dict_like(key):
             # expand the indexer so we can handle Ellipsis
-            key = indexing.expanded_indexer(key, self.data_array.ndim)
-            return tuple(lookup_positions(dim, labels) for dim, labels
-                         in zip(self.data_array.dims, key))
+            labels = indexing.expanded_indexer(key, self.data_array.ndim)
+            key = dict(zip(self.data_array.dims, labels))
+        return indexing.remap_label_indexers(self.data_array, key)
 
     def __getitem__(self, key):
-        return self.data_array[self._remap_key(key)]
+        pos_indexers, new_indexes = self._remap_key(key)
+        return self.data_array[pos_indexers]._replace_indexes(new_indexes)
 
     def __setitem__(self, key, value):
-        self.data_array[self._remap_key(key)] = value
+        pos_indexers, _ = self._remap_key(key)
+        self.data_array[pos_indexers] = value
 
 
 class _ThisArray(object):
@@ -244,6 +240,23 @@ class DataArray(AbstractArray, BaseDataObject):
                                  if set(v.dims) <= allowed_dims)
         return self._replace(variable, coords, name)
 
+    def _replace_indexes(self, indexes):
+        if not len(indexes):
+            return self
+        coords = self._coords.copy()
+        for name, idx in indexes.items():
+            coords[name] = Coordinate(name, idx)
+        obj = self._replace(coords=coords)
+
+        # switch from dimension to level names, if necessary
+        dim_names = {}
+        for dim, idx in indexes.items():
+            if not isinstance(idx, pd.MultiIndex) and idx.name != dim:
+                dim_names[dim] = idx.name
+        if dim_names:
+            obj = obj.rename(dim_names)
+        return obj
+
     __this_array = _ThisArray()
 
     def _to_temp_dataset(self):
@@ -276,8 +289,15 @@ class DataArray(AbstractArray, BaseDataObject):
         if name in self.coords:
             raise ValueError('cannot create a Dataset from a DataArray with '
                              'the same name as one of its coordinates')
-        dataset = self.coords._to_dataset(shallow_copy=shallow_copy)
-        dataset[name] = self.variable
+        # use private APIs here for speed: this is called by _to_temp_dataset(),
+        # which is used in the guts of a lot of operations (e.g., reindex)
+        variables = self._coords.copy()
+        variables[name] = self.variable
+        if shallow_copy:
+            for k in variables:
+                variables[k] = variables[k].copy(deep=False)
+        coord_names = set(self._coords)
+        dataset = Dataset._from_vars_and_coord_names(variables, coord_names)
         return dataset
 
     def to_dataset(self, dim=None, name=None):
@@ -455,7 +475,7 @@ class DataArray(AbstractArray, BaseDataObject):
     def indexes(self):
         """OrderedDict of pandas.Index objects used for label based indexing
         """
-        return Indexes(self)
+        return Indexes(self._coords, self.dims)
 
     @property
     def coords(self):
@@ -537,7 +557,7 @@ class DataArray(AbstractArray, BaseDataObject):
         return self.copy(deep=False)
 
     def __deepcopy__(self, memo=None):
-        # memo does nothing but is required for compatability with
+        # memo does nothing but is required for compatibility with
         # copy.deepcopy
         return self.copy(deep=True)
 
@@ -599,8 +619,10 @@ class DataArray(AbstractArray, BaseDataObject):
         Dataset.sel
         DataArray.isel
         """
-        return self.isel(**indexing.remap_label_indexers(
-            self, indexers, method=method, tolerance=tolerance))
+        pos_indexers, new_indexes = indexing.remap_label_indexers(
+            self, indexers, method=method, tolerance=tolerance
+        )
+        return self.isel(**pos_indexers)._replace_indexes(new_indexes)
 
     def isel_points(self, dim='points', **indexers):
         """Return a new DataArray whose dataset is given by pointwise integer
@@ -644,7 +666,7 @@ class DataArray(AbstractArray, BaseDataObject):
             data array:
 
             * None (default): don't fill gaps
-            * pad / ffill: propgate last valid index value forward
+            * pad / ffill: propagate last valid index value forward
             * backfill / bfill: propagate next valid index value backward
             * nearest: use nearest valid index value (requires pandas>=0.16)
         tolerance : optional
@@ -688,7 +710,7 @@ class DataArray(AbstractArray, BaseDataObject):
             this data array:
 
             * None (default): don't fill gaps
-            * pad / ffill: propgate last valid index value forward
+            * pad / ffill: propagate last valid index value forward
             * backfill / bfill: propagate next valid index value backward
             * nearest: use nearest valid index value (requires pandas>=0.16)
         tolerance : optional
@@ -898,8 +920,8 @@ class DataArray(AbstractArray, BaseDataObject):
 
         Parameters
         ----------
-        labels : str
-            Names of coordinate variables or index labels to drop.
+        labels : scalar or list of scalars
+            Name(s) of coordinate variables or index labels to drop.
         dim : str, optional
             Dimension along which to drop index labels. By default (if
             ``dim is None``), drops coordinates rather than index labels.
@@ -1142,7 +1164,7 @@ class DataArray(AbstractArray, BaseDataObject):
         values in the same locations.
 
         This method is necessary because `v1 == v2` for ``DataArray``
-        does element-wise comparisions (like numpy.ndarrays).
+        does element-wise comparisons (like numpy.ndarrays).
 
         See Also
         --------
@@ -1205,7 +1227,7 @@ class DataArray(AbstractArray, BaseDataObject):
             variable = (f(self.variable, other_variable)
                         if not reflexive
                         else f(other_variable, self.variable))
-            coords = self.coords.merge(other_coords)._variables
+            coords = self.coords._merge_raw(other_coords)
             name = self._result_name(other)
 
             return self._replace(variable, coords, name)
@@ -1218,6 +1240,10 @@ class DataArray(AbstractArray, BaseDataObject):
             if isinstance(other, groupby.GroupBy):
                 raise TypeError('in-place operations between a DataArray and '
                                 'a grouped object are not permitted')
+            # n.b. we can't align other to self (with other.reindex_like(self))
+            # because `other` may be converted into floats, which would cause
+            # in-place arithmetic to fail unpredictably. Instead, we simply
+            # don't support automatic alignment with in-place arithmetic.
             other_coords = getattr(other, 'coords', None)
             other_variable = getattr(other, 'variable', other)
             with self.coords._merge_inplace(other_coords):
@@ -1288,7 +1314,7 @@ class DataArray(AbstractArray, BaseDataObject):
         Returns
         -------
         difference : same type as caller
-            The n-th order finite differnce of this object.
+            The n-th order finite difference of this object.
 
         Examples
         --------

@@ -1,7 +1,8 @@
 import numpy as np
 import pandas as pd
 
-from xarray import Variable, DataArray, Dataset, concat
+import xarray as xr
+from xarray import Variable, DataArray, Dataset
 import xarray.ufuncs as xu
 from xarray.core.pycompat import suppress
 from . import TestCase, requires_dask
@@ -56,7 +57,7 @@ class TestVariable(DaskTestCase):
         self.assertLazyAnd(expected, actual, self.assertVariableAllClose)
 
     def setUp(self):
-        self.values = np.random.randn(4, 6)
+        self.values = np.random.RandomState(0).randn(4, 6)
         self.data = da.from_array(self.values, chunks=(2, 2))
 
         self.eager_var = Variable(('x', 'y'), self.values)
@@ -178,10 +179,16 @@ class TestVariable(DaskTestCase):
         except NotImplementedError as err:
             self.assertIn('dask', str(err))
 
-    def test_ufuncs(self):
+    def test_univariate_ufunc(self):
         u = self.eager_var
         v = self.lazy_var
         self.assertLazyAndAllClose(np.sin(u), xu.sin(v))
+
+    def test_bivariate_ufunc(self):
+        u = self.eager_var
+        v = self.lazy_var
+        self.assertLazyAndAllClose(np.maximum(u, 0), xu.maximum(v, 0))
+        self.assertLazyAndAllClose(np.maximum(u, 0), xu.maximum(0, v))
 
 
 @requires_dask
@@ -220,7 +227,7 @@ class TestDataArrayAndDataset(DaskTestCase):
         self.assertLazyAndAllClose(u.mean(), v.mean())
         self.assertLazyAndAllClose(1 + u, 1 + v)
 
-        actual = concat([v[:2], v[2:]], 'x')
+        actual = xr.concat([v[:2], v[2:]], 'x')
         self.assertLazyAndAllClose(u, actual)
 
     def test_groupby(self):
@@ -260,6 +267,15 @@ class TestDataArrayAndDataset(DaskTestCase):
 
         expected = u.assign_coords(x=u['x'])
         self.assertLazyAndIdentical(expected, v.to_dataset('x').to_array('x'))
+
+    def test_merge(self):
+
+        def duplicate_and_merge(array):
+            return xr.merge([array, array.rename('bar')]).to_array()
+
+        expected = duplicate_and_merge(self.eager_array)
+        actual = duplicate_and_merge(self.lazy_array)
+        self.assertLazyAndIdentical(expected, actual)
 
     def test_ufuncs(self):
         u = self.eager_array

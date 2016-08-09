@@ -17,6 +17,7 @@ Top-level functions
    align
    broadcast
    concat
+   merge
    set_options
 
 Dataset
@@ -109,6 +110,7 @@ Computation
    Dataset.apply
    Dataset.reduce
    Dataset.groupby
+   Dataset.groupby_bins
    Dataset.resample
    Dataset.diff
 
@@ -245,6 +247,7 @@ Computation
 
    DataArray.reduce
    DataArray.groupby
+   DataArray.groupby_bins
    DataArray.rolling
    DataArray.resample
    DataArray.get_axis_num
@@ -392,6 +395,7 @@ Dataset methods
    Dataset.close
    Dataset.load
    Dataset.chunk
+   Dataset.filter_by_attrs
 
 DataArray methods
 -----------------

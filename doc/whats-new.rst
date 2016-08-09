@@ -13,12 +13,38 @@ What's New
     import xarray as xr
     np.random.seed(123456)
 
-.. _whats-new.0.8.0:
+.. _whats-new.0.8.2:
 
-v0.8.0 (unreleased)
+v0.8.2 (unreleased)
 -------------------
 
-This release includes
+Enhancements
+~~~~~~~~~~~~
+
+Bug fixes
+~~~~~~~~~
+
+- Fix to ensure xarray works with h5netcdf v0.3.0 for arrays with ``dtype=str``
+  (:issue:`953`). By `Stephan Hoyer <https://github.com/shoyer>`_.
+
+.. _whats-new.0.8.1:
+
+v0.8.1 (5 August 2016)
+----------------------
+
+Bug fixes
+~~~~~~~~~
+
+- Fix bug in v0.8.0 that broke assignment to Datasets with non-unique
+  indexes (:issue:`943`). By `Stephan Hoyer <https://github.com/shoyer>`_.
+
+.. _whats-new.0.8.0:
+
+v0.8.0 (2 August 2016)
+----------------------
+
+This release includes four months of new features and bug fixes, including
+several breaking changes.
 
 .. _v0.8.0.breaking:
 
@@ -26,28 +52,63 @@ Breaking changes
 ~~~~~~~~~~~~~~~~
 
 - Dropped support for Python 2.6 (:issue:`855`).
+- Indexing on multi-index now drop levels, which is consistent with pandas.
+  It also changes the name of the dimension / coordinate when the multi-index is
+  reduced to a single index (:issue:`802`).
+- Contour plots no longer add a colorbar per default (:issue:`866`). Filled
+  contour plots are unchanged.
+- ``DataArray.values`` and ``.data`` now always returns an NumPy array-like
+  object, even for 0-dimensional arrays with object dtype (:issue:`867`).
+  Previously, ``.values`` returned native Python objects in such cases. To
+  convert the values of scalar arrays to Python objects, use the ``.item()``
+  method.
 
 Enhancements
 ~~~~~~~~~~~~
 
+- Groupby operations now support grouping over multidimensional variables. A new
+  method called :py:meth:`~xarray.Dataset.groupby_bins` has also been added to
+  allow users to specify bins for grouping. The new features are described in
+  :ref:`groupby.multidim` and :ref:`examples.multidim`.
+  By `Ryan Abernathey <http://github.com/rabernat>`_.
+
 - DataArray and Dataset method :py:meth:`where` now supports a ``drop=True``
   option that clips coordinate elements that are fully masked.  By
   `Phillip J. Wolfram <https://github.com/pwolfram>`_.
+
+- New top level :py:func:`merge` function allows for combining variables from
+  any number of ``Dataset`` and/or ``DataArray`` variables. See :ref:`merge`
+  for more details. By `Stephan Hoyer <https://github.com/shoyer>`_.
 
 - DataArray and Dataset method :py:meth:`resample` now supports the
   ``keep_attrs=False`` option that determines whether variable and dataset
   attributes are retained in the resampled object. By
   `Jeremy McGibbon <https://github.com/mcgibbon>`_.
 
+- Better multi-index support in DataArray and Dataset :py:meth:`sel` and
+  :py:meth:`loc` methods, which now behave more closely to pandas and which
+  also accept dictionaries for indexing based on given level names and labels
+  (see :ref:`multi-level indexing`). By
+  `Benoit Bovy <https://github.com/benbovy>`_.
+
 - New (experimental) decorators :py:func:`~xarray.register_dataset_accessor` and
   :py:func:`~xarray.register_dataarray_accessor` for registering custom xarray
   extensions without subclassing. They are described in the new documentation
-  page on :ref:`internals`. By `Stephan Hoyer <https://github.com/shoyer>`
+  page on :ref:`internals`. By `Stephan Hoyer <https://github.com/shoyer>`_.
 
 - Round trip boolean datatypes. Previously, writing boolean datatypes to netCDF
   formats would raise an error since netCDF does not have a `bool` datatype.
   This feature reads/writes a `dtype` attribute to boolean variables in netCDF
   files. By `Joe Hamman <https://github.com/jhamman>`_.
+
+- 2D plotting methods now have two new keywords (`cbar_ax` and `cbar_kwargs`),
+  allowing more control on the colorbar (:issue:`872`).
+  By `Fabien Maussion <https://github.com/fmaussion>`_.
+
+- New Dataset method :py:meth:`filter_by_attrs`, akin to
+  ``netCDF4.Dataset.get_variables_by_attributes``, to easily filter
+  data variables using its attributes.
+  `Filipe Fernandes <https://github.com/ocefpaf>`_.
 
 Bug fixes
 ~~~~~~~~~
@@ -59,9 +120,42 @@ Bug fixes
   ``keep_attrs=True`` option. By
   `Jeremy McGibbon <https://github.com/mcgibbon>`_.
 
+- Concatenating xarray objects along an axis with a MultiIndex or PeriodIndex
+  preserves the nature of the index (:issue:`875`). By
+  `Stephan Hoyer <https://github.com/shoyer>`_.
+
+- Fixed bug in arithmetic operations on DataArray objects whose dimensions
+  are numpy structured arrays or recarrays :issue:`861`, :issue:`837`. By
+  `Maciek Swat <https://github.com/maciekswat>`_.
+
 - ``decode_cf_timedelta`` now accepts arrays with ``ndim`` >1 (:issue:`842`).
    This fixes issue :issue:`665`.
    `Filipe Fernandes <https://github.com/ocefpaf>`_.
+
+- Fix a bug where `xarray.ufuncs` that take two arguments would incorrectly
+  use to numpy functions instead of dask.array functions (:issue:`876`). By
+  `Stephan Hoyer <https://github.com/shoyer>`_.
+
+- Support for pickling functions from  ``xarray.ufuncs`` (:issue:`901`). By
+  `Stephan Hoyer <https://github.com/shoyer>`_.
+
+- ``Variable.copy(deep=True)`` no longer converts MultiIndex into a base Index
+  (:issue:`769`). By `Benoit Bovy <https://github.com/benbovy>`_.
+
+- Fixes for groupby on dimensions with a multi-index (:issue:`867`). By
+  `Stephan Hoyer <https://github.com/shoyer>`_.
+
+- Fix printing datasets with unicode attributes on Python 2 (:issue:`892`). By
+  `Stephan Hoyer <https://github.com/shoyer>`_.
+
+- Fixed incorrect test for dask version (:issue:`891`). By
+  `Stephan Hoyer <https://github.com/shoyer>`_.
+
+- Fixed `dim` argument for `isel_points`/`sel_points` when a `pandas.Index` is
+  passed. By `Stephan Hoyer <https://github.com/shoyer>`_.
+
+- :py:func:`~xarray.plot.contour` now plots the correct number of contours
+  (:issue:`866`). By `Fabien Maussion <https://github.com/fmaussion>`_.
 
 .. _whats-new.0.7.2:
 

@@ -54,13 +54,18 @@ before_install:
   - bash miniconda.sh -b -p $HOME/miniconda
   - export PATH="$HOME/miniconda/bin:$PATH"
   - hash -r
-  - conda config --set always_yes yes --set changeps1 no
+  - conda config --set always_yes yes --set changeps1 no --set show_channel_urls true
   - conda update -q conda
   - conda info -a
 
 install:
   - conda env create --file ci/requirements-$CONDA_ENV.yml
   - source activate test_env
+  # scipy should not have been installed, but it's included in older versions of
+  # the conda pandas package
+  - if [[ "$CONDA_ENV" == "py27-min" ]]; then
+      conda remove scipy;
+    fi
   - python setup.py install
 
 script:

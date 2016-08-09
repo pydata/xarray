@@ -965,9 +965,11 @@ class DaskTest(TestCase):
             data = create_test_data()
             data.to_netcdf(tmp)
             with open_mfdataset(tmp) as ds:
-                original_names = dict((k, v.data.name) for k, v in ds.items())
+                original_names = dict((k, v.data.name)
+                                      for k, v in ds.data_vars.items())
             with open_mfdataset(tmp) as ds:
-                repeat_names = dict((k, v.data.name) for k, v in ds.items())
+                repeat_names = dict((k, v.data.name)
+                                    for k, v in ds.data_vars.items())
             for var_name, dask_name in original_names.items():
                 self.assertIn(var_name, dask_name)
                 self.assertIn(tmp, dask_name)
