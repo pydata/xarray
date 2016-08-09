@@ -61,7 +61,9 @@ use ``DataFrame`` methods like :py:meth:`~pandas.DataFrame.reset_index`,
 :py:meth:`~pandas.DataFrame.stack` and :py:meth:`~pandas.DataFrame.unstack`.
 
 To create a ``Dataset`` from a ``DataFrame``, use the
-:py:meth:`~xarray.Dataset.from_dataframe` class method:
+:py:meth:`~xarray.Dataset.from_dataframe` class method or the equivalent
+:py:meth:`pandas.DataFrame.to_xarray <DataFrame.to_xarray>` method (pandas
+v0.18 or later):
 
 .. ipython:: python
 
@@ -89,6 +91,7 @@ DataFrames:
     s = ds['foo'].to_series()
     s
 
+    # or equivalently, with Series.to_xarray()
     xr.DataArray.from_series(s)
 
 Both the ``from_series`` and ``from_dataframe`` methods use reindexing, so they
@@ -97,10 +100,13 @@ work even if not the hierarchical index is not a full tensor product:
 .. ipython:: python
 
     s[::2]
-    xr.DataArray.from_series(s[::2])
+    s[::2].to_xarray()
 
 Multi-dimensional data
 ~~~~~~~~~~~~~~~~~~~~~~
+
+Tidy data is great, but it sometimes you want to preserve dimensions instead of
+automatically stacking them into a ``MultiIndex``.
 
 :py:meth:`DataArray.to_pandas() <xarray.DataArray.to_pandas>` is a shortcut that
 lets you convert a DataArray directly into a pandas object with the same
@@ -115,87 +121,99 @@ dimensionality (i.e., a 1D array is converted to a :py:class:`~pandas.Series`,
     df
 
 To perform the inverse operation of converting any pandas objects into a data
-array with the same shape, simply use the ``DataArray`` constructor:
+array with the same shape, simply use the :py:class:`~xarray.DataArray`
+constructor:
 
 .. ipython:: python
 
     xr.DataArray(df)
 
-xarray objects do not yet support hierarchical indexes, so if your data has
-a hierarchical index, you will either need to unstack it first or use the
-:py:meth:`~xarray.DataArray.from_series` or
-:py:meth:`~xarray.Dataset.from_dataframe` constructors described above.
+Both the ``DataArray`` and ``Dataset`` constructors directly convert pandas
+objects into xarray objects with the same shape. This means that they
+preserve all use of multi-indexes:
 
+.. ipython:: python
+
+    index = pd.MultiIndex.from_arrays([['a', 'a', 'b'], [0, 1, 2]],
+                                      names=['one', 'two'])
+    df = pd.DataFrame({'x': 1, 'y': 2}, index=index)
+    ds = xr.Dataset(df)
+    ds
+
+However, you will need to set dimension names explicitly, either with the
+``dims`` argument on in the ``DataArray`` constructor or by calling
+:py:class:`~xarray.Dataset.rename` on the new object.
+
+.. _panel transition:
 
 Transitioning from pandas.Panel to xarray
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-:py:class:`~pandas.Panel`, pandas's data structure for 3D arrays, has always been a second class
-data structure compared to the Series and DataFrame. To allow pandas developers to focus more on
-its core functionality built around the DataFrame, pandas plans to eventually deprecate Panel.
+:py:class:`~pandas.Panel`, pandas's data structure for 3D arrays, has always
+been a second class data structure compared to the Series and DataFrame. To
+allow pandas developers to focus more on its core functionality built around
+the DataFrame, pandas plans to eventually deprecate Panel.
 
 xarray has most of ``Panel``'s features, a more explicit API (particularly around
 indexing), and the ability to scale to >3 dimensions with the same interface.
 
-As discussed in the xarray docs, there are two primary data structures in xarray:
-``DataArray`` and ``Dataset``. You can imagine a ``DataArray`` as a n-dimensional pandas
-``Series`` (i.e. a single typed array), and a ``Dataset`` as the ``DataFrame``-equivalent
-(i.e. a dict of aligned ``DataArray``s).
+As discussed :ref:`elsewhere <data structures>` in the docs, there are two primary data structures in
+xarray: ``DataArray`` and ``Dataset``. You can imagine a ``DataArray`` as a
+n-dimensional pandas ``Series`` (i.e. a single typed array), and a ``Dataset``
+as the ``DataFrame`` equivalent (i.e. a dict of aligned ``DataArray`` objects).
 
 So you can represent a Panel, in two ways:
-- A 3-dimenional ``DataArray``
-- A ``Dataset`` containing a number of 2-dimensional DataArray-s
+
+- As a 3-dimensional ``DataArray``,
+- Or as a ``Dataset`` containing a number of 2-dimensional DataArray objects.
+
+Let's take a look:
 
 .. ipython:: python
+
     panel = pd.Panel(np.random.rand(2, 3, 4), items=list('ab'), major_axis=list('mno'),
                      minor_axis=pd.date_range(start='2000', periods=4, name='date'))
 
     panel
 
-
 As a DataArray:
 
-
 .. ipython:: python
 
+    # or equivalently, with Panel.to_xarray()
     xr.DataArray(panel)
 
-Or:
-
-
-.. ipython:: python
-
-    panel.to_xarray()
-
-
-As you can see, there are three dimensions (each is also a coordinate). Two of the
-axes of the panel were unnamed, so have been assigned `dim_0` & `dim_1` respectively,
-while the third retains its name `date`.
-
+As you can see, there are three dimensions (each is also a coordinate). Two of
+the axes of the panel were unnamed, so have been assigned ``dim_0`` and
+``dim_1`` respectively, while the third retains its name ``date``.
 
 As a Dataset:
 
 .. ipython:: python
+
     xr.Dataset(panel)
 
-Here, there are two data variables, each representing a DataFrame on panel's `items`
-axis, and labelled as such. Each variable is a 2D array of the respective values along
-the `items` dimension.
+Here, there are two data variables, each representing a DataFrame on panel's
+``items`` axis, and labelled as such. Each variable is a 2D array of the
+respective values along the ``items`` dimension.
 
 While the xarray docs are relatively complete, a few items stand out for Panel users:
-- A DataArray's data is stored as a numpy array, and so can only contain a single
-  type. As a result, a Panel that contains :py:class:`~pandas.DataFrame`s with
-  multiple types will be converted to `object` types. A ``Dataset`` of multiple ``DataArray``s
-  each with its own dtype will allow original types to be preserved
-- Indexing is similar to pandas, but more explicit and leverages xarray's naming
-  of dimensions
-- Because of those features, making much higher dimension-ed data is very practical
-- Variables in ``Dataset``s can use a subset of its dimensions. For example, you can
-  have one dataset with Person x Score x Time, and another with Person x Score
-- You can use coordinates are used for both dimensions and for variables which
-  _label_ the data variables, so you could have a coordinate Age, that labelled the
-  `Person` dimension of a DataSet of Person x Score x Time
 
+- A DataArray's data is stored as a numpy array, and so can only contain a single
+  type. As a result, a Panel that contains :py:class:`~pandas.DataFrame` objects
+  with multiple types will be converted to ``dtype=object``. A ``Dataset`` of
+  multiple ``DataArray`` objects each with its own dtype will allow original
+  types to be preserved.
+- :ref:`Indexing <indexing>` is similar to pandas, but more explicit and
+  leverages xarray's naming of dimensions.
+- Because of those features, making much higher dimensional data is very
+  practical.
+- Variables in ``Dataset`` objects can use a subset of its dimensions. For
+  example, you can have one dataset with Person x Score x Time, and another with
+  Person x Score.
+- You can use coordinates are used for both dimensions and for variables which
+  _label_ the data variables, so you could have a coordinate Age, that labelled
+  the Person dimension of a Dataset of Person x Score x Time.
 
 While xarray may take some getting used to, it's worth it! If anything is unclear,
 please post an issue on `GitHub <https://github.com/pydata/xarray>`__ or
