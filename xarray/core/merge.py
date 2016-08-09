@@ -1,7 +1,7 @@
 import pandas as pd
 
-from .alignment import deep_align
-from .utils import Frozen
+from .alignment import partial_align
+from .utils import Frozen, is_dict_like
 from .variable import as_variable, default_index_coordinate
 from .pycompat import (basestring, OrderedDict)
 
@@ -173,9 +173,9 @@ def expand_variable_dicts(list_of_variable_dicts):
 
     Returns
     -------
-    A list of ordered dictionaries with all values given by those found on the
-    original dictionaries or coordinates, all of which are xarray.Variable
-    objects.
+    A list of ordered dictionaries corresponding to inputs, or coordinates from
+    an input's values. The values of each ordered dictionary are all
+    xarray.Variable objects.
     """
     var_dicts = []
 
@@ -183,8 +183,8 @@ def expand_variable_dicts(list_of_variable_dicts):
         if hasattr(variables, 'variables'):  # duck-type Dataset
             sanitized_vars = variables.variables
         else:
-            # append sanitized_vars before filling it up because we want coords
-            # to appear afterwards
+            # append coords to var_dicts before appending sanitized_vars,
+            # because we want coords to appear first
             sanitized_vars = OrderedDict()
 
             for name, var in variables.items():
@@ -271,7 +271,7 @@ def coerce_pandas_values(objects):
     return out
 
 
-def merge_coords_only(objs, priority_vars=None):
+def merge_coords_without_align(objs, priority_vars=None):
     """Merge coordinate variables without worrying about alignment.
 
     This function is used for merging variables in coordinates.py.
@@ -279,6 +279,61 @@ def merge_coords_only(objs, priority_vars=None):
     expanded = expand_variable_dicts(objs)
     variables = merge_variables(expanded, priority_vars)
     return variables
+
+
+def _align_for_merge(input_objects, join, copy, indexes=None,
+                     indexes_from_arg=None):
+    """Align objects for merging, recursing into dictionary values.
+    """
+    if indexes is None:
+        indexes = {}
+
+    def is_alignable(obj):
+        return hasattr(obj, 'indexes') and hasattr(obj, 'reindex')
+
+    positions = []
+    keys = []
+    out = []
+    targets = []
+    no_key = object()
+    not_replaced = object()
+    for n, variables in enumerate(input_objects):
+        if is_alignable(variables):
+            positions.append(n)
+            keys.append(no_key)
+            targets.append(variables)
+            out.append(not_replaced)
+        else:
+            for k, v in variables.items():
+                if is_alignable(v) and k not in indexes:
+                    # Skip variables in indexes for alignment, because these
+                    # should to be overwritten instead:
+                    # https://github.com/pydata/xarray/issues/725
+                    positions.append(n)
+                    keys.append(k)
+                    targets.append(v)
+            out.append(OrderedDict(variables))
+
+    if not targets or (len(targets) == 1 and
+                       (indexes is None or positions == [indexes_from_arg])):
+        # Don't align if we only have one object to align and it's already
+        # aligned to itself. This ensures it's possible to overwrite index
+        # coordinates with non-unique values, which cannot be reindexed:
+        # https://github.com/pydata/xarray/issues/943
+        return input_objects
+
+    aligned = partial_align(*targets, join=join, copy=copy, indexes=indexes)
+
+    for position, key, aligned_obj in zip(positions, keys, aligned):
+        if key is no_key:
+            out[position] = aligned_obj
+        else:
+            out[position][key] = aligned_obj
+
+    # something went wrong: we should have replaced all sentinel values
+    assert all(arg is not not_replaced for arg in out)
+
+    return out
 
 
 def _get_priority_vars(objects, priority_arg, compat='equals'):
@@ -310,13 +365,18 @@ def _get_priority_vars(objects, priority_arg, compat='equals'):
     return priority_vars
 
 
-def align_and_merge_coords(objs, compat='minimal', join='outer',
-                           priority_arg=None, indexes=None):
-    """Align and merge coordinate variables."""
+def merge_coords(objs, compat='minimal', join='outer', priority_arg=None,
+                 indexes=None, indexes_from_arg=False):
+    """Merge coordinate variables.
+
+    See merge_core below for argument descriptions. This works similarly to
+    merge_core, except everything we don't worry about whether variables are
+    coordinates or not.
+    """
     _assert_compat_valid(compat)
     coerced = coerce_pandas_values(objs)
-    aligned = deep_align(coerced, join=join, copy=False, indexes=indexes,
-                         skip_single_target=True)
+    aligned = _align_for_merge(coerced, join=join, copy=False, indexes=indexes,
+                               indexes_from_arg=indexes_from_arg)
     expanded = expand_variable_dicts(aligned)
     priority_vars = _get_priority_vars(aligned, priority_arg, compat=compat)
     variables = merge_variables(expanded, priority_vars, compat=compat)
@@ -333,7 +393,7 @@ def merge_data_and_coords(data, coords, compat='broadcast_equals',
 
 
 def merge_core(objs, compat='broadcast_equals', join='outer', priority_arg=None,
-               explicit_coords=None, indexes=None):
+               explicit_coords=None, indexes=None, indexes_from_arg=False):
     """Core logic for merging labeled objects.
 
     This is not public API.
@@ -352,6 +412,10 @@ def merge_core(objs, compat='broadcast_equals', join='outer', priority_arg=None,
         An explicit list of variables from `objs` that are coordinates.
     indexes : dict, optional
         Dictionary with values given by pandas.Index objects.
+    indexes_from_arg : boolean, optional
+        If indexes were provided, were these taken from one of the objects in
+        ``objs``? This allows us to skip alignment if this object is the only
+        one to be aligned.
 
     Returns
     -------
@@ -371,8 +435,8 @@ def merge_core(objs, compat='broadcast_equals', join='outer', priority_arg=None,
     _assert_compat_valid(compat)
 
     coerced = coerce_pandas_values(objs)
-    aligned = deep_align(coerced, join=join, copy=False, indexes=indexes,
-                         skip_single_target=True)
+    aligned = _align_for_merge(coerced, join=join, copy=False, indexes=indexes,
+                               indexes_from_arg=indexes_from_arg)
     expanded = expand_variable_dicts(aligned)
 
     coord_names, noncoord_names = determine_coords(coerced)
@@ -488,7 +552,5 @@ def dataset_merge_method(dataset, other, overwrite_vars=frozenset(),
 
 def dataset_update_method(dataset, other):
     """Guts of the Dataset.update method"""
-    objs = [dataset, other]
-    priority_arg = 1
-    indexes = dataset.indexes
-    return merge_core(objs, priority_arg=priority_arg, indexes=indexes)
+    return merge_core([dataset, other], priority_arg=1, indexes=dataset.indexes,
+                      indexes_from_arg=0)
