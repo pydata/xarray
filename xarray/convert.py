@@ -160,10 +160,20 @@ def _iris_cell_methods_to_str(cell_methods_obj):
 def from_iris(cube):
     """ Convert a Iris cube into an DataArray
     """
+    import iris.exceptions
     name = cube.var_name
-    dims = [dim.var_name for dim in cube.dim_coords]
-    if not dims:
-        dims = ["dim{}".format(i) for i in range(cube.data.ndim)]
+    dims = []
+    for dim in xrange(cube.ndim):
+        try:
+            dim_coord = cube.coord(dim_coords=True, dimensions=(dim,))
+            dims.append(dim_coord.var_name)
+        except iris.exceptions.CoordinateNotFoundError:
+            index_coord = range(cube.shape[dim])
+            dims.append("dim{}".format(index_coord))
+
+    # dims = [dim.var_name for dim in cube.dim_coords]
+    # if not dims:
+    #     dims = ["dim{}".format(i) for i in range(cube.data.ndim)]
     coords = OrderedDict()
 
     for coord in cube.coords():
