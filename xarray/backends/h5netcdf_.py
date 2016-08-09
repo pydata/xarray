@@ -7,7 +7,8 @@ from ..core.utils import FrozenOrderedDict, close_on_error, Frozen
 from ..core.pycompat import iteritems, bytes_type, unicode_type, OrderedDict
 
 from .common import WritableCFDataStore
-from .netCDF4_ import _nc4_group, _nc4_values_and_dtype, _extract_nc4_encoding
+from .netCDF4_ import (_nc4_group, _nc4_values_and_dtype, _extract_nc4_encoding,
+                       BaseNetCDF4Array)
 
 
 def maybe_decode_bytes(txt):
@@ -51,7 +52,7 @@ class H5NetCDFStore(WritableCFDataStore):
 
     def open_store_variable(self, var):
         dimensions = var.dimensions
-        data = indexing.LazilyIndexedArray(var)
+        data = indexing.LazilyIndexedArray(BaseNetCDF4Array(var))
         attrs = _read_attributes(var)
 
         # netCDF4 specific encoding
