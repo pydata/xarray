@@ -24,6 +24,9 @@ Enhancements
 Bug fixes
 ~~~~~~~~~
 
+- Fix to ensure xarray works with h5netcdf v0.3.0 for arrays with ``dtype=str``
+  (:issue:`953`). By `Stephan Hoyer <https://github.com/shoyer>`_.
+
 .. _whats-new.0.8.1:
 
 v0.8.1 (5 August 2016)
@@ -33,7 +36,7 @@ Bug fixes
 ~~~~~~~~~
 
 - Fix bug in v0.8.0 that broke assignment to Datasets with non-unique
-  indexes (:issue:`943`).
+  indexes (:issue:`943`). By `Stephan Hoyer <https://github.com/shoyer>`_.
 
 .. _whats-new.0.8.0:
 
@@ -122,7 +125,7 @@ Bug fixes
   `Stephan Hoyer <https://github.com/shoyer>`_.
 
 - Fixed bug in arithmetic operations on DataArray objects whose dimensions
-  are numpy structured arrays or recarrays :issue:`861`, :issue:`837`.
+  are numpy structured arrays or recarrays :issue:`861`, :issue:`837`. By
   `Maciek Swat <https://github.com/maciekswat>`_.
 
 - ``decode_cf_timedelta`` now accepts arrays with ``ndim`` >1 (:issue:`842`).
