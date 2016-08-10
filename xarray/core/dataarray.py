@@ -267,7 +267,7 @@ class DataArray(AbstractArray, BaseDataObject):
     def _from_temp_dataset(cls, dataset, name=__default):
         variable = dataset._variables.pop(cls.__this_array)
         coords = dataset._variables
-        return cls(variable, coords, name, fastpath=True)
+        return cls(variable, coords, name=name, fastpath=True)
 
     def _to_dataset_split(self, dim):
         def subset(dim, label):
