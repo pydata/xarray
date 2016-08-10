@@ -163,13 +163,12 @@ def from_iris(cube):
     import iris.exceptions
     name = cube.var_name
     dims = []
-    for dim in xrange(cube.ndim):
+    for i in xrange(cube.ndim):
         try:
-            dim_coord = cube.coord(dim_coords=True, dimensions=(dim,))
+            dim_coord = cube.coord(dim_coords=True, dimensions=(i,))
             dims.append(dim_coord.var_name)
         except iris.exceptions.CoordinateNotFoundError:
-            index_coord = range(cube.shape[dim])
-            dims.append("dim{}".format(index_coord))
+            dims.append("dim_{}".format(i))
 
     # dims = [dim.var_name for dim in cube.dim_coords]
     # if not dims:
