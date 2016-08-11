@@ -60,6 +60,8 @@ native representation of dates to those that fall between the years 1678 and
 2262. When a netCDF file contains dates outside of these bounds, dates will be
 returned as arrays of ``netcdftime.datetime`` objects.
 
+Timezones are not handeled.
+
 Datetime indexing
 -----------------
 
