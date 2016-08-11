@@ -1093,6 +1093,84 @@ class DataArray(AbstractArray, BaseDataObject):
         isnull = pd.isnull(self.values)
         return np.ma.MaskedArray(data=self.values, mask=isnull, copy=copy)
 
+    def to_dict(self):
+        """
+        Convert this xarray.DataArray into a dictionary following xarray
+        naming conventions.
+
+        Useful for coverting to json.
+        """
+        d = {'coords': {}, 'attrs': dict(self.attrs), 'dims': self.dims}
+
+        def time_check(val):
+            # needed because of numpy bug GH#7619
+            if np.issubdtype(val.dtype, np.datetime64):
+                val = val.astype('datetime64[us]')
+            elif np.issubdtype(val.dtype, np.timedelta64):
+                val = val.astype('timedelta64[us]')
+            return val
+
+        for k in self.coords:
+            data = time_check(self[k].values).tolist()
+            d['coords'].update({k: {'data': data,
+                                    'dims': self[k].dims,
+                                    'attrs': dict(self[k].attrs)}})
+
+        d.update({'data': time_check(self.values).tolist(),
+                  'name': self.name})
+        return d
+
+    @classmethod
+    def from_dict(cls, d):
+        """
+        Convert a dictionary into an xarray.DataArray
+
+        Input dict can take several forms::
+
+            d = {'dims': ('t'), 'data': x}
+
+            d = {'coords': {'t': {'dims': 't', 'data': t,
+                                  'attrs': {'units':'s'}}},
+                 'attrs': {'title': 'air temperature'},
+                 'dims': 't',
+                 'data': x,
+                 'name': 'a'}
+
+        where 't' is the name of the dimesion, 'a' is the name of the array,
+        and  x and t are lists, numpy.arrays, or pandas objects.
+
+        Parameters
+        ----------
+        d : dict, with a minimum structure of {'dims': [..], 'data': [..]}
+
+        Returns
+        -------
+        obj : xarray.DataArray
+
+        See also
+        --------
+        xarray.Dataset.from_dict
+        """
+        coords = None
+        if 'coords' in d:
+            try:
+                coords = OrderedDict([(k, (v['dims'],
+                                           v['data'],
+                                           v.get('attrs')))
+                                      for k, v in d['coords'].items()])
+            except KeyError as e:
+                raise ValueError(
+                    "cannot convert dict when coords are missing the key "
+                    "'{dims_data}'".format(dims_data=str(e.args[0])))
+        try:
+            data = d['data']
+        except KeyError:
+            raise ValueError("cannot convert dict without the key 'data''")
+        else:
+            obj = cls(data, coords, d.get('dims'), d.get('name'),
+                      d.get('attrs'))
+        return obj
+
     @classmethod
     def from_series(cls, series):
         """Convert a pandas.Series into an xarray.DataArray.

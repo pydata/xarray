@@ -25,7 +25,7 @@ module:
 
 .. ipython:: python
 
-    import cPickle as pickle
+    import pickle
 
     ds = xr.Dataset({'foo': (('x', 'y'), np.random.rand(4, 5))},
                     coords={'x': [10, 20, 30, 40],
@@ -51,6 +51,34 @@ and lets you use xarray objects with Python modules like
    refined, we make no guarantees (at this point) that objects pickled with
    this version of xarray will work in future versions.
 
+.. _dictionary io:
+
+Dictionary
+----------
+
+Serializing an xarray object to a Python dictionary is also simple.
+
+We can convert a ``Dataset`` (or a ``DataArray``) to a dict using
+:py:meth:`~xarray.Dataset.to_dict`:
+
+.. ipython:: python
+
+    d = ds.to_dict()
+    d
+
+We can create a new xarray object from a dict using
+:py:meth:`~xarray.Dataset.from_dict`:
+
+.. ipython:: python
+
+    ds_dict = xr.Dataset.from_dict(d)
+    ds_dict
+
+Dictionary support allows for flexible use of xarray objects. It doesn't
+require external libraries and dicts can easily be pickled, or converted to
+json, or geojson. All the values are converted to lists, so dicts might
+be quite large.
+
 netCDF
 ------
 
@@ -58,7 +86,7 @@ Currently, the only disk based serialization format that xarray directly support
 is `netCDF`__. netCDF is a file format for fully self-described datasets that
 is widely used in the geosciences and supported on almost all platforms. We use
 netCDF because xarray was based on the netCDF data model, so netCDF files on disk
-directly correspond to :py:class:`~xarray.Dataset` objects. Recent versions
+directly correspond to :py:class:`~xarray.Dataset` objects. Recent versions of
 netCDF are based on the even more widely used HDF5 file-format.
 
 __ http://www.unidata.ucar.edu/software/netcdf/

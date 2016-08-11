@@ -1838,6 +1838,97 @@ class TestDataset(TestCase):
             expected = expected.drop(['h'], axis=1)
         assert roundtripped.equals(expected)
 
+    def test_to_and_from_dict(self):
+        # <xarray.Dataset>
+        # Dimensions:  (t: 10)
+        # Coordinates:
+        #   * t        (t) <U1 'a' 'b' 'c' 'd' 'e' 'f' 'g' 'h' 'i' 'j'
+        # Data variables:
+        #     a        (t) float64 0.6916 -1.056 -1.163 0.9792 -0.7865 ...
+        #     b        (t) float64 1.32 0.1954 1.91 1.39 0.519 -0.2772 ...
+        x = np.random.randn(10)
+        y = np.random.randn(10)
+        t = list('abcdefghij')
+        ds = Dataset(OrderedDict([('a', ('t', x)),
+                                  ('b', ('t', y)),
+                                  ('t', ('t', t))]))
+        expected = {'coords': {'t': {'dims': ('t',),
+                                     'data': t,
+                                     'attrs': {}}},
+                    'attrs': {},
+                    'dims': {'t': 10},
+                    'data_vars': {'a': {'dims': ('t',),
+                                        'data': x.tolist(),
+                                        'attrs': {}},
+                                  'b': {'dims': ('t',),
+                                        'data': y.tolist(),
+                                        'attrs': {}}}}
+
+        actual = ds.to_dict()
+
+        # check that they are identical
+        self.assertEqual(expected, actual)
+
+        # check roundtrip
+        self.assertDatasetIdentical(ds, Dataset.from_dict(actual))
+
+        # verify coords are included roundtrip
+        expected = ds.set_coords('b')
+        actual = Dataset.from_dict(expected.to_dict())
+
+        self.assertDatasetIdentical(expected, actual)
+
+        # test some incomplete dicts:
+        # this one has no attrs field, the dims are strings, and x, y are
+        # np.arrays
+
+        d = {'coords': {'t': {'dims': 't', 'data': t}},
+             'dims': 't',
+             'data_vars': {'a': {'dims': 't', 'data': x},
+                           'b': {'dims': 't', 'data': y}}}
+        self.assertDatasetIdentical(ds, Dataset.from_dict(d))
+
+        # this is kind of a flattened version with no coords, or data_vars
+        d = {'a': {'dims': 't', 'data': x},
+             't': {'data': t, 'dims': 't'},
+             'b': {'dims': 't', 'data': y}}
+        self.assertDatasetIdentical(ds, Dataset.from_dict(d))
+
+        # this one is missing some necessary information
+        d = {'a': {'data': x},
+             't': {'data': t, 'dims': 't'},
+             'b': {'dims': 't', 'data': y}}
+        with self.assertRaisesRegexp(ValueError, "cannot convert dict "
+                                     "without the key 'dims'"):
+            Dataset.from_dict(d)
+
+    def test_to_and_from_dict_with_time_dim(self):
+        x = np.random.randn(10, 3)
+        y = np.random.randn(10, 3)
+        t = pd.date_range('20130101', periods=10)
+        lat = [77.7, 83.2, 76]
+        ds = Dataset(OrderedDict([('a', (['t', 'lat'], x)),
+                                  ('b', (['t', 'lat'], y)),
+                                  ('t', ('t', t)),
+                                  ('lat', ('lat', lat))]))
+        roundtripped = Dataset.from_dict(ds.to_dict())
+        self.assertDatasetIdentical(ds, roundtripped)
+
+    def test_to_and_from_dict_with_nan_nat(self):
+        x = np.random.randn(10, 3)
+        y = np.random.randn(10, 3)
+        y[2] = np.nan
+        t = pd.Series(pd.date_range('20130101', periods=10))
+        t[2] = np.nan
+
+        lat = [77.7, 83.2, 76]
+        ds = Dataset(OrderedDict([('a', (['t', 'lat'], x)),
+                                  ('b', (['t', 'lat'], y)),
+                                  ('t', ('t', t)),
+                                  ('lat', ('lat', lat))]))
+        roundtripped = Dataset.from_dict(ds.to_dict())
+        self.assertDatasetIdentical(ds, roundtripped)
+
     def test_pickle(self):
         data = create_test_data()
         roundtripped = pickle.loads(pickle.dumps(data))

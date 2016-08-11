@@ -1746,6 +1746,70 @@ class TestDataArray(TestCase):
         arr = DataArray(s)
         assert "'a'" in repr(arr)  # should not error
 
+    def test_to_and_from_dict(self):
+        expected = {'name': 'foo',
+                    'dims': ('x', 'y'),
+                    'data': self.x.tolist(),
+                    'attrs': {},
+                    'coords': {'y': {'dims': ('y',),
+                                     'data': list(range(20)),
+                                     'attrs': {}},
+                               'x': {'dims': ('x',),
+                                     'data': list(range(10)),
+                                     'attrs': {}}}}
+        actual = self.dv.to_dict()
+
+        # check that they are identical
+        self.assertEqual(expected, actual)
+
+        # check roundtrip
+        self.assertDataArrayIdentical(self.dv, DataArray.from_dict(actual))
+
+        # a more bare bones representation still roundtrips
+        d = {'name': 'foo',
+             'dims': ('x', 'y'),
+             'data': self.x,
+             'coords': {'y': {'dims': 'y', 'data': list(range(20))},
+                        'x': {'dims': 'x', 'data': list(range(10))}}}
+        self.assertDataArrayIdentical(self.dv, DataArray.from_dict(d))
+
+        # and the most bare bones representation still roundtrips
+        d = {'name': 'foo', 'dims': ('x', 'y'), 'data': self.x}
+        self.assertDataArrayIdentical(self.dv, DataArray.from_dict(d))
+
+        # missing a dims in the coords
+        d = {'dims': ('x', 'y'),
+             'data': self.x,
+             'coords': {'y': {'data': list(range(20))},
+                        'x': {'dims': 'x', 'data': list(range(10))}}}
+        with self.assertRaisesRegexp(ValueError, "cannot convert dict when coords are missing the key 'dims'"):
+            DataArray.from_dict(d)
+
+        # this one is missing some necessary information
+        d = {'dims': ('t')}
+        with self.assertRaisesRegexp(ValueError, "cannot convert dict without the key 'data'"):
+            DataArray.from_dict(d)
+
+    def test_to_and_from_dict_with_time_dim(self):
+        x = np.random.randn(10, 3)
+        t = pd.date_range('20130101', periods=10)
+        lat = [77.7, 83.2, 76]
+        da = DataArray(x, OrderedDict([('t', ('t', t)),
+                                       ('lat', ('lat', lat))]))
+        roundtripped = DataArray.from_dict(da.to_dict())
+        self.assertDataArrayIdentical(da, roundtripped)
+
+    def test_to_and_from_dict_with_nan_nat(self):
+        y = np.random.randn(10, 3)
+        y[2] = np.nan
+        t = pd.Series(pd.date_range('20130101', periods=10))
+        t[2] = np.nan
+        lat = [77.7, 83.2, 76]
+        da = DataArray(y, OrderedDict([('t', ('t', t)),
+                                       ('lat', ('lat', lat))]))
+        roundtripped = DataArray.from_dict(da.to_dict())
+        self.assertDataArrayIdentical(da, roundtripped)
+
     def test_to_masked_array(self):
         rs = np.random.RandomState(44)
         x = rs.random_sample(size=(10, 20))

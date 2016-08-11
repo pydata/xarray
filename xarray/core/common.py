@@ -578,7 +578,6 @@ class BaseDataObject(AttrAccessMixin):
 
         return outobj._where(outcond)
 
-
     # this has no runtime function - these are listed so IDEs know these methods
     # are defined and don't warn on these operations
     __lt__ = __le__ =__ge__ = __gt__ = __add__ = __sub__ = __mul__ = \
