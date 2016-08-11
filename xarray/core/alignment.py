@@ -96,22 +96,9 @@ def partial_align(*objects, **kwargs):
     exclude = kwargs.pop('exclude', None)
     if exclude is None:
         exclude = set()
-    skip_single_target = kwargs.pop('skip_single_target', False)
     if kwargs:
         raise TypeError('align() got unexpected keyword arguments: %s'
                         % list(kwargs))
-
-    if len(objects) == 1:
-        obj, = objects
-        if (indexes is None or
-                (skip_single_target and
-                 all(obj.indexes[k].equals(v) for k, v in indexes.items()
-                     if k in obj.indexes))):
-            # We don't need to align, so don't bother with reindexing, which
-            # fails for non-unique indexes.
-            # `skip_single_target` is a hack so we can skip alignment of a
-            # single object in merge.
-            return (obj.copy() if copy else obj,)
 
     joined_indexes = _join_indexes(join, objects, exclude=exclude)
     if indexes is not None:
@@ -124,56 +111,6 @@ def partial_align(*objects, **kwargs):
         result.append(obj.reindex(copy=copy, **valid_indexers))
 
     return tuple(result)
-
-
-def is_alignable(obj):
-    return hasattr(obj, 'indexes') and hasattr(obj, 'reindex')
-
-
-def deep_align(list_of_variable_maps, join='outer', copy=True, indexes=None,
-               skip_single_target=False):
-    """Align objects, recursing into dictionary values.
-    """
-    if indexes is None:
-        indexes = {}
-
-    # We use keys to identify arguments to align. Integers indicate single
-    # arguments, while (int, variable_name) pairs indicate variables in ordered
-    # dictionaries.
-    keys = []
-    out = []
-    targets = []
-    sentinel = object()
-    for n, variables in enumerate(list_of_variable_maps):
-        if is_alignable(variables):
-            keys.append(n)
-            targets.append(variables)
-            out.append(sentinel)
-        elif is_dict_like(variables):
-            for k, v in variables.items():
-                if is_alignable(v) and k not in indexes:
-                    # don't align dict-like variables that are already fixed
-                    # indexes: we might be overwriting these index variables
-                    keys.append((n, k))
-                    targets.append(v)
-            out.append(OrderedDict(variables))
-        else:
-            out.append(variables)
-
-    aligned = partial_align(*targets, join=join, copy=copy, indexes=indexes,
-                            skip_single_target=skip_single_target)
-
-    for key, aligned_obj in zip(keys, aligned):
-        if isinstance(key, tuple):
-            n, k = key
-            out[n][k] = aligned_obj
-        else:
-            out[key] = aligned_obj
-
-    # something went wrong: we should have replaced all sentinel values
-    assert all(arg is not sentinel for arg in out)
-
-    return out
 
 
 def reindex_variables(variables, indexes, indexers, method=None,
