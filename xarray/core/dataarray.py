@@ -1125,16 +1125,16 @@ class DataArray(AbstractArray, BaseDataObject):
         """
         Convert a dictionary into an xarray.DataArray
 
-        Input dict can take several forms:
+        Input dict can take several forms::
 
-        d = {'dims': ('t'), 'data': x}
+            d = {'dims': ('t'), 'data': x}
 
-        d = {'coords': {'t': {'dims': 't', 'data': t, \
-                              'attrs': {'units':'s'}}}, \n
-             'attrs': {'title': 'air temperature'}, \
-             'dims': 't', \
-             'data': x, \
-             'name': 'a'}
+            d = {'coords': {'t': {'dims': 't', 'data': t,
+                                  'attrs': {'units':'s'}}},
+                 'attrs': {'title': 'air temperature'},
+                 'dims': 't',
+                 'data': x,
+                 'name': 'a'}
 
         where 't' is the name of the dimesion, 'a' is the name of the array,
         and  x and t are lists, numpy.arrays, or pandas objects.

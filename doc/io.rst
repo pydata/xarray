@@ -25,7 +25,7 @@ module:
 
 .. ipython:: python
 
-    import pickle as pickle
+    import pickle
 
     ds = xr.Dataset({'foo': (('x', 'y'), np.random.rand(4, 5))},
                     coords={'x': [10, 20, 30, 40],
