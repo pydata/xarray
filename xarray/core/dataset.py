@@ -2179,7 +2179,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
     def filter_by_attrs(self, **kwargs):
         """Returns a ``Dataset`` with variables that match specific conditions.
 
-        Can pass in ``key=value ``or ``key=callable``.  Variables are returned
+        Can pass in ``key=value`` or ``key=callable``.  Variables are returned
         that contain all of the matches or callable returns True.  If using a
         callable note that it should accept a single parameter only,
         the attribute value.
@@ -2202,7 +2202,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
 
         Examples
         --------
-        # "Create an example dataset:
+        >>> # Create an example dataset:
         >>> import numpy as np
         >>> import pandas as pd
         >>> import xarray as xr
