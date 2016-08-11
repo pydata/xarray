@@ -246,14 +246,13 @@ def broadcast(*args, **kwargs):
     xarray objects automatically broadcast against each other in arithmetic
     operations, so this function should not be necessary for normal use.
 
+    If no change is needed, the input data is returned to the output without
+    being copied.
+
     Parameters
     ----------
     *args : DataArray or Dataset objects
         Arrays to broadcast against each other.
-    copy : bool, optional
-        If ``copy=True``, the returned objects contain all new variables. If
-        ``copy=False`` and no reindexing is required then the broadcasted objects
-        will include original variables.
     exclude : sequence of str, optional
         Dimensions that must not be broadcasted
 
@@ -320,7 +319,6 @@ def broadcast(*args, **kwargs):
     from .dataarray import DataArray
     from .dataset import Dataset
 
-    copy = kwargs.pop('copy', True)
     exclude = kwargs.pop('exclude', None)
     if exclude is None:
         exclude = set()
@@ -349,16 +347,12 @@ def broadcast(*args, **kwargs):
                 pass                
 
         dims = tuple(array_dims_map)
-        if not copy and set(dims) == set(array.dims):
-            return array
 
         data = array.variable.expand_dims(array_dims_map)
         coords = OrderedDict(array.coords)
         coords.update(common_coords)
         res = DataArray(data, coords, dims, name=array.name,
                         attrs=array.attrs, encoding=array.encoding)
-        if copy and res.data is array.data:
-            res = res.copy()
         return res
 
     def _broadcast_dataset(ds):
@@ -369,9 +363,6 @@ def broadcast(*args, **kwargs):
                 ds_dims_map[dim] = ds.dims[dim]
             except KeyError:
                 pass
-
-        if not copy and dict(ds.dims) == dict(ds_dims_map):
-            return ds
 
         data_vars = OrderedDict()
         for k in ds.data_vars:
