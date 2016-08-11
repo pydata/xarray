@@ -170,14 +170,13 @@ def from_iris(cube):
         except iris.exceptions.CoordinateNotFoundError:
             dims.append("dim_{}".format(i))
 
-    # dims = [dim.var_name for dim in cube.dim_coords]
-    # if not dims:
-    #     dims = ["dim{}".format(i) for i in range(cube.data.ndim)]
     coords = OrderedDict()
 
     for coord in cube.coords():
         coord_attrs = _iris_obj_to_attrs(coord)
         coord_dims = [dims[i] for i in cube.coord_dims(coord)]
+        if not coord.var_name:
+            raise ValueError('Coordinate has no var_name')
         if coord_dims:
             coords[coord.var_name] = (coord_dims, coord.points, coord_attrs)
         else:
@@ -190,4 +189,5 @@ def from_iris(cube):
         array_attrs['cell_methods'] = cell_methods
     dataarray = DataArray(cube.data, coords=coords, name=name,
                           attrs=array_attrs, dims=dims)
-    return decode_cf(dataarray.to_dataset())[dataarray.name]
+    decoded_ds = decode_cf(dataarray._to_temp_dataset())
+    return dataarray._from_temp_dataset(decoded_ds)
