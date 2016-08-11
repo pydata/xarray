@@ -201,7 +201,8 @@ class DatasetIOTestCases(object):
     def test_roundtrip_timedelta_data(self):
         time_deltas = pd.to_timedelta(['1h', '2h', 'NaT'])
         expected = Dataset({'td': ('td', time_deltas), 'td0': time_deltas[0]})
-        with self.roundtrip(expected) as actual:
+        with self.roundtrip(
+            expected, open_kwargs={'decode_timedeltas': True}) as actual:
             self.assertDatasetIdentical(expected, actual)
 
     def test_roundtrip_float64_data(self):
