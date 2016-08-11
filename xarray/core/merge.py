@@ -294,7 +294,8 @@ def merge_coords_without_align(objs, priority_vars=None):
     return variables
 
 
-def _align_for_merge(input_objects, join, copy, indexes=None):
+def _align_for_merge(input_objects, join, copy, indexes=None,
+                     aise_on_invalid=True):
     """Align objects for merging, recursing into dictionary values.
     """
     if indexes is None:
@@ -315,7 +316,7 @@ def _align_for_merge(input_objects, join, copy, indexes=None):
             keys.append(no_key)
             targets.append(variables)
             out.append(not_replaced)
-        else:
+        elif is_dict_like(variables):
             for k, v in variables.items():
                 if is_alignable(v) and k not in indexes:
                     # Skip variables in indexes for alignment, because these
@@ -325,6 +326,12 @@ def _align_for_merge(input_objects, join, copy, indexes=None):
                     keys.append(k)
                     targets.append(v)
             out.append(OrderedDict(variables))
+        elif raise_on_invalid:
+            raise ValueError('object to align is neither an xarray.Dataset, '
+                             'an xarray.DataArray nor a dictionary: %r'
+                             % variables)
+        else:
+            out.append(variables)
 
     aligned = align(*targets, join=join, copy=copy, indexes=indexes)
 
