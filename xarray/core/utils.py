@@ -178,11 +178,21 @@ def is_valid_numpy_dtype(dtype):
         return True
 
 
-def tuple_to_0darray(value):
+def to_0d_object_array(value):
+    """Given a value, wrap it in a 0-D numpy.ndarray with dtype=object."""
     result = np.empty((1,), dtype=object)
     result[:] = [value]
     result.shape = ()
     return result
+
+
+def to_0d_array(value):
+    """Given a value, wrap it in a 0-D numpy.ndarray."""
+    if np.isscalar(value) or (isinstance(value, np.ndarray)
+                                and value.ndim == 0):
+        return np.array(value)
+    else:
+        return to_0d_object_array(value)
 
 
 def dict_equiv(first, second, compat=equivalent):

@@ -47,8 +47,8 @@ class VariableSubclassTestCases(object):
         expected = v[0]
         self.assertVariableIdentical(expected, actual)
 
-    def assertIndexedLikeNDArray(self, variable, expected_value0,
-                                 expected_dtype=None):
+    def _assertIndexedLikeNDArray(self, variable, expected_value0,
+                                  expected_dtype=None):
         """Given a 1-dimensional variable, verify that the variable is indexed
         like a numpy.ndarray.
         """
@@ -66,7 +66,7 @@ class VariableSubclassTestCases(object):
             # check output type instead of array dtype
             self.assertEqual(type(variable.values[0]), type(expected_value0))
             self.assertEqual(type(variable[0].values), type(expected_value0))
-        else:
+        elif expected_dtype is not False:
             self.assertEqual(variable.values[0].dtype, expected_dtype)
             self.assertEqual(variable[0].values.dtype, expected_dtype)
 
@@ -74,44 +74,44 @@ class VariableSubclassTestCases(object):
         for value, dtype in [(0, np.int_),
                              (np.int32(0), np.int32)]:
             x = self.cls(['x'], [value])
-            self.assertIndexedLikeNDArray(x, value, dtype)
+            self._assertIndexedLikeNDArray(x, value, dtype)
 
     def test_index_0d_float(self):
         for value, dtype in [(0.5, np.float_),
                              (np.float32(0.5), np.float32)]:
             x = self.cls(['x'], [value])
-            self.assertIndexedLikeNDArray(x, value, dtype)
+            self._assertIndexedLikeNDArray(x, value, dtype)
 
     def test_index_0d_string(self):
         for value, dtype in [('foo', np.dtype('U3' if PY3 else 'S3')),
                              (u'foo', np.dtype('U3'))]:
             x = self.cls(['x'], [value])
-            self.assertIndexedLikeNDArray(x, value, dtype)
+            self._assertIndexedLikeNDArray(x, value, dtype)
 
     def test_index_0d_datetime(self):
         d = datetime(2000, 1, 1)
         x = self.cls(['x'], [d])
-        self.assertIndexedLikeNDArray(x, np.datetime64(d))
+        self._assertIndexedLikeNDArray(x, np.datetime64(d))
 
         x = self.cls(['x'], [np.datetime64(d)])
-        self.assertIndexedLikeNDArray(x, np.datetime64(d), 'datetime64[ns]')
+        self._assertIndexedLikeNDArray(x, np.datetime64(d), 'datetime64[ns]')
 
         x = self.cls(['x'], pd.DatetimeIndex([d]))
-        self.assertIndexedLikeNDArray(x, np.datetime64(d), 'datetime64[ns]')
+        self._assertIndexedLikeNDArray(x, np.datetime64(d), 'datetime64[ns]')
 
     def test_index_0d_timedelta64(self):
         td = timedelta(hours=1)
 
         x = self.cls(['x'], [np.timedelta64(td)])
-        self.assertIndexedLikeNDArray(x, np.timedelta64(td), 'timedelta64[ns]')
+        self._assertIndexedLikeNDArray(x, np.timedelta64(td), 'timedelta64[ns]')
 
         x = self.cls(['x'], pd.to_timedelta([td]))
-        self.assertIndexedLikeNDArray(x, np.timedelta64(td), 'timedelta64[ns]')
+        self._assertIndexedLikeNDArray(x, np.timedelta64(td), 'timedelta64[ns]')
 
     def test_index_0d_not_a_time(self):
         d = np.datetime64('NaT', 'ns')
         x = self.cls(['x'], [d])
-        self.assertIndexedLikeNDArray(x, d, None)
+        self._assertIndexedLikeNDArray(x, d)
 
     def test_index_0d_object(self):
 
@@ -130,7 +130,15 @@ class VariableSubclassTestCases(object):
 
         item = HashableItemWrapper((1, 2, 3))
         x = self.cls('x', [item])
-        self.assertIndexedLikeNDArray(x, item)
+        self._assertIndexedLikeNDArray(x, item, expected_dtype=False)
+
+    def test_0d_object_array_with_list(self):
+        listarray = np.empty((1,), dtype=object)
+        listarray[0] = [1, 2, 3]
+        x = self.cls('x', listarray)
+        assert x.data == listarray
+        assert x[0].data == listarray.squeeze()
+        assert x.squeeze().data == listarray.squeeze()
 
     def test_index_and_concat_datetime(self):
         # regression test for #125
@@ -562,7 +570,6 @@ class TestVariable(TestCase, VariableSubclassTestCases):
         self.assertVariableIdentical(expected, as_variable(ds['x']))
         self.assertNotIsInstance(ds['x'], Variable)
         self.assertIsInstance(as_variable(ds['x']), Variable)
-        self.assertIsInstance(as_variable(ds['x'], strict=False), DataArray)
 
         FakeVariable = namedtuple('FakeVariable', 'values dims')
         fake_xarray = FakeVariable(expected.values, expected.dims)
@@ -571,13 +578,15 @@ class TestVariable(TestCase, VariableSubclassTestCases):
         xarray_tuple = (expected.dims, expected.values)
         self.assertVariableIdentical(expected, as_variable(xarray_tuple))
 
-        with self.assertRaisesRegexp(TypeError, 'cannot convert arg'):
+        with self.assertRaisesRegexp(TypeError, 'tuples to convert'):
             as_variable(tuple(data))
-        with self.assertRaisesRegexp(TypeError, 'cannot infer .+ dimensions'):
+        with self.assertRaisesRegexp(
+                TypeError, 'without an explicit list of dimensions'):
             as_variable(data)
 
-        actual = as_variable(data, key='x')
+        actual = as_variable(data, name='x')
         self.assertVariableIdentical(expected, actual)
+        self.assertIsInstance(actual, Coordinate)
 
         actual = as_variable(0)
         expected = Variable([], 0)
@@ -728,6 +737,19 @@ class TestVariable(TestCase, VariableSubclassTestCases):
         w3 = Variable(['b', 'c', 'd', 'a'], np.einsum('abcd->bcda', x))
         self.assertVariableIdentical(w, w3.transpose('a', 'b', 'c', 'd'))
 
+    def test_transpose_0d(self):
+        for value in [
+                3.5,
+                ('a', 1),
+                np.datetime64('2000-01-01'),
+                np.timedelta64(1, 'h'),
+                None,
+                object(),
+                ]:
+            variable = Variable([], value)
+            actual = variable.transpose()
+            assert actual.identical(variable)
+
     def test_squeeze(self):
         v = Variable(['x', 'y'], [[1]])
         self.assertVariableIdentical(Variable([], 1), v.squeeze())
@@ -771,6 +793,15 @@ class TestVariable(TestCase, VariableSubclassTestCases):
 
         with self.assertRaisesRegexp(ValueError, 'must be a superset'):
             v.expand_dims(['z'])
+
+    def test_expand_dims_object_dtype(self):
+        v = Variable([], ('a', 1))
+        actual = v.expand_dims(('x',), (3,))
+        exp_values = np.empty((3,), dtype=object)
+        for i in range(3):
+            exp_values[i] = ('a', 1)
+        expected = Variable(['x'], exp_values)
+        assert actual.identical(expected)
 
     def test_stack(self):
         v = Variable(['x', 'y'], [[0, 1], [2, 3]], {'foo': 'bar'})

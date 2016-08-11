@@ -1,10 +1,10 @@
-name: xarray
+name: xarray-docs
 dependencies:
   - python=2.7
-  - numpy=1.10
-  - pandas=0.17.1
+  - numpy=1.11
+  - pandas=0.18.1
   - numpydoc=0.5
-  - seaborn=0.6
-  - dask=0.7.5
+  - seaborn=0.7.1
+  - dask=0.10.1
   - ipython=4.0.1
-  - sphinx=1.2.3  # pin to avoid https://github.com/sphinx-doc/sphinx/issues/1822
+  - sphinx=1.4.1

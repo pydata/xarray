@@ -1,4 +1,4 @@
-..
+.. _internals:
 
 xarray Internals
 ================
@@ -81,7 +81,7 @@ xarray:
 This achieves the same result as if the ``Dataset`` class had a cached property
 defined that returns an instance of your class:
 
-.. python::
+.. code-block:: python
 
   class Dataset:
       ...

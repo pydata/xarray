@@ -17,6 +17,7 @@ Top-level functions
    align
    broadcast
    concat
+   merge
    set_options
 
 Dataset
@@ -394,6 +395,7 @@ Dataset methods
    Dataset.close
    Dataset.load
    Dataset.chunk
+   Dataset.filter_by_attrs
 
 DataArray methods
 -----------------
