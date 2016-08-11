@@ -33,34 +33,48 @@ _DATETIMEINDEX_COMPONENTS = ['year', 'month', 'day', 'hour', 'minute',
                              'quarter']
 
 
-def _get_virtual_variable(variables, key):
-    """Get a virtual variable (e.g., 'time.year') from a dict of
-    xarray.Variable objects (if possible)
+def _get_virtual_variable(variables, key, level_vars={}):
+    """Get a virtual variable (e.g., 'time.year' or a MultiIndex level)
+    from a dict of xarray.Variable objects (if possible)
     """
     if not isinstance(key, basestring):
         raise KeyError(key)
 
     split_key = key.split('.', 1)
-    if len(split_key) != 2:
-        raise KeyError(key)
-
-    ref_name, var_name = split_key
-    ref_var = variables[ref_name]
-    if ref_var.ndim == 1:
-        date = ref_var.to_index()
-    elif ref_var.ndim == 0:
-        date = pd.Timestamp(ref_var.values)
+    if len(split_key) == 2:
+        ref_name, var_name = split_key
+    elif len(split_key) == 1:
+        ref_name, var_name = key, None
     else:
         raise KeyError(key)
 
-    if var_name == 'season':
-        # TODO: move 'season' into pandas itself
-        seasons = np.array(['DJF', 'MAM', 'JJA', 'SON'])
-        month = date.month
-        data = seasons[(month // 3) % 4]
+    if ref_name in level_vars:
+        dim_var = variables[level_vars[ref_name]]
+        ref_var = dim_var.to_coord().get_level_coord(ref_name)
     else:
-        data = getattr(date, var_name)
-    return ref_name, var_name, Variable(ref_var.dims, data)
+        ref_var = variables[ref_name]
+
+    if var_name is None:
+        virtual_var = ref_var
+        var_name = key
+    else:
+        if ref_var.ndim == 1:
+            date = ref_var.to_index()
+        elif ref_var.ndim == 0:
+            date = pd.Timestamp(ref_var.values)
+        else:
+            raise KeyError(key)
+
+        if var_name == 'season':
+            # TODO: move 'season' into pandas itself
+            seasons = np.array(['DJF', 'MAM', 'JJA', 'SON'])
+            month = date.month
+            data = seasons[(month // 3) % 4]
+        else:
+            data = getattr(date, var_name)
+        virtual_var = Variable(ref_var.dims, data)
+
+    return ref_name, var_name, virtual_var
 
 
 def calculate_dimensions(variables):
@@ -426,11 +440,22 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
 
     @property
     def _level_coords(self):
+        """Return a mapping of all MultiIndex levels and their corresponding
+        coordinate name. Raise a `ValueError`` if two or more levels have
+        the same name.
+        """
         level_coords = OrderedDict()
-        for name in self._coord_names:
-            var = self.variables[name]
+        for cname in self._coord_names:
+            var = self.variables[cname]
             if var.ndim == 1:
-                level_coords.update(var.to_coord().get_level_coords())
+                level_names = var.to_coord().level_names
+                if level_names is not None:
+                    duplicate_names = set(level_names) & set(level_coords)
+                    if duplicate_names:
+                        raise ValueError("duplicate MultiIndex level names %r"
+                                         % duplicate_names)
+                    dim = var.dims[0]
+                    level_coords.update({lname: dim for lname in level_names})
         return level_coords
 
     def _copy_listed(self, names):
@@ -445,7 +470,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
                 variables[name] = self._variables[name]
             except KeyError:
                 ref_name, var_name, var = _get_virtual_variable(
-                    self._variables, name)
+                    self._variables, name, self._level_coords)
                 variables[var_name] = var
                 if ref_name in self._coord_names:
                     coord_names.add(var_name)
@@ -459,11 +484,10 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         from .dataarray import DataArray
 
         try:
-            variable = self._variables.get(name)
-            if variable is None:
-                variable = self._level_coords[name]
+            variable = self._variables[name]
         except KeyError:
-            _, name, variable = _get_virtual_variable(self._variables, name)
+            _, name, variable = _get_virtual_variable(
+                self._variables, name, self._level_coords)
 
         coords = OrderedDict()
         needed_dims = set(variable.dims)

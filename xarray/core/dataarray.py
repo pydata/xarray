@@ -420,10 +420,21 @@ class DataArray(AbstractArray, BaseDataObject):
 
     @property
     def _level_coords(self):
+        """Return a mapping of all MultiIndex levels and their corresponding
+        coordinate name. Raise a `ValueError`` if two or more levels have
+        the same name.
+        """
         level_coords = OrderedDict()
-        for name, var in self._coords.items():
+        for cname, var in self._coords.items():
             if var.ndim == 1:
-                level_coords.update(var.to_coord().get_level_coords())
+                level_names = var.to_coord().level_names
+                if level_names is not None:
+                    duplicate_names = set(level_names) & set(level_coords)
+                    if duplicate_names:
+                        raise ValueError("duplicate MultiIndex level names %r"
+                                         % duplicate_names)
+                    dim = var.dims[0]
+                    level_coords.update({lname: dim for lname in level_names})
         return level_coords
 
     def __getitem__(self, key):
@@ -431,11 +442,10 @@ class DataArray(AbstractArray, BaseDataObject):
             from .dataset import _get_virtual_variable
 
             try:
-                var = self._coords.get(key)
-                if var is None:
-                    var = self._level_coords[key]
+                var = self._coords[key]
             except KeyError:
-                _, key, var = _get_virtual_variable(self._coords, key)
+                _, key, var = _get_virtual_variable(
+                    self._coords, key, self._level_coords)
 
             return self._replace_maybe_drop_dims(var, name=key)
         else:

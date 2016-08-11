@@ -1182,20 +1182,27 @@ class IndexVariable(Variable):
             index = index.set_names(self.name)
         return index
 
-    def get_level_coords(self):
-        """Return an OrderedDict of independent coordinates for each
-        index level, or return an empty OrderedDict if the coordinate
-        has no MultiIndex.
+    @property
+    def level_names(self):
+        """Return MultiIndex level names or None if Coordinate has no
+        MultiIndex.
         """
-        level_coords = OrderedDict()
         index = self.to_index()
-        if not isinstance(index, pd.MultiIndex):
-            return level_coords
-        for level_name in index.names:
-            level_coords[level_name] = type(self)(
-                level_name, index.get_level_values(level_name), dim=self.name
-            )
-        return level_coords
+        if isinstance(index, pd.MultiIndex):
+            return index.names
+        else:
+            return None
+
+    @level_names.setter
+    def level_names(self, value):
+        raise AttributeError('cannot modify level names of Coordinate in-place')
+
+    def get_level_coord(self, level):
+        """Return a new Coordinate from a given MultiIndex level."""
+        if self.level_names is None:
+            raise ValueError("Coordinate %s has no MultiIndex" % self.name)
+        index = self.to_index()
+        return type(self)(level, index.get_level_values(level), dim=self.name)
 
     @property
     def name(self):

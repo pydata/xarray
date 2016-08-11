@@ -200,7 +200,21 @@ def _summarize_var_or_coord(name, var, col_width, show_values=True,
         values_str = format_array_flat(var, max_width - len(front_str))
     else:
         values_str = u'...'
+
     return front_str + values_str
+
+
+def _summarize_coord_multiindex(coord, col_width, marker):
+    first_col = pretty_print(u'  %s %s ' % (marker, coord.name), col_width)
+    return u'%s(%s) MultiIndex' % (first_col, unicode_type(coord.dims[0]))
+
+
+def _summarize_coord_levels(coord, col_width, marker):
+    # TODO: maybe slicing based on calculated number of displayed values
+    return u'\n'.join(
+        [_summarize_var_or_coord(lname, coord[:30].get_level_coord(lname),
+                                 col_width, marker=marker)
+         for lname in coord.level_names])
 
 
 def _not_remote(var):
@@ -223,13 +237,11 @@ def summarize_coord(name, var, col_width):
     show_values = is_index or _not_remote(var)
     marker = u'*' if is_index else u' '
     if is_index:
-        level_coords = var.variable.to_coord().get_level_coords()
-        if level_coords:
-            return u'\n'.join([
-                _summarize_var_or_coord(coord_name, coord, col_width,
-                                        show_values, marker)
-                for coord_name, coord in level_coords.items()
-            ])
+        coord = var.variable.to_coord()
+        if coord.level_names is not None:
+            return u'\n'.join(
+                [_summarize_coord_multiindex(coord, col_width, marker),
+                 _summarize_coord_levels(coord, col_width, u'-')])
     return _summarize_var_or_coord(name, var, col_width, show_values, marker)
 
 
