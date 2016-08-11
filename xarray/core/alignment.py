@@ -342,8 +342,11 @@ def broadcast(*args, **kwargs):
         # Add excluded dims to a copy of dims_map
         array_dims_map = dims_map.copy()
         for dim in exclude:
-            if dim in ds.dims:
-                array_dims_map[dim] = ds.shape[ds.dims.index(dim)]
+            try:
+                array_dims_map[dim] = array.shape[array.dims.index(dim)]
+            except ValueError:
+                # dim not in array.dims
+                pass                
 
         dims = tuple(array_dims_map)
         if not copy and set(dims) == set(array.dims):
@@ -352,15 +355,20 @@ def broadcast(*args, **kwargs):
         data = array.variable.expand_dims(array_dims_map)
         coords = OrderedDict(array.coords)
         coords.update(common_coords)
-        return DataArray(data, coords, dims, name=array.name,
-                         attrs=array.attrs, encoding=array.encoding)
+        res = DataArray(data, coords, dims, name=array.name,
+                        attrs=array.attrs, encoding=array.encoding)
+        if copy and res.data is array.data:
+            res = res.copy()
+        return res
 
     def _broadcast_dataset(ds):
         # Add excluded dims to a copy of dims_map    
         ds_dims_map = dims_map.copy()
         for dim in exclude:
-            if dim in ds.dims:
+            try:
                 ds_dims_map[dim] = ds.dims[dim]
+            except KeyError:
+                pass
 
         if not copy and dict(ds.dims) == dict(ds_dims_map):
             return ds

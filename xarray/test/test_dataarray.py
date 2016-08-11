@@ -1636,6 +1636,7 @@ class TestDataArray(TestCase):
         self.assertDataArrayIdentical(expected_x2, x2)
         self.assertDataArrayIdentical(expected_y2, y2)
 
+    def test_broadcast_arrays_misaligned(self):
         # broadcast on misaligned coords must auto-align
         x = DataArray([[1, 2], [3, 4]], coords=[('a', [-1, -2]), ('b', [3, 4])])
         y = DataArray([1, 2], coords=[('a', [-1, 20])])
@@ -1644,6 +1645,44 @@ class TestDataArray(TestCase):
         x2, y2 = broadcast(x, y)
         self.assertDataArrayIdentical(expected_x2, x2)
         self.assertDataArrayIdentical(expected_y2, y2)
+
+    def test_broadcast_arrays_copy(self):
+        x = DataArray([1, 2], coords=[('a', [-1, -2])], name='x')
+        y = DataArray(3, name='y')
+        expected_x2 = DataArray([1, 2], coords=[('a', [-1, -2])], name='x')
+        expected_y2 = DataArray([3, 3], coords=[('a', [-1, -2])], name='y')
+
+        x2, y2 = broadcast(x, y, copy=False)
+        self.assertDataArrayIdentical(expected_x2, x2)
+        self.assertDataArrayIdentical(expected_y2, y2)
+        assert x2.data is x.data
+        
+        x2, y2 = broadcast(x, y, copy=True)
+        self.assertDataArrayIdentical(expected_x2, x2)
+        self.assertDataArrayIdentical(expected_y2, y2)
+        assert x2.data is not x.data
+
+        # single-element broadcast (trivial case)
+        x2, = broadcast(x, copy=False)
+        self.assertDataArrayIdentical(x, x2)
+        assert x2.data is x.data
+
+        x2, = broadcast(x, copy=True)
+        self.assertDataArrayIdentical(x, x2)
+        assert x2.data is not x.data
+
+    def test_broadcast_arrays_exclude(self):
+        x = DataArray([[1, 2], [3, 4]], coords=[('a', [-1, -2]), ('b', [3, 4])])
+        y = DataArray([1, 2], coords=[('a', [-1, 20])])
+        z = DataArray(5, coords={'b': 5})
+        
+        x2, y2, z2 = broadcast(x, y, z, exclude=['b'])
+        expected_x2 = DataArray([[3, 4], [1, 2], [np.nan, np.nan]], coords=[('a', [-2, -1, 20]), ('b', [3, 4])])
+        expected_y2 = DataArray([np.nan, 1, 2], coords=[('a', [-2, -1, 20])])
+        expected_z2 = DataArray([5, 5, 5], dims=['a'], coords={'a': [-2, -1, 20], 'b': 5})
+        self.assertDataArrayIdentical(expected_x2, x2)
+        self.assertDataArrayIdentical(expected_y2, y2)
+        self.assertDataArrayIdentical(expected_z2, z2)
 
     def test_broadcast_coordinates(self):
         # regression test for GH649
