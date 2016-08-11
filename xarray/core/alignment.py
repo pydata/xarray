@@ -356,17 +356,22 @@ def broadcast(*args, **kwargs):
         return res
 
     def _broadcast_dataset(ds):
-        # Add excluded dims to a copy of dims_map    
-        ds_dims_map = dims_map.copy()
-        for dim in exclude:
-            try:
-                ds_dims_map[dim] = ds.dims[dim]
-            except KeyError:
-                pass
-
         data_vars = OrderedDict()
         for k in ds.data_vars:
-            data_vars[k] = ds.variables[k].expand_dims(ds_dims_map)
+            var = ds.variables[k]
+            # Add excluded dims to a copy of dims_map    
+            var_dims_map = dims_map.copy()
+            for dim in exclude:
+                try:
+                    var_dims_map[dim] = var.shape[var.dims.index(dim)]
+                except ValueError:
+                    # dim not in var.dims
+                    try:
+                        del var_dims_map[dim]
+                    except KeyError:
+                        pass
+        
+            data_vars[k] = var.expand_dims(var_dims_map)
 
         coords = OrderedDict(ds.coords)
         coords.update(common_coords)
