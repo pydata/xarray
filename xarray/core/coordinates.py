@@ -231,6 +231,9 @@ class DataArrayCoordinates(AbstractCoordinates):
 
 class DataArrayLevelCoordinates(AbstractCoordinates):
     """Dictionary like container for DataArray MultiIndex level coordinates.
+
+    Used for attribute style lookup. Not returned directly by any
+    public methods.
     """
     def __init__(self, dataarray):
         self._data = dataarray

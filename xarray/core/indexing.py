@@ -1,4 +1,5 @@
 from datetime import timedelta
+from collections import defaultdict
 import numpy as np
 import pandas as pd
 
@@ -228,14 +229,12 @@ def get_dim_indexers(data_obj, indexers):
         raise ValueError("dimensions or multi-index levels %r do not exist"
                          % invalid)
 
-    level_indexers = {}
+    level_indexers = defaultdict(dict)
     dim_indexers = {}
     for key, label in iteritems(indexers):
-        dim = data_obj[key].dims[0]
+        dim, = data_obj[key].dims
         if key != dim:
             # assume here multi-index level indexer
-            if not level_indexers.get(dim, False):
-                level_indexers[dim] = {}
             level_indexers[dim][key] = label
         else:
             dim_indexers[key] = label

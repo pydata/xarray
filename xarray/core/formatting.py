@@ -209,10 +209,10 @@ def _summarize_coord_multiindex(coord, col_width, marker):
     return u'%s(%s) MultiIndex' % (first_col, unicode_type(coord.dims[0]))
 
 
-def _summarize_coord_levels(coord, col_width, marker):
-    # TODO: maybe slicing based on calculated number of displayed values
+def _summarize_coord_levels(coord, col_width, marker=u'-'):
+    relevant_coord = coord[:30]
     return u'\n'.join(
-        [_summarize_var_or_coord(lname, coord[:30].get_level_coord(lname),
+        [_summarize_var_or_coord(lname, relevant_coord.get_level_coord(lname),
                                  col_width, marker=marker)
          for lname in coord.level_names])
 
@@ -241,7 +241,7 @@ def summarize_coord(name, var, col_width):
         if coord.level_names is not None:
             return u'\n'.join(
                 [_summarize_coord_multiindex(coord, col_width, marker),
-                 _summarize_coord_levels(coord, col_width, u'-')])
+                 _summarize_coord_levels(coord, col_width)])
     return _summarize_var_or_coord(name, var, col_width, show_values, marker)
 
 
