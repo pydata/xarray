@@ -1,6 +1,6 @@
 import pandas as pd
 
-from .alignment import partial_align
+from .alignment import align
 from .utils import Frozen, is_dict_like
 from .variable import as_variable, default_index_coordinate
 from .pycompat import (basestring, OrderedDict)
@@ -322,7 +322,7 @@ def _align_for_merge(input_objects, join, copy, indexes=None,
         # https://github.com/pydata/xarray/issues/943
         return input_objects
 
-    aligned = partial_align(*targets, join=join, copy=copy, indexes=indexes)
+    aligned = align(*targets, join=join, copy=copy, indexes=indexes)
 
     for position, key, aligned_obj in zip(positions, keys, aligned):
         if key is no_key:
