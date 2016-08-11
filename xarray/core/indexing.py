@@ -218,7 +218,7 @@ def get_dim_indexers(data_obj, indexers):
     """Given an xarray data object and label based indexers, return a mapping
     of indexers with only dimension names as keys.
 
-    It tries to group multiple indexers given on a multi-index dimension
+    It groups multiple level indexers given on a multi-index dimension
     into a single, dictionary indexer for that dimension (Raise a ValueError
     if it is not possible).
     """
@@ -241,20 +241,10 @@ def get_dim_indexers(data_obj, indexers):
             dim_indexers[key] = label
 
     for dim, level_labels in iteritems(level_indexers):
-        dim_idx = dim_indexers.get(dim, False)
-        if dim_idx:
-            if is_dict_like(dim_idx):
-                if len(set(dim_idx.keys() & set(level_labels.keys()))):
-                    raise ValueError("Duplicate multi-index level indexer(s) "
-                                     "given for dimension %s" % dim)
-                else:
-                    dim_indexers[dim].update(level_labels)
-            else:
-                raise ValueError("Cannot combine multi-index level indexers "
-                                 "with a non-dict indexer for dimension %s"
-                                 % dim)
-        else:
-            dim_indexers[dim] = level_labels
+        if dim_indexers.get(dim, False):
+            raise ValueError("Cannot combine multi-index level indexers "
+                             "with an indexer for dimension %s" % dim)
+        dim_indexers[dim] = level_labels
 
     return dim_indexers
 
