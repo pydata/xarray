@@ -3,6 +3,7 @@ import warnings
 import pandas as pd
 
 from . import utils
+from .alignment import partial_align
 from .merge import merge
 from .pycompat import iteritems, OrderedDict, basestring
 from .variable import Variable, as_variable, Coordinate, concat as concat_vars
@@ -207,6 +208,9 @@ def _dataset_concat(datasets, dim, data_vars, coords, compat, positions):
     datasets = [as_dataset(ds) for ds in datasets]
     dim, coord = _calc_concat_dim_coord(dim)
 
+    # TODO: enable automatic alignment by using partial_align:
+    datasets = partial_align(*datasets, join='outer', copy=False,
+                             exclude=set([dim]))
     concat_over = _calc_concat_over(datasets, dim, data_vars, coords)
 
     def insert_result_variable(k, v):
