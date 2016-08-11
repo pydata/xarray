@@ -812,8 +812,8 @@ class DataArray(AbstractArray, BaseDataObject):
         stacked : DataArray
             DataArray with stacked data.
 
-        Example
-        -------
+        Examples
+        --------
 
         >>> arr = DataArray(np.arange(6).reshape(2, 3),
         ...                 coords=[('x', ['a', 'b']), ('y', [0, 1, 2])])
