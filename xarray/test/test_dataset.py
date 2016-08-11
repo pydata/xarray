@@ -1898,8 +1898,8 @@ class TestDataset(TestCase):
         d = {'a': {'data': x},
              't': {'data': t, 'dims': 't'},
              'b': {'dims': 't', 'data': y}}
-        with self.assertRaisesRegexp(KeyError,
-                                     'cannot convert dict with missing dims'):
+        with self.assertRaisesRegexp(ValueError, "cannot convert dict "
+                                     "without the key 'dims'"):
             Dataset.from_dict(d)
 
     def test_to_and_from_dict_with_time_dim(self):

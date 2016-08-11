@@ -24,8 +24,8 @@ Enhancements
   `Maximilian Roos <https://github.com/MaximilianR>`_.
 - New ``Dataset`` and ``DataArray`` methods :py:meth:`to_dict` and
   :py:meth:`from_dict` to allow easy conversion between dictionaries and
-  xarray objects (:issue:`432`). See :ref:`io` for more details. By
-  `Julia Signell <https://github.com/jsignell>`_.
+  xarray objects (:issue:`432`). See :ref:`dictionary IO <dictionary io>`
+  for more details. By `Julia Signell <https://github.com/jsignell>`_.
 
 Bug fixes
 ~~~~~~~~~

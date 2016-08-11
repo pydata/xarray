@@ -1921,6 +1921,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
              'data_vars': {}}
 
         def time_check(val):
+            # needed because of numpy bug GH#7619
             if np.issubdtype(val.dtype, np.datetime64):
                 val = val.astype('datetime64[us]')
             elif np.issubdtype(val.dtype, np.timedelta64):
@@ -1946,15 +1947,15 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
 
         Input dict can take several forms:
 
-        d = {'t': {'dims': ('t'), 'data': t},
-             'a': {'dims': ('t'), 'data': x},
+        d = {'t': {'dims': ('t'), 'data': t}, \n
+             'a': {'dims': ('t'), 'data': x}, \n
              'b': {'dims': ('t'), 'data': y}}
 
-        d = {'coords': {'t': {'dims': 't', 'data': t,
-                              'attrs': {'units':'s'}}},
-             'attrs': {'title': 'air temperature'},
-             'dims': 't',
-             'data_vars': {'a': {'dims': 't', 'data': x, },
+        d = {'coords': {'t': {'dims': 't', 'data': t, \
+                              'attrs': {'units':'s'}}}, \n
+             'attrs': {'title': 'air temperature'}, \n
+             'dims': 't', \n
+             'data_vars': {'a': {'dims': 't', 'data': x, }, \
                            'b': {'dims': 't', 'data': y}}}
 
         where 't' is the name of the dimesion, 'a' and 'b' are names of data
@@ -1962,8 +1963,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
 
         Parameters
         ----------
-        d : dict, with a minimum structure of {'var_0': {'dims': [..],
-                                                         'data': [..]},
+        d : dict, with a minimum structure of {'var_0': {'dims': [..], \
+                                                         'data': [..]}, \
                                                ...}
 
         Returns
@@ -1974,21 +1975,23 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         --------
         xarray.DataArray.from_dict
         """
-        import itertools
 
-        variables = itertools.chain(d.get('coords', {}).items(),
-                                    d.get('data_vars', {}).items())
         if not set(['coords', 'data_vars']).issubset(set(d)):
             variables = d.items()
+        else:
+            import itertools
+            variables = itertools.chain(d.get('coords', {}).items(),
+                                        d.get('data_vars', {}).items())
         try:
-            OD = OrderedDict([(k, (v['dims'],
-                                   v['data'],
-                                   v.get('attrs'))) for k, v in variables])
+            variable_dict = OrderedDict([(k, (v['dims'],
+                                              v['data'],
+                                              v.get('attrs'))) for
+                                         k, v in variables])
         except KeyError as e:
-            raise KeyError(
-                'cannot convert dict with missing {dims_data}'.format(
-                    dims_data=str(e.args[0])))
-        obj = cls(OD)
+            raise ValueError(
+                "cannot convert dict without the key "
+                "'{dims_data}'".format(dims_data=str(e.args[0])))
+        obj = cls(variable_dict)
 
         # what if coords aren't dims?
         coords = set(d.get('coords', {})) - set(d.get('dims', {}))

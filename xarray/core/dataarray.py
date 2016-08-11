@@ -1103,6 +1103,7 @@ class DataArray(AbstractArray, BaseDataObject):
         d = {'coords': {}, 'attrs': dict(self.attrs), 'dims': self.dims}
 
         def time_check(val):
+            # needed because of numpy bug GH#7619
             if np.issubdtype(val.dtype, np.datetime64):
                 val = val.astype('datetime64[us]')
             elif np.issubdtype(val.dtype, np.timedelta64):
@@ -1128,11 +1129,11 @@ class DataArray(AbstractArray, BaseDataObject):
 
         d = {'dims': ('t'), 'data': x}
 
-        d = {'coords': {'t': {'dims': 't', 'data': t,
-                              'attrs': {'units':'s'}}},
-             'attrs': {'title': 'air temperature'},
-             'dims': 't',
-             'data': x,
+        d = {'coords': {'t': {'dims': 't', 'data': t, \
+                              'attrs': {'units':'s'}}}, \n
+             'attrs': {'title': 'air temperature'}, \
+             'dims': 't', \
+             'data': x, \
              'name': 'a'}
 
         where 't' is the name of the dimesion, 'a' is the name of the array,
@@ -1141,9 +1142,6 @@ class DataArray(AbstractArray, BaseDataObject):
         Parameters
         ----------
         d : dict, with a minimum structure of {'dims': [..], 'data': [..]}
-            or optionally {'dims': [..],
-                           'data': [..],
-                           'coords': {'dims': [..], 'data': [..]}}
 
         Returns
         -------
@@ -1161,14 +1159,16 @@ class DataArray(AbstractArray, BaseDataObject):
                                            v.get('attrs')))
                                       for k, v in d['coords'].items()])
             except KeyError as e:
-                raise KeyError(
-                    'cannot convert dict when coords are missing '
-                    '{dims_data}'.format(dims_data=str(e.args[0])))
+                raise ValueError(
+                    "cannot convert dict when coords are missing the key "
+                    "'{dims_data}'".format(dims_data=str(e.args[0])))
         try:
-            obj = cls(d['data'], coords, d.get('dims'), d.get('name'),
-                      d.get('attrs'))
+            data = d['data']
         except KeyError:
-            raise KeyError('cannot convert dict with missing data')
+            raise ValueError("cannot convert dict without the key 'data''")
+        else:
+            obj = cls(data, coords, d.get('dims'), d.get('name'),
+                      d.get('attrs'))
         return obj
 
     @classmethod

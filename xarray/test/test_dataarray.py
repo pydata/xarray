@@ -1782,12 +1782,12 @@ class TestDataArray(TestCase):
              'data': self.x,
              'coords': {'y': {'data': list(range(20))},
                         'x': {'dims': 'x', 'data': list(range(10))}}}
-        with self.assertRaisesRegexp(KeyError, 'cannot convert dict when coords are missing dims'):
+        with self.assertRaisesRegexp(ValueError, "cannot convert dict when coords are missing the key 'dims'"):
             DataArray.from_dict(d)
 
         # this one is missing some necessary information
         d = {'dims': ('t')}
-        with self.assertRaisesRegexp(KeyError, 'cannot convert dict with missing data'):
+        with self.assertRaisesRegexp(ValueError, "cannot convert dict without the key 'data'"):
             DataArray.from_dict(d)
 
     def test_to_and_from_dict_with_time_dim(self):

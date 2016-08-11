@@ -25,7 +25,7 @@ module:
 
 .. ipython:: python
 
-    import cPickle as pickle
+    import pickle as pickle
 
     ds = xr.Dataset({'foo': (('x', 'y'), np.random.rand(4, 5))},
                     coords={'x': [10, 20, 30, 40],
@@ -50,6 +50,8 @@ and lets you use xarray objects with Python modules like
    remains unchanged. Because the internal design of xarray is still being
    refined, we make no guarantees (at this point) that objects pickled with
    this version of xarray will work in future versions.
+
+.. _dictionary io:
 
 Dictionary
 ----------

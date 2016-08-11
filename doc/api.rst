@@ -391,7 +391,9 @@ Dataset methods
    save_mfdataset
    Dataset.to_array
    Dataset.to_dataframe
+   Dataset.to_dict
    Dataset.from_dataframe
+   Dataset.from_dict
    Dataset.close
    Dataset.load
    Dataset.chunk
@@ -410,8 +412,10 @@ DataArray methods
    DataArray.to_index
    DataArray.to_masked_array
    DataArray.to_cdms2
+   DataArray.to_dict
    DataArray.from_series
    DataArray.from_cdms2
+   DataArray.from_dict
    DataArray.load
    DataArray.chunk
 
