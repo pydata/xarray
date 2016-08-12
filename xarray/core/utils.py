@@ -6,13 +6,13 @@ import functools
 import itertools
 import re
 import warnings
-from collections import Mapping, MutableMapping
+from collections import Mapping, MutableMapping, Iterable
 
 import numpy as np
 import pandas as pd
 
 from . import ops
-from .pycompat import iteritems, OrderedDict
+from .pycompat import iteritems, OrderedDict, basestring, bytes_type
 
 
 def alias_warning(old_name, new_name, stacklevel=3):  # pragma: no cover
@@ -155,18 +155,13 @@ def combine_pos_and_kw_args(pos_kwargs, kw_kwargs, func_name):
         return kw_kwargs
 
 
-_SCALAR_TYPES = (datetime.datetime, datetime.date, datetime.timedelta)
-
-
 def is_scalar(value):
-    """np.isscalar only works on primitive numeric types and (bizarrely)
-    excludes 0-d ndarrays; this version does more comprehensive checks
-    """
-    if hasattr(value, 'ndim'):
-        return value.ndim == 0
-    return (np.isscalar(value) or
-            isinstance(value, _SCALAR_TYPES) or
-            value is None)
+    """ Whether to treat a value as a scalar. Any non-iterable, string, or 0-D array """
+    return (
+        getattr(value, 'ndim', None) == 0
+        or isinstance(value, (basestring, bytes_type))
+        or not isinstance(value, Iterable))
+
 
 
 def is_valid_numpy_dtype(dtype):

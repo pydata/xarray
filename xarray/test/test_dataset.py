@@ -181,9 +181,13 @@ class TestDataset(TestCase):
             actual = Dataset({'x': arg})
             self.assertDatasetIdentical(expected, actual)
 
+        class Arbitrary(object):
+            pass
+
         d = pd.Timestamp('2000-01-01T12')
         args = [True, None, 3.4, np.nan, 'hello', u'uni', b'raw',
-                np.datetime64('2000-01-01T00'), d, d.to_datetime()]
+                np.datetime64('2000-01-01T00'), d, d.to_datetime(),
+                Arbitrary()]
         for arg in args:
             print(arg)
             expected = Dataset({'x': ([], arg)})
