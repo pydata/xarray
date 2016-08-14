@@ -1069,15 +1069,18 @@ class TestDataset(TestCase):
     def test_align_nocopy(self):
         x = Dataset({'foo': DataArray([1, 2, 3], coords={'x': [1, 2, 3]})})
         y = Dataset({'foo': DataArray([1, 2], coords={'x': [1, 2]})})
-        x2, y2 = align(x, y, join='outer')
-
         expected_x2 = x
         expected_y2 = Dataset({'foo': DataArray([1, 2, np.nan], coords={'x': [1, 2, 3]})})
+
+        x2, y2 = align(x, y, copy=False, join='outer')
         self.assertDatasetIdentical(expected_x2, x2)
         self.assertDatasetIdentical(expected_y2, y2)
-
-        # Test that data copies will be avoided if not necessary
         assert source_ndarray(x['foo'].data) is source_ndarray(x2['foo'].data)
+
+        x2, y2 = align(x, y, copy=True, join='outer')
+        self.assertDatasetIdentical(expected_x2, x2)
+        self.assertDatasetIdentical(expected_y2, y2)
+        assert source_ndarray(x['foo'].data) is not source_ndarray(x2['foo'].data)
 
     def test_align_indexes(self):
         x = Dataset({'foo': DataArray([1, 2, 3], coords={'x': [1, 2, 3]})})

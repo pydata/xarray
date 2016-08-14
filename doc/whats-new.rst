@@ -24,6 +24,11 @@ Enhancements
 - New documentation on :ref:`panel transition`. By
   `Maximilian Roos <https://github.com/MaximilianR>`_.
 
+- Added exclude and indexes optional parameters to align(), and exclude optional parameter
+  to broadcast(). By `Guido Imperiale <https://github.com/crusaderky>`_.
+- broadcast() and concat() will now auto-align inputs.
+  By `Guido Imperiale <https://github.com/crusaderky>`_.
+
 Bug fixes
 ~~~~~~~~~
 

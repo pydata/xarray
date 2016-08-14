@@ -106,6 +106,14 @@ class TestConcatDataset(TestCase):
         actual = concat(split_data[::-1], 'dim1')
         self.assertDatasetIdentical(data, actual)
 
+    def test_concat_autoalign(self):
+        ds1 = Dataset({'foo': DataArray([1, 2], coords={'x': [1, 2]})})
+        ds2 = Dataset({'foo': DataArray([1, 2], coords={'x': [1, 3]})})        
+        actual = concat([ds1, ds2], 'y')
+        expected = Dataset({'foo': DataArray([[1, 2, np.nan], [1, np.nan, 2]],
+                                             dims=['y', 'x'], coords={'y': [0, 1], 'x': [1, 2, 3]})})
+        self.assertDatasetIdentical(expected, actual)
+
     def test_concat_errors(self):
         data = create_test_data()
         split_data = [data.isel(dim1=slice(3)),
@@ -127,14 +135,6 @@ class TestConcatDataset(TestCase):
         with self.assertRaisesRegexp(ValueError, 'encountered unexpected'):
             data0, data1 = deepcopy(split_data)
             data1['foo'] = ('bar', np.random.randn(10))
-            concat([data0, data1], 'dim1')
-
-        with self.assertRaisesRegexp(ValueError, 'not equal across datasets'):
-            data0, data1 = deepcopy(split_data)
-            data1['dim2'] = 2 * data1['dim2']
-            concat([data0, data1], 'dim1', coords='minimal')
-
-        with self.assertRaisesRegexp(ValueError, 'it is not 1-dimensional'):
             concat([data0, data1], 'dim1')
 
         with self.assertRaisesRegexp(ValueError, 'compat.* invalid'):
