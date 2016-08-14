@@ -9,7 +9,7 @@ from . import ops, utils
 from .common import _maybe_promote
 from .pycompat import iteritems, OrderedDict
 from .utils import is_full_slice, is_dict_like
-from .variable import Variable, Coordinate, broadcast_variables
+from .variable import Variable, Coordinate
 
 
 def _get_joiner(join):
@@ -71,24 +71,16 @@ def align(*objects, **kwargs):
         If ``copy=True``, the returned objects contain all new variables. If
         ``copy=False`` and no reindexing is required then the aligned objects
         will include original variables.
+    exclude : sequence of str, optional
+        Dimensions that must be excluded from alignment
+    indexes : dict-like, optional
+        Any indexes explicitly provided with the `indexes` argument should be
+        used in preference to the aligned indexes.
 
     Returns
     -------
     aligned : same as *objects
         Tuple of objects with aligned coordinates.
-    """
-    return partial_align(*objects, exclude=None, **kwargs)
-
-
-def partial_align(*objects, **kwargs):
-    """partial_align(*objects, join='inner', copy=True, indexes=None,
-                     exclude=set())
-
-    Like align, but don't align along dimensions in exclude. Any indexes
-    explicitly provided with the `indexes` argument should be used in preference
-    to the aligned indexes.
-
-    Not public API.
     """
     join = kwargs.pop('join', 'inner')
     copy = kwargs.pop('copy', True)
@@ -247,21 +239,26 @@ def reindex_variables(variables, indexes, indexers, method=None,
     return reindexed
 
 
-def broadcast(*args):
+def broadcast(*args, **kwargs):
     """Explicitly broadcast any number of DataArray or Dataset objects against
     one another.
 
     xarray objects automatically broadcast against each other in arithmetic
     operations, so this function should not be necessary for normal use.
 
+    If no change is needed, the input data is returned to the output without
+    being copied.
+
     Parameters
     ----------
-    *args: DataArray or Dataset objects
+    *args : DataArray or Dataset objects
         Arrays to broadcast against each other.
+    exclude : sequence of str, optional
+        Dimensions that must not be broadcasted
 
     Returns
     -------
-    broadcast: tuple of xarray objects
+    broadcast : tuple of xarray objects
         The same data as the input arrays, but with additional dimensions
         inserted so that all data arrays have the same dimensions and shape.
 
@@ -322,36 +319,48 @@ def broadcast(*args):
     from .dataarray import DataArray
     from .dataset import Dataset
 
-    all_indexes = _get_all_indexes(args)
-    for k, v in all_indexes.items():
-        if not all(v[0].equals(vi) for vi in v[1:]):
-            raise ValueError('cannot broadcast arrays: the %s index is not '
-                             'aligned (use xarray.align first)' % k)
+    exclude = kwargs.pop('exclude', None)
+    if exclude is None:
+        exclude = set()
+    if kwargs:
+        raise TypeError('broadcast() got unexpected keyword arguments: %s'
+                        % list(kwargs))
+
+    args = align(*args, join='outer', copy=False, exclude=exclude)
 
     common_coords = OrderedDict()
     dims_map = OrderedDict()
     for arg in args:
         for dim in arg.dims:
-            if dim not in common_coords:
+            if dim not in common_coords and dim not in exclude:
                 common_coords[dim] = arg.coords[dim].variable
                 dims_map[dim] = common_coords[dim].size
 
+    def _expand_dims(var):
+        # Add excluded dims to a copy of dims_map    
+        var_dims_map = dims_map.copy()
+        for dim in exclude:
+            try:
+                var_dims_map[dim] = var.shape[var.dims.index(dim)]
+            except ValueError:
+                # dim not in var.dims
+                pass
+
+        return var.expand_dims(var_dims_map)
+
     def _broadcast_array(array):
-        data = array.variable.expand_dims(dims_map)
+        data = _expand_dims(array.variable)
         coords = OrderedDict(array.coords)
         coords.update(common_coords)
-        dims = tuple(common_coords)
-        return DataArray(data, coords, dims, name=array.name,
+        return DataArray(data, coords, data.dims, name=array.name,
                          attrs=array.attrs, encoding=array.encoding)
 
     def _broadcast_dataset(ds):
-        data_vars = OrderedDict()
-        for k in ds.data_vars:
-            data_vars[k] = ds.variables[k].expand_dims(dims_map)
-
+        data_vars = OrderedDict(
+            (k, _expand_dims(ds.variables[k]))
+            for k in ds.data_vars)
         coords = OrderedDict(ds.coords)
         coords.update(common_coords)
-
         return Dataset(data_vars, coords, ds.attrs)
 
     result = []
@@ -367,6 +376,7 @@ def broadcast(*args):
 
 
 def broadcast_arrays(*args):
+    import warnings
     warnings.warn('xarray.broadcast_arrays is deprecated: use '
                   'xarray.broadcast instead', DeprecationWarning, stacklevel=2)
     return broadcast(*args)

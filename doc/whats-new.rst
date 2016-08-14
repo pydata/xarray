@@ -28,6 +28,12 @@ Enhancements
   xarray objects (:issue:`432`). See :ref:`dictionary IO <dictionary io>`
   for more details. By `Julia Signell <https://github.com/jsignell>`_.
 
+- Added ``exclude`` and ``indexes`` optional parameters to :py:func:`~xarray.align`,
+  and ``exclude`` optional parameter to :py:func:`~xarray.broadcast`.
+  By `Guido Imperiale <https://github.com/crusaderky>`_.
+- :py:func:`~xarray.broadcast` and :py:func:`~xarray.concat` will now auto-align inputs,
+  using ``join=outer``. By `Guido Imperiale <https://github.com/crusaderky>`_.
+
 Bug fixes
 ~~~~~~~~~
 

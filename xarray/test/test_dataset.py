@@ -21,7 +21,7 @@ from xarray.core import indexing, utils
 from xarray.core.pycompat import iteritems, OrderedDict, unicode_type
 
 from . import (TestCase, unittest, InaccessibleArray, UnexpectedDataAccess,
-               requires_dask)
+               requires_dask, source_ndarray)
 
 
 def create_test_data(seed=None):
@@ -1060,6 +1060,38 @@ class TestDataset(TestCase):
         with self.assertRaises(TypeError):
             align(left, right, foo='bar')
 
+    def test_align_exclude(self):
+        x = Dataset({'foo': DataArray([[1, 2],[3, 4]], dims=['x', 'y'], coords={'x': [1, 2], 'y': [3, 4]})})
+        y = Dataset({'bar': DataArray([[1, 2],[3, 4]], dims=['x', 'y'], coords={'x': [1, 3], 'y': [5, 6]})})
+        x2, y2 = align(x, y, exclude=['y'], join='outer')
+
+        expected_x2 = Dataset({'foo': DataArray([[1, 2], [3, 4], [np.nan, np.nan]], dims=['x', 'y'], coords={'x': [1, 2, 3], 'y': [3, 4]})})
+        expected_y2 = Dataset({'bar': DataArray([[1, 2], [np.nan, np.nan], [3, 4]], dims=['x', 'y'], coords={'x': [1, 2, 3], 'y': [5, 6]})})
+        self.assertDatasetIdentical(expected_x2, x2)
+        self.assertDatasetIdentical(expected_y2, y2)
+
+    def test_align_nocopy(self):
+        x = Dataset({'foo': DataArray([1, 2, 3], coords={'x': [1, 2, 3]})})
+        y = Dataset({'foo': DataArray([1, 2], coords={'x': [1, 2]})})
+        expected_x2 = x
+        expected_y2 = Dataset({'foo': DataArray([1, 2, np.nan], coords={'x': [1, 2, 3]})})
+
+        x2, y2 = align(x, y, copy=False, join='outer')
+        self.assertDatasetIdentical(expected_x2, x2)
+        self.assertDatasetIdentical(expected_y2, y2)
+        assert source_ndarray(x['foo'].data) is source_ndarray(x2['foo'].data)
+
+        x2, y2 = align(x, y, copy=True, join='outer')
+        self.assertDatasetIdentical(expected_x2, x2)
+        self.assertDatasetIdentical(expected_y2, y2)
+        assert source_ndarray(x['foo'].data) is not source_ndarray(x2['foo'].data)
+
+    def test_align_indexes(self):
+        x = Dataset({'foo': DataArray([1, 2, 3], coords={'x': [1, 2, 3]})})
+        x2, = align(x, indexes={'x': [2, 3, 1]})
+        expected_x2 = Dataset({'foo': DataArray([2, 3, 1], coords={'x': [2, 3, 1]})})
+        self.assertDatasetIdentical(expected_x2, x2)
+
     def test_broadcast(self):
         ds = Dataset({'foo': 0, 'bar': ('x', [1]), 'baz': ('y', [2, 3])},
                      {'c': ('x', [4])})
@@ -1083,6 +1115,48 @@ class TestDataset(TestCase):
         actual_x, actual_y = broadcast(ds_x, array_y)
         self.assertDatasetIdentical(expected_x, actual_x)
         self.assertDataArrayIdentical(expected_y, actual_y)
+
+    def test_broadcast_nocopy(self):
+        # Test that data is not copied if not needed
+        x = Dataset({'foo': (('x', 'y'), [[1, 1]])})
+        y = Dataset({'bar': ('y', [2, 3])})
+
+        actual_x, = broadcast(x)
+        self.assertDatasetIdentical(x, actual_x)
+        assert source_ndarray(actual_x['foo'].data) is source_ndarray(x['foo'].data)
+
+        actual_x, actual_y = broadcast(x, y)
+        self.assertDatasetIdentical(x, actual_x)
+        assert source_ndarray(actual_x['foo'].data) is source_ndarray(x['foo'].data)
+
+    def test_broadcast_exclude(self):
+        x = Dataset({
+            'foo': DataArray([[1, 2],[3, 4]], dims=['x', 'y'], coords={'x': [1, 2], 'y': [3, 4]}),
+            'bar': DataArray(5),
+        })
+        y = Dataset({
+            'foo': DataArray([[1, 2]], dims=['z', 'y'], coords={'z': [1], 'y': [5, 6]}),
+        })
+        x2, y2 = broadcast(x, y, exclude=['y'])
+
+        expected_x2 = Dataset({
+            'foo': DataArray([[[1, 2]], [[3, 4]]], dims=['x', 'z', 'y'], coords={'z': [1], 'x': [1, 2], 'y': [3, 4]}),
+            'bar': DataArray([[5], [5]], dims=['x', 'z'], coords={'x': [1, 2], 'z': [1]}),
+        })
+        expected_y2 = Dataset({
+            'foo': DataArray([[[1, 2]], [[1, 2]]], dims=['x', 'z', 'y'], coords={'z': [1], 'x': [1, 2], 'y': [5, 6]}),
+        })
+        self.assertDatasetIdentical(expected_x2, x2)
+        self.assertDatasetIdentical(expected_y2, y2)
+
+    def test_broadcast_misaligned(self):
+        x = Dataset({'foo': DataArray([1, 2, 3], coords={'x': [-1, -2, -3]})})
+        y = Dataset({'bar': DataArray([[1, 2], [3, 4]], dims=['y', 'x'], coords={'y': [1, 2], 'x': [10, -3]})})
+        x2, y2 = broadcast(x, y)
+        expected_x2 = Dataset({'foo': DataArray([[3, 3], [2, 2], [1, 1], [np.nan, np.nan]], dims=['x', 'y'], coords={'y': [1, 2], 'x': [-3, -2, -1, 10]})})
+        expected_y2 = Dataset({'bar': DataArray([[2, 4], [np.nan, np.nan], [np.nan, np.nan], [1, 3]], dims=['x', 'y'], coords={'y': [1, 2], 'x': [-3, -2, -1, 10]})})
+        self.assertDatasetIdentical(expected_x2, x2)
+        self.assertDatasetIdentical(expected_y2, y2)
 
     def test_variable_indexing(self):
         data = create_test_data()

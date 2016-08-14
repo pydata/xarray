@@ -3,6 +3,7 @@ import warnings
 import pandas as pd
 
 from . import utils
+from .alignment import align
 from .merge import merge
 from .pycompat import iteritems, OrderedDict, basestring
 from .variable import Variable, as_variable, Coordinate, concat as concat_vars
@@ -202,10 +203,9 @@ def _dataset_concat(datasets, dim, data_vars, coords, compat, positions):
         raise ValueError("compat=%r invalid: must be 'equals' "
                          "or 'identical'" % compat)
 
-    # don't bother trying to work with datasets as a generator instead of a
-    # list; the gains would be minimal
-    datasets = [as_dataset(ds) for ds in datasets]
     dim, coord = _calc_concat_dim_coord(dim)
+    datasets = [as_dataset(ds) for ds in datasets]
+    datasets = align(*datasets, join='outer', copy=False, exclude=[dim])
 
     concat_over = _calc_concat_over(datasets, dim, data_vars, coords)
 
