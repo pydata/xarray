@@ -56,7 +56,7 @@ def _default_lock(filename, engine):
                 # TODO: identify netcdf3 files and don't use the global lock
                 # for them
                 lock = _global_lock
-        elif engine == 'h5netcdf':
+        elif engine in {'h5netcdf', 'pynio'}:
             lock = _global_lock
         else:
             lock = False

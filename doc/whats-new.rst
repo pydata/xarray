@@ -20,6 +20,7 @@ v0.8.2 (unreleased)
 
 Enhancements
 ~~~~~~~~~~~~
+
 - New documentation on :ref:`panel transition`. By
   `Maximilian Roos <https://github.com/MaximilianR>`_.
 - New ``Dataset`` and ``DataArray`` methods :py:meth:`to_dict` and
@@ -30,13 +31,15 @@ Enhancements
 Bug fixes
 ~~~~~~~~~
 
-- Fix to ensure xarray works with h5netcdf v0.3.0 for arrays with ``dtype=str``
+- Ensure xarray works with h5netcdf v0.3.0 for arrays with ``dtype=str``
   (:issue:`953`). By `Stephan Hoyer <https://github.com/shoyer>`_.
-- ``Dataset.__dir__()`` (i.e. the method python calls to get autocomplete options) failed
-  if one of the dataset's keys was not a string (:issue:`852`). By
-  `Maximilian Roos <https://github.com/maximilianr>`_.
-- ``Dataset`` constructor can now take arbitrary objects as values (:issue:`647`)
-
+- ``Dataset.__dir__()`` (i.e. the method python calls to get autocomplete
+  options) failed if one of the dataset's keys was not a string (:issue:`852`).
+  By `Maximilian Roos <https://github.com/maximilianr>`_.
+- ``Dataset`` constructor can now take arbitrary objects as values
+  (:issue:`647`). By `Maximilian Roos <https://github.com/maximilianr>`_.
+- Fix ``open_mfdataset`` with ``engine='pynio'`` (:issue:`936`).
+  By `Stephan Hoyer <https://github.com/shoyer>`_.
 
 .. _whats-new.0.8.1:
 
