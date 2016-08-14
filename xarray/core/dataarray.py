@@ -675,9 +675,10 @@ class DataArray(AbstractArray, BaseDataObject):
             satisfy the equation ``abs(index[indexer] - target) <= tolerance``.
             Requires pandas>=0.17.
         copy : bool, optional
-            If `copy=True`, the returned array's dataset contains only copied
-            variables. If `copy=False` and no reindexing is required then
-            original variables from this array's dataset are returned.
+            If ``copy=True``, data in the return value is always copied. If
+            ``copy=False`` and reindexing is unnecessary, or can be performed
+            with only slice operations, then the output may share memory with
+            the input. In either case, a new xarray object is always returned.
 
         Returns
         -------
@@ -702,9 +703,10 @@ class DataArray(AbstractArray, BaseDataObject):
         Parameters
         ----------
         copy : bool, optional
-            If `copy=True`, the returned array's dataset contains only copied
-            variables. If `copy=False` and no reindexing is required then
-            original variables from this array's dataset are returned.
+            If ``copy=True``, data in the return value is always copied. If
+            ``copy=False`` and reindexing is unnecessary, or can be performed
+            with only slice operations, then the output may share memory with
+            the input. In either case, a new xarray object is always returned.
         method : {None, 'nearest', 'pad'/'ffill', 'backfill'/'bfill'}, optional
             Method to use for filling index values in ``indexers`` not found on
             this data array:

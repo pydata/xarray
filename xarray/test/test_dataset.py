@@ -994,6 +994,12 @@ class TestDataset(TestCase):
         actual = ds.reindex(x=[0, 1, 3], y=[0, 1])
         self.assertDatasetIdentical(expected, actual)
 
+    def test_reindex_variables_copied(self):
+        data = create_test_data()
+        reindexed_data = data.reindex(copy=False)
+        for k in data.variables:
+            assert reindexed_data.variables[k] is not data.variables[k]
+
     def test_reindex_method(self):
         ds = Dataset({'x': ('y', [10, 20])})
         y = [-0.5, 0.5, 1.5]
