@@ -1628,22 +1628,22 @@ class TestDataArray(TestCase):
         x2, y2 = align(x, y, join='outer', copy=False)
         self.assertDataArrayIdentical(expected_x2, x2)
         self.assertDataArrayIdentical(expected_y2, y2)
-        assert x2.data is x.data
+        assert source_ndarray(x2.data) is source_ndarray(x.data)
     
         x2, y2 = align(x, y, join='outer', copy=True)
         self.assertDataArrayIdentical(expected_x2, x2)
         self.assertDataArrayIdentical(expected_y2, y2)
-        assert x2.data is not x.data
+        assert source_ndarray(x2.data) is not source_ndarray(x.data)
 
         # Trivial align - 1 element
         x = DataArray([1, 2, 3], coords=[('a', [1, 2, 3])])
         x2, = align(x, copy=False)
         self.assertDataArrayIdentical(x, x2)
-        assert x2.data is x.data
+        assert source_ndarray(x2.data) is source_ndarray(x.data)
     
         x2, = align(x, copy=True)
         self.assertDataArrayIdentical(x, x2)
-        assert x2.data is not x.data
+        assert source_ndarray(x2.data) is not source_ndarray(x.data)
 
     def test_align_exclude(self):
         x = DataArray([[1, 2], [3, 4]], coords=[('a', [-1, -2]), ('b', [3, 4])])
@@ -1710,12 +1710,12 @@ class TestDataArray(TestCase):
         x2, y2 = broadcast(x, y)
         self.assertDataArrayIdentical(expected_x2, x2)
         self.assertDataArrayIdentical(expected_y2, y2)
-        assert x2.data is x.data
+        assert source_ndarray(x2.data) is source_ndarray(x.data)
         
         # single-element broadcast (trivial case)
         x2, = broadcast(x)
         self.assertDataArrayIdentical(x, x2)
-        assert x2.data is x.data
+        assert source_ndarray(x2.data) is source_ndarray(x.data)
 
     def test_broadcast_arrays_exclude(self):
         x = DataArray([[1, 2], [3, 4]], coords=[('a', [-1, -2]), ('b', [3, 4])])

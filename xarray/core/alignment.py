@@ -336,46 +336,31 @@ def broadcast(*args, **kwargs):
                 common_coords[dim] = arg.coords[dim].variable
                 dims_map[dim] = common_coords[dim].size
 
-    def _broadcast_array(array):
-        # Add excluded dims to a copy of dims_map
-        array_dims_map = dims_map.copy()
+    def _expand_dims(var):
+        # Add excluded dims to a copy of dims_map    
+        var_dims_map = dims_map.copy()
         for dim in exclude:
             try:
-                array_dims_map[dim] = array.shape[array.dims.index(dim)]
+                var_dims_map[dim] = var.shape[var.dims.index(dim)]
             except ValueError:
-                # dim not in array.dims
-                pass                
+                # dim not in var.dims
+                pass
 
-        dims = tuple(array_dims_map)
+        return var.expand_dims(var_dims_map)
 
-        data = array.variable.expand_dims(array_dims_map)
+    def _broadcast_array(array):
+        data = _expand_dims(array.variable)
         coords = OrderedDict(array.coords)
         coords.update(common_coords)
-        res = DataArray(data, coords, dims, name=array.name,
-                        attrs=array.attrs, encoding=array.encoding)
-        return res
+        return DataArray(data, coords, data.dims, name=array.name,
+                         attrs=array.attrs, encoding=array.encoding)
 
     def _broadcast_dataset(ds):
-        data_vars = OrderedDict()
-        for k in ds.data_vars:
-            var = ds.variables[k]
-            # Add excluded dims to a copy of dims_map    
-            var_dims_map = dims_map.copy()
-            for dim in exclude:
-                try:
-                    var_dims_map[dim] = var.shape[var.dims.index(dim)]
-                except ValueError:
-                    # dim not in var.dims
-                    try:
-                        del var_dims_map[dim]
-                    except KeyError:
-                        pass
-        
-            data_vars[k] = var.expand_dims(var_dims_map)
-
+        data_vars = OrderedDict(
+            (k, _expand_dims(ds.variables[k]))
+            for k in ds.data_vars)
         coords = OrderedDict(ds.coords)
         coords.update(common_coords)
-
         return Dataset(data_vars, coords, ds.attrs)
 
     result = []

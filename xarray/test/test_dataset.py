@@ -21,7 +21,7 @@ from xarray.core import indexing, utils
 from xarray.core.pycompat import iteritems, OrderedDict, unicode_type
 
 from . import (TestCase, unittest, InaccessibleArray, UnexpectedDataAccess,
-               requires_dask)
+               requires_dask, source_ndarray)
 
 
 def create_test_data(seed=None):
@@ -1066,6 +1066,19 @@ class TestDataset(TestCase):
         self.assertDatasetIdentical(expected_x2, x2)
         self.assertDatasetIdentical(expected_y2, y2)
 
+    def test_align_nocopy(self):
+        x = Dataset({'foo': DataArray([1, 2, 3], coords={'x': [1, 2, 3]})})
+        y = Dataset({'foo': DataArray([1, 2], coords={'x': [1, 2]})})
+        x2, y2 = align(x, y, join='outer')
+
+        expected_x2 = x
+        expected_y2 = Dataset({'foo': DataArray([1, 2, np.nan], coords={'x': [1, 2, 3]})})
+        self.assertDatasetIdentical(expected_x2, x2)
+        self.assertDatasetIdentical(expected_y2, y2)
+
+        # Test that data copies will be avoided if not necessary
+        assert source_ndarray(x['foo'].data) is source_ndarray(x2['foo'].data)
+
     def test_align_indexes(self):
         x = Dataset({'foo': DataArray([1, 2, 3], coords={'x': [1, 2, 3]})})
         x2, = align(x, indexes={'x': [2, 3, 1]})
@@ -1103,11 +1116,11 @@ class TestDataset(TestCase):
 
         actual_x, = broadcast(x)
         self.assertDatasetIdentical(x, actual_x)
-        assert actual_x['foo'].data is x['foo'].data
+        assert source_ndarray(actual_x['foo'].data) is source_ndarray(x['foo'].data)
 
         actual_x, actual_y = broadcast(x, y)
         self.assertDatasetIdentical(x, actual_x)
-        assert actual_x['foo'].data is x['foo'].data
+        assert source_ndarray(actual_x['foo'].data) is source_ndarray(x['foo'].data)
 
     def test_broadcast_exclude(self):
         x = Dataset({
