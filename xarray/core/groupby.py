@@ -13,13 +13,15 @@ from .utils import peek_at, maybe_wrap_array, safe_cast_to_index
 from .variable import as_variable, Variable, Coordinate
 
 
-def unique_value_groups(ar):
+def unique_value_groups(ar, sort=True):
     """Group an array by its unique values.
 
     Parameters
     ----------
     ar : array-like
         Input array. This will be flattened if it is not already 1-D.
+    sort : boolean, optional
+        Whether or not to sort unique values.
 
     Returns
     -------
@@ -29,7 +31,7 @@ def unique_value_groups(ar):
         Each element provides the integer indices in `ar` with values given by
         the corresponding value in `unique_values`.
     """
-    inverse, values = pd.factorize(ar, sort=True)
+    inverse, values = pd.factorize(ar, sort=sort)
     groups = [[] for _ in range(len(values))]
     for n, g in enumerate(inverse):
         if g >= 0:
@@ -220,7 +222,8 @@ class GroupBy(object):
             unique_coord = group
         else:
             # look through group to find the unique values
-            unique_values, group_indices = unique_value_groups(group)
+            sort = bins is None
+            unique_values, group_indices = unique_value_groups(group, sort=sort)
             unique_coord = Coordinate(group.name, unique_values)
 
         self.obj = obj

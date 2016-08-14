@@ -1395,6 +1395,13 @@ class TestDataArray(TestCase):
                                     lambda x : x.sum(), shortcut=False)
         self.assertDataArrayIdentical(expected, actual)
 
+    def test_groupby_bins_sort(self):
+        data = xr.DataArray(
+            np.arange(100), dims='x',
+            coords={'x': np.linspace(-100, 100, num=100)})
+        binned_mean = data.groupby_bins('x', bins=11).mean()
+        assert binned_mean.to_index().is_monotonic
+
     def make_rolling_example_array(self):
         times = pd.date_range('2000-01-01', freq='1D', periods=21)
         values = np.random.random((21, 4))

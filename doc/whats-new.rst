@@ -40,6 +40,8 @@ Bug fixes
   (:issue:`647`). By `Maximilian Roos <https://github.com/maximilianr>`_.
 - Fix ``open_mfdataset`` with ``engine='pynio'`` (:issue:`936`).
   By `Stephan Hoyer <https://github.com/shoyer>`_.
+- ``groupby_bins`` sorted bin labels as strings (:issue:`952`).
+  By `Stephan Hoyer <https://github.com/shoyer>`_.
 
 .. _whats-new.0.8.1:
 
