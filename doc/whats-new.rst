@@ -33,6 +33,8 @@ Enhancements
   By `Guido Imperiale <https://github.com/crusaderky>`_.
 - :py:func:`~xarray.broadcast` and :py:func:`~xarray.concat` will now auto-align inputs,
   using ``join=outer``. By `Guido Imperiale <https://github.com/crusaderky>`_.
+- Better error message when assigning variables without dimensions
+  (:issue:`971`). By `Stephan Hoyer <https://github.com/shoyer>`_.
 
 Bug fixes
 ~~~~~~~~~
