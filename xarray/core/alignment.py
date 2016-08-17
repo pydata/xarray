@@ -25,26 +25,6 @@ def _get_joiner(join):
         raise ValueError('invalid value for join: %s' % join)
 
 
-def _get_all_indexes(objects, exclude=set()):
-    all_indexes = defaultdict(list)
-    for obj in objects:
-        for k, v in iteritems(obj.indexes):
-            if k not in exclude:
-                all_indexes[k].append(v)
-    return all_indexes
-
-
-def _join_indexes(join, objects, exclude=set()):
-    joiner = _get_joiner(join)
-    indexes = _get_all_indexes(objects, exclude=exclude)
-    # exclude dimensions with all equal indices (the usual case) to avoid
-    # unnecessary reindexing work.
-    # TODO: don't bother to check equals for left or right joins
-    joined_indexes = dict((k, joiner(v)) for k, v in iteritems(indexes)
-                          if any(not v[0].equals(idx) for idx in v[1:]))
-    return joined_indexes
-
-
 def align(*objects, **kwargs):
     """align(*objects, join='inner', copy=True)
 
@@ -87,15 +67,36 @@ def align(*objects, **kwargs):
     copy = kwargs.pop('copy', True)
     indexes = kwargs.pop('indexes', None)
     exclude = kwargs.pop('exclude', None)
+    if indexes is None:
+        indexes = {}
     if exclude is None:
         exclude = set()
     if kwargs:
         raise TypeError('align() got unexpected keyword arguments: %s'
                         % list(kwargs))
 
-    joined_indexes = _join_indexes(join, objects, exclude=exclude)
-    if indexes is not None:
-        joined_indexes.update(indexes)
+    all_indexes = defaultdict(list)
+    for obj in objects:
+        for dim, index in iteritems(obj.indexes):
+            if dim not in exclude:
+                all_indexes[dim].append(index)
+
+    # We don't join over dimensions with all equal indexes for two reasons:
+    # - It's faster for the usual case (already aligned objects).
+    # - It ensures it's possible to do operations that don't require alignment
+    #   on indexes with duplicate values (which cannot be reindexed with
+    #   pandas). This is useful, e.g., for overwriting such duplicate indexes.
+    joiner = _get_joiner(join)
+    joined_indexes = {}
+    for dim, dim_indexes in iteritems(all_indexes):
+        if dim in indexes:
+            index = utils.safe_cast_to_index(indexes[dim])
+            if any(not index.equals(other) for other in dim_indexes):
+                joined_indexes[dim] = index
+        else:
+            if any(not dim_indexes[0].equals(other)
+                   for other in dim_indexes[1:]):
+                joined_indexes[dim] = joiner(dim_indexes)
 
     result = []
     for obj in objects:
@@ -163,6 +164,10 @@ def reindex_variables(variables, indexes, indexers, method=None,
         to_shape[name] = index.size
         if name in indexers:
             target = utils.safe_cast_to_index(indexers[name])
+            if not index.is_unique:
+                raise ValueError(
+                    'cannot reindex or align along dimension %r because the '
+                    'index has duplicate values' % name)
             indexer = index.get_indexer(target, method=method,
                                         **get_indexer_kwargs)
 
