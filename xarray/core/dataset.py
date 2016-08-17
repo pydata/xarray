@@ -1142,9 +1142,10 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
             satisfy the equation ``abs(index[indexer] - target) <= tolerance``.
             Requires pandas>=0.17.
         copy : bool, optional
-            If `copy=True`, the returned dataset contains only copied
-            variables. If `copy=False` and no reindexing is required then
-            original variables from this dataset are returned.
+            If ``copy=True``, data in the return value is always copied. If
+            ``copy=False`` and reindexing is unnecessary, or can be performed
+            with only slice operations, then the output may share memory with
+            the input. In either case, a new xarray object is always returned.
 
         Returns
         -------
@@ -1187,9 +1188,10 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
             satisfy the equation ``abs(index[indexer] - target) <= tolerance``.
             Requires pandas>=0.17.
         copy : bool, optional
-            If `copy=True`, the returned dataset contains only copied
-            variables. If `copy=False` and no reindexing is required then
-            original variables from this dataset are returned.
+            If ``copy=True``, data in the return value is always copied. If
+            ``copy=False`` and reindexing is unnecessary, or can be performed
+            with only slice operations, then the output may share memory with
+            the input. In either case, a new xarray object is always returned.
         **kw_indexers : optional
             Keyword arguments in the same form as ``indexers``.
 
@@ -1206,9 +1208,6 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         """
         indexers = utils.combine_pos_and_kw_args(indexers, kw_indexers,
                                                  'reindex')
-        if not indexers:
-            # shortcut
-            return self.copy(deep=True) if copy else self
 
         bad_dims = [d for d in indexers if d not in self.dims]
         if bad_dims:

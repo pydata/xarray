@@ -44,6 +44,9 @@ Bug fixes
   By `Maximilian Roos <https://github.com/maximilianr>`_.
 - ``Dataset`` constructor can now take arbitrary objects as values
   (:issue:`647`). By `Maximilian Roos <https://github.com/maximilianr>`_.
+- Clarified ``copy`` argument for :py:meth`~xarray.DataArray.reindex` and
+  :py:func:`~xarray.align`, which now consistently always return new xarray
+  objects (:issue:`927`).
 - Fix ``open_mfdataset`` with ``engine='pynio'`` (:issue:`936`).
   By `Stephan Hoyer <https://github.com/shoyer>`_.
 - ``groupby_bins`` sorted bin labels as strings (:issue:`952`).

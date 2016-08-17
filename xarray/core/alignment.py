@@ -68,9 +68,10 @@ def align(*objects, **kwargs):
         - 'left': use indexes from the first object with each dimension
         - 'right': use indexes from the last object with each dimension
     copy : bool, optional
-        If ``copy=True``, the returned objects contain all new variables. If
-        ``copy=False`` and no reindexing is required then the aligned objects
-        will include original variables.
+        If ``copy=True``, data in the return values is always copied. If
+        ``copy=False`` and reindexing is unnecessary, or can be performed with
+        only slice operations, then the output may share memory with the input.
+        In either case, new xarray objects are always returned.
     exclude : sequence of str, optional
         Dimensions that must be excluded from alignment
     indexes : dict-like, optional
@@ -135,9 +136,10 @@ def reindex_variables(variables, indexes, indexers, method=None,
         The values of the index at the matching locations most satisfy the
         equation ``abs(index[indexer] - target) <= tolerance``.
     copy : bool, optional
-        If `copy=True`, the returned dataset contains only copied
-        variables. If `copy=False` and no reindexing is required then
-        original variables from this dataset are returned.
+        If ``copy=True``, data in the return values is always copied. If
+        ``copy=False`` and reindexing is unnecessary, or can be performed
+        with only slice operations, then the output may share memory with
+        the input. In either case, new xarray objects are always returned.
 
     Returns
     -------
@@ -233,7 +235,7 @@ def reindex_variables(variables, indexes, indexers, method=None,
                 # no reindexing is necessary
                 # here we need to manually deal with copying data, since
                 # we neither created a new ndarray nor used fancy indexing
-                new_var = var.copy() if copy else var
+                new_var = var.copy(deep=copy)
 
         reindexed[name] = new_var
     return reindexed
@@ -337,7 +339,7 @@ def broadcast(*args, **kwargs):
                 dims_map[dim] = common_coords[dim].size
 
     def _expand_dims(var):
-        # Add excluded dims to a copy of dims_map    
+        # Add excluded dims to a copy of dims_map
         var_dims_map = dims_map.copy()
         for dim in exclude:
             try:
