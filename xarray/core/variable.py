@@ -42,7 +42,7 @@ def as_variable(obj, name=None, copy=False):
         obj = obj.copy(deep=False)
     elif hasattr(obj, 'dims') and (hasattr(obj, 'data') or
                                    hasattr(obj, 'values')):
-        obj = Variable(obj.dims, getattr(obj, 'data', getattr(obj, 'values')),
+        obj = Variable(obj.dims, getattr(obj, 'data', obj.values),
                        getattr(obj, 'attrs', None),
                        getattr(obj, 'encoding', None))
     elif isinstance(obj, tuple):
