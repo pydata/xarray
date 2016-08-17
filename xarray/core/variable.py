@@ -75,7 +75,8 @@ def as_variable(obj, name=None, copy=False):
             raise ValueError(
                 '%r has more than 1-dimension and the same name as one of its '
                 'dimensions %r. xarray disallows such variables because they '
-                'conflict with dimension coordinates.' % (name, obj.dims))
+                'conflict with the coordinates used to label dimensions.'
+                % (name, obj.dims))
         obj = obj.to_coord()
 
     return obj
