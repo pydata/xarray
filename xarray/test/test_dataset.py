@@ -141,8 +141,7 @@ class TestDataset(TestCase):
 
         with self.assertRaisesRegexp(ValueError, 'conflicting sizes'):
             Dataset({'a': x1, 'b': x2})
-        with self.assertRaisesRegexp(ValueError,
-                "variable 'x' has the same name"):
+        with self.assertRaisesRegexp(ValueError, "disallows such variables"):
             Dataset({'a': x1, 'x': z})
         with self.assertRaisesRegexp(TypeError, 'tuples to convert'):
             Dataset({'x': (1, 2, 3, 4, 5, 6, 7)})
@@ -1484,7 +1483,7 @@ class TestDataset(TestCase):
         self.assertDatasetIdentical(data1, data2)
         # can't assign an ND array without dimensions
         with self.assertRaisesRegexp(ValueError,
-                                     'dimensions .* must have the same len'):
+                                     'without explicit dimension names'):
             data2['C'] = var.values.reshape(2, 4)
         # but can assign a 1D array
         data1['C'] = var.values

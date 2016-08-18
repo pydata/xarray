@@ -58,7 +58,13 @@ def as_variable(obj, name=None, copy=False):
     elif getattr(obj, 'name', None) is not None:
         obj = Variable(obj.name, obj)
     elif name is not None:
-        obj = Variable(name, obj)
+        data = as_compatible_data(obj)
+        if data.ndim != 1:
+            raise ValueError(
+                'cannot set variable %r with %r-dimensional data '
+                'without explicit dimension names. Pass a tuple of '
+                '(dims, data) instead.' % (name, data.ndim))
+        obj = Variable(name, obj, fastpath=True)
     else:
         raise TypeError('unable to convert object into a variable without an '
                         'explicit list of dimensions: %r' % obj)
@@ -66,9 +72,11 @@ def as_variable(obj, name=None, copy=False):
     if name is not None and name in obj.dims:
         # convert the into an Index
         if obj.ndim != 1:
-            raise ValueError('the variable %r has the same name as one of its '
-                             'dimensions %r, but it is not 1-dimensional and '
-                             'thus it is not a valid index' % (name, obj.dims))
+            raise ValueError(
+                '%r has more than 1-dimension and the same name as one of its '
+                'dimensions %r. xarray disallows such variables because they '
+                'conflict with the coordinates used to label dimensions.'
+                % (name, obj.dims))
         obj = obj.to_coord()
 
     return obj
