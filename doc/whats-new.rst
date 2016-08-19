@@ -35,6 +35,8 @@ Enhancements
   using ``join=outer``. By `Guido Imperiale <https://github.com/crusaderky>`_.
 - Better error message when assigning variables without dimensions
   (:issue:`971`). By `Stephan Hoyer <https://github.com/shoyer>`_.
+- Better error message when reindex/align fails due to duplicate index values
+  (:issue:`956`). By `Stephan Hoyer <https://github.com/shoyer>`_.
 
 Bug fixes
 ~~~~~~~~~
@@ -53,6 +55,8 @@ Bug fixes
   By `Stephan Hoyer <https://github.com/shoyer>`_.
 - ``groupby_bins`` sorted bin labels as strings (:issue:`952`).
   By `Stephan Hoyer <https://github.com/shoyer>`_.
+- Fix bug introduced by v0.8.0 that broke assignment to datasets when both the
+  left and right side have the same non-unique index values (:issue:`956`).
 
 .. _whats-new.0.8.1:
 

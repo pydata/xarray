@@ -1066,12 +1066,20 @@ class TestDataset(TestCase):
             align(left, right, foo='bar')
 
     def test_align_exclude(self):
-        x = Dataset({'foo': DataArray([[1, 2],[3, 4]], dims=['x', 'y'], coords={'x': [1, 2], 'y': [3, 4]})})
-        y = Dataset({'bar': DataArray([[1, 2],[3, 4]], dims=['x', 'y'], coords={'x': [1, 3], 'y': [5, 6]})})
+        x = Dataset({'foo': DataArray([[1, 2],[3, 4]], dims=['x', 'y'],
+                    coords={'x': [1, 2], 'y': [3, 4]})})
+        y = Dataset({'bar': DataArray([[1, 2],[3, 4]], dims=['x', 'y'],
+                    coords={'x': [1, 3], 'y': [5, 6]})})
         x2, y2 = align(x, y, exclude=['y'], join='outer')
 
-        expected_x2 = Dataset({'foo': DataArray([[1, 2], [3, 4], [np.nan, np.nan]], dims=['x', 'y'], coords={'x': [1, 2, 3], 'y': [3, 4]})})
-        expected_y2 = Dataset({'bar': DataArray([[1, 2], [np.nan, np.nan], [3, 4]], dims=['x', 'y'], coords={'x': [1, 2, 3], 'y': [5, 6]})})
+        expected_x2 = Dataset(
+            {'foo': DataArray([[1, 2], [3, 4], [np.nan, np.nan]],
+                              dims=['x', 'y'],
+                              coords={'x': [1, 2, 3], 'y': [3, 4]})})
+        expected_y2 = Dataset(
+            {'bar': DataArray([[1, 2], [np.nan, np.nan], [3, 4]],
+                              dims=['x', 'y'],
+                              coords={'x': [1, 2, 3], 'y': [5, 6]})})
         self.assertDatasetIdentical(expected_x2, x2)
         self.assertDatasetIdentical(expected_y2, y2)
 
@@ -1079,7 +1087,8 @@ class TestDataset(TestCase):
         x = Dataset({'foo': DataArray([1, 2, 3], coords={'x': [1, 2, 3]})})
         y = Dataset({'foo': DataArray([1, 2], coords={'x': [1, 2]})})
         expected_x2 = x
-        expected_y2 = Dataset({'foo': DataArray([1, 2, np.nan], coords={'x': [1, 2, 3]})})
+        expected_y2 = Dataset({'foo': DataArray([1, 2, np.nan],
+                                                 coords={'x': [1, 2, 3]})})
 
         x2, y2 = align(x, y, copy=False, join='outer')
         self.assertDatasetIdentical(expected_x2, x2)
@@ -1096,6 +1105,15 @@ class TestDataset(TestCase):
         x2, = align(x, indexes={'x': [2, 3, 1]})
         expected_x2 = Dataset({'foo': DataArray([2, 3, 1], coords={'x': [2, 3, 1]})})
         self.assertDatasetIdentical(expected_x2, x2)
+
+    def test_align_non_unique(self):
+        x = Dataset({'foo': ('x', [3, 4, 5]), 'x': [0, 0, 1]})
+        x1, x2 = align(x, x)
+        assert x1.identical(x) and x2.identical(x)
+
+        y = Dataset({'bar': ('x', [6, 7]), 'x': [0, 1]})
+        with self.assertRaisesRegexp(ValueError, 'cannot reindex or align'):
+            align(x, y)
 
     def test_broadcast(self):
         ds = Dataset({'foo': 0, 'bar': ('x', [1]), 'baz': ('y', [2, 3])},
@@ -1573,7 +1591,7 @@ class TestDataset(TestCase):
         expected = expected.set_coords('c')
         self.assertDatasetIdentical(actual, expected)
 
-    def test_setitem_non_unique_index(self):
+    def test_setitem_original_non_unique_index(self):
         # regression test for GH943
         original = Dataset({'data': ('x', np.arange(5))},
                             coords={'x': [0, 1, 2, 0, 1]})
@@ -1590,6 +1608,17 @@ class TestDataset(TestCase):
         actual = original.copy()
         actual.coords['x'] = list(range(5))
         self.assertDatasetIdentical(actual, expected)
+
+    def test_setitem_both_non_unique_index(self):
+        # regression test for GH956
+        names = ['joaquin', 'manolo', 'joaquin']
+        values = np.random.randint(0, 256, (3, 4, 4))
+        array = DataArray(values, dims=['name', 'row', 'column'],
+                          coords=[names, range(4), range(4)])
+        expected = Dataset({'first': array, 'second': array})
+        actual = array.rename('first').to_dataset()
+        actual['second'] = array
+        self.assertDatasetIdentical(expected, actual)
 
     def test_delitem(self):
         data = create_test_data()
