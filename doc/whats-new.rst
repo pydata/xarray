@@ -15,8 +15,18 @@ What's New
 
 .. _whats-new.0.8.2:
 
-v0.8.2 (unreleased)
--------------------
+v0.8.2 (18 August 2016)
+-----------------------
+
+This release includes a number of bug fixes and minor enhancements.
+
+Breaking changes
+~~~~~~~~~~~~~~~~
+
+- :py:func:`~xarray.broadcast` and :py:func:`~xarray.concat` now auto-align
+  inputs, using ``join=outer``. Previously, these functions raised
+  ``ValueError`` for non-aligned inputs.
+  By `Guido Imperiale <https://github.com/crusaderky>`_.
 
 Enhancements
 ~~~~~~~~~~~~
@@ -27,12 +37,9 @@ Enhancements
   :py:meth:`from_dict` to allow easy conversion between dictionaries and
   xarray objects (:issue:`432`). See :ref:`dictionary IO <dictionary io>`
   for more details. By `Julia Signell <https://github.com/jsignell>`_.
-
 - Added ``exclude`` and ``indexes`` optional parameters to :py:func:`~xarray.align`,
   and ``exclude`` optional parameter to :py:func:`~xarray.broadcast`.
   By `Guido Imperiale <https://github.com/crusaderky>`_.
-- :py:func:`~xarray.broadcast` and :py:func:`~xarray.concat` will now auto-align inputs,
-  using ``join=outer``. By `Guido Imperiale <https://github.com/crusaderky>`_.
 - Better error message when assigning variables without dimensions
   (:issue:`971`). By `Stephan Hoyer <https://github.com/shoyer>`_.
 - Better error message when reindex/align fails due to duplicate index values

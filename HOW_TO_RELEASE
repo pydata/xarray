@@ -34,7 +34,7 @@ Time required: about an hour.
     only fixes that apply the current released version.
 10. Revert ISRELEASED in setup.py back to False. Don't change the version
     number: in normal development, we keep the version number in setup.py as the
-    last releaseld version.
+    last released version.
 11. Commit your changes and push to master again:
       git commit -a -m 'Revert to dev version'
       git push upstream master
