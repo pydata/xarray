@@ -9,8 +9,8 @@ from setuptools import Command
 
 MAJOR = 0
 MINOR = 8
-MICRO = 1
-ISRELEASED = False
+MICRO = 2
+ISRELEASED = True
 VERSION = '%d.%d.%d' % (MAJOR, MINOR, MICRO)
 QUALIFIER = ''
 
@@ -37,9 +37,6 @@ CLASSIFIERS = [
 
 INSTALL_REQUIRES = ['numpy >= 1.7', 'pandas >= 0.15.0']
 TESTS_REQUIRE = ['pytest >= 2.7.1']
-
-if sys.version_info[:2] < (2, 7):
-    TESTS_REQUIRE += ["unittest2 == 0.5.1"]
 
 DESCRIPTION = "N-D labeled arrays and datasets in Python"
 LONG_DESCRIPTION = """
