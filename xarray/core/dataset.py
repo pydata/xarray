@@ -1915,6 +1915,10 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         conventions.
 
         Useful for coverting to json.
+
+        See also
+        --------
+        xarray.Dataset.from_dict
         """
         d = {'coords': {}, 'attrs': dict(self.attrs), 'dims': dict(self.dims),
              'data_vars': {}}
@@ -1972,6 +1976,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
 
         See also
         --------
+        xarray.Dataset.to_dict
         xarray.DataArray.from_dict
         """
 

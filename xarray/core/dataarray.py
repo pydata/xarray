@@ -1101,6 +1101,10 @@ class DataArray(AbstractArray, BaseDataObject):
         naming conventions.
 
         Useful for coverting to json.
+
+        See also
+        --------
+        xarray.DataArray.from_dict
         """
         d = {'coords': {}, 'attrs': dict(self.attrs), 'dims': self.dims}
 
@@ -1151,6 +1155,7 @@ class DataArray(AbstractArray, BaseDataObject):
 
         See also
         --------
+        xarray.DataArray.to_dict
         xarray.Dataset.from_dict
         """
         coords = None

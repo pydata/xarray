@@ -33,10 +33,11 @@ Enhancements
 
 - New documentation on :ref:`panel transition`. By
   `Maximilian Roos <https://github.com/MaximilianR>`_.
-- New ``Dataset`` and ``DataArray`` methods :py:meth:`to_dict` and
-  :py:meth:`from_dict` to allow easy conversion between dictionaries and
-  xarray objects (:issue:`432`). See :ref:`dictionary IO <dictionary io>`
-  for more details. By `Julia Signell <https://github.com/jsignell>`_.
+- New ``Dataset`` and ``DataArray`` methods :py:meth:`~xarray.Dataset.to_dict`
+  and :py:meth:`~xarray.Dataset.from_dict` to allow easy conversion between
+  dictionaries and xarray objects (:issue:`432`). See
+  :ref:`dictionary IO<dictionary io>` for more details.
+  By `Julia Signell <https://github.com/jsignell>`_.
 - Added ``exclude`` and ``indexes`` optional parameters to :py:func:`~xarray.align`,
   and ``exclude`` optional parameter to :py:func:`~xarray.broadcast`.
   By `Guido Imperiale <https://github.com/crusaderky>`_.
@@ -55,7 +56,7 @@ Bug fixes
   By `Maximilian Roos <https://github.com/maximilianr>`_.
 - ``Dataset`` constructor can now take arbitrary objects as values
   (:issue:`647`). By `Maximilian Roos <https://github.com/maximilianr>`_.
-- Clarified ``copy`` argument for :py:meth`~xarray.DataArray.reindex` and
+- Clarified ``copy`` argument for :py:meth:`~xarray.DataArray.reindex` and
   :py:func:`~xarray.align`, which now consistently always return new xarray
   objects (:issue:`927`).
 - Fix ``open_mfdataset`` with ``engine='pynio'`` (:issue:`936`).
