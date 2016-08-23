@@ -9,7 +9,7 @@ from collections import defaultdict
 from pandas.tslib import OutOfBoundsDatetime
 
 from .core import indexing, ops, utils
-from .core.formatting import format_timestamp, first_n_items
+from .core.formatting import format_timestamp, first_n_items, last_item
 from .core.variable import as_variable, Variable
 from .core.pycompat import iteritems, OrderedDict, PY3, basestring
 
@@ -141,6 +141,12 @@ def decode_cf_datetime(num_dates, units, calendar=None):
             # ValueError is raised by pd.Timestamp for non-ISO timestamp
             # strings, in which case we fall back to using netCDF4
             raise OutOfBoundsDatetime
+
+        # fixes: https://github.com/pydata/pandas/issues/14068
+        # these lines check if the the lowest or the highest value in dates
+        # cause an OutOfBoundsDatetime (Overflow) error
+        pd.to_timedelta(flat_num_dates.min(), delta) + ref_date
+        pd.to_timedelta(flat_num_dates.max(), delta) + ref_date
 
         dates = (pd.to_timedelta(flat_num_dates, delta) + ref_date).values
 
@@ -369,10 +375,17 @@ class DecodedCFDatetimeArray(utils.NDArrayMixin):
         self.array = array
         self.units = units
         self.calendar = calendar
-        # Verify at least one date can be decoded successfully.
-        # Otherwise, tracebacks end up swallowed by Dataset.__repr__ when users
-        # try to view their lazily decoded array.
-        example_value = first_n_items(array, 1) or 0
+
+        # Verify that at least the first and last date can be decoded 
+        # successfully. Otherwise, tracebacks end up swallowed by 
+        # Dataset.__repr__ when users try to view their lazily decoded array.
+        example_value = first_n_items(array, 1) or [0]
+
+        if array.size > 1:
+            # fixes (part of) https://github.com/pydata/xarray/issues/975
+            example_value_end = last_item(array)
+            example_value = np.concatenate((example_value, example_value_end))
+
         try:
             result = decode_cf_datetime(example_value, units, calendar)
         except Exception:

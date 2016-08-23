@@ -37,6 +37,16 @@ class TestFormatting(TestCase):
         with self.assertRaisesRegexp(ValueError, 'at least one item'):
             formatting.first_n_items(array, 0)
 
+    def test_last_item(self):
+        array = np.arange(100)
+
+        reshape = ((10, 10), (1, 100), (2, 2, 5, 5))
+        expected = np.array(99)
+
+        for r in reshape:
+            result = formatting.last_item(array.reshape(r))
+            self.assertEqual(result, expected)
+
     def test_format_item(self):
         cases = [
             (pd.Timestamp('2000-01-01T12'), '2000-01-01T12:00:00'),
@@ -74,8 +84,8 @@ class TestFormatting(TestCase):
             actual = ' '.join(formatting.format_items(item))
             self.assertEqual(expected, actual)
 
-
-    def test_format_array_flat(self):
+    
+def test_format_array_flat(self):
         actual = formatting.format_array_flat(np.arange(100), 13)
         expected = '0 1 2 3 4 ...'
         self.assertEqual(expected, actual)
@@ -106,3 +116,15 @@ class TestFormatting(TestCase):
 
     def test_maybe_truncate(self):
         self.assertEqual(formatting.maybe_truncate(u'ß', 10), u'ß')
+
+    def test_format_timestamp_out_of_bounds(self):
+        from datetime import datetime
+        date = datetime(1300, 12, 1)
+        expected = '1300-12-01'
+        result = formatting.format_timestamp(date)
+        self.assertEqual(result, expected)
+        
+        date = datetime(2300, 12, 1)
+        expected = '2300-12-01'
+        result = formatting.format_timestamp(date)
+        self.assertEqual(result, expected)
