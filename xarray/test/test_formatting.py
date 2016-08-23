@@ -85,30 +85,30 @@ class TestFormatting(TestCase):
             self.assertEqual(expected, actual)
 
     
-def test_format_array_flat(self):
-        actual = formatting.format_array_flat(np.arange(100), 13)
-        expected = '0 1 2 3 4 ...'
-        self.assertEqual(expected, actual)
+    def test_format_array_flat(self):
+            actual = formatting.format_array_flat(np.arange(100), 13)
+            expected = '0 1 2 3 4 ...'
+            self.assertEqual(expected, actual)
 
-        actual = formatting.format_array_flat(np.arange(100.0), 11)
-        expected = '0.0 1.0 ...'
-        self.assertEqual(expected, actual)
+            actual = formatting.format_array_flat(np.arange(100.0), 11)
+            expected = '0.0 1.0 ...'
+            self.assertEqual(expected, actual)
 
-        actual = formatting.format_array_flat(np.arange(100.0), 1)
-        expected = '0.0 ...'
-        self.assertEqual(expected, actual)
+            actual = formatting.format_array_flat(np.arange(100.0), 1)
+            expected = '0.0 ...'
+            self.assertEqual(expected, actual)
 
-        actual = formatting.format_array_flat(np.arange(3), 5)
-        expected = '0 1 2'
-        self.assertEqual(expected, actual)
+            actual = formatting.format_array_flat(np.arange(3), 5)
+            expected = '0 1 2'
+            self.assertEqual(expected, actual)
 
-        actual = formatting.format_array_flat(np.arange(4.0), 11)
-        expected = '0.0 1.0 ...'
-        self.assertEqual(expected, actual)
+            actual = formatting.format_array_flat(np.arange(4.0), 11)
+            expected = '0.0 1.0 ...'
+            self.assertEqual(expected, actual)
 
-        actual = formatting.format_array_flat(np.arange(4), 0)
-        expected = '0 ...'
-        self.assertEqual(expected, actual)
+            actual = formatting.format_array_flat(np.arange(4), 0)
+            expected = '0 ...'
+            self.assertEqual(expected, actual)
 
     def test_pretty_print(self):
         self.assertEqual(formatting.pretty_print('abcdefghij', 8), 'abcde...')
