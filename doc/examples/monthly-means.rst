@@ -3,13 +3,19 @@
 Calculating Seasonal Averages from Timeseries of Monthly Means
 ==============================================================
 
-Author: `Joe Hamman <http://uw-hydro.github.io/current_member/joe_hamman/>`_
+Author: `Joe Hamman <https://github.com/jhamman/>`__
 
-The data for this example can be found in the `xray-data <https://github.com/xray/xray-data>`_ repository. This example is also available in an IPython Notebook that is available `here <https://github.com/xray/xray/tree/master/examples/xray_seasonal_means.ipynb>`_.
+The data used for this example can be found in the
+`xarray-data <https://github.com/pydata/xarray-data>`__ repository.
 
 Suppose we have a netCDF or xray Dataset of monthly mean data and we
 want to calculate the seasonal average. To do this properly, we need to
 calculate the weighted average considering that each month has a
+different number of days.
+
+Suppose we have a netCDF or ``xarray.Dataset`` of monthly mean data and
+we want to calculate the seasonal average. To do this properly, we need
+to calculate the weighted average considering that each month has a
 different number of days.
 
 .. code:: python
@@ -17,19 +23,20 @@ different number of days.
     %matplotlib inline
     import numpy as np
     import pandas as pd
-    import xray
+    import xarray as xr
     from netCDF4 import num2date
     import matplotlib.pyplot as plt
 
     print("numpy version  : ", np.__version__)
-    print("pandas version : ", pd.version.version)
-    print("xray version   : ", xray.version.version)
+    print("pandas version : ", pd.__version__)
+    print("xarray version : ", xr.__version__)
+
 
 .. parsed-literal::
 
-    numpy version  :  1.9.2
-    pandas version :  0.16.2
-    xray version   :  0.5.1
+    numpy version  :  1.11.1
+    pandas version :  0.18.1
+    xarray version :  0.8.2
 
 
 Some calendar information so we can support any netCDF calendar.
@@ -90,21 +97,22 @@ Open the ``Dataset``
 
 .. code:: python
 
-    monthly_mean_file = 'RASM_example_data.nc'
-    ds = xray.open_dataset(monthly_mean_file, decode_coords=False)
+    ds = xr.tutorial.load_dataset('rasm')
     print(ds)
 
 
 .. parsed-literal::
 
-    <xray.Dataset>
+    <xarray.Dataset>
     Dimensions:  (time: 36, x: 275, y: 205)
     Coordinates:
       * time     (time) datetime64[ns] 1980-09-16T12:00:00 1980-10-17 ...
-      * x        (x) int64 0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 ...
       * y        (y) int64 0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 ...
+      * x        (x) int64 0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 ...
     Data variables:
         Tair     (time, y, x) float64 nan nan nan nan nan nan nan nan nan nan ...
+        yc       (y, x) float64 16.53 16.78 17.02 17.27 17.51 17.76 18.0 18.25 ...
+        xc       (y, x) float64 189.2 189.4 189.6 189.7 189.9 190.1 190.2 190.4 ...
     Attributes:
         title: /workspace/jhamman/processed/R1002RBRxaaa01a/lnd/temp/R1002RBRxaaa01a.vic.ha.1979-09-01.nc
         institution: U.W.
@@ -132,9 +140,8 @@ allong the time dimension.
 .. code:: python
 
     # Make a DataArray with the number of days in each month, size = len(time)
-    month_length = xray.DataArray(get_dpm(ds.time.to_index(),
-                                          calendar='noleap'),
-                                  coords=[ds.time], name='month_length')
+    month_length = xr.DataArray(get_dpm(ds.time.to_index(), calendar='noleap'),
+                                coords=[ds.time], name='month_length')
 
     # Calculate the weights by grouping by 'time.season'.
     # Conversion to float type ('astype(float)') only necessary for Python 2.x
@@ -153,7 +160,7 @@ allong the time dimension.
 
 .. parsed-literal::
 
-    <xray.Dataset>
+    <xarray.Dataset>
     Dimensions:  (season: 4, x: 275, y: 205)
     Coordinates:
       * y        (y) int64 0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 ...
@@ -161,6 +168,8 @@ allong the time dimension.
       * season   (season) object 'DJF' 'JJA' 'MAM' 'SON'
     Data variables:
         Tair     (season, y, x) float64 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 ...
+        xc       (season, y, x) float64 189.2 189.4 189.6 189.7 189.9 190.1 ...
+        yc       (season, y, x) float64 16.53 16.78 17.02 17.27 17.51 17.76 18.0 ...
 
 
 .. code:: python
@@ -172,30 +181,31 @@ allong the time dimension.
 .. code:: python
 
     # Quick plot to show the results
-    is_null = np.isnan(ds_unweighted['Tair'][0].values)
+    notnull = pd.notnull(ds_unweighted['Tair'][0])
 
     fig, axes = plt.subplots(nrows=4, ncols=3, figsize=(14,12))
     for i, season in enumerate(('DJF', 'MAM', 'JJA', 'SON')):
-        plt.sca(axes[i, 0])
-        plt.pcolormesh(np.ma.masked_where(is_null, ds_weighted['Tair'].sel(season=season).values),
-                       vmin=-30, vmax=30, cmap='Spectral_r')
-        plt.colorbar(extend='both')
+        ds_weighted['Tair'].sel(season=season).where(notnull).plot.pcolormesh(
+            ax=axes[i, 0], vmin=-30, vmax=30, cmap='Spectral_r',
+            add_colorbar=True, extend='both')
 
-        plt.sca(axes[i, 1])
-        plt.pcolormesh(np.ma.masked_where(is_null, ds_unweighted['Tair'].sel(season=season).values),
-                       vmin=-30, vmax=30, cmap='Spectral_r')
-        plt.colorbar(extend='both')
+        ds_unweighted['Tair'].sel(season=season).where(notnull).plot.pcolormesh(
+            ax=axes[i, 1], vmin=-30, vmax=30, cmap='Spectral_r',
+            add_colorbar=True, extend='both')
 
-        plt.sca(axes[i, 2])
-        plt.pcolormesh(np.ma.masked_where(is_null, ds_diff['Tair'].sel(season=season).values),
-                       vmin=-0.1, vmax=.1, cmap='RdBu_r')
-        plt.colorbar(extend='both')
-        for j in range(3):
-            axes[i, j].axes.get_xaxis().set_ticklabels([])
-            axes[i, j].axes.get_yaxis().set_ticklabels([])
-            axes[i, j].axes.axis('tight')
+        ds_diff['Tair'].sel(season=season).where(notnull).plot.pcolormesh(
+            ax=axes[i, 2], vmin=-0.1, vmax=.1, cmap='RdBu_r',
+            add_colorbar=True, extend='both')
 
         axes[i, 0].set_ylabel(season)
+        axes[i, 1].set_ylabel('')
+        axes[i, 2].set_ylabel('')
+
+    for ax in axes.flat:
+        ax.axes.get_xaxis().set_ticklabels([])
+        ax.axes.get_yaxis().set_ticklabels([])
+        ax.axes.axis('tight')
+        ax.set_xlabel('')
 
     axes[0, 0].set_title('Weighted by DPM')
     axes[0, 1].set_title('Equal Weighting')
@@ -206,6 +216,15 @@ allong the time dimension.
     fig.suptitle('Seasonal Surface Air Temperature', fontsize=16, y=1.02)
 
 
+
+
+.. parsed-literal::
+
+    <matplotlib.text.Text at 0x117c18048>
+
+
+
+
 .. image:: monthly_means_output.png
 
 
@@ -214,12 +233,12 @@ allong the time dimension.
     # Wrap it into a simple function
     def season_mean(ds, calendar='standard'):
         # Make a DataArray of season/year groups
-        year_season = xray.DataArray(ds.time.to_index().to_period(freq='Q-NOV').to_timestamp(how='E'),
-                                     coords=[ds.time], name='year_season')
+        year_season = xr.DataArray(ds.time.to_index().to_period(freq='Q-NOV').to_timestamp(how='E'),
+                                   coords=[ds.time], name='year_season')
 
         # Make a DataArray with the number of days in each month, size = len(time)
-        month_length = xray.DataArray(get_dpm(ds.time.to_index(), calendar=calendar),
-                                      coords=[ds.time], name='month_length')
+        month_length = xr.DataArray(get_dpm(ds.time.to_index(), calendar=calendar),
+                                    coords=[ds.time], name='month_length')
         # Calculate the weights by grouping by 'time.season'
         weights = month_length.groupby('time.season') / month_length.groupby('time.season').sum()
 
