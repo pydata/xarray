@@ -1075,10 +1075,8 @@ class IndexVariable(Variable):
     unless another name is given.
     """
 
-    def __init__(self, name, data, attrs=None, encoding=None,
-                 fastpath=False, dim=None):
-        if dim is None:
-            dim = name
+    def __init__(self, dims, data, attrs=None, encoding=None,
+                 name=None, fastpath=False):
 
         super(IndexVariable, self).__init__(dim, data, attrs, encoding, fastpath)
         if self.ndim != 1:
@@ -1101,8 +1099,8 @@ class IndexVariable(Variable):
         if not hasattr(values, 'ndim') or values.ndim == 0:
             return Variable((), values, self._attrs, self._encoding)
         else:
-            return type(self)(self._name, values, self._attrs,
-                              self._encoding, fastpath=True, dim=self.dims)
+            return type(self)(self.dims, values, self._attrs,
+                              self._encoding, name=self._name, fastpath=True)
 
     def __setitem__(self, key, value):
         raise TypeError('%s values cannot be modified' % type(self).__name__)
@@ -1154,8 +1152,8 @@ class IndexVariable(Variable):
         # there is no need to copy the index values here even if deep=True
         # since pandas.Index objects are immutable
         data = PandasIndexAdapter(self) if deep else self._data
-        return type(self)(self._name, data, self._attrs,
-                          self._encoding, fastpath=True, dim=self.dims)
+        return type(self)(self.dims, data, self._attrs,
+                          self._encoding, name=self._name, fastpath=True)
 
     def _data_equals(self, other):
         return self.to_index().equals(other.to_index())
@@ -1202,7 +1200,7 @@ class IndexVariable(Variable):
         if self.level_names is None:
             raise ValueError("Coordinate %s has no MultiIndex" % self.name)
         index = self.to_index()
-        return type(self)(level, index.get_level_values(level), dim=self.name)
+        return type(self)(self.dims, index.get_level_values(level), name=level)
 
     @property
     def name(self):
