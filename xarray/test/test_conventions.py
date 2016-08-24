@@ -186,6 +186,7 @@ class TestDatetime(TestCase):
                             pd.Index(actual), units, calendar)
                         self.assertArrayEqual(num_dates, np.around(encoded, 1))
 
+    @requires_netCDF4
     def test_decode_cf_datetime_overflow(self):
         # checks for 
         # https://github.com/pydata/pandas/issues/14068
@@ -202,6 +203,7 @@ class TestDatetime(TestCase):
             result = conventions.decode_cf_datetime(day, units)
             self.assertEqual(result, expected[i])
 
+    @requires_netCDF4
     def test_decode_cf_datetime_transition_to_invalid(self):
         # manually create dataset with not-decoded date
         from datetime import datetime
@@ -369,6 +371,7 @@ class TestDatetime(TestCase):
                 self.assertEqual(actual.dtype, np.dtype('O'))
                 self.assertArrayEqual(actual, expected)
 
+    @requires_netCDF4
     def test_cf_datetime_nan(self):
         for num_dates, units, expected_list in [
                 ([np.nan], 'days since 2000-01-01', ['NaT']),

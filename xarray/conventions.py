@@ -376,15 +376,11 @@ class DecodedCFDatetimeArray(utils.NDArrayMixin):
         self.units = units
         self.calendar = calendar
 
-        # Verify that at least the first and last date can be decoded 
-        # successfully. Otherwise, tracebacks end up swallowed by 
+        # Verify that at least the first and last date can be decoded
+        # successfully. Otherwise, tracebacks end up swallowed by
         # Dataset.__repr__ when users try to view their lazily decoded array.
-        example_value = first_n_items(array, 1) or [0]
-
-        if array.size > 1:
-            # fixes (part of) https://github.com/pydata/xarray/issues/975
-            example_value_end = last_item(array)
-            example_value = np.concatenate((example_value, example_value_end))
+        example_value = np.concatenate([first_n_items(array, 1),
+                                        last_item(array), [0]])
 
         try:
             result = decode_cf_datetime(example_value, units, calendar)

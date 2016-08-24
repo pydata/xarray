@@ -90,16 +90,15 @@ def last_item(x):
         return []
 
     indexer = (slice(-1, None), ) * x.ndim
-    return x[indexer]
-
+    return np.array(x[indexer], ndmin=1)
 
 def format_timestamp(t):
     """Cast given object to a Timestamp and return a nicely formatted string"""
-	# Timestamp is only valid for 1678 to 2262
+    # Timestamp is only valid for 1678 to 2262
     try:
         datetime_str = unicode_type(pd.Timestamp(t))
     except OutOfBoundsDatetime:
-        datetime_str = unicode_type(t.__str__())
+        datetime_str = unicode_type(t)
         
     try:
         date_str, time_str = datetime_str.split()
