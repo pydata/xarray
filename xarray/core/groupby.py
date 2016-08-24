@@ -70,6 +70,7 @@ def _dummy_copy(xarray_obj):
         raise AssertionError
     return res
 
+
 def _is_one_or_none(obj):
     return obj == 1 or obj is None
 

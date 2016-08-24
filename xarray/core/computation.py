@@ -88,8 +88,8 @@ def _build_output_coords(args, signature, new_coords=None):
     return output
 
 
-def apply_dataarray(args, func, signature=None, join='inner',
-                    kwargs=None, new_coords=None, combine_names=None):
+def apply_dataarray_ufunc(args, func, signature=None, join='inner',
+                          kwargs=None, new_coords=None, combine_names=None):
     if signature is None:
         signature = _default_signature(len(args))
 
@@ -137,8 +137,9 @@ def collect_dict_values(objects, keys, fill_value=None)
     return result_values
 
 
-def apply_dataset(args, func, signature=None, join='inner', fill_value=None,
-                  kwargs=None, new_coords=None, result_attrs=None):
+def apply_dataset_ufunc(args, func, signature=None, join='inner',
+                        fill_value=None, kwargs=None, new_coords=None,
+                        result_attrs=None):
     if kwargs is None:
         kwargs = {}
 
@@ -192,6 +193,65 @@ def apply_dataset(args, func, signature=None, join='inner', fill_value=None,
         coords_vars, = list_of_coords
         attrs, = list_of_attrs
         return make_dataset(data_vars, coord_vars, attrs)
+
+
+
+
+def _iter_over_selections(obj, dim, values):
+    """Iterate over selections of an xarray object in the provided order.
+    """
+    dummy = None
+    for value in values:
+        try:
+            obj_sel = obj.sel(**{dim: values})
+        except KeyError:
+            if dim not in obj.dims:
+                raise ValueError('incompatible dimensions for a grouped '
+                                 'binary operation: the group variable %r '
+                                 'is not a dimension on the other argument'
+                                 % dim)
+            if dummy is None:
+                dummy = _dummy_copy(obj)
+            obj_sel = dummy
+        yield obj_sel
+
+
+def apply_groupby_ufunc(args, func):
+    groupbys = [arg for arg in args if isinstance(GroupBy)]
+    if not groupbys:
+        raise ValueError('must have at least one groupby to iterate over')
+    first_groupby = groups[0]
+    if any(not first_groupby.unique_coord.equals(gb.unique_coord)
+           for gb in groupbys[1:]):
+        raise ValueError('can only perform operations over multiple groupbys '
+                         'at once if they have all the same unique coordinate')
+
+    grouped_dim = first_groupby.group.name
+    unique_values = first_groupby.unique_coord.values
+
+    iterators = []
+    for arg in args:
+        if isinstance(arg, GroupBy):
+            iterator = (value for _, value in arg)
+        elif hasattr(arg, 'dims') and group_name in arg.dims:
+            if isinstance(arg, Variable):
+                raise ValueError(
+                    'groupby operations cannot be performed with '
+                    'xarray.Variable objects that share a dimension with '
+                    'the grouped dimension')
+            iterator = _iter_over_selections(arg, grouped_dim, unique_vlaues)
+        else:
+            iterator = itertools.repeat(arg)
+        iterators.append(iterator)
+
+    applied = (func(*zipped_args) for zipped_args in zip(iterators))
+    applied_example, applied = peek_at(applied)
+    combine = first_groupby._combined
+    if isinstance(applied_example, tuple):
+        combined = tuple(combine(output) for output in zip(*applied))
+    else:
+        combined = combine(applied)
+    return combined
 
 
 def _calculate_unified_dim_sizes(variables):
@@ -340,11 +400,19 @@ def apply_ufunc(args, func=None, signature=None, join='inner',
         apply_variable_ufunc, func=func, dask_array=dask_array,
         combine_attrs=combine_variable_attrs, kwargs=kwargs)
 
-    if any(is_dict_like(a) for a in args):
-        return apply_dataset(args, variables_ufunc, join=join,
-                             combine_attrs=combine_dataset_attrs)
+    if any(isinstance(a, GroupBy) for a in args):
+        partial_apply_ufunc = functools.partial(
+            apply_ufunc, func=func, signature=signature, join=join,
+            dask_array=dask_array, kwargs=kwargs,
+            combine_dataset_attrs=combine_dataset_attrs,
+            combine_variable_attrs=combine_variable_attrs,
+            dtype=None)
+        return apply_groupby_ufunc(args, partial_apply_ufunc)
+    elif any(is_dict_like(a) for a in args):
+        return apply_dataset_ufunc(args, variables_ufunc, join=join,
+                                   combine_attrs=combine_dataset_attrs)
     elif any(isinstance(a, DataArray) for a in args):
-        return apply_dataarray(args, variables_ufunc, join=join)
+        return apply_dataarray_ufunc(args, variables_ufunc, join=join)
     elif any(isinstance(a, Variable) for a in args):
         return variables_ufunc(args)
     elif dask_array == 'auto' and any(
