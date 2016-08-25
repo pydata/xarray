@@ -1324,8 +1324,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
                 else:
                     variables[name] = var.copy(deep=False)
 
-        idx = pd.MultiIndex.from_product([self.indexes[d] for d in dims],
-                                         names=dims)
+        idx = utils.multiindex_from_product_levels(
+            [self.indexes[d] for d in dims], names=dims)
         variables[new_dim] = Coordinate(new_dim, idx)
 
         coord_names = set(self._coord_names) - set(dims) | set([new_dim])

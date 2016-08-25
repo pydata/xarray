@@ -22,6 +22,17 @@ class TestSafeCastToIndex(TestCase):
             self.assertEqual(expected.dtype, actual.dtype)
 
 
+def test_multiindex_from_product_levels():
+    result = utils.multiindex_from_product_levels([['b', 'a'], [1, 3, 2]])
+    np.testing.assert_array_equal(
+        result.labels, [[0, 0, 0, 1, 1, 1], [0, 1, 2, 0, 1, 2]])
+    np.testing.assert_array_equal(result.levels[0], ['b', 'a'])
+    np.testing.assert_array_equal(result.levels[1], [1, 3, 2])
+
+    other = pd.MultiIndex.from_product([['b', 'a'], [1, 3, 2]])
+    np.testing.assert_array_equal(result.values, other.values)
+
+
 class TestArrayEquiv(TestCase):
     def test_0d(self):
         # verify our work around for pd.isnull not working for 0-dimensional

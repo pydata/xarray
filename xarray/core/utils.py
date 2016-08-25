@@ -59,6 +59,29 @@ def safe_cast_to_index(array):
     return index
 
 
+def multiindex_from_product_levels(levels, names=None):
+    """Creating a MultiIndex from a product without refactorizing levels.
+
+    Keeping levels the same is faster, and also gives back the original labels
+    when we unstack.
+
+    Parameters
+    ----------
+    levels : sequence of arrays
+        Unique labels for each level.
+    names : optional sequence of objects
+        Names for each level.
+
+    Returns
+    -------
+    pandas.MultiIndex
+    """
+    labels_mesh = np.meshgrid(*[np.arange(len(lev)) for lev in levels],
+                              indexing='ij')
+    labels = [x.ravel() for x in labels_mesh]
+    return pd.MultiIndex(levels, labels, sortorder=0, names=names)
+
+
 def maybe_wrap_array(original, new_array):
     """Wrap a transformed array with __array_wrap__ is it can be done safely.
 
