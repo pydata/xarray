@@ -186,6 +186,37 @@ class TestDatetime(TestCase):
                             pd.Index(actual), units, calendar)
                         self.assertArrayEqual(num_dates, np.around(encoded, 1))
 
+    @requires_netCDF4
+    def test_decode_cf_datetime_overflow(self):
+        # checks for 
+        # https://github.com/pydata/pandas/issues/14068
+        # https://github.com/pydata/xarray/issues/975
+
+        from datetime import datetime        
+        units = 'days since 2000-01-01 00:00:00'
+
+        # date after 2262 and before 1678
+        days = (-117608, 95795)
+        expected = (datetime(1677, 12, 31), datetime(2262, 4, 12))
+
+        for i, day in enumerate(days):
+            result = conventions.decode_cf_datetime(day, units)
+            self.assertEqual(result, expected[i])
+
+    @requires_netCDF4
+    def test_decode_cf_datetime_transition_to_invalid(self):
+        # manually create dataset with not-decoded date
+        from datetime import datetime
+        ds = Dataset(coords={'time' : [0, 266 * 365]})
+        units = 'days since 2000-01-01 00:00:00'
+        ds.time.attrs = dict(units=units)
+        ds_decoded = conventions.decode_cf(ds)
+
+        expected = [datetime(2000, 1, 1, 0, 0),
+                    datetime(2265, 10, 28, 0, 0)]
+
+        self.assertArrayEqual(ds_decoded.time.values, expected)
+
     def test_decoded_cf_datetime_array(self):
         actual = conventions.DecodedCFDatetimeArray(
             np.array([0, 1, 2]), 'days since 1900-01-01', 'standard')
@@ -340,6 +371,7 @@ class TestDatetime(TestCase):
                 self.assertEqual(actual.dtype, np.dtype('O'))
                 self.assertArrayEqual(actual, expected)
 
+    @requires_netCDF4
     def test_cf_datetime_nan(self):
         for num_dates, units, expected_list in [
                 ([np.nan], 'days since 2000-01-01', ['NaT']),
