@@ -26,6 +26,8 @@ Enhancements
 
 Bug fixes
 ~~~~~~~~~
+- Fix issues for dates outside the valid range of pandas timestamps
+  (:issue:`975`). By `Mathias Hauser <https://github.com/mathause>`_.
 
 .. _whats-new.0.8.2:
 
