@@ -25,21 +25,18 @@ such datasets.
 
 .. parsed-literal::
 
-    ('numpy version  : ', '1.11.0')
-    ('pandas version : ', u'0.18.0')
-    ('xarray version   : ', '0.7.2-32-gf957eb8')
+    numpy version  :  1.11.1
+    pandas version :  0.18.1
+    xarray version :  0.8.2
 
 
 As an example, consider this dataset from the
 `xarray-data <https://github.com/pydata/xarray-data>`__ repository.
 
-.. code:: python
-
-    ! curl -L -O https://github.com/pydata/xarray-data/raw/master/RASM_example_data.nc
 
 .. code:: python
 
-    ds = xr.open_dataset('RASM_example_data.nc')
+    ds = xr.tutorial.load_dataset('rasm')
     ds
 
 
