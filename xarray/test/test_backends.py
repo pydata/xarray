@@ -1063,3 +1063,131 @@ class TestEncodingInvalid(TestCase):
                           {'least_sigificant_digit': 2})
         with self.assertRaisesRegexp(ValueError, 'unexpected encoding'):
             _extract_nc4_encoding(var, raise_on_invalid=True)
+
+
+class MiscObject:
+    pass
+
+
+class TestValidateAttrs(TestCase):
+
+    def test_invalid_attr_names(self):
+        ds = Dataset({'data': ('y', np.arange(10.0))})
+        self.assert_invalid_attr_names_for_obj(ds.attrs, ds)
+
+        ds = Dataset({'data': ('y', np.arange(10.0))})
+        self.assert_invalid_attr_names_for_obj(ds.data.attrs, ds)
+
+        ds = Dataset({'data': ('y', np.arange(10.0))})
+        self.assert_invalid_attr_names_for_obj(ds.coords['y'].attrs, ds)
+
+    def test_invalid_attr_values(self):
+        ds = Dataset({'data': ('y', np.arange(10.0))})
+        self.assert_invalid_attr_values_for_obj(ds.attrs, ds)
+
+        ds = Dataset({'data': ('y', np.arange(10.0))})
+        self.assert_invalid_attr_values_for_obj(ds.data.attrs, ds)
+
+        ds = Dataset({'data': ('y', np.arange(10.0))})
+        self.assert_invalid_attr_values_for_obj(ds.coords['y'].attrs, ds)
+
+    def test_valid_attr_values(self):
+        ds = Dataset({'data': ('y', np.arange(10.0))})
+        self.assert_valid_attr_values_for_obj(ds.attrs, ds)
+
+        ds = Dataset({'data': ('y', np.arange(10.0))})
+        self.assert_valid_attr_values_for_obj(ds.data.attrs, ds)
+
+        ds = Dataset({'data': ('y', np.arange(10.0))})
+        self.assert_valid_attr_values_for_obj(ds.coords['y'].attrs, ds)
+
+    def assert_invalid_attr_names_for_obj(self, obj, ds):
+        # Helper function for `test_invalid_attr_names`
+        # In this function `obj` is an 'attrs' object (eg. ds.attrs or
+        # data.var.attrs, and `ds` is the dataset object
+
+        obj.clear()
+        obj[123] = 'test'
+        with self.assertRaisesRegexp(TypeError, 'Invalid name for attr'):
+            ds.to_netcdf('test.nc')
+
+        obj.clear()
+        obj[MiscObject()] = 'test'
+        with self.assertRaisesRegexp(TypeError, 'Invalid name for attr'):
+            ds.to_netcdf('test.nc')
+
+        obj.clear()
+        obj[''] = 'test'
+        with self.assertRaisesRegexp(ValueError, 'Invalid name for attr'):
+            ds.to_netcdf('test.nc')
+
+        # This one should work
+        obj.clear()
+        obj['test'] = 'test'
+        with create_tmp_file() as tmp_file:
+            ds.to_netcdf(tmp_file)
+
+    def assert_invalid_attr_values_for_obj(self, obj, ds):
+        # Helper function for `test_invalid_attr_values`
+        # In this function `obj` is an 'attrs' object (eg. ds.attrs or
+        # data.var.attrs, and `ds` is the dataset object
+
+        obj.clear()
+        obj['test'] = {'a': 5}
+        with self.assertRaisesRegexp(TypeError, 'Invalid value for attr'):
+            ds.to_netcdf('test.nc')
+
+        obj.clear()
+        obj['test'] = MiscObject()
+        with self.assertRaisesRegexp(TypeError, 'Invalid value for attr'):
+            ds.to_netcdf('test.nc')
+
+    def assert_valid_attr_values_for_obj(self, obj, ds):
+        # Helper function for `test_valid_attr_values`
+        # In this function `obj` is an 'attrs' object (eg. ds.attrs or
+        # data.var.attrs, and `ds` is the dataset object
+
+        obj.clear()
+        obj['test'] = 5
+        with create_tmp_file() as tmp_file:
+            ds.to_netcdf(tmp_file)
+
+        obj.clear()
+        obj['test'] = 3.14
+        with create_tmp_file() as tmp_file:
+            ds.to_netcdf(tmp_file)
+
+        obj.clear()
+        obj['test'] = [1, 2, 3, 4]
+        with create_tmp_file() as tmp_file:
+            ds.to_netcdf(tmp_file)
+
+        obj.clear()
+        obj['test'] = (1.9, 2.5)
+        with create_tmp_file() as tmp_file:
+            ds.to_netcdf(tmp_file)
+
+        obj.clear()
+        obj['test'] = np.arange(5)
+        with create_tmp_file() as tmp_file:
+            ds.to_netcdf(tmp_file)
+
+        obj.clear()
+        obj['test'] = np.arange(12).reshape(3, 4)
+        with create_tmp_file() as tmp_file:
+            ds.to_netcdf(tmp_file)
+
+        obj.clear()
+        obj['test'] = 'This is a string'
+        with create_tmp_file() as tmp_file:
+            ds.to_netcdf(tmp_file)
+
+        obj.clear()
+        obj['test'] = ''
+        with create_tmp_file() as tmp_file:
+            ds.to_netcdf(tmp_file)
+
+        obj.clear()
+        obj['test'] = np.arange(12).reshape(3, 4)
+        with create_tmp_file() as tmp_file:
+            ds.to_netcdf(tmp_file)

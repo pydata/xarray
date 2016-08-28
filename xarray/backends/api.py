@@ -5,6 +5,10 @@ import threading
 from distutils.version import StrictVersion
 from glob import glob
 from io import BytesIO
+from numbers import Number
+from collections.abc import Iterable
+
+import numpy as np
 
 from .. import backends, conventions
 from .common import ArrayWriter
@@ -77,6 +81,42 @@ def _validate_dataset_names(dataset):
 
     for k in dataset:
         check_name(k)
+
+
+def _validate_attrs(dataset):
+    """`attrs` must have a string key and a value which is either: a number
+    a string, an ndarray or a list/tuple of numbers/strings.
+    """
+    def check_attr(name, value):
+        if isinstance(name, basestring):
+            if not name:
+                raise ValueError('Invalid name for attr: string must be length '
+                                 '1 or greater for serialization to netCDF '
+                                 'files')
+        else:
+            raise TypeError('Invalid name for attr: must be a string for '
+                            'serialization to netCDF files')
+
+        if not isinstance(value, basestring) and not isinstance(value, Number) and \
+           not isinstance(value, np.ndarray) and not isinstance(value, list) and \
+           not isinstance(value, tuple):
+                raise TypeError('Invalid value for attr: must be a number '
+                                'string, ndarray or a list/tuple of numbers/strings '
+                                'for serialization to netCDF files')
+
+    # Check attrs on the dataset itself
+    for k, v in dataset.attrs.items():
+        check_attr(k, v)
+
+    # Check attrs on each variable within the dataset
+    for var_name in dataset.data_vars:
+        for k, v in dataset[var_name].attrs.items():
+            check_attr(k, v)
+
+    # Check attrs on each coord within the dataset
+    for coord_name in dataset.coords:
+        for k, v in dataset.coords[coord_name].attrs.items():
+            check_attr(k, v)
 
 
 def open_dataset(filename_or_obj, group=None, decode_cf=True,
@@ -335,8 +375,9 @@ def to_netcdf(dataset, path=None, mode='w', format=None, group=None,
     elif engine is None:
         engine = _get_default_engine(path)
 
-    # validate Dataset keys and DataArray names
+    # validate Dataset keys, DataArray names, and attr keys/values
     _validate_dataset_names(dataset)
+    _validate_attrs(dataset)
 
     try:
         store_cls = WRITEABLE_STORES[engine]
