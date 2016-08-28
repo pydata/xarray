@@ -993,6 +993,15 @@ class TestDataArray(TestCase):
         actual = orig.stack(z=['x', 'y']).unstack('z')
         self.assertDataArrayIdentical(orig, actual)
 
+    def test_stack_unstack_decreasing_coordinate(self):
+        # regression test for GH980
+        orig = DataArray(np.random.rand(3, 4), dims=('y', 'x'),
+                         coords={'x': np.arange(4),
+                                 'y': np.arange(3, 0, -1)})
+        stacked = orig.stack(allpoints=['y', 'x'])
+        actual = stacked.unstack('allpoints')
+        self.assertDataArrayIdentical(orig, actual)
+
     def test_unstack_pandas_consistency(self):
         df = pd.DataFrame({'foo': range(3),
                            'x': ['a', 'b', 'b'],
@@ -1628,7 +1637,7 @@ class TestDataArray(TestCase):
     def test_align_copy(self):
         x = DataArray([1, 2, 3], coords=[('a', [1, 2, 3])])
         y = DataArray([1, 2], coords=[('a', [3, 1])])
-        
+
         expected_x2 = x
         expected_y2 = DataArray([2, np.nan, 1], coords=[('a', [1, 2, 3])])
 
@@ -1636,7 +1645,7 @@ class TestDataArray(TestCase):
         self.assertDataArrayIdentical(expected_x2, x2)
         self.assertDataArrayIdentical(expected_y2, y2)
         assert source_ndarray(x2.data) is source_ndarray(x.data)
-    
+
         x2, y2 = align(x, y, join='outer', copy=True)
         self.assertDataArrayIdentical(expected_x2, x2)
         self.assertDataArrayIdentical(expected_y2, y2)
@@ -1647,23 +1656,28 @@ class TestDataArray(TestCase):
         x2, = align(x, copy=False)
         self.assertDataArrayIdentical(x, x2)
         assert source_ndarray(x2.data) is source_ndarray(x.data)
-    
+
         x2, = align(x, copy=True)
         self.assertDataArrayIdentical(x, x2)
         assert source_ndarray(x2.data) is not source_ndarray(x.data)
 
     def test_align_exclude(self):
-        x = DataArray([[1, 2], [3, 4]], coords=[('a', [-1, -2]), ('b', [3, 4])])
-        y = DataArray([[1, 2], [3, 4]], coords=[('a', [-1, 20]), ('b', [5, 6])])
+        x = DataArray([[1, 2], [3, 4]],
+                      coords=[('a', [-1, -2]), ('b', [3, 4])])
+        y = DataArray([[1, 2], [3, 4]],
+                      coords=[('a', [-1, 20]), ('b', [5, 6])])
         z = DataArray([1], dims=['a'], coords={'a': [20], 'b': 7})
-        
+
         x2, y2, z2 = align(x, y, z, join='outer', exclude=['b'])
-        expected_x2 = DataArray([[3, 4], [1, 2], [np.nan, np.nan]], coords=[('a', [-2, -1, 20]), ('b', [3, 4])])
-        expected_y2 = DataArray([[np.nan, np.nan], [1, 2], [3, 4]], coords=[('a', [-2, -1, 20]), ('b', [5, 6])])
-        expected_z2 = DataArray([np.nan, np.nan, 1], dims=['a'], coords={'a': [-2, -1, 20], 'b': 7})
+        expected_x2 = DataArray([[3, 4], [1, 2], [np.nan, np.nan]],
+                                coords=[('a', [-2, -1, 20]), ('b', [3, 4])])
+        expected_y2 = DataArray([[np.nan, np.nan], [1, 2], [3, 4]],
+                                coords=[('a', [-2, -1, 20]), ('b', [5, 6])])
+        expected_z2 = DataArray([np.nan, np.nan, 1], dims=['a'],
+                                coords={'a': [-2, -1, 20], 'b': 7})
         self.assertDataArrayIdentical(expected_x2, x2)
         self.assertDataArrayIdentical(expected_y2, y2)
-        self.assertDataArrayIdentical(expected_z2, z2)        
+        self.assertDataArrayIdentical(expected_z2, z2)
 
     def test_align_indexes(self):
         x = DataArray([1, 2, 3], coords=[('a', [-1, 10, -2])])
@@ -1676,7 +1690,8 @@ class TestDataArray(TestCase):
         self.assertDataArrayIdentical(expected_y2, y2)
 
         x2, = align(x, join='outer', indexes={'a': [-2, 7, 10, -1]})
-        expected_x2 = DataArray([3, np.nan, 2, 1], coords=[('a', [-2, 7, 10, -1])])
+        expected_x2 = DataArray([3, np.nan, 2, 1],
+                                coords=[('a', [-2, 7, 10, -1])])
         self.assertDataArrayIdentical(expected_x2, x2)
 
     def test_broadcast_arrays(self):
@@ -1699,10 +1714,13 @@ class TestDataArray(TestCase):
 
     def test_broadcast_arrays_misaligned(self):
         # broadcast on misaligned coords must auto-align
-        x = DataArray([[1, 2], [3, 4]], coords=[('a', [-1, -2]), ('b', [3, 4])])
+        x = DataArray([[1, 2], [3, 4]],
+                      coords=[('a', [-1, -2]), ('b', [3, 4])])
         y = DataArray([1, 2], coords=[('a', [-1, 20])])
-        expected_x2 = DataArray([[3, 4], [1, 2], [np.nan, np.nan]], coords=[('a', [-2, -1, 20]), ('b', [3, 4])])
-        expected_y2 = DataArray([[np.nan, np.nan], [1, 1], [2, 2]], coords=[('a', [-2, -1, 20]), ('b', [3, 4])])
+        expected_x2 = DataArray([[3, 4], [1, 2], [np.nan, np.nan]],
+                                coords=[('a', [-2, -1, 20]), ('b', [3, 4])])
+        expected_y2 = DataArray([[np.nan, np.nan], [1, 1], [2, 2]],
+                                coords=[('a', [-2, -1, 20]), ('b', [3, 4])])
         x2, y2 = broadcast(x, y)
         self.assertDataArrayIdentical(expected_x2, x2)
         self.assertDataArrayIdentical(expected_y2, y2)
@@ -1718,21 +1736,24 @@ class TestDataArray(TestCase):
         self.assertDataArrayIdentical(expected_x2, x2)
         self.assertDataArrayIdentical(expected_y2, y2)
         assert source_ndarray(x2.data) is source_ndarray(x.data)
-        
+
         # single-element broadcast (trivial case)
         x2, = broadcast(x)
         self.assertDataArrayIdentical(x, x2)
         assert source_ndarray(x2.data) is source_ndarray(x.data)
 
     def test_broadcast_arrays_exclude(self):
-        x = DataArray([[1, 2], [3, 4]], coords=[('a', [-1, -2]), ('b', [3, 4])])
+        x = DataArray([[1, 2], [3, 4]],
+                      coords=[('a', [-1, -2]), ('b', [3, 4])])
         y = DataArray([1, 2], coords=[('a', [-1, 20])])
         z = DataArray(5, coords={'b': 5})
-        
+
         x2, y2, z2 = broadcast(x, y, z, exclude=['b'])
-        expected_x2 = DataArray([[3, 4], [1, 2], [np.nan, np.nan]], coords=[('a', [-2, -1, 20]), ('b', [3, 4])])
+        expected_x2 = DataArray([[3, 4], [1, 2], [np.nan, np.nan]],
+                                coords=[('a', [-2, -1, 20]), ('b', [3, 4])])
         expected_y2 = DataArray([np.nan, 1, 2], coords=[('a', [-2, -1, 20])])
-        expected_z2 = DataArray([5, 5, 5], dims=['a'], coords={'a': [-2, -1, 20], 'b': 5})
+        expected_z2 = DataArray([5, 5, 5], dims=['a'],
+                                coords={'a': [-2, -1, 20], 'b': 5})
         self.assertDataArrayIdentical(expected_x2, x2)
         self.assertDataArrayIdentical(expected_y2, y2)
         self.assertDataArrayIdentical(expected_z2, z2)

@@ -26,8 +26,13 @@ Enhancements
 
 Bug fixes
 ~~~~~~~~~
+
 - Fix issues for dates outside the valid range of pandas timestamps
   (:issue:`975`). By `Mathias Hauser <https://github.com/mathause>`_.
+
+- Unstacking produced flipped array after stacking decreasing coordinate values
+  (:issue:`980`).
+  By `Stephan Hoyer <https://github.com/shoyer>`_.
 
 .. _whats-new.0.8.2:
 
