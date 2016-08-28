@@ -621,7 +621,7 @@ def maybe_encode_dtype(var, name=None):
     if 'dtype' in var.encoding:
         dims, data, attrs, encoding = _var_as_tuple(var)
         dtype = np.dtype(encoding.pop('dtype'))
-        if dtype != var.dtype and dtype.kind != 'O':
+        if dtype != var.dtype:
             if np.issubdtype(dtype, np.integer):
                 if (np.issubdtype(var.dtype, np.floating) and
                         '_FillValue' not in var.attrs):
@@ -634,7 +634,7 @@ def maybe_encode_dtype(var, name=None):
                 data = string_to_char(np.asarray(data, 'S'))
                 dims = dims + ('string%s' % data.shape[-1],)
             data = data.astype(dtype=dtype)
-            var = Variable(dims, data, attrs, encoding)
+        var = Variable(dims, data, attrs, encoding)
     return var
 
 

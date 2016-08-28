@@ -401,6 +401,13 @@ class CFEncodedDataTest(DatasetIOTestCases):
             self.assertEqual(actual.t.encoding['units'], units)
             self.assertDatasetIdentical(actual, ds)
 
+    def test_encoding_same_dtype(self):
+        ds = Dataset({'x': ('y', np.arange(10.0, dtype='f4'))})
+        kwargs = dict(encoding={'x': {'dtype': 'f4'}})
+        with self.roundtrip(ds, save_kwargs=kwargs) as actual:
+            self.assertEqual(actual.x.encoding['dtype'], 'f4')
+        self.assertEqual(ds.x.encoding, {})
+
 
 _counter = itertools.count()
 
