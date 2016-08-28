@@ -34,6 +34,11 @@ Bug fixes
   (:issue:`980`).
   By `Stephan Hoyer <https://github.com/shoyer>`_.
 
+- Setting ``dtype`` via the ``encoding`` parameter of ``to_netcdf`` failed if
+  the encoded dtype was the same as the dtype of the original array
+  (:issue:`873`).
+  By `Stephan Hoyer <https://github.com/shoyer>`_.
+
 .. _whats-new.0.8.2:
 
 v0.8.2 (18 August 2016)
