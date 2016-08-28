@@ -51,7 +51,7 @@ def _default_signature(n_inputs):
     return Signature([()] * n_inputs, [()])
 
 
-def result_name(objects):
+def _result_name(objects):
     # use the same naming heuristics as pandas:
     # https://github.com/blaze/blaze/issues/458#issuecomment-51936356
     names = set(getattr(obj, 'name', None) for obj in objects)
@@ -89,32 +89,25 @@ def _build_output_coords(args, signature, new_coords=None):
 
 
 def apply_dataarray_ufunc(args, func, signature=None, join='inner',
-                          kwargs=None, new_coords=None, combine_names=None):
+                          new_coords=None):
     if signature is None:
         signature = _default_signature(len(args))
 
-    if kwargs is None:
-        kwargs = {}
-
-    if combine_names is None:
-        combine_names = result_name
-
     args = deep_align(*args, join=join, copy=False, raise_on_invalid=False)
 
-    list_of_names = combine_names(args)
+    name = _result_name(args)
     list_of_coords = _build_output_coords(args, signature, new_coords)
 
     data_vars = [getattr(a, 'variable') for a in args]
-    variable_or_variables = func(*data_vars, **kwargs)
+    variable_or_variables = func(*data_vars)
 
     if len(signature.output_dims) > 1:
         return tuple(DataArray(variable, coords, name=name, fastpath=True)
                      for variable, coords, name in zip(
-                         variable_or_variables, list_of_coords, list_of_names))
+                         variable_or_variables, list_of_coords))
     else:
         variable = variable_or_variables
         coords, = list_of_coords
-        name, = list_of_names
         return DataArray(variable, coords, name=name, fastpath=True)
 
 
@@ -138,20 +131,9 @@ def collect_dict_values(objects, keys, fill_value=None)
 
 
 def apply_dataset_ufunc(args, func, signature=None, join='inner',
-                        fill_value=None, kwargs=None, new_coords=None,
-                        result_attrs=None):
-    if kwargs is None:
-        kwargs = {}
-
+                        fill_value=None, new_coords=None):
     if signature is None:
         signature = _default_signature(len(args))
-
-    if result_attrs is None:
-        result_attrs = _default_result_attrs
-
-    list_of_attrs = result_attrs([getattr(a, 'attrs', {}) for a in args]
-                                 getattr(func, 'func', func),
-                                 signature)
 
     args = deep_align(*args, join=join, copy=False, raise_on_invalid=False)
 
@@ -165,16 +147,15 @@ def apply_dataset_ufunc(args, func, signature=None, join='inner',
 
     result_vars = OrderedDict()
     for name, variable_args in zip(names, lists_of_args):
-        result_vars[name] = func(*variable_args, **kwargs)
+        result_vars[name] = func(*variable_args)
 
-    def make_dataset(data_vars, coord_vars, attrs):
+    def make_dataset(data_vars, coord_vars):
         # Normally, we would copy data_vars to be safe, but we created the
         # OrderedDict in this function and don't use it for anything else.
         variables = data_vars
         variables.update(coord_vars)
         coord_names = set(coord_vars)
-        return Dataset._from_vars_and_coord_names(
-            variables, coord_names, attrs)
+        return Dataset._from_vars_and_coord_names(variables, coord_names)
 
     n_outputs = len(signature.output_dims)
     if n_outputs > 1:
@@ -185,14 +166,12 @@ def apply_dataset_ufunc(args, func, signature=None, join='inner',
             for value, results_dict in zip(values, list_of_result_vars):
                 list_of_result_vars[name] = value
 
-        return tuple(make_dataset(data_vars, coord_vars, attrs)
-                     for data_vars, coord_vars, attrs in zip(
-                         list_of_result_vars, list_of_coords, list_of_attrs))
+        return tuple(make_dataset(*args)
+                     for args in zip(list_of_result_vars, list_of_coords))
     else:
         data_vars = result_vars
         coords_vars, = list_of_coords
-        attrs, = list_of_attrs
-        return make_dataset(data_vars, coord_vars, attrs)
+        return make_dataset(data_vars, coord_vars)
 
 
 
@@ -335,7 +314,7 @@ def _apply_with_dask_atop(func, list_of_input_data, signature, kwargs, dtype):
 
 
 def apply_variable_ufunc(args, func, signature=None, dask_array='forbidden',
-                         combine_attrs=None, kwargs=None, dtype=None):
+                         kwargs=None, dtype=None):
 
     if signature is None:
         signature = _default_signature(len(args))
@@ -343,19 +322,11 @@ def apply_variable_ufunc(args, func, signature=None, dask_array='forbidden',
         raise ValueError('unknown setting for dask array handling')
     if kwargs is None:
         kwargs = {}
-    if combine_attrs is None:
-        combine_attrs = lambda func, attrs: None
-    if result_attrs is None:
-        result_attrs = _default_result_attrs
 
     dim_sizes = _calculate_unified_dim_sizes(variables)
     core_dims = signature.input_core_dims | signature.output_core_dims
     broadcast_dims = tuple(d for d in dim_sizes if d not in core_dims)
     output_dims = [broadcast_dims + out for out in signature.output_core_dims]
-
-    list_of_attrs = result_attrs([getattr(a, 'attrs', {}) for a in args]
-                                 getattr(func, 'func', func),
-                                 signature)
 
     list_of_input_data = []
     for arg in args:
@@ -378,41 +349,36 @@ def apply_variable_ufunc(args, func, signature=None, dask_array='forbidden',
 
     if len(output_dims) > 1:
         output = []
-        for dims, data, attrs in zip(
-                output_dims, result_data, list_of_attrs):
-            output.append(Variable(dims, data, attrs))
+        for dims, data in zip(output_dims, result_data):
+            output.append(Variable(dims, data))
         return tuple(output)
     else:
         dims, = output_dims
         data = result_data
-        attrs, = list_of_attrs
-        return Variable(dims, data, attrs)
+        return Variable(dims, data)
 
 
-def apply_ufunc(args, func=None, signature=None, join='inner',
-                dask_array='forbidden', kwargs=None, combine_dataset_attrs=None,
-                combine_variable_attrs=None, dtype=None):
+def apply_ufunc(args, func=None, kwargs=None, signature=None, join='inner',
+                dask_array='forbidden', dtype=None, new_coords=None):
 
     if signature is None:
         signature = _default_signature(len(args))
 
     variables_ufunc = functools.partial(
-        apply_variable_ufunc, func=func, dask_array=dask_array,
-        combine_attrs=combine_variable_attrs, kwargs=kwargs)
+        apply_variable_ufunc, func=func, dask_array=dask_array, kwargs=kwargs)
 
     if any(isinstance(a, GroupBy) for a in args):
         partial_apply_ufunc = functools.partial(
-            apply_ufunc, func=func, signature=signature, join=join,
-            dask_array=dask_array, kwargs=kwargs,
-            combine_dataset_attrs=combine_dataset_attrs,
-            combine_variable_attrs=combine_variable_attrs,
-            dtype=None)
+            apply_ufunc, func=func, kwargs=kwargs, signature=signature,
+            join=join, dask_array=dask_array, dtype=dtype,
+            new_coords=new_coords)
         return apply_groupby_ufunc(args, partial_apply_ufunc)
     elif any(is_dict_like(a) for a in args):
-        return apply_dataset_ufunc(args, variables_ufunc, join=join,
-                                   combine_attrs=combine_dataset_attrs)
+        return apply_dataset_ufunc(args, variables_ufunc, signature=signature,
+                                   join=join, new_coords=new_coords)
     elif any(isinstance(a, DataArray) for a in args):
-        return apply_dataarray_ufunc(args, variables_ufunc, join=join)
+        return apply_dataarray_ufunc(args, variables_ufunc, signature=signature,
+                                     join=join, new_coords=new_coords)
     elif any(isinstance(a, Variable) for a in args):
         return variables_ufunc(args)
     elif dask_array == 'auto' and any(
