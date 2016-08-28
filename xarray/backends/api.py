@@ -267,6 +267,27 @@ def open_dataset(filename_or_obj, group=None, decode_cf=True,
     return maybe_decode_store(store)
 
 
+def open_dataarray(*args, **kwargs):
+    """
+    Opens an `xarray.DataArray` from a netCDF file, reading the variable called
+    `data`.
+
+    This is designed to read files saved with `xarray.DataArray.to_netcdf`.
+
+    Parameters
+    ----------
+    All parameters are passed directly to `xarray.open_dataset`.
+    """
+    dataset = open_dataset(*args, **kwargs)
+
+    try:
+        return dataset['data']
+    except KeyError:
+        raise ValueError('Given file dataset does not contain the variable `data`.'
+                         'If dataset was not saved using `xarray.DataArray.to_netcdf` then'
+                         'it must be loaded with `xarray.open_dataset`.')
+
+
 class _MultiFileCloser(object):
     def __init__(self, file_objs):
         self.file_objs = file_objs

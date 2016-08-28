@@ -1092,6 +1092,23 @@ class DataArray(AbstractArray, BaseDataObject):
         isnull = pd.isnull(self.values)
         return np.ma.MaskedArray(data=self.values, mask=isnull, copy=copy)
 
+    def to_netcdf(self, *args, **kwargs):
+        """
+        Write DataArray contents to a netCDF file.
+
+        Parameters
+        ----------
+        All parameters are passed directly to `xarray.Dataset.to_netcdf`.
+
+        Notes
+        -----
+        Only xarray.Dataset objects can be written to netCDF files, so
+        the xarray.DataArray is converted to a xarray.Dataset object
+        containing a single variable with the name `data`.
+        """
+        dataset = self.to_dataset(name='data')
+        dataset.to_netcdf(*args, **kwargs)
+
     def to_dict(self):
         """
         Convert this xarray.DataArray into a dictionary following xarray
