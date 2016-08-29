@@ -1,7 +1,16 @@
 import itertools
+import re
 from collections import namedtuple
 
 from .core.pycompat import dask_array_type
+
+
+# see http://docs.scipy.org/doc/numpy/reference/c-api.generalized-ufuncs.html
+DIMENSION_NAME = r'\w+'
+CORE_DIMENSION_LIST = '(?:' + DIMENSION_NAME + '(?:,' + DIMENSION_NAME + ')*)?'
+ARGUMENT = r'\(' + CORE_DIMENSION_LIST + r'\)'
+ARGUMENT_LIST = ARGUMENT + '(?:,'+ ARGUMENT + ')*'
+SIGNATURE = '^' + ARGUMENT_LIST + '->' + ARGUMENT_LIST + '$'
 
 
 class Signature(object):
@@ -12,9 +21,9 @@ class Signature(object):
     Attributes
     ----------
     input_core_dims : list of tuples
-        A list of tuples of dimension names expected on each input variable.
+        A list of tuples of core dimension names on each input variable.
     output_core_dims : list of tuples
-        A list of tuples of dimension names expected on each output variable.
+        A list of tuples of core dimension names on each output variable.
     """
     def __init__(self, input_core_dims, output_core_dims=((),)):
         if dtypes is None:
@@ -40,7 +49,18 @@ class Signature(object):
 
     @classmethod
     def from_string(cls, string):
-        raise NotImplementedError
+        """Create a Signature object from a NumPy gufunc signature.
+
+        Parameters
+        ----------
+        string : str
+            Signature string, e.g., (m,n),(n,p)->(m,p).
+        """
+        if not re.match(SIGNATURE, string):
+            raise ValueError('not a valid gufunc signature: {}'.format(string))
+        return cls(*[[re.findall(DIMENSION_NAME, arg)
+                      for arg in re.findall(ARGUMENT, arg_list)]
+                     for arg_list in string.split('->')])
 
     @classmethod
     def from_ufunc(cls, ufunc):
