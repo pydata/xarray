@@ -140,6 +140,29 @@ def array_equiv(arr1, arr2):
     return bool(flag_array.all())
 
 
+def array_notnull_equiv(arr1, arr2):
+    """Like np.array_equal, but also allows values to be NaN in either or both
+    arrays
+    """
+    arr1, arr2 = as_like_arrays(arr1, arr2)
+    if arr1.shape != arr2.shape:
+        return False
+
+    flag_array = (arr1 == arr2)
+
+    # GH837, GH861
+    # isnull fcn from pandas will throw TypeError when run on numpy structured array
+    # therefore for dims that are np structured arrays we skip testing for nan
+
+    try:
+        flag_array |= (isnull(arr1) | isnull(arr2))
+
+    except TypeError:
+        pass
+
+    return bool(flag_array.all())
+
+
 def _call_possibly_missing_method(arg, name, args, kwargs):
     try:
         method = getattr(arg, name)

@@ -560,6 +560,22 @@ class TestVariable(TestCase, VariableSubclassTestCases):
         v4 = Variable(('x'), [np.nan] * 3)
         self.assertFalse(v2.broadcast_equals(v4))
 
+    def test_notnull_equals(self):
+        v1 = Variable(('x'), [1, 2, np.nan, np.nan])
+        v2 = Variable(('x'), [np.nan, 2, 3, np.nan])
+        self.assertTrue(v1.notnull_equals(v2))
+        self.assertFalse(v1.equals(v2))
+        self.assertFalse(v1.broadcast_equals(v2))
+        self.assertFalse(v1.identical(v2))
+
+        self.assertFalse(v1.notnull_equals(None))
+
+        v3 = Variable(('y'), [np.nan, 2, 3, np.nan])
+        self.assertFalse(v3.notnull_equals(v1))
+
+        v4 = Variable(('x'), [np.nan, 1, 3, np.nan])
+        self.assertFalse(v4.notnull_equals(v1))
+
     def test_as_variable(self):
         data = np.arange(10)
         expected = Variable('x', data)

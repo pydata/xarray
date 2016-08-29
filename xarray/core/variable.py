@@ -1016,6 +1016,24 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
         except (TypeError, AttributeError):
             return False
 
+    def _data_notnull_equals(self, other):
+        return (self._data is other._data or
+                ops.array_notnull_equiv(self.data, other.data))
+
+    def notnull_equals(self, other):
+        """True if the intersection of two Variable's non-null data is
+        equal; otherwise false.
+
+        Variables can thus still be equal if there are locations where either,
+        or both, contain NaN values.
+        """
+        other = getattr(other, 'variable', other)
+        try:
+            return (self.dims == other.dims and
+                    self._data_notnull_equals(other))
+        except (TypeError, AttributeError):
+            return False
+
     @property
     def real(self):
         return type(self)(self.dims, self.data.real, self._attrs)
