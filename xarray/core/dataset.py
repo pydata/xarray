@@ -216,6 +216,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
             coords = {}
         if data_vars is not None or coords is not None:
             self._set_init_vars_and_dims(data_vars, coords, compat)
+            self._check_multiindex_level_names()
         if attrs is not None:
             self.attrs = attrs
         self._initialized = True
@@ -241,6 +242,21 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         self._variables = variables
         self._coord_names = coord_names
         self._dims = dims
+
+    def _check_multiindex_level_names(self):
+        """Check for uniqueness of MultiIndex level names
+        """
+        level_names = {}
+        for c in self._coord_names:
+            v = self._variables[c]
+            if v.ndim == 1 and v._in_memory:
+                idx_level_names = v.to_coord().level_names or []
+                for n in idx_level_names:
+                    if n in level_names:
+                        raise ValueError('found duplicate MultiIndex level '
+                                         'name %r for coordinates %r and %r'
+                                         % (n, c, level_names[n]))
+                    level_names[n] = c
 
     @classmethod
     def load_store(cls, store, decoder=None):

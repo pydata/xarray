@@ -71,6 +71,7 @@ def _infer_coords_and_dims(shape, coords, dims):
             new_coords[dim] = default_index_coordinate(dim, size)
 
     sizes = dict(zip(dims, shape))
+    level_names = {}
     for k, v in new_coords.items():
         if any(d not in dims for d in v.dims):
             raise ValueError('coordinate %s has dimensions %s, but these '
@@ -82,6 +83,15 @@ def _infer_coords_and_dims(shape, coords, dims):
                 raise ValueError('conflicting sizes for dimension %r: '
                                  'length %s on the data but length %s on '
                                  'coordinate %r' % (d, sizes[d], s, k))
+
+        if v.ndim == 1:
+            idx_level_names = v.to_coord().level_names or []
+            for n in idx_level_names:
+                if n in level_names:
+                    raise ValueError('found duplicate MultiIndex level '
+                                     'name %r for coordinates %r and %r'
+                                     % (n, k, level_names[n]))
+                level_names[n] = k
 
     return new_coords, dims
 
