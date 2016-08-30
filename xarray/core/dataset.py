@@ -457,8 +457,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
     @property
     def _level_coords(self):
         """Return a mapping of all MultiIndex levels and their corresponding
-        coordinate name. Raise a `ValueError`` if two or more levels have
-        the same name.
+        coordinate name.
         """
         level_coords = OrderedDict()
         for cname in self._coord_names:
@@ -466,10 +465,6 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
             if var.ndim == 1:
                 level_names = var.to_coord().level_names
                 if level_names is not None:
-                    duplicate_names = set(level_names) & set(level_coords)
-                    if duplicate_names:
-                        raise ValueError("duplicate MultiIndex level names %r"
-                                         % duplicate_names)
                     dim = var.dims[0]
                     level_coords.update({lname: dim for lname in level_names})
         return level_coords
