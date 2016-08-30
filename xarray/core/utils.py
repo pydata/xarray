@@ -21,21 +21,12 @@ def alias_warning(old_name, new_name, stacklevel=3):  # pragma: no cover
                   FutureWarning, stacklevel=stacklevel)
 
 
-def function_alias(obj, old_name):  # pragma: no cover
+def alias(obj, old_name):  # pragma: no cover
     @functools.wraps(obj)
     def wrapper(*args, **kwargs):
         alias_warning(old_name, obj.__name__)
         return obj(*args, **kwargs)
     return wrapper
-
-
-def class_alias(obj, old_name):  # pragma: no cover
-    class Wrapper(obj):
-        def __new__(cls, *args, **kwargs):
-            alias_warning(old_name, obj.__name__)
-            return super(Wrapper, cls).__new__(cls, *args, **kwargs)
-    Wrapper.__name__ = obj.__name__
-    return Wrapper
 
 
 def safe_cast_to_index(array):

@@ -15,7 +15,7 @@ import pandas as pd
 import pytest
 
 from xarray import (align, broadcast, concat, merge, conventions, backends,
-                    Dataset, DataArray, Variable, Coordinate, auto_combine,
+                    Dataset, DataArray, Variable, IndexVariable, auto_combine,
                     open_dataset, set_options, MergeError)
 from xarray.core import indexing, utils
 from xarray.core.pycompat import iteritems, OrderedDict, unicode_type
@@ -153,19 +153,6 @@ class TestDataset(TestCase):
         actual = Dataset({'z': expected['z']})
         self.assertDatasetIdentical(expected, actual)
 
-    def test_constructor_kwargs(self):
-        x1 = ('x', 2 * np.arange(100))
-
-        with self.assertRaises(TypeError):
-            Dataset(data_vars={'x1': x1}, invalid_kwarg=42)
-
-        import warnings
-        # this can be removed once the variables keyword is fully removed
-        with warnings.catch_warnings(record=False):
-            ds = Dataset(variables={'x1': x1})
-        # but assert dataset is still created
-        self.assertDatasetEqual(ds, Dataset(data_vars={'x1': x1}))
-
     def test_constructor_1d(self):
         expected = Dataset({'x': (['x'], 5.0 + np.arange(5))})
         actual = Dataset({'x': 5.0 + np.arange(5)})
@@ -193,6 +180,10 @@ class TestDataset(TestCase):
             actual = Dataset({'x': arg})
             self.assertDatasetIdentical(expected, actual)
 
+    def test_constructor_deprecated(self):
+        with self.assertWarns('deprecated'):
+            DataArray([1, 2, 3], coords={'x': [0, 1, 2]})
+
     def test_constructor_auto_align(self):
         a = DataArray([1, 2], [('x', [0, 1])])
         b = DataArray([3, 4], [('x', [1, 2])])
@@ -204,7 +195,7 @@ class TestDataset(TestCase):
         self.assertDatasetIdentical(expected, actual)
 
         # regression test for GH346
-        self.assertIsInstance(actual.variables['x'], Coordinate)
+        self.assertIsInstance(actual.variables['x'], IndexVariable)
 
         # variable with different dimensions
         c = ('y', [3, 4])
@@ -228,13 +219,13 @@ class TestDataset(TestCase):
         pandas_objs = OrderedDict(
             (var_name, ds[var_name].to_pandas()) for var_name in ['foo','bar']
         )
-        ds_based_on_pandas = Dataset(data_vars=pandas_objs, coords=ds.coords, attrs=ds.attrs)
+        ds_based_on_pandas = Dataset(pandas_objs, ds.coords, attrs=ds.attrs)
         self.assertDatasetEqual(ds, ds_based_on_pandas)
 
         # reindex pandas obj, check align works
         rearranged_index = reversed(pandas_objs['foo'].index)
         pandas_objs['foo'] = pandas_objs['foo'].reindex(rearranged_index)
-        ds_based_on_pandas = Dataset(variables=pandas_objs, coords=ds.coords, attrs=ds.attrs)
+        ds_based_on_pandas = Dataset(pandas_objs, ds.coords, attrs=ds.attrs)
         self.assertDatasetEqual(ds, ds_based_on_pandas)
 
     def test_constructor_pandas_single(self):
@@ -1066,10 +1057,10 @@ class TestDataset(TestCase):
             align(left, right, foo='bar')
 
     def test_align_exclude(self):
-        x = Dataset({'foo': DataArray([[1, 2],[3, 4]], dims=['x', 'y'],
-                    coords={'x': [1, 2], 'y': [3, 4]})})
-        y = Dataset({'bar': DataArray([[1, 2],[3, 4]], dims=['x', 'y'],
-                    coords={'x': [1, 3], 'y': [5, 6]})})
+        x = Dataset({'foo': DataArray([[1, 2], [3, 4]], dims=['x', 'y'],
+                                      coords={'x': [1, 2], 'y': [3, 4]})})
+        y = Dataset({'bar': DataArray([[1, 2], [3, 4]], dims=['x', 'y'],
+                                      coords={'x': [1, 3], 'y': [5, 6]})})
         x2, y2 = align(x, y, exclude=['y'], join='outer')
 
         expected_x2 = Dataset(
@@ -1084,11 +1075,11 @@ class TestDataset(TestCase):
         self.assertDatasetIdentical(expected_y2, y2)
 
     def test_align_nocopy(self):
-        x = Dataset({'foo': DataArray([1, 2, 3], coords={'x': [1, 2, 3]})})
-        y = Dataset({'foo': DataArray([1, 2], coords={'x': [1, 2]})})
+        x = Dataset({'foo': DataArray([1, 2, 3], coords=[('x', [1, 2, 3])])})
+        y = Dataset({'foo': DataArray([1, 2], coords=[('x', [1, 2])])})
         expected_x2 = x
         expected_y2 = Dataset({'foo': DataArray([1, 2, np.nan],
-                                                 coords={'x': [1, 2, 3]})})
+                                                 coords=[('x', [1, 2, 3])])})
 
         x2, y2 = align(x, y, copy=False, join='outer')
         self.assertDatasetIdentical(expected_x2, x2)
@@ -1101,7 +1092,7 @@ class TestDataset(TestCase):
         assert source_ndarray(x['foo'].data) is not source_ndarray(x2['foo'].data)
 
     def test_align_indexes(self):
-        x = Dataset({'foo': DataArray([1, 2, 3], coords={'x': [1, 2, 3]})})
+        x = Dataset({'foo': DataArray([1, 2, 3], coords=[('x', [1, 2, 3])])})
         x2, = align(x, indexes={'x': [2, 3, 1]})
         expected_x2 = Dataset({'foo': DataArray([2, 3, 1], coords={'x': [2, 3, 1]})})
         self.assertDatasetIdentical(expected_x2, x2)
@@ -1173,11 +1164,18 @@ class TestDataset(TestCase):
         self.assertDatasetIdentical(expected_y2, y2)
 
     def test_broadcast_misaligned(self):
-        x = Dataset({'foo': DataArray([1, 2, 3], coords={'x': [-1, -2, -3]})})
-        y = Dataset({'bar': DataArray([[1, 2], [3, 4]], dims=['y', 'x'], coords={'y': [1, 2], 'x': [10, -3]})})
+        x = Dataset({'foo': DataArray([1, 2, 3], coords=[('x', [-1, -2, -3])])})
+        y = Dataset({'bar': DataArray([[1, 2], [3, 4]], dims=['y', 'x'],
+                                      coords={'y': [1, 2], 'x': [10, -3]})})
         x2, y2 = broadcast(x, y)
-        expected_x2 = Dataset({'foo': DataArray([[3, 3], [2, 2], [1, 1], [np.nan, np.nan]], dims=['x', 'y'], coords={'y': [1, 2], 'x': [-3, -2, -1, 10]})})
-        expected_y2 = Dataset({'bar': DataArray([[2, 4], [np.nan, np.nan], [np.nan, np.nan], [1, 3]], dims=['x', 'y'], coords={'y': [1, 2], 'x': [-3, -2, -1, 10]})})
+        expected_x2 = Dataset(
+            {'foo': DataArray([[3, 3], [2, 2], [1, 1], [np.nan, np.nan]],
+                              dims=['x', 'y'],
+                              coords={'y': [1, 2], 'x': [-3, -2, -1, 10]})})
+        expected_y2 = Dataset(
+            {'bar': DataArray(
+                [[2, 4], [np.nan, np.nan], [np.nan, np.nan], [1, 3]],
+                dims=['x', 'y'], coords={'y': [1, 2], 'x': [-3, -2, -1, 10]})})
         self.assertDatasetIdentical(expected_x2, x2)
         self.assertDatasetIdentical(expected_y2, y2)
 
@@ -1311,7 +1309,7 @@ class TestDataset(TestCase):
         expected = Dataset({'z': 42}, {'x': ('y', [1, 2, 3]), 'y': list('abc')})
         actual = original.swap_dims({'x': 'y'})
         self.assertDatasetIdentical(expected, actual)
-        self.assertIsInstance(actual.variables['y'], Coordinate)
+        self.assertIsInstance(actual.variables['y'], IndexVariable)
         self.assertIsInstance(actual.variables['x'], Variable)
 
         roundtripped = actual.swap_dims({'y': 'x'})
@@ -1472,7 +1470,7 @@ class TestDataset(TestCase):
         times = pd.date_range('2000-01-01', freq='H', periods=5)
         data = Dataset({'time': times})
         actual = data['time.time']
-        expected = DataArray(times.time, {'time': times}, name='time')
+        expected = DataArray(times.time, [('time', times)], name='time')
         self.assertDataArrayIdentical(actual, expected)
 
     def test_time_season(self):

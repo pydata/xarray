@@ -21,6 +21,19 @@ v0.9.0 (unreleased)
 Breaking changes
 ~~~~~~~~~~~~~~~~
 
+Deprecations
+~~~~~~~~~~~~
+
+- Renamed the ``Coordinate`` class from xarray's low level API to
+  :py:class:`~xarray.IndexVariable``.
+- Deprecated supplying ``coords`` as a dictionary to the ``DataArray``
+  constructor without also supplying an explicit ``dims`` argument. The old
+  behavior encouraged relying on the iteration order of dictionaries, which is
+  a bad practice (:issue:`727`).
+- Removed a number of methods deprecated since v0.7.0 or earlier:
+  ``load_data``, ``vars``, ``drop_vars``, ``dump``, ``dumps`` and the
+  ``variables`` keyword argument alias to ``Dataset``.
+
 Enhancements
 ~~~~~~~~~~~~
 

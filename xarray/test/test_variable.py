@@ -8,9 +8,9 @@ import numpy as np
 import pytz
 import pandas as pd
 
-from xarray import Variable, Dataset, DataArray
+from xarray import Variable, IndexVariable, Coordinate, Dataset, DataArray
 from xarray.core import indexing
-from xarray.core.variable import (Coordinate, as_variable, as_compatible_data)
+from xarray.core.variable import as_variable, as_compatible_data
 from xarray.core.indexing import PandasIndexAdapter, LazilyIndexedArray
 from xarray.core.pycompat import PY3, OrderedDict
 
@@ -243,9 +243,9 @@ class VariableSubclassTestCases(object):
         self.assertEqual(float, (0 + v).values.dtype)
         # check types of returned data
         self.assertIsInstance(+v, Variable)
-        self.assertNotIsInstance(+v, Coordinate)
+        self.assertNotIsInstance(+v, IndexVariable)
         self.assertIsInstance(0 + v, Variable)
-        self.assertNotIsInstance(0 + v, Coordinate)
+        self.assertNotIsInstance(0 + v, IndexVariable)
 
     def test_1d_reduce(self):
         x = np.arange(5)
@@ -266,7 +266,7 @@ class VariableSubclassTestCases(object):
         # test ufuncs
         self.assertVariableIdentical(np.sin(v), self.cls(['x'], np.sin(x)))
         self.assertIsInstance(np.sin(v), Variable)
-        self.assertNotIsInstance(np.sin(v), Coordinate)
+        self.assertNotIsInstance(np.sin(v), IndexVariable)
 
     def example_1d_objects(self):
         for data in [range(3),
@@ -469,7 +469,7 @@ class TestVariable(TestCase, VariableSubclassTestCases):
         self.assertEqual(v.item(), 0)
         self.assertIs(type(v.item()), float)
 
-        v = Coordinate('x', np.arange(5))
+        v = IndexVariable('x', np.arange(5))
         self.assertEqual(2, v.searchsorted(2))
 
     def test_datetime64_conversion_scalar(self):
@@ -586,7 +586,7 @@ class TestVariable(TestCase, VariableSubclassTestCases):
 
         actual = as_variable(data, name='x')
         self.assertVariableIdentical(expected, actual)
-        self.assertIsInstance(actual, Coordinate)
+        self.assertIsInstance(actual, IndexVariable)
 
         actual = as_variable(0)
         expected = Variable([], 0)
@@ -1002,37 +1002,37 @@ class TestVariable(TestCase, VariableSubclassTestCases):
         self.assertVariableIdentical(expected, actual)
 
 
-class TestCoordinate(TestCase, VariableSubclassTestCases):
-    cls = staticmethod(Coordinate)
+class TestIndexVariable(TestCase, VariableSubclassTestCases):
+    cls = staticmethod(IndexVariable)
 
     def test_init(self):
         with self.assertRaisesRegexp(ValueError, 'must be 1-dimensional'):
-            Coordinate((), 0)
+            IndexVariable((), 0)
 
     def test_to_index(self):
         data = 0.5 * np.arange(10)
-        v = Coordinate(['time'], data, {'foo': 'bar'})
+        v = IndexVariable(['time'], data, {'foo': 'bar'})
         self.assertTrue(pd.Index(data, name='time').identical(v.to_index()))
 
     def test_multiindex_default_level_names(self):
         midx = pd.MultiIndex.from_product([['a', 'b'], [1, 2]])
-        v = Coordinate(['x'], midx, {'foo': 'bar'})
+        v = IndexVariable(['x'], midx, {'foo': 'bar'})
         self.assertEqual(v.to_index().names, ('x_level_0', 'x_level_1'))
 
     def test_data(self):
-        x = Coordinate('x', np.arange(3.0))
+        x = IndexVariable('x', np.arange(3.0))
         # data should be initially saved as an ndarray
         self.assertIs(type(x._data), np.ndarray)
         self.assertEqual(float, x.dtype)
         self.assertArrayEqual(np.arange(3), x)
         self.assertEqual(float, x.values.dtype)
-        # after inspecting x.values, the Coordinate value will be saved as an Index
+        # after inspecting x.values, the IndexVariable value will be saved as an Index
         self.assertIsInstance(x._data, PandasIndexAdapter)
         with self.assertRaisesRegexp(TypeError, 'cannot be modified'):
             x[:] = 0
 
     def test_name(self):
-        coord = Coordinate('x', [10.0])
+        coord = IndexVariable('x', [10.0])
         self.assertEqual(coord.name, 'x')
 
         with self.assertRaises(AttributeError):
@@ -1040,24 +1040,30 @@ class TestCoordinate(TestCase, VariableSubclassTestCases):
 
     def test_concat_periods(self):
         periods = pd.period_range('2000-01-01', periods=10)
-        coords = [Coordinate('t', periods[:5]), Coordinate('t', periods[5:])]
-        expected = Coordinate('t', periods)
-        actual = Coordinate.concat(coords, dim='t')
+        coords = [IndexVariable('t', periods[:5]), IndexVariable('t', periods[5:])]
+        expected = IndexVariable('t', periods)
+        actual = IndexVariable.concat(coords, dim='t')
         assert actual.identical(expected)
         assert isinstance(actual.to_index(), pd.PeriodIndex)
 
         positions = [list(range(5)), list(range(5, 10))]
-        actual = Coordinate.concat(coords, dim='t', positions=positions)
+        actual = IndexVariable.concat(coords, dim='t', positions=positions)
         assert actual.identical(expected)
         assert isinstance(actual.to_index(), pd.PeriodIndex)
 
     def test_concat_multiindex(self):
         idx = pd.MultiIndex.from_product([[0, 1, 2], ['a', 'b']])
-        coords = [Coordinate('x', idx[:2]), Coordinate('x', idx[2:])]
-        expected = Coordinate('x', idx)
-        actual = Coordinate.concat(coords, dim='x')
+        coords = [IndexVariable('x', idx[:2]), IndexVariable('x', idx[2:])]
+        expected = IndexVariable('x', idx)
+        actual = IndexVariable.concat(coords, dim='x')
         assert actual.identical(expected)
         assert isinstance(actual.to_index(), pd.MultiIndex)
+
+    def test_coordinate_alias(self):
+        with self.assertWarns('deprecated'):
+            x = Coordinate('x', [1, 2, 3])
+        self.assertIsInstance(x, IndexVariable)
+
 
 
 class TestAsCompatibleData(TestCase):

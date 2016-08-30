@@ -20,7 +20,7 @@ from .common import ImplementsDatasetReduce, BaseDataObject
 from .merge import (dataset_update_method, dataset_merge_method,
                     merge_data_and_coords)
 from .utils import Frozen, SortedKeysDict, maybe_wrap_array, hashable
-from .variable import (Variable, as_variable, Coordinate, broadcast_variables)
+from .variable import (Variable, as_variable, IndexVariable, broadcast_variables)
 from .pycompat import (iteritems, basestring, OrderedDict,
                        dask_array_type)
 from .combine import concat
@@ -157,7 +157,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
     groupby_cls = groupby.DatasetGroupBy
 
     def __init__(self, data_vars=None, coords=None, attrs=None,
-                 compat='broadcast_equals', **kwargs):
+                 compat='broadcast_equals'):
         """To load data from a file or file-like object, use the `open_dataset`
         function.
 
@@ -183,7 +183,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
             Global attributes to save on this dataset.
         compat : {'broadcast_equals', 'equals', 'identical'}, optional
             String indicating how to compare variables of the same name for
-            potential conflicts:
+            potential conflicts when initializing this dataset:
 
             - 'broadcast_equals': all values must be equal when variables are
               broadcast against each other to ensure common dimensions.
@@ -196,14 +196,6 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         self._dims = {}
         self._attrs = None
         self._file_obj = None
-        if kwargs:
-            if 'variables' in kwargs:
-                data_vars = kwargs.pop('variables')
-                warnings.warn('`variables` kwarg is deprecated. Use '
-                              '`data_vars` instead.', stacklevel=2)
-            if kwargs:
-                raise TypeError(
-                    '{0} are not valid kwargs'.format(kwargs.keys()))
         if data_vars is None:
             data_vars = {}
         if coords is None:
@@ -326,12 +318,6 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
 
         return self
 
-    def load_data(self):  # pragma: no cover
-        warnings.warn('the Dataset method `load_data` has been deprecated; '
-                      'use `load` instead',
-                      FutureWarning, stacklevel=2)
-        return self.load()
-
     @classmethod
     def _construct_direct(cls, variables, coord_names, dims=None, attrs=None,
                           file_obj=None):
@@ -398,7 +384,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
             return self
         variables = self._variables.copy()
         for name, idx in indexes.items():
-            variables[name] = Coordinate(name, idx)
+            variables[name] = IndexVariable(name, idx)
         obj = self._replace_vars_and_dims(variables)
 
         # switch from dimension to level names, if necessary
@@ -641,13 +627,6 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         """
         return DataVariables(self)
 
-    @property
-    def vars(self):  # pragma: no cover
-        warnings.warn('the Dataset property `vars` has been deprecated; '
-                      'use `data_vars` instead',
-                      FutureWarning, stacklevel=2)
-        return self.data_vars
-
     def set_coords(self, names, inplace=False):
         """Given names of one or more variables, set them as coordinates
 
@@ -780,9 +759,6 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         from ..backends.api import to_netcdf
         return to_netcdf(self, path, mode, format=format, group=group,
                          engine=engine, encoding=encoding)
-
-    dump = utils.function_alias(to_netcdf, 'dump')
-    dumps = utils.function_alias(to_netcdf, 'dumps')
 
     def __unicode__(self):
         return formatting.dataset_repr(self)
@@ -1326,7 +1302,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
 
         idx = utils.multiindex_from_product_levels(
             [self.indexes[d] for d in dims], names=dims)
-        variables[new_dim] = Coordinate(new_dim, idx)
+        variables[new_dim] = IndexVariable(new_dim, idx)
 
         coord_names = set(self._coord_names) - set(dims) | set([new_dim])
 
@@ -1404,7 +1380,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
                     variables[name] = var
 
         for name, lev in zip(new_dim_names, index.levels):
-            variables[name] = Coordinate(name, lev)
+            variables[name] = IndexVariable(name, lev)
 
         coord_names = set(self._coord_names) - set([dim]) | set(new_dim_names)
 
@@ -1532,12 +1508,6 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
                                 if k not in drop)
         coord_names = set(k for k in self._coord_names if k in variables)
         return self._replace_vars_and_dims(variables, coord_names)
-
-    def drop_vars(self, *names):  # pragma: no cover
-        warnings.warn('the Dataset method `drop_vars` has been deprecated; '
-                      'use `drop` instead',
-                      FutureWarning, stacklevel=2)
-        return self.drop(names)
 
     def transpose(self, *dims):
         """Return a new Dataset object with all array dimensions transposed.

@@ -17,7 +17,7 @@ from .common import AbstractArray, BaseDataObject, squeeze
 from .coordinates import DataArrayCoordinates, Indexes
 from .dataset import Dataset
 from .pycompat import iteritems, basestring, OrderedDict, zip
-from .variable import (as_variable, Variable, as_compatible_data, Coordinate,
+from .variable import (as_variable, Variable, as_compatible_data, IndexVariable,
                        default_index_coordinate)
 from .formatting import format_item
 
@@ -39,7 +39,10 @@ def _infer_coords_and_dims(shape, coords, dims):
         if coords is not None and len(coords) == len(shape):
             # try to infer dimensions from coords
             if utils.is_dict_like(coords):
-                # TODO: deprecate this path
+                warnings.warn('inferring DataArray dimensions from dictionary '
+                              'like ``coords`` has been deprecated. Use an '
+                              'explicit list of ``dims`` instead.',
+                              FutureWarning, stacklevel=3)
                 dims = list(coords.keys())
             else:
                 for n, (dim, coord) in enumerate(zip(dims, coords)):
@@ -142,7 +145,7 @@ class DataArray(AbstractArray, BaseDataObject):
     values : np.ndarray
         Access or modify DataArray values as a numpy array.
     coords : dict-like
-        Dictionary of Coordinate objects that label values along each dimension.
+        Dictionary of DataArray objects that label values along each dimension.
     name : str or None
         Name of this array.
     attrs : OrderedDict
@@ -197,7 +200,7 @@ class DataArray(AbstractArray, BaseDataObject):
                     coords = [data.index]
                 elif isinstance(data, pd.DataFrame):
                     coords = [data.index, data.columns]
-                elif isinstance(data, (pd.Index, Coordinate)):
+                elif isinstance(data, (pd.Index, IndexVariable)):
                     coords = [data]
                 elif isinstance(data, pd.Panel):
                     coords = [data.items, data.major_axis, data.minor_axis]
@@ -245,7 +248,7 @@ class DataArray(AbstractArray, BaseDataObject):
             return self
         coords = self._coords.copy()
         for name, idx in indexes.items():
-            coords[name] = Coordinate(name, idx)
+            coords[name] = IndexVariable(name, idx)
         obj = self._replace(coords=coords)
 
         # switch from dimension to level names, if necessary
@@ -534,12 +537,6 @@ class DataArray(AbstractArray, BaseDataObject):
         self._variable = new._variable
         self._coords = new._coords
         return self
-
-    def load_data(self):  # pragma: no cover
-        warnings.warn('the DataArray method `load_data` has been deprecated; '
-                      'use `load` instead',
-                      FutureWarning, stacklevel=2)
-        return self.load()
 
     def copy(self, deep=True):
         """Returns a copy of this array.

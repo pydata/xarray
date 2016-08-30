@@ -6,7 +6,7 @@ from . import utils
 from .alignment import align
 from .merge import merge
 from .pycompat import iteritems, OrderedDict, basestring
-from .variable import Variable, as_variable, Coordinate, concat as concat_vars
+from .variable import Variable, as_variable, IndexVariable, concat as concat_vars
 
 
 def concat(objs, dim=None, data_vars='all', coords='different',
@@ -125,11 +125,11 @@ def _calc_concat_dim_coord(dim):
     if isinstance(dim, basestring):
         coord = None
     elif not hasattr(dim, 'dims'):
-        # dim is not a DataArray or Coordinate
+        # dim is not a DataArray or IndexVariable
         dim_name = getattr(dim, 'name', None)
         if dim_name is None:
             dim_name = 'concat_dim'
-        coord = Coordinate(dim_name, dim)
+        coord = IndexVariable(dim_name, dim)
         dim = dim_name
     elif not hasattr(dim, 'name'):
         coord = as_variable(dim).to_coord()

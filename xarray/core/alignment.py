@@ -9,7 +9,7 @@ from . import ops, utils
 from .common import _maybe_promote
 from .pycompat import iteritems, OrderedDict
 from .utils import is_full_slice, is_dict_like
-from .variable import Variable, Coordinate
+from .variable import Variable, IndexVariable
 
 
 def _get_joiner(join):
@@ -119,7 +119,7 @@ def reindex_variables(variables, indexes, indexers, method=None,
     variables : dict-like
         Dictionary of xarray.Variable objects.
     indexes : dict-like
-        Dictionary of xarray.Coordinate objects associated with variables.
+        Dictionary of xarray.IndexVariable objects associated with variables.
     indexers : dict
         Dictionary with keys given by dimension names and values given by
         arrays of coordinates tick labels. Any mis-matched coordinate values
@@ -200,8 +200,8 @@ def reindex_variables(variables, indexes, indexers, method=None,
     for name, var in iteritems(variables):
         if name in indexers:
             # no need to copy, because index data is immutable
-            new_var = Coordinate(var.dims, indexers[name], var.attrs,
-                                 var.encoding)
+            new_var = IndexVariable(var.dims, indexers[name], var.attrs,
+                                    var.encoding)
         else:
             assign_to = var_indexers(var, to_indexers)
             assign_from = var_indexers(var, from_indexers)
