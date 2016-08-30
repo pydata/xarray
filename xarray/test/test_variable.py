@@ -570,11 +570,15 @@ class TestVariable(TestCase, VariableSubclassTestCases):
 
         self.assertFalse(v1.notnull_equals(None))
 
+        v4 = Variable(('x'), [np.nan, 1, 3, np.nan])
+        self.assertFalse(v4.notnull_equals(v1))
+
         v3 = Variable(('y'), [np.nan, 2, 3, np.nan])
         self.assertFalse(v3.notnull_equals(v1))
 
-        v4 = Variable(('x'), [np.nan, 1, 3, np.nan])
-        self.assertFalse(v4.notnull_equals(v1))
+        d = np.array([1, 2, np.nan, np.nan])
+        self.assertFalse(v1.notnull_equals(d))
+        self.assertFalse(v2.notnull_equals(d))
 
     def test_as_variable(self):
         data = np.arange(10)
