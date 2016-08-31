@@ -94,30 +94,24 @@ def _validate_attrs(dataset):
                                  '1 or greater for serialization to netCDF '
                                  'files')
         else:
-            raise TypeError('Invalid name for attr: must be a string for '
-                            'serialization to netCDF files')
+            raise TypeError("Invalid name for attr: {} must be a string for "
+                            "serialization to netCDF files".format(name))
 
-        if not isinstance(value, basestring) and not isinstance(value, Number) and \
-           not isinstance(value, np.ndarray) and not isinstance(value, list) and \
-           not isinstance(value, tuple):
-                raise TypeError('Invalid value for attr: must be a number '
-                                'string, ndarray or a list/tuple of numbers/strings '
-                                'for serialization to netCDF files')
+        if not isinstance(value, (basestring, Number, np.ndarray, np.number,
+                                  list, tuple)):
+            raise TypeError('Invalid value for attr: {} must be a number '
+                            'string, ndarray or a list/tuple of numbers/strings '
+                            'for serialization to netCDF '
+                            'files'.format(value))
 
     # Check attrs on the dataset itself
     for k, v in dataset.attrs.items():
         check_attr(k, v)
 
     # Check attrs on each variable within the dataset
-    for var_name in dataset.data_vars:
+    for var_name in dataset.variables:
         for k, v in dataset[var_name].attrs.items():
             check_attr(k, v)
-
-    # Check attrs on each coord within the dataset
-    for coord_name in dataset.coords:
-        for k, v in dataset.coords[coord_name].attrs.items():
-            check_attr(k, v)
-
 
 def open_dataset(filename_or_obj, group=None, decode_cf=True,
                  mask_and_scale=True, decode_times=True,
