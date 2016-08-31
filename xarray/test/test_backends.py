@@ -1068,7 +1068,7 @@ class TestEncodingInvalid(TestCase):
 class MiscObject:
     pass
 
-
+@requires_netCDF4
 class TestValidateAttrs(TestCase):
     def test_validating_attrs(self):
         def new_dataset():
