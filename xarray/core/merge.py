@@ -12,7 +12,8 @@ PANDAS_TYPES = (pd.Series, pd.DataFrame, pd.Panel)
 _VALID_COMPAT = Frozen({'identical': 0,
                         'equals': 1,
                         'broadcast_equals': 2,
-                        'minimal': 3})
+                        'minimal': 3,
+                        'notnull_equals': 4})
 
 
 def broadcast_dimension_size(variables):
@@ -61,6 +62,8 @@ def unique_variable(name, variables, compat='broadcast_equals'):
     """
     out = variables[0]
     if len(variables) > 1:
+        combine_method = None
+
         if compat == 'minimal':
             compat = 'broadcast_equals'
 
@@ -68,12 +71,18 @@ def unique_variable(name, variables, compat='broadcast_equals'):
             dim_lengths = broadcast_dimension_size(variables)
             out = out.expand_dims(dim_lengths)
 
+        if compat == 'notnull_equals':
+            combine_method = 'fillna'
+
         for var in variables[1:]:
             if not getattr(out, compat)(var):
                 raise MergeError('conflicting values for variable %r on '
                                  'objects to be combined:\n'
                                  'first value: %r\nsecond value: %r'
                                  % (name, out, var))
+            if combine_method:
+                out = getattr(out, combine_method)(var)
+
     return out
 
 

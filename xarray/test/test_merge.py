@@ -60,6 +60,51 @@ class TestMergeFunction(TestCase):
         with self.assertRaises(xr.MergeError):
             xr.merge([ds, ds + 1])
 
+    def test_merge_notnull_equals_single_var(self):
+        ds1 = xr.Dataset({'a': ('x', [1, 2])})
+        ds2 = xr.Dataset({'a': ('x', [2, 3]), 'x': [1, 2]})
+        expected = xr.Dataset({'a': ('x', [1, 2, 3])})
+        assert expected.identical(xr.merge([ds1, ds2],
+                                  compat='notnull_equals'))
+        assert expected.identical(xr.merge([ds2, ds1],
+                                  compat='notnull_equals'))
+        assert ds1.identical(xr.merge([ds1, ds2],
+                                      compat='notnull_equals',
+                                      join='left'))
+        assert ds2.identical(xr.merge([ds1, ds2],
+                                      compat='notnull_equals',
+                                      join='right'))
+        expected = xr.Dataset({'a': ('x', [2]), 'x': [1]})
+        assert expected.identical(xr.merge([ds1, ds2],
+                                           compat='notnull_equals',
+                                           join='inner'))
+
+        with self.assertRaises(xr.MergeError):
+            ds3 = xr.Dataset({'a': ('x', [99, 3]), 'x': [1, 2]})
+            xr.merge([ds1, ds3], compat='notnull_equals')
+
+        with self.assertRaises(xr.MergeError):
+            ds3 = xr.Dataset({'a': ('y', [2, 3]), 'y': [1, 2]})
+            xr.merge([ds1, ds3], compat='notnull_equals')
+
+    def test_merge_notnull_equals_multi_var(self):
+        data = create_test_data()
+        data1 = data.copy(deep=True)
+        data2 = data.copy(deep=True)
+
+        expected = data[['var1', 'var2']]
+        actual = xr.merge([data1.var1, data2.var2], compat='notnull_equals')
+        assert expected.identical(actual)
+
+        data1['var1'][:, :5] = np.nan
+        data2['var1'][:, 5:] = np.nan
+        data1['var2'][:4, :] = np.nan
+        data2['var2'][4:, :] = np.nan
+        del data2['var3']
+
+        actual = xr.merge([data1, data2], compat='notnull_equals')
+        assert data.equals(actual)
+
 
 class TestMergeMethod(TestCase):
 
@@ -111,7 +156,8 @@ class TestMergeMethod(TestCase):
     def test_merge_compat(self):
         ds1 = xr.Dataset({'x': 0})
         ds2 = xr.Dataset({'x': 1})
-        for compat in ['broadcast_equals', 'equals', 'identical']:
+        for compat in ['broadcast_equals', 'equals', 'identical',
+                       'notnull_equals']:
             with self.assertRaises(xr.MergeError):
                 ds1.merge(ds2, compat=compat)
 
@@ -132,7 +178,7 @@ class TestMergeMethod(TestCase):
         ds1 = xr.Dataset({'a': ('x', [1, 2])})
         ds2 = xr.Dataset({'b': ('x', [3, 4]), 'x': [1, 2]})
         expected = xr.Dataset({'a': ('x', [1, 2, np.nan]),
-                            'b': ('x', [np.nan, 3, 4])})
+                               'b': ('x', [np.nan, 3, 4])})
         assert expected.identical(ds1.merge(ds2))
         assert expected.identical(ds2.merge(ds1))
 
@@ -143,3 +189,29 @@ class TestMergeMethod(TestCase):
         expected = expected.isel(x=slice(1, 2))
         assert expected.identical(ds1.merge(ds2, join='inner'))
         assert expected.identical(ds2.merge(ds1, join='inner'))
+
+    def test_merge_notnull_equals(self):
+        ds1 = xr.Dataset({'a': ('x', [1, 2])})
+        ds2 = xr.Dataset({'a': ('x', [2, 3]), 'x': [1, 2]})
+        expected = xr.Dataset({'a': ('x', [1, 2, 3])})
+
+        assert expected.identical(ds1.merge(ds2, compat='notnull_equals'))
+        assert expected.identical(ds2.merge(ds1, compat='notnull_equals'))
+
+        assert ds1.identical(ds1.merge(ds2, compat='notnull_equals',
+                                       join='left'))
+
+        assert ds2.identical(ds1.merge(ds2, compat='notnull_equals',
+                                       join='right'))
+
+        expected2 = xr.Dataset({'a': ('x', [2]), 'x': [1]})
+        assert expected2.identical(ds1.merge(ds2, compat='notnull_equals',
+                                             join='inner'))
+
+        with self.assertRaises(xr.MergeError):
+            ds3 = xr.Dataset({'a': ('x', [99, 3]), 'x': [1, 2]})
+            ds1.merge(ds3, compat='notnull_equals')
+
+        with self.assertRaises(xr.MergeError):
+            ds3 = xr.Dataset({'a': ('y', [2, 3]), 'y': [1, 2]})
+            ds1.merge(ds3, compat='notnull_equals')
