@@ -6,7 +6,7 @@ import xarray as xr
 
 from numpy.testing import assert_array_equal
 from xarray.core.computation import (
-    join_dict_keys, collect_dict_values, broadcast_compat_data, Signature)
+    join_dict_keys, collect_dict_values, broadcast_compat_data, _Signature)
 
 
 def assert_identical(a, b):
@@ -15,16 +15,27 @@ def assert_identical(a, b):
 
 
 def test_parse_signature():
-    assert Signature([['x']]) == Signature.parse('(x)->()')
-    assert Signature([['x', 'y']]) == Signature.parse('(x,y)->()')
-    assert Signature([['x'], ['y']]) == Signature.parse('(x),(y)->()')
-    assert Signature([['x']], [['y']]) == Signature.parse('(x)->(y)')
+    assert _Signature([['x']]) == _Signature.from_string('(x)->()')
+    assert _Signature([['x', 'y']]) == _Signature.from_string('(x,y)->()')
+    assert _Signature([['x'], ['y']]) == _Signature.from_string('(x),(y)->()')
+    assert (_Signature([['x']], [['y'], []]) ==
+            _Signature.from_string('(x)->(y),()'))
     with pytest.raises(ValueError):
-        Signature.parse('(x)(y)->()')
+        _Signature.from_string('(x)(y)->()')
     with pytest.raises(ValueError):
-        Signature.parse('(x),(y)->')
+        _Signature.from_string('(x),(y)->')
     with pytest.raises(ValueError):
-        Signature.parse('((x))->(x)')
+        _Signature.from_string('((x))->(x)')
+
+
+def test_signature_properties():
+    sig = _Signature.from_string('(x),(x,y)->(z)')
+    assert sig.input_core_dims == (('x',), ('x', 'y'))
+    assert sig.output_core_dims == (('z',),)
+    assert sig.all_input_core_dims == frozenset(['x', 'y'])
+    assert sig.all_output_core_dims == frozenset(['z'])
+    assert sig.n_inputs == 2
+    assert sig.n_outputs == 1
 
 
 def test_join_dict_keys():

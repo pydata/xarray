@@ -29,8 +29,8 @@ def safe_tuple(x):
     return tuple(x)
 
 
-class Signature(object):
-    """Core dimensions signature for a given function
+class _Signature(object):
+    """Core dimensions signature for a given function.
 
     Based on the signature provided by generalized ufuncs in NumPy.
 
@@ -70,8 +70,27 @@ class Signature(object):
         return len(self.output_core_dims)
 
     @classmethod
-    def parse(cls, string):
-        """Create a Signature object from a NumPy gufunc signature.
+    def default(cls, n_inputs):
+        return cls([()] * n_inputs, [()])
+
+    @classmethod
+    def from_sequence(cls, nested):
+        if (not isinstance(nested, collections.Sequence) or
+                not len(nested) == 2 or
+                any(not isinstance(arg_list, collections.Sequence)
+                    for arg_list in nested) or
+                any(isinstance(arg, basestring) or
+                    not isinstance(arg, collections.Sequence)
+                    for arg_list in nested for arg in arg_list)):
+            raise TypeError('functions signatures not provided as a string '
+                            'must be a triply nested sequence providing the '
+                            'list of core dimensions for each variable, for '
+                            'both input and output.')
+        return cls(*nested)
+
+    @classmethod
+    def from_string(cls, string):
+        """Create a _Signature object from a NumPy gufunc signature.
 
         Parameters
         ----------
@@ -99,10 +118,6 @@ class Signature(object):
                 % (type(self).__name__,
                    list(self.input_core_dims),
                    list(self.output_core_dims)))
-
-
-def _default_signature(n_inputs):
-    return Signature([()] * n_inputs, [()])
 
 
 def result_name(objects):
@@ -342,10 +357,12 @@ def broadcast_compat_data(variable, broadcast_dims, core_dims):
 
     set_old_dims = set(old_dims)
 
-    not_found = [d for d in core_dims if d not in set_old_dims]
-    if not_found:
+    missing_core_dims = [d for d in core_dims if d not in set_old_dims]
+    if missing_core_dims:
         raise ValueError('operation requires dimensions missing on input '
-                         'variable: %r' % not_found)
+                         'variable: %r' % missing_core_dims)
+
+    # TODO: check for core dimensions present on the wrong variable.
 
     # this should be true by based on how we constructed broadcast_dims with
     # _calculate_unified_dim_sizes
@@ -417,7 +434,7 @@ def apply_variable_ufunc(func, *args, **kwargs):
     signature = kwargs.pop('signature')
     dask_array = kwargs.pop('dask_array', 'forbidden')
     kwargs_ = kwargs.pop('kwargs', None)
-    dtype = kwargs.pop('dtype', None)
+    dask_dtype = kwargs.pop('dask_dtype', None)
     if kwargs:
         raise TypeError('apply_ufunc() got unexpected keyword arguments: %s'
                         % list(kwargs))
@@ -429,7 +446,8 @@ def apply_variable_ufunc(func, *args, **kwargs):
 
     dim_sizes = _calculate_unified_dim_sizes([a for a in args
                                               if hasattr(a, 'dims')])
-    all_core_dims = signature.all_input_core_dims | signature.all_output_core_dims
+    all_core_dims = (signature.all_input_core_dims
+                     | signature.all_output_core_dims)
     broadcast_dims = tuple(d for d in dim_sizes if d not in all_core_dims)
     output_dims = [broadcast_dims + out for out in signature.output_core_dims]
 
@@ -448,7 +466,7 @@ def apply_variable_ufunc(func, *args, **kwargs):
         raise ValueError('encountered dask array')
     elif dask_array == 'auto' and contains_dask:
         result_data = _apply_with_dask_atop(func, list_of_input_data, signature,
-                                            kwargs_, dtype)
+                                            kwargs_, dask_dtype)
     else:
         result_data = func(*list_of_input_data, **kwargs_)
 
@@ -464,36 +482,68 @@ def apply_variable_ufunc(func, *args, **kwargs):
 
 
 def apply_ufunc(func, *args, **kwargs):
+    """apply_ufunc(func, *args, signature=None, join='inner', new_coords=None,
+                   kwargs=None, dask_array='forbidden', dask_dtype=None)
+
+    Apply a broadcasting function for unlabeled arrays to xarray objects.
+
+    The input arguments will be handled using xarray's standard rules for
+    labeled computation, including alignment, broadcasting and merging of
+    coordinates.
+
+    Parameters
+    ----------
+    func : callable
+        Function to call like ``func(*args, **kwargs)`` on unlabeled arrays.
+    *args : Dataset, DataArray, GroupBy, Variable, numpy/dask arrays or scalars
+        Mix of labeled and/or unlabeled arrays to which to apply the function.
+    signature : string or triply nested sequence, optional
+        Object indicating any core dimensions that should not be broadcast on
+        the input arguments, new dimensions in the output, and/or multiple
+        outputs. Two forms of signatures are accepted:
+        (a) A signature string of the form used by NumPy's generalized universal
+            functions [1], e.g., '(),(time)->()' indicating a function that
+            accepts two arguments and returns a single argument, on which all
+            dimensions should be broadcast except 'time' on the second argument.
+        (a) A triply nested sequence providing lists of core dimensions for each
+            variable, for both input and output, e.g., ([(), ('time',)], [()]).
+
+        Unlike the NumPy gufunc signature spec, the names of all dimensions
+        provided in signatures must be the names of actual dimensions on the
+        xarray objects.
+
+    [1] http://docs.scipy.org/doc/numpy/reference/c-api.generalized-ufuncs.html
+    """
     from .groupby import GroupBy
     from .dataarray import DataArray
     from .dataset import Dataset
     from .variable import Variable
 
-    kwargs_ = kwargs.pop('kwargs', None)
     signature = kwargs.pop('signature', None)
     join = kwargs.pop('join', 'inner')
-    dask_array = kwargs.pop('dask_array', 'forbidden')
-    dtype = kwargs.pop('dtype', None)
     new_coords = kwargs.pop('new_coords', None)
+    kwargs_ = kwargs.pop('kwargs', None)
+    dask_array = kwargs.pop('dask_array', 'forbidden')
+    dask_dtype = kwargs.pop('dask_dtype', None)
     if kwargs:
         raise TypeError('apply_ufunc() got unexpected keyword arguments: %s'
                         % list(kwargs))
 
     if signature is None:
-        signature = _default_signature(len(args))
+        signature = _Signature.default(len(args))
     elif isinstance(signature, basestring):
-        signature = Signature.parse(signature)
-    elif not isinstance(signature, Signature):
-        raise TypeError('invalid signature: %r' % signature)
+        signature = _Signature.from_string(signature)
+    else:
+        signature = _Signature.from_sequence(signature)
 
     variables_ufunc = functools.partial(
         apply_variable_ufunc, func, signature=signature, dask_array=dask_array,
-        kwargs=kwargs_, dtype=dtype)
+        kwargs=kwargs_, dask_dtype=dask_dtype)
 
     if any(isinstance(a, GroupBy) for a in args):
         partial_apply_ufunc = functools.partial(
             apply_ufunc, func, kwargs=kwargs_, signature=signature,
-            join=join, dask_array=dask_array, dtype=dtype,
+            join=join, dask_array=dask_array, dask_dtype=dask_dtype,
             new_coords=new_coords)
         return apply_groupby_ufunc(partial_apply_ufunc, *args)
     elif any(is_dict_like(a) for a in args):
@@ -511,17 +561,17 @@ def apply_ufunc(func, *args, **kwargs):
             raise ValueError("cannot use dask_array='auto' on unlabeled dask "
                              'arrays with a function signature that uses core '
                              'dimensions')
-        return da.elemwise(func, *args, dtype=dtype)
+        return da.elemwise(func, *args, dtype=dask_dtype)
     else:
         return func(*args)
 
 
 # def mean(xarray_object, dim=None):
 #     if dim is None:
-#         signature = Signature([(dim,)])
+#         signature = _Signature([(dim,)])
 #         kwargs = {'axis': -1}
 #     else:
-#         signature = Signature([xarray_object.dims])
+#         signature = _Signature([xarray_object.dims])
 #         kwargs = {}
 #     return apply_ufunc([xarray_object], ops.mean, signature,
 #                        dask_array='allowed', kwargs=kwargs)
