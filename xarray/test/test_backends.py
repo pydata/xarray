@@ -13,7 +13,8 @@ import numpy as np
 import pandas as pd
 
 import xarray as xr
-from xarray import Dataset, open_dataset, open_mfdataset, backends, save_mfdataset
+from xarray import (Dataset, DataArray, open_dataset, open_dataarray,
+                    open_mfdataset, backends, save_mfdataset)
 from xarray.backends.common import robust_getitem
 from xarray.backends.netCDF4_ import _extract_nc4_encoding
 from xarray.core.pycompat import iteritems, PY3
@@ -1071,7 +1072,6 @@ class TestEncodingInvalid(TestCase):
         with self.assertRaisesRegexp(ValueError, 'unexpected encoding'):
             _extract_nc4_encoding(var, raise_on_invalid=True)
 
-
 class MiscObject:
     pass
 
@@ -1172,3 +1172,28 @@ class TestValidateAttrs(TestCase):
             attrs['test'] = np.arange(12).reshape(3, 4)
             with create_tmp_file() as tmp_file:
                 ds.to_netcdf(tmp_file)
+
+class TestDataArrayToNetCDF(TestCase):
+
+    def test_dataarray_to_netcdf_no_name(self):
+        original_da = DataArray(np.arange(12).reshape((3, 4)))
+
+        with create_tmp_file() as tmp:
+            original_da.to_netcdf(tmp)
+
+            loaded_da = open_dataarray(tmp)
+
+        self.assertDataArrayEqual(original_da, loaded_da)
+        self.assertEqual(loaded_da.name, 'data')
+
+    def test_dataarray_to_netcdf_with_name(self):
+        original_da = DataArray(np.arange(12).reshape((3, 4)),
+                                name='test')
+
+        with create_tmp_file() as tmp:
+            original_da.to_netcdf(tmp)
+
+            loaded_da = open_dataarray(tmp)
+
+        self.assertDataArrayIdentical(original_da, loaded_da)
+        self.assertEqual(loaded_da.name, 'test')
