@@ -405,7 +405,9 @@ DataArray methods
 .. autosummary::
    :toctree: generated/
 
+   open_dataarray
    DataArray.to_dataset
+   DataArray.to_netcdf
    DataArray.to_pandas
    DataArray.to_series
    DataArray.to_dataframe

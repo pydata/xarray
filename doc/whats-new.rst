@@ -43,6 +43,12 @@ Enhancements
 error messages if they are invalid. (:issue:`911`).
 By `Robin Wilson <https://github.com/robintw>`_.
 
+- Added ability to save ``DataArray`` objects directly to netCDF files using
+  :py:meth:`~xarray.DataArray.to_netcdf`, and to load directly from netCDF files
+  using :py:func:`~xarray.open_dataarray`. These remove the need to convert a
+  ``DataArray`` to a ``Dataset`` before saving as a netCDF file, and deals with
+  names to ensure a perfect 'roundtrip' capability.
+
 Bug fixes
 ~~~~~~~~~
 

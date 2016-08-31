@@ -117,6 +117,14 @@ We can load netCDF files to create a new Dataset using
     ds_disk = xr.open_dataset('saved_on_disk.nc')
     ds_disk
 
+Similarly, a DataArray can be saved to disk using the
+:py:attr:`DataArray.to_netcdf <xarray.DataArray.to_netcdf>` method, and loaded
+from disk using the :py:func:`~xarray.open_dataarray` function. As netCDF files
+correspond to :py:class:`~xarray.Dataset` objects, these functions internally
+convert the ``DataArray`` to a ``Dataset`` before saving, and then convert back
+when loading, ensuring that the ``DataArray`` that is loaded is always exactly
+the same as the one that was saved.
+
 A dataset can also be loaded or written to a specific group within a netCDF
 file. To load from a group, pass a ``group`` keyword argument to the
 ``open_dataset`` function. The group can be specified as a path-like

@@ -328,8 +328,8 @@ def open_dataarray(*args, **kwargs):
 
     Notes
     -----
-    This is designed to be fully compatible with `DataArray.to_netcdf`.
-    Saving using `DataArray.to_netcdf` and then loading with this function will
+    This is designed to be fully compatible with `DataArray.to_netcdf`. Saving
+    using `DataArray.to_netcdf` and then loading with this function will
     produce an identical result.
 
     All parameters are passed directly to `xarray.open_dataset`. See that
