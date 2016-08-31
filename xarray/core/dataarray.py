@@ -19,7 +19,8 @@ from .coordinates import (DataArrayCoordinates, DataArrayLevelCoordinates,
 from .dataset import Dataset
 from .pycompat import iteritems, basestring, OrderedDict, zip
 from .variable import (as_variable, Variable, as_compatible_data, IndexVariable,
-                       default_index_coordinate)
+                       default_index_coordinate,
+                       assert_unique_multiindex_level_names)
 from .formatting import format_item
 
 
@@ -84,14 +85,7 @@ def _infer_coords_and_dims(shape, coords, dims):
                                  'length %s on the data but length %s on '
                                  'coordinate %r' % (d, sizes[d], s, k))
 
-        if v.ndim == 1:
-            idx_level_names = v.to_coord().level_names or []
-            for n in idx_level_names:
-                if n in level_names:
-                    raise ValueError('found duplicate MultiIndex level '
-                                     'name %r for coordinates %r and %r'
-                                     % (n, k, level_names[n]))
-                level_names[n] = k
+    assert_unique_multiindex_level_names(new_coords)
 
     return new_coords, dims
 

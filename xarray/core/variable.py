@@ -1,4 +1,5 @@
 from datetime import timedelta
+from collections import defaultdict
 import functools
 import itertools
 import warnings
@@ -1305,3 +1306,28 @@ def concat(variables, dim='concat_dim', positions=None, shortcut=False):
         return IndexVariable.concat(variables, dim, positions, shortcut)
     else:
         return Variable.concat(variables, dim, positions, shortcut)
+
+
+def assert_unique_multiindex_level_names(variables):
+    """Check for uniqueness of MultiIndex level names in all given
+    variables.
+
+    Not public API. Used for checking consistency of DataArray and Dataset
+    objects.
+    """
+    level_names = defaultdict(list)
+    for var_name, var in variables.items():
+        if isinstance(var._data, PandasIndexAdapter):
+            idx_level_names = var.to_coord().level_names
+            if idx_level_names is not None:
+                for n in idx_level_names:
+                    level_names[n].append(var_name)
+
+    duplicate_level_names = {k: v for k, v in level_names.items()
+                             if len(v) > 1}
+    if duplicate_level_names:
+        duplicate_str = '\n'.join(['level %r found in %s'
+                                   % (k, ' and '.join(v))
+                                   for k, v in duplicate_level_names.items()])
+        raise ValueError('conflicting MultiIndex level names:\n%s'
+                         % duplicate_str)
