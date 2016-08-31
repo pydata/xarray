@@ -400,6 +400,12 @@ class TestDataArray(TestCase):
         c['a'] = 99
         self.assertFalse(a.notnull_equals(c))
 
+        self.assertFalse(a.notnull_equals(data1))
+        self.assertFalse(a.notnull_equals({'a': 1}))
+        self.assertFalse(a.notnull_equals('abc'))
+        self.assertFalse(a.notnull_equals(123))
+
+
     def test_getitem(self):
         # strings pull out dataarrays
         self.assertDataArrayIdentical(self.dv, self.ds['foo'])
