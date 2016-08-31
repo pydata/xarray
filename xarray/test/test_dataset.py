@@ -653,6 +653,43 @@ class TestDataset(TestCase):
         self.assertFalse(data1.equals(data2))
         self.assertFalse(data1.identical(data2))
 
+    def test_notnull_equals(self):
+        data1 = create_test_data()
+        data2 = data1.copy(deep=True)
+
+        self.assertTrue(data1.notnull_equals(data2))
+
+        data1['var1'][5:, :] = np.nan
+        data1['var2'][:, :5] = np.nan
+        data1['var3'][1:3, 1:3] = np.nan
+
+        data2['var1'][:5, :] = np.nan  # exactly non-overlapping
+        data2['var2'][:5, :] = np.nan  # overlap in different directions
+        data2['var3'][6:8, 6:8] = np.nan  # patchy overlap
+
+        self.assertTrue(data1.notnull_equals(data2))
+        self.assertTrue(data2.notnull_equals(data1))
+        self.assertFalse(data1.equals(data2))
+
+        data3 = data2.copy(deep=True)
+        data3.attrs['foo'] = 'bar'
+        self.assertTrue(data1.notnull_equals(data3))
+
+        data3 = data2.copy(deep=True)
+        data3['var2'][-1, -1] = 99
+        self.assertFalse(data1.notnull_equals(data3))
+
+        data3 = data2.rename({'var1': 'var4'})
+        self.assertFalse(data1.notnull_equals(data3))
+
+        data3 = data2.copy(deep=True)
+        data3.coords['new'] = np.arange(0, 10)
+        self.assertFalse(data1.notnull_equals(data3))
+
+        self.assertFalse(data1.notnull_equals(123))
+        self.assertFalse(data1.notnull_equals('abc'))
+        self.assertFalse(data1.notnull_equals({'a': 1}))
+
     def test_attrs(self):
         data = create_test_data(seed=42)
         data.attrs = {'foobar': 'baz'}
