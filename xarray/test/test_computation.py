@@ -15,9 +15,16 @@ def assert_identical(a, b):
 
 
 def test_parse_signature():
-    expected = Signature([['x']])
-    actual = Signature.parse('(x)->()')
-    assert expected == actual
+    assert Signature([['x']]) == Signature.parse('(x)->()')
+    assert Signature([['x', 'y']]) == Signature.parse('(x,y)->()')
+    assert Signature([['x'], ['y']]) == Signature.parse('(x),(y)->()')
+    assert Signature([['x']], [['y']]) == Signature.parse('(x)->(y)')
+    with pytest.raises(ValueError):
+        Signature.parse('(x)(y)->()')
+    with pytest.raises(ValueError):
+        Signature.parse('(x),(y)->')
+    with pytest.raises(ValueError):
+        Signature.parse('((x))->(x)')
 
 
 def test_join_dict_keys():

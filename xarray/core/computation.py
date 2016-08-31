@@ -94,6 +94,12 @@ class Signature(object):
     def __ne__(self, other):
         return self != other
 
+    def __repr__(self):
+        return ('%s(%r, %r)'
+                % (type(self).__name__,
+                   list(self.input_core_dims),
+                   list(self.output_core_dims)))
+
 
 def _default_signature(n_inputs):
     return Signature([()] * n_inputs, [()])
