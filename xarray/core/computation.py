@@ -1,9 +1,19 @@
+import functools
 import itertools
 import re
 from collections import namedtuple
 
-from .core.pycompat import dask_array_type
+import pandas as pd
 
+from . import ops
+from .alignment import _get_joiner
+from .merge import _align_for_merge as deep_align
+from .merge import merge_coords_without_align
+from .utils import is_dict_like
+from .pycompat import dask_array_type, OrderedDict, basestring
+
+
+SLICE_NONE = slice(None)
 
 # see http://docs.scipy.org/doc/numpy/reference/c-api.generalized-ufuncs.html
 DIMENSION_NAME = r'\w+'
@@ -11,6 +21,12 @@ CORE_DIMENSION_LIST = '(?:' + DIMENSION_NAME + '(?:,' + DIMENSION_NAME + ')*)?'
 ARGUMENT = r'\(' + CORE_DIMENSION_LIST + r'\)'
 ARGUMENT_LIST = ARGUMENT + '(?:,'+ ARGUMENT + ')*'
 SIGNATURE = '^' + ARGUMENT_LIST + '->' + ARGUMENT_LIST + '$'
+
+
+def safe_tuple(x):
+    if isinstance(x, basestring):
+        raise ValueError('cannot safely convert %r to a tuple')
+    return tuple(x)
 
 
 class Signature(object):
@@ -26,10 +42,8 @@ class Signature(object):
         A list of tuples of core dimension names on each output variable.
     """
     def __init__(self, input_core_dims, output_core_dims=((),)):
-        if dtypes is None:
-            dtypes = {}
-        self.input_core_dims = input_core_dims
-        self.output_core_dims = output_core_dims
+        self.input_core_dims = tuple(safe_tuple(a) for a in input_core_dims)
+        self.output_core_dims = tuple(safe_tuple(a) for a in output_core_dims)
         self._all_input_core_dims = None
         self._all_output_core_dims = None
 
@@ -47,8 +61,16 @@ class Signature(object):
                 dim for dims in self.output_core_dims for dim in dims)
         return self._all_output_core_dims
 
+    @property
+    def n_inputs(self):
+        return len(self.input_core_dims)
+
+    @property
+    def n_outputs(self):
+        return len(self.output_core_dims)
+
     @classmethod
-    def from_string(cls, string):
+    def parse(cls, string):
         """Create a Signature object from a NumPy gufunc signature.
 
         Parameters
@@ -62,16 +84,22 @@ class Signature(object):
                       for arg in re.findall(ARGUMENT, arg_list)]
                      for arg_list in string.split('->')])
 
-    @classmethod
-    def from_ufunc(cls, ufunc):
-        raise NotImplementedError
+    def __eq__(self, other):
+        try:
+            return (self.input_core_dims == other.input_core_dims and
+                    self.output_core_dims == other.output_core_dims)
+        except AttributeError:
+            return False
+
+    def __ne__(self, other):
+        return self != other
 
 
 def _default_signature(n_inputs):
     return Signature([()] * n_inputs, [()])
 
 
-def _result_name(objects):
+def result_name(objects):
     # use the same naming heuristics as pandas:
     # https://github.com/blaze/blaze/issues/458#issuecomment-51936356
     names = set(getattr(obj, 'name', None) for obj in objects)
@@ -84,13 +112,13 @@ def _result_name(objects):
 
 
 def _default_result_attrs(attrs, func, signature):
-    return [{}] * len(signature.outputs)
+    return [{}] * signature.n_outputs
 
 
 def _build_output_coords(args, signature, new_coords=None):
 
     def get_coord_variables(arg):
-        return getattr(getattr(arg, 'coords', {}), 'variables')
+        return getattr(getattr(arg, 'coords', {}), 'variables', {})
 
     coord_variables = [get_coord_variables(a) for a in args]
     if new_coords is not None:
@@ -108,22 +136,33 @@ def _build_output_coords(args, signature, new_coords=None):
     return output
 
 
-def apply_dataarray_ufunc(args, func, signature=None, join='inner',
-                          new_coords=None):
+def apply_dataarray_ufunc(func, *args, **kwargs):
+    """apply_dataarray_ufunc(func, *args, signature=None, join='inner',
+                             new_coords=None)
+    """
+    from .dataarray import DataArray
+
+    signature = kwargs.pop('signature')
+    join = kwargs.pop('join', 'inner')
+    new_coords = kwargs.pop('new_coords', None)
+    if kwargs:
+        raise TypeError('apply_dataarray_ufunc() got unexpected keyword arguments: %s'
+                        % list(kwargs))
+
     if signature is None:
         signature = _default_signature(len(args))
 
-    args = deep_align(*args, join=join, copy=False, raise_on_invalid=False)
+    args = deep_align(args, join=join, copy=False, raise_on_invalid=False)
 
-    name = _result_name(args)
+    name = result_name(args)
     list_of_coords = _build_output_coords(args, signature, new_coords)
 
     data_vars = [getattr(a, 'variable') for a in args]
     variable_or_variables = func(*data_vars)
 
-    if len(signature.output_dims) > 1:
+    if signature.n_outputs > 1:
         return tuple(DataArray(variable, coords, name=name, fastpath=True)
-                     for variable, coords, name in zip(
+                     for variable, coords in zip(
                          variable_or_variables, list_of_coords))
     else:
         variable = variable_or_variables
@@ -131,13 +170,14 @@ def apply_dataarray_ufunc(args, func, signature=None, join='inner',
         return DataArray(variable, coords, name=name, fastpath=True)
 
 
-def join_dict_keys(objects, how='inner')
+def join_dict_keys(objects, how='inner'):
     joiner = _get_joiner(how)
     all_keys = (obj.keys() for obj in objects if hasattr(obj, 'keys'))
-    result_keys = list(joiner(pd.Index(keys) for keys in all_keys))
+    result_keys = joiner([pd.Index(keys) for keys in all_keys])
+    return result_keys
 
 
-def collect_dict_values(objects, keys, fill_value=None)
+def collect_dict_values(objects, keys, fill_value=None):
     result_values = []
     for key in keys:
         values = []
@@ -145,17 +185,30 @@ def collect_dict_values(objects, keys, fill_value=None)
             if hasattr(obj, 'keys'):
                 values.append(obj.get(key, fill_value))
             else:
-                values = obj
+                values = tobj
         result_values.append(values)
     return result_values
 
 
-def apply_dataset_ufunc(args, func, signature=None, join='inner',
-                        fill_value=None, new_coords=None):
+def apply_dataset_ufunc(func, *args, **kwargs):
+    """
+    def apply_dataset_ufunc(func, args, signature=None, join='inner',
+                            fill_value=None, new_coords=None):
+    """
+    from .dataset import Dataset
+
+    signature = kwargs.pop('signature')
+    join = kwargs.pop('join', 'inner')
+    fill_value = kwargs.pop('fill_value', None)
+    new_coords = kwargs.pop('new_coords', None)
+    if kwargs:
+        raise TypeError('apply_dataarray_ufunc() got unexpected keyword arguments: %s'
+                        % list(kwargs))
+
     if signature is None:
         signature = _default_signature(len(args))
 
-    args = deep_align(*args, join=join, copy=False, raise_on_invalid=False)
+    args = deep_align(args, join=join, copy=False, raise_on_invalid=False)
 
     list_of_coords = _build_output_coords(args, signature, new_coords)
 
@@ -163,7 +216,7 @@ def apply_dataset_ufunc(args, func, signature=None, join='inner',
     names = join_dict_keys(list_of_data_vars, how=join)
 
     list_of_variables = [getattr(a, 'variables', {}) for a in args]
-    lists_of_args = reindex_dict_values(list_of_variables, names, fill_value)
+    lists_of_args = collect_dict_values(list_of_variables, names, fill_value)
 
     result_vars = OrderedDict()
     for name, variable_args in zip(names, lists_of_args):
@@ -177,23 +230,20 @@ def apply_dataset_ufunc(args, func, signature=None, join='inner',
         coord_names = set(coord_vars)
         return Dataset._from_vars_and_coord_names(variables, coord_names)
 
-    n_outputs = len(signature.output_dims)
-    if n_outputs > 1:
+    if signature.n_outputs > 1:
         # we need to unpack result_vars from Dict[object, Tuple[Variable]] ->
         # Tuple[Dict[object, Variable]].
-        list_of_result_vars = [OrderedDict() for _ in n_outputs]
+        result_dict_list = [OrderedDict() for _ in range(signature.n_outputs)]
         for name, values in result_vars.items():
-            for value, results_dict in zip(values, list_of_result_vars):
-                list_of_result_vars[name] = value
+            for value, results_dict in zip(values, result_dict_list):
+                results_dict[name] = value
 
         return tuple(make_dataset(*args)
-                     for args in zip(list_of_result_vars, list_of_coords))
+                     for args in zip(result_dict_list, list_of_coords))
     else:
         data_vars = result_vars
-        coords_vars, = list_of_coords
+        coord_vars, = list_of_coords
         return make_dataset(data_vars, coord_vars)
-
-
 
 
 def _iter_over_selections(obj, dim, values):
@@ -215,7 +265,9 @@ def _iter_over_selections(obj, dim, values):
         yield obj_sel
 
 
-def apply_groupby_ufunc(args, func):
+def apply_groupby_ufunc(func, *args):
+    from .groupby import GroupBy
+
     groupbys = [arg for arg in args if isinstance(GroupBy)]
     if not groupbys:
         raise ValueError('must have at least one groupby to iterate over')
@@ -257,15 +309,10 @@ def _calculate_unified_dim_sizes(variables):
     dim_sizes = OrderedDict()
 
     for var in variables:
-        try:
-            var_dims = var.dims
-        except AttributeError:
-            continue
-
-        if len(set(var_dims)) < len(var_dims):
+        if len(set(var.dims)) < len(var.dims):
             raise ValueError('broadcasting cannot handle duplicate '
-                             'dimensions: %r' % list(var_dims))
-        for dim, size in zip(var_dims, var.shape):
+                             'dimensions: %r' % list(var.dims))
+        for dim, size in zip(var.dims, var.shape):
             if dim not in dim_sizes:
                 dim_sizes[dim] = size
             elif dim_sizes[dim] != size:
@@ -276,26 +323,39 @@ def _calculate_unified_dim_sizes(variables):
     return dim_sizes
 
 
-def _broadcast_variable_data_to(variable, broadcast_dims):
+def broadcast_compat_data(variable, broadcast_dims, core_dims):
 
     data = variable.data
 
     old_dims = variable.dims
-    if broadcast_dims == old_dims:
+    new_dims = broadcast_dims + core_dims
+
+    if new_dims == old_dims:
+        # optimize for the typical case
         return data
 
-    assert set(broadcast_dims) <= set(old_dims)
+    set_old_dims = set(old_dims)
+
+    not_found = [d for d in core_dims if d not in set_old_dims]
+    if not_found:
+        raise ValueError('operation requires dimensions missing on input '
+                         'variable: %r' % not_found)
+
+    # this should be true by based on how we constructed broadcast_dims with
+    # _calculate_unified_dim_sizes
+    assert set_old_dims <= set(new_dims)
 
     # for consistency with numpy, keep broadcast dimensions to the left
-    reordered_dims = (tuple(d for d in broadcast_dims if d in old_dims) +
-                      tuple(d for d in old_dims if d not in broadcast_dims))
+    old_broadcast_dims = tuple(d for d in broadcast_dims if d in set_old_dims)
+    reordered_dims = old_broadcast_dims + core_dims
     if reordered_dims != old_dims:
         order = tuple(old_dims.index(d) for d in reordered_dims)
         data = ops.transpose(data, order)
 
-    new_dims = tuple(d for d in broadcast_dims if d not in old_dims)
-    if new_dims:
-        data = data[(np.newaxis,) * len(new_dims) + (Ellipsis,)]
+    if new_dims != reordered_dims:
+        key = tuple(SLICE_NONE if dim in set_old_dims else None
+                    for dim in new_dims)
+        data = data[key]
 
     return data
 
@@ -307,51 +367,70 @@ def _deep_unpack_list(arg):
     return arg
 
 
-def _apply_with_dask_atop(func, list_of_input_data, signature, kwargs, dtype):
-    import toolz  # required dependency of dask.array
+def _apply_with_dask_atop(func, args, signature, kwargs, dtype):
 
-    if len(signature.output_core_dims) > 1:
-        raise ValueError('cannot create use dask.array.atop for '
-                         'multiple outputs')
-    if signature.all_output_core_dims - signature.all_input_core_dims:
-        raise ValueError('cannot create new dimensions in dask.array.atop')
+    if signature.all_input_core_dims or signature.all_output_core_dims:
+        raise ValueError("cannot use dask_array='auto' on unlabeled dask "
+                         'arrays with a function signature that uses core '
+                         'dimensions')
+    return da.elemwise(func, *args, dtype=dtype, **kwargs)
 
-    input_dims = [broadcast_dims + inp for inp in signature.input_core_dims]
-    dropped = signature.all_input_core_dims - signature.all_output_core_dims
-    for data, dims in zip(list_of_input_data, input_dims):
-        if isinstance(data, dask_array_type):
-            for dropped_dim in dropped:
-                if (dropped_dim in dims and
-                    len(data.chunks[dims.index(dropped_dim)]) != 1):
-                raise ValueError('dimension %r dropped in the output does not '
-                                 'consist of exactly one chunk on all arrays '
-                                 'in the inputs' % dropped_dim)
+    # import toolz  # required dependency of dask.array
 
-    out_ind, = output_dims
-    atop_args = [ai for a in (list_of_input_data, input_dims) for ai in a]
-    func2 = toolz.functools.compose(func, _deep_unpack_list)
-    result_data = da.atop(func2, out_ind, *atop_args, dtype=dtype, **kwargs)
+    # if len(signature.output_core_dims) > 1:
+    #     raise ValueError('cannot create use dask.array.atop for '
+    #                      'multiple outputs')
+    # if signature.all_output_core_dims - signature.all_input_core_dims:
+    #     raise ValueError('cannot create new dimensions in dask.array.atop')
+
+    # input_dims = [broadcast_dims + inp for inp in signature.input_core_dims]
+    # dropped = signature.all_input_core_dims - signature.all_output_core_dims
+    # for data, dims in zip(args, input_dims):
+    #     if isinstance(data, dask_array_type):
+    #         for dropped_dim in dropped:
+    #             if (dropped_dim in dims and
+    #                     len(data.chunks[dims.index(dropped_dim)]) != 1):
+    #                 raise ValueError(
+    #                     'dimension %r dropped in the output does not '
+    #                     'consist of exactly one chunk on all arrays '
+    #                     'in the inputs' % dropped_dim)
+
+    # out_ind, = output_dims
+    # atop_args = [ai for a in (args, input_dims) for ai in a]
+    # func2 = toolz.functools.compose(func, _deep_unpack_list)
+    # result_data = da.atop(func2, out_ind, *atop_args, dtype=dtype, **kwargs)
 
 
-def apply_variable_ufunc(args, func, signature=None, dask_array='forbidden',
-                         kwargs=None, dtype=None):
+def apply_variable_ufunc(func, *args, **kwargs):
+    """
+    def apply_variable_ufunc(func, args, signature=None, dask_array='forbidden',
+                             kwargs=None, dtype=None)
+    """
+    from .variable import Variable
 
-    if signature is None:
-        signature = _default_signature(len(args))
+    signature = kwargs.pop('signature')
+    dask_array = kwargs.pop('dask_array', 'forbidden')
+    kwargs_ = kwargs.pop('kwargs', None)
+    dtype = kwargs.pop('dtype', None)
+    if kwargs:
+        raise TypeError('apply_ufunc() got unexpected keyword arguments: %s'
+                        % list(kwargs))
+
     if dask_array not in {'forbidden', 'allowed', 'auto'}:
         raise ValueError('unknown setting for dask array handling')
-    if kwargs is None:
-        kwargs = {}
+    if kwargs_ is None:
+        kwargs_ = {}
 
-    dim_sizes = _calculate_unified_dim_sizes(variables)
-    core_dims = signature.input_core_dims | signature.output_core_dims
-    broadcast_dims = tuple(d for d in dim_sizes if d not in core_dims)
+    dim_sizes = _calculate_unified_dim_sizes([a for a in args
+                                              if hasattr(a, 'dims')])
+    all_core_dims = signature.all_input_core_dims | signature.all_output_core_dims
+    broadcast_dims = tuple(d for d in dim_sizes if d not in all_core_dims)
     output_dims = [broadcast_dims + out for out in signature.output_core_dims]
 
     list_of_input_data = []
-    for arg in args:
+    for arg, core_dims in zip(args, signature.input_core_dims):
         if isinstance(arg, Variable):
-            data = _broadcast_variable_data_to(arg, broadcast_dims)
+            data = broadcast_compat_data(arg, broadcast_dims, core_dims)
         else:
             data = arg
         list_of_input_data.append(data)
@@ -363,9 +442,9 @@ def apply_variable_ufunc(args, func, signature=None, dask_array='forbidden',
         raise ValueError('encountered dask array')
     elif dask_array == 'auto' and contains_dask:
         result_data = _apply_with_dask_atop(func, list_of_input_data, signature,
-                                            kwargs, dtype)
+                                            kwargs_, dtype)
     else:
-        result_data = func(*list_of_input_data, **kwargs)
+        result_data = func(*list_of_input_data, **kwargs_)
 
     if len(output_dims) > 1:
         output = []
@@ -378,29 +457,47 @@ def apply_variable_ufunc(args, func, signature=None, dask_array='forbidden',
         return Variable(dims, data)
 
 
-def apply_ufunc(args, func=None, kwargs=None, signature=None, join='inner',
-                dask_array='forbidden', dtype=None, new_coords=None):
+def apply_ufunc(func, *args, **kwargs):
+    from .groupby import GroupBy
+    from .dataarray import DataArray
+    from .dataset import Dataset
+    from .variable import Variable
+
+    kwargs_ = kwargs.pop('kwargs', None)
+    signature = kwargs.pop('signature', None)
+    join = kwargs.pop('join', 'inner')
+    dask_array = kwargs.pop('dask_array', 'forbidden')
+    dtype = kwargs.pop('dtype', None)
+    new_coords = kwargs.pop('new_coords', None)
+    if kwargs:
+        raise TypeError('apply_ufunc() got unexpected keyword arguments: %s'
+                        % list(kwargs))
 
     if signature is None:
         signature = _default_signature(len(args))
+    elif isinstance(signature, basestring):
+        signature = Signature.parse(signature)
+    elif not isinstance(signature, Signature):
+        raise TypeError('invalid signature: %r' % signature)
 
     variables_ufunc = functools.partial(
-        apply_variable_ufunc, func=func, dask_array=dask_array, kwargs=kwargs)
+        apply_variable_ufunc, func, signature=signature, dask_array=dask_array,
+        kwargs=kwargs_, dtype=dtype)
 
     if any(isinstance(a, GroupBy) for a in args):
         partial_apply_ufunc = functools.partial(
-            apply_ufunc, func=func, kwargs=kwargs, signature=signature,
+            apply_ufunc, func, kwargs=kwargs_, signature=signature,
             join=join, dask_array=dask_array, dtype=dtype,
             new_coords=new_coords)
-        return apply_groupby_ufunc(args, partial_apply_ufunc)
+        return apply_groupby_ufunc(partial_apply_ufunc, *args)
     elif any(is_dict_like(a) for a in args):
-        return apply_dataset_ufunc(args, variables_ufunc, signature=signature,
+        return apply_dataset_ufunc(variables_ufunc, *args, signature=signature,
                                    join=join, new_coords=new_coords)
     elif any(isinstance(a, DataArray) for a in args):
-        return apply_dataarray_ufunc(args, variables_ufunc, signature=signature,
+        return apply_dataarray_ufunc(variables_ufunc, *args, signature=signature,
                                      join=join, new_coords=new_coords)
     elif any(isinstance(a, Variable) for a in args):
-        return variables_ufunc(args)
+        return variables_ufunc(*args)
     elif dask_array == 'auto' and any(
             isinstance(arg, dask_array_type) for arg in args):
         import dask.array as da
@@ -410,7 +507,7 @@ def apply_ufunc(args, func=None, kwargs=None, signature=None, join='inner',
                              'dimensions')
         return da.elemwise(func, *args, dtype=dtype)
     else:
-        return func(args)
+        return func(*args)
 
 
 # def mean(xarray_object, dim=None):

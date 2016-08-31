@@ -295,7 +295,7 @@ def merge_coords_without_align(objs, priority_vars=None):
 
 
 def _align_for_merge(input_objects, join, copy, indexes=None,
-                     aise_on_invalid=True):
+                     raise_on_invalid=True):
     """Align objects for merging, recursing into dictionary values.
     """
     if indexes is None:
