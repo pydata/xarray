@@ -1359,7 +1359,8 @@ class DataArray(AbstractArray, BaseDataObject):
         """Like equals, but only checks locations where both arrays contain
         non-null data.
 
-        DataArrays can be notnull equals if one has data present that is missing (NaN) in the other, but they otherwise are equal.
+        DataArrays can be notnull equals if one has data present that is
+        missing (NaN) in the other, but they otherwise are equal.
         """
         try:
             return self._all_compat(other, 'notnull_equals')
