@@ -1173,6 +1173,7 @@ class TestValidateAttrs(TestCase):
             with create_tmp_file() as tmp_file:
                 ds.to_netcdf(tmp_file)
 
+@requires_netCDF4
 class TestDataArrayToNetCDF(TestCase):
 
     def test_dataarray_to_netcdf_no_name(self):
