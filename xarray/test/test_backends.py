@@ -1183,8 +1183,7 @@ class TestDataArrayToNetCDF(TestCase):
 
             loaded_da = open_dataarray(tmp)
 
-        self.assertDataArrayEqual(original_da, loaded_da)
-        self.assertEqual(loaded_da.name, 'data')
+        self.assertDataArrayIdentical(original_da, loaded_da)
 
     def test_dataarray_to_netcdf_with_name(self):
         original_da = DataArray(np.arange(12).reshape((3, 4)),
@@ -1196,4 +1195,15 @@ class TestDataArrayToNetCDF(TestCase):
             loaded_da = open_dataarray(tmp)
 
         self.assertDataArrayIdentical(original_da, loaded_da)
-        self.assertEqual(loaded_da.name, 'test')
+
+    def test_dataarray_to_netcdf_coord_name_clash(self):
+        original_da = DataArray(np.arange(12).reshape((3, 4)),
+                                dims=['x', 'y'],
+                                name='x')
+
+        with create_tmp_file() as tmp:
+            original_da.to_netcdf(tmp)
+
+            loaded_da = open_dataarray(tmp)
+
+        self.assertDataArrayIdentical(original_da, loaded_da)

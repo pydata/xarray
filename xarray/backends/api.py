@@ -269,15 +269,75 @@ def open_dataset(filename_or_obj, group=None, decode_cf=True,
 
 def open_dataarray(*args, **kwargs):
     """
-    Opens an `xarray.DataArray` from a netCDF file, and returns the single
-    variable that is within the file. If multiple variables are present then
-    a ValueError is raised.
+    Opens an DataArray from a netCDF file containing a single data variable.
 
-    This is designed to read files saved with `xarray.DataArray.to_netcdf`.
+    This is designed to read netCDF files with only one data variable. If
+    multiple variables are present then a ValueError is raised.
 
     Parameters
     ----------
-    All parameters are passed directly to `xarray.open_dataset`.
+    filename_or_obj : str, file or xarray.backends.*DataStore
+        Strings are interpreted as a path to a netCDF file or an OpenDAP URL
+        and opened with python-netCDF4, unless the filename ends with .gz, in
+        which case the file is gunzipped and opened with scipy.io.netcdf (only
+        netCDF3 supported). File-like objects are opened with scipy.io.netcdf
+        (only netCDF3 supported).
+    group : str, optional
+        Path to the netCDF4 group in the given file to open (only works for
+        netCDF4 files).
+    decode_cf : bool, optional
+        Whether to decode these variables, assuming they were saved according
+        to CF conventions.
+    mask_and_scale : bool, optional
+        If True, replace array values equal to `_FillValue` with NA and scale
+        values according to the formula `original_values * scale_factor +
+        add_offset`, where `_FillValue`, `scale_factor` and `add_offset` are
+        taken from variable attributes (if they exist).  If the `_FillValue` or
+        `missing_value` attribute contains multiple values a warning will be
+        issued and all array values matching one of the multiple values will
+        be replaced by NA.
+    decode_times : bool, optional
+        If True, decode times encoded in the standard NetCDF datetime format
+        into datetime objects. Otherwise, leave them encoded as numbers.
+    concat_characters : bool, optional
+        If True, concatenate along the last dimension of character arrays to
+        form string arrays. Dimensions will only be concatenated over (and
+        removed) if they have no corresponding variable and if they are only
+        used as the last dimension of character arrays.
+    decode_coords : bool, optional
+        If True, decode the 'coordinates' attribute to identify coordinates in
+        the resulting dataset.
+    engine : {'netcdf4', 'scipy', 'pydap', 'h5netcdf', 'pynio'}, optional
+        Engine to use when reading files. If not provided, the default engine
+        is chosen based on available dependencies, with a preference for
+        'netcdf4'.
+    chunks : int or dict, optional
+        If chunks is provided, it used to load the new dataset into dask
+        arrays. This is an experimental feature; see the documentation for more
+        details.
+    lock : False, True or threading.Lock, optional
+        If chunks is provided, this argument is passed on to
+        :py:func:`dask.array.from_array`. By default, a per-variable lock is
+        used when reading data from netCDF files with the netcdf4 and h5netcdf
+        engines to avoid issues with concurrent access when using dask's
+        multithreaded backend.
+    drop_variables: string or iterable, optional
+        A variable or list of variables to exclude from being parsed from the
+        dataset. This may be useful to drop variables with problems or
+        inconsistent values.
+
+    Notes
+    -----
+    This is designed to be fully compatible with `DataArray.to_netcdf`.
+    Saving using `DataArray.to_netcdf` and then loading with this function will
+    produce an identical result.
+
+    All parameters are passed directly to `xarray.open_dataset`. See that
+    documentation for further details.
+
+    See also
+    --------
+    open_dataset
     """
     dataset = open_dataset(*args, **kwargs)
 
@@ -287,6 +347,15 @@ def open_dataarray(*args, **kwargs):
                          'the variable you want.')
     else:
         data_array, = dataset.data_vars.values()
+
+    # Reset names if they were changed during saving
+    # to ensure that we can 'roundtrip' perfectly
+    if '__xarray_dataarray_name__' in dataset.attrs:
+        data_array.name = dataset.attrs['__xarray_dataarray_name__']
+        del dataset.attrs['__xarray_dataarray_name__']
+
+    if data_array.name == '__xarray_dataarray_variable__':
+        data_array.name = None
 
     return data_array
 
