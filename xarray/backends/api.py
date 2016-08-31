@@ -269,8 +269,9 @@ def open_dataset(filename_or_obj, group=None, decode_cf=True,
 
 def open_dataarray(*args, **kwargs):
     """
-    Opens an `xarray.DataArray` from a netCDF file, reading the variable called
-    `data`.
+    Opens an `xarray.DataArray` from a netCDF file, and returns the single
+    variable that is within the file. If multiple variables are present then
+    a ValueError is raised.
 
     This is designed to read files saved with `xarray.DataArray.to_netcdf`.
 
@@ -280,12 +281,14 @@ def open_dataarray(*args, **kwargs):
     """
     dataset = open_dataset(*args, **kwargs)
 
-    try:
-        return dataset['data']
-    except KeyError:
-        raise ValueError('Given file dataset does not contain the variable `data`.'
-                         'If dataset was not saved using `xarray.DataArray.to_netcdf` then'
-                         'it must be loaded with `xarray.open_dataset`.')
+    if len(dataset.data_vars) != 1:
+        raise ValueError('Given file dataset contains more than one variable. '
+                         'Please read with xarray.open_dataset and then select '
+                         'the variable you want.')
+    else:
+        data_array, = dataset.data_vars.values()
+
+    return data_array
 
 
 class _MultiFileCloser(object):

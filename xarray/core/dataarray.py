@@ -1104,9 +1104,17 @@ class DataArray(AbstractArray, BaseDataObject):
         -----
         Only xarray.Dataset objects can be written to netCDF files, so
         the xarray.DataArray is converted to a xarray.Dataset object
-        containing a single variable with the name `data`.
+        containing a single variable. If the DataArray has no name, then
+        it is given the name 'data'.
         """
-        dataset = self.to_dataset(name='data')
+        if not self.name and self.name not in list(self.coords):
+            # If the name isn't blank/None or the same as one of the coords
+            # (as the latter is invalid for a netCDF file) then give it a name
+            # of `data`
+            dataset = self.to_dataset(name='data')
+        else:
+            dataset = self.to_dataset()
+
         dataset.to_netcdf(*args, **kwargs)
 
     def to_dict(self):
