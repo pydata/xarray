@@ -102,16 +102,6 @@ def equivalent(first, second):
         return first is second or first == second or (pd.isnull(first) and pd.isnull(second))
 
 
-def notnull_equivalent(first, second):
-    """Compare two objects for non-null equivalence, using array_notnull_equiv
-    if either object is an ndarray.
-    """
-    if isinstance(first, np.ndarray) or isinstance(second, np.ndarray):
-        return ops.array_notnull_equiv(first, second)
-    else:
-        return first is second or first == second
-
-
 def peek_at(iterable):
     """Returns the first value from iterable, as well as a new iterable with
     the same content as the original iterable
