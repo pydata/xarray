@@ -72,7 +72,6 @@ def _infer_coords_and_dims(shape, coords, dims):
             new_coords[dim] = default_index_coordinate(dim, size)
 
     sizes = dict(zip(dims, shape))
-    level_names = {}
     for k, v in new_coords.items():
         if any(d not in dims for d in v.dims):
             raise ValueError('coordinate %s has dimensions %s, but these '

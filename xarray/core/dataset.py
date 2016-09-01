@@ -551,6 +551,12 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         if utils.is_dict_like(key):
             raise NotImplementedError('cannot yet use a dictionary as a key '
                                       'to set Dataset values')
+
+        if key in self._level_coords:
+            raise ValueError("%r is already a MultiIndex level of "
+                             "coordinate %r"
+                             % (key, self._level_coords[key]))
+
         self.update({key: value})
 
     def __delitem__(self, key):
