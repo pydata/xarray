@@ -151,12 +151,6 @@ class DatasetCoordinates(AbstractCoordinates):
     def _update_coords(self, coords):
         from .dataset import calculate_dimensions
 
-        for key in coords:
-            if key in self._data._level_coords:
-                raise ValueError("%r is already a MultiIndex level of "
-                                 "coordinate %r"
-                                 % (key, self._data._level_coords[key]))
-
         variables = self._data._variables.copy()
         variables.update(coords)
 
@@ -201,12 +195,6 @@ class DataArrayCoordinates(AbstractCoordinates):
 
     def _update_coords(self, coords):
         from .dataset import calculate_dimensions
-
-        for key in coords:
-            if key in self._data._level_coords:
-                raise ValueError("%r is already a MultiIndex level of "
-                                 "coordinate %r"
-                                 % (key, self._data._level_coords[key]))
 
         dims = calculate_dimensions(coords)
         if set(dims) != set(self.dims):

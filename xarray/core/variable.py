@@ -1321,13 +1321,16 @@ def assert_unique_multiindex_level_names(variables):
             idx_level_names = var.to_coord().level_names
             if idx_level_names is not None:
                 for n in idx_level_names:
-                    level_names[n].append(var_name)
+                    level_names[n].append('%r (%s)' % (n, var_name))
+
+    for n in level_names:
+        if n in variables:
+            level_names[n].append('(%s)' % n)
 
     duplicate_level_names = {k: v for k, v in level_names.items()
                              if len(v) > 1}
     if duplicate_level_names:
-        duplicate_str = '\n'.join(['level %r found in %s'
-                                   % (k, ' and '.join(v))
-                                   for k, v in duplicate_level_names.items()])
-        raise ValueError('conflicting MultiIndex level names:\n%s'
+        duplicate_str = '\n'.join([', '.join(v)
+                                   for v in duplicate_level_names.values()])
+        raise ValueError('conflicting MultiIndex level name(s):\n%s'
                          % duplicate_str)
