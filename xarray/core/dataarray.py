@@ -221,7 +221,11 @@ class DataArray(AbstractArray, BaseDataObject):
         self._variable = variable
         self._coords = coords
         self._name = name
+
+        self._file_obj = None
+
         self._initialized = True
+
 
     __default = object()
 
