@@ -10,7 +10,7 @@ from .common import (
 )
 from .pycompat import zip
 from .utils import peek_at, maybe_wrap_array, safe_cast_to_index
-from .variable import as_variable, Variable, Coordinate
+from .variable import as_variable, Variable, IndexVariable
 
 
 def unique_value_groups(ar, sort=True):
@@ -63,6 +63,7 @@ def _dummy_copy(xarray_obj):
                         dict((k, _get_fill_value(v.dtype))
                              for k, v in xarray_obj.coords.items()
                              if k not in xarray_obj.dims),
+                        dims=[],
                         name=xarray_obj.name,
                         attrs=xarray_obj.attrs)
     else:  # pragma: no cover
@@ -140,7 +141,7 @@ class GroupBy(object):
         ----------
         obj : Dataset or DataArray
             Object to group.
-        group : DataArray or Coordinate
+        group : DataArray or IndexVariable
             1-dimensional array with the group values.
         squeeze : boolean, optional
             If "group" is a coordinate of object, `squeeze` controls whether
@@ -206,7 +207,7 @@ class GroupBy(object):
             sbins = first_items.values.astype(np.int64)
             group_indices = ([slice(i, j) for i, j in zip(sbins[:-1], sbins[1:])] +
                              [slice(sbins[-1], None)])
-            unique_coord = Coordinate(group.name, first_items.index)
+            unique_coord = IndexVariable(group.name, first_items.index)
         elif group.name in obj.dims and bins is None:
             # assume that group already has sorted, unique values
             # (if using bins, the group will have the same name as a dimension
@@ -224,7 +225,7 @@ class GroupBy(object):
             # look through group to find the unique values
             sort = bins is None
             unique_values, group_indices = unique_value_groups(group, sort=sort)
-            unique_coord = Coordinate(group.name, unique_values)
+            unique_coord = IndexVariable(group.name, unique_values)
 
         self.obj = obj
         self.group = group

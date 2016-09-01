@@ -7,7 +7,7 @@ from textwrap import dedent
 import xarray as xr
 
 from xarray import (align, broadcast, Dataset, DataArray,
-                    Coordinate, Variable)
+                    IndexVariable, Variable)
 from xarray.core.pycompat import iteritems, OrderedDict
 from xarray.core.common import _full_like
 
@@ -133,9 +133,9 @@ class TestDataArray(TestCase):
         self.assertEqual(arr.name, 'bar')
         self.assertDataArrayEqual(copied, arr)
 
-        actual = DataArray(Coordinate('x', [3]))
+        actual = DataArray(IndexVariable('x', [3]))
         actual.name = 'y'
-        expected = DataArray([3], {'x': [3]}, name='y')
+        expected = DataArray([3], [('x', [3])], name='y')
         self.assertDataArrayIdentical(actual, expected)
 
     def test_dims(self):
@@ -190,9 +190,6 @@ class TestDataArray(TestCase):
 
         coords = [('x', ['a', 'b']), ('y', [-1, -2, -3])]
         actual = DataArray(data, coords)
-        self.assertDataArrayIdentical(expected, actual)
-
-        actual = DataArray(data, OrderedDict(coords))
         self.assertDataArrayIdentical(expected, actual)
 
         expected = Dataset({None: (['x', 'y'], data),
@@ -281,7 +278,7 @@ class TestDataArray(TestCase):
         actual = DataArray(pd.Index(['a', 'b'], name='foo'))
         self.assertDataArrayIdentical(expected, actual)
 
-        actual = DataArray(Coordinate('foo', ['a', 'b']))
+        actual = DataArray(IndexVariable('foo', ['a', 'b']))
         self.assertDataArrayIdentical(expected, actual)
 
     def test_constructor_from_0d(self):
@@ -596,8 +593,8 @@ class TestDataArray(TestCase):
 
     def test_coords(self):
         # use int64 to ensure repr() consistency on windows
-        coords = [Coordinate('x', np.array([-1, -2], 'int64')),
-                  Coordinate('y', np.array([0, 1, 2], 'int64'))]
+        coords = [IndexVariable('x', np.array([-1, -2], 'int64')),
+                  IndexVariable('y', np.array([0, 1, 2], 'int64'))]
         da = DataArray(np.random.randn(2, 3), coords, name='foo')
 
         self.assertEquals(2, len(da.coords))
@@ -1354,8 +1351,8 @@ class TestDataArray(TestCase):
     def test_groupby_multidim(self):
         array = self.make_groupby_multidim_example_array()
         for dim, expected_sum in [
-                ('lon', DataArray([5, 28, 23], coords={'lon': [30., 40., 50.]})),
-                ('lat', DataArray([16, 40], coords={'lat': [10., 20.]}))]:
+                ('lon', DataArray([5, 28, 23], coords=[('lon', [30., 40., 50.])])),
+                ('lat', DataArray([16, 40], coords=[('lat', [10., 20.])]))]:
             actual_sum = array.groupby(dim).sum()
             self.assertDataArrayIdentical(expected_sum, actual_sum)
 
@@ -1629,8 +1626,8 @@ class TestDataArray(TestCase):
         # regression test for #264
         x1 = np.arange(30)
         x2 = np.arange(5, 35)
-        a = DataArray(np.random.random((30,)).astype(np.float32), {'x': x1})
-        b = DataArray(np.random.random((30,)).astype(np.float32), {'x': x2})
+        a = DataArray(np.random.random((30,)).astype(np.float32), [('x', x1)])
+        b = DataArray(np.random.random((30,)).astype(np.float32), [('x', x2)])
         c, d = align(a, b, join='outer')
         self.assertEqual(c.dtype, np.float32)
 
@@ -1912,8 +1909,7 @@ class TestDataArray(TestCase):
         x = np.random.randn(10, 3)
         t = pd.date_range('20130101', periods=10)
         lat = [77.7, 83.2, 76]
-        da = DataArray(x, OrderedDict([('t', ('t', t)),
-                                       ('lat', ('lat', lat))]))
+        da = DataArray(x, {'t': t, 'lat': lat}, dims=['t', 'lat'])
         roundtripped = DataArray.from_dict(da.to_dict())
         self.assertDataArrayIdentical(da, roundtripped)
 
@@ -1923,8 +1919,7 @@ class TestDataArray(TestCase):
         t = pd.Series(pd.date_range('20130101', periods=10))
         t[2] = np.nan
         lat = [77.7, 83.2, 76]
-        da = DataArray(y, OrderedDict([('t', ('t', t)),
-                                       ('lat', ('lat', lat))]))
+        da = DataArray(y, {'t': t, 'lat': lat}, dims=['t', 'lat'])
         roundtripped = DataArray.from_dict(da.to_dict())
         self.assertDataArrayIdentical(da, roundtripped)
 
@@ -1980,8 +1975,8 @@ class TestDataArray(TestCase):
                              [('distance', [-2, 2], {'units': 'meters'}),
                               ('time', pd.date_range('2000-01-01', periods=3))],
                              name='foo', attrs={'baz': 123})
-        expected_coords = [Coordinate('distance', [-2, 2]),
-                           Coordinate('time', [0, 1, 2])]
+        expected_coords = [IndexVariable('distance', [-2, 2]),
+                           IndexVariable('time', [0, 1, 2])]
         actual = original.to_cdms2()
         self.assertArrayEqual(actual, original)
         self.assertEqual(actual.id, original.name)

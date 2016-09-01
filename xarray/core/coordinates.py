@@ -177,8 +177,7 @@ class DataArrayCoordinates(AbstractCoordinates):
     """Dictionary like container for DataArray coordinates.
 
     Essentially an OrderedDict with keys given by the array's
-    dimensions and the values given by the corresponding xarray.Coordinate
-    objects.
+    dimensions and the values given by corresponding DataArray objects.
     """
     def __init__(self, dataarray):
         self._data = dataarray

@@ -326,7 +326,7 @@ class BaseDataObject(AttrAccessMixin):
 
         Parameters
         ----------
-        group : str, DataArray or Coordinate
+        group : str, DataArray or IndexVariable
             Array whose unique values should be used to group this array. If a
             string, must be the name of a variable contained in this dataset.
         squeeze : boolean, optional
@@ -353,7 +353,7 @@ class BaseDataObject(AttrAccessMixin):
 
         Parameters
         ----------
-        group : str, DataArray or Coordinate
+        group : str, DataArray or IndexVariable
             Array whose binned values should be used to group this array. If a
             string, must be the name of a variable contained in this dataset.
         bins : int or array of scalars

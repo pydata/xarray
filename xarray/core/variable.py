@@ -77,7 +77,7 @@ def as_variable(obj, name=None, copy=False):
                 'dimensions %r. xarray disallows such variables because they '
                 'conflict with the coordinates used to label dimensions.'
                 % (name, obj.dims))
-        obj = obj.to_coord()
+        obj = obj.to_index_variable()
 
     return obj
 
@@ -87,7 +87,7 @@ def default_index_coordinate(dim, size):
     This is equivalent to np.arange(size), but waits to create the array until
     its actually accessed.
     """
-    return Coordinate(dim, LazyIntegerRange(size))
+    return IndexVariable(dim, LazyIntegerRange(size))
 
 
 def _maybe_wrap_data(data):
@@ -290,12 +290,6 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
         self._data_cached()
         return self
 
-    def load_data(self):  # pragma: no cover
-        warnings.warn('the Variable method `load_data` has been deprecated; '
-                      'use `load` instead',
-                      FutureWarning, stacklevel=2)
-        return self.load()
-
     def __getstate__(self):
         """Always cache data as an in-memory array before pickling"""
         self._data_cached()
@@ -312,19 +306,23 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
     def values(self, values):
         self.data = values
 
-    def to_variable(self):
+    def to_base_variable(self):
         """Return this variable as a base xarray.Variable"""
         return Variable(self.dims, self._data, self._attrs,
                         encoding=self._encoding, fastpath=True)
 
-    def to_coord(self):
-        """Return this variable as an xarray.Coordinate"""
-        return Coordinate(self.dims, self._data, self._attrs,
-                          encoding=self._encoding, fastpath=True)
+    to_variable = utils.alias(to_base_variable, 'to_variable')
+
+    def to_index_variable(self):
+        """Return this variable as an xarray.IndexVariable"""
+        return IndexVariable(self.dims, self._data, self._attrs,
+                             encoding=self._encoding, fastpath=True)
+
+    to_coord = utils.alias(to_index_variable, 'to_coord')
 
     def to_index(self):
         """Convert this variable to a pandas.Index"""
-        return self.to_coord().to_index()
+        return self.to_index_variable().to_index()
 
     @property
     def dims(self):
@@ -1066,21 +1064,19 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
 ops.inject_all_ops_and_reduce_methods(Variable)
 
 
-class Coordinate(Variable):
+class IndexVariable(Variable):
+    """Wrapper for accommodating a pandas.Index in an xarray.Variable.
 
-    """Wrapper around pandas.Index that adds xarray specific functionality.
+    IndexVariable preserve loaded values in the form of a pandas.Index instead
+    of a NumPy array. Hence, their values are immutable and must always be one-
+    dimensional.
 
-    The most important difference is that Coordinate objects must always have a
-    name, which is the dimension along which they index values.
-
-    Coordinates must always be 1-dimensional. In addition to Variable methods
-    and properties (attributes, encoding, broadcasting), they support some
-    pandas.Index methods directly (e.g., get_indexer), even though pandas does
-    not (yet) support duck-typing for indexes.
+    They also have a name property, which is the name of their sole dimension.
     """
 
     def __init__(self, name, data, attrs=None, encoding=None, fastpath=False):
-        super(Coordinate, self).__init__(name, data, attrs, encoding, fastpath)
+        super(IndexVariable, self).__init__(
+            name, data, attrs, encoding, fastpath)
         if self.ndim != 1:
             raise ValueError('%s objects must be 1-dimensional' %
                              type(self).__name__)
@@ -1105,7 +1101,7 @@ class Coordinate(Variable):
     @classmethod
     def concat(cls, variables, dim='concat_dim', positions=None,
                shortcut=False):
-        """Specialized version of Variable.concat for Coordinate variables.
+        """Specialized version of Variable.concat for IndexVariable objects.
 
         This exists because we want to avoid converting Index objects to NumPy
         arrays, if possible.
@@ -1117,8 +1113,8 @@ class Coordinate(Variable):
         first_var = variables[0]
 
         if any(not isinstance(v, cls) for v in variables):
-            raise TypeError('Coordinate.concat requires that all input '
-                            'variables be Coordinate objects')
+            raise TypeError('IndexVariable.concat requires that all input '
+                            'variables be IndexVariable objects')
 
         arrays = [v._data_cached().array for v in variables]
 
@@ -1155,9 +1151,11 @@ class Coordinate(Variable):
     def _data_equals(self, other):
         return self.to_index().equals(other.to_index())
 
-    def to_coord(self):
-        """Return this variable as an xarray.Coordinate"""
+    def to_index_variable(self):
+        """Return this variable as an xarray.IndexVariable"""
         return self
+
+    to_coord = utils.alias(to_index_variable, 'to_coord')
 
     def to_index(self):
         """Convert this variable to a pandas.Index"""
@@ -1181,7 +1179,10 @@ class Coordinate(Variable):
 
     @name.setter
     def name(self, value):
-        raise AttributeError('cannot modify name of Coordinate in-place')
+        raise AttributeError('cannot modify name of IndexVariable in-place')
+
+# for backwards compatibility
+Coordinate = utils.alias(IndexVariable, 'Coordinate')
 
 
 def _unified_dims(variables):
@@ -1271,7 +1272,7 @@ def concat(variables, dim='concat_dim', positions=None, shortcut=False):
         along the given dimension.
     """
     variables = list(variables)
-    if all(isinstance(v, Coordinate) for v in variables):
-        return Coordinate.concat(variables, dim, positions, shortcut)
+    if all(isinstance(v, IndexVariable) for v in variables):
+        return IndexVariable.concat(variables, dim, positions, shortcut)
     else:
         return Variable.concat(variables, dim, positions, shortcut)

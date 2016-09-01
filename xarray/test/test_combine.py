@@ -107,8 +107,8 @@ class TestConcatDataset(TestCase):
         self.assertDatasetIdentical(data, actual)
 
     def test_concat_autoalign(self):
-        ds1 = Dataset({'foo': DataArray([1, 2], coords={'x': [1, 2]})})
-        ds2 = Dataset({'foo': DataArray([1, 2], coords={'x': [1, 3]})})        
+        ds1 = Dataset({'foo': DataArray([1, 2], coords=[('x', [1, 2])])})
+        ds2 = Dataset({'foo': DataArray([1, 2], coords=[('x', [1, 3])])})
         actual = concat([ds1, ds2], 'y')
         expected = Dataset({'foo': DataArray([[1, 2, np.nan], [1, np.nan, 2]],
                                              dims=['y', 'x'], coords={'y': [0, 1], 'x': [1, 2, 3]})})

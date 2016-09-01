@@ -99,7 +99,7 @@ def format_timestamp(t):
         datetime_str = unicode_type(pd.Timestamp(t))
     except OutOfBoundsDatetime:
         datetime_str = unicode_type(t)
-        
+
     try:
         date_str, time_str = datetime_str.split()
     except ValueError:
@@ -271,7 +271,7 @@ def indexes_repr(indexes):
 
 
 def array_repr(arr):
-    # used for DataArray, Variable and Coordinate
+    # used for DataArray, Variable and IndexVariable
     if hasattr(arr, 'name') and arr.name is not None:
         name_str = '%r ' % arr.name
     else:
