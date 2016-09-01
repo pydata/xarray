@@ -6,7 +6,6 @@ from distutils.version import StrictVersion
 from glob import glob
 from io import BytesIO
 from numbers import Number
-from collections.abc import Iterable
 
 import numpy as np
 
