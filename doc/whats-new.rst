@@ -25,14 +25,17 @@ Deprecations
 ~~~~~~~~~~~~
 
 - Renamed the ``Coordinate`` class from xarray's low level API to
-  :py:class:`~xarray.IndexVariable``.
+  :py:class:`~xarray.IndexVariable`. ``Variable.to_variable`` and
+  ``Variable.to_coord`` have been renamed to
+  :py:meth:`~xarray.Variable.to_base_variable` and
+  :py:meth:`~xarray.Variable.to_index_variable`.
 - Deprecated supplying ``coords`` as a dictionary to the ``DataArray``
   constructor without also supplying an explicit ``dims`` argument. The old
   behavior encouraged relying on the iteration order of dictionaries, which is
   a bad practice (:issue:`727`).
 - Removed a number of methods deprecated since v0.7.0 or earlier:
   ``load_data``, ``vars``, ``drop_vars``, ``dump``, ``dumps`` and the
-  ``variables`` keyword argument alias to ``Dataset``.
+  ``variables`` keyword argument to ``Dataset``.
 
 Enhancements
 ~~~~~~~~~~~~

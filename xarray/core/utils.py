@@ -15,17 +15,23 @@ from . import ops
 from .pycompat import iteritems, OrderedDict, basestring, bytes_type
 
 
-def alias_warning(old_name, new_name, stacklevel=3):  # pragma: no cover
-    warnings.warn('%s has been deprecated and renamed to %s'
-                  % (old_name, new_name),
-                  FutureWarning, stacklevel=stacklevel)
+def alias_message(old_name, new_name):
+    return '%s has been deprecated. Use %s instead.' % (old_name, new_name)
 
 
-def alias(obj, old_name):  # pragma: no cover
+def alias_warning(old_name, new_name, stacklevel=3):
+    warnings.warn(alias_message(old_name, new_name), FutureWarning,
+                  stacklevel=stacklevel)
+
+
+def alias(obj, old_name):
+    assert isinstance(old_name, basestring)
+
     @functools.wraps(obj)
     def wrapper(*args, **kwargs):
         alias_warning(old_name, obj.__name__)
         return obj(*args, **kwargs)
+    wrapper.__doc__ = alias_message(old_name, obj.__name__)
     return wrapper
 
 

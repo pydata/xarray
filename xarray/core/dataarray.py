@@ -46,7 +46,7 @@ def _infer_coords_and_dims(shape, coords, dims):
                 dims = list(coords.keys())
             else:
                 for n, (dim, coord) in enumerate(zip(dims, coords)):
-                    coord = as_variable(coord, name=dims[n]).to_coord()
+                    coord = as_variable(coord, name=dims[n]).to_index_variable()
                     dims[n] = coord.name
         dims = tuple(dims)
     else:

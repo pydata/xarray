@@ -77,7 +77,7 @@ def as_variable(obj, name=None, copy=False):
                 'dimensions %r. xarray disallows such variables because they '
                 'conflict with the coordinates used to label dimensions.'
                 % (name, obj.dims))
-        obj = obj.to_coord()
+        obj = obj.to_index_variable()
 
     return obj
 
@@ -306,19 +306,23 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
     def values(self, values):
         self.data = values
 
-    def to_variable(self):
+    def to_base_variable(self):
         """Return this variable as a base xarray.Variable"""
         return Variable(self.dims, self._data, self._attrs,
                         encoding=self._encoding, fastpath=True)
 
-    def to_coord(self):
+    to_variable = utils.alias(to_base_variable, 'to_variable')
+
+    def to_index_variable(self):
         """Return this variable as an xarray.IndexVariable"""
         return IndexVariable(self.dims, self._data, self._attrs,
                              encoding=self._encoding, fastpath=True)
 
+    to_coord = utils.alias(to_index_variable, 'to_coord')
+
     def to_index(self):
         """Convert this variable to a pandas.Index"""
-        return self.to_coord().to_index()
+        return self.to_index_variable().to_index()
 
     @property
     def dims(self):
@@ -1147,9 +1151,11 @@ class IndexVariable(Variable):
     def _data_equals(self, other):
         return self.to_index().equals(other.to_index())
 
-    def to_coord(self):
+    def to_index_variable(self):
         """Return this variable as an xarray.IndexVariable"""
         return self
+
+    to_coord = utils.alias(to_index_variable, 'to_coord')
 
     def to_index(self):
         """Convert this variable to a pandas.Index"""

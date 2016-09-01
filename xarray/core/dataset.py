@@ -1279,7 +1279,10 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
 
         for k, v in iteritems(self.variables):
             dims = tuple(dims_dict.get(dim, dim) for dim in v.dims)
-            var = v.to_coord() if k in result_dims else v.to_variable()
+            if k in result_dims:
+                var = v.to_index_variable()
+            else:
+                var = v.to_base_variable()
             var.dims = dims
             variables[k] = var
 

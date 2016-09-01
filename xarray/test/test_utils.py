@@ -6,6 +6,16 @@ from xarray.core.pycompat import OrderedDict
 from . import TestCase
 
 
+class TestAlias(TestCase):
+    def test(self):
+        def new_method():
+            pass
+        old_method = utils.alias(new_method, 'old_method')
+        assert 'deprecated' in old_method.__doc__
+        with self.assertWarns('deprecated'):
+            old_method()
+
+
 class TestSafeCastToIndex(TestCase):
     def test(self):
         dates = pd.date_range('2000-01-01', periods=10)

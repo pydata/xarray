@@ -132,7 +132,7 @@ def _calc_concat_dim_coord(dim):
         coord = IndexVariable(dim_name, dim)
         dim = dim_name
     elif not hasattr(dim, 'name'):
-        coord = as_variable(dim).to_coord()
+        coord = as_variable(dim).to_index_variable()
         dim, = coord.dims
     else:
         coord = dim
