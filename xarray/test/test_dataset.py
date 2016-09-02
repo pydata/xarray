@@ -48,7 +48,7 @@ def create_test_data(seed=None):
 def create_test_multiindex():
     mindex = pd.MultiIndex.from_product([['a', 'b'], [1, 2]],
                                         names=('level_1', 'level_2'))
-    return Dataset(data_vars={'foo': ('x', range(4))}, coords={'x': mindex})
+    return Dataset({}, {'x': mindex})
 
 
 class InaccessibleVariableDataStore(backends.InMemoryDataStore):
@@ -126,7 +126,7 @@ class TestDataset(TestCase):
           - level_1  (x) object 'a' 'a' 'b' 'b'
           - level_2  (x) int64 1 2 1 2
         Data variables:
-            foo      (x) int64 0 1 2 3""")
+            *empty*""")
         actual = '\n'.join(x.rstrip() for x in repr(data).split('\n'))
         print(actual)
         self.assertEqual(expected, actual)
@@ -135,7 +135,7 @@ class TestDataset(TestCase):
         mindex = pd.MultiIndex.from_product(
             [['a', 'b'], [1, 2]],
             names=('a_quite_long_level_name', 'level_2'))
-        data = data.assign_coords(x=mindex)
+        data = Dataset({}, {'x': mindex})
         expected = dedent("""\
         <xarray.Dataset>
         Dimensions:                  (x: 4)
@@ -144,7 +144,7 @@ class TestDataset(TestCase):
           - a_quite_long_level_name  (x) object 'a' 'a' 'b' 'b'
           - level_2                  (x) int64 1 2 1 2
         Data variables:
-            foo                      (x) int64 0 1 2 3""")
+            *empty*""")
         actual = '\n'.join(x.rstrip() for x in repr(data).split('\n'))
         print(actual)
         self.assertEqual(expected, actual)
