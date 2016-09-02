@@ -356,17 +356,17 @@ def broadcast_compat_data(variable, broadcast_dims, core_dims):
         return data
 
     set_old_dims = set(old_dims)
-
     missing_core_dims = [d for d in core_dims if d not in set_old_dims]
     if missing_core_dims:
         raise ValueError('operation requires dimensions missing on input '
                          'variable: %r' % missing_core_dims)
 
-    # TODO: check for core dimensions present on the wrong variable.
-
-    # this should be true by based on how we constructed broadcast_dims with
-    # _calculate_unified_dim_sizes
-    assert set_old_dims <= set(new_dims)
+    set_new_dims = set(new_dims)
+    unexpected_dims = [d for d in old_dims if d not in set_new_dims]
+    if unexpected_dims:
+        raise ValueError('operation encountered unexpected dimensions %r '
+                         'on input variable: these are core dimensions on '
+                         'other input or output variables' % unexpected_dims)
 
     # for consistency with numpy, keep broadcast dimensions to the left
     old_broadcast_dims = tuple(d for d in broadcast_dims if d in set_old_dims)

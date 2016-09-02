@@ -119,6 +119,9 @@ def test_broadcast_compat_data_1d():
     with pytest.raises(ValueError):
          broadcast_compat_data(var, ('x',), ('w',))
 
+    with pytest.raises(ValueError):
+         broadcast_compat_data(var, (), ())
+
 
 def test_broadcast_compat_data_2d():
     data = np.arange(12).reshape(3, 4)
