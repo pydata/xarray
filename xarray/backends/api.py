@@ -267,7 +267,10 @@ def open_dataset(filename_or_obj, group=None, decode_cf=True,
     return maybe_decode_store(store)
 
 
-def open_dataarray(*args, **kwargs):
+def open_dataarray(filename_or_obj, group=None, decode_cf=True,
+                   mask_and_scale=True, decode_times=True,
+                   concat_characters=True, decode_coords=True, engine=None,
+                   chunks=None, lock=None, drop_variables=None):
     """
     Opens an DataArray from a netCDF file containing a single data variable.
 
@@ -339,7 +342,10 @@ def open_dataarray(*args, **kwargs):
     --------
     open_dataset
     """
-    dataset = open_dataset(*args, **kwargs)
+    dataset = open_dataset(filename_or_obj, group, decode_cf,
+                           mask_and_scale, decode_times,
+                           concat_characters, decode_coords, engine,
+                           chunks, lock, drop_variables)
 
     if len(dataset.data_vars) != 1:
         raise ValueError('Given file dataset contains more than one variable. '
