@@ -13,6 +13,7 @@ from pandas.tslib import OutOfBoundsDatetime
 
 from .options import OPTIONS
 from .pycompat import PY2, iteritems, unicode_type, bytes_type, dask_array_type
+from .indexing import PandasIndexAdapter
 
 
 def pretty_print(x, numchars):
@@ -254,9 +255,24 @@ def summarize_attr(key, value, col_width=None):
 EMPTY_REPR = u'    *empty*'
 
 
-def _calculate_col_width(mapping):
-    max_name_length = (max(len(unicode_type(k)) for k in mapping)
-                       if mapping else 0)
+def _get_col_items(mapping):
+    """Get all column items to format, including both keys of `mapping`
+    and MultiIndex levels if any.
+    """
+    col_items = []
+    for k, v in mapping.items():
+        col_items.append(k)
+        var = getattr(v, 'variable', v)
+        if isinstance(var._data, PandasIndexAdapter):
+            level_names = var.to_index_variable().level_names
+            if level_names is not None:
+                col_items += list(level_names)
+    return col_items
+
+
+def _calculate_col_width(col_items):
+    max_name_length = (max(len(unicode_type(s)) for s in col_items)
+                       if col_items else 0)
     col_width = max(max_name_length, 7) + 6
     return col_width
 
@@ -272,16 +288,19 @@ def _mapping_repr(mapping, title, summarizer, col_width=None):
     return u'\n'.join(summary)
 
 
-coords_repr = functools.partial(_mapping_repr, title=u'Coordinates',
-                                summarizer=summarize_coord)
-
-
 vars_repr = functools.partial(_mapping_repr, title=u'Data variables',
                               summarizer=summarize_var)
 
 
 attrs_repr = functools.partial(_mapping_repr, title=u'Attributes',
                                summarizer=summarize_attr)
+
+
+def coords_repr(coords, col_width=None):
+    if col_width is None:
+        col_width = _calculate_col_width(_get_col_items(coords))
+    return _mapping_repr(coords, title=u'Coordinates',
+                         summarizer=summarize_coord, col_width=col_width)
 
 
 def indexes_repr(indexes):
@@ -323,7 +342,7 @@ def array_repr(arr):
 def dataset_repr(ds):
     summary = [u'<xarray.%s>' % type(ds).__name__]
 
-    col_width = _calculate_col_width(ds)
+    col_width = _calculate_col_width(_get_col_items(ds))
 
     dims_start = pretty_print(u'Dimensions:', col_width)
     all_dim_strings = [u'%s: %s' % (k, v) for k, v in iteritems(ds.dims)]
