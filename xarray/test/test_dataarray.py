@@ -543,7 +543,7 @@ class TestDataArray(TestCase):
         self.assertEqual(data.loc[True], 0)
         self.assertEqual(data.loc[False], 1)
 
-    def test_multiindex(self):
+    def test_selection_multiindex(self):
         mindex = pd.MultiIndex.from_product([['a', 'b'], [1, 2], [-1, -2]],
                                             names=('one', 'two', 'three'))
         mdata = DataArray(range(8), [('x', mindex)])
@@ -581,6 +581,9 @@ class TestDataArray(TestCase):
                                       mdata.sel(x={'one': 'a'}))
         with self.assertRaises(IndexError):
             mdata.loc[('a', 1)]
+
+        self.assertDataArrayIdentical(mdata.sel(x={'one': 'a', 'two': 1}),
+                                      mdata.sel(one='a', two=1))
 
     def test_time_components(self):
         dates = pd.date_range('2000-01-01', periods=10)

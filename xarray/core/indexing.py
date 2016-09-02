@@ -241,7 +241,7 @@ def get_dim_indexers(data_obj, indexers):
 
     for dim, level_labels in iteritems(level_indexers):
         if dim_indexers.get(dim, False):
-            raise ValueError("Cannot combine multi-index level indexers "
+            raise ValueError("cannot combine multi-index level indexers "
                              "with an indexer for dimension %s" % dim)
         dim_indexers[dim] = level_labels
 

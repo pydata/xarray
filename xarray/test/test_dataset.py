@@ -917,6 +917,9 @@ class TestDataset(TestCase):
         self.assertDatasetIdentical(mdata.loc[{'x': ('a', 1, -1)}],
                                     mdata.sel(x=('a', 1, -1)))
 
+        self.assertDatasetIdentical(mdata.sel(x={'one': 'a', 'two': 1}),
+                                    mdata.sel(one='a', two=1))
+
     def test_reindex_like(self):
         data = create_test_data()
         data['letters'] = ('dim3', 10 * ['a'])
