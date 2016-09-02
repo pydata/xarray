@@ -245,8 +245,8 @@ class DataArrayLevelCoordinates(AbstractCoordinates):
     @property
     def variables(self):
         level_coords = OrderedDict(
-            (k, self._data[v].variable.get_level_coord(k))
-            for k, v in self._data._level_coords.items())
+            (k, self._data[v].variable.get_level_variable(k))
+             for k, v in self._data._level_coords.items())
         return Frozen(level_coords)
 
 

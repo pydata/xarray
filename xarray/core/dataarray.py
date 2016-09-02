@@ -429,7 +429,7 @@ class DataArray(AbstractArray, BaseDataObject):
         level_coords = OrderedDict()
         for cname, var in self._coords.items():
             if var.ndim == 1:
-                level_names = var.to_coord().level_names
+                level_names = var.to_index_variable().level_names
                 if level_names is not None:
                     dim = var.dims[0]
                     level_coords.update({lname: dim for lname in level_names})

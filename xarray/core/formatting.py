@@ -212,7 +212,8 @@ def _summarize_coord_multiindex(coord, col_width, marker):
 def _summarize_coord_levels(coord, col_width, marker=u'-'):
     relevant_coord = coord[:30]
     return u'\n'.join(
-        [_summarize_var_or_coord(lname, relevant_coord.get_level_coord(lname),
+        [_summarize_var_or_coord(lname,
+                                 relevant_coord.get_level_variable(lname),
                                  col_width, marker=marker)
          for lname in coord.level_names])
 
@@ -237,7 +238,7 @@ def summarize_coord(name, var, col_width):
     show_values = is_index or _not_remote(var)
     marker = u'*' if is_index else u' '
     if is_index:
-        coord = var.variable.to_coord()
+        coord = var.variable.to_index_variable()
         if coord.level_names is not None:
             return u'\n'.join(
                 [_summarize_coord_multiindex(coord, col_width, marker),

@@ -1079,7 +1079,8 @@ class IndexVariable(Variable):
     def __init__(self, dims, data, attrs=None, encoding=None,
                  name=None, fastpath=False):
 
-        super(IndexVariable, self).__init__(dim, data, attrs, encoding, fastpath)
+        super(IndexVariable, self).__init__(dims, data, attrs, encoding,
+                                            fastpath)
         if self.ndim != 1:
             raise ValueError('%s objects must be 1-dimensional' %
                              type(self).__name__)
@@ -1183,7 +1184,7 @@ class IndexVariable(Variable):
 
     @property
     def level_names(self):
-        """Return MultiIndex level names or None if Coordinate has no
+        """Return MultiIndex level names or None if this IndexVariable has no
         MultiIndex.
         """
         index = self.to_index()
@@ -1194,12 +1195,13 @@ class IndexVariable(Variable):
 
     @level_names.setter
     def level_names(self, value):
-        raise AttributeError('cannot modify level names of Coordinate in-place')
+        raise AttributeError('cannot modify level names of '
+                             'IndexVariable in-place')
 
-    def get_level_coord(self, level):
-        """Return a new Coordinate from a given MultiIndex level."""
+    def get_level_variable(self, level):
+        """Return a new IndexVariable from a given MultiIndex level."""
         if self.level_names is None:
-            raise ValueError("Coordinate %s has no MultiIndex" % self.name)
+            raise ValueError("IndexVariable %r has no MultiIndex" % self.name)
         index = self.to_index()
         return type(self)(self.dims, index.get_level_values(level), name=level)
 
@@ -1318,7 +1320,7 @@ def assert_unique_multiindex_level_names(variables):
     level_names = defaultdict(list)
     for var_name, var in variables.items():
         if isinstance(var._data, PandasIndexAdapter):
-            idx_level_names = var.to_coord().level_names
+            idx_level_names = var.to_index_variable().level_names
             if idx_level_names is not None:
                 for n in idx_level_names:
                     level_names[n].append('%r (%s)' % (n, var_name))

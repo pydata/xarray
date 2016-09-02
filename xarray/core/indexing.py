@@ -216,8 +216,8 @@ def convert_label_indexer(index, label, index_name='', method=None,
 
 
 def get_dim_indexers(data_obj, indexers):
-    """Given an xarray data object and label based indexers, return a mapping
-    of indexers with only dimension names as keys.
+    """Given a xarray data object and label based indexers, return a mapping
+    of label indexers with only dimension names as keys.
 
     It groups multiple level indexers given on a multi-index dimension
     into a single, dictionary indexer for that dimension (Raise a ValueError

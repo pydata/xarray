@@ -50,7 +50,7 @@ def _get_virtual_variable(variables, key, level_vars={}):
 
     if ref_name in level_vars:
         dim_var = variables[level_vars[ref_name]]
-        ref_var = dim_var.to_coord().get_level_coord(ref_name)
+        ref_var = dim_var.to_index_variable().get_level_variable(ref_name)
     else:
         ref_var = variables[ref_name]
 
@@ -447,7 +447,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         for cname in self._coord_names:
             var = self.variables[cname]
             if var.ndim == 1:
-                level_names = var.to_coord().level_names
+                level_names = var.to_index_variable().level_names
                 if level_names is not None:
                     dim = var.dims[0]
                     level_coords.update({lname: dim for lname in level_names})
