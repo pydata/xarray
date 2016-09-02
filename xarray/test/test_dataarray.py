@@ -24,6 +24,10 @@ class TestDataArray(TestCase):
         self.ds = Dataset({'foo': self.v})
         self.dv = self.ds['foo']
 
+        self.mindex = pd.MultiIndex.from_product([['a', 'b'], [1, 2]],
+                                                 names=('level_1', 'level_2'))
+        self.mda = DataArray([0, 1, 2, 3], coords={'x': self.mindex}, dims='x')
+
     def test_repr(self):
         v = Variable(['time', 'x'], [[1, 2, 3], [4, 5, 6]], {'foo': 'bar'})
         data_array = DataArray(v, {'other': np.int64(0)}, name='my_variable')
@@ -38,6 +42,16 @@ class TestDataArray(TestCase):
         Attributes:
             foo: bar""")
         self.assertEqual(expected, repr(data_array))
+
+    def test_repr_multiindex(self):
+        expected = dedent("""\
+        <xarray.DataArray (x: 4)>
+        array([0, 1, 2, 3])
+        Coordinates:
+          * x        (x) MultiIndex
+          - level_1  (x) object 'a' 'a' 'b' 'b'
+          - level_2  (x) int64 1 2 1 2""")
+        self.assertEqual(expected, repr(self.mda))
 
     def test_properties(self):
         self.assertVariableEqual(self.dv.variable, self.v)
@@ -236,6 +250,11 @@ class TestDataArray(TestCase):
         with self.assertRaisesRegexp(ValueError, 'conflicting sizes for dim'):
             DataArray([1, 2], coords={'x': [0, 1], 'y': ('x', [1])}, dims='x')
 
+        with self.assertRaisesRegexp(ValueError, 'conflicting MultiIndex'):
+            DataArray(np.random.rand(4, 4),
+                      [('x', self.mindex), ('y', self.mindex)])
+            DataArray(np.random.rand(4, 4),
+                      [('x', mindex), ('level_1', range(4))])
 
     def test_constructor_from_self_described(self):
         data = [[-0.1, 21], [0, 2]]
@@ -404,6 +423,11 @@ class TestDataArray(TestCase):
                        'y2': 'c', 'xy': ('x', ['d', 'e'])},
             dims='x')
         self.assertDataArrayIdentical(expected, actual)
+
+    def test_attr_sources_multiindex(self):
+        # make sure attr-style access for multi-index levels
+        # returns DataArray objects
+        self.assertIsInstance(self.mda.level_1, DataArray)
 
     def test_pickle(self):
         data = DataArray(np.random.random((3, 3)), dims=('id', 'time'))
@@ -627,6 +651,10 @@ class TestDataArray(TestCase):
         with self.assertRaisesRegexp(ValueError, 'cannot delete'):
             del da.coords['x']
 
+        with self.assertRaisesRegexp(ValueError, 'cannot replace MultiIndex'):
+            self.mda['level_1'] = np.arange(4)
+            self.mda.coords['level_1'] = np.arange(4)
+
     def test_coord_coords(self):
         orig = DataArray([10, 20],
                          {'x': [1, 2], 'x2': ('x', ['a', 'b']), 'z': 4},
@@ -706,6 +734,9 @@ class TestDataArray(TestCase):
         expected = array.copy()
         expected.coords['d'] = ('x', [1.5, 1.5, 3.5, 3.5])
         self.assertDataArrayIdentical(actual, expected)
+
+        with self.assertRaisesRegexp(ValueError, 'conflicting MultiIndex'):
+            self.mda.assign_coords(level_1=range(4))
 
     def test_coords_alignment(self):
         lhs = DataArray([1, 2, 3], [('x', [0, 1, 2])])
