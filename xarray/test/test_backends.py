@@ -1111,9 +1111,6 @@ class TestValidateAttrs(TestCase):
             with create_tmp_file() as tmp_file:
                 ds.to_netcdf(tmp_file)
 
-
-
-
             ds, attrs = new_dataset_and_attrs()
             attrs['test'] = {'a': 5}
             with self.assertRaisesRegexp(TypeError, 'Invalid value for attr'):
@@ -1123,8 +1120,6 @@ class TestValidateAttrs(TestCase):
             attrs['test'] = MiscObject()
             with self.assertRaisesRegexp(TypeError, 'Invalid value for attr'):
                 ds.to_netcdf('test.nc')
-
-
 
             ds, attrs = new_dataset_and_attrs()
             attrs['test'] = 5

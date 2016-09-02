@@ -108,9 +108,10 @@ def _validate_attrs(dataset):
         check_attr(k, v)
 
     # Check attrs on each variable within the dataset
-    for var_name in dataset.variables:
-        for k, v in dataset[var_name].attrs.items():
+    for variable in dataset.variables.values():
+        for k, v in variable.attrs.items():
             check_attr(k, v)
+
 
 def open_dataset(filename_or_obj, group=None, decode_cf=True,
                  mask_and_scale=True, decode_times=True,
