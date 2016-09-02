@@ -39,6 +39,9 @@ Deprecations
 
 Enhancements
 ~~~~~~~~~~~~
+- Add checking of ``attr`` names and values when saving to netCDF, raising useful
+error messages if they are invalid. (:issue:`911`).
+By `Robin Wilson <https://github.com/robintw>`_.
 
 Bug fixes
 ~~~~~~~~~

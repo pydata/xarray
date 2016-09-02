@@ -1070,3 +1070,105 @@ class TestEncodingInvalid(TestCase):
                           {'least_sigificant_digit': 2})
         with self.assertRaisesRegexp(ValueError, 'unexpected encoding'):
             _extract_nc4_encoding(var, raise_on_invalid=True)
+
+
+class MiscObject:
+    pass
+
+@requires_netCDF4
+class TestValidateAttrs(TestCase):
+    def test_validating_attrs(self):
+        def new_dataset():
+            return Dataset({'data': ('y', np.arange(10.0))})
+
+        def new_dataset_and_dataset_attrs():
+            ds = new_dataset()
+            return ds, ds.attrs
+
+        def new_dataset_and_data_attrs():
+            ds = new_dataset()
+            return ds, ds.data.attrs
+
+        def new_dataset_and_coord_attrs():
+            ds = new_dataset()
+            return ds, ds.coords['y'].attrs
+
+        for new_dataset_and_attrs in [new_dataset_and_dataset_attrs,
+                                      new_dataset_and_data_attrs,
+                                      new_dataset_and_coord_attrs]:
+            ds, attrs = new_dataset_and_attrs()
+
+            attrs[123] = 'test'
+            with self.assertRaisesRegexp(TypeError, 'Invalid name for attr'):
+                ds.to_netcdf('test.nc')
+
+            ds, attrs = new_dataset_and_attrs()
+            attrs[MiscObject()] = 'test'
+            with self.assertRaisesRegexp(TypeError, 'Invalid name for attr'):
+                ds.to_netcdf('test.nc')
+
+            ds, attrs = new_dataset_and_attrs()
+            attrs[''] = 'test'
+            with self.assertRaisesRegexp(ValueError, 'Invalid name for attr'):
+                ds.to_netcdf('test.nc')
+
+            # This one should work
+            ds, attrs = new_dataset_and_attrs()
+            attrs['test'] = 'test'
+            with create_tmp_file() as tmp_file:
+                ds.to_netcdf(tmp_file)
+
+            ds, attrs = new_dataset_and_attrs()
+            attrs['test'] = {'a': 5}
+            with self.assertRaisesRegexp(TypeError, 'Invalid value for attr'):
+                ds.to_netcdf('test.nc')
+
+            ds, attrs = new_dataset_and_attrs()
+            attrs['test'] = MiscObject()
+            with self.assertRaisesRegexp(TypeError, 'Invalid value for attr'):
+                ds.to_netcdf('test.nc')
+
+            ds, attrs = new_dataset_and_attrs()
+            attrs['test'] = 5
+            with create_tmp_file() as tmp_file:
+                ds.to_netcdf(tmp_file)
+
+            ds, attrs = new_dataset_and_attrs()
+            attrs['test'] = 3.14
+            with create_tmp_file() as tmp_file:
+                ds.to_netcdf(tmp_file)
+
+            ds, attrs = new_dataset_and_attrs()
+            attrs['test'] = [1, 2, 3, 4]
+            with create_tmp_file() as tmp_file:
+                ds.to_netcdf(tmp_file)
+
+            ds, attrs = new_dataset_and_attrs()
+            attrs['test'] = (1.9, 2.5)
+            with create_tmp_file() as tmp_file:
+                ds.to_netcdf(tmp_file)
+
+            ds, attrs = new_dataset_and_attrs()
+            attrs['test'] = np.arange(5)
+            with create_tmp_file() as tmp_file:
+                ds.to_netcdf(tmp_file)
+
+            ds, attrs = new_dataset_and_attrs()
+            attrs['test'] = np.arange(12).reshape(3, 4)
+            with create_tmp_file() as tmp_file:
+                ds.to_netcdf(tmp_file)
+
+            ds, attrs = new_dataset_and_attrs()
+            attrs['test'] = 'This is a string'
+            with create_tmp_file() as tmp_file:
+                ds.to_netcdf(tmp_file)
+
+            ds, attrs = new_dataset_and_attrs()
+            attrs['test'] = ''
+            with create_tmp_file() as tmp_file:
+                ds.to_netcdf(tmp_file)
+
+            ds, attrs = new_dataset_and_attrs()
+            attrs['test'] = np.arange(12).reshape(3, 4)
+            with create_tmp_file() as tmp_file:
+                ds.to_netcdf(tmp_file)

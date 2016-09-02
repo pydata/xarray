@@ -5,6 +5,9 @@ import threading
 from distutils.version import StrictVersion
 from glob import glob
 from io import BytesIO
+from numbers import Number
+
+import numpy as np
 
 from .. import backends, conventions
 from .common import ArrayWriter
@@ -77,6 +80,37 @@ def _validate_dataset_names(dataset):
 
     for k in dataset:
         check_name(k)
+
+
+def _validate_attrs(dataset):
+    """`attrs` must have a string key and a value which is either: a number
+    a string, an ndarray or a list/tuple of numbers/strings.
+    """
+    def check_attr(name, value):
+        if isinstance(name, basestring):
+            if not name:
+                raise ValueError('Invalid name for attr: string must be length '
+                                 '1 or greater for serialization to netCDF '
+                                 'files')
+        else:
+            raise TypeError("Invalid name for attr: {} must be a string for "
+                            "serialization to netCDF files".format(name))
+
+        if not isinstance(value, (basestring, Number, np.ndarray, np.number,
+                                  list, tuple)):
+            raise TypeError('Invalid value for attr: {} must be a number '
+                            'string, ndarray or a list/tuple of numbers/strings '
+                            'for serialization to netCDF '
+                            'files'.format(value))
+
+    # Check attrs on the dataset itself
+    for k, v in dataset.attrs.items():
+        check_attr(k, v)
+
+    # Check attrs on each variable within the dataset
+    for variable in dataset.variables.values():
+        for k, v in variable.attrs.items():
+            check_attr(k, v)
 
 
 def open_dataset(filename_or_obj, group=None, decode_cf=True,
@@ -335,8 +369,9 @@ def to_netcdf(dataset, path=None, mode='w', format=None, group=None,
     elif engine is None:
         engine = _get_default_engine(path)
 
-    # validate Dataset keys and DataArray names
+    # validate Dataset keys, DataArray names, and attr keys/values
     _validate_dataset_names(dataset)
+    _validate_attrs(dataset)
 
     try:
         store_cls = WRITEABLE_STORES[engine]
