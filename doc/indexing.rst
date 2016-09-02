@@ -325,11 +325,25 @@ Additionally, xarray supports dictionaries:
 .. ipython:: python
 
    mda.sel(x={'one': 'a', 'two': 0})
-   mda.loc[{'one': 'a'}, ...]
+
+For convenience, ``sel`` also accepts multi-index levels directly
+as keyword arguments:
+
+.. ipython:: python
+
+   mda.sel(one='a', two=0)
+
+Note that using ``sel`` it is not possible to mix a dimension
+indexer with level indexers for that dimension
+(e.g., ``mda.sel(x={'one': 'a'}, two=0)`` will raise a ``ValueError``).
 
 Like pandas, xarray handles partial selection on multi-index (level drop).
-As shown in the last example above, it also renames the dimension / coordinate
-when the multi-index is reduced to a single index.
+As shown below, it also renames the dimension / coordinate when the
+multi-index is reduced to a single index.
+
+.. ipython:: python
+
+   mda.loc[{'one': 'a'}, ...]
 
 Unlike pandas, xarray does not guess whether you provide index levels or
 dimensions when using ``loc`` in some ambiguous cases. For example, for

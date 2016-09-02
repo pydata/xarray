@@ -40,6 +40,13 @@ Deprecations
 Enhancements
 ~~~~~~~~~~~~
 
+- Multi-index levels are now accessible as "virtual" coordinate variables,
+  e.g., ``ds['time']`` can pull out the ``'time'`` level of a multi-index
+  (see :ref:`coordinates`). ``sel`` also accepts providing multi-index levels
+  as keyword arguments, e.g., ``ds.sel(time='2000-01')``
+  (see :ref:`multi-level indexing`).
+  By `Benoit Bovy <https://github.com/benbovy>`_.
+
 Bug fixes
 ~~~~~~~~~
 
