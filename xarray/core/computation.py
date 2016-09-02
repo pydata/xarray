@@ -1,3 +1,4 @@
+import collections
 import functools
 import itertools
 import re
@@ -138,12 +139,10 @@ def _default_result_attrs(attrs, func, signature):
 
 def _build_output_coords(args, signature, new_coords=None):
 
-    def get_coord_variables(arg):
-        return getattr(getattr(arg, 'coords', {}), 'variables', {})
-
-    coord_variables = [get_coord_variables(a) for a in args]
+    coord_variables = [getattr(getattr(arg, 'coords', arg), 'variables', {})
+                       for arg in args]
     if new_coords is not None:
-        coord_variables.append(get_coord_variables(new_coords))
+        coord_variables.append(new_coords)
 
     merged = merge_coords_without_align(coord_variables)
 
@@ -176,19 +175,17 @@ def apply_dataarray_ufunc(func, *args, **kwargs):
     args = deep_align(args, join=join, copy=False, raise_on_invalid=False)
 
     name = result_name(args)
-    list_of_coords = _build_output_coords(args, signature, new_coords)
+    result_coords = _build_output_coords(args, signature, new_coords)
 
     data_vars = [getattr(a, 'variable') for a in args]
-    variable_or_variables = func(*data_vars)
+    result_var = func(*data_vars)
 
     if signature.n_outputs > 1:
-        return tuple(DataArray(variable, coords, name=name, fastpath=True)
-                     for variable, coords in zip(
-                         variable_or_variables, list_of_coords))
+        return tuple(DataArray(variable, coords, name=name)
+                     for variable, coords in zip(result_var, result_coords))
     else:
-        variable = variable_or_variables
-        coords, = list_of_coords
-        return DataArray(variable, coords, name=name, fastpath=True)
+        coords, = result_coords
+        return DataArray(result_var, coords, name=name)
 
 
 def join_dict_keys(objects, how='inner'):
@@ -243,14 +240,6 @@ def apply_dataset_ufunc(func, *args, **kwargs):
     for name, variable_args in zip(names, lists_of_args):
         result_vars[name] = func(*variable_args)
 
-    def make_dataset(data_vars, coord_vars):
-        # Normally, we would copy data_vars to be safe, but we created the
-        # OrderedDict in this function and don't use it for anything else.
-        variables = data_vars
-        variables.update(coord_vars)
-        coord_names = set(coord_vars)
-        return Dataset._from_vars_and_coord_names(variables, coord_names)
-
     if signature.n_outputs > 1:
         # we need to unpack result_vars from Dict[object, Tuple[Variable]] ->
         # Tuple[Dict[object, Variable]].
@@ -259,12 +248,12 @@ def apply_dataset_ufunc(func, *args, **kwargs):
             for value, results_dict in zip(values, result_dict_list):
                 results_dict[name] = value
 
-        return tuple(make_dataset(*args)
+        return tuple(Dataset(*args)
                      for args in zip(result_dict_list, list_of_coords))
     else:
         data_vars = result_vars
         coord_vars, = list_of_coords
-        return make_dataset(data_vars, coord_vars)
+        return Dataset(data_vars, coord_vars)
 
 
 def _iter_over_selections(obj, dim, values):
@@ -383,47 +372,6 @@ def broadcast_compat_data(variable, broadcast_dims, core_dims):
     return data
 
 
-def _deep_unpack_list(arg):
-    if isinstance(arg, list):
-        arg, = arg
-        return _deep_unpack_list(arg)
-    return arg
-
-
-def _apply_with_dask_atop(func, args, signature, kwargs, dtype):
-
-    if signature.all_input_core_dims or signature.all_output_core_dims:
-        raise ValueError("cannot use dask_array='auto' on unlabeled dask "
-                         'arrays with a function signature that uses core '
-                         'dimensions')
-    return da.elemwise(func, *args, dtype=dtype, **kwargs)
-
-    # import toolz  # required dependency of dask.array
-
-    # if len(signature.output_core_dims) > 1:
-    #     raise ValueError('cannot create use dask.array.atop for '
-    #                      'multiple outputs')
-    # if signature.all_output_core_dims - signature.all_input_core_dims:
-    #     raise ValueError('cannot create new dimensions in dask.array.atop')
-
-    # input_dims = [broadcast_dims + inp for inp in signature.input_core_dims]
-    # dropped = signature.all_input_core_dims - signature.all_output_core_dims
-    # for data, dims in zip(args, input_dims):
-    #     if isinstance(data, dask_array_type):
-    #         for dropped_dim in dropped:
-    #             if (dropped_dim in dims and
-    #                     len(data.chunks[dims.index(dropped_dim)]) != 1):
-    #                 raise ValueError(
-    #                     'dimension %r dropped in the output does not '
-    #                     'consist of exactly one chunk on all arrays '
-    #                     'in the inputs' % dropped_dim)
-
-    # out_ind, = output_dims
-    # atop_args = [ai for a in (args, input_dims) for ai in a]
-    # func2 = toolz.functools.compose(func, _deep_unpack_list)
-    # result_data = da.atop(func2, out_ind, *atop_args, dtype=dtype, **kwargs)
-
-
 def apply_variable_ufunc(func, *args, **kwargs):
     """
     def apply_variable_ufunc(func, args, signature=None, dask_array='forbidden',
@@ -465,8 +413,8 @@ def apply_variable_ufunc(func, *args, **kwargs):
     if dask_array == 'forbidden' and contains_dask:
         raise ValueError('encountered dask array')
     elif dask_array == 'auto' and contains_dask:
-        result_data = _apply_with_dask_atop(func, list_of_input_data, signature,
-                                            kwargs_, dask_dtype)
+        result_data = apply_dask_array(func, *args, signature=signature,
+                                       kwargs=kwargs, dtype=dask_dtype)
     else:
         result_data = func(*list_of_input_data, **kwargs_)
 
@@ -479,6 +427,26 @@ def apply_variable_ufunc(func, *args, **kwargs):
         dims, = output_dims
         data = result_data
         return Variable(dims, data)
+
+
+def apply_dask_ufunc(func, *args, **kwargs):
+    import dask.array as da
+
+    signature = kwargs.pop('signature')
+    kwargs_ = kwargs.pop('kwargs', None)
+    dtype = kwargs.pop('dtype', None)
+
+    if signature.n_outputs != 1:
+        raise ValueError("cannot use dask_array='auto' with functions that "
+                         'return multiple values')
+
+    if signature.all_input_core_dims or signature.all_output_core_dims:
+        raise ValueError("cannot use dask_array='auto' on unlabeled dask "
+                         'arrays with a function signature that uses core '
+                         'dimensions')
+
+    f = functools.partial(func, **kwargs_)
+    return da.elemwise(f, *args, dtype=dtype)
 
 
 def apply_ufunc(func, *args, **kwargs):
@@ -556,12 +524,8 @@ def apply_ufunc(func, *args, **kwargs):
         return variables_ufunc(*args)
     elif dask_array == 'auto' and any(
             isinstance(arg, dask_array_type) for arg in args):
-        import dask.array as da
-        if signature.all_input_core_dims or signature.all_output_core_dims:
-            raise ValueError("cannot use dask_array='auto' on unlabeled dask "
-                             'arrays with a function signature that uses core '
-                             'dimensions')
-        return da.elemwise(func, *args, dtype=dask_dtype)
+        return apply_dask_array(func, *args, signature=signature, kwargs=kwargs,
+                                dtype=dask_dtype)
     else:
         return func(*args)
 

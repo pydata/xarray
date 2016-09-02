@@ -100,6 +100,85 @@ def test_apply_ufunc_two_outputs():
     assert_identical(out1, 2 * dataset)
 
 
+def test_apply_ufunc_input_core_dimension():
+
+    def first_element(obj, dim):
+        func = lambda x: x[..., 0]
+        sig = ([(dim,)], [(),])
+        return xr.apply_ufunc(func, obj, signature=sig)
+
+    array = np.array([[1, 2], [3, 4]])
+    variable = xr.Variable(['x', 'y'], array)
+    data_array = xr.DataArray(variable, {'x': ['a', 'b'], 'y': [-1, -2]})
+    dataset = xr.Dataset({'data': data_array})
+
+    expected_variable_x = xr.Variable(['y'], [1, 2])
+    expected_data_array_x = xr.DataArray(expected_variable_x, {'y': [-1, -2]})
+    expected_dataset_x = xr.Dataset({'data': expected_data_array_x})
+
+    expected_variable_y = xr.Variable(['x'], [1, 3])
+    expected_data_array_y = xr.DataArray(expected_variable_y, {'x': ['a', 'b']})
+    expected_dataset_y = xr.Dataset({'data': expected_data_array_y})
+
+    actual = first_element(variable, 'x')
+    assert_identical(actual, expected_variable_x)
+    actual = first_element(variable, 'y')
+    assert_identical(actual, expected_variable_y)
+
+    actual = first_element(data_array, 'x')
+    assert_identical(actual, expected_data_array_x)
+    actual = first_element(data_array, 'y')
+    assert_identical(actual, expected_data_array_y)
+
+    actual = first_element(dataset, 'x')
+    assert_identical(actual, expected_dataset_x)
+    actual = first_element(dataset, 'y')
+    assert_identical(actual, expected_dataset_y)
+
+
+def test_apply_ufunc_output_core_dimension():
+
+    def stack_negative(obj):
+        func = lambda x: xr.core.npcompat.stack([x, -x], axis=-1)
+        sig = ([()], [('sign',)])
+        new_coords = {'sign': [1, -1]}
+        return xr.apply_ufunc(func, obj, signature=sig, new_coords=new_coords)
+
+    array = np.array([[1, 2], [3, 4]])
+    variable = xr.Variable(['x', 'y'], array)
+    data_array = xr.DataArray(variable, {'x': ['a', 'b'], 'y': [-1, -2]})
+    dataset = xr.Dataset({'data': data_array})
+
+    stacked_array = np.array([[[1, -1], [2, -2]], [[3, -3], [4, -4]]])
+    expected_variable = xr.Variable(['x', 'y', 'sign'], stacked_array)
+    expected_coords = {'x': ['a', 'b'], 'y': [-1, -2], 'sign': [1, -1]}
+    expected_data_array = xr.DataArray(expected_variable, expected_coords)
+    expected_dataset = xr.Dataset({'data': expected_data_array})
+
+    actual = stack_negative(variable)
+    assert_identical(actual, expected_variable)
+
+    actual = stack_negative(data_array)
+    assert_identical(actual, expected_data_array)
+
+    actual = stack_negative(dataset)
+    assert_identical(actual, expected_dataset)
+
+    def stack2(obj):
+        func = lambda x: xr.core.npcompat.stack([x, -x], axis=-1)
+        sig = ([()], [('sign',)])
+        # no new_coords
+        return xr.apply_ufunc(func, obj, signature=sig)
+
+    actual = stack2(data_array)
+    expected_data_array.coords['sign'] = [0, 1]
+    assert_identical(actual, expected_data_array)
+
+    actual = stack2(dataset)
+    expected_dataset.coords['sign'] = [0, 1]
+    assert_identical(actual, expected_dataset)
+
+
 def test_broadcast_compat_data_1d():
     data = np.arange(5)
     var = xr.Variable('x', data)
