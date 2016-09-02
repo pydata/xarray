@@ -1327,7 +1327,7 @@ def assert_unique_multiindex_level_names(variables):
 
     for k, v in level_names.items():
         if k in variables:
-            v.append('(%s)' % n)
+            v.append('(%s)' % k)
 
     duplicate_names = [v for v in level_names.values() if len(v) > 1]
     if duplicate_names:
