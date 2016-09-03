@@ -431,7 +431,7 @@ class DataArray(AbstractArray, BaseDataObject):
             if var.ndim == 1:
                 level_names = var.to_index_variable().level_names
                 if level_names is not None:
-                    dim = var.dims[0]
+                    dim, = var.dims
                     level_coords.update({lname: dim for lname in level_names})
         return level_coords
 

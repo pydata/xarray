@@ -166,13 +166,6 @@ class DatasetCoordinates(AbstractCoordinates):
         self._data._coord_names.update(updated_coord_names)
         self._data._dims = dict(dims)
 
-    def __setitem__(self, key, value):
-        if key in self._data._level_coords:
-            raise ValueError("cannot replace MultiIndex level %r, replace %r "
-                             "coordinate instead"
-                             % (key, self._data._level_coords[key]))
-        return super(DatasetCoordinates, self).__setitem__(key, value)
-
     def __delitem__(self, key):
         if key in self:
             del self._data[key]
@@ -214,13 +207,6 @@ class DataArrayCoordinates(AbstractCoordinates):
 
     def to_dataset(self):
         return self._to_dataset()
-
-    def __setitem__(self, key, value):
-        if key in self._data._level_coords:
-            raise ValueError("cannot replace MultiIndex level %r, replace %r "
-                             "coordinate instead"
-                             % (key, self._data._level_coords[key]))
-        return super(DataArrayCoordinates, self).__setitem__(key, value)
 
     def __delitem__(self, key):
         if key in self.dims:

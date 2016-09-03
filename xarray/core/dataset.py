@@ -449,7 +449,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
             if var.ndim == 1:
                 level_names = var.to_index_variable().level_names
                 if level_names is not None:
-                    dim = var.dims[0]
+                    dim, = var.dims
                     level_coords.update({lname: dim for lname in level_names})
         return level_coords
 
@@ -551,11 +551,6 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         if utils.is_dict_like(key):
             raise NotImplementedError('cannot yet use a dictionary as a key '
                                       'to set Dataset values')
-
-        if key in self._level_coords:
-            raise ValueError("%r is already a MultiIndex level of "
-                             "coordinate %r"
-                             % (key, self._level_coords[key]))
 
         self.update({key: value})
 

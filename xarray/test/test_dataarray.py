@@ -651,7 +651,7 @@ class TestDataArray(TestCase):
         with self.assertRaisesRegexp(ValueError, 'cannot delete'):
             del da.coords['x']
 
-        with self.assertRaisesRegexp(ValueError, 'cannot replace MultiIndex'):
+        with self.assertRaisesRegexp(ValueError, 'conflicting MultiIndex'):
             self.mda['level_1'] = np.arange(4)
             self.mda.coords['level_1'] = np.arange(4)
 

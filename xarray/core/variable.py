@@ -1193,11 +1193,6 @@ class IndexVariable(Variable):
         else:
             return None
 
-    @level_names.setter
-    def level_names(self, value):
-        raise AttributeError('cannot modify level names of '
-                             'IndexVariable in-place')
-
     def get_level_variable(self, level):
         """Return a new IndexVariable from a given MultiIndex level."""
         if self.level_names is None:

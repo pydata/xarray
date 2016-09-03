@@ -13,7 +13,6 @@ from pandas.tslib import OutOfBoundsDatetime
 
 from .options import OPTIONS
 from .pycompat import PY2, iteritems, unicode_type, bytes_type, dask_array_type
-from .indexing import PandasIndexAdapter
 
 
 def pretty_print(x, numchars):
@@ -259,11 +258,13 @@ def _get_col_items(mapping):
     """Get all column items to format, including both keys of `mapping`
     and MultiIndex levels if any.
     """
+    from .variable import IndexVariable
+
     col_items = []
     for k, v in mapping.items():
         col_items.append(k)
         var = getattr(v, 'variable', v)
-        if isinstance(var._data, PandasIndexAdapter):
+        if isinstance(var, IndexVariable):
             level_names = var.to_index_variable().level_names
             if level_names is not None:
                 col_items += list(level_names)

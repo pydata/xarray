@@ -513,7 +513,7 @@ class TestDataset(TestCase):
 
     def test_coords_setitem_multiindex(self):
         data = create_test_multiindex()
-        with self.assertRaisesRegexp(ValueError, 'cannot replace MultiIndex'):
+        with self.assertRaisesRegexp(ValueError, 'conflicting MultiIndex'):
             data.coords['level_1'] = range(4)
 
     def test_coords_set(self):
@@ -1693,7 +1693,7 @@ class TestDataset(TestCase):
 
     def test_setitem_multiindex_level(self):
         data = create_test_multiindex()
-        with self.assertRaisesRegexp(ValueError, 'already a MultiIndex level'):
+        with self.assertRaisesRegexp(ValueError, 'conflicting MultiIndex'):
             data['level_1'] = range(4)
 
     def test_delitem(self):

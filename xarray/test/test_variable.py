@@ -1047,9 +1047,6 @@ class TestIndexVariable(TestCase, VariableSubclassTestCases):
         x = IndexVariable('x', midx)
         self.assertEqual(x.level_names, midx.names)
 
-        with self.assertRaisesRegexp(AttributeError, 'cannot modify'):
-            x.level_names = ['one', 'two']
-
         self.assertIsNone(IndexVariable('y', [10.0]).level_names)
 
     def test_get_level_variable(self):
