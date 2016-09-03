@@ -1152,14 +1152,16 @@ class DataArray(AbstractArray, BaseDataObject):
 
         All parameters are passed directly to `xarray.Dataset.to_netcdf`.
         """
+        from ..backends.api import DATAARRAY_NAME, DATAARRAY_VARIABLE
+
         if not self.name:
             # If no name is set then use a generic xarray name
-            dataset = self.to_dataset(name='__xarray_dataarray_variable__')
+            dataset = self.to_dataset(name=DATAARRAY_VARIABLE)
         elif self.name in list(self.coords):
             # The name is the same as one of the coords names, which netCDF
             # doesn't support, so rename it but keep track of the old name
-            dataset = self.to_dataset(name='__xarray_dataarray_variable__')
-            dataset.attrs['__xarray_dataarray_name__'] = self.name
+            dataset = self.to_dataset(name=DATAARRAY_VARIABLE)
+            dataset.attrs[DATAARRAY_NAME] = self.name
         else:
             # No problems with the name - so we're fine!
             dataset = self.to_dataset()

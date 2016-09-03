@@ -15,6 +15,8 @@ from ..core.combine import auto_combine
 from ..core.utils import close_on_error, is_remote_uri
 from ..core.pycompat import basestring
 
+DATAARRAY_NAME = '__xarray_dataarray_name__'
+DATAARRAY_VARIABLE = '__xarray_dataarray_variable__'
 
 def _get_default_engine(path, allow_remote=False):
     if allow_remote and is_remote_uri(path):  # pragma: no cover
@@ -348,9 +350,9 @@ def open_dataarray(filename_or_obj, group=None, decode_cf=True,
                            chunks, lock, drop_variables)
 
     if len(dataset.data_vars) != 1:
-        raise ValueError('Given file dataset contains more than one variable. '
-                         'Please read with xarray.open_dataset and then select '
-                         'the variable you want.')
+        raise ValueError('Given file dataset contains more than one data '
+                         'variable. Please read with xarray.open_dataset and '
+                         'then select the variable you want.')
     else:
         data_array, = dataset.data_vars.values()
 
@@ -358,11 +360,11 @@ def open_dataarray(filename_or_obj, group=None, decode_cf=True,
 
     # Reset names if they were changed during saving
     # to ensure that we can 'roundtrip' perfectly
-    if '__xarray_dataarray_name__' in dataset.attrs:
-        data_array.name = dataset.attrs['__xarray_dataarray_name__']
-        del dataset.attrs['__xarray_dataarray_name__']
+    if DATAARRAY_NAME in dataset.attrs:
+        data_array.name = dataset.attrs[DATAARRAY_NAME]
+        del dataset.attrs[DATAARRAY_NAME]
 
-    if data_array.name == '__xarray_dataarray_variable__':
+    if data_array.name == DATAARRAY_VARIABLE:
         data_array.name = None
 
     return data_array

@@ -579,7 +579,7 @@ class BaseDataObject(AttrAccessMixin):
         return outobj._where(outcond)
 
     def close(self):
-        """Close any files linked to this dataset
+        """Close any files linked to this object
         """
         if self._file_obj is not None:
             self._file_obj.close()
