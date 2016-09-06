@@ -8,7 +8,8 @@ from .core.dataarray import DataArray
 from .core.merge import merge, MergeError
 from .core.options import set_options
 
-from .backends.api import open_dataset, open_mfdataset, save_mfdataset
+from .backends.api import (open_dataset, open_dataarray, open_mfdataset,
+                           save_mfdataset)
 from .conventions import decode_cf
 
 try:

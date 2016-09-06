@@ -578,6 +578,19 @@ class BaseDataObject(AttrAccessMixin):
 
         return outobj._where(outcond)
 
+    def close(self):
+        """Close any files linked to this object
+        """
+        if self._file_obj is not None:
+            self._file_obj.close()
+        self._file_obj = None
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        self.close()
+
     # this has no runtime function - these are listed so IDEs know these methods
     # are defined and don't warn on these operations
     __lt__ = __le__ =__ge__ = __gt__ = __add__ = __sub__ = __mul__ = \

@@ -221,7 +221,11 @@ class DataArray(AbstractArray, BaseDataObject):
         self._variable = variable
         self._coords = coords
         self._name = name
+
+        self._file_obj = None
+
         self._initialized = True
+
 
     __default = object()
 
@@ -1091,6 +1095,78 @@ class DataArray(AbstractArray, BaseDataObject):
         """
         isnull = pd.isnull(self.values)
         return np.ma.MaskedArray(data=self.values, mask=isnull, copy=copy)
+
+    def to_netcdf(self, *args, **kwargs):
+        """
+        Write DataArray contents to a netCDF file.
+
+        Parameters
+        ----------
+        path : str, optional
+            Path to which to save this dataset. If no path is provided, this
+            function returns the resulting netCDF file as a bytes object; in
+            this case, we need to use scipy.io.netcdf, which does not support
+            netCDF version 4 (the default format becomes NETCDF3_64BIT).
+        mode : {'w', 'a'}, optional
+            Write ('w') or append ('a') mode. If mode='w', any existing file at
+            this location will be overwritten.
+        format : {'NETCDF4', 'NETCDF4_CLASSIC', 'NETCDF3_64BIT', 'NETCDF3_CLASSIC'}, optional
+            File format for the resulting netCDF file:
+
+            * NETCDF4: Data is stored in an HDF5 file, using netCDF4 API
+              features.
+            * NETCDF4_CLASSIC: Data is stored in an HDF5 file, using only
+              netCDF 3 compatible API features.
+            * NETCDF3_64BIT: 64-bit offset version of the netCDF 3 file format,
+              which fully supports 2+ GB files, but is only compatible with
+              clients linked against netCDF version 3.6.0 or later.
+            * NETCDF3_CLASSIC: The classic netCDF 3 file format. It does not
+              handle 2+ GB files very well.
+
+            All formats are supported by the netCDF4-python library.
+            scipy.io.netcdf only supports the last two formats.
+
+            The default format is NETCDF4 if you are saving a file to disk and
+            have the netCDF4-python library available. Otherwise, xarray falls
+            back to using scipy to write netCDF files and defaults to the
+            NETCDF3_64BIT format (scipy does not support netCDF4).
+        group : str, optional
+            Path to the netCDF4 group in the given file to open (only works for
+            format='NETCDF4'). The group(s) will be created if necessary.
+        engine : {'netcdf4', 'scipy', 'h5netcdf'}, optional
+            Engine to use when writing netCDF files. If not provided, the
+            default engine is chosen based on available dependencies, with a
+            preference for 'netcdf4' if writing to a file on disk.
+        encoding : dict, optional
+            Nested dictionary with variable names as keys and dictionaries of
+            variable specific encodings as values, e.g.,
+            ``{'my_variable': {'dtype': 'int16', 'scale_factor': 0.1, 'zlib': True}, ...}``
+
+        Notes
+        -----
+        Only xarray.Dataset objects can be written to netCDF files, so
+        the xarray.DataArray is converted to a xarray.Dataset object
+        containing a single variable. If the DataArray has no name, or if the
+        name is the same as a co-ordinate name, then it is given the name
+        '__xarray_dataarray_variable__'.
+
+        All parameters are passed directly to `xarray.Dataset.to_netcdf`.
+        """
+        from ..backends.api import DATAARRAY_NAME, DATAARRAY_VARIABLE
+
+        if not self.name:
+            # If no name is set then use a generic xarray name
+            dataset = self.to_dataset(name=DATAARRAY_VARIABLE)
+        elif self.name in list(self.coords):
+            # The name is the same as one of the coords names, which netCDF
+            # doesn't support, so rename it but keep track of the old name
+            dataset = self.to_dataset(name=DATAARRAY_VARIABLE)
+            dataset.attrs[DATAARRAY_NAME] = self.name
+        else:
+            # No problems with the name - so we're fine!
+            dataset = self.to_dataset()
+
+        dataset.to_netcdf(*args, **kwargs)
 
     def to_dict(self):
         """

@@ -240,19 +240,6 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         obj._file_obj = store
         return obj
 
-    def close(self):
-        """Close any files linked to this dataset
-        """
-        if self._file_obj is not None:
-            self._file_obj.close()
-        self._file_obj = None
-
-    def __enter__(self):
-        return self
-
-    def __exit__(self, exc_type, exc_value, traceback):
-        self.close()
-
     def __getstate__(self):
         """Always load data in-memory before pickling"""
         self.load()
