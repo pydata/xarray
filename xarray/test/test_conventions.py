@@ -259,6 +259,20 @@ class TestDatetime(TestCase):
         self.assertRaisesRegexp(ValueError, "_FillValue and missing_value",
                                 lambda: conventions.decode_cf_variable(var))
 
+        var = Variable(['t'], np.arange(10),
+                       {'units': 'foobar',
+                        'missing_value': np.nan,
+                        '_FillValue': np.nan})
+        var = conventions.decode_cf_variable(var)
+        self.assertIsNotNone(var)
+
+        var = Variable(['t'], np.arange(10),
+                               {'units': 'foobar',
+                                'missing_value': np.float32(np.nan),
+                                '_FillValue': np.float32(np.nan)})
+        var = conventions.decode_cf_variable(var)
+        self.assertIsNotNone(var)
+
     @requires_netCDF4
     def test_decode_cf_datetime_non_iso_strings(self):
         # datetime strings that are _almost_ ISO compliant but not quite,
