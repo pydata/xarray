@@ -65,6 +65,10 @@ Bug fixes
   (:issue:`873`).
   By `Stephan Hoyer <https://github.com/shoyer>`_.
 
+- Fix issues with variables where both attributes ``_FillValue`` and
+  ``missing_value`` are set to ``NaN`` (:issue:`997`).
+  By `Marco Zühlke <https://github.com/mzuehlke>`_.
+
 .. _whats-new.0.8.2:
 
 v0.8.2 (18 August 2016)
