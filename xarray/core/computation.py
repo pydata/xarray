@@ -137,12 +137,12 @@ def _default_result_attrs(attrs, func, signature):
     return [{}] * signature.n_outputs
 
 
-def _build_output_coords(args, signature, new_coords=None):
+def build_output_coords(args, signature, new_coords=None):
 
-    coord_variables = [getattr(getattr(arg, 'coords', arg), 'variables', {})
+    coord_variables = [getattr(getattr(arg, 'coords', {}), 'variables', {})
                        for arg in args]
     if new_coords is not None:
-        coord_variables.append(new_coords)
+        coord_variables.append(getattr(new_coords, 'variables', new_coords))
 
     merged = merge_coords_without_align(coord_variables)
 
@@ -175,7 +175,7 @@ def apply_dataarray_ufunc(func, *args, **kwargs):
     args = deep_align(args, join=join, copy=False, raise_on_invalid=False)
 
     name = result_name(args)
-    result_coords = _build_output_coords(args, signature, new_coords)
+    result_coords = build_output_coords(args, signature, new_coords)
 
     data_vars = [getattr(a, 'variable') for a in args]
     result_var = func(*data_vars)
@@ -228,7 +228,7 @@ def apply_dataset_ufunc(func, *args, **kwargs):
 
     args = deep_align(args, join=join, copy=False, raise_on_invalid=False)
 
-    list_of_coords = _build_output_coords(args, signature, new_coords)
+    list_of_coords = build_output_coords(args, signature, new_coords)
 
     list_of_data_vars = [getattr(a, 'data_vars', {}) for a in args]
     names = join_dict_keys(list_of_data_vars, how=join)
