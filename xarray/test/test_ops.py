@@ -1,8 +1,8 @@
+from pytest import mark
 import numpy as np
 from numpy import array, nan
-from xarray.core import ops
 from xarray.core.ops import (
-    first, last, count, mean
+    first, last, count, mean, array_notnull_equiv,
 )
 
 from . import TestCase
@@ -74,3 +74,34 @@ class TestOps(TestCase):
 
     def test_all_nan_arrays(self):
         assert np.isnan(mean([np.nan, np.nan]))
+
+
+class TestArrayNotNullEquiv():
+    @mark.parametrize("arr1, arr2", [
+        (np.array([1, 2, 3]), np.array([1, 2, 3])),
+        (np.array([1, 2, np.nan]), np.array([1, np.nan, 3])),
+        (np.array([np.nan, 2, np.nan]), np.array([1, np.nan, np.nan])),
+    ])
+    def test_equal(self, arr1, arr2):
+        assert array_notnull_equiv(arr1, arr2)
+
+    def test_some_not_equal(self):
+        a = np.array([1, 2, 4])
+        b = np.array([1, np.nan, 3])
+        assert not array_notnull_equiv(a, b)
+
+    def test_wrong_shape(self):
+        a = np.array([[1, np.nan, np.nan, 4]])
+        b = np.array([[1, 2], [np.nan, 4]])
+        assert not array_notnull_equiv(a, b)
+
+    @mark.parametrize("val1, val2, val3, null", [
+        (1, 2, 3, None),
+        (1., 2., 3., np.nan),
+        (1., 2., 3., None),
+        ('foo', 'bar', 'baz', None),
+    ])
+    def test_types(self, val1, val2, val3, null):
+        arr1 = np.array([val1, null, val3, null])
+        arr2 = np.array([val1, val2, null, null])
+        assert array_notnull_equiv(arr1, arr2)

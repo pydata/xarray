@@ -288,10 +288,13 @@ class VariableSubclassTestCases(object):
             v2 = v.copy()
             self.assertTrue(v.equals(v2))
             self.assertTrue(v.identical(v2))
+            self.assertTrue(v.notnull_equals(v2))
             self.assertTrue(v[0].equals(v2[0]))
             self.assertTrue(v[0].identical(v2[0]))
+            self.assertTrue(v[0].notnull_equals(v2[0]))
             self.assertTrue(v[:2].equals(v2[:2]))
             self.assertTrue(v[:2].identical(v2[:2]))
+            self.assertTrue(v[:2].notnull_equals(v2[:2]))
 
     def test_eq_all_dtypes(self):
         # ensure that we don't choke on comparisons for which numpy returns
@@ -570,14 +573,8 @@ class TestVariable(TestCase, VariableSubclassTestCases):
 
         self.assertFalse(v1.notnull_equals(None))
 
-        v3 = Variable(('x'), [np.nan, 1, 3, np.nan])
+        v3 = Variable(('y'), [np.nan, 2, 3, np.nan])
         self.assertFalse(v3.notnull_equals(v1))
-
-        v4 = Variable(('y'), [np.nan, 2, 3, np.nan])
-        self.assertFalse(v4.notnull_equals(v1))
-
-        v5 = Variable(('x', 'y'), [[1, 2], [np.nan, np.nan]])
-        self.assertFalse(v1.notnull_equals(v5))
 
         d = np.array([1, 2, np.nan, np.nan])
         self.assertFalse(v1.notnull_equals(d))
