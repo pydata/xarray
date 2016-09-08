@@ -177,7 +177,7 @@ def apply_dataarray_ufunc(func, *args, **kwargs):
     name = result_name(args)
     result_coords = build_output_coords(args, signature, new_coords)
 
-    data_vars = [getattr(a, 'variable') for a in args]
+    data_vars = [getattr(a, 'variable', a) for a in args]
     result_var = func(*data_vars)
 
     if signature.n_outputs > 1:
@@ -196,16 +196,11 @@ def join_dict_keys(objects, how='inner'):
 
 
 def collect_dict_values(objects, keys, fill_value=None):
-    result_values = []
-    for key in keys:
-        values = []
-        for obj in objects:
-            if hasattr(obj, 'keys'):
-                values.append(obj.get(key, fill_value))
-            else:
-                values = tobj
-        result_values.append(values)
-    return result_values
+    return [[obj.get(key, fill_value)
+             if is_dict_like(obj)
+             else obj
+             for obj in objects]
+            for key in keys]
 
 
 def apply_dataset_ufunc(func, *args, **kwargs):
@@ -220,8 +215,8 @@ def apply_dataset_ufunc(func, *args, **kwargs):
     fill_value = kwargs.pop('fill_value', None)
     new_coords = kwargs.pop('new_coords', None)
     if kwargs:
-        raise TypeError('apply_dataarray_ufunc() got unexpected keyword arguments: %s'
-                        % list(kwargs))
+        raise TypeError('apply_dataarray_ufunc() got unexpected keyword '
+                        'arguments: %s' % list(kwargs))
 
     if signature is None:
         signature = _default_signature(len(args))
@@ -230,10 +225,10 @@ def apply_dataset_ufunc(func, *args, **kwargs):
 
     list_of_coords = build_output_coords(args, signature, new_coords)
 
-    list_of_data_vars = [getattr(a, 'data_vars', {}) for a in args]
+    list_of_data_vars = [getattr(a, 'data_vars', a) for a in args]
     names = join_dict_keys(list_of_data_vars, how=join)
 
-    list_of_variables = [getattr(a, 'variables', {}) for a in args]
+    list_of_variables = [getattr(a, 'variables', a) for a in args]
     lists_of_args = collect_dict_values(list_of_variables, names, fill_value)
 
     result_vars = OrderedDict()

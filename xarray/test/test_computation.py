@@ -1,4 +1,5 @@
 from collections import OrderedDict
+import operator
 
 import numpy as np
 import pytest
@@ -47,8 +48,8 @@ def test_join_dict_keys():
 
 
 def test_collect_dict_values():
-    dicts = [{'x': 1, 'y': 2, 'z': 3}, {'z': 4}]
-    expected = [[1, 0], [2, 0], [3, 4]]
+    dicts = [{'x': 1, 'y': 2, 'z': 3}, {'z': 4}, 5]
+    expected = [[1, 0, 5], [2, 0, 5], [3, 4, 5]]
     collected = collect_dict_values(dicts, ['x', 'y', 'z'], fill_value=0)
     assert collected == expected
 
@@ -72,6 +73,52 @@ def test_apply_ufunc_identity():
 
     output = xr.apply_ufunc(identity, dataset)
     assert_identical(output, dataset)
+
+
+def test_apply_ufunc_two_inputs():
+    array = np.array([1, 2, 3])
+    variable = xr.Variable('x', array)
+    data_array = xr.DataArray(variable, [('x', -array)])
+    dataset = xr.Dataset({'y': variable}, {'x': -array})
+
+    zeros_array = np.zeros_like(array)
+    zeros_variable = xr.Variable('x', zeros_array)
+    zeros_data_array = xr.DataArray(zeros_variable, [('x', -array)])
+    zeros_dataset = xr.Dataset({'y': zeros_variable}, {'x': -array})
+
+    add = lambda a, b: xr.apply_ufunc(operator.add, a, b)
+
+    assert_array_equal(array, add(array, 0))
+    assert_array_equal(array, add(array, zeros_array))
+    assert_array_equal(array, add(0, array))
+    assert_array_equal(array, add(zeros_array, array))
+
+    assert_identical(variable, add(variable, 0))
+    assert_identical(variable, add(variable, zeros_array))
+    assert_identical(variable, add(variable, zeros_variable))
+    assert_identical(variable, add(0, variable))
+    assert_identical(variable, add(zeros_array, variable))
+    assert_identical(variable, add(zeros_variable, variable))
+
+    assert_identical(data_array, add(data_array, 0))
+    assert_identical(data_array, add(data_array, zeros_array))
+    assert_identical(data_array, add(data_array, zeros_variable))
+    assert_identical(data_array, add(data_array, zeros_data_array))
+    assert_identical(data_array, add(0, data_array))
+    assert_identical(data_array, add(zeros_array, data_array))
+    assert_identical(data_array, add(zeros_variable, data_array))
+    assert_identical(data_array, add(zeros_data_array, data_array))
+
+    assert_identical(dataset, add(dataset, 0))
+    assert_identical(dataset, add(dataset, zeros_array))
+    assert_identical(dataset, add(dataset, zeros_variable))
+    assert_identical(dataset, add(dataset, zeros_data_array))
+    assert_identical(dataset, add(dataset, zeros_dataset))
+    assert_identical(dataset, add(0, dataset))
+    assert_identical(dataset, add(zeros_array, dataset))
+    assert_identical(dataset, add(zeros_variable, dataset))
+    assert_identical(dataset, add(zeros_data_array, dataset))
+    assert_identical(dataset, add(zeros_dataset, dataset))
 
 
 def test_apply_ufunc_two_outputs():
