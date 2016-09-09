@@ -217,13 +217,11 @@ def test_apply_ufunc_output_core_dimension():
         # no new_coords
         return xr.apply_ufunc(func, obj, signature=sig)
 
-    actual = stack2(data_array)
-    expected_data_array.coords['sign'] = [0, 1]
-    assert_identical(actual, expected_data_array)
+    with pytest.raises(ValueError):
+        stack2(data_array)
 
-    actual = stack2(dataset)
-    expected_dataset.coords['sign'] = [0, 1]
-    assert_identical(actual, expected_dataset)
+    with pytest.raises(ValueError):
+        stack2(dataset)
 
 
 def test_broadcast_compat_data_1d():

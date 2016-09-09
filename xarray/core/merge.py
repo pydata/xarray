@@ -439,7 +439,7 @@ def merge_core(objs, compat='broadcast_equals', join='outer', priority_arg=None,
     ------
     MergeError if the merge cannot be done successfully.
     """
-    from .dataset import calculate_dimensions
+    from .dataset import calculate_dimensions, add_default_dim_coords_inplace
 
     _assert_compat_valid(compat)
 
@@ -457,10 +457,7 @@ def merge_core(objs, compat='broadcast_equals', join='outer', priority_arg=None,
     assert_unique_multiindex_level_names(variables)
 
     dims = calculate_dimensions(variables)
-
-    for dim, size in dims.items():
-        if dim not in variables:
-            variables[dim] = default_index_coordinate(dim, size)
+    add_default_dim_coords_inplace(variables, dims)
 
     coord_names.update(dims)
 

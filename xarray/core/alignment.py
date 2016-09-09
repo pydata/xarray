@@ -75,6 +75,11 @@ def align(*objects, **kwargs):
         raise TypeError('align() got unexpected keyword arguments: %s'
                         % list(kwargs))
 
+    if not indexes and len(objects) == 1:
+        # fast path for the trivial case
+        obj, = objects
+        return (obj.copy(deep=copy),)
+
     all_indexes = defaultdict(list)
     for obj in objects:
         for dim, index in iteritems(obj.indexes):
@@ -102,7 +107,12 @@ def align(*objects, **kwargs):
     for obj in objects:
         valid_indexers = dict((k, v) for k, v in joined_indexes.items()
                               if k in obj.dims)
-        result.append(obj.reindex(copy=copy, **valid_indexers))
+        if not valid_indexers:
+            # fast path for no reindexing necessary
+            new_obj = obj.copy(deep=copy)
+        else:
+            new_obj = obj.reindex(copy=copy, **valid_indexers)
+        result.append(new_obj)
 
     return tuple(result)
 

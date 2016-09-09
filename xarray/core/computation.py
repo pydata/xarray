@@ -11,7 +11,7 @@ from .alignment import _get_joiner
 from .merge import _align_for_merge as deep_align
 from .merge import merge_coords_without_align
 from .utils import is_dict_like
-from .pycompat import dask_array_type, OrderedDict, basestring
+from .pycompat import dask_array_type, OrderedDict, basestring, suppress
 
 
 SLICE_NONE = slice(None)
@@ -138,22 +138,41 @@ def _default_result_attrs(attrs, func, signature):
 
 
 def build_output_coords(args, signature, new_coords=None):
+    coord_variables = []
+    for arg in args:
+        try:
+            coords = arg.coords
+        except AttributeError:
+            pass  # skip this argument
+        else:
+            coord_vars = getattr(coords, 'variables', coords)
+            coord_variables.append(coord_vars)
 
-    coord_variables = [getattr(getattr(arg, 'coords', {}), 'variables', {})
-                       for arg in args]
     if new_coords is not None:
         coord_variables.append(getattr(new_coords, 'variables', new_coords))
 
-    merged = merge_coords_without_align(coord_variables)
+    if len(args) == 1 and new_coords is None:
+        # we can skip the expensive merge
+        merged, = coord_variables
+    else:
+        merged = merge_coords_without_align(coord_variables)
 
-    output = []
+    missing_dims = signature.all_output_core_dims - set(merged)
+    if missing_dims:
+        raise ValueError('new output dimensions must have matching entries in '
+                         '`new_coords`: %r' % missing_dims)
+
+    output_coords = []
     for output_dims in signature.output_core_dims:
         dropped_dims = signature.all_input_core_dims - set(output_dims)
-        coords = OrderedDict((k, v) for k, v in merged.items()
-                             if set(v.dims).isdisjoint(dropped_dims))
-        output.append(coords)
+        if dropped_dims:
+            coords = OrderedDict((k, v) for k, v in merged.items()
+                                 if set(v.dims).isdisjoint(dropped_dims))
+        else:
+            coords = merged
+        output_coords.append(coords)
 
-    return output
+    return output_coords
 
 
 def apply_dataarray_ufunc(func, *args, **kwargs):
@@ -172,7 +191,8 @@ def apply_dataarray_ufunc(func, *args, **kwargs):
     if signature is None:
         signature = _default_signature(len(args))
 
-    args = deep_align(args, join=join, copy=False, raise_on_invalid=False)
+    if len(args) > 1:
+        args = deep_align(args, join=join, copy=False, raise_on_invalid=False)
 
     name = result_name(args)
     result_coords = build_output_coords(args, signature, new_coords)
@@ -181,16 +201,23 @@ def apply_dataarray_ufunc(func, *args, **kwargs):
     result_var = func(*data_vars)
 
     if signature.n_outputs > 1:
-        return tuple(DataArray(variable, coords, name=name)
+        return tuple(DataArray(variable, coords, name=name, fastpath=True)
                      for variable, coords in zip(result_var, result_coords))
     else:
         coords, = result_coords
-        return DataArray(result_var, coords, name=name)
+        return DataArray(result_var, coords, name=name, fastpath=True)
 
 
 def join_dict_keys(objects, how='inner'):
+    all_keys = [obj.keys() for obj in objects if hasattr(obj, 'keys')]
+
+    if len(all_keys) == 1:
+        # shortcut
+        result_keys, = all_keys
+        return result_keys
+
     joiner = _get_joiner(how)
-    all_keys = (obj.keys() for obj in objects if hasattr(obj, 'keys'))
+    # TODO: use a faster ordered set than a pandas.Index
     result_keys = joiner([pd.Index(keys) for keys in all_keys])
     return result_keys
 
@@ -201,6 +228,17 @@ def collect_dict_values(objects, keys, fill_value=None):
              else obj
              for obj in objects]
             for key in keys]
+
+
+def _fast_dataset(variables, coord_variables):
+    """Create a dataset as quickly as possible.
+
+    Variables are modified *inplace*.
+    """
+    from .dataset import Dataset
+    variables.update(coord_variables)
+    coord_names = set(coord_variables)
+    return Dataset._from_vars_and_coord_names(variables, coord_names)
 
 
 def apply_dataset_ufunc(func, *args, **kwargs):
@@ -221,7 +259,8 @@ def apply_dataset_ufunc(func, *args, **kwargs):
     if signature is None:
         signature = _default_signature(len(args))
 
-    args = deep_align(args, join=join, copy=False, raise_on_invalid=False)
+    if len(args) > 1:
+        args = deep_align(args, join=join, copy=False, raise_on_invalid=False)
 
     list_of_coords = build_output_coords(args, signature, new_coords)
 
@@ -243,12 +282,11 @@ def apply_dataset_ufunc(func, *args, **kwargs):
             for value, results_dict in zip(values, result_dict_list):
                 results_dict[name] = value
 
-        return tuple(Dataset(*args)
+        return tuple(_fast_dataset(*args)
                      for args in zip(result_dict_list, list_of_coords))
     else:
-        data_vars = result_vars
         coord_vars, = list_of_coords
-        return Dataset(data_vars, coord_vars)
+        return _fast_dataset(result_vars, coord_vars)
 
 
 def _iter_over_selections(obj, dim, values):

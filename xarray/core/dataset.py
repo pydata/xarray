@@ -20,7 +20,8 @@ from .common import ImplementsDatasetReduce, BaseDataObject
 from .merge import (dataset_update_method, dataset_merge_method,
                     merge_data_and_coords)
 from .utils import Frozen, SortedKeysDict, maybe_wrap_array, hashable
-from .variable import (Variable, as_variable, IndexVariable, broadcast_variables)
+from .variable import (Variable, as_variable, IndexVariable,
+                       broadcast_variables, default_index_coordinate)
 from .pycompat import (iteritems, basestring, OrderedDict,
                        dask_array_type)
 from .combine import concat
@@ -101,9 +102,12 @@ def calculate_dimensions(variables):
     return dims
 
 
-def _assert_empty(args, msg='%s'):
-    if args:
-        raise ValueError(msg % args)
+def add_default_dim_coords_inplace(variables, dims):
+    # type: (MutableMapping[object, Variable], Mapping[object, int]) -> None
+    """Add missing coordinates to variables inplace."""
+    for dim, size in iteritems(dims):
+        if dim not in variables:
+            variables[dim] = default_index_coordinate(dim, size)
 
 
 def as_dataset(obj):
@@ -219,13 +223,6 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         if attrs is not None:
             self.attrs = attrs
         self._initialized = True
-
-    def _add_missing_coords_inplace(self):
-        """Add missing coordinates to self._variables
-        """
-        for dim, size in iteritems(self.dims):
-            if dim not in self._variables:
-                self._variables[dim] = default_index_coordinate(dim, size)
 
     def _set_init_vars_and_dims(self, data_vars, coords, compat):
         """Set the initial value of Dataset variables and dimensions
@@ -696,9 +693,11 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
             if isinstance(names, basestring):
                 names = [names]
             self._assert_all_in_dataset(names)
-            _assert_empty(
-                set(names) & set(self.dims),
-                'cannot remove index coordinates with reset_coords: %s')
+            bad_coords = set(names) & set(self.dims)
+            if bad_coords:
+                raise ValueError(
+                    'cannot remove index coordinates with reset_coords: %s'
+                    % bad_coords)
         obj = self if inplace else self.copy()
         obj._coord_names.difference_update(names)
         if drop:
@@ -1717,8 +1716,10 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         else:
             dims = set(dim)
 
-        _assert_empty([dim for dim in dims if dim not in self.dims],
-                      'Dataset does not contain the dimensions: %s')
+        missing_dimensions = [dim for dim in dims if dim not in self.dims]
+        if missing_dimensions:
+            raise ValueError('Dataset does not contain the dimensions: %s'
+                             % missing_dimensions)
 
         variables = OrderedDict()
         for name, var in iteritems(self._variables):
