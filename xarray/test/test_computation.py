@@ -12,8 +12,11 @@ from xarray.core.computation import (
 
 
 def assert_identical(a, b):
-    msg = 'not identical:\n%r\n%r' % (a, b)
-    assert a.identical(b), msg
+    if hasattr(a, 'identical'):
+        msg = 'not identical:\n%r\n%r' % (a, b)
+        assert a.identical(b), msg
+    else:
+        assert_array_equal(a, b)
 
 
 def test_parse_signature():
@@ -63,12 +66,16 @@ def test_apply_ufunc_identity():
 
     identity = functools.partial(xr.apply_ufunc, lambda x: x)
 
-    assert_array_equal(array, identity(array))
+    assert_identical(array, identity(array))
     assert_identical(variable, identity(variable))
     assert_identical(data_array, identity(data_array))
     assert_identical(data_array, identity(data_array.groupby('x')))
     assert_identical(dataset, identity(dataset))
     assert_identical(dataset, identity(dataset.groupby('x')))
+
+
+def add(a, b):
+    return xr.apply_ufunc(operator.add, a, b)
 
 
 def test_apply_ufunc_two_inputs():
@@ -77,70 +84,128 @@ def test_apply_ufunc_two_inputs():
     data_array = xr.DataArray(variable, [('x', -array)])
     dataset = xr.Dataset({'y': variable}, {'x': -array})
 
-    zeros_array = np.zeros_like(array)
-    zeros_variable = xr.Variable('x', zeros_array)
-    zeros_data_array = xr.DataArray(zeros_variable, [('x', -array)])
-    zeros_dataset = xr.Dataset({'y': zeros_variable}, {'x': -array})
+    zero_array = np.zeros_like(array)
+    zero_variable = xr.Variable('x', zero_array)
+    zero_data_array = xr.DataArray(zero_variable, [('x', -array)])
+    zero_dataset = xr.Dataset({'y': zero_variable}, {'x': -array})
 
-    add = lambda a, b: xr.apply_ufunc(operator.add, a, b)
+    assert_identical(array, add(array, zero_array))
+    assert_identical(array, add(zero_array, array))
 
-    assert_array_equal(array, add(array, 0))
-    assert_array_equal(array, add(array, zeros_array))
-    assert_array_equal(array, add(0, array))
-    assert_array_equal(array, add(zeros_array, array))
+    assert_identical(variable, add(variable, zero_array))
+    assert_identical(variable, add(variable, zero_variable))
+    assert_identical(variable, add(zero_array, variable))
+    assert_identical(variable, add(zero_variable, variable))
 
-    assert_identical(variable, add(variable, 0))
-    assert_identical(variable, add(variable, zeros_array))
-    assert_identical(variable, add(variable, zeros_variable))
-    assert_identical(variable, add(0, variable))
-    assert_identical(variable, add(zeros_array, variable))
-    assert_identical(variable, add(zeros_variable, variable))
+    assert_identical(data_array, add(data_array, zero_array))
+    assert_identical(data_array, add(data_array, zero_variable))
+    assert_identical(data_array, add(data_array, zero_data_array))
+    assert_identical(data_array, add(zero_array, data_array))
+    assert_identical(data_array, add(zero_variable, data_array))
+    assert_identical(data_array, add(zero_data_array, data_array))
 
-    assert_identical(data_array, add(data_array, 0))
-    assert_identical(data_array, add(data_array, zeros_array))
-    assert_identical(data_array, add(data_array, zeros_variable))
-    assert_identical(data_array, add(data_array, zeros_data_array))
-    assert_identical(data_array, add(0, data_array))
-    assert_identical(data_array, add(zeros_array, data_array))
-    assert_identical(data_array, add(zeros_variable, data_array))
-    assert_identical(data_array, add(zeros_data_array, data_array))
+    assert_identical(dataset, add(dataset, zero_array))
+    assert_identical(dataset, add(dataset, zero_variable))
+    assert_identical(dataset, add(dataset, zero_data_array))
+    assert_identical(dataset, add(dataset, zero_dataset))
+    assert_identical(dataset, add(zero_array, dataset))
+    assert_identical(dataset, add(zero_variable, dataset))
+    assert_identical(dataset, add(zero_data_array, dataset))
+    assert_identical(dataset, add(zero_dataset, dataset))
 
-    assert_identical(dataset, add(dataset, 0))
-    assert_identical(dataset, add(dataset, zeros_array))
-    assert_identical(dataset, add(dataset, zeros_variable))
-    assert_identical(dataset, add(dataset, zeros_data_array))
-    assert_identical(dataset, add(dataset, zeros_dataset))
-    assert_identical(dataset, add(0, dataset))
-    assert_identical(dataset, add(zeros_array, dataset))
-    assert_identical(dataset, add(zeros_variable, dataset))
-    assert_identical(dataset, add(zeros_data_array, dataset))
-    assert_identical(dataset, add(zeros_dataset, dataset))
+    assert_identical(data_array, add(data_array.groupby('x'), zero_data_array))
+    assert_identical(data_array, add(zero_data_array, data_array.groupby('x')))
+
+    assert_identical(dataset, add(data_array.groupby('x'), zero_dataset))
+    assert_identical(dataset, add(zero_dataset, data_array.groupby('x')))
+
+    assert_identical(dataset, add(dataset.groupby('x'), zero_data_array))
+    assert_identical(dataset, add(dataset.groupby('x'), zero_dataset))
+    assert_identical(dataset, add(zero_data_array, dataset.groupby('x')))
+    assert_identical(dataset, add(zero_dataset, dataset.groupby('x')))
 
 
-def test_apply_ufunc_two_outputs():
-    array = np.arange(10)
+def test_apply_ufunc_1d_and_0d():
+    array = np.array([1, 2, 3])
     variable = xr.Variable('x', array)
     data_array = xr.DataArray(variable, [('x', -array)])
     dataset = xr.Dataset({'y': variable}, {'x': -array})
 
-    func = lambda x: (x, 2 * x)
-    signature = '()->(),()'
+    zero_array = 0
+    zero_variable = xr.Variable((), zero_array)
+    zero_data_array = xr.DataArray(zero_variable)
+    zero_dataset = xr.Dataset({'y': zero_variable})
 
-    out0, out1 = xr.apply_ufunc(func, array, signature=signature)
+    assert_identical(array, add(array, zero_array))
+    assert_identical(array, add(zero_array, array))
+
+    assert_identical(variable, add(variable, zero_array))
+    assert_identical(variable, add(variable, zero_variable))
+    assert_identical(variable, add(zero_array, variable))
+    assert_identical(variable, add(zero_variable, variable))
+
+    assert_identical(data_array, add(data_array, zero_array))
+    assert_identical(data_array, add(data_array, zero_variable))
+    assert_identical(data_array, add(data_array, zero_data_array))
+    assert_identical(data_array, add(zero_array, data_array))
+    assert_identical(data_array, add(zero_variable, data_array))
+    assert_identical(data_array, add(zero_data_array, data_array))
+
+    assert_identical(dataset, add(dataset, zero_array))
+    assert_identical(dataset, add(dataset, zero_variable))
+    assert_identical(dataset, add(dataset, zero_data_array))
+    assert_identical(dataset, add(dataset, zero_dataset))
+    assert_identical(dataset, add(zero_array, dataset))
+    assert_identical(dataset, add(zero_variable, dataset))
+    assert_identical(dataset, add(zero_data_array, dataset))
+    assert_identical(dataset, add(zero_dataset, dataset))
+
+    assert_identical(data_array, add(data_array.groupby('x'), zero_data_array))
+    assert_identical(data_array, add(zero_data_array, data_array.groupby('x')))
+
+    assert_identical(dataset, add(data_array.groupby('x'), zero_dataset))
+    assert_identical(dataset, add(zero_dataset, data_array.groupby('x')))
+
+    assert_identical(dataset, add(dataset.groupby('x'), zero_data_array))
+    assert_identical(dataset, add(dataset.groupby('x'), zero_dataset))
+    assert_identical(dataset, add(zero_data_array, dataset.groupby('x')))
+    assert_identical(dataset, add(zero_dataset, dataset.groupby('x')))
+
+
+def test_apply_ufunc_two_outputs():
+    array = np.arange(5)
+    variable = xr.Variable('x', array)
+    data_array = xr.DataArray(variable, [('x', -array)])
+    dataset = xr.Dataset({'y': variable}, {'x': -array})
+
+    def twice(obj):
+        func = lambda x: (x, x)
+        signature = '()->(),()'
+        return xr.apply_ufunc(func, obj, signature=signature)
+
+    out0, out1 = twice(array)
     assert_array_equal(out0, array)
-    assert_array_equal(out1, 2 * array)
+    assert_array_equal(out1, array)
 
-    out0, out1 = xr.apply_ufunc(func, variable, signature=signature)
+    out0, out1 = twice(variable)
     assert_identical(out0, variable)
-    assert_identical(out1, 2 * variable)
+    assert_identical(out1, variable)
 
-    out0, out1 = xr.apply_ufunc(func, data_array, signature=signature)
+    out0, out1 = twice(data_array)
     assert_identical(out0, data_array)
-    assert_identical(out1, 2 * data_array)
+    assert_identical(out1, data_array)
 
-    out0, out1 = xr.apply_ufunc(func, dataset, signature=signature)
+    out0, out1 = twice(dataset)
     assert_identical(out0, dataset)
-    assert_identical(out1, 2 * dataset)
+    assert_identical(out1, dataset)
+
+    out0, out1 = twice(data_array.groupby('x'))
+    assert_identical(out0, data_array)
+    assert_identical(out1, data_array)
+
+    out0, out1 = twice(dataset.groupby('x'))
+    assert_identical(out0, dataset)
+    assert_identical(out1, dataset)
 
 
 def test_apply_ufunc_input_core_dimension():
@@ -197,14 +262,14 @@ def test_apply_ufunc_output_core_dimension():
     expected_data_array = xr.DataArray(expected_variable, expected_coords)
     expected_dataset = xr.Dataset({'data': expected_data_array})
 
-    actual = stack_negative(variable)
-    assert_identical(actual, expected_variable)
-
-    actual = stack_negative(data_array)
-    assert_identical(actual, expected_data_array)
-
-    actual = stack_negative(dataset)
-    assert_identical(actual, expected_dataset)
+    assert_array_equal(stacked_array, stack_negative(array))
+    assert_identical(expected_variable, stack_negative(variable))
+    assert_identical(expected_data_array, stack_negative(data_array))
+    assert_identical(expected_dataset, stack_negative(dataset))
+    assert_identical(expected_data_array,
+                     stack_negative(data_array.groupby('x')))
+    assert_identical(expected_dataset,
+                     stack_negative(dataset.groupby('x')))
 
     def stack2(obj):
         func = lambda x: xr.core.npcompat.stack([x, -x], axis=-1)
@@ -219,21 +284,54 @@ def test_apply_ufunc_output_core_dimension():
         stack2(dataset)
 
 
+def test_apply_groupby_add_same():
+    array = np.arange(5)
+    variable = xr.Variable('x', array)
+    coords = {'x': -array, 'y': ('x', [0, 0, 1, 1, 2])}
+    data_array = xr.DataArray(variable, coords, dims='x')
+    dataset = xr.Dataset({'z': variable}, coords)
+
+    other_variable = xr.Variable('y', [0, 10])
+    other_data_array = xr.DataArray(other_variable, dims='y')
+    other_dataset = xr.Dataset({'z': other_variable})
+
+    expected_variable = xr.Variable('x', [0, 1, 12, 13, np.nan])
+    expected_data_array = xr.DataArray(expected_variable, coords, dims='x')
+    expected_dataset = xr.Dataset({'z': expected_variable}, coords)
+
+    assert_identical(expected_data_array,
+                     add(data_array.groupby('y'), other_data_array))
+    assert_identical(expected_dataset,
+                     add(data_array.groupby('y'), other_dataset))
+    assert_identical(expected_dataset,
+                     add(dataset.groupby('y'), other_data_array))
+    assert_identical(expected_dataset,
+                     add(dataset.groupby('y'), other_dataset))
+
+    # cannot be performed with xarray.Variable objects that share a dimension
+    with pytest.raises(ValueError):
+        add(data_array.groupby('y'), other_variable)
+
+    # if they are all grouped the same way
+    with pytest.raises(ValueError):
+        add(data_array.groupby('y'), data_array[:4].groupby('y'))
+    with pytest.raises(ValueError):
+        add(data_array.groupby('y'), data_array[1:].groupby('y'))
+    with pytest.raises(ValueError):
+        add(data_array.groupby('y'), other_data_array.groupby('y'))
+    with pytest.raises(ValueError):
+        add(data_array.groupby('y'), data_array.groupby('x'))
+
+
 def test_broadcast_compat_data_1d():
     data = np.arange(5)
     var = xr.Variable('x', data)
 
-    actual = broadcast_compat_data(var, ('x',), ())
-    assert_array_equal(actual, data)
-
-    actual = broadcast_compat_data(var, (), ('x',))
-    assert_array_equal(actual, data)
-
-    actual = broadcast_compat_data(var, ('w',), ('x',))
-    assert_array_equal(actual, data[None, :])
-
-    actual = broadcast_compat_data(var, ('w', 'x', 'y'), ())
-    assert_array_equal(actual, data[None, :, None])
+    assert_identical(data, broadcast_compat_data(var, ('x',), ()))
+    assert_identical(data, broadcast_compat_data(var, (), ('x',)))
+    assert_identical(data[None, :], broadcast_compat_data(var, ('w',), ('x',)))
+    assert_identical(data[None, :, None],
+                     broadcast_compat_data(var, ('w', 'x', 'y'), ()))
 
     with pytest.raises(ValueError):
          broadcast_compat_data(var, ('x',), ('w',))
@@ -246,32 +344,18 @@ def test_broadcast_compat_data_2d():
     data = np.arange(12).reshape(3, 4)
     var = xr.Variable(['x', 'y'], data)
 
-    actual = broadcast_compat_data(var, ('x', 'y'), ())
-    assert_array_equal(actual, data)
-
-    actual = broadcast_compat_data(var, ('x',), ('y',))
-    assert_array_equal(actual, data)
-
-    actual = broadcast_compat_data(var, (), ('x', 'y'))
-    assert_array_equal(actual, data)
-
-    actual = broadcast_compat_data(var, ('y', 'x'), ())
-    assert_array_equal(actual, data.T)
-
-    actual = broadcast_compat_data(var, ('y',), ('x',))
-    assert_array_equal(actual, data.T)
-
-    actual = broadcast_compat_data(var, ('w', 'x'), ('y',))
-    assert_array_equal(actual, data[None, :, :])
-
-    actual = broadcast_compat_data(var, ('w',), ('x', 'y'))
-    assert_array_equal(actual, data[None, :, :])
-
-    actual = broadcast_compat_data(var, ('w',), ('y', 'x'))
-    assert_array_equal(actual, data.T[None, :, :])
-
-    actual = broadcast_compat_data(var, ('w', 'x', 'y', 'z'), ())
-    assert_array_equal(actual, data[None, :, :, None])
-
-    actual = broadcast_compat_data(var, ('w', 'y', 'x', 'z'), ())
-    assert_array_equal(actual, data.T[None, :, :, None])
+    assert_identical(data, broadcast_compat_data(var, ('x', 'y'), ()))
+    assert_identical(data, broadcast_compat_data(var, ('x',), ('y',)))
+    assert_identical(data, broadcast_compat_data(var, (), ('x', 'y')))
+    assert_identical(data.T, broadcast_compat_data(var, ('y', 'x'), ()))
+    assert_identical(data.T, broadcast_compat_data(var, ('y',), ('x',)))
+    assert_identical(data[None, :, :],
+                     broadcast_compat_data(var, ('w', 'x'), ('y',)))
+    assert_identical(data[None, :, :],
+                     broadcast_compat_data(var, ('w',), ('x', 'y')))
+    assert_identical(data.T[None, :, :],
+                     broadcast_compat_data(var, ('w',), ('y', 'x')))
+    assert_identical(data[None, :, :, None],
+                     broadcast_compat_data(var, ('w', 'x', 'y', 'z'), ()))
+    assert_identical(data.T[None, :, :, None],
+                     broadcast_compat_data(var, ('w', 'y', 'x', 'z'), ()))

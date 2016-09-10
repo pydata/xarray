@@ -268,7 +268,16 @@ def apply_dataset_ufunc(func, *args, **kwargs):
     list_of_data_vars = [getattr(a, 'data_vars', a) for a in args]
     names = join_dict_keys(list_of_data_vars, how=join)
 
-    list_of_variables = [getattr(a, 'variables', a) for a in args]
+    def as_variable_or_variables(arg):
+        try:
+            return arg.variables
+        except AttributeError:
+            try:
+                return arg.variable
+            except AttributeError:
+                return arg
+
+    list_of_variables = [as_variable_or_variables(a) for a in args]
     lists_of_args = collect_dict_values(list_of_variables, names, fill_value)
 
     result_vars = OrderedDict()
@@ -293,16 +302,13 @@ def apply_dataset_ufunc(func, *args, **kwargs):
 def _iter_over_selections(obj, dim, values):
     """Iterate over selections of an xarray object in the provided order.
     """
+    from .groupby import _dummy_copy
+
     dummy = None
     for value in values:
         try:
-            obj_sel = obj.sel(**{dim: values})
+            obj_sel = obj.sel(**{dim: value})
         except KeyError:
-            if dim not in obj.dims:
-                raise ValueError('incompatible dimensions for a grouped '
-                                 'binary operation: the group variable %r '
-                                 'is not a dimension on the other argument'
-                                 % dim)
             if dummy is None:
                 dummy = _dummy_copy(obj)
             obj_sel = dummy
@@ -311,15 +317,15 @@ def _iter_over_selections(obj, dim, values):
 
 def apply_groupby_ufunc(func, *args):
     from .groupby import GroupBy, peek_at
+    from .variable import Variable
 
     groupbys = [arg for arg in args if isinstance(arg, GroupBy)]
     if not groupbys:
         raise ValueError('must have at least one groupby to iterate over')
     first_groupby = groupbys[0]
-    if any(not first_groupby.unique_coord.equals(gb.unique_coord)
-           for gb in groupbys[1:]):
+    if any(not first_groupby.group.equals(gb.group) for gb in groupbys[1:]):
         raise ValueError('can only perform operations over multiple groupbys '
-                         'at once if they have all the same unique coordinate')
+                         'at once if they are all grouped the same way')
 
     grouped_dim = first_groupby.group.name
     unique_values = first_groupby.unique_coord.values
@@ -328,13 +334,13 @@ def apply_groupby_ufunc(func, *args):
     for arg in args:
         if isinstance(arg, GroupBy):
             iterator = (value for _, value in arg)
-        elif hasattr(arg, 'dims') and group_name in arg.dims:
+        elif hasattr(arg, 'dims') and grouped_dim in arg.dims:
             if isinstance(arg, Variable):
                 raise ValueError(
                     'groupby operations cannot be performed with '
                     'xarray.Variable objects that share a dimension with '
                     'the grouped dimension')
-            iterator = _iter_over_selections(arg, grouped_dim, unique_vlaues)
+            iterator = _iter_over_selections(arg, grouped_dim, unique_values)
         else:
             iterator = itertools.repeat(arg)
         iterators.append(iterator)
@@ -343,7 +349,7 @@ def apply_groupby_ufunc(func, *args):
     applied_example, applied = peek_at(applied)
     combine = first_groupby._concat
     if isinstance(applied_example, tuple):
-        combined = tuple(combine(output) for output in applied)
+        combined = tuple(combine(output) for output in zip(*applied))
     else:
         combined = combine(applied)
     return combined
