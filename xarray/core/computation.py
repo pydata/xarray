@@ -153,7 +153,8 @@ def build_output_coords(args, signature, new_coords=None):
 
     if len(args) == 1 and new_coords is None:
         # we can skip the expensive merge
-        merged, = coord_variables
+        coord_vars, = coord_variables
+        merged = OrderedDict(coord_vars)
     else:
         merged = merge_coords_without_align(coord_variables)
 
@@ -309,12 +310,12 @@ def _iter_over_selections(obj, dim, values):
 
 
 def apply_groupby_ufunc(func, *args):
-    from .groupby import GroupBy
+    from .groupby import GroupBy, peek_at
 
-    groupbys = [arg for arg in args if isinstance(GroupBy)]
+    groupbys = [arg for arg in args if isinstance(arg, GroupBy)]
     if not groupbys:
         raise ValueError('must have at least one groupby to iterate over')
-    first_groupby = groups[0]
+    first_groupby = groupbys[0]
     if any(not first_groupby.unique_coord.equals(gb.unique_coord)
            for gb in groupbys[1:]):
         raise ValueError('can only perform operations over multiple groupbys '
@@ -338,11 +339,11 @@ def apply_groupby_ufunc(func, *args):
             iterator = itertools.repeat(arg)
         iterators.append(iterator)
 
-    applied = (func(*zipped_args) for zipped_args in zip(iterators))
+    applied = (func(*zipped_args) for zipped_args in zip(*iterators))
     applied_example, applied = peek_at(applied)
-    combine = first_groupby._combined
+    combine = first_groupby._concat
     if isinstance(applied_example, tuple):
-        combined = tuple(combine(output) for output in zip(*applied))
+        combined = tuple(combine(output) for output in applied)
     else:
         combined = combine(applied)
     return combined
@@ -534,7 +535,7 @@ def apply_ufunc(func, *args, **kwargs):
         signature = _Signature.default(len(args))
     elif isinstance(signature, basestring):
         signature = _Signature.from_string(signature)
-    else:
+    elif not isinstance(signature, _Signature):
         signature = _Signature.from_sequence(signature)
 
     variables_ufunc = functools.partial(
@@ -561,14 +562,3 @@ def apply_ufunc(func, *args, **kwargs):
                                 dtype=dask_dtype)
     else:
         return func(*args)
-
-
-# def mean(xarray_object, dim=None):
-#     if dim is None:
-#         signature = _Signature([(dim,)])
-#         kwargs = {'axis': -1}
-#     else:
-#         signature = _Signature([xarray_object.dims])
-#         kwargs = {}
-#     return apply_ufunc([xarray_object], ops.mean, signature,
-#                        dask_array='allowed', kwargs=kwargs)

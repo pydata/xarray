@@ -1,4 +1,5 @@
 from collections import OrderedDict
+import functools
 import operator
 
 import numpy as np
@@ -60,19 +61,14 @@ def test_apply_ufunc_identity():
     data_array = xr.DataArray(variable, [('x', -array)])
     dataset = xr.Dataset({'y': variable}, {'x': -array})
 
-    identity = lambda x: x
+    identity = functools.partial(xr.apply_ufunc, lambda x: x)
 
-    output = xr.apply_ufunc(identity, array)
-    assert_array_equal(output, array)
-
-    output = xr.apply_ufunc(identity, variable)
-    assert_identical(output, variable)
-
-    output = xr.apply_ufunc(identity, data_array)
-    assert_identical(output, data_array)
-
-    output = xr.apply_ufunc(identity, dataset)
-    assert_identical(output, dataset)
+    assert_array_equal(array, identity(array))
+    assert_identical(variable, identity(variable))
+    assert_identical(data_array, identity(data_array))
+    assert_identical(data_array, identity(data_array.groupby('x')))
+    assert_identical(dataset, identity(dataset))
+    assert_identical(dataset, identity(dataset.groupby('x')))
 
 
 def test_apply_ufunc_two_inputs():
@@ -167,20 +163,19 @@ def test_apply_ufunc_input_core_dimension():
     expected_data_array_y = xr.DataArray(expected_variable_y, {'x': ['a', 'b']})
     expected_dataset_y = xr.Dataset({'data': expected_data_array_y})
 
-    actual = first_element(variable, 'x')
-    assert_identical(actual, expected_variable_x)
-    actual = first_element(variable, 'y')
-    assert_identical(actual, expected_variable_y)
+    assert_identical(expected_variable_x, first_element(variable, 'x'))
+    assert_identical(expected_variable_y, first_element(variable, 'y'))
 
-    actual = first_element(data_array, 'x')
-    assert_identical(actual, expected_data_array_x)
-    actual = first_element(data_array, 'y')
-    assert_identical(actual, expected_data_array_y)
+    assert_identical(expected_data_array_x, first_element(data_array, 'x'))
+    assert_identical(expected_data_array_y, first_element(data_array, 'y'))
 
-    actual = first_element(dataset, 'x')
-    assert_identical(actual, expected_dataset_x)
-    actual = first_element(dataset, 'y')
-    assert_identical(actual, expected_dataset_y)
+    assert_identical(expected_dataset_x, first_element(dataset, 'x'))
+    assert_identical(expected_dataset_y, first_element(dataset, 'y'))
+
+    assert_identical(expected_data_array_x,
+                     first_element(data_array.groupby('y'), 'x'))
+    assert_identical(expected_dataset_x,
+                     first_element(dataset.groupby('y'), 'x'))
 
 
 def test_apply_ufunc_output_core_dimension():
