@@ -140,9 +140,9 @@ If you are using xarray and would like to cite it in academic publication, we
 would certainly appreciate it. We recommend two citations.
 
   1. At a minimum, we recommend citing the xarray overview journal article,
-     to be submitted to the Journal of Open Research Software.
+     submitted to the Journal of Open Research Software.
 
-     - Hoyer, S., Hamman, J. (In preparation). Xarray: N-D labeled arrays and
+     - Hoyer, S., Hamman, J. (In review). Xarray: N-D labeled arrays and
        datasets in Python. Journal of Open Research Software.
 
        Here’s an example of a BibTeX entry::
@@ -150,14 +150,14 @@ would certainly appreciate it. We recommend two citations.
            @article{hoyer2016xarray,
              title   = {xarray: {N-D} labeled arrays and datasets in {Python}},
              author  = {Hoyer, S. and J. Hamman},
-             journal = {in prep, J. Open Res. Software},
+             journal = {In review, J. Open Res. Software},
              year    = {2016}
            }
 
   2. You may also want to cite a specific version of the xarray package. We
-     provide a `Zenodo`__ citation and DOI for this purpose.
-
-     - Hoyer, S. et al.. (2016). xarray: v0.8.0. Zenodo. 10.5281/zenodo.59499
+     provide a `Zenodo`__ citation and DOI for this purpose:
+        .. image:: https://zenodo.org/badge/7766/pydata/xarray.svg
+            :target: https://zenodo.org/badge/latestdoi/7766/pydata/xarray.
 
        An example BibTeX entry::
 
@@ -169,4 +169,4 @@ would certainly appreciate it. We recommend two citations.
                  doi    = {10.5281/zenodo.59499},
                  url    = {http://dx.doi.org/10.5281/zenodo.59499}
                 }
-__ https://zenodo.org
+__ https://zenodo.org/badge/latestdoi/7766/pydata/xarray
