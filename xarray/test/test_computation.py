@@ -21,10 +21,6 @@ def assert_identical(a, b):
     if hasattr(a, 'identical'):
         msg = 'not identical:\n%r\n%r' % (a, b)
         assert a.identical(b), msg
-    # elif isinstance(a, dask_array_type) or isinstance(b, dask_array_type):
-    #     assert isinstance(a, dask_array_type)
-    #     assert isinstance(b, dask_array_type)
-    #     assert_array_equal(a.compute(), b.compute())
     else:
         assert_array_equal(a, b)
 
@@ -427,7 +423,7 @@ def test_apply_ufunc_dask():
 
     identity = lambda x: x
 
-    # encountered dask array
+    # encountered dask array, but did not set dask_array='allowed'
     with pytest.raises(ValueError):
         xr.apply_ufunc(identity, array)
     with pytest.raises(ValueError):
@@ -436,6 +432,10 @@ def test_apply_ufunc_dask():
         xr.apply_ufunc(identity, data_array)
     with pytest.raises(ValueError):
         xr.apply_ufunc(identity, dataset)
+
+    # unknown setting for dask array handling
+    with pytest.raises(ValueError):
+        xr.apply_ufunc(identity, array, dask_array='auto')
 
     def dask_safe_identity(x):
         return xr.apply_ufunc(identity, x, dask_array='allowed')

@@ -15,9 +15,6 @@ from .utils import is_dict_like
 from .pycompat import dask_array_type, OrderedDict, basestring, suppress
 
 
-# TODO: consider requiring the typing module as a requirement. If so, uncomment:
-# A = TypeVar('A', numpy.ndarray, dask.array.Array)
-
 SLICE_NONE = slice(None)
 
 # see http://docs.scipy.org/doc/numpy/reference/c-api.generalized-ufuncs.html
@@ -403,6 +400,8 @@ def _calculate_unified_dim_sizes(variables):
     return dim_sizes
 
 
+# A = TypeVar('A', numpy.ndarray, dask.array.Array)
+
 def broadcast_compat_data(variable, broadcast_dims, core_dims):
     # type: (Variable[A], tuple, tuple) -> A
     data = variable.data
@@ -476,9 +475,9 @@ def apply_variable_ufunc(func, *args, **kwargs):
 
 
 def apply_array_ufunc(func, *args, **kwargs):
-    """apply_variable_ufunc(func, *args, dask_array)
+    """apply_variable_ufunc(func, *args, dask_array='forbidden')
     """
-    dask_array = kwargs.pop('dask_array')
+    dask_array = kwargs.pop('dask_array', 'forbidden')
     if kwargs:
         raise TypeError('apply_array_ufunc() got unexpected keyword '
                         'arguments: %s' % list(kwargs))
@@ -487,8 +486,8 @@ def apply_array_ufunc(func, *args, **kwargs):
         # TODO: add a mode dask_array='auto' when dask.array gets a function for
         # applying arbitrary gufuncs
         if dask_array == 'forbidden':
-            raise ValueError('encountered dask array, but dask arrays are not '
-                             "'explicitly allowed with dask_array='allowed'")
+            raise ValueError('encountered dask array, but did not set '
+                             "dask_array='allowed'")
         elif dask_array != 'allowed':
             raise ValueError('unknown setting for dask array handling: %r'
                              % dask_array)
