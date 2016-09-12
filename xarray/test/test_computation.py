@@ -8,7 +8,8 @@ import xarray as xr
 
 from numpy.testing import assert_array_equal
 from xarray.core.computation import (
-    join_dict_keys, collect_dict_values, broadcast_compat_data, _Signature)
+    ordered_set_union, ordered_set_intersection, join_dict_keys,
+    collect_dict_values, broadcast_compat_data, Signature)
 
 
 def assert_identical(a, b):
@@ -20,35 +21,52 @@ def assert_identical(a, b):
 
 
 def test_parse_signature():
-    assert _Signature([['x']]) == _Signature.from_string('(x)->()')
-    assert _Signature([['x', 'y']]) == _Signature.from_string('(x,y)->()')
-    assert _Signature([['x'], ['y']]) == _Signature.from_string('(x),(y)->()')
-    assert (_Signature([['x']], [['y'], []]) ==
-            _Signature.from_string('(x)->(y),()'))
+    assert Signature([['x']]) == Signature.from_string('(x)->()')
+    assert Signature([['x', 'y']]) == Signature.from_string('(x,y)->()')
+    assert Signature([['x'], ['y']]) == Signature.from_string('(x),(y)->()')
+    assert (Signature([['x']], [['y'], []]) ==
+            Signature.from_string('(x)->(y),()'))
     with pytest.raises(ValueError):
-        _Signature.from_string('(x)(y)->()')
+        Signature.from_string('(x)(y)->()')
     with pytest.raises(ValueError):
-        _Signature.from_string('(x),(y)->')
+        Signature.from_string('(x),(y)->')
     with pytest.raises(ValueError):
-        _Signature.from_string('((x))->(x)')
+        Signature.from_string('((x))->(x)')
 
 
 def test_signature_properties():
-    sig = _Signature.from_string('(x),(x,y)->(z)')
+    sig = Signature.from_string('(x),(x,y)->(z)')
     assert sig.input_core_dims == (('x',), ('x', 'y'))
     assert sig.output_core_dims == (('z',),)
     assert sig.all_input_core_dims == frozenset(['x', 'y'])
     assert sig.all_output_core_dims == frozenset(['z'])
     assert sig.n_inputs == 2
     assert sig.n_outputs == 1
+    # dimension names matter
+    assert Signature([['x']]) != Signature([['y']])
+
+
+def test_ordered_set_union():
+    assert list(ordered_set_union([[1, 2]])) == [1, 2]
+    assert list(ordered_set_union([[1, 2], [2, 1]])) == [1, 2]
+    assert list(ordered_set_union([[0], [1, 2], [1, 3]])) == [0, 1, 2, 3]
+
+
+def test_ordered_set_intersection():
+    assert list(ordered_set_intersection([[1, 2]])) == [1, 2]
+    assert list(ordered_set_intersection([[1, 2], [2, 1]])) == [1, 2]
+    assert list(ordered_set_intersection([[1, 2], [1, 3]])) == [1]
+    assert list(ordered_set_intersection([[1, 2], [2]])) == [2]
 
 
 def test_join_dict_keys():
     dicts = [OrderedDict.fromkeys(keys) for keys in [['x', 'y'], ['y', 'z']]]
-    assert_array_equal(join_dict_keys(dicts, 'left'), ['x', 'y'])
-    assert_array_equal(join_dict_keys(dicts, 'right'), ['y', 'z'])
-    assert_array_equal(join_dict_keys(dicts, 'inner'), ['y'])
-    assert_array_equal(join_dict_keys(dicts, 'outer'), ['x', 'y', 'z'])
+    assert list(join_dict_keys(dicts, 'left')) == ['x', 'y']
+    assert list(join_dict_keys(dicts, 'right')) == ['y', 'z']
+    assert list(join_dict_keys(dicts, 'inner')) == ['y']
+    assert list(join_dict_keys(dicts, 'outer')) == ['x', 'y', 'z']
+    with pytest.raises(KeyError):
+        join_dict_keys(dicts, 'foobar')
 
 
 def test_collect_dict_values():

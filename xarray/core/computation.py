@@ -1,6 +1,7 @@
 import collections
 import functools
 import itertools
+import operator
 import re
 from collections import namedtuple
 
@@ -30,7 +31,7 @@ def safe_tuple(x):
     return tuple(x)
 
 
-class _Signature(object):
+class Signature(object):
     """Core dimensions signature for a given function.
 
     Based on the signature provided by generalized ufuncs in NumPy.
@@ -47,6 +48,7 @@ class _Signature(object):
         self.output_core_dims = tuple(safe_tuple(a) for a in output_core_dims)
         self._all_input_core_dims = None
         self._all_output_core_dims = None
+        self._all_core_dims = None
 
     @property
     def all_input_core_dims(self):
@@ -61,6 +63,13 @@ class _Signature(object):
             self._all_output_core_dims = frozenset(
                 dim for dims in self.output_core_dims for dim in dims)
         return self._all_output_core_dims
+
+    @property
+    def all_core_dims(self):
+        if self._all_core_dims is None:
+            self._all_core_dims = (self.all_input_core_dims
+                                   | self.all_output_core_dims)
+        return self._all_core_dims
 
     @property
     def n_inputs(self):
@@ -91,7 +100,7 @@ class _Signature(object):
 
     @classmethod
     def from_string(cls, string):
-        """Create a _Signature object from a NumPy gufunc signature.
+        """Create a Signature object from a NumPy gufunc signature.
 
         Parameters
         ----------
@@ -112,7 +121,7 @@ class _Signature(object):
             return False
 
     def __ne__(self, other):
-        return self != other
+        return not self == other
 
     def __repr__(self):
         return ('%s(%r, %r)'
@@ -186,8 +195,8 @@ def apply_dataarray_ufunc(func, *args, **kwargs):
     join = kwargs.pop('join', 'inner')
     new_coords = kwargs.pop('new_coords', None)
     if kwargs:
-        raise TypeError('apply_dataarray_ufunc() got unexpected keyword arguments: %s'
-                        % list(kwargs))
+        raise TypeError('apply_dataarray_ufunc() got unexpected keyword '
+                        'arguments: %s' % list(kwargs))
 
     if signature is None:
         signature = _default_signature(len(args))
@@ -209,26 +218,55 @@ def apply_dataarray_ufunc(func, *args, **kwargs):
         return DataArray(result_var, coords, name=name, fastpath=True)
 
 
+def ordered_set_union(all_keys):
+    # type: List[Iterable -> Iterable
+    result_dict = OrderedDict()
+    for keys in all_keys:
+        for key in keys:
+            result_dict[key] = None
+    return result_dict.keys()
+
+
+def ordered_set_intersection(all_keys):
+    # type: List[Iterable] -> Iterable
+    intersection = set(all_keys[0])
+    for keys in all_keys[1:]:
+        intersection.intersection_update(keys)
+    return [key for key in all_keys[0] if key in intersection]
+
+
+_JOINERS = {
+    'inner': ordered_set_intersection,
+    'outer': ordered_set_union,
+    'left': operator.itemgetter(0),
+    'right': operator.itemgetter(-1),
+}
+
+
 def join_dict_keys(objects, how='inner'):
+    # type: (Iterable[Union[Mapping, Any]], str) -> Iterable
+    joiner = _JOINERS[how]
     all_keys = [obj.keys() for obj in objects if hasattr(obj, 'keys')]
-
-    if len(all_keys) == 1:
-        # shortcut
-        result_keys, = all_keys
-        return result_keys
-
-    joiner = _get_joiner(how)
-    # TODO: use a faster ordered set than a pandas.Index
-    result_keys = joiner([pd.Index(keys) for keys in all_keys])
-    return result_keys
+    return joiner(all_keys)
 
 
 def collect_dict_values(objects, keys, fill_value=None):
+    # type: (Iterable[Union[Mapping, Any]], Iterable, Any) -> List[list]
     return [[obj.get(key, fill_value)
              if is_dict_like(obj)
              else obj
              for obj in objects]
             for key in keys]
+
+
+def _as_variables_or_variable(arg):
+    try:
+        return arg.variables
+    except AttributeError:
+        try:
+            return arg.variable
+        except AttributeError:
+            return arg
 
 
 def _fast_dataset(variables, coord_variables):
@@ -268,16 +306,7 @@ def apply_dataset_ufunc(func, *args, **kwargs):
     list_of_data_vars = [getattr(a, 'data_vars', a) for a in args]
     names = join_dict_keys(list_of_data_vars, how=join)
 
-    def as_variable_or_variables(arg):
-        try:
-            return arg.variables
-        except AttributeError:
-            try:
-                return arg.variable
-            except AttributeError:
-                return arg
-
-    list_of_variables = [as_variable_or_variables(a) for a in args]
+    list_of_variables = [_as_variables_or_variable(a) for a in args]
     lists_of_args = collect_dict_values(list_of_variables, names, fill_value)
 
     result_vars = OrderedDict()
@@ -427,46 +456,40 @@ def apply_variable_ufunc(func, *args, **kwargs):
         raise TypeError('apply_ufunc() got unexpected keyword arguments: %s'
                         % list(kwargs))
 
-    if dask_array not in {'forbidden', 'allowed', 'auto'}:
-        raise ValueError('unknown setting for dask array handling')
-    if kwargs_ is None:
-        kwargs_ = {}
-
-    dim_sizes = _calculate_unified_dim_sizes([a for a in args
-                                              if hasattr(a, 'dims')])
-    all_core_dims = (signature.all_input_core_dims
-                     | signature.all_output_core_dims)
-    broadcast_dims = tuple(d for d in dim_sizes if d not in all_core_dims)
+    dim_sizes = _calculate_unified_dim_sizes(a for a in args
+                                             if hasattr(a, 'dims'))
+    broadcast_dims = tuple(dim for dim in dim_sizes
+                           if dim not in signature.all_core_dims)
     output_dims = [broadcast_dims + out for out in signature.output_core_dims]
 
-    list_of_input_data = []
-    for arg, core_dims in zip(args, signature.input_core_dims):
-        if isinstance(arg, Variable):
-            data = broadcast_compat_data(arg, broadcast_dims, core_dims)
-        else:
-            data = arg
-        list_of_input_data.append(data)
+    input_data = [broadcast_compat_data(arg, broadcast_dims, core_dims)
+                  if isinstance(arg, Variable)
+                  else arg
+                  for arg, core_dims in zip(args, signature.input_core_dims)]
 
-    contains_dask = any(isinstance(d, dask_array_type)
-                        for d in list_of_input_data)
+    if any(isinstance(d, dask_array_type) for d in input_data):
+        if dask_array == 'forbidden':
+            raise ValueError('encountered dask array')
+        elif dask_array == 'auto':
+            result_data = apply_dask_array(func, *args, signature=signature,
+                                           kwargs=kwargs, dtype=dask_dtype)
+        elif dask_array != 'allowed':
+            raise ValueError('unknown setting for dask array handling: %r'
+                             % dask_array)
 
-    if dask_array == 'forbidden' and contains_dask:
-        raise ValueError('encountered dask array')
-    elif dask_array == 'auto' and contains_dask:
-        result_data = apply_dask_array(func, *args, signature=signature,
-                                       kwargs=kwargs, dtype=dask_dtype)
+    if kwargs_:
+        result_data = func(*input_data, **kwargs_)
     else:
-        result_data = func(*list_of_input_data, **kwargs_)
+        result_data = func(*input_data)
 
-    if len(output_dims) > 1:
+    if signature.n_outputs > 1:
         output = []
         for dims, data in zip(output_dims, result_data):
             output.append(Variable(dims, data))
         return tuple(output)
     else:
         dims, = output_dims
-        data = result_data
-        return Variable(dims, data)
+        return Variable(dims, result_data)
 
 
 def apply_dask_ufunc(func, *args, **kwargs):
@@ -538,11 +561,11 @@ def apply_ufunc(func, *args, **kwargs):
                         % list(kwargs))
 
     if signature is None:
-        signature = _Signature.default(len(args))
+        signature = Signature.default(len(args))
     elif isinstance(signature, basestring):
-        signature = _Signature.from_string(signature)
-    elif not isinstance(signature, _Signature):
-        signature = _Signature.from_sequence(signature)
+        signature = Signature.from_string(signature)
+    elif not isinstance(signature, Signature):
+        signature = Signature.from_sequence(signature)
 
     variables_ufunc = functools.partial(
         apply_variable_ufunc, func, signature=signature, dask_array=dask_array,
