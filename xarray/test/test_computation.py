@@ -21,14 +21,10 @@ def assert_identical(a, b):
     if hasattr(a, 'identical'):
         msg = 'not identical:\n%r\n%r' % (a, b)
         assert a.identical(b), msg
-    elif isinstance(a, dask_array_type) or isinstance(b, dask_array_type):
-        assert isinstance(a, dask_array_type)
-        assert isinstance(b, dask_array_type)
-        assert a.chunks == b.chunks
-        # this is private API, but AFAICT the only way to test that dask array
-        # objects have the same precomputed dtype
-        assert a._dtype == b._dtype
-        assert_array_equal(a.compute(), b.compute())
+    # elif isinstance(a, dask_array_type) or isinstance(b, dask_array_type):
+    #     assert isinstance(a, dask_array_type)
+    #     assert isinstance(b, dask_array_type)
+    #     assert_array_equal(a.compute(), b.compute())
     else:
         assert_array_equal(a, b)
 
@@ -411,18 +407,49 @@ def test_broadcast_compat_data_2d():
                      broadcast_compat_data(var, ('w', 'y', 'x', 'z'), ()))
 
 
+class _NoCacheVariable(xr.Variable):
+    """Subclass of Variable for testing that does not cache values."""
+    # TODO: remove this class when we change the default behavior for caching
+    # dask.array objects.
+    def _data_cached(self):
+        return np.asarray(self._data)
+
+
 @requires_dask
 def test_apply_ufunc_dask():
     import dask.array as da
 
+    array = da.ones((2,), chunks=2)
+    variable = _NoCacheVariable('x', array)
+    coords = xr.DataArray(variable).coords
+    data_array = xr.DataArray(variable, coords, fastpath=True)
+    dataset = xr.Dataset({'y': variable})
+
     identity = lambda x: x
-    dask_ones = da.ones((2, 3), chunks=3)
 
-    with pytest.raises(ValueError):  # encountered dask array
-        xr.apply_ufunc(identity, dask_ones)
+    # encountered dask array
+    with pytest.raises(ValueError):
+        xr.apply_ufunc(identity, array)
+    with pytest.raises(ValueError):
+        xr.apply_ufunc(identity, variable)
+    with pytest.raises(ValueError):
+        xr.apply_ufunc(identity, data_array)
+    with pytest.raises(ValueError):
+        xr.apply_ufunc(identity, dataset)
 
-    actual = xr.apply_ufunc(identity, dask_ones, dask_array='allowed')
-    assert_identical(actual, dask_ones)
+    def dask_safe_identity(x):
+        return xr.apply_ufunc(identity, x, dask_array='allowed')
 
-    actual = xr.apply_ufunc(identity, dask_ones, dask_array='auto')
-    assert_identical(actual, dask_ones)
+    assert array is dask_safe_identity(array)
+
+    actual = dask_safe_identity(variable)
+    assert isinstance(actual.data, da.Array)
+    assert_identical(variable, actual)
+
+    actual = dask_safe_identity(data_array)
+    assert isinstance(actual.data, da.Array)
+    assert_identical(data_array, actual)
+
+    actual = dask_safe_identity(dataset)
+    assert isinstance(actual['y'].data, da.Array)
+    assert_identical(dataset, actual)

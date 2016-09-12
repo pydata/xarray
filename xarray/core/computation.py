@@ -447,9 +447,7 @@ def broadcast_compat_data(variable, broadcast_dims, core_dims):
 
 
 def apply_variable_ufunc(func, *args, **kwargs):
-    """
-    def apply_variable_ufunc(func, args, signature=None, dask_array='forbidden',
-                             kwargs=None, dtype=None)
+    """def apply_variable_ufunc(func, args, signature=None)
     """
     from .variable import Variable
 
@@ -469,7 +467,7 @@ def apply_variable_ufunc(func, *args, **kwargs):
                   else arg
                   for arg, core_dims in zip(args, signature.input_core_dims)]
 
-    result_data = apply_array_ufunc(func, *input_data)
+    result_data = func(*input_data)
 
     if signature.n_outputs > 1:
         output = []
@@ -481,44 +479,20 @@ def apply_variable_ufunc(func, *args, **kwargs):
         return Variable(dims, result_data)
 
 
-def apply_dask_ufunc(func, *args, **kwargs):
-    import dask.array as da
-
-    signature = kwargs.pop('signature')
-    dtype = kwargs.pop('dtype', None)
+def apply_array_ufunc(func, *args, **kwargs):
+    """def apply_variable_ufunc(func, *args, dask_array)
+    """
+    dask_array = kwargs.pop('dask_array')
     if kwargs:
-        raise TypeError('apply_dask_ufunc() got unexpected keyword '
+        raise TypeError('apply_array_ufunc() got unexpected keyword '
                         'arguments: %s' % list(kwargs))
 
-    # TODO: relax these checks and use built-in gufunc support for dask.array,
-    # if/when that arrives
-    if signature.n_outputs != 1:
-        raise NotImplementedError(
-            "cannot yet use dask_array='auto' with functions that "
-            'return multiple values')
-    if signature.all_input_core_dims or signature.all_output_core_dims:
-        raise NotImplementedError(
-            "cannot yet use dask_array='auto' on dask arrays "
-            'with a function signature that includes core dimensions')
-
-    return da.elemwise(func, *args, dtype=dtype)
-
-
-def apply_array_ufunc(func, *args, **kwargs):
     if any(isinstance(arg, dask_array_type) for arg in args):
-        # for efficiency, only unpack these arguments if necessary
-        signature = kwargs.pop('signature')
-        dask_array = kwargs.pop('dask_array', None)
-        dask_dtype = kwargs.pop('dask_dtype', None)
-        if kwargs:
-            raise TypeError('apply_dask_ufunc() got unexpected keyword '
-                            'arguments: %s' % list(kwargs))
-
+        # TODO: add a mode dask_array='auto' when dask.array gets a function for
+        # applying arbitrary gufuncs
         if dask_array == 'forbidden':
-            raise ValueError('encountered dask array')
-        elif dask_array == 'auto':
-            return apply_dask_ufunc(func, *args, signature=signature,
-                                    dtype=dask_dtype)
+            raise ValueError('encountered dask array, but dask arrays are not '
+                             "'explicitly allowed with dask_array='allowed'")
         elif dask_array != 'allowed':
             raise ValueError('unknown setting for dask array handling: %r'
                              % dask_array)
@@ -528,7 +502,7 @@ def apply_array_ufunc(func, *args, **kwargs):
 
 def apply_ufunc(func, *args, **kwargs):
     """apply_ufunc(func, *args, signature=None, join='inner', new_coords=None,
-                   kwargs=None, dask_array='forbidden', dask_dtype=None)
+                   kwargs=None, dask_array='forbidden')
 
     Apply a broadcasting function for unlabeled arrays to xarray objects.
 
@@ -569,7 +543,6 @@ def apply_ufunc(func, *args, **kwargs):
     new_coords = kwargs.pop('new_coords', None)
     kwargs_ = kwargs.pop('kwargs', None)
     dask_array = kwargs.pop('dask_array', 'forbidden')
-    dask_dtype = kwargs.pop('dask_dtype', None)
     if kwargs:
         raise TypeError('apply_ufunc() got unexpected keyword arguments: %s'
                         % list(kwargs))
@@ -585,8 +558,7 @@ def apply_ufunc(func, *args, **kwargs):
         func = functools.partial(func, **kwargs_)
 
     array_ufunc = functools.partial(
-        apply_array_ufunc, func, signature=signature, dask_array=dask_array,
-        dask_dtype=dask_dtype)
+        apply_array_ufunc, func, dask_array=dask_array)
 
     variables_ufunc = functools.partial(
         apply_variable_ufunc, array_ufunc, signature=signature)
@@ -594,7 +566,7 @@ def apply_ufunc(func, *args, **kwargs):
     if any(isinstance(a, GroupBy) for a in args):
         this_apply_ufunc = functools.partial(
             apply_ufunc, func, signature=signature, join=join,
-            dask_array=dask_array, dask_dtype=dask_dtype, new_coords=new_coords)
+            dask_array=dask_array, new_coords=new_coords)
         return apply_groupby_ufunc(this_apply_ufunc, *args)
     elif any(is_dict_like(a) for a in args):
         return apply_dataset_ufunc(variables_ufunc, *args, signature=signature,
