@@ -15,6 +15,9 @@ from .utils import is_dict_like
 from .pycompat import dask_array_type, OrderedDict, basestring, suppress
 
 
+# TODO: consider requiring the typing module as a requirement. If so, uncomment:
+# A = TypeVar('A', numpy.ndarray, dask.array.Array)
+
 SLICE_NONE = slice(None)
 
 # see http://docs.scipy.org/doc/numpy/reference/c-api.generalized-ufuncs.html
@@ -131,6 +134,7 @@ class Signature(object):
 
 
 def result_name(objects):
+    # type: List[object] -> Any
     # use the same naming heuristics as pandas:
     # https://github.com/blaze/blaze/issues/458#issuecomment-51936356
     names = set(getattr(obj, 'name', None) for obj in objects)
@@ -385,6 +389,7 @@ def apply_groupby_ufunc(func, *args):
 
 
 def _calculate_unified_dim_sizes(variables):
+    # type: Iterable[Variable] -> OrderedDict[Any, int]
     dim_sizes = OrderedDict()
 
     for var in variables:
@@ -403,7 +408,7 @@ def _calculate_unified_dim_sizes(variables):
 
 
 def broadcast_compat_data(variable, broadcast_dims, core_dims):
-
+    # type: (Variable[A], tuple, tuple) -> A
     data = variable.data
 
     old_dims = variable.dims

@@ -9,7 +9,10 @@ import xarray as xr
 from numpy.testing import assert_array_equal
 from xarray.core.computation import (
     ordered_set_union, ordered_set_intersection, join_dict_keys,
-    collect_dict_values, broadcast_compat_data, Signature)
+    collect_dict_values, broadcast_compat_data, Signature,
+    _calculate_unified_dim_sizes)
+
+from . import requires_dask
 
 
 def assert_identical(a, b):
@@ -339,6 +342,25 @@ def test_apply_groupby_add_same():
         add(data_array.groupby('y'), other_data_array.groupby('y'))
     with pytest.raises(ValueError):
         add(data_array.groupby('y'), data_array.groupby('x'))
+
+
+def test_calculate_unified_dim_sizes():
+    assert _calculate_unified_dim_sizes([xr.Variable((), 0)]) == OrderedDict()
+    assert (_calculate_unified_dim_sizes(
+                [xr.Variable('x', [1]), xr.Variable('x', [1])])
+            == OrderedDict([('x', 1)]))
+    assert (_calculate_unified_dim_sizes(
+                [xr.Variable('x', [1]), xr.Variable('y', [1, 2])])
+            == OrderedDict([('x', 1), ('y', 2)]))
+
+    # duplicate dimensions
+    with pytest.raises(ValueError):
+        _calculate_unified_dim_sizes([xr.Variable(('x', 'x'), [[1]])])
+
+    # mismatched lengths
+    with pytest.raises(ValueError):
+        _calculate_unified_dim_sizes(
+            [xr.Variable('x', [1]), xr.Variable('x', [1, 2])])
 
 
 def test_broadcast_compat_data_1d():
