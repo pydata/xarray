@@ -271,7 +271,7 @@ def test_apply_ufunc_output_core_dimension():
     def stack_negative(obj):
         func = lambda x: xr.core.npcompat.stack([x, -x], axis=-1)
         sig = ([()], [('sign',)])
-        new_coords = {'sign': [1, -1]}
+        new_coords = [{'sign': [1, -1]}]
         return xr.apply_ufunc(func, obj, signature=sig, new_coords=new_coords)
 
     array = np.array([[1, 2], [3, 4]])
@@ -297,7 +297,7 @@ def test_apply_ufunc_output_core_dimension():
     def original_and_stack_negative(obj):
         func = lambda x: (x, xr.core.npcompat.stack([x, -x], axis=-1))
         sig = ([()], [(), ('sign',)])
-        new_coords = {'sign': [1, -1]}
+        new_coords = [None, {'sign': [1, -1]}]
         return xr.apply_ufunc(func, obj, signature=sig, new_coords=new_coords)
 
     out0, out1 = original_and_stack_negative(array)
@@ -330,6 +330,7 @@ def test_apply_ufunc_output_core_dimension():
         # no new_coords
         return xr.apply_ufunc(func, obj, signature=sig)
 
+    # new output dimensions must have matching entries
     with pytest.raises(ValueError):
         stack_invalid(data_array)
     with pytest.raises(ValueError):

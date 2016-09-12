@@ -15,8 +15,6 @@ from .utils import is_dict_like
 from .pycompat import dask_array_type, OrderedDict, basestring, suppress
 
 
-SLICE_NONE = slice(None)
-
 # see http://docs.scipy.org/doc/numpy/reference/c-api.generalized-ufuncs.html
 DIMENSION_NAME = r'\w+'
 CORE_DIMENSION_LIST = '(?:' + DIMENSION_NAME + '(?:,' + DIMENSION_NAME + ')*)?'
@@ -143,9 +141,16 @@ def result_name(objects):
     return name
 
 
+_REPEAT_NONE = itertools.repeat(None)
+
 def build_output_coords(args, signature, new_coords=None):
-    # type: (list, Signature, Optional[Mapping]) -> List[OrderedDict[Any, Variable]]
-    coord_variables = []
+    # type: (list, Signature, Iterable[Optional[Mapping]])
+    # -> List[OrderedDict[Any, Variable]]
+
+    if new_coords is None:
+        new_coords = _REPEAT_NONE
+
+    input_coords = []
     for arg in args:
         try:
             coords = arg.coords
@@ -153,32 +158,38 @@ def build_output_coords(args, signature, new_coords=None):
             pass  # skip this argument
         else:
             coord_vars = getattr(coords, 'variables', coords)
-            coord_variables.append(coord_vars)
-
-    if new_coords is not None:
-        coord_variables.append(getattr(new_coords, 'variables', new_coords))
-
-    if len(args) == 1 and new_coords is None:
-        # we can skip the expensive merge
-        coord_vars, = coord_variables
-        merged = OrderedDict(coord_vars)
-    else:
-        merged = merge_coords_without_align(coord_variables)
-
-    missing_dims = signature.all_output_core_dims - set(merged)
-    if missing_dims:
-        raise ValueError('new output dimensions must have matching entries in '
-                         '`new_coords`: %r' % missing_dims)
+            input_coords.append(coord_vars)
 
     output_coords = []
-    for output_dims in signature.output_core_dims:
-        dropped_dims = signature.all_core_dims - set(output_dims)
-        if dropped_dims:
-            coords = OrderedDict((k, v) for k, v in merged.items()
-                                 if set(v.dims).isdisjoint(dropped_dims))
+    for output_dims, arg_new_coords in zip(
+            signature.output_core_dims, new_coords):
+
+        arg_coords = list(input_coords)
+        if arg_new_coords is not None:
+            arg_new_coords = getattr(
+                arg_new_coords, 'variables', arg_new_coords)
+            arg_coords.append(arg_new_coords)
+
+        if len(arg_coords) == 1:
+            # we can skip the expensive merge
+            unpacked_arg_coords, = arg_coords
+            merged = OrderedDict(unpacked_arg_coords)
         else:
-            coords = merged
-        output_coords.append(coords)
+            print(arg_coords)
+            merged = merge_coords_without_align(arg_coords)
+
+        missing_dims = [dim for dim in output_dims if dim not in merged]
+        if missing_dims:
+            raise ValueError(
+                'new output dimensions must have matching entries '
+                'in `new_coords`: %r' % missing_dims)
+
+        dropped_dims = signature.all_input_core_dims - set(output_dims)
+        if dropped_dims:
+            merged = OrderedDict((k, v) for k, v in merged.items()
+                                 if dropped_dims.isdisjoint(v.dims))
+
+        output_coords.append(merged)
 
     return output_coords
 
@@ -400,6 +411,8 @@ def _calculate_unified_dim_sizes(variables):
     return dim_sizes
 
 
+SLICE_NONE = slice(None)
+
 # A = TypeVar('A', numpy.ndarray, dask.array.Array)
 
 def broadcast_compat_data(variable, broadcast_dims, core_dims):
@@ -537,9 +550,9 @@ def apply_ufunc(func, *args, **kwargs):
         - 'inner': use the intersection of object indexes
         - 'left': use indexes from the first object with each dimension
         - 'right': use indexes from the last object with each dimension
-    new_coords : dict-like, optional
-        New coordinates to include on output variables. Any core dimensions
-        on the output that are not found on the inputs must be provided here.
+    new_coords : list of dict-like, optional
+        New coordinates to include on each output variable. Any core dimensions
+        on outputs not found on the inputs must be provided here.
     dataset_fill_value : optional
         Value used in place of missing variables on Dataset inputs when the
         datasets do not share the exact same ``data_vars``.
@@ -557,10 +570,11 @@ def apply_ufunc(func, *args, **kwargs):
     ``apply_ufunc`` to write functions to (very nearly) replicate existing
     xarray functionality:
 
-    Add two arrays (``+``) using an outer join for indexes::
+    Calculate the vector magnitude of two arguments:
 
-        def add(a, b):
-            return xr.apply_func(np.add, a, b, join='outer')
+        def magnitude(a, b):
+            func = lambda x, y: np.sqrt(x ** 2 + y ** 2)
+            return xr.apply_func(func, a, b)
 
     Compute the mean (``.mean``)::
 
@@ -584,7 +598,7 @@ def apply_ufunc(func, *args, **kwargs):
 
         def stack(objects, dim, new_coord):
             sig = ([()] * len(objects), [(dim,)])
-            new_coords = {dim: new_coord}
+            new_coords = [{dim: new_coord}]
             func = lambda *x: np.stack(x, axis=-1)
             return xr.apply_ufunc(func, *objects, signature=sig,
                                   new_coords=new_coords,
