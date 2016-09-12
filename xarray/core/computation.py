@@ -146,11 +146,8 @@ def result_name(objects):
     return name
 
 
-def _default_result_attrs(attrs, func, signature):
-    return [{}] * signature.n_outputs
-
-
 def build_output_coords(args, signature, new_coords=None):
+    # type: (list, Signature, Optional[Mapping]) -> List[OrderedDict[Any, Variable]]
     coord_variables = []
     for arg in args:
         try:
@@ -190,7 +187,7 @@ def build_output_coords(args, signature, new_coords=None):
 
 
 def apply_dataarray_ufunc(func, *args, **kwargs):
-    """apply_dataarray_ufunc(func, *args, signature=None, join='inner',
+    """apply_dataarray_ufunc(func, *args, signature, join='inner',
                              new_coords=None)
     """
     from .dataarray import DataArray
@@ -285,9 +282,8 @@ def _fast_dataset(variables, coord_variables):
 
 
 def apply_dataset_ufunc(func, *args, **kwargs):
-    """
-    def apply_dataset_ufunc(func, args, signature=None, join='inner',
-                            fill_value=None, new_coords=None):
+    """apply_dataset_ufunc(func, *args, signature, join='inner',
+                           fill_value=None, new_coords=None):
     """
     from .dataset import Dataset
 
@@ -447,7 +443,7 @@ def broadcast_compat_data(variable, broadcast_dims, core_dims):
 
 
 def apply_variable_ufunc(func, *args, **kwargs):
-    """def apply_variable_ufunc(func, args, signature=None)
+    """apply_variable_ufunc(func, *args, signature)
     """
     from .variable import Variable
 
@@ -480,7 +476,7 @@ def apply_variable_ufunc(func, *args, **kwargs):
 
 
 def apply_array_ufunc(func, *args, **kwargs):
-    """def apply_variable_ufunc(func, *args, dask_array)
+    """apply_variable_ufunc(func, *args, dask_array)
     """
     dask_array = kwargs.pop('dask_array')
     if kwargs:
