@@ -207,8 +207,8 @@ def test_apply_ufunc_two_outputs():
         return xr.apply_ufunc(func, obj, signature=signature)
 
     out0, out1 = twice(array)
-    assert_array_equal(out0, array)
-    assert_array_equal(out1, array)
+    assert_identical(out0, array)
+    assert_identical(out1, array)
 
     out0, out1 = twice(variable)
     assert_identical(out0, variable)
@@ -280,31 +280,60 @@ def test_apply_ufunc_output_core_dimension():
     dataset = xr.Dataset({'data': data_array})
 
     stacked_array = np.array([[[1, -1], [2, -2]], [[3, -3], [4, -4]]])
-    expected_variable = xr.Variable(['x', 'y', 'sign'], stacked_array)
-    expected_coords = {'x': ['a', 'b'], 'y': [-1, -2], 'sign': [1, -1]}
-    expected_data_array = xr.DataArray(expected_variable, expected_coords)
-    expected_dataset = xr.Dataset({'data': expected_data_array})
+    stacked_variable = xr.Variable(['x', 'y', 'sign'], stacked_array)
+    stacked_coords = {'x': ['a', 'b'], 'y': [-1, -2], 'sign': [1, -1]}
+    stacked_data_array = xr.DataArray(stacked_variable, stacked_coords)
+    stacked_dataset = xr.Dataset({'data': stacked_data_array})
 
-    assert_array_equal(stacked_array, stack_negative(array))
-    assert_identical(expected_variable, stack_negative(variable))
-    assert_identical(expected_data_array, stack_negative(data_array))
-    assert_identical(expected_dataset, stack_negative(dataset))
-    assert_identical(expected_data_array,
+    assert_identical(stacked_array, stack_negative(array))
+    assert_identical(stacked_variable, stack_negative(variable))
+    assert_identical(stacked_data_array, stack_negative(data_array))
+    assert_identical(stacked_dataset, stack_negative(dataset))
+    assert_identical(stacked_data_array,
                      stack_negative(data_array.groupby('x')))
-    assert_identical(expected_dataset,
+    assert_identical(stacked_dataset,
                      stack_negative(dataset.groupby('x')))
 
-    def stack2(obj):
+    def original_and_stack_negative(obj):
+        func = lambda x: (x, xr.core.npcompat.stack([x, -x], axis=-1))
+        sig = ([()], [(), ('sign',)])
+        new_coords = {'sign': [1, -1]}
+        return xr.apply_ufunc(func, obj, signature=sig, new_coords=new_coords)
+
+    out0, out1 = original_and_stack_negative(array)
+    assert_identical(array, out0)
+    assert_identical(stacked_array, out1)
+
+    out0, out1 = original_and_stack_negative(variable)
+    assert_identical(variable, out0)
+    assert_identical(stacked_variable, out1)
+
+    out0, out1 = original_and_stack_negative(data_array)
+    assert_identical(data_array, out0)
+    assert_identical(stacked_data_array, out1)
+
+    out0, out1 = original_and_stack_negative(dataset)
+    assert_identical(dataset, out0)
+    assert_identical(stacked_dataset, out1)
+
+    out0, out1 = original_and_stack_negative(data_array.groupby('x'))
+    assert_identical(data_array, out0)
+    assert_identical(stacked_data_array, out1)
+
+    out0, out1 = original_and_stack_negative(dataset.groupby('x'))
+    assert_identical(dataset, out0)
+    assert_identical(stacked_dataset, out1)
+
+    def stack_invalid(obj):
         func = lambda x: xr.core.npcompat.stack([x, -x], axis=-1)
         sig = ([()], [('sign',)])
         # no new_coords
         return xr.apply_ufunc(func, obj, signature=sig)
 
     with pytest.raises(ValueError):
-        stack2(data_array)
-
+        stack_invalid(data_array)
     with pytest.raises(ValueError):
-        stack2(dataset)
+        stack_invalid(dataset)
 
 
 def test_apply_groupby_add_same():

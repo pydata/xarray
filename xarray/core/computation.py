@@ -172,7 +172,7 @@ def build_output_coords(args, signature, new_coords=None):
 
     output_coords = []
     for output_dims in signature.output_core_dims:
-        dropped_dims = signature.all_input_core_dims - set(output_dims)
+        dropped_dims = signature.all_core_dims - set(output_dims)
         if dropped_dims:
             coords = OrderedDict((k, v) for k, v in merged.items()
                                  if set(v.dims).isdisjoint(dropped_dims))
@@ -497,7 +497,7 @@ def apply_array_ufunc(func, *args, **kwargs):
 
 def apply_ufunc(func, *args, **kwargs):
     """apply_ufunc(func, *args, signature=None, join='inner', new_coords=None,
-                   kwargs=None, dask_array='forbidden')
+                   dataset_fill_value=None, kwargs=None, dask_array='forbidden')
 
     Apply a broadcasting function for unlabeled arrays to xarray objects.
 
@@ -522,9 +522,76 @@ def apply_ufunc(func, *args, **kwargs):
         (a) A triply nested sequence providing lists of core dimensions for each
             variable, for both input and output, e.g., ([(), ('time',)], [()]).
 
+        Core dimensions are automatically moved to the last axes of any input
+        variables, which facilitates using NumPy style generalized ufuncs (see
+        the examples below).
+
         Unlike the NumPy gufunc signature spec, the names of all dimensions
         provided in signatures must be the names of actual dimensions on the
         xarray objects.
+    join : {'outer', 'inner', 'left', 'right'}, optional
+        Method for joining the indexes of the passed objects along each
+        dimension, and the variables of Dataset objects with mismatched
+        data variables:
+        - 'outer': use the union of object indexes
+        - 'inner': use the intersection of object indexes
+        - 'left': use indexes from the first object with each dimension
+        - 'right': use indexes from the last object with each dimension
+    new_coords : dict-like, optional
+        New coordinates to include on output variables. Any core dimensions
+        on the output that are not found on the inputs must be provided here.
+    dataset_fill_value : optional
+        Value used in place of missing variables on Dataset inputs when the
+        datasets do not share the exact same ``data_vars``.
+    kwargs: dict, optional
+        Optional keyword arguments with which to all ``func``.
+    dask_array: 'forbidden' or 'allowed', optional
+        Whether or not to allow applying the ufunc to objects containing lazy
+        data in the form of dask arrays. By default, this is forbidden, to
+        avoid implicitly converting lazy data.
+
+    Examples
+    --------
+
+    For illustrative purposes only, here are examples of how you could use
+    ``apply_ufunc`` to write functions to (very nearly) replicate existing
+    xarray functionality:
+
+    Add two arrays (``+``) using an outer join for indexes::
+
+        def add(a, b):
+            return xr.apply_func(np.add, a, b, join='outer')
+
+    Compute the mean (``.mean``)::
+
+        def mean(obj, dim):
+            # note: apply_ufunc always moves core dimensions to the end
+            sig = ([(dim,)], [()])
+            kwargs = {'axis': -1}
+            return xr.apply_ufunc(np.mean, obj, signature=sig, kwargs=kwargs)
+
+    Inner product over a specific dimension::
+
+        def _inner(x, y):
+            result = np.matmul(x[..., np.newaxis, :], y[..., :, np.newaxis])
+            return result[..., 0, 0]
+
+        def inner_product(a, b, dim):
+            sig = ([(dim,), (dim,)], [()])
+            return xr.apply_ufunc(_inner, a, b, signature=sig)
+
+    Stack objects along a new dimension (``xr.concat``)::
+
+        def stack(objects, dim, new_coord):
+            sig = ([()] * len(objects), [(dim,)])
+            new_coords = {dim: new_coord}
+            func = lambda *x: np.stack(x, axis=-1)
+            return xr.apply_ufunc(func, *objects, signature=sig,
+                                  new_coords=new_coords,
+                                  dataset_fill_value=np.nan)
+
+    References
+    ----------
 
     [1] http://docs.scipy.org/doc/numpy/reference/c-api.generalized-ufuncs.html
     """
@@ -536,6 +603,7 @@ def apply_ufunc(func, *args, **kwargs):
     signature = kwargs.pop('signature', None)
     join = kwargs.pop('join', 'inner')
     new_coords = kwargs.pop('new_coords', None)
+    dataset_fill_value = kwargs.pop('dataset_fill_value', None)
     kwargs_ = kwargs.pop('kwargs', None)
     dask_array = kwargs.pop('dask_array', 'forbidden')
     if kwargs:
@@ -561,11 +629,13 @@ def apply_ufunc(func, *args, **kwargs):
     if any(isinstance(a, GroupBy) for a in args):
         this_apply_ufunc = functools.partial(
             apply_ufunc, func, signature=signature, join=join,
-            dask_array=dask_array, new_coords=new_coords)
+            dask_array=dask_array, new_coords=new_coords,
+            dataset_fill_value=dataset_fill_value)
         return apply_groupby_ufunc(this_apply_ufunc, *args)
     elif any(is_dict_like(a) for a in args):
         return apply_dataset_ufunc(variables_ufunc, *args, signature=signature,
-                                   join=join, new_coords=new_coords)
+                                   join=join, new_coords=new_coords,
+                                   fill_value=dataset_fill_value)
     elif any(isinstance(a, DataArray) for a in args):
         return apply_dataarray_ufunc(variables_ufunc, *args, signature=signature,
                                      join=join, new_coords=new_coords)
