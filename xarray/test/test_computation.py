@@ -6,6 +6,8 @@ import numpy as np
 import pytest
 import xarray as xr
 
+from xarray.core.pycompat import dask_array_type
+
 from numpy.testing import assert_array_equal
 from xarray.core.computation import (
     ordered_set_union, ordered_set_intersection, join_dict_keys,
@@ -19,6 +21,14 @@ def assert_identical(a, b):
     if hasattr(a, 'identical'):
         msg = 'not identical:\n%r\n%r' % (a, b)
         assert a.identical(b), msg
+    elif isinstance(a, dask_array_type) or isinstance(b, dask_array_type):
+        assert isinstance(a, dask_array_type)
+        assert isinstance(b, dask_array_type)
+        assert a.chunks == b.chunks
+        # this is private API, but AFAICT the only way to test that dask array
+        # objects have the same precomputed dtype
+        assert a._dtype == b._dtype
+        assert_array_equal(a.compute(), b.compute())
     else:
         assert_array_equal(a, b)
 
@@ -399,3 +409,20 @@ def test_broadcast_compat_data_2d():
                      broadcast_compat_data(var, ('w', 'x', 'y', 'z'), ()))
     assert_identical(data.T[None, :, :, None],
                      broadcast_compat_data(var, ('w', 'y', 'x', 'z'), ()))
+
+
+@requires_dask
+def test_apply_ufunc_dask():
+    import dask.array as da
+
+    identity = lambda x: x
+    dask_ones = da.ones((2, 3), chunks=3)
+
+    with pytest.raises(ValueError):  # encountered dask array
+        xr.apply_ufunc(identity, dask_ones)
+
+    actual = xr.apply_ufunc(identity, dask_ones, dask_array='allowed')
+    assert_identical(actual, dask_ones)
+
+    actual = xr.apply_ufunc(identity, dask_ones, dask_array='auto')
+    assert_identical(actual, dask_ones)
