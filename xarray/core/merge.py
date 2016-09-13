@@ -1,6 +1,6 @@
 import pandas as pd
 
-from .alignment import align
+from .alignment import deep_align
 from .utils import Frozen, is_dict_like
 from .variable import (as_variable, default_index_coordinate,
                        assert_unique_multiindex_level_names)
@@ -297,60 +297,6 @@ def merge_coords_for_inplace_math(objs, priority_vars=None):
     return variables
 
 
-def _align_for_merge(input_objects, join, copy, indexes=None,
-                     exclude=frozenset(), raise_on_invalid=True):
-    """Align objects for merging, recursing into dictionary values.
-    """
-    if indexes is None:
-        indexes = {}
-
-    def is_alignable(obj):
-        return hasattr(obj, 'indexes') and hasattr(obj, 'reindex')
-
-    positions = []
-    keys = []
-    out = []
-    targets = []
-    no_key = object()
-    not_replaced = object()
-    for n, variables in enumerate(input_objects):
-        if is_alignable(variables):
-            positions.append(n)
-            keys.append(no_key)
-            targets.append(variables)
-            out.append(not_replaced)
-        elif is_dict_like(variables):
-            for k, v in variables.items():
-                if is_alignable(v) and k not in indexes:
-                    # Skip variables in indexes for alignment, because these
-                    # should to be overwritten instead:
-                    # https://github.com/pydata/xarray/issues/725
-                    positions.append(n)
-                    keys.append(k)
-                    targets.append(v)
-            out.append(OrderedDict(variables))
-        elif raise_on_invalid:
-            raise ValueError('object to align is neither an xarray.Dataset, '
-                             'an xarray.DataArray nor a dictionary: %r'
-                             % variables)
-        else:
-            out.append(variables)
-
-    aligned = align(*targets, join=join, copy=copy, indexes=indexes,
-                    exclude=exclude)
-
-    for position, key, aligned_obj in zip(positions, keys, aligned):
-        if key is no_key:
-            out[position] = aligned_obj
-        else:
-            out[position][key] = aligned_obj
-
-    # something went wrong: we should have replaced all sentinel values
-    assert all(arg is not not_replaced for arg in out)
-
-    return out
-
-
 def _get_priority_vars(objects, priority_arg, compat='equals'):
     """Extract the priority variable from a list of mappings.
 
@@ -404,7 +350,7 @@ def merge_coords(objs, compat='minimal', join='outer', priority_arg=None,
     """
     _assert_compat_valid(compat)
     coerced = coerce_pandas_values(objs)
-    aligned = _align_for_merge(coerced, join=join, copy=False, indexes=indexes)
+    aligned = deep_align(coerced, join=join, copy=False, indexes=indexes)
     expanded = expand_variable_dicts(aligned)
     priority_vars = _get_priority_vars(aligned, priority_arg, compat=compat)
     variables = merge_variables(expanded, priority_vars, compat=compat)
@@ -461,7 +407,7 @@ def merge_core(objs, compat='broadcast_equals', join='outer', priority_arg=None,
     _assert_compat_valid(compat)
 
     coerced = coerce_pandas_values(objs)
-    aligned = _align_for_merge(coerced, join=join, copy=False, indexes=indexes)
+    aligned = deep_align(coerced, join=join, copy=False, indexes=indexes)
     expanded = expand_variable_dicts(aligned)
 
     coord_names, noncoord_names = determine_coords(coerced)

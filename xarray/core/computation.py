@@ -8,8 +8,7 @@ from collections import namedtuple
 import pandas as pd
 
 from . import ops
-from .alignment import _get_joiner
-from .merge import _align_for_merge as deep_align
+from .alignment import deep_align
 from .merge import merge_coords_without_align
 from .utils import is_dict_like
 from .pycompat import dask_array_type, OrderedDict, basestring, suppress
