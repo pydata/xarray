@@ -13,7 +13,7 @@ _VALID_COMPAT = Frozen({'identical': 0,
                         'equals': 1,
                         'broadcast_equals': 2,
                         'minimal': 3,
-                        'notnull_equals': 4})
+                        'no_conflicts': 4})
 
 
 def broadcast_dimension_size(variables):
@@ -71,7 +71,7 @@ def unique_variable(name, variables, compat='broadcast_equals'):
             dim_lengths = broadcast_dimension_size(variables)
             out = out.expand_dims(dim_lengths)
 
-        if compat == 'notnull_equals':
+        if compat == 'no_conflicts':
             combine_method = 'fillna'
 
         for var in variables[1:]:

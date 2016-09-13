@@ -1016,11 +1016,11 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
         except (TypeError, AttributeError):
             return False
 
-    def _data_notnull_equals(self, other):
+    def _data_no_conflicts(self, other):
         return (self._data is other._data or
                 ops.array_notnull_equiv(self.data, other.data))
 
-    def notnull_equals(self, other):
+    def no_conflicts(self, other):
         """True if the intersection of two Variable's non-null data is
         equal; otherwise false.
 
@@ -1030,7 +1030,7 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
         other = getattr(other, 'variable', other)
         try:
             return (self.dims == other.dims and
-                    self._data_notnull_equals(other))
+                    self._data_no_conflicts(other))
         except (TypeError, AttributeError):
             return False
 
