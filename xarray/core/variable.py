@@ -1076,19 +1076,12 @@ class IndexVariable(Variable):
     unless another name is given.
     """
 
-    def __init__(self, dims, data, attrs=None, encoding=None,
-                 name=None, fastpath=False):
-
+    def __init__(self, dims, data, attrs=None, encoding=None, fastpath=False):
         super(IndexVariable, self).__init__(dims, data, attrs, encoding,
                                             fastpath)
         if self.ndim != 1:
             raise ValueError('%s objects must be 1-dimensional' %
                              type(self).__name__)
-
-        if isinstance(name, basestring):
-            self._name = name
-        else:
-            self._name = self.dims[0]
 
     def _data_cached(self):
         if not isinstance(self._data, PandasIndexAdapter):
@@ -1102,7 +1095,7 @@ class IndexVariable(Variable):
             return Variable((), values, self._attrs, self._encoding)
         else:
             return type(self)(self.dims, values, self._attrs,
-                              self._encoding, name=self._name, fastpath=True)
+                              self._encoding, fastpath=True)
 
     def __setitem__(self, key, value):
         raise TypeError('%s values cannot be modified' % type(self).__name__)
@@ -1155,7 +1148,7 @@ class IndexVariable(Variable):
         # since pandas.Index objects are immutable
         data = PandasIndexAdapter(self) if deep else self._data
         return type(self)(self.dims, data, self._attrs,
-                          self._encoding, name=self._name, fastpath=True)
+                          self._encoding, fastpath=True)
 
     def _data_equals(self, other):
         return self.to_index().equals(other.to_index())
@@ -1198,11 +1191,11 @@ class IndexVariable(Variable):
         if self.level_names is None:
             raise ValueError("IndexVariable %r has no MultiIndex" % self.name)
         index = self.to_index()
-        return type(self)(self.dims, index.get_level_values(level), name=level)
+        return type(self)(self.dims, index.get_level_values(level))
 
     @property
     def name(self):
-        return self._name
+        return self.dims[0]
 
     @name.setter
     def name(self, value):

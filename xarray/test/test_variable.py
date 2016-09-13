@@ -1035,9 +1035,6 @@ class TestIndexVariable(TestCase, VariableSubclassTestCases):
         coord = IndexVariable('x', [10.0])
         self.assertEqual(coord.name, 'x')
 
-        coord = IndexVariable('x', [10.0], name='y')
-        self.assertEqual(coord.name, 'y')
-
         with self.assertRaises(AttributeError):
             coord.name = 'y'
 
@@ -1053,8 +1050,7 @@ class TestIndexVariable(TestCase, VariableSubclassTestCases):
         midx = pd.MultiIndex.from_product([['a', 'b'], [1, 2]],
                                           names=['level_1', 'level_2'])
         x = IndexVariable('x', midx)
-        level_1 = IndexVariable('x', midx.get_level_values('level_1'),
-                                name='level_1')
+        level_1 = IndexVariable('x', midx.get_level_values('level_1'))
         self.assertVariableIdentical(x.get_level_variable('level_1'), level_1)
 
         with self.assertRaisesRegexp(ValueError, 'has no MultiIndex'):
