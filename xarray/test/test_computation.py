@@ -6,8 +6,6 @@ import numpy as np
 import pytest
 import xarray as xr
 
-from xarray.core.pycompat import dask_array_type
-
 from numpy.testing import assert_array_equal
 from xarray.core.computation import (
     ordered_set_union, ordered_set_intersection, join_dict_keys,
@@ -445,10 +443,10 @@ def test_broadcast_compat_data_1d():
                      broadcast_compat_data(var, ('w', 'x', 'y'), ()))
 
     with pytest.raises(ValueError):
-         broadcast_compat_data(var, ('x',), ('w',))
+        broadcast_compat_data(var, ('x',), ('w',))
 
     with pytest.raises(ValueError):
-         broadcast_compat_data(var, (), ())
+        broadcast_compat_data(var, (), ())
 
 
 def test_broadcast_compat_data_2d():

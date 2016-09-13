@@ -3,15 +3,12 @@ import functools
 import itertools
 import operator
 import re
-from collections import namedtuple
-
-import pandas as pd
 
 from . import ops
 from .alignment import deep_align
 from .merge import merge_coords_without_align
 from .utils import is_dict_like
-from .pycompat import dask_array_type, OrderedDict, basestring, suppress
+from .pycompat import dask_array_type, OrderedDict, basestring
 
 
 _DEFAULT_FROZEN_SET = frozenset()
@@ -20,7 +17,7 @@ _DEFAULT_FROZEN_SET = frozenset()
 DIMENSION_NAME = r'\w+'
 CORE_DIMENSION_LIST = '(?:' + DIMENSION_NAME + '(?:,' + DIMENSION_NAME + ')*)?'
 ARGUMENT = r'\(' + CORE_DIMENSION_LIST + r'\)'
-ARGUMENT_LIST = ARGUMENT + '(?:,'+ ARGUMENT + ')*'
+ARGUMENT_LIST = ARGUMENT + '(?:,' + ARGUMENT + ')*'
 SIGNATURE = '^' + ARGUMENT_LIST + '->' + ARGUMENT_LIST + '$'
 
 
@@ -296,8 +293,6 @@ def apply_dataset_ufunc(func, *args, **kwargs):
                            fill_value=None, new_coords=None,
                            exclude_dims=frozenset()):
     """
-    from .dataset import Dataset
-
     signature = kwargs.pop('signature')
     join = kwargs.pop('join', 'inner')
     fill_value = kwargs.pop('fill_value', None)
@@ -306,9 +301,6 @@ def apply_dataset_ufunc(func, *args, **kwargs):
     if kwargs:
         raise TypeError('apply_dataarray_ufunc() got unexpected keyword '
                         'arguments: %s' % list(kwargs))
-
-    if signature is None:
-        signature = _default_signature(len(args))
 
     if len(args) > 1:
         args = deep_align(args, join=join, copy=False, exclude=exclude_dims,
@@ -609,7 +601,7 @@ def apply_ufunc(func, *args, **kwargs):
             sig = ([(dim,), (dim,)], [()])
             return xr.apply_ufunc(_inner, a, b, signature=sig)
 
-    Stack objects along a new dimension (``xr.concat``)::
+    Stack objects along a new dimension (like ``xr.concat``)::
 
         def stack(objects, dim, new_coord):
             sig = ([()] * len(objects), [(dim,)])

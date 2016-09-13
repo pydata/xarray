@@ -27,6 +27,7 @@ def _get_joiner(join):
 
 _DEFAULT_EXCLUDE = frozenset()
 
+
 def align(*objects, **kwargs):
     """align(*objects, join='inner', copy=True, indexes=None,
              exclude=frozenset())
