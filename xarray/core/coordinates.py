@@ -4,7 +4,8 @@ import pandas as pd
 
 from . import formatting
 from .utils import Frozen
-from .merge import merge_coords, merge_coords_without_align
+from .merge import (
+    merge_coords, merge_coords_without_align, merge_coords_for_inplace_math)
 from .pycompat import iteritems, basestring, OrderedDict
 from .variable import default_index_coordinate
 
@@ -86,7 +87,7 @@ class AbstractCoordinates(Mapping, formatting.ReprMixin):
             # first
             priority_vars = OrderedDict(
                 (k, v) for k, v in self.variables.items() if k not in self.dims)
-            variables = merge_coords_without_align(
+            variables = merge_coords_for_inplace_math(
                 [self.variables, other.variables], priority_vars=priority_vars)
             yield
             self._update_coords(variables)

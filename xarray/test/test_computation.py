@@ -12,7 +12,7 @@ from numpy.testing import assert_array_equal
 from xarray.core.computation import (
     ordered_set_union, ordered_set_intersection, join_dict_keys,
     collect_dict_values, broadcast_compat_data, Signature,
-    _calculate_unified_dim_sizes)
+    unified_dim_sizes)
 
 from . import requires_dask
 
@@ -337,6 +337,40 @@ def test_apply_ufunc_output_core_dimension():
         stack_invalid(dataset)
 
 
+def test_apply_ufunc_exclude():
+
+    def concatenate(objects, dim='x'):
+        sig = ([(dim,)] * len(objects), [(dim,)])
+        new_coord = np.concatenate(
+            [obj.coords[dim] if hasattr(obj, 'coords') else []
+             for obj in objects])
+        new_coords = [{dim: new_coord}]
+        func = lambda *x: np.concatenate(x, axis=-1)
+        return xr.apply_ufunc(func, *objects, signature=sig,
+                              new_coords=new_coords, exclude_dims={dim})
+
+    arrays = [np.array([1]), np.array([2, 3])]
+    variables = [xr.Variable('x', a) for a in arrays]
+    data_arrays = [xr.DataArray(v, [('x', c)])
+                   for v, c in zip(variables, [['a'], ['b', 'c']])]
+    datasets = [xr.Dataset({'data': data_array}) for data_array in data_arrays]
+
+    expected_array = np.array([1, 2, 3])
+    expected_variable = xr.Variable('x', expected_array)
+    expected_data_array = xr.DataArray(expected_variable, [('x', list('abc'))])
+    expected_dataset = xr.Dataset({'data': expected_data_array})
+
+    assert_identical(expected_array, concatenate(arrays))
+    assert_identical(expected_variable, concatenate(variables))
+    assert_identical(expected_data_array, concatenate(data_arrays))
+    assert_identical(expected_dataset, concatenate(datasets))
+
+    identity = lambda x: x
+    # must also be a core dimension
+    with pytest.raises(ValueError):
+        xr.apply_ufunc(identity, variables[0], exclude_dims={'x'})
+
+
 def test_apply_groupby_add_same():
     array = np.arange(5)
     variable = xr.Variable('x', array)
@@ -376,22 +410,27 @@ def test_apply_groupby_add_same():
         add(data_array.groupby('y'), data_array.groupby('x'))
 
 
-def test_calculate_unified_dim_sizes():
-    assert _calculate_unified_dim_sizes([xr.Variable((), 0)]) == OrderedDict()
-    assert (_calculate_unified_dim_sizes(
+def test_unified_dim_sizes():
+    assert unified_dim_sizes([xr.Variable((), 0)]) == OrderedDict()
+    assert (unified_dim_sizes(
                 [xr.Variable('x', [1]), xr.Variable('x', [1])])
             == OrderedDict([('x', 1)]))
-    assert (_calculate_unified_dim_sizes(
+    assert (unified_dim_sizes(
                 [xr.Variable('x', [1]), xr.Variable('y', [1, 2])])
+            == OrderedDict([('x', 1), ('y', 2)]))
+    assert (unified_dim_sizes(
+                [xr.Variable(('x', 'z'), [[1]]),
+                 xr.Variable(('y', 'z'), [[1, 2], [3, 4]])],
+                 exclude_dims={'z'})
             == OrderedDict([('x', 1), ('y', 2)]))
 
     # duplicate dimensions
     with pytest.raises(ValueError):
-        _calculate_unified_dim_sizes([xr.Variable(('x', 'x'), [[1]])])
+        unified_dim_sizes([xr.Variable(('x', 'x'), [[1]])])
 
     # mismatched lengths
     with pytest.raises(ValueError):
-        _calculate_unified_dim_sizes(
+        unified_dim_sizes(
             [xr.Variable('x', [1]), xr.Variable('x', [1, 2])])
 
 

@@ -15,6 +15,8 @@ from .utils import is_dict_like
 from .pycompat import dask_array_type, OrderedDict, basestring, suppress
 
 
+_DEFAULT_FROZEN_SET = frozenset()
+
 # see http://docs.scipy.org/doc/numpy/reference/c-api.generalized-ufuncs.html
 DIMENSION_NAME = r'\w+'
 CORE_DIMENSION_LIST = '(?:' + DIMENSION_NAME + '(?:,' + DIMENSION_NAME + ')*)?'
@@ -24,6 +26,7 @@ SIGNATURE = '^' + ARGUMENT_LIST + '->' + ARGUMENT_LIST + '$'
 
 
 def safe_tuple(x):
+    # type: Iterable -> tuple
     if isinstance(x, basestring):
         raise ValueError('cannot safely convert %r to a tuple')
     return tuple(x)
@@ -143,9 +146,13 @@ def result_name(objects):
 
 _REPEAT_NONE = itertools.repeat(None)
 
-def build_output_coords(args, signature, new_coords=None):
-    # type: (list, Signature, Iterable[Optional[Mapping]])
-    # -> List[OrderedDict[Any, Variable]]
+def build_output_coords(
+        args,                 # type: list
+        signature,            # type: Signature
+        new_coords=None,      # type: Iterable[Optional[Mapping]]
+        exclude=frozenset(),  # type: set
+        ):
+    # type: (...) -> List[OrderedDict[Any, Variable]]
 
     if new_coords is None:
         new_coords = _REPEAT_NONE
@@ -164,19 +171,15 @@ def build_output_coords(args, signature, new_coords=None):
     for output_dims, arg_new_coords in zip(
             signature.output_core_dims, new_coords):
 
-        arg_coords = list(input_coords)
-        if arg_new_coords is not None:
-            arg_new_coords = getattr(
-                arg_new_coords, 'variables', arg_new_coords)
-            arg_coords.append(arg_new_coords)
-
-        if len(arg_coords) == 1:
+        if len(input_coords) == 1 and not exclude and arg_new_coords is None:
             # we can skip the expensive merge
-            unpacked_arg_coords, = arg_coords
-            merged = OrderedDict(unpacked_arg_coords)
+            unpacked_input_coords, = input_coords
+            merged = OrderedDict(unpacked_input_coords)
+        elif arg_new_coords:
+            merged = merge_coords_without_align([arg_new_coords] + input_coords,
+                                                priority_arg=0, exclude=exclude)
         else:
-            print(arg_coords)
-            merged = merge_coords_without_align(arg_coords)
+            merged = merge_coords_without_align(input_coords, exclude=exclude)
 
         missing_dims = [dim for dim in output_dims if dim not in merged]
         if missing_dims:
@@ -196,25 +199,25 @@ def build_output_coords(args, signature, new_coords=None):
 
 def apply_dataarray_ufunc(func, *args, **kwargs):
     """apply_dataarray_ufunc(func, *args, signature, join='inner',
-                             new_coords=None)
+                             new_coords=None, exclude_dims=frozenset())
     """
     from .dataarray import DataArray
 
     signature = kwargs.pop('signature')
     join = kwargs.pop('join', 'inner')
     new_coords = kwargs.pop('new_coords', None)
+    exclude_dims = kwargs.pop('exclude_dims', _DEFAULT_FROZEN_SET)
     if kwargs:
         raise TypeError('apply_dataarray_ufunc() got unexpected keyword '
                         'arguments: %s' % list(kwargs))
 
-    if signature is None:
-        signature = _default_signature(len(args))
-
     if len(args) > 1:
-        args = deep_align(args, join=join, copy=False, raise_on_invalid=False)
+        args = deep_align(args, join=join, copy=False, exclude=exclude_dims,
+                          raise_on_invalid=False)
 
     name = result_name(args)
-    result_coords = build_output_coords(args, signature, new_coords)
+    result_coords = build_output_coords(args, signature, new_coords,
+                                        exclude=exclude_dims)
 
     data_vars = [getattr(a, 'variable', a) for a in args]
     result_var = func(*data_vars)
@@ -291,7 +294,8 @@ def _fast_dataset(variables, coord_variables):
 
 def apply_dataset_ufunc(func, *args, **kwargs):
     """apply_dataset_ufunc(func, *args, signature, join='inner',
-                           fill_value=None, new_coords=None):
+                           fill_value=None, new_coords=None,
+                           exclude_dims=frozenset()):
     """
     from .dataset import Dataset
 
@@ -299,6 +303,7 @@ def apply_dataset_ufunc(func, *args, **kwargs):
     join = kwargs.pop('join', 'inner')
     fill_value = kwargs.pop('fill_value', None)
     new_coords = kwargs.pop('new_coords', None)
+    exclude_dims = kwargs.pop('exclude_dims', _DEFAULT_FROZEN_SET)
     if kwargs:
         raise TypeError('apply_dataarray_ufunc() got unexpected keyword '
                         'arguments: %s' % list(kwargs))
@@ -307,9 +312,11 @@ def apply_dataset_ufunc(func, *args, **kwargs):
         signature = _default_signature(len(args))
 
     if len(args) > 1:
-        args = deep_align(args, join=join, copy=False, raise_on_invalid=False)
+        args = deep_align(args, join=join, copy=False, exclude=exclude_dims,
+                          raise_on_invalid=False)
 
-    list_of_coords = build_output_coords(args, signature, new_coords)
+    list_of_coords = build_output_coords(args, signature, new_coords,
+                                         exclude=exclude_dims)
 
     list_of_data_vars = [getattr(a, 'data_vars', a) for a in args]
     names = join_dict_keys(list_of_data_vars, how=join)
@@ -392,7 +399,7 @@ def apply_groupby_ufunc(func, *args):
     return combined
 
 
-def _calculate_unified_dim_sizes(variables):
+def unified_dim_sizes(variables, exclude_dims=frozenset()):
     # type: Iterable[Variable] -> OrderedDict[Any, int]
     dim_sizes = OrderedDict()
 
@@ -401,13 +408,14 @@ def _calculate_unified_dim_sizes(variables):
             raise ValueError('broadcasting cannot handle duplicate '
                              'dimensions: %r' % list(var.dims))
         for dim, size in zip(var.dims, var.shape):
-            if dim not in dim_sizes:
-                dim_sizes[dim] = size
-            elif dim_sizes[dim] != size:
-                raise ValueError('operands cannot be broadcast together '
-                                 'with mismatched lengths for dimension '
-                                 '%r: %s vs %s'
-                                 % (dim, dim_sizes[dim], size))
+            if dim not in exclude_dims:
+                if dim not in dim_sizes:
+                    dim_sizes[dim] = size
+                elif dim_sizes[dim] != size:
+                    raise ValueError('operands cannot be broadcast together '
+                                     'with mismatched lengths for dimension '
+                                     '%r: %s vs %s'
+                                     % (dim, dim_sizes[dim], size))
     return dim_sizes
 
 
@@ -455,17 +463,18 @@ def broadcast_compat_data(variable, broadcast_dims, core_dims):
 
 
 def apply_variable_ufunc(func, *args, **kwargs):
-    """apply_variable_ufunc(func, *args, signature)
+    """apply_variable_ufunc(func, *args, signature, exclude_dims=frozenset())
     """
     from .variable import Variable
 
     signature = kwargs.pop('signature')
+    exclude_dims = kwargs.pop('exclude_dims', _DEFAULT_FROZEN_SET)
     if kwargs:
         raise TypeError('apply_variable_ufunc() got unexpected keyword '
                         'arguments: %s' % list(kwargs))
 
-    dim_sizes = _calculate_unified_dim_sizes(a for a in args
-                                             if hasattr(a, 'dims'))
+    dim_sizes = unified_dim_sizes((a for a in args if hasattr(a, 'dims')),
+                                  exclude_dims=exclude_dims)
     broadcast_dims = tuple(dim for dim in dim_sizes
                            if dim not in signature.all_core_dims)
     output_dims = [broadcast_dims + out for out in signature.output_core_dims]
@@ -510,7 +519,8 @@ def apply_array_ufunc(func, *args, **kwargs):
 
 def apply_ufunc(func, *args, **kwargs):
     """apply_ufunc(func, *args, signature=None, join='inner', new_coords=None,
-                   dataset_fill_value=None, kwargs=None, dask_array='forbidden')
+                   exclude_dims=frozenset(), dataset_fill_value=None,
+                   kwargs=None, dask_array='forbidden')
 
     Apply a broadcasting function for unlabeled arrays to xarray objects.
 
@@ -553,6 +563,12 @@ def apply_ufunc(func, *args, **kwargs):
     new_coords : list of dict-like, optional
         New coordinates to include on each output variable. Any core dimensions
         on outputs not found on the inputs must be provided here.
+    exclude_dims : set, optional
+        Dimensions to exclude from alignment and broadcasting. Any inputs
+        coordinates along these dimensions will be dropped. If you include these
+        dimensions on any outputs, you must explicit set them in ``new_coords``.
+        Each excluded dimension must be a core dimension in the function
+        signature.
     dataset_fill_value : optional
         Value used in place of missing variables on Dataset inputs when the
         datasets do not share the exact same ``data_vars``.
@@ -617,6 +633,7 @@ def apply_ufunc(func, *args, **kwargs):
     signature = kwargs.pop('signature', None)
     join = kwargs.pop('join', 'inner')
     new_coords = kwargs.pop('new_coords', None)
+    exclude_dims = kwargs.pop('exclude_dims', frozenset())
     dataset_fill_value = kwargs.pop('dataset_fill_value', None)
     kwargs_ = kwargs.pop('kwargs', None)
     dask_array = kwargs.pop('dask_array', 'forbidden')
@@ -631,6 +648,10 @@ def apply_ufunc(func, *args, **kwargs):
     elif not isinstance(signature, Signature):
         signature = Signature.from_sequence(signature)
 
+    if exclude_dims and not exclude_dims <= signature.all_core_dims:
+        raise ValueError('each dimension in `exclude_dims` must also be a core '
+                         'dimension in the function signature')
+
     if kwargs_:
         func = functools.partial(func, **kwargs_)
 
@@ -638,21 +659,25 @@ def apply_ufunc(func, *args, **kwargs):
         apply_array_ufunc, func, dask_array=dask_array)
 
     variables_ufunc = functools.partial(
-        apply_variable_ufunc, array_ufunc, signature=signature)
+        apply_variable_ufunc, array_ufunc, signature=signature,
+        exclude_dims=exclude_dims)
 
     if any(isinstance(a, GroupBy) for a in args):
         this_apply_ufunc = functools.partial(
             apply_ufunc, func, signature=signature, join=join,
             dask_array=dask_array, new_coords=new_coords,
-            dataset_fill_value=dataset_fill_value)
+            exclude_dims=exclude_dims, dataset_fill_value=dataset_fill_value)
         return apply_groupby_ufunc(this_apply_ufunc, *args)
     elif any(is_dict_like(a) for a in args):
         return apply_dataset_ufunc(variables_ufunc, *args, signature=signature,
                                    join=join, new_coords=new_coords,
+                                   exclude_dims=exclude_dims,
                                    fill_value=dataset_fill_value)
     elif any(isinstance(a, DataArray) for a in args):
-        return apply_dataarray_ufunc(variables_ufunc, *args, signature=signature,
-                                     join=join, new_coords=new_coords)
+        return apply_dataarray_ufunc(variables_ufunc, *args,
+                                     signature=signature,
+                                     join=join, new_coords=new_coords,
+                                     exclude_dims=exclude_dims)
     elif any(isinstance(a, Variable) for a in args):
         return variables_ufunc(*args)
     else:

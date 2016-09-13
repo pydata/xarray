@@ -107,7 +107,7 @@ class OrderedDefaultDict(OrderedDict):
 
 def merge_variables(
         list_of_variables_dicts,  # type: List[Mapping[Any, Variable]]
-        priority_vars=None,       # type: Optional[Mapping[Any, Variable]]
+        priority_vars=None,       # type: Optional[Mapping[Any, Optional[Variable]]]
         compat='minimal',         # type: str
         ):
     # type: (...) -> OrderedDict[Any, Variable]
@@ -117,23 +117,22 @@ def merge_variables(
     ----------
     lists_of_variables_dicts : list of mappings with Variable values
         List of mappings for which each value is a xarray.Variable object.
-    priority_vars : mapping with Variable values, optional
+    priority_vars : mapping with Variable or None values, optional
         If provided, variables are always taken from this dict in preference to
-        the input variable dictionaries, without checking for conflicts.
+        the input variable dictionaries, without checking for conflicts. Values
+        of None indicate that the named parameter should omitted from the
+        result.
     compat : {'identical', 'equals', 'broadcast_equals',
               'minimal', 'no_conflicts'}, optional
-        Type of equality check to use wben checking for conflicts.
+        Type of equality check to use when checking for conflicts.
 
     Returns
     -------
-    OrderedDict keys given by the union of keys on list_of_variable_dicts
-    (unless compat=='minimal', in which case some variables with conflicting
-    values can be dropped), and Variable values corresponding to those that
-    should be found in the result.
+    OrderedDict with keys taken by the union of keys on list_of_variable_dicts,
+    and Variable values corresponding to those that should be found on the
+    merged result.
     """
     if priority_vars is None:
-        # one of these arguments (e.g., the first for in-place
-        # arithmetic or the second for Dataset.update) takes priority
         priority_vars = {}
 
     _assert_compat_valid(compat)
@@ -150,7 +149,11 @@ def merge_variables(
 
     for name, variables in lookup.items():
         if name in priority_vars:
-            merged[name] = priority_vars[name]
+            # one of these arguments (e.g., the first for in-place arithmetic or
+            # the second for Dataset.update) takes priority
+            priority_var = priority_vars[name]
+            if priority_var is not None:
+                merged[name] = priority_var
         else:
             dim_variables = [var for var in variables if (name,) == var.dims]
             if dim_variables:
@@ -283,7 +286,7 @@ def coerce_pandas_values(objects):
     return out
 
 
-def merge_coords_without_align(objs, priority_vars=None):
+def merge_coords_for_inplace_math(objs, priority_vars=None):
     """Merge coordinate variables without worrying about alignment.
 
     This function is used for merging variables in coordinates.py.
@@ -295,7 +298,7 @@ def merge_coords_without_align(objs, priority_vars=None):
 
 
 def _align_for_merge(input_objects, join, copy, indexes=None,
-                     raise_on_invalid=True):
+                     exclude=frozenset(), raise_on_invalid=True):
     """Align objects for merging, recursing into dictionary values.
     """
     if indexes is None:
@@ -333,7 +336,8 @@ def _align_for_merge(input_objects, join, copy, indexes=None,
         else:
             out.append(variables)
 
-    aligned = align(*targets, join=join, copy=copy, indexes=indexes)
+    aligned = align(*targets, join=join, copy=copy, indexes=indexes,
+                    exclude=exclude)
 
     for position, key, aligned_obj in zip(positions, keys, aligned):
         if key is no_key:
@@ -370,11 +374,24 @@ def _get_priority_vars(objects, priority_arg, compat='equals'):
     values indicating priority variables.
     """
     if priority_arg is None:
-        priority_vars = None
+        priority_vars = {}
     else:
         expanded = expand_variable_dicts([objects[priority_arg]])
         priority_vars = merge_variables(expanded, compat=compat)
     return priority_vars
+
+
+def merge_coords_without_align(objs, priority_arg=None, exclude=frozenset()):
+    """Merge coordinate variables without worrying about alignment.
+
+    This function is used for merging variables in computation.py.
+    """
+    expanded = expand_variable_dicts(objs)
+    priority_vars = _get_priority_vars(objs, priority_arg, compat='equals')
+    for key in exclude:
+        priority_vars.setdefault(key, None)
+    variables = merge_variables(expanded, priority_vars)
+    return variables
 
 
 def merge_coords(objs, compat='minimal', join='outer', priority_arg=None,
