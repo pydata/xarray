@@ -49,7 +49,8 @@ def unique_variable(name, variables, compat='broadcast_equals'):
     variables : list of xarray.Variable
         List of Variable objects, all of which go by the same name in different
         inputs.
-    compat : {'identical', 'equals', 'broadcast_equals'}, optional
+    compat : {'identical', 'equals', 'broadcast_equals',
+              'no_conflicts'}, optional
         Type of equality check to use.
 
     Returns
@@ -119,8 +120,9 @@ def merge_variables(
     priority_vars : mapping with Variable values, optional
         If provided, variables are always taken from this dict in preference to
         the input variable dictionaries, without checking for conflicts.
-    compat : {'identical', 'equals', 'broadcast_equals', 'minimal'}, optional
-        Type of equality check to use when checking for conflicts.
+    compat : {'identical', 'equals', 'broadcast_equals',
+              'minimal', 'no_conflicts'}, optional
+        Type of equality check to use wben checking for conflicts.
 
     Returns
     -------
@@ -351,7 +353,8 @@ def _get_priority_vars(objects, priority_arg, compat='equals'):
         Dictionaries in which to find the priority variables.
     priority_arg : int or None
         Integer object whose variable should take priority.
-    compat : 'broadcast_equals', 'equals' or 'identical', optional
+    compat : {'identical', 'equals', 'broadcast_equals',
+              'no_conflicts'}, optional
         Compatibility checks to use when merging variables.
 
     Returns
@@ -404,9 +407,10 @@ def merge_core(objs, compat='broadcast_equals', join='outer', priority_arg=None,
     ----------
     objs : list of mappings
         All values must be convertable to labeled arrays.
-    compat : 'broadcast_equals', 'equals' or 'identical', optional
+    compat : {'identical', 'equals', 'broadcast_equals',
+              'no_conflicts'}, optional
         Compatibility checks to use when merging variables.
-    join : 'outer', 'inner', 'left' or 'right', optional
+    join : {'outer', 'inner', 'left', 'right'}, optional
         How to combine objects with different indexes.
     priority_arg : integer, optional
         Optional argument in `objs` that takes precedence over the others.
@@ -470,9 +474,10 @@ def merge(objects, compat='broadcast_equals', join='outer'):
     objects : Iterable[Union[xarray.Dataset, xarray.DataArray, dict]]
         Merge together all variables from these objects. If any of them are
         DataArray objects, they must have a name.
-    compat : 'broadcast_equals', 'equals' or 'identical', optional
+    compat : {'identical', 'equals', 'broadcast_equals',
+              'no_conflicts'}, optional
         Compatibility checks to use when merging variables.
-    join : 'outer', 'inner', 'left' or 'right', optional
+    join : {'outer', 'inner', 'left', 'right'}, optional
         How to combine objects with different indexes.
 
     Returns
