@@ -1355,18 +1355,6 @@ class DataArray(AbstractArray, BaseDataObject):
         except (TypeError, AttributeError):
             return False
 
-    def notnull_equals(self, other):
-        """Like equals, but only checks locations where both arrays contain
-        non-null data.
-
-        DataArrays can be notnull equals if one has data present that is
-        missing (NaN) in the other, but they otherwise are equal.
-        """
-        try:
-            return self._all_compat(other, 'notnull_equals')
-        except (TypeError, AttributeError):
-            return False
-
     __default_name = object()
 
     def _result_name(self, other=None):

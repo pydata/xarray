@@ -368,43 +368,6 @@ class TestDataArray(TestCase):
         self.assertFalse(a.broadcast_equals(c))
         self.assertFalse(c.broadcast_equals(a))
 
-    def test_notnull_equals(self):
-        data1 = np.random.rand(4, 3)
-        data2 = data1.copy()
-        data1[3, :] = np.nan
-        data2[:, 2] = np.nan
-
-        a = DataArray(data1, coords={'a': 42}, dims=('x', 'y'))
-        b = DataArray(data2, coords={'a': 42}, dims=('x', 'y'))
-
-        self.assertTrue(a.notnull_equals(b))
-        self.assertTrue(b.notnull_equals(a))
-        self.assertFalse(a.equals(b))
-        self.assertFalse(a.identical(b))
-
-        c = b.rename('baz')
-        self.assertTrue(a.notnull_equals(c))
-
-        c = b.copy()
-        c.attrs['foo'] = 'bar'
-        self.assertTrue(a.notnull_equals(c))
-
-        c = b.copy()
-        c[0, 0] = 99
-        self.assertFalse(a.notnull_equals(c))
-
-        c = b.rename({'x': 'z'})
-        self.assertFalse(a.notnull_equals(c))
-
-        c = b.copy()
-        c['a'] = 99
-        self.assertFalse(a.notnull_equals(c))
-
-        self.assertFalse(a.notnull_equals(data1))
-        self.assertFalse(a.notnull_equals({'a': 1}))
-        self.assertFalse(a.notnull_equals('abc'))
-        self.assertFalse(a.notnull_equals(123))
-
     def test_getitem(self):
         # strings pull out dataarrays
         self.assertDataArrayIdentical(self.dv, self.ds['foo'])

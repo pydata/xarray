@@ -626,18 +626,6 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         except (TypeError, AttributeError):
             return False
 
-    def notnull_equals(self, other):
-        """Like equals, but only checks the intersection of each variables
-        non-null data.
-
-        Datasets can be notnull equals if one has data present that is missing
-        (NaN) in the other, but they otherwise are equal.
-        """
-        try:
-            return self._all_compat(other, 'notnull_equals')
-        except (TypeError, AttributeError):
-            return False
-
     @property
     def indexes(self):
         """OrderedDict of pandas.Index objects used for label based indexing
