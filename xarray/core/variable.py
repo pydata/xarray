@@ -1,4 +1,5 @@
 from datetime import timedelta
+from collections import defaultdict
 import functools
 import itertools
 import warnings
@@ -1071,12 +1072,13 @@ class IndexVariable(Variable):
     of a NumPy array. Hence, their values are immutable and must always be one-
     dimensional.
 
-    They also have a name property, which is the name of their sole dimension.
+    They also have a name property, which is the name of their sole dimension
+    unless another name is given.
     """
 
-    def __init__(self, name, data, attrs=None, encoding=None, fastpath=False):
-        super(IndexVariable, self).__init__(
-            name, data, attrs, encoding, fastpath)
+    def __init__(self, dims, data, attrs=None, encoding=None, fastpath=False):
+        super(IndexVariable, self).__init__(dims, data, attrs, encoding,
+                                            fastpath)
         if self.ndim != 1:
             raise ValueError('%s objects must be 1-dimensional' %
                              type(self).__name__)
@@ -1092,8 +1094,8 @@ class IndexVariable(Variable):
         if not hasattr(values, 'ndim') or values.ndim == 0:
             return Variable((), values, self._attrs, self._encoding)
         else:
-            return type(self)(self.dims, values, self._attrs, self._encoding,
-                              fastpath=True)
+            return type(self)(self.dims, values, self._attrs,
+                              self._encoding, fastpath=True)
 
     def __setitem__(self, key, value):
         raise TypeError('%s values cannot be modified' % type(self).__name__)
@@ -1145,8 +1147,8 @@ class IndexVariable(Variable):
         # there is no need to copy the index values here even if deep=True
         # since pandas.Index objects are immutable
         data = PandasIndexAdapter(self) if deep else self._data
-        return type(self)(self.dims, data, self._attrs, self._encoding,
-                          fastpath=True)
+        return type(self)(self.dims, data, self._attrs,
+                          self._encoding, fastpath=True)
 
     def _data_equals(self, other):
         return self.to_index().equals(other.to_index())
@@ -1166,12 +1168,30 @@ class IndexVariable(Variable):
         if isinstance(index, pd.MultiIndex):
             # set default names for multi-index unnamed levels so that
             # we can safely rename dimension / coordinate later
-            valid_level_names = [name or '{}_level_{}'.format(self.name, i)
+            valid_level_names = [name or '{}_level_{}'.format(self.dims[0], i)
                                  for i, name in enumerate(index.names)]
             index = index.set_names(valid_level_names)
         else:
             index = index.set_names(self.name)
         return index
+
+    @property
+    def level_names(self):
+        """Return MultiIndex level names or None if this IndexVariable has no
+        MultiIndex.
+        """
+        index = self.to_index()
+        if isinstance(index, pd.MultiIndex):
+            return index.names
+        else:
+            return None
+
+    def get_level_variable(self, level):
+        """Return a new IndexVariable from a given MultiIndex level."""
+        if self.level_names is None:
+            raise ValueError("IndexVariable %r has no MultiIndex" % self.name)
+        index = self.to_index()
+        return type(self)(self.dims, index.get_level_values(level))
 
     @property
     def name(self):
@@ -1276,3 +1296,29 @@ def concat(variables, dim='concat_dim', positions=None, shortcut=False):
         return IndexVariable.concat(variables, dim, positions, shortcut)
     else:
         return Variable.concat(variables, dim, positions, shortcut)
+
+
+def assert_unique_multiindex_level_names(variables):
+    """Check for uniqueness of MultiIndex level names in all given
+    variables.
+
+    Not public API. Used for checking consistency of DataArray and Dataset
+    objects.
+    """
+    level_names = defaultdict(list)
+    for var_name, var in variables.items():
+        if isinstance(var._data, PandasIndexAdapter):
+            idx_level_names = var.to_index_variable().level_names
+            if idx_level_names is not None:
+                for n in idx_level_names:
+                    level_names[n].append('%r (%s)' % (n, var_name))
+
+    for k, v in level_names.items():
+        if k in variables:
+            v.append('(%s)' % k)
+
+    duplicate_names = [v for v in level_names.values() if len(v) > 1]
+    if duplicate_names:
+        conflict_str = '\n'.join([', '.join(v) for v in duplicate_names])
+        raise ValueError('conflicting MultiIndex level name(s):\n%s'
+                         % conflict_str)

@@ -14,11 +14,13 @@ from . import ops
 from . import utils
 from .alignment import align
 from .common import AbstractArray, BaseDataObject, squeeze
-from .coordinates import DataArrayCoordinates, Indexes
+from .coordinates import (DataArrayCoordinates, DataArrayLevelCoordinates,
+                          Indexes)
 from .dataset import Dataset
 from .pycompat import iteritems, basestring, OrderedDict, zip
 from .variable import (as_variable, Variable, as_compatible_data, IndexVariable,
-                       default_index_coordinate)
+                       default_index_coordinate,
+                       assert_unique_multiindex_level_names)
 from .formatting import format_item
 
 
@@ -81,6 +83,8 @@ def _infer_coords_and_dims(shape, coords, dims):
                 raise ValueError('conflicting sizes for dimension %r: '
                                  'length %s on the data but length %s on '
                                  'coordinate %r' % (d, sizes[d], s, k))
+
+    assert_unique_multiindex_level_names(new_coords)
 
     return new_coords, dims
 
@@ -421,6 +425,20 @@ class DataArray(AbstractArray, BaseDataObject):
             key = indexing.expanded_indexer(key, self.ndim)
             return dict(zip(self.dims, key))
 
+    @property
+    def _level_coords(self):
+        """Return a mapping of all MultiIndex levels and their corresponding
+        coordinate name.
+        """
+        level_coords = OrderedDict()
+        for cname, var in self._coords.items():
+            if var.ndim == 1:
+                level_names = var.to_index_variable().level_names
+                if level_names is not None:
+                    dim, = var.dims
+                    level_coords.update({lname: dim for lname in level_names})
+        return level_coords
+
     def __getitem__(self, key):
         if isinstance(key, basestring):
             from .dataset import _get_virtual_variable
@@ -428,7 +446,8 @@ class DataArray(AbstractArray, BaseDataObject):
             try:
                 var = self._coords[key]
             except KeyError:
-                _, key, var = _get_virtual_variable(self._coords, key)
+                _, key, var = _get_virtual_variable(
+                    self._coords, key, self._level_coords)
 
             return self._replace_maybe_drop_dims(var, name=key)
         else:
@@ -448,7 +467,7 @@ class DataArray(AbstractArray, BaseDataObject):
     @property
     def _attr_sources(self):
         """List of places to look-up items for attribute-style access"""
-        return [self.coords, self.attrs]
+        return [self.coords, DataArrayLevelCoordinates(self), self.attrs]
 
     def __contains__(self, key):
         return key in self._coords

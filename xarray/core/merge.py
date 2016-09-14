@@ -2,7 +2,8 @@ import pandas as pd
 
 from .alignment import align
 from .utils import Frozen, is_dict_like
-from .variable import as_variable, default_index_coordinate
+from .variable import (as_variable, default_index_coordinate,
+                       assert_unique_multiindex_level_names)
 from .pycompat import (basestring, OrderedDict)
 
 
@@ -110,7 +111,7 @@ def merge_variables(
         If provided, variables are always taken from this dict in preference to
         the input variable dictionaries, without checking for conflicts.
     compat : {'identical', 'equals', 'broadcast_equals', 'minimal'}, optional
-        Type of equality check to use wben checking for conflicts.
+        Type of equality check to use when checking for conflicts.
 
     Returns
     -------
@@ -278,6 +279,7 @@ def merge_coords_without_align(objs, priority_vars=None):
     """
     expanded = expand_variable_dicts(objs)
     variables = merge_variables(expanded, priority_vars)
+    assert_unique_multiindex_level_names(variables)
     return variables
 
 
@@ -370,6 +372,7 @@ def merge_coords(objs, compat='minimal', join='outer', priority_arg=None,
     expanded = expand_variable_dicts(aligned)
     priority_vars = _get_priority_vars(aligned, priority_arg, compat=compat)
     variables = merge_variables(expanded, priority_vars, compat=compat)
+    assert_unique_multiindex_level_names(variables)
 
     return variables
 
@@ -431,6 +434,7 @@ def merge_core(objs, compat='broadcast_equals', join='outer', priority_arg=None,
 
     priority_vars = _get_priority_vars(aligned, priority_arg, compat=compat)
     variables = merge_variables(expanded, priority_vars, compat=compat)
+    assert_unique_multiindex_level_names(variables)
 
     dims = calculate_dimensions(variables)
 

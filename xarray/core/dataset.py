@@ -33,34 +33,48 @@ _DATETIMEINDEX_COMPONENTS = ['year', 'month', 'day', 'hour', 'minute',
                              'quarter']
 
 
-def _get_virtual_variable(variables, key):
-    """Get a virtual variable (e.g., 'time.year') from a dict of
-    xarray.Variable objects (if possible)
+def _get_virtual_variable(variables, key, level_vars={}):
+    """Get a virtual variable (e.g., 'time.year' or a MultiIndex level)
+    from a dict of xarray.Variable objects (if possible)
     """
     if not isinstance(key, basestring):
         raise KeyError(key)
 
     split_key = key.split('.', 1)
-    if len(split_key) != 2:
-        raise KeyError(key)
-
-    ref_name, var_name = split_key
-    ref_var = variables[ref_name]
-    if ref_var.ndim == 1:
-        date = ref_var.to_index()
-    elif ref_var.ndim == 0:
-        date = pd.Timestamp(ref_var.values)
+    if len(split_key) == 2:
+        ref_name, var_name = split_key
+    elif len(split_key) == 1:
+        ref_name, var_name = key, None
     else:
         raise KeyError(key)
 
-    if var_name == 'season':
-        # TODO: move 'season' into pandas itself
-        seasons = np.array(['DJF', 'MAM', 'JJA', 'SON'])
-        month = date.month
-        data = seasons[(month // 3) % 4]
+    if ref_name in level_vars:
+        dim_var = variables[level_vars[ref_name]]
+        ref_var = dim_var.to_index_variable().get_level_variable(ref_name)
     else:
-        data = getattr(date, var_name)
-    return ref_name, var_name, Variable(ref_var.dims, data)
+        ref_var = variables[ref_name]
+
+    if var_name is None:
+        virtual_var = ref_var
+        var_name = key
+    else:
+        if ref_var.ndim == 1:
+            date = ref_var.to_index()
+        elif ref_var.ndim == 0:
+            date = pd.Timestamp(ref_var.values)
+        else:
+            raise KeyError(key)
+
+        if var_name == 'season':
+            # TODO: move 'season' into pandas itself
+            seasons = np.array(['DJF', 'MAM', 'JJA', 'SON'])
+            month = date.month
+            data = seasons[(month // 3) % 4]
+        else:
+            data = getattr(date, var_name)
+        virtual_var = Variable(ref_var.dims, data)
+
+    return ref_name, var_name, virtual_var
 
 
 def calculate_dimensions(variables):
@@ -411,6 +425,21 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
 
         return self._construct_direct(variables, coord_names, dims, attrs)
 
+    @property
+    def _level_coords(self):
+        """Return a mapping of all MultiIndex levels and their corresponding
+        coordinate name.
+        """
+        level_coords = OrderedDict()
+        for cname in self._coord_names:
+            var = self.variables[cname]
+            if var.ndim == 1:
+                level_names = var.to_index_variable().level_names
+                if level_names is not None:
+                    dim, = var.dims
+                    level_coords.update({lname: dim for lname in level_names})
+        return level_coords
+
     def _copy_listed(self, names):
         """Create a new Dataset with the listed variables from this dataset and
         the all relevant coordinates. Skips all validation.
@@ -423,7 +452,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
                 variables[name] = self._variables[name]
             except KeyError:
                 ref_name, var_name, var = _get_virtual_variable(
-                    self._variables, name)
+                    self._variables, name, self._level_coords)
                 variables[var_name] = var
                 if ref_name in self._coord_names:
                     coord_names.add(var_name)
@@ -439,7 +468,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         try:
             variable = self._variables[name]
         except KeyError:
-            _, name, variable = _get_virtual_variable(self._variables, name)
+            _, name, variable = _get_virtual_variable(
+                self._variables, name, self._level_coords)
 
         coords = OrderedDict()
         needed_dims = set(variable.dims)
@@ -508,6 +538,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         if utils.is_dict_like(key):
             raise NotImplementedError('cannot yet use a dictionary as a key '
                                       'to set Dataset values')
+
         self.update({key: value})
 
     def __delitem__(self, key):

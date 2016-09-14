@@ -1,4 +1,5 @@
 from datetime import timedelta
+from collections import defaultdict
 import numpy as np
 import pandas as pd
 
@@ -214,6 +215,39 @@ def convert_label_indexer(index, label, index_name='', method=None,
     return indexer, new_index
 
 
+def get_dim_indexers(data_obj, indexers):
+    """Given a xarray data object and label based indexers, return a mapping
+    of label indexers with only dimension names as keys.
+
+    It groups multiple level indexers given on a multi-index dimension
+    into a single, dictionary indexer for that dimension (Raise a ValueError
+    if it is not possible).
+    """
+    invalid = [k for k in indexers
+               if k not in data_obj.dims and k not in data_obj._level_coords]
+    if invalid:
+        raise ValueError("dimensions or multi-index levels %r do not exist"
+                         % invalid)
+
+    level_indexers = defaultdict(dict)
+    dim_indexers = {}
+    for key, label in iteritems(indexers):
+        dim, = data_obj[key].dims
+        if key != dim:
+            # assume here multi-index level indexer
+            level_indexers[dim][key] = label
+        else:
+            dim_indexers[key] = label
+
+    for dim, level_labels in iteritems(level_indexers):
+        if dim_indexers.get(dim, False):
+            raise ValueError("cannot combine multi-index level indexers "
+                             "with an indexer for dimension %s" % dim)
+        dim_indexers[dim] = level_labels
+
+    return dim_indexers
+
+
 def remap_label_indexers(data_obj, indexers, method=None, tolerance=None):
     """Given an xarray data object and label based indexers, return a mapping
     of equivalent location based indexers. Also return a mapping of updated
@@ -223,7 +257,7 @@ def remap_label_indexers(data_obj, indexers, method=None, tolerance=None):
         raise TypeError('``method`` must be a string')
 
     pos_indexers, new_indexes = {}, {}
-    for dim, label in iteritems(indexers):
+    for dim, label in iteritems(get_dim_indexers(data_obj, indexers)):
         index = data_obj[dim].to_index()
         idxr, new_idx = convert_label_indexer(index, label,
                                               dim, method, tolerance)

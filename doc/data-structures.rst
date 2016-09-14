@@ -115,10 +115,6 @@ If you create a ``DataArray`` by supplying a pandas
     df
     xr.DataArray(df)
 
-Xarray supports labeling coordinate values with a :py:class:`pandas.MultiIndex`.
-While it handles multi-indexes with unnamed levels, it is recommended that you
-explicitly set the names of the levels.
-
 DataArray properties
 ~~~~~~~~~~~~~~~~~~~~
 
@@ -531,6 +527,41 @@ dimension and whose the values are ``Index`` objects:
 .. ipython:: python
 
     ds.indexes
+
+MultiIndex coordinates
+~~~~~~~~~~~~~~~~~~~~~~
+
+Xarray supports labeling coordinate values with a :py:class:`pandas.MultiIndex`:
+
+.. ipython:: python
+
+    midx = pd.MultiIndex.from_arrays([['R', 'R', 'V', 'V'], [.1, .2, .7, .9]],
+                                     names=('band', 'wn'))
+    mda = xr.DataArray(np.random.rand(4), coords={'spec': midx}, dims='spec')
+    mda
+
+For convenience multi-index levels are directly accessible as "virtual" or
+"derived" coordinates (marked by ``-`` when printing a dataset or data array):
+
+.. ipython:: python
+
+     mda['band']
+     mda.wn
+
+Indexing with multi-index levels is also possible using the ``sel`` method
+(see :ref:`multi-level indexing`).
+
+Unlike other coordinates, "virtual" level coordinates are not stored in
+the ``coords`` attribute of ``DataArray`` and ``Dataset`` objects
+(although they are shown when printing the ``coords`` attribute).
+Consequently, most of the coordinates related methods don't apply for them.
+It also can't be used to replace one particular level.
+
+Because in a ``DataArray`` or ``Dataset`` object each multi-index level is
+accessible as a "virtual" coordinate, its name must not conflict with the names
+of the other levels, coordinates and data variables of the same object.
+Even though Xarray set default names for multi-indexes with unnamed levels,
+it is recommended that you explicitly set the names of the levels.
 
 .. [1] Latitude and longitude are 2D arrays because the dataset uses
    `projected coordinates`__. ``reference_time`` refers to the reference time

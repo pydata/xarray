@@ -107,8 +107,22 @@ class TestIndexers(TestCase):
             # slice is always a view.
             indexing.convert_label_indexer(index, slice('2001', '2002'))
 
+    def test_get_dim_indexers(self):
+        mindex = pd.MultiIndex.from_product([['a', 'b'], [1, 2]],
+                                            names=('one', 'two'))
+        mdata = DataArray(range(4), [('x', mindex)])
+
+        dim_indexers = indexing.get_dim_indexers(mdata, {'one': 'a', 'two': 1})
+        self.assertEqual(dim_indexers, {'x': {'one': 'a', 'two': 1}})
+
+        with self.assertRaisesRegexp(ValueError, 'cannot combine'):
+            _ = indexing.get_dim_indexers(mdata, {'x': 'a', 'two': 1})
+
+        with self.assertRaisesRegexp(ValueError, 'do not exist'):
+            _ = indexing.get_dim_indexers(mdata, {'y': 'a'})
+            _ = indexing.get_dim_indexers(data, {'four': 1})
+
     def test_remap_label_indexers(self):
-        # TODO: fill in more tests!
         def test_indexer(data, x, expected_pos, expected_idx=None):
             pos, idx = indexing.remap_label_indexers(data, {'x': x})
             self.assertArrayEqual(pos.get('x'), expected_pos)

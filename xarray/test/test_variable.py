@@ -1038,6 +1038,24 @@ class TestIndexVariable(TestCase, VariableSubclassTestCases):
         with self.assertRaises(AttributeError):
             coord.name = 'y'
 
+    def test_level_names(self):
+        midx = pd.MultiIndex.from_product([['a', 'b'], [1, 2]],
+                                          names=['level_1', 'level_2'])
+        x = IndexVariable('x', midx)
+        self.assertEqual(x.level_names, midx.names)
+
+        self.assertIsNone(IndexVariable('y', [10.0]).level_names)
+
+    def test_get_level_variable(self):
+        midx = pd.MultiIndex.from_product([['a', 'b'], [1, 2]],
+                                          names=['level_1', 'level_2'])
+        x = IndexVariable('x', midx)
+        level_1 = IndexVariable('x', midx.get_level_values('level_1'))
+        self.assertVariableIdentical(x.get_level_variable('level_1'), level_1)
+
+        with self.assertRaisesRegexp(ValueError, 'has no MultiIndex'):
+            IndexVariable('y', [10.0]).get_level_variable('level')
+
     def test_concat_periods(self):
         periods = pd.period_range('2000-01-01', periods=10)
         coords = [IndexVariable('t', periods[:5]), IndexVariable('t', periods[5:])]
