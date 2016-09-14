@@ -57,6 +57,11 @@ By `Robin Wilson <https://github.com/robintw>`_.
   (see :ref:`multi-level indexing`).
   By `Benoit Bovy <https://github.com/benbovy>`_.
 
+- Added the ``compat`` option ``'no_conflicts'`` to ``merge``, allowing the
+  combination of xarray objects with disjoint (:issue:`742`) or
+  overlapping (:issue:`835`) coordinates as long as any present data agrees.
+  By `Johnnie Gray <https://github.com/jcmgray>`_.
+
 Bug fixes
 ~~~~~~~~~
 
