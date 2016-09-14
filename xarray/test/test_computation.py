@@ -9,7 +9,7 @@ import xarray as xr
 from numpy.testing import assert_array_equal
 from xarray.core.computation import (
     ordered_set_union, ordered_set_intersection, join_dict_keys,
-    collect_dict_values, broadcast_compat_data, Signature,
+    collect_dict_values, broadcast_compat_data, UFuncSignature,
     unified_dim_sizes)
 
 from . import requires_dask
@@ -24,21 +24,24 @@ def assert_identical(a, b):
 
 
 def test_parse_signature():
-    assert Signature([['x']]) == Signature.from_string('(x)->()')
-    assert Signature([['x', 'y']]) == Signature.from_string('(x,y)->()')
-    assert Signature([['x'], ['y']]) == Signature.from_string('(x),(y)->()')
-    assert (Signature([['x']], [['y'], []]) ==
-            Signature.from_string('(x)->(y),()'))
+    assert (UFuncSignature([['x']]) ==
+            UFuncSignature.from_string('(x)->()'))
+    assert (UFuncSignature([['x', 'y']]) ==
+            UFuncSignature.from_string('(x,y)->()'))
+    assert (UFuncSignature([['x'], ['y']]) ==
+            UFuncSignature.from_string('(x),(y)->()'))
+    assert (UFuncSignature([['x']], [['y'], []]) ==
+            UFuncSignature.from_string('(x)->(y),()'))
     with pytest.raises(ValueError):
-        Signature.from_string('(x)(y)->()')
+        UFuncSignature.from_string('(x)(y)->()')
     with pytest.raises(ValueError):
-        Signature.from_string('(x),(y)->')
+        UFuncSignature.from_string('(x),(y)->')
     with pytest.raises(ValueError):
-        Signature.from_string('((x))->(x)')
+        UFuncSignature.from_string('((x))->(x)')
 
 
 def test_signature_properties():
-    sig = Signature.from_string('(x),(x,y)->(z)')
+    sig = UFuncSignature.from_string('(x),(x,y)->(z)')
     assert sig.input_core_dims == (('x',), ('x', 'y'))
     assert sig.output_core_dims == (('z',),)
     assert sig.all_input_core_dims == frozenset(['x', 'y'])
@@ -46,7 +49,7 @@ def test_signature_properties():
     assert sig.n_inputs == 2
     assert sig.n_outputs == 1
     # dimension names matter
-    assert Signature([['x']]) != Signature([['y']])
+    assert UFuncSignature([['x']]) != UFuncSignature([['y']])
 
 
 def test_ordered_set_union():

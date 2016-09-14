@@ -28,7 +28,7 @@ def safe_tuple(x):
     return tuple(x)
 
 
-class Signature(object):
+class UFuncSignature(object):
     """Core dimensions signature for a given function.
 
     Based on the signature provided by generalized ufuncs in NumPy.
@@ -97,7 +97,7 @@ class Signature(object):
 
     @classmethod
     def from_string(cls, string):
-        """Create a Signature object from a NumPy gufunc signature.
+        """Create a UFuncSignature object from a NumPy gufunc signature.
 
         Parameters
         ----------
@@ -131,7 +131,7 @@ def result_name(objects):
     # type: List[object] -> Any
     # use the same naming heuristics as pandas:
     # https://github.com/blaze/blaze/issues/458#issuecomment-51936356
-    names = set(getattr(obj, 'name', None) for obj in objects)
+    names = {getattr(obj, 'name', None) for obj in objects}
     names.discard(None)
     if len(names) == 1:
         name, = names
@@ -144,7 +144,7 @@ _REPEAT_NONE = itertools.repeat(None)
 
 def build_output_coords(
         args,                 # type: list
-        signature,            # type: Signature
+        signature,            # type: UFuncSignature
         new_coords=None,      # type: Iterable[Optional[Mapping]]
         exclude=frozenset(),  # type: set
         ):
@@ -227,7 +227,7 @@ def apply_dataarray_ufunc(func, *args, **kwargs):
 
 
 def ordered_set_union(all_keys):
-    # type: List[Iterable -> Iterable
+    # type: List[Iterable] -> Iterable
     result_dict = OrderedDict()
     for keys in all_keys:
         for key in keys:
@@ -633,11 +633,11 @@ def apply_ufunc(func, *args, **kwargs):
                         % list(kwargs))
 
     if signature is None:
-        signature = Signature.default(len(args))
+        signature = UFuncSignature.default(len(args))
     elif isinstance(signature, basestring):
-        signature = Signature.from_string(signature)
-    elif not isinstance(signature, Signature):
-        signature = Signature.from_sequence(signature)
+        signature = UFuncSignature.from_string(signature)
+    elif not isinstance(signature, UFuncSignature):
+        signature = UFuncSignature.from_sequence(signature)
 
     if exclude_dims and not exclude_dims <= signature.all_core_dims:
         raise ValueError('each dimension in `exclude_dims` must also be a core '
