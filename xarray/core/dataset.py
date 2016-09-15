@@ -1453,7 +1453,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         overwrite_vars : str or sequence, optional
             If provided, update variables of these name(s) without checking for
             conflicts in this dataset.
-        compat : {'broadcast_equals', 'equals', 'identical'}, optional
+        compat : {'broadcast_equals', 'equals', 'identical',
+                  'no_conflicts'}, optional
             String indicating how to compare variables of the same name for
             potential conflicts:
 
@@ -1462,6 +1463,9 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
             - 'equals': all values and dimensions must be the same.
             - 'identical': all values, dimensions and attributes must be the
               same.
+            - 'no_conflicts': only values which are not null in both datasets
+              must be equal. The returned dataset then contains the combination
+              of all non-null values.
         join : {'outer', 'inner', 'left', 'right'}, optional
             Method for joining ``self`` and ``other`` along shared dimensions:
 
@@ -1477,7 +1481,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
 
         Raises
         ------
-        ValueError
+        MergeError
             If any variables conflict (see ``compat``).
         """
         variables, coord_names, dims = dataset_merge_method(

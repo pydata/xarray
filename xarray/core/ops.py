@@ -79,8 +79,20 @@ def _fail_on_dask_array_input(values, msg=None, func_name=None):
 
 around = _dask_or_eager_func('around')
 isclose = _dask_or_eager_func('isclose')
-isnull = _dask_or_eager_func('isnull', pd)
 notnull = _dask_or_eager_func('notnull', pd)
+_isnull = _dask_or_eager_func('isnull', pd)
+
+
+def isnull(data):
+    # GH837, GH861
+    # isnull fcn from pandas will throw TypeError when run on numpy structured
+    # array therefore for dims that are np structured arrays we assume all
+    # data is present
+    try:
+        return _isnull(data)
+    except TypeError:
+        return np.zeros(data.shape, dtype=bool)
+
 
 transpose = _dask_or_eager_func('transpose')
 where = _dask_or_eager_func('where', n_array_args=3)
@@ -125,17 +137,22 @@ def array_equiv(arr1, arr2):
         return False
 
     flag_array = (arr1 == arr2)
+    flag_array |= (isnull(arr1) & isnull(arr2))
 
-    # GH837, GH861
-    # isnull fcn from pandas will throw TypeError when run on numpy structured array
-    # therefore for dims that are np structured arrays we skip testing for nan
+    return bool(flag_array.all())
 
-    try:
 
-        flag_array |= (isnull(arr1) & isnull(arr2))
+def array_notnull_equiv(arr1, arr2):
+    """Like np.array_equal, but also allows values to be NaN in either or both
+    arrays
+    """
+    arr1, arr2 = as_like_arrays(arr1, arr2)
+    if arr1.shape != arr2.shape:
+        return False
 
-    except TypeError:
-        pass
+    flag_array = (arr1 == arr2)
+    flag_array |= isnull(arr1)
+    flag_array |= isnull(arr2)
 
     return bool(flag_array.all())
 

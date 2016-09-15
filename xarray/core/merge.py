@@ -12,7 +12,8 @@ PANDAS_TYPES = (pd.Series, pd.DataFrame, pd.Panel)
 _VALID_COMPAT = Frozen({'identical': 0,
                         'equals': 1,
                         'broadcast_equals': 2,
-                        'minimal': 3})
+                        'minimal': 3,
+                        'no_conflicts': 4})
 
 
 def broadcast_dimension_size(variables):
@@ -48,7 +49,8 @@ def unique_variable(name, variables, compat='broadcast_equals'):
     variables : list of xarray.Variable
         List of Variable objects, all of which go by the same name in different
         inputs.
-    compat : {'identical', 'equals', 'broadcast_equals'}, optional
+    compat : {'identical', 'equals', 'broadcast_equals',
+              'no_conflicts'}, optional
         Type of equality check to use.
 
     Returns
@@ -61,6 +63,8 @@ def unique_variable(name, variables, compat='broadcast_equals'):
     """
     out = variables[0]
     if len(variables) > 1:
+        combine_method = None
+
         if compat == 'minimal':
             compat = 'broadcast_equals'
 
@@ -68,12 +72,18 @@ def unique_variable(name, variables, compat='broadcast_equals'):
             dim_lengths = broadcast_dimension_size(variables)
             out = out.expand_dims(dim_lengths)
 
+        if compat == 'no_conflicts':
+            combine_method = 'fillna'
+
         for var in variables[1:]:
             if not getattr(out, compat)(var):
                 raise MergeError('conflicting values for variable %r on '
                                  'objects to be combined:\n'
                                  'first value: %r\nsecond value: %r'
                                  % (name, out, var))
+            if combine_method:
+                out = getattr(out, combine_method)(var)
+
     return out
 
 
@@ -110,8 +120,9 @@ def merge_variables(
     priority_vars : mapping with Variable values, optional
         If provided, variables are always taken from this dict in preference to
         the input variable dictionaries, without checking for conflicts.
-    compat : {'identical', 'equals', 'broadcast_equals', 'minimal'}, optional
-        Type of equality check to use when checking for conflicts.
+    compat : {'identical', 'equals', 'broadcast_equals',
+              'minimal', 'no_conflicts'}, optional
+        Type of equality check to use wben checking for conflicts.
 
     Returns
     -------
@@ -342,7 +353,8 @@ def _get_priority_vars(objects, priority_arg, compat='equals'):
         Dictionaries in which to find the priority variables.
     priority_arg : int or None
         Integer object whose variable should take priority.
-    compat : 'broadcast_equals', 'equals' or 'identical', optional
+    compat : {'identical', 'equals', 'broadcast_equals',
+              'no_conflicts'}, optional
         Compatibility checks to use when merging variables.
 
     Returns
@@ -395,9 +407,10 @@ def merge_core(objs, compat='broadcast_equals', join='outer', priority_arg=None,
     ----------
     objs : list of mappings
         All values must be convertable to labeled arrays.
-    compat : 'broadcast_equals', 'equals' or 'identical', optional
+    compat : {'identical', 'equals', 'broadcast_equals',
+              'no_conflicts'}, optional
         Compatibility checks to use when merging variables.
-    join : 'outer', 'inner', 'left' or 'right', optional
+    join : {'outer', 'inner', 'left', 'right'}, optional
         How to combine objects with different indexes.
     priority_arg : integer, optional
         Optional argument in `objs` that takes precedence over the others.
@@ -461,9 +474,10 @@ def merge(objects, compat='broadcast_equals', join='outer'):
     objects : Iterable[Union[xarray.Dataset, xarray.DataArray, dict]]
         Merge together all variables from these objects. If any of them are
         DataArray objects, they must have a name.
-    compat : 'broadcast_equals', 'equals' or 'identical', optional
+    compat : {'identical', 'equals', 'broadcast_equals',
+              'no_conflicts'}, optional
         Compatibility checks to use when merging variables.
-    join : 'outer', 'inner', 'left' or 'right', optional
+    join : {'outer', 'inner', 'left', 'right'}, optional
         How to combine objects with different indexes.
 
     Returns
