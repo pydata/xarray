@@ -208,5 +208,5 @@ coordinates as long as any non-missing values agree or are disjoint:
     xr.merge([ds1, ds2], compat='no_conflicts')
 
 Note that due to the underlying representation of missing values as floating
-point numbers (``NaN``) or generic objects (``None``), variable data type is not
-always conserved when merging in this manner.
+point numbers (``NaN``), variable data type is not always preserved when merging
+in this manner.
