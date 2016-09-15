@@ -1,15 +1,16 @@
-from collections import OrderedDict
 import functools
 import operator
+from collections import OrderedDict
 
 import numpy as np
-import pytest
-import xarray as xr
-
 from numpy.testing import assert_array_equal
+
+import pytest
+
+import xarray as xr
 from xarray.core.computation import (
-    ordered_set_union, ordered_set_intersection, join_dict_keys,
-    collect_dict_values, broadcast_compat_data, UFuncSignature,
+    UFuncSignature, broadcast_compat_data, collect_dict_values,
+    join_dict_keys, ordered_set_intersection, ordered_set_union,
     unified_dim_sizes)
 
 from . import requires_dask
@@ -236,7 +237,7 @@ def test_apply_ufunc_input_core_dimension():
 
     def first_element(obj, dim):
         func = lambda x: x[..., 0]
-        sig = ([(dim,)], [(),])
+        sig = ([(dim,)], [()])
         return xr.apply_ufunc(func, obj, signature=sig)
 
     array = np.array([[1, 2], [3, 4]])
@@ -249,7 +250,8 @@ def test_apply_ufunc_input_core_dimension():
     expected_dataset_x = xr.Dataset({'data': expected_data_array_x})
 
     expected_variable_y = xr.Variable(['x'], [1, 3])
-    expected_data_array_y = xr.DataArray(expected_variable_y, {'x': ['a', 'b']})
+    expected_data_array_y = xr.DataArray(expected_variable_y,
+                                         {'x': ['a', 'b']})
     expected_dataset_y = xr.Dataset({'data': expected_data_array_y})
 
     assert_identical(expected_variable_x, first_element(variable, 'x'))
@@ -413,17 +415,16 @@ def test_apply_groupby_add_same():
 
 def test_unified_dim_sizes():
     assert unified_dim_sizes([xr.Variable((), 0)]) == OrderedDict()
-    assert (unified_dim_sizes(
-                [xr.Variable('x', [1]), xr.Variable('x', [1])])
-            == OrderedDict([('x', 1)]))
-    assert (unified_dim_sizes(
-                [xr.Variable('x', [1]), xr.Variable('y', [1, 2])])
-            == OrderedDict([('x', 1), ('y', 2)]))
-    assert (unified_dim_sizes(
-                [xr.Variable(('x', 'z'), [[1]]),
-                 xr.Variable(('y', 'z'), [[1, 2], [3, 4]])],
-                 exclude_dims={'z'})
-            == OrderedDict([('x', 1), ('y', 2)]))
+    assert (unified_dim_sizes([xr.Variable('x', [1]),
+                               xr.Variable('x', [1])]) ==
+            OrderedDict([('x', 1)]))
+    assert (unified_dim_sizes([xr.Variable('x', [1]),
+                               xr.Variable('y', [1, 2])]) ==
+            OrderedDict([('x', 1), ('y', 2)]))
+    assert (unified_dim_sizes([xr.Variable(('x', 'z'), [[1]]),
+                               xr.Variable(('y', 'z'), [[1, 2], [3, 4]])],
+                              exclude_dims={'z'}) ==
+            OrderedDict([('x', 1), ('y', 2)]))
 
     # duplicate dimensions
     with pytest.raises(ValueError):

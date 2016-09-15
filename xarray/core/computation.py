@@ -7,8 +7,8 @@ import re
 from . import ops
 from .alignment import deep_align
 from .merge import merge_coords_without_align
+from .pycompat import OrderedDict, basestring, dask_array_type
 from .utils import is_dict_like
-from .pycompat import dask_array_type, OrderedDict, basestring
 
 
 _DEFAULT_FROZEN_SET = frozenset()
@@ -64,8 +64,8 @@ class UFuncSignature(object):
     @property
     def all_core_dims(self):
         if self._all_core_dims is None:
-            self._all_core_dims = (self.all_input_core_dims
-                                   | self.all_output_core_dims)
+            self._all_core_dims = (self.all_input_core_dims |
+                                   self.all_output_core_dims)
         return self._all_core_dims
 
     @property
@@ -142,6 +142,7 @@ def result_name(objects):
 
 _REPEAT_NONE = itertools.repeat(None)
 
+
 def build_output_coords(
         args,                 # type: list
         signature,            # type: UFuncSignature
@@ -172,8 +173,9 @@ def build_output_coords(
             unpacked_input_coords, = input_coords
             merged = OrderedDict(unpacked_input_coords)
         elif arg_new_coords:
-            merged = merge_coords_without_align([arg_new_coords] + input_coords,
-                                                priority_arg=0, exclude=exclude)
+            coords_list = [arg_new_coords] + input_coords
+            merged = merge_coords_without_align(coords_list, priority_arg=0,
+                                                exclude=exclude)
         else:
             merged = merge_coords_without_align(input_coords, exclude=exclude)
 
@@ -278,9 +280,10 @@ def _as_variables_or_variable(arg):
 
 
 def _fast_dataset(variables, coord_variables):
+    # type: (OrderedDict[Any, Variable], Mapping[Any, Variable]) -> Dataset
     """Create a dataset as quickly as possible.
 
-    Variables are modified *inplace*.
+    Beware: the `variables` OrderedDict is modified INPLACE.
     """
     from .dataset import Dataset
     variables.update(coord_variables)
@@ -414,6 +417,7 @@ SLICE_NONE = slice(None)
 
 # A = TypeVar('A', numpy.ndarray, dask.array.Array)
 
+
 def broadcast_compat_data(variable, broadcast_dims, core_dims):
     # type: (Variable[A], tuple, tuple) -> A
     data = variable.data
@@ -496,8 +500,8 @@ def apply_array_ufunc(func, *args, **kwargs):
                         'arguments: %s' % list(kwargs))
 
     if any(isinstance(arg, dask_array_type) for arg in args):
-        # TODO: add a mode dask_array='auto' when dask.array gets a function for
-        # applying arbitrary gufuncs
+        # TODO: add a mode dask_array='auto' when dask.array gets a function
+        # for applying arbitrary gufuncs
         if dask_array == 'forbidden':
             raise ValueError('encountered dask array, but did not set '
                              "dask_array='allowed'")
@@ -529,12 +533,14 @@ def apply_ufunc(func, *args, **kwargs):
         Object indicating any core dimensions that should not be broadcast on
         the input arguments, new dimensions in the output, and/or multiple
         outputs. Two forms of signatures are accepted:
-        (a) A signature string of the form used by NumPy's generalized universal
-            functions [1], e.g., '(),(time)->()' indicating a function that
-            accepts two arguments and returns a single argument, on which all
-            dimensions should be broadcast except 'time' on the second argument.
-        (a) A triply nested sequence providing lists of core dimensions for each
-            variable, for both input and output, e.g., ([(), ('time',)], [()]).
+        (a) A signature string of the form used by NumPy's generalized
+            universal functions [1], e.g., '(),(time)->()' indicating a
+            function that accepts two arguments and returns a single argument,
+            on which all dimensions should be broadcast except 'time' on the
+            second argument.
+        (a) A triply nested sequence providing lists of core dimensions for
+            each variable, for both input and output, e.g.,
+            ``([(), ('time',)], [()])``.
 
         Core dimensions are automatically moved to the last axes of any input
         variables, which facilitates using NumPy style generalized ufuncs (see
@@ -556,10 +562,10 @@ def apply_ufunc(func, *args, **kwargs):
         on outputs not found on the inputs must be provided here.
     exclude_dims : set, optional
         Dimensions to exclude from alignment and broadcasting. Any inputs
-        coordinates along these dimensions will be dropped. If you include these
-        dimensions on any outputs, you must explicit set them in ``new_coords``.
-        Each excluded dimension must be a core dimension in the function
-        signature.
+        coordinates along these dimensions will be dropped. If you include
+        these dimensions on any outputs, you must explicit set them in
+        ``new_coords``. Each excluded dimension must be a core dimension in the
+        function signature.
     dataset_fill_value : optional
         Value used in place of missing variables on Dataset inputs when the
         datasets do not share the exact same ``data_vars``.

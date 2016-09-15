@@ -1,10 +1,9 @@
 import pandas as pd
 
 from .alignment import deep_align
-from .utils import Frozen, is_dict_like
-from .variable import (as_variable, default_index_coordinate,
-                       assert_unique_multiindex_level_names)
-from .pycompat import (basestring, OrderedDict)
+from .pycompat import OrderedDict, basestring
+from .utils import Frozen
+from .variable import as_variable, assert_unique_multiindex_level_names
 
 
 PANDAS_TYPES = (pd.Series, pd.DataFrame, pd.Panel)
@@ -149,8 +148,8 @@ def merge_variables(
 
     for name, variables in lookup.items():
         if name in priority_vars:
-            # one of these arguments (e.g., the first for in-place arithmetic or
-            # the second for Dataset.update) takes priority
+            # one of these arguments (e.g., the first for in-place arithmetic
+            # or the second for Dataset.update) takes priority
             priority_var = priority_vars[name]
             if priority_var is not None:
                 merged[name] = priority_var
@@ -300,9 +299,9 @@ def merge_coords_for_inplace_math(objs, priority_vars=None):
 def _get_priority_vars(objects, priority_arg, compat='equals'):
     """Extract the priority variable from a list of mappings.
 
-    We need this method because in some cases the priority argument itself might
-    have conflicting values (e.g., if it is a dict with two DataArray values
-    with conflicting coordinate values).
+    We need this method because in some cases the priority argument itself
+    might have conflicting values (e.g., if it is a dict with two DataArray
+    values with conflicting coordinate values).
 
     Parameters
     ----------
