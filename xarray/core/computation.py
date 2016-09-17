@@ -150,7 +150,6 @@ def build_output_coords(
         exclude=frozenset(),  # type: set
         ):
     # type: (...) -> List[OrderedDict[Any, Variable]]
-
     if new_coords is None:
         new_coords = _REPEAT_NONE
 
@@ -338,8 +337,7 @@ def apply_dataset_ufunc(func, *args, **kwargs):
 
 
 def _iter_over_selections(obj, dim, values):
-    """Iterate over selections of an xarray object in the provided order.
-    """
+    """Iterate over selections of an xarray object in the provided order."""
     from .groupby import _dummy_copy
 
     dummy = None
@@ -517,24 +515,32 @@ def apply_ufunc(func, *args, **kwargs):
                    exclude_dims=frozenset(), dataset_fill_value=None,
                    kwargs=None, dask_array='forbidden')
 
-    Apply a broadcasting function for unlabeled arrays to xarray objects.
+    Apply a vectorized function for unlabeled arrays to xarray objects.
 
     The input arguments will be handled using xarray's standard rules for
-    labeled computation, including alignment, broadcasting and merging of
-    coordinates.
+    labeled computation, including alignment, broadcasting, looping over
+    groups / Dataset variables, and merging of coordinates.
 
     Parameters
     ----------
     func : callable
-        Function to call like ``func(*args, **kwargs)`` on unlabeled arrays.
+        Function to call like ``func(*args, **kwargs)`` on unlabeled arrays
+        (``.data``). If multiple arguments with non-matching dimensions are
+        supplied, this function is expected to vectorize (broadcast) over
+        axes of positional arguments in the style of NumPy universal
+        functions [1]_.
     *args : Dataset, DataArray, GroupBy, Variable, numpy/dask arrays or scalars
         Mix of labeled and/or unlabeled arrays to which to apply the function.
     signature : string or triply nested sequence, optional
-        Object indicating any core dimensions that should not be broadcast on
-        the input arguments, new dimensions in the output, and/or multiple
-        outputs. Two forms of signatures are accepted:
+        Object indicating core dimensions that should not be broadcast on
+        the input and outputs arguments. If omitted, inputs will be broadcast
+        to share all dimensions in common before calling ``func`` on their
+        values, and the output of ``func`` will be assumed to be a single array
+        with the same shape as the inputs.
+
+        Two forms of signatures are accepted:
         (a) A signature string of the form used by NumPy's generalized
-            universal functions [1], e.g., '(),(time)->()' indicating a
+            universal functions [2]_, e.g., '(),(time)->()' indicating a
             function that accepts two arguments and returns a single argument,
             on which all dimensions should be broadcast except 'time' on the
             second argument.
@@ -568,17 +574,22 @@ def apply_ufunc(func, *args, **kwargs):
         function signature.
     dataset_fill_value : optional
         Value used in place of missing variables on Dataset inputs when the
-        datasets do not share the exact same ``data_vars``.
+        datasets do not share the exact same ``data_vars``. Only relevant if
+        ``join != 'inner'``.
     kwargs: dict, optional
-        Optional keyword arguments with which to all ``func``.
+        Optional keyword arguments passed directly on to call ``func``.
     dask_array: 'forbidden' or 'allowed', optional
         Whether or not to allow applying the ufunc to objects containing lazy
         data in the form of dask arrays. By default, this is forbidden, to
         avoid implicitly converting lazy data.
 
+    Returns
+    -------
+    Single value or tuple of Dataset, DataArray, Variable, dask.array.Array or
+    numpy.ndarray, the first type on that list to appear on an input.
+
     Examples
     --------
-
     For illustrative purposes only, here are examples of how you could use
     ``apply_ufunc`` to write functions to (very nearly) replicate existing
     xarray functionality:
@@ -614,17 +625,29 @@ def apply_ufunc(func, *args, **kwargs):
             new_coords = [{dim: new_coord}]
             func = lambda *x: np.stack(x, axis=-1)
             return xr.apply_ufunc(func, *objects, signature=sig,
-                                  new_coords=new_coords,
+                                  join='outer', new_coords=new_coords,
                                   dataset_fill_value=np.nan)
+
+    Most of NumPy's builtin functions already broadcast their inputs
+    appropriately for use in `apply_ufunc`. You may find helper functions such
+    as numpy.broadcast_arrays or numpy.vectorize helpful in writing your
+    function. `apply_ufunc` also works well with numba's vectorize and
+    guvectorize.
+
+    See also
+    --------
+    numpy.broadcast_arrays
+    numpy.vectorize
+    numba.vectorize
+    numba.guvectorize
 
     References
     ----------
-
-    [1] http://docs.scipy.org/doc/numpy/reference/c-api.generalized-ufuncs.html
+    .. [1] http://docs.scipy.org/doc/numpy/reference/ufuncs.html
+    .. [2] http://docs.scipy.org/doc/numpy/reference/c-api.generalized-ufuncs.html
     """
     from .groupby import GroupBy
     from .dataarray import DataArray
-    from .dataset import Dataset
     from .variable import Variable
 
     signature = kwargs.pop('signature', None)
@@ -646,8 +669,8 @@ def apply_ufunc(func, *args, **kwargs):
         signature = UFuncSignature.from_sequence(signature)
 
     if exclude_dims and not exclude_dims <= signature.all_core_dims:
-        raise ValueError('each dimension in `exclude_dims` must also be a core '
-                         'dimension in the function signature')
+        raise ValueError('each dimension in `exclude_dims` must also be a '
+                         'core dimension in the function signature')
 
     if kwargs_:
         func = functools.partial(func, **kwargs_)
