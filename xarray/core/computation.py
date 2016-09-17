@@ -510,16 +510,16 @@ def apply_array_ufunc(func, *args, **kwargs):
     return func(*args)
 
 
-def apply_ufunc(func, *args, **kwargs):
-    """apply_ufunc(func, *args, signature=None, join='inner', new_coords=None,
-                   exclude_dims=frozenset(), dataset_fill_value=None,
-                   kwargs=None, dask_array='forbidden')
+def apply(func, *args, **kwargs):
+    """apply(func, *args, signature=None, join='inner', new_coords=None,
+             exclude_dims=frozenset(), dataset_fill_value=None, kwargs=None,
+             dask_array='forbidden')
 
     Apply a vectorized function for unlabeled arrays to xarray objects.
 
     The input arguments will be handled using xarray's standard rules for
     labeled computation, including alignment, broadcasting, looping over
-    groups / Dataset variables, and merging of coordinates.
+    GroupBy/Dataset variables, and merging of coordinates.
 
     Parameters
     ----------
@@ -591,8 +591,8 @@ def apply_ufunc(func, *args, **kwargs):
     Examples
     --------
     For illustrative purposes only, here are examples of how you could use
-    ``apply_ufunc`` to write functions to (very nearly) replicate existing
-    xarray functionality:
+    ``apply`` to write functions to (very nearly) replicate existing xarray
+    functionality:
 
     Calculate the vector magnitude of two arguments:
 
@@ -603,10 +603,10 @@ def apply_ufunc(func, *args, **kwargs):
     Compute the mean (``.mean``)::
 
         def mean(obj, dim):
-            # note: apply_ufunc always moves core dimensions to the end
+            # note: apply always moves core dimensions to the end
             sig = ([(dim,)], [()])
             kwargs = {'axis': -1}
-            return xr.apply_ufunc(np.mean, obj, signature=sig, kwargs=kwargs)
+            return xr.apply(np.mean, obj, signature=sig, kwargs=kwargs)
 
     Inner product over a specific dimension::
 
@@ -616,7 +616,7 @@ def apply_ufunc(func, *args, **kwargs):
 
         def inner_product(a, b, dim):
             sig = ([(dim,), (dim,)], [()])
-            return xr.apply_ufunc(_inner, a, b, signature=sig)
+            return xr.apply(_inner, a, b, signature=sig)
 
     Stack objects along a new dimension (like ``xr.concat``)::
 
@@ -624,15 +624,14 @@ def apply_ufunc(func, *args, **kwargs):
             sig = ([()] * len(objects), [(dim,)])
             new_coords = [{dim: new_coord}]
             func = lambda *x: np.stack(x, axis=-1)
-            return xr.apply_ufunc(func, *objects, signature=sig,
+            return xr.apply(func, *objects, signature=sig,
                                   join='outer', new_coords=new_coords,
                                   dataset_fill_value=np.nan)
 
     Most of NumPy's builtin functions already broadcast their inputs
-    appropriately for use in `apply_ufunc`. You may find helper functions such
-    as numpy.broadcast_arrays or numpy.vectorize helpful in writing your
-    function. `apply_ufunc` also works well with numba's vectorize and
-    guvectorize.
+    appropriately for use in `apply`. You may find helper functions such as
+    numpy.broadcast_arrays or numpy.vectorize helpful in writing your function.
+    `apply` also works well with numba's vectorize and guvectorize.
 
     See also
     --------
@@ -683,11 +682,11 @@ def apply_ufunc(func, *args, **kwargs):
         exclude_dims=exclude_dims)
 
     if any(isinstance(a, GroupBy) for a in args):
-        this_apply_ufunc = functools.partial(
-            apply_ufunc, func, signature=signature, join=join,
+        this_apply = functools.partial(
+            apply, func, signature=signature, join=join,
             dask_array=dask_array, new_coords=new_coords,
             exclude_dims=exclude_dims, dataset_fill_value=dataset_fill_value)
-        return apply_groupby_ufunc(this_apply_ufunc, *args)
+        return apply_groupby_ufunc(this_apply, *args)
     elif any(is_dict_like(a) for a in args):
         return apply_dataset_ufunc(variables_ufunc, *args, signature=signature,
                                    join=join, new_coords=new_coords,
