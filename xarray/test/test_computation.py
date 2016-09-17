@@ -488,7 +488,7 @@ def test_apply_dask():
 
     array = da.ones((2,), chunks=2)
     variable = _NoCacheVariable('x', array)
-    coords = xr.DataArray(variable).coords
+    coords = xr.DataArray(variable).coords.variables
     data_array = xr.DataArray(variable, coords, fastpath=True)
     dataset = xr.Dataset({'y': variable})
 
