@@ -215,8 +215,8 @@ class DataArrayCoordinates(AbstractCoordinates):
         del self._data._coords[key]
 
 
-class DataArrayLevelCoordinates(AbstractCoordinates):
-    """Dictionary like container for DataArray MultiIndex level coordinates.
+class LevelCoordinates(AbstractCoordinates):
+    """Dictionary like container for MultiIndex level coordinates.
 
     Used for attribute style lookup. Not returned directly by any
     public methods.
@@ -232,7 +232,7 @@ class DataArrayLevelCoordinates(AbstractCoordinates):
     def variables(self):
         level_coords = OrderedDict(
             (k, self._data[v].variable.get_level_variable(k))
-             for k, v in self._data._level_coords.items())
+            for k, v in self._data._level_coords.items())
         return Frozen(level_coords)
 
 

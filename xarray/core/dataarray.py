@@ -14,7 +14,7 @@ from . import ops
 from . import utils
 from .alignment import align
 from .common import AbstractArray, BaseDataObject, squeeze
-from .coordinates import (DataArrayCoordinates, DataArrayLevelCoordinates,
+from .coordinates import (DataArrayCoordinates, LevelCoordinates,
                           Indexes)
 from .dataset import Dataset
 from .pycompat import iteritems, basestring, OrderedDict, zip
@@ -467,7 +467,7 @@ class DataArray(AbstractArray, BaseDataObject):
     @property
     def _attr_sources(self):
         """List of places to look-up items for attribute-style access"""
-        return [self.coords, DataArrayLevelCoordinates(self), self.attrs]
+        return [self.coords, LevelCoordinates(self), self.attrs]
 
     def __contains__(self, key):
         return key in self._coords

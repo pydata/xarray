@@ -1540,6 +1540,9 @@ class TestDataset(TestCase):
                              name='hour', coords=[mindex], dims='x')
         self.assertDataArrayIdentical(expected, data['level_date.hour'])
 
+        # attribute style access
+        self.assertDataArrayIdentical(data.level_str, data['level_str'])
+
     def test_time_season(self):
         ds = Dataset({'t': pd.date_range('2000-01-01', periods=12, freq='M')})
         expected = ['DJF'] * 2 + ['MAM'] * 3 + ['JJA'] * 3 + ['SON'] * 3 + ['DJF']

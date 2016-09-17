@@ -181,7 +181,7 @@ class AttrAccessMixin(object):
     @property
     def _attr_sources(self):
         """List of places to look-up items for attribute-style access"""
-        return [self, self.attrs]
+        return []
 
     def __getattr__(self, name):
         if name != '__setstate__':
