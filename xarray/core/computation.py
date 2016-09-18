@@ -144,10 +144,10 @@ _REPEAT_NONE = itertools.repeat(None)
 
 
 def build_output_coords(
-        args,                 # type: list
-        signature,            # type: UFuncSignature
-        new_coords=None,      # type: Iterable[Optional[Mapping]]
-        exclude=frozenset(),  # type: set
+        args,                      # type: list
+        signature,                 # type: UFuncSignature
+        new_coords=None,           # type: Iterable[Optional[Mapping]]
+        exclude_dims=frozenset(),  # type: set
         ):
     # type: (...) -> List[OrderedDict[Any, Variable]]
     if new_coords is None:
@@ -163,20 +163,24 @@ def build_output_coords(
             coord_vars = getattr(coords, 'variables', coords)
             input_coords.append(coord_vars)
 
+    if exclude_dims:
+        input_coords = [OrderedDict((k, v) for k, v in coord_vars.items()
+                                    if exclude_dims.isdisjoint(v.dims))
+                        for coord_vars in input_coords]
+
     output_coords = []
     for output_dims, arg_new_coords in zip(
             signature.output_core_dims, new_coords):
 
-        if len(input_coords) == 1 and not exclude and arg_new_coords is None:
+        if len(input_coords) == 1 and arg_new_coords is None:
             # we can skip the expensive merge
             unpacked_input_coords, = input_coords
             merged = OrderedDict(unpacked_input_coords)
         elif arg_new_coords:
             coords_list = [arg_new_coords] + input_coords
-            merged = merge_coords_without_align(coords_list, priority_arg=0,
-                                                exclude=exclude)
+            merged = merge_coords_without_align(coords_list, priority_arg=-1)
         else:
-            merged = merge_coords_without_align(input_coords, exclude=exclude)
+            merged = merge_coords_without_align(input_coords)
 
         missing_dims = [dim for dim in output_dims if dim not in merged]
         if missing_dims:
@@ -214,7 +218,7 @@ def apply_dataarray_ufunc(func, *args, **kwargs):
 
     name = result_name(args)
     result_coords = build_output_coords(args, signature, new_coords,
-                                        exclude=exclude_dims)
+                                        exclude_dims=exclude_dims)
 
     data_vars = [getattr(a, 'variable', a) for a in args]
     result_var = func(*data_vars)
@@ -278,6 +282,37 @@ def _as_variables_or_variable(arg):
             return arg
 
 
+def apply_dict_of_variables_ufunc(func, *args, **kwargs):
+    """apply_dict_of_variables_ufunc(func, *args, signature, join='inner',
+                                     fill_value=None):
+    """
+    signature = kwargs.pop('signature')
+    join = kwargs.pop('join', 'inner')
+    fill_value = kwargs.pop('fill_value', None)
+    if kwargs:
+        raise TypeError('apply_dict_of_variables_ufunc() got unexpected '
+                        'keyword arguments: %s' % list(kwargs))
+
+    args = [_as_variables_or_variable(arg) for arg in args]
+    names = join_dict_keys(args, how=join)
+    args = collect_dict_values(args, names, fill_value)
+
+    result_vars = OrderedDict()
+    for name, variable_args in zip(names, args):
+        result_vars[name] = func(*variable_args)
+
+    if signature.n_outputs > 1:
+        # we need to unpack result_vars from Dict[object, Tuple[Variable]] ->
+        # Tuple[Dict[object, Variable]].
+        out = tuple(OrderedDict() for _ in range(signature.n_outputs))
+        for name, values in result_vars.items():
+            for value, results_dict in zip(values, out):
+                results_dict[name] = value
+        return out
+    else:
+        return result_vars
+
+
 def _fast_dataset(variables, coord_variables):
     # type: (OrderedDict[Any, Variable], Mapping[Any, Variable]) -> Dataset
     """Create a dataset as quickly as possible.
@@ -301,7 +336,7 @@ def apply_dataset_ufunc(func, *args, **kwargs):
     new_coords = kwargs.pop('new_coords', None)
     exclude_dims = kwargs.pop('exclude_dims', _DEFAULT_FROZEN_SET)
     if kwargs:
-        raise TypeError('apply_dataarray_ufunc() got unexpected keyword '
+        raise TypeError('apply_dataset_ufunc() got unexpected keyword '
                         'arguments: %s' % list(kwargs))
 
     if len(args) > 1:
@@ -309,28 +344,15 @@ def apply_dataset_ufunc(func, *args, **kwargs):
                           raise_on_invalid=False)
 
     list_of_coords = build_output_coords(args, signature, new_coords,
-                                         exclude=exclude_dims)
+                                         exclude_dims=exclude_dims)
 
-    list_of_data_vars = [getattr(a, 'data_vars', a) for a in args]
-    names = join_dict_keys(list_of_data_vars, how=join)
-
-    list_of_variables = [_as_variables_or_variable(a) for a in args]
-    lists_of_args = collect_dict_values(list_of_variables, names, fill_value)
-
-    result_vars = OrderedDict()
-    for name, variable_args in zip(names, lists_of_args):
-        result_vars[name] = func(*variable_args)
+    args = [getattr(arg, 'data_vars', arg) for arg in args]
+    result_vars = apply_dict_of_variables_ufunc(
+        func, *args, signature=signature, join=join, fill_value=fill_value)
 
     if signature.n_outputs > 1:
-        # we need to unpack result_vars from Dict[object, Tuple[Variable]] ->
-        # Tuple[Dict[object, Variable]].
-        result_dict_list = [OrderedDict() for _ in range(signature.n_outputs)]
-        for name, values in result_vars.items():
-            for value, results_dict in zip(values, result_dict_list):
-                results_dict[name] = value
-
         return tuple(_fast_dataset(*args)
-                     for args in zip(result_dict_list, list_of_coords))
+                     for args in zip(result_vars, list_of_coords))
     else:
         coord_vars, = list_of_coords
         return _fast_dataset(result_vars, coord_vars)

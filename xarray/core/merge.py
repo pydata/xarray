@@ -106,7 +106,7 @@ class OrderedDefaultDict(OrderedDict):
 
 def merge_variables(
         list_of_variables_dicts,  # type: List[Mapping[Any, Variable]]
-        priority_vars=None,       # type: Optional[Mapping[Any, Optional[Variable]]]
+        priority_vars=None,       # type: Optional[Mapping[Any, Variable]]
         compat='minimal',         # type: str
         ):
     # type: (...) -> OrderedDict[Any, Variable]
@@ -118,9 +118,7 @@ def merge_variables(
         List of mappings for which each value is a xarray.Variable object.
     priority_vars : mapping with Variable or None values, optional
         If provided, variables are always taken from this dict in preference to
-        the input variable dictionaries, without checking for conflicts. Values
-        of None indicate that the named parameter should omitted from the
-        result.
+        the input variable dictionaries, without checking for conflicts.
     compat : {'identical', 'equals', 'broadcast_equals',
               'minimal', 'no_conflicts'}, optional
         Type of equality check to use when checking for conflicts.
@@ -150,9 +148,7 @@ def merge_variables(
         if name in priority_vars:
             # one of these arguments (e.g., the first for in-place arithmetic
             # or the second for Dataset.update) takes priority
-            priority_var = priority_vars[name]
-            if priority_var is not None:
-                merged[name] = priority_var
+            merged[name] = priority_vars[name]
         else:
             dim_variables = [var for var in variables if (name,) == var.dims]
             if dim_variables:
@@ -326,16 +322,15 @@ def _get_priority_vars(objects, priority_arg, compat='equals'):
     return priority_vars
 
 
-def merge_coords_without_align(objs, priority_arg=None, exclude=frozenset()):
+def merge_coords_without_align(objs, priority_arg=None):
     """Merge coordinate variables without worrying about alignment.
 
     This function is used for merging variables in computation.py.
     """
     expanded = expand_variable_dicts(objs)
-    priority_vars = _get_priority_vars(objs, priority_arg, compat='equals')
-    for key in exclude:
-        priority_vars.setdefault(key, None)
+    priority_vars = _get_priority_vars(objs, priority_arg)
     variables = merge_variables(expanded, priority_vars)
+    assert_unique_multiindex_level_names(variables)
     return variables
 
 

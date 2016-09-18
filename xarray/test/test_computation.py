@@ -349,12 +349,12 @@ def test_apply_exclude():
              for obj in objects])
         new_coords = [{dim: new_coord}]
         func = lambda *x: np.concatenate(x, axis=-1)
-        return xr.apply(func, *objects, signature=sig,
-                              new_coords=new_coords, exclude_dims={dim})
+        return xr.apply(func, *objects, signature=sig, new_coords=new_coords,
+                        exclude_dims={dim})
 
     arrays = [np.array([1]), np.array([2, 3])]
     variables = [xr.Variable('x', a) for a in arrays]
-    data_arrays = [xr.DataArray(v, [('x', c)])
+    data_arrays = [xr.DataArray(v, {'x': c, 'y': ('x', range(len(c)))})
                    for v, c in zip(variables, [['a'], ['b', 'c']])]
     datasets = [xr.Dataset({'data': data_array}) for data_array in data_arrays]
 
@@ -374,7 +374,7 @@ def test_apply_exclude():
         xr.apply(identity, variables[0], exclude_dims={'x'})
 
 
-def test_apply_groupby_add_same():
+def test_apply_groupby_add():
     array = np.arange(5)
     variable = xr.Variable('x', array)
     coords = {'x': -array, 'y': ('x', [0, 0, 1, 1, 2])}

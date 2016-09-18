@@ -147,6 +147,11 @@ class DataVariables(Mapping, formatting.ReprMixin):
     def __unicode__(self):
         return formatting.vars_repr(self)
 
+    @property
+    def variables(self):
+        all_variables = self._dataset.variables
+        return Frozen(OrderedDict((k, all_variables[k]) for k in self))
+
 
 class _LocIndexer(object):
     def __init__(self, dataset):
