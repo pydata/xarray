@@ -105,6 +105,21 @@ class TestMergeFunction(TestCase):
         actual = xr.merge([data1, data2], compat='no_conflicts')
         assert data.equals(actual)
 
+    def test_merge_no_conflicts_preserve_attrs(self):
+        data = xr.Dataset({'x': ([], 0, {'foo': 'bar'})})
+        actual = xr.merge([data, data])
+        assert data.identical(actual)
+
+    def test_merge_no_conflicts_broadcast(self):
+        datasets = [xr.Dataset({'x': ('y', [0])}), xr.Dataset({'x': np.nan})]
+        actual = xr.merge(datasets)
+        expected = xr.Dataset({'x': ('y', [0])})
+        assert expected.identical(actual)
+
+        datasets = [xr.Dataset({'x': ('y', [np.nan])}), xr.Dataset({'x': 0})]
+        actual = xr.merge(datasets)
+        assert expected.identical(actual)
+
 
 class TestMergeMethod(TestCase):
 

@@ -241,7 +241,8 @@ class TestConcatDataset(TestCase):
         objs = [Dataset(OrderedDict([('x', ('a', [0])), ('y', ('a', [0]))])),
                 Dataset(OrderedDict([('y', ('a', [1])), ('x', ('a', [1]))]))]
         actual = auto_combine(objs)
-        expected = Dataset({'x': ('a', [0, 1]), 'y': ('a', [0, 1]), 'a': [0, 0]})
+        expected = Dataset(
+            {'x': ('a', [0, 1]), 'y': ('a', [0, 1]), 'a': [0, 0]})
         self.assertDatasetIdentical(expected, actual)
 
         objs = [Dataset({'x': [0], 'y': [0]}), Dataset({'y': [1], 'x': [1]})]
@@ -255,6 +256,22 @@ class TestConcatDataset(TestCase):
         objs = [Dataset({'x': [0], 'y': [0]}), Dataset({'x': [0]})]
         with self.assertRaises(KeyError):
             auto_combine(objs)
+
+    @requires_dask  # only for toolz
+    def test_auto_combine_no_concat(self):
+        objs = [Dataset({'x': 0}), Dataset({'y': 1})]
+        actual = auto_combine(objs)
+        expected = Dataset({'x': 0, 'y': 1})
+        self.assertDatasetIdentical(expected, actual)
+
+        objs = [Dataset({'x': 0, 'y': 1}), Dataset({'y': np.nan, 'z': 2})]
+        actual = auto_combine(objs)
+        expected = Dataset({'x': 0, 'y': 1, 'z': 2})
+        self.assertDatasetIdentical(expected, actual)
+
+        data = Dataset({'x': 0})
+        actual = auto_combine([data, data, data], concat_dim=None)
+        self.assertDatasetIdentical(data, actual)
 
 
 class TestConcatDataArray(TestCase):

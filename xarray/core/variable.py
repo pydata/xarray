@@ -974,11 +974,7 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
 
         return cls(dims, data, attrs)
 
-    def _data_equals(self, other):
-        return (self._data is other._data or
-                ops.array_equiv(self.data, other.data))
-
-    def equals(self, other):
+    def equals(self, other, equiv=ops.array_equiv):
         """True if two Variables have the same dimensions and values;
         otherwise False.
 
@@ -990,11 +986,13 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
         """
         other = getattr(other, 'variable', other)
         try:
-            return (self.dims == other.dims and self._data_equals(other))
+            return (self.dims == other.dims and
+                    (self._data is other._data or
+                     equiv(self.data, other.data)))
         except (TypeError, AttributeError):
             return False
 
-    def broadcast_equals(self, other):
+    def broadcast_equals(self, other, equiv=ops.array_equiv):
         """True if two Variables have the values after being broadcast against
         each other; otherwise False.
 
@@ -1005,7 +1003,7 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
             self, other = broadcast_variables(self, other)
         except (ValueError, AttributeError):
             return False
-        return self.equals(other)
+        return self.equals(other, equiv=equiv)
 
     def identical(self, other):
         """Like equals, but also checks attributes.
@@ -1016,10 +1014,6 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
         except (TypeError, AttributeError):
             return False
 
-    def _data_no_conflicts(self, other):
-        return (self._data is other._data or
-                ops.array_notnull_equiv(self.data, other.data))
-
     def no_conflicts(self, other):
         """True if the intersection of two Variable's non-null data is
         equal; otherwise false.
@@ -1027,12 +1021,7 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
         Variables can thus still be equal if there are locations where either,
         or both, contain NaN values.
         """
-        other = getattr(other, 'variable', other)
-        try:
-            return (self.dims == other.dims and
-                    self._data_no_conflicts(other))
-        except (TypeError, AttributeError):
-            return False
+        return self.broadcast_equals(other, equiv=ops.array_notnull_equiv)
 
     @property
     def real(self):

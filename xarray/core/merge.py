@@ -82,7 +82,9 @@ def unique_variable(name, variables, compat='broadcast_equals'):
                                  'first value: %r\nsecond value: %r'
                                  % (name, out, var))
             if combine_method:
+                # TODO: add preservation of attrs into fillna
                 out = getattr(out, combine_method)(var)
+                out.attrs = var.attrs
 
     return out
 
@@ -397,8 +399,12 @@ def merge_data_and_coords(data, coords, compat='broadcast_equals',
     return merge_core(objs, compat, join, explicit_coords=explicit_coords)
 
 
-def merge_core(objs, compat='broadcast_equals', join='outer', priority_arg=None,
-               explicit_coords=None, indexes=None):
+def merge_core(objs,
+               compat='broadcast_equals',
+               join='outer',
+               priority_arg=None,
+               explicit_coords=None,
+               indexes=None):
     """Core logic for merging labeled objects.
 
     This is not public API.
@@ -466,7 +472,7 @@ def merge_core(objs, compat='broadcast_equals', join='outer', priority_arg=None,
     return variables, coord_names, dict(dims)
 
 
-def merge(objects, compat='broadcast_equals', join='outer'):
+def merge(objects, compat='no_conflicts', join='outer'):
     """Merge any number of xarray objects into a single Dataset as variables.
 
     Parameters
@@ -476,7 +482,17 @@ def merge(objects, compat='broadcast_equals', join='outer'):
         DataArray objects, they must have a name.
     compat : {'identical', 'equals', 'broadcast_equals',
               'no_conflicts'}, optional
-        Compatibility checks to use when merging variables.
+        String indicating how to compare variables of the same name for
+        potential conflicts:
+
+        - 'broadcast_equals': all values must be equal when variables are
+          broadcast against each other to ensure common dimensions.
+        - 'equals': all values and dimensions must be the same.
+        - 'identical': all values, dimensions and attributes must be the
+          same.
+        - 'no_conflicts': only values which are not null in both datasets
+          must be equal. The returned dataset then contains the combination
+          of all non-null values.
     join : {'outer', 'inner', 'left', 'right'}, optional
         How to combine objects with different indexes.
 
@@ -521,8 +537,7 @@ def merge(objects, compat='broadcast_equals', join='outer'):
     return merged
 
 
-def dataset_merge_method(dataset, other, overwrite_vars=frozenset(),
-                         compat='broadcast_equals', join='outer'):
+def dataset_merge_method(dataset, other, overwrite_vars, compat, join):
     """Guts of the Dataset.merge method."""
 
     # we are locked into supporting overwrite_vars for the Dataset.merge

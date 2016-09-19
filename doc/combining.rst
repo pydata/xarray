@@ -193,6 +193,8 @@ numpy):
 Note that ``NaN`` does not compare equal to ``NaN`` in element-wise comparison;
 you may need to deal with missing values explicitly.
 
+.. _combining.no_conflicts:
+
 Merging with 'no_conflicts'
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 

@@ -329,7 +329,12 @@ def _auto_concat(datasets, dim=None):
         return concat(datasets, dim=dim)
 
 
-def auto_combine(datasets, concat_dim=None):
+_CONCAT_DIM_DEFAULT = '__infer_concat_dim__'
+
+
+def auto_combine(datasets,
+                 concat_dim=_CONCAT_DIM_DEFAULT,
+                 compat='no_conflicts'):
     """Attempt to auto-magically combine the given datasets into one.
 
     This method attempts to combine a list of datasets into a single entity by
@@ -362,6 +367,22 @@ def auto_combine(datasets, concat_dim=None):
         dimension along which you want to concatenate is not a dimension in
         the original datasets, e.g., if you want to stack a collection of
         2D arrays along a third dimension.
+        By default, xarray attempts to infer this argument by examining
+        component files. Set ``concat_dim=None`` explicitly to disable
+        concatenation.
+    compat : {'identical', 'equals', 'broadcast_equals',
+              'no_conflicts'}, optional
+        String indicating how to compare variables of the same name for
+        potential conflicts:
+
+        - 'broadcast_equals': all values must be equal when variables are
+          broadcast against each other to ensure common dimensions.
+        - 'equals': all values and dimensions must be the same.
+        - 'identical': all values, dimensions and attributes must be the
+          same.
+        - 'no_conflicts': only values which are not null in both datasets
+          must be equal. The returned dataset then contains the combination
+          of all non-null values.
 
     Returns
     -------
@@ -373,8 +394,12 @@ def auto_combine(datasets, concat_dim=None):
     Dataset.merge
     """
     from toolz import itertoolz
-    grouped = itertoolz.groupby(lambda ds: tuple(sorted(ds.data_vars)),
-                                datasets).values()
-    concatenated = [_auto_concat(ds, dim=concat_dim) for ds in grouped]
-    merged = merge(concatenated)
+    if concat_dim is not None:
+        dim = None if concat_dim is _CONCAT_DIM_DEFAULT else concat_dim
+        grouped = itertoolz.groupby(lambda ds: tuple(sorted(ds.data_vars)),
+                                    datasets).values()
+        concatenated = [_auto_concat(ds, dim=dim) for ds in grouped]
+    else:
+        concatenated = datasets
+    merged = merge(concatenated, compat=compat)
     return merged

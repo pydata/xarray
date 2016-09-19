@@ -379,8 +379,12 @@ class _MultiFileCloser(object):
             f.close()
 
 
-def open_mfdataset(paths, chunks=None, concat_dim=None, preprocess=None,
-                   engine=None, lock=None, **kwargs):
+_CONCAT_DIM_DEFAULT = '__infer_concat_dim__'
+
+
+def open_mfdataset(paths, chunks=None, concat_dim=_CONCAT_DIM_DEFAULT,
+                   compat='no_conflicts', preprocess=None, engine=None,
+                   lock=None, **kwargs):
     """Open multiple files as a single dataset.
 
     Experimental. Requires dask to be installed.
@@ -397,12 +401,28 @@ def open_mfdataset(paths, chunks=None, concat_dim=None, preprocess=None,
         By default, chunks will be chosen to load entire input files into
         memory at once. This has a major impact on performance: please see the
         full documentation for more details.
-    concat_dim : str or DataArray or Index, optional
+    concat_dim : None, str, DataArray or Index, optional
         Dimension to concatenate files along. This argument is passed on to
         :py:func:`xarray.auto_combine` along with the dataset objects. You only
         need to provide this argument if the dimension along which you want to
         concatenate is not a dimension in the original datasets, e.g., if you
         want to stack a collection of 2D arrays along a third dimension.
+        By default, xarray attempts to infer this argument by examining
+        component files. Set ``concat_dim=None`` explicitly to disable
+        concatenation.
+    compat : {'identical', 'equals', 'broadcast_equals',
+              'no_conflicts'}, optional
+        String indicating how to compare variables of the same name for
+        potential conflicts when merging:
+
+        - 'broadcast_equals': all values must be equal when variables are
+          broadcast against each other to ensure common dimensions.
+        - 'equals': all values and dimensions must be the same.
+        - 'identical': all values, dimensions and attributes must be the
+          same.
+        - 'no_conflicts': only values which are not null in both datasets
+          must be equal. The returned dataset then contains the combination
+          of all non-null values.
     preprocess : callable, optional
         If provided, call this function on each dataset prior to concatenation.
     engine : {'netcdf4', 'scipy', 'pydap', 'h5netcdf', 'pynio'}, optional
@@ -440,7 +460,10 @@ def open_mfdataset(paths, chunks=None, concat_dim=None, preprocess=None,
     if preprocess is not None:
         datasets = [preprocess(ds) for ds in datasets]
 
-    combined = auto_combine(datasets, concat_dim=concat_dim)
+    if concat_dim is _CONCAT_DIM_DEFAULT:
+        combined = auto_combine(datasets, compat=compat)
+    else:
+        combined = auto_combine(datasets, concat_dim=concat_dim, compat=compat)
     combined._file_obj = _MultiFileCloser(file_objs)
     return combined
 

@@ -1434,8 +1434,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         return self._replace_vars_and_dims(variables, coord_names, dims,
                                            inplace=inplace)
 
-    def merge(self, other, inplace=False, overwrite_vars=set(),
-              compat='broadcast_equals', join='outer'):
+    def merge(self, other, inplace=False, overwrite_vars=frozenset(),
+              compat='no_conflicts', join='outer'):
         """Merge the arrays of two datasets into a single dataset.
 
         This method generally not allow for overriding data, with the exception
@@ -1485,7 +1485,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
             If any variables conflict (see ``compat``).
         """
         variables, coord_names, dims = dataset_merge_method(
-            self, other, overwrite_vars, compat=compat, join=join)
+            self, other, overwrite_vars=overwrite_vars, compat=compat,
+            join=join)
 
         return self._replace_vars_and_dims(variables, coord_names, dims,
                                            inplace=inplace)
