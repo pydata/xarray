@@ -15,7 +15,7 @@ from . import alignment
 from . import formatting
 from .. import conventions
 from .alignment import align
-from .coordinates import DatasetCoordinates, Indexes
+from .coordinates import DatasetCoordinates, LevelCoordinates, Indexes
 from .common import ImplementsDatasetReduce, BaseDataObject
 from .merge import (dataset_update_method, dataset_merge_method,
                     merge_data_and_coords)
@@ -486,6 +486,11 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         # memo does nothing but is required for compatibility with
         # copy.deepcopy
         return self.copy(deep=True)
+
+    @property
+    def _attr_sources(self):
+        """List of places to look-up items for attribute-style access"""
+        return [self, LevelCoordinates(self), self.attrs]
 
     def __contains__(self, key):
         """The 'in' operator will return true or false depending on whether
