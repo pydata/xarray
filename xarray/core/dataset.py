@@ -1687,8 +1687,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         """
         out = self._fillna(value)
         out.attrs = self.attrs
-        for v in self:
-            out[v].attrs = self[v].attrs
+        for v in self.variables:
+            out.variables[v].attrs = self.variables[v].attrs
         return out
 
     def reduce(self, func, dim=None, keep_attrs=False, numeric_only=False,

@@ -556,8 +556,8 @@ class BaseDataObject(AttrAccessMixin):
             raise NotImplementedError("The optional argument 'other' has not yet been implemented")
 
         if drop:
-            from .dataset import Dataset
             from .dataarray import DataArray
+            from .dataset import Dataset
             # get cond with the minimal size needed for the Dataset
             if isinstance(cond, Dataset):
                 clipcond = cond.to_array().any('variable')
