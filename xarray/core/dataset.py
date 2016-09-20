@@ -1685,7 +1685,11 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         -------
         Dataset
         """
-        return self._fillna(value)
+        out = self._fillna(value)
+        out.attrs = self.attrs
+        for v in self:
+            out[v].attrs = self[v].attrs
+        return out
 
     def reduce(self, func, dim=None, keep_attrs=False, numeric_only=False,
                allow_lazy=False, **kwargs):

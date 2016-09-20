@@ -555,9 +555,9 @@ class BaseDataObject(AttrAccessMixin):
         if other is not None:
             raise NotImplementedError("The optional argument 'other' has not yet been implemented")
 
+        from .dataset import Dataset
         if drop:
             from .dataarray import DataArray
-            from .dataset import Dataset
             # get cond with the minimal size needed for the Dataset
             if isinstance(cond, Dataset):
                 clipcond = cond.to_array().any('variable')
@@ -576,7 +576,13 @@ class BaseDataObject(AttrAccessMixin):
             outobj = self
             outcond = cond
 
-        return outobj._where(outcond)
+        # preserve attributes
+        out = outobj._where(outcond)
+        out.attrs = self.attrs
+        if isinstance(out, Dataset):
+            for v in out:
+                out[v].attrs = self[v].attrs
+        return out
 
     def close(self):
         """Close any files linked to this object
