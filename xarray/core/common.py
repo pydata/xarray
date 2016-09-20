@@ -555,8 +555,8 @@ class BaseDataObject(AttrAccessMixin):
         if other is not None:
             raise NotImplementedError("The optional argument 'other' has not yet been implemented")
 
-        from .dataset import Dataset
         if drop:
+            from .dataset import Dataset
             from .dataarray import DataArray
             # get cond with the minimal size needed for the Dataset
             if isinstance(cond, Dataset):
@@ -578,10 +578,7 @@ class BaseDataObject(AttrAccessMixin):
 
         # preserve attributes
         out = outobj._where(outcond)
-        out.attrs = self.attrs
-        if isinstance(out, Dataset):
-            for v in out:
-                out[v].attrs = self[v].attrs
+        out._copy_attrs_from(self)
         return out
 
     def close(self):

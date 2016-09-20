@@ -1417,6 +1417,9 @@ class DataArray(AbstractArray, BaseDataObject):
             return self
         return func
 
+    def _copy_attrs_from(self, other):
+        self.attrs = other.attrs
+
     @property
     def plot(self):
         """

@@ -2267,25 +2267,20 @@ class TestDataset(TestCase):
         ds.attrs['attr'] = 'ds'
         ds.a.attrs['attr'] = 'da'
         actual = ds.groupby('b').fillna(Dataset({'a': ('b', [0, 2])}))
-        self.assertTrue('attr' in actual.attrs)
-        self.assertTrue(actual.attrs['attr'] == 'ds')
+        self.assertEqual(actual.attrs, ds.attrs)
         self.assertTrue(actual.a.name == 'a')
-        self.assertTrue('attr' in actual.a.attrs)
-        self.assertTrue(actual.a.attrs['attr'] == 'da')
+        self.assertEqual(actual.a.attrs, ds.a.attrs)
 
         da = DataArray(range(5), name='a', attrs={'attr':'da'})
         actual = da.fillna(1)
         self.assertTrue(actual.name == 'a')
-        self.assertTrue('attr' in actual.attrs)
-        self.assertTrue(actual.attrs['attr'] == 'da')
+        self.assertEqual(actual.attrs, da.attrs)
 
         ds = Dataset({'a': da}, attrs={'attr':'ds'})
         actual = ds.fillna({'a': 1})
-        self.assertTrue('attr' in actual.attrs)
-        self.assertTrue(actual.attrs['attr'] == 'ds')
+        self.assertEqual(actual.attrs, ds.attrs)
         self.assertTrue(actual.a.name == 'a')
-        self.assertTrue('attr' in actual.a.attrs)
-        self.assertTrue(actual.a.attrs['attr'] == 'da')
+        self.assertEqual(actual.a.attrs, ds.a.attrs)
 
     def test_where(self):
         ds = Dataset({'a': ('x', range(5))})
@@ -2325,26 +2320,21 @@ class TestDataset(TestCase):
         ds.attrs['attr'] = 'ds'
         ds.a.attrs['attr'] = 'da'
         actual = ds.groupby('c').where(cond)
-        self.assertTrue('attr' in actual.attrs)
-        self.assertTrue(actual.attrs['attr'] == 'ds')
+        self.assertEqual(actual.attrs, ds.attrs)
         self.assertTrue(actual.a.name == 'a')
-        self.assertTrue('attr' in actual.a.attrs)
-        self.assertTrue(actual.a.attrs['attr'] == 'da')
+        self.assertEqual(actual.a.attrs, ds.a.attrs)
 
         # attrs
         da = DataArray(range(5), name='a', attrs={'attr':'da'})
         actual = da.where(da.values > 1)
         self.assertTrue(actual.name == 'a')
-        self.assertTrue('attr' in actual.attrs)
-        self.assertTrue(actual.attrs['attr'] == 'da')
+        self.assertEqual(actual.attrs, da.attrs)
 
         ds = Dataset({'a': da}, attrs={'attr':'ds'})
         actual = ds.where(ds > 0)
-        self.assertTrue('attr' in actual.attrs)
-        self.assertTrue(actual.attrs['attr'] == 'ds')
+        self.assertEqual(actual.attrs, ds.attrs)
         self.assertTrue(actual.a.name == 'a')
-        self.assertTrue('attr' in actual.a.attrs)
-        self.assertTrue(actual.a.attrs['attr'] == 'da')
+        self.assertEqual(actual.a.attrs, ds.a.attrs)
 
     def test_where_drop(self):
         # if drop=True
