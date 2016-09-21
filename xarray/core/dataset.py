@@ -1685,7 +1685,9 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         -------
         Dataset
         """
-        return self._fillna(value)
+        out = self._fillna(value)
+        out._copy_attrs_from(self)
+        return out
 
     def reduce(self, func, dim=None, keep_attrs=False, numeric_only=False,
                allow_lazy=False, **kwargs):
@@ -2089,6 +2091,11 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
 
         ds._variables.update(new_vars)
         return ds
+
+    def _copy_attrs_from(self, other):
+        self.attrs = other.attrs
+        for v in other.variables:
+            self.variables[v].attrs = other.variables[v].attrs
 
     def diff(self, dim, n=1, label='upper'):
         """Calculate the n-th order discrete difference along given axis.

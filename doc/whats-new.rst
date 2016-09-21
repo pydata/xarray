@@ -81,6 +81,9 @@ Bug fixes
   ``missing_value`` are set to ``NaN`` (:issue:`997`).
   By `Marco Zühlke <https://github.com/mzuehlke>`_.
 
+- ``.where()`` and ``.fillna()`` now preserve attributes(:issue:`1009`).
+  By `Fabien Maussion <https://github.com/fmaussion>`_.
+
 .. _whats-new.0.8.2:
 
 v0.8.2 (18 August 2016)
