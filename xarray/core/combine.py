@@ -340,22 +340,14 @@ def auto_combine(datasets,
     This method attempts to combine a list of datasets into a single entity by
     inspecting metadata and using a combination of concat and merge.
 
-    It does not concatenate along more than one dimension or align or sort data
-    under any circumstances. It will fail in complex cases, for which you
-    should use ``concat`` and ``merge`` explicitly.
+    It does not concatenate along more than one dimension or sort data under any
+    circumstances. It does align coordinates, but different variables on
+    datasets can cause it to fail under some scenarios. In complex cases, you
+    may need to clean up your data and use ``concat``/``merge`` explicitly.
 
-    When ``auto_combine`` may succeed:
-
-    * You have N years of data and M data variables. Each combination of a
-      distinct time period and test of data variables is saved its own dataset.
-
-    Examples of when ``auto_combine`` fails:
-
-    * In the above scenario, one file is missing, containing the data for one
-      year's data for one variable.
-    * In the most recent year, there is an additional data variable.
-    * Your data includes "time" and "station" dimensions, and each year's data
-      has a different set of stations.
+    ``auto_combine`` works well if you have N years of data and M data
+    variables, and each combination of a distinct time period and set of data
+    variables is saved its own dataset.
 
     Parameters
     ----------
