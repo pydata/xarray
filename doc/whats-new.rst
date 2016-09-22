@@ -21,9 +21,9 @@ v0.9.0 (unreleased)
 Breaking changes
 ~~~~~~~~~~~~~~~~
 
-- The default behavior of ``merge`` is now ``compat='no_conflict'``, so some
+- The default behavior of ``merge`` is now ``compat='no_conflicts'``, so some
   merges will now succeed in cases that previously raised
-  ``xarray.MergeError``. Set ``compat='broadcast_arrays'`` to restore the
+  ``xarray.MergeError``. Set ``compat='broadcast_equals'`` to restore the
   previous default.
 
 Deprecations
