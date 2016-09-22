@@ -322,7 +322,7 @@ def _get_priority_vars(objects, priority_arg, compat='equals'):
     return priority_vars
 
 
-def merge_coords_without_align(objs, priority_arg=None):
+def expand_and_merge_variables(objs, priority_arg=None):
     """Merge coordinate variables without worrying about alignment.
 
     This function is used for merging variables in computation.py.
@@ -330,7 +330,6 @@ def merge_coords_without_align(objs, priority_arg=None):
     expanded = expand_variable_dicts(objs)
     priority_vars = _get_priority_vars(objs, priority_arg)
     variables = merge_variables(expanded, priority_vars)
-    assert_unique_multiindex_level_names(variables)
     return variables
 
 

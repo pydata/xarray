@@ -5,7 +5,7 @@ import pandas as pd
 from . import formatting
 from .utils import Frozen
 from .merge import (
-    merge_coords, merge_coords_without_align, merge_coords_for_inplace_math)
+    merge_coords, expand_and_merge_variables, merge_coords_for_inplace_math)
 from .pycompat import iteritems, basestring, OrderedDict
 from .variable import default_index_coordinate
 
@@ -73,7 +73,7 @@ class AbstractCoordinates(Mapping, formatting.ReprMixin):
             variables = OrderedDict(self.variables)
         else:
             # don't align because we already called xarray.align
-            variables = merge_coords_without_align(
+            variables = expand_and_merge_variables(
                 [self.variables, other.variables])
         return variables
 
@@ -120,7 +120,7 @@ class AbstractCoordinates(Mapping, formatting.ReprMixin):
             return self.to_dataset()
         else:
             other_vars = getattr(other, 'variables', other)
-            coords = merge_coords_without_align([self.variables, other_vars])
+            coords = expand_and_merge_variables([self.variables, other_vars])
             return Dataset._from_vars_and_coord_names(coords, set(coords))
 
 

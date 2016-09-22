@@ -6,7 +6,7 @@ import re
 
 from . import ops
 from .alignment import deep_align
-from .merge import merge_coords_without_align
+from .merge import expand_and_merge_variables
 from .pycompat import OrderedDict, basestring, dask_array_type
 from .utils import is_dict_like
 
@@ -143,16 +143,7 @@ def result_name(objects):
 _REPEAT_NONE = itertools.repeat(None)
 
 
-def build_output_coords(
-        args,                      # type: list
-        signature,                 # type: UFuncSignature
-        new_coords=None,           # type: Iterable[Optional[Mapping]]
-        exclude_dims=frozenset(),  # type: set
-        ):
-    # type: (...) -> List[OrderedDict[Any, Variable]]
-    if new_coords is None:
-        new_coords = _REPEAT_NONE
-
+def _get_coord_variables(args):
     input_coords = []
     for arg in args:
         try:
@@ -162,6 +153,19 @@ def build_output_coords(
         else:
             coord_vars = getattr(coords, 'variables', coords)
             input_coords.append(coord_vars)
+
+
+def build_output_coords(
+        args,                      # type: list
+        signature,                 # type: UFuncSignature
+        new_coords=None,           # type: Optional[Iterable[Optional[Mapping]]]
+        exclude_dims=frozenset(),  # type: set
+        ):
+    # type: (...) -> List[OrderedDict[Any, Variable]]
+    if new_coords is None:
+        new_coords = _REPEAT_NONE
+
+    input_coords = _get_coord_variables(args)
 
     if exclude_dims:
         input_coords = [OrderedDict((k, v) for k, v in coord_vars.items()
@@ -178,9 +182,9 @@ def build_output_coords(
             merged = OrderedDict(unpacked_input_coords)
         elif arg_new_coords:
             coords_list = [arg_new_coords] + input_coords
-            merged = merge_coords_without_align(coords_list, priority_arg=-1)
+            merged = expand_and_merge_variables(coords_list, priority_arg=0)
         else:
-            merged = merge_coords_without_align(input_coords)
+            merged = expand_and_merge_variables(input_coords)
 
         missing_dims = [dim for dim in output_dims if dim not in merged]
         if missing_dims:
@@ -282,6 +286,18 @@ def _as_variables_or_variable(arg):
             return arg
 
 
+def _unpack_dict_tuples(
+        result_vars,  # type: Mapping[Any, Tuple[Variable]]
+        n_outputs,    # type: int
+        ):
+    # type: (...) -> Tuple[Dict[Any, Variable]]
+    out = tuple(OrderedDict() for _ in range(signature.n_outputs))
+    for name, values in result_vars.items():
+        for value, results_dict in zip(values, out):
+            results_dict[name] = value
+    return out
+
+
 def apply_dict_of_variables_ufunc(func, *args, **kwargs):
     """apply_dict_of_variables_ufunc(func, *args, signature, join='inner',
                                      fill_value=None):
@@ -295,20 +311,14 @@ def apply_dict_of_variables_ufunc(func, *args, **kwargs):
 
     args = [_as_variables_or_variable(arg) for arg in args]
     names = join_dict_keys(args, how=join)
-    args = collect_dict_values(args, names, fill_value)
+    grouped_by_name = collect_dict_values(args, names, fill_value)
 
     result_vars = OrderedDict()
-    for name, variable_args in zip(names, args):
+    for name, variable_args in zip(names, grouped_by_name):
         result_vars[name] = func(*variable_args)
 
     if signature.n_outputs > 1:
-        # we need to unpack result_vars from Dict[object, Tuple[Variable]] ->
-        # Tuple[Dict[object, Variable]].
-        out = tuple(OrderedDict() for _ in range(signature.n_outputs))
-        for name, values in result_vars.items():
-            for value, results_dict in zip(values, out):
-                results_dict[name] = value
-        return out
+        return _unpack_dict_tuples(result_vars, signature.n_outputs)
     else:
         return result_vars
 
@@ -356,6 +366,70 @@ def apply_dataset_ufunc(func, *args, **kwargs):
     else:
         coord_vars, = list_of_coords
         return _fast_dataset(result_vars, coord_vars)
+
+
+def apply_dataset_matching_ufunc(func, *args, **kwargs):
+    """apply_dataset_ufunc(func, *args, signature, join='inner',
+                           fill_value=None, new_coords=None,
+                           exclude_dims=frozenset()):
+    """
+    signature = kwargs.pop('signature')
+    join = kwargs.pop('join', 'inner')
+    fill_value = kwargs.pop('fill_value', None)
+    # new_coords = kwargs.pop('new_coords', None)
+    exclude_dims = kwargs.pop('exclude_dims', _DEFAULT_FROZEN_SET)
+    if kwargs:
+        raise TypeError('apply_dataset_ufunc() got unexpected keyword '
+                        'arguments: %s' % list(kwargs))
+
+    if len(args) > 1:
+        args = deep_align(args, join=join, copy=False, exclude=exclude_dims,
+                          raise_on_invalid=False)
+
+    args = [_as_variables_or_variable(arg) for arg in args]
+    variable_names = join_dict_keys(args, how=join)
+    grouped_by_name = collect_dict_values(args, variable_names, fill_value)
+
+    # coord_names = _get_coord_variables(args)
+    # union_coord_names = join_dict_keys(coord_names, how='outer')
+    data_var_names = set()
+    coord_names = set()
+    for arg in args:
+        if hasattr(arg, 'keys'):
+            coord_names = set(getattr(arg, 'coords', []))
+            var_names = set(arg.keys())
+            coord_names.update(coord_names)
+            data_var_names.update(var_names - coord_names)
+
+    if coord_names.intersection(data_var_names):
+        raise ValueError
+
+    result_coords = OrderedDict()
+    result_data_vars = OrderedDict()
+    for variable_name, variable_args in zip(variable_names, grouped_by_name):
+
+        # Do core dimensions match?
+        # If yes, apply.
+        # If no, merge.
+        # If mixed, error.
+
+        # Is it a coordinate?
+        # If yes, save as coordinate.
+        # If no, save as data variable.
+        # If mixed, error.
+
+        result_vars[variable_name] = func(*variable_args)
+
+    # result_vars = apply_dict_of_variables_ufunc(
+    #     func, *args, signature=signature, join=join, fill_value=fill_value)
+
+    if signature.n_outputs > 1:
+        return tuple(_fast_dataset(*args)
+                     for args in zip(result_vars, list_of_coords))
+    else:
+        coord_vars, = list_of_coords
+        return _fast_dataset(result_vars, coord_vars)
+
 
 
 def _iter_over_selections(obj, dim, values):
