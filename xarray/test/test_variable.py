@@ -580,6 +580,9 @@ class TestVariable(TestCase, VariableSubclassTestCases):
         self.assertFalse(v1.no_conflicts(d))
         self.assertFalse(v2.no_conflicts(d))
 
+        v4 = Variable(('w', 'x'), [d])
+        self.assertTrue(v1.no_conflicts(v4))
+
     def test_as_variable(self):
         data = np.arange(10)
         expected = Variable('x', data)

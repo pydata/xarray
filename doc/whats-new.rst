@@ -21,6 +21,11 @@ v0.9.0 (unreleased)
 Breaking changes
 ~~~~~~~~~~~~~~~~
 
+- The default behavior of ``merge`` is now ``compat='no_conflicts'``, so some
+  merges will now succeed in cases that previously raised
+  ``xarray.MergeError``. Set ``compat='broadcast_equals'`` to restore the
+  previous default.
+
 Deprecations
 ~~~~~~~~~~~~
 
@@ -59,8 +64,14 @@ By `Robin Wilson <https://github.com/robintw>`_.
 
 - Added the ``compat`` option ``'no_conflicts'`` to ``merge``, allowing the
   combination of xarray objects with disjoint (:issue:`742`) or
-  overlapping (:issue:`835`) coordinates as long as any present data agrees.
-  By `Johnnie Gray <https://github.com/jcmgray>`_.
+  overlapping (:issue:`835`) coordinates as long as all present data agrees.
+  By `Johnnie Gray <https://github.com/jcmgray>`_. See
+  :ref:`combining.no_conflicts` for more details.
+
+- It is now possible to set ``concat_dim=None`` explicitly in
+  :py:func:`~xarray.open_mfdataset` to disable inferring a dimension along
+  which to concatenate.
+  By `Stephan Hoyer <https://github.com/shoyer>`_.
 
 Bug fixes
 ~~~~~~~~~
