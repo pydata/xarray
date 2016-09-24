@@ -1254,7 +1254,6 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
 
         See Also
         --------
-
         Dataset.swap_dims
         DataArray.rename
         """
@@ -1329,6 +1328,85 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
             variables[k] = var
 
         return self._replace_vars_and_dims(variables, coord_names,
+                                           inplace=inplace)
+
+    def set_index(self, indexers=None, append=False, inplace=False,
+                  **kw_indexers):
+        """
+        Set Dataset indexes using one or more existing coordinates or
+        variables.
+
+        Parameters
+        ----------
+        indexers : dict, optional
+            Dictionary with keys given by dimension names and values given by
+            (lists of) the names of existing coordinates or variables.
+            Any list of multiple names given for a dimension will result as
+            a MultiIndex for that dimension.
+        append : bool, optional
+            If True, append the supplied indexers to the existing indexes.
+            Otherwise replace the existing indexes (default).
+        inplace : bool, optional
+            If True, set new indexes in-place. Otherwise, return a new dataset
+            object.
+        **kw_indexers : optional
+            Keyword arguments in the same form as ``indexers``.
+
+        Returns
+        -------
+        reindexed : Dataset
+            Another dataset, with this dataset's data but replaced coordinates.
+
+        See Also
+        --------
+        Dataset.reset_index
+        Dataset.reindex
+        """
+        indexers = utils.combine_pos_and_kw_args(indexers, kw_indexers,
+                                                 'set_index')
+
+        vars_to_remove = []
+        vars_to_replace = {}
+
+        for dim, var_names in indexers.items():
+            if not isinstance(var_names, list):
+                var_names = [var_names]
+
+            names = []
+            arrays = []
+            vars_to_remove.extend(var_names)
+            current_index_variable = self._variables[dim]
+
+            if append:
+                current_index = current_index_variable.to_index()
+                if isinstance(current_index, pd.MultiIndex):
+                    names.extend(current_index.names)
+                    for i in range(current_index.nlevels):
+                        arrays.append(current_index.get_level_values(i))
+                else:
+                    names.append('%s_level_0' % dim)
+                    arrays.append(current_index.values)
+
+            for n in var_names:
+                names.append(n)
+                var = self._variables[n]
+                if var.dims != current_index_variable.dims:
+                    raise ValueError(
+                        "dimension mismatch between %r %s and %r %s"
+                        % (dim, current_index_variable.dims, n, var.dims))
+                else:
+                    arrays.append(var.values)
+
+            idx = pd.MultiIndex.from_arrays(arrays, names=names)
+            vars_to_replace[dim] = IndexVariable(dim, idx)
+
+        variables = OrderedDict(((k, v) for k, v in iteritems(self._variables)
+                                 if k not in vars_to_remove))
+        variables.update(vars_to_replace)
+        coord_names = set([n for n in self._coord_names
+                           if n not in vars_to_remove])
+
+        return self._replace_vars_and_dims(variables, coord_names=coord_names,
                                            inplace=inplace)
 
     def _stack_once(self, dims, new_dim):
