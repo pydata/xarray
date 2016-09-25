@@ -149,6 +149,27 @@ class DatasetIOTestCases(object):
             actual = ds.load()
         self.assertDatasetAllClose(expected, actual)
 
+    def test_dataset_compute(self):
+        expected = create_test_data()
+
+        with self.roundtrip(expected) as actual:
+            # Test Dataset.compute()
+            for v in actual.variables.values():
+                self.assertFalse(v._in_memory)
+
+            computed = actual.compute()
+
+            # indexes are going to be loaded in memory anyway, even
+            # with compute(). This is by design.
+            for v in actual.data_vars.values():
+                self.assertFalse(v._in_memory)
+    
+            for v in computed.variables.values():
+                self.assertTrue(v._in_memory)
+
+            self.assertDatasetAllClose(expected, actual)
+            self.assertDatasetAllClose(expected, computed)
+
     def test_roundtrip_None_variable(self):
         expected = Dataset({None: (('x', 'y'), [[0, 1], [2, 3]])})
         with self.roundtrip(expected) as actual:
@@ -229,18 +250,6 @@ class DatasetIOTestCases(object):
         expected = original.drop('foo')
         with self.roundtrip(expected) as actual:
             self.assertDatasetIdentical(expected, actual)
-
-        expected = original.copy()
-        expected.attrs['coordinates'] = 'something random'
-        with self.assertRaisesRegexp(ValueError, 'cannot serialize'):
-            with self.roundtrip(expected):
-                pass
-
-        expected = original.copy(deep=True)
-        expected['foo'].attrs['coordinates'] = 'something random'
-        with self.assertRaisesRegexp(ValueError, 'cannot serialize'):
-            with self.roundtrip(expected):
-                pass
 
     def test_roundtrip_boolean_dtype(self):
         original = create_boolean_data()
@@ -872,7 +881,26 @@ class H5NetCDFDataTest(BaseNetCDF4Test, TestCase):
 @requires_dask
 @requires_scipy
 @requires_netCDF4
-class DaskTest(TestCase):
+class DaskTest(TestCase, DatasetIOTestCases):
+    @contextlib.contextmanager
+    def create_store(self):
+        yield Dataset()
+
+    @contextlib.contextmanager
+    def roundtrip(self, data, save_kwargs={}, open_kwargs={}):
+        yield data.chunk()
+
+    def test_roundtrip_datetime_data(self):
+        # Override method in DatasetIOTestCases - remove not applicable save_kwds
+        times = pd.to_datetime(['2000-01-01', '2000-01-02', 'NaT'])
+        expected = Dataset({'t': ('t', times), 't0': times[0]})
+        with self.roundtrip(expected) as actual:
+            self.assertDatasetIdentical(expected, actual)
+
+    def test_write_store(self):
+        # Override method in DatasetIOTestCases - not applicable to dask
+        pass
+
     def test_open_mfdataset(self):
         original = Dataset({'foo': ('x', np.random.randn(10))})
         with create_tmp_file() as tmp1:
@@ -991,6 +1019,38 @@ class DaskTest(TestCase):
                 self.assertIn(var_name, dask_name)
                 self.assertIn(tmp, dask_name)
             self.assertEqual(original_names, repeat_names)
+
+    def test_dataarray_compute(self):
+        actual = DataArray([1,2]).chunk()
+        computed = actual.compute()
+        self.assertFalse(actual._in_memory)
+        self.assertTrue(computed._in_memory)
+        self.assertDataArrayAllClose(actual, computed)
+
+    def test_pickle(self):
+        # Test that pickling/unpickling does not convert the dask
+        # backend to numpy
+        a1 = DataArray([1,2]).chunk()
+        self.assertFalse(a1._in_memory)        
+        a2 = pickle.loads(pickle.dumps(a1))
+        self.assertDataArrayIdentical(a1, a2)
+        self.assertFalse(a1._in_memory)
+        self.assertFalse(a2._in_memory)        
+
+        ds1 = Dataset({'a': [1,2]}).chunk()
+        self.assertFalse(ds1['a']._in_memory)        
+        ds2 = pickle.loads(pickle.dumps(ds1))
+        self.assertDatasetIdentical(ds1, ds2)
+        self.assertFalse(ds1['a']._in_memory)
+        self.assertFalse(ds2['a']._in_memory)        
+
+    def test_values(self):
+        # Test that invoking the values property does not convert the dask
+        # backend to numpy
+        a = DataArray([1,2]).chunk()
+        self.assertFalse(a._in_memory)
+        self.assertEquals(a.values.tolist(), [1, 2])
+        self.assertFalse(a._in_memory)
 
 
 @requires_scipy_or_netCDF4
