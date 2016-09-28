@@ -45,6 +45,12 @@ def create_test_data(seed=None):
     return obj
 
 
+def create_test_multiindex():
+    mindex = pd.MultiIndex.from_product([['a', 'b'], [1, 2]],
+                                        names=('level_1', 'level_2'))
+    return Dataset({}, {'x': mindex})
+
+
 class InaccessibleVariableDataStore(backends.InMemoryDataStore):
     def get_variables(self):
         def lazy_inaccessible(x):
@@ -109,6 +115,39 @@ class TestDataset(TestCase):
         # verify long attributes are truncated
         data = Dataset(attrs={'foo': 'bar' * 1000})
         self.assertTrue(len(repr(data)) < 1000)
+
+    def test_repr_multiindex(self):
+        data = create_test_multiindex()
+        expected = dedent("""\
+        <xarray.Dataset>
+        Dimensions:  (x: 4)
+        Coordinates:
+          * x        (x) MultiIndex
+          - level_1  (x) object 'a' 'a' 'b' 'b'
+          - level_2  (x) int64 1 2 1 2
+        Data variables:
+            *empty*""")
+        actual = '\n'.join(x.rstrip() for x in repr(data).split('\n'))
+        print(actual)
+        self.assertEqual(expected, actual)
+
+        # verify that long level names are not truncated
+        mindex = pd.MultiIndex.from_product(
+            [['a', 'b'], [1, 2]],
+            names=('a_quite_long_level_name', 'level_2'))
+        data = Dataset({}, {'x': mindex})
+        expected = dedent("""\
+        <xarray.Dataset>
+        Dimensions:                  (x: 4)
+        Coordinates:
+          * x                        (x) MultiIndex
+          - a_quite_long_level_name  (x) object 'a' 'a' 'b' 'b'
+          - level_2                  (x) int64 1 2 1 2
+        Data variables:
+            *empty*""")
+        actual = '\n'.join(x.rstrip() for x in repr(data).split('\n'))
+        print(actual)
+        self.assertEqual(expected, actual)
 
     def test_repr_period_index(self):
         data = create_test_data(seed=456)
@@ -288,6 +327,12 @@ class TestDataset(TestCase):
         self.assertFalse(ds.data_vars)
         self.assertItemsEqual(ds.coords.keys(), ['x', 'a'])
 
+        mindex = pd.MultiIndex.from_product([['a', 'b'], [1, 2]],
+                                            names=('level_1', 'level_2'))
+        with self.assertRaisesRegexp(ValueError, 'conflicting MultiIndex'):
+            Dataset({}, {'x': mindex, 'y': mindex})
+            Dataset({}, {'x': mindex, 'level_1': range(4)})
+
     def test_properties(self):
         ds = create_test_data()
         self.assertEqual(ds.dims,
@@ -465,6 +510,11 @@ class TestDataset(TestCase):
         actual.coords['foo'] = ('x', [1, 2, 3])
         expected = Dataset(coords={'foo': ('x', [1, 2, 3])})
         self.assertDatasetIdentical(expected, actual)
+
+    def test_coords_setitem_multiindex(self):
+        data = create_test_multiindex()
+        with self.assertRaisesRegexp(ValueError, 'conflicting MultiIndex'):
+            data.coords['level_1'] = range(4)
 
     def test_coords_set(self):
         one_coord = Dataset({'x': ('x', [0]),
@@ -876,7 +926,7 @@ class TestDataset(TestCase):
         with self.assertRaises(TypeError):
             data.loc[dict(dim3='a')] = 0
 
-    def test_multiindex(self):
+    def test_selection_multiindex(self):
         mindex = pd.MultiIndex.from_product([['a', 'b'], [1, 2], [-1, -2]],
                                             names=('one', 'two', 'three'))
         mdata = Dataset(data_vars={'var': ('x', range(8))},
@@ -916,8 +966,9 @@ class TestDataset(TestCase):
                                     mdata.sel(x=('a', 1)))
         self.assertDatasetIdentical(mdata.loc[{'x': ('a', 1, -1)}],
                                     mdata.sel(x=('a', 1, -1)))
-        with self.assertRaises(KeyError):
-            mdata.loc[{'one': 'a'}]
+
+        self.assertDatasetIdentical(mdata.sel(x={'one': 'a', 'two': 1}),
+                                    mdata.sel(one='a', two=1))
 
     def test_reindex_like(self):
         data = create_test_data()
@@ -1473,6 +1524,25 @@ class TestDataset(TestCase):
         expected = DataArray(times.time, [('time', times)], name='time')
         self.assertDataArrayIdentical(actual, expected)
 
+    def test_virtual_variable_multiindex(self):
+        # access multi-index levels as virtual variables
+        data = create_test_multiindex()
+        expected = DataArray(['a', 'a', 'b', 'b'], name='level_1',
+                             coords=[data['x'].to_index()], dims='x')
+        self.assertDataArrayIdentical(expected, data['level_1'])
+
+        # combine multi-index level and datetime
+        dr_index = pd.date_range('1/1/2011', periods=4, freq='H')
+        mindex = pd.MultiIndex.from_arrays([['a', 'a', 'b', 'b'], dr_index],
+                                           names=('level_str', 'level_date'))
+        data = Dataset({}, {'x': mindex})
+        expected = DataArray(mindex.get_level_values('level_date').hour,
+                             name='hour', coords=[mindex], dims='x')
+        self.assertDataArrayIdentical(expected, data['level_date.hour'])
+
+        # attribute style access
+        self.assertDataArrayIdentical(data.level_str, data['level_str'])
+
     def test_time_season(self):
         ds = Dataset({'t': pd.date_range('2000-01-01', periods=12, freq='M')})
         expected = ['DJF'] * 2 + ['MAM'] * 3 + ['JJA'] * 3 + ['SON'] * 3 + ['DJF']
@@ -1589,6 +1659,12 @@ class TestDataset(TestCase):
         expected = expected.set_coords('c')
         self.assertDatasetIdentical(actual, expected)
 
+    def test_assign_multiindex_level(self):
+        data = create_test_multiindex()
+        with self.assertRaisesRegexp(ValueError, 'conflicting MultiIndex'):
+            data.assign(level_1=range(4))
+            data.assign_coords(level_1=range(4))
+
     def test_setitem_original_non_unique_index(self):
         # regression test for GH943
         original = Dataset({'data': ('x', np.arange(5))},
@@ -1617,6 +1693,11 @@ class TestDataset(TestCase):
         actual = array.rename('first').to_dataset()
         actual['second'] = array
         self.assertDatasetIdentical(expected, actual)
+
+    def test_setitem_multiindex_level(self):
+        data = create_test_multiindex()
+        with self.assertRaisesRegexp(ValueError, 'conflicting MultiIndex'):
+            data['level_1'] = range(4)
 
     def test_delitem(self):
         data = create_test_data()
@@ -1744,9 +1825,9 @@ class TestDataset(TestCase):
         actual = zeros + grouped
         self.assertDatasetEqual(expected, actual)
 
-        with self.assertRaisesRegexp(ValueError, 'dimensions .* do not exist'):
+        with self.assertRaisesRegexp(ValueError, 'incompat.* grouped binary'):
             grouped + ds
-        with self.assertRaisesRegexp(ValueError, 'dimensions .* do not exist'):
+        with self.assertRaisesRegexp(ValueError, 'incompat.* grouped binary'):
             ds + grouped
         with self.assertRaisesRegexp(TypeError, 'only support binary ops'):
             grouped + 1
@@ -2182,6 +2263,25 @@ class TestDataset(TestCase):
         actual = ds.groupby('b').fillna(Dataset({'a': ('b', [0, 2])}))
         self.assertDatasetIdentical(expected, actual)
 
+        # attrs with groupby
+        ds.attrs['attr'] = 'ds'
+        ds.a.attrs['attr'] = 'da'
+        actual = ds.groupby('b').fillna(Dataset({'a': ('b', [0, 2])}))
+        self.assertEqual(actual.attrs, ds.attrs)
+        self.assertEqual(actual.a.name, 'a')
+        self.assertEqual(actual.a.attrs, ds.a.attrs)
+
+        da = DataArray(range(5), name='a', attrs={'attr':'da'})
+        actual = da.fillna(1)
+        self.assertEqual(actual.name, 'a')
+        self.assertEqual(actual.attrs, da.attrs)
+
+        ds = Dataset({'a': da}, attrs={'attr':'ds'})
+        actual = ds.fillna({'a': 1})
+        self.assertEqual(actual.attrs, ds.attrs)
+        self.assertEqual(actual.a.name, 'a')
+        self.assertEqual(actual.a.attrs, ds.a.attrs)
+
     def test_where(self):
         ds = Dataset({'a': ('x', range(5))})
         expected = Dataset({'a': ('x', [np.nan, np.nan, 2, 3, 4])})
@@ -2215,6 +2315,26 @@ class TestDataset(TestCase):
         expected['a'].values = [0, 1] + [np.nan] * 3
         actual = ds.groupby('c').where(cond)
         self.assertDatasetIdentical(expected, actual)
+
+        # attrs with groupby
+        ds.attrs['attr'] = 'ds'
+        ds.a.attrs['attr'] = 'da'
+        actual = ds.groupby('c').where(cond)
+        self.assertEqual(actual.attrs, ds.attrs)
+        self.assertEqual(actual.a.name, 'a')
+        self.assertEqual(actual.a.attrs, ds.a.attrs)
+
+        # attrs
+        da = DataArray(range(5), name='a', attrs={'attr':'da'})
+        actual = da.where(da.values > 1)
+        self.assertEqual(actual.name, 'a')
+        self.assertEqual(actual.attrs, da.attrs)
+
+        ds = Dataset({'a': da}, attrs={'attr':'ds'})
+        actual = ds.where(ds > 0)
+        self.assertEqual(actual.attrs, ds.attrs)
+        self.assertEqual(actual.a.name, 'a')
+        self.assertEqual(actual.a.attrs, ds.a.attrs)
 
     def test_where_drop(self):
         # if drop=True

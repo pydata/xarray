@@ -21,6 +21,11 @@ v0.9.0 (unreleased)
 Breaking changes
 ~~~~~~~~~~~~~~~~
 
+- The default behavior of ``merge`` is now ``compat='no_conflicts'``, so some
+  merges will now succeed in cases that previously raised
+  ``xarray.MergeError``. Set ``compat='broadcast_equals'`` to restore the
+  previous default.
+
 Deprecations
 ~~~~~~~~~~~~
 
@@ -50,6 +55,24 @@ By `Robin Wilson <https://github.com/robintw>`_.
   and deals with names to ensure a perfect 'roundtrip' capability.
   By `Robin Wilson <https://github.com/robintw`_.
 
+- Multi-index levels are now accessible as "virtual" coordinate variables,
+  e.g., ``ds['time']`` can pull out the ``'time'`` level of a multi-index
+  (see :ref:`coordinates`). ``sel`` also accepts providing multi-index levels
+  as keyword arguments, e.g., ``ds.sel(time='2000-01')``
+  (see :ref:`multi-level indexing`).
+  By `Benoit Bovy <https://github.com/benbovy>`_.
+
+- Added the ``compat`` option ``'no_conflicts'`` to ``merge``, allowing the
+  combination of xarray objects with disjoint (:issue:`742`) or
+  overlapping (:issue:`835`) coordinates as long as all present data agrees.
+  By `Johnnie Gray <https://github.com/jcmgray>`_. See
+  :ref:`combining.no_conflicts` for more details.
+
+- It is now possible to set ``concat_dim=None`` explicitly in
+  :py:func:`~xarray.open_mfdataset` to disable inferring a dimension along
+  which to concatenate.
+  By `Stephan Hoyer <https://github.com/shoyer>`_.
+
 Bug fixes
 ~~~~~~~~~
 
@@ -68,6 +91,9 @@ Bug fixes
 - Fix issues with variables where both attributes ``_FillValue`` and
   ``missing_value`` are set to ``NaN`` (:issue:`997`).
   By `Marco Zühlke <https://github.com/mzuehlke>`_.
+
+- ``.where()`` and ``.fillna()`` now preserve attributes(:issue:`1009`).
+  By `Fabien Maussion <https://github.com/fmaussion>`_.
 
 .. _whats-new.0.8.2:
 

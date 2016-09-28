@@ -15,7 +15,7 @@ from . import alignment
 from . import formatting
 from .. import conventions
 from .alignment import align
-from .coordinates import DatasetCoordinates, Indexes
+from .coordinates import DatasetCoordinates, LevelCoordinates, Indexes
 from .common import ImplementsDatasetReduce, BaseDataObject
 from .merge import (dataset_update_method, dataset_merge_method,
                     merge_data_and_coords)
@@ -33,34 +33,48 @@ _DATETIMEINDEX_COMPONENTS = ['year', 'month', 'day', 'hour', 'minute',
                              'quarter']
 
 
-def _get_virtual_variable(variables, key):
-    """Get a virtual variable (e.g., 'time.year') from a dict of
-    xarray.Variable objects (if possible)
+def _get_virtual_variable(variables, key, level_vars={}):
+    """Get a virtual variable (e.g., 'time.year' or a MultiIndex level)
+    from a dict of xarray.Variable objects (if possible)
     """
     if not isinstance(key, basestring):
         raise KeyError(key)
 
     split_key = key.split('.', 1)
-    if len(split_key) != 2:
-        raise KeyError(key)
-
-    ref_name, var_name = split_key
-    ref_var = variables[ref_name]
-    if ref_var.ndim == 1:
-        date = ref_var.to_index()
-    elif ref_var.ndim == 0:
-        date = pd.Timestamp(ref_var.values)
+    if len(split_key) == 2:
+        ref_name, var_name = split_key
+    elif len(split_key) == 1:
+        ref_name, var_name = key, None
     else:
         raise KeyError(key)
 
-    if var_name == 'season':
-        # TODO: move 'season' into pandas itself
-        seasons = np.array(['DJF', 'MAM', 'JJA', 'SON'])
-        month = date.month
-        data = seasons[(month // 3) % 4]
+    if ref_name in level_vars:
+        dim_var = variables[level_vars[ref_name]]
+        ref_var = dim_var.to_index_variable().get_level_variable(ref_name)
     else:
-        data = getattr(date, var_name)
-    return ref_name, var_name, Variable(ref_var.dims, data)
+        ref_var = variables[ref_name]
+
+    if var_name is None:
+        virtual_var = ref_var
+        var_name = key
+    else:
+        if ref_var.ndim == 1:
+            date = ref_var.to_index()
+        elif ref_var.ndim == 0:
+            date = pd.Timestamp(ref_var.values)
+        else:
+            raise KeyError(key)
+
+        if var_name == 'season':
+            # TODO: move 'season' into pandas itself
+            seasons = np.array(['DJF', 'MAM', 'JJA', 'SON'])
+            month = date.month
+            data = seasons[(month // 3) % 4]
+        else:
+            data = getattr(date, var_name)
+        virtual_var = Variable(ref_var.dims, data)
+
+    return ref_name, var_name, virtual_var
 
 
 def calculate_dimensions(variables):
@@ -411,6 +425,21 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
 
         return self._construct_direct(variables, coord_names, dims, attrs)
 
+    @property
+    def _level_coords(self):
+        """Return a mapping of all MultiIndex levels and their corresponding
+        coordinate name.
+        """
+        level_coords = OrderedDict()
+        for cname in self._coord_names:
+            var = self.variables[cname]
+            if var.ndim == 1:
+                level_names = var.to_index_variable().level_names
+                if level_names is not None:
+                    dim, = var.dims
+                    level_coords.update({lname: dim for lname in level_names})
+        return level_coords
+
     def _copy_listed(self, names):
         """Create a new Dataset with the listed variables from this dataset and
         the all relevant coordinates. Skips all validation.
@@ -423,7 +452,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
                 variables[name] = self._variables[name]
             except KeyError:
                 ref_name, var_name, var = _get_virtual_variable(
-                    self._variables, name)
+                    self._variables, name, self._level_coords)
                 variables[var_name] = var
                 if ref_name in self._coord_names:
                     coord_names.add(var_name)
@@ -439,7 +468,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         try:
             variable = self._variables[name]
         except KeyError:
-            _, name, variable = _get_virtual_variable(self._variables, name)
+            _, name, variable = _get_virtual_variable(
+                self._variables, name, self._level_coords)
 
         coords = OrderedDict()
         needed_dims = set(variable.dims)
@@ -456,6 +486,11 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         # memo does nothing but is required for compatibility with
         # copy.deepcopy
         return self.copy(deep=True)
+
+    @property
+    def _attr_sources(self):
+        """List of places to look-up items for attribute-style access"""
+        return [self, LevelCoordinates(self), self.attrs]
 
     def __contains__(self, key):
         """The 'in' operator will return true or false depending on whether
@@ -508,6 +543,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         if utils.is_dict_like(key):
             raise NotImplementedError('cannot yet use a dictionary as a key '
                                       'to set Dataset values')
+
         self.update({key: value})
 
     def __delitem__(self, key):
@@ -1403,8 +1439,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         return self._replace_vars_and_dims(variables, coord_names, dims,
                                            inplace=inplace)
 
-    def merge(self, other, inplace=False, overwrite_vars=set(),
-              compat='broadcast_equals', join='outer'):
+    def merge(self, other, inplace=False, overwrite_vars=frozenset(),
+              compat='no_conflicts', join='outer'):
         """Merge the arrays of two datasets into a single dataset.
 
         This method generally not allow for overriding data, with the exception
@@ -1422,7 +1458,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         overwrite_vars : str or sequence, optional
             If provided, update variables of these name(s) without checking for
             conflicts in this dataset.
-        compat : {'broadcast_equals', 'equals', 'identical'}, optional
+        compat : {'broadcast_equals', 'equals', 'identical',
+                  'no_conflicts'}, optional
             String indicating how to compare variables of the same name for
             potential conflicts:
 
@@ -1431,6 +1468,9 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
             - 'equals': all values and dimensions must be the same.
             - 'identical': all values, dimensions and attributes must be the
               same.
+            - 'no_conflicts': only values which are not null in both datasets
+              must be equal. The returned dataset then contains the combination
+              of all non-null values.
         join : {'outer', 'inner', 'left', 'right'}, optional
             Method for joining ``self`` and ``other`` along shared dimensions:
 
@@ -1446,11 +1486,12 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
 
         Raises
         ------
-        ValueError
+        MergeError
             If any variables conflict (see ``compat``).
         """
         variables, coord_names, dims = dataset_merge_method(
-            self, other, overwrite_vars, compat=compat, join=join)
+            self, other, overwrite_vars=overwrite_vars, compat=compat,
+            join=join)
 
         return self._replace_vars_and_dims(variables, coord_names, dims,
                                            inplace=inplace)
@@ -1645,7 +1686,9 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         -------
         Dataset
         """
-        return self._fillna(value)
+        out = self._fillna(value)
+        out._copy_attrs_from(self)
+        return out
 
     def reduce(self, func, dim=None, keep_attrs=False, numeric_only=False,
                allow_lazy=False, **kwargs):
@@ -2049,6 +2092,11 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
 
         ds._variables.update(new_vars)
         return ds
+
+    def _copy_attrs_from(self, other):
+        self.attrs = other.attrs
+        for v in other.variables:
+            self.variables[v].attrs = other.variables[v].attrs
 
     def diff(self, dim, n=1, label='upper'):
         """Calculate the n-th order discrete difference along given axis.

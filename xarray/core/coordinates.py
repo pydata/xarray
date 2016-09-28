@@ -215,6 +215,27 @@ class DataArrayCoordinates(AbstractCoordinates):
         del self._data._coords[key]
 
 
+class LevelCoordinates(AbstractCoordinates):
+    """Dictionary like container for MultiIndex level coordinates.
+
+    Used for attribute style lookup. Not returned directly by any
+    public methods.
+    """
+    def __init__(self, dataarray):
+        self._data = dataarray
+
+    @property
+    def _names(self):
+        return set(self._data._level_coords)
+
+    @property
+    def variables(self):
+        level_coords = OrderedDict(
+            (k, self._data[v].variable.get_level_variable(k))
+            for k, v in self._data._level_coords.items())
+        return Frozen(level_coords)
+
+
 class Indexes(Mapping, formatting.ReprMixin):
     """Ordered Mapping[str, pandas.Index] for xarray objects.
     """

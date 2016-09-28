@@ -2,7 +2,8 @@ import pandas as pd
 
 from .alignment import align
 from .utils import Frozen, is_dict_like
-from .variable import as_variable, default_index_coordinate
+from .variable import (as_variable, default_index_coordinate,
+                       assert_unique_multiindex_level_names)
 from .pycompat import (basestring, OrderedDict)
 
 
@@ -11,7 +12,8 @@ PANDAS_TYPES = (pd.Series, pd.DataFrame, pd.Panel)
 _VALID_COMPAT = Frozen({'identical': 0,
                         'equals': 1,
                         'broadcast_equals': 2,
-                        'minimal': 3})
+                        'minimal': 3,
+                        'no_conflicts': 4})
 
 
 def broadcast_dimension_size(variables):
@@ -47,7 +49,8 @@ def unique_variable(name, variables, compat='broadcast_equals'):
     variables : list of xarray.Variable
         List of Variable objects, all of which go by the same name in different
         inputs.
-    compat : {'identical', 'equals', 'broadcast_equals'}, optional
+    compat : {'identical', 'equals', 'broadcast_equals',
+              'no_conflicts'}, optional
         Type of equality check to use.
 
     Returns
@@ -60,6 +63,8 @@ def unique_variable(name, variables, compat='broadcast_equals'):
     """
     out = variables[0]
     if len(variables) > 1:
+        combine_method = None
+
         if compat == 'minimal':
             compat = 'broadcast_equals'
 
@@ -67,12 +72,20 @@ def unique_variable(name, variables, compat='broadcast_equals'):
             dim_lengths = broadcast_dimension_size(variables)
             out = out.expand_dims(dim_lengths)
 
+        if compat == 'no_conflicts':
+            combine_method = 'fillna'
+
         for var in variables[1:]:
             if not getattr(out, compat)(var):
                 raise MergeError('conflicting values for variable %r on '
                                  'objects to be combined:\n'
                                  'first value: %r\nsecond value: %r'
                                  % (name, out, var))
+            if combine_method:
+                # TODO: add preservation of attrs into fillna
+                out = getattr(out, combine_method)(var)
+                out.attrs = var.attrs
+
     return out
 
 
@@ -109,7 +122,8 @@ def merge_variables(
     priority_vars : mapping with Variable values, optional
         If provided, variables are always taken from this dict in preference to
         the input variable dictionaries, without checking for conflicts.
-    compat : {'identical', 'equals', 'broadcast_equals', 'minimal'}, optional
+    compat : {'identical', 'equals', 'broadcast_equals',
+              'minimal', 'no_conflicts'}, optional
         Type of equality check to use wben checking for conflicts.
 
     Returns
@@ -278,6 +292,7 @@ def merge_coords_without_align(objs, priority_vars=None):
     """
     expanded = expand_variable_dicts(objs)
     variables = merge_variables(expanded, priority_vars)
+    assert_unique_multiindex_level_names(variables)
     return variables
 
 
@@ -340,7 +355,8 @@ def _get_priority_vars(objects, priority_arg, compat='equals'):
         Dictionaries in which to find the priority variables.
     priority_arg : int or None
         Integer object whose variable should take priority.
-    compat : 'broadcast_equals', 'equals' or 'identical', optional
+    compat : {'identical', 'equals', 'broadcast_equals',
+              'no_conflicts'}, optional
         Compatibility checks to use when merging variables.
 
     Returns
@@ -370,6 +386,7 @@ def merge_coords(objs, compat='minimal', join='outer', priority_arg=None,
     expanded = expand_variable_dicts(aligned)
     priority_vars = _get_priority_vars(aligned, priority_arg, compat=compat)
     variables = merge_variables(expanded, priority_vars, compat=compat)
+    assert_unique_multiindex_level_names(variables)
 
     return variables
 
@@ -382,8 +399,12 @@ def merge_data_and_coords(data, coords, compat='broadcast_equals',
     return merge_core(objs, compat, join, explicit_coords=explicit_coords)
 
 
-def merge_core(objs, compat='broadcast_equals', join='outer', priority_arg=None,
-               explicit_coords=None, indexes=None):
+def merge_core(objs,
+               compat='broadcast_equals',
+               join='outer',
+               priority_arg=None,
+               explicit_coords=None,
+               indexes=None):
     """Core logic for merging labeled objects.
 
     This is not public API.
@@ -392,9 +413,10 @@ def merge_core(objs, compat='broadcast_equals', join='outer', priority_arg=None,
     ----------
     objs : list of mappings
         All values must be convertable to labeled arrays.
-    compat : 'broadcast_equals', 'equals' or 'identical', optional
+    compat : {'identical', 'equals', 'broadcast_equals',
+              'no_conflicts'}, optional
         Compatibility checks to use when merging variables.
-    join : 'outer', 'inner', 'left' or 'right', optional
+    join : {'outer', 'inner', 'left', 'right'}, optional
         How to combine objects with different indexes.
     priority_arg : integer, optional
         Optional argument in `objs` that takes precedence over the others.
@@ -431,6 +453,7 @@ def merge_core(objs, compat='broadcast_equals', join='outer', priority_arg=None,
 
     priority_vars = _get_priority_vars(aligned, priority_arg, compat=compat)
     variables = merge_variables(expanded, priority_vars, compat=compat)
+    assert_unique_multiindex_level_names(variables)
 
     dims = calculate_dimensions(variables)
 
@@ -449,7 +472,7 @@ def merge_core(objs, compat='broadcast_equals', join='outer', priority_arg=None,
     return variables, coord_names, dict(dims)
 
 
-def merge(objects, compat='broadcast_equals', join='outer'):
+def merge(objects, compat='no_conflicts', join='outer'):
     """Merge any number of xarray objects into a single Dataset as variables.
 
     Parameters
@@ -457,9 +480,20 @@ def merge(objects, compat='broadcast_equals', join='outer'):
     objects : Iterable[Union[xarray.Dataset, xarray.DataArray, dict]]
         Merge together all variables from these objects. If any of them are
         DataArray objects, they must have a name.
-    compat : 'broadcast_equals', 'equals' or 'identical', optional
-        Compatibility checks to use when merging variables.
-    join : 'outer', 'inner', 'left' or 'right', optional
+    compat : {'identical', 'equals', 'broadcast_equals',
+              'no_conflicts'}, optional
+        String indicating how to compare variables of the same name for
+        potential conflicts:
+
+        - 'broadcast_equals': all values must be equal when variables are
+          broadcast against each other to ensure common dimensions.
+        - 'equals': all values and dimensions must be the same.
+        - 'identical': all values, dimensions and attributes must be the
+          same.
+        - 'no_conflicts': only values which are not null in both datasets
+          must be equal. The returned dataset then contains the combination
+          of all non-null values.
+    join : {'outer', 'inner', 'left', 'right'}, optional
         How to combine objects with different indexes.
 
     Returns
@@ -503,8 +537,7 @@ def merge(objects, compat='broadcast_equals', join='outer'):
     return merged
 
 
-def dataset_merge_method(dataset, other, overwrite_vars=frozenset(),
-                         compat='broadcast_equals', join='outer'):
+def dataset_merge_method(dataset, other, overwrite_vars, compat, join):
     """Guts of the Dataset.merge method."""
 
     # we are locked into supporting overwrite_vars for the Dataset.merge

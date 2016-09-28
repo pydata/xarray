@@ -288,10 +288,13 @@ class VariableSubclassTestCases(object):
             v2 = v.copy()
             self.assertTrue(v.equals(v2))
             self.assertTrue(v.identical(v2))
+            self.assertTrue(v.no_conflicts(v2))
             self.assertTrue(v[0].equals(v2[0]))
             self.assertTrue(v[0].identical(v2[0]))
+            self.assertTrue(v[0].no_conflicts(v2[0]))
             self.assertTrue(v[:2].equals(v2[:2]))
             self.assertTrue(v[:2].identical(v2[:2]))
+            self.assertTrue(v[:2].no_conflicts(v2[:2]))
 
     def test_eq_all_dtypes(self):
         # ensure that we don't choke on comparisons for which numpy returns
@@ -559,6 +562,26 @@ class TestVariable(TestCase, VariableSubclassTestCases):
 
         v4 = Variable(('x'), [np.nan] * 3)
         self.assertFalse(v2.broadcast_equals(v4))
+
+    def test_no_conflicts(self):
+        v1 = Variable(('x'), [1, 2, np.nan, np.nan])
+        v2 = Variable(('x'), [np.nan, 2, 3, np.nan])
+        self.assertTrue(v1.no_conflicts(v2))
+        self.assertFalse(v1.equals(v2))
+        self.assertFalse(v1.broadcast_equals(v2))
+        self.assertFalse(v1.identical(v2))
+
+        self.assertFalse(v1.no_conflicts(None))
+
+        v3 = Variable(('y'), [np.nan, 2, 3, np.nan])
+        self.assertFalse(v3.no_conflicts(v1))
+
+        d = np.array([1, 2, np.nan, np.nan])
+        self.assertFalse(v1.no_conflicts(d))
+        self.assertFalse(v2.no_conflicts(d))
+
+        v4 = Variable(('w', 'x'), [d])
+        self.assertTrue(v1.no_conflicts(v4))
 
     def test_as_variable(self):
         data = np.arange(10)
@@ -1037,6 +1060,24 @@ class TestIndexVariable(TestCase, VariableSubclassTestCases):
 
         with self.assertRaises(AttributeError):
             coord.name = 'y'
+
+    def test_level_names(self):
+        midx = pd.MultiIndex.from_product([['a', 'b'], [1, 2]],
+                                          names=['level_1', 'level_2'])
+        x = IndexVariable('x', midx)
+        self.assertEqual(x.level_names, midx.names)
+
+        self.assertIsNone(IndexVariable('y', [10.0]).level_names)
+
+    def test_get_level_variable(self):
+        midx = pd.MultiIndex.from_product([['a', 'b'], [1, 2]],
+                                          names=['level_1', 'level_2'])
+        x = IndexVariable('x', midx)
+        level_1 = IndexVariable('x', midx.get_level_values('level_1'))
+        self.assertVariableIdentical(x.get_level_variable('level_1'), level_1)
+
+        with self.assertRaisesRegexp(ValueError, 'has no MultiIndex'):
+            IndexVariable('y', [10.0]).get_level_variable('level')
 
     def test_concat_periods(self):
         periods = pd.period_range('2000-01-01', periods=10)

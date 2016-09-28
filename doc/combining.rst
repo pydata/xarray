@@ -192,3 +192,23 @@ numpy):
 
 Note that ``NaN`` does not compare equal to ``NaN`` in element-wise comparison;
 you may need to deal with missing values explicitly.
+
+.. _combining.no_conflicts:
+
+Merging with 'no_conflicts'
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The ``compat`` argument ``'no_conflicts'`` is only available when
+combining xarray objects with ``merge``. In addition to the above comparison
+methods it allows the merging of xarray objects with locations where *either*
+have ``NaN`` values. This can be used to combine data with overlapping
+coordinates as long as any non-missing values agree or are disjoint:
+
+.. ipython:: python
+    ds1 = xr.Dataset({'a': ('x', [10, 20, 30, np.nan])}, {'x': [1, 2, 3, 4]})
+    ds2 = xr.Dataset({'a': ('x', [np.nan, 30, 40, 50])}, {'x': [2, 3, 4, 5]})
+    xr.merge([ds1, ds2], compat='no_conflicts')
+
+Note that due to the underlying representation of missing values as floating
+point numbers (``NaN``), variable data type is not always preserved when merging
+in this manner.

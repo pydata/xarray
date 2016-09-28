@@ -283,7 +283,7 @@ class GroupBy(object):
                 raise TypeError('GroupBy objects only support binary ops '
                                 'when the other argument is a Dataset or '
                                 'DataArray')
-            except KeyError:
+            except (KeyError, ValueError):
                 if self.group.name not in other.dims:
                     raise ValueError('incompatible dimensions for a grouped '
                                      'binary operation: the group variable %r '

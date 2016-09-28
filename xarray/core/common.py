@@ -181,7 +181,7 @@ class AttrAccessMixin(object):
     @property
     def _attr_sources(self):
         """List of places to look-up items for attribute-style access"""
-        return [self, self.attrs]
+        return []
 
     def __getattr__(self, name):
         if name != '__setstate__':
@@ -576,7 +576,10 @@ class BaseDataObject(AttrAccessMixin):
             outobj = self
             outcond = cond
 
-        return outobj._where(outcond)
+        # preserve attributes
+        out = outobj._where(outcond)
+        out._copy_attrs_from(self)
+        return out
 
     def close(self):
         """Close any files linked to this object
