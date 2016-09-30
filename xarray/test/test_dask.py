@@ -13,44 +13,22 @@ with suppress(ImportError):
     import dask.array as da
 
 
-def _copy_at_variable_level(arg):
-    """We need to copy the argument at the level of xarray.Variable objects, so
-    that viewing its values does not trigger lazy loading.
-    """
-    if isinstance(arg, Variable):
-        return arg.copy(deep=False)
-    elif isinstance(arg, DataArray):
-        ds = arg.to_dataset(name='__copied__')
-        return _copy_at_variable_level(ds)['__copied__']
-    elif isinstance(arg, Dataset):
-        ds = arg.copy()
-        for k in list(ds):
-            ds._variables[k] = ds._variables[k].copy(deep=False)
-        return ds
-    else:
-        assert False
-
-
 class DaskTestCase(TestCase):
     def assertLazyAnd(self, expected, actual, test):
-        expected_copy = _copy_at_variable_level(expected)
-        actual_copy = _copy_at_variable_level(actual)
+        expected.name = None
+        actual.name = None
         with dask.set_options(get=dask.get):
-            test(actual_copy, expected_copy)
-        var = getattr(actual, 'variable', actual)
-        self.assertIsInstance(var.data, da.Array)
+            test(actual, expected)
+        if isinstance(actual, Dataset):
+            for var in actual.variables.values():
+                self.assertIsInstance(var.data, da.Array)            
+        else:    
+            var = getattr(actual, 'variable', actual)
+            self.assertIsInstance(var.data, da.Array)
 
 
 @requires_dask
 class TestVariable(DaskTestCase):
-    def assertLazyAnd(self, expected, actual, test):
-        expected_copy = expected.copy(deep=False)
-        actual_copy = actual.copy(deep=False)
-        with dask.set_options(get=dask.get):
-            test(actual_copy, expected_copy)
-        var = getattr(actual, 'variable', actual)
-        self.assertIsInstance(var.data, da.Array)
-
     def assertLazyAndIdentical(self, expected, actual):
         self.assertLazyAnd(expected, actual, self.assertVariableIdentical)
 

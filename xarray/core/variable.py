@@ -298,10 +298,8 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
         Normally, it should not be necessary to call this method in user code,
         because all xarray functions should either work on deferred data or
         load data automatically.
-        """
-        new_data = self._data_cached()
-        if isinstance(self._data, dask_array_type):
-            self._data = new_data
+        """        
+        self._data = self._data_cast()
         return self
 
     def compute(self):

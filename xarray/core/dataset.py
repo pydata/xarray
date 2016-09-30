@@ -309,7 +309,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         """
         # access .data to coerce everything to numpy or dask arrays
         all_data = dict((k, v.data) for k, v in self.variables.items())
-        lazy_data = OrderedDict((k, v) for k, v in all_data.items()
+        lazy_data = dict((k, v) for k, v in all_data.items()
                          if isinstance(v, dask_array_type))
         if lazy_data:
             import dask.array as da
@@ -417,8 +417,9 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         """Returns a copy of this dataset.
 
         If `deep=True`, a deep copy is made of each of the component variables.
-        Otherwise, a shallow copy is made, so each variable in the new dataset
-        is also a variable in the original dataset.
+        Otherwise, a shallow copy of each of the component variable is made, so
+        that the underlying memory region of the new dataset is the same as in
+        the original dataset.
         """
         variables = OrderedDict((k, v.copy(deep=deep))
                                 for k, v in iteritems(self._variables))
