@@ -321,3 +321,10 @@ class TestDataArrayAndDataset(DaskTestCase):
         eager = self.eager_array.dot(self.eager_array[0])
         lazy = self.lazy_array.dot(self.lazy_array[0])
         self.assertLazyAndAllClose(eager, lazy)
+
+    def test_from_dask_variable(self):
+        # Test array creation from Variable with dask backend.
+        # This is used e.g. in broadcast()
+        a = DataArray(self.lazy_array.variable)
+        self.assertLazyAndIdentical(self.lazy_array, a)
+
