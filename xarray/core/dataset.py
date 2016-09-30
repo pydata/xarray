@@ -21,7 +21,8 @@ from .merge import (dataset_update_method, dataset_merge_method,
                     merge_data_and_coords)
 from .utils import (Frozen, SortedKeysDict, maybe_wrap_array, hashable,
                     decode_numpy_dict_values, ensure_us_time_resolution)
-from .variable import (Variable, as_variable, IndexVariable, broadcast_variables)
+from .variable import (Variable, as_variable, IndexVariable,
+                       broadcast_variables, default_index_coordinate)
 from .pycompat import (iteritems, basestring, OrderedDict,
                        dask_array_type)
 from .combine import concat
@@ -100,6 +101,95 @@ def calculate_dimensions(variables):
                                  'length %s on %r and length %s on %r' %
                                  (dim, size, k, dims[dim], last_used[dim]))
     return dims
+
+
+def merge_indexes(indexers, variables, coord_names, append=False):
+    """Merge variables into multi-indexes.
+
+    Not public API. Used in Dataset and DataArray set_index
+    methods.
+    """
+    vars_to_replace = {}
+    vars_to_remove = []
+
+    for dim, var_names in indexers.items():
+        if isinstance(var_names, basestring):
+            var_names = [var_names]
+
+        names = []
+        arrays = []
+        current_index_variable = variables[dim]
+
+        if append:
+            current_index = current_index_variable.to_index()
+            if isinstance(current_index, pd.MultiIndex):
+                names.extend(current_index.names)
+                for i in range(current_index.nlevels):
+                    arrays.append(current_index.get_level_values(i))
+            else:
+                names.append('%s_level_0' % dim)
+                arrays.append(current_index.values)
+
+        for n in var_names:
+            names.append(n)
+            var = variables[n]
+            if var.dims != current_index_variable.dims:
+                raise ValueError(
+                    "dimension mismatch between %r %s and %r %s"
+                    % (dim, current_index_variable.dims, n, var.dims))
+            else:
+                arrays.append(var.values)
+
+        idx = pd.MultiIndex.from_arrays(arrays, names=names)
+        vars_to_replace[dim] = IndexVariable(dim, idx)
+        vars_to_remove.extend(var_names)
+
+    new_variables = OrderedDict([(k, v) for k, v in iteritems(variables)
+                                 if k not in vars_to_remove])
+    new_variables.update(vars_to_replace)
+    new_coord_names = coord_names - set(vars_to_remove)
+
+    return new_variables, new_coord_names
+
+
+def split_indexes(dim_levels, variables, coord_names, drop=False):
+    """Split multi-indexes into variables.
+
+    Not public API. Used in Dataset and DataArray reset_index
+    methods.
+    """
+    vars_to_replace = {}
+    vars_to_create = OrderedDict()
+
+    for dim, levels in dim_levels.items():
+        current_index = variables[dim].to_index()
+        if not isinstance(current_index, pd.MultiIndex):
+            raise ValueError("%r has no MultiIndex" % dim)
+
+        if levels is None:
+            levels = current_index.names
+        elif not isinstance(levels, (tuple, list)):
+            levels = [levels]
+
+        if len(levels) == current_index.nlevels:
+            new_index_variable = default_index_coordinate(
+                dim, current_index.size)
+        else:
+            new_index_variable = IndexVariable(
+                dim, current_index.droplevel(levels))
+        vars_to_replace[dim] = new_index_variable
+
+        if not drop:
+            for lev in levels:
+                idx = current_index.get_level_values(lev)
+                vars_to_create[idx.name] = IndexVariable(dim, idx)
+
+    new_variables = variables.copy()
+    new_variables.update(vars_to_replace)
+    new_variables.update(vars_to_create)
+    new_coord_names = coord_names | set(vars_to_create)
+
+    return new_variables, new_coord_names
 
 
 def _assert_empty(args, msg='%s'):
@@ -1332,8 +1422,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
 
     def set_index(self, indexers=None, append=False, inplace=False,
                   **kw_indexers):
-        """
-        Set Dataset indexes using one or more existing coordinates or
+        """Set Dataset (multi-)indexes using one or more existing coordinates or
         variables.
 
         Parameters
@@ -1360,52 +1449,47 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         See Also
         --------
         Dataset.reset_index
-        Dataset.reindex
         """
         indexers = utils.combine_pos_and_kw_args(indexers, kw_indexers,
                                                  'set_index')
+        variables, coord_names = merge_indexes(indexers, self._variables,
+                                               self._coord_names,
+                                               append=append)
+        return self._replace_vars_and_dims(variables, coord_names=coord_names,
+                                           inplace=inplace)
 
-        vars_to_remove = []
-        vars_to_replace = {}
+    def reset_index(self, dim_levels=None, drop=False, inplace=False,
+                    **kw_dim_levels):
+        """Extract multi-index levels as new coordinates.
 
-        for dim, var_names in indexers.items():
-            if not isinstance(var_names, list):
-                var_names = [var_names]
+        Parameters
+        ----------
+        dim_levels : dict, optional
+            Dictionary with keys given by dimension names and values given by
+            (lists of) the names of the levels to extract, or None to extract
+            all levels. Every given dimension must have a multi-index.
+        drop : bool, optional
+            If True, remove the specified levels instead of extracting them as
+            new coordinates (default: False).
+        inplace : bool, optional
+            If True, set modify the dataset in-place. Otherwise, return a new
+            Dataset object.
+        **kw_dim_levels : optional
+            Keyword arguments in the same form as ``dim_levels``.
 
-            names = []
-            arrays = []
-            vars_to_remove.extend(var_names)
-            current_index_variable = self._variables[dim]
+        Returns
+        -------
+        reindexed: Dataset
+            Another dataset, with this dataset's data but replaced coordinates.
 
-            if append:
-                current_index = current_index_variable.to_index()
-                if isinstance(current_index, pd.MultiIndex):
-                    names.extend(current_index.names)
-                    for i in range(current_index.nlevels):
-                        arrays.append(current_index.get_level_values(i))
-                else:
-                    names.append('%s_level_0' % dim)
-                    arrays.append(current_index.values)
-
-            for n in var_names:
-                names.append(n)
-                var = self._variables[n]
-                if var.dims != current_index_variable.dims:
-                    raise ValueError(
-                        "dimension mismatch between %r %s and %r %s"
-                        % (dim, current_index_variable.dims, n, var.dims))
-                else:
-                    arrays.append(var.values)
-
-            idx = pd.MultiIndex.from_arrays(arrays, names=names)
-            vars_to_replace[dim] = IndexVariable(dim, idx)
-
-        variables = OrderedDict(((k, v) for k, v in iteritems(self._variables)
-                                 if k not in vars_to_remove))
-        variables.update(vars_to_replace)
-        coord_names = set([n for n in self._coord_names
-                           if n not in vars_to_remove])
-
+        See Also
+        --------
+        Dataset.set_index
+        """
+        dim_levels = utils.combine_pos_and_kw_args(dim_levels, kw_dim_levels,
+                                                   'reset_index')
+        variables, coord_names = split_indexes(dim_levels, self._variables,
+                                               self._coord_names, drop=drop)
         return self._replace_vars_and_dims(variables, coord_names=coord_names,
                                            inplace=inplace)
 

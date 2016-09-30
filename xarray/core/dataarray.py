@@ -15,7 +15,7 @@ from .alignment import align
 from .common import AbstractArray, BaseDataObject
 from .coordinates import (DataArrayCoordinates, LevelCoordinates,
                           Indexes)
-from .dataset import Dataset
+from .dataset import Dataset, merge_indexes, split_indexes
 from .pycompat import iteritems, basestring, OrderedDict, zip
 from .variable import (as_variable, Variable, as_compatible_data, IndexVariable,
                        default_index_coordinate,
@@ -820,6 +820,80 @@ class DataArray(AbstractArray, BaseDataObject):
         """
         ds = self._to_temp_dataset().swap_dims(dims_dict)
         return self._from_temp_dataset(ds)
+
+    def set_index(self, indexers=None, append=False, inplace=False,
+                  **kw_indexers):
+        """Set DataArray (multi-)indexes using one or more existing coordinates.
+
+        Parameters
+        ----------
+        indexers : dict, optional
+            Dictionary with keys given by dimension names and values given by
+            (lists of) the names of existing coordinates.
+            Any list of multiple names given for a dimension will result as
+            a MultiIndex for that dimension.
+        append : bool, optional
+            If True, append the supplied indexers to the existing indexes.
+            Otherwise replace the existing indexes (default).
+        inplace : bool, optional
+            If True, set new indexes in-place. Otherwise, return a new DataArray
+            object.
+        **kw_indexers : optional
+            Keyword arguments in the same form as ``indexers``.
+
+        Returns
+        -------
+        reindexed : DataArray
+            Another dataarray, with this dataarray's data but replaced coordinates.
+
+        See Also
+        --------
+        DataArray.reset_index
+        """
+        indexers = utils.combine_pos_and_kw_args(indexers, kw_indexers,
+                                                 'set_index')
+        coords, _ = merge_indexes(indexers, self._coords, set(), append=append)
+        if inplace:
+            self._coords = coords
+        else:
+            return self._replace(coords=coords)
+
+    def reset_index(self, dim_levels=None, drop=False, inplace=False,
+                    **kw_dim_levels):
+        """Extract multi-index levels as new coordinates.
+
+        Parameters
+        ----------
+        dim_levels : dict, optional
+            Dictionary with keys given by dimension names and values given by
+            (lists of) the names of the levels to extract, or None to extract
+            all levels. Every given dimension must have a multi-index.
+        drop : bool, optional
+            If True, remove the specified levels instead of extracting them as
+            new coordinates (default: False).
+        inplace : bool, optional
+            If True, set modify the dataarray in-place. Otherwise, return a new
+            DataArray object.
+        **kw_dim_levels : optional
+            Keyword arguments in the same form as ``dim_levels``.
+
+        Returns
+        -------
+        reindexed: DataArray
+            Another dataarray, with this dataarray's data but replaced
+            coordinates.
+
+        See Also
+        --------
+        DataArray.set_index
+        """
+        dim_levels = utils.combine_pos_and_kw_args(dim_levels, kw_dim_levels,
+                                                   'reset_index')
+        coords, _ = split_indexes(dim_levels, self._coords, set(), drop=drop)
+        if inplace:
+            self._coords = coords
+        else:
+            return self._replace(coords=coords)
 
     def stack(self, **dimensions):
         """
