@@ -263,8 +263,9 @@ class FacetGrid(object):
             kwargs.setdefault('extend', self._cmap_extend)
         if getattr(self.data, 'name', None) is not None:
             kwargs.setdefault('label', self.data.name)
-        self.fig.colorbar(self._mappables[-1], ax=list(self.axes.flat),
-                          **kwargs)
+        self.cbar = self.fig.colorbar(self._mappables[-1],
+                                      ax=list(self.axes.flat),
+                                      **kwargs)
         return self
 
     def set_axis_labels(self, x_var=None, y_var=None):
