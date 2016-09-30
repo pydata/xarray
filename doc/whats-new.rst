@@ -26,8 +26,8 @@ Breaking changes
   ``xarray.MergeError``. Set ``compat='broadcast_equals'`` to restore the
   previous default.
 - Pickling an xarray object based on the dask backend, or reading its
-  :py:meth:`values` property, won't automatically convert the backend to numpy
-  in the original object anymore.
+  :py:meth:`values` property, won't automatically convert the array from dask
+  to numpy in the original object anymore.
   By `Guido Imperiale <https://github.com/crusaderky>`_.
 
 Deprecations
@@ -72,8 +72,9 @@ Enhancements
   :py:func:`~xarray.open_mfdataset` to disable inferring a dimension along
   which to concatenate.
   By `Stephan Hoyer <https://github.com/shoyer>`_.
-- Added :py:meth:`compute` method to :py:class:`DataArray`, :py:class:`Dataset`,
-  and :py:class:`Variable` as a non-destructive alternative to :py:meth:`load`.
+- Added methods :py:meth:`DataArray.compute`, :py:meth:`Dataset.compute`, and
+  :py:meth:`Variable.compute` as a non-mutating alternative to
+  :py:meth:`~DataArray.load`.
   By `Guido Imperiale <https://github.com/crusaderky>`_.
 
 Bug fixes

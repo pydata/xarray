@@ -271,19 +271,20 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
                 "replacement data must match the Variable's shape")
         self._data = data
 
+    def _data_cast(self):
+        if isinstance(self._data, (np.ndarray, PandasIndexAdapter)):
+            return self._data
+        else:
+            return np.asarray(self._data)
+
     def _data_cached(self):
         """Load data into memory and return it.
         Do not cache dask arrays automatically; that should
         require an explicit load() call.
         """
-        if isinstance(self._data, (np.ndarray, PandasIndexAdapter)):
-            new_data = self._data
-        else:
-            new_data = np.asarray(self._data)
-
+        new_data = self._data_cast()
         if not isinstance(self._data, dask_array_type):
             self._data = new_data
-
         return new_data
 
     @property
@@ -1115,20 +1116,11 @@ class IndexVariable(Variable):
             raise ValueError('%s objects must be 1-dimensional' %
                              type(self).__name__)
 
-    def _data_cached(self):
-        """Load data into memory and return it.
-        Do not cache dask arrays automatically; that should
-        require an explicit load() call.
-        """
+    def _data_cast(self):
         if isinstance(self._data, PandasIndexAdapter):
-            new_data = self._data
+            return self._data
         else:
-            new_data = PandasIndexAdapter(self._data)
-
-        if not isinstance(self._data, dask_array_type):
-            self._data = new_data
-
-        return new_data
+            return PandasIndexAdapter(self._data)
 
     def __getitem__(self, key):
         key = self._item_key_to_tuple(key)

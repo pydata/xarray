@@ -1,3 +1,4 @@
+import pickle
 import numpy as np
 import pandas as pd
 
@@ -321,3 +322,29 @@ class TestDataArrayAndDataset(DaskTestCase):
         eager = self.eager_array.dot(self.eager_array[0])
         lazy = self.lazy_array.dot(self.lazy_array[0])
         self.assertLazyAndAllClose(eager, lazy)
+
+    def test_dataarray_pickle(self):
+        # Test that pickling/unpickling does not convert the dask
+        # backend to numpy
+        a1 = DataArray([1,2]).chunk()
+        self.assertFalse(a1._in_memory)        
+        a2 = pickle.loads(pickle.dumps(a1))
+        self.assertDataArrayIdentical(a1, a2)
+        self.assertFalse(a1._in_memory)
+        self.assertFalse(a2._in_memory)        
+
+    def test_dataset_pickle(self):
+        ds1 = Dataset({'a': [1,2]}).chunk()
+        self.assertFalse(ds1['a']._in_memory)        
+        ds2 = pickle.loads(pickle.dumps(ds1))
+        self.assertDatasetIdentical(ds1, ds2)
+        self.assertFalse(ds1['a']._in_memory)
+        self.assertFalse(ds2['a']._in_memory)        
+
+    def test_values(self):
+        # Test that invoking the values property does not convert the dask
+        # backend to numpy
+        a = DataArray([1,2]).chunk()
+        self.assertFalse(a._in_memory)
+        self.assertEquals(a.values.tolist(), [1, 2])
+        self.assertFalse(a._in_memory)        
