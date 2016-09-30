@@ -561,6 +561,19 @@ class DataArray(AbstractArray, BaseDataObject):
         self._coords = new._coords
         return self
 
+    def compute(self):
+        """Manually trigger loading of this array's data from disk or a
+        remote source into memory and return a new array. The original is
+        left unaltered.
+
+        Normally, it should not be necessary to call this method in user code,
+        because all xarray functions should either work on deferred data or
+        load data automatically. However, this method can be necessary when
+        working with many file objects on disk.
+        """
+        new = self.copy(deep=False)
+        return new.load()
+
     def copy(self, deep=True):
         """Returns a copy of this array.
 

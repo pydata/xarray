@@ -255,8 +255,11 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         return obj
 
     def __getstate__(self):
-        """Always load data in-memory before pickling"""
-        self.load()
+        """Load data in-memory before pickling (except for Dask data)"""
+        for v in self.variables.values():
+            if not isinstance(v.data, dask_array_type):
+                v.load()
+
         # self.__dict__ is the default pickle object, we don't need to
         # implement our own __setstate__ method to make pickle work
         state = self.__dict__.copy()
@@ -306,7 +309,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         """
         # access .data to coerce everything to numpy or dask arrays
         all_data = dict((k, v.data) for k, v in self.variables.items())
-        lazy_data = dict((k, v) for k, v in all_data.items()
+        lazy_data = OrderedDict((k, v) for k, v in all_data.items()
                          if isinstance(v, dask_array_type))
         if lazy_data:
             import dask.array as da
@@ -318,6 +321,19 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
                 self.variables[k].data = data
 
         return self
+
+    def compute(self):
+        """Manually trigger loading of this dataset's data from disk or a
+        remote source into memory and return a new dataset. The original is
+        left unaltered.
+
+        Normally, it should not be necessary to call this method in user code,
+        because all xarray functions should either work on deferred data or
+        load data automatically. However, this method can be necessary when
+        working with many file objects on disk.
+        """
+        new = self.copy(deep=False)
+        return new.load()
 
     @classmethod
     def _construct_direct(cls, variables, coord_names, dims=None, attrs=None,
@@ -404,11 +420,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         Otherwise, a shallow copy is made, so each variable in the new dataset
         is also a variable in the original dataset.
         """
-        if deep:
-            variables = OrderedDict((k, v.copy(deep=True))
-                                    for k, v in iteritems(self._variables))
-        else:
-            variables = self._variables.copy()
+        variables = OrderedDict((k, v.copy(deep=deep))
+                                for k, v in iteritems(self._variables))
         # skip __init__ to avoid costly validation
         return self._construct_direct(variables, self._coord_names.copy(),
                                       self._dims.copy(), self._attrs_copy())
