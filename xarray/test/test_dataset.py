@@ -1287,10 +1287,13 @@ class TestDataset(TestCase):
 
         for copied in [data.copy(deep=False), copy(data)]:
             self.assertDatasetIdentical(data, copied)
-            for k in data:
+            # Note: IndexVariable objects with string dtype are always
+            # copied because of xarray.core.util.safe_cast_to_index.
+            # Limiting the test to data variables.
+            for k in data.data_vars:
                 v0 = data.variables[k]
                 v1 = copied.variables[k]
-                self.assertIs(v0, v1)
+                assert source_ndarray(v0.data) is source_ndarray(v1.data)
             copied['foo'] = ('z', np.arange(5))
             self.assertNotIn('foo', data)
 

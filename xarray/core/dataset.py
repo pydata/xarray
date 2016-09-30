@@ -332,29 +332,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         load data automatically. However, this method can be necessary when
         working with many file objects on disk.
         """
-        # Can't just do the below, because new.variables[k] is the
-        # same object as self.variables[k]!
-        # new = self.copy(deep=False)
-        # return new.load()
-
-        variables = OrderedDict((k, v.copy(deep=False))
-                                for (k, v) in self.variables.items())
-        lazy_data = OrderedDict((k, v.data) for k, v in variables.items()
-                                if isinstance(v.data, dask_array_type))
-
-        if lazy_data:
-            import dask.array as da
-
-            # evaluate all the dask arrays simultaneously
-            evaluated_data = da.compute(*lazy_data.values())
-
-            for k, data in zip(lazy_data, evaluated_data):
-                variables[k] = variables[k].copy(deep=False)
-                variables[k].data = data
-
-        # skip __init__ to avoid costly validation
-        return self._construct_direct(variables, self._coord_names.copy(),
-                                     self._dims.copy(), self._attrs_copy())
+        new = self.copy(deep=False)
+        return new.load()
 
     @classmethod
     def _construct_direct(cls, variables, coord_names, dims=None, attrs=None,
@@ -441,11 +420,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         Otherwise, a shallow copy is made, so each variable in the new dataset
         is also a variable in the original dataset.
         """
-        if deep:
-            variables = OrderedDict((k, v.copy(deep=True))
-                                    for k, v in iteritems(self._variables))
-        else:
-            variables = self._variables.copy()
+        variables = OrderedDict((k, v.copy(deep=deep))
+                                for k, v in iteritems(self._variables))
         # skip __init__ to avoid costly validation
         return self._construct_direct(variables, self._coord_names.copy(),
                                       self._dims.copy(), self._attrs_copy())
