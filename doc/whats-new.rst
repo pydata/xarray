@@ -95,6 +95,9 @@ Bug fixes
 - ``.where()`` and ``.fillna()`` now preserve attributes(:issue:`1009`).
   By `Fabien Maussion <https://github.com/fmaussion>`_.
 
+- Applying :py:func:`broadcast()` to an xarray object based on the dask backend
+  won't accidentally convert the array from dask to numpy anymore (:issue:`978`).
+  By `Guido Imperiale <https://github.com/crusaderky>`_.
 .. _whats-new.0.8.2:
 
 v0.8.2 (18 August 2016)
