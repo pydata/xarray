@@ -119,6 +119,9 @@ def as_compatible_data(data, fastpath=False):
         # can't use fastpath (yet) for scalars
         return _maybe_wrap_data(data)
 
+    if isinstance(data, Variable):
+        return data.data
+
     # add a custom fast-path for dask.array to avoid expensive checks for the
     # dtype attribute
     if isinstance(data, dask_array_type):
