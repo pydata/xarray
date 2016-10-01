@@ -327,3 +327,10 @@ class TestDataArrayAndDataset(DaskTestCase):
         self.assertFalse(a._in_memory)
         self.assertEquals(a.values.tolist(), [1, 2])
         self.assertFalse(a._in_memory)        
+
+    def test_from_dask_variable(self):
+        # Test array creation from Variable with dask backend.
+        # This is used e.g. in broadcast()
+        a = DataArray(self.lazy_array.variable)
+        self.assertLazyAndIdentical(self.lazy_array, a)
+
