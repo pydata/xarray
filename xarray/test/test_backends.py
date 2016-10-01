@@ -125,7 +125,7 @@ class DatasetIOTestCases(object):
             if vars is None:
                 vars = expected
             with self.roundtrip(expected) as actual:
-                for v in actual.variables.values():
+                for v in actual.data_vars.values():
                     self.assertFalse(v._in_memory)
                 yield actual
                 for k, v in actual.variables.items():
@@ -154,7 +154,7 @@ class DatasetIOTestCases(object):
 
         with self.roundtrip(expected) as actual:
             # Test Dataset.compute()
-            for v in actual.variables.values():
+            for v in actual.data_vars.values():
                 self.assertFalse(v._in_memory)
 
             computed = actual.compute()
@@ -1026,7 +1026,7 @@ class DaskTest(TestCase, DatasetIOTestCases):
         self.assertFalse(actual._in_memory)
         self.assertTrue(computed._in_memory)
         self.assertDataArrayAllClose(actual, computed)
-        
+
 @requires_scipy_or_netCDF4
 @requires_pydap
 class PydapTest(TestCase):

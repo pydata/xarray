@@ -18,11 +18,19 @@ class DaskTestCase(TestCase):
         with dask.set_options(get=dask.get):
             test(actual, expected)
         if isinstance(actual, Dataset):
-            for var in actual.variables.values():
-                self.assertIsInstance(var.data, da.Array)            
-        else:    
-            var = getattr(actual, 'variable', actual)
-            self.assertIsInstance(var.data, da.Array)
+            for k, v in actual.variables.items():
+                if k in actual.data_vars:
+                    self.assertIsInstance(var.data, da.Array)
+                else:
+                    self.assertIsInstance(var.data, np.ndarray)
+        elif isinstance(actual, DataArray):
+            self.assertIsInstance(actual.data, da.Array)
+            for coord in actual.coords.values():
+                self.assertIsInstance(coord.data, np.ndarray)
+        elif isinstance(actual, Variable):
+            self.assertIsInstance(actual.data, da.Array)
+        else:
+            assert False
 
 
 @requires_dask
@@ -188,6 +196,7 @@ class TestDataArrayAndDataset(DaskTestCase):
     def test_rechunk(self):
         chunked = self.eager_array.chunk({'x': 2}).chunk({'y': 2})
         self.assertEqual(chunked.chunks, ((2,) * 2, (2,) * 3))
+        self.assertLazyAndIdentical(self.lazy_array, chunked)
 
     def test_new_chunk(self):
         chunked = self.eager_array.chunk()
@@ -306,19 +315,19 @@ class TestDataArrayAndDataset(DaskTestCase):
         # Test that pickling/unpickling does not convert the dask
         # backend to numpy
         a1 = DataArray([1,2]).chunk()
-        self.assertFalse(a1._in_memory)        
+        self.assertFalse(a1._in_memory)
         a2 = pickle.loads(pickle.dumps(a1))
         self.assertDataArrayIdentical(a1, a2)
         self.assertFalse(a1._in_memory)
-        self.assertFalse(a2._in_memory)        
+        self.assertFalse(a2._in_memory)
 
     def test_dataset_pickle(self):
-        ds1 = Dataset({'a': [1,2]}).chunk()
-        self.assertFalse(ds1['a']._in_memory)        
+        ds1 = Dataset({'a': DataArray([1,2])}).chunk()
+        self.assertFalse(ds1['a']._in_memory)
         ds2 = pickle.loads(pickle.dumps(ds1))
         self.assertDatasetIdentical(ds1, ds2)
         self.assertFalse(ds1['a']._in_memory)
-        self.assertFalse(ds2['a']._in_memory)        
+        self.assertFalse(ds2['a']._in_memory)
 
     def test_values(self):
         # Test that invoking the values property does not convert the dask
@@ -326,11 +335,10 @@ class TestDataArrayAndDataset(DaskTestCase):
         a = DataArray([1,2]).chunk()
         self.assertFalse(a._in_memory)
         self.assertEquals(a.values.tolist(), [1, 2])
-        self.assertFalse(a._in_memory)        
+        self.assertFalse(a._in_memory)
 
     def test_from_dask_variable(self):
         # Test array creation from Variable with dask backend.
         # This is used e.g. in broadcast()
         a = DataArray(self.lazy_array.variable)
         self.assertLazyAndEqual(self.lazy_array, a)
-

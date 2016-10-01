@@ -806,13 +806,19 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         array.
         """
         chunks = {}
-        for v in self.variables.values():
+        for v in self.data_vars.values():
             if v.chunks is not None:
                 new_chunks = list(zip(v.dims, v.chunks))
                 if any(chunk != chunks[d] for d, chunk in new_chunks
                        if d in chunks):
                     raise ValueError('inconsistent chunks')
                 chunks.update(new_chunks)
+        if chunks:
+            # Add dims that are defined in the coords but are not in data_vars
+            for v in self.coords.values():
+                for dim in v.dims:
+                    if dim not in chunks:
+                        chunks[dim] = (v.size,)
         return Frozen(SortedKeysDict(chunks))
 
     def chunk(self, chunks=None, name_prefix='xarray-', token=None,
@@ -865,6 +871,9 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
             return dict((d, dict_[d]) for d in keys if d in dict_)
 
         def maybe_chunk(name, var, chunks):
+            if name not in self.data_vars:
+                return var
+
             chunks = selkeys(chunks, var.dims)
             if not chunks:
                 chunks = None
