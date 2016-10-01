@@ -15,8 +15,6 @@ with suppress(ImportError):
 
 class DaskTestCase(TestCase):
     def assertLazyAnd(self, expected, actual, test):
-        expected.name = None
-        actual.name = None
         with dask.set_options(get=dask.get):
             test(actual, expected)
         if isinstance(actual, Dataset):
@@ -178,6 +176,9 @@ class TestDataArrayAndDataset(DaskTestCase):
     def assertLazyAndAllClose(self, expected, actual):
         self.assertLazyAnd(expected, actual, self.assertDataArrayAllClose)
 
+    def assertLazyAndEqual(self, expected, actual):
+        self.assertLazyAnd(expected, actual, self.assertDataArrayEqual)
+
     def setUp(self):
         self.values = np.random.randn(4, 6)
         self.data = da.from_array(self.values, chunks=(2, 2))
@@ -245,7 +246,7 @@ class TestDataArrayAndDataset(DaskTestCase):
         v = self.lazy_array
 
         expected = u.assign_coords(x=u['x'])
-        self.assertLazyAndIdentical(expected, v.to_dataset('x').to_array('x'))
+        self.assertLazyAndEqual(expected, v.to_dataset('x').to_array('x'))
 
     def test_merge(self):
 
@@ -254,7 +255,7 @@ class TestDataArrayAndDataset(DaskTestCase):
 
         expected = duplicate_and_merge(self.eager_array)
         actual = duplicate_and_merge(self.lazy_array)
-        self.assertLazyAndIdentical(expected, actual)
+        self.assertLazyAndEqual(expected, actual)
 
     def test_ufuncs(self):
         u = self.eager_array
@@ -267,9 +268,9 @@ class TestDataArrayAndDataset(DaskTestCase):
         x = da.from_array(a, 5)
         y = da.from_array(b, 5)
         expected = DataArray(a).where(b)
-        self.assertLazyAndIdentical(expected, DataArray(a).where(y))
-        self.assertLazyAndIdentical(expected, DataArray(x).where(b))
-        self.assertLazyAndIdentical(expected, DataArray(x).where(y))
+        self.assertLazyAndEqual(expected, DataArray(a).where(y))
+        self.assertLazyAndEqual(expected, DataArray(x).where(b))
+        self.assertLazyAndEqual(expected, DataArray(x).where(y))
 
     def test_simultaneous_compute(self):
         ds = Dataset({'foo': ('x', range(5)),
@@ -294,7 +295,7 @@ class TestDataArrayAndDataset(DaskTestCase):
         expected = DataArray(data.reshape(2, -1), {'w': [0, 1], 'z': z},
                              dims=['w', 'z'])
         assert stacked.data.chunks == expected.data.chunks
-        self.assertLazyAndIdentical(expected, stacked)
+        self.assertLazyAndEqual(expected, stacked)
 
     def test_dot(self):
         eager = self.eager_array.dot(self.eager_array[0])
