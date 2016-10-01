@@ -332,5 +332,5 @@ class TestDataArrayAndDataset(DaskTestCase):
         # Test array creation from Variable with dask backend.
         # This is used e.g. in broadcast()
         a = DataArray(self.lazy_array.variable)
-        self.assertLazyAndIdentical(self.lazy_array, a)
+        self.assertLazyAndEqual(self.lazy_array, a)
 
