@@ -134,7 +134,7 @@ class GroupBy(object):
     DataArray.groupby
     """
     def __init__(self, obj, group, squeeze=False, grouper=None, bins=None,
-                    cut_kwargs={}):
+                    cut_kwargs={}, drop_empty_bins=True):
         """Create a GroupBy object
 
         Parameters
@@ -154,6 +154,9 @@ class GroupBy(object):
             specified bins by `pandas.cut`.
         cut_kwargs : dict, optional
             Extra keyword arguments to pass to `pandas.cut`
+        drop_empty_bins : boolean, optional
+            If true, empty bins are dropped from the group. If false, they are
+            filled with NaN.
         """
         from .dataset import as_dataset
         from .dataarray import DataArray
@@ -193,6 +196,8 @@ class GroupBy(object):
             binned = pd.cut(group.values, bins, **cut_kwargs)
             new_dim_name = group.name + '_bins'
             group = DataArray(binned, group.coords, name=new_dim_name)
+            if not drop_empty_bins:
+                full_index = binned.categories
         if grouper is not None:
             index = safe_cast_to_index(group)
             if not index.is_monotonic:

@@ -345,7 +345,7 @@ class BaseDataObject(AttrAccessMixin):
         return self.groupby_cls(self, group, squeeze=squeeze)
 
     def groupby_bins(self, group, bins, right=True, labels=None, precision=3,
-                     include_lowest=False, squeeze=True):
+                     include_lowest=False, squeeze=True, drop_empty_bins=True):
         """Returns a GroupBy object for performing grouped operations.
 
         Rather than using all unique values of `group`, the values are discretized
@@ -378,6 +378,9 @@ class BaseDataObject(AttrAccessMixin):
             If "group" is a dimension of any arrays in this dataset, `squeeze`
             controls whether the subarrays have a dimension of length 1 along
             that dimension or if the dimension is squeezed out.
+        drop_empty_bins : boolean, optional
+            If true, empty bins are dropped from the group. If false, they are
+            filled with NaN.
 
         Returns
         -------
@@ -396,7 +399,8 @@ class BaseDataObject(AttrAccessMixin):
         return self.groupby_cls(self, group, squeeze=squeeze, bins=bins,
                                 cut_kwargs={'right': right, 'labels': labels,
                                             'precision': precision,
-                                            'include_lowest': include_lowest})
+                                            'include_lowest': include_lowest},
+                                drop_empty_bins=False)
 
     def rolling(self, min_periods=None, center=False, **windows):
         """
