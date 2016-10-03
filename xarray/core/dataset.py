@@ -1472,7 +1472,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
             If True, remove the specified levels instead of extracting them as
             new coordinates (default: False).
         inplace : bool, optional
-            If True, set modify the dataset in-place. Otherwise, return a new
+            If True, modify the dataset in-place. Otherwise, return a new
             Dataset object.
         **kw_dim_levels : optional
             Keyword arguments in the same form as ``dim_levels``.
@@ -1492,6 +1492,41 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
                                                self._coord_names, drop=drop)
         return self._replace_vars_and_dims(variables, coord_names=coord_names,
                                            inplace=inplace)
+
+    def reorder_levels(self, dim_order=None, inplace=False, **kw_dim_order):
+        """Rearrange index levels using input order.
+
+        Parameters
+        ----------
+        dim_order : dict, optional
+            Dictionary with keys given by dimension names and values given
+            by lists representing new level orders. Every given dimension
+            must have a multi-index.
+        inplace : bool, optional
+            If True, modify the dataset in-place. Otherwise, return a new
+            DataArray object.
+        **kw_dim_order : optional
+            Keyword arguments in the same form as ``dim_order``.
+
+        Returns
+        -------
+        reindexed: Dataset
+            Another dataset, with this dataset's data but replaced
+            coordinates.
+        """
+        dim_order = utils.combine_pos_and_kw_args(dim_order, kw_dim_order,
+                                                  'reorder_levels')
+        replace_variables = {}
+        for dim, order in dim_order.items():
+            coord = self._variables[dim]
+            index = coord.to_index()
+            if not isinstance(index, pd.MultiIndex):
+                raise ValueError("coordinate %r has no MultiIndex" % dim)
+            replace_variables[dim] = IndexVariable(coord.dims,
+                                                   index.reorder_levels(order))
+        variables = self._variables.copy()
+        variables.update(replace_variables)
+        return self._replace_vars_and_dims(variables, inplace=inplace)
 
     def _stack_once(self, dims, new_dim):
         variables = OrderedDict()

@@ -872,7 +872,7 @@ class DataArray(AbstractArray, BaseDataObject):
             If True, remove the specified levels instead of extracting them as
             new coordinates (default: False).
         inplace : bool, optional
-            If True, set modify the dataarray in-place. Otherwise, return a new
+            If True, modify the dataarray in-place. Otherwise, return a new
             DataArray object.
         **kw_dim_levels : optional
             Keyword arguments in the same form as ``dim_levels``.
@@ -890,6 +890,44 @@ class DataArray(AbstractArray, BaseDataObject):
         dim_levels = utils.combine_pos_and_kw_args(dim_levels, kw_dim_levels,
                                                    'reset_index')
         coords, _ = split_indexes(dim_levels, self._coords, set(), drop=drop)
+        if inplace:
+            self._coords = coords
+        else:
+            return self._replace(coords=coords)
+
+    def reorder_levels(self, dim_order=None, inplace=False, **kw_dim_order):
+        """Rearrange index levels using input order.
+
+        Parameters
+        ----------
+        dim_order : dict, optional
+            Dictionary with keys given by dimension names and values given
+            by lists representing new level orders. Every given dimension
+            must have a multi-index.
+        inplace : bool, optional
+            If True, modify the dataarray in-place. Otherwise, return a new
+            DataArray object.
+        **kw_dim_order : optional
+            Keyword arguments in the same form as ``dim_order``.
+
+        Returns
+        -------
+        reindexed: DataArray
+            Another dataarray, with this dataarray's data but replaced
+            coordinates.
+        """
+        dim_order = utils.combine_pos_and_kw_args(dim_order, kw_dim_order,
+                                                  'reorder_levels')
+        replace_coords = {}
+        for dim, order in dim_order.items():
+            coord = self._coords[dim]
+            index = coord.to_index()
+            if not isinstance(index, pd.MultiIndex):
+                raise ValueError("coordinate %r has no MultiIndex" % dim)
+            replace_coords[dim] = IndexVariable(coord.dims,
+                                                index.reorder_levels(order))
+        coords = self._coords.copy()
+        coords.update(replace_coords)
         if inplace:
             self._coords = coords
         else:
