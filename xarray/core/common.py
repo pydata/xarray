@@ -345,7 +345,7 @@ class BaseDataObject(AttrAccessMixin):
         return self.groupby_cls(self, group, squeeze=squeeze)
 
     def groupby_bins(self, group, bins, right=True, labels=None, precision=3,
-                     include_lowest=False, squeeze=True, drop_empty_bins=True):
+                     include_lowest=False, squeeze=True, drop_empty_bins=False):
         """Returns a GroupBy object for performing grouped operations.
 
         Rather than using all unique values of `group`, the values are discretized

@@ -75,6 +75,8 @@ By `Robin Wilson <https://github.com/robintw>`_.
 
 Bug fixes
 ~~~~~~~~~
+- ``groupby_bins`` now restores empty bins by default (:issue:`1019`).
+  By `Ryan Abernathey <https://github.com/rabernat>`_.
 
 - Fix issues for dates outside the valid range of pandas timestamps
   (:issue:`975`). By `Mathias Hauser <https://github.com/mathause>`_.
