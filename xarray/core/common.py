@@ -400,7 +400,7 @@ class BaseDataObject(AttrAccessMixin):
                                 cut_kwargs={'right': right, 'labels': labels,
                                             'precision': precision,
                                             'include_lowest': include_lowest},
-                                drop_empty_bins=False)
+                                drop_empty_bins=drop_empty_bins)
 
     def rolling(self, min_periods=None, center=False, **windows):
         """

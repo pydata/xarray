@@ -1420,7 +1420,8 @@ class TestDataArray(TestCase):
         array = DataArray(np.arange(4), dims='dim_0')
         # one of these bins will be empty
         bins = [0,4,5]
-        actual = array.groupby_bins('dim_0', bins).sum()
+        actual = array.groupby_bins('dim_0', bins, drop_empty_bins=True).sum()
+        print(actual)
         expected = DataArray([6], dims='dim_0_bins',
                         coords={'dim_0_bins': ['(0, 4]']})
         self.assertDataArrayIdentical(expected, actual)
