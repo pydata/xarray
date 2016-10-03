@@ -817,6 +817,71 @@ class TestDataArray(TestCase):
         actual = array.swap_dims({'x': 'y'})
         self.assertDataArrayIdentical(expected, actual)
 
+    def test_set_index(self):
+        indexes = [self.mindex.get_level_values(n) for n in self.mindex.names]
+        coords = {idx.name: ('x', idx) for idx in indexes}
+        array = DataArray(self.mda.values, coords=coords, dims='x')
+        expected = self.mda.copy()
+        level_3 = ('x', [1, 2, 3, 4])
+        array['level_3'] = level_3
+        expected['level_3'] = level_3
+
+        reindexed = array.set_index(indexers={'x': self.mindex.names})
+        self.assertDataArrayIdentical(reindexed, expected)
+
+        reindexed = reindexed.set_index(x='level_3', append=True)
+        expected = array.set_index(x=['level_1', 'level_2', 'level_3'])
+        self.assertDataArrayIdentical(reindexed, expected)
+
+        array.set_index(x=['level_1', 'level_2', 'level_3'], inplace=True)
+        self.assertDataArrayIdentical(array, expected)
+
+        array2d = DataArray(np.random.rand(2, 2),
+                            coords={'level': ('y', [1, 2])},
+                            dims=('x', 'y'))
+        with self.assertRaisesRegex(ValueError, 'dimension mismatch'):
+            array2d.set_index(x='level')
+
+    def test_reset_index(self):
+        indexes = [self.mindex.get_level_values(n) for n in self.mindex.names]
+        coords = {idx.name: ('x', idx) for idx in indexes}
+        expected = DataArray(self.mda.values, coords=coords, dims='x')
+
+        reindexed = self.mda.reset_index(dim_levels={'x': None})
+        self.assertDataArrayIdentical(reindexed, expected)
+        reindexed = self.mda.reset_index(x=self.mindex.names)
+        self.assertDataArrayIdentical(reindexed, expected)
+
+        coords = {'x': ('x', self.mindex.droplevel('level_1')),
+                  'level_1': ('x', self.mindex.get_level_values('level_1'))}
+        expected = DataArray(self.mda.values, coords=coords, dims='x')
+        reindexed = self.mda.reset_index(x='level_1')
+        self.assertDataArrayIdentical(reindexed, expected)
+
+        expected = DataArray(self.mda.values, dims='x')
+        reindexed = self.mda.reset_index(x=None, drop=True)
+        self.assertDataArrayIdentical(reindexed, expected)
+
+        array = self.mda.copy()
+        array.reset_index(x=None, drop=True, inplace=True)
+        self.assertDataArrayIdentical(array, expected)
+
+    def test_reorder_levels(self):
+        midx = self.mindex.reorder_levels(['level_2', 'level_1'])
+        expected = DataArray(self.mda.values, coords={'x': midx}, dims='x')
+
+        reindexed = self.mda.reorder_levels(
+            dim_order={'x': ['level_2', 'level_1']})
+        self.assertDataArrayIdentical(reindexed, expected)
+
+        array = self.mda.copy()
+        array.reorder_levels(x=['level_2', 'level_1'], inplace=True)
+        self.assertDataArrayIdentical(array, expected)
+
+        array = DataArray([1, 2], dims='x')
+        with self.assertRaisesRegex(ValueError, 'has no MultiIndex'):
+            array.reorder_levels(x=['level_1', 'level_2'])
+
     def test_dataset_getitem(self):
         dv = self.ds['foo']
         self.assertDataArrayIdentical(dv, self.dv)
