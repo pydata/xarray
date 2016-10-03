@@ -45,8 +45,8 @@ Deprecations
 Enhancements
 ~~~~~~~~~~~~
 - Add checking of ``attr`` names and values when saving to netCDF, raising useful
-error messages if they are invalid. (:issue:`911`).
-By `Robin Wilson <https://github.com/robintw>`_.
+  error messages if they are invalid. (:issue:`911`).
+  By `Robin Wilson <https://github.com/robintw>`_.
 
 - Added ability to save ``DataArray`` objects directly to netCDF files using
   :py:meth:`~xarray.DataArray.to_netcdf`, and to load directly from netCDF files
