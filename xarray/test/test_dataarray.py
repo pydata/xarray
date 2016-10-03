@@ -1428,12 +1428,6 @@ class TestDataArray(TestCase):
         # (was a problem in earlier versions)
         self.assertEqual(len(array.dim_0), 4)
 
-        # now do the same
-        actual = array.groupby_bins('dim_0', bins, drop_empty_bins=True).sum()
-        expected = DataArray([6], dims='dim_0_bins',
-                        coords={'dim_0_bins': ['(0, 4]']})
-        self.assertDataArrayIdentical(expected, actual)
-
     def test_groupby_bins_multidim(self):
         array = self.make_groupby_multidim_example_array()
         bins = [0,15,20]
