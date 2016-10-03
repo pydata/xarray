@@ -368,9 +368,10 @@ Transforming datasets
 In addition to dictionary-like methods (described above), xarray has additional
 methods (like pandas) for transforming datasets into new objects.
 
-For removing variables, you can select and drop an explicit list of variables
-by indexing with a list of names or using the :py:meth:`~xarray.Dataset.drop`
-methods to return a new ``Dataset``. These operations keep around coordinates:
+For removing variables, you can select and drop an explicit list of
+variables by indexing with a list of names or using the
+:py:meth:`~xray.Dataset.drop` methods to return a new ``Dataset``. These
+operations keep around coordinates:
 
 .. ipython:: python
 

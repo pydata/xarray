@@ -1416,6 +1416,18 @@ class TestDataArray(TestCase):
         # (would fail with shortcut=True above)
         self.assertEqual(len(array.dim_0), 4)
 
+    def test_groupby_bins_empty(self):
+        array = DataArray(np.arange(4), dims='dim_0')
+        # one of these bins will be empty
+        bins = [0,4,5]
+        actual = array.groupby_bins('dim_0', bins).sum()
+        expected = DataArray([6, np.nan], dims='dim_0_bins',
+                        coords={'dim_0_bins': ['(0, 4]','(4, 5]']})
+        self.assertDataArrayIdentical(expected, actual)
+        # make sure original array is unchanged
+        # (was a problem in earlier versions)
+        self.assertEqual(len(array.dim_0), 4)
+
     def test_groupby_bins_multidim(self):
         array = self.make_groupby_multidim_example_array()
         bins = [0,15,20]
