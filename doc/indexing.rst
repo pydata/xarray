@@ -478,6 +478,47 @@ Both ``reindex_like`` and ``align`` work interchangeably between
     # this is a no-op, because there are no shared dimension names
     ds.reindex_like(other)
 
+.. _multi-index handling:
+
+Multi-index handling
+--------------------
+
+Morroring pandas, xarray's ``set_index``, ``reset_index`` and
+``reorder_levels`` allow easy manipulation of ``DataArray`` or ``Dataset``
+multi-indexes without modifying the data.
+
+You can create a multi-index from several 1-dimensional variables and/or
+coordinates using ``set_index``:
+
+.. ipython:: python
+
+     da = xr.DataArray(np.random.rand(4),
+                       coords={'band': ('x', ['a', 'a', 'b', 'b']),
+                               'wavenumber': ('x', np.linspace(200, 400, 4))},
+                       dims='x')
+     da
+     mda = da.set_index(x=['band', 'wavenumber'])
+     mda
+
+These coordinates can now be used for indexing, e.g.,
+
+.. ipython:: python
+
+     mda.sel(band='a')
+
+Conversely, you can use ``reset_index`` to extract multi-index levels as
+coordinates (this is mainly useful for serialization):
+
+.. ipython:: python
+
+     mda.reset_index(x=['band', 'wavenumber'])
+
+``reorder_levels`` allows changing the order of multi-index levels:
+
+.. ipython:: python
+
+     mda.reorder_levels(x=['wavenumber', 'band'])
+
 Underlying Indexes
 ------------------
 
@@ -490,4 +531,3 @@ through the :py:attr:`~xarray.DataArray.indexes` attribute.
    arr
    arr.indexes
    arr.indexes['time']
-
