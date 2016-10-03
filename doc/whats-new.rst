@@ -53,7 +53,7 @@ Enhancements
   using :py:func:`~xarray.open_dataarray` (:issue:`915`). These remove the need
   to convert a ``DataArray`` to a ``Dataset`` before saving as a netCDF file,
   and deals with names to ensure a perfect 'roundtrip' capability.
-  By `Robin Wilson <https://github.com/robintw`_.
+  By `Robin Wilson <https://github.com/robintw>`_.
 
 - Multi-index levels are now accessible as "virtual" coordinate variables,
   e.g., ``ds['time']`` can pull out the ``'time'`` level of a multi-index
