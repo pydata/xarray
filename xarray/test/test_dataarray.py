@@ -839,7 +839,7 @@ class TestDataArray(TestCase):
         array2d = DataArray(np.random.rand(2, 2),
                             coords={'level': ('y', [1, 2])},
                             dims=('x', 'y'))
-        with self.assertRaisesRegex(ValueError, 'dimension mismatch'):
+        with self.assertRaisesRegexp(ValueError, 'dimension mismatch'):
             array2d.set_index(x='level')
 
     def test_reset_index(self):
@@ -879,7 +879,7 @@ class TestDataArray(TestCase):
         self.assertDataArrayIdentical(array, expected)
 
         array = DataArray([1, 2], dims='x')
-        with self.assertRaisesRegex(ValueError, 'has no MultiIndex'):
+        with self.assertRaisesRegexp(ValueError, 'has no MultiIndex'):
             array.reorder_levels(x=['level_1', 'level_2'])
 
     def test_dataset_getitem(self):

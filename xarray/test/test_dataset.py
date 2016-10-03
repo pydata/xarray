@@ -1415,7 +1415,7 @@ class TestDataset(TestCase):
         self.assertDatasetIdentical(ds, expected)
 
         ds = Dataset({}, coords={'x': [1, 2]})
-        with self.assertRaisesRegex(ValueError, 'has no MultiIndex'):
+        with self.assertRaisesRegexp(ValueError, 'has no MultiIndex'):
             ds.reorder_levels(x=['level_1', 'level_2'])
 
     def test_stack(self):
