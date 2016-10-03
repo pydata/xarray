@@ -1089,6 +1089,28 @@ class TestDataArray(TestCase):
         expected = arr[:, 1:]
         self.assertDataArrayIdentical(actual, expected)
 
+    def test_cumops(self):
+        coords = {'x': [-1, -2], 'y': ['ab', 'cd', 'ef'],
+                  'lat': (['x', 'y'], [[1, 2, 3], [-1, -2, -3]]),
+                  'c': -999}
+        orig = DataArray([[-1, 0, 1], [-3, 0, 3]], coords, dims=['x', 'y'])
+
+        actual = orig.cumsum('x')
+        expected = DataArray([[-1, 0, 1], [-4, 0, 4]], coords, dims=['x', 'y'])
+        self.assertDataArrayIdentical(expected, actual)
+
+        actual = orig.cumsum('y')
+        expected = DataArray([[-1, -1, 0], [-3, -3, 0]], coords, dims=['x', 'y'])
+        self.assertDataArrayIdentical(expected, actual)
+
+        actual = orig.cumprod('x')
+        expected = DataArray([[-1, 0, 1], [3, 0, 3]], coords, dims=['x', 'y'])
+        self.assertDataArrayIdentical(expected, actual)
+
+        actual = orig.cumprod('y')
+        expected = DataArray([[-1, 0, 0], [-3, 0, 0]], coords, dims=['x', 'y'])
+        self.assertDataArrayIdentical(expected, actual)
+
     def test_reduce(self):
         coords = {'x': [-1, -2], 'y': ['ab', 'cd', 'ef'],
                   'lat': (['x', 'y'], [[1, 2, 3], [-1, -2, -3]]),

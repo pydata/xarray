@@ -146,8 +146,6 @@ class TestVariable(DaskTestCase):
         self.assertLazyAndAllClose((u > 1).any(), (v > 1).any())
         self.assertLazyAndAllClose((u < 1).all('x'), (v < 1).all('x'))
         with self.assertRaisesRegexp(NotImplementedError, 'dask'):
-            v.prod()
-        with self.assertRaisesRegexp(NotImplementedError, 'dask'):
             v.median()
 
     def test_missing_values(self):

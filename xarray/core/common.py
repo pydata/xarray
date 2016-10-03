@@ -29,6 +29,13 @@ class ImplementsArrayReduce(object):
             and 'axis' arguments can be supplied. If neither are supplied, then
             `{name}` is calculated over axes."""
 
+    _cum_extra_args_docstring = \
+        """dim : str or sequence of str, optional
+            Dimension over which to apply `{name}`.
+        axis : int or sequence of int, optional
+            Axis over which to apply `{name}`. Only one of the 'dim'
+            and 'axis' arguments can be supplied."""
+
 
 class ImplementsDatasetReduce(object):
     @classmethod
@@ -50,6 +57,13 @@ class ImplementsDatasetReduce(object):
         """dim : str or sequence of str, optional
             Dimension(s) over which to apply `func`.  By default `func` is
             applied over all dimensions."""
+
+    _cum_extra_args_docstring = \
+        """dim : str or sequence of str, optional
+            Dimension over which to apply `{name}`.
+        axis : int or sequence of int, optional
+            Axis over which to apply `{name}`. Only one of the 'dim'
+            and 'axis' arguments can be supplied."""
 
 
 class ImplementsRollingArrayReduce(object):

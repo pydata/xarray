@@ -73,6 +73,10 @@ Enhancements
   which to concatenate.
   By `Stephan Hoyer <https://github.com/shoyer>`_.
 
+- Adds DataArray and Dataset methods :py:meth:`~xarray.DataArray.cumsum` and
+  :py:meth:`~xarray.DataArray.cumprod`.  By `Phillip J. Wolfram
+  <https://github.com/pwolfram>`_.
+
 Bug fixes
 ~~~~~~~~~
 - ``groupby_bins`` now restores empty bins by default (:issue:`1019`).

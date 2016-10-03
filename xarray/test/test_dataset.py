@@ -2421,6 +2421,25 @@ class TestDataset(TestCase):
         with self.assertRaisesRegexp(ValueError, 'Dataset does not contain'):
             ds = data.mean(dim='bad_dim')
 
+    def test_reduce_cumsum_test_dims(self):
+        data = create_test_data()
+        for cumfunc in ['cumsum', 'cumprod']:
+            with self.assertRaisesRegexp(ValueError, "must supply either single 'dim' or 'axis'"):
+                ds = getattr(data, cumfunc)()
+            with self.assertRaisesRegexp(ValueError, "must supply either single 'dim' or 'axis'"):
+                ds = getattr(data, cumfunc)(dim=['dim1', 'dim2'])
+            with self.assertRaisesRegexp(ValueError, 'Dataset does not contain'):
+                ds = getattr(data, cumfunc)(dim='bad_dim')
+
+            # ensure dimensions are correct
+            for reduct, expected in [('dim1', ['dim1', 'dim2', 'dim3', 'time']),
+                                     ('dim2', ['dim1', 'dim2', 'dim3', 'time']),
+                                     ('dim3', ['dim1', 'dim2', 'dim3', 'time']),
+                                     ('time', ['dim1', 'dim2', 'dim3'])]:
+                actual = getattr(data, cumfunc)(dim=reduct).dims
+                print(reduct, actual, expected)
+                self.assertItemsEqual(actual, expected)
+
     def test_reduce_non_numeric(self):
         data1 = create_test_data(seed=44)
         data2 = create_test_data(seed=44)
