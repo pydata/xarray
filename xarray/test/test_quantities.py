@@ -53,3 +53,10 @@ class TestWithQuantities(TestCase):
         """
         da = self.da
         self.assertEqualWUnits(da.x.data,self.x)
+
+    def test_sel(self):
+        self.assertEqualWUnits(self.da.sel(y=self.y[0]).values,self.v[:,0])
+
+    def test_mean(self):
+        self.assertEqualWUnits(self.da.mean('x').values,self.v.mean(0))
+
