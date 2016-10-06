@@ -28,6 +28,9 @@ Breaking changes
 - Pickling an xarray object based on the dask backend, or reading its
   :py:meth:`values` property, won't automatically convert the array from dask
   to numpy in the original object anymore.
+  If a dask object is used as a coord of a :py:class:`~xarray.DataArray` or
+  :py:class:`~xarray.Dataset`, its values won't be automatically cached, likely
+  causing performance degradation.
   By `Guido Imperiale <https://github.com/crusaderky>`_.
 
 Deprecations
@@ -57,8 +60,6 @@ Enhancements
   to convert a ``DataArray`` to a ``Dataset`` before saving as a netCDF file,
   and deals with names to ensure a perfect 'roundtrip' capability.
   By `Robin Wilson <https://github.com/robintw>`_.
-
->>>>>>> master
 - Multi-index levels are now accessible as "virtual" coordinate variables,
   e.g., ``ds['time']`` can pull out the ``'time'`` level of a multi-index
   (see :ref:`coordinates`). ``sel`` also accepts providing multi-index levels
@@ -78,7 +79,6 @@ Enhancements
   :py:meth:`Variable.compute` as a non-mutating alternative to
   :py:meth:`~DataArray.load`.
   By `Guido Imperiale <https://github.com/crusaderky>`_.
-
 - Adds DataArray and Dataset methods :py:meth:`~xarray.DataArray.cumsum` and
   :py:meth:`~xarray.DataArray.cumprod`.  By `Phillip J. Wolfram
   <https://github.com/pwolfram>`_.
