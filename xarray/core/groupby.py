@@ -154,6 +154,7 @@ class GroupBy(object):
             specified bins by `pandas.cut`.
         cut_kwargs : dict, optional
             Extra keyword arguments to pass to `pandas.cut`
+
         """
         from .dataset import as_dataset
         from .dataarray import DataArray
@@ -193,6 +194,7 @@ class GroupBy(object):
             binned = pd.cut(group.values, bins, **cut_kwargs)
             new_dim_name = group.name + '_bins'
             group = DataArray(binned, group.coords, name=new_dim_name)
+            full_index = binned.categories
         if grouper is not None:
             index = safe_cast_to_index(group)
             if not index.is_monotonic:

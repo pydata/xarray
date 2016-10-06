@@ -974,6 +974,10 @@ class TestVariable(TestCase, VariableSubclassTestCases):
         self.assertVariableIdentical(np.mean(v), Variable([], 2))
 
         self.assertVariableIdentical(v.prod(), Variable([], 6))
+        self.assertVariableIdentical(v.cumsum(axis=0),
+                                     Variable('x', np.array([1, 1, 3, 6])))
+        self.assertVariableIdentical(v.cumprod(axis=0),
+                                     Variable('x', np.array([1, 1, 2, 6])))
         self.assertVariableIdentical(v.var(), Variable([], 2.0 / 3))
 
         if LooseVersion(np.__version__) < '1.9':

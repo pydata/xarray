@@ -145,6 +145,8 @@ Computation
 :py:attr:`~Dataset.round`
 :py:attr:`~Dataset.real`
 :py:attr:`~Dataset.T`
+:py:attr:`~Dataset.cumsum`
+:py:attr:`~Dataset.cumprod`
 
 **Grouped operations**:
 :py:attr:`~core.groupby.DatasetGroupBy.assign`
@@ -286,6 +288,8 @@ Computation
 :py:attr:`~DataArray.round`
 :py:attr:`~DataArray.real`
 :py:attr:`~DataArray.T`
+:py:attr:`~DataArray.cumsum`
+:py:attr:`~DataArray.cumprod`
 
 **Grouped operations**:
 :py:attr:`~core.groupby.DataArrayGroupBy.assign_coords`

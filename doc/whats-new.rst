@@ -56,7 +56,9 @@ Enhancements
   using :py:func:`~xarray.open_dataarray` (:issue:`915`). These remove the need
   to convert a ``DataArray`` to a ``Dataset`` before saving as a netCDF file,
   and deals with names to ensure a perfect 'roundtrip' capability.
-  By `Robin Wilson <https://github.com/robintw`_.
+  By `Robin Wilson <https://github.com/robintw>`_.
+
+>>>>>>> master
 - Multi-index levels are now accessible as "virtual" coordinate variables,
   e.g., ``ds['time']`` can pull out the ``'time'`` level of a multi-index
   (see :ref:`coordinates`). ``sel`` also accepts providing multi-index levels
@@ -77,8 +79,14 @@ Enhancements
   :py:meth:`~DataArray.load`.
   By `Guido Imperiale <https://github.com/crusaderky>`_.
 
+- Adds DataArray and Dataset methods :py:meth:`~xarray.DataArray.cumsum` and
+  :py:meth:`~xarray.DataArray.cumprod`.  By `Phillip J. Wolfram
+  <https://github.com/pwolfram>`_.
+
 Bug fixes
 ~~~~~~~~~
+- ``groupby_bins`` now restores empty bins by default (:issue:`1019`).
+  By `Ryan Abernathey <https://github.com/rabernat>`_.
 
 - Fix issues for dates outside the valid range of pandas timestamps
   (:issue:`975`). By `Mathias Hauser <https://github.com/mathause>`_.

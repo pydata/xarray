@@ -1089,6 +1089,28 @@ class TestDataArray(TestCase):
         expected = arr[:, 1:]
         self.assertDataArrayIdentical(actual, expected)
 
+    def test_cumops(self):
+        coords = {'x': [-1, -2], 'y': ['ab', 'cd', 'ef'],
+                  'lat': (['x', 'y'], [[1, 2, 3], [-1, -2, -3]]),
+                  'c': -999}
+        orig = DataArray([[-1, 0, 1], [-3, 0, 3]], coords, dims=['x', 'y'])
+
+        actual = orig.cumsum('x')
+        expected = DataArray([[-1, 0, 1], [-4, 0, 4]], coords, dims=['x', 'y'])
+        self.assertDataArrayIdentical(expected, actual)
+
+        actual = orig.cumsum('y')
+        expected = DataArray([[-1, -1, 0], [-3, -3, 0]], coords, dims=['x', 'y'])
+        self.assertDataArrayIdentical(expected, actual)
+
+        actual = orig.cumprod('x')
+        expected = DataArray([[-1, 0, 1], [3, 0, 3]], coords, dims=['x', 'y'])
+        self.assertDataArrayIdentical(expected, actual)
+
+        actual = orig.cumprod('y')
+        expected = DataArray([[-1, 0, 0], [-3, 0, 0]], coords, dims=['x', 'y'])
+        self.assertDataArrayIdentical(expected, actual)
+
     def test_reduce(self):
         coords = {'x': [-1, -2], 'y': ['ab', 'cd', 'ef'],
                   'lat': (['x', 'y'], [[1, 2, 3], [-1, -2, -3]]),
@@ -1414,6 +1436,18 @@ class TestDataArray(TestCase):
         self.assertDataArrayIdentical(expected, actual)
         # make sure original array dims are unchanged
         # (would fail with shortcut=True above)
+        self.assertEqual(len(array.dim_0), 4)
+
+    def test_groupby_bins_empty(self):
+        array = DataArray(np.arange(4), dims='dim_0')
+        # one of these bins will be empty
+        bins = [0,4,5]
+        actual = array.groupby_bins('dim_0', bins).sum()
+        expected = DataArray([6, np.nan], dims='dim_0_bins',
+                        coords={'dim_0_bins': ['(0, 4]','(4, 5]']})
+        self.assertDataArrayIdentical(expected, actual)
+        # make sure original array is unchanged
+        # (was a problem in earlier versions)
         self.assertEqual(len(array.dim_0), 4)
 
     def test_groupby_bins_multidim(self):
