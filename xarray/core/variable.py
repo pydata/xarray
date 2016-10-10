@@ -301,7 +301,7 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
         Normally, it should not be necessary to call this method in user code,
         because all xarray functions should either work on deferred data or
         load data automatically.
-        """        
+        """
         self._data = self._data_cast()
         return self
 
@@ -320,7 +320,8 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
     def __getstate__(self):
         """Always cache data as an in-memory array before pickling
         (with the exception of dask backend)"""
-        self._data_cached()
+        if not isinstance(self._data, dask_array_type):
+            self._data_cached()
         # self.__dict__ is the default pickle object, we don't need to
         # implement our own __setstate__ method to make pickle work
         return self.__dict__

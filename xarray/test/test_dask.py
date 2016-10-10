@@ -309,20 +309,39 @@ class TestDataArrayAndDataset(DaskTestCase):
         lazy = self.lazy_array.dot(self.lazy_array[0])
         self.assertLazyAndAllClose(eager, lazy)
 
+    def test_variable_pickle(self):
+        # Test that pickling/unpickling does not convert the dask
+        # backend to numpy
+        a1 = Variable(['x'], build_dask_array())
+        a1.compute()
+        self.assertFalse(a1._in_memory)
+        self.assertEquals(kernel_call_count, 1)
+        a2 = pickle.loads(pickle.dumps(a1))
+        self.assertEquals(kernel_call_count, 1)
+        self.assertVariableIdentical(a1, a2)
+        self.assertFalse(a1._in_memory)
+        self.assertFalse(a2._in_memory)
+
     def test_dataarray_pickle(self):
         # Test that pickling/unpickling does not convert the dask
         # backend to numpy
-        a1 = DataArray([1,2]).chunk()
+        a1 = DataArray(build_dask_array())
+        a1.compute()
         self.assertFalse(a1._in_memory)
+        self.assertEquals(kernel_call_count, 1)
         a2 = pickle.loads(pickle.dumps(a1))
+        self.assertEquals(kernel_call_count, 1)
         self.assertDataArrayIdentical(a1, a2)
         self.assertFalse(a1._in_memory)
         self.assertFalse(a2._in_memory)
 
     def test_dataset_pickle(self):
-        ds1 = Dataset({'a': DataArray([1,2])}).chunk()
+        ds1 = Dataset({'a': DataArray(build_dask_array())})
+        ds1.compute()
         self.assertFalse(ds1['a']._in_memory)
+        self.assertEquals(kernel_call_count, 1)
         ds2 = pickle.loads(pickle.dumps(ds1))
+        self.assertEquals(kernel_call_count, 1)
         self.assertDatasetIdentical(ds1, ds2)
         self.assertFalse(ds1['a']._in_memory)
         self.assertFalse(ds2['a']._in_memory)
@@ -340,3 +359,20 @@ class TestDataArrayAndDataset(DaskTestCase):
         # This is used e.g. in broadcast()
         a = DataArray(self.lazy_array.variable)
         self.assertLazyAndEqual(self.lazy_array, a)
+
+
+kernel_call_count = 0
+def kernel():
+    """Dask kernel to test pickling/unpickling.
+    Must be global to make it pickleable.
+    """
+    global kernel_call_count
+    kernel_call_count += 1
+    return np.ones(1)
+
+def build_dask_array():
+    global kernel_call_count
+    kernel_call_count = 0
+    return dask.array.Array(
+        dask={('foo', 0): (kernel, )}, name='foo',
+        chunks=((1,),), dtype=int)
