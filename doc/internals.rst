@@ -125,9 +125,9 @@ and the libraries that implement them on this page.
 Here are several existing libraries that build functionality upon xarray.
 They may be useful points of reference for your work:
 
-- `xgcm <http://xgcm.readthedocs.org/>`_: General Circulation Model
+- `xgcm <https://xgcm.readthedocs.io/>`_: General Circulation Model
   Postprocessing. Uses subclassing and custom xarray backends.
-- `PyGDX <http://pygdx.readthedocs.org/en/latest/>`_: Python 3 package for
+- `PyGDX <https://pygdx.readthedocs.io/en/latest/>`_: Python 3 package for
   accessing data stored in GAMS Data eXchange (GDX) files. Also uses a custom
   subclass.
 - `windspharm <http://ajdawson.github.io/windspharm/index.html>`_: Spherical
