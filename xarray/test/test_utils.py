@@ -182,3 +182,9 @@ class Test_OrderedSet(TestCase):
         self.assertEqual(s1 + s3, set(['a', 'b', 'c', 'd', 'e']))
         s1.update(s3)
         self.assertEqual(s1, set(['a', 'b', 'c', 'd', 'e']))
+        s1.discard('e')
+        self.assertEqual(s1, set(['a', 'b', 'c', 'd']))
+
+
+
+

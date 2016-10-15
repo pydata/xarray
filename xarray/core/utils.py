@@ -277,8 +277,9 @@ class OrderedSet(MutableSet):
         return key in self.map
 
     def __add__(self, other):
-        self.update(other)
-        return self
+        out = OrderedSet(self)
+        out.update(other)
+        return out
 
     def add(self, key):
         if key not in self.map:
@@ -302,20 +303,6 @@ class OrderedSet(MutableSet):
         while curr is not end:
             yield curr[0]
             curr = curr[2]
-
-    def __reversed__(self):
-        end = self.end
-        curr = end[1]
-        while curr is not end:
-            yield curr[0]
-            curr = curr[1]
-
-    def pop(self, last=True):
-        if not self:
-            raise KeyError('set is empty')
-        key = self.end[1][0] if last else self.end[2][0]
-        self.discard(key)
-        return key
 
     def __repr__(self):
         if not self:
