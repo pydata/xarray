@@ -168,3 +168,23 @@ class Test_hashable(TestCase):
             self.assertTrue(utils.hashable(v))
         for v in [[5, 6], ['seven', '8'], {9: 'ten'}]:
             self.assertFalse(utils.hashable(v))
+
+
+class Test_OrderedSet(TestCase):
+
+    def test_set_op(self):
+        s1 = utils.OrderedSet(['a', 'b', 'c'])
+        s2 = utils.OrderedSet(['b'])
+        s3 = utils.OrderedSet(['d', 'e'])
+        self.assertEqual(s1 - s3, s1)
+        self.assertEqual(s1 - s2, set(['a', 'c']))
+        self.assertEqual(s1 + s2, s1)
+        self.assertEqual(s1 + s3, set(['a', 'b', 'c', 'd', 'e']))
+        s1.update(s3)
+        self.assertEqual(s1, set(['a', 'b', 'c', 'd', 'e']))
+        s1.discard('e')
+        self.assertEqual(s1, set(['a', 'b', 'c', 'd']))
+
+
+
+
