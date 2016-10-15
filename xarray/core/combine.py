@@ -145,6 +145,8 @@ def _calc_concat_over(datasets, dim, data_vars, coords):
     Determine which dataset variables need to be concatenated in the result,
     and which can simply be taken from the first dataset.
     """
+    from .utils import OrderedSet
+
     def process_subset_opt(opt, subset):
         if subset == 'coords':
             subset_long_name = 'coordinates'
@@ -161,11 +163,11 @@ def _calc_concat_over(datasets, dim, data_vars, coords):
                     return any(not ds.variables[vname].equals(v)
                                for ds in datasets[1:])
                 # all nonindexes that are not the same in each dataset
-                concat_new = set(k for k in getattr(datasets[0], subset)
-                                 if k not in concat_over and differs(k))
+                concat_new = OrderedSet(k for k in getattr(datasets[0], subset)
+                                        if k not in concat_over and differs(k))
             elif opt == 'all':
-                concat_new = (set(getattr(datasets[0], subset)) -
-                              set(datasets[0].dims))
+                concat_new = (OrderedSet(getattr(datasets[0], subset)) -
+                              OrderedSet(datasets[0].dims))
             elif opt == 'minimal':
                 concat_new = set()
             else:
@@ -182,11 +184,12 @@ def _calc_concat_over(datasets, dim, data_vars, coords):
         return concat_new
 
     concat_over = set()
+    ivars = list(process_subset_opt(coords, 'coords')) + \
+            list(process_subset_opt(data_vars, 'data_vars'))
+    concat_over = OrderedSet(ivars)
     for ds in datasets:
         concat_over.update(k for k, v in ds.variables.items()
                            if dim in v.dims)
-    concat_over.update(process_subset_opt(data_vars, 'data_vars'))
-    concat_over.update(process_subset_opt(coords, 'coords'))
     if dim in datasets[0]:
         concat_over.add(dim)
 
