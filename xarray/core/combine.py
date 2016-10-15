@@ -189,8 +189,8 @@ def _calc_concat_over(datasets, dim, data_vars, coords):
     concat_over.update(process_subset_opt(coords, 'coords'))
     if dim in datasets[0]:
         concat_over.add(dim)
-
-    return concat_over
+    # return a list to keep the variables order
+    return [vn for vn in datasets[0].variables if vn in concat_over]
 
 
 def _dataset_concat(datasets, dim, data_vars, coords, compat, positions):
