@@ -189,8 +189,7 @@ def _calc_concat_over(datasets, dim, data_vars, coords):
     concat_over.update(process_subset_opt(coords, 'coords'))
     if dim in datasets[0]:
         concat_over.add(dim)
-    # return a list to keep the variables order
-    return [vn for vn in datasets[0].variables if vn in concat_over]
+    return concat_over
 
 
 def _dataset_concat(datasets, dim, data_vars, coords, compat, positions):
@@ -264,11 +263,12 @@ def _dataset_concat(datasets, dim, data_vars, coords, compat, positions):
                 var = var.expand_dims(common_dims, common_shape)
             yield var
 
-    # stack up each variable to fill-out the dataset
-    for k in concat_over:
-        vars = ensure_common_dims([ds.variables[k] for ds in datasets])
-        combined = concat_vars(vars, dim, positions)
-        insert_result_variable(k, combined)
+    # stack up each variable to fill-out the dataset (in order)
+    for k in datasets[0].variables:
+        if k in concat_over:
+            vars = ensure_common_dims([ds.variables[k] for ds in datasets])
+            combined = concat_vars(vars, dim, positions)
+            insert_result_variable(k, combined)
 
     result = Dataset(result_vars, attrs=result_attrs)
     result = result.set_coords(result_coord_names)
