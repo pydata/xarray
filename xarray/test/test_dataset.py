@@ -2120,6 +2120,23 @@ class TestDataset(TestCase):
         roundtripped = Dataset.from_dict(ds.to_dict())
         self.assertDatasetIdentical(ds, roundtripped)
 
+    def test_to_dict_with_numpy_attrs(self):
+        # this doesn't need to roundtrip
+        x = np.random.randn(10)
+        y = np.random.randn(10)
+        t = list('abcdefghij')
+        attrs = {'coords': np.array([37, -110.1, 100]),
+                 'maintainer': 'bar'}
+        ds = Dataset(OrderedDict([('a', ('t', x, attrs)),
+                                  ('b', ('t', y, attrs)),
+                                  ('t', ('t', t))]))
+        expected_attrs = {'coords': attrs['coords'].tolist(),
+                          'maintainer': 'bar'}
+        actual = ds.to_dict()
+
+        # check that they are identical
+        self.assertEqual(expected_attrs, actual['data_vars']['a']['attrs'])
+
     def test_pickle(self):
         data = create_test_data()
         roundtripped = pickle.loads(pickle.dumps(data))

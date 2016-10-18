@@ -1989,6 +1989,22 @@ class TestDataArray(TestCase):
         roundtripped = DataArray.from_dict(da.to_dict())
         self.assertDataArrayIdentical(da, roundtripped)
 
+    def test_to_dict_with_numpy_attrs(self):
+        # this doesn't need to roundtrip
+        x = np.random.randn(10, 3)
+        t = list('abcdefghij')
+        lat = [77.7, 83.2, 76]
+        attrs = {'coords': np.array([37, -110.1, 100]),
+                 'maintainer': 'bar'}
+        da = DataArray(x, {'t': t, 'lat': lat}, dims=['t', 'lat'],
+                       attrs=attrs)
+        expected_attrs = {'coords': attrs['coords'].tolist(),
+                          'maintainer': 'bar'}
+        actual = da.to_dict()
+
+        # check that they are identical
+        self.assertEqual(expected_attrs, actual['attrs'])
+
     def test_to_masked_array(self):
         rs = np.random.RandomState(44)
         x = rs.random_sample(size=(10, 20))

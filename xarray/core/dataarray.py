@@ -1194,13 +1194,22 @@ class DataArray(AbstractArray, BaseDataObject):
         Convert this xarray.DataArray into a dictionary following xarray
         naming conventions.
 
-        Useful for coverting to json.
+        Useful for coverting to json.To avoid datetime incompatibility
+        use decode_times=False kwarg in xarrray.open_dataset.
 
         See also
         --------
         xarray.DataArray.from_dict
         """
-        d = {'coords': {}, 'attrs': dict(self.attrs), 'dims': self.dims}
+        def np_check(attrs):
+            # catch numpy arrays in attrs and convert to nested lists
+            attrs = dict(attrs)
+            for k, v in attrs.items():
+                if hasattr(v, 'tolist'):
+                    attrs.update({k: v.tolist()})
+            return attrs
+
+        d = {'coords': {}, 'attrs': np_check(self.attrs), 'dims': self.dims}
 
         def time_check(val):
             # needed because of numpy bug GH#7619
@@ -1214,7 +1223,7 @@ class DataArray(AbstractArray, BaseDataObject):
             data = time_check(self[k].values).tolist()
             d['coords'].update({k: {'data': data,
                                     'dims': self[k].dims,
-                                    'attrs': dict(self[k].attrs)}})
+                                    'attrs': np_check(self[k].attrs)}})
 
         d.update({'data': time_check(self.values).tolist(),
                   'name': self.name})

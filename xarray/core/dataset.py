@@ -1917,14 +1917,23 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         Convert this dataset to a dictionary following xarray naming
         conventions.
 
-        Useful for coverting to json.
+        Useful for coverting to json. To avoid datetime incompatibility
+        use decode_times=False kwarg in xarrray.open_dataset.
 
         See also
         --------
         xarray.Dataset.from_dict
         """
-        d = {'coords': {}, 'attrs': dict(self.attrs), 'dims': dict(self.dims),
-             'data_vars': {}}
+        def np_check(attrs):
+            # catch numpy arrays in attrs and convert to nested lists
+            attrs = dict(attrs)
+            for k, v in attrs.items():
+                if hasattr(v, 'tolist'):
+                    attrs.update({k: v.tolist()})
+            return attrs
+
+        d = {'coords': {}, 'attrs': np_check(self.attrs),
+             'dims': dict(self.dims), 'data_vars': {}}
 
         def time_check(val):
             # needed because of numpy bug GH#7619
@@ -1938,12 +1947,12 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
             data = time_check(self[k].values).tolist()
             d['coords'].update({k: {'data': data,
                                     'dims': self[k].dims,
-                                    'attrs': dict(self[k].attrs)}})
+                                    'attrs': np_check(self[k].attrs)}})
         for k in self.data_vars:
             data = time_check(self[k].values).tolist()
             d['data_vars'].update({k: {'data': data,
                                        'dims': self[k].dims,
-                                       'attrs': dict(self[k].attrs)}})
+                                       'attrs': np_check(self[k].attrs)}})
         return d
 
     @classmethod
