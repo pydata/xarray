@@ -22,6 +22,7 @@ from .variable import (as_variable, Variable, as_compatible_data, IndexVariable,
                        default_index_coordinate,
                        assert_unique_multiindex_level_names)
 from .formatting import format_item
+from .utils import np_check, time_check
 
 
 def _infer_coords_and_dims(shape, coords, dims):
@@ -1194,30 +1195,15 @@ class DataArray(AbstractArray, BaseDataObject):
         Convert this xarray.DataArray into a dictionary following xarray
         naming conventions.
 
-        Useful for coverting to json.To avoid datetime incompatibility
+        Converts all variables and attributes to native Python objects.
+        Useful for coverting to json. To avoid datetime incompatibility
         use decode_times=False kwarg in xarrray.open_dataset.
 
         See also
         --------
         xarray.DataArray.from_dict
         """
-        def np_check(attrs):
-            # catch numpy arrays in attrs and convert to nested lists
-            attrs = dict(attrs)
-            for k, v in attrs.items():
-                if hasattr(v, 'tolist'):
-                    attrs.update({k: v.tolist()})
-            return attrs
-
         d = {'coords': {}, 'attrs': np_check(self.attrs), 'dims': self.dims}
-
-        def time_check(val):
-            # needed because of numpy bug GH#7619
-            if np.issubdtype(val.dtype, np.datetime64):
-                val = val.astype('datetime64[us]')
-            elif np.issubdtype(val.dtype, np.timedelta64):
-                val = val.astype('timedelta64[us]')
-            return val
 
         for k in self.coords:
             data = time_check(self[k].values).tolist()

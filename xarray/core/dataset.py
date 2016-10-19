@@ -19,7 +19,8 @@ from .coordinates import DatasetCoordinates, LevelCoordinates, Indexes
 from .common import ImplementsDatasetReduce, BaseDataObject
 from .merge import (dataset_update_method, dataset_merge_method,
                     merge_data_and_coords)
-from .utils import Frozen, SortedKeysDict, maybe_wrap_array, hashable
+from .utils import (Frozen, SortedKeysDict, maybe_wrap_array, hashable,
+                    np_check, time_check)
 from .variable import (Variable, as_variable, IndexVariable, broadcast_variables)
 from .pycompat import (iteritems, basestring, OrderedDict,
                        dask_array_type)
@@ -1917,6 +1918,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         Convert this dataset to a dictionary following xarray naming
         conventions.
 
+        Converts all variables and attributes to native Python objects
         Useful for coverting to json. To avoid datetime incompatibility
         use decode_times=False kwarg in xarrray.open_dataset.
 
@@ -1924,24 +1926,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         --------
         xarray.Dataset.from_dict
         """
-        def np_check(attrs):
-            # catch numpy arrays in attrs and convert to nested lists
-            attrs = dict(attrs)
-            for k, v in attrs.items():
-                if hasattr(v, 'tolist'):
-                    attrs.update({k: v.tolist()})
-            return attrs
-
         d = {'coords': {}, 'attrs': np_check(self.attrs),
              'dims': dict(self.dims), 'data_vars': {}}
-
-        def time_check(val):
-            # needed because of numpy bug GH#7619
-            if np.issubdtype(val.dtype, np.datetime64):
-                val = val.astype('datetime64[us]')
-            elif np.issubdtype(val.dtype, np.timedelta64):
-                val = val.astype('timedelta64[us]')
-            return val
 
         for k in self.coords:
             data = time_check(self[k].values).tolist()
