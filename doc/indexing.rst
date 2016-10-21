@@ -477,3 +477,17 @@ Both ``reindex_like`` and ``align`` work interchangeably between
     other = xr.DataArray(['a', 'b', 'c'], dims='other')
     # this is a no-op, because there are no shared dimension names
     ds.reindex_like(other)
+
+Underlying Indexes
+------------------
+
+xarray uses the :py:class:`pandas.Index` internally to perform indexing
+operations.  If you need to access the underlying indexes, they are available
+through the :py:attr:`~xarray.DataArray.indexes` attribute.
+
+.. ipython:: python
+
+   arr
+   arr.indexes
+   arr.indexes['time']
+
