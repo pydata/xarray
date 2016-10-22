@@ -137,7 +137,7 @@ class TestCase(unittest.TestCase):
             warnings.filterwarnings('always', message)
             yield
             assert len(w) > 0
-            assert all(message in str(wi.message) for wi in w)
+            assert any(message in str(wi.message) for wi in w)
 
     def assertVariableEqual(self, v1, v2):
         assert as_variable(v1).equals(v2), (v1, v2)
