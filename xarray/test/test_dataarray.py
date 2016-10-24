@@ -1994,11 +1994,13 @@ class TestDataArray(TestCase):
         x = np.random.randn(10, 3)
         t = list('abcdefghij')
         lat = [77.7, 83.2, 76]
-        attrs = {'coords': np.array([37, -110.1, 100]),
+        attrs = {'created': np.float64(1998),
+                 'coords': np.array([37, -110.1, 100]),
                  'maintainer': 'bar'}
         da = DataArray(x, {'t': t, 'lat': lat}, dims=['t', 'lat'],
                        attrs=attrs)
-        expected_attrs = {'coords': attrs['coords'].tolist(),
+        expected_attrs = {'created': np.asscalar(attrs['created']),
+                          'coords': attrs['coords'].tolist(),
                           'maintainer': 'bar'}
         actual = da.to_dict()
 

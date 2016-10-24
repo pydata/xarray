@@ -2125,12 +2125,14 @@ class TestDataset(TestCase):
         x = np.random.randn(10)
         y = np.random.randn(10)
         t = list('abcdefghij')
-        attrs = {'coords': np.array([37, -110.1, 100]),
+        attrs = {'created': np.float64(1998),
+                 'coords': np.array([37, -110.1, 100]),
                  'maintainer': 'bar'}
         ds = Dataset(OrderedDict([('a', ('t', x, attrs)),
                                   ('b', ('t', y, attrs)),
                                   ('t', ('t', t))]))
-        expected_attrs = {'coords': attrs['coords'].tolist(),
+        expected_attrs = {'created': np.asscalar(attrs['created']),
+                          'coords': attrs['coords'].tolist(),
                           'maintainer': 'bar'}
         actual = ds.to_dict()
 
