@@ -20,7 +20,7 @@ from .common import ImplementsDatasetReduce, BaseDataObject
 from .merge import (dataset_update_method, dataset_merge_method,
                     merge_data_and_coords)
 from .utils import (Frozen, SortedKeysDict, maybe_wrap_array, hashable,
-                    np_check, time_check)
+                    decode_numpy_dict_values, ensure_us_time_resolution)
 from .variable import (Variable, as_variable, IndexVariable, broadcast_variables)
 from .pycompat import (iteritems, basestring, OrderedDict,
                        dask_array_type)
@@ -1926,19 +1926,21 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         --------
         xarray.Dataset.from_dict
         """
-        d = {'coords': {}, 'attrs': np_check(self.attrs),
+        d = {'coords': {}, 'attrs': decode_numpy_dict_values(self.attrs),
              'dims': dict(self.dims), 'data_vars': {}}
 
         for k in self.coords:
-            data = time_check(self[k].values).tolist()
-            d['coords'].update({k: {'data': data,
-                                    'dims': self[k].dims,
-                                    'attrs': np_check(self[k].attrs)}})
+            data = ensure_us_time_resolution(self[k].values).tolist()
+            d['coords'].update({
+                k: {'data': data,
+                    'dims': self[k].dims,
+                    'attrs': decode_numpy_dict_values(self[k].attrs)}})
         for k in self.data_vars:
-            data = time_check(self[k].values).tolist()
-            d['data_vars'].update({k: {'data': data,
-                                       'dims': self[k].dims,
-                                       'attrs': np_check(self[k].attrs)}})
+            data = ensure_us_time_resolution(self[k].values).tolist()
+            d['data_vars'].update({
+                k: {'data': data,
+                    'dims': self[k].dims,
+                    'attrs': decode_numpy_dict_values(self[k].attrs)}})
         return d
 
     @classmethod
