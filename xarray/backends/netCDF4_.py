@@ -179,13 +179,16 @@ class NetCDF4DataStore(WritableCFDataStore):
     This store supports NetCDF3, NetCDF4 and OpenDAP datasets.
     """
     def __init__(self, filename, mode='r', format='NETCDF4', group=None,
-                 writer=None, clobber=True, diskless=False, persist=False):
+                 writer=None, clobber=True, diskless=False, persist=False,
+                 ds=None):
         import netCDF4 as nc4
         if format is None:
             format = 'NETCDF4'
-        ds = nc4.Dataset(filename, mode=mode, clobber=clobber,
-                         diskless=diskless, persist=persist,
-                         format=format)
+        if ds is None:
+            # sometimes users want to give a custom NetCDF object
+            ds = nc4.Dataset(filename, mode=mode, clobber=clobber,
+                             diskless=diskless, persist=persist,
+                             format=format)
         with close_on_error(ds):
             self.ds = _nc4_group(ds, group, mode)
         self.format = format
