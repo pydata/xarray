@@ -460,3 +460,25 @@ def hashable(v):
 
 def not_implemented(*args, **kwargs):
     return NotImplemented
+
+
+def decode_numpy_dict_values(attrs):
+    """Convert attribute values from numpy objects to native Python objects,
+    for use in to_dict"""
+    attrs = dict(attrs)
+    for k, v in attrs.items():
+        if isinstance(v, np.ndarray):
+            attrs[k] = v.tolist()
+        elif isinstance(v, np.generic):
+            attrs[k] = np.asscalar(v)
+    return attrs
+
+
+def ensure_us_time_resolution(val):
+    """Convert val out of numpy time, for use in to_dict.
+    Needed because of numpy bug GH#7619"""
+    if np.issubdtype(val.dtype, np.datetime64):
+        val = val.astype('datetime64[us]')
+    elif np.issubdtype(val.dtype, np.timedelta64):
+        val = val.astype('timedelta64[us]')
+    return val

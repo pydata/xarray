@@ -19,7 +19,8 @@ from .coordinates import DatasetCoordinates, LevelCoordinates, Indexes
 from .common import ImplementsDatasetReduce, BaseDataObject
 from .merge import (dataset_update_method, dataset_merge_method,
                     merge_data_and_coords)
-from .utils import Frozen, SortedKeysDict, maybe_wrap_array, hashable
+from .utils import (Frozen, SortedKeysDict, maybe_wrap_array, hashable,
+                    decode_numpy_dict_values, ensure_us_time_resolution)
 from .variable import (Variable, as_variable, IndexVariable, broadcast_variables)
 from .pycompat import (iteritems, basestring, OrderedDict,
                        dask_array_type)
@@ -1917,33 +1918,29 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         Convert this dataset to a dictionary following xarray naming
         conventions.
 
-        Useful for coverting to json.
+        Converts all variables and attributes to native Python objects
+        Useful for coverting to json. To avoid datetime incompatibility
+        use decode_times=False kwarg in xarrray.open_dataset.
 
         See also
         --------
         xarray.Dataset.from_dict
         """
-        d = {'coords': {}, 'attrs': dict(self.attrs), 'dims': dict(self.dims),
-             'data_vars': {}}
-
-        def time_check(val):
-            # needed because of numpy bug GH#7619
-            if np.issubdtype(val.dtype, np.datetime64):
-                val = val.astype('datetime64[us]')
-            elif np.issubdtype(val.dtype, np.timedelta64):
-                val = val.astype('timedelta64[us]')
-            return val
+        d = {'coords': {}, 'attrs': decode_numpy_dict_values(self.attrs),
+             'dims': dict(self.dims), 'data_vars': {}}
 
         for k in self.coords:
-            data = time_check(self[k].values).tolist()
-            d['coords'].update({k: {'data': data,
-                                    'dims': self[k].dims,
-                                    'attrs': dict(self[k].attrs)}})
+            data = ensure_us_time_resolution(self[k].values).tolist()
+            d['coords'].update({
+                k: {'data': data,
+                    'dims': self[k].dims,
+                    'attrs': decode_numpy_dict_values(self[k].attrs)}})
         for k in self.data_vars:
-            data = time_check(self[k].values).tolist()
-            d['data_vars'].update({k: {'data': data,
-                                       'dims': self[k].dims,
-                                       'attrs': dict(self[k].attrs)}})
+            data = ensure_us_time_resolution(self[k].values).tolist()
+            d['data_vars'].update({
+                k: {'data': data,
+                    'dims': self[k].dims,
+                    'attrs': decode_numpy_dict_values(self[k].attrs)}})
         return d
 
     @classmethod
