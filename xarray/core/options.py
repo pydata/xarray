@@ -1,4 +1,5 @@
-OPTIONS = {'display_width': 80}
+OPTIONS = {'display_width': 80,
+           'join': "inner"}
 
 
 class set_options(object):

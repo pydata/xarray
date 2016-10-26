@@ -25,6 +25,7 @@ from .variable import (Variable, as_variable, IndexVariable, broadcast_variables
 from .pycompat import (iteritems, basestring, OrderedDict,
                        dask_array_type)
 from .combine import concat
+from .options import OPTIONS
 
 
 # list of attributes of pd.DatetimeIndex that are ndarrays of time info
@@ -2018,13 +2019,15 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         return func
 
     @staticmethod
-    def _binary_op(f, reflexive=False, join='inner', fillna=False):
+    def _binary_op(f, reflexive=False, join=None, fillna=False):
         @functools.wraps(f)
         def func(self, other):
             if isinstance(other, groupby.GroupBy):
                 return NotImplemented
             if hasattr(other, 'indexes'):
-                self, other = align(self, other, join=join, copy=False)
+                # if user does not specify join, default to OPTIONS['join']
+                how_to_join = join if join is not None else OPTIONS['join']
+                self, other = align(self, other, join=how_to_join, copy=False)
             g = f if not reflexive else lambda x, y: f(y, x)
             ds = self._calculate_binary_op(g, other, fillna=fillna)
             return ds
