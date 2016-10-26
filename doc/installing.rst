@@ -59,9 +59,7 @@ with its recommended dependencies using the conda command line tool::
 
 .. _conda: http://conda.io/
 
-We recommend using the community maintained
-`conda-forge <https://conda-forge.github.io/>`__ channel if you need difficult
-to build dependencies such as cartopy or pynio:
+We recommend using the community maintained `conda-forge <https://conda-forge.github.io/>`__ channel if you need difficult\-to\-build dependencies such as cartopy or pynio::
 
     $ conda install -c conda-forge xarray cartopy pynio
 
