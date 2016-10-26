@@ -12,6 +12,7 @@ except ImportError:
 
 import numpy as np
 import pandas as pd
+import xarray as xr
 import pytest
 
 from xarray import (align, broadcast, concat, merge, conventions, backends,
@@ -2915,6 +2916,47 @@ class TestDataset(TestCase):
         self.assertEqual(len(new_ds.data_vars), 1)
         for var in new_ds.data_vars:
             self.assertEqual(new_ds[var].height, '10 m')
+
+    def test_binary_op_join_setting(self):
+        """
+        A test method to verify the ability to set binary operation join kwarg
+        ("inner", "outer", "left", "right") via xr.set_options().
+        """
+        # First we set up a data array
+        xdim, ydim, zdim = 'x', 'y', 'z'
+        xcoords, ycoords, zcoords = ['a', 'b', 'c'], [-2, 0, 2], [0, 1, 2]
+        total_size = len(xcoords) * len(ycoords) * len(zcoords)
+        # create a 3-by-3-by-3 data array
+        arr = DataArray(np.arange(total_size).\
+                        reshape(len(xcoords),len(ycoords),len(zcoords)),
+                        [(xdim, xcoords), (ydim, ycoords),(zdim, zcoords)])
+        # now create a data array with the last x slice missing
+        arr1 = arr[0:-1,:,:].copy()
+        ds1 = arr1.to_dataset(name='foo')
+        # create another data array with the last z slice missing
+        arr2 = arr[:,:,0:-1].copy()
+        ds2 = arr2.to_dataset(name='foo') # needs to be name='foo' as well
+        # because the default in OPTIONS is join="inner", we test "outer" first
+        xr.set_options(join="outer")
+        result = ds1 + ds2
+        self.assertTrue(result.foo.size == total_size) # should be 3 * 3 * 3
+        self.assertTrue(result.foo.shape == arr.shape)
+        self.assertTrue(result.foo[-1,:,:].isnull().all())
+        self.assertTrue(result.foo[:,:,-1].isnull().all())
+        # now revert back to join="inner"
+        xr.set_options(join="inner")
+        result = ds1 + ds2
+        self.assertTrue(result.foo.size == \
+                        (len(xcoords)-1)*len(ycoords)*(len(zcoords)-1))
+        self.assertTrue(result.foo.shape == \
+                        (len(xcoords)-1, len(ycoords), len(zcoords)-1))
+        self.assertTrue(result.foo.notnull().all())
+        self.assertTrue('c' not in list(result.foo['x']))
+        self.assertTrue(2 not in list(result.foo['z']))
+        # just for kicks, what happens when the dataarrays have different names?
+        ds3 = arr1.to_dataset(name='bar')
+        result = ds1 + ds3
+        self.assertTrue(len(result.data_vars)==0) # empty dataset
 
 
 ### Py.test tests
