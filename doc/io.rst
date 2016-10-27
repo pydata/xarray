@@ -25,7 +25,7 @@ module:
 
 .. ipython:: python
 
-    import cPickle as pickle
+    import pickle
 
     ds = xr.Dataset({'foo': (('x', 'y'), np.random.rand(4, 5))},
                     coords={'x': [10, 20, 30, 40],
@@ -51,6 +51,34 @@ and lets you use xarray objects with Python modules like
    refined, we make no guarantees (at this point) that objects pickled with
    this version of xarray will work in future versions.
 
+.. _dictionary io:
+
+Dictionary
+----------
+
+Serializing an xarray object to a Python dictionary is also simple.
+
+We can convert a ``Dataset`` (or a ``DataArray``) to a dict using
+:py:meth:`~xarray.Dataset.to_dict`:
+
+.. ipython:: python
+
+    d = ds.to_dict()
+    d
+
+We can create a new xarray object from a dict using
+:py:meth:`~xarray.Dataset.from_dict`:
+
+.. ipython:: python
+
+    ds_dict = xr.Dataset.from_dict(d)
+    ds_dict
+
+Dictionary support allows for flexible use of xarray objects. It doesn't
+require external libraries and dicts can easily be pickled, or converted to
+json, or geojson. All the values are converted to lists, so dicts might
+be quite large.
+
 netCDF
 ------
 
@@ -58,7 +86,7 @@ Currently, the only disk based serialization format that xarray directly support
 is `netCDF`__. netCDF is a file format for fully self-described datasets that
 is widely used in the geosciences and supported on almost all platforms. We use
 netCDF because xarray was based on the netCDF data model, so netCDF files on disk
-directly correspond to :py:class:`~xarray.Dataset` objects. Recent versions
+directly correspond to :py:class:`~xarray.Dataset` objects. Recent versions of
 netCDF are based on the even more widely used HDF5 file-format.
 
 __ http://www.unidata.ucar.edu/software/netcdf/
@@ -89,6 +117,14 @@ We can load netCDF files to create a new Dataset using
     ds_disk = xr.open_dataset('saved_on_disk.nc')
     ds_disk
 
+Similarly, a DataArray can be saved to disk using the
+:py:attr:`DataArray.to_netcdf <xarray.DataArray.to_netcdf>` method, and loaded
+from disk using the :py:func:`~xarray.open_dataarray` function. As netCDF files
+correspond to :py:class:`~xarray.Dataset` objects, these functions internally
+convert the ``DataArray`` to a ``Dataset`` before saving, and then convert back
+when loading, ensuring that the ``DataArray`` that is loaded is always exactly
+the same as the one that was saved.
+
 A dataset can also be loaded or written to a specific group within a netCDF
 file. To load from a group, pass a ``group`` keyword argument to the
 ``open_dataset`` function. The group can be specified as a path-like
@@ -97,12 +133,10 @@ string, e.g., to access subgroup 'bar' within group 'foo' pass
 pass ``mode='a'`` to ``to_netcdf`` to ensure that each call does not delete the
 file.
 
-Data is loaded lazily from netCDF files. You can manipulate, slice and subset
+Data is always loaded lazily from netCDF files. You can manipulate, slice and subset
 Dataset and DataArray objects, and no array values are loaded into memory until
 you try to perform some sort of actual computation. For an example of how these
 lazy arrays work, see the OPeNDAP section below.
-
-.. todo: clarify this WRT dask.array
 
 It is important to note that when you modify values of a Dataset, even one
 linked to files on disk, only the in-memory copy you are manipulating in xarray
@@ -124,11 +158,13 @@ netCDF file. However, it's often cleaner to use a ``with`` statement:
     with xr.open_dataset('saved_on_disk.nc') as ds:
         print(ds.keys())
 
-..  Although xarray provides reasonable support for incremental reads of files on
-    disk, it does not yet support incremental writes, which is important for
-    dealing with datasets that do not fit into memory. This is a significant
-    shortcoming that we hope to resolve (:issue:`199`) by adding the ability to
-    create ``Dataset`` objects directly linked to a netCDF file on disk.
+Although xarray provides reasonable support for incremental reads of files on
+disk, it does not support incremental writes, which can be a useful strategy
+for dealing with datasets too big to fit into memory. Instead, xarray integrates
+with dask.array (see :ref:`dask`), which provides a fully featured engine for
+streaming computation.
+
+.. _io.encoding:
 
 Reading encoded data
 ~~~~~~~~~~~~~~~~~~~~

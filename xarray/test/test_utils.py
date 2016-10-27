@@ -6,6 +6,16 @@ from xarray.core.pycompat import OrderedDict
 from . import TestCase
 
 
+class TestAlias(TestCase):
+    def test(self):
+        def new_method():
+            pass
+        old_method = utils.alias(new_method, 'old_method')
+        assert 'deprecated' in old_method.__doc__
+        with self.assertWarns('deprecated'):
+            old_method()
+
+
 class TestSafeCastToIndex(TestCase):
     def test(self):
         dates = pd.date_range('2000-01-01', periods=10)
@@ -20,6 +30,17 @@ class TestSafeCastToIndex(TestCase):
             actual = utils.safe_cast_to_index(array)
             self.assertArrayEqual(expected, actual)
             self.assertEqual(expected.dtype, actual.dtype)
+
+
+def test_multiindex_from_product_levels():
+    result = utils.multiindex_from_product_levels([['b', 'a'], [1, 3, 2]])
+    np.testing.assert_array_equal(
+        result.labels, [[0, 0, 0, 1, 1, 1], [0, 1, 2, 0, 1, 2]])
+    np.testing.assert_array_equal(result.levels[0], ['b', 'a'])
+    np.testing.assert_array_equal(result.levels[1], [1, 3, 2])
+
+    other = pd.MultiIndex.from_product([['b', 'a'], [1, 3, 2]])
+    np.testing.assert_array_equal(result.values, other.values)
 
 
 class TestArrayEquiv(TestCase):

@@ -1,11 +1,18 @@
+"""String formatting routines for __repr__.
+
+For the sake of sanity, we only do internal formatting with unicode, which can
+be returned by the __unicode__ special method. We use ReprMixin to provide the
+__repr__ method so that things can work on Python 2.
+"""
 from datetime import datetime, timedelta
 import functools
 
 import numpy as np
 import pandas as pd
+from pandas.tslib import OutOfBoundsDatetime
 
 from .options import OPTIONS
-from .pycompat import iteritems, unicode_type, bytes_type, dask_array_type
+from .pycompat import PY2, iteritems, unicode_type, bytes_type, dask_array_type
 
 
 def pretty_print(x, numchars):
@@ -13,11 +20,15 @@ def pretty_print(x, numchars):
     that it is numchars long, padding with trailing spaces or truncating with
     ellipses as necessary
     """
-    s = str(x)
-    if len(s) > numchars:
-        return s[:(numchars - 3)] + '...'
-    else:
-        return s + ' ' * (numchars - len(s))
+    s = maybe_truncate(x, numchars)
+    return s + ' ' * max(numchars - len(s), 0)
+
+
+def maybe_truncate(obj, maxlen=500):
+    s = unicode_type(obj)
+    if len(s) > maxlen:
+        s = s[:(maxlen - 3)] + u'...'
+    return s
 
 
 def wrap_indent(text, start='', length=None):
@@ -25,6 +36,23 @@ def wrap_indent(text, start='', length=None):
         length = len(start)
     indent = '\n' + ' ' * length
     return start + indent.join(x for x in text.splitlines())
+
+
+def ensure_valid_repr(string):
+    """Ensure that the given value is valid for the result of __repr__.
+
+    On Python 2, this means we need to convert unicode to bytes. We won't need
+    this function once we drop Python 2.7 support.
+    """
+    if PY2 and isinstance(string, unicode):
+        string = string.encode('utf-8')
+    return string
+
+
+class ReprMixin(object):
+    """Mixin that defines __repr__ for a class that already has __unicode__."""
+    def __repr__(self):
+        return ensure_valid_repr(self.__unicode__())
 
 
 def _get_indexer_at_least_n_items(shape, n_desired):
@@ -55,10 +83,23 @@ def first_n_items(x, n_desired):
         x = x[indexer]
     return np.asarray(x).flat[:n_desired]
 
+def last_item(x):
+    """Returns the last item of an array"""
+    if x.size == 0:
+        # work around for https://github.com/numpy/numpy/issues/5195
+        return []
+
+    indexer = (slice(-1, None), ) * x.ndim
+    return np.array(x[indexer], ndmin=1)
 
 def format_timestamp(t):
     """Cast given object to a Timestamp and return a nicely formatted string"""
-    datetime_str = str(pd.Timestamp(t))
+    # Timestamp is only valid for 1678 to 2262
+    try:
+        datetime_str = unicode_type(pd.Timestamp(t))
+    except OutOfBoundsDatetime:
+        datetime_str = unicode_type(t)
+
     try:
         date_str, time_str = datetime_str.split()
     except ValueError:
@@ -73,7 +114,7 @@ def format_timestamp(t):
 
 def format_timedelta(t, timedelta_format=None):
     """Cast given object to a Timestamp and return a nicely formatted string"""
-    timedelta_str = str(pd.Timedelta(t))
+    timedelta_str = unicode_type(pd.Timedelta(t))
     try:
         days_str, time_str = timedelta_str.split(' days ')
     except ValueError:
@@ -97,9 +138,9 @@ def format_item(x, timedelta_format=None, quote_strings=True):
     elif isinstance(x, (unicode_type, bytes_type)):
         return repr(x) if quote_strings else x
     elif isinstance(x, (float, np.float)):
-        return '{0:.4}'.format(x)
+        return u'{0:.4}'.format(x)
     else:
-        return str(x)
+        return unicode_type(x)
 
 
 def format_items(x):
@@ -135,13 +176,13 @@ def format_array_flat(items_ndarray, max_width):
     cum_len = np.cumsum([len(s) + 1 for s in pprint_items]) - 1
     if (max_possibly_relevant < items_ndarray.size or
             (cum_len > max_width).any()):
-        end_padding = ' ...'
+        end_padding = u' ...'
         count = max(np.argmax((cum_len + len(end_padding)) > max_width), 1)
         pprint_items = pprint_items[:count]
     else:
-        end_padding = ''
+        end_padding = u''
 
-    pprint_str = ' '.join(pprint_items) + end_padding
+    pprint_str = u' '.join(pprint_items) + end_padding
     return pprint_str
 
 
@@ -149,14 +190,32 @@ def _summarize_var_or_coord(name, var, col_width, show_values=True,
                             marker=' ', max_width=None):
     if max_width is None:
         max_width = OPTIONS['display_width']
-    first_col = pretty_print('  %s %s ' % (marker, name), col_width)
-    dims_str = '(%s) ' % ', '.join(map(str, var.dims)) if var.dims else ''
-    front_str = first_col + dims_str + ('%s ' % var.dtype)
+    first_col = pretty_print(u'  %s %s ' % (marker, name), col_width)
+    if var.dims:
+        dims_str = u'(%s) ' % u', '.join(map(unicode_type, var.dims))
+    else:
+        dims_str = u''
+    front_str = u'%s%s%s ' % (first_col, dims_str, var.dtype)
     if show_values:
         values_str = format_array_flat(var, max_width - len(front_str))
     else:
-        values_str = '...'
+        values_str = u'...'
+
     return front_str + values_str
+
+
+def _summarize_coord_multiindex(coord, col_width, marker):
+    first_col = pretty_print(u'  %s %s ' % (marker, coord.name), col_width)
+    return u'%s(%s) MultiIndex' % (first_col, unicode_type(coord.dims[0]))
+
+
+def _summarize_coord_levels(coord, col_width, marker=u'-'):
+    relevant_coord = coord[:30]
+    return u'\n'.join(
+        [_summarize_var_or_coord(lname,
+                                 relevant_coord.get_level_variable(lname),
+                                 col_width, marker=marker)
+         for lname in coord.level_names])
 
 
 def _not_remote(var):
@@ -177,27 +236,44 @@ def summarize_var(name, var, col_width):
 def summarize_coord(name, var, col_width):
     is_index = name in var.dims
     show_values = is_index or _not_remote(var)
-    marker = '*' if is_index else ' '
+    marker = u'*' if is_index else u' '
+    if is_index:
+        coord = var.variable.to_index_variable()
+        if coord.level_names is not None:
+            return u'\n'.join(
+                [_summarize_coord_multiindex(coord, col_width, marker),
+                 _summarize_coord_levels(coord, col_width)])
     return _summarize_var_or_coord(name, var, col_width, show_values, marker)
-
-
-def _maybe_truncate(obj, maxlen=500):
-    s = str(obj)
-    if len(s) > maxlen:
-        s = s[:(maxlen - 3)] + '...'
-    return s
 
 
 def summarize_attr(key, value, col_width=None):
     # ignore col_width for now to more clearly distinguish attributes
-    return '    %s: %s' % (key, _maybe_truncate(value))
+    return u'    %s: %s' % (key, maybe_truncate(value))
 
 
-EMPTY_REPR = '    *empty*'
+EMPTY_REPR = u'    *empty*'
 
 
-def _calculate_col_width(mapping):
-    max_name_length = max(len(str(k)) for k in mapping) if mapping else 0
+def _get_col_items(mapping):
+    """Get all column items to format, including both keys of `mapping`
+    and MultiIndex levels if any.
+    """
+    from .variable import IndexVariable
+
+    col_items = []
+    for k, v in mapping.items():
+        col_items.append(k)
+        var = getattr(v, 'variable', v)
+        if isinstance(var, IndexVariable):
+            level_names = var.to_index_variable().level_names
+            if level_names is not None:
+                col_items += list(level_names)
+    return col_items
+
+
+def _calculate_col_width(col_items):
+    max_name_length = (max(len(unicode_type(s)) for s in col_items)
+                       if col_items else 0)
     col_width = max(max_name_length, 7) + 6
     return col_width
 
@@ -205,43 +281,46 @@ def _calculate_col_width(mapping):
 def _mapping_repr(mapping, title, summarizer, col_width=None):
     if col_width is None:
         col_width = _calculate_col_width(mapping)
-    summary = ['%s:' % title]
+    summary = [u'%s:' % title]
     if mapping:
         summary += [summarizer(k, v, col_width) for k, v in mapping.items()]
     else:
         summary += [EMPTY_REPR]
-    return '\n'.join(summary)
+    return u'\n'.join(summary)
 
 
-coords_repr = functools.partial(_mapping_repr, title='Coordinates',
-                                summarizer=summarize_coord)
-
-
-vars_repr = functools.partial(_mapping_repr, title='Data variables',
+vars_repr = functools.partial(_mapping_repr, title=u'Data variables',
                               summarizer=summarize_var)
 
 
-attrs_repr = functools.partial(_mapping_repr, title='Attributes',
+attrs_repr = functools.partial(_mapping_repr, title=u'Attributes',
                                summarizer=summarize_attr)
+
+
+def coords_repr(coords, col_width=None):
+    if col_width is None:
+        col_width = _calculate_col_width(_get_col_items(coords))
+    return _mapping_repr(coords, title=u'Coordinates',
+                         summarizer=summarize_coord, col_width=col_width)
 
 
 def indexes_repr(indexes):
     summary = []
     for k, v in indexes.items():
         summary.append(wrap_indent(repr(v), '%s: ' % k))
-    return '\n'.join(summary)
+    return u'\n'.join(summary)
 
 
 def array_repr(arr):
-    # used for DataArray, Variable and Coordinate
+    # used for DataArray, Variable and IndexVariable
     if hasattr(arr, 'name') and arr.name is not None:
         name_str = '%r ' % arr.name
     else:
-        name_str = ''
-    dim_summary = ', '.join('%s: %s' % (k, v) for k, v
+        name_str = u''
+    dim_summary = u', '.join(u'%s: %s' % (k, v) for k, v
                             in zip(arr.dims, arr.shape))
 
-    summary = ['<xarray.%s %s(%s)>'
+    summary = [u'<xarray.%s %s(%s)>'
                % (type(arr).__name__, name_str, dim_summary)]
 
     if isinstance(getattr(arr, 'variable', arr)._data, dask_array_type):
@@ -249,7 +328,7 @@ def array_repr(arr):
     elif arr._in_memory or arr.size < 1e5:
         summary.append(repr(arr.values))
     else:
-        summary.append('[%s values with dtype=%s]' % (arr.size, arr.dtype))
+        summary.append(u'[%s values with dtype=%s]' % (arr.size, arr.dtype))
 
     if hasattr(arr, 'coords'):
         if arr.coords:
@@ -258,21 +337,21 @@ def array_repr(arr):
     if arr.attrs:
         summary.append(attrs_repr(arr.attrs))
 
-    return '\n'.join(summary)
+    return u'\n'.join(summary)
 
 
 def dataset_repr(ds):
-    summary = ['<xarray.%s>' % type(ds).__name__]
+    summary = [u'<xarray.%s>' % type(ds).__name__]
 
-    col_width = _calculate_col_width(ds)
+    col_width = _calculate_col_width(_get_col_items(ds))
 
-    dims_start = pretty_print('Dimensions:', col_width)
-    all_dim_strings = ['%s: %s' % (k, v) for k, v in iteritems(ds.dims)]
-    summary.append('%s(%s)' % (dims_start, ', '.join(all_dim_strings)))
+    dims_start = pretty_print(u'Dimensions:', col_width)
+    all_dim_strings = [u'%s: %s' % (k, v) for k, v in iteritems(ds.dims)]
+    summary.append(u'%s(%s)' % (dims_start, ', '.join(all_dim_strings)))
 
     summary.append(coords_repr(ds.coords, col_width=col_width))
     summary.append(vars_repr(ds.data_vars, col_width=col_width))
     if ds.attrs:
         summary.append(attrs_repr(ds.attrs))
 
-    return '\n'.join(summary)
+    return u'\n'.join(summary)

@@ -75,14 +75,15 @@ expensive if you are manipulating your dataset lazily using :ref:`dask`.
 Merge
 ~~~~~
 
-To combine variables and coordinates between multiple Datasets, you can use the
-:py:meth:`~xarray.Dataset.merge` and :py:meth:`~xarray.Dataset.update` methods.
-Merge checks for conflicting variables before merging and by default it returns
-a new Dataset:
+To combine variables and coordinates between multiple ``DataArray`` and/or
+``Dataset`` object, use :py:func:`~xarray.merge`. It can merge a list of
+``Dataset``, ``DataArray`` or dictionaries of objects convertible to
+``DataArray`` objects:
 
 .. ipython:: python
 
-    ds.merge({'hello': ('space', np.arange(3) + 10)})
+    xr.merge([ds, ds.rename({'foo': 'bar'})])
+    xr.merge([xr.DataArray(n, name='var%d' % n) for n in range(5)])
 
 If you merge another dataset (or a dictionary including data array objects), by
 default the resulting dataset will be aligned on the **union** of all index
@@ -91,9 +92,22 @@ coordinates:
 .. ipython:: python
 
     other = xr.Dataset({'bar': ('x', [1, 2, 3, 4]), 'x': list('abcd')})
-    ds.merge(other)
+    xr.merge([ds, other])
 
-This ensures that the ``merge`` is non-destructive.
+This ensures that ``merge`` is non-destructive. ``xarray.MergeError`` is raised
+if you attempt to merge two variables with the same name but different values:
+
+.. ipython::
+
+    @verbatim
+    In [1]: xr.merge([ds, ds + 1])
+    MergeError: conflicting values for variable 'foo' on objects to be combined:
+    first value: <xarray.Variable (x: 2, y: 3)>
+    array([[ 0.4691123 , -0.28286334, -1.5090585 ],
+           [-1.13563237,  1.21211203, -0.17321465]])
+    second value: <xarray.Variable (x: 2, y: 3)>
+    array([[ 1.4691123 ,  0.71713666, -0.5090585 ],
+           [-0.13563237,  2.21211203,  0.82678535]])
 
 The same non-destructive merging between ``DataArray`` index coordinates is
 used in the :py:class:`~xarray.Dataset` constructor:
@@ -178,3 +192,23 @@ numpy):
 
 Note that ``NaN`` does not compare equal to ``NaN`` in element-wise comparison;
 you may need to deal with missing values explicitly.
+
+.. _combining.no_conflicts:
+
+Merging with 'no_conflicts'
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The ``compat`` argument ``'no_conflicts'`` is only available when
+combining xarray objects with ``merge``. In addition to the above comparison
+methods it allows the merging of xarray objects with locations where *either*
+have ``NaN`` values. This can be used to combine data with overlapping
+coordinates as long as any non-missing values agree or are disjoint:
+
+.. ipython:: python
+    ds1 = xr.Dataset({'a': ('x', [10, 20, 30, np.nan])}, {'x': [1, 2, 3, 4]})
+    ds2 = xr.Dataset({'a': ('x', [np.nan, 30, 40, 50])}, {'x': [2, 3, 4, 5]})
+    xr.merge([ds1, ds2], compat='no_conflicts')
+
+Note that due to the underlying representation of missing values as floating
+point numbers (``NaN``), variable data type is not always preserved when merging
+in this manner.

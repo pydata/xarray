@@ -35,7 +35,9 @@ Documentation
 .. toctree::
    :maxdepth: 1
 
+   whats-new
    why-xarray
+   faq
    examples
    installing
    data-structures
@@ -50,8 +52,7 @@ Documentation
    dask
    plotting
    api
-   faq
-   whats-new
+   internals
 
 See also
 --------
@@ -70,10 +71,12 @@ See also
 Get in touch
 ------------
 
-- To ask questions or discuss xarray, use the `mailing list`_.
-- Report bugs, suggest feature ideas or view the source code `on GitHub`_.
-- For interactive discussion, we have a chatroom `on Gitter`_.
+- Ask usage questions on `StackOverflow`_.
+- Report bugs, suggest features or view the source code `on GitHub`_.
+- For less well defined questions or ideas, use the `mailing list`_.
+- You can also try our chatroom `on Gitter`_.
 
+.. _StackOverFlow: http://stackoverflow.com/questions/tagged/python-xarray
 .. _mailing list: https://groups.google.com/forum/#!forum/xarray
 .. _on Gitter: https://gitter.im/pydata/xarray
 .. _on GitHub: http://github.com/pydata/xarray

@@ -22,7 +22,7 @@ _endian_lookup = {'=': 'native',
                   '|': 'native'}
 
 
-class NetCDF4ArrayWrapper(NDArrayMixin):
+class BaseNetCDF4Array(NDArrayMixin):
     def __init__(self, array, is_remote=False):
         self.array = array
         self.is_remote = is_remote
@@ -36,6 +36,12 @@ class NetCDF4ArrayWrapper(NDArrayMixin):
             # string concatenation via conventions.decode_cf_variable
             dtype = np.dtype('O')
         return dtype
+
+
+class NetCDF4ArrayWrapper(BaseNetCDF4Array):
+    def __init__(self, array, is_remote=False):
+        self.array = array
+        self.is_remote = is_remote
 
     def __getitem__(self, key):
         if self.is_remote:  # pragma: no cover
@@ -72,7 +78,7 @@ def _nc4_values_and_dtype(var):
             var = var.astype('O')
         dtype = str
     elif var.dtype.kind == 'S':
-        # use character arrays instead of unicode, because unicode suppot in
+        # use character arrays instead of unicode, because unicode support in
         # netCDF4 is still rather buggy
         data, dims = maybe_convert_to_char_array(var.data, var.dims)
         var = Variable(dims, data, var.attrs, var.encoding)

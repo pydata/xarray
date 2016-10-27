@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
 
-from .pycompat import basestring, iteritems, suppress, dask_array_type
+from .pycompat import basestring, iteritems, suppress, dask_array_type, bytes_type
 from . import formatting
 from .utils import SortedKeysDict, not_implemented
 
@@ -29,6 +29,13 @@ class ImplementsArrayReduce(object):
             and 'axis' arguments can be supplied. If neither are supplied, then
             `{name}` is calculated over axes."""
 
+    _cum_extra_args_docstring = \
+        """dim : str or sequence of str, optional
+            Dimension over which to apply `{name}`.
+        axis : int or sequence of int, optional
+            Axis over which to apply `{name}`. Only one of the 'dim'
+            and 'axis' arguments can be supplied."""
+
 
 class ImplementsDatasetReduce(object):
     @classmethod
@@ -50,6 +57,13 @@ class ImplementsDatasetReduce(object):
         """dim : str or sequence of str, optional
             Dimension(s) over which to apply `func`.  By default `func` is
             applied over all dimensions."""
+
+    _cum_extra_args_docstring = \
+        """dim : str or sequence of str, optional
+            Dimension over which to apply `{name}`.
+        axis : int or sequence of int, optional
+            Axis over which to apply `{name}`. Only one of the 'dim'
+            and 'axis' arguments can be supplied."""
 
 
 class ImplementsRollingArrayReduce(object):
@@ -109,7 +123,7 @@ class ImplementsRollingArrayReduce(object):
         return wrapped_func
 
 
-class AbstractArray(ImplementsArrayReduce):
+class AbstractArray(ImplementsArrayReduce, formatting.ReprMixin):
     def __bool__(self):
         return bool(self.values)
 
@@ -181,7 +195,7 @@ class AttrAccessMixin(object):
     @property
     def _attr_sources(self):
         """List of places to look-up items for attribute-style access"""
-        return [self, self.attrs]
+        return []
 
     def __getattr__(self, name):
         if name != '__setstate__':
@@ -211,8 +225,9 @@ class AttrAccessMixin(object):
         """Provide method name lookup and completion. Only provide 'public'
         methods.
         """
-        extra_attrs = [item for sublist in self._attr_sources
-                       for item in sublist]
+        extra_attrs = [
+            item for sublist in self._attr_sources for item in sublist
+            if isinstance(item, basestring)]
         return sorted(set(dir(type(self)) + extra_attrs))
 
 
@@ -325,7 +340,7 @@ class BaseDataObject(AttrAccessMixin):
 
         Parameters
         ----------
-        group : str, DataArray or Coordinate
+        group : str, DataArray or IndexVariable
             Array whose unique values should be used to group this array. If a
             string, must be the name of a variable contained in this dataset.
         squeeze : boolean, optional
@@ -343,9 +358,66 @@ class BaseDataObject(AttrAccessMixin):
             group = self[group]
         return self.groupby_cls(self, group, squeeze=squeeze)
 
+    def groupby_bins(self, group, bins, right=True, labels=None, precision=3,
+                     include_lowest=False, squeeze=True):
+        """Returns a GroupBy object for performing grouped operations.
+
+        Rather than using all unique values of `group`, the values are discretized
+        first by applying `pandas.cut` [1]_ to `group`.
+
+        Parameters
+        ----------
+        group : str, DataArray or IndexVariable
+            Array whose binned values should be used to group this array. If a
+            string, must be the name of a variable contained in this dataset.
+        bins : int or array of scalars
+            If bins is an int, it defines the number of equal-width bins in the
+            range of x. However, in this case, the range of x is extended by .1%
+            on each side to include the min or max values of x. If bins is a
+            sequence it defines the bin edges allowing for non-uniform bin
+            width. No extension of the range of x is done in this case.
+        right : boolean, optional
+            Indicates whether the bins include the rightmost edge or not. If
+            right == True (the default), then the bins [1,2,3,4] indicate
+            (1,2], (2,3], (3,4].
+        labels : array or boolean, default None
+            Used as labels for the resulting bins. Must be of the same length as
+            the resulting bins. If False, string bin labels are assigned by
+            `pandas.cut`.
+        precision : int
+            The precision at which to store and display the bins labels.
+        include_lowest : bool
+            Whether the first interval should be left-inclusive or not.
+        squeeze : boolean, optional
+            If "group" is a dimension of any arrays in this dataset, `squeeze`
+            controls whether the subarrays have a dimension of length 1 along
+            that dimension or if the dimension is squeezed out.
+
+        Returns
+        -------
+        grouped : GroupBy
+            A `GroupBy` object patterned after `pandas.GroupBy` that can be
+            iterated over in the form of `(unique_value, grouped_array)` pairs.
+            The name of the group has the added suffix `_bins` in order to
+            distinguish it from the original variable.
+
+        References
+        ----------
+        .. [1] http://pandas.pydata.org/pandas-docs/stable/generated/pandas.cut.html
+        """
+        if isinstance(group, basestring):
+            group = self[group]
+        return self.groupby_cls(self, group, squeeze=squeeze, bins=bins,
+                                cut_kwargs={'right': right, 'labels': labels,
+                                            'precision': precision,
+                                            'include_lowest': include_lowest})
+
     def rolling(self, min_periods=None, center=False, **windows):
         """
-        Moving window object.
+        Rolling window object.
+
+        Rolling window aggregations are much faster when bottleneck is
+        installed.
 
         Parameters
         ----------
@@ -371,7 +443,7 @@ class BaseDataObject(AttrAccessMixin):
                                 center=center, **windows)
 
     def resample(self, freq, dim, how='mean', skipna=None, closed=None,
-                 label=None, base=0):
+                 label=None, base=0, keep_attrs=False):
         """Resample this object to a new temporal resolution.
 
         Handles both downsampling and upsampling. Upsampling with filling is
@@ -415,6 +487,10 @@ class BaseDataObject(AttrAccessMixin):
             For frequencies that evenly subdivide 1 day, the "origin" of the
             aggregated intervals. For example, for '24H' frequency, base could
             range from 0 through 23.
+        keep_attrs : bool, optional
+            If True, the object's attributes (`attrs`) will be copied from
+            the original object to the new one.  If False (default), the new
+            object will be returned without attributes.
 
         Returns
         -------
@@ -438,15 +514,15 @@ class BaseDataObject(AttrAccessMixin):
         if isinstance(how, basestring):
             f = getattr(gb, how)
             if how in ['first', 'last']:
-                result = f(skipna=skipna)
+                result = f(skipna=skipna, keep_attrs=keep_attrs)
             else:
-                result = f(dim=dim.name, skipna=skipna)
+                result = f(dim=dim.name, skipna=skipna, keep_attrs=keep_attrs)
         else:
-            result = gb.reduce(how, dim=dim.name)
+            result = gb.reduce(how, dim=dim.name, keep_attrs=keep_attrs)
         result = result.rename({RESAMPLE_DIM: dim.name})
         return result
 
-    def where(self, cond):
+    def where(self, cond, other=None, drop=False):
         """Return an object of the same shape with all entries where cond is
         True and all other entries masked.
 
@@ -456,10 +532,15 @@ class BaseDataObject(AttrAccessMixin):
         Parameters
         ----------
         cond : boolean DataArray or Dataset
+        other : unimplemented, optional
+            Unimplemented placeholder for compatibility with future numpy / pandas versions
+        drop : boolean, optional
+            Coordinate labels that only correspond to NA values should be dropped
 
         Returns
         -------
-        same type as caller
+        same type as caller or if drop=True same type as caller with dimensions
+        reduced for dim element where mask is True
 
         Examples
         --------
@@ -476,8 +557,56 @@ class BaseDataObject(AttrAccessMixin):
         Coordinates:
           * y        (y) int64 0 1 2 3 4
           * x        (x) int64 0 1 2 3 4
+        >>> a.where((a > 6) & (a < 18), drop=True)
+        <xarray.DataArray (x: 5, y: 5)>
+        array([[ nan,  nan,   7.,   8.,   9.],
+               [ 10.,  11.,  12.,  13.,  14.],
+               [ 15.,  16.,  17.,  nan,  nan],
+        Coordinates:
+          * x        (x) int64 1 2 3
+          * y        (y) int64 0 1 2 3 4
         """
-        return self._where(cond)
+        if other is not None:
+            raise NotImplementedError("The optional argument 'other' has not yet been implemented")
+
+        if drop:
+            from .dataarray import DataArray
+            from .dataset import Dataset
+            # get cond with the minimal size needed for the Dataset
+            if isinstance(cond, Dataset):
+                clipcond = cond.to_array().any('variable')
+            elif isinstance(cond, DataArray):
+                clipcond = cond
+            else:
+                raise TypeError("Cond argument is %r but must be a %r or %r" %
+                                (cond, Dataset, DataArray))
+
+            # clip the data corresponding to coordinate dims that are not used
+            clip = dict(zip(clipcond.dims, [np.unique(adim)
+                                            for adim in np.nonzero(clipcond.values)]))
+            outcond = cond.isel(**clip)
+            outobj = self.sel(**outcond.indexes)
+        else:
+            outobj = self
+            outcond = cond
+
+        # preserve attributes
+        out = outobj._where(outcond)
+        out._copy_attrs_from(self)
+        return out
+
+    def close(self):
+        """Close any files linked to this object
+        """
+        if self._file_obj is not None:
+            self._file_obj.close()
+        self._file_obj = None
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        self.close()
 
     # this has no runtime function - these are listed so IDEs know these methods
     # are defined and don't warn on these operations

@@ -1,11 +1,15 @@
 from .core.alignment import align, broadcast, broadcast_arrays
 from .core.combine import concat, auto_combine
-from .core.variable import Variable, Coordinate
+from .core.extensions import (register_dataarray_accessor,
+                              register_dataset_accessor)
+from .core.variable import Variable, IndexVariable, Coordinate
 from .core.dataset import Dataset
 from .core.dataarray import DataArray
+from .core.merge import merge, MergeError
 from .core.options import set_options
 
-from .backends.api import open_dataset, open_mfdataset, save_mfdataset
+from .backends.api import (open_dataset, open_dataarray, open_mfdataset,
+                           save_mfdataset)
 from .conventions import decode_cf
 
 try:

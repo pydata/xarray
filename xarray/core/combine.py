@@ -3,8 +3,10 @@ import warnings
 import pandas as pd
 
 from . import utils
-from .pycompat import iteritems, reduce, OrderedDict, basestring
-from .variable import Variable, as_variable, Coordinate
+from .alignment import align
+from .merge import merge
+from .pycompat import iteritems, OrderedDict, basestring
+from .variable import Variable, as_variable, IndexVariable, concat as concat_vars
 
 
 def concat(objs, dim=None, data_vars='all', coords='different',
@@ -69,10 +71,11 @@ def concat(objs, dim=None, data_vars='all', coords='different',
 
     See also
     --------
+    merge
     auto_combine
     """
     # TODO: add join and ignore_index arguments copied from pandas.concat
-    # TODO: support concatenating scaler coordinates even if the concatenated
+    # TODO: support concatenating scalar coordinates even if the concatenated
     # dimension already exists
     from .dataset import Dataset
     from .dataarray import DataArray
@@ -122,14 +125,14 @@ def _calc_concat_dim_coord(dim):
     if isinstance(dim, basestring):
         coord = None
     elif not hasattr(dim, 'dims'):
-        # dim is not a DataArray or Coordinate
+        # dim is not a DataArray or IndexVariable
         dim_name = getattr(dim, 'name', None)
         if dim_name is None:
             dim_name = 'concat_dim'
-        coord = Coordinate(dim_name, dim)
+        coord = IndexVariable(dim_name, dim)
         dim = dim_name
     elif not hasattr(dim, 'name'):
-        coord = as_variable(dim).to_coord()
+        coord = as_variable(dim).to_index_variable()
         dim, = coord.dims
     else:
         coord = dim
@@ -200,10 +203,10 @@ def _dataset_concat(datasets, dim, data_vars, coords, compat, positions):
         raise ValueError("compat=%r invalid: must be 'equals' "
                          "or 'identical'" % compat)
 
-    # don't bother trying to work with datasets as a generator instead of a
-    # list; the gains would be minimal
-    datasets = [as_dataset(ds) for ds in datasets]
     dim, coord = _calc_concat_dim_coord(dim)
+    datasets = [as_dataset(ds) for ds in datasets]
+    datasets = align(*datasets, join='outer', copy=False, exclude=[dim])
+
     concat_over = _calc_concat_over(datasets, dim, data_vars, coords)
 
     def insert_result_variable(k, v):
@@ -217,7 +220,6 @@ def _dataset_concat(datasets, dim, data_vars, coords, compat, positions):
     result_coord_names = set(datasets[0].coords)
     result_attrs = datasets[0].attrs
 
-    # Dataset({}, attrs=datasets[0].attrs)
     for k, v in datasets[0].variables.items():
         if k not in concat_over:
             insert_result_variable(k, v)
@@ -265,7 +267,7 @@ def _dataset_concat(datasets, dim, data_vars, coords, compat, positions):
     # stack up each variable to fill-out the dataset
     for k in concat_over:
         vars = ensure_common_dims([ds.variables[k] for ds in datasets])
-        combined = Variable.concat(vars, dim, positions)
+        combined = concat_vars(vars, dim, positions)
         insert_result_variable(k, combined)
 
     result = Dataset(result_vars, attrs=result_attrs)
@@ -327,28 +329,25 @@ def _auto_concat(datasets, dim=None):
         return concat(datasets, dim=dim)
 
 
-def auto_combine(datasets, concat_dim=None):
+_CONCAT_DIM_DEFAULT = '__infer_concat_dim__'
+
+
+def auto_combine(datasets,
+                 concat_dim=_CONCAT_DIM_DEFAULT,
+                 compat='no_conflicts'):
     """Attempt to auto-magically combine the given datasets into one.
 
     This method attempts to combine a list of datasets into a single entity by
     inspecting metadata and using a combination of concat and merge.
 
-    It does not concatenate along more than one dimension or align or sort data
-    under any circumstances. It will fail in complex cases, for which you
-    should use ``concat`` and ``merge`` explicitly.
+    It does not concatenate along more than one dimension or sort data under any
+    circumstances. It does align coordinates, but different variables on
+    datasets can cause it to fail under some scenarios. In complex cases, you
+    may need to clean up your data and use ``concat``/``merge`` explicitly.
 
-    When ``auto_combine`` may succeed:
-
-    * You have N years of data and M data variables. Each combination of a
-      distinct time period and test of data variables is saved its own dataset.
-
-    Examples of when ``auto_combine`` fails:
-
-    * In the above scenario, one file is missing, containing the data for one
-      year's data for one variable.
-    * In the most recent year, there is an additional data variable.
-    * Your data includes "time" and "station" dimensions, and each year's data
-      has a different set of stations.
+    ``auto_combine`` works well if you have N years of data and M data
+    variables, and each combination of a distinct time period and set of data
+    variables is saved its own dataset.
 
     Parameters
     ----------
@@ -360,6 +359,22 @@ def auto_combine(datasets, concat_dim=None):
         dimension along which you want to concatenate is not a dimension in
         the original datasets, e.g., if you want to stack a collection of
         2D arrays along a third dimension.
+        By default, xarray attempts to infer this argument by examining
+        component files. Set ``concat_dim=None`` explicitly to disable
+        concatenation.
+    compat : {'identical', 'equals', 'broadcast_equals',
+              'no_conflicts'}, optional
+        String indicating how to compare variables of the same name for
+        potential conflicts:
+
+        - 'broadcast_equals': all values must be equal when variables are
+          broadcast against each other to ensure common dimensions.
+        - 'equals': all values and dimensions must be the same.
+        - 'identical': all values, dimensions and attributes must be the
+          same.
+        - 'no_conflicts': only values which are not null in both datasets
+          must be equal. The returned dataset then contains the combination
+          of all non-null values.
 
     Returns
     -------
@@ -371,8 +386,12 @@ def auto_combine(datasets, concat_dim=None):
     Dataset.merge
     """
     from toolz import itertoolz
-    grouped = itertoolz.groupby(lambda ds: tuple(sorted(ds.data_vars)),
-                                datasets).values()
-    concatenated = [_auto_concat(ds, dim=concat_dim) for ds in grouped]
-    merged = reduce(lambda ds, other: ds.merge(other), concatenated)
+    if concat_dim is not None:
+        dim = None if concat_dim is _CONCAT_DIM_DEFAULT else concat_dim
+        grouped = itertoolz.groupby(lambda ds: tuple(sorted(ds.data_vars)),
+                                    datasets).values()
+        concatenated = [_auto_concat(ds, dim=dim) for ds in grouped]
+    else:
+        concatenated = datasets
+    merged = merge(concatenated, compat=compat)
     return merged

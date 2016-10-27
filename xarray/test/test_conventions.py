@@ -105,6 +105,15 @@ class TestCharToStringArray(TestCase):
         self.assertArrayEqual(actual, expected)
 
 
+class TestBoolTypeArray(TestCase):
+    def test_booltype_array(self):
+        x = np.array([1, 0, 1, 1, 0], dtype='i1')
+        bx = conventions.BoolTypeArray(x)
+        self.assertEqual(bx.dtype, np.bool)
+        self.assertArrayEqual(bx, np.array([True, False, True, True, False],
+                                           dtype=np.bool))
+
+
 @np.vectorize
 def _ensure_naive_tz(dt):
     if hasattr(dt, 'tzinfo'):
@@ -177,6 +186,37 @@ class TestDatetime(TestCase):
                             pd.Index(actual), units, calendar)
                         self.assertArrayEqual(num_dates, np.around(encoded, 1))
 
+    @requires_netCDF4
+    def test_decode_cf_datetime_overflow(self):
+        # checks for 
+        # https://github.com/pydata/pandas/issues/14068
+        # https://github.com/pydata/xarray/issues/975
+
+        from datetime import datetime        
+        units = 'days since 2000-01-01 00:00:00'
+
+        # date after 2262 and before 1678
+        days = (-117608, 95795)
+        expected = (datetime(1677, 12, 31), datetime(2262, 4, 12))
+
+        for i, day in enumerate(days):
+            result = conventions.decode_cf_datetime(day, units)
+            self.assertEqual(result, expected[i])
+
+    @requires_netCDF4
+    def test_decode_cf_datetime_transition_to_invalid(self):
+        # manually create dataset with not-decoded date
+        from datetime import datetime
+        ds = Dataset(coords={'time' : [0, 266 * 365]})
+        units = 'days since 2000-01-01 00:00:00'
+        ds.time.attrs = dict(units=units)
+        ds_decoded = conventions.decode_cf(ds)
+
+        expected = [datetime(2000, 1, 1, 0, 0),
+                    datetime(2265, 10, 28, 0, 0)]
+
+        self.assertArrayEqual(ds_decoded.time.values, expected)
+
     def test_decoded_cf_datetime_array(self):
         actual = conventions.DecodedCFDatetimeArray(
             np.array([0, 1, 2]), 'days since 1900-01-01', 'standard')
@@ -218,6 +258,20 @@ class TestDatetime(TestCase):
                         '_FillValue': 1})
         self.assertRaisesRegexp(ValueError, "_FillValue and missing_value",
                                 lambda: conventions.decode_cf_variable(var))
+
+        var = Variable(['t'], np.arange(10),
+                       {'units': 'foobar',
+                        'missing_value': np.nan,
+                        '_FillValue': np.nan})
+        var = conventions.decode_cf_variable(var)
+        self.assertIsNotNone(var)
+
+        var = Variable(['t'], np.arange(10),
+                               {'units': 'foobar',
+                                'missing_value': np.float32(np.nan),
+                                '_FillValue': np.float32(np.nan)})
+        var = conventions.decode_cf_variable(var)
+        self.assertIsNotNone(var)
 
     @requires_netCDF4
     def test_decode_cf_datetime_non_iso_strings(self):
@@ -331,6 +385,7 @@ class TestDatetime(TestCase):
                 self.assertEqual(actual.dtype, np.dtype('O'))
                 self.assertArrayEqual(actual, expected)
 
+    @requires_netCDF4
     def test_cf_datetime_nan(self):
         for num_dates, units, expected_list in [
                 ([np.nan], 'days since 2000-01-01', ['NaT']),
@@ -399,6 +454,16 @@ class TestDatetime(TestCase):
         expected = np.timedelta64('NaT', 'ns')
         actual = conventions.decode_cf_timedelta(np.array(np.nan), 'days')
         self.assertArrayEqual(expected, actual)
+
+    def test_cf_timedelta_2d(self):
+        timedeltas, units, numbers = ['1D', '2D', '3D'], 'days', np.atleast_2d([1, 2, 3])
+
+        timedeltas = np.atleast_2d(pd.to_timedelta(timedeltas, box=False))
+        expected = timedeltas
+
+        actual = conventions.decode_cf_timedelta(numbers, units)
+        self.assertArrayEqual(expected, actual)
+        self.assertEqual(expected.dtype, actual.dtype)
 
     def test_infer_timedelta_units(self):
         for deltas, expected in [

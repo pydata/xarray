@@ -13,10 +13,10 @@ import numpy as np
 import pandas as pd
 
 import xarray as xr
-from xarray import Dataset, open_dataset, open_mfdataset, backends, save_mfdataset
+from xarray import (Dataset, DataArray, open_dataset, open_dataarray,
+                    open_mfdataset, backends, save_mfdataset)
 from xarray.backends.common import robust_getitem
 from xarray.backends.netCDF4_ import _extract_nc4_encoding
-from xarray.backends.h5netcdf_ import _extract_h5nc_encoding
 from xarray.core.pycompat import iteritems, PY3
 
 from . import (TestCase, requires_scipy, requires_netCDF4, requires_pydap,
@@ -30,7 +30,6 @@ except ImportError:
     pass
 
 try:
-    import dask
     import dask.array as da
 except ImportError:
     pass
@@ -52,6 +51,11 @@ def create_encoded_masked_and_scaled_data():
     attributes = {'_FillValue': -1, 'add_offset': 10,
                   'scale_factor': np.float32(0.1)}
     return Dataset({'x': ('t', [-1, -1, 0, 1, 2], attributes)})
+
+
+def create_boolean_data():
+    attributes = {'units': '-'}
+    return Dataset({'x': ('t', [True, False, False, True], attributes)})
 
 
 class TestCommon(TestCase):
@@ -238,6 +242,13 @@ class DatasetIOTestCases(object):
             with self.roundtrip(expected):
                 pass
 
+    def test_roundtrip_boolean_dtype(self):
+        original = create_boolean_data()
+        self.assertEqual(original['x'].dtype, 'bool')
+        with self.roundtrip(original) as actual:
+            self.assertDatasetIdentical(original, actual)
+            self.assertEqual(actual['x'].dtype, 'bool')
+
     def test_orthogonal_indexing(self):
         in_memory = create_test_data()
         with self.roundtrip(in_memory) as on_disk:
@@ -390,6 +401,13 @@ class CFEncodedDataTest(DatasetIOTestCases):
         with self.roundtrip(ds, save_kwargs=kwargs) as actual:
             self.assertEqual(actual.t.encoding['units'], units)
             self.assertDatasetIdentical(actual, ds)
+
+    def test_encoding_same_dtype(self):
+        ds = Dataset({'x': ('y', np.arange(10.0, dtype='f4'))})
+        kwargs = dict(encoding={'x': {'dtype': 'f4'}})
+        with self.roundtrip(ds, save_kwargs=kwargs) as actual:
+            self.assertEqual(actual.x.encoding['dtype'], 'f4')
+        self.assertEqual(ds.x.encoding, {})
 
 
 _counter = itertools.count()
@@ -924,6 +942,15 @@ class DaskTest(TestCase):
                 actual = 1.0 * ds
                 self.assertDatasetAllClose(original, actual)
 
+    def test_open_mfdataset_concat_dim_none(self):
+        with create_tmp_file() as tmp1:
+            with create_tmp_file() as tmp2:
+                data = Dataset({'x': 0})
+                data.to_netcdf(tmp1)
+                Dataset({'x': np.nan}).to_netcdf(tmp2)
+                with open_mfdataset([tmp1, tmp2], concat_dim=None) as actual:
+                    self.assertDatasetIdentical(data, actual)
+
     def test_open_dataset(self):
         original = Dataset({'foo': ('x', np.random.randn(10))})
         with create_tmp_file() as tmp:
@@ -955,9 +982,11 @@ class DaskTest(TestCase):
             data = create_test_data()
             data.to_netcdf(tmp)
             with open_mfdataset(tmp) as ds:
-                original_names = dict((k, v.data.name) for k, v in ds.items())
+                original_names = dict((k, v.data.name)
+                                      for k, v in ds.data_vars.items())
             with open_mfdataset(tmp) as ds:
-                repeat_names = dict((k, v.data.name) for k, v in ds.items())
+                repeat_names = dict((k, v.data.name)
+                                    for k, v in ds.data_vars.items())
             for var_name, dask_name in original_names.items():
                 self.assertIn(var_name, dask_name)
                 self.assertIn(tmp, dask_name)
@@ -1080,3 +1109,139 @@ class TestEncodingInvalid(TestCase):
                           {'least_sigificant_digit': 2})
         with self.assertRaisesRegexp(ValueError, 'unexpected encoding'):
             _extract_nc4_encoding(var, raise_on_invalid=True)
+
+class MiscObject:
+    pass
+
+@requires_netCDF4
+class TestValidateAttrs(TestCase):
+    def test_validating_attrs(self):
+        def new_dataset():
+            return Dataset({'data': ('y', np.arange(10.0))})
+
+        def new_dataset_and_dataset_attrs():
+            ds = new_dataset()
+            return ds, ds.attrs
+
+        def new_dataset_and_data_attrs():
+            ds = new_dataset()
+            return ds, ds.data.attrs
+
+        def new_dataset_and_coord_attrs():
+            ds = new_dataset()
+            return ds, ds.coords['y'].attrs
+
+        for new_dataset_and_attrs in [new_dataset_and_dataset_attrs,
+                                      new_dataset_and_data_attrs,
+                                      new_dataset_and_coord_attrs]:
+            ds, attrs = new_dataset_and_attrs()
+
+            attrs[123] = 'test'
+            with self.assertRaisesRegexp(TypeError, 'Invalid name for attr'):
+                ds.to_netcdf('test.nc')
+
+            ds, attrs = new_dataset_and_attrs()
+            attrs[MiscObject()] = 'test'
+            with self.assertRaisesRegexp(TypeError, 'Invalid name for attr'):
+                ds.to_netcdf('test.nc')
+
+            ds, attrs = new_dataset_and_attrs()
+            attrs[''] = 'test'
+            with self.assertRaisesRegexp(ValueError, 'Invalid name for attr'):
+                ds.to_netcdf('test.nc')
+
+            # This one should work
+            ds, attrs = new_dataset_and_attrs()
+            attrs['test'] = 'test'
+            with create_tmp_file() as tmp_file:
+                ds.to_netcdf(tmp_file)
+
+            ds, attrs = new_dataset_and_attrs()
+            attrs['test'] = {'a': 5}
+            with self.assertRaisesRegexp(TypeError, 'Invalid value for attr'):
+                ds.to_netcdf('test.nc')
+
+            ds, attrs = new_dataset_and_attrs()
+            attrs['test'] = MiscObject()
+            with self.assertRaisesRegexp(TypeError, 'Invalid value for attr'):
+                ds.to_netcdf('test.nc')
+
+            ds, attrs = new_dataset_and_attrs()
+            attrs['test'] = 5
+            with create_tmp_file() as tmp_file:
+                ds.to_netcdf(tmp_file)
+
+            ds, attrs = new_dataset_and_attrs()
+            attrs['test'] = 3.14
+            with create_tmp_file() as tmp_file:
+                ds.to_netcdf(tmp_file)
+
+            ds, attrs = new_dataset_and_attrs()
+            attrs['test'] = [1, 2, 3, 4]
+            with create_tmp_file() as tmp_file:
+                ds.to_netcdf(tmp_file)
+
+            ds, attrs = new_dataset_and_attrs()
+            attrs['test'] = (1.9, 2.5)
+            with create_tmp_file() as tmp_file:
+                ds.to_netcdf(tmp_file)
+
+            ds, attrs = new_dataset_and_attrs()
+            attrs['test'] = np.arange(5)
+            with create_tmp_file() as tmp_file:
+                ds.to_netcdf(tmp_file)
+
+            ds, attrs = new_dataset_and_attrs()
+            attrs['test'] = np.arange(12).reshape(3, 4)
+            with create_tmp_file() as tmp_file:
+                ds.to_netcdf(tmp_file)
+
+            ds, attrs = new_dataset_and_attrs()
+            attrs['test'] = 'This is a string'
+            with create_tmp_file() as tmp_file:
+                ds.to_netcdf(tmp_file)
+
+            ds, attrs = new_dataset_and_attrs()
+            attrs['test'] = ''
+            with create_tmp_file() as tmp_file:
+                ds.to_netcdf(tmp_file)
+
+            ds, attrs = new_dataset_and_attrs()
+            attrs['test'] = np.arange(12).reshape(3, 4)
+            with create_tmp_file() as tmp_file:
+                ds.to_netcdf(tmp_file)
+
+@requires_netCDF4
+class TestDataArrayToNetCDF(TestCase):
+
+    def test_dataarray_to_netcdf_no_name(self):
+        original_da = DataArray(np.arange(12).reshape((3, 4)))
+
+        with create_tmp_file() as tmp:
+            original_da.to_netcdf(tmp)
+
+            with open_dataarray(tmp) as loaded_da:
+                self.assertDataArrayIdentical(original_da, loaded_da)
+
+
+    def test_dataarray_to_netcdf_with_name(self):
+        original_da = DataArray(np.arange(12).reshape((3, 4)),
+                                name='test')
+
+        with create_tmp_file() as tmp:
+            original_da.to_netcdf(tmp)
+
+            with open_dataarray(tmp) as loaded_da:
+                self.assertDataArrayIdentical(original_da, loaded_da)
+
+
+    def test_dataarray_to_netcdf_coord_name_clash(self):
+        original_da = DataArray(np.arange(12).reshape((3, 4)),
+                                dims=['x', 'y'],
+                                name='x')
+
+        with create_tmp_file() as tmp:
+            original_da.to_netcdf(tmp)
+
+            with open_dataarray(tmp) as loaded_da:
+                self.assertDataArrayIdentical(original_da, loaded_da)

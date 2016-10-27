@@ -1,10 +1,11 @@
 from datetime import timedelta
+from collections import defaultdict
 import numpy as np
 import pandas as pd
 
 from . import utils
 from .pycompat import iteritems, range, dask_array_type, suppress
-from .utils import is_full_slice
+from .utils import is_full_slice, is_dict_like
 
 
 def expanded_indexer(key, ndim):
@@ -125,7 +126,7 @@ def _asarray_tuplesafe(values):
     Adapted from pandas.core.common._asarray_tuplesafe
     """
     if isinstance(values, tuple):
-        result = utils.tuple_to_0darray(values)
+        result = utils.to_0d_object_array(values)
     else:
         result = np.asarray(values)
         if result.ndim == 2:
@@ -135,11 +136,18 @@ def _asarray_tuplesafe(values):
     return result
 
 
+def _is_nested_tuple(possible_tuple):
+    return (isinstance(possible_tuple, tuple)
+            and any(isinstance(value, (tuple, list, slice))
+                    for value in possible_tuple))
+
+
 def convert_label_indexer(index, label, index_name='', method=None,
                           tolerance=None):
     """Given a pandas.Index and labels (e.g., from __getitem__) for one
     dimension, return an indexer suitable for indexing an ndarray along that
-    dimension
+    dimension. If `index` is a pandas.MultiIndex and depending on `label`,
+    return a new pandas.Index or pandas.MultiIndex (otherwise return None).
     """
     # backwards compatibility for pandas<0.16 (method) or pandas<0.17
     # (tolerance)
@@ -151,6 +159,8 @@ def convert_label_indexer(index, label, index_name='', method=None,
             raise NotImplementedError(
                 'the tolerance argument requires pandas v0.17 or newer')
         kwargs['tolerance'] = tolerance
+
+    new_index = None
 
     if isinstance(label, slice):
         if method is not None or tolerance is not None:
@@ -166,10 +176,35 @@ def convert_label_indexer(index, label, index_name='', method=None,
             raise KeyError('cannot represent labeled-based slice indexer for '
                            'dimension %r with a slice over integer positions; '
                            'the index is unsorted or non-unique')
+
+    elif is_dict_like(label):
+        is_nested_vals = _is_nested_tuple(tuple(label.values()))
+        if not isinstance(index, pd.MultiIndex):
+            raise ValueError('cannot use a dict-like object for selection on a '
+                             'dimension that does not have a MultiIndex')
+        elif len(label) == index.nlevels and not is_nested_vals:
+            indexer = index.get_loc(tuple((label[k] for k in index.names)))
+        else:
+            indexer, new_index = index.get_loc_level(tuple(label.values()),
+                                                     level=tuple(label.keys()))
+
+    elif isinstance(label, tuple) and isinstance(index, pd.MultiIndex):
+        if _is_nested_tuple(label):
+            indexer = index.get_locs(label)
+        elif len(label) == index.nlevels:
+            indexer = index.get_loc(label)
+        else:
+            indexer, new_index = index.get_loc_level(
+                label, level=list(range(len(label)))
+            )
+
     else:
         label = _asarray_tuplesafe(label)
         if label.ndim == 0:
-            indexer = index.get_loc(label.item(), **kwargs)
+            if isinstance(index, pd.MultiIndex):
+                indexer, new_index = index.get_loc_level(label.item(), level=0)
+            else:
+                indexer = index.get_loc(label.item(), **kwargs)
         elif label.dtype.kind == 'b':
             indexer, = np.nonzero(label)
         else:
@@ -177,18 +212,60 @@ def convert_label_indexer(index, label, index_name='', method=None,
             if np.any(indexer < 0):
                 raise KeyError('not all values found in index %r'
                                % index_name)
-    return indexer
+    return indexer, new_index
+
+
+def get_dim_indexers(data_obj, indexers):
+    """Given a xarray data object and label based indexers, return a mapping
+    of label indexers with only dimension names as keys.
+
+    It groups multiple level indexers given on a multi-index dimension
+    into a single, dictionary indexer for that dimension (Raise a ValueError
+    if it is not possible).
+    """
+    invalid = [k for k in indexers
+               if k not in data_obj.dims and k not in data_obj._level_coords]
+    if invalid:
+        raise ValueError("dimensions or multi-index levels %r do not exist"
+                         % invalid)
+
+    level_indexers = defaultdict(dict)
+    dim_indexers = {}
+    for key, label in iteritems(indexers):
+        dim, = data_obj[key].dims
+        if key != dim:
+            # assume here multi-index level indexer
+            level_indexers[dim][key] = label
+        else:
+            dim_indexers[key] = label
+
+    for dim, level_labels in iteritems(level_indexers):
+        if dim_indexers.get(dim, False):
+            raise ValueError("cannot combine multi-index level indexers "
+                             "with an indexer for dimension %s" % dim)
+        dim_indexers[dim] = level_labels
+
+    return dim_indexers
 
 
 def remap_label_indexers(data_obj, indexers, method=None, tolerance=None):
     """Given an xarray data object and label based indexers, return a mapping
-    of equivalent location based indexers.
+    of equivalent location based indexers. Also return a mapping of updated
+    pandas index objects (in case of multi-index level drop).
     """
     if method is not None and not isinstance(method, str):
         raise TypeError('``method`` must be a string')
-    return dict((dim, convert_label_indexer(data_obj[dim].to_index(), label,
-                                            dim, method, tolerance))
-                for dim, label in iteritems(indexers))
+
+    pos_indexers, new_indexes = {}, {}
+    for dim, label in iteritems(get_dim_indexers(data_obj, indexers)):
+        index = data_obj[dim].to_index()
+        idxr, new_idx = convert_label_indexer(index, label,
+                                              dim, method, tolerance)
+        pos_indexers[dim] = idxr
+        if new_idx is not None:
+            new_indexes[dim] = new_idx
+
+    return pos_indexers, new_indexes
 
 
 def slice_slice(old_slice, applied_slice, size):
@@ -353,9 +430,18 @@ class NumpyIndexingAdapter(utils.NDArrayMixin):
             key = orthogonal_indexer(key, self.shape)
         return key
 
+    def _ensure_ndarray(self, value):
+        # We always want the result of indexing to be a NumPy array. If it's
+        # not, then it really should be a 0d array. Doing the coercion here
+        # instead of inside variable.as_compatible_data makes it less error
+        # prone.
+        if not isinstance(value, np.ndarray):
+            value = utils.to_0d_array(value)
+        return value
+
     def __getitem__(self, key):
         key = self._convert_key(key)
-        return self.array[key]
+        return self._ensure_ndarray(self.array[key])
 
     def __setitem__(self, key, value):
         key = self._convert_key(key)
@@ -426,16 +512,22 @@ class PandasIndexAdapter(utils.NDArrayMixin):
 
         if isinstance(result, pd.Index):
             result = PandasIndexAdapter(result, dtype=self.dtype)
-        elif result is pd.NaT:
-            # work around the impossibility of casting NaT with asarray
-            # note: it probably would be better in general to return
-            # pd.Timestamp rather np.than datetime64 but this is easier
-            # (for now)
-            result = np.datetime64('NaT', 'ns')
-        elif isinstance(result, timedelta):
-            result = np.timedelta64(getattr(result, 'value', result), 'ns')
-        elif self.dtype != object:
-            result = np.asarray(result, dtype=self.dtype)
+        else:
+            # result is a scalar
+            if result is pd.NaT:
+                # work around the impossibility of casting NaT with asarray
+                # note: it probably would be better in general to return
+                # pd.Timestamp rather np.than datetime64 but this is easier
+                # (for now)
+                result = np.datetime64('NaT', 'ns')
+            elif isinstance(result, timedelta):
+                result = np.timedelta64(getattr(result, 'value', result), 'ns')
+            elif self.dtype != object:
+                result = np.asarray(result, dtype=self.dtype)
+
+            # as for numpy.ndarray indexing, we always want the result to be
+            # a NumPy array.
+            result = utils.to_0d_array(result)
 
         return result
 

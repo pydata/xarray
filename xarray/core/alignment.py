@@ -8,8 +8,8 @@ import pandas as pd
 from . import ops, utils
 from .common import _maybe_promote
 from .pycompat import iteritems, OrderedDict
-from .utils import is_full_slice
-from .variable import Variable, Coordinate, broadcast_variables
+from .utils import is_full_slice, is_dict_like
+from .variable import Variable, IndexVariable
 
 
 def _get_joiner(join):
@@ -23,26 +23,6 @@ def _get_joiner(join):
         return operator.itemgetter(-1)
     else:
         raise ValueError('invalid value for join: %s' % join)
-
-
-def _get_all_indexes(objects, exclude=set()):
-    all_indexes = defaultdict(list)
-    for obj in objects:
-        for k, v in iteritems(obj.indexes):
-            if k not in exclude:
-                all_indexes[k].append(v)
-    return all_indexes
-
-
-def _join_indexes(join, objects, exclude=set()):
-    joiner = _get_joiner(join)
-    indexes = _get_all_indexes(objects, exclude=exclude)
-    # exclude dimensions with all equal indices (the usual case) to avoid
-    # unnecessary reindexing work.
-    # TODO: don't bother to check equals for left or right joins
-    joined_indexes = dict((k, joiner(v)) for k, v in iteritems(indexes)
-                          if any(not v[0].equals(idx) for idx in v[1:]))
-    return joined_indexes
 
 
 def align(*objects, **kwargs):
@@ -68,9 +48,15 @@ def align(*objects, **kwargs):
         - 'left': use indexes from the first object with each dimension
         - 'right': use indexes from the last object with each dimension
     copy : bool, optional
-        If ``copy=True``, the returned objects contain all new variables. If
-        ``copy=False`` and no reindexing is required then the aligned objects
-        will include original variables.
+        If ``copy=True``, data in the return values is always copied. If
+        ``copy=False`` and reindexing is unnecessary, or can be performed with
+        only slice operations, then the output may share memory with the input.
+        In either case, new xarray objects are always returned.
+    exclude : sequence of str, optional
+        Dimensions that must be excluded from alignment
+    indexes : dict-like, optional
+        Any indexes explicitly provided with the `indexes` argument should be
+        used in preference to the aligned indexes.
 
     Returns
     -------
@@ -79,49 +65,46 @@ def align(*objects, **kwargs):
     """
     join = kwargs.pop('join', 'inner')
     copy = kwargs.pop('copy', True)
+    indexes = kwargs.pop('indexes', None)
+    exclude = kwargs.pop('exclude', None)
+    if indexes is None:
+        indexes = {}
+    if exclude is None:
+        exclude = set()
     if kwargs:
         raise TypeError('align() got unexpected keyword arguments: %s'
                         % list(kwargs))
 
-    joined_indexes = _join_indexes(join, objects)
+    all_indexes = defaultdict(list)
+    for obj in objects:
+        for dim, index in iteritems(obj.indexes):
+            if dim not in exclude:
+                all_indexes[dim].append(index)
+
+    # We don't join over dimensions with all equal indexes for two reasons:
+    # - It's faster for the usual case (already aligned objects).
+    # - It ensures it's possible to do operations that don't require alignment
+    #   on indexes with duplicate values (which cannot be reindexed with
+    #   pandas). This is useful, e.g., for overwriting such duplicate indexes.
+    joiner = _get_joiner(join)
+    joined_indexes = {}
+    for dim, dim_indexes in iteritems(all_indexes):
+        if dim in indexes:
+            index = utils.safe_cast_to_index(indexes[dim])
+            if any(not index.equals(other) for other in dim_indexes):
+                joined_indexes[dim] = index
+        else:
+            if any(not dim_indexes[0].equals(other)
+                   for other in dim_indexes[1:]):
+                joined_indexes[dim] = joiner(dim_indexes)
+
     result = []
     for obj in objects:
         valid_indexers = dict((k, v) for k, v in joined_indexes.items()
                               if k in obj.dims)
         result.append(obj.reindex(copy=copy, **valid_indexers))
+
     return tuple(result)
-
-
-def partial_align(*objects, **kwargs):
-    """partial_align(*objects, join='inner', copy=True, exclude=set()
-
-    Like align, but don't align along dimensions in exclude. Not public API.
-    """
-    join = kwargs.pop('join', 'inner')
-    copy = kwargs.pop('copy', True)
-    exclude = kwargs.pop('exclude', set())
-    assert not kwargs
-    joined_indexes = _join_indexes(join, objects, exclude=exclude)
-    return tuple(obj.reindex(copy=copy, **joined_indexes) for obj in objects)
-
-
-def align_variables(variables, join='outer', copy=False):
-    """Align all DataArrays in the provided dict, leaving other values alone.
-    """
-    from .dataarray import DataArray
-    from pandas import Series, DataFrame, Panel
-
-    new_variables = OrderedDict(variables)
-    # if an item is a Series / DataFrame / Panel, try and wrap it in a DataArray constructor
-    new_variables.update((
-        (k, DataArray(v)) for k, v in variables.items()
-        if isinstance(v, (Series, DataFrame, Panel))
-    ))
-
-    alignable = [k for k, v in new_variables.items() if hasattr(v, 'indexes')]
-    aligned = align(*[new_variables[a] for a in alignable], join=join, copy=copy)
-    new_variables.update(zip(alignable, aligned))
-    return new_variables
 
 
 def reindex_variables(variables, indexes, indexers, method=None,
@@ -136,7 +119,7 @@ def reindex_variables(variables, indexes, indexers, method=None,
     variables : dict-like
         Dictionary of xarray.Variable objects.
     indexes : dict-like
-        Dictionary of xarray.Coordinate objects associated with variables.
+        Dictionary of xarray.IndexVariable objects associated with variables.
     indexers : dict
         Dictionary with keys given by dimension names and values given by
         arrays of coordinates tick labels. Any mis-matched coordinate values
@@ -146,7 +129,7 @@ def reindex_variables(variables, indexes, indexers, method=None,
         Method to use for filling index values in ``indexers`` not found in
         this dataset:
           * None (default): don't fill gaps
-          * pad / ffill: propgate last valid index value forward
+          * pad / ffill: propagate last valid index value forward
           * backfill / bfill: propagate next valid index value backward
           * nearest: use nearest valid index value
     tolerance : optional
@@ -154,9 +137,10 @@ def reindex_variables(variables, indexes, indexers, method=None,
         The values of the index at the matching locations most satisfy the
         equation ``abs(index[indexer] - target) <= tolerance``.
     copy : bool, optional
-        If `copy=True`, the returned dataset contains only copied
-        variables. If `copy=False` and no reindexing is required then
-        original variables from this dataset are returned.
+        If ``copy=True``, data in the return values is always copied. If
+        ``copy=False`` and reindexing is unnecessary, or can be performed
+        with only slice operations, then the output may share memory with
+        the input. In either case, new xarray objects are always returned.
 
     Returns
     -------
@@ -180,6 +164,10 @@ def reindex_variables(variables, indexes, indexers, method=None,
         to_shape[name] = index.size
         if name in indexers:
             target = utils.safe_cast_to_index(indexers[name])
+            if not index.is_unique:
+                raise ValueError(
+                    'cannot reindex or align along dimension %r because the '
+                    'index has duplicate values' % name)
             indexer = index.get_indexer(target, method=method,
                                         **get_indexer_kwargs)
 
@@ -212,8 +200,8 @@ def reindex_variables(variables, indexes, indexers, method=None,
     for name, var in iteritems(variables):
         if name in indexers:
             # no need to copy, because index data is immutable
-            new_var = Coordinate(var.dims, indexers[name], var.attrs,
-                                 var.encoding)
+            new_var = IndexVariable(var.dims, indexers[name], var.attrs,
+                                    var.encoding)
         else:
             assign_to = var_indexers(var, to_indexers)
             assign_from = var_indexers(var, from_indexers)
@@ -252,27 +240,32 @@ def reindex_variables(variables, indexes, indexers, method=None,
                 # no reindexing is necessary
                 # here we need to manually deal with copying data, since
                 # we neither created a new ndarray nor used fancy indexing
-                new_var = var.copy() if copy else var
+                new_var = var.copy(deep=copy)
 
         reindexed[name] = new_var
     return reindexed
 
 
-def broadcast(*args):
+def broadcast(*args, **kwargs):
     """Explicitly broadcast any number of DataArray or Dataset objects against
     one another.
 
     xarray objects automatically broadcast against each other in arithmetic
     operations, so this function should not be necessary for normal use.
 
+    If no change is needed, the input data is returned to the output without
+    being copied.
+
     Parameters
     ----------
-    *args: DataArray or Dataset objects
+    *args : DataArray or Dataset objects
         Arrays to broadcast against each other.
+    exclude : sequence of str, optional
+        Dimensions that must not be broadcasted
 
     Returns
     -------
-    broadcast: tuple of xarray objects
+    broadcast : tuple of xarray objects
         The same data as the input arrays, but with additional dimensions
         inserted so that all data arrays have the same dimensions and shape.
 
@@ -333,36 +326,48 @@ def broadcast(*args):
     from .dataarray import DataArray
     from .dataset import Dataset
 
-    all_indexes = _get_all_indexes(args)
-    for k, v in all_indexes.items():
-        if not all(v[0].equals(vi) for vi in v[1:]):
-            raise ValueError('cannot broadcast arrays: the %s index is not '
-                             'aligned (use xarray.align first)' % k)
+    exclude = kwargs.pop('exclude', None)
+    if exclude is None:
+        exclude = set()
+    if kwargs:
+        raise TypeError('broadcast() got unexpected keyword arguments: %s'
+                        % list(kwargs))
+
+    args = align(*args, join='outer', copy=False, exclude=exclude)
 
     common_coords = OrderedDict()
     dims_map = OrderedDict()
     for arg in args:
         for dim in arg.dims:
-            if dim not in common_coords:
+            if dim not in common_coords and dim not in exclude:
                 common_coords[dim] = arg.coords[dim].variable
                 dims_map[dim] = common_coords[dim].size
 
+    def _expand_dims(var):
+        # Add excluded dims to a copy of dims_map
+        var_dims_map = dims_map.copy()
+        for dim in exclude:
+            try:
+                var_dims_map[dim] = var.shape[var.dims.index(dim)]
+            except ValueError:
+                # dim not in var.dims
+                pass
+
+        return var.expand_dims(var_dims_map)
+
     def _broadcast_array(array):
-        data = array.variable.expand_dims(dims_map)
+        data = _expand_dims(array.variable)
         coords = OrderedDict(array.coords)
         coords.update(common_coords)
-        dims = tuple(common_coords)
-        return DataArray(data, coords, dims, name=array.name,
+        return DataArray(data, coords, data.dims, name=array.name,
                          attrs=array.attrs, encoding=array.encoding)
 
     def _broadcast_dataset(ds):
-        data_vars = OrderedDict()
-        for k in ds.data_vars:
-            data_vars[k] = ds.variables[k].expand_dims(dims_map)
-
+        data_vars = OrderedDict(
+            (k, _expand_dims(ds.variables[k]))
+            for k in ds.data_vars)
         coords = OrderedDict(ds.coords)
         coords.update(common_coords)
-
         return Dataset(data_vars, coords, ds.attrs)
 
     result = []
@@ -378,6 +383,7 @@ def broadcast(*args):
 
 
 def broadcast_arrays(*args):
+    import warnings
     warnings.warn('xarray.broadcast_arrays is deprecated: use '
                   'xarray.broadcast instead', DeprecationWarning, stacklevel=2)
     return broadcast(*args)

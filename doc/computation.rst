@@ -99,6 +99,8 @@ These operations automatically skip missing values, like in pandas:
 If desired, you can disable this behavior by invoking the aggregation method
 with ``skipna=False``.
 
+.. _comput.rolling:
+
 Rolling window operations
 =========================
 
@@ -134,6 +136,12 @@ Aggregation and summary methods can be applied directly to the ``Rolling`` objec
     r.mean()
     r.reduce(np.std)
 
+Note that rolling window aggregations are much faster (both asymptotically and
+because they avoid a loop in Python) when bottleneck_ is installed. Otherwise,
+we fall back to a slower, pure Python implementation.
+
+.. _bottleneck: https://github.com/kwgoodman/bottleneck/
+
 Finally, we can manually iterate through ``Rolling`` objects:
 
 .. ipython:: python
@@ -141,6 +149,8 @@ Finally, we can manually iterate through ``Rolling`` objects:
    @verbatim
    for label, arr_window in r:
       # arr_window is a view of x
+
+.. _compute.broadcasting:
 
 Broadcasting by dimension name
 ==============================

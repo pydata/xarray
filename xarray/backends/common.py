@@ -3,7 +3,9 @@ import itertools
 import logging
 import time
 import traceback
+import threading
 from collections import Mapping
+from distutils.version import StrictVersion
 
 from ..conventions import cf_encoder
 from ..core.utils import FrozenOrderedDict
@@ -37,7 +39,7 @@ def is_trivial_index(var):
     the actual values to np.arange()
     """
     # if either attributes or encodings are defined
-    # the index is not trival.
+    # the index is not trivial.
     if len(var.attrs) or len(var.encoding):
         return False
     # if the index is not a 1d integer array
@@ -162,7 +164,11 @@ class ArrayWriter(object):
     def sync(self):
         if self.sources:
             import dask.array as da
-            da.store(self.sources, self.targets)
+            import dask
+            if StrictVersion(dask.__version__) > StrictVersion('0.8.1'):
+                da.store(self.sources, self.targets, lock=threading.Lock())
+            else:
+                da.store(self.sources, self.targets)
             self.sources = []
             self.targets = []
 
