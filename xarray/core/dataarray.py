@@ -1385,7 +1385,7 @@ class DataArray(AbstractArray, BaseDataObject):
                 return NotImplemented
             if hasattr(other, 'indexes'):
                 # if user does not specify join, default to OPTIONS['join']
-                how_to_join = join if join is not None else OPTIONS['join']
+                how_to_join = join or OPTIONS['join']
                 self, other = align(self, other, join=how_to_join, copy=False)
             other_variable = getattr(other, 'variable', other)
             other_coords = getattr(other, 'coords', None)

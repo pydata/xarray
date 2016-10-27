@@ -2283,23 +2283,20 @@ class TestDataArray(TestCase):
                            reshape(len(xcoords),len(ycoords),len(zcoords)),
                            [(xdim, xcoords), (ydim, ycoords),(zdim, zcoords)])
         # now create a data array with the last x slice missing
-        arr1 = arr[0:-1,:,:].copy()
+        missing_last_x = arr[0:-1,:,:].copy()
         # create another data array with the last z slice missing
-        arr2 = arr[:,:,0:-1].copy()
+        missing_last_z = arr[:,:,0:-1].copy()
         # because the default in OPTIONS is join="inner", we test "outer" first
         xr.set_options(join="outer")
-        result = arr1 + arr2
-        self.assertTrue(result.size == total_size) # should be 3 * 3 * 3
+        result = missing_last_x + missing_last_z
         self.assertTrue(result.shape == arr.shape)
         self.assertTrue(result[-1,:,:].isnull().all())
         self.assertTrue(result[:,:,-1].isnull().all())
         # now revert back to join="inner"
         xr.set_options(join="inner")
-        result = arr1 + arr2
-        self.assertTrue(result.size == \
-                        (len(xcoords)-1)*len(ycoords)*(len(zcoords)-1))
+        result = missing_last_x + missing_last_z
         self.assertTrue(result.shape == \
                         (len(xcoords)-1, len(ycoords), len(zcoords)-1))
         self.assertTrue(result.notnull().all())
-        self.assertTrue('c' not in list(result['x']))
-        self.assertTrue(2 not in list(result['z']))
+        self.assertFalse('c' in list(result['x']))
+        self.assertFalse(2 in list(result['z']))

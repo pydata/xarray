@@ -2932,30 +2932,27 @@ class TestDataset(TestCase):
                         [(xdim, xcoords), (ydim, ycoords),(zdim, zcoords)])
         # now create a data array with the last x slice missing
         arr1 = arr[0:-1,:,:].copy()
-        ds1 = arr1.to_dataset(name='foo')
+        missing_last_x = arr1.to_dataset(name='foo')
         # create another data array with the last z slice missing
         arr2 = arr[:,:,0:-1].copy()
-        ds2 = arr2.to_dataset(name='foo') # needs to be name='foo' as well
+        missing_last_z = arr2.to_dataset(name='foo') # needs to be name='foo' as well
         # because the default in OPTIONS is join="inner", we test "outer" first
         xr.set_options(join="outer")
-        result = ds1 + ds2
-        self.assertTrue(result.foo.size == total_size) # should be 3 * 3 * 3
+        result = missing_last_x + missing_last_z
         self.assertTrue(result.foo.shape == arr.shape)
         self.assertTrue(result.foo[-1,:,:].isnull().all())
         self.assertTrue(result.foo[:,:,-1].isnull().all())
         # now revert back to join="inner"
         xr.set_options(join="inner")
-        result = ds1 + ds2
-        self.assertTrue(result.foo.size == \
-                        (len(xcoords)-1)*len(ycoords)*(len(zcoords)-1))
+        result = missing_last_x + missing_last_z
         self.assertTrue(result.foo.shape == \
                         (len(xcoords)-1, len(ycoords), len(zcoords)-1))
         self.assertTrue(result.foo.notnull().all())
-        self.assertTrue('c' not in list(result.foo['x']))
-        self.assertTrue(2 not in list(result.foo['z']))
+        self.assertFalse('c' in list(result.foo['x']))
+        self.assertFalse(2 in list(result.foo['z']))
         # just for kicks, what happens when the dataarrays have different names?
-        ds3 = arr1.to_dataset(name='bar')
-        result = ds1 + ds3
+        misnomer = arr1.to_dataset(name='bar')
+        result = missing_last_x + misnomer
         self.assertTrue(len(result.data_vars)==0) # empty dataset
 
 
