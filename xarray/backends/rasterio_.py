@@ -34,7 +34,7 @@ class RasterioDataStore(AbstractDataStore):
     """
     def __init__(self, filename, mode='r'):
 
-        with rasterio.drivers():
+        with rasterio.Env():
             self.ds = rasterio.open(filename, mode=mode, )
 
             # Get coords
@@ -46,10 +46,10 @@ class RasterioDataStore(AbstractDataStore):
                   'x': np.arange(start=x0, stop=(x0 + nx * dx), step=dx)}
 
         # Get dims
-        if self.ds.count == 3:
+        if self.ds.count >= 2:
             self.dims = ('band', 'y', 'x')
             coords['band'] = self.ds.indexes
-        elif self.ds.count == 2:
+        elif self.ds.count == 1:
             self.dims = ('y', 'x')
         else:
             raise ValueError('unknown dims')
@@ -69,7 +69,7 @@ class RasterioDataStore(AbstractDataStore):
         """
         wx = (self.sub_x[0], self.sub_x[1] + 1)
         wy = (self.sub_y[0], self.sub_y[1] + 1)
-        with rasterio.drivers():
+        with rasterio.Env():
             band = self.ds.read(var_id, window=(wy, wx))
         return band
 
