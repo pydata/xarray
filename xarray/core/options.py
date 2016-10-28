@@ -1,5 +1,5 @@
 OPTIONS = {'display_width': 80,
-           'join': "inner"}
+           'arithmetic_join': "inner"}
 
 
 class set_options(object):

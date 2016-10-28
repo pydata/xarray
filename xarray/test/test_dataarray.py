@@ -2270,33 +2270,14 @@ class TestDataArray(TestCase):
             da.dot(DataArray(1))
 
     def test_binary_op_join_setting(self):
-        """
-        A test method to verify the ability to set binary operation join kwarg
-        ("inner", "outer", "left", "right") via xr.set_options().
-        """
-        # First we set up a data array
-        xdim, ydim, zdim = 'x', 'y', 'z'
-        xcoords, ycoords, zcoords = ['a', 'b', 'c'], [-2, 0, 2], [0, 1, 2]
-        total_size = len(xcoords) * len(ycoords) * len(zcoords)
-        # create a 3-by-3-by-3 data array
-        arr = xr.DataArray(np.arange(total_size).\
-                           reshape(len(xcoords),len(ycoords),len(zcoords)),
-                           [(xdim, xcoords), (ydim, ycoords),(zdim, zcoords)])
-        # now create a data array with the last x slice missing
-        missing_last_x = arr[0:-1,:,:].copy()
-        # create another data array with the last z slice missing
-        missing_last_z = arr[:,:,0:-1].copy()
-        # because the default in OPTIONS is join="inner", we test "outer" first
-        xr.set_options(join="outer")
-        result = missing_last_x + missing_last_z
-        self.assertTrue(result.shape == arr.shape)
-        self.assertTrue(result[-1,:,:].isnull().all())
-        self.assertTrue(result[:,:,-1].isnull().all())
-        # now revert back to join="inner"
-        xr.set_options(join="inner")
-        result = missing_last_x + missing_last_z
-        self.assertTrue(result.shape == \
-                        (len(xcoords)-1, len(ycoords), len(zcoords)-1))
-        self.assertTrue(result.notnull().all())
-        self.assertFalse('c' in list(result['x']))
-        self.assertFalse(2 in list(result['z']))
+        dim = 'x'
+        align_type = "outer"
+        coords_l, coords_r = [0, 1, 2], [1, 2, 3]
+        missing_0 = xr.DataArray(coords_l, [(dim, coords_l)])
+        missing_3 = xr.DataArray(coords_r, [(dim, coords_r)])
+        with xr.set_options(arithmetic_join=align_type):
+            experimental = missing_0 + missing_3
+            missing_0_aligned, missing_3_aligned =\
+                xr.align(missing_0, missing_3, join=align_type)
+            control = missing_0_aligned + missing_3_aligned
+            self.assertDataArrayEqual(experimental, control)

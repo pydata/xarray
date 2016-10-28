@@ -44,6 +44,11 @@ Deprecations
 
 Enhancements
 ~~~~~~~~~~~~
+- Added the ability to change default automatic alignment (arithmetic_join="inner")
+  for binary operations via :py:func:`~xarray.set_options()`
+  (see :ref:`automatic alignment`).
+  By `Chun-Wei Yuan <https://github.com/chunweiyuan>`_.
+
 - Add checking of ``attr`` names and values when saving to netCDF, raising useful
   error messages if they are invalid. (:issue:`911`).
   By `Robin Wilson <https://github.com/robintw>`_.

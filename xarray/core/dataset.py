@@ -2025,9 +2025,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
             if isinstance(other, groupby.GroupBy):
                 return NotImplemented
             if hasattr(other, 'indexes'):
-                # if user does not specify join, default to OPTIONS['join']
-                how_to_join = join or OPTIONS['join']
-                self, other = align(self, other, join=how_to_join, copy=False)
+                align_type = OPTIONS['arithmetic_join'] if join is None else join
+                self, other = align(self, other, join=align_type, copy=False)
             g = f if not reflexive else lambda x, y: f(y, x)
             ds = self._calculate_binary_op(g, other, fillna=fillna)
             return ds
