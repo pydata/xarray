@@ -49,9 +49,9 @@ except ImportError:
 
 try:
     import rasterio
-    has_rasterioio = True
+    has_rasterio = True
 except ImportError:
-    has_rasterioio = False
+    has_rasterio = False
 
 
 try:

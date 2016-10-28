@@ -1077,7 +1077,7 @@ class TestRasterIO(CFEncodedDataTest, Only32BitTypes, TestCase):
     def roundtrip(self, data, save_kwargs={}, open_kwargs={}):
         with create_tmp_file() as tmp_file:
             data.to_netcdf(tmp_file, engine='scipy', **save_kwargs)
-            with open_dataset(tmp_file, engine='pynio', **open_kwargs) as ds:
+            with open_dataset(tmp_file, engine='rasterio', **open_kwargs) as ds:
                 yield ds
 
     def test_weakrefs(self):
@@ -1086,7 +1086,7 @@ class TestRasterIO(CFEncodedDataTest, Only32BitTypes, TestCase):
 
         with create_tmp_file() as tmp_file:
             example.to_netcdf(tmp_file, engine='scipy')
-            on_disk = open_dataset(tmp_file, engine='pynio')
+            on_disk = open_dataset(tmp_file, engine='rasterio')
             actual = on_disk.rename({'foo': 'bar', 'x': 'y'})
             del on_disk  # trigger garbage collection
             self.assertDatasetIdentical(actual, expected)

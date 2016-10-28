@@ -8,20 +8,21 @@ except ImportError:
 from .. import Variable, DataArray
 from ..core.utils import FrozenOrderedDict, Frozen, NDArrayMixin
 from ..core import indexing
+from ..core.pycompat import OrderedDict
 
 from .common import AbstractDataStore
 
-_VARNAME = 'raster'
+__rio_varname__ = 'raster'
 
 
 class RasterioArrayWrapper(NDArrayMixin):
-    def __init__(self, array, ds):
-        self.array = array
-        self._ds = ds  # make an explicit reference because pynio uses weakrefs
+    def __init__(self, ds):
+        self._ds = ds
+        self.array = ds.read()
 
     @property
     def dtype(self):
-        return np.dtype(self.array.typecode())
+        return np.dtype(self._ds.dtypes[0])
 
     def __getitem__(self, key):
         if key == () and self.ndim == 0:
@@ -42,52 +43,58 @@ class RasterioDataStore(AbstractDataStore):
             x0, y0 = self.ds.bounds.left, self.ds.bounds.top
             dx, dy = self.ds.res[0], -self.ds.res[1]
 
-        coords = {'y': np.arange(start=y0, stop=(y0 + ny * dy), step=dy),
-                  'x': np.arange(start=x0, stop=(x0 + nx * dx), step=dx)}
+        self.coords = {'y': np.arange(start=y0, stop=(y0 + ny * dy), step=dy),
+                       'x': np.arange(start=x0, stop=(x0 + nx * dx), step=dx)}
 
         # Get dims
         if self.ds.count >= 2:
             self.dims = ('band', 'y', 'x')
-            coords['band'] = self.ds.indexes
+            self.coords['band'] = self.ds.indexes
         elif self.ds.count == 1:
             self.dims = ('y', 'x')
         else:
             raise ValueError('unknown dims')
 
-        attrs = {}
-        for attr_name in ['crs', 'affine', 'proj']:
+        self._attrs = OrderedDict()
+        for attr_name in ['crs', 'transform', 'proj']:
             try:
-                attrs[attr_name] = getattr(self.ds, attr_name)
+                self._attrs[attr_name] = getattr(self.ds, attr_name)
             except AttributeError:
                 pass
 
-    def get_vardata(self, var_id=1):
-        """Read the geotiff band.
-        Parameters
-        ----------
-        var_id: the variable name (here the band number)
-        """
-        wx = (self.sub_x[0], self.sub_x[1] + 1)
-        wy = (self.sub_y[0], self.sub_y[1] + 1)
-        with rasterio.Env():
-            band = self.ds.read(var_id, window=(wy, wx))
-        return band
+        self.coords = _try_to_get_latlon_coords(self.coords, self._attrs)
+
+
+
+    # def get_vardata(self, var_id=1):
+    #     """Read the geotiff band.
+    #     Parameters
+    #     ----------
+    #     var_id: the variable name (here the band number)
+    #     """
+    #     # wx = (self.sub_x[0], self.sub_x[1] + 1)
+    #     # wy = (self.sub_y[0], self.sub_y[1] + 1)
+    #     with rasterio.Env():
+    #         band = self.ds.read()  # var_id, window=(wy, wx))
+    #     return band
 
     def open_store_variable(self, var):
-        if var != _VARNAME:
-            raise ValueError('Rasterio variables are all named %s' % _VARNAME)
-        data = indexing.LazilyIndexedArray(RasterioArrayWrapper(var, self.ds))
-        return Variable(var.dimensions, data, var.attributes)
+        if var != __rio_varname__:
+            raise ValueError(
+                'Rasterio variables are all named %s' % __rio_varname__)
+        data = indexing.LazilyIndexedArray(
+            RasterioArrayWrapper(self.ds))
+        return Variable(self.dims, data, self._attrs)
 
     def get_variables(self):
-        return FrozenOrderedDict((k, self.open_store_variable(v))
-                                 for k, v in self.ds.variables.items())
+        return FrozenOrderedDict(
+            {__rio_varname__: self.open_store_variable(__rio_varname__)})
 
     def get_attrs(self):
-        return Frozen(self.ds.attributes)
+        return Frozen(self._attrs)
 
     def get_dimensions(self):
-        return Frozen(self.ds.dimensions)
+        return Frozen(self.ds.dims)
 
     def close(self):
         self.ds.close()
@@ -110,23 +117,26 @@ def _transform_proj(p1, p2, x, y, nocopy=False):
     return pyproj.transform(p1, p2, x, y)
 
 
-def _try_to_get_latlon_coords(da):
-    import pyproj
-    if 'crs' in da.attrs:
-        proj = pyproj.Proj(da.attrs['crs'])
-        x, y = np.meshgrid(da['x'], da['y'])
+def _try_to_get_latlon_coords(coords, attrs):
+    try:
+        import pyproj
+    except ImportError:
+        pyproj = False
+    if 'crs' in attrs and pyproj:
+        proj = pyproj.Proj(attrs['crs'])
+        x, y = np.meshgrid(coords['x'], coords['y'])
         proj_out = pyproj.Proj("+init=EPSG:4326", preserve_units=True)
         xc, yc = _transform_proj(proj, proj_out, x, y)
-        coords = dict(y=da['y'], x=da['x'])
+        coords = dict(y=coords['y'], x=coords['x'])
         dims = ('y', 'x')
 
-        da.coords['latitude'] = \
-            DataArray(yc, coords=coords, dims=dims, name='latitude',
-                      attrs={'units': 'degrees_north', 'long_name': 'latitude',
-                             'standard_name': 'latitude'})
-        da.coords['longitude'] = DataArray(xc, coords=coords, dims=dims, name='latitude',
-                                           attrs={'units': 'degrees_east',
-                                                  'long_name': 'longitude',
-                                                  'standard_name': 'longitude'})
+        coords['latitude'] = DataArray(
+            data=yc, coords=coords, dims=dims, name='latitude',
+            attrs={'units': 'degrees_north', 'long_name': 'latitude',
+                   'standard_name': 'latitude'})
+        coords['longitude'] = DataArray(
+            data=xc, coords=coords, dims=dims, name='latitude',
+            attrs={'units': 'degrees_east', 'long_name': 'longitude',
+                   'standard_name': 'longitude'})
 
-    return da
+    return coords

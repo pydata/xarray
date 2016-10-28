@@ -1,4 +1,3 @@
-import sys
 import gzip
 import os.path
 import threading
@@ -17,6 +16,7 @@ from ..core.pycompat import basestring
 
 DATAARRAY_NAME = '__xarray_dataarray_name__'
 DATAARRAY_VARIABLE = '__xarray_dataarray_variable__'
+
 
 def _get_default_engine(path, allow_remote=False):
     if allow_remote and is_remote_uri(path):  # pragma: no cover
