@@ -2921,14 +2921,14 @@ class TestDataset(TestCase):
         dim = 'x'
         align_type = "outer"
         coords_l, coords_r = [0, 1, 2], [1, 2, 3]
-        missing_0 = xr.DataArray(coords_l, [(dim, coords_l)]).to_dataset(name='a')
-        missing_3 = xr.DataArray(coords_r, [(dim, coords_r)]).to_dataset(name='a')
+        missing_3 = xr.DataArray(coords_l, [(dim, coords_l)]).to_dataset(name='a')
+        missing_0 = xr.DataArray(coords_r, [(dim, coords_r)]).to_dataset(name='a')
         with xr.set_options(arithmetic_join=align_type):
             experimental = missing_0 + missing_3
-            missing_0_aligned, missing_3_aligned =\
-                xr.align(missing_0, missing_3, join=align_type)
-            control = missing_0_aligned + missing_3_aligned
-            self.assertDatasetEqual(experimental, control)
+        missing_0_aligned, missing_3_aligned =\
+            xr.align(missing_0, missing_3, join=align_type)
+        control = missing_0_aligned + missing_3_aligned
+        self.assertDatasetEqual(experimental, control)
 
 
 ### Py.test tests

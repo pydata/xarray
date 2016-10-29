@@ -226,15 +226,7 @@ If the result would be empty, an error is raised instead:
     ValueError: no overlapping labels for some dimensions: ['x']
 
 However, one can explicitly change this default automatic alignment type ("inner")
-via :py:func:`~xarray.set_options()`
-
-.. ipython:: python
-
-    xr.set_options(arithmetic_join="outer")
-    arr + arr[:1]
-
-Note that this changes the alignment type for all ensuing binary operations.  One
-could also use :py:func:`~xarray.set_options()` in a context manager
+via :py:func:`~xarray.set_options()` in context manager:
 
 .. ipython:: python
 
