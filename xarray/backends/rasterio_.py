@@ -47,11 +47,9 @@ class RasterioDataStore(AbstractDataStore):
                        'x': np.arange(start=x0, stop=(x0 + nx * dx), step=dx)}
 
         # Get dims
-        if self.ds.count >= 2:
+        if self.ds.count >= 1:
             self.dims = ('band', 'y', 'x')
             self.coords['band'] = self.ds.indexes
-        elif self.ds.count == 1:
-            self.dims = ('y', 'x')
         else:
             raise ValueError('unknown dims')
 
@@ -63,7 +61,6 @@ class RasterioDataStore(AbstractDataStore):
                 pass
 
         self.coords = _try_to_get_latlon_coords(self.coords, self._attrs)
-
 
 
     # def get_vardata(self, var_id=1):
@@ -135,8 +132,7 @@ def _try_to_get_latlon_coords(coords, attrs):
             attrs={'units': 'degrees_north', 'long_name': 'latitude',
                    'standard_name': 'latitude'})
         coords['longitude'] = DataArray(
-            data=xc, coords=coords, dims=dims, name='latitude',
+            data=xc, coords=coords, dims=dims, name='longitude',
             attrs={'units': 'degrees_east', 'long_name': 'longitude',
                    'standard_name': 'longitude'})
-
     return coords
