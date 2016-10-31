@@ -18,6 +18,8 @@ dependencies:
   - scipy
   - seaborn
   - toolz
+  - cyordereddict
+  - rasterio>=1.0
   - pip:
     - coveralls
     - pytest-cov
