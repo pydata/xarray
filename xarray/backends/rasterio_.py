@@ -60,9 +60,6 @@ class RasterioDataStore(AbstractDataStore):
             except AttributeError:
                 pass
 
-        self.coords = _try_to_get_latlon_coords(self.coords, self._attrs)
-
-
     # def get_vardata(self, var_id=1):
     #     """Read the geotiff band.
     #     Parameters
@@ -84,8 +81,11 @@ class RasterioDataStore(AbstractDataStore):
         return Variable(self.dims, data, self._attrs)
 
     def get_variables(self):
-        return FrozenOrderedDict(
-            {__rio_varname__: self.open_store_variable(__rio_varname__)})
+        # Get lat lon coordinates
+        coords = _try_to_get_latlon_coords(self.coords, self._attrs)
+        vars = {__rio_varname__: self.open_store_variable(__rio_varname__)}
+        vars.update(coords)
+        return FrozenOrderedDict(vars)
 
     def get_attrs(self):
         return Frozen(self._attrs)
@@ -115,6 +115,7 @@ def _transform_proj(p1, p2, x, y, nocopy=False):
 
 
 def _try_to_get_latlon_coords(coords, attrs):
+    coords_out = {}
     try:
         import pyproj
     except ImportError:
@@ -127,12 +128,12 @@ def _try_to_get_latlon_coords(coords, attrs):
         coords = dict(y=coords['y'], x=coords['x'])
         dims = ('y', 'x')
 
-        coords['latitude'] = DataArray(
-            data=yc, coords=coords, dims=dims, name='latitude',
+        coords_out['lat'] = DataArray(
+            data=yc, coords=coords, dims=dims, name='lat',
             attrs={'units': 'degrees_north', 'long_name': 'latitude',
                    'standard_name': 'latitude'})
-        coords['longitude'] = DataArray(
-            data=xc, coords=coords, dims=dims, name='longitude',
+        coords_out['lon'] = DataArray(
+            data=xc, coords=coords, dims=dims, name='lon',
             attrs={'units': 'degrees_east', 'long_name': 'longitude',
                    'standard_name': 'longitude'})
-    return coords
+    return coords_out

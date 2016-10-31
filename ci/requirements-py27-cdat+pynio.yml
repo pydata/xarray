@@ -3,7 +3,7 @@ channels:
   - conda-forge
 dependencies:
   - python=2.7
-  # - cdat-lite
+  - cdat-lite
   - dask
   - pytest
   - numpy
