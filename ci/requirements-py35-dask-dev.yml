@@ -7,7 +7,7 @@ dependencies:
   - pandas
   - scipy
   - toolz
-  - rasterio>=1.0
+  - rasterio
   - pip:
     - coveralls
     - pytest-cov
