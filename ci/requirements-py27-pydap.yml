@@ -8,6 +8,7 @@ dependencies:
   - numpy
   - pandas
   - scipy
+  - rasterio>=1.0
   - pip:
     - coveralls
     - pytest-cov

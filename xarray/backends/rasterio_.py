@@ -8,7 +8,7 @@ except ImportError:
 from .. import Variable, DataArray
 from ..core.utils import FrozenOrderedDict, Frozen, NDArrayMixin
 from ..core import indexing
-from ..core.pycompat import OrderedDict
+from ..core.pycompat import OrderedDict, suppress
 
 from .common import AbstractDataStore
 
@@ -54,23 +54,9 @@ class RasterioDataStore(AbstractDataStore):
             raise ValueError('unknown dims')
 
         self._attrs = OrderedDict()
-        for attr_name in ['crs', 'transform', 'proj']:
-            try:
-                self._attrs[attr_name] = getattr(self.ds, attr_name)
-            except AttributeError:
-                pass
-
-    # def get_vardata(self, var_id=1):
-    #     """Read the geotiff band.
-    #     Parameters
-    #     ----------
-    #     var_id: the variable name (here the band number)
-    #     """
-    #     # wx = (self.sub_x[0], self.sub_x[1] + 1)
-    #     # wy = (self.sub_y[0], self.sub_y[1] + 1)
-    #     with rasterio.Env():
-    #         band = self.ds.read()  # var_id, window=(wy, wx))
-    #     return band
+        with suppress(AttributeError):
+            for attr_name in ['crs', 'transform', 'proj']:
+                    self._attrs[attr_name] = getattr(self.ds, attr_name)
 
     def open_store_variable(self, var):
         if var != __rio_varname__:
@@ -125,15 +111,10 @@ def _try_to_get_latlon_coords(coords, attrs):
         x, y = np.meshgrid(coords['x'], coords['y'])
         proj_out = pyproj.Proj("+init=EPSG:4326", preserve_units=True)
         xc, yc = _transform_proj(proj, proj_out, x, y)
-        coords = dict(y=coords['y'], x=coords['x'])
         dims = ('y', 'x')
 
-        coords_out['lat'] = DataArray(
-            data=yc, coords=coords, dims=dims, name='lat',
-            attrs={'units': 'degrees_north', 'long_name': 'latitude',
+        coords_out['lat'] = Variable(dims,yc,attrs={'units': 'degrees_north', 'long_name': 'latitude',
                    'standard_name': 'latitude'})
-        coords_out['lon'] = DataArray(
-            data=xc, coords=coords, dims=dims, name='lon',
-            attrs={'units': 'degrees_east', 'long_name': 'longitude',
+        coords_out['lon'] = Variable(dims,xc,attrs={'units': 'degrees_east', 'long_name': 'longitude',
                    'standard_name': 'longitude'})
     return coords_out

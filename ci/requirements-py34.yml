@@ -4,6 +4,7 @@ dependencies:
   - bottleneck
   - pytest
   - pandas
+  - rasterio>=1.0
   - pip:
     - coveralls
     - pytest-cov
