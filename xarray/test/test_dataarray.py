@@ -2276,8 +2276,8 @@ class TestDataArray(TestCase):
         missing_3 = xr.DataArray(coords_l, [(dim, coords_l)])
         missing_0 = xr.DataArray(coords_r, [(dim, coords_r)])
         with xr.set_options(arithmetic_join=align_type):
-            experimental = missing_0 + missing_3
+            actual = missing_0 + missing_3
         missing_0_aligned, missing_3_aligned =\
             xr.align(missing_0, missing_3, join=align_type)
-        control = xr.DataArray([np.nan, 2, 4, np.nan], [(dim, [0, 1, 2, 3])]) #missing_0_aligned + missing_3_aligned
-        self.assertDataArrayEqual(experimental, control)
+        expected = xr.DataArray([np.nan, 2, 4, np.nan], [(dim, [0, 1, 2, 3])]) 
+        self.assertDataArrayEqual(actual, expected)
