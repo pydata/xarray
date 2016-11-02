@@ -49,19 +49,7 @@ class NetCDF4ArrayWrapper(BaseNetCDF4Array):
         else:
             getitem = operator.getitem
 
-        try:
-            data = getitem(self.array, key)
-        except IndexError:
-            # Catch IndexError in netCDF4 and return a more informative error
-            # message.  This is most often called when an unsorted indexer is
-            # used before the data is loaded from disk.
-            msg = ('The indexing operation you are attempting to perform is '
-                   'not valid on netCDF4.Variable object. Try loading your '
-                   'data into memory first by calling .load().')
-            if not PY3:
-                import traceback
-                msg += '\n\nOriginal traceback:\n' + traceback.format_exc()
-            raise IndexError(msg)
+        data = getitem(self.array, key)
 
         if self.ndim == 0:
             # work around for netCDF4-python's broken handling of 0-d
@@ -179,16 +167,13 @@ class NetCDF4DataStore(WritableCFDataStore):
     This store supports NetCDF3, NetCDF4 and OpenDAP datasets.
     """
     def __init__(self, filename, mode='r', format='NETCDF4', group=None,
-                 writer=None, clobber=True, diskless=False, persist=False,
-                 ds=None):
+                 writer=None, clobber=True, diskless=False, persist=False):
         import netCDF4 as nc4
         if format is None:
             format = 'NETCDF4'
-        if ds is None:
-            # sometimes users want to give a custom NetCDF object
-            ds = nc4.Dataset(filename, mode=mode, clobber=clobber,
-                             diskless=diskless, persist=persist,
-                             format=format)
+        ds = nc4.Dataset(filename, mode=mode, clobber=clobber,
+                         diskless=diskless, persist=persist,
+                         format=format)
         with close_on_error(ds):
             self.ds = _nc4_group(ds, group, mode)
         self.format = format
