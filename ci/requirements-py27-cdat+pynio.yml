@@ -19,7 +19,6 @@ dependencies:
   - seaborn
   - toolz
   - cyordereddict
-  - rasterio
   - pip:
     - coveralls
     - pytest-cov
