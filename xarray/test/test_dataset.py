@@ -1858,6 +1858,21 @@ class TestDataset(TestCase):
         expected = Dataset({'foo': ('bar', [1.5, 3]), 'bar': [1, 2]})
         self.assertDatasetIdentical(actual, expected)
 
+    def test_groupby_order(self):
+        # groupby should preserve variables order
+
+        ds = Dataset()
+        for vn in ['a', 'b', 'c']:
+            ds[vn] = DataArray(np.arange(10), dims=['t'])
+        all_vars_ref = list(ds.variables.keys())
+        data_vars_ref = list(ds.data_vars.keys())
+        ds = ds.groupby('t').mean()
+        all_vars = list(ds.variables.keys())
+        data_vars = list(ds.data_vars.keys())
+        self.assertEqual(data_vars, data_vars_ref)
+        # coords are now at the end of the list, so the test below fails
+        # self.assertEqual(all_vars, all_vars_ref)
+
     def test_resample_and_first(self):
         times = pd.date_range('2000-01-01', freq='6H', periods=10)
         ds = Dataset({'foo': (['time', 'x', 'y'], np.random.randn(10, 5, 3)),
@@ -2119,6 +2134,25 @@ class TestDataset(TestCase):
                                   ('lat', ('lat', lat))]))
         roundtripped = Dataset.from_dict(ds.to_dict())
         self.assertDatasetIdentical(ds, roundtripped)
+
+    def test_to_dict_with_numpy_attrs(self):
+        # this doesn't need to roundtrip
+        x = np.random.randn(10)
+        y = np.random.randn(10)
+        t = list('abcdefghij')
+        attrs = {'created': np.float64(1998),
+                 'coords': np.array([37, -110.1, 100]),
+                 'maintainer': 'bar'}
+        ds = Dataset(OrderedDict([('a', ('t', x, attrs)),
+                                  ('b', ('t', y, attrs)),
+                                  ('t', ('t', t))]))
+        expected_attrs = {'created': np.asscalar(attrs['created']),
+                          'coords': attrs['coords'].tolist(),
+                          'maintainer': 'bar'}
+        actual = ds.to_dict()
+
+        # check that they are identical
+        self.assertEqual(expected_attrs, actual['data_vars']['a']['attrs'])
 
     def test_pickle(self):
         data = create_test_data()

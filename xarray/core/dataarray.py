@@ -22,6 +22,7 @@ from .variable import (as_variable, Variable, as_compatible_data, IndexVariable,
                        default_index_coordinate,
                        assert_unique_multiindex_level_names)
 from .formatting import format_item
+from .utils import decode_numpy_dict_values, ensure_us_time_resolution
 
 
 def _infer_coords_and_dims(shape, coords, dims):
@@ -1194,29 +1195,25 @@ class DataArray(AbstractArray, BaseDataObject):
         Convert this xarray.DataArray into a dictionary following xarray
         naming conventions.
 
-        Useful for coverting to json.
+        Converts all variables and attributes to native Python objects.
+        Useful for coverting to json. To avoid datetime incompatibility
+        use decode_times=False kwarg in xarrray.open_dataset.
 
         See also
         --------
         xarray.DataArray.from_dict
         """
-        d = {'coords': {}, 'attrs': dict(self.attrs), 'dims': self.dims}
-
-        def time_check(val):
-            # needed because of numpy bug GH#7619
-            if np.issubdtype(val.dtype, np.datetime64):
-                val = val.astype('datetime64[us]')
-            elif np.issubdtype(val.dtype, np.timedelta64):
-                val = val.astype('timedelta64[us]')
-            return val
+        d = {'coords': {}, 'attrs': decode_numpy_dict_values(self.attrs),
+             'dims': self.dims}
 
         for k in self.coords:
-            data = time_check(self[k].values).tolist()
-            d['coords'].update({k: {'data': data,
-                                    'dims': self[k].dims,
-                                    'attrs': dict(self[k].attrs)}})
+            data = ensure_us_time_resolution(self[k].values).tolist()
+            d['coords'].update({
+                k: {'data': data,
+                    'dims': self[k].dims,
+                    'attrs': decode_numpy_dict_values(self[k].attrs)}})
 
-        d.update({'data': time_check(self.values).tolist(),
+        d.update({'data': ensure_us_time_resolution(self.values).tolist(),
                   'name': self.name})
         return d
 
