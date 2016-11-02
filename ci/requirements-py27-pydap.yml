@@ -1,6 +1,4 @@
 name: test_env
-channels:
-  - conda-forge
 dependencies:
   - python=2.7
   - dask
@@ -10,7 +8,6 @@ dependencies:
   - numpy
   - pandas
   - scipy
-  - rasterio
   - pip:
     - coveralls
     - pytest-cov

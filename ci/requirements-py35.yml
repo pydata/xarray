@@ -1,6 +1,4 @@
 name: test_env
-channels:
-  - conda-forge
 dependencies:
   - python=3.5
   - cython
@@ -13,7 +11,6 @@ dependencies:
   - pandas
   - seaborn
   - scipy
-  - rasterio
   - pip:
     - coveralls
     - pytest-cov

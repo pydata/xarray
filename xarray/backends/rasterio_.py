@@ -44,7 +44,7 @@ class RasterioDataStore(AbstractDataStore):
             dx, dy = self.ds.res[0], -self.ds.res[1]
 
         self.coords = {'y': np.arange(start=y0, stop=(y0 + ny * dy), step=dy),
-                       'x': np.arange(start=x0, stop=(x0 + nx * dx), step=dx)}
+            'x': np.arange(start=x0, stop=(x0 + nx * dx), step=dx)}
 
         # Get dims
         if self.ds.count >= 1:
@@ -56,7 +56,7 @@ class RasterioDataStore(AbstractDataStore):
         self._attrs = OrderedDict()
         with suppress(AttributeError):
             for attr_name in ['crs', 'transform', 'proj']:
-                    self._attrs[attr_name] = getattr(self.ds, attr_name)
+                self._attrs[attr_name] = getattr(self.ds, attr_name)
 
     def open_store_variable(self, var):
         if var != __rio_varname__:
@@ -69,9 +69,9 @@ class RasterioDataStore(AbstractDataStore):
     def get_variables(self):
         # Get lat lon coordinates
         coords = _try_to_get_latlon_coords(self.coords, self._attrs)
-        vars = {__rio_varname__: self.open_store_variable(__rio_varname__)}
-        vars.update(coords)
-        return FrozenOrderedDict(vars)
+        rio_vars = {__rio_varname__: self.open_store_variable(__rio_varname__)}
+        rio_vars.update(coords)
+        return FrozenOrderedDict(rio_vars)
 
     def get_attrs(self):
         return Frozen(self._attrs)

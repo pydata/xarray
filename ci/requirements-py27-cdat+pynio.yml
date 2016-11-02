@@ -12,6 +12,5 @@ dependencies:
   - scipy
   - pytest-cov
   - cyordereddict
-  - rasterio
   - pip:
     - coveralls
