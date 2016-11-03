@@ -2,7 +2,6 @@ from datetime import timedelta
 from collections import defaultdict
 import functools
 import itertools
-import warnings
 
 import numpy as np
 import pandas as pd
@@ -192,7 +191,8 @@ def _as_array_or_item(data):
     return data
 
 
-class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
+class Variable(common.AbstractArray, common.SharedMethodsMixin,
+               utils.NdimSizeLenMixin):
 
     """A netcdf-like variable consisting of dimensions, data and attributes
     which describe a single Array. A single Variable object is not fully
@@ -678,34 +678,6 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
         data = ops.transpose(self.data, axes)
         return type(self)(dims, data, self._attrs, self._encoding, fastpath=True)
 
-    def squeeze(self, dim=None):
-        """Return a new Variable object with squeezed data.
-
-        Parameters
-        ----------
-        dim : None or str or tuple of str, optional
-            Selects a subset of the length one dimensions. If a dimension is
-            selected with length greater than one, an error is raised. If
-            None, all length one dimensions are squeezed.
-
-        Returns
-        -------
-        squeezed : Variable
-            This array, but with with all or a subset of the dimensions of
-            length 1 removed.
-
-        Notes
-        -----
-        Although this operation returns a view of this variable's data, it is
-        not lazy -- the data will be fully loaded.
-
-        See Also
-        --------
-        numpy.squeeze
-        """
-        dims = dict(zip(self.dims, self.shape))
-        return common.squeeze(self, dims, dim)
-
     def expand_dims(self, dims, shape=None):
         """Return a new variable with expanded dimensions.
 
@@ -814,8 +786,7 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
             raise ValueError('cannot create a new dimension with the same '
                              'name as an existing dimension')
 
-        axis = self.get_axis_num(old_dim)
-        if np.prod(new_dim_sizes) != self.shape[axis]:
+        if np.prod(new_dim_sizes) != self.sizes[old_dim]:
             raise ValueError('the product of the new dimension sizes must '
                              'equal the size of the old dimension')
 
@@ -913,7 +884,6 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
                             else np.atleast_1d(axis) % self.ndim)
             dims = [adim for n, adim in enumerate(self.dims)
                     if n not in removed_axes]
-
 
         attrs = self._attrs if keep_attrs else None
 

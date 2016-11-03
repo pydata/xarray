@@ -1,4 +1,3 @@
-import contextlib
 import functools
 import warnings
 
@@ -13,7 +12,7 @@ from . import rolling
 from . import ops
 from . import utils
 from .alignment import align
-from .common import AbstractArray, BaseDataObject, squeeze
+from .common import AbstractArray, BaseDataObject
 from .coordinates import (DataArrayCoordinates, LevelCoordinates,
                           Indexes)
 from .dataset import Dataset
@@ -411,7 +410,12 @@ class DataArray(AbstractArray, BaseDataObject):
 
     @property
     def dims(self):
-        """Dimension names associated with this array."""
+        """Tuple of dimension names associated with this array.
+
+        Note that the type of this property is inconsistent with `Dataset.dims`.
+        See `Dataset.sizes` and `DataArray.sizes` for consistently named
+        properties.
+        """
         return self.variable.dims
 
     @dims.setter
@@ -910,33 +914,6 @@ class DataArray(AbstractArray, BaseDataObject):
         """
         variable = self.variable.transpose(*dims)
         return self._replace(variable)
-
-    def squeeze(self, dim=None):
-        """Return a new DataArray object with squeezed data.
-
-        Parameters
-        ----------
-        dim : None or str or tuple of str, optional
-            Selects a subset of the length one dimensions. If a dimension is
-            selected with length greater than one, an error is raised. If
-            None, all length one dimensions are squeezed.
-
-        Returns
-        -------
-        squeezed : DataArray
-            This array, but with with all or a subset of the dimensions of
-            length 1 removed.
-
-        Notes
-        -----
-        Although this operation returns a view of this array's data, it is
-        not lazy -- the data will be fully loaded.
-
-        See Also
-        --------
-        numpy.squeeze
-        """
-        return squeeze(self, dict(zip(self.dims, self.shape)), dim)
 
     def drop(self, labels, dim=None):
         """Drop coordinates or index labels from this DataArray.

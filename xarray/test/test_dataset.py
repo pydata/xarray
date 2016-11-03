@@ -338,6 +338,7 @@ class TestDataset(TestCase):
         self.assertEqual(ds.dims,
                          {'dim1': 8, 'dim2': 9, 'dim3': 10, 'time': 20})
         self.assertEqual(list(ds.dims), sorted(ds.dims))
+        self.assertEqual(ds.sizes, ds.dims)
 
         # These exact types aren't public API, but this makes sure we don't
         # change them inadvertently:

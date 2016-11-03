@@ -77,6 +77,11 @@ Enhancements
   :py:meth:`~xarray.DataArray.cumprod`.  By `Phillip J. Wolfram
   <https://github.com/pwolfram>`_.
 
+- New properties :py:attr:`Dataset.sizes` and :py:attr:`DataArray.sizes` for
+  providing consistent access to dimension length on both ``Dataset`` and
+  ``DataArray`` (:issue:`921`).
+  By `Stephan Hoyer <https://github.com/shoyer>`_.
+
 Bug fixes
 ~~~~~~~~~
 - ``groupby_bins`` now restores empty bins by default (:issue:`1019`).
