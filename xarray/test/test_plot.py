@@ -851,14 +851,12 @@ class TestPcolormesh(Common2dMixin, PlotTestCase):
         self.assertEqual('x2d', ax.get_xlabel())
         self.assertEqual('y2d', ax.get_ylabel())
 
-    def test_dont_infer_interval_breaks_for_cartopy(self):
-        # Regression for GH 781
+    def test_infer_interval_breaks_for_cartopy(self):
+        # GH 781
         ax = plt.gca()
-        # Simulate a Cartopy Axis
-        setattr(ax, 'projection', True)
-        artist = self.plotmethod(x='x2d', y='y2d', ax=ax)
+        artist = self.plotmethod(x='x2d', y='y2d', ax=ax,
+                                 infer_interval_breaks=False)
         self.assertTrue(isinstance(artist, mpl.collections.QuadMesh))
-        # Let cartopy handle the axis limits and artist size
         self.assertTrue(artist.get_array().size <= self.darray.size)
 
 
