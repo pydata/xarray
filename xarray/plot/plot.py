@@ -316,7 +316,7 @@ def _plot2d(plotfunc):
         provided, extend is inferred from vmin, vmax and the data limits.
     levels : int or list-like object, optional
         Split the colormap (cmap) into discrete color intervals.
-    infer_interval_breaks : bool, optional
+    infer_intervals : bool, optional
         Only applies to pcolormesh. If True, the coordinate intervals are
         passed to pcolormesh (the default). If False, the original coordinates
         are used (this can be useful for certain map projections).
@@ -345,7 +345,7 @@ def _plot2d(plotfunc):
                     col_wrap=None, xincrease=True, yincrease=True,
                     add_colorbar=None, add_labels=True, vmin=None, vmax=None,
                     cmap=None, center=None, robust=False, extend=None,
-                    levels=None, infer_interval_breaks=True, colors=None,
+                    levels=None, infer_intervals=True, colors=None,
                     subplot_kws=None, cbar_ax=None, cbar_kwargs=None,
                     **kwargs):
         # All 2d plots in xarray share this function signature.
@@ -461,7 +461,7 @@ def _plot2d(plotfunc):
                    col=None, col_wrap=None, xincrease=True, yincrease=True,
                    add_colorbar=None, add_labels=True, vmin=None, vmax=None,
                    cmap=None, colors=None, center=None, robust=False,
-                   extend=None, levels=None, infer_interval_breaks=True,
+                   extend=None, levels=None, infer_intervals=True,
                    subplot_kws=None, cbar_ax=None, cbar_kwargs=None, **kwargs):
         """
         The method should have the same signature as the function.
@@ -560,14 +560,14 @@ def _infer_interval_breaks(coord):
 
 
 @_plot2d
-def pcolormesh(x, y, z, ax, infer_interval_breaks=True, **kwargs):
+def pcolormesh(x, y, z, ax, infer_intervals=True, **kwargs):
     """
     Pseudocolor plot of 2d DataArray
 
     Wraps matplotlib.pyplot.pcolormesh
     """
 
-    if infer_interval_breaks:
+    if infer_intervals:
         x = _infer_interval_breaks(x)
         y = _infer_interval_breaks(y)
 

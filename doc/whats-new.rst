@@ -109,8 +109,8 @@ Bug fixes
   By `Fabien Maussion <https://github.com/fmaussion>`_.
 
 - Fixed a regression with pcolormesh (:issue:`781`). A new
-  ``infer_interval_breaks`` keyword gives control on whether the interval
-  breaks should be computed or not.
+  ``infer_intervals`` keyword gives control on whether the cell intervals
+  should be computed or not.
   By `Fabien Maussion <https://github.com/fmaussion>`_.
 
 .. _whats-new.0.8.2:

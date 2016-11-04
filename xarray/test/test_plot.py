@@ -855,7 +855,7 @@ class TestPcolormesh(Common2dMixin, PlotTestCase):
         # GH 781
         ax = plt.gca()
         artist = self.plotmethod(x='x2d', y='y2d', ax=ax,
-                                 infer_interval_breaks=False)
+                                 infer_intervals=False)
         self.assertTrue(isinstance(artist, mpl.collections.QuadMesh))
         self.assertTrue(artist.get_array().size <= self.darray.size)
 
