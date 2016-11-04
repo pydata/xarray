@@ -159,6 +159,13 @@ class TestDataArray(TestCase):
         with self.assertRaisesRegexp(AttributeError, 'you cannot assign'):
             arr.dims = ('w', 'z')
 
+    def test_sizes(self):
+        array = DataArray(np.zeros((3, 4)), dims=['x', 'y'])
+        self.assertEqual(array.sizes, {'x': 3, 'y': 4})
+        self.assertEqual(tuple(array.sizes), array.dims)
+        with self.assertRaises(TypeError):
+            array.sizes['foo'] = 5
+
     def test_encoding(self):
         expected = {'foo': 'bar'}
         self.dv.encoding['foo'] = 'bar'

@@ -178,10 +178,7 @@ class GroupBy(object):
             raise ValueError("`group` must have a 'dims' attribute")
         group_dim, = group.dims
 
-        try:
-            expected_size = obj.dims[group_dim]
-        except TypeError:
-            expected_size = obj.shape[obj.get_axis_num(group_dim)]
+        expected_size = obj.sizes[group_dim]
         if group.size != expected_size:
             raise ValueError('the group variable\'s length does not '
                              'match the length of this variable along its '
