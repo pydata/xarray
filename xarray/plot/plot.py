@@ -421,6 +421,9 @@ def _plot2d(plotfunc):
             kwargs['extend'] = cmap_params['extend']
             kwargs['levels'] = cmap_params['levels']
 
+        if 'pcolormesh' == plotfunc.__name__:
+            kwargs['infer_intervals'] = infer_intervals
+
         # This allows the user to pass in a custom norm coming via kwargs
         kwargs.setdefault('norm', cmap_params['norm'])
 
