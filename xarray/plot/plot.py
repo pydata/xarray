@@ -157,9 +157,10 @@ def line(darray, *args, **kwargs):
     if ax is None:
         ax = plt.gca()
 
-    xlabel, x = list(darray.indexes.items())[0]
+    xlabel, = darray.dims
+    x = darray.coords[xlabel]
 
-    _ensure_plottable([x])
+    _ensure_plottable(x)
 
     primitive = ax.plot(x, darray, *args, **kwargs)
 
