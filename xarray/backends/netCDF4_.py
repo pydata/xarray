@@ -3,6 +3,12 @@ from functools import partial
 
 import numpy as np
 
+try:
+    import distributed.protocol
+    HAS_DISTRIBUTED = True
+except ImportError:
+    HAS_DISTRIBUTED = False
+
 from .. import Variable
 from ..conventions import pop_to, cf_encoder
 from ..core import indexing
@@ -69,6 +75,29 @@ class NetCDF4ArrayWrapper(BaseNetCDF4Array):
             # https://github.com/Unidata/netcdf4-python/pull/220
             data = np.asscalar(data)
         return data
+
+
+def serialize_netcdf4_array_wrapper(array):
+    header, frames = distributed.protocol.serialize(array.array)
+    header['__netcdf4_array_wrapper__array_type'] = header.get('type')
+    header['__netcdf4_array_wrapper__is_remote'] = array.is_remote
+    return header, frames
+
+
+def deserialize_netcdf4_array_wrapper(header, frames):
+    is_remote = header.pop('__netcdf4_array_wrapper__is_remote')
+    type_ = header.pop('__netcdf4_array_wrapper__array_type', None)
+    if type_ is not None:
+        header['type'] = type_
+    array = distributed.protocol.deserialize(header, frames)
+    return NetCDF4ArrayWrapper(array, is_remote)
+
+
+if HAS_DISTRIBUTED:
+    distributed.protocol.register_serialization(
+        NetCDF4ArrayWrapper,
+        serialize_netcdf4_array_wrapper,
+        deserialize_netcdf4_array_wrapper)
 
 
 def _nc4_values_and_dtype(var):
