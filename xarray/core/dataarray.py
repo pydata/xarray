@@ -1,4 +1,3 @@
-import contextlib
 import functools
 import warnings
 
@@ -13,7 +12,7 @@ from . import rolling
 from . import ops
 from . import utils
 from .alignment import align
-from .common import AbstractArray, BaseDataObject, squeeze
+from .common import AbstractArray, BaseDataObject
 from .coordinates import (DataArrayCoordinates, LevelCoordinates,
                           Indexes)
 from .dataset import Dataset
@@ -22,6 +21,7 @@ from .variable import (as_variable, Variable, as_compatible_data, IndexVariable,
                        default_index_coordinate,
                        assert_unique_multiindex_level_names)
 from .formatting import format_item
+from .utils import decode_numpy_dict_values, ensure_us_time_resolution
 
 
 def _infer_coords_and_dims(shape, coords, dims):
@@ -410,7 +410,12 @@ class DataArray(AbstractArray, BaseDataObject):
 
     @property
     def dims(self):
-        """Dimension names associated with this array."""
+        """Tuple of dimension names associated with this array.
+
+        Note that the type of this property is inconsistent with `Dataset.dims`.
+        See `Dataset.sizes` and `DataArray.sizes` for consistently named
+        properties.
+        """
         return self.variable.dims
 
     @dims.setter
@@ -923,33 +928,6 @@ class DataArray(AbstractArray, BaseDataObject):
         variable = self.variable.transpose(*dims)
         return self._replace(variable)
 
-    def squeeze(self, dim=None):
-        """Return a new DataArray object with squeezed data.
-
-        Parameters
-        ----------
-        dim : None or str or tuple of str, optional
-            Selects a subset of the length one dimensions. If a dimension is
-            selected with length greater than one, an error is raised. If
-            None, all length one dimensions are squeezed.
-
-        Returns
-        -------
-        squeezed : DataArray
-            This array, but with with all or a subset of the dimensions of
-            length 1 removed.
-
-        Notes
-        -----
-        Although this operation returns a view of this array's data, it is
-        not lazy -- the data will be fully loaded.
-
-        See Also
-        --------
-        numpy.squeeze
-        """
-        return squeeze(self, dict(zip(self.dims, self.shape)), dim)
-
     def drop(self, labels, dim=None):
         """Drop coordinates or index labels from this DataArray.
 
@@ -1207,29 +1185,25 @@ class DataArray(AbstractArray, BaseDataObject):
         Convert this xarray.DataArray into a dictionary following xarray
         naming conventions.
 
-        Useful for coverting to json.
+        Converts all variables and attributes to native Python objects.
+        Useful for coverting to json. To avoid datetime incompatibility
+        use decode_times=False kwarg in xarrray.open_dataset.
 
         See also
         --------
         xarray.DataArray.from_dict
         """
-        d = {'coords': {}, 'attrs': dict(self.attrs), 'dims': self.dims}
-
-        def time_check(val):
-            # needed because of numpy bug GH#7619
-            if np.issubdtype(val.dtype, np.datetime64):
-                val = val.astype('datetime64[us]')
-            elif np.issubdtype(val.dtype, np.timedelta64):
-                val = val.astype('timedelta64[us]')
-            return val
+        d = {'coords': {}, 'attrs': decode_numpy_dict_values(self.attrs),
+             'dims': self.dims}
 
         for k in self.coords:
-            data = time_check(self[k].values).tolist()
-            d['coords'].update({k: {'data': data,
-                                    'dims': self[k].dims,
-                                    'attrs': dict(self[k].attrs)}})
+            data = ensure_us_time_resolution(self[k].values).tolist()
+            d['coords'].update({
+                k: {'data': data,
+                    'dims': self[k].dims,
+                    'attrs': decode_numpy_dict_values(self[k].attrs)}})
 
-        d.update({'data': time_check(self.values).tolist(),
+        d.update({'data': ensure_us_time_resolution(self.values).tolist(),
                   'name': self.name})
         return d
 

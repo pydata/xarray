@@ -1,9 +1,10 @@
 import numpy as np
 import pandas as pd
 
-from .pycompat import basestring, iteritems, suppress, dask_array_type, bytes_type
+from .pycompat import (basestring, iteritems, suppress, dask_array_type,
+                       OrderedDict)
 from . import formatting
-from .utils import SortedKeysDict, not_implemented
+from .utils import SortedKeysDict, not_implemented, Frozen
 
 
 class ImplementsArrayReduce(object):
@@ -124,6 +125,8 @@ class ImplementsRollingArrayReduce(object):
 
 
 class AbstractArray(ImplementsArrayReduce, formatting.ReprMixin):
+    """Shared base class for DataArray and Variable."""
+
     def __bool__(self):
         return bool(self.values)
 
@@ -186,6 +189,18 @@ class AbstractArray(ImplementsArrayReduce, formatting.ReprMixin):
             raise ValueError("%r not found in array dimensions %r" %
                              (dim, self.dims))
 
+    @property
+    def sizes(self):
+        """Ordered mapping from dimension names to lengths.
+
+        Immutable.
+
+        See also
+        --------
+        Dataset.sizes
+        """
+        return Frozen(OrderedDict(zip(self.dims, self.shape)))
+
 
 class AttrAccessMixin(object):
     """Mixin class that allows getting keys with attribute access
@@ -231,7 +246,43 @@ class AttrAccessMixin(object):
         return sorted(set(dir(type(self)) + extra_attrs))
 
 
-class BaseDataObject(AttrAccessMixin):
+class SharedMethodsMixin(object):
+    """Shared methods for Dataset, DataArray and Variable."""
+
+    def squeeze(self, dim=None):
+        """Return a new object with squeezed data.
+
+        Parameters
+        ----------
+        dim : None or str or tuple of str, optional
+            Selects a subset of the length one dimensions. If a dimension is
+            selected with length greater than one, an error is raised. If
+            None, all length one dimensions are squeezed.
+
+        Returns
+        -------
+        squeezed : same type as caller
+            This object, but with with all or a subset of the dimensions of
+            length 1 removed.
+
+        See Also
+        --------
+        numpy.squeeze
+        """
+        if dim is None:
+            dim = [d for d, s in self.sizes.items() if s == 1]
+        else:
+            if isinstance(dim, basestring):
+                dim = [dim]
+            if any(self.sizes[k] > 1 for k in dim):
+                raise ValueError('cannot select a dimension to squeeze out '
+                                 'which has length greater than one')
+        return self.isel(**{d: 0 for d in dim})
+
+
+class BaseDataObject(SharedMethodsMixin, AttrAccessMixin):
+    """Shared base class for Dataset and DataArray."""
+
     def _calc_assign_results(self, kwargs):
         results = SortedKeysDict()
         for k, v in kwargs.items():
@@ -613,19 +664,6 @@ class BaseDataObject(AttrAccessMixin):
     __lt__ = __le__ =__ge__ = __gt__ = __add__ = __sub__ = __mul__ = \
     __truediv__ = __floordiv__ = __mod__ = __pow__ = __and__  = __xor__ = \
     __or__ = __div__ = __eq__ = __ne__ = not_implemented
-
-
-def squeeze(xarray_obj, dims, dim=None):
-    """Squeeze the dims of an xarray object."""
-    if dim is None:
-        dim = [d for d, s in iteritems(dims) if s == 1]
-    else:
-        if isinstance(dim, basestring):
-            dim = [dim]
-        if any(dims[k] > 1 for k in dim):
-            raise ValueError('cannot select a dimension to squeeze out '
-                             'which has length greater than one')
-    return xarray_obj.isel(**dict((d, 0) for d in dim))
 
 
 def _maybe_promote(dtype):

@@ -159,6 +159,13 @@ class TestDataArray(TestCase):
         with self.assertRaisesRegexp(AttributeError, 'you cannot assign'):
             arr.dims = ('w', 'z')
 
+    def test_sizes(self):
+        array = DataArray(np.zeros((3, 4)), dims=['x', 'y'])
+        self.assertEqual(array.sizes, {'x': 3, 'y': 4})
+        self.assertEqual(tuple(array.sizes), array.dims)
+        with self.assertRaises(TypeError):
+            array.sizes['foo'] = 5
+
     def test_encoding(self):
         expected = {'foo': 'bar'}
         self.dv.encoding['foo'] = 'bar'
@@ -1988,6 +1995,24 @@ class TestDataArray(TestCase):
         da = DataArray(y, {'t': t, 'lat': lat}, dims=['t', 'lat'])
         roundtripped = DataArray.from_dict(da.to_dict())
         self.assertDataArrayIdentical(da, roundtripped)
+
+    def test_to_dict_with_numpy_attrs(self):
+        # this doesn't need to roundtrip
+        x = np.random.randn(10, 3)
+        t = list('abcdefghij')
+        lat = [77.7, 83.2, 76]
+        attrs = {'created': np.float64(1998),
+                 'coords': np.array([37, -110.1, 100]),
+                 'maintainer': 'bar'}
+        da = DataArray(x, {'t': t, 'lat': lat}, dims=['t', 'lat'],
+                       attrs=attrs)
+        expected_attrs = {'created': np.asscalar(attrs['created']),
+                          'coords': attrs['coords'].tolist(),
+                          'maintainer': 'bar'}
+        actual = da.to_dict()
+
+        # check that they are identical
+        self.assertEqual(expected_attrs, actual['attrs'])
 
     def test_to_masked_array(self):
         rs = np.random.RandomState(44)

@@ -83,6 +83,11 @@ Enhancements
   :py:meth:`~xarray.DataArray.cumprod`.  By `Phillip J. Wolfram
   <https://github.com/pwolfram>`_.
 
+- New properties :py:attr:`Dataset.sizes` and :py:attr:`DataArray.sizes` for
+  providing consistent access to dimension length on both ``Dataset`` and
+  ``DataArray`` (:issue:`921`).
+  By `Stephan Hoyer <https://github.com/shoyer>`_.
+
 Bug fixes
 ~~~~~~~~~
 - ``groupby_bins`` now restores empty bins by default (:issue:`1019`).
@@ -104,12 +109,16 @@ Bug fixes
   ``missing_value`` are set to ``NaN`` (:issue:`997`).
   By `Marco Zühlke <https://github.com/mzuehlke>`_.
 
-- ``.where()`` and ``.fillna()`` now preserve attributes(:issue:`1009`).
+- ``.where()`` and ``.fillna()`` now preserve attributes (:issue:`1009`).
   By `Fabien Maussion <https://github.com/fmaussion>`_.
 
 - Applying :py:func:`broadcast()` to an xarray object based on the dask backend
   won't accidentally convert the array from dask to numpy anymore (:issue:`978`).
   By `Guido Imperiale <https://github.com/crusaderky>`_.
+
+- ``Dataset.concat()`` now preserves variables order (:issue:`1027`).
+  By `Fabien Maussion <https://github.com/fmaussion>`_.
+
 .. _whats-new.0.8.2:
 
 v0.8.2 (18 August 2016)

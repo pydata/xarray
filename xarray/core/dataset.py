@@ -19,7 +19,8 @@ from .coordinates import DatasetCoordinates, LevelCoordinates, Indexes
 from .common import ImplementsDatasetReduce, BaseDataObject
 from .merge import (dataset_update_method, dataset_merge_method,
                     merge_data_and_coords)
-from .utils import Frozen, SortedKeysDict, maybe_wrap_array, hashable
+from .utils import (Frozen, SortedKeysDict, maybe_wrap_array, hashable,
+                    decode_numpy_dict_values, ensure_us_time_resolution)
 from .variable import (Variable, as_variable, IndexVariable, broadcast_variables)
 from .pycompat import (iteritems, basestring, OrderedDict,
                        dask_array_type)
@@ -293,10 +294,28 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
     def dims(self):
         """Mapping from dimension names to lengths.
 
-        This dictionary cannot be modified directly, but is updated when adding
-        new variables.
+        Cannot be modified directly, but is updated when adding new variables.
+
+        Note that type of this object differs from `DataArray.dims`.
+        See `Dataset.sizes` and `DataArray.sizes` for consistently named
+        properties.
         """
         return Frozen(SortedKeysDict(self._dims))
+
+    @property
+    def sizes(self):
+        """Mapping from dimension names to lengths.
+
+        Cannot be modified directly, but is updated when adding new variables.
+
+        This is an alias for `Dataset.dims` provided for the benefit of
+        consistency with `DataArray.sizes`.
+
+        See also
+        --------
+        DataArray.sizes
+        """
+        return self.dims
 
     def load(self):
         """Manually trigger loading of this dataset's data from disk or a
@@ -1606,33 +1625,6 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
     def T(self):
         return self.transpose()
 
-    def squeeze(self, dim=None):
-        """Returns a new dataset with squeezed data.
-
-        Parameters
-        ----------
-        dim : None or str or tuple of str, optional
-            Selects a subset of the length one dimensions. If a dimension is
-            selected with length greater than one, an error is raised.  If
-            None, all length one dimensions are squeezed.
-
-        Returns
-        -------
-        squeezed : Dataset
-            This dataset, but with with all or a subset of the dimensions of
-            length 1 removed.
-
-        Notes
-        -----
-        Although this operation returns a view of each variable's data, it is
-        not lazy -- all variable data will be fully loaded.
-
-        See Also
-        --------
-        numpy.squeeze
-        """
-        return common.squeeze(self, self.dims, dim)
-
     def dropna(self, dim, how='any', thresh=None, subset=None):
         """Returns a new dataset with dropped labels for missing values along
         the provided dimension.
@@ -1940,33 +1932,29 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         Convert this dataset to a dictionary following xarray naming
         conventions.
 
-        Useful for coverting to json.
+        Converts all variables and attributes to native Python objects
+        Useful for coverting to json. To avoid datetime incompatibility
+        use decode_times=False kwarg in xarrray.open_dataset.
 
         See also
         --------
         xarray.Dataset.from_dict
         """
-        d = {'coords': {}, 'attrs': dict(self.attrs), 'dims': dict(self.dims),
-             'data_vars': {}}
-
-        def time_check(val):
-            # needed because of numpy bug GH#7619
-            if np.issubdtype(val.dtype, np.datetime64):
-                val = val.astype('datetime64[us]')
-            elif np.issubdtype(val.dtype, np.timedelta64):
-                val = val.astype('timedelta64[us]')
-            return val
+        d = {'coords': {}, 'attrs': decode_numpy_dict_values(self.attrs),
+             'dims': dict(self.dims), 'data_vars': {}}
 
         for k in self.coords:
-            data = time_check(self[k].values).tolist()
-            d['coords'].update({k: {'data': data,
-                                    'dims': self[k].dims,
-                                    'attrs': dict(self[k].attrs)}})
+            data = ensure_us_time_resolution(self[k].values).tolist()
+            d['coords'].update({
+                k: {'data': data,
+                    'dims': self[k].dims,
+                    'attrs': decode_numpy_dict_values(self[k].attrs)}})
         for k in self.data_vars:
-            data = time_check(self[k].values).tolist()
-            d['data_vars'].update({k: {'data': data,
-                                       'dims': self[k].dims,
-                                       'attrs': dict(self[k].attrs)}})
+            data = ensure_us_time_resolution(self[k].values).tolist()
+            d['data_vars'].update({
+                k: {'data': data,
+                    'dims': self[k].dims,
+                    'attrs': decode_numpy_dict_values(self[k].attrs)}})
         return d
 
     @classmethod

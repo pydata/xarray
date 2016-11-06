@@ -26,6 +26,7 @@ class VariableSubclassTestCases(object):
         self.assertEqual(v.dtype, float)
         self.assertEqual(v.shape, (10,))
         self.assertEqual(v.size, 10)
+        self.assertEqual(v.sizes, {'time': 10})
         self.assertEqual(v.nbytes, 80)
         self.assertEqual(v.ndim, 1)
         self.assertEqual(len(v), 10)

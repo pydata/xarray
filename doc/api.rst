@@ -39,9 +39,11 @@ Attributes
    :toctree: generated/
 
    Dataset.dims
+   Dataset.sizes
    Dataset.data_vars
    Dataset.coords
    Dataset.attrs
+   Dataset.indexes
 
 Dictionary interface
 --------------------
@@ -186,9 +188,11 @@ Attributes
    DataArray.data
    DataArray.coords
    DataArray.dims
+   DataArray.sizes
    DataArray.name
    DataArray.attrs
    DataArray.encoding
+   DataArray.indexes
 
 **ndarray attributes**:
 :py:attr:`~DataArray.ndim`
