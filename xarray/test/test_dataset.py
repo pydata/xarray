@@ -1383,7 +1383,7 @@ class TestDataset(TestCase):
         coords = {idx.name: ('x', idx) for idx in indexes}
         ds = Dataset({}, coords=coords)
 
-        reindexed = ds.set_index(indexers={'x': mindex.names})
+        reindexed = ds.set_index(x=mindex.names)
         self.assertDatasetIdentical(reindexed, expected)
 
         ds.set_index(x=mindex.names, inplace=True)
@@ -1396,10 +1396,10 @@ class TestDataset(TestCase):
         coords = {idx.name: ('x', idx) for idx in indexes}
         expected = Dataset({}, coords=coords)
 
-        reindexed = ds.reset_index(dim_levels={'x': None})
+        reindexed = ds.reset_index('x')
         self.assertDatasetIdentical(reindexed, expected)
 
-        ds.reset_index(x=None, inplace=True)
+        ds.reset_index('x', inplace=True)
         self.assertDatasetIdentical(ds, expected)
 
     def test_reorder_levels(self):
@@ -1408,7 +1408,7 @@ class TestDataset(TestCase):
         midx = mindex.reorder_levels(['level_2', 'level_1'])
         expected = Dataset({}, coords={'x': midx})
 
-        reindexed = ds.reorder_levels(dim_order={'x': ['level_2', 'level_1']})
+        reindexed = ds.reorder_levels(x=['level_2', 'level_1'])
         self.assertDatasetIdentical(reindexed, expected)
 
         ds.reorder_levels(x=['level_2', 'level_1'], inplace=True)

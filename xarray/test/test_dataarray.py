@@ -826,7 +826,7 @@ class TestDataArray(TestCase):
         array['level_3'] = level_3
         expected['level_3'] = level_3
 
-        reindexed = array.set_index(indexers={'x': self.mindex.names})
+        reindexed = array.set_index(x=self.mindex.names)
         self.assertDataArrayIdentical(reindexed, expected)
 
         reindexed = reindexed.set_index(x='level_3', append=True)
@@ -847,31 +847,30 @@ class TestDataArray(TestCase):
         coords = {idx.name: ('x', idx) for idx in indexes}
         expected = DataArray(self.mda.values, coords=coords, dims='x')
 
-        reindexed = self.mda.reset_index(dim_levels={'x': None})
+        reindexed = self.mda.reset_index('x')
         self.assertDataArrayIdentical(reindexed, expected)
-        reindexed = self.mda.reset_index(x=self.mindex.names)
+        reindexed = self.mda.reset_index('x', levels=self.mindex.names)
         self.assertDataArrayIdentical(reindexed, expected)
 
         coords = {'x': ('x', self.mindex.droplevel('level_1')),
                   'level_1': ('x', self.mindex.get_level_values('level_1'))}
         expected = DataArray(self.mda.values, coords=coords, dims='x')
-        reindexed = self.mda.reset_index(x='level_1')
+        reindexed = self.mda.reset_index('x', levels=['level_1'])
         self.assertDataArrayIdentical(reindexed, expected)
 
         expected = DataArray(self.mda.values, dims='x')
-        reindexed = self.mda.reset_index(x=None, drop=True)
+        reindexed = self.mda.reset_index('x', drop=True)
         self.assertDataArrayIdentical(reindexed, expected)
 
         array = self.mda.copy()
-        array.reset_index(x=None, drop=True, inplace=True)
+        array.reset_index(['x'], drop=True, inplace=True)
         self.assertDataArrayIdentical(array, expected)
 
     def test_reorder_levels(self):
         midx = self.mindex.reorder_levels(['level_2', 'level_1'])
         expected = DataArray(self.mda.values, coords={'x': midx}, dims='x')
 
-        reindexed = self.mda.reorder_levels(
-            dim_order={'x': ['level_2', 'level_1']})
+        reindexed = self.mda.reorder_levels(x=['level_2', 'level_1'])
         self.assertDataArrayIdentical(reindexed, expected)
 
         array = self.mda.copy()
