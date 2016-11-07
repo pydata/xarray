@@ -108,7 +108,7 @@ Bug fixes
 - ``Dataset.concat()`` now preserves variables order (:issue:`1027`).
   By `Fabien Maussion <https://github.com/fmaussion>`_.
 
-- Fixed a regression with pcolormesh (:issue:`781`). A new
+- Fixed an issue with pcolormesh (:issue:`781`). A new
   ``infer_intervals`` keyword gives control on whether the cell intervals
   should be computed or not.
   By `Fabien Maussion <https://github.com/fmaussion>`_.
