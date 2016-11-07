@@ -44,14 +44,8 @@ Deprecations
 
 Enhancements
 ~~~~~~~~~~~~
-<<<<<<< 9f53c72b88e245244d078b8bbed316b01fb6676b
 - Add checking of ``attr`` names and values when saving to netCDF, raising useful
   error messages if they are invalid. (:issue:`911`).
-=======
-
-- Add checking of ``attr`` names and values when saving to netCDF, raising
-  useful error messages if they are invalid. (:issue:`911`).
->>>>>>> update doc
   By `Robin Wilson <https://github.com/robintw>`_.
 
 - Added ability to save ``DataArray`` objects directly to netCDF files using
