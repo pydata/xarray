@@ -9,6 +9,7 @@ from distributed.utils_test import cluster, loop, gen_cluster
 
 from xarray.core.indexing import LazilyIndexedArray
 from xarray.backends.netCDF4_ import NetCDF4ArrayWrapper
+from xarray.conventions import CharToStringArray
 
 from xarray.test.test_backends import create_tmp_file
 
@@ -27,6 +28,13 @@ def test_serialize_deserialize_netcdf4_array_wrapper():
     assert type(restored) is type(original)
     assert (restored.array == original.array).all()
     assert restored.is_remote == original.is_remote
+
+
+def test_serialize_deserialize_char_to_string_array():
+    original = CharToStringArray(np.array(['a', 'b', 'c'], dtype='S1'))
+    restored = deserialize(*serialize(original))
+    assert type(restored) is type(original)
+    assert (restored.array == original.array).all()
 
 
 def test_serialize_deserialize_nested_arrays():
