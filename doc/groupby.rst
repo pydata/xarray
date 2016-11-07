@@ -55,7 +55,7 @@ the group indices with the ``groups`` attribute:
 
     ds.groupby('letters').groups
 
-You can also iterate over over groups in ``(label, group)`` pairs:
+You can also iterate over groups in ``(label, group)`` pairs:
 
 .. ipython:: python
 
