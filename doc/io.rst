@@ -423,7 +423,7 @@ library::
         combined = xr.concat(dataset, dim)
         return combined
 
-    read_netcdfs('/all/my/files/*.nc', dim='time')
+    combined = read_netcdfs('/all/my/files/*.nc', dim='time')
 
 This function will work in many cases, but it's not very robust. First, it
 never closes files, which means it will fail one you need to load more than
@@ -454,7 +454,7 @@ deficiencies::
 
     # here we suppose we only care about the combined mean of each file;
     # you might also use indexing operations like .sel to subset datasets
-    read_netcdfs('/all/my/files/*.nc', dim='time',
+    combined = read_netcdfs('/all/my/files/*.nc', dim='time',
                  transform_func=lambda ds: ds.mean())
 
 This pattern works well and is very robust. We've used similar code to process
