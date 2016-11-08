@@ -43,8 +43,8 @@ class RasterioDataStore(AbstractDataStore):
             x0, y0 = self.ds.bounds.left, self.ds.bounds.top
             dx, dy = self.ds.res[0], -self.ds.res[1]
 
-        self.coords = {'y': np.arange(start=y0, stop=(y0 + ny * dy), step=dy),
-                       'x': np.arange(start=x0, stop=(x0 + nx * dx), step=dx)}
+        self.coords = {'y': np.linspace(start=y0, num=ny, stop=(y0 + (ny-1) * dy)),
+                       'x': np.linspace(start=x0, num=nx, stop=(x0 + (nx-1) * dx))}
 
         # Get dims
         if self.ds.count >= 1:
