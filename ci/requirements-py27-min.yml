@@ -4,7 +4,6 @@ dependencies:
   - pytest
   - numpy==1.9.3
   - pandas==0.15.0
-  - rasterio>=1.0
   - pip:
     - coveralls
     - pytest-cov

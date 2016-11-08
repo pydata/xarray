@@ -3,7 +3,6 @@ dependencies:
   - python=3.3
   - pytest
   - pandas
-  - rasterio>=1.0
   - pip:
     - coveralls
     - pytest-cov
