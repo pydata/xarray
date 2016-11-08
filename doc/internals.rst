@@ -133,6 +133,8 @@ They may be useful points of reference for your work:
 - `windspharm <http://ajdawson.github.io/windspharm/index.html>`_: Spherical
   harmonic wind analysis in Python.
 - `eofs <http://ajdawson.github.io/eofs/>`_: EOF analysis in Python.
+- `salem <http://salem.readthedocs.io>`_: extends xarray to add geolocalised
+  subsetting, masking, and plotting operations.
 
 .. TODO: consider adding references to these projects somewhere more prominent
 .. in the documentation? maybe the FAQ page?
