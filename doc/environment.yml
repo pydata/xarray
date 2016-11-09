@@ -1,14 +1,14 @@
 name: xarray-docs
 channels:
-- conda-forge
+  - conda-forge
 dependencies:
-  - python=2.7
-  - numpy=1.11
-  - pandas=0.18.1
-  - numpydoc=0.5
-  - seaborn=0.7.1
-  - dask=0.10.1
-  - ipython=4.0.1
-  - sphinx=1.4.1
+  - python
+  - numpy
+  - pandas
+  - numpydoc
+  - seaborn
+  - dask
+  - ipython
+  - sphinx
   - netCDF4
   - cartopy
