@@ -1,6 +1,6 @@
 name: xarray-docs
 channels:
-- conda-forge
+  - conda-forge
 dependencies:
   - python
   - numpy
