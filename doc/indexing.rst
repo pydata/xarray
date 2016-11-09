@@ -511,7 +511,7 @@ coordinates (this is mainly useful for serialization):
 
 .. ipython:: python
 
-     mda.reset_index(x=['band', 'wavenumber'])
+     mda.reset_index('x')
 
 ``reorder_levels`` allows changing the order of multi-index levels:
 
