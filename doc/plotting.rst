@@ -440,11 +440,14 @@ To follow this section you'll need to have Cartopy installed and working.
 
 This script will plot the air temperature on a map.
 
-.. literalinclude:: examples/cartopy_example.py
+.. ipython:: python
 
-Here is the resulting image:
-
-.. image:: examples/cartopy_example.png
+    import cartopy.crs as ccrs
+    air = xr.tutorial.load_dataset('air_temperature').air.isel(time=0)
+    ax = plt.axes(projection=ccrs.Orthographic(-80, 35))
+    air.plot.contourf(ax=ax, transform=ccrs.PlateCarree());
+    @savefig plotting_maps_cartopy.png width=100%
+    ax.set_global(); ax.coastlines();
 
 Details
 -------
