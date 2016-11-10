@@ -556,21 +556,17 @@ def _infer_interval_breaks(coord, axis=0):
     """
     >>> _infer_interval_breaks(np.arange(5))
     array([-0.5,  0.5,  1.5,  2.5,  3.5,  4.5])
-    >>> _infer_interval_breaks([[0, 1], [0, 1]], axis=1)
+    >>> _infer_interval_breaks([[0, 1], [3, 4]], axis=1)
     array([[-0.5,  0.5,  1.5],
-           [-0.5,  0.5,  1.5]])
+           [ 2.5,  3.5,  4.5]])
     """
     coord = np.asarray(coord)
-    if axis == 0:
-        deltas = 0.5 * (coord[1:, ...] - coord[:-1, ...])
-        first = coord[0, ...] - deltas[0, ...]
-        last = coord[-1, ...] + deltas[-1, ...]
-        return np.r_[[first], coord[:-1, ...] + deltas, [last]]
-    elif axis == 1:
-        deltas = 0.5 * (coord[..., 1:] - coord[..., :-1])
-        first = coord[..., [0]] - deltas[..., [0]]
-        last = coord[..., [-1]] + deltas[..., [-1]]
-        return np.c_[first, coord[..., :-1] + deltas, last]
+    deltas = 0.5 * np.diff(coord, axis=axis)
+    first = np.take(coord, [0], axis=axis) - np.take(deltas, [0], axis=axis)
+    last = np.take(coord, [-1], axis=axis) + np.take(deltas, [-1], axis=axis)
+    trim_last = tuple(slice(None, -1) if n == axis else slice(None)
+                      for n in range(coord.ndim))
+    return np.concatenate([first, coord[trim_last] + deltas, last], axis=axis)
 
 
 @_plot2d
