@@ -15,6 +15,7 @@ such datasets.
     import numpy as np
     import pandas as pd
     import xarray as xr
+    import netCDF4
     import cartopy.crs as ccrs
     import matplotlib.pyplot as plt
 
