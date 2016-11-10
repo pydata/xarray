@@ -8,6 +8,8 @@ import xarray.ufuncs as xu
 from xarray.core.pycompat import suppress
 from . import TestCase, requires_dask
 
+from xarray.test import unittest
+
 with suppress(ImportError):
     import dask
     import dask.array as da
@@ -167,6 +169,7 @@ class TestVariable(DaskTestCase):
         v = self.lazy_var
         self.assertLazyAndAllClose(np.sin(u), xu.sin(v))
 
+    @unittest.skip('currently broken in dask, see GH1090')
     def test_bivariate_ufunc(self):
         u = self.eager_var
         v = self.lazy_var
