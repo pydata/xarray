@@ -1,3 +1,6 @@
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
 from .core.alignment import align, broadcast, broadcast_arrays
 from .core.combine import concat, auto_combine
 from .core.extensions import (register_dataarray_accessor,

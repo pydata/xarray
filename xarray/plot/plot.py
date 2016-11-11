@@ -5,8 +5,9 @@ Use this module directly:
 Or use the methods on a DataArray:
     DataArray.plot._____
 """
-
+from __future__ import absolute_import
 from __future__ import division
+from __future__ import print_function
 import functools
 import warnings
 
