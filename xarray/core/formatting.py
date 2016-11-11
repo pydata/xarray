@@ -1,12 +1,12 @@
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
 """String formatting routines for __repr__.
 
 For the sake of sanity, we only do internal formatting with unicode, which can
 be returned by the __unicode__ special method. We use ReprMixin to provide the
 __repr__ method so that things can work on Python 2.
 """
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
 from datetime import datetime, timedelta
 import functools
 
