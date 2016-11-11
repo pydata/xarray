@@ -1,9 +1,13 @@
 name: test_env
+channels:
+  - conda-forge
 dependencies:
   - python=3.4
   - bottleneck
   - pytest
   - pandas
+  - rasterio
+  - scipy
   - pip:
     - coveralls
     - pytest-cov
