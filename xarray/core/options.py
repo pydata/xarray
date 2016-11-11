@@ -26,6 +26,10 @@ class set_options(object):
     """
     def __init__(self, **kwargs):
         self.old = OPTIONS.copy()
+        for key in kwargs:
+            if key not in OPTIONS:
+                raise KeyError("acceptable keys are: {}".\
+                               format(', '.join(OPTIONS.keys())))
         OPTIONS.update(kwargs)
 
     def __enter__(self):

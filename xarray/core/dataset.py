@@ -2024,11 +2024,12 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         def func(self, other):
             if isinstance(other, groupby.GroupBy):
                 return NotImplemented
+            align_type = OPTIONS['arithmetic_join'] if join is None else join
             if hasattr(other, 'indexes'):
-                align_type = OPTIONS['arithmetic_join'] if join is None else join
                 self, other = align(self, other, join=align_type, copy=False)
             g = f if not reflexive else lambda x, y: f(y, x)
-            ds = self._calculate_binary_op(g, other, fillna=fillna)
+            ds = self._calculate_binary_op(g, other, join=align_type,
+                                           fillna=fillna)
             return ds
         return func
 
@@ -2050,25 +2051,30 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
             return self
         return func
 
-    def _calculate_binary_op(self, f, other, inplace=False, fillna=False):
+    def _calculate_binary_op(self, f, other, join='inner',
+                             inplace=False, fillna=False):
 
         def apply_over_both(lhs_data_vars, rhs_data_vars, lhs_vars, rhs_vars):
+            if fillna and join != 'left':
+                raise ValueError('`fillna` must be accompanied by left join')
             if fillna and not set(rhs_data_vars) <= set(lhs_data_vars):
                 raise ValueError('all variables in the argument to `fillna` '
                                  'must be contained in the original dataset')
+            if inplace and set(lhs_data_vars) != set(rhs_data_vars):
+                raise ValueError('datasets must have the same data variables '
+                                 'for in-place arithmetic operations: %s, %s'
+                                 % (list(lhs_data_vars), list(rhs_data_vars)))
 
             dest_vars = OrderedDict()
-            for k in lhs_data_vars:
-                if k in rhs_data_vars:
-                    dest_vars[k] = f(lhs_vars[k], rhs_vars[k])
-                elif inplace:
-                    raise ValueError(
-                        'datasets must have the same data variables '
-                        'for in-place arithmetic operations: %s, %s'
-                        % (list(lhs_data_vars), list(rhs_data_vars)))
-                elif fillna:
-                    # this shortcuts left alignment of variables for fillna
+
+            for k in set(lhs_data_vars) & set(rhs_data_vars):
+                dest_vars[k] = f(lhs_vars[k], rhs_vars[k])
+            if join in ["outer", "left"]:
+                for k in set(lhs_data_vars) - set(rhs_data_vars):
                     dest_vars[k] = lhs_vars[k]
+            if join in ["outer", "right"]:
+                for k in set(rhs_data_vars) - set(lhs_data_vars):
+                    dest_vars[k] = rhs_vars[k]
             return dest_vars
 
         if utils.is_dict_like(other) and not isinstance(other, Dataset):
@@ -2088,7 +2094,6 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
             other_variable = getattr(other, 'variable', other)
             new_vars = OrderedDict((k, f(self.variables[k], other_variable))
                                    for k in self.data_vars)
-
         ds._variables.update(new_vars)
         return ds
 
