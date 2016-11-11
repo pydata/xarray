@@ -27,7 +27,7 @@ Dask divides arrays into many small pieces, called *chunks*, each of which is
 presumed to be small enough to fit into memory.
 
 Unlike NumPy, which has eager evaluation, operations on dask arrays are lazy.
-Operations queue up a series of taks mapped over blocks, and no computation is
+Operations queue up a series of tasks mapped over blocks, and no computation is
 performed until you actually ask values to be computed (e.g., to print results
 to your screen or write to disk). At that point, data is loaded into memory
 and computation proceeds in a streaming fashion, block-by-block.
