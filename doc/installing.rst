@@ -74,31 +74,3 @@ pandas) installed first. Then, install xarray with pip::
 To run the test suite after installing xarray, install
 `py.test <https://pytest.org>`__ (``pip install pytest``) and run
 ``py.test xarray``.
-
-
-Version of the packages used to build this documentation
---------------------------------------------------------
-
-
-.. ipython:: python
-    :suppress:
-
-    import numpy
-    import pandas
-    import matplotlib
-    import xarray
-    import netCDF4
-    import cartopy
-    import dask
-    import seaborn
-
-.. ipython:: python
-
-    numpy.__version__
-    pandas.__version__
-    dask.__version__
-    netCDF4.__version__
-    matplotlib.__version__
-    cartopy.__version__
-    seaborn.__version__
-    xarray.__version__
