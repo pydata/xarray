@@ -440,11 +440,14 @@ To follow this section you'll need to have Cartopy installed and working.
 
 This script will plot the air temperature on a map.
 
-.. literalinclude:: examples/cartopy_example.py
+.. ipython:: python
 
-Here is the resulting image:
-
-.. image:: examples/cartopy_example.png
+    import cartopy.crs as ccrs
+    air = xr.tutorial.load_dataset('air_temperature').air.isel(time=0)
+    ax = plt.axes(projection=ccrs.Orthographic(-80, 35))
+    air.plot.contourf(ax=ax, transform=ccrs.PlateCarree());
+    @savefig plotting_maps_cartopy.png width=100%
+    ax.set_global(); ax.coastlines();
 
 Details
 -------
@@ -522,3 +525,56 @@ the values on the y axis are decreasing with -0.5 on the top. This is because
 the pixels are centered over their coordinates, and the
 axis labels and ranges correspond to the values of the
 coordinates.
+
+Multidimensional coordinates
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+See also: :ref:`examples.multidim`.
+
+You can plot irregular grids defined by multidimensional coordinates with
+xarray, but you'll have to tell the plot function to use these coordinates
+instead of the default ones:
+
+.. ipython:: python
+
+    lon, lat = np.meshgrid(np.linspace(-20, 20, 5), np.linspace(0, 30, 4))
+    lon += lat/10
+    lat += lon/10
+    da = xr.DataArray(np.arange(20).reshape(4, 5), dims=['y', 'x'],
+                      coords = {'lat': (('y', 'x'), lat),
+                                'lon': (('y', 'x'), lon)})
+
+    @savefig plotting_example_2d_irreg.png width=4in
+    da.plot.pcolormesh('lon', 'lat');
+
+Note that in this case, xarray still follows the pixel centered convention.
+This might be undesirable in some cases, for example when your data is defined
+on a polar projection (:issue:`781`). This is why the default is to not follow
+this convention when plotting on a map:
+
+.. ipython:: python
+
+    import cartopy.crs as ccrs
+    ax = plt.subplot(projection=ccrs.PlateCarree());
+    da.plot.pcolormesh('lon', 'lat', ax=ax);
+    ax.scatter(lon, lat, transform=ccrs.PlateCarree());
+    @savefig plotting_example_2d_irreg_map.png width=4in
+    ax.coastlines(); ax.gridlines(draw_labels=True);
+
+You can however decide to infer the cell boundaries and use the
+``infer_intervals`` keyword:
+
+.. ipython:: python
+
+    ax = plt.subplot(projection=ccrs.PlateCarree());
+    da.plot.pcolormesh('lon', 'lat', ax=ax, infer_intervals=True);
+    ax.scatter(lon, lat, transform=ccrs.PlateCarree());
+    @savefig plotting_example_2d_irreg_map_infer.png width=4in
+    ax.coastlines(); ax.gridlines(draw_labels=True);
+
+.. note::
+    The data model of xarray does not support datasets with `cell boundaries`_
+    yet. If you want to use these coordinates, you'll have to make the plots
+    outside the xarray framework.
+
+.. _cell boundaries: http://cfconventions.org/cf-conventions/v1.6.0/cf-conventions.html#cell-boundaries

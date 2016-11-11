@@ -39,6 +39,7 @@ Attributes
    :toctree: generated/
 
    Dataset.dims
+   Dataset.sizes
    Dataset.data_vars
    Dataset.coords
    Dataset.attrs
@@ -187,6 +188,7 @@ Attributes
    DataArray.data
    DataArray.coords
    DataArray.dims
+   DataArray.sizes
    DataArray.name
    DataArray.attrs
    DataArray.encoding

@@ -1,3 +1,6 @@
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
 import numpy as np
 import pandas as pd
 import pickle
@@ -158,6 +161,13 @@ class TestDataArray(TestCase):
 
         with self.assertRaisesRegexp(AttributeError, 'you cannot assign'):
             arr.dims = ('w', 'z')
+
+    def test_sizes(self):
+        array = DataArray(np.zeros((3, 4)), dims=['x', 'y'])
+        self.assertEqual(array.sizes, {'x': 3, 'y': 4})
+        self.assertEqual(tuple(array.sizes), array.dims)
+        with self.assertRaises(TypeError):
+            array.sizes['foo'] = 5
 
     def test_encoding(self):
         expected = {'foo': 'bar'}

@@ -1,3 +1,6 @@
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
 from collections import namedtuple
 from copy import copy, deepcopy
 from datetime import datetime, timedelta
@@ -26,6 +29,7 @@ class VariableSubclassTestCases(object):
         self.assertEqual(v.dtype, float)
         self.assertEqual(v.shape, (10,))
         self.assertEqual(v.size, 10)
+        self.assertEqual(v.sizes, {'time': 10})
         self.assertEqual(v.nbytes, 80)
         self.assertEqual(v.ndim, 1)
         self.assertEqual(len(v), 10)

@@ -1,7 +1,9 @@
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
 import functools
 
 from .. import Variable
-from ..conventions import cf_encoder
 from ..core import indexing
 from ..core.utils import FrozenOrderedDict, close_on_error, Frozen
 from ..core.pycompat import iteritems, bytes_type, unicode_type, OrderedDict

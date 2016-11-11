@@ -1,3 +1,6 @@
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
 import functools
 import warnings
 from collections import Mapping
@@ -292,10 +295,28 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
     def dims(self):
         """Mapping from dimension names to lengths.
 
-        This dictionary cannot be modified directly, but is updated when adding
-        new variables.
+        Cannot be modified directly, but is updated when adding new variables.
+
+        Note that type of this object differs from `DataArray.dims`.
+        See `Dataset.sizes` and `DataArray.sizes` for consistently named
+        properties.
         """
         return Frozen(SortedKeysDict(self._dims))
+
+    @property
+    def sizes(self):
+        """Mapping from dimension names to lengths.
+
+        Cannot be modified directly, but is updated when adding new variables.
+
+        This is an alias for `Dataset.dims` provided for the benefit of
+        consistency with `DataArray.sizes`.
+
+        See also
+        --------
+        DataArray.sizes
+        """
+        return self.dims
 
     def load(self):
         """Manually trigger loading of this dataset's data from disk or a
@@ -1584,33 +1605,6 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
     @property
     def T(self):
         return self.transpose()
-
-    def squeeze(self, dim=None):
-        """Returns a new dataset with squeezed data.
-
-        Parameters
-        ----------
-        dim : None or str or tuple of str, optional
-            Selects a subset of the length one dimensions. If a dimension is
-            selected with length greater than one, an error is raised.  If
-            None, all length one dimensions are squeezed.
-
-        Returns
-        -------
-        squeezed : Dataset
-            This dataset, but with with all or a subset of the dimensions of
-            length 1 removed.
-
-        Notes
-        -----
-        Although this operation returns a view of each variable's data, it is
-        not lazy -- all variable data will be fully loaded.
-
-        See Also
-        --------
-        numpy.squeeze
-        """
-        return common.squeeze(self, self.dims, dim)
 
     def dropna(self, dim, how='any', thresh=None, subset=None):
         """Returns a new dataset with dropped labels for missing values along
