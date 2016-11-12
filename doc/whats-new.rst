@@ -29,8 +29,8 @@ Breaking changes
   :py:meth:`values` property, won't automatically convert the array from dask
   to numpy in the original object anymore.
   If a dask object is used as a coord of a :py:class:`~xarray.DataArray` or
-  :py:class:`~xarray.Dataset`, its values won't be automatically cached, likely
-  causing performance degradation.
+  :py:class:`~xarray.Dataset`, its values will still be automatically cached,
+  but only if it's used to index a dim (e.g. it's used for alignment).
   By `Guido Imperiale <https://github.com/crusaderky>`_.
 
 Deprecations

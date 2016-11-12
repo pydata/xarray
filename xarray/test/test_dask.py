@@ -24,14 +24,17 @@ class DaskTestCase(TestCase):
             test(actual, expected)
         if isinstance(actual, Dataset):
             for k, v in actual.variables.items():
-                if k in actual.data_vars:
-                    self.assertIsInstance(var.data, da.Array)
-                else:
+                if k in actual.dims:
                     self.assertIsInstance(var.data, np.ndarray)
+                else:
+                    self.assertIsInstance(var.data, da.Array)
         elif isinstance(actual, DataArray):
             self.assertIsInstance(actual.data, da.Array)
-            for coord in actual.coords.values():
-                self.assertIsInstance(coord.data, np.ndarray)
+            for k, v in actual.coords.items():
+                if k in actual.dims:
+                    self.assertIsInstance(v.data, np.ndarray)
+                else:
+                    self.assertIsInstance(v.data, da.Array)
         elif isinstance(actual, Variable):
             self.assertIsInstance(actual.data, da.Array)
         else:

@@ -1100,6 +1100,11 @@ class IndexVariable(Variable):
             raise ValueError('%s objects must be 1-dimensional' %
                              type(self).__name__)
 
+    def _data_cached(self):
+        # Unlike in Variable._data_cached, always eagerly resolve dask arrays
+        self._data = self._data_cast()
+        return self._data
+
     def _data_cast(self):
         if isinstance(self._data, PandasIndexAdapter):
             return self._data

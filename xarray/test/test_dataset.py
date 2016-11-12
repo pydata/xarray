@@ -673,20 +673,18 @@ class TestDataset(TestCase):
 
         reblocked = data.chunk()
         for k, v in reblocked.variables.items():
-            if k in reblocked.data_vars:
-                self.assertIsInstance(v.data, da.Array)
-            else:
+            if k in reblocked.dims:
                 self.assertIsInstance(v.data, np.ndarray)
+            else:
+                self.assertIsInstance(v.data, da.Array)
 
-        expected_chunks = {'time': (20,), 'dim1': (8,),
-                           'dim2': (9,), 'dim3': (10,)}
+        expected_chunks = {'dim1': (8,), 'dim2': (9,), 'dim3': (10,)}
         self.assertEqual(reblocked.chunks, expected_chunks)
 
         reblocked = data.chunk({'time': 5, 'dim1': 5, 'dim2': 5, 'dim3': 5})
         # time is not a dim in any of the data_vars, so it
         # doesn't get chunked
-        expected_chunks = {'time': (20,), 'dim1': (5, 3),
-                   'dim2': (5, 4), 'dim3': (5, 5)}
+        expected_chunks = {'dim1': (5, 3), 'dim2': (5, 4), 'dim3': (5, 5)}
         self.assertEqual(reblocked.chunks, expected_chunks)
 
         reblocked = data.chunk(expected_chunks)

@@ -128,8 +128,10 @@ class DatasetIOTestCases(object):
             if vars is None:
                 vars = expected
             with self.roundtrip(expected) as actual:
-                for v in actual.data_vars.values():
-                    self.assertFalse(v._in_memory)
+                for k, v in actual.variables.items():
+                    # IndexVariables are eagerly cached into memory
+                    if k not in actual.dims:
+                        self.assertFalse(v._in_memory)
                 yield actual
                 for k, v in actual.variables.items():
                     if k in vars:
@@ -157,13 +159,16 @@ class DatasetIOTestCases(object):
 
         with self.roundtrip(expected) as actual:
             # Test Dataset.compute()
-            for v in actual.data_vars.values():
-                self.assertFalse(v._in_memory)
+            for k, v in actual.variables.items():
+                # IndexVariables are eagerly cached
+                if k not in actual.dims:
+                    self.assertFalse(v._in_memory)
 
             computed = actual.compute()
 
-            for v in actual.data_vars.values():
-                self.assertFalse(v._in_memory)
+            for k, v in actual.variables.items():
+                if k not in actual.dims:
+                    self.assertFalse(v._in_memory)
             for v in computed.variables.values():
                 self.assertTrue(v._in_memory)
 
