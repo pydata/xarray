@@ -2065,12 +2065,12 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
                 if k in rhs_data_vars:
                     dest_vars[k] = f(lhs_vars[k], rhs_vars[k])
                 elif join in ["left", "outer"]:
-                    dest_vars[k] = lhs_vars[k] if fillna else\
-                                   f(lhs_vars[k], np.nan)
+                    dest_vars[k] = (lhs_vars[k] if fillna else
+                                    f(lhs_vars[k], np.nan))
             for k in rhs_data_vars:
                 if k not in dest_vars and join in ["right", "outer"]:
-                    dest_vars[k] = rhs_vars[k] if fillna else\
-                                   f(rhs_vars[k], np.nan)
+                    dest_vars[k] = (rhs_vars[k] if fillna else
+                                    f(rhs_vars[k], np.nan))
             return dest_vars
 
         if utils.is_dict_like(other) and not isinstance(other, Dataset):
