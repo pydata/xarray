@@ -33,7 +33,8 @@ class TestDataArray(TestCase):
 
     def test_repr(self):
         v = Variable(['time', 'x'], [[1, 2, 3], [4, 5, 6]], {'foo': 'bar'})
-        coords = OrderedDict([('x', [0, 1, 2]), ('other', np.int64(0))])
+        coords = OrderedDict([('x', np.arange(3, dtype=np.int64)),
+                              ('other', np.int64(0))])
         data_array = DataArray(v, coords, name='my_variable')
         expected = dedent("""\
         <xarray.DataArray 'my_variable' (time: 2, x: 3)>
