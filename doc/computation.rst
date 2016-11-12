@@ -210,8 +210,8 @@ coordinates with the same name as a dimension, marked by ``*``) on objects used
 in binary operations.
 
 Similarly to pandas, this alignment is automatic for arithmetic on binary
-operations. Note that unlike pandas, this the result of a binary operation is
-by the *intersection* (not the union) of coordinate labels:
+operations. The default result of a binary operation is by the *intersection*
+(not the union) of coordinate labels:
 
 .. ipython:: python
 
@@ -224,6 +224,15 @@ If the result would be empty, an error is raised instead:
     @verbatim
     In [1]: arr[:2] + arr[2:]
     ValueError: no overlapping labels for some dimensions: ['x']
+
+However, one can explicitly change this default automatic alignment type ("inner")
+via :py:func:`~xarray.set_options()` in context manager:
+
+.. ipython:: python
+
+    with xr.set_options(arithmetic_join="outer"):
+        arr + arr[:1]
+    arr + arr[:1]
 
 Before loops or performance critical code, it's a good idea to align arrays
 explicitly (e.g., by putting them in the same Dataset or using

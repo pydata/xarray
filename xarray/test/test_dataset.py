@@ -15,6 +15,7 @@ except ImportError:
 
 import numpy as np
 import pandas as pd
+import xarray as xr
 import pytest
 
 from xarray import (align, broadcast, concat, merge, conventions, backends,
@@ -2934,6 +2935,37 @@ class TestDataset(TestCase):
         self.assertEqual(len(new_ds.data_vars), 1)
         for var in new_ds.data_vars:
             self.assertEqual(new_ds[var].height, '10 m')
+
+    def test_binary_op_join_setting(self):
+        # arithmetic_join applies to data array coordinates
+        missing_2 = xr.Dataset({'x':[0, 1]})
+        missing_0 = xr.Dataset({'x':[1, 2]})
+        with xr.set_options(arithmetic_join='outer'):
+            actual = missing_2 + missing_0
+        expected = xr.Dataset({'x':[0, 1, 2]})
+        self.assertDatasetEqual(actual, expected)
+
+        # arithmetic join also applies to data_vars
+        ds1 = xr.Dataset({'foo': 1, 'bar': 2})
+        ds2 = xr.Dataset({'bar': 2, 'baz': 3})
+        expected = xr.Dataset({'bar': 4}) # default is inner joining
+        actual = ds1 + ds2
+        self.assertDatasetEqual(actual, expected)
+
+        with xr.set_options(arithmetic_join='outer'):
+            expected = xr.Dataset({'foo': np.nan, 'bar': 4, 'baz': np.nan})
+            actual = ds1 + ds2
+            self.assertDatasetEqual(actual, expected)
+
+        with xr.set_options(arithmetic_join='left'):
+            expected = xr.Dataset({'foo': np.nan, 'bar': 4})
+            actual = ds1 + ds2
+            self.assertDatasetEqual(actual, expected)
+
+        with xr.set_options(arithmetic_join='right'):
+            expected = xr.Dataset({'bar': 4, 'baz': np.nan})
+            actual = ds1 + ds2
+            self.assertDatasetEqual(actual, expected)
 
 
 ### Py.test tests
