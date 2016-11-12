@@ -5,8 +5,9 @@ Use this module directly:
 Or use the methods on a DataArray:
     DataArray.plot._____
 """
-
+from __future__ import absolute_import
 from __future__ import division
+from __future__ import print_function
 import functools
 import warnings
 
@@ -316,6 +317,12 @@ def _plot2d(plotfunc):
         provided, extend is inferred from vmin, vmax and the data limits.
     levels : int or list-like object, optional
         Split the colormap (cmap) into discrete color intervals.
+    infer_intervals : bool, optional
+        Only applies to pcolormesh. If True, the coordinate intervals are
+        passed to pcolormesh. If False, the original coordinates are used
+        (this can be useful for certain map projections). The default is to
+        always infer intervals, unless the mesh is irregular and plotted on
+        a map projection.
     subplot_kws : dict, optional
         Dictionary of keyword arguments for matplotlib subplots. Only applies
         to FacetGrid plotting.
@@ -341,8 +348,9 @@ def _plot2d(plotfunc):
                     col_wrap=None, xincrease=True, yincrease=True,
                     add_colorbar=None, add_labels=True, vmin=None, vmax=None,
                     cmap=None, center=None, robust=False, extend=None,
-                    levels=None, colors=None, subplot_kws=None,
-                    cbar_ax=None, cbar_kwargs=None, **kwargs):
+                    levels=None, infer_intervals=None, colors=None,
+                    subplot_kws=None, cbar_ax=None, cbar_kwargs=None,
+                    **kwargs):
         # All 2d plots in xarray share this function signature.
         # Method signature below should be consistent.
 
@@ -416,6 +424,9 @@ def _plot2d(plotfunc):
             kwargs['extend'] = cmap_params['extend']
             kwargs['levels'] = cmap_params['levels']
 
+        if 'pcolormesh' == plotfunc.__name__:
+            kwargs['infer_intervals'] = infer_intervals
+
         # This allows the user to pass in a custom norm coming via kwargs
         kwargs.setdefault('norm', cmap_params['norm'])
 
@@ -456,8 +467,8 @@ def _plot2d(plotfunc):
                    col=None, col_wrap=None, xincrease=True, yincrease=True,
                    add_colorbar=None, add_labels=True, vmin=None, vmax=None,
                    cmap=None, colors=None, center=None, robust=False,
-                   extend=None, levels=None, subplot_kws=None,
-                   cbar_ax=None, cbar_kwargs=None, **kwargs):
+                   extend=None, levels=None, infer_intervals=None,
+                   subplot_kws=None, cbar_ax=None, cbar_kwargs=None, **kwargs):
         """
         The method should have the same signature as the function.
 
@@ -542,29 +553,52 @@ def contourf(x, y, z, ax, **kwargs):
     return ax, primitive
 
 
-def _infer_interval_breaks(coord):
+def _infer_interval_breaks(coord, axis=0):
     """
     >>> _infer_interval_breaks(np.arange(5))
     array([-0.5,  0.5,  1.5,  2.5,  3.5,  4.5])
+    >>> _infer_interval_breaks([[0, 1], [3, 4]], axis=1)
+    array([[-0.5,  0.5,  1.5],
+           [ 2.5,  3.5,  4.5]])
     """
     coord = np.asarray(coord)
-    deltas = 0.5 * (coord[1:] - coord[:-1])
-    first = coord[0] - deltas[0]
-    last = coord[-1] + deltas[-1]
-    return np.r_[[first], coord[:-1] + deltas, [last]]
+    deltas = 0.5 * np.diff(coord, axis=axis)
+    first = np.take(coord, [0], axis=axis) - np.take(deltas, [0], axis=axis)
+    last = np.take(coord, [-1], axis=axis) + np.take(deltas, [-1], axis=axis)
+    trim_last = tuple(slice(None, -1) if n == axis else slice(None)
+                      for n in range(coord.ndim))
+    return np.concatenate([first, coord[trim_last] + deltas, last], axis=axis)
 
 
 @_plot2d
-def pcolormesh(x, y, z, ax, **kwargs):
+def pcolormesh(x, y, z, ax, infer_intervals=None, **kwargs):
     """
     Pseudocolor plot of 2d DataArray
 
     Wraps matplotlib.pyplot.pcolormesh
     """
 
-    if not hasattr(ax, 'projection'):
-        x = _infer_interval_breaks(x)
-        y = _infer_interval_breaks(y)
+    # decide on a default for infer_intervals (GH781)
+    x = np.asarray(x)
+    if infer_intervals is None:
+        if hasattr(ax, 'projection'):
+            if len(x.shape) == 1:
+                infer_intervals = True
+            else:
+                infer_intervals = False
+        else:
+            infer_intervals = True
+
+    if infer_intervals:
+        if len(x.shape) == 1:
+            x = _infer_interval_breaks(x)
+            y = _infer_interval_breaks(y)
+        else:
+            # we have to infer the intervals on both axes
+            x = _infer_interval_breaks(x, axis=1)
+            x = _infer_interval_breaks(x, axis=0)
+            y = _infer_interval_breaks(y, axis=1)
+            y = _infer_interval_breaks(y, axis=0)
 
     primitive = ax.pcolormesh(x, y, z, **kwargs)
 

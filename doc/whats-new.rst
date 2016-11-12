@@ -51,6 +51,11 @@ Deprecations
 
 Enhancements
 ~~~~~~~~~~~~
+- Added the ability to change default automatic alignment (arithmetic_join="inner")
+  for binary operations via :py:func:`~xarray.set_options()`
+  (see :ref:`automatic alignment`).
+  By `Chun-Wei Yuan <https://github.com/chunweiyuan>`_.
+
 - Add checking of ``attr`` names and values when saving to netCDF, raising useful
   error messages if they are invalid. (:issue:`911`).
   By `Robin Wilson <https://github.com/robintw>`_.
@@ -117,6 +122,11 @@ Bug fixes
   By `Guido Imperiale <https://github.com/crusaderky>`_.
 
 - ``Dataset.concat()`` now preserves variables order (:issue:`1027`).
+  By `Fabien Maussion <https://github.com/fmaussion>`_.
+
+- Fixed an issue with pcolormesh (:issue:`781`). A new
+  ``infer_intervals`` keyword gives control on whether the cell intervals
+  should be computed or not.
   By `Fabien Maussion <https://github.com/fmaussion>`_.
 
 .. _whats-new.0.8.2:

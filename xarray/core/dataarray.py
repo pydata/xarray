@@ -1,3 +1,6 @@
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
 import functools
 import warnings
 
@@ -22,6 +25,7 @@ from .variable import (as_variable, Variable, as_compatible_data, IndexVariable,
                        assert_unique_multiindex_level_names)
 from .formatting import format_item
 from .utils import decode_numpy_dict_values, ensure_us_time_resolution
+from .options import OPTIONS
 
 
 def _infer_coords_and_dims(shape, coords, dims):
@@ -1367,13 +1371,14 @@ class DataArray(AbstractArray, BaseDataObject):
         return func
 
     @staticmethod
-    def _binary_op(f, reflexive=False, join='inner', **ignored_kwargs):
+    def _binary_op(f, reflexive=False, join=None, **ignored_kwargs):
         @functools.wraps(f)
         def func(self, other):
             if isinstance(other, (Dataset, groupby.GroupBy)):
                 return NotImplemented
             if hasattr(other, 'indexes'):
-                self, other = align(self, other, join=join, copy=False)
+                align_type = OPTIONS['arithmetic_join'] if join is None else join
+                self, other = align(self, other, join=align_type, copy=False)
             other_variable = getattr(other, 'variable', other)
             other_coords = getattr(other, 'coords', None)
 
