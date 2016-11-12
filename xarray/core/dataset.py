@@ -2061,14 +2061,16 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
 
             dest_vars = OrderedDict()
 
-            for k in set(lhs_data_vars) & set(rhs_data_vars):
-                dest_vars[k] = f(lhs_vars[k], rhs_vars[k])
-            if join in ["outer", "left"]:
-                for k in set(lhs_data_vars) - set(rhs_data_vars):
-                    dest_vars[k] = lhs_vars[k]
-            if join in ["outer", "right"]:
-                for k in set(rhs_data_vars) - set(lhs_data_vars):
-                    dest_vars[k] = rhs_vars[k]
+            for k in lhs_data_vars:
+                if k in rhs_data_vars:
+                    dest_vars[k] = f(lhs_vars[k], rhs_vars[k])
+                elif join in ["left", "outer"]:
+                    dest_vars[k] = lhs_vars[k] if fillna else\
+                                   f(lhs_vars[k], np.nan)
+            for k in rhs_data_vars:
+                if k not in dest_vars and join in ["right", "outer"]:
+                    dest_vars[k] = rhs_vars[k] if fillna else\
+                                   f(rhs_vars[k], np.nan)
             return dest_vars
 
         if utils.is_dict_like(other) and not isinstance(other, Dataset):

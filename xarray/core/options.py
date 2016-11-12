@@ -33,10 +33,6 @@ class set_options(object):
             raise ValueError('argument names %r are not in the set of valid '
                              'options %r' % (invalid_options, set(OPTIONS)))
         self.old = OPTIONS.copy()
-        for key in kwargs:
-            if key not in OPTIONS:
-                raise KeyError("acceptable keys are: {}".\
-                               format(', '.join(OPTIONS.keys())))
         OPTIONS.update(kwargs)
 
     def __enter__(self):

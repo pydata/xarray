@@ -2951,19 +2951,19 @@ class TestDataset(TestCase):
         expected = xr.Dataset({'bar': 4}) # default is inner joining
         actual = ds1 + ds2
         self.assertDatasetEqual(actual, expected)
-        
+
         with xr.set_options(arithmetic_join='outer'):
-            expected = xr.Dataset({'foo':1, 'bar': 4, 'baz': 3})
+            expected = xr.Dataset({'foo': np.nan, 'bar': 4, 'baz': np.nan})
             actual = ds1 + ds2
             self.assertDatasetEqual(actual, expected)
 
         with xr.set_options(arithmetic_join='left'):
-            expected = xr.Dataset({'foo':1, 'bar': 4})
+            expected = xr.Dataset({'foo': np.nan, 'bar': 4})
             actual = ds1 + ds2
             self.assertDatasetEqual(actual, expected)
 
         with xr.set_options(arithmetic_join='right'):
-            expected = xr.Dataset({'baz':3, 'bar': 4})
+            expected = xr.Dataset({'bar': 4, 'baz': np.nan})
             actual = ds1 + ds2
             self.assertDatasetEqual(actual, expected)
 
