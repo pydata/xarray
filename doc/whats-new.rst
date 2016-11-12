@@ -22,7 +22,7 @@ Breaking changes
 ~~~~~~~~~~~~~~~~
 
 - Index coordinates for each dimensions are now optional, and no longer created
-  by default. This has a number of implications:
+  by default :issue:`1017`. This has a number of implications:
 
   - :py:func:`~align` and :py:meth:`~Dataset.reindex` can now error, if
     dimensions labels are missing and dimensions have different sizes.
