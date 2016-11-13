@@ -497,8 +497,8 @@ class TestDatetime(TestCase):
         # this should not throw a warning (GH1111)
         with warnings.catch_warnings():
             warnings.filterwarnings('error')
-            _ = conventions.DecodedCFDatetimeArray(np.asarray([722624]),
-                                                   "days since 0001-01-01")
+            conventions.DecodedCFDatetimeArray(np.asarray([722624]),
+                                               "days since 0001-01-01")
 
 
 class TestNativeEndiannessArray(TestCase):
