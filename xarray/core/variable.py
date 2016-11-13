@@ -1100,16 +1100,19 @@ class IndexVariable(Variable):
             raise ValueError('%s objects must be 1-dimensional' %
                              type(self).__name__)
 
-    def _data_cached(self):
-        # Unlike in Variable._data_cached, always eagerly resolve dask arrays
-        self._data = self._data_cast()
-        return self._data
+        # Unlike in Variable, always eagerly load values into memory
+        if not isinstance(self._data, PandasIndexAdapter):
+            self._data = PandasIndexAdapter(self._data)
 
-    def _data_cast(self):
-        if isinstance(self._data, PandasIndexAdapter):
-            return self._data
-        else:
-            return PandasIndexAdapter(self._data)
+    @Variable.data.setter
+    def data(self, data):
+        Variable.data.fset(self, data)
+        if not isinstance(self._data, PandasIndexAdapter):
+            self._data = PandasIndexAdapter(self._data)
+
+    def chunk(self, chunks=None, name=None, lock=False):
+        # Dummy - do not chunk. This method is invoked e.g. by Dataset.chunk()
+        return self.copy(deep=False)
 
     def __getitem__(self, key):
         key = self._item_key_to_tuple(key)

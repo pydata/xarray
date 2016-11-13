@@ -887,9 +887,6 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
             return dict((d, dict_[d]) for d in keys if d in dict_)
 
         def maybe_chunk(name, var, chunks):
-            if name in self.dims:
-                return var
-
             chunks = selkeys(chunks, var.dims)
             if not chunks:
                 chunks = None

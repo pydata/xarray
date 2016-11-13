@@ -56,11 +56,24 @@ def create_test_multiindex():
 
 
 class InaccessibleVariableDataStore(backends.InMemoryDataStore):
+    def __init__(self, writer=None):
+        super(InaccessibleVariableDataStore, self).__init__(writer)
+        self._indexvars = set()
+
+    def store(self, variables, attributes, check_encoding_set=frozenset()):
+        super(InaccessibleVariableDataStore, self).store(
+            variables, attributes, check_encoding_set)
+        for k, v in variables.items():
+            if isinstance(v, IndexVariable):
+                self._indexvars.add(k)
+
     def get_variables(self):
-        def lazy_inaccessible(x):
-            data = indexing.LazilyIndexedArray(InaccessibleArray(x.values))
-            return Variable(x.dims, data, x.attrs)
-        return dict((k, lazy_inaccessible(v)) for
+        def lazy_inaccessible(k, v):
+            if k in self._indexvars:
+                return v
+            data = indexing.LazilyIndexedArray(InaccessibleArray(v.values))
+            return Variable(v.dims, data, v.attrs)
+        return dict((k, lazy_inaccessible(k, v)) for
                     k, v in iteritems(self._variables))
 
 
