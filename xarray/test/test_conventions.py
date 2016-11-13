@@ -494,6 +494,12 @@ class TestDatetime(TestCase):
         ds = decode_cf(Dataset({'time': ('time', [0, 1], attrs)}))
         self.assertIn('(time) datetime64[ns]', repr(ds))
 
+        # this should not throw a warning (GH1111)
+        with warnings.catch_warnings():
+            warnings.filterwarnings('error')
+            conventions.DecodedCFDatetimeArray(np.asarray([722624]),
+                                               "days since 0001-01-01")
+
 
 class TestNativeEndiannessArray(TestCase):
     def test(self):
