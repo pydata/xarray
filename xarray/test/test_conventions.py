@@ -495,10 +495,10 @@ class TestDatetime(TestCase):
         self.assertIn('(time) datetime64[ns]', repr(ds))
 
         # this should not throw a warning (GH1111)
-        from xarray.tutorial import load_dataset
         with warnings.catch_warnings():
             warnings.filterwarnings('error')
-            ds = load_dataset('rasm')
+            _ = conventions.DecodedCFDatetimeArray(np.asarray([722624]),
+                                                   "days since 0001-01-01")
 
 
 class TestNativeEndiannessArray(TestCase):
