@@ -49,7 +49,7 @@ class TestWithQuantities(TestCase):
     def test_units_in_indexes(self):
         """
         Indexes are borrowed from Pandas, and Pandas does not support units.
-        Therefore, we currently don't intend to support units on idexes either.
+        Therefore, we currently don't intend to support units on indexes either.
         """
         da = self.da
         self.assertEqualWUnits(da.x.data,self.x)
