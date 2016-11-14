@@ -260,8 +260,11 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         return obj
 
     def __getstate__(self):
-        """Always load data in-memory before pickling"""
-        self.load()
+        """Load data in-memory before pickling (except for Dask data)"""
+        for v in self.variables.values():
+            if not isinstance(v.data, dask_array_type):
+                v.load()
+
         # self.__dict__ is the default pickle object, we don't need to
         # implement our own __setstate__ method to make pickle work
         state = self.__dict__.copy()
@@ -341,6 +344,19 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
                 self.variables[k].data = data
 
         return self
+
+    def compute(self):
+        """Manually trigger loading of this dataset's data from disk or a
+        remote source into memory and return a new dataset. The original is
+        left unaltered.
+
+        Normally, it should not be necessary to call this method in user code,
+        because all xarray functions should either work on deferred data or
+        load data automatically. However, this method can be necessary when
+        working with many file objects on disk.
+        """
+        new = self.copy(deep=False)
+        return new.load()
 
     @classmethod
     def _construct_direct(cls, variables, coord_names, dims=None, attrs=None,
@@ -424,14 +440,12 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         """Returns a copy of this dataset.
 
         If `deep=True`, a deep copy is made of each of the component variables.
-        Otherwise, a shallow copy is made, so each variable in the new dataset
-        is also a variable in the original dataset.
+        Otherwise, a shallow copy of each of the component variable is made, so
+        that the underlying memory region of the new dataset is the same as in
+        the original dataset.
         """
-        if deep:
-            variables = OrderedDict((k, v.copy(deep=True))
-                                    for k, v in iteritems(self._variables))
-        else:
-            variables = self._variables.copy()
+        variables = OrderedDict((k, v.copy(deep=deep))
+                                for k, v in iteritems(self._variables))
         # skip __init__ to avoid costly validation
         return self._construct_direct(variables, self._coord_names.copy(),
                                       self._dims.copy(), self._attrs_copy())
@@ -817,11 +831,10 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         chunks = {}
         for v in self.variables.values():
             if v.chunks is not None:
-                new_chunks = list(zip(v.dims, v.chunks))
-                if any(chunk != chunks[d] for d, chunk in new_chunks
-                       if d in chunks):
-                    raise ValueError('inconsistent chunks')
-                chunks.update(new_chunks)
+                for dim, c in zip(v.dims, v.chunks):
+                    if dim in chunks and c != chunks[dim]:
+                        raise ValueError('inconsistent chunks')
+                    chunks[dim] = c
         return Frozen(SortedKeysDict(chunks))
 
     def chunk(self, chunks=None, name_prefix='xarray-', token=None,
