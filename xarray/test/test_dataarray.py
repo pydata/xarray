@@ -829,12 +829,12 @@ class TestDataArray(TestCase):
         array['level_3'] = level_3
         expected['level_3'] = level_3
 
-        reindexed = array.set_index(x=self.mindex.names)
-        self.assertDataArrayIdentical(reindexed, expected)
+        obj = array.set_index(x=self.mindex.names)
+        self.assertDataArrayIdentical(obj, expected)
 
-        reindexed = reindexed.set_index(x='level_3', append=True)
+        obj = obj.set_index(x='level_3', append=True)
         expected = array.set_index(x=['level_1', 'level_2', 'level_3'])
-        self.assertDataArrayIdentical(reindexed, expected)
+        self.assertDataArrayIdentical(obj, expected)
 
         array.set_index(x=['level_1', 'level_2', 'level_3'], inplace=True)
         self.assertDataArrayIdentical(array, expected)
@@ -850,31 +850,41 @@ class TestDataArray(TestCase):
         coords = {idx.name: ('x', idx) for idx in indexes}
         expected = DataArray(self.mda.values, coords=coords, dims='x')
 
-        reindexed = self.mda.reset_index('x')
-        self.assertDataArrayIdentical(reindexed, expected)
-        reindexed = self.mda.reset_index('x', levels=self.mindex.names)
-        self.assertDataArrayIdentical(reindexed, expected)
+        obj = self.mda.reset_index('x')
+        self.assertDataArrayIdentical(obj, expected)
+        obj = self.mda.reset_index(self.mindex.names)
+        self.assertDataArrayIdentical(obj, expected)
+        obj = self.mda.reset_index(['x', 'level_1'])
+        self.assertDataArrayIdentical(obj, expected)
 
         coords = {'x': ('x', self.mindex.droplevel('level_1')),
                   'level_1': ('x', self.mindex.get_level_values('level_1'))}
         expected = DataArray(self.mda.values, coords=coords, dims='x')
-        reindexed = self.mda.reset_index('x', levels=['level_1'])
-        self.assertDataArrayIdentical(reindexed, expected)
+        obj = self.mda.reset_index(['level_1'])
+        self.assertDataArrayIdentical(obj, expected)
 
         expected = DataArray(self.mda.values, dims='x')
-        reindexed = self.mda.reset_index('x', drop=True)
-        self.assertDataArrayIdentical(reindexed, expected)
+        obj = self.mda.reset_index('x', drop=True)
+        self.assertDataArrayIdentical(obj, expected)
 
         array = self.mda.copy()
         array.reset_index(['x'], drop=True, inplace=True)
         self.assertDataArrayIdentical(array, expected)
 
+        # single index
+        array = DataArray([1, 2], coords={'x': ['a', 'b']}, dims='x')
+        expected = DataArray(
+            [1, 2],
+            coords={'x': ('x', [0, 1]), 'x_': ('x', ['a', 'b'])},
+            dims='x')
+        self.assertDataArrayIdentical(array.reset_index('x'), expected)
+
     def test_reorder_levels(self):
         midx = self.mindex.reorder_levels(['level_2', 'level_1'])
         expected = DataArray(self.mda.values, coords={'x': midx}, dims='x')
 
-        reindexed = self.mda.reorder_levels(x=['level_2', 'level_1'])
-        self.assertDataArrayIdentical(reindexed, expected)
+        obj = self.mda.reorder_levels(x=['level_2', 'level_1'])
+        self.assertDataArrayIdentical(obj, expected)
 
         array = self.mda.copy()
         array.reorder_levels(x=['level_2', 'level_1'], inplace=True)

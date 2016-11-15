@@ -869,23 +869,17 @@ class DataArray(AbstractArray, BaseDataObject):
         else:
             return self._replace(coords=coords)
 
-    def reset_index(self, dim, levels=None, drop=False, inplace=False):
-        """Extract index(es) as new coordinates.
+    def reset_index(self, dims_or_levels, drop=False, inplace=False):
+        """Reset the specified index(es) or multi-index level(s).
 
         Parameters
         ----------
-        dim : str or list
-            Name(s) of the dimension(s) for which to extract and reset
-            the index.
-        levels : list or None, optional
-            If None (default) and if `dim` has a multi-index, extract all levels
-            as new coordinates. Otherwise extract only the given list of level
-            names. If more than one dimension is given in `dim`, `levels` should
-            be a list of the same length than `dim` (or simply None to extract
-            all indexes/levels from all given dimensions).
+        dims_or_levels : str or list
+            Name(s) of the dimension(s) and/or multi-index level(s) that will
+            be reset.
         drop : bool, optional
-            If True, remove the specified levels instead of extracting them as
-            new coordinates (default: False).
+            If True, remove the specified indexes and/or multi-index levels
+            instead of extracting them as new coordinates (default: False).
         inplace : bool, optional
             If True, modify the dataarray in-place. Otherwise, return a new
             DataArray object.
@@ -900,7 +894,8 @@ class DataArray(AbstractArray, BaseDataObject):
         --------
         DataArray.set_index
         """
-        coords, _ = split_indexes(dim, levels, self._coords, set(), drop=drop)
+        coords, _ = split_indexes(dims_or_levels, self._coords, set(),
+                                  self._level_coords, drop=drop)
         if inplace:
             self._coords = coords
         else:

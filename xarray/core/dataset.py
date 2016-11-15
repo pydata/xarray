@@ -3,7 +3,7 @@ from __future__ import division
 from __future__ import print_function
 import functools
 import warnings
-from collections import Mapping
+from collections import Mapping, defaultdict
 from numbers import Number
 
 import numpy as np
@@ -159,44 +159,51 @@ def merge_indexes(indexes, variables, coord_names, append=False):
     return new_variables, new_coord_names
 
 
-def split_indexes(dim, levels, variables, coord_names, drop=False):
-    """Split multi-indexes into variables.
+def split_indexes(dims_or_levels, variables, coord_names, level_coords,
+                  drop=False):
+    """Extract (multi-)indexes (levels) as variables.
 
     Not public API. Used in Dataset and DataArray reset_index
     methods.
     """
-    if isinstance(dim, basestring):
-        dim = [dim]
-        if levels is not None:
-            levels = [levels]
-    if levels is None:
-        levels = [None] * len(dim)
+    if isinstance(dims_or_levels, basestring):
+        dims_or_levels = [dims_or_levels]
+
+    dim_levels = defaultdict(list)
+    dims = []
+    for k in dims_or_levels:
+        if k in level_coords:
+            dim_levels[level_coords[k]].append(k)
+        else:
+            dims.append(k)
 
     vars_to_replace = {}
     vars_to_create = OrderedDict()
 
-    for d, levs in zip(dim, levels):
-        current_index = variables[d].to_index()
-        if not isinstance(current_index, pd.MultiIndex):
-            raise ValueError("%r has no MultiIndex" % d)
-
-        if levs is None:
-            levs = current_index.names
-        elif not isinstance(levs, (tuple, list)):
-            levs = [levs]
-
-        if len(levs) == current_index.nlevels:
-            new_index_variable = default_index_coordinate(
-                d, current_index.size)
+    for d in dims:
+        index = variables[d].to_index()
+        if isinstance(index, pd.MultiIndex):
+            dim_levels[d] = index.names
         else:
-            new_index_variable = IndexVariable(
-                d, current_index.droplevel(levs))
-        vars_to_replace[d] = new_index_variable
+            # TODO: remove instead of replace (#1017)
+            vars_to_replace[d] = default_index_coordinate(index.name,
+                                                          index.size)
+            if not drop:
+                vars_to_create[d + '_'] = Variable(d, index)
+
+    for d, levs in dim_levels.items():
+        index = variables[d].to_index()
+        if len(levs) == index.nlevels:
+            # TODO: remove instead of replace (#1017)
+            new_index_var = default_index_coordinate(d, index.size)
+        else:
+            new_index_var = IndexVariable(d, index.droplevel(levs))
+        vars_to_replace[d] = new_index_var
 
         if not drop:
-            for level in levs:
-                idx = current_index.get_level_values(level)
-                vars_to_create[idx.name] = IndexVariable(d, idx)
+            for lev in levs:
+                idx = index.get_level_values(lev)
+                vars_to_create[idx.name] = Variable(d, idx)
 
     new_variables = variables.copy()
     new_variables.update(vars_to_replace)
@@ -1479,23 +1486,17 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         return self._replace_vars_and_dims(variables, coord_names=coord_names,
                                            inplace=inplace)
 
-    def reset_index(self, dim, levels=None, drop=False, inplace=False):
-        """Extract index(es) as new coordinates.
+    def reset_index(self, dims_or_levels, drop=False, inplace=False):
+        """Reset the specified index(es) or multi-index level(s).
 
         Parameters
         ----------
-        dim : str or list
-            Name(s) of the dimension(s) for which to extract and reset
-            the index.
-        levels : list or None, optional
-            If None (default) and if `dim` has a multi-index, extract all levels
-            as new coordinates. Otherwise extract only the given list of level
-            names. If more than one dimension is given in `dim`, `levels` should
-            be a list of the same length than `dim` (or simply None to extract
-            all indexes/levels from all given dimensions).
+        dims_or_levels : str or list
+            Name(s) of the dimension(s) and/or multi-index level(s) that will
+            be reset.
         drop : bool, optional
-            If True, remove the specified levels instead of extracting them as
-            new coordinates (default: False).
+            If True, remove the specified indexes and/or multi-index levels
+            instead of extracting them as new coordinates (default: False).
         inplace : bool, optional
             If True, modify the dataset in-place. Otherwise, return a new
             Dataset object.
@@ -1509,8 +1510,9 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         --------
         Dataset.set_index
         """
-        variables, coord_names = split_indexes(dim, levels, self._variables,
-                                               self._coord_names, drop=drop)
+        variables, coord_names = split_indexes(dims_or_levels, self._variables,
+                                               self._coord_names,
+                                               self._level_coords, drop=drop)
         return self._replace_vars_and_dims(variables, coord_names=coord_names,
                                            inplace=inplace)
 
