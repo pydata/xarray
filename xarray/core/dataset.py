@@ -107,7 +107,13 @@ def calculate_dimensions(variables):
     return dims
 
 
-def merge_indexes(indexes, variables, coord_names, append=False):
+def merge_indexes(
+        indexes,       # type: Dict[Any, Union[Any, List[Any]]]
+        variables,     # type: Dict[Any, Variable]
+        coord_names,   # type: Set
+        append=False,  # type: bool
+        ):
+    # type: (...) -> Tuple[OrderedDict[Any, Variable], Set]
     """Merge variables into multi-indexes.
 
     Not public API. Used in Dataset and DataArray set_index
@@ -159,8 +165,14 @@ def merge_indexes(indexes, variables, coord_names, append=False):
     return new_variables, new_coord_names
 
 
-def split_indexes(dims_or_levels, variables, coord_names, level_coords,
-                  drop=False):
+def split_indexes(
+        dims_or_levels,  # type: Union[Any, List[Any]]
+        variables,       # type: Dict[Any, Variable]
+        coord_names,     # type: Set
+        level_coords,    # type: Dict[Any, Any]
+        drop=False,      # type: bool
+        ):
+    # type: (...) -> Tuple[OrderedDict[Any, Variable], Set]
     """Extract (multi-)indexes (levels) as variables.
 
     Not public API. Used in Dataset and DataArray reset_index
