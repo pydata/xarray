@@ -382,8 +382,8 @@ class DecodedCFDatetimeArray(utils.NDArrayMixin):
         # Verify that at least the first and last date can be decoded
         # successfully. Otherwise, tracebacks end up swallowed by
         # Dataset.__repr__ when users try to view their lazily decoded array.
-        example_value = np.concatenate([first_n_items(array, 1),
-                                        last_item(array), [0]])
+        example_value = np.concatenate([first_n_items(array, 1) or [0],
+                                        last_item(array) or [0]])
 
         try:
             result = decode_cf_datetime(example_value, units, calendar)

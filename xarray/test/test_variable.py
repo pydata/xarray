@@ -1052,13 +1052,11 @@ class TestIndexVariable(TestCase, VariableSubclassTestCases):
 
     def test_data(self):
         x = IndexVariable('x', np.arange(3.0))
-        # data should be initially saved as an ndarray
-        self.assertIs(type(x._data), np.ndarray)
+        self.assertIsInstance(x._data, PandasIndexAdapter)
+        self.assertIsInstance(x.data, np.ndarray)
         self.assertEqual(float, x.dtype)
         self.assertArrayEqual(np.arange(3), x)
         self.assertEqual(float, x.values.dtype)
-        # after inspecting x.values, the IndexVariable value will be saved as an Index
-        self.assertIsInstance(x._data, PandasIndexAdapter)
         with self.assertRaisesRegexp(TypeError, 'cannot be modified'):
             x[:] = 0
 

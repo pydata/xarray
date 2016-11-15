@@ -812,6 +812,13 @@ class TestDataArray(TestCase):
             renamed.to_dataset(), self.ds.rename({'foo': 'bar'}))
         self.assertEqual(renamed.name, 'bar')
 
+        # regression to #1116
+        renamed = self.dv.x.rename({'x': 'z'})
+        self.assertDatasetIdentical(
+            renamed, self.ds.rename({'x': 'z'}).z)
+        self.assertEqual(renamed.name, 'z')
+        self.assertEqual(renamed.dims, ('z',))
+
     def test_swap_dims(self):
         array = DataArray(np.random.randn(3), {'y': ('x', list('abc'))}, 'x')
         expected = DataArray(array.values,

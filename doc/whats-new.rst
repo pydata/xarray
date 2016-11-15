@@ -25,6 +25,13 @@ Breaking changes
   merges will now succeed in cases that previously raised
   ``xarray.MergeError``. Set ``compat='broadcast_equals'`` to restore the
   previous default.
+- Pickling an xarray object based on the dask backend, or reading its
+  :py:meth:`values` property, won't automatically convert the array from dask
+  to numpy in the original object anymore.
+  If a dask object is used as a coord of a :py:class:`~xarray.DataArray` or
+  :py:class:`~xarray.Dataset`, its values are eagerly computed and cached,
+  but only if it's used to index a dim (e.g. it's used for alignment).
+  By `Guido Imperiale <https://github.com/crusaderky>`_.
 
 Deprecations
 ~~~~~~~~~~~~
@@ -52,32 +59,31 @@ Enhancements
 - Add checking of ``attr`` names and values when saving to netCDF, raising useful
   error messages if they are invalid. (:issue:`911`).
   By `Robin Wilson <https://github.com/robintw>`_.
-
 - Added ability to save ``DataArray`` objects directly to netCDF files using
   :py:meth:`~xarray.DataArray.to_netcdf`, and to load directly from netCDF files
   using :py:func:`~xarray.open_dataarray` (:issue:`915`). These remove the need
   to convert a ``DataArray`` to a ``Dataset`` before saving as a netCDF file,
   and deals with names to ensure a perfect 'roundtrip' capability.
   By `Robin Wilson <https://github.com/robintw>`_.
-
 - Multi-index levels are now accessible as "virtual" coordinate variables,
   e.g., ``ds['time']`` can pull out the ``'time'`` level of a multi-index
   (see :ref:`coordinates`). ``sel`` also accepts providing multi-index levels
   as keyword arguments, e.g., ``ds.sel(time='2000-01')``
   (see :ref:`multi-level indexing`).
   By `Benoit Bovy <https://github.com/benbovy>`_.
-
 - Added the ``compat`` option ``'no_conflicts'`` to ``merge``, allowing the
   combination of xarray objects with disjoint (:issue:`742`) or
   overlapping (:issue:`835`) coordinates as long as all present data agrees.
   By `Johnnie Gray <https://github.com/jcmgray>`_. See
   :ref:`combining.no_conflicts` for more details.
-
 - It is now possible to set ``concat_dim=None`` explicitly in
   :py:func:`~xarray.open_mfdataset` to disable inferring a dimension along
   which to concatenate.
   By `Stephan Hoyer <https://github.com/shoyer>`_.
-
+- Added methods :py:meth:`DataArray.compute`, :py:meth:`Dataset.compute`, and
+  :py:meth:`Variable.compute` as a non-mutating alternative to
+  :py:meth:`~DataArray.load`.
+  By `Guido Imperiale <https://github.com/crusaderky>`_.
 - Adds DataArray and Dataset methods :py:meth:`~xarray.DataArray.cumsum` and
   :py:meth:`~xarray.DataArray.cumprod`.  By `Phillip J. Wolfram
   <https://github.com/pwolfram>`_.
@@ -122,6 +128,14 @@ Bug fixes
   ``infer_intervals`` keyword gives control on whether the cell intervals
   should be computed or not.
   By `Fabien Maussion <https://github.com/fmaussion>`_.
+
+- :py:meth:`~xarray.DataArray.rename` now simultaneously renames the array and
+  any coordinate with the same name, when supplied via a :py:class:`dict`
+  (:issue:`1116`).
+  By `Yves Delley <https://github.com/burnpanck>`_.
+
+- Fixed sub-optimal performance in certain operations with object arrays (:issue:`1121`).
+  By `Yves Delley <https://github.com/burnpanck>`_.
 
 .. _whats-new.0.8.2:
 
