@@ -129,6 +129,11 @@ Bug fixes
   should be computed or not.
   By `Fabien Maussion <https://github.com/fmaussion>`_.
 
+- :py:meth:`~xarray.DataArray.rename` now simultaneously renames the array and
+  any coordinate with the same name, when supplied via a :py:class:`dict`
+  (:issue:`1116`).
+  By `Yves Delley <https://github.com/burnpanck>`_.
+
 .. _whats-new.0.8.2:
 
 v0.8.2 (18 August 2016)

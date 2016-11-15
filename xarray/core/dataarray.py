@@ -806,7 +806,10 @@ class DataArray(AbstractArray, BaseDataObject):
         """
         if utils.is_dict_like(new_name_or_name_dict):
             name_dict = new_name_or_name_dict.copy()
-            name = name_dict.pop(self.name, self.name)
+            if self.name in self.dims:
+                name = name_dict.get(self.name, self.name)
+            else:
+                name = name_dict.pop(self.name, self.name)
             dataset = self._to_temp_dataset().rename(name_dict)
             return self._from_temp_dataset(dataset, name)
         else:
