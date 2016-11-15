@@ -1466,7 +1466,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
 
         Returns
         -------
-        reindexed : Dataset
+        obj : Dataset
             Another dataset, with this dataset's data but replaced coordinates.
 
         See Also
@@ -1502,7 +1502,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
 
         Returns
         -------
-        reindexed: Dataset
+        obj : Dataset
             Another dataset, with this dataset's data but replaced coordinates.
 
         See Also
@@ -1529,7 +1529,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
 
         Returns
         -------
-        reindexed: Dataset
+        obj : Dataset
             Another dataset, with this dataset's data but replaced
             coordinates.
         """

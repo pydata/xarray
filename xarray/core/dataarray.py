@@ -856,7 +856,7 @@ class DataArray(AbstractArray, BaseDataObject):
 
         Returns
         -------
-        reindexed : DataArray
+        obj : DataArray
             Another dataarray, with this dataarray's data but replaced coordinates.
 
         See Also
@@ -892,7 +892,7 @@ class DataArray(AbstractArray, BaseDataObject):
 
         Returns
         -------
-        reindexed: DataArray
+        obj : DataArray
             Another dataarray, with this dataarray's data but replaced
             coordinates.
 
@@ -921,7 +921,7 @@ class DataArray(AbstractArray, BaseDataObject):
 
         Returns
         -------
-        reindexed: DataArray
+        obj : DataArray
             Another dataarray, with this dataarray's data but replaced
             coordinates.
         """
