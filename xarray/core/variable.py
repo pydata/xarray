@@ -142,10 +142,12 @@ def as_compatible_data(data, fastpath=False):
     if isinstance(data, timedelta):
         data = np.timedelta64(getattr(data, 'value', data), 'ns')
 
-    if (not hasattr(data, 'dtype') or not hasattr(data, 'shape') or
+    if (not hasattr(data, 'dtype') or not isinstance(data.dtype, np.dtype) or
+            not hasattr(data, 'shape') or
             isinstance(data, (np.string_, np.unicode_,
                               np.datetime64, np.timedelta64))):
         # data must be ndarray-like
+        # don't allow non-numpy dtypes (e.g., categories)
         data = np.asarray(data)
 
     # we don't want nested self-described arrays
@@ -260,7 +262,9 @@ class Variable(common.AbstractArray, common.SharedMethodsMixin,
 
     @property
     def _in_memory(self):
-        return isinstance(self._data, (np.ndarray, PandasIndexAdapter))
+        return (isinstance(self._data, (np.ndarray, PandasIndexAdapter)) or
+                (isinstance(self._data, indexing.MemoryCachedArray) and
+                 isinstance(self._data.array, np.ndarray)))
 
     @property
     def data(self):
@@ -277,22 +281,6 @@ class Variable(common.AbstractArray, common.SharedMethodsMixin,
                 "replacement data must match the Variable's shape")
         self._data = data
 
-    def _data_cast(self):
-        if isinstance(self._data, (np.ndarray, PandasIndexAdapter)):
-            return self._data
-        else:
-            return np.asarray(self._data)
-
-    def _data_cached(self):
-        """Load data into memory and return it.
-        Do not cache dask arrays automatically; that should
-        require an explicit load() call.
-        """
-        new_data = self._data_cast()
-        if not isinstance(self._data, dask_array_type):
-            self._data = new_data
-        return new_data
-
     @property
     def _indexable_data(self):
         return orthogonally_indexable(self._data)
@@ -305,7 +293,8 @@ class Variable(common.AbstractArray, common.SharedMethodsMixin,
         because all xarray functions should either work on deferred data or
         load data automatically.
         """
-        self._data = self._data_cast()
+        if not isinstance(self._data, np.ndarray):
+            self._data = np.asarray(self._data)
         return self
 
     def compute(self):
@@ -320,19 +309,10 @@ class Variable(common.AbstractArray, common.SharedMethodsMixin,
         new = self.copy(deep=False)
         return new.load()
 
-    def __getstate__(self):
-        """Always cache data as an in-memory array before pickling
-        (with the exception of dask backend)"""
-        if not isinstance(self._data, dask_array_type):
-            self._data_cached()
-        # self.__dict__ is the default pickle object, we don't need to
-        # implement our own __setstate__ method to make pickle work
-        return self.__dict__
-
     @property
     def values(self):
         """The variable's data as a numpy.ndarray"""
-        return _as_array_or_item(self._data_cached())
+        return _as_array_or_item(self._data)
 
     @values.setter
     def values(self, values):
@@ -425,7 +405,7 @@ class Variable(common.AbstractArray, common.SharedMethodsMixin,
                             'assign to this variable, you must first load it '
                             'into memory explicitly using the .load_data() '
                             'method or accessing its .values attribute.')
-        data = orthogonally_indexable(self._data_cached())
+        data = orthogonally_indexable(self._data)
         data[key] = value
 
     @property
@@ -462,7 +442,7 @@ class Variable(common.AbstractArray, common.SharedMethodsMixin,
         the new object. Dimensions, attributes and encodings are always copied.
         """
         if (deep and not isinstance(self.data, dask_array_type)
-            and not isinstance(self._data, PandasIndexAdapter)):
+                and not isinstance(self._data, PandasIndexAdapter)):
             # pandas.Index objects are immutable
             # dask arrays don't have a copy method
             # https://github.com/blaze/dask/issues/911
@@ -1144,15 +1124,16 @@ class IndexVariable(Variable):
             raise TypeError('IndexVariable.concat requires that all input '
                             'variables be IndexVariable objects')
 
-        arrays = [v._data_cached().array for v in variables]
+        indexes = [v._data.array for v in variables]
 
-        if not arrays:
+        if not indexes:
             data = []
         else:
-            data = arrays[0].append(arrays[1:])
+            data = indexes[0].append(indexes[1:])
 
             if positions is not None:
-                indices = nputils.inverse_permutation(np.concatenate(positions))
+                indices = nputils.inverse_permutation(
+                    np.concatenate(positions))
                 data = data.take(indices)
 
         attrs = OrderedDict(first_var.attrs)
@@ -1167,13 +1148,11 @@ class IndexVariable(Variable):
     def copy(self, deep=True):
         """Returns a copy of this object.
 
-        If `deep=True`, the values array is loaded into memory and copied onto
-        the new object. Dimensions, attributes and encodings are always copied.
+        `deep` is ignored since data is stored in the form of pandas.Index,
+        which is already immutable. Dimensions, attributes and encodings are
+        always copied.
         """
-        # there is no need to copy the index values here even if deep=True
-        # since pandas.Index objects are immutable
-        data = PandasIndexAdapter(self) if deep else self._data
-        return type(self)(self.dims, data, self._attrs,
+        return type(self)(self.dims, self._data, self._attrs,
                           self._encoding, fastpath=True)
 
     def _data_equals(self, other):
@@ -1190,7 +1169,7 @@ class IndexVariable(Variable):
         # n.b. creating a new pandas.Index from an old pandas.Index is
         # basically free as pandas.Index objects are immutable
         assert self.ndim == 1
-        index = self._data_cached().array
+        index = self._data.array
         if isinstance(index, pd.MultiIndex):
             # set default names for multi-index unnamed levels so that
             # we can safely rename dimension / coordinate later

@@ -25,12 +25,14 @@ Breaking changes
   merges will now succeed in cases that previously raised
   ``xarray.MergeError``. Set ``compat='broadcast_equals'`` to restore the
   previous default.
-- Pickling an xarray object based on the dask backend, or reading its
-  :py:meth:`values` property, won't automatically convert the array from dask
-  to numpy in the original object anymore.
-  If a dask object is used as a coord of a :py:class:`~xarray.DataArray` or
-  :py:class:`~xarray.Dataset`, its values are eagerly computed and cached,
-  but only if it's used to index a dim (e.g. it's used for alignment).
+- Pickling an xarray object or reading its :py:attr:`~DataArray.values`
+  property no longer always caches values in a NumPy array. Caching
+  of ``.values`` read from netCDF files on disk is still the default when
+  :py:func:`open_dataset` is called with ``cache=True``.
+  By `Guido Imperiale <https://github.com/crusaderky>`_ and
+  `Stephan Hoyer <https://github.com/shoyer>`_.
+- Coordinates used to index a dimension are now loaded eagerly into
+  :py:class:`pandas.Index` objects, instead of loading the values lazily.
   By `Guido Imperiale <https://github.com/crusaderky>`_.
 
 Deprecations

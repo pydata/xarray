@@ -1,6 +1,9 @@
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
+import pickle
+import pytest
+
 import numpy as np
 import pandas as pd
 
@@ -171,3 +174,9 @@ class Test_hashable(TestCase):
             self.assertTrue(utils.hashable(v))
         for v in [[5, 6], ['seven', '8'], {9: 'ten'}]:
             self.assertFalse(utils.hashable(v))
+
+
+def test_no_pickle_mixin():
+    obj = utils.NoPickleMixin()
+    with pytest.raises(TypeError):
+        pickle.dumps(obj)

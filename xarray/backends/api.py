@@ -13,12 +13,15 @@ import numpy as np
 
 from .. import backends, conventions
 from .common import ArrayWriter
+from ..core import indexing
 from ..core.combine import auto_combine
 from ..core.utils import close_on_error, is_remote_uri
+from ..core.variable import Variable, IndexVariable
 from ..core.pycompat import basestring
 
 DATAARRAY_NAME = '__xarray_dataarray_name__'
 DATAARRAY_VARIABLE = '__xarray_dataarray_variable__'
+
 
 def _get_default_engine(path, allow_remote=False):
     if allow_remote and is_remote_uri(path):  # pragma: no cover
@@ -117,10 +120,20 @@ def _validate_attrs(dataset):
             check_attr(k, v)
 
 
+def _protect_dataset_variables_inplace(dataset, cache):
+    for name, variable in dataset.variables.items():
+        if name not in variable.dims:
+            # no need to protect IndexVariable objects
+            data = indexing.CopyOnWriteArray(variable._data)
+            if cache:
+                data = indexing.MemoryCachedArray(data)
+            variable._data = data
+
+
 def open_dataset(filename_or_obj, group=None, decode_cf=True,
                  mask_and_scale=True, decode_times=True,
                  concat_characters=True, decode_coords=True, engine=None,
-                 chunks=None, lock=None, drop_variables=None):
+                 chunks=None, lock=None, cache=None, drop_variables=None):
     """Load and decode a dataset from a file or file-like object.
 
     Parameters
@@ -162,14 +175,22 @@ def open_dataset(filename_or_obj, group=None, decode_cf=True,
         'netcdf4'.
     chunks : int or dict, optional
         If chunks is provided, it used to load the new dataset into dask
-        arrays. This is an experimental feature; see the documentation for more
-        details.
+        arrays. ``chunks={}`` loads the dataset with dask using a single
+        chunk for all arrays. This is an experimental feature; see the
+        documentation for more details.
     lock : False, True or threading.Lock, optional
         If chunks is provided, this argument is passed on to
         :py:func:`dask.array.from_array`. By default, a per-variable lock is
         used when reading data from netCDF files with the netcdf4 and h5netcdf
         engines to avoid issues with concurrent access when using dask's
         multithreaded backend.
+    cache : bool, optional
+        If True, cache data loaded from the underlying datastore in memory as
+        NumPy arrays when accessed to avoid reading from the underlying data-
+        store multiple times. Defaults to True unless you specify the `chunks`
+        argument to use dask, in which case it defaults to False. Does not
+        change the behavior of coordinates corresponding to dimensions, which
+        always load their data from disk into a ``pandas.Index``.
     drop_variables: string or iterable, optional
         A variable or list of variables to exclude from being parsed from the
         dataset. This may be useful to drop variables with problems or
@@ -190,11 +211,16 @@ def open_dataset(filename_or_obj, group=None, decode_cf=True,
         concat_characters = False
         decode_coords = False
 
+    if cache is None:
+        cache = chunks is not None
+
     def maybe_decode_store(store, lock=False):
         ds = conventions.decode_cf(
             store, mask_and_scale=mask_and_scale, decode_times=decode_times,
             concat_characters=concat_characters, decode_coords=decode_coords,
             drop_variables=drop_variables)
+
+        _protect_dataset_variables_inplace(ds, cache)
 
         if chunks is not None:
             try:

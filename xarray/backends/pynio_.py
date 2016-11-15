@@ -4,13 +4,13 @@ from __future__ import print_function
 import numpy as np
 
 from .. import Variable
-from ..core.utils import FrozenOrderedDict, Frozen, NDArrayMixin
+from ..core.utils import FrozenOrderedDict, Frozen, NDArrayMixin, NoPickleMixin
 from ..core import indexing
 
 from .common import AbstractDataStore
 
 
-class NioArrayWrapper(NDArrayMixin):
+class NioArrayWrapper(NDArrayMixin, NoPickleMixin):
     def __init__(self, array, ds):
         self.array = array
         self._ds = ds  # make an explicit reference because pynio uses weakrefs
@@ -25,7 +25,7 @@ class NioArrayWrapper(NDArrayMixin):
         return self.array[key]
 
 
-class NioDataStore(AbstractDataStore):
+class NioDataStore(AbstractDataStore, NoPickleMixin):
     """Store for accessing datasets via PyNIO
     """
     def __init__(self, filename, mode='r'):

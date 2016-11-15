@@ -5,7 +5,8 @@ import functools
 
 from .. import Variable
 from ..core import indexing
-from ..core.utils import FrozenOrderedDict, close_on_error, Frozen
+from ..core.utils import (FrozenOrderedDict, close_on_error, Frozen,
+                          NoPickleMixin)
 from ..core.pycompat import iteritems, bytes_type, unicode_type, OrderedDict
 
 from .common import WritableCFDataStore
@@ -37,7 +38,7 @@ _extract_h5nc_encoding = functools.partial(_extract_nc4_encoding,
                                            lsd_okay=False, backend='h5netcdf')
 
 
-class H5NetCDFStore(WritableCFDataStore):
+class H5NetCDFStore(WritableCFDataStore, NoPickleMixin):
     """Store for reading and writing data via h5netcdf
     """
     def __init__(self, filename, mode='r', format=None, group=None,

@@ -9,7 +9,7 @@ import warnings
 from xarray import conventions, Variable, Dataset, open_dataset
 from xarray.core import utils, indexing
 from . import TestCase, requires_netCDF4, unittest
-from .test_backends import CFEncodedDataTest
+from .test_backends import CFEncodedDataTest, PickleSupportedMixin
 from xarray.core.pycompat import iteritems
 from xarray.backends.memory import InMemoryDataStore
 from xarray.backends.common import WritableCFDataStore
@@ -191,11 +191,11 @@ class TestDatetime(TestCase):
 
     @requires_netCDF4
     def test_decode_cf_datetime_overflow(self):
-        # checks for 
+        # checks for
         # https://github.com/pydata/pandas/issues/14068
         # https://github.com/pydata/xarray/issues/975
 
-        from datetime import datetime        
+        from datetime import datetime
         units = 'days since 2000-01-01 00:00:00'
 
         # date after 2262 and before 1678
@@ -620,7 +620,7 @@ def null_wrap(ds):
 
 
 @requires_netCDF4
-class TestCFEncodedDataStore(CFEncodedDataTest, TestCase):
+class TestCFEncodedDataStore(CFEncodedDataTest, PickleSupportedMixin, TestCase):
     @contextlib.contextmanager
     def create_store(self):
         yield CFEncodedInMemoryStore()

@@ -163,18 +163,12 @@ class DatasetIOTestCases(object):
             # Test Dataset.compute()
             for k, v in actual.variables.items():
                 # IndexVariables are eagerly cached
-                if k in actual.dims:
-                    self.assertTrue(v._in_memory)
-                else:
-                    self.assertFalse(v._in_memory)
+                self.assertEqual(v._in_memory, k in actual.dims)
 
             computed = actual.compute()
 
             for k, v in actual.variables.items():
-                if k in actual.dims:
-                    self.assertTrue(v._in_memory)
-                else:
-                    self.assertFalse(v._in_memory)
+                self.assertEqual(v._in_memory, k in actual.dims)
             for v in computed.variables.values():
                 self.assertTrue(v._in_memory)
 
@@ -282,10 +276,40 @@ class DatasetIOTestCases(object):
             actual = on_disk.isel(**indexers)
             self.assertDatasetAllClose(expected, actual)
 
+
+class PickleNotSupportedMixin(object):
+
     def test_pickle(self):
-        on_disk = open_example_dataset('bears.nc')
-        unpickled = pickle.loads(pickle.dumps(on_disk))
-        self.assertDatasetIdentical(on_disk, unpickled)
+        expected = Dataset({'foo': ('x', [42])})
+        with self.roundtrip(expected) as on_disk:
+            with self.assertRaisesRegexp(
+                    TypeError, 'load data into memory first'):
+                pickle.dumps(on_disk)
+            computed_ds = on_disk.compute()
+            unpickled_ds = pickle.loads(pickle.dumps(computed_ds))
+            self.assertDatasetIdentical(expected, computed_ds)
+            self.assertDatasetIdentical(expected, unpickled_ds)
+
+            with self.assertRaisesRegexp(
+                    TypeError, 'load data into memory first'):
+                pickle.dumps(on_disk['foo'])
+            computed_array = on_disk['foo'].compute()
+            unpickled_array = pickle.loads(pickle.dumps(computed_array))
+            self.assertDatasetIdentical(expected['foo'], computed_array)
+            self.assertDatasetIdentical(expected['foo'], unpickled_array)
+
+
+class PickleSupportedMixin(object):
+
+    def test_pickle(self):
+        # this should work for dask arrays, unlike most real data stores
+        expected = Dataset({'foo': ('x', [42])})
+        with self.roundtrip(expected) as roundtripped:
+            unpickled_ds = pickle.loads(pickle.dumps(roundtripped))
+            self.assertDatasetIdentical(expected, unpickled_ds)
+
+            unpickled_array = pickle.loads(pickle.dumps(roundtripped['foo']))
+            self.assertDatasetIdentical(expected['foo'], unpickled_array)
 
 
 class CFEncodedDataTest(DatasetIOTestCases):
@@ -443,7 +467,7 @@ def create_tmp_file(suffix='.nc'):
         shutil.rmtree(temp_dir)
 
 
-class BaseNetCDF4Test(CFEncodedDataTest):
+class BaseNetCDF4Test(CFEncodedDataTest, PickleNotSupportedMixin):
     def test_open_group(self):
         # Create a netCDF file with a dataset stored within a group
         with create_tmp_file() as tmp_file:
@@ -642,7 +666,7 @@ class BaseNetCDF4Test(CFEncodedDataTest):
 
 
 @requires_netCDF4
-class NetCDF4DataTest(BaseNetCDF4Test, TestCase):
+class NetCDF4DataTest(BaseNetCDF4Test, PickleNotSupportedMixin, TestCase):
     @contextlib.contextmanager
     def create_store(self):
         with create_tmp_file() as tmp_file:
@@ -687,7 +711,7 @@ class NetCDF4DataTest(BaseNetCDF4Test, TestCase):
 
 @requires_netCDF4
 @requires_dask
-class NetCDF4ViaDaskDataTest(NetCDF4DataTest):
+class NetCDF4ViaDaskDataTest(NetCDF4DataTest, PickleNotSupportedMixin):
     @contextlib.contextmanager
     def roundtrip(self, data, save_kwargs={}, open_kwargs={}):
         with NetCDF4DataTest.roundtrip(
@@ -753,7 +777,8 @@ class ScipyOnDiskDataTest(CFEncodedDataTest, Only32BitTypes, TestCase):
 
 
 @requires_netCDF4
-class NetCDF3ViaNetCDF4DataTest(CFEncodedDataTest, Only32BitTypes, TestCase):
+class NetCDF3ViaNetCDF4DataTest(CFEncodedDataTest, Only32BitTypes,
+                                PickleNotSupportedMixin, TestCase):
     @contextlib.contextmanager
     def create_store(self):
         with create_tmp_file() as tmp_file:
@@ -771,7 +796,8 @@ class NetCDF3ViaNetCDF4DataTest(CFEncodedDataTest, Only32BitTypes, TestCase):
 
 
 @requires_netCDF4
-class NetCDF4ClassicViaNetCDF4DataTest(CFEncodedDataTest, Only32BitTypes, TestCase):
+class NetCDF4ClassicViaNetCDF4DataTest(CFEncodedDataTest, Only32BitTypes,
+                                       PickleNotSupportedMixin, TestCase):
     @contextlib.contextmanager
     def create_store(self):
         with create_tmp_file() as tmp_file:
@@ -789,7 +815,8 @@ class NetCDF4ClassicViaNetCDF4DataTest(CFEncodedDataTest, Only32BitTypes, TestCa
 
 
 @requires_scipy_or_netCDF4
-class GenericNetCDFDataTest(CFEncodedDataTest, Only32BitTypes, TestCase):
+class GenericNetCDFDataTest(CFEncodedDataTest, Only32BitTypes,
+                            PickleNotSupportedMixin, TestCase):
     # verify that we can read and write netCDF3 files as long as we have scipy
     # or netCDF4-python installed
 
@@ -841,7 +868,7 @@ class GenericNetCDFDataTest(CFEncodedDataTest, Only32BitTypes, TestCase):
 
 @requires_h5netcdf
 @requires_netCDF4
-class H5NetCDFDataTest(BaseNetCDF4Test, TestCase):
+class H5NetCDFDataTest(BaseNetCDF4Test, PickleNotSupportedMixin, TestCase):
     @contextlib.contextmanager
     def create_store(self):
         with create_tmp_file() as tmp_file:
@@ -892,7 +919,7 @@ class H5NetCDFDataTest(BaseNetCDF4Test, TestCase):
 @requires_dask
 @requires_scipy
 @requires_netCDF4
-class DaskTest(TestCase, DatasetIOTestCases):
+class DaskTest(TestCase, PickleSupportedMixin, DatasetIOTestCases):
     @contextlib.contextmanager
     def create_store(self):
         yield Dataset()
@@ -1041,6 +1068,7 @@ class DaskTest(TestCase, DatasetIOTestCases):
         self.assertTrue(computed._in_memory)
         self.assertDataArrayAllClose(actual, computed)
 
+
 @requires_scipy_or_netCDF4
 @requires_pydap
 class PydapTest(TestCase):
@@ -1083,7 +1111,8 @@ class PydapTest(TestCase):
 
 @requires_scipy
 @requires_pynio
-class TestPyNio(CFEncodedDataTest, Only32BitTypes, TestCase):
+class TestPyNio(CFEncodedDataTest, PickleNotSupportedMixin, Only32BitTypes,
+                TestCase):
     def test_write_store(self):
         # pynio is read-only for now
         pass

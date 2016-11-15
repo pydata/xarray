@@ -8,7 +8,7 @@ import warnings
 
 from .. import Variable
 from ..core.pycompat import iteritems, basestring, OrderedDict
-from ..core.utils import Frozen, FrozenOrderedDict
+from ..core.utils import Frozen, FrozenOrderedDict, NoPickleMixin
 from ..core.indexing import NumpyIndexingAdapter
 
 from .common import WritableCFDataStore
@@ -29,7 +29,7 @@ def _decode_attrs(d):
                        for (k, v) in iteritems(d))
 
 
-class ScipyArrayWrapper(NumpyIndexingAdapter):
+class ScipyArrayWrapper(NumpyIndexingAdapter, NoPickleMixin):
     def __init__(self, netcdf_file, variable_name):
         self.netcdf_file = netcdf_file
         self.variable_name = variable_name
@@ -57,7 +57,7 @@ class ScipyArrayWrapper(NumpyIndexingAdapter):
         return data
 
 
-class ScipyDataStore(WritableCFDataStore):
+class ScipyDataStore(WritableCFDataStore, NoPickleMixin):
     """Store for reading and writing data via scipy.io.netcdf.
 
     This store has the advantage of being able to be initialized with a

@@ -9,7 +9,7 @@ import numpy as np
 from .. import Variable
 from ..conventions import pop_to, cf_encoder
 from ..core import indexing
-from ..core.utils import (FrozenOrderedDict, NDArrayMixin,
+from ..core.utils import (FrozenOrderedDict, NDArrayMixin, NoPickleMixin,
                           close_on_error, is_remote_uri)
 from ..core.pycompat import iteritems, basestring, OrderedDict, PY3
 
@@ -25,7 +25,7 @@ _endian_lookup = {'=': 'native',
                   '|': 'native'}
 
 
-class BaseNetCDF4Array(NDArrayMixin):
+class BaseNetCDF4Array(NDArrayMixin, NoPickleMixin):
     def __init__(self, array, is_remote=False):
         self.array = array
         self.is_remote = is_remote
@@ -176,7 +176,7 @@ def _extract_nc4_encoding(variable, raise_on_invalid=False, lsd_okay=True,
     return encoding
 
 
-class NetCDF4DataStore(WritableCFDataStore):
+class NetCDF4DataStore(WritableCFDataStore, NoPickleMixin):
     """Store for reading and writing data via the Python-NetCDF4 library.
 
     This store supports NetCDF3, NetCDF4 and OpenDAP datasets.
