@@ -134,6 +134,9 @@ Bug fixes
   (:issue:`1116`).
   By `Yves Delley <https://github.com/burnpanck>`_.
 
+- Fixed sub-optimal performance in certain operations with object arrays (:issue:`1121`).
+  By `Yves Delley <https://github.com/burnpanck>`_.
+
 .. _whats-new.0.8.2:
 
 v0.8.2 (18 August 2016)

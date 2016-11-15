@@ -197,9 +197,8 @@ def is_valid_numpy_dtype(dtype):
 
 def to_0d_object_array(value):
     """Given a value, wrap it in a 0-D numpy.ndarray with dtype=object."""
-    result = np.empty((1,), dtype=object)
-    result[:] = [value]
-    result.shape = ()
+    result = np.empty((), dtype=object)
+    result[()] = value
     return result
 
 
