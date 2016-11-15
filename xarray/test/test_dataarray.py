@@ -1,3 +1,6 @@
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
 import numpy as np
 import pandas as pd
 import pickle
@@ -2339,3 +2342,17 @@ class TestDataArray(TestCase):
             da.dot(dm.values)
         with self.assertRaisesRegexp(ValueError, 'no shared dimensions'):
             da.dot(DataArray(1))
+
+    def test_binary_op_join_setting(self):
+        dim = 'x'
+        align_type = "outer"
+        coords_l, coords_r = [0, 1, 2], [1, 2, 3]
+        missing_3 = xr.DataArray(coords_l, [(dim, coords_l)])
+        missing_0 = xr.DataArray(coords_r, [(dim, coords_r)])
+        with xr.set_options(arithmetic_join=align_type):
+            actual = missing_0 + missing_3
+        missing_0_aligned, missing_3_aligned = xr.align(missing_0,
+                                                        missing_3,
+                                                        join=align_type)
+        expected = xr.DataArray([np.nan, 2, 4, np.nan], [(dim, [0, 1, 2, 3])])
+        self.assertDataArrayEqual(actual, expected)

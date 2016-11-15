@@ -1,3 +1,6 @@
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
 from io import BytesIO
 from threading import Lock
 import contextlib
@@ -125,8 +128,12 @@ class DatasetIOTestCases(object):
             if vars is None:
                 vars = expected
             with self.roundtrip(expected) as actual:
-                for v in actual.variables.values():
-                    self.assertFalse(v._in_memory)
+                for k, v in actual.variables.items():
+                    # IndexVariables are eagerly loaded into memory
+                    if k in actual.dims:
+                        self.assertTrue(v._in_memory)
+                    else:
+                        self.assertFalse(v._in_memory)
                 yield actual
                 for k, v in actual.variables.items():
                     if k in vars:
@@ -148,6 +155,31 @@ class DatasetIOTestCases(object):
         with self.roundtrip(expected) as ds:
             actual = ds.load()
         self.assertDatasetAllClose(expected, actual)
+
+    def test_dataset_compute(self):
+        expected = create_test_data()
+
+        with self.roundtrip(expected) as actual:
+            # Test Dataset.compute()
+            for k, v in actual.variables.items():
+                # IndexVariables are eagerly cached
+                if k in actual.dims:
+                    self.assertTrue(v._in_memory)
+                else:
+                    self.assertFalse(v._in_memory)
+
+            computed = actual.compute()
+
+            for k, v in actual.variables.items():
+                if k in actual.dims:
+                    self.assertTrue(v._in_memory)
+                else:
+                    self.assertFalse(v._in_memory)
+            for v in computed.variables.values():
+                self.assertTrue(v._in_memory)
+
+            self.assertDatasetAllClose(expected, actual)
+            self.assertDatasetAllClose(expected, computed)
 
     def test_roundtrip_None_variable(self):
         expected = Dataset({None: (('x', 'y'), [[0, 1], [2, 3]])})
@@ -229,18 +261,6 @@ class DatasetIOTestCases(object):
         expected = original.drop('foo')
         with self.roundtrip(expected) as actual:
             self.assertDatasetIdentical(expected, actual)
-
-        expected = original.copy()
-        expected.attrs['coordinates'] = 'something random'
-        with self.assertRaisesRegexp(ValueError, 'cannot serialize'):
-            with self.roundtrip(expected):
-                pass
-
-        expected = original.copy(deep=True)
-        expected['foo'].attrs['coordinates'] = 'something random'
-        with self.assertRaisesRegexp(ValueError, 'cannot serialize'):
-            with self.roundtrip(expected):
-                pass
 
     def test_roundtrip_boolean_dtype(self):
         original = create_boolean_data()
@@ -872,7 +892,26 @@ class H5NetCDFDataTest(BaseNetCDF4Test, TestCase):
 @requires_dask
 @requires_scipy
 @requires_netCDF4
-class DaskTest(TestCase):
+class DaskTest(TestCase, DatasetIOTestCases):
+    @contextlib.contextmanager
+    def create_store(self):
+        yield Dataset()
+
+    @contextlib.contextmanager
+    def roundtrip(self, data, save_kwargs={}, open_kwargs={}):
+        yield data.chunk()
+
+    def test_roundtrip_datetime_data(self):
+        # Override method in DatasetIOTestCases - remove not applicable save_kwds
+        times = pd.to_datetime(['2000-01-01', '2000-01-02', 'NaT'])
+        expected = Dataset({'t': ('t', times), 't0': times[0]})
+        with self.roundtrip(expected) as actual:
+            self.assertDatasetIdentical(expected, actual)
+
+    def test_write_store(self):
+        # Override method in DatasetIOTestCases - not applicable to dask
+        pass
+
     def test_open_mfdataset(self):
         original = Dataset({'foo': ('x', np.random.randn(10))})
         with create_tmp_file() as tmp1:
@@ -992,6 +1031,15 @@ class DaskTest(TestCase):
                 self.assertIn(tmp, dask_name)
             self.assertEqual(original_names, repeat_names)
 
+    def test_dataarray_compute(self):
+        # Test DataArray.compute() on dask backend.
+        # The test for Dataset.compute() is already in DatasetIOTestCases;
+        # however dask is the only tested backend which supports DataArrays
+        actual = DataArray([1,2]).chunk()
+        computed = actual.compute()
+        self.assertFalse(actual._in_memory)
+        self.assertTrue(computed._in_memory)
+        self.assertDataArrayAllClose(actual, computed)
 
 @requires_scipy_or_netCDF4
 @requires_pydap

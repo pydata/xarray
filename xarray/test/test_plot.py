@@ -1,3 +1,7 @@
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
+
 import inspect
 
 import numpy as np
@@ -111,6 +115,17 @@ class TestPlot(PlotTestCase):
                               _infer_interval_breaks([0, 1, 9, 10]))
         self.assertArrayEqual(pd.date_range('20000101', periods=4) - np.timedelta64(12, 'h'),
                               _infer_interval_breaks(pd.date_range('20000101', periods=3)))
+
+        # make a bounded 2D array that we will center and re-infer
+        xref, yref = np.meshgrid(np.arange(6), np.arange(5))
+        cx = (xref[1:, 1:] + xref[:-1, :-1]) / 2
+        cy = (yref[1:, 1:] + yref[:-1, :-1]) / 2
+        x = _infer_interval_breaks(cx, axis=1)
+        x = _infer_interval_breaks(x, axis=0)
+        y = _infer_interval_breaks(cy, axis=1)
+        y = _infer_interval_breaks(y, axis=0)
+        np.testing.assert_allclose(xref, x)
+        np.testing.assert_allclose(yref, y)
 
     def test_datetime_dimension(self):
         nrow = 3

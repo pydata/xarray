@@ -1,3 +1,6 @@
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
 import functools
 import warnings
 from collections import Mapping
@@ -26,6 +29,7 @@ from .variable import (Variable, as_variable, IndexVariable,
 from .pycompat import (iteritems, basestring, OrderedDict,
                        dask_array_type)
 from .combine import concat
+from .options import OPTIONS
 
 
 # list of attributes of pd.DatetimeIndex that are ndarrays of time info
@@ -356,8 +360,11 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         return obj
 
     def __getstate__(self):
-        """Always load data in-memory before pickling"""
-        self.load()
+        """Load data in-memory before pickling (except for Dask data)"""
+        for v in self.variables.values():
+            if not isinstance(v.data, dask_array_type):
+                v.load()
+
         # self.__dict__ is the default pickle object, we don't need to
         # implement our own __setstate__ method to make pickle work
         state = self.__dict__.copy()
@@ -437,6 +444,19 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
                 self.variables[k].data = data
 
         return self
+
+    def compute(self):
+        """Manually trigger loading of this dataset's data from disk or a
+        remote source into memory and return a new dataset. The original is
+        left unaltered.
+
+        Normally, it should not be necessary to call this method in user code,
+        because all xarray functions should either work on deferred data or
+        load data automatically. However, this method can be necessary when
+        working with many file objects on disk.
+        """
+        new = self.copy(deep=False)
+        return new.load()
 
     @classmethod
     def _construct_direct(cls, variables, coord_names, dims=None, attrs=None,
@@ -520,14 +540,12 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         """Returns a copy of this dataset.
 
         If `deep=True`, a deep copy is made of each of the component variables.
-        Otherwise, a shallow copy is made, so each variable in the new dataset
-        is also a variable in the original dataset.
+        Otherwise, a shallow copy of each of the component variable is made, so
+        that the underlying memory region of the new dataset is the same as in
+        the original dataset.
         """
-        if deep:
-            variables = OrderedDict((k, v.copy(deep=True))
-                                    for k, v in iteritems(self._variables))
-        else:
-            variables = self._variables.copy()
+        variables = OrderedDict((k, v.copy(deep=deep))
+                                for k, v in iteritems(self._variables))
         # skip __init__ to avoid costly validation
         return self._construct_direct(variables, self._coord_names.copy(),
                                       self._dims.copy(), self._attrs_copy())
@@ -913,11 +931,10 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         chunks = {}
         for v in self.variables.values():
             if v.chunks is not None:
-                new_chunks = list(zip(v.dims, v.chunks))
-                if any(chunk != chunks[d] for d, chunk in new_chunks
-                       if d in chunks):
-                    raise ValueError('inconsistent chunks')
-                chunks.update(new_chunks)
+                for dim, c in zip(v.dims, v.chunks):
+                    if dim in chunks and c != chunks[dim]:
+                        raise ValueError('inconsistent chunks')
+                    chunks[dim] = c
         return Frozen(SortedKeysDict(chunks))
 
     def chunk(self, chunks=None, name_prefix='xarray-', token=None,
@@ -2206,15 +2223,17 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         return func
 
     @staticmethod
-    def _binary_op(f, reflexive=False, join='inner', fillna=False):
+    def _binary_op(f, reflexive=False, join=None, fillna=False):
         @functools.wraps(f)
         def func(self, other):
             if isinstance(other, groupby.GroupBy):
                 return NotImplemented
+            align_type = OPTIONS['arithmetic_join'] if join is None else join
             if hasattr(other, 'indexes'):
-                self, other = align(self, other, join=join, copy=False)
+                self, other = align(self, other, join=align_type, copy=False)
             g = f if not reflexive else lambda x, y: f(y, x)
-            ds = self._calculate_binary_op(g, other, fillna=fillna)
+            ds = self._calculate_binary_op(g, other, join=align_type,
+                                           fillna=fillna)
             return ds
         return func
 
@@ -2236,25 +2255,32 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
             return self
         return func
 
-    def _calculate_binary_op(self, f, other, inplace=False, fillna=False):
+    def _calculate_binary_op(self, f, other, join='inner',
+                             inplace=False, fillna=False):
 
         def apply_over_both(lhs_data_vars, rhs_data_vars, lhs_vars, rhs_vars):
+            if fillna and join != 'left':
+                raise ValueError('`fillna` must be accompanied by left join')
             if fillna and not set(rhs_data_vars) <= set(lhs_data_vars):
                 raise ValueError('all variables in the argument to `fillna` '
                                  'must be contained in the original dataset')
+            if inplace and set(lhs_data_vars) != set(rhs_data_vars):
+                raise ValueError('datasets must have the same data variables '
+                                 'for in-place arithmetic operations: %s, %s'
+                                 % (list(lhs_data_vars), list(rhs_data_vars)))
 
             dest_vars = OrderedDict()
+
             for k in lhs_data_vars:
                 if k in rhs_data_vars:
                     dest_vars[k] = f(lhs_vars[k], rhs_vars[k])
-                elif inplace:
-                    raise ValueError(
-                        'datasets must have the same data variables '
-                        'for in-place arithmetic operations: %s, %s'
-                        % (list(lhs_data_vars), list(rhs_data_vars)))
-                elif fillna:
-                    # this shortcuts left alignment of variables for fillna
-                    dest_vars[k] = lhs_vars[k]
+                elif join in ["left", "outer"]:
+                    dest_vars[k] = (lhs_vars[k] if fillna else
+                                    f(lhs_vars[k], np.nan))
+            for k in rhs_data_vars:
+                if k not in dest_vars and join in ["right", "outer"]:
+                    dest_vars[k] = (rhs_vars[k] if fillna else
+                                    f(rhs_vars[k], np.nan))
             return dest_vars
 
         if utils.is_dict_like(other) and not isinstance(other, Dataset):
@@ -2274,7 +2300,6 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
             other_variable = getattr(other, 'variable', other)
             new_vars = OrderedDict((k, f(self.variables[k], other_variable))
                                    for k in self.data_vars)
-
         ds._variables.update(new_vars)
         return ds
 

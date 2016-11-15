@@ -1,10 +1,12 @@
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
 from io import BytesIO
 
 import numpy as np
 import warnings
 
 from .. import Variable
-from ..conventions import cf_encoder
 from ..core.pycompat import iteritems, basestring, OrderedDict
 from ..core.utils import Frozen, FrozenOrderedDict
 from ..core.indexing import NumpyIndexingAdapter

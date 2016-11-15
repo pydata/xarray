@@ -11,43 +11,56 @@
 #
 # All configuration values have a default; values that are commented out
 # serve to show the default.
+from __future__ import print_function
+from __future__ import division
+from __future__ import absolute_import
 
 import sys
 import os
 
-print "python exec:", sys.executable
-print "sys.path:", sys.path
+print("python exec:", sys.executable)
+print("sys.path:", sys.path)
 try:
     import numpy
-    print "numpy: %s, %s" % (numpy.__version__, numpy.__file__)
+    print("numpy: %s, %s" % (numpy.__version__, numpy.__file__))
 except ImportError:
-    print "no numpy"
+    print("no numpy")
 try:
     import scipy
-    print "scipy: %s, %s" % (scipy.__version__, scipy.__file__)
+    print("scipy: %s, %s" % (scipy.__version__, scipy.__file__))
 except ImportError:
-    print "no scipy"
+    print("no scipy")
 try:
     import pandas
-    print "pandas: %s, %s" % (pandas.__version__, pandas.__file__)
+    print("pandas: %s, %s" % (pandas.__version__, pandas.__file__))
 except ImportError:
-    print "no pandas"
+    print("no pandas")
 try:
     import matplotlib
     matplotlib.use('Agg')
-    print "matplotlib: %s, %s" % (matplotlib.__version__, matplotlib.__file__)
+    print("matplotlib: %s, %s" % (matplotlib.__version__, matplotlib.__file__))
 except ImportError:
-    print "no matplotlib"
+    print("no matplotlib")
 try:
     import IPython
-    print "ipython: %s, %s" % (IPython.__version__, IPython.__file__)
+    print("ipython: %s, %s" % (IPython.__version__, IPython.__file__))
 except ImportError:
-    print "no ipython"
+    print("no ipython")
 try:
     import seaborn
-    print "seaborn: %s, %s" % (seaborn.__version__, seaborn.__file__)
+    print("seaborn: %s, %s" % (seaborn.__version__, seaborn.__file__))
 except ImportError:
-    print "no seaborn"
+    print("no seaborn")
+try:
+    import cartopy
+    print("cartopy: %s, %s" % (cartopy.__version__, cartopy.__file__))
+except ImportError:
+    print("no cartopy")
+try:
+    import netCDF4
+    print("netCDF4: %s, %s" % (netCDF4.__version__, netCDF4.__file__))
+except ImportError:
+    print("no netCDF4")
 
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
@@ -62,6 +75,7 @@ import linecache
 import re
 from inspect import getsourcefile, getfile, getmodule,\
      ismodule, isclass, ismethod, isfunction, istraceback, isframe, iscode
+
 
 def findsource(object):
     """Return the entire source file and starting line number for an object.

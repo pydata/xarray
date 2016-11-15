@@ -1,3 +1,6 @@
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
 from datetime import timedelta
 from collections import defaultdict
 import functools
@@ -274,10 +277,21 @@ class Variable(common.AbstractArray, common.SharedMethodsMixin,
                 "replacement data must match the Variable's shape")
         self._data = data
 
+    def _data_cast(self):
+        if isinstance(self._data, (np.ndarray, PandasIndexAdapter)):
+            return self._data
+        else:
+            return np.asarray(self._data)
+
     def _data_cached(self):
-        if not isinstance(self._data, (np.ndarray, PandasIndexAdapter)):
-            self._data = np.asarray(self._data)
-        return self._data
+        """Load data into memory and return it.
+        Do not cache dask arrays automatically; that should
+        require an explicit load() call.
+        """
+        new_data = self._data_cast()
+        if not isinstance(self._data, dask_array_type):
+            self._data = new_data
+        return new_data
 
     @property
     def _indexable_data(self):
@@ -291,12 +305,26 @@ class Variable(common.AbstractArray, common.SharedMethodsMixin,
         because all xarray functions should either work on deferred data or
         load data automatically.
         """
-        self._data_cached()
+        self._data = self._data_cast()
         return self
 
+    def compute(self):
+        """Manually trigger loading of this variable's data from disk or a
+        remote source into memory and return a new variable. The original is
+        left unaltered.
+
+        Normally, it should not be necessary to call this method in user code,
+        because all xarray functions should either work on deferred data or
+        load data automatically.
+        """
+        new = self.copy(deep=False)
+        return new.load()
+
     def __getstate__(self):
-        """Always cache data as an in-memory array before pickling"""
-        self._data_cached()
+        """Always cache data as an in-memory array before pickling
+        (with the exception of dask backend)"""
+        if not isinstance(self._data, dask_array_type):
+            self._data_cached()
         # self.__dict__ is the default pickle object, we don't need to
         # implement our own __setstate__ method to make pickle work
         return self.__dict__
@@ -1072,10 +1100,19 @@ class IndexVariable(Variable):
             raise ValueError('%s objects must be 1-dimensional' %
                              type(self).__name__)
 
-    def _data_cached(self):
+        # Unlike in Variable, always eagerly load values into memory
         if not isinstance(self._data, PandasIndexAdapter):
             self._data = PandasIndexAdapter(self._data)
-        return self._data
+
+    @Variable.data.setter
+    def data(self, data):
+        Variable.data.fset(self, data)
+        if not isinstance(self._data, PandasIndexAdapter):
+            self._data = PandasIndexAdapter(self._data)
+
+    def chunk(self, chunks=None, name=None, lock=False):
+        # Dummy - do not chunk. This method is invoked e.g. by Dataset.chunk()
+        return self.copy(deep=False)
 
     def __getitem__(self, key):
         key = self._item_key_to_tuple(key)

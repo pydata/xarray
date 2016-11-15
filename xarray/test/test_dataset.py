@@ -1,4 +1,7 @@
 # -*- coding: utf-8 -*-
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
 from copy import copy, deepcopy
 from textwrap import dedent
 try:
@@ -12,6 +15,7 @@ except ImportError:
 
 import numpy as np
 import pandas as pd
+import xarray as xr
 import pytest
 
 from xarray import (align, broadcast, concat, merge, conventions, backends,
@@ -52,11 +56,24 @@ def create_test_multiindex():
 
 
 class InaccessibleVariableDataStore(backends.InMemoryDataStore):
+    def __init__(self, writer=None):
+        super(InaccessibleVariableDataStore, self).__init__(writer)
+        self._indexvars = set()
+
+    def store(self, variables, attributes, check_encoding_set=frozenset()):
+        super(InaccessibleVariableDataStore, self).store(
+            variables, attributes, check_encoding_set)
+        for k, v in variables.items():
+            if isinstance(v, IndexVariable):
+                self._indexvars.add(k)
+
     def get_variables(self):
-        def lazy_inaccessible(x):
-            data = indexing.LazilyIndexedArray(InaccessibleArray(x.values))
-            return Variable(x.dims, data, x.attrs)
-        return dict((k, lazy_inaccessible(v)) for
+        def lazy_inaccessible(k, v):
+            if k in self._indexvars:
+                return v
+            data = indexing.LazilyIndexedArray(InaccessibleArray(v.values))
+            return Variable(v.dims, data, v.attrs)
+        return dict((k, lazy_inaccessible(k, v)) for
                     k, v in iteritems(self._variables))
 
 
@@ -668,14 +685,19 @@ class TestDataset(TestCase):
         self.assertEqual(data.chunks, {})
 
         reblocked = data.chunk()
-        for v in reblocked.variables.values():
-            self.assertIsInstance(v.data, da.Array)
-        expected_chunks = dict((d, (s,)) for d, s in data.dims.items())
+        for k, v in reblocked.variables.items():
+            if k in reblocked.dims:
+                self.assertIsInstance(v.data, np.ndarray)
+            else:
+                self.assertIsInstance(v.data, da.Array)
+
+        expected_chunks = {'dim1': (8,), 'dim2': (9,), 'dim3': (10,)}
         self.assertEqual(reblocked.chunks, expected_chunks)
 
         reblocked = data.chunk({'time': 5, 'dim1': 5, 'dim2': 5, 'dim3': 5})
-        expected_chunks = {'time': (5,) * 4, 'dim1': (5, 3),
-                           'dim2': (5, 4), 'dim3': (5, 5)}
+        # time is not a dim in any of the data_vars, so it
+        # doesn't get chunked
+        expected_chunks = {'dim1': (5, 3), 'dim2': (5, 4), 'dim3': (5, 5)}
         self.assertEqual(reblocked.chunks, expected_chunks)
 
         reblocked = data.chunk(expected_chunks)
@@ -1288,10 +1310,13 @@ class TestDataset(TestCase):
 
         for copied in [data.copy(deep=False), copy(data)]:
             self.assertDatasetIdentical(data, copied)
-            for k in data:
+            # Note: IndexVariable objects with string dtype are always
+            # copied because of xarray.core.util.safe_cast_to_index.
+            # Limiting the test to data variables.
+            for k in data.data_vars:
                 v0 = data.variables[k]
                 v1 = copied.variables[k]
-                self.assertIs(v0, v1)
+                assert source_ndarray(v0.data) is source_ndarray(v1.data)
             copied['foo'] = ('z', np.arange(5))
             self.assertNotIn('foo', data)
 
@@ -2973,6 +2998,37 @@ class TestDataset(TestCase):
         self.assertEqual(len(new_ds.data_vars), 1)
         for var in new_ds.data_vars:
             self.assertEqual(new_ds[var].height, '10 m')
+
+    def test_binary_op_join_setting(self):
+        # arithmetic_join applies to data array coordinates
+        missing_2 = xr.Dataset({'x':[0, 1]})
+        missing_0 = xr.Dataset({'x':[1, 2]})
+        with xr.set_options(arithmetic_join='outer'):
+            actual = missing_2 + missing_0
+        expected = xr.Dataset({'x':[0, 1, 2]})
+        self.assertDatasetEqual(actual, expected)
+
+        # arithmetic join also applies to data_vars
+        ds1 = xr.Dataset({'foo': 1, 'bar': 2})
+        ds2 = xr.Dataset({'bar': 2, 'baz': 3})
+        expected = xr.Dataset({'bar': 4}) # default is inner joining
+        actual = ds1 + ds2
+        self.assertDatasetEqual(actual, expected)
+
+        with xr.set_options(arithmetic_join='outer'):
+            expected = xr.Dataset({'foo': np.nan, 'bar': 4, 'baz': np.nan})
+            actual = ds1 + ds2
+            self.assertDatasetEqual(actual, expected)
+
+        with xr.set_options(arithmetic_join='left'):
+            expected = xr.Dataset({'foo': np.nan, 'bar': 4})
+            actual = ds1 + ds2
+            self.assertDatasetEqual(actual, expected)
+
+        with xr.set_options(arithmetic_join='right'):
+            expected = xr.Dataset({'bar': 4, 'baz': np.nan})
+            actual = ds1 + ds2
+            self.assertDatasetEqual(actual, expected)
 
 
 ### Py.test tests

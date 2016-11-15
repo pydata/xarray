@@ -1,3 +1,6 @@
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
 import contextlib
 import numpy as np
 import pandas as pd
@@ -490,6 +493,12 @@ class TestDatetime(TestCase):
         attrs = {'units': 'days since 1900-01-01'}
         ds = decode_cf(Dataset({'time': ('time', [0, 1], attrs)}))
         self.assertIn('(time) datetime64[ns]', repr(ds))
+
+        # this should not throw a warning (GH1111)
+        with warnings.catch_warnings():
+            warnings.filterwarnings('error')
+            conventions.DecodedCFDatetimeArray(np.asarray([722624]),
+                                               "days since 0001-01-01")
 
 
 class TestNativeEndiannessArray(TestCase):
