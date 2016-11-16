@@ -455,7 +455,7 @@ deficiencies::
     # here we suppose we only care about the combined mean of each file;
     # you might also use indexing operations like .sel to subset datasets
     combined = read_netcdfs('/all/my/files/*.nc', dim='time',
-                 transform_func=lambda ds: ds.mean())
+                            transform_func=lambda ds: ds.mean())
 
 This pattern works well and is very robust. We've used similar code to process
 tens of thousands of files constituting 100s of GB of data.
