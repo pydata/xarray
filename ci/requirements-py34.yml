@@ -7,3 +7,4 @@ dependencies:
   - pip:
     - coveralls
     - pytest-cov
+    - quantities

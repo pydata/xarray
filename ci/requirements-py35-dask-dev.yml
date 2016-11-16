@@ -10,4 +10,5 @@ dependencies:
   - pip:
     - coveralls
     - pytest-cov
+    - quantities
     - git+https://github.com/blaze/dask.git

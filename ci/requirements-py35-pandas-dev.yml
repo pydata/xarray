@@ -11,4 +11,5 @@ dependencies:
     - coveralls
     - pytest-cov
     - dask
+    - quantities
     - git+https://github.com/pydata/pandas.git

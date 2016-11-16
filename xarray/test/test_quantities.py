@@ -12,7 +12,7 @@ except ImportError:
     has_quantities = False
 
 def requires_quantities(test):
-    return test if has_quantities else unittest.skip('requires dask')(test)
+    return test if has_quantities else unittest.skip('requires python-quantities')(test)
 
 @requires_quantities
 class TestWithQuantities(TestCase):

@@ -12,3 +12,4 @@ dependencies:
     - coveralls
     - pytest-cov
     - pydap
+    - quantities
