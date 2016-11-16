@@ -705,54 +705,69 @@ def _get_fill_value(dtype):
     return fill_value
 
 
-def _full_like_dataarray(arr, keep_attrs=False, fill_value=None):
-    """empty DataArray"""
-    from .dataarray import DataArray
-
-    attrs = arr.attrs if keep_attrs else {}
-
-    if fill_value is None:
-        values = np.empty_like(arr)
-    elif fill_value is True:
-        dtype, fill_value = _maybe_promote(arr.dtype)
-        values = np.full_like(arr, fill_value=fill_value, dtype=dtype)
-    else:
-        dtype, _ = _maybe_promote(np.array(fill_value).dtype)
-        values = np.full_like(arr, fill_value=fill_value, dtype=dtype)
-
-    return DataArray(values, dims=arr.dims, coords=arr.coords, attrs=attrs)
-
-
-def _full_like(xray_obj, keep_attrs=False, fill_value=None):
+def full_like(other, fill_value, dtype=None):
     """Return a new object with the same shape and type as a given object.
 
     Parameters
     ----------
-    xray_obj : DataArray or Dataset
-        Return a full object with the same shape/dims/coords/attrs.
-            `func` is calculated over all dimension for each group item.
-    keep_attrs : bool, optional
-        If True, the datasets's attributes (`attrs`) will be copied from
-        the original object to the new one.  If False (default), the new
-        object will be returned without attributes.
-    fill_value : scalar, optional
-        Value to fill DataArray(s) with before returning.
+    other : DataArray, Dataset, or Variable
+        The reference object in input
+    fill_value : scalar
+        Value to fill the new object with before returning it.
+    dtype : dtype, optional
+        dtype of the new array. If omitted, it defaults to other.dtype.
 
     Returns
     -------
-    out : same as xray_obj
-        New object with the same shape and type as a given object.
+    out : same as object
+        New object with the same shape and type as other, with the data
+        filled with fill_value. Coords will be copied from other.
+        If other is based on dask, the new one will be as well, and will be
+        split in the same chunks.
     """
     from .dataarray import DataArray
     from .dataset import Dataset
+    from .variable import Variable
 
-    if isinstance(xray_obj, Dataset):
-        attrs = xray_obj.attrs if keep_attrs else {}
+    if isinstance(other, Dataset):
+        data_vars = OrderedDict(
+            (k, _full_like_variable(v, fill_value, dtype))
+            for k, v in other.data_vars.items())
+        return Dataset(data_vars, coords=other.coords, attrs=other.attrs)
+    elif isinstance(other, DataArray):
+        return DataArray(
+            _full_like_variable(other.variable, fill_value, dtype),
+            dims=other.dims, coords=other.coords, attrs=other.attrs)
+    elif isinstance(other, Variable):
+        return _full_like_variable(other, fill_value, dtype)
+    else:
+        raise TypeError("Expected DataArray, Dataset, or Variable")
 
-        return Dataset(dict((k, _full_like_dataarray(v, keep_attrs=keep_attrs,
-                                                     fill_value=fill_value))
-                            for k, v in iteritems(xray_obj.data_vars)),
-                       name=xray_obj.name, attrs=attrs)
-    elif isinstance(xray_obj, DataArray):
-        return _full_like_dataarray(xray_obj, keep_attrs=keep_attrs,
-                                    fill_value=fill_value)
+
+def _full_like_variable(other, fill_value, dtype=None):
+    """Inner function of full_like, where other must be a variable
+    """
+    from .variable import Variable
+
+    if isinstance(other.data, dask_array_type):
+        import dask.array
+        if dtype is None:
+            dtype = other.dtype
+        data = dask.array.full(other.shape, fill_value, dtype=dtype,
+                               chunks=other.data.chunks)
+    else:
+        data = np.full_like(other, fill_value, dtype=dtype)
+
+    return Variable(dims=other.dims, data=data, attrs=other.attrs)
+
+
+def zeros_like(other, dtype=None):
+    """Shorthand for full_like(other, 0, dtype)
+    """
+    return full_like(other, 0, dtype)
+
+
+def ones_like(other, dtype=None):
+    """Shorthand for full_like(other, 1, dtype)
+    """
+    return full_like(other, 1, dtype)

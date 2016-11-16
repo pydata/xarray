@@ -12,7 +12,7 @@ import xarray as xr
 from xarray import (align, broadcast, Dataset, DataArray,
                     IndexVariable, Variable)
 from xarray.core.pycompat import iteritems, OrderedDict
-from xarray.core.common import _full_like
+from xarray.core.common import full_like
 
 from xarray.test import (TestCase, ReturnItem, source_ndarray, unittest, requires_dask,
                requires_bottleneck)
@@ -2215,38 +2215,26 @@ class TestDataArray(TestCase):
             array.other = 2
 
     def test_full_like(self):
+        # For more thorough tests, see test_variable.py
         da = DataArray(np.random.random(size=(4, 4)), dims=('x', 'y'),
                        attrs={'attr1': 'value1'})
-        actual = _full_like(da)
+        actual = full_like(da, 2)
 
         self.assertEqual(actual.dtype, da.dtype)
         self.assertEqual(actual.shape, da.shape)
         self.assertEqual(actual.dims, da.dims)
-        self.assertEqual(actual.attrs, {})
-
+        self.assertEqual(actual.attrs, da.attrs)
+        self.assertArrayEqual(actual.data, np.full_like(da.data, 2))
         for name in da.coords:
             self.assertArrayEqual(da[name], actual[name])
             self.assertEqual(da[name].dtype, actual[name].dtype)
 
-        # keep attrs
-        actual = _full_like(da, keep_attrs=True)
-        self.assertEqual(actual.attrs, da.attrs)
-
-        # Fill value
-        actual = _full_like(da, fill_value=True)
-        self.assertEqual(actual.dtype, da.dtype)
+        # override dtype
+        actual = full_like(da, fill_value=True, dtype=bool)
+        self.assertEqual(actual.dtype, bool)
         self.assertEqual(actual.shape, da.shape)
         self.assertEqual(actual.dims, da.dims)
-        np.testing.assert_equal(actual.values, np.nan)
-
-        actual = _full_like(da, fill_value=10)
-        self.assertEqual(actual.dtype, da.dtype)
-        np.testing.assert_equal(actual.values, 10)
-
-        # make sure filling with nans promotes integer type
-        actual = _full_like(DataArray([1, 2, 3]), fill_value=np.nan)
-        self.assertEqual(actual.dtype, np.float)
-        np.testing.assert_equal(actual.values, np.nan)
+        self.assertArrayEqual(actual.data, np.full_like(da.data, True, dtype=bool))
 
     def test_dot(self):
         x = np.linspace(-3, 3, 6)

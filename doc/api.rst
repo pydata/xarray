@@ -19,6 +19,9 @@ Top-level functions
    concat
    merge
    set_options
+   full_like
+   zeros_like
+   ones_like
 
 Dataset
 =======

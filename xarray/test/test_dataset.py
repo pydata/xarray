@@ -23,6 +23,7 @@ from xarray import (align, broadcast, concat, merge, conventions, backends,
                     open_dataset, set_options, MergeError)
 from xarray.core import indexing, utils
 from xarray.core.pycompat import iteritems, OrderedDict, unicode_type
+from xarray.core.common import full_like
 
 from . import (TestCase, unittest, InaccessibleArray, UnexpectedDataAccess,
                requires_dask, source_ndarray)
@@ -2988,6 +2989,37 @@ class TestDataset(TestCase):
             actual = ds1 + ds2
             self.assertDatasetEqual(actual, expected)
 
+    def test_full_like(self):
+        # For more thorough tests, see test_variable.py
+        # Note: testing data_vars with mismatched dtypes
+        ds = Dataset({
+            'd1': DataArray([1,2,3], dims=['x'], coords={'x': [10,20,30]}),
+            'd2': DataArray([1.1, 2.2, 3.3], dims=['y'])
+        }, attrs={'foo': 'bar'})
+        actual = full_like(ds, 2)
+
+        self.assertEqual(actual.attrs, ds.attrs)
+        for k in ds.variables:
+            if k in ds.data_vars:
+                self.assertEqual(actual[k].dtype, ds[k].dtype)
+                self.assertEqual(actual[k].shape, ds[k].shape)
+                self.assertEqual(actual[k].dims, ds[k].dims)
+                self.assertArrayEqual(actual[k].data, np.full_like(ds[k].data, 2))
+            else:
+                self.assertDataArrayIdentical(actual[k], ds[k])
+
+        # override dtype
+        actual = full_like(ds, fill_value=True, dtype=bool)
+        self.assertEqual(actual.attrs, ds.attrs)
+        for k in ds.variables:
+            if k in ds.data_vars:
+                self.assertEqual(actual[k].dtype, bool)
+                self.assertEqual(actual[k].shape, ds[k].shape)
+                self.assertEqual(actual[k].dims, ds[k].dims)
+                self.assertArrayEqual(actual[k].data,
+                                      np.full_like(ds[k].data, True, dtype=bool))
+            else:
+                self.assertDataArrayIdentical(actual[k], ds[k])
 
 ### Py.test tests
 
