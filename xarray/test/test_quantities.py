@@ -42,7 +42,7 @@ class TestWithQuantities(TestCase):
     def test_unit_checking(self):
         da = self.da
         f = DataArray(np.arange(10*20).reshape(10,20)*pq.A,dims=['x','y'],coords=dict(x=self.x,y=self.y))
-        with self.assertRaisesRegex(ValueError,'Unable to convert between units'):
+        with self.assertRaisesRegexp(ValueError,'Unable to convert between units'):
             da + f
 
     @unittest.expectedFailure
