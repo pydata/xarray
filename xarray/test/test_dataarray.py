@@ -2175,6 +2175,14 @@ class TestDataArray(TestCase):
                              ['x', 'y'])
         self.assertDataArrayEqual(expected, actual)
 
+    def test_dataarray_diff_default_dim(self):
+        da = self.ds['foo']
+        actual = da.diff()
+        expected = DataArray(np.diff(da.values, axis=1),
+                             [da['x'].values, da['y'].values[1:]],
+                             ['x', 'y'])
+        self.assertDataArrayEqual(expected, actual)
+
     def test_coordinate_diff(self):
         # regression test for GH634
         arr = DataArray(range(0, 20, 2), dims=['lon'], coords=[range(10)])

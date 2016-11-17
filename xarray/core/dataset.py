@@ -2111,13 +2111,14 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         for v in other.variables:
             self.variables[v].attrs = other.variables[v].attrs
 
-    def diff(self, dim, n=1, label='upper'):
+    def diff(self, dim=None, n=1, label='upper'):
         """Calculate the n-th order discrete difference along given axis.
 
         Parameters
         ----------
         dim : str, optional
-            Dimension over which to calculate the finite difference.
+            Dimension over which to calculate the finite difference. Defaults
+            to last dimension (like in ``diff`` in numpy).
         n : int, optional
             The number of times values are differenced.
         label : str, optional
@@ -2155,6 +2156,10 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         if n < 0:
             raise ValueError('order `n` must be non-negative but got {0}'
                              ''.format(n))
+
+        # get default last dim if not specified
+        if dim is None:
+            dim = self.dims[-1]
 
         # prepare slices
         kwargs_start = {dim: slice(None, -1)}

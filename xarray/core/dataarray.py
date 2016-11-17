@@ -1460,13 +1460,14 @@ class DataArray(AbstractArray, BaseDataObject):
 
         return title
 
-    def diff(self, dim, n=1, label='upper'):
+    def diff(self, dim=None, n=1, label='upper'):
         """Calculate the n-th order discrete difference along given axis.
 
         Parameters
         ----------
         dim : str, optional
-            Dimension over which to calculate the finite difference.
+            Dimension over which to calculate the finite difference. Defaults
+            to last dimension (like in ``diff`` in numpy).
         n : int, optional
             The number of times values are differenced.
         label : str, optional

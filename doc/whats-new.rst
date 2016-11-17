@@ -137,6 +137,11 @@ Bug fixes
 - Fixed sub-optimal performance in certain operations with object arrays (:issue:`1121`).
   By `Yves Delley <https://github.com/burnpanck>`_.
 
+- Fixed default dim argument in ``.diff()`` methods to be truly optional (as in
+  docstring), defaults to last dimension (convenient for 1D arrays and
+  consistent with ``diff`` in numpy (:issue:`1040`).
+  By `Ondřej Grover <https://github.com/smartass101>`_.
+
 .. _whats-new.0.8.2:
 
 v0.8.2 (18 August 2016)
