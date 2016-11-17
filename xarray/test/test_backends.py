@@ -20,6 +20,7 @@ from xarray import (Dataset, DataArray, open_dataset, open_dataarray,
                     open_mfdataset, backends, save_mfdataset)
 from xarray.backends.common import robust_getitem
 from xarray.backends.netCDF4_ import _extract_nc4_encoding
+from xarray.core import indexing
 from xarray.core.pycompat import iteritems, PY3
 
 from . import (TestCase, requires_scipy, requires_netCDF4, requires_pydap,
@@ -174,6 +175,22 @@ class DatasetIOTestCases(object):
 
             self.assertDatasetAllClose(expected, actual)
             self.assertDatasetAllClose(expected, computed)
+
+    def test_dataset_caching(self):
+        expected = Dataset({'foo': ('x', [5, 6, 7])})
+        with self.roundtrip(expected) as actual:
+            assert isinstance(actual.foo.variable._data,
+                              indexing.MemoryCachedArray)
+            assert not actual.foo.variable._in_memory
+            actual.foo.values  # cache
+            assert actual.foo.variable._in_memory
+
+        with self.roundtrip(expected, open_kwargs={'cache': False}) as actual:
+            assert isinstance(actual.foo.variable._data,
+                              indexing.CopyOnWriteArray)
+            assert not actual.foo.variable._in_memory
+            actual.foo.values  # no caching
+            assert not actual.foo.variable._in_memory
 
     def test_roundtrip_None_variable(self):
         expected = Dataset({None: (('x', 'y'), [[0, 1], [2, 3]])})
@@ -723,6 +740,10 @@ class NetCDF4ViaDaskDataTest(NetCDF4DataTest, PickleNotSupportedMixin):
         # dask first pulls items by block.
         pass
 
+    def test_dataset_caching(self):
+        # caching behavior differs for dask
+        pass
+
 
 @requires_scipy
 class ScipyInMemoryDataTest(CFEncodedDataTest, Only32BitTypes, TestCase):
@@ -938,6 +959,13 @@ class DaskTest(TestCase, PickleSupportedMixin, DatasetIOTestCases):
     def test_write_store(self):
         # Override method in DatasetIOTestCases - not applicable to dask
         pass
+
+    def test_dataset_caching(self):
+        expected = Dataset({'foo': ('x', [5, 6, 7])})
+        with self.roundtrip(expected) as actual:
+            assert not actual.foo.variable._in_memory
+            actual.foo.values  # no caching
+            assert not actual.foo.variable._in_memory
 
     def test_open_mfdataset(self):
         original = Dataset({'foo': ('x', np.random.randn(10))})

@@ -127,7 +127,7 @@ def _protect_dataset_variables_inplace(dataset, cache):
             data = indexing.CopyOnWriteArray(variable._data)
             if cache:
                 data = indexing.MemoryCachedArray(data)
-            variable._data = data
+            variable.data = data
 
 
 def open_dataset(filename_or_obj, group=None, decode_cf=True,
@@ -212,7 +212,7 @@ def open_dataset(filename_or_obj, group=None, decode_cf=True,
         decode_coords = False
 
     if cache is None:
-        cache = chunks is not None
+        cache = chunks is None
 
     def maybe_decode_store(store, lock=False):
         ds = conventions.decode_cf(
@@ -300,7 +300,7 @@ def open_dataset(filename_or_obj, group=None, decode_cf=True,
 def open_dataarray(filename_or_obj, group=None, decode_cf=True,
                    mask_and_scale=True, decode_times=True,
                    concat_characters=True, decode_coords=True, engine=None,
-                   chunks=None, lock=None, drop_variables=None):
+                   chunks=None, lock=None, cache=None, drop_variables=None):
     """
     Opens an DataArray from a netCDF file containing a single data variable.
 
@@ -354,6 +354,13 @@ def open_dataarray(filename_or_obj, group=None, decode_cf=True,
         used when reading data from netCDF files with the netcdf4 and h5netcdf
         engines to avoid issues with concurrent access when using dask's
         multithreaded backend.
+    cache : bool, optional
+        If True, cache data loaded from the underlying datastore in memory as
+        NumPy arrays when accessed to avoid reading from the underlying data-
+        store multiple times. Defaults to True unless you specify the `chunks`
+        argument to use dask, in which case it defaults to False. Does not
+        change the behavior of coordinates corresponding to dimensions, which
+        always load their data from disk into a ``pandas.Index``.
     drop_variables: string or iterable, optional
         A variable or list of variables to exclude from being parsed from the
         dataset. This may be useful to drop variables with problems or
@@ -375,7 +382,7 @@ def open_dataarray(filename_or_obj, group=None, decode_cf=True,
     dataset = open_dataset(filename_or_obj, group, decode_cf,
                            mask_and_scale, decode_times,
                            concat_characters, decode_coords, engine,
-                           chunks, lock, drop_variables)
+                           chunks, lock, cache, drop_variables)
 
     if len(dataset.data_vars) != 1:
         raise ValueError('Given file dataset contains more than one data '

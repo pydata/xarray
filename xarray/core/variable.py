@@ -441,14 +441,17 @@ class Variable(common.AbstractArray, common.SharedMethodsMixin,
         If `deep=True`, the data array is loaded into memory and copied onto
         the new object. Dimensions, attributes and encodings are always copied.
         """
-        if (deep and not isinstance(self.data, dask_array_type)
-                and not isinstance(self._data, PandasIndexAdapter)):
-            # pandas.Index objects are immutable
-            # dask arrays don't have a copy method
-            # https://github.com/blaze/dask/issues/911
-            data = self.data.copy()
-        else:
-            data = self._data
+        data = self._data
+
+        if isinstance(data, indexing.MemoryCachedArray):
+            # don't share caching between copies
+            data = indexing.MemoryCachedArray(data.array)
+
+        if deep and not isinstance(
+                data, (dask_array_type, PandasIndexAdapter)):
+            # pandas.Index and dask.array objects are immutable
+            data = np.array(data)
+
         # note:
         # dims is already an immutable tuple
         # attributes and encoding will be copied when the new Array is created
@@ -681,7 +684,7 @@ class Variable(common.AbstractArray, common.SharedMethodsMixin,
         if len(dims) == 0:
             dims = self.dims[::-1]
         axes = self.get_axis_num(dims)
-        if len(dims) < 2: # no need to transpose if only one dimension
+        if len(dims) < 2:  # no need to transpose if only one dimension
             return self.copy(deep=False)
         data = ops.transpose(self.data, axes)
         return type(self)(dims, data, self._attrs, self._encoding, fastpath=True)
