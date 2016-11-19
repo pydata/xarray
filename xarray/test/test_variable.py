@@ -18,7 +18,7 @@ from xarray.core.indexing import PandasIndexAdapter, LazilyIndexedArray
 from xarray.core.pycompat import PY3, OrderedDict
 from xarray.core.common import full_like, zeros_like, ones_like
 
-from . import TestCase, source_ndarray
+from . import TestCase, source_ndarray, requires_dask
 
 
 class VariableSubclassTestCases(object):
@@ -1177,12 +1177,12 @@ class TestAsCompatibleData(TestCase):
         orig = Variable(dims=('x', 'y'), data=[[1.5 ,2.0], [3.1, 4.3]],
                         attrs={'foo': 'bar'})
 
-        def check(actual, expect_dtype, expect_values, chunks=None):
+        def check(actual, expect_dtype, expect_values):
             self.assertEqual(actual.dtype, expect_dtype)
             self.assertEqual(actual.shape, orig.shape)
             self.assertEqual(actual.dims, orig.dims)
             self.assertEqual(actual.attrs, orig.attrs)
-            self.assertEqual(actual.chunks, chunks)
+            self.assertEqual(actual.chunks, None)
             self.assertArrayEqual(actual.values, expect_values)
 
         check(full_like(orig, 2),
@@ -1193,21 +1193,28 @@ class TestAsCompatibleData(TestCase):
               bool,
               np.full_like(orig.values, True, dtype=bool))
 
-        # dask backend
-        chunks = ((1, 1), (2,))
-        check(full_like(orig.chunk(chunks), 2),
-              orig.dtype,
-              np.full_like(orig.values, 2),
-              chunks=chunks)
-        # dask override dtype
-        check(full_like(orig.chunk(chunks), True, dtype=bool),
-              bool,
-              np.full_like(orig.values, True, dtype=bool),
-              chunks=chunks)
+    @requires_dask
+    def test_full_like_dask(self):
+        orig = Variable(dims=('x', 'y'), data=[[1.5 ,2.0], [3.1, 4.3]],
+                        attrs={'foo': 'bar'}).chunk(((1, 1), (2,)))
+
+        def check(actual, expect_dtype, expect_values):
+            self.assertEqual(actual.dtype, expect_dtype)
+            self.assertEqual(actual.shape, orig.shape)
+            self.assertEqual(actual.dims, orig.dims)
+            self.assertEqual(actual.attrs, orig.attrs)
+            self.assertEqual(actual.chunks, orig.chunks)
+            self.assertArrayEqual(actual.values, expect_values)
+
+        check(full_like(orig, 2),
+              orig.dtype, np.full_like(orig.values, 2))
+        # override dtype
+        check(full_like(orig, True, dtype=bool),
+              bool, np.full_like(orig.values, True, dtype=bool))
 
         # Check that there's no array stored inside dask
         # (e.g. we didn't create a numpy array and then we chunked it!)
-        dsk = full_like(orig.chunk(chunks), 1).data.dask
+        dsk = full_like(orig, 1).data.dask
         for v in dsk.values():
             if isinstance(v, tuple):
                 for vi in v:
