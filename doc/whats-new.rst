@@ -48,6 +48,7 @@ Deprecations
 - Removed a number of methods deprecated since v0.7.0 or earlier:
   ``load_data``, ``vars``, ``drop_vars``, ``dump``, ``dumps`` and the
   ``variables`` keyword argument to ``Dataset``.
+- Removed the dummy module that enabled ``import xray``.
 
 Enhancements
 ~~~~~~~~~~~~
