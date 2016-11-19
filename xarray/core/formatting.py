@@ -314,17 +314,20 @@ def indexes_repr(indexes):
     return u'\n'.join(summary)
 
 
+def dim_summary(obj):
+    elements = [u'%s: %s' % (k, v) for k, v in obj.sizes.items()]
+    return u', '.join(elements)
+
+
 def array_repr(arr):
     # used for DataArray, Variable and IndexVariable
     if hasattr(arr, 'name') and arr.name is not None:
         name_str = '%r ' % arr.name
     else:
         name_str = u''
-    dim_summary = u', '.join(u'%s: %s' % (k, v) for k, v
-                            in zip(arr.dims, arr.shape))
 
     summary = [u'<xarray.%s %s(%s)>'
-               % (type(arr).__name__, name_str, dim_summary)]
+               % (type(arr).__name__, name_str, dim_summary(arr))]
 
     if isinstance(getattr(arr, 'variable', arr)._data, dask_array_type):
         summary.append(repr(arr.data))
@@ -349,8 +352,7 @@ def dataset_repr(ds):
     col_width = _calculate_col_width(_get_col_items(ds))
 
     dims_start = pretty_print(u'Dimensions:', col_width)
-    all_dim_strings = [u'%s: %s' % (k, v) for k, v in iteritems(ds.dims)]
-    summary.append(u'%s(%s)' % (dims_start, ', '.join(all_dim_strings)))
+    summary.append(u'%s(%s)' % (dims_start, dim_summary(ds)))
 
     summary.append(coords_repr(ds.coords, col_width=col_width))
     summary.append(vars_repr(ds.data_vars, col_width=col_width))
