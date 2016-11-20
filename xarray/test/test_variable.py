@@ -449,6 +449,15 @@ class VariableSubclassTestCases(object):
         self.assertVariableIdentical(Variable((), ('a', 0)), v[0])
         self.assertVariableIdentical(v, v[:])
 
+    def test_load(self):
+        array = self.cls('x', np.arange(5))
+        orig_data = array._data
+        copied = array.copy(deep=True)
+        array.load()
+        assert type(array._data) is type(orig_data)
+        assert type(copied._data) is type(orig_data)
+        self.assertVariableIdentical(array, copied)
+
 
 class TestVariable(TestCase, VariableSubclassTestCases):
     cls = staticmethod(Variable)

@@ -1087,6 +1087,10 @@ class IndexVariable(Variable):
         if not isinstance(self._data, PandasIndexAdapter):
             self._data = PandasIndexAdapter(self._data)
 
+    def load(self):
+        # data is already loaded into memory for IndexVariable
+        return self
+
     @Variable.data.setter
     def data(self, data):
         Variable.data.fset(self, data)

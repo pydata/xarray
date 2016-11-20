@@ -259,14 +259,6 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         obj._file_obj = store
         return obj
 
-    def __getstate__(self):
-        """Get this object's state for pickling"""
-        # we need a custom method to avoid
-
-        # self.__dict__ is the default pickle object, we don't need to
-        # implement our own __setstate__ method to make pickle work
-        return self.__dict__
-
     @property
     def variables(self):
         """Frozen dictionary of xarray.Variable objects constituting this
