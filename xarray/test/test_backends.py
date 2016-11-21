@@ -178,7 +178,9 @@ class DatasetIOTestCases(object):
         expected = Dataset({'foo': ('x', [42])})
         with self.roundtrip(expected) as roundtripped:
             raw_pickle = pickle.dumps(roundtripped)
-        with pickle.loads(raw_pickle) as unpickled_ds:
+            # windows doesn't like opening the same file twice
+            roundtripped.close()
+            unpickled_ds = pickle.loads(raw_pickle)
             self.assertDatasetIdentical(expected, unpickled_ds)
 
     @pytest.mark.skipif(sys.platform == 'win32',
