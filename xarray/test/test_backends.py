@@ -177,9 +177,9 @@ class DatasetIOTestCases(object):
     def test_pickle(self):
         expected = Dataset({'foo': ('x', [42])})
         with self.roundtrip(expected) as roundtripped:
-            unpickled_ds = pickle.loads(pickle.dumps(roundtripped))
-            with unpickled_ds:
-                self.assertDatasetIdentical(expected, unpickled_ds)
+            raw_pickle = pickle.dumps(roundtripped)
+        with pickle.loads(raw_pickle) as unpickled_ds:
+            self.assertDatasetIdentical(expected, unpickled_ds)
 
     @pytest.mark.skipif(sys.platform == 'win32',
                         reason='all files on Windows must be closed to delete')
