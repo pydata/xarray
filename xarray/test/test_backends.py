@@ -173,12 +173,14 @@ class DatasetIOTestCases(object):
             self.assertDatasetAllClose(expected, actual)
             self.assertDatasetAllClose(expected, computed)
 
-    def test_pickle(self):
+    def test_pickle_dataset(self):
         expected = Dataset({'foo': ('x', [42])})
         with self.roundtrip(expected) as roundtripped:
             unpickled_ds = pickle.loads(pickle.dumps(roundtripped))
             self.assertDatasetIdentical(expected, unpickled_ds)
 
+    def test_pickle_dataarray(self):
+        expected = Dataset({'foo': ('x', [42])})
         with self.roundtrip(expected) as roundtripped:
             unpickled_array = pickle.loads(pickle.dumps(roundtripped['foo']))
             self.assertDatasetIdentical(expected['foo'], unpickled_array)
