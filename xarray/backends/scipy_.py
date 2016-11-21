@@ -9,7 +9,7 @@ import warnings
 
 from .. import Variable
 from ..core.pycompat import iteritems, basestring, OrderedDict
-from ..core.utils import Frozen, FrozenOrderedDict, normalize_path
+from ..core.utils import Frozen, FrozenOrderedDict
 from ..core.indexing import NumpyIndexingAdapter
 
 from .common import WritableCFDataStore, DataStorePickleMixin
@@ -54,6 +54,17 @@ class ScipyArrayWrapper(NumpyIndexingAdapter):
         return data
 
 
+def _open_scipy_netcdf(filename, mode, mmap, version):
+    import scipy.io
+
+    if isinstance(filename, bytes) and filename.startswith(b'CDF'):
+        # it's a NetCDF3 bytestring
+        filename = BytesIO(filename)
+
+    return scipy.io.netcdf_file(filename, mode=mode, mmap=mmap,
+                                version=version)
+
+
 class ScipyDataStore(WritableCFDataStore, DataStorePickleMixin):
     """Store for reading and writing data via scipy.io.netcdf.
 
@@ -85,16 +96,7 @@ class ScipyDataStore(WritableCFDataStore, DataStorePickleMixin):
             raise ValueError('invalid format for scipy.io.netcdf backend: %r'
                              % format)
 
-        if (isinstance(filename_or_obj, bytes) and
-                filename_or_obj.startswith(b'CDF')):
-            # it's a NetCDF3 bytestring
-            filename_or_obj = BytesIO(filename_or_obj)
-
-        if isinstance(filename_or_obj, basestring):
-            # not a file-like object
-            filename_or_obj = normalize_path(filename_or_obj)
-
-        opener = functools.partial(scipy.io.netcdf_file,
+        opener = functools.partial(_open_scipy_netcdf,
                                    filename=filename_or_obj,
                                    mode=mode, mmap=mmap, version=version)
         self.ds = opener()
@@ -162,7 +164,8 @@ class ScipyDataStore(WritableCFDataStore, DataStorePickleMixin):
 
     def __setstate__(self, state):
         filename = state['_opener'].keywords['filename']
-        if not isinstance(filename, basestring):
+        if hasattr(filename, 'seek'):
             # it's a file-like object
+            # seek to the start of the file so scipy can read it
             filename.seek(0)
         super(ScipyDataStore, self).__setstate__(state)

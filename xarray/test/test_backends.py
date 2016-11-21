@@ -21,7 +21,7 @@ from xarray import (Dataset, DataArray, open_dataset, open_dataarray,
 from xarray.backends.common import robust_getitem
 from xarray.backends.netCDF4_ import _extract_nc4_encoding
 from xarray.core import indexing
-from xarray.core.pycompat import iteritems, PY3
+from xarray.core.pycompat import iteritems, PY2, PY3
 
 from . import (TestCase, requires_scipy, requires_netCDF4, requires_pydap,
                requires_scipy_or_netCDF4, requires_dask, requires_h5netcdf,
@@ -726,8 +726,17 @@ class ScipyInMemoryDataTest(CFEncodedDataTest, Only32BitTypes, TestCase):
     @contextlib.contextmanager
     def roundtrip(self, data, save_kwargs={}, open_kwargs={}):
         serialized = data.to_netcdf(**save_kwargs)
-        with open_dataset(BytesIO(serialized), **open_kwargs) as ds:
+        with open_dataset(serialized, engine='scipy', **open_kwargs) as ds:
             yield ds
+
+    def test_bytesio_pickle(self):
+        if PY2:
+            raise unittest.SkipTest('cannot pickle BytesIO on Python 2')
+        data = Dataset({'foo': ('x', [1, 2, 3])})
+        fobj = BytesIO(data.to_netcdf())
+        with open_dataset(fobj) as ds:
+            unpickled = pickle.loads(pickle.dumps(ds))
+            self.assertDatasetIdentical(unpickled, data)
 
 
 @requires_scipy

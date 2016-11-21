@@ -48,6 +48,13 @@ def _get_default_engine(path, allow_remote=False):
     return engine
 
 
+def _normalize_path(path):
+    if is_remote_uri(path):
+        return path
+    else:
+        return os.path.abspath(os.path.expanduser(path))
+
+
 _global_lock = threading.Lock()
 
 
@@ -251,6 +258,17 @@ def open_dataset(filename_or_obj, group=None, decode_cf=True,
     if isinstance(filename_or_obj, backends.AbstractDataStore):
         store = filename_or_obj
     elif isinstance(filename_or_obj, basestring):
+
+        if (isinstance(filename_or_obj, bytes) and
+                filename_or_obj.startswith(b'\x89HDF')):
+            raise ValueError('cannot read netCDF4/HDF5 file images')
+        elif (isinstance(filename_or_obj, bytes) and
+                filename_or_obj.startswith(b'CDF')):
+            # netCDF3 file images are handled by scipy
+            pass
+        elif isinstance(filename_or_obj, basestring):
+            filename_or_obj = _normalize_path(filename_or_obj)
+
         if filename_or_obj.endswith('.gz'):
             if engine is not None and engine != 'scipy':
                 raise ValueError('can only read gzipped netCDF files with '
@@ -526,8 +544,10 @@ def to_netcdf(dataset, path=None, mode='w', format=None, group=None,
             raise ValueError('invalid engine for creating bytes with '
                              'to_netcdf: %r. Only the default engine '
                              "or engine='scipy' is supported" % engine)
-    elif engine is None:
-        engine = _get_default_engine(path)
+    else:
+        if engine is None:
+            engine = _get_default_engine(path)
+        path = _normalize_path(path)
 
     # validate Dataset keys, DataArray names, and attr keys/values
     _validate_dataset_names(dataset)

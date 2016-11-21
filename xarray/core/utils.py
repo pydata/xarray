@@ -437,13 +437,6 @@ def is_remote_uri(path):
     return bool(re.search('^https?\://', path))
 
 
-def normalize_path(path):
-    if is_remote_uri(path):
-        return path
-    else:
-        return os.path.abspath(os.path.expanduser(path))
-
-
 def is_uniform_spaced(arr, **kwargs):
     """Return True if values of an array are uniformly spaced and sorted.
 
