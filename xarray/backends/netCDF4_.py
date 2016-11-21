@@ -10,7 +10,7 @@ from .. import Variable
 from ..conventions import pop_to, cf_encoder
 from ..core import indexing
 from ..core.utils import (FrozenOrderedDict, NDArrayMixin,
-                          close_on_error, is_remote_uri)
+                          close_on_error, is_remote_uri, normalize_path)
 from ..core.pycompat import iteritems, basestring, OrderedDict, PY3
 
 from .common import WritableCFDataStore, robust_getitem, DataStorePickleMixin
@@ -199,6 +199,7 @@ class NetCDF4DataStore(WritableCFDataStore, DataStorePickleMixin):
                  writer=None, clobber=True, diskless=False, persist=False):
         if format is None:
             format = 'NETCDF4'
+        filename = normalize_path(filename)
         opener = functools.partial(_open_netcdf4_group, filename, mode=mode,
                                    group=group, clobber=clobber,
                                    diskless=diskless, persist=persist,

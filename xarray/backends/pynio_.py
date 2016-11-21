@@ -7,7 +7,7 @@ import functools
 import numpy as np
 
 from .. import Variable
-from ..core.utils import FrozenOrderedDict, Frozen, NDArrayMixin
+from ..core.utils import FrozenOrderedDict, Frozen, NDArrayMixin, normalize_path
 from ..core import indexing
 
 from .common import AbstractDataStore, DataStorePickleMixin
@@ -38,6 +38,7 @@ class NioDataStore(AbstractDataStore, DataStorePickleMixin):
     """
     def __init__(self, filename, mode='r'):
         import Nio
+        filename = normalize_path(filename)
         opener = functools.partial(Nio.open_file, filename, mode=mode)
         self.ds = opener()
         self._opener = opener

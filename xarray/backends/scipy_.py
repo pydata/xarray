@@ -9,7 +9,7 @@ import warnings
 
 from .. import Variable
 from ..core.pycompat import iteritems, basestring, OrderedDict
-from ..core.utils import Frozen, FrozenOrderedDict
+from ..core.utils import Frozen, FrozenOrderedDict, normalize_path
 from ..core.indexing import NumpyIndexingAdapter
 
 from .common import WritableCFDataStore, DataStorePickleMixin
@@ -89,6 +89,10 @@ class ScipyDataStore(WritableCFDataStore, DataStorePickleMixin):
                 filename_or_obj.startswith(b'CDF')):
             # it's a NetCDF3 bytestring
             filename_or_obj = BytesIO(filename_or_obj)
+
+        if isinstance(filename_or_obj, basestring):
+            # not a file-like object
+            filename_or_obj = normalize_path(filename_or_obj)
 
         opener = functools.partial(scipy.io.netcdf_file,
                                    filename=filename_or_obj,

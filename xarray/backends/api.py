@@ -16,7 +16,6 @@ from .common import ArrayWriter
 from ..core import indexing
 from ..core.combine import auto_combine
 from ..core.utils import close_on_error, is_remote_uri
-from ..core.variable import Variable, IndexVariable
 from ..core.pycompat import basestring
 
 DATAARRAY_NAME = '__xarray_dataarray_name__'

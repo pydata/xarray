@@ -6,6 +6,7 @@ from __future__ import print_function
 import contextlib
 import functools
 import itertools
+import os.path
 import re
 import warnings
 from collections import Mapping, MutableMapping, Iterable
@@ -434,6 +435,13 @@ def close_on_error(f):
 
 def is_remote_uri(path):
     return bool(re.search('^https?\://', path))
+
+
+def normalize_path(path):
+    if is_remote_uri(path):
+        return path
+    else:
+        return os.path.abspath(os.path.expanduser(path))
 
 
 def is_uniform_spaced(arr, **kwargs):

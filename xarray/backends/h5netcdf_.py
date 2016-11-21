@@ -5,7 +5,8 @@ import functools
 
 from .. import Variable
 from ..core import indexing
-from ..core.utils import (FrozenOrderedDict, close_on_error, Frozen)
+from ..core.utils import (FrozenOrderedDict, close_on_error, Frozen,
+                          normalize_path)
 from ..core.pycompat import iteritems, bytes_type, unicode_type, OrderedDict
 
 from .common import WritableCFDataStore, DataStorePickleMixin
@@ -51,6 +52,7 @@ class H5NetCDFStore(WritableCFDataStore, DataStorePickleMixin):
                  writer=None):
         if format not in [None, 'NETCDF4']:
             raise ValueError('invalid format for h5netcdf backend')
+        filename = normalize_path(filename)
         opener = functools.partial(_open_h5netcdf_group, filename, mode=mode,
                                    group=group)
         self.ds = opener()
