@@ -235,3 +235,22 @@ class WritableCFDataStore(AbstractWritableDataStore):
         cf_variables, cf_attrs = cf_encoder(variables, attributes)
         AbstractWritableDataStore.store(self, cf_variables, cf_attrs,
                                         check_encoding_set)
+
+
+class DataStorePickleMixin(object):
+    """Subclasses must define `ds`, `_opener` and `_mode` attributes.
+
+    Do not subclass this class: it is not part of xarray's external API.
+    """
+
+    def __getstate__(self):
+        state = self.__dict__.copy()
+        del state['ds']
+        if self._mode == 'w':
+            # file has already been created, don't override when restoring
+            state['_mode'] = 'a'
+        return state
+
+    def __setstate__(self, state):
+        self.__dict__.update(state)
+        self.ds = self._opener(mode=self._mode)

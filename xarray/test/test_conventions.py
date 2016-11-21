@@ -9,7 +9,7 @@ import warnings
 from xarray import conventions, Variable, Dataset, open_dataset
 from xarray.core import utils, indexing
 from . import TestCase, requires_netCDF4, unittest
-from .test_backends import CFEncodedDataTest, PickleSupportedMixin
+from .test_backends import CFEncodedDataTest
 from xarray.core.pycompat import iteritems
 from xarray.backends.memory import InMemoryDataStore
 from xarray.backends.common import WritableCFDataStore
@@ -620,7 +620,7 @@ def null_wrap(ds):
 
 
 @requires_netCDF4
-class TestCFEncodedDataStore(CFEncodedDataTest, PickleSupportedMixin, TestCase):
+class TestCFEncodedDataStore(CFEncodedDataTest, TestCase):
     @contextlib.contextmanager
     def create_store(self):
         yield CFEncodedInMemoryStore()

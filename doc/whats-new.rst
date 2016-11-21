@@ -25,12 +25,18 @@ Breaking changes
   merges will now succeed in cases that previously raised
   ``xarray.MergeError``. Set ``compat='broadcast_equals'`` to restore the
   previous default.
-- Pickling an xarray object or reading its :py:attr:`~DataArray.values`
-  property no longer always caches values in a NumPy array. Caching
-  of ``.values`` read from netCDF files on disk is still the default when
-  :py:func:`open_dataset` is called with ``cache=True``.
+- Reading :py:attr:`~DataArray.values` no longer always caches values in a NumPy
+  array :issue:`1128`. Caching of ``.values`` on variables read from netCDF
+  files on disk is still the default when :py:func:`open_dataset` is called with
+  ``cache=True``.
   By `Guido Imperiale <https://github.com/crusaderky>`_ and
   `Stephan Hoyer <https://github.com/shoyer>`_.
+- Pickling a ``Dataset`` or ``DataArray`` linked to a file on disk no longer
+  caches its values into memory before pickling :issue:`1128`. Instead, pickle
+  stores file paths and restores objects by reopening file references. This
+  enables preliminary, experimental use of xarray for opening files with
+  `dask.distributed <https://distributed.readthedocs.io>`_.
+  By `Stephan Hoyer <https://github.com/shoyer>`_.
 - Coordinates used to index a dimension are now loaded eagerly into
   :py:class:`pandas.Index` objects, instead of loading the values lazily.
   By `Guido Imperiale <https://github.com/crusaderky>`_.

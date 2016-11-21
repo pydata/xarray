@@ -126,6 +126,12 @@ def data_allclose_or_equiv(arr1, arr2, rtol=1e-05, atol=1e-08):
         return ops.allclose_or_equiv(arr1, arr2, rtol=rtol, atol=atol)
 
 
+def assert_dataset_allclose(first, second):
+    # TODO(shoyer): make a lighter weight version of this that doesn't require
+    # constructing a dummy TestCase.
+    TestCase.assertDatasetAllClose(TestCase(), first, second)
+
+
 class TestCase(unittest.TestCase):
     if PY3:
         # Python 3 assertCountEqual is roughly equivalent to Python 2

@@ -420,13 +420,6 @@ class NDArrayMixin(NdimSizeLenMixin):
         return '%s(array=%r)' % (type(self).__name__, self.array)
 
 
-class NoPickleMixin(object):
-    def __getstate__(self):
-        raise TypeError(
-            'cannot pickle objects of type %r: call .compute() or .load() '
-            'to load data into memory first.' % type(self))
-
-
 @contextlib.contextmanager
 def close_on_error(f):
     """Context manager to ensure that a file opened by xarray is closed if an

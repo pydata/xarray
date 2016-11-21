@@ -1,6 +1,7 @@
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
+import functools
 from io import BytesIO
 
 import numpy as np
@@ -8,10 +9,10 @@ import warnings
 
 from .. import Variable
 from ..core.pycompat import iteritems, basestring, OrderedDict
-from ..core.utils import Frozen, FrozenOrderedDict, NoPickleMixin
+from ..core.utils import Frozen, FrozenOrderedDict
 from ..core.indexing import NumpyIndexingAdapter
 
-from .common import WritableCFDataStore
+from .common import WritableCFDataStore, DataStorePickleMixin
 from .netcdf3 import (is_valid_nc3_name, encode_nc3_attr_value,
                       encode_nc3_variable)
 
@@ -29,18 +30,14 @@ def _decode_attrs(d):
                        for (k, v) in iteritems(d))
 
 
-class ScipyArrayWrapper(NumpyIndexingAdapter, NoPickleMixin):
-    def __init__(self, netcdf_file, variable_name):
-        self.netcdf_file = netcdf_file
+class ScipyArrayWrapper(NumpyIndexingAdapter):
+    def __init__(self, variable_name, datastore):
+        self.datastore = datastore
         self.variable_name = variable_name
 
     @property
     def array(self):
-        # We can't store the actual netcdf_variable object or its data array,
-        # because otherwise scipy complains about variables or files still
-        # referencing mmapped arrays when we try to close datasets without
-        # having read all data in the file.
-        return self.netcdf_file.variables[self.variable_name].data
+        return self.datastore.ds.variables[self.variable_name].data
 
     @property
     def dtype(self):
@@ -52,12 +49,12 @@ class ScipyArrayWrapper(NumpyIndexingAdapter, NoPickleMixin):
         # Copy data if the source file is mmapped. This makes things consistent
         # with the netCDF4 library by ensuring we can safely read arrays even
         # after closing associated files.
-        copy = self.netcdf_file.use_mmap
+        copy = self.datastore.ds.use_mmap
         data = np.array(data, dtype=self.dtype, copy=copy)
         return data
 
 
-class ScipyDataStore(WritableCFDataStore, NoPickleMixin):
+class ScipyDataStore(WritableCFDataStore, DataStorePickleMixin):
     """Store for reading and writing data via scipy.io.netcdf.
 
     This store has the advantage of being able to be initialized with a
@@ -88,18 +85,22 @@ class ScipyDataStore(WritableCFDataStore, NoPickleMixin):
             raise ValueError('invalid format for scipy.io.netcdf backend: %r'
                              % format)
 
-        # if filename is a NetCDF3 bytestring we store it in a StringIO
-        if (isinstance(filename_or_obj, basestring) and
-                filename_or_obj.startswith('CDF')):
-            # TODO: this check has the unfortunate side-effect that
-            # paths to files cannot start with 'CDF'.
+        if (isinstance(filename_or_obj, bytes) and
+                filename_or_obj.startswith(b'CDF')):
+            # it's a NetCDF3 bytestring
             filename_or_obj = BytesIO(filename_or_obj)
-        self.ds = scipy.io.netcdf_file(
-            filename_or_obj, mode=mode, mmap=mmap, version=version)
+
+        opener = functools.partial(scipy.io.netcdf_file,
+                                   filename=filename_or_obj,
+                                   mode=mode, mmap=mmap, version=version)
+        self.ds = opener()
+        self._opener = opener
+        self._mode = mode
+
         super(ScipyDataStore, self).__init__(writer)
 
     def open_store_variable(self, name, var):
-        return Variable(var.dimensions, ScipyArrayWrapper(self.ds, name),
+        return Variable(var.dimensions, ScipyArrayWrapper(name, self),
                         _decode_attrs(var._attributes))
 
     def get_variables(self):
@@ -154,3 +155,10 @@ class ScipyDataStore(WritableCFDataStore, NoPickleMixin):
 
     def __exit__(self, type, value, tb):
         self.close()
+
+    def __setstate__(self, state):
+        filename = state['_opener'].keywords['filename']
+        if not isinstance(filename, basestring):
+            # it's a file-like object
+            filename.seek(0)
+        super(ScipyDataStore, self).__setstate__(state)
