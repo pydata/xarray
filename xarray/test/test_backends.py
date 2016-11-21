@@ -14,6 +14,7 @@ import sys
 
 import numpy as np
 import pandas as pd
+import pytest
 
 import xarray as xr
 from xarray import (Dataset, DataArray, open_dataset, open_dataarray,
@@ -173,12 +174,15 @@ class DatasetIOTestCases(object):
             self.assertDatasetAllClose(expected, actual)
             self.assertDatasetAllClose(expected, computed)
 
-    def test_pickle_dataset(self):
+    def test_pickle(self):
         expected = Dataset({'foo': ('x', [42])})
         with self.roundtrip(expected) as roundtripped:
             unpickled_ds = pickle.loads(pickle.dumps(roundtripped))
-            self.assertDatasetIdentical(expected, unpickled_ds)
+            with unpickled_ds:
+                self.assertDatasetIdentical(expected, unpickled_ds)
 
+    @pytest.mark.skipif(sys.platform == 'win32',
+                        reason='all files on Windows must be closed to delete')
     def test_pickle_dataarray(self):
         expected = Dataset({'foo': ('x', [42])})
         with self.roundtrip(expected) as roundtripped:
@@ -732,9 +736,8 @@ class ScipyInMemoryDataTest(CFEncodedDataTest, Only32BitTypes, TestCase):
         with open_dataset(serialized, engine='scipy', **open_kwargs) as ds:
             yield ds
 
+    @pytest.mark.skipif(PY2, reason='cannot pickle BytesIO on Python 2')
     def test_bytesio_pickle(self):
-        if PY2:
-            raise unittest.SkipTest('cannot pickle BytesIO on Python 2')
         data = Dataset({'foo': ('x', [1, 2, 3])})
         fobj = BytesIO(data.to_netcdf())
         with open_dataset(fobj) as ds:
