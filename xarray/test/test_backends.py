@@ -179,6 +179,7 @@ class DatasetIOTestCases(object):
             unpickled_ds = pickle.loads(pickle.dumps(roundtripped))
             self.assertDatasetIdentical(expected, unpickled_ds)
 
+        with self.roundtrip(expected) as roundtripped:
             unpickled_array = pickle.loads(pickle.dumps(roundtripped['foo']))
             self.assertDatasetIdentical(expected['foo'], unpickled_array)
 
