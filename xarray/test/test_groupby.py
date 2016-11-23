@@ -48,7 +48,7 @@ def test_multi_index_groupby_sum():
 
 
 def test_groupby_da_datetime():
-    # test groupby with a DataArray of dtype datetime for GH1133
+    # test groupby with a DataArray of dtype datetime for GH1132
     # create test data
     times = pd.date_range('2000-01-01', periods=4)
     foo = xr.DataArray([1,2,3,4], coords=dict(time=times), dims='time')
