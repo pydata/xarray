@@ -2,6 +2,7 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 import numpy as np
+import pandas as pd
 import xarray as xr
 from xarray.core.groupby import _consolidate_slices
 
@@ -44,6 +45,24 @@ def test_multi_index_groupby_sum():
               .sum('z')
               .unstack('space'))
     assert expected.equals(actual)
+
+
+def test_groupby_da_datetime():
+    # test groupby with a DataArray of dtype datetime for GH1133
+    # create test data
+    times = pd.date_range('2000-01-01', periods=4)
+    foo = xr.DataArray([1,2,3,4], coords=dict(time=times), dims='time')
+    # create test index
+    dd = times.to_datetime()
+    reference_dates = [dd[0], dd[2]]
+    labels = reference_dates[0:1]*2 + reference_dates[1:2]*2
+    ind = xr.DataArray(labels, coords=dict(time=times), dims='time', name='reference_date')
+    # group foo by ind
+    g = foo.groupby(ind)
+    # check result
+    actual = g.sum(dim='time')
+    expected = xr.DataArray([3,7], coords=dict(reference_date=reference_dates), dims='reference_date')
+    assert actual.to_dataset(name='foo').equals(expected.to_dataset(name='foo'))
 
 
 # TODO: move other groupby tests from test_dataset and test_dataarray over here
