@@ -226,7 +226,7 @@ class GroupBy(object):
         else:
             # look through group to find the unique values
             sort = bins is None
-            unique_values, group_indices = unique_value_groups(group.values, sort=sort)
+            unique_values, group_indices = unique_value_groups(safe_cast_to_index(group), sort=sort)
             unique_coord = IndexVariable(group.name, unique_values)
 
         self.obj = obj
