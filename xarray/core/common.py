@@ -723,12 +723,12 @@ def _full_like_dataarray(arr, keep_attrs=False, fill_value=None):
     return DataArray(values, dims=arr.dims, coords=arr.coords, attrs=attrs)
 
 
-def _full_like(xray_obj, keep_attrs=False, fill_value=None):
+def _full_like(xarray_obj, keep_attrs=False, fill_value=None):
     """Return a new object with the same shape and type as a given object.
 
     Parameters
     ----------
-    xray_obj : DataArray or Dataset
+    xarray_obj : DataArray or Dataset
         Return a full object with the same shape/dims/coords/attrs.
             `func` is calculated over all dimension for each group item.
     keep_attrs : bool, optional
@@ -740,19 +740,19 @@ def _full_like(xray_obj, keep_attrs=False, fill_value=None):
 
     Returns
     -------
-    out : same as xray_obj
+    out : same as xarray_obj
         New object with the same shape and type as a given object.
     """
     from .dataarray import DataArray
     from .dataset import Dataset
 
-    if isinstance(xray_obj, Dataset):
-        attrs = xray_obj.attrs if keep_attrs else {}
+    if isinstance(xarray_obj, Dataset):
+        attrs = xarray_obj.attrs if keep_attrs else {}
 
         return Dataset(dict((k, _full_like_dataarray(v, keep_attrs=keep_attrs,
                                                      fill_value=fill_value))
-                            for k, v in iteritems(xray_obj.data_vars)),
-                       name=xray_obj.name, attrs=attrs)
-    elif isinstance(xray_obj, DataArray):
-        return _full_like_dataarray(xray_obj, keep_attrs=keep_attrs,
+                            for k, v in iteritems(xarray_obj.data_vars)),
+                       name=xarray_obj.name, attrs=attrs)
+    elif isinstance(xarray_obj, DataArray):
+        return _full_like_dataarray(xarray_obj, keep_attrs=keep_attrs,
                                     fill_value=fill_value)
