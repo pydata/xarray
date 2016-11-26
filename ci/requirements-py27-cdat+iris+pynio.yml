@@ -10,6 +10,7 @@ dependencies:
   - pandas>=0.15.0
   - pynio
   - scipy
+  - iris
   - pytest-cov
   - cyordereddict
   - pip:
