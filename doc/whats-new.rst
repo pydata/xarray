@@ -8,7 +8,7 @@ What's New
 
     import numpy as np
     import pandas as pd
-    import xray
+    import xarray as xray
     import xarray
     import xarray as xr
     np.random.seed(123456)
@@ -436,7 +436,7 @@ The following individuals contributed to this release:
 v0.7.0 (21 January 2016)
 ------------------------
 
-This major release includes redesign of :py:class:`~xray.DataArray`
+This major release includes redesign of :py:class:`~xarray.DataArray`
 internals, as well as new methods for reshaping, rolling and shifting
 data. It includes preliminary support for :py:class:`pandas.MultiIndex`,
 as well as a number of other features and bug fixes, several of which
