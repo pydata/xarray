@@ -865,7 +865,7 @@ class DataArray(AbstractArray, BaseDataObject):
         >>> arr = DataArray(np.arange(6).reshape(2, 3),
         ...                 coords=[('x', ['a', 'b']), ('y', [0, 1, 2])])
         >>> arr
-        <xray.DataArray (x: 2, y: 3)>
+        <xarray.DataArray (x: 2, y: 3)>
         array([[0, 1, 2],
                [3, 4, 5]])
         Coordinates:

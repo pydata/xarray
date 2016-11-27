@@ -12,4 +12,5 @@ dependencies:
   - ipython=4.0.1
   - sphinx
   - netCDF4
+  - hdf4  # temporary install to get netCD4 working (GH1106)
   - cartopy

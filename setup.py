@@ -141,5 +141,4 @@ setup(name=DISTNAME,
       tests_require=TESTS_REQUIRE,
       url=URL,
       packages=find_packages(),
-      py_modules=['xray'],
       package_data={'xarray': ['test/data/*', 'plot/default_colormap.csv']})
