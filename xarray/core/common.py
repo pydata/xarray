@@ -737,7 +737,7 @@ def full_like(other, fill_value, dtype=None):
     elif isinstance(other, DataArray):
         return DataArray(
             _full_like_variable(other.variable, fill_value, dtype),
-            dims=other.dims, coords=other.coords, attrs=other.attrs)
+            dims=other.dims, coords=other.coords, attrs=other.attrs, name=other.name)
     elif isinstance(other, Variable):
         return _full_like_variable(other, fill_value, dtype)
     else:

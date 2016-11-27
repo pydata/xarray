@@ -1177,21 +1177,15 @@ class TestAsCompatibleData(TestCase):
         orig = Variable(dims=('x', 'y'), data=[[1.5 ,2.0], [3.1, 4.3]],
                         attrs={'foo': 'bar'})
 
-        def check(actual, expect_dtype, expect_values):
-            self.assertEqual(actual.dtype, expect_dtype)
-            self.assertEqual(actual.shape, orig.shape)
-            self.assertEqual(actual.dims, orig.dims)
-            self.assertEqual(actual.attrs, orig.attrs)
-            self.assertEqual(actual.chunks, None)
-            self.assertArrayEqual(actual.values, expect_values)
+        expect = orig.copy(deep=True)
+        expect.values = [[2.0, 2.0], [2.0, 2.0]]
+        self.assertVariableIdentical(expect, full_like(orig, 2))
 
-        check(full_like(orig, 2),
-              orig.dtype,
-              np.full_like(orig.values, 2))
         # override dtype
-        check(full_like(orig, True, dtype=bool),
-              bool,
-              np.full_like(orig.values, True, dtype=bool))
+        expect.values = [[True, True], [True, True]]
+        self.assertEquals(expect.dtype, bool)
+        self.assertVariableIdentical(expect, full_like(orig, True, dtype=bool))
+
 
     @requires_dask
     def test_full_like_dask(self):

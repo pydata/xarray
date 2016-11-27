@@ -2998,28 +2998,21 @@ class TestDataset(TestCase):
         }, attrs={'foo': 'bar'})
         actual = full_like(ds, 2)
 
-        self.assertEqual(actual.attrs, ds.attrs)
-        for k in ds.variables:
-            if k in ds.data_vars:
-                self.assertEqual(actual[k].dtype, ds[k].dtype)
-                self.assertEqual(actual[k].shape, ds[k].shape)
-                self.assertEqual(actual[k].dims, ds[k].dims)
-                self.assertArrayEqual(actual[k].data, np.full_like(ds[k].data, 2))
-            else:
-                self.assertDataArrayIdentical(actual[k], ds[k])
+        expect = ds.copy(deep=True)
+        expect['d1'].values = [2, 2, 2]
+        expect['d2'].values = [2.0, 2.0, 2.0]
+        self.assertEqual(expect['d1'].dtype, int)
+        self.assertEqual(expect['d2'].dtype, float)
+        self.assertDatasetIdentical(expect, actual)
 
         # override dtype
         actual = full_like(ds, fill_value=True, dtype=bool)
-        self.assertEqual(actual.attrs, ds.attrs)
-        for k in ds.variables:
-            if k in ds.data_vars:
-                self.assertEqual(actual[k].dtype, bool)
-                self.assertEqual(actual[k].shape, ds[k].shape)
-                self.assertEqual(actual[k].dims, ds[k].dims)
-                self.assertArrayEqual(actual[k].data,
-                                      np.full_like(ds[k].data, True, dtype=bool))
-            else:
-                self.assertDataArrayIdentical(actual[k], ds[k])
+        expect = ds.copy(deep=True)
+        expect['d1'].values = [True, True, True]
+        expect['d2'].values = [True, True, True]
+        self.assertEqual(expect['d1'].dtype, bool)
+        self.assertEqual(expect['d2'].dtype, bool)
+        self.assertDatasetIdentical(expect, actual)
 
 ### Py.test tests
 

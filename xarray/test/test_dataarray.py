@@ -2216,25 +2216,22 @@ class TestDataArray(TestCase):
 
     def test_full_like(self):
         # For more thorough tests, see test_variable.py
-        da = DataArray(np.random.random(size=(4, 4)), dims=('x', 'y'),
-                       attrs={'attr1': 'value1'})
-        actual = full_like(da, 2)
+        da = DataArray(np.random.random(size=(2, 2)),
+                       dims=('x', 'y'),
+                       attrs={'attr1': 'value1'},
+                       coords={'x': [4, 3]},
+                       name='helloworld')
 
-        self.assertEqual(actual.dtype, da.dtype)
-        self.assertEqual(actual.shape, da.shape)
-        self.assertEqual(actual.dims, da.dims)
-        self.assertEqual(actual.attrs, da.attrs)
-        self.assertArrayEqual(actual.data, np.full_like(da.data, 2))
-        for name in da.coords:
-            self.assertArrayEqual(da[name], actual[name])
-            self.assertEqual(da[name].dtype, actual[name].dtype)
+        actual = full_like(da, 2)
+        expect = da.copy(deep=True)
+        expect.values = [[2.0, 2.0], [2.0, 2.0]]
+        self.assertDataArrayIdentical(expect, actual)
 
         # override dtype
         actual = full_like(da, fill_value=True, dtype=bool)
-        self.assertEqual(actual.dtype, bool)
-        self.assertEqual(actual.shape, da.shape)
-        self.assertEqual(actual.dims, da.dims)
-        self.assertArrayEqual(actual.data, np.full_like(da.data, True, dtype=bool))
+        expect.values = [[True, True], [True, True]]
+        self.assertEquals(expect.dtype, bool)
+        self.assertDataArrayIdentical(expect, actual)
 
     def test_dot(self):
         x = np.linspace(-3, 3, 6)
