@@ -182,7 +182,6 @@ class DatasetIOTestCases(object):
             roundtripped.close()
             unpickled_ds = pickle.loads(raw_pickle)
             self.assertDatasetIdentical(expected, unpickled_ds)
-            unpickled_ds.close()
 
     @pytest.mark.skipif(sys.platform == 'win32',
                         reason='all files on Windows must be closed to delete')
@@ -724,6 +723,12 @@ class NetCDF4ViaDaskDataTest(NetCDF4DataTest):
     def test_dataset_caching(self):
         # caching behavior differs for dask
         pass
+
+    @pytest.mark.skipif(
+        sys.platform == 'win32',
+        reason='something related to deleting unclosed files, see GH1128')
+    def test_pickle(self):
+        super(NetCDF4ViaDaskDataTest, self).test_pickle()
 
 
 @requires_scipy
