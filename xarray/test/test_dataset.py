@@ -23,6 +23,7 @@ from xarray import (align, broadcast, concat, merge, conventions, backends,
                     open_dataset, set_options, MergeError)
 from xarray.core import indexing, utils
 from xarray.core.pycompat import iteritems, OrderedDict, unicode_type
+from xarray.core.common import full_like
 
 from . import (TestCase, unittest, InaccessibleArray, UnexpectedDataAccess,
                requires_dask, source_ndarray)
@@ -2988,6 +2989,30 @@ class TestDataset(TestCase):
             actual = ds1 + ds2
             self.assertDatasetEqual(actual, expected)
 
+    def test_full_like(self):
+        # For more thorough tests, see test_variable.py
+        # Note: testing data_vars with mismatched dtypes
+        ds = Dataset({
+            'd1': DataArray([1,2,3], dims=['x'], coords={'x': [10,20,30]}),
+            'd2': DataArray([1.1, 2.2, 3.3], dims=['y'])
+        }, attrs={'foo': 'bar'})
+        actual = full_like(ds, 2)
+
+        expect = ds.copy(deep=True)
+        expect['d1'].values = [2, 2, 2]
+        expect['d2'].values = [2.0, 2.0, 2.0]
+        self.assertEqual(expect['d1'].dtype, int)
+        self.assertEqual(expect['d2'].dtype, float)
+        self.assertDatasetIdentical(expect, actual)
+
+        # override dtype
+        actual = full_like(ds, fill_value=True, dtype=bool)
+        expect = ds.copy(deep=True)
+        expect['d1'].values = [True, True, True]
+        expect['d2'].values = [True, True, True]
+        self.assertEqual(expect['d1'].dtype, bool)
+        self.assertEqual(expect['d2'].dtype, bool)
+        self.assertDatasetIdentical(expect, actual)
 
 ### Py.test tests
 

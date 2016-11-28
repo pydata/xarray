@@ -93,6 +93,9 @@ Enhancements
   providing consistent access to dimension length on both ``Dataset`` and
   ``DataArray`` (:issue:`921`).
   By `Stephan Hoyer <https://github.com/shoyer>`_.
+- New top-level functions :py:func:`~xarray.full_like`,
+  :py:func:`~xarray.zeros_like`, and :py:func:`~xarray.ones_like`
+  By `Guido Imperiale <https://github.com/crusaderky>`_.
 
 Bug fixes
 ~~~~~~~~~
