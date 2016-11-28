@@ -42,6 +42,11 @@ try:
 except ImportError:
     print("no matplotlib")
 try:
+    import dask
+    print("dask: %s, %s" % (dask.__version__, dask.__file__))
+except ImportError:
+    print("no dask")
+try:
     import IPython
     print("ipython: %s, %s" % (IPython.__version__, IPython.__file__))
 except ImportError:
