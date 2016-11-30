@@ -205,6 +205,7 @@ have ``NaN`` values. This can be used to combine data with overlapping
 coordinates as long as any non-missing values agree or are disjoint:
 
 .. ipython:: python
+
     ds1 = xr.Dataset({'a': ('x', [10, 20, 30, np.nan])}, {'x': [1, 2, 3, 4]})
     ds2 = xr.Dataset({'a': ('x', [np.nan, 30, 40, 50])}, {'x': [2, 3, 4, 5]})
     xr.merge([ds1, ds2], compat='no_conflicts')
