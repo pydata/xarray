@@ -198,6 +198,15 @@ def _func_slash_method_wrapper(f, name=None):
     return func
 
 
+def rolling_count(rolling):
+
+    not_null = rolling.obj.notnull()
+    instance_attr_dict = {'center': rolling.center,
+                          'min_periods': rolling.min_periods,
+                          rolling.dim: rolling.window}
+    rolling_count = not_null.rolling(**instance_attr_dict).sum()
+    return rolling_count
+
 def inject_reduce_methods(cls):
     methods = ([(name, getattr(duck_array_ops, 'array_%s' % name), False)
                 for name in REDUCE_METHODS] +
@@ -352,3 +361,8 @@ def inject_datasetrolling_methods(cls):
         func.__doc__ = _ROLLING_REDUCE_DOCSTRING_TEMPLATE.format(
             name=func.__name__, da_or_ds='Dataset')
         setattr(cls, name, func)
+    # bottleneck doesn't offer rolling_count, so we construct it ourselves
+    func = rolling_count
+    func.__name__ = 'count'
+    func.__doc__ = _ROLLING_REDUCE_DOCSTRING_TEMPLATE.format(name=func.__name__)
+    setattr(cls, 'count', func)

@@ -2618,8 +2618,8 @@ def test_rolling_properties(da):
     assert 'min_periods must be greater than zero' in str(exception)
 
 
-@pytest.mark.parametrize('name', ('sum', 'mean', 'std', 'var',
-                                  'min', 'max', 'median'))
+@pytest.mark.parametrize('name', ('sum', 'mean', 'std', 'min', 'max',
+                                  'median', 'count'))
 @pytest.mark.parametrize('center', (True, False, None))
 @pytest.mark.parametrize('min_periods', (1, None))
 def test_rolling_wrapped_bottleneck(da, name, center, min_periods):
@@ -2651,7 +2651,6 @@ def test_rolling_wrapped_bottleneck(da, name, center, min_periods):
     actual = getattr(rolling_obj, name)()['time']
     assert_equal(actual, da['time'])
 
-<<<<<<< HEAD
 
 def test_rolling_invalid_args(da):
     pytest.importorskip('bottleneck', minversion="1.0")
@@ -2702,3 +2701,14 @@ def test_rolling_reduce(da, center, min_periods, window, name):
     expected = getattr(rolling_obj, name)()
     assert_allclose(actual, expected)
     assert actual.dims == expected.dims
+
+
+def test_rolling_count_correct(da):
+
+    result = da.rolling(time=7, min_periods=1).count()
+    expected_rolling_count = np.r_[np.arange(1, 8), np.full((14), 7)]
+    expected = xr.DataArray(
+        np.broadcast_to(expected_rolling_count, (4, 21)).T,
+        dims=['time', 'x'])
+    expected['time'] = result['time']
+    assert_equal(result, expected)
