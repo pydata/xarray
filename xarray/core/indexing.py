@@ -403,6 +403,46 @@ class LazilyIndexedArray(utils.NDArrayMixin):
                 (type(self).__name__, self.array, self.key))
 
 
+class CopyOnWriteArray(utils.NDArrayMixin):
+    def __init__(self, array):
+        self.array = array
+        self._copied = False
+
+    def _ensure_copied(self):
+        if not self._copied:
+            self.array = np.array(self.array)
+            self._copied = True
+
+    def __array__(self, dtype=None):
+        return np.asarray(self.array, dtype=dtype)
+
+    def __getitem__(self, key):
+        return type(self)(self.array[key])
+
+    def __setitem__(self, key, value):
+        self._ensure_copied()
+        self.array[key] = value
+
+
+class MemoryCachedArray(utils.NDArrayMixin):
+    def __init__(self, array):
+        self.array = array
+
+    def _ensure_cached(self):
+        if not isinstance(self.array, np.ndarray):
+            self.array = np.asarray(self.array)
+
+    def __array__(self, dtype=None):
+        self._ensure_cached()
+        return np.asarray(self.array, dtype=dtype)
+
+    def __getitem__(self, key):
+        return type(self)(self.array[key])
+
+    def __setitem__(self, key, value):
+        self.array[key] = value
+
+
 def orthogonally_indexable(array):
     if isinstance(array, np.ndarray):
         return NumpyIndexingAdapter(array)

@@ -259,19 +259,6 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         obj._file_obj = store
         return obj
 
-    def __getstate__(self):
-        """Load data in-memory before pickling (except for Dask data)"""
-        for v in self.variables.values():
-            if not isinstance(v.data, dask_array_type):
-                v.load()
-
-        # self.__dict__ is the default pickle object, we don't need to
-        # implement our own __setstate__ method to make pickle work
-        state = self.__dict__.copy()
-        # throw away any references to datastores in the pickle
-        state['_file_obj'] = None
-        return state
-
     @property
     def variables(self):
         """Frozen dictionary of xarray.Variable objects constituting this
@@ -331,9 +318,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         working with many file objects on disk.
         """
         # access .data to coerce everything to numpy or dask arrays
-        all_data = dict((k, v.data) for k, v in self.variables.items())
-        lazy_data = dict((k, v) for k, v in all_data.items()
-                         if isinstance(v, dask_array_type))
+        lazy_data = {k: v._data for k, v in self.variables.items()
+                     if isinstance(v._data, dask_array_type)}
         if lazy_data:
             import dask.array as da
 
@@ -342,6 +328,11 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
 
             for k, data in zip(lazy_data, evaluated_data):
                 self.variables[k].data = data
+
+        # load everything else sequentially
+        for k, v in self.variables.items():
+            if k not in lazy_data:
+                v.load()
 
         return self
 

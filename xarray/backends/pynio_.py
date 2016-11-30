@@ -1,19 +1,27 @@
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
+
+import functools
+
 import numpy as np
 
 from .. import Variable
 from ..core.utils import FrozenOrderedDict, Frozen, NDArrayMixin
 from ..core import indexing
 
-from .common import AbstractDataStore
+from .common import AbstractDataStore, DataStorePickleMixin
 
 
 class NioArrayWrapper(NDArrayMixin):
-    def __init__(self, array, ds):
-        self.array = array
-        self._ds = ds  # make an explicit reference because pynio uses weakrefs
+
+    def __init__(self, variable_name, datastore):
+        self.datastore = datastore
+        self.variable_name = variable_name
+
+    @property
+    def array(self):
+        return self.datastore.ds.variables[self.variable_name]
 
     @property
     def dtype(self):
@@ -25,19 +33,22 @@ class NioArrayWrapper(NDArrayMixin):
         return self.array[key]
 
 
-class NioDataStore(AbstractDataStore):
+class NioDataStore(AbstractDataStore, DataStorePickleMixin):
     """Store for accessing datasets via PyNIO
     """
     def __init__(self, filename, mode='r'):
         import Nio
-        self.ds = Nio.open_file(filename, mode=mode)
+        opener = functools.partial(Nio.open_file, filename, mode=mode)
+        self.ds = opener()
+        self._opener = opener
+        self._mode = mode
 
-    def open_store_variable(self, var):
-        data = indexing.LazilyIndexedArray(NioArrayWrapper(var, self.ds))
+    def open_store_variable(self, name, var):
+        data = indexing.LazilyIndexedArray(NioArrayWrapper(name, self))
         return Variable(var.dimensions, data, var.attributes)
 
     def get_variables(self):
-        return FrozenOrderedDict((k, self.open_store_variable(v))
+        return FrozenOrderedDict((k, self.open_store_variable(k, v))
                                  for k, v in self.ds.variables.iteritems())
 
     def get_attrs(self):

@@ -6,6 +6,7 @@ from __future__ import print_function
 import contextlib
 import functools
 import itertools
+import os.path
 import re
 import warnings
 from collections import Mapping, MutableMapping, Iterable
