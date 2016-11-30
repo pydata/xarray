@@ -6,6 +6,12 @@ from functools import partial
 
 import numpy as np
 
+try:
+    import distributed.protocol
+    HAS_DISTRIBUTED = True
+except ImportError:
+    HAS_DISTRIBUTED = False
+
 from .. import Variable
 from ..conventions import pop_to, cf_encoder
 from ..core import indexing
@@ -39,6 +45,20 @@ class BaseNetCDF4Array(NDArrayMixin):
             # string concatenation via conventions.decode_cf_variable
             dtype = np.dtype('O')
         return dtype
+
+    def __getstate__(self):
+        if not HAS_DISTRIBUTED:
+            raise NotImplementedError
+        header, frames = distributed.protocol.serialize(self.array)
+        return (header, frames, self.is_remote)
+
+    def __setstate__(self, state):
+        if not HAS_DISTRIBUTED:
+            raise NotImplementedError
+        header, frames, is_remote = state
+        array = distributed.protocol.deserialize(header, frames)
+        self.array = array
+        self.is_remote = is_remote
 
 
 class NetCDF4ArrayWrapper(BaseNetCDF4Array):
