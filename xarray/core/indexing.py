@@ -6,6 +6,12 @@ from collections import defaultdict
 import numpy as np
 import pandas as pd
 
+try:
+    import distributed.protocol
+    HAS_DISTRIBUTED = True
+except ImportError:
+    HAS_DISTRIBUTED = False
+
 from . import utils
 from .pycompat import iteritems, range, dask_array_type, suppress
 from .utils import is_full_slice, is_dict_like
@@ -401,6 +407,31 @@ class LazilyIndexedArray(utils.NDArrayMixin):
     def __repr__(self):
         return ('%s(array=%r, key=%r)' %
                 (type(self).__name__, self.array, self.key))
+
+
+def serialize_lazily_indexed_array(array):
+    header, frames = distributed.protocol.serialize(array.array)
+    if 'sub-type' not in header:
+        header['sub-type'] = []
+    header['sub-type'] = list(header['sub-type']) + [header.pop('type')]
+    frames.append(distributed.protocol.pickle.dumps(array.key))
+    return header, frames
+
+
+def deserialize_lazily_indexed_array(header, frames):
+    key = distributed.protocol.pickle.loads(frames[-1])
+    if header.get('sub-type'):
+        header['type'] = header['sub-type'][-1]
+        header['sub-type'] = header['sub-type'][:-1]
+    array = distributed.protocol.deserialize(header, frames[:-1])
+    return LazilyIndexedArray(array, key)
+
+
+if HAS_DISTRIBUTED:
+    distributed.protocol.register_serialization(
+        LazilyIndexedArray,
+        serialize_lazily_indexed_array,
+        deserialize_lazily_indexed_array)
 
 
 def orthogonally_indexable(array):

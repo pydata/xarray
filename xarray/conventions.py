@@ -11,6 +11,12 @@ import pandas as pd
 from collections import defaultdict
 from pandas.tslib import OutOfBoundsDatetime
 
+try:
+    import distributed.protocol
+    HAS_DISTRIBUTED = True
+except ImportError:
+    HAS_DISTRIBUTED = False
+
 from .core import indexing, ops, utils
 from .core.formatting import format_timestamp, first_n_items, last_item
 from .core.variable import as_variable, Variable
@@ -471,6 +477,27 @@ class CharToStringArray(utils.NDArrayMixin):
                 raise IndexError('too many indices')
             values = char_to_string(self.array[key])
         return values
+
+
+def serialize_char_to_string_array(array):
+    header, frames = distributed.protocol.serialize(array.array)
+    header['__char_to_string_array__array_type'] = header.get('type')
+    return header, frames
+
+
+def deserialize_char_to_string_array(header, frames):
+    type_ = header.pop('__char_to_string_array__array_type', None)
+    if type_ is not None:
+        header['type'] = type_
+    array = distributed.protocol.deserialize(header, frames)
+    return CharToStringArray(array)
+
+
+if HAS_DISTRIBUTED:
+    distributed.protocol.register_serialization(
+        CharToStringArray,
+        serialize_char_to_string_array,
+        deserialize_char_to_string_array)
 
 
 class NativeEndiannessArray(utils.NDArrayMixin):
