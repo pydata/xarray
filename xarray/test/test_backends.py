@@ -40,6 +40,9 @@ except ImportError:
     pass
 
 
+ON_WINDOWS = sys.platform == 'win32'
+
+
 def open_example_dataset(name, *args, **kwargs):
     return open_dataset(os.path.join(os.path.dirname(__file__), 'data', name),
                         *args, **kwargs)
@@ -176,18 +179,18 @@ class DatasetIOTestCases(object):
 
     def test_pickle(self):
         expected = Dataset({'foo': ('x', [42])})
-        with self.roundtrip(expected) as roundtripped:
+        with self.roundtrip(
+                expected, allow_cleanup_failure=ON_WINDOWS) as roundtripped:
             raw_pickle = pickle.dumps(roundtripped)
             # windows doesn't like opening the same file twice
             roundtripped.close()
             unpickled_ds = pickle.loads(raw_pickle)
             self.assertDatasetIdentical(expected, unpickled_ds)
 
-    @pytest.mark.skipif(sys.platform == 'win32',
-                        reason='all files on Windows must be closed to delete')
     def test_pickle_dataarray(self):
         expected = Dataset({'foo': ('x', [42])})
-        with self.roundtrip(expected) as roundtripped:
+        with self.roundtrip(
+                expected, allow_cleanup_failure=ON_WINDOWS) as roundtripped:
             unpickled_array = pickle.loads(pickle.dumps(roundtripped['foo']))
             self.assertDatasetIdentical(expected['foo'], unpickled_array)
 
@@ -455,13 +458,17 @@ _counter = itertools.count()
 
 
 @contextlib.contextmanager
-def create_tmp_file(suffix='.nc'):
+def create_tmp_file(suffix='.nc', allow_cleanup_failure=False):
     temp_dir = tempfile.mkdtemp()
     path = os.path.join(temp_dir, 'temp-%s%s' % (next(_counter), suffix))
     try:
         yield path
     finally:
-        shutil.rmtree(temp_dir)
+        try:
+            shutil.rmtree(temp_dir)
+        except OSError:
+            if not allow_cleanup_failure:
+                raise
 
 
 class BaseNetCDF4Test(CFEncodedDataTest):
@@ -671,8 +678,10 @@ class NetCDF4DataTest(BaseNetCDF4Test, TestCase):
                 yield store
 
     @contextlib.contextmanager
-    def roundtrip(self, data, save_kwargs={}, open_kwargs={}):
-        with create_tmp_file() as tmp_file:
+    def roundtrip(self, data, save_kwargs={}, open_kwargs={},
+                  allow_cleanup_failure=False):
+        with create_tmp_file(
+                allow_cleanup_failure=allow_cleanup_failure) as tmp_file:
             data.to_netcdf(tmp_file, **save_kwargs)
             with open_dataset(tmp_file, **open_kwargs) as ds:
                 yield ds
@@ -710,9 +719,11 @@ class NetCDF4DataTest(BaseNetCDF4Test, TestCase):
 @requires_dask
 class NetCDF4ViaDaskDataTest(NetCDF4DataTest):
     @contextlib.contextmanager
-    def roundtrip(self, data, save_kwargs={}, open_kwargs={}):
+    def roundtrip(self, data, save_kwargs={}, open_kwargs={},
+                  allow_cleanup_failure=False):
         with NetCDF4DataTest.roundtrip(
-                self, data, save_kwargs, open_kwargs) as ds:
+                self, data, save_kwargs, open_kwargs,
+                allow_cleanup_failure) as ds:
             yield ds.chunk()
 
     def test_unsorted_index_raises(self):
@@ -724,12 +735,6 @@ class NetCDF4ViaDaskDataTest(NetCDF4DataTest):
         # caching behavior differs for dask
         pass
 
-    @pytest.mark.skipif(
-        sys.platform == 'win32',
-        reason='something related to deleting unclosed files, see GH1128')
-    def test_pickle(self):
-        super(NetCDF4ViaDaskDataTest, self).test_pickle()
-
 
 @requires_scipy
 class ScipyInMemoryDataTest(CFEncodedDataTest, Only32BitTypes, TestCase):
@@ -739,7 +744,8 @@ class ScipyInMemoryDataTest(CFEncodedDataTest, Only32BitTypes, TestCase):
         yield backends.ScipyDataStore(fobj, 'w')
 
     @contextlib.contextmanager
-    def roundtrip(self, data, save_kwargs={}, open_kwargs={}):
+    def roundtrip(self, data, save_kwargs={}, open_kwargs={},
+                  allow_cleanup_failure=False):
         serialized = data.to_netcdf(**save_kwargs)
         with open_dataset(serialized, engine='scipy', **open_kwargs) as ds:
             yield ds
@@ -762,8 +768,10 @@ class ScipyOnDiskDataTest(CFEncodedDataTest, Only32BitTypes, TestCase):
                 yield store
 
     @contextlib.contextmanager
-    def roundtrip(self, data, save_kwargs={}, open_kwargs={}):
-        with create_tmp_file() as tmp_file:
+    def roundtrip(self, data, save_kwargs={}, open_kwargs={},
+                  allow_cleanup_failure=False):
+        with create_tmp_file(
+                allow_cleanup_failure=allow_cleanup_failure) as tmp_file:
             data.to_netcdf(tmp_file, engine='scipy', **save_kwargs)
             with open_dataset(tmp_file, engine='scipy', **open_kwargs) as ds:
                 yield ds
@@ -801,8 +809,10 @@ class NetCDF3ViaNetCDF4DataTest(CFEncodedDataTest, Only32BitTypes, TestCase):
                 yield store
 
     @contextlib.contextmanager
-    def roundtrip(self, data, save_kwargs={}, open_kwargs={}):
-        with create_tmp_file() as tmp_file:
+    def roundtrip(self, data, save_kwargs={}, open_kwargs={},
+                  allow_cleanup_failure=False):
+        with create_tmp_file(
+                allow_cleanup_failure=allow_cleanup_failure) as tmp_file:
             data.to_netcdf(tmp_file, format='NETCDF3_CLASSIC',
                            engine='netcdf4', **save_kwargs)
             with open_dataset(tmp_file, engine='netcdf4', **open_kwargs) as ds:
@@ -820,8 +830,10 @@ class NetCDF4ClassicViaNetCDF4DataTest(CFEncodedDataTest, Only32BitTypes,
                 yield store
 
     @contextlib.contextmanager
-    def roundtrip(self, data, save_kwargs={}, open_kwargs={}):
-        with create_tmp_file() as tmp_file:
+    def roundtrip(self, data, save_kwargs={}, open_kwargs={},
+                  allow_cleanup_failure=False):
+        with create_tmp_file(
+                allow_cleanup_failure=allow_cleanup_failure) as tmp_file:
             data.to_netcdf(tmp_file, format='NETCDF4_CLASSIC',
                            engine='netcdf4', **save_kwargs)
             with open_dataset(tmp_file, engine='netcdf4', **open_kwargs) as ds:
@@ -838,8 +850,10 @@ class GenericNetCDFDataTest(CFEncodedDataTest, Only32BitTypes, TestCase):
         pass
 
     @contextlib.contextmanager
-    def roundtrip(self, data, save_kwargs={}, open_kwargs={}):
-        with create_tmp_file() as tmp_file:
+    def roundtrip(self, data, save_kwargs={}, open_kwargs={},
+                  allow_cleanup_failure=False):
+        with create_tmp_file(
+                allow_cleanup_failure=allow_cleanup_failure) as tmp_file:
             data.to_netcdf(tmp_file, format='netcdf3_64bit', **save_kwargs)
             with open_dataset(tmp_file, **open_kwargs) as ds:
                 yield ds
@@ -888,8 +902,10 @@ class H5NetCDFDataTest(BaseNetCDF4Test, TestCase):
             yield backends.H5NetCDFStore(tmp_file, 'w')
 
     @contextlib.contextmanager
-    def roundtrip(self, data, save_kwargs={}, open_kwargs={}):
-        with create_tmp_file() as tmp_file:
+    def roundtrip(self, data, save_kwargs={}, open_kwargs={},
+                  allow_cleanup_failure=False):
+        with create_tmp_file(
+                allow_cleanup_failure=allow_cleanup_failure) as tmp_file:
             data.to_netcdf(tmp_file, engine='h5netcdf', **save_kwargs)
             with open_dataset(tmp_file, engine='h5netcdf', **open_kwargs) as ds:
                 yield ds
@@ -938,7 +954,8 @@ class DaskTest(TestCase, DatasetIOTestCases):
         yield Dataset()
 
     @contextlib.contextmanager
-    def roundtrip(self, data, save_kwargs={}, open_kwargs={}):
+    def roundtrip(self, data, save_kwargs={}, open_kwargs={},
+                  allow_cleanup_failure=False):
         yield data.chunk()
 
     def test_roundtrip_datetime_data(self):
@@ -1141,8 +1158,10 @@ class TestPyNio(CFEncodedDataTest, Only32BitTypes, TestCase):
         pass
 
     @contextlib.contextmanager
-    def roundtrip(self, data, save_kwargs={}, open_kwargs={}):
-        with create_tmp_file() as tmp_file:
+    def roundtrip(self, data, save_kwargs={}, open_kwargs={},
+                  allow_cleanup_failure=False):
+        with create_tmp_file(
+                allow_cleanup_failure=allow_cleanup_failure) as tmp_file:
             data.to_netcdf(tmp_file, engine='scipy', **save_kwargs)
             with open_dataset(tmp_file, engine='pynio', **open_kwargs) as ds:
                 yield ds
