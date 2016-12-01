@@ -9,8 +9,8 @@ from .dataset import Dataset
 from .pycompat import PY2
 
 
-class AccessorRegistrationError(Exception):
-    """Exception for conflicts in accessor registration."""
+class AccessorRegistrationWarning(Warning):
+    """Warning for conflicts in accessor registration."""
 
 
 class _CachedAccessor(object):
@@ -47,7 +47,9 @@ def _register_accessor(name, cls):
             warnings.warn(
                 'registration of accessor %r under name %r for type %r is '
                 'overriding a preexisting attribute with the same name.'
-                % (accessor, name, cls), stacklevel=2)
+                % (accessor, name, cls),
+                AccessorRegistrationWarning,
+                stacklevel=2)
         setattr(cls, name, _CachedAccessor(name, accessor))
         return accessor
     return decorator
