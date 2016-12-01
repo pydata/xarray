@@ -4,6 +4,7 @@ from __future__ import print_function
 import numpy as np
 import pandas as pd
 import pickle
+import pytest
 from copy import deepcopy
 from textwrap import dedent
 
@@ -263,8 +264,9 @@ class TestDataArray(TestCase):
         with self.assertRaisesRegexp(ValueError, 'conflicting MultiIndex'):
             DataArray(np.random.rand(4, 4),
                       [('x', self.mindex), ('y', self.mindex)])
+        with self.assertRaisesRegexp(ValueError, 'conflicting MultiIndex'):
             DataArray(np.random.rand(4, 4),
-                      [('x', mindex), ('level_1', range(4))])
+                      [('x', self.mindex), ('level_1', range(4))])
 
     def test_constructor_from_self_described(self):
         data = [[-0.1, 21], [0, 2]]
@@ -879,7 +881,6 @@ class TestDataArray(TestCase):
     def test_non_overlapping_dataarrays_return_empty_result(self):
 
         a = DataArray(range(5), [('x', range(5))])
-        b = DataArray(range(5), [('x', range(1, 6))])
         result = a.isel(x=slice(2)) + a.isel(x=slice(2, None))
         self.assertEqual(len(result['x']), 0)
 
@@ -888,7 +889,6 @@ class TestDataArray(TestCase):
         a = DataArray(data=[])
         result = a * a
         self.assertEqual(len(result['dim_0']), 0)
-
 
     def test_inplace_math_basics(self):
         x = self.x
@@ -1414,10 +1414,13 @@ class TestDataArray(TestCase):
         self.assertDataArrayIdentical(expected, actual)
 
     def make_groupby_multidim_example_array(self):
-        return DataArray([[[0,1],[2,3]],[[5,10],[15,20]]],
-                        coords={'lon': (['ny', 'nx'], [[30., 40.], [40., 50.]] ),
-                                'lat': (['ny', 'nx'], [[10., 10.], [20., 20.]] ),},
-                        dims=['time', 'ny', 'nx'])
+        return DataArray(
+            [[[0, 1], [2, 3]], [[5, 10], [15, 20]]],
+            coords={
+                'lon': (['ny', 'nx'], [[30., 40.], [40., 50.]]),
+                'lat': (['ny', 'nx'], [[10., 10.], [20., 20.]]),
+            },
+            dims=['time', 'ny', 'nx'])
 
     def test_groupby_multidim(self):
         array = self.make_groupby_multidim_example_array()
@@ -2067,10 +2070,7 @@ class TestDataArray(TestCase):
         self.assertEqual(len(ma.mask), N)
 
     def test_to_and_from_cdms2(self):
-        try:
-            import cdms2
-        except ImportError:
-            raise unittest.SkipTest('cdms2 not installed')
+        pytest.importorskip('cdms2')
 
         original = DataArray(np.arange(6).reshape(2, 3),
                              [('distance', [-2, 2], {'units': 'meters'}),
@@ -2182,6 +2182,7 @@ class TestDataArray(TestCase):
         expected = DataArray([1] * 9, dims=['lon'], coords=[range(1, 10)],
                              name='lon')
         actual = lon.diff('lon')
+        self.assertDataArrayEqual(expected, actual)
 
     def test_shift(self):
         arr = DataArray([1, 2, 3], dims='x')
