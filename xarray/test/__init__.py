@@ -215,6 +215,24 @@ class TestCase(unittest.TestCase):
         self.assertVariableAllClose(ar1, ar2, rtol=rtol, atol=atol)
         self.assertCoordinatesEqual(ar1, ar2)
 
+def assert_equal(a, b):
+    import xarray as xr
+    ___tracebackhide__ = True
+    assert type(a) == type(b)
+    if isinstance(a, xr.DataArray):
+        assert_equal(a.data_vars, b.data_vars)
+        assert_equal(a.coords, b.coords)
+    elif isinstance(a, xr.Variable):
+        assert as_variable(a).equals(b), (a, b)
+    elif isinstance(a, xr.Dataset):
+        assert a.equals(b), (a, b)
+    elif isinstance(a, dict):  # coords
+        assert sorted(a.coords) == sorted(b.coords)
+        for k in a.coords:
+            v1 = a.coords[k]
+            v2 = b.coords[k]
+            assert_equal(v1, v2)
+
 
 class UnexpectedDataAccess(Exception):
     pass
