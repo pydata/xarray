@@ -104,6 +104,11 @@ Enhancements
 - New top-level functions :py:func:`~xarray.full_like`,
   :py:func:`~xarray.zeros_like`, and :py:func:`~xarray.ones_like`
   By `Guido Imperiale <https://github.com/crusaderky>`_.
+- Overriding a preexisting attribute with
+  :py:func:`~xarray.register_dataset_accessor` or
+  :py:func:`~xarray.register_dataarray_accessor` now issues a warning instead of
+  errors (:issue:`1082`).
+  By `Stephan Hoyer <https://github.com/shoyer>`_.
 
 Bug fixes
 ~~~~~~~~~

@@ -2,6 +2,7 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 import traceback
+import warnings
 
 from .dataarray import DataArray
 from .dataset import Dataset
@@ -43,10 +44,10 @@ class _CachedAccessor(object):
 def _register_accessor(name, cls):
     def decorator(accessor):
         if hasattr(cls, name):
-            raise AccessorRegistrationError(
-                'cannot register accessor %r under name %r for type %r '
-                'because an attribute with that name already exists.'
-                % (accessor, name, cls))
+            warnings.warn(
+                'registration of accessor %r under name %r for type %r is '
+                'overriding a preexisting attribute with the same name.'
+                % (accessor, name, cls), stacklevel=2)
         setattr(cls, name, _CachedAccessor(name, accessor))
         return accessor
     return decorator
@@ -58,7 +59,8 @@ def register_dataarray_accessor(name):
     Parameters
     ----------
     name : str
-        Name under which the accessor should be registered.
+        Name under which the accessor should be registered. A warning is issued
+        if this name conflicts with a preexisting attribute.
 
     Examples
     --------
@@ -105,7 +107,8 @@ def register_dataset_accessor(name):
     Parameters
     ----------
     name : str
-        Name under which the property should be registered.
+        Name under which the accessor should be registered. A warning is issued
+        if this name conflicts with a preexisting attribute.
 
     See also
     --------
