@@ -314,6 +314,13 @@ def inject_bottleneck_rolling_methods(cls):
             name=func.__name__, da_or_ds='DataArray')
         setattr(cls, name, func)
 
+    # bottleneck doesn't offer rolling_count, so we construct it ourselves
+    func = rolling_count
+    func.__name__ = 'count'
+    func.__doc__ = _ROLLING_REDUCE_DOCSTRING_TEMPLATE.format(
+        name=func.__name__)
+    setattr(cls, 'count', func)
+
     # bottleneck rolling methods
     if has_bottleneck:
         # TODO: Bump the required version of bottlneck to 1.1 and remove all
@@ -364,5 +371,6 @@ def inject_datasetrolling_methods(cls):
     # bottleneck doesn't offer rolling_count, so we construct it ourselves
     func = rolling_count
     func.__name__ = 'count'
-    func.__doc__ = _ROLLING_REDUCE_DOCSTRING_TEMPLATE.format(name=func.__name__)
+    func.__doc__ = _ROLLING_REDUCE_DOCSTRING_TEMPLATE.format(
+        name=func.__name__)
     setattr(cls, 'count', func)
