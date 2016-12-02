@@ -104,6 +104,10 @@ Enhancements
 - New top-level functions :py:func:`~xarray.full_like`,
   :py:func:`~xarray.zeros_like`, and :py:func:`~xarray.ones_like`
   By `Guido Imperiale <https://github.com/crusaderky>`_.
+- Options for axes sharing between subplots are exposed to
+  :py:class:`FacetGrid` and :py:func:`~xarray.plot.plot`, so axes
+  sharing can be disabled for polar plots.
+  By `Bas Hoonhout <https://github.com/hoonhout>`_.
 
 Bug fixes
 ~~~~~~~~~
