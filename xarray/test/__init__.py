@@ -215,24 +215,56 @@ class TestCase(unittest.TestCase):
         self.assertVariableAllClose(ar1, ar2, rtol=rtol, atol=atol)
         self.assertCoordinatesEqual(ar1, ar2)
 
-def assert_equal(a, b):
+def assert_xarray_equal(a, b):
+    import xarray as xr
+    ___tracebackhide__ = True
+    assert type(a) == type(b)
+    if isinstance(a, xr.Dataset):
+        assert_xarray_equal(a.data_vars, b.data_vars)
+        assert_xarray_equal(a.coords, b.coords)
+    elif isinstance(a, (xr.Variable, xr.DataArray, xr.Coordinate)):
+        assert a.equals(b), '{}/n{}'.format(a, b)
+    elif isinstance(a, xr.core.coordinates.AbstractCoordinates):
+        assert sorted(a.coords) == sorted(b.coords)
+        [assert_xarray_equal(a.coords[k], b.coords[k]) for k in a.coords]
+    else:
+        raise TypeError('{} not supported by assertion comparison'
+                        .format(type(a)))
+
+def assert_xarray_identical(a, b):
     import xarray as xr
     ___tracebackhide__ = True
     assert type(a) == type(b)
     if isinstance(a, xr.DataArray):
-        assert_equal(a.data_vars, b.data_vars)
-        assert_equal(a.coords, b.coords)
-    elif isinstance(a, xr.Variable):
-        assert as_variable(a).equals(b), (a, b)
-    elif isinstance(a, xr.Dataset):
-        assert a.equals(b), (a, b)
-    elif isinstance(a, dict):  # coords
-        assert sorted(a.coords) == sorted(b.coords)
-        for k in a.coords:
-            v1 = a.coords[k]
-            v2 = b.coords[k]
-            assert_equal(v1, v2)
+        assert a.name == b.name
+        assert_xarray_identical(a._to_temp_dataset(), b._to_temp_dataset())
+    elif isinstance(a, (xr.Dataset, xr.Variable)):
+        assert a.identical(b), '{}/n{}'.format(a, b)
+    else:
+        raise TypeError('{} not supported by assertion comparison'
+                        .format(type(a)))
 
+def assert_xarray_close(a, b, rtol=1e-05, atol=1e-08):
+    import xarray as xr
+    ___tracebackhide__ = True
+    assert type(a) == type(b)
+    if isinstance(a, xr.DataArray):
+        assert_xarray_close(a.variable, b.variable, rtol=rtol, atol=atol)
+        assert_xarray_equal(a.coords, b.coords)
+    elif isinstance(a, xr.Dataset):
+        assert sorted(a, key=str) == sorted(a, key=str)
+        assert_xarray_equal(a.coords, b.coords)
+        [assert_xarray_close(
+            a.variables[k], b.variables[k], rtol=1e-05, atol=1e-08)
+         for k in a]
+    elif isinstance(a, xr.Variable):
+        assert a.dims == b.dims
+        allclose = data_allclose_or_equiv(
+            a.values, b.values, rtol=rtol, atol=atol)
+        assert allclose, '{}/n{}'.format(a.values, b.values)
+    else:
+        raise TypeError('{} not supported by assertion comparison'
+                        .format(type(a)))
 
 class UnexpectedDataAccess(Exception):
     pass
