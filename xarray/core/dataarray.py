@@ -640,7 +640,7 @@ class DataArray(AbstractArray, BaseDataObject):
         ds = self._to_temp_dataset().chunk(chunks)
         return self._from_temp_dataset(ds)
 
-    def isel(self, **indexers):
+    def isel(self, drop=False, **indexers):
         """Return a new DataArray whose dataset is given by integer indexing
         along the specified dimension(s).
 
@@ -649,10 +649,10 @@ class DataArray(AbstractArray, BaseDataObject):
         Dataset.isel
         DataArray.sel
         """
-        ds = self._to_temp_dataset().isel(**indexers)
+        ds = self._to_temp_dataset().isel(drop=drop, **indexers)
         return self._from_temp_dataset(ds)
 
-    def sel(self, method=None, tolerance=None, **indexers):
+    def sel(self, method=None, tolerance=None, drop=False, **indexers):
         """Return a new DataArray whose dataset is given by selecting
         index labels along the specified dimension(s).
 
@@ -664,7 +664,8 @@ class DataArray(AbstractArray, BaseDataObject):
         pos_indexers, new_indexes = indexing.remap_label_indexers(
             self, indexers, method=method, tolerance=tolerance
         )
-        return self.isel(**pos_indexers)._replace_indexes(new_indexes)
+        result = self.isel(drop=drop, **pos_indexers)
+        return result._replace_indexes(new_indexes)
 
     def isel_points(self, dim='points', **indexers):
         """Return a new DataArray whose dataset is given by pointwise integer

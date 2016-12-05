@@ -196,8 +196,7 @@ def _as_array_or_item(data):
     return data
 
 
-class Variable(common.AbstractArray, common.SharedMethodsMixin,
-               utils.NdimSizeLenMixin):
+class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
 
     """A netcdf-like variable consisting of dimensions, data and attributes
     which describe a single Array. A single Variable object is not fully
@@ -552,6 +551,29 @@ class Variable(common.AbstractArray, common.SharedMethodsMixin,
             if dim in indexers:
                 key[i] = indexers[dim]
         return self[tuple(key)]
+
+    def squeeze(self, dim=None):
+        """Return a new object with squeezed data.
+
+        Parameters
+        ----------
+        dim : None or str or tuple of str, optional
+            Selects a subset of the length one dimensions. If a dimension is
+            selected with length greater than one, an error is raised. If
+            None, all length one dimensions are squeezed.
+
+        Returns
+        -------
+        squeezed : same type as caller
+            This object, but with with all or a subset of the dimensions of
+            length 1 removed.
+
+        See Also
+        --------
+        numpy.squeeze
+        """
+        dims = common.get_squeeze_dims(self, dim)
+        return self.isel(**{d: 0 for d in dims})
 
     def _shift_one_dim(self, dim, count):
         axis = self.get_axis_num(dim)
