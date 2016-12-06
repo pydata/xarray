@@ -107,7 +107,7 @@ Enhancements
 - Overriding a preexisting attribute with
   :py:func:`~xarray.register_dataset_accessor` or
   :py:func:`~xarray.register_dataarray_accessor` now issues a warning instead of
-  errors (:issue:`1082`).
+  raising an error (:issue:`1082`).
   By `Stephan Hoyer <https://github.com/shoyer>`_.
 
 Bug fixes

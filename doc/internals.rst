@@ -95,7 +95,7 @@ defined that returns an instance of your class:
 
 However, using the register accessor decorators is preferable to simply adding
 your own ad-hoc property (i.e., ``Dataset.geo = property(...)``), for several
-of reasons:
+reasons:
 
 1. It ensures that the name of your property does not accidentally conflict with
    any other attributes or methods (including other accessors).
