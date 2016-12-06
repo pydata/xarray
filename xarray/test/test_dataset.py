@@ -1780,6 +1780,19 @@ class TestDataset(TestCase):
         selected = data.squeeze(drop=False)
         self.assertDatasetIdentical(expected, selected)
 
+        data = Dataset({'foo': (('x', 'y'), [[1]])}, {'x': [0], 'y': [0]})
+        expected = Dataset({'foo': 1})
+        selected = data.squeeze(drop=True)
+        self.assertDatasetIdentical(expected, selected)
+
+        expected = Dataset({'foo': ('x', [1])}, {'x': [0]})
+        selected = data.squeeze(dim='y', drop=True)
+        self.assertDatasetIdentical(expected, selected)
+
+        data = Dataset({'foo': (('x',), [])}, {'x': []})
+        selected = data.squeeze(drop=True)
+        self.assertDatasetIdentical(data, selected)
+
     def test_groupby(self):
         data = Dataset({'z': (['x', 'y'], np.random.randn(3, 5))},
                        {'x': ('x', list('abc')),
