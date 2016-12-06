@@ -52,7 +52,7 @@ class TestAccessor(TestCase):
         del xr.Dataset.demo
         assert not hasattr(xr.Dataset, 'demo')
 
-        with self.assertRaises(xr.core.extensions.AccessorRegistrationError):
+        with self.assertWarns('overriding a preexisting attribute'):
             @xr.register_dataarray_accessor('demo')
             class Foo(object):
                 pass
