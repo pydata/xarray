@@ -61,8 +61,8 @@ and values given by ``DataArray`` objects.
    Dataset.__setitem__
    Dataset.__delitem__
    Dataset.update
-   Dataset.iteritems
-   Dataset.itervalues
+   Dataset.items
+   Dataset.values
 
 Dataset contents
 ----------------
