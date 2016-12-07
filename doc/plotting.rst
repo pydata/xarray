@@ -25,7 +25,7 @@ Matplotlib must be installed before xarray can plot.
 
 For more extensive plotting applications consider the following projects:
 
-- `Seaborn <http://stanford.edu/~mwaskom/software/seaborn/>`_: "provides
+- `Seaborn <http://seaborn.pydata.org/>`_: "provides
   a high-level interface for drawing attractive statistical graphics."
   Integrates well with pandas.
 
@@ -303,8 +303,8 @@ You can also specify a list of discrete colors through the ``colors`` argument:
     @savefig plotting_custom_colors_levels.png width=4in
     air2d.plot(levels=[0, 12, 18, 30], colors=flatui)
 
-Finally, if you have `Seaborn <http://stanford.edu/~mwaskom/software/seaborn/>`_
-installed, you can also specify a `seaborn` color palette to the ``cmap``
+Finally, if you have `Seaborn <http://seaborn.pydata.org/>`_
+installed, you can also specify a seaborn color palette to the ``cmap``
 argument. Note that ``levels`` *must* be specified with seaborn color palettes
 if using ``imshow`` or ``pcolormesh`` (but not with ``contour`` or ``contourf``,
 since levels are chosen automatically).
@@ -356,7 +356,7 @@ arguments to the xarray plotting methods/functions. This returns a
     g_simple = t.plot(x='lon', y='lat', col='time', col_wrap=3)
 
 4 dimensional
-~~~~~~~~~~~~~~
+~~~~~~~~~~~~~
 
 For 4 dimensional arrays we can use the rows and columns of the grids.
 Here we create a 4 dimensional array by taking the original data and adding
@@ -393,8 +393,8 @@ FacetGrid Objects
 
 :py:class:`xarray.plot.FacetGrid` is used to control the behavior of the
 multiple plots.
-It borrows an API and code from `Seaborn
-<http://stanford.edu/~mwaskom/software/seaborn/tutorial/axis_grids.html>`_.
+It borrows an API and code from `Seaborn's FacetGrid
+<http://seaborn.pydata.org/tutorial/axis_grids.html>`_.
 The structure is contained within the ``axes`` and ``name_dicts``
 attributes, both 2d Numpy object arrays.
 

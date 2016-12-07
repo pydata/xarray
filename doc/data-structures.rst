@@ -230,6 +230,7 @@ variables (``data_vars``), coordinates (``coords``) and attributes (``attrs``).
 
 ``data_vars`` are supplied as a dictionary with each key as the name of the variable and each
 value as one of:
+
 - A :py:class:`~xarray.DataArray`
 - A tuple of the form ``(dims, data[, attrs])``
 - A pandas object
@@ -276,8 +277,9 @@ Where a pandas object is supplied as a value, the names of its indexes are used 
 names, and its data is aligned to any existing dimensions.
 
 You can also create an dataset from:
+
 - A :py:class:`pandas.DataFrame` or :py:class:`pandas.Panel` along its columns and items
-  respectively, by passing it into the :py:class:`xarray.Dataset` directly
+  respectively, by passing it into the :py:class:`~xarray.Dataset` directly
 - A :py:class:`pandas.DataFrame` with :py:meth:`Dataset.from_dataframe <xarray.Dataset.from_dataframe>`,
   which will additionally handle MultiIndexes See :ref:`pandas`
 - A netCDF file on disk with :py:func:`~xarray.open_dataset`. See :ref:`io`.

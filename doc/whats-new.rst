@@ -177,7 +177,7 @@ Enhancements
 ~~~~~~~~~~~~
 
 - New documentation on :ref:`panel transition`. By
-  `Maximilian Roos <https://github.com/MaximilianR>`_.
+  `Maximilian Roos <https://github.com/maximilianr>`_.
 - New ``Dataset`` and ``DataArray`` methods :py:meth:`~xarray.Dataset.to_dict`
   and :py:meth:`~xarray.Dataset.from_dict` to allow easy conversion between
   dictionaries and xarray objects (:issue:`432`). See
@@ -254,7 +254,7 @@ Enhancements
   method called :py:meth:`~xarray.Dataset.groupby_bins` has also been added to
   allow users to specify bins for grouping. The new features are described in
   :ref:`groupby.multidim` and :ref:`examples.multidim`.
-  By `Ryan Abernathey <http://github.com/rabernat>`_.
+  By `Ryan Abernathey <https://github.com/rabernat>`_.
 
 - DataArray and Dataset method :py:meth:`where` now supports a ``drop=True``
   option that clips coordinate elements that are fully masked.  By
