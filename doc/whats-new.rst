@@ -109,6 +109,10 @@ Enhancements
   :py:func:`~xarray.register_dataarray_accessor` now issues a warning instead of
   raising an error (:issue:`1082`).
   By `Stephan Hoyer <https://github.com/shoyer>`_.
+- Options for axes sharing between subplots are exposed to
+  :py:class:`FacetGrid` and :py:func:`~xarray.plot.plot`, so axes
+  sharing can be disabled for polar plots.
+  By `Bas Hoonhout <https://github.com/hoonhout>`_.
 
 Bug fixes
 ~~~~~~~~~
