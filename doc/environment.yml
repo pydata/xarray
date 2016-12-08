@@ -10,7 +10,7 @@ dependencies:
   - matplotlib
   - seaborn
   - dask
-  - ipython
+  - ipython=4
   - sphinx
   - netCDF4
   - hdf4  # temporary install to get netCD4 working (GH1106)
