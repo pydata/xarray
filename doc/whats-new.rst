@@ -113,7 +113,7 @@ Bug fixes
 
 - Fix issues with variables where both attributes ``_FillValue`` and
   ``missing_value`` are set to ``NaN`` (:issue:`997`).
-  By `Marco ZÃ¼hlke <https://github.com/mzuehlke>`_.
+  By `Marco Zühlke <https://github.com/mzuehlke>`_.
 
 - ``.where()`` and ``.fillna()`` now preserve attributes (:issue:`1009`).
   By `Fabien Maussion <https://github.com/fmaussion>`_.
