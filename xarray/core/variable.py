@@ -1,7 +1,10 @@
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
 from datetime import timedelta
+from collections import defaultdict
 import functools
 import itertools
-import warnings
 
 import numpy as np
 import pandas as pd
@@ -10,6 +13,7 @@ from . import common
 from . import indexing
 from . import ops
 from . import utils
+from . import nputils
 from .pycompat import basestring, OrderedDict, zip, dask_array_type
 from .indexing import (PandasIndexAdapter, orthogonally_indexable,
                        LazyIntegerRange)
@@ -22,12 +26,10 @@ except ImportError:
     pass
 
 
-def as_variable(obj, key=None, strict=True, copy=False):
-    """Convert an object into an Variable
+def as_variable(obj, name=None, copy=False):
+    """Convert an object into an Variable.
 
-    - If the object is already an `Variable`, return it.
-    - If the object is a `DataArray`, return it if `strict=False` or return
-      its variable if `strict=True`.
+    - If the object is already an `Variable`, return a shallow copy.
     - Otherwise, if the object has 'dims' and 'data' attributes, convert
       it into a new `Variable`.
     - If all else fails, attempt to convert the object into an `Variable` by
@@ -35,31 +37,51 @@ def as_variable(obj, key=None, strict=True, copy=False):
     """
     # TODO: consider extending this method to automatically handle Iris and
     # pandas objects.
-    if strict and hasattr(obj, 'variable'):
+    if hasattr(obj, 'variable'):
         # extract the primary Variable from DataArrays
         obj = obj.variable
-    if not isinstance(obj, (Variable, xr.DataArray)):
-        if hasattr(obj, 'dims') and (hasattr(obj, 'data') or
-                                     hasattr(obj, 'values')):
-            obj = Variable(obj.dims, getattr(obj, 'data', obj.values),
-                           getattr(obj, 'attrs', None),
-                           getattr(obj, 'encoding', None))
-        elif isinstance(obj, tuple):
-            try:
-                obj = Variable(*obj)
-            except TypeError:
-                raise TypeError('cannot convert argument into an Variable')
-        elif utils.is_scalar(obj):
-            obj = Variable([], obj)
-        elif getattr(obj, 'name', None) is not None:
-            obj = Variable(obj.name, obj)
-        elif key is not None:
-            obj = Variable(key, obj)
-        else:
-            raise TypeError('cannot infer Variable dimensions')
+
+    if isinstance(obj, Variable):
+        obj = obj.copy(deep=False)
+    elif hasattr(obj, 'dims') and (hasattr(obj, 'data') or
+                                   hasattr(obj, 'values')):
+        obj = Variable(obj.dims, getattr(obj, 'data', obj.values),
+                       getattr(obj, 'attrs', None),
+                       getattr(obj, 'encoding', None))
+    elif isinstance(obj, tuple):
+        try:
+            obj = Variable(*obj)
+        except TypeError:
+            # use .format() instead of % because it handles tuples consistently
+            raise TypeError('tuples to convert into variables must be of the '
+                            'form (dims, data[, attrs, encoding]): '
+                            '{}'.format(obj))
+    elif utils.is_scalar(obj):
+        obj = Variable([], obj)
+    elif getattr(obj, 'name', None) is not None:
+        obj = Variable(obj.name, obj)
+    elif name is not None:
+        data = as_compatible_data(obj)
+        if data.ndim != 1:
+            raise ValueError(
+                'cannot set variable %r with %r-dimensional data '
+                'without explicit dimension names. Pass a tuple of '
+                '(dims, data) instead.' % (name, data.ndim))
+        obj = Variable(name, obj, fastpath=True)
     else:
-        if copy:
-            obj = obj.copy(deep=False)
+        raise TypeError('unable to convert object into a variable without an '
+                        'explicit list of dimensions: %r' % obj)
+
+    if name is not None and name in obj.dims:
+        # convert the into an Index
+        if obj.ndim != 1:
+            raise ValueError(
+                '%r has more than 1-dimension and the same name as one of its '
+                'dimensions %r. xarray disallows such variables because they '
+                'conflict with the coordinates used to label dimensions.'
+                % (name, obj.dims))
+        obj = obj.to_index_variable()
+
     return obj
 
 
@@ -68,7 +90,7 @@ def default_index_coordinate(dim, size):
     This is equivalent to np.arange(size), but waits to create the array until
     its actually accessed.
     """
-    return Coordinate(dim, LazyIntegerRange(size))
+    return IndexVariable(dim, LazyIntegerRange(size))
 
 
 def _maybe_wrap_data(data):
@@ -99,6 +121,9 @@ def as_compatible_data(data, fastpath=False):
         # can't use fastpath (yet) for scalars
         return _maybe_wrap_data(data)
 
+    if isinstance(data, Variable):
+        return data.data
+
     # add a custom fast-path for dask.array to avoid expensive checks for the
     # dtype attribute
     if isinstance(data, dask_array_type):
@@ -108,7 +133,7 @@ def as_compatible_data(data, fastpath=False):
         return _maybe_wrap_data(data)
 
     if isinstance(data, tuple):
-        data = utils.tuple_to_0darray(data)
+        data = utils.to_0d_object_array(data)
 
     if isinstance(data, pd.Timestamp):
         # TODO: convert, handle datetime objects, too
@@ -117,10 +142,12 @@ def as_compatible_data(data, fastpath=False):
     if isinstance(data, timedelta):
         data = np.timedelta64(getattr(data, 'value', data), 'ns')
 
-    if (not hasattr(data, 'dtype') or not hasattr(data, 'shape') or
+    if (not hasattr(data, 'dtype') or not isinstance(data.dtype, np.dtype) or
+            not hasattr(data, 'shape') or
             isinstance(data, (np.string_, np.unicode_,
                               np.datetime64, np.timedelta64))):
         # data must be ndarray-like
+        # don't allow non-numpy dtypes (e.g., categories)
         data = np.asarray(data)
 
     # we don't want nested self-described arrays
@@ -148,26 +175,29 @@ def as_compatible_data(data, fastpath=False):
 
 def _as_array_or_item(data):
     """Return the given values as a numpy array, or as an individual item if
-    it's a 0-dimensional object array or datetime64.
+    it's a 0d datetime64 or timedelta64 array.
 
     Importantly, this function does not copy data if it is already an ndarray -
     otherwise, it will not be possible to update Variable values in place.
+
+    This function mostly exists because 0-dimensional ndarrays with
+    dtype=datetime64 are broken :(
+    https://github.com/numpy/numpy/issues/4337
+    https://github.com/numpy/numpy/issues/7619
+
+    TODO: remove this (replace with np.asarray) once these issues are fixed
     """
     data = np.asarray(data)
     if data.ndim == 0:
-        if data.dtype.kind == 'O':
-            # unpack 0d object arrays to be consistent with numpy
-            data = data.item()
-        elif data.dtype.kind == 'M':
-            # convert to a np.datetime64 object, because 0-dimensional ndarrays
-            # with dtype=datetime64 are broken :(
+        if data.dtype.kind == 'M':
             data = np.datetime64(data, 'ns')
         elif data.dtype.kind == 'm':
             data = np.timedelta64(data, 'ns')
     return data
 
 
-class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
+class Variable(common.AbstractArray, common.SharedMethodsMixin,
+               utils.NdimSizeLenMixin):
 
     """A netcdf-like variable consisting of dimensions, data and attributes
     which describe a single Array. A single Variable object is not fully
@@ -206,7 +236,7 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
             Dictionary specifying how to encode this array's data into a
             serialized format like netCDF4. Currently used keys (for netCDF)
             include '_FillValue', 'scale_factor', 'add_offset' and 'dtype'.
-            Well behaviored code to serialize a Variable should ignore
+            Well-behaved code to serialize a Variable should ignore
             unrecognized encoding items.
         """
         self._data = as_compatible_data(data, fastpath=fastpath)
@@ -232,7 +262,9 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
 
     @property
     def _in_memory(self):
-        return isinstance(self._data, (np.ndarray, PandasIndexAdapter))
+        return (isinstance(self._data, (np.ndarray, PandasIndexAdapter)) or
+                (isinstance(self._data, indexing.MemoryCachedArray) and
+                 isinstance(self._data.array, np.ndarray)))
 
     @property
     def data(self):
@@ -249,11 +281,6 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
                 "replacement data must match the Variable's shape")
         self._data = data
 
-    def _data_cached(self):
-        if not isinstance(self._data, (np.ndarray, PandasIndexAdapter)):
-            self._data = np.asarray(self._data)
-        return self._data
-
     @property
     def _indexable_data(self):
         return orthogonally_indexable(self._data)
@@ -266,44 +293,48 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
         because all xarray functions should either work on deferred data or
         load data automatically.
         """
-        self._data_cached()
+        if not isinstance(self._data, np.ndarray):
+            self._data = np.asarray(self._data)
         return self
 
-    def load_data(self):  # pragma: no cover
-        warnings.warn('the Variable method `load_data` has been deprecated; '
-                      'use `load` instead',
-                      FutureWarning, stacklevel=2)
-        return self.load()
+    def compute(self):
+        """Manually trigger loading of this variable's data from disk or a
+        remote source into memory and return a new variable. The original is
+        left unaltered.
 
-    def __getstate__(self):
-        """Always cache data as an in-memory array before pickling"""
-        self._data_cached()
-        # self.__dict__ is the default pickle object, we don't need to
-        # implement our own __setstate__ method to make pickle work
-        return self.__dict__
+        Normally, it should not be necessary to call this method in user code,
+        because all xarray functions should either work on deferred data or
+        load data automatically.
+        """
+        new = self.copy(deep=False)
+        return new.load()
 
     @property
     def values(self):
         """The variable's data as a numpy.ndarray"""
-        return _as_array_or_item(self._data_cached())
+        return _as_array_or_item(self._data)
 
     @values.setter
     def values(self, values):
         self.data = values
 
-    def to_variable(self):
+    def to_base_variable(self):
         """Return this variable as a base xarray.Variable"""
         return Variable(self.dims, self._data, self._attrs,
                         encoding=self._encoding, fastpath=True)
 
-    def to_coord(self):
-        """Return this variable as an xarray.Coordinate"""
-        return Coordinate(self.dims, self._data, self._attrs,
-                          encoding=self._encoding, fastpath=True)
+    to_variable = utils.alias(to_base_variable, 'to_variable')
+
+    def to_index_variable(self):
+        """Return this variable as an xarray.IndexVariable"""
+        return IndexVariable(self.dims, self._data, self._attrs,
+                             encoding=self._encoding, fastpath=True)
+
+    to_coord = utils.alias(to_index_variable, 'to_coord')
 
     def to_index(self):
         """Convert this variable to a pandas.Index"""
-        return self.to_coord().to_index()
+        return self.to_index_variable().to_index()
 
     @property
     def dims(self):
@@ -374,7 +405,7 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
                             'assign to this variable, you must first load it '
                             'into memory explicitly using the .load_data() '
                             'method or accessing its .values attribute.')
-        data = orthogonally_indexable(self._data_cached())
+        data = orthogonally_indexable(self._data)
         data[key] = value
 
     @property
@@ -410,12 +441,17 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
         If `deep=True`, the data array is loaded into memory and copied onto
         the new object. Dimensions, attributes and encodings are always copied.
         """
-        if deep and not isinstance(self.data, dask_array_type):
-            # dask arrays don't have a copy method
-            # https://github.com/blaze/dask/issues/911
-            data = self.data.copy()
-        else:
-            data = self._data
+        data = self._data
+
+        if isinstance(data, indexing.MemoryCachedArray):
+            # don't share caching between copies
+            data = indexing.MemoryCachedArray(data.array)
+
+        if deep and not isinstance(
+                data, (dask_array_type, PandasIndexAdapter)):
+            # pandas.Index and dask.array objects are immutable
+            data = np.array(data)
+
         # note:
         # dims is already an immutable tuple
         # attributes and encoding will be copied when the new Array is created
@@ -426,7 +462,7 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
         return self.copy(deep=False)
 
     def __deepcopy__(self, memo=None):
-        # memo does nothing but is required for compatability with
+        # memo does nothing but is required for compatibility with
         # copy.deepcopy
         return self.copy(deep=True)
 
@@ -648,38 +684,10 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
         if len(dims) == 0:
             dims = self.dims[::-1]
         axes = self.get_axis_num(dims)
-        if len(dims) < 2: # no need to transpose if only one dimension
+        if len(dims) < 2:  # no need to transpose if only one dimension
             return self.copy(deep=False)
         data = ops.transpose(self.data, axes)
         return type(self)(dims, data, self._attrs, self._encoding, fastpath=True)
-
-    def squeeze(self, dim=None):
-        """Return a new Variable object with squeezed data.
-
-        Parameters
-        ----------
-        dim : None or str or tuple of str, optional
-            Selects a subset of the length one dimensions. If a dimension is
-            selected with length greater than one, an error is raised. If
-            None, all length one dimensions are squeezed.
-
-        Returns
-        -------
-        squeezed : Variable
-            This array, but with with all or a subset of the dimensions of
-            length 1 removed.
-
-        Notes
-        -----
-        Although this operation returns a view of this variable's data, it is
-        not lazy -- the data will be fully loaded.
-
-        See Also
-        --------
-        numpy.squeeze
-        """
-        dims = dict(zip(self.dims, self.shape))
-        return common.squeeze(self, dims, dim)
 
     def expand_dims(self, dims, shape=None):
         """Return a new variable with expanded dimensions.
@@ -711,13 +719,19 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
         self_dims = set(self.dims)
         expanded_dims = tuple(
             d for d in dims if d not in self_dims) + self.dims
-        if shape is not None:
+
+        if self.dims == expanded_dims:
+            # don't use broadcast_to unless necessary so the result remains
+            # writeable if possible
+            expanded_data = self.data
+        elif shape is not None:
             dims_map = dict(zip(dims, shape))
-            tmp_shape = [dims_map[d] for d in expanded_dims]
+            tmp_shape = tuple(dims_map[d] for d in expanded_dims)
             expanded_data = ops.broadcast_to(self.data, tmp_shape)
         else:
             expanded_data = self.data[
                 (None,) * (len(expanded_dims) - self.ndim)]
+
         expanded_var = Variable(expanded_dims, expanded_data, self._attrs,
                                 self._encoding, fastpath=True)
         return expanded_var.transpose(*dims)
@@ -783,8 +797,7 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
             raise ValueError('cannot create a new dimension with the same '
                              'name as an existing dimension')
 
-        axis = self.get_axis_num(old_dim)
-        if np.prod(new_dim_sizes) != self.shape[axis]:
+        if np.prod(new_dim_sizes) != self.sizes[old_dim]:
             raise ValueError('the product of the new dimension sizes must '
                              'equal the size of the old dimension')
 
@@ -865,15 +878,23 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
         if dim is not None and axis is not None:
             raise ValueError("cannot supply both 'axis' and 'dim' arguments")
 
+        if getattr(func, 'keep_dims', False):
+            if dim is None and axis is None:
+                raise ValueError("must supply either single 'dim' or 'axis' argument to %s"
+                                 % (func.__name__))
+
         if dim is not None:
             axis = self.get_axis_num(dim)
         data = func(self.data if allow_lazy else self.values,
                     axis=axis, **kwargs)
 
-        removed_axes = (range(self.ndim) if axis is None
-                        else np.atleast_1d(axis) % self.ndim)
-        dims = [dim for n, dim in enumerate(self.dims)
-                if n not in removed_axes]
+        if getattr(data, 'shape', ()) == self.shape:
+            dims = self.dims
+        else:
+            removed_axes = (range(self.ndim) if axis is None
+                            else np.atleast_1d(axis) % self.ndim)
+            dims = [adim for n, adim in enumerate(self.dims)
+                    if n not in removed_axes]
 
         attrs = self._attrs if keep_attrs else None
 
@@ -926,10 +947,12 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
         if dim in first_var.dims:
             axis = first_var.get_axis_num(dim)
             dims = first_var.dims
-            if positions is None:
-                data = ops.concatenate(arrays, axis=axis)
-            else:
-                data = ops.interleaved_concat(arrays, positions, axis=axis)
+            data = ops.concatenate(arrays, axis=axis)
+            if positions is not None:
+                # TODO: deprecate this option -- we don't need it for groupby
+                # any more.
+                indices = nputils.inverse_permutation(np.concatenate(positions))
+                data = ops.take(data, indices, axis=axis)
         else:
             axis = 0
             dims = (dim,) + first_var.dims
@@ -944,11 +967,7 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
 
         return cls(dims, data, attrs)
 
-    def _data_equals(self, other):
-        return (self._data is other._data or
-                ops.array_equiv(self.data, other.data))
-
-    def equals(self, other):
+    def equals(self, other, equiv=ops.array_equiv):
         """True if two Variables have the same dimensions and values;
         otherwise False.
 
@@ -956,15 +975,17 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
         values in the same locations.
 
         This method is necessary because `v1 == v2` for Variables
-        does element-wise comparisions (like numpy.ndarrays).
+        does element-wise comparisons (like numpy.ndarrays).
         """
         other = getattr(other, 'variable', other)
         try:
-            return (self.dims == other.dims and self._data_equals(other))
+            return (self.dims == other.dims and
+                    (self._data is other._data or
+                     equiv(self.data, other.data)))
         except (TypeError, AttributeError):
             return False
 
-    def broadcast_equals(self, other):
+    def broadcast_equals(self, other, equiv=ops.array_equiv):
         """True if two Variables have the values after being broadcast against
         each other; otherwise False.
 
@@ -975,7 +996,7 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
             self, other = broadcast_variables(self, other)
         except (ValueError, AttributeError):
             return False
-        return self.equals(other)
+        return self.equals(other, equiv=equiv)
 
     def identical(self, other):
         """Like equals, but also checks attributes.
@@ -985,6 +1006,15 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
                     self.equals(other))
         except (TypeError, AttributeError):
             return False
+
+    def no_conflicts(self, other):
+        """True if the intersection of two Variable's non-null data is
+        equal; otherwise false.
+
+        Variables can thus still be equal if there are locations where either,
+        or both, contain NaN values.
+        """
+        return self.broadcast_equals(other, equiv=ops.array_notnull_equiv)
 
     @property
     def real(self):
@@ -1035,29 +1065,41 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
 ops.inject_all_ops_and_reduce_methods(Variable)
 
 
-class Coordinate(Variable):
+class IndexVariable(Variable):
+    """Wrapper for accommodating a pandas.Index in an xarray.Variable.
 
-    """Wrapper around pandas.Index that adds xarray specific functionality.
+    IndexVariable preserve loaded values in the form of a pandas.Index instead
+    of a NumPy array. Hence, their values are immutable and must always be one-
+    dimensional.
 
-    The most important difference is that Coordinate objects must always have a
-    name, which is the dimension along which they index values.
-
-    Coordinates must always be 1-dimensional. In addition to Variable methods
-    and properties (attributes, encoding, broadcasting), they support some
-    pandas.Index methods directly (e.g., get_indexer), even though pandas does
-    not (yet) support duck-typing for indexes.
+    They also have a name property, which is the name of their sole dimension
+    unless another name is given.
     """
 
-    def __init__(self, name, data, attrs=None, encoding=None, fastpath=False):
-        super(Coordinate, self).__init__(name, data, attrs, encoding, fastpath)
+    def __init__(self, dims, data, attrs=None, encoding=None, fastpath=False):
+        super(IndexVariable, self).__init__(dims, data, attrs, encoding,
+                                            fastpath)
         if self.ndim != 1:
             raise ValueError('%s objects must be 1-dimensional' %
                              type(self).__name__)
 
-    def _data_cached(self):
+        # Unlike in Variable, always eagerly load values into memory
         if not isinstance(self._data, PandasIndexAdapter):
             self._data = PandasIndexAdapter(self._data)
-        return self._data
+
+    def load(self):
+        # data is already loaded into memory for IndexVariable
+        return self
+
+    @Variable.data.setter
+    def data(self, data):
+        Variable.data.fset(self, data)
+        if not isinstance(self._data, PandasIndexAdapter):
+            self._data = PandasIndexAdapter(self._data)
+
+    def chunk(self, chunks=None, name=None, lock=False):
+        # Dummy - do not chunk. This method is invoked e.g. by Dataset.chunk()
+        return self.copy(deep=False)
 
     def __getitem__(self, key):
         key = self._item_key_to_tuple(key)
@@ -1065,40 +1107,103 @@ class Coordinate(Variable):
         if not hasattr(values, 'ndim') or values.ndim == 0:
             return Variable((), values, self._attrs, self._encoding)
         else:
-            return type(self)(self.dims, values, self._attrs, self._encoding,
-                              fastpath=True)
+            return type(self)(self.dims, values, self._attrs,
+                              self._encoding, fastpath=True)
 
     def __setitem__(self, key, value):
         raise TypeError('%s values cannot be modified' % type(self).__name__)
 
+    @classmethod
+    def concat(cls, variables, dim='concat_dim', positions=None,
+               shortcut=False):
+        """Specialized version of Variable.concat for IndexVariable objects.
+
+        This exists because we want to avoid converting Index objects to NumPy
+        arrays, if possible.
+        """
+        if not isinstance(dim, basestring):
+            dim, = dim.dims
+
+        variables = list(variables)
+        first_var = variables[0]
+
+        if any(not isinstance(v, cls) for v in variables):
+            raise TypeError('IndexVariable.concat requires that all input '
+                            'variables be IndexVariable objects')
+
+        indexes = [v._data.array for v in variables]
+
+        if not indexes:
+            data = []
+        else:
+            data = indexes[0].append(indexes[1:])
+
+            if positions is not None:
+                indices = nputils.inverse_permutation(
+                    np.concatenate(positions))
+                data = data.take(indices)
+
+        attrs = OrderedDict(first_var.attrs)
+        if not shortcut:
+            for var in variables:
+                if var.dims != first_var.dims:
+                    raise ValueError('inconsistent dimensions')
+                utils.remove_incompatible_items(attrs, var.attrs)
+
+        return cls(first_var.dims, data, attrs)
+
     def copy(self, deep=True):
         """Returns a copy of this object.
 
-        If `deep=True`, the values array is loaded into memory and copied onto
-        the new object. Dimensions, attributes and encodings are always copied.
+        `deep` is ignored since data is stored in the form of pandas.Index,
+        which is already immutable. Dimensions, attributes and encodings are
+        always copied.
         """
-        # there is no need to copy the index values here even if deep=True
-        # since pandas.Index objects are immutable
-        data = PandasIndexAdapter(self) if deep else self._data
-        return type(self)(self.dims, data, self._attrs, self._encoding,
-                          fastpath=True)
+        return type(self)(self.dims, self._data, self._attrs,
+                          self._encoding, fastpath=True)
 
     def _data_equals(self, other):
         return self.to_index().equals(other.to_index())
 
-    def to_coord(self):
-        """Return this variable as an xarray.Coordinate"""
+    def to_index_variable(self):
+        """Return this variable as an xarray.IndexVariable"""
         return self
+
+    to_coord = utils.alias(to_index_variable, 'to_coord')
 
     def to_index(self):
         """Convert this variable to a pandas.Index"""
         # n.b. creating a new pandas.Index from an old pandas.Index is
         # basically free as pandas.Index objects are immutable
         assert self.ndim == 1
-        index = self._data_cached().array
-        if not isinstance(index, pd.MultiIndex):
+        index = self._data.array
+        if isinstance(index, pd.MultiIndex):
+            # set default names for multi-index unnamed levels so that
+            # we can safely rename dimension / coordinate later
+            valid_level_names = [name or '{}_level_{}'.format(self.dims[0], i)
+                                 for i, name in enumerate(index.names)]
+            index = index.set_names(valid_level_names)
+        else:
             index = index.set_names(self.name)
         return index
+
+    @property
+    def level_names(self):
+        """Return MultiIndex level names or None if this IndexVariable has no
+        MultiIndex.
+        """
+        index = self.to_index()
+        if isinstance(index, pd.MultiIndex):
+            return index.names
+        else:
+            return None
+
+    def get_level_variable(self, level):
+        """Return a new IndexVariable from a given MultiIndex level."""
+        if self.level_names is None:
+            raise ValueError("IndexVariable %r has no MultiIndex" % self.name)
+        index = self.to_index()
+        return type(self)(self.dims, index.get_level_values(level))
 
     @property
     def name(self):
@@ -1106,7 +1211,10 @@ class Coordinate(Variable):
 
     @name.setter
     def name(self, value):
-        raise AttributeError('cannot modify name of Coordinate in-place')
+        raise AttributeError('cannot modify name of IndexVariable in-place')
+
+# for backwards compatibility
+Coordinate = utils.alias(IndexVariable, 'Coordinate')
 
 
 def _unified_dims(variables):
@@ -1140,7 +1248,7 @@ def broadcast_variables(*variables):
     The data on the returned variables will be a view of the data on the
     corresponding original arrays, but dimensions will be reordered and
     inserted so that both broadcast arrays have the same dimensions. The new
-    dimensions are sorted in order of appearence in the first variable's
+    dimensions are sorted in order of appearance in the first variable's
     dimensions followed by the second variable's dimensions.
     """
     dims_map = _unified_dims(variables)
@@ -1163,3 +1271,66 @@ def _broadcast_compat_data(self, other):
         other_data = other
         dims = self.dims
     return self_data, other_data, dims
+
+
+def concat(variables, dim='concat_dim', positions=None, shortcut=False):
+    """Concatenate variables along a new or existing dimension.
+
+    Parameters
+    ----------
+    variables : iterable of Array
+        Arrays to stack together. Each variable is expected to have
+        matching dimensions and shape except for along the stacked
+        dimension.
+    dim : str or DataArray, optional
+        Name of the dimension to stack along. This can either be a new
+        dimension name, in which case it is added along axis=0, or an
+        existing dimension name, in which case the location of the
+        dimension is unchanged. Where to insert the new dimension is
+        determined by the first variable.
+    positions : None or list of integer arrays, optional
+        List of integer arrays which specifies the integer positions to which
+        to assign each dataset along the concatenated dimension. If not
+        supplied, objects are concatenated in the provided order.
+    shortcut : bool, optional
+        This option is used internally to speed-up groupby operations.
+        If `shortcut` is True, some checks of internal consistency between
+        arrays to concatenate are skipped.
+
+    Returns
+    -------
+    stacked : Variable
+        Concatenated Variable formed by stacking all the supplied variables
+        along the given dimension.
+    """
+    variables = list(variables)
+    if all(isinstance(v, IndexVariable) for v in variables):
+        return IndexVariable.concat(variables, dim, positions, shortcut)
+    else:
+        return Variable.concat(variables, dim, positions, shortcut)
+
+
+def assert_unique_multiindex_level_names(variables):
+    """Check for uniqueness of MultiIndex level names in all given
+    variables.
+
+    Not public API. Used for checking consistency of DataArray and Dataset
+    objects.
+    """
+    level_names = defaultdict(list)
+    for var_name, var in variables.items():
+        if isinstance(var._data, PandasIndexAdapter):
+            idx_level_names = var.to_index_variable().level_names
+            if idx_level_names is not None:
+                for n in idx_level_names:
+                    level_names[n].append('%r (%s)' % (n, var_name))
+
+    for k, v in level_names.items():
+        if k in variables:
+            v.append('(%s)' % k)
+
+    duplicate_names = [v for v in level_names.values() if len(v) > 1]
+    if duplicate_names:
+        conflict_str = '\n'.join([', '.join(v) for v in duplicate_names])
+        raise ValueError('conflicting MultiIndex level name(s):\n%s'
+                         % conflict_str)

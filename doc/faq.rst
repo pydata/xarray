@@ -132,3 +132,43 @@ pandas) make it a faster and more flexible data analysis tool. That said, Iris
 and CDAT have some great domain specific functionality, and we would love to
 have support for converting their native objects to and from xarray (see
 :issue:`37` and :issue:`133`)
+
+How should I cite xarray?
+-------------------------
+
+If you are using xarray and would like to cite it in academic publication, we
+would certainly appreciate it. We recommend two citations.
+
+  1. At a minimum, we recommend citing the xarray overview journal article,
+     submitted to the Journal of Open Research Software.
+
+     - Hoyer, S., Hamman, J. (In review). Xarray: N-D labeled arrays and
+       datasets in Python. Journal of Open Research Software.
+
+       Here’s an example of a BibTeX entry::
+
+           @article{hoyer2016xarray,
+             title   = {xarray: {N-D} labeled arrays and datasets in {Python}},
+             author  = {Hoyer, S. and J. Hamman},
+             journal = {In review, J. Open Res. Software},
+             year    = {2016}
+           }
+
+  2. You may also want to cite a specific version of the xarray package. We
+     provide a `Zenodo`__ citation and DOI for this purpose:
+
+        .. image:: https://zenodo.org/badge/7766/pydata/xarray.svg
+            :target: https://zenodo.org/badge/latestdoi/7766/pydata/xarray.
+
+       An example BibTeX entry::
+
+           @misc{xarray_v0_8_0,
+                 author = {Stephan Hoyer and Clark Fitzgerald and Joe Hamman and others},
+                 title  = {xarray: v0.8.0},
+                 month  = aug,
+                 year   = 2016,
+                 doi    = {10.5281/zenodo.59499},
+                 url    = {http://dx.doi.org/10.5281/zenodo.59499}
+                }
+
+__ https://zenodo.org/badge/latestdoi/7766/pydata/xarray

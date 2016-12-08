@@ -87,7 +87,7 @@ implemented :py:meth:`~xarray.DataArray.stack` and
     stacked.unstack('z')
 
 These methods are modeled on the :py:class:`pandas.DataFrame` methods of the
-same name, although they in xarray they always create new dimensions rather than
+same name, although in xarray they always create new dimensions rather than
 adding to the existing index or columns.
 
 Like :py:meth:`DataFrame.unstack<pandas.DataFrame.unstack>`, xarray's ``unstack``

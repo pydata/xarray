@@ -5,6 +5,7 @@ dependencies:
   - python=2.7
   - cdat-lite
   - dask
+  - distributed
   - pytest
   - numpy
   - pandas>=0.15.0

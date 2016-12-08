@@ -5,8 +5,9 @@ Use this module directly:
 Or use the methods on a DataArray:
     DataArray.plot._____
 """
-
+from __future__ import absolute_import
 from __future__ import division
+from __future__ import print_function
 import functools
 import warnings
 
@@ -38,8 +39,9 @@ def _ensure_plottable(*args):
                         'or dates.')
 
 
-def _easy_facetgrid(darray, plotfunc, x, y, row=None, col=None, col_wrap=None,
-                    aspect=1, size=3, subplot_kws=None, **kwargs):
+def _easy_facetgrid(darray, plotfunc, x, y, row=None, col=None,
+                    col_wrap=None, sharex=True, sharey=True, aspect=1,
+                    size=3, subplot_kws=None, **kwargs):
     """
     Convenience method to call xarray.plot.FacetGrid from 2d plotting methods
 
@@ -50,7 +52,8 @@ def _easy_facetgrid(darray, plotfunc, x, y, row=None, col=None, col_wrap=None,
         raise ValueError("Can't use axes when making faceted plots.")
 
     g = FacetGrid(data=darray, col=col, row=row, col_wrap=col_wrap,
-                  aspect=aspect, size=size, subplot_kws=subplot_kws)
+                  sharex=sharex, sharey=sharey, aspect=aspect,
+                  size=size, subplot_kws=subplot_kws)
     return g.map_dataarray(plotfunc, x, y, **kwargs)
 
 
@@ -316,9 +319,19 @@ def _plot2d(plotfunc):
         provided, extend is inferred from vmin, vmax and the data limits.
     levels : int or list-like object, optional
         Split the colormap (cmap) into discrete color intervals.
+    infer_intervals : bool, optional
+        Only applies to pcolormesh. If True, the coordinate intervals are
+        passed to pcolormesh. If False, the original coordinates are used
+        (this can be useful for certain map projections). The default is to
+        always infer intervals, unless the mesh is irregular and plotted on
+        a map projection.
     subplot_kws : dict, optional
         Dictionary of keyword arguments for matplotlib subplots. Only applies
         to FacetGrid plotting.
+    cbar_ax : matplotlib Axes, optional
+        Axes in which to draw the colorbar.
+    cbar_kwargs : dict, optional
+        Dictionary of keyword arguments to pass to the colorbar.
     **kwargs : optional
         Additional arguments to wrapped matplotlib function
 
@@ -335,11 +348,17 @@ def _plot2d(plotfunc):
     @functools.wraps(plotfunc)
     def newplotfunc(darray, x=None, y=None, ax=None, row=None, col=None,
                     col_wrap=None, xincrease=True, yincrease=True,
-                    add_colorbar=True, add_labels=True, vmin=None, vmax=None,
+                    add_colorbar=None, add_labels=True, vmin=None, vmax=None,
                     cmap=None, center=None, robust=False, extend=None,
-                    levels=None, colors=None, subplot_kws=None, **kwargs):
+                    levels=None, infer_intervals=None, colors=None,
+                    subplot_kws=None, cbar_ax=None, cbar_kwargs=None,
+                    **kwargs):
         # All 2d plots in xarray share this function signature.
         # Method signature below should be consistent.
+
+        # Decide on a default for the colorbar before facetgrids
+        if add_colorbar is None:
+            add_colorbar = plotfunc.__name__ != 'contour'
 
         # Handle facetgrids first
         if row or col:
@@ -407,6 +426,9 @@ def _plot2d(plotfunc):
             kwargs['extend'] = cmap_params['extend']
             kwargs['levels'] = cmap_params['levels']
 
+        if 'pcolormesh' == plotfunc.__name__:
+            kwargs['infer_intervals'] = infer_intervals
+
         # This allows the user to pass in a custom norm coming via kwargs
         kwargs.setdefault('norm', cmap_params['norm'])
 
@@ -423,9 +445,19 @@ def _plot2d(plotfunc):
             ax.set_title(darray._title_for_slice())
 
         if add_colorbar:
-            cbar = plt.colorbar(primitive, ax=ax, extend=cmap_params['extend'])
-            if darray.name and add_labels:
+            cbar_kwargs = {} if cbar_kwargs is None else dict(cbar_kwargs)
+            cbar_kwargs.setdefault('extend', cmap_params['extend'])
+            if cbar_ax is None:
+                cbar_kwargs.setdefault('ax', ax)
+            else:
+                cbar_kwargs.setdefault('cax', cbar_ax)
+            cbar = plt.colorbar(primitive, **cbar_kwargs)
+            if darray.name and add_labels and 'label' not in cbar_kwargs:
                 cbar.set_label(darray.name, rotation=90)
+        elif cbar_ax is not None or cbar_kwargs is not None:
+            # inform the user about keywords which aren't used
+            raise ValueError("cbar_ax and cbar_kwargs can't be used with "
+                             "add_colorbar=False.")
 
         _update_axes_limits(ax, xincrease, yincrease)
 
@@ -435,9 +467,10 @@ def _plot2d(plotfunc):
     @functools.wraps(newplotfunc)
     def plotmethod(_PlotMethods_obj, x=None, y=None, ax=None, row=None,
                    col=None, col_wrap=None, xincrease=True, yincrease=True,
-                   add_colorbar=True, add_labels=True, vmin=None, vmax=None,
+                   add_colorbar=None, add_labels=True, vmin=None, vmax=None,
                    cmap=None, colors=None, center=None, robust=False,
-                   extend=None, levels=None, subplot_kws=None, **kwargs):
+                   extend=None, levels=None, infer_intervals=None,
+                   subplot_kws=None, cbar_ax=None, cbar_kwargs=None, **kwargs):
         """
         The method should have the same signature as the function.
 
@@ -522,29 +555,52 @@ def contourf(x, y, z, ax, **kwargs):
     return ax, primitive
 
 
-def _infer_interval_breaks(coord):
+def _infer_interval_breaks(coord, axis=0):
     """
     >>> _infer_interval_breaks(np.arange(5))
     array([-0.5,  0.5,  1.5,  2.5,  3.5,  4.5])
+    >>> _infer_interval_breaks([[0, 1], [3, 4]], axis=1)
+    array([[-0.5,  0.5,  1.5],
+           [ 2.5,  3.5,  4.5]])
     """
     coord = np.asarray(coord)
-    deltas = 0.5 * (coord[1:] - coord[:-1])
-    first = coord[0] - deltas[0]
-    last = coord[-1] + deltas[-1]
-    return np.r_[[first], coord[:-1] + deltas, [last]]
+    deltas = 0.5 * np.diff(coord, axis=axis)
+    first = np.take(coord, [0], axis=axis) - np.take(deltas, [0], axis=axis)
+    last = np.take(coord, [-1], axis=axis) + np.take(deltas, [-1], axis=axis)
+    trim_last = tuple(slice(None, -1) if n == axis else slice(None)
+                      for n in range(coord.ndim))
+    return np.concatenate([first, coord[trim_last] + deltas, last], axis=axis)
 
 
 @_plot2d
-def pcolormesh(x, y, z, ax, **kwargs):
+def pcolormesh(x, y, z, ax, infer_intervals=None, **kwargs):
     """
     Pseudocolor plot of 2d DataArray
 
     Wraps matplotlib.pyplot.pcolormesh
     """
 
-    if not hasattr(ax, 'projection'):
-        x = _infer_interval_breaks(x)
-        y = _infer_interval_breaks(y)
+    # decide on a default for infer_intervals (GH781)
+    x = np.asarray(x)
+    if infer_intervals is None:
+        if hasattr(ax, 'projection'):
+            if len(x.shape) == 1:
+                infer_intervals = True
+            else:
+                infer_intervals = False
+        else:
+            infer_intervals = True
+
+    if infer_intervals:
+        if len(x.shape) == 1:
+            x = _infer_interval_breaks(x)
+            y = _infer_interval_breaks(y)
+        else:
+            # we have to infer the intervals on both axes
+            x = _infer_interval_breaks(x, axis=1)
+            x = _infer_interval_breaks(x, axis=0)
+            y = _infer_interval_breaks(y, axis=1)
+            y = _infer_interval_breaks(y, axis=0)
 
     primitive = ax.pcolormesh(x, y, z, **kwargs)
 

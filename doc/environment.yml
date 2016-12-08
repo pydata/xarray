@@ -1,10 +1,17 @@
-name: xarray
+name: xarray-docs
+channels:
+  - conda-forge
+  - defaults
 dependencies:
-  - python=2.7
-  - numpy=1.10
-  - pandas=0.17.1
-  - numpydoc=0.5
-  - seaborn=0.6
-  - dask=0.7.5
-  - ipython=4.0.1
-  - sphinx=1.2.3  # pin to avoid https://github.com/sphinx-doc/sphinx/issues/1822
+  - python=3.5
+  - numpy=1.11.2
+  - pandas=0.19.1
+  - numpydoc=0.6.0
+  - matplotlib=1.5.3
+  - seaborn=0.7.1
+  - dask=0.12.0
+  - ipython=4.0.3  # https://github.com/ipython/ipython/issues/8733
+  - sphinx=1.5
+  - netCDF4=1.2.5
+  - hdf4=4.2.12  # temporary install to get netCD4 working (GH1106)
+  - cartopy=0.14.3

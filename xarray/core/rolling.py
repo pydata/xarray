@@ -1,7 +1,10 @@
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
 import numpy as np
 
 from .pycompat import OrderedDict, zip
-from .common import ImplementsRollingArrayReduce, _full_like
+from .common import ImplementsRollingArrayReduce, full_like
 from .combine import concat
 from .ops import inject_bottleneck_rolling_methods
 
@@ -103,13 +106,13 @@ class Rolling(object):
             window = self.obj.isel(**{self.dim: indices})
 
             if not valid:
-                window = _full_like(window, fill_value=True)
+                window = full_like(window, fill_value=True, dtype=bool)
 
             yield (label, window)
 
     def _setup_windows(self):
         """
-        Find the indicies and labels for each window
+        Find the indices and labels for each window
         """
         from .dataarray import DataArray
 

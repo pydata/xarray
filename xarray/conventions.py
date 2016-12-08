@@ -1,3 +1,6 @@
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
 from datetime import datetime
 import re
 import traceback
@@ -9,7 +12,7 @@ from collections import defaultdict
 from pandas.tslib import OutOfBoundsDatetime
 
 from .core import indexing, ops, utils
-from .core.formatting import format_timestamp, first_n_items
+from .core.formatting import format_timestamp, first_n_items, last_item
 from .core.variable import as_variable, Variable
 from .core.pycompat import iteritems, OrderedDict, PY3, basestring
 
@@ -141,6 +144,12 @@ def decode_cf_datetime(num_dates, units, calendar=None):
             # ValueError is raised by pd.Timestamp for non-ISO timestamp
             # strings, in which case we fall back to using netCDF4
             raise OutOfBoundsDatetime
+
+        # fixes: https://github.com/pydata/pandas/issues/14068
+        # these lines check if the the lowest or the highest value in dates
+        # cause an OutOfBoundsDatetime (Overflow) error
+        pd.to_timedelta(flat_num_dates.min(), delta) + ref_date
+        pd.to_timedelta(flat_num_dates.max(), delta) + ref_date
 
         dates = (pd.to_timedelta(flat_num_dates, delta) + ref_date).values
 
@@ -304,7 +313,7 @@ def encode_cf_timedelta(timedeltas, units=None):
 
 class MaskedAndScaledArray(utils.NDArrayMixin):
     """Wrapper around array-like objects to create a new indexable object where
-    values, when accessesed, are automatically scaled and masked according to
+    values, when accessed, are automatically scaled and masked according to
     CF conventions for packed and missing data values.
 
     New values are given by the formula:
@@ -369,10 +378,13 @@ class DecodedCFDatetimeArray(utils.NDArrayMixin):
         self.array = array
         self.units = units
         self.calendar = calendar
-        # Verify at least one date can be decoded successfully.
-        # Otherwise, tracebacks end up swallowed by Dataset.__repr__ when users
-        # try to view their lazily decoded array.
-        example_value = first_n_items(array, 1) or 0
+
+        # Verify that at least the first and last date can be decoded
+        # successfully. Otherwise, tracebacks end up swallowed by
+        # Dataset.__repr__ when users try to view their lazily decoded array.
+        example_value = np.concatenate([first_n_items(array, 1) or [0],
+                                        last_item(array) or [0]])
+
         try:
             result = decode_cf_datetime(example_value, units, calendar)
         except Exception:
@@ -493,7 +505,7 @@ class NativeEndiannessArray(utils.NDArrayMixin):
 class BoolTypeArray(utils.NDArrayMixin):
     """Decode arrays on the fly from integer to boolean datatype
 
-    This is useful for decoding boolean arrays from interger typed netCDF
+    This is useful for decoding boolean arrays from integer typed netCDF
     variables.
 
     >>> x = np.array([1, 0, 1, 1, 0], dtype='i1')
@@ -612,7 +624,7 @@ def maybe_encode_dtype(var, name=None):
     if 'dtype' in var.encoding:
         dims, data, attrs, encoding = _var_as_tuple(var)
         dtype = np.dtype(encoding.pop('dtype'))
-        if dtype != var.dtype and dtype.kind != 'O':
+        if dtype != var.dtype:
             if np.issubdtype(dtype, np.integer):
                 if (np.issubdtype(var.dtype, np.floating) and
                         '_FillValue' not in var.attrs):
@@ -625,7 +637,7 @@ def maybe_encode_dtype(var, name=None):
                 data = string_to_char(np.asarray(data, 'S'))
                 dims = dims + ('string%s' % data.shape[-1],)
             data = data.astype(dtype=dtype)
-            var = Variable(dims, data, attrs, encoding)
+        var = Variable(dims, data, attrs, encoding)
     return var
 
 

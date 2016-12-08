@@ -17,7 +17,11 @@ Top-level functions
    align
    broadcast
    concat
+   merge
    set_options
+   full_like
+   zeros_like
+   ones_like
 
 Dataset
 =======
@@ -38,9 +42,11 @@ Attributes
    :toctree: generated/
 
    Dataset.dims
+   Dataset.sizes
    Dataset.data_vars
    Dataset.coords
    Dataset.attrs
+   Dataset.indexes
 
 Dictionary interface
 --------------------
@@ -55,8 +61,8 @@ and values given by ``DataArray`` objects.
    Dataset.__setitem__
    Dataset.__delitem__
    Dataset.update
-   Dataset.iteritems
-   Dataset.itervalues
+   Dataset.items
+   Dataset.values
 
 Dataset contents
 ----------------
@@ -109,6 +115,7 @@ Computation
    Dataset.apply
    Dataset.reduce
    Dataset.groupby
+   Dataset.groupby_bins
    Dataset.resample
    Dataset.diff
 
@@ -143,6 +150,8 @@ Computation
 :py:attr:`~Dataset.round`
 :py:attr:`~Dataset.real`
 :py:attr:`~Dataset.T`
+:py:attr:`~Dataset.cumsum`
+:py:attr:`~Dataset.cumprod`
 
 **Grouped operations**:
 :py:attr:`~core.groupby.DatasetGroupBy.assign`
@@ -182,9 +191,11 @@ Attributes
    DataArray.data
    DataArray.coords
    DataArray.dims
+   DataArray.sizes
    DataArray.name
    DataArray.attrs
    DataArray.encoding
+   DataArray.indexes
 
 **ndarray attributes**:
 :py:attr:`~DataArray.ndim`
@@ -245,6 +256,7 @@ Computation
 
    DataArray.reduce
    DataArray.groupby
+   DataArray.groupby_bins
    DataArray.rolling
    DataArray.resample
    DataArray.get_axis_num
@@ -283,6 +295,8 @@ Computation
 :py:attr:`~DataArray.round`
 :py:attr:`~DataArray.real`
 :py:attr:`~DataArray.T`
+:py:attr:`~DataArray.cumsum`
+:py:attr:`~DataArray.cumprod`
 
 **Grouped operations**:
 :py:attr:`~core.groupby.DataArrayGroupBy.assign_coords`
@@ -388,10 +402,13 @@ Dataset methods
    save_mfdataset
    Dataset.to_array
    Dataset.to_dataframe
+   Dataset.to_dict
    Dataset.from_dataframe
+   Dataset.from_dict
    Dataset.close
    Dataset.load
    Dataset.chunk
+   Dataset.filter_by_attrs
 
 DataArray methods
 -----------------
@@ -399,15 +416,19 @@ DataArray methods
 .. autosummary::
    :toctree: generated/
 
+   open_dataarray
    DataArray.to_dataset
+   DataArray.to_netcdf
    DataArray.to_pandas
    DataArray.to_series
    DataArray.to_dataframe
    DataArray.to_index
    DataArray.to_masked_array
    DataArray.to_cdms2
+   DataArray.to_dict
    DataArray.from_series
    DataArray.from_cdms2
+   DataArray.from_dict
    DataArray.load
    DataArray.chunk
 

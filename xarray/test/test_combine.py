@@ -1,3 +1,6 @@
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
 from copy import deepcopy
 
 import numpy as np
@@ -22,7 +25,7 @@ class TestConcatDataset(TestCase):
         self.assertDatasetIdentical(data, concat(split_data, 'dim1'))
 
         def rectify_dim_order(dataset):
-            # return a new dataset with all variable dimensions tranposed into
+            # return a new dataset with all variable dimensions transposed into
             # the order in which they are found in `data`
             return Dataset(dict((k, v.transpose(*data[k].dims))
                                 for k, v in iteritems(dataset.data_vars)),
@@ -106,6 +109,14 @@ class TestConcatDataset(TestCase):
         actual = concat(split_data[::-1], 'dim1')
         self.assertDatasetIdentical(data, actual)
 
+    def test_concat_autoalign(self):
+        ds1 = Dataset({'foo': DataArray([1, 2], coords=[('x', [1, 2])])})
+        ds2 = Dataset({'foo': DataArray([1, 2], coords=[('x', [1, 3])])})
+        actual = concat([ds1, ds2], 'y')
+        expected = Dataset({'foo': DataArray([[1, 2, np.nan], [1, np.nan, 2]],
+                                             dims=['y', 'x'], coords={'y': [0, 1], 'x': [1, 2, 3]})})
+        self.assertDatasetIdentical(expected, actual)
+
     def test_concat_errors(self):
         data = create_test_data()
         split_data = [data.isel(dim1=slice(3)),
@@ -127,14 +138,6 @@ class TestConcatDataset(TestCase):
         with self.assertRaisesRegexp(ValueError, 'encountered unexpected'):
             data0, data1 = deepcopy(split_data)
             data1['foo'] = ('bar', np.random.randn(10))
-            concat([data0, data1], 'dim1')
-
-        with self.assertRaisesRegexp(ValueError, 'not equal across datasets'):
-            data0, data1 = deepcopy(split_data)
-            data1['dim2'] = 2 * data1['dim2']
-            concat([data0, data1], 'dim1', coords='minimal')
-
-        with self.assertRaisesRegexp(ValueError, 'it is not 1-dimensional'):
             concat([data0, data1], 'dim1')
 
         with self.assertRaisesRegexp(ValueError, 'compat.* invalid'):
@@ -214,39 +217,13 @@ class TestConcatDataset(TestCase):
         actual = concat(objs, coord)
         self.assertDatasetIdentical(actual, expected)
 
-    @requires_dask  # only for toolz
-    def test_auto_combine(self):
-        objs = [Dataset({'x': [0]}), Dataset({'x': [1]})]
-        actual = auto_combine(objs)
-        expected = Dataset({'x': [0, 1]})
-        self.assertDatasetIdentical(expected, actual)
-
-        actual = auto_combine([actual])
-        self.assertDatasetIdentical(expected, actual)
-
-        objs = [Dataset({'x': [0, 1]}), Dataset({'x': [2]})]
-        actual = auto_combine(objs)
-        expected = Dataset({'x': [0, 1, 2]})
-        self.assertDatasetIdentical(expected, actual)
-
-        # ensure auto_combine handles non-sorted dimensions
-        objs = [Dataset(OrderedDict([('x', ('a', [0])), ('y', ('a', [0]))])),
-                Dataset(OrderedDict([('y', ('a', [1])), ('x', ('a', [1]))]))]
-        actual = auto_combine(objs)
-        expected = Dataset({'x': ('a', [0, 1]), 'y': ('a', [0, 1]), 'a': [0, 0]})
-        self.assertDatasetIdentical(expected, actual)
-
-        objs = [Dataset({'x': [0], 'y': [0]}), Dataset({'y': [1], 'x': [1]})]
-        with self.assertRaisesRegexp(ValueError, 'too many .* dimensions'):
-            auto_combine(objs)
-
-        objs = [Dataset({'x': 0}), Dataset({'x': 1})]
-        with self.assertRaisesRegexp(ValueError, 'cannot infer dimension'):
-            auto_combine(objs)
-
-        objs = [Dataset({'x': [0], 'y': [0]}), Dataset({'x': [0]})]
-        with self.assertRaises(KeyError):
-            auto_combine(objs)
+    def test_concat_multiindex(self):
+        x = pd.MultiIndex.from_product([[1, 2, 3], ['a', 'b']])
+        expected = Dataset({'x': x})
+        actual = concat([expected.isel(x=slice(2)),
+                         expected.isel(x=slice(2, None))], 'x')
+        assert expected.equals(actual)
+        assert isinstance(actual.x.to_index(), pd.MultiIndex)
 
 
 class TestConcatDataArray(TestCase):
@@ -294,3 +271,86 @@ class TestConcatDataArray(TestCase):
         combined = concat(arrays, dim='z')
         self.assertEqual(combined.shape, (2, 3, 3))
         self.assertEqual(combined.dims, ('z', 'x', 'y'))
+
+
+class TestAutoCombine(TestCase):
+
+    @requires_dask  # only for toolz
+    def test_auto_combine(self):
+        objs = [Dataset({'x': [0]}), Dataset({'x': [1]})]
+        actual = auto_combine(objs)
+        expected = Dataset({'x': [0, 1]})
+        self.assertDatasetIdentical(expected, actual)
+
+        actual = auto_combine([actual])
+        self.assertDatasetIdentical(expected, actual)
+
+        objs = [Dataset({'x': [0, 1]}), Dataset({'x': [2]})]
+        actual = auto_combine(objs)
+        expected = Dataset({'x': [0, 1, 2]})
+        self.assertDatasetIdentical(expected, actual)
+
+        # ensure auto_combine handles non-sorted variables
+        objs = [Dataset(OrderedDict([('x', ('a', [0])), ('y', ('a', [0]))])),
+                Dataset(OrderedDict([('y', ('a', [1])), ('x', ('a', [1]))]))]
+        actual = auto_combine(objs)
+        expected = Dataset(
+            {'x': ('a', [0, 1]), 'y': ('a', [0, 1]), 'a': [0, 0]})
+        self.assertDatasetIdentical(expected, actual)
+
+        objs = [Dataset({'x': [0], 'y': [0]}), Dataset({'y': [1], 'x': [1]})]
+        with self.assertRaisesRegexp(ValueError, 'too many .* dimensions'):
+            auto_combine(objs)
+
+        objs = [Dataset({'x': 0}), Dataset({'x': 1})]
+        with self.assertRaisesRegexp(ValueError, 'cannot infer dimension'):
+            auto_combine(objs)
+
+        objs = [Dataset({'x': [0], 'y': [0]}), Dataset({'x': [0]})]
+        with self.assertRaises(KeyError):
+            auto_combine(objs)
+
+    @requires_dask  # only for toolz
+    def test_auto_combine_previously_failed(self):
+        # In the above scenario, one file is missing, containing the data for
+        # one year's data for one variable.
+        datasets = [Dataset({'a': ('x', [0]), 'x': [0]}),
+                    Dataset({'b': ('x', [0]), 'x': [0]}),
+                    Dataset({'a': ('x', [1]), 'x': [1]})]
+        expected = Dataset({'a': ('x', [0, 1]), 'b': ('x', [0, np.nan])})
+        actual = auto_combine(datasets)
+        self.assertDatasetIdentical(expected, actual)
+
+        # Your data includes "time" and "station" dimensions, and each year's
+        # data has a different set of stations.
+        datasets = [Dataset({'a': ('x', [2, 3]), 'x': [1, 2]}),
+                    Dataset({'a': ('x', [1, 2]), 'x': [0, 1]})]
+        expected = Dataset({'a': (('t', 'x'),
+                                  [[np.nan, 2, 3], [1, 2, np.nan]])})
+        actual = auto_combine(datasets, concat_dim='t')
+        self.assertDatasetIdentical(expected, actual)
+
+    @requires_dask  # only for toolz
+    def test_auto_combine_still_fails(self):
+        # concat can't handle new variables (yet):
+        # https://github.com/pydata/xarray/issues/508
+        datasets = [Dataset({'x': 0}, {'y': 0}),
+                    Dataset({'x': 1}, {'y': 1, 'z': 1})]
+        with self.assertRaises(ValueError):
+            auto_combine(datasets, 'y')
+
+    @requires_dask  # only for toolz
+    def test_auto_combine_no_concat(self):
+        objs = [Dataset({'x': 0}), Dataset({'y': 1})]
+        actual = auto_combine(objs)
+        expected = Dataset({'x': 0, 'y': 1})
+        self.assertDatasetIdentical(expected, actual)
+
+        objs = [Dataset({'x': 0, 'y': 1}), Dataset({'y': np.nan, 'z': 2})]
+        actual = auto_combine(objs)
+        expected = Dataset({'x': 0, 'y': 1, 'z': 2})
+        self.assertDatasetIdentical(expected, actual)
+
+        data = Dataset({'x': 0})
+        actual = auto_combine([data, data, data], concat_dim=None)
+        self.assertDatasetIdentical(data, actual)

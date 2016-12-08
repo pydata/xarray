@@ -44,6 +44,8 @@
    Dataset.round
    Dataset.real
    Dataset.T
+   Dataset.cumsum
+   Dataset.cumprod
 
    DataArray.ndim
    DataArray.shape
@@ -87,6 +89,8 @@
    DataArray.round
    DataArray.real
    DataArray.T
+   DataArray.cumsum
+   DataArray.cumprod
 
    ufuncs.angle
    ufuncs.arccos

@@ -115,12 +115,6 @@ If you create a ``DataArray`` by supplying a pandas
     df
     xr.DataArray(df)
 
-xarray does not (yet!) support labeling coordinate values with a
-:py:class:`pandas.MultiIndex` (see :issue:`164`).
-However, the alternate ``from_series`` constructor will automatically unpack
-any hierarchical indexes it encounters by expanding the series into a
-multi-dimensional array, as described in :doc:`pandas`.
-
 DataArray properties
 ~~~~~~~~~~~~~~~~~~~~
 
@@ -236,6 +230,7 @@ variables (``data_vars``), coordinates (``coords``) and attributes (``attrs``).
 
 ``data_vars`` are supplied as a dictionary with each key as the name of the variable and each
 value as one of:
+
 - A :py:class:`~xarray.DataArray`
 - A tuple of the form ``(dims, data[, attrs])``
 - A pandas object
@@ -282,8 +277,9 @@ Where a pandas object is supplied as a value, the names of its indexes are used 
 names, and its data is aligned to any existing dimensions.
 
 You can also create an dataset from:
+
 - A :py:class:`pandas.DataFrame` or :py:class:`pandas.Panel` along its columns and items
-  respectively, by passing it into the :py:class:`xarray.Dataset` directly
+  respectively, by passing it into the :py:class:`~xarray.Dataset` directly
 - A :py:class:`pandas.DataFrame` with :py:meth:`Dataset.from_dataframe <xarray.Dataset.from_dataframe>`,
   which will additionally handle MultiIndexes See :ref:`pandas`
 - A netCDF file on disk with :py:func:`~xarray.open_dataset`. See :ref:`io`.
@@ -375,7 +371,7 @@ In addition to dictionary-like methods (described above), xarray has additional
 methods (like pandas) for transforming datasets into new objects.
 
 For removing variables, you can select and drop an explicit list of
-variables by using the by indexing with a list of names or using the
+variables by indexing with a list of names or using the
 :py:meth:`~xarray.Dataset.drop` methods to return a new ``Dataset``. These
 operations keep around coordinates:
 
@@ -534,6 +530,41 @@ dimension and whose the values are ``Index`` objects:
 .. ipython:: python
 
     ds.indexes
+
+MultiIndex coordinates
+~~~~~~~~~~~~~~~~~~~~~~
+
+Xarray supports labeling coordinate values with a :py:class:`pandas.MultiIndex`:
+
+.. ipython:: python
+
+    midx = pd.MultiIndex.from_arrays([['R', 'R', 'V', 'V'], [.1, .2, .7, .9]],
+                                     names=('band', 'wn'))
+    mda = xr.DataArray(np.random.rand(4), coords={'spec': midx}, dims='spec')
+    mda
+
+For convenience multi-index levels are directly accessible as "virtual" or
+"derived" coordinates (marked by ``-`` when printing a dataset or data array):
+
+.. ipython:: python
+
+     mda['band']
+     mda.wn
+
+Indexing with multi-index levels is also possible using the ``sel`` method
+(see :ref:`multi-level indexing`).
+
+Unlike other coordinates, "virtual" level coordinates are not stored in
+the ``coords`` attribute of ``DataArray`` and ``Dataset`` objects
+(although they are shown when printing the ``coords`` attribute).
+Consequently, most of the coordinates related methods don't apply for them.
+It also can't be used to replace one particular level.
+
+Because in a ``DataArray`` or ``Dataset`` object each multi-index level is
+accessible as a "virtual" coordinate, its name must not conflict with the names
+of the other levels, coordinates and data variables of the same object.
+Even though Xarray set default names for multi-indexes with unnamed levels,
+it is recommended that you explicitly set the names of the levels.
 
 .. [1] Latitude and longitude are 2D arrays because the dataset uses
    `projected coordinates`__. ``reference_time`` refers to the reference time

@@ -1,3 +1,6 @@
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
 import numpy as np
 import itertools
 import logging
@@ -5,6 +8,7 @@ import time
 import traceback
 import threading
 from collections import Mapping
+from distutils.version import StrictVersion
 
 from ..conventions import cf_encoder
 from ..core.utils import FrozenOrderedDict
@@ -38,7 +42,7 @@ def is_trivial_index(var):
     the actual values to np.arange()
     """
     # if either attributes or encodings are defined
-    # the index is not trival.
+    # the index is not trivial.
     if len(var.attrs) or len(var.encoding):
         return False
     # if the index is not a 1d integer array
@@ -164,7 +168,7 @@ class ArrayWriter(object):
         if self.sources:
             import dask.array as da
             import dask
-            if dask.__version__ > '0.8.1':
+            if StrictVersion(dask.__version__) > StrictVersion('0.8.1'):
                 da.store(self.sources, self.targets, lock=threading.Lock())
             else:
                 da.store(self.sources, self.targets)
@@ -231,3 +235,22 @@ class WritableCFDataStore(AbstractWritableDataStore):
         cf_variables, cf_attrs = cf_encoder(variables, attributes)
         AbstractWritableDataStore.store(self, cf_variables, cf_attrs,
                                         check_encoding_set)
+
+
+class DataStorePickleMixin(object):
+    """Subclasses must define `ds`, `_opener` and `_mode` attributes.
+
+    Do not subclass this class: it is not part of xarray's external API.
+    """
+
+    def __getstate__(self):
+        state = self.__dict__.copy()
+        del state['ds']
+        if self._mode == 'w':
+            # file has already been created, don't override when restoring
+            state['_mode'] = 'a'
+        return state
+
+    def __setstate__(self, state):
+        self.__dict__.update(state)
+        self.ds = self._opener(mode=self._mode)

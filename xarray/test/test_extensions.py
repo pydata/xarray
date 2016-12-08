@@ -1,3 +1,6 @@
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
 try:
     import cPickle as pickle
 except ImportError:
@@ -49,7 +52,7 @@ class TestAccessor(TestCase):
         del xr.Dataset.demo
         assert not hasattr(xr.Dataset, 'demo')
 
-        with self.assertRaises(xr.core.extensions.AccessorRegistrationError):
+        with self.assertWarns('overriding a preexisting attribute'):
             @xr.register_dataarray_accessor('demo')
             class Foo(object):
                 pass
@@ -74,3 +77,14 @@ class TestAccessor(TestCase):
         assert array.example_accessor is array.example_accessor
         array_restored = pickle.loads(pickle.dumps(array))
         assert array.identical(array_restored)
+
+    def test_broken_accessor(self):
+        # regression test for GH933
+
+        @xr.register_dataset_accessor('stupid_accessor')
+        class BrokenAccessor(object):
+            def __init__(self, xarray_obj):
+                raise AttributeError('broken')
+
+        with self.assertRaisesRegexp(RuntimeError, 'error initializing'):
+            xr.Dataset().stupid_accessor

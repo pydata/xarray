@@ -1,8 +1,9 @@
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
 import numpy as np
 import pandas as pd
 import warnings
-
-from .pycompat import builtins, reduce
 
 
 def _validate_axis(data, axis):
@@ -34,24 +35,24 @@ def nanlast(values, axis):
     return _select_along_axis(values, idx_last, axis)
 
 
-def _calc_concat_shape(arrays, axis=0):
-    first_shape = arrays[0].shape
-    length = builtins.sum(a.shape[axis] for a in arrays)
-    result_shape = first_shape[:axis] + (length,) + first_shape[(axis + 1):]
-    return result_shape
+def inverse_permutation(indices):
+    """Return indices for an inverse permutation.
 
+    Parameters
+    ----------
+    indices : 1D np.ndarray with dtype=int
+        Integer positions to assign elements to.
 
-def interleaved_concat(arrays, indices, axis=0):
-    arrays = [np.asarray(a) for a in arrays]
-    axis = _validate_axis(arrays[0], axis)
-    result_shape = _calc_concat_shape(arrays, axis=axis)
-    dtype = reduce(np.promote_types, [a.dtype for a in arrays])
-    result = np.empty(result_shape, dtype)
-    key = [slice(None)] * result.ndim
-    for a, ind in zip(arrays, indices):
-        key[axis] = ind
-        result[key] = a
-    return result
+    Returns
+    -------
+    inverse_permutation : 1D np.ndarray with dtype=int
+        Integer indices to take from the original array to create the
+        permutation.
+    """
+    # use intp instead of int64 because of windows :(
+    inverse_permutation = np.empty(len(indices), dtype=np.intp)
+    inverse_permutation[indices] = np.arange(len(indices), dtype=np.intp)
+    return inverse_permutation
 
 
 def _ensure_bool_is_ndarray(result, *args):

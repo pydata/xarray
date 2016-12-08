@@ -1,0 +1,70 @@
+How to issue an xarray release in 15 easy steps
+
+Time required: about an hour.
+
+ 1. Ensure your master branch is synced to upstream:
+       git pull upstream master
+ 2. Look over whats-new.rst and the docs. Make sure "What's New" is complete
+    (check the date!) and add a brief summary note describing the release at the
+    top.
+ 3. Update the version in setup.py and switch to `ISRELEASED = True`.
+ 4. If you have any doubts, run the full test suite one final time!
+      py.test
+ 5. On the master branch, commit the release in git:
+      git commit -a -m 'Release v0.X.Y'
+ 6. Tag the release:
+      git tag -a v0.X.Y -m 'v0.X.Y'
+ 7. Build source and binary wheels for pypi:
+      python setup.py bdist_wheel sdist
+ 8. Use twine to register and upload the release on pypi. Be careful, you can't
+    take this back!
+      twine register dist/xarray-0.X.Y-py2.py3-none-any.whl
+      twine upload dist/xarray-0.X.Y*
+    You will need to be listed as a package owner at
+    https://pypi.python.org/pypi/xarray for this to work.
+ 9. Push your changes to master:
+      git push upstream master
+      git push upstream --tags
+ 9. Update the stable branch (used by ReadTheDocs) and switch back to master:
+      git checkout stable
+      git rebase master
+      git push upstream stable
+      git checkout master
+    We also update the stable branch with `git cherrypick` for documentation
+    only fixes that apply the current released version.
+10. Revert ISRELEASED in setup.py back to False. Don't change the version
+    number: in normal development, we keep the version number in setup.py as the
+    last released version.
+11. Commit your changes and push to master again:
+      git commit -a -m 'Revert to dev version'
+      git push upstream master
+    You're done pushing to master!
+12. Issue the release on GitHub. Click on "Draft a new release" at
+    https://github.com/pydata/xarray/releases and paste in the latest from
+    whats-new.rst.
+13. Update the docs. Login to https://readthedocs.org/projects/xray/versions/
+    and switch your new release tag (at the bottom) from "Inactive" to "Active".
+    It should now build automatically.
+14. Update conda-forge. Clone https://github.com/conda-forge/xarray-feedstock
+    and update the version number and sha256 in meta.yaml. (On OS X, you can
+    calculate sha256 with `shasum -a 256 xarray-0.X.Y.tar.gz`). Submit a pull
+    request (and merge it, once CI passes).
+15. Issue the release announcement! For bug fix releases, I usually only email
+    xarray@googlegroups.com. For major/feature releases, I will email a broader
+    list (no more than once every 3-6 months):
+      pydata@googlegroups.com, xarray@googlegroups.com,
+      numpy-discussion@scipy.org, scipy-user@scipy.org,
+      pyaos@lists.johnny-lin.com
+    Google search will turn up examples of prior release announcements (look for
+    "ANN xarray").
+
+Note on version numbering:
+
+We follow a rough approximation of semantic version. Only major releases (0.X.0)
+show include breaking changes. Minor releases (0.X.Y) are for bug fixes and
+backwards compatible new features, but if a sufficient number of new features
+have arrived we will issue a major release even if there are no compatibility
+breaks.
+
+Once the project reaches a sufficient level of maturity for a 1.0.0 release, we
+intend to follow semantic versioning more strictly.

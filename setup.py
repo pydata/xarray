@@ -8,7 +8,7 @@ from setuptools import setup, find_packages
 from setuptools import Command
 
 MAJOR = 0
-MINOR = 7
+MINOR = 8
 MICRO = 2
 ISRELEASED = False
 VERSION = '%d.%d.%d' % (MAJOR, MINOR, MICRO)
@@ -27,7 +27,6 @@ CLASSIFIERS = [
     'Intended Audience :: Science/Research',
     'Programming Language :: Python',
     'Programming Language :: Python :: 2',
-    'Programming Language :: Python :: 2.6',
     'Programming Language :: Python :: 2.7',
     'Programming Language :: Python :: 3',
     'Programming Language :: Python :: 3.3',
@@ -38,9 +37,6 @@ CLASSIFIERS = [
 
 INSTALL_REQUIRES = ['numpy >= 1.7', 'pandas >= 0.15.0']
 TESTS_REQUIRE = ['pytest >= 2.7.1']
-
-if sys.version_info[:2] < (2, 7):
-    TESTS_REQUIRE += ["unittest2 == 0.5.1"]
 
 DESCRIPTION = "N-D labeled arrays and datasets in Python"
 LONG_DESCRIPTION = """
@@ -145,5 +141,4 @@ setup(name=DISTNAME,
       tests_require=TESTS_REQUIRE,
       url=URL,
       packages=find_packages(),
-      py_modules=['xray'],
       package_data={'xarray': ['test/data/*', 'plot/default_colormap.csv']})

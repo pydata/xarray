@@ -1,3 +1,7 @@
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
+
 import inspect
 
 import numpy as np
@@ -111,6 +115,17 @@ class TestPlot(PlotTestCase):
                               _infer_interval_breaks([0, 1, 9, 10]))
         self.assertArrayEqual(pd.date_range('20000101', periods=4) - np.timedelta64(12, 'h'),
                               _infer_interval_breaks(pd.date_range('20000101', periods=3)))
+
+        # make a bounded 2D array that we will center and re-infer
+        xref, yref = np.meshgrid(np.arange(6), np.arange(5))
+        cx = (xref[1:, 1:] + xref[:-1, :-1]) / 2
+        cy = (yref[1:, 1:] + yref[:-1, :-1]) / 2
+        x = _infer_interval_breaks(cx, axis=1)
+        x = _infer_interval_breaks(x, axis=0)
+        y = _infer_interval_breaks(cy, axis=1)
+        y = _infer_interval_breaks(y, axis=0)
+        np.testing.assert_allclose(xref, x)
+        np.testing.assert_allclose(yref, y)
 
     def test_datetime_dimension(self):
         nrow = 3
@@ -349,7 +364,7 @@ class TestDetermineCmapParams(TestCase):
         self.assertEqual(cmap_params['vmax'], 0.9)
         self.assertEqual(cmap_params['cmap'], "RdBu_r")
 
-        # Setting vmin or vmax alone will force symetric bounds around center
+        # Setting vmin or vmax alone will force symmetric bounds around center
         cmap_params = _determine_cmap_params(neg, vmin=-0.1)
         self.assertEqual(cmap_params['vmin'], -0.1)
         self.assertEqual(cmap_params['vmax'], 0.1)
@@ -414,7 +429,7 @@ class TestDiscreteColorMap(TestCase):
             if filled:
                 self.assertEqual(ncmap.colorbar_extend, extend)
             else:
-                self.assertEqual(ncmap.colorbar_extend, 'neither')
+                self.assertEqual(ncmap.colorbar_extend, 'max')
 
     def test_discrete_colormap_list_of_levels(self):
         for extend, levels in [('max', [-1, 2, 4, 8, 10]),
@@ -429,7 +444,7 @@ class TestDiscreteColorMap(TestCase):
                 if kind != 'contour':
                     self.assertEqual(extend, primitive.cmap.colorbar_extend)
                 else:
-                    self.assertEqual('neither', primitive.cmap.colorbar_extend)
+                    self.assertEqual('max', primitive.cmap.colorbar_extend)
                 self.assertEqual(len(levels) - 1, len(primitive.cmap.colors))
 
     def test_discrete_colormap_int_levels(self):
@@ -454,7 +469,7 @@ class TestDiscreteColorMap(TestCase):
                 if kind != 'contour':
                     self.assertEqual(extend, primitive.cmap.colorbar_extend)
                 else:
-                    self.assertEqual('neither', primitive.cmap.colorbar_extend)
+                    self.assertEqual('max', primitive.cmap.colorbar_extend)
                 self.assertGreaterEqual(levels, len(primitive.cmap.colors))
 
     def test_discrete_colormap_list_levels_and_vmin_or_vmax(self):
@@ -593,7 +608,7 @@ class Common2dMixin:
         ax = plt.gca()
         self.assertEqual('x', ax.get_xlabel())
         self.assertEqual('newy', ax.get_ylabel())
-        # ax limits might change bewteen plotfuncs
+        # ax limits might change between plotfuncs
         # simply ensure that these high coords were passed over
         self.assertTrue(np.min(ax.get_ylim()) > 100.)
 
@@ -607,7 +622,7 @@ class Common2dMixin:
         ax = plt.gca()
         self.assertEqual('newy', ax.get_xlabel())
         self.assertEqual('x', ax.get_ylabel())
-        # ax limits might change bewteen plotfuncs
+        # ax limits might change between plotfuncs
         # simply ensure that these high coords were passed over
         self.assertTrue(np.min(ax.get_xlim()) > 100.)
 
@@ -618,9 +633,9 @@ class Common2dMixin:
         title = plt.gca().get_title()
         self.assertTrue('c = 1, d = foo' == title or 'd = foo, c = 1' == title)
 
-    def test_colorbar_label(self):
+    def test_colorbar_default_label(self):
         self.darray.name = 'testvar'
-        self.plotmethod()
+        self.plotmethod(add_colorbar=True)
         self.assertIn(self.darray.name, text_in_fig())
 
     def test_no_labels(self):
@@ -629,6 +644,43 @@ class Common2dMixin:
         alltxt = text_in_fig()
         for string in ['x', 'y', 'testvar']:
             self.assertNotIn(string, alltxt)
+
+    def test_colorbar_kwargs(self):
+        # replace label
+        self.darray.name = 'testvar'
+        self.plotmethod(add_colorbar=True, cbar_kwargs={'label':'MyLabel'})
+        alltxt = text_in_fig()
+        self.assertIn('MyLabel', alltxt)
+        self.assertNotIn('testvar', alltxt)
+        # you can use mapping types as well
+        self.plotmethod(add_colorbar=True, cbar_kwargs=(('label', 'MyLabel'),))
+        alltxt = text_in_fig()
+        self.assertIn('MyLabel', alltxt)
+        self.assertNotIn('testvar', alltxt)
+        # change cbar ax
+        fig, (ax, cax) = plt.subplots(1, 2)
+        self.plotmethod(ax=ax, cbar_ax=cax, add_colorbar=True,
+                        cbar_kwargs={'label':'MyBar'})
+        self.assertTrue(ax.has_data())
+        self.assertTrue(cax.has_data())
+        alltxt = text_in_fig()
+        self.assertIn('MyBar', alltxt)
+        self.assertNotIn('testvar', alltxt)
+        # note that there are two ways to achieve this
+        fig, (ax, cax) = plt.subplots(1, 2)
+        self.plotmethod(ax=ax, add_colorbar=True,
+                        cbar_kwargs={'label':'MyBar', 'cax':cax})
+        self.assertTrue(ax.has_data())
+        self.assertTrue(cax.has_data())
+        alltxt = text_in_fig()
+        self.assertIn('MyBar', alltxt)
+        self.assertNotIn('testvar', alltxt)
+        # see that no colorbar is respected
+        self.plotmethod(add_colorbar=False)
+        self.assertNotIn('testvar', text_in_fig())
+        # check that error is raised
+        self.assertRaises(ValueError, self.plotmethod,
+                          add_colorbar=False, cbar_kwargs= {'label':'label'})
 
     def test_verbose_facetgrid(self):
         a = easy_array((10, 15, 3))
@@ -747,7 +799,7 @@ class TestContour(Common2dMixin, PlotTestCase):
 
     def test_colors(self):
         # matplotlib cmap.colors gives an rgbA ndarray
-        # when seaborn is used, instead we get an rgb tuble
+        # when seaborn is used, instead we get an rgb tuple
         def _color_as_tuple(c):
             return tuple(c[:3])
         artist = self.plotmethod(colors='k')
@@ -758,6 +810,19 @@ class TestContour(Common2dMixin, PlotTestCase):
         artist = self.plotmethod(colors=['k', 'b'])
         self.assertEqual(
             _color_as_tuple(artist.cmap.colors[1]),
+            (0.0, 0.0, 1.0))
+
+        artist = self.darray.plot.contour(levels=[-0.5, 0., 0.5, 1.],
+                                          colors=['k', 'r', 'w', 'b'])
+        self.assertEqual(
+            _color_as_tuple(artist.cmap.colors[1]),
+            (1.0, 0.0, 0.0))
+        self.assertEqual(
+            _color_as_tuple(artist.cmap.colors[2]),
+            (1.0, 1.0, 1.0))
+        # the last color is now under "over"
+        self.assertEqual(
+             _color_as_tuple(artist.cmap._rgba_over),
             (0.0, 0.0, 1.0))
 
     def test_cmap_and_color_both(self):
@@ -774,6 +839,12 @@ class TestContour(Common2dMixin, PlotTestCase):
         ax = plt.gca()
         self.assertEqual('x2d', ax.get_xlabel())
         self.assertEqual('y2d', ax.get_ylabel())
+
+    def test_single_level(self):
+        # this used to raise an error, but not anymore since
+        # add_colorbar defaults to false
+        self.plotmethod(levels=[0.1])
+        self.plotmethod(levels=1)
 
 
 class TestPcolormesh(Common2dMixin, PlotTestCase):
@@ -1030,7 +1101,13 @@ class TestFacetGrid(PlotTestCase):
         d.plot.imshow(x='x', y='y', col='z', add_colorbar=False)
         self.assertEqual(0, len(find_possible_colorbars()))
 
+    def test_facetgrid_polar(self):
+        # test if polar projection in FacetGrid does not raise an exception
+        self.darray.plot.pcolormesh(col='z',
+                                    subplot_kws=dict(projection='polar'),
+                                    sharex=False, sharey=False)
 
+        
 class TestFacetGrid4d(PlotTestCase):
 
     def setUp(self):
@@ -1056,3 +1133,5 @@ class TestFacetGrid4d(PlotTestCase):
         # Top row should be labeled
         for label, ax in zip(self.darray.coords['col'].values, g.axes[0, :]):
             self.assertTrue(substring_in_axes(label, ax))
+        
+        

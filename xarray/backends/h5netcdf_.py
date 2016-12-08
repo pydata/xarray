@@ -1,13 +1,16 @@
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
 import functools
 
 from .. import Variable
-from ..conventions import cf_encoder
 from ..core import indexing
 from ..core.utils import FrozenOrderedDict, close_on_error, Frozen
 from ..core.pycompat import iteritems, bytes_type, unicode_type, OrderedDict
 
-from .common import WritableCFDataStore
-from .netCDF4_ import _nc4_group, _nc4_values_and_dtype, _extract_nc4_encoding
+from .common import WritableCFDataStore, DataStorePickleMixin
+from .netCDF4_ import (_nc4_group, _nc4_values_and_dtype, _extract_nc4_encoding,
+                       BaseNetCDF4Array)
 
 
 def maybe_decode_bytes(txt):
@@ -34,24 +37,32 @@ _extract_h5nc_encoding = functools.partial(_extract_nc4_encoding,
                                            lsd_okay=False, backend='h5netcdf')
 
 
-class H5NetCDFStore(WritableCFDataStore):
+def _open_h5netcdf_group(filename, mode, group):
+    import h5netcdf.legacyapi
+    ds = h5netcdf.legacyapi.Dataset(filename, mode=mode)
+    with close_on_error(ds):
+        return _nc4_group(ds, group, mode)
+
+
+class H5NetCDFStore(WritableCFDataStore, DataStorePickleMixin):
     """Store for reading and writing data via h5netcdf
     """
     def __init__(self, filename, mode='r', format=None, group=None,
                  writer=None):
-        import h5netcdf.legacyapi
         if format not in [None, 'NETCDF4']:
             raise ValueError('invalid format for h5netcdf backend')
-        ds = h5netcdf.legacyapi.Dataset(filename, mode=mode)
-        with close_on_error(ds):
-            self.ds = _nc4_group(ds, group, mode)
+        opener = functools.partial(_open_h5netcdf_group, filename, mode=mode,
+                                   group=group)
+        self.ds = opener()
         self.format = format
+        self._opener = opener
         self._filename = filename
+        self._mode = mode
         super(H5NetCDFStore, self).__init__(writer)
 
-    def open_store_variable(self, var):
+    def open_store_variable(self, name, var):
         dimensions = var.dimensions
-        data = indexing.LazilyIndexedArray(var)
+        data = indexing.LazilyIndexedArray(BaseNetCDF4Array(name, self))
         attrs = _read_attributes(var)
 
         # netCDF4 specific encoding
@@ -66,7 +77,7 @@ class H5NetCDFStore(WritableCFDataStore):
         return Variable(dimensions, data, attrs, encoding)
 
     def get_variables(self):
-        return FrozenOrderedDict((k, self.open_store_variable(v))
+        return FrozenOrderedDict((k, self.open_store_variable(k, v))
                                  for k, v in iteritems(self.ds.variables))
 
     def get_attrs(self):

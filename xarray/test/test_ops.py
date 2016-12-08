@@ -1,10 +1,12 @@
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
+from pytest import mark
 import numpy as np
 from numpy import array, nan
-from xarray.core import ops
 from xarray.core.ops import (
-    first, last, count, mean
+    first, last, count, mean, array_notnull_equiv,
 )
-from xarray.core.nputils import interleaved_concat as interleaved_concat_numpy
 
 from . import TestCase
 
@@ -76,59 +78,33 @@ class TestOps(TestCase):
     def test_all_nan_arrays(self):
         assert np.isnan(mean([np.nan, np.nan]))
 
-    def test_interleaved_concat(self):
-        for interleaved_concat in [interleaved_concat_numpy,
-                                   ops._interleaved_concat_slow,
-                                   ops.interleaved_concat]:
-            x = np.arange(5)
-            self.assertArrayEqual(x, interleaved_concat([x], [x]))
 
-            arrays = np.arange(10).reshape(2, -1)
-            indices = np.arange(10).reshape(2, -1, order='F')
-            actual = interleaved_concat(arrays, indices)
-            expected = np.array([0, 5, 1, 6, 2, 7, 3, 8, 4, 9])
-            self.assertArrayEqual(expected, actual)
+class TestArrayNotNullEquiv():
+    @mark.parametrize("arr1, arr2", [
+        (np.array([1, 2, 3]), np.array([1, 2, 3])),
+        (np.array([1, 2, np.nan]), np.array([1, np.nan, 3])),
+        (np.array([np.nan, 2, np.nan]), np.array([1, np.nan, np.nan])),
+    ])
+    def test_equal(self, arr1, arr2):
+        assert array_notnull_equiv(arr1, arr2)
 
-            arrays2 = arrays.reshape(2, 5, 1)
+    def test_some_not_equal(self):
+        a = np.array([1, 2, 4])
+        b = np.array([1, np.nan, 3])
+        assert not array_notnull_equiv(a, b)
 
-            actual = interleaved_concat(arrays2, indices, axis=0)
-            self.assertArrayEqual(expected.reshape(10, 1), actual)
+    def test_wrong_shape(self):
+        a = np.array([[1, np.nan, np.nan, 4]])
+        b = np.array([[1, 2], [np.nan, 4]])
+        assert not array_notnull_equiv(a, b)
 
-            actual = interleaved_concat(arrays2, [[0], [1]], axis=1)
-            self.assertArrayEqual(arrays.T, actual)
-
-            actual = interleaved_concat(arrays2, [slice(1), slice(1, 2)], axis=-1)
-            self.assertArrayEqual(arrays.T, actual)
-
-            with self.assertRaises(IndexError):
-                interleaved_concat(arrays, indices, axis=1)
-            with self.assertRaises(IndexError):
-                interleaved_concat(arrays, indices, axis=-2)
-            with self.assertRaises(IndexError):
-                interleaved_concat(arrays2, [0, 1], axis=2)
-
-    def test_interleaved_concat_dtypes(self):
-        for interleaved_concat in [interleaved_concat_numpy,
-                                   ops._interleaved_concat_slow,
-                                   ops.interleaved_concat]:
-            a = np.array(['a'])
-            b = np.array(['bc'])
-            actual = interleaved_concat([a, b], [[0], [1]])
-            expected = np.array(['a', 'bc'])
-            self.assertArrayEqual(expected, actual)
-
-            c = np.array([np.nan], dtype=object)
-            actual = interleaved_concat([a, b, c], [[0], [1], [2]])
-            expected = np.array(['a', 'bc', np.nan], dtype=object)
-            self.assertArrayEqual(expected, actual)
-
-    def test_interleaved_indices_required(self):
-        self.assertFalse(ops._interleaved_indices_required([[0]]))
-        self.assertFalse(ops._interleaved_indices_required([[0, 1], [2, 3, 4]]))
-        self.assertFalse(ops._interleaved_indices_required([slice(3), slice(3, 4)]))
-        self.assertFalse(ops._interleaved_indices_required([slice(0, 2, 1)]))
-        self.assertTrue(ops._interleaved_indices_required([[0], [2]]))
-        self.assertTrue(ops._interleaved_indices_required([[1], [2, 3]]))
-        self.assertTrue(ops._interleaved_indices_required([[0, 1], [2, 4]]))
-        self.assertTrue(ops._interleaved_indices_required([[0, 1], [3.5, 4]]))
-        self.assertTrue(ops._interleaved_indices_required([slice(None, None, 2)]))
+    @mark.parametrize("val1, val2, val3, null", [
+        (1, 2, 3, None),
+        (1., 2., 3., np.nan),
+        (1., 2., 3., None),
+        ('foo', 'bar', 'baz', None),
+    ])
+    def test_types(self, val1, val2, val3, null):
+        arr1 = np.array([val1, null, val3, null])
+        arr2 = np.array([val1, val2, null, null])
+        assert array_notnull_equiv(arr1, arr2)

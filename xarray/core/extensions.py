@@ -1,9 +1,16 @@
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
+import traceback
+import warnings
+
 from .dataarray import DataArray
 from .dataset import Dataset
+from .pycompat import PY2
 
 
-class AccessorRegistrationError(Exception):
-    """Exception for conflicts in accessor registration."""
+class AccessorRegistrationWarning(Warning):
+    """Warning for conflicts in accessor registration."""
 
 
 class _CachedAccessor(object):
@@ -16,7 +23,16 @@ class _CachedAccessor(object):
         if obj is None:
             # we're accessing the attribute of the class, i.e., Dataset.geo
             return self._accessor
-        accessor_obj = self._accessor(obj)
+        try:
+            accessor_obj = self._accessor(obj)
+        except AttributeError:
+            # __getattr__ on data object will swallow any AttributeErrors raised
+            # when initializing the accessor, so we need to raise as something
+            # else (GH933):
+            msg = 'error initializing %r accessor.' % self._name
+            if PY2:
+                msg += ' Full traceback:\n' + traceback.format_exc()
+            raise RuntimeError(msg)
         # Replace the property with the accessor object. Inspired by:
         # http://www.pydanny.com/cached-property.html
         # We need to use object.__setattr__ because we overwrite __setattr__ on
@@ -28,10 +44,12 @@ class _CachedAccessor(object):
 def _register_accessor(name, cls):
     def decorator(accessor):
         if hasattr(cls, name):
-            raise AccessorRegistrationError(
-                'cannot register accessor %r under name %r for type %r '
-                'because an attribute with that name already exists.'
-                % (accessor, name, cls))
+            warnings.warn(
+                'registration of accessor %r under name %r for type %r is '
+                'overriding a preexisting attribute with the same name.'
+                % (accessor, name, cls),
+                AccessorRegistrationWarning,
+                stacklevel=2)
         setattr(cls, name, _CachedAccessor(name, accessor))
         return accessor
     return decorator
@@ -43,7 +61,8 @@ def register_dataarray_accessor(name):
     Parameters
     ----------
     name : str
-        Name under which the accessor should be registered.
+        Name under which the accessor should be registered. A warning is issued
+        if this name conflicts with a preexisting attribute.
 
     Examples
     --------
@@ -90,7 +109,8 @@ def register_dataset_accessor(name):
     Parameters
     ----------
     name : str
-        Name under which the property should be registered.
+        Name under which the accessor should be registered. A warning is issued
+        if this name conflicts with a preexisting attribute.
 
     See also
     --------

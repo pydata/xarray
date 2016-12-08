@@ -1,9 +1,13 @@
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
 import numpy as np
 import pandas as pd
 
-from .pycompat import basestring, iteritems, suppress, dask_array_type
+from .pycompat import (basestring, iteritems, suppress, dask_array_type,
+                       OrderedDict)
 from . import formatting
-from .utils import SortedKeysDict, not_implemented
+from .utils import SortedKeysDict, not_implemented, Frozen
 
 
 class ImplementsArrayReduce(object):
@@ -29,6 +33,13 @@ class ImplementsArrayReduce(object):
             and 'axis' arguments can be supplied. If neither are supplied, then
             `{name}` is calculated over axes."""
 
+    _cum_extra_args_docstring = \
+        """dim : str or sequence of str, optional
+            Dimension over which to apply `{name}`.
+        axis : int or sequence of int, optional
+            Axis over which to apply `{name}`. Only one of the 'dim'
+            and 'axis' arguments can be supplied."""
+
 
 class ImplementsDatasetReduce(object):
     @classmethod
@@ -50,6 +61,13 @@ class ImplementsDatasetReduce(object):
         """dim : str or sequence of str, optional
             Dimension(s) over which to apply `func`.  By default `func` is
             applied over all dimensions."""
+
+    _cum_extra_args_docstring = \
+        """dim : str or sequence of str, optional
+            Dimension over which to apply `{name}`.
+        axis : int or sequence of int, optional
+            Axis over which to apply `{name}`. Only one of the 'dim'
+            and 'axis' arguments can be supplied."""
 
 
 class ImplementsRollingArrayReduce(object):
@@ -109,7 +127,9 @@ class ImplementsRollingArrayReduce(object):
         return wrapped_func
 
 
-class AbstractArray(ImplementsArrayReduce):
+class AbstractArray(ImplementsArrayReduce, formatting.ReprMixin):
+    """Shared base class for DataArray and Variable."""
+
     def __bool__(self):
         return bool(self.values)
 
@@ -172,6 +192,18 @@ class AbstractArray(ImplementsArrayReduce):
             raise ValueError("%r not found in array dimensions %r" %
                              (dim, self.dims))
 
+    @property
+    def sizes(self):
+        """Ordered mapping from dimension names to lengths.
+
+        Immutable.
+
+        See also
+        --------
+        Dataset.sizes
+        """
+        return Frozen(OrderedDict(zip(self.dims, self.shape)))
+
 
 class AttrAccessMixin(object):
     """Mixin class that allows getting keys with attribute access
@@ -181,7 +213,7 @@ class AttrAccessMixin(object):
     @property
     def _attr_sources(self):
         """List of places to look-up items for attribute-style access"""
-        return [self, self.attrs]
+        return []
 
     def __getattr__(self, name):
         if name != '__setstate__':
@@ -211,12 +243,49 @@ class AttrAccessMixin(object):
         """Provide method name lookup and completion. Only provide 'public'
         methods.
         """
-        extra_attrs = [item for sublist in self._attr_sources
-                       for item in sublist]
+        extra_attrs = [
+            item for sublist in self._attr_sources for item in sublist
+            if isinstance(item, basestring)]
         return sorted(set(dir(type(self)) + extra_attrs))
 
 
-class BaseDataObject(AttrAccessMixin):
+class SharedMethodsMixin(object):
+    """Shared methods for Dataset, DataArray and Variable."""
+
+    def squeeze(self, dim=None):
+        """Return a new object with squeezed data.
+
+        Parameters
+        ----------
+        dim : None or str or tuple of str, optional
+            Selects a subset of the length one dimensions. If a dimension is
+            selected with length greater than one, an error is raised. If
+            None, all length one dimensions are squeezed.
+
+        Returns
+        -------
+        squeezed : same type as caller
+            This object, but with with all or a subset of the dimensions of
+            length 1 removed.
+
+        See Also
+        --------
+        numpy.squeeze
+        """
+        if dim is None:
+            dim = [d for d, s in self.sizes.items() if s == 1]
+        else:
+            if isinstance(dim, basestring):
+                dim = [dim]
+            if any(self.sizes[k] > 1 for k in dim):
+                raise ValueError('cannot select a dimension to squeeze out '
+                                 'which has length greater than one')
+        return self.isel(**{d: 0 for d in dim})
+
+
+class BaseDataObject(SharedMethodsMixin, AttrAccessMixin):
+    """Shared base class for Dataset and DataArray."""
+
     def _calc_assign_results(self, kwargs):
         results = SortedKeysDict()
         for k, v in kwargs.items():
@@ -325,7 +394,7 @@ class BaseDataObject(AttrAccessMixin):
 
         Parameters
         ----------
-        group : str, DataArray or Coordinate
+        group : str, DataArray or IndexVariable
             Array whose unique values should be used to group this array. If a
             string, must be the name of a variable contained in this dataset.
         squeeze : boolean, optional
@@ -342,6 +411,60 @@ class BaseDataObject(AttrAccessMixin):
         if isinstance(group, basestring):
             group = self[group]
         return self.groupby_cls(self, group, squeeze=squeeze)
+
+    def groupby_bins(self, group, bins, right=True, labels=None, precision=3,
+                     include_lowest=False, squeeze=True):
+        """Returns a GroupBy object for performing grouped operations.
+
+        Rather than using all unique values of `group`, the values are discretized
+        first by applying `pandas.cut` [1]_ to `group`.
+
+        Parameters
+        ----------
+        group : str, DataArray or IndexVariable
+            Array whose binned values should be used to group this array. If a
+            string, must be the name of a variable contained in this dataset.
+        bins : int or array of scalars
+            If bins is an int, it defines the number of equal-width bins in the
+            range of x. However, in this case, the range of x is extended by .1%
+            on each side to include the min or max values of x. If bins is a
+            sequence it defines the bin edges allowing for non-uniform bin
+            width. No extension of the range of x is done in this case.
+        right : boolean, optional
+            Indicates whether the bins include the rightmost edge or not. If
+            right == True (the default), then the bins [1,2,3,4] indicate
+            (1,2], (2,3], (3,4].
+        labels : array or boolean, default None
+            Used as labels for the resulting bins. Must be of the same length as
+            the resulting bins. If False, string bin labels are assigned by
+            `pandas.cut`.
+        precision : int
+            The precision at which to store and display the bins labels.
+        include_lowest : bool
+            Whether the first interval should be left-inclusive or not.
+        squeeze : boolean, optional
+            If "group" is a dimension of any arrays in this dataset, `squeeze`
+            controls whether the subarrays have a dimension of length 1 along
+            that dimension or if the dimension is squeezed out.
+
+        Returns
+        -------
+        grouped : GroupBy
+            A `GroupBy` object patterned after `pandas.GroupBy` that can be
+            iterated over in the form of `(unique_value, grouped_array)` pairs.
+            The name of the group has the added suffix `_bins` in order to
+            distinguish it from the original variable.
+
+        References
+        ----------
+        .. [1] http://pandas.pydata.org/pandas-docs/stable/generated/pandas.cut.html
+        """
+        if isinstance(group, basestring):
+            group = self[group]
+        return self.groupby_cls(self, group, squeeze=squeeze, bins=bins,
+                                cut_kwargs={'right': right, 'labels': labels,
+                                            'precision': precision,
+                                            'include_lowest': include_lowest})
 
     def rolling(self, min_periods=None, center=False, **windows):
         """
@@ -464,7 +587,7 @@ class BaseDataObject(AttrAccessMixin):
         ----------
         cond : boolean DataArray or Dataset
         other : unimplemented, optional
-            Unimplemented placeholder for compatability with future numpy / pandas versions
+            Unimplemented placeholder for compatibility with future numpy / pandas versions
         drop : boolean, optional
             Coordinate labels that only correspond to NA values should be dropped
 
@@ -521,27 +644,29 @@ class BaseDataObject(AttrAccessMixin):
             outobj = self
             outcond = cond
 
-        return outobj._where(outcond)
+        # preserve attributes
+        out = outobj._where(outcond)
+        out._copy_attrs_from(self)
+        return out
 
+    def close(self):
+        """Close any files linked to this object
+        """
+        if self._file_obj is not None:
+            self._file_obj.close()
+        self._file_obj = None
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        self.close()
 
     # this has no runtime function - these are listed so IDEs know these methods
     # are defined and don't warn on these operations
     __lt__ = __le__ =__ge__ = __gt__ = __add__ = __sub__ = __mul__ = \
     __truediv__ = __floordiv__ = __mod__ = __pow__ = __and__  = __xor__ = \
     __or__ = __div__ = __eq__ = __ne__ = not_implemented
-
-
-def squeeze(xarray_obj, dims, dim=None):
-    """Squeeze the dims of an xarray object."""
-    if dim is None:
-        dim = [d for d, s in iteritems(dims) if s == 1]
-    else:
-        if isinstance(dim, basestring):
-            dim = [dim]
-        if any(dims[k] > 1 for k in dim):
-            raise ValueError('cannot select a dimension to squeeze out '
-                             'which has length greater than one')
-    return xarray_obj.isel(**dict((d, 0) for d in dim))
 
 
 def _maybe_promote(dtype):
@@ -580,54 +705,69 @@ def _get_fill_value(dtype):
     return fill_value
 
 
-def _full_like_dataarray(arr, keep_attrs=False, fill_value=None):
-    """empty DataArray"""
-    from .dataarray import DataArray
-
-    attrs = arr.attrs if keep_attrs else {}
-
-    if fill_value is None:
-        values = np.empty_like(arr)
-    elif fill_value is True:
-        dtype, fill_value = _maybe_promote(arr.dtype)
-        values = np.full_like(arr, fill_value=fill_value, dtype=dtype)
-    else:
-        dtype, _ = _maybe_promote(np.array(fill_value).dtype)
-        values = np.full_like(arr, fill_value=fill_value, dtype=dtype)
-
-    return DataArray(values, dims=arr.dims, coords=arr.coords, attrs=attrs)
-
-
-def _full_like(xray_obj, keep_attrs=False, fill_value=None):
+def full_like(other, fill_value, dtype=None):
     """Return a new object with the same shape and type as a given object.
 
     Parameters
     ----------
-    xray_obj : DataArray or Dataset
-        Return a full object with the same shape/dims/coords/attrs.
-            `func` is calculated over all dimension for each group item.
-    keep_attrs : bool, optional
-        If True, the datasets's attributes (`attrs`) will be copied from
-        the original object to the new one.  If False (default), the new
-        object will be returned without attributes.
-    fill_value : scalar, optional
-        Value to fill DataArray(s) with before returning.
+    other : DataArray, Dataset, or Variable
+        The reference object in input
+    fill_value : scalar
+        Value to fill the new object with before returning it.
+    dtype : dtype, optional
+        dtype of the new array. If omitted, it defaults to other.dtype.
 
     Returns
     -------
-    out : same as xray_obj
-        New object with the same shape and type as a given object.
+    out : same as object
+        New object with the same shape and type as other, with the data
+        filled with fill_value. Coords will be copied from other.
+        If other is based on dask, the new one will be as well, and will be
+        split in the same chunks.
     """
     from .dataarray import DataArray
     from .dataset import Dataset
+    from .variable import Variable
 
-    if isinstance(xray_obj, Dataset):
-        attrs = xray_obj.attrs if keep_attrs else {}
+    if isinstance(other, Dataset):
+        data_vars = OrderedDict(
+            (k, _full_like_variable(v, fill_value, dtype))
+            for k, v in other.data_vars.items())
+        return Dataset(data_vars, coords=other.coords, attrs=other.attrs)
+    elif isinstance(other, DataArray):
+        return DataArray(
+            _full_like_variable(other.variable, fill_value, dtype),
+            dims=other.dims, coords=other.coords, attrs=other.attrs, name=other.name)
+    elif isinstance(other, Variable):
+        return _full_like_variable(other, fill_value, dtype)
+    else:
+        raise TypeError("Expected DataArray, Dataset, or Variable")
 
-        return Dataset(dict((k, _full_like_dataarray(v, keep_attrs=keep_attrs,
-                                                     fill_value=fill_value))
-                            for k, v in iteritems(xray_obj.data_vars)),
-                       name=xray_obj.name, attrs=attrs)
-    elif isinstance(xray_obj, DataArray):
-        return _full_like_dataarray(xray_obj, keep_attrs=keep_attrs,
-                                    fill_value=fill_value)
+
+def _full_like_variable(other, fill_value, dtype=None):
+    """Inner function of full_like, where other must be a variable
+    """
+    from .variable import Variable
+
+    if isinstance(other.data, dask_array_type):
+        import dask.array
+        if dtype is None:
+            dtype = other.dtype
+        data = dask.array.full(other.shape, fill_value, dtype=dtype,
+                               chunks=other.data.chunks)
+    else:
+        data = np.full_like(other, fill_value, dtype=dtype)
+
+    return Variable(dims=other.dims, data=data, attrs=other.attrs)
+
+
+def zeros_like(other, dtype=None):
+    """Shorthand for full_like(other, 0, dtype)
+    """
+    return full_like(other, 0, dtype)
+
+
+def ones_like(other, dtype=None):
+    """Shorthand for full_like(other, 1, dtype)
+    """
+    return full_like(other, 1, dtype)

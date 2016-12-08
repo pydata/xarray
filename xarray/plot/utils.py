@@ -1,3 +1,6 @@
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
 import pkg_resources
 
 import numpy as np
@@ -41,7 +44,7 @@ def _build_discrete_cmap(cmap, levels, extend, filled):
 
     if not filled:
         # non-filled contour plots
-        extend = 'neither'
+        extend = 'max'
 
     if extend == 'both':
         ext_n = 2

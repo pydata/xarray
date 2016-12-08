@@ -1,7 +1,10 @@
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
 import numpy as np
 import pandas as pd
 
-from xarray import Dataset, Variable
+from xarray import Dataset, DataArray, Variable
 from xarray.core import indexing
 from . import TestCase, ReturnItem
 
@@ -85,6 +88,19 @@ class TestIndexers(TestCase):
             indexing.convert_label_indexer(index, [0])
         with self.assertRaises(KeyError):
             indexing.convert_label_indexer(index, 0)
+        with self.assertRaisesRegexp(ValueError, 'does not have a MultiIndex'):
+            indexing.convert_label_indexer(index, {'one': 0})
+
+        mindex = pd.MultiIndex.from_product([['a', 'b'], [1, 2]],
+                                            names=('one', 'two'))
+        with self.assertRaisesRegexp(KeyError, 'not all values found'):
+            indexing.convert_label_indexer(mindex, [0])
+        with self.assertRaises(KeyError):
+            indexing.convert_label_indexer(mindex, 0)
+        with self.assertRaises(ValueError):
+            indexing.convert_label_indexer(index, {'three': 0})
+        with self.assertRaisesRegexp(KeyError, 'index to be fully lexsorted'):
+            indexing.convert_label_indexer(mindex, (slice(None), 1, 'no_level'))
 
     def test_convert_unsorted_datetime_index_raises(self):
         index = pd.to_datetime(['2001', '2000', '2002'])
@@ -94,15 +110,57 @@ class TestIndexers(TestCase):
             # slice is always a view.
             indexing.convert_label_indexer(index, slice('2001', '2002'))
 
-    def test_remap_label_indexers(self):
-        # TODO: fill in more tests!
-        data = Dataset({'x': ('x', [1, 2, 3])})
+    def test_get_dim_indexers(self):
+        mindex = pd.MultiIndex.from_product([['a', 'b'], [1, 2]],
+                                            names=('one', 'two'))
+        mdata = DataArray(range(4), [('x', mindex)])
 
-        def test_indexer(x):
-            return indexing.remap_label_indexers(data, {'x': x})
-        self.assertEqual({'x': 0}, test_indexer(1))
-        self.assertEqual({'x': 0}, test_indexer(np.int32(1)))
-        self.assertEqual({'x': 0}, test_indexer(Variable([], 1)))
+        dim_indexers = indexing.get_dim_indexers(mdata, {'one': 'a', 'two': 1})
+        self.assertEqual(dim_indexers, {'x': {'one': 'a', 'two': 1}})
+
+        with self.assertRaisesRegexp(ValueError, 'cannot combine'):
+            _ = indexing.get_dim_indexers(mdata, {'x': 'a', 'two': 1})
+
+        with self.assertRaisesRegexp(ValueError, 'do not exist'):
+            _ = indexing.get_dim_indexers(mdata, {'y': 'a'})
+            _ = indexing.get_dim_indexers(data, {'four': 1})
+
+    def test_remap_label_indexers(self):
+        def test_indexer(data, x, expected_pos, expected_idx=None):
+            pos, idx = indexing.remap_label_indexers(data, {'x': x})
+            self.assertArrayEqual(pos.get('x'), expected_pos)
+            self.assertArrayEqual(idx.get('x'), expected_idx)
+
+        data = Dataset({'x': ('x', [1, 2, 3])})
+        mindex = pd.MultiIndex.from_product([['a', 'b'], [1, 2], [-1, -2]],
+                                            names=('one', 'two', 'three'))
+        mdata = DataArray(range(8), [('x', mindex)])
+
+        test_indexer(data, 1, 0)
+        test_indexer(data, np.int32(1), 0)
+        test_indexer(data, Variable([], 1), 0)
+        test_indexer(mdata, ('a', 1, -1), 0)
+        test_indexer(mdata, ('a', 1),
+                     [True,  True, False, False, False, False, False, False],
+                     [-1, -2])
+        test_indexer(mdata, 'a', slice(0, 4, None),
+                     pd.MultiIndex.from_product([[1, 2], [-1, -2]]))
+        test_indexer(mdata, ('a',),
+                     [True,  True,  True,  True, False, False, False, False],
+                     pd.MultiIndex.from_product([[1, 2], [-1, -2]]))
+        test_indexer(mdata, [('a', 1, -1), ('b', 2, -2)], [0, 7])
+        test_indexer(mdata, slice('a', 'b'), slice(0, 8, None))
+        test_indexer(mdata, slice(('a', 1), ('b', 1)), slice(0, 6, None))
+        test_indexer(mdata, {'one': 'a', 'two': 1, 'three': -1}, 0)
+        test_indexer(mdata, {'one': 'a', 'two': 1},
+                     [True,  True, False, False, False, False, False, False],
+                     [-1, -2])
+        test_indexer(mdata, {'one': 'a', 'three': -1},
+                     [True,  False, True, False, False, False, False, False],
+                     [1, 2])
+        test_indexer(mdata, {'one': 'a'},
+                     [True,  True,  True,  True, False, False, False, False],
+                     pd.MultiIndex.from_product([[1, 2], [-1, -2]]))
 
 
 class TestLazyArray(TestCase):
@@ -142,3 +200,45 @@ class TestLazyArray(TestCase):
             actual = lazy[i][j]
             self.assertEqual(expected.shape, actual.shape)
             self.assertArrayEqual(expected, actual)
+
+
+class TestCopyOnWriteArray(TestCase):
+    def test_setitem(self):
+        original = np.arange(10)
+        wrapped = indexing.CopyOnWriteArray(original)
+        wrapped[:] = 0
+        self.assertArrayEqual(original, np.arange(10))
+        self.assertArrayEqual(wrapped, np.zeros(10))
+
+    def test_sub_array(self):
+        original = np.arange(10)
+        wrapped = indexing.CopyOnWriteArray(original)
+        child = wrapped[:5]
+        self.assertIsInstance(child, indexing.CopyOnWriteArray)
+        child[:] = 0
+        self.assertArrayEqual(original, np.arange(10))
+        self.assertArrayEqual(wrapped, np.arange(10))
+        self.assertArrayEqual(child, np.zeros(5))
+
+
+class TestMemoryCachedArray(TestCase):
+    def test_wrapper(self):
+        original = indexing.LazilyIndexedArray(np.arange(10))
+        wrapped = indexing.MemoryCachedArray(original)
+        self.assertArrayEqual(wrapped, np.arange(10))
+        self.assertIsInstance(wrapped.array, np.ndarray)
+
+    def test_sub_array(self):
+        original = indexing.LazilyIndexedArray(np.arange(10))
+        wrapped = indexing.MemoryCachedArray(original)
+        child = wrapped[:5]
+        self.assertIsInstance(child, indexing.MemoryCachedArray)
+        self.assertArrayEqual(child, np.arange(5))
+        self.assertIsInstance(child.array, np.ndarray)
+        self.assertIsInstance(wrapped.array, indexing.LazilyIndexedArray)
+
+    def test_setitem(self):
+        original = np.arange(10)
+        wrapped = indexing.MemoryCachedArray(original)
+        wrapped[:] = 0
+        self.assertArrayEqual(original, np.zeros(10))
