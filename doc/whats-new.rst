@@ -138,6 +138,10 @@ Bug fixes
 - Fixed sub-optimal performance in certain operations with object arrays (:issue:`1121`).
   By `Yves Delley <https://github.com/burnpanck>`_.
 
+- Use `safe_cast_to_index` when generating `unique_value_groups` in ``groupby``
+  (:issue:`1132`).
+  By `Jonas Sølvsteen <https://github.com/j08lue>`_.
+
 .. _whats-new.0.8.2:
 
 v0.8.2 (18 August 2016)
