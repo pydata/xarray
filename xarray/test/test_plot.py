@@ -179,7 +179,8 @@ class TestPlot1D(PlotTestCase):
 
     def setUp(self):
         d = [0, 1.1, 0, 2]
-        self.darray = DataArray(d, coords={'period': range(len(d))})
+        self.darray = DataArray(d, coords={'period': range(len(d))},
+                                dims='period')
 
     def test_xlabel_is_index_name(self):
         self.darray.plot()
@@ -206,7 +207,8 @@ class TestPlot1D(PlotTestCase):
         self.pass_in_axis(self.darray.plot.line)
 
     def test_nonnumeric_index_raises_typeerror(self):
-        a = DataArray([1, 2, 3], {'letter': ['a', 'b', 'c']})
+        a = DataArray([1, 2, 3], {'letter': ['a', 'b', 'c']},
+                      dims='letter')
         with self.assertRaisesRegexp(TypeError, r'[Pp]lot'):
             a.plot.line()
 
@@ -292,6 +294,11 @@ class TestDetermineCmapParams(TestCase):
         self.assertEqual(cmap_params['extend'], 'neither')
         self.assertIsNone(cmap_params['levels'])
         self.assertIsNone(cmap_params['norm'])
+
+    def test_norm(self):
+        cmap_params = _determine_cmap_params(self.data,
+                                             norm=mpl.colors.SymLogNorm(0.1))
+        self.assertIsNotNone(cmap_params['norm'])
 
     def test_integer_levels(self):
         data = self.data + 1
