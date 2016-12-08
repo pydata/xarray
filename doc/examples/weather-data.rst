@@ -17,7 +17,11 @@ Shared setup:
 .. ipython:: python
    :suppress:
 
-   execfile("examples/_code/weather_data_setup.py")
+    fpath = "examples/_code/weather_data_setup.py"
+    with open(fpath) as f:
+        code = compile(f.read(), fpath, 'exec')
+        exec(code)
+
 
 Examine a dataset with pandas_ and seaborn_
 -------------------------------------------

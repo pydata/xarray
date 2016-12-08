@@ -6,6 +6,7 @@ from __future__ import print_function
 import contextlib
 import functools
 import itertools
+import os.path
 import re
 import warnings
 from collections import Mapping, MutableMapping, Iterable
@@ -197,9 +198,8 @@ def is_valid_numpy_dtype(dtype):
 
 def to_0d_object_array(value):
     """Given a value, wrap it in a 0-D numpy.ndarray with dtype=object."""
-    result = np.empty((1,), dtype=object)
-    result[:] = [value]
-    result.shape = ()
+    result = np.empty((), dtype=object)
+    result[()] = value
     return result
 
 

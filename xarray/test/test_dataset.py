@@ -23,6 +23,7 @@ from xarray import (align, broadcast, concat, merge, conventions, backends,
                     open_dataset, set_options, MergeError)
 from xarray.core import indexing, utils
 from xarray.core.pycompat import iteritems, OrderedDict, unicode_type
+from xarray.core.common import full_like
 
 from . import (TestCase, unittest, InaccessibleArray, UnexpectedDataAccess,
                requires_dask, source_ndarray)
@@ -55,11 +56,24 @@ def create_test_multiindex():
 
 
 class InaccessibleVariableDataStore(backends.InMemoryDataStore):
+    def __init__(self, writer=None):
+        super(InaccessibleVariableDataStore, self).__init__(writer)
+        self._indexvars = set()
+
+    def store(self, variables, attributes, check_encoding_set=frozenset()):
+        super(InaccessibleVariableDataStore, self).store(
+            variables, attributes, check_encoding_set)
+        for k, v in variables.items():
+            if isinstance(v, IndexVariable):
+                self._indexvars.add(k)
+
     def get_variables(self):
-        def lazy_inaccessible(x):
-            data = indexing.LazilyIndexedArray(InaccessibleArray(x.values))
-            return Variable(x.dims, data, x.attrs)
-        return dict((k, lazy_inaccessible(v)) for
+        def lazy_inaccessible(k, v):
+            if k in self._indexvars:
+                return v
+            data = indexing.LazilyIndexedArray(InaccessibleArray(v.values))
+            return Variable(v.dims, data, v.attrs)
+        return dict((k, lazy_inaccessible(k, v)) for
                     k, v in iteritems(self._variables))
 
 
@@ -682,14 +696,19 @@ class TestDataset(TestCase):
         self.assertEqual(data.chunks, {})
 
         reblocked = data.chunk()
-        for v in reblocked.variables.values():
-            self.assertIsInstance(v.data, da.Array)
-        expected_chunks = dict((d, (s,)) for d, s in data.dims.items())
+        for k, v in reblocked.variables.items():
+            if k in reblocked.dims:
+                self.assertIsInstance(v.data, np.ndarray)
+            else:
+                self.assertIsInstance(v.data, da.Array)
+
+        expected_chunks = {'dim1': (8,), 'dim2': (9,), 'dim3': (10,)}
         self.assertEqual(reblocked.chunks, expected_chunks)
 
         reblocked = data.chunk({'time': 5, 'dim1': 5, 'dim2': 5, 'dim3': 5})
-        expected_chunks = {'time': (5,) * 4, 'dim1': (5, 3),
-                           'dim2': (5, 4), 'dim3': (5, 5)}
+        # time is not a dim in any of the data_vars, so it
+        # doesn't get chunked
+        expected_chunks = {'dim1': (5, 3), 'dim2': (5, 4), 'dim3': (5, 5)}
         self.assertEqual(reblocked.chunks, expected_chunks)
 
         reblocked = data.chunk(expected_chunks)
@@ -1319,10 +1338,13 @@ class TestDataset(TestCase):
 
         for copied in [data.copy(deep=False), copy(data)]:
             self.assertDatasetIdentical(data, copied)
-            for k in data:
+            # Note: IndexVariable objects with string dtype are always
+            # copied because of xarray.core.util.safe_cast_to_index.
+            # Limiting the test to data variables.
+            for k in data.data_vars:
                 v0 = data.variables[k]
                 v1 = copied.variables[k]
-                self.assertIs(v0, v1)
+                assert source_ndarray(v0.data) is source_ndarray(v1.data)
             copied['foo'] = ('z', np.arange(5))
             self.assertNotIn('foo', data)
 
@@ -3011,6 +3033,30 @@ class TestDataset(TestCase):
             actual = ds1 + ds2
             self.assertDatasetEqual(actual, expected)
 
+    def test_full_like(self):
+        # For more thorough tests, see test_variable.py
+        # Note: testing data_vars with mismatched dtypes
+        ds = Dataset({
+            'd1': DataArray([1,2,3], dims=['x'], coords={'x': [10,20,30]}),
+            'd2': DataArray([1.1, 2.2, 3.3], dims=['y'])
+        }, attrs={'foo': 'bar'})
+        actual = full_like(ds, 2)
+
+        expect = ds.copy(deep=True)
+        expect['d1'].values = [2, 2, 2]
+        expect['d2'].values = [2.0, 2.0, 2.0]
+        self.assertEqual(expect['d1'].dtype, int)
+        self.assertEqual(expect['d2'].dtype, float)
+        self.assertDatasetIdentical(expect, actual)
+
+        # override dtype
+        actual = full_like(ds, fill_value=True, dtype=bool)
+        expect = ds.copy(deep=True)
+        expect['d1'].values = [True, True, True]
+        expect['d2'].values = [True, True, True]
+        self.assertEqual(expect['d1'].dtype, bool)
+        self.assertEqual(expect['d2'].dtype, bool)
+        self.assertDatasetIdentical(expect, actual)
 
 ### Py.test tests
 

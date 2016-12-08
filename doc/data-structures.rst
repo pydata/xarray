@@ -292,8 +292,9 @@ Where a pandas object is supplied as a value, the names of its indexes are used 
 names, and its data is aligned to any existing dimensions.
 
 You can also create an dataset from:
+
 - A :py:class:`pandas.DataFrame` or :py:class:`pandas.Panel` along its columns and items
-  respectively, by passing it into the :py:class:`xarray.Dataset` directly
+  respectively, by passing it into the :py:class:`~xarray.Dataset` directly
 - A :py:class:`pandas.DataFrame` with :py:meth:`Dataset.from_dataframe <xarray.Dataset.from_dataframe>`,
   which will additionally handle MultiIndexes See :ref:`pandas`
 - A netCDF file on disk with :py:func:`~xarray.open_dataset`. See :ref:`io`.
@@ -386,7 +387,7 @@ methods (like pandas) for transforming datasets into new objects.
 
 For removing variables, you can select and drop an explicit list of
 variables by indexing with a list of names or using the
-:py:meth:`~xray.Dataset.drop` methods to return a new ``Dataset``. These
+:py:meth:`~xarray.Dataset.drop` methods to return a new ``Dataset``. These
 operations keep around coordinates:
 
 .. ipython:: python

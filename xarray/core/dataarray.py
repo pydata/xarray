@@ -575,6 +575,19 @@ class DataArray(AbstractArray, BaseDataObject):
         self._coords = new._coords
         return self
 
+    def compute(self):
+        """Manually trigger loading of this array's data from disk or a
+        remote source into memory and return a new array. The original is
+        left unaltered.
+
+        Normally, it should not be necessary to call this method in user code,
+        because all xarray functions should either work on deferred data or
+        load data automatically. However, this method can be necessary when
+        working with many file objects on disk.
+        """
+        new = self.copy(deep=False)
+        return new.load()
+
     def copy(self, deep=True):
         """Returns a copy of this array.
 
@@ -797,7 +810,10 @@ class DataArray(AbstractArray, BaseDataObject):
         """
         if utils.is_dict_like(new_name_or_name_dict):
             name_dict = new_name_or_name_dict.copy()
-            name = name_dict.pop(self.name, self.name)
+            if self.name in self.dims:
+                name = name_dict.get(self.name, self.name)
+            else:
+                name = name_dict.pop(self.name, self.name)
             dataset = self._to_temp_dataset().rename(name_dict)
             return self._from_temp_dataset(dataset, name)
         else:
@@ -853,7 +869,7 @@ class DataArray(AbstractArray, BaseDataObject):
         >>> arr = DataArray(np.arange(6).reshape(2, 3),
         ...                 coords=[('x', ['a', 'b']), ('y', [0, 1, 2])])
         >>> arr
-        <xray.DataArray (x: 2, y: 3)>
+        <xarray.DataArray (x: 2, y: 3)>
         array([[0, 1, 2],
                [3, 4, 5]])
         Coordinates:

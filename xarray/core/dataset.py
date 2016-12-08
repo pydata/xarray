@@ -260,16 +260,6 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         obj._file_obj = store
         return obj
 
-    def __getstate__(self):
-        """Always load data in-memory before pickling"""
-        self.load()
-        # self.__dict__ is the default pickle object, we don't need to
-        # implement our own __setstate__ method to make pickle work
-        state = self.__dict__.copy()
-        # throw away any references to datastores in the pickle
-        state['_file_obj'] = None
-        return state
-
     @property
     def variables(self):
         """Frozen dictionary of xarray.Variable objects constituting this
@@ -329,9 +319,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         working with many file objects on disk.
         """
         # access .data to coerce everything to numpy or dask arrays
-        all_data = dict((k, v.data) for k, v in self.variables.items())
-        lazy_data = dict((k, v) for k, v in all_data.items()
-                         if isinstance(v, dask_array_type))
+        lazy_data = {k: v._data for k, v in self.variables.items()
+                     if isinstance(v._data, dask_array_type)}
         if lazy_data:
             import dask.array as da
 
@@ -341,7 +330,25 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
             for k, data in zip(lazy_data, evaluated_data):
                 self.variables[k].data = data
 
+        # load everything else sequentially
+        for k, v in self.variables.items():
+            if k not in lazy_data:
+                v.load()
+
         return self
+
+    def compute(self):
+        """Manually trigger loading of this dataset's data from disk or a
+        remote source into memory and return a new dataset. The original is
+        left unaltered.
+
+        Normally, it should not be necessary to call this method in user code,
+        because all xarray functions should either work on deferred data or
+        load data automatically. However, this method can be necessary when
+        working with many file objects on disk.
+        """
+        new = self.copy(deep=False)
+        return new.load()
 
     @classmethod
     def _construct_direct(cls, variables, coord_names, dims=None, attrs=None,
@@ -425,14 +432,12 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         """Returns a copy of this dataset.
 
         If `deep=True`, a deep copy is made of each of the component variables.
-        Otherwise, a shallow copy is made, so each variable in the new dataset
-        is also a variable in the original dataset.
+        Otherwise, a shallow copy of each of the component variable is made, so
+        that the underlying memory region of the new dataset is the same as in
+        the original dataset.
         """
-        if deep:
-            variables = OrderedDict((k, v.copy(deep=True))
-                                    for k, v in iteritems(self._variables))
-        else:
-            variables = self._variables.copy()
+        variables = OrderedDict((k, v.copy(deep=deep))
+                                for k, v in iteritems(self._variables))
         # skip __init__ to avoid costly validation
         return self._construct_direct(variables, self._coord_names.copy(),
                                       self._dims.copy(), self._attrs_copy())
@@ -805,11 +810,10 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         chunks = {}
         for v in self.variables.values():
             if v.chunks is not None:
-                new_chunks = list(zip(v.dims, v.chunks))
-                if any(chunk != chunks[d] for d, chunk in new_chunks
-                       if d in chunks):
-                    raise ValueError('inconsistent chunks')
-                chunks.update(new_chunks)
+                for dim, c in zip(v.dims, v.chunks):
+                    if dim in chunks and c != chunks[dim]:
+                        raise ValueError('inconsistent chunks')
+                    chunks[dim] = c
         return Frozen(SortedKeysDict(chunks))
 
     def chunk(self, chunks=None, name_prefix='xarray-', token=None,

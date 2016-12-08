@@ -16,8 +16,9 @@ from xarray.core import indexing
 from xarray.core.variable import as_variable, as_compatible_data
 from xarray.core.indexing import PandasIndexAdapter, LazilyIndexedArray
 from xarray.core.pycompat import PY3, OrderedDict
+from xarray.core.common import full_like, zeros_like, ones_like
 
-from . import TestCase, source_ndarray
+from . import TestCase, source_ndarray, requires_dask
 
 
 class VariableSubclassTestCases(object):
@@ -448,6 +449,15 @@ class VariableSubclassTestCases(object):
         v = self.cls('x', idx)
         self.assertVariableIdentical(Variable((), ('a', 0)), v[0])
         self.assertVariableIdentical(v, v[:])
+
+    def test_load(self):
+        array = self.cls('x', np.arange(5))
+        orig_data = array._data
+        copied = array.copy(deep=True)
+        array.load()
+        assert type(array._data) is type(orig_data)
+        assert type(copied._data) is type(orig_data)
+        self.assertVariableIdentical(array, copied)
 
 
 class TestVariable(TestCase, VariableSubclassTestCases):
@@ -1052,13 +1062,11 @@ class TestIndexVariable(TestCase, VariableSubclassTestCases):
 
     def test_data(self):
         x = IndexVariable('x', np.arange(3.0))
-        # data should be initially saved as an ndarray
-        self.assertIs(type(x._data), np.ndarray)
+        self.assertIsInstance(x._data, PandasIndexAdapter)
+        self.assertIsInstance(x.data, np.ndarray)
         self.assertEqual(float, x.dtype)
         self.assertArrayEqual(np.arange(3), x)
         self.assertEqual(float, x.values.dtype)
-        # after inspecting x.values, the IndexVariable value will be saved as an Index
-        self.assertIsInstance(x._data, PandasIndexAdapter)
         with self.assertRaisesRegexp(TypeError, 'cannot be modified'):
             x[:] = 0
 
@@ -1172,3 +1180,63 @@ class TestAsCompatibleData(TestCase):
         self.assertEqual(np.asarray(expected), actual)
         self.assertEqual(np.ndarray, type(actual))
         self.assertEqual(np.dtype('datetime64[ns]'), actual.dtype)
+
+    def test_full_like(self):
+        # For more thorough tests, see test_variable.py
+        orig = Variable(dims=('x', 'y'), data=[[1.5 ,2.0], [3.1, 4.3]],
+                        attrs={'foo': 'bar'})
+
+        expect = orig.copy(deep=True)
+        expect.values = [[2.0, 2.0], [2.0, 2.0]]
+        self.assertVariableIdentical(expect, full_like(orig, 2))
+
+        # override dtype
+        expect.values = [[True, True], [True, True]]
+        self.assertEquals(expect.dtype, bool)
+        self.assertVariableIdentical(expect, full_like(orig, True, dtype=bool))
+
+
+    @requires_dask
+    def test_full_like_dask(self):
+        orig = Variable(dims=('x', 'y'), data=[[1.5 ,2.0], [3.1, 4.3]],
+                        attrs={'foo': 'bar'}).chunk(((1, 1), (2,)))
+
+        def check(actual, expect_dtype, expect_values):
+            self.assertEqual(actual.dtype, expect_dtype)
+            self.assertEqual(actual.shape, orig.shape)
+            self.assertEqual(actual.dims, orig.dims)
+            self.assertEqual(actual.attrs, orig.attrs)
+            self.assertEqual(actual.chunks, orig.chunks)
+            self.assertArrayEqual(actual.values, expect_values)
+
+        check(full_like(orig, 2),
+              orig.dtype, np.full_like(orig.values, 2))
+        # override dtype
+        check(full_like(orig, True, dtype=bool),
+              bool, np.full_like(orig.values, True, dtype=bool))
+
+        # Check that there's no array stored inside dask
+        # (e.g. we didn't create a numpy array and then we chunked it!)
+        dsk = full_like(orig, 1).data.dask
+        for v in dsk.values():
+            if isinstance(v, tuple):
+                for vi in v:
+                    assert not isinstance(vi, np.ndarray)
+            else:
+                assert not isinstance(v, np.ndarray)
+
+    def test_zeros_like(self):
+        orig = Variable(dims=('x', 'y'), data=[[1.5 ,2.0], [3.1, 4.3]],
+                        attrs={'foo': 'bar'})
+        self.assertVariableIdentical(zeros_like(orig),
+                                     full_like(orig, 0))
+        self.assertVariableIdentical(zeros_like(orig, dtype=int),
+                                     full_like(orig, 0, dtype=int))
+
+    def test_ones_like(self):
+        orig = Variable(dims=('x', 'y'), data=[[1.5 ,2.0], [3.1, 4.3]],
+                        attrs={'foo': 'bar'})
+        self.assertVariableIdentical(ones_like(orig),
+                                     full_like(orig, 1))
+        self.assertVariableIdentical(ones_like(orig, dtype=int),
+                                     full_like(orig, 1, dtype=int))

@@ -126,6 +126,18 @@ def data_allclose_or_equiv(arr1, arr2, rtol=1e-05, atol=1e-08):
         return ops.allclose_or_equiv(arr1, arr2, rtol=rtol, atol=atol)
 
 
+def assert_dataset_allclose(d1, d2, rtol=1e-05, atol=1e-08):
+    assert sorted(d1, key=str) == sorted(d2, key=str)
+    assert sorted(d1.coords, key=str) == sorted(d2.coords, key=str)
+    for k in d1:
+        v1 = d1.variables[k]
+        v2 = d2.variables[k]
+        assert v1.dims == v2.dims
+        allclose = data_allclose_or_equiv(
+            v1.values, v2.values, rtol=rtol, atol=atol)
+        assert allclose, (k, v1.values, v2.values)
+
+
 class TestCase(unittest.TestCase):
     if PY3:
         # Python 3 assertCountEqual is roughly equivalent to Python 2

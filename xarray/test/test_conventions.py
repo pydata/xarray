@@ -494,6 +494,12 @@ class TestDatetime(TestCase):
         ds = decode_cf(Dataset({'time': ('time', [0, 1], attrs)}))
         self.assertIn('(time) datetime64[ns]', repr(ds))
 
+        # this should not throw a warning (GH1111)
+        with warnings.catch_warnings():
+            warnings.filterwarnings('error')
+            conventions.DecodedCFDatetimeArray(np.asarray([722624]),
+                                               "days since 0001-01-01")
+
 
 class TestNativeEndiannessArray(TestCase):
     def test(self):
@@ -619,7 +625,8 @@ class TestCFEncodedDataStore(CFEncodedDataTest, TestCase):
         yield CFEncodedInMemoryStore()
 
     @contextlib.contextmanager
-    def roundtrip(self, data, save_kwargs={}, open_kwargs={}):
+    def roundtrip(self, data, save_kwargs={}, open_kwargs={},
+                  allow_cleanup_failure=False):
         store = CFEncodedInMemoryStore()
         data.dump_to_store(store, **save_kwargs)
         yield open_dataset(store, **open_kwargs)

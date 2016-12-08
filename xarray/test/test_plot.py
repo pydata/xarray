@@ -1101,7 +1101,13 @@ class TestFacetGrid(PlotTestCase):
         d.plot.imshow(x='x', y='y', col='z', add_colorbar=False)
         self.assertEqual(0, len(find_possible_colorbars()))
 
+    def test_facetgrid_polar(self):
+        # test if polar projection in FacetGrid does not raise an exception
+        self.darray.plot.pcolormesh(col='z',
+                                    subplot_kws=dict(projection='polar'),
+                                    sharex=False, sharey=False)
 
+        
 class TestFacetGrid4d(PlotTestCase):
 
     def setUp(self):
@@ -1127,3 +1133,5 @@ class TestFacetGrid4d(PlotTestCase):
         # Top row should be labeled
         for label, ax in zip(self.darray.coords['col'].values, g.axes[0, :]):
             self.assertTrue(substring_in_axes(label, ax))
+        
+        

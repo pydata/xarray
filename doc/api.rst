@@ -19,6 +19,9 @@ Top-level functions
    concat
    merge
    set_options
+   full_like
+   zeros_like
+   ones_like
 
 Dataset
 =======
@@ -59,8 +62,8 @@ and values given by ``DataArray`` objects.
    Dataset.__setitem__
    Dataset.__delitem__
    Dataset.update
-   Dataset.iteritems
-   Dataset.itervalues
+   Dataset.items
+   Dataset.values
 
 Dataset contents
 ----------------
