@@ -1039,6 +1039,12 @@ class TestFacetGrid(PlotTestCase):
             clim = np.array(image.get_clim())
             self.assertTrue(np.allclose(expected, clim))
 
+    def test_can_set_norm(self):
+        norm = mpl.colors.SymLogNorm(0.1)
+        self.g.map_dataarray(xplt.imshow, 'x', 'y', norm=norm)
+        for image in plt.gcf().findobj(mpl.image.AxesImage):
+            self.assertIs(image.norm, norm)
+
     def test_figure_size(self):
 
         self.assertArrayEqual(self.g.fig.get_size_inches(), (10, 3))
