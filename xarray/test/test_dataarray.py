@@ -43,6 +43,7 @@ class TestDataArray(TestCase):
         Coordinates:
           * x        (x) int64 0 1 2
             other    int64 0
+          * time     (time) -
         Attributes:
             foo: bar""")
         self.assertEqual(expected, repr(data_array))

@@ -76,6 +76,7 @@ class TestDataset(TestCase):
           * dim2     (dim2) float64 0.0 0.5 1.0 1.5 2.0 2.5 3.0 3.5 4.0
           * dim3     (dim3) %s 'a' 'b' 'c' 'd' 'e' 'f' 'g' 'h' 'i' 'j'
             numbers  (dim3) int64 0 1 2 0 0 1 1 2 2 3
+          * dim1     (dim1) -
         Data variables:
             var1     (dim1, dim2) float64 -1.086 0.9973 0.283 -1.506 -0.5786 1.651 ...
             var2     (dim1, dim2) float64 1.162 -1.097 -2.123 1.04 -0.4034 -0.126 ...
