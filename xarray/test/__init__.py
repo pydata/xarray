@@ -219,14 +219,8 @@ def assert_xarray_equal(a, b):
     import xarray as xr
     ___tracebackhide__ = True
     assert type(a) == type(b)
-    if isinstance(a, xr.Dataset):
-        assert_xarray_equal(a.data_vars, b.data_vars)
-        assert_xarray_equal(a.coords, b.coords)
-    elif isinstance(a, (xr.Variable, xr.DataArray, xr.Coordinate)):
-        assert a.equals(b), '{}/n{}'.format(a, b)
-    elif isinstance(a, xr.core.coordinates.AbstractCoordinates):
-        assert sorted(a.coords) == sorted(b.coords)
-        [assert_xarray_equal(a.coords[k], b.coords[k]) for k in a.coords]
+    if isinstance(a, (xr.Variable, xr.DataArray, xr.Dataset)):
+        assert a.equals(b), '{}\n{}'.format(a, b)
     else:
         raise TypeError('{} not supported by assertion comparison'
                         .format(type(a)))
@@ -239,7 +233,7 @@ def assert_xarray_identical(a, b):
         assert a.name == b.name
         assert_xarray_identical(a._to_temp_dataset(), b._to_temp_dataset())
     elif isinstance(a, (xr.Dataset, xr.Variable)):
-        assert a.identical(b), '{}/n{}'.format(a, b)
+        assert a.identical(b), '{}\n{}'.format(a, b)
     else:
         raise TypeError('{} not supported by assertion comparison'
                         .format(type(a)))
@@ -255,13 +249,13 @@ def assert_xarray_close(a, b, rtol=1e-05, atol=1e-08):
         assert sorted(a, key=str) == sorted(a, key=str)
         assert_xarray_equal(a.coords, b.coords)
         [assert_xarray_close(
-            a.variables[k], b.variables[k], rtol=1e-05, atol=1e-08)
+            a.variables[k], b.variables[k], rtol=rtol, atol=atol)
          for k in a]
     elif isinstance(a, xr.Variable):
         assert a.dims == b.dims
         allclose = data_allclose_or_equiv(
             a.values, b.values, rtol=rtol, atol=atol)
-        assert allclose, '{}/n{}'.format(a.values, b.values)
+        assert allclose, '{}\n{}'.format(a.values, b.values)
     else:
         raise TypeError('{} not supported by assertion comparison'
                         .format(type(a)))
