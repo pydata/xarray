@@ -3,15 +3,15 @@ channels:
   - conda-forge
   - defaults
 dependencies:
-  - python=3.4.5
+  - python=3.5
   - numpy=1.11.2
   - pandas=0.19.1
   - numpydoc=0.6.0
   - matplotlib=1.5.3
   - seaborn=0.7.1
   - dask=0.12.0
-  - ipython=5.1.0
-  - sphinx=1.4.8
-  - netCDF4=1.2.4
+  - ipython=4.0.3  # https://github.com/ipython/ipython/issues/8733
+  - sphinx=1.5
+  - netCDF4=1.2.5
   - hdf4=4.2.12  # temporary install to get netCD4 working (GH1106)
   - cartopy=0.14.3
