@@ -104,7 +104,7 @@ def _color_palette(cmap, n_colors):
 
 def _determine_cmap_params(plot_data, vmin=None, vmax=None, cmap=None,
                            center=None, robust=False, extend=None,
-                           levels=None, filled=True, cnorm=None):
+                           levels=None, filled=True, norm=None):
     """
     Use some heuristics to set good defaults for colorbar and range.
 
@@ -196,10 +196,10 @@ def _determine_cmap_params(plot_data, vmin=None, vmax=None, cmap=None,
         extend = _determine_extend(calc_data, vmin, vmax)
 
     if levels is not None:
-        cmap, cnorm = _build_discrete_cmap(cmap, levels, extend, filled)
+        cmap, norm = _build_discrete_cmap(cmap, levels, extend, filled)
 
     return dict(vmin=vmin, vmax=vmax, cmap=cmap, extend=extend,
-                levels=levels, norm=cnorm)
+                levels=levels, norm=norm)
 
 
 def _infer_xy_labels(darray, x, y):

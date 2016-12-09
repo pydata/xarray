@@ -158,6 +158,9 @@ Bug fixes
 - Fixed sub-optimal performance in certain operations with object arrays (:issue:`1121`).
   By `Yves Delley <https://github.com/burnpanck>`_.
 
+- Fixed a bug whith facetgrid (the ``norm`` keyword was ignored, :issue:`1159`).
+  By `Fabien Maussion <https://github.com/fmaussion>`_.
+
 .. _whats-new.0.8.2:
 
 v0.8.2 (18 August 2016)
