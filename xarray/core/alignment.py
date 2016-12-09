@@ -164,7 +164,7 @@ def reindex_variables(variables, indexes, indexers, method=None,
         get_indexer_kwargs['tolerance'] = tolerance
 
     for name, index in iteritems(indexes):
-        to_shape[name] = index.size
+        to_shape[name] = len(index)
         if name in indexers:
             target = utils.safe_cast_to_index(indexers[name])
             if not index.is_unique:
@@ -186,7 +186,7 @@ def reindex_variables(variables, indexes, indexers, method=None,
                 to_indexers[name] = slice(None)
 
             from_indexers[name] = indexer[to_indexers[name]]
-            if np.array_equal(from_indexers[name], np.arange(index.size)):
+            if np.array_equal(from_indexers[name], np.arange(len(index))):
                 # If the indexer is equal to the original index, use a full
                 # slice object to speed up selection and so we can avoid
                 # unnecessary copies
