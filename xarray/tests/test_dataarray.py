@@ -16,10 +16,9 @@ from xarray import (align, broadcast, Dataset, DataArray,
 from xarray.core.pycompat import iteritems, OrderedDict
 from xarray.core.common import full_like
 
-from xarray.tests import (
+from xarray.test import (
     TestCase, ReturnItem, source_ndarray, unittest, requires_dask,
-    assert_identical, assert_equal,
-    assert_allclose, assert_array_equal)
+    assert_identical, assert_equal, assert_allclose, assert_array_equal)
 
 
 class TestDataArray(TestCase):
