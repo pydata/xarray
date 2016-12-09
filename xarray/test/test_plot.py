@@ -295,11 +295,6 @@ class TestDetermineCmapParams(TestCase):
         self.assertIsNone(cmap_params['levels'])
         self.assertIsNone(cmap_params['norm'])
 
-    def test_norm(self):
-        cmap_params = _determine_cmap_params(self.data,
-                                             norm=mpl.colors.SymLogNorm(0.1))
-        self.assertIsNotNone(cmap_params['norm'])
-
     def test_integer_levels(self):
         data = self.data + 1
         cmap_params = _determine_cmap_params(data, levels=5, vmin=0, vmax=5,
