@@ -179,7 +179,8 @@ class TestPlot1D(PlotTestCase):
 
     def setUp(self):
         d = [0, 1.1, 0, 2]
-        self.darray = DataArray(d, coords={'period': range(len(d))})
+        self.darray = DataArray(d, coords={'period': range(len(d))},
+                                dims='period')
 
     def test_xlabel_is_index_name(self):
         self.darray.plot()
@@ -206,7 +207,8 @@ class TestPlot1D(PlotTestCase):
         self.pass_in_axis(self.darray.plot.line)
 
     def test_nonnumeric_index_raises_typeerror(self):
-        a = DataArray([1, 2, 3], {'letter': ['a', 'b', 'c']})
+        a = DataArray([1, 2, 3], {'letter': ['a', 'b', 'c']},
+                      dims='letter')
         with self.assertRaisesRegexp(TypeError, r'[Pp]lot'):
             a.plot.line()
 
@@ -1031,6 +1033,12 @@ class TestFacetGrid(PlotTestCase):
         for image in plt.gcf().findobj(mpl.image.AxesImage):
             clim = np.array(image.get_clim())
             self.assertTrue(np.allclose(expected, clim))
+
+    def test_can_set_norm(self):
+        norm = mpl.colors.SymLogNorm(0.1)
+        self.g.map_dataarray(xplt.imshow, 'x', 'y', norm=norm)
+        for image in plt.gcf().findobj(mpl.image.AxesImage):
+            self.assertIs(image.norm, norm)
 
     def test_figure_size(self):
 
