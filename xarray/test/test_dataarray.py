@@ -2409,3 +2409,116 @@ class TestDataArray(TestCase):
                                                         join=align_type)
         expected = xr.DataArray([np.nan, 2, 4, np.nan], [(dim, [0, 1, 2, 3])])
         self.assertDataArrayEqual(actual, expected)
+
+
+@pytest.fixture(params=[1])
+def da(request):
+    if request.param == 1:
+        times = pd.date_range('2000-01-01', freq='1D', periods=21)
+        values = np.random.random((21, 4))
+        da = DataArray(values, dims=('time', 'x'))
+        da['time'] = times
+        return da
+
+    if request.param == 2:
+        return DataArray([0, np.nan, 1, 2, np.nan, 3, 4, 5, np.nan, 6, 7], dims='time')
+
+def test_rolling_iter(da):
+
+    rolling_obj = da.rolling(time=7)
+
+    assert len(rolling_obj.window_labels) == len(da['time'])
+    assert_xarray_identical(rolling_obj.window_labels, da['time'])
+
+    for i, (label, window_da) in enumerate(rolling_obj):
+        assert label == da['time'].isel(time=i)
+
+def test_rolling_properties(da):
+    pytest.importorskip('bottleneck')
+    import bottleneck as bn
+
+    rolling_obj = da.rolling(time=4)
+
+    assert rolling_obj._axis_num == 0
+
+    # catching invalid args
+    with pytest.raises(ValueError) as exception:
+        da.rolling(time=7, x=2)
+    assert 'exactly one dim/window should' in str(exception)
+    with pytest.raises(ValueError) as exception:
+        da.rolling(time=-2)
+    assert 'window must be > 0' in str(exception)
+    with pytest.raises(ValueError) as exception:
+        da.rolling(time=2, min_periods=0)
+    assert 'min_periods must be greater than zero' in str(exception)
+
+
+@pytest.mark.parametrize('name', ('sum', 'mean', 'std', 'min', 'max', 'median'))
+@pytest.mark.parametrize('center', (True, False, None))
+@pytest.mark.parametrize('min_periods', (1, None))
+def test_rolling_wrapped_bottleneck(da, name, center, min_periods):
+    pytest.importorskip('bottleneck')
+    import bottleneck as bn
+
+    # skip if median and min_periods
+    if (min_periods == 1) and (name == 'median'):
+        pytest.skip()
+
+    # Test all bottleneck functions
+    rolling_obj = da.rolling(time=7, min_periods=min_periods)
+
+    func_name = 'move_{0}'.format(name)
+    actual = getattr(rolling_obj, name)()
+    expected = getattr(bn, func_name)(da.values, window=7, axis=0, min_count=min_periods)
+    assert_array_equal(actual.values, expected)
+
+    # Test center
+    rolling_obj = da.rolling(time=7, center=center)
+    actual = getattr(rolling_obj, name)()['time']
+    assert_xarray_equal(actual, da['time'])
+
+def test_rolling_invalid_args(da):
+    pytest.importorskip('bottleneck')
+    with pytest.raises(ValueError) as exception:
+        da.rolling(time=7, min_periods=1).median()
+    assert 'Rolling.median does not' in str(exception)
+
+
+@pytest.mark.parametrize('center', (True, False))
+@pytest.mark.parametrize('min_periods', (None, 1, 2, 3))
+@pytest.mark.parametrize('window', (1, 2, 3, 4))
+def test_rolling_pandas_compat(da, center, window, min_periods):
+    s = pd.Series(range(10))
+    da = DataArray.from_series(s)
+
+    if min_periods is not None and window < min_periods:
+        min_periods = window
+
+    s_rolling = pd.rolling_mean(s, window, center=center,
+                                min_periods=min_periods)
+    da_rolling = da.rolling(index=window, center=center,
+                            min_periods=min_periods).mean()
+    # pandas does some fancy stuff in the last position,
+    # we're not going to do that yet!
+    np.testing.assert_allclose(s_rolling.values[:-1],
+                               da_rolling.values[:-1])
+    np.testing.assert_allclose(s_rolling.index,
+                               da_rolling['index'])
+
+@pytest.mark.parametrize('da', (1, 2), indirect=True)
+@pytest.mark.parametrize('center', (True, False))
+@pytest.mark.parametrize('min_periods', (None, 1, 2, 3))
+@pytest.mark.parametrize('window', (1, 2, 3, 4))
+@pytest.mark.parametrize('name', ('sum', 'mean', 'std', 'max'))
+def test_rolling_reduce(da, center, min_periods, window, name):
+
+    if min_periods is not None and window < min_periods:
+        min_periods = window
+
+    rolling_obj = da.rolling(time=window, center=center,
+                             min_periods=min_periods)
+
+    # add nan prefix to numpy methods to get similar # behavior as bottleneck
+    actual = rolling_obj.reduce(getattr(np, 'nan%s' % name))
+    expected = getattr(rolling_obj, name)()
+    assert_xarray_close(actual, expected)
