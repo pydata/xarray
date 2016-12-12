@@ -2651,6 +2651,7 @@ def test_rolling_wrapped_bottleneck(da, name, center, min_periods):
     actual = getattr(rolling_obj, name)()['time']
     assert_equal(actual, da['time'])
 
+<<<<<<< HEAD
 
 def test_rolling_invalid_args(da):
     pytest.importorskip('bottleneck', minversion="1.0")
