@@ -996,94 +996,6 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         )
         return self.isel(**pos_indexers)._replace_indexes(new_indexes)
 
-    def isel_points_old(self, dim='points', **indexers):
-        """Returns a new dataset with each array indexed pointwise along the
-        specified dimension(s).
-
-        This method selects pointwise values from each array and is akin to
-        the NumPy indexing behavior of `arr[[0, 1], [0, 1]]`, except this
-        method does not require knowing the order of each array's dimensions.
-
-        Parameters
-        ----------
-        dim : str or DataArray or pandas.Index or other list-like object, optional
-            Name of the dimension to concatenate along. If dim is provided as a
-            string, it must be a new dimension name, in which case it is added
-            along axis=0. If dim is provided as a DataArray or Index or
-            list-like object, its name, which must not be present in the
-            dataset, is used as the dimension to concatenate along and the
-            values are added as a coordinate.
-        **indexers : {dim: indexer, ...}
-            Keyword arguments with names matching dimensions and values given
-            by array-like objects. All indexers must be the same length and
-            1 dimensional.
-
-        Returns
-        -------
-        obj : Dataset
-            A new Dataset with the same contents as this dataset, except each
-            array and dimension is indexed by the appropriate indexers. With
-            pointwise indexing, the new Dataset will always be a copy of the
-            original.
-
-        See Also
-        --------
-        Dataset.sel
-        Dataset.isel
-        Dataset.sel_points
-        DataArray.isel_points
-        """
-        from .dataarray import DataArray
-
-        indexer_dims = set(indexers)
-
-        def relevant_keys(mapping):
-            return [k for k, v in mapping.items()
-                    if any(d in indexer_dims for d in v.dims)]
-
-        data_vars = relevant_keys(self.data_vars)
-        coords = relevant_keys(self.coords)
-
-        # all the indexers should be iterables
-        keys = indexers.keys()
-        indexers = [(k, np.asarray(v)) for k, v in iteritems(indexers)]
-        # Check that indexers are valid dims, integers, and 1D
-        for k, v in indexers:
-            if k not in self.dims:
-                raise ValueError("dimension %s does not exist" % k)
-            if v.dtype.kind != 'i':
-                raise TypeError('Indexers must be integers')
-            if v.ndim != 1:
-                raise ValueError('Indexers must be 1 dimensional')
-
-        # all the indexers should have the same length
-        lengths = set(len(v) for k, v in indexers)
-        if len(lengths) > 1:
-            raise ValueError('All indexers must be the same length')
-
-        # Existing dimensions are not valid choices for the dim argument
-        if isinstance(dim, basestring):
-            if dim in self.dims:
-                # dim is an invalid string
-                raise ValueError('Existing dimension names are not valid '
-                                 'choices for the dim argument in sel_points')
-        elif hasattr(dim, 'dims'):
-            # dim is a DataArray or Coordinate
-            if dim.name in self.dims:
-                # dim already exists
-                raise ValueError('Existing dimensions are not valid choices '
-                                 'for the dim argument in sel_points')
-
-        if not utils.is_scalar(dim) and not isinstance(dim, DataArray):
-            dim = as_variable(dim, name='points')
-
-        # TODO: This would be sped up with vectorized indexing. This will
-        # require dask to support pointwise indexing as well.
-        return concat([self.isel(**d) for d in
-                       [dict(zip(keys, inds)) for inds in
-                        zip(*[v for k, v in indexers])]],
-                      dim=dim, coords=coords, data_vars=data_vars)
-
     def isel_points(self, dim='points', **indexers):
         """Returns a new dataset with each array indexed pointwise along the
         specified dimension(s).
@@ -1187,7 +1099,9 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
             else:
                 # TODO need to make sure this still works in the non-dask case
                 # if data is ndarray should give expected behaviour
-                variables[name] = var.data[tuple(slc)]
+                variables[name] = DataArray(var.data[tuple(slc)],
+                          coords=[np.arange(points_len)] + coords, dims=[dim] + non_indexed,
+                          name=name)
 
 
         return merge([v for k, v in variables.items() if k not in self.dims])
