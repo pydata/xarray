@@ -428,7 +428,12 @@ class CFEncodedDataTest(DatasetIOTestCases):
         ds = Dataset({'x': ('y', np.arange(10.0))})
         kwargs = dict(encoding={'x': {'dtype': 'f4'}})
         with self.roundtrip(ds, save_kwargs=kwargs) as actual:
-            self.assertEqual(actual.x.encoding['_FillValue'], b'NaN')
+            fill_value = actual.x.encoding['_FillValue']
+            try:
+                fill_value = np.asscalar(fill_value)
+            except AttributeError:
+                pass
+            self.assertEqual(fill_value.lower(), b'nan')
         self.assertEqual(ds.x.encoding, {})
 
         # Test default encoding for int:
