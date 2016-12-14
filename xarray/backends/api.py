@@ -567,7 +567,7 @@ def to_netcdf(dataset, path=None, mode='w', format=None, group=None,
                     pass
             except ValueError:
                 pass
-            
+
     # validate Dataset keys, DataArray names, and attr keys/values
     _validate_dataset_names(dataset)
     _validate_attrs(dataset)
