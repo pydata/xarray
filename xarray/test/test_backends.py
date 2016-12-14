@@ -433,7 +433,11 @@ class CFEncodedDataTest(DatasetIOTestCases):
                 fill_value = np.asscalar(fill_value)
             except AttributeError:
                 pass
-            self.assertEqual(fill_value.lower(), b'nan')
+            try:
+                fill_value = fill_value.lower()
+            except AttributeError:
+                fill_value = str.encode(str(fill_value))
+            self.assertEqual(fill_value, b'nan')
         self.assertEqual(ds.x.encoding, {})
 
         # Test default encoding for int:
