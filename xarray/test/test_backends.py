@@ -435,13 +435,13 @@ class CFEncodedDataTest(DatasetIOTestCases):
         ds = Dataset({'x': ('y', np.arange(10.0))})
         kwargs = dict(encoding={'x': {'dtype': 'int16'}})
         with self.roundtrip(ds, save_kwargs=kwargs) as actual:
-            self.assertTrue('_FillValue' not  in actual.x.encoding)
+            self.assertTrue('_FillValue' not in actual.x.encoding)
         self.assertEqual(ds.x.encoding, {})
 
         # Test default encoding for implicit int:
         ds = Dataset({'x': ('y', np.arange(10, dtype='int16'))})
         with self.roundtrip(ds) as actual:
-            self.assertTrue('_FillValue' not  in actual.x.encoding)
+            self.assertTrue('_FillValue' not in actual.x.encoding)
         self.assertEqual(ds.x.encoding, {})
 
         kwargs = dict(encoding={'x': {'foo': 'bar'}})
