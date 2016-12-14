@@ -549,6 +549,25 @@ def to_netcdf(dataset, path=None, mode='w', format=None, group=None,
             engine = _get_default_engine(path)
         path = _normalize_path(path)
 
+    for var in encoding:
+        # This section sets the default _FillValue
+        # to NaNs
+        if '_FillValue' not in encoding[var]:
+            if 'dtype' in encoding[var]:
+                dtype = encoding[var]['dtype']
+            else:
+                dtype = dataset[var].dtype
+            try:
+                # Test whether NaNs are accepted for
+                # the requested dtype:
+                np.asarray(np.nan, dtype=dtype)
+                try:
+                    encoding[var]['_FillValue'] = 'NaN'
+                except TypeError:
+                    pass
+            except ValueError:
+                pass
+            
     # validate Dataset keys, DataArray names, and attr keys/values
     _validate_dataset_names(dataset)
     _validate_attrs(dataset)
