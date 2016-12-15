@@ -562,7 +562,7 @@ def to_netcdf(dataset, path=None, mode='w', format=None, group=None,
                 # the requested dtype:
                 np.asarray(np.nan, dtype=dtype)
                 try:
-                    encoding[var]['_FillValue'] = 'NaN'
+                    encoding[var]['_FillValue'] = np.nan
                 except TypeError:
                     pass
             except ValueError:
