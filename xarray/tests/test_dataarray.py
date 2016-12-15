@@ -16,7 +16,7 @@ from xarray import (align, broadcast, Dataset, DataArray,
 from xarray.core.pycompat import iteritems, OrderedDict
 from xarray.core.common import full_like
 
-from xarray.test import (
+from xarray.tests import (
     TestCase, ReturnItem, source_ndarray, unittest, requires_dask,
     assert_identical, assert_equal, assert_allclose, assert_array_equal)
 
@@ -1320,7 +1320,7 @@ class TestDataArray(TestCase):
                                  self.dv.transpose().variable)
 
     def test_squeeze(self):
-        self.assertVariableEqual(self.dv.variable.squeeze(), self.dv.squeeze().variable)
+        assert_equal(self.dv.variable.squeeze(), self.dv.squeeze().variable)
 
     def test_squeeze_drop(self):
         array = DataArray([1], [('x', [0])])
@@ -1848,12 +1848,14 @@ class TestDataArray(TestCase):
         array = DataArray(np.arange(10), [('time', times)])
         array.attrs['meta'] = 'data'
 
-        resampled_array = array.resample('1D', dim='time', how='first', keep_attrs=True)
+        resampled_array = array.resample('1D', dim='time', how='first',
+                                         keep_attrs=True)
         actual = resampled_array.attrs
         expected = array.attrs
         self.assertEqual(expected, actual)
 
-        resampled_array = array.resample('1D', dim='time', how='first', keep_attrs=False)
+        resampled_array = array.resample('1D', dim='time', how='first',
+                                         keep_attrs=False)
         assert resampled_array.attrs == {}
 
     def test_resample_mean_keep_attrs(self):
@@ -1861,12 +1863,14 @@ class TestDataArray(TestCase):
         array = DataArray(np.arange(10), [('time', times)])
         array.attrs['meta'] = 'data'
 
-        resampled_array = array.resample('1D', dim='time', how='mean', keep_attrs=True)
+        resampled_array = array.resample('1D', dim='time', how='mean',
+                                         keep_attrs=True)
         actual = resampled_array.attrs
         expected = array.attrs
         self.assertEqual(expected, actual)
 
-        resampled_array = array.resample('1D', dim='time', how='mean', keep_attrs=False)
+        resampled_array = array.resample('1D', dim='time', how='mean',
+                                         keep_attrs=False)
         assert resampled_array.attrs == {}
 
     def test_resample_skipna(self):
@@ -2470,7 +2474,8 @@ class TestDataArray(TestCase):
 
         # all shared dims
         actual = da.dot(da)
-        expected_vals = np.tensordot(da_vals, da_vals, axes=([0, 1, 2], [0, 1, 2]))
+        expected_vals = np.tensordot(da_vals, da_vals,
+                                     axes=([0, 1, 2], [0, 1, 2]))
         expected = DataArray(expected_vals)
         self.assertDataArrayEqual(expected, actual)
 
@@ -2577,9 +2582,9 @@ def da(request):
         return da
 
     if request.param == 2:
-        return DataArray([0, np.nan, 1, 2, np.nan, 3, 4, 5, np.nan, 6, 7],
-                         dims='time')
-
+        return DataArray(
+            [0, np.nan, 1, 2, np.nan, 3, 4, 5, np.nan, 6, 7],
+            dims='time')
 
 def test_rolling_iter(da):
 
