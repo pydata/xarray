@@ -583,7 +583,6 @@ class TestDecodeCF(TestCase):
         })
         expected = Dataset({
             't': pd.date_range('2000-01-01', periods=3),
-            'x': ("x", [0, 1, 2]),
             'foo': (('t', 'x'), [[0, 0, 0], [1, 1, 1], [2, 2, 2]], {'units': 'bar'}),
             'y': ('t', [5, 10, np.nan])
         })

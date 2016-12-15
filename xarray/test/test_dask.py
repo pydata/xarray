@@ -197,8 +197,10 @@ class TestDataArrayAndDataset(DaskTestCase):
     def setUp(self):
         self.values = np.random.randn(4, 6)
         self.data = da.from_array(self.values, chunks=(2, 2))
-        self.eager_array = DataArray(self.values, dims=('x', 'y'), name='foo')
-        self.lazy_array = DataArray(self.data, dims=('x', 'y'), name='foo')
+        self.eager_array = DataArray(self.values, coords={'x': range(4)},
+                                     dims=('x', 'y'), name='foo')
+        self.lazy_array = DataArray(self.data, coords={'x': range(4)},
+                                    dims=('x', 'y'), name='foo')
 
     def test_rechunk(self):
         chunked = self.eager_array.chunk({'x': 2}).chunk({'y': 2})
@@ -247,8 +249,8 @@ class TestDataArrayAndDataset(DaskTestCase):
         self.assertLazyAndAllClose(expected, actual)
 
     def test_reindex(self):
-        u = self.eager_array
-        v = self.lazy_array
+        u = self.eager_array.assign_coords(y=range(6))
+        v = self.lazy_array.assign_coords(y=range(6))
 
         for kwargs in [{'x': [2, 3, 4]},
                        {'x': [1, 100, 2, 101, 3]},
@@ -308,8 +310,7 @@ class TestDataArrayAndDataset(DaskTestCase):
         stacked = arr.stack(z=('x', 'y'))
         z = pd.MultiIndex.from_product([np.arange(3), np.arange(4)],
                                        names=['x', 'y'])
-        expected = DataArray(data.reshape(2, -1), {'w': [0, 1], 'z': z},
-                             dims=['w', 'z'])
+        expected = DataArray(data.reshape(2, -1), {'z': z}, dims=['w', 'z'])
         assert stacked.data.chunks == expected.data.chunks
         self.assertLazyAndEqual(expected, stacked)
 
@@ -366,8 +367,9 @@ class TestDataArrayAndDataset(DaskTestCase):
     def test_from_dask_variable(self):
         # Test array creation from Variable with dask backend.
         # This is used e.g. in broadcast()
-        a = DataArray(self.lazy_array.variable)
-        self.assertLazyAndEqual(self.lazy_array, a)
+        a = DataArray(self.lazy_array.variable,
+                      coords={'x': range(4)}, name='foo')
+        self.assertLazyAndIdentical(self.lazy_array, a)
 
 
 kernel_call_count = 0

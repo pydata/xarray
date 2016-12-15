@@ -39,8 +39,9 @@ def _ensure_plottable(*args):
                         'or dates.')
 
 
-def _easy_facetgrid(darray, plotfunc, x, y, row=None, col=None, col_wrap=None,
-                    aspect=1, size=3, subplot_kws=None, **kwargs):
+def _easy_facetgrid(darray, plotfunc, x, y, row=None, col=None,
+                    col_wrap=None, sharex=True, sharey=True, aspect=1,
+                    size=3, subplot_kws=None, **kwargs):
     """
     Convenience method to call xarray.plot.FacetGrid from 2d plotting methods
 
@@ -51,7 +52,8 @@ def _easy_facetgrid(darray, plotfunc, x, y, row=None, col=None, col_wrap=None,
         raise ValueError("Can't use axes when making faceted plots.")
 
     g = FacetGrid(data=darray, col=col, row=row, col_wrap=col_wrap,
-                  aspect=aspect, size=size, subplot_kws=subplot_kws)
+                  sharex=sharex, sharey=sharey, aspect=aspect,
+                  size=size, subplot_kws=subplot_kws)
     return g.map_dataarray(plotfunc, x, y, **kwargs)
 
 
@@ -157,9 +159,10 @@ def line(darray, *args, **kwargs):
     if ax is None:
         ax = plt.gca()
 
-    xlabel, x = list(darray.indexes.items())[0]
+    xlabel, = darray.dims
+    x = darray.coords[xlabel]
 
-    _ensure_plottable([x])
+    _ensure_plottable(x)
 
     primitive = ax.plot(x, darray, *args, **kwargs)
 

@@ -47,6 +47,7 @@ Attributes
    Dataset.coords
    Dataset.attrs
    Dataset.indexes
+   Dataset.get_index
 
 Dictionary interface
 --------------------
@@ -61,8 +62,8 @@ and values given by ``DataArray`` objects.
    Dataset.__setitem__
    Dataset.__delitem__
    Dataset.update
-   Dataset.iteritems
-   Dataset.itervalues
+   Dataset.items
+   Dataset.values
 
 Dataset contents
 ----------------
@@ -196,6 +197,7 @@ Attributes
    DataArray.attrs
    DataArray.encoding
    DataArray.indexes
+   DataArray.get_index
 
 **ndarray attributes**:
 :py:attr:`~DataArray.ndim`

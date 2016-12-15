@@ -15,8 +15,7 @@ from . import ops
 from . import utils
 from . import nputils
 from .pycompat import basestring, OrderedDict, zip, dask_array_type
-from .indexing import (PandasIndexAdapter, orthogonally_indexable,
-                       LazyIntegerRange)
+from .indexing import (PandasIndexAdapter, orthogonally_indexable)
 
 import xarray as xr  # only for Dataset and DataArray
 
@@ -83,14 +82,6 @@ def as_variable(obj, name=None, copy=False):
         obj = obj.to_index_variable()
 
     return obj
-
-
-def default_index_coordinate(dim, size):
-    """
-    This is equivalent to np.arange(size), but waits to create the array until
-    its actually accessed.
-    """
-    return IndexVariable(dim, LazyIntegerRange(size))
 
 
 def _maybe_wrap_data(data):

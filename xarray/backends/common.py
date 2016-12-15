@@ -33,25 +33,6 @@ def _decode_variable_name(name):
     return name
 
 
-def is_trivial_index(var):
-    """
-    Determines if in index is 'trivial' meaning that it is
-    equivalent to np.arange().  This is determined by
-    checking if there are any attributes or encodings,
-    if ndims is one, dtype is int and finally by comparing
-    the actual values to np.arange()
-    """
-    # if either attributes or encodings are defined
-    # the index is not trivial.
-    if len(var.attrs) or len(var.encoding):
-        return False
-    # if the index is not a 1d integer array
-    if var.ndim > 1 or not var.dtype.kind == 'i':
-        return False
-    arange = np.arange(var.size, dtype=var.dtype)
-    return np.all(var.values == arange)
-
-
 def robust_getitem(array, key, catch=Exception, max_retries=6,
                    initial_delay=500):
     """
@@ -203,12 +184,6 @@ class AbstractWritableDataStore(AbstractDataStore):
 
     def store(self, variables, attributes, check_encoding_set=frozenset()):
         self.set_attributes(attributes)
-        neccesary_dims = [v.dims for v in variables.values()]
-        neccesary_dims = set(itertools.chain(*neccesary_dims))
-        # set all non-indexes and any index which is not trivial.
-        variables = OrderedDict((k, v) for k, v in iteritems(variables)
-                                if not (k in neccesary_dims and
-                                        is_trivial_index(v)))
         self.set_variables(variables, check_encoding_set)
 
     def set_attributes(self, attributes):
