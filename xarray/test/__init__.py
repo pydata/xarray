@@ -154,66 +154,43 @@ class TestCase(unittest.TestCase):
             assert any(message in str(wi.message) for wi in w)
 
     def assertVariableEqual(self, v1, v2):
-        assert as_variable(v1).equals(v2), (v1, v2)
+        assert_xarray_equal(d1, d2)
 
     def assertVariableIdentical(self, v1, v2):
-        assert as_variable(v1).identical(v2), (v1, v2)
+        assert_xarray_identical(ar1, ar2)
 
     def assertVariableAllClose(self, v1, v2, rtol=1e-05, atol=1e-08):
-        self.assertEqual(v1.dims, v2.dims)
-        allclose = data_allclose_or_equiv(
-            v1.values, v2.values, rtol=rtol, atol=atol)
-        assert allclose, (v1.values, v2.values)
+        assert_xarray_close(d1, d2, rtol=rtol, atol=atol)
 
     def assertVariableNotEqual(self, v1, v2):
-        self.assertFalse(as_variable(v1).equals(v2))
+        assert not v1.equals(v2)
 
     def assertArrayEqual(self, a1, a2):
-        assert_array_equal(a1, a2)
-
-    # TODO: write a generic "assertEqual" that uses the equals method, or just
-    # switch to py.test and add an appropriate hook.
+        assert_xarray_equal(a1, a2)
 
     def assertEqual(self, a1, a2):
         assert a1 == a2 or (a1 != a1 and a2 != a2)
 
     def assertDatasetEqual(self, d1, d2):
-        # this method is functionally equivalent to `assert d1 == d2`, but it
-        # checks each aspect of equality separately for easier debugging
-        assert d1.equals(d2), (d1, d2)
+        assert_xarray_equal(d1, d2)
 
     def assertDatasetIdentical(self, d1, d2):
-        # this method is functionally equivalent to `assert d1.identical(d2)`,
-        # but it checks each aspect of equality separately for easier debugging
-        assert d1.identical(d2), (d1, d2)
+        assert_xarray_identical(ar1, ar2)
 
     def assertDatasetAllClose(self, d1, d2, rtol=1e-05, atol=1e-08):
-        self.assertEqual(sorted(d1, key=str), sorted(d2, key=str))
-        self.assertItemsEqual(d1.coords, d2.coords)
-        for k in d1:
-            v1 = d1.variables[k]
-            v2 = d2.variables[k]
-            self.assertVariableAllClose(v1, v2, rtol=rtol, atol=atol)
+        assert_xarray_close(d1, d2, rtol=rtol, atol=atol)
 
     def assertCoordinatesEqual(self, d1, d2):
-        self.assertEqual(sorted(d1.coords), sorted(d2.coords))
-        for k in d1.coords:
-            v1 = d1.coords[k]
-            v2 = d2.coords[k]
-            self.assertVariableEqual(v1, v2)
+        assert_xarray_equal(d1, d2)
 
     def assertDataArrayEqual(self, ar1, ar2):
-        self.assertVariableEqual(ar1, ar2)
-        self.assertCoordinatesEqual(ar1, ar2)
+        assert_xarray_equal(d1, d2)
 
     def assertDataArrayIdentical(self, ar1, ar2):
-        self.assertEqual(ar1.name, ar2.name)
-        self.assertDatasetIdentical(ar1._to_temp_dataset(),
-                                    ar2._to_temp_dataset())
+        assert_xarray_identical(ar1, ar2)
 
     def assertDataArrayAllClose(self, ar1, ar2, rtol=1e-05, atol=1e-08):
-        self.assertVariableAllClose(ar1, ar2, rtol=rtol, atol=atol)
-        self.assertCoordinatesEqual(ar1, ar2)
+        assert_xarray_close(ar1, ar2, rtol=rtol, atol=atol)
 
 def assert_xarray_equal(a, b):
     import xarray as xr
