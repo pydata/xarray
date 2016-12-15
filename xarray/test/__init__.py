@@ -6,6 +6,7 @@ from contextlib import contextmanager
 
 import numpy as np
 from numpy.testing import assert_array_equal
+import pytest
 
 from xarray.core import utils, nputils, ops
 from xarray.core.variable import as_variable
@@ -98,7 +99,7 @@ def requires_scipy_or_netCDF4(test):
 
 
 def requires_dask(test):
-    return test if has_dask else unittest.skip('requires dask')(test)
+    return test if has_dask else pytest.mark.skip('dask')
 
 
 def requires_matplotlib(test):
@@ -154,19 +155,19 @@ class TestCase(unittest.TestCase):
             assert any(message in str(wi.message) for wi in w)
 
     def assertVariableEqual(self, v1, v2):
-        assert_xarray_equal(d1, d2)
+        assert_xarray_equal(v1, v2)
 
     def assertVariableIdentical(self, v1, v2):
-        assert_xarray_identical(ar1, ar2)
+        assert_xarray_identical(v1, v2)
 
     def assertVariableAllClose(self, v1, v2, rtol=1e-05, atol=1e-08):
-        assert_xarray_close(d1, d2, rtol=rtol, atol=atol)
+        assert_xarray_close(v1, v2, rtol=rtol, atol=atol)
 
     def assertVariableNotEqual(self, v1, v2):
         assert not v1.equals(v2)
 
     def assertArrayEqual(self, a1, a2):
-        assert_xarray_equal(a1, a2)
+        assert_array_equal(a1, a2)
 
     def assertEqual(self, a1, a2):
         assert a1 == a2 or (a1 != a1 and a2 != a2)
@@ -175,7 +176,7 @@ class TestCase(unittest.TestCase):
         assert_xarray_equal(d1, d2)
 
     def assertDatasetIdentical(self, d1, d2):
-        assert_xarray_identical(ar1, ar2)
+        assert_xarray_identical(d1, d2)
 
     def assertDatasetAllClose(self, d1, d2, rtol=1e-05, atol=1e-08):
         assert_xarray_close(d1, d2, rtol=rtol, atol=atol)
@@ -184,7 +185,7 @@ class TestCase(unittest.TestCase):
         assert_xarray_equal(d1, d2)
 
     def assertDataArrayEqual(self, ar1, ar2):
-        assert_xarray_equal(d1, d2)
+        assert_xarray_equal(ar1, ar2)
 
     def assertDataArrayIdentical(self, ar1, ar2):
         assert_xarray_identical(ar1, ar2)
@@ -194,7 +195,7 @@ class TestCase(unittest.TestCase):
 
 def assert_xarray_equal(a, b):
     import xarray as xr
-    ___tracebackhide__ = True
+    ___tracebackhide__ = True  # noqa: F841
     assert type(a) == type(b)
     if isinstance(a, (xr.Variable, xr.DataArray, xr.Dataset)):
         assert a.equals(b), '{}\n{}'.format(a, b)
@@ -204,7 +205,7 @@ def assert_xarray_equal(a, b):
 
 def assert_xarray_identical(a, b):
     import xarray as xr
-    ___tracebackhide__ = True
+    ___tracebackhide__ = True  # noqa: F841
     assert type(a) == type(b)
     if isinstance(a, xr.DataArray):
         assert a.name == b.name
@@ -217,7 +218,7 @@ def assert_xarray_identical(a, b):
 
 def assert_xarray_close(a, b, rtol=1e-05, atol=1e-08):
     import xarray as xr
-    ___tracebackhide__ = True
+    ___tracebackhide__ = True  # noqa: F841
     assert type(a) == type(b)
     if isinstance(a, xr.DataArray):
         assert_xarray_close(a.variable, b.variable, rtol=rtol, atol=atol)
