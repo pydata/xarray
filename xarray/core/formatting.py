@@ -208,7 +208,7 @@ def _summarize_var_or_coord(name, var, col_width, show_values=True,
     return front_str + values_str
 
 
-def _summarize_dummy_var(name, col_width, marker=u'*', values=u'-'):
+def _summarize_dummy_var(name, col_width, marker=u'o', values=u'-'):
     """Used if there is no coordinate for a dimension."""
     first_col = pretty_print(u'  %s %s ' % (marker, name), col_width)
     dims_str = u'(%s) ' % unicode_type(name)
