@@ -222,7 +222,7 @@ class TestPlot1D(PlotTestCase):
 
     def test_x_ticks_are_rotated_for_time(self):
         time = pd.date_range('2000-01-01', '2000-01-10')
-        a = DataArray(np.arange(len(time)), {'t': time})
+        a = DataArray(np.arange(len(time)), [('t', time)])
         a.plot.line()
         rotation = plt.gca().get_xticklabels()[0].get_rotation()
         self.assertFalse(rotation == 0)
@@ -598,8 +598,7 @@ class Common2dMixin:
 
     def test_coord_strings(self):
         # 1d coords (same as dims)
-        self.assertIn('x', self.darray.coords)
-        self.assertIn('y', self.darray.coords)
+        self.assertEqual({'x', 'y'}, set(self.darray.dims))
         self.plotmethod(y='y', x='x')
 
     def test_non_linked_coords(self):
@@ -630,6 +629,7 @@ class Common2dMixin:
 
     def test_default_title(self):
         a = DataArray(easy_array((4, 3, 2)), dims=['a', 'b', 'c'])
+        a.coords['c'] = [0, 1]
         a.coords['d'] = u'foo'
         self.plotfunc(a.isel(c=1))
         title = plt.gca().get_title()

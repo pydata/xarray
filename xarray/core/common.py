@@ -286,6 +286,17 @@ class SharedMethodsMixin(object):
 class BaseDataObject(SharedMethodsMixin, AttrAccessMixin):
     """Shared base class for Dataset and DataArray."""
 
+    def get_index(self, key):
+        """Get an index for a dimension, with fall-back to a default RangeIndex
+        """
+        if key not in self.dims:
+            raise KeyError(key)
+
+        try:
+            return self.indexes[key]
+        except KeyError:
+            return pd.Index(range(self.sizes[key]), name=key)
+
     def _calc_assign_results(self, kwargs):
         results = SortedKeysDict()
         for k, v in kwargs.items():
@@ -408,8 +419,6 @@ class BaseDataObject(SharedMethodsMixin, AttrAccessMixin):
             A `GroupBy` object patterned after `pandas.GroupBy` that can be
             iterated over in the form of `(unique_value, grouped_array)` pairs.
         """
-        if isinstance(group, basestring):
-            group = self[group]
         return self.groupby_cls(self, group, squeeze=squeeze)
 
     def groupby_bins(self, group, bins, right=True, labels=None, precision=3,
@@ -459,8 +468,6 @@ class BaseDataObject(SharedMethodsMixin, AttrAccessMixin):
         ----------
         .. [1] http://pandas.pydata.org/pandas-docs/stable/generated/pandas.cut.html
         """
-        if isinstance(group, basestring):
-            group = self[group]
         return self.groupby_cls(self, group, squeeze=squeeze, bins=bins,
                                 cut_kwargs={'right': right, 'labels': labels,
                                             'precision': precision,
@@ -639,7 +646,8 @@ class BaseDataObject(SharedMethodsMixin, AttrAccessMixin):
             clip = dict(zip(clipcond.dims, [np.unique(adim)
                                             for adim in np.nonzero(clipcond.values)]))
             outcond = cond.isel(**clip)
-            outobj = self.sel(**outcond.indexes)
+            indexers = {dim: outcond.get_index(dim) for dim in outcond.dims}
+            outobj = self.sel(**indexers)
         else:
             outobj = self
             outcond = cond

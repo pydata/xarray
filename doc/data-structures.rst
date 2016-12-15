@@ -67,18 +67,33 @@ in with default values:
 
     xr.DataArray(data)
 
-As you can see, dimensions and coordinate arrays corresponding to each
-dimension are always present. This behavior is similar to pandas, which fills
-in index values in the same way.
+As you can see, dimension names are always present in the xarray data model: if
+you do not provide them, defaults of the form ``dim_N`` will be created.
+
+.. note::
+
+  Prior to xarray v0.9, coordinates corresponding to dimension were *also*
+  always present in xarray: xarray would create default coordinates of the form
+  ``range(dim_size)`` if coordinates were not supplied explicitly. This is no
+  longer the case.
 
 Coordinates can take the following forms:
 
-- A list of ``(dim, ticks[, attrs])`` pairs with length equal to the number of dimensions
-- A dictionary of ``{coord_name: coord}`` where the values are each a scalar value,
-  a 1D array or a tuple. Tuples are be in the same form as the above, and
-  multiple dimensions can be supplied with the form  ``(dims, data[, attrs])``.
-  Supplying as a tuple allows other coordinates than those corresponding to
-  dimensions (more on these later).
+- A list of values with length equal to the number of dimensions, providing
+  coordinate labels for each dimension. Each value must be of one of the
+  following forms:
+
+  * A :py:class:`~xarray.DataArray` or :py:class:`~xarray.Variable`
+  * A tuple of the form ``(dims, data[, attrs])``, which is converted into
+    arguments for :py:class:`~xarray.Variable`
+  * A pandas object or scalar value, which is converted into a ``DataArray``
+  * A 1D array or list, which is interpreted as values for a one dimensional
+    coordinate variable along the same dimension as it's name
+
+- A dictionary of ``{coord_name: coord}`` where values are of the same form
+  as the list. Supplying coordinates as a dictionary allows other coordinates
+  than those corresponding to dimensions (more on these later). If you supply
+  ``coords`` as a dictionary, you must explicitly provide ``dims``.
 
 As a list of tuples:
 
@@ -128,7 +143,7 @@ Let's take a look at the important properties on our array:
     foo.attrs
     print(foo.name)
 
-You can even modify ``values`` inplace:
+You can modify ``values`` inplace:
 
 .. ipython:: python
 
@@ -228,15 +243,19 @@ Creating a Dataset
 To make an :py:class:`~xarray.Dataset` from scratch, supply dictionaries for any
 variables (``data_vars``), coordinates (``coords``) and attributes (``attrs``).
 
-``data_vars`` are supplied as a dictionary with each key as the name of the variable and each
+- ``data_vars`` should be a dictionary with each key as the name of the variable and each
 value as one of:
 
-- A :py:class:`~xarray.DataArray`
-- A tuple of the form ``(dims, data[, attrs])``
-- A pandas object
+  * A :py:class:`~xarray.DataArray` or :py:class:`~xarray.Variable`
+  * A tuple of the form ``(dims, data[, attrs])``, which is converted into
+    arguments for :py:class:`~xarray.Variable`
+  * A pandas object, which is converted into a ``DataArray``
+  * A 1D array or list, which is interpreted as values for a one dimensional
+    coordinate variable along the same dimension as it's name
 
-``coords`` are supplied as dictionary of ``{coord_name: coord}`` where the values are scalar values,
-arrays or tuples in the form of ``(dims, data[, attrs])``.
+- ``coords`` should be a dictionary of the same form as ``data_vars``.
+
+- ``attrs`` should be a dictionary.
 
 Let's create some fake data for the example we show above:
 
@@ -256,10 +275,6 @@ Let's create some fake data for the example we show above:
                             'time': pd.date_range('2014-09-06', periods=3),
                             'reference_time': pd.Timestamp('2014-09-05')})
     ds
-
-Notice that we did not explicitly include coordinates for the "x" or "y"
-dimensions, so they were filled in array of ascending integers of the proper
-length.
 
 Here we pass :py:class:`xarray.DataArray` objects or a pandas object as values
 in the dictionary:

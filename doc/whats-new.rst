@@ -21,10 +21,32 @@ v0.9.0 (unreleased)
 Breaking changes
 ~~~~~~~~~~~~~~~~
 
+- Index coordinates for each dimensions are now optional, and no longer created
+  by default :issue:`1017`. This has a number of implications:
+
+  - :py:func:`~align` and :py:meth:`~Dataset.reindex` can now error, if
+    dimensions labels are missing and dimensions have different sizes.
+  - Because pandas does not support missing indexes, methods such as
+    ``to_dataframe``/``from_dataframe`` and ``stack``/``unstack`` no longer
+    roundtrip faithfully on all inputs. Use :py:meth:`~Dataset.reset_index` to
+    remove undesired indexes.
+  - ``Dataset.__delitem__`` and :py:meth:`~Dataset.drop` no longer delete/drop
+    variables that have dimensions matching a deleted/dropped variable.
+  - ``DataArray.coords.__delitem__`` is now allowed on variables matching
+    dimension names.
+  - ``.sel`` and ``.loc`` now handle indexing along a dimension without
+    coordinate labels by doing integer based indexing. See
+    :ref:`indexing.missing_coordinates` for an example.
+  - :py:attr:`~Dataset.indexes` is no longer guaranteed to include all
+    dimensions names as keys. The new method :py:meth:`~Dataset.get_index` has
+    been added to get an index for a dimension guaranteed, falling back to
+    produce a default ``RangeIndex`` if necessary.
+
 - The default behavior of ``merge`` is now ``compat='no_conflicts'``, so some
   merges will now succeed in cases that previously raised
   ``xarray.MergeError``. Set ``compat='broadcast_equals'`` to restore the
-  previous default.
+  previous default. See :ref:`combining.no_conflicts` for more details.
+
 - Reading :py:attr:`~DataArray.values` no longer always caches values in a NumPy
   array :issue:`1128`. Caching of ``.values`` on variables read from netCDF
   files on disk is still the default when :py:func:`open_dataset` is called with
@@ -149,6 +171,13 @@ Bug fixes
   ``infer_intervals`` keyword gives control on whether the cell intervals
   should be computed or not.
   By `Fabien Maussion <https://github.com/fmaussion>`_.
+
+- Grouping over an dimension with non-unique values with ``groupby`` gives
+  correct groups.
+  By `Stephan Hoyer <https://github.com/shoyer>`_.
+
+- Fixed accessing coordinate variables with non-string names from ``.coords``.
+  By `Stephan Hoyer <https://github.com/shoyer>`_.
 
 - :py:meth:`~xarray.DataArray.rename` now simultaneously renames the array and
   any coordinate with the same name, when supplied via a :py:class:`dict`
@@ -1280,7 +1309,7 @@ Enhancements
 
   .. ipython:: python
 
-      data = xray.DataArray([1, 2, 3], dims='x')
+      data = xray.DataArray([1, 2, 3], [('x', range(3))])
       data.reindex(x=[0.5, 1, 1.5, 2, 2.5], method='pad')
 
   This will be especially useful once pandas 0.16 is released, at which point

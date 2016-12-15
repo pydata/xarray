@@ -913,7 +913,7 @@ def decode_cf(obj, concat_characters=True, mask_and_scale=True,
         identify coordinates.
     drop_variables: string or iterable, optional
         A variable or list of variables to exclude from being parsed from the
-        dataset.This may be useful to drop variables with problems or
+        dataset. This may be useful to drop variables with problems or
         inconsistent values.
 
     Returns
@@ -939,7 +939,7 @@ def decode_cf(obj, concat_characters=True, mask_and_scale=True,
         vars, attrs, concat_characters, mask_and_scale, decode_times,
         decode_coords, drop_variables=drop_variables)
     ds = Dataset(vars, attrs=attrs)
-    ds = ds.set_coords(coord_names.union(extra_coords))
+    ds = ds.set_coords(coord_names.union(extra_coords).intersection(vars))
     ds._file_obj = file_obj
     return ds
 

@@ -1203,7 +1203,8 @@ class MiscObject:
 class TestValidateAttrs(TestCase):
     def test_validating_attrs(self):
         def new_dataset():
-            return Dataset({'data': ('y', np.arange(10.0))})
+            return Dataset({'data': ('y', np.arange(10.0))},
+                           {'y': np.arange(10)})
 
         def new_dataset_and_dataset_attrs():
             ds = new_dataset()

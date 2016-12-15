@@ -196,7 +196,9 @@ This means, for example, that you always subtract an array from its transpose:
 You can explicitly broadcast xaray data structures by using the
 :py:func:`~xarray.broadcast` function:
 
-    a2, b2 = xr.broadcast(a, b2)
+.. ipython:: python
+
+    a2, b2 = xr.broadcast(a, b)
     a2
     b2
 
@@ -215,15 +217,18 @@ operations. The default result of a binary operation is by the *intersection*
 
 .. ipython:: python
 
-    arr + arr[:1]
+    arr = xr.DataArray(np.arange(3), [('x', range(3))])
+    arr + arr[:-1]
 
-If the result would be empty, an error is raised instead:
+If coordinate values for a dimension are missing on either argument, all
+matching dimensions must have the same size:
 
-.. ipython::
+.. ipython:: python
 
     @verbatim
-    In [1]: arr[:2] + arr[2:]
-    ValueError: no overlapping labels for some dimensions: ['x']
+    In [1]: arr + xr.DataArray([1, 2], dims='x')
+    ValueError: arguments without labels along dimension 'x' cannot be aligned because they have different dimension size(s) {2} than the size of the aligned dimension labels: 3
+
 
 However, one can explicitly change this default automatic alignment type ("inner")
 via :py:func:`~xarray.set_options()` in context manager:

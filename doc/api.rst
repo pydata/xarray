@@ -47,6 +47,7 @@ Attributes
    Dataset.coords
    Dataset.attrs
    Dataset.indexes
+   Dataset.get_index
 
 Dictionary interface
 --------------------
@@ -196,6 +197,7 @@ Attributes
    DataArray.attrs
    DataArray.encoding
    DataArray.indexes
+   DataArray.get_index
 
 **ndarray attributes**:
 :py:attr:`~DataArray.ndim`
