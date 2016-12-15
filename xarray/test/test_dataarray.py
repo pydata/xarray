@@ -15,8 +15,10 @@ from xarray import (align, broadcast, Dataset, DataArray,
 from xarray.core.pycompat import iteritems, OrderedDict
 from xarray.core.common import full_like
 
-from xarray.test import (TestCase, ReturnItem, source_ndarray, unittest,
-                         requires_dask, requires_bottleneck)
+from xarray.test import (
+    TestCase, ReturnItem, source_ndarray, unittest, requires_dask,
+    assert_xarray_identical, assert_xarray_equal,
+    assert_xarray_allclose, assert_array_equal)
 
 
 class TestDataArray(TestCase):
@@ -2435,7 +2437,6 @@ def test_rolling_iter(da):
 
 def test_rolling_properties(da):
     pytest.importorskip('bottleneck')
-    import bottleneck as bn
 
     rolling_obj = da.rolling(time=4)
 
@@ -2521,4 +2522,4 @@ def test_rolling_reduce(da, center, min_periods, window, name):
     # add nan prefix to numpy methods to get similar # behavior as bottleneck
     actual = rolling_obj.reduce(getattr(np, 'nan%s' % name))
     expected = getattr(rolling_obj, name)()
-    assert_xarray_close(actual, expected)
+    assert_xarray_allclose(actual, expected)

@@ -161,7 +161,7 @@ class TestCase(unittest.TestCase):
         assert_xarray_identical(v1, v2)
 
     def assertVariableAllClose(self, v1, v2, rtol=1e-05, atol=1e-08):
-        assert_xarray_close(v1, v2, rtol=rtol, atol=atol)
+        assert_xarray_allclose(v1, v2, rtol=rtol, atol=atol)
 
     def assertVariableNotEqual(self, v1, v2):
         assert not v1.equals(v2)
@@ -179,7 +179,7 @@ class TestCase(unittest.TestCase):
         assert_xarray_identical(d1, d2)
 
     def assertDatasetAllClose(self, d1, d2, rtol=1e-05, atol=1e-08):
-        assert_xarray_close(d1, d2, rtol=rtol, atol=atol)
+        assert_xarray_allclose(d1, d2, rtol=rtol, atol=atol)
 
     def assertCoordinatesEqual(self, d1, d2):
         assert_xarray_equal(d1, d2)
@@ -191,7 +191,7 @@ class TestCase(unittest.TestCase):
         assert_xarray_identical(ar1, ar2)
 
     def assertDataArrayAllClose(self, ar1, ar2, rtol=1e-05, atol=1e-08):
-        assert_xarray_close(ar1, ar2, rtol=rtol, atol=atol)
+        assert_xarray_allclose(ar1, ar2, rtol=rtol, atol=atol)
 
 def assert_xarray_equal(a, b):
     import xarray as xr
@@ -216,17 +216,17 @@ def assert_xarray_identical(a, b):
         raise TypeError('{} not supported by assertion comparison'
                         .format(type(a)))
 
-def assert_xarray_close(a, b, rtol=1e-05, atol=1e-08):
+def assert_xarray_allclose(a, b, rtol=1e-05, atol=1e-08):
     import xarray as xr
     ___tracebackhide__ = True  # noqa: F841
     assert type(a) == type(b)
     if isinstance(a, xr.DataArray):
-        assert_xarray_close(a.variable, b.variable, rtol=rtol, atol=atol)
+        assert_xarray_allclose(a.variable, b.variable, rtol=rtol, atol=atol)
         assert_xarray_equal(a.coords, b.coords)
     elif isinstance(a, xr.Dataset):
         assert sorted(a, key=str) == sorted(a, key=str)
         assert_xarray_equal(a.coords, b.coords)
-        [assert_xarray_close(
+        [assert_xarray_allclose(
             a.variables[k], b.variables[k], rtol=rtol, atol=atol)
          for k in a]
     elif isinstance(a, xr.Variable):
