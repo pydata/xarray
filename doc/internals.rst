@@ -54,7 +54,7 @@ Extending xarray
     np.random.seed(123456)
 
 xarray is designed as a general purpose library, and hence tries to avoid
-including overly domain specific methods. But inevitably, the need for more
+including overly domain specific functionality. But inevitably, the need for more
 domain specific logic arises.
 
 One standard solution to this problem is to subclass Dataset and/or DataArray to
@@ -69,7 +69,11 @@ task, even if most methods are only forwarding to xarray implementations.
 
 __ https://github.com/pydata/xarray/issues/706
 
-To resolve this dilemma, xarray has the experimental
+If you simply want the ability to call a function with the syntax of a
+method call, then the builtin :py:meth:`~xarray.DataArray.pipe` method (copied
+from pandas) may suffice.
+
+To resolve this issue for more complex cases, xarray has the
 :py:func:`~xarray.register_dataset_accessor` and
 :py:func:`~xarray.register_dataarray_accessor` decorators for adding custom
 "accessors" on xarray objects. Here's how you might use these decorators to
@@ -90,14 +94,17 @@ defined that returns an instance of your class:
           return GeoAccessor(self)
 
 However, using the register accessor decorators is preferable to simply adding
-your own ad-hoc property (i.e., ``Dataset.geo = property(...)``), for two
+your own ad-hoc property (i.e., ``Dataset.geo = property(...)``), for several
 reasons:
 
-1. It ensures that the name of your property does not conflict with any other
-   attributes or methods.
+1. It ensures that the name of your property does not accidentally conflict with
+   any other attributes or methods (including other accessors).
 2. Instances of accessor object will be cached on the xarray object that creates
    them. This means you can save state on them (e.g., to cache computed
    properties).
+3. Using an accessor provides an implicit namespace for your custom
+   functionality that clearly identifies it as separate from built-in xarray
+   methods.
 
 Back in an interactive IPython session, we can use these properties:
 
@@ -115,7 +122,9 @@ Back in an interactive IPython session, we can use these properties:
 
 The intent here is that libraries that extend xarray could add such an accessor
 to implement subclass specific functionality rather than using actual subclasses
-or patching in a large number of domain specific methods.
+or patching in a large number of domain specific methods. For further reading
+on ways to write new accessors and the philosophy behind the approach, see
+:issue:`1080`.
 
 To help users keep things straight, please `let us know
 <https://github.com/pydata/xarray/issues>`_ if you plan to write a new accessor

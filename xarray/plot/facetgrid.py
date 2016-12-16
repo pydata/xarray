@@ -72,7 +72,8 @@ class FacetGrid(object):
     """
 
     def __init__(self, data, col=None, row=None, col_wrap=None,
-                 aspect=1, size=3, subplot_kws=None):
+                 sharex=True, sharey=True, aspect=1, size=3,
+                 subplot_kws=None):
         """
         Parameters
         ----------
@@ -83,6 +84,10 @@ class FacetGrid(object):
             on separate facets in the grid.
         col_wrap : int, optional
             "Wrap" the column variable at this width, so that the column facets
+        sharex : bool, optional
+            If true, the facets will share x axes
+        sharey : bool, optional
+            If true, the facets will share y axes
         aspect : scalar, optional
             Aspect ratio of each facet, so that ``aspect * size`` gives the
             width of each facet in inches
@@ -141,7 +146,7 @@ class FacetGrid(object):
         figsize = (ncol * size * aspect + cbar_space, nrow * size)
 
         fig, axes = plt.subplots(nrow, ncol,
-                                 sharex=True, sharey=True, squeeze=False,
+                                 sharex=sharex, sharey=sharey, squeeze=False,
                                  figsize=figsize, subplot_kw=subplot_kws)
 
         # Set up the lists of names for the row and column facet variables

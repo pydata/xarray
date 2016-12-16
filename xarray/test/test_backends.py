@@ -14,13 +14,15 @@ import sys
 
 import numpy as np
 import pandas as pd
+import pytest
 
 import xarray as xr
 from xarray import (Dataset, DataArray, open_dataset, open_dataarray,
                     open_mfdataset, backends, save_mfdataset)
 from xarray.backends.common import robust_getitem
 from xarray.backends.netCDF4_ import _extract_nc4_encoding
-from xarray.core.pycompat import iteritems, PY3
+from xarray.core import indexing
+from xarray.core.pycompat import iteritems, PY2, PY3
 
 from . import (TestCase, requires_scipy, requires_netCDF4, requires_pydap,
                requires_scipy_or_netCDF4, requires_dask, requires_h5netcdf,
@@ -36,6 +38,9 @@ try:
     import dask.array as da
 except ImportError:
     pass
+
+
+ON_WINDOWS = sys.platform == 'win32'
 
 
 def open_example_dataset(name, *args, **kwargs):
@@ -130,10 +135,7 @@ class DatasetIOTestCases(object):
             with self.roundtrip(expected) as actual:
                 for k, v in actual.variables.items():
                     # IndexVariables are eagerly loaded into memory
-                    if k in actual.dims:
-                        self.assertTrue(v._in_memory)
-                    else:
-                        self.assertFalse(v._in_memory)
+                    self.assertEqual(v._in_memory, k in actual.dims)
                 yield actual
                 for k, v in actual.variables.items():
                     if k in vars:
@@ -163,23 +165,50 @@ class DatasetIOTestCases(object):
             # Test Dataset.compute()
             for k, v in actual.variables.items():
                 # IndexVariables are eagerly cached
-                if k in actual.dims:
-                    self.assertTrue(v._in_memory)
-                else:
-                    self.assertFalse(v._in_memory)
+                self.assertEqual(v._in_memory, k in actual.dims)
 
             computed = actual.compute()
 
             for k, v in actual.variables.items():
-                if k in actual.dims:
-                    self.assertTrue(v._in_memory)
-                else:
-                    self.assertFalse(v._in_memory)
+                self.assertEqual(v._in_memory, k in actual.dims)
             for v in computed.variables.values():
                 self.assertTrue(v._in_memory)
 
             self.assertDatasetAllClose(expected, actual)
             self.assertDatasetAllClose(expected, computed)
+
+    def test_pickle(self):
+        expected = Dataset({'foo': ('x', [42])})
+        with self.roundtrip(
+                expected, allow_cleanup_failure=ON_WINDOWS) as roundtripped:
+            raw_pickle = pickle.dumps(roundtripped)
+            # windows doesn't like opening the same file twice
+            roundtripped.close()
+            unpickled_ds = pickle.loads(raw_pickle)
+            self.assertDatasetIdentical(expected, unpickled_ds)
+
+    def test_pickle_dataarray(self):
+        expected = Dataset({'foo': ('x', [42])})
+        with self.roundtrip(
+                expected, allow_cleanup_failure=ON_WINDOWS) as roundtripped:
+            unpickled_array = pickle.loads(pickle.dumps(roundtripped['foo']))
+            self.assertDatasetIdentical(expected['foo'], unpickled_array)
+
+    def test_dataset_caching(self):
+        expected = Dataset({'foo': ('x', [5, 6, 7])})
+        with self.roundtrip(expected) as actual:
+            assert isinstance(actual.foo.variable._data,
+                              indexing.MemoryCachedArray)
+            assert not actual.foo.variable._in_memory
+            actual.foo.values  # cache
+            assert actual.foo.variable._in_memory
+
+        with self.roundtrip(expected, open_kwargs={'cache': False}) as actual:
+            assert isinstance(actual.foo.variable._data,
+                              indexing.CopyOnWriteArray)
+            assert not actual.foo.variable._in_memory
+            actual.foo.values  # no caching
+            assert not actual.foo.variable._in_memory
 
     def test_roundtrip_None_variable(self):
         expected = Dataset({None: (('x', 'y'), [[0, 1], [2, 3]])})
@@ -281,11 +310,6 @@ class DatasetIOTestCases(object):
             # when we cached the values
             actual = on_disk.isel(**indexers)
             self.assertDatasetAllClose(expected, actual)
-
-    def test_pickle(self):
-        on_disk = open_example_dataset('bears.nc')
-        unpickled = pickle.loads(pickle.dumps(on_disk))
-        self.assertDatasetIdentical(on_disk, unpickled)
 
 
 class CFEncodedDataTest(DatasetIOTestCases):
@@ -422,6 +446,28 @@ class CFEncodedDataTest(DatasetIOTestCases):
             self.assertEqual(actual.t.encoding['units'], units)
             self.assertDatasetIdentical(actual, ds)
 
+    def test_default_fill_value(self):
+        # Test default encoding for float:
+        ds = Dataset({'x': ('y', np.arange(10.0))})
+        kwargs = dict(encoding={'x': {'dtype': 'f4'}})
+        with self.roundtrip(ds, save_kwargs=kwargs) as actual:
+            self.assertEqual(actual.x.encoding['_FillValue'],
+                             np.nan)
+        self.assertEqual(ds.x.encoding, {})
+
+        # Test default encoding for int:
+        ds = Dataset({'x': ('y', np.arange(10.0))})
+        kwargs = dict(encoding={'x': {'dtype': 'int16'}})
+        with self.roundtrip(ds, save_kwargs=kwargs) as actual:
+            self.assertTrue('_FillValue' not in actual.x.encoding)
+        self.assertEqual(ds.x.encoding, {})
+
+        # Test default encoding for implicit int:
+        ds = Dataset({'x': ('y', np.arange(10, dtype='int16'))})
+        with self.roundtrip(ds) as actual:
+            self.assertTrue('_FillValue' not in actual.x.encoding)
+        self.assertEqual(ds.x.encoding, {})
+
     def test_encoding_same_dtype(self):
         ds = Dataset({'x': ('y', np.arange(10.0, dtype='f4'))})
         kwargs = dict(encoding={'x': {'dtype': 'f4'}})
@@ -434,13 +480,17 @@ _counter = itertools.count()
 
 
 @contextlib.contextmanager
-def create_tmp_file(suffix='.nc'):
+def create_tmp_file(suffix='.nc', allow_cleanup_failure=False):
     temp_dir = tempfile.mkdtemp()
     path = os.path.join(temp_dir, 'temp-%s%s' % (next(_counter), suffix))
     try:
         yield path
     finally:
-        shutil.rmtree(temp_dir)
+        try:
+            shutil.rmtree(temp_dir)
+        except OSError:
+            if not allow_cleanup_failure:
+                raise
 
 
 class BaseNetCDF4Test(CFEncodedDataTest):
@@ -650,8 +700,10 @@ class NetCDF4DataTest(BaseNetCDF4Test, TestCase):
                 yield store
 
     @contextlib.contextmanager
-    def roundtrip(self, data, save_kwargs={}, open_kwargs={}):
-        with create_tmp_file() as tmp_file:
+    def roundtrip(self, data, save_kwargs={}, open_kwargs={},
+                  allow_cleanup_failure=False):
+        with create_tmp_file(
+                allow_cleanup_failure=allow_cleanup_failure) as tmp_file:
             data.to_netcdf(tmp_file, **save_kwargs)
             with open_dataset(tmp_file, **open_kwargs) as ds:
                 yield ds
@@ -689,14 +741,20 @@ class NetCDF4DataTest(BaseNetCDF4Test, TestCase):
 @requires_dask
 class NetCDF4ViaDaskDataTest(NetCDF4DataTest):
     @contextlib.contextmanager
-    def roundtrip(self, data, save_kwargs={}, open_kwargs={}):
+    def roundtrip(self, data, save_kwargs={}, open_kwargs={},
+                  allow_cleanup_failure=False):
         with NetCDF4DataTest.roundtrip(
-                self, data, save_kwargs, open_kwargs) as ds:
+                self, data, save_kwargs, open_kwargs,
+                allow_cleanup_failure) as ds:
             yield ds.chunk()
 
     def test_unsorted_index_raises(self):
         # Skip when using dask because dask rewrites indexers to getitem,
         # dask first pulls items by block.
+        pass
+
+    def test_dataset_caching(self):
+        # caching behavior differs for dask
         pass
 
 
@@ -708,10 +766,19 @@ class ScipyInMemoryDataTest(CFEncodedDataTest, Only32BitTypes, TestCase):
         yield backends.ScipyDataStore(fobj, 'w')
 
     @contextlib.contextmanager
-    def roundtrip(self, data, save_kwargs={}, open_kwargs={}):
+    def roundtrip(self, data, save_kwargs={}, open_kwargs={},
+                  allow_cleanup_failure=False):
         serialized = data.to_netcdf(**save_kwargs)
-        with open_dataset(BytesIO(serialized), **open_kwargs) as ds:
+        with open_dataset(serialized, engine='scipy', **open_kwargs) as ds:
             yield ds
+
+    @pytest.mark.skipif(PY2, reason='cannot pickle BytesIO on Python 2')
+    def test_bytesio_pickle(self):
+        data = Dataset({'foo': ('x', [1, 2, 3])})
+        fobj = BytesIO(data.to_netcdf())
+        with open_dataset(fobj) as ds:
+            unpickled = pickle.loads(pickle.dumps(ds))
+            self.assertDatasetIdentical(unpickled, data)
 
 
 @requires_scipy
@@ -723,8 +790,10 @@ class ScipyOnDiskDataTest(CFEncodedDataTest, Only32BitTypes, TestCase):
                 yield store
 
     @contextlib.contextmanager
-    def roundtrip(self, data, save_kwargs={}, open_kwargs={}):
-        with create_tmp_file() as tmp_file:
+    def roundtrip(self, data, save_kwargs={}, open_kwargs={},
+                  allow_cleanup_failure=False):
+        with create_tmp_file(
+                allow_cleanup_failure=allow_cleanup_failure) as tmp_file:
             data.to_netcdf(tmp_file, engine='scipy', **save_kwargs)
             with open_dataset(tmp_file, engine='scipy', **open_kwargs) as ds:
                 yield ds
@@ -762,8 +831,10 @@ class NetCDF3ViaNetCDF4DataTest(CFEncodedDataTest, Only32BitTypes, TestCase):
                 yield store
 
     @contextlib.contextmanager
-    def roundtrip(self, data, save_kwargs={}, open_kwargs={}):
-        with create_tmp_file() as tmp_file:
+    def roundtrip(self, data, save_kwargs={}, open_kwargs={},
+                  allow_cleanup_failure=False):
+        with create_tmp_file(
+                allow_cleanup_failure=allow_cleanup_failure) as tmp_file:
             data.to_netcdf(tmp_file, format='NETCDF3_CLASSIC',
                            engine='netcdf4', **save_kwargs)
             with open_dataset(tmp_file, engine='netcdf4', **open_kwargs) as ds:
@@ -771,7 +842,8 @@ class NetCDF3ViaNetCDF4DataTest(CFEncodedDataTest, Only32BitTypes, TestCase):
 
 
 @requires_netCDF4
-class NetCDF4ClassicViaNetCDF4DataTest(CFEncodedDataTest, Only32BitTypes, TestCase):
+class NetCDF4ClassicViaNetCDF4DataTest(CFEncodedDataTest, Only32BitTypes,
+                                       TestCase):
     @contextlib.contextmanager
     def create_store(self):
         with create_tmp_file() as tmp_file:
@@ -780,8 +852,10 @@ class NetCDF4ClassicViaNetCDF4DataTest(CFEncodedDataTest, Only32BitTypes, TestCa
                 yield store
 
     @contextlib.contextmanager
-    def roundtrip(self, data, save_kwargs={}, open_kwargs={}):
-        with create_tmp_file() as tmp_file:
+    def roundtrip(self, data, save_kwargs={}, open_kwargs={},
+                  allow_cleanup_failure=False):
+        with create_tmp_file(
+                allow_cleanup_failure=allow_cleanup_failure) as tmp_file:
             data.to_netcdf(tmp_file, format='NETCDF4_CLASSIC',
                            engine='netcdf4', **save_kwargs)
             with open_dataset(tmp_file, engine='netcdf4', **open_kwargs) as ds:
@@ -798,8 +872,10 @@ class GenericNetCDFDataTest(CFEncodedDataTest, Only32BitTypes, TestCase):
         pass
 
     @contextlib.contextmanager
-    def roundtrip(self, data, save_kwargs={}, open_kwargs={}):
-        with create_tmp_file() as tmp_file:
+    def roundtrip(self, data, save_kwargs={}, open_kwargs={},
+                  allow_cleanup_failure=False):
+        with create_tmp_file(
+                allow_cleanup_failure=allow_cleanup_failure) as tmp_file:
             data.to_netcdf(tmp_file, format='netcdf3_64bit', **save_kwargs)
             with open_dataset(tmp_file, **open_kwargs) as ds:
                 yield ds
@@ -848,8 +924,10 @@ class H5NetCDFDataTest(BaseNetCDF4Test, TestCase):
             yield backends.H5NetCDFStore(tmp_file, 'w')
 
     @contextlib.contextmanager
-    def roundtrip(self, data, save_kwargs={}, open_kwargs={}):
-        with create_tmp_file() as tmp_file:
+    def roundtrip(self, data, save_kwargs={}, open_kwargs={},
+                  allow_cleanup_failure=False):
+        with create_tmp_file(
+                allow_cleanup_failure=allow_cleanup_failure) as tmp_file:
             data.to_netcdf(tmp_file, engine='h5netcdf', **save_kwargs)
             with open_dataset(tmp_file, engine='h5netcdf', **open_kwargs) as ds:
                 yield ds
@@ -898,7 +976,8 @@ class DaskTest(TestCase, DatasetIOTestCases):
         yield Dataset()
 
     @contextlib.contextmanager
-    def roundtrip(self, data, save_kwargs={}, open_kwargs={}):
+    def roundtrip(self, data, save_kwargs={}, open_kwargs={},
+                  allow_cleanup_failure=False):
         yield data.chunk()
 
     def test_roundtrip_datetime_data(self):
@@ -911,6 +990,13 @@ class DaskTest(TestCase, DatasetIOTestCases):
     def test_write_store(self):
         # Override method in DatasetIOTestCases - not applicable to dask
         pass
+
+    def test_dataset_caching(self):
+        expected = Dataset({'foo': ('x', [5, 6, 7])})
+        with self.roundtrip(expected) as actual:
+            assert not actual.foo.variable._in_memory
+            actual.foo.values  # no caching
+            assert not actual.foo.variable._in_memory
 
     def test_open_mfdataset(self):
         original = Dataset({'foo': ('x', np.random.randn(10))})
@@ -1041,6 +1127,7 @@ class DaskTest(TestCase, DatasetIOTestCases):
         self.assertTrue(computed._in_memory)
         self.assertDataArrayAllClose(actual, computed)
 
+
 @requires_scipy_or_netCDF4
 @requires_pydap
 class PydapTest(TestCase):
@@ -1093,8 +1180,10 @@ class TestPyNio(CFEncodedDataTest, Only32BitTypes, TestCase):
         pass
 
     @contextlib.contextmanager
-    def roundtrip(self, data, save_kwargs={}, open_kwargs={}):
-        with create_tmp_file() as tmp_file:
+    def roundtrip(self, data, save_kwargs={}, open_kwargs={},
+                  allow_cleanup_failure=False):
+        with create_tmp_file(
+                allow_cleanup_failure=allow_cleanup_failure) as tmp_file:
             data.to_netcdf(tmp_file, engine='scipy', **save_kwargs)
             with open_dataset(tmp_file, engine='pynio', **open_kwargs) as ds:
                 yield ds
@@ -1136,7 +1225,8 @@ class MiscObject:
 class TestValidateAttrs(TestCase):
     def test_validating_attrs(self):
         def new_dataset():
-            return Dataset({'data': ('y', np.arange(10.0))})
+            return Dataset({'data': ('y', np.arange(10.0))},
+                           {'y': np.arange(10)})
 
         def new_dataset_and_dataset_attrs():
             ds = new_dataset()

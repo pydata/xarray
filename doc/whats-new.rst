@@ -8,7 +8,7 @@ What's New
 
     import numpy as np
     import pandas as pd
-    import xray
+    import xarray as xray
     import xarray
     import xarray as xr
     np.random.seed(123456)
@@ -21,16 +21,48 @@ v0.9.0 (unreleased)
 Breaking changes
 ~~~~~~~~~~~~~~~~
 
+- By default ``to_netcdf()`` add a ``_FillValue = NaN`` attributes to float types.
+
+- Index coordinates for each dimensions are now optional, and no longer created
+  by default :issue:`1017`. This has a number of implications:
+
+  - :py:func:`~align` and :py:meth:`~Dataset.reindex` can now error, if
+    dimensions labels are missing and dimensions have different sizes.
+  - Because pandas does not support missing indexes, methods such as
+    ``to_dataframe``/``from_dataframe`` and ``stack``/``unstack`` no longer
+    roundtrip faithfully on all inputs. Use :py:meth:`~Dataset.reset_index` to
+    remove undesired indexes.
+  - ``Dataset.__delitem__`` and :py:meth:`~Dataset.drop` no longer delete/drop
+    variables that have dimensions matching a deleted/dropped variable.
+  - ``DataArray.coords.__delitem__`` is now allowed on variables matching
+    dimension names.
+  - ``.sel`` and ``.loc`` now handle indexing along a dimension without
+    coordinate labels by doing integer based indexing. See
+    :ref:`indexing.missing_coordinates` for an example.
+  - :py:attr:`~Dataset.indexes` is no longer guaranteed to include all
+    dimensions names as keys. The new method :py:meth:`~Dataset.get_index` has
+    been added to get an index for a dimension guaranteed, falling back to
+    produce a default ``RangeIndex`` if necessary.
+
 - The default behavior of ``merge`` is now ``compat='no_conflicts'``, so some
   merges will now succeed in cases that previously raised
   ``xarray.MergeError``. Set ``compat='broadcast_equals'`` to restore the
-  previous default.
-- Pickling an xarray object based on the dask backend, or reading its
-  :py:meth:`values` property, won't automatically convert the array from dask
-  to numpy in the original object anymore.
-  If a dask object is used as a coord of a :py:class:`~xarray.DataArray` or
-  :py:class:`~xarray.Dataset`, its values are eagerly computed and cached,
-  but only if it's used to index a dim (e.g. it's used for alignment).
+  previous default. See :ref:`combining.no_conflicts` for more details.
+
+- Reading :py:attr:`~DataArray.values` no longer always caches values in a NumPy
+  array :issue:`1128`. Caching of ``.values`` on variables read from netCDF
+  files on disk is still the default when :py:func:`open_dataset` is called with
+  ``cache=True``.
+  By `Guido Imperiale <https://github.com/crusaderky>`_ and
+  `Stephan Hoyer <https://github.com/shoyer>`_.
+- Pickling a ``Dataset`` or ``DataArray`` linked to a file on disk no longer
+  caches its values into memory before pickling :issue:`1128`. Instead, pickle
+  stores file paths and restores objects by reopening file references. This
+  enables preliminary, experimental use of xarray for opening files with
+  `dask.distributed <https://distributed.readthedocs.io>`_.
+  By `Stephan Hoyer <https://github.com/shoyer>`_.
+- Coordinates used to index a dimension are now loaded eagerly into
+  :py:class:`pandas.Index` objects, instead of loading the values lazily.
   By `Guido Imperiale <https://github.com/crusaderky>`_.
 
 Deprecations
@@ -93,6 +125,18 @@ Enhancements
   providing consistent access to dimension length on both ``Dataset`` and
   ``DataArray`` (:issue:`921`).
   By `Stephan Hoyer <https://github.com/shoyer>`_.
+- New top-level functions :py:func:`~xarray.full_like`,
+  :py:func:`~xarray.zeros_like`, and :py:func:`~xarray.ones_like`
+  By `Guido Imperiale <https://github.com/crusaderky>`_.
+- Overriding a preexisting attribute with
+  :py:func:`~xarray.register_dataset_accessor` or
+  :py:func:`~xarray.register_dataarray_accessor` now issues a warning instead of
+  raising an error (:issue:`1082`).
+  By `Stephan Hoyer <https://github.com/shoyer>`_.
+- Options for axes sharing between subplots are exposed to
+  :py:class:`FacetGrid` and :py:func:`~xarray.plot.plot`, so axes
+  sharing can be disabled for polar plots.
+  By `Bas Hoonhout <https://github.com/hoonhout>`_.
 
 Bug fixes
 ~~~~~~~~~
@@ -130,6 +174,13 @@ Bug fixes
   should be computed or not.
   By `Fabien Maussion <https://github.com/fmaussion>`_.
 
+- Grouping over an dimension with non-unique values with ``groupby`` gives
+  correct groups.
+  By `Stephan Hoyer <https://github.com/shoyer>`_.
+
+- Fixed accessing coordinate variables with non-string names from ``.coords``.
+  By `Stephan Hoyer <https://github.com/shoyer>`_.
+
 - :py:meth:`~xarray.DataArray.rename` now simultaneously renames the array and
   any coordinate with the same name, when supplied via a :py:class:`dict`
   (:issue:`1116`).
@@ -140,6 +191,9 @@ Bug fixes
 
 - Fix ``.groupby(group)`` when ``group`` has datetime dtype (:issue:`1132`).
   By `Jonas Sølvsteen <https://github.com/j08lue>`_.
+
+- Fixed a bug with facetgrid (the ``norm`` keyword was ignored, :issue:`1159`).
+  By `Fabien Maussion <https://github.com/fmaussion>`_.
 
 .. _whats-new.0.8.2:
 
@@ -160,7 +214,7 @@ Enhancements
 ~~~~~~~~~~~~
 
 - New documentation on :ref:`panel transition`. By
-  `Maximilian Roos <https://github.com/MaximilianR>`_.
+  `Maximilian Roos <https://github.com/maximilianr>`_.
 - New ``Dataset`` and ``DataArray`` methods :py:meth:`~xarray.Dataset.to_dict`
   and :py:meth:`~xarray.Dataset.from_dict` to allow easy conversion between
   dictionaries and xarray objects (:issue:`432`). See
@@ -237,7 +291,7 @@ Enhancements
   method called :py:meth:`~xarray.Dataset.groupby_bins` has also been added to
   allow users to specify bins for grouping. The new features are described in
   :ref:`groupby.multidim` and :ref:`examples.multidim`.
-  By `Ryan Abernathey <http://github.com/rabernat>`_.
+  By `Ryan Abernathey <https://github.com/rabernat>`_.
 
 - DataArray and Dataset method :py:meth:`where` now supports a ``drop=True``
   option that clips coordinate elements that are fully masked.  By
@@ -439,7 +493,7 @@ The following individuals contributed to this release:
 v0.7.0 (21 January 2016)
 ------------------------
 
-This major release includes redesign of :py:class:`~xray.DataArray`
+This major release includes redesign of :py:class:`~xarray.DataArray`
 internals, as well as new methods for reshaping, rolling and shifting
 data. It includes preliminary support for :py:class:`pandas.MultiIndex`,
 as well as a number of other features and bug fixes, several of which
@@ -1260,7 +1314,7 @@ Enhancements
 
   .. ipython:: python
 
-      data = xray.DataArray([1, 2, 3], dims='x')
+      data = xray.DataArray([1, 2, 3], [('x', range(3))])
       data.reindex(x=[0.5, 1, 1.5, 2, 2.5], method='pad')
 
   This will be especially useful once pandas 0.16 is released, at which point

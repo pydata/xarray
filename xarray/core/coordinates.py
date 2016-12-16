@@ -8,19 +8,12 @@ import pandas as pd
 from . import formatting
 from .utils import Frozen
 from .merge import merge_coords, merge_coords_without_align
-from .pycompat import iteritems, basestring, OrderedDict
-from .variable import default_index_coordinate
+from .pycompat import OrderedDict
 
 
 class AbstractCoordinates(Mapping, formatting.ReprMixin):
     def __getitem__(self, key):
-        if (key in self._names or
-            (isinstance(key, basestring) and
-             key.split('.')[0] in self._names)):
-            # allow indexing current coordinates or components
-            return self._data[key]
-        else:
-            raise KeyError(key)
+        raise NotImplementedError
 
     def __setitem__(self, key, value):
         self.update({key: value})
@@ -60,7 +53,7 @@ class AbstractCoordinates(Mapping, formatting.ReprMixin):
         """
         if ordered_dims is None:
             ordered_dims = self.dims
-        indexes = [self.variables[k].to_index() for k in ordered_dims]
+        indexes = [self._data.get_index(k) for k in ordered_dims]
         return pd.MultiIndex.from_product(indexes, names=list(ordered_dims))
 
     def update(self, other):
@@ -146,6 +139,11 @@ class DatasetCoordinates(AbstractCoordinates):
                                   for k, v in self._data.variables.items()
                                   if k in self._names))
 
+    def __getitem__(self, key):
+        if key in self._data.data_vars:
+            raise KeyError(key)
+        return self._data[key]
+
     def to_dataset(self):
         """Convert these coordinates into a new Dataset
         """
@@ -159,14 +157,13 @@ class DatasetCoordinates(AbstractCoordinates):
 
         # check for inconsistent state *before* modifying anything in-place
         dims = calculate_dimensions(variables)
+        new_coord_names = set(coords)
         for dim, size in dims.items():
-            if dim not in variables:
-                variables[dim] = default_index_coordinate(dim, size)
-
-        updated_coord_names = set(coords) | set(dims)
+            if dim in variables:
+                new_coord_names.add(dim)
 
         self._data._variables = variables
-        self._data._coord_names.update(updated_coord_names)
+        self._data._coord_names.update(new_coord_names)
         self._data._dims = dict(dims)
 
     def __delitem__(self, key):
@@ -189,11 +186,14 @@ class DataArrayCoordinates(AbstractCoordinates):
     def _names(self):
         return set(self._data._coords)
 
+    def __getitem__(self, key):
+        return self._data._getitem_coord(key)
+
     def _update_coords(self, coords):
         from .dataset import calculate_dimensions
 
         dims = calculate_dimensions(coords)
-        if set(dims) != set(self.dims):
+        if not set(dims) <= set(self.dims):
             raise ValueError('cannot add coordinates with new dimensions to '
                              'a DataArray')
         self._data._coords = coords
@@ -212,64 +212,58 @@ class DataArrayCoordinates(AbstractCoordinates):
         return self._to_dataset()
 
     def __delitem__(self, key):
-        if key in self.dims:
-            raise ValueError('cannot delete a coordinate corresponding to a '
-                             'DataArray dimension')
         del self._data._coords[key]
 
 
-class LevelCoordinates(AbstractCoordinates):
-    """Dictionary like container for MultiIndex level coordinates.
+class LevelCoordinatesSource(object):
+    """Iterator for MultiIndex level coordinates.
 
-    Used for attribute style lookup. Not returned directly by any
-    public methods.
+    Used for attribute style lookup with AttrAccessMixin. Not returned directly
+    by any public methods.
     """
-    def __init__(self, dataarray):
-        self._data = dataarray
+    def __init__(self, data_object):
+        self._data = data_object
 
-    @property
-    def _names(self):
-        return set(self._data._level_coords)
+    def __getitem__(self, key):
+        # not necessary -- everything here can already be found in coords.
+        raise KeyError
 
-    @property
-    def variables(self):
-        level_coords = OrderedDict(
-            (k, self._data[v].variable.get_level_variable(k))
-            for k, v in self._data._level_coords.items())
-        return Frozen(level_coords)
+    def __iter__(self):
+        return iter(self._data._level_coords)
 
 
 class Indexes(Mapping, formatting.ReprMixin):
     """Ordered Mapping[str, pandas.Index] for xarray objects.
     """
-    def __init__(self, variables, dims):
+    def __init__(self, variables, sizes):
         """Not for public consumption.
 
         Arguments
         ---------
-        variables : OrderedDict
+        variables : OrderedDict[Any, Variable]
             Reference to OrderedDict holding variable objects. Should be the
             same dictionary used by the source object.
-        dims : sequence or mapping
-            Should be the same dimensions used by the source object.
+        sizes : OrderedDict[Any, int]
+            Map from dimension names to sizes.
         """
         self._variables = variables
-        self._dims = dims
+        self._sizes = sizes
 
     def __iter__(self):
-        return iter(self._dims)
+        for key in self._sizes:
+            if key in self._variables:
+                yield key
 
     def __len__(self):
-        return len(self._dims)
+        return sum(key in self._variables for key in self._sizes)
 
     def __contains__(self, key):
-        return key in self._dims
+        return key in self._sizes and key in self._variables
 
     def __getitem__(self, key):
-        if key in self:
-            return self._variables[key].to_index()
-        else:
+        if key not in self._sizes:
             raise KeyError(key)
+        return self._variables[key].to_index()
 
     def __unicode__(self):
         return formatting.indexes_repr(self)

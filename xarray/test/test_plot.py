@@ -179,7 +179,8 @@ class TestPlot1D(PlotTestCase):
 
     def setUp(self):
         d = [0, 1.1, 0, 2]
-        self.darray = DataArray(d, coords={'period': range(len(d))})
+        self.darray = DataArray(d, coords={'period': range(len(d))},
+                                dims='period')
 
     def test_xlabel_is_index_name(self):
         self.darray.plot()
@@ -206,7 +207,8 @@ class TestPlot1D(PlotTestCase):
         self.pass_in_axis(self.darray.plot.line)
 
     def test_nonnumeric_index_raises_typeerror(self):
-        a = DataArray([1, 2, 3], {'letter': ['a', 'b', 'c']})
+        a = DataArray([1, 2, 3], {'letter': ['a', 'b', 'c']},
+                      dims='letter')
         with self.assertRaisesRegexp(TypeError, r'[Pp]lot'):
             a.plot.line()
 
@@ -220,7 +222,7 @@ class TestPlot1D(PlotTestCase):
 
     def test_x_ticks_are_rotated_for_time(self):
         time = pd.date_range('2000-01-01', '2000-01-10')
-        a = DataArray(np.arange(len(time)), {'t': time})
+        a = DataArray(np.arange(len(time)), [('t', time)])
         a.plot.line()
         rotation = plt.gca().get_xticklabels()[0].get_rotation()
         self.assertFalse(rotation == 0)
@@ -596,8 +598,7 @@ class Common2dMixin:
 
     def test_coord_strings(self):
         # 1d coords (same as dims)
-        self.assertIn('x', self.darray.coords)
-        self.assertIn('y', self.darray.coords)
+        self.assertEqual({'x', 'y'}, set(self.darray.dims))
         self.plotmethod(y='y', x='x')
 
     def test_non_linked_coords(self):
@@ -628,6 +629,7 @@ class Common2dMixin:
 
     def test_default_title(self):
         a = DataArray(easy_array((4, 3, 2)), dims=['a', 'b', 'c'])
+        a.coords['c'] = [0, 1]
         a.coords['d'] = u'foo'
         self.plotfunc(a.isel(c=1))
         title = plt.gca().get_title()
@@ -1032,6 +1034,12 @@ class TestFacetGrid(PlotTestCase):
             clim = np.array(image.get_clim())
             self.assertTrue(np.allclose(expected, clim))
 
+    def test_can_set_norm(self):
+        norm = mpl.colors.SymLogNorm(0.1)
+        self.g.map_dataarray(xplt.imshow, 'x', 'y', norm=norm)
+        for image in plt.gcf().findobj(mpl.image.AxesImage):
+            self.assertIs(image.norm, norm)
+
     def test_figure_size(self):
 
         self.assertArrayEqual(self.g.fig.get_size_inches(), (10, 3))
@@ -1101,7 +1109,13 @@ class TestFacetGrid(PlotTestCase):
         d.plot.imshow(x='x', y='y', col='z', add_colorbar=False)
         self.assertEqual(0, len(find_possible_colorbars()))
 
+    def test_facetgrid_polar(self):
+        # test if polar projection in FacetGrid does not raise an exception
+        self.darray.plot.pcolormesh(col='z',
+                                    subplot_kws=dict(projection='polar'),
+                                    sharex=False, sharey=False)
 
+        
 class TestFacetGrid4d(PlotTestCase):
 
     def setUp(self):
@@ -1127,3 +1141,5 @@ class TestFacetGrid4d(PlotTestCase):
         # Top row should be labeled
         for label, ax in zip(self.darray.coords['col'].values, g.axes[0, :]):
             self.assertTrue(substring_in_axes(label, ax))
+        
+        
