@@ -536,6 +536,11 @@ class TestDataArray(TestCase):
         selected = data.sel(x=0, drop=False)
         self.assertDataArrayIdentical(expected, selected)
 
+        data = DataArray([1, 2, 3], dims=['x'])
+        expected = DataArray(1)
+        selected = data.sel(x=0, drop=True)
+        self.assertDataArrayIdentical(expected, selected)
+
     def test_isel_drop(self):
         data = DataArray([1, 2, 3], [('x', [0, 1, 2])])
         expected = DataArray(1)

@@ -834,6 +834,11 @@ class TestDataset(TestCase):
         selected = data.sel(x=0, drop=False)
         self.assertDatasetIdentical(expected, selected)
 
+        data = Dataset({'foo': ('x', [1, 2, 3])})
+        expected = Dataset({'foo': 1})
+        selected = data.sel(x=0, drop=True)
+        self.assertDatasetIdentical(expected, selected)
+
     def test_isel_drop(self):
         data = Dataset({'foo': ('x', [1, 2, 3])}, {'x': [0, 1, 2]})
         expected = Dataset({'foo': 1})
