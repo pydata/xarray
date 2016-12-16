@@ -113,7 +113,7 @@ Bug fixes
 
 - Fix issues with variables where both attributes ``_FillValue`` and
   ``missing_value`` are set to ``NaN`` (:issue:`997`).
-  By `Marco Zühlke <https://github.com/mzuehlke>`_.
+  By `Marco ZÃ¼hlke <https://github.com/mzuehlke>`_.
 
 - ``.where()`` and ``.fillna()`` now preserve attributes (:issue:`1009`).
   By `Fabien Maussion <https://github.com/fmaussion>`_.
@@ -138,9 +138,8 @@ Bug fixes
 - Fixed sub-optimal performance in certain operations with object arrays (:issue:`1121`).
   By `Yves Delley <https://github.com/burnpanck>`_.
 
-- Use ``safe_cast_to_index`` when generating ``unique_value_groups`` in ``groupby``
-  (:issue:`1132`).
-  By `Jonas Sølvsteen <https://github.com/j08lue>`_.
+- Fix ``.groupby(group)`` when ``group`` has datetime dtype (:issue:`1132`).
+  By `Jonas SÃ¸lvsteen <https://github.com/j08lue>`_.
 
 .. _whats-new.0.8.2:
 
