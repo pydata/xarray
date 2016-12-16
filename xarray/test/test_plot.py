@@ -175,16 +175,16 @@ class TestPlot(PlotTestCase):
         self.darray.plot(size=5, aspect=2)
         assert tuple(plt.gcf().get_size_inches()) == (10, 5)
 
-        with self.assertRaisesRegexp(TypeError, 'cannot provide both'):
+        with self.assertRaisesRegexp(ValueError, 'cannot provide both'):
             self.darray.plot(ax=plt.gca(), figsize=(3, 4))
 
-        with self.assertRaisesRegexp(TypeError, 'cannot provide both'):
+        with self.assertRaisesRegexp(ValueError, 'cannot provide both'):
             self.darray.plot(size=5, figsize=(3, 4))
 
-        with self.assertRaisesRegexp(TypeError, 'cannot provide both'):
+        with self.assertRaisesRegexp(ValueError, 'cannot provide both'):
             self.darray.plot(size=5, ax=plt.gca())
 
-        with self.assertRaisesRegexp(TypeError, 'cannot provide `aspect`'):
+        with self.assertRaisesRegexp(ValueError, 'cannot provide `aspect`'):
             self.darray.plot(aspect=1)
 
     def test_convenient_facetgrid_4d(self):
@@ -1082,7 +1082,10 @@ class TestFacetGrid(PlotTestCase):
         g = xplt.FacetGrid(self.darray, col='z', size=4, aspect=0.5)
         self.assertArrayEqual(g.fig.get_size_inches(), (7, 4))
 
-        with self.assertRaisesRegexp(ValueError, "Can't use"):
+        g = xplt.FacetGrid(self.darray, col='z', figsize=(9, 4))
+        self.assertArrayEqual(g.fig.get_size_inches(), (9, 4))
+
+        with self.assertRaisesRegexp(ValueError, "cannot provide both"):
             g = xplt.plot(self.darray, row=2, col='z', figsize=(6, 4), size=6)
 
         with self.assertRaisesRegexp(ValueError, "Can't use"):

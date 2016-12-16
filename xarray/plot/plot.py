@@ -52,16 +52,16 @@ def _easy_facetgrid(darray, plotfunc, x, y, row=None, col=None,
     figsize = kwargs.pop('figsize', None)
     if ax is not None:
         raise ValueError("Can't use axes when making faceted plots.")
-    if figsize is not None:
-        raise ValueError("Can't use ``figsize`` when making faceted plots.")
     if aspect is None:
         aspect = 1
     if size is None:
         size = 3
+    elif figsize is not None:
+        raise ValueError('cannot provide both `figsize` and `size` arguments')
 
     g = FacetGrid(data=darray, col=col, row=row, col_wrap=col_wrap,
-                  sharex=sharex, sharey=sharey, aspect=aspect,
-                  size=size, subplot_kws=subplot_kws)
+                  sharex=sharex, sharey=sharey, figsize=figsize,
+                  aspect=aspect, size=size, subplot_kws=subplot_kws)
     return g.map_dataarray(plotfunc, x, y, **kwargs)
 
 

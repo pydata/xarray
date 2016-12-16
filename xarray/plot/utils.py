@@ -226,21 +226,22 @@ def get_axis(figsize, size, aspect, ax):
 
     if figsize is not None:
         if ax is not None:
-            raise TypeError('cannot provide both `figsize` and `ax` arguments')
+            raise ValueError('cannot provide both `figsize` and ' \
+                             '`ax` arguments')
         if size is not None:
-            raise TypeError('cannot provide both `figsize` and ' \
-                            '`size` arguments')
+            raise ValueError('cannot provide both `figsize` and ' \
+                             '`size` arguments')
         _, ax = plt.subplots(figsize=figsize)
     elif size is not None:
         if ax is not None:
-            raise TypeError('cannot provide both `size` and `ax` arguments')
+            raise ValueError('cannot provide both `size` and `ax` arguments')
         if aspect is None:
             width, height = mpl.rcParams['figure.figsize']
             aspect = width / height
         figsize = (size * aspect, size)
         _, ax = plt.subplots(figsize=figsize)
     elif aspect is not None:
-        raise TypeError('cannot provide `aspect` argument without `size`')
+        raise ValueError('cannot provide `aspect` argument without `size`')
 
     if ax is None:
         ax = plt.gca()
