@@ -824,6 +824,31 @@ class TestDataset(TestCase):
         self.assertDatasetEqual(data.isel(td=slice(1, 3)),
                                 data.sel(td=slice('1 days', '2 days')))
 
+    def test_sel_drop(self):
+        data = Dataset({'foo': ('x', [1, 2, 3])}, {'x': [0, 1, 2]})
+        expected = Dataset({'foo': 1})
+        selected = data.sel(x=0, drop=True)
+        self.assertDatasetIdentical(expected, selected)
+
+        expected = Dataset({'foo': 1}, {'x': 0})
+        selected = data.sel(x=0, drop=False)
+        self.assertDatasetIdentical(expected, selected)
+
+        data = Dataset({'foo': ('x', [1, 2, 3])})
+        expected = Dataset({'foo': 1})
+        selected = data.sel(x=0, drop=True)
+        self.assertDatasetIdentical(expected, selected)
+
+    def test_isel_drop(self):
+        data = Dataset({'foo': ('x', [1, 2, 3])}, {'x': [0, 1, 2]})
+        expected = Dataset({'foo': 1})
+        selected = data.isel(x=0, drop=True)
+        self.assertDatasetIdentical(expected, selected)
+
+        expected = Dataset({'foo': 1}, {'x': 0})
+        selected = data.isel(x=0, drop=False)
+        self.assertDatasetIdentical(expected, selected)
+
     def test_isel_points(self):
         data = create_test_data()
 
@@ -1792,6 +1817,29 @@ class TestDataset(TestCase):
         # invalid squeeze
         with self.assertRaisesRegexp(ValueError, 'cannot select a dimension'):
             data.squeeze('y')
+
+    def test_squeeze_drop(self):
+        data = Dataset({'foo': ('x', [1])}, {'x': [0]})
+        expected = Dataset({'foo': 1})
+        selected = data.squeeze(drop=True)
+        self.assertDatasetIdentical(expected, selected)
+
+        expected = Dataset({'foo': 1}, {'x': 0})
+        selected = data.squeeze(drop=False)
+        self.assertDatasetIdentical(expected, selected)
+
+        data = Dataset({'foo': (('x', 'y'), [[1]])}, {'x': [0], 'y': [0]})
+        expected = Dataset({'foo': 1})
+        selected = data.squeeze(drop=True)
+        self.assertDatasetIdentical(expected, selected)
+
+        expected = Dataset({'foo': ('x', [1])}, {'x': [0]})
+        selected = data.squeeze(dim='y', drop=True)
+        self.assertDatasetIdentical(expected, selected)
+
+        data = Dataset({'foo': (('x',), [])}, {'x': []})
+        selected = data.squeeze(drop=True)
+        self.assertDatasetIdentical(data, selected)
 
     def test_groupby(self):
         data = Dataset({'z': (['x', 'y'], np.random.randn(3, 5))},

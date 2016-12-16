@@ -125,6 +125,12 @@ Enhancements
   providing consistent access to dimension length on both ``Dataset`` and
   ``DataArray`` (:issue:`921`).
   By `Stephan Hoyer <https://github.com/shoyer>`_.
+- New keyword argument ``drop=True`` for :py:meth:`~DataArray.sel`,
+  :py:meth:`~DataArray.isel` and :py:meth:`~DataArray.squeeze` for dropping
+  scalar coordinates that arise from indexing.
+  ``DataArray`` (:issue:`242`).
+  By `Stephan Hoyer <https://github.com/shoyer>`_.
+
 - New top-level functions :py:func:`~xarray.full_like`,
   :py:func:`~xarray.zeros_like`, and :py:func:`~xarray.ones_like`
   By `Guido Imperiale <https://github.com/crusaderky>`_.

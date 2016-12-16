@@ -526,6 +526,31 @@ class TestDataArray(TestCase):
             with self.assertRaisesRegexp(TypeError, 'tolerance'):
                 data.sel(x=[0.9, 1.9], method='backfill', tolerance=1)
 
+    def test_sel_drop(self):
+        data = DataArray([1, 2, 3], [('x', [0, 1, 2])])
+        expected = DataArray(1)
+        selected = data.sel(x=0, drop=True)
+        self.assertDataArrayIdentical(expected, selected)
+
+        expected = DataArray(1, {'x': 0})
+        selected = data.sel(x=0, drop=False)
+        self.assertDataArrayIdentical(expected, selected)
+
+        data = DataArray([1, 2, 3], dims=['x'])
+        expected = DataArray(1)
+        selected = data.sel(x=0, drop=True)
+        self.assertDataArrayIdentical(expected, selected)
+
+    def test_isel_drop(self):
+        data = DataArray([1, 2, 3], [('x', [0, 1, 2])])
+        expected = DataArray(1)
+        selected = data.isel(x=0, drop=True)
+        self.assertDataArrayIdentical(expected, selected)
+
+        expected = DataArray(1, {'x': 0})
+        selected = data.isel(x=0, drop=False)
+        self.assertDataArrayIdentical(expected, selected)
+
     def test_isel_points(self):
         shape = (10, 5, 6)
         np_array = np.random.random(shape)
@@ -1116,6 +1141,16 @@ class TestDataArray(TestCase):
 
     def test_squeeze(self):
         self.assertVariableEqual(self.dv.variable.squeeze(), self.dv.squeeze())
+
+    def test_squeeze_drop(self):
+        array = DataArray([1], [('x', [0])])
+        expected = DataArray(1)
+        actual = array.squeeze(drop=True)
+        self.assertDataArrayIdentical(expected, actual)
+
+        expected = DataArray(1, {'x': 0})
+        actual = array.squeeze(drop=False)
+        self.assertDataArrayIdentical(expected, actual)
 
     def test_drop_coordinates(self):
         expected = DataArray(np.random.randn(2, 3), dims=['x', 'y'])
