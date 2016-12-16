@@ -21,6 +21,8 @@ v0.9.0 (unreleased)
 Breaking changes
 ~~~~~~~~~~~~~~~~
 
+- By default ``to_netcdf()`` add a ``_FillValue = NaN`` attributes to float types.
+
 - Index coordinates for each dimensions are now optional, and no longer created
   by default :issue:`1017`. This has a number of implications:
 

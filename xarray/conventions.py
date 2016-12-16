@@ -641,6 +641,14 @@ def maybe_encode_dtype(var, name=None):
     return var
 
 
+def maybe_default_fill_value(var):
+    # make NaN the fill value for float types:
+    if ('_FillValue' not in var.attrs and
+       np.issubdtype(var.dtype, np.floating)):
+        var.attrs['_FillValue'] = np.nan
+    return var
+
+
 def maybe_encode_bools(var):
     if ((var.dtype == np.bool) and
             ('dtype' not in var.encoding) and ('dtype' not in var.attrs)):
@@ -724,6 +732,7 @@ def encode_cf_variable(var, needs_copy=True, name=None):
     var, needs_copy = maybe_encode_offset_and_scale(var, needs_copy)
     var, needs_copy = maybe_encode_fill_value(var, needs_copy)
     var = maybe_encode_dtype(var, name)
+    var = maybe_default_fill_value(var)
     var = maybe_encode_bools(var)
     var = ensure_dtype_not_object(var)
     return var
