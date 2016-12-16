@@ -134,6 +134,42 @@ axes created by ``plt.subplots``.
 
 On the right is a histogram created by :py:func:`xarray.plot.hist`.
 
+.. _plotting.figsize:
+
+Controlling the figure size
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+You can pass a ``figsize`` argument to all xarray's plotting methods to
+control the figure size. For convenience, xarray's plotting methods also
+support the ``aspect`` and ``size`` arguments which control the size of the
+resulting image via the formula ``figsize = (aspect * size, size)``:
+
+.. ipython:: python
+
+    air1d.plot(aspect=2, size=3)
+    @savefig plotting_example_size_and_aspect.png
+    plt.tight_layout()
+
+.. ipython:: python
+    :suppress:
+
+    # create a dummy figure so sphinx plots everything below normally
+    plt.figure()
+
+This feature also works with :ref:`plotting.faceting`.
+
+.. note::
+
+    If ``figsize`` or ``size`` are used, a new figure is created,
+    so this is mutually exclusive with the ``ax`` argument.
+
+.. note::
+
+    The convention used by xarray (``figsize = (aspect * size, size)``) is
+    borrowed from seaborn: it is therefore `not equivalent to matplotlib's`_.
+
+.. _not equivalent to matplotlib's: https://github.com/mwaskom/seaborn/issues/746
+
 Two Dimensions
 --------------
 

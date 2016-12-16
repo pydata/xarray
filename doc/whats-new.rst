@@ -143,6 +143,10 @@ Enhancements
   :py:class:`FacetGrid` and :py:func:`~xarray.plot.plot`, so axes
   sharing can be disabled for polar plots.
   By `Bas Hoonhout <https://github.com/hoonhout>`_.
+- ``figsize``, ``size`` and ``aspect`` plot arguments are now supported for all
+  plots (:issue:`897`). See :ref:`plotting.figsize` for more details.
+  By `Stephan Hoyer <https://github.com/shoyer>`_ and
+  `Fabien Maussion <https://github.com/fmaussion>`_.
 
 Bug fixes
 ~~~~~~~~~
