@@ -4,7 +4,7 @@ Serialization and IO
 ====================
 
 xarray supports direct serialization and IO to several file formats, from
-simple :ref:`io.pickle` files to the much more flexible :ref:`io.netcdf`
+simple :ref:`io.pickle` files to the more flexible :ref:`io.netcdf`
 format.
 
 .. ipython:: python
@@ -20,8 +20,8 @@ format.
 Pickle
 ------
 
-The simplest way to serialize an xarray object is to use Python's built-in
-pickle module:
+The simplest way to serialize an xarray object is to use Python's built-in pickle
+module:
 
 .. ipython:: python
 
@@ -40,7 +40,7 @@ pickle module:
 
 Pickle support is important because it doesn't require any external libraries
 and lets you use xarray objects with Python modules like
-:py:mod:`multiprocessing`. However, there are important caveats:
+:py:mod:`multiprocessing`. However, there are two important caveats:
 
 1. To simplify serialization, xarray's support for pickle currently loads all
    array values into memory before dumping an object. This means it is not
