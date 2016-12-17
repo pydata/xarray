@@ -148,8 +148,8 @@ def line(darray, *args, **kwargs):
     darray : DataArray
         Must be 1 dimensional
     figsize : tuple, optional
-        A tuple (width, height) in inches. Mutually exclusive with ``size``
-        and ``ax``.
+        A tuple (width, height) of the figure in inches.
+        Mutually exclusive with ``size`` and ``ax``.
     aspect : scalar, optional
         Aspect ratio of plot, so that ``aspect * size`` gives the width in
         inches. Only used if a ``size`` is provided.
@@ -212,8 +212,8 @@ def hist(darray, figsize=None, size=None, aspect=None, ax=None, **kwargs):
     darray : DataArray
         Can be any dimension
     figsize : tuple, optional
-        A tuple (width, height) in inches. Mutually exclusive with ``size``
-        and ``ax``.
+        A tuple (width, height) of the figure in inches.
+        Mutually exclusive with ``size`` and ``ax``.
     aspect : scalar, optional
         Aspect ratio of plot, so that ``aspect * size`` gives the width in
         inches. Only used if a ``size`` is provided.
@@ -303,8 +303,8 @@ def _plot2d(plotfunc):
     y : string, optional
         Coordinate for y axis. If None use darray.dims[0]
     figsize : tuple, optional
-        A tuple (width, height) in inches. Mutually exclusive with ``size``
-        and ``ax``.
+        A tuple (width, height) of the figure in inches.
+        Mutually exclusive with ``size`` and ``ax``.
     aspect : scalar, optional
         Aspect ratio of plot, so that ``aspect * size`` gives the width in
         inches. Only used if a ``size`` is provided.
@@ -471,9 +471,9 @@ def _plot2d(plotfunc):
         kwargs.setdefault('norm', cmap_params['norm'])
 
         if 'imshow' == plotfunc.__name__ and isinstance(aspect, basestring):
-            # user probably wants something else than xarray's behavior
-            aspect = None
-            kwargs['aspect'] = aspect
+            # forbid usage of mpl strings
+            raise ValueError("plt.imshow's `aspect` kwarg is not available " \
+                             "in xarray")
 
         ax = get_axis(figsize, size, aspect, ax)
         primitive = plotfunc(xval, yval, zval, ax=ax, cmap=cmap_params['cmap'],

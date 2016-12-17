@@ -89,7 +89,8 @@ class FacetGrid(object):
         sharey : bool, optional
             If true, the facets will share y axes
         figsize : tuple, optional
-            A tuple (width, height) in inches. If set, overrides ``size``.
+            A tuple (width, height) of the figure in inches.
+            If set, overrides ``size`` and ``aspect``.
         aspect : scalar, optional
             Aspect ratio of each facet, so that ``aspect * size`` gives the
             width of each facet in inches

@@ -922,9 +922,11 @@ class TestImshow(Common2dMixin, PlotTestCase):
         self.darray.plot.imshow()
         self.assertEqual('auto', plt.gca().get_aspect())
 
-    def test_can_change_aspect(self):
-        self.darray.plot.imshow(aspect='equal')
-        self.assertEqual('equal', plt.gca().get_aspect())
+    def test_cannot_change_mpl_aspect(self):
+
+        with self.assertRaisesRegexp(ValueError, 'not available in xarray'):
+            self.darray.plot.imshow(aspect='equal')
+
         # with numbers we fall back to fig control
         self.darray.plot.imshow(size=5, aspect=2)
         self.assertEqual('auto', plt.gca().get_aspect())

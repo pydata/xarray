@@ -156,7 +156,10 @@ resulting image via the formula ``figsize = (aspect * size, size)``:
     # create a dummy figure so sphinx plots everything below normally
     plt.figure()
 
-This feature also works with :ref:`plotting.faceting`.
+This feature also works with :ref:`plotting.faceting`. For facet plots,
+``size`` and ``aspect`` refer to a single panel (so that ``aspect * size``
+gives the width of each facet in inches), while ``figsize`` refers to the
+entire figure (as for matplotlib's ``figsize`` argument).
 
 .. note::
 
