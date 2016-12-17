@@ -950,6 +950,7 @@ def decode_cf(obj, concat_characters=True, mask_and_scale=True,
     ds = Dataset(vars, attrs=attrs)
     ds = ds.set_coords(coord_names.union(extra_coords).intersection(vars))
     ds._file_obj = file_obj
+    ds.encoding = obj.encoding
     return ds
 
 

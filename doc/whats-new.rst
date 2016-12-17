@@ -144,6 +144,10 @@ Enhancements
   sharing can be disabled for polar plots.
   By `Bas Hoonhout <https://github.com/hoonhout>`_.
 
+- Added the ability write unlimited netCDF dimensions with the ``netcdf4``
+  backend.
+  By `Joe Hamman <https://github.com/jhamman>`_.
+
 Bug fixes
 ~~~~~~~~~
 - ``groupby_bins`` now restores empty bins by default (:issue:`1019`).

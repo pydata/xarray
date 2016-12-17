@@ -20,7 +20,7 @@ import xarray as xr
 from xarray import (Dataset, DataArray, open_dataset, open_dataarray,
                     open_mfdataset, backends, save_mfdataset)
 from xarray.backends.common import robust_getitem
-from xarray.backends.netCDF4_ import _extract_nc4_encoding
+from xarray.backends.netCDF4_ import _extract_nc4_variable_encoding
 from xarray.core import indexing
 from xarray.core.pycompat import iteritems, PY2, PY3
 
@@ -736,6 +736,16 @@ class NetCDF4DataTest(BaseNetCDF4Test, TestCase):
             except IndexError as err:
                 self.assertIn('first by calling .load', str(err))
 
+    def test_encoding_unlimited_dims(self):
+        ds = Dataset({'x': ('y', np.arange(10.0))})
+        # also test for netcdf3
+        kwargs = dict(format='NETCDF4',
+                      encoding={'y': {'unlimited_dims': ['y']}})
+        ds.to_netcdf('test.nc', **kwargs)
+        with self.roundtrip(ds, save_kwargs=kwargs) as actual:
+            self.assertEqual(actual.x.encoding['unlimited_dims'], set('y'))
+        self.assertEqual(ds.x.encoding, {})
+
 
 @requires_netCDF4
 @requires_dask
@@ -1202,13 +1212,13 @@ class TestPyNio(CFEncodedDataTest, Only32BitTypes, TestCase):
 
 class TestEncodingInvalid(TestCase):
 
-    def test_extract_nc4_encoding(self):
+    def test_extract_nc4_variable_encoding(self):
         var = xr.Variable(('x',), [1, 2, 3], {}, {'foo': 'bar'})
         with self.assertRaisesRegexp(ValueError, 'unexpected encoding'):
-            _extract_nc4_encoding(var, raise_on_invalid=True)
+            _extract_nc4_variable_encoding(var, raise_on_invalid=True)
 
         var = xr.Variable(('x',), [1, 2, 3], {}, {'chunking': (2, 1)})
-        encoding = _extract_nc4_encoding(var)
+        encoding = _extract_nc4_variable_encoding(var)
         self.assertEqual({}, encoding)
 
     def test_extract_h5nc_encoding(self):
@@ -1216,10 +1226,12 @@ class TestEncodingInvalid(TestCase):
         var = xr.Variable(('x',), [1, 2, 3], {},
                           {'least_sigificant_digit': 2})
         with self.assertRaisesRegexp(ValueError, 'unexpected encoding'):
-            _extract_nc4_encoding(var, raise_on_invalid=True)
+            _extract_nc4_variable_encoding(var, raise_on_invalid=True)
+
 
 class MiscObject:
     pass
+
 
 @requires_netCDF4
 class TestValidateAttrs(TestCase):
@@ -1320,6 +1332,7 @@ class TestValidateAttrs(TestCase):
             with create_tmp_file() as tmp_file:
                 ds.to_netcdf(tmp_file)
 
+
 @requires_netCDF4
 class TestDataArrayToNetCDF(TestCase):
 
@@ -1332,7 +1345,6 @@ class TestDataArrayToNetCDF(TestCase):
             with open_dataarray(tmp) as loaded_da:
                 self.assertDataArrayIdentical(original_da, loaded_da)
 
-
     def test_dataarray_to_netcdf_with_name(self):
         original_da = DataArray(np.arange(12).reshape((3, 4)),
                                 name='test')
@@ -1342,7 +1354,6 @@ class TestDataArrayToNetCDF(TestCase):
 
             with open_dataarray(tmp) as loaded_da:
                 self.assertDataArrayIdentical(original_da, loaded_da)
-
 
     def test_dataarray_to_netcdf_coord_name_clash(self):
         original_da = DataArray(np.arange(12).reshape((3, 4)),

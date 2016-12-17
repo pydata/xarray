@@ -22,7 +22,8 @@ from .merge import (dataset_update_method, dataset_merge_method,
                     merge_data_and_coords)
 from .utils import (Frozen, SortedKeysDict, maybe_wrap_array, hashable,
                     decode_numpy_dict_values, ensure_us_time_resolution)
-from .variable import (Variable, as_variable, IndexVariable, broadcast_variables)
+from .variable import (Variable, as_variable, IndexVariable,
+                       broadcast_variables)
 from .pycompat import (iteritems, basestring, OrderedDict,
                        dask_array_type, range)
 from .combine import concat
@@ -184,7 +185,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
     groupby_cls = groupby.DatasetGroupBy
 
     def __init__(self, data_vars=None, coords=None, attrs=None,
-                 compat='broadcast_equals'):
+                 compat='broadcast_equals', encoding=None):
         """To load data from a file or file-like object, use the `open_dataset`
         function.
 
@@ -222,6 +223,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         self._coord_names = set()
         self._dims = {}
         self._attrs = None
+        self._encoding = None
         self._file_obj = None
         if data_vars is None:
             data_vars = {}
@@ -232,6 +234,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         if attrs is not None:
             self.attrs = attrs
         self._initialized = True
+        if encoding is not None:
+            self.encoding = encoding
 
     def _set_init_vars_and_dims(self, data_vars, coords, compat):
         """Set the initial value of Dataset variables and dimensions
@@ -281,6 +285,18 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
     @attrs.setter
     def attrs(self, value):
         self._attrs = OrderedDict(value)
+
+    @property
+    def encoding(self):
+        """Dictionary of global encoding attributes on this dataset
+        """
+        if self._encoding is None:
+            self._encoding = OrderedDict()
+        return self._encoding
+
+    @encoding.setter
+    def encoding(self, value):
+        self._encoding = OrderedDict(value)
 
     @property
     def dims(self):
@@ -519,7 +535,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
     @property
     def _attr_sources(self):
         """List of places to look-up items for attribute-style access"""
-        return [self, LevelCoordinatesSource(self), self.attrs]
+        return [self, LevelCoordinatesSource(self), self.attrs, self.encoding]
 
     def __contains__(self, key):
         """The 'in' operator will return true or false depending on whether
@@ -1186,7 +1202,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         return self.reindex(method=method, copy=copy, tolerance=tolerance,
                             **indexers)
 
-    def reindex(self, indexers=None, method=None, tolerance=None, copy=True, **kw_indexers):
+    def reindex(self, indexers=None, method=None, tolerance=None, copy=True,
+                **kw_indexers):
         """Conform this object onto a new set of indexes, filling in
         missing values with NaN.
 

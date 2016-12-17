@@ -8,7 +8,7 @@ import numpy as np
 import warnings
 
 from .. import Variable
-from ..core.pycompat import iteritems, basestring, OrderedDict
+from ..core.pycompat import iteritems, OrderedDict
 from ..core.utils import Frozen, FrozenOrderedDict
 from ..core.indexing import NumpyIndexingAdapter
 
@@ -105,6 +105,9 @@ class ScipyDataStore(WritableCFDataStore, DataStorePickleMixin):
 
         super(ScipyDataStore, self).__init__(writer)
 
+        self._unlimited_dimensions = set()
+        self.encoding = {}
+
     def open_store_variable(self, name, var):
         return Variable(var.dimensions, ScipyArrayWrapper(name, self),
                         _decode_attrs(var._attributes))
@@ -116,7 +119,11 @@ class ScipyDataStore(WritableCFDataStore, DataStorePickleMixin):
     def get_attrs(self):
         return Frozen(_decode_attrs(self.ds._attributes))
 
+    def _get_unlimited_dimensions(self):
+        return set(k for k, v in iteritems(self.ds.dimensions) if v is None)
+
     def get_dimensions(self):
+        self._unlimited_dimensions = self._get_unlimited_dimensions()
         return Frozen(self.ds.dimensions)
 
     def set_dimension(self, name, length):
@@ -140,7 +147,9 @@ class ScipyDataStore(WritableCFDataStore, DataStorePickleMixin):
             raise ValueError('unexpected encoding for scipy backend: %r'
                              % list(variable.encoding))
 
-        self.set_necessary_dimensions(variable)
+        self.set_necessary_dimensions(
+            variable, unlimited_dims=self._unlimited_dimensions)
+
         data = variable.data
         # nb. this still creates a numpy array in all memory, even though we
         # don't write the data yet; scipy.io.netcdf does not not support

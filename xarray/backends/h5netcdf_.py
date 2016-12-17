@@ -9,8 +9,8 @@ from ..core.utils import FrozenOrderedDict, close_on_error, Frozen
 from ..core.pycompat import iteritems, bytes_type, unicode_type, OrderedDict
 
 from .common import WritableCFDataStore, DataStorePickleMixin
-from .netCDF4_ import (_nc4_group, _nc4_values_and_dtype, _extract_nc4_encoding,
-                       BaseNetCDF4Array)
+from .netCDF4_ import (_nc4_group, _nc4_values_and_dtype,
+                       _extract_nc4_variable_encoding, BaseNetCDF4Array)
 
 
 def maybe_decode_bytes(txt):
@@ -33,7 +33,7 @@ def _read_attributes(h5netcdf_var):
     return attrs
 
 
-_extract_h5nc_encoding = functools.partial(_extract_nc4_encoding,
+_extract_h5nc_encoding = functools.partial(_extract_nc4_variable_encoding,
                                            lsd_okay=False, backend='h5netcdf')
 
 

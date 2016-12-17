@@ -2,7 +2,6 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 import numpy as np
-import itertools
 import logging
 import time
 import traceback
@@ -12,7 +11,7 @@ from distutils.version import StrictVersion
 
 from ..conventions import cf_encoder
 from ..core.utils import FrozenOrderedDict
-from ..core.pycompat import iteritems, dask_array_type, OrderedDict
+from ..core.pycompat import iteritems, dask_array_type
 
 # Create a logger object, but don't add any handlers. Leave that to user code.
 logger = logging.getLogger(__name__)
@@ -96,8 +95,8 @@ class AbstractDataStore(Mapping):
         This function will be called anytime variables or attributes
         are requested, so care should be taken to make sure its fast.
         """
-        variables = FrozenOrderedDict((_decode_variable_name(k), v)
-                                      for k, v in iteritems(self.get_variables()))
+        variables = FrozenOrderedDict((_decode_variable_name(k), v) for k, v in
+                                      iteritems(self.get_variables()))
         attributes = FrozenOrderedDict(self.get_attrs())
         return variables, attributes
 
@@ -197,9 +196,11 @@ class AbstractWritableDataStore(AbstractDataStore):
             target, source = self.prepare_variable(name, v, check)
             self.writer.add(source, target)
 
-    def set_necessary_dimensions(self, variable):
+    def set_necessary_dimensions(self, variable, unlimited_dims=set()):
         for d, l in zip(variable.dims, variable.shape):
             if d not in self.dimensions:
+                if d in unlimited_dims:
+                    l = None
                 self.set_dimension(d, l)
 
 
