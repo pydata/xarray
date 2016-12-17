@@ -82,11 +82,13 @@ be quite large.
 netCDF
 ------
 
-The recommended way to store xarray objects is `netCDF`__.
-netCDF is a file format for fully self-described datasets that
-is widely used and supported on almost all platforms. xarray is based on the
-netCDF data model, so netCDF files on disk
-directly correspond to :py:class:`~xarray.Dataset` objects. Recent versions of
+The recommended way to store xarray data structures is `netCDF`__, which
+is a binary file format for self-described datasets that originated
+in the geosciences. xarray is based on the netCDF data model, so netCDF files
+on disk directly correspond to :py:class:`~xarray.Dataset` objects.
+
+NetCDF is supported on almost all platforms, and parsers exist
+for the vast majority of scientific programming languages. Recent versions of
 netCDF are based on the even more widely used HDF5 file-format.
 
 __ http://www.unidata.ucar.edu/software/netcdf/
@@ -94,7 +96,7 @@ __ http://www.unidata.ucar.edu/software/netcdf/
 .. tip::
 
     If you aren't familiar with this data format, the `netCDF FAQ`_ is a good
-    place to start reading.
+    place to start.
 
 .. _netCDF FAQ: http://www.unidata.ucar.edu/software/netcdf/docs/faq.html#What-Is-netCDF
 
@@ -152,8 +154,8 @@ is modified: the original file on disk is never touched.
 
     xarray's lazy loading of remote or on-disk datasets is often but not always
     desirable. Before performing computationally intense operations, it is
-    often a good idea to load a dataset entirely into memory by invoking the
-    :py:meth:`~xarray.Dataset.load` method.
+    often a good idea to load a Dataset (or DataArray) entirely into memory by
+    invoking the :py:meth:`~xarray.Dataset.load` method.
 
 Datasets have a :py:meth:`~xarray.Dataset.close` method to close the associated
 netCDF file. However, it's often cleaner to use a ``with`` statement:
@@ -403,8 +405,8 @@ We recommend installing PyNIO via conda::
 Formats supported by Pandas
 ---------------------------
 
-For more options, consider exporting your objects to pandas
-and using its broad range of `IO tools`_.
+For more options (tabular formats and CSV files in particular), consider
+exporting your objects to pandas and using its broad range of `IO tools`_.
 
 .. _IO tools: http://pandas.pydata.org/pandas-docs/stable/io.html
 
@@ -424,7 +426,8 @@ files into a single Dataset by making use of :py:func:`~xarray.concat`.
 
         xr.open_mfdataset('my/files/*.nc')
 
-    This function automatically concatenates and merges into a single xarray datasets.
+    This function automatically concatenates and merges multiple files into a
+    single xarray dataset.
     It is the recommended way to open multiple files with xarray.
     For more details, see :ref:`dask.io` and a `blog post`_ by Stephan Hoyer.
 
