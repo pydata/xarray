@@ -472,7 +472,7 @@ def _plot2d(plotfunc):
 
         if 'imshow' == plotfunc.__name__ and isinstance(aspect, basestring):
             # forbid usage of mpl strings
-            raise ValueError("plt.imshow's `aspect` kwarg is not available " \
+            raise ValueError("plt.imshow's `aspect` kwarg is not available "
                              "in xarray")
 
         ax = get_axis(figsize, size, aspect, ax)
