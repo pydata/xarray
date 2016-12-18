@@ -162,6 +162,31 @@ class TestPlot(PlotTestCase):
         for ax in g.axes.flat:
             self.assertEqual(ax.get_axis_bgcolor(), 'r')
 
+    def test_plot_size(self):
+        self.darray[:, 0, 0].plot(figsize=(13, 5))
+        assert tuple(plt.gcf().get_size_inches()) == (13, 5)
+
+        self.darray.plot(figsize=(13, 5))
+        assert tuple(plt.gcf().get_size_inches()) == (13, 5)
+
+        self.darray.plot(size=5)
+        assert plt.gcf().get_size_inches()[1] == 5
+
+        self.darray.plot(size=5, aspect=2)
+        assert tuple(plt.gcf().get_size_inches()) == (10, 5)
+
+        with self.assertRaisesRegexp(ValueError, 'cannot provide both'):
+            self.darray.plot(ax=plt.gca(), figsize=(3, 4))
+
+        with self.assertRaisesRegexp(ValueError, 'cannot provide both'):
+            self.darray.plot(size=5, figsize=(3, 4))
+
+        with self.assertRaisesRegexp(ValueError, 'cannot provide both'):
+            self.darray.plot(size=5, ax=plt.gca())
+
+        with self.assertRaisesRegexp(ValueError, 'cannot provide `aspect`'):
+            self.darray.plot(aspect=1)
+
     def test_convenient_facetgrid_4d(self):
         a = easy_array((10, 15, 2, 3))
         d = DataArray(a, dims=['y', 'x', 'columns', 'rows'])
@@ -897,9 +922,15 @@ class TestImshow(Common2dMixin, PlotTestCase):
         self.darray.plot.imshow()
         self.assertEqual('auto', plt.gca().get_aspect())
 
-    def test_can_change_aspect(self):
-        self.darray.plot.imshow(aspect='equal')
-        self.assertEqual('equal', plt.gca().get_aspect())
+    def test_cannot_change_mpl_aspect(self):
+
+        with self.assertRaisesRegexp(ValueError, 'not available in xarray'):
+            self.darray.plot.imshow(aspect='equal')
+
+        # with numbers we fall back to fig control
+        self.darray.plot.imshow(size=5, aspect=2)
+        self.assertEqual('auto', plt.gca().get_aspect())
+        assert tuple(plt.gcf().get_size_inches()) == (10, 5)
 
     def test_primitive_artist_returned(self):
         artist = self.plotmethod()
@@ -1052,6 +1083,15 @@ class TestFacetGrid(PlotTestCase):
 
         g = xplt.FacetGrid(self.darray, col='z', size=4, aspect=0.5)
         self.assertArrayEqual(g.fig.get_size_inches(), (7, 4))
+
+        g = xplt.FacetGrid(self.darray, col='z', figsize=(9, 4))
+        self.assertArrayEqual(g.fig.get_size_inches(), (9, 4))
+
+        with self.assertRaisesRegexp(ValueError, "cannot provide both"):
+            g = xplt.plot(self.darray, row=2, col='z', figsize=(6, 4), size=6)
+
+        with self.assertRaisesRegexp(ValueError, "Can't use"):
+            g = xplt.plot(self.darray, row=2, col='z', ax=plt.gca(), size=6)
 
     def test_num_ticks(self):
         nticks = 100
