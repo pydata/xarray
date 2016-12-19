@@ -492,7 +492,7 @@ def create_tmp_file(suffix='.nc', allow_cleanup_failure=False):
             if not allow_cleanup_failure:
                 raise
 
-
+@requires_netCDF4
 class BaseNetCDF4Test(CFEncodedDataTest):
     def test_open_group(self):
         # Create a netCDF file with a dataset stored within a group
@@ -693,6 +693,9 @@ class BaseNetCDF4Test(CFEncodedDataTest):
 
 @requires_netCDF4
 class NetCDF4DataTest(BaseNetCDF4Test, TestCase):
+
+    #pytest.importorskip('netCDF4')
+
     @contextlib.contextmanager
     def create_store(self):
         with create_tmp_file() as tmp_file:
