@@ -153,6 +153,7 @@ def _get_coord_variables(args):
         else:
             coord_vars = getattr(coords, 'variables', coords)
             input_coords.append(coord_vars)
+    return input_coords
 
 
 def build_output_coords(
@@ -289,9 +290,9 @@ def _as_variables_or_variable(arg):
 def _unpack_dict_tuples(
         result_vars,  # type: Mapping[Any, Tuple[Variable]]
         n_outputs,    # type: int
-        ):
+):
     # type: (...) -> Tuple[Dict[Any, Variable]]
-    out = tuple(OrderedDict() for _ in range(signature.n_outputs))
+    out = tuple(OrderedDict() for _ in range(n_outputs))
     for name, values in result_vars.items():
         for value, results_dict in zip(values, out):
             results_dict[name] = value
@@ -431,7 +432,6 @@ def apply_dataset_matching_ufunc(func, *args, **kwargs):
         return _fast_dataset(result_vars, coord_vars)
 
 
-
 def _iter_over_selections(obj, dim, values):
     """Iterate over selections of an xarray object in the provided order."""
     from .groupby import _dummy_copy
@@ -440,7 +440,7 @@ def _iter_over_selections(obj, dim, values):
     for value in values:
         try:
             obj_sel = obj.sel(**{dim: value})
-        except KeyError:
+        except (KeyError, IndexError):
             if dummy is None:
                 dummy = _dummy_copy(obj)
             obj_sel = dummy
@@ -455,12 +455,12 @@ def apply_groupby_ufunc(func, *args):
     if not groupbys:
         raise ValueError('must have at least one groupby to iterate over')
     first_groupby = groupbys[0]
-    if any(not first_groupby.group.equals(gb.group) for gb in groupbys[1:]):
+    if any(not first_groupby._group.equals(gb._group) for gb in groupbys[1:]):
         raise ValueError('can only perform operations over multiple groupbys '
                          'at once if they are all grouped the same way')
 
-    grouped_dim = first_groupby.group.name
-    unique_values = first_groupby.unique_coord.values
+    grouped_dim = first_groupby._group.name
+    unique_values = first_groupby._unique_coord.values
 
     iterators = []
     for arg in args:
@@ -479,7 +479,7 @@ def apply_groupby_ufunc(func, *args):
 
     applied = (func(*zipped_args) for zipped_args in zip(*iterators))
     applied_example, applied = peek_at(applied)
-    combine = first_groupby._concat
+    combine = first_groupby._combine
     if isinstance(applied_example, tuple):
         combined = tuple(combine(output) for output in zip(*applied))
     else:
