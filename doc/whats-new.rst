@@ -199,7 +199,10 @@ Bug fixes
 - Fixed sub-optimal performance in certain operations with object arrays (:issue:`1121`).
   By `Yves Delley <https://github.com/burnpanck>`_.
 
-- Fixed a bug whith facetgrid (the ``norm`` keyword was ignored, :issue:`1159`).
+- Fix ``.groupby(group)`` when ``group`` has datetime dtype (:issue:`1132`).
+  By `Jonas Sølvsteen <https://github.com/j08lue>`_.
+
+- Fixed a bug with facetgrid (the ``norm`` keyword was ignored, :issue:`1159`).
   By `Fabien Maussion <https://github.com/fmaussion>`_.
 
 .. _whats-new.0.8.2:
