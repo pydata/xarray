@@ -3,6 +3,7 @@ dependencies:
   - python=3.5
   - cython
   - dask
+  - distributed
   - h5py
   - matplotlib
   - netcdf4

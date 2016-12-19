@@ -1,3 +1,6 @@
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
 import numpy as np
 import pandas as pd
 
@@ -197,3 +200,45 @@ class TestLazyArray(TestCase):
             actual = lazy[i][j]
             self.assertEqual(expected.shape, actual.shape)
             self.assertArrayEqual(expected, actual)
+
+
+class TestCopyOnWriteArray(TestCase):
+    def test_setitem(self):
+        original = np.arange(10)
+        wrapped = indexing.CopyOnWriteArray(original)
+        wrapped[:] = 0
+        self.assertArrayEqual(original, np.arange(10))
+        self.assertArrayEqual(wrapped, np.zeros(10))
+
+    def test_sub_array(self):
+        original = np.arange(10)
+        wrapped = indexing.CopyOnWriteArray(original)
+        child = wrapped[:5]
+        self.assertIsInstance(child, indexing.CopyOnWriteArray)
+        child[:] = 0
+        self.assertArrayEqual(original, np.arange(10))
+        self.assertArrayEqual(wrapped, np.arange(10))
+        self.assertArrayEqual(child, np.zeros(5))
+
+
+class TestMemoryCachedArray(TestCase):
+    def test_wrapper(self):
+        original = indexing.LazilyIndexedArray(np.arange(10))
+        wrapped = indexing.MemoryCachedArray(original)
+        self.assertArrayEqual(wrapped, np.arange(10))
+        self.assertIsInstance(wrapped.array, np.ndarray)
+
+    def test_sub_array(self):
+        original = indexing.LazilyIndexedArray(np.arange(10))
+        wrapped = indexing.MemoryCachedArray(original)
+        child = wrapped[:5]
+        self.assertIsInstance(child, indexing.MemoryCachedArray)
+        self.assertArrayEqual(child, np.arange(5))
+        self.assertIsInstance(child.array, np.ndarray)
+        self.assertIsInstance(wrapped.array, indexing.LazilyIndexedArray)
+
+    def test_setitem(self):
+        original = np.arange(10)
+        wrapped = indexing.MemoryCachedArray(original)
+        wrapped[:] = 0
+        self.assertArrayEqual(original, np.zeros(10))

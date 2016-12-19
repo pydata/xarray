@@ -1,3 +1,6 @@
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
 import numpy as np
 import itertools
 import logging
@@ -28,25 +31,6 @@ def _decode_variable_name(name):
     if name == NONE_VAR_NAME:
         name = None
     return name
-
-
-def is_trivial_index(var):
-    """
-    Determines if in index is 'trivial' meaning that it is
-    equivalent to np.arange().  This is determined by
-    checking if there are any attributes or encodings,
-    if ndims is one, dtype is int and finally by comparing
-    the actual values to np.arange()
-    """
-    # if either attributes or encodings are defined
-    # the index is not trivial.
-    if len(var.attrs) or len(var.encoding):
-        return False
-    # if the index is not a 1d integer array
-    if var.ndim > 1 or not var.dtype.kind == 'i':
-        return False
-    arange = np.arange(var.size, dtype=var.dtype)
-    return np.all(var.values == arange)
 
 
 def robust_getitem(array, key, catch=Exception, max_retries=6,
@@ -200,12 +184,6 @@ class AbstractWritableDataStore(AbstractDataStore):
 
     def store(self, variables, attributes, check_encoding_set=frozenset()):
         self.set_attributes(attributes)
-        neccesary_dims = [v.dims for v in variables.values()]
-        neccesary_dims = set(itertools.chain(*neccesary_dims))
-        # set all non-indexes and any index which is not trivial.
-        variables = OrderedDict((k, v) for k, v in iteritems(variables)
-                                if not (k in neccesary_dims and
-                                        is_trivial_index(v)))
         self.set_variables(variables, check_encoding_set)
 
     def set_attributes(self, attributes):
@@ -232,3 +210,22 @@ class WritableCFDataStore(AbstractWritableDataStore):
         cf_variables, cf_attrs = cf_encoder(variables, attributes)
         AbstractWritableDataStore.store(self, cf_variables, cf_attrs,
                                         check_encoding_set)
+
+
+class DataStorePickleMixin(object):
+    """Subclasses must define `ds`, `_opener` and `_mode` attributes.
+
+    Do not subclass this class: it is not part of xarray's external API.
+    """
+
+    def __getstate__(self):
+        state = self.__dict__.copy()
+        del state['ds']
+        if self._mode == 'w':
+            # file has already been created, don't override when restoring
+            state['_mode'] = 'a'
+        return state
+
+    def __setstate__(self, state):
+        self.__dict__.update(state)
+        self.ds = self._opener(mode=self._mode)

@@ -1,4 +1,6 @@
-import sys
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
 import warnings
 from contextlib import contextmanager
 
@@ -124,6 +126,18 @@ def data_allclose_or_equiv(arr1, arr2, rtol=1e-05, atol=1e-08):
         return ops.allclose_or_equiv(arr1, arr2, rtol=rtol, atol=atol)
 
 
+def assert_dataset_allclose(d1, d2, rtol=1e-05, atol=1e-08):
+    assert sorted(d1, key=str) == sorted(d2, key=str)
+    assert sorted(d1.coords, key=str) == sorted(d2.coords, key=str)
+    for k in d1:
+        v1 = d1.variables[k]
+        v2 = d2.variables[k]
+        assert v1.dims == v2.dims
+        allclose = data_allclose_or_equiv(
+            v1.values, v2.values, rtol=rtol, atol=atol)
+        assert allclose, (k, v1.values, v2.values)
+
+
 class TestCase(unittest.TestCase):
     if PY3:
         # Python 3 assertCountEqual is roughly equivalent to Python 2
@@ -137,7 +151,7 @@ class TestCase(unittest.TestCase):
             warnings.filterwarnings('always', message)
             yield
             assert len(w) > 0
-            assert all(message in str(wi.message) for wi in w)
+            assert any(message in str(wi.message) for wi in w)
 
     def assertVariableEqual(self, v1, v2):
         assert as_variable(v1).equals(v2), (v1, v2)

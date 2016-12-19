@@ -1,3 +1,6 @@
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
 from functools import partial
 import contextlib
 import inspect
@@ -45,10 +48,11 @@ PANDAS_UNARY_FUNCTIONS = ['isnull', 'notnull']
 REDUCE_METHODS = ['all', 'any']
 NAN_REDUCE_METHODS = ['argmax', 'argmin', 'max', 'min', 'mean', 'prod', 'sum',
                       'std', 'var', 'median']
+NAN_CUM_METHODS = ['cumsum', 'cumprod']
 BOTTLENECK_ROLLING_METHODS = {'move_sum': 'sum', 'move_mean': 'mean',
                               'move_std': 'std', 'move_min': 'min',
                               'move_max': 'max'}
-# TODO: wrap cumprod/cumsum, take, dot, sort
+# TODO: wrap take, dot, sort
 
 
 def _dask_or_eager_func(name, eager_module=np, list_of_args=False,
@@ -201,6 +205,30 @@ def _func_slash_method_wrapper(f, name=None):
     func.__doc__ = f.__doc__
     return func
 
+_CUM_DOCSTRING_TEMPLATE = \
+        """Apply `{name}` along some dimension of {cls}.
+
+        Parameters
+        ----------
+        {extra_args}
+        skipna : bool, optional
+            If True, skip missing values (as marked by NaN). By default, only
+            skips missing values for float dtypes; other dtypes either do not
+            have a sentinel missing value (int) or skipna=True has not been
+            implemented (object, datetime64 or timedelta64).
+        keep_attrs : bool, optional
+            If True, the attributes (`attrs`) will be copied from the original
+            object to the new one.  If False (default), the new object will be
+            returned without attributes.
+        **kwargs : dict
+            Additional keyword arguments passed on to `{name}`.
+
+        Returns
+        -------
+        cumvalue : {cls}
+            New {cls} object with `{name}` applied to its data along the
+            indicated dimension.
+        """
 
 _REDUCE_DOCSTRING_TEMPLATE = \
         """Reduce this {cls}'s data by applying `{name}` along some
@@ -274,7 +302,9 @@ def _ignore_warnings_if(condition):
         yield
 
 
-def _create_nan_agg_method(name, numeric_only=False, coerce_strings=False):
+def _create_nan_agg_method(name, numeric_only=False, np_compat=False,
+                           no_bottleneck=False, coerce_strings=False,
+                           keep_dims=False):
     def f(values, axis=None, skipna=None, **kwargs):
         # ignore keyword args inserted by np.mean and other numpy aggregators
         # automatically:
@@ -292,14 +322,17 @@ def _create_nan_agg_method(name, numeric_only=False, coerce_strings=False):
                     'skipna=True not yet implemented for %s with dtype %s'
                     % (name, values.dtype))
             nanname = 'nan' + name
-            if isinstance(axis, tuple) or not values.dtype.isnative:
+            if isinstance(axis, tuple) or not values.dtype.isnative or no_bottleneck:
                 # bottleneck can't handle multiple axis arguments or non-native
                 # endianness
-                eager_module = np
+                if np_compat:
+                    eager_module = npcompat
+                else:
+                    eager_module = np
             else:
                 eager_module = bn
             func = _dask_or_eager_func(nanname, eager_module)
-            using_numpy_nan_func = eager_module is np
+            using_numpy_nan_func = eager_module is np or eager_module is npcompat
         else:
             func = _dask_or_eager_func(name)
             using_numpy_nan_func = False
@@ -312,10 +345,12 @@ def _create_nan_agg_method(name, numeric_only=False, coerce_strings=False):
                 else:
                     assert using_numpy_nan_func
                     msg = ('%s is not available with skipna=False with the '
-                           'installed version of numpy; upgrade to numpy 1.9 '
+                           'installed version of numpy; upgrade to numpy 1.12 '
                            'or newer to use skipna=True or skipna=None' % name)
                 raise NotImplementedError(msg)
     f.numeric_only = numeric_only
+    f.keep_dims = keep_dims
+    f.__name__ = name
     return f
 
 
@@ -328,26 +363,16 @@ mean = _create_nan_agg_method('mean', numeric_only=True)
 std = _create_nan_agg_method('std', numeric_only=True)
 var = _create_nan_agg_method('var', numeric_only=True)
 median = _create_nan_agg_method('median', numeric_only=True)
-
+prod = _create_nan_agg_method('prod', numeric_only=True, np_compat=True,
+                              no_bottleneck=True)
+cumprod = _create_nan_agg_method('cumprod', numeric_only=True, np_compat=True,
+                                 no_bottleneck=True, keep_dims=True)
+cumsum = _create_nan_agg_method('cumsum', numeric_only=True, np_compat=True,
+                                no_bottleneck=True, keep_dims=True)
 
 _fail_on_dask_array_input_skipna = partial(
     _fail_on_dask_array_input,
     msg='%r with skipna=True is not yet implemented on dask arrays')
-
-
-_prod = _dask_or_eager_func('prod')
-
-
-def prod(values, axis=None, skipna=None, **kwargs):
-    if skipna or (skipna is None and values.dtype.kind == 'f'):
-        if values.dtype.kind not in ['i', 'f']:
-            raise NotImplementedError(
-                'skipna=True not yet implemented for prod with dtype %s'
-                % values.dtype)
-        _fail_on_dask_array_input_skipna(values)
-        return npcompat.nanprod(values, axis=axis, **kwargs)
-    return _prod(values, axis=axis, **kwargs)
-prod.numeric_only = True
 
 
 def first(values, axis, skipna=None):
@@ -382,6 +407,17 @@ def inject_reduce_methods(cls):
         func.__doc__ = _REDUCE_DOCSTRING_TEMPLATE.format(
             name=name, cls=cls.__name__,
             extra_args=cls._reduce_extra_args_docstring)
+        setattr(cls, name, func)
+
+def inject_cum_methods(cls):
+    methods = ([(name, globals()[name], True) for name in NAN_CUM_METHODS])
+    for name, f, include_skipna in methods:
+        numeric_only = getattr(f, 'numeric_only', False)
+        func = cls._reduce_method(f, include_skipna, numeric_only)
+        func.__name__ = name
+        func.__doc__ = _CUM_DOCSTRING_TEMPLATE.format(
+            name=name, cls=cls.__name__,
+            extra_args=cls._cum_extra_args_docstring)
         setattr(cls, name, func)
 
 
@@ -454,6 +490,7 @@ def inject_all_ops_and_reduce_methods(cls, priority=50, array_only=True):
             setattr(cls, name, _values_method_wrapper(name))
 
     inject_reduce_methods(cls)
+    inject_cum_methods(cls)
 
 
 def inject_bottleneck_rolling_methods(cls):

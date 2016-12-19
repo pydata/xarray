@@ -1,3 +1,7 @@
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
+import pickle
 import numpy as np
 import pandas as pd
 
@@ -7,49 +11,38 @@ import xarray.ufuncs as xu
 from xarray.core.pycompat import suppress
 from . import TestCase, requires_dask
 
+from xarray.test import unittest
+
 with suppress(ImportError):
     import dask
     import dask.array as da
 
 
-def _copy_at_variable_level(arg):
-    """We need to copy the argument at the level of xarray.Variable objects, so
-    that viewing its values does not trigger lazy loading.
-    """
-    if isinstance(arg, Variable):
-        return arg.copy(deep=False)
-    elif isinstance(arg, DataArray):
-        ds = arg.to_dataset(name='__copied__')
-        return _copy_at_variable_level(ds)['__copied__']
-    elif isinstance(arg, Dataset):
-        ds = arg.copy()
-        for k in list(ds):
-            ds._variables[k] = ds._variables[k].copy(deep=False)
-        return ds
-    else:
-        assert False
-
-
 class DaskTestCase(TestCase):
     def assertLazyAnd(self, expected, actual, test):
-        expected_copy = _copy_at_variable_level(expected)
-        actual_copy = _copy_at_variable_level(actual)
         with dask.set_options(get=dask.get):
-            test(actual_copy, expected_copy)
-        var = getattr(actual, 'variable', actual)
-        self.assertIsInstance(var.data, da.Array)
+            test(actual, expected)
+        if isinstance(actual, Dataset):
+            for k, v in actual.variables.items():
+                if k in actual.dims:
+                    self.assertIsInstance(var.data, np.ndarray)
+                else:
+                    self.assertIsInstance(var.data, da.Array)
+        elif isinstance(actual, DataArray):
+            self.assertIsInstance(actual.data, da.Array)
+            for k, v in actual.coords.items():
+                if k in actual.dims:
+                    self.assertIsInstance(v.data, np.ndarray)
+                else:
+                    self.assertIsInstance(v.data, da.Array)
+        elif isinstance(actual, Variable):
+            self.assertIsInstance(actual.data, da.Array)
+        else:
+            assert False
 
 
 @requires_dask
 class TestVariable(DaskTestCase):
-    def assertLazyAnd(self, expected, actual, test):
-        expected_copy = expected.copy(deep=False)
-        actual_copy = actual.copy(deep=False)
-        with dask.set_options(get=dask.get):
-            test(actual_copy, expected_copy)
-        var = getattr(actual, 'variable', actual)
-        self.assertIsInstance(var.data, da.Array)
-
     def assertLazyAndIdentical(self, expected, actual):
         self.assertLazyAnd(expected, actual, self.assertVariableIdentical)
 
@@ -146,8 +139,6 @@ class TestVariable(DaskTestCase):
         self.assertLazyAndAllClose((u > 1).any(), (v > 1).any())
         self.assertLazyAndAllClose((u < 1).all('x'), (v < 1).all('x'))
         with self.assertRaisesRegexp(NotImplementedError, 'dask'):
-            v.prod()
-        with self.assertRaisesRegexp(NotImplementedError, 'dask'):
             v.median()
 
     def test_missing_values(self):
@@ -184,6 +175,7 @@ class TestVariable(DaskTestCase):
         v = self.lazy_var
         self.assertLazyAndAllClose(np.sin(u), xu.sin(v))
 
+    @unittest.skip('currently broken in dask, see GH1090')
     def test_bivariate_ufunc(self):
         u = self.eager_var
         v = self.lazy_var
@@ -199,15 +191,21 @@ class TestDataArrayAndDataset(DaskTestCase):
     def assertLazyAndAllClose(self, expected, actual):
         self.assertLazyAnd(expected, actual, self.assertDataArrayAllClose)
 
+    def assertLazyAndEqual(self, expected, actual):
+        self.assertLazyAnd(expected, actual, self.assertDataArrayEqual)
+
     def setUp(self):
         self.values = np.random.randn(4, 6)
         self.data = da.from_array(self.values, chunks=(2, 2))
-        self.eager_array = DataArray(self.values, dims=('x', 'y'), name='foo')
-        self.lazy_array = DataArray(self.data, dims=('x', 'y'), name='foo')
+        self.eager_array = DataArray(self.values, coords={'x': range(4)},
+                                     dims=('x', 'y'), name='foo')
+        self.lazy_array = DataArray(self.data, coords={'x': range(4)},
+                                    dims=('x', 'y'), name='foo')
 
     def test_rechunk(self):
         chunked = self.eager_array.chunk({'x': 2}).chunk({'y': 2})
         self.assertEqual(chunked.chunks, ((2,) * 2, (2,) * 3))
+        self.assertLazyAndIdentical(self.lazy_array, chunked)
 
     def test_new_chunk(self):
         chunked = self.eager_array.chunk()
@@ -251,8 +249,8 @@ class TestDataArrayAndDataset(DaskTestCase):
         self.assertLazyAndAllClose(expected, actual)
 
     def test_reindex(self):
-        u = self.eager_array
-        v = self.lazy_array
+        u = self.eager_array.assign_coords(y=range(6))
+        v = self.lazy_array.assign_coords(y=range(6))
 
         for kwargs in [{'x': [2, 3, 4]},
                        {'x': [1, 100, 2, 101, 3]},
@@ -266,7 +264,7 @@ class TestDataArrayAndDataset(DaskTestCase):
         v = self.lazy_array
 
         expected = u.assign_coords(x=u['x'])
-        self.assertLazyAndIdentical(expected, v.to_dataset('x').to_array('x'))
+        self.assertLazyAndEqual(expected, v.to_dataset('x').to_array('x'))
 
     def test_merge(self):
 
@@ -275,7 +273,7 @@ class TestDataArrayAndDataset(DaskTestCase):
 
         expected = duplicate_and_merge(self.eager_array)
         actual = duplicate_and_merge(self.lazy_array)
-        self.assertLazyAndIdentical(expected, actual)
+        self.assertLazyAndEqual(expected, actual)
 
     def test_ufuncs(self):
         u = self.eager_array
@@ -288,9 +286,9 @@ class TestDataArrayAndDataset(DaskTestCase):
         x = da.from_array(a, 5)
         y = da.from_array(b, 5)
         expected = DataArray(a).where(b)
-        self.assertLazyAndIdentical(expected, DataArray(a).where(y))
-        self.assertLazyAndIdentical(expected, DataArray(x).where(b))
-        self.assertLazyAndIdentical(expected, DataArray(x).where(y))
+        self.assertLazyAndEqual(expected, DataArray(a).where(y))
+        self.assertLazyAndEqual(expected, DataArray(x).where(b))
+        self.assertLazyAndEqual(expected, DataArray(x).where(y))
 
     def test_simultaneous_compute(self):
         ds = Dataset({'foo': ('x', range(5)),
@@ -312,12 +310,80 @@ class TestDataArrayAndDataset(DaskTestCase):
         stacked = arr.stack(z=('x', 'y'))
         z = pd.MultiIndex.from_product([np.arange(3), np.arange(4)],
                                        names=['x', 'y'])
-        expected = DataArray(data.reshape(2, -1), {'w': [0, 1], 'z': z},
-                             dims=['w', 'z'])
+        expected = DataArray(data.reshape(2, -1), {'z': z}, dims=['w', 'z'])
         assert stacked.data.chunks == expected.data.chunks
-        self.assertLazyAndIdentical(expected, stacked)
+        self.assertLazyAndEqual(expected, stacked)
 
     def test_dot(self):
         eager = self.eager_array.dot(self.eager_array[0])
         lazy = self.lazy_array.dot(self.lazy_array[0])
         self.assertLazyAndAllClose(eager, lazy)
+
+    def test_variable_pickle(self):
+        # Test that pickling/unpickling does not convert the dask
+        # backend to numpy
+        a1 = Variable(['x'], build_dask_array())
+        a1.compute()
+        self.assertFalse(a1._in_memory)
+        self.assertEquals(kernel_call_count, 1)
+        a2 = pickle.loads(pickle.dumps(a1))
+        self.assertEquals(kernel_call_count, 1)
+        self.assertVariableIdentical(a1, a2)
+        self.assertFalse(a1._in_memory)
+        self.assertFalse(a2._in_memory)
+
+    def test_dataarray_pickle(self):
+        # Test that pickling/unpickling does not convert the dask
+        # backend to numpy
+        a1 = DataArray(build_dask_array())
+        a1.compute()
+        self.assertFalse(a1._in_memory)
+        self.assertEquals(kernel_call_count, 1)
+        a2 = pickle.loads(pickle.dumps(a1))
+        self.assertEquals(kernel_call_count, 1)
+        self.assertDataArrayIdentical(a1, a2)
+        self.assertFalse(a1._in_memory)
+        self.assertFalse(a2._in_memory)
+
+    def test_dataset_pickle(self):
+        ds1 = Dataset({'a': DataArray(build_dask_array())})
+        ds1.compute()
+        self.assertFalse(ds1['a']._in_memory)
+        self.assertEquals(kernel_call_count, 1)
+        ds2 = pickle.loads(pickle.dumps(ds1))
+        self.assertEquals(kernel_call_count, 1)
+        self.assertDatasetIdentical(ds1, ds2)
+        self.assertFalse(ds1['a']._in_memory)
+        self.assertFalse(ds2['a']._in_memory)
+
+    def test_values(self):
+        # Test that invoking the values property does not convert the dask
+        # backend to numpy
+        a = DataArray([1,2]).chunk()
+        self.assertFalse(a._in_memory)
+        self.assertEquals(a.values.tolist(), [1, 2])
+        self.assertFalse(a._in_memory)
+
+    def test_from_dask_variable(self):
+        # Test array creation from Variable with dask backend.
+        # This is used e.g. in broadcast()
+        a = DataArray(self.lazy_array.variable,
+                      coords={'x': range(4)}, name='foo')
+        self.assertLazyAndIdentical(self.lazy_array, a)
+
+
+kernel_call_count = 0
+def kernel():
+    """Dask kernel to test pickling/unpickling.
+    Must be global to make it pickleable.
+    """
+    global kernel_call_count
+    kernel_call_count += 1
+    return np.ones(1)
+
+def build_dask_array():
+    global kernel_call_count
+    kernel_call_count = 0
+    return dask.array.Array(
+        dask={('foo', 0): (kernel, )}, name='foo',
+        chunks=((1,),), dtype=int)

@@ -1,9 +1,12 @@
 """Internal utilties; not for external use
 """
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
 import contextlib
-import datetime
 import functools
 import itertools
+import os.path
 import re
 import warnings
 from collections import Mapping, MutableMapping, Iterable
@@ -195,9 +198,8 @@ def is_valid_numpy_dtype(dtype):
 
 def to_0d_object_array(value):
     """Given a value, wrap it in a 0-D numpy.ndarray with dtype=object."""
-    result = np.empty((1,), dtype=object)
-    result[:] = [value]
-    result.shape = ()
+    result = np.empty((), dtype=object)
+    result[()] = value
     return result
 
 
@@ -460,3 +462,25 @@ def hashable(v):
 
 def not_implemented(*args, **kwargs):
     return NotImplemented
+
+
+def decode_numpy_dict_values(attrs):
+    """Convert attribute values from numpy objects to native Python objects,
+    for use in to_dict"""
+    attrs = dict(attrs)
+    for k, v in attrs.items():
+        if isinstance(v, np.ndarray):
+            attrs[k] = v.tolist()
+        elif isinstance(v, np.generic):
+            attrs[k] = np.asscalar(v)
+    return attrs
+
+
+def ensure_us_time_resolution(val):
+    """Convert val out of numpy time, for use in to_dict.
+    Needed because of numpy bug GH#7619"""
+    if np.issubdtype(val.dtype, np.datetime64):
+        val = val.astype('datetime64[us]')
+    elif np.issubdtype(val.dtype, np.timedelta64):
+        val = val.astype('timedelta64[us]')
+    return val

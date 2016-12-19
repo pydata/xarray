@@ -1,3 +1,6 @@
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
 from datetime import datetime
 import re
 import traceback
@@ -379,8 +382,8 @@ class DecodedCFDatetimeArray(utils.NDArrayMixin):
         # Verify that at least the first and last date can be decoded
         # successfully. Otherwise, tracebacks end up swallowed by
         # Dataset.__repr__ when users try to view their lazily decoded array.
-        example_value = np.concatenate([first_n_items(array, 1),
-                                        last_item(array), [0]])
+        example_value = np.concatenate([first_n_items(array, 1) or [0],
+                                        last_item(array) or [0]])
 
         try:
             result = decode_cf_datetime(example_value, units, calendar)
@@ -638,6 +641,14 @@ def maybe_encode_dtype(var, name=None):
     return var
 
 
+def maybe_default_fill_value(var):
+    # make NaN the fill value for float types:
+    if ('_FillValue' not in var.attrs and
+       np.issubdtype(var.dtype, np.floating)):
+        var.attrs['_FillValue'] = np.nan
+    return var
+
+
 def maybe_encode_bools(var):
     if ((var.dtype == np.bool) and
             ('dtype' not in var.encoding) and ('dtype' not in var.attrs)):
@@ -721,6 +732,7 @@ def encode_cf_variable(var, needs_copy=True, name=None):
     var, needs_copy = maybe_encode_offset_and_scale(var, needs_copy)
     var, needs_copy = maybe_encode_fill_value(var, needs_copy)
     var = maybe_encode_dtype(var, name)
+    var = maybe_default_fill_value(var)
     var = maybe_encode_bools(var)
     var = ensure_dtype_not_object(var)
     return var
@@ -910,7 +922,7 @@ def decode_cf(obj, concat_characters=True, mask_and_scale=True,
         identify coordinates.
     drop_variables: string or iterable, optional
         A variable or list of variables to exclude from being parsed from the
-        dataset.This may be useful to drop variables with problems or
+        dataset. This may be useful to drop variables with problems or
         inconsistent values.
 
     Returns
@@ -936,7 +948,7 @@ def decode_cf(obj, concat_characters=True, mask_and_scale=True,
         vars, attrs, concat_characters, mask_and_scale, decode_times,
         decode_coords, drop_variables=drop_variables)
     ds = Dataset(vars, attrs=attrs)
-    ds = ds.set_coords(coord_names.union(extra_coords))
+    ds = ds.set_coords(coord_names.union(extra_coords).intersection(vars))
     ds._file_obj = file_obj
     return ds
 

@@ -1,3 +1,6 @@
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
 import functools
 import numpy as np
 import pandas as pd
@@ -8,8 +11,8 @@ from .combine import concat
 from .common import (
     ImplementsArrayReduce, ImplementsDatasetReduce, _maybe_promote,
 )
-from .pycompat import zip
-from .utils import peek_at, maybe_wrap_array, safe_cast_to_index
+from .pycompat import range, zip
+from .utils import hashable, peek_at, maybe_wrap_array, safe_cast_to_index
 from .variable import as_variable, Variable, IndexVariable
 
 
@@ -118,6 +121,46 @@ def _inverse_permutation_indices(positions):
     return indices
 
 
+class _DummyGroup(object):
+    """Class for keeping track of grouped dimensions without coordinates.
+
+    Should not be user visible.
+    """
+
+    def __init__(self, obj, name, coords):
+        self.name = name
+        self.coords = coords
+        self.dims = (name,)
+        self.ndim = 1
+        self.size = obj.sizes[name]
+        self.values = range(self.size)
+
+
+def _ensure_1d(group, obj):
+    if group.ndim != 1:
+        # try to stack the dims of the group into a single dim
+        orig_dims = group.dims
+        stacked_dim = 'stacked_' + '_'.join(orig_dims)
+        # these dimensions get created by the stack operation
+        inserted_dims = [dim for dim in group.dims if dim not in group.coords]
+        # the copy is necessary here, otherwise read only array raises error
+        # in pandas: https://github.com/pydata/pandas/issues/12813
+        group = group.stack(**{stacked_dim: orig_dims}).copy()
+        obj = obj.stack(**{stacked_dim: orig_dims})
+    else:
+        stacked_dim = None
+        inserted_dims = []
+    return group, obj, stacked_dim, inserted_dims
+
+
+def _unique_and_monotonic(group):
+    if isinstance(group, _DummyGroup):
+        return True
+    else:
+        index = safe_cast_to_index(group)
+        return index.is_unique and index.is_monotonic
+
+
 class GroupBy(object):
     """A object that implements the split-apply-combine pattern.
 
@@ -135,15 +178,15 @@ class GroupBy(object):
     DataArray.groupby
     """
     def __init__(self, obj, group, squeeze=False, grouper=None, bins=None,
-                    cut_kwargs={}):
+                 cut_kwargs={}):
         """Create a GroupBy object
 
         Parameters
         ----------
         obj : Dataset or DataArray
             Object to group.
-        group : DataArray or IndexVariable
-            1-dimensional array with the group values.
+        group : DataArray
+            Array with the group values.
         squeeze : boolean, optional
             If "group" is a coordinate of object, `squeeze` controls whether
             the subarrays have a dimension of length 1 along that coordinate or
@@ -155,114 +198,114 @@ class GroupBy(object):
             specified bins by `pandas.cut`.
         cut_kwargs : dict, optional
             Extra keyword arguments to pass to `pandas.cut`
+
         """
-        from .dataset import as_dataset
         from .dataarray import DataArray
+
+        if grouper is not None and bins is not None:
+            raise TypeError("can't specify both `grouper` and `bins`")
+
+        if not isinstance(group, (DataArray, IndexVariable)):
+            if not hashable(group):
+                raise TypeError('`group` must be an xarray.DataArray or the '
+                                'name of an xarray variable or dimension')
+            group = obj[group]
+            if group.name not in obj and group.name in obj.dims:
+                # DummyGroups should not appear on groupby results
+                group = _DummyGroup(obj, group.name, group.coords)
 
         if getattr(group, 'name', None) is None:
             raise ValueError('`group` must have a name')
-        self._stacked_dim = None
-        if group.ndim != 1:
-            # try to stack the dims of the group into a single dim
-            # TODO: figure out how to exclude dimensions from the stacking
-            #       (e.g. group over space dims but leave time dim intact)
-            orig_dims = group.dims
-            stacked_dim_name = 'stacked_' + '_'.join(orig_dims)
-            # the copy is necessary here, otherwise read only array raises error
-            # in pandas: https://github.com/pydata/pandas/issues/12813
-            group = group.stack(**{stacked_dim_name: orig_dims}).copy()
-            obj = obj.stack(**{stacked_dim_name: orig_dims})
-            self._stacked_dim = stacked_dim_name
-            self._unstacked_dims = orig_dims
-        if not hasattr(group, 'dims'):
-            raise ValueError("`group` must have a 'dims' attribute")
+
+        group, obj, stacked_dim, inserted_dims = _ensure_1d(group, obj)
         group_dim, = group.dims
 
-        try:
-            expected_size = obj.dims[group_dim]
-        except TypeError:
-            expected_size = obj.shape[obj.get_axis_num(group_dim)]
+        expected_size = obj.sizes[group_dim]
         if group.size != expected_size:
             raise ValueError('the group variable\'s length does not '
                              'match the length of this variable along its '
                              'dimension')
+
         full_index = None
 
-        if grouper is not None and bins is not None:
-            raise TypeError("Can't specify both `grouper` and `bins`.")
         if bins is not None:
             binned = pd.cut(group.values, bins, **cut_kwargs)
             new_dim_name = group.name + '_bins'
             group = DataArray(binned, group.coords, name=new_dim_name)
+            full_index = binned.categories
+
         if grouper is not None:
             index = safe_cast_to_index(group)
             if not index.is_monotonic:
                 # TODO: sort instead of raising an error
                 raise ValueError('index must be monotonic for resampling')
             s = pd.Series(np.arange(index.size), index)
-            if grouper is not None:
-                first_items = s.groupby(grouper).first()
+            first_items = s.groupby(grouper).first()
             if first_items.isnull().any():
                 full_index = first_items.index
                 first_items = first_items.dropna()
             sbins = first_items.values.astype(np.int64)
-            group_indices = ([slice(i, j) for i, j in zip(sbins[:-1], sbins[1:])] +
+            group_indices = ([slice(i, j)
+                              for i, j in zip(sbins[:-1], sbins[1:])] +
                              [slice(sbins[-1], None)])
             unique_coord = IndexVariable(group.name, first_items.index)
-        elif group.name in obj.dims and bins is None:
-            # assume that group already has sorted, unique values
-            # (if using bins, the group will have the same name as a dimension
-            # but different values)
-            if group.dims != (group.name,):
-                raise ValueError('`group` is required to be a coordinate if '
-                                 '`group.name` is a dimension in `obj`')
+        elif group.dims == (group.name,) and _unique_and_monotonic(group):
+            # no need to factorize
             group_indices = np.arange(group.size)
             if not squeeze:
-                # group_indices = group_indices.reshape(-1, 1)
                 # use slices to do views instead of fancy indexing
+                # equivalent to: group_indices = group_indices.reshape(-1, 1)
                 group_indices = [slice(i, i + 1) for i in group_indices]
             unique_coord = group
         else:
             # look through group to find the unique values
-            sort = bins is None
-            unique_values, group_indices = unique_value_groups(group, sort=sort)
+            unique_values, group_indices = unique_value_groups(
+                group, sort=(bins is None))
             unique_coord = IndexVariable(group.name, unique_values)
 
-        self.obj = obj
-        self.group = group
-        self.group_dim = group_dim
-        self.group_indices = group_indices
-        self.unique_coord = unique_coord
-        self._groups = None
+        # specification for the groupby operation
+        self._obj = obj
+        self._group = group
+        self._group_dim = group_dim
+        self._group_indices = group_indices
+        self._unique_coord = unique_coord
+        self._stacked_dim = stacked_dim
+        self._inserted_dims = inserted_dims
         self._full_index = full_index
+
+        # cached attributes
+        self._groups = None
 
     @property
     def groups(self):
         # provided to mimic pandas.groupby
         if self._groups is None:
-            self._groups = dict(zip(self.unique_coord.values,
-                                    self.group_indices))
+            self._groups = dict(zip(self._unique_coord.values,
+                                    self._group_indices))
         return self._groups
 
     def __len__(self):
-        return self.unique_coord.size
+        return self._unique_coord.size
 
     def __iter__(self):
-        return zip(self.unique_coord.values, self._iter_grouped())
+        return zip(self._unique_coord.values, self._iter_grouped())
 
     def _iter_grouped(self):
         """Iterate over each element in this group"""
-        for indices in self.group_indices:
-            yield self.obj.isel(**{self.group_dim: indices})
+        for indices in self._group_indices:
+            yield self._obj.isel(**{self._group_dim: indices})
 
     def _infer_concat_args(self, applied_example):
-        if self.group_dim in applied_example.dims:
-            concat_dim = self.group
-            positions = self.group_indices
+        if self._group_dim in applied_example.dims:
+            coord = self._group
+            positions = self._group_indices
         else:
-            concat_dim = self.unique_coord
+            coord = self._unique_coord
             positions = None
-        return concat_dim, positions
+        dim, = coord.dims
+        if isinstance(coord, _DummyGroup):
+            coord = None
+        return coord, dim, positions
 
     @staticmethod
     def _binary_op(f, reflexive=False, **ignored_kwargs):
@@ -270,7 +313,7 @@ class GroupBy(object):
         def func(self, other):
             g = f if not reflexive else lambda x, y: f(y, x)
             applied = self._yield_binary_applied(g, other)
-            combined = self._concat(applied)
+            combined = self._combine(applied)
             return combined
         return func
 
@@ -279,17 +322,17 @@ class GroupBy(object):
 
         for group_value, obj in self:
             try:
-                other_sel = other.sel(**{self.group.name: group_value})
+                other_sel = other.sel(**{self._group.name: group_value})
             except AttributeError:
                 raise TypeError('GroupBy objects only support binary ops '
                                 'when the other argument is a Dataset or '
                                 'DataArray')
             except (KeyError, ValueError):
-                if self.group.name not in other.dims:
+                if self._group.name not in other.dims:
                     raise ValueError('incompatible dimensions for a grouped '
                                      'binary operation: the group variable %r '
                                      'is not a dimension on the other argument'
-                                     % self.group.name)
+                                     % self._group.name)
                 if dummy is None:
                     dummy = _dummy_copy(other)
                 other_sel = dummy
@@ -301,17 +344,21 @@ class GroupBy(object):
         """Our index contained empty groups (e.g., from a resampling). If we
         reduced on that dimension, we want to restore the full index.
         """
-        if (self._full_index is not None and self.group.name in combined.dims):
-            indexers = {self.group.name: self._full_index}
+        if (self._full_index is not None and
+                self._group.name in combined.dims):
+            indexers = {self._group.name: self._full_index}
             combined = combined.reindex(**indexers)
         return combined
 
-    def _maybe_unstack_array(self, arr):
+    def _maybe_unstack(self, obj):
         """This gets called if we are applying on an array with a
         multidimensional group."""
-        if self._stacked_dim is not None and self._stacked_dim in arr.dims:
-            arr = arr.unstack(self._stacked_dim)
-        return arr
+        if self._stacked_dim is not None and self._stacked_dim in obj.dims:
+            obj = obj.unstack(self._stacked_dim)
+            for dim in self._inserted_dims:
+                if dim in obj.coords:
+                    del obj.coords[dim]
+        return obj
 
     def fillna(self, value):
         """Fill missing values in this object by group.
@@ -359,11 +406,11 @@ class GroupBy(object):
         return self._where(cond)
 
     def _first_or_last(self, op, skipna, keep_attrs):
-        if isinstance(self.group_indices[0], (int, np.integer)):
+        if isinstance(self._group_indices[0], (int, np.integer)):
             # NB. this is currently only used for reductions along an existing
             # dimension
-            return self.obj
-        return self.reduce(op, self.group_dim, skipna=skipna,
+            return self._obj
+        return self.reduce(op, self._group_dim, skipna=skipna,
                            keep_attrs=keep_attrs, allow_lazy=True)
 
     def first(self, skipna=None, keep_attrs=True):
@@ -386,13 +433,12 @@ class GroupBy(object):
         return self.apply(lambda ds: ds.assign_coords(**kwargs))
 
 
-def _maybe_reorder(xarray_obj, concat_dim, positions):
+def _maybe_reorder(xarray_obj, dim, positions):
     order = _inverse_permutation_indices(positions)
 
     if order is None:
         return xarray_obj
     else:
-        dim, = concat_dim.dims
         return xarray_obj[{dim: order}]
 
 
@@ -403,39 +449,32 @@ class DataArrayGroupBy(GroupBy, ImplementsArrayReduce):
         """Fast version of `_iter_grouped` that yields Variables without
         metadata
         """
-        var = self.obj.variable
-        for indices in self.group_indices:
-            yield var[{self.group_dim: indices}]
+        var = self._obj.variable
+        for indices in self._group_indices:
+            yield var[{self._group_dim: indices}]
 
-    def _concat_shortcut(self, applied, concat_dim, positions=None):
+    def _concat_shortcut(self, applied, dim, positions=None):
         # nb. don't worry too much about maintaining this method -- it does
         # speed things up, but it's not very interpretable and there are much
         # faster alternatives (e.g., doing the grouped aggregation in a
         # compiled language)
-        stacked = Variable.concat(applied, concat_dim, shortcut=True)
-        reordered = _maybe_reorder(stacked, concat_dim, positions)
-        result = self.obj._replace_maybe_drop_dims(reordered)
-        result._coords[concat_dim.name] = as_variable(concat_dim, copy=True)
+        stacked = Variable.concat(applied, dim, shortcut=True)
+        reordered = _maybe_reorder(stacked, dim, positions)
+        result = self._obj._replace_maybe_drop_dims(reordered)
         return result
 
     def _restore_dim_order(self, stacked):
         def lookup_order(dimension):
-            if dimension == self.group.name:
-                dimension, = self.group.dims
-            if dimension in self.obj.dims:
-                axis = self.obj.get_axis_num(dimension)
+            if dimension == self._group.name:
+                dimension, = self._group.dims
+            if dimension in self._obj.dims:
+                axis = self._obj.get_axis_num(dimension)
             else:
                 axis = 1e6  # some arbitrarily high value
             return axis
 
         new_order = sorted(stacked.dims, key=lookup_order)
         return stacked.transpose(*new_order)
-
-    def _restore_multiindex(self, combined):
-        if self._stacked_dim is not None and self._stacked_dim in combined.dims:
-            stacked_dim = self.group[self._stacked_dim]
-            combined[self._stacked_dim] = stacked_dim
-        return combined
 
     def apply(self, func, shortcut=False, **kwargs):
         """Apply a function over each array in the group and concatenate them
@@ -471,31 +510,37 @@ class DataArrayGroupBy(GroupBy, ImplementsArrayReduce):
 
         Returns
         -------
-        applied : DataArray
+        applied : DataArray or DataArray
             The result of splitting, applying and combining this array.
         """
         if shortcut:
             grouped = self._iter_grouped_shortcut()
         else:
             grouped = self._iter_grouped()
-        applied = (maybe_wrap_array(arr, func(arr, **kwargs)) for arr in grouped)
-        combined = self._concat(applied, shortcut=shortcut)
-        result = self._maybe_restore_empty_groups(
-                    self._maybe_unstack_array(combined))
-        return result
+        applied = (maybe_wrap_array(arr, func(arr, **kwargs))
+                   for arr in grouped)
+        return self._combine(applied, shortcut=shortcut)
 
-    def _concat(self, applied, shortcut=False):
-        # peek at applied to determine which coordinate to stack over
+    def _combine(self, applied, shortcut=False):
+        """Recombine the applied objects like the original."""
         applied_example, applied = peek_at(applied)
-        concat_dim, positions = self._infer_concat_args(applied_example)
+        coord, dim, positions = self._infer_concat_args(applied_example)
         if shortcut:
-            combined = self._concat_shortcut(applied, concat_dim, positions)
+            combined = self._concat_shortcut(applied, dim, positions)
         else:
-            combined = concat(applied, concat_dim)
-            combined = _maybe_reorder(combined, concat_dim, positions)
-        if isinstance(combined, type(self.obj)):
+            combined = concat(applied, dim)
+            combined = _maybe_reorder(combined, dim, positions)
+
+        if isinstance(combined, type(self._obj)):
+            # only restore dimension order for arrays
             combined = self._restore_dim_order(combined)
-            combined = self._restore_multiindex(combined)
+        if coord is not None:
+            if shortcut:
+                combined._coords[coord.name] = as_variable(coord, copy=True)
+            else:
+                combined.coords[coord.name] = coord
+        combined = self._maybe_restore_empty_groups(combined)
+        combined = self._maybe_unstack(combined)
         return combined
 
     def reduce(self, func, dim=None, axis=None, keep_attrs=False,
@@ -561,22 +606,24 @@ class DatasetGroupBy(GroupBy, ImplementsDatasetReduce):
 
         Returns
         -------
-        applied : Dataset
+        applied : Dataset or DataArray
             The result of splitting, applying and combining this dataset.
         """
         kwargs.pop('shortcut', None)  # ignore shortcut if set (for now)
         applied = (func(ds, **kwargs) for ds in self._iter_grouped())
-        combined = self._concat(applied)
-        result = self._maybe_restore_empty_groups(combined)
-        return result
+        return self._combine(applied)
 
-    def _concat(self, applied):
+    def _combine(self, applied):
+        """Recombine the applied objects like the original."""
         applied_example, applied = peek_at(applied)
-        concat_dim, positions = self._infer_concat_args(applied_example)
-
-        combined = concat(applied, concat_dim)
-        reordered = _maybe_reorder(combined, concat_dim, positions)
-        return reordered
+        coord, dim, positions = self._infer_concat_args(applied_example)
+        combined = concat(applied, dim)
+        combined = _maybe_reorder(combined, dim, positions)
+        if coord is not None:
+            combined[coord.name] = coord
+        combined = self._maybe_restore_empty_groups(combined)
+        combined = self._maybe_unstack(combined)
+        return combined
 
     def reduce(self, func, dim=None, keep_attrs=False, **kwargs):
         """Reduce the items in this group by applying `func` along some

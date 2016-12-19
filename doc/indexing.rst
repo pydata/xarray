@@ -221,7 +221,7 @@ enabling nearest neighbor (inexact) lookups by use of the methods ``'pad'``,
 
 .. ipython:: python
 
-    data = xr.DataArray([1, 2, 3], dims='x')
+    data = xr.DataArray([1, 2, 3], [('x', [0, 1, 2])])
     data.sel(x=[1.1, 1.9], method='nearest')
     data.sel(x=0.1, method='backfill')
     data.reindex(x=[0.5, 1, 1.5, 2, 2.5], method='pad')
@@ -477,3 +477,49 @@ Both ``reindex_like`` and ``align`` work interchangeably between
     other = xr.DataArray(['a', 'b', 'c'], dims='other')
     # this is a no-op, because there are no shared dimension names
     ds.reindex_like(other)
+
+.. _indexing.missing_coordinates:
+
+Missing coordinate labels
+-------------------------
+
+Coordinate labels for each dimension are optional (as of xarray v0.9). Label
+based indexing with ``.sel`` and ``.loc`` uses standard positional,
+integer-based indexing as a fallback for dimensions without a coordinate label:
+
+.. ipython:: python
+
+    array = xr.DataArray([1, 2, 3], dims='x')
+    array.sel(x=[0, -1])
+
+Alignment between xarray objects where one or both do not have coordinate labels
+succeeds only if all dimensions of the same name have the same length.
+Otherwise, it raises an informative error:
+
+.. ipython::
+    :verbatim:
+
+    In [62]: xr.align(array, array[:2])
+    ValueError: arguments without labels along dimension 'x' cannot be aligned because they have different dimension sizes: {2, 3}
+
+Underlying Indexes
+------------------
+
+xarray uses the :py:class:`pandas.Index` internally to perform indexing
+operations.  If you need to access the underlying indexes, they are available
+through the :py:attr:`~xarray.DataArray.indexes` attribute.
+
+.. ipython:: python
+
+   arr
+   arr.indexes
+   arr.indexes['time']
+
+Use :py:meth:`~xarray.DataArray.get_index` to get an index for a dimension,
+falling back to a default :py:class:`pandas.RangeIndex` if it has no coordinate
+labels:
+
+.. ipython:: python
+
+    array
+    array.get_index('x')

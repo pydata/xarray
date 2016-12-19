@@ -1,9 +1,13 @@
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
 import numpy as np
 import pandas as pd
 
-from .pycompat import basestring, iteritems, suppress, dask_array_type, bytes_type
+from .pycompat import (basestring, iteritems, suppress, dask_array_type,
+                       OrderedDict)
 from . import formatting
-from .utils import SortedKeysDict, not_implemented
+from .utils import SortedKeysDict, not_implemented, Frozen
 
 
 class ImplementsArrayReduce(object):
@@ -29,6 +33,13 @@ class ImplementsArrayReduce(object):
             and 'axis' arguments can be supplied. If neither are supplied, then
             `{name}` is calculated over axes."""
 
+    _cum_extra_args_docstring = \
+        """dim : str or sequence of str, optional
+            Dimension over which to apply `{name}`.
+        axis : int or sequence of int, optional
+            Axis over which to apply `{name}`. Only one of the 'dim'
+            and 'axis' arguments can be supplied."""
+
 
 class ImplementsDatasetReduce(object):
     @classmethod
@@ -50,6 +61,13 @@ class ImplementsDatasetReduce(object):
         """dim : str or sequence of str, optional
             Dimension(s) over which to apply `func`.  By default `func` is
             applied over all dimensions."""
+
+    _cum_extra_args_docstring = \
+        """dim : str or sequence of str, optional
+            Dimension over which to apply `{name}`.
+        axis : int or sequence of int, optional
+            Axis over which to apply `{name}`. Only one of the 'dim'
+            and 'axis' arguments can be supplied."""
 
 
 class ImplementsRollingArrayReduce(object):
@@ -110,6 +128,8 @@ class ImplementsRollingArrayReduce(object):
 
 
 class AbstractArray(ImplementsArrayReduce, formatting.ReprMixin):
+    """Shared base class for DataArray and Variable."""
+
     def __bool__(self):
         return bool(self.values)
 
@@ -172,6 +192,18 @@ class AbstractArray(ImplementsArrayReduce, formatting.ReprMixin):
             raise ValueError("%r not found in array dimensions %r" %
                              (dim, self.dims))
 
+    @property
+    def sizes(self):
+        """Ordered mapping from dimension names to lengths.
+
+        Immutable.
+
+        See also
+        --------
+        Dataset.sizes
+        """
+        return Frozen(OrderedDict(zip(self.dims, self.shape)))
+
 
 class AttrAccessMixin(object):
     """Mixin class that allows getting keys with attribute access
@@ -181,7 +213,7 @@ class AttrAccessMixin(object):
     @property
     def _attr_sources(self):
         """List of places to look-up items for attribute-style access"""
-        return [self, self.attrs]
+        return []
 
     def __getattr__(self, name):
         if name != '__setstate__':
@@ -217,7 +249,60 @@ class AttrAccessMixin(object):
         return sorted(set(dir(type(self)) + extra_attrs))
 
 
+def get_squeeze_dims(xarray_obj, dim):
+    """Get a list of dimensions to squeeze out.
+    """
+    if dim is None:
+        dim = [d for d, s in xarray_obj.sizes.items() if s == 1]
+    else:
+        if isinstance(dim, basestring):
+            dim = [dim]
+        if any(xarray_obj.sizes[k] > 1 for k in dim):
+            raise ValueError('cannot select a dimension to squeeze out '
+                             'which has length greater than one')
+    return dim
+
+
 class BaseDataObject(AttrAccessMixin):
+    """Shared base class for Dataset and DataArray."""
+
+    def squeeze(self, dim=None, drop=False):
+        """Return a new object with squeezed data.
+
+        Parameters
+        ----------
+        dim : None or str or tuple of str, optional
+            Selects a subset of the length one dimensions. If a dimension is
+            selected with length greater than one, an error is raised. If
+            None, all length one dimensions are squeezed.
+        drop : bool, optional
+            If ``drop=True``, drop squeezed coordinates instead of making them
+            scalar.
+
+        Returns
+        -------
+        squeezed : same type as caller
+            This object, but with with all or a subset of the dimensions of
+            length 1 removed.
+
+        See Also
+        --------
+        numpy.squeeze
+        """
+        dims = get_squeeze_dims(self, dim)
+        return self.isel(drop=drop, **{d: 0 for d in dims})
+
+    def get_index(self, key):
+        """Get an index for a dimension, with fall-back to a default RangeIndex
+        """
+        if key not in self.dims:
+            raise KeyError(key)
+
+        try:
+            return self.indexes[key]
+        except KeyError:
+            return pd.Index(range(self.sizes[key]), name=key)
+
     def _calc_assign_results(self, kwargs):
         results = SortedKeysDict()
         for k, v in kwargs.items():
@@ -340,8 +425,6 @@ class BaseDataObject(AttrAccessMixin):
             A `GroupBy` object patterned after `pandas.GroupBy` that can be
             iterated over in the form of `(unique_value, grouped_array)` pairs.
         """
-        if isinstance(group, basestring):
-            group = self[group]
         return self.groupby_cls(self, group, squeeze=squeeze)
 
     def groupby_bins(self, group, bins, right=True, labels=None, precision=3,
@@ -391,8 +474,6 @@ class BaseDataObject(AttrAccessMixin):
         ----------
         .. [1] http://pandas.pydata.org/pandas-docs/stable/generated/pandas.cut.html
         """
-        if isinstance(group, basestring):
-            group = self[group]
         return self.groupby_cls(self, group, squeeze=squeeze, bins=bins,
                                 cut_kwargs={'right': right, 'labels': labels,
                                             'precision': precision,
@@ -571,12 +652,16 @@ class BaseDataObject(AttrAccessMixin):
             clip = dict(zip(clipcond.dims, [np.unique(adim)
                                             for adim in np.nonzero(clipcond.values)]))
             outcond = cond.isel(**clip)
-            outobj = self.sel(**outcond.indexes)
+            indexers = {dim: outcond.get_index(dim) for dim in outcond.dims}
+            outobj = self.sel(**indexers)
         else:
             outobj = self
             outcond = cond
 
-        return outobj._where(outcond)
+        # preserve attributes
+        out = outobj._where(outcond)
+        out._copy_attrs_from(self)
+        return out
 
     def close(self):
         """Close any files linked to this object
@@ -596,19 +681,6 @@ class BaseDataObject(AttrAccessMixin):
     __lt__ = __le__ =__ge__ = __gt__ = __add__ = __sub__ = __mul__ = \
     __truediv__ = __floordiv__ = __mod__ = __pow__ = __and__  = __xor__ = \
     __or__ = __div__ = __eq__ = __ne__ = not_implemented
-
-
-def squeeze(xarray_obj, dims, dim=None):
-    """Squeeze the dims of an xarray object."""
-    if dim is None:
-        dim = [d for d, s in iteritems(dims) if s == 1]
-    else:
-        if isinstance(dim, basestring):
-            dim = [dim]
-        if any(dims[k] > 1 for k in dim):
-            raise ValueError('cannot select a dimension to squeeze out '
-                             'which has length greater than one')
-    return xarray_obj.isel(**dict((d, 0) for d in dim))
 
 
 def _maybe_promote(dtype):
@@ -647,54 +719,69 @@ def _get_fill_value(dtype):
     return fill_value
 
 
-def _full_like_dataarray(arr, keep_attrs=False, fill_value=None):
-    """empty DataArray"""
-    from .dataarray import DataArray
-
-    attrs = arr.attrs if keep_attrs else {}
-
-    if fill_value is None:
-        values = np.empty_like(arr)
-    elif fill_value is True:
-        dtype, fill_value = _maybe_promote(arr.dtype)
-        values = np.full_like(arr, fill_value=fill_value, dtype=dtype)
-    else:
-        dtype, _ = _maybe_promote(np.array(fill_value).dtype)
-        values = np.full_like(arr, fill_value=fill_value, dtype=dtype)
-
-    return DataArray(values, dims=arr.dims, coords=arr.coords, attrs=attrs)
-
-
-def _full_like(xray_obj, keep_attrs=False, fill_value=None):
+def full_like(other, fill_value, dtype=None):
     """Return a new object with the same shape and type as a given object.
 
     Parameters
     ----------
-    xray_obj : DataArray or Dataset
-        Return a full object with the same shape/dims/coords/attrs.
-            `func` is calculated over all dimension for each group item.
-    keep_attrs : bool, optional
-        If True, the datasets's attributes (`attrs`) will be copied from
-        the original object to the new one.  If False (default), the new
-        object will be returned without attributes.
-    fill_value : scalar, optional
-        Value to fill DataArray(s) with before returning.
+    other : DataArray, Dataset, or Variable
+        The reference object in input
+    fill_value : scalar
+        Value to fill the new object with before returning it.
+    dtype : dtype, optional
+        dtype of the new array. If omitted, it defaults to other.dtype.
 
     Returns
     -------
-    out : same as xray_obj
-        New object with the same shape and type as a given object.
+    out : same as object
+        New object with the same shape and type as other, with the data
+        filled with fill_value. Coords will be copied from other.
+        If other is based on dask, the new one will be as well, and will be
+        split in the same chunks.
     """
     from .dataarray import DataArray
     from .dataset import Dataset
+    from .variable import Variable
 
-    if isinstance(xray_obj, Dataset):
-        attrs = xray_obj.attrs if keep_attrs else {}
+    if isinstance(other, Dataset):
+        data_vars = OrderedDict(
+            (k, _full_like_variable(v, fill_value, dtype))
+            for k, v in other.data_vars.items())
+        return Dataset(data_vars, coords=other.coords, attrs=other.attrs)
+    elif isinstance(other, DataArray):
+        return DataArray(
+            _full_like_variable(other.variable, fill_value, dtype),
+            dims=other.dims, coords=other.coords, attrs=other.attrs, name=other.name)
+    elif isinstance(other, Variable):
+        return _full_like_variable(other, fill_value, dtype)
+    else:
+        raise TypeError("Expected DataArray, Dataset, or Variable")
 
-        return Dataset(dict((k, _full_like_dataarray(v, keep_attrs=keep_attrs,
-                                                     fill_value=fill_value))
-                            for k, v in iteritems(xray_obj.data_vars)),
-                       name=xray_obj.name, attrs=attrs)
-    elif isinstance(xray_obj, DataArray):
-        return _full_like_dataarray(xray_obj, keep_attrs=keep_attrs,
-                                    fill_value=fill_value)
+
+def _full_like_variable(other, fill_value, dtype=None):
+    """Inner function of full_like, where other must be a variable
+    """
+    from .variable import Variable
+
+    if isinstance(other.data, dask_array_type):
+        import dask.array
+        if dtype is None:
+            dtype = other.dtype
+        data = dask.array.full(other.shape, fill_value, dtype=dtype,
+                               chunks=other.data.chunks)
+    else:
+        data = np.full_like(other, fill_value, dtype=dtype)
+
+    return Variable(dims=other.dims, data=data, attrs=other.attrs)
+
+
+def zeros_like(other, dtype=None):
+    """Shorthand for full_like(other, 0, dtype)
+    """
+    return full_like(other, 0, dtype)
+
+
+def ones_like(other, dtype=None):
+    """Shorthand for full_like(other, 1, dtype)
+    """
+    return full_like(other, 1, dtype)

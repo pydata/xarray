@@ -1,3 +1,6 @@
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
 import pandas as pd
 
 from .alignment import deep_align
@@ -81,7 +84,9 @@ def unique_variable(name, variables, compat='broadcast_equals'):
                                  'first value: %r\nsecond value: %r'
                                  % (name, out, var))
             if combine_method:
+                # TODO: add preservation of attrs into fillna
                 out = getattr(out, combine_method)(var)
+                out.attrs = var.attrs
 
     return out
 
@@ -360,8 +365,12 @@ def merge_data_and_coords(data, coords, compat='broadcast_equals',
     return merge_core(objs, compat, join, explicit_coords=explicit_coords)
 
 
-def merge_core(objs, compat='broadcast_equals', join='outer', priority_arg=None,
-               explicit_coords=None, indexes=None):
+def merge_core(objs,
+               compat='broadcast_equals',
+               join='outer',
+               priority_arg=None,
+               explicit_coords=None,
+               indexes=None):
     """Core logic for merging labeled objects.
 
     This is not public API.
@@ -395,7 +404,7 @@ def merge_core(objs, compat='broadcast_equals', join='outer', priority_arg=None,
     ------
     MergeError if the merge cannot be done successfully.
     """
-    from .dataset import calculate_dimensions, add_default_dim_coords_inplace
+    from .dataset import calculate_dimensions
 
     _assert_compat_valid(compat)
 
@@ -413,9 +422,10 @@ def merge_core(objs, compat='broadcast_equals', join='outer', priority_arg=None,
     assert_unique_multiindex_level_names(variables)
 
     dims = calculate_dimensions(variables)
-    add_default_dim_coords_inplace(variables, dims)
 
-    coord_names.update(dims)
+    for dim, size in dims.items():
+        if dim in variables:
+            coord_names.add(dim)
 
     ambiguous_coords = coord_names.intersection(noncoord_names)
     if ambiguous_coords:
@@ -426,7 +436,7 @@ def merge_core(objs, compat='broadcast_equals', join='outer', priority_arg=None,
     return variables, coord_names, dict(dims)
 
 
-def merge(objects, compat='broadcast_equals', join='outer'):
+def merge(objects, compat='no_conflicts', join='outer'):
     """Merge any number of xarray objects into a single Dataset as variables.
 
     Parameters
@@ -436,7 +446,17 @@ def merge(objects, compat='broadcast_equals', join='outer'):
         DataArray objects, they must have a name.
     compat : {'identical', 'equals', 'broadcast_equals',
               'no_conflicts'}, optional
-        Compatibility checks to use when merging variables.
+        String indicating how to compare variables of the same name for
+        potential conflicts:
+
+        - 'broadcast_equals': all values must be equal when variables are
+          broadcast against each other to ensure common dimensions.
+        - 'equals': all values and dimensions must be the same.
+        - 'identical': all values, dimensions and attributes must be the
+          same.
+        - 'no_conflicts': only values which are not null in both datasets
+          must be equal. The returned dataset then contains the combination
+          of all non-null values.
     join : {'outer', 'inner', 'left', 'right'}, optional
         How to combine objects with different indexes.
 
@@ -481,8 +501,7 @@ def merge(objects, compat='broadcast_equals', join='outer'):
     return merged
 
 
-def dataset_merge_method(dataset, other, overwrite_vars=frozenset(),
-                         compat='broadcast_equals', join='outer'):
+def dataset_merge_method(dataset, other, overwrite_vars, compat, join):
     """Guts of the Dataset.merge method."""
 
     # we are locked into supporting overwrite_vars for the Dataset.merge

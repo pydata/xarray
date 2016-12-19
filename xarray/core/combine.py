@@ -1,3 +1,6 @@
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
 import warnings
 
 import pandas as pd
@@ -189,7 +192,6 @@ def _calc_concat_over(datasets, dim, data_vars, coords):
     concat_over.update(process_subset_opt(coords, 'coords'))
     if dim in datasets[0]:
         concat_over.add(dim)
-
     return concat_over
 
 
@@ -264,11 +266,12 @@ def _dataset_concat(datasets, dim, data_vars, coords, compat, positions):
                 var = var.expand_dims(common_dims, common_shape)
             yield var
 
-    # stack up each variable to fill-out the dataset
-    for k in concat_over:
-        vars = ensure_common_dims([ds.variables[k] for ds in datasets])
-        combined = concat_vars(vars, dim, positions)
-        insert_result_variable(k, combined)
+    # stack up each variable to fill-out the dataset (in order)
+    for k in datasets[0].variables:
+        if k in concat_over:
+            vars = ensure_common_dims([ds.variables[k] for ds in datasets])
+            combined = concat_vars(vars, dim, positions)
+            insert_result_variable(k, combined)
 
     result = Dataset(result_vars, attrs=result_attrs)
     result = result.set_coords(result_coord_names)
@@ -329,28 +332,25 @@ def _auto_concat(datasets, dim=None):
         return concat(datasets, dim=dim)
 
 
-def auto_combine(datasets, concat_dim=None):
+_CONCAT_DIM_DEFAULT = '__infer_concat_dim__'
+
+
+def auto_combine(datasets,
+                 concat_dim=_CONCAT_DIM_DEFAULT,
+                 compat='no_conflicts'):
     """Attempt to auto-magically combine the given datasets into one.
 
     This method attempts to combine a list of datasets into a single entity by
     inspecting metadata and using a combination of concat and merge.
 
-    It does not concatenate along more than one dimension or align or sort data
-    under any circumstances. It will fail in complex cases, for which you
-    should use ``concat`` and ``merge`` explicitly.
+    It does not concatenate along more than one dimension or sort data under any
+    circumstances. It does align coordinates, but different variables on
+    datasets can cause it to fail under some scenarios. In complex cases, you
+    may need to clean up your data and use ``concat``/``merge`` explicitly.
 
-    When ``auto_combine`` may succeed:
-
-    * You have N years of data and M data variables. Each combination of a
-      distinct time period and test of data variables is saved its own dataset.
-
-    Examples of when ``auto_combine`` fails:
-
-    * In the above scenario, one file is missing, containing the data for one
-      year's data for one variable.
-    * In the most recent year, there is an additional data variable.
-    * Your data includes "time" and "station" dimensions, and each year's data
-      has a different set of stations.
+    ``auto_combine`` works well if you have N years of data and M data
+    variables, and each combination of a distinct time period and set of data
+    variables is saved its own dataset.
 
     Parameters
     ----------
@@ -362,6 +362,22 @@ def auto_combine(datasets, concat_dim=None):
         dimension along which you want to concatenate is not a dimension in
         the original datasets, e.g., if you want to stack a collection of
         2D arrays along a third dimension.
+        By default, xarray attempts to infer this argument by examining
+        component files. Set ``concat_dim=None`` explicitly to disable
+        concatenation.
+    compat : {'identical', 'equals', 'broadcast_equals',
+              'no_conflicts'}, optional
+        String indicating how to compare variables of the same name for
+        potential conflicts:
+
+        - 'broadcast_equals': all values must be equal when variables are
+          broadcast against each other to ensure common dimensions.
+        - 'equals': all values and dimensions must be the same.
+        - 'identical': all values, dimensions and attributes must be the
+          same.
+        - 'no_conflicts': only values which are not null in both datasets
+          must be equal. The returned dataset then contains the combination
+          of all non-null values.
 
     Returns
     -------
@@ -373,8 +389,12 @@ def auto_combine(datasets, concat_dim=None):
     Dataset.merge
     """
     from toolz import itertoolz
-    grouped = itertoolz.groupby(lambda ds: tuple(sorted(ds.data_vars)),
-                                datasets).values()
-    concatenated = [_auto_concat(ds, dim=concat_dim) for ds in grouped]
-    merged = merge(concatenated)
+    if concat_dim is not None:
+        dim = None if concat_dim is _CONCAT_DIM_DEFAULT else concat_dim
+        grouped = itertoolz.groupby(lambda ds: tuple(sorted(ds.data_vars)),
+                                    datasets).values()
+        concatenated = [_auto_concat(ds, dim=dim) for ds in grouped]
+    else:
+        concatenated = datasets
+    merged = merge(concatenated, compat=compat)
     return merged

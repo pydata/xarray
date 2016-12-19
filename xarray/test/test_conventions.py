@@ -1,3 +1,6 @@
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
 import contextlib
 import numpy as np
 import pandas as pd
@@ -188,11 +191,11 @@ class TestDatetime(TestCase):
 
     @requires_netCDF4
     def test_decode_cf_datetime_overflow(self):
-        # checks for 
+        # checks for
         # https://github.com/pydata/pandas/issues/14068
         # https://github.com/pydata/xarray/issues/975
 
-        from datetime import datetime        
+        from datetime import datetime
         units = 'days since 2000-01-01 00:00:00'
 
         # date after 2262 and before 1678
@@ -491,6 +494,12 @@ class TestDatetime(TestCase):
         ds = decode_cf(Dataset({'time': ('time', [0, 1], attrs)}))
         self.assertIn('(time) datetime64[ns]', repr(ds))
 
+        # this should not throw a warning (GH1111)
+        with warnings.catch_warnings():
+            warnings.filterwarnings('error')
+            conventions.DecodedCFDatetimeArray(np.asarray([722624]),
+                                               "days since 0001-01-01")
+
 
 class TestNativeEndiannessArray(TestCase):
     def test(self):
@@ -574,7 +583,6 @@ class TestDecodeCF(TestCase):
         })
         expected = Dataset({
             't': pd.date_range('2000-01-01', periods=3),
-            'x': ("x", [0, 1, 2]),
             'foo': (('t', 'x'), [[0, 0, 0], [1, 1, 1], [2, 2, 2]], {'units': 'bar'}),
             'y': ('t', [5, 10, np.nan])
         })
@@ -617,7 +625,8 @@ class TestCFEncodedDataStore(CFEncodedDataTest, TestCase):
         yield CFEncodedInMemoryStore()
 
     @contextlib.contextmanager
-    def roundtrip(self, data, save_kwargs={}, open_kwargs={}):
+    def roundtrip(self, data, save_kwargs={}, open_kwargs={},
+                  allow_cleanup_failure=False):
         store = CFEncodedInMemoryStore()
         data.dump_to_store(store, **save_kwargs)
         yield open_dataset(store, **open_kwargs)

@@ -1,4 +1,6 @@
+from __future__ import absolute_import
 from __future__ import division
+from __future__ import print_function
 
 import inspect
 import warnings
@@ -70,7 +72,8 @@ class FacetGrid(object):
     """
 
     def __init__(self, data, col=None, row=None, col_wrap=None,
-                 aspect=1, size=3, subplot_kws=None):
+                 sharex=True, sharey=True, figsize=None, aspect=1, size=3,
+                 subplot_kws=None):
         """
         Parameters
         ----------
@@ -81,6 +84,13 @@ class FacetGrid(object):
             on separate facets in the grid.
         col_wrap : int, optional
             "Wrap" the column variable at this width, so that the column facets
+        sharex : bool, optional
+            If true, the facets will share x axes
+        sharey : bool, optional
+            If true, the facets will share y axes
+        figsize : tuple, optional
+            A tuple (width, height) of the figure in inches.
+            If set, overrides ``size`` and ``aspect``.
         aspect : scalar, optional
             Aspect ratio of each facet, so that ``aspect * size`` gives the
             width of each facet in inches
@@ -133,13 +143,14 @@ class FacetGrid(object):
         # Set the subplot kwargs
         subplot_kws = {} if subplot_kws is None else subplot_kws
 
-        # Calculate the base figure size with extra horizontal space for a
-        # colorbar
-        cbar_space = 1
-        figsize = (ncol * size * aspect + cbar_space, nrow * size)
+        if figsize is None:
+            # Calculate the base figure size with extra horizontal space for a
+            # colorbar
+            cbar_space = 1
+            figsize = (ncol * size * aspect + cbar_space, nrow * size)
 
         fig, axes = plt.subplots(nrow, ncol,
-                                 sharex=True, sharey=True, squeeze=False,
+                                 sharex=sharex, sharey=sharey, squeeze=False,
                                  figsize=figsize, subplot_kw=subplot_kws)
 
         # Set up the lists of names for the row and column facet variables
@@ -263,8 +274,9 @@ class FacetGrid(object):
             kwargs.setdefault('extend', self._cmap_extend)
         if getattr(self.data, 'name', None) is not None:
             kwargs.setdefault('label', self.data.name)
-        self.fig.colorbar(self._mappables[-1], ax=list(self.axes.flat),
-                          **kwargs)
+        self.cbar = self.fig.colorbar(self._mappables[-1],
+                                      ax=list(self.axes.flat),
+                                      **kwargs)
         return self
 
     def set_axis_labels(self, x_var=None, y_var=None):

@@ -1,3 +1,6 @@
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
 import pkg_resources
 
 import numpy as np
@@ -101,7 +104,7 @@ def _color_palette(cmap, n_colors):
 
 def _determine_cmap_params(plot_data, vmin=None, vmax=None, cmap=None,
                            center=None, robust=False, extend=None,
-                           levels=None, filled=True, cnorm=None):
+                           levels=None, filled=True, norm=None):
     """
     Use some heuristics to set good defaults for colorbar and range.
 
@@ -193,10 +196,10 @@ def _determine_cmap_params(plot_data, vmin=None, vmax=None, cmap=None,
         extend = _determine_extend(calc_data, vmin, vmax)
 
     if levels is not None:
-        cmap, cnorm = _build_discrete_cmap(cmap, levels, extend, filled)
+        cmap, norm = _build_discrete_cmap(cmap, levels, extend, filled)
 
     return dict(vmin=vmin, vmax=vmax, cmap=cmap, extend=extend,
-                levels=levels, norm=cnorm)
+                levels=levels, norm=norm)
 
 
 def _infer_xy_labels(darray, x, y):
@@ -212,6 +215,35 @@ def _infer_xy_labels(darray, x, y):
         y, x = darray.dims
     elif x is None or y is None:
         raise ValueError('cannot supply only one of x and y')
-    elif any(k not in darray.coords for k in (x, y)):
+    elif any(k not in darray.coords and k not in darray.dims for k in (x, y)):
         raise ValueError('x and y must be coordinate variables')
     return x, y
+
+
+def get_axis(figsize, size, aspect, ax):
+    import matplotlib as mpl
+    import matplotlib.pyplot as plt
+
+    if figsize is not None:
+        if ax is not None:
+            raise ValueError('cannot provide both `figsize` and '
+                             '`ax` arguments')
+        if size is not None:
+            raise ValueError('cannot provide both `figsize` and '
+                             '`size` arguments')
+        _, ax = plt.subplots(figsize=figsize)
+    elif size is not None:
+        if ax is not None:
+            raise ValueError('cannot provide both `size` and `ax` arguments')
+        if aspect is None:
+            width, height = mpl.rcParams['figure.figsize']
+            aspect = width / height
+        figsize = (size * aspect, size)
+        _, ax = plt.subplots(figsize=figsize)
+    elif aspect is not None:
+        raise ValueError('cannot provide `aspect` argument without `size`')
+
+    if ax is None:
+        ax = plt.gca()
+
+    return ax

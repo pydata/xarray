@@ -1,3 +1,6 @@
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
 import numpy as np
 import xarray as xr
 from xarray.core.groupby import _consolidate_slices
@@ -42,5 +45,12 @@ def test_multi_index_groupby_sum():
               .unstack('space'))
     assert expected.equals(actual)
 
+
+def test_groupby_duplicate_coordinate_labels():
+    # fix for http://stackoverflow.com/questions/38065129
+    array = xr.DataArray([1, 2, 3], [('x', [1, 1, 2])])
+    expected = xr.DataArray([3, 3], [('x', [1, 2])])
+    actual = array.groupby('x').sum()
+    assert expected.equals(actual)
 
 # TODO: move other groupby tests from test_dataset and test_dataarray over here

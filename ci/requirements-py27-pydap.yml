@@ -2,6 +2,7 @@ name: test_env
 dependencies:
   - python=2.7
   - dask
+  - distributed
   - h5py
   - netcdf4
   - pytest
