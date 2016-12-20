@@ -23,7 +23,7 @@ from .merge import (dataset_update_method, dataset_merge_method,
 from .utils import (Frozen, SortedKeysDict, maybe_wrap_array, hashable,
                     decode_numpy_dict_values, ensure_us_time_resolution)
 from .variable import (Variable, as_variable, IndexVariable,
-                       broadcast_variables, default_index_coordinate)
+                       broadcast_variables)
 from .pycompat import (iteritems, basestring, OrderedDict,
                        dask_array_type, range)
 from .combine import concat
@@ -135,9 +135,9 @@ def merge_indexes(
             var_names = [var_names]
 
         names, labels, levels = [], [], []
-        current_index_variable = variables[dim]
+        current_index_variable = variables.get(dim)
 
-        if append:
+        if current_index_variable is not None and append:
             current_index = current_index_variable.to_index()
             if isinstance(current_index, pd.MultiIndex):
                 names.extend(current_index.names)
@@ -152,7 +152,8 @@ def merge_indexes(
         for n in var_names:
             names.append(n)
             var = variables[n]
-            if var.dims != current_index_variable.dims:
+            if (current_index_variable is not None and
+                var.dims != current_index_variable.dims):
                 raise ValueError(
                     "dimension mismatch between %r %s and %r %s"
                     % (dim, current_index_variable.dims, n, var.dims))
@@ -168,7 +169,8 @@ def merge_indexes(
     new_variables = OrderedDict([(k, v) for k, v in iteritems(variables)
                                  if k not in vars_to_remove])
     new_variables.update(vars_to_replace)
-    new_coord_names = coord_names - set(vars_to_remove)
+    new_coord_names = coord_names | set(vars_to_replace)
+    new_coord_names -= set(vars_to_remove)
 
     return new_variables, new_coord_names
 
@@ -199,26 +201,23 @@ def split_indexes(
 
     vars_to_replace = {}
     vars_to_create = OrderedDict()
+    vars_to_remove = []
 
     for d in dims:
         index = variables[d].to_index()
         if isinstance(index, pd.MultiIndex):
             dim_levels[d] = index.names
         else:
-            # TODO: remove instead of replace (#1017)
-            vars_to_replace[d] = default_index_coordinate(index.name,
-                                                          index.size)
+            vars_to_remove.append(d)
             if not drop:
                 vars_to_create[d + '_'] = Variable(d, index)
 
     for d, levs in dim_levels.items():
         index = variables[d].to_index()
         if len(levs) == index.nlevels:
-            # TODO: remove instead of replace (#1017)
-            new_index_var = default_index_coordinate(d, index.size)
+            vars_to_remove.append(d)
         else:
-            new_index_var = IndexVariable(d, index.droplevel(levs))
-        vars_to_replace[d] = new_index_var
+            vars_to_replace[d] = IndexVariable(d, index.droplevel(levs))
 
         if not drop:
             for lev in levs:
@@ -226,9 +225,11 @@ def split_indexes(
                 vars_to_create[idx.name] = Variable(d, idx)
 
     new_variables = variables.copy()
+    for v in vars_to_remove:
+        del new_variables[d]
     new_variables.update(vars_to_replace)
     new_variables.update(vars_to_create)
-    new_coord_names = coord_names | set(vars_to_create)
+    new_coord_names = (coord_names | set(vars_to_create)) - set(vars_to_remove)
 
     return new_variables, new_coord_names
 

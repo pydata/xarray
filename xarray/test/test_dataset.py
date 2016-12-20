@@ -1461,8 +1461,8 @@ class TestDataset(TestCase):
         coords = {idx.name: ('x', idx) for idx in indexes}
         ds = Dataset({}, coords=coords)
 
-        reindexed = ds.set_index(x=mindex.names)
-        self.assertDatasetIdentical(reindexed, expected)
+        obj = ds.set_index(x=mindex.names)
+        self.assertDatasetIdentical(obj, expected)
 
         ds.set_index(x=mindex.names, inplace=True)
         self.assertDatasetIdentical(ds, expected)
@@ -1474,8 +1474,8 @@ class TestDataset(TestCase):
         coords = {idx.name: ('x', idx) for idx in indexes}
         expected = Dataset({}, coords=coords)
 
-        reindexed = ds.reset_index('x')
-        self.assertDatasetIdentical(reindexed, expected)
+        obj = ds.reset_index('x')
+        self.assertDatasetIdentical(obj, expected)
 
         ds.reset_index('x', inplace=True)
         self.assertDatasetIdentical(ds, expected)

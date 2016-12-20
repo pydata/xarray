@@ -929,7 +929,8 @@ class TestDataArray(TestCase):
         self.assertDataArrayIdentical(array, expected)
 
         array2d = DataArray(np.random.rand(2, 2),
-                            coords={'level': ('y', [1, 2])},
+                            coords={'x': ('x', [0, 1]),
+                                    'level': ('y', [1, 2])},
                             dims=('x', 'y'))
         with self.assertRaisesRegexp(ValueError, 'dimension mismatch'):
             array2d.set_index(x='level')
@@ -962,10 +963,8 @@ class TestDataArray(TestCase):
 
         # single index
         array = DataArray([1, 2], coords={'x': ['a', 'b']}, dims='x')
-        expected = DataArray(
-            [1, 2],
-            coords={'x': ('x', [0, 1]), 'x_': ('x', ['a', 'b'])},
-            dims='x')
+        expected = DataArray([1, 2], coords={'x_': ('x', ['a', 'b'])},
+                             dims='x')
         self.assertDataArrayIdentical(array.reset_index('x'), expected)
 
     def test_reorder_levels(self):
@@ -980,6 +979,10 @@ class TestDataArray(TestCase):
         self.assertDataArrayIdentical(array, expected)
 
         array = DataArray([1, 2], dims='x')
+        with self.assertRaises(KeyError):
+            array.reorder_levels(x=['level_1', 'level_2'])
+
+        array['x'] = [0, 1]
         with self.assertRaisesRegexp(ValueError, 'has no MultiIndex'):
             array.reorder_levels(x=['level_1', 'level_2'])
 
