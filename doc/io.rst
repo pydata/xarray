@@ -241,7 +241,9 @@ These encoding options work on any version of the netCDF file format:
   or ``'float32'``. This controls the type of the data written on disk.
 - ``_FillValue``:  Values of ``NaN`` in xarray variables are remapped to this value when
   saved on disk. This is important when converting floating point with missing values
-  to integers on disk, because ``NaN`` is not a valid dtype for integer dtypes.
+  to integers on disk, because ``NaN`` is not a valid dtype for integer dtypes. As a
+  default, variables with float types are attributed a ``_FillValue`` of ``NaN`` in the
+  output file.
 - ``scale_factor`` and ``add_offset``: Used to convert from encoded data on disk to
   to the decoded data in memory, according to the formula
   ``decoded = scale_factor * encoded + add_offset``.
@@ -251,6 +253,7 @@ example, to save the variable ``foo`` with a precision of 0.1 in 16-bit integers
 converting ``NaN`` to ``-9999``, we would use
 ``encoding={'foo': {'dtype': 'int16', 'scale_factor': 0.1, '_FillValue': -9999}}``.
 Compression and decompression with such discretization is extremely fast.
+
 
 Chunk based compression
 .......................
@@ -423,7 +426,7 @@ library::
         combined = xr.concat(dataset, dim)
         return combined
 
-    read_netcdfs('/all/my/files/*.nc', dim='time')
+    combined = read_netcdfs('/all/my/files/*.nc', dim='time')
 
 This function will work in many cases, but it's not very robust. First, it
 never closes files, which means it will fail one you need to load more than
@@ -454,8 +457,8 @@ deficiencies::
 
     # here we suppose we only care about the combined mean of each file;
     # you might also use indexing operations like .sel to subset datasets
-    read_netcdfs('/all/my/files/*.nc', dim='time',
-                 transform_func=lambda ds: ds.mean())
+    combined = read_netcdfs('/all/my/files/*.nc', dim='time',
+                            transform_func=lambda ds: ds.mean())
 
 This pattern works well and is very robust. We've used similar code to process
 tens of thousands of files constituting 100s of GB of data.

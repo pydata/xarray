@@ -145,6 +145,27 @@ def _is_nested_tuple(possible_tuple):
                     for value in possible_tuple))
 
 
+def _index_method_kwargs(method, tolerance):
+    # backwards compatibility for pandas<0.16 (method) or pandas<0.17
+    # (tolerance)
+    kwargs = {}
+    if method is not None:
+        kwargs['method'] = method
+    if tolerance is not None:
+        kwargs['tolerance'] = tolerance
+    return kwargs
+
+
+def get_loc(index, label, method=None, tolerance=None):
+    kwargs = _index_method_kwargs(method, tolerance)
+    return index.get_loc(label, **kwargs)
+
+
+def get_indexer(index, labels, method=None, tolerance=None):
+    kwargs = _index_method_kwargs(method, tolerance)
+    return index.get_indexer(labels, **kwargs)
+
+
 def convert_label_indexer(index, label, index_name='', method=None,
                           tolerance=None):
     """Given a pandas.Index and labels (e.g., from __getitem__) for one
@@ -152,17 +173,6 @@ def convert_label_indexer(index, label, index_name='', method=None,
     dimension. If `index` is a pandas.MultiIndex and depending on `label`,
     return a new pandas.Index or pandas.MultiIndex (otherwise return None).
     """
-    # backwards compatibility for pandas<0.16 (method) or pandas<0.17
-    # (tolerance)
-    kwargs = {}
-    if method is not None:
-        kwargs['method'] = method
-    if tolerance is not None:
-        if pd.__version__ < '0.17':
-            raise NotImplementedError(
-                'the tolerance argument requires pandas v0.17 or newer')
-        kwargs['tolerance'] = tolerance
-
     new_index = None
 
     if isinstance(label, slice):
@@ -207,11 +217,11 @@ def convert_label_indexer(index, label, index_name='', method=None,
             if isinstance(index, pd.MultiIndex):
                 indexer, new_index = index.get_loc_level(label.item(), level=0)
             else:
-                indexer = index.get_loc(label.item(), **kwargs)
+                indexer = get_loc(index, label.item(), method, tolerance)
         elif label.dtype.kind == 'b':
             indexer, = np.nonzero(label)
         else:
-            indexer = index.get_indexer(label, **kwargs)
+            indexer = get_indexer(index, label, method, tolerance)
             if np.any(indexer < 0):
                 raise KeyError('not all values found in index %r'
                                % index_name)
@@ -259,14 +269,26 @@ def remap_label_indexers(data_obj, indexers, method=None, tolerance=None):
     if method is not None and not isinstance(method, str):
         raise TypeError('``method`` must be a string')
 
-    pos_indexers, new_indexes = {}, {}
-    for dim, label in iteritems(get_dim_indexers(data_obj, indexers)):
-        index = data_obj[dim].to_index()
-        idxr, new_idx = convert_label_indexer(index, label,
-                                              dim, method, tolerance)
-        pos_indexers[dim] = idxr
-        if new_idx is not None:
-            new_indexes[dim] = new_idx
+    pos_indexers = {}
+    new_indexes = {}
+
+    dim_indexers = get_dim_indexers(data_obj, indexers)
+    for dim, label in iteritems(dim_indexers):
+        try:
+            index = data_obj.indexes[dim]
+        except KeyError:
+            # no index for this dimension: reuse the provided labels
+            if method is not None or tolerance is not None:
+                raise ValueError('cannot supply ``method`` or ``tolerance`` '
+                                 'when the indexed dimension does not have '
+                                 'an associated coordinate.')
+            pos_indexers[dim] = label
+        else:
+            idxr, new_idx = convert_label_indexer(index, label,
+                                                  dim, method, tolerance)
+            pos_indexers[dim] = idxr
+            if new_idx is not None:
+                new_indexes[dim] = new_idx
 
     return pos_indexers, new_indexes
 
@@ -306,47 +328,6 @@ def _index_indexer_1d(old_indexer, applied_indexer, size):
     else:
         indexer = old_indexer[applied_indexer]
     return indexer
-
-
-class LazyIntegerRange(utils.NDArrayMixin):
-
-    def __init__(self, *args, **kwdargs):
-        """
-        Parameters
-        ----------
-        See np.arange
-        """
-        self.args = args
-        self.kwdargs = kwdargs
-        assert 'dtype' not in self.kwdargs
-        # range will fail if any arguments are not integers
-        self.array = range(*args, **kwdargs)
-
-    @property
-    def shape(self):
-        return (len(self.array),)
-
-    @property
-    def dtype(self):
-        return np.dtype('int64')
-
-    @property
-    def ndim(self):
-        return 1
-
-    @property
-    def size(self):
-        return len(self.array)
-
-    def __getitem__(self, key):
-        return np.array(self)[key]
-
-    def __array__(self, dtype=None):
-        return np.arange(*self.args, **self.kwdargs)
-
-    def __repr__(self):
-        return ('%s(array=%r)' %
-                (type(self).__name__, self.array))
 
 
 class LazilyIndexedArray(utils.NDArrayMixin):
@@ -401,6 +382,46 @@ class LazilyIndexedArray(utils.NDArrayMixin):
     def __repr__(self):
         return ('%s(array=%r, key=%r)' %
                 (type(self).__name__, self.array, self.key))
+
+
+class CopyOnWriteArray(utils.NDArrayMixin):
+    def __init__(self, array):
+        self.array = array
+        self._copied = False
+
+    def _ensure_copied(self):
+        if not self._copied:
+            self.array = np.array(self.array)
+            self._copied = True
+
+    def __array__(self, dtype=None):
+        return np.asarray(self.array, dtype=dtype)
+
+    def __getitem__(self, key):
+        return type(self)(self.array[key])
+
+    def __setitem__(self, key, value):
+        self._ensure_copied()
+        self.array[key] = value
+
+
+class MemoryCachedArray(utils.NDArrayMixin):
+    def __init__(self, array):
+        self.array = array
+
+    def _ensure_cached(self):
+        if not isinstance(self.array, np.ndarray):
+            self.array = np.asarray(self.array)
+
+    def __array__(self, dtype=None):
+        self._ensure_cached()
+        return np.asarray(self.array, dtype=dtype)
+
+    def __getitem__(self, key):
+        return type(self)(self.array[key])
+
+    def __setitem__(self, key, value):
+        self.array[key] = value
 
 
 def orthogonally_indexable(array):

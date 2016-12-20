@@ -4,9 +4,8 @@ from __future__ import print_function
 import pandas as pd
 
 from .alignment import align
-from .utils import Frozen, is_dict_like
-from .variable import (as_variable, default_index_coordinate,
-                       assert_unique_multiindex_level_names)
+from .utils import Frozen
+from .variable import (as_variable, assert_unique_multiindex_level_names)
 from .pycompat import (basestring, OrderedDict)
 
 
@@ -461,10 +460,8 @@ def merge_core(objs,
     dims = calculate_dimensions(variables)
 
     for dim, size in dims.items():
-        if dim not in variables:
-            variables[dim] = default_index_coordinate(dim, size)
-
-    coord_names.update(dims)
+        if dim in variables:
+            coord_names.add(dim)
 
     ambiguous_coords = coord_names.intersection(noncoord_names)
     if ambiguous_coords:

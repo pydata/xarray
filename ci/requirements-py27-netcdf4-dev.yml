@@ -3,6 +3,7 @@ dependencies:
   - python=2.7
   - cython
   - dask
+  - distributed
   - h5py
   - pytest
   - numpy

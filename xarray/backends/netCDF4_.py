@@ -1,8 +1,8 @@
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
+import functools
 import operator
-from functools import partial
 
 import numpy as np
 
@@ -13,7 +13,7 @@ from ..core.utils import (FrozenOrderedDict, NDArrayMixin,
                           close_on_error, is_remote_uri)
 from ..core.pycompat import iteritems, basestring, OrderedDict, PY3
 
-from .common import WritableCFDataStore, robust_getitem
+from .common import WritableCFDataStore, robust_getitem, DataStorePickleMixin
 from .netcdf3 import (encode_nc3_attr_value, encode_nc3_variable,
                       maybe_convert_to_char_array)
 
@@ -26,9 +26,13 @@ _endian_lookup = {'=': 'native',
 
 
 class BaseNetCDF4Array(NDArrayMixin):
-    def __init__(self, array, is_remote=False):
-        self.array = array
-        self.is_remote = is_remote
+    def __init__(self, variable_name, datastore):
+        self.datastore = datastore
+        self.variable_name = variable_name
+
+    @property
+    def array(self):
+        return self.datastore.ds.variables[self.variable_name]
 
     @property
     def dtype(self):
@@ -42,13 +46,9 @@ class BaseNetCDF4Array(NDArrayMixin):
 
 
 class NetCDF4ArrayWrapper(BaseNetCDF4Array):
-    def __init__(self, array, is_remote=False):
-        self.array = array
-        self.is_remote = is_remote
-
     def __getitem__(self, key):
-        if self.is_remote:  # pragma: no cover
-            getitem = partial(robust_getitem, catch=RuntimeError)
+        if self.datastore.is_remote:  # pragma: no cover
+            getitem = functools.partial(robust_getitem, catch=RuntimeError)
         else:
             getitem = operator.getitem
 
@@ -176,31 +176,44 @@ def _extract_nc4_encoding(variable, raise_on_invalid=False, lsd_okay=True,
     return encoding
 
 
-class NetCDF4DataStore(WritableCFDataStore):
+def _open_netcdf4_group(filename, mode, group=None, **kwargs):
+    import netCDF4 as nc4
+
+    ds = nc4.Dataset(filename, mode=mode, **kwargs)
+
+    with close_on_error(ds):
+        ds = _nc4_group(ds, group, mode)
+
+    for var in ds.variables.values():
+        # we handle masking and scaling ourselves
+        var.set_auto_maskandscale(False)
+    return ds
+
+
+class NetCDF4DataStore(WritableCFDataStore, DataStorePickleMixin):
     """Store for reading and writing data via the Python-NetCDF4 library.
 
     This store supports NetCDF3, NetCDF4 and OpenDAP datasets.
     """
     def __init__(self, filename, mode='r', format='NETCDF4', group=None,
                  writer=None, clobber=True, diskless=False, persist=False):
-        import netCDF4 as nc4
         if format is None:
             format = 'NETCDF4'
-        ds = nc4.Dataset(filename, mode=mode, clobber=clobber,
-                         diskless=diskless, persist=persist,
-                         format=format)
-        with close_on_error(ds):
-            self.ds = _nc4_group(ds, group, mode)
+        opener = functools.partial(_open_netcdf4_group, filename, mode=mode,
+                                   group=group, clobber=clobber,
+                                   diskless=diskless, persist=persist,
+                                   format=format)
+        self.ds = opener()
         self.format = format
         self.is_remote = is_remote_uri(filename)
+        self._opener = opener
         self._filename = filename
+        self._mode = 'a' if mode == 'w' else mode
         super(NetCDF4DataStore, self).__init__(writer)
 
-    def open_store_variable(self, var):
-        var.set_auto_maskandscale(False)
+    def open_store_variable(self, name, var):
         dimensions = var.dimensions
-        data = indexing.LazilyIndexedArray(NetCDF4ArrayWrapper(
-            var, self.is_remote))
+        data = indexing.LazilyIndexedArray(NetCDF4ArrayWrapper(name, self))
         attributes = OrderedDict((k, var.getncattr(k))
                                  for k in var.ncattrs())
         _ensure_fill_value_valid(data, attributes)
@@ -227,7 +240,7 @@ class NetCDF4DataStore(WritableCFDataStore):
         return Variable(dimensions, data, attributes, encoding)
 
     def get_variables(self):
-        return FrozenOrderedDict((k, self.open_store_variable(v))
+        return FrozenOrderedDict((k, self.open_store_variable(k, v))
                                  for k, v in iteritems(self.ds.variables))
 
     def get_attrs(self):
