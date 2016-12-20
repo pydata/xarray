@@ -418,7 +418,7 @@ class TestDataArray(TestCase):
         for i in [I[0], I[:, 0], I[:3, :2],
                   I[x.values[:3]], I[x.variable[:3]], I[x[:3]], I[x[:3], y[:4]],
                   I[x.values > 3], I[x.variable > 3], I[x > 3], I[x > 3, y > 3]]:
-            self.assertVariableEqual(self.v[i], self.dv[i])
+            assert_array_equal(self.v[i], self.dv[i])
 
     def test_getitem_dict(self):
         actual = self.dv[{'x': slice(3), 'y': 0}]
@@ -919,13 +919,13 @@ class TestDataArray(TestCase):
         self.assertArrayEqual(np.asarray(self.dv), self.x)
         # test patched in methods
         self.assertArrayEqual(self.dv.astype(float), self.v.astype(float))
-        self.assertVariableEqual(self.dv.argsort(), self.v.argsort())
-        self.assertVariableEqual(self.dv.clip(2, 3), self.v.clip(2, 3))
+        assert_array_equal(self.dv.argsort(), self.v.argsort())
+        assert_array_equal(self.dv.clip(2, 3), self.v.clip(2, 3))
         # test ufuncs
         expected = deepcopy(self.ds)
         expected['foo'][:] = np.sin(self.x)
         self.assertDataArrayEqual(expected['foo'], np.sin(self.dv))
-        self.assertDataArrayEqual(self.dv, np.maximum(self.v, self.dv))
+        assert_array_equal(self.dv, np.maximum(self.v, self.dv))
         bar = Variable(['x', 'y'], np.zeros((10, 20)))
         self.assertDataArrayEqual(self.dv, np.maximum(self.dv, bar))
 

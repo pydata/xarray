@@ -222,13 +222,11 @@ def assert_xarray_allclose(a, b, rtol=1e-05, atol=1e-08):
     assert type(a) == type(b)
     if isinstance(a, xr.DataArray):
         assert_xarray_allclose(a.variable, b.variable, rtol=rtol, atol=atol)
-        assert_xarray_equal(a.coords, b.coords)
+        [assert_xarray_allclose(a[k], b[k], rtol=rtol, atol=atol) for k in a.coords]
     elif isinstance(a, xr.Dataset):
         assert sorted(a, key=str) == sorted(a, key=str)
-        assert_xarray_equal(a.coords, b.coords)
-        [assert_xarray_allclose(
-            a.variables[k], b.variables[k], rtol=rtol, atol=atol)
-         for k in a]
+        [assert_xarray_allclose(a[k], b[k], rtol=rtol, atol=atol)
+         for k in list(a.variables) + list(a.coords)]
     elif isinstance(a, xr.Variable):
         assert a.dims == b.dims
         allclose = data_allclose_or_equiv(

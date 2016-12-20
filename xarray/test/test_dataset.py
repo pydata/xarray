@@ -473,8 +473,8 @@ class TestDataset(TestCase):
 
         self.assertItemsEqual(['x', 'y', 'a', 'b'], list(data.coords))
 
-        self.assertVariableIdentical(data.coords['x'], data['x'].variable)
-        self.assertVariableIdentical(data.coords['y'], data['y'].variable)
+        self.assertVariableIdentical(data.coords['x'].variable, data['x'].variable)
+        self.assertVariableIdentical(data.coords['y'].variable, data['y'].variable)
 
         self.assertIn('x', data.coords)
         self.assertIn('a', data.coords)
@@ -1162,7 +1162,7 @@ class TestDataset(TestCase):
         self.assertDatasetIdentical(left2, right2)
 
         left2, right2 = align(left, right, join='outer')
-        self.assertVariableEqual(left2['dim3'], right2['dim3'])
+        self.assertVariableEqual(left2['dim3'].variable, right2['dim3'].variable)
         self.assertArrayEqual(left2['dim3'], union)
         self.assertDatasetIdentical(left2.sel(dim3=intersection),
                                     right2.sel(dim3=intersection))
@@ -1170,15 +1170,15 @@ class TestDataset(TestCase):
         self.assertTrue(np.isnan(right2['var3'][:2]).all())
 
         left2, right2 = align(left, right, join='left')
-        self.assertVariableEqual(left2['dim3'], right2['dim3'])
-        self.assertVariableEqual(left2['dim3'], left['dim3'])
+        self.assertVariableEqual(left2['dim3'].variable, right2['dim3'].variable)
+        self.assertVariableEqual(left2['dim3'].variable, left['dim3'].variable)
         self.assertDatasetIdentical(left2.sel(dim3=intersection),
                                     right2.sel(dim3=intersection))
         self.assertTrue(np.isnan(right2['var3'][:2]).all())
 
         left2, right2 = align(left, right, join='right')
-        self.assertVariableEqual(left2['dim3'], right2['dim3'])
-        self.assertVariableEqual(left2['dim3'], right['dim3'])
+        self.assertVariableEqual(left2['dim3'].variable, right2['dim3'].variable)
+        self.assertVariableEqual(left2['dim3'].variable, right['dim3'].variable)
         self.assertDatasetIdentical(left2.sel(dim3=intersection),
                                     right2.sel(dim3=intersection))
         self.assertTrue(np.isnan(left2['var3'][-2:]).all())
@@ -1548,7 +1548,7 @@ class TestDataset(TestCase):
     def test_getitem(self):
         data = create_test_data()
         self.assertIsInstance(data['var1'], DataArray)
-        self.assertVariableEqual(data['var1'], data.variables['var1'])
+        self.assertVariableEqual(data['var1'].variable, data.variables['var1'])
         with self.assertRaises(KeyError):
             data['notfound']
         with self.assertRaises(KeyError):
