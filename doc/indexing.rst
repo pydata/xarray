@@ -483,12 +483,12 @@ Both ``reindex_like`` and ``align`` work interchangeably between
 Multi-index handling
 --------------------
 
-Morroring pandas, xarray's ``set_index``, ``reset_index`` and
-``reorder_levels`` allow easy manipulation of ``DataArray`` or ``Dataset``
+Morroring pandas, xarray's ``.set_index``, ``.reset_index`` and
+``.reorder_levels`` allow easy manipulation of ``DataArray`` or ``Dataset``
 multi-indexes without modifying the data.
 
 You can create a multi-index from several 1-dimensional variables and/or
-coordinates using ``set_index``:
+coordinates using :py:meth:`~xarray.DataArray.set_index`:
 
 .. ipython:: python
 
@@ -506,14 +506,16 @@ These coordinates can now be used for indexing, e.g.,
 
      mda.sel(band='a')
 
-Conversely, you can use ``reset_index`` to extract multi-index levels as
-coordinates (this is mainly useful for serialization):
+Conversely, you can use :py:meth:`~xarray.DataArray.reset_index`
+to extract multi-index levels as coordinates (this is mainly useful
+for serialization):
 
 .. ipython:: python
 
      mda.reset_index('x')
 
-``reorder_levels`` allows changing the order of multi-index levels:
+:py:meth:`~xarray.DataArray.reorder_levels` allows changing the order
+of multi-index levels:
 
 .. ipython:: python
 
@@ -542,6 +544,20 @@ Otherwise, it raises an informative error:
 
     In [62]: xr.align(array, array[:2])
     ValueError: arguments without labels along dimension 'x' cannot be aligned because they have different dimension sizes: {2, 3}
+
+You can use ``.set_index`` / ``.reset_index`` to add / remove labels for one or
+several dimensions:
+
+.. ipython:: python
+
+    array['c'] = ('x', ['a', 'b', 'c'])
+    array.set_index(x='c', inplace=True)
+    array
+
+.. ipython:: python
+
+    array.reset_index('x', drop=True, inplace=True)
+    array
 
 Underlying Indexes
 ------------------

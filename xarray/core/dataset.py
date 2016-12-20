@@ -225,8 +225,8 @@ def split_indexes(
                 vars_to_create[idx.name] = Variable(d, idx)
 
     new_variables = variables.copy()
-    for v in vars_to_remove:
-        del new_variables[d]
+    for v in set(vars_to_remove):
+        del new_variables[v]
     new_variables.update(vars_to_replace)
     new_variables.update(vars_to_create)
     new_coord_names = (coord_names | set(vars_to_create)) - set(vars_to_remove)
