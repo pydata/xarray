@@ -736,16 +736,6 @@ class NetCDF4DataTest(BaseNetCDF4Test, TestCase):
             except IndexError as err:
                 self.assertIn('first by calling .load', str(err))
 
-    def test_encoding_unlimited_dims(self):
-        ds = Dataset({'x': ('y', np.arange(10.0))})
-        # also test for netcdf3
-        kwargs = dict(format='NETCDF4',
-                      encoding={'y': {'unlimited_dims': ['y']}})
-        ds.to_netcdf('test.nc', **kwargs)
-        with self.roundtrip(ds, save_kwargs=kwargs) as actual:
-            self.assertEqual(actual.x.encoding['unlimited_dims'], set('y'))
-        self.assertEqual(ds.x.encoding, {})
-
 
 @requires_netCDF4
 @requires_dask
@@ -923,6 +913,13 @@ class GenericNetCDFDataTest(CFEncodedDataTest, Only32BitTypes, TestCase):
                         with open_dataset(tmp_file,
                                           engine=read_engine) as actual:
                             self.assertDatasetAllClose(data, actual)
+
+    def test_encoding_unlimited_dims(self):
+        ds = Dataset({'x': ('y', np.arange(10.0))})
+        ds.encoding = {'unlimited_dims': ['y']}
+        ds.to_netcdf('test.nc')
+        with self.roundtrip(ds) as actual:
+            self.assertEqual(actual.x.encoding['unlimited_dims'], set('y'))
 
 
 @requires_h5netcdf

@@ -941,6 +941,11 @@ def decode_cf(obj, concat_characters=True, mask_and_scale=True,
         vars, attrs = obj.load()
         extra_coords = set()
         file_obj = obj
+        # if obj._unlimited_dimensions:
+        #     unlimited_dims = obj._unlimited_dimensions
+        #     print("unlimited_dims", unlimited_dims)
+        # else:
+        #     unlimited_dims = set()
     else:
         raise TypeError('can only decode Dataset or DataStore objects')
 
@@ -951,6 +956,7 @@ def decode_cf(obj, concat_characters=True, mask_and_scale=True,
     ds = ds.set_coords(coord_names.union(extra_coords).intersection(vars))
     ds._file_obj = file_obj
     ds.encoding = obj.encoding
+
     return ds
 
 

@@ -42,6 +42,7 @@ class NioDataStore(AbstractDataStore, DataStorePickleMixin):
         self.ds = opener()
         self._opener = opener
         self._mode = mode
+        self.encoding = {}
 
     def open_store_variable(self, name, var):
         data = indexing.LazilyIndexedArray(NioArrayWrapper(name, self))
@@ -56,6 +57,12 @@ class NioDataStore(AbstractDataStore, DataStorePickleMixin):
 
     def get_dimensions(self):
         return Frozen(self.ds.dimensions)
+
+    def get_encoding(self):
+        encoding = {}
+        encoding['unlimited_dims'] = set(
+            [k for k in self.ds.dimensions if self.ds.unlimited(k)])
+        return encoding
 
     def close(self):
         self.ds.close()

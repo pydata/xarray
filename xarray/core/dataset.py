@@ -223,7 +223,6 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         self._coord_names = set()
         self._dims = {}
         self._attrs = None
-        self._encoding = None
         self._file_obj = None
         if data_vars is None:
             data_vars = {}
@@ -233,9 +232,10 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
             self._set_init_vars_and_dims(data_vars, coords, compat)
         if attrs is not None:
             self.attrs = attrs
-        self._initialized = True
+        self._encoding = None
         if encoding is not None:
             self.encoding = encoding
+        self._initialized = True
 
     def _set_init_vars_and_dims(self, data_vars, coords, compat):
         """Set the initial value of Dataset variables and dimensions
@@ -291,12 +291,12 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         """Dictionary of global encoding attributes on this dataset
         """
         if self._encoding is None:
-            self._encoding = OrderedDict()
+            self._encoding = dict()
         return self._encoding
 
     @encoding.setter
     def encoding(self, value):
-        self._encoding = OrderedDict(value)
+        self._encoding = dict(value)
 
     @property
     def dims(self):
@@ -368,7 +368,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
 
     @classmethod
     def _construct_direct(cls, variables, coord_names, dims=None, attrs=None,
-                          file_obj=None):
+                          file_obj=None, encoding=None):
         """Shortcut around __init__ for internal use when we want to skip
         costly validation
         """
@@ -378,6 +378,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         obj._dims = dims
         obj._attrs = attrs
         obj._file_obj = file_obj
+        obj._encoding = encoding
         obj._initialized = True
         return obj
 
@@ -535,7 +536,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
     @property
     def _attr_sources(self):
         """List of places to look-up items for attribute-style access"""
-        return [self, LevelCoordinatesSource(self), self.attrs, self.encoding]
+        return [self, LevelCoordinatesSource(self), self.attrs]
 
     def __contains__(self, key):
         """The 'in' operator will return true or false depending on whether

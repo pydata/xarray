@@ -102,11 +102,9 @@ class ScipyDataStore(WritableCFDataStore, DataStorePickleMixin):
         self.ds = opener()
         self._opener = opener
         self._mode = mode
+        self.encoding = {}
 
         super(ScipyDataStore, self).__init__(writer)
-
-        self._unlimited_dimensions = set()
-        self.encoding = {}
 
     def open_store_variable(self, name, var):
         return Variable(var.dimensions, ScipyArrayWrapper(name, self),
@@ -125,6 +123,12 @@ class ScipyDataStore(WritableCFDataStore, DataStorePickleMixin):
     def get_dimensions(self):
         self._unlimited_dimensions = self._get_unlimited_dimensions()
         return Frozen(self.ds.dimensions)
+
+    def get_encoding(self):
+        encoding = {}
+        encoding['unlimited_dims'] = set(
+            [k for k, v in self.ds.dimensions.items() if v is None])
+        return encoding
 
     def set_dimension(self, name, length):
         if name in self.dimensions:
@@ -147,8 +151,11 @@ class ScipyDataStore(WritableCFDataStore, DataStorePickleMixin):
             raise ValueError('unexpected encoding for scipy backend: %r'
                              % list(variable.encoding))
 
-        self.set_necessary_dimensions(
-            variable, unlimited_dims=self._unlimited_dimensions)
+        unlimited_dims = self.encoding.get('unlimited_dims', set())
+
+        if len(unlimited_dims) > 1:
+            raise ValueError('NETCDF3 only supports one unlimited dimension')
+        self.set_necessary_dimensions(variable, unlimited_dims=unlimited_dims)
 
         data = variable.data
         # nb. this still creates a numpy array in all memory, even though we

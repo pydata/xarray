@@ -565,6 +565,8 @@ def to_netcdf(dataset, path=None, mode='w', format=None, group=None,
     sync = writer is None
 
     store = store_cls(path, mode, format, group, writer)
+    # Copy dataset encoding to datastore
+    store.encoding = dataset.encoding
     try:
         dataset.dump_to_store(store, sync=sync, encoding=encoding)
         if isinstance(path, BytesIO):

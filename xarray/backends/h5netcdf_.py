@@ -100,7 +100,10 @@ class H5NetCDFStore(WritableCFDataStore, DataStorePickleMixin):
         if dtype is str:
             dtype = h5py.special_dtype(vlen=unicode_type)
 
-        self.set_necessary_dimensions(variable)
+        unlimited_dims = self.encoding.get('unlimited_dims', set())
+        if len(unlimited_dims) > 0:
+            raise ValueError('h5netcdf does not support unlimited dimensions')
+        self.set_necessary_dimensions(variable, unlimited_dims=unlimited_dims)
 
         fill_value = attrs.pop('_FillValue', None)
         if fill_value in ['\x00']:

@@ -143,15 +143,6 @@ def _force_native_endianness(var):
     return var
 
 
-def _extract_nc4_dataset_encoding(ds):
-    import netCDF4 as nc4
-
-    encoding = {}
-    encoding['unlimited_dims'] = set(
-        [k for k, v in ds.dimensions if nc4.isunlimited(v)])
-    return encoding
-
-
 def _extract_nc4_variable_encoding(variable, raise_on_invalid=False,
                                    lsd_okay=True, backend='netCDF4'):
     encoding = variable.encoding.copy()
@@ -217,8 +208,7 @@ class NetCDF4DataStore(WritableCFDataStore, DataStorePickleMixin):
         self._opener = opener
         self._filename = filename
         self._mode = 'a' if mode == 'w' else mode
-        self._unlimited_dimensions = set()
-        self.encoding = None
+        self.encoding = {}
         super(NetCDF4DataStore, self).__init__(writer)
 
     def open_store_variable(self, name, var):
@@ -258,16 +248,14 @@ class NetCDF4DataStore(WritableCFDataStore, DataStorePickleMixin):
                                  for k in self.ds.ncattrs())
 
     def get_dimensions(self):
-        # TODO: these can be combined somehow to avoid iterating throw
-        # dimensions twice
-        self._unlimited_dimensions = self._get_unlimited_dimensions()
         return FrozenOrderedDict((k, len(v))
                                  for k, v in iteritems(self.ds.dimensions))
 
-    def _get_unlimited_dimensions(self):
-        import netCDF4 as nc4
-        return set(
-            k for k, v in iteritems(self.ds.dimensions) if nc4.isunlimited(v))
+    def get_encoding(self):
+        encoding = {}
+        encoding['unlimited_dims'] = set(
+            [k for k, v in self.ds.dimensions.items() if v.isunlimited()])
+        return encoding
 
     def set_dimension(self, name, length):
         self.ds.createDimension(name, size=length)
@@ -288,8 +276,8 @@ class NetCDF4DataStore(WritableCFDataStore, DataStorePickleMixin):
             variable = encode_nc3_variable(variable)
             datatype = variable.dtype
 
-        self.set_necessary_dimensions(
-            variable, unlimited_dims=self._unlimited_dimensions)
+        unlimited_dims = self.encoding.get('unlimited_dims', set())
+        self.set_necessary_dimensions(variable, unlimited_dims=unlimited_dims)
 
         fill_value = attrs.pop('_FillValue', None)
         if fill_value in ['', '\x00']:
