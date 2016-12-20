@@ -917,7 +917,6 @@ class GenericNetCDFDataTest(CFEncodedDataTest, Only32BitTypes, TestCase):
     def test_encoding_unlimited_dims(self):
         ds = Dataset({'x': ('y', np.arange(10.0))})
         ds.encoding = {'unlimited_dims': ['y']}
-        ds.to_netcdf('test.nc')
         with self.roundtrip(ds) as actual:
             self.assertEqual(actual.x.encoding['unlimited_dims'], set('y'))
 

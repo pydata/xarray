@@ -58,6 +58,7 @@ class H5NetCDFStore(WritableCFDataStore, DataStorePickleMixin):
         self._opener = opener
         self._filename = filename
         self._mode = mode
+        self.encoding = {}
         super(H5NetCDFStore, self).__init__(writer)
 
     def open_store_variable(self, name, var):
