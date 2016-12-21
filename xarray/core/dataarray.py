@@ -788,8 +788,8 @@ class DataArray(AbstractArray, BaseDataObject):
             method=method, tolerance=tolerance, copy=copy, **indexers)
         return self._from_temp_dataset(ds)
 
-    def rename(self, new_name_or_dims_dict, new_dims_dict=None):
-        """Returns a new DataArray with renamed coordinates and/or a new name.
+    def rename(self, new_name_or_dims_dict):
+        """Returns a new DataArray with renamed coordinates or a new name.
 
 
         Parameters
@@ -799,36 +799,23 @@ class DataArray(AbstractArray, BaseDataObject):
             names to new names for coordinates. Otherwise, use the argument
             as the new name for this array.
 
-        new_dims_dict : dict-like
-            Used as a mapping from old names to new names for coordinates.
-
 
         Returns
         -------
         renamed : DataArray
-            Array with renamed name and/or coordinates.
+            Renamed array or array with renamed coordinates.
 
         See Also
         --------
         Dataset.rename
         DataArray.swap_dims
         """
-        datarray = self
         if utils.is_dict_like(new_name_or_dims_dict):
-            if (new_dims_dict is not None) \
-               and utils.is_dict_like(new_dims_dict):
-                raise TypeError('`new_dims_dict` already passed as first argument.')
             dims_dict = new_name_or_dims_dict.copy()
-            dataset = datarray._to_temp_dataset().rename(dims_dict)
-            return datarray._from_temp_dataset(dataset)
+            dataset = self._to_temp_dataset().rename(dims_dict)
+            return self._from_temp_dataset(dataset)
         else:
-            new_name = new_name_or_dims_dict
-            datarray = datarray._replace(name=new_name)
-        if new_dims_dict is not None:
-            dims_dict = new_dims_dict.copy()
-            dataset = datarray._to_temp_dataset().rename(dims_dict)
-            datarray = datarray._from_temp_dataset(dataset)
-        return datarray
+            return self._replace(name=new_name_or_dims_dict)
 
     def swap_dims(self, dims_dict):
         """Returns a new DataArray with swapped dimensions.
