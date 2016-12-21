@@ -364,7 +364,7 @@ def array_repr(arr):
 def _put_lines(buf, lines):
     '''see also from pandas.formats.format import _put_lines'''
     if any(isinstance(x, basestring) for x in lines):
-        lines = [basestring(x) for x in lines]
+        lines = [ensure_valid_repr(x) for x in lines]
     buf.write('\n'.join(lines))
 
 
