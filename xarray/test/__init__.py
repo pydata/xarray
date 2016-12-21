@@ -85,7 +85,7 @@ def requires_pydap(test):
 
 
 def requires_netCDF4(test):
-    return test if has_netCDF4 else pytest.mark.skip('requires dask')(test)
+    return test if has_netCDF4 else pytest.mark.skip('requires netCDF4')(test)
 
 
 def requires_h5netcdf(test):
@@ -103,8 +103,6 @@ def requires_scipy_or_netCDF4(test):
 
 def requires_dask(test):
     return test if has_dask else pytest.mark.skip('requires dask')(test)
-
-
 
 
 def requires_bottleneck(test):
