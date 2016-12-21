@@ -74,40 +74,40 @@ except ImportError:
 
 
 def requires_scipy(test):
-    return test if has_scipy else unittest.skip('requires scipy')(test)
+    return test if has_scipy else pytest.mark.skip('requires scipy')(test)
 
 
 def requires_pydap(test):
-    return test if has_pydap else unittest.skip('requires pydap.client')(test)
+    return test if has_pydap else pytest.mark.skip('requires pydap.client')(test)
 
 
 def requires_netCDF4(test):
-    return test if has_netCDF4 else unittest.skip('requires netCDF4')(test)
+    return test if has_netCDF4 else pytest.mark.skip('requires dask')(test)
 
 
 def requires_h5netcdf(test):
-    return test if has_h5netcdf else unittest.skip('requires h5netcdf')(test)
+    return test if has_h5netcdf else pytest.mark.skip('requires h5netcdf')(test)
 
 
 def requires_pynio(test):
-    return test if has_pynio else unittest.skip('requires pynio')(test)
+    return test if has_pynio else pytest.mark.skip('requires pynio')(test)
 
 
 def requires_scipy_or_netCDF4(test):
     return (test if has_scipy or has_netCDF4
-            else unittest.skip('requires scipy or netCDF4')(test))
+            else pytest.mark.skip('requires scipy or netCDF4')(test))
 
 
 def requires_dask(test):
-    return test if has_dask else pytest.mark.skip('dask')
+    return test if has_dask else pytest.mark.skip('requires dask')(test)
 
 
 def requires_matplotlib(test):
-    return test if has_matplotlib else unittest.skip('requires matplotlib')(test)
+    return test if has_matplotlib else pytest.mark.skip('requires matplotlib')(test)
 
 
 def requires_bottleneck(test):
-    return test if has_bottleneck else unittest.skip('requires bottleneck')(test)
+    return test if has_bottleneck else pytest.mark.skip('requires bottleneck')(test)
 
 
 def decode_string_data(data):
@@ -220,18 +220,23 @@ def assert_xarray_allclose(a, b, rtol=1e-05, atol=1e-08):
     import xarray as xr
     ___tracebackhide__ = True  # noqa: F841
     assert type(a) == type(b)
-    if isinstance(a, xr.DataArray):
-        assert_xarray_allclose(a.variable, b.variable, rtol=rtol, atol=atol)
-        [assert_xarray_allclose(a[k], b[k], rtol=rtol, atol=atol) for k in a.coords]
-    elif isinstance(a, xr.Dataset):
-        assert sorted(a, key=str) == sorted(a, key=str)
-        [assert_xarray_allclose(a[k], b[k], rtol=rtol, atol=atol)
-         for k in list(a.variables) + list(a.coords)]
-    elif isinstance(a, xr.Variable):
+    if isinstance(a, xr.Variable):
         assert a.dims == b.dims
         allclose = data_allclose_or_equiv(
             a.values, b.values, rtol=rtol, atol=atol)
         assert allclose, '{}\n{}'.format(a.values, b.values)
+    elif isinstance(a, xr.DataArray):
+        if hasattr(a, 'variables'):
+            [assert_xarray_allclose(a[k], b[k], rtol=rtol, atol=atol) for k in a.variables]
+        else:
+            # unsure if we should need this branch
+            # https://github.com/pydata/xarray/issues/1152
+            assert_xarray_allclose(a.variable, b.variable)
+    elif isinstance(a, xr.Dataset):
+        assert sorted(a, key=str) == sorted(a, key=str)
+        [assert_xarray_allclose(a[k], b[k], rtol=rtol, atol=atol)
+         for k in list(a.variables) + list(a.coords)]
+
     else:
         raise TypeError('{} not supported by assertion comparison'
                         .format(type(a)))

@@ -26,7 +26,7 @@ from xarray.core.pycompat import iteritems, PY2, PY3
 
 from . import (TestCase, requires_scipy, requires_netCDF4, requires_pydap,
                requires_scipy_or_netCDF4, requires_dask, requires_h5netcdf,
-               requires_pynio, has_netCDF4, has_scipy)
+               requires_pynio, has_netCDF4, has_scipy, assert_xarray_allclose)
 from .test_dataset import create_test_data
 
 try:
@@ -694,7 +694,6 @@ class BaseNetCDF4Test(CFEncodedDataTest):
 @requires_netCDF4
 class NetCDF4DataTest(BaseNetCDF4Test, TestCase):
 
-    #pytest.importorskip('netCDF4')
 
     @contextlib.contextmanager
     def create_store(self):
@@ -915,7 +914,12 @@ class GenericNetCDFDataTest(CFEncodedDataTest, Only32BitTypes, TestCase):
                     for read_engine in valid_engines:
                         with open_dataset(tmp_file,
                                           engine=read_engine) as actual:
-                            self.assertDatasetAllClose(data, actual)
+                            # hack to allow test to work:
+                            # coord comes back as DataArray rather than coord, and so
+                            # need to loop through here rather than in the test
+                            # function (or we get recursion)
+                            [assert_xarray_allclose(data[k].variable, actual[k].variable)
+                             for k in data]
 
 
 @requires_h5netcdf

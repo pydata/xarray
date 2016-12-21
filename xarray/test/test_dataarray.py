@@ -67,7 +67,7 @@ class TestDataArray(TestCase):
         for attr in ['dims', 'dtype', 'shape', 'size', 'nbytes', 'ndim', 'attrs']:
             self.assertEqual(getattr(self.dv, attr), getattr(self.v, attr))
         self.assertEqual(len(self.dv), len(self.v))
-        self.assertVariableEqual(self.dv, self.v)
+        self.assertVariableEqual(self.dv.variable, self.v)
         self.assertItemsEqual(list(self.dv.coords), list(self.ds.coords))
         for k, v in iteritems(self.dv.coords):
             self.assertArrayEqual(v, self.ds.coords[k])
@@ -650,7 +650,7 @@ class TestDataArray(TestCase):
                 if renamed_dim:
                     self.assertEqual(da.dims[0], renamed_dim)
                     da = da.rename({renamed_dim: 'x'})
-                self.assertVariableIdentical(da, expected_da)
+                self.assertVariableIdentical(da.variable, expected_da.variable)
                 self.assertVariableNotEqual(da['x'], expected_da['x'])
 
         test_sel(('a', 1, -1), 0)
@@ -1139,10 +1139,10 @@ class TestDataArray(TestCase):
 
     def test_transpose(self):
         self.assertVariableEqual(self.dv.variable.transpose(),
-                                 self.dv.transpose())
+                                 self.dv.transpose().variable)
 
     def test_squeeze(self):
-        self.assertVariableEqual(self.dv.variable.squeeze(), self.dv.squeeze())
+        self.assertVariableEqual(self.dv.variable.squeeze(), self.dv.squeeze().variable)
 
     def test_squeeze_drop(self):
         array = DataArray([1], [('x', [0])])
@@ -1249,7 +1249,7 @@ class TestDataArray(TestCase):
         expected = DataArray([0, 0], {'x': coords['x'], 'c': -999}, 'x')
         self.assertDataArrayIdentical(expected, actual)
 
-        self.assertVariableEqual(self.dv.reduce(np.mean, 'x'),
+        self.assertVariableEqual(self.dv.reduce(np.mean, 'x').variable,
                                  self.v.reduce(np.mean, 'x'))
 
         orig = DataArray([[1, 0, np.nan], [3, 0, 3]], coords, dims=['x', 'y'])

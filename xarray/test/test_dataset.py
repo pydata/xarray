@@ -439,7 +439,7 @@ class TestDataset(TestCase):
         a['x'] = ('x', vec, attributes)
         self.assertTrue('x' in a.coords)
         self.assertIsInstance(a.coords['x'].to_index(), pd.Index)
-        self.assertVariableIdentical(a.coords['x'], a.variables['x'])
+        self.assertVariableIdentical(a.coords['x'].variable, a.variables['x'])
         b = Dataset()
         b['x'] = ('x', vec, attributes)
         self.assertVariableIdentical(a['x'], b['x'])
@@ -1012,7 +1012,8 @@ class TestDataset(TestCase):
                 if renamed_dim:
                     self.assertEqual(ds['var'].dims[0], renamed_dim)
                     ds = ds.rename({renamed_dim: 'x'})
-                self.assertVariableIdentical(ds['var'], expected_ds['var'])
+                self.assertVariableIdentical(ds['var'].variable,
+                                             expected_ds['var'].variable)
                 self.assertVariableNotEqual(ds['x'], expected_ds['x'])
 
         test_sel(('a', 1, -1), 0)
@@ -1396,7 +1397,7 @@ class TestDataset(TestCase):
                     dims[dims.index(name)] = newname
 
             self.assertVariableEqual(Variable(dims, v.values, v.attrs),
-                                     renamed[k])
+                                     renamed[k].variable.to_base_variable())
             self.assertEqual(v.encoding, renamed[k].encoding)
             self.assertEqual(type(v), type(renamed.variables[k]))
 
@@ -1644,9 +1645,9 @@ class TestDataset(TestCase):
 
     def test_slice_virtual_variable(self):
         data = create_test_data()
-        self.assertVariableEqual(data['time.dayofyear'][:10],
+        self.assertVariableEqual(data['time.dayofyear'][:10].variable,
                                  Variable(['time'], 1 + np.arange(10)))
-        self.assertVariableEqual(data['time.dayofyear'][0], Variable([], 1))
+        self.assertVariableEqual(data['time.dayofyear'][0].variable, Variable([], 1))
 
     def test_setitem(self):
         # assign a variable
