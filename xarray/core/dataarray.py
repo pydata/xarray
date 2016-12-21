@@ -788,37 +788,47 @@ class DataArray(AbstractArray, BaseDataObject):
             method=method, tolerance=tolerance, copy=copy, **indexers)
         return self._from_temp_dataset(ds)
 
-    def rename(self, new_name_or_name_dict):
+    def rename(self, new_name_or_dims_dict, new_dims_dict=None):
         """Returns a new DataArray with renamed coordinates and/or a new name.
 
 
         Parameters
         ----------
-        new_name_or_name_dict : str or dict-like
+        new_name_or_dims_dict : str or dict-like
             If the argument is dict-like, it it used as a mapping from old
-            names to new names for coordinates (and/or this array itself).
-            Otherwise, use the argument as the new name for this array.
+            names to new names for coordinates. Otherwise, use the argument
+            as the new name for this array.
+
+        new_dims_dict : dict-like
+            Used as a mapping from old names to new names for coordinates.
+
 
         Returns
         -------
         renamed : DataArray
-            Renamed array or array with renamed coordinates.
+            Array with renamed name and/or coordinates.
 
         See Also
         --------
         Dataset.rename
         DataArray.swap_dims
         """
-        if utils.is_dict_like(new_name_or_name_dict):
-            name_dict = new_name_or_name_dict.copy()
-            if self.name in self.dims:
-                name = name_dict.get(self.name, self.name)
-            else:
-                name = name_dict.pop(self.name, self.name)
-            dataset = self._to_temp_dataset().rename(name_dict)
-            return self._from_temp_dataset(dataset, name)
+        datarray = self
+        if utils.is_dict_like(new_name_or_dims_dict):
+            if (new_dims_dict is not None) \
+               and utils.is_dict_like(new_dims_dict):
+                raise TypeError('`new_dims_dict` already passed as first argument.')
+            dims_dict = new_name_or_dims_dict.copy()
+            dataset = datarray._to_temp_dataset().rename(dims_dict)
+            return datarray._from_temp_dataset(dataset)
         else:
-            return self._replace(name=new_name_or_name_dict)
+            new_name = new_name_or_dims_dict
+            datarray = datarray._replace(name=new_name)
+        if new_dims_dict is not None:
+            dims_dict = new_dims_dict.copy()
+            dataset = datarray._to_temp_dataset().rename(dims_dict)
+            datarray = datarray._from_temp_dataset(dataset)
+        return datarray
 
     def swap_dims(self, dims_dict):
         """Returns a new DataArray with swapped dimensions.

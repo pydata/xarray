@@ -21,6 +21,10 @@ v0.9.0 (unreleased)
 Breaking changes
 ~~~~~~~~~~~~~~~~
 
+- ``DataArray.rename()`` behavior changed to strictly change the ``DataArray.name``
+  if called with string argument, or strictly change coordinate names if called with
+  dict-like argument.
+
 - By default ``to_netcdf()`` add a ``_FillValue = NaN`` attributes to float types.
 
 - Index coordinates for each dimensions are now optional, and no longer created
