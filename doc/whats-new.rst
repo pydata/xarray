@@ -64,6 +64,7 @@ Breaking changes
 - Coordinates used to index a dimension are now loaded eagerly into
   :py:class:`pandas.Index` objects, instead of loading the values lazily.
   By `Guido Imperiale <https://github.com/crusaderky>`_.
+- xarray no longer supports python 3.3
 
 Deprecations
 ~~~~~~~~~~~~
