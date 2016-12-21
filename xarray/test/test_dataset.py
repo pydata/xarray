@@ -194,13 +194,14 @@ class TestDataset(TestCase):
         actual = unicode_type(data)
         self.assertEqual(expected, actual)
 
-    def test_attr_info(self):
-        data = create_test_data(seed=123)
-        data.attrs['foo'] = 'bar'
+    def test_info(self):
+        ds = create_test_data(seed=123)
+        ds = ds.drop('dim3')  # string type prints differently in PY2 vs PY3
+        ds.attrs['foo'] = 'bar'
         buf = StringIO()
-        data.attr_info(buf=buf)
+        ds.info(buf=buf)
 
-        expected = dedent('''\
+        expected = dedent(u'''\
         xarray.Dataset {
         dimensions:
         	dim1 = 8 ;
@@ -211,7 +212,6 @@ class TestDataset(TestCase):
         variables:
         	datetime64[ns] time(time) ;
         	float64 dim2(dim2) ;
-        	<U1 dim3(dim3) ;
         	float64 var1(dim1, dim2) ;
         		var1:foo = variable ;
         	float64 var2(dim1, dim2) ;
@@ -223,8 +223,8 @@ class TestDataset(TestCase):
         // global attributes:
         	:foo = bar ;
         }''')
-
-        self.assertEqual(expected, buf.getvalue())
+        actual = buf.getvalue()
+        self.assertEqual(expected, actual)
         buf.close()
 
     def test_constructor(self):

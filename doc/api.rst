@@ -411,6 +411,7 @@ Dataset methods
    Dataset.load
    Dataset.chunk
    Dataset.filter_by_attrs
+   Dataset.info
 
 DataArray methods
 -----------------

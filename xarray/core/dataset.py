@@ -804,7 +804,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
     def __unicode__(self):
         return formatting.dataset_repr(self)
 
-    def attr_info(self, buf=None):
+    def info(self, buf=None):
         """
         Concise summary of a Dataset variables and attributes.
         Parameters
