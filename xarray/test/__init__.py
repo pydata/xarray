@@ -72,6 +72,8 @@ try:
 except ImportError:
     has_bottleneck = False
 
+# Instead of using these decorators, use `pytest.importorskip('package')` inline
+# These can go in a file, a function, or a `setup` method of a class
 
 def requires_scipy(test):
     return test if has_scipy else pytest.mark.skip('requires scipy')(test)
