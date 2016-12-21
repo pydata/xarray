@@ -694,7 +694,6 @@ class BaseNetCDF4Test(CFEncodedDataTest):
 @requires_netCDF4
 class NetCDF4DataTest(BaseNetCDF4Test, TestCase):
 
-
     @contextlib.contextmanager
     def create_store(self):
         with create_tmp_file() as tmp_file:

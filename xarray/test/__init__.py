@@ -72,8 +72,9 @@ try:
 except ImportError:
     has_bottleneck = False
 
-# Instead of using these decorators, use `pytest.importorskip('package')` inline
-# These can go in a file, a function, or a `setup` method of a class
+# slighly simpler construction that the full functions.
+# Generally `pytest.importorskip('package')` inline is even easier
+requires_matplotlib = pytest.mark.skipif(not has_matplotlib, reason='requires matplotlib')
 
 def requires_scipy(test):
     return test if has_scipy else pytest.mark.skip('requires scipy')(test)
@@ -104,8 +105,6 @@ def requires_dask(test):
     return test if has_dask else pytest.mark.skip('requires dask')(test)
 
 
-def requires_matplotlib(test):
-    return test if has_matplotlib else pytest.mark.skip('requires matplotlib')(test)
 
 
 def requires_bottleneck(test):
