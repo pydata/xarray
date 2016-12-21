@@ -144,6 +144,10 @@ Enhancements
   :py:class:`FacetGrid` and :py:func:`~xarray.plot.plot`, so axes
   sharing can be disabled for polar plots.
   By `Bas Hoonhout <https://github.com/hoonhout>`_.
+- New utility functions :py:func:`~xarray.test.assert_xarray_equal`,
+  :py:func:`~xarray.test.assert_xarray_identical`, and
+  :py:func:`~xarray.test.assert_xarray_allclose` for asserting relationships
+  between xarray objects, designed for use in a pytest test suite.
 - ``figsize``, ``size`` and ``aspect`` plot arguments are now supported for all
   plots (:issue:`897`). See :ref:`plotting.figsize` for more details.
   By `Stephan Hoyer <https://github.com/shoyer>`_ and
