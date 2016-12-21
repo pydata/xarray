@@ -12,6 +12,10 @@ try:
     import dask.array as da
 except ImportError:
     pass
+try:
+    from io import StringIO
+except ImportError:
+    from cStringIO import StringIO
 
 import numpy as np
 import pandas as pd
@@ -189,6 +193,39 @@ class TestDataset(TestCase):
             å: ∑""" % u'ba®')
         actual = unicode_type(data)
         self.assertEqual(expected, actual)
+
+    def test_attr_info(self):
+        data = create_test_data(seed=123)
+        data.attrs['foo'] = 'bar'
+        buf = StringIO()
+        data.attr_info(buf=buf)
+
+        expected = dedent('''\
+        xarray.Dataset {
+        dimensions:
+        	dim1 = 8 ;
+        	dim2 = 9 ;
+        	dim3 = 10 ;
+        	time = 20 ;
+
+        variables:
+        	datetime64[ns] time(time) ;
+        	float64 dim2(dim2) ;
+        	<U1 dim3(dim3) ;
+        	float64 var1(dim1, dim2) ;
+        		var1:foo = variable ;
+        	float64 var2(dim1, dim2) ;
+        		var2:foo = variable ;
+        	float64 var3(dim3, dim1) ;
+        		var3:foo = variable ;
+        	int64 numbers(dim3) ;
+
+        // global attributes:
+        	:foo = bar ;
+        }''')
+
+        self.assertEqual(expected, buf.getvalue())
+        buf.close()
 
     def test_constructor(self):
         x1 = ('x', 2 * np.arange(100))

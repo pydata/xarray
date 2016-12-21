@@ -5,6 +5,8 @@ import functools
 from collections import Mapping
 from numbers import Number
 
+import sys
+
 import numpy as np
 import pandas as pd
 
@@ -801,6 +803,42 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
 
     def __unicode__(self):
         return formatting.dataset_repr(self)
+
+    def attr_info(self, buf=None):
+        """
+        Concise summary of a Dataset variables and attributes.
+        Parameters
+        ----------
+        buf : writable buffer, defaults to sys.stdout
+
+        See Also
+        --------
+        pandas.DataFrame.assign
+        netCDF's ncdump
+        """
+
+        if buf is None:  # pragma: no cover
+            buf = sys.stdout
+
+        lines = []
+        lines.append('xarray.Dataset {')
+        lines.append('dimensions:')
+        for name, size in self.dims.items():
+            lines.append('\t{name} = {size} ;'.format(name=name, size=size))
+        lines.append('\nvariables:')
+        for name, da in self.variables.items():
+            dims = ', '.join(da.dims)
+            lines.append('\t{type} {name}({dims}) ;'.format(
+                type=da.dtype, name=name, dims=dims))
+            for k, v in da.attrs.items():
+                lines.append('\t\t{name}:{k} = {v} ;'.format(name=name, k=k,
+                                                             v=v))
+        lines.append('\n// global attributes:')
+        for k, v in self.attrs.items():
+            lines.append('\t:{k} = {v} ;'.format(k=k, v=v))
+        lines.append('}')
+
+        formatting._put_lines(buf, lines)
 
     @property
     def chunks(self):

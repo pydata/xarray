@@ -16,7 +16,7 @@ from pandas.tslib import OutOfBoundsDatetime
 
 from .options import OPTIONS
 from .pycompat import (
-    PY2, unicode_type, bytes_type, dask_array_type, OrderedDict)
+    PY2, unicode_type, bytes_type, dask_array_type, OrderedDict, basestring)
 
 
 def pretty_print(x, numchars):
@@ -359,6 +359,13 @@ def array_repr(arr):
         summary.append(attrs_repr(arr.attrs))
 
     return u'\n'.join(summary)
+
+
+def _put_lines(buf, lines):
+    '''see also from pandas.formats.format import _put_lines'''
+    if any(isinstance(x, basestring) for x in lines):
+        lines = [basestring(x) for x in lines]
+    buf.write('\n'.join(lines))
 
 
 def dataset_repr(ds):
