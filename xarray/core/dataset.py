@@ -1047,7 +1047,6 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         coords = relevant_keys(self.coords)
         dim_coord = None
 
-
         # all the indexers should be iterables
         keys = indexers.keys()
         indexers = [(k, np.asarray(v)) for k, v in iteritems(indexers)]
@@ -1091,39 +1090,46 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
             points_len = lengths.pop()
             dim_coord = np.arange(points_len)
 
-
         indexers_dict = dict(indexers)
         non_indexed_dims = set(self.dims) - indexer_dims
 
-        # To avoid edge cases in numpy want to transpose to ensure the indexed dimensions are firse
+        # To avoid edge cases in numpy want to transpose to ensure the indexed dimensions are first
         # However transpose is not lazy, so want to avoid using it for dask case (??)
-        reordered = self.transpose(*(list(indexer_dims) + list(non_indexed_dims)))
+        # reordered = self.transpose(*(list(indexer_dims) + list(non_indexed_dims)))
 
         variables = OrderedDict()
 
         for name in data_vars:
             var = self.variables[name]
+            # Transpose the var to ensure that the indexed dims come first
+            # These dims will be collapsed in the output.
+            var = var.transpose(*(list(d for d in indexer_dims if d in var.dims) +
+                                  list(d for d in non_indexed_dims if d in var.dims)))
+
             # add 'select all' slices for the non-indexed dimensions
             slc = [indexers_dict[k] if k in indexers_dict else slice(None) for k in var.dims]
 
-            # Need to preserve order for dims and coords...
-            dim_added = False
-            var_coords = []
-            var_dims = []
+            var_coords = [dim_coord] + [self.variables[coord] for coord in var.dims if coord not in indexers_dict]
+            var_dims = [dim] + [d for d in var.dims if d in non_indexed_dims]
             # FIXME (shoyer) instead reorder the axes to make sure the indexed dimensions come first to avoid weird behaviour in numpy edge cases
-            for k in var.dims:
-                # collapse dims that are in the indexer
-                # add coords for others
-                if k not in indexers_dict:
-                    var_dims.append(k)
-                    var_coords.append(self.variables[k])
-                else:
-                    # To make sure it gets added the first time we hit an index dim, but only add once
-                    if not dim_added:
-                        # add generated points to replace collapsed dims...
-                        var_coords.append(dim_coord)
-                        var_dims.append(dim)
-                        dim_added = True
+            # Note that transpose is not lazy however so this could create performance problems
+            # Need to preserve order for dims and coords...
+            # dim_added = False
+            # var_coords = []
+            # var_dims = []
+            # for k in var.dims:
+            #     # collapse dims that are in the indexer
+            #     # add coords for others
+            #     if k not in indexers_dict:
+            #         var_dims.append(k)
+            #         var_coords.append(self.variables[k])
+            #     else:
+            #         # To make sure it gets added the first time we hit an index dim, but only add once
+            #         if not dim_added:
+            #             # add generated points to replace collapsed dims...
+            #             var_coords.append(dim_coord)
+            #             var_dims.append(dim)
+            #             dim_added = True
 
             if hasattr(var.data, 'vindex'):
                 # Special case for dask backed arrays to use vectorised list indexing
@@ -1132,16 +1138,18 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
                 # Otherwise assume backend is numpy array with 'fancy' indexing
                 sel = var.data[tuple(slc)]
 
-
             variables[name] = DataArray(sel,
                                         coords=var_coords,
                                         dims=var_dims,
                                         name=name)
 
-        # Add sliced versions of the standard dimensions
+        # Add sliced versions of the indexed dimensions
+        # (only if they were in the original)
         for dim, slc in indexers_dict.items():
             if dim not in variables:
-                variables[dim] = self.variables[dim][slc]
+                # variables[dim] = self.variables[dim][slc]
+                # print(self.variables[dim])
+                pass
 
         # Add sliced versions of coordinates that themselves depend on other dimensions
         # which may also have been indexed
@@ -1149,19 +1157,19 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
             if c not in variables:
                 var = self.variables[c]
                 if any(d in indexer_dims for d in var.dims):
+                    # If the coord variable depends on an indexed dimension, slice it
                     coord_dim = var.dims[0]  # should just be one?
                     variables[c] = var[indexers_dict[coord_dim]]
 
         # now just add anything we didn't have already (behaviour is to preserve all non-indexed dimensions)
         for name, var in self.variables.items():
             if name not in variables:
-                variables[name] = var
+                pass
+                # variables[name] = var
+        # print(variables)
         dset = Dataset(variables)
-
-        print(dset)
         return dset
 
-    # For now, early return with original version if any of the data_vars are not dask backed...
     # return concat([self.isel(**d) for d in
     #                                   [dict(zip(keys, inds)) for inds in
     #                                    zip(*[v for k, v in indexers])]],
