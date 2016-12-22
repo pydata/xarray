@@ -811,8 +811,7 @@ class DataArray(AbstractArray, BaseDataObject):
         DataArray.swap_dims
         """
         if utils.is_dict_like(new_name_or_name_dict):
-            name_dict = new_name_or_name_dict.copy()
-            dataset = self._to_temp_dataset().rename(name_dict)
+            dataset = self._to_temp_dataset().rename(new_name_or_name_dict)
             return self._from_temp_dataset(dataset)
         else:
             return self._replace(name=new_name_or_name_dict)
