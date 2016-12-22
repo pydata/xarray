@@ -1042,7 +1042,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
 
         data_vars = relevant_keys(self.data_vars)
         coords = relevant_keys(self.coords)
-        print(coords)
+        dim_coord = None
 
         # all the indexers should be iterables
         keys = indexers.keys()
@@ -1073,12 +1073,20 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
                 # dim already exists
                 raise ValueError('Existing dimensions are not valid choices '
                                  'for the dim argument in sel_points')
+            # replace the array dim
+            dim_coord = dim.copy()
+            dim = dim.name
 
         if not utils.is_scalar(dim) and not isinstance(dim, DataArray):
-            dim = as_variable(dim, name='points')
+            name = 'points' if not hasattr(dim, 'name') else dim.name
+            dim_coord = as_variable(dim, name=name)
+            dim = name
 
+        if dim_coord is None:
+            # need to generate a new dimension if not provided
+            points_len = lengths.pop()
+            dim_coord = np.arange(points_len)
         # Early return in case we don't have dask dataframe
-        # if not hasattr(self.variables[list(self.variables.keys())[0]].data, 'vindex'):
         #     return concat([self.isel(**d) for d in
         #                        [dict(zip(keys, inds)) for inds in
         #                         zip(*[v for k, v in indexers])]],
@@ -1087,8 +1095,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         indexers_dict = dict(indexers)
         # non_indexed = list(set(self.dims) - indexer_dims)
 
-        # need to generate a new dimension
-        points_len = lengths.pop()
+
         variables = OrderedDict()
 
         # FIXME Think I need to check each variable
@@ -1114,7 +1121,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
                     # To make sure it gets added the first time we hit an index dim, but only add once
                     if not dim_added:
                         # add generated points to replace collapsed dims...
-                        var_coords.append(np.arange(points_len))
+                        var_coords.append(dim_coord)
                         var_dims.append(dim)
                         dim_added = True
 
@@ -1132,7 +1139,6 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
                 #                                   [dict(zip(keys, inds)) for inds in
                 #                                    zip(*[v for k, v in indexers])]],
                 #                                  dim=dim, coords=coords, data_vars=data_vars)
-
             variables[name] = DataArray(sel,
                                         coords=var_coords,
                                         dims=var_dims,
@@ -1160,9 +1166,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
                 variables[name] = var
         dset = Dataset(variables)
         # print('------')
-        # print(self)
-        #
-        # print(dset)
+        print(dset)
         return dset
 
 
