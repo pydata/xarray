@@ -198,7 +198,7 @@ def assert_xarray_equal(a, b):
     assert type(a) == type(b)
     if isinstance(a, (xr.Variable, xr.DataArray, xr.Dataset)):
         assert a.equals(b), '{}\n{}'.format(a, b)
-    else:
+    else:  
         raise TypeError('{} not supported by assertion comparison'
                         .format(type(a)))
 

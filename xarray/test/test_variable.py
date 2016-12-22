@@ -318,7 +318,7 @@ class VariableSubclassTestCases(object):
             self.assertVariableIdentical(expected, actual)
 
     def test_encoding_preserved(self):
-        expected = Variable('x', range(3), {'foo': 1}, {'bar': 2})
+        expected = self.cls('x', range(3), {'foo': 1}, {'bar': 2})
         for actual in [expected.T,
                        expected[...],
                        expected.squeeze(),
