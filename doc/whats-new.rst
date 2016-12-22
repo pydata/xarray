@@ -56,7 +56,7 @@ Breaking changes
   By `Guido Imperiale <https://github.com/crusaderky>`_ and
   `Stephan Hoyer <https://github.com/shoyer>`_.
 - Pickling a ``Dataset`` or ``DataArray`` linked to a file on disk no longer
-  caches its values into memory before pickling :issue:`1128`. Instead, pickle
+  caches its values into memory before pickling (:issue:`1128`). Instead, pickle
   stores file paths and restores objects by reopening file references. This
   enables preliminary, experimental use of xarray for opening files with
   `dask.distributed <https://distributed.readthedocs.io>`_.
@@ -205,6 +205,10 @@ Bug fixes
 
 - Fixed a bug with facetgrid (the ``norm`` keyword was ignored, :issue:`1159`).
   By `Fabien Maussion <https://github.com/fmaussion>`_.
+
+- Resolved a concurrency bug that could cause Python to crash when
+  simultaneously reading and writing netCDF4 files with dask (:issue:`1172`).
+  By `Stephan Hoyer <https://github.com/shoyer>`_.
 
 .. _whats-new.0.8.2:
 
