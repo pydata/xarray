@@ -1044,6 +1044,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         coords = relevant_keys(self.coords)
         dim_coord = None
 
+
         # all the indexers should be iterables
         keys = indexers.keys()
         indexers = [(k, np.asarray(v)) for k, v in iteritems(indexers)]
@@ -1086,21 +1087,17 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
             # need to generate a new dimension if not provided
             points_len = lengths.pop()
             dim_coord = np.arange(points_len)
-        # Early return in case we don't have dask dataframe
-        #     return concat([self.isel(**d) for d in
-        #                        [dict(zip(keys, inds)) for inds in
-        #                         zip(*[v for k, v in indexers])]],
-        #                       dim=dim, coords=coords, data_vars=data_vars)
+
 
         indexers_dict = dict(indexers)
-        # non_indexed = list(set(self.dims) - indexer_dims)
+        non_indexed_dims = set(self.dims) - indexer_dims
 
+        # To avoid edge cases in numpy want to transpose to ensure the indexed dimensions are firse
+        # However transpose is not lazy, so want to avoid using it for dask case (??)
+        reordered = self.transpose(*(list(indexer_dims) + list(non_indexed_dims)))
 
         variables = OrderedDict()
 
-        # FIXME Think I need to check each variable
-        # TODO need to figure out how to make sure we get the indexed vs non indexed dimensions in the right order
-        # FIXME this currently assumes that every variable shares all dims
         for name in data_vars:
             var = self.variables[name]
             # add 'select all' slices for the non-indexed dimensions
@@ -1110,7 +1107,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
             dim_added = False
             var_coords = []
             var_dims = []
-
+            # FIXME (shoyer) instead reorder the axes to make sure the indexed dimensions come first to avoid weird behaviour in numpy edge cases
             for k in var.dims:
                 # collapse dims that are in the indexer
                 # add coords for others
@@ -1125,8 +1122,6 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
                         var_dims.append(dim)
                         dim_added = True
 
-            # coords = [self.variables[k] if k not in indexers_dict else np.arange(points_len) for k in var.dims]
-
             if hasattr(var.data, 'vindex'):
                 # Special case for dask backed arrays to use vectorised list indexing
                 sel = var.data.vindex[tuple(slc)]
@@ -1134,17 +1129,11 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
                 # Otherwise assume backend is numpy array with 'fancy' indexing
                 sel = var.data[tuple(slc)]
 
-                # For now, early return with original version if any of the data_vars are not dask backed...
-                # return concat([self.isel(**d) for d in
-                #                                   [dict(zip(keys, inds)) for inds in
-                #                                    zip(*[v for k, v in indexers])]],
-                #                                  dim=dim, coords=coords, data_vars=data_vars)
+
             variables[name] = DataArray(sel,
                                         coords=var_coords,
                                         dims=var_dims,
                                         name=name)
-
-        non_indexed = list(set(self.dims) - indexer_dims)
 
         # Add sliced versions of the standard dimensions
         for dim, slc in indexers_dict.items():
@@ -1165,9 +1154,15 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
             if name not in variables:
                 variables[name] = var
         dset = Dataset(variables)
-        # print('------')
+
         print(dset)
         return dset
+
+    # For now, early return with original version if any of the data_vars are not dask backed...
+    # return concat([self.isel(**d) for d in
+    #                                   [dict(zip(keys, inds)) for inds in
+    #                                    zip(*[v for k, v in indexers])]],
+    #                                  dim=dim, coords=coords, data_vars=data_vars)
 
 
     def sel_points(self, dim='points', method=None, tolerance=None,
