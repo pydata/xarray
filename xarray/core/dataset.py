@@ -30,7 +30,6 @@ from .pycompat import (iteritems, basestring, OrderedDict,
 from .combine import concat
 from .options import OPTIONS
 
-
 # list of attributes of pd.DatetimeIndex that are ndarrays of time info
 _DATETIMEINDEX_COMPONENTS = ['year', 'month', 'day', 'hour', 'minute',
                              'second', 'microsecond', 'nanosecond', 'date',
@@ -580,6 +579,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         If this variable is a dimension, all variables containing this
         dimension are also removed.
         """
+
         def remove(k):
             del self._variables[k]
             self._coord_names.discard(k)
@@ -598,10 +598,12 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
 
     def _all_compat(self, other, compat_str):
         """Helper function for equals and identical"""
+
         # some stores (e.g., scipy) do not seem to preserve order, so don't
         # require matching order for equality
         def compat(x, y):
             return getattr(x, compat_str)(y)
+
         return (self._coord_names == other._coord_names and
                 utils.dict_equiv(self._variables, other._variables,
                                  compat=compat))
@@ -1043,6 +1045,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
 
         data_vars = relevant_keys(self.data_vars)
         coords = relevant_keys(self.coords)
+        print(coords)
 
         # all the indexers should be iterables
         keys = indexers.keys()
@@ -1077,41 +1080,94 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         if not utils.is_scalar(dim) and not isinstance(dim, DataArray):
             dim = as_variable(dim, name='points')
 
+        # Early return in case we don't have dask dataframe
+        # if not hasattr(self.variables[list(self.variables.keys())[0]].data, 'vindex'):
+        #     return concat([self.isel(**d) for d in
+        #                        [dict(zip(keys, inds)) for inds in
+        #                         zip(*[v for k, v in indexers])]],
+        #                       dim=dim, coords=coords, data_vars=data_vars)
+
         indexers_dict = dict(indexers)
-        non_indexed = list(set(self.dims) - indexer_dims)
+        # non_indexed = list(set(self.dims) - indexer_dims)
 
         # need to generate a new dimension
         points_len = lengths.pop()
-
         variables = OrderedDict()
 
-        # add : slices for the non-indexed dimensions
-        slc = [indexers_dict[k] if k in indexers_dict else slice(None, None) for k in self.dims]
-        coords = [self.variables[k] for k in non_indexed]
-
+        # FIXME Think I need to check each variable
         # TODO need to figure out how to make sure we get the indexed vs non indexed dimensions in the right order
+        # FIXME this currently assumes that every variable shares all dims
         for name in data_vars:
             var = self.variables[name]
+            # add 'select all' slices for the non-indexed dimensions
+            slc = [indexers_dict[k] if k in indexers_dict else slice(None) for k in var.dims]
+
+            # Need to preserve order for dims and coords...
+            dim_added = False
+            var_coords = []
+            var_dims = []
+
+            for k in var.dims:
+                # collapse dims that are in the indexer
+                # add coords for others
+                if k not in indexers_dict:
+                    var_dims.append(k)
+                    var_coords.append(self.variables[k])
+                else:
+                    # To make sure it gets added the first time we hit an index dim, but only add once
+                    if not dim_added:
+                        # add generated points to replace collapsed dims...
+                        var_coords.append(np.arange(points_len))
+                        var_dims.append(dim)
+                        dim_added = True
+
+            # coords = [self.variables[k] if k not in indexers_dict else np.arange(points_len) for k in var.dims]
+
             if hasattr(var.data, 'vindex'):
-                variables[name] = DataArray(var.data.vindex[tuple(slc)],
-                                            coords=[np.arange(points_len)] + coords, dims=[dim] + non_indexed,
-                                            name=name)
+                # Special case for dask backed arrays to use vectorised list indexing
+                sel = var.data.vindex[tuple(slc)]
             else:
-                # TODO need to make sure this still works in the non-dask case
-                # if data is ndarray should give expected behaviour
-                variables[name] = DataArray(var.data[tuple(slc)],
-                          coords=[np.arange(points_len)] + coords, dims=[dim] + non_indexed,
-                          name=name)
+                # Otherwise assume backend is numpy array with 'fancy' indexing
+                sel = var.data[tuple(slc)]
 
+                # For now, early return with original version if any of the data_vars are not dask backed...
+                # return concat([self.isel(**d) for d in
+                #                                   [dict(zip(keys, inds)) for inds in
+                #                                    zip(*[v for k, v in indexers])]],
+                #                                  dim=dim, coords=coords, data_vars=data_vars)
 
-        return merge([v for k, v in variables.items() if k not in self.dims])
-        # TODO: This would be sped up with vectorized indexing. This will
-        # require dask to support pointwise indexing as well.
+            variables[name] = DataArray(sel,
+                                        coords=var_coords,
+                                        dims=var_dims,
+                                        name=name)
 
-    #     return concat([self.isel(**d) for d in
-    #                    [dict(zip(keys, inds)) for inds in
-    #                     zip(*[v for k, v in indexers])]],
-    #                   dim=dim, coords=coords, data_vars=data_vars)
+        non_indexed = list(set(self.dims) - indexer_dims)
+
+        # Add sliced versions of the standard dimensions
+        for dim, slc in indexers_dict.items():
+            if dim not in variables:
+                variables[dim] = self.variables[dim][slc]
+
+        # Add sliced versions of coordinates that themselves depend on other dimensions
+        # which may also have been indexed
+        for c in coords:
+            if c not in variables:
+                var = self.variables[c]
+                if any(d in indexer_dims for d in var.dims):
+                    coord_dim = var.dims[0]  # should just be one?
+                    variables[c] = var[indexers_dict[coord_dim]]
+
+        # now just add anything we didn't have already (behaviour is to preserve all non-indexed dimensions)
+        for name, var in self.variables.items():
+            if name not in variables:
+                variables[name] = var
+        dset = Dataset(variables)
+        # print('------')
+        # print(self)
+        #
+        # print(dset)
+        return dset
+
 
     def sel_points(self, dim='points', method=None, tolerance=None,
                    **indexers):
@@ -1763,8 +1819,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
             if reduce_dims or not var.dims:
                 if name not in self.coords:
                     if (not numeric_only or
-                        np.issubdtype(var.dtype, np.number) or
-                            var.dtype == np.bool_):
+                            np.issubdtype(var.dtype, np.number) or
+                                var.dtype == np.bool_):
                         if len(reduce_dims) == 1:
                             # unpack dimensions for the benefit of functions
                             # like np.argmin which can't handle tuple arguments
@@ -2043,6 +2099,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
             if keep_attrs:
                 ds._attrs = self._attrs
             return ds
+
         return func
 
     @staticmethod
@@ -2058,6 +2115,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
             ds = self._calculate_binary_op(g, other, join=align_type,
                                            fillna=fillna)
             return ds
+
         return func
 
     @staticmethod
@@ -2076,6 +2134,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
             self._replace_vars_and_dims(ds._variables, ds._coord_names,
                                         attrs=ds._attrs, inplace=True)
             return self
+
         return func
 
     def _calculate_binary_op(self, f, other, join='inner',
@@ -2392,8 +2451,9 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
             for attr_name, pattern in kwargs.items():
                 attr_value = variable.attrs.get(attr_name)
                 if ((callable(pattern) and pattern(attr_value))
-                        or attr_value == pattern):
+                    or attr_value == pattern):
                     selection.append(var_name)
         return self[selection]
+
 
 ops.inject_all_ops_and_reduce_methods(Dataset, array_only=False)
