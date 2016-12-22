@@ -225,16 +225,17 @@ def assert_xarray_allclose(a, b, rtol=1e-05, atol=1e-08):
             a.values, b.values, rtol=rtol, atol=atol)
         assert allclose, '{}\n{}'.format(a.values, b.values)
     elif isinstance(a, xr.DataArray):
-        if hasattr(a, 'variables'):
-            [assert_xarray_allclose(a[k], b[k], rtol=rtol, atol=atol) for k in a.variables]
-        else:
-            # unsure if we should need this branch
-            # https://github.com/pydata/xarray/issues/1152
-            assert_xarray_allclose(a.variable, b.variable)
+        assert_xarray_allclose(a.variable, b.variable)
+        for v in a.coords.variables:
+            # can't recurse with this function as coord is sometimes a DataArray,
+            # so call into data_allclose_or_equiv directly
+            allclose = data_allclose_or_equiv(
+                a.coords[v].values, b.coords[v].values, rtol=rtol, atol=atol)
+            assert allclose, '{}\n{}'.format(a.coords[v].values, b.coords[v].values)
     elif isinstance(a, xr.Dataset):
-        assert sorted(a, key=str) == sorted(a, key=str)
-        [assert_xarray_allclose(a[k], b[k], rtol=rtol, atol=atol)
-         for k in list(a.variables) + list(a.coords)]
+        assert sorted(a, key=str) == sorted(b, key=str)
+        for k in list(a.variables) + list(a.coords):
+            assert_xarray_allclose(a[k], b[k], rtol=rtol, atol=atol)
 
     else:
         raise TypeError('{} not supported by assertion comparison'

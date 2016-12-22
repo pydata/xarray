@@ -216,15 +216,16 @@ class VariableSubclassTestCases(object):
 
         # should we need `.to_base_variable()`?
         # probably a break that `+v` changes type?
-        v = self.cls(['x'], x).to_base_variable()
+        v = self.cls(['x'], x)
+        base_v = v.to_base_variable()
         # unary ops
-        self.assertVariableIdentical(v, +v)
-        self.assertVariableIdentical(v, abs(v))
+        self.assertVariableIdentical(base_v, +v)
+        self.assertVariableIdentical(base_v, abs(v))
         self.assertArrayEqual((-v).values, -x)
         # binary ops with numbers
-        self.assertVariableIdentical(v, v + 0)
-        self.assertVariableIdentical(v, 0 + v)
-        self.assertVariableIdentical(v, v * 1)
+        self.assertVariableIdentical(base_v, v + 0)
+        self.assertVariableIdentical(base_v, 0 + v)
+        self.assertVariableIdentical(base_v, v * 1)
         self.assertArrayEqual((v > 2).values, x > 2)
         self.assertArrayEqual((0 == v).values, 0 == x)
         self.assertArrayEqual((v - 1).values, x - 1)
@@ -236,7 +237,7 @@ class VariableSubclassTestCases(object):
         self.assertArrayEqual(y - v, 1 - v)
         # verify attributes are dropped
         v2 = self.cls(['x'], x, {'units': 'meters'})
-        self.assertVariableIdentical(v, +v2)
+        self.assertVariableIdentical(base_v, +v2)
         # binary ops with all variables
         self.assertArrayEqual(v + v, 2 * v)
         w = self.cls(['x'], y, {'foo': 'bar'})
@@ -309,7 +310,7 @@ class VariableSubclassTestCases(object):
     def test_eq_all_dtypes(self):
         # ensure that we don't choke on comparisons for which numpy returns
         # scalars
-        expected = self.cls('x', 3 * [False]).to_base_variable()
+        expected = Variable('x', 3 * [False])
         for v, _ in self.example_1d_objects():
             actual = 'z' == v
             self.assertVariableIdentical(expected, actual)
@@ -317,7 +318,7 @@ class VariableSubclassTestCases(object):
             self.assertVariableIdentical(expected, actual)
 
     def test_encoding_preserved(self):
-        expected = self.cls('x', range(3), {'foo': 1}, {'bar': 2}).to_base_variable()
+        expected = Variable('x', range(3), {'foo': 1}, {'bar': 2})
         for actual in [expected.T,
                        expected[...],
                        expected.squeeze(),
@@ -326,7 +327,8 @@ class VariableSubclassTestCases(object):
                        expected.copy(deep=True),
                        expected.copy(deep=False)]:
 
-            self.assertVariableIdentical(expected, actual)
+            self.assertVariableIdentical(expected.to_base_variable(),
+                                         actual.to_base_variable())
             self.assertEqual(expected.encoding, actual.encoding)
 
     def test_concat(self):
