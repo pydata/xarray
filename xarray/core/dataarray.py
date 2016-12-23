@@ -789,15 +789,16 @@ class DataArray(AbstractArray, BaseDataObject):
         return self._from_temp_dataset(ds)
 
     def rename(self, new_name_or_name_dict):
-        """Returns a new DataArray with renamed coordinates and/or a new name.
+        """Returns a new DataArray with renamed coordinates or a new name.
 
 
         Parameters
         ----------
         new_name_or_name_dict : str or dict-like
             If the argument is dict-like, it it used as a mapping from old
-            names to new names for coordinates (and/or this array itself).
-            Otherwise, use the argument as the new name for this array.
+            names to new names for coordinates. Otherwise, use the argument
+            as the new name for this array.
+
 
         Returns
         -------
@@ -810,13 +811,8 @@ class DataArray(AbstractArray, BaseDataObject):
         DataArray.swap_dims
         """
         if utils.is_dict_like(new_name_or_name_dict):
-            name_dict = new_name_or_name_dict.copy()
-            if self.name in self.dims:
-                name = name_dict.get(self.name, self.name)
-            else:
-                name = name_dict.pop(self.name, self.name)
-            dataset = self._to_temp_dataset().rename(name_dict)
-            return self._from_temp_dataset(dataset, name)
+            dataset = self._to_temp_dataset().rename(new_name_or_name_dict)
+            return self._from_temp_dataset(dataset)
         else:
             return self._replace(name=new_name_or_name_dict)
 
