@@ -12,6 +12,7 @@ try:
     import dask.array as da
 except ImportError:
     pass
+from io import StringIO
 
 import numpy as np
 import pandas as pd
@@ -22,7 +23,7 @@ from xarray import (align, broadcast, concat, merge, conventions, backends,
                     Dataset, DataArray, Variable, IndexVariable, auto_combine,
                     open_dataset, set_options, MergeError)
 from xarray.core import indexing, utils
-from xarray.core.pycompat import iteritems, OrderedDict, unicode_type, StringIO
+from xarray.core.pycompat import iteritems, OrderedDict, unicode_type
 from xarray.core.common import full_like
 
 from . import (TestCase, unittest, InaccessibleArray, UnexpectedDataAccess,
@@ -199,7 +200,7 @@ class TestDataset(TestCase):
         buf = StringIO()
         ds.info(buf=buf)
 
-        expected = dedent('''\
+        expected = dedent(u'''\
         xarray.Dataset {
         dimensions:
         	dim1 = 8 ;

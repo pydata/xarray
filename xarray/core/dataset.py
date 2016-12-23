@@ -839,8 +839,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
             lines.append(u'\t:{k} = {v} ;'.format(k=k, v=v))
         lines.append(u'}')
 
-        lines = [ensure_valid_repr(line) for line in lines]
-        buf.write('\n'.join(lines))
+        buf.write(u'\n'.join(lines))
 
     @property
     def chunks(self):

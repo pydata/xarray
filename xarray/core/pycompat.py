@@ -22,7 +22,6 @@ if PY3:  # pragma: no cover
     from functools import reduce
     import builtins
     from urllib.request import urlretrieve
-    from io import StringIO
 else:  # pragma: no cover
     # Python 2
     basestring = basestring
@@ -40,7 +39,6 @@ else:  # pragma: no cover
     reduce = reduce
     import __builtin__ as builtins
     from urllib import urlretrieve
-    from cStringIO import StringIO
 
 try:
     from cyordereddict import OrderedDict
