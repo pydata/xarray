@@ -87,6 +87,7 @@ def first_n_items(x, n_desired):
         x = x[indexer]
     return np.asarray(x).flat[:n_desired]
 
+
 def last_item(x):
     """Returns the last item of an array"""
     if x.size == 0:
@@ -95,6 +96,7 @@ def last_item(x):
 
     indexer = (slice(-1, None), ) * x.ndim
     return np.array(x[indexer], ndmin=1)
+
 
 def format_timestamp(t):
     """Cast given object to a Timestamp and return a nicely formatted string"""
@@ -359,16 +361,6 @@ def array_repr(arr):
         summary.append(attrs_repr(arr.attrs))
 
     return u'\n'.join(summary)
-
-
-def _put_lines(buf, lines):
-    '''see also from pandas.formats.format import _put_lines'''
-    if any(isinstance(x, basestring) for x in lines):
-        if PY2:
-            lines = [unicode(x) for x in lines]
-        else:
-            lines = [basestring(x) for x in lines]
-    buf.write('\n'.join(lines))
 
 
 def dataset_repr(ds):

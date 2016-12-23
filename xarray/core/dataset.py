@@ -27,9 +27,9 @@ from .utils import (Frozen, SortedKeysDict, maybe_wrap_array, hashable,
 from .variable import (Variable, as_variable, IndexVariable, broadcast_variables)
 from .pycompat import (iteritems, basestring, OrderedDict,
                        dask_array_type, range)
+from .formatting import ensure_valid_repr
 from .combine import concat
 from .options import OPTIONS
-
 
 # list of attributes of pd.DatetimeIndex that are ndarrays of time info
 _DATETIMEINDEX_COMPONENTS = ['year', 'month', 'day', 'hour', 'minute',
@@ -807,6 +807,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
     def info(self, buf=None):
         """
         Concise summary of a Dataset variables and attributes.
+
         Parameters
         ----------
         buf : writable buffer, defaults to sys.stdout
@@ -821,24 +822,25 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
             buf = sys.stdout
 
         lines = []
-        lines.append('xarray.Dataset {')
-        lines.append('dimensions:')
+        lines.append(u'xarray.Dataset {')
+        lines.append(u'dimensions:')
         for name, size in self.dims.items():
-            lines.append('\t{name} = {size} ;'.format(name=name, size=size))
-        lines.append('\nvariables:')
+            lines.append(u'\t{name} = {size} ;'.format(name=name, size=size))
+        lines.append(u'\nvariables:')
         for name, da in self.variables.items():
-            dims = ', '.join(da.dims)
-            lines.append('\t{type} {name}({dims}) ;'.format(
+            dims = u', '.join(da.dims)
+            lines.append(u'\t{type} {name}({dims}) ;'.format(
                 type=da.dtype, name=name, dims=dims))
             for k, v in da.attrs.items():
-                lines.append('\t\t{name}:{k} = {v} ;'.format(name=name, k=k,
-                                                             v=v))
-        lines.append('\n// global attributes:')
+                lines.append(u'\t\t{name}:{k} = {v} ;'.format(name=name, k=k,
+                                                              v=v))
+        lines.append(u'\n// global attributes:')
         for k, v in self.attrs.items():
-            lines.append('\t:{k} = {v} ;'.format(k=k, v=v))
-        lines.append('}')
+            lines.append(u'\t:{k} = {v} ;'.format(k=k, v=v))
+        lines.append(u'}')
 
-        formatting._put_lines(buf, lines)
+        lines = [ensure_valid_repr(line) for line in lines]
+        buf.write('\n'.join(lines))
 
     @property
     def chunks(self):

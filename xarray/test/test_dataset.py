@@ -12,10 +12,6 @@ try:
     import dask.array as da
 except ImportError:
     pass
-try:
-    from io import StringIO
-except ImportError:
-    from cStringIO import StringIO
 
 import numpy as np
 import pandas as pd
@@ -26,7 +22,7 @@ from xarray import (align, broadcast, concat, merge, conventions, backends,
                     Dataset, DataArray, Variable, IndexVariable, auto_combine,
                     open_dataset, set_options, MergeError)
 from xarray.core import indexing, utils
-from xarray.core.pycompat import iteritems, OrderedDict, unicode_type
+from xarray.core.pycompat import iteritems, OrderedDict, unicode_type, StringIO
 from xarray.core.common import full_like
 
 from . import (TestCase, unittest, InaccessibleArray, UnexpectedDataAccess,
@@ -197,11 +193,13 @@ class TestDataset(TestCase):
     def test_info(self):
         ds = create_test_data(seed=123)
         ds = ds.drop('dim3')  # string type prints differently in PY2 vs PY3
-        ds.attrs['foo'] = 'bar'
+        ds.attrs['unicode_attr'] = u'ba®'
+        ds.attrs['string_attr'] = 'bar'
+
         buf = StringIO()
         ds.info(buf=buf)
 
-        expected = dedent(u'''\
+        expected = dedent('''\
         xarray.Dataset {
         dimensions:
         	dim1 = 8 ;
@@ -221,7 +219,8 @@ class TestDataset(TestCase):
         	int64 numbers(dim3) ;
 
         // global attributes:
-        	:foo = bar ;
+            :unicode_attr = ba® ;
+            :string_attr = bar ;
         }''')
         actual = buf.getvalue()
         self.assertEqual(expected, actual)
