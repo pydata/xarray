@@ -939,13 +939,16 @@ class TestDataset(TestCase):
         self.assertDatasetIdentical(expected, actual)
 
         data = Dataset({'foo': (('x', 'y'), np.arange(9).reshape(3, 3))})
-        expected = Dataset({'foo': ('points', [0, 4, 8])})
+        expected = Dataset({'foo': ('points', [0, 4, 8])},
+                           {'points': ('points', [0, 1, 2])})
         actual = data.sel_points(x=[0, 1, 2], y=[0, 1, 2])
         self.assertDatasetIdentical(expected, actual)
 
         data.coords.update({'x': [0, 1, 2], 'y': [0, 1, 2]})
         expected.coords.update({'x': ('points', [0, 1, 2]),
-                                'y': ('points', [0, 1, 2])})
+                                'y': ('points', [0, 1, 2]),
+                                'points': ('points', [0, 1, 2])
+                                })
         actual = data.sel_points(x=[0.1, 1.1, 2.5], y=[0, 1.2, 2.0],
                                  method='pad')
         self.assertDatasetIdentical(expected, actual)
