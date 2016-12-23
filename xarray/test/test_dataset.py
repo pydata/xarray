@@ -869,7 +869,6 @@ class TestDataset(TestCase):
                                   dim=stations['station'])
         assert 'station' in actual.coords
         assert 'station' in actual.dims
-        # FIXME not sure that station should actually be aquiring these two dims...
         self.assertDataArrayIdentical(actual['station'].drop(['dim1', 'dim2']),
                                       stations['station'])
 

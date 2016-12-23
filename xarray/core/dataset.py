@@ -1039,6 +1039,15 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
 
         indexer_dims = set(indexers)
 
+        def take(variable, slices):
+            if hasattr(variable.data, 'vindex'):
+                # Special case for dask backed arrays to use vectorised list indexing
+                sel = variable.data.vindex[slices]
+            else:
+                # Otherwise assume backend is numpy array with 'fancy' indexing
+                sel = variable.data[slices]
+            return sel
+
         def relevant_keys(mapping):
             return [k for k, v in mapping.items()
                     if any(d in indexer_dims for d in v.dims)]
@@ -1089,7 +1098,6 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
             # need to generate a new dimension if not provided
             points_len = lengths.pop()
             dim_coord = np.arange(points_len)
-
         indexers_dict = dict(indexers)
         non_indexed_dims = set(self.dims) - indexer_dims
 
@@ -1111,6 +1119,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
 
             var_coords = [dim_coord] + [self.variables[coord] for coord in var.dims if coord not in indexers_dict]
             var_dims = [dim] + [d for d in var.dims if d in non_indexed_dims]
+
             # FIXME (shoyer) instead reorder the axes to make sure the indexed dimensions come first to avoid weird behaviour in numpy edge cases
             # Note that transpose is not lazy however so this could create performance problems
             # Need to preserve order for dims and coords...
@@ -1131,25 +1140,23 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
             #             var_dims.append(dim)
             #             dim_added = True
 
-            if hasattr(var.data, 'vindex'):
-                # Special case for dask backed arrays to use vectorised list indexing
-                sel = var.data.vindex[tuple(slc)]
-            else:
-                # Otherwise assume backend is numpy array with 'fancy' indexing
-                sel = var.data[tuple(slc)]
-
-            variables[name] = DataArray(sel,
+            selection = take(var, tuple(slc))
+            variables[name] = DataArray(selection,
                                         coords=var_coords,
                                         dims=var_dims,
                                         name=name)
+        out_coords = OrderedDict()
+        out_coords[dim] = dim_coord
 
-        # Add sliced versions of the indexed dimensions
-        # (only if they were in the original)
-        for dim, slc in indexers_dict.items():
-            if dim not in variables:
-                # variables[dim] = self.variables[dim][slc]
-                # print(self.variables[dim])
-                pass
+        # Add sliced versions of the indexed dimensions (only if they were in the original)
+        for d, slc in indexers_dict.items():
+            if d not in variables:
+                selection = take(self.variables[d], slc)
+
+                out_coords[d] = DataArray(selection,
+                                            dims=dim,
+                                            name=d)
+
 
         # Add sliced versions of coordinates that themselves depend on other dimensions
         # which may also have been indexed
@@ -1159,15 +1166,19 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
                 if any(d in indexer_dims for d in var.dims):
                     # If the coord variable depends on an indexed dimension, slice it
                     coord_dim = var.dims[0]  # should just be one?
-                    variables[c] = var[indexers_dict[coord_dim]]
+                    selection = take(var, indexers_dict[coord_dim])
+
+                    out_coords[c] = DataArray(selection,
+                                              coords={dim: dim_coord},
+                                              dims=dim,
+                                              name=c)
 
         # now just add anything we didn't have already (behaviour is to preserve all non-indexed dimensions)
         for name, var in self.variables.items():
-            if name not in variables:
-                pass
-                # variables[name] = var
-        # print(variables)
-        dset = Dataset(variables)
+            if name not in variables and name not in out_coords:
+                variables[name] = var
+
+        dset = Dataset(variables, out_coords)
         return dset
 
     # return concat([self.isel(**d) for d in
