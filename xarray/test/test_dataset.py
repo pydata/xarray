@@ -855,7 +855,6 @@ class TestDataset(TestCase):
         pdim1 = [1, 2, 3]
         pdim2 = [4, 5, 1]
         pdim3 = [1, 2, 3]
-
         actual = data.isel_points(dim1=pdim1, dim2=pdim2, dim3=pdim3,
                                   dim='test_coord')
         assert 'test_coord' in actual.dims
@@ -903,7 +902,7 @@ class TestDataset(TestCase):
                                   dim=stations['station'])
         assert 'station' in actual.coords
         assert 'station' in actual.dims
-        self.assertDataArrayIdentical(actual['station'].drop(['dim2']),
+        self.assertDataArrayIdentical(actual['station'].drop(['dim1','dim2']),
                                       stations['station'])
 
         # make sure we get the default 'points' coordinate when a list is passed

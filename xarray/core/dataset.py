@@ -19,7 +19,7 @@ from .alignment import align
 from .coordinates import DatasetCoordinates, LevelCoordinatesSource, Indexes
 from .common import ImplementsDatasetReduce, BaseDataObject
 from .merge import (dataset_update_method, dataset_merge_method,
-                    merge_data_and_coords, merge)
+                    merge_data_and_coords)
 from .utils import (Frozen, SortedKeysDict, maybe_wrap_array, hashable,
                     decode_numpy_dict_values, ensure_us_time_resolution)
 from .variable import (Variable, as_variable, IndexVariable, broadcast_variables)
@@ -1142,15 +1142,14 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
                                         coords=var_coords,
                                         dims=var_dims,
                                         name=name)
-        out_coords = OrderedDict()
-        out_coords[dim] = dim_coord
+        sel_coords = OrderedDict()
+        sel_coords[dim] = dim_coord
 
         # Add sliced versions of the indexed dimensions (only if they were in the original)
         for d, slc in indexers_dict.items():
             if d not in variables:
-                selection = take(self.variables[d], slc)
-
-                out_coords[d] = DataArray(selection,
+                selection = take(self.coords[d], slc)
+                sel_coords[d] = DataArray(selection,
                                             dims=dim,
                                             name=d)
 
@@ -1165,18 +1164,16 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
                     coord_dim = var.dims[0]  # should just be one?
                     selection = take(var, indexers_dict[coord_dim])
 
-                    out_coords[c] = DataArray(selection,
+                    sel_coords[c] = DataArray(selection,
                                               coords={dim: dim_coord},
                                               dims=dim,
                                               name=c)
 
         # now just add anything we didn't have already (behaviour is to preserve all non-indexed dimensions)
         for name, var in self.variables.items():
-            if name not in variables and name not in out_coords:
+            if name not in variables and name not in sel_coords:
                 variables[name] = var
-
-        dset = Dataset(variables, out_coords)
-        return dset
+        return Dataset(variables, sel_coords, attrs=self.attrs)
 
     # return concat([self.isel(**d) for d in
     #                                   [dict(zip(keys, inds)) for inds in
