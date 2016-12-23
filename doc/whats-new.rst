@@ -24,6 +24,7 @@ Breaking changes
 - ``DataArray.rename()`` behavior changed to strictly change the ``DataArray.name``
   if called with string argument, or strictly change coordinate names if called with
   dict-like argument.
+  By `Markus Gonser <https://github.com/magonser>`_.
 
 - By default ``to_netcdf()`` add a ``_FillValue = NaN`` attributes to float types.
 
