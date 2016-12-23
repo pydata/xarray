@@ -893,13 +893,7 @@ class TestDataArray(TestCase):
             renamed.to_dataset(), self.ds.rename({'foo': 'bar'}))
         self.assertEqual(renamed.name, 'bar')
 
-        renamed = self.dv.rename({'foo': 'bar'})
-        self.assertDatasetIdentical(
-            renamed.to_dataset(), self.ds.rename({'foo': 'bar'}))
-        self.assertEqual(renamed.name, 'bar')
-
-        # regression to #1116
-        renamed = self.dv.x.rename({'x': 'z'})
+        renamed = self.dv.x.rename({'x': 'z'}).rename('z')
         self.assertDatasetIdentical(
             renamed, self.ds.rename({'x': 'z'}).z)
         self.assertEqual(renamed.name, 'z')

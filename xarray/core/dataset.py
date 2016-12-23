@@ -5,6 +5,8 @@ import functools
 from collections import Mapping
 from numbers import Number
 
+import sys
+
 import numpy as np
 import pandas as pd
 
@@ -25,6 +27,7 @@ from .utils import (Frozen, SortedKeysDict, maybe_wrap_array, hashable,
 from .variable import (Variable, as_variable, IndexVariable, broadcast_variables)
 from .pycompat import (iteritems, basestring, OrderedDict,
                        dask_array_type, range)
+from .formatting import ensure_valid_repr
 from .combine import concat
 from .options import OPTIONS
 
@@ -802,6 +805,43 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
 
     def __unicode__(self):
         return formatting.dataset_repr(self)
+
+    def info(self, buf=None):
+        """
+        Concise summary of a Dataset variables and attributes.
+
+        Parameters
+        ----------
+        buf : writable buffer, defaults to sys.stdout
+
+        See Also
+        --------
+        pandas.DataFrame.assign
+        netCDF's ncdump
+        """
+
+        if buf is None:  # pragma: no cover
+            buf = sys.stdout
+
+        lines = []
+        lines.append(u'xarray.Dataset {')
+        lines.append(u'dimensions:')
+        for name, size in self.dims.items():
+            lines.append(u'\t{name} = {size} ;'.format(name=name, size=size))
+        lines.append(u'\nvariables:')
+        for name, da in self.variables.items():
+            dims = u', '.join(da.dims)
+            lines.append(u'\t{type} {name}({dims}) ;'.format(
+                type=da.dtype, name=name, dims=dims))
+            for k, v in da.attrs.items():
+                lines.append(u'\t\t{name}:{k} = {v} ;'.format(name=name, k=k,
+                                                              v=v))
+        lines.append(u'\n// global attributes:')
+        for k, v in self.attrs.items():
+            lines.append(u'\t:{k} = {v} ;'.format(k=k, v=v))
+        lines.append(u'}')
+
+        buf.write(u'\n'.join(lines))
 
     @property
     def chunks(self):

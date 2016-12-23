@@ -87,7 +87,6 @@ class TestFormatting(TestCase):
             actual = ' '.join(formatting.format_items(item))
             self.assertEqual(expected, actual)
 
-
     def test_format_array_flat(self):
         actual = formatting.format_array_flat(np.arange(100), 13)
         expected = '0 1 2 3 4 ...'
@@ -126,7 +125,7 @@ class TestFormatting(TestCase):
         expected = '1300-12-01'
         result = formatting.format_timestamp(date)
         self.assertEqual(result, expected)
-        
+
         date = datetime(2300, 12, 1)
         expected = '2300-12-01'
         result = formatting.format_timestamp(date)
