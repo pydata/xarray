@@ -1,0 +1,15 @@
+name: test_env
+dependencies:
+  - python=3.6
+  - dask
+  - distributed
+  - h5py
+  - netcdf4
+  - pytest
+  - numpy
+  - pandas
+  - scipy
+  - pip:
+    - coveralls
+    - pytest-cov
+    - pydap

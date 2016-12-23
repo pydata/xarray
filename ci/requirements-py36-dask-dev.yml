@@ -1,16 +1,13 @@
 name: test_env
 dependencies:
-  - python=2.7
+  - python=3.6
   - cython
-  - dask
-  - distributed
-  - h5py
   - pytest
   - numpy
   - pandas
   - scipy
+  - toolz
   - pip:
     - coveralls
     - pytest-cov
-    - h5netcdf
-    - git+https://github.com/Unidata/netcdf4-python.git
+    - git+https://github.com/blaze/dask.git

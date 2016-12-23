@@ -8,8 +8,8 @@ environment:
       PYTHON_VERSION: "2.7"
       PYTHON_ARCH: "32"
 
-    - PYTHON: "C:\\Python34-conda64"
-      PYTHON_VERSION: "3.4"
+    - PYTHON: "C:\\Python36-conda64"
+      PYTHON_VERSION: "3.6"
       PYTHON_ARCH: "64"
 
 install:
@@ -32,4 +32,4 @@ install:
 build: false
 
 test_script:
-  - "py.test xarray"
+  - "py.test xarray --verbose"
