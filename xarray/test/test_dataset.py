@@ -439,7 +439,7 @@ class TestDataset(TestCase):
         a['x'] = ('x', vec, attributes)
         self.assertTrue('x' in a.coords)
         self.assertIsInstance(a.coords['x'].to_index(), pd.Index)
-        self.assertVariableIdentical(a.coords['x'], a.variables['x'])
+        self.assertVariableIdentical(a.coords['x'].variable, a.variables['x'])
         b = Dataset()
         b['x'] = ('x', vec, attributes)
         self.assertVariableIdentical(a['x'], b['x'])
@@ -473,8 +473,8 @@ class TestDataset(TestCase):
 
         self.assertItemsEqual(['x', 'y', 'a', 'b'], list(data.coords))
 
-        self.assertVariableIdentical(data.coords['x'], data['x'].variable)
-        self.assertVariableIdentical(data.coords['y'], data['y'].variable)
+        self.assertVariableIdentical(data.coords['x'].variable, data['x'].variable)
+        self.assertVariableIdentical(data.coords['y'].variable, data['y'].variable)
 
         self.assertIn('x', data.coords)
         self.assertIn('a', data.coords)
@@ -1012,7 +1012,8 @@ class TestDataset(TestCase):
                 if renamed_dim:
                     self.assertEqual(ds['var'].dims[0], renamed_dim)
                     ds = ds.rename({renamed_dim: 'x'})
-                self.assertVariableIdentical(ds['var'], expected_ds['var'])
+                self.assertVariableIdentical(ds['var'].variable,
+                                             expected_ds['var'].variable)
                 self.assertVariableNotEqual(ds['x'], expected_ds['x'])
 
         test_sel(('a', 1, -1), 0)
@@ -1162,7 +1163,7 @@ class TestDataset(TestCase):
         self.assertDatasetIdentical(left2, right2)
 
         left2, right2 = align(left, right, join='outer')
-        self.assertVariableEqual(left2['dim3'], right2['dim3'])
+        self.assertVariableEqual(left2['dim3'].variable, right2['dim3'].variable)
         self.assertArrayEqual(left2['dim3'], union)
         self.assertDatasetIdentical(left2.sel(dim3=intersection),
                                     right2.sel(dim3=intersection))
@@ -1170,15 +1171,15 @@ class TestDataset(TestCase):
         self.assertTrue(np.isnan(right2['var3'][:2]).all())
 
         left2, right2 = align(left, right, join='left')
-        self.assertVariableEqual(left2['dim3'], right2['dim3'])
-        self.assertVariableEqual(left2['dim3'], left['dim3'])
+        self.assertVariableEqual(left2['dim3'].variable, right2['dim3'].variable)
+        self.assertVariableEqual(left2['dim3'].variable, left['dim3'].variable)
         self.assertDatasetIdentical(left2.sel(dim3=intersection),
                                     right2.sel(dim3=intersection))
         self.assertTrue(np.isnan(right2['var3'][:2]).all())
 
         left2, right2 = align(left, right, join='right')
-        self.assertVariableEqual(left2['dim3'], right2['dim3'])
-        self.assertVariableEqual(left2['dim3'], right['dim3'])
+        self.assertVariableEqual(left2['dim3'].variable, right2['dim3'].variable)
+        self.assertVariableEqual(left2['dim3'].variable, right['dim3'].variable)
         self.assertDatasetIdentical(left2.sel(dim3=intersection),
                                     right2.sel(dim3=intersection))
         self.assertTrue(np.isnan(left2['var3'][-2:]).all())
@@ -1396,7 +1397,7 @@ class TestDataset(TestCase):
                     dims[dims.index(name)] = newname
 
             self.assertVariableEqual(Variable(dims, v.values, v.attrs),
-                                     renamed[k])
+                                     renamed[k].variable.to_base_variable())
             self.assertEqual(v.encoding, renamed[k].encoding)
             self.assertEqual(type(v), type(renamed.variables[k]))
 
@@ -1548,7 +1549,7 @@ class TestDataset(TestCase):
     def test_getitem(self):
         data = create_test_data()
         self.assertIsInstance(data['var1'], DataArray)
-        self.assertVariableEqual(data['var1'], data.variables['var1'])
+        self.assertVariableEqual(data['var1'].variable, data.variables['var1'])
         with self.assertRaises(KeyError):
             data['notfound']
         with self.assertRaises(KeyError):
@@ -1644,9 +1645,9 @@ class TestDataset(TestCase):
 
     def test_slice_virtual_variable(self):
         data = create_test_data()
-        self.assertVariableEqual(data['time.dayofyear'][:10],
+        self.assertVariableEqual(data['time.dayofyear'][:10].variable,
                                  Variable(['time'], 1 + np.arange(10)))
-        self.assertVariableEqual(data['time.dayofyear'][0], Variable([], 1))
+        self.assertVariableEqual(data['time.dayofyear'][0].variable, Variable([], 1))
 
     def test_setitem(self):
         # assign a variable

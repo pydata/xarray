@@ -64,6 +64,7 @@ Breaking changes
 - Coordinates used to index a dimension are now loaded eagerly into
   :py:class:`pandas.Index` objects, instead of loading the values lazily.
   By `Guido Imperiale <https://github.com/crusaderky>`_.
+- xarray no longer supports python 3.3
 
 Deprecations
 ~~~~~~~~~~~~
@@ -143,6 +144,14 @@ Enhancements
   :py:class:`FacetGrid` and :py:func:`~xarray.plot.plot`, so axes
   sharing can be disabled for polar plots.
   By `Bas Hoonhout <https://github.com/hoonhout>`_.
+- New utility functions :py:func:`~xarray.test.assert_xarray_equal`,
+  :py:func:`~xarray.test.assert_xarray_identical`, and
+  :py:func:`~xarray.test.assert_xarray_allclose` for asserting relationships
+  between xarray objects, designed for use in a pytest test suite.
+- ``figsize``, ``size`` and ``aspect`` plot arguments are now supported for all
+  plots (:issue:`897`). See :ref:`plotting.figsize` for more details.
+  By `Stephan Hoyer <https://github.com/shoyer>`_ and
+  `Fabien Maussion <https://github.com/fmaussion>`_.
 
 - Added the ability write unlimited netCDF dimensions with the ``netcdf4``
   backend.
@@ -199,7 +208,10 @@ Bug fixes
 - Fixed sub-optimal performance in certain operations with object arrays (:issue:`1121`).
   By `Yves Delley <https://github.com/burnpanck>`_.
 
-- Fixed a bug whith facetgrid (the ``norm`` keyword was ignored, :issue:`1159`).
+- Fix ``.groupby(group)`` when ``group`` has datetime dtype (:issue:`1132`).
+  By `Jonas Sølvsteen <https://github.com/j08lue>`_.
+
+- Fixed a bug with facetgrid (the ``norm`` keyword was ignored, :issue:`1159`).
   By `Fabien Maussion <https://github.com/fmaussion>`_.
 
 .. _whats-new.0.8.2:

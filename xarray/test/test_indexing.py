@@ -119,11 +119,13 @@ class TestIndexers(TestCase):
         self.assertEqual(dim_indexers, {'x': {'one': 'a', 'two': 1}})
 
         with self.assertRaisesRegexp(ValueError, 'cannot combine'):
-            _ = indexing.get_dim_indexers(mdata, {'x': 'a', 'two': 1})
+            indexing.get_dim_indexers(mdata, {'x': 'a', 'two': 1})
 
         with self.assertRaisesRegexp(ValueError, 'do not exist'):
-            _ = indexing.get_dim_indexers(mdata, {'y': 'a'})
-            _ = indexing.get_dim_indexers(data, {'four': 1})
+            indexing.get_dim_indexers(mdata, {'y': 'a'})
+
+        with self.assertRaisesRegexp(ValueError, 'do not exist'):
+            indexing.get_dim_indexers(mdata, {'four': 1})
 
     def test_remap_label_indexers(self):
         def test_indexer(data, x, expected_pos, expected_idx=None):
