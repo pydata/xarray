@@ -1095,22 +1095,26 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         if dim_coord is None:
             # need to generate a new dimension if not provided
             points_len = lengths.pop()
-            dim_coord = DataArray(np.arange(points_len), dims=dim)
+            # dim_coord = DataArray(np.arange(points_len), dims=dim)
+            # dim_coord = points_len
 
         indexers_dict = dict(indexers)
         non_indexed_dims = set(self.dims) - indexer_dims
 
         sel_coords = OrderedDict()
-        sel_coords[dim] = dim_coord
+        if dim_coord is not None:
+            sel_coords[dim] = dim_coord
 
         # Add sliced versions of coordinates that themselves depend on other dimensions
         # which may also have been indexed
         for c in self.coords:
             if c in indexers_dict:
                 selection = take(self.coords[c], indexers_dict[c])
-                sel_coords[c] = DataArray(selection,
-                                          dims=dim,
-                                          name=c)
+                # sel_coords[c] = DataArray(selection,
+                #                           dims=dim,
+                #                           name=c)
+
+                sel_coords[c] = (dim, selection)
 
 
             elif any(d in indexer_dims for d in self.coords[c].dims):
@@ -1119,10 +1123,11 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
                 coord_dim = var.dims[0]  # should just be one?
                 selection = take(var, indexers_dict[coord_dim])
 
-                sel_coords[c] = DataArray(selection,
-                                          coords={dim: dim_coord},
-                                          dims=dim,
-                                          name=c)
+                # sel_coords[c] = DataArray(selection,
+                #                           coords={dim: dim_coord},
+                #                           dims=dim,
+                #                           name=c)
+                sel_coords[c] = (dim, selection)
             else:
                 sel_coords[c] = self.coords[c]
 
@@ -1143,7 +1148,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
             slc = [indexers_dict[k] if k in indexers_dict else slice(None) for k in var.dims]
 
             var_dims = [dim] + [d for d in var.dims if d in non_indexed_dims]
-            var_coords = {d: sel_coords[d] for d in var_dims}
+            var_coords = {d: sel_coords[d] for d in var_dims if d in sel_coords}
 
 
             # FIXME (shoyer) instead reorder the axes to make sure the indexed dimensions come first to avoid weird behaviour in numpy edge cases
@@ -1167,17 +1172,22 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
             #             dim_added = True
 
             selection = take(var, tuple(slc))
-            variables[name] = DataArray(selection,
-                                        coords=var_coords,
-                                        dims=var_dims,
-                                        name=name)
+            # variables[name] = DataArray(selection,
+            #                             coords=var_coords,
+            #                             dims=var_dims,
+            #                             name=name)
+
+            variables[name] = (var_dims, selection)
 
         # add anything we didn't have already (behaviour is to preserve all non-indexed dimensions)
         for name, var in self.variables.items():
             if name not in variables and name not in sel_coords:
                 variables[name] = var
 
-        return Dataset(variables, sel_coords, attrs=self.attrs)
+        dset = Dataset(variables,
+                       sel_coords,
+                       attrs=self.attrs)
+        return dset
 
     # return concat([self.isel(**d) for d in
     #                                   [dict(zip(keys, inds)) for inds in
