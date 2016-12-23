@@ -158,6 +158,10 @@ Enhancements
   plots (:issue:`897`). See :ref:`plotting.figsize` for more details.
   By `Stephan Hoyer <https://github.com/shoyer>`_ and
   `Fabien Maussion <https://github.com/fmaussion>`_.
+- New :py:meth:`~Dataset.info` method to summarize ``Dataset`` variables
+  and attributes. The method prints to a buffer (e.g. ``stdout``) with output
+  similar to what the command line utility ``ncdump -h`` produces (:issue:`1150`).
+  By `Joe Hamman <https://github.com/jhamman>`_.
 
 Bug fixes
 ~~~~~~~~~
