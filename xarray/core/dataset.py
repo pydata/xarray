@@ -1142,8 +1142,9 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
             # add 'select all' slices for the non-indexed dimensions
             slc = [indexers_dict[k] if k in indexers_dict else slice(None) for k in var.dims]
 
-            var_coords = [dim_coord] + [sel_coords[d] for d in var.dims if d in non_indexed_dims]
             var_dims = [dim] + [d for d in var.dims if d in non_indexed_dims]
+            var_coords = {d: sel_coords[d] for d in var_dims}
+
 
             # FIXME (shoyer) instead reorder the axes to make sure the indexed dimensions come first to avoid weird behaviour in numpy edge cases
             # Note that transpose is not lazy however so this could create performance problems
