@@ -902,7 +902,7 @@ class TestDataset(TestCase):
                                   dim=stations['station'])
         assert 'station' in actual.coords
         assert 'station' in actual.dims
-        self.assertDataArrayIdentical(actual['station'].drop(['dim1','dim2']),
+        self.assertDataArrayIdentical(actual['station'].drop(['dim2']),
                                       stations['station'])
 
         # make sure we get the default 'points' coordinate when a list is passed
@@ -928,7 +928,6 @@ class TestDataset(TestCase):
 
         # add in a range() index
         data['dim1'] = data.dim1
-        print(data)
 
         pdim1 = [1, 2, 3]
         pdim2 = [4, 5, 1]
