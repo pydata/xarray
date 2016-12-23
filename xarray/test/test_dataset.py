@@ -219,8 +219,8 @@ class TestDataset(TestCase):
         	int64 numbers(dim3) ;
 
         // global attributes:
-            :unicode_attr = ba® ;
-            :string_attr = bar ;
+        	:unicode_attr = ba® ;
+        	:string_attr = bar ;
         }''')
         actual = buf.getvalue()
         self.assertEqual(expected, actual)
