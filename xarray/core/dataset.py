@@ -1051,11 +1051,10 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
                     if any(d in indexer_dims for d in v.dims)]
 
         data_vars = relevant_keys(self.data_vars)
-        coords = relevant_keys(self.coords)
+        # coords = relevant_keys(self.coords)
         dim_coord = None
 
         # all the indexers should be iterables
-        keys = indexers.keys()
         indexers = [(k, np.asarray(v)) for k, v in iteritems(indexers)]
         # Check that indexers are valid dims, integers, and 1D
         for k, v in indexers:
@@ -1092,12 +1091,6 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
             dim_coord = as_variable(dim, name=name)
             dim = name
 
-        if dim_coord is None:
-            # need to generate a new dimension if not provided
-            points_len = lengths.pop()
-            # dim_coord = DataArray(np.arange(points_len), dims=dim)
-            # dim_coord = points_len
-
         indexers_dict = dict(indexers)
         non_indexed_dims = set(self.dims) - indexer_dims
 
@@ -1110,12 +1103,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         for c in self.coords:
             if c in indexers_dict:
                 selection = take(self.coords[c], indexers_dict[c])
-                # sel_coords[c] = DataArray(selection,
-                #                           dims=dim,
-                #                           name=c)
-
                 sel_coords[c] = (dim, selection)
-
 
             elif any(d in indexer_dims for d in self.coords[c].dims):
                 # If the coord variable depends on an indexed dimension, slice it
@@ -1123,17 +1111,9 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
                 coord_dim = var.dims[0]  # should just be one?
                 selection = take(var, indexers_dict[coord_dim])
 
-                # sel_coords[c] = DataArray(selection,
-                #                           coords={dim: dim_coord},
-                #                           dims=dim,
-                #                           name=c)
                 sel_coords[c] = (dim, selection)
             else:
                 sel_coords[c] = self.coords[c]
-
-        # To avoid edge cases in numpy want to transpose to ensure the indexed dimensions are first
-        # However transpose is not lazy, so want to avoid using it for dask case (??)
-        # reordered = self.transpose(*(list(indexer_dims) + list(non_indexed_dims)))
 
         variables = OrderedDict()
 
@@ -1141,6 +1121,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
             var = self.variables[name]
             # Transpose the var to ensure that the indexed dims come first
             # These dims will be collapsed in the output.
+            # To avoid edge cases in numpy want to transpose to ensure the indexed dimensions are first
+            # However transpose is not lazy, so want to avoid using it for dask case (??)
             var = var.transpose(*(list(d for d in indexer_dims if d in var.dims) +
                                   list(d for d in non_indexed_dims if d in var.dims)))
 
@@ -1148,10 +1130,9 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
             slc = [indexers_dict[k] if k in indexers_dict else slice(None) for k in var.dims]
 
             var_dims = [dim] + [d for d in var.dims if d in non_indexed_dims]
-            var_coords = {d: sel_coords[d] for d in var_dims if d in sel_coords}
 
-
-            # FIXME (shoyer) instead reorder the axes to make sure the indexed dimensions come first to avoid weird behaviour in numpy edge cases
+            # Keeping this around in case transpose causes issues with dask
+            # (shoyer) instead reorder the axes to make sure the indexed dimensions come first to avoid weird behaviour in numpy edge cases
             # Note that transpose is not lazy however so this could create performance problems
             # Need to preserve order for dims and coords...
             # dim_added = False
@@ -1172,10 +1153,6 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
             #             dim_added = True
 
             selection = take(var, tuple(slc))
-            # variables[name] = DataArray(selection,
-            #                             coords=var_coords,
-            #                             dims=var_dims,
-            #                             name=name)
 
             variables[name] = (var_dims, selection)
 
@@ -1188,11 +1165,6 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
                        sel_coords,
                        attrs=self.attrs)
         return dset
-
-    # return concat([self.isel(**d) for d in
-    #                                   [dict(zip(keys, inds)) for inds in
-    #                                    zip(*[v for k, v in indexers])]],
-    #                                  dim=dim, coords=coords, data_vars=data_vars)
 
 
     def sel_points(self, dim='points', method=None, tolerance=None,
