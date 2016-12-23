@@ -21,7 +21,13 @@ v0.9.0 (unreleased)
 Breaking changes
 ~~~~~~~~~~~~~~~~
 
+- ``DataArray.rename()`` behavior changed to strictly change the ``DataArray.name``
+  if called with string argument, or strictly change coordinate names if called with
+  dict-like argument.
+  By `Markus Gonser <https://github.com/magonser>`_.
+
 - By default ``to_netcdf()`` add a ``_FillValue = NaN`` attributes to float types.
+  By `Frederic Laliberte <https://github.com/laliberte>`_.
 
 - Index coordinates for each dimensions are now optional, and no longer created
   by default :issue:`1017`. This has a number of implications:
@@ -152,6 +158,10 @@ Enhancements
   plots (:issue:`897`). See :ref:`plotting.figsize` for more details.
   By `Stephan Hoyer <https://github.com/shoyer>`_ and
   `Fabien Maussion <https://github.com/fmaussion>`_.
+- New :py:meth:`~Dataset.info` method to summarize ``Dataset`` variables
+  and attributes. The method prints to a buffer (e.g. ``stdout``) with output
+  similar to what the command line utility ``ncdump -h`` produces (:issue:`1150`).
+  By `Joe Hamman <https://github.com/jhamman>`_.
 
 - Added the ability write unlimited netCDF dimensions with the ``netcdf4``
   backend.

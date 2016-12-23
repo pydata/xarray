@@ -12,6 +12,7 @@ try:
     import dask.array as da
 except ImportError:
     pass
+from io import StringIO
 
 import numpy as np
 import pandas as pd
@@ -189,6 +190,42 @@ class TestDataset(TestCase):
             å: ∑""" % u'ba®')
         actual = unicode_type(data)
         self.assertEqual(expected, actual)
+
+    def test_info(self):
+        ds = create_test_data(seed=123)
+        ds = ds.drop('dim3')  # string type prints differently in PY2 vs PY3
+        ds.attrs['unicode_attr'] = u'ba®'
+        ds.attrs['string_attr'] = 'bar'
+
+        buf = StringIO()
+        ds.info(buf=buf)
+
+        expected = dedent(u'''\
+        xarray.Dataset {
+        dimensions:
+        	dim1 = 8 ;
+        	dim2 = 9 ;
+        	dim3 = 10 ;
+        	time = 20 ;
+
+        variables:
+        	datetime64[ns] time(time) ;
+        	float64 dim2(dim2) ;
+        	float64 var1(dim1, dim2) ;
+        		var1:foo = variable ;
+        	float64 var2(dim1, dim2) ;
+        		var2:foo = variable ;
+        	float64 var3(dim3, dim1) ;
+        		var3:foo = variable ;
+        	int64 numbers(dim3) ;
+
+        // global attributes:
+        	:unicode_attr = ba® ;
+        	:string_attr = bar ;
+        }''')
+        actual = buf.getvalue()
+        self.assertEqual(expected, actual)
+        buf.close()
 
     def test_constructor(self):
         x1 = ('x', 2 * np.arange(100))
