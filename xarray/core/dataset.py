@@ -1091,7 +1091,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
                     if any(d in indexer_dims for d in v.dims)]
 
         data_vars = relevant_keys(self.data_vars)
-        # coords = relevant_keys(self.coords)
+        coords = relevant_keys(self.coords)
         dim_coord = None
 
         # all the indexers should be iterables
@@ -1134,77 +1134,58 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         indexers_dict = dict(indexers)
         non_indexed_dims = set(self.dims) - indexer_dims
 
+        reordered = self.transpose(*(list(indexer_dims) + list(non_indexed_dims)))
+
+        variables = OrderedDict()
         sel_coords = OrderedDict()
+
+        for name, var in reordered.variables.items():
+            if name in indexers_dict or any(d in indexer_dims for d in var.dims):
+                # if the var is an indexer or if it depends on an indexed dim, slice it
+                slc = [indexers_dict[k] if k in indexers_dict else slice(None) for k in var.dims]
+                var_dims = [dim] + [d for d in var.dims if d in non_indexed_dims]
+                selection = take(var, tuple(slc))
+
+                # Add the var to variables or coords accordingly
+                if name in coords:
+                    sel_coords[name] = (var_dims, selection)
+                else:
+                    variables[name] = (var_dims, selection)
+            else:
+                # If not indexed just add it back to variables or coordinates
+                if name in self.coords:
+                    sel_coords[name] = var
+                else:
+                    variables[name] = var
+
         if dim_coord is not None:
             sel_coords[dim] = dim_coord
 
-        # Add sliced versions of coordinates that themselves depend on other dimensions
-        # which may also have been indexed
-        for c in self.coords:
-            if c in indexers_dict:
-                selection = take(self.coords[c], indexers_dict[c])
-                sel_coords[c] = (dim, selection)
 
-            elif any(d in indexer_dims for d in self.coords[c].dims):
-                # If the coord variable depends on an indexed dimension, slice it
-                var = self.coords[c]
-                coord_dim = var.dims[0]  # should just be one?
-                selection = take(var, indexers_dict[coord_dim])
+        # Keeping this around in case transpose causes issues
+        # transpose is not lazy so could create performance problems
+        # This code adds variables in order and inserts the new dim at the first position of
+        # and indexed dim
+        # dim_added = False
+        # var_coords = []
+        # var_dims = []
+        # for k in var.dims:
+        #     # collapse dims that are in the indexer
+        #     # add coords for others
+        #     if k not in indexers_dict:
+        #         var_dims.append(k)
+        #         var_coords.append(self.variables[k])
+        #     else:
+        #         # To make sure it gets added the first time we hit an index dim, but only add once
+        #         if not dim_added:
+        #             # add generated points to replace collapsed dims...
+        #             var_coords.append(dim_coord)
+        #             var_dims.append(dim)
+        #             dim_added = True
 
-                sel_coords[c] = (dim, selection)
-            else:
-                sel_coords[c] = self.coords[c]
-
-        variables = OrderedDict()
-
-        for name in data_vars:
-            var = self.variables[name]
-            # Transpose the var to ensure that the indexed dims come first
-            # These dims will be collapsed in the output.
-            # To avoid edge cases in numpy want to transpose to ensure the indexed dimensions are first
-            # However transpose is not lazy, so want to avoid using it for dask case (??)
-            var = var.transpose(*(list(d for d in indexer_dims if d in var.dims) +
-                                  list(d for d in non_indexed_dims if d in var.dims)))
-
-            # add 'select all' slices for the non-indexed dimensions
-            slc = [indexers_dict[k] if k in indexers_dict else slice(None) for k in var.dims]
-
-            var_dims = [dim] + [d for d in var.dims if d in non_indexed_dims]
-
-            # Keeping this around in case transpose causes issues with dask
-            # (shoyer) instead reorder the axes to make sure the indexed dimensions come first to avoid weird behaviour in numpy edge cases
-            # Note that transpose is not lazy however so this could create performance problems
-            # Need to preserve order for dims and coords...
-            # dim_added = False
-            # var_coords = []
-            # var_dims = []
-            # for k in var.dims:
-            #     # collapse dims that are in the indexer
-            #     # add coords for others
-            #     if k not in indexers_dict:
-            #         var_dims.append(k)
-            #         var_coords.append(self.variables[k])
-            #     else:
-            #         # To make sure it gets added the first time we hit an index dim, but only add once
-            #         if not dim_added:
-            #             # add generated points to replace collapsed dims...
-            #             var_coords.append(dim_coord)
-            #             var_dims.append(dim)
-            #             dim_added = True
-
-            selection = take(var, tuple(slc))
-
-            variables[name] = (var_dims, selection)
-
-        # add anything we didn't have already (behaviour is to preserve all non-indexed dimensions)
-        for name, var in self.variables.items():
-            if name not in variables and name not in sel_coords:
-                variables[name] = var
-
-        dset = Dataset(variables,
+        return Dataset(variables,
                        sel_coords,
                        attrs=self.attrs)
-        return dset
 
 
     def sel_points(self, dim='points', method=None, tolerance=None,
