@@ -105,7 +105,7 @@ Enhancements
   (see :ref:`multi-level indexing`).
   By `Benoit Bovy <https://github.com/benbovy>`_.
 - Added ``set_index``, ``reset_index`` and ``reorder_levels`` methods to
-  easily create and manipulate multi-indexes (see :ref:`multi-index handling`).
+  easily create and manipulate (multi-)indexes (see :ref:`reshape.set_index`).
   By `Benoit Bovy <https://github.com/benbovy>`_.
 - Added the ``compat`` option ``'no_conflicts'`` to ``merge``, allowing the
   combination of xarray objects with disjoint (:issue:`742`) or
