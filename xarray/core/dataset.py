@@ -1092,10 +1092,12 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
 
         data_vars = relevant_keys(self.data_vars)
         coords = relevant_keys(self.coords)
+        indexers = [(k, np.asarray(v)) for k, v in iteritems(indexers)]
+        indexers_dict = dict(indexers)
+        non_indexed_dims = set(self.dims) - indexer_dims
         dim_coord = None
 
         # all the indexers should be iterables
-        indexers = [(k, np.asarray(v)) for k, v in iteritems(indexers)]
         # Check that indexers are valid dims, integers, and 1D
         for k, v in indexers:
             if k not in self.dims:
@@ -1131,9 +1133,6 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
             dim_coord = as_variable(dim, name=name)
             dim = name
 
-        indexers_dict = dict(indexers)
-        non_indexed_dims = set(self.dims) - indexer_dims
-
         reordered = self.transpose(*(list(indexer_dims) + list(non_indexed_dims)))
 
         variables = OrderedDict()
@@ -1161,7 +1160,6 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         if dim_coord is not None:
             sel_coords[dim] = dim_coord
 
-
         # Keeping this around in case transpose causes issues
         # transpose is not lazy so could create performance problems
         # This code adds variables in order and inserts the new dim at the first position of
@@ -1186,7 +1184,6 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         return Dataset(variables,
                        sel_coords,
                        attrs=self.attrs)
-
 
     def sel_points(self, dim='points', method=None, tolerance=None,
                    **indexers):
