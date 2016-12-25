@@ -411,6 +411,7 @@ Dataset methods
    Dataset.load
    Dataset.chunk
    Dataset.filter_by_attrs
+   Dataset.info
 
 DataArray methods
 -----------------
@@ -471,3 +472,14 @@ arguments for the ``from_store`` and ``dump_to_store`` Dataset methods:
    backends.H5NetCDFStore
    backends.PydapDataStore
    backends.ScipyDataStore
+
+
+Testing
+=======
+
+.. autosummary::
+   :toctree: generated/
+
+   test.assert_xarray_equal
+   test.assert_xarray_identical
+   test.assert_xarray_allclose

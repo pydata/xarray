@@ -21,7 +21,13 @@ v0.9.0 (unreleased)
 Breaking changes
 ~~~~~~~~~~~~~~~~
 
+- ``DataArray.rename()`` behavior changed to strictly change the ``DataArray.name``
+  if called with string argument, or strictly change coordinate names if called with
+  dict-like argument.
+  By `Markus Gonser <https://github.com/magonser>`_.
+
 - By default ``to_netcdf()`` add a ``_FillValue = NaN`` attributes to float types.
+  By `Frederic Laliberte <https://github.com/laliberte>`_.
 
 - Index coordinates for each dimensions are now optional, and no longer created
   by default :issue:`1017`. This has a number of implications:
@@ -64,6 +70,7 @@ Breaking changes
 - Coordinates used to index a dimension are now loaded eagerly into
   :py:class:`pandas.Index` objects, instead of loading the values lazily.
   By `Guido Imperiale <https://github.com/crusaderky>`_.
+- xarray no longer supports python 3.3
 
 Deprecations
 ~~~~~~~~~~~~
@@ -125,6 +132,12 @@ Enhancements
   providing consistent access to dimension length on both ``Dataset`` and
   ``DataArray`` (:issue:`921`).
   By `Stephan Hoyer <https://github.com/shoyer>`_.
+- New keyword argument ``drop=True`` for :py:meth:`~DataArray.sel`,
+  :py:meth:`~DataArray.isel` and :py:meth:`~DataArray.squeeze` for dropping
+  scalar coordinates that arise from indexing.
+  ``DataArray`` (:issue:`242`).
+  By `Stephan Hoyer <https://github.com/shoyer>`_.
+
 - New top-level functions :py:func:`~xarray.full_like`,
   :py:func:`~xarray.zeros_like`, and :py:func:`~xarray.ones_like`
   By `Guido Imperiale <https://github.com/crusaderky>`_.
@@ -137,6 +150,18 @@ Enhancements
   :py:class:`FacetGrid` and :py:func:`~xarray.plot.plot`, so axes
   sharing can be disabled for polar plots.
   By `Bas Hoonhout <https://github.com/hoonhout>`_.
+- New utility functions :py:func:`~xarray.test.assert_xarray_equal`,
+  :py:func:`~xarray.test.assert_xarray_identical`, and
+  :py:func:`~xarray.test.assert_xarray_allclose` for asserting relationships
+  between xarray objects, designed for use in a pytest test suite.
+- ``figsize``, ``size`` and ``aspect`` plot arguments are now supported for all
+  plots (:issue:`897`). See :ref:`plotting.figsize` for more details.
+  By `Stephan Hoyer <https://github.com/shoyer>`_ and
+  `Fabien Maussion <https://github.com/fmaussion>`_.
+- New :py:meth:`~Dataset.info` method to summarize ``Dataset`` variables
+  and attributes. The method prints to a buffer (e.g. ``stdout``) with output
+  similar to what the command line utility ``ncdump -h`` produces (:issue:`1150`).
+  By `Joe Hamman <https://github.com/jhamman>`_.
 
 Bug fixes
 ~~~~~~~~~

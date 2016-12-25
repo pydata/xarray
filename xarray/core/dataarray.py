@@ -645,7 +645,7 @@ class DataArray(AbstractArray, BaseDataObject):
         ds = self._to_temp_dataset().chunk(chunks)
         return self._from_temp_dataset(ds)
 
-    def isel(self, **indexers):
+    def isel(self, drop=False, **indexers):
         """Return a new DataArray whose dataset is given by integer indexing
         along the specified dimension(s).
 
@@ -654,10 +654,10 @@ class DataArray(AbstractArray, BaseDataObject):
         Dataset.isel
         DataArray.sel
         """
-        ds = self._to_temp_dataset().isel(**indexers)
+        ds = self._to_temp_dataset().isel(drop=drop, **indexers)
         return self._from_temp_dataset(ds)
 
-    def sel(self, method=None, tolerance=None, **indexers):
+    def sel(self, method=None, tolerance=None, drop=False, **indexers):
         """Return a new DataArray whose dataset is given by selecting
         index labels along the specified dimension(s).
 
@@ -669,7 +669,8 @@ class DataArray(AbstractArray, BaseDataObject):
         pos_indexers, new_indexes = indexing.remap_label_indexers(
             self, indexers, method=method, tolerance=tolerance
         )
-        return self.isel(**pos_indexers)._replace_indexes(new_indexes)
+        result = self.isel(drop=drop, **pos_indexers)
+        return result._replace_indexes(new_indexes)
 
     def isel_points(self, dim='points', **indexers):
         """Return a new DataArray whose dataset is given by pointwise integer
@@ -788,15 +789,16 @@ class DataArray(AbstractArray, BaseDataObject):
         return self._from_temp_dataset(ds)
 
     def rename(self, new_name_or_name_dict):
-        """Returns a new DataArray with renamed coordinates and/or a new name.
+        """Returns a new DataArray with renamed coordinates or a new name.
 
 
         Parameters
         ----------
         new_name_or_name_dict : str or dict-like
             If the argument is dict-like, it it used as a mapping from old
-            names to new names for coordinates (and/or this array itself).
-            Otherwise, use the argument as the new name for this array.
+            names to new names for coordinates. Otherwise, use the argument
+            as the new name for this array.
+
 
         Returns
         -------
@@ -809,13 +811,8 @@ class DataArray(AbstractArray, BaseDataObject):
         DataArray.swap_dims
         """
         if utils.is_dict_like(new_name_or_name_dict):
-            name_dict = new_name_or_name_dict.copy()
-            if self.name in self.dims:
-                name = name_dict.get(self.name, self.name)
-            else:
-                name = name_dict.pop(self.name, self.name)
-            dataset = self._to_temp_dataset().rename(name_dict)
-            return self._from_temp_dataset(dataset, name)
+            dataset = self._to_temp_dataset().rename(new_name_or_name_dict)
+            return self._from_temp_dataset(dataset)
         else:
             return self._replace(name=new_name_or_name_dict)
 

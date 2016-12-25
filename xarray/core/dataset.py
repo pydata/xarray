@@ -5,6 +5,8 @@ import functools
 from collections import Mapping
 from numbers import Number
 
+import sys
+
 import numpy as np
 import pandas as pd
 
@@ -25,9 +27,9 @@ from .utils import (Frozen, SortedKeysDict, maybe_wrap_array, hashable,
 from .variable import (Variable, as_variable, IndexVariable, broadcast_variables)
 from .pycompat import (iteritems, basestring, OrderedDict,
                        dask_array_type, range)
+from .formatting import ensure_valid_repr
 from .combine import concat
 from .options import OPTIONS
-
 
 # list of attributes of pd.DatetimeIndex that are ndarrays of time info
 _DATETIMEINDEX_COMPONENTS = ['year', 'month', 'day', 'hour', 'minute',
@@ -802,6 +804,43 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
     def __unicode__(self):
         return formatting.dataset_repr(self)
 
+    def info(self, buf=None):
+        """
+        Concise summary of a Dataset variables and attributes.
+
+        Parameters
+        ----------
+        buf : writable buffer, defaults to sys.stdout
+
+        See Also
+        --------
+        pandas.DataFrame.assign
+        netCDF's ncdump
+        """
+
+        if buf is None:  # pragma: no cover
+            buf = sys.stdout
+
+        lines = []
+        lines.append(u'xarray.Dataset {')
+        lines.append(u'dimensions:')
+        for name, size in self.dims.items():
+            lines.append(u'\t{name} = {size} ;'.format(name=name, size=size))
+        lines.append(u'\nvariables:')
+        for name, da in self.variables.items():
+            dims = u', '.join(da.dims)
+            lines.append(u'\t{type} {name}({dims}) ;'.format(
+                type=da.dtype, name=name, dims=dims))
+            for k, v in da.attrs.items():
+                lines.append(u'\t\t{name}:{k} = {v} ;'.format(name=name, k=k,
+                                                              v=v))
+        lines.append(u'\n// global attributes:')
+        for k, v in self.attrs.items():
+            lines.append(u'\t:{k} = {v} ;'.format(k=k, v=v))
+        lines.append(u'}')
+
+        buf.write(u'\n'.join(lines))
+
     @property
     def chunks(self):
         """Block dimensions for this dataset's data or None if it's not a dask
@@ -880,7 +919,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
                                  for k, v in self.variables.items()])
         return self._replace_vars_and_dims(variables)
 
-    def isel(self, **indexers):
+    def isel(self, drop=False, **indexers):
         """Returns a new dataset with each array indexed along the specified
         dimension(s).
 
@@ -890,6 +929,9 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
 
         Parameters
         ----------
+        drop : bool, optional
+            If ``drop=True``, drop coordinates variables indexed by integers
+            instead of making them scalar.
         **indexers : {dim: indexer, ...}
             Keyword arguments with names matching dimensions and values given
             by integers, slice objects or arrays.
@@ -923,10 +965,13 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         variables = OrderedDict()
         for name, var in iteritems(self._variables):
             var_indexers = dict((k, v) for k, v in indexers if k in var.dims)
-            variables[name] = var.isel(**var_indexers)
-        return self._replace_vars_and_dims(variables)
+            new_var = var.isel(**var_indexers)
+            if not (drop and name in var_indexers):
+                variables[name] = new_var
+        coord_names = set(self._coord_names) & set(variables)
+        return self._replace_vars_and_dims(variables, coord_names=coord_names)
 
-    def sel(self, method=None, tolerance=None, **indexers):
+    def sel(self, method=None, tolerance=None, drop=False, **indexers):
         """Returns a new dataset with each array indexed by tick labels
         along the specified dimension(s).
 
@@ -957,6 +1002,9 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
             matches. The values of the index at the matching locations most
             satisfy the equation ``abs(index[indexer] - target) <= tolerance``.
             Requires pandas>=0.17.
+        drop : bool, optional
+            If ``drop=True``, drop coordinates variables in `indexers` instead
+            of making them scalar.
         **indexers : {dim: indexer, ...}
             Keyword arguments with names matching dimensions and values given
             by scalars, slices or arrays of tick labels. For dimensions with
@@ -982,7 +1030,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         pos_indexers, new_indexes = indexing.remap_label_indexers(
             self, indexers, method=method, tolerance=tolerance
         )
-        return self.isel(**pos_indexers)._replace_indexes(new_indexes)
+        result = self.isel(drop=drop, **pos_indexers)
+        return result._replace_indexes(new_indexes)
 
     def isel_points(self, dim='points', **indexers):
         """Returns a new dataset with each array indexed pointwise along the

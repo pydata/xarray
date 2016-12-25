@@ -12,6 +12,7 @@ try:
     import dask.array as da
 except ImportError:
     pass
+from io import StringIO
 
 import numpy as np
 import pandas as pd
@@ -189,6 +190,42 @@ class TestDataset(TestCase):
             å: ∑""" % u'ba®')
         actual = unicode_type(data)
         self.assertEqual(expected, actual)
+
+    def test_info(self):
+        ds = create_test_data(seed=123)
+        ds = ds.drop('dim3')  # string type prints differently in PY2 vs PY3
+        ds.attrs['unicode_attr'] = u'ba®'
+        ds.attrs['string_attr'] = 'bar'
+
+        buf = StringIO()
+        ds.info(buf=buf)
+
+        expected = dedent(u'''\
+        xarray.Dataset {
+        dimensions:
+        	dim1 = 8 ;
+        	dim2 = 9 ;
+        	dim3 = 10 ;
+        	time = 20 ;
+
+        variables:
+        	datetime64[ns] time(time) ;
+        	float64 dim2(dim2) ;
+        	float64 var1(dim1, dim2) ;
+        		var1:foo = variable ;
+        	float64 var2(dim1, dim2) ;
+        		var2:foo = variable ;
+        	float64 var3(dim3, dim1) ;
+        		var3:foo = variable ;
+        	int64 numbers(dim3) ;
+
+        // global attributes:
+        	:unicode_attr = ba® ;
+        	:string_attr = bar ;
+        }''')
+        actual = buf.getvalue()
+        self.assertEqual(expected, actual)
+        buf.close()
 
     def test_constructor(self):
         x1 = ('x', 2 * np.arange(100))
@@ -439,7 +476,7 @@ class TestDataset(TestCase):
         a['x'] = ('x', vec, attributes)
         self.assertTrue('x' in a.coords)
         self.assertIsInstance(a.coords['x'].to_index(), pd.Index)
-        self.assertVariableIdentical(a.coords['x'], a.variables['x'])
+        self.assertVariableIdentical(a.coords['x'].variable, a.variables['x'])
         b = Dataset()
         b['x'] = ('x', vec, attributes)
         self.assertVariableIdentical(a['x'], b['x'])
@@ -473,8 +510,8 @@ class TestDataset(TestCase):
 
         self.assertItemsEqual(['x', 'y', 'a', 'b'], list(data.coords))
 
-        self.assertVariableIdentical(data.coords['x'], data['x'].variable)
-        self.assertVariableIdentical(data.coords['y'], data['y'].variable)
+        self.assertVariableIdentical(data.coords['x'].variable, data['x'].variable)
+        self.assertVariableIdentical(data.coords['y'].variable, data['y'].variable)
 
         self.assertIn('x', data.coords)
         self.assertIn('a', data.coords)
@@ -824,6 +861,31 @@ class TestDataset(TestCase):
         self.assertDatasetEqual(data.isel(td=slice(1, 3)),
                                 data.sel(td=slice('1 days', '2 days')))
 
+    def test_sel_drop(self):
+        data = Dataset({'foo': ('x', [1, 2, 3])}, {'x': [0, 1, 2]})
+        expected = Dataset({'foo': 1})
+        selected = data.sel(x=0, drop=True)
+        self.assertDatasetIdentical(expected, selected)
+
+        expected = Dataset({'foo': 1}, {'x': 0})
+        selected = data.sel(x=0, drop=False)
+        self.assertDatasetIdentical(expected, selected)
+
+        data = Dataset({'foo': ('x', [1, 2, 3])})
+        expected = Dataset({'foo': 1})
+        selected = data.sel(x=0, drop=True)
+        self.assertDatasetIdentical(expected, selected)
+
+    def test_isel_drop(self):
+        data = Dataset({'foo': ('x', [1, 2, 3])}, {'x': [0, 1, 2]})
+        expected = Dataset({'foo': 1})
+        selected = data.isel(x=0, drop=True)
+        self.assertDatasetIdentical(expected, selected)
+
+        expected = Dataset({'foo': 1}, {'x': 0})
+        selected = data.isel(x=0, drop=False)
+        self.assertDatasetIdentical(expected, selected)
+
     def test_isel_points(self):
         data = create_test_data()
 
@@ -987,7 +1049,8 @@ class TestDataset(TestCase):
                 if renamed_dim:
                     self.assertEqual(ds['var'].dims[0], renamed_dim)
                     ds = ds.rename({renamed_dim: 'x'})
-                self.assertVariableIdentical(ds['var'], expected_ds['var'])
+                self.assertVariableIdentical(ds['var'].variable,
+                                             expected_ds['var'].variable)
                 self.assertVariableNotEqual(ds['x'], expected_ds['x'])
 
         test_sel(('a', 1, -1), 0)
@@ -1137,7 +1200,7 @@ class TestDataset(TestCase):
         self.assertDatasetIdentical(left2, right2)
 
         left2, right2 = align(left, right, join='outer')
-        self.assertVariableEqual(left2['dim3'], right2['dim3'])
+        self.assertVariableEqual(left2['dim3'].variable, right2['dim3'].variable)
         self.assertArrayEqual(left2['dim3'], union)
         self.assertDatasetIdentical(left2.sel(dim3=intersection),
                                     right2.sel(dim3=intersection))
@@ -1145,15 +1208,15 @@ class TestDataset(TestCase):
         self.assertTrue(np.isnan(right2['var3'][:2]).all())
 
         left2, right2 = align(left, right, join='left')
-        self.assertVariableEqual(left2['dim3'], right2['dim3'])
-        self.assertVariableEqual(left2['dim3'], left['dim3'])
+        self.assertVariableEqual(left2['dim3'].variable, right2['dim3'].variable)
+        self.assertVariableEqual(left2['dim3'].variable, left['dim3'].variable)
         self.assertDatasetIdentical(left2.sel(dim3=intersection),
                                     right2.sel(dim3=intersection))
         self.assertTrue(np.isnan(right2['var3'][:2]).all())
 
         left2, right2 = align(left, right, join='right')
-        self.assertVariableEqual(left2['dim3'], right2['dim3'])
-        self.assertVariableEqual(left2['dim3'], right['dim3'])
+        self.assertVariableEqual(left2['dim3'].variable, right2['dim3'].variable)
+        self.assertVariableEqual(left2['dim3'].variable, right['dim3'].variable)
         self.assertDatasetIdentical(left2.sel(dim3=intersection),
                                     right2.sel(dim3=intersection))
         self.assertTrue(np.isnan(left2['var3'][-2:]).all())
@@ -1371,7 +1434,7 @@ class TestDataset(TestCase):
                     dims[dims.index(name)] = newname
 
             self.assertVariableEqual(Variable(dims, v.values, v.attrs),
-                                     renamed[k])
+                                     renamed[k].variable.to_base_variable())
             self.assertEqual(v.encoding, renamed[k].encoding)
             self.assertEqual(type(v), type(renamed.variables[k]))
 
@@ -1523,7 +1586,7 @@ class TestDataset(TestCase):
     def test_getitem(self):
         data = create_test_data()
         self.assertIsInstance(data['var1'], DataArray)
-        self.assertVariableEqual(data['var1'], data.variables['var1'])
+        self.assertVariableEqual(data['var1'].variable, data.variables['var1'])
         with self.assertRaises(KeyError):
             data['notfound']
         with self.assertRaises(KeyError):
@@ -1619,9 +1682,9 @@ class TestDataset(TestCase):
 
     def test_slice_virtual_variable(self):
         data = create_test_data()
-        self.assertVariableEqual(data['time.dayofyear'][:10],
+        self.assertVariableEqual(data['time.dayofyear'][:10].variable,
                                  Variable(['time'], 1 + np.arange(10)))
-        self.assertVariableEqual(data['time.dayofyear'][0], Variable([], 1))
+        self.assertVariableEqual(data['time.dayofyear'][0].variable, Variable([], 1))
 
     def test_setitem(self):
         # assign a variable
@@ -1792,6 +1855,29 @@ class TestDataset(TestCase):
         # invalid squeeze
         with self.assertRaisesRegexp(ValueError, 'cannot select a dimension'):
             data.squeeze('y')
+
+    def test_squeeze_drop(self):
+        data = Dataset({'foo': ('x', [1])}, {'x': [0]})
+        expected = Dataset({'foo': 1})
+        selected = data.squeeze(drop=True)
+        self.assertDatasetIdentical(expected, selected)
+
+        expected = Dataset({'foo': 1}, {'x': 0})
+        selected = data.squeeze(drop=False)
+        self.assertDatasetIdentical(expected, selected)
+
+        data = Dataset({'foo': (('x', 'y'), [[1]])}, {'x': [0], 'y': [0]})
+        expected = Dataset({'foo': 1})
+        selected = data.squeeze(drop=True)
+        self.assertDatasetIdentical(expected, selected)
+
+        expected = Dataset({'foo': ('x', [1])}, {'x': [0]})
+        selected = data.squeeze(dim='y', drop=True)
+        self.assertDatasetIdentical(expected, selected)
+
+        data = Dataset({'foo': (('x',), [])}, {'x': []})
+        selected = data.squeeze(drop=True)
+        self.assertDatasetIdentical(data, selected)
 
     def test_groupby(self):
         data = Dataset({'z': (['x', 'y'], np.random.randn(3, 5))},

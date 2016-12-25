@@ -249,10 +249,24 @@ class AttrAccessMixin(object):
         return sorted(set(dir(type(self)) + extra_attrs))
 
 
-class SharedMethodsMixin(object):
-    """Shared methods for Dataset, DataArray and Variable."""
+def get_squeeze_dims(xarray_obj, dim):
+    """Get a list of dimensions to squeeze out.
+    """
+    if dim is None:
+        dim = [d for d, s in xarray_obj.sizes.items() if s == 1]
+    else:
+        if isinstance(dim, basestring):
+            dim = [dim]
+        if any(xarray_obj.sizes[k] > 1 for k in dim):
+            raise ValueError('cannot select a dimension to squeeze out '
+                             'which has length greater than one')
+    return dim
 
-    def squeeze(self, dim=None):
+
+class BaseDataObject(AttrAccessMixin):
+    """Shared base class for Dataset and DataArray."""
+
+    def squeeze(self, dim=None, drop=False):
         """Return a new object with squeezed data.
 
         Parameters
@@ -261,6 +275,9 @@ class SharedMethodsMixin(object):
             Selects a subset of the length one dimensions. If a dimension is
             selected with length greater than one, an error is raised. If
             None, all length one dimensions are squeezed.
+        drop : bool, optional
+            If ``drop=True``, drop squeezed coordinates instead of making them
+            scalar.
 
         Returns
         -------
@@ -272,19 +289,8 @@ class SharedMethodsMixin(object):
         --------
         numpy.squeeze
         """
-        if dim is None:
-            dim = [d for d, s in self.sizes.items() if s == 1]
-        else:
-            if isinstance(dim, basestring):
-                dim = [dim]
-            if any(self.sizes[k] > 1 for k in dim):
-                raise ValueError('cannot select a dimension to squeeze out '
-                                 'which has length greater than one')
-        return self.isel(**{d: 0 for d in dim})
-
-
-class BaseDataObject(SharedMethodsMixin, AttrAccessMixin):
-    """Shared base class for Dataset and DataArray."""
+        dims = get_squeeze_dims(self, dim)
+        return self.isel(drop=drop, **{d: 0 for d in dims})
 
     def get_index(self, key):
         """Get an index for a dimension, with fall-back to a default RangeIndex
