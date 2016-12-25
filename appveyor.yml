@@ -32,4 +32,4 @@ install:
 build: false
 
 test_script:
-  - "py.test xarray"
+  - "py.test xarray --verbose"
