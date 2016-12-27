@@ -1492,6 +1492,48 @@ class TestDataset(TestCase):
         with self.assertRaisesRegexp(ValueError, 'replacement dimension'):
             original.swap_dims({'x': 'z'})
 
+    def test_set_index(self):
+        expected = create_test_multiindex()
+        mindex = expected['x'].to_index()
+        indexes = [mindex.get_level_values(n) for n in mindex.names]
+        coords = {idx.name: ('x', idx) for idx in indexes}
+        ds = Dataset({}, coords=coords)
+
+        obj = ds.set_index(x=mindex.names)
+        self.assertDatasetIdentical(obj, expected)
+
+        ds.set_index(x=mindex.names, inplace=True)
+        self.assertDatasetIdentical(ds, expected)
+
+    def test_reset_index(self):
+        ds = create_test_multiindex()
+        mindex = ds['x'].to_index()
+        indexes = [mindex.get_level_values(n) for n in mindex.names]
+        coords = {idx.name: ('x', idx) for idx in indexes}
+        expected = Dataset({}, coords=coords)
+
+        obj = ds.reset_index('x')
+        self.assertDatasetIdentical(obj, expected)
+
+        ds.reset_index('x', inplace=True)
+        self.assertDatasetIdentical(ds, expected)
+
+    def test_reorder_levels(self):
+        ds = create_test_multiindex()
+        mindex = ds['x'].to_index()
+        midx = mindex.reorder_levels(['level_2', 'level_1'])
+        expected = Dataset({}, coords={'x': midx})
+
+        reindexed = ds.reorder_levels(x=['level_2', 'level_1'])
+        self.assertDatasetIdentical(reindexed, expected)
+
+        ds.reorder_levels(x=['level_2', 'level_1'], inplace=True)
+        self.assertDatasetIdentical(ds, expected)
+
+        ds = Dataset({}, coords={'x': [1, 2]})
+        with self.assertRaisesRegexp(ValueError, 'has no MultiIndex'):
+            ds.reorder_levels(x=['level_1', 'level_2'])
+
     def test_stack(self):
         ds = Dataset({'a': ('x', [0, 1]),
                       'b': (('x', 'y'), [[0, 1], [2, 3]]),
