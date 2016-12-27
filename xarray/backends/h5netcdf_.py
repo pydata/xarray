@@ -2,6 +2,7 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 import functools
+import warnings
 
 from .. import Variable
 from ..core import indexing
@@ -103,7 +104,9 @@ class H5NetCDFStore(WritableCFDataStore, DataStorePickleMixin):
 
         unlimited_dims = self.encoding.get('unlimited_dims', set())
         if len(unlimited_dims) > 0:
-            raise ValueError('h5netcdf does not support unlimited dimensions')
+            warnings.warn('h5netcdf does not support unlimited dimensions',
+                          UserWarning)
+            unlimited_dims = set()
         self.set_necessary_dimensions(variable, unlimited_dims=unlimited_dims)
 
         fill_value = attrs.pop('_FillValue', None)

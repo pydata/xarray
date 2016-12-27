@@ -146,7 +146,11 @@ class ArrayWriter(object):
             self.sources.append(source)
             self.targets.append(target)
         else:
-            target[...] = source
+            try:
+                target[...] = source
+            except TypeError:
+                # workaround for GH: scipy/scipy#6880
+                target[slice(None, None, None)] = source
 
     def sync(self):
         if self.sources:

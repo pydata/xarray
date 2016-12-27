@@ -924,7 +924,7 @@ class GenericNetCDFDataTest(CFEncodedDataTest, Only32BitTypes, TestCase):
         ds = Dataset({'x': ('y', np.arange(10.0))})
         ds.encoding = {'unlimited_dims': ['y']}
         with self.roundtrip(ds) as actual:
-            self.assertEqual(actual.x.encoding['unlimited_dims'], set('y'))
+            self.assertEqual(actual.encoding['unlimited_dims'], set('y'))
 
 
 @requires_h5netcdf
@@ -978,6 +978,11 @@ class H5NetCDFDataTest(BaseNetCDF4Test, TestCase):
             expected = Dataset(attrs={'foo': 'bar'})
             self.assertDatasetIdentical(expected, actual)
 
+    def test_encoding_unlimited_dims(self):
+        ds = Dataset({'x': ('y', np.arange(10.0))})
+        ds.encoding = {'unlimited_dims': ['y']}
+        with pytest.warns(UserWarning):
+            ds.to_netcdf('foo-bar.nc', engine='h5netcdf')
 
 @requires_dask
 @requires_scipy
