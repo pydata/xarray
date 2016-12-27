@@ -111,6 +111,9 @@ Enhancements
   as keyword arguments, e.g., ``ds.sel(time='2000-01')``
   (see :ref:`multi-level indexing`).
   By `Benoit Bovy <https://github.com/benbovy>`_.
+- Added ``set_index``, ``reset_index`` and ``reorder_levels`` methods to
+  easily create and manipulate (multi-)indexes (see :ref:`reshape.set_index`).
+  By `Benoit Bovy <https://github.com/benbovy>`_.
 - Added the ``compat`` option ``'no_conflicts'`` to ``merge``, allowing the
   combination of xarray objects with disjoint (:issue:`742`) or
   overlapping (:issue:`835`) coordinates as long as all present data agrees.

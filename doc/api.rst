@@ -106,6 +106,9 @@ Indexing
    Dataset.squeeze
    Dataset.reindex
    Dataset.reindex_like
+   Dataset.set_index
+   Dataset.reset_index
+   Dataset.reorder_levels
 
 Computation
 -----------
@@ -239,6 +242,9 @@ Indexing
    DataArray.squeeze
    DataArray.reindex
    DataArray.reindex_like
+   DataArray.set_index
+   DataArray.reset_index
+   DataArray.reorder_levels
 
 Comparisons
 -----------
