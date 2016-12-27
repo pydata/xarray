@@ -3,6 +3,7 @@ from __future__ import division
 from __future__ import print_function
 
 import inspect
+from distutils.version import LooseVersion
 
 import numpy as np
 import pandas as pd
@@ -160,7 +161,12 @@ class TestPlot(PlotTestCase):
         g = d.plot(x='x', y='y', col='z', col_wrap=2, cmap='cool',
                    subplot_kws=dict(axisbg='r'))
         for ax in g.axes.flat:
-            self.assertEqual(ax.get_axis_bgcolor(), 'r')
+            try:
+                # mpl V2
+                self.assertEqual(ax.get_facecolor()[0:3],
+                                 mpl.colors.to_rgb('r'))
+            except AttributeError:
+                self.assertEqual(ax.get_axis_bgcolor(), 'r')
 
     def test_convenient_facetgrid_4d(self):
         a = easy_array((10, 15, 2, 3))
@@ -458,8 +464,10 @@ class TestDiscreteColorMap(TestCase):
                 primitive = getattr(self.darray.plot, kind)(levels=levels,
                                                             vmin=vmin,
                                                             vmax=vmax)
-                self.assertGreaterEqual(levels,
-                                        len(primitive.norm.boundaries) - 1)
+                if LooseVersion(mpl.__version__) < LooseVersion('2.0'):
+                    self.assertGreaterEqual(levels,
+                                            len(primitive.norm.boundaries) - 1)
+                    self.assertGreaterEqual(levels, len(primitive.cmap.colors))
                 if vmax is None:
                     self.assertGreaterEqual(primitive.norm.vmax, self.data_max)
                 else:
@@ -472,7 +480,6 @@ class TestDiscreteColorMap(TestCase):
                     self.assertEqual(extend, primitive.cmap.colorbar_extend)
                 else:
                     self.assertEqual('max', primitive.cmap.colorbar_extend)
-                self.assertGreaterEqual(levels, len(primitive.cmap.colors))
 
     def test_discrete_colormap_list_levels_and_vmin_or_vmax(self):
         levels = [0, 5, 10, 15]
@@ -1054,7 +1061,7 @@ class TestFacetGrid(PlotTestCase):
         self.assertArrayEqual(g.fig.get_size_inches(), (7, 4))
 
     def test_num_ticks(self):
-        nticks = 100
+        nticks = 99
         maxticks = nticks + 1
         self.g.map_dataarray(xplt.imshow, 'x', 'y')
         self.g.set_ticks(max_xticks=nticks, max_yticks=nticks)
