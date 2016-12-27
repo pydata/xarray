@@ -46,6 +46,7 @@ Attributes
    Dataset.data_vars
    Dataset.coords
    Dataset.attrs
+   Dataset.encoding
    Dataset.indexes
    Dataset.get_index
 
