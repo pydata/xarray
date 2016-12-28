@@ -28,7 +28,6 @@ from .variable import (Variable, as_variable, IndexVariable,
                        broadcast_variables)
 from .pycompat import (iteritems, basestring, OrderedDict,
                        dask_array_type, range)
-from .formatting import ensure_valid_repr
 from .combine import concat
 from .options import OPTIONS
 
@@ -306,7 +305,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
     groupby_cls = groupby.DatasetGroupBy
 
     def __init__(self, data_vars=None, coords=None, attrs=None,
-                 compat='broadcast_equals', encoding=None):
+                 compat='broadcast_equals'):
         """To load data from a file or file-like object, use the `open_dataset`
         function.
 
@@ -339,11 +338,6 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
             - 'equals': all values and dimensions must be the same.
             - 'identical': all values, dimensions and attributes must be the
               same.
-        encoding : dict_like or None, optional
-            Dictionary specifying how to encode this Dataset's data into a
-            serialized format like netCDF. Currently used keys (for netCDF)
-            include 'unlimited_dims'.
-            Unrecognized keys are ignored.
         """
         self._variables = OrderedDict()
         self._coord_names = set()
@@ -359,8 +353,6 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         if attrs is not None:
             self.attrs = attrs
         self._encoding = None
-        if encoding is not None:
-            self.encoding = encoding
         self._initialized = True
 
     def _set_init_vars_and_dims(self, data_vars, coords, compat):
