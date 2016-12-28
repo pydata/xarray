@@ -28,7 +28,6 @@ from .variable import (Variable, as_variable, IndexVariable,
                        broadcast_variables)
 from .pycompat import (iteritems, basestring, OrderedDict,
                        dask_array_type, range)
-from .formatting import ensure_valid_repr
 from .combine import concat
 from .options import OPTIONS
 

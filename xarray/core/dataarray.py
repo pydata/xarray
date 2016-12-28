@@ -1736,5 +1736,93 @@ class DataArray(AbstractArray, BaseDataObject):
 
         return type(self)(new_data, new_coords, new_dims)
 
+    def quantile(self, q, dim=None, axis=None, interpolation='linear'):
+        """
+
+        Compute the qth quantile of the data along the specified axis,
+        while ignoring nan values.
+        Returns the qth quantiles(s) of the array elements.
+
+        Parameters
+        ----------
+        q : float in range of [0,100] (or sequence of floats)
+            Quantile to compute, which must be between 0 and 100
+            inclusive.
+        dim : str or sequence of str, optional
+            Dimension(s) over which to apply quantile.
+        axis : int or sequence of int, optional
+            Axis or axes along which the quantiles are computed. The
+            default is to compute the quantile(s) along a flattened
+            version of the array.
+        interpolation : {'linear', 'lower', 'higher', 'midpoint', 'nearest'}
+            This optional parameter specifies the interpolation method to
+            use when the desired quantile lies between two data points
+            ``i < j``:
+                * linear: ``i + (j - i) * fraction``, where ``fraction`` is
+                  the fractional part of the index surrounded by ``i`` and
+                  ``j``.
+                * lower: ``i``.
+                * higher: ``j``.
+                * nearest: ``i`` or ``j``, whichever is nearest.
+                * midpoint: ``(i + j) / 2``.
+
+        Returns
+        -------
+        quantiles : DataArray
+            If `q` is a single quantile and `axis=None`, then the result
+            is a scalar. If multiple percentiles are given, first axis of
+            the result corresponds to the quantile and a quantile dimension
+            is added to the return array. The other axes are the axes that
+            remain after the reduction of the array. If the input
+            contains integers or floats smaller than ``float64``, the output
+            data-type is ``float64``. Otherwise, the output data-type is the
+            same as that of the input.
+        See Also
+        --------
+        np.nanpercentile
+        """
+
+        if dim is not None and axis is not None:
+            raise ValueError("cannot supply both 'axis' and 'dim' arguments")
+
+        isscalar = np.isscalar(q)
+        if isscalar:
+            q = float(q)
+        else:
+            q = np.asarray(q, dtype=np.float64)
+
+        new_dims = list(self.dims)
+        if dim is not None:
+            if isinstance(dim, basestring):
+                axis = self.get_axis_num(dim)
+                new_dims.remove(dim)
+            else:
+                axis = [self.get_axis_num(d) for d in dim]
+                for d in dim:
+                    new_dims.remove(d)
+        elif axis is not None:
+            if hasattr(axis, '__iter__'):
+                for i in axis:
+                    new_dims.remove(self.dims[i])
+            else:
+                new_dims.remove(self.dims[axis])
+        else:
+            new_dims = []
+        # only add the quantile dimension if q is array like
+        if not isscalar:
+            new_dims = ['quantile'] + new_dims
+
+        ps = np.nanpercentile(self.data, q, axis=axis,
+                              interpolation=interpolation)
+
+        # Construct the return DataArray
+        ps = DataArray(ps, dims=new_dims, name=self.name)
+        if not isscalar:
+            ps['quantile'] = DataArray(q, dims=('quantile', ),
+                                       name='quantile')
+
+        return ps
+
+
 # priority most be higher than Variable to properly work with binary ufuncs
 ops.inject_all_ops_and_reduce_methods(DataArray, priority=60)

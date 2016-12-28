@@ -270,6 +270,7 @@ Computation
    DataArray.get_axis_num
    DataArray.diff
    DataArray.dot
+   DataArray.quantile
 
 **Aggregation**:
 :py:attr:`~DataArray.all`

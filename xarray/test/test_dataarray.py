@@ -1328,6 +1328,22 @@ class TestDataArray(TestCase):
         expected = DataArray(5, {'c': -999})
         self.assertDataArrayIdentical(expected, actual)
 
+    def test_quantile(self):
+        for method in ['linear', 'lower', 'higher', 'nearest', 'midpoint']:
+            for q in [25, [50], [25, 75]]:
+                for axis, dim in zip([None, 0, [0], [0, 1]],
+                                     [None, 'x', ['x'], ['x', 'y']]):
+                    a = self.dv.quantile(q, dim=dim, interpolation=method)
+                    b = self.dv.quantile(q, axis=axis, interpolation=method)
+                    self.assertDataArrayIdentical(a, b)
+                    expected = np.nanpercentile(self.dv.values, q, axis=axis,
+                                                interpolation=method)
+                    np.testing.assert_allclose(a.values, expected)
+
+        # raises with both axis and dim
+        with self.assertRaisesRegexp(ValueError, 'cannot supply both'):
+            self.dv.quantile(q, axis=0, dim='x')
+
     def test_reduce_keep_attrs(self):
         # Test dropped attrs
         vm = self.va.mean()
