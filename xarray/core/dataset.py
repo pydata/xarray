@@ -2537,6 +2537,57 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
 
         return self._replace_vars_and_dims(variables)
 
+    def quantile(self, q, dim=None, interpolation='linear'):
+        """Compute the qth quantile of the data along the specified dimension.
+
+        Returns the qth quantiles(s) of the array elements for each variable
+        in the Dataset.
+
+        Parameters
+        ----------
+        q : float in range of [0,1] (or sequence of floats)
+            Quantile to compute, which must be between 0 and 1
+            inclusive.
+        dim : str or sequence of str, optional
+            Dimension(s) over which to apply quantile.
+        interpolation : {'linear', 'lower', 'higher', 'midpoint', 'nearest'}
+            This optional parameter specifies the interpolation method to
+            use when the desired quantile lies between two data points
+            ``i < j``:
+                * linear: ``i + (j - i) * fraction``, where ``fraction`` is
+                  the fractional part of the index surrounded by ``i`` and
+                  ``j``.
+                * lower: ``i``.
+                * higher: ``j``.
+                * nearest: ``i`` or ``j``, whichever is nearest.
+                * midpoint: ``(i + j) / 2``.
+
+        Returns
+        -------
+        quantiles : Dataset
+            If `q` is a single quantile, then the result is a scalar for each
+            variable in data_vars. If multiple percentiles are given, first
+            axis of the result corresponds to the quantile and a quantile
+            dimension is added to the return Dataset. The other dimensions are
+            the dimensions that remain after the reduction of the array.
+
+        See Also
+        --------
+        np.nanpercentile, pd.Series.quantile, xr.DataArray.quantile
+        """
+
+        q = np.asarray(q, dtype=np.float64)
+
+        variables = OrderedDict()
+        for name, var in iteritems(self.variables):
+            variables[name] = var.quantile(q, dim=dim,
+                                           interpolation=interpolation)
+        new = self._replace_vars_and_dims(variables)
+        if q.ndim != 0:
+            new.coords['quantile'] = Variable('quantile', q)
+
+        return new
+
     @property
     def real(self):
         return self._unary_op(lambda x: x.real, keep_attrs=True)(self)

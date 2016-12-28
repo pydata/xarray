@@ -1772,42 +1772,12 @@ class DataArray(AbstractArray, BaseDataObject):
 
         See Also
         --------
-        np.nanpercentile, pd.Series.quantile
+        np.nanpercentile, pd.Series.quantile, xr.Dataset.quantile
         """
 
-        if isinstance(self.data, dask_array_type):
-            TypeError("quantile does not work for arrays stored as dask "
-                      "arrays. Load the data via .load() prior to calling "
-                      "this method.")
-
-        q = np.asarray(q, dtype=np.float64)
-
-        new_dims = list(self.dims)
-        if dim is not None:
-            if utils.is_scalar(dim):
-                axis = self.get_axis_num(dim)
-                new_dims.remove(dim)
-            else:
-                axis = [self.get_axis_num(d) for d in dim]
-                for d in dim:
-                    new_dims.remove(d)
-        else:
-            axis = None
-            new_dims = []
-
-        # only add the quantile dimension if q is array like
-        if q.ndim != 0:
-            new_dims = ['quantile'] + new_dims
-
-        ps = np.nanpercentile(self.data, q * 100., axis=axis,
-                              interpolation=interpolation)
-
-        # Construct the return DataArray
-        ps = DataArray(ps, dims=new_dims, name=self.name)
-        if q.ndim != 0:
-            ps.coords['quantile'] = Variable('quantile', q)
-
-        return ps
+        ds = self._to_temp_dataset().quantile(q, dim=dim,
+                                              interpolation=interpolation)
+        return self._from_temp_dataset(ds)
 
 
 # priority most be higher than Variable to properly work with binary ufuncs
