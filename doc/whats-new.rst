@@ -165,9 +165,9 @@ Enhancements
   and attributes. The method prints to a buffer (e.g. ``stdout``) with output
   similar to what the command line utility ``ncdump -h`` produces (:issue:`1150`).
   By `Joe Hamman <https://github.com/jhamman>`_.
-
-- Added the ability write unlimited netCDF dimensions with the ``netcdf4``
-  backend.
+- Added the ability write unlimited netCDF dimensions with the ``scipy`` and
+  ``netcdf4`` backends via the new :py:attr:`~xray.Dataset.encoding` attribute
+  or via the ``unlimited_dims`` argument to :py:meth:`~xray.Dataset.to_netcdf`.
   By `Joe Hamman <https://github.com/jhamman>`_.
 
 Bug fixes

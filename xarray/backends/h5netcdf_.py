@@ -105,6 +105,9 @@ class H5NetCDFStore(WritableCFDataStore, DataStorePickleMixin):
 
         if unlimited_dims is None:
             unlimited_dims = self.encoding.get('unlimited_dims', set())
+        else:
+            raise NotImplementedError('h5netcdf does not support unlimited'
+                                      'dimensions')
         if unlimited_dims is not None or len(unlimited_dims) > 0:
             warnings.warn('h5netcdf does not support unlimited dimensions',
                           UserWarning)
