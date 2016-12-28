@@ -219,13 +219,12 @@ class AbstractWritableDataStore(AbstractDataStore):
 
 
 class WritableCFDataStore(AbstractWritableDataStore):
-    def store(self, variables, attributes, check_encoding_set=frozenset(),
-              unlimited_dims=None):
+    def store(self, variables, attributes, *args, **kwargs):
         # All NetCDF files get CF encoded by default, without this attempting
         # to write times, for example, would fail.
         cf_variables, cf_attrs = cf_encoder(variables, attributes)
         AbstractWritableDataStore.store(self, cf_variables, cf_attrs,
-                                        check_encoding_set)
+                                        *args, **kwargs)
 
 
 class DataStorePickleMixin(object):

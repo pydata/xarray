@@ -61,9 +61,9 @@ class InaccessibleVariableDataStore(backends.InMemoryDataStore):
         super(InaccessibleVariableDataStore, self).__init__(writer)
         self._indexvars = set()
 
-    def store(self, variables, attributes, check_encoding_set=frozenset()):
+    def store(self, variables, *args, **kwargs):
         super(InaccessibleVariableDataStore, self).store(
-            variables, attributes, check_encoding_set)
+            variables, *args, **kwargs)
         for k, v in variables.items():
             if isinstance(v, IndexVariable):
                 self._indexvars.add(k)
