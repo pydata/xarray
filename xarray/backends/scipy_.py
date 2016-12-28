@@ -145,13 +145,14 @@ class ScipyDataStore(WritableCFDataStore, DataStorePickleMixin):
         value = encode_nc3_attr_value(value)
         setattr(self.ds, key, value)
 
-    def prepare_variable(self, name, variable, check_encoding=False):
+    def prepare_variable(self, name, variable, check_encoding=False,
+                         unlimited_dims=None):
         variable = encode_nc3_variable(variable)
         if check_encoding and variable.encoding:
             raise ValueError('unexpected encoding for scipy backend: %r'
                              % list(variable.encoding))
-
-        unlimited_dims = self.encoding.get('unlimited_dims', set())
+        if unlimited_dims is None:
+            unlimited_dims = self.encoding.get('unlimited_dims', set())
 
         if len(unlimited_dims) > 1:
             raise ValueError('NETCDF3 only supports one unlimited dimension')

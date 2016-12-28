@@ -339,6 +339,11 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
             - 'equals': all values and dimensions must be the same.
             - 'identical': all values, dimensions and attributes must be the
               same.
+        encoding : dict_like or None, optional
+            Dictionary specifying how to encode this Dataset's data into a
+            serialized format like netCDF. Currently used keys (for netCDF)
+            include 'unlimited_dims'.
+            Unrecognized keys are ignored.
         """
         self._variables = OrderedDict()
         self._coord_names = set()
@@ -412,7 +417,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         """Dictionary of global encoding attributes on this dataset
         """
         if self._encoding is None:
-            self._encoding = dict()
+            self._encoding = {}
         return self._encoding
 
     @encoding.setter
@@ -865,7 +870,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
                 del obj._variables[name]
         return obj
 
-    def dump_to_store(self, store, encoder=None, sync=True, encoding=None):
+    def dump_to_store(self, store, encoder=None, sync=True, encoding=None,
+                      unlimited_dims=None):
         """Store dataset contents to a backends.*DataStore object."""
         if encoding is None:
             encoding = {}
@@ -881,12 +887,13 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         if encoder:
             variables, attrs = encoder(variables, attrs)
 
-        store.store(variables, attrs, check_encoding)
+        store.store(variables, attrs, check_encoding,
+                    unlimited_dims=unlimited_dims)
         if sync:
             store.sync()
 
     def to_netcdf(self, path=None, mode='w', format=None, group=None,
-                  engine=None, encoding=None):
+                  engine=None, encoding=None, unlimited_dims=None):
         """Write dataset contents to a netCDF file.
 
         Parameters
@@ -930,12 +937,18 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
             Nested dictionary with variable names as keys and dictionaries of
             variable specific encodings as values, e.g.,
             ``{'my_variable': {'dtype': 'int16', 'scale_factor': 0.1, 'zlib': True}, ...}``
+        unlimited_dims : str or sequence of str, optional
+            Dimension(s) that should be serialized as unlimited dimensions.
+            By default, no dimensions are treated as unlimited dimensions.
+            Note that unlimited_dims may also be set via
+            ``dataset.encoding['unlimited_dims']``.
         """
         if encoding is None:
             encoding = {}
         from ..backends.api import to_netcdf
         return to_netcdf(self, path, mode, format=format, group=group,
-                         engine=engine, encoding=encoding)
+                         engine=engine, encoding=encoding,
+                         unlimited_dims=unlimited_dims)
 
     def __unicode__(self):
         return formatting.dataset_repr(self)

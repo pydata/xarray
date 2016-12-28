@@ -253,8 +253,8 @@ class NetCDF4DataStore(WritableCFDataStore, DataStorePickleMixin):
 
     def get_encoding(self):
         encoding = {}
-        encoding['unlimited_dims'] = set(
-            [k for k, v in self.ds.dimensions.items() if v.isunlimited()])
+        encoding['unlimited_dims'] = {
+            k for k, v in self.ds.dimensions.items() if v.isunlimited()}
         return encoding
 
     def set_dimension(self, name, length):
@@ -265,7 +265,8 @@ class NetCDF4DataStore(WritableCFDataStore, DataStorePickleMixin):
             value = encode_nc3_attr_value(value)
         self.ds.setncattr(key, value)
 
-    def prepare_variable(self, name, variable, check_encoding=False):
+    def prepare_variable(self, name, variable, check_encoding=False,
+                         unlimited_dims=None):
         attrs = variable.attrs.copy()
 
         variable = _force_native_endianness(variable)
@@ -276,7 +277,8 @@ class NetCDF4DataStore(WritableCFDataStore, DataStorePickleMixin):
             variable = encode_nc3_variable(variable)
             datatype = variable.dtype
 
-        unlimited_dims = self.encoding.get('unlimited_dims', set())
+        if unlimited_dims is None:
+            unlimited_dims = self.encoding.get('unlimited_dims', set())
         self.set_necessary_dimensions(variable, unlimited_dims=unlimited_dims)
 
         fill_value = attrs.pop('_FillValue', None)

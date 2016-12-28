@@ -94,7 +94,8 @@ class H5NetCDFStore(WritableCFDataStore, DataStorePickleMixin):
     def set_attribute(self, key, value):
         self.ds.setncattr(key, value)
 
-    def prepare_variable(self, name, variable, check_encoding=False):
+    def prepare_variable(self, name, variable, check_encoding=False,
+                         unlimited_dims=None):
         import h5py
 
         attrs = variable.attrs.copy()
@@ -102,8 +103,9 @@ class H5NetCDFStore(WritableCFDataStore, DataStorePickleMixin):
         if dtype is str:
             dtype = h5py.special_dtype(vlen=unicode_type)
 
-        unlimited_dims = self.encoding.get('unlimited_dims', set())
-        if len(unlimited_dims) > 0:
+        if unlimited_dims is None:
+            unlimited_dims = self.encoding.get('unlimited_dims', set())
+        if unlimited_dims is not None or len(unlimited_dims) > 0:
             warnings.warn('h5netcdf does not support unlimited dimensions',
                           UserWarning)
             unlimited_dims = set()

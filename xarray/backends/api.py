@@ -526,7 +526,7 @@ WRITEABLE_STORES = {'netcdf4': backends.NetCDF4DataStore,
 
 
 def to_netcdf(dataset, path=None, mode='w', format=None, group=None,
-              engine=None, writer=None, encoding=None):
+              engine=None, writer=None, encoding=None, unlimited_dims=None):
     """This function creates an appropriate datastore for writing a dataset to
     disk as a netCDF file
 
@@ -568,7 +568,8 @@ def to_netcdf(dataset, path=None, mode='w', format=None, group=None,
     # Copy dataset encoding to datastore
     store.encoding = dataset.encoding
     try:
-        dataset.dump_to_store(store, sync=sync, encoding=encoding)
+        dataset.dump_to_store(store, sync=sync, encoding=encoding,
+                              unlimited_dims=unlimited_dims)
         if isinstance(path, BytesIO):
             return path.getvalue()
     finally:

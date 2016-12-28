@@ -189,22 +189,28 @@ class AbstractWritableDataStore(AbstractDataStore):
         # dataset.variables
         self.store(dataset, dataset.attrs)
 
-    def store(self, variables, attributes, check_encoding_set=frozenset()):
+    def store(self, variables, attributes, check_encoding_set=frozenset(),
+              unlimited_dims=None):
         self.set_attributes(attributes)
-        self.set_variables(variables, check_encoding_set)
+        self.set_variables(variables, check_encoding_set,
+                           unlimited_dims=unlimited_dims)
 
     def set_attributes(self, attributes):
         for k, v in iteritems(attributes):
             self.set_attribute(k, v)
 
-    def set_variables(self, variables, check_encoding_set):
+    def set_variables(self, variables, check_encoding_set,
+                      unlimited_dims=None):
         for vn, v in iteritems(variables):
             name = _encode_variable_name(vn)
             check = vn in check_encoding_set
-            target, source = self.prepare_variable(name, v, check)
+            target, source = self.prepare_variable(
+                name, v, check, unlimited_dims=unlimited_dims)
             self.writer.add(source, target)
 
-    def set_necessary_dimensions(self, variable, unlimited_dims=set()):
+    def set_necessary_dimensions(self, variable, unlimited_dims=None):
+        if unlimited_dims is None:
+            unlimited_dims = set()
         for d, l in zip(variable.dims, variable.shape):
             if d not in self.dimensions:
                 if d in unlimited_dims:
@@ -213,7 +219,8 @@ class AbstractWritableDataStore(AbstractDataStore):
 
 
 class WritableCFDataStore(AbstractWritableDataStore):
-    def store(self, variables, attributes, check_encoding_set=frozenset()):
+    def store(self, variables, attributes, check_encoding_set=frozenset(),
+              unlimited_dims=None):
         # All NetCDF files get CF encoded by default, without this attempting
         # to write times, for example, would fail.
         cf_variables, cf_attrs = cf_encoder(variables, attributes)
