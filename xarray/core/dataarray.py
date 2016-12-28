@@ -19,7 +19,8 @@ from .common import AbstractArray, BaseDataObject
 from .coordinates import (DataArrayCoordinates, LevelCoordinatesSource,
                           Indexes)
 from .dataset import Dataset, merge_indexes, split_indexes
-from .pycompat import iteritems, basestring, OrderedDict, zip, range
+from .pycompat import (iteritems, basestring, OrderedDict, zip, range,
+                       dask_array_type)
 from .variable import (as_variable, Variable, as_compatible_data,
                        IndexVariable,
                        assert_unique_multiindex_level_names)
@@ -1736,24 +1737,18 @@ class DataArray(AbstractArray, BaseDataObject):
 
         return type(self)(new_data, new_coords, new_dims)
 
-    def quantile(self, q, dim=None, axis=None, interpolation='linear'):
-        """
+    def quantile(self, q, dim=None, interpolation='linear'):
+        """Compute the qth quantile of the data along the specified dimension.
 
-        Compute the qth quantile of the data along the specified axis,
-        while ignoring nan values.
         Returns the qth quantiles(s) of the array elements.
 
         Parameters
         ----------
-        q : float in range of [0,100] (or sequence of floats)
-            Quantile to compute, which must be between 0 and 100
+        q : float in range of [0,1] (or sequence of floats)
+            Quantile to compute, which must be between 0 and 1
             inclusive.
         dim : str or sequence of str, optional
             Dimension(s) over which to apply quantile.
-        axis : int or sequence of int, optional
-            Axis or axes along which the quantiles are computed. The
-            default is to compute the quantile(s) along a flattened
-            version of the array.
         interpolation : {'linear', 'lower', 'higher', 'midpoint', 'nearest'}
             This optional parameter specifies the interpolation method to
             use when the desired quantile lies between two data points
@@ -1769,57 +1764,48 @@ class DataArray(AbstractArray, BaseDataObject):
         Returns
         -------
         quantiles : DataArray
-            If `q` is a single quantile and `axis=None`, then the result
+            If `q` is a single quantile, then the result
             is a scalar. If multiple percentiles are given, first axis of
             the result corresponds to the quantile and a quantile dimension
-            is added to the return array. The other axes are the axes that
-            remain after the reduction of the array. If the input
-            contains integers or floats smaller than ``float64``, the output
-            data-type is ``float64``. Otherwise, the output data-type is the
-            same as that of the input.
+            is added to the return array. The other dimensions are the
+             dimensions that remain after the reduction of the array.
+
         See Also
         --------
-        np.nanpercentile
+        np.nanpercentile, pd.Series.quantile
         """
 
-        if dim is not None and axis is not None:
-            raise ValueError("cannot supply both 'axis' and 'dim' arguments")
+        if isinstance(self.data, dask_array_type):
+            TypeError("quantile does not work for arrays stored as dask "
+                      "arrays. Load the data via .load() prior to calling "
+                      "this method.")
 
-        isscalar = np.isscalar(q)
-        if isscalar:
-            q = float(q)
-        else:
-            q = np.asarray(q, dtype=np.float64)
+        q = np.asarray(q, dtype=np.float64)
 
         new_dims = list(self.dims)
         if dim is not None:
-            if isinstance(dim, basestring):
+            if utils.is_scalar(dim):
                 axis = self.get_axis_num(dim)
                 new_dims.remove(dim)
             else:
                 axis = [self.get_axis_num(d) for d in dim]
                 for d in dim:
                     new_dims.remove(d)
-        elif axis is not None:
-            if hasattr(axis, '__iter__'):
-                for i in axis:
-                    new_dims.remove(self.dims[i])
-            else:
-                new_dims.remove(self.dims[axis])
         else:
+            axis = None
             new_dims = []
+
         # only add the quantile dimension if q is array like
-        if not isscalar:
+        if q.ndim != 0:
             new_dims = ['quantile'] + new_dims
 
-        ps = np.nanpercentile(self.data, q, axis=axis,
+        ps = np.nanpercentile(self.data, q * 100., axis=axis,
                               interpolation=interpolation)
 
         # Construct the return DataArray
         ps = DataArray(ps, dims=new_dims, name=self.name)
-        if not isscalar:
-            ps['quantile'] = DataArray(q, dims=('quantile', ),
-                                       name='quantile')
+        if q.ndim != 0:
+            ps.coords['quantile'] = Variable('quantile', q)
 
         return ps
 
