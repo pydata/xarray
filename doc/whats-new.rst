@@ -226,6 +226,10 @@ Bug fixes
 - Fix to make ``.copy()`` actually copy dask arrays, which will be relevant for
   future releases of dask in which dask arrays will be mutable (:issue:`1180`).
 
+- Automatic levels for 2d plots are now guaranteed to land on ``vmin`` and
+  ``vmax`` when these kwargs are explicitly provided (:issue:`1191`).
+  By `Fabien Maussion <https://github.com/fmaussion>`_.
+
 .. _whats-new.0.8.2:
 
 v0.8.2 (18 August 2016)
