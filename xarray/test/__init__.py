@@ -70,8 +70,6 @@ except ImportError:
 try:
     import bottleneck
     if StrictVersion(bottleneck.__version__) < StrictVersion('1.0'):
-        warnings.warn('xarray requires bottleneck version of 1.0 or greater.'
-                      'Falling back to numpy')
         raise ImportError('Fall back to numpy')
     has_bottleneck = True
 except ImportError:

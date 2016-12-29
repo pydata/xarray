@@ -18,10 +18,6 @@ from .nputils import nanfirst, nanlast, array_eq, array_ne
 
 try:
     import bottleneck as bn
-    if StrictVersion(bn.__version__) < StrictVersion('1.0'):
-        warnings.warn('xarray requires bottleneck version of 1.0 or greater.'
-                      'Falling back to numpy')
-        raise ImportError('Fall back to numpy')
     has_bottleneck = True
 except ImportError:
     # use numpy methods instead
@@ -509,6 +505,9 @@ def inject_bottleneck_rolling_methods(cls):
 
     # bottleneck rolling methods
     if has_bottleneck:
+        if StrictVersion(bn.__version__) < StrictVersion('1.0'):
+            return
+
         for bn_name, method_name in BOTTLENECK_ROLLING_METHODS.items():
             f = getattr(bn, bn_name)
             func = cls._bottleneck_reduce(f)
