@@ -70,7 +70,8 @@ Breaking changes
 - Coordinates used to index a dimension are now loaded eagerly into
   :py:class:`pandas.Index` objects, instead of loading the values lazily.
   By `Guido Imperiale <https://github.com/crusaderky>`_.
-- xarray no longer supports python 3.3 or versions of dask prior to v0.9.0.
+- xarray no longer supports python 3.3, versions of dask prior to v0.9.0,
+  or versions of bottleneck prior to v1.0.
 
 Deprecations
 ~~~~~~~~~~~~

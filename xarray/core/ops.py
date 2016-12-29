@@ -6,6 +6,7 @@ import contextlib
 import inspect
 import operator
 import warnings
+from distutils.version import StrictVersion
 
 import numpy as np
 import pandas as pd
@@ -17,6 +18,10 @@ from .nputils import nanfirst, nanlast, array_eq, array_ne
 
 try:
     import bottleneck as bn
+    if StrictVersion(bn.__version__) < StrictVersion('1.0'):
+        warnings.warn('xarray requires bottleneck version of 1.0 or greater.'
+                      'Falling back to numpy')
+        raise ImportError('Fall back to numpy')
     has_bottleneck = True
 except ImportError:
     # use numpy methods instead

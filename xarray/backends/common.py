@@ -2,7 +2,6 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 import numpy as np
-import itertools
 import logging
 import time
 import traceback
@@ -12,7 +11,7 @@ from distutils.version import StrictVersion
 
 from ..conventions import cf_encoder
 from ..core.utils import FrozenOrderedDict
-from ..core.pycompat import iteritems, dask_array_type, OrderedDict
+from ..core.pycompat import iteritems, dask_array_type
 
 # Create a logger object, but don't add any handlers. Leave that to user code.
 logger = logging.getLogger(__name__)

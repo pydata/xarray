@@ -3,6 +3,7 @@ from __future__ import division
 from __future__ import print_function
 import warnings
 from contextlib import contextmanager
+from distutils.version import StrictVersion
 
 import numpy as np
 from numpy.testing import assert_array_equal
@@ -68,6 +69,10 @@ except ImportError:
 
 try:
     import bottleneck
+    if StrictVersion(bottleneck.__version__) < StrictVersion('1.0'):
+        warnings.warn('xarray requires bottleneck version of 1.0 or greater.'
+                      'Falling back to numpy')
+        raise ImportError('Fall back to numpy')
     has_bottleneck = True
 except ImportError:
     has_bottleneck = False
@@ -75,6 +80,7 @@ except ImportError:
 # slighly simpler construction that the full functions.
 # Generally `pytest.importorskip('package')` inline is even easier
 requires_matplotlib = pytest.mark.skipif(not has_matplotlib, reason='requires matplotlib')
+
 
 def requires_scipy(test):
     return test if has_scipy else pytest.mark.skip('requires scipy')(test)
@@ -192,15 +198,17 @@ class TestCase(unittest.TestCase):
     def assertDataArrayAllClose(self, ar1, ar2, rtol=1e-05, atol=1e-08):
         assert_xarray_allclose(ar1, ar2, rtol=rtol, atol=atol)
 
+
 def assert_xarray_equal(a, b):
     import xarray as xr
     ___tracebackhide__ = True  # noqa: F841
     assert type(a) == type(b)
     if isinstance(a, (xr.Variable, xr.DataArray, xr.Dataset)):
         assert a.equals(b), '{}\n{}'.format(a, b)
-    else:  
+    else:
         raise TypeError('{} not supported by assertion comparison'
                         .format(type(a)))
+
 
 def assert_xarray_identical(a, b):
     import xarray as xr
@@ -214,6 +222,7 @@ def assert_xarray_identical(a, b):
     else:
         raise TypeError('{} not supported by assertion comparison'
                         .format(type(a)))
+
 
 def assert_xarray_allclose(a, b, rtol=1e-05, atol=1e-08):
     import xarray as xr
@@ -240,6 +249,7 @@ def assert_xarray_allclose(a, b, rtol=1e-05, atol=1e-08):
     else:
         raise TypeError('{} not supported by assertion comparison'
                         .format(type(a)))
+
 
 class UnexpectedDataAccess(Exception):
     pass
