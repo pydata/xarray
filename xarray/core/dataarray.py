@@ -18,7 +18,7 @@ from .alignment import align, reindex_like_indexers
 from .common import AbstractArray, BaseDataObject
 from .coordinates import (DataArrayCoordinates, LevelCoordinatesSource,
                           Indexes)
-from .dataset import Dataset
+from .dataset import Dataset, merge_indexes, split_indexes
 from .pycompat import iteritems, basestring, OrderedDict, zip, range
 from .variable import (as_variable, Variable, as_compatible_data,
                        IndexVariable,
@@ -841,6 +841,103 @@ class DataArray(AbstractArray, BaseDataObject):
         """
         ds = self._to_temp_dataset().swap_dims(dims_dict)
         return self._from_temp_dataset(ds)
+
+    def set_index(self, append=False, inplace=False, **indexes):
+        """Set DataArray (multi-)indexes using one or more existing coordinates.
+
+        Parameters
+        ----------
+        append : bool, optional
+            If True, append the supplied index(es) to the existing index(es).
+            Otherwise replace the existing index(es) (default).
+        inplace : bool, optional
+            If True, set new index(es) in-place. Otherwise, return a new DataArray
+            object.
+        **indexes : {dim: index, ...}
+            Keyword arguments with names matching dimensions and values given
+            by (lists of) the names of existing coordinates or variables to set
+            as new (multi-)index.
+
+        Returns
+        -------
+        obj : DataArray
+            Another dataarray, with this dataarray's data but replaced coordinates.
+
+        See Also
+        --------
+        DataArray.reset_index
+        """
+        coords, _ = merge_indexes(indexes, self._coords, set(), append=append)
+        if inplace:
+            self._coords = coords
+        else:
+            return self._replace(coords=coords)
+
+    def reset_index(self, dims_or_levels, drop=False, inplace=False):
+        """Reset the specified index(es) or multi-index level(s).
+
+        Parameters
+        ----------
+        dims_or_levels : str or list
+            Name(s) of the dimension(s) and/or multi-index level(s) that will
+            be reset.
+        drop : bool, optional
+            If True, remove the specified indexes and/or multi-index levels
+            instead of extracting them as new coordinates (default: False).
+        inplace : bool, optional
+            If True, modify the dataarray in-place. Otherwise, return a new
+            DataArray object.
+
+        Returns
+        -------
+        obj : DataArray
+            Another dataarray, with this dataarray's data but replaced
+            coordinates.
+
+        See Also
+        --------
+        DataArray.set_index
+        """
+        coords, _ = split_indexes(dims_or_levels, self._coords, set(),
+                                  self._level_coords, drop=drop)
+        if inplace:
+            self._coords = coords
+        else:
+            return self._replace(coords=coords)
+
+    def reorder_levels(self, inplace=False, **dim_order):
+        """Rearrange index levels using input order.
+
+        Parameters
+        ----------
+        inplace : bool, optional
+            If True, modify the dataarray in-place. Otherwise, return a new
+            DataArray object.
+        **dim_order : optional
+            Keyword arguments with names matching dimensions and values given
+            by lists representing new level orders. Every given dimension
+            must have a multi-index.
+
+        Returns
+        -------
+        obj : DataArray
+            Another dataarray, with this dataarray's data but replaced
+            coordinates.
+        """
+        replace_coords = {}
+        for dim, order in dim_order.items():
+            coord = self._coords[dim]
+            index = coord.to_index()
+            if not isinstance(index, pd.MultiIndex):
+                raise ValueError("coordinate %r has no MultiIndex" % dim)
+            replace_coords[dim] = IndexVariable(coord.dims,
+                                                index.reorder_levels(order))
+        coords = self._coords.copy()
+        coords.update(replace_coords)
+        if inplace:
+            self._coords = coords
+        else:
+            return self._replace(coords=coords)
 
     def stack(self, **dimensions):
         """

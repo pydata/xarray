@@ -70,7 +70,7 @@ Breaking changes
 - Coordinates used to index a dimension are now loaded eagerly into
   :py:class:`pandas.Index` objects, instead of loading the values lazily.
   By `Guido Imperiale <https://github.com/crusaderky>`_.
-- xarray no longer supports python 3.3
+- xarray no longer supports python 3.3 or versions of dask prior to v0.9.0.
 
 Deprecations
 ~~~~~~~~~~~~
@@ -110,6 +110,9 @@ Enhancements
   (see :ref:`coordinates`). ``sel`` also accepts providing multi-index levels
   as keyword arguments, e.g., ``ds.sel(time='2000-01')``
   (see :ref:`multi-level indexing`).
+  By `Benoit Bovy <https://github.com/benbovy>`_.
+- Added ``set_index``, ``reset_index`` and ``reorder_levels`` methods to
+  easily create and manipulate (multi-)indexes (see :ref:`reshape.set_index`).
   By `Benoit Bovy <https://github.com/benbovy>`_.
 - Added the ``compat`` option ``'no_conflicts'`` to ``merge``, allowing the
   combination of xarray objects with disjoint (:issue:`742`) or
@@ -219,6 +222,9 @@ Bug fixes
 
 - Fixed a bug with facetgrid (the ``norm`` keyword was ignored, :issue:`1159`).
   By `Fabien Maussion <https://github.com/fmaussion>`_.
+
+- Fix to make ``.copy()`` actually copy dask arrays, which will be relevant for
+  future releases of dask in which dask arrays will be mutable (:issue:`1180`).
 
 .. _whats-new.0.8.2:
 
