@@ -70,6 +70,10 @@ Breaking changes
 - Coordinates used to index a dimension are now loaded eagerly into
   :py:class:`pandas.Index` objects, instead of loading the values lazily.
   By `Guido Imperiale <https://github.com/crusaderky>`_.
+- Automatic levels for 2d plots are now guaranteed to land on ``vmin`` and
+  ``vmax`` when these kwargs are explicitly provided (:issue:`1191`). The
+  automated level selection logic also slightly changed.
+  By `Fabien Maussion <https://github.com/fmaussion>`_.
 - xarray no longer supports python 3.3 or versions of dask prior to v0.9.0.
 
 Deprecations
@@ -225,10 +229,6 @@ Bug fixes
 
 - Fix to make ``.copy()`` actually copy dask arrays, which will be relevant for
   future releases of dask in which dask arrays will be mutable (:issue:`1180`).
-
-- Automatic levels for 2d plots are now guaranteed to land on ``vmin`` and
-  ``vmax`` when these kwargs are explicitly provided (:issue:`1191`).
-  By `Fabien Maussion <https://github.com/fmaussion>`_.
 
 .. _whats-new.0.8.2:
 
