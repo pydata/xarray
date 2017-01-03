@@ -13,7 +13,6 @@ except ImportError:
     pass
 
 import inspect
-from distutils.version import LooseVersion
 
 import numpy as np
 import pandas as pd
@@ -511,10 +510,8 @@ class TestDiscreteColorMap(TestCase):
                 primitive = getattr(self.darray.plot, kind)(levels=levels,
                                                             vmin=vmin,
                                                             vmax=vmax)
-                if LooseVersion(mpl.__version__) < LooseVersion('2.0'):
-                    self.assertGreaterEqual(levels,
-                                            len(primitive.norm.boundaries) - 1)
-                    self.assertGreaterEqual(levels, len(primitive.cmap.colors))
+                self.assertGreaterEqual(levels,
+                                        len(primitive.norm.boundaries) - 1)
                 if vmax is None:
                     self.assertGreaterEqual(primitive.norm.vmax, self.data_max)
                 else:
@@ -527,6 +524,7 @@ class TestDiscreteColorMap(TestCase):
                     self.assertEqual(extend, primitive.cmap.colorbar_extend)
                 else:
                     self.assertEqual('max', primitive.cmap.colorbar_extend)
+                self.assertGreaterEqual(levels, len(primitive.cmap.colors))
 
     def test_discrete_colormap_list_levels_and_vmin_or_vmax(self):
         levels = [0, 5, 10, 15]
@@ -1210,5 +1208,3 @@ class TestFacetGrid4d(PlotTestCase):
         # Top row should be labeled
         for label, ax in zip(self.darray.coords['col'].values, g.axes[0, :]):
             self.assertTrue(substring_in_axes(label, ax))
-        
-        
