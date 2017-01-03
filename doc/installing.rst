@@ -6,7 +6,7 @@ Installation
 Required dependencies
 ---------------------
 
-- Python 2.7, 3.3, 3.4 or 3.5
+- Python 2.7, 3.4 or 3.5
 - `numpy <http://www.numpy.org/>`__ (1.7 or later)
 - `pandas <http://pandas.pydata.org/>`__ (0.15.0 or later)
 
@@ -36,7 +36,8 @@ For accelerating xarray
 For parallel computing
 ~~~~~~~~~~~~~~~~~~~~~~
 
-- `dask.array <http://dask.pydata.org>`__: required for :ref:`dask`.
+- `dask.array <http://dask.pydata.org>`__ (0.9.0 or later): required for
+  :ref:`dask`.
 
 For plotting
 ~~~~~~~~~~~~

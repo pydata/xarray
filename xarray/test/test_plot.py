@@ -2,6 +2,16 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
+# import mpl and change the backend before other mpl imports
+try:
+    import matplotlib as mpl
+    # Using a different backend makes Travis CI work
+    mpl.use('Agg')
+    # Order of imports is important here.
+    import matplotlib.pyplot as plt
+except ImportError:
+    pass
+
 import inspect
 from distutils.version import LooseVersion
 
@@ -17,15 +27,6 @@ from xarray.plot.utils import (_determine_cmap_params,
                                _color_palette)
 
 from . import TestCase, requires_matplotlib
-
-try:
-    import matplotlib as mpl
-    # Using a different backend makes Travis CI work.
-    mpl.use('Agg')
-    # Order of imports is important here.
-    import matplotlib.pyplot as plt
-except ImportError:
-    pass
 
 
 def text_in_fig():
@@ -168,6 +169,31 @@ class TestPlot(PlotTestCase):
             except AttributeError:
                 self.assertEqual(ax.get_axis_bgcolor(), 'r')
 
+    def test_plot_size(self):
+        self.darray[:, 0, 0].plot(figsize=(13, 5))
+        assert tuple(plt.gcf().get_size_inches()) == (13, 5)
+
+        self.darray.plot(figsize=(13, 5))
+        assert tuple(plt.gcf().get_size_inches()) == (13, 5)
+
+        self.darray.plot(size=5)
+        assert plt.gcf().get_size_inches()[1] == 5
+
+        self.darray.plot(size=5, aspect=2)
+        assert tuple(plt.gcf().get_size_inches()) == (10, 5)
+
+        with self.assertRaisesRegexp(ValueError, 'cannot provide both'):
+            self.darray.plot(ax=plt.gca(), figsize=(3, 4))
+
+        with self.assertRaisesRegexp(ValueError, 'cannot provide both'):
+            self.darray.plot(size=5, figsize=(3, 4))
+
+        with self.assertRaisesRegexp(ValueError, 'cannot provide both'):
+            self.darray.plot(size=5, ax=plt.gca())
+
+        with self.assertRaisesRegexp(ValueError, 'cannot provide `aspect`'):
+            self.darray.plot(aspect=1)
+
     def test_convenient_facetgrid_4d(self):
         a = easy_array((10, 15, 2, 3))
         d = DataArray(a, dims=['y', 'x', 'columns', 'rows'])
@@ -303,19 +329,40 @@ class TestDetermineCmapParams(TestCase):
 
     def test_integer_levels(self):
         data = self.data + 1
+
+        # default is to cover full data range but with no guarantee on Nlevels
+        for level in np.arange(2, 10, dtype=int):
+            cmap_params = _determine_cmap_params(data, levels=level)
+            self.assertEqual(cmap_params['vmin'], cmap_params['levels'][0])
+            self.assertEqual(cmap_params['vmax'], cmap_params['levels'][-1])
+            self.assertEqual(cmap_params['extend'], 'neither')
+
+        # with min max we are more strict
         cmap_params = _determine_cmap_params(data, levels=5, vmin=0, vmax=5,
                                              cmap='Blues')
+        self.assertEqual(cmap_params['vmin'], 0)
+        self.assertEqual(cmap_params['vmax'], 5)
         self.assertEqual(cmap_params['vmin'], cmap_params['levels'][0])
         self.assertEqual(cmap_params['vmax'], cmap_params['levels'][-1])
         self.assertEqual(cmap_params['cmap'].name, 'Blues')
         self.assertEqual(cmap_params['extend'], 'neither')
-        self.assertEqual(cmap_params['cmap'].N, 5)
-        self.assertEqual(cmap_params['norm'].N, 6)
+        self.assertEqual(cmap_params['cmap'].N, 4)
+        self.assertEqual(cmap_params['norm'].N, 5)
 
         cmap_params = _determine_cmap_params(data, levels=5,
                                              vmin=0.5, vmax=1.5)
         self.assertEqual(cmap_params['cmap'].name, 'viridis')
         self.assertEqual(cmap_params['extend'], 'max')
+
+        cmap_params = _determine_cmap_params(data, levels=5,
+                                             vmin=1.5)
+        self.assertEqual(cmap_params['cmap'].name, 'viridis')
+        self.assertEqual(cmap_params['extend'], 'min')
+
+        cmap_params = _determine_cmap_params(data, levels=5,
+                                             vmin=1.3, vmax=1.5)
+        self.assertEqual(cmap_params['cmap'].name, 'viridis')
+        self.assertEqual(cmap_params['extend'], 'both')
 
     def test_list_levels(self):
         data = self.data + 1
@@ -904,9 +951,15 @@ class TestImshow(Common2dMixin, PlotTestCase):
         self.darray.plot.imshow()
         self.assertEqual('auto', plt.gca().get_aspect())
 
-    def test_can_change_aspect(self):
-        self.darray.plot.imshow(aspect='equal')
-        self.assertEqual('equal', plt.gca().get_aspect())
+    def test_cannot_change_mpl_aspect(self):
+
+        with self.assertRaisesRegexp(ValueError, 'not available in xarray'):
+            self.darray.plot.imshow(aspect='equal')
+
+        # with numbers we fall back to fig control
+        self.darray.plot.imshow(size=5, aspect=2)
+        self.assertEqual('auto', plt.gca().get_aspect())
+        assert tuple(plt.gcf().get_size_inches()) == (10, 5)
 
     def test_primitive_artist_returned(self):
         artist = self.plotmethod()
@@ -1059,6 +1112,15 @@ class TestFacetGrid(PlotTestCase):
 
         g = xplt.FacetGrid(self.darray, col='z', size=4, aspect=0.5)
         self.assertArrayEqual(g.fig.get_size_inches(), (7, 4))
+
+        g = xplt.FacetGrid(self.darray, col='z', figsize=(9, 4))
+        self.assertArrayEqual(g.fig.get_size_inches(), (9, 4))
+
+        with self.assertRaisesRegexp(ValueError, "cannot provide both"):
+            g = xplt.plot(self.darray, row=2, col='z', figsize=(6, 4), size=6)
+
+        with self.assertRaisesRegexp(ValueError, "Can't use"):
+            g = xplt.plot(self.darray, row=2, col='z', ax=plt.gca(), size=6)
 
     def test_num_ticks(self):
         nticks = 99

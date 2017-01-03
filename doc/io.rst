@@ -3,11 +3,9 @@
 Serialization and IO
 ====================
 
-xarray supports direct serialization and IO to several file formats. For more
-options, consider exporting your objects to pandas (see the preceding section)
-and using its broad range of `IO tools`__.
-
-__ http://pandas.pydata.org/pandas-docs/stable/io.html
+xarray supports direct serialization and IO to several file formats, from
+simple :ref:`io.pickle` files to the more flexible :ref:`io.netcdf`
+format.
 
 .. ipython:: python
    :suppress:
@@ -16,6 +14,8 @@ __ http://pandas.pydata.org/pandas-docs/stable/io.html
     import pandas as pd
     import xarray as xr
     np.random.seed(123456)
+
+.. _io.pickle:
 
 Pickle
 ------
@@ -56,8 +56,6 @@ and lets you use xarray objects with Python modules like
 Dictionary
 ----------
 
-Serializing an xarray object to a Python dictionary is also simple.
-
 We can convert a ``Dataset`` (or a ``DataArray``) to a dict using
 :py:meth:`~xarray.Dataset.to_dict`:
 
@@ -79,27 +77,37 @@ require external libraries and dicts can easily be pickled, or converted to
 json, or geojson. All the values are converted to lists, so dicts might
 be quite large.
 
+.. _io.netcdf:
+
 netCDF
 ------
 
-Currently, the only disk based serialization format that xarray directly supports
-is `netCDF`__. netCDF is a file format for fully self-described datasets that
-is widely used in the geosciences and supported on almost all platforms. We use
-netCDF because xarray was based on the netCDF data model, so netCDF files on disk
-directly correspond to :py:class:`~xarray.Dataset` objects. Recent versions of
+The recommended way to store xarray data structures is `netCDF`__, which
+is a binary file format for self-described datasets that originated
+in the geosciences. xarray is based on the netCDF data model, so netCDF files
+on disk directly correspond to :py:class:`~xarray.Dataset` objects.
+
+NetCDF is supported on almost all platforms, and parsers exist
+for the vast majority of scientific programming languages. Recent versions of
 netCDF are based on the even more widely used HDF5 file-format.
 
 __ http://www.unidata.ucar.edu/software/netcdf/
 
-Reading and writing netCDF files with xarray requires the
-`netCDF4-Python`__ library or scipy to be installed.
+.. tip::
+
+    If you aren't familiar with this data format, the `netCDF FAQ`_ is a good
+    place to start.
+
+.. _netCDF FAQ: http://www.unidata.ucar.edu/software/netcdf/docs/faq.html#What-Is-netCDF
+
+Reading and writing netCDF files with xarray requires scipy or the
+`netCDF4-Python`__ library to be installed (the later is required to
+read/write netCDF V4 files and use the compression options described below).
 
 __ https://github.com/Unidata/netcdf4-python
 
 We can save a Dataset to disk using the
 :py:attr:`Dataset.to_netcdf <xarray.Dataset.to_netcdf>` method:
-
-.. use verbatim because readthedocs doesn't have netCDF4 support
 
 .. ipython:: python
 
@@ -146,8 +154,8 @@ is modified: the original file on disk is never touched.
 
     xarray's lazy loading of remote or on-disk datasets is often but not always
     desirable. Before performing computationally intense operations, it is
-    often a good idea to load a dataset entirely into memory by invoking the
-    :py:meth:`~xarray.Dataset.load` method.
+    often a good idea to load a Dataset (or DataArray) entirely into memory by
+    invoking the :py:meth:`~xarray.Dataset.load` method.
 
 Datasets have a :py:meth:`~xarray.Dataset.close` method to close the associated
 netCDF file. However, it's often cleaner to use a ``with`` statement:
@@ -393,6 +401,16 @@ We recommend installing PyNIO via conda::
 
 .. _combining multiple files:
 
+
+Formats supported by Pandas
+---------------------------
+
+For more options (tabular formats and CSV files in particular), consider
+exporting your objects to pandas and using its broad range of `IO tools`_.
+
+.. _IO tools: http://pandas.pydata.org/pandas-docs/stable/io.html
+
+
 Combining multiple files
 ------------------------
 
@@ -402,16 +420,19 @@ files into a single Dataset by making use of :py:func:`~xarray.concat`.
 
 .. note::
 
-    Version 0.5 includes experimental support for manipulating datasets that
+    Version 0.5 includes support for manipulating datasets that
     don't fit into memory with dask_. If you have dask installed, you can open
     multiple files simultaneously using :py:func:`~xarray.open_mfdataset`::
 
         xr.open_mfdataset('my/files/*.nc')
 
-    This function automatically concatenates and merges into a single xarray datasets.
-    For more details, see :ref:`dask.io`.
+    This function automatically concatenates and merges multiple files into a
+    single xarray dataset.
+    It is the recommended way to open multiple files with xarray.
+    For more details, see :ref:`dask.io` and a `blog post`_ by Stephan Hoyer.
 
 .. _dask: http://dask.pydata.org
+.. _blog post: http://stephanhoyer.com/2015/06/11/xray-dask-out-of-core-labeled-arrays/
 
 For example, here's how we could approximate ``MFDataset`` from the netCDF4
 library::

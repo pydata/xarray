@@ -39,6 +39,7 @@ nosetests.xml
 # PyCharm and Vim
 .idea
 *.swp
+.DS_Store
 
 # xarray specific
 doc/_build
