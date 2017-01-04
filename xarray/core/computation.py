@@ -163,13 +163,9 @@ def _get_coord_variables(args):
 def build_output_coords(
         args,                      # type: list
         signature,                 # type: UFuncSignature
-        new_coords=None,           # type: Optional[Iterable[Optional[Mapping]]]
         exclude_dims=frozenset(),  # type: set
 ):
     # type: (...) -> List[OrderedDict[Any, Variable]]
-    if new_coords is None:
-        new_coords = _REPEAT_NONE
-
     input_coords = _get_coord_variables(args)
 
     if exclude_dims:
@@ -177,45 +173,34 @@ def build_output_coords(
                                     if exclude_dims.isdisjoint(v.dims))
                         for coord_vars in input_coords]
 
+    if len(input_coords) == 1:
+        # we can skip the expensive merge
+        unpacked_input_coords, = input_coords
+        merged = OrderedDict(unpacked_input_coords)
+    else:
+        merged = expand_and_merge_variables(input_coords)
+
     output_coords = []
-    for output_dims, arg_new_coords in zip(
-            signature.output_core_dims, new_coords):
-
-        if len(input_coords) == 1 and arg_new_coords is None:
-            # we can skip the expensive merge
-            unpacked_input_coords, = input_coords
-            merged = OrderedDict(unpacked_input_coords)
-        elif arg_new_coords:
-            coords_list = [arg_new_coords] + input_coords
-            merged = expand_and_merge_variables(coords_list, priority_arg=0)
-        else:
-            merged = expand_and_merge_variables(input_coords)
-
-        missing_dims = [dim for dim in output_dims if dim not in merged]
-        if missing_dims:
-            raise ValueError(
-                'new output dimensions must have matching entries '
-                'in `new_coords`: %r' % missing_dims)
-
+    for output_dims in signature.output_core_dims:
         dropped_dims = signature.all_input_core_dims - set(output_dims)
         if dropped_dims:
-            merged = OrderedDict((k, v) for k, v in merged.items()
-                                 if dropped_dims.isdisjoint(v.dims))
-
-        output_coords.append(merged)
+            filtered = OrderedDict((k, v) for k, v in merged.items()
+                                   if dropped_dims.isdisjoint(v.dims))
+        else:
+            filtered = merged
+        output_coords.append(filtered)
 
     return output_coords
 
 
 def apply_dataarray_ufunc(func, *args, **kwargs):
     """apply_dataarray_ufunc(func, *args, signature, join='inner',
-                             new_coords=None, exclude_dims=frozenset())
+                             exclude_dims=frozenset())
     """
     from .dataarray import DataArray
 
     signature = kwargs.pop('signature')
     join = kwargs.pop('join', 'inner')
-    new_coords = kwargs.pop('new_coords', None)
     exclude_dims = kwargs.pop('exclude_dims', _DEFAULT_FROZEN_SET)
     if kwargs:
         raise TypeError('apply_dataarray_ufunc() got unexpected keyword '
@@ -226,8 +211,7 @@ def apply_dataarray_ufunc(func, *args, **kwargs):
                           raise_on_invalid=False)
 
     name = result_name(args)
-    result_coords = build_output_coords(args, signature, new_coords,
-                                        exclude_dims=exclude_dims)
+    result_coords = build_output_coords(args, signature, exclude_dims)
 
     data_vars = [getattr(a, 'variable', a) for a in args]
     result_var = func(*data_vars)
@@ -342,13 +326,11 @@ def _fast_dataset(variables, coord_variables):
 
 def apply_dataset_ufunc(func, *args, **kwargs):
     """apply_dataset_ufunc(func, *args, signature, join='inner',
-                           fill_value=None, new_coords=None,
-                           exclude_dims=frozenset()):
+                           fill_value=None, exclude_dims=frozenset()):
     """
     signature = kwargs.pop('signature')
     join = kwargs.pop('join', 'inner')
     fill_value = kwargs.pop('fill_value', None)
-    new_coords = kwargs.pop('new_coords', None)
     exclude_dims = kwargs.pop('exclude_dims', _DEFAULT_FROZEN_SET)
     if kwargs:
         raise TypeError('apply_dataset_ufunc() got unexpected keyword '
@@ -358,8 +340,7 @@ def apply_dataset_ufunc(func, *args, **kwargs):
         args = deep_align(args, join=join, copy=False, exclude=exclude_dims,
                           raise_on_invalid=False)
 
-    list_of_coords = build_output_coords(args, signature, new_coords,
-                                         exclude_dims=exclude_dims)
+    list_of_coords = build_output_coords(args, signature, exclude_dims)
 
     args = [getattr(arg, 'data_vars', arg) for arg in args]
     result_vars = apply_dict_of_variables_ufunc(
@@ -548,7 +529,7 @@ def apply_array_ufunc(func, *args, **kwargs):
 
 
 def apply_ufunc(func, *args, **kwargs):
-    """apply_ufunc(func, *args, signature=None, join='inner', new_coords=None,
+    """apply_ufunc(func, *args, signature=None, join='inner',
                    exclude_dims=frozenset(), dataset_fill_value=None,
                    kwargs=None, dask_array='forbidden')
 
@@ -600,15 +581,10 @@ def apply_ufunc(func, *args, **kwargs):
         - 'inner': use the intersection of object indexes
         - 'left': use indexes from the first object with each dimension
         - 'right': use indexes from the last object with each dimension
-    new_coords : list of dict-like, optional
-        New coordinates to include on each output variable. Any core dimensions
-        on outputs not found on the inputs must be provided here.
     exclude_dims : set, optional
         Dimensions to exclude from alignment and broadcasting. Any inputs
-        coordinates along these dimensions will be dropped. If you include
-        these dimensions on any outputs, you must explicit set them in
-        ``new_coords``. Each excluded dimension must be a core dimension in the
-        function signature.
+        coordinates along these dimensions will be dropped. Each excluded
+        dimension must be a core dimension in the function signature.
     dataset_fill_value : optional
         Value used in place of missing variables on Dataset inputs when the
         datasets do not share the exact same ``data_vars``. Only relevant if
@@ -659,11 +635,11 @@ def apply_ufunc(func, *args, **kwargs):
 
         def stack(objects, dim, new_coord):
             sig = ([()] * len(objects), [(dim,)])
-            new_coords = [{dim: new_coord}]
             func = lambda *x: np.stack(x, axis=-1)
-            return apply_ufunc(func, *objects, signature=sig,
-                               join='outer', new_coords=new_coords,
-                               dataset_fill_value=np.nan)
+            result = apply_ufunc(func, *objects, signature=sig,
+                                 join='outer', dataset_fill_value=np.nan)
+            result[dim] = new_coord
+            return result
 
     Most of NumPy's builtin functions already broadcast their inputs
     appropriately for use in `apply`. You may find helper functions such as
@@ -688,7 +664,6 @@ def apply_ufunc(func, *args, **kwargs):
 
     signature = kwargs.pop('signature', None)
     join = kwargs.pop('join', 'inner')
-    new_coords = kwargs.pop('new_coords', None)
     exclude_dims = kwargs.pop('exclude_dims', frozenset())
     dataset_fill_value = kwargs.pop('dataset_fill_value', None)
     kwargs_ = kwargs.pop('kwargs', None)
@@ -721,19 +696,17 @@ def apply_ufunc(func, *args, **kwargs):
     if any(isinstance(a, GroupBy) for a in args):
         this_apply = functools.partial(
             apply_ufunc, func, signature=signature, join=join,
-            dask_array=dask_array, new_coords=new_coords,
-            exclude_dims=exclude_dims, dataset_fill_value=dataset_fill_value)
+            dask_array=dask_array, exclude_dims=exclude_dims,
+            dataset_fill_value=dataset_fill_value)
         return apply_groupby_ufunc(this_apply, *args)
     elif any(is_dict_like(a) for a in args):
         return apply_dataset_ufunc(variables_ufunc, *args, signature=signature,
-                                   join=join, new_coords=new_coords,
-                                   exclude_dims=exclude_dims,
+                                   join=join, exclude_dims=exclude_dims,
                                    fill_value=dataset_fill_value)
     elif any(isinstance(a, DataArray) for a in args):
         return apply_dataarray_ufunc(variables_ufunc, *args,
                                      signature=signature,
-                                     join=join, new_coords=new_coords,
-                                     exclude_dims=exclude_dims)
+                                     join=join, exclude_dims=exclude_dims)
     elif any(isinstance(a, Variable) for a in args):
         return variables_ufunc(*args)
     else:

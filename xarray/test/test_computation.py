@@ -274,8 +274,10 @@ def test_apply_output_core_dimension():
     def stack_negative(obj):
         func = lambda x: xr.core.npcompat.stack([x, -x], axis=-1)
         sig = ([()], [('sign',)])
-        new_coords = [{'sign': [1, -1]}]
-        return apply_ufunc(func, obj, signature=sig, new_coords=new_coords)
+        result = apply_ufunc(func, obj, signature=sig)
+        if isinstance(result, (xr.Dataset, xr.DataArray)):
+            result.coords['sign'] = [1, -1]
+        return result
 
     array = np.array([[1, 2], [3, 4]])
     variable = xr.Variable(['x', 'y'], array)
@@ -300,8 +302,10 @@ def test_apply_output_core_dimension():
     def original_and_stack_negative(obj):
         func = lambda x: (x, xr.core.npcompat.stack([x, -x], axis=-1))
         sig = ([()], [(), ('sign',)])
-        new_coords = [None, {'sign': [1, -1]}]
-        return apply_ufunc(func, obj, signature=sig, new_coords=new_coords)
+        result = apply_ufunc(func, obj, signature=sig)
+        if isinstance(result[1], (xr.Dataset, xr.DataArray)):
+            result[1].coords['sign'] = [1, -1]
+        return result
 
     out0, out1 = original_and_stack_negative(array)
     assert_identical(array, out0)
@@ -333,12 +337,6 @@ def test_apply_output_core_dimension():
         # no new_coords
         return apply_ufunc(func, obj, signature=sig)
 
-    # new output dimensions must have matching entries
-    with pytest.raises(ValueError):
-        stack_invalid(data_array)
-    with pytest.raises(ValueError):
-        stack_invalid(dataset)
-
 
 def test_apply_exclude():
 
@@ -347,10 +345,11 @@ def test_apply_exclude():
         new_coord = np.concatenate(
             [obj.coords[dim] if hasattr(obj, 'coords') else []
              for obj in objects])
-        new_coords = [{dim: new_coord}]
         func = lambda *x: np.concatenate(x, axis=-1)
-        return apply_ufunc(func, *objects, signature=sig, new_coords=new_coords,
-                        exclude_dims={dim})
+        result = apply_ufunc(func, *objects, signature=sig, exclude_dims={dim})
+        if isinstance(result, (xr.Dataset, xr.DataArray)):
+            result.coords[dim] = new_coord
+        return result
 
     arrays = [np.array([1]), np.array([2, 3])]
     variables = [xr.Variable('x', a) for a in arrays]
