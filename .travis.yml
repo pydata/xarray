@@ -67,7 +67,7 @@ install:
   - python setup.py install
 
 script:
-  - py.test xarray --cov=xarray --cov-report term-missing
+  - py.test xarray --cov=xarray --cov-report term-missing --verbose
 
 after_success:
   - coveralls

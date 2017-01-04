@@ -16,7 +16,7 @@ from pandas.tslib import OutOfBoundsDatetime
 
 from .options import OPTIONS
 from .pycompat import (
-    PY2, unicode_type, bytes_type, dask_array_type, OrderedDict)
+    PY2, unicode_type, bytes_type, dask_array_type, OrderedDict, basestring)
 
 
 def pretty_print(x, numchars):
@@ -87,6 +87,7 @@ def first_n_items(x, n_desired):
         x = x[indexer]
     return np.asarray(x).flat[:n_desired]
 
+
 def last_item(x):
     """Returns the last item of an array"""
     if x.size == 0:
@@ -95,6 +96,7 @@ def last_item(x):
 
     indexer = (slice(-1, None), ) * x.ndim
     return np.array(x[indexer], ndmin=1)
+
 
 def format_timestamp(t):
     """Cast given object to a Timestamp and return a nicely formatted string"""
