@@ -28,9 +28,7 @@ def test_dask_distributed_integration_test(loop, engine):
             original = create_test_data()
             with create_tmp_file() as filename:
                 original.to_netcdf(filename, engine=engine)
-                # TODO: should be able to serialize locks
-                restored = xr.open_dataset(filename, chunks=3, lock=False,
-                                           engine=engine)
+                restored = xr.open_dataset(filename, chunks=3, engine=engine)
                 assert isinstance(restored.var1.data, da.Array)
                 computed = restored.compute()
                 assert_dataset_allclose(original, computed)
