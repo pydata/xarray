@@ -11,7 +11,7 @@ import xarray as xr
 from xarray.core.computation import (
     UFuncSignature, broadcast_compat_data, collect_dict_values,
     join_dict_keys, ordered_set_intersection, ordered_set_union,
-    unified_dim_sizes)
+    unified_dim_sizes, apply_ufunc)
 
 from . import requires_dask
 
@@ -89,7 +89,7 @@ def test_apply_identity():
     data_array = xr.DataArray(variable, [('x', -array)])
     dataset = xr.Dataset({'y': variable}, {'x': -array})
 
-    identity = functools.partial(xr.apply, lambda x: x)
+    identity = functools.partial(apply_ufunc, lambda x: x)
 
     assert_identical(array, identity(array))
     assert_identical(variable, identity(variable))
@@ -100,7 +100,7 @@ def test_apply_identity():
 
 
 def add(a, b):
-    return xr.apply(operator.add, a, b)
+    return apply_ufunc(operator.add, a, b)
 
 
 def test_apply_two_inputs():
@@ -206,7 +206,7 @@ def test_apply_two_outputs():
     def twice(obj):
         func = lambda x: (x, x)
         signature = '()->(),()'
-        return xr.apply(func, obj, signature=signature)
+        return apply_ufunc(func, obj, signature=signature)
 
     out0, out1 = twice(array)
     assert_identical(out0, array)
@@ -238,7 +238,7 @@ def test_apply_input_core_dimension():
     def first_element(obj, dim):
         func = lambda x: x[..., 0]
         sig = ([(dim,)], [()])
-        return xr.apply(func, obj, signature=sig)
+        return apply_ufunc(func, obj, signature=sig)
 
     array = np.array([[1, 2], [3, 4]])
     variable = xr.Variable(['x', 'y'], array)
@@ -275,7 +275,7 @@ def test_apply_output_core_dimension():
         func = lambda x: xr.core.npcompat.stack([x, -x], axis=-1)
         sig = ([()], [('sign',)])
         new_coords = [{'sign': [1, -1]}]
-        return xr.apply(func, obj, signature=sig, new_coords=new_coords)
+        return apply_ufunc(func, obj, signature=sig, new_coords=new_coords)
 
     array = np.array([[1, 2], [3, 4]])
     variable = xr.Variable(['x', 'y'], array)
@@ -301,7 +301,7 @@ def test_apply_output_core_dimension():
         func = lambda x: (x, xr.core.npcompat.stack([x, -x], axis=-1))
         sig = ([()], [(), ('sign',)])
         new_coords = [None, {'sign': [1, -1]}]
-        return xr.apply(func, obj, signature=sig, new_coords=new_coords)
+        return apply_ufunc(func, obj, signature=sig, new_coords=new_coords)
 
     out0, out1 = original_and_stack_negative(array)
     assert_identical(array, out0)
@@ -331,7 +331,7 @@ def test_apply_output_core_dimension():
         func = lambda x: xr.core.npcompat.stack([x, -x], axis=-1)
         sig = ([()], [('sign',)])
         # no new_coords
-        return xr.apply(func, obj, signature=sig)
+        return apply_ufunc(func, obj, signature=sig)
 
     # new output dimensions must have matching entries
     with pytest.raises(ValueError):
@@ -349,7 +349,7 @@ def test_apply_exclude():
              for obj in objects])
         new_coords = [{dim: new_coord}]
         func = lambda *x: np.concatenate(x, axis=-1)
-        return xr.apply(func, *objects, signature=sig, new_coords=new_coords,
+        return apply_ufunc(func, *objects, signature=sig, new_coords=new_coords,
                         exclude_dims={dim})
 
     arrays = [np.array([1]), np.array([2, 3])]
@@ -371,7 +371,7 @@ def test_apply_exclude():
     identity = lambda x: x
     # must also be a core dimension
     with pytest.raises(ValueError):
-        xr.apply(identity, variables[0], exclude_dims={'x'})
+        apply_ufunc(identity, variables[0], exclude_dims={'x'})
 
 
 def test_apply_groupby_add():
@@ -496,20 +496,20 @@ def test_apply_dask():
 
     # encountered dask array, but did not set dask_array='allowed'
     with pytest.raises(ValueError):
-        xr.apply(identity, array)
+        apply_ufunc(identity, array)
     with pytest.raises(ValueError):
-        xr.apply(identity, variable)
+        apply_ufunc(identity, variable)
     with pytest.raises(ValueError):
-        xr.apply(identity, data_array)
+        apply_ufunc(identity, data_array)
     with pytest.raises(ValueError):
-        xr.apply(identity, dataset)
+        apply_ufunc(identity, dataset)
 
     # unknown setting for dask array handling
     with pytest.raises(ValueError):
-        xr.apply(identity, array, dask_array='auto')
+        apply_ufunc(identity, array, dask_array='auto')
 
     def dask_safe_identity(x):
-        return xr.apply(identity, x, dask_array='allowed')
+        return apply_ufunc(identity, x, dask_array='allowed')
 
     assert array is dask_safe_identity(array)
 

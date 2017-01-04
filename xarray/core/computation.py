@@ -1,3 +1,7 @@
+"""Functions for applying functions that act on arrays to xarray's labeled data.
+
+NOT PUBLIC API.
+"""
 import collections
 import functools
 import itertools
@@ -161,7 +165,7 @@ def build_output_coords(
         signature,                 # type: UFuncSignature
         new_coords=None,           # type: Optional[Iterable[Optional[Mapping]]]
         exclude_dims=frozenset(),  # type: set
-        ):
+):
     # type: (...) -> List[OrderedDict[Any, Variable]]
     if new_coords is None:
         new_coords = _REPEAT_NONE
@@ -369,69 +373,6 @@ def apply_dataset_ufunc(func, *args, **kwargs):
         return _fast_dataset(result_vars, coord_vars)
 
 
-def apply_dataset_matching_ufunc(func, *args, **kwargs):
-    """apply_dataset_ufunc(func, *args, signature, join='inner',
-                           fill_value=None, new_coords=None,
-                           exclude_dims=frozenset()):
-    """
-    signature = kwargs.pop('signature')
-    join = kwargs.pop('join', 'inner')
-    fill_value = kwargs.pop('fill_value', None)
-    # new_coords = kwargs.pop('new_coords', None)
-    exclude_dims = kwargs.pop('exclude_dims', _DEFAULT_FROZEN_SET)
-    if kwargs:
-        raise TypeError('apply_dataset_ufunc() got unexpected keyword '
-                        'arguments: %s' % list(kwargs))
-
-    if len(args) > 1:
-        args = deep_align(args, join=join, copy=False, exclude=exclude_dims,
-                          raise_on_invalid=False)
-
-    args = [_as_variables_or_variable(arg) for arg in args]
-    variable_names = join_dict_keys(args, how=join)
-    grouped_by_name = collect_dict_values(args, variable_names, fill_value)
-
-    # coord_names = _get_coord_variables(args)
-    # union_coord_names = join_dict_keys(coord_names, how='outer')
-    data_var_names = set()
-    coord_names = set()
-    for arg in args:
-        if hasattr(arg, 'keys'):
-            coord_names = set(getattr(arg, 'coords', []))
-            var_names = set(arg.keys())
-            coord_names.update(coord_names)
-            data_var_names.update(var_names - coord_names)
-
-    if coord_names.intersection(data_var_names):
-        raise ValueError
-
-    result_coords = OrderedDict()
-    result_data_vars = OrderedDict()
-    for variable_name, variable_args in zip(variable_names, grouped_by_name):
-
-        # Do core dimensions match?
-        # If yes, apply.
-        # If no, merge.
-        # If mixed, error.
-
-        # Is it a coordinate?
-        # If yes, save as coordinate.
-        # If no, save as data variable.
-        # If mixed, error.
-
-        result_vars[variable_name] = func(*variable_args)
-
-    # result_vars = apply_dict_of_variables_ufunc(
-    #     func, *args, signature=signature, join=join, fill_value=fill_value)
-
-    if signature.n_outputs > 1:
-        return tuple(_fast_dataset(*args)
-                     for args in zip(result_vars, list_of_coords))
-    else:
-        coord_vars, = list_of_coords
-        return _fast_dataset(result_vars, coord_vars)
-
-
 def _iter_over_selections(obj, dim, values):
     """Iterate over selections of an xarray object in the provided order."""
     from .groupby import _dummy_copy
@@ -606,10 +547,10 @@ def apply_array_ufunc(func, *args, **kwargs):
     return func(*args)
 
 
-def apply(func, *args, **kwargs):
-    """apply(func, *args, signature=None, join='inner', new_coords=None,
-             exclude_dims=frozenset(), dataset_fill_value=None, kwargs=None,
-             dask_array='forbidden')
+def apply_ufunc(func, *args, **kwargs):
+    """apply_ufunc(func, *args, signature=None, join='inner', new_coords=None,
+                   exclude_dims=frozenset(), dataset_fill_value=None,
+                   kwargs=None, dask_array='forbidden')
 
     Apply a vectorized function for unlabeled arrays to xarray objects.
 
@@ -687,8 +628,8 @@ def apply(func, *args, **kwargs):
     Examples
     --------
     For illustrative purposes only, here are examples of how you could use
-    ``apply`` to write functions to (very nearly) replicate existing xarray
-    functionality:
+    ``apply_ufunc`` to write functions to (very nearly) replicate existing
+    xarray functionality:
 
     Calculate the vector magnitude of two arguments:
 
@@ -702,7 +643,7 @@ def apply(func, *args, **kwargs):
             # note: apply always moves core dimensions to the end
             sig = ([(dim,)], [()])
             kwargs = {'axis': -1}
-            return xr.apply(np.mean, obj, signature=sig, kwargs=kwargs)
+            return apply_ufunc(np.mean, obj, signature=sig, kwargs=kwargs)
 
     Inner product over a specific dimension::
 
@@ -712,7 +653,7 @@ def apply(func, *args, **kwargs):
 
         def inner_product(a, b, dim):
             sig = ([(dim,), (dim,)], [()])
-            return xr.apply(_inner, a, b, signature=sig)
+            return apply_ufunc(_inner, a, b, signature=sig)
 
     Stack objects along a new dimension (like ``xr.concat``)::
 
@@ -720,14 +661,14 @@ def apply(func, *args, **kwargs):
             sig = ([()] * len(objects), [(dim,)])
             new_coords = [{dim: new_coord}]
             func = lambda *x: np.stack(x, axis=-1)
-            return xr.apply(func, *objects, signature=sig,
-                                  join='outer', new_coords=new_coords,
-                                  dataset_fill_value=np.nan)
+            return apply_ufunc(func, *objects, signature=sig,
+                               join='outer', new_coords=new_coords,
+                               dataset_fill_value=np.nan)
 
     Most of NumPy's builtin functions already broadcast their inputs
     appropriately for use in `apply`. You may find helper functions such as
     numpy.broadcast_arrays or numpy.vectorize helpful in writing your function.
-    `apply` also works well with numba's vectorize and guvectorize.
+    `apply_ufunc` also works well with numba's vectorize and guvectorize.
 
     See also
     --------
@@ -779,7 +720,7 @@ def apply(func, *args, **kwargs):
 
     if any(isinstance(a, GroupBy) for a in args):
         this_apply = functools.partial(
-            apply, func, signature=signature, join=join,
+            apply_ufunc, func, signature=signature, join=join,
             dask_array=dask_array, new_coords=new_coords,
             exclude_dims=exclude_dims, dataset_fill_value=dataset_fill_value)
         return apply_groupby_ufunc(this_apply, *args)
