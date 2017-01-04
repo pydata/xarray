@@ -260,7 +260,7 @@ class GroupBy(object):
         else:
             # look through group to find the unique values
             unique_values, group_indices = unique_value_groups(
-                group, sort=(bins is None))
+                safe_cast_to_index(group), sort=(bins is None))
             unique_coord = IndexVariable(group.name, unique_values)
 
         # specification for the groupby operation

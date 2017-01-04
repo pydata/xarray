@@ -21,7 +21,13 @@ v0.9.0 (unreleased)
 Breaking changes
 ~~~~~~~~~~~~~~~~
 
+- ``DataArray.rename()`` behavior changed to strictly change the ``DataArray.name``
+  if called with string argument, or strictly change coordinate names if called with
+  dict-like argument.
+  By `Markus Gonser <https://github.com/magonser>`_.
+
 - By default ``to_netcdf()`` add a ``_FillValue = NaN`` attributes to float types.
+  By `Frederic Laliberte <https://github.com/laliberte>`_.
 
 - Index coordinates for each dimensions are now optional, and no longer created
   by default :issue:`1017`. This has a number of implications:
@@ -64,6 +70,11 @@ Breaking changes
 - Coordinates used to index a dimension are now loaded eagerly into
   :py:class:`pandas.Index` objects, instead of loading the values lazily.
   By `Guido Imperiale <https://github.com/crusaderky>`_.
+- Automatic levels for 2d plots are now guaranteed to land on ``vmin`` and
+  ``vmax`` when these kwargs are explicitly provided (:issue:`1191`). The
+  automated level selection logic also slightly changed.
+  By `Fabien Maussion <https://github.com/fmaussion>`_.
+- xarray no longer supports python 3.3 or versions of dask prior to v0.9.0.
 
 Deprecations
 ~~~~~~~~~~~~
@@ -104,6 +115,9 @@ Enhancements
   as keyword arguments, e.g., ``ds.sel(time='2000-01')``
   (see :ref:`multi-level indexing`).
   By `Benoit Bovy <https://github.com/benbovy>`_.
+- Added ``set_index``, ``reset_index`` and ``reorder_levels`` methods to
+  easily create and manipulate (multi-)indexes (see :ref:`reshape.set_index`).
+  By `Benoit Bovy <https://github.com/benbovy>`_.
 - Added the ``compat`` option ``'no_conflicts'`` to ``merge``, allowing the
   combination of xarray objects with disjoint (:issue:`742`) or
   overlapping (:issue:`835`) coordinates as long as all present data agrees.
@@ -143,10 +157,18 @@ Enhancements
   :py:class:`FacetGrid` and :py:func:`~xarray.plot.plot`, so axes
   sharing can be disabled for polar plots.
   By `Bas Hoonhout <https://github.com/hoonhout>`_.
+- New utility functions :py:func:`~xarray.test.assert_xarray_equal`,
+  :py:func:`~xarray.test.assert_xarray_identical`, and
+  :py:func:`~xarray.test.assert_xarray_allclose` for asserting relationships
+  between xarray objects, designed for use in a pytest test suite.
 - ``figsize``, ``size`` and ``aspect`` plot arguments are now supported for all
   plots (:issue:`897`). See :ref:`plotting.figsize` for more details.
   By `Stephan Hoyer <https://github.com/shoyer>`_ and
   `Fabien Maussion <https://github.com/fmaussion>`_.
+- New :py:meth:`~Dataset.info` method to summarize ``Dataset`` variables
+  and attributes. The method prints to a buffer (e.g. ``stdout``) with output
+  similar to what the command line utility ``ncdump -h`` produces (:issue:`1150`).
+  By `Joe Hamman <https://github.com/jhamman>`_.
 
 Bug fixes
 ~~~~~~~~~
@@ -199,8 +221,14 @@ Bug fixes
 - Fixed sub-optimal performance in certain operations with object arrays (:issue:`1121`).
   By `Yves Delley <https://github.com/burnpanck>`_.
 
-- Fixed a bug whith facetgrid (the ``norm`` keyword was ignored, :issue:`1159`).
+- Fix ``.groupby(group)`` when ``group`` has datetime dtype (:issue:`1132`).
+  By `Jonas Sølvsteen <https://github.com/j08lue>`_.
+
+- Fixed a bug with facetgrid (the ``norm`` keyword was ignored, :issue:`1159`).
   By `Fabien Maussion <https://github.com/fmaussion>`_.
+
+- Fix to make ``.copy()`` actually copy dask arrays, which will be relevant for
+  future releases of dask in which dask arrays will be mutable (:issue:`1180`).
 
 .. _whats-new.0.8.2:
 

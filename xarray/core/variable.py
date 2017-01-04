@@ -437,10 +437,12 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
             # don't share caching between copies
             data = indexing.MemoryCachedArray(data.array)
 
-        if deep and not isinstance(
-                data, (dask_array_type, PandasIndexAdapter)):
-            # pandas.Index and dask.array objects are immutable
-            data = np.array(data)
+        if deep:
+            if isinstance(data, dask_array_type):
+                data = data.copy()
+            elif not isinstance(data, PandasIndexAdapter):
+                # pandas.Index is immutable
+                data = np.array(data)
 
         # note:
         # dims is already an immutable tuple

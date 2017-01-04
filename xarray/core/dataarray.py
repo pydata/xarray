@@ -18,7 +18,7 @@ from .alignment import align, reindex_like_indexers
 from .common import AbstractArray, BaseDataObject
 from .coordinates import (DataArrayCoordinates, LevelCoordinatesSource,
                           Indexes)
-from .dataset import Dataset
+from .dataset import Dataset, merge_indexes, split_indexes
 from .pycompat import iteritems, basestring, OrderedDict, zip, range
 from .variable import (as_variable, Variable, as_compatible_data,
                        IndexVariable,
@@ -789,15 +789,16 @@ class DataArray(AbstractArray, BaseDataObject):
         return self._from_temp_dataset(ds)
 
     def rename(self, new_name_or_name_dict):
-        """Returns a new DataArray with renamed coordinates and/or a new name.
+        """Returns a new DataArray with renamed coordinates or a new name.
 
 
         Parameters
         ----------
         new_name_or_name_dict : str or dict-like
             If the argument is dict-like, it it used as a mapping from old
-            names to new names for coordinates (and/or this array itself).
-            Otherwise, use the argument as the new name for this array.
+            names to new names for coordinates. Otherwise, use the argument
+            as the new name for this array.
+
 
         Returns
         -------
@@ -810,13 +811,8 @@ class DataArray(AbstractArray, BaseDataObject):
         DataArray.swap_dims
         """
         if utils.is_dict_like(new_name_or_name_dict):
-            name_dict = new_name_or_name_dict.copy()
-            if self.name in self.dims:
-                name = name_dict.get(self.name, self.name)
-            else:
-                name = name_dict.pop(self.name, self.name)
-            dataset = self._to_temp_dataset().rename(name_dict)
-            return self._from_temp_dataset(dataset, name)
+            dataset = self._to_temp_dataset().rename(new_name_or_name_dict)
+            return self._from_temp_dataset(dataset)
         else:
             return self._replace(name=new_name_or_name_dict)
 
@@ -845,6 +841,103 @@ class DataArray(AbstractArray, BaseDataObject):
         """
         ds = self._to_temp_dataset().swap_dims(dims_dict)
         return self._from_temp_dataset(ds)
+
+    def set_index(self, append=False, inplace=False, **indexes):
+        """Set DataArray (multi-)indexes using one or more existing coordinates.
+
+        Parameters
+        ----------
+        append : bool, optional
+            If True, append the supplied index(es) to the existing index(es).
+            Otherwise replace the existing index(es) (default).
+        inplace : bool, optional
+            If True, set new index(es) in-place. Otherwise, return a new DataArray
+            object.
+        **indexes : {dim: index, ...}
+            Keyword arguments with names matching dimensions and values given
+            by (lists of) the names of existing coordinates or variables to set
+            as new (multi-)index.
+
+        Returns
+        -------
+        obj : DataArray
+            Another dataarray, with this dataarray's data but replaced coordinates.
+
+        See Also
+        --------
+        DataArray.reset_index
+        """
+        coords, _ = merge_indexes(indexes, self._coords, set(), append=append)
+        if inplace:
+            self._coords = coords
+        else:
+            return self._replace(coords=coords)
+
+    def reset_index(self, dims_or_levels, drop=False, inplace=False):
+        """Reset the specified index(es) or multi-index level(s).
+
+        Parameters
+        ----------
+        dims_or_levels : str or list
+            Name(s) of the dimension(s) and/or multi-index level(s) that will
+            be reset.
+        drop : bool, optional
+            If True, remove the specified indexes and/or multi-index levels
+            instead of extracting them as new coordinates (default: False).
+        inplace : bool, optional
+            If True, modify the dataarray in-place. Otherwise, return a new
+            DataArray object.
+
+        Returns
+        -------
+        obj : DataArray
+            Another dataarray, with this dataarray's data but replaced
+            coordinates.
+
+        See Also
+        --------
+        DataArray.set_index
+        """
+        coords, _ = split_indexes(dims_or_levels, self._coords, set(),
+                                  self._level_coords, drop=drop)
+        if inplace:
+            self._coords = coords
+        else:
+            return self._replace(coords=coords)
+
+    def reorder_levels(self, inplace=False, **dim_order):
+        """Rearrange index levels using input order.
+
+        Parameters
+        ----------
+        inplace : bool, optional
+            If True, modify the dataarray in-place. Otherwise, return a new
+            DataArray object.
+        **dim_order : optional
+            Keyword arguments with names matching dimensions and values given
+            by lists representing new level orders. Every given dimension
+            must have a multi-index.
+
+        Returns
+        -------
+        obj : DataArray
+            Another dataarray, with this dataarray's data but replaced
+            coordinates.
+        """
+        replace_coords = {}
+        for dim, order in dim_order.items():
+            coord = self._coords[dim]
+            index = coord.to_index()
+            if not isinstance(index, pd.MultiIndex):
+                raise ValueError("coordinate %r has no MultiIndex" % dim)
+            replace_coords[dim] = IndexVariable(coord.dims,
+                                                index.reorder_levels(order))
+        coords = self._coords.copy()
+        coords.update(replace_coords)
+        if inplace:
+            self._coords = coords
+        else:
+            return self._replace(coords=coords)
 
     def stack(self, **dimensions):
         """

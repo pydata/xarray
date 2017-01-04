@@ -106,6 +106,9 @@ Indexing
    Dataset.squeeze
    Dataset.reindex
    Dataset.reindex_like
+   Dataset.set_index
+   Dataset.reset_index
+   Dataset.reorder_levels
 
 Computation
 -----------
@@ -239,6 +242,9 @@ Indexing
    DataArray.squeeze
    DataArray.reindex
    DataArray.reindex_like
+   DataArray.set_index
+   DataArray.reset_index
+   DataArray.reorder_levels
 
 Comparisons
 -----------
@@ -411,6 +417,7 @@ Dataset methods
    Dataset.load
    Dataset.chunk
    Dataset.filter_by_attrs
+   Dataset.info
 
 DataArray methods
 -----------------
@@ -471,3 +478,14 @@ arguments for the ``from_store`` and ``dump_to_store`` Dataset methods:
    backends.H5NetCDFStore
    backends.PydapDataStore
    backends.ScipyDataStore
+
+
+Testing
+=======
+
+.. autosummary::
+   :toctree: generated/
+
+   test.assert_xarray_equal
+   test.assert_xarray_identical
+   test.assert_xarray_allclose
