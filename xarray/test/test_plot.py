@@ -2,6 +2,16 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
+# import mpl and change the backend before other mpl imports
+try:
+    import matplotlib as mpl
+    # Using a different backend makes Travis CI work
+    mpl.use('Agg')
+    # Order of imports is important here.
+    import matplotlib.pyplot as plt
+except ImportError:
+    pass
+
 import inspect
 
 import numpy as np
@@ -16,15 +26,6 @@ from xarray.plot.utils import (_determine_cmap_params,
                                _color_palette)
 
 from . import TestCase, requires_matplotlib
-
-try:
-    import matplotlib as mpl
-    # Using a different backend makes Travis CI work.
-    mpl.use('Agg')
-    # Order of imports is important here.
-    import matplotlib.pyplot as plt
-except ImportError:
-    pass
 
 
 def text_in_fig():
@@ -322,19 +323,40 @@ class TestDetermineCmapParams(TestCase):
 
     def test_integer_levels(self):
         data = self.data + 1
+
+        # default is to cover full data range but with no guarantee on Nlevels
+        for level in np.arange(2, 10, dtype=int):
+            cmap_params = _determine_cmap_params(data, levels=level)
+            self.assertEqual(cmap_params['vmin'], cmap_params['levels'][0])
+            self.assertEqual(cmap_params['vmax'], cmap_params['levels'][-1])
+            self.assertEqual(cmap_params['extend'], 'neither')
+
+        # with min max we are more strict
         cmap_params = _determine_cmap_params(data, levels=5, vmin=0, vmax=5,
                                              cmap='Blues')
+        self.assertEqual(cmap_params['vmin'], 0)
+        self.assertEqual(cmap_params['vmax'], 5)
         self.assertEqual(cmap_params['vmin'], cmap_params['levels'][0])
         self.assertEqual(cmap_params['vmax'], cmap_params['levels'][-1])
         self.assertEqual(cmap_params['cmap'].name, 'Blues')
         self.assertEqual(cmap_params['extend'], 'neither')
-        self.assertEqual(cmap_params['cmap'].N, 5)
-        self.assertEqual(cmap_params['norm'].N, 6)
+        self.assertEqual(cmap_params['cmap'].N, 4)
+        self.assertEqual(cmap_params['norm'].N, 5)
 
         cmap_params = _determine_cmap_params(data, levels=5,
                                              vmin=0.5, vmax=1.5)
         self.assertEqual(cmap_params['cmap'].name, 'viridis')
         self.assertEqual(cmap_params['extend'], 'max')
+
+        cmap_params = _determine_cmap_params(data, levels=5,
+                                             vmin=1.5)
+        self.assertEqual(cmap_params['cmap'].name, 'viridis')
+        self.assertEqual(cmap_params['extend'], 'min')
+
+        cmap_params = _determine_cmap_params(data, levels=5,
+                                             vmin=1.3, vmax=1.5)
+        self.assertEqual(cmap_params['cmap'].name, 'viridis')
+        self.assertEqual(cmap_params['extend'], 'both')
 
     def test_list_levels(self):
         data = self.data + 1
