@@ -161,7 +161,12 @@ class TestPlot(PlotTestCase):
         g = d.plot(x='x', y='y', col='z', col_wrap=2, cmap='cool',
                    subplot_kws=dict(axisbg='r'))
         for ax in g.axes.flat:
-            self.assertEqual(ax.get_axis_bgcolor(), 'r')
+            try:
+                # mpl V2
+                self.assertEqual(ax.get_facecolor()[0:3],
+                                 mpl.colors.to_rgb('r'))
+            except AttributeError:
+                self.assertEqual(ax.get_axis_bgcolor(), 'r')
 
     def test_plot_size(self):
         self.darray[:, 0, 0].plot(figsize=(13, 5))
@@ -1116,7 +1121,7 @@ class TestFacetGrid(PlotTestCase):
             g = xplt.plot(self.darray, row=2, col='z', ax=plt.gca(), size=6)
 
     def test_num_ticks(self):
-        nticks = 100
+        nticks = 99
         maxticks = nticks + 1
         self.g.map_dataarray(xplt.imshow, 'x', 'y')
         self.g.set_ticks(max_xticks=nticks, max_yticks=nticks)
@@ -1203,5 +1208,3 @@ class TestFacetGrid4d(PlotTestCase):
         # Top row should be labeled
         for label, ax in zip(self.darray.coords['col'].values, g.axes[0, :]):
             self.assertTrue(substring_in_axes(label, ax))
-        
-        
