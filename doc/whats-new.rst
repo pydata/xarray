@@ -35,6 +35,12 @@ Added new method :py:meth:`~Dataset.assign_attrs` to ``DataArray`` and
 ``dict.update`` method on attrs (:issue:`1281`).
 By `Henry S. Harrison <https://hsharrison.github.io>`_.
 
+- It is now possible to set the ``autoclose=True`` argument to
+  :py:func:`~xarray.open_mfdataset` to explicitly close opened files when not
+  in use to prevent occurrence of an OS Error related to too many open files.
+  Note, the default is ``autoclose=False``, which is consistent with previous
+  xarray behavior.  By `Phillip J. Wolfram <https://github.com/pwolfram>`_.
+
 Bug fixes
 ~~~~~~~~~
 - ``rolling`` now keeps its original dimension order (:issue:`1125`).

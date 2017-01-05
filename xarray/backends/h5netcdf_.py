@@ -6,12 +6,18 @@ import warnings
 
 from .. import Variable
 from ..core import indexing
-from ..core.utils import FrozenOrderedDict, close_on_error, Frozen
+from ..core.utils import FrozenOrderedDict, close_on_error
 from ..core.pycompat import iteritems, bytes_type, unicode_type, OrderedDict
 
-from .common import WritableCFDataStore, DataStorePickleMixin
+from .common import WritableCFDataStore, DataStorePickleMixin, find_root
 from .netCDF4_ import (_nc4_group, _nc4_values_and_dtype,
                        _extract_nc4_variable_encoding, BaseNetCDF4Array)
+
+
+class H5NetCDFArrayWrapper(BaseNetCDF4Array):
+    def __getitem__(self, key):
+        with self.datastore.ensure_open(autoclose=True):
+            return self.get_array()[key]
 
 
 def maybe_decode_bytes(txt):
@@ -49,12 +55,18 @@ class H5NetCDFStore(WritableCFDataStore, DataStorePickleMixin):
     """Store for reading and writing data via h5netcdf
     """
     def __init__(self, filename, mode='r', format=None, group=None,
-                 writer=None):
+                 writer=None, autoclose=False):
         if format not in [None, 'NETCDF4']:
             raise ValueError('invalid format for h5netcdf backend')
         opener = functools.partial(_open_h5netcdf_group, filename, mode=mode,
                                    group=group)
         self.ds = opener()
+        if autoclose:
+            raise NotImplemented('autoclose=True is not implemented '
+                                 'for the h5netcdf backend pending further '
+                                 'exploration, e.g., bug fixes (in h5netcdf?)')
+        self._autoclose = False
+        self._isopen = True
         self.format = format
         self._opener = opener
         self._filename = filename
@@ -62,36 +74,44 @@ class H5NetCDFStore(WritableCFDataStore, DataStorePickleMixin):
         super(H5NetCDFStore, self).__init__(writer)
 
     def open_store_variable(self, name, var):
-        dimensions = var.dimensions
-        data = indexing.LazilyIndexedArray(BaseNetCDF4Array(name, self))
-        attrs = _read_attributes(var)
+        with self.ensure_open(autoclose=False):
+            dimensions = var.dimensions
+            data = indexing.LazilyIndexedArray(
+                H5NetCDFArrayWrapper(name, self))
+            attrs = _read_attributes(var)
 
-        # netCDF4 specific encoding
-        encoding = dict(var.filters())
-        chunking = var.chunking()
-        encoding['chunksizes'] = chunking if chunking != 'contiguous' else None
+            # netCDF4 specific encoding
+            encoding = dict(var.filters())
+            chunking = var.chunking()
+            encoding['chunksizes'] = chunking \
+                if chunking != 'contiguous' else None
 
-        # save source so __repr__ can detect if it's local or not
-        encoding['source'] = self._filename
-        encoding['original_shape'] = var.shape
+            # save source so __repr__ can detect if it's local or not
+            encoding['source'] = self._filename
+            encoding['original_shape'] = var.shape
 
         return Variable(dimensions, data, attrs, encoding)
 
     def get_variables(self):
-        return FrozenOrderedDict((k, self.open_store_variable(k, v))
-                                 for k, v in iteritems(self.ds.variables))
+        with self.ensure_open(autoclose=False):
+            return FrozenOrderedDict((k, self.open_store_variable(k, v))
+                                     for k, v in iteritems(self.ds.variables))
 
     def get_attrs(self):
-        return Frozen(_read_attributes(self.ds))
+        with self.ensure_open(autoclose=True):
+            return FrozenOrderedDict(_read_attributes(self.ds))
 
     def get_dimensions(self):
-        return self.ds.dimensions
+        with self.ensure_open(autoclose=True):
+            return self.ds.dimensions
 
     def set_dimension(self, name, length):
-        self.ds.createDimension(name, size=length)
+        with self.ensure_open(autoclose=False):
+            self.ds.createDimension(name, size=length)
 
     def set_attribute(self, key, value):
-        self.ds.setncattr(key, value)
+        with self.ensure_open(autoclose=False):
+            self.ds.setncattr(key, value)
 
     def prepare_variable(self, name, variable, check_encoding=False,
                          unlimited_dims=None):
@@ -129,12 +149,14 @@ class H5NetCDFStore(WritableCFDataStore, DataStorePickleMixin):
         return nc4_var, variable.data
 
     def sync(self):
-        super(H5NetCDFStore, self).sync()
-        self.ds.sync()
+        with self.ensure_open(autoclose=True):
+            super(H5NetCDFStore, self).sync()
+            self.ds.sync()
 
     def close(self):
-        ds = self.ds
-        # netCDF4 only allows closing the root group
-        while ds.parent is not None:
-            ds = ds.parent
-        ds.close()
+        if self._isopen:
+            # netCDF4 only allows closing the root group
+            ds = find_root(self.ds)
+            if not ds._closed:
+                ds.close()
+            self._isopen = False
