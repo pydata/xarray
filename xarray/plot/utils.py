@@ -7,6 +7,7 @@ import numpy as np
 import pandas as pd
 
 from ..core.pycompat import basestring
+from ..core.utils import is_scalar
 
 
 def _load_default_cmap(fname='default_colormap.csv'):
@@ -139,6 +140,9 @@ def _determine_cmap_params(plot_data, vmin=None, vmax=None, cmap=None,
     if (vmin is not None) and (vmax is not None):
         possibly_divergent = False
 
+    # Setting vmin or vmax implies linspaced levels
+    user_minmax = (vmin is not None) or (vmax is not None)
+
     # vlim might be computed below
     vlim = None
 
@@ -187,9 +191,13 @@ def _determine_cmap_params(plot_data, vmin=None, vmax=None, cmap=None,
 
     # Handle discrete levels
     if levels is not None:
-        if isinstance(levels, int):
-            ticker = mpl.ticker.MaxNLocator(levels)
-            levels = ticker.tick_values(vmin, vmax)
+        if is_scalar(levels):
+            if user_minmax or levels == 1:
+                levels = np.linspace(vmin, vmax, levels)
+            else:
+                # N in MaxNLocator refers to bins, not ticks
+                ticker = mpl.ticker.MaxNLocator(levels-1)
+                levels = ticker.tick_values(vmin, vmax)
         vmin, vmax = levels[0], levels[-1]
 
     if extend is None:

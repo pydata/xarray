@@ -1,18 +1,21 @@
 name: test_env
 channels:
+  - conda-forge/label/rc
   - conda-forge
 dependencies:
-  - python=2.7
+  - python=3.5
   - cython
   - dask
   - distributed
   - h5py
+  - matplotlib
+  - netcdf4
   - pytest
   - numpy
   - pandas
+  - seaborn
   - scipy
   - pip:
     - coveralls
     - pytest-cov
     - h5netcdf
-    - git+https://github.com/Unidata/netcdf4-python.git

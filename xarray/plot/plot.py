@@ -358,7 +358,11 @@ def _plot2d(plotfunc):
         How to draw arrows extending the colorbar beyond its limits. If not
         provided, extend is inferred from vmin, vmax and the data limits.
     levels : int or list-like object, optional
-        Split the colormap (cmap) into discrete color intervals.
+        Split the colormap (cmap) into discrete color intervals. If an integer
+        is provided, "nice" levels are chosen based on the data range: this can
+        imply that the final number of levels is not exactly the expected one.
+        Setting ``vmin`` and/or ``vmax`` with ``levels=N`` is equivalent to
+        setting ``levels=np.linspace(vmin, vmax, N)``.
     infer_intervals : bool, optional
         Only applies to pcolormesh. If True, the coordinate intervals are
         passed to pcolormesh. If False, the original coordinates are used

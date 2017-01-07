@@ -13,11 +13,21 @@ from ..conventions import cf_encoder
 from ..core.utils import FrozenOrderedDict
 from ..core.pycompat import iteritems, dask_array_type
 
+try:
+    from dask.utils import SerializableLock as Lock
+except ImportError:
+    from threading import Lock
+
+
 # Create a logger object, but don't add any handlers. Leave that to user code.
 logger = logging.getLogger(__name__)
 
 
 NONE_VAR_NAME = '__values__'
+
+
+# dask.utils.SerializableLock if available, otherwise just a threading.Lock
+GLOBAL_LOCK = Lock()
 
 
 def _encode_variable_name(name):
@@ -149,7 +159,7 @@ class ArrayWriter(object):
             import dask.array as da
             import dask
             if StrictVersion(dask.__version__) > StrictVersion('0.8.1'):
-                da.store(self.sources, self.targets, lock=threading.Lock())
+                da.store(self.sources, self.targets, lock=GLOBAL_LOCK)
             else:
                 da.store(self.sources, self.targets)
             self.sources = []
