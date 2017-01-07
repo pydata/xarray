@@ -6,6 +6,7 @@ import contextlib
 import inspect
 import operator
 import warnings
+from distutils.version import StrictVersion
 
 import numpy as np
 import pandas as pd
@@ -504,6 +505,9 @@ def inject_bottleneck_rolling_methods(cls):
 
     # bottleneck rolling methods
     if has_bottleneck:
+        if StrictVersion(bn.__version__) < StrictVersion('1.0'):
+            return
+
         for bn_name, method_name in BOTTLENECK_ROLLING_METHODS.items():
             f = getattr(bn, bn_name)
             func = cls._bottleneck_reduce(f)

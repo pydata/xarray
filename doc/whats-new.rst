@@ -74,7 +74,8 @@ Breaking changes
   ``vmax`` when these kwargs are explicitly provided (:issue:`1191`). The
   automated level selection logic also slightly changed.
   By `Fabien Maussion <https://github.com/fmaussion>`_.
-- xarray no longer supports python 3.3 or versions of dask prior to v0.9.0.
+- xarray no longer supports python 3.3, versions of dask prior to v0.9.0,
+  or versions of bottleneck prior to v1.0.
 
 Deprecations
 ~~~~~~~~~~~~
