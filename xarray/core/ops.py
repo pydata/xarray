@@ -278,11 +278,19 @@ def count(data, axis=None):
     return sum(~isnull(data), axis=axis)
 
 
-def fillna(data, other):
+def fillna(data, other, join="left"):
     """Fill missing values in this object with data from the other object.
     Follows normal broadcasting and alignment rules.
     """
-    return where(isnull(data), other, data)
+    from .computation import apply_ufunc
+
+    def _fillna(data, other):
+        if hasattr(other, "__len__"):  # array
+            data[isnull(data)] = other[isnull(data)]
+        else:  # scalar
+            data[isnull(data)] = other
+        return data
+    return apply_ufunc(_fillna, data, other, join=join)
 
 
 def where_method(data, cond, other=np.nan):
