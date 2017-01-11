@@ -1075,7 +1075,7 @@ class DataArray(AbstractArray, BaseDataObject):
         ds = self._to_temp_dataset().dropna(dim, how=how, thresh=thresh)
         return self._from_temp_dataset(ds)
 
-    def fillna(self, value):
+    def fillna(self, value, join="left"):
         """Fill missing values in this object.
 
         This operation follows the normal broadcasting and alignment rules that
@@ -1097,7 +1097,7 @@ class DataArray(AbstractArray, BaseDataObject):
         if utils.is_dict_like(value):
             raise TypeError('cannot provide fill value as a dictionary with '
                             'fillna on a DataArray')
-        out = self._fillna(value)
+        out = self._fillna(value, join=join)
         out.attrs = self.attrs
         return out
 

@@ -343,6 +343,7 @@ def apply_dataset_ufunc(func, *args, **kwargs):
     list_of_coords = build_output_coords(args, signature, exclude_dims)
 
     args = [getattr(arg, 'data_vars', arg) for arg in args]
+
     result_vars = apply_dict_of_variables_ufunc(
         func, *args, signature=signature, join=join, fill_value=fill_value)
 

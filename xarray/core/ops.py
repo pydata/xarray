@@ -285,11 +285,10 @@ def fillna(data, other, join="left"):
     from .computation import apply_ufunc
 
     def _fillna(data, other):
-        if hasattr(other, "__len__"):  # array
-            data[isnull(data)] = other[isnull(data)]
-        else:  # scalar
-            data[isnull(data)] = other
-        return data
+        left, right = np.broadcast_arrays(data, other)
+        result = left.copy()  # view must be copied before being written
+        result[isnull(result)] = right[isnull(result)]
+        return result
     return apply_ufunc(_fillna, data, other, join=join)
 
 
@@ -454,8 +453,8 @@ def inject_binary_ops(cls, inplace=False):
 
     # patch in fillna
     f = _func_slash_method_wrapper(fillna)
-    method = cls._binary_op(f, join='left', fillna=True)
-    setattr(cls, '_fillna', method)
+    #method = cls._binary_op(f, join='left', fillna=True)
+    setattr(cls, '_fillna', fillna)
 
     # patch in where
     f = _func_slash_method_wrapper(where_method, 'where')
