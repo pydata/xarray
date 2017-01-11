@@ -18,9 +18,9 @@ What's New
 v0.9.0 (unreleased)
 -------------------
 
-This major release includes five months worth of enhancements and bug fixes,
-including some significant changes that are not fully backwards compatible.
-Highlights include:
+This major release includes five months worth of enhancements and bug fixes from
+23 contributors, including some significant changes that are not fully backwards
+compatible. Highlights include:
 
 - Coordinates are now *optional* in the xarray data model, even for dimensions
 - Changes to caching, lazy loading and pickling to improve xarray's experience
