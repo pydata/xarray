@@ -18,16 +18,17 @@ What's New
 v0.9.0 (unreleased)
 -------------------
 
+This major release includes five months worth of enhancements and bug fixes,
+including some significant changes that are not fully backwards compatible.
+Highlights include:
+
+- Coordinates are now *optional* in the xarray data model, even for dimensions
+- Changes to caching, lazy loading and pickling to improve xarray's experience
+  for parallel computing
+- Improvements for accessing and manipulating ``pandas.MultiIndex`` levels
+
 Breaking changes
 ~~~~~~~~~~~~~~~~
-
-- ``DataArray.rename()`` behavior changed to strictly change the ``DataArray.name``
-  if called with string argument, or strictly change coordinate names if called with
-  dict-like argument.
-  By `Markus Gonser <https://github.com/magonser>`_.
-
-- By default ``to_netcdf()`` add a ``_FillValue = NaN`` attributes to float types.
-  By `Frederic Laliberte <https://github.com/laliberte>`_.
 
 - Index coordinates for each dimensions are now optional, and no longer created
   by default :issue:`1017`. This has a number of implications:
@@ -74,6 +75,15 @@ Breaking changes
   ``vmax`` when these kwargs are explicitly provided (:issue:`1191`). The
   automated level selection logic also slightly changed.
   By `Fabien Maussion <https://github.com/fmaussion>`_.
+
+- ``DataArray.rename()`` behavior changed to strictly change the ``DataArray.name``
+  if called with string argument, or strictly change coordinate names if called with
+  dict-like argument.
+  By `Markus Gonser <https://github.com/magonser>`_.
+
+- By default ``to_netcdf()`` add a ``_FillValue = NaN`` attributes to float types.
+  By `Frederic Laliberte <https://github.com/laliberte>`_.
+
 - xarray no longer supports python 3.3, versions of dask prior to v0.9.0,
   or versions of bottleneck prior to v1.0.
 
