@@ -1934,7 +1934,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
 
         return self.isel(**{dim: mask})
 
-    def fillna(self, value, join="left"):
+    def fillna(self, value):
         """Fill missing values in this object.
 
         This operation follows the normal broadcasting and alignment rules that
@@ -1961,7 +1961,29 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
             if not set(value_keys) <= set(self.data_vars.keys()):
                 raise ValueError('all variables in the argument to `fillna` '
                                  'must be contained in the original dataset')
-        out = self._fillna(value, join=join)
+        out = ops.fillna(self, value, join="left")
+        out._copy_attrs_from(self)
+        return out
+
+    def combine_first(self, other):
+        """Combine two Datasets, default to data_vars of self.
+
+        The new coordinates follow the normal broadcasting and alignment rules
+        of ``join='outer'``.  Vacant cells in the expanded coordinates are
+        filled with np.nan.
+
+        Renders the same result as xr.merge([self, other]).
+
+        Parameters
+        ----------
+        other : DataArray
+            Used to fill all matching missing values in this array.
+
+        Returns
+        -------
+        DataArray
+        """
+        out = ops.fillna(self, other, join="outer")
         out._copy_attrs_from(self)
         return out
 

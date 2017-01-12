@@ -1097,9 +1097,27 @@ class DataArray(AbstractArray, BaseDataObject):
         if utils.is_dict_like(value):
             raise TypeError('cannot provide fill value as a dictionary with '
                             'fillna on a DataArray')
-        out = self._fillna(value, join=join)
+        out = ops.fillna(self, value, join=join)
         out.attrs = self.attrs
         return out
+
+    def combine_first(self, other):
+        """Combine two DataArray objects, with union of coordinates.
+
+        This operation follows the normal broadcasting and alignment rules of
+        ``join='outer'``.  Default to non-null values of array calling the
+        method.  Use np.nan to fill in vacant cells after alignment.
+
+        Parameters
+        ----------
+        other : DataArray
+            Used to fill all matching missing values in this array.
+
+        Returns
+        -------
+        DataArray
+        """
+        return self.fillna(other, join="outer")
 
     def reduce(self, func, dim=None, axis=None, keep_attrs=False, **kwargs):
         """Reduce this array by applying `func` along some dimension(s).

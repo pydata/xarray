@@ -13,6 +13,7 @@ Combining data
 
 * For combining datasets or data arrays along a dimension, see concatenate_.
 * For combining datasets with different variables, see merge_.
+# For combining datasets or data arrays with outer-join alignment, see combine_.
 
 .. _concatenate:
 
@@ -115,6 +116,36 @@ used in the :py:class:`~xarray.Dataset` constructor:
 .. ipython:: python
 
     xr.Dataset({'a': arr[:-1], 'b': arr[1:]})
+
+.. _combine:
+
+Combine
+~~~~~~~
+
+The instance method ``combine_first`` combines two datasets/data arrays and
+defaults to non-null values in the calling object, using values from the called
+object to fill holes.  The resulting coordinates are the union of coordinate labels.
+Vacant cells as a result of the outer-join are filled with nan.
+
+Mimics the behavior of ``pandas.Dataframe.combine_first``
+
+For data array,
+.. ipython:: python
+
+    ar0 = DataArray([[0, 0], [0, 0]], [('x', ['a', 'b']), ('y', [-1, 0])])
+    ar1 = DataArray([[1, 1], [1, 1]], [('x', ['b', 'c']), ('y', [0, 1])])
+    ar2 = DataArray([2], [('x', ['d'])])
+    ar0.combine_first(ar1)
+    ar1.combine_first(ar0)
+    ar0.combine_first(ar2)
+
+For datasets, ``ds0.combine_first(ds1)`` works just like ``xr.merge([ds0, ds1])``
+.. ipython:: python
+
+    dsx0 = DataArray([0, 0], [('x', ['a', 'b'])]).to_dataset(name='dsx0')
+    dsx1 = DataArray([1, 1], [('x', ['b', 'c'])]).to_dataset(name='dsx1')
+    dsx0.combine_first(dsx1)
+    xr.merge([dsx1, dsx0])
 
 .. _update:
 

@@ -452,9 +452,6 @@ def inject_binary_ops(cls, inplace=False):
     for name, f in [('eq', array_eq), ('ne', array_ne)]:
         setattr(cls, op_str(name), cls._binary_op(f))
 
-    # patch in fillna
-    setattr(cls, '_fillna', fillna)
-
     # patch in where
     f = _func_slash_method_wrapper(where_method, 'where')
     setattr(cls, '_where', cls._binary_op(f))
