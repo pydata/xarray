@@ -130,6 +130,7 @@ Vacant cells as a result of the outer-join are filled with nan.
 Mimics the behavior of ``pandas.Dataframe.combine_first``
 
 For data array,
+
 .. ipython:: python
 
     ar0 = DataArray([[0, 0], [0, 0]], [('x', ['a', 'b']), ('y', [-1, 0])])
@@ -140,6 +141,7 @@ For data array,
     ar0.combine_first(ar2)
 
 For datasets, ``ds0.combine_first(ds1)`` works just like ``xr.merge([ds0, ds1])``
+
 .. ipython:: python
 
     dsx0 = DataArray([0, 0], [('x', ['a', 'b'])]).to_dataset(name='dsx0')
