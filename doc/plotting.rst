@@ -450,7 +450,7 @@ When faceting on maps, the projection can be transferred to the plot function us
 
 .. ipython:: python
 
-    p = time_maps.plot(transform=ccrs.PlateCarree(), col='time', subplot_kws={'projection':ccrs.PlateCarree()})`
+    p = time_maps.plot(transform=ccrs.PlateCarree(), col='time', subplot_kws={'projection':ccrs.PlateCarree()})
     for ax in p.axes.flat:
         ax.coastlines()
         ax.gridlines()
