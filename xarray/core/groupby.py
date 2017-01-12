@@ -360,7 +360,7 @@ class GroupBy(object):
                     del obj.coords[dim]
         return obj
 
-    def fillna(self, value):
+    def fillna(self, value, join="left"):
         """Fill missing values in this object by group.
 
         This operation follows the normal broadcasting and alignment rules that
@@ -382,7 +382,15 @@ class GroupBy(object):
         Dataset.fillna
         DataArray.fillna
         """
-        return self._fillna(value)
+        def _yield_applied(this, other):
+            """apply fillna to each individual groupby ds"""
+            for group_value, obj in this:
+                other_sel = other.sel(**{this._group.name: group_value})
+                yield obj.fillna(other_sel, join=join)
+
+        datasets = _yield_applied(self, value)
+        combined = self._combine(datasets)
+        return combined
 
     def where(self, cond):
         """Return an object of the same shape with all entries where cond is
