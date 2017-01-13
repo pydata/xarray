@@ -488,6 +488,16 @@ This script will plot the air temperature on a map.
     @savefig plotting_maps_cartopy.png width=100%
     ax.set_global(); ax.coastlines();
 
+When faceting on maps, the projection can be transferred to the ``plot`` function using the ``subplot_kws`` keyword. Axes for the subplots created by faceting are accessible in the object returned by ``plot``:
+
+.. ipython:: python
+
+    p = time_maps.plot(transform=ccrs.PlateCarree(), col='time', subplot_kws={'projection': ccrs.PlateCarree()})
+    for ax in p.axes.flat:
+        ax.coastlines()
+        ax.gridlines()
+
+
 Details
 -------
 
