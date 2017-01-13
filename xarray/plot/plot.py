@@ -49,8 +49,11 @@ def _easy_facetgrid(darray, plotfunc, x, y, row=None, col=None, col_wrap=None,
     if ax is not None:
         raise ValueError("Can't use axes when making faceted plots.")
 
+    transform=kwargs.pop('transform', None)
+
     g = FacetGrid(data=darray, col=col, row=row, col_wrap=col_wrap,
-                  aspect=aspect, size=size, subplot_kws=subplot_kws)
+                  aspect=aspect, size=size, transform=transform,
+                  subplot_kws=subplot_kws)
     return g.map_dataarray(plotfunc, x, y, **kwargs)
 
 

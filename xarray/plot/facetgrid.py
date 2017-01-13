@@ -70,7 +70,7 @@ class FacetGrid(object):
     """
 
     def __init__(self, data, col=None, row=None, col_wrap=None,
-                 aspect=1, size=3, subplot_kws=None):
+                 aspect=1, size=3, transform=None, subplot_kws=None):
         """
         Parameters
         ----------
@@ -132,6 +132,8 @@ class FacetGrid(object):
 
         # Set the subplot kwargs
         subplot_kws = {} if subplot_kws is None else subplot_kws
+        if transform is not None and 'projection' not in subplot_kws:
+            subplot_kws['projection'] = transform
 
         # Calculate the base figure size with extra horizontal space for a
         # colorbar
