@@ -287,9 +287,7 @@ def fillna(data, other, join="left"):
 
     def _fillna(data, other):
         left, right = np.broadcast_arrays(data, other)
-        result = left.copy()  # view must be copied before being written
-        result[isnull(result)] = right[isnull(result)]
-        return result
+        return np.where(isnull(left), right, left)
     return apply_ufunc(_fillna, data, other, join=join)
 
 

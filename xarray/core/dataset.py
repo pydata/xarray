@@ -1956,8 +1956,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         Dataset
         """
         if utils.is_dict_like(value):
-            value_keys = value.data_vars.keys() if isinstance(value, Dataset)\
-                else value.keys()
+            value_keys = getattr(value, 'data_vars', value).keys()
             if not set(value_keys) <= set(self.data_vars.keys()):
                 raise ValueError('all variables in the argument to `fillna` '
                                  'must be contained in the original dataset')

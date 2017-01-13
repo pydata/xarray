@@ -13,6 +13,19 @@ What's New
     import xarray as xr
     np.random.seed(123456)
 
+.. _whats-new.0.9.1:
+
+v0.9.1 (unreleased)
+
+Enhancements
+~~~~~~~~~~~~
+
+- Added the xarray equivalent of `pandas.Dataframe.combine_first` as an instance
+  method to DataArray/Dataset objects, facilitated by the new `ops.fillna` with
+  `join` options.
+  (see :ref:`combine`)
+  By `Chun-Wei Yuan <https://github.com/chunweiyuan>`_.
+
 .. _whats-new.0.9.0:
 
 v0.9.0 (unreleased)
@@ -106,12 +119,6 @@ Deprecations
 
 Enhancements
 ~~~~~~~~~~~~
-
-- Added the xarray equivalent of `pandas.Dataframe.combine_first` as an instance
-  method to DataArray/Dataset objects, facilitated by the new `ops.fillna` that
-  uses `apply_ufunc` for different `join` options.
-  (see :ref:`combine`)
-  By `Chun-Wei Yuan <https://github.com/chunweiyuan>`_.
 
 - Added the ability to change default automatic alignment (arithmetic_join="inner")
   for binary operations via :py:func:`~xarray.set_options()`
