@@ -4,6 +4,9 @@ For the sake of sanity, we only do internal formatting with unicode, which can
 be returned by the __unicode__ special method. We use ReprMixin to provide the
 __repr__ method so that things can work on Python 2.
 """
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
 from datetime import datetime, timedelta
 import functools
 
@@ -12,7 +15,8 @@ import pandas as pd
 from pandas.tslib import OutOfBoundsDatetime
 
 from .options import OPTIONS
-from .pycompat import PY2, iteritems, unicode_type, bytes_type, dask_array_type
+from .pycompat import (
+    PY2, unicode_type, bytes_type, dask_array_type, OrderedDict, basestring)
 
 
 def pretty_print(x, numchars):
@@ -83,6 +87,7 @@ def first_n_items(x, n_desired):
         x = x[indexer]
     return np.asarray(x).flat[:n_desired]
 
+
 def last_item(x):
     """Returns the last item of an array"""
     if x.size == 0:
@@ -91,6 +96,7 @@ def last_item(x):
 
     indexer = (slice(-1, None), ) * x.ndim
     return np.array(x[indexer], ndmin=1)
+
 
 def format_timestamp(t):
     """Cast given object to a Timestamp and return a nicely formatted string"""
@@ -204,6 +210,13 @@ def _summarize_var_or_coord(name, var, col_width, show_values=True,
     return front_str + values_str
 
 
+def _summarize_dummy_var(name, col_width, marker=u'o', values=u'-'):
+    """Used if there is no coordinate for a dimension."""
+    first_col = pretty_print(u'  %s %s ' % (marker, name), col_width)
+    dims_str = u'(%s) ' % unicode_type(name)
+    return u'%s%s%s' % (first_col, dims_str, values)
+
+
 def _summarize_coord_multiindex(coord, col_width, marker):
     first_col = pretty_print(u'  %s %s ' % (marker, coord.name), col_width)
     return u'%s(%s) MultiIndex' % (first_col, unicode_type(coord.dims[0]))
@@ -234,6 +247,8 @@ def summarize_var(name, var, col_width):
 
 
 def summarize_coord(name, var, col_width):
+    if var is None:
+        return _summarize_dummy_var(name, col_width)
     is_index = name in var.dims
     show_values = is_index or _not_remote(var)
     marker = u'*' if is_index else u' '
@@ -300,7 +315,12 @@ attrs_repr = functools.partial(_mapping_repr, title=u'Attributes',
 def coords_repr(coords, col_width=None):
     if col_width is None:
         col_width = _calculate_col_width(_get_col_items(coords))
-    return _mapping_repr(coords, title=u'Coordinates',
+    # augment coordinates to include markers for missing coordinates
+    augmented_coords = OrderedDict(coords)
+    for dim in coords.dims:
+        if dim not in augmented_coords:
+            augmented_coords[dim] = None
+    return _mapping_repr(augmented_coords, title=u'Coordinates',
                          summarizer=summarize_coord, col_width=col_width)
 
 
@@ -311,17 +331,20 @@ def indexes_repr(indexes):
     return u'\n'.join(summary)
 
 
+def dim_summary(obj):
+    elements = [u'%s: %s' % (k, v) for k, v in obj.sizes.items()]
+    return u', '.join(elements)
+
+
 def array_repr(arr):
     # used for DataArray, Variable and IndexVariable
     if hasattr(arr, 'name') and arr.name is not None:
         name_str = '%r ' % arr.name
     else:
         name_str = u''
-    dim_summary = u', '.join(u'%s: %s' % (k, v) for k, v
-                            in zip(arr.dims, arr.shape))
 
     summary = [u'<xarray.%s %s(%s)>'
-               % (type(arr).__name__, name_str, dim_summary)]
+               % (type(arr).__name__, name_str, dim_summary(arr))]
 
     if isinstance(getattr(arr, 'variable', arr)._data, dask_array_type):
         summary.append(repr(arr.data))
@@ -346,8 +369,7 @@ def dataset_repr(ds):
     col_width = _calculate_col_width(_get_col_items(ds))
 
     dims_start = pretty_print(u'Dimensions:', col_width)
-    all_dim_strings = [u'%s: %s' % (k, v) for k, v in iteritems(ds.dims)]
-    summary.append(u'%s(%s)' % (dims_start, ', '.join(all_dim_strings)))
+    summary.append(u'%s(%s)' % (dims_start, dim_summary(ds)))
 
     summary.append(coords_repr(ds.coords, col_width=col_width))
     summary.append(vars_repr(ds.data_vars, col_width=col_width))

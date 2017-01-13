@@ -1,3 +1,17 @@
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
+
+# import mpl and change the backend before other mpl imports
+try:
+    import matplotlib as mpl
+    # Using a different backend makes Travis CI work
+    mpl.use('Agg')
+    # Order of imports is important here.
+    import matplotlib.pyplot as plt
+except ImportError:
+    pass
+
 import inspect
 
 import numpy as np
@@ -12,15 +26,6 @@ from xarray.plot.utils import (_determine_cmap_params,
                                _color_palette)
 
 from . import TestCase, requires_matplotlib
-
-try:
-    import matplotlib as mpl
-    # Using a different backend makes Travis CI work.
-    mpl.use('Agg')
-    # Order of imports is important here.
-    import matplotlib.pyplot as plt
-except ImportError:
-    pass
 
 
 def text_in_fig():
@@ -112,6 +117,17 @@ class TestPlot(PlotTestCase):
         self.assertArrayEqual(pd.date_range('20000101', periods=4) - np.timedelta64(12, 'h'),
                               _infer_interval_breaks(pd.date_range('20000101', periods=3)))
 
+        # make a bounded 2D array that we will center and re-infer
+        xref, yref = np.meshgrid(np.arange(6), np.arange(5))
+        cx = (xref[1:, 1:] + xref[:-1, :-1]) / 2
+        cy = (yref[1:, 1:] + yref[:-1, :-1]) / 2
+        x = _infer_interval_breaks(cx, axis=1)
+        x = _infer_interval_breaks(x, axis=0)
+        y = _infer_interval_breaks(cy, axis=1)
+        y = _infer_interval_breaks(y, axis=0)
+        np.testing.assert_allclose(xref, x)
+        np.testing.assert_allclose(yref, y)
+
     def test_datetime_dimension(self):
         nrow = 3
         ncol = 4
@@ -145,7 +161,37 @@ class TestPlot(PlotTestCase):
         g = d.plot(x='x', y='y', col='z', col_wrap=2, cmap='cool',
                    subplot_kws=dict(axisbg='r'))
         for ax in g.axes.flat:
-            self.assertEqual(ax.get_axis_bgcolor(), 'r')
+            try:
+                # mpl V2
+                self.assertEqual(ax.get_facecolor()[0:3],
+                                 mpl.colors.to_rgb('r'))
+            except AttributeError:
+                self.assertEqual(ax.get_axis_bgcolor(), 'r')
+
+    def test_plot_size(self):
+        self.darray[:, 0, 0].plot(figsize=(13, 5))
+        assert tuple(plt.gcf().get_size_inches()) == (13, 5)
+
+        self.darray.plot(figsize=(13, 5))
+        assert tuple(plt.gcf().get_size_inches()) == (13, 5)
+
+        self.darray.plot(size=5)
+        assert plt.gcf().get_size_inches()[1] == 5
+
+        self.darray.plot(size=5, aspect=2)
+        assert tuple(plt.gcf().get_size_inches()) == (10, 5)
+
+        with self.assertRaisesRegexp(ValueError, 'cannot provide both'):
+            self.darray.plot(ax=plt.gca(), figsize=(3, 4))
+
+        with self.assertRaisesRegexp(ValueError, 'cannot provide both'):
+            self.darray.plot(size=5, figsize=(3, 4))
+
+        with self.assertRaisesRegexp(ValueError, 'cannot provide both'):
+            self.darray.plot(size=5, ax=plt.gca())
+
+        with self.assertRaisesRegexp(ValueError, 'cannot provide `aspect`'):
+            self.darray.plot(aspect=1)
 
     def test_convenient_facetgrid_4d(self):
         a = easy_array((10, 15, 2, 3))
@@ -164,7 +210,8 @@ class TestPlot1D(PlotTestCase):
 
     def setUp(self):
         d = [0, 1.1, 0, 2]
-        self.darray = DataArray(d, coords={'period': range(len(d))})
+        self.darray = DataArray(d, coords={'period': range(len(d))},
+                                dims='period')
 
     def test_xlabel_is_index_name(self):
         self.darray.plot()
@@ -191,7 +238,8 @@ class TestPlot1D(PlotTestCase):
         self.pass_in_axis(self.darray.plot.line)
 
     def test_nonnumeric_index_raises_typeerror(self):
-        a = DataArray([1, 2, 3], {'letter': ['a', 'b', 'c']})
+        a = DataArray([1, 2, 3], {'letter': ['a', 'b', 'c']},
+                      dims='letter')
         with self.assertRaisesRegexp(TypeError, r'[Pp]lot'):
             a.plot.line()
 
@@ -205,7 +253,7 @@ class TestPlot1D(PlotTestCase):
 
     def test_x_ticks_are_rotated_for_time(self):
         time = pd.date_range('2000-01-01', '2000-01-10')
-        a = DataArray(np.arange(len(time)), {'t': time})
+        a = DataArray(np.arange(len(time)), [('t', time)])
         a.plot.line()
         rotation = plt.gca().get_xticklabels()[0].get_rotation()
         self.assertFalse(rotation == 0)
@@ -280,19 +328,40 @@ class TestDetermineCmapParams(TestCase):
 
     def test_integer_levels(self):
         data = self.data + 1
+
+        # default is to cover full data range but with no guarantee on Nlevels
+        for level in np.arange(2, 10, dtype=int):
+            cmap_params = _determine_cmap_params(data, levels=level)
+            self.assertEqual(cmap_params['vmin'], cmap_params['levels'][0])
+            self.assertEqual(cmap_params['vmax'], cmap_params['levels'][-1])
+            self.assertEqual(cmap_params['extend'], 'neither')
+
+        # with min max we are more strict
         cmap_params = _determine_cmap_params(data, levels=5, vmin=0, vmax=5,
                                              cmap='Blues')
+        self.assertEqual(cmap_params['vmin'], 0)
+        self.assertEqual(cmap_params['vmax'], 5)
         self.assertEqual(cmap_params['vmin'], cmap_params['levels'][0])
         self.assertEqual(cmap_params['vmax'], cmap_params['levels'][-1])
         self.assertEqual(cmap_params['cmap'].name, 'Blues')
         self.assertEqual(cmap_params['extend'], 'neither')
-        self.assertEqual(cmap_params['cmap'].N, 5)
-        self.assertEqual(cmap_params['norm'].N, 6)
+        self.assertEqual(cmap_params['cmap'].N, 4)
+        self.assertEqual(cmap_params['norm'].N, 5)
 
         cmap_params = _determine_cmap_params(data, levels=5,
                                              vmin=0.5, vmax=1.5)
         self.assertEqual(cmap_params['cmap'].name, 'viridis')
         self.assertEqual(cmap_params['extend'], 'max')
+
+        cmap_params = _determine_cmap_params(data, levels=5,
+                                             vmin=1.5)
+        self.assertEqual(cmap_params['cmap'].name, 'viridis')
+        self.assertEqual(cmap_params['extend'], 'min')
+
+        cmap_params = _determine_cmap_params(data, levels=5,
+                                             vmin=1.3, vmax=1.5)
+        self.assertEqual(cmap_params['cmap'].name, 'viridis')
+        self.assertEqual(cmap_params['extend'], 'both')
 
     def test_list_levels(self):
         data = self.data + 1
@@ -581,8 +650,7 @@ class Common2dMixin:
 
     def test_coord_strings(self):
         # 1d coords (same as dims)
-        self.assertIn('x', self.darray.coords)
-        self.assertIn('y', self.darray.coords)
+        self.assertEqual({'x', 'y'}, set(self.darray.dims))
         self.plotmethod(y='y', x='x')
 
     def test_non_linked_coords(self):
@@ -613,6 +681,7 @@ class Common2dMixin:
 
     def test_default_title(self):
         a = DataArray(easy_array((4, 3, 2)), dims=['a', 'b', 'c'])
+        a.coords['c'] = [0, 1]
         a.coords['d'] = u'foo'
         self.plotfunc(a.isel(c=1))
         title = plt.gca().get_title()
@@ -880,9 +949,15 @@ class TestImshow(Common2dMixin, PlotTestCase):
         self.darray.plot.imshow()
         self.assertEqual('auto', plt.gca().get_aspect())
 
-    def test_can_change_aspect(self):
-        self.darray.plot.imshow(aspect='equal')
-        self.assertEqual('equal', plt.gca().get_aspect())
+    def test_cannot_change_mpl_aspect(self):
+
+        with self.assertRaisesRegexp(ValueError, 'not available in xarray'):
+            self.darray.plot.imshow(aspect='equal')
+
+        # with numbers we fall back to fig control
+        self.darray.plot.imshow(size=5, aspect=2)
+        self.assertEqual('auto', plt.gca().get_aspect())
+        assert tuple(plt.gcf().get_size_inches()) == (10, 5)
 
     def test_primitive_artist_returned(self):
         artist = self.plotmethod()
@@ -1017,6 +1092,12 @@ class TestFacetGrid(PlotTestCase):
             clim = np.array(image.get_clim())
             self.assertTrue(np.allclose(expected, clim))
 
+    def test_can_set_norm(self):
+        norm = mpl.colors.SymLogNorm(0.1)
+        self.g.map_dataarray(xplt.imshow, 'x', 'y', norm=norm)
+        for image in plt.gcf().findobj(mpl.image.AxesImage):
+            self.assertIs(image.norm, norm)
+
     def test_figure_size(self):
 
         self.assertArrayEqual(self.g.fig.get_size_inches(), (10, 3))
@@ -1030,8 +1111,17 @@ class TestFacetGrid(PlotTestCase):
         g = xplt.FacetGrid(self.darray, col='z', size=4, aspect=0.5)
         self.assertArrayEqual(g.fig.get_size_inches(), (7, 4))
 
+        g = xplt.FacetGrid(self.darray, col='z', figsize=(9, 4))
+        self.assertArrayEqual(g.fig.get_size_inches(), (9, 4))
+
+        with self.assertRaisesRegexp(ValueError, "cannot provide both"):
+            g = xplt.plot(self.darray, row=2, col='z', figsize=(6, 4), size=6)
+
+        with self.assertRaisesRegexp(ValueError, "Can't use"):
+            g = xplt.plot(self.darray, row=2, col='z', ax=plt.gca(), size=6)
+
     def test_num_ticks(self):
-        nticks = 100
+        nticks = 99
         maxticks = nticks + 1
         self.g.map_dataarray(xplt.imshow, 'x', 'y')
         self.g.set_ticks(max_xticks=nticks, max_yticks=nticks)
@@ -1086,7 +1176,13 @@ class TestFacetGrid(PlotTestCase):
         d.plot.imshow(x='x', y='y', col='z', add_colorbar=False)
         self.assertEqual(0, len(find_possible_colorbars()))
 
+    def test_facetgrid_polar(self):
+        # test if polar projection in FacetGrid does not raise an exception
+        self.darray.plot.pcolormesh(col='z',
+                                    subplot_kws=dict(projection='polar'),
+                                    sharex=False, sharey=False)
 
+        
 class TestFacetGrid4d(PlotTestCase):
 
     def setUp(self):

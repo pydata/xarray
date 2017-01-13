@@ -1,3 +1,6 @@
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
 import functools
 import warnings
 
@@ -11,17 +14,18 @@ from . import groupby
 from . import rolling
 from . import ops
 from . import utils
-from .alignment import align
+from .alignment import align, reindex_like_indexers
 from .common import AbstractArray, BaseDataObject
-from .coordinates import (DataArrayCoordinates, LevelCoordinates,
+from .coordinates import (DataArrayCoordinates, LevelCoordinatesSource,
                           Indexes)
-from .dataset import Dataset
-from .pycompat import iteritems, basestring, OrderedDict, zip
-from .variable import (as_variable, Variable, as_compatible_data, IndexVariable,
-                       default_index_coordinate,
+from .dataset import Dataset, merge_indexes, split_indexes
+from .pycompat import iteritems, basestring, OrderedDict, zip, range
+from .variable import (as_variable, Variable, as_compatible_data,
+                       IndexVariable,
                        assert_unique_multiindex_level_names)
 from .formatting import format_item
 from .utils import decode_numpy_dict_values, ensure_us_time_resolution
+from .options import OPTIONS
 
 
 def _infer_coords_and_dims(shape, coords, dims):
@@ -66,10 +70,6 @@ def _infer_coords_and_dims(shape, coords, dims):
             var = as_variable(coord, name=dim)
             var.dims = (dim,)
             new_coords[dim] = var
-
-    for dim, size in zip(dims, shape):
-        if dim not in new_coords:
-            new_coords[dim] = default_index_coordinate(dim, size)
 
     sizes = dict(zip(dims, shape))
     for k, v in new_coords.items():
@@ -221,6 +221,9 @@ class DataArray(AbstractArray, BaseDataObject):
             coords, dims = _infer_coords_and_dims(data.shape, coords, dims)
             variable = Variable(dims, data, attrs, encoding, fastpath=True)
 
+        # uncomment for a useful consistency check:
+        # assert all(isinstance(v, Variable) for v in coords.values())
+
         # These fully describe a DataArray
         self._variable = variable
         self._coords = coords
@@ -229,7 +232,6 @@ class DataArray(AbstractArray, BaseDataObject):
         self._file_obj = None
 
         self._initialized = True
-
 
     __default = object()
 
@@ -281,14 +283,17 @@ class DataArray(AbstractArray, BaseDataObject):
 
     def _to_dataset_split(self, dim):
         def subset(dim, label):
-            array = self.loc[{dim: label}].drop(dim)
+            array = self.loc[{dim: label}]
+            if dim in array.coords:
+                del array.coords[dim]
             array.attrs = {}
             return array
 
         variables = OrderedDict([(label, subset(dim, label))
-                                 for label in self.indexes[dim]])
+                                 for label in self.get_index(dim)])
         coords = self.coords.to_dataset()
-        del coords[dim]
+        if dim in coords:
+            del coords[dim]
         return Dataset(variables, coords, self.attrs)
 
     def _to_dataset_whole(self, name=None, shallow_copy=True):
@@ -444,17 +449,21 @@ class DataArray(AbstractArray, BaseDataObject):
                     level_coords.update({lname: dim for lname in level_names})
         return level_coords
 
+    def _getitem_coord(self, key):
+        from .dataset import _get_virtual_variable
+
+        try:
+            var = self._coords[key]
+        except KeyError:
+            dim_sizes = dict(zip(self.dims, self.shape))
+            _, key, var = _get_virtual_variable(
+                self._coords, key, self._level_coords, dim_sizes)
+
+        return self._replace_maybe_drop_dims(var, name=key)
+
     def __getitem__(self, key):
         if isinstance(key, basestring):
-            from .dataset import _get_virtual_variable
-
-            try:
-                var = self._coords[key]
-            except KeyError:
-                _, key, var = _get_virtual_variable(
-                    self._coords, key, self._level_coords)
-
-            return self._replace_maybe_drop_dims(var, name=key)
+            return self._getitem_coord(key)
         else:
             # orthogonal array indexing
             return self.isel(**self._item_key_to_dict(key))
@@ -472,7 +481,7 @@ class DataArray(AbstractArray, BaseDataObject):
     @property
     def _attr_sources(self):
         """List of places to look-up items for attribute-style access"""
-        return [self.coords, LevelCoordinates(self), self.attrs]
+        return [self.coords, LevelCoordinatesSource(self), self.attrs]
 
     def __contains__(self, key):
         return key in self._coords
@@ -506,7 +515,7 @@ class DataArray(AbstractArray, BaseDataObject):
     def indexes(self):
         """OrderedDict of pandas.Index objects used for label based indexing
         """
-        return Indexes(self._coords, self.dims)
+        return Indexes(self._coords, self.sizes)
 
     @property
     def coords(self):
@@ -566,6 +575,19 @@ class DataArray(AbstractArray, BaseDataObject):
         self._coords = new._coords
         return self
 
+    def compute(self):
+        """Manually trigger loading of this array's data from disk or a
+        remote source into memory and return a new array. The original is
+        left unaltered.
+
+        Normally, it should not be necessary to call this method in user code,
+        because all xarray functions should either work on deferred data or
+        load data automatically. However, this method can be necessary when
+        working with many file objects on disk.
+        """
+        new = self.copy(deep=False)
+        return new.load()
+
     def copy(self, deep=True):
         """Returns a copy of this array.
 
@@ -623,7 +645,7 @@ class DataArray(AbstractArray, BaseDataObject):
         ds = self._to_temp_dataset().chunk(chunks)
         return self._from_temp_dataset(ds)
 
-    def isel(self, **indexers):
+    def isel(self, drop=False, **indexers):
         """Return a new DataArray whose dataset is given by integer indexing
         along the specified dimension(s).
 
@@ -632,10 +654,10 @@ class DataArray(AbstractArray, BaseDataObject):
         Dataset.isel
         DataArray.sel
         """
-        ds = self._to_temp_dataset().isel(**indexers)
+        ds = self._to_temp_dataset().isel(drop=drop, **indexers)
         return self._from_temp_dataset(ds)
 
-    def sel(self, method=None, tolerance=None, **indexers):
+    def sel(self, method=None, tolerance=None, drop=False, **indexers):
         """Return a new DataArray whose dataset is given by selecting
         index labels along the specified dimension(s).
 
@@ -647,7 +669,8 @@ class DataArray(AbstractArray, BaseDataObject):
         pos_indexers, new_indexes = indexing.remap_label_indexers(
             self, indexers, method=method, tolerance=tolerance
         )
-        return self.isel(**pos_indexers)._replace_indexes(new_indexes)
+        result = self.isel(drop=drop, **pos_indexers)
+        return result._replace_indexes(new_indexes)
 
     def isel_points(self, dim='points', **indexers):
         """Return a new DataArray whose dataset is given by pointwise integer
@@ -716,8 +739,7 @@ class DataArray(AbstractArray, BaseDataObject):
         DataArray.reindex
         align
         """
-        indexers = dict((k, v) for k, v in other.indexes.items()
-                        if k in self.dims)
+        indexers = reindex_like_indexers(self, other)
         return self.reindex(method=method, tolerance=tolerance, copy=copy,
                             **indexers)
 
@@ -767,15 +789,16 @@ class DataArray(AbstractArray, BaseDataObject):
         return self._from_temp_dataset(ds)
 
     def rename(self, new_name_or_name_dict):
-        """Returns a new DataArray with renamed coordinates and/or a new name.
+        """Returns a new DataArray with renamed coordinates or a new name.
 
 
         Parameters
         ----------
         new_name_or_name_dict : str or dict-like
             If the argument is dict-like, it it used as a mapping from old
-            names to new names for coordinates (and/or this array itself).
-            Otherwise, use the argument as the new name for this array.
+            names to new names for coordinates. Otherwise, use the argument
+            as the new name for this array.
+
 
         Returns
         -------
@@ -788,10 +811,8 @@ class DataArray(AbstractArray, BaseDataObject):
         DataArray.swap_dims
         """
         if utils.is_dict_like(new_name_or_name_dict):
-            name_dict = new_name_or_name_dict.copy()
-            name = name_dict.pop(self.name, self.name)
-            dataset = self._to_temp_dataset().rename(name_dict)
-            return self._from_temp_dataset(dataset, name)
+            dataset = self._to_temp_dataset().rename(new_name_or_name_dict)
+            return self._from_temp_dataset(dataset)
         else:
             return self._replace(name=new_name_or_name_dict)
 
@@ -821,6 +842,103 @@ class DataArray(AbstractArray, BaseDataObject):
         ds = self._to_temp_dataset().swap_dims(dims_dict)
         return self._from_temp_dataset(ds)
 
+    def set_index(self, append=False, inplace=False, **indexes):
+        """Set DataArray (multi-)indexes using one or more existing coordinates.
+
+        Parameters
+        ----------
+        append : bool, optional
+            If True, append the supplied index(es) to the existing index(es).
+            Otherwise replace the existing index(es) (default).
+        inplace : bool, optional
+            If True, set new index(es) in-place. Otherwise, return a new DataArray
+            object.
+        **indexes : {dim: index, ...}
+            Keyword arguments with names matching dimensions and values given
+            by (lists of) the names of existing coordinates or variables to set
+            as new (multi-)index.
+
+        Returns
+        -------
+        obj : DataArray
+            Another dataarray, with this dataarray's data but replaced coordinates.
+
+        See Also
+        --------
+        DataArray.reset_index
+        """
+        coords, _ = merge_indexes(indexes, self._coords, set(), append=append)
+        if inplace:
+            self._coords = coords
+        else:
+            return self._replace(coords=coords)
+
+    def reset_index(self, dims_or_levels, drop=False, inplace=False):
+        """Reset the specified index(es) or multi-index level(s).
+
+        Parameters
+        ----------
+        dims_or_levels : str or list
+            Name(s) of the dimension(s) and/or multi-index level(s) that will
+            be reset.
+        drop : bool, optional
+            If True, remove the specified indexes and/or multi-index levels
+            instead of extracting them as new coordinates (default: False).
+        inplace : bool, optional
+            If True, modify the dataarray in-place. Otherwise, return a new
+            DataArray object.
+
+        Returns
+        -------
+        obj : DataArray
+            Another dataarray, with this dataarray's data but replaced
+            coordinates.
+
+        See Also
+        --------
+        DataArray.set_index
+        """
+        coords, _ = split_indexes(dims_or_levels, self._coords, set(),
+                                  self._level_coords, drop=drop)
+        if inplace:
+            self._coords = coords
+        else:
+            return self._replace(coords=coords)
+
+    def reorder_levels(self, inplace=False, **dim_order):
+        """Rearrange index levels using input order.
+
+        Parameters
+        ----------
+        inplace : bool, optional
+            If True, modify the dataarray in-place. Otherwise, return a new
+            DataArray object.
+        **dim_order : optional
+            Keyword arguments with names matching dimensions and values given
+            by lists representing new level orders. Every given dimension
+            must have a multi-index.
+
+        Returns
+        -------
+        obj : DataArray
+            Another dataarray, with this dataarray's data but replaced
+            coordinates.
+        """
+        replace_coords = {}
+        for dim, order in dim_order.items():
+            coord = self._coords[dim]
+            index = coord.to_index()
+            if not isinstance(index, pd.MultiIndex):
+                raise ValueError("coordinate %r has no MultiIndex" % dim)
+            replace_coords[dim] = IndexVariable(coord.dims,
+                                                index.reorder_levels(order))
+        coords = self._coords.copy()
+        coords.update(replace_coords)
+        if inplace:
+            self._coords = coords
+        else:
+            return self._replace(coords=coords)
+
     def stack(self, **dimensions):
         """
         Stack any number of existing dimensions into a single new dimension.
@@ -845,7 +963,7 @@ class DataArray(AbstractArray, BaseDataObject):
         >>> arr = DataArray(np.arange(6).reshape(2, 3),
         ...                 coords=[('x', ['a', 'b']), ('y', [0, 1, 2])])
         >>> arr
-        <xray.DataArray (x: 2, y: 3)>
+        <xarray.DataArray (x: 2, y: 3)>
         array([[0, 1, 2],
                [3, 4, 5]])
         Coordinates:
@@ -1040,7 +1158,8 @@ class DataArray(AbstractArray, BaseDataObject):
         except KeyError:
             raise ValueError('cannot convert arrays with %s dimensions into '
                              'pandas objects' % self.ndim)
-        return constructor(self.values, *self.indexes.values())
+        indexes = [self.get_index(dim) for dim in self.dims]
+        return constructor(self.values, *indexes)
 
     def to_dataframe(self, name=None):
         """Convert this array and its coordinates into a tidy pandas.DataFrame.
@@ -1153,10 +1272,10 @@ class DataArray(AbstractArray, BaseDataObject):
         """
         from ..backends.api import DATAARRAY_NAME, DATAARRAY_VARIABLE
 
-        if not self.name:
+        if self.name is None:
             # If no name is set then use a generic xarray name
             dataset = self.to_dataset(name=DATAARRAY_VARIABLE)
-        elif self.name in list(self.coords):
+        elif self.name in self.coords or self.name in self.dims:
             # The name is the same as one of the coords names, which netCDF
             # doesn't support, so rename it but keep track of the old name
             dataset = self.to_dataset(name=DATAARRAY_VARIABLE)
@@ -1354,13 +1473,14 @@ class DataArray(AbstractArray, BaseDataObject):
         return func
 
     @staticmethod
-    def _binary_op(f, reflexive=False, join='inner', **ignored_kwargs):
+    def _binary_op(f, reflexive=False, join=None, **ignored_kwargs):
         @functools.wraps(f)
         def func(self, other):
             if isinstance(other, (Dataset, groupby.GroupBy)):
                 return NotImplemented
             if hasattr(other, 'indexes'):
-                self, other = align(self, other, join=join, copy=False)
+                align_type = OPTIONS['arithmetic_join'] if join is None else join
+                self, other = align(self, other, join=align_type, copy=False)
             other_variable = getattr(other, 'variable', other)
             other_coords = getattr(other, 'coords', None)
 
@@ -1609,7 +1729,8 @@ class DataArray(AbstractArray, BaseDataObject):
         axes = (self.get_axis_num(dims), other.get_axis_num(dims))
         new_data = ops.tensordot(self.data, other.data, axes=axes)
 
-        new_coords = self.coords.merge(other.coords).drop(dims)
+        new_coords = self.coords.merge(other.coords)
+        new_coords = new_coords.drop([d for d in dims if d in new_coords])
         new_dims = ([d for d in self.dims if d not in dims] +
                     [d for d in other.dims if d not in dims])
 

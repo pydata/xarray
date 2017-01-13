@@ -1,3 +1,6 @@
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
 try:
     import cPickle as pickle
 except ImportError:
@@ -49,7 +52,7 @@ class TestAccessor(TestCase):
         del xr.Dataset.demo
         assert not hasattr(xr.Dataset, 'demo')
 
-        with self.assertRaises(xr.core.extensions.AccessorRegistrationError):
+        with self.assertWarns('overriding a preexisting attribute'):
             @xr.register_dataarray_accessor('demo')
             class Foo(object):
                 pass

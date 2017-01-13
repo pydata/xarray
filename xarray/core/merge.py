@@ -1,10 +1,12 @@
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
 import pandas as pd
 
-from .alignment import align
-from .utils import Frozen, is_dict_like
-from .variable import (as_variable, default_index_coordinate,
-                       assert_unique_multiindex_level_names)
-from .pycompat import (basestring, OrderedDict)
+from .alignment import deep_align
+from .pycompat import OrderedDict, basestring
+from .utils import Frozen
+from .variable import as_variable, assert_unique_multiindex_level_names
 
 
 PANDAS_TYPES = (pd.Series, pd.DataFrame, pd.Panel)
@@ -119,23 +121,20 @@ def merge_variables(
     ----------
     lists_of_variables_dicts : list of mappings with Variable values
         List of mappings for which each value is a xarray.Variable object.
-    priority_vars : mapping with Variable values, optional
+    priority_vars : mapping with Variable or None values, optional
         If provided, variables are always taken from this dict in preference to
         the input variable dictionaries, without checking for conflicts.
     compat : {'identical', 'equals', 'broadcast_equals',
               'minimal', 'no_conflicts'}, optional
-        Type of equality check to use wben checking for conflicts.
+        Type of equality check to use when checking for conflicts.
 
     Returns
     -------
-    OrderedDict keys given by the union of keys on list_of_variable_dicts
-    (unless compat=='minimal', in which case some variables with conflicting
-    values can be dropped), and Variable values corresponding to those that
-    should be found in the result.
+    OrderedDict with keys taken by the union of keys on list_of_variable_dicts,
+    and Variable values corresponding to those that should be found on the
+    merged result.
     """
     if priority_vars is None:
-        # one of these arguments (e.g., the first for in-place
-        # arithmetic or the second for Dataset.update) takes priority
         priority_vars = {}
 
     _assert_compat_valid(compat)
@@ -152,6 +151,8 @@ def merge_variables(
 
     for name, variables in lookup.items():
         if name in priority_vars:
+            # one of these arguments (e.g., the first for in-place arithmetic
+            # or the second for Dataset.update) takes priority
             merged[name] = priority_vars[name]
         else:
             dim_variables = [var for var in variables if (name,) == var.dims]
@@ -285,7 +286,7 @@ def coerce_pandas_values(objects):
     return out
 
 
-def merge_coords_without_align(objs, priority_vars=None):
+def merge_coords_for_inplace_math(objs, priority_vars=None):
     """Merge coordinate variables without worrying about alignment.
 
     This function is used for merging variables in coordinates.py.
@@ -296,58 +297,12 @@ def merge_coords_without_align(objs, priority_vars=None):
     return variables
 
 
-def _align_for_merge(input_objects, join, copy, indexes=None):
-    """Align objects for merging, recursing into dictionary values.
-    """
-    if indexes is None:
-        indexes = {}
-
-    def is_alignable(obj):
-        return hasattr(obj, 'indexes') and hasattr(obj, 'reindex')
-
-    positions = []
-    keys = []
-    out = []
-    targets = []
-    no_key = object()
-    not_replaced = object()
-    for n, variables in enumerate(input_objects):
-        if is_alignable(variables):
-            positions.append(n)
-            keys.append(no_key)
-            targets.append(variables)
-            out.append(not_replaced)
-        else:
-            for k, v in variables.items():
-                if is_alignable(v) and k not in indexes:
-                    # Skip variables in indexes for alignment, because these
-                    # should to be overwritten instead:
-                    # https://github.com/pydata/xarray/issues/725
-                    positions.append(n)
-                    keys.append(k)
-                    targets.append(v)
-            out.append(OrderedDict(variables))
-
-    aligned = align(*targets, join=join, copy=copy, indexes=indexes)
-
-    for position, key, aligned_obj in zip(positions, keys, aligned):
-        if key is no_key:
-            out[position] = aligned_obj
-        else:
-            out[position][key] = aligned_obj
-
-    # something went wrong: we should have replaced all sentinel values
-    assert all(arg is not not_replaced for arg in out)
-
-    return out
-
-
 def _get_priority_vars(objects, priority_arg, compat='equals'):
     """Extract the priority variable from a list of mappings.
 
-    We need this method because in some cases the priority argument itself might
-    have conflicting values (e.g., if it is a dict with two DataArray values
-    with conflicting coordinate values).
+    We need this method because in some cases the priority argument itself
+    might have conflicting values (e.g., if it is a dict with two DataArray
+    values with conflicting coordinate values).
 
     Parameters
     ----------
@@ -365,11 +320,22 @@ def _get_priority_vars(objects, priority_arg, compat='equals'):
     values indicating priority variables.
     """
     if priority_arg is None:
-        priority_vars = None
+        priority_vars = {}
     else:
         expanded = expand_variable_dicts([objects[priority_arg]])
         priority_vars = merge_variables(expanded, compat=compat)
     return priority_vars
+
+
+def expand_and_merge_variables(objs, priority_arg=None):
+    """Merge coordinate variables without worrying about alignment.
+
+    This function is used for merging variables in computation.py.
+    """
+    expanded = expand_variable_dicts(objs)
+    priority_vars = _get_priority_vars(objs, priority_arg)
+    variables = merge_variables(expanded, priority_vars)
+    return variables
 
 
 def merge_coords(objs, compat='minimal', join='outer', priority_arg=None,
@@ -382,7 +348,7 @@ def merge_coords(objs, compat='minimal', join='outer', priority_arg=None,
     """
     _assert_compat_valid(compat)
     coerced = coerce_pandas_values(objs)
-    aligned = _align_for_merge(coerced, join=join, copy=False, indexes=indexes)
+    aligned = deep_align(coerced, join=join, copy=False, indexes=indexes)
     expanded = expand_variable_dicts(aligned)
     priority_vars = _get_priority_vars(aligned, priority_arg, compat=compat)
     variables = merge_variables(expanded, priority_vars, compat=compat)
@@ -443,7 +409,7 @@ def merge_core(objs,
     _assert_compat_valid(compat)
 
     coerced = coerce_pandas_values(objs)
-    aligned = _align_for_merge(coerced, join=join, copy=False, indexes=indexes)
+    aligned = deep_align(coerced, join=join, copy=False, indexes=indexes)
     expanded = expand_variable_dicts(aligned)
 
     coord_names, noncoord_names = determine_coords(coerced)
@@ -458,10 +424,8 @@ def merge_core(objs,
     dims = calculate_dimensions(variables)
 
     for dim, size in dims.items():
-        if dim not in variables:
-            variables[dim] = default_index_coordinate(dim, size)
-
-    coord_names.update(dims)
+        if dim in variables:
+            coord_names.add(dim)
 
     ambiguous_coords = coord_names.intersection(noncoord_names)
     if ambiguous_coords:

@@ -8,7 +8,7 @@ Author: `Joe Hamman <https://github.com/jhamman/>`__
 The data used for this example can be found in the
 `xarray-data <https://github.com/pydata/xarray-data>`__ repository.
 
-Suppose we have a netCDF or xray Dataset of monthly mean data and we
+Suppose we have a netCDF or xarray Dataset of monthly mean data and we
 want to calculate the seasonal average. To do this properly, we need to
 calculate the weighted average considering that each month has a
 different number of days.

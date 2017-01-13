@@ -1,3 +1,6 @@
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
 import numpy as np
 import xarray as xr
 
@@ -61,9 +64,9 @@ class TestMergeFunction(TestCase):
             xr.merge([ds, ds + 1])
 
     def test_merge_no_conflicts_single_var(self):
-        ds1 = xr.Dataset({'a': ('x', [1, 2])})
+        ds1 = xr.Dataset({'a': ('x', [1, 2]), 'x': [0, 1]})
         ds2 = xr.Dataset({'a': ('x', [2, 3]), 'x': [1, 2]})
-        expected = xr.Dataset({'a': ('x', [1, 2, 3])})
+        expected = xr.Dataset({'a': ('x', [1, 2, 3]), 'x': [0, 1, 2]})
         assert expected.identical(xr.merge([ds1, ds2],
                                   compat='no_conflicts'))
         assert expected.identical(xr.merge([ds2, ds1],
@@ -190,10 +193,11 @@ class TestMergeMethod(TestCase):
             ds1.merge(ds2, compat='foobar')
 
     def test_merge_auto_align(self):
-        ds1 = xr.Dataset({'a': ('x', [1, 2])})
+        ds1 = xr.Dataset({'a': ('x', [1, 2]), 'x': [0, 1]})
         ds2 = xr.Dataset({'b': ('x', [3, 4]), 'x': [1, 2]})
         expected = xr.Dataset({'a': ('x', [1, 2, np.nan]),
-                               'b': ('x', [np.nan, 3, 4])})
+                               'b': ('x', [np.nan, 3, 4])},
+                              {'x': [0, 1, 2]})
         assert expected.identical(ds1.merge(ds2))
         assert expected.identical(ds2.merge(ds1))
 
@@ -206,9 +210,9 @@ class TestMergeMethod(TestCase):
         assert expected.identical(ds2.merge(ds1, join='inner'))
 
     def test_merge_no_conflicts(self):
-        ds1 = xr.Dataset({'a': ('x', [1, 2])})
+        ds1 = xr.Dataset({'a': ('x', [1, 2]), 'x': [0, 1]})
         ds2 = xr.Dataset({'a': ('x', [2, 3]), 'x': [1, 2]})
-        expected = xr.Dataset({'a': ('x', [1, 2, 3])})
+        expected = xr.Dataset({'a': ('x', [1, 2, 3]), 'x': [0, 1, 2]})
 
         assert expected.identical(ds1.merge(ds2, compat='no_conflicts'))
         assert expected.identical(ds2.merge(ds1, compat='no_conflicts'))

@@ -1,9 +1,12 @@
 """Internal utilties; not for external use
 """
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
 import contextlib
-import datetime
 import functools
 import itertools
+import os.path
 import re
 import warnings
 from collections import Mapping, MutableMapping, Iterable
@@ -155,7 +158,7 @@ def remove_incompatible_items(first_dict, second_dict, compat=equivalent):
 
 
 def is_dict_like(value):
-    return hasattr(value, '__getitem__') and hasattr(value, 'keys')
+    return hasattr(value, 'keys') and hasattr(value, '__getitem__')
 
 
 def is_full_slice(value):
@@ -195,9 +198,8 @@ def is_valid_numpy_dtype(dtype):
 
 def to_0d_object_array(value):
     """Given a value, wrap it in a 0-D numpy.ndarray with dtype=object."""
-    result = np.empty((1,), dtype=object)
-    result[:] = [value]
-    result.shape = ()
+    result = np.empty((), dtype=object)
+    result[()] = value
     return result
 
 

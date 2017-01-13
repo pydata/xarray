@@ -1,9 +1,14 @@
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
 import numpy as np
+import warnings
+from distutils.version import StrictVersion
 
 from .pycompat import OrderedDict, zip
-from .common import ImplementsRollingArrayReduce, _full_like
+from .common import ImplementsRollingArrayReduce, full_like
 from .combine import concat
-from .ops import inject_bottleneck_rolling_methods
+from .ops import inject_bottleneck_rolling_methods, has_bottleneck, bn
 
 
 class Rolling(object):
@@ -44,6 +49,13 @@ class Rolling(object):
         -------
         rolling : type of input argument
         """
+
+        if (has_bottleneck and
+                (StrictVersion(bn.__version__) < StrictVersion('1.0'))):
+            warnings.warn('xarray requires bottleneck version of 1.0 or '
+                          'greater for rolling operations. Rolling '
+                          'aggregation methods will use numpy instead'
+                          'of bottleneck.')
 
         if len(windows) != 1:
             raise ValueError('exactly one dim/window should be provided')
@@ -103,7 +115,7 @@ class Rolling(object):
             window = self.obj.isel(**{self.dim: indices})
 
             if not valid:
-                window = _full_like(window, fill_value=True)
+                window = full_like(window, fill_value=True, dtype=bool)
 
             yield (label, window)
 
@@ -161,10 +173,10 @@ class Rolling(object):
                    for _, window in self]
 
         # Find valid windows based on count
+        concat_dim = self.window_labels if self.dim in self.obj else self.dim
         counts = concat([window.count(dim=self.dim) for _, window in self],
-                        dim=self.obj[self.dim])
-
-        result = concat(windows, dim=self.window_labels)
+                        dim=concat_dim)
+        result = concat(windows, dim=concat_dim)
 
         result = result.where(counts >= self._min_periods)
 

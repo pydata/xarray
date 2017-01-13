@@ -1,3 +1,6 @@
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
 from collections import namedtuple
 from copy import copy, deepcopy
 from datetime import datetime, timedelta
@@ -13,8 +16,9 @@ from xarray.core import indexing
 from xarray.core.variable import as_variable, as_compatible_data
 from xarray.core.indexing import PandasIndexAdapter, LazilyIndexedArray
 from xarray.core.pycompat import PY3, OrderedDict
+from xarray.core.common import full_like, zeros_like, ones_like
 
-from . import TestCase, source_ndarray
+from . import TestCase, source_ndarray, requires_dask
 
 
 class VariableSubclassTestCases(object):
@@ -209,15 +213,19 @@ class VariableSubclassTestCases(object):
     def test_1d_math(self):
         x = 1.0 * np.arange(5)
         y = np.ones(5)
+
+        # should we need `.to_base_variable()`?
+        # probably a break that `+v` changes type?
         v = self.cls(['x'], x)
+        base_v = v.to_base_variable()
         # unary ops
-        self.assertVariableIdentical(v, +v)
-        self.assertVariableIdentical(v, abs(v))
+        self.assertVariableIdentical(base_v, +v)
+        self.assertVariableIdentical(base_v, abs(v))
         self.assertArrayEqual((-v).values, -x)
         # binary ops with numbers
-        self.assertVariableIdentical(v, v + 0)
-        self.assertVariableIdentical(v, 0 + v)
-        self.assertVariableIdentical(v, v * 1)
+        self.assertVariableIdentical(base_v, v + 0)
+        self.assertVariableIdentical(base_v, 0 + v)
+        self.assertVariableIdentical(base_v, v * 1)
         self.assertArrayEqual((v > 2).values, x > 2)
         self.assertArrayEqual((0 == v).values, 0 == x)
         self.assertArrayEqual((v - 1).values, x - 1)
@@ -229,11 +237,11 @@ class VariableSubclassTestCases(object):
         self.assertArrayEqual(y - v, 1 - v)
         # verify attributes are dropped
         v2 = self.cls(['x'], x, {'units': 'meters'})
-        self.assertVariableIdentical(v, +v2)
+        self.assertVariableIdentical(base_v, +v2)
         # binary ops with all variables
         self.assertArrayEqual(v + v, 2 * v)
         w = self.cls(['x'], y, {'foo': 'bar'})
-        self.assertVariableIdentical(v + w, self.cls(['x'], x + y))
+        self.assertVariableIdentical(v + w, self.cls(['x'], x + y).to_base_variable())
         self.assertArrayEqual((v * w).values, x * y)
         # something complicated
         self.assertArrayEqual((v ** 2 * w - 1 + x).values, x ** 2 * y - 1 + x)
@@ -262,10 +270,12 @@ class VariableSubclassTestCases(object):
         self.assertArrayEqual(np.asarray(v), x)
         # test patched in methods
         self.assertArrayEqual(v.astype(float), x.astype(float))
-        self.assertVariableIdentical(v.argsort(), v)
-        self.assertVariableIdentical(v.clip(2, 3), self.cls('x', x.clip(2, 3)))
+        # think this is a break, that argsort changes the type
+        self.assertVariableIdentical(v.argsort(), v.to_base_variable())
+        self.assertVariableIdentical(v.clip(2, 3),
+                                     self.cls('x', x.clip(2, 3)).to_base_variable())
         # test ufuncs
-        self.assertVariableIdentical(np.sin(v), self.cls(['x'], np.sin(x)))
+        self.assertVariableIdentical(np.sin(v), self.cls(['x'], np.sin(x)).to_base_variable())
         self.assertIsInstance(np.sin(v), Variable)
         self.assertNotIsInstance(np.sin(v), IndexVariable)
 
@@ -300,7 +310,7 @@ class VariableSubclassTestCases(object):
     def test_eq_all_dtypes(self):
         # ensure that we don't choke on comparisons for which numpy returns
         # scalars
-        expected = self.cls('x', 3 * [False])
+        expected = Variable('x', 3 * [False])
         for v, _ in self.example_1d_objects():
             actual = 'z' == v
             self.assertVariableIdentical(expected, actual)
@@ -316,7 +326,9 @@ class VariableSubclassTestCases(object):
                        expected.expand_dims({'x': 3}),
                        expected.copy(deep=True),
                        expected.copy(deep=False)]:
-            self.assertVariableIdentical(expected, actual)
+
+            self.assertVariableIdentical(expected.to_base_variable(),
+                                         actual.to_base_variable())
             self.assertEqual(expected.encoding, actual.encoding)
 
     def test_concat(self):
@@ -353,7 +365,7 @@ class VariableSubclassTestCases(object):
         # different or conflicting attributes should be removed
         v = self.cls('a', np.arange(5), {'foo': 'bar'})
         w = self.cls('a', np.ones(5))
-        expected = self.cls('a', np.concatenate([np.arange(5), np.ones(5)]))
+        expected = self.cls('a', np.concatenate([np.arange(5), np.ones(5)])).to_base_variable()
         self.assertVariableIdentical(expected, Variable.concat([v, w], 'a'))
         w.attrs['foo'] = 2
         self.assertVariableIdentical(expected, Variable.concat([v, w], 'a'))
@@ -415,7 +427,7 @@ class VariableSubclassTestCases(object):
         expected_im = self.cls('x', -np.arange(3), {'foo': 'bar'})
         self.assertVariableIdentical(v.imag, expected_im)
 
-        expected_abs = self.cls('x', np.sqrt(2 * np.arange(3) ** 2))
+        expected_abs = self.cls('x', np.sqrt(2 * np.arange(3) ** 2)).to_base_variable()
         self.assertVariableAllClose(abs(v), expected_abs)
 
     def test_aggregate_complex(self):
@@ -445,6 +457,15 @@ class VariableSubclassTestCases(object):
         v = self.cls('x', idx)
         self.assertVariableIdentical(Variable((), ('a', 0)), v[0])
         self.assertVariableIdentical(v, v[:])
+
+    def test_load(self):
+        array = self.cls('x', np.arange(5))
+        orig_data = array._data
+        copied = array.copy(deep=True)
+        array.load()
+        assert type(array._data) is type(orig_data)
+        assert type(copied._data) is type(orig_data)
+        self.assertVariableIdentical(array, copied)
 
 
 class TestVariable(TestCase, VariableSubclassTestCases):
@@ -591,7 +612,7 @@ class TestVariable(TestCase, VariableSubclassTestCases):
         self.assertVariableIdentical(expected, as_variable(expected))
 
         ds = Dataset({'x': expected})
-        self.assertVariableIdentical(expected, as_variable(ds['x']))
+        self.assertVariableIdentical(expected, as_variable(ds['x']).to_base_variable())
         self.assertNotIsInstance(ds['x'], Variable)
         self.assertIsInstance(as_variable(ds['x']), Variable)
 
@@ -609,8 +630,7 @@ class TestVariable(TestCase, VariableSubclassTestCases):
             as_variable(data)
 
         actual = as_variable(data, name='x')
-        self.assertVariableIdentical(expected, actual)
-        self.assertIsInstance(actual, IndexVariable)
+        self.assertVariableIdentical(expected.to_index_variable(), actual)
 
         actual = as_variable(0)
         expected = Variable([], 0)
@@ -1049,13 +1069,11 @@ class TestIndexVariable(TestCase, VariableSubclassTestCases):
 
     def test_data(self):
         x = IndexVariable('x', np.arange(3.0))
-        # data should be initially saved as an ndarray
-        self.assertIs(type(x._data), np.ndarray)
+        self.assertIsInstance(x._data, PandasIndexAdapter)
+        self.assertIsInstance(x.data, np.ndarray)
         self.assertEqual(float, x.dtype)
         self.assertArrayEqual(np.arange(3), x)
         self.assertEqual(float, x.values.dtype)
-        # after inspecting x.values, the IndexVariable value will be saved as an Index
-        self.assertIsInstance(x._data, PandasIndexAdapter)
         with self.assertRaisesRegexp(TypeError, 'cannot be modified'):
             x[:] = 0
 
@@ -1169,3 +1187,63 @@ class TestAsCompatibleData(TestCase):
         self.assertEqual(np.asarray(expected), actual)
         self.assertEqual(np.ndarray, type(actual))
         self.assertEqual(np.dtype('datetime64[ns]'), actual.dtype)
+
+    def test_full_like(self):
+        # For more thorough tests, see test_variable.py
+        orig = Variable(dims=('x', 'y'), data=[[1.5 ,2.0], [3.1, 4.3]],
+                        attrs={'foo': 'bar'})
+
+        expect = orig.copy(deep=True)
+        expect.values = [[2.0, 2.0], [2.0, 2.0]]
+        self.assertVariableIdentical(expect, full_like(orig, 2))
+
+        # override dtype
+        expect.values = [[True, True], [True, True]]
+        self.assertEquals(expect.dtype, bool)
+        self.assertVariableIdentical(expect, full_like(orig, True, dtype=bool))
+
+
+    @requires_dask
+    def test_full_like_dask(self):
+        orig = Variable(dims=('x', 'y'), data=[[1.5 ,2.0], [3.1, 4.3]],
+                        attrs={'foo': 'bar'}).chunk(((1, 1), (2,)))
+
+        def check(actual, expect_dtype, expect_values):
+            self.assertEqual(actual.dtype, expect_dtype)
+            self.assertEqual(actual.shape, orig.shape)
+            self.assertEqual(actual.dims, orig.dims)
+            self.assertEqual(actual.attrs, orig.attrs)
+            self.assertEqual(actual.chunks, orig.chunks)
+            self.assertArrayEqual(actual.values, expect_values)
+
+        check(full_like(orig, 2),
+              orig.dtype, np.full_like(orig.values, 2))
+        # override dtype
+        check(full_like(orig, True, dtype=bool),
+              bool, np.full_like(orig.values, True, dtype=bool))
+
+        # Check that there's no array stored inside dask
+        # (e.g. we didn't create a numpy array and then we chunked it!)
+        dsk = full_like(orig, 1).data.dask
+        for v in dsk.values():
+            if isinstance(v, tuple):
+                for vi in v:
+                    assert not isinstance(vi, np.ndarray)
+            else:
+                assert not isinstance(v, np.ndarray)
+
+    def test_zeros_like(self):
+        orig = Variable(dims=('x', 'y'), data=[[1.5 ,2.0], [3.1, 4.3]],
+                        attrs={'foo': 'bar'})
+        self.assertVariableIdentical(zeros_like(orig),
+                                     full_like(orig, 0))
+        self.assertVariableIdentical(zeros_like(orig, dtype=int),
+                                     full_like(orig, 0, dtype=int))
+
+    def test_ones_like(self):
+        orig = Variable(dims=('x', 'y'), data=[[1.5 ,2.0], [3.1, 4.3]],
+                        attrs={'foo': 'bar'})
+        self.assertVariableIdentical(ones_like(orig),
+                                     full_like(orig, 1))
+        self.assertVariableIdentical(ones_like(orig, dtype=int),
+                                     full_like(orig, 1, dtype=int))

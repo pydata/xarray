@@ -11,8 +11,6 @@ matrix:
     env: CONDA_ENV=py27-min
   - python: 2.7
     env: CONDA_ENV=py27-cdat+pynio
-  - python: 3.3
-    env: CONDA_ENV=py33
   - python: 3.4
     env: CONDA_ENV=py34
   - python: 3.5
@@ -30,6 +28,8 @@ matrix:
     env: CONDA_ENV=py35-dask-dev
   - python: 3.5
     env: CONDA_ENV=py35-pandas-dev
+  - python: 3.5
+    env: CONDA_ENV=py35-condaforge-rc
   allow_failures:
   - python: 2.7
     env: CONDA_ENV=py27-pydap
@@ -44,6 +44,8 @@ matrix:
     env: CONDA_ENV=py35-dask-dev
   - python: 3.5
     env: CONDA_ENV=py35-pandas-dev
+  - python: 3.5
+    env: CONDA_ENV=py35-condaforge-rc
 
 before_install:
   - if [[ "$TRAVIS_PYTHON_VERSION" == "2.7" ]]; then
@@ -69,7 +71,7 @@ install:
   - python setup.py install
 
 script:
-  - py.test xarray --cov=xarray --cov-report term-missing
+  - py.test xarray --cov=xarray --cov-report term-missing --verbose
 
 after_success:
   - coveralls
