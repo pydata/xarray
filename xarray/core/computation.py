@@ -330,6 +330,7 @@ def apply_dataset_ufunc(func, *args, **kwargs):
     """
     signature = kwargs.pop('signature')
     join = kwargs.pop('join', 'inner')
+    data_vars_join = kwargs.pop('data_vars_join', 'inner')
     fill_value = kwargs.pop('fill_value', None)
     exclude_dims = kwargs.pop('exclude_dims', _DEFAULT_FROZEN_SET)
     if kwargs:
@@ -345,7 +346,8 @@ def apply_dataset_ufunc(func, *args, **kwargs):
     args = [getattr(arg, 'data_vars', arg) for arg in args]
 
     result_vars = apply_dict_of_variables_ufunc(
-        func, *args, signature=signature, join=join, fill_value=fill_value)
+        func, *args, signature=signature, join=data_vars_join,
+        fill_value=fill_value)
 
     if signature.n_outputs > 1:
         return tuple(_fast_dataset(*args)
@@ -582,6 +584,13 @@ def apply_ufunc(func, *args, **kwargs):
         - 'inner': use the intersection of object indexes
         - 'left': use indexes from the first object with each dimension
         - 'right': use indexes from the last object with each dimension
+    data_vars_join : {'outer', 'inner', 'left', 'right'}, optional
+        Method for joining variables of Dataset objects with mismatched
+        data variables.
+        - 'outer': take variables from both Dataset objects
+        - 'inner': take only overlapped variables
+        - 'left': take only variables from the first object
+        - 'right': take only variables from the last object
     exclude_dims : set, optional
         Dimensions to exclude from alignment and broadcasting. Any inputs
         coordinates along these dimensions will be dropped. Each excluded
@@ -665,6 +674,7 @@ def apply_ufunc(func, *args, **kwargs):
 
     signature = kwargs.pop('signature', None)
     join = kwargs.pop('join', 'inner')
+    data_vars_join = kwargs.pop('data_vars_join', 'inner')
     exclude_dims = kwargs.pop('exclude_dims', frozenset())
     dataset_fill_value = kwargs.pop('dataset_fill_value', None)
     kwargs_ = kwargs.pop('kwargs', None)
@@ -703,7 +713,8 @@ def apply_ufunc(func, *args, **kwargs):
     elif any(is_dict_like(a) for a in args):
         return apply_dataset_ufunc(variables_ufunc, *args, signature=signature,
                                    join=join, exclude_dims=exclude_dims,
-                                   fill_value=dataset_fill_value)
+                                   fill_value=dataset_fill_value,
+                                   data_vars_join=data_vars_join)
     elif any(isinstance(a, DataArray) for a in args):
         return apply_dataarray_ufunc(variables_ufunc, *args,
                                      signature=signature,

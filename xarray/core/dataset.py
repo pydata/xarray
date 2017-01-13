@@ -1934,7 +1934,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
 
         return self.isel(**{dim: mask})
 
-    def fillna(self, value):
+    def fillna(self, value, join="left"):
         """Fill missing values in this object.
 
         This operation follows the normal broadcasting and alignment rules that
@@ -1950,6 +1950,13 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
             fill all data with aligned coordinates (for DataArrays).
             Dictionaries or datasets match data variables and then align
             coordinates if necessary.
+        join : {'outer', 'inner', 'left', 'right'}, optional
+            Method for joining the indexes of the passed objects along each
+            dimension
+            - 'outer': use the union of object indexes
+            - 'inner': use the intersection of object indexes
+            - 'left': use indexes from the first object with each dimension
+            - 'right': use indexes from the last object with each dimension
 
         Returns
         -------
@@ -1960,7 +1967,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
             if not set(value_keys) <= set(self.data_vars.keys()):
                 raise ValueError('all variables in the argument to `fillna` '
                                  'must be contained in the original dataset')
-        out = ops.fillna(self, value, join="left")
+        out = ops.fillna(self, value, join=join)
         out._copy_attrs_from(self)
         return out
 
@@ -1971,8 +1978,6 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         of ``join='outer'``.  Vacant cells in the expanded coordinates are
         filled with np.nan.
 
-        Renders the same result as xr.merge([self, other]).
-
         Parameters
         ----------
         other : DataArray
@@ -1982,7 +1987,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         -------
         DataArray
         """
-        out = ops.fillna(self, other, join="outer")
+        out = ops.fillna(self, other, join="outer", data_vars_join="outer")
         out._copy_attrs_from(self)
         return out
 
@@ -2351,11 +2356,6 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
                              inplace=False, fillna=False):
 
         def apply_over_both(lhs_data_vars, rhs_data_vars, lhs_vars, rhs_vars):
-            if fillna and join != 'left':
-                raise ValueError('`fillna` must be accompanied by left join')
-            if fillna and not set(rhs_data_vars) <= set(lhs_data_vars):
-                raise ValueError('all variables in the argument to `fillna` '
-                                 'must be contained in the original dataset')
             if inplace and set(lhs_data_vars) != set(rhs_data_vars):
                 raise ValueError('datasets must have the same data variables '
                                  'for in-place arithmetic operations: %s, %s'

@@ -1089,7 +1089,14 @@ class DataArray(AbstractArray, BaseDataObject):
             Used to fill all matching missing values in this array. If the
             argument is a DataArray, it is first aligned with (reindexed to)
             this array.
-
+        join : {'outer', 'inner', 'left', 'right'}, optional
+            Method for joining the indexes of the passed objects along each
+            dimension
+            - 'outer': use the union of object indexes
+            - 'inner': use the intersection of object indexes
+            - 'left': use indexes from the first object with each dimension
+            - 'right': use indexes from the last object with each dimension
+            
         Returns
         -------
         DataArray
