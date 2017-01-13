@@ -446,11 +446,11 @@ Here is the resulting image:
 
 .. image:: examples/cartopy_example.png
 
-When faceting on maps, the projection can be transferred to the plot function using the ``subplot_kws`` keyword. Axes for the subplots created by faceting are accessible in the object returned by plot:
+When faceting on maps, the projection can be transferred to the ``plot`` function using the ``subplot_kws`` keyword. Axes for the subplots created by faceting are accessible in the object returned by ``plot``:
 
 .. ipython:: python
 
-    p = time_maps.plot(transform=ccrs.PlateCarree(), col='time', subplot_kws={'projection':ccrs.PlateCarree()})
+    p = time_maps.plot(transform=ccrs.PlateCarree(), col='time', subplot_kws={'projection': ccrs.PlateCarree()})
     for ax in p.axes.flat:
         ax.coastlines()
         ax.gridlines()
