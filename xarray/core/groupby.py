@@ -382,15 +382,9 @@ class GroupBy(object):
         Dataset.fillna
         DataArray.fillna
         """
-        def _yield_applied(this, other):
-            """apply fillna to each individual groupby ds"""
-            for group_value, obj in this:
-                other_sel = other.sel(**{this._group.name: group_value})
-                yield obj.fillna(other_sel)
-
-        datasets = _yield_applied(self, value)
-        combined = self._combine(datasets)
-        return combined
+        out = ops.fillna(self, value)
+        out._copy_attrs_from(self._obj)
+        return out
 
     def where(self, cond):
         """Return an object of the same shape with all entries where cond is

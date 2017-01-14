@@ -13,7 +13,8 @@ Combining data
 
 * For combining datasets or data arrays along a dimension, see concatenate_.
 * For combining datasets with different variables, see merge_.
-# For combining datasets or data arrays with outer-join alignment, see combine_.
+# For combining datasets with different coordinates or missing values,
+  or data arrays with outer-join alignment, see combine_.
 
 .. _concatenate:
 
@@ -140,14 +141,16 @@ For data array,
     ar1.combine_first(ar0)
     ar0.combine_first(ar2)
 
-For datasets, ``ds0.combine_first(ds1)`` works just like ``xr.merge([ds0, ds1])``
+For datasets, ``ds0.combine_first(ds1)`` works similarly to ``xr.merge([ds0, ds1])``,
+except that ``xr.merge`` raises a ``MergeError`` when there are conflicting values
+in merging data variables, whereas ``.combine_first`` defaults to the calling object's values.
 
 .. ipython:: python
 
-    dsx0 = DataArray([0, 0], [('x', ['a', 'b'])]).to_dataset(name='dsx0')
-    dsx1 = DataArray([1, 1], [('x', ['b', 'c'])]).to_dataset(name='dsx1')
-    dsx0.combine_first(dsx1)
-    xr.merge([dsx1, dsx0])
+    ds0 = Dataset({'a': ('x', [1, 2]), 'x': [0, 1]})
+    ds1 = Dataset({'a': ('x', [99, 3]), 'x': [1, 2]})
+    ds0.combine_first(ds1)
+    xr.merge([ds0, ds1])
 
 .. _update:
 

@@ -2320,7 +2320,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         return func
 
     @staticmethod
-    def _binary_op(f, reflexive=False, join=None, fillna=False):
+    def _binary_op(f, reflexive=False, join=None):
         @functools.wraps(f)
         def func(self, other):
             if isinstance(other, groupby.GroupBy):
@@ -2329,8 +2329,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
             if hasattr(other, 'indexes'):
                 self, other = align(self, other, join=align_type, copy=False)
             g = f if not reflexive else lambda x, y: f(y, x)
-            ds = self._calculate_binary_op(g, other, join=align_type,
-                                           fillna=fillna)
+            ds = self._calculate_binary_op(g, other, join=align_type)
             return ds
         return func
 
@@ -2353,7 +2352,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         return func
 
     def _calculate_binary_op(self, f, other, join='inner',
-                             inplace=False, fillna=False):
+                             inplace=False):
 
         def apply_over_both(lhs_data_vars, rhs_data_vars, lhs_vars, rhs_vars):
             if inplace and set(lhs_data_vars) != set(rhs_data_vars):
@@ -2367,12 +2366,10 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
                 if k in rhs_data_vars:
                     dest_vars[k] = f(lhs_vars[k], rhs_vars[k])
                 elif join in ["left", "outer"]:
-                    dest_vars[k] = (lhs_vars[k] if fillna else
-                                    f(lhs_vars[k], np.nan))
+                    dest_vars[k] = f(lhs_vars[k], np.nan)
             for k in rhs_data_vars:
                 if k not in dest_vars and join in ["right", "outer"]:
-                    dest_vars[k] = (rhs_vars[k] if fillna else
-                                    f(rhs_vars[k], np.nan))
+                    dest_vars[k] = f(rhs_vars[k], np.nan)
             return dest_vars
 
         if utils.is_dict_like(other) and not isinstance(other, Dataset):

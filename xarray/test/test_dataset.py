@@ -3186,7 +3186,7 @@ class TestDataset(TestCase):
         self.assertEqual(expect['d2'].dtype, bool)
         self.assertDatasetIdentical(expect, actual)
 
-    def test_combine_first(self):  # works just like xr.merge([self, other])
+    def test_combine_first(self):
         dsx0 = DataArray([0, 0], [('x', ['a', 'b'])]).to_dataset(name='dsx0')
         dsx1 = DataArray([1, 1], [('x', ['b', 'c'])]).to_dataset(name='dsx1')
 
@@ -3197,8 +3197,9 @@ class TestDataset(TestCase):
         self.assertDatasetEqual(actual, expected)
         self.assertDatasetEqual(actual, xr.merge([dsx0, dsx1]))
 
-        dsy2 = DataArray([2, 2, 2], [('x', ['b', 'c', 'd'])]).\
-            to_dataset(name='dsy2')
+        # works just like xr.merge([self, other])
+        dsy2 = DataArray([2, 2, 2],
+                        [('x', ['b', 'c', 'd'])]).to_dataset(name='dsy2')
         actual = dsx0.combine_first(dsy2)
         expected = xr.merge([dsy2, dsx0])
         self.assertDatasetEqual(actual, expected)

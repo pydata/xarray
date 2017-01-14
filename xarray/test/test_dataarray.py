@@ -2391,7 +2391,6 @@ class TestDataArray(TestCase):
         self.assertDataArrayEqual(actual, expected)
 
 
-
 @pytest.fixture(params=[1])
 def da(request):
     if request.param == 1:

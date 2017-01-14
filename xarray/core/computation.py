@@ -708,7 +708,8 @@ def apply_ufunc(func, *args, **kwargs):
         this_apply = functools.partial(
             apply_ufunc, func, signature=signature, join=join,
             dask_array=dask_array, exclude_dims=exclude_dims,
-            dataset_fill_value=dataset_fill_value)
+            dataset_fill_value=dataset_fill_value,
+            data_vars_join=data_vars_join)
         return apply_groupby_ufunc(this_apply, *args)
     elif any(is_dict_like(a) for a in args):
         return apply_dataset_ufunc(variables_ufunc, *args, signature=signature,

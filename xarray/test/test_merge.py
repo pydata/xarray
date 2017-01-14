@@ -234,3 +234,5 @@ class TestMergeMethod(TestCase):
         with self.assertRaises(xr.MergeError):
             ds3 = xr.Dataset({'a': ('y', [2, 3]), 'y': [1, 2]})
             ds1.merge(ds3, compat='no_conflicts')
+
+    def test_data_vars_join(self):

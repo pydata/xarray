@@ -303,8 +303,7 @@ def fillna(data, other, join="left", data_vars_join="left"):
     from .computation import apply_ufunc
 
     def _fillna(data, other):
-        left, right = np.broadcast_arrays(data, other)
-        return np.where(isnull(left), right, left)
+        return where(isnull(data), other, data)
     return apply_ufunc(_fillna, data, other, join=join, dask_array="allowed",
                        data_vars_join=data_vars_join)
 
