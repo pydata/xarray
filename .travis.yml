@@ -3,6 +3,9 @@ language: python
 sudo: false # use container based build
 notifications:
   email: false
+branches:
+  except:
+    - fix-docs
 
 matrix:
   fast_finish: true
