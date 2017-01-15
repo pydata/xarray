@@ -1036,13 +1036,15 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         return result._replace_indexes(new_indexes)
 
     def isel_points(self, dim='points', **indexers):
-        # type: () -> Dataset
+        # type: (...) -> Dataset
         """Returns a new dataset with each array indexed pointwise along the
         specified dimension(s).
 
         This method selects pointwise values from each array and is akin to
         the NumPy indexing behavior of `arr[[0, 1], [0, 1]]`, except this
         method does not require knowing the order of each array's dimensions.
+
+        Will use dask vectorised operation if available
 
         Parameters
         ----------
@@ -1078,6 +1080,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         indexer_dims = set(indexers)
 
         def take(variable, slices):
+            # Note: remove helper function when once when numpy supports vindex https://github.com/numpy/numpy/pull/6075
             if hasattr(variable.data, 'vindex'):
                 # Special case for dask backed arrays to use vectorised list indexing
                 sel = variable.data.vindex[slices]
@@ -1090,12 +1093,11 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
             return [k for k, v in mapping.items()
                     if any(d in indexer_dims for d in v.dims)]
 
-        data_vars = relevant_keys(self.data_vars)
         coords = relevant_keys(self.coords)
         indexers = [(k, np.asarray(v)) for k, v in iteritems(indexers)]
         indexers_dict = dict(indexers)
         non_indexed_dims = set(self.dims) - indexer_dims
-        dim_coord = None
+
 
         # all the indexers should be iterables
         # Check that indexers are valid dims, integers, and 1D
@@ -1118,72 +1120,51 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
                 # dim is an invalid string
                 raise ValueError('Existing dimension names are not valid '
                                  'choices for the dim argument in sel_points')
+
         elif hasattr(dim, 'dims'):
             # dim is a DataArray or Coordinate
             if dim.name in self.dims:
                 # dim already exists
                 raise ValueError('Existing dimensions are not valid choices '
                                  'for the dim argument in sel_points')
-            # replace the array dim
-            dim_coord = dim.copy()
-            dim = dim.name
 
-        if not utils.is_scalar(dim) and not isinstance(dim, DataArray):
-            name = 'points' if not hasattr(dim, 'name') else dim.name
-            dim_coord = as_variable(dim, name=name)
-            dim = name
+
+        # Set the new dim_name, and optionally the new dim coordinate
+        # dim is either an array-like or a string
+        if not utils.is_scalar(dim):
+            # dim is array like get name or assign 'points', get as variable
+            dim_name = 'points' if not hasattr(dim, 'name') else dim.name
+            dim_coord = as_variable(dim, name=dim_name)
+        else:
+            # dim is a string
+            dim_name = dim
+            dim_coord = None
 
         reordered = self.transpose(*(list(indexer_dims) + list(non_indexed_dims)))
 
         variables = OrderedDict()
-        sel_coords = OrderedDict()
 
         for name, var in reordered.variables.items():
             if name in indexers_dict or any(d in indexer_dims for d in var.dims):
                 # if the var is an indexer or if it depends on an indexed dim, slice it
                 slc = [indexers_dict[k] if k in indexers_dict else slice(None) for k in var.dims]
-                var_dims = [dim] + [d for d in var.dims if d in non_indexed_dims]
+                var_dims = [dim_name] + [d for d in var.dims if d in non_indexed_dims]
                 selection = take(var, tuple(slc))
-
-                # Add the var to variables or coords accordingly
-                if name in coords:
-                    sel_coords[name] = (var_dims, selection)
-                else:
-                    variables[name] = (var_dims, selection)
+                var_subset = type(var)(var_dims, selection, var.attrs)
+                variables[name] = var_subset
             else:
                 # If not indexed just add it back to variables or coordinates
-                if name in self.coords:
-                    sel_coords[name] = var
-                else:
-                    variables[name] = var
+                variables[name] = var
 
+        coord_names = set(coords) & set(variables)
+
+        dset = self._replace_vars_and_dims(variables, coord_names=coord_names)
+        # Add the dim coord to the new dset. Must be done after creation because
+        # _replace_vars_and_dims can only access existing coords, not add new ones
         if dim_coord is not None:
-            sel_coords[dim] = dim_coord
+            dset.coords[dim_name] = dim_coord
+        return dset
 
-        # Keeping this around in case transpose causes issues
-        # transpose is not lazy so could create performance problems
-        # This code adds variables in order and inserts the new dim at the first position of
-        # and indexed dim
-        # dim_added = False
-        # var_coords = []
-        # var_dims = []
-        # for k in var.dims:
-        #     # collapse dims that are in the indexer
-        #     # add coords for others
-        #     if k not in indexers_dict:
-        #         var_dims.append(k)
-        #         var_coords.append(self.variables[k])
-        #     else:
-        #         # To make sure it gets added the first time we hit an index dim, but only add once
-        #         if not dim_added:
-        #             # add generated points to replace collapsed dims...
-        #             var_coords.append(dim_coord)
-        #             var_dims.append(dim)
-        #             dim_added = True
-
-        return Dataset(variables,
-                       sel_coords,
-                       attrs=self.attrs)
 
     def sel_points(self, dim='points', method=None, tolerance=None,
                    **indexers):
