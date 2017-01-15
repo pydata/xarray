@@ -29,7 +29,6 @@ from .variable import (Variable, as_variable, IndexVariable,
 from .pycompat import (iteritems, basestring, OrderedDict,
                        dask_array_type, range)
 from .formatting import ensure_valid_repr
-from .combine import concat
 from .options import OPTIONS
 
 # list of attributes of pd.DatetimeIndex that are ndarrays of time info
@@ -118,11 +117,11 @@ def calculate_dimensions(variables):
 
 
 def merge_indexes(
-        indexes,       # type: Dict[Any, Union[Any, List[Any]]]
-        variables,     # type: Dict[Any, Variable]
-        coord_names,   # type: Set
+        indexes,  # type: Dict[Any, Union[Any, List[Any]]]
+        variables,  # type: Dict[Any, Variable]
+        coord_names,  # type: Set
         append=False,  # type: bool
-        ):
+):
     # type: (...) -> Tuple[OrderedDict[Any, Variable], Set]
     """Merge variables into multi-indexes.
 
@@ -155,7 +154,7 @@ def merge_indexes(
             names.append(n)
             var = variables[n]
             if (current_index_variable is not None and
-                var.dims != current_index_variable.dims):
+                        var.dims != current_index_variable.dims):
                 raise ValueError(
                     "dimension mismatch between %r %s and %r %s"
                     % (dim, current_index_variable.dims, n, var.dims))
@@ -179,11 +178,11 @@ def merge_indexes(
 
 def split_indexes(
         dims_or_levels,  # type: Union[Any, List[Any]]
-        variables,       # type: Dict[Any, Variable]
-        coord_names,     # type: Set
-        level_coords,    # type: Dict[Any, Any]
-        drop=False,      # type: bool
-        ):
+        variables,  # type: Dict[Any, Variable]
+        coord_names,  # type: Set
+        level_coords,  # type: Dict[Any, Any]
+        drop=False,  # type: bool
+):
     # type: (...) -> Tuple[OrderedDict[Any, Variable], Set]
     """Extract (multi-)indexes (levels) as variables.
 
@@ -1207,7 +1206,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         indexer_dims = set(indexers)
 
         def take(variable, slices):
-            # Note: remove helper function when once when numpy supports vindex https://github.com/numpy/numpy/pull/6075
+            # Note: remove helper function when once when numpy
+            # supports vindex https://github.com/numpy/numpy/pull/6075
             if hasattr(variable.data, 'vindex'):
                 # Special case for dask backed arrays to use vectorised list indexing
                 sel = variable.data.vindex[slices]
@@ -1225,8 +1225,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         indexers_dict = dict(indexers)
         non_indexed_dims = set(self.dims) - indexer_dims
 
-
-        # all the indexers should be iterables
+        # All the indexers should be iterables
         # Check that indexers are valid dims, integers, and 1D
         for k, v in indexers:
             if k not in self.dims:
@@ -1255,7 +1254,6 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
                 raise ValueError('Existing dimensions are not valid choices '
                                  'for the dim argument in sel_points')
 
-
         # Set the new dim_name, and optionally the new dim coordinate
         # dim is either an array-like or a string
         if not utils.is_scalar(dim):
@@ -1273,9 +1271,13 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
 
         for name, var in reordered.variables.items():
             if name in indexers_dict or any(d in indexer_dims for d in var.dims):
-                # if the var is an indexer or if it depends on an indexed dim, slice it
-                slc = [indexers_dict[k] if k in indexers_dict else slice(None) for k in var.dims]
-                var_dims = [dim_name] + [d for d in var.dims if d in non_indexed_dims]
+                # slice if var is an indexer or depends on an indexed dim
+                slc = [indexers_dict[k]
+                       if k in indexers_dict
+                       else slice(None) for k in var.dims]
+
+                var_dims = [dim_name] + [d for d in var.dims
+                                         if d in non_indexed_dims]
                 selection = take(var, tuple(slc))
                 var_subset = type(var)(var_dims, selection, var.attrs)
                 variables[name] = var_subset
@@ -1286,12 +1288,12 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         coord_names = set(coords) & set(variables)
 
         dset = self._replace_vars_and_dims(variables, coord_names=coord_names)
-        # Add the dim coord to the new dset. Must be done after creation because
-        # _replace_vars_and_dims can only access existing coords, not add new ones
+        # Add the dim coord to the new dset. Must be done after creation
+        # because_replace_vars_and_dims can only access existing coords,
+        # not add new ones
         if dim_coord is not None:
             dset.coords[dim_name] = dim_coord
         return dset
-
 
     def sel_points(self, dim='points', method=None, tolerance=None,
                    **indexers):
