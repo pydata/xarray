@@ -136,7 +136,7 @@ def test_set_numpy_options():
     original_options = np.get_printoptions()
     with formatting.set_numpy_options(threshold=10):
         assert len(repr(np.arange(500))) < 200
-    # original optiosn are restored
+    # original options are restored
     assert np.get_printoptions() == original_options
 
 
