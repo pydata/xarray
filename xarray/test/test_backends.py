@@ -1034,20 +1034,6 @@ class DaskTest(TestCase, DatasetIOTestCases):
             with open_mfdataset(tmp, preprocess=preprocess) as actual:
                 self.assertDatasetIdentical(expected, actual)
 
-    def test_lock(self):
-        original = Dataset({'foo': ('x', np.random.randn(10))})
-        with create_tmp_file() as tmp:
-            original.to_netcdf(tmp, format='NETCDF3_CLASSIC')
-            with open_dataset(tmp, chunks=10) as ds:
-                task = ds.foo.data.dask[ds.foo.data.name, 0]
-                self.assertIsInstance(task[-1], type(Lock()))
-            with open_mfdataset(tmp) as ds:
-                task = ds.foo.data.dask[ds.foo.data.name, 0]
-                self.assertIsInstance(task[-1], type(Lock()))
-            with open_mfdataset(tmp, engine='scipy') as ds:
-                task = ds.foo.data.dask[ds.foo.data.name, 0]
-                self.assertNotIsInstance(task[-1], type(Lock()))
-
     def test_save_mfdataset_roundtrip(self):
         original = Dataset({'foo': ('x', np.random.randn(10))})
         datasets = [original.isel(x=slice(5)),

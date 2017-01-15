@@ -905,6 +905,83 @@ class TestDataArray(TestCase):
         actual = array.swap_dims({'x': 'y'})
         self.assertDataArrayIdentical(expected, actual)
 
+    def test_set_index(self):
+        indexes = [self.mindex.get_level_values(n) for n in self.mindex.names]
+        coords = {idx.name: ('x', idx) for idx in indexes}
+        array = DataArray(self.mda.values, coords=coords, dims='x')
+        expected = self.mda.copy()
+        level_3 = ('x', [1, 2, 3, 4])
+        array['level_3'] = level_3
+        expected['level_3'] = level_3
+
+        obj = array.set_index(x=self.mindex.names)
+        self.assertDataArrayIdentical(obj, expected)
+
+        obj = obj.set_index(x='level_3', append=True)
+        expected = array.set_index(x=['level_1', 'level_2', 'level_3'])
+        self.assertDataArrayIdentical(obj, expected)
+
+        array.set_index(x=['level_1', 'level_2', 'level_3'], inplace=True)
+        self.assertDataArrayIdentical(array, expected)
+
+        array2d = DataArray(np.random.rand(2, 2),
+                            coords={'x': ('x', [0, 1]),
+                                    'level': ('y', [1, 2])},
+                            dims=('x', 'y'))
+        with self.assertRaisesRegexp(ValueError, 'dimension mismatch'):
+            array2d.set_index(x='level')
+
+    def test_reset_index(self):
+        indexes = [self.mindex.get_level_values(n) for n in self.mindex.names]
+        coords = {idx.name: ('x', idx) for idx in indexes}
+        expected = DataArray(self.mda.values, coords=coords, dims='x')
+
+        obj = self.mda.reset_index('x')
+        self.assertDataArrayIdentical(obj, expected)
+        obj = self.mda.reset_index(self.mindex.names)
+        self.assertDataArrayIdentical(obj, expected)
+        obj = self.mda.reset_index(['x', 'level_1'])
+        self.assertDataArrayIdentical(obj, expected)
+
+        coords = {'x': ('x', self.mindex.droplevel('level_1')),
+                  'level_1': ('x', self.mindex.get_level_values('level_1'))}
+        expected = DataArray(self.mda.values, coords=coords, dims='x')
+        obj = self.mda.reset_index(['level_1'])
+        self.assertDataArrayIdentical(obj, expected)
+
+        expected = DataArray(self.mda.values, dims='x')
+        obj = self.mda.reset_index('x', drop=True)
+        self.assertDataArrayIdentical(obj, expected)
+
+        array = self.mda.copy()
+        array.reset_index(['x'], drop=True, inplace=True)
+        self.assertDataArrayIdentical(array, expected)
+
+        # single index
+        array = DataArray([1, 2], coords={'x': ['a', 'b']}, dims='x')
+        expected = DataArray([1, 2], coords={'x_': ('x', ['a', 'b'])},
+                             dims='x')
+        self.assertDataArrayIdentical(array.reset_index('x'), expected)
+
+    def test_reorder_levels(self):
+        midx = self.mindex.reorder_levels(['level_2', 'level_1'])
+        expected = DataArray(self.mda.values, coords={'x': midx}, dims='x')
+
+        obj = self.mda.reorder_levels(x=['level_2', 'level_1'])
+        self.assertDataArrayIdentical(obj, expected)
+
+        array = self.mda.copy()
+        array.reorder_levels(x=['level_2', 'level_1'], inplace=True)
+        self.assertDataArrayIdentical(array, expected)
+
+        array = DataArray([1, 2], dims='x')
+        with self.assertRaises(KeyError):
+            array.reorder_levels(x=['level_1', 'level_2'])
+
+        array['x'] = [0, 1]
+        with self.assertRaisesRegexp(ValueError, 'has no MultiIndex'):
+            array.reorder_levels(x=['level_1', 'level_2'])
+
     def test_dataset_getitem(self):
         dv = self.ds['foo']
         self.assertDataArrayIdentical(dv, self.dv)
@@ -2304,7 +2381,9 @@ def da(request):
         return da
 
     if request.param == 2:
-        return DataArray([0, np.nan, 1, 2, np.nan, 3, 4, 5, np.nan, 6, 7], dims='time')
+        return DataArray([0, np.nan, 1, 2, np.nan, 3, 4, 5, np.nan, 6, 7],
+                         dims='time')
+
 
 def test_rolling_iter(da):
 
@@ -2316,8 +2395,9 @@ def test_rolling_iter(da):
     for i, (label, window_da) in enumerate(rolling_obj):
         assert label == da['time'].isel(time=i)
 
+
 def test_rolling_properties(da):
-    pytest.importorskip('bottleneck')
+    pytest.importorskip('bottleneck', minversion='1.0')
 
     rolling_obj = da.rolling(time=4)
 
