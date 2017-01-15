@@ -84,6 +84,10 @@ Breaking changes
 - By default ``to_netcdf()`` add a ``_FillValue = NaN`` attributes to float types.
   By `Frederic Laliberte <https://github.com/laliberte>`_.
 
+- ``repr`` on ``DataArray`` objects uses an shortened display for NumPy array
+  data (:issue:`TBD`).
+  By `Stephan Hoyer <https://github.com/shoyer>`_.
+
 - xarray no longer supports python 3.3, versions of dask prior to v0.9.0,
   or versions of bottleneck prior to v1.0.
 

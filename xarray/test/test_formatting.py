@@ -130,3 +130,26 @@ class TestFormatting(TestCase):
         expected = '2300-12-01'
         result = formatting.format_timestamp(date)
         self.assertEqual(result, expected)
+
+
+def test_set_numpy_options():
+    original_options = np.get_printoptions()
+    with formatting.set_numpy_options(threshold=10):
+        assert len(repr(np.arange(500))) < 200
+    # original optiosn are restored
+    assert np.get_printoptions() == original_options
+
+
+def test_short_array_repr():
+    cases = [
+        np.random.randn(500),
+        np.random.randn(20, 20),
+        np.random.randn(5, 10, 15),
+        np.random.randn(5, 10, 15, 3),
+    ]
+    # number of lines:
+    # for default numpy repr: 167, 140, 254, 248
+    # for short_array_repr: 1, 7, 24, 19
+    for array in cases:
+        num_lines = formatting.short_array_repr(array).count('\n') + 1
+        assert num_lines < 30
