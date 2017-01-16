@@ -472,6 +472,21 @@ def test_broadcast_compat_data_2d():
     assert_identical(data.T[None, :, :, None],
                      broadcast_compat_data(var, ('w', 'y', 'x', 'z'), ()))
 
+"""
+def test_data_vars_join():
+    ds0 = xr.Dataset({'a': ('x', [1, 2]), 'x': [0, 1]})
+    ds1 = xr.Dataset({'a': ('x', [99, 3]), 'x': [1, 2]})
+    ds2 = xr.Dataset({'b': ('x', [99, 3]), 'x': [1, 2]})
+    import numpy as np
+    def add(a, b, join, data_vars_join):
+        return apply_ufunc(operator.add, a, b, join=join,
+                           data_vars_join=data_vars_join,
+                           dataset_fill_value=np.nan)
+    out = add(ds0, ds2, 'outer', 'outer')
+    import pdb; pdb.set_trace()
+    print('done')
+"""
+
 
 class _NoCacheVariable(xr.Variable):
     """Subclass of Variable for testing that does not cache values."""

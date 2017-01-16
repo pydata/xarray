@@ -201,6 +201,7 @@ def apply_dataarray_ufunc(func, *args, **kwargs):
 
     signature = kwargs.pop('signature')
     join = kwargs.pop('join', 'inner')
+    keep_attrs = kwargs.pop('keep_attrs', True)
     exclude_dims = kwargs.pop('exclude_dims', _DEFAULT_FROZEN_SET)
     if kwargs:
         raise TypeError('apply_dataarray_ufunc() got unexpected keyword '
@@ -330,6 +331,7 @@ def apply_dataset_ufunc(func, *args, **kwargs):
     """
     signature = kwargs.pop('signature')
     join = kwargs.pop('join', 'inner')
+    keep_attrs = kwargs.pop('keep_attrs', True)
     data_vars_join = kwargs.pop('data_vars_join', 'inner')
     fill_value = kwargs.pop('fill_value', None)
     exclude_dims = kwargs.pop('exclude_dims', _DEFAULT_FROZEN_SET)
@@ -591,6 +593,8 @@ def apply_ufunc(func, *args, **kwargs):
         - 'inner': take only overlapped variables
         - 'left': take only variables from the first object
         - 'right': take only variables from the last object
+    keep_attrs: boolean, Optional
+        Whether to copy attributes from the first argument to the output.
     exclude_dims : set, optional
         Dimensions to exclude from alignment and broadcasting. Any inputs
         coordinates along these dimensions will be dropped. Each excluded
@@ -675,6 +679,7 @@ def apply_ufunc(func, *args, **kwargs):
     signature = kwargs.pop('signature', None)
     join = kwargs.pop('join', 'inner')
     data_vars_join = kwargs.pop('data_vars_join', 'inner')
+    keep_attrs = kwargs.pop('keep_attrs', True)
     exclude_dims = kwargs.pop('exclude_dims', frozenset())
     dataset_fill_value = kwargs.pop('dataset_fill_value', None)
     kwargs_ = kwargs.pop('kwargs', None)
@@ -709,17 +714,20 @@ def apply_ufunc(func, *args, **kwargs):
             apply_ufunc, func, signature=signature, join=join,
             dask_array=dask_array, exclude_dims=exclude_dims,
             dataset_fill_value=dataset_fill_value,
-            data_vars_join=data_vars_join)
+            data_vars_join=data_vars_join,
+            keep_attrs=keep_attrs)
         return apply_groupby_ufunc(this_apply, *args)
     elif any(is_dict_like(a) for a in args):
         return apply_dataset_ufunc(variables_ufunc, *args, signature=signature,
                                    join=join, exclude_dims=exclude_dims,
                                    fill_value=dataset_fill_value,
-                                   data_vars_join=data_vars_join)
+                                   data_vars_join=data_vars_join,
+                                   keep_attrs=keep_attrs)
     elif any(isinstance(a, DataArray) for a in args):
         return apply_dataarray_ufunc(variables_ufunc, *args,
                                      signature=signature,
-                                     join=join, exclude_dims=exclude_dims)
+                                     join=join, exclude_dims=exclude_dims,
+                                     keep_attrs=keep_attrs)
     elif any(isinstance(a, Variable) for a in args):
         return variables_ufunc(*args)
     else:
