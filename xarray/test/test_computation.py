@@ -472,20 +472,35 @@ def test_broadcast_compat_data_2d():
     assert_identical(data.T[None, :, :, None],
                      broadcast_compat_data(var, ('w', 'y', 'x', 'z'), ()))
 
-"""
+
 def test_data_vars_join():
+    import numpy as np
     ds0 = xr.Dataset({'a': ('x', [1, 2]), 'x': [0, 1]})
     ds1 = xr.Dataset({'a': ('x', [99, 3]), 'x': [1, 2]})
-    ds2 = xr.Dataset({'b': ('x', [99, 3]), 'x': [1, 2]})
-    import numpy as np
+
     def add(a, b, join, data_vars_join):
         return apply_ufunc(operator.add, a, b, join=join,
-                           data_vars_join=data_vars_join,
-                           dataset_fill_value=np.nan)
-    out = add(ds0, ds2, 'outer', 'outer')
-    import pdb; pdb.set_trace()
-    print('done')
-"""
+                           data_vars_join=data_vars_join)
+
+    actual = add(ds0, ds1, 'outer', 'inner')
+    expected = xr.Dataset({'a': ('x', [np.nan, 101, np.nan]),
+                           'x': [0, 1, 2]})
+    assert_identical(actual, expected)
+
+    actual = add(ds0, ds1, 'outer', 'outer')
+    assert_identical(actual, expected)
+
+    # if variables don't match, join will perform add with np.nan
+    ds2 = xr.Dataset({'b': ('x', [99, 3]), 'x': [1, 2]})
+    actual = add(ds0, ds2, 'outer', 'inner')
+    expected = xr.Dataset({'x': [0, 1, 2]})
+    assert_identical(actual, expected)
+
+    actual = add(ds0, ds2, 'outer', 'outer')
+    expected = xr.Dataset({'a': ('x', [np.nan, np.nan, np.nan]),
+                           'b': ('x', [np.nan, np.nan, np.nan]),
+                           'x': [0, 1, 2]})
+    assert_identical(actual, expected)
 
 
 class _NoCacheVariable(xr.Variable):

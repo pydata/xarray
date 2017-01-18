@@ -8,6 +8,8 @@ import itertools
 import operator
 import re
 
+import numpy as np
+
 from . import ops
 from .alignment import deep_align
 from .merge import expand_and_merge_variables
@@ -201,7 +203,6 @@ def apply_dataarray_ufunc(func, *args, **kwargs):
 
     signature = kwargs.pop('signature')
     join = kwargs.pop('join', 'inner')
-    keep_attrs = kwargs.pop('keep_attrs', True)
     exclude_dims = kwargs.pop('exclude_dims', _DEFAULT_FROZEN_SET)
     if kwargs:
         raise TypeError('apply_dataarray_ufunc() got unexpected keyword '
@@ -331,20 +332,17 @@ def apply_dataset_ufunc(func, *args, **kwargs):
     """
     signature = kwargs.pop('signature')
     join = kwargs.pop('join', 'inner')
-    keep_attrs = kwargs.pop('keep_attrs', True)
     data_vars_join = kwargs.pop('data_vars_join', 'inner')
     fill_value = kwargs.pop('fill_value', None)
     exclude_dims = kwargs.pop('exclude_dims', _DEFAULT_FROZEN_SET)
     if kwargs:
         raise TypeError('apply_dataset_ufunc() got unexpected keyword '
                         'arguments: %s' % list(kwargs))
-
     if len(args) > 1:
         args = deep_align(args, join=join, copy=False, exclude=exclude_dims,
                           raise_on_invalid=False)
 
     list_of_coords = build_output_coords(args, signature, exclude_dims)
-
     args = [getattr(arg, 'data_vars', arg) for arg in args]
 
     result_vars = apply_dict_of_variables_ufunc(
@@ -681,7 +679,7 @@ def apply_ufunc(func, *args, **kwargs):
     data_vars_join = kwargs.pop('data_vars_join', 'inner')
     keep_attrs = kwargs.pop('keep_attrs', True)
     exclude_dims = kwargs.pop('exclude_dims', frozenset())
-    dataset_fill_value = kwargs.pop('dataset_fill_value', None)
+    dataset_fill_value = kwargs.pop('dataset_fill_value', np.nan)
     kwargs_ = kwargs.pop('kwargs', None)
     dask_array = kwargs.pop('dask_array', 'forbidden')
     if kwargs:
@@ -714,20 +712,25 @@ def apply_ufunc(func, *args, **kwargs):
             apply_ufunc, func, signature=signature, join=join,
             dask_array=dask_array, exclude_dims=exclude_dims,
             dataset_fill_value=dataset_fill_value,
-            data_vars_join=data_vars_join,
-            keep_attrs=keep_attrs)
+            data_vars_join=data_vars_join)
         return apply_groupby_ufunc(this_apply, *args)
     elif any(is_dict_like(a) for a in args):
-        return apply_dataset_ufunc(variables_ufunc, *args, signature=signature,
-                                   join=join, exclude_dims=exclude_dims,
-                                   fill_value=dataset_fill_value,
-                                   data_vars_join=data_vars_join,
-                                   keep_attrs=keep_attrs)
+        first_obj = args[0]
+        out = apply_dataset_ufunc(variables_ufunc, *args, signature=signature,
+                                  join=join, exclude_dims=exclude_dims,
+                                  fill_value=dataset_fill_value,
+                                  data_vars_join=data_vars_join)
+        if keep_attrs and (type(first_obj) is type(out)):
+            out._copy_attrs_from(first_obj)
+        return out
     elif any(isinstance(a, DataArray) for a in args):
-        return apply_dataarray_ufunc(variables_ufunc, *args,
-                                     signature=signature,
-                                     join=join, exclude_dims=exclude_dims,
-                                     keep_attrs=keep_attrs)
+        first_obj = args[0]
+        out = apply_dataarray_ufunc(variables_ufunc, *args,
+                                    signature=signature,
+                                    join=join, exclude_dims=exclude_dims)
+        if keep_attrs and (type(first_obj) is type(out)):
+            out._copy_attrs_from(first_obj)
+        return out
     elif any(isinstance(a, Variable) for a in args):
         return variables_ufunc(*args)
     else:

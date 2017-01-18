@@ -1075,7 +1075,7 @@ class DataArray(AbstractArray, BaseDataObject):
         ds = self._to_temp_dataset().dropna(dim, how=how, thresh=thresh)
         return self._from_temp_dataset(ds)
 
-    def fillna(self, value, join="left"):
+    def fillna(self, value):
         """Fill missing values in this object.
 
         This operation follows the normal broadcasting and alignment rules that
@@ -1089,14 +1089,7 @@ class DataArray(AbstractArray, BaseDataObject):
             Used to fill all matching missing values in this array. If the
             argument is a DataArray, it is first aligned with (reindexed to)
             this array.
-        join : {'outer', 'inner', 'left', 'right'}, optional
-            Method for joining the indexes of the passed objects along each
-            dimension
-            - 'outer': use the union of object indexes
-            - 'inner': use the intersection of object indexes
-            - 'left': use indexes from the first object with each dimension
-            - 'right': use indexes from the last object with each dimension
-            
+
         Returns
         -------
         DataArray
@@ -1104,8 +1097,7 @@ class DataArray(AbstractArray, BaseDataObject):
         if utils.is_dict_like(value):
             raise TypeError('cannot provide fill value as a dictionary with '
                             'fillna on a DataArray')
-        out = ops.fillna(self, value, join=join)
-        out.attrs = self.attrs
+        out = ops.fillna(self, value, join="left")
         return out
 
     def combine_first(self, other):
@@ -1124,7 +1116,7 @@ class DataArray(AbstractArray, BaseDataObject):
         -------
         DataArray
         """
-        return self.fillna(other, join="outer")
+        return ops.fillna(self, other, join="outer")
 
     def reduce(self, func, dim=None, axis=None, keep_attrs=False, **kwargs):
         """Reduce this array by applying `func` along some dimension(s).

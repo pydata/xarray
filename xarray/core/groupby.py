@@ -383,7 +383,6 @@ class GroupBy(object):
         DataArray.fillna
         """
         out = ops.fillna(self, value)
-        out._copy_attrs_from(self._obj)
         return out
 
     def where(self, cond):

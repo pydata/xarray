@@ -1934,7 +1934,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
 
         return self.isel(**{dim: mask})
 
-    def fillna(self, value, join="left"):
+    def fillna(self, value):
         """Fill missing values in this object.
 
         This operation follows the normal broadcasting and alignment rules that
@@ -1950,13 +1950,6 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
             fill all data with aligned coordinates (for DataArrays).
             Dictionaries or datasets match data variables and then align
             coordinates if necessary.
-        join : {'outer', 'inner', 'left', 'right'}, optional
-            Method for joining the indexes of the passed objects along each
-            dimension
-            - 'outer': use the union of object indexes
-            - 'inner': use the intersection of object indexes
-            - 'left': use indexes from the first object with each dimension
-            - 'right': use indexes from the last object with each dimension
 
         Returns
         -------
@@ -1967,8 +1960,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
             if not set(value_keys) <= set(self.data_vars.keys()):
                 raise ValueError('all variables in the argument to `fillna` '
                                  'must be contained in the original dataset')
-        out = ops.fillna(self, value, join=join)
-        out._copy_attrs_from(self)
+        out = ops.fillna(self, value, join="left")
         return out
 
     def combine_first(self, other):
@@ -1988,7 +1980,6 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         DataArray
         """
         out = ops.fillna(self, other, join="outer", data_vars_join="outer")
-        out._copy_attrs_from(self)
         return out
 
     def reduce(self, func, dim=None, keep_attrs=False, numeric_only=False,
@@ -2396,7 +2387,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
     def _copy_attrs_from(self, other):
         self.attrs = other.attrs
         for v in other.variables:
-            self.variables[v].attrs = other.variables[v].attrs
+            if v in self.variables:
+                self.variables[v].attrs = other.variables[v].attrs
 
     def diff(self, dim, n=1, label='upper'):
         """Calculate the n-th order discrete difference along given axis.
