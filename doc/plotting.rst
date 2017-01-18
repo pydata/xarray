@@ -482,11 +482,26 @@ This script will plot the air temperature on a map.
 .. ipython:: python
 
     import cartopy.crs as ccrs
-    air = xr.tutorial.load_dataset('air_temperature').air.isel(time=0)
+    air = xr.tutorial.load_dataset('air_temperature').air
     ax = plt.axes(projection=ccrs.Orthographic(-80, 35))
-    air.plot.contourf(ax=ax, transform=ccrs.PlateCarree());
+    air.isel(time=0).plot.contourf(ax=ax, transform=ccrs.PlateCarree());
     @savefig plotting_maps_cartopy.png width=100%
     ax.set_global(); ax.coastlines();
+
+When faceting on maps, the projection can be transferred to the ``plot``
+function using the ``subplot_kws`` keyword. The axes for the subplots created
+by faceting are accessible in the object returned by ``plot``:
+
+.. ipython:: python
+
+    p = air.isel(time=[0, 4]).plot(transform=ccrs.PlateCarree(), col='time',
+                                   subplot_kws={'projection': ccrs.Orthographic(-80, 35)})
+    for ax in p.axes.flat:
+        ax.coastlines()
+        ax.gridlines()
+    @savefig plotting_maps_cartopy_facetting.png width=100%
+    plt.show();
+
 
 Details
 -------
