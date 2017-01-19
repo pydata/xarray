@@ -16,4 +16,4 @@ dependencies:
   - hdf4=4.2.12  # temporary install to get netCD4 working (GH1106)
   - cartopy=0.14.3
   - pip:
-    - git+https://github.com/takluyver/ipython.git@i8733
+    - git+https://github.com/fmaussion/ipython.git@directive
