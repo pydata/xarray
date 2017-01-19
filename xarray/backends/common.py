@@ -5,7 +5,6 @@ import numpy as np
 import logging
 import time
 import traceback
-import threading
 from collections import Mapping
 from distutils.version import StrictVersion
 
@@ -108,7 +107,6 @@ class AbstractDataStore(Mapping):
         This function will be called anytime variables or attributes
         are requested, so care should be taken to make sure its fast.
         """
-        self.encoding = self.get_encoding()
         variables = FrozenOrderedDict((_decode_variable_name(k), v) for k, v in
                                       iteritems(self.get_variables()))
         attributes = FrozenOrderedDict(self.get_attrs())

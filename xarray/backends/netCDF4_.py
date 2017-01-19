@@ -208,7 +208,6 @@ class NetCDF4DataStore(WritableCFDataStore, DataStorePickleMixin):
         self._opener = opener
         self._filename = filename
         self._mode = 'a' if mode == 'w' else mode
-        self.encoding = {}
         super(NetCDF4DataStore, self).__init__(writer)
 
     def open_store_variable(self, name, var):
@@ -277,8 +276,6 @@ class NetCDF4DataStore(WritableCFDataStore, DataStorePickleMixin):
             variable = encode_nc3_variable(variable)
             datatype = variable.dtype
 
-        if unlimited_dims is None:
-            unlimited_dims = self.encoding.get('unlimited_dims', set())
         self.set_necessary_dimensions(variable, unlimited_dims=unlimited_dims)
 
         fill_value = attrs.pop('_FillValue', None)

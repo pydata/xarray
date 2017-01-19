@@ -561,8 +561,9 @@ def to_netcdf(dataset, path=None, mode='w', format=None, group=None,
     sync = writer is None
 
     store = store_cls(path, mode, format, group, writer)
-    # Copy dataset encoding to datastore
-    store.encoding = dataset.encoding
+
+    if unlimited_dims is None:
+        unlimited_dims = dataset.encoding.get('unlimited_dims', None)
     try:
         dataset.dump_to_store(store, sync=sync, encoding=encoding,
                               unlimited_dims=unlimited_dims)

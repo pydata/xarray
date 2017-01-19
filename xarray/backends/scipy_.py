@@ -121,13 +121,12 @@ class ScipyDataStore(WritableCFDataStore, DataStorePickleMixin):
         return set(k for k, v in iteritems(self.ds.dimensions) if v is None)
 
     def get_dimensions(self):
-        self._unlimited_dimensions = self._get_unlimited_dimensions()
         return Frozen(self.ds.dimensions)
 
     def get_encoding(self):
         encoding = {}
-        encoding['unlimited_dims'] = set(
-            [k for k, v in self.ds.dimensions.items() if v is None])
+        encoding['unlimited_dims'] = {
+            k for k, v in self.ds.dimensions.items() if v is None}
         return encoding
 
     def set_dimension(self, name, length):
@@ -151,10 +150,8 @@ class ScipyDataStore(WritableCFDataStore, DataStorePickleMixin):
         if check_encoding and variable.encoding:
             raise ValueError('unexpected encoding for scipy backend: %r'
                              % list(variable.encoding))
-        if unlimited_dims is None:
-            unlimited_dims = self.encoding.get('unlimited_dims', set())
 
-        if len(unlimited_dims) > 1:
+        if unlimited_dims is not None and len(unlimited_dims) > 1:
             raise ValueError('NETCDF3 only supports one unlimited dimension')
         self.set_necessary_dimensions(variable, unlimited_dims=unlimited_dims)
 
