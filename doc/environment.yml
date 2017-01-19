@@ -10,10 +10,9 @@ dependencies:
   - matplotlib=1.5.3
   - seaborn=0.7.1
   - dask=0.12.0
-  - ipython=4.0.3  # https://github.com/ipython/ipython/issues/8733
   - sphinx=1.5
   - netCDF4=1.2.5
   - hdf4=4.2.12  # temporary install to get netCD4 working (GH1106)
   - cartopy=0.14.3
   - pip:
-    - git+https://github.com/fmaussion/ipython.git@directive
+    - git+https://github.com/takluyver/ipython.git@i8733
