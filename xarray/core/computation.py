@@ -18,6 +18,8 @@ from .utils import is_dict_like
 
 
 _DEFAULT_FROZEN_SET = frozenset()
+_DEFAULT_FILL_VALUE = object()
+
 
 # see http://docs.scipy.org/doc/numpy/reference/c-api.generalized-ufuncs.html
 DIMENSION_NAME = r'\w+'
@@ -204,6 +206,8 @@ def apply_dataarray_ufunc(func, *args, **kwargs):
     signature = kwargs.pop('signature')
     join = kwargs.pop('join', 'inner')
     exclude_dims = kwargs.pop('exclude_dims', _DEFAULT_FROZEN_SET)
+    keep_attrs = kwargs.pop('keep_attrs', False)
+    first_obj = args[0]  # we'll copy attrs from this in case keep_attrs=True
     if kwargs:
         raise TypeError('apply_dataarray_ufunc() got unexpected keyword '
                         'arguments: %s' % list(kwargs))
@@ -219,12 +223,18 @@ def apply_dataarray_ufunc(func, *args, **kwargs):
     result_var = func(*data_vars)
 
     if signature.n_outputs > 1:
-        return tuple(DataArray(variable, coords, name=name, fastpath=True)
-                     for variable, coords in zip(result_var, result_coords))
+        out = tuple(DataArray(variable, coords, name=name, fastpath=True)
+                    for variable, coords in zip(result_var, result_coords))
     else:
         coords, = result_coords
-        return DataArray(result_var, coords, name=name, fastpath=True)
+        out = DataArray(result_var, coords, name=name, fastpath=True)
 
+    if keep_attrs and isinstance(first_obj, DataArray):
+        if isinstance(out, tuple):
+            out = tuple(ds._copy_attrs_from(first_obj) for ds in out)
+        else:
+            out._copy_attrs_from(first_obj)
+    return out
 
 def ordered_set_union(all_keys):
     # type: List[Iterable] -> Iterable
@@ -330,11 +340,14 @@ def apply_dataset_ufunc(func, *args, **kwargs):
     """apply_dataset_ufunc(func, *args, signature, join='inner',
                            fill_value=None, exclude_dims=frozenset()):
     """
+    from .dataset import Dataset
     signature = kwargs.pop('signature')
     join = kwargs.pop('join', 'inner')
     data_vars_join = kwargs.pop('data_vars_join', 'inner')
     fill_value = kwargs.pop('fill_value', None)
     exclude_dims = kwargs.pop('exclude_dims', _DEFAULT_FROZEN_SET)
+    keep_attrs = kwargs.pop('keep_attrs', False)
+    first_obj = args[0]  # we'll copy attrs from this in case keep_attrs=True
     if kwargs:
         raise TypeError('apply_dataset_ufunc() got unexpected keyword '
                         'arguments: %s' % list(kwargs))
@@ -350,11 +363,18 @@ def apply_dataset_ufunc(func, *args, **kwargs):
         fill_value=fill_value)
 
     if signature.n_outputs > 1:
-        return tuple(_fast_dataset(*args)
-                     for args in zip(result_vars, list_of_coords))
+        out = tuple(_fast_dataset(*args)
+                    for args in zip(result_vars, list_of_coords))
     else:
         coord_vars, = list_of_coords
-        return _fast_dataset(result_vars, coord_vars)
+        out = _fast_dataset(result_vars, coord_vars)
+
+    if keep_attrs and isinstance(first_obj, Dataset):
+        if isinstance(out, tuple):
+            out = tuple(ds._copy_attrs_from(first_obj) for ds in out)
+        else:
+            out._copy_attrs_from(first_obj)
+    return out
 
 
 def _iter_over_selections(obj, dim, values):
@@ -677,7 +697,7 @@ def apply_ufunc(func, *args, **kwargs):
     signature = kwargs.pop('signature', None)
     join = kwargs.pop('join', 'inner')
     data_vars_join = kwargs.pop('data_vars_join', 'inner')
-    keep_attrs = kwargs.pop('keep_attrs', True)
+    keep_attrs = kwargs.pop('keep_attrs', False)
     exclude_dims = kwargs.pop('exclude_dims', frozenset())
     dataset_fill_value = kwargs.pop('dataset_fill_value', np.nan)
     kwargs_ = kwargs.pop('kwargs', None)
@@ -712,25 +732,20 @@ def apply_ufunc(func, *args, **kwargs):
             apply_ufunc, func, signature=signature, join=join,
             dask_array=dask_array, exclude_dims=exclude_dims,
             dataset_fill_value=dataset_fill_value,
-            data_vars_join=data_vars_join)
+            data_vars_join=data_vars_join,
+            keep_attrs=keep_attrs)
         return apply_groupby_ufunc(this_apply, *args)
     elif any(is_dict_like(a) for a in args):
-        first_obj = args[0]
-        out = apply_dataset_ufunc(variables_ufunc, *args, signature=signature,
-                                  join=join, exclude_dims=exclude_dims,
-                                  fill_value=dataset_fill_value,
-                                  data_vars_join=data_vars_join)
-        if keep_attrs and (type(first_obj) is type(out)):
-            out._copy_attrs_from(first_obj)
-        return out
+        return apply_dataset_ufunc(variables_ufunc, *args, signature=signature,
+                                   join=join, exclude_dims=exclude_dims,
+                                   fill_value=dataset_fill_value,
+                                   data_vars_join=data_vars_join,
+                                   keep_attrs=keep_attrs)
     elif any(isinstance(a, DataArray) for a in args):
-        first_obj = args[0]
-        out = apply_dataarray_ufunc(variables_ufunc, *args,
-                                    signature=signature,
-                                    join=join, exclude_dims=exclude_dims)
-        if keep_attrs and (type(first_obj) is type(out)):
-            out._copy_attrs_from(first_obj)
-        return out
+        return apply_dataarray_ufunc(variables_ufunc, *args,
+                                     signature=signature,
+                                     join=join, exclude_dims=exclude_dims,
+                                     keep_attrs=keep_attrs)
     elif any(isinstance(a, Variable) for a in args):
         return variables_ufunc(*args)
     else:

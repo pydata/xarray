@@ -1960,7 +1960,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
             if not set(value_keys) <= set(self.data_vars.keys()):
                 raise ValueError('all variables in the argument to `fillna` '
                                  'must be contained in the original dataset')
-        out = ops.fillna(self, value, join="left")
+        out = ops.fillna(self, value)
         return out
 
     def combine_first(self, other):

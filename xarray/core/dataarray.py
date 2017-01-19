@@ -1097,7 +1097,7 @@ class DataArray(AbstractArray, BaseDataObject):
         if utils.is_dict_like(value):
             raise TypeError('cannot provide fill value as a dictionary with '
                             'fillna on a DataArray')
-        out = ops.fillna(self, value, join="left")
+        out = ops.fillna(self, value)
         return out
 
     def combine_first(self, other):
