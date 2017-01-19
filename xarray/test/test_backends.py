@@ -988,7 +988,7 @@ class H5NetCDFDataTest(BaseNetCDF4Test, TestCase):
         ds.encoding = {'unlimited_dims': ['y']}
         with pytest.warns(UserWarning):
             ds.to_netcdf('foo-bar.nc', engine='h5netcdf')
-        with pytest.raises(NotImplementedError):
+        with pytest.warns(UserWarning):
             ds.to_netcdf('foo-bar.nc', engine='h5netcdf', unlimited_dims=['y'])
 
 
