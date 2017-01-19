@@ -270,6 +270,9 @@ def join_dict_keys(objects, how='inner'):
 
 def collect_dict_values(objects, keys, fill_value=None):
     # type: (Iterable[Union[Mapping, Any]], Iterable, Any) -> List[list]
+    if fill_value is _DEFAULT_FILL_VALUE:
+        raise ValueError('Inappropriate fill value for Dataset: {}'
+                         .format(fill_value))
     return [[obj.get(key, fill_value)
              if is_dict_like(obj)
              else obj
@@ -699,7 +702,7 @@ def apply_ufunc(func, *args, **kwargs):
     data_vars_join = kwargs.pop('data_vars_join', 'inner')
     keep_attrs = kwargs.pop('keep_attrs', False)
     exclude_dims = kwargs.pop('exclude_dims', frozenset())
-    dataset_fill_value = kwargs.pop('dataset_fill_value', np.nan)
+    dataset_fill_value = kwargs.pop('dataset_fill_value', _DEFAULT_FILL_VALUE)
     kwargs_ = kwargs.pop('kwargs', None)
     dask_array = kwargs.pop('dask_array', 'forbidden')
     if kwargs:

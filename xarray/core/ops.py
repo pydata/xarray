@@ -305,7 +305,9 @@ def fillna(data, other, join="left", data_vars_join="left"):
     def _fillna(data, other):
         return where(isnull(data), other, data)
     return apply_ufunc(_fillna, data, other, join=join, dask_array="allowed",
-                       data_vars_join=data_vars_join, keep_attrs=True)
+                       data_vars_join=data_vars_join,
+                       dataset_fill_value=np.nan,
+                       keep_attrs=True)
 
 
 def where_method(data, cond, other=np.nan):
