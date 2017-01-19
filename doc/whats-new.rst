@@ -85,7 +85,7 @@ Breaking changes
   By `Frederic Laliberte <https://github.com/laliberte>`_.
 
 - ``repr`` on ``DataArray`` objects uses an shortened display for NumPy array
-  data (:issue:`TBD`).
+  data that is less likely to overflow onto multiple pages (:issue:`1207`).
   By `Stephan Hoyer <https://github.com/shoyer>`_.
 
 - xarray no longer supports python 3.3, versions of dask prior to v0.9.0,
