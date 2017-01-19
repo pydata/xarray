@@ -211,6 +211,12 @@ if not on_rtd:  # only import and set the theme if we're building docs locally
 # so a file named "default.css" will overwrite the builtin "default.css".
 html_static_path = ['_static']
 
+# attempt to fix https://github.com/ipython/ipython/issues/8733
+ipython_savefig_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                                   '_build','html','_static')
+if not os.path.exists(ipython_savefig_dir):
+    os.makedirs(ipython_savefig_dir)
+
 # Add any extra paths that contain custom files (such as robots.txt or
 # .htaccess) here, relative to this directory. These files are copied
 # directly to the root of the documentation.
