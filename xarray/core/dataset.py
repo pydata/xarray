@@ -277,6 +277,11 @@ class DataVariables(Mapping, formatting.ReprMixin):
     def __unicode__(self):
         return formatting.vars_repr(self)
 
+    @property
+    def variables(self):
+        all_variables = self._dataset.variables
+        return Frozen(OrderedDict((k, all_variables[k]) for k in self))
+
 
 class _LocIndexer(object):
     def __init__(self, dataset):
@@ -503,9 +508,9 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
     __default_attrs = object()
 
     @classmethod
-    def _from_vars_and_coord_names(cls, variables, coord_names):
+    def _from_vars_and_coord_names(cls, variables, coord_names, attrs=None):
         dims = dict(calculate_dimensions(variables))
-        return cls._construct_direct(variables, coord_names, dims)
+        return cls._construct_direct(variables, coord_names, dims, attrs)
 
     def _replace_vars_and_dims(self, variables, coord_names=None, dims=None,
                                attrs=__default_attrs, inplace=False):
@@ -852,9 +857,11 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
             if isinstance(names, basestring):
                 names = [names]
             self._assert_all_in_dataset(names)
-            _assert_empty(
-                set(names) & set(self.dims),
-                'cannot remove index coordinates with reset_coords: %s')
+            bad_coords = set(names) & set(self.dims)
+            if bad_coords:
+                raise ValueError(
+                    'cannot remove index coordinates with reset_coords: %s'
+                    % bad_coords)
         obj = self if inplace else self.copy()
         obj._coord_names.difference_update(names)
         if drop:
@@ -2009,8 +2016,10 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         else:
             dims = set(dim)
 
-        _assert_empty([dim for dim in dims if dim not in self.dims],
-                      'Dataset does not contain the dimensions: %s')
+        missing_dimensions = [dim for dim in dims if dim not in self.dims]
+        if missing_dimensions:
+            raise ValueError('Dataset does not contain the dimensions: %s'
+                             % missing_dimensions)
 
         variables = OrderedDict()
         for name, var in iteritems(self._variables):

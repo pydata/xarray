@@ -1,5 +1,8 @@
 # CI on Windows via appveyor
 # This file was based on Olivier Grisel's python-appveyor-demo
+branches:
+  except:
+    - fix-docs
 
 environment:
 

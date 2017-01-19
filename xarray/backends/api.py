@@ -3,7 +3,6 @@ from __future__ import division
 from __future__ import print_function
 import gzip
 import os.path
-import threading
 from distutils.version import StrictVersion
 from glob import glob
 from io import BytesIO
@@ -12,7 +11,7 @@ from numbers import Number
 import numpy as np
 
 from .. import backends, conventions
-from .common import ArrayWriter
+from .common import ArrayWriter, GLOBAL_LOCK
 from ..core import indexing
 from ..core.combine import auto_combine
 from ..core.utils import close_on_error, is_remote_uri
@@ -55,9 +54,6 @@ def _normalize_path(path):
         return os.path.abspath(os.path.expanduser(path))
 
 
-_global_lock = threading.Lock()
-
-
 def _default_lock(filename, engine):
     if filename.endswith('.gz'):
         lock = False
@@ -71,9 +67,9 @@ def _default_lock(filename, engine):
             else:
                 # TODO: identify netcdf3 files and don't use the global lock
                 # for them
-                lock = _global_lock
+                lock = GLOBAL_LOCK
         elif engine in {'h5netcdf', 'pynio'}:
-            lock = _global_lock
+            lock = GLOBAL_LOCK
         else:
             lock = False
     return lock

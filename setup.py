@@ -8,11 +8,11 @@ from setuptools import setup, find_packages
 from setuptools import Command
 
 MAJOR = 0
-MINOR = 8
-MICRO = 2
+MINOR = 9
+MICRO = 0
 ISRELEASED = False
 VERSION = '%d.%d.%d' % (MAJOR, MINOR, MICRO)
-QUALIFIER = ''
+QUALIFIER = 'rc1'
 
 
 DISTNAME = 'xarray'
@@ -29,7 +29,6 @@ CLASSIFIERS = [
     'Programming Language :: Python :: 2',
     'Programming Language :: Python :: 2.7',
     'Programming Language :: Python :: 3',
-    'Programming Language :: Python :: 3.3',
     'Programming Language :: Python :: 3.4',
     'Programming Language :: Python :: 3.5',
     'Topic :: Scientific/Engineering',

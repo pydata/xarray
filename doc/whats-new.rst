@@ -18,16 +18,17 @@ What's New
 v0.9.0 (unreleased)
 -------------------
 
+This major release includes five months worth of enhancements and bug fixes from
+23 contributors, including some significant changes that are not fully backwards
+compatible. Highlights include:
+
+- Coordinates are now *optional* in the xarray data model, even for dimensions
+- Changes to caching, lazy loading and pickling to improve xarray's experience
+  for parallel computing
+- Improvements for accessing and manipulating ``pandas.MultiIndex`` levels
+
 Breaking changes
 ~~~~~~~~~~~~~~~~
-
-- ``DataArray.rename()`` behavior changed to strictly change the ``DataArray.name``
-  if called with string argument, or strictly change coordinate names if called with
-  dict-like argument.
-  By `Markus Gonser <https://github.com/magonser>`_.
-
-- By default ``to_netcdf()`` add a ``_FillValue = NaN`` attributes to float types.
-  By `Frederic Laliberte <https://github.com/laliberte>`_.
 
 - Index coordinates for each dimensions are now optional, and no longer created
   by default :issue:`1017`. This has a number of implications:
@@ -62,7 +63,7 @@ Breaking changes
   By `Guido Imperiale <https://github.com/crusaderky>`_ and
   `Stephan Hoyer <https://github.com/shoyer>`_.
 - Pickling a ``Dataset`` or ``DataArray`` linked to a file on disk no longer
-  caches its values into memory before pickling :issue:`1128`. Instead, pickle
+  caches its values into memory before pickling (:issue:`1128`). Instead, pickle
   stores file paths and restores objects by reopening file references. This
   enables preliminary, experimental use of xarray for opening files with
   `dask.distributed <https://distributed.readthedocs.io>`_.
@@ -70,7 +71,21 @@ Breaking changes
 - Coordinates used to index a dimension are now loaded eagerly into
   :py:class:`pandas.Index` objects, instead of loading the values lazily.
   By `Guido Imperiale <https://github.com/crusaderky>`_.
-- xarray no longer supports python 3.3
+- Automatic levels for 2d plots are now guaranteed to land on ``vmin`` and
+  ``vmax`` when these kwargs are explicitly provided (:issue:`1191`). The
+  automated level selection logic also slightly changed.
+  By `Fabien Maussion <https://github.com/fmaussion>`_.
+
+- ``DataArray.rename()`` behavior changed to strictly change the ``DataArray.name``
+  if called with string argument, or strictly change coordinate names if called with
+  dict-like argument.
+  By `Markus Gonser <https://github.com/magonser>`_.
+
+- By default ``to_netcdf()`` add a ``_FillValue = NaN`` attributes to float types.
+  By `Frederic Laliberte <https://github.com/laliberte>`_.
+
+- xarray no longer supports python 3.3, versions of dask prior to v0.9.0,
+  or versions of bottleneck prior to v1.0.
 
 Deprecations
 ~~~~~~~~~~~~
@@ -226,6 +241,13 @@ Bug fixes
 
 - Fixed a bug with facetgrid (the ``norm`` keyword was ignored, :issue:`1159`).
   By `Fabien Maussion <https://github.com/fmaussion>`_.
+
+- Resolved a concurrency bug that could cause Python to crash when
+  simultaneously reading and writing netCDF4 files with dask (:issue:`1172`).
+  By `Stephan Hoyer <https://github.com/shoyer>`_.
+
+- Fix to make ``.copy()`` actually copy dask arrays, which will be relevant for
+  future releases of dask in which dask arrays will be mutable (:issue:`1180`).
 
 .. _whats-new.0.8.2:
 
