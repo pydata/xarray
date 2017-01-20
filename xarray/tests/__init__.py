@@ -12,8 +12,8 @@ import pytest
 from xarray.core import utils, nputils, ops
 from xarray.core.variable import as_variable
 from xarray.core.pycompat import PY3
-from xarray.testing import (decode_string_data, data_allclose_or_equiv,
-                            assert_dataset_allclose, assert_equal,
+from xarray.testing import (data_allclose_or_equiv,
+                            assert_equal,
                             assert_identical, assert_allclose)
 
 try:

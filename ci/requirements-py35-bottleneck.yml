@@ -1,0 +1,21 @@
+name: test_env
+channels:
+  - conda-forge
+dependencies:
+  - python=3.5
+  - cython
+  - dask
+  - distributed
+  - bottleneck
+  - h5py
+  - matplotlib
+  - netcdf4
+  - pytest
+  - numpy
+  - pandas
+  - seaborn
+  - scipy
+  - pip:
+    - coveralls
+    - pytest-cov
+    - h5netcdf
