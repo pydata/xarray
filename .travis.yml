@@ -18,10 +18,10 @@ matrix:
     env: CONDA_ENV=py34
   - python: 3.5
     env: CONDA_ENV=py35
-  - python: 3.5
-    env: CONDA_ENV=py35-bottleneck
   - python: 2.7
     env: CONDA_ENV=py27-pydap
+  - python: 3.5
+    env: CONDA_ENV=py35-bottleneck
   - python: 3.5
     env: CONDA_ENV=py27-netcdf4-dev
     addons:
