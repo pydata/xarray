@@ -10,10 +10,8 @@ dependencies:
   - matplotlib=1.5.3
   - seaborn=0.7.1
   - dask=0.12.0
-#  - ipython=5.1.0
+  - ipython=5.1.0
   - sphinx=1.5
   - netCDF4=1.2.5
   - hdf4=4.2.12  # temporary install to get netCD4 working (GH1106)
   - cartopy=0.14.3
-  - pip:
-    - git+https://github.com/takluyver/ipython.git@sphinx-savefig-alt
