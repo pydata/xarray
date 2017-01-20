@@ -6,8 +6,8 @@ distributed = pytest.importorskip('distributed')
 da = pytest.importorskip('dask.array')
 from distributed.utils_test import cluster, loop
 
-from xarray.test.test_backends import create_tmp_file
-from xarray.test.test_dataset import create_test_data
+from xarray.tests.test_backends import create_tmp_file
+from xarray.tests.test_dataset import create_test_data
 
 from . import assert_dataset_allclose, has_scipy, has_netCDF4, has_h5netcdf
 

@@ -15,10 +15,10 @@ from xarray import (align, broadcast, Dataset, DataArray,
 from xarray.core.pycompat import iteritems, OrderedDict
 from xarray.core.common import full_like
 
-from xarray.test import (
+from xarray.tests import (
     TestCase, ReturnItem, source_ndarray, unittest, requires_dask,
-    assert_xarray_identical, assert_xarray_equal,
-    assert_xarray_allclose, assert_array_equal)
+    assert_identical, assert_equal,
+    assert_allclose, assert_array_equal)
 
 
 class TestDataArray(TestCase):
@@ -2390,7 +2390,7 @@ def test_rolling_iter(da):
     rolling_obj = da.rolling(time=7)
 
     assert len(rolling_obj.window_labels) == len(da['time'])
-    assert_xarray_identical(rolling_obj.window_labels, da['time'])
+    assert_identical(rolling_obj.window_labels, da['time'])
 
     for i, (label, window_da) in enumerate(rolling_obj):
         assert label == da['time'].isel(time=i)
@@ -2437,7 +2437,7 @@ def test_rolling_wrapped_bottleneck(da, name, center, min_periods):
     # Test center
     rolling_obj = da.rolling(time=7, center=center)
     actual = getattr(rolling_obj, name)()['time']
-    assert_xarray_equal(actual, da['time'])
+    assert_equal(actual, da['time'])
 
 def test_rolling_invalid_args(da):
     pytest.importorskip('bottleneck')
@@ -2483,4 +2483,4 @@ def test_rolling_reduce(da, center, min_periods, window, name):
     # add nan prefix to numpy methods to get similar # behavior as bottleneck
     actual = rolling_obj.reduce(getattr(np, 'nan%s' % name))
     expected = getattr(rolling_obj, name)()
-    assert_xarray_allclose(actual, expected)
+    assert_allclose(actual, expected)
