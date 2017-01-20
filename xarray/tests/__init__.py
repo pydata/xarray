@@ -12,9 +12,7 @@ import pytest
 from xarray.core import utils, nputils, ops
 from xarray.core.variable import as_variable
 from xarray.core.pycompat import PY3
-from xarray.testing import (data_allclose_or_equiv,
-                            assert_equal,
-                            assert_identical, assert_allclose)
+from xarray.testing import assert_equal, assert_identical, assert_allclose
 
 try:
     import unittest2 as unittest

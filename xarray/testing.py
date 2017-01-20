@@ -53,24 +53,27 @@ def assert_identical(a, b):
                         .format(type(a)))
 
 
-def assert_allclose(a, b, rtol=1e-05, atol=1e-08):
+def assert_allclose(a, b, rtol=1e-05, atol=1e-08, decode_bytes=True):
     """Like numpy.testing.assert_allclose, but for xarray objects."""
     import xarray as xr
     ___tracebackhide__ = True  # noqa: F841
     assert type(a) == type(b)
     if isinstance(a, xr.Variable):
         assert a.dims == b.dims
-        allclose = data_allclose_or_equiv(
-            a.values, b.values, rtol=rtol, atol=atol)
+        allclose = data_allclose_or_equiv(a.values, b.values,
+                                          rtol=rtol, atol=atol,
+                                          decode_bytes=decode_bytes)
         assert allclose, '{}\n{}'.format(a.values, b.values)
     elif isinstance(a, xr.DataArray):
         assert_allclose(a.variable, b.variable)
+        assert set(a.coords) == set(b.coords)
         for v in a.coords.variables:
             # can't recurse with this function as coord is sometimes a
             # DataArray, so call into data_allclose_or_equiv directly
-            assert set(a.coords) == set(b.coords)
-            allclose = data_allclose_or_equiv(
-                a.coords[v].values, b.coords[v].values, rtol=rtol, atol=atol)
+            allclose = data_allclose_or_equiv(a.coords[v].values,
+                                              b.coords[v].values,
+                                              rtol=rtol, atol=atol,
+                                              decode_bytes=decode_bytes)
             assert allclose, '{}\n{}'.format(a.coords[v].values,
                                              b.coords[v].values)
     elif isinstance(a, xr.Dataset):
