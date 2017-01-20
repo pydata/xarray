@@ -21,8 +21,6 @@ matrix:
   - python: 2.7
     env: CONDA_ENV=py27-pydap
   - python: 3.5
-    env: CONDA_ENV=py35-bottleneck
-  - python: 3.5
     env: CONDA_ENV=py27-netcdf4-dev
     addons:
       apt_packages:
@@ -38,8 +36,6 @@ matrix:
   allow_failures:
   - python: 2.7
     env: CONDA_ENV=py27-pydap
-  - python: 3.5
-    env: CONDA_ENV=py35-bottleneck
   - python: 3.5
     env: CONDA_ENV=py27-netcdf4-dev
     addons:
