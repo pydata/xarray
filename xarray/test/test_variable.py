@@ -11,7 +11,7 @@ import numpy as np
 import pytz
 import pandas as pd
 
-from xarray import Variable, IndexVariable, Coordinate, Dataset, DataArray
+from xarray import Variable, IndexVariable, Coordinate, Dataset
 from xarray.core import indexing
 from xarray.core.variable import as_variable, as_compatible_data
 from xarray.core.indexing import PandasIndexAdapter, LazilyIndexedArray
@@ -979,6 +979,17 @@ class TestVariable(TestCase, VariableSubclassTestCases):
 
         with self.assertRaisesRegexp(ValueError, 'cannot supply both'):
             v.mean(dim='x', axis=0)
+
+    def test_quantile(self):
+        v = Variable(['x', 'y'], self.d)
+        for q in [0.25, [0.50], [0.25, 0.75]]:
+            for axis, dim in zip([None, 0, [0], [0, 1]],
+                                 [None, 'x', ['x'], ['x', 'y']]):
+                actual = v.quantile(q, dim=dim)
+
+                expected = np.nanpercentile(self.d, np.array(q) * 100,
+                                            axis=axis)
+                np.testing.assert_allclose(actual.values, expected)
 
     def test_big_endian_reduce(self):
         # regression test for GH489

@@ -2537,7 +2537,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
 
         return self._replace_vars_and_dims(variables)
 
-    def quantile(self, q, dim=None, interpolation='linear'):
+    def quantile(self, q, dim=None, numeric_only=False, keep_attrs=False,
+                 interpolation='linear'):
         """Compute the qth quantile of the data along the specified dimension.
 
         Returns the qth quantiles(s) of the array elements for each variable
@@ -2576,16 +2577,45 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         np.nanpercentile, pd.Series.quantile, xr.DataArray.quantile
         """
 
+        if isinstance(dim, basestring):
+            dims = set([dim])
+        elif dim is None:
+            dims = set(self.dims)
+        else:
+            dims = set(dim)
+
+        _assert_empty([dim for dim in dims if dim not in self.dims],
+                      'Dataset does not contain the dimensions: %s')
+
         q = np.asarray(q, dtype=np.float64)
 
         variables = OrderedDict()
         for name, var in iteritems(self.variables):
-            variables[name] = var.quantile(q, dim=dim,
-                                           interpolation=interpolation)
-        new = self._replace_vars_and_dims(variables)
-        if q.ndim != 0:
-            new.coords['quantile'] = Variable('quantile', q)
+            reduce_dims = [dim for dim in var.dims if dim in dims]
+            if reduce_dims or not var.dims:
+                if name not in self.coords:
+                    if (not numeric_only or
+                        np.issubdtype(var.dtype, np.number) or
+                            var.dtype == np.bool_):
+                        if len(reduce_dims) == var.ndim:
+                            # prefer to aggregate over axis=None rather than
+                            # axis=(0, 1) if they will be equivalent, because
+                            # the former is often more efficient
+                            reduce_dims = None
+                        variables[name] = var.quantile(
+                            q, dim=reduce_dims, interpolation=interpolation)
 
+            else:
+                variables[name] = var
+
+        # construct the new dataset
+        coord_names = set(k for k in self.coords if k in variables)
+        attrs = self.attrs if keep_attrs else None
+        new = self._replace_vars_and_dims(variables, coord_names, attrs=attrs)
+        if 'quantile' in new.dims:
+            new.coords['quantile'] = Variable('quantile', q)
+        else:
+            new.coords['quantile'] = q
         return new
 
     @property

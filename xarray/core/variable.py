@@ -1070,18 +1070,17 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
 
         if isinstance(self.data, dask_array_type):
             TypeError("quantile does not work for arrays stored as dask "
-                      "arrays. Load the data via .load() prior to calling "
-                      "this method.")
+                      "arrays. Load the data via .compute() or .load() prior "
+                      "to calling this method.")
 
         q = np.asarray(q, dtype=np.float64)
 
         new_dims = list(self.dims)
         if dim is not None:
+            axis = self.get_axis_num(dim)
             if utils.is_scalar(dim):
-                axis = self.get_axis_num(dim)
                 new_dims.remove(dim)
             else:
-                axis = [self.get_axis_num(d) for d in dim]
                 for d in dim:
                     new_dims.remove(d)
         else:
@@ -1094,7 +1093,6 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
 
         qs = np.nanpercentile(self.data, q * 100., axis=axis,
                               interpolation=interpolation)
-
         return Variable(new_dims, qs)
 
     @property
