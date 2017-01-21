@@ -5,6 +5,7 @@ from datetime import timedelta
 from collections import defaultdict
 import functools
 import itertools
+from distutils.version import LooseVersion
 
 import numpy as np
 import pandas as pd
@@ -1072,6 +1073,9 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
             TypeError("quantile does not work for arrays stored as dask "
                       "arrays. Load the data via .compute() or .load() prior "
                       "to calling this method.")
+        if LooseVersion(np.__version__) < LooseVersion('1.10.0'):
+            raise NotImplementedError(
+                'quantile requres numpy version 1.10.0 or later')
 
         q = np.asarray(q, dtype=np.float64)
 
