@@ -249,7 +249,7 @@ These encoding options work on any version of the netCDF file format:
   or ``'float32'``. This controls the type of the data written on disk.
 - ``_FillValue``:  Values of ``NaN`` in xarray variables are remapped to this value when
   saved on disk. This is important when converting floating point with missing values
-  to integers on disk, because ``NaN`` is not a valid dtype for integer dtypes. As a
+  to integers on disk, because ``NaN`` is not a valid value for integer dtypes. As a
   default, variables with float types are attributed a ``_FillValue`` of ``NaN`` in the
   output file.
 - ``scale_factor`` and ``add_offset``: Used to convert from encoded data on disk to

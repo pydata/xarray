@@ -6,7 +6,7 @@ Installation
 Required dependencies
 ---------------------
 
-- Python 2.7, 3.3, 3.4 or 3.5
+- Python 2.7, 3.4, 3.5, or 3.6
 - `numpy <http://www.numpy.org/>`__ (1.7 or later)
 - `pandas <http://pandas.pydata.org/>`__ (0.15.0 or later)
 
@@ -30,13 +30,15 @@ For accelerating xarray
 
 - `bottleneck <https://github.com/kwgoodman/bottleneck>`__: speeds up
   NaN-skipping and rolling window aggregations by a large factor
+  (1.0 or later)
 - `cyordereddict <https://github.com/shoyer/cyordereddict>`__: speeds up most
   internal operations with xarray data structures (for python versions < 3.5)
 
 For parallel computing
 ~~~~~~~~~~~~~~~~~~~~~~
 
-- `dask.array <http://dask.pydata.org>`__: required for :ref:`dask`.
+- `dask.array <http://dask.pydata.org>`__ (0.9.0 or later): required for
+  :ref:`dask`.
 
 For plotting
 ~~~~~~~~~~~~

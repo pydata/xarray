@@ -10,8 +10,13 @@ dependencies:
   - numpy
   - pandas>=0.15.0
   - pynio
+  - netcdf4
   - scipy
   - pytest-cov
   - cyordereddict
+  - h5py
+  - netcdf4
+  - matplotlib
+  - seaborn
   - pip:
     - coveralls

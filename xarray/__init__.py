@@ -25,3 +25,4 @@ except ImportError:  # pragma: no cover
                       'then install it in-place by running: pip install -e .')
 
 from . import tutorial
+from . import ufuncs

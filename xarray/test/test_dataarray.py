@@ -2394,7 +2394,9 @@ def da(request):
         return da
 
     if request.param == 2:
-        return DataArray([0, np.nan, 1, 2, np.nan, 3, 4, 5, np.nan, 6, 7], dims='time')
+        return DataArray([0, np.nan, 1, 2, np.nan, 3, 4, 5, np.nan, 6, 7],
+                         dims='time')
+
 
 def test_rolling_iter(da):
 
@@ -2406,8 +2408,9 @@ def test_rolling_iter(da):
     for i, (label, window_da) in enumerate(rolling_obj):
         assert label == da['time'].isel(time=i)
 
+
 def test_rolling_properties(da):
-    pytest.importorskip('bottleneck')
+    pytest.importorskip('bottleneck', minversion='1.0')
 
     rolling_obj = da.rolling(time=4)
 
