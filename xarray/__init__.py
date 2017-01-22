@@ -26,3 +26,4 @@ except ImportError:  # pragma: no cover
 
 from . import tutorial
 from . import ufuncs
+from . import testing
