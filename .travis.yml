@@ -33,8 +33,8 @@ matrix:
     env: CONDA_ENV=py36-dask-dev
   - python: 3.6
     env: CONDA_ENV=py36-pandas-dev
-  - python: 3.5
-    env: CONDA_ENV=py35-condaforge-rc
+  - python: 3.6
+    env: CONDA_ENV=py36-condaforge-rc
   allow_failures:
   - python: 3.6
     env: CONDA_ENV=py36-pydap
@@ -49,8 +49,8 @@ matrix:
     env: CONDA_ENV=py36-dask-dev
   - python: 3.6
     env: CONDA_ENV=py36-pandas-dev
-  - python: 3.5
-    env: CONDA_ENV=py35-condaforge-rc
+  - python: 3.6
+    env: CONDA_ENV=py36-condaforge-rc
 
 before_install:
   - if [[ "$TRAVIS_PYTHON_VERSION" == "2.7" ]]; then
