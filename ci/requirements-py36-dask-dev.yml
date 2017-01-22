@@ -2,16 +2,14 @@ name: test_env
 channels:
   - conda-forge
 dependencies:
-  - python=2.7
-  - dask
-  - distributed
-  - h5py
-  - netcdf4
+  - python=3.6
+  - cython
   - pytest
   - numpy
   - pandas
   - scipy
+  - toolz
   - pip:
     - coveralls
     - pytest-cov
-    - pydap
+    - git+https://github.com/blaze/dask.git

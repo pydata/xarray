@@ -18,37 +18,39 @@ matrix:
     env: CONDA_ENV=py34
   - python: 3.5
     env: CONDA_ENV=py35
-  - python: 2.7
-    env: CONDA_ENV=py27-pydap
-  - python: 3.5
-    env: CONDA_ENV=py27-netcdf4-dev
+  - python: 3.6
+    env: CONDA_ENV=py36
+  - python: 3.6
+    env: CONDA_ENV=py36-pydap
+  - python: 3.6
+    env: CONDA_ENV=py36-netcdf4-dev
     addons:
       apt_packages:
         - libhdf5-serial-dev
         - netcdf-bin
         - libnetcdf-dev
-  - python: 3.5
-    env: CONDA_ENV=py35-dask-dev
-  - python: 3.5
-    env: CONDA_ENV=py35-pandas-dev
-  - python: 3.5
-    env: CONDA_ENV=py35-condaforge-rc
+  - python: 3.6
+    env: CONDA_ENV=py36-dask-dev
+  - python: 3.6
+    env: CONDA_ENV=py36-pandas-dev
+  - python: 3.6
+    env: CONDA_ENV=py36-condaforge-rc
   allow_failures:
-  - python: 2.7
-    env: CONDA_ENV=py27-pydap
-  - python: 3.5
-    env: CONDA_ENV=py27-netcdf4-dev
+  - python: 3.6
+    env: CONDA_ENV=py36-pydap
+  - python: 3.6
+    env: CONDA_ENV=py36-netcdf4-dev
     addons:
       apt_packages:
         - libhdf5-serial-dev
         - netcdf-bin
         - libnetcdf-dev
-  - python: 3.5
-    env: CONDA_ENV=py35-dask-dev
-  - python: 3.5
-    env: CONDA_ENV=py35-pandas-dev
-  - python: 3.5
-    env: CONDA_ENV=py35-condaforge-rc
+  - python: 3.6
+    env: CONDA_ENV=py36-dask-dev
+  - python: 3.6
+    env: CONDA_ENV=py36-pandas-dev
+  - python: 3.6
+    env: CONDA_ENV=py36-condaforge-rc
 
 before_install:
   - if [[ "$TRAVIS_PYTHON_VERSION" == "2.7" ]]; then
