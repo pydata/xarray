@@ -2,11 +2,13 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 import numpy as np
+import warnings
+from distutils.version import StrictVersion
 
 from .pycompat import OrderedDict, zip
 from .common import ImplementsRollingArrayReduce, full_like
 from .combine import concat
-from .ops import inject_bottleneck_rolling_methods
+from .ops import inject_bottleneck_rolling_methods, has_bottleneck, bn
 
 
 class Rolling(object):
@@ -47,6 +49,13 @@ class Rolling(object):
         -------
         rolling : type of input argument
         """
+
+        if (has_bottleneck and
+                (StrictVersion(bn.__version__) < StrictVersion('1.0'))):
+            warnings.warn('xarray requires bottleneck version of 1.0 or '
+                          'greater for rolling operations. Rolling '
+                          'aggregation methods will use numpy instead'
+                          'of bottleneck.')
 
         if len(windows) != 1:
             raise ValueError('exactly one dim/window should be provided')

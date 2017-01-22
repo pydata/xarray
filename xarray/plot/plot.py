@@ -341,7 +341,7 @@ def _plot2d(plotfunc):
         The mapping from data values to color space. If not provided, this
         will be either be ``viridis`` (if the function infers a sequential
         dataset) or ``RdBu_r`` (if the function infers a diverging dataset).
-        When when `Seaborn` is installed, ``cmap`` may also be a `seaborn`
+        When `Seaborn` is installed, ``cmap`` may also be a `seaborn`
         color palette. If ``cmap`` is seaborn color palette and the plot type
         is not ``contour`` or ``contourf``, ``levels`` must also be specified.
     colors : discrete colors to plot, optional
@@ -358,7 +358,11 @@ def _plot2d(plotfunc):
         How to draw arrows extending the colorbar beyond its limits. If not
         provided, extend is inferred from vmin, vmax and the data limits.
     levels : int or list-like object, optional
-        Split the colormap (cmap) into discrete color intervals.
+        Split the colormap (cmap) into discrete color intervals. If an integer
+        is provided, "nice" levels are chosen based on the data range: this can
+        imply that the final number of levels is not exactly the expected one.
+        Setting ``vmin`` and/or ``vmax`` with ``levels=N`` is equivalent to
+        setting ``levels=np.linspace(vmin, vmax, N)``.
     infer_intervals : bool, optional
         Only applies to pcolormesh. If True, the coordinate intervals are
         passed to pcolormesh. If False, the original coordinates are used

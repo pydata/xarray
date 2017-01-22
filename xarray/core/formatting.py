@@ -7,6 +7,7 @@ __repr__ method so that things can work on Python 2.
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
+import contextlib
 from datetime import datetime, timedelta
 import functools
 
@@ -336,6 +337,34 @@ def dim_summary(obj):
     return u', '.join(elements)
 
 
+@contextlib.contextmanager
+def set_numpy_options(*args, **kwargs):
+    original = np.get_printoptions()
+    np.set_printoptions(*args, **kwargs)
+    yield
+    np.set_printoptions(**original)
+
+
+def short_array_repr(array):
+    array = np.asarray(array)
+    # default to lower precision so a full (abbreviated) line can fit on
+    # one line with the default display_width
+    options = {
+        'precision': 6,
+        'linewidth': OPTIONS['display_width'],
+        'threshold': 200,
+    }
+    if array.ndim < 3:
+        edgeitems = 3
+    elif array.ndim == 3:
+        edgeitems = 2
+    else:
+        edgeitems = 1
+    options['edgeitems'] = edgeitems
+    with set_numpy_options(**options):
+        return repr(array)
+
+
 def array_repr(arr):
     # used for DataArray, Variable and IndexVariable
     if hasattr(arr, 'name') and arr.name is not None:
@@ -349,7 +378,7 @@ def array_repr(arr):
     if isinstance(getattr(arr, 'variable', arr)._data, dask_array_type):
         summary.append(repr(arr.data))
     elif arr._in_memory or arr.size < 1e5:
-        summary.append(repr(arr.values))
+        summary.append(short_array_repr(arr.values))
     else:
         summary.append(u'[%s values with dtype=%s]' % (arr.size, arr.dtype))
 

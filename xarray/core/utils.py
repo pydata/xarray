@@ -158,7 +158,7 @@ def remove_incompatible_items(first_dict, second_dict, compat=equivalent):
 
 
 def is_dict_like(value):
-    return hasattr(value, '__getitem__') and hasattr(value, 'keys')
+    return hasattr(value, 'keys') and hasattr(value, '__getitem__')
 
 
 def is_full_slice(value):
