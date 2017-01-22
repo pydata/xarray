@@ -14,8 +14,8 @@ def _decode_string_data(data):
     return data
 
 
-def data_allclose_or_equiv(arr1, arr2, rtol=1e-05, atol=1e-08,
-                           decode_bytes=True):
+def _data_allclose_or_equiv(arr1, arr2, rtol=1e-05, atol=1e-08,
+                            decode_bytes=True):
     if any(arr.dtype.kind == 'S' for arr in [arr1, arr2]) and decode_bytes:
         arr1 = _decode_string_data(arr1)
         arr2 = _decode_string_data(arr2)
@@ -27,7 +27,25 @@ def data_allclose_or_equiv(arr1, arr2, rtol=1e-05, atol=1e-08,
 
 
 def assert_equal(a, b):
-    """Like numpy.testing.assert_array_equal, but for xarray objects."""
+    """Like :py:func:`numpy.testing.assert_array_equal`, but for xarray
+    objects.
+
+    Raises an AssertionError if two objects are not equal. This will match
+    data values and coordinates, but not names or attributes (except for
+    Dataset objects for which the variable names must match).
+
+    Parameters
+    ----------
+    a : xarray.Dataset or xarray.DataArray
+        The first object to compare
+    b : xarray.Dataset or xarray.DataArray
+        The second object to compare
+
+    See also
+    --------
+    assert_identical, assert_allclose, xarray.Dataset.equals,
+    xarray.DataArray.equals
+    """
     import xarray as xr
     ___tracebackhide__ = True  # noqa: F841
     assert type(a) == type(b)
@@ -39,7 +57,23 @@ def assert_equal(a, b):
 
 
 def assert_identical(a, b):
-    """Like assert_equal, but also checks the objects' names and attributes."""
+    """Like :py:func:`xarray.testing.assert_equal`, but also matches the
+    objects' names and attributes.
+
+    Raises an AssertionError if two objects are not identical.
+
+    Parameters
+    ----------
+    a : xarray.Dataset or xarray.DataArray
+        The first object to compare
+    b : xarray.Dataset or xarray.DataArray
+        The second object to compare
+
+    See also
+    --------
+    assert_equal, assert_allclose, xarray.Dataset.equals,
+    xarray.DataArray.equals
+    """
     import xarray as xr
     ___tracebackhide__ = True  # noqa: F841
     assert type(a) == type(b)
@@ -54,33 +88,55 @@ def assert_identical(a, b):
 
 
 def assert_allclose(a, b, rtol=1e-05, atol=1e-08, decode_bytes=True):
-    """Like numpy.testing.assert_allclose, but for xarray objects."""
+    """Like :py:func:`numpy.testing.assert_allclose`, but for xarray objects.
+
+    Raises an AssertionError if two objects are not equal up to desired
+    tolerance.
+
+    Parameters
+    ----------
+    a : xarray.Dataset or xarray.DataArray
+        The first object to compare
+    b : xarray.Dataset or xarray.DataArray
+        The second object to compare
+    rtol : float, optional
+        Relative tolerance
+    atol : float, optional
+        Absolute tolerance
+    decode_bytes : bool, optional
+        Whether byte types should be decoded to a string or not
+
+    See also
+    --------
+    assert_identical, assert_equal
+    """
     import xarray as xr
     ___tracebackhide__ = True  # noqa: F841
     assert type(a) == type(b)
     if isinstance(a, xr.Variable):
         assert a.dims == b.dims
-        allclose = data_allclose_or_equiv(a.values, b.values,
-                                          rtol=rtol, atol=atol,
-                                          decode_bytes=decode_bytes)
+        allclose = _data_allclose_or_equiv(a.values, b.values,
+                                           rtol=rtol, atol=atol,
+                                           decode_bytes=decode_bytes)
         assert allclose, '{}\n{}'.format(a.values, b.values)
     elif isinstance(a, xr.DataArray):
         assert_allclose(a.variable, b.variable)
         assert set(a.coords) == set(b.coords)
         for v in a.coords.variables:
             # can't recurse with this function as coord is sometimes a
-            # DataArray, so call into data_allclose_or_equiv directly
-            allclose = data_allclose_or_equiv(a.coords[v].values,
-                                              b.coords[v].values,
-                                              rtol=rtol, atol=atol,
-                                              decode_bytes=decode_bytes)
+            # DataArray, so call into _data_allclose_or_equiv directly
+            allclose = _data_allclose_or_equiv(a.coords[v].values,
+                                               b.coords[v].values,
+                                               rtol=rtol, atol=atol,
+                                               decode_bytes=decode_bytes)
             assert allclose, '{}\n{}'.format(a.coords[v].values,
                                              b.coords[v].values)
     elif isinstance(a, xr.Dataset):
         assert set(a) == set(b)
         assert set(a.coords) == set(b.coords)
         for k in list(a.variables) + list(a.coords):
-            assert_allclose(a[k], b[k], rtol=rtol, atol=atol)
+            assert_allclose(a[k], b[k], rtol=rtol, atol=atol,
+                            decode_bytes=decode_bytes)
 
     else:
         raise TypeError('{} not supported by assertion comparison'
