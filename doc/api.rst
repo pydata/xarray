@@ -122,6 +122,7 @@ Computation
    Dataset.groupby_bins
    Dataset.resample
    Dataset.diff
+   Dataset.quantile
 
 **Aggregation**:
 :py:attr:`~Dataset.all`
