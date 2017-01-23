@@ -207,7 +207,6 @@ def apply_dataarray_ufunc(func, *args, **kwargs):
     join = kwargs.pop('join', 'inner')
     exclude_dims = kwargs.pop('exclude_dims', _DEFAULT_FROZEN_SET)
     keep_attrs = kwargs.pop('keep_attrs', False)
-    first_obj = args[0]  # we'll copy attrs from this in case keep_attrs=True
     if kwargs:
         raise TypeError('apply_dataarray_ufunc() got unexpected keyword '
                         'arguments: %s' % list(kwargs))
@@ -229,11 +228,11 @@ def apply_dataarray_ufunc(func, *args, **kwargs):
         coords, = result_coords
         out = DataArray(result_var, coords, name=name, fastpath=True)
 
-    if keep_attrs and isinstance(first_obj, DataArray):
+    if keep_attrs and isinstance(args[0], DataArray):
         if isinstance(out, tuple):
-            out = tuple(ds._copy_attrs_from(first_obj) for ds in out)
+            out = tuple(ds._copy_attrs_from(args[0]) for ds in out)
         else:
-            out._copy_attrs_from(first_obj)
+            out._copy_attrs_from(args[0])
     return out
 
 def ordered_set_union(all_keys):
@@ -270,9 +269,6 @@ def join_dict_keys(objects, how='inner'):
 
 def collect_dict_values(objects, keys, fill_value=None):
     # type: (Iterable[Union[Mapping, Any]], Iterable, Any) -> List[list]
-    if fill_value is _DEFAULT_FILL_VALUE:
-        raise ValueError('Inappropriate fill value for Dataset: {}'
-                         .format(fill_value))
     return [[obj.get(key, fill_value)
              if is_dict_like(obj)
              else obj
@@ -346,11 +342,17 @@ def apply_dataset_ufunc(func, *args, **kwargs):
     from .dataset import Dataset
     signature = kwargs.pop('signature')
     join = kwargs.pop('join', 'inner')
-    data_vars_join = kwargs.pop('data_vars_join', 'inner')
+    dataset_join = kwargs.pop('dataset_join', 'inner')
     fill_value = kwargs.pop('fill_value', None)
     exclude_dims = kwargs.pop('exclude_dims', _DEFAULT_FROZEN_SET)
     keep_attrs = kwargs.pop('keep_attrs', False)
     first_obj = args[0]  # we'll copy attrs from this in case keep_attrs=True
+
+    if dataset_join != 'inner' and fill_value is _DEFAULT_FILL_VALUE:
+        raise TypeError('To apply an operation to datasets with different ',
+                        'data variables, you must supply the ',
+                        'dataset_fill_value argument.')
+
     if kwargs:
         raise TypeError('apply_dataset_ufunc() got unexpected keyword '
                         'arguments: %s' % list(kwargs))
@@ -362,7 +364,7 @@ def apply_dataset_ufunc(func, *args, **kwargs):
     args = [getattr(arg, 'data_vars', arg) for arg in args]
 
     result_vars = apply_dict_of_variables_ufunc(
-        func, *args, signature=signature, join=data_vars_join,
+        func, *args, signature=signature, join=dataset_join,
         fill_value=fill_value)
 
     if signature.n_outputs > 1:
@@ -607,23 +609,23 @@ def apply_ufunc(func, *args, **kwargs):
         - 'inner': use the intersection of object indexes
         - 'left': use indexes from the first object with each dimension
         - 'right': use indexes from the last object with each dimension
-    data_vars_join : {'outer', 'inner', 'left', 'right'}, optional
+    dataset_join : {'outer', 'inner', 'left', 'right'}, optional
         Method for joining variables of Dataset objects with mismatched
         data variables.
         - 'outer': take variables from both Dataset objects
         - 'inner': take only overlapped variables
         - 'left': take only variables from the first object
         - 'right': take only variables from the last object
+    dataset_fill_value : optional
+        Value used in place of missing variables on Dataset inputs when the
+        datasets do not share the exact same ``data_vars``. Only relevant if
+        ``dataset_join != 'inner'``.
     keep_attrs: boolean, Optional
         Whether to copy attributes from the first argument to the output.
     exclude_dims : set, optional
         Dimensions to exclude from alignment and broadcasting. Any inputs
         coordinates along these dimensions will be dropped. Each excluded
         dimension must be a core dimension in the function signature.
-    dataset_fill_value : optional
-        Value used in place of missing variables on Dataset inputs when the
-        datasets do not share the exact same ``data_vars``. Only relevant if
-        ``join != 'inner'``.
     kwargs: dict, optional
         Optional keyword arguments passed directly on to call ``func``.
     dask_array: 'forbidden' or 'allowed', optional
@@ -699,7 +701,7 @@ def apply_ufunc(func, *args, **kwargs):
 
     signature = kwargs.pop('signature', None)
     join = kwargs.pop('join', 'inner')
-    data_vars_join = kwargs.pop('data_vars_join', 'inner')
+    dataset_join = kwargs.pop('dataset_join', 'inner')
     keep_attrs = kwargs.pop('keep_attrs', False)
     exclude_dims = kwargs.pop('exclude_dims', frozenset())
     dataset_fill_value = kwargs.pop('dataset_fill_value', _DEFAULT_FILL_VALUE)
@@ -735,14 +737,14 @@ def apply_ufunc(func, *args, **kwargs):
             apply_ufunc, func, signature=signature, join=join,
             dask_array=dask_array, exclude_dims=exclude_dims,
             dataset_fill_value=dataset_fill_value,
-            data_vars_join=data_vars_join,
+            dataset_join=dataset_join,
             keep_attrs=keep_attrs)
         return apply_groupby_ufunc(this_apply, *args)
     elif any(is_dict_like(a) for a in args):
         return apply_dataset_ufunc(variables_ufunc, *args, signature=signature,
                                    join=join, exclude_dims=exclude_dims,
                                    fill_value=dataset_fill_value,
-                                   data_vars_join=data_vars_join,
+                                   dataset_join=dataset_join,
                                    keep_attrs=keep_attrs)
     elif any(isinstance(a, DataArray) for a in args):
         return apply_dataarray_ufunc(variables_ufunc, *args,

@@ -89,8 +89,7 @@ def test_apply_identity():
     data_array = xr.DataArray(variable, [('x', -array)])
     dataset = xr.Dataset({'y': variable}, {'x': -array})
 
-    identity = functools.partial(apply_ufunc, lambda x: x,
-                                 dataset_fill_value=np.nan)
+    identity = functools.partial(apply_ufunc, lambda x: x)
 
     assert_identical(array, identity(array))
     assert_identical(variable, identity(variable))
@@ -101,7 +100,7 @@ def test_apply_identity():
 
 
 def add(a, b):
-    return apply_ufunc(operator.add, a, b, dataset_fill_value=np.nan)
+    return apply_ufunc(operator.add, a, b)
 
 
 def test_apply_two_inputs():
@@ -207,8 +206,7 @@ def test_apply_two_outputs():
     def twice(obj):
         func = lambda x: (x, x)
         signature = '()->(),()'
-        return apply_ufunc(func, obj, signature=signature,
-                           dataset_fill_value=np.nan)
+        return apply_ufunc(func, obj, signature=signature)
 
     out0, out1 = twice(array)
     assert_identical(out0, array)
@@ -240,8 +238,7 @@ def test_apply_input_core_dimension():
     def first_element(obj, dim):
         func = lambda x: x[..., 0]
         sig = ([(dim,)], [()])
-        return apply_ufunc(func, obj, signature=sig,
-                           dataset_fill_value=np.nan)
+        return apply_ufunc(func, obj, signature=sig)
 
     array = np.array([[1, 2], [3, 4]])
     variable = xr.Variable(['x', 'y'], array)
@@ -277,8 +274,7 @@ def test_apply_output_core_dimension():
     def stack_negative(obj):
         func = lambda x: xr.core.npcompat.stack([x, -x], axis=-1)
         sig = ([()], [('sign',)])
-        result = apply_ufunc(func, obj, signature=sig,
-                             dataset_fill_value=np.nan)
+        result = apply_ufunc(func, obj, signature=sig)
         if isinstance(result, (xr.Dataset, xr.DataArray)):
             result.coords['sign'] = [1, -1]
         return result
@@ -306,8 +302,7 @@ def test_apply_output_core_dimension():
     def original_and_stack_negative(obj):
         func = lambda x: (x, xr.core.npcompat.stack([x, -x], axis=-1))
         sig = ([()], [(), ('sign',)])
-        result = apply_ufunc(func, obj, signature=sig,
-                             dataset_fill_value=np.nan)
+        result = apply_ufunc(func, obj, signature=sig)
         if isinstance(result[1], (xr.Dataset, xr.DataArray)):
             result[1].coords['sign'] = [1, -1]
         return result
@@ -352,8 +347,7 @@ def test_apply_exclude():
             [obj.coords[dim] if hasattr(obj, 'coords') else []
              for obj in objects])
         func = lambda *x: np.concatenate(x, axis=-1)
-        result = apply_ufunc(func, *objects, signature=sig, exclude_dims={dim},
-                             dataset_fill_value=np.nan)
+        result = apply_ufunc(func, *objects, signature=sig, exclude_dims={dim})
         if isinstance(result, (xr.Dataset, xr.DataArray)):
             result.coords[dim] = new_coord
         return result
@@ -480,14 +474,46 @@ def test_broadcast_compat_data_2d():
                      broadcast_compat_data(var, ('w', 'y', 'x', 'z'), ()))
 
 
-def test_data_vars_join():
+def test_keep_attrs():
+
+    def add(a, b, keep_attrs):
+        if keep_attrs:
+            return apply_ufunc(operator.add, a, b, keep_attrs=keep_attrs)
+        else:
+            return apply_ufunc(operator.add, a, b)
+
+    a = xr.DataArray([0, 1], [('x', [0, 1])])
+    a.attrs['attr'] = 'da'
+    b = xr.DataArray([1, 2], [('x', [0, 1])])
+
+    actual = add(a, b, keep_attrs=False)
+    assert not actual.attrs
+    actual = add(a, b, keep_attrs=True)
+    assert_identical(actual.attrs, a.attrs)
+
+    a = xr.Dataset({'x': ('x', [1, 2]), 'x': [0, 1]})
+    a.attrs['attr'] = 'ds'
+    a.x.attrs['attr'] = 'da'
+    b = xr.Dataset({'x': ('x', [1, 1]), 'x': [0, 1]})
+
+    actual = add(a, b, keep_attrs=False)
+    assert not actual.attrs
+    actual = add(a, b, keep_attrs=True)
+    assert_identical(actual.attrs, a.attrs)
+    assert_identical(actual.x.attrs, a.x.attrs)
+
+
+def test_dataset_join():
     import numpy as np
     ds0 = xr.Dataset({'a': ('x', [1, 2]), 'x': [0, 1]})
     ds1 = xr.Dataset({'a': ('x', [99, 3]), 'x': [1, 2]})
 
-    def add(a, b, join, data_vars_join):
+    with pytest.raises(TypeError):
+        apply_ufunc(operator.add, ds0, ds1, dataset_join='outer')
+
+    def add(a, b, join, dataset_join):
         return apply_ufunc(operator.add, a, b, join=join,
-                           data_vars_join=data_vars_join,
+                           dataset_join=dataset_join,
                            dataset_fill_value=np.nan)
 
     actual = add(ds0, ds1, 'outer', 'inner')
@@ -546,8 +572,7 @@ def test_apply_dask():
         apply_ufunc(identity, array, dask_array='auto')
 
     def dask_safe_identity(x):
-        return apply_ufunc(identity, x, dask_array='allowed',
-                           dataset_fill_value=np.nan)
+        return apply_ufunc(identity, x, dask_array='allowed')
 
     assert array is dask_safe_identity(array)
 

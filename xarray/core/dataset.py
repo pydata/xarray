@@ -1979,7 +1979,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         -------
         DataArray
         """
-        out = ops.fillna(self, other, join="outer", data_vars_join="outer")
+        out = ops.fillna(self, other, join="outer", dataset_join="outer")
         return out
 
     def reduce(self, func, dim=None, keep_attrs=False, numeric_only=False,

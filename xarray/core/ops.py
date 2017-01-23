@@ -279,7 +279,7 @@ def count(data, axis=None):
     return sum(~isnull(data), axis=axis)
 
 
-def fillna(data, other, join="left", data_vars_join="left"):
+def fillna(data, other, join="left", dataset_join="left"):
     """Fill missing values in this object with data from the other object.
     Follows normal broadcasting and alignment rules.
 
@@ -292,7 +292,7 @@ def fillna(data, other, join="left", data_vars_join="left"):
         - 'inner': use the intersection of object indexes
         - 'left': use indexes from the first object with each dimension
         - 'right': use indexes from the last object with each dimension
-    data_vars_join : {'outer', 'inner', 'left', 'right'}, optional
+    dataset_join : {'outer', 'inner', 'left', 'right'}, optional
         Method for joining variables of Dataset objects with mismatched
         data variables.
         - 'outer': take variables from both Dataset objects
@@ -305,7 +305,7 @@ def fillna(data, other, join="left", data_vars_join="left"):
     def _fillna(data, other):
         return where(isnull(data), other, data)
     return apply_ufunc(_fillna, data, other, join=join, dask_array="allowed",
-                       data_vars_join=data_vars_join,
+                       dataset_join=dataset_join,
                        dataset_fill_value=np.nan,
                        keep_attrs=True)
 

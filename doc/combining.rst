@@ -13,8 +13,7 @@ Combining data
 
 * For combining datasets or data arrays along a dimension, see concatenate_.
 * For combining datasets with different variables, see merge_.
-# For combining datasets with different coordinates or missing values,
-  or data arrays with outer-join alignment, see combine_.
+* For combining datasets or data arrays with different indexes or missing values.
 
 .. _concatenate:
 
