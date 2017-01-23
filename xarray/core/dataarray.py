@@ -19,8 +19,7 @@ from .common import AbstractArray, BaseDataObject
 from .coordinates import (DataArrayCoordinates, LevelCoordinatesSource,
                           Indexes)
 from .dataset import Dataset, merge_indexes, split_indexes
-from .pycompat import (iteritems, basestring, OrderedDict, zip, range,
-                       dask_array_type)
+from .pycompat import iteritems, basestring, OrderedDict, zip, range
 from .variable import (as_variable, Variable, as_compatible_data,
                        IndexVariable,
                        assert_unique_multiindex_level_names)
@@ -1737,7 +1736,7 @@ class DataArray(AbstractArray, BaseDataObject):
 
         return type(self)(new_data, new_coords, new_dims)
 
-    def quantile(self, q, dim=None, interpolation='linear'):
+    def quantile(self, q, dim=None, interpolation='linear', keep_attrs=False):
         """Compute the qth quantile of the data along the specified dimension.
 
         Returns the qth quantiles(s) of the array elements.
@@ -1760,6 +1759,10 @@ class DataArray(AbstractArray, BaseDataObject):
                 * higher: ``j``.
                 * nearest: ``i`` or ``j``, whichever is nearest.
                 * midpoint: ``(i + j) / 2``.
+        keep_attrs : bool, optional
+            If True, the dataset's attributes (`attrs`) will be copied from
+            the original object to the new one.  If False (default), the new
+            object will be returned without attributes.
 
         Returns
         -------
@@ -1775,7 +1778,7 @@ class DataArray(AbstractArray, BaseDataObject):
         np.nanpercentile, pd.Series.quantile, xr.Dataset.quantile
         """
 
-        ds = self._to_temp_dataset().quantile(q, dim=dim,
+        ds = self._to_temp_dataset().quantile(q, dim=dim, keep_attrs=keep_attrs,
                                               interpolation=interpolation)
         return self._from_temp_dataset(ds)
 

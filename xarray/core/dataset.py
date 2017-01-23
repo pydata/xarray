@@ -2546,8 +2546,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
 
         return self._replace_vars_and_dims(variables)
 
-    def quantile(self, q, dim=None, numeric_only=False, keep_attrs=False,
-                 interpolation='linear'):
+    def quantile(self, q, dim=None, interpolation='linear',
+                 numeric_only=False, keep_attrs=False):
         """Compute the qth quantile of the data along the specified dimension.
 
         Returns the qth quantiles(s) of the array elements for each variable
@@ -2571,6 +2571,12 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
                 * higher: ``j``.
                 * nearest: ``i`` or ``j``, whichever is nearest.
                 * midpoint: ``(i + j) / 2``.
+        keep_attrs : bool, optional
+            If True, the dataset's attributes (`attrs`) will be copied from
+            the original object to the new one.  If False (default), the new
+            object will be returned without attributes.
+        numeric_only : bool, optional
+            If True, only apply ``func`` to variables with a numeric dtype.
 
         Returns
         -------
