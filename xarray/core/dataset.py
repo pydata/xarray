@@ -2001,8 +2001,31 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         -------
         Dataset
         """
-        out = self._fillna(value)
-        out._copy_attrs_from(self)
+        if utils.is_dict_like(value):
+            value_keys = getattr(value, 'data_vars', value).keys()
+            if not set(value_keys) <= set(self.data_vars.keys()):
+                raise ValueError('all variables in the argument to `fillna` '
+                                 'must be contained in the original dataset')
+        out = ops.fillna(self, value)
+        return out
+
+    def combine_first(self, other):
+        """Combine two Datasets, default to data_vars of self.
+
+        The new coordinates follow the normal broadcasting and alignment rules
+        of ``join='outer'``.  Vacant cells in the expanded coordinates are
+        filled with np.nan.
+
+        Parameters
+        ----------
+        other : DataArray
+            Used to fill all matching missing values in this array.
+
+        Returns
+        -------
+        DataArray
+        """
+        out = ops.fillna(self, other, join="outer", dataset_join="outer")
         return out
 
     def reduce(self, func, dim=None, keep_attrs=False, numeric_only=False,
@@ -2335,7 +2358,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         return func
 
     @staticmethod
-    def _binary_op(f, reflexive=False, join=None, fillna=False):
+    def _binary_op(f, reflexive=False, join=None):
         @functools.wraps(f)
         def func(self, other):
             if isinstance(other, groupby.GroupBy):
@@ -2344,8 +2367,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
             if hasattr(other, 'indexes'):
                 self, other = align(self, other, join=align_type, copy=False)
             g = f if not reflexive else lambda x, y: f(y, x)
-            ds = self._calculate_binary_op(g, other, join=align_type,
-                                           fillna=fillna)
+            ds = self._calculate_binary_op(g, other, join=align_type)
             return ds
 
         return func
@@ -2370,14 +2392,9 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         return func
 
     def _calculate_binary_op(self, f, other, join='inner',
-                             inplace=False, fillna=False):
+                             inplace=False):
 
         def apply_over_both(lhs_data_vars, rhs_data_vars, lhs_vars, rhs_vars):
-            if fillna and join != 'left':
-                raise ValueError('`fillna` must be accompanied by left join')
-            if fillna and not set(rhs_data_vars) <= set(lhs_data_vars):
-                raise ValueError('all variables in the argument to `fillna` '
-                                 'must be contained in the original dataset')
             if inplace and set(lhs_data_vars) != set(rhs_data_vars):
                 raise ValueError('datasets must have the same data variables '
                                  'for in-place arithmetic operations: %s, %s'
@@ -2389,12 +2406,10 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
                 if k in rhs_data_vars:
                     dest_vars[k] = f(lhs_vars[k], rhs_vars[k])
                 elif join in ["left", "outer"]:
-                    dest_vars[k] = (lhs_vars[k] if fillna else
-                                    f(lhs_vars[k], np.nan))
+                    dest_vars[k] = f(lhs_vars[k], np.nan)
             for k in rhs_data_vars:
                 if k not in dest_vars and join in ["right", "outer"]:
-                    dest_vars[k] = (rhs_vars[k] if fillna else
-                                    f(rhs_vars[k], np.nan))
+                    dest_vars[k] = f(rhs_vars[k], np.nan)
             return dest_vars
 
         if utils.is_dict_like(other) and not isinstance(other, Dataset):
@@ -2421,7 +2436,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
     def _copy_attrs_from(self, other):
         self.attrs = other.attrs
         for v in other.variables:
-            self.variables[v].attrs = other.variables[v].attrs
+            if v in self.variables:
+                self.variables[v].attrs = other.variables[v].attrs
 
     def diff(self, dim, n=1, label='upper'):
         """Calculate the n-th order discrete difference along given axis.

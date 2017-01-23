@@ -382,7 +382,8 @@ class GroupBy(object):
         Dataset.fillna
         DataArray.fillna
         """
-        return self._fillna(value)
+        out = ops.fillna(self, value)
+        return out
 
     def where(self, cond):
         """Return an object of the same shape with all entries where cond is

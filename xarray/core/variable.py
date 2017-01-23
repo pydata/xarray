@@ -856,7 +856,7 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
         return result
 
     def fillna(self, value):
-        return self._fillna(value)
+        return ops.fillna(self, value)
 
     def where(self, cond):
         return self._where(cond)

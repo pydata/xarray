@@ -3169,17 +3169,17 @@ class TestDataset(TestCase):
 
     def test_binary_op_join_setting(self):
         # arithmetic_join applies to data array coordinates
-        missing_2 = xr.Dataset({'x':[0, 1]})
-        missing_0 = xr.Dataset({'x':[1, 2]})
+        missing_2 = xr.Dataset({'x': [0, 1]})
+        missing_0 = xr.Dataset({'x': [1, 2]})
         with xr.set_options(arithmetic_join='outer'):
             actual = missing_2 + missing_0
-        expected = xr.Dataset({'x':[0, 1, 2]})
+        expected = xr.Dataset({'x': [0, 1, 2]})
         self.assertDatasetEqual(actual, expected)
 
         # arithmetic join also applies to data_vars
         ds1 = xr.Dataset({'foo': 1, 'bar': 2})
         ds2 = xr.Dataset({'bar': 2, 'baz': 3})
-        expected = xr.Dataset({'bar': 4}) # default is inner joining
+        expected = xr.Dataset({'bar': 4})  # default is inner joining
         actual = ds1 + ds2
         self.assertDatasetEqual(actual, expected)
 
@@ -3202,7 +3202,7 @@ class TestDataset(TestCase):
         # For more thorough tests, see test_variable.py
         # Note: testing data_vars with mismatched dtypes
         ds = Dataset({
-            'd1': DataArray([1,2,3], dims=['x'], coords={'x': [10,20,30]}),
+            'd1': DataArray([1,2,3], dims=['x'], coords={'x': [10, 20, 30]}),
             'd2': DataArray([1.1, 2.2, 3.3], dims=['y'])
         }, attrs={'foo': 'bar'})
         actual = full_like(ds, 2)
@@ -3222,6 +3222,24 @@ class TestDataset(TestCase):
         self.assertEqual(expect['d1'].dtype, bool)
         self.assertEqual(expect['d2'].dtype, bool)
         self.assertDatasetIdentical(expect, actual)
+
+    def test_combine_first(self):
+        dsx0 = DataArray([0, 0], [('x', ['a', 'b'])]).to_dataset(name='dsx0')
+        dsx1 = DataArray([1, 1], [('x', ['b', 'c'])]).to_dataset(name='dsx1')
+
+        actual = dsx0.combine_first(dsx1)
+        expected = Dataset({'dsx0': ('x', [0, 0, np.nan]),
+                            'dsx1': ('x', [np.nan, 1, 1])},
+                           coords={'x': ['a', 'b', 'c']})
+        self.assertDatasetEqual(actual, expected)
+        self.assertDatasetEqual(actual, xr.merge([dsx0, dsx1]))
+
+        # works just like xr.merge([self, other])
+        dsy2 = DataArray([2, 2, 2],
+                        [('x', ['b', 'c', 'd'])]).to_dataset(name='dsy2')
+        actual = dsx0.combine_first(dsy2)
+        expected = xr.merge([dsy2, dsx0])
+        self.assertDatasetEqual(actual, expected)
 
 ### Py.test tests
 

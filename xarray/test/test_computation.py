@@ -335,7 +335,8 @@ def test_apply_output_core_dimension():
         func = lambda x: xr.core.npcompat.stack([x, -x], axis=-1)
         sig = ([()], [('sign',)])
         # no new_coords
-        return apply_ufunc(func, obj, signature=sig)
+        return apply_ufunc(func, obj, signature=sig,
+                           dataset_fill_value=np.nan)
 
 
 def test_apply_exclude():
@@ -471,6 +472,69 @@ def test_broadcast_compat_data_2d():
                      broadcast_compat_data(var, ('w', 'x', 'y', 'z'), ()))
     assert_identical(data.T[None, :, :, None],
                      broadcast_compat_data(var, ('w', 'y', 'x', 'z'), ()))
+
+
+def test_keep_attrs():
+
+    def add(a, b, keep_attrs):
+        if keep_attrs:
+            return apply_ufunc(operator.add, a, b, keep_attrs=keep_attrs)
+        else:
+            return apply_ufunc(operator.add, a, b)
+
+    a = xr.DataArray([0, 1], [('x', [0, 1])])
+    a.attrs['attr'] = 'da'
+    b = xr.DataArray([1, 2], [('x', [0, 1])])
+
+    actual = add(a, b, keep_attrs=False)
+    assert not actual.attrs
+    actual = add(a, b, keep_attrs=True)
+    assert_identical(actual.attrs, a.attrs)
+
+    a = xr.Dataset({'x': ('x', [1, 2]), 'x': [0, 1]})
+    a.attrs['attr'] = 'ds'
+    a.x.attrs['attr'] = 'da'
+    b = xr.Dataset({'x': ('x', [1, 1]), 'x': [0, 1]})
+
+    actual = add(a, b, keep_attrs=False)
+    assert not actual.attrs
+    actual = add(a, b, keep_attrs=True)
+    assert_identical(actual.attrs, a.attrs)
+    assert_identical(actual.x.attrs, a.x.attrs)
+
+
+def test_dataset_join():
+    import numpy as np
+    ds0 = xr.Dataset({'a': ('x', [1, 2]), 'x': [0, 1]})
+    ds1 = xr.Dataset({'a': ('x', [99, 3]), 'x': [1, 2]})
+
+    with pytest.raises(TypeError):
+        apply_ufunc(operator.add, ds0, ds1, dataset_join='outer')
+
+    def add(a, b, join, dataset_join):
+        return apply_ufunc(operator.add, a, b, join=join,
+                           dataset_join=dataset_join,
+                           dataset_fill_value=np.nan)
+
+    actual = add(ds0, ds1, 'outer', 'inner')
+    expected = xr.Dataset({'a': ('x', [np.nan, 101, np.nan]),
+                           'x': [0, 1, 2]})
+    assert_identical(actual, expected)
+
+    actual = add(ds0, ds1, 'outer', 'outer')
+    assert_identical(actual, expected)
+
+    # if variables don't match, join will perform add with np.nan
+    ds2 = xr.Dataset({'b': ('x', [99, 3]), 'x': [1, 2]})
+    actual = add(ds0, ds2, 'outer', 'inner')
+    expected = xr.Dataset({'x': [0, 1, 2]})
+    assert_identical(actual, expected)
+
+    actual = add(ds0, ds2, 'outer', 'outer')
+    expected = xr.Dataset({'a': ('x', [np.nan, np.nan, np.nan]),
+                           'b': ('x', [np.nan, np.nan, np.nan]),
+                           'x': [0, 1, 2]})
+    assert_identical(actual, expected)
 
 
 class _NoCacheVariable(xr.Variable):

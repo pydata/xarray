@@ -128,6 +128,13 @@ Deprecations
 
 Enhancements
 ~~~~~~~~~~~~
+
+- Added the xarray equivalent of `pandas.Dataframe.combine_first` as an instance
+  method to DataArray/Dataset objects, facilitated by the new `ops.fillna` with
+  `join` and `data_vars_join` options.
+  (see :ref:`combine`)
+  By `Chun-Wei Yuan <https://github.com/chunweiyuan>`_.
+
 - Added the ability to change default automatic alignment (arithmetic_join="inner")
   for binary operations via :py:func:`~xarray.set_options()`
   (see :ref:`automatic alignment`).

@@ -2384,6 +2384,26 @@ class TestDataArray(TestCase):
         expected = xr.DataArray([np.nan, 2, 4, np.nan], [(dim, [0, 1, 2, 3])])
         self.assertDataArrayEqual(actual, expected)
 
+    def test_combine_first(self):
+        ar0 = DataArray([[0, 0], [0, 0]], [('x', ['a', 'b']), ('y', [-1, 0])])
+        ar1 = DataArray([[1, 1], [1, 1]], [('x', ['b', 'c']), ('y', [0, 1])])
+        ar2 = DataArray([2], [('x', ['d'])])
+
+        actual = ar0.combine_first(ar1)
+        expected = DataArray([[0, 0, np.nan], [0, 0, 1], [np.nan, 1, 1]],
+                             [('x', ['a', 'b', 'c']), ('y', [-1, 0, 1])])
+        self.assertDataArrayEqual(actual, expected)
+
+        actual = ar1.combine_first(ar0)
+        expected = DataArray([[0, 0, np.nan], [0, 1, 1], [np.nan, 1, 1]],
+                             [('x', ['a', 'b', 'c']), ('y', [-1, 0, 1])])
+        self.assertDataArrayEqual(actual, expected)
+
+        actual = ar0.combine_first(ar2)
+        expected = DataArray([[0, 0], [0, 0], [2, 2]],
+                             [('x', ['a', 'b', 'd']), ('y', [-1, 0])])
+        self.assertDataArrayEqual(actual, expected)
+
 
 @pytest.fixture(params=[1])
 def da(request):
