@@ -28,7 +28,6 @@ from .variable import (Variable, as_variable, IndexVariable,
                        broadcast_variables)
 from .pycompat import (iteritems, basestring, OrderedDict,
                        dask_array_type, range)
-from .formatting import ensure_valid_repr
 from .combine import concat
 from .options import OPTIONS
 
@@ -2546,6 +2545,93 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
             variables[name] = var.roll(**var_shifts)
 
         return self._replace_vars_and_dims(variables)
+
+    def quantile(self, q, dim=None, interpolation='linear',
+                 numeric_only=False, keep_attrs=False):
+        """Compute the qth quantile of the data along the specified dimension.
+
+        Returns the qth quantiles(s) of the array elements for each variable
+        in the Dataset.
+
+        Parameters
+        ----------
+        q : float in range of [0,1] (or sequence of floats)
+            Quantile to compute, which must be between 0 and 1
+            inclusive.
+        dim : str or sequence of str, optional
+            Dimension(s) over which to apply quantile.
+        interpolation : {'linear', 'lower', 'higher', 'midpoint', 'nearest'}
+            This optional parameter specifies the interpolation method to
+            use when the desired quantile lies between two data points
+            ``i < j``:
+                * linear: ``i + (j - i) * fraction``, where ``fraction`` is
+                  the fractional part of the index surrounded by ``i`` and
+                  ``j``.
+                * lower: ``i``.
+                * higher: ``j``.
+                * nearest: ``i`` or ``j``, whichever is nearest.
+                * midpoint: ``(i + j) / 2``.
+        keep_attrs : bool, optional
+            If True, the dataset's attributes (`attrs`) will be copied from
+            the original object to the new one.  If False (default), the new
+            object will be returned without attributes.
+        numeric_only : bool, optional
+            If True, only apply ``func`` to variables with a numeric dtype.
+
+        Returns
+        -------
+        quantiles : Dataset
+            If `q` is a single quantile, then the result is a scalar for each
+            variable in data_vars. If multiple percentiles are given, first
+            axis of the result corresponds to the quantile and a quantile
+            dimension is added to the return Dataset. The other dimensions are
+            the dimensions that remain after the reduction of the array.
+
+        See Also
+        --------
+        np.nanpercentile, pd.Series.quantile, xr.DataArray.quantile
+        """
+
+        if isinstance(dim, basestring):
+            dims = set([dim])
+        elif dim is None:
+            dims = set(self.dims)
+        else:
+            dims = set(dim)
+
+        _assert_empty([dim for dim in dims if dim not in self.dims],
+                      'Dataset does not contain the dimensions: %s')
+
+        q = np.asarray(q, dtype=np.float64)
+
+        variables = OrderedDict()
+        for name, var in iteritems(self.variables):
+            reduce_dims = [dim for dim in var.dims if dim in dims]
+            if reduce_dims or not var.dims:
+                if name not in self.coords:
+                    if (not numeric_only or
+                        np.issubdtype(var.dtype, np.number) or
+                            var.dtype == np.bool_):
+                        if len(reduce_dims) == var.ndim:
+                            # prefer to aggregate over axis=None rather than
+                            # axis=(0, 1) if they will be equivalent, because
+                            # the former is often more efficient
+                            reduce_dims = None
+                        variables[name] = var.quantile(
+                            q, dim=reduce_dims, interpolation=interpolation)
+
+            else:
+                variables[name] = var
+
+        # construct the new dataset
+        coord_names = set(k for k in self.coords if k in variables)
+        attrs = self.attrs if keep_attrs else None
+        new = self._replace_vars_and_dims(variables, coord_names, attrs=attrs)
+        if 'quantile' in new.dims:
+            new.coords['quantile'] = Variable('quantile', q)
+        else:
+            new.coords['quantile'] = q
+        return new
 
     @property
     def real(self):
