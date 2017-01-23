@@ -276,7 +276,7 @@ class DataVariables(Mapping, formatting.ReprMixin):
             raise KeyError(key)
 
     def __unicode__(self):
-        return formatting.vars_repr(self)
+        return formatting.data_vars_repr(self)
 
     @property
     def variables(self):

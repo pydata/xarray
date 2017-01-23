@@ -211,13 +211,6 @@ def _summarize_var_or_coord(name, var, col_width, show_values=True,
     return front_str + values_str
 
 
-def _summarize_dummy_var(name, col_width, marker=u'o', values=u'-'):
-    """Used if there is no coordinate for a dimension."""
-    first_col = pretty_print(u'  %s %s ' % (marker, name), col_width)
-    dims_str = u'(%s) ' % unicode_type(name)
-    return u'%s%s%s' % (first_col, dims_str, values)
-
-
 def _summarize_coord_multiindex(coord, col_width, marker):
     first_col = pretty_print(u'  %s %s ' % (marker, coord.name), col_width)
     return u'%s(%s) MultiIndex' % (first_col, unicode_type(coord.dims[0]))
@@ -248,8 +241,6 @@ def summarize_var(name, var, col_width):
 
 
 def summarize_coord(name, var, col_width):
-    if var is None:
-        return _summarize_dummy_var(name, col_width)
     is_index = name in var.dims
     show_values = is_index or _not_remote(var)
     marker = u'*' if is_index else u' '
@@ -305,8 +296,8 @@ def _mapping_repr(mapping, title, summarizer, col_width=None):
     return u'\n'.join(summary)
 
 
-vars_repr = functools.partial(_mapping_repr, title=u'Data variables',
-                              summarizer=summarize_var)
+data_vars_repr = functools.partial(_mapping_repr, title=u'Data variables',
+                                   summarizer=summarize_var)
 
 
 attrs_repr = functools.partial(_mapping_repr, title=u'Attributes',
@@ -316,12 +307,7 @@ attrs_repr = functools.partial(_mapping_repr, title=u'Attributes',
 def coords_repr(coords, col_width=None):
     if col_width is None:
         col_width = _calculate_col_width(_get_col_items(coords))
-    # augment coordinates to include markers for missing coordinates
-    augmented_coords = OrderedDict(coords)
-    for dim in coords.dims:
-        if dim not in augmented_coords:
-            augmented_coords[dim] = None
-    return _mapping_repr(augmented_coords, title=u'Coordinates',
+    return _mapping_repr(coords, title=u'Coordinates',
                          summarizer=summarize_coord, col_width=col_width)
 
 
@@ -337,6 +323,15 @@ def dim_summary(obj):
     return u', '.join(elements)
 
 
+def unindexed_dims_repr(dims, coords):
+    unindexed_dims = [d for d in dims if d not in coords]
+    if unindexed_dims:
+        dims_str = u', '.join(u'%s' % d for d in unindexed_dims)
+        return u'Unindexed dimensions:\n' + u' ' * 4 + dims_str
+    else:
+        return None
+
+      
 @contextlib.contextmanager
 def set_numpy_options(*args, **kwargs):
     original = np.get_printoptions()
@@ -386,6 +381,10 @@ def array_repr(arr):
         if arr.coords:
             summary.append(repr(arr.coords))
 
+        unindexed_dims_str = unindexed_dims_repr(arr.dims, arr.coords)
+        if unindexed_dims_str:
+            summary.append(unindexed_dims_str)
+
     if arr.attrs:
         summary.append(attrs_repr(arr.attrs))
 
@@ -401,7 +400,13 @@ def dataset_repr(ds):
     summary.append(u'%s(%s)' % (dims_start, dim_summary(ds)))
 
     summary.append(coords_repr(ds.coords, col_width=col_width))
-    summary.append(vars_repr(ds.data_vars, col_width=col_width))
+
+    unindexed_dims_str = unindexed_dims_repr(ds.dims, ds.coords)
+    if unindexed_dims_str:
+        summary.append(unindexed_dims_str)
+
+    summary.append(data_vars_repr(ds.data_vars, col_width=col_width))
+
     if ds.attrs:
         summary.append(attrs_repr(ds.attrs))
 
