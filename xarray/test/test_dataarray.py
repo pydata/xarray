@@ -7,6 +7,7 @@ import pickle
 import pytest
 from copy import deepcopy
 from textwrap import dedent
+from distutils.version import LooseVersion
 
 import xarray as xr
 
@@ -46,7 +47,8 @@ class TestDataArray(TestCase):
         Coordinates:
           * x        (x) int64 0 1 2
             other    int64 0
-          o time     (time) -
+        Unindexed dimensions:
+            time
         Attributes:
             foo: bar""")
         self.assertEqual(expected, repr(data_array))
@@ -1327,6 +1329,18 @@ class TestDataArray(TestCase):
         actual = orig.count()
         expected = DataArray(5, {'c': -999})
         self.assertDataArrayIdentical(expected, actual)
+
+    @pytest.mark.skipif(LooseVersion(np.__version__) < LooseVersion('1.10.0'),
+                        reason='requires numpy version 1.10.0 or later')
+    # skip due to bug in older versions of numpy.nanpercentile
+    def test_quantile(self):
+        for q in [0.25, [0.50], [0.25, 0.75]]:
+            for axis, dim in zip([None, 0, [0], [0, 1]],
+                                 [None, 'x', ['x'], ['x', 'y']]):
+                actual = self.dv.quantile(q, dim=dim)
+                expected = np.nanpercentile(self.dv.values, np.array(q) * 100,
+                                            axis=axis)
+                np.testing.assert_allclose(actual.values, expected)
 
     def test_reduce_keep_attrs(self):
         # Test dropped attrs

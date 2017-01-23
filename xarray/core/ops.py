@@ -410,6 +410,7 @@ def inject_reduce_methods(cls):
             extra_args=cls._reduce_extra_args_docstring)
         setattr(cls, name, func)
 
+
 def inject_cum_methods(cls):
     methods = ([(name, globals()[name], True) for name in NAN_CUM_METHODS])
     for name, f, include_skipna in methods:

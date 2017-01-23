@@ -31,7 +31,25 @@ Breaking changes
 ~~~~~~~~~~~~~~~~
 
 - Index coordinates for each dimensions are now optional, and no longer created
-  by default :issue:`1017`. This has a number of implications:
+  by default :issue:`1017`. You can identify such dimensions without indexes by
+  their appearance in list of "Unindexed dimensions" in the ``Dataset`` or
+  ``DataArray`` repr:
+
+  .. ipython::
+    :verbatim:
+
+    In [1]: xr.Dataset({'foo': (('x', 'y'), [[1, 2]])})
+    Out[1]:
+    <xarray.Dataset>
+    Dimensions:  (x: 1, y: 2)
+    Coordinates:
+        *empty*
+    Unindexed dimensions:
+        x, y
+    Data variables:
+        foo      (x, y) int64 1 2
+
+  This has a number of implications:
 
   - :py:func:`~align` and :py:meth:`~Dataset.reindex` can now error, if
     dimensions labels are missing and dimensions have different sizes.
@@ -187,6 +205,9 @@ Enhancements
 - Added the ability write unlimited netCDF dimensions with the ``scipy`` and
   ``netcdf4`` backends via the new :py:attr:`~xray.Dataset.encoding` attribute
   or via the ``unlimited_dims`` argument to :py:meth:`~xray.Dataset.to_netcdf`.
+  By `Joe Hamman <https://github.com/jhamman>`_.
+- New :py:meth:`~DataArray.quantile` method to calculate quantiles from
+  DataArray objects (:issue:`1187`).
   By `Joe Hamman <https://github.com/jhamman>`_.
 
 Bug fixes

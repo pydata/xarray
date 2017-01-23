@@ -13,20 +13,20 @@ try:
 except ImportError:
     pass
 from io import StringIO
+from distutils.version import LooseVersion
 
 import numpy as np
 import pandas as pd
 import xarray as xr
 import pytest
 
-from xarray import (align, broadcast, concat, merge, conventions, backends,
-                    Dataset, DataArray, Variable, IndexVariable, auto_combine,
-                    open_dataset, set_options, MergeError)
+from xarray import (align, broadcast, backends, Dataset, DataArray, Variable,
+                    IndexVariable, open_dataset, set_options, MergeError)
 from xarray.core import indexing, utils
 from xarray.core.pycompat import iteritems, OrderedDict, unicode_type
 from xarray.core.common import full_like
 
-from . import (TestCase, unittest, InaccessibleArray, UnexpectedDataAccess,
+from . import (TestCase, InaccessibleArray, UnexpectedDataAccess,
                requires_dask, source_ndarray)
 
 
@@ -91,7 +91,8 @@ class TestDataset(TestCase):
           * dim2     (dim2) float64 0.0 0.5 1.0 1.5 2.0 2.5 3.0 3.5 4.0
           * dim3     (dim3) %s 'a' 'b' 'c' 'd' 'e' 'f' 'g' 'h' 'i' 'j'
             numbers  (dim3) int64 0 1 2 0 0 1 1 2 2 3
-          o dim1     (dim1) -
+        Unindexed dimensions:
+            dim1
         Data variables:
             var1     (dim1, dim2) float64 -1.086 0.9973 0.283 -1.506 -0.5786 1.651 ...
             var2     (dim1, dim2) float64 1.162 -1.097 -2.123 1.04 -0.4034 -0.126 ...
@@ -203,25 +204,25 @@ class TestDataset(TestCase):
         expected = dedent(u'''\
         xarray.Dataset {
         dimensions:
-        	dim1 = 8 ;
-        	dim2 = 9 ;
-        	dim3 = 10 ;
-        	time = 20 ;
+        \tdim1 = 8 ;
+        \tdim2 = 9 ;
+        \tdim3 = 10 ;
+        \ttime = 20 ;
 
         variables:
-        	datetime64[ns] time(time) ;
-        	float64 dim2(dim2) ;
-        	float64 var1(dim1, dim2) ;
-        		var1:foo = variable ;
-        	float64 var2(dim1, dim2) ;
-        		var2:foo = variable ;
-        	float64 var3(dim3, dim1) ;
-        		var3:foo = variable ;
-        	int64 numbers(dim3) ;
+        \tdatetime64[ns] time(time) ;
+        \tfloat64 dim2(dim2) ;
+        \tfloat64 var1(dim1, dim2) ;
+        \t\tvar1:foo = variable ;
+        \tfloat64 var2(dim1, dim2) ;
+        \t\tvar2:foo = variable ;
+        \tfloat64 var3(dim3, dim1) ;
+        \t\tvar3:foo = variable ;
+        \tint64 numbers(dim3) ;
 
         // global attributes:
-        	:unicode_attr = ba® ;
-        	:string_attr = bar ;
+        \t:unicode_attr = ba® ;
+        \t:string_attr = bar ;
         }''')
         actual = buf.getvalue()
         self.assertEqual(expected, actual)
@@ -684,6 +685,23 @@ class TestDataset(TestCase):
         expected = orig_coords.to_dataset()
         actual = orig_coords.merge(other_coords)
         self.assertDatasetIdentical(expected, actual)
+
+    def test_data_vars_properties(self):
+        ds = Dataset()
+        ds['foo'] = (('x',), [1.0])
+        ds['bar'] = 2.0
+
+        self.assertEqual(set(ds.data_vars), {'foo', 'bar'})
+        self.assertIn('foo', ds.data_vars)
+        self.assertNotIn('x', ds.data_vars)
+        self.assertDataArrayIdentical(ds['foo'], ds.data_vars['foo'])
+
+        expected = dedent("""\
+        Data variables:
+            foo      (x) float64 1.0
+            bar      float64 2.0""")
+        actual = repr(ds.data_vars)
+        self.assertEqual(expected, actual)
 
     def test_equals_and_identical(self):
         data = create_test_data(seed=42)
@@ -2787,6 +2805,25 @@ class TestDataset(TestCase):
         with self.assertRaisesRegexp(TypeError, 'non-integer axis'):
             ds.reduce(mean_only_one_axis, ['x', 'y'])
 
+    @pytest.mark.skipif(LooseVersion(np.__version__) < LooseVersion('1.10.0'),
+                        reason='requires numpy version 1.10.0 or later')
+    def test_quantile(self):
+
+        ds = create_test_data(seed=123)
+
+        for q in [0.25, [0.50], [0.25, 0.75]]:
+            for dim in [None, 'dim1', ['dim1']]:
+                ds_quantile = ds.quantile(q, dim=dim)
+                assert 'quantile' in ds_quantile
+                for var, dar in ds.data_vars.items():
+                    assert var in ds_quantile
+                    self.assertDataArrayIdentical(
+                        ds_quantile[var], dar.quantile(q, dim=dim))
+            dim = ['dim1', 'dim2']
+            ds_quantile = ds.quantile(q, dim=dim)
+            assert 'dim3' in ds_quantile.dims
+            assert all(d not in ds_quantile.dims for d in dim)
+
     def test_count(self):
         ds = Dataset({'x': ('a', [np.nan, 1]), 'y': 0, 'z': np.nan})
         expected = Dataset({'x': 1, 'y': 1, 'z': 0})
@@ -3101,7 +3138,7 @@ class TestDataset(TestCase):
         ds = Dataset({'temperature_0': (['t'], [0], temp0),
                       'temperature_10': (['t'], [0], temp10),
                       'precipitation': (['t'], [0], precip)},
-                    coords={'time': (['t'], [0], dict(axis='T'))})
+                     coords={'time': (['t'], [0], dict(axis='T'))})
 
         # Test return empty Dataset.
         ds.filter_by_attrs(standard_name='invalid_standard_name')

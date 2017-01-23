@@ -6,7 +6,6 @@ from __future__ import print_function
 import contextlib
 import functools
 import itertools
-import os.path
 import re
 import warnings
 from collections import Mapping, MutableMapping, Iterable
@@ -102,7 +101,9 @@ def equivalent(first, second):
     if isinstance(first, np.ndarray) or isinstance(second, np.ndarray):
         return ops.array_equiv(first, second)
     else:
-        return first is second or first == second or (pd.isnull(first) and pd.isnull(second))
+        return (first is second or
+                first == second or
+                (pd.isnull(first) and pd.isnull(second)))
 
 
 def peek_at(iterable):
@@ -179,12 +180,14 @@ def combine_pos_and_kw_args(pos_kwargs, kw_kwargs, func_name):
 
 
 def is_scalar(value):
-    """ Whether to treat a value as a scalar. Any non-iterable, string, or 0-D array """
-    return (
-        getattr(value, 'ndim', None) == 0
-        or isinstance(value, (basestring, bytes_type))
-        or not isinstance(value, Iterable))
+    """Whether to treat a value as a scalar.
 
+    Any non-iterable, string, or 0-D array
+    """
+    return (
+        getattr(value, 'ndim', None) == 0 or
+        isinstance(value, (basestring, bytes_type)) or not
+        isinstance(value, Iterable))
 
 
 def is_valid_numpy_dtype(dtype):
@@ -205,8 +208,8 @@ def to_0d_object_array(value):
 
 def to_0d_array(value):
     """Given a value, wrap it in a 0-D numpy.ndarray."""
-    if np.isscalar(value) or (isinstance(value, np.ndarray)
-                                and value.ndim == 0):
+    if np.isscalar(value) or (isinstance(value, np.ndarray) and
+                              value.ndim == 0):
         return np.array(value)
     else:
         return to_0d_object_array(value)
