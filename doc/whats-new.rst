@@ -270,6 +270,15 @@ Bug fixes
 - Fix to make ``.copy()`` actually copy dask arrays, which will be relevant for
   future releases of dask in which dask arrays will be mutable (:issue:`1180`).
 
+Performance improvements
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+- :py:meth:`~xarray.Dataset.isel_points` and
+  :py:meth:`~xarray.Dataset.sel_points` now use vectorised indexing in numpy
+  and dask (:issue:`1161`), which can result in several orders of magnitude
+  speedup.
+  By `Jonathan Chambers <https://github.com/mangecoeur>`_.
+
 .. _whats-new.0.8.2:
 
 v0.8.2 (18 August 2016)

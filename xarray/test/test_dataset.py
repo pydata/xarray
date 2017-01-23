@@ -910,7 +910,6 @@ class TestDataset(TestCase):
         pdim1 = [1, 2, 3]
         pdim2 = [4, 5, 1]
         pdim3 = [1, 2, 3]
-
         actual = data.isel_points(dim1=pdim1, dim2=pdim2, dim3=pdim3,
                                   dim='test_coord')
         assert 'test_coord' in actual.dims
@@ -984,7 +983,6 @@ class TestDataset(TestCase):
 
         # add in a range() index
         data['dim1'] = data.dim1
-        print(data)
 
         pdim1 = [1, 2, 3]
         pdim2 = [4, 5, 1]
@@ -996,13 +994,15 @@ class TestDataset(TestCase):
         self.assertDatasetIdentical(expected, actual)
 
         data = Dataset({'foo': (('x', 'y'), np.arange(9).reshape(3, 3))})
-        expected = Dataset({'foo': ('points', [0, 4, 8])})
+        expected = Dataset({'foo': ('points', [0, 4, 8])}
+                            )
         actual = data.sel_points(x=[0, 1, 2], y=[0, 1, 2])
         self.assertDatasetIdentical(expected, actual)
 
         data.coords.update({'x': [0, 1, 2], 'y': [0, 1, 2]})
         expected.coords.update({'x': ('points', [0, 1, 2]),
-                                'y': ('points', [0, 1, 2])})
+                                'y': ('points', [0, 1, 2])
+                                })
         actual = data.sel_points(x=[0.1, 1.1, 2.5], y=[0, 1.2, 2.0],
                                  method='pad')
         self.assertDatasetIdentical(expected, actual)
