@@ -102,7 +102,6 @@ class ScipyDataStore(WritableCFDataStore, DataStorePickleMixin):
         self.ds = opener()
         self._opener = opener
         self._mode = mode
-        self.encoding = {}
 
         super(ScipyDataStore, self).__init__(writer)
 
@@ -116,9 +115,6 @@ class ScipyDataStore(WritableCFDataStore, DataStorePickleMixin):
 
     def get_attrs(self):
         return Frozen(_decode_attrs(self.ds._attributes))
-
-    def _get_unlimited_dimensions(self):
-        return set(k for k, v in iteritems(self.ds.dimensions) if v is None)
 
     def get_dimensions(self):
         return Frozen(self.ds.dimensions)

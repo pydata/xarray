@@ -21,7 +21,6 @@ class InMemoryDataStore(AbstractWritableDataStore):
     def __init__(self, variables=None, attributes=None, writer=None):
         self._variables = OrderedDict() if variables is None else variables
         self._attributes = OrderedDict() if attributes is None else attributes
-        self.encoding = {}
         super(InMemoryDataStore, self).__init__(writer)
 
     def get_attrs(self):

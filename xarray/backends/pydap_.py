@@ -62,7 +62,6 @@ class PydapDataStore(AbstractDataStore):
     def __init__(self, url):
         import pydap.client
         self.ds = pydap.client.open_url(url)
-        self.encoding = {}
 
     def open_store_variable(self, var):
         data = indexing.LazilyIndexedArray(PydapArrayWrapper(var))

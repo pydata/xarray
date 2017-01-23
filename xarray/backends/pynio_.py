@@ -42,7 +42,6 @@ class NioDataStore(AbstractDataStore, DataStorePickleMixin):
         self.ds = opener()
         self._opener = opener
         self._mode = mode
-        self.encoding = {}
 
     def open_store_variable(self, name, var):
         data = indexing.LazilyIndexedArray(NioArrayWrapper(name, self))
