@@ -337,7 +337,11 @@ def _fast_dataset(variables, coord_variables):
 
 def apply_dataset_ufunc(func, *args, **kwargs):
     """apply_dataset_ufunc(func, *args, signature, join='inner',
-                           fill_value=None, exclude_dims=frozenset()):
+                           dataset_join='inner', fill_value=None,
+                           exclude_dims=frozenset(), keep_attrs=False):
+
+       If dataset_join != 'inner', a non-default fill_value must be supplied
+       by the user.  Otherwise a TypeError is raised.
     """
     from .dataset import Dataset
     signature = kwargs.pop('signature')
@@ -558,7 +562,8 @@ def apply_array_ufunc(func, *args, **kwargs):
 
 def apply_ufunc(func, *args, **kwargs):
     """apply_ufunc(func, *args, signature=None, join='inner',
-                   exclude_dims=frozenset(), dataset_fill_value=None,
+                   exclude_dims=frozenset(), dataset_join='inner',
+                   dataset_fill_value=None, keep_attrs=False,
                    kwargs=None, dask_array='forbidden')
 
     Apply a vectorized function for unlabeled arrays to xarray objects.
@@ -618,8 +623,8 @@ def apply_ufunc(func, *args, **kwargs):
         - 'right': take only variables from the last object
     dataset_fill_value : optional
         Value used in place of missing variables on Dataset inputs when the
-        datasets do not share the exact same ``data_vars``. Only relevant if
-        ``dataset_join != 'inner'``.
+        datasets do not share the exact same ``data_vars``. Required if
+        ``dataset_join != 'inner'``, otherwise ignored.
     keep_attrs: boolean, Optional
         Whether to copy attributes from the first argument to the output.
     exclude_dims : set, optional
