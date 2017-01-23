@@ -202,6 +202,9 @@ Enhancements
   and attributes. The method prints to a buffer (e.g. ``stdout``) with output
   similar to what the command line utility ``ncdump -h`` produces (:issue:`1150`).
   By `Joe Hamman <https://github.com/jhamman>`_.
+- New :py:meth:`~DataArray.quantile` method to calculate quantiles from
+  DataArray objects (:issue:`1187`).
+  By `Joe Hamman <https://github.com/jhamman>`_.
 
 Bug fixes
 ~~~~~~~~~
