@@ -1170,8 +1170,6 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         the NumPy indexing behavior of `arr[[0, 1], [0, 1]]`, except this
         method does not require knowing the order of each array's dimensions.
 
-        Will use dask vectorised operation if available
-
         Parameters
         ----------
         dim : str or DataArray or pandas.Index or other list-like object, optional
