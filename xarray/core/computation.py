@@ -563,7 +563,7 @@ def apply_array_ufunc(func, *args, **kwargs):
 def apply_ufunc(func, *args, **kwargs):
     """apply_ufunc(func, *args, signature=None, join='inner',
                    exclude_dims=frozenset(), dataset_join='inner',
-                   dataset_fill_value=None, keep_attrs=False,
+                   dataset_fill_value=_DEFAULT_FILL_VALUE, keep_attrs=False,
                    kwargs=None, dask_array='forbidden')
 
     Apply a vectorized function for unlabeled arrays to xarray objects.
