@@ -5,6 +5,7 @@ from datetime import timedelta
 from collections import defaultdict
 import functools
 import itertools
+from distutils.version import LooseVersion
 
 import numpy as np
 import pandas as pd
@@ -855,7 +856,7 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
         return result
 
     def fillna(self, value):
-        return self._fillna(value)
+        return ops.fillna(self, value)
 
     def where(self, cond):
         return self._where(cond)
@@ -1030,6 +1031,75 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
         or both, contain NaN values.
         """
         return self.broadcast_equals(other, equiv=ops.array_notnull_equiv)
+
+    def quantile(self, q, dim=None, interpolation='linear'):
+        """Compute the qth quantile of the data along the specified dimension.
+
+        Returns the qth quantiles(s) of the array elements.
+
+        Parameters
+        ----------
+        q : float in range of [0,1] (or sequence of floats)
+            Quantile to compute, which must be between 0 and 1
+            inclusive.
+        dim : str or sequence of str, optional
+            Dimension(s) over which to apply quantile.
+        interpolation : {'linear', 'lower', 'higher', 'midpoint', 'nearest'}
+            This optional parameter specifies the interpolation method to
+            use when the desired quantile lies between two data points
+            ``i < j``:
+                * linear: ``i + (j - i) * fraction``, where ``fraction`` is
+                  the fractional part of the index surrounded by ``i`` and
+                  ``j``.
+                * lower: ``i``.
+                * higher: ``j``.
+                * nearest: ``i`` or ``j``, whichever is nearest.
+                * midpoint: ``(i + j) / 2``.
+
+        Returns
+        -------
+        quantiles : Variable
+            If `q` is a single quantile, then the result
+            is a scalar. If multiple percentiles are given, first axis of
+            the result corresponds to the quantile and a quantile dimension
+            is added to the return array. The other dimensions are the
+             dimensions that remain after the reduction of the array.
+
+        See Also
+        --------
+        np.nanpercentile, pd.Series.quantile,
+        xr.Dataset.quantile, xr.DataArray.quantile
+        """
+
+        if isinstance(self.data, dask_array_type):
+            TypeError("quantile does not work for arrays stored as dask "
+                      "arrays. Load the data via .compute() or .load() prior "
+                      "to calling this method.")
+        if LooseVersion(np.__version__) < LooseVersion('1.10.0'):
+            raise NotImplementedError(
+                'quantile requres numpy version 1.10.0 or later')
+
+        q = np.asarray(q, dtype=np.float64)
+
+        new_dims = list(self.dims)
+        if dim is not None:
+            axis = self.get_axis_num(dim)
+            if utils.is_scalar(dim):
+                new_dims.remove(dim)
+            else:
+                for d in dim:
+                    new_dims.remove(d)
+        else:
+            axis = None
+            new_dims = []
+
+        # only add the quantile dimension if q is array like
+        if q.ndim != 0:
+            new_dims = ['quantile'] + new_dims
+
+        qs = np.nanpercentile(self.data, q * 100., axis=axis,
+                              interpolation=interpolation)
+        return Variable(new_dims, qs)
 
     @property
     def real(self):

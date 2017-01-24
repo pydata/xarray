@@ -5,7 +5,6 @@ import numpy as np
 import logging
 import time
 import traceback
-import threading
 from collections import Mapping
 from distutils.version import StrictVersion
 
@@ -84,6 +83,9 @@ class AbstractDataStore(Mapping):
     def get_variables(self):  # pragma: no cover
         raise NotImplementedError
 
+    def get_encoding(self):
+        return {}
+
     def load(self):
         """
         This loads the variables and attributes simultaneously.
@@ -105,8 +107,8 @@ class AbstractDataStore(Mapping):
         This function will be called anytime variables or attributes
         are requested, so care should be taken to make sure its fast.
         """
-        variables = FrozenOrderedDict((_decode_variable_name(k), v)
-                                      for k, v in iteritems(self.get_variables()))
+        variables = FrozenOrderedDict((_decode_variable_name(k), v) for k, v in
+                                      iteritems(self.get_variables()))
         attributes = FrozenOrderedDict(self.get_attrs())
         return variables, attributes
 
@@ -152,7 +154,11 @@ class ArrayWriter(object):
             self.sources.append(source)
             self.targets.append(target)
         else:
-            target[...] = source
+            try:
+                target[...] = source
+            except TypeError:
+                # workaround for GH: scipy/scipy#6880
+                target[:] = source
 
     def sync(self):
         if self.sources:
@@ -191,34 +197,42 @@ class AbstractWritableDataStore(AbstractDataStore):
         # dataset.variables
         self.store(dataset, dataset.attrs)
 
-    def store(self, variables, attributes, check_encoding_set=frozenset()):
+    def store(self, variables, attributes, check_encoding_set=frozenset(),
+              unlimited_dims=None):
         self.set_attributes(attributes)
-        self.set_variables(variables, check_encoding_set)
+        self.set_variables(variables, check_encoding_set,
+                           unlimited_dims=unlimited_dims)
 
     def set_attributes(self, attributes):
         for k, v in iteritems(attributes):
             self.set_attribute(k, v)
 
-    def set_variables(self, variables, check_encoding_set):
+    def set_variables(self, variables, check_encoding_set,
+                      unlimited_dims=None):
         for vn, v in iteritems(variables):
             name = _encode_variable_name(vn)
             check = vn in check_encoding_set
-            target, source = self.prepare_variable(name, v, check)
+            target, source = self.prepare_variable(
+                name, v, check, unlimited_dims=unlimited_dims)
             self.writer.add(source, target)
 
-    def set_necessary_dimensions(self, variable):
+    def set_necessary_dimensions(self, variable, unlimited_dims=None):
+        if unlimited_dims is None:
+            unlimited_dims = set()
         for d, l in zip(variable.dims, variable.shape):
             if d not in self.dimensions:
+                if d in unlimited_dims:
+                    l = None
                 self.set_dimension(d, l)
 
 
 class WritableCFDataStore(AbstractWritableDataStore):
-    def store(self, variables, attributes, check_encoding_set=frozenset()):
+    def store(self, variables, attributes, *args, **kwargs):
         # All NetCDF files get CF encoded by default, without this attempting
         # to write times, for example, would fail.
         cf_variables, cf_attrs = cf_encoder(variables, attributes)
         AbstractWritableDataStore.store(self, cf_variables, cf_attrs,
-                                        check_encoding_set)
+                                        *args, **kwargs)
 
 
 class DataStorePickleMixin(object):

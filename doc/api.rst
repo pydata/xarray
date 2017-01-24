@@ -46,6 +46,7 @@ Attributes
    Dataset.data_vars
    Dataset.coords
    Dataset.attrs
+   Dataset.encoding
    Dataset.indexes
    Dataset.get_index
 
@@ -122,6 +123,7 @@ Computation
    Dataset.groupby_bins
    Dataset.resample
    Dataset.diff
+   Dataset.quantile
 
 **Aggregation**:
 :py:attr:`~Dataset.all`
@@ -270,6 +272,7 @@ Computation
    DataArray.get_axis_num
    DataArray.diff
    DataArray.dot
+   DataArray.quantile
 
 **Aggregation**:
 :py:attr:`~DataArray.all`

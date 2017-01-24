@@ -13,20 +13,20 @@ try:
 except ImportError:
     pass
 from io import StringIO
+from distutils.version import LooseVersion
 
 import numpy as np
 import pandas as pd
 import xarray as xr
 import pytest
 
-from xarray import (align, broadcast, concat, merge, conventions, backends,
-                    Dataset, DataArray, Variable, IndexVariable, auto_combine,
-                    open_dataset, set_options, MergeError)
+from xarray import (align, broadcast, backends, Dataset, DataArray, Variable,
+                    IndexVariable, open_dataset, set_options, MergeError)
 from xarray.core import indexing, utils
 from xarray.core.pycompat import iteritems, OrderedDict, unicode_type
 from xarray.core.common import full_like
 
-from . import (TestCase, unittest, InaccessibleArray, UnexpectedDataAccess,
+from . import (TestCase, InaccessibleArray, UnexpectedDataAccess,
                requires_dask, source_ndarray)
 
 
@@ -61,9 +61,9 @@ class InaccessibleVariableDataStore(backends.InMemoryDataStore):
         super(InaccessibleVariableDataStore, self).__init__(writer)
         self._indexvars = set()
 
-    def store(self, variables, attributes, check_encoding_set=frozenset()):
+    def store(self, variables, *args, **kwargs):
         super(InaccessibleVariableDataStore, self).store(
-            variables, attributes, check_encoding_set)
+            variables, *args, **kwargs)
         for k, v in variables.items():
             if isinstance(v, IndexVariable):
                 self._indexvars.add(k)
@@ -910,7 +910,6 @@ class TestDataset(TestCase):
         pdim1 = [1, 2, 3]
         pdim2 = [4, 5, 1]
         pdim3 = [1, 2, 3]
-
         actual = data.isel_points(dim1=pdim1, dim2=pdim2, dim3=pdim3,
                                   dim='test_coord')
         assert 'test_coord' in actual.dims
@@ -984,7 +983,6 @@ class TestDataset(TestCase):
 
         # add in a range() index
         data['dim1'] = data.dim1
-        print(data)
 
         pdim1 = [1, 2, 3]
         pdim2 = [4, 5, 1]
@@ -996,13 +994,15 @@ class TestDataset(TestCase):
         self.assertDatasetIdentical(expected, actual)
 
         data = Dataset({'foo': (('x', 'y'), np.arange(9).reshape(3, 3))})
-        expected = Dataset({'foo': ('points', [0, 4, 8])})
+        expected = Dataset({'foo': ('points', [0, 4, 8])}
+                            )
         actual = data.sel_points(x=[0, 1, 2], y=[0, 1, 2])
         self.assertDatasetIdentical(expected, actual)
 
         data.coords.update({'x': [0, 1, 2], 'y': [0, 1, 2]})
         expected.coords.update({'x': ('points', [0, 1, 2]),
-                                'y': ('points', [0, 1, 2])})
+                                'y': ('points', [0, 1, 2])
+                                })
         actual = data.sel_points(x=[0.1, 1.1, 2.5], y=[0, 1.2, 2.0],
                                  method='pad')
         self.assertDatasetIdentical(expected, actual)
@@ -2805,6 +2805,25 @@ class TestDataset(TestCase):
         with self.assertRaisesRegexp(TypeError, 'non-integer axis'):
             ds.reduce(mean_only_one_axis, ['x', 'y'])
 
+    @pytest.mark.skipif(LooseVersion(np.__version__) < LooseVersion('1.10.0'),
+                        reason='requires numpy version 1.10.0 or later')
+    def test_quantile(self):
+
+        ds = create_test_data(seed=123)
+
+        for q in [0.25, [0.50], [0.25, 0.75]]:
+            for dim in [None, 'dim1', ['dim1']]:
+                ds_quantile = ds.quantile(q, dim=dim)
+                assert 'quantile' in ds_quantile
+                for var, dar in ds.data_vars.items():
+                    assert var in ds_quantile
+                    self.assertDataArrayIdentical(
+                        ds_quantile[var], dar.quantile(q, dim=dim))
+            dim = ['dim1', 'dim2']
+            ds_quantile = ds.quantile(q, dim=dim)
+            assert 'dim3' in ds_quantile.dims
+            assert all(d not in ds_quantile.dims for d in dim)
+
     def test_count(self):
         ds = Dataset({'x': ('a', [np.nan, 1]), 'y': 0, 'z': np.nan})
         expected = Dataset({'x': 1, 'y': 1, 'z': 0})
@@ -3150,17 +3169,17 @@ class TestDataset(TestCase):
 
     def test_binary_op_join_setting(self):
         # arithmetic_join applies to data array coordinates
-        missing_2 = xr.Dataset({'x':[0, 1]})
-        missing_0 = xr.Dataset({'x':[1, 2]})
+        missing_2 = xr.Dataset({'x': [0, 1]})
+        missing_0 = xr.Dataset({'x': [1, 2]})
         with xr.set_options(arithmetic_join='outer'):
             actual = missing_2 + missing_0
-        expected = xr.Dataset({'x':[0, 1, 2]})
+        expected = xr.Dataset({'x': [0, 1, 2]})
         self.assertDatasetEqual(actual, expected)
 
         # arithmetic join also applies to data_vars
         ds1 = xr.Dataset({'foo': 1, 'bar': 2})
         ds2 = xr.Dataset({'bar': 2, 'baz': 3})
-        expected = xr.Dataset({'bar': 4}) # default is inner joining
+        expected = xr.Dataset({'bar': 4})  # default is inner joining
         actual = ds1 + ds2
         self.assertDatasetEqual(actual, expected)
 
@@ -3183,7 +3202,7 @@ class TestDataset(TestCase):
         # For more thorough tests, see test_variable.py
         # Note: testing data_vars with mismatched dtypes
         ds = Dataset({
-            'd1': DataArray([1,2,3], dims=['x'], coords={'x': [10,20,30]}),
+            'd1': DataArray([1,2,3], dims=['x'], coords={'x': [10, 20, 30]}),
             'd2': DataArray([1.1, 2.2, 3.3], dims=['y'])
         }, attrs={'foo': 'bar'})
         actual = full_like(ds, 2)
@@ -3203,6 +3222,24 @@ class TestDataset(TestCase):
         self.assertEqual(expect['d1'].dtype, bool)
         self.assertEqual(expect['d2'].dtype, bool)
         self.assertDatasetIdentical(expect, actual)
+
+    def test_combine_first(self):
+        dsx0 = DataArray([0, 0], [('x', ['a', 'b'])]).to_dataset(name='dsx0')
+        dsx1 = DataArray([1, 1], [('x', ['b', 'c'])]).to_dataset(name='dsx1')
+
+        actual = dsx0.combine_first(dsx1)
+        expected = Dataset({'dsx0': ('x', [0, 0, np.nan]),
+                            'dsx1': ('x', [np.nan, 1, 1])},
+                           coords={'x': ['a', 'b', 'c']})
+        self.assertDatasetEqual(actual, expected)
+        self.assertDatasetEqual(actual, xr.merge([dsx0, dsx1]))
+
+        # works just like xr.merge([self, other])
+        dsy2 = DataArray([2, 2, 2],
+                        [('x', ['b', 'c', 'd'])]).to_dataset(name='dsy2')
+        actual = dsx0.combine_first(dsy2)
+        expected = xr.merge([dsy2, dsx0])
+        self.assertDatasetEqual(actual, expected)
 
 ### Py.test tests
 

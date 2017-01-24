@@ -128,6 +128,13 @@ Deprecations
 
 Enhancements
 ~~~~~~~~~~~~
+
+- Added the xarray equivalent of `pandas.Dataframe.combine_first` as an instance
+  method to DataArray/Dataset objects, facilitated by the new `ops.fillna` with
+  `join` and `data_vars_join` options.
+  (see :ref:`combine`)
+  By `Chun-Wei Yuan <https://github.com/chunweiyuan>`_.
+
 - Added the ability to change default automatic alignment (arithmetic_join="inner")
   for binary operations via :py:func:`~xarray.set_options()`
   (see :ref:`automatic alignment`).
@@ -202,6 +209,13 @@ Enhancements
   and attributes. The method prints to a buffer (e.g. ``stdout``) with output
   similar to what the command line utility ``ncdump -h`` produces (:issue:`1150`).
   By `Joe Hamman <https://github.com/jhamman>`_.
+- Added the ability write unlimited netCDF dimensions with the ``scipy`` and
+  ``netcdf4`` backends via the new :py:attr:`~xray.Dataset.encoding` attribute
+  or via the ``unlimited_dims`` argument to :py:meth:`~xray.Dataset.to_netcdf`.
+  By `Joe Hamman <https://github.com/jhamman>`_.
+- New :py:meth:`~DataArray.quantile` method to calculate quantiles from
+  DataArray objects (:issue:`1187`).
+  By `Joe Hamman <https://github.com/jhamman>`_.
 
 Bug fixes
 ~~~~~~~~~
@@ -266,6 +280,15 @@ Bug fixes
 
 - Fix to make ``.copy()`` actually copy dask arrays, which will be relevant for
   future releases of dask in which dask arrays will be mutable (:issue:`1180`).
+
+Performance improvements
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+- :py:meth:`~xarray.Dataset.isel_points` and
+  :py:meth:`~xarray.Dataset.sel_points` now use vectorised indexing in numpy
+  and dask (:issue:`1161`), which can result in several orders of magnitude
+  speedup.
+  By `Jonathan Chambers <https://github.com/mangecoeur>`_.
 
 .. _whats-new.0.8.2:
 

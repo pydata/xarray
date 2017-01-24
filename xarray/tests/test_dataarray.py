@@ -7,6 +7,7 @@ import pickle
 import pytest
 from copy import deepcopy
 from textwrap import dedent
+from distutils.version import LooseVersion
 
 import xarray as xr
 
@@ -1329,6 +1330,18 @@ class TestDataArray(TestCase):
         expected = DataArray(5, {'c': -999})
         self.assertDataArrayIdentical(expected, actual)
 
+    @pytest.mark.skipif(LooseVersion(np.__version__) < LooseVersion('1.10.0'),
+                        reason='requires numpy version 1.10.0 or later')
+    # skip due to bug in older versions of numpy.nanpercentile
+    def test_quantile(self):
+        for q in [0.25, [0.50], [0.25, 0.75]]:
+            for axis, dim in zip([None, 0, [0], [0, 1]],
+                                 [None, 'x', ['x'], ['x', 'y']]):
+                actual = self.dv.quantile(q, dim=dim)
+                expected = np.nanpercentile(self.dv.values, np.array(q) * 100,
+                                            axis=axis)
+                np.testing.assert_allclose(actual.values, expected)
+
     def test_reduce_keep_attrs(self):
         # Test dropped attrs
         vm = self.va.mean()
@@ -2369,6 +2382,26 @@ class TestDataArray(TestCase):
                                                         missing_3,
                                                         join=align_type)
         expected = xr.DataArray([np.nan, 2, 4, np.nan], [(dim, [0, 1, 2, 3])])
+        self.assertDataArrayEqual(actual, expected)
+
+    def test_combine_first(self):
+        ar0 = DataArray([[0, 0], [0, 0]], [('x', ['a', 'b']), ('y', [-1, 0])])
+        ar1 = DataArray([[1, 1], [1, 1]], [('x', ['b', 'c']), ('y', [0, 1])])
+        ar2 = DataArray([2], [('x', ['d'])])
+
+        actual = ar0.combine_first(ar1)
+        expected = DataArray([[0, 0, np.nan], [0, 0, 1], [np.nan, 1, 1]],
+                             [('x', ['a', 'b', 'c']), ('y', [-1, 0, 1])])
+        self.assertDataArrayEqual(actual, expected)
+
+        actual = ar1.combine_first(ar0)
+        expected = DataArray([[0, 0, np.nan], [0, 1, 1], [np.nan, 1, 1]],
+                             [('x', ['a', 'b', 'c']), ('y', [-1, 0, 1])])
+        self.assertDataArrayEqual(actual, expected)
+
+        actual = ar0.combine_first(ar2)
+        expected = DataArray([[0, 0], [0, 0], [2, 2]],
+                             [('x', ['a', 'b', 'd']), ('y', [-1, 0])])
         self.assertDataArrayEqual(actual, expected)
 
 
