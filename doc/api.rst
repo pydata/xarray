@@ -489,6 +489,6 @@ Testing
 .. autosummary::
    :toctree: generated/
 
-   test.assert_xarray_equal
-   test.assert_xarray_identical
-   test.assert_xarray_allclose
+   testing.assert_equal
+   testing.assert_identical
+   testing.assert_allclose

@@ -26,7 +26,7 @@ from xarray.core.pycompat import iteritems, PY2, PY3
 
 from . import (TestCase, requires_scipy, requires_netCDF4, requires_pydap,
                requires_scipy_or_netCDF4, requires_dask, requires_h5netcdf,
-               requires_pynio, has_netCDF4, has_scipy, assert_xarray_allclose)
+               requires_pynio, has_netCDF4, has_scipy, assert_allclose)
 from .test_dataset import create_test_data
 
 try:
@@ -917,7 +917,7 @@ class GenericNetCDFDataTest(CFEncodedDataTest, Only32BitTypes, TestCase):
                             # coord comes back as DataArray rather than coord, and so
                             # need to loop through here rather than in the test
                             # function (or we get recursion)
-                            [assert_xarray_allclose(data[k].variable, actual[k].variable)
+                            [assert_allclose(data[k].variable, actual[k].variable)
                              for k in data]
 
     def test_encoding_unlimited_dims(self):

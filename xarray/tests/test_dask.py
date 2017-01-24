@@ -11,7 +11,7 @@ import xarray.ufuncs as xu
 from xarray.core.pycompat import suppress
 from . import TestCase, requires_dask
 
-from xarray.test import unittest
+from xarray.tests import unittest
 
 with suppress(ImportError):
     import dask
