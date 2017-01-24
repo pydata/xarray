@@ -7,7 +7,7 @@ import operator
 import numpy as np
 
 from .. import Variable
-from ..conventions import pop_to, cf_encoder
+from ..conventions import pop_to
 from ..core import indexing
 from ..core.utils import (FrozenOrderedDict, NDArrayMixin,
                           close_on_error, is_remote_uri)
@@ -138,13 +138,13 @@ def _force_native_endianness(var):
     # check to see if encoding has a value for endian its 'native'
     if not var.encoding.get('endian', 'native') is 'native':
         raise NotImplementedError("Attempt to write non-native endian type, "
-                                  "this is not supported by the netCDF4 python "
-                                  "library.")
+                                  "this is not supported by the netCDF4 "
+                                  "python library.")
     return var
 
 
-def _extract_nc4_encoding(variable, raise_on_invalid=False, lsd_okay=True,
-                          backend='netCDF4'):
+def _extract_nc4_variable_encoding(variable, raise_on_invalid=False,
+                                   lsd_okay=True, backend='netCDF4'):
     encoding = variable.encoding.copy()
 
     safe_to_drop = set(['source', 'original_shape'])
@@ -154,9 +154,8 @@ def _extract_nc4_encoding(variable, raise_on_invalid=False, lsd_okay=True,
         valid_encodings.add('least_significant_digit')
 
     if (encoding.get('chunksizes') is not None and
-            (encoding.get('original_shape', variable.shape)
-             != variable.shape) and
-            not raise_on_invalid):
+            (encoding.get('original_shape', variable.shape) !=
+                variable.shape) and not raise_on_invalid):
         del encoding['chunksizes']
 
     for k in safe_to_drop:
@@ -251,6 +250,12 @@ class NetCDF4DataStore(WritableCFDataStore, DataStorePickleMixin):
         return FrozenOrderedDict((k, len(v))
                                  for k, v in iteritems(self.ds.dimensions))
 
+    def get_encoding(self):
+        encoding = {}
+        encoding['unlimited_dims'] = {
+            k for k, v in self.ds.dimensions.items() if v.isunlimited()}
+        return encoding
+
     def set_dimension(self, name, length):
         self.ds.createDimension(name, size=length)
 
@@ -259,7 +264,8 @@ class NetCDF4DataStore(WritableCFDataStore, DataStorePickleMixin):
             value = encode_nc3_attr_value(value)
         self.ds.setncattr(key, value)
 
-    def prepare_variable(self, name, variable, check_encoding=False):
+    def prepare_variable(self, name, variable, check_encoding=False,
+                         unlimited_dims=None):
         attrs = variable.attrs.copy()
 
         variable = _force_native_endianness(variable)
@@ -270,7 +276,7 @@ class NetCDF4DataStore(WritableCFDataStore, DataStorePickleMixin):
             variable = encode_nc3_variable(variable)
             datatype = variable.dtype
 
-        self.set_necessary_dimensions(variable)
+        self.set_necessary_dimensions(variable, unlimited_dims=unlimited_dims)
 
         fill_value = attrs.pop('_FillValue', None)
         if fill_value in ['', '\x00']:
@@ -278,8 +284,8 @@ class NetCDF4DataStore(WritableCFDataStore, DataStorePickleMixin):
             # doesn't like setting fill_value to an empty string
             fill_value = None
 
-        encoding = _extract_nc4_encoding(variable,
-                                         raise_on_invalid=check_encoding)
+        encoding = _extract_nc4_variable_encoding(
+            variable, raise_on_invalid=check_encoding)
         nc4_var = self.ds.createVariable(
             varname=name,
             datatype=datatype,

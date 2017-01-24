@@ -358,6 +358,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
             self._set_init_vars_and_dims(data_vars, coords, compat)
         if attrs is not None:
             self.attrs = attrs
+        self._encoding = None
         self._initialized = True
 
     def _set_init_vars_and_dims(self, data_vars, coords, compat):
@@ -408,6 +409,18 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
     @attrs.setter
     def attrs(self, value):
         self._attrs = OrderedDict(value)
+
+    @property
+    def encoding(self):
+        """Dictionary of global encoding attributes on this dataset
+        """
+        if self._encoding is None:
+            self._encoding = {}
+        return self._encoding
+
+    @encoding.setter
+    def encoding(self, value):
+        self._encoding = dict(value)
 
     @property
     def dims(self):
@@ -479,7 +492,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
 
     @classmethod
     def _construct_direct(cls, variables, coord_names, dims=None, attrs=None,
-                          file_obj=None):
+                          file_obj=None, encoding=None):
         """Shortcut around __init__ for internal use when we want to skip
         costly validation
         """
@@ -489,6 +502,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         obj._dims = dims
         obj._attrs = attrs
         obj._file_obj = file_obj
+        obj._encoding = encoding
         obj._initialized = True
         return obj
 
@@ -858,7 +872,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
                 del obj._variables[name]
         return obj
 
-    def dump_to_store(self, store, encoder=None, sync=True, encoding=None):
+    def dump_to_store(self, store, encoder=None, sync=True, encoding=None,
+                      unlimited_dims=None):
         """Store dataset contents to a backends.*DataStore object."""
         if encoding is None:
             encoding = {}
@@ -874,12 +889,13 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         if encoder:
             variables, attrs = encoder(variables, attrs)
 
-        store.store(variables, attrs, check_encoding)
+        store.store(variables, attrs, check_encoding,
+                    unlimited_dims=unlimited_dims)
         if sync:
             store.sync()
 
     def to_netcdf(self, path=None, mode='w', format=None, group=None,
-                  engine=None, encoding=None):
+                  engine=None, encoding=None, unlimited_dims=None):
         """Write dataset contents to a netCDF file.
 
         Parameters
@@ -923,12 +939,18 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
             Nested dictionary with variable names as keys and dictionaries of
             variable specific encodings as values, e.g.,
             ``{'my_variable': {'dtype': 'int16', 'scale_factor': 0.1, 'zlib': True}, ...}``
+        unlimited_dims : sequence of str, optional
+            Dimension(s) that should be serialized as unlimited dimensions.
+            By default, no dimensions are treated as unlimited dimensions.
+            Note that unlimited_dims may also be set via
+            ``dataset.encoding['unlimited_dims']``.
         """
         if encoding is None:
             encoding = {}
         from ..backends.api import to_netcdf
         return to_netcdf(self, path, mode, format=format, group=group,
-                         engine=engine, encoding=encoding)
+                         engine=engine, encoding=encoding,
+                         unlimited_dims=unlimited_dims)
 
     def __unicode__(self):
         return formatting.dataset_repr(self)
@@ -1398,7 +1420,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         return self.reindex(method=method, copy=copy, tolerance=tolerance,
                             **indexers)
 
-    def reindex(self, indexers=None, method=None, tolerance=None, copy=True, **kw_indexers):
+    def reindex(self, indexers=None, method=None, tolerance=None, copy=True,
+                **kw_indexers):
         """Conform this object onto a new set of indexes, filling in
         missing values with NaN.
 

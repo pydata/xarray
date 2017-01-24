@@ -8,7 +8,7 @@ import numpy as np
 import warnings
 
 from .. import Variable
-from ..core.pycompat import iteritems, basestring, OrderedDict
+from ..core.pycompat import iteritems, OrderedDict
 from ..core.utils import Frozen, FrozenOrderedDict
 from ..core.indexing import NumpyIndexingAdapter
 
@@ -119,6 +119,12 @@ class ScipyDataStore(WritableCFDataStore, DataStorePickleMixin):
     def get_dimensions(self):
         return Frozen(self.ds.dimensions)
 
+    def get_encoding(self):
+        encoding = {}
+        encoding['unlimited_dims'] = {
+            k for k, v in self.ds.dimensions.items() if v is None}
+        return encoding
+
     def set_dimension(self, name, length):
         if name in self.dimensions:
             raise ValueError('%s does not support modifying dimensions'
@@ -134,13 +140,17 @@ class ScipyDataStore(WritableCFDataStore, DataStorePickleMixin):
         value = encode_nc3_attr_value(value)
         setattr(self.ds, key, value)
 
-    def prepare_variable(self, name, variable, check_encoding=False):
+    def prepare_variable(self, name, variable, check_encoding=False,
+                         unlimited_dims=None):
         variable = encode_nc3_variable(variable)
         if check_encoding and variable.encoding:
             raise ValueError('unexpected encoding for scipy backend: %r'
                              % list(variable.encoding))
 
-        self.set_necessary_dimensions(variable)
+        if unlimited_dims is not None and len(unlimited_dims) > 1:
+            raise ValueError('NETCDF3 only supports one unlimited dimension')
+        self.set_necessary_dimensions(variable, unlimited_dims=unlimited_dims)
+
         data = variable.data
         # nb. this still creates a numpy array in all memory, even though we
         # don't write the data yet; scipy.io.netcdf does not not support

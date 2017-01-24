@@ -4,8 +4,7 @@ from __future__ import print_function
 import numpy as np
 import pandas as pd
 
-from .pycompat import (basestring, iteritems, suppress, dask_array_type,
-                       OrderedDict)
+from .pycompat import (basestring, suppress, dask_array_type, OrderedDict)
 from . import formatting
 from .utils import SortedKeysDict, not_implemented, Frozen
 
@@ -751,7 +750,8 @@ def full_like(other, fill_value, dtype=None):
     elif isinstance(other, DataArray):
         return DataArray(
             _full_like_variable(other.variable, fill_value, dtype),
-            dims=other.dims, coords=other.coords, attrs=other.attrs, name=other.name)
+            dims=other.dims, coords=other.coords, attrs=other.attrs,
+            name=other.name)
     elif isinstance(other, Variable):
         return _full_like_variable(other, fill_value, dtype)
     else:
