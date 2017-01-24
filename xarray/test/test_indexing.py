@@ -244,3 +244,11 @@ class TestMemoryCachedArray(TestCase):
         wrapped = indexing.MemoryCachedArray(original)
         wrapped[:] = 0
         self.assertArrayEqual(original, np.zeros(10))
+
+
+class TestIssue1140(TestCase):
+    def test_sel_nearest(self):
+        """https://github.com/pydata/xarray/issues/1140"""
+        times = pd.date_range('2000-01-01', periods=4)
+        foo = DataArray([1,2,3,4], coords=dict(time=times), dims='time')
+        foo.sel(time='2000-01-01', method='nearest')
