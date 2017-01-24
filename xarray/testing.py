@@ -31,20 +31,24 @@ def assert_equal(a, b):
     objects.
 
     Raises an AssertionError if two objects are not equal. This will match
-    data values and coordinates, but not names or attributes (except for
-    Dataset objects for which the variable names must match).
+    data values, dimensions and coordinates, but not names or attributes
+    (except for Dataset objects for which the variable names must match).
+    Arrays with NaN in the same location are considered equal.
 
     Parameters
     ----------
-    a : xarray.Dataset or xarray.DataArray
-        The first object to compare
-    b : xarray.Dataset or xarray.DataArray
-        The second object to compare
+    a : xarray.Dataset, xarray.DataArray or xarray.Variable
+        The first object to compare.
+    b : xarray.Dataset, xarray.DataArray or xarray.Variable
+        The second object to compare.
 
     See also
     --------
-    assert_identical, assert_allclose, xarray.Dataset.equals,
+    assert_identical
+    assert_allclose
+    xarray.Dataset.equals
     xarray.DataArray.equals
+    numpy.testing.assert_array_equal
     """
     import xarray as xr
     ___tracebackhide__ = True  # noqa: F841
@@ -64,14 +68,16 @@ def assert_identical(a, b):
 
     Parameters
     ----------
-    a : xarray.Dataset or xarray.DataArray
-        The first object to compare
-    b : xarray.Dataset or xarray.DataArray
-        The second object to compare
+    a : xarray.Dataset, xarray.DataArray or xarray.Variable
+        The first object to compare.
+    b : xarray.Dataset, xarray.DataArray or xarray.Variable
+        The second object to compare.
 
     See also
     --------
-    assert_equal, assert_allclose, xarray.Dataset.equals,
+    assert_equal
+    assert_allclose
+    xarray.Dataset.equals
     xarray.DataArray.equals
     """
     import xarray as xr
@@ -95,20 +101,24 @@ def assert_allclose(a, b, rtol=1e-05, atol=1e-08, decode_bytes=True):
 
     Parameters
     ----------
-    a : xarray.Dataset or xarray.DataArray
-        The first object to compare
-    b : xarray.Dataset or xarray.DataArray
-        The second object to compare
+    a : xarray.Dataset, xarray.DataArray or xarray.Variable
+        The first object to compare.
+    b : xarray.Dataset, xarray.DataArray or xarray.Variable
+        The second object to compare.
     rtol : float, optional
-        Relative tolerance
+        Relative tolerance.
     atol : float, optional
-        Absolute tolerance
+        Absolute tolerance.
     decode_bytes : bool, optional
-        Whether byte types should be decoded to a string or not
+        Whether byte dtypes should be decoded to strings as UTF-8 or not.
+        This is useful for testing serialization methods on Python 3 that
+        return saved strings as bytes.
 
     See also
     --------
-    assert_identical, assert_equal
+    assert_identical
+    assert_equal
+    numpy.testing.assert_allclose
     """
     import xarray as xr
     ___tracebackhide__ = True  # noqa: F841
