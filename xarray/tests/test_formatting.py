@@ -44,7 +44,7 @@ class TestFormatting(TestCase):
         array = np.arange(100)
 
         reshape = ((10, 10), (1, 100), (2, 2, 5, 5))
-        expected = np.array(99)
+        expected = np.array([99])
 
         for r in reshape:
             result = formatting.last_item(array.reshape(r))
