@@ -15,17 +15,34 @@ What's New
 
 .. _whats-new.0.9.0:
 
-v0.9.0 (unreleased)
--------------------
+v0.9.0 (25 January 2017)
+------------------------
 
 This major release includes five months worth of enhancements and bug fixes from
-23 contributors, including some significant changes that are not fully backwards
+24 contributors, including some significant changes that are not fully backwards
 compatible. Highlights include:
 
-- Coordinates are now *optional* in the xarray data model, even for dimensions
+- Coordinates are now *optional* in the xarray data model, even for dimensions.
 - Changes to caching, lazy loading and pickling to improve xarray's experience
-  for parallel computing
-- Improvements for accessing and manipulating ``pandas.MultiIndex`` levels
+  for parallel computing.
+- Improvements for accessing and manipulating ``pandas.MultiIndex`` levels.
+- Many new methods and functions, including
+  :py:meth:`~DataArray.quantile`,
+  :py:meth:`~DataArray.cumsum`,
+  :py:meth:`~DataArray.cumprod`
+  :py:attr:`~DataArray.combine_first`
+  :py:meth:`~DataArray.set_index`,
+  :py:meth:`~DataArray.reset_index`,
+  :py:meth:`~DataArray.reorder_levels`,
+  :py:func:`~xarray.full_like`,
+  :py:func:`~xarray.zeros_like`,
+  :py:func:`~xarray.ones_like`
+  :py:func:`~xarray.open_dataarray`,
+  :py:meth:`~DataArray.compute`,
+  :py:meth:`Dataset.info`,
+  :py:func:`testing.assert_equal`,
+  :py:func:`testing.assert_identical`, and
+  :py:func:`testing.assert_allclose`.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
@@ -129,15 +146,13 @@ Deprecations
 Enhancements
 ~~~~~~~~~~~~
 
-- Added the xarray equivalent of `pandas.Dataframe.combine_first` as an instance
-  method to DataArray/Dataset objects, facilitated by the new `ops.fillna` with
-  `join` and `data_vars_join` options.
-  (see :ref:`combine`)
+- Added new method :py:meth:`~DataArray.combine_first` to ``DataArray`` and
+  ``Dataset``, based on the pandas method of the same name (see :ref:`combine`).
   By `Chun-Wei Yuan <https://github.com/chunweiyuan>`_.
 
 - Added the ability to change default automatic alignment (arithmetic_join="inner")
   for binary operations via :py:func:`~xarray.set_options()`
-  (see :ref:`automatic alignment`).
+  (see :ref:`math automatic alignment`).
   By `Chun-Wei Yuan <https://github.com/chunweiyuan>`_.
 
 - Add checking of ``attr`` names and values when saving to netCDF, raising useful

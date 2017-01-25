@@ -44,10 +44,7 @@ def assert_equal(a, b):
 
     See also
     --------
-    assert_identical
-    assert_allclose
-    xarray.Dataset.equals
-    xarray.DataArray.equals
+    assert_identical, assert_allclose, Dataset.equals, DataArray.equals,
     numpy.testing.assert_array_equal
     """
     import xarray as xr
@@ -75,10 +72,7 @@ def assert_identical(a, b):
 
     See also
     --------
-    assert_equal
-    assert_allclose
-    xarray.Dataset.equals
-    xarray.DataArray.equals
+    assert_equal, assert_allclose, Dataset.equals, DataArray.equals
     """
     import xarray as xr
     ___tracebackhide__ = True  # noqa: F841
@@ -116,9 +110,7 @@ def assert_allclose(a, b, rtol=1e-05, atol=1e-08, decode_bytes=True):
 
     See also
     --------
-    assert_identical
-    assert_equal
-    numpy.testing.assert_allclose
+    assert_identical, assert_equal, numpy.testing.assert_allclose
     """
     import xarray as xr
     ___tracebackhide__ = True  # noqa: F841

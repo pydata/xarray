@@ -431,7 +431,7 @@ def inject_reduce_methods(cls):
         func.__name__ = name
         func.__doc__ = _REDUCE_DOCSTRING_TEMPLATE.format(
             name=name, cls=cls.__name__,
-            extra_args=cls._reduce_extra_args_docstring)
+            extra_args=cls._reduce_extra_args_docstring.format(name=name))
         setattr(cls, name, func)
 
 
@@ -443,7 +443,7 @@ def inject_cum_methods(cls):
         func.__name__ = name
         func.__doc__ = _CUM_DOCSTRING_TEMPLATE.format(
             name=name, cls=cls.__name__,
-            extra_args=cls._cum_extra_args_docstring)
+            extra_args=cls._cum_extra_args_docstring.format(name=name))
         setattr(cls, name, func)
 
 
