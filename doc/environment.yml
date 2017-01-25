@@ -7,7 +7,7 @@ dependencies:
   - numpy=1.11.2
   - pandas=0.19.1
   - numpydoc=0.6.0
-  - matplotlib=1.5.3
+  - matplotlib=2.0.0
   - seaborn=0.7.1
   - dask=0.12.0
   - ipython=5.1.0
