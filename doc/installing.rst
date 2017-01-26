@@ -75,4 +75,4 @@ pandas) installed first. Then, install xarray with pip::
 
 To run the test suite after installing xarray, install
 `py.test <https://pytest.org>`__ (``pip install pytest``) and run
-``py.test xarray``.
+``py.test --pyargs xarray``.
