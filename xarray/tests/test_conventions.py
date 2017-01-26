@@ -403,6 +403,15 @@ class TestDatetime(TestCase):
             expected = np.array(expected_list, dtype='datetime64[ns]')
             self.assertArrayEqual(expected, actual)
 
+    @requires_netCDF4
+    def test_decoded_cf_datetime_array_2d(self):
+        # regression test for GH1229
+        array = conventions.DecodedCFDatetimeArray(np.array([[0, 1], [2, 3]]),
+                                                   'days since 2000-01-01')
+        assert array.dtype == 'datetime64[ns]'
+        expected = pd.date_range('2000-01-01', periods=4).values.reshape(2, 2)
+        self.assertArrayEqual(np.asarray(array), expected)
+
     def test_infer_datetime_units(self):
         for dates, expected in [(pd.date_range('1900-01-01', periods=5),
                                  'days since 1900-01-01 00:00:00'),

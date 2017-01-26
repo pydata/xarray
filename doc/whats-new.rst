@@ -295,6 +295,11 @@ Bug fixes
 
 - Fix to make ``.copy()`` actually copy dask arrays, which will be relevant for
   future releases of dask in which dask arrays will be mutable (:issue:`1180`).
+  By `Stephan Hoyer <https://github.com/shoyer>`_.
+
+- Fix opening NetCDF files with multi-dimensional time variables
+  (:issue:`1229`).
+  By `Stephan Hoyer <https://github.com/shoyer>`_.
 
 Performance improvements
 ~~~~~~~~~~~~~~~~~~~~~~~~
