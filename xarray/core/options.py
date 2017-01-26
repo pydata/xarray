@@ -1,18 +1,23 @@
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
-OPTIONS = {'display_width': 80,
-           'arithmetic_join': "inner"}
+
+
+OPTIONS = {
+    'display_width': 80,
+    'arithmetic_join': 'inner',
+}
 
 
 class set_options(object):
     """Set options for xarray in a controlled context.
 
-    Currently, the only supported options are:
-    1.) display_width: maximum terminal display width of data arrays.
-                       Default=80.
-    2.) arithmetic_join: dataarray/dataset alignment in binary operations.
-                         Default='inner'.
+    Currently supported options:
+
+    - ``display_width``: maximum display width for ``repr`` on xarray objects.
+      Default: ``80``.
+    - ``arithmetic_join``: DataArray/Dataset alignment in binary operations.
+      Default: ``'inner'``.
 
     You can use ``set_options`` either as a context manager:
 

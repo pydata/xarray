@@ -1067,8 +1067,8 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
 
         See Also
         --------
-        np.nanpercentile, pd.Series.quantile,
-        xr.Dataset.quantile, xr.DataArray.quantile
+        numpy.nanpercentile, pandas.Series.quantile, Dataset.quantile,
+        DataArray.quantile
         """
 
         if isinstance(self.data, dask_array_type):

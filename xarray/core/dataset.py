@@ -2286,7 +2286,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
 
         See also
         --------
-        xarray.Dataset.from_dict
+        Dataset.from_dict
         """
         d = {'coords': {}, 'attrs': decode_numpy_dict_values(self.attrs),
              'dims': dict(self.dims), 'data_vars': {}}
@@ -2338,8 +2338,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
 
         See also
         --------
-        xarray.Dataset.to_dict
-        xarray.DataArray.from_dict
+        Dataset.to_dict
+        DataArray.from_dict
         """
 
         if not set(['coords', 'data_vars']).issubset(set(d)):
@@ -2645,14 +2645,14 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         Parameters
         ----------
         q : float in range of [0,1] (or sequence of floats)
-            Quantile to compute, which must be between 0 and 1
-            inclusive.
+            Quantile to compute, which must be between 0 and 1 inclusive.
         dim : str or sequence of str, optional
             Dimension(s) over which to apply quantile.
         interpolation : {'linear', 'lower', 'higher', 'midpoint', 'nearest'}
             This optional parameter specifies the interpolation method to
             use when the desired quantile lies between two data points
             ``i < j``:
+
                 * linear: ``i + (j - i) * fraction``, where ``fraction`` is
                   the fractional part of the index surrounded by ``i`` and
                   ``j``.
@@ -2678,7 +2678,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
 
         See Also
         --------
-        np.nanpercentile, pd.Series.quantile, xr.DataArray.quantile
+        numpy.nanpercentile, pandas.Series.quantile, DataArray.quantile
         """
 
         if isinstance(dim, basestring):

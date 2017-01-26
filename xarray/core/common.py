@@ -58,7 +58,7 @@ class ImplementsDatasetReduce(object):
 
     _reduce_extra_args_docstring = \
         """dim : str or sequence of str, optional
-            Dimension(s) over which to apply `func`.  By default `func` is
+            Dimension(s) over which to apply `{name}`.  By default `{name}` is
             applied over all dimensions."""
 
     _cum_extra_args_docstring = \

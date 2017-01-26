@@ -825,8 +825,6 @@ class DataArray(AbstractArray, BaseDataObject):
             Dictionary whose keys are current dimension names and whose values
             are new names. Each value must already be a coordinate on this
             array.
-        inplace : bool, optional
-            If True, swap dimensions in-place. Otherwise, return a new object.
 
         Returns
         -------
@@ -1314,7 +1312,7 @@ class DataArray(AbstractArray, BaseDataObject):
 
         See also
         --------
-        xarray.DataArray.from_dict
+        DataArray.from_dict
         """
         d = {'coords': {}, 'attrs': decode_numpy_dict_values(self.attrs),
              'dims': self.dims}
@@ -1359,8 +1357,8 @@ class DataArray(AbstractArray, BaseDataObject):
 
         See also
         --------
-        xarray.DataArray.to_dict
-        xarray.Dataset.from_dict
+        DataArray.to_dict
+        Dataset.from_dict
         """
         coords = None
         if 'coords' in d:
@@ -1710,7 +1708,7 @@ class DataArray(AbstractArray, BaseDataObject):
 
         See also
         --------
-        np.tensordot(a, b, axes)
+        numpy.tensordot
 
         Examples
         --------
@@ -1761,14 +1759,14 @@ class DataArray(AbstractArray, BaseDataObject):
         Parameters
         ----------
         q : float in range of [0,1] (or sequence of floats)
-            Quantile to compute, which must be between 0 and 1
-            inclusive.
+            Quantile to compute, which must be between 0 and 1 inclusive.
         dim : str or sequence of str, optional
             Dimension(s) over which to apply quantile.
         interpolation : {'linear', 'lower', 'higher', 'midpoint', 'nearest'}
             This optional parameter specifies the interpolation method to
             use when the desired quantile lies between two data points
             ``i < j``:
+
                 * linear: ``i + (j - i) * fraction``, where ``fraction`` is
                   the fractional part of the index surrounded by ``i`` and
                   ``j``.
@@ -1792,7 +1790,7 @@ class DataArray(AbstractArray, BaseDataObject):
 
         See Also
         --------
-        np.nanpercentile, pd.Series.quantile, xr.Dataset.quantile
+        numpy.nanpercentile, pandas.Series.quantile, Dataset.quantile
         """
 
         ds = self._to_temp_dataset().quantile(q, dim=dim, keep_attrs=keep_attrs,

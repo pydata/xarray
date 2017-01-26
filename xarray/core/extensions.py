@@ -98,7 +98,7 @@ def register_dataarray_accessor(name):
 
     See also
     --------
-    xarray.register_dataset_accessor
+    register_dataset_accessor
     """
     return _register_accessor(name, DataArray)
 
@@ -114,6 +114,6 @@ def register_dataset_accessor(name):
 
     See also
     --------
-    xarray.register_dataarray_accessor
+    register_dataarray_accessor
     """
     return _register_accessor(name, Dataset)
