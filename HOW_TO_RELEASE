@@ -30,6 +30,7 @@ Time required: about an hour.
       git rebase master
       git push upstream stable
       git checkout master
+    It's OK to force push to 'stable' if necessary.
     We also update the stable branch with `git cherrypick` for documentation
     only fixes that apply the current released version.
 10. Revert ISRELEASED in setup.py back to False. Don't change the version
