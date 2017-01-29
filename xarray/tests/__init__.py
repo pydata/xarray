@@ -3,7 +3,7 @@ from __future__ import division
 from __future__ import print_function
 import warnings
 from contextlib import contextmanager
-from distutils.version import StrictVersion
+from distutils.version import LooseVersion
 
 import numpy as np
 from numpy.testing import assert_array_equal
@@ -70,7 +70,7 @@ except ImportError:
 
 try:
     import bottleneck
-    if StrictVersion(bottleneck.__version__) < StrictVersion('1.0'):
+    if LooseVersion(bottleneck.__version__) < LooseVersion('1.0'):
         raise ImportError('Fall back to numpy')
     has_bottleneck = True
 except ImportError:
