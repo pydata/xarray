@@ -188,7 +188,7 @@ def convert_label_indexer(index, label, index_name='', method=None,
             # indexer into an array indexer
             raise KeyError('cannot represent labeled-based slice indexer for '
                            'dimension %r with a slice over integer positions; '
-                           'the index is unsorted or non-unique')
+                           'the index is unsorted or non-unique' % index_name)
 
     elif is_dict_like(label):
         is_nested_vals = _is_nested_tuple(tuple(label.values()))
