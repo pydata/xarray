@@ -14,9 +14,9 @@ What's New
     np.random.seed(123456)
 
 
-.. _whats-new.0.9.0:
+.. _whats-new.0.9.1:
 
-v0.9.1 (29 January 2017)
+v0.9.1 (30 January 2017)
 ------------------------
 
 Renamed the "Unindexed dimensions" section in the ``Dataset`` and
