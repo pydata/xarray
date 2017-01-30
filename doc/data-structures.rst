@@ -69,8 +69,8 @@ in with default values:
 
 As you can see, dimension names are always present in the xarray data model: if
 you do not provide them, defaults of the form ``dim_N`` will be created.
-However, coordinates are optional. If you do not specific coordinates for a
-dimension, the axis name will appear under the list of "Unindexed dimensions".
+However, coordinates are always optional, and dimensions do not have automatic
+coordinate labels.
 
 .. note::
 

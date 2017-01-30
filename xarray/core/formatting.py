@@ -327,7 +327,7 @@ def unindexed_dims_repr(dims, coords):
     unindexed_dims = [d for d in dims if d not in coords]
     if unindexed_dims:
         dims_str = u', '.join(u'%s' % d for d in unindexed_dims)
-        return u'Unindexed dimensions:\n' + u' ' * 4 + dims_str
+        return u'Dimensions without coordinates: ' + dims_str
     else:
         return None
 
@@ -399,7 +399,8 @@ def dataset_repr(ds):
     dims_start = pretty_print(u'Dimensions:', col_width)
     summary.append(u'%s(%s)' % (dims_start, dim_summary(ds)))
 
-    summary.append(coords_repr(ds.coords, col_width=col_width))
+    if ds.coords:
+        summary.append(coords_repr(ds.coords, col_width=col_width))
 
     unindexed_dims_str = unindexed_dims_repr(ds.dims, ds.coords)
     if unindexed_dims_str:
