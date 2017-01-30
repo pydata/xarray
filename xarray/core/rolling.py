@@ -3,7 +3,7 @@ from __future__ import division
 from __future__ import print_function
 import numpy as np
 import warnings
-from distutils.version import StrictVersion
+from distutils.version import LooseVersion
 
 from .pycompat import OrderedDict, zip
 from .common import ImplementsRollingArrayReduce, full_like
@@ -51,7 +51,7 @@ class Rolling(object):
         """
 
         if (has_bottleneck and
-                (StrictVersion(bn.__version__) < StrictVersion('1.0'))):
+                (LooseVersion(bn.__version__) < LooseVersion('1.0'))):
             warnings.warn('xarray requires bottleneck version of 1.0 or '
                           'greater for rolling operations. Rolling '
                           'aggregation methods will use numpy instead'
