@@ -13,6 +13,16 @@ What's New
     import xarray as xr
     np.random.seed(123456)
 
+
+.. _whats-new.0.9.1:
+
+v0.9.1 (30 January 2017)
+------------------------
+
+Renamed the "Unindexed dimensions" section in the ``Dataset`` and
+``DataArray`` repr (added in v0.9.0) to "Dimensions without coordinates"
+(:issue:`1199`).
+
 .. _whats-new.0.9.0:
 
 v0.9.0 (25 January 2017)
@@ -48,9 +58,9 @@ Breaking changes
 ~~~~~~~~~~~~~~~~
 
 - Index coordinates for each dimensions are now optional, and no longer created
-  by default :issue:`1017`. You can identify such dimensions without indexes by
-  their appearance in list of "Unindexed dimensions" in the ``Dataset`` or
-  ``DataArray`` repr:
+  by default :issue:`1017`. You can identify such dimensions without coordinates
+  by their appearance in list of "Dimensions without coordinates" in the
+  ``Dataset`` or ``DataArray`` repr:
 
   .. ipython::
     :verbatim:
@@ -59,10 +69,7 @@ Breaking changes
     Out[1]:
     <xarray.Dataset>
     Dimensions:  (x: 1, y: 2)
-    Coordinates:
-        *empty*
-    Unindexed dimensions:
-        x, y
+    Dimensions without coordinates: x, y
     Data variables:
         foo      (x, y) int64 1 2
 
