@@ -9,8 +9,7 @@ import numpy as np
 from numpy.testing import assert_array_equal
 import pytest
 
-from xarray.core import utils, nputils, ops
-from xarray.core.variable import as_variable
+from xarray.core import utils
 from xarray.core.pycompat import PY3
 from xarray.testing import assert_equal, assert_identical, assert_allclose
 

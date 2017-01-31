@@ -896,8 +896,8 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
 
         if getattr(func, 'keep_dims', False):
             if dim is None and axis is None:
-                raise ValueError("must supply either single 'dim' or 'axis' argument to %s"
-                                 % (func.__name__))
+                raise ValueError("must supply either single 'dim' or 'axis' "
+                                 "argument to %s" % (func.__name__))
 
         if dim is not None:
             axis = self.get_axis_num(dim)

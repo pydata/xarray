@@ -101,8 +101,8 @@ def equivalent(first, second):
     if isinstance(first, np.ndarray) or isinstance(second, np.ndarray):
         return ops.array_equiv(first, second)
     else:
-        return (first is second or
-                first == second or
+        return ((first is second) or
+                (first == second) or
                 (pd.isnull(first) and pd.isnull(second)))
 
 

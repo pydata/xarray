@@ -28,8 +28,6 @@ from .variable import (Variable, as_variable, IndexVariable,
                        broadcast_variables)
 from .pycompat import (iteritems, basestring, OrderedDict,
                        dask_array_type, range)
-from .combine import concat
-from .formatting import ensure_valid_repr
 from .options import OPTIONS
 
 # list of attributes of pd.DatetimeIndex that are ndarrays of time info
@@ -154,8 +152,8 @@ def merge_indexes(
         for n in var_names:
             names.append(n)
             var = variables[n]
-            if (current_index_variable is not None and
-                        var.dims != current_index_variable.dims):
+            if ((current_index_variable is not None) and
+                    (var.dims != current_index_variable.dims)):
                 raise ValueError(
                     "dimension mismatch between %r %s and %r %s"
                     % (dim, current_index_variable.dims, n, var.dims))
@@ -1222,7 +1220,6 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         Dataset.sel_points
         DataArray.isel_points
         """
-        from .dataarray import DataArray
 
         indexer_dims = set(indexers)
 
@@ -2098,7 +2095,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
                 if name not in self.coords:
                     if (not numeric_only or
                             np.issubdtype(var.dtype, np.number) or
-                                var.dtype == np.bool_):
+                            (var.dtype == np.bool_)):
                         if len(reduce_dims) == 1:
                             # unpack dimensions for the benefit of functions
                             # like np.argmin which can't handle tuple arguments
@@ -2810,7 +2807,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
             for attr_name, pattern in kwargs.items():
                 attr_value = variable.attrs.get(attr_name)
                 if ((callable(pattern) and pattern(attr_value))
-                    or attr_value == pattern):
+                        or attr_value == pattern):
                     selection.append(var_name)
         return self[selection]
 
