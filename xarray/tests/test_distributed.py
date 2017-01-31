@@ -6,10 +6,10 @@ distributed = pytest.importorskip('distributed')
 da = pytest.importorskip('dask.array')
 from distributed.utils_test import cluster, loop
 
-from xarray.test.test_backends import create_tmp_file
-from xarray.test.test_dataset import create_test_data
+from xarray.tests.test_backends import create_tmp_file
+from xarray.tests.test_dataset import create_test_data
 
-from . import assert_dataset_allclose, has_scipy, has_netCDF4, has_h5netcdf
+from . import assert_allclose, has_scipy, has_netCDF4, has_h5netcdf
 
 
 ENGINES = []
@@ -28,9 +28,7 @@ def test_dask_distributed_integration_test(loop, engine):
             original = create_test_data()
             with create_tmp_file() as filename:
                 original.to_netcdf(filename, engine=engine)
-                # TODO: should be able to serialize locks
-                restored = xr.open_dataset(filename, chunks=3, lock=False,
-                                           engine=engine)
+                restored = xr.open_dataset(filename, chunks=3, engine=engine)
                 assert isinstance(restored.var1.data, da.Array)
                 computed = restored.compute()
-                assert_dataset_allclose(original, computed)
+                assert_allclose(original, computed)

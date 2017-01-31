@@ -46,6 +46,7 @@ Attributes
    Dataset.data_vars
    Dataset.coords
    Dataset.attrs
+   Dataset.encoding
    Dataset.indexes
    Dataset.get_index
 
@@ -122,6 +123,7 @@ Computation
    Dataset.groupby_bins
    Dataset.resample
    Dataset.diff
+   Dataset.quantile
 
 **Aggregation**:
 :py:attr:`~Dataset.all`
@@ -270,6 +272,7 @@ Computation
    DataArray.get_axis_num
    DataArray.diff
    DataArray.dot
+   DataArray.quantile
 
 **Aggregation**:
 :py:attr:`~DataArray.all`
@@ -414,6 +417,7 @@ Dataset methods
    Dataset.from_dataframe
    Dataset.from_dict
    Dataset.close
+   Dataset.compute
    Dataset.load
    Dataset.chunk
    Dataset.filter_by_attrs
@@ -438,6 +442,7 @@ DataArray methods
    DataArray.from_series
    DataArray.from_cdms2
    DataArray.from_dict
+   DataArray.compute
    DataArray.load
    DataArray.chunk
 
@@ -456,6 +461,16 @@ Plotting
    plot.pcolormesh
    plot.FacetGrid
 
+Testing
+=======
+
+.. autosummary::
+   :toctree: generated/
+
+   testing.assert_equal
+   testing.assert_identical
+   testing.assert_allclose
+
 Advanced API
 ============
 
@@ -463,7 +478,7 @@ Advanced API
    :toctree: generated/
 
    Variable
-   Coordinate
+   IndexVariable
    register_dataset_accessor
    register_dataarray_accessor
 
@@ -478,14 +493,3 @@ arguments for the ``from_store`` and ``dump_to_store`` Dataset methods:
    backends.H5NetCDFStore
    backends.PydapDataStore
    backends.ScipyDataStore
-
-
-Testing
-=======
-
-.. autosummary::
-   :toctree: generated/
-
-   test.assert_xarray_equal
-   test.assert_xarray_identical
-   test.assert_xarray_allclose

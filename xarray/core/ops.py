@@ -6,6 +6,7 @@ import contextlib
 import inspect
 import operator
 import warnings
+from distutils.version import LooseVersion
 
 import numpy as np
 import pandas as pd
@@ -278,11 +279,35 @@ def count(data, axis=None):
     return sum(~isnull(data), axis=axis)
 
 
-def fillna(data, other):
+def fillna(data, other, join="left", dataset_join="left"):
     """Fill missing values in this object with data from the other object.
     Follows normal broadcasting and alignment rules.
+
+    Parameters
+    ----------
+    join : {'outer', 'inner', 'left', 'right'}, optional
+        Method for joining the indexes of the passed objects along each
+        dimension
+        - 'outer': use the union of object indexes
+        - 'inner': use the intersection of object indexes
+        - 'left': use indexes from the first object with each dimension
+        - 'right': use indexes from the last object with each dimension
+    dataset_join : {'outer', 'inner', 'left', 'right'}, optional
+        Method for joining variables of Dataset objects with mismatched
+        data variables.
+        - 'outer': take variables from both Dataset objects
+        - 'inner': take only overlapped variables
+        - 'left': take only variables from the first object
+        - 'right': take only variables from the last object
     """
-    return where(isnull(data), other, data)
+    from .computation import apply_ufunc
+
+    def _fillna(data, other):
+        return where(isnull(data), other, data)
+    return apply_ufunc(_fillna, data, other, join=join, dask_array="allowed",
+                       dataset_join=dataset_join,
+                       dataset_fill_value=np.nan,
+                       keep_attrs=True)
 
 
 def where_method(data, cond, other=np.nan):
@@ -406,7 +431,7 @@ def inject_reduce_methods(cls):
         func.__name__ = name
         func.__doc__ = _REDUCE_DOCSTRING_TEMPLATE.format(
             name=name, cls=cls.__name__,
-            extra_args=cls._reduce_extra_args_docstring)
+            extra_args=cls._reduce_extra_args_docstring.format(name=name))
         setattr(cls, name, func)
 
 
@@ -418,7 +443,7 @@ def inject_cum_methods(cls):
         func.__name__ = name
         func.__doc__ = _CUM_DOCSTRING_TEMPLATE.format(
             name=name, cls=cls.__name__,
-            extra_args=cls._cum_extra_args_docstring)
+            extra_args=cls._cum_extra_args_docstring.format(name=name))
         setattr(cls, name, func)
 
 
@@ -444,11 +469,6 @@ def inject_binary_ops(cls, inplace=False):
 
     for name, f in [('eq', array_eq), ('ne', array_ne)]:
         setattr(cls, op_str(name), cls._binary_op(f))
-
-    # patch in fillna
-    f = _func_slash_method_wrapper(fillna)
-    method = cls._binary_op(f, join='left', fillna=True)
-    setattr(cls, '_fillna', method)
 
     # patch in where
     f = _func_slash_method_wrapper(where_method, 'where')
@@ -505,6 +525,9 @@ def inject_bottleneck_rolling_methods(cls):
 
     # bottleneck rolling methods
     if has_bottleneck:
+        if LooseVersion(bn.__version__) < LooseVersion('1.0'):
+            return
+
         for bn_name, method_name in BOTTLENECK_ROLLING_METHODS.items():
             f = getattr(bn, bn_name)
             func = cls._bottleneck_reduce(f)

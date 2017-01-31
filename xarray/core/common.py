@@ -4,8 +4,7 @@ from __future__ import print_function
 import numpy as np
 import pandas as pd
 
-from .pycompat import (basestring, suppress, dask_array_type,
-                       OrderedDict)
+from .pycompat import basestring, suppress, dask_array_type, OrderedDict
 from . import formatting
 from .utils import SortedKeysDict, not_implemented, Frozen
 
@@ -59,7 +58,7 @@ class ImplementsDatasetReduce(object):
 
     _reduce_extra_args_docstring = \
         """dim : str or sequence of str, optional
-            Dimension(s) over which to apply `func`.  By default `func` is
+            Dimension(s) over which to apply `{name}`.  By default `{name}` is
             applied over all dimensions."""
 
     _cum_extra_args_docstring = \
@@ -753,7 +752,8 @@ def full_like(other, fill_value, dtype=None):
     elif isinstance(other, DataArray):
         return DataArray(
             _full_like_variable(other.variable, fill_value, dtype),
-            dims=other.dims, coords=other.coords, attrs=other.attrs, name=other.name)
+            dims=other.dims, coords=other.coords, attrs=other.attrs,
+            name=other.name)
     elif isinstance(other, Variable):
         return _full_like_variable(other, fill_value, dtype)
     else:

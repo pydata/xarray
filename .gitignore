@@ -44,7 +44,6 @@ nosetests.xml
 # xarray specific
 doc/_build
 doc/generated
-doc/_static/*.png
 xarray/version.py
 
 .ipynb_checkpoints

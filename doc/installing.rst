@@ -6,7 +6,7 @@ Installation
 Required dependencies
 ---------------------
 
-- Python 2.7, 3.4 or 3.5
+- Python 2.7, 3.4, 3.5, or 3.6
 - `numpy <http://www.numpy.org/>`__ (1.7 or later)
 - `pandas <http://pandas.pydata.org/>`__ (0.15.0 or later)
 
@@ -30,6 +30,7 @@ For accelerating xarray
 
 - `bottleneck <https://github.com/kwgoodman/bottleneck>`__: speeds up
   NaN-skipping and rolling window aggregations by a large factor
+  (1.0 or later)
 - `cyordereddict <https://github.com/shoyer/cyordereddict>`__: speeds up most
   internal operations with xarray data structures (for python versions < 3.5)
 
@@ -74,4 +75,4 @@ pandas) installed first. Then, install xarray with pip::
 
 To run the test suite after installing xarray, install
 `py.test <https://pytest.org>`__ (``pip install pytest``) and run
-``py.test xarray``.
+``py.test --pyargs xarray``.

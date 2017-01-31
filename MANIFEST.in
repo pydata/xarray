@@ -1,1 +1,5 @@
 include LICENSE
+recursive-include licenses *
+recursive-include doc *
+prune doc/_build
+prune doc/generated

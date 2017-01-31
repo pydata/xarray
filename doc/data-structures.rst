@@ -48,7 +48,7 @@ The :py:class:`~xarray.DataArray` constructor takes:
   :py:class:`~pandas.Series`, :py:class:`~pandas.DataFrame` or :py:class:`~pandas.Panel`)
 - ``coords``: a list or dictionary of coordinates
 - ``dims``: a list of dimension names. If omitted, dimension names are
-  taken from ``coords`` if possible
+  taken from ``coords`` if possible.
 - ``attrs``: a dictionary of attributes to add to the instance
 - ``name``: a string that names the instance
 
@@ -69,15 +69,19 @@ in with default values:
 
 As you can see, dimension names are always present in the xarray data model: if
 you do not provide them, defaults of the form ``dim_N`` will be created.
+However, coordinates are always optional, and dimensions do not have automatic
+coordinate labels.
 
 .. note::
 
-  Prior to xarray v0.9, coordinates corresponding to dimension were *also*
-  always present in xarray: xarray would create default coordinates of the form
-  ``range(dim_size)`` if coordinates were not supplied explicitly. This is no
-  longer the case.
+  This is different from pandas, where axes always have tick labels, which
+  default to the integers ``[0, ..., n-1]``.
 
-Coordinates can take the following forms:
+  Prior to xarray v0.9, xarray copied this behavior: default coordinates for
+  each dimension would be created if coordinates were not supplied explicitly.
+  This is no longer the case.
+
+Coordinates can be specified in the following ways:
 
 - A list of values with length equal to the number of dimensions, providing
   coordinate labels for each dimension. Each value must be of one of the
@@ -243,8 +247,8 @@ Creating a Dataset
 To make an :py:class:`~xarray.Dataset` from scratch, supply dictionaries for any
 variables (``data_vars``), coordinates (``coords``) and attributes (``attrs``).
 
-- ``data_vars`` should be a dictionary with each key as the name of the variable and each
-value as one of:
+- ``data_vars`` should be a dictionary with each key as the name of the variable
+  and each value as one of:
 
   * A :py:class:`~xarray.DataArray` or :py:class:`~xarray.Variable`
   * A tuple of the form ``(dims, data[, attrs])``, which is converted into

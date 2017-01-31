@@ -11,7 +11,7 @@ from . import ops, utils
 from .common import _maybe_promote
 from .indexing import get_indexer
 from .pycompat import iteritems, OrderedDict, suppress
-from .utils import is_full_slice
+from .utils import is_full_slice, is_dict_like
 from .variable import Variable, IndexVariable
 
 
@@ -28,8 +28,12 @@ def _get_joiner(join):
         raise ValueError('invalid value for join: %s' % join)
 
 
+_DEFAULT_EXCLUDE = frozenset()
+
+
 def align(*objects, **kwargs):
-    """align(*objects, join='inner', copy=True)
+    """align(*objects, join='inner', copy=True, indexes=None,
+             exclude=frozenset())
 
     Given any number of Dataset and/or DataArray objects, returns new
     objects with aligned indexes and dimension sizes.
@@ -75,14 +79,17 @@ def align(*objects, **kwargs):
     join = kwargs.pop('join', 'inner')
     copy = kwargs.pop('copy', True)
     indexes = kwargs.pop('indexes', None)
-    exclude = kwargs.pop('exclude', None)
+    exclude = kwargs.pop('exclude', _DEFAULT_EXCLUDE)
     if indexes is None:
         indexes = {}
-    if exclude is None:
-        exclude = set()
     if kwargs:
         raise TypeError('align() got unexpected keyword arguments: %s'
                         % list(kwargs))
+
+    if not indexes and len(objects) == 1:
+        # fast path for the trivial case
+        obj, = objects
+        return (obj.copy(deep=copy),)
 
     all_indexes = defaultdict(list)
     unlabeled_dim_sizes = defaultdict(set)
@@ -141,9 +148,70 @@ def align(*objects, **kwargs):
     for obj in objects:
         valid_indexers = {k: v for k, v in joined_indexes.items()
                           if k in obj.dims}
-        result.append(obj.reindex(copy=copy, **valid_indexers))
+        if not valid_indexers:
+            # fast path for no reindexing necessary
+            new_obj = obj.copy(deep=copy)
+        else:
+            new_obj = obj.reindex(copy=copy, **valid_indexers)
+        result.append(new_obj)
 
     return tuple(result)
+
+
+def deep_align(objects, join='inner', copy=True, indexes=None,
+               exclude=frozenset(), raise_on_invalid=True):
+    """Align objects for merging, recursing into dictionary values.
+
+    This function is not public API.
+    """
+    if indexes is None:
+        indexes = {}
+
+    def is_alignable(obj):
+        return hasattr(obj, 'indexes') and hasattr(obj, 'reindex')
+
+    positions = []
+    keys = []
+    out = []
+    targets = []
+    no_key = object()
+    not_replaced = object()
+    for n, variables in enumerate(objects):
+        if is_alignable(variables):
+            positions.append(n)
+            keys.append(no_key)
+            targets.append(variables)
+            out.append(not_replaced)
+        elif is_dict_like(variables):
+            for k, v in variables.items():
+                if is_alignable(v) and k not in indexes:
+                    # Skip variables in indexes for alignment, because these
+                    # should to be overwritten instead:
+                    # https://github.com/pydata/xarray/issues/725
+                    positions.append(n)
+                    keys.append(k)
+                    targets.append(v)
+            out.append(OrderedDict(variables))
+        elif raise_on_invalid:
+            raise ValueError('object to align is neither an xarray.Dataset, '
+                             'an xarray.DataArray nor a dictionary: %r'
+                             % variables)
+        else:
+            out.append(variables)
+
+    aligned = align(*targets, join=join, copy=copy, indexes=indexes,
+                    exclude=exclude)
+
+    for position, key, aligned_obj in zip(positions, keys, aligned):
+        if key is no_key:
+            out[position] = aligned_obj
+        else:
+            out[position][key] = aligned_obj
+
+    # something went wrong: we should have replaced all sentinel values
+    assert all(arg is not not_replaced for arg in out)
+
+    return out
 
 
 def reindex_like_indexers(target, other):

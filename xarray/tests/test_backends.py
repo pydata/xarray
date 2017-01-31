@@ -20,13 +20,13 @@ import xarray as xr
 from xarray import (Dataset, DataArray, open_dataset, open_dataarray,
                     open_mfdataset, backends, save_mfdataset)
 from xarray.backends.common import robust_getitem
-from xarray.backends.netCDF4_ import _extract_nc4_encoding
+from xarray.backends.netCDF4_ import _extract_nc4_variable_encoding
 from xarray.core import indexing
 from xarray.core.pycompat import iteritems, PY2, PY3
 
 from . import (TestCase, requires_scipy, requires_netCDF4, requires_pydap,
                requires_scipy_or_netCDF4, requires_dask, requires_h5netcdf,
-               requires_pynio, has_netCDF4, has_scipy, assert_xarray_allclose)
+               requires_pynio, has_netCDF4, has_scipy, assert_allclose)
 from .test_dataset import create_test_data
 
 try:
@@ -917,8 +917,19 @@ class GenericNetCDFDataTest(CFEncodedDataTest, Only32BitTypes, TestCase):
                             # coord comes back as DataArray rather than coord, and so
                             # need to loop through here rather than in the test
                             # function (or we get recursion)
-                            [assert_xarray_allclose(data[k].variable, actual[k].variable)
+                            [assert_allclose(data[k].variable, actual[k].variable)
                              for k in data]
+
+    def test_encoding_unlimited_dims(self):
+        ds = Dataset({'x': ('y', np.arange(10.0))})
+        with self.roundtrip(ds,
+                            save_kwargs=dict(unlimited_dims=['y'])) as actual:
+            self.assertEqual(actual.encoding['unlimited_dims'], set('y'))
+            self.assertDatasetEqual(ds, actual)
+        ds.encoding = {'unlimited_dims': ['y']}
+        with self.roundtrip(ds) as actual:
+            self.assertEqual(actual.encoding['unlimited_dims'], set('y'))
+            self.assertDatasetEqual(ds, actual)
 
 
 @requires_h5netcdf
@@ -971,6 +982,15 @@ class H5NetCDFDataTest(BaseNetCDF4Test, TestCase):
             actual = open_dataset(tmp_file)
             expected = Dataset(attrs={'foo': 'bar'})
             self.assertDatasetIdentical(expected, actual)
+
+    def test_encoding_unlimited_dims(self):
+        ds = Dataset({'x': ('y', np.arange(10.0))})
+        ds.encoding = {'unlimited_dims': ['y']}
+        with create_tmp_file() as tmp_file:
+            with pytest.warns(UserWarning):
+                ds.to_netcdf(tmp_file, engine='h5netcdf')
+            with pytest.warns(UserWarning):
+                ds.to_netcdf(tmp_file, engine='h5netcdf', unlimited_dims=['y'])
 
 
 @requires_dask
@@ -1033,20 +1053,6 @@ class DaskTest(TestCase, DatasetIOTestCases):
             expected = preprocess(original)
             with open_mfdataset(tmp, preprocess=preprocess) as actual:
                 self.assertDatasetIdentical(expected, actual)
-
-    def test_lock(self):
-        original = Dataset({'foo': ('x', np.random.randn(10))})
-        with create_tmp_file() as tmp:
-            original.to_netcdf(tmp, format='NETCDF3_CLASSIC')
-            with open_dataset(tmp, chunks=10) as ds:
-                task = ds.foo.data.dask[ds.foo.data.name, 0]
-                self.assertIsInstance(task[-1], type(Lock()))
-            with open_mfdataset(tmp) as ds:
-                task = ds.foo.data.dask[ds.foo.data.name, 0]
-                self.assertIsInstance(task[-1], type(Lock()))
-            with open_mfdataset(tmp, engine='scipy') as ds:
-                task = ds.foo.data.dask[ds.foo.data.name, 0]
-                self.assertNotIsInstance(task[-1], type(Lock()))
 
     def test_save_mfdataset_roundtrip(self):
         original = Dataset({'foo': ('x', np.random.randn(10))})
@@ -1208,13 +1214,13 @@ class TestPyNio(CFEncodedDataTest, Only32BitTypes, TestCase):
 
 class TestEncodingInvalid(TestCase):
 
-    def test_extract_nc4_encoding(self):
+    def test_extract_nc4_variable_encoding(self):
         var = xr.Variable(('x',), [1, 2, 3], {}, {'foo': 'bar'})
         with self.assertRaisesRegexp(ValueError, 'unexpected encoding'):
-            _extract_nc4_encoding(var, raise_on_invalid=True)
+            _extract_nc4_variable_encoding(var, raise_on_invalid=True)
 
         var = xr.Variable(('x',), [1, 2, 3], {}, {'chunking': (2, 1)})
-        encoding = _extract_nc4_encoding(var)
+        encoding = _extract_nc4_variable_encoding(var)
         self.assertEqual({}, encoding)
 
     def test_extract_h5nc_encoding(self):
@@ -1222,10 +1228,12 @@ class TestEncodingInvalid(TestCase):
         var = xr.Variable(('x',), [1, 2, 3], {},
                           {'least_sigificant_digit': 2})
         with self.assertRaisesRegexp(ValueError, 'unexpected encoding'):
-            _extract_nc4_encoding(var, raise_on_invalid=True)
+            _extract_nc4_variable_encoding(var, raise_on_invalid=True)
+
 
 class MiscObject:
     pass
+
 
 @requires_netCDF4
 class TestValidateAttrs(TestCase):
@@ -1326,6 +1334,7 @@ class TestValidateAttrs(TestCase):
             with create_tmp_file() as tmp_file:
                 ds.to_netcdf(tmp_file)
 
+
 @requires_netCDF4
 class TestDataArrayToNetCDF(TestCase):
 
@@ -1338,7 +1347,6 @@ class TestDataArrayToNetCDF(TestCase):
             with open_dataarray(tmp) as loaded_da:
                 self.assertDataArrayIdentical(original_da, loaded_da)
 
-
     def test_dataarray_to_netcdf_with_name(self):
         original_da = DataArray(np.arange(12).reshape((3, 4)),
                                 name='test')
@@ -1348,7 +1356,6 @@ class TestDataArrayToNetCDF(TestCase):
 
             with open_dataarray(tmp) as loaded_da:
                 self.assertDataArrayIdentical(original_da, loaded_da)
-
 
     def test_dataarray_to_netcdf_coord_name_clash(self):
         original_da = DataArray(np.arange(12).reshape((3, 4)),

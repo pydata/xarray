@@ -825,8 +825,6 @@ class DataArray(AbstractArray, BaseDataObject):
             Dictionary whose keys are current dimension names and whose values
             are new names. Each value must already be a coordinate on this
             array.
-        inplace : bool, optional
-            If True, swap dimensions in-place. Otherwise, return a new object.
 
         Returns
         -------
@@ -1097,9 +1095,26 @@ class DataArray(AbstractArray, BaseDataObject):
         if utils.is_dict_like(value):
             raise TypeError('cannot provide fill value as a dictionary with '
                             'fillna on a DataArray')
-        out = self._fillna(value)
-        out.attrs = self.attrs
+        out = ops.fillna(self, value)
         return out
+
+    def combine_first(self, other):
+        """Combine two DataArray objects, with union of coordinates.
+
+        This operation follows the normal broadcasting and alignment rules of
+        ``join='outer'``.  Default to non-null values of array calling the
+        method.  Use np.nan to fill in vacant cells after alignment.
+
+        Parameters
+        ----------
+        other : DataArray
+            Used to fill all matching missing values in this array.
+
+        Returns
+        -------
+        DataArray
+        """
+        return ops.fillna(self, other, join="outer")
 
     def reduce(self, func, dim=None, axis=None, keep_attrs=False, **kwargs):
         """Reduce this array by applying `func` along some dimension(s).
@@ -1297,7 +1312,7 @@ class DataArray(AbstractArray, BaseDataObject):
 
         See also
         --------
-        xarray.DataArray.from_dict
+        DataArray.from_dict
         """
         d = {'coords': {}, 'attrs': decode_numpy_dict_values(self.attrs),
              'dims': self.dims}
@@ -1342,8 +1357,8 @@ class DataArray(AbstractArray, BaseDataObject):
 
         See also
         --------
-        xarray.DataArray.to_dict
-        xarray.Dataset.from_dict
+        DataArray.to_dict
+        Dataset.from_dict
         """
         coords = None
         if 'coords' in d:
@@ -1693,7 +1708,7 @@ class DataArray(AbstractArray, BaseDataObject):
 
         See also
         --------
-        np.tensordot(a, b, axes)
+        numpy.tensordot
 
         Examples
         --------
@@ -1735,6 +1750,53 @@ class DataArray(AbstractArray, BaseDataObject):
                     [d for d in other.dims if d not in dims])
 
         return type(self)(new_data, new_coords, new_dims)
+
+    def quantile(self, q, dim=None, interpolation='linear', keep_attrs=False):
+        """Compute the qth quantile of the data along the specified dimension.
+
+        Returns the qth quantiles(s) of the array elements.
+
+        Parameters
+        ----------
+        q : float in range of [0,1] (or sequence of floats)
+            Quantile to compute, which must be between 0 and 1 inclusive.
+        dim : str or sequence of str, optional
+            Dimension(s) over which to apply quantile.
+        interpolation : {'linear', 'lower', 'higher', 'midpoint', 'nearest'}
+            This optional parameter specifies the interpolation method to
+            use when the desired quantile lies between two data points
+            ``i < j``:
+
+                * linear: ``i + (j - i) * fraction``, where ``fraction`` is
+                  the fractional part of the index surrounded by ``i`` and
+                  ``j``.
+                * lower: ``i``.
+                * higher: ``j``.
+                * nearest: ``i`` or ``j``, whichever is nearest.
+                * midpoint: ``(i + j) / 2``.
+        keep_attrs : bool, optional
+            If True, the dataset's attributes (`attrs`) will be copied from
+            the original object to the new one.  If False (default), the new
+            object will be returned without attributes.
+
+        Returns
+        -------
+        quantiles : DataArray
+            If `q` is a single quantile, then the result
+            is a scalar. If multiple percentiles are given, first axis of
+            the result corresponds to the quantile and a quantile dimension
+            is added to the return array. The other dimensions are the
+             dimensions that remain after the reduction of the array.
+
+        See Also
+        --------
+        numpy.nanpercentile, pandas.Series.quantile, Dataset.quantile
+        """
+
+        ds = self._to_temp_dataset().quantile(q, dim=dim, keep_attrs=keep_attrs,
+                                              interpolation=interpolation)
+        return self._from_temp_dataset(ds)
+
 
 # priority most be higher than Variable to properly work with binary ufuncs
 ops.inject_all_ops_and_reduce_methods(DataArray, priority=60)

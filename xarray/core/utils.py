@@ -159,7 +159,7 @@ def remove_incompatible_items(first_dict, second_dict, compat=equivalent):
 
 
 def is_dict_like(value):
-    return hasattr(value, '__getitem__') and hasattr(value, 'keys')
+    return hasattr(value, 'keys') and hasattr(value, '__getitem__')
 
 
 def is_full_slice(value):
@@ -180,12 +180,14 @@ def combine_pos_and_kw_args(pos_kwargs, kw_kwargs, func_name):
 
 
 def is_scalar(value):
-    """ Whether to treat a value as a scalar. Any non-iterable, string, or 0-D array """
-    return (
-        getattr(value, 'ndim', None) == 0
-        or isinstance(value, (basestring, bytes_type))
-        or not isinstance(value, Iterable))
+    """Whether to treat a value as a scalar.
 
+    Any non-iterable, string, or 0-D array
+    """
+    return (
+        getattr(value, 'ndim', None) == 0 or
+        isinstance(value, (basestring, bytes_type)) or not
+        isinstance(value, Iterable))
 
 def is_valid_numpy_dtype(dtype):
     try:
@@ -205,8 +207,8 @@ def to_0d_object_array(value):
 
 def to_0d_array(value):
     """Given a value, wrap it in a 0-D numpy.ndarray."""
-    if np.isscalar(value) or (isinstance(value, np.ndarray)
-                              and value.ndim == 0):
+    if np.isscalar(value) or (isinstance(value, np.ndarray) and
+                              value.ndim == 0):
         return np.array(value)
     else:
         return to_0d_object_array(value)

@@ -1,10 +1,12 @@
 name: test_env
+channels:
+  - conda-forge
 dependencies:
-  - python=2.7
-  - cython
+  - python=3.6
   - dask
   - distributed
   - h5py
+  - netcdf4
   - pytest
   - numpy
   - pandas
@@ -12,5 +14,4 @@ dependencies:
   - pip:
     - coveralls
     - pytest-cov
-    - h5netcdf
-    - git+https://github.com/Unidata/netcdf4-python.git
+    - pydap

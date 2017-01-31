@@ -225,7 +225,7 @@ larger chunksizes.
 
     import os
     os.remove('example-data.nc')
-    
+
 Optimization Tips
 -----------------
 

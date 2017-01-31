@@ -13,6 +13,7 @@ Combining data
 
 * For combining datasets or data arrays along a dimension, see concatenate_.
 * For combining datasets with different variables, see merge_.
+* For combining datasets or data arrays with different indexes or missing values, see combine_.
 
 .. _concatenate:
 
@@ -116,14 +117,37 @@ used in the :py:class:`~xarray.Dataset` constructor:
 
     xr.Dataset({'a': arr[:-1], 'b': arr[1:]})
 
+.. _combine:
+
+Combine
+~~~~~~~
+
+The instance method :py:meth:`~xarray.DataArray.combine_first` combines two
+datasets/data arrays and defaults to non-null values in the calling object,
+using values from the called object to fill holes.  The resulting coordinates
+are the union of coordinate labels. Vacant cells as a result of the outer-join
+are filled with ``NaN``. For example:
+
+.. ipython:: python
+
+    ar0 = xr.DataArray([[0, 0], [0, 0]], [('x', ['a', 'b']), ('y', [-1, 0])])
+    ar1 = xr.DataArray([[1, 1], [1, 1]], [('x', ['b', 'c']), ('y', [0, 1])])
+    ar0.combine_first(ar1)
+    ar1.combine_first(ar0)
+
+For datasets, ``ds0.combine_first(ds1)`` works similarly to
+``xr.merge([ds0, ds1])``, except that ``xr.merge`` raises ``MergeError`` when
+there are conflicting values in variables to be merged, whereas
+``.combine_first`` defaults to the calling object's values.
+
 .. _update:
 
 Update
 ~~~~~~
 
-In contrast to ``merge``, ``update`` modifies a dataset in-place without
-checking for conflicts, and will overwrite any existing variables with new
-values:
+In contrast to ``merge``, :py:meth:`~xarray.Dataset.update` modifies a dataset
+in-place without checking for conflicts, and will overwrite any existing
+variables with new values:
 
 .. ipython:: python
 

@@ -7,6 +7,7 @@ import pickle
 import pytest
 from copy import deepcopy
 from textwrap import dedent
+from distutils.version import LooseVersion
 
 import xarray as xr
 
@@ -15,10 +16,10 @@ from xarray import (align, broadcast, Dataset, DataArray,
 from xarray.core.pycompat import iteritems, OrderedDict
 from xarray.core.common import full_like
 
-from xarray.test import (
+from xarray.tests import (
     TestCase, ReturnItem, source_ndarray, unittest, requires_dask,
-    assert_xarray_identical, assert_xarray_equal,
-    assert_xarray_allclose, assert_array_equal)
+    assert_identical, assert_equal,
+    assert_allclose, assert_array_equal)
 
 
 class TestDataArray(TestCase):
@@ -46,7 +47,7 @@ class TestDataArray(TestCase):
         Coordinates:
           * x        (x) int64 0 1 2
             other    int64 0
-          o time     (time) -
+        Dimensions without coordinates: time
         Attributes:
             foo: bar""")
         self.assertEqual(expected, repr(data_array))
@@ -1328,6 +1329,18 @@ class TestDataArray(TestCase):
         expected = DataArray(5, {'c': -999})
         self.assertDataArrayIdentical(expected, actual)
 
+    @pytest.mark.skipif(LooseVersion(np.__version__) < LooseVersion('1.10.0'),
+                        reason='requires numpy version 1.10.0 or later')
+    # skip due to bug in older versions of numpy.nanpercentile
+    def test_quantile(self):
+        for q in [0.25, [0.50], [0.25, 0.75]]:
+            for axis, dim in zip([None, 0, [0], [0, 1]],
+                                 [None, 'x', ['x'], ['x', 'y']]):
+                actual = self.dv.quantile(q, dim=dim)
+                expected = np.nanpercentile(self.dv.values, np.array(q) * 100,
+                                            axis=axis)
+                np.testing.assert_allclose(actual.values, expected)
+
     def test_reduce_keep_attrs(self):
         # Test dropped attrs
         vm = self.va.mean()
@@ -2370,6 +2383,26 @@ class TestDataArray(TestCase):
         expected = xr.DataArray([np.nan, 2, 4, np.nan], [(dim, [0, 1, 2, 3])])
         self.assertDataArrayEqual(actual, expected)
 
+    def test_combine_first(self):
+        ar0 = DataArray([[0, 0], [0, 0]], [('x', ['a', 'b']), ('y', [-1, 0])])
+        ar1 = DataArray([[1, 1], [1, 1]], [('x', ['b', 'c']), ('y', [0, 1])])
+        ar2 = DataArray([2], [('x', ['d'])])
+
+        actual = ar0.combine_first(ar1)
+        expected = DataArray([[0, 0, np.nan], [0, 0, 1], [np.nan, 1, 1]],
+                             [('x', ['a', 'b', 'c']), ('y', [-1, 0, 1])])
+        self.assertDataArrayEqual(actual, expected)
+
+        actual = ar1.combine_first(ar0)
+        expected = DataArray([[0, 0, np.nan], [0, 1, 1], [np.nan, 1, 1]],
+                             [('x', ['a', 'b', 'c']), ('y', [-1, 0, 1])])
+        self.assertDataArrayEqual(actual, expected)
+
+        actual = ar0.combine_first(ar2)
+        expected = DataArray([[0, 0], [0, 0], [2, 2]],
+                             [('x', ['a', 'b', 'd']), ('y', [-1, 0])])
+        self.assertDataArrayEqual(actual, expected)
+
 
 @pytest.fixture(params=[1])
 def da(request):
@@ -2381,20 +2414,23 @@ def da(request):
         return da
 
     if request.param == 2:
-        return DataArray([0, np.nan, 1, 2, np.nan, 3, 4, 5, np.nan, 6, 7], dims='time')
+        return DataArray([0, np.nan, 1, 2, np.nan, 3, 4, 5, np.nan, 6, 7],
+                         dims='time')
+
 
 def test_rolling_iter(da):
 
     rolling_obj = da.rolling(time=7)
 
     assert len(rolling_obj.window_labels) == len(da['time'])
-    assert_xarray_identical(rolling_obj.window_labels, da['time'])
+    assert_identical(rolling_obj.window_labels, da['time'])
 
     for i, (label, window_da) in enumerate(rolling_obj):
         assert label == da['time'].isel(time=i)
 
+
 def test_rolling_properties(da):
-    pytest.importorskip('bottleneck')
+    pytest.importorskip('bottleneck', minversion='1.0')
 
     rolling_obj = da.rolling(time=4)
 
@@ -2434,7 +2470,7 @@ def test_rolling_wrapped_bottleneck(da, name, center, min_periods):
     # Test center
     rolling_obj = da.rolling(time=7, center=center)
     actual = getattr(rolling_obj, name)()['time']
-    assert_xarray_equal(actual, da['time'])
+    assert_equal(actual, da['time'])
 
 def test_rolling_invalid_args(da):
     pytest.importorskip('bottleneck')
@@ -2480,4 +2516,4 @@ def test_rolling_reduce(da, center, min_periods, window, name):
     # add nan prefix to numpy methods to get similar # behavior as bottleneck
     actual = rolling_obj.reduce(getattr(np, 'nan%s' % name))
     expected = getattr(rolling_obj, name)()
-    assert_xarray_allclose(actual, expected)
+    assert_allclose(actual, expected)

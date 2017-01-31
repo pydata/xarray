@@ -3,7 +3,6 @@ from __future__ import division
 from __future__ import print_function
 import gzip
 import os.path
-import threading
 from distutils.version import StrictVersion
 from glob import glob
 from io import BytesIO
@@ -12,7 +11,7 @@ from numbers import Number
 import numpy as np
 
 from .. import backends, conventions
-from .common import ArrayWriter
+from .common import ArrayWriter, GLOBAL_LOCK
 from ..core import indexing
 from ..core.combine import auto_combine
 from ..core.utils import close_on_error, is_remote_uri
@@ -55,9 +54,6 @@ def _normalize_path(path):
         return os.path.abspath(os.path.expanduser(path))
 
 
-_global_lock = threading.Lock()
-
-
 def _default_lock(filename, engine):
     if filename.endswith('.gz'):
         lock = False
@@ -71,9 +67,9 @@ def _default_lock(filename, engine):
             else:
                 # TODO: identify netcdf3 files and don't use the global lock
                 # for them
-                lock = _global_lock
+                lock = GLOBAL_LOCK
         elif engine in {'h5netcdf', 'pynio'}:
-            lock = _global_lock
+            lock = GLOBAL_LOCK
         else:
             lock = False
     return lock
@@ -526,7 +522,7 @@ WRITEABLE_STORES = {'netcdf4': backends.NetCDF4DataStore,
 
 
 def to_netcdf(dataset, path=None, mode='w', format=None, group=None,
-              engine=None, writer=None, encoding=None):
+              engine=None, writer=None, encoding=None, unlimited_dims=None):
     """This function creates an appropriate datastore for writing a dataset to
     disk as a netCDF file
 
@@ -565,8 +561,12 @@ def to_netcdf(dataset, path=None, mode='w', format=None, group=None,
     sync = writer is None
 
     store = store_cls(path, mode, format, group, writer)
+
+    if unlimited_dims is None:
+        unlimited_dims = dataset.encoding.get('unlimited_dims', None)
     try:
-        dataset.dump_to_store(store, sync=sync, encoding=encoding)
+        dataset.dump_to_store(store, sync=sync, encoding=encoding,
+                              unlimited_dims=unlimited_dims)
         if isinstance(path, BytesIO):
             return path.getvalue()
     finally:
