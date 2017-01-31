@@ -4,7 +4,7 @@ from __future__ import print_function
 import numpy as np
 import pandas as pd
 
-from .pycompat import (basestring, iteritems, suppress, dask_array_type,
+from .pycompat import (basestring, suppress, dask_array_type,
                        OrderedDict)
 from . import formatting
 from .utils import SortedKeysDict, not_implemented, Frozen
@@ -600,7 +600,8 @@ class BaseDataObject(AttrAccessMixin):
         ----------
         cond : boolean DataArray or Dataset
         other : unimplemented, optional
-            Unimplemented placeholder for compatibility with future numpy / pandas versions
+            Unimplemented placeholder for compatibility with future
+            numpy / pandas versions
         drop : boolean, optional
             Coordinate labels that only correspond to NA values should be dropped
 
@@ -634,7 +635,8 @@ class BaseDataObject(AttrAccessMixin):
           * y        (y) int64 0 1 2 3 4
         """
         if other is not None:
-            raise NotImplementedError("The optional argument 'other' has not yet been implemented")
+            raise NotImplementedError("The optional argument 'other' has not "
+                                      "yet been implemented")
 
         if drop:
             from .dataarray import DataArray
@@ -678,9 +680,9 @@ class BaseDataObject(AttrAccessMixin):
 
     # this has no runtime function - these are listed so IDEs know these methods
     # are defined and don't warn on these operations
-    __lt__ = __le__ =__ge__ = __gt__ = __add__ = __sub__ = __mul__ = \
-    __truediv__ = __floordiv__ = __mod__ = __pow__ = __and__  = __xor__ = \
-    __or__ = __div__ = __eq__ = __ne__ = not_implemented
+    __lt__ = __le__ = __ge__ = __gt__ = __add__ = __sub__ = __mul__ = \
+        __truediv__ = __floordiv__ = __mod__ = __pow__ = __and__ = __xor__ = \
+        __or__ = __div__ = __eq__ = __ne__ = not_implemented
 
 
 def _maybe_promote(dtype):

@@ -227,8 +227,6 @@ def hist(darray, figsize=None, size=None, aspect=None, ax=None, **kwargs):
         Additional keyword arguments to matplotlib.pyplot.hist
 
     """
-    import matplotlib.pyplot as plt
-
     ax = get_axis(figsize, size, aspect, ax)
 
     no_nan = np.ravel(darray.values)

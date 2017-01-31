@@ -6,7 +6,6 @@ import operator
 from collections import defaultdict
 
 import numpy as np
-import pandas as pd
 
 from . import ops, utils
 from .common import _maybe_promote

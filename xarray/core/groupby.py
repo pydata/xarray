@@ -82,6 +82,7 @@ def _consolidate_slices(slices):
     """Consolidate adjacent slices in a list of slices.
     """
     result = []
+    last_slice = slice(None)
     for slice_ in slices:
         if not isinstance(slice_, slice):
             raise ValueError('list element is not a slice: %r' % slice_)

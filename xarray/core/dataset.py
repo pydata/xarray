@@ -28,7 +28,6 @@ from .variable import (Variable, as_variable, IndexVariable,
                        broadcast_variables)
 from .pycompat import (iteritems, basestring, OrderedDict,
                        dask_array_type, range)
-from .formatting import ensure_valid_repr
 from .combine import concat
 from .options import OPTIONS
 
@@ -154,8 +153,8 @@ def merge_indexes(
         for n in var_names:
             names.append(n)
             var = variables[n]
-            if (current_index_variable is not None and
-                var.dims != current_index_variable.dims):
+            if ((current_index_variable is not None) and
+                    (var.dims != current_index_variable.dims)):
                 raise ValueError(
                     "dimension mismatch between %r %s and %r %s"
                     % (dim, current_index_variable.dims, n, var.dims))
@@ -1345,7 +1344,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         return self.reindex(method=method, copy=copy, tolerance=tolerance,
                             **indexers)
 
-    def reindex(self, indexers=None, method=None, tolerance=None, copy=True, **kw_indexers):
+    def reindex(self, indexers=None, method=None, tolerance=None, copy=True,
+                **kw_indexers):
         """Conform this object onto a new set of indexes, filling in
         missing values with NaN.
 

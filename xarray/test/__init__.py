@@ -8,8 +8,7 @@ import numpy as np
 from numpy.testing import assert_array_equal
 import pytest
 
-from xarray.core import utils, nputils, ops
-from xarray.core.variable import as_variable
+from xarray.core import utils, ops
 from xarray.core.pycompat import PY3
 
 try:
@@ -198,7 +197,7 @@ def assert_xarray_equal(a, b):
     assert type(a) == type(b)
     if isinstance(a, (xr.Variable, xr.DataArray, xr.Dataset)):
         assert a.equals(b), '{}\n{}'.format(a, b)
-    else:  
+    else:
         raise TypeError('{} not supported by assertion comparison'
                         .format(type(a)))
 

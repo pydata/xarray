@@ -16,7 +16,7 @@ from pandas.tslib import OutOfBoundsDatetime
 
 from .options import OPTIONS
 from .pycompat import (
-    PY2, unicode_type, bytes_type, dask_array_type, OrderedDict, basestring)
+    PY2, unicode_type, bytes_type, dask_array_type, OrderedDict)
 
 
 def pretty_print(x, numchars):
@@ -48,7 +48,7 @@ def ensure_valid_repr(string):
     On Python 2, this means we need to convert unicode to bytes. We won't need
     this function once we drop Python 2.7 support.
     """
-    if PY2 and isinstance(string, unicode):
+    if PY2 and isinstance(string, unicode_type):
         string = string.encode('utf-8')
     return string
 

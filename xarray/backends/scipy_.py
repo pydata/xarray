@@ -8,7 +8,7 @@ import numpy as np
 import warnings
 
 from .. import Variable
-from ..core.pycompat import iteritems, basestring, OrderedDict
+from ..core.pycompat import iteritems, OrderedDict
 from ..core.utils import Frozen, FrozenOrderedDict
 from ..core.indexing import NumpyIndexingAdapter
 

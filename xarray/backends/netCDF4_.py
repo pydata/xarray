@@ -7,7 +7,7 @@ import operator
 import numpy as np
 
 from .. import Variable
-from ..conventions import pop_to, cf_encoder
+from ..conventions import pop_to
 from ..core import indexing
 from ..core.utils import (FrozenOrderedDict, NDArrayMixin,
                           close_on_error, is_remote_uri)

@@ -6,7 +6,6 @@ from __future__ import print_function
 import contextlib
 import functools
 import itertools
-import os.path
 import re
 import warnings
 from collections import Mapping, MutableMapping, Iterable
@@ -102,7 +101,9 @@ def equivalent(first, second):
     if isinstance(first, np.ndarray) or isinstance(second, np.ndarray):
         return ops.array_equiv(first, second)
     else:
-        return first is second or first == second or (pd.isnull(first) and pd.isnull(second))
+        return ((first is second) or
+                (first == second) or
+                (pd.isnull(first) and pd.isnull(second)))
 
 
 def peek_at(iterable):
@@ -186,7 +187,6 @@ def is_scalar(value):
         or not isinstance(value, Iterable))
 
 
-
 def is_valid_numpy_dtype(dtype):
     try:
         np.dtype(dtype)
@@ -206,7 +206,7 @@ def to_0d_object_array(value):
 def to_0d_array(value):
     """Given a value, wrap it in a 0-D numpy.ndarray."""
     if np.isscalar(value) or (isinstance(value, np.ndarray)
-                                and value.ndim == 0):
+                              and value.ndim == 0):
         return np.array(value)
     else:
         return to_0d_object_array(value)
