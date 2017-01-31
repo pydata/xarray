@@ -442,8 +442,8 @@ def test_broadcast_compat_data_1d():
 
     assert_identical(data, broadcast_compat_data(var, ('x',), ()))
     assert_identical(data, broadcast_compat_data(var, (), ('x',)))
-    assert_identical(data[None, :], broadcast_compat_data(var, ('w',), ('x',)))
-    assert_identical(data[None, :, None],
+    assert_identical(data[:], broadcast_compat_data(var, ('w',), ('x',)))
+    assert_identical(data[:, None],
                      broadcast_compat_data(var, ('w', 'x', 'y'), ()))
 
     with pytest.raises(ValueError):
@@ -462,15 +462,12 @@ def test_broadcast_compat_data_2d():
     assert_identical(data, broadcast_compat_data(var, (), ('x', 'y')))
     assert_identical(data.T, broadcast_compat_data(var, ('y', 'x'), ()))
     assert_identical(data.T, broadcast_compat_data(var, ('y',), ('x',)))
-    assert_identical(data[None, :, :],
-                     broadcast_compat_data(var, ('w', 'x'), ('y',)))
-    assert_identical(data[None, :, :],
-                     broadcast_compat_data(var, ('w',), ('x', 'y')))
-    assert_identical(data.T[None, :, :],
-                     broadcast_compat_data(var, ('w',), ('y', 'x')))
-    assert_identical(data[None, :, :, None],
+    assert_identical(data, broadcast_compat_data(var, ('w', 'x'), ('y',)))
+    assert_identical(data, broadcast_compat_data(var, ('w',), ('x', 'y')))
+    assert_identical(data.T, broadcast_compat_data(var, ('w',), ('y', 'x')))
+    assert_identical(data[:, :, None],
                      broadcast_compat_data(var, ('w', 'x', 'y', 'z'), ()))
-    assert_identical(data.T[None, :, :, None],
+    assert_identical(data[None, :, :].T,
                      broadcast_compat_data(var, ('w', 'y', 'x', 'z'), ()))
 
 

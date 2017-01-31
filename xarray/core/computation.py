@@ -498,9 +498,15 @@ def broadcast_compat_data(variable, broadcast_dims, core_dims):
         data = ops.transpose(data, order)
 
     if new_dims != reordered_dims:
-        key = tuple(SLICE_NONE if dim in set_old_dims else None
-                    for dim in new_dims)
-        data = data[key]
+        key_parts = []
+        for dim in new_dims:
+            if dim in set_old_dims:
+                key_parts.append(SLICE_NONE)
+            elif key_parts:
+                # no need to insert new axes at the beginning that are already
+                # handled by broadcasting
+                key_parts.append(np.newaxis)
+        data = data[tuple(key_parts)]
 
     return data
 
