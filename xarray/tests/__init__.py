@@ -9,7 +9,7 @@ import numpy as np
 from numpy.testing import assert_array_equal
 import pytest
 
-from xarray.core import utils, ops
+from xarray.core import utils
 from xarray.core.pycompat import PY3
 from xarray.testing import assert_equal, assert_identical, assert_allclose
 
@@ -166,58 +166,6 @@ class TestCase(unittest.TestCase):
 
     def assertDataArrayAllClose(self, ar1, ar2, rtol=1e-05, atol=1e-08):
         assert_allclose(ar1, ar2, rtol=rtol, atol=atol)
-
-
-def assert_xarray_equal(a, b):
-    import xarray as xr
-    ___tracebackhide__ = True  # noqa: F841
-    assert type(a) == type(b)
-    if isinstance(a, (xr.Variable, xr.DataArray, xr.Dataset)):
-        assert a.equals(b), '{}\n{}'.format(a, b)
-    else:  
-        raise TypeError('{} not supported by assertion comparison'
-                        .format(type(a)))
-
-
-def assert_xarray_identical(a, b):
-    import xarray as xr
-    ___tracebackhide__ = True  # noqa: F841
-    assert type(a) == type(b)
-    if isinstance(a, xr.DataArray):
-        assert a.name == b.name
-        assert_xarray_identical(a._to_temp_dataset(), b._to_temp_dataset())
-    elif isinstance(a, (xr.Dataset, xr.Variable)):
-        assert a.identical(b), '{}\n{}'.format(a, b)
-    else:
-        raise TypeError('{} not supported by assertion comparison'
-                        .format(type(a)))
-
-
-def assert_xarray_allclose(a, b, rtol=1e-05, atol=1e-08):
-    import xarray as xr
-    ___tracebackhide__ = True  # noqa: F841
-    assert type(a) == type(b)
-    if isinstance(a, xr.Variable):
-        assert a.dims == b.dims
-        allclose = data_allclose_or_equiv(
-            a.values, b.values, rtol=rtol, atol=atol)
-        assert allclose, '{}\n{}'.format(a.values, b.values)
-    elif isinstance(a, xr.DataArray):
-        assert_xarray_allclose(a.variable, b.variable)
-        for v in a.coords.variables:
-            # can't recurse with this function as coord is sometimes a DataArray,
-            # so call into data_allclose_or_equiv directly
-            allclose = data_allclose_or_equiv(
-                a.coords[v].values, b.coords[v].values, rtol=rtol, atol=atol)
-            assert allclose, '{}\n{}'.format(a.coords[v].values, b.coords[v].values)
-    elif isinstance(a, xr.Dataset):
-        assert sorted(a, key=str) == sorted(b, key=str)
-        for k in list(a.variables) + list(a.coords):
-            assert_xarray_allclose(a[k], b[k], rtol=rtol, atol=atol)
-
-    else:
-        raise TypeError('{} not supported by assertion comparison'
-                        .format(type(a)))
 
 
 class UnexpectedDataAccess(Exception):

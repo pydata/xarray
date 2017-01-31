@@ -16,8 +16,7 @@ import pandas as pd
 from pandas.tslib import OutOfBoundsDatetime
 
 from .options import OPTIONS
-from .pycompat import (
-    PY2, unicode_type, bytes_type, dask_array_type, OrderedDict)
+from .pycompat import PY2, unicode_type, bytes_type, dask_array_type
 
 
 def pretty_print(x, numchars):

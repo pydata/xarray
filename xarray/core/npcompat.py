@@ -252,9 +252,9 @@ except ImportError:  # pragma: no cover
 
     def nancumsum(a, axis=None, dtype=None, out=None):
         """
-        Return the cumulative sum of array elements over a given axis treating Not a
-        Numbers (NaNs) as zero.  The cumulative sum does not change when NaNs are
-        encountered and leading NaNs are replaced by zeros.
+        Return the cumulative sum of array elements over a given axis treating
+        Not a Numbers (NaNs) as zero.  The cumulative sum does not change when
+        NaNs are encountered and leading NaNs are replaced by zeros.
 
         Zeros are returned for slices that are all-NaN or empty.
 
@@ -316,9 +316,9 @@ except ImportError:  # pragma: no cover
 
     def nancumprod(a, axis=None, dtype=None, out=None):
         """
-        Return the cumulative product of array elements over a given axis treating Not a
-        Numbers (NaNs) as one.  The cumulative product does not change when NaNs are
-        encountered and leading NaNs are replaced by ones.
+        Return the cumulative product of array elements over a given axis
+        treating Not a Numbers (NaNs) as one.  The cumulative product does not
+        change when NaNs are encountered and leading NaNs are replaced by ones.
 
         Ones are returned for slices that are all-NaN or empty.
 

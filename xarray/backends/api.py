@@ -98,9 +98,9 @@ def _validate_attrs(dataset):
     def check_attr(name, value):
         if isinstance(name, basestring):
             if not name:
-                raise ValueError('Invalid name for attr: string must be length '
-                                 '1 or greater for serialization to netCDF '
-                                 'files')
+                raise ValueError('Invalid name for attr: string must be '
+                                 'length 1 or greater for serialization to '
+                                 'netCDF files')
         else:
             raise TypeError("Invalid name for attr: {} must be a string for "
                             "serialization to netCDF files".format(name))
@@ -108,8 +108,8 @@ def _validate_attrs(dataset):
         if not isinstance(value, (basestring, Number, np.ndarray, np.number,
                                   list, tuple)):
             raise TypeError('Invalid value for attr: {} must be a number '
-                            'string, ndarray or a list/tuple of numbers/strings '
-                            'for serialization to netCDF '
+                            'string, ndarray or a list/tuple of '
+                            'numbers/strings for serialization to netCDF '
                             'files'.format(value))
 
     # Check attrs on the dataset itself
@@ -228,9 +228,11 @@ def open_dataset(filename_or_obj, group=None, decode_cf=True,
             try:
                 from dask.base import tokenize
             except ImportError:
-                import dask  # raise the usual error if dask is entirely missing
+                # raise the usual error if dask is entirely missing
+                import dask
                 if StrictVersion(dask.__version__) < StrictVersion('0.6'):
-                    raise ImportError('xarray requires dask version 0.6 or newer')
+                    raise ImportError(
+                        'xarray requires dask version 0.6 or newer')
                 else:
                     raise
 

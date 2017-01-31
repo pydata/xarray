@@ -602,7 +602,8 @@ class BaseDataObject(AttrAccessMixin):
             Unimplemented placeholder for compatibility with future
             numpy / pandas versions
         drop : boolean, optional
-            Coordinate labels that only correspond to NA values should be dropped
+            Coordinate labels that only correspond to NA values should be
+            dropped
 
         Returns
         -------
@@ -677,8 +678,8 @@ class BaseDataObject(AttrAccessMixin):
     def __exit__(self, exc_type, exc_value, traceback):
         self.close()
 
-    # this has no runtime function - these are listed so IDEs know these methods
-    # are defined and don't warn on these operations
+    # this has no runtime function - these are listed so IDEs know these
+    # methods are defined and don't warn on these operations
     __lt__ = __le__ = __ge__ = __gt__ = __add__ = __sub__ = __mul__ = \
         __truediv__ = __floordiv__ = __mod__ = __pow__ = __and__ = __xor__ = \
         __or__ = __div__ = __eq__ = __ne__ = not_implemented

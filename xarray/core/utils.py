@@ -189,6 +189,7 @@ def is_scalar(value):
         isinstance(value, (basestring, bytes_type)) or not
         isinstance(value, Iterable))
 
+
 def is_valid_numpy_dtype(dtype):
     try:
         np.dtype(dtype)
