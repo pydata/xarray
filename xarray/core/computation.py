@@ -571,8 +571,8 @@ def apply_ufunc(func, *args, **kwargs):
         there are no core dimensions on any input arguments.
 
         For example ,``input_core_dims=[[], ['time']]`` indicates that all
-        dimensions on the first argument and all dimensions other than 'time' on
-        the second argument should be broadcast.
+        dimensions on the first argument and all dimensions other than 'time'
+        on the second argument should be broadcast.
 
         Core dimensions are automatically moved to the last axes of input
         variables before applying ``func``, which facilitates using NumPy style

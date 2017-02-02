@@ -66,20 +66,24 @@ def test_collect_dict_values():
     assert collected == expected
 
 
+def identity(x):
+    return x
+
+
 def test_apply_identity():
     array = np.arange(10)
     variable = xr.Variable('x', array)
     data_array = xr.DataArray(variable, [('x', -array)])
     dataset = xr.Dataset({'y': variable}, {'x': -array})
 
-    identity = functools.partial(apply_ufunc, lambda x: x)
+    apply_identity = functools.partial(apply_ufunc, identity)
 
-    assert_identical(array, identity(array))
-    assert_identical(variable, identity(variable))
-    assert_identical(data_array, identity(data_array))
-    assert_identical(data_array, identity(data_array.groupby('x')))
-    assert_identical(dataset, identity(dataset))
-    assert_identical(dataset, identity(dataset.groupby('x')))
+    assert_identical(array, apply_identity(array))
+    assert_identical(variable, apply_identity(variable))
+    assert_identical(data_array, apply_identity(data_array))
+    assert_identical(data_array, apply_identity(data_array.groupby('x')))
+    assert_identical(dataset, apply_identity(dataset))
+    assert_identical(dataset, apply_identity(dataset.groupby('x')))
 
 
 def add(a, b):
@@ -187,7 +191,8 @@ def test_apply_two_outputs():
     dataset = xr.Dataset({'y': variable}, {'x': -array})
 
     def twice(obj):
-        func = lambda x: (x, x)
+        def func(x):
+            return (x, x)
         return apply_ufunc(func, obj, output_core_dims=[[], []])
 
     out0, out1 = twice(array)
@@ -218,7 +223,8 @@ def test_apply_two_outputs():
 def test_apply_input_core_dimension():
 
     def first_element(obj, dim):
-        func = lambda x: x[..., 0]
+        def func(x):
+            return x[..., 0]
         return apply_ufunc(func, obj, input_core_dims=[[dim]])
 
     array = np.array([[1, 2], [3, 4]])
@@ -253,7 +259,8 @@ def test_apply_input_core_dimension():
 def test_apply_output_core_dimension():
 
     def stack_negative(obj):
-        func = lambda x: xr.core.npcompat.stack([x, -x], axis=-1)
+        def func(x):
+            return xr.core.npcompat.stack([x, -x], axis=-1)
         result = apply_ufunc(func, obj, output_core_dims=[['sign']])
         if isinstance(result, (xr.Dataset, xr.DataArray)):
             result.coords['sign'] = [1, -1]
@@ -280,7 +287,8 @@ def test_apply_output_core_dimension():
                      stack_negative(dataset.groupby('x')))
 
     def original_and_stack_negative(obj):
-        func = lambda x: (x, xr.core.npcompat.stack([x, -x], axis=-1))
+        def func(x):
+            return (x, xr.core.npcompat.stack([x, -x], axis=-1))
         result = apply_ufunc(func, obj, output_core_dims=[[], ['sign']])
         if isinstance(result[1], (xr.Dataset, xr.DataArray)):
             result[1].coords['sign'] = [1, -1]
@@ -314,7 +322,8 @@ def test_apply_output_core_dimension():
 def test_apply_exclude():
 
     def concatenate(objects, dim='x'):
-        func = lambda *x: np.concatenate(x, axis=-1)
+        def func(*x):
+            return np.concatenate(x, axis=-1)
         result = apply_ufunc(func, *objects,
                              input_core_dims=[[dim]] * len(objects),
                              output_core_dims=[[dim]],
@@ -341,7 +350,6 @@ def test_apply_exclude():
     assert_identical(expected_data_array, concatenate(data_arrays))
     assert_identical(expected_dataset, concatenate(datasets))
 
-    identity = lambda x: x
     # must also be a core dimension
     with pytest.raises(ValueError):
         apply_ufunc(identity, variables[0], exclude_dims={'x'})
@@ -524,8 +532,6 @@ def test_apply_dask():
     coords = xr.DataArray(variable).coords.variables
     data_array = xr.DataArray(variable, coords, fastpath=True)
     dataset = xr.Dataset({'y': variable})
-
-    identity = lambda x: x
 
     # encountered dask array, but did not set dask_array='allowed'
     with pytest.raises(ValueError):
