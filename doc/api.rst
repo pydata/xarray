@@ -217,6 +217,7 @@ DataArray contents
    :toctree: generated/
 
    DataArray.assign_coords
+   DataArray.pipe
    DataArray.rename
    DataArray.swap_dims
    DataArray.drop
