@@ -9,7 +9,7 @@ import pytest
 
 import xarray as xr
 from xarray.core.computation import (
-    UFuncSignature, broadcast_compat_data, collect_dict_values,
+    _UFuncSignature, broadcast_compat_data, collect_dict_values,
     join_dict_keys, ordered_set_intersection, ordered_set_union,
     unified_dim_sizes, apply_ufunc)
 
@@ -24,25 +24,8 @@ def assert_identical(a, b):
         assert_array_equal(a, b)
 
 
-def test_parse_signature():
-    assert (UFuncSignature([['x']]) ==
-            UFuncSignature.from_string('(x)->()'))
-    assert (UFuncSignature([['x', 'y']]) ==
-            UFuncSignature.from_string('(x,y)->()'))
-    assert (UFuncSignature([['x'], ['y']]) ==
-            UFuncSignature.from_string('(x),(y)->()'))
-    assert (UFuncSignature([['x']], [['y'], []]) ==
-            UFuncSignature.from_string('(x)->(y),()'))
-    with pytest.raises(ValueError):
-        UFuncSignature.from_string('(x)(y)->()')
-    with pytest.raises(ValueError):
-        UFuncSignature.from_string('(x),(y)->')
-    with pytest.raises(ValueError):
-        UFuncSignature.from_string('((x))->(x)')
-
-
 def test_signature_properties():
-    sig = UFuncSignature.from_string('(x),(x,y)->(z)')
+    sig = _UFuncSignature([['x'], ['x', 'y']], [['z']])
     assert sig.input_core_dims == (('x',), ('x', 'y'))
     assert sig.output_core_dims == (('z',),)
     assert sig.all_input_core_dims == frozenset(['x', 'y'])
@@ -50,7 +33,7 @@ def test_signature_properties():
     assert sig.n_inputs == 2
     assert sig.n_outputs == 1
     # dimension names matter
-    assert UFuncSignature([['x']]) != UFuncSignature([['y']])
+    assert _UFuncSignature([['x']]) != _UFuncSignature([['y']])
 
 
 def test_ordered_set_union():
@@ -83,20 +66,24 @@ def test_collect_dict_values():
     assert collected == expected
 
 
+def identity(x):
+    return x
+
+
 def test_apply_identity():
     array = np.arange(10)
     variable = xr.Variable('x', array)
     data_array = xr.DataArray(variable, [('x', -array)])
     dataset = xr.Dataset({'y': variable}, {'x': -array})
 
-    identity = functools.partial(apply_ufunc, lambda x: x)
+    apply_identity = functools.partial(apply_ufunc, identity)
 
-    assert_identical(array, identity(array))
-    assert_identical(variable, identity(variable))
-    assert_identical(data_array, identity(data_array))
-    assert_identical(data_array, identity(data_array.groupby('x')))
-    assert_identical(dataset, identity(dataset))
-    assert_identical(dataset, identity(dataset.groupby('x')))
+    assert_identical(array, apply_identity(array))
+    assert_identical(variable, apply_identity(variable))
+    assert_identical(data_array, apply_identity(data_array))
+    assert_identical(data_array, apply_identity(data_array.groupby('x')))
+    assert_identical(dataset, apply_identity(dataset))
+    assert_identical(dataset, apply_identity(dataset.groupby('x')))
 
 
 def add(a, b):
@@ -204,9 +191,9 @@ def test_apply_two_outputs():
     dataset = xr.Dataset({'y': variable}, {'x': -array})
 
     def twice(obj):
-        func = lambda x: (x, x)
-        signature = '()->(),()'
-        return apply_ufunc(func, obj, signature=signature)
+        def func(x):
+            return (x, x)
+        return apply_ufunc(func, obj, output_core_dims=[[], []])
 
     out0, out1 = twice(array)
     assert_identical(out0, array)
@@ -236,9 +223,9 @@ def test_apply_two_outputs():
 def test_apply_input_core_dimension():
 
     def first_element(obj, dim):
-        func = lambda x: x[..., 0]
-        sig = ([(dim,)], [()])
-        return apply_ufunc(func, obj, signature=sig)
+        def func(x):
+            return x[..., 0]
+        return apply_ufunc(func, obj, input_core_dims=[[dim]])
 
     array = np.array([[1, 2], [3, 4]])
     variable = xr.Variable(['x', 'y'], array)
@@ -272,9 +259,9 @@ def test_apply_input_core_dimension():
 def test_apply_output_core_dimension():
 
     def stack_negative(obj):
-        func = lambda x: xr.core.npcompat.stack([x, -x], axis=-1)
-        sig = ([()], [('sign',)])
-        result = apply_ufunc(func, obj, signature=sig)
+        def func(x):
+            return xr.core.npcompat.stack([x, -x], axis=-1)
+        result = apply_ufunc(func, obj, output_core_dims=[['sign']])
         if isinstance(result, (xr.Dataset, xr.DataArray)):
             result.coords['sign'] = [1, -1]
         return result
@@ -300,9 +287,9 @@ def test_apply_output_core_dimension():
                      stack_negative(dataset.groupby('x')))
 
     def original_and_stack_negative(obj):
-        func = lambda x: (x, xr.core.npcompat.stack([x, -x], axis=-1))
-        sig = ([()], [(), ('sign',)])
-        result = apply_ufunc(func, obj, signature=sig)
+        def func(x):
+            return (x, xr.core.npcompat.stack([x, -x], axis=-1))
+        result = apply_ufunc(func, obj, output_core_dims=[[], ['sign']])
         if isinstance(result[1], (xr.Dataset, xr.DataArray)):
             result[1].coords['sign'] = [1, -1]
         return result
@@ -331,24 +318,19 @@ def test_apply_output_core_dimension():
     assert_identical(dataset, out0)
     assert_identical(stacked_dataset, out1)
 
-    def stack_invalid(obj):
-        func = lambda x: xr.core.npcompat.stack([x, -x], axis=-1)
-        sig = ([()], [('sign',)])
-        # no new_coords
-        return apply_ufunc(func, obj, signature=sig,
-                           dataset_fill_value=np.nan)
-
 
 def test_apply_exclude():
 
     def concatenate(objects, dim='x'):
-        sig = ([(dim,)] * len(objects), [(dim,)])
-        new_coord = np.concatenate(
-            [obj.coords[dim] if hasattr(obj, 'coords') else []
-             for obj in objects])
-        func = lambda *x: np.concatenate(x, axis=-1)
-        result = apply_ufunc(func, *objects, signature=sig, exclude_dims={dim})
+        def func(*x):
+            return np.concatenate(x, axis=-1)
+        result = apply_ufunc(func, *objects,
+                             input_core_dims=[[dim]] * len(objects),
+                             output_core_dims=[[dim]],
+                             exclude_dims={dim})
         if isinstance(result, (xr.Dataset, xr.DataArray)):
+            # note: this will fail dim is not a coordinate on any input
+            new_coord = np.concatenate([obj.coords[dim] for obj in objects])
             result.coords[dim] = new_coord
         return result
 
@@ -368,7 +350,6 @@ def test_apply_exclude():
     assert_identical(expected_data_array, concatenate(data_arrays))
     assert_identical(expected_dataset, concatenate(datasets))
 
-    identity = lambda x: x
     # must also be a core dimension
     with pytest.raises(ValueError):
         apply_ufunc(identity, variables[0], exclude_dims={'x'})
@@ -551,8 +532,6 @@ def test_apply_dask():
     coords = xr.DataArray(variable).coords.variables
     data_array = xr.DataArray(variable, coords, fastpath=True)
     dataset = xr.Dataset({'y': variable})
-
-    identity = lambda x: x
 
     # encountered dask array, but did not set dask_array='allowed'
     with pytest.raises(ValueError):

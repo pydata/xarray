@@ -21,36 +21,21 @@ _DEFAULT_FROZEN_SET = frozenset()
 _DEFAULT_FILL_VALUE = object()
 
 
-# see http://docs.scipy.org/doc/numpy/reference/c-api.generalized-ufuncs.html
-DIMENSION_NAME = r'\w+'
-CORE_DIMENSION_LIST = '(?:' + DIMENSION_NAME + '(?:,' + DIMENSION_NAME + ')*)?'
-ARGUMENT = r'\(' + CORE_DIMENSION_LIST + r'\)'
-ARGUMENT_LIST = ARGUMENT + '(?:,' + ARGUMENT + ')*'
-SIGNATURE = '^' + ARGUMENT_LIST + '->' + ARGUMENT_LIST + '$'
-
-
-def safe_tuple(x):
-    # type: Iterable -> tuple
-    if isinstance(x, basestring):
-        raise ValueError('cannot safely convert %r to a tuple')
-    return tuple(x)
-
-
-class UFuncSignature(object):
+class _UFuncSignature(object):
     """Core dimensions signature for a given function.
 
     Based on the signature provided by generalized ufuncs in NumPy.
 
     Attributes
     ----------
-    input_core_dims : list of tuples
-        A list of tuples of core dimension names on each input variable.
-    output_core_dims : list of tuples
-        A list of tuples of core dimension names on each output variable.
+    input_core_dims : tuple[tuple]
+        Core dimension names on each input variable.
+    output_core_dims : tuple[tuple]
+        Core dimension names on each output variable.
     """
     def __init__(self, input_core_dims, output_core_dims=((),)):
-        self.input_core_dims = tuple(safe_tuple(a) for a in input_core_dims)
-        self.output_core_dims = tuple(safe_tuple(a) for a in output_core_dims)
+        self.input_core_dims = tuple(tuple(a) for a in input_core_dims)
+        self.output_core_dims = tuple(tuple(a) for a in output_core_dims)
         self._all_input_core_dims = None
         self._all_output_core_dims = None
         self._all_core_dims = None
@@ -103,21 +88,6 @@ class UFuncSignature(object):
                             'both input and output.')
         return cls(*nested)
 
-    @classmethod
-    def from_string(cls, string):
-        """Create a UFuncSignature object from a NumPy gufunc signature.
-
-        Parameters
-        ----------
-        string : str
-            Signature string, e.g., (m,n),(n,p)->(m,p).
-        """
-        if not re.match(SIGNATURE, string):
-            raise ValueError('not a valid gufunc signature: {}'.format(string))
-        return cls(*[[re.findall(DIMENSION_NAME, arg)
-                      for arg in re.findall(ARGUMENT, arg_list)]
-                     for arg_list in string.split('->')])
-
     def __eq__(self, other):
         try:
             return (self.input_core_dims == other.input_core_dims and
@@ -148,9 +118,6 @@ def result_name(objects):
     return name
 
 
-_REPEAT_NONE = itertools.repeat(None)
-
-
 def _get_coord_variables(args):
     input_coords = []
     for arg in args:
@@ -166,7 +133,7 @@ def _get_coord_variables(args):
 
 def build_output_coords(
         args,                      # type: list
-        signature,                 # type: UFuncSignature
+        signature,                 # type: _UFuncSignature
         exclude_dims=frozenset(),  # type: set
 ):
     # type: (...) -> List[OrderedDict[Any, Variable]]
@@ -234,6 +201,7 @@ def apply_dataarray_ufunc(func, *args, **kwargs):
         else:
             out._copy_attrs_from(args[0])
     return out
+
 
 def ordered_set_union(all_keys):
     # type: List[Iterable] -> Iterable
@@ -567,51 +535,62 @@ def apply_array_ufunc(func, *args, **kwargs):
 
 
 def apply_ufunc(func, *args, **kwargs):
-    """apply_ufunc(func, *args, signature=None, join='inner',
-                   exclude_dims=frozenset(), dataset_join='inner',
-                   dataset_fill_value=_DEFAULT_FILL_VALUE, keep_attrs=False,
-                   kwargs=None, dask_array='forbidden')
+    """apply_ufunc(func : Callable,
+                   *args : Any,
+                   input_core_dims : Optional[Sequence[Sequence]] = None,
+                   output_core_dims : Optional[Sequence[Sequence]] = ((),),
+                   exclude_dims : Collection = frozenset(),
+                   join : str = 'inner',
+                   dataset_join : str = 'inner',
+                   dataset_fill_value : Any = _DEFAULT_FILL_VALUE,
+                   keep_attrs : bool = False,
+                   kwargs : Mapping = None,
+                   dask_array : str = 'forbidden')
 
-    Apply a vectorized function for unlabeled arrays to xarray objects.
+    Apply a vectorized function for unlabeled arrays on xarray objects.
 
-    The input arguments will be handled using xarray's standard rules for
-    labeled computation, including alignment, broadcasting, looping over
-    GroupBy/Dataset variables, and merging of coordinates.
+    The function will be mapped over the data variable(s) of the input
+    arguments using xarray's standard rules for labeled computation, including
+    alignment, broadcasting, looping over GroupBy/Dataset variables, and
+    merging of coordinates.
 
     Parameters
     ----------
     func : callable
         Function to call like ``func(*args, **kwargs)`` on unlabeled arrays
-        (``.data``). If multiple arguments with non-matching dimensions are
-        supplied, this function is expected to vectorize (broadcast) over
-        axes of positional arguments in the style of NumPy universal
-        functions [1]_.
+        (``.data``) that returns an array or tuple of arrays. If multiple
+        arguments with non-matching dimensions are supplied, this function is
+        expected to vectorize (broadcast) over axes of positional arguments in
+        the style of NumPy universal functions [1]_. If this function returns
+        multiple outputs, you most set ``output_core_dims`` as well.
     *args : Dataset, DataArray, GroupBy, Variable, numpy/dask arrays or scalars
         Mix of labeled and/or unlabeled arrays to which to apply the function.
-    signature : string or triply nested sequence, optional
-        Object indicating core dimensions that should not be broadcast on
-        the input and outputs arguments. If omitted, inputs will be broadcast
-        to share all dimensions in common before calling ``func`` on their
-        values, and the output of ``func`` will be assumed to be a single array
-        with the same shape as the inputs.
+    input_core_dims : Sequence[Sequence], optional
+        List of the same length as ``args`` giving the list of core dimensions
+        on each input argument that should be broadcast. By default, we assume
+        there are no core dimensions on any input arguments.
 
-        Two forms of signatures are accepted:
-        (a) A signature string of the form used by NumPy's generalized
-            universal functions [2]_, e.g., '(),(time)->()' indicating a
-            function that accepts two arguments and returns a single argument,
-            on which all dimensions should be broadcast except 'time' on the
-            second argument.
-        (a) A triply nested sequence providing lists of core dimensions for
-            each variable, for both input and output, e.g.,
-            ``([(), ('time',)], [()])``.
+        For example ,``input_core_dims=[[], ['time']]`` indicates that all
+        dimensions on the first argument and all dimensions other than 'time'
+        on the second argument should be broadcast.
 
-        Core dimensions are automatically moved to the last axes of any input
-        variables, which facilitates using NumPy style generalized ufuncs (see
-        the examples below).
+        Core dimensions are automatically moved to the last axes of input
+        variables before applying ``func``, which facilitates using NumPy style
+        generalized ufuncs [2]_.
+    output_core_dims : List[tuple], optional
+        List of the same length as the number of output arguments from
+        ``func``, giving the list of core dimensions on each output that were
+        not broadcast on the inputs. By default, we assume that ``func``
+        outputs exactly one array, with axes corresponding to each broadcast
+        dimension.
 
-        Unlike the NumPy gufunc signature spec, the names of all dimensions
-        provided in signatures must be the names of actual dimensions on the
-        xarray objects.
+        Core dimensions are assumed to appear as the last dimensions of each
+        output in the provided order.
+    exclude_dims : set, optional
+        Core dimensions on the inputs to exclude from alignment and
+        broadcasting entirely. Any input coordinates along these dimensions
+        will be dropped. Each excluded dimension must also appear in
+        ``input_core_dims`` for at least one argument.
     join : {'outer', 'inner', 'left', 'right'}, optional
         Method for joining the indexes of the passed objects along each
         dimension, and the variables of Dataset objects with mismatched
@@ -633,10 +612,6 @@ def apply_ufunc(func, *args, **kwargs):
         ``dataset_join != 'inner'``, otherwise ignored.
     keep_attrs: boolean, Optional
         Whether to copy attributes from the first argument to the output.
-    exclude_dims : set, optional
-        Dimensions to exclude from alignment and broadcasting. Any inputs
-        coordinates along these dimensions will be dropped. Each excluded
-        dimension must be a core dimension in the function signature.
     kwargs: dict, optional
         Optional keyword arguments passed directly on to call ``func``.
     dask_array: 'forbidden' or 'allowed', optional
@@ -661,13 +636,13 @@ def apply_ufunc(func, *args, **kwargs):
             func = lambda x, y: np.sqrt(x ** 2 + y ** 2)
             return xr.apply_func(func, a, b)
 
-    Compute the mean (``.mean``)::
+    Compute the mean (``.mean``) over one dimension::
 
         def mean(obj, dim):
             # note: apply always moves core dimensions to the end
-            sig = ([(dim,)], [()])
-            kwargs = {'axis': -1}
-            return apply_ufunc(np.mean, obj, signature=sig, kwargs=kwargs)
+            return apply_ufunc(np.mean, obj,
+                               input_core_dims=[[dim]],
+                               kwargs={'axis': -1})
 
     Inner product over a specific dimension::
 
@@ -676,16 +651,17 @@ def apply_ufunc(func, *args, **kwargs):
             return result[..., 0, 0]
 
         def inner_product(a, b, dim):
-            sig = ([(dim,), (dim,)], [()])
-            return apply_ufunc(_inner, a, b, signature=sig)
+            return apply_ufunc(_inner, a, b, input_core_dims=[[dim], [dim]])
 
     Stack objects along a new dimension (like ``xr.concat``)::
 
         def stack(objects, dim, new_coord):
-            sig = ([()] * len(objects), [(dim,)])
+            # note: this version does not stack coordinates
             func = lambda *x: np.stack(x, axis=-1)
-            result = apply_ufunc(func, *objects, signature=sig,
-                                 join='outer', dataset_fill_value=np.nan)
+            result = apply_ufunc(func, *objects,
+                                 output_core_dims=[[dim]],
+                                 join='outer',
+                                 dataset_fill_value=np.nan)
             result[dim] = new_coord
             return result
 
@@ -710,7 +686,8 @@ def apply_ufunc(func, *args, **kwargs):
     from .dataarray import DataArray
     from .variable import Variable
 
-    signature = kwargs.pop('signature', None)
+    input_core_dims = kwargs.pop('input_core_dims', None)
+    output_core_dims = kwargs.pop('output_core_dims', ((),))
     join = kwargs.pop('join', 'inner')
     dataset_join = kwargs.pop('dataset_join', 'inner')
     keep_attrs = kwargs.pop('keep_attrs', False)
@@ -722,12 +699,10 @@ def apply_ufunc(func, *args, **kwargs):
         raise TypeError('apply_ufunc() got unexpected keyword arguments: %s'
                         % list(kwargs))
 
-    if signature is None:
-        signature = UFuncSignature.default(len(args))
-    elif isinstance(signature, basestring):
-        signature = UFuncSignature.from_string(signature)
-    elif not isinstance(signature, UFuncSignature):
-        signature = UFuncSignature.from_sequence(signature)
+    if input_core_dims is None:
+        input_core_dims = ((),) * (len(args))
+
+    signature = _UFuncSignature(input_core_dims, output_core_dims)
 
     if exclude_dims and not exclude_dims <= signature.all_core_dims:
         raise ValueError('each dimension in `exclude_dims` must also be a '
@@ -739,28 +714,35 @@ def apply_ufunc(func, *args, **kwargs):
     array_ufunc = functools.partial(
         apply_array_ufunc, func, dask_array=dask_array)
 
-    variables_ufunc = functools.partial(
-        apply_variable_ufunc, array_ufunc, signature=signature,
-        exclude_dims=exclude_dims)
+    variables_ufunc = functools.partial(apply_variable_ufunc, array_ufunc,
+                                        signature=signature,
+                                        exclude_dims=exclude_dims)
 
     if any(isinstance(a, GroupBy) for a in args):
-        this_apply = functools.partial(
-            apply_ufunc, func, signature=signature, join=join,
-            dask_array=dask_array, exclude_dims=exclude_dims,
-            dataset_fill_value=dataset_fill_value,
-            dataset_join=dataset_join,
-            keep_attrs=keep_attrs)
+        # kwargs has already been added into func
+        this_apply = functools.partial(apply_ufunc, func,
+                                       input_core_dims=input_core_dims,
+                                       output_core_dims=output_core_dims,
+                                       exclude_dims=exclude_dims,
+                                       join=join,
+                                       dataset_join=dataset_join,
+                                       dataset_fill_value=dataset_fill_value,
+                                       keep_attrs=keep_attrs,
+                                       dask_array=dask_array)
         return apply_groupby_ufunc(this_apply, *args)
     elif any(is_dict_like(a) for a in args):
-        return apply_dataset_ufunc(variables_ufunc, *args, signature=signature,
-                                   join=join, exclude_dims=exclude_dims,
+        return apply_dataset_ufunc(variables_ufunc, *args,
+                                   signature=signature,
+                                   join=join,
+                                   exclude_dims=exclude_dims,
                                    fill_value=dataset_fill_value,
                                    dataset_join=dataset_join,
                                    keep_attrs=keep_attrs)
     elif any(isinstance(a, DataArray) for a in args):
         return apply_dataarray_ufunc(variables_ufunc, *args,
                                      signature=signature,
-                                     join=join, exclude_dims=exclude_dims,
+                                     join=join,
+                                     exclude_dims=exclude_dims,
                                      keep_attrs=keep_attrs)
     elif any(isinstance(a, Variable) for a in args):
         return variables_ufunc(*args)
