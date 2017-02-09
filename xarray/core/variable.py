@@ -1247,6 +1247,19 @@ class IndexVariable(Variable):
         return type(self)(self.dims, self._data, self._attrs,
                           self._encoding, fastpath=True)
 
+    def equals(self, other, equiv=None):
+        # if equiv is specified, super up
+        if equiv is not None:
+            return super(IndexVariable, self).equals(other, equiv)
+
+        # otherwise use the native index equals, rather than looking at _data
+        other = getattr(other, 'variable', other)
+        try:
+            return (self.dims == other.dims and
+                    self._data_equals(other))
+        except (TypeError, AttributeError):
+            return False
+
     def _data_equals(self, other):
         return self.to_index().equals(other.to_index())
 
