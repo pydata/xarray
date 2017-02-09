@@ -1249,7 +1249,7 @@ class IndexVariable(Variable):
 
     def equals(self, other, equiv=None):
         # if equiv is specified, super up
-        if equiv:
+        if equiv is not None:
             return super(IndexVariable, self).equals(other, equiv)
 
         # otherwise use the native index equals, rather than looking at _data
