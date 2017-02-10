@@ -5,7 +5,8 @@ import unicodedata
 
 import numpy as np
 
-from .. import conventions, Variable
+from .. import Variable
+from ..conventions import coding
 from ..core import ops
 from ..core.pycompat import basestring, unicode_type, OrderedDict
 
@@ -56,7 +57,7 @@ def coerce_nc3_dtype(arr):
 
 def maybe_convert_to_char_array(data, dims):
     if data.dtype.kind == 'S' and data.dtype.itemsize > 1:
-        data = conventions.string_to_char(data)
+        data = coding.string_to_char(data)
         dims = dims + ('string%s' % data.shape[-1],)
     return data, dims
 

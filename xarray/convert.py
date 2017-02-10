@@ -7,7 +7,7 @@ from __future__ import print_function
 import numpy as np
 
 from .core.dataarray import DataArray
-from .conventions import (
+from .conventions.coding import (
     maybe_encode_timedelta, maybe_encode_datetime, decode_cf)
 
 ignored_attrs = set(['name', 'tileIndex'])

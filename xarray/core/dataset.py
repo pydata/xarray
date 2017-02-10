@@ -16,8 +16,8 @@ from . import groupby
 from . import indexing
 from . import alignment
 from . import formatting
-from .. import conventions
 from .alignment import align
+from ..conventions import coding
 from .coordinates import DatasetCoordinates, LevelCoordinatesSource, Indexes
 from .common import ImplementsDatasetReduce, BaseDataObject
 from .merge import (dataset_update_method, dataset_merge_method,
@@ -875,7 +875,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         """Store dataset contents to a backends.*DataStore object."""
         if encoding is None:
             encoding = {}
-        variables, attrs = conventions.encode_dataset_coordinates(self)
+        variables, attrs = coding.encode_dataset_coordinates(self)
 
         check_encoding = set()
         for k, enc in encoding.items():

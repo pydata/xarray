@@ -10,8 +10,9 @@ from numbers import Number
 
 import numpy as np
 
-from .. import backends, conventions
+from .. import backends
 from .common import ArrayWriter, GLOBAL_LOCK
+from ..conventions import coding
 from ..core import indexing
 from ..core.combine import auto_combine
 from ..core.utils import close_on_error, is_remote_uri
@@ -217,7 +218,7 @@ def open_dataset(filename_or_obj, group=None, decode_cf=True,
         cache = chunks is None
 
     def maybe_decode_store(store, lock=False):
-        ds = conventions.decode_cf(
+        ds = coding.decode_cf(
             store, mask_and_scale=mask_and_scale, decode_times=decode_times,
             concat_characters=concat_characters, decode_coords=decode_coords,
             drop_variables=drop_variables)

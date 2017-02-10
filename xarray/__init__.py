@@ -14,7 +14,7 @@ from .core.options import set_options
 
 from .backends.api import (open_dataset, open_dataarray, open_mfdataset,
                            save_mfdataset)
-from .conventions import decode_cf
+from .conventions.coding import decode_cf
 
 try:
     from .version import version as __version__

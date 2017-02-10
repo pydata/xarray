@@ -4,7 +4,8 @@ from datetime import timedelta
 import numpy as np
 import pandas as pd
 
-from pandas.lib import isscalar
+from xarray.core import pycompat
+from xarray.core.utils import is_scalar
 
 
 def named(name, pattern):
@@ -35,10 +36,12 @@ def build_pattern(date_sep='\-', datetime_sep='T', time_sep='\:'):
     return '^' + trailing_optional(pattern_list) + '$'
 
 
+basic_pattern = build_pattern(date_sep='', time_sep='')
+extended_pattern = build_pattern()
+patterns = [basic_pattern, extended_pattern]
+
+
 def parse_iso8601(datetime_string):
-    basic_pattern = build_pattern(date_sep='', time_sep='')
-    extended_pattern = build_pattern()
-    patterns = [basic_pattern, extended_pattern]
     for pattern in patterns:
         match = re.match(pattern, datetime_string)
         if match:
@@ -54,6 +57,10 @@ def _parse_iso8601_with_reso(date_type, timestr):
     for attr in ['year', 'month', 'day', 'hour', 'minute', 'second']:
         value = result.get(attr, None)
         if value is not None:
+            # Note ISO8601 conventions allow for fractional seconds; casting
+            # to an int means all seconds values get rounded down to the
+            # nearest integer.  TODO: Consider adding support for sub-second
+            # resolution?
             replace[attr] = int(value)
             resolution = attr
 
@@ -61,6 +68,11 @@ def _parse_iso8601_with_reso(date_type, timestr):
 
 
 def _parsed_string_to_bounds(date_type, resolution, parsed):
+    """Generalization of
+    pandas.tseries.index.DatetimeIndex._parsed_string_to_bounds
+    for use with non-standard calendars and netcdftime._netcdftime.datetime
+    objects.
+    """
     if resolution == 'year':
         return (date_type(parsed.year, 1, 1),
                 date_type(parsed.year + 1, 1, 1) - timedelta(microseconds=1))
@@ -90,10 +102,12 @@ def _parsed_string_to_bounds(date_type, resolution, parsed):
 
 
 def get_date_field(datetimes, field):
+    """Adapted from pandas.tslib.get_date_field"""
     return [getattr(date, field) for date in datetimes]
 
 
 def _field_accessor(name, docstring=None):
+    """Adapted from pandas.tseries.index._field_accessor"""
     def f(self):
         return get_date_field(self._data, name)
 
@@ -106,9 +120,23 @@ def get_date_type(self):
     return type(self._data[0])
 
 
+def assert_all_same_netcdftime_datetimes(data):
+    from netcdftime._netcdftime import datetime
+
+    if not isinstance(data[0], datetime):
+        raise TypeError(
+            'NetCDFTimeIndex requires netcdftime._netcdftime.datetime'
+            ' objects.')
+    if not all(isinstance(value, type(data[0])) for value in data):
+        raise TypeError(
+            'NetCDFTimeIndex requires using netcdftime._netcdftime.datetime'
+            ' objects of all the same type.')
+
+
 class NetCDFTimeIndex(pd.Index):
     def __new__(cls, data):
         result = object.__new__(cls)
+        assert_all_same_netcdftime_datetimes(data)
         result._data = np.array(data)
         return result
 
@@ -122,37 +150,33 @@ class NetCDFTimeIndex(pd.Index):
                                   'The microseconds of the datetime')
     date_type = property(get_date_type)
 
-    def _partial_date_slice(self, resolution, parsed,
-                            use_lhs=True, use_rhs=True):
+    def _partial_date_slice(self, resolution, parsed):
+        """Adapted from
+        pandas.tseries.index.DatetimeIndex._partial_date_slice"""
         start, end = _parsed_string_to_bounds(self.date_type, resolution,
                                               parsed)
-        lhs_mask = (self._data >= start) if use_lhs else True
-        rhs_mask = (self._data <= end) if use_rhs else True
+        lhs_mask = (self._data >= start)
+        rhs_mask = (self._data <= end)
         return (lhs_mask & rhs_mask).nonzero()[0]
 
-    def _get_string_slice(self, key, use_lhs=True, use_rhs=True):
+    def _get_string_slice(self, key):
+        """Adapted from pandas.tseries.index.DatetimeIndex._get_string_slice"""
         parsed, resolution = _parse_iso8601_with_reso(self.date_type, key)
-        loc = self._partial_date_slice(resolution, parsed, use_lhs, use_rhs)
+        loc = self._partial_date_slice(resolution, parsed)
         return loc
 
     def get_loc(self, key, method=None, tolerance=None):
-        if isinstance(key, pd.compat.string_types):
-            result = self._get_string_slice(key)
-            # Prevents problem with __contains__ if key corresponds to only
-            # the first element in index (if we leave things as a list,
-            # np.any([0]) is False).
-            # Also coerces things to scalar coords in xarray if possible,
-            # which is consistent with the behavior with a DatetimeIndex.
-            if len(result) == 1:
-                return result[0]
-            else:
-                return result
+        """Adapted from pandas.tseries.index.DatetimeIndex.get_loc"""
+        if isinstance(key, pycompat.basestring):
+            return self._get_string_slice(key)
         else:
             return pd.Index.get_loc(self, key, method=method,
                                     tolerance=tolerance)
 
     def _maybe_cast_slice_bound(self, label, side, kind):
-        if isinstance(label, pd.compat.string_types):
+        """Adapted from
+        pandas.tseries.index.DatetimeIndex._maybe_cast_slice_bound"""
+        if isinstance(label, pycompat.basestring):
             parsed, resolution = _parse_iso8601_with_reso(self.date_type,
                                                           label)
             start, end = _parsed_string_to_bounds(self.date_type, resolution,
@@ -166,6 +190,7 @@ class NetCDFTimeIndex(pd.Index):
     # TODO: Add ability to use integer range outside of iloc?
     # e.g. series[1:5].
     def get_value(self, series, key):
+        """Adapted from pandas.tseries.index.DatetimeIndex.get_value"""
         if not isinstance(key, slice):
             return series.iloc[self.get_loc(key)]
         else:
@@ -173,8 +198,11 @@ class NetCDFTimeIndex(pd.Index):
                 key.start, key.stop, key.step)]
 
     def __contains__(self, key):
+        """Adapted from
+        pandas.tseries.base.DatetimeIndexOpsMixin.__contains__"""
         try:
             result = self.get_loc(key)
-            return isscalar(result) or type(result) == slice or np.any(result)
+            return (is_scalar(result) or type(result) == slice or
+                    (isinstance(result, np.ndarray) and result.size))
         except (KeyError, TypeError, ValueError):
             return False

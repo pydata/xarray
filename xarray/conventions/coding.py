@@ -11,10 +11,10 @@ import pandas as pd
 from collections import defaultdict
 from pandas.tslib import OutOfBoundsDatetime
 
-from .core import indexing, ops, utils
-from .core.formatting import format_timestamp, first_n_items, last_item
-from .core.variable import as_variable, Variable
-from .core.pycompat import iteritems, OrderedDict, PY3, basestring
+from ..core import indexing, ops, utils
+from ..core.formatting import format_timestamp, first_n_items, last_item
+from ..core.variable import as_variable, Variable
+from ..core.pycompat import iteritems, OrderedDict, PY3, basestring
 
 
 # standard calendars recognized by netcdftime
@@ -929,8 +929,8 @@ def decode_cf(obj, concat_characters=True, mask_and_scale=True,
     -------
     decoded : Dataset
     """
-    from .core.dataset import Dataset
-    from .backends.common import AbstractDataStore
+    from ..core.dataset import Dataset
+    from ..backends.common import AbstractDataStore
 
     if isinstance(obj, Dataset):
         vars = obj._variables

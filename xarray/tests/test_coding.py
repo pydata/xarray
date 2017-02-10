@@ -6,19 +6,20 @@ import numpy as np
 import pandas as pd
 import warnings
 
-from xarray import conventions, Variable, Dataset, open_dataset
+from xarray import Variable, Dataset, open_dataset
+from xarray.conventions import coding
 from xarray.core import utils, indexing
 from . import TestCase, requires_netCDF4, unittest
 from .test_backends import CFEncodedDataTest
 from xarray.core.pycompat import iteritems
 from xarray.backends.memory import InMemoryDataStore
 from xarray.backends.common import WritableCFDataStore
-from xarray.conventions import decode_cf
+from xarray.conventions.coding import decode_cf
 
 
 class TestMaskedAndScaledArray(TestCase):
     def test(self):
-        x = conventions.MaskedAndScaledArray(np.arange(3), fill_value=0)
+        x = coding.MaskedAndScaledArray(np.arange(3), fill_value=0)
         self.assertEqual(x.dtype, np.dtype('float'))
         self.assertEqual(x.shape, (3,))
         self.assertEqual(x.size, 3)
@@ -26,31 +27,31 @@ class TestMaskedAndScaledArray(TestCase):
         self.assertEqual(len(x), 3)
         self.assertArrayEqual([np.nan, 1, 2], x)
 
-        x = conventions.MaskedAndScaledArray(np.arange(3), add_offset=1)
+        x = coding.MaskedAndScaledArray(np.arange(3), add_offset=1)
         self.assertArrayEqual(np.arange(3) + 1, x)
 
-        x = conventions.MaskedAndScaledArray(np.arange(3), scale_factor=2)
+        x = coding.MaskedAndScaledArray(np.arange(3), scale_factor=2)
         self.assertArrayEqual(2 * np.arange(3), x)
 
-        x = conventions.MaskedAndScaledArray(np.array([-99, -1, 0, 1, 2]),
+        x = coding.MaskedAndScaledArray(np.array([-99, -1, 0, 1, 2]),
                                              -99, 0.01, 1)
         expected = np.array([np.nan, 0.99, 1, 1.01, 1.02])
         self.assertArrayEqual(expected, x)
 
     def test_0d(self):
-        x = conventions.MaskedAndScaledArray(np.array(0), fill_value=0)
+        x = coding.MaskedAndScaledArray(np.array(0), fill_value=0)
         self.assertTrue(np.isnan(x))
         self.assertTrue(np.isnan(x[...]))
 
-        x = conventions.MaskedAndScaledArray(np.array(0), fill_value=10)
+        x = coding.MaskedAndScaledArray(np.array(0), fill_value=10)
         self.assertEqual(0, x[...])
 
     def test_multiple_fill_value(self):
-        x = conventions.MaskedAndScaledArray(
+        x = coding.MaskedAndScaledArray(
             np.arange(4), fill_value=np.array([0, 1]))
         self.assertArrayEqual([np.nan, np.nan, 2, 3], x)
 
-        x = conventions.MaskedAndScaledArray(
+        x = coding.MaskedAndScaledArray(
             np.array(0), fill_value=np.array([0, 1]))
         self.assertTrue(np.isnan(x))
         self.assertTrue(np.isnan(x[...]))
@@ -59,7 +60,7 @@ class TestMaskedAndScaledArray(TestCase):
 class TestCharToStringArray(TestCase):
     def test_wrapper_class(self):
         array = np.array(list('abc'), dtype='S')
-        actual = conventions.CharToStringArray(array)
+        actual = coding.CharToStringArray(array)
         expected = np.array('abc', dtype='S')
         self.assertEqual(actual.dtype, expected.dtype)
         self.assertEqual(actual.shape, expected.shape)
@@ -73,7 +74,7 @@ class TestCharToStringArray(TestCase):
         self.assertEqual(str(actual), 'abc')
 
         array = np.array([list('abc'), list('cdf')], dtype='S')
-        actual = conventions.CharToStringArray(array)
+        actual = coding.CharToStringArray(array)
         expected = np.array(['abc', 'cdf'], dtype='S')
         self.assertEqual(actual.dtype, expected.dtype)
         self.assertEqual(actual.shape, expected.shape)
@@ -88,30 +89,30 @@ class TestCharToStringArray(TestCase):
     def test_char_to_string(self):
         array = np.array([['a', 'b', 'c'], ['d', 'e', 'f']])
         expected = np.array(['abc', 'def'])
-        actual = conventions.char_to_string(array)
+        actual = coding.char_to_string(array)
         self.assertArrayEqual(actual, expected)
 
         expected = np.array(['ad', 'be', 'cf'])
-        actual = conventions.char_to_string(array.T)  # non-contiguous
+        actual = coding.char_to_string(array.T)  # non-contiguous
         self.assertArrayEqual(actual, expected)
 
     def test_string_to_char(self):
         array = np.array([['ab', 'cd'], ['ef', 'gh']])
         expected = np.array([[['a', 'b'], ['c', 'd']],
                              [['e', 'f'], ['g', 'h']]])
-        actual = conventions.string_to_char(array)
+        actual = coding.string_to_char(array)
         self.assertArrayEqual(actual, expected)
 
         expected = np.array([[['a', 'b'], ['e', 'f']],
                              [['c', 'd'], ['g', 'h']]])
-        actual = conventions.string_to_char(array.T)
+        actual = coding.string_to_char(array.T)
         self.assertArrayEqual(actual, expected)
 
 
 class TestBoolTypeArray(TestCase):
     def test_booltype_array(self):
         x = np.array([1, 0, 1, 1, 0], dtype='i1')
-        bx = conventions.BoolTypeArray(x)
+        bx = coding.BoolTypeArray(x)
         self.assertEqual(bx.dtype, np.bool)
         self.assertArrayEqual(bx, np.array([True, False, True, True, False],
                                            dtype=np.bool))
@@ -159,7 +160,7 @@ class TestDatetime(TestCase):
                 with warnings.catch_warnings():
                     warnings.filterwarnings('ignore',
                                             'Unable to decode time axis')
-                    actual = conventions.decode_cf_datetime(num_dates, units,
+                    actual = coding.decode_cf_datetime(num_dates, units,
                                                             calendar)
                 if (isinstance(actual, np.ndarray) and
                         np.issubdtype(actual.dtype, np.datetime64)):
@@ -172,7 +173,7 @@ class TestDatetime(TestCase):
                 else:
                     actual_cmp = actual
                 self.assertArrayEqual(expected, actual_cmp)
-                encoded, _, _ = conventions.encode_cf_datetime(actual, units,
+                encoded, _, _ = coding.encode_cf_datetime(actual, units,
                                                                calendar)
                 if '1-1-1' not in units:
                     # pandas parses this date very strangely, so the original
@@ -185,7 +186,7 @@ class TestDatetime(TestCase):
                         # verify that wrapping with a pandas.Index works
                         # note that it *does not* currently work to even put
                         # non-datetime64 compatible dates into a pandas.Index :(
-                        encoded, _, _ = conventions.encode_cf_datetime(
+                        encoded, _, _ = coding.encode_cf_datetime(
                             pd.Index(actual), units, calendar)
                         self.assertArrayEqual(num_dates, np.around(encoded, 1))
 
@@ -203,7 +204,7 @@ class TestDatetime(TestCase):
         expected = (datetime(1677, 12, 31), datetime(2262, 4, 12))
 
         for i, day in enumerate(days):
-            result = conventions.decode_cf_datetime(day, units)
+            result = coding.decode_cf_datetime(day, units)
             self.assertEqual(result, expected[i])
 
     @requires_netCDF4
@@ -213,7 +214,7 @@ class TestDatetime(TestCase):
         ds = Dataset(coords={'time' : [0, 266 * 365]})
         units = 'days since 2000-01-01 00:00:00'
         ds.time.attrs = dict(units=units)
-        ds_decoded = conventions.decode_cf(ds)
+        ds_decoded = coding.decode_cf(ds)
 
         expected = [datetime(2000, 1, 1, 0, 0),
                     datetime(2265, 10, 28, 0, 0)]
@@ -221,26 +222,26 @@ class TestDatetime(TestCase):
         self.assertArrayEqual(ds_decoded.time.values, expected)
 
     def test_decoded_cf_datetime_array(self):
-        actual = conventions.DecodedCFDatetimeArray(
+        actual = coding.DecodedCFDatetimeArray(
             np.array([0, 1, 2]), 'days since 1900-01-01', 'standard')
         expected = pd.date_range('1900-01-01', periods=3).values
         self.assertEqual(actual.dtype, np.dtype('datetime64[ns]'))
         self.assertArrayEqual(actual, expected)
 
         # default calendar
-        actual = conventions.DecodedCFDatetimeArray(
+        actual = coding.DecodedCFDatetimeArray(
             np.array([0, 1, 2]), 'days since 1900-01-01')
         self.assertEqual(actual.dtype, np.dtype('datetime64[ns]'))
         self.assertArrayEqual(actual, expected)
 
     def test_slice_decoded_cf_datetime_array(self):
-        actual = conventions.DecodedCFDatetimeArray(
+        actual = coding.DecodedCFDatetimeArray(
             np.array([0, 1, 2]), 'days since 1900-01-01', 'standard')
         expected = pd.date_range('1900-01-01', periods=3).values
         self.assertEqual(actual.dtype, np.dtype('datetime64[ns]'))
         self.assertArrayEqual(actual[slice(0, 2)], expected[slice(0, 2)])
 
-        actual = conventions.DecodedCFDatetimeArray(
+        actual = coding.DecodedCFDatetimeArray(
             np.array([0, 1, 2]), 'days since 1900-01-01', 'standard')
         expected = pd.date_range('1900-01-01', periods=3).values
         self.assertEqual(actual.dtype, np.dtype('datetime64[ns]'))
@@ -251,7 +252,7 @@ class TestDatetime(TestCase):
         # netCDFs from madis.noaa.gov use this format for their time units
         # they cannot be parsed by netcdftime, but pd.Timestamp works
         units = 'hours since 1-1-1970'
-        actual = conventions.decode_cf_datetime(np.arange(100), units)
+        actual = coding.decode_cf_datetime(np.arange(100), units)
         self.assertArrayEqual(actual, expected)
 
     def test_decode_cf_with_conflicting_fill_missing_value(self):
@@ -260,20 +261,20 @@ class TestDatetime(TestCase):
                         'missing_value': 0,
                         '_FillValue': 1})
         self.assertRaisesRegexp(ValueError, "_FillValue and missing_value",
-                                lambda: conventions.decode_cf_variable(var))
+                                lambda: coding.decode_cf_variable(var))
 
         var = Variable(['t'], np.arange(10),
                        {'units': 'foobar',
                         'missing_value': np.nan,
                         '_FillValue': np.nan})
-        var = conventions.decode_cf_variable(var)
+        var = coding.decode_cf_variable(var)
         self.assertIsNotNone(var)
 
         var = Variable(['t'], np.arange(10),
                                {'units': 'foobar',
                                 'missing_value': np.float32(np.nan),
                                 '_FillValue': np.float32(np.nan)})
-        var = conventions.decode_cf_variable(var)
+        var = coding.decode_cf_variable(var)
         self.assertIsNotNone(var)
 
     @requires_netCDF4
@@ -285,7 +286,7 @@ class TestDatetime(TestCase):
                  (np.arange(100), 'hours since 2000-1-1 0'),
                  (np.arange(100), 'hours since 2000-01-01 0:00')]
         for num_dates, units in cases:
-            actual = conventions.decode_cf_datetime(num_dates, units)
+            actual = coding.decode_cf_datetime(num_dates, units)
             self.assertArrayEqual(actual, expected)
 
     @requires_netCDF4
@@ -302,7 +303,7 @@ class TestDatetime(TestCase):
             expected = times.values
             with warnings.catch_warnings():
                 warnings.filterwarnings('ignore', 'Unable to decode time axis')
-                actual = conventions.decode_cf_datetime(noleap_time, units,
+                actual = coding.decode_cf_datetime(noleap_time, units,
                                                         calendar=calendar)
             self.assertEqual(actual.dtype, np.dtype('M8[ns]'))
             abs_diff = abs(actual - expected)
@@ -320,7 +321,7 @@ class TestDatetime(TestCase):
                 with warnings.catch_warnings():
                     warnings.filterwarnings('ignore',
                                             'Unable to decode time axis')
-                    actual = conventions.decode_cf_datetime(num_time, units,
+                    actual = coding.decode_cf_datetime(num_time, units,
                                                             calendar=calendar)
                 self.assertEqual(actual.dtype, np.dtype('M8[ns]'))
 
@@ -333,7 +334,7 @@ class TestDatetime(TestCase):
         for calendar in ['360_day', 'all_leap', '366_day']:
             num_time = nc4.date2num(dt, units, calendar)
             with self.assertWarns('Unable to decode time axis'):
-                actual = conventions.decode_cf_datetime(num_time, units,
+                actual = coding.decode_cf_datetime(num_time, units,
                                                         calendar=calendar)
             expected = np.asarray(nc4.num2date(num_time, units, calendar))
             print(num_time, calendar, actual, expected)
@@ -360,7 +361,7 @@ class TestDatetime(TestCase):
         expected2 = times2.values
         with warnings.catch_warnings():
             warnings.filterwarnings('ignore', 'Unable to decode time axis')
-            actual = conventions.decode_cf_datetime(mdim_time, units,
+            actual = coding.decode_cf_datetime(mdim_time, units,
                                                     calendar=calendar)
         self.assertEqual(actual.dtype, np.dtype('M8[ns]'))
         self.assertArrayEqual(actual[:, 0], expected1)
@@ -379,7 +380,7 @@ class TestDatetime(TestCase):
 
                 with warnings.catch_warnings(record=True) as w:
                     warnings.simplefilter('always')
-                    actual = conventions.decode_cf_datetime(num_times, units,
+                    actual = coding.decode_cf_datetime(num_times, units,
                                                             calendar=calendar)
                     self.assertEqual(len(w), 1)
                     self.assertIn('Unable to decode time axis',
@@ -399,14 +400,14 @@ class TestDatetime(TestCase):
                 ]:
             with warnings.catch_warnings():
                 warnings.filterwarnings('ignore', 'All-NaN')
-                actual = conventions.decode_cf_datetime(num_dates, units)
+                actual = coding.decode_cf_datetime(num_dates, units)
             expected = np.array(expected_list, dtype='datetime64[ns]')
             self.assertArrayEqual(expected, actual)
 
     @requires_netCDF4
     def test_decoded_cf_datetime_array_2d(self):
         # regression test for GH1229
-        array = conventions.DecodedCFDatetimeArray(np.array([[0, 1], [2, 3]]),
+        array = coding.DecodedCFDatetimeArray(np.array([[0, 1], [2, 3]]),
                                                    'days since 2000-01-01')
         assert array.dtype == 'datetime64[ns]'
         expected = pd.date_range('2000-01-01', periods=4).values.reshape(2, 2)
@@ -431,7 +432,7 @@ class TestDatetime(TestCase):
                                 (pd.to_datetime(['NaT']),
                                  'days since 1970-01-01 00:00:00'),
                                 ]:
-            self.assertEqual(expected, conventions.infer_datetime_units(dates))
+            self.assertEqual(expected, coding.infer_datetime_units(dates))
 
     def test_cf_timedelta(self):
         examples = [
@@ -453,18 +454,18 @@ class TestDatetime(TestCase):
             numbers = np.array(numbers)
 
             expected = numbers
-            actual, _ = conventions.encode_cf_timedelta(timedeltas, units)
+            actual, _ = coding.encode_cf_timedelta(timedeltas, units)
             self.assertArrayEqual(expected, actual)
             self.assertEqual(expected.dtype, actual.dtype)
 
             if units is not None:
                 expected = timedeltas
-                actual = conventions.decode_cf_timedelta(numbers, units)
+                actual = coding.decode_cf_timedelta(numbers, units)
                 self.assertArrayEqual(expected, actual)
                 self.assertEqual(expected.dtype, actual.dtype)
 
         expected = np.timedelta64('NaT', 'ns')
-        actual = conventions.decode_cf_timedelta(np.array(np.nan), 'days')
+        actual = coding.decode_cf_timedelta(np.array(np.nan), 'days')
         self.assertArrayEqual(expected, actual)
 
     def test_cf_timedelta_2d(self):
@@ -473,7 +474,7 @@ class TestDatetime(TestCase):
         timedeltas = np.atleast_2d(pd.to_timedelta(timedeltas, box=False))
         expected = timedeltas
 
-        actual = conventions.decode_cf_timedelta(numbers, units)
+        actual = coding.decode_cf_timedelta(numbers, units)
         self.assertArrayEqual(expected, actual)
         self.assertEqual(expected.dtype, actual.dtype)
 
@@ -483,7 +484,7 @@ class TestDatetime(TestCase):
                 (pd.to_timedelta(['1h', '1 day 1 hour']), 'hours'),
                 (pd.to_timedelta(['1m', '2m', np.nan]), 'minutes'),
                 (pd.to_timedelta(['1m3s', '1m4s']), 'seconds')]:
-            self.assertEqual(expected, conventions.infer_timedelta_units(deltas))
+            self.assertEqual(expected, coding.infer_timedelta_units(deltas))
 
     def test_invalid_units_raises_eagerly(self):
         ds = Dataset({'time': ('time', [0, 1], {'units': 'foobar since 123'})})
@@ -506,7 +507,7 @@ class TestDatetime(TestCase):
         # this should not throw a warning (GH1111)
         with warnings.catch_warnings():
             warnings.filterwarnings('error')
-            conventions.DecodedCFDatetimeArray(np.asarray([722624]),
+            coding.DecodedCFDatetimeArray(np.asarray([722624]),
                                                "days since 0001-01-01")
 
 
@@ -514,7 +515,7 @@ class TestNativeEndiannessArray(TestCase):
     def test(self):
         x = np.arange(5, dtype='>i8')
         expected = np.arange(5, dtype='int64')
-        a = conventions.NativeEndiannessArray(x)
+        a = coding.NativeEndiannessArray(x)
         assert a.dtype == expected.dtype
         assert a.dtype == expected[:].dtype
         self.assertArrayEqual(a, expected)
@@ -532,13 +533,13 @@ class TestEncodeCFVariable(TestCase):
             ]
         for var in invalid_vars:
             with self.assertRaises(ValueError):
-                conventions.encode_cf_variable(var)
+                coding.encode_cf_variable(var)
 
     def test_missing_fillvalue(self):
         v = Variable(['x'], np.array([np.nan, 1, 2, 3]))
         v.encoding = {'dtype': 'int16'}
         with self.assertWarns('floating point data as an integer'):
-            conventions.encode_cf_variable(v)
+            coding.encode_cf_variable(v)
 
 
 @requires_netCDF4
@@ -552,26 +553,26 @@ class TestDecodeCF(TestCase):
         expected = Dataset({'foo': ('t', [0, 0, 0], {'units': 'bar'})},
                            {'t': pd.date_range('2000-01-01', periods=3),
                             'y': ('t', [5.0, 10.0, np.nan])})
-        actual = conventions.decode_cf(original)
+        actual = coding.decode_cf(original)
         self.assertDatasetIdentical(expected, actual)
 
     def test_invalid_coordinates(self):
         # regression test for GH308
         original = Dataset({'foo': ('t', [1, 2], {'coordinates': 'invalid'})})
-        actual = conventions.decode_cf(original)
+        actual = coding.decode_cf(original)
         self.assertDatasetIdentical(original, actual)
 
     def test_decode_coordinates(self):
         # regression test for GH610
         original = Dataset({'foo': ('t', [1, 2], {'coordinates': 'x'}),
                             'x': ('t', [4, 5])})
-        actual = conventions.decode_cf(original)
+        actual = coding.decode_cf(original)
         self.assertEqual(actual.foo.encoding['coordinates'], 'x')
 
     def test_0d_int32_encoding(self):
         original = Variable((), np.int32(0), encoding={'dtype': 'int64'})
         expected = Variable((), np.int64(0))
-        actual = conventions.maybe_encode_dtype(original)
+        actual = coding.maybe_encode_dtype(original)
         self.assertDatasetIdentical(expected, actual)
 
     def test_decode_cf_with_multiple_missing_values(self):
@@ -579,7 +580,7 @@ class TestDecodeCF(TestCase):
                             {'missing_value': np.array([0, 1])})
         expected = Variable(['t'], [np.nan, np.nan, 2], {})
         with warnings.catch_warnings(record=True) as w:
-            actual = conventions.decode_cf_variable(original)
+            actual = coding.decode_cf_variable(original)
             self.assertDatasetIdentical(expected, actual)
             self.assertIn('variable has multiple fill', str(w[0].message))
 
@@ -595,8 +596,8 @@ class TestDecodeCF(TestCase):
             'foo': (('t', 'x'), [[0, 0, 0], [1, 1, 1], [2, 2, 2]], {'units': 'bar'}),
             'y': ('t', [5, 10, np.nan])
         })
-        actual = conventions.decode_cf(original, drop_variables=("x",))
-        actual2 = conventions.decode_cf(original, drop_variables="x")
+        actual = coding.decode_cf(original, drop_variables=("x",))
+        actual2 = coding.decode_cf(original, drop_variables="x")
         self.assertDatasetIdentical(expected, actual)
         self.assertDatasetIdentical(expected, actual2)
 

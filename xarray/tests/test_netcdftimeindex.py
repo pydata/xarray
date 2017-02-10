@@ -3,6 +3,9 @@ import pytest
 import pandas as pd
 import xarray as xr
 
+from xarray.conventions.netcdftimeindex import (
+    parse_iso8601, NetCDFTimeIndex, assert_all_same_netcdftime_datetimes,
+    _parsed_string_to_bounds, _parse_iso8601_with_reso)
 from xarray.tests import assert_array_equal, assert_identical
 
 # Putting this at the module level for now, though technically we
@@ -15,8 +18,7 @@ def date_dict(year=None, month=None, day=None,
     return dict(year=year, month=month, day=day, hour=hour,
                 minute=minute, second=second)
 
-
-@pytest.mark.parametrize(('string', 'expected'), [
+ISO8601_STRING_TESTS = [
     ('1999', date_dict(year='1999')),
     ('199901', date_dict(year='1999', month='01')),
     ('1999-01', date_dict(year='1999', month='01')),
@@ -40,12 +42,16 @@ def date_dict(year=None, month=None, day=None,
     ('1999-01-01T12:34:56.78', date_dict(
         year='1999', month='01', day='01', hour='12', minute='34',
         second='56.78'))
-], ids=['year', 'month', 'month-dash', 'day', 'day-dash', 'hour', 'hour-dash',
-        'minute', 'minute-dash', 'second', 'second-dash', 'second-dec',
-        'second-dec-dash'])
-def test_parse_iso8601(string, expected):
-    from xarray.core.netcdftimeindex import parse_iso8601
+]
+ISO8601_STRING_TEST_IDS = [
+    'year', 'month', 'month-dash', 'day', 'day-dash', 'hour', 'hour-dash',
+    'minute', 'minute-dash', 'second', 'second-dash', 'second-dec',
+    'second-dec-dash']
 
+
+@pytest.mark.parametrize(('string', 'expected'), ISO8601_STRING_TESTS,
+                         ids=ISO8601_STRING_TEST_IDS)
+def test_parse_iso8601(string, expected):
     result = parse_iso8601(string)
     assert result == expected
 
@@ -69,8 +75,6 @@ def date_type(request):
 
 @pytest.fixture
 def index(date_type):
-    from xarray.core.netcdftimeindex import NetCDFTimeIndex
-
     dates = [date_type(1, 1, 1), date_type(1, 2, 1),
              date_type(2, 1, 1), date_type(2, 2, 1)]
     return NetCDFTimeIndex(dates)
@@ -95,9 +99,9 @@ def df(index):
 @pytest.fixture
 def feb_days(date_type):
     from netcdftime import DatetimeAllLeap, Datetime360Day
-    if date_type == DatetimeAllLeap:
+    if date_type is DatetimeAllLeap:
         return 29
-    elif date_type == Datetime360Day:
+    elif date_type is Datetime360Day:
         return 30
     else:
         return 28
@@ -106,10 +110,27 @@ def feb_days(date_type):
 @pytest.fixture
 def dec_days(date_type):
     from netcdftime import Datetime360Day
-    if date_type == Datetime360Day:
+    if date_type is Datetime360Day:
         return 30
     else:
         return 31
+
+
+def test_assert_all_netcdftime_datetimes(date_type, index):
+    from netcdftime import DatetimeNoLeap, DatetimeAllLeap
+
+    if date_type is DatetimeNoLeap:
+        mixed_date_types = [date_type(1, 1, 1), DatetimeAllLeap(1, 2, 1)]
+    else:
+        mixed_date_types = [date_type(1, 1, 1), DatetimeNoLeap(1, 2, 1)]
+    with pytest.raises(TypeError):
+        assert_all_same_netcdftime_datetimes(mixed_date_types)
+
+    with pytest.raises(TypeError):
+        assert_all_same_netcdftime_datetimes([1, date_type(1, 1, 1)])
+
+    assert_all_same_netcdftime_datetimes([date_type(1, 1, 1),
+                                          date_type(1, 2, 1)])
 
 
 @pytest.mark.parametrize(('field', 'expected'), [
@@ -136,7 +157,6 @@ def test_netcdftimeindex_field_accessors(index, field, expected):
     ids=['year', 'month', 'day', 'hour', 'minute', 'second']
 )
 def test_parse_iso8601_with_reso(date_type, string, date_args, reso):
-    from xarray.core.netcdftimeindex import _parse_iso8601_with_reso
     expected_date = date_type(*date_args)
     expected_reso = reso
     result_date, result_reso = _parse_iso8601_with_reso(date_type, string)
@@ -145,7 +165,6 @@ def test_parse_iso8601_with_reso(date_type, string, date_args, reso):
 
 
 def test_parse_string_to_bounds_year(date_type, dec_days):
-    from xarray.core.netcdftimeindex import _parsed_string_to_bounds
     parsed = date_type(2, 2, 10, 6, 2, 8, 1)
     expected_start = date_type(2, 1, 1)
     expected_end = date_type(2, 12, dec_days, 23, 59, 59, 999999)
@@ -156,7 +175,6 @@ def test_parse_string_to_bounds_year(date_type, dec_days):
 
 
 def test_parse_string_to_bounds_month_feb(date_type, feb_days):
-    from xarray.core.netcdftimeindex import _parsed_string_to_bounds
     parsed = date_type(2, 2, 10, 6, 2, 8, 1)
     expected_start = date_type(2, 2, 1)
     expected_end = date_type(2, 2, feb_days, 23, 59, 59, 999999)
@@ -167,7 +185,6 @@ def test_parse_string_to_bounds_month_feb(date_type, feb_days):
 
 
 def test_parse_string_to_bounds_month_dec(date_type, dec_days):
-    from xarray.core.netcdftimeindex import _parsed_string_to_bounds
     parsed = date_type(2, 12, 1)
     expected_start = date_type(2, 12, 1)
     expected_end = date_type(2, 12, dec_days, 23, 59, 59, 999999)
@@ -185,7 +202,6 @@ def test_parse_string_to_bounds_month_dec(date_type, dec_days):
 ], ids=['day', 'hour', 'minute', 'second'])
 def test_parsed_string_to_bounds_sub_monthly(date_type, reso,
                                              ex_start_args, ex_end_args):
-    from xarray.core.netcdftimeindex import _parsed_string_to_bounds
     parsed = date_type(2, 2, 10, 6, 2, 8, 1)
     expected_start = date_type(*ex_start_args)
     expected_end = date_type(*ex_end_args)
@@ -274,9 +290,6 @@ def test_sel_date_scalar(da, date_type, index):
     result = da.sel(time=date_type(1, 1, 1))
     assert_identical(result, expected)
 
-    result = da.sel(time='0001-01-01')
-    assert_identical(result, expected)
-
 
 def test_isel(da, index):
     expected = xr.DataArray(1).assign_coords(time=index[0])
@@ -290,7 +303,7 @@ def test_isel(da, index):
 
 @pytest.fixture
 def scalar_args(date_type):
-    return ['0001-01-01', date_type(1, 1, 1)]
+    return [date_type(1, 1, 1)]
 
 
 @pytest.fixture
@@ -307,7 +320,7 @@ def test_indexing_in_series_getitem(series, index, scalar_args, range_args):
 
     expected = pd.Series([1, 2], index=index[:2])
     for arg in range_args:
-        pd.util.testing.assert_series_equal(series[arg], expected)
+        assert series[arg].equals(expected)
 
 
 def test_indexing_in_series_loc(series, index, scalar_args, range_args):
@@ -316,7 +329,7 @@ def test_indexing_in_series_loc(series, index, scalar_args, range_args):
 
     expected = pd.Series([1, 2], index=index[:2])
     for arg in range_args:
-        pd.util.testing.assert_series_equal(series.loc[arg], expected)
+        assert series.loc[arg].equals(expected)
 
 
 def test_indexing_in_series_iloc(series, index):
@@ -324,26 +337,27 @@ def test_indexing_in_series_iloc(series, index):
     assert series.iloc[0] == expected
 
     expected = pd.Series([1, 2], index=index[:2])
-    pd.util.testing.assert_series_equal(series.iloc[:2], expected)
+    assert series.iloc[:2].equals(expected)
 
 
 def test_indexing_in_dataframe_loc(df, index, scalar_args, range_args):
     expected = pd.Series([1], name=index[0])
     for arg in scalar_args:
         result = df.loc[arg]
-        pd.util.testing.assert_series_equal(result, expected)
+        assert result.equals(expected)
 
     expected = pd.DataFrame([1, 2], index=index[:2])
     for arg in range_args:
         result = df.loc[arg]
-        pd.util.testing.assert_frame_equal(result, expected)
+        assert result.equals(expected)
 
 
 def test_indexing_in_dataframe_iloc(df, index):
     expected = pd.Series([1], name=index[0])
     result = df.iloc[0]
+    assert result.equals(expected)
     pd.util.testing.assert_series_equal(result, expected)
 
     expected = pd.DataFrame([1, 2], index=index[:2])
     result = df.iloc[:2]
-    pd.util.testing.assert_frame_equal(result, expected)
+    assert result.equals(expected)
