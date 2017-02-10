@@ -13,7 +13,7 @@ from ..core.pycompat import OrderedDict, suppress
 
 from .common import AbstractDataStore
 
-__rio_varname__ = 'raster'
+_rio_varname = 'raster'
 
 
 class RasterioArrayWrapper(NDArrayMixin):
@@ -66,35 +66,30 @@ class RasterioDataStore(AbstractDataStore):
                 self._attrs[attr_name] = getattr(self.ds, attr_name)
 
     def open_store_variable(self, var):
-        if var != __rio_varname__:
-            raise ValueError(
-                'Rasterio variables are all named %s' % __rio_varname__)
-        data = indexing.LazilyIndexedArray(
-            RasterioArrayWrapper(self.ds))
+        if var != _rio_varname:
+            raise ValueError('Rasterio variables are named %s' % _rio_varname)
+        data = indexing.LazilyIndexedArray(RasterioArrayWrapper(self.ds))
         return Variable(self.dims, data, self._attrs)
 
     def get_variables(self):
         # Get lat lon coordinates
-        coords = _try_to_get_latlon_coords(self.coords, self._attrs)
-        rio_vars = {__rio_varname__: self.open_store_variable(__rio_varname__)}
-        rio_vars.update(coords)
-        return FrozenOrderedDict(rio_vars)
+        vars = _try_to_get_latlon_coords(self.coords, self._attrs)
+        vars[_rio_varname] = self.open_store_variable(_rio_varname)
+        return FrozenOrderedDict(vars)
 
     def get_attrs(self):
         return Frozen(self._attrs)
 
     def get_dimensions(self):
-        return Frozen(self.ds.dims)
+        return Frozen(self.dims)
 
     def close(self):
         self.ds.close()
 
 
 def _try_to_get_latlon_coords(coords, attrs):
-
     from rasterio.warp import transform
 
-    coords_out = coords
     if 'crs' in attrs:
         proj = attrs['crs']
         # TODO: if the proj is already PlateCarree, making 2D coordinates
@@ -107,13 +102,12 @@ def _try_to_get_latlon_coords(coords, attrs):
         xc = np.asarray(xc).reshape((ny, nx))
         yc = np.asarray(yc).reshape((ny, nx))
         dims = ('y', 'x')
-
-        coords_out['lat'] = Variable(dims, yc,
-                                     attrs={'units': 'degrees_north',
-                                            'long_name': 'latitude',
-                                            'standard_name': 'latitude'})
-        coords_out['lon'] = Variable(dims, xc,
-                                     attrs={'units': 'degrees_east',
-                                            'long_name': 'longitude',
-                                            'standard_name': 'longitude'})
-    return coords_out
+        coords['lon'] = Variable(dims, xc,
+                                 attrs={'units': 'degrees_east',
+                                        'long_name': 'longitude',
+                                        'standard_name': 'longitude'})
+        coords['lat'] = Variable(dims, yc,
+                                 attrs={'units': 'degrees_north',
+                                        'long_name': 'latitude',
+                                        'standard_name': 'latitude'})
+    return coords
