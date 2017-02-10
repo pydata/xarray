@@ -4,8 +4,6 @@ dependencies:
   - bottleneck
   - pytest
   - pandas
-  - rasterio
-  - scipy
   - pip:
     - coveralls
     - pytest-cov
