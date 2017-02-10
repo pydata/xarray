@@ -1470,7 +1470,7 @@ class TestRasterIO(CFEncodedDataTest, Only32BitTypes, TestCase):
                     crs='+proj=latlong',
                     transform=transform,
                     dtype=rasterio.float32) as s:
-                s.write(data)
+                s.write(data, indexes=1)
             actual = xr.open_dataset(tmp_file, engine='rasterio')
 
             expected = Dataset()
