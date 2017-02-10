@@ -1443,8 +1443,6 @@ class TestRasterIO(CFEncodedDataTest, Only32BitTypes, TestCase):
     #     with rasterio.open(
     #             name, 'w',
     #             driver='GTiff', height=3, width=4, count=1,
-    #             crs={'units': 'm', 'no_defs': True, 'ellps': 'WGS84',
-    #                  'proj': 'utm', 'zone': 18},
     #             transform=transform,
     #             dtype=rasterio.float32) as s:
     #         s.write(a, indexes=1)
@@ -1472,12 +1470,8 @@ class TestRasterIO(CFEncodedDataTest, Only32BitTypes, TestCase):
                     crs='+proj=latlong',
                     transform=transform,
                     dtype=rasterio.float32) as s:
-                s.write(data,
-                        indexes=1)
+                s.write(data)
             actual = xr.open_dataset(tmp_file, engine='rasterio')
-
-            assert 'proj' in actual.crs
-            assert actual.crs['proj'] == 'longlat'
 
             expected = Dataset()
             expected['x'] = ('x', [1, 1.5, 2, 2.5])
@@ -1493,6 +1487,37 @@ class TestRasterIO(CFEncodedDataTest, Only32BitTypes, TestCase):
             assert_allclose(actual.raster, expected.raster)
             assert_allclose(actual.lon, expected.lon)
             assert_allclose(actual.lat, expected.lat)
+
+            print(actual)
+
+    def test_utm_coords(self):
+
+        import rasterio
+        from rasterio.transform import from_origin
+
+        # Create a geotiff file in utm proj
+        data = np.arange(24, dtype=rasterio.float32).reshape(2, 3, 4)
+        with create_tmp_file(suffix='.tif') as tmp_file:
+            transform = from_origin(-3000, 1000, 1000, 1000)
+            with rasterio.open(
+                    tmp_file, 'w',
+                    driver='GTiff', height=3, width=4, count=2,
+                    crs={'units': 'm', 'no_defs': True, 'ellps': 'WGS84',
+                         'proj': 'utm', 'zone': 18},
+                    transform=transform,
+                    dtype=rasterio.float32) as s:
+                s.write(data)
+            actual = xr.open_dataset(tmp_file, engine='rasterio')
+
+            expected = Dataset()
+            expected['x'] = ('x', [-3000., -2000, -1000, 0])
+            expected['y'] = ('y', [1000., 0, -1000])
+            expected['band'] = ('band', [1, 2])
+            expected['raster'] = (('band', 'y', 'x'), data)
+
+            assert_allclose(actual.y, expected.y)
+            assert_allclose(actual.x, expected.x)
+            assert_allclose(actual.raster, expected.raster)
 
             print(actual)
 
