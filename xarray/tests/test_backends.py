@@ -1431,31 +1431,70 @@ class TestPyNioAutocloseTrue(TestPyNio):
 
 @requires_rasterio
 class TestRasterIO(CFEncodedDataTest, Only32BitTypes, TestCase):
+
+    # def setUp(self):
+    #
+    #
+    #     name = 'test_latlong.tif'
+    #
+    #
+    #     name = 'test_utm.tif'
+    #     transform = from_origin(-300, 200, 1000, 1000)
+    #     with rasterio.open(
+    #             name, 'w',
+    #             driver='GTiff', height=3, width=4, count=1,
+    #             crs={'units': 'm', 'no_defs': True, 'ellps': 'WGS84',
+    #                  'proj': 'utm', 'zone': 18},
+    #             transform=transform,
+    #             dtype=rasterio.float32) as s:
+    #         s.write(a, indexes=1)
+
     def test_write_store(self):
-        # rasterio is read-only for now
+        # RasterIO is read-only for now
         pass
 
     def test_orthogonal_indexing(self):
-        # rasterio also does not support list-like indexing
+        # RasterIO also does not support list-like indexing
         pass
 
-    @contextlib.contextmanager
-    def roundtrip(self, data, save_kwargs={}, open_kwargs={}):
-        with create_tmp_file() as tmp_file:
-            data.to_netcdf(tmp_file, engine='scipy', **save_kwargs)
-            with open_dataset(tmp_file, engine='rasterio', **open_kwargs) as ds:
-                yield ds
+    def test_latlong_coords(self):
 
-    def test_weakrefs(self):
-        example = Dataset({'foo': ('x', np.arange(5.0))})
-        expected = example.rename({'foo': 'bar', 'x': 'y'})
+        import rasterio
+        from rasterio.transform import from_origin
 
-        with create_tmp_file() as tmp_file:
-            example.to_netcdf(tmp_file, engine='scipy')
-            on_disk = open_dataset(tmp_file, engine='rasterio')
-            actual = on_disk.rename({'foo': 'bar', 'x': 'y'})
-            del on_disk  # trigger garbage collection
-            self.assertDatasetIdentical(actual, expected)
+        # Create a geotiff file in latlong proj
+        data = np.arange(12, dtype=rasterio.float32).reshape(3, 4)
+        with create_tmp_file(suffix='.tif') as tmp_file:
+            transform = from_origin(1, 2, 0.5, 1.)
+            with rasterio.open(
+                    tmp_file, 'w',
+                    driver='GTiff', height=3, width=4, count=1,
+                    crs='+proj=latlong',
+                    transform=transform,
+                    dtype=rasterio.float32) as s:
+                s.write(data,
+                        indexes=1)
+            actual = xr.open_dataset(tmp_file, engine='rasterio')
+
+            assert 'proj' in actual.crs
+            assert actual.crs['proj'] == 'longlat'
+
+            expected = Dataset()
+            expected['x'] = ('x', [1, 1.5, 2, 2.5])
+            expected['y'] = ('y', [2., 1, 0])
+            expected['band'] = ('band', [1])
+            expected['raster'] = (('band', 'y', 'x'), data[np.newaxis, ...])
+            lon, lat = np.meshgrid(expected['x'], expected['y'])
+            expected['lon'] = (('y', 'x'), lon)
+            expected['lat'] = (('y', 'x'), lat)
+
+            assert_allclose(actual.y, expected.y)
+            assert_allclose(actual.x, expected.x)
+            assert_allclose(actual.raster, expected.raster)
+            assert_allclose(actual.lon, expected.lon)
+            assert_allclose(actual.lat, expected.lat)
+
+            print(actual)
 
 
 class TestEncodingInvalid(TestCase):

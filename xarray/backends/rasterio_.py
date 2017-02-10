@@ -1,3 +1,4 @@
+import copy
 import numpy as np
 
 try:
@@ -35,23 +36,27 @@ class RasterioDataStore(AbstractDataStore):
     """
     def __init__(self, filename, mode='r'):
 
+        # TODO: is the rasterio.Env() really necessary, and if yes where?
         with rasterio.Env():
-            self.ds = rasterio.open(filename, mode=mode, )
+            self.ds = rasterio.open(filename, mode=mode)
 
-            # Get coords
-            nx, ny = self.ds.width, self.ds.height
-            x0, y0 = self.ds.bounds.left, self.ds.bounds.top
-            dx, dy = self.ds.res[0], -self.ds.res[1]
+        # Get coords
+        nx, ny = self.ds.width, self.ds.height
+        dx, dy = self.ds.res[0], -self.ds.res[1]
+        x0 = self.ds.bounds.right if dx < 0 else self.ds.bounds.left
+        y0 = self.ds.bounds.top if dy < 0 else self.ds.bounds.bottom
+        y = np.linspace(start=y0, num=ny, stop=(y0 + (ny-1) * dy))
+        x = np.linspace(start=x0, num=nx, stop=(x0 + (nx-1) * dx))
 
-        self.coords = {'y': np.linspace(start=y0, num=ny,
-                                        stop=(y0 + (ny-1) * dy)),
-                       'x': np.linspace(start=x0, num=nx,
-                                        stop=(x0 + (nx-1) * dx))}
+        self.coords = OrderedDict()
+        self.coords['y'] = Variable(('y', ), y)
+        self.coords['x'] = Variable(('x', ), x)
 
         # Get dims
         if self.ds.count >= 1:
             self.dims = ('band', 'y', 'x')
-            self.coords['band'] = self.ds.indexes
+            self.coords['band'] = Variable(('band', ),
+                                           np.atleast_1d(self.ds.indexes))
         else:
             raise ValueError('unknown dims')
 
@@ -85,38 +90,30 @@ class RasterioDataStore(AbstractDataStore):
         self.ds.close()
 
 
-def _transform_proj(p1, p2, x, y, nocopy=False):
-    """Wrapper around the pyproj transform.
-    When two projections are equal, this function avoids quite a bunch of
-    useless calculations. See https://github.com/jswhit/pyproj/issues/15
-    """
-    import pyproj
-    import copy
-
-    if p1.srs == p2.srs:
-        if nocopy:
-            return x, y
-        else:
-            return copy.deepcopy(x), copy.deepcopy(y)
-
-    return pyproj.transform(p1, p2, x, y)
-
-
 def _try_to_get_latlon_coords(coords, attrs):
-    coords_out = {}
-    try:
-        import pyproj
-    except ImportError:
-        pyproj = False
-    if 'crs' in attrs and pyproj:
-        proj = pyproj.Proj(attrs['crs'])
+
+    from rasterio.warp import transform
+
+    coords_out = coords
+    if 'crs' in attrs:
+        proj = attrs['crs']
+        # TODO: if the proj is already PlateCarree, making 2D coordinates
+        # is not the best thing to do here.
+        ny, nx = len(coords['y']), len(coords['x'])
         x, y = np.meshgrid(coords['x'], coords['y'])
-        proj_out = pyproj.Proj("+init=EPSG:4326", preserve_units=True)
-        xc, yc = _transform_proj(proj, proj_out, x, y)
+        # Rasterio works with 1D arrays
+        xc, yc = transform(proj, {'init': 'EPSG:4326'},
+                           x.flatten(), y.flatten())
+        xc = np.asarray(xc).reshape((ny, nx))
+        yc = np.asarray(yc).reshape((ny, nx))
         dims = ('y', 'x')
 
-        coords_out['lat'] = Variable(dims,yc,attrs={'units': 'degrees_north', 'long_name': 'latitude',
-                   'standard_name': 'latitude'})
-        coords_out['lon'] = Variable(dims,xc,attrs={'units': 'degrees_east', 'long_name': 'longitude',
-                   'standard_name': 'longitude'})
+        coords_out['lat'] = Variable(dims, yc,
+                                     attrs={'units': 'degrees_north',
+                                            'long_name': 'latitude',
+                                            'standard_name': 'latitude'})
+        coords_out['lon'] = Variable(dims, xc,
+                                     attrs={'units': 'degrees_east',
+                                            'long_name': 'longitude',
+                                            'standard_name': 'longitude'})
     return coords_out
