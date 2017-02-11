@@ -117,7 +117,7 @@ def dec_days(date_type):
         return 31
 
 
-def test_assert_all_netcdftime_datetimes(date_type, index):
+def test_assert_all_valid_date_type(date_type, index):
     from netcdftime import DatetimeNoLeap, DatetimeAllLeap
 
     if date_type is DatetimeNoLeap:
