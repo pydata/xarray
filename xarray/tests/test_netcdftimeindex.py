@@ -42,8 +42,9 @@ ISO8601_STRING_TESTS = {
 }
 
 
-@pytest.mark.parametrize(('string', 'expected'), ISO8601_STRING_TESTS.values(),
-                         ids=ISO8601_STRING_TESTS.keys())
+@pytest.mark.parametrize(('string', 'expected'),
+                         list(ISO8601_STRING_TESTS.values()),
+                         ids=list(ISO8601_STRING_TESTS.keys()))
 def test_parse_iso8601(string, expected):
     result = parse_iso8601(string)
     assert result == expected
@@ -294,8 +295,8 @@ SEL_STRING_OR_LIST_TESTS = {
 }
 
 
-@pytest.mark.parametrize('sel_arg', SEL_STRING_OR_LIST_TESTS.values(),
-                         ids=SEL_STRING_OR_LIST_TESTS.keys())
+@pytest.mark.parametrize('sel_arg', list(SEL_STRING_OR_LIST_TESTS.values()),
+                         ids=list(SEL_STRING_OR_LIST_TESTS.keys()))
 def test_sel_string_or_list(da, index, sel_arg):
     expected = xr.DataArray([1, 2], coords=[index[:2]], dims=['time'])
     result = da.sel(time=sel_arg)
