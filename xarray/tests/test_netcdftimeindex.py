@@ -3,8 +3,9 @@ import pytest
 import pandas as pd
 import xarray as xr
 
+from datetime import timedelta
 from xarray.conventions.netcdftimeindex import (
-    parse_iso8601, NetCDFTimeIndex, assert_all_same_netcdftime_datetimes,
+    parse_iso8601, NetCDFTimeIndex, assert_all_valid_date_type,
     _parsed_string_to_bounds, _parse_iso8601_with_reso)
 from xarray.tests import assert_array_equal, assert_identical
 
@@ -18,46 +19,38 @@ def date_dict(year=None, month=None, day=None,
     return dict(year=year, month=month, day=day, hour=hour,
                 minute=minute, second=second)
 
-ISO8601_STRING_TESTS = [
-    ('1999', date_dict(year='1999')),
-    ('199901', date_dict(year='1999', month='01')),
-    ('1999-01', date_dict(year='1999', month='01')),
-    ('19990101', date_dict(year='1999', month='01', day='01')),
-    ('1999-01-01', date_dict(year='1999', month='01', day='01')),
-    ('19990101T12', date_dict(year='1999', month='01', day='01', hour='12')),
-    ('1999-01-01T12', date_dict(year='1999', month='01', day='01', hour='12')),
-    ('19990101T1234', date_dict(
+ISO8601_STRING_TESTS = {
+    'year': ('1999', date_dict(year='1999')),
+    'month': ('199901', date_dict(year='1999', month='01')),
+    'month-dash': ('1999-01', date_dict(year='1999', month='01')),
+    'day': ('19990101', date_dict(year='1999', month='01', day='01')),
+    'day-dash': ('1999-01-01', date_dict(year='1999', month='01', day='01')),
+    'hour': ('19990101T12', date_dict(
+        year='1999', month='01', day='01', hour='12')),
+    'hour-dash': ('1999-01-01T12', date_dict(
+        year='1999', month='01', day='01', hour='12')),
+    'minute': ('19990101T1234', date_dict(
         year='1999', month='01', day='01', hour='12', minute='34')),
-    ('1999-01-01T12:34', date_dict(
+    'minute-dash': ('1999-01-01T12:34', date_dict(
         year='1999', month='01', day='01', hour='12', minute='34')),
-    ('19990101T123456', date_dict(
+    'second': ('19990101T123456', date_dict(
         year='1999', month='01', day='01', hour='12', minute='34',
         second='56')),
-    ('1999-01-01T12:34:56', date_dict(
+    'second-dash': ('1999-01-01T12:34:56', date_dict(
         year='1999', month='01', day='01', hour='12', minute='34',
-        second='56')),
-    ('19990101T123456.78', date_dict(
-        year='1999', month='01', day='01', hour='12', minute='34',
-        second='56.78')),
-    ('1999-01-01T12:34:56.78', date_dict(
-        year='1999', month='01', day='01', hour='12', minute='34',
-        second='56.78'))
-]
-ISO8601_STRING_TEST_IDS = [
-    'year', 'month', 'month-dash', 'day', 'day-dash', 'hour', 'hour-dash',
-    'minute', 'minute-dash', 'second', 'second-dash', 'second-dec',
-    'second-dec-dash']
+        second='56'))
+}
 
 
-@pytest.mark.parametrize(('string', 'expected'), ISO8601_STRING_TESTS,
-                         ids=ISO8601_STRING_TEST_IDS)
+@pytest.mark.parametrize(('string', 'expected'), ISO8601_STRING_TESTS.values(),
+                         ids=ISO8601_STRING_TESTS.keys())
 def test_parse_iso8601(string, expected):
     result = parse_iso8601(string)
     assert result == expected
 
-    if '.' not in string:
-        with pytest.raises(ValueError):
-            parse_iso8601(string + '3')
+    with pytest.raises(ValueError):
+        parse_iso8601(string + '3')
+        parse_iso8601(string + '.3')
 
 
 def netcdftime_date_types():
@@ -77,6 +70,13 @@ def date_type(request):
 def index(date_type):
     dates = [date_type(1, 1, 1), date_type(1, 2, 1),
              date_type(2, 1, 1), date_type(2, 2, 1)]
+    return NetCDFTimeIndex(dates)
+
+
+@pytest.fixture
+def monotonic_decreasing_index(date_type):
+    dates = [date_type(2, 2, 1), date_type(2, 1, 1),
+             date_type(1, 2, 1), date_type(1, 1, 1)]
     return NetCDFTimeIndex(dates)
 
 
@@ -124,13 +124,12 @@ def test_assert_all_netcdftime_datetimes(date_type, index):
     else:
         mixed_date_types = [date_type(1, 1, 1), DatetimeNoLeap(1, 2, 1)]
     with pytest.raises(TypeError):
-        assert_all_same_netcdftime_datetimes(mixed_date_types)
+        assert_all_valid_date_type(mixed_date_types)
 
     with pytest.raises(TypeError):
-        assert_all_same_netcdftime_datetimes([1, date_type(1, 1, 1)])
+        assert_all_valid_date_type([1, date_type(1, 1, 1)])
 
-    assert_all_same_netcdftime_datetimes([date_type(1, 1, 1),
-                                          date_type(1, 2, 1)])
+    assert_all_valid_date_type([date_type(1, 1, 1), date_type(1, 2, 1)])
 
 
 @pytest.mark.parametrize(('field', 'expected'), [
@@ -140,8 +139,7 @@ def test_assert_all_netcdftime_datetimes(date_type, index):
     ('hour', [0, 0, 0, 0]),
     ('minute', [0, 0, 0, 0]),
     ('second', [0, 0, 0, 0]),
-    ('microsecond', [0, 0, 0, 0])
-], ids=['year', 'month', 'day', 'hour', 'minute', 'second', 'microsecond'])
+    ('microsecond', [0, 0, 0, 0])])
 def test_netcdftimeindex_field_accessors(index, field, expected):
     result = getattr(index, field)
     assert_array_equal(result, expected)
@@ -153,9 +151,7 @@ def test_netcdftimeindex_field_accessors(index, field, expected):
     ('19990202', (1999, 2, 2), 'day'),
     ('19990202T01', (1999, 2, 2, 1), 'hour'),
     ('19990202T0101', (1999, 2, 2, 1, 1), 'minute'),
-    ('19990202T010156', (1999, 2, 2, 1, 1, 56), 'second')],
-    ids=['year', 'month', 'day', 'hour', 'minute', 'second']
-)
+    ('19990202T010156', (1999, 2, 2, 1, 1, 56), 'second')])
 def test_parse_iso8601_with_reso(date_type, string, date_args, reso):
     expected_date = date_type(*date_args)
     expected_reso = reso
@@ -198,11 +194,10 @@ def test_parse_string_to_bounds_month_dec(date_type, dec_days):
     ('day', (2, 2, 10), (2, 2, 10, 23, 59, 59, 999999)),
     ('hour', (2, 2, 10, 6), (2, 2, 10, 6, 59, 59, 999999)),
     ('minute', (2, 2, 10, 6, 2), (2, 2, 10, 6, 2, 59, 999999)),
-    ('second', (2, 2, 10, 6, 2, 8), (2, 2, 10, 6, 2, 8, 999999))
-], ids=['day', 'hour', 'minute', 'second'])
+    ('second', (2, 2, 10, 6, 2, 8), (2, 2, 10, 6, 2, 8, 999999))])
 def test_parsed_string_to_bounds_sub_monthly(date_type, reso,
                                              ex_start_args, ex_end_args):
-    parsed = date_type(2, 2, 10, 6, 2, 8, 1)
+    parsed = date_type(2, 2, 10, 6, 2, 8, 123456)
     expected_start = date_type(*ex_start_args)
     expected_end = date_type(*ex_end_args)
 
@@ -210,6 +205,11 @@ def test_parsed_string_to_bounds_sub_monthly(date_type, reso,
         date_type, reso, parsed)
     assert result_start == expected_start
     assert result_end == expected_end
+
+
+def test_parsed_string_to_bounds_raises(date_type):
+    with pytest.raises(KeyError):
+        _parsed_string_to_bounds(date_type, 'a', date_type(1, 1, 1))
 
 
 def test_get_loc(date_type, index):
@@ -247,8 +247,30 @@ def test_get_slice_bound(date_type, index, kind):
     assert result == expected
 
 
+@pytest.mark.parametrize('kind', ['loc', 'getitem'])
+def test_get_slice_bound_decreasing_index(
+        date_type, monotonic_decreasing_index, kind):
+    result = monotonic_decreasing_index.get_slice_bound('0001', 'left', kind)
+    expected = 2
+    assert result == expected
+
+    result = monotonic_decreasing_index.get_slice_bound('0001', 'right', kind)
+    expected = 4
+    assert result == expected
+
+    result = monotonic_decreasing_index.get_slice_bound(
+        date_type(1, 3, 1), 'left', kind)
+    expected = 2
+    assert result == expected
+
+    result = monotonic_decreasing_index.get_slice_bound(
+        date_type(1, 3, 1), 'right', kind)
+    expected = 2
+    assert result == expected
+
+
 def test_date_type_property(date_type, index):
-    assert index.date_type == date_type
+    assert index.date_type is date_type
 
 
 def test_contains(date_type, index):
@@ -265,11 +287,15 @@ def test_groupby(da):
     assert_identical(result, expected)
 
 
-@pytest.mark.parametrize('sel_arg', [
-    '0001',
-    slice('0001-01-01', '0001-12-30'),
-    [True, True, False, False]
-], ids=['string', 'string-slice', 'bool-list'])
+SEL_STRING_OR_LIST_TESTS = {
+    'string': '0001',
+    'string-slice': slice('0001-01-01', '0001-12-30'),
+    'bool-list': [True, True, False, False]
+}
+
+
+@pytest.mark.parametrize('sel_arg', SEL_STRING_OR_LIST_TESTS.values(),
+                         ids=SEL_STRING_OR_LIST_TESTS.keys())
 def test_sel_string_or_list(da, index, sel_arg):
     expected = xr.DataArray([1, 2], coords=[index[:2]], dims=['time'])
     result = da.sel(time=sel_arg)
@@ -289,6 +315,116 @@ def test_sel_date_scalar(da, date_type, index):
     expected = xr.DataArray(1).assign_coords(time=index[0])
     result = da.sel(time=date_type(1, 1, 1))
     assert_identical(result, expected)
+
+
+@pytest.mark.parametrize('sel_kwargs', [
+    {'method': 'nearest'},
+    {'method': 'nearest', 'tolerance': timedelta(days=70)}
+])
+def test_sel_date_scalar_nearest(da, date_type, index, sel_kwargs):
+    expected = xr.DataArray(2).assign_coords(time=index[1])
+    result = da.sel(time=date_type(1, 4, 1), **sel_kwargs)
+    assert_identical(result, expected)
+
+    expected = xr.DataArray(3).assign_coords(time=index[2])
+    result = da.sel(time=date_type(1, 11, 1), **sel_kwargs)
+    assert_identical(result, expected)
+
+
+@pytest.mark.parametrize('sel_kwargs', [
+    {'method': 'pad'},
+    {'method': 'pad', 'tolerance': timedelta(days=365)}
+])
+def test_sel_date_scalar_pad(da, date_type, index, sel_kwargs):
+    expected = xr.DataArray(2).assign_coords(time=index[1])
+    result = da.sel(time=date_type(1, 4, 1), **sel_kwargs)
+    assert_identical(result, expected)
+
+    expected = xr.DataArray(2).assign_coords(time=index[1])
+    result = da.sel(time=date_type(1, 11, 1), **sel_kwargs)
+    assert_identical(result, expected)
+
+
+@pytest.mark.parametrize('sel_kwargs', [
+    {'method': 'backfill'},
+    {'method': 'backfill', 'tolerance': timedelta(days=365)}
+])
+def test_sel_date_scalar_backfill(da, date_type, index, sel_kwargs):
+    expected = xr.DataArray(3).assign_coords(time=index[2])
+    result = da.sel(time=date_type(1, 4, 1), **sel_kwargs)
+    assert_identical(result, expected)
+
+    expected = xr.DataArray(3).assign_coords(time=index[2])
+    result = da.sel(time=date_type(1, 11, 1), **sel_kwargs)
+    assert_identical(result, expected)
+
+
+@pytest.mark.parametrize('sel_kwargs', [
+    {'method': 'pad', 'tolerance': timedelta(days=20)},
+    {'method': 'backfill', 'tolerance': timedelta(days=20)},
+    {'method': 'nearest', 'tolerance': timedelta(days=20)},
+])
+def test_sel_date_scalar_tolerance_raises(da, date_type, sel_kwargs):
+    with pytest.raises(KeyError):
+        da.sel(time=date_type(1, 5, 1), **sel_kwargs)
+
+
+@pytest.mark.parametrize('sel_kwargs', [
+    {'method': 'nearest'},
+    {'method': 'nearest', 'tolerance': timedelta(days=70)}
+])
+def test_sel_date_list_nearest(da, date_type, index, sel_kwargs):
+    expected = xr.DataArray(
+        [2, 2], coords=[[index[1], index[1]]], dims=['time'])
+    result = da.sel(
+        time=[date_type(1, 3, 1), date_type(1, 4, 1)], **sel_kwargs)
+    assert_identical(result, expected)
+
+    expected = xr.DataArray(
+        [2, 3], coords=[[index[1], index[2]]], dims=['time'])
+    result = da.sel(
+        time=[date_type(1, 3, 1), date_type(1, 12, 1)], **sel_kwargs)
+    assert_identical(result, expected)
+
+    expected = xr.DataArray(
+        [3, 3], coords=[[index[2], index[2]]], dims=['time'])
+    result = da.sel(
+        time=[date_type(1, 11, 1), date_type(1, 12, 1)], **sel_kwargs)
+    assert_identical(result, expected)
+
+
+@pytest.mark.parametrize('sel_kwargs', [
+    {'method': 'pad'},
+    {'method': 'pad', 'tolerance': timedelta(days=365)}
+])
+def test_sel_date_list_pad(da, date_type, index, sel_kwargs):
+    expected = xr.DataArray(
+        [2, 2], coords=[[index[1], index[1]]], dims=['time'])
+    result = da.sel(
+        time=[date_type(1, 3, 1), date_type(1, 4, 1)], **sel_kwargs)
+    assert_identical(result, expected)
+
+
+@pytest.mark.parametrize('sel_kwargs', [
+    {'method': 'backfill'},
+    {'method': 'backfill', 'tolerance': timedelta(days=365)}
+])
+def test_sel_date_list_backfill(da, date_type, index, sel_kwargs):
+    expected = xr.DataArray(
+        [3, 3], coords=[[index[2], index[2]]], dims=['time'])
+    result = da.sel(
+        time=[date_type(1, 3, 1), date_type(1, 4, 1)], **sel_kwargs)
+    assert_identical(result, expected)
+
+
+@pytest.mark.parametrize('sel_kwargs', [
+    {'method': 'pad', 'tolerance': timedelta(days=20)},
+    {'method': 'backfill', 'tolerance': timedelta(days=20)},
+    {'method': 'nearest', 'tolerance': timedelta(days=20)},
+])
+def test_sel_date_list_tolerance_raises(da, date_type, sel_kwargs):
+    with pytest.raises(KeyError):
+        da.sel(time=[date_type(1, 2, 1), date_type(1, 5, 1)], **sel_kwargs)
 
 
 def test_isel(da, index):
@@ -356,7 +492,7 @@ def test_indexing_in_dataframe_iloc(df, index):
     expected = pd.Series([1], name=index[0])
     result = df.iloc[0]
     assert result.equals(expected)
-    pd.util.testing.assert_series_equal(result, expected)
+    assert result.equals(expected)
 
     expected = pd.DataFrame([1, 2], index=index[:2])
     result = df.iloc[:2]

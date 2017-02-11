@@ -28,7 +28,7 @@ def build_pattern(date_sep='\-', datetime_sep='T', time_sep='\:'):
               (date_sep, 'day', '\d{2}'),
               (datetime_sep, 'hour', '\d{2}'),
               (time_sep, 'minute', '\d{2}'),
-              (time_sep, 'second', '\d{2}' + optional('\.\d+'))]
+              (time_sep, 'second', '\d{2}')]
     pattern_list = []
     for sep, name, sub_pattern in pieces:
         pattern_list.append((sep if sep else '') + named(name, sub_pattern))
@@ -36,13 +36,13 @@ def build_pattern(date_sep='\-', datetime_sep='T', time_sep='\:'):
     return '^' + trailing_optional(pattern_list) + '$'
 
 
-basic_pattern = build_pattern(date_sep='', time_sep='')
-extended_pattern = build_pattern()
-patterns = [basic_pattern, extended_pattern]
+_BASIC_PATTERN = build_pattern(date_sep='', time_sep='')
+_EXTENDED_PATTERN = build_pattern()
+_PATTERNS = [_BASIC_PATTERN, _EXTENDED_PATTERN]
 
 
 def parse_iso8601(datetime_string):
-    for pattern in patterns:
+    for pattern in _PATTERNS:
         match = re.match(pattern, datetime_string)
         if match:
             return match.groupdict()
@@ -57,10 +57,8 @@ def _parse_iso8601_with_reso(date_type, timestr):
     for attr in ['year', 'month', 'day', 'hour', 'minute', 'second']:
         value = result.get(attr, None)
         if value is not None:
-            # Note ISO8601 conventions allow for fractional seconds; casting
-            # to an int means all seconds values get rounded down to the
-            # nearest integer.  TODO: Consider adding support for sub-second
-            # resolution?
+            # Note ISO8601 conventions allow for fractional seconds.
+            # TODO: Consider adding support for sub-second resolution?
             replace[attr] = int(value)
             resolution = attr
 
@@ -120,23 +118,31 @@ def get_date_type(self):
     return type(self._data[0])
 
 
-def assert_all_same_netcdftime_datetimes(data):
-    from netcdftime._netcdftime import datetime
+def assert_all_valid_date_type(data):
+    from netcdftime import (
+        DatetimeJulian, DatetimeNoLeap, DatetimeAllLeap,
+        DatetimeGregorian, DatetimeProlepticGregorian, Datetime360Day)
 
-    if not isinstance(data[0], datetime):
+    valid_types = (DatetimeJulian, DatetimeNoLeap, DatetimeAllLeap,
+                   DatetimeGregorian, DatetimeProlepticGregorian,
+                   Datetime360Day)
+
+    sample = data[0]
+    date_type = type(sample)
+    if not isinstance(sample, valid_types):
         raise TypeError(
-            'NetCDFTimeIndex requires netcdftime._netcdftime.datetime'
-            ' objects.')
-    if not all(isinstance(value, type(data[0])) for value in data):
+            'NetCDFTimeIndex requires netcdftime._netcdftime.datetime '
+            'objects.  Got object of {}.'.format(date_type))
+    if not all(isinstance(value, date_type) for value in data):
         raise TypeError(
-            'NetCDFTimeIndex requires using netcdftime._netcdftime.datetime'
-            ' objects of all the same type.')
+            'NetCDFTimeIndex requires using netcdftime._netcdftime.datetime '
+            'objects of all the same type.  Got\n{}.'.format(data))
 
 
 class NetCDFTimeIndex(pd.Index):
     def __new__(cls, data):
         result = object.__new__(cls)
-        assert_all_same_netcdftime_datetimes(data)
+        assert_all_valid_date_type(data)
         result._data = np.array(data)
         return result
 
