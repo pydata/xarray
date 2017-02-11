@@ -32,7 +32,9 @@ def _ensure_plottable(*args):
     Raise exception if there is anything in args that can't be plotted on
     an axis.
     """
-    plottypes = [np.floating, np.integer, np.timedelta64, np.datetime64]
+    from netCDF4 import datetime as nc4datetime
+    plottypes = [np.floating, np.integer, np.timedelta64, np.datetime64, 
+                 nc4datetime]
 
     # Lists need to be converted to np.arrays here.
     if not any(_right_dtype(np.array(x), plottypes) for x in args):
