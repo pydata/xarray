@@ -489,3 +489,38 @@ def ensure_us_time_resolution(val):
     elif np.issubdtype(val.dtype, np.timedelta64):
         val = val.astype('timedelta64[us]')
     return val
+
+
+def get_latlon_coords_from_crs(ds, crs=None):
+    """Currently very specific function, but coul dbe generalized."""
+
+    from .. import DataArray
+
+    try:
+        from rasterio.warp import transform
+    except ImportError:
+        raise ImportError('add_latlon_coords_from_crs needs RasterIO.')
+
+    if crs is None:
+        if 'crs' in ds.attrs:
+            crs = ds.attrs['crs']
+        else:
+            raise ValueError('crs not found')
+
+    ny, nx = len(ds['y']), len(ds['x'])
+    x, y = np.meshgrid(ds['x'], ds['y'])
+    # Rasterio works with 1D arrays
+    xc, yc = transform(crs, {'init': 'EPSG:4326'},
+                       x.flatten(), y.flatten())
+    xc = np.asarray(xc).reshape((ny, nx))
+    yc = np.asarray(yc).reshape((ny, nx))
+    dims = ('y', 'x')
+    ds['lon'] = DataArray(xc, dims=dims,
+                          attrs={'units': 'degrees_east',
+                                 'long_name': 'longitude',
+                                 'standard_name': 'longitude'})
+    ds['lat'] = DataArray(yc, dims=dims,
+                          attrs={'units': 'degrees_north',
+                                 'long_name': 'latitude',
+                                 'standard_name': 'latitude'})
+    return ds

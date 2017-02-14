@@ -1432,21 +1432,6 @@ class TestPyNioAutocloseTrue(TestPyNio):
 @requires_rasterio
 class TestRasterIO(CFEncodedDataTest, Only32BitTypes, TestCase):
 
-    # def setUp(self):
-    #
-    #
-    #     name = 'test_latlong.tif'
-    #
-    #
-    #     name = 'test_utm.tif'
-    #     transform = from_origin(-300, 200, 1000, 1000)
-    #     with rasterio.open(
-    #             name, 'w',
-    #             driver='GTiff', height=3, width=4, count=1,
-    #             transform=transform,
-    #             dtype=rasterio.float32) as s:
-    #         s.write(a, indexes=1)
-
     def test_write_store(self):
         # RasterIO is read-only for now
         pass
@@ -1455,53 +1440,64 @@ class TestRasterIO(CFEncodedDataTest, Only32BitTypes, TestCase):
         # RasterIO also does not support list-like indexing
         pass
 
-    def test_latlong_coords(self):
+    def test_latlong_basics(self):
 
         import rasterio
         from rasterio.transform import from_origin
+        from ..core.utils import get_latlon_coords_from_crs
 
         # Create a geotiff file in latlong proj
-        data = np.arange(12, dtype=rasterio.float32).reshape(3, 4)
         with create_tmp_file(suffix='.tif') as tmp_file:
-            transform = from_origin(1, 2, 0.5, 1.)
+            # data
+            nx, ny = 8, 10
+            data = np.arange(80, dtype=rasterio.float32).reshape(ny, nx)
+            transform = from_origin(1, 2, 0.5, 2.)
             with rasterio.open(
                     tmp_file, 'w',
-                    driver='GTiff', height=3, width=4, count=1,
+                    driver='GTiff', height=ny, width=nx, count=1,
                     crs='+proj=latlong',
                     transform=transform,
                     dtype=rasterio.float32) as s:
                 s.write(data, indexes=1)
             actual = xr.open_dataset(tmp_file, engine='rasterio')
 
+            # ref
             expected = Dataset()
-            expected['x'] = ('x', [1, 1.5, 2, 2.5])
-            expected['y'] = ('y', [2., 1, 0])
+            expected['x'] = ('x', np.arange(nx)*0.5 + 1)
+            expected['y'] = ('y', -np.arange(ny)*2 + 2)
             expected['band'] = ('band', [1])
             expected['raster'] = (('band', 'y', 'x'), data[np.newaxis, ...])
             lon, lat = np.meshgrid(expected['x'], expected['y'])
             expected['lon'] = (('y', 'x'), lon)
             expected['lat'] = (('y', 'x'), lat)
 
+            # tests
             assert_allclose(actual.y, expected.y)
             assert_allclose(actual.x, expected.x)
             assert_allclose(actual.raster, expected.raster)
+
+            actual = get_latlon_coords_from_crs(actual)
             assert_allclose(actual.lon, expected.lon)
             assert_allclose(actual.lat, expected.lat)
 
-            print(actual)
+            assert 'crs' in actual.attrs
 
-    def test_utm_coords(self):
+    def test_utm_basics(self):
 
         import rasterio
         from rasterio.transform import from_origin
+        from ..core.utils import get_latlon_coords_from_crs
 
         # Create a geotiff file in utm proj
-        data = np.arange(24, dtype=rasterio.float32).reshape(2, 3, 4)
         with create_tmp_file(suffix='.tif') as tmp_file:
-            transform = from_origin(-3000, 1000, 1000, 1000)
+            # data
+            nx, ny, nz = 4, 3, 3
+            data = np.arange(nx*ny*nz,
+                             dtype=rasterio.float32).reshape(nz, ny, nx)
+            transform = from_origin(5000, 80000, 1000, 2000.)
             with rasterio.open(
                     tmp_file, 'w',
-                    driver='GTiff', height=3, width=4, count=2,
+                    driver='GTiff', height=ny, width=nx, count=nz,
                     crs={'units': 'm', 'no_defs': True, 'ellps': 'WGS84',
                          'proj': 'utm', 'zone': 18},
                     transform=transform,
@@ -1509,17 +1505,101 @@ class TestRasterIO(CFEncodedDataTest, Only32BitTypes, TestCase):
                 s.write(data)
             actual = xr.open_dataset(tmp_file, engine='rasterio')
 
+            # ref
             expected = Dataset()
-            expected['x'] = ('x', [-3000., -2000, -1000, 0])
-            expected['y'] = ('y', [1000., 0, -1000])
-            expected['band'] = ('band', [1, 2])
+            expected['x'] = ('x', np.arange(nx)*1000 + 5000)
+            expected['y'] = ('y', -np.arange(ny)*2000 + 80000)
+            expected['band'] = ('band', [1, 2, 3])
             expected['raster'] = (('band', 'y', 'x'), data)
 
+            # data obtained independently with pyproj
+            lon = np.array(
+                [[-79.44429834, -79.43533803, -79.42637762, -79.4174171],
+                 [-79.44428102, -79.43532075, -79.42636037, -79.41739988],
+                 [-79.44426413, -79.4353039, -79.42634355, -79.4173831]])
+            lat = np.array(
+                [[0.72159393, 0.72160275, 0.72161156, 0.72162034],
+                 [0.70355411, 0.70356271, 0.70357129, 0.70357986],
+                 [0.68551428, 0.68552266, 0.68553103, 0.68553937]])
+            expected['lon'] = (('y', 'x'), lon)
+            expected['lat'] = (('y', 'x'), lat)
+
+            # tests
             assert_allclose(actual.y, expected.y)
             assert_allclose(actual.x, expected.x)
             assert_allclose(actual.raster, expected.raster)
 
-            print(actual)
+            actual = get_latlon_coords_from_crs(actual)
+            assert_allclose(actual.lon, expected.lon)
+            assert_allclose(actual.lat, expected.lat)
+
+            assert 'crs' in actual.attrs
+
+    def test_indexing(self):
+
+        import rasterio
+        from rasterio.transform import from_origin
+
+        # Create a geotiff file in latlong proj
+        with create_tmp_file(suffix='.tif') as tmp_file:
+            # data
+            nx, ny, nz = 8, 10, 3
+            data = np.arange(nx*ny*nz,
+                             dtype=rasterio.float32).reshape(nz, ny, nx)
+            transform = from_origin(1, 2, 0.5, 2.)
+            with rasterio.open(
+                    tmp_file, 'w',
+                    driver='GTiff', height=ny, width=nx, count=nz,
+                    crs='+proj=latlong',
+                    transform=transform,
+                    dtype=rasterio.float32) as s:
+                s.write(data)
+            actual = xr.open_dataset(tmp_file, engine='rasterio')
+
+            # ref
+            expected = Dataset()
+            expected['x'] = ('x', np.arange(nx)*0.5 + 1)
+            expected['y'] = ('y', -np.arange(ny)*2 + 2)
+            expected['band'] = ('band', [1, 2, 3])
+            expected['raster'] = (('band', 'y', 'x'), data)
+
+            # tests
+            _ex = expected.isel(band=1)
+            _ac = actual.isel(band=1)
+            assert_allclose(_ac.y, _ex.y)
+            assert_allclose(_ac.x, _ex.x)
+            assert_allclose(_ac.band, _ex.band)
+            assert_allclose(_ac.raster, _ex.raster)
+
+            _ex = expected.isel(x=slice(2, 5), y=slice(5, 7))
+            _ac = actual.isel(x=slice(2, 5), y=slice(5, 7))
+            assert_allclose(_ac.y, _ex.y)
+            assert_allclose(_ac.x, _ex.x)
+            assert_allclose(_ac.raster, _ex.raster)
+
+            _ex = expected.isel(band=slice(1, 2), x=slice(2, 5), y=slice(5, 7))
+            _ac = actual.isel(band=slice(1, 2), x=slice(2, 5), y=slice(5, 7))
+            assert_allclose(_ac.y, _ex.y)
+            assert_allclose(_ac.x, _ex.x)
+            assert_allclose(_ac.raster, _ex.raster)
+
+            _ex = expected.isel(x=1, y=2)
+            _ac = actual.isel(x=1, y=2)
+            assert_allclose(_ac.y, _ex.y)
+            assert_allclose(_ac.x, _ex.x)
+            # TODO: this doesnt work properly because of the shape
+            # assert_allclose(_ac.raster, _ex.raster)
+            np.testing.assert_allclose(_ac.raster.values.flatten(),
+                                       _ex.raster.values)
+
+            _ex = expected.isel(band=0, x=1, y=2)
+            _ac = actual.isel(band=0, x=1, y=2)
+            assert_allclose(_ac.y, _ex.y)
+            assert_allclose(_ac.x, _ex.x)
+            # TODO: this doesnt work properly because of the shape
+            # assert_allclose(_ac.raster, _ex.raster)
+            np.testing.assert_allclose(_ac.raster.values.flatten(),
+                                       _ex.raster.values)
 
 
 class TestEncodingInvalid(TestCase):

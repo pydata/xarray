@@ -15,20 +15,56 @@ from .common import AbstractDataStore
 
 _rio_varname = 'raster'
 
+_error_mess = 'The kind of indexing operation you are trying to do is not ' \
+              'valid on RasterIO files. Try to load your data with ds.load()' \
+              ' first'
 
 class RasterioArrayWrapper(NDArrayMixin):
     def __init__(self, ds):
-        self._ds = ds
-        self.array = ds.read()
+        self.ds = ds
+        self._shape = self.ds.count, self.ds.height, self.ds.width
 
     @property
     def dtype(self):
-        return np.dtype(self._ds.dtypes[0])
+        return np.dtype(self.ds.dtypes[0])    \
+
+    @property
+    def shape(self):
+        return self._shape
 
     def __getitem__(self, key):
-        if key == () and self.ndim == 0:
-            return self.array.get_value()
-        return self.array[key]
+
+        # make our job a bit easier
+        key = indexing.canonicalize_indexer(key, len(self.shape))
+
+        # bands cannot be windowed but they can be listed
+        bands, n = key[0], self.shape[0]
+        if isinstance(bands, slice):
+            start = bands.start if bands.start is not None else 0
+            stop = bands.stop if bands.stop is not None else n
+            if bands.step is not None and bands.step != 1:
+                raise IndexError(_error_mess)
+            bands = np.arange(start, stop)
+        # be sure we give out a list
+        bands = (np.asarray(bands) + 1).tolist()
+
+        # but other dims can
+        window = []
+        for k, n in zip(key[1:], self.shape[1:]):
+            if isinstance(k, slice):
+                start = k.start if k.start is not None else 0
+                stop = k.stop if k.stop is not None else n
+                if k.step is not None and k.step != 1:
+                    raise IndexError(_error_mess)
+            else:
+                k = np.asarray(k).flatten()
+                start = k[0]
+                stop = k[-1] + 1
+                if (stop - start) != len(k):
+                    raise IndexError(_error_mess)
+            window.append((start, stop))
+
+        return self.ds.read(bands, window=window)
 
 
 class RasterioDataStore(AbstractDataStore):
@@ -36,7 +72,7 @@ class RasterioDataStore(AbstractDataStore):
     """
     def __init__(self, filename, mode='r'):
 
-        # TODO: is the rasterio.Env() really necessary, and if yes where?
+        # TODO: is the rasterio.Env() really necessary, and if yes: when?
         with rasterio.Env():
             self.ds = rasterio.open(filename, mode=mode)
 
@@ -45,25 +81,28 @@ class RasterioDataStore(AbstractDataStore):
         dx, dy = self.ds.res[0], -self.ds.res[1]
         x0 = self.ds.bounds.right if dx < 0 else self.ds.bounds.left
         y0 = self.ds.bounds.top if dy < 0 else self.ds.bounds.bottom
-        y = np.linspace(start=y0, num=ny, stop=(y0 + (ny-1) * dy))
-        x = np.linspace(start=x0, num=nx, stop=(x0 + (nx-1) * dx))
+        x = np.linspace(start=x0, num=nx, stop=(x0 + (nx - 1) * dx))
+        y = np.linspace(start=y0, num=ny, stop=(y0 + (ny - 1) * dy))
 
-        self.coords = OrderedDict()
-        self.coords['y'] = Variable(('y', ), y)
-        self.coords['x'] = Variable(('x', ), x)
+        self._vars = OrderedDict()
+        self._vars['y'] = Variable(('y',), y)
+        self._vars['x'] = Variable(('x',), x)
 
         # Get dims
         if self.ds.count >= 1:
             self.dims = ('band', 'y', 'x')
-            self.coords['band'] = Variable(('band', ),
-                                           np.atleast_1d(self.ds.indexes))
+            self._vars['band'] = Variable(('band',),
+                                          np.atleast_1d(self.ds.indexes))
         else:
-            raise ValueError('unknown dims')
+            raise ValueError('Unknown dims')
 
         self._attrs = OrderedDict()
         with suppress(AttributeError):
-            for attr_name in ['crs', 'transform', 'proj']:
+            for attr_name in ['crs']:
                 self._attrs[attr_name] = getattr(self.ds, attr_name)
+
+        # Get data
+        self._vars[_rio_varname] = self.open_store_variable(_rio_varname)
 
     def open_store_variable(self, var):
         if var != _rio_varname:
@@ -72,10 +111,7 @@ class RasterioDataStore(AbstractDataStore):
         return Variable(self.dims, data, self._attrs)
 
     def get_variables(self):
-        # Get lat lon coordinates
-        vars = _try_to_get_latlon_coords(self.coords, self._attrs)
-        vars[_rio_varname] = self.open_store_variable(_rio_varname)
-        return FrozenOrderedDict(vars)
+        return FrozenOrderedDict(self._vars)
 
     def get_attrs(self):
         return Frozen(self._attrs)
@@ -85,29 +121,3 @@ class RasterioDataStore(AbstractDataStore):
 
     def close(self):
         self.ds.close()
-
-
-def _try_to_get_latlon_coords(coords, attrs):
-    from rasterio.warp import transform
-
-    if 'crs' in attrs:
-        proj = attrs['crs']
-        # TODO: if the proj is already PlateCarree, making 2D coordinates
-        # is not the best thing to do here.
-        ny, nx = len(coords['y']), len(coords['x'])
-        x, y = np.meshgrid(coords['x'], coords['y'])
-        # Rasterio works with 1D arrays
-        xc, yc = transform(proj, {'init': 'EPSG:4326'},
-                           x.flatten(), y.flatten())
-        xc = np.asarray(xc).reshape((ny, nx))
-        yc = np.asarray(yc).reshape((ny, nx))
-        dims = ('y', 'x')
-        coords['lon'] = Variable(dims, xc,
-                                 attrs={'units': 'degrees_east',
-                                        'long_name': 'longitude',
-                                        'standard_name': 'longitude'})
-        coords['lat'] = Variable(dims, yc,
-                                 attrs={'units': 'degrees_north',
-                                        'long_name': 'latitude',
-                                        'standard_name': 'latitude'})
-    return coords
