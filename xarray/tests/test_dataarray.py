@@ -1898,7 +1898,7 @@ class TestDataArray(TestCase):
                              name='time')
         self.assertDataArrayIdentical(expected, actual)
 
-    def test_resample_first_keep_attrs(self):
+    def test_resample_first_keep_attrs_old_api(self):
         times = pd.date_range('2000-01-01', freq='6H', periods=10)
         array = DataArray(np.arange(10), [('time', times)])
         array.attrs['meta'] = 'data'
@@ -1913,7 +1913,7 @@ class TestDataArray(TestCase):
                                          keep_attrs=False)
         assert resampled_array.attrs == {}
 
-    def test_resample_mean_keep_attrs(self):
+    def test_resample_mean_keep_attrs_old_api(self):
         times = pd.date_range('2000-01-01', freq='6H', periods=10)
         array = DataArray(np.arange(10), [('time', times)])
         array.attrs['meta'] = 'data'
@@ -1928,7 +1928,7 @@ class TestDataArray(TestCase):
                                          keep_attrs=False)
         assert resampled_array.attrs == {}
 
-    def test_resample_skipna(self):
+    def test_resample_skipna_old_api(self):
         times = pd.date_range('2000-01-01', freq='6H', periods=10)
         array = DataArray(np.ones(10), [('time', times)])
         array[1] = np.nan
@@ -1942,10 +1942,52 @@ class TestDataArray(TestCase):
         array = DataArray(np.arange(5), [('time', times)])
 
         expected_time = pd.date_range('2000-01-01', freq='12H', periods=9)
+        actual = array.resample(time='12H')
+        expected = array.reindex(time=expected_time)
+        for name in ['mean', 'median', 'sum', 'first', 'last']:
+            method = getattr(actual, name)
+            self.assertDataArrayIdentical(expected, method())
+        for method in [np.mean, np.sum, np.max]:
+            actual = array.resample(time='12H').reduce(method)
+
+    def test_resample_upsampling_old_api(self):
+        times = pd.date_range('2000-01-01', freq='1D', periods=5)
+        array = DataArray(np.arange(5), [('time', times)])
+
+        expected_time = pd.date_range('2000-01-01', freq='12H', periods=9)
         expected = array.reindex(time=expected_time)
         for how in ['mean', 'median', 'sum', 'first', 'last', np.mean]:
             actual = array.resample('12H', 'time', how=how)
             self.assertDataArrayIdentical(expected, actual)
+
+    def test_resample_old_vs_new_api(self):
+        times = pd.date_range('2000-01-01', freq='6H', periods=10)
+        array = DataArray(np.ones(10), [('time', times)])
+
+        # Simple mean
+        old_mean = array.resample('1D', 'time', how='mean')
+        new_mean = array.resample(time='1D').mean()
+        self.assertDataArrayIdentical(old_mean, new_mean)
+
+        # Mean, while keeping attributes
+        attr_array = array.copy()
+        attr_array.attrs['meta'] = 'data'
+
+        old_mean = attr_array.resample('1D', dim='time', how='mean',
+                                       keep_attrs=True)
+        new_mean = attr_array.resample(time='1D').mean(keep_attrs=True)
+        self.assertEqual(old_mean.attrs, new_mean.attrs)
+        self.assertDatasetIdentical(old_mean, new_mean)
+
+        # Mean, with NaN to skip
+        nan_array = array.copy()
+        nan_array[1] = np.nan
+
+        old_mean = nan_array.resample('1D', 'time', how='mean', skipna=False)
+        new_mean = nan_array.resample(time='1D').mean(skipna=False)
+        expected = DataArray([np.nan, 1, 1], [('time', times[::4])])
+        self.assertDataArrayIdentical(old_mean, expected)
+        self.assertDataArrayIdentical(new_mean, expected)
 
     def test_align(self):
         array = DataArray(np.random.random((6, 8)),
