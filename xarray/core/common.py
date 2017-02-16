@@ -480,7 +480,7 @@ class BaseDataObject(AttrAccessMixin):
 
     def resample(self, freq=None, dim=None, how='mean', skipna=None,
                  closed=None, label=None, base=0, keep_attrs=False, **indexer):
-        """Returns a TimeGrouper object for performing resampling operations.
+        """Returns a Resample object for performing resampling operations.
 
         Handles both downsampling and upsampling. Upsampling with filling is
         not yet supported; if any intervals contain no values in the original
@@ -541,59 +541,63 @@ class BaseDataObject(AttrAccessMixin):
 
         .. [1] http://pandas.pydata.org/pandas-docs/stable/timeseries.html#offset-aliases
         """
-        from .dataarray import DataArray
-
-        RESAMPLE_DIM = '__resample_dim__'
 
         if dim is not None:
-            warnings.warn("\n.resample() has been modified to defer "
-                          "calculations. Instead of passing 'dim' and "
-                          "'how=\"{how}\", instead consider using "
-                          "\n.resample({dim}={freq}).{how}() ".format(
-                              dim=dim, freq=freq, how=how
-                          ),
-                          DeprecationWarning, stacklevel=3)
+            return self._resample_immediately(freq, dim, how, skipna, closed,
+                                              label, base, keep_attrs)
 
-            if isinstance(dim, basestring):
-                dim = self[dim]
-            group = DataArray(dim, [(RESAMPLE_DIM, dim)], name=RESAMPLE_DIM)
-            time_grouper = pd.TimeGrouper(freq=freq, how=how, closed=closed,
-                                          label=label, base=base)
-            gb = self.groupby_cls(self, group, grouper=time_grouper)
-            if isinstance(how, basestring):
-                f = getattr(gb, how)
-                if how in ['first', 'last']:
-                    result = f(skipna=skipna, keep_attrs=keep_attrs)
-                else:
-                    result = f(dim=dim.name, skipna=skipna, keep_attrs=keep_attrs)
-            else:
-                result = gb.reduce(how, dim=dim.name, keep_attrs=keep_attrs)
-            result = result.rename({RESAMPLE_DIM: dim.name})
-            return result
+        # More than one indexer is ambiguous, but we do in fact need one if
+        # "dim" was not provided, until the old API is fully deprecated
+        if len(indexer) != 1:
+            raise NotImplementedError(
+                "Resampling only supported along single dimensions."
+            )
+        dim, freq = indexer.popitem()
 
+        if isinstance(dim, basestring):
+            dim_name = dim
+            dim = self[dim]
         else:
+            raise ValueError("Dimension name should be a string; "
+                             "was passed %r" % dim)
 
-            # More than one indexer is ambiguous, but we do in fact need one if
-            # "dim" was not provided, until the old API is fully deprecated
-            if len(indexer) != 1:
-                raise NotImplementedError(
-                    "Resampling only supported along single dimensions."
-                )
-            dim, freq = indexer.popitem()
+        time_grouper = pd.TimeGrouper(freq=freq, closed=closed,
+                                      label=label, base=base)
+        resampler = self.resample_cls(self, group=dim, dim=dim_name,
+                                      grouper=time_grouper)
 
-            if isinstance(dim, basestring):
-                dim_name = dim
-                dim = self[dim]
+        return resampler
+
+    def _resample_immediately(self, freq, dim, how, skipna,
+                              closed, label, base, keep_attrs):
+        """Implement the original version of .resample() which immediately
+        executes the desired resampling operation. """
+        from .dataarray import DataArray
+        RESAMPLE_DIM = '__resample_dim__'
+
+        warnings.warn("\n.resample() has been modified to defer "
+                      "calculations. Instead of passing 'dim' and "
+                      "'how=\"{how}\", instead consider using "
+                      ".resample({dim}=\"{freq}\").{how}() ".format(
+                            dim=dim, freq=freq, how=how
+                      ), DeprecationWarning, stacklevel=3)
+
+        if isinstance(dim, basestring):
+            dim = self[dim]
+        group = DataArray(dim, [(RESAMPLE_DIM, dim)], name=RESAMPLE_DIM)
+        time_grouper = pd.TimeGrouper(freq=freq, how=how, closed=closed,
+                                      label=label, base=base)
+        gb = self.groupby_cls(self, group, grouper=time_grouper)
+        if isinstance(how, basestring):
+            f = getattr(gb, how)
+            if how in ['first', 'last']:
+                result = f(skipna=skipna, keep_attrs=keep_attrs)
             else:
-                raise ValueError("Dimension name should be a string; "
-                                 "was passed %r" % dim)
-
-            time_grouper = pd.TimeGrouper(freq=freq, closed=closed,
-                                          label=label, base=base)
-            gb = self.resample_cls(self, group=dim, dim=dim_name,
-                                   grouper=time_grouper)
-
-            return gb
+                result = f(dim=dim.name, skipna=skipna, keep_attrs=keep_attrs)
+        else:
+            result = gb.reduce(how, dim=dim.name, keep_attrs=keep_attrs)
+        result = result.rename({RESAMPLE_DIM: dim.name})
+        return result
 
 
     def where(self, cond, other=None, drop=False):
