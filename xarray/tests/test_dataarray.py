@@ -1805,6 +1805,20 @@ class TestDataArray(TestCase):
         times = pd.date_range('2000-01-01', freq='6H', periods=10)
         array = DataArray(np.arange(10), [('time', times)])
 
+        actual = array.resample(time='24H').mean()
+        expected = DataArray(array.to_series().resample('24H').mean())
+        self.assertDataArrayIdentical(expected, actual)
+
+        actual = array.resample(time='24H').reduce(np.mean)
+        self.assertDataArrayIdentical(expected, actual)
+
+        with self.assertRaisesRegexp(ValueError, 'index must be monotonic'):
+            array[[2, 0, 1]].resample(time='1D')
+
+    def test_resample_old_api(self):
+        times = pd.date_range('2000-01-01', freq='6H', periods=10)
+        array = DataArray(np.arange(10), [('time', times)])
+
         actual = array.resample('6H', dim='time')
         self.assertDataArrayIdentical(array, actual)
 
@@ -1819,6 +1833,39 @@ class TestDataArray(TestCase):
             array[[2, 0, 1]].resample('1D', dim='time')
 
     def test_resample_first(self):
+        times = pd.date_range('2000-01-01', freq='6H', periods=10)
+        array = DataArray(np.arange(10), [('time', times)])
+
+        actual = array.resample(time='1D').first()
+        expected = DataArray([0, 4, 8], [('time', times[::4])])
+        self.assertDataArrayIdentical(expected, actual)
+
+        # verify that labels don't use the first value
+        actual = array.resample(time='24H').first()
+        expected = DataArray(array.to_series().resample('24H').first())
+        self.assertDataArrayIdentical(expected, actual)
+
+        # missing values
+        array = array.astype(float)
+        array[:2] = np.nan
+        actual = array.resample(time='1D').first()
+        expected = DataArray([2, 4, 8], [('time', times[::4])])
+        self.assertDataArrayIdentical(expected, actual)
+
+        actual = array.resample(time='1D', skipna=False).first()
+        expected = DataArray([np.nan, 4, 8], [('time', times[::4])])
+        self.assertDataArrayIdentical(expected, actual)
+
+        # regression test for http://stackoverflow.com/questions/33158558/
+        array = Dataset({'time': times})['time']
+        actual = array.resample(time='1D').last()
+        expected_times = pd.to_datetime(['2000-01-01T18', '2000-01-02T18',
+                                         '2000-01-03T06'])
+        expected = DataArray(expected_times, [('time', times[::4])],
+                             name='time')
+        self.assertDataArrayIdentical(expected, actual)
+
+    def test_resample_first_old_api(self):
         times = pd.date_range('2000-01-01', freq='6H', periods=10)
         array = DataArray(np.arange(10), [('time', times)])
 
