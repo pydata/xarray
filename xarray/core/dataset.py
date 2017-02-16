@@ -304,6 +304,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
     """
     _groupby_cls = groupby.DatasetGroupBy
     _rolling_cls = rolling.DatasetRolling
+    _resample_cls = groupby.DatasetResample
 
     def __init__(self, data_vars=None, coords=None, attrs=None,
                  compat='broadcast_equals'):

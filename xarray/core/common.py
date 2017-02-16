@@ -3,6 +3,7 @@ from __future__ import division
 from __future__ import print_function
 import numpy as np
 import pandas as pd
+import warnings
 
 from .pycompat import basestring, suppress, dask_array_type, OrderedDict
 from . import formatting
@@ -477,9 +478,9 @@ class BaseDataObject(AttrAccessMixin):
         return self._rolling_cls(self, min_periods=min_periods,
                                  center=center, **windows)
 
-    def resample(self, freq, dim, how='mean', skipna=None, closed=None,
-                 label=None, base=0, keep_attrs=False):
-        """Resample this object to a new temporal resolution.
+    def resample(self, freq=None, dim=None, how='mean', skipna=None,
+                 closed=None, label=None, base=0, keep_attrs=False, **indexer):
+        """Returns a TimeGrouper object for performing resampling operations.
 
         Handles both downsampling and upsampling. Upsampling with filling is
         not yet supported; if any intervals contain no values in the original
@@ -518,7 +519,7 @@ class BaseDataObject(AttrAccessMixin):
             Side of each interval to treat as closed.
         label : 'left or 'right', optional
             Side of each interval to use for labeling.
-        base : int, optionalt
+        base : int, optional
             For frequencies that evenly subdivide 1 day, the "origin" of the
             aggregated intervals. For example, for '24H' frequency, base could
             range from 0 through 23.
@@ -526,6 +527,9 @@ class BaseDataObject(AttrAccessMixin):
             If True, the object's attributes (`attrs`) will be copied from
             the original object to the new one.  If False (default), the new
             object will be returned without attributes.
+        **indexer : {dim: freq}
+            Dictionary with a key indicating the dimension name to resample
+            over and a value corresponding to the resampling frequency.
 
         Returns
         -------
@@ -540,22 +544,57 @@ class BaseDataObject(AttrAccessMixin):
         from .dataarray import DataArray
 
         RESAMPLE_DIM = '__resample_dim__'
-        if isinstance(dim, basestring):
-            dim = self[dim]
-        group = DataArray(dim, [(RESAMPLE_DIM, dim)], name=RESAMPLE_DIM)
-        time_grouper = pd.TimeGrouper(freq=freq, how=how, closed=closed,
-                                      label=label, base=base)
-        gb = self._groupby_cls(self, group, grouper=time_grouper)
-        if isinstance(how, basestring):
-            f = getattr(gb, how)
-            if how in ['first', 'last']:
-                result = f(skipna=skipna, keep_attrs=keep_attrs)
+
+        if dim is not None:
+            warnings.warn("\n.resample() has been modified to defer "
+                          "calculations. Instead of passing 'dim' and "
+                          "'how=\"{how}\", instead consider using "
+                          "\n.resample({dim}={freq}).{how}() ".format(
+                              dim=dim, freq=freq, how=how
+                          ),
+                          DeprecationWarning, stacklevel=3)
+
+            if isinstance(dim, basestring):
+                dim = self[dim]
+            group = DataArray(dim, [(RESAMPLE_DIM, dim)], name=RESAMPLE_DIM)
+            time_grouper = pd.TimeGrouper(freq=freq, how=how, closed=closed,
+                                          label=label, base=base)
+            gb = self.groupby_cls(self, group, grouper=time_grouper)
+            if isinstance(how, basestring):
+                f = getattr(gb, how)
+                if how in ['first', 'last']:
+                    result = f(skipna=skipna, keep_attrs=keep_attrs)
+                else:
+                    result = f(dim=dim.name, skipna=skipna, keep_attrs=keep_attrs)
             else:
-                result = f(dim=dim.name, skipna=skipna, keep_attrs=keep_attrs)
+                result = gb.reduce(how, dim=dim.name, keep_attrs=keep_attrs)
+            result = result.rename({RESAMPLE_DIM: dim.name})
+            return result
+
         else:
-            result = gb.reduce(how, dim=dim.name, keep_attrs=keep_attrs)
-        result = result.rename({RESAMPLE_DIM: dim.name})
-        return result
+
+            # More than one indexer is ambiguous, but we do in fact need one if
+            # "dim" was not provided, until the old API is fully deprecated
+            if len(indexer) != 1:
+                raise NotImplementedError(
+                    "Resampling only supported along single dimensions."
+                )
+            dim, freq = indexer.popitem()
+
+            if isinstance(dim, basestring):
+                dim_name = dim
+                dim = self[dim]
+            else:
+                raise ValueError("Dimension name should be a string; "
+                                 "was passed %r" % dim)
+
+            time_grouper = pd.TimeGrouper(freq=freq, closed=closed,
+                                          label=label, base=base)
+            gb = self.resample_cls(self, group=dim, dim=dim_name,
+                                   grouper=time_grouper)
+
+            return gb
+
 
     def where(self, cond, other=None, drop=False):
         """Return an object of the same shape with all entries where cond is

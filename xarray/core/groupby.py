@@ -584,6 +584,51 @@ ops.inject_reduce_methods(DataArrayGroupBy)
 ops.inject_binary_ops(DataArrayGroupBy)
 
 
+class DataArrayResample(DataArrayGroupBy):
+    """DataArrayGroupBy object specialized to resampling a specified dimension
+    """
+
+    def __init__(self, *args, dim=None, **kwargs):
+        self._dim = dim
+        super(DataArrayResample, self).__init__(*args, **kwargs)
+
+    def reduce(self, func, dim=None, axis=None, shortcut=True,
+               keep_attrs=False, **kwargs):
+        """Reduce the items in this group by applying `func` along the
+        pre-defined resampling dimension.
+
+        Note that `dim` and `axis` are set by default here and are ignored
+        if passed by the user; this ensures compatibility with the existing
+        reduce interface.
+
+        Parameters
+        ----------
+        func : function
+            Function which can be called in the form
+            `func(x, axis=axis, **kwargs)` to return the result of collapsing an
+            np.ndarray over an integer valued axis.
+        keep_attrs : bool, optional
+            If True, the datasets's attributes (`attrs`) will be copied from
+            the original object to the new one.  If False (default), the new
+            object will be returned without attributes.
+        **kwargs : dict
+            Additional keyword arguments passed on to `func`.
+
+        Returns
+        -------
+        reduced : Array
+            Array with summarized data and the indicated dimension(s)
+            removed.
+        """
+        def reduce_array(ar):
+            return ar.reduce(func, self._dim, axis=None, keep_attrs=keep_attrs,
+                             **kwargs)
+        return self.apply(reduce_array, shortcut=shortcut)
+
+ops.inject_reduce_methods(DataArrayResample)
+ops.inject_binary_ops(DataArrayResample)
+
+
 class DatasetGroupBy(GroupBy, ImplementsDatasetReduce):
     def apply(self, func, **kwargs):
         """Apply a function over each Dataset in the group and concatenate them
@@ -672,3 +717,48 @@ class DatasetGroupBy(GroupBy, ImplementsDatasetReduce):
 
 ops.inject_reduce_methods(DatasetGroupBy)
 ops.inject_binary_ops(DatasetGroupBy)
+
+
+class DatasetResample(DatasetGroupBy):
+    """DatasetGroupBy object specialized to resampling a specified dimension
+    """
+
+    def __init__(self, *args, dim=None, **kwargs):
+        self._dim = dim
+        super(DatasetResample, self).__init__(*args, **kwargs)
+
+    def reduce(self, func, dim=None, axis=None, shortcut=True,
+               keep_attrs=False, **kwargs):
+        """Reduce the items in this group by applying `func` along the
+        pre-defined resampling dimension.
+
+        Note that `dim` and `axis` are set by default here and are ignored
+        if passed by the user; this ensures compatibility with the existing
+        reduce interface.
+
+        Parameters
+        ----------
+        func : function
+            Function which can be called in the form
+            `func(x, axis=axis, **kwargs)` to return the result of collapsing an
+            np.ndarray over an integer valued axis.
+        keep_attrs : bool, optional
+            If True, the datasets's attributes (`attrs`) will be copied from
+            the original object to the new one.  If False (default), the new
+            object will be returned without attributes.
+        **kwargs : dict
+            Additional keyword arguments passed on to `func`.
+
+        Returns
+        -------
+        reduced : Array
+            Array with summarized data and the indicated dimension(s)
+            removed.
+        """
+        def reduce_array(ar):
+            return ar.reduce(func, self._dim, axis=None, keep_attrs=keep_attrs,
+                             **kwargs)
+        return self.apply(reduce_array, shortcut=shortcut)
+
+ops.inject_reduce_methods(DatasetResample)
+ops.inject_binary_ops(DatasetResample)
