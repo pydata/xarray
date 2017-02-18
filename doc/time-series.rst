@@ -5,7 +5,7 @@ Time series data
 ================
 
 A major use case for xarray is multi-dimensional time-series data.
-Accordingly, we've copied many of features that make working with time-series
+Accordingly, we've copied many of the features that make working with time-series
 data in pandas such a joy to xarray. In most cases, we rely on pandas for the
 core functionality.
 
