@@ -10,12 +10,12 @@ environment:
     - PYTHON: "C:\\Python27-conda32"
       PYTHON_VERSION: "2.7"
       PYTHON_ARCH: "32"
-      CONDA_ENV: "py27-cdat+pynio"
+      CONDA_ENV: "py27-windows"
 
     - PYTHON: "C:\\Python36-conda64"
       PYTHON_VERSION: "3.6"
       PYTHON_ARCH: "64"
-      CONDA_ENV: "py36"
+      CONDA_ENV: "py36-windows"
 
 install:
   # Install miniconda Python
