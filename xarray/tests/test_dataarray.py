@@ -2518,4 +2518,4 @@ def test_rolling_reduce(da, center, min_periods, window, name):
     actual = rolling_obj.reduce(getattr(np, 'nan%s' % name))
     expected = getattr(rolling_obj, name)()
     assert_allclose(actual, expected)
-    assert(da.dims == expected.dims)
+    assert da.dims == expected.dims
