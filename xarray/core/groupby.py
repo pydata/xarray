@@ -583,7 +583,7 @@ class DataArrayGroupBy(GroupBy, ImplementsArrayReduce):
 ops.inject_reduce_methods(DataArrayGroupBy)
 ops.inject_binary_ops(DataArrayGroupBy)
 
-
+RESAMPLE_DIM = '__resample_dim__'
 class DataArrayResample(DataArrayGroupBy):
     """DataArrayGroupBy object specialized to resampling a specified dimension
     """
@@ -620,10 +620,13 @@ class DataArrayResample(DataArrayGroupBy):
             Array with summarized data and the indicated dimension(s)
             removed.
         """
+        RESAMPLE_DIM = '__resample_dim__'
+
         def reduce_array(ar):
             return ar.reduce(func, self._dim, axis=None, keep_attrs=keep_attrs,
                              **kwargs)
-        return self.apply(reduce_array, shortcut=shortcut)
+        result = self.apply(reduce_array, shortcut=shortcut)
+        return result.rename({RESAMPLE_DIM: self._dim})
 
 ops.inject_reduce_methods(DataArrayResample)
 ops.inject_binary_ops(DataArrayResample)
@@ -755,10 +758,13 @@ class DatasetResample(DatasetGroupBy):
             Array with summarized data and the indicated dimension(s)
             removed.
         """
+        RESAMPLE_DIM = '__resample_dim__'
+
         def reduce_array(ar):
             return ar.reduce(func, self._dim, axis=None, keep_attrs=keep_attrs,
                              **kwargs)
-        return self.apply(reduce_array, shortcut=shortcut)
+        result = self.apply(reduce_array, shortcut=shortcut)
+        return result.rename({RESAMPLE_DIM: self._dim})
 
 ops.inject_reduce_methods(DatasetResample)
 ops.inject_binary_ops(DatasetResample)

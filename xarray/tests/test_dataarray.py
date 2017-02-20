@@ -1852,7 +1852,7 @@ class TestDataArray(TestCase):
         expected = DataArray([2, 4, 8], [('time', times[::4])])
         self.assertDataArrayIdentical(expected, actual)
 
-        actual = array.resample(time='1D', skipna=False).first()
+        actual = array.resample(time='1D').first(skipna=False)
         expected = DataArray([np.nan, 4, 8], [('time', times[::4])])
         self.assertDataArrayIdentical(expected, actual)
 

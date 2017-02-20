@@ -478,6 +478,7 @@ class BaseDataObject(AttrAccessMixin):
         return self._rolling_cls(self, min_periods=min_periods,
                                  center=center, **windows)
 
+
     def resample(self, freq=None, dim=None, how='mean', skipna=None,
                  closed=None, label=None, base=0, keep_attrs=False, **indexer):
         """Returns a Resample object for performing resampling operations.
@@ -541,6 +542,8 @@ class BaseDataObject(AttrAccessMixin):
 
         .. [1] http://pandas.pydata.org/pandas-docs/stable/timeseries.html#offset-aliases
         """
+        from .dataarray import DataArray
+        RESAMPLE_DIM = '__resample_dim__'
 
         if dim is not None:
             return self._resample_immediately(freq, dim, how, skipna, closed,
@@ -560,10 +563,10 @@ class BaseDataObject(AttrAccessMixin):
         else:
             raise ValueError("Dimension name should be a string; "
                              "was passed %r" % dim)
-
+        group = DataArray(dim, [(dim.dims, dim)], name=RESAMPLE_DIM)
         time_grouper = pd.TimeGrouper(freq=freq, closed=closed,
                                       label=label, base=base)
-        resampler = self.resample_cls(self, group=dim, dim=dim_name,
+        resampler = self.resample_cls(self, group=group, dim=dim_name,
                                       grouper=time_grouper)
 
         return resampler
@@ -583,8 +586,9 @@ class BaseDataObject(AttrAccessMixin):
                       ), DeprecationWarning, stacklevel=3)
 
         if isinstance(dim, basestring):
+            dim_name = dim
             dim = self[dim]
-        group = DataArray(dim, [(RESAMPLE_DIM, dim)], name=RESAMPLE_DIM)
+        group = DataArray(dim, [(dim.dims, dim)], name=RESAMPLE_DIM)
         time_grouper = pd.TimeGrouper(freq=freq, how=how, closed=closed,
                                       label=label, base=base)
         gb = self.groupby_cls(self, group, grouper=time_grouper)
