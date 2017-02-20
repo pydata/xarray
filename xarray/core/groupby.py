@@ -740,14 +740,12 @@ class DatasetResample(DatasetGroupBy):
                              "('{_dim}')! ".format(self))
         super(DatasetResample, self).__init__(*args, **kwargs)
 
-    def reduce(self, func, dim=None, axis=None, shortcut=True,
-               keep_attrs=False, **kwargs):
+    def reduce(self, func, dim=None, keep_attrs=False, **kwargs):
         """Reduce the items in this group by applying `func` along the
         pre-defined resampling dimension.
 
-        Note that `dim` and `axis` are set by default here and are ignored
-        if passed by the user; this ensures compatibility with the existing
-        reduce interface.
+        Note that `dim` is by default here and ignored if passed by the user;
+        this ensures compatibility with the existing reduce interface.
 
         Parameters
         ----------
@@ -769,10 +767,9 @@ class DatasetResample(DatasetGroupBy):
             removed.
         """
 
-        def reduce_array(ar):
-            return ar.reduce(func, self._dim, axis=None, keep_attrs=keep_attrs,
-                             **kwargs)
-        result = self.apply(reduce_array, shortcut=shortcut)
+        def reduce_dataset(ds):
+            return ds.reduce(func, self._dim, keep_attrs=keep_attrs, **kwargs)
+        result = self.apply(reduce_dataset)
 
         return result.rename({self._resample_dim: self._dim})
 
