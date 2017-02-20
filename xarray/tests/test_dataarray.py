@@ -2448,23 +2448,32 @@ def test_rolling_properties(da):
     assert 'min_periods must be greater than zero' in str(exception)
 
 
-@pytest.mark.parametrize('name', ('sum', 'mean', 'std', 'min', 'max', 'median'))
+@pytest.mark.parametrize('name', ('sum', 'mean', 'std', 'var',
+                                  'min', 'max', 'median'))
 @pytest.mark.parametrize('center', (True, False, None))
 @pytest.mark.parametrize('min_periods', (1, None))
 def test_rolling_wrapped_bottleneck(da, name, center, min_periods):
     pytest.importorskip('bottleneck')
     import bottleneck as bn
 
-    # skip if median and min_periods
-    if (min_periods == 1) and (name == 'median'):
-        pytest.skip()
+    # skip if median and min_periods bottleneck version < 1.1
+    if ((min_periods == 1) and
+        (name == 'median') and
+            (LooseVersion(bn.__version__) < LooseVersion('1.1'))):
+        pytest.skip('rolling median accepts min_periods for bottleneck 1.1')
+
+    # skip if var and bottleneck version < 1.1
+    if ((name == 'median') and
+            (LooseVersion(bn.__version__) < LooseVersion('1.1'))):
+        pytest.skip('rolling median accepts min_periods for bottleneck 1.1')
 
     # Test all bottleneck functions
     rolling_obj = da.rolling(time=7, min_periods=min_periods)
 
     func_name = 'move_{0}'.format(name)
     actual = getattr(rolling_obj, name)()
-    expected = getattr(bn, func_name)(da.values, window=7, axis=0, min_count=min_periods)
+    expected = getattr(bn, func_name)(da.values, window=7, axis=0,
+                                      min_count=min_periods)
     assert_array_equal(actual.values, expected)
 
     # Test center
@@ -2472,8 +2481,12 @@ def test_rolling_wrapped_bottleneck(da, name, center, min_periods):
     actual = getattr(rolling_obj, name)()['time']
     assert_equal(actual, da['time'])
 
+
 def test_rolling_invalid_args(da):
-    pytest.importorskip('bottleneck')
+    pytest.importorskip('bottleneck', minversion="1.0")
+    import bottleneck as bn
+    if LooseVersion(bn.__version__) >= LooseVersion('1.1'):
+        pytest.skip('rolling median accepts min_periods for bottleneck 1.1')
     with pytest.raises(ValueError) as exception:
         da.rolling(time=7, min_periods=1).median()
     assert 'Rolling.median does not' in str(exception)
