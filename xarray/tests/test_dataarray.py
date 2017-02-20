@@ -1865,6 +1865,12 @@ class TestDataArray(TestCase):
                              name='time')
         self.assertDataArrayIdentical(expected, actual)
 
+    def test_resample_bad_resample_dim(self):
+        times = pd.date_range('2000-01-01', freq='6H', periods=10)
+        array = DataArray(np.arange(10), [('__resample_dim__', times)])
+        actual = array.resample('1D', dim='__resample_dim__', how='first')
+        self.assertRaisesRegexp(ValueError, 'Proxy resampling dimension')
+
     def test_resample_first_old_api(self):
         times = pd.date_range('2000-01-01', freq='6H', periods=10)
         array = DataArray(np.arange(10), [('time', times)])

@@ -588,8 +588,13 @@ class DataArrayResample(DataArrayGroupBy):
     """DataArrayGroupBy object specialized to resampling a specified dimension
     """
 
-    def __init__(self, *args, dim=None, **kwargs):
+    def __init__(self, *args, dim=None, resample_dim=None, **kwargs):
         self._dim = dim
+        self._resample_dim = resample_dim
+        if dim == resample_dim:
+            raise ValueError("Proxy resampling dimension ('{_resample_dim}') "
+                             "cannot have the same name as actual dimension "
+                             "('{_dim}')! ".format(self))
         super(DataArrayResample, self).__init__(*args, **kwargs)
 
     def reduce(self, func, dim=None, axis=None, shortcut=True,
@@ -620,13 +625,13 @@ class DataArrayResample(DataArrayGroupBy):
             Array with summarized data and the indicated dimension(s)
             removed.
         """
-        RESAMPLE_DIM = '__resample_dim__'
 
         def reduce_array(ar):
             return ar.reduce(func, self._dim, axis=None, keep_attrs=keep_attrs,
                              **kwargs)
         result = self.apply(reduce_array, shortcut=shortcut)
-        return result.rename({RESAMPLE_DIM: self._dim})
+
+        return result.rename({self._resample_dim: self._dim})
 
 ops.inject_reduce_methods(DataArrayResample)
 ops.inject_binary_ops(DataArrayResample)
@@ -726,8 +731,13 @@ class DatasetResample(DatasetGroupBy):
     """DatasetGroupBy object specialized to resampling a specified dimension
     """
 
-    def __init__(self, *args, dim=None, **kwargs):
+    def __init__(self, *args, dim=None, resample_dim=None, **kwargs):
         self._dim = dim
+        self._resample_dim = resample_dim
+        if dim == resample_dim:
+            raise ValueError("Proxy resampling dimension ('{_resample_dim}') "
+                             "cannot have the same name as actual dimension "
+                             "('{_dim}')! ".format(self))
         super(DatasetResample, self).__init__(*args, **kwargs)
 
     def reduce(self, func, dim=None, axis=None, shortcut=True,
@@ -758,13 +768,13 @@ class DatasetResample(DatasetGroupBy):
             Array with summarized data and the indicated dimension(s)
             removed.
         """
-        RESAMPLE_DIM = '__resample_dim__'
 
         def reduce_array(ar):
             return ar.reduce(func, self._dim, axis=None, keep_attrs=keep_attrs,
                              **kwargs)
         result = self.apply(reduce_array, shortcut=shortcut)
-        return result.rename({RESAMPLE_DIM: self._dim})
+
+        return result.rename({self._resample_dim: self._dim})
 
 ops.inject_reduce_methods(DatasetResample)
 ops.inject_binary_ops(DatasetResample)

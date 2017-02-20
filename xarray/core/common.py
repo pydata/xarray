@@ -478,7 +478,6 @@ class BaseDataObject(AttrAccessMixin):
         return self._rolling_cls(self, min_periods=min_periods,
                                  center=center, **windows)
 
-
     def resample(self, freq=None, dim=None, how='mean', skipna=None,
                  closed=None, label=None, base=0, keep_attrs=False, **indexer):
         """Returns a Resample object for performing resampling operations.
@@ -567,7 +566,8 @@ class BaseDataObject(AttrAccessMixin):
         time_grouper = pd.TimeGrouper(freq=freq, closed=closed,
                                       label=label, base=base)
         resampler = self.resample_cls(self, group=group, dim=dim_name,
-                                      grouper=time_grouper)
+                                      grouper=time_grouper,
+                                      resample_dim=RESAMPLE_DIM)
 
         return resampler
 
