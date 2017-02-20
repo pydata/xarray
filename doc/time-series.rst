@@ -150,17 +150,45 @@ For example, we can downsample our dataset from hourly to 6-hourly:
 
 .. ipython:: python
 
-    ds.resample('6H', dim='time', how='mean')
+    ds.resample(time='6H')
 
-Resample also works for upsampling, in which case intervals without any
-values are marked by ``NaN``:
+This will create a specialized ``GroupBy`` object which saves information
+necessary for resampling. All of the reduction methods which work with
+``GroupBy`` objects can also be used for resampling:
 
 .. ipython:: python
 
-    ds.resample('30Min', 'time')
+   ds.resample(time='6H').mean()
+
+You can also supply an arbitrary reduction function to aggregate over each
+resampling group:
+
+.. ipython: python
+
+   ds.resample(time='6H').reduce(np.mean)
+
+Resampling does not yet work for upsampling.
 
 Of course, all of these resampling and groupby operation work on both Dataset
 and DataArray objects with any number of additional dimensions.
+
+.. note::
+
+   The ``resample`` api was updated in version ?? to reflect similar updates
+   in pandas` ``resample`` api to be more groupby-like. Older style calls to
+   ``resample`` will still be supported for a short period:
+
+   .. ipython:: python
+
+    ds.resample('6H', dim='time', how='mean')
+
+   Using the depcreated api, resample will also work for upsampling, in which
+   case intervals without any values are marked by ``NaN``:
+
+.. ipython:: python
+
+    ds.resample('30Min', dime='time')
+
 
 For more examples of using grouped operations on a time dimension, see
 :ref:`toy weather data`.
