@@ -1,0 +1,13 @@
+name: test_env
+channels:
+  - conda-forge
+dependencies:
+  - python=2.7
+  - dask
+  - matplotlib
+  - netCDF4
+  - numpy
+  - pandas
+  - pip
+  - pytest
+  - scipy
