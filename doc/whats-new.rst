@@ -22,6 +22,11 @@ v0.9.2 (unreleased)
 Enhancements
 ~~~~~~~~~~~~
 
+Added new method :py:meth:`~Dataset.assign_attrs` to ``DataArray`` and
+``Dataset``, a chained-method compatible implementation of the
+``dict.update`` method on attrs (:issue:`1281`).
+By `Henry S. Harrison <https://hsharrison.github.io>`_.
+
 Bug fixes
 ~~~~~~~~~
 
