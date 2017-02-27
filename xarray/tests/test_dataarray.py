@@ -2408,8 +2408,8 @@ class TestDataArray(TestCase):
 def da(request):
     if request.param == 1:
         times = pd.date_range('2000-01-01', freq='1D', periods=21)
-        values = np.random.random((21, 4))
-        da = DataArray(values, dims=('time', 'x'))
+        values = np.random.random((3, 21, 4))
+        da = DataArray(values, dims=('a', 'time', 'x'))
         da['time'] = times
         return da
 
@@ -2434,7 +2434,7 @@ def test_rolling_properties(da):
 
     rolling_obj = da.rolling(time=4)
 
-    assert rolling_obj._axis_num == 0
+    assert rolling_obj._axis_num == 1
 
     # catching invalid args
     with pytest.raises(ValueError) as exception:
@@ -2464,7 +2464,8 @@ def test_rolling_wrapped_bottleneck(da, name, center, min_periods):
 
     func_name = 'move_{0}'.format(name)
     actual = getattr(rolling_obj, name)()
-    expected = getattr(bn, func_name)(da.values, window=7, axis=0, min_count=min_periods)
+    expected = getattr(bn, func_name)(da.values, window=7, axis=1,
+                                      min_count=min_periods)
     assert_array_equal(actual.values, expected)
 
     # Test center
@@ -2517,3 +2518,4 @@ def test_rolling_reduce(da, center, min_periods, window, name):
     actual = rolling_obj.reduce(getattr(np, 'nan%s' % name))
     expected = getattr(rolling_obj, name)()
     assert_allclose(actual, expected)
+    assert da.dims == expected.dims
