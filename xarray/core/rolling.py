@@ -244,8 +244,14 @@ class DatasetRolling(Rolling, ImplementsRollingDatasetReduce):
             fixed = self._center_result(self.fixed_ds)
         else:
             fixed = self.fixed_ds
+        # call parent's reduce
+        reduced = Rolling.reduce(self, func, **kwargs)
+        # Need to restore dimension order
+        for key, var in reduced.data_vars.items():
+            reduced = reduced.assign(**{key:
+                                        var.transpose(*self.obj[key].dims)})
         # merge the fixed DataArrays
-        return Rolling.reduce(self, func, **kwargs).merge(fixed, join='inner')
+        return reduced.merge(fixed, join='inner')
 
 
 inject_bottleneck_rolling_methods(DataArrayRolling)

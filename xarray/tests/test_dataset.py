@@ -3269,7 +3269,7 @@ def test_dir_unicode(data_set):
 @pytest.fixture(params=[1])
 def ds(request):
     if request.param == 1:
-        return Dataset({'z1': (['x', 'y'], np.random.randn(20, 5)),
+        return Dataset({'z1': (['y', 'x'], np.random.randn(5, 20)),
                         'z2': (['time', 'y'], np.random.randn(30, 5))},
                        {'x': ('x', np.linspace(0, 1.0, 20)),
                         'time': ('time', np.linspace(0, 1.0, 30)),
@@ -3278,7 +3278,8 @@ def ds(request):
 
     if request.param == 2:
         return Dataset({'z1': (['time', 'y'], np.random.randn(30, 5)),
-                        'z2': (['time'], np.random.randn(30))},
+                        'z2': (['time'], np.random.randn(30)),
+                        'z3': (['x', 'time'], np.random.randn(20, 30))},
                        {'x': ('x', np.linspace(0, 1.0, 20)),
                         'time': ('time', np.linspace(0, 1.0, 30)),
                         'c': ('y', ['a', 'b', 'c', 'd', 'e']),
@@ -3396,3 +3397,7 @@ def test_rolling_reduce(ds, center, min_periods, window, name):
     expected = getattr(rolling_obj, name)()
     assert_allclose(actual, expected)
     assert ds.dims == actual.dims
+
+    # Make sure the dimension order is restored
+    for key, src_var in ds.data_vars.items():
+        assert src_var.dims == actual[key].dims
