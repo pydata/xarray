@@ -126,6 +126,71 @@ class ImplementsRollingArrayReduce(object):
         return wrapped_func
 
 
+class ImplementsRollingDatasetReduce(object):
+    @classmethod
+    def _reduce_method(cls, func):
+        def wrapped_func(self, **kwargs):
+            return self.reduce(func, **kwargs)
+        return wrapped_func
+
+    @classmethod
+    def _bottleneck_reduce(cls, func):
+        def wrapped_func(self, **kwargs):
+            from .dataset import Dataset
+
+            if any(isinstance(da, dask_array_type) for _, da
+                   in self.obj.data_vars.items()):
+                raise NotImplementedError(
+                    'Rolling window operation does not work with dask arrays')
+
+            # bottleneck doesn't allow min_count to be 0, although it should
+            # work the same as if min_count = 1
+            if self.min_periods is not None and self.min_periods == 0:
+                min_count = self.min_periods + 1
+            else:
+                min_count = self.min_periods
+
+            result = Dataset({key: (da.dims,
+                                    func(da.data, window=self.window,
+                                         min_count=min_count,
+                                         axis=da.get_axis_num(self.dim)))
+                              for key, da in self.obj.data_vars.items()},
+                             coords=self.obj.coords)
+            result = result.merge(self.fixed_ds, join='inner')
+
+            if self.center:
+                result = self._center_result(result)
+
+            return result
+        return wrapped_func
+
+    @classmethod
+    def _bottleneck_reduce_without_min_count(cls, func):
+        def wrapped_func(self, **kwargs):
+            from .dataset import Dataset
+
+            if self.min_periods is not None:
+                raise ValueError('Rolling.median does not accept min_periods')
+
+            if any(isinstance(da, dask_array_type) for _, da
+                   in self.obj.data_vars.items()):
+                raise NotImplementedError(
+                    'Rolling window operation does not work with dask arrays')
+
+            result = Dataset({key: (da.dims,
+                                    func(da.data, window=self.window,
+                                         axis=da.get_axis_num(self.dim)))
+                              for key, da in self.obj.data_vars.items()},
+                             coords=self.obj.coords)
+            result = result.merge(self.fixed_ds, join='inner')
+
+            if self.center:
+                result = self._center_result(result)
+
+            return result
+        return wrapped_func
+
+
 class AbstractArray(ImplementsArrayReduce, formatting.ReprMixin):
     """Shared base class for DataArray and Variable."""
 

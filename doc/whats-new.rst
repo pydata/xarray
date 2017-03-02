@@ -21,9 +21,14 @@ v0.9.2 (unreleased)
 
 Enhancements
 ~~~~~~~~~~~~
+- ``rolling`` on Dataset is now supported (:issue:`859`).
+  By `Keisuke Fujii <https://github.com/fujiisoup>`_.
 
 Bug fixes
 ~~~~~~~~~
+- ``rolling`` now keeps its original dimension order (:issue:`1125`).
+  By `Keisuke Fujii <https://github.com/fujiisoup>`_.
+
 
 .. _whats-new.0.9.1:
 

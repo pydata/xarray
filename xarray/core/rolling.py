@@ -6,7 +6,8 @@ import warnings
 from distutils.version import LooseVersion
 
 from .pycompat import OrderedDict, zip
-from .common import ImplementsRollingArrayReduce, full_like
+from .common import (ImplementsRollingArrayReduce,
+                     ImplementsRollingDatasetReduce, full_like)
 from .combine import concat
 from .ops import inject_bottleneck_rolling_methods, has_bottleneck, bn
 
@@ -80,7 +81,8 @@ class Rolling(object):
         self.center = center
         self.dim = dim
 
-        self._axis_num = self.obj.get_axis_num(self.dim)
+        if hasattr(obj, 'get_axis_num'):
+            self._axis_num = self.obj.get_axis_num(self.dim)
 
         self._windows = None
         self._valid_windows = None
@@ -177,6 +179,8 @@ class Rolling(object):
         counts = concat([window.count(dim=self.dim) for _, window in self],
                         dim=concat_dim)
         result = concat(windows, dim=concat_dim)
+        # restore dim order
+        result = result.transpose(*self.obj.dims)
 
         result = result.where(counts >= self._min_periods)
 
@@ -190,4 +194,59 @@ class DataArrayRolling(Rolling, ImplementsRollingArrayReduce):
     """Rolling object for DataArrays"""
 
 
+class DatasetRolling(Rolling, ImplementsRollingDatasetReduce):
+    """An object that implements the moving window pattern for Dataset.
+
+    See Also
+    --------
+    Dataset.groupby
+    DataArray.groupby
+    Dataset.rolling
+    DataArray.rolling
+    """
+    def __init__(self, obj, min_periods=None, center=False, **windows):
+        """
+        Moving window object for Dataset.
+
+        Parameters
+        ----------
+        obj : Dataset
+            Object to window.
+        min_periods : int, default None
+            Minimum number of observations in window required to have a value
+            (otherwise result is NA). The default, None, is equivalent to
+            setting min_periods equal to the size of the window.
+        center : boolean, default False
+            Set the labels at the center of the window.
+        **windows : dim=window
+            dim : str
+                Name of the dimension to create the rolling iterator
+                along (e.g., `time`).
+            window : int
+                Size of the moving window.
+
+        Returns
+        -------
+        rolling : type of input argument
+        """
+        from .dataset import Dataset
+        dim, window = next(iter(windows.items()))
+        # DataArrays not depending on the rolling-axis are kept aside from obj
+        self.fixed_ds = Dataset({key: da for key, da in obj.data_vars.items()
+                                 if dim not in da.dims},
+                                obj.coords)
+        # drop them from obj, then call parent's initializer.
+        obj = obj.drop(self.fixed_ds.data_vars.keys())
+        Rolling.__init__(self, obj, min_periods, center, **windows)
+
+    def reduce(self, func, **kwargs):
+        if self.center:
+            fixed = self._center_result(self.fixed_ds)
+        else:
+            fixed = self.fixed_ds
+        # merge the fixed DataArrays
+        return Rolling.reduce(self, func, **kwargs).merge(fixed, join='inner')
+
+
 inject_bottleneck_rolling_methods(DataArrayRolling)
+inject_bottleneck_rolling_methods(DatasetRolling)
