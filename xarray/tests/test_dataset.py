@@ -3385,6 +3385,8 @@ def test_rolling_reduce(ds, center, min_periods, window, name):
     # std with window == 1 seems unstable in bottleneck
     if name == 'std' and window == 1:
         window = 2
+    if name == 'median':
+        min_periods = None
 
     rolling_obj = ds.rolling(time=window, center=center,
                              min_periods=min_periods)
