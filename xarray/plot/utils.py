@@ -227,7 +227,7 @@ def _infer_xy_labels(darray, x, y):
         x = darray.dims[0] if y == darray.dims[1] else darray.dims[1]
     elif y is None:
         if x not in darray.dims:
-            raise ValueError('x must be a coordinate variables')
+            raise ValueError('x must be a coordinate variable')
         y = darray.dims[0] if x == darray.dims[1] else darray.dims[1]
     elif any(k not in darray.coords and k not in darray.dims for k in (x, y)):
         raise ValueError('x and y must be coordinate variables')
