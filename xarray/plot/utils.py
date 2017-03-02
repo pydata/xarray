@@ -222,8 +222,12 @@ def _infer_xy_labels(darray, x, y):
             raise ValueError('DataArray must be 2d')
         y, x = darray.dims
     elif x is None:
+        if y not in darray.dims:
+            raise ValueError('y must be a coordinate variable')
         x = darray.dims[0] if y == darray.dims[1] else darray.dims[1]
     elif y is None:
+        if x not in darray.dims:
+            raise ValueError('x must be a coordinate variables')
         y = darray.dims[0] if x == darray.dims[1] else darray.dims[1]
     elif any(k not in darray.coords and k not in darray.dims for k in (x, y)):
         raise ValueError('x and y must be coordinate variables')
