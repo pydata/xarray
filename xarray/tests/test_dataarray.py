@@ -2434,7 +2434,7 @@ def test_rolling_properties(da):
 
     rolling_obj = da.rolling(time=4)
 
-    assert rolling_obj.obj.get_axis_num('time') == 0
+    assert rolling_obj.obj.get_axis_num('time') == 1
 
     # catching invalid args
     with pytest.raises(ValueError) as exception:
@@ -2464,7 +2464,7 @@ def test_rolling_wrapped_bottleneck(da, name, center, min_periods):
 
     func_name = 'move_{0}'.format(name)
     actual = getattr(rolling_obj, name)()
-    expected = getattr(bn, func_name)(da.values, window=7, axis=0, min_count=min_periods)
+    expected = getattr(bn, func_name)(da.values, window=7, axis=1,
                                       min_count=min_periods)
     assert_array_equal(actual.values, expected)
 
