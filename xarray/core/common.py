@@ -70,14 +70,51 @@ class ImplementsDatasetReduce(object):
 
 
 class ImplementsRollingArrayReduce(object):
+    """
+    This class is subject to multiple-inheritance scheme.
+    By inheriging this class as well as Rolling class (in rolling.py),
+    the child class will get the following class methods;
+    + _reduce_method(cls, func)
+    + _bottleneck_reduce(cls, func)
+    + _bottleneck_reduce_without_min_count(cls, func)
+
+    These class methods will be used to inject numpy or bottleneck function
+    by doing
+
+    >>> func = cls._reduce_method(f)
+    >>> func.__name__ = name
+    >>> setattr(cls, name, func)
+
+    in ops.inject_bottleneck_rolling_methods.
+
+    After the injection, the Rolling object will have `name` (such as `mean` or
+    `median`) methods,
+    e.g. it enables the following call,
+    >>> data.rolling().mean()
+
+    If bottleneck is installed, some bottleneck methods will be used instdad of
+    the numpy method.
+
+    see also
+    + rolling.DataArrayRolling
+    + ops.inject_bottleneck_rolling_methods
+    """
     @classmethod
     def _reduce_method(cls, func):
+        """
+        Methods to return a wrapped function for any function `func` for
+        numpy methods.
+        """
         def wrapped_func(self, **kwargs):
             return self.reduce(func, **kwargs)
         return wrapped_func
 
     @classmethod
     def _bottleneck_reduce(cls, func):
+        """
+        Methods to return a wrapped function for any function `func` for
+        bottoleneck method, except for `median`.
+        """
         def wrapped_func(self, **kwargs):
             from .dataarray import DataArray
 
@@ -93,7 +130,8 @@ class ImplementsRollingArrayReduce(object):
                 min_count = self.min_periods
 
             values = func(self.obj.data, window=self.window,
-                          min_count=min_count, axis=self._axis_num)
+                          min_count=min_count,
+                          axis=self.obj.get_axis_num(self.dim))
 
             result = DataArray(values, self.obj.coords)
 
@@ -105,6 +143,10 @@ class ImplementsRollingArrayReduce(object):
 
     @classmethod
     def _bottleneck_reduce_without_min_count(cls, func):
+        """
+        Methods to return a wrapped function for `media` bottoleneck method.
+        bottleneck's median does not accept min_periods.
+        """
         def wrapped_func(self, **kwargs):
             from .dataarray import DataArray
 
@@ -115,7 +157,8 @@ class ImplementsRollingArrayReduce(object):
                 raise NotImplementedError(
                     'Rolling window operation does not work with dask arrays')
 
-            values = func(self.obj.data, window=self.window, axis=self._axis_num)
+            values = func(self.obj.data, window=self.window,
+                          axis=self.obj.get_axis_num(self.dim))
 
             result = DataArray(values, self.obj.coords)
 
@@ -126,13 +169,18 @@ class ImplementsRollingArrayReduce(object):
         return wrapped_func
 
 
-class ImplementsRollingDatasetReduce(object):
-    @classmethod
-    def _reduce_method(cls, func):
-        def wrapped_func(self, **kwargs):
-            return self.reduce(func, **kwargs)
-        return wrapped_func
+class ImplementsRollingDatasetReduce(ImplementsRollingArrayReduce):
+    """
+    Similar class to ImplementsRollingArrayReduce, but for Dataset.
 
+    `wrapped_func` is reused.
+    `_bottleneck_reduce` and `_bottleneck_reduce_without_min_count` is
+    overloaded.
+
+    see also
+    + rolling.DatasetRolling
+    + ops.inject_bottleneck_rolling_methods
+    """
     @classmethod
     def _bottleneck_reduce(cls, func):
         def wrapped_func(self, **kwargs):

@@ -2434,7 +2434,7 @@ def test_rolling_properties(da):
 
     rolling_obj = da.rolling(time=4)
 
-    assert rolling_obj._axis_num == 0
+    assert rolling_obj.obj.get_axis_num('time') == 0
 
     # catching invalid args
     with pytest.raises(ValueError) as exception:

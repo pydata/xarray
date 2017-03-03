@@ -81,9 +81,6 @@ class Rolling(object):
         self.center = center
         self.dim = dim
 
-        if hasattr(obj, 'get_axis_num'):
-            self._axis_num = self.obj.get_axis_num(self.dim)
-
         self._windows = None
         self._valid_windows = None
         self.window_indices = None
@@ -197,6 +194,16 @@ class DataArrayRolling(Rolling, ImplementsRollingArrayReduce):
 class DatasetRolling(Rolling, ImplementsRollingDatasetReduce):
     """An object that implements the moving window pattern for Dataset.
 
+    This class inherites Rolling class, which is originally designed for
+    DataArray. Most of its methods also works for Dataset, but Dataset.concat()
+    used in reduce() gives undesired duplication of some DataArrays which does
+    not depend on the rolling-dim.
+
+    In this class, such DataArrays are kept aside as `self.fixed_ds`,
+    prior to call parent's __init__ method.
+    In `reduce` method, the fixed DataArrays are merged to the reduced
+    Dataset.
+
     See Also
     --------
     Dataset.groupby
@@ -245,7 +252,7 @@ class DatasetRolling(Rolling, ImplementsRollingDatasetReduce):
         else:
             fixed = self.fixed_ds
         # call parent's reduce
-        reduced = Rolling.reduce(self, func, **kwargs)
+        reduced = super(DatasetRolling, self).reduce(func, **kwargs)
         # Need to restore dimension order
         for key, var in reduced.data_vars.items():
             reduced = reduced.assign(**{key:
