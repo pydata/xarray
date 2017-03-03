@@ -28,7 +28,7 @@ def test_dask_distributed_integration_test(loop, engine):
             original = create_test_data()
             with create_tmp_file() as filename:
                 original.to_netcdf(filename, engine=engine)
-                restored = xr.open_dataset(filename, chunks=3, engine=engine)
-                assert isinstance(restored.var1.data, da.Array)
-                computed = restored.compute()
-                assert_allclose(original, computed)
+                with xr.open_dataset(filename, chunks=3, engine=engine) as restored:
+                    assert isinstance(restored.var1.data, da.Array)
+                    computed = restored.compute()
+                    assert_allclose(original, computed)
