@@ -307,8 +307,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
     One dimensional variables with name equal to their dimension are index
     coordinates used for label based indexing.
     """
-    groupby_cls = groupby.DatasetGroupBy
-    rolling_cls = rolling.DatasetRolling
+    _groupby_cls = groupby.DatasetGroupBy
+    _rolling_cls = rolling.DatasetRolling
 
     def __init__(self, data_vars=None, coords=None, attrs=None,
                  compat='broadcast_equals'):

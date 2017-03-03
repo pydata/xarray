@@ -537,7 +537,7 @@ class BaseDataObject(AttrAccessMixin):
             A `GroupBy` object patterned after `pandas.GroupBy` that can be
             iterated over in the form of `(unique_value, grouped_array)` pairs.
         """
-        return self.groupby_cls(self, group, squeeze=squeeze)
+        return self._groupby_cls(self, group, squeeze=squeeze)
 
     def groupby_bins(self, group, bins, right=True, labels=None, precision=3,
                      include_lowest=False, squeeze=True):
@@ -586,10 +586,10 @@ class BaseDataObject(AttrAccessMixin):
         ----------
         .. [1] http://pandas.pydata.org/pandas-docs/stable/generated/pandas.cut.html
         """
-        return self.groupby_cls(self, group, squeeze=squeeze, bins=bins,
-                                cut_kwargs={'right': right, 'labels': labels,
-                                            'precision': precision,
-                                            'include_lowest': include_lowest})
+        return self._groupby_cls(self, group, squeeze=squeeze, bins=bins,
+                                 cut_kwargs={'right': right, 'labels': labels,
+                                             'precision': precision,
+                                             'include_lowest': include_lowest})
 
     def rolling(self, min_periods=None, center=False, **windows):
         """
@@ -618,8 +618,8 @@ class BaseDataObject(AttrAccessMixin):
         rolling : type of input argument
         """
 
-        return self.rolling_cls(self, min_periods=min_periods,
-                                center=center, **windows)
+        return self._rolling_cls(self, min_periods=min_periods,
+                                 center=center, **windows)
 
     def resample(self, freq, dim, how='mean', skipna=None, closed=None,
                  label=None, base=0, keep_attrs=False):
@@ -689,7 +689,7 @@ class BaseDataObject(AttrAccessMixin):
         group = DataArray(dim, [(RESAMPLE_DIM, dim)], name=RESAMPLE_DIM)
         time_grouper = pd.TimeGrouper(freq=freq, how=how, closed=closed,
                                       label=label, base=base)
-        gb = self.groupby_cls(self, group, grouper=time_grouper)
+        gb = self._groupby_cls(self, group, grouper=time_grouper)
         if isinstance(how, basestring):
             f = getattr(gb, how)
             if how in ['first', 'last']:
