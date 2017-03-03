@@ -244,7 +244,8 @@ class DatasetRolling(Rolling, ImplementsRollingDatasetReduce):
                                 obj.coords)
         # drop them from obj, then call parent's initializer.
         obj = obj.drop(self.fixed_ds.data_vars.keys())
-        Rolling.__init__(self, obj, min_periods, center, **windows)
+        super(DatasetRolling, self).__init__(obj,
+                                             min_periods, center, **windows)
 
     def reduce(self, func, **kwargs):
         if self.center:
