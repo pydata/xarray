@@ -64,7 +64,8 @@ class TestDataArray(TestCase):
     def test_properties(self):
         self.assertVariableEqual(self.dv.variable, self.v)
         self.assertArrayEqual(self.dv.values, self.v.values)
-        for attr in ['dims', 'dtype', 'shape', 'size', 'nbytes', 'ndim', 'attrs']:
+        for attr in ['dims', 'dtype', 'shape', 'size', 'nbytes',
+                     'ndim', 'attrs']:
             self.assertEqual(getattr(self.dv, attr), getattr(self.v, attr))
         self.assertEqual(len(self.dv), len(self.v))
         self.assertVariableEqual(self.dv.variable, self.v)
@@ -423,8 +424,10 @@ class TestDataArray(TestCase):
                   I[x > -1, y > -1]]:
             self.assertVariableEqual(self.dv, self.dv[i])
         for i in [I[0], I[:, 0], I[:3, :2],
-                  I[x.values[:3]], I[x.variable[:3]], I[x[:3]], I[x[:3], y[:4]],
-                  I[x.values > 3], I[x.variable > 3], I[x > 3], I[x > 3, y > 3]]:
+                  I[x.values[:3]], I[x.variable[:3]],
+                  I[x[:3]], I[x[:3], y[:4]],
+                  I[x.values > 3], I[x.variable > 3],
+                  I[x > 3], I[x > 3, y > 3]]:
             assert_array_equal(self.v[i], self.dv[i])
 
     def test_getitem_dict(self):
@@ -1385,18 +1388,22 @@ class TestDataArray(TestCase):
         coords = {'x': [-1, -2], 'y': ['ab', 'cd', 'ef'],
                   'lat': (['x', 'y'], [[1, 2, 3], [-1, -2, -3]]),
                   'c': -999}
-        orig = DataArray([[-1, 0, 1], [-3, 0, 3]], coords, dims=['x', 'y'])
+        orig = DataArray([[-1, 0, 1], [-3, 0, 3]], coords,
+                         dims=['x', 'y'])
 
         actual = orig.cumsum('x')
-        expected = DataArray([[-1, 0, 1], [-4, 0, 4]], coords, dims=['x', 'y'])
+        expected = DataArray([[-1, 0, 1], [-4, 0, 4]], coords,
+                             dims=['x', 'y'])
         self.assertDataArrayIdentical(expected, actual)
 
         actual = orig.cumsum('y')
-        expected = DataArray([[-1, -1, 0], [-3, -3, 0]], coords, dims=['x', 'y'])
+        expected = DataArray([[-1, -1, 0], [-3, -3, 0]], coords,
+                             dims=['x', 'y'])
         self.assertDataArrayIdentical(expected, actual)
 
         actual = orig.cumprod('x')
-        expected = DataArray([[-1, 0, 1], [3, 0, 3]], coords, dims=['x', 'y'])
+        expected = DataArray([[-1, 0, 1], [3, 0, 3]], coords,
+                             dims=['x', 'y'])
         self.assertDataArrayIdentical(expected, actual)
 
         actual = orig.cumprod('y')
@@ -1576,9 +1583,10 @@ class TestDataArray(TestCase):
         self.assertDataArrayAllClose(expected_sum_axis1, grouped.sum('y'))
 
     def test_groupby_count(self):
-        array = DataArray([0, 0, np.nan, np.nan, 0, 0],
-                          coords={'cat': ('x', ['a', 'b', 'b', 'c', 'c', 'c'])},
-                          dims='x')
+        array = DataArray(
+            [0, 0, np.nan, np.nan, 0, 0],
+            coords={'cat': ('x', ['a', 'b', 'b', 'c', 'c', 'c'])},
+            dims='x')
         actual = array.groupby('cat').count()
         expected = DataArray([1, 1, 2], coords=[('cat', ['a', 'b', 'c'])])
         self.assertDataArrayIdentical(actual, expected)
@@ -2028,7 +2036,7 @@ class TestDataArray(TestCase):
         self.assertDataArrayIdentical(expected_y2, y2)
 
     def test_broadcast_arrays_nocopy(self):
-        # Test that input data is not copied over in case no alteration is needed
+        # Test input data is not copied over in case no alteration is needed
         x = DataArray([1, 2], coords=[('a', [-1, -2])], name='x')
         y = DataArray(3, name='y')
         expected_x2 = DataArray([1, 2], coords=[('a', [-1, -2])], name='x')
@@ -2294,10 +2302,11 @@ class TestDataArray(TestCase):
     def test_to_and_from_cdms2(self):
         pytest.importorskip('cdms2')
 
-        original = DataArray(np.arange(6).reshape(2, 3),
-                             [('distance', [-2, 2], {'units': 'meters'}),
-                              ('time', pd.date_range('2000-01-01', periods=3))],
-                             name='foo', attrs={'baz': 123})
+        original = DataArray(
+            np.arange(6).reshape(2, 3),
+            [('distance', [-2, 2], {'units': 'meters'}),
+             ('time', pd.date_range('2000-01-01', periods=3))],
+            name='foo', attrs={'baz': 123})
         expected_coords = [IndexVariable('distance', [-2, 2]),
                            IndexVariable('time', [0, 1, 2])]
         actual = original.to_cdms2()
@@ -2358,7 +2367,7 @@ class TestDataArray(TestCase):
 
         # use dates as convenient non-str objects. Not a specific date test
         import datetime
-        dates = [datetime.date(2000,1,d) for d in range(1,4)]
+        dates = [datetime.date(2000, 1, d) for d in range(1, 4)]
 
         array = DataArray([1, 2, 3], coords=[('x', dates)],
                           attrs={'a': 1})
