@@ -24,7 +24,7 @@ if has_h5netcdf:
 @pytest.mark.parametrize('engine', ENGINES)
 def test_dask_distributed_integration_test(loop, engine):
     with cluster() as (s, _):
-        with distributed.Client(('127.0.0.1', s['port']), loop=loop):
+        with distributed.Client(s['address'], loop=loop):
             original = create_test_data()
             with create_tmp_file() as filename:
                 original.to_netcdf(filename, engine=engine)
