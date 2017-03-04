@@ -22,6 +22,9 @@ v0.9.2 (unreleased)
 Enhancements
 ~~~~~~~~~~~~
 
+- When `plot()` is called on a 2D DataArray and only one dimension is
+specified with `x=` or `=y`, the other dimension is now guessed.
+
 Bug fixes
 ~~~~~~~~~
 - ``rolling`` now keeps its original dimension order (:issue:`1125`).
