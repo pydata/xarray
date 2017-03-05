@@ -472,19 +472,24 @@ objects in the ``coords`` attribute:
     ds.coords
 
 Unlike attributes, xarray *does* interpret and persist coordinates in
-operations that transform xarray objects.
+operations that transform xarray objects. Following the `CF conventions`_,
+there are two types of coordinates in xarray:
 
-One dimensional coordinates with a name equal to their sole dimension (marked
-by ``*`` when printing a dataset or data array) take on a special meaning in
-xarray. They are used for label based indexing and alignment,
-like the ``index`` found on a pandas :py:class:`~pandas.DataFrame` or
-:py:class:`~pandas.Series`. Indeed, these "dimension" coordinates use a
-:py:class:`pandas.Index` internally to store their values.
+- **coordinate variables** are one dimensional coordinates with a name equal
+  to their sole dimension (marked by ``*`` when printing a dataset or data
+  array). They are used for label based indexing and alignment,
+  like the ``index`` found on a pandas :py:class:`~pandas.DataFrame` or
+  :py:class:`~pandas.Series`. Indeed, these "dimension" coordinates use a
+  :py:class:`pandas.Index` internally to store their values.
 
-Other than for indexing, xarray does not make any direct use of the values
-associated with coordinates. Coordinates with names not matching a dimension
-are not used for alignment or indexing, nor are they required to match when
-doing arithmetic (see :ref:`coordinates math`).
+- **auxiliary coordinate variables** are variables that contain coordinate
+  data, but are not a coordinate variable. They can be of any dimension
+  (see :ref:`examples.multidim`), and there is no relationship between the
+  name of an auxiliary coordinate variable and the name(s) of its dimension(s).
+  Other than for indexing, xarray does not make any direct use of the values
+  associated with auxiliary coordinates. They are not used for alignment or
+  indexing, nor are they required to match when doing arithmetic
+  (see :ref:`coordinates math`).
 
 Modifying coordinates
 ~~~~~~~~~~~~~~~~~~~~~
