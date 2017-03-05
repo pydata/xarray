@@ -177,6 +177,8 @@ class Rolling(object):
         counts = concat([window.count(dim=self.dim) for _, window in self],
                         dim=concat_dim)
         result = concat(windows, dim=concat_dim)
+        # restore dim order
+        result = result.transpose(*self.obj.dims)
 
         result = result.where(counts >= self._min_periods)
 
