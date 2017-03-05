@@ -1,4 +1,3 @@
-import copy
 import numpy as np
 
 try:
@@ -6,7 +5,7 @@ try:
 except ImportError:
     rasterio = False
 
-from .. import Variable, DataArray
+from .. import Variable
 from ..core.utils import FrozenOrderedDict, Frozen, NDArrayMixin
 from ..core import indexing
 from ..core.pycompat import OrderedDict, suppress
@@ -15,18 +14,19 @@ from .common import AbstractDataStore
 
 _rio_varname = 'raster'
 
-_error_mess = 'The kind of indexing operation you are trying to do is not ' \
-              'valid on RasterIO files. Try to load your data with ds.load()' \
-              ' first'
+_error_mess = 'The kind of indexing operation you are trying to do is not '
+'valid on RasterIO files. Try to load your data with ds.load()'
+'first.'
 
 class RasterioArrayWrapper(NDArrayMixin):
     def __init__(self, ds):
         self.ds = ds
         self._shape = self.ds.count, self.ds.height, self.ds.width
+        self._ndims = len(self.shape)
 
     @property
     def dtype(self):
-        return np.dtype(self.ds.dtypes[0])    \
+        return np.dtype(self.ds.dtypes[0])
 
     @property
     def shape(self):
@@ -35,7 +35,7 @@ class RasterioArrayWrapper(NDArrayMixin):
     def __getitem__(self, key):
 
         # make our job a bit easier
-        key = indexing.canonicalize_indexer(key, len(self.shape))
+        key = indexing.canonicalize_indexer(key, self._ndims)
 
         # bands cannot be windowed but they can be listed
         bands, n = key[0], self.shape[0]
