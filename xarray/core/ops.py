@@ -541,3 +541,14 @@ def inject_bottleneck_rolling_methods(cls):
         func.__name__ = 'median'
         func.__doc__ = _ROLLING_REDUCE_DOCSTRING_TEMPLATE.format(name=func.__name__)
         setattr(cls, 'median', func)
+
+
+def inject_datasetrolling_methods(cls):
+    # standard numpy reduce methods
+    methods = [(name, globals()[name]) for name in NAN_REDUCE_METHODS]
+    for name, f in methods:
+        func = cls._reduce_method(f)
+        func.__name__ = name
+        func.__doc__ =\
+            _ROLLING_REDUCE_DOCSTRING_TEMPLATE.format(name=func.__name__)
+        setattr(cls, name, func)

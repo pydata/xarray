@@ -29,7 +29,7 @@ from xarray.core.common import full_like
 from . import (TestCase, InaccessibleArray, UnexpectedDataAccess,
                requires_dask, source_ndarray)
 
-from xarray.tests import (assert_identical, assert_equal, assert_allclose,
+from xarray.tests import (assert_equal, assert_allclose,
                           assert_array_equal)
 
 
@@ -3286,16 +3286,6 @@ def ds(request):
                         'y': range(5)})
 
 
-def test_rolling_iter(ds):
-    rolling_obj = ds.rolling(time=7)
-
-    assert len(rolling_obj.window_labels) == len(ds['time'])
-    assert_identical(rolling_obj.window_labels, ds['time'])
-
-    for i, (label, window_ds) in enumerate(rolling_obj):
-        assert label == ds['time'].isel(time=i)
-
-
 def test_rolling_properties(ds):
     pytest.importorskip('bottleneck', minversion='1.0')
 
@@ -3398,7 +3388,7 @@ def test_rolling_reduce(ds, center, min_periods, window, name):
     assert_allclose(actual, expected)
     assert ds.dims == actual.dims
     # make sure the order of data_var are not changed.
-    assert ds.data_vars.keys() == actual.data_vars.keys()
+    assert list(ds.data_vars.keys()) == list(actual.data_vars.keys())
 
     # Make sure the dimension order is restored
     for key, src_var in ds.data_vars.items():
