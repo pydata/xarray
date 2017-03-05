@@ -53,8 +53,7 @@ NAN_CUM_METHODS = ['cumsum', 'cumprod']
 BOTTLENECK_ROLLING_METHODS = {'move_sum': 'sum', 'move_mean': 'mean',
                               'move_std': 'std', 'move_min': 'min',
                               'move_max': 'max', 'move_var': 'var',
-                              'move_argmin': 'argmin', 'move_argmax': 'argmax',
-                              'move_rank': 'rank'}
+                              'move_argmin': 'argmin', 'move_argmax': 'argmax'}
 # TODO: wrap take, dot, sort
 
 
@@ -528,6 +527,8 @@ def inject_bottleneck_rolling_methods(cls):
 
     # bottleneck rolling methods
     if has_bottleneck:
+        # TODO: Bump the required version of bottlneck to 1.1 and remove all
+        # these version checks (see GH#1278)
         bn_version = LooseVersion(bn.__version__)
         bn_min_version = LooseVersion('1.0')
         bn_version_1_1 = LooseVersion('1.1')
