@@ -5,9 +5,8 @@ import numpy as np
 import warnings
 from distutils.version import LooseVersion
 
-from .pycompat import OrderedDict, zip
-from .common import (ImplementsRollingArrayReduce,
-                     ImplementsRollingDatasetReduce, full_like)
+from .pycompat import OrderedDict, zip, dask_array_type
+from .common import full_like
 from .combine import concat
 from .ops import inject_bottleneck_rolling_methods, has_bottleneck, bn
 
@@ -186,12 +185,106 @@ class Rolling(object):
 
         return result
 
+    @classmethod
+    def _reduce_method(cls, func):
+        """
+        Methods to return a wrapped function for any function `func` for
+        numpy methods.
+        """
+        def wrapped_func(self, **kwargs):
+            return self.reduce(func, **kwargs)
+        return wrapped_func
 
-class DataArrayRolling(Rolling, ImplementsRollingArrayReduce):
-    """Rolling object for DataArrays"""
+
+class DataArrayRolling(Rolling):
+    """
+    This class adds the following class methods;
+    + _reduce_method(cls, func)
+    + _bottleneck_reduce(cls, func)
+    + _bottleneck_reduce_without_min_count(cls, func)
+
+    These class methods will be used to inject numpy or bottleneck function
+    by doing
+
+    >>> func = cls._reduce_method(f)
+    >>> func.__name__ = name
+    >>> setattr(cls, name, func)
+
+    in ops.inject_bottleneck_rolling_methods.
+
+    After the injection, the Rolling object will have `name` (such as `mean` or
+    `median`) methods,
+    e.g. it enables the following call,
+    >>> data.rolling().mean()
+
+    If bottleneck is installed, some bottleneck methods will be used instdad of
+    the numpy method.
+
+    see also
+    + rolling.DataArrayRolling
+    + ops.inject_bottleneck_rolling_methods
+    """
+    @classmethod
+    def _bottleneck_reduce(cls, func):
+        """
+        Methods to return a wrapped function for any function `func` for
+        bottoleneck method, except for `median`.
+        """
+        def wrapped_func(self, **kwargs):
+            from .dataarray import DataArray
+
+            if isinstance(self.obj.data, dask_array_type):
+                raise NotImplementedError(
+                    'Rolling window operation does not work with dask arrays')
+
+            # bottleneck doesn't allow min_count to be 0, although it should
+            # work the same as if min_count = 1
+            if self.min_periods is not None and self.min_periods == 0:
+                min_count = self.min_periods + 1
+            else:
+                min_count = self.min_periods
+
+            values = func(self.obj.data, window=self.window,
+                          min_count=min_count,
+                          axis=self.obj.get_axis_num(self.dim))
+
+            result = DataArray(values, self.obj.coords)
+
+            if self.center:
+                result = self._center_result(result)
+
+            return result
+        return wrapped_func
+
+    @classmethod
+    def _bottleneck_reduce_without_min_count(cls, func):
+        """
+        Methods to return a wrapped function for `media` bottoleneck method.
+        bottleneck's median does not accept min_periods.
+        """
+        def wrapped_func(self, **kwargs):
+            from .dataarray import DataArray
+
+            if self.min_periods is not None:
+                raise ValueError('Rolling.median does not accept min_periods')
+
+            if isinstance(self.obj.data, dask_array_type):
+                raise NotImplementedError(
+                    'Rolling window operation does not work with dask arrays')
+
+            values = func(self.obj.data, window=self.window,
+                          axis=self.obj.get_axis_num(self.dim))
+
+            result = DataArray(values, self.obj.coords)
+
+            if self.center:
+                result = self._center_result(result)
+
+            return result
+        return wrapped_func
 
 
-class DatasetRolling(Rolling, ImplementsRollingDatasetReduce):
+class DatasetRolling(Rolling):
     """An object that implements the moving window pattern for Dataset.
 
     This class inherites Rolling class, which is originally designed for
@@ -260,6 +353,73 @@ class DatasetRolling(Rolling, ImplementsRollingDatasetReduce):
                                         var.transpose(*self.obj[key].dims)})
         # merge the fixed DataArrays
         return reduced.merge(fixed, join='inner')
+
+    @classmethod
+    def _reduce_method(cls, func):
+        """
+        Methods to return a wrapped function for any function `func` for
+        numpy methods.
+        """
+        def wrapped_func(self, **kwargs):
+            return self.reduce(func, **kwargs)
+        return wrapped_func
+
+    @classmethod
+    def _bottleneck_reduce(cls, func):
+        def wrapped_func(self, **kwargs):
+            from .dataset import Dataset
+
+            if any(isinstance(da, dask_array_type) for _, da
+                   in self.obj.data_vars.items()):
+                raise NotImplementedError(
+                    'Rolling window operation does not work with dask arrays')
+
+            # bottleneck doesn't allow min_count to be 0, although it should
+            # work the same as if min_count = 1
+            if self.min_periods is not None and self.min_periods == 0:
+                min_count = self.min_periods + 1
+            else:
+                min_count = self.min_periods
+
+            result = Dataset({key: (da.dims,
+                                    func(da.data, window=self.window,
+                                         min_count=min_count,
+                                         axis=da.get_axis_num(self.dim)))
+                              for key, da in self.obj.data_vars.items()},
+                             coords=self.obj.coords)
+            result = result.merge(self.fixed_ds, join='inner')
+
+            if self.center:
+                result = self._center_result(result)
+
+            return result
+        return wrapped_func
+
+    @classmethod
+    def _bottleneck_reduce_without_min_count(cls, func):
+        def wrapped_func(self, **kwargs):
+            from .dataset import Dataset
+
+            if self.min_periods is not None:
+                raise ValueError('Rolling.median does not accept min_periods')
+
+            if any(isinstance(da, dask_array_type) for _, da
+                   in self.obj.data_vars.items()):
+                raise NotImplementedError(
+                    'Rolling window operation does not work with dask arrays')
+
+            result = Dataset({key: (da.dims,
+                                    func(da.data, window=self.window,
+                                         axis=da.get_axis_num(self.dim)))
+                              for key, da in self.obj.data_vars.items()},
+                             coords=self.obj.coords)
+            result = result.merge(self.fixed_ds, join='inner')
+
+            if self.center:
+                result = self._center_result(result)
+
+            return result
+        return wrapped_func
 
 
 inject_bottleneck_rolling_methods(DataArrayRolling)

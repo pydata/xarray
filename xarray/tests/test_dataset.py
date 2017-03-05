@@ -3397,6 +3397,8 @@ def test_rolling_reduce(ds, center, min_periods, window, name):
     expected = getattr(rolling_obj, name)()
     assert_allclose(actual, expected)
     assert ds.dims == actual.dims
+    # make sure the order of data_var are not changed.
+    assert ds.data_vars.keys() == actual.data_vars.keys()
 
     # Make sure the dimension order is restored
     for key, src_var in ds.data_vars.items():
