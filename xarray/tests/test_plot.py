@@ -16,6 +16,7 @@ import inspect
 
 import numpy as np
 import pandas as pd
+from datetime import datetime
 
 from xarray import DataArray
 
@@ -25,12 +26,7 @@ from xarray.plot.utils import (_determine_cmap_params,
                                _build_discrete_cmap,
                                _color_palette)
 
-try:
-    from netCDF4 import datetime as nc4datetime
-except ImportError:
-    pass
-
-from . import TestCase, requires_matplotlib, requires_netCDF4
+from . import TestCase, requires_matplotlib
 
 
 def text_in_fig():
@@ -1215,23 +1211,20 @@ class TestFacetGrid4d(PlotTestCase):
             self.assertTrue(substring_in_axes(label, ax))
 
 
-@requires_netCDF4
 class TestDatetimePlot(PlotTestCase):
 
     def setUp(self):
         '''
-        Create a DataArray with a time-axis that contains netCDF4.datetime
-        objects.
+        Create a DataArray with a time-axis that contains datetime objects.
         '''
         month = np.arange(1, 13, 1)
         data = np.sin(2 * np.pi * month / 12.0)
 
         darray = DataArray(data, dims=['time'])
-        darray.coords['time'] = \
-                np.array([nc4datetime(2017, m, 1) for m in month])
+        darray.coords['time'] = np.array([datetime(2017, m, 1) for m in month])
 
         self.darray = darray
 
-    def test_netcdftime_line_plot(self):
+    def test_datetime_line_plot(self):
         # test if line plot raises no Exception
         self.darray.plot.line()

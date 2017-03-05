@@ -78,7 +78,6 @@ except ImportError:
 # slighly simpler construction that the full functions.
 # Generally `pytest.importorskip('package')` inline is even easier
 requires_matplotlib = pytest.mark.skipif(not has_matplotlib, reason='requires matplotlib')
-requires_netCDF4 = pytest.mark.skipif(not has_netCDF4, reason='requires netCDF4')
 
 
 def requires_scipy(test):

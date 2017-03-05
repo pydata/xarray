@@ -26,11 +26,8 @@ def _valid_numpy_subdtype(x, numpy_types):
     """
     # If any of the types given in numpy_types is understood as numpy.generic,
     # all possible x will be considered valid.  This is probably unwanted.
-    # Warn then.
     for t in numpy_types:
-        if np.issubdtype(np.generic, t):
-            warnings.warn('{} is treated as numpy.generic.'.format(t),
-                          RuntimeWarning, stacklevel=3)
+        assert not np.issubdtype(np.generic, t)
 
     return any(np.issubdtype(x.dtype, t) for t in numpy_types)
 
