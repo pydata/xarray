@@ -332,6 +332,8 @@ class DatasetRolling(Rolling):
         """
         super(DatasetRolling, self).__init__(obj,
                                              min_periods, center, **windows)
+        if self.dim not in self.obj.dims:
+            raise KeyError(self.dim)
         # Keep each Rolling object as an OrderedDict
         self.rollings = OrderedDict()
         for key, da in self.obj.data_vars.items():

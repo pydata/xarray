@@ -3299,7 +3299,9 @@ def test_rolling_properties(ds):
     with pytest.raises(ValueError) as exception:
         ds.rolling(time=2, min_periods=0)
     assert 'min_periods must be greater than zero' in str(exception)
-
+    with pytest.raises(KeyError) as exception:
+        ds.rolling(time2=2)
+    assert 'time2' in str(exception)
 
 @pytest.mark.parametrize('name',
                          ('sum', 'mean', 'std', 'var', 'min', 'max', 'median'))
