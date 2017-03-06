@@ -23,6 +23,10 @@ Enhancements
 ~~~~~~~~~~~~
 - ``rolling`` on Dataset is now supported (:issue:`859`).
   By `Keisuke Fujii <https://github.com/fujiisoup>`_.
+- When bottleneck version 1.1 or later is installed, use bottleneck for rolling
+  `var`, `argmin`, `argmax`, and `rank` computations. Also, `rolling.median`
+  now also accepts a `min_periods` argument (:issue:`1276`).
+  By `Joe Hamman <https://github.com/jhamman>`_.
 
 Bug fixes
 ~~~~~~~~~
