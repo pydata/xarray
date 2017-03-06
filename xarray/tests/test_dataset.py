@@ -3333,9 +3333,12 @@ def test_rolling_wrapped_bottleneck(ds, name, center, min_periods, key):
 
 
 def test_rolling_invalid_args(ds):
-    pytest.importorskip('bottleneck')
+    pytest.importorskip('bottleneck', minversion="1.0")
+    import bottleneck as bn
+    if LooseVersion(bn.__version__) >= LooseVersion('1.1'):
+        pytest.skip('rolling median accepts min_periods for bottleneck 1.1')
     with pytest.raises(ValueError) as exception:
-        ds.rolling(time=7, min_periods=1).median()
+        da.rolling(time=7, min_periods=1).median()
     assert 'Rolling.median does not' in str(exception)
 
 
