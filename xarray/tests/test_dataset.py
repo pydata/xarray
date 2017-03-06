@@ -3302,7 +3302,7 @@ def test_rolling_properties(ds):
 
 
 @pytest.mark.parametrize('name',
-                         ('sum', 'mean', 'std', 'min', 'max', 'median'))
+                         ('sum', 'mean', 'std', 'var', 'min', 'max', 'median'))
 @pytest.mark.parametrize('center', (True, False, None))
 @pytest.mark.parametrize('min_periods', (1, None))
 @pytest.mark.parametrize('key', ('z1', 'z2'))
@@ -3370,7 +3370,7 @@ def test_rolling_pandas_compat(center, window, min_periods):
 @pytest.mark.parametrize('min_periods', (None, 1, 2, 3))
 @pytest.mark.parametrize('window', (1, 2, 3, 4))
 @pytest.mark.parametrize('name',
-                         ('sum', 'mean', 'std', 'min', 'max', 'median'))
+                         ('sum', 'mean', 'std', 'var', 'min', 'max', 'median'))
 def test_rolling_reduce(ds, center, min_periods, window, name):
 
     if min_periods is not None and window < min_periods:
