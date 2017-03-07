@@ -75,6 +75,7 @@ Dataset contents
    Dataset.copy
    Dataset.assign
    Dataset.assign_coords
+   Dataset.assign_attrs
    Dataset.pipe
    Dataset.merge
    Dataset.rename
@@ -217,6 +218,7 @@ DataArray contents
    :toctree: generated/
 
    DataArray.assign_coords
+   DataArray.assign_attrs
    DataArray.pipe
    DataArray.rename
    DataArray.swap_dims
