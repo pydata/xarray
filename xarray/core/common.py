@@ -312,8 +312,10 @@ class BaseDataObject(AttrAccessMixin):
         return results
 
     def assign_coords(self, **kwargs):
-        """Assign new coordinates to this object, returning a new object
-        with all the original data in addition to the new coordinates.
+        """Assign new coordinates to this object.
+
+        Returns a new object with all the original data in addition to the new
+        coordinates.
 
         Parameters
         ----------
@@ -347,8 +349,9 @@ class BaseDataObject(AttrAccessMixin):
         return data
 
     def assign_attrs(self, *args, **kwargs):
-        """Assign new attrs to this object, returning a new object equivalent
-        to self.attrs.update(*args, **kwargs).
+        """Assign new attrs to this object.
+
+        Returns a new object equivalent to self.attrs.update(*args, **kwargs).
 
         Parameters
         ----------
