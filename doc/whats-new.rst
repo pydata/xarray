@@ -26,6 +26,10 @@ Enhancements
   now also accepts a `min_periods` argument (:issue:`1276`).
   By `Joe Hamman <https://github.com/jhamman>`_.
 
+- When `plot()` is called on a 2D DataArray and only one dimension is
+  specified with `x=` or `y=`, the other dimension is now guessed. By
+  `Vincent Noel <https://github.com/vnoel>`_.
+
 Bug fixes
 ~~~~~~~~~
 - ``rolling`` now keeps its original dimension order (:issue:`1125`).

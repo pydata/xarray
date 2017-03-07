@@ -636,17 +636,27 @@ class Common2dMixin:
         self.assertEqual('x', ax.get_ylabel())
 
     def test_positional_coord_string(self):
-        with self.assertRaisesRegexp(ValueError, 'cannot supply only one'):
-            self.plotmethod('y')
-        with self.assertRaisesRegexp(ValueError, 'cannot supply only one'):
-            self.plotmethod(y='x')
+        self.plotmethod(y='x')
+        ax = plt.gca()
+        self.assertEqual('x', ax.get_ylabel())
+        self.assertEqual('y', ax.get_xlabel())
+
+        self.plotmethod(x='x')
+        ax = plt.gca()
+        self.assertEqual('x', ax.get_xlabel())
+        self.assertEqual('y', ax.get_ylabel())
 
     def test_bad_x_string_exception(self):
-        with self.assertRaisesRegexp(ValueError, 'x and y must be coordinate'):
+        with self.assertRaisesRegexp(
+                ValueError, 'x and y must be coordinate variables'):
             self.plotmethod('not_a_real_dim', 'y')
+        with self.assertRaisesRegexp(
+                ValueError, 'x must be a dimension name if y is not supplied'):
+            self.plotmethod(x='not_a_real_dim')
+        with self.assertRaisesRegexp(
+                ValueError, 'y must be a dimension name if x is not supplied'):
+            self.plotmethod(y='not_a_real_dim')
         self.darray.coords['z'] = 100
-        with self.assertRaisesRegexp(ValueError, 'cannot supply only one'):
-            self.plotmethod('z')
 
     def test_coord_strings(self):
         # 1d coords (same as dims)
