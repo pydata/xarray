@@ -647,11 +647,14 @@ class Common2dMixin:
         self.assertEqual('y', ax.get_ylabel())
 
     def test_bad_x_string_exception(self):
-        with self.assertRaisesRegexp(ValueError, 'x and y must be coordinate variables'):
+        with self.assertRaisesRegexp(
+                ValueError, 'x and y must be coordinate variables'):
             self.plotmethod('not_a_real_dim', 'y')
-        with self.assertRaisesRegexp(ValueError, 'x must be a dimension name if y is not supplied'):
+        with self.assertRaisesRegexp(
+                ValueError, 'x must be a dimension name if y is not supplied'):
             self.plotmethod(x='not_a_real_dim')
-        with self.assertRaisesRegexp(ValueError, 'y must be a dimension name if x is not supplied'):
+        with self.assertRaisesRegexp(
+                ValueError, 'y must be a dimension name if x is not supplied'):
             self.plotmethod(y='not_a_real_dim')
         self.darray.coords['z'] = 100
 
