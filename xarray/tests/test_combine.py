@@ -268,6 +268,11 @@ class TestConcatDataArray(TestCase):
         with self.assertRaisesRegexp(ValueError, 'not a valid argument'):
             concat([foo, bar], dim='w', data_vars='minimal')
 
+        # gh-1297
+        foo.encoding = {"complevel": 5}
+        self.assertEqual(concat([foo, foo], dim="x").encoding,
+                         foo.encoding)
+
     @requires_dask
     def test_concat_lazy(self):
         import dask.array as da
