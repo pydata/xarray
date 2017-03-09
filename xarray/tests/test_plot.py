@@ -16,6 +16,7 @@ import inspect
 
 import numpy as np
 import pandas as pd
+from datetime import datetime
 
 from xarray import DataArray
 
@@ -1192,7 +1193,7 @@ class TestFacetGrid(PlotTestCase):
                                     subplot_kws=dict(projection='polar'),
                                     sharex=False, sharey=False)
 
-        
+
 class TestFacetGrid4d(PlotTestCase):
 
     def setUp(self):
@@ -1218,3 +1219,22 @@ class TestFacetGrid4d(PlotTestCase):
         # Top row should be labeled
         for label, ax in zip(self.darray.coords['col'].values, g.axes[0, :]):
             self.assertTrue(substring_in_axes(label, ax))
+
+
+class TestDatetimePlot(PlotTestCase):
+
+    def setUp(self):
+        '''
+        Create a DataArray with a time-axis that contains datetime objects.
+        '''
+        month = np.arange(1, 13, 1)
+        data = np.sin(2 * np.pi * month / 12.0)
+
+        darray = DataArray(data, dims=['time'])
+        darray.coords['time'] = np.array([datetime(2017, m, 1) for m in month])
+
+        self.darray = darray
+
+    def test_datetime_line_plot(self):
+        # test if line plot raises no Exception
+        self.darray.plot.line()
