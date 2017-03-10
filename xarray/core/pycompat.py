@@ -58,7 +58,9 @@ except ImportError:  # pragma: no cover
 try:
     from contextlib import suppress
 except ImportError:
-    # backport from Python 3.5:
+    # Backport from CPython 3.5:
+    # Used under the terms of Python's license, see licenses/PYTHON_LICENSE.
+
     class suppress:
         """Context manager to suppress specified exceptions
 

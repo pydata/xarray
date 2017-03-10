@@ -103,14 +103,15 @@ def _color_palette(cmap, n_colors):
     return pal
 
 
+# _determine_cmap_params is adapted from Seaborn:
+# https://github.com/mwaskom/seaborn/blob/v0.6/seaborn/matrix.py#L158
+# Used under the terms of Seaborn's license, see licenses/SEABORN_LICENSE.
+
 def _determine_cmap_params(plot_data, vmin=None, vmax=None, cmap=None,
                            center=None, robust=False, extend=None,
                            levels=None, filled=True, norm=None):
     """
     Use some heuristics to set good defaults for colorbar and range.
-
-    Adapted from Seaborn:
-    https://github.com/mwaskom/seaborn/blob/v0.6/seaborn/matrix.py#L158
 
     Parameters
     ==========
