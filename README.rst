@@ -110,7 +110,7 @@ __ http://climate.com/
 License
 -------
 
-Copyright 2014-2016, xarray Developers
+Copyright 2014-2017, xarray Developers
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -124,5 +124,13 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 
-xarray includes portions of pandas, NumPy, Seaborn and Python itself. These
-licenses are included in the licenses directory.
+xarray bundles portions of pandas, NumPy and Seaborn, all of which are available
+under a "3-clause BSD" license:
+- pandas: setup.py
+- NumPy: xarray/core/npcompat.py
+- Seaborn: _determine_cmap_params in xarray/core/plot/utils.py
+
+xarray also bundles portions of CPython, which is available under the "Python
+Software Foundation License" in xarray/core/pycompat.py.
+
+The full text of these licenses are included in the licenses directory.
