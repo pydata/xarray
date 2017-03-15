@@ -47,8 +47,7 @@ The :py:class:`~xarray.DataArray` constructor takes:
 - ``data``: a multi-dimensional array of values (e.g., a numpy ndarray,
   :py:class:`~pandas.Series`, :py:class:`~pandas.DataFrame` or :py:class:`~pandas.Panel`)
 - ``coords``: a list or dictionary of coordinates
-- ``dims``: a list of dimension names. If omitted, dimension names are
-  taken from ``coords`` if possible.
+- ``dims``: a list of dimension names.
 - ``attrs``: a dictionary of attributes to add to the instance
 - ``name``: a string that names the instance
 
