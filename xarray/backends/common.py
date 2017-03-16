@@ -6,7 +6,7 @@ import logging
 import time
 import traceback
 from collections import Mapping
-from distutils.version import StrictVersion
+from distutils.version import LooseVersion
 
 from ..conventions import cf_encoder
 from ..core.utils import FrozenOrderedDict
@@ -164,7 +164,7 @@ class ArrayWriter(object):
         if self.sources:
             import dask.array as da
             import dask
-            if StrictVersion(dask.__version__) > StrictVersion('0.8.1'):
+            if LooseVersion(dask.__version__) > LooseVersion('0.8.1'):
                 da.store(self.sources, self.targets, lock=GLOBAL_LOCK)
             else:
                 da.store(self.sources, self.targets)
