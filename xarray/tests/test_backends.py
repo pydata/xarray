@@ -120,9 +120,24 @@ class DatasetIOTestCases(object):
             actual = xr.decode_cf(store)
             self.assertDatasetAllClose(expected, actual)
 
+    def check_dtypes_roundtripped(self, expected, actual):
+        for k in expected:
+            expected_dtype = expected.variables[k].dtype
+            if (isinstance(self, Only32BitTypes) and
+                    expected_dtype == 'int64'):
+                # downcast
+                expected_dtype = np.dtype('int32')
+            actual_dtype = actual.variables[k].dtype
+            # TODO: check expected behavior for string dtypes more carefully
+            string_kinds = {'O', 'S', 'U'}
+            assert (expected_dtype == actual_dtype or
+                    (expected_dtype.kind in string_kinds and
+                     actual_dtype.kind in string_kinds))
+
     def test_roundtrip_test_data(self):
         expected = create_test_data()
         with self.roundtrip(expected) as actual:
+            self.check_dtypes_roundtripped(expected, actual)
             self.assertDatasetAllClose(expected, actual)
 
     def test_load(self):
