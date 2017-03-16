@@ -3,7 +3,7 @@ from __future__ import division
 from __future__ import print_function
 import gzip
 import os.path
-from distutils.version import StrictVersion
+from distutils.version import LooseVersion
 from glob import glob
 from io import BytesIO
 from numbers import Number
@@ -230,7 +230,7 @@ def open_dataset(filename_or_obj, group=None, decode_cf=True,
             except ImportError:
                 # raise the usual error if dask is entirely missing
                 import dask
-                if StrictVersion(dask.__version__) < StrictVersion('0.6'):
+                if LooseVersion(dask.__version__) < LooseVersion('0.6'):
                     raise ImportError(
                         'xarray requires dask version 0.6 or newer')
                 else:
