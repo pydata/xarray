@@ -22,7 +22,7 @@ from xarray import (Dataset, DataArray, open_dataset, open_dataarray,
 from xarray.backends.common import robust_getitem
 from xarray.backends.netCDF4_ import _extract_nc4_variable_encoding
 from xarray.core import indexing
-from xarray.core.pycompat import iteritems, PY2, PY3
+from xarray.core.pycompat import iteritems, PY2, PY3, ExitStack
 
 from . import (TestCase, requires_scipy, requires_netCDF4, requires_pydap,
                requires_scipy_or_netCDF4, requires_dask, requires_h5netcdf,
@@ -98,6 +98,8 @@ class Only32BitTypes(object):
 
 
 class DatasetIOTestCases(object):
+    autoclose = False
+
     def create_store(self):
         raise NotImplementedError
 
@@ -347,8 +349,10 @@ class CFEncodedDataTest(DatasetIOTestCases):
             # variables
             expected['x'][-1] = ''
         elif (isinstance(self, (NetCDF3ViaNetCDF4DataTest,
-                                NetCDF4ClassicViaNetCDF4DataTest)) or
-              (has_netCDF4 and type(self) is GenericNetCDFDataTest)):
+                                NetCDF4ClassicViaNetCDF4DataTest))
+              or (has_netCDF4 and
+                  (type(self) is GenericNetCDFDataTest or
+                   type(self) is GenericNetCDFDataTestAutocloseTrue))):
             # netCDF4 can't keep track of an empty _FillValue for nc3, either:
             # https://github.com/Unidata/netcdf4-python/issues/273
             expected['x'][-1] = np.string_('')
@@ -506,6 +510,16 @@ def create_tmp_file(suffix='.nc', allow_cleanup_failure=False):
         except OSError:
             if not allow_cleanup_failure:
                 raise
+
+
+@contextlib.contextmanager
+def create_tmp_files(nfiles, suffix='.nc', allow_cleanup_failure=False):
+    with ExitStack() as stack:
+        files = [stack.enter_context(create_tmp_file(suffix,
+                                                     allow_cleanup_failure))
+                 for apath in np.arange(nfiles)]
+        yield files
+
 
 @requires_netCDF4
 class BaseNetCDF4Test(CFEncodedDataTest):
@@ -708,6 +722,7 @@ class BaseNetCDF4Test(CFEncodedDataTest):
 
 @requires_netCDF4
 class NetCDF4DataTest(BaseNetCDF4Test, TestCase):
+    autoclose = False
 
     @contextlib.contextmanager
     def create_store(self):
@@ -721,7 +736,8 @@ class NetCDF4DataTest(BaseNetCDF4Test, TestCase):
         with create_tmp_file(
                 allow_cleanup_failure=allow_cleanup_failure) as tmp_file:
             data.to_netcdf(tmp_file, **save_kwargs)
-            with open_dataset(tmp_file, **open_kwargs) as ds:
+            with open_dataset(tmp_file,
+                              autoclose=self.autoclose, **open_kwargs) as ds:
                 yield ds
 
     def test_variable_order(self):
@@ -753,6 +769,10 @@ class NetCDF4DataTest(BaseNetCDF4Test, TestCase):
                 self.assertIn('first by calling .load', str(err))
 
 
+class NetCDF4DataStoreAutocloseTrue(NetCDF4DataTest):
+    autoclose = True
+
+
 @requires_netCDF4
 @requires_dask
 class NetCDF4ViaDaskDataTest(NetCDF4DataTest):
@@ -774,6 +794,10 @@ class NetCDF4ViaDaskDataTest(NetCDF4DataTest):
         pass
 
 
+class NetCDF4ViaDaskDataTestAutocloseTrue(NetCDF4ViaDaskDataTest):
+    autoclose = True
+
+
 @requires_scipy
 class ScipyInMemoryDataTest(CFEncodedDataTest, Only32BitTypes, TestCase):
     @contextlib.contextmanager
@@ -785,16 +809,21 @@ class ScipyInMemoryDataTest(CFEncodedDataTest, Only32BitTypes, TestCase):
     def roundtrip(self, data, save_kwargs={}, open_kwargs={},
                   allow_cleanup_failure=False):
         serialized = data.to_netcdf(**save_kwargs)
-        with open_dataset(serialized, engine='scipy', **open_kwargs) as ds:
+        with open_dataset(serialized, engine='scipy',
+                          autoclose=self.autoclose, **open_kwargs) as ds:
             yield ds
 
     @pytest.mark.skipif(PY2, reason='cannot pickle BytesIO on Python 2')
     def test_bytesio_pickle(self):
         data = Dataset({'foo': ('x', [1, 2, 3])})
         fobj = BytesIO(data.to_netcdf())
-        with open_dataset(fobj) as ds:
+        with open_dataset(fobj, autoclose=self.autoclose) as ds:
             unpickled = pickle.loads(pickle.dumps(ds))
             self.assertDatasetIdentical(unpickled, data)
+
+
+class ScipyInMemoryDataTestAutocloseTrue(ScipyInMemoryDataTest):
+    autoclose = True
 
 
 @requires_scipy
@@ -811,7 +840,8 @@ class ScipyOnDiskDataTest(CFEncodedDataTest, Only32BitTypes, TestCase):
         with create_tmp_file(
                 allow_cleanup_failure=allow_cleanup_failure) as tmp_file:
             data.to_netcdf(tmp_file, engine='scipy', **save_kwargs)
-            with open_dataset(tmp_file, engine='scipy', **open_kwargs) as ds:
+            with open_dataset(tmp_file, engine='scipy',
+                              autoclose=self.autoclose, **open_kwargs) as ds:
                 yield ds
 
     def test_array_attrs(self):
@@ -837,6 +867,10 @@ class ScipyOnDiskDataTest(CFEncodedDataTest, Only32BitTypes, TestCase):
             self.assertTrue(var.dtype.isnative)
 
 
+class ScipyOnDiskDataTestAutocloseTrue(ScipyOnDiskDataTest):
+    autoclose = True
+
+
 @requires_netCDF4
 class NetCDF3ViaNetCDF4DataTest(CFEncodedDataTest, Only32BitTypes, TestCase):
     @contextlib.contextmanager
@@ -853,8 +887,13 @@ class NetCDF3ViaNetCDF4DataTest(CFEncodedDataTest, Only32BitTypes, TestCase):
                 allow_cleanup_failure=allow_cleanup_failure) as tmp_file:
             data.to_netcdf(tmp_file, format='NETCDF3_CLASSIC',
                            engine='netcdf4', **save_kwargs)
-            with open_dataset(tmp_file, engine='netcdf4', **open_kwargs) as ds:
+            with open_dataset(tmp_file, engine='netcdf4',
+                              autoclose=self.autoclose, **open_kwargs) as ds:
                 yield ds
+
+
+class NetCDF3ViaNetCDF4DataTestAutocloseTrue(NetCDF3ViaNetCDF4DataTest):
+    autoclose = True
 
 
 @requires_netCDF4
@@ -874,8 +913,14 @@ class NetCDF4ClassicViaNetCDF4DataTest(CFEncodedDataTest, Only32BitTypes,
                 allow_cleanup_failure=allow_cleanup_failure) as tmp_file:
             data.to_netcdf(tmp_file, format='NETCDF4_CLASSIC',
                            engine='netcdf4', **save_kwargs)
-            with open_dataset(tmp_file, engine='netcdf4', **open_kwargs) as ds:
+            with open_dataset(tmp_file, engine='netcdf4',
+                              autoclose=self.autoclose, **open_kwargs) as ds:
                 yield ds
+
+
+class NetCDF4ClassicViaNetCDF4DataTestAutocloseTrue(
+        NetCDF4ClassicViaNetCDF4DataTest):
+    autoclose = True
 
 
 @requires_scipy_or_netCDF4
@@ -893,7 +938,8 @@ class GenericNetCDFDataTest(CFEncodedDataTest, Only32BitTypes, TestCase):
         with create_tmp_file(
                 allow_cleanup_failure=allow_cleanup_failure) as tmp_file:
             data.to_netcdf(tmp_file, format='netcdf3_64bit', **save_kwargs)
-            with open_dataset(tmp_file, **open_kwargs) as ds:
+            with open_dataset(tmp_file,
+                              autoclose=self.autoclose, **open_kwargs) as ds:
                 yield ds
 
     def test_engine(self):
@@ -947,6 +993,10 @@ class GenericNetCDFDataTest(CFEncodedDataTest, Only32BitTypes, TestCase):
             self.assertDatasetEqual(ds, actual)
 
 
+class GenericNetCDFDataTestAutocloseTrue(GenericNetCDFDataTest):
+    autoclose = True
+
+
 @requires_h5netcdf
 @requires_netCDF4
 class H5NetCDFDataTest(BaseNetCDF4Test, TestCase):
@@ -961,7 +1011,8 @@ class H5NetCDFDataTest(BaseNetCDF4Test, TestCase):
         with create_tmp_file(
                 allow_cleanup_failure=allow_cleanup_failure) as tmp_file:
             data.to_netcdf(tmp_file, engine='h5netcdf', **save_kwargs)
-            with open_dataset(tmp_file, engine='h5netcdf', **open_kwargs) as ds:
+            with open_dataset(tmp_file, engine='h5netcdf',
+                              autoclose=self.autoclose, **open_kwargs) as ds:
                 yield ds
 
     def test_orthogonal_indexing(self):
@@ -1007,6 +1058,80 @@ class H5NetCDFDataTest(BaseNetCDF4Test, TestCase):
             with pytest.warns(UserWarning):
                 ds.to_netcdf(tmp_file, engine='h5netcdf', unlimited_dims=['y'])
 
+# tests pending h5netcdf fix
+# class H5NetCDFDataTestAutocloseTrue(H5NetCDFDataTest):
+#     autoclose = True
+
+
+class OpenMFDatasetManyFilesTest(TestCase):
+    def validate_open_mfdataset_autoclose(self, engine, nfiles=10):
+        randdata = np.random.randn(nfiles)
+        original = Dataset({'foo': ('x', randdata)})
+        # test standard open_mfdataset approach with too many files
+        with create_tmp_files(nfiles) as tmpfiles:
+            for readengine in engine:
+                writeengine = \
+                        readengine if readengine != 'pynio' else 'netcdf4'
+                # split into multiple sets of temp files
+                for ii in original.x.values:
+                    subds = original.isel(x=slice(ii, ii+1))
+                    subds.to_netcdf(tmpfiles[ii], engine=writeengine)
+
+                # check that calculation on opened datasets works properly
+                ds = open_mfdataset(tmpfiles, engine=readengine,
+                                    autoclose=True)
+                self.assertAllClose(ds.x.sum().values, (nfiles*(nfiles-1))/2)
+                self.assertAllClose(ds.foo.sum().values, np.sum(randdata))
+                self.assertAllClose(ds.sum().foo.values, np.sum(randdata))
+                ds.close()
+
+    def validate_open_mfdataset_large_num_files(self, engine):
+        self.validate_open_mfdataset_autoclose(engine, nfiles=2000)
+
+    @requires_dask
+    @requires_netCDF4
+    def test_1_autoclose_netcdf4(self):
+        self.validate_open_mfdataset_autoclose(engine=['netcdf4'])
+
+    @requires_dask
+    @requires_scipy
+    def test_2_autoclose_scipy(self):
+        self.validate_open_mfdataset_autoclose(engine=['scipy'])
+
+    @requires_dask
+    @requires_pynio
+    def test_3_autoclose_pynio(self):
+        self.validate_open_mfdataset_autoclose(engine=['pynio'])
+
+    # use of autoclose=True with h5netcdf broken because of
+    # probable h5netcdf error, uncomment when fixed to test
+    # @requires_dask
+    # @requires_h5netcdf
+    # def test_4_autoclose_h5netcdf(self):
+    #     self.validate_open_mfdataset_autoclose(engine=['h5netcdf'])
+
+    @requires_dask
+    @requires_netCDF4
+    def test_1_open_large_num_files_netcdf4(self):
+        self.validate_open_mfdataset_large_num_files(engine=['netcdf4'])
+
+    @requires_dask
+    @requires_scipy
+    def test_2_open_large_num_files_scipy(self):
+        self.validate_open_mfdataset_large_num_files(engine=['scipy'])
+
+    @requires_dask
+    @requires_pynio
+    def test_3_open_large_num_files_pynio(self):
+        self.validate_open_mfdataset_large_num_files(engine=['pynio'])
+
+    # use of autoclose=True with h5netcdf broken because of
+    # probable h5netcdf error, uncomment when fixed to test
+    # @requires_dask
+    # @requires_h5netcdf
+    # def test_4_open_large_num_files_h5netcdf(self):
+    #     self.validate_open_mfdataset_large_num_files(engine=['h5netcdf'])
+
 
 @requires_dask
 @requires_scipy
@@ -1045,17 +1170,19 @@ class DaskTest(TestCase, DatasetIOTestCases):
             with create_tmp_file() as tmp2:
                 original.isel(x=slice(5)).to_netcdf(tmp1)
                 original.isel(x=slice(5, 10)).to_netcdf(tmp2)
-                with open_mfdataset([tmp1, tmp2]) as actual:
+                with open_mfdataset([tmp1, tmp2],
+                                    autoclose=self.autoclose) as actual:
                     self.assertIsInstance(actual.foo.variable.data, da.Array)
                     self.assertEqual(actual.foo.variable.data.chunks,
                                      ((5, 5),))
                     self.assertDatasetAllClose(original, actual)
-                with open_mfdataset([tmp1, tmp2], chunks={'x': 3}) as actual:
+                with open_mfdataset([tmp1, tmp2], chunks={'x': 3},
+                                    autoclose=self.autoclose) as actual:
                     self.assertEqual(actual.foo.variable.data.chunks,
                                      ((3, 2, 3, 2),))
 
         with self.assertRaisesRegexp(IOError, 'no files to open'):
-            open_mfdataset('foo-bar-baz-*.nc')
+            open_mfdataset('foo-bar-baz-*.nc', autoclose=self.autoclose)
 
     def test_preprocess_mfdataset(self):
         original = Dataset({'foo': ('x', np.random.randn(10))})
@@ -1066,7 +1193,8 @@ class DaskTest(TestCase, DatasetIOTestCases):
                 return ds.assign_coords(z=0)
 
             expected = preprocess(original)
-            with open_mfdataset(tmp, preprocess=preprocess) as actual:
+            with open_mfdataset(tmp, preprocess=preprocess,
+                                autoclose=self.autoclose) as actual:
                 self.assertDatasetIdentical(expected, actual)
 
     def test_save_mfdataset_roundtrip(self):
@@ -1076,7 +1204,8 @@ class DaskTest(TestCase, DatasetIOTestCases):
         with create_tmp_file() as tmp1:
             with create_tmp_file() as tmp2:
                 save_mfdataset(datasets, [tmp1, tmp2])
-                with open_mfdataset([tmp1, tmp2]) as actual:
+                with open_mfdataset([tmp1, tmp2],
+                                    autoclose=self.autoclose) as actual:
                     self.assertDatasetIdentical(actual, original)
 
     def test_save_mfdataset_invalid(self):
@@ -1090,7 +1219,7 @@ class DaskTest(TestCase, DatasetIOTestCases):
         original = Dataset({'foo': ('x', np.random.randn(10))})
         with create_tmp_file() as tmp:
             original.to_netcdf(tmp)
-            with open_mfdataset(tmp) as ds:
+            with open_mfdataset(tmp, autoclose=self.autoclose) as ds:
                 actual = 1.0 * ds
                 self.assertDatasetAllClose(original, actual)
 
@@ -1100,7 +1229,8 @@ class DaskTest(TestCase, DatasetIOTestCases):
                 data = Dataset({'x': 0})
                 data.to_netcdf(tmp1)
                 Dataset({'x': np.nan}).to_netcdf(tmp2)
-                with open_mfdataset([tmp1, tmp2], concat_dim=None) as actual:
+                with open_mfdataset([tmp1, tmp2], concat_dim=None,
+                                    autoclose=self.autoclose) as actual:
                     self.assertDatasetIdentical(data, actual)
 
     def test_open_dataset(self):
@@ -1133,10 +1263,10 @@ class DaskTest(TestCase, DatasetIOTestCases):
         with create_tmp_file() as tmp:
             data = create_test_data()
             data.to_netcdf(tmp)
-            with open_mfdataset(tmp) as ds:
+            with open_mfdataset(tmp, autoclose=self.autoclose) as ds:
                 original_names = dict((k, v.data.name)
                                       for k, v in ds.data_vars.items())
-            with open_mfdataset(tmp) as ds:
+            with open_mfdataset(tmp, autoclose=self.autoclose) as ds:
                 repeat_names = dict((k, v.data.name)
                                     for k, v in ds.data_vars.items())
             for var_name, dask_name in original_names.items():
@@ -1153,6 +1283,10 @@ class DaskTest(TestCase, DatasetIOTestCases):
         self.assertFalse(actual._in_memory)
         self.assertTrue(computed._in_memory)
         self.assertDataArrayAllClose(actual, computed)
+
+
+class DaskTestAutocloseTrue(DaskTest):
+    autoclose = True
 
 
 @requires_scipy_or_netCDF4
@@ -1212,7 +1346,8 @@ class TestPyNio(CFEncodedDataTest, Only32BitTypes, TestCase):
         with create_tmp_file(
                 allow_cleanup_failure=allow_cleanup_failure) as tmp_file:
             data.to_netcdf(tmp_file, engine='scipy', **save_kwargs)
-            with open_dataset(tmp_file, engine='pynio', **open_kwargs) as ds:
+            with open_dataset(tmp_file, engine='pynio',
+                              autoclose=self.autoclose, **open_kwargs) as ds:
                 yield ds
 
     def test_weakrefs(self):
@@ -1225,6 +1360,10 @@ class TestPyNio(CFEncodedDataTest, Only32BitTypes, TestCase):
             actual = on_disk.rename({'foo': 'bar', 'x': 'y'})
             del on_disk  # trigger garbage collection
             self.assertDatasetIdentical(actual, expected)
+
+
+class TestPyNioAutocloseTrue(TestPyNio):
+    autoclose = True
 
 
 class TestEncodingInvalid(TestCase):

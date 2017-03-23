@@ -9,11 +9,13 @@ import numpy as np
 from .. import Variable
 from ..conventions import pop_to
 from ..core import indexing
-from ..core.utils import (FrozenOrderedDict, NDArrayMixin,
-                          close_on_error, is_remote_uri)
+from ..core.utils import (FrozenOrderedDict, NdimSizeLenMixin,
+                          DunderArrayMixin, close_on_error,
+                          is_remote_uri)
 from ..core.pycompat import iteritems, basestring, OrderedDict, PY3
 
-from .common import WritableCFDataStore, robust_getitem, DataStorePickleMixin
+from .common import (WritableCFDataStore, robust_getitem,
+                     DataStorePickleMixin, find_root)
 from .netcdf3 import (encode_nc3_attr_value, encode_nc3_variable,
                       maybe_convert_to_char_array)
 
@@ -25,24 +27,25 @@ _endian_lookup = {'=': 'native',
                   '|': 'native'}
 
 
-class BaseNetCDF4Array(NDArrayMixin):
+class BaseNetCDF4Array(NdimSizeLenMixin, DunderArrayMixin):
     def __init__(self, variable_name, datastore):
         self.datastore = datastore
         self.variable_name = variable_name
 
-    @property
-    def array(self):
-        return self.datastore.ds.variables[self.variable_name]
+        array = self.get_array()
+        self.shape = array.shape
 
-    @property
-    def dtype(self):
-        dtype = self.array.dtype
+        dtype = array.dtype
         if dtype is str:
-            # return object dtype because that's the only way in numpy to
+            # use object dtype because that's the only way in numpy to
             # represent variable length strings; it also prevents automatic
             # string concatenation via conventions.decode_cf_variable
             dtype = np.dtype('O')
-        return dtype
+        self.dtype = dtype
+
+    def get_array(self):
+        self.datastore.assert_open()
+        return self.datastore.ds.variables[self.variable_name]
 
 
 class NetCDF4ArrayWrapper(BaseNetCDF4Array):
@@ -52,19 +55,20 @@ class NetCDF4ArrayWrapper(BaseNetCDF4Array):
         else:
             getitem = operator.getitem
 
-        try:
-            data = getitem(self.array, key)
-        except IndexError:
-            # Catch IndexError in netCDF4 and return a more informative error
-            # message.  This is most often called when an unsorted indexer is
-            # used before the data is loaded from disk.
-            msg = ('The indexing operation you are attempting to perform is '
-                   'not valid on netCDF4.Variable object. Try loading your '
-                   'data into memory first by calling .load().')
-            if not PY3:
-                import traceback
-                msg += '\n\nOriginal traceback:\n' + traceback.format_exc()
-            raise IndexError(msg)
+        with self.datastore.ensure_open(autoclose=True):
+            try:
+                data = getitem(self.get_array(), key)
+            except IndexError:
+                # Catch IndexError in netCDF4 and return a more informative
+                # error message.  This is most often called when an unsorted
+                # indexer is used before the data is loaded from disk.
+                msg = ('The indexing operation you are attempting to perform '
+                       'is not valid on netCDF4.Variable object. Try loading '
+                       'your data into memory first by calling .load().')
+                if not PY3:
+                    import traceback
+                    msg += '\n\nOriginal traceback:\n' + traceback.format_exc()
+                raise IndexError(msg)
 
         if self.ndim == 0:
             # work around for netCDF4-python's broken handling of 0-d
@@ -195,7 +199,8 @@ class NetCDF4DataStore(WritableCFDataStore, DataStorePickleMixin):
     This store supports NetCDF3, NetCDF4 and OpenDAP datasets.
     """
     def __init__(self, filename, mode='r', format='NETCDF4', group=None,
-                 writer=None, clobber=True, diskless=False, persist=False):
+                 writer=None, clobber=True, diskless=False, persist=False,
+                 autoclose=False):
         if format is None:
             format = 'NETCDF4'
         opener = functools.partial(_open_netcdf4_group, filename, mode=mode,
@@ -203,66 +208,84 @@ class NetCDF4DataStore(WritableCFDataStore, DataStorePickleMixin):
                                    diskless=diskless, persist=persist,
                                    format=format)
         self.ds = opener()
+        self._autoclose = autoclose
+        self._isopen = True
         self.format = format
         self.is_remote = is_remote_uri(filename)
-        self._opener = opener
         self._filename = filename
         self._mode = 'a' if mode == 'w' else mode
+        self._opener = functools.partial(opener, mode=self._mode)
         super(NetCDF4DataStore, self).__init__(writer)
 
     def open_store_variable(self, name, var):
-        dimensions = var.dimensions
-        data = indexing.LazilyIndexedArray(NetCDF4ArrayWrapper(name, self))
-        attributes = OrderedDict((k, var.getncattr(k))
-                                 for k in var.ncattrs())
-        _ensure_fill_value_valid(data, attributes)
-        # netCDF4 specific encoding; save _FillValue for later
-        encoding = {}
-        filters = var.filters()
-        if filters is not None:
-            encoding.update(filters)
-        chunking = var.chunking()
-        if chunking is not None:
-            if chunking == 'contiguous':
-                encoding['contiguous'] = True
-                encoding['chunksizes'] = None
-            else:
-                encoding['contiguous'] = False
-                encoding['chunksizes'] = tuple(chunking)
-        # TODO: figure out how to round-trip "endian-ness" without raising
-        # warnings from netCDF4
-        # encoding['endian'] = var.endian()
-        pop_to(attributes, encoding, 'least_significant_digit')
-        # save source so __repr__ can detect if it's local or not
-        encoding['source'] = self._filename
-        encoding['original_shape'] = var.shape
+        with self.ensure_open(autoclose=False):
+            dimensions = var.dimensions
+            data = indexing.LazilyIndexedArray(NetCDF4ArrayWrapper(name, self))
+            attributes = OrderedDict((k, var.getncattr(k))
+                                     for k in var.ncattrs())
+            _ensure_fill_value_valid(data, attributes)
+            # netCDF4 specific encoding; save _FillValue for later
+            encoding = {}
+            filters = var.filters()
+            if filters is not None:
+                encoding.update(filters)
+            chunking = var.chunking()
+            if chunking is not None:
+                if chunking == 'contiguous':
+                    encoding['contiguous'] = True
+                    encoding['chunksizes'] = None
+                else:
+                    encoding['contiguous'] = False
+                    encoding['chunksizes'] = tuple(chunking)
+            # TODO: figure out how to round-trip "endian-ness" without raising
+            # warnings from netCDF4
+            # encoding['endian'] = var.endian()
+            pop_to(attributes, encoding, 'least_significant_digit')
+            # save source so __repr__ can detect if it's local or not
+            encoding['source'] = self._filename
+            encoding['original_shape'] = var.shape
+
         return Variable(dimensions, data, attributes, encoding)
 
     def get_variables(self):
-        return FrozenOrderedDict((k, self.open_store_variable(k, v))
-                                 for k, v in iteritems(self.ds.variables))
+        with self.ensure_open(autoclose=False):
+            dsvars = FrozenOrderedDict((k, self.open_store_variable(k, v))
+                                       for k, v in
+                                       iteritems(self.ds.variables))
+        return dsvars
 
     def get_attrs(self):
-        return FrozenOrderedDict((k, self.ds.getncattr(k))
-                                 for k in self.ds.ncattrs())
+        with self.ensure_open(autoclose=True):
+            attrs = FrozenOrderedDict((k, self.ds.getncattr(k))
+                                      for k in self.ds.ncattrs())
+        return attrs
 
     def get_dimensions(self):
-        return FrozenOrderedDict((k, len(v))
-                                 for k, v in iteritems(self.ds.dimensions))
+        with self.ensure_open(autoclose=True):
+            dims = FrozenOrderedDict((k, len(v))
+                                     for k, v in iteritems(self.ds.dimensions))
+        return dims
 
     def get_encoding(self):
-        encoding = {}
-        encoding['unlimited_dims'] = {
-            k for k, v in self.ds.dimensions.items() if v.isunlimited()}
+        with self.ensure_open(autoclose=True):
+            encoding = {}
+            encoding['unlimited_dims'] = {
+                k for k, v in self.ds.dimensions.items() if v.isunlimited()}
         return encoding
 
     def set_dimension(self, name, length):
-        self.ds.createDimension(name, size=length)
+        with self.ensure_open(autoclose=False):
+            self.ds.createDimension(name, size=length)
 
     def set_attribute(self, key, value):
-        if self.format != 'NETCDF4':
-            value = encode_nc3_attr_value(value)
-        self.ds.setncattr(key, value)
+        with self.ensure_open(autoclose=False):
+            if self.format != 'NETCDF4':
+                value = encode_nc3_attr_value(value)
+            self.ds.setncattr(key, value)
+
+    def set_variables(self, *args, **kwargs):
+        with self.ensure_open(autoclose=False):
+            super(NetCDF4DataStore, self).set_variables(*args, **kwargs)
 
     def prepare_variable(self, name, variable, check_encoding=False,
                          unlimited_dims=None):
@@ -305,15 +328,18 @@ class NetCDF4DataStore(WritableCFDataStore, DataStorePickleMixin):
             # set attributes one-by-one since netCDF4<1.0.10 can't handle
             # OrderedDict as the input to setncatts
             nc4_var.setncattr(k, v)
+
         return nc4_var, variable.data
 
     def sync(self):
-        super(NetCDF4DataStore, self).sync()
-        self.ds.sync()
+        with self.ensure_open(autoclose=True):
+            super(NetCDF4DataStore, self).sync()
+            self.ds.sync()
 
     def close(self):
-        ds = self.ds
-        # netCDF4 only allows closing the root group
-        while ds.parent is not None:
-            ds = ds.parent
-        ds.close()
+        if self._isopen:
+            # netCDF4 only allows closing the root group
+            ds = find_root(self.ds)
+            if ds._isopen:
+                ds.close()
+            self._isopen = False
