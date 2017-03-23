@@ -52,19 +52,7 @@ class NetCDF4ArrayWrapper(BaseNetCDF4Array):
         else:
             getitem = operator.getitem
 
-        try:
-            data = getitem(self.array, key)
-        except IndexError:
-            # Catch IndexError in netCDF4 and return a more informative error
-            # message.  This is most often called when an unsorted indexer is
-            # used before the data is loaded from disk.
-            msg = ('The indexing operation you are attempting to perform is '
-                   'not valid on netCDF4.Variable object. Try loading your '
-                   'data into memory first by calling .load().')
-            if not PY3:
-                import traceback
-                msg += '\n\nOriginal traceback:\n' + traceback.format_exc()
-            raise IndexError(msg)
+        data = getitem(self.array, key)
 
         if self.ndim == 0:
             # work around for netCDF4-python's broken handling of 0-d
