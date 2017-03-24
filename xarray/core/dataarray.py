@@ -840,6 +840,67 @@ class DataArray(AbstractArray, BaseDataObject):
         ds = self._to_temp_dataset().swap_dims(dims_dict)
         return self._from_temp_dataset(ds)
 
+    def expand_dims(self, dim=None, axis=None):
+        """Return a new object with an additional axis (or axes) inserted at the
+        corresponding position in the array shape.
+
+        Parameters
+        ----------
+        dim : str, (list, tuple) of strs, or None
+            Name(s) of new dimension.
+            If a list (or tuple) of strings is passed, multiple axes are
+            inserted. In this case, axis argument should be None or same length
+            of integers indicating new axes positions.
+        axis : integer, list (or tuple) of integers or None
+            Axis position(s) where new axis is to be inserted (position(s) on
+            the result array). If a list (or tuple) of integers is passed,
+            multiple axes are inserted. In this case, dim arguments should be
+            None or same length list. If None is passed, all the axis will be
+            inserted to the start of the result array.
+
+        Returns
+        -------
+        expanded : same type as caller
+            This object, but with an additional dimension.
+
+        Raises
+        -------
+        ValueError:
+               If the length of axis and dim are different.
+               If the axis is a list containing identical integers
+               If axis is invalid (larger than the original dimension+1)
+        """
+        # Some error checking
+        if axis is None and dim is None:
+            raise ValueError('At least one of axis or dim should be specified\
+            in expand_dims')
+        if dim is not None:
+            if isinstance(dim, str):
+                dim = [dim]
+            # Make sure user does not do `expand_dims(0)`
+            if not isinstance(dim, (list, tuple)):
+                raise TypeError('dim should be str or list of str or tuple of \
+                                 str')
+            # Make sure the length of axis and dims are identical
+            if isinstance(axis, int) and len(dim) == 1 or len(dim) != len(axis):
+                raise TypeError('lengths of dim and axis should be identical.')
+            # make sure any of dim does not already exist
+            for d in dim:
+                if d in self.dims:
+                    raise ValueError('{dim} already exists.'.format(dim=d))
+
+        if axis is None:
+            axis = list(range(len(dim)))
+        # make sure there is no duplicate in axis
+        if len(axis) != len(set(axis)):
+            raise ValueError('axis should not contain same values.')
+        # sort dim and axis, so that axis is in order.
+        axis, dim = zip(*sorted(zip(axis, dim)))
+        new_shape = self.shape
+        for a in axis:
+            new_shape.insert(a, 1)
+
+
     def set_index(self, append=False, inplace=False, **indexes):
         """Set DataArray (multi-)indexes using one or more existing coordinates.
 

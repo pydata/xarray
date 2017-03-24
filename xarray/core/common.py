@@ -291,6 +291,48 @@ class BaseDataObject(AttrAccessMixin):
         dims = get_squeeze_dims(self, dim)
         return self.isel(drop=drop, **{d: 0 for d in dims})
 
+    def expand_dims(self, dim=None, axis=None):
+        """Return a new object with an additional axis (or axes) inserted at the
+        corresponding position in the array shape.
+
+        Parameters
+        ----------
+        dim : str, (list or tuple) of strs, or None
+            Name(s) of new dimension.
+            If a list (or tuple) of strings is passed, multiple axes are
+            inserted. In this case, axis argument should be None or same length
+            of integers indicating new axes positions.
+        axis : integer, list (or tuple) of integers or None
+            Axis position(s) where new axis is to be inserted (position(s) on
+            the result array). If a list (or tuple) of integers is passed,
+            multiple axes are inserted. In this case, dim arguments should be
+            None or same length list. If None is passed, all the axis will be
+            inserted to the start of the result array.
+
+        Returns
+        -------
+        expanded : same type as caller
+            This object, but with an additional dimension.
+
+        Raises
+        -------
+        ValueError:
+               If the length of axis and dim are different.
+               If the axis is a list containing identical integers
+               If axis is invalid (larger than the original dimension+1)
+        """
+        # Some error checking
+        if axis is None and dim is None:
+            raise ValueError('At least one of axis or dim should be specified\
+            in expand_dims')
+        # Make sure user does not do `expand_dims(0)`
+        if dim is not None and not isinstance(dim, (str, list, tuple)):
+            raise TypeError('dim should be str or list of str or tuple of str')
+
+        if axis is None:
+            axis = list(range(len(dim)))
+
+
     def get_index(self, key):
         """Get an index for a dimension, with fall-back to a default RangeIndex
         """
