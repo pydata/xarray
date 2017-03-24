@@ -644,7 +644,7 @@ class TestVariable(TestCase, VariableSubclassTestCases):
         array([[1, 2, 3],
                [4, 5, 6]])
         Attributes:
-            foo: bar
+            foo:      bar
         """).strip()
         self.assertEqual(expected, repr(v))
 
