@@ -259,7 +259,7 @@ _REDUCE_DOCSTRING_TEMPLATE = \
         """
 
 _ROLLING_REDUCE_DOCSTRING_TEMPLATE = \
-        """Reduce this DataArrayRolling's data windows by applying `{name}`
+        """Reduce this {da_or_ds}'s data windows by applying `{name}`
         along its dimension.
 
         Parameters
@@ -269,8 +269,8 @@ _ROLLING_REDUCE_DOCSTRING_TEMPLATE = \
 
         Returns
         -------
-        reduced : DataArray
-            New DataArray object with `{name}` applied along its rolling dimnension.
+        reduced : {da_or_ds}
+            New {da_or_ds} object with `{name}` applied along its rolling dimnension.
         """
 
 
@@ -522,7 +522,7 @@ def inject_bottleneck_rolling_methods(cls):
         func = cls._reduce_method(f)
         func.__name__ = name
         func.__doc__ = _ROLLING_REDUCE_DOCSTRING_TEMPLATE.format(
-            name=func.__name__)
+            name=func.__name__, da_or_ds='DataArray')
         setattr(cls, name, func)
 
     # bottleneck rolling methods
@@ -541,7 +541,7 @@ def inject_bottleneck_rolling_methods(cls):
                 func = cls._bottleneck_reduce(f)
                 func.__name__ = method_name
                 func.__doc__ = _ROLLING_REDUCE_DOCSTRING_TEMPLATE.format(
-                    name=func.__name__)
+                    name=func.__name__, da_or_ds='DataArray')
                 setattr(cls, method_name, func)
             except AttributeError as e:
                 # skip functions not in Bottleneck 1.0
@@ -558,7 +558,7 @@ def inject_bottleneck_rolling_methods(cls):
             func = cls._bottleneck_reduce_without_min_count(f)
         func.__name__ = 'median'
         func.__doc__ = _ROLLING_REDUCE_DOCSTRING_TEMPLATE.format(
-            name=func.__name__)
+            name=func.__name__, da_or_ds='DataArray')
         setattr(cls, 'median', func)
 
 
@@ -568,6 +568,6 @@ def inject_datasetrolling_methods(cls):
     for name, f in methods:
         func = cls._reduce_method(f)
         func.__name__ = name
-        func.__doc__ =\
-            _ROLLING_REDUCE_DOCSTRING_TEMPLATE.format(name=func.__name__)
+        func.__doc__ =  _ROLLING_REDUCE_DOCSTRING_TEMPLATE.format(
+            name=func.__name__, da_or_ds='Dataset')
         setattr(cls, name, func)
