@@ -1851,6 +1851,18 @@ class TestDataset(TestCase):
         expected = expected.set_coords('c')
         self.assertDatasetIdentical(actual, expected)
 
+    def test_assign_attrs(self):
+        expected = Dataset(attrs=dict(a=1, b=2))
+        new = Dataset()
+        actual = new.assign_attrs(a=1, b=2)
+        self.assertDatasetIdentical(actual, expected)
+        self.assertEqual(new.attrs, {})
+
+        expected.attrs['c'] = 3
+        new_actual = actual.assign_attrs({'c': 3})
+        self.assertDatasetIdentical(new_actual, expected)
+        self.assertEqual(actual.attrs, dict(a=1, b=2))
+
     def test_assign_multiindex_level(self):
         data = create_test_multiindex()
         with self.assertRaisesRegexp(ValueError, 'conflicting MultiIndex'):

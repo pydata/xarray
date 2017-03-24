@@ -64,7 +64,8 @@ Important links
 - SciPy2015 talk: https://www.youtube.com/watch?v=X0pAhJgySxk
 """
 
-# code to extract and write the version copied from pandas
+# Code to extract and write the version copied from pandas.
+# Used under the terms of pandas's license, see licenses/PANDAS_LICENSE.
 FULLVERSION = VERSION
 write_version = True
 

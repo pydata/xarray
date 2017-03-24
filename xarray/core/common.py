@@ -255,8 +255,10 @@ class BaseDataObject(AttrAccessMixin):
         return results
 
     def assign_coords(self, **kwargs):
-        """Assign new coordinates to this object, returning a new object
-        with all the original data in addition to the new coordinates.
+        """Assign new coordinates to this object.
+
+        Returns a new object with all the original data in addition to the new
+        coordinates.
 
         Parameters
         ----------
@@ -288,6 +290,29 @@ class BaseDataObject(AttrAccessMixin):
         results = self._calc_assign_results(kwargs)
         data.coords.update(results)
         return data
+
+    def assign_attrs(self, *args, **kwargs):
+        """Assign new attrs to this object.
+
+        Returns a new object equivalent to self.attrs.update(*args, **kwargs).
+
+        Parameters
+        ----------
+        args : positional arguments passed into ``attrs.update``.
+        kwargs : keyword arguments passed into ``attrs.update``.
+
+        Returns
+        -------
+        assigned : same type as caller
+            A new object with the new attrs in addition to the existing data.
+
+        See also
+        --------
+        Dataset.assign
+        """
+        out = self.copy(deep=False)
+        out.attrs.update(*args, **kwargs)
+        return out
 
     def pipe(self, func, *args, **kwargs):
         """
