@@ -1352,6 +1352,20 @@ class TestDataArray(TestCase):
         self.assertEqual(len(vm.attrs), len(self.attrs))
         self.assertEqual(vm.attrs, self.attrs)
 
+    def test_assign_attrs(self):
+        expected = DataArray([], attrs=dict(a=1, b=2))
+        expected.attrs['a'] = 1
+        expected.attrs['b'] = 2
+        new = DataArray([])
+        actual = DataArray([]).assign_attrs(a=1, b=2)
+        self.assertDatasetIdentical(actual, expected)
+        self.assertEqual(new.attrs, {})
+
+        expected.attrs['c'] = 3
+        new_actual = actual.assign_attrs({'c': 3})
+        self.assertDatasetIdentical(new_actual, expected)
+        self.assertEqual(actual.attrs, {'a': 1, 'b': 2})
+
     def test_fillna(self):
         a = DataArray([np.nan, 1, np.nan, 3], coords={'x': range(4)}, dims='x')
         actual = a.fillna(-1)
@@ -2408,8 +2422,8 @@ class TestDataArray(TestCase):
 def da(request):
     if request.param == 1:
         times = pd.date_range('2000-01-01', freq='1D', periods=21)
-        values = np.random.random((21, 4))
-        da = DataArray(values, dims=('time', 'x'))
+        values = np.random.random((3, 21, 4))
+        da = DataArray(values, dims=('a', 'time', 'x'))
         da['time'] = times
         return da
 
@@ -2434,7 +2448,7 @@ def test_rolling_properties(da):
 
     rolling_obj = da.rolling(time=4)
 
-    assert rolling_obj._axis_num == 0
+    assert rolling_obj._axis_num == 1
 
     # catching invalid args
     with pytest.raises(ValueError) as exception:
@@ -2448,23 +2462,32 @@ def test_rolling_properties(da):
     assert 'min_periods must be greater than zero' in str(exception)
 
 
-@pytest.mark.parametrize('name', ('sum', 'mean', 'std', 'min', 'max', 'median'))
+@pytest.mark.parametrize('name', ('sum', 'mean', 'std', 'var',
+                                  'min', 'max', 'median'))
 @pytest.mark.parametrize('center', (True, False, None))
 @pytest.mark.parametrize('min_periods', (1, None))
 def test_rolling_wrapped_bottleneck(da, name, center, min_periods):
     pytest.importorskip('bottleneck')
     import bottleneck as bn
 
-    # skip if median and min_periods
-    if (min_periods == 1) and (name == 'median'):
-        pytest.skip()
+    # skip if median and min_periods bottleneck version < 1.1
+    if ((min_periods == 1) and
+        (name == 'median') and
+            (LooseVersion(bn.__version__) < LooseVersion('1.1'))):
+        pytest.skip('rolling median accepts min_periods for bottleneck 1.1')
+
+    # skip if var and bottleneck version < 1.1
+    if ((name == 'median') and
+            (LooseVersion(bn.__version__) < LooseVersion('1.1'))):
+        pytest.skip('rolling median accepts min_periods for bottleneck 1.1')
 
     # Test all bottleneck functions
     rolling_obj = da.rolling(time=7, min_periods=min_periods)
 
     func_name = 'move_{0}'.format(name)
     actual = getattr(rolling_obj, name)()
-    expected = getattr(bn, func_name)(da.values, window=7, axis=0, min_count=min_periods)
+    expected = getattr(bn, func_name)(da.values, window=7, axis=1,
+                                      min_count=min_periods)
     assert_array_equal(actual.values, expected)
 
     # Test center
@@ -2472,8 +2495,12 @@ def test_rolling_wrapped_bottleneck(da, name, center, min_periods):
     actual = getattr(rolling_obj, name)()['time']
     assert_equal(actual, da['time'])
 
+
 def test_rolling_invalid_args(da):
-    pytest.importorskip('bottleneck')
+    pytest.importorskip('bottleneck', minversion="1.0")
+    import bottleneck as bn
+    if LooseVersion(bn.__version__) >= LooseVersion('1.1'):
+        pytest.skip('rolling median accepts min_periods for bottleneck 1.1')
     with pytest.raises(ValueError) as exception:
         da.rolling(time=7, min_periods=1).median()
     assert 'Rolling.median does not' in str(exception)
@@ -2517,3 +2544,4 @@ def test_rolling_reduce(da, center, min_periods, window, name):
     actual = rolling_obj.reduce(getattr(np, 'nan%s' % name))
     expected = getattr(rolling_obj, name)()
     assert_allclose(actual, expected)
+    assert da.dims == expected.dims

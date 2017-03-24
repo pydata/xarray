@@ -21,9 +21,31 @@ v0.9.2 (unreleased)
 
 Enhancements
 ~~~~~~~~~~~~
+- When bottleneck version 1.1 or later is installed, use bottleneck for rolling
+  `var`, `argmin`, `argmax`, and `rank` computations. Also, `rolling.median`
+  now also accepts a `min_periods` argument (:issue:`1276`).
+  By `Joe Hamman <https://github.com/jhamman>`_.
+
+- When `plot()` is called on a 2D DataArray and only one dimension is
+  specified with `x=` or `y=`, the other dimension is now guessed. By
+  `Vincent Noel <https://github.com/vnoel>`_.
+
+Added new method :py:meth:`~Dataset.assign_attrs` to ``DataArray`` and
+``Dataset``, a chained-method compatible implementation of the
+``dict.update`` method on attrs (:issue:`1281`).
+By `Henry S. Harrison <https://hsharrison.github.io>`_.
+
+- It is now possible to set the ``autoclose=True`` argument to
+  :py:func:`~xarray.open_mfdataset` to explicitly close opened files when not
+  in use to prevent occurrence of an OS Error related to too many open files.
+  Note, the default is ``autoclose=False``, which is consistent with previous
+  xarray behavior.  By `Phillip J. Wolfram <https://github.com/pwolfram>`_.
 
 Bug fixes
 ~~~~~~~~~
+- ``rolling`` now keeps its original dimension order (:issue:`1125`).
+  By `Keisuke Fujii <https://github.com/fujiisoup>`_.
+
 
 .. _whats-new.0.9.1:
 

@@ -13,32 +13,48 @@ import warnings
 
 import numpy as np
 import pandas as pd
+from datetime import datetime
 
 from .utils import _determine_cmap_params, _infer_xy_labels, get_axis
 from .facetgrid import FacetGrid
 from xarray.core.pycompat import basestring
 
 
-# Maybe more appropriate to keep this in .utils
-def _right_dtype(arr, types):
+def _valid_numpy_subdtype(x, numpy_types):
     """
-    Is the numpy array a sub dtype of anything in types?
+    Is any dtype from numpy_types superior to the dtype of x?
     """
-    return any(np.issubdtype(arr.dtype, t) for t in types)
+    # If any of the types given in numpy_types is understood as numpy.generic,
+    # all possible x will be considered valid.  This is probably unwanted.
+    for t in numpy_types:
+        assert not np.issubdtype(np.generic, t)
+
+    return any(np.issubdtype(x.dtype, t) for t in numpy_types)
+
+
+def _valid_other_type(x, types):
+    """
+    Do all elements of x have a type from types?
+    """
+    if not np.issubdtype(np.generic, x.dtype):
+        return False
+    else:
+        return all(any(isinstance(el, t) for t in types) for el in np.ravel(x))
 
 
 def _ensure_plottable(*args):
     """
-    Raise exception if there is anything in args that can't be plotted on
-    an axis.
+    Raise exception if there is anything in args that can't be plotted on an
+    axis.
     """
-    plottypes = [np.floating, np.integer, np.timedelta64, np.datetime64]
+    numpy_types = [np.floating, np.integer, np.timedelta64, np.datetime64]
+    other_types = [datetime]
 
-    # Lists need to be converted to np.arrays here.
-    if not any(_right_dtype(np.array(x), plottypes) for x in args):
-        raise TypeError('Plotting requires coordinates to be numeric '
-                        'or dates.')
-
+    for x in args:
+        if not (_valid_numpy_subdtype(np.array(x), numpy_types)
+                or _valid_other_type(np.array(x), other_types)):
+            raise TypeError('Plotting requires coordinates to be numeric '
+                            'or dates.')
 
 def _easy_facetgrid(darray, plotfunc, x, y, row=None, col=None,
                     col_wrap=None, sharex=True, sharey=True, aspect=None,

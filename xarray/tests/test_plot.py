@@ -16,6 +16,7 @@ import inspect
 
 import numpy as np
 import pandas as pd
+from datetime import datetime
 
 from xarray import DataArray
 
@@ -636,17 +637,27 @@ class Common2dMixin:
         self.assertEqual('x', ax.get_ylabel())
 
     def test_positional_coord_string(self):
-        with self.assertRaisesRegexp(ValueError, 'cannot supply only one'):
-            self.plotmethod('y')
-        with self.assertRaisesRegexp(ValueError, 'cannot supply only one'):
-            self.plotmethod(y='x')
+        self.plotmethod(y='x')
+        ax = plt.gca()
+        self.assertEqual('x', ax.get_ylabel())
+        self.assertEqual('y', ax.get_xlabel())
+
+        self.plotmethod(x='x')
+        ax = plt.gca()
+        self.assertEqual('x', ax.get_xlabel())
+        self.assertEqual('y', ax.get_ylabel())
 
     def test_bad_x_string_exception(self):
-        with self.assertRaisesRegexp(ValueError, 'x and y must be coordinate'):
+        with self.assertRaisesRegexp(
+                ValueError, 'x and y must be coordinate variables'):
             self.plotmethod('not_a_real_dim', 'y')
+        with self.assertRaisesRegexp(
+                ValueError, 'x must be a dimension name if y is not supplied'):
+            self.plotmethod(x='not_a_real_dim')
+        with self.assertRaisesRegexp(
+                ValueError, 'y must be a dimension name if x is not supplied'):
+            self.plotmethod(y='not_a_real_dim')
         self.darray.coords['z'] = 100
-        with self.assertRaisesRegexp(ValueError, 'cannot supply only one'):
-            self.plotmethod('z')
 
     def test_coord_strings(self):
         # 1d coords (same as dims)
@@ -1182,7 +1193,7 @@ class TestFacetGrid(PlotTestCase):
                                     subplot_kws=dict(projection='polar'),
                                     sharex=False, sharey=False)
 
-        
+
 class TestFacetGrid4d(PlotTestCase):
 
     def setUp(self):
@@ -1208,3 +1219,22 @@ class TestFacetGrid4d(PlotTestCase):
         # Top row should be labeled
         for label, ax in zip(self.darray.coords['col'].values, g.axes[0, :]):
             self.assertTrue(substring_in_axes(label, ax))
+
+
+class TestDatetimePlot(PlotTestCase):
+
+    def setUp(self):
+        '''
+        Create a DataArray with a time-axis that contains datetime objects.
+        '''
+        month = np.arange(1, 13, 1)
+        data = np.sin(2 * np.pi * month / 12.0)
+
+        darray = DataArray(data, dims=['time'])
+        darray.coords['time'] = np.array([datetime(2017, m, 1) for m in month])
+
+        self.darray = darray
+
+    def test_datetime_line_plot(self):
+        # test if line plot raises no Exception
+        self.darray.plot.line()
