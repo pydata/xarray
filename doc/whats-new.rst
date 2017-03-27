@@ -125,6 +125,19 @@ Enhancements
   to ``py.test`` (:issue:`1336`).
   By `Stephan Hoyer <https://github.com/shoyer>`_ and
   `Phillip J. Wolfram <https://github.com/pwolfram>`_.
+- When `plot()` is called on a 2D DataArray and only one dimension is
+  specified with `x=` or `y=`, the other dimension is now guessed. By
+  `Vincent Noel <https://github.com/vnoel>`_.
+
+- :py:func:`~xarray.align` now supports ``join='exact'``, which raises
+  :py:class:`~xarray.AlignmentError` instead of aligning when indexes to be
+  aligned are not equal.
+  By `Stephan Hoyer <https://github.com/shoyer>`_.
+
+Added new method :py:meth:`~Dataset.assign_attrs` to ``DataArray`` and
+``Dataset``, a chained-method compatible implementation of the
+``dict.update`` method on attrs (:issue:`1281`).
+By `Henry S. Harrison <https://hsharrison.github.io>`_.
 
 Bug fixes
 ~~~~~~~~~

@@ -1,7 +1,8 @@
+# flake8: noqa
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
-from .core.alignment import align, broadcast, broadcast_arrays
+from .core.alignment import AlignmentError, align, broadcast, broadcast_arrays
 from .core.common import full_like, zeros_like, ones_like
 from .core.combine import concat, auto_combine
 from .core.extensions import (register_dataarray_accessor,
