@@ -114,6 +114,21 @@ def requires_bottleneck(test):
     return test if has_bottleneck else pytest.mark.skip('requires bottleneck')(test)
 
 
+flakey = pytest.mark.skipif(
+    not pytest.config.getoption("--run-flakey"),
+    reason="set --run-flakey option to run flakey tests")
+
+optionalci = pytest.mark.skipif(
+    pytest.config.getoption("--skip-optional-ci"),
+    reason=("set --skip-optional-ci option to skip tests in CI, "
+            "e.g., due to travis CI resource issues"))
+
+
+slow = pytest.mark.skipif(
+    pytest.config.getoption("--skip-slow"),
+    reason="set --skip-slow option to run slow tests")
+
+
 class TestCase(unittest.TestCase):
     if PY3:
         # Python 3 assertCountEqual is roughly equivalent to Python 2

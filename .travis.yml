@@ -11,46 +11,46 @@ matrix:
   fast_finish: true
   include:
   - python: 2.7
-    env: CONDA_ENV=py27-min
+    env: CONDA_ENV=py27-min EXTRA_FLAGS=--skip-optional-ci
   - python: 2.7
-    env: CONDA_ENV=py27-cdat+pynio
+    env: CONDA_ENV=py27-cdat+pynio EXTRA_FLAGS=--skip-optional-ci
   - python: 3.4
-    env: CONDA_ENV=py34
+    env: CONDA_ENV=py34 EXTRA_FLAGS=--skip-optional-ci
   - python: 3.5
-    env: CONDA_ENV=py35
+    env: CONDA_ENV=py35 EXTRA_FLAGS=--skip-optional-ci
   - python: 3.6
-    env: CONDA_ENV=py36
+    env: CONDA_ENV=py36 EXTRA_FLAGS=--skip-optional-ci
   - python: 3.6
-    env: CONDA_ENV=py36-pydap
+    env: CONDA_ENV=py36-pydap EXTRA_FLAGS=--run-flakey
   - python: 3.6
-    env: CONDA_ENV=py36-netcdf4-dev
+    env: CONDA_ENV=py36-netcdf4-dev EXTRA_FLAGS=--run-flakey
     addons:
       apt_packages:
         - libhdf5-serial-dev
         - netcdf-bin
         - libnetcdf-dev
   - python: 3.6
-    env: CONDA_ENV=py36-dask-dev
+    env: CONDA_ENV=py36-dask-dev EXTRA_FLAGS=--run-flakey
   - python: 3.6
-    env: CONDA_ENV=py36-pandas-dev
+    env: CONDA_ENV=py36-pandas-dev EXTRA_FLAGS=--run-flakey
   - python: 3.6
-    env: CONDA_ENV=py36-condaforge-rc
+    env: CONDA_ENV=py36-condaforge-rc EXTRA_FLAGS=--run-flakey
   allow_failures:
   - python: 3.6
-    env: CONDA_ENV=py36-pydap
+    env: CONDA_ENV=py36-pydap EXTRA_FLAGS=--run-flakey
   - python: 3.6
-    env: CONDA_ENV=py36-netcdf4-dev
+    env: CONDA_ENV=py36-netcdf4-dev EXTRA_FLAGS=--run-flakey
     addons:
       apt_packages:
         - libhdf5-serial-dev
         - netcdf-bin
         - libnetcdf-dev
   - python: 3.6
-    env: CONDA_ENV=py36-dask-dev
+    env: CONDA_ENV=py36-dask-dev EXTRA_FLAGS=--run-flakey
   - python: 3.6
-    env: CONDA_ENV=py36-pandas-dev
+    env: CONDA_ENV=py36-pandas-dev EXTRA_FLAGS=--run-flakey
   - python: 3.6
-    env: CONDA_ENV=py36-condaforge-rc
+    env: CONDA_ENV=py36-condaforge-rc EXTRA_FLAGS=--run-flakey
 
 before_install:
   - if [[ "$TRAVIS_PYTHON_VERSION" == "2.7" ]]; then
@@ -76,7 +76,7 @@ install:
   - python setup.py install
 
 script:
-  - py.test xarray --cov=xarray --cov-report term-missing --verbose
+  - py.test xarray --cov=xarray --cov-report term-missing --verbose $EXTRA_FLAGS
 
 after_success:
   - coveralls
