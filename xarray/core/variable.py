@@ -15,7 +15,8 @@ from . import indexing
 from . import ops
 from . import utils
 from . import nputils
-from .pycompat import basestring, OrderedDict, zip, dask_array_type
+from .pycompat import (basestring, OrderedDict, zip, integer_types,
+                       dask_array_type)
 from .indexing import (PandasIndexAdapter, orthogonally_indexable)
 
 import xarray as xr  # only for Dataset and DataArray
@@ -373,7 +374,7 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
         key = self._item_key_to_tuple(key)
         key = indexing.expanded_indexer(key, self.ndim)
         dims = tuple(dim for k, dim in zip(key, self.dims)
-                     if not isinstance(k, (int, np.integer)))
+                     if not isinstance(k, integer_types))
         values = self._indexable_data[key]
         # orthogonal indexing should ensure the dimensionality is consistent
         if hasattr(values, 'ndim'):
