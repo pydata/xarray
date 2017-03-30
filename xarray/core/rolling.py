@@ -90,7 +90,7 @@ class Rolling(object):
                                           attrs=','.join(attrs))
 
     def __len__(self):
-        return len(self.obj[self.dim])
+        return self.obj.sizes[self.dim]
 
 
 class DataArrayRolling(Rolling):

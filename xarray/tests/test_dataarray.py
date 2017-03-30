@@ -1352,6 +1352,20 @@ class TestDataArray(TestCase):
         self.assertEqual(len(vm.attrs), len(self.attrs))
         self.assertEqual(vm.attrs, self.attrs)
 
+    def test_assign_attrs(self):
+        expected = DataArray([], attrs=dict(a=1, b=2))
+        expected.attrs['a'] = 1
+        expected.attrs['b'] = 2
+        new = DataArray([])
+        actual = DataArray([]).assign_attrs(a=1, b=2)
+        self.assertDatasetIdentical(actual, expected)
+        self.assertEqual(new.attrs, {})
+
+        expected.attrs['c'] = 3
+        new_actual = actual.assign_attrs({'c': 3})
+        self.assertDatasetIdentical(new_actual, expected)
+        self.assertEqual(actual.attrs, {'a': 1, 'b': 2})
+
     def test_fillna(self):
         a = DataArray([np.nan, 1, np.nan, 3], coords={'x': range(4)}, dims='x')
         actual = a.fillna(-1)
@@ -2428,6 +2442,24 @@ def test_rolling_iter(da):
     for i, (label, window_da) in enumerate(rolling_obj):
         assert label == da['time'].isel(time=i)
 
+def test_rolling_doc(da):
+
+    rolling_obj = da.rolling(time=7)
+
+    assert rolling_obj.mean.__doc__ == \
+        """Reduce this DataArray's data windows by applying `mean`
+        along its dimension.
+
+        Parameters
+        ----------
+        **kwargs : dict
+            Additional keyword arguments passed on to `mean`.
+
+        Returns
+        -------
+        reduced : DataArray
+            New DataArray object with `mean` applied along its rolling dimnension.
+        """
 
 def test_rolling_properties(da):
     pytest.importorskip('bottleneck', minversion='1.0')
@@ -2530,3 +2562,4 @@ def test_rolling_reduce(da, center, min_periods, window, name):
     actual = rolling_obj.reduce(getattr(np, 'nan%s' % name))
     expected = getattr(rolling_obj, name)()
     assert_allclose(actual, expected)
+    assert actual.dims == expected.dims
