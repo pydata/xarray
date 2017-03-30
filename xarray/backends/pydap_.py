@@ -6,7 +6,7 @@ import numpy as np
 from .. import Variable
 from ..core.utils import FrozenOrderedDict, Frozen, NDArrayMixin
 from ..core import indexing
-from ..pycompat import integer_types
+from ..core.pycompat import integer_types
 
 from .common import AbstractDataStore, robust_getitem
 
