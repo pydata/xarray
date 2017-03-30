@@ -2602,6 +2602,14 @@ class TestDataset(TestCase):
     def test_where_drop(self):
         # if drop=True
 
+        # empty case
+        array = DataArray(np.random.rand(100, 10),
+                          dims=['nCells', 'nVertLevels'])
+        mask = DataArray(np.zeros((100,), dtype='bool'), dims='nCells')
+        actual = array.where(mask, drop=True)
+        expected = DataArray(np.zeros((0, 10)), dims=['nCells', 'nVertLevels'])
+        self.assertDatasetIdentical(expected, actual)
+
         # 1d
         # data array case
         array = DataArray(range(5), coords=[range(5)], dims=['x'])
