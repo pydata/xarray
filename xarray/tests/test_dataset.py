@@ -23,7 +23,8 @@ import pytest
 from xarray import (align, broadcast, backends, Dataset, DataArray, Variable,
                     IndexVariable, open_dataset, set_options, MergeError)
 from xarray.core import indexing, utils
-from xarray.core.pycompat import iteritems, OrderedDict, unicode_type
+from xarray.core.pycompat import (iteritems, OrderedDict, unicode_type,
+                                  integer_types)
 from xarray.core.common import full_like
 
 from . import (TestCase, InaccessibleArray, UnexpectedDataAccess,
@@ -2797,7 +2798,7 @@ class TestDataset(TestCase):
     def test_reduce_only_one_axis(self):
 
         def mean_only_one_axis(x, axis):
-            if not isinstance(axis, (int, np.integer)):
+            if not isinstance(axis, integer_types):
                 raise TypeError('non-integer axis')
             return x.mean(axis)
 

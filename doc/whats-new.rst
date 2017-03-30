@@ -46,6 +46,9 @@ Bug fixes
 - ``rolling`` now keeps its original dimension order (:issue:`1125`).
   By `Keisuke Fujii <https://github.com/fujiisoup>`_.
 
+- Fix ``sel`` with ``method='nearest'`` on Python 2.7 and 64-bit Windows
+  (:issue:`1140`).
+  `Stephan Hoyer <https://github.com/shoyer>`_.
 
 .. _whats-new.0.9.1:
 
