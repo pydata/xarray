@@ -106,6 +106,13 @@ class TestDataArray(TestCase):
         with self.assertRaises(KeyError):
             array.get_index('z')
 
+    def test_get_index_size_zero(self):
+        array = DataArray(np.zeros((0,)), dims=['x'])
+        actual = array.get_index('x')
+        expected = pd.Index([], dtype=np.int64)
+        assert actual.equals(expected)
+        assert actual.dtype == expected.dtype
+
     def test_struct_array_dims(self):
         """
         This test checks subraction of two DataArrays for the case

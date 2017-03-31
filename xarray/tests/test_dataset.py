@@ -2602,14 +2602,6 @@ class TestDataset(TestCase):
     def test_where_drop(self):
         # if drop=True
 
-        # empty case
-        array = DataArray(np.random.rand(100, 10),
-                          dims=['nCells', 'nVertLevels'])
-        mask = DataArray(np.zeros((100,), dtype='bool'), dims='nCells')
-        actual = array.where(mask, drop=True)
-        expected = DataArray(np.zeros((0, 10)), dims=['nCells', 'nVertLevels'])
-        self.assertDatasetIdentical(expected, actual)
-
         # 1d
         # data array case
         array = DataArray(range(5), coords=[range(5)], dims=['x'])
@@ -2662,6 +2654,15 @@ class TestDataset(TestCase):
         ds = Dataset({'a': (('x', 'y'), [[0, 1], [2, 3]]), 'b': (('x','y'), [[4, 5], [6, 7]])})
         expected = Dataset({'a': (('x', 'y'), [[np.nan, 1], [2, 3]]), 'b': (('x', 'y'), [[4, 5], [6,7]])})
         actual = ds.where(ds > 0, drop=True)
+        self.assertDatasetIdentical(expected, actual)
+
+    def test_where_drop_empty(self):
+        # regression test for GH1341
+        array = DataArray(np.random.rand(100, 10),
+                          dims=['nCells', 'nVertLevels'])
+        mask = DataArray(np.zeros((100,), dtype='bool'), dims='nCells')
+        actual = array.where(mask, drop=True)
+        expected = DataArray(np.zeros((0, 10)), dims=['nCells', 'nVertLevels'])
         self.assertDatasetIdentical(expected, actual)
 
     def test_reduce(self):
