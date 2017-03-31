@@ -13,6 +13,7 @@ import pandas as pd
 from . import ops
 from . import utils
 from . import groupby
+from . import rolling
 from . import indexing
 from . import alignment
 from . import formatting
@@ -306,7 +307,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
     One dimensional variables with name equal to their dimension are index
     coordinates used for label based indexing.
     """
-    groupby_cls = groupby.DatasetGroupBy
+    _groupby_cls = groupby.DatasetGroupBy
+    _rolling_cls = rolling.DatasetRolling
 
     def __init__(self, data_vars=None, coords=None, attrs=None,
                  compat='broadcast_equals'):
