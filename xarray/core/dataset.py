@@ -13,6 +13,7 @@ import pandas as pd
 from . import ops
 from . import utils
 from . import groupby
+from . import rolling
 from . import indexing
 from . import alignment
 from . import formatting
@@ -27,7 +28,7 @@ from .utils import (Frozen, SortedKeysDict, maybe_wrap_array, hashable,
 from .variable import (Variable, as_variable, IndexVariable,
                        broadcast_variables)
 from .pycompat import (iteritems, basestring, OrderedDict,
-                       dask_array_type, range)
+                       integer_types, dask_array_type, range)
 from .options import OPTIONS
 
 # list of attributes of pd.DatetimeIndex that are ndarrays of time info
@@ -306,7 +307,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
     One dimensional variables with name equal to their dimension are index
     coordinates used for label based indexing.
     """
-    groupby_cls = groupby.DatasetGroupBy
+    _groupby_cls = groupby.DatasetGroupBy
+    _rolling_cls = rolling.DatasetRolling
 
     def __init__(self, data_vars=None, coords=None, attrs=None,
                  compat='broadcast_equals'):
@@ -1107,7 +1109,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
 
         # all indexers should be int, slice or np.ndarrays
         indexers = [(k, (np.asarray(v)
-                         if not isinstance(v, (int, np.integer, slice))
+                         if not isinstance(v, integer_types + (slice,))
                          else v))
                     for k, v in iteritems(indexers)]
 

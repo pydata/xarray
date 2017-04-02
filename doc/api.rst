@@ -122,6 +122,7 @@ Computation
    Dataset.reduce
    Dataset.groupby
    Dataset.groupby_bins
+   Dataset.rolling
    Dataset.resample
    Dataset.diff
    Dataset.quantile
@@ -222,6 +223,7 @@ DataArray contents
    DataArray.pipe
    DataArray.rename
    DataArray.swap_dims
+   DataArray.expand_dims
    DataArray.drop
    DataArray.reset_coords
    DataArray.copy

@@ -907,44 +907,67 @@ class TestDataArray(TestCase):
         self.assertDataArrayIdentical(expected, actual)
 
     def test_expand_dims(self):
-        array = DataArray(np.random.randn(3,4), dims=['x', 'dim0'],
-                          coords={'x': np.linspace(0.0,1.0,3)},
+        array = DataArray(np.random.randn(3, 4), dims=['x', 'dim0'],
+                          coords={'x': np.linspace(0.0, 1.0, 3)},
                           attrs={'key': 'entry'})
         # Error checking
-        with self.assertRaises(TypeError):
-            array.expand_dims(0) # the first argument should not be an integer
-        with self.assertRaises(TypeError):
+        with self.assertRaises(ValueError):
+            array.expand_dims(0)  # the first argument should not be an integer
+        with self.assertRaises(ValueError):
             # dims and axis argument should be the same length
-            array.expand_dims(dim=['a', 'b'], axis=[1,2,3])
+            array.expand_dims(dim=['a', 'b'], axis=[1, 2, 3])
         with self.assertRaises(ValueError):
             # Should not pass the already existing dimension.
             array.expand_dims(dim=['x'])
         with self.assertRaises(ValueError):
             # There should not be a duplicate
-            array.expand_dims(axis=[1,2,1])
+            array.expand_dims(axis=[1, 2, 1])
 
-        # Working test    
+        # Working test
         # pass only dim label
         actual = array.expand_dims(dim='y')
         expected = DataArray(np.expand_dims(array.values, 0),
-                             dims=['y','x','dim0'],
-                             coords={'x': np.linspace(0.0,1.0,3)},
+                             dims=['y', 'x', 'dim0'],
+                             coords={'x': np.linspace(0.0, 1.0, 3)},
                              attrs={'key': 'entry'})
         self.assertDataArrayIdentical(expected, actual)
 
         # pass multiple dims
         actual = array.expand_dims(dim=['y', 'z'])
-        expected = DataArray(np.expand_dims(np.expand_dims(array.values, 0), 0),
-                             dims=['y', 'z', 'x','dim0'],
-                             coords={'x': np.linspace(0.0,1.0,3)},
+        expected = DataArray(np.expand_dims(np.expand_dims(array.values, 0),
+                                            0),
+                             dims=['y', 'z', 'x', 'dim0'],
+                             coords={'x': np.linspace(0.0, 1.0, 3)},
                              attrs={'key': 'entry'})
         self.assertDataArrayIdentical(expected, actual)
 
         # pass multiple dims and axis. Axis is out of order
-        actual = array.expand_dims(dim=['z', 'y'], axis=[2,1])
-        expected = DataArray(np.expand_dims(np.expand_dims(array.values, 1), 2),
+        actual = array.expand_dims(dim=['z', 'y'], axis=[2, 1])
+        expected = DataArray(np.expand_dims(np.expand_dims(array.values, 1),
+                                            2),
                              dims=['x', 'y', 'z', 'dim0'],
-                             coords={'x': np.linspace(0.0,1.0,3)},
+                             coords={'x': np.linspace(0.0, 1.0, 3)},
+                             attrs={'key': 'entry'})
+        self.assertDataArrayIdentical(expected, actual)
+
+        # pass Only axies.
+        actual = array.expand_dims(axis=[2, 1])
+        expected = DataArray(np.expand_dims(np.expand_dims(array.values, 1),
+                                            2),
+                             dims=['x', 'dim2', 'dim1', 'dim0'],
+                             coords={'x': np.linspace(0.0, 1.0, 3)},
+                             attrs={'key': 'entry'})
+        self.assertDataArrayIdentical(expected, actual)
+
+    def test_expand_dims_with_scalar_coordinate(self):
+        array = DataArray(np.random.randn(3, 4), dims=['x', 'dim0'],
+                          coords={'x': np.linspace(0.0, 1.0, 3), 'z': 1.0},
+                          attrs={'key': 'entry'})
+        actual = array.expand_dims(dim='z')
+        expected = DataArray(np.expand_dims(array.values, 0),
+                             dims=['z', 'x', 'dim0'],
+                             coords={'x': np.linspace(0.0, 1.0, 3),
+                                     'z': np.ones(1)},
                              attrs={'key': 'entry'})
         self.assertDataArrayIdentical(expected, actual)
 
@@ -2484,13 +2507,31 @@ def test_rolling_iter(da):
     for i, (label, window_da) in enumerate(rolling_obj):
         assert label == da['time'].isel(time=i)
 
+def test_rolling_doc(da):
+
+    rolling_obj = da.rolling(time=7)
+
+    assert rolling_obj.mean.__doc__ == \
+        """Reduce this DataArray's data windows by applying `mean`
+        along its dimension.
+
+        Parameters
+        ----------
+        **kwargs : dict
+            Additional keyword arguments passed on to `mean`.
+
+        Returns
+        -------
+        reduced : DataArray
+            New DataArray object with `mean` applied along its rolling dimnension.
+        """
 
 def test_rolling_properties(da):
     pytest.importorskip('bottleneck', minversion='1.0')
 
     rolling_obj = da.rolling(time=4)
 
-    assert rolling_obj._axis_num == 1
+    assert rolling_obj.obj.get_axis_num('time') == 1
 
     # catching invalid args
     with pytest.raises(ValueError) as exception:
@@ -2586,4 +2627,4 @@ def test_rolling_reduce(da, center, min_periods, window, name):
     actual = rolling_obj.reduce(getattr(np, 'nan%s' % name))
     expected = getattr(rolling_obj, name)()
     assert_allclose(actual, expected)
-    assert da.dims == expected.dims
+    assert actual.dims == expected.dims

@@ -69,63 +69,6 @@ class ImplementsDatasetReduce(object):
             and 'axis' arguments can be supplied."""
 
 
-class ImplementsRollingArrayReduce(object):
-    @classmethod
-    def _reduce_method(cls, func):
-        def wrapped_func(self, **kwargs):
-            return self.reduce(func, **kwargs)
-        return wrapped_func
-
-    @classmethod
-    def _bottleneck_reduce(cls, func):
-        def wrapped_func(self, **kwargs):
-            from .dataarray import DataArray
-
-            if isinstance(self.obj.data, dask_array_type):
-                raise NotImplementedError(
-                    'Rolling window operation does not work with dask arrays')
-
-            # bottleneck doesn't allow min_count to be 0, although it should
-            # work the same as if min_count = 1
-            if self.min_periods is not None and self.min_periods == 0:
-                min_count = self.min_periods + 1
-            else:
-                min_count = self.min_periods
-
-            values = func(self.obj.data, window=self.window,
-                          min_count=min_count, axis=self._axis_num)
-
-            result = DataArray(values, self.obj.coords)
-
-            if self.center:
-                result = self._center_result(result)
-
-            return result
-        return wrapped_func
-
-    @classmethod
-    def _bottleneck_reduce_without_min_count(cls, func):
-        def wrapped_func(self, **kwargs):
-            from .dataarray import DataArray
-
-            if self.min_periods is not None:
-                raise ValueError('Rolling.median does not accept min_periods')
-
-            if isinstance(self.obj.data, dask_array_type):
-                raise NotImplementedError(
-                    'Rolling window operation does not work with dask arrays')
-
-            values = func(self.obj.data, window=self.window, axis=self._axis_num)
-
-            result = DataArray(values, self.obj.coords)
-
-            if self.center:
-                result = self._center_result(result)
-
-            return result
-        return wrapped_func
-
-
 class AbstractArray(ImplementsArrayReduce, formatting.ReprMixin):
     """Shared base class for DataArray and Variable."""
 
@@ -291,48 +234,6 @@ class BaseDataObject(AttrAccessMixin):
         dims = get_squeeze_dims(self, dim)
         return self.isel(drop=drop, **{d: 0 for d in dims})
 
-    def expand_dims(self, dim=None, axis=None):
-        """Return a new object with an additional axis (or axes) inserted at the
-        corresponding position in the array shape.
-
-        Parameters
-        ----------
-        dim : str, (list or tuple) of strs, or None
-            Name(s) of new dimension.
-            If a list (or tuple) of strings is passed, multiple axes are
-            inserted. In this case, axis argument should be None or same length
-            of integers indicating new axes positions.
-        axis : integer, list (or tuple) of integers or None
-            Axis position(s) where new axis is to be inserted (position(s) on
-            the result array). If a list (or tuple) of integers is passed,
-            multiple axes are inserted. In this case, dim arguments should be
-            None or same length list. If None is passed, all the axis will be
-            inserted to the start of the result array.
-
-        Returns
-        -------
-        expanded : same type as caller
-            This object, but with an additional dimension.
-
-        Raises
-        -------
-        ValueError:
-               If the length of axis and dim are different.
-               If the axis is a list containing identical integers
-               If axis is invalid (larger than the original dimension+1)
-        """
-        # Some error checking
-        if axis is None and dim is None:
-            raise ValueError('At least one of axis or dim should be specified\
-            in expand_dims')
-        # Make sure user does not do `expand_dims(0)`
-        if dim is not None and not isinstance(dim, (str, list, tuple)):
-            raise TypeError('dim should be str or list of str or tuple of str')
-
-        if axis is None:
-            axis = list(range(len(dim)))
-
-
     def get_index(self, key):
         """Get an index for a dimension, with fall-back to a default RangeIndex
         """
@@ -491,7 +392,7 @@ class BaseDataObject(AttrAccessMixin):
             A `GroupBy` object patterned after `pandas.GroupBy` that can be
             iterated over in the form of `(unique_value, grouped_array)` pairs.
         """
-        return self.groupby_cls(self, group, squeeze=squeeze)
+        return self._groupby_cls(self, group, squeeze=squeeze)
 
     def groupby_bins(self, group, bins, right=True, labels=None, precision=3,
                      include_lowest=False, squeeze=True):
@@ -540,10 +441,10 @@ class BaseDataObject(AttrAccessMixin):
         ----------
         .. [1] http://pandas.pydata.org/pandas-docs/stable/generated/pandas.cut.html
         """
-        return self.groupby_cls(self, group, squeeze=squeeze, bins=bins,
-                                cut_kwargs={'right': right, 'labels': labels,
-                                            'precision': precision,
-                                            'include_lowest': include_lowest})
+        return self._groupby_cls(self, group, squeeze=squeeze, bins=bins,
+                                 cut_kwargs={'right': right, 'labels': labels,
+                                             'precision': precision,
+                                             'include_lowest': include_lowest})
 
     def rolling(self, min_periods=None, center=False, **windows):
         """
@@ -572,8 +473,8 @@ class BaseDataObject(AttrAccessMixin):
         rolling : type of input argument
         """
 
-        return self.rolling_cls(self, min_periods=min_periods,
-                                center=center, **windows)
+        return self._rolling_cls(self, min_periods=min_periods,
+                                 center=center, **windows)
 
     def resample(self, freq, dim, how='mean', skipna=None, closed=None,
                  label=None, base=0, keep_attrs=False):
@@ -643,7 +544,7 @@ class BaseDataObject(AttrAccessMixin):
         group = DataArray(dim, [(RESAMPLE_DIM, dim)], name=RESAMPLE_DIM)
         time_grouper = pd.TimeGrouper(freq=freq, how=how, closed=closed,
                                       label=label, base=base)
-        gb = self.groupby_cls(self, group, grouper=time_grouper)
+        gb = self._groupby_cls(self, group, grouper=time_grouper)
         if isinstance(how, basestring):
             f = getattr(gb, how)
             if how in ['first', 'last']:

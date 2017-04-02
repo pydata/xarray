@@ -155,8 +155,8 @@ class DataArray(AbstractArray, BaseDataObject):
     attrs : OrderedDict
         Dictionary for holding arbitrary metadata.
     """
-    groupby_cls = groupby.DataArrayGroupBy
-    rolling_cls = rolling.DataArrayRolling
+    _groupby_cls = groupby.DataArrayGroupBy
+    _rolling_cls = rolling.DataArrayRolling
 
     def __init__(self, data, coords=None, dims=None, name=None,
                  attrs=None, encoding=None, fastpath=False):
@@ -844,24 +844,29 @@ class DataArray(AbstractArray, BaseDataObject):
         """Return a new object with an additional axis (or axes) inserted at the
         corresponding position in the array shape.
 
+        If dim is already a scalar coordinate, it will be promoted to a 1D
+        coordinate consisting of a single value.
+
         Parameters
         ----------
-        dim : str, (list, tuple) of strs, or None
+        dim : str, or list (or tuple) of strs, or None
             Name(s) of new dimension.
             If a list (or tuple) of strings is passed, multiple axes are
             inserted. In this case, axis argument should be None or same length
             of integers indicating new axes positions.
-        axis : integer, list (or tuple) of integers or None
+            If None is passed, dimension labels are automatically generated,
+            e.g. dim0, dim1, ...
+        axis : integer, list (or tuple) of integers, or None
             Axis position(s) where new axis is to be inserted (position(s) on
             the result array). If a list (or tuple) of integers is passed,
             multiple axes are inserted. In this case, dim arguments should be
-            None or same length list. If None is passed, all the axis will be
+            same length list or None. If None is passed, all the axes will be
             inserted to the start of the result array.
 
         Returns
         -------
         expanded : same type as caller
-            This object, but with an additional dimension.
+            This object, but with an additional dimension(s).
 
         Raises
         -------
@@ -877,41 +882,41 @@ class DataArray(AbstractArray, BaseDataObject):
                 if dim not in src_dims:
                     return dim
 
-        if axis is None and dim is None:
-            axis = [0]
-            dim = [create_dim_name(self.dims)]
-        if isinstance(axis, int):
+        # Make axis and dims a pair of lists
+        if axis is not None and not isinstance(axis, (list, tuple)):
             axis = [axis]
-        if isinstance(dim, str):
+        if dim is not None and not isinstance(dim, (list, tuple)):
             dim = [dim]
-        # Some error checking
-        if dim is not None:
-            # Make sure user does not do `expand_dims(0)`
-            if not isinstance(dim, (list, tuple)):
-                raise TypeError('dim should be str or list of str or tuple of \
-                                 str')
-            # Make sure the length of axis and dims are identical
-            if hasattr(axis, '__len__') and len(dim) != len(axis):
-                raise TypeError('lengths of dim and axis should be identical.')
-            # make sure any of dim does not already exist
-            for d in dim:
-                if d in self.dims:
-                    raise ValueError('{dim} already exists.'.format(dim=d))
-            # If axis is None, the new dimensions are inserted at the start.
-            if axis is None:
+
+        # infer None arguments.
+        if axis is None:
+            if dim is None:
+                axis = [0]
+                dim = [create_dim_name(self.dims) for a in axis]
+            else:
                 axis = list(range(len(dim)))
+        if dim is None:
+            dim = []
+            for a in axis:
+                dim.append(create_dim_name(list(self.dims) + dim))
 
-            # sort dim and axis, so that axis is in order.
-            axis, dim = zip(*sorted(zip(axis, dim)))
-        else:
-            # sort dim and axis, so that axis is in order.
-            axis = sorted(axis)
-            dims = self.dims
-            dims = [create_dim_name(dims) for _ in axis]
+        # Error checking
+        # Make sure user does not do `expand_dims(0)`
+        if not isinstance(dim[0], str):
+            raise ValueError('dim should be str or list (or tulple) of strs')
+        # Make sure the length of axis and dims are identical
+        if len(dim) != len(axis):
+            raise ValueError('lengths of dim and axis should be identical.')
+        # make sure any of dim does not already exist
+        for d in dim:
+            if d in self.dims:
+                raise ValueError('{dim} already exists.'.format(dim=d))
 
-        # make sure there is no duplicate in axis
+        # make sure there is no duplicates in axis or dims
         if len(axis) != len(set(axis)):
             raise ValueError('axis should not contain same values.')
+        if len(dim) != len(set(dim)):
+            raise ValueError('dims should not contain same values.')
 
         def expand_1dim(da, d, a):
             """ return a new dataarray with 1 dimension inserted
@@ -919,8 +924,16 @@ class DataArray(AbstractArray, BaseDataObject):
             new_dims = list(da.dims)
             new_dims.insert(a, d)
             new_array = np.expand_dims(da.values, a)
+            # If there is already a scalar variable named `d`, it is converted
+            # to 1d-coordinate.
+            coords = OrderedDict(da.coords)
+            if d in coords.keys():
+                coords[d] = np.atleast_1d(coords[d])
             return DataArray(new_array, dims=new_dims,
-                             coords=da.coords, attrs=da.attrs, name=da.name)
+                             coords=coords, attrs=da.attrs, name=da.name)
+
+        # sort dim and axis, so that axis is in order.
+        axis, dim = zip(*sorted(zip(axis, dim)))
 
         expanded = self
         for d, a in zip(dim, axis):
