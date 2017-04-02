@@ -849,11 +849,9 @@ class DataArray(AbstractArray, BaseDataObject):
 
         Parameters
         ----------
-        dim : str, or list (or tuple) of strs, or None
-            Name(s) of new dimension.
-            If a list (or tuple) of strings is passed, multiple axes are
-            inserted. In this case, axis argument should be None or same length
-            of integers indicating new axes positions.
+        dim : str or sequence of str, or None.
+            Dimensions to include on the new variable.
+            dimensions are inserted with length 1.
             If None is passed, dimension labels are automatically generated,
             e.g. dim0, dim1, ...
         axis : integer, list (or tuple) of integers, or None
@@ -876,17 +874,21 @@ class DataArray(AbstractArray, BaseDataObject):
                If axis is invalid (larger than the original dimension+1)
         """
         def create_dim_name(src_dims):
-            """ A simple function to automatically generate dimension name. """
+            """ A function to automatically generate dimension name. """
             for i in range(len(src_dims)+1):
                 dim = 'dim'+str(i)
                 if dim not in src_dims:
                     return dim
 
+        # Make sure user does not do `expand_dims(0)`
+        if isinstance(dim, int):
+            raise ValueError('dim should be str or sequence of strs or dict')
+
         # Make axis and dims a pair of lists
+        if isinstance(dim, basestring):
+            dim = [dim]
         if axis is not None and not isinstance(axis, (list, tuple)):
             axis = [axis]
-        if dim is not None and not isinstance(dim, (list, tuple)):
-            dim = [dim]
 
         # infer None arguments.
         if axis is None:
@@ -901,9 +903,6 @@ class DataArray(AbstractArray, BaseDataObject):
                 dim.append(create_dim_name(list(self.dims) + dim))
 
         # Error checking
-        # Make sure user does not do `expand_dims(0)`
-        if not isinstance(dim[0], str):
-            raise ValueError('dim should be str or list (or tulple) of strs')
         # Make sure the length of axis and dims are identical
         if len(dim) != len(axis):
             raise ValueError('lengths of dim and axis should be identical.')
@@ -918,27 +917,21 @@ class DataArray(AbstractArray, BaseDataObject):
         if len(dim) != len(set(dim)):
             raise ValueError('dims should not contain same values.')
 
-        def expand_1dim(da, d, a):
-            """ return a new dataarray with 1 dimension inserted
-            at position `a` named `d` """
-            new_dims = list(da.dims)
-            new_dims.insert(a, d)
-            new_array = np.expand_dims(da.values, a)
-            # If there is already a scalar variable named `d`, it is converted
-            # to 1d-coordinate.
-            coords = OrderedDict(da.coords)
-            if d in coords.keys():
-                coords[d] = np.atleast_1d(coords[d])
-            return DataArray(new_array, dims=new_dims,
-                             coords=coords, attrs=da.attrs, name=da.name)
-
         # sort dim and axis, so that axis is in order.
         axis, dim = zip(*sorted(zip(axis, dim)))
+        # dims of the result array. This will be passed to Variable.expand_dims
+        all_dims = list(self.dims)
+        [all_dims.insert(a, d) for a, d in zip(axis, dim)]
 
-        expanded = self
-        for d, a in zip(dim, axis):
-            expanded = expand_1dim(expanded, d, a)
-        return expanded
+        # If dims includes a label of a scalar variables,
+        # it will be promoted to a 1D coordinate consisting of a single value.
+        coords = OrderedDict(self.coords)
+        for d in dim:
+            if d in coords.keys():
+                coords[d] = np.atleast_1d(coords[d])
+
+        return DataArray(self._variable.expand_dims(all_dims),
+                         dims=all_dims, coords=coords, attrs=self.attrs)
 
     def set_index(self, append=False, inplace=False, **indexes):
         """Set DataArray (multi-)indexes using one or more existing coordinates.
