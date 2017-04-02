@@ -2659,6 +2659,15 @@ class TestDataset(TestCase):
         actual = ds.where(ds > 0, drop=True)
         self.assertDatasetIdentical(expected, actual)
 
+    def test_where_drop_empty(self):
+        # regression test for GH1341
+        array = DataArray(np.random.rand(100, 10),
+                          dims=['nCells', 'nVertLevels'])
+        mask = DataArray(np.zeros((100,), dtype='bool'), dims='nCells')
+        actual = array.where(mask, drop=True)
+        expected = DataArray(np.zeros((0, 10)), dims=['nCells', 'nVertLevels'])
+        self.assertDatasetIdentical(expected, actual)
+
     def test_reduce(self):
         data = create_test_data()
 

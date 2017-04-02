@@ -51,6 +51,9 @@ Bug fixes
 - Fix ``sel`` with ``method='nearest'`` on Python 2.7 and 64-bit Windows
   (:issue:`1140`).
   `Stephan Hoyer <https://github.com/shoyer>`_.
+- Fixes ``where`` with ``drop='True'`` for empty masks (:issue:`1341`).
+  By `Stephan Hoyer <https://github.com/shoyer>`_ and
+  `Phillip J. Wolfram <https://github.com/pwolfram>`_.
 
 .. _whats-new.0.9.1:
 
