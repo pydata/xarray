@@ -907,7 +907,7 @@ class TestDataArray(TestCase):
         self.assertDataArrayIdentical(expected, actual)
 
     def test_expand_dims(self):
-        array = DataArray(np.random.randn(3, 4), dims=['x', 'dim0'],
+        array = DataArray(np.random.randn(3, 4), dims=['x', 'dim_0'],
                           coords={'x': np.linspace(0.0, 1.0, 3)},
                           attrs={'key': 'entry'})
         # Error checking
@@ -927,7 +927,7 @@ class TestDataArray(TestCase):
         # pass only dim label
         actual = array.expand_dims(dim='y')
         expected = DataArray(np.expand_dims(array.values, 0),
-                             dims=['y', 'x', 'dim0'],
+                             dims=['y', 'x', 'dim_0'],
                              coords={'x': np.linspace(0.0, 1.0, 3)},
                              attrs={'key': 'entry'})
         self.assertDataArrayIdentical(expected, actual)
@@ -936,7 +936,7 @@ class TestDataArray(TestCase):
         actual = array.expand_dims(dim=['y', 'z'])
         expected = DataArray(np.expand_dims(np.expand_dims(array.values, 0),
                                             0),
-                             dims=['y', 'z', 'x', 'dim0'],
+                             dims=['y', 'z', 'x', 'dim_0'],
                              coords={'x': np.linspace(0.0, 1.0, 3)},
                              attrs={'key': 'entry'})
         self.assertDataArrayIdentical(expected, actual)
@@ -945,7 +945,7 @@ class TestDataArray(TestCase):
         actual = array.expand_dims(dim=['z', 'y'], axis=[2, 1])
         expected = DataArray(np.expand_dims(np.expand_dims(array.values, 1),
                                             2),
-                             dims=['x', 'y', 'z', 'dim0'],
+                             dims=['x', 'y', 'z', 'dim_0'],
                              coords={'x': np.linspace(0.0, 1.0, 3)},
                              attrs={'key': 'entry'})
         self.assertDataArrayIdentical(expected, actual)
@@ -954,18 +954,18 @@ class TestDataArray(TestCase):
         actual = array.expand_dims(axis=[2, 1])
         expected = DataArray(np.expand_dims(np.expand_dims(array.values, 1),
                                             2),
-                             dims=['x', 'dim2', 'dim1', 'dim0'],
+                             dims=['x', 'dim_2', 'dim_1', 'dim_0'],
                              coords={'x': np.linspace(0.0, 1.0, 3)},
                              attrs={'key': 'entry'})
         self.assertDataArrayIdentical(expected, actual)
 
     def test_expand_dims_with_scalar_coordinate(self):
-        array = DataArray(np.random.randn(3, 4), dims=['x', 'dim0'],
+        array = DataArray(np.random.randn(3, 4), dims=['x', 'dim_0'],
                           coords={'x': np.linspace(0.0, 1.0, 3), 'z': 1.0},
                           attrs={'key': 'entry'})
         actual = array.expand_dims(dim='z')
         expected = DataArray(np.expand_dims(array.values, 0),
-                             dims=['z', 'x', 'dim0'],
+                             dims=['z', 'x', 'dim_0'],
                              coords={'x': np.linspace(0.0, 1.0, 3),
                                      'z': np.ones(1)},
                              attrs={'key': 'entry'})

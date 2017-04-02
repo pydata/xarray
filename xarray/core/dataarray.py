@@ -876,7 +876,7 @@ class DataArray(AbstractArray, BaseDataObject):
         def create_dim_name(src_dims):
             """ A function to automatically generate dimension name. """
             for i in range(len(src_dims)+1):
-                dim = 'dim'+str(i)
+                dim = 'dim_'+str(i)
                 if dim not in src_dims:
                     return dim
 
