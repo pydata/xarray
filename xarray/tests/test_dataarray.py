@@ -906,6 +906,48 @@ class TestDataArray(TestCase):
         actual = array.swap_dims({'x': 'y'})
         self.assertDataArrayIdentical(expected, actual)
 
+    def test_expand_dims(self):
+        array = DataArray(np.random.randn(3,4), dims=['x', 'dim0'],
+                          coords={'x': np.linspace(0.0,1.0,3)},
+                          attrs={'key': 'entry'})
+        # Error checking
+        with self.assertRaises(TypeError):
+            array.expand_dims(0) # the first argument should not be an integer
+        with self.assertRaises(TypeError):
+            # dims and axis argument should be the same length
+            array.expand_dims(dim=['a', 'b'], axis=[1,2,3])
+        with self.assertRaises(ValueError):
+            # Should not pass the already existing dimension.
+            array.expand_dims(dim=['x'])
+        with self.assertRaises(ValueError):
+            # There should not be a duplicate
+            array.expand_dims(axis=[1,2,1])
+
+        # Working test    
+        # pass only dim label
+        actual = array.expand_dims(dim='y')
+        expected = DataArray(np.expand_dims(array.values, 0),
+                             dims=['y','x','dim0'],
+                             coords={'x': np.linspace(0.0,1.0,3)},
+                             attrs={'key': 'entry'})
+        self.assertDataArrayIdentical(expected, actual)
+
+        # pass multiple dims
+        actual = array.expand_dims(dim=['y', 'z'])
+        expected = DataArray(np.expand_dims(np.expand_dims(array.values, 0), 0),
+                             dims=['y', 'z', 'x','dim0'],
+                             coords={'x': np.linspace(0.0,1.0,3)},
+                             attrs={'key': 'entry'})
+        self.assertDataArrayIdentical(expected, actual)
+
+        # pass multiple dims and axis. Axis is out of order
+        actual = array.expand_dims(dim=['z', 'y'], axis=[2,1])
+        expected = DataArray(np.expand_dims(np.expand_dims(array.values, 1), 2),
+                             dims=['x', 'y', 'z', 'dim0'],
+                             coords={'x': np.linspace(0.0,1.0,3)},
+                             attrs={'key': 'entry'})
+        self.assertDataArrayIdentical(expected, actual)
+
     def test_set_index(self):
         indexes = [self.mindex.get_level_values(n) for n in self.mindex.names]
         coords = {idx.name: ('x', idx) for idx in indexes}

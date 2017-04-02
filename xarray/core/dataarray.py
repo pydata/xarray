@@ -870,36 +870,62 @@ class DataArray(AbstractArray, BaseDataObject):
                If the axis is a list containing identical integers
                If axis is invalid (larger than the original dimension+1)
         """
-        # Some error checking
+        def create_dim_name(src_dims):
+            """ A simple function to automatically generate dimension name. """
+            for i in range(len(src_dims)+1):
+                dim = 'dim'+str(i)
+                if dim not in src_dims:
+                    return dim
+
         if axis is None and dim is None:
-            raise ValueError('At least one of axis or dim should be specified\
-            in expand_dims')
+            axis = [0]
+            dim = [create_dim_name(self.dims)]
+        if isinstance(axis, int):
+            axis = [axis]
+        if isinstance(dim, str):
+            dim = [dim]
+        # Some error checking
         if dim is not None:
-            if isinstance(dim, str):
-                dim = [dim]
             # Make sure user does not do `expand_dims(0)`
             if not isinstance(dim, (list, tuple)):
                 raise TypeError('dim should be str or list of str or tuple of \
                                  str')
             # Make sure the length of axis and dims are identical
-            if isinstance(axis, int) and len(dim) == 1 or len(dim) != len(axis):
+            if hasattr(axis, '__len__') and len(dim) != len(axis):
                 raise TypeError('lengths of dim and axis should be identical.')
             # make sure any of dim does not already exist
             for d in dim:
                 if d in self.dims:
                     raise ValueError('{dim} already exists.'.format(dim=d))
+            # If axis is None, the new dimensions are inserted at the start.
+            if axis is None:
+                axis = list(range(len(dim)))
 
-        if axis is None:
-            axis = list(range(len(dim)))
+            # sort dim and axis, so that axis is in order.
+            axis, dim = zip(*sorted(zip(axis, dim)))
+        else:
+            # sort dim and axis, so that axis is in order.
+            axis = sorted(axis)
+            dims = self.dims
+            dims = [create_dim_name(dims) for _ in axis]
+
         # make sure there is no duplicate in axis
         if len(axis) != len(set(axis)):
             raise ValueError('axis should not contain same values.')
-        # sort dim and axis, so that axis is in order.
-        axis, dim = zip(*sorted(zip(axis, dim)))
-        new_shape = self.shape
-        for a in axis:
-            new_shape.insert(a, 1)
 
+        def expand_1dim(da, d, a):
+            """ return a new dataarray with 1 dimension inserted
+            at position `a` named `d` """
+            new_dims = list(da.dims)
+            new_dims.insert(a, d)
+            new_array = np.expand_dims(da.values, a)
+            return DataArray(new_array, dims=new_dims,
+                             coords=da.coords, attrs=da.attrs, name=da.name)
+
+        expanded = self
+        for d, a in zip(dim, axis):
+            expanded = expand_1dim(expanded, d, a)
+        return expanded
 
     def set_index(self, append=False, inplace=False, **indexes):
         """Set DataArray (multi-)indexes using one or more existing coordinates.
