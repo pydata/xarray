@@ -21,6 +21,10 @@ matrix:
   - python: 3.6
     env: CONDA_ENV=py36
   - python: 3.6
+    env:
+    - CONDA_ENV=py36
+    - EXTRA_FLAGS="--run-flaky"
+  - python: 3.6
     env: CONDA_ENV=py36-pydap
   - python: 3.6
     env: CONDA_ENV=py36-netcdf4-dev
@@ -36,6 +40,10 @@ matrix:
   - python: 3.6
     env: CONDA_ENV=py36-condaforge-rc
   allow_failures:
+  - python: 3.6
+    env:
+    - CONDA_ENV=py36
+    - EXTRA_FLAGS="--run-flaky"
   - python: 3.6
     env: CONDA_ENV=py36-pydap
   - python: 3.6
@@ -76,7 +84,7 @@ install:
   - python setup.py install
 
 script:
-  - py.test xarray --cov=xarray --cov-report term-missing --verbose
+  - py.test xarray --cov=xarray --cov-report term-missing --verbose $EXTRA_FLAGS
 
 after_success:
   - coveralls

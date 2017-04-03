@@ -49,7 +49,7 @@ class TestDataArray(TestCase):
             other    int64 0
         Dimensions without coordinates: time
         Attributes:
-            foo: bar""")
+            foo:      bar""")
         self.assertEqual(expected, repr(data_array))
 
     def test_repr_multiindex(self):
@@ -105,6 +105,13 @@ class TestDataArray(TestCase):
         assert array.get_index('y').equals(pd.Index([0, 1, 2]))
         with self.assertRaises(KeyError):
             array.get_index('z')
+
+    def test_get_index_size_zero(self):
+        array = DataArray(np.zeros((0,)), dims=['x'])
+        actual = array.get_index('x')
+        expected = pd.Index([], dtype=np.int64)
+        assert actual.equals(expected)
+        assert actual.dtype == expected.dtype
 
     def test_struct_array_dims(self):
         """

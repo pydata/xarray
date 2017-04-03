@@ -101,7 +101,7 @@ class TestDataset(TestCase):
             var2     (dim1, dim2) float64 1.162 -1.097 -2.123 1.04 -0.4034 -0.126 ...
             var3     (dim3, dim1) float64 0.5565 -0.2121 0.4563 1.545 -0.2397 0.1433 ...
         Attributes:
-            foo: bar""") % data['dim3'].dtype
+            foo:      bar""") % data['dim3'].dtype
         actual = '\n'.join(x.rstrip() for x in repr(data).split('\n'))
         print(actual)
         self.assertEqual(expected, actual)
@@ -187,7 +187,7 @@ class TestDataset(TestCase):
         Data variables:
             *empty*
         Attributes:
-            å: ∑""" % u'ba®')
+            å:        ∑""" % u'ba®')
         actual = unicode_type(data)
         self.assertEqual(expected, actual)
 
@@ -2677,6 +2677,15 @@ class TestDataset(TestCase):
         ds = Dataset({'a': (('x', 'y'), [[0, 1], [2, 3]]), 'b': (('x','y'), [[4, 5], [6, 7]])})
         expected = Dataset({'a': (('x', 'y'), [[np.nan, 1], [2, 3]]), 'b': (('x', 'y'), [[4, 5], [6,7]])})
         actual = ds.where(ds > 0, drop=True)
+        self.assertDatasetIdentical(expected, actual)
+
+    def test_where_drop_empty(self):
+        # regression test for GH1341
+        array = DataArray(np.random.rand(100, 10),
+                          dims=['nCells', 'nVertLevels'])
+        mask = DataArray(np.zeros((100,), dtype='bool'), dims='nCells')
+        actual = array.where(mask, drop=True)
+        expected = DataArray(np.zeros((0, 10)), dims=['nCells', 'nVertLevels'])
         self.assertDatasetIdentical(expected, actual)
 
     def test_reduce(self):

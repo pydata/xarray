@@ -26,7 +26,8 @@ from xarray.core.pycompat import iteritems, PY2, PY3, ExitStack
 
 from . import (TestCase, requires_scipy, requires_netCDF4, requires_pydap,
                requires_scipy_or_netCDF4, requires_dask, requires_h5netcdf,
-               requires_pynio, has_netCDF4, has_scipy, assert_allclose)
+               requires_pynio, has_netCDF4, has_scipy, assert_allclose,
+               flaky, slow)
 from .test_dataset import create_test_data
 
 try:
@@ -119,8 +120,8 @@ class DatasetIOTestCases(object):
             expected.dump_to_store(store)
             # we need to cf decode the store because it has time and
             # non-dimension coordinates
-            actual = xr.decode_cf(store)
-            self.assertDatasetAllClose(expected, actual)
+            with xr.decode_cf(store) as actual:
+                self.assertDatasetAllClose(expected, actual)
 
     def check_dtypes_roundtripped(self, expected, actual):
         for k in expected:
@@ -1024,13 +1025,11 @@ class H5NetCDFDataTest(BaseNetCDF4Test, TestCase):
         with self.roundtrip(expected) as actual:
             self.assertDatasetEqual(expected, actual)
 
+    @pytest.mark.xfail(reason='https://github.com/pydata/xarray/issues/535')
     def test_cross_engine_read_write_netcdf4(self):
         # Drop dim3, because its labels include strings. These appear to be
         # not properly read with python-netCDF4, which converts them into
         # unicode instead of leaving them as bytes.
-        if PY3:
-            raise unittest.SkipTest('see https://github.com/pydata/xarray/issues/535')
-
         data = create_test_data().drop('dim3')
         data.attrs['foo'] = 'bar'
         valid_engines = ['netcdf4', 'h5netcdf']
@@ -1045,9 +1044,9 @@ class H5NetCDFDataTest(BaseNetCDF4Test, TestCase):
         with create_tmp_file() as tmp_file:
             with nc4.Dataset(tmp_file, 'w') as nc:
                 nc.foo = b'bar'
-            actual = open_dataset(tmp_file)
-            expected = Dataset(attrs={'foo': 'bar'})
-            self.assertDatasetIdentical(expected, actual)
+            with open_dataset(tmp_file) as actual:
+                expected = Dataset(attrs={'foo': 'bar'})
+                self.assertDatasetIdentical(expected, actual)
 
     def test_encoding_unlimited_dims(self):
         ds = Dataset({'x': ('y', np.arange(10.0))})
@@ -1058,9 +1057,11 @@ class H5NetCDFDataTest(BaseNetCDF4Test, TestCase):
             with pytest.warns(UserWarning):
                 ds.to_netcdf(tmp_file, engine='h5netcdf', unlimited_dims=['y'])
 
+
 # tests pending h5netcdf fix
-# class H5NetCDFDataTestAutocloseTrue(H5NetCDFDataTest):
-#     autoclose = True
+@pytest.mark.xfail
+class H5NetCDFDataTestAutocloseTrue(H5NetCDFDataTest):
+    autoclose = True
 
 
 class OpenMFDatasetManyFilesTest(TestCase):
@@ -1070,8 +1071,8 @@ class OpenMFDatasetManyFilesTest(TestCase):
         # test standard open_mfdataset approach with too many files
         with create_tmp_files(nfiles) as tmpfiles:
             for readengine in engine:
-                writeengine = \
-                        readengine if readengine != 'pynio' else 'netcdf4'
+                writeengine = (readengine if readengine != 'pynio'
+                               else 'netcdf4')
                 # split into multiple sets of temp files
                 for ii in original.x.values:
                     subds = original.isel(x=slice(ii, ii+1))
@@ -1104,33 +1105,46 @@ class OpenMFDatasetManyFilesTest(TestCase):
         self.validate_open_mfdataset_autoclose(engine=['pynio'])
 
     # use of autoclose=True with h5netcdf broken because of
-    # probable h5netcdf error, uncomment when fixed to test
-    # @requires_dask
-    # @requires_h5netcdf
-    # def test_4_autoclose_h5netcdf(self):
-    #     self.validate_open_mfdataset_autoclose(engine=['h5netcdf'])
+    # probable h5netcdf error
+    @requires_dask
+    @requires_h5netcdf
+    @pytest.mark.xfail
+    def test_4_autoclose_h5netcdf(self):
+        self.validate_open_mfdataset_autoclose(engine=['h5netcdf'])
+
+    # These tests below are marked as flaky (and skipped by default) because
+    # they fail sometimes on Travis-CI, for no clear reason.
 
     @requires_dask
     @requires_netCDF4
+    @flaky
+    @slow
     def test_1_open_large_num_files_netcdf4(self):
         self.validate_open_mfdataset_large_num_files(engine=['netcdf4'])
 
     @requires_dask
     @requires_scipy
+    @flaky
+    @slow
     def test_2_open_large_num_files_scipy(self):
         self.validate_open_mfdataset_large_num_files(engine=['scipy'])
 
     @requires_dask
     @requires_pynio
+    @flaky
+    @slow
     def test_3_open_large_num_files_pynio(self):
         self.validate_open_mfdataset_large_num_files(engine=['pynio'])
 
     # use of autoclose=True with h5netcdf broken because of
-    # probable h5netcdf error, uncomment when fixed to test
-    # @requires_dask
-    # @requires_h5netcdf
-    # def test_4_open_large_num_files_h5netcdf(self):
-    #     self.validate_open_mfdataset_large_num_files(engine=['h5netcdf'])
+    # probable h5netcdf error
+    @requires_dask
+    @requires_h5netcdf
+    @flaky
+    @pytest.mark.xfail
+    @slow
+    def test_4_open_large_num_files_h5netcdf(self):
+        self.validate_open_mfdataset_large_num_files(engine=['h5netcdf'])
 
 
 @requires_dask

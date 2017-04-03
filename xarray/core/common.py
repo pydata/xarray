@@ -243,7 +243,8 @@ class BaseDataObject(AttrAccessMixin):
         try:
             return self.indexes[key]
         except KeyError:
-            return pd.Index(range(self.sizes[key]), name=key)
+            # need to ensure dtype=int64 in case range is empty on Python 2
+            return pd.Index(range(self.sizes[key]), name=key, dtype=np.int64)
 
     def _calc_assign_results(self, kwargs):
         results = SortedKeysDict()
