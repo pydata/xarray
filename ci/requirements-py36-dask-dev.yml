@@ -3,7 +3,6 @@ channels:
   - conda-forge
 dependencies:
   - python=3.6
-  - bottleneck
   - h5py
   - h5netcdf
   - matplotlib
