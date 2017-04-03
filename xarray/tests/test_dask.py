@@ -304,6 +304,17 @@ class TestDataArrayAndDataset(DaskTestCase):
             ds.load()
         self.assertEqual(count[0], 1)
 
+    def test_persist(self):
+        ds = Dataset({'foo': ('x', range(5)),
+                      'bar': ('x', range(5))}).chunk()
+        ds = ds + 1
+        n = len(ds.foo.data.dask)
+
+        ds2 = ds.persist()
+
+        assert len(ds2.foo.data.dask) == 1
+        assert len(ds.foo.data.dask) == n  # doesn't mutate in place
+
     def test_stack(self):
         data = da.random.normal(size=(2, 3, 4), chunks=(1, 3, 4))
         arr = DataArray(data, dims=('w', 'x', 'y'))
