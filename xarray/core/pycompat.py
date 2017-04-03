@@ -3,6 +3,8 @@ from __future__ import division
 from __future__ import print_function
 import sys
 
+import numpy as np
+
 PY2 = sys.version_info[0] < 3
 PY3 = sys.version_info[0] >= 3
 
@@ -10,6 +12,7 @@ if PY3:  # pragma: no cover
     basestring = str
     unicode_type = str
     bytes_type = bytes
+    integer_types = (int, np.integer)
 
     def iteritems(d):
         return iter(d.items())
@@ -24,9 +27,10 @@ if PY3:  # pragma: no cover
     from urllib.request import urlretrieve
 else:  # pragma: no cover
     # Python 2
-    basestring = basestring
-    unicode_type = unicode
+    basestring = basestring  # noqa
+    unicode_type = unicode  # noqa
     bytes_type = str
+    integer_types = (int, long, np.integer)  # noqa
 
     def iteritems(d):
         return d.iteritems()

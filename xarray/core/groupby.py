@@ -11,7 +11,7 @@ from .combine import concat
 from .common import (
     ImplementsArrayReduce, ImplementsDatasetReduce, _maybe_promote,
 )
-from .pycompat import range, zip
+from .pycompat import range, zip, integer_types
 from .utils import hashable, peek_at, maybe_wrap_array, safe_cast_to_index
 from .variable import as_variable, Variable, IndexVariable
 
@@ -408,7 +408,7 @@ class GroupBy(object):
         return self._where(cond)
 
     def _first_or_last(self, op, skipna, keep_attrs):
-        if isinstance(self._group_indices[0], (int, np.integer)):
+        if isinstance(self._group_indices[0], integer_types):
             # NB. this is currently only used for reductions along an existing
             # dimension
             return self._obj

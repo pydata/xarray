@@ -49,7 +49,7 @@ class TestDataArray(TestCase):
             other    int64 0
         Dimensions without coordinates: time
         Attributes:
-            foo: bar""")
+            foo:      bar""")
         self.assertEqual(expected, repr(data_array))
 
     def test_repr_multiindex(self):
@@ -105,6 +105,13 @@ class TestDataArray(TestCase):
         assert array.get_index('y').equals(pd.Index([0, 1, 2]))
         with self.assertRaises(KeyError):
             array.get_index('z')
+
+    def test_get_index_size_zero(self):
+        array = DataArray(np.zeros((0,)), dims=['x'])
+        actual = array.get_index('x')
+        expected = pd.Index([], dtype=np.int64)
+        assert actual.equals(expected)
+        assert actual.dtype == expected.dtype
 
     def test_struct_array_dims(self):
         """
@@ -2442,13 +2449,31 @@ def test_rolling_iter(da):
     for i, (label, window_da) in enumerate(rolling_obj):
         assert label == da['time'].isel(time=i)
 
+def test_rolling_doc(da):
+
+    rolling_obj = da.rolling(time=7)
+
+    assert rolling_obj.mean.__doc__ == \
+        """Reduce this DataArray's data windows by applying `mean`
+        along its dimension.
+
+        Parameters
+        ----------
+        **kwargs : dict
+            Additional keyword arguments passed on to `mean`.
+
+        Returns
+        -------
+        reduced : DataArray
+            New DataArray object with `mean` applied along its rolling dimnension.
+        """
 
 def test_rolling_properties(da):
     pytest.importorskip('bottleneck', minversion='1.0')
 
     rolling_obj = da.rolling(time=4)
 
-    assert rolling_obj._axis_num == 1
+    assert rolling_obj.obj.get_axis_num('time') == 1
 
     # catching invalid args
     with pytest.raises(ValueError) as exception:
@@ -2544,4 +2569,4 @@ def test_rolling_reduce(da, center, min_periods, window, name):
     actual = rolling_obj.reduce(getattr(np, 'nan%s' % name))
     expected = getattr(rolling_obj, name)()
     assert_allclose(actual, expected)
-    assert da.dims == expected.dims
+    assert actual.dims == expected.dims

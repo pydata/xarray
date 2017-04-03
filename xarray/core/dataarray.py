@@ -155,8 +155,8 @@ class DataArray(AbstractArray, BaseDataObject):
     attrs : OrderedDict
         Dictionary for holding arbitrary metadata.
     """
-    groupby_cls = groupby.DataArrayGroupBy
-    rolling_cls = rolling.DataArrayRolling
+    _groupby_cls = groupby.DataArrayGroupBy
+    _rolling_cls = rolling.DataArrayRolling
 
     def __init__(self, data, coords=None, dims=None, name=None,
                  attrs=None, encoding=None, fastpath=False):

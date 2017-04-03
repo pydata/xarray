@@ -21,6 +21,8 @@ v0.9.2 (unreleased)
 
 Enhancements
 ~~~~~~~~~~~~
+- ``rolling`` on Dataset is now supported (:issue:`859`).
+  By `Keisuke Fujii <https://github.com/fujiisoup>`_.
 - When bottleneck version 1.1 or later is installed, use bottleneck for rolling
   `var`, `argmin`, `argmax`, and `rank` computations. Also, `rolling.median`
   now also accepts a `min_periods` argument (:issue:`1276`).
@@ -41,6 +43,13 @@ By `Henry S. Harrison <https://hsharrison.github.io>`_.
   Note, the default is ``autoclose=False``, which is consistent with previous
   xarray behavior.  By `Phillip J. Wolfram <https://github.com/pwolfram>`_.
 
+- The ``repr()`` of ``Dataset`` and ``DataArray`` attributes uses a similar
+  format to coordinates and variables, with vertically aligned entries
+  truncated to fit on a single line.  Hopefully this will stop people writing
+  ``data.attrs = {}`` and discarding metadata in notebooks for the sake of
+  cleaner output.  The full metadata is still available as ``data.attrs``.
+  By `Zac Hatfield-Dodds <https://github.com/Zac-HD>`_.
+
 - Enhances tests by use of ``@slow``, ``@flakey``, and ``@optionalci``
   decorrators, which are controled via ``--run-flakey``,
   ``--skip-optional-ci``, and ``--skip-slow``command line arguments 
@@ -52,6 +61,12 @@ Bug fixes
 - ``rolling`` now keeps its original dimension order (:issue:`1125`).
   By `Keisuke Fujii <https://github.com/fujiisoup>`_.
 
+- Fix ``sel`` with ``method='nearest'`` on Python 2.7 and 64-bit Windows
+  (:issue:`1140`).
+  `Stephan Hoyer <https://github.com/shoyer>`_.
+- Fixes ``where`` with ``drop='True'`` for empty masks (:issue:`1341`).
+  By `Stephan Hoyer <https://github.com/shoyer>`_ and
+  `Phillip J. Wolfram <https://github.com/pwolfram>`_.
 
 .. _whats-new.0.9.1:
 

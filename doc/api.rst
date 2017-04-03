@@ -122,6 +122,7 @@ Computation
    Dataset.reduce
    Dataset.groupby
    Dataset.groupby_bins
+   Dataset.rolling
    Dataset.resample
    Dataset.diff
    Dataset.quantile

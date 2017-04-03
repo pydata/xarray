@@ -1196,6 +1196,25 @@ class DaskTest(TestCase, DatasetIOTestCases):
         with self.assertRaisesRegexp(IOError, 'no files to open'):
             open_mfdataset('foo-bar-baz-*.nc', autoclose=self.autoclose)
 
+    def test_attrs_mfdataset(self):
+        original = Dataset({'foo': ('x', np.random.randn(10))})
+        with create_tmp_file() as tmp1:
+            with create_tmp_file() as tmp2:
+                ds1 = original.isel(x=slice(5))
+                ds2 = original.isel(x=slice(5, 10))
+                ds1.attrs['test1'] = 'foo'
+                ds2.attrs['test2'] = 'bar'
+                ds1.to_netcdf(tmp1)
+                ds2.to_netcdf(tmp2)
+                with open_mfdataset([tmp1, tmp2]) as actual:
+                    # presumes that attributes inherited from
+                    # first dataset loaded
+                    self.assertEqual(actual.test1, ds1.test1)
+                    # attributes from ds2 are not retained, e.g.,
+                    with self.assertRaisesRegexp(AttributeError,
+                                                 'no attribute'):
+                        actual.test2
+
     def test_preprocess_mfdataset(self):
         original = Dataset({'foo': ('x', np.random.randn(10))})
         with create_tmp_file() as tmp:
