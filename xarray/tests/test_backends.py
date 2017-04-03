@@ -1047,6 +1047,7 @@ class H5NetCDFDataTest(BaseNetCDF4Test, TestCase):
             actual = open_dataset(tmp_file)
             expected = Dataset(attrs={'foo': 'bar'})
             self.assertDatasetIdentical(expected, actual)
+            actual.close()
 
     def test_encoding_unlimited_dims(self):
         ds = Dataset({'x': ('y', np.arange(10.0))})
