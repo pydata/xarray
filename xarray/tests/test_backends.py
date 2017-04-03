@@ -27,7 +27,7 @@ from xarray.core.pycompat import iteritems, PY2, PY3, ExitStack
 from . import (TestCase, requires_scipy, requires_netCDF4, requires_pydap,
                requires_scipy_or_netCDF4, requires_dask, requires_h5netcdf,
                requires_pynio, has_netCDF4, has_scipy, assert_allclose,
-               flakey, optionalci, slow)
+               flaky, optionalci, slow)
 from .test_dataset import create_test_data
 
 try:
@@ -1060,7 +1060,7 @@ class H5NetCDFDataTest(BaseNetCDF4Test, TestCase):
                 ds.to_netcdf(tmp_file, engine='h5netcdf', unlimited_dims=['y'])
 
 # tests pending h5netcdf fix
-@flakey
+@flaky
 class H5NetCDFDataTestAutocloseTrue(H5NetCDFDataTest):
     autoclose = True
 
@@ -1109,7 +1109,7 @@ class OpenMFDatasetManyFilesTest(TestCase):
     # probable h5netcdf error, uncomment when fixed to test
     @requires_dask
     @requires_h5netcdf
-    @flakey
+    @flaky
     def test_4_autoclose_h5netcdf(self):
         self.validate_open_mfdataset_autoclose(engine=['h5netcdf'])
 
@@ -1138,7 +1138,7 @@ class OpenMFDatasetManyFilesTest(TestCase):
     # probable h5netcdf error, uncomment when fixed to test
     @requires_dask
     @requires_h5netcdf
-    @flakey
+    @flaky
     @optionalci
     @slow
     def test_4_open_large_num_files_h5netcdf(self):

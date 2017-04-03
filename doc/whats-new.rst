@@ -50,9 +50,9 @@ By `Henry S. Harrison <https://hsharrison.github.io>`_.
   cleaner output.  The full metadata is still available as ``data.attrs``.
   By `Zac Hatfield-Dodds <https://github.com/Zac-HD>`_.
 
-- Enhances tests by use of ``@slow``, ``@flakey``, and ``@optionalci``
-  decorrators, which are controled via ``--run-flakey``,
-  ``--skip-optional-ci``, and ``--skip-slow``command line arguments 
+- Enhances tests by use of ``@slow``, ``@flaky``, and ``@optionalci``
+  decorrators, which are controled via ``--run-flaky``,
+  ``--skip-optional-ci``, and ``--skip-slow``command line arguments
   to ``py.test``.  By `Stephan Hoyer <https://github.com/shoyer>`_ and
   `Phillip J. Wolfram <https://github.com/pwolfram>`_.
 

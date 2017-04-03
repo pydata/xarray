@@ -21,36 +21,36 @@ matrix:
   - python: 3.6
     env: CONDA_ENV=py36 EXTRA_FLAGS=--skip-optional-ci
   - python: 3.6
-    env: CONDA_ENV=py36-pydap EXTRA_FLAGS=--run-flakey
+    env: CONDA_ENV=py36-pydap EXTRA_FLAGS=--run-flaky
   - python: 3.6
-    env: CONDA_ENV=py36-netcdf4-dev EXTRA_FLAGS=--run-flakey
+    env: CONDA_ENV=py36-netcdf4-dev EXTRA_FLAGS=--run-flaky
     addons:
       apt_packages:
         - libhdf5-serial-dev
         - netcdf-bin
         - libnetcdf-dev
   - python: 3.6
-    env: CONDA_ENV=py36-dask-dev EXTRA_FLAGS=--run-flakey
+    env: CONDA_ENV=py36-dask-dev EXTRA_FLAGS=--run-flaky
   - python: 3.6
-    env: CONDA_ENV=py36-pandas-dev EXTRA_FLAGS=--run-flakey
+    env: CONDA_ENV=py36-pandas-dev EXTRA_FLAGS=--run-flaky
   - python: 3.6
-    env: CONDA_ENV=py36-condaforge-rc EXTRA_FLAGS=--run-flakey
+    env: CONDA_ENV=py36-condaforge-rc EXTRA_FLAGS=--run-flaky
   allow_failures:
   - python: 3.6
-    env: CONDA_ENV=py36-pydap EXTRA_FLAGS=--run-flakey
+    env: CONDA_ENV=py36-pydap EXTRA_FLAGS=--run-flaky
   - python: 3.6
-    env: CONDA_ENV=py36-netcdf4-dev EXTRA_FLAGS=--run-flakey
+    env: CONDA_ENV=py36-netcdf4-dev EXTRA_FLAGS=--run-flaky
     addons:
       apt_packages:
         - libhdf5-serial-dev
         - netcdf-bin
         - libnetcdf-dev
   - python: 3.6
-    env: CONDA_ENV=py36-dask-dev EXTRA_FLAGS=--run-flakey
+    env: CONDA_ENV=py36-dask-dev EXTRA_FLAGS=--run-flaky
   - python: 3.6
-    env: CONDA_ENV=py36-pandas-dev EXTRA_FLAGS=--run-flakey
+    env: CONDA_ENV=py36-pandas-dev EXTRA_FLAGS=--run-flaky
   - python: 3.6
-    env: CONDA_ENV=py36-condaforge-rc EXTRA_FLAGS=--run-flakey
+    env: CONDA_ENV=py36-condaforge-rc EXTRA_FLAGS=--run-flaky
 
 before_install:
   - if [[ "$TRAVIS_PYTHON_VERSION" == "2.7" ]]; then

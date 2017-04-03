@@ -114,9 +114,9 @@ def requires_bottleneck(test):
     return test if has_bottleneck else pytest.mark.skip('requires bottleneck')(test)
 
 
-flakey = pytest.mark.skipif(
-    not pytest.config.getoption("--run-flakey"),
-    reason="set --run-flakey option to run flakey tests")
+flaky = pytest.mark.skipif(
+    not pytest.config.getoption("--run-flaky"),
+    reason="set --run-flaky option to run flaky tests")
 
 optionalci = pytest.mark.skipif(
     pytest.config.getoption("--skip-optional-ci"),
