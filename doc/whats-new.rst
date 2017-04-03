@@ -50,6 +50,11 @@ By `Henry S. Harrison <https://hsharrison.github.io>`_.
   cleaner output.  The full metadata is still available as ``data.attrs``.
   By `Zac Hatfield-Dodds <https://github.com/Zac-HD>`_.
 
+- Enhanced tests suite by use of ``@slow`` and ``@flaky`` decorators, which are
+  controlled via ``--run-flaky`` and ``--skip-slow`` command line arguments
+  to ``py.test``.  By `Stephan Hoyer <https://github.com/shoyer>`_ and
+  `Phillip J. Wolfram <https://github.com/pwolfram>`_.
+
 Bug fixes
 ~~~~~~~~~
 - ``rolling`` now keeps its original dimension order (:issue:`1125`).
