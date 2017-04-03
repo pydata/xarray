@@ -1061,7 +1061,7 @@ class H5NetCDFDataTest(BaseNetCDF4Test, TestCase):
 
 
 # tests pending h5netcdf fix
-@flaky
+@pytest.mark.xfail
 class H5NetCDFDataTestAutocloseTrue(H5NetCDFDataTest):
     autoclose = True
 
@@ -1073,8 +1073,8 @@ class OpenMFDatasetManyFilesTest(TestCase):
         # test standard open_mfdataset approach with too many files
         with create_tmp_files(nfiles) as tmpfiles:
             for readengine in engine:
-                writeengine = \
-                        readengine if readengine != 'pynio' else 'netcdf4'
+                writeengine = (readengine if readengine != 'pynio'
+                               else 'netcdf4')
                 # split into multiple sets of temp files
                 for ii in original.x.values:
                     subds = original.isel(x=slice(ii, ii+1))
@@ -1110,7 +1110,7 @@ class OpenMFDatasetManyFilesTest(TestCase):
     # probable h5netcdf error
     @requires_dask
     @requires_h5netcdf
-    @pytest.pytest.mark.xfail
+    @pytest.mark.xfail
     def test_4_autoclose_h5netcdf(self):
         self.validate_open_mfdataset_autoclose(engine=['h5netcdf'])
 
