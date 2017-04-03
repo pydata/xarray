@@ -43,4 +43,4 @@ install:
 build: false
 
 test_script:
-  - "py.test xarray --verbose --skip-optional-ci"
+  - "py.test xarray --verbose"

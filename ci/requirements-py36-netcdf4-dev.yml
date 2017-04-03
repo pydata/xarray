@@ -3,16 +3,19 @@ channels:
   - conda-forge
 dependencies:
   - python=3.6
+  - bottleneck
   - cython
   - dask
   - distributed
   - h5py
+  - h5netcdf
+  - matplotlib
   - pytest
   - numpy
   - pandas
   - scipy
+  - toolz
   - pip:
     - coveralls
     - pytest-cov
-    - h5netcdf
     - git+https://github.com/Unidata/netcdf4-python.git

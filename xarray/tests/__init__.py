@@ -118,12 +118,6 @@ flaky = pytest.mark.skipif(
     not pytest.config.getoption("--run-flaky"),
     reason="set --run-flaky option to run flaky tests")
 
-optionalci = pytest.mark.skipif(
-    pytest.config.getoption("--skip-optional-ci"),
-    reason=("set --skip-optional-ci option to skip tests in CI, "
-            "e.g., due to travis CI resource issues"))
-
-
 slow = pytest.mark.skipif(
     pytest.config.getoption("--skip-slow"),
     reason="set --skip-slow option to run slow tests")

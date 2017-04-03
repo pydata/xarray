@@ -3,20 +3,22 @@ channels:
   - conda-forge
 dependencies:
   - python=2.7
+  - bottleneck
   - cdat-lite
+  - cyordereddict
   - dask
   - distributed
-  - pytest
-  - numpy
-  - pandas>=0.15.0
-  - pynio
-  - netcdf4
-  - scipy
-  - pytest-cov
-  - cyordereddict
   - h5py
-  - netcdf4
+  - h5netcdf
   - matplotlib
+  - netcdf4
+  - numpy
+  - pandas
+  - pynio
+  - pytest
+  - scipy
   - seaborn
+  - toolz
   - pip:
     - coveralls
+    - pytest-cov

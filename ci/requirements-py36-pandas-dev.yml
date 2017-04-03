@@ -3,14 +3,19 @@ channels:
   - conda-forge
 dependencies:
   - python=3.6
-  - cython=0.23.4
+  - bottleneck
+  - cython
+  - dask
+  - distributed
+  - h5py
+  - h5netcdf
+  - matplotlib
+  - netcdf4
   - pytest
-  - numpy=1.10.1
-  - netcdf4=1.1.9
-  - scipy=0.16.0
+  - numpy
+  - scipy
   - toolz
   - pip:
     - coveralls
     - pytest-cov
-    - dask
     - git+https://github.com/pydata/pandas.git

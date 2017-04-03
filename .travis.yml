@@ -11,46 +11,54 @@ matrix:
   fast_finish: true
   include:
   - python: 2.7
-    env: CONDA_ENV=py27-min EXTRA_FLAGS=--skip-optional-ci
+    env: CONDA_ENV=py27-min
   - python: 2.7
-    env: CONDA_ENV=py27-cdat+pynio EXTRA_FLAGS=--skip-optional-ci
+    env: CONDA_ENV=py27-cdat+pynio
   - python: 3.4
-    env: CONDA_ENV=py34 EXTRA_FLAGS=--skip-optional-ci
+    env: CONDA_ENV=py34
   - python: 3.5
-    env: CONDA_ENV=py35 EXTRA_FLAGS=--skip-optional-ci
+    env: CONDA_ENV=py35
   - python: 3.6
-    env: CONDA_ENV=py36 EXTRA_FLAGS=--skip-optional-ci
+    env: CONDA_ENV=py36
   - python: 3.6
-    env: CONDA_ENV=py36-pydap EXTRA_FLAGS=--run-flaky
+    env:
+    - CONDA_ENV=py36
+    - EXTRA_FLAGS="--run-flaky"
   - python: 3.6
-    env: CONDA_ENV=py36-netcdf4-dev EXTRA_FLAGS=--run-flaky
+    env: CONDA_ENV=py36-pydap
+  - python: 3.6
+    env: CONDA_ENV=py36-netcdf4-dev
     addons:
       apt_packages:
         - libhdf5-serial-dev
         - netcdf-bin
         - libnetcdf-dev
   - python: 3.6
-    env: CONDA_ENV=py36-dask-dev EXTRA_FLAGS=--run-flaky
+    env: CONDA_ENV=py36-dask-dev
   - python: 3.6
-    env: CONDA_ENV=py36-pandas-dev EXTRA_FLAGS=--run-flaky
+    env: CONDA_ENV=py36-pandas-dev
   - python: 3.6
-    env: CONDA_ENV=py36-condaforge-rc EXTRA_FLAGS=--run-flaky
+    env: CONDA_ENV=py36-condaforge-rc
   allow_failures:
   - python: 3.6
-    env: CONDA_ENV=py36-pydap EXTRA_FLAGS=--run-flaky
+    env:
+    - CONDA_ENV=py36
+    - EXTRA_FLAGS="--run-flaky"
   - python: 3.6
-    env: CONDA_ENV=py36-netcdf4-dev EXTRA_FLAGS=--run-flaky
+    env: CONDA_ENV=py36-pydap
+  - python: 3.6
+    env: CONDA_ENV=py36-netcdf4-dev
     addons:
       apt_packages:
         - libhdf5-serial-dev
         - netcdf-bin
         - libnetcdf-dev
   - python: 3.6
-    env: CONDA_ENV=py36-dask-dev EXTRA_FLAGS=--run-flaky
+    env: CONDA_ENV=py36-dask-dev
   - python: 3.6
-    env: CONDA_ENV=py36-pandas-dev EXTRA_FLAGS=--run-flaky
+    env: CONDA_ENV=py36-pandas-dev
   - python: 3.6
-    env: CONDA_ENV=py36-condaforge-rc EXTRA_FLAGS=--run-flaky
+    env: CONDA_ENV=py36-condaforge-rc
 
 before_install:
   - if [[ "$TRAVIS_PYTHON_VERSION" == "2.7" ]]; then

@@ -27,7 +27,7 @@ from xarray.core.pycompat import iteritems, PY2, PY3, ExitStack
 from . import (TestCase, requires_scipy, requires_netCDF4, requires_pydap,
                requires_scipy_or_netCDF4, requires_dask, requires_h5netcdf,
                requires_pynio, has_netCDF4, has_scipy, assert_allclose,
-               flaky, optionalci, slow)
+               flaky, slow)
 from .test_dataset import create_test_data
 
 try:
@@ -1059,6 +1059,7 @@ class H5NetCDFDataTest(BaseNetCDF4Test, TestCase):
             with pytest.warns(UserWarning):
                 ds.to_netcdf(tmp_file, engine='h5netcdf', unlimited_dims=['y'])
 
+
 # tests pending h5netcdf fix
 @flaky
 class H5NetCDFDataTestAutocloseTrue(H5NetCDFDataTest):
@@ -1106,40 +1107,43 @@ class OpenMFDatasetManyFilesTest(TestCase):
         self.validate_open_mfdataset_autoclose(engine=['pynio'])
 
     # use of autoclose=True with h5netcdf broken because of
-    # probable h5netcdf error, uncomment when fixed to test
+    # probable h5netcdf error
     @requires_dask
     @requires_h5netcdf
-    @flaky
+    @pytest.pytest.mark.xfail
     def test_4_autoclose_h5netcdf(self):
         self.validate_open_mfdataset_autoclose(engine=['h5netcdf'])
 
+    # These tests below are marked as flaky (and skipped by default) because
+    # they fail sometimes on Travis-CI, for no clear reason.
+
     @requires_dask
     @requires_netCDF4
-    @optionalci
+    @flaky
     @slow
     def test_1_open_large_num_files_netcdf4(self):
         self.validate_open_mfdataset_large_num_files(engine=['netcdf4'])
 
     @requires_dask
     @requires_scipy
-    @optionalci
+    @flaky
     @slow
     def test_2_open_large_num_files_scipy(self):
         self.validate_open_mfdataset_large_num_files(engine=['scipy'])
 
     @requires_dask
     @requires_pynio
-    @optionalci
+    @flaky
     @slow
     def test_3_open_large_num_files_pynio(self):
         self.validate_open_mfdataset_large_num_files(engine=['pynio'])
 
     # use of autoclose=True with h5netcdf broken because of
-    # probable h5netcdf error, uncomment when fixed to test
+    # probable h5netcdf error
     @requires_dask
     @requires_h5netcdf
     @flaky
-    @optionalci
+    @pytest.mark.xfail
     @slow
     def test_4_open_large_num_files_h5netcdf(self):
         self.validate_open_mfdataset_large_num_files(engine=['h5netcdf'])
