@@ -16,54 +16,64 @@ What's New
 
 .. _whats-new.0.9.2:
 
-v0.9.2 (unreleased)
--------------------
+v0.9.2 (2 April, 2017)
+----------------------
+
+The minor release includes bug-fixes and backwards compatible enhancements.
 
 Enhancements
 ~~~~~~~~~~~~
-- ``rolling`` on Dataset is now supported (:issue:`859`).
+
+- ``.rolling()`` on Dataset is now supported (:issue:`859`).
   By `Keisuke Fujii <https://github.com/fujiisoup>`_.
+
 - When bottleneck version 1.1 or later is installed, use bottleneck for rolling
-  `var`, `argmin`, `argmax`, and `rank` computations. Also, `rolling.median`
-  now also accepts a `min_periods` argument (:issue:`1276`).
+  ``var``, ``argmin``, ``argmax``, and ``rank`` computations. Also, rolling
+  median now accepts a ``min_periods`` argument (:issue:`1276`).
   By `Joe Hamman <https://github.com/jhamman>`_.
 
-- When `plot()` is called on a 2D DataArray and only one dimension is
-  specified with `x=` or `y=`, the other dimension is now guessed. By
-  `Vincent Noel <https://github.com/vnoel>`_.
+- When ``.plot()`` is called on a 2D DataArray and only one dimension is
+  specified with ``x=`` or ``y=``, the other dimension is now guessed
+  (:issue:`1291`).
+  By `Vincent Noel <https://github.com/vnoel>`_.
 
-Added new method :py:meth:`~Dataset.assign_attrs` to ``DataArray`` and
-``Dataset``, a chained-method compatible implementation of the
-``dict.update`` method on attrs (:issue:`1281`).
-By `Henry S. Harrison <https://hsharrison.github.io>`_.
+- Added new method :py:meth:`~Dataset.assign_attrs` to ``DataArray`` and
+  ``Dataset``, a chained-method compatible implementation of the
+  ``dict.update`` method on attrs (:issue:`1281`).
+  By `Henry S. Harrison <https://hsharrison.github.io>`_.
 
-- It is now possible to set the ``autoclose=True`` argument to
-  :py:func:`~xarray.open_mfdataset` to explicitly close opened files when not
-  in use to prevent occurrence of an OS Error related to too many open files.
-  Note, the default is ``autoclose=False``, which is consistent with previous
-  xarray behavior.  By `Phillip J. Wolfram <https://github.com/pwolfram>`_.
+- Added new ``autoclose=True`` argument to
+  :py:func:`~xarray.open_mfdataset` to explicitly close opened files when not in
+  use to prevent occurrence of an OS Error related to too many open files
+  (:issue:`1198`).
+  Note, the default is ``autoclose=False``, which is consistent with
+  previous xarray behavior.
+  By `Phillip J. Wolfram <https://github.com/pwolfram>`_.
 
 - The ``repr()`` of ``Dataset`` and ``DataArray`` attributes uses a similar
   format to coordinates and variables, with vertically aligned entries
-  truncated to fit on a single line.  Hopefully this will stop people writing
-  ``data.attrs = {}`` and discarding metadata in notebooks for the sake of
-  cleaner output.  The full metadata is still available as ``data.attrs``.
+  truncated to fit on a single line (:issue:`1319`).  Hopefully this will stop
+  people writing ``data.attrs = {}`` and discarding metadata in notebooks for
+  the sake of cleaner output.  The full metadata is still available as
+  ``data.attrs``.
   By `Zac Hatfield-Dodds <https://github.com/Zac-HD>`_.
 
 - Enhanced tests suite by use of ``@slow`` and ``@flaky`` decorators, which are
   controlled via ``--run-flaky`` and ``--skip-slow`` command line arguments
-  to ``py.test``.  By `Stephan Hoyer <https://github.com/shoyer>`_ and
+  to ``py.test`` (:issue:`1336`).
+  By `Stephan Hoyer <https://github.com/shoyer>`_ and
   `Phillip J. Wolfram <https://github.com/pwolfram>`_.
 
 Bug fixes
 ~~~~~~~~~
-- ``rolling`` now keeps its original dimension order (:issue:`1125`).
+- Rolling operations now keep preserve original dimension order (:issue:`1125`).
   By `Keisuke Fujii <https://github.com/fujiisoup>`_.
 
-- Fix ``sel`` with ``method='nearest'`` on Python 2.7 and 64-bit Windows
+- Fixed ``sel`` with ``method='nearest'`` on Python 2.7 and 64-bit Windows
   (:issue:`1140`).
   `Stephan Hoyer <https://github.com/shoyer>`_.
-- Fixes ``where`` with ``drop='True'`` for empty masks (:issue:`1341`).
+
+- Fixed ``where`` with ``drop='True'`` for empty masks (:issue:`1341`).
   By `Stephan Hoyer <https://github.com/shoyer>`_ and
   `Phillip J. Wolfram <https://github.com/pwolfram>`_.
 
