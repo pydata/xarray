@@ -120,8 +120,8 @@ class DatasetIOTestCases(object):
             expected.dump_to_store(store)
             # we need to cf decode the store because it has time and
             # non-dimension coordinates
-            actual = xr.decode_cf(store)
-            self.assertDatasetAllClose(expected, actual)
+            with xr.decode_cf(store) as actual:
+                self.assertDatasetAllClose(expected, actual)
 
     def check_dtypes_roundtripped(self, expected, actual):
         for k in expected:
@@ -1044,10 +1044,9 @@ class H5NetCDFDataTest(BaseNetCDF4Test, TestCase):
         with create_tmp_file() as tmp_file:
             with nc4.Dataset(tmp_file, 'w') as nc:
                 nc.foo = b'bar'
-            actual = open_dataset(tmp_file)
-            expected = Dataset(attrs={'foo': 'bar'})
-            self.assertDatasetIdentical(expected, actual)
-            actual.close()
+            with open_dataset(tmp_file) as actual:
+                expected = Dataset(attrs={'foo': 'bar'})
+                self.assertDatasetIdentical(expected, actual)
 
     def test_encoding_unlimited_dims(self):
         ds = Dataset({'x': ('y', np.arange(10.0))})
