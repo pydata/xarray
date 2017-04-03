@@ -15,7 +15,7 @@ dependencies:
   - pytest-cov
   - cyordereddict
   - h5py
-  - netcdf4
+  - h5netcdf
   - matplotlib
   - seaborn
   - pip:
