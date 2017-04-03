@@ -253,8 +253,15 @@ def summarize_coord(name, var, col_width):
 
 
 def summarize_attr(key, value, col_width=None):
-    # ignore col_width for now to more clearly distinguish attributes
-    return u'    %s: %s' % (key, maybe_truncate(value))
+    """Summary for __repr__ - use ``X.attrs[key]`` for full value."""
+    # Indent key and add ':', then right-pad if col_width is not None
+    k_str = u'    %s:' % key
+    if col_width is not None:
+        k_str = pretty_print(k_str, col_width)
+    # Replace tabs and newlines, so we print on one line in known width
+    v_str = unicode_type(value).replace(u'\t', u'\\t').replace(u'\n', u'\\n')
+    # Finally, truncate to the desired display width
+    return maybe_truncate(u'%s %s' % (k_str, v_str), OPTIONS['display_width'])
 
 
 EMPTY_REPR = u'    *empty*'

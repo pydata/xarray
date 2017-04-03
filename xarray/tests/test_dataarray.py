@@ -49,7 +49,7 @@ class TestDataArray(TestCase):
             other    int64 0
         Dimensions without coordinates: time
         Attributes:
-            foo: bar""")
+            foo:      bar""")
         self.assertEqual(expected, repr(data_array))
 
     def test_repr_multiindex(self):

@@ -43,6 +43,13 @@ By `Henry S. Harrison <https://hsharrison.github.io>`_.
   Note, the default is ``autoclose=False``, which is consistent with previous
   xarray behavior.  By `Phillip J. Wolfram <https://github.com/pwolfram>`_.
 
+- The ``repr()`` of ``Dataset`` and ``DataArray`` attributes uses a similar
+  format to coordinates and variables, with vertically aligned entries
+  truncated to fit on a single line.  Hopefully this will stop people writing
+  ``data.attrs = {}`` and discarding metadata in notebooks for the sake of
+  cleaner output.  The full metadata is still available as ``data.attrs``.
+  By `Zac Hatfield-Dodds <https://github.com/Zac-HD>`_.
+
 Bug fixes
 ~~~~~~~~~
 - ``rolling`` now keeps its original dimension order (:issue:`1125`).

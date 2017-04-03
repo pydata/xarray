@@ -101,7 +101,7 @@ class TestDataset(TestCase):
             var2     (dim1, dim2) float64 1.162 -1.097 -2.123 1.04 -0.4034 -0.126 ...
             var3     (dim3, dim1) float64 0.5565 -0.2121 0.4563 1.545 -0.2397 0.1433 ...
         Attributes:
-            foo: bar""") % data['dim3'].dtype
+            foo:      bar""") % data['dim3'].dtype
         actual = '\n'.join(x.rstrip() for x in repr(data).split('\n'))
         print(actual)
         self.assertEqual(expected, actual)
@@ -187,7 +187,7 @@ class TestDataset(TestCase):
         Data variables:
             *empty*
         Attributes:
-            å: ∑""" % u'ba®')
+            å:        ∑""" % u'ba®')
         actual = unicode_type(data)
         self.assertEqual(expected, actual)
 
