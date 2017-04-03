@@ -1509,6 +1509,26 @@ class TestDataset(TestCase):
         with self.assertRaisesRegexp(ValueError, 'replacement dimension'):
             original.swap_dims({'x': 'z'})
 
+    def test_expand_dims(self):
+        original = Dataset({'x': ('a', np.random.randn(3)),
+                            'y': (['b', 'a'], np.random.randn(4, 3))},
+                            coords={'a': np.linspace(0, 1, 3),
+                                    'b': np.linspace(0, 1, 4),
+                                    'c': np.linspace(0, 1, 5)},
+                            attrs={'key': 'entry'})
+        expected = Dataset({'x': original['x'].expand_dims('z', 1),
+                            'y': original['y'].expand_dims('z', 1),},
+                            coords={'a': np.linspace(0, 1, 3),
+                                    'b': np.linspace(0, 1, 4),
+                                    'c': np.linspace(0, 1, 5)},
+                            attrs={'key': 'entry'})
+
+        actual = original.expand_dims(['z'], [1])
+        self.assertDatasetIdentical(expected, actual)
+        # make sure squeeze restores the original data set.
+        roundtripped = actual.squeeze('z')
+        self.assertDatasetIdentical(original, roundtripped)
+
     def test_set_index(self):
         expected = create_test_multiindex()
         mindex = expected['x'].to_index()

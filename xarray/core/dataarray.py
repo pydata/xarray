@@ -864,51 +864,8 @@ class DataArray(AbstractArray, BaseDataObject):
         expanded : same type as caller
             This object, but with an additional dimension(s).
         """
-        # Make sure user does not do `expand_dims(0)`
-        if isinstance(dim, int):
-            raise ValueError('dim should be str or sequence of strs or dict')
-
-        # Make axis and dims a pair of lists
-        if isinstance(dim, basestring):
-            dim = [dim]
-        if axis is not None and not isinstance(axis, (list, tuple)):
-            axis = [axis]
-
-        # infer None arguments.
-        if axis is None:
-            axis = list(range(len(dim)))
-
-        # Error checking
-        # Make sure the length of axis and dims are identical
-        if len(dim) != len(axis):
-            raise ValueError('lengths of dim and axis should be identical.')
-        # make sure any of dim does not already exist
-        for d in dim:
-            if d in self.dims:
-                raise ValueError('{dim} already exists.'.format(dim=d))
-
-        # make sure there is no duplicates in axis or dims
-        if len(axis) != len(set(axis)):
-            raise ValueError('axis should not contain same values.')
-        if len(dim) != len(set(dim)):
-            raise ValueError('dims should not contain same values.')
-
-        # sort dim and axis, so that axis is in order.
-        axis, dim = zip(*sorted(zip(axis, dim)))
-        # dims of the result array. This will be passed to Variable.expand_dims
-        all_dims = list(self.dims)
-        for a, d in zip(axis, dim):
-            all_dims.insert(a, d)
-
-        # If dims includes a label of a scalar variables,
-        # it will be promoted to a 1D coordinate consisting of a single value.
-        coords = OrderedDict(self._coords)
-        for d in dim:
-            if d in self._coords:
-                coords[d] = coords[d].expand_dims(d)
-
-        return DataArray(self._variable.expand_dims(all_dims),
-                         dims=all_dims, coords=coords, attrs=self.attrs)
+        ds = self._to_temp_dataset().expand_dims(dim, axis)
+        return self._from_temp_dataset(ds)
 
     def set_index(self, append=False, inplace=False, **indexes):
         """Set DataArray (multi-)indexes using one or more existing coordinates.

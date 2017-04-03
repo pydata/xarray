@@ -928,6 +928,8 @@ class TestDataArray(TestCase):
                              coords={'x': np.linspace(0.0, 1.0, 3)},
                              attrs={'key': 'entry'})
         self.assertDataArrayIdentical(expected, actual)
+        roundtripped = actual.squeeze('y', drop=True)
+        self.assertDatasetIdentical(array, roundtripped)
 
         # pass multiple dims
         actual = array.expand_dims(dim=['y', 'z'])
@@ -937,6 +939,8 @@ class TestDataArray(TestCase):
                              coords={'x': np.linspace(0.0, 1.0, 3)},
                              attrs={'key': 'entry'})
         self.assertDataArrayIdentical(expected, actual)
+        roundtripped = actual.squeeze(['y', 'z'], drop=True)
+        self.assertDatasetIdentical(array, roundtripped)
 
         # pass multiple dims and axis. Axis is out of order
         actual = array.expand_dims(dim=['z', 'y'], axis=[2, 1])
@@ -946,6 +950,10 @@ class TestDataArray(TestCase):
                              coords={'x': np.linspace(0.0, 1.0, 3)},
                              attrs={'key': 'entry'})
         self.assertDataArrayIdentical(expected, actual)
+        # make sure the attrs are tracked
+        self.assertTrue(actual.attrs['key'] == 'entry')
+        roundtripped = actual.squeeze(['z', 'y'], drop=True)
+        self.assertDatasetIdentical(array, roundtripped)
 
     def test_expand_dims_with_scalar_coordinate(self):
         array = DataArray(np.random.randn(3, 4), dims=['x', 'dim_0'],
@@ -958,6 +966,8 @@ class TestDataArray(TestCase):
                                      'z': np.ones(1)},
                              attrs={'key': 'entry'})
         self.assertDataArrayIdentical(expected, actual)
+        roundtripped = actual.squeeze(['z'], drop=False)
+        self.assertDatasetIdentical(array, roundtripped)
 
     def test_set_index(self):
         indexes = [self.mindex.get_level_values(n) for n in self.mindex.names]
