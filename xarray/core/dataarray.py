@@ -840,7 +840,7 @@ class DataArray(AbstractArray, BaseDataObject):
         ds = self._to_temp_dataset().swap_dims(dims_dict)
         return self._from_temp_dataset(ds)
 
-    def expand_dims(self, dim=None, axis=None):
+    def expand_dims(self, dim, axis=None):
         """Return a new object with an additional axis (or axes) inserted at the
         corresponding position in the array shape.
 
@@ -849,11 +849,9 @@ class DataArray(AbstractArray, BaseDataObject):
 
         Parameters
         ----------
-        dim : str or sequence of str, or None.
+        dim : str or sequence of str.
             Dimensions to include on the new variable.
             dimensions are inserted with length 1.
-            If None is passed, dimension labels are automatically generated,
-            e.g. dim0, dim1, ...
         axis : integer, list (or tuple) of integers, or None
             Axis position(s) where new axis is to be inserted (position(s) on
             the result array). If a list (or tuple) of integers is passed,
@@ -865,21 +863,7 @@ class DataArray(AbstractArray, BaseDataObject):
         -------
         expanded : same type as caller
             This object, but with an additional dimension(s).
-
-        Raises
-        -------
-        ValueError:
-               If the length of axis and dim are different.
-               If the axis is a list containing identical integers
-               If axis is invalid (larger than the original dimension+1)
         """
-        def create_dim_name(src_dims):
-            """ A function to automatically generate dimension name. """
-            for i in range(len(src_dims)+1):
-                dim = 'dim_'+str(i)
-                if dim not in src_dims:
-                    return dim
-
         # Make sure user does not do `expand_dims(0)`
         if isinstance(dim, int):
             raise ValueError('dim should be str or sequence of strs or dict')
@@ -892,15 +876,7 @@ class DataArray(AbstractArray, BaseDataObject):
 
         # infer None arguments.
         if axis is None:
-            if dim is None:
-                axis = [0]
-                dim = [create_dim_name(self.dims) for a in axis]
-            else:
-                axis = list(range(len(dim)))
-        if dim is None:
-            dim = []
-            for a in axis:
-                dim.append(create_dim_name(list(self.dims) + dim))
+            axis = list(range(len(dim)))
 
         # Error checking
         # Make sure the length of axis and dims are identical
@@ -921,14 +897,15 @@ class DataArray(AbstractArray, BaseDataObject):
         axis, dim = zip(*sorted(zip(axis, dim)))
         # dims of the result array. This will be passed to Variable.expand_dims
         all_dims = list(self.dims)
-        [all_dims.insert(a, d) for a, d in zip(axis, dim)]
+        for a, d in zip(axis, dim):
+            all_dims.insert(a, d)
 
         # If dims includes a label of a scalar variables,
         # it will be promoted to a 1D coordinate consisting of a single value.
-        coords = OrderedDict(self.coords)
+        coords = OrderedDict(self._coords)
         for d in dim:
-            if d in coords.keys():
-                coords[d] = np.atleast_1d(coords[d])
+            if d in self._coords:
+                coords[d] = coords[d].expand_dims(d)
 
         return DataArray(self._variable.expand_dims(all_dims),
                          dims=all_dims, coords=coords, attrs=self.attrs)

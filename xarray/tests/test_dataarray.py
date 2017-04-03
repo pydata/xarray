@@ -919,9 +919,6 @@ class TestDataArray(TestCase):
         with self.assertRaises(ValueError):
             # Should not pass the already existing dimension.
             array.expand_dims(dim=['x'])
-        with self.assertRaises(ValueError):
-            # There should not be a duplicate
-            array.expand_dims(axis=[1, 2, 1])
 
         # Working test
         # pass only dim label
@@ -946,15 +943,6 @@ class TestDataArray(TestCase):
         expected = DataArray(np.expand_dims(np.expand_dims(array.values, 1),
                                             2),
                              dims=['x', 'y', 'z', 'dim_0'],
-                             coords={'x': np.linspace(0.0, 1.0, 3)},
-                             attrs={'key': 'entry'})
-        self.assertDataArrayIdentical(expected, actual)
-
-        # pass Only axies.
-        actual = array.expand_dims(axis=[2, 1])
-        expected = DataArray(np.expand_dims(np.expand_dims(array.values, 1),
-                                            2),
-                             dims=['x', 'dim_2', 'dim_1', 'dim_0'],
                              coords={'x': np.linspace(0.0, 1.0, 3)},
                              attrs={'key': 'entry'})
         self.assertDataArrayIdentical(expected, actual)
