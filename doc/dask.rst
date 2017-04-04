@@ -144,6 +144,19 @@ Explicit conversion by wrapping a DataArray with ``np.asarray`` also works:
             [  1.337e+00,  -1.531e+00, ...,   8.726e-01,  -1.538e+00],
             ...
 
+Alternatively you can load the data into memory but keep the arrays as
+dask arrays using the `~xarray.Dataset.persist` method:
+
+.. ipython::
+
+   ds = ds.persist()
+
+This is particularly useful when using a distributed cluster because the data
+will be loaded into distributed memory across your machines and be much faster
+to use than reading repeatedly from disk.  Warning that on a single machine
+this operation will try to load all of your data into memory.  You should make
+sure that your dataset is not larger than available memory.
+
 With the current version of dask, there is no automatic alignment of chunks when
 performing operations between dask arrays with different chunk sizes. If your
 computation involves multiple dask arrays with different chunks, you may need to
@@ -225,6 +238,7 @@ larger chunksizes.
 
     import os
     os.remove('example-data.nc')
+
 
 Optimization Tips
 -----------------
