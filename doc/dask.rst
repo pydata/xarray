@@ -157,12 +157,10 @@ to use than reading repeatedly from disk.  Warning that on a single machine
 this operation will try to load all of your data into memory.  You should make
 sure that your dataset is not larger than available memory.
 
-With the current version of dask, there is no automatic alignment of chunks when
-performing operations between dask arrays with different chunk sizes. If your
-computation involves multiple dask arrays with different chunks, you may need to
-explicitly rechunk each array to ensure compatibility. With xarray, both
-converting data to a dask arrays and converting the chunk sizes of dask arrays
-is done with the :py:meth:`~xarray.Dataset.chunk` method:
+For performance you may wish to consider chunk sizes.  The correct choice of
+chunk size depends both on your data and on the operations you want to perform.
+With xarray, both converting data to a dask arrays and converting the chunk
+sizes of dask arrays is done with the :py:meth:`~xarray.Dataset.chunk` method:
 
 .. ipython:: python
     :suppress:
