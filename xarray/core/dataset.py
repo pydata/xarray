@@ -1599,55 +1599,50 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         expanded : same type as caller
             This object, but with an additional dimension(s).
         """
-        # Make sure user does not do `expand_dims(0)`
         if isinstance(dim, int):
             raise ValueError('dim should be str or sequence of strs or dict')
 
-        # Make axis and dims a pair of lists
         if isinstance(dim, basestring):
             dim = [dim]
         if axis is not None and not isinstance(axis, (list, tuple)):
             axis = [axis]
 
-        # infer None arguments.
         if axis is None:
             axis = list(range(len(dim)))
 
-        # Error checking
-        # Make sure the length of axis and dims are identical
         if len(dim) != len(axis):
             raise ValueError('lengths of dim and axis should be identical.')
-        # make sure any of dim does not already exist
         for d in dim:
             if d in self.dims:
-                raise ValueError('{dim} already exists.'.format(dim=d))
+                raise ValueError('Dimension {dim} already exists.'.format(dim=d))
 
-        # make sure there is no duplicates in axis or dims
-        if len(axis) != len(set(axis)):
-            raise ValueError('axis should not contain same values.')
         if len(dim) != len(set(dim)):
-            raise ValueError('dims should not contain same values.')
-
-        # sort dim and axis, so that axis is in order.
-        axis, dim = zip(*sorted(zip(axis, dim)))
+            raise ValueError('dims should not contain duplicate values.')
 
         variables = OrderedDict()
         for k, v in iteritems(self._variables):
-            if k in self._coord_names:
-                if k not in dim: # Do not change coordinates
+            if k not in dim:
+                if k in self._coord_names:  # Do not change coordinates
                     variables[k] = v
                 else:
-                    # If dims includes a label of a scalar variables,
-                    # it will be promoted to a 1D coordinate consisting
-                    # of a single value.
-                    variables[k] = v.set_dims(k)
+                    axis_pos = [a if a >= 0 else len(v.dims) + len(axis) + a
+                                for a in axis]
+                    if len(axis_pos) != len(set(axis_pos)):
+                        raise ValueError('axis should not contain duplicate'
+                                         ' values.')
+                    # We need to sort them to make sure `axis` equals to the
+                    # axis positions of the result array.
+                    axis_pos, dim_pos = zip(*sorted(zip(axis_pos, dim)))
+
+                    all_dims = list(v.dims)
+                    for a, d in zip(axis_pos, dim_pos):
+                        all_dims.insert(a, d)
+                    print(all_dims)
+                    variables[k] = v.set_dims(all_dims)
             else:
-                # all the dims of the result array
-                # to be passed to Variable.set_dims
-                all_dims = list(v.dims)
-                for a, d in zip(axis, dim):
-                    all_dims.insert(a, d)
-                variables[k] = v.set_dims(all_dims)
+                # If dims includes a label of a non-dimension coordinate,
+                # it will be promoted to a 1D coordinate with a single value.
+                variables[k] = v.set_dims(k)
 
         return self._replace_vars_and_dims(variables, self._coord_names)
 

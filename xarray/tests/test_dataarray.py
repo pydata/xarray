@@ -917,7 +917,7 @@ class TestDataArray(TestCase):
         array = DataArray(np.random.randn(3, 4), dims=['x', 'dim_0'],
                           coords={'x': np.linspace(0.0, 1.0, 3)},
                           attrs={'key': 'entry'})
-        # Error checking
+
         with self.assertRaises(ValueError):
             array.expand_dims(0)  # the first argument should not be an integer
         with self.assertRaises(ValueError):
@@ -926,6 +926,13 @@ class TestDataArray(TestCase):
         with self.assertRaises(ValueError):
             # Should not pass the already existing dimension.
             array.expand_dims(dim=['x'])
+        # raise if duplicate
+        with self.assertRaises(ValueError):
+            array.expand_dims(dim=['y', 'y'])
+        with self.assertRaises(ValueError):
+            array.expand_dims(dim=['y', 'z'], axis=[1, 1])
+        with self.assertRaises(ValueError):
+            array.expand_dims(dim=['y', 'z'], axis=[2, -2])
 
         # Working test
         # pass only dim label
@@ -960,6 +967,18 @@ class TestDataArray(TestCase):
         # make sure the attrs are tracked
         self.assertTrue(actual.attrs['key'] == 'entry')
         roundtripped = actual.squeeze(['z', 'y'], drop=True)
+        self.assertDatasetIdentical(array, roundtripped)
+
+        # Negative axis and they are out of order
+        actual = array.expand_dims(dim=['y', 'z'], axis=[-1, -2])
+        expected = DataArray(np.expand_dims(np.expand_dims(array.values, -1),
+                                            -1),
+                             dims=['x', 'dim_0', 'z', 'y'],
+                             coords={'x': np.linspace(0.0, 1.0, 3)},
+                             attrs={'key': 'entry'})
+        self.assertDataArrayIdentical(expected, actual)
+        self.assertTrue(actual.attrs['key'] == 'entry')
+        roundtripped = actual.squeeze(['y', 'z'], drop=True)
         self.assertDatasetIdentical(array, roundtripped)
 
     def test_expand_dims_with_scalar_coordinate(self):
