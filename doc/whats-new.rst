@@ -14,6 +14,17 @@ What's New
     np.random.seed(123456)
 
 
+.. _whats-new.0.9.3:
+
+v0.9.3 (unreleased)
+-------------------
+
+Enhancements
+~~~~~~~~~~~~
+
+Bug fixes
+~~~~~~~~~
+
 .. _whats-new.0.9.2:
 
 v0.9.2 (2 April, 2017)
