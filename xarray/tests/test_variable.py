@@ -324,7 +324,7 @@ class VariableSubclassTestCases(object):
                        expected[...],
                        expected.squeeze(),
                        expected.isel(x=slice(None)),
-                       expected.expand_dims({'x': 3}),
+                       expected.set_dims({'x': 3}),
                        expected.copy(deep=True),
                        expected.copy(deep=False)]:
 
@@ -818,30 +818,30 @@ class TestVariable(TestCase, VariableSubclassTestCases):
         with self.assertRaisesRegexp(ValueError, 'not found in array dim'):
             v.get_axis_num('foobar')
 
-    def test_expand_dims(self):
+    def test_set_dims(self):
         v = Variable(['x'], [0, 1])
-        actual = v.expand_dims(['x', 'y'])
+        actual = v.set_dims(['x', 'y'])
         expected = Variable(['x', 'y'], [[0], [1]])
         self.assertVariableIdentical(actual, expected)
 
-        actual = v.expand_dims(['y', 'x'])
+        actual = v.set_dims(['y', 'x'])
         self.assertVariableIdentical(actual, expected.T)
 
-        actual = v.expand_dims(OrderedDict([('x', 2), ('y', 2)]))
+        actual = v.set_dims(OrderedDict([('x', 2), ('y', 2)]))
         expected = Variable(['x', 'y'], [[0, 0], [1, 1]])
         self.assertVariableIdentical(actual, expected)
 
         v = Variable(['foo'], [0, 1])
-        actual = v.expand_dims('foo')
+        actual = v.set_dims('foo')
         expected = v
         self.assertVariableIdentical(actual, expected)
 
         with self.assertRaisesRegexp(ValueError, 'must be a superset'):
-            v.expand_dims(['z'])
+            v.set_dims(['z'])
 
-    def test_expand_dims_object_dtype(self):
+    def test_set_dims_object_dtype(self):
         v = Variable([], ('a', 1))
-        actual = v.expand_dims(('x',), (3,))
+        actual = v.set_dims(('x',), (3,))
         exp_values = np.empty((3,), dtype=object)
         for i in range(3):
             exp_values[i] = ('a', 1)

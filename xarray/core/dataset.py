@@ -1640,14 +1640,14 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
                     # If dims includes a label of a scalar variables,
                     # it will be promoted to a 1D coordinate consisting
                     # of a single value.
-                    variables[k] = v.expand_dims(k)
+                    variables[k] = v.set_dims(k)
             else:
                 # all the dims of the result array
-                # to be passed to Variable.expand_dims
+                # to be passed to Variable.set_dims
                 all_dims = list(v.dims)
                 for a, d in zip(axis, dim):
                     all_dims.insert(a, d)
-                variables[k] = v.expand_dims(all_dims)
+                variables[k] = v.set_dims(all_dims)
 
         return self._replace_vars_and_dims(variables, self._coord_names)
 
@@ -1752,7 +1752,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
                     add_dims = [d for d in dims if d not in var.dims]
                     vdims = list(var.dims) + add_dims
                     shape = [self.dims[d] for d in vdims]
-                    exp_var = var.expand_dims(vdims, shape)
+                    exp_var = var.set_dims(vdims, shape)
                     stacked_var = exp_var.stack(**{new_dim: dims})
                     variables[name] = stacked_var
                 else:
@@ -2293,7 +2293,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
 
     def _to_dataframe(self, ordered_dims):
         columns = [k for k in self if k not in self.dims]
-        data = [self._variables[k].expand_dims(ordered_dims).values.reshape(-1)
+        data = [self._variables[k].set_dims(ordered_dims).values.reshape(-1)
                 for k in columns]
         index = self.coords.to_index(ordered_dims)
         return pd.DataFrame(OrderedDict(zip(columns, data)), index=index)

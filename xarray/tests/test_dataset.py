@@ -2026,7 +2026,7 @@ class TestDataset(TestCase):
                         'letters': ('y', ['a', 'a', 'b', 'b'])})
 
         expected = data.mean('y')
-        expected['yonly'] = expected['yonly'].variable.expand_dims({'x': 3})
+        expected['yonly'] = expected['yonly'].variable.set_dims({'x': 3})
         actual = data.groupby('x').mean()
         self.assertDatasetAllClose(expected, actual)
 
@@ -2036,7 +2036,7 @@ class TestDataset(TestCase):
         letters = data['letters']
         expected = Dataset({'xy': data['xy'].groupby(letters).mean(),
                             'xonly': (data['xonly'].mean().variable
-                                      .expand_dims({'letters': 2})),
+                                      .set_dims({'letters': 2})),
                             'yonly': data['yonly'].groupby(letters).mean()})
         actual = data.groupby('letters').mean()
         self.assertDatasetAllClose(expected, actual)

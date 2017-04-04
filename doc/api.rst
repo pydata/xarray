@@ -80,6 +80,7 @@ Dataset contents
    Dataset.merge
    Dataset.rename
    Dataset.swap_dims
+   Dataset.expand_dims
    Dataset.drop
    Dataset.set_coords
    Dataset.reset_coords

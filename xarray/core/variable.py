@@ -706,8 +706,9 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
         data = ops.transpose(self.data, axes)
         return type(self)(dims, data, self._attrs, self._encoding, fastpath=True)
 
-    def expand_dims(self, dims, shape=None):
-        """Return a new variable with expanded dimensions.
+    def set_dims(self, dims, shape=None):
+        """Return a new variable with given set of dimensions.
+        This method might be used to attach new dimension(s) to variable.
 
         When possible, this operation does not copy this variable's data.
 
@@ -1336,7 +1337,7 @@ def _unified_dims(variables):
 
 def _broadcast_compat_variables(*variables):
     dims = tuple(_unified_dims(variables))
-    return tuple(var.expand_dims(dims) if var.dims != dims else var
+    return tuple(var.set_dims(dims) if var.dims != dims else var
                  for var in variables)
 
 
@@ -1352,7 +1353,7 @@ def broadcast_variables(*variables):
     """
     dims_map = _unified_dims(variables)
     dims_tuple = tuple(dims_map)
-    return tuple(var.expand_dims(dims_map) if var.dims != dims_tuple else var
+    return tuple(var.set_dims(dims_map) if var.dims != dims_tuple else var
                  for var in variables)
 
 
