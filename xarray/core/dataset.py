@@ -490,6 +490,34 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         new = self.copy(deep=False)
         return new.load()
 
+    def _persist_inplace(self):
+        """ Persist all Dask arrays in memory """
+        # access .data to coerce everything to numpy or dask arrays
+        lazy_data = {k: v._data for k, v in self.variables.items()
+                     if isinstance(v._data, dask_array_type)}
+        if lazy_data:
+            import dask
+
+            # evaluate all the dask arrays simultaneously
+            evaluated_data = dask.persist(*lazy_data.values())
+
+            for k, data in zip(lazy_data, evaluated_data):
+                self.variables[k].data = data
+
+        return self
+
+    def persist(self):
+        """ Trigger computation, keeping data as dask arrays
+
+        This operation can be used to trigger computation on underlying dask
+        arrays, similar to ``.compute()``.  However this operation keeps the
+        data as dask arrays.  This is particularly useful when using the
+        dask.distributed scheduler and you want to load a large amount of data
+        into distributed memory.
+        """
+        new = self.copy(deep=False)
+        return new._persist_inplace()
+
     @classmethod
     def _construct_direct(cls, variables, coord_names, dims=None, attrs=None,
                           file_obj=None, encoding=None):

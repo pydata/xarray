@@ -422,6 +422,7 @@ Dataset methods
    Dataset.from_dict
    Dataset.close
    Dataset.compute
+   Dataset.persist
    Dataset.load
    Dataset.chunk
    Dataset.filter_by_attrs
@@ -447,6 +448,7 @@ DataArray methods
    DataArray.from_cdms2
    DataArray.from_dict
    DataArray.compute
+   DataArray.persist
    DataArray.load
    DataArray.chunk
 

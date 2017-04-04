@@ -22,6 +22,10 @@ v0.9.3 (unreleased)
 Enhancements
 ~~~~~~~~~~~~
 
+- Add ``.persist()`` method to Datasets and DataArrays to enable persisting
+  data in distributed memory (:issue:`1344`).
+  By `Matthew Rocklin <https://github.com/mrocklin>`_.
+
 Bug fixes
 ~~~~~~~~~
 

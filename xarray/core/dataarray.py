@@ -588,6 +588,16 @@ class DataArray(AbstractArray, BaseDataObject):
         new = self.copy(deep=False)
         return new.load()
 
+    def persist(self):
+        """ Trigger computation in constituent dask arrays
+
+        This keeps them as dask arrays but encourages them to keep data in
+        memory.  This is particularly useful when on a distributed machine.
+        When on a single machine consider using ``.compute()`` instead.
+        """
+        ds = self._to_temp_dataset().persist()
+        return self._from_temp_dataset(ds)
+
     def copy(self, deep=True):
         """Returns a copy of this array.
 
