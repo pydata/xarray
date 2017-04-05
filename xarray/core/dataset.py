@@ -1591,7 +1591,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
             Axis position(s) where new axis is to be inserted (position(s) on
             the result array). If a list (or tuple) of integers is passed,
             multiple axes are inserted. In this case, dim arguments should be
-            the same length list or None. If None is passed, all the axes will
+            the same length list. If axis=None is passed, all the axes will
             be inserted to the start of the result array.
 
         Returns
