@@ -1512,18 +1512,31 @@ class TestDataset(TestCase):
     def test_expand_dims(self):
         original = Dataset({'x': ('a', np.random.randn(3)),
                             'y': (['b', 'a'], np.random.randn(4, 3))},
-                            coords={'a': np.linspace(0, 1, 3),
-                                    'b': np.linspace(0, 1, 4),
-                                    'c': np.linspace(0, 1, 5)},
-                            attrs={'key': 'entry'})
-        expected = Dataset({'x': original['x'].expand_dims('z', 1),
-                            'y': original['y'].expand_dims('z', 1),},
-                            coords={'a': np.linspace(0, 1, 3),
-                                    'b': np.linspace(0, 1, 4),
-                                    'c': np.linspace(0, 1, 5)},
-                            attrs={'key': 'entry'})
+                           coords={'a': np.linspace(0, 1, 3),
+                                   'b': np.linspace(0, 1, 4),
+                                   'c': np.linspace(0, 1, 5)},
+                           attrs={'key': 'entry'})
 
         actual = original.expand_dims(['z'], [1])
+        expected = Dataset({'x': original['x'].expand_dims('z', 1),
+                            'y': original['y'].expand_dims('z', 1)},
+                           coords={'a': np.linspace(0, 1, 3),
+                                   'b': np.linspace(0, 1, 4),
+                                   'c': np.linspace(0, 1, 5)},
+                           attrs={'key': 'entry'})
+        self.assertDatasetIdentical(expected, actual)
+        # make sure squeeze restores the original data set.
+        roundtripped = actual.squeeze('z')
+        self.assertDatasetIdentical(original, roundtripped)
+
+        # another test with a negative axis
+        actual = original.expand_dims(['z'], [-1])
+        expected = Dataset({'x': original['x'].expand_dims('z', -1),
+                            'y': original['y'].expand_dims('z', -1)},
+                           coords={'a': np.linspace(0, 1, 3),
+                                   'b': np.linspace(0, 1, 4),
+                                   'c': np.linspace(0, 1, 5)},
+                           attrs={'key': 'entry'})
         self.assertDatasetIdentical(expected, actual)
         # make sure squeeze restores the original data set.
         roundtripped = actual.squeeze('z')

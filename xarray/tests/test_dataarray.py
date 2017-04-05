@@ -913,7 +913,7 @@ class TestDataArray(TestCase):
         actual = array.swap_dims({'x': 'y'})
         self.assertDataArrayIdentical(expected, actual)
 
-    def test_expand_dims(self):
+    def test_expand_dims_error(self):
         array = DataArray(np.random.randn(3, 4), dims=['x', 'dim_0'],
                           coords={'x': np.linspace(0.0, 1.0, 3)},
                           attrs={'key': 'entry'})
@@ -934,7 +934,19 @@ class TestDataArray(TestCase):
         with self.assertRaises(ValueError):
             array.expand_dims(dim=['y', 'z'], axis=[2, -2])
 
-        # Working test
+        # out of bounds error, axis must be in [-4, 3]
+        with self.assertRaises(IndexError):
+            array.expand_dims(dim=['y', 'z'], axis=[2, 4])
+        with self.assertRaises(IndexError):
+            array.expand_dims(dim=['y', 'z'], axis=[2, -5])
+        # Does not raise an IndexError
+        array.expand_dims(dim=['y', 'z'], axis=[2, -4])
+        array.expand_dims(dim=['y', 'z'], axis=[2, 3])
+
+    def test_expand_dims(self):
+        array = DataArray(np.random.randn(3, 4), dims=['x', 'dim_0'],
+                          coords={'x': np.linspace(0.0, 1.0, 3)},
+                          attrs={'key': 'entry'})
         # pass only dim label
         actual = array.expand_dims(dim='y')
         expected = DataArray(np.expand_dims(array.values, 0),

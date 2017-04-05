@@ -1614,7 +1614,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
             raise ValueError('lengths of dim and axis should be identical.')
         for d in dim:
             if d in self.dims:
-                raise ValueError('Dimension {dim} already exists.'.format(dim=d))
+                raise ValueError(
+                            'Dimension {dim} already exists.'.format(dim=d))
 
         if len(dim) != len(set(dim)):
             raise ValueError('dims should not contain duplicate values.')
@@ -1625,19 +1626,26 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
                 if k in self._coord_names:  # Do not change coordinates
                     variables[k] = v
                 else:
-                    axis_pos = [a if a >= 0 else len(v.dims) + len(axis) + a
+                    result_ndim = len(v.dims) + len(axis)
+                    for a in axis:
+                        if a < -result_ndim or result_ndim - 1 < a:
+                            raise IndexError(
+                                'Axis {a} is out of bounds of the expanded'
+                                'dimension size {dim}.'.format(
+                                               a=a, v=k, dim=result_ndim))
+
+                    axis_pos = [a if a >= 0 else result_ndim + a
                                 for a in axis]
                     if len(axis_pos) != len(set(axis_pos)):
                         raise ValueError('axis should not contain duplicate'
                                          ' values.')
                     # We need to sort them to make sure `axis` equals to the
                     # axis positions of the result array.
-                    axis_pos, dim_pos = zip(*sorted(zip(axis_pos, dim)))
+                    zip_axis_dim = sorted(zip(axis_pos, dim))
 
                     all_dims = list(v.dims)
-                    for a, d in zip(axis_pos, dim_pos):
+                    for a, d in zip_axis_dim:
                         all_dims.insert(a, d)
-                    print(all_dims)
                     variables[k] = v.set_dims(all_dims)
             else:
                 # If dims includes a label of a non-dimension coordinate,
