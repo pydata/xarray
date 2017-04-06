@@ -757,3 +757,10 @@ def ones_like(other, dtype=None):
     """Shorthand for full_like(other, 1, dtype)
     """
     return full_like(other, 1, dtype)
+
+
+def is_datetime_like(dtype):
+    """Check if a dtype is a subclass of the numpy datetime types
+    """
+    return (np.issubdtype(dtype, np.datetime64) or
+            np.issubdtype(dtype, np.timedelta64))
