@@ -915,23 +915,23 @@ class TestDataArray(TestCase):
 
     def test_expand_dims_error(self):
         array = DataArray(np.random.randn(3, 4), dims=['x', 'dim_0'],
-                          coords={'x': np.linspace(0.0, 1.0, 3)},
+                          coords={'x': np.linspace(0.0, 1.0, 3.0)},
                           attrs={'key': 'entry'})
 
-        with self.assertRaises(ValueError):
-            array.expand_dims(0)  # the first argument should not be an integer
-        with self.assertRaises(ValueError):
+        with self.assertRaisesRegexp(ValueError, 'dim should be str or'):
+            array.expand_dims(0)
+        with self.assertRaisesRegexp(ValueError, 'lengths of dim and axis'):
             # dims and axis argument should be the same length
             array.expand_dims(dim=['a', 'b'], axis=[1, 2, 3])
-        with self.assertRaises(ValueError):
+        with self.assertRaisesRegexp(ValueError, 'Dimension x already'):
             # Should not pass the already existing dimension.
             array.expand_dims(dim=['x'])
         # raise if duplicate
-        with self.assertRaises(ValueError):
+        with self.assertRaisesRegexp(ValueError, 'duplicate values.'):
             array.expand_dims(dim=['y', 'y'])
-        with self.assertRaises(ValueError):
+        with self.assertRaisesRegexp(ValueError, 'duplicate values.'):
             array.expand_dims(dim=['y', 'z'], axis=[1, 1])
-        with self.assertRaises(ValueError):
+        with self.assertRaisesRegexp(ValueError, 'duplicate values.'):
             array.expand_dims(dim=['y', 'z'], axis=[2, -2])
 
         # out of bounds error, axis must be in [-4, 3]

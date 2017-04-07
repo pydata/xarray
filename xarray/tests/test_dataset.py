@@ -1509,6 +1509,24 @@ class TestDataset(TestCase):
         with self.assertRaisesRegexp(ValueError, 'replacement dimension'):
             original.swap_dims({'x': 'z'})
 
+    def test_expand_dims_error(self):
+        original = Dataset({'x': ('a', np.random.randn(3)),
+                            'y': (['b', 'a'], np.random.randn(4, 3)),
+                            'z': ('a', np.random.randn(3))},
+                           coords={'a': np.linspace(0, 1, 3),
+                                   'b': np.linspace(0, 1, 4),
+                                   'c': np.linspace(0, 1, 5)},
+                           attrs={'key': 'entry'})
+
+        with self.assertRaisesRegexp(ValueError, 'already exists'):
+            original.expand_dims(dim=['x'])
+
+        # Make sure it raises true error also for non-dimensional coordinates
+        # which has dimension.
+        original.set_coords('z', inplace=True)
+        with self.assertRaisesRegexp(ValueError, 'already exists'):
+            original.expand_dims(dim=['z'])
+
     def test_expand_dims(self):
         original = Dataset({'x': ('a', np.random.randn(3)),
                             'y': (['b', 'a'], np.random.randn(4, 3))},

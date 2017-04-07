@@ -1616,6 +1616,11 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
             if d in self.dims:
                 raise ValueError(
                             'Dimension {dim} already exists.'.format(dim=d))
+            if d in self._variables.keys() and \
+                    not utils.is_scalar(self._variables[d]):
+                raise ValueError(
+                            '{dim} already exists as coordinate or'
+                            ' variable name.'.format(dim=d))
 
         if len(dim) != len(set(dim)):
             raise ValueError('dims should not contain duplicate values.')
@@ -1631,7 +1636,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
                         if a < -result_ndim or result_ndim - 1 < a:
                             raise IndexError(
                                 'Axis {a} is out of bounds of the expanded'
-                                'dimension size {dim}.'.format(
+                                ' dimension size {dim}.'.format(
                                                a=a, v=k, dim=result_ndim))
 
                     axis_pos = [a if a >= 0 else result_ndim + a
