@@ -18,7 +18,7 @@ class DatetimeAccessor(object):
         ...                                            freq='D', periods=100)})
         >>> ds.time.dt
         <xarray.core.accessors.DatetimeAccessor at 0x10c369f60>
-        >>> ds.time.dt.dayofyear[5]
+        >>> ds.time.dt.dayofyear[:5]
         <xarray.DataArray 'dayofyear' (time: 5)>
         array([1, 2, 3, 4, 5], dtype=int32)
         Coordinates:
@@ -26,14 +26,14 @@ class DatetimeAccessor(object):
 
      All of the pandas fields are accessible here. Note that these fields are not
      calendar-aware; if your datetimes are encoded with a non-Gregorian calendar
-     (e.g. a 360-day calendar), then some fields like `dayofyear` may not be
-     accurate.
+     (e.g. a 360-day calendar) using netcdftime, then some fields like
+     `dayofyear` may not be accurate.
 
      """
     def __init__(self, xarray_obj):
         if not is_datetime_like(xarray_obj.dtype):
             raise TypeError("'dt' accessor only available for "
-                            "DataArray with datetime64 dtype")
+                            "DataArray with datetime64 or timedelta64 dtype")
         self._obj = xarray_obj
         self._dt = None
 
@@ -65,6 +65,7 @@ class DatetimeAccessor(object):
         f.__name__ = name
         f.__doc__ = docstring
         return property(f)
+
 
     year = _tslib_field_accessor('year', 'Y', "The year of the datetime")
     month = _tslib_field_accessor(
