@@ -1,4 +1,4 @@
-include LICENSE
+include LICENSE conftest.py
 recursive-include licenses *
 recursive-include doc *
 prune doc/_build
