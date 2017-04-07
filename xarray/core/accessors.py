@@ -23,6 +23,32 @@ def _get_date_field(array, name):
     field_values = getattr(series.dt, name).values
     return field_values.reshape(array.shape)
 
+_date_field_ops_and_descrs = [
+    ('year', "The year of the datetime"),
+    ('month', "The month as January=1, December=12"),
+    ('day', "The days of the datetime"),
+    ('hour', "The hours of the datetime"),
+    ('minute', "The minutes of the datetime"),
+    ('second', "The seconds of the datetime"),
+    ('microsecond', "The microseconds of the datetime"),
+    ('nanosecond', "The nanoseconds of the datetime"),
+    ('weekofyear',  "The week ordinal of the year"),
+    ('week', "The week ordinal of the year"),
+    ('weekday', "The day of the week with Monday=0, Sunday=6"),
+    ('weekday_name',
+     "The name of day in a week (ex: Friday)"),
+    ('dayofweek', "The day of the week with Monday=0, Sunday=6"),
+    ('dayofyear',  "The ordinal day of the year"),
+    ('quarter', "The quarter of the date"),
+    ('days_in_month', "The number of days in the month"),
+    ('daysinmonth', "The number of days in the month"),
+]
+
+def inject_date_field_accessors(cls):
+    for op, descr in _date_field_ops_and_descrs:
+        prop = cls._date_field_accessor(op, docstring=descr)
+        setattr(cls, op, prop)
+
 
 @register_dataarray_accessor('dt')
 class DatetimeAccessor(object):
@@ -54,12 +80,6 @@ class DatetimeAccessor(object):
         self._obj = xarray_obj
         self._dt = None
 
-    _field_ops = ['year', 'month', 'day', 'hour', 'minute', 'second',
-                  'weekofyear', 'week', 'weekday', 'dayofweek',
-                  'dayofyear', 'quarter', 'days_in_month',
-                  'daysinmonth', 'microsecond',
-                  'nanosecond']
-
     @property
     def dt(self):
         """Attribute to cache a view of the underlying datetime-like
@@ -69,7 +89,7 @@ class DatetimeAccessor(object):
             self._dt = self._obj.values
         return self._dt
 
-    def _tslib_field_accessor(name, field, docstring=None):
+    def _date_field_accessor(name, docstring=None):
         def f(self):
             from .dataarray import DataArray
             result = _get_date_field(self.dt, name)
@@ -80,40 +100,4 @@ class DatetimeAccessor(object):
         f.__doc__ = docstring
         return property(f)
 
-
-    year = _tslib_field_accessor('year', 'Y', "The year of the datetime")
-    month = _tslib_field_accessor(
-        'month', 'M', "The month as January=1, December=12"
-    )
-    day = _tslib_field_accessor('day', 'D', "The days of the datetime")
-    hour = _tslib_field_accessor('hour', 'h', "The hours of the datetime")
-    minute = _tslib_field_accessor('minute', 'm', "The minutes of the datetime")
-    second = _tslib_field_accessor('second', 's', "The seconds of the datetime")
-    microsecond = _tslib_field_accessor(
-        'microsecond', 'us', "The microseconds of the datetime"
-    )
-    nanosecond = _tslib_field_accessor(
-        'nanosecond', 'ns', "The nanoseconds of the datetime"
-    )
-    weekofyear = _tslib_field_accessor(
-        'weekofyear', 'woy', "The week ordinal of the year"
-    )
-    week = weekofyear
-    dayofweek = _tslib_field_accessor(
-        'dayofweek', 'dow', "The day of the week with Monday=0, Sunday=6"
-    )
-    weekday = dayofweek
-
-    weekday_name = _tslib_field_accessor(
-        'weekday_name', 'weekday_name',
-        "The name of day in a week (ex: Friday)"
-    )
-
-    dayofyear = _tslib_field_accessor(
-        'dayofyear', 'doy', "The ordinal day of the year"
-    )
-    quarter = _tslib_field_accessor('quarter', 'q', "The quarter of the date")
-    days_in_month = _tslib_field_accessor(
-        'days_in_month', 'dim', "The number of days in the month"
-    )
-    daysinmonth = days_in_month
+inject_date_field_accessors(DatetimeAccessor)
