@@ -25,19 +25,24 @@ class TestDatetimeAccessor(TestCase):
                                  dims=['lon', 'lat', 'time'], name='data')
 
     def test_field_access(self):
-        years = self.times.year
-        months = self.times.month
-        days = self.times.day
-        hours = self.times.hour
+        years = xr.DataArray(self.times.year, name='year',
+                             coords=[self.times, ], dims=['time', ])
+        months = xr.DataArray(self.times.month, name='month',
+                             coords=[self.times, ], dims=['time', ])
+        days = xr.DataArray(self.times.day, name='day',
+                             coords=[self.times, ], dims=['time', ])
+        hours = xr.DataArray(self.times.hour, name='hour',
+                             coords=[self.times, ], dims=['time', ])
 
-        self.assertArrayEqual(years, self.data.time.dt.year)
-        self.assertArrayEqual(months, self.data.time.dt.month)
-        self.assertArrayEqual(days, self.data.time.dt.day)
-        self.assertArrayEqual(hours, self.data.time.dt.hour)
+
+        self.assertDataArrayEqual(years, self.data.time.dt.year)
+        self.assertDataArrayEqual(months, self.data.time.dt.month)
+        self.assertDataArrayEqual(days, self.data.time.dt.day)
+        self.assertDataArrayEqual(hours, self.data.time.dt.hour)
 
     def test_not_datetime_type(self):
         nontime_data = self.data.copy()
-        nontime_data['time'].values = \
-            np.arange(len(self.data.time)).astype('int8')
+        int_data = np.arange(len(self.data.time)).astype('int8')
+        nontime_data['time'].values = int_data
         with self.assertRaisesRegexp(TypeError, 'dt'):
             nontime_data.time.dt.year
