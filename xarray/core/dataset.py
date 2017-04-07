@@ -1616,8 +1616,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
             if d in self.dims:
                 raise ValueError(
                             'Dimension {dim} already exists.'.format(dim=d))
-            if d in self._variables.keys() and \
-                    not utils.is_scalar(self._variables[d]):
+            if (d in self._variables and
+                    not utils.is_scalar(self._variables[d])):
                 raise ValueError(
                             '{dim} already exists as coordinate or'
                             ' variable name.'.format(dim=d))

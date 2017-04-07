@@ -706,6 +706,13 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
         data = ops.transpose(self.data, axes)
         return type(self)(dims, data, self._attrs, self._encoding, fastpath=True)
 
+    def expand_dims(self, *args):
+        import warnings
+        warnings.warn('Variable.expand_dims is deprecated: use '
+                      'Variable.set_dims instead', DeprecationWarning,
+                      stacklevel=2)
+        return self.expand_dims(*args)
+
     def set_dims(self, dims, shape=None):
         """Return a new variable with given set of dimensions.
         This method might be used to attach new dimension(s) to variable.
