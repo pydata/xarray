@@ -5,7 +5,24 @@ from __future__ import print_function
 from .common import is_datetime_like
 from .extensions import register_dataarray_accessor
 
-from pandas import tslib as libts
+import pandas as pd
+
+def _get_date_field(array, name):
+    """Indirectly access pandas' libts.get_date_field by wrapping data
+    as a Series and calling through `.dt` attribute.
+
+    Parameters
+    ----------
+    array : np.ndarray or array-like
+        Array-like container of datetime-like values
+    name : str
+        Name of datetime field to access
+
+    """
+    series = pd.Series(array.ravel())
+    field_values = getattr(series.dt, name).values
+    return field_values.reshape(array.shape)
+
 
 @register_dataarray_accessor('dt')
 class DatetimeAccessor(object):
@@ -49,16 +66,13 @@ class DatetimeAccessor(object):
         array for passing to pandas.tslib for date_field operations
         """
         if self._dt is None:
-            datetimes_asi8 = self._obj.values.view('i8')
-            self._dt = datetimes_asi8
+            self._dt = self._obj.values
         return self._dt
 
-    # Modified from https://github.com/pandas-dev/pandas/pandas/tseries/index.py#L59
     def _tslib_field_accessor(name, field, docstring=None):
         def f(self):
             from .dataarray import DataArray
-            values = self.dt
-            result = libts.get_date_field(values, field)
+            result = _get_date_field(self.dt, name)
             return DataArray(result, name=name,
                              coords=self._obj.coords, dims=self._obj.dims)
 
