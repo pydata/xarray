@@ -9,6 +9,7 @@ import pandas as pd
 
 from ..plot.plot import _PlotMethods
 
+from . import duck_array_ops
 from . import indexing
 from . import groupby
 from . import rolling
@@ -1752,7 +1753,7 @@ class DataArray(AbstractArray, BaseDataObject):
         self, other = align(self, other, join='inner', copy=False)
 
         axes = (self.get_axis_num(dims), other.get_axis_num(dims))
-        new_data = ops.tensordot(self.data, other.data, axes=axes)
+        new_data = duck_array_ops.tensordot(self.data, other.data, axes=axes)
 
         new_coords = self.coords.merge(other.coords)
         new_coords = new_coords.drop([d for d in dims if d in new_coords])

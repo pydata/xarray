@@ -17,6 +17,7 @@ from . import rolling
 from . import indexing
 from . import alignment
 from . import formatting
+from . import duck_array_ops
 from .. import conventions
 from .alignment import align
 from .coordinates import DatasetCoordinates, LevelCoordinatesSource, Indexes
@@ -2234,7 +2235,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
 
         data_vars = [self.variables[k] for k in self.data_vars]
         broadcast_vars = broadcast_variables(*data_vars)
-        data = ops.stack([b.data for b in broadcast_vars], axis=0)
+        data = duck_array_ops.stack([b.data for b in broadcast_vars], axis=0)
 
         coords = dict(self.coords)
         coords[dim] = list(self.data_vars)

@@ -1,20 +1,23 @@
+"""Define core operations for xarray objects.
+
+TODO(shoyer): rewrite this module, making use of xarray.core.computation,
+NumPy's __array_ufunc__ and mixin classes instead of the unintuitive "inject"
+functions.
+"""
+
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
-from functools import partial
-import contextlib
-import inspect
+
 import operator
-import warnings
 from distutils.version import LooseVersion
 
 import numpy as np
 import pandas as pd
 
-from . import npcompat
-from .pycompat import PY3, dask_array_type
-from .nputils import nanfirst, nanlast, array_eq, array_ne
-
+from . import duck_array_ops
+from .pycompat import PY3
+from .nputils import array_eq, array_ne
 
 try:
     import bottleneck as bn
@@ -23,12 +26,6 @@ except ImportError:
     # use numpy methods instead
     bn = np
     has_bottleneck = False
-
-try:
-    import dask.array as da
-    has_dask = True
-except ImportError:
-    has_dask = False
 
 
 UNARY_OPS = ['neg', 'pos', 'abs', 'invert']
@@ -57,119 +54,110 @@ BOTTLENECK_ROLLING_METHODS = {'move_sum': 'sum', 'move_mean': 'mean',
 # TODO: wrap take, dot, sort
 
 
-def _dask_or_eager_func(name, eager_module=np, list_of_args=False,
-                        n_array_args=1):
-    if has_dask:
-        def f(*args, **kwargs):
-            dispatch_args = args[0] if list_of_args else args
-            if any(isinstance(a, da.Array)
-                   for a in dispatch_args[:n_array_args]):
-                module = da
-            else:
-                module = eager_module
-            return getattr(module, name)(*args, **kwargs)
-    else:
-        def f(data, *args, **kwargs):
-            return getattr(eager_module, name)(data, *args, **kwargs)
-    return f
+_CUM_DOCSTRING_TEMPLATE = """\
+Apply `{name}` along some dimension of {cls}.
+
+Parameters
+----------
+{extra_args}
+skipna : bool, optional
+    If True, skip missing values (as marked by NaN). By default, only
+    skips missing values for float dtypes; other dtypes either do not
+    have a sentinel missing value (int) or skipna=True has not been
+    implemented (object, datetime64 or timedelta64).
+keep_attrs : bool, optional
+    If True, the attributes (`attrs`) will be copied from the original
+    object to the new one.  If False (default), the new object will be
+    returned without attributes.
+**kwargs : dict
+    Additional keyword arguments passed on to `{name}`.
+
+Returns
+-------
+cumvalue : {cls}
+    New {cls} object with `{name}` applied to its data along the
+    indicated dimension.
+"""
+
+_REDUCE_DOCSTRING_TEMPLATE = """\
+Reduce this {cls}'s data by applying `{name}` along some dimension(s).
+
+Parameters
+----------
+{extra_args}
+skipna : bool, optional
+    If True, skip missing values (as marked by NaN). By default, only
+    skips missing values for float dtypes; other dtypes either do not
+    have a sentinel missing value (int) or skipna=True has not been
+    implemented (object, datetime64 or timedelta64).
+keep_attrs : bool, optional
+    If True, the attributes (`attrs`) will be copied from the original
+    object to the new one.  If False (default), the new object will be
+    returned without attributes.
+**kwargs : dict
+    Additional keyword arguments passed on to the appropriate array
+    function for calculating `{name}` on this object's data.
+
+Returns
+-------
+reduced : {cls}
+    New {cls} object with `{name}` applied to its data and the
+    indicated dimension(s) removed.
+"""
+
+_ROLLING_REDUCE_DOCSTRING_TEMPLATE = """\
+Reduce this {da_or_ds}'s data windows by applying `{name}` along its dimension.
+
+Parameters
+----------
+**kwargs : dict
+    Additional keyword arguments passed on to `{name}`.
+
+Returns
+-------
+reduced : {da_or_ds}
+    New {da_or_ds} object with `{name}` applied along its rolling dimnension.
+"""
 
 
-def _fail_on_dask_array_input(values, msg=None, func_name=None):
-    if isinstance(values, dask_array_type):
-        if msg is None:
-            msg = '%r is not a valid method on dask arrays'
-        if func_name is None:
-            func_name = inspect.stack()[1][3]
-        raise NotImplementedError(msg % func_name)
+def fillna(data, other, join="left", dataset_join="left"):
+    """Fill missing values in this object with data from the other object.
+    Follows normal broadcasting and alignment rules.
 
-
-around = _dask_or_eager_func('around')
-isclose = _dask_or_eager_func('isclose')
-notnull = _dask_or_eager_func('notnull', pd)
-_isnull = _dask_or_eager_func('isnull', pd)
-
-
-def isnull(data):
-    # GH837, GH861
-    # isnull fcn from pandas will throw TypeError when run on numpy structured
-    # array therefore for dims that are np structured arrays we assume all
-    # data is present
-    try:
-        return _isnull(data)
-    except TypeError:
-        return np.zeros(data.shape, dtype=bool)
-
-
-transpose = _dask_or_eager_func('transpose')
-where = _dask_or_eager_func('where', n_array_args=3)
-insert = _dask_or_eager_func('insert')
-take = _dask_or_eager_func('take')
-broadcast_to = _dask_or_eager_func('broadcast_to', npcompat)
-
-concatenate = _dask_or_eager_func('concatenate', list_of_args=True)
-stack = _dask_or_eager_func('stack', npcompat, list_of_args=True)
-
-array_all = _dask_or_eager_func('all')
-array_any = _dask_or_eager_func('any')
-
-tensordot = _dask_or_eager_func('tensordot', n_array_args=2)
-
-
-def asarray(data):
-    return data if isinstance(data, dask_array_type) else np.asarray(data)
-
-
-def as_like_arrays(*data):
-    if all(isinstance(d, dask_array_type) for d in data):
-        return data
-    else:
-        return tuple(np.asarray(d) for d in data)
-
-
-def allclose_or_equiv(arr1, arr2, rtol=1e-5, atol=1e-8):
-    """Like np.allclose, but also allows values to be NaN in both arrays
+    Parameters
+    ----------
+    join : {'outer', 'inner', 'left', 'right'}, optional
+        Method for joining the indexes of the passed objects along each
+        dimension
+        - 'outer': use the union of object indexes
+        - 'inner': use the intersection of object indexes
+        - 'left': use indexes from the first object with each dimension
+        - 'right': use indexes from the last object with each dimension
+    dataset_join : {'outer', 'inner', 'left', 'right'}, optional
+        Method for joining variables of Dataset objects with mismatched
+        data variables.
+        - 'outer': take variables from both Dataset objects
+        - 'inner': take only overlapped variables
+        - 'left': take only variables from the first object
+        - 'right': take only variables from the last object
     """
-    arr1, arr2 = as_like_arrays(arr1, arr2)
-    if arr1.shape != arr2.shape:
-        return False
-    return bool(isclose(arr1, arr2, rtol=rtol, atol=atol, equal_nan=True).all())
+    from .computation import apply_ufunc
 
-
-def array_equiv(arr1, arr2):
-    """Like np.array_equal, but also allows values to be NaN in both arrays
-    """
-    arr1, arr2 = as_like_arrays(arr1, arr2)
-    if arr1.shape != arr2.shape:
-        return False
-
-    flag_array = (arr1 == arr2)
-    flag_array |= (isnull(arr1) & isnull(arr2))
-
-    return bool(flag_array.all())
-
-
-def array_notnull_equiv(arr1, arr2):
-    """Like np.array_equal, but also allows values to be NaN in either or both
-    arrays
-    """
-    arr1, arr2 = as_like_arrays(arr1, arr2)
-    if arr1.shape != arr2.shape:
-        return False
-
-    flag_array = (arr1 == arr2)
-    flag_array |= isnull(arr1)
-    flag_array |= isnull(arr2)
-
-    return bool(flag_array.all())
+    def _fillna(data, other):
+        return duck_array_ops.where(duck_array_ops.isnull(data), other, data)
+    return apply_ufunc(_fillna, data, other, join=join, dask_array="allowed",
+                       dataset_join=dataset_join,
+                       dataset_fill_value=np.nan,
+                       keep_attrs=True)
 
 
 def _call_possibly_missing_method(arg, name, args, kwargs):
     try:
         method = getattr(arg, name)
     except AttributeError:
-        _fail_on_dask_array_input(arg, func_name=name)
+        duck_array_ops.fail_on_dask_array_input(arg, func_name=name)
         if hasattr(arg, 'data'):
-            _fail_on_dask_array_input(arg.data, func_name=name)
+            duck_array_ops.fail_on_dask_array_input(arg.data, func_name=name)
         raise
     else:
         return method(*args, **kwargs)
@@ -207,225 +195,13 @@ def _func_slash_method_wrapper(f, name=None):
     func.__doc__ = f.__doc__
     return func
 
-_CUM_DOCSTRING_TEMPLATE = \
-        """Apply `{name}` along some dimension of {cls}.
-
-        Parameters
-        ----------
-        {extra_args}
-        skipna : bool, optional
-            If True, skip missing values (as marked by NaN). By default, only
-            skips missing values for float dtypes; other dtypes either do not
-            have a sentinel missing value (int) or skipna=True has not been
-            implemented (object, datetime64 or timedelta64).
-        keep_attrs : bool, optional
-            If True, the attributes (`attrs`) will be copied from the original
-            object to the new one.  If False (default), the new object will be
-            returned without attributes.
-        **kwargs : dict
-            Additional keyword arguments passed on to `{name}`.
-
-        Returns
-        -------
-        cumvalue : {cls}
-            New {cls} object with `{name}` applied to its data along the
-            indicated dimension.
-        """
-
-_REDUCE_DOCSTRING_TEMPLATE = \
-        """Reduce this {cls}'s data by applying `{name}` along some
-        dimension(s).
-
-        Parameters
-        ----------
-        {extra_args}
-        skipna : bool, optional
-            If True, skip missing values (as marked by NaN). By default, only
-            skips missing values for float dtypes; other dtypes either do not
-            have a sentinel missing value (int) or skipna=True has not been
-            implemented (object, datetime64 or timedelta64).
-        keep_attrs : bool, optional
-            If True, the attributes (`attrs`) will be copied from the original
-            object to the new one.  If False (default), the new object will be
-            returned without attributes.
-        **kwargs : dict
-            Additional keyword arguments passed on to `{name}`.
-
-        Returns
-        -------
-        reduced : {cls}
-            New {cls} object with `{name}` applied to its data and the
-            indicated dimension(s) removed.
-        """
-
-_ROLLING_REDUCE_DOCSTRING_TEMPLATE = \
-        """Reduce this {da_or_ds}'s data windows by applying `{name}`
-        along its dimension.
-
-        Parameters
-        ----------
-        **kwargs : dict
-            Additional keyword arguments passed on to `{name}`.
-
-        Returns
-        -------
-        reduced : {da_or_ds}
-            New {da_or_ds} object with `{name}` applied along its rolling dimnension.
-        """
-
-
-def count(data, axis=None):
-    """Count the number of non-NA in this array along the given axis or axes
-    """
-    return sum(~isnull(data), axis=axis)
-
-
-def fillna(data, other, join="left", dataset_join="left"):
-    """Fill missing values in this object with data from the other object.
-    Follows normal broadcasting and alignment rules.
-
-    Parameters
-    ----------
-    join : {'outer', 'inner', 'left', 'right'}, optional
-        Method for joining the indexes of the passed objects along each
-        dimension
-        - 'outer': use the union of object indexes
-        - 'inner': use the intersection of object indexes
-        - 'left': use indexes from the first object with each dimension
-        - 'right': use indexes from the last object with each dimension
-    dataset_join : {'outer', 'inner', 'left', 'right'}, optional
-        Method for joining variables of Dataset objects with mismatched
-        data variables.
-        - 'outer': take variables from both Dataset objects
-        - 'inner': take only overlapped variables
-        - 'left': take only variables from the first object
-        - 'right': take only variables from the last object
-    """
-    from .computation import apply_ufunc
-
-    def _fillna(data, other):
-        return where(isnull(data), other, data)
-    return apply_ufunc(_fillna, data, other, join=join, dask_array="allowed",
-                       dataset_join=dataset_join,
-                       dataset_fill_value=np.nan,
-                       keep_attrs=True)
-
-
-def where_method(data, cond, other=np.nan):
-    """Select values from this object that are True in cond. Everything else
-    gets masked with other. Follows normal broadcasting and alignment rules.
-    """
-    return where(cond, data, other)
-
-
-@contextlib.contextmanager
-def _ignore_warnings_if(condition):
-    if condition:
-        with warnings.catch_warnings():
-            warnings.simplefilter('ignore')
-            yield
-    else:
-        yield
-
-
-def _create_nan_agg_method(name, numeric_only=False, np_compat=False,
-                           no_bottleneck=False, coerce_strings=False,
-                           keep_dims=False):
-    def f(values, axis=None, skipna=None, **kwargs):
-        # ignore keyword args inserted by np.mean and other numpy aggregators
-        # automatically:
-        kwargs.pop('dtype', None)
-        kwargs.pop('out', None)
-
-        values = asarray(values)
-
-        if coerce_strings and values.dtype.kind in 'SU':
-            values = values.astype(object)
-
-        if skipna or (skipna is None and values.dtype.kind in 'cf'):
-            if values.dtype.kind not in ['i', 'f', 'c']:
-                raise NotImplementedError(
-                    'skipna=True not yet implemented for %s with dtype %s'
-                    % (name, values.dtype))
-            nanname = 'nan' + name
-            if isinstance(axis, tuple) or not values.dtype.isnative or no_bottleneck:
-                # bottleneck can't handle multiple axis arguments or non-native
-                # endianness
-                if np_compat:
-                    eager_module = npcompat
-                else:
-                    eager_module = np
-            else:
-                eager_module = bn
-            func = _dask_or_eager_func(nanname, eager_module)
-            using_numpy_nan_func = eager_module is np or eager_module is npcompat
-        else:
-            func = _dask_or_eager_func(name)
-            using_numpy_nan_func = False
-        with _ignore_warnings_if(using_numpy_nan_func):
-            try:
-                return func(values, axis=axis, **kwargs)
-            except AttributeError:
-                if isinstance(values, dask_array_type):
-                    msg = '%s is not yet implemented on dask arrays' % name
-                else:
-                    assert using_numpy_nan_func
-                    msg = ('%s is not available with skipna=False with the '
-                           'installed version of numpy; upgrade to numpy 1.12 '
-                           'or newer to use skipna=True or skipna=None' % name)
-                raise NotImplementedError(msg)
-    f.numeric_only = numeric_only
-    f.keep_dims = keep_dims
-    f.__name__ = name
-    return f
-
-
-argmax = _create_nan_agg_method('argmax', coerce_strings=True)
-argmin = _create_nan_agg_method('argmin', coerce_strings=True)
-max = _create_nan_agg_method('max', coerce_strings=True)
-min = _create_nan_agg_method('min', coerce_strings=True)
-sum = _create_nan_agg_method('sum', numeric_only=True)
-mean = _create_nan_agg_method('mean', numeric_only=True)
-std = _create_nan_agg_method('std', numeric_only=True)
-var = _create_nan_agg_method('var', numeric_only=True)
-median = _create_nan_agg_method('median', numeric_only=True)
-prod = _create_nan_agg_method('prod', numeric_only=True, np_compat=True,
-                              no_bottleneck=True)
-cumprod = _create_nan_agg_method('cumprod', numeric_only=True, np_compat=True,
-                                 no_bottleneck=True, keep_dims=True)
-cumsum = _create_nan_agg_method('cumsum', numeric_only=True, np_compat=True,
-                                no_bottleneck=True, keep_dims=True)
-
-_fail_on_dask_array_input_skipna = partial(
-    _fail_on_dask_array_input,
-    msg='%r with skipna=True is not yet implemented on dask arrays')
-
-
-def first(values, axis, skipna=None):
-    """Return the first non-NA elements in this array along the given axis
-    """
-    if (skipna or skipna is None) and values.dtype.kind not in 'iSU':
-        # only bother for dtypes that can hold NaN
-        _fail_on_dask_array_input_skipna(values)
-        return nanfirst(values, axis)
-    return take(values, 0, axis=axis)
-
-
-def last(values, axis, skipna=None):
-    """Return the last non-NA elements in this array along the given axis
-    """
-    if (skipna or skipna is None) and values.dtype.kind not in 'iSU':
-        # only bother for dtypes that can hold NaN
-        _fail_on_dask_array_input_skipna(values)
-        return nanlast(values, axis)
-    return take(values, -1, axis=axis)
-
 
 def inject_reduce_methods(cls):
-    methods = ([(name, globals()['array_%s' % name], False) for name
-               in REDUCE_METHODS] +
-               [(name, globals()[name], True) for name in NAN_REDUCE_METHODS] +
-               [('count', count, False)])
+    methods = ([(name, getattr(duck_array_ops, 'array_%s' % name), False)
+                for name in REDUCE_METHODS] +
+               [(name, getattr(duck_array_ops, name), True)
+                for name in NAN_REDUCE_METHODS] +
+               [('count', duck_array_ops.count, False)])
     for name, f, include_skipna in methods:
         numeric_only = getattr(f, 'numeric_only', False)
         func = cls._reduce_method(f, include_skipna, numeric_only)
@@ -437,7 +213,8 @@ def inject_reduce_methods(cls):
 
 
 def inject_cum_methods(cls):
-    methods = ([(name, globals()[name], True) for name in NAN_CUM_METHODS])
+    methods = ([(name, getattr(duck_array_ops, name), True)
+               for name in NAN_CUM_METHODS])
     for name, f, include_skipna in methods:
         numeric_only = getattr(f, 'numeric_only', False)
         func = cls._reduce_method(f, include_skipna, numeric_only)
@@ -472,7 +249,7 @@ def inject_binary_ops(cls, inplace=False):
         setattr(cls, op_str(name), cls._binary_op(f))
 
     # patch in where
-    f = _func_slash_method_wrapper(where_method, 'where')
+    f = _func_slash_method_wrapper(duck_array_ops.where_method, 'where')
     setattr(cls, '_where', cls._binary_op(f))
 
     for name in NUM_BINARY_OPS:
@@ -502,7 +279,7 @@ def inject_all_ops_and_reduce_methods(cls, priority=50, array_only=True):
         f = _func_slash_method_wrapper(getattr(pd, name))
         setattr(cls, name, cls._unary_op(f))
 
-    f = _func_slash_method_wrapper(around, name='round')
+    f = _func_slash_method_wrapper(duck_array_ops.around, name='round')
     setattr(cls, 'round', cls._unary_op(f))
 
     if array_only:
@@ -517,7 +294,8 @@ def inject_all_ops_and_reduce_methods(cls, priority=50, array_only=True):
 
 def inject_bottleneck_rolling_methods(cls):
     # standard numpy reduce methods
-    methods = [(name, globals()[name]) for name in NAN_REDUCE_METHODS]
+    methods = [(name, getattr(duck_array_ops, name))
+               for name in NAN_REDUCE_METHODS]
     for name, f in methods:
         func = cls._reduce_method(f)
         func.__name__ = name
@@ -564,10 +342,11 @@ def inject_bottleneck_rolling_methods(cls):
 
 def inject_datasetrolling_methods(cls):
     # standard numpy reduce methods
-    methods = [(name, globals()[name]) for name in NAN_REDUCE_METHODS]
+    methods = [(name, getattr(duck_array_ops, name))
+               for name in NAN_REDUCE_METHODS]
     for name, f in methods:
         func = cls._reduce_method(f)
         func.__name__ = name
-        func.__doc__ =  _ROLLING_REDUCE_DOCSTRING_TEMPLATE.format(
+        func.__doc__ = _ROLLING_REDUCE_DOCSTRING_TEMPLATE.format(
             name=func.__name__, da_or_ds='Dataset')
         setattr(cls, name, func)

@@ -7,7 +7,7 @@ from collections import defaultdict
 
 import numpy as np
 
-from . import ops, utils
+from . import duck_array_ops, utils
 from .common import _maybe_promote
 from .indexing import get_indexer
 from .pycompat import iteritems, OrderedDict, suppress
@@ -376,8 +376,8 @@ def reindex_variables(variables, sizes, indexes, indexers, method=None,
                     for axis, indexer in enumerate(assign_to):
                         if not is_full_slice(indexer):
                             indices = np.cumsum(indexer)[~indexer]
-                            data = ops.insert(data, indices, fill_value,
-                                              axis=axis)
+                            data = duck_array_ops.insert(
+                                data, indices, fill_value, axis=axis)
                     new_var = Variable(var.dims, data, var.attrs,
                                        fastpath=True)
 
