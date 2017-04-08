@@ -29,6 +29,11 @@ Enhancements
 Bug fixes
 ~~~~~~~~~
 
+- Fix ``.where()`` with ``drop=True`` when arguments do not have indexes
+  (:issue:`1350`). This bug, introduced in v0.9, resulted in xarray producing
+  incorrect results in some cases.
+  By `Stephan Hoyer <https://github.com/shoyer>`_.
+
 .. _whats-new.0.9.2:
 
 v0.9.2 (2 April, 2017)
