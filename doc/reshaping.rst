@@ -27,6 +27,28 @@ on a :py:class:`~xarray.Dataset`, use :py:meth:`~xarray.DataArray.transpose` or 
     ds.transpose('y', 'z', 'x')
     ds.T
 
+Expand and squeeze dimensions
+-----------------------------
+
+To expand a :py:class:`~xarray.DataArray` or all
+variables on a :py:class:`~xarray.Dataset` along a new dimension,
+use :py:meth:`~xarray.DataArray.expand_dims`
+
+.. ipython:: python
+
+    expanded  = ds.expand_dims('w')
+    expanded
+
+This method attaches a new dimension with size 1 to all data variable.
+
+To remove such a size-1 dimension from the py:class:`~xarray.DataArray`
+or :py:class:`~xarray.Dataset`,
+use :py:meth:`~xarray.DataArray.squeeze`
+
+.. ipython:: python
+
+    expanded.squeeze('w')
+
 Converting between datasets and arrays
 --------------------------------------
 

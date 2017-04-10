@@ -38,6 +38,10 @@ The minor release includes bug-fixes and backwards compatible enhancements.
 
 Enhancements
 ~~~~~~~~~~~~
+- `expand_dims` on DataArray is newly supported (:issue:`1326`)
+  By `Keisuke Fujii <https://github.com/fujiisoup>`_.
+
+- ``rolling`` on Dataset is now supported (:issue:`859`).
 
 - ``.rolling()`` on Dataset is now supported (:issue:`859`).
   By `Keisuke Fujii <https://github.com/fujiisoup>`_.
