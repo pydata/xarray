@@ -11,10 +11,11 @@ import numpy as np
 import pandas as pd
 
 from . import common
+from . import duck_array_ops
 from . import indexing
+from . import nputils
 from . import ops
 from . import utils
-from . import nputils
 from .pycompat import (basestring, OrderedDict, zip, integer_types,
                        dask_array_type)
 from .indexing import (PandasIndexAdapter, orthogonally_indexable)
@@ -600,7 +601,7 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
         else:
             arrays = [trimmed_data, nans]
 
-        data = ops.concatenate(arrays, axis)
+        data = duck_array_ops.concatenate(arrays, axis)
 
         if isinstance(data, dask_array_type):
             # chunked data should come out with the same chunks; this makes
@@ -643,7 +644,7 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
         arrays = [self[(slice(None),) * axis + (idx,)].data
                   for idx in indices]
 
-        data = ops.concatenate(arrays, axis)
+        data = duck_array_ops.concatenate(arrays, axis)
 
         if isinstance(data, dask_array_type):
             # chunked data should come out with the same chunks; this makes
@@ -703,8 +704,9 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
         axes = self.get_axis_num(dims)
         if len(dims) < 2:  # no need to transpose if only one dimension
             return self.copy(deep=False)
-        data = ops.transpose(self.data, axes)
-        return type(self)(dims, data, self._attrs, self._encoding, fastpath=True)
+        data = duck_array_ops.transpose(self.data, axes)
+        return type(self)(dims, data, self._attrs, self._encoding,
+                          fastpath=True)
 
     def expand_dims(self, *args):
         import warnings
@@ -752,7 +754,7 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
         elif shape is not None:
             dims_map = dict(zip(dims, shape))
             tmp_shape = tuple(dims_map[d] for d in expanded_dims)
-            expanded_data = ops.broadcast_to(self.data, tmp_shape)
+            expanded_data = duck_array_ops.broadcast_to(self.data, tmp_shape)
         else:
             expanded_data = self.data[
                 (None,) * (len(expanded_dims) - self.ndim)]
@@ -972,16 +974,17 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
         if dim in first_var.dims:
             axis = first_var.get_axis_num(dim)
             dims = first_var.dims
-            data = ops.concatenate(arrays, axis=axis)
+            data = duck_array_ops.concatenate(arrays, axis=axis)
             if positions is not None:
                 # TODO: deprecate this option -- we don't need it for groupby
                 # any more.
-                indices = nputils.inverse_permutation(np.concatenate(positions))
-                data = ops.take(data, indices, axis=axis)
+                indices = nputils.inverse_permutation(
+                    np.concatenate(positions))
+                data = duck_array_ops.take(data, indices, axis=axis)
         else:
             axis = 0
             dims = (dim,) + first_var.dims
-            data = ops.stack(arrays, axis=axis)
+            data = duck_array_ops.stack(arrays, axis=axis)
 
         attrs = OrderedDict(first_var.attrs)
         if not shortcut:
@@ -992,7 +995,7 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
 
         return cls(dims, data, attrs)
 
-    def equals(self, other, equiv=ops.array_equiv):
+    def equals(self, other, equiv=duck_array_ops.array_equiv):
         """True if two Variables have the same dimensions and values;
         otherwise False.
 
@@ -1010,7 +1013,7 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
         except (TypeError, AttributeError):
             return False
 
-    def broadcast_equals(self, other, equiv=ops.array_equiv):
+    def broadcast_equals(self, other, equiv=duck_array_ops.array_equiv):
         """True if two Variables have the values after being broadcast against
         each other; otherwise False.
 
@@ -1039,7 +1042,8 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
         Variables can thus still be equal if there are locations where either,
         or both, contain NaN values.
         """
-        return self.broadcast_equals(other, equiv=ops.array_notnull_equiv)
+        return self.broadcast_equals(
+            other, equiv=duck_array_ops.array_notnull_equiv)
 
     def quantile(self, q, dim=None, interpolation='linear'):
         """Compute the qth quantile of the data along the specified dimension.
