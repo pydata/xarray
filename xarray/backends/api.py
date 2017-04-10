@@ -536,7 +536,7 @@ WRITEABLE_STORES = {'netcdf4': backends.NetCDF4DataStore,
                     'h5netcdf': backends.H5NetCDFStore}
 
 
-def to_netcdf(dataset, path=None, mode='w', format=None, group=None,
+def to_netcdf(dataset, path_or_file=None, mode='w', format=None, group=None,
               engine=None, writer=None, encoding=None, unlimited_dims=None):
     """This function creates an appropriate datastore for writing a dataset to
     disk as a netCDF file
@@ -547,18 +547,19 @@ def to_netcdf(dataset, path=None, mode='w', format=None, group=None,
     """
     if encoding is None:
         encoding = {}
-    if path is None:
-        path = BytesIO()
+    if path_or_file is None:
         if engine is None:
             engine = 'scipy'
-        elif engine is not None:
+        elif engine != 'scipy':
             raise ValueError('invalid engine for creating bytes with '
                              'to_netcdf: %r. Only the default engine '
                              "or engine='scipy' is supported" % engine)
-    else:
+    elif isinstance(path_or_file, basestring):
         if engine is None:
-            engine = _get_default_engine(path)
-        path = _normalize_path(path)
+            engine = _get_default_engine(path_or_file)
+        path_or_file = _normalize_path(path_or_file)
+    else:  # file-like object
+        engine = 'scipy'
 
     # validate Dataset keys, DataArray names, and attr keys/values
     _validate_dataset_names(dataset)
@@ -575,17 +576,18 @@ def to_netcdf(dataset, path=None, mode='w', format=None, group=None,
     # if a writer is provided, store asynchronously
     sync = writer is None
 
-    store = store_cls(path, mode, format, group, writer)
+    target = path_or_file if path_or_file is not None else BytesIO()
+    store = store_cls(target, mode, format, group, writer)
 
     if unlimited_dims is None:
         unlimited_dims = dataset.encoding.get('unlimited_dims', None)
     try:
         dataset.dump_to_store(store, sync=sync, encoding=encoding,
                               unlimited_dims=unlimited_dims)
-        if isinstance(path, BytesIO):
-            return path.getvalue()
+        if path_or_file is None:
+            return target.getvalue()
     finally:
-        if sync:
+        if sync and isinstance(path_or_file, basestring):
             store.close()
 
     if not sync:

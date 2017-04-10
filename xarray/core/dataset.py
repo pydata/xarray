@@ -921,6 +921,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         store.store(variables, attrs, check_encoding,
                     unlimited_dims=unlimited_dims)
         if sync:
+            print('syncing')
             store.sync()
 
     def to_netcdf(self, path=None, mode='w', format=None, group=None,
@@ -929,11 +930,12 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
 
         Parameters
         ----------
-        path : str, optional
-            Path to which to save this dataset. If no path is provided, this
-            function returns the resulting netCDF file as a bytes object; in
-            this case, we need to use scipy.io.netcdf, which does not support
-            netCDF version 4 (the default format becomes NETCDF3_64BIT).
+        path : str or file-like object, optional
+            Path to which to save this dataset. File-like objects are only
+            supported by the scipy engine. If no path is provided, this
+            function returns the resulting netCDF file as bytes; in this case,
+            we need to use scipy, which does not support netCDF version 4 (the
+            default format becomes NETCDF3_64BIT).
         mode : {'w', 'a'}, optional
             Write ('w') or append ('a') mode. If mode='w', any existing file at
             this location will be overwritten.

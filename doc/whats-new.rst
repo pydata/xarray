@@ -29,6 +29,13 @@ Enhancements
 Bug fixes
 ~~~~~~~~~
 
+- Fixed writing to file-like objects with :py:meth:`~xarray.Dataset.to_netcdf`
+  (:issue:`1320`).
+  `Stephan Hoyer <https://github.com/shoyer>`_.
+- Fixed explicitly setting ``engine='scipy'`` with ``to_netcdf`` when not
+  providing a path (:issue:`1321`).
+  `Stephan Hoyer <https://github.com/shoyer>`_.
+
 .. _whats-new.0.9.2:
 
 v0.9.2 (2 April, 2017)
