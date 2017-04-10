@@ -29,6 +29,11 @@ Enhancements
 Bug fixes
 ~~~~~~~~~
 
+- Ensure test suite works when runs from an installed version of xarray
+  (:issue:`1336`). Use ``@pytest.mark.slow`` instead of a custom flag to mark
+  slow tests.
+  By `Stephan Hoyer <https://github.com/shoyer>`_
+
 .. _whats-new.0.9.2:
 
 v0.9.2 (2 April, 2017)

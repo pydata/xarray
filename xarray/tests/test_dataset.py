@@ -3342,21 +3342,21 @@ def test_dir_unicode(data_set):
 @pytest.fixture(params=[1])
 def ds(request):
     if request.param == 1:
-        return Dataset({'z1': (['y', 'x'], np.random.randn(5, 20)),
-                        'z2': (['time', 'y'], np.random.randn(30, 5))},
-                       {'x': ('x', np.linspace(0, 1.0, 20)),
-                        'time': ('time', np.linspace(0, 1.0, 30)),
-                        'c': ('y', ['a', 'b', 'c', 'd', 'e']),
-                        'y': range(5)})
+        return Dataset({'z1': (['y', 'x'], np.random.randn(2, 8)),
+                        'z2': (['time', 'y'], np.random.randn(10, 2))},
+                       {'x': ('x', np.linspace(0, 1.0, 8)),
+                        'time': ('time', np.linspace(0, 1.0, 10)),
+                        'c': ('y', ['a', 'b']),
+                        'y': range(2)})
 
     if request.param == 2:
-        return Dataset({'z1': (['time', 'y'], np.random.randn(30, 5)),
-                        'z2': (['time'], np.random.randn(30)),
-                        'z3': (['x', 'time'], np.random.randn(20, 30))},
-                       {'x': ('x', np.linspace(0, 1.0, 20)),
-                        'time': ('time', np.linspace(0, 1.0, 30)),
-                        'c': ('y', ['a', 'b', 'c', 'd', 'e']),
-                        'y': range(5)})
+        return Dataset({'z1': (['time', 'y'], np.random.randn(10, 2)),
+                        'z2': (['time'], np.random.randn(10)),
+                        'z3': (['x', 'time'], np.random.randn(8, 10))},
+                       {'x': ('x', np.linspace(0, 1.0, 8)),
+                        'time': ('time', np.linspace(0, 1.0, 10)),
+                        'c': ('y', ['a', 'b']),
+                        'y': range(2)})
 
 
 def test_rolling_properties(ds):
@@ -3440,6 +3440,7 @@ def test_rolling_pandas_compat(center, window, min_periods):
                                ds_rolling['index'])
 
 
+@pytest.mark.slow
 @pytest.mark.parametrize('ds', (1, 2), indirect=True)
 @pytest.mark.parametrize('center', (True, False))
 @pytest.mark.parametrize('min_periods', (None, 1, 2, 3))

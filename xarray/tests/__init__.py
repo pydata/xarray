@@ -78,49 +78,36 @@ except ImportError:
 
 # slighly simpler construction that the full functions.
 # Generally `pytest.importorskip('package')` inline is even easier
-requires_matplotlib = pytest.mark.skipif(not has_matplotlib, reason='requires matplotlib')
+requires_matplotlib = pytest.mark.skipif(
+    not has_matplotlib, reason='requires matplotlib')
+requires_scipy = pytest.mark.skipif(
+    not has_scipy, reason='requires scipy')
+requires_pydap = pytest.mark.skipif(
+    not has_pydap, reason='requires pydap')
+requires_netCDF4 = pytest.mark.skipif(
+    not has_netCDF4, reason='requires netCDF4')
+requires_h5netcdf = pytest.mark.skipif(
+    not has_h5netcdf, reason='requires h5netcdf')
+requires_pynio = pytest.mark.skipif(
+    not has_pynio, reason='requires pynio')
+requires_scipy_or_netCDF4 = pytest.mark.skipif(
+    not has_scipy and not netCDF4, reason='requires scipy or netCDF4')
+requires_dask = pytest.mark.skipif(
+    not has_dask, reason='requires dask')
+requires_bottleneck = pytest.mark.skipif(
+    not has_bottleneck, reason='requires bottleneck')
 
 
-def requires_scipy(test):
-    return test if has_scipy else pytest.mark.skip('requires scipy')(test)
-
-
-def requires_pydap(test):
-    return test if has_pydap else pytest.mark.skip('requires pydap.client')(test)
-
-
-def requires_netCDF4(test):
-    return test if has_netCDF4 else pytest.mark.skip('requires netCDF4')(test)
-
-
-def requires_h5netcdf(test):
-    return test if has_h5netcdf else pytest.mark.skip('requires h5netcdf')(test)
-
-
-def requires_pynio(test):
-    return test if has_pynio else pytest.mark.skip('requires pynio')(test)
-
-
-def requires_scipy_or_netCDF4(test):
-    return (test if has_scipy or has_netCDF4
-            else pytest.mark.skip('requires scipy or netCDF4')(test))
-
-
-def requires_dask(test):
-    return test if has_dask else pytest.mark.skip('requires dask')(test)
-
-
-def requires_bottleneck(test):
-    return test if has_bottleneck else pytest.mark.skip('requires bottleneck')(test)
-
+try:
+    _SKIP_FLAKY = not pytest.config.getoption("--run-flaky")
+except ValueError:
+    # Can't get config from pytest, e.g., because xarray is installed instead
+    # of being run from a development version (and hence conftests.py is not
+    # available). Don't run flaky tests.
+    _SKIP_FLAKY = True
 
 flaky = pytest.mark.skipif(
-    not pytest.config.getoption("--run-flaky"),
-    reason="set --run-flaky option to run flaky tests")
-
-slow = pytest.mark.skipif(
-    pytest.config.getoption("--skip-slow"),
-    reason="set --skip-slow option to run slow tests")
+    _SKIP_FLAKY, reason="set --run-flaky option to run flaky tests")
 
 
 class TestCase(unittest.TestCase):
