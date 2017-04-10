@@ -39,9 +39,9 @@ use :py:meth:`~xarray.DataArray.expand_dims`
     expanded  = ds.expand_dims('w')
     expanded
 
-This method attaches a new dimension with size 1 to all data variable.
+This method attaches a new dimension with size 1 to all data variables.
 
-To remove such a size-1 dimension from the py:class:`~xarray.DataArray`
+To remove such a size-1 dimension from the :py:class:`~xarray.DataArray`
 or :py:class:`~xarray.Dataset`,
 use :py:meth:`~xarray.DataArray.squeeze`
 
