@@ -52,7 +52,7 @@ class DatetimeAccessor(object):
             raise TypeError("'dt' accessor only available for "
                             "DataArray with datetime64 or timedelta64 dtype")
         self._obj = xarray_obj
-        self._dt = None
+        self._dt = self._obj.values
 
     _field_ops = ['year', 'month', 'day', 'hour', 'minute', 'second',
                   'weekofyear', 'week', 'weekday', 'dayofweek',
@@ -60,19 +60,10 @@ class DatetimeAccessor(object):
                   'daysinmonth', 'microsecond',
                   'nanosecond']
 
-    @property
-    def dt(self):
-        """Attribute to cache a view of the underlying datetime-like
-        array for passing to pandas.tslib for date_field operations
-        """
-        if self._dt is None:
-            self._dt = self._obj.values
-        return self._dt
-
     def _tslib_field_accessor(name, field, docstring=None):
         def f(self):
             from .dataarray import DataArray
-            result = _get_date_field(self.dt, name)
+            result = _get_date_field(self._dt, name)
             return DataArray(result, name=name,
                              coords=self._obj.coords, dims=self._obj.dims)
 
