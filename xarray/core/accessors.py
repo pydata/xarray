@@ -4,24 +4,55 @@ from __future__ import print_function
 
 from .common import is_datetime_like
 from .extensions import register_dataarray_accessor
+from .pycompat import dask_array_type
 
+import numpy as np
 import pandas as pd
 
-def _get_date_field(array, name):
+
+def _get_date_field_from_dask(values, name):
+    """Specialized date field accessor for data contained in dask arrays
+    """
+    from dask import delayed
+    from dask.array import from_delayed, map_blocks
+    from dask.dataframe import from_array
+
+    def _getattr_from_dask(accessor):
+        attr_values = getattr(accessor, name).values
+        return attr_values.compute()
+
+    def _ravel_and_access(darr):
+        raveled = darr.ravel()
+        raveled_as_series = from_array(raveled[..., np.newaxis],
+                                       columns=['_raveled_data', ])
+        field_values = delayed(
+            _getattr_from_dask(raveled_as_series['_raveled_data'].dt)
+        )
+        field_values = from_delayed(field_values, shape=raveled.shape,
+                                    dtype=raveled.dtype)
+        return field_values.reshape(darr.shape)
+
+    return map_blocks(_ravel_and_access, values, dtype=values.dtype)
+
+
+def _get_date_field(values, name):
     """Indirectly access pandas' libts.get_date_field by wrapping data
     as a Series and calling through `.dt` attribute.
 
     Parameters
     ----------
-    array : np.ndarray or array-like
+    values : np.ndarray or dask.array-like
         Array-like container of datetime-like values
     name : str
         Name of datetime field to access
 
     """
-    series = pd.Series(array.ravel())
-    field_values = getattr(series.dt, name).values
-    return field_values.reshape(array.shape)
+    if isinstance(values, dask_array_type):
+        return _get_date_field_from_dask(values, name)
+    else:
+        values_as_series = pd.Series(values.ravel())
+    field_values = getattr(values_as_series.dt, name).values
+    return field_values.reshape(values.shape)
 
 
 @register_dataarray_accessor('dt')
@@ -52,7 +83,7 @@ class DatetimeAccessor(object):
             raise TypeError("'dt' accessor only available for "
                             "DataArray with datetime64 or timedelta64 dtype")
         self._obj = xarray_obj
-        self._dt = self._obj.values
+        self._dt = self._obj.data
 
     _field_ops = ['year', 'month', 'day', 'hour', 'minute', 'second',
                   'weekofyear', 'week', 'weekday', 'dayofweek',
