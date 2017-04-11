@@ -17,6 +17,7 @@ def _get_date_field_from_dask(values, name):
     from dask.array import from_delayed, map_blocks
     from dask.dataframe import from_array
 
+    @delayed
     def _getattr_from_dask(accessor):
         attr_values = getattr(accessor, name).values
         return attr_values.compute()
@@ -25,12 +26,10 @@ def _get_date_field_from_dask(values, name):
         raveled = darr.ravel()
         raveled_as_series = from_array(raveled[..., np.newaxis],
                                        columns=['_raveled_data', ])
-        field_values = delayed(
-            _getattr_from_dask(raveled_as_series['_raveled_data'].dt)
-        )
+        field_values = _getattr_from_dask(raveled_as_series['_raveled_data'].dt)
         field_values = from_delayed(field_values, shape=raveled.shape,
                                     dtype=raveled.dtype)
-        return field_values.reshape(darr.shape)
+        return field_values.reshape(darr.shape).compute()
 
     return map_blocks(_ravel_and_access, values, dtype=values.dtype)
 
