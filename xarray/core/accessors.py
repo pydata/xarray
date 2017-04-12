@@ -9,31 +9,6 @@ from .pycompat import dask_array_type
 import numpy as np
 import pandas as pd
 
-
-def _get_date_field_from_dask(values, name):
-    """Specialized date field accessor for data contained in dask arrays
-    """
-    from dask import delayed
-    from dask.array import from_delayed, map_blocks
-    from dask.dataframe import from_array
-
-    @delayed
-    def _getattr_from_dask(accessor):
-        attr_values = getattr(accessor, name).values
-        return attr_values.compute()
-
-    def _ravel_and_access(darr):
-        raveled = darr.ravel()
-        raveled_as_series = from_array(raveled[..., np.newaxis],
-                                       columns=['_raveled_data', ])
-        field_values = _getattr_from_dask(raveled_as_series['_raveled_data'].dt)
-        field_values = from_delayed(field_values, shape=raveled.shape,
-                                    dtype=raveled.dtype)
-        return field_values.reshape(darr.shape).compute()
-
-    return map_blocks(_ravel_and_access, values, dtype=values.dtype)
-
-
 def _get_date_field(values, name):
     """Indirectly access pandas' libts.get_date_field by wrapping data
     as a Series and calling through `.dt` attribute.
@@ -46,12 +21,18 @@ def _get_date_field(values, name):
         Name of datetime field to access
 
     """
-    if isinstance(values, dask_array_type):
-        return _get_date_field_from_dask(values, name)
-    else:
+    def _access_through_series(values, name):
         values_as_series = pd.Series(values.ravel())
-    field_values = getattr(values_as_series.dt, name).values
-    return field_values.reshape(values.shape)
+        field_values = getattr(values_as_series.dt, name).values
+        return field_values.reshape(values.shape)
+
+    if isinstance(values, dask_array_type):
+        from dask.array import map_blocks
+        out_dtype = object if name == "weekday_name" else np.int64
+        return map_blocks(_access_through_series,
+                          values, name, dtype=out_dtype)
+    else:
+        return _access_through_series(values, name)
 
 
 @register_dataarray_accessor('dt')
@@ -83,12 +64,6 @@ class DatetimeAccessor(object):
                             "DataArray with datetime64 or timedelta64 dtype")
         self._obj = xarray_obj
         self._dt = self._obj.data
-
-    _field_ops = ['year', 'month', 'day', 'hour', 'minute', 'second',
-                  'weekofyear', 'week', 'weekday', 'dayofweek',
-                  'dayofyear', 'quarter', 'days_in_month',
-                  'daysinmonth', 'microsecond',
-                  'nanosecond']
 
     def _tslib_field_accessor(name, docstring=None):
         def f(self):

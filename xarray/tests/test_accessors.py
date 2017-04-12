@@ -20,10 +20,15 @@ class TestDatetimeAccessor(TestCase):
         lons = np.linspace(0, 11, 10)
         lats = np.linspace(0, 20, 10)
         self.times = pd.date_range(start="2000/01/01", freq='H', periods=nt)
-        self.times_arr = np.random.choice(self.times, size=(10, 10, nt))
 
         self.data = xr.DataArray(data, coords=[lons, lats, self.times],
                                  dims=['lon', 'lat', 'time'], name='data')
+
+        self.times_arr = np.random.choice(self.times, size=(10, 10, nt))
+        self.times_data = xr.DataArray(self.times_arr,
+                                       coords=[lons, lats, self.times],
+                                       dims=['lon', 'lat', 'time'],
+                                       name='data')
 
     def test_field_access(self):
         years = xr.DataArray(self.times.year, name='year',
@@ -35,7 +40,6 @@ class TestDatetimeAccessor(TestCase):
         hours = xr.DataArray(self.times.hour, name='hour',
                              coords=[self.times, ], dims=['time', ])
 
-
         self.assertDataArrayEqual(years, self.data.time.dt.year)
         self.assertDataArrayEqual(months, self.data.time.dt.month)
         self.assertDataArrayEqual(days, self.data.time.dt.day)
@@ -46,23 +50,16 @@ class TestDatetimeAccessor(TestCase):
         int_data = np.arange(len(self.data.time)).astype('int8')
         nontime_data['time'].values = int_data
         with self.assertRaisesRegexp(TypeError, 'dt'):
-            nontime_data.time.dt.year
+            nontime_data.time.dt
 
     @requires_dask
     def test_dask_field_access(self):
         import dask.array as da
 
-        # Safely pre-compute comparison fields by passing through Pandas
-        # machinery
-        def _getattr_and_reshape(arr, attr):
-            data = getattr(arr.dt, attr).values.reshape(self.times_arr.shape)
-            return xr.DataArray(data, coords=self.data.coords,
-                                dims=self.data.dims, name=attr)
-        times_arr_as_series = pd.Series(self.times_arr.ravel())
-        years = _getattr_and_reshape(times_arr_as_series, 'year')
-        months = _getattr_and_reshape(times_arr_as_series,'month')
-        days = _getattr_and_reshape(times_arr_as_series, 'day')
-        hours = _getattr_and_reshape(times_arr_as_series, 'hour')
+        years = self.times_data.dt.year
+        months = self.times_data.dt.month
+        hours = self.times_data.dt.hour
+        days = self.times_data.dt.day
 
         dask_times_arr = da.from_array(self.times_arr, chunks=(5, 5, 50))
         dask_times_2d = xr.DataArray(dask_times_arr,
