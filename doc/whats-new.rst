@@ -29,6 +29,10 @@ Enhancements
 Bug fixes
 ~~~~~~~~~
 
+- Fixed open_dataarray does not pass properly its parameters to open_dataset
+  (:issue:`1359`).
+  `Stephan Hoyer <https://github.com/shoyer>`_.
+
 .. _whats-new.0.9.2:
 
 v0.9.2 (2 April, 2017)
