@@ -27,7 +27,7 @@ from xarray.core.pycompat import iteritems, PY2, PY3, ExitStack
 from . import (TestCase, requires_scipy, requires_netCDF4, requires_pydap,
                requires_scipy_or_netCDF4, requires_dask, requires_h5netcdf,
                requires_pynio, has_netCDF4, has_scipy, assert_allclose,
-               flaky, slow)
+               flaky)
 from .test_dataset import create_test_data
 
 try:
@@ -1148,21 +1148,21 @@ class OpenMFDatasetManyFilesTest(TestCase):
     @requires_dask
     @requires_netCDF4
     @flaky
-    @slow
+    @pytest.mark.slow
     def test_1_open_large_num_files_netcdf4(self):
         self.validate_open_mfdataset_large_num_files(engine=['netcdf4'])
 
     @requires_dask
     @requires_scipy
     @flaky
-    @slow
+    @pytest.mark.slow
     def test_2_open_large_num_files_scipy(self):
         self.validate_open_mfdataset_large_num_files(engine=['scipy'])
 
     @requires_dask
     @requires_pynio
     @flaky
-    @slow
+    @pytest.mark.slow
     def test_3_open_large_num_files_pynio(self):
         self.validate_open_mfdataset_large_num_files(engine=['pynio'])
 
@@ -1172,7 +1172,7 @@ class OpenMFDatasetManyFilesTest(TestCase):
     @requires_h5netcdf
     @flaky
     @pytest.mark.xfail
-    @slow
+    @pytest.mark.slow
     def test_4_open_large_num_files_h5netcdf(self):
         self.validate_open_mfdataset_large_num_files(engine=['h5netcdf'])
 
@@ -1552,7 +1552,7 @@ class TestValidateAttrs(TestCase):
                 ds.to_netcdf(tmp_file)
 
 
-@requires_netCDF4
+@requires_scipy_or_netCDF4
 class TestDataArrayToNetCDF(TestCase):
 
     def test_dataarray_to_netcdf_no_name(self):
@@ -1584,3 +1584,14 @@ class TestDataArrayToNetCDF(TestCase):
 
             with open_dataarray(tmp) as loaded_da:
                 self.assertDataArrayIdentical(original_da, loaded_da)
+
+    def test_open_dataarray_options(self):
+        data = DataArray(
+            np.arange(5), coords={'y': ('x', range(5))}, dims=['x'])
+
+        with create_tmp_file() as tmp:
+            data.to_netcdf(tmp)
+
+            expected = data.drop('y')
+            with open_dataarray(tmp, drop_variables=['y']) as loaded:
+                self.assertDataArrayIdentical(expected, loaded)
