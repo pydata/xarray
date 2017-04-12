@@ -29,6 +29,10 @@ Enhancements
 Bug fixes
 ~~~~~~~~~
 
+- Fixed open_dataarray does not pass properly its parameters to open_dataset
+  (:issue:`1359`).
+  `Stephan Hoyer <https://github.com/shoyer>`_.
+
 - Ensure test suite works when runs from an installed version of xarray
   (:issue:`1336`). Use ``@pytest.mark.slow`` instead of a custom flag to mark
   slow tests.

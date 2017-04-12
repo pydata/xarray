@@ -2543,24 +2543,13 @@ def test_rolling_iter(da):
     for i, (label, window_da) in enumerate(rolling_obj):
         assert label == da['time'].isel(time=i)
 
-def test_rolling_doc(da):
 
+def test_rolling_doc(da):
     rolling_obj = da.rolling(time=7)
 
-    assert rolling_obj.mean.__doc__ == \
-        """Reduce this DataArray's data windows by applying `mean`
-        along its dimension.
+    # argument substitution worked
+    assert '`mean`' in rolling_obj.mean.__doc__
 
-        Parameters
-        ----------
-        **kwargs : dict
-            Additional keyword arguments passed on to `mean`.
-
-        Returns
-        -------
-        reduced : DataArray
-            New DataArray object with `mean` applied along its rolling dimnension.
-        """
 
 def test_rolling_properties(da):
     pytest.importorskip('bottleneck', minversion='1.0')

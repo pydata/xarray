@@ -7,7 +7,7 @@ from distutils.version import LooseVersion
 
 import numpy as np
 from numpy.testing import assert_array_equal
-from xarray.core.ops import allclose_or_equiv
+from xarray.core.duck_array_ops import allclose_or_equiv
 import pytest
 
 from xarray.core import utils

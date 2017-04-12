@@ -5,6 +5,7 @@ import functools
 import numpy as np
 import pandas as pd
 
+from . import duck_array_ops
 from . import nputils
 from . import ops
 from .combine import concat
@@ -418,12 +419,12 @@ class GroupBy(object):
     def first(self, skipna=None, keep_attrs=True):
         """Return the first element of each group along the group dimension
         """
-        return self._first_or_last(ops.first, skipna, keep_attrs)
+        return self._first_or_last(duck_array_ops.first, skipna, keep_attrs)
 
     def last(self, skipna=None, keep_attrs=True):
         """Return the last element of each group along the group dimension
         """
-        return self._first_or_last(ops.last, skipna, keep_attrs)
+        return self._first_or_last(duck_array_ops.last, skipna, keep_attrs)
 
     def assign_coords(self, **kwargs):
         """Assign coordinates by group.

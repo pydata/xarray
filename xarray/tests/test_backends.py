@@ -1522,7 +1522,7 @@ class TestValidateAttrs(TestCase):
                 ds.to_netcdf(tmp_file)
 
 
-@requires_netCDF4
+@requires_scipy_or_netCDF4
 class TestDataArrayToNetCDF(TestCase):
 
     def test_dataarray_to_netcdf_no_name(self):
@@ -1554,3 +1554,14 @@ class TestDataArrayToNetCDF(TestCase):
 
             with open_dataarray(tmp) as loaded_da:
                 self.assertDataArrayIdentical(original_da, loaded_da)
+
+    def test_open_dataarray_options(self):
+        data = DataArray(
+            np.arange(5), coords={'y': ('x', range(5))}, dims=['x'])
+
+        with create_tmp_file() as tmp:
+            data.to_netcdf(tmp)
+
+            expected = data.drop('y')
+            with open_dataarray(tmp, drop_variables=['y']) as loaded:
+                self.assertDataArrayIdentical(expected, loaded)
