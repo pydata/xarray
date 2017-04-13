@@ -814,6 +814,10 @@ class ScipyInMemoryDataTest(CFEncodedDataTest, Only32BitTypes, TestCase):
                           autoclose=self.autoclose, **open_kwargs) as ds:
             yield ds
 
+    def test_to_netcdf_explicit_engine(self):
+        # regression test for GH1321
+        Dataset({'foo': 42}).to_netcdf(engine='scipy')
+
     @pytest.mark.skipif(PY2, reason='cannot pickle BytesIO on Python 2')
     def test_bytesio_pickle(self):
         data = Dataset({'foo': ('x', [1, 2, 3])})
@@ -828,7 +832,33 @@ class ScipyInMemoryDataTestAutocloseTrue(ScipyInMemoryDataTest):
 
 
 @requires_scipy
-class ScipyOnDiskDataTest(CFEncodedDataTest, Only32BitTypes, TestCase):
+class ScipyFileObjectTest(CFEncodedDataTest, Only32BitTypes, TestCase):
+    @contextlib.contextmanager
+    def create_store(self):
+        fobj = BytesIO()
+        yield backends.ScipyDataStore(fobj, 'w')
+
+    @contextlib.contextmanager
+    def roundtrip(self, data, save_kwargs={}, open_kwargs={},
+                  allow_cleanup_failure=False):
+        with create_tmp_file() as tmp_file:
+            with open(tmp_file, 'wb') as f:
+                data.to_netcdf(f, **save_kwargs)
+            with open(tmp_file, 'rb') as f:
+                with open_dataset(f, engine='scipy', **open_kwargs) as ds:
+                    yield ds
+
+    @pytest.mark.skip(reason='cannot pickle file objects')
+    def test_pickle(self):
+        pass
+
+    @pytest.mark.skip(reason='cannot pickle file objects')
+    def test_pickle_dataarray(self):
+        pass
+
+
+@requires_scipy
+class ScipyFilePathTest(CFEncodedDataTest, Only32BitTypes, TestCase):
     @contextlib.contextmanager
     def create_store(self):
         with create_tmp_file() as tmp_file:
@@ -868,7 +898,7 @@ class ScipyOnDiskDataTest(CFEncodedDataTest, Only32BitTypes, TestCase):
             self.assertTrue(var.dtype.isnative)
 
 
-class ScipyOnDiskDataTestAutocloseTrue(ScipyOnDiskDataTest):
+class ScipyFilePathTestAutocloseTrue(ScipyFilePathTest):
     autoclose = True
 
 
