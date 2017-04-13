@@ -27,7 +27,7 @@ from xarray.core.pycompat import iteritems, PY2, PY3, ExitStack
 from . import (TestCase, requires_scipy, requires_netCDF4, requires_pydap,
                requires_scipy_or_netCDF4, requires_dask, requires_h5netcdf,
                requires_pynio, has_netCDF4, has_scipy, assert_allclose,
-               flaky, slow)
+               flaky)
 from .test_dataset import create_test_data
 
 try:
@@ -814,6 +814,10 @@ class ScipyInMemoryDataTest(CFEncodedDataTest, Only32BitTypes, TestCase):
                           autoclose=self.autoclose, **open_kwargs) as ds:
             yield ds
 
+    def test_to_netcdf_explicit_engine(self):
+        # regression test for GH1321
+        Dataset({'foo': 42}).to_netcdf(engine='scipy')
+
     @pytest.mark.skipif(PY2, reason='cannot pickle BytesIO on Python 2')
     def test_bytesio_pickle(self):
         data = Dataset({'foo': ('x', [1, 2, 3])})
@@ -828,7 +832,33 @@ class ScipyInMemoryDataTestAutocloseTrue(ScipyInMemoryDataTest):
 
 
 @requires_scipy
-class ScipyOnDiskDataTest(CFEncodedDataTest, Only32BitTypes, TestCase):
+class ScipyFileObjectTest(CFEncodedDataTest, Only32BitTypes, TestCase):
+    @contextlib.contextmanager
+    def create_store(self):
+        fobj = BytesIO()
+        yield backends.ScipyDataStore(fobj, 'w')
+
+    @contextlib.contextmanager
+    def roundtrip(self, data, save_kwargs={}, open_kwargs={},
+                  allow_cleanup_failure=False):
+        with create_tmp_file() as tmp_file:
+            with open(tmp_file, 'wb') as f:
+                data.to_netcdf(f, **save_kwargs)
+            with open(tmp_file, 'rb') as f:
+                with open_dataset(f, engine='scipy', **open_kwargs) as ds:
+                    yield ds
+
+    @pytest.mark.skip(reason='cannot pickle file objects')
+    def test_pickle(self):
+        pass
+
+    @pytest.mark.skip(reason='cannot pickle file objects')
+    def test_pickle_dataarray(self):
+        pass
+
+
+@requires_scipy
+class ScipyFilePathTest(CFEncodedDataTest, Only32BitTypes, TestCase):
     @contextlib.contextmanager
     def create_store(self):
         with create_tmp_file() as tmp_file:
@@ -868,7 +898,7 @@ class ScipyOnDiskDataTest(CFEncodedDataTest, Only32BitTypes, TestCase):
             self.assertTrue(var.dtype.isnative)
 
 
-class ScipyOnDiskDataTestAutocloseTrue(ScipyOnDiskDataTest):
+class ScipyFilePathTestAutocloseTrue(ScipyFilePathTest):
     autoclose = True
 
 
@@ -1118,21 +1148,21 @@ class OpenMFDatasetManyFilesTest(TestCase):
     @requires_dask
     @requires_netCDF4
     @flaky
-    @slow
+    @pytest.mark.slow
     def test_1_open_large_num_files_netcdf4(self):
         self.validate_open_mfdataset_large_num_files(engine=['netcdf4'])
 
     @requires_dask
     @requires_scipy
     @flaky
-    @slow
+    @pytest.mark.slow
     def test_2_open_large_num_files_scipy(self):
         self.validate_open_mfdataset_large_num_files(engine=['scipy'])
 
     @requires_dask
     @requires_pynio
     @flaky
-    @slow
+    @pytest.mark.slow
     def test_3_open_large_num_files_pynio(self):
         self.validate_open_mfdataset_large_num_files(engine=['pynio'])
 
@@ -1142,7 +1172,7 @@ class OpenMFDatasetManyFilesTest(TestCase):
     @requires_h5netcdf
     @flaky
     @pytest.mark.xfail
-    @slow
+    @pytest.mark.slow
     def test_4_open_large_num_files_h5netcdf(self):
         self.validate_open_mfdataset_large_num_files(engine=['h5netcdf'])
 
@@ -1522,7 +1552,7 @@ class TestValidateAttrs(TestCase):
                 ds.to_netcdf(tmp_file)
 
 
-@requires_netCDF4
+@requires_scipy_or_netCDF4
 class TestDataArrayToNetCDF(TestCase):
 
     def test_dataarray_to_netcdf_no_name(self):
@@ -1554,3 +1584,14 @@ class TestDataArrayToNetCDF(TestCase):
 
             with open_dataarray(tmp) as loaded_da:
                 self.assertDataArrayIdentical(original_da, loaded_da)
+
+    def test_open_dataarray_options(self):
+        data = DataArray(
+            np.arange(5), coords={'y': ('x', range(5))}, dims=['x'])
+
+        with create_tmp_file() as tmp:
+            data.to_netcdf(tmp)
+
+            expected = data.drop('y')
+            with open_dataarray(tmp, drop_variables=['y']) as loaded:
+                self.assertDataArrayIdentical(expected, loaded)

@@ -26,6 +26,10 @@ Enhancements
   data in distributed memory (:issue:`1344`).
   By `Matthew Rocklin <https://github.com/mrocklin>`_.
 
+- New :py:meth:`~xarray.DataArray.expand_dims` method for ``DataArray`` and
+  ``Dataset`` (:issue:`1326`).
+  By `Keisuke Fujii <https://github.com/fujiisoup>`_.
+
 Bug fixes
 ~~~~~~~~~
 
@@ -33,6 +37,23 @@ Bug fixes
   (:issue:`1350`). This bug, introduced in v0.9, resulted in xarray producing
   incorrect results in some cases.
   By `Stephan Hoyer <https://github.com/shoyer>`_.
+
+- Fixed writing to file-like objects with :py:meth:`~xarray.Dataset.to_netcdf`
+  (:issue:`1320`).
+  `Stephan Hoyer <https://github.com/shoyer>`_.
+
+- Fixed explicitly setting ``engine='scipy'`` with ``to_netcdf`` when not
+  providing a path (:issue:`1321`).
+  `Stephan Hoyer <https://github.com/shoyer>`_.
+
+- Fixed open_dataarray does not pass properly its parameters to open_dataset
+  (:issue:`1359`).
+  `Stephan Hoyer <https://github.com/shoyer>`_.
+
+- Ensure test suite works when runs from an installed version of xarray
+  (:issue:`1336`). Use ``@pytest.mark.slow`` instead of a custom flag to mark
+  slow tests.
+  By `Stephan Hoyer <https://github.com/shoyer>`_
 
 .. _whats-new.0.9.2:
 
@@ -43,6 +64,8 @@ The minor release includes bug-fixes and backwards compatible enhancements.
 
 Enhancements
 ~~~~~~~~~~~~
+
+- ``rolling`` on Dataset is now supported (:issue:`859`).
 
 - ``.rolling()`` on Dataset is now supported (:issue:`859`).
   By `Keisuke Fujii <https://github.com/fujiisoup>`_.

@@ -9,6 +9,7 @@ import pandas as pd
 
 from ..plot.plot import _PlotMethods
 
+from . import duck_array_ops
 from . import indexing
 from . import groupby
 from . import rolling
@@ -848,6 +849,33 @@ class DataArray(AbstractArray, BaseDataObject):
         Dataset.swap_dims
         """
         ds = self._to_temp_dataset().swap_dims(dims_dict)
+        return self._from_temp_dataset(ds)
+
+    def expand_dims(self, dim, axis=None):
+        """Return a new object with an additional axis (or axes) inserted at the
+        corresponding position in the array shape.
+
+        If dim is already a scalar coordinate, it will be promoted to a 1D
+        coordinate consisting of a single value.
+
+        Parameters
+        ----------
+        dim : str or sequence of str.
+            Dimensions to include on the new variable.
+            dimensions are inserted with length 1.
+        axis : integer, list (or tuple) of integers, or None
+            Axis position(s) where new axis is to be inserted (position(s) on
+            the result array). If a list (or tuple) of integers is passed,
+            multiple axes are inserted. In this case, dim arguments should be
+            same length list. If axis=None is passed, all the axes will be
+            inserted to the start of the result array.
+
+        Returns
+        -------
+        expanded : same type as caller
+            This object, but with an additional dimension(s).
+        """
+        ds = self._to_temp_dataset().expand_dims(dim, axis)
         return self._from_temp_dataset(ds)
 
     def set_index(self, append=False, inplace=False, **indexes):
@@ -1752,7 +1780,7 @@ class DataArray(AbstractArray, BaseDataObject):
         self, other = align(self, other, join='inner', copy=False)
 
         axes = (self.get_axis_num(dims), other.get_axis_num(dims))
-        new_data = ops.tensordot(self.data, other.data, axes=axes)
+        new_data = duck_array_ops.tensordot(self.data, other.data, axes=axes)
 
         new_coords = self.coords.merge(other.coords)
         new_coords = new_coords.drop([d for d in dims if d in new_coords])

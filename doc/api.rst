@@ -80,6 +80,7 @@ Dataset contents
    Dataset.merge
    Dataset.rename
    Dataset.swap_dims
+   Dataset.expand_dims
    Dataset.drop
    Dataset.set_coords
    Dataset.reset_coords
@@ -223,6 +224,7 @@ DataArray contents
    DataArray.pipe
    DataArray.rename
    DataArray.swap_dims
+   DataArray.expand_dims
    DataArray.drop
    DataArray.reset_coords
    DataArray.copy
