@@ -14,6 +14,45 @@ What's New
     np.random.seed(123456)
 
 
+.. _whats-new.0.9.3:
+
+v0.9.3 (unreleased)
+-------------------
+
+Enhancements
+~~~~~~~~~~~~
+
+- Add ``.dt`` accessor to DataArrays for computing datetime-like properties
+  for the values they contain, similar to ``pandas.Series`` (:issue:`358`).
+  By `Daniel Rothenberg <https://github.com/darothen>`_.
+
+- Add ``.persist()`` method to Datasets and DataArrays to enable persisting
+  data in distributed memory (:issue:`1344`).
+  By `Matthew Rocklin <https://github.com/mrocklin>`_.
+
+- New :py:meth:`~xarray.DataArray.expand_dims` method for ``DataArray`` and
+  ``Dataset`` (:issue:`1326`).
+  By `Keisuke Fujii <https://github.com/fujiisoup>`_.
+
+Bug fixes
+~~~~~~~~~
+
+- Fixed writing to file-like objects with :py:meth:`~xarray.Dataset.to_netcdf`
+  (:issue:`1320`).
+  `Stephan Hoyer <https://github.com/shoyer>`_.
+- Fixed explicitly setting ``engine='scipy'`` with ``to_netcdf`` when not
+  providing a path (:issue:`1321`).
+  `Stephan Hoyer <https://github.com/shoyer>`_.
+
+- Fixed open_dataarray does not pass properly its parameters to open_dataset
+  (:issue:`1359`).
+  `Stephan Hoyer <https://github.com/shoyer>`_.
+
+- Ensure test suite works when runs from an installed version of xarray
+  (:issue:`1336`). Use ``@pytest.mark.slow`` instead of a custom flag to mark
+  slow tests.
+  By `Stephan Hoyer <https://github.com/shoyer>`_
+
 .. _whats-new.0.9.2:
 
 v0.9.2 (2 April, 2017)
@@ -23,6 +62,8 @@ The minor release includes bug-fixes and backwards compatible enhancements.
 
 Enhancements
 ~~~~~~~~~~~~
+
+- ``rolling`` on Dataset is now supported (:issue:`859`).
 
 - ``.rolling()`` on Dataset is now supported (:issue:`859`).
   By `Keisuke Fujii <https://github.com/fujiisoup>`_.
