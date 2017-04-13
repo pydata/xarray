@@ -140,18 +140,24 @@ If you are using xarray and would like to cite it in academic publication, we
 would certainly appreciate it. We recommend two citations.
 
   1. At a minimum, we recommend citing the xarray overview journal article,
-     submitted to the Journal of Open Research Software.
+     published in the Journal of Open Research Software.
 
-     - Hoyer, S., Hamman, J. (In revision). Xarray: N-D labeled arrays and
-       datasets in Python. Journal of Open Research Software.
+     - Hoyer, S. & Hamman, J., (2017). xarray: N-D labeled Arrays and
+       Datasets in Python. Journal of Open Research Software. 5(1), p.10.
+       DOI: http://doi.org/10.5334/jors.148
 
        Here’s an example of a BibTeX entry::
 
            @article{hoyer2017xarray,
-             title   = {xarray: {N-D} labeled arrays and datasets in {Python}},
-             author  = {Hoyer, S. and J. Hamman},
-             journal = {In revision, J. Open Res. Software},
-             year    = {2017}
+             title     = {xarray: {N-D} labeled arrays and datasets in {Python}},
+             author    = {Hoyer, S. and J. Hamman},
+             journal   = {Journal of Open Research Software},
+             volume    = {5},
+             number    = {1},
+             year      = {2017},
+             publisher = {Ubiquity Press},
+             doi       = {10.5334/jors.148},
+             url       = {http://doi.org/10.5334/jors.148}
            }
 
   2. You may also want to cite a specific version of the xarray package. We

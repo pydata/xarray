@@ -318,12 +318,8 @@ def open_dataset(filename_or_obj, group=None, decode_cf=True,
     return maybe_decode_store(store)
 
 
-def open_dataarray(filename_or_obj, group=None, decode_cf=True,
-                   mask_and_scale=True, decode_times=True,
-                   concat_characters=True, decode_coords=True, engine=None,
-                   chunks=None, lock=None, cache=None, drop_variables=None):
-    """
-    Opens an DataArray from a netCDF file containing a single data variable.
+def open_dataarray(*args, **kwargs):
+    """Open an DataArray from a netCDF file containing a single data variable.
 
     This is designed to read netCDF files with only one data variable. If
     multiple variables are present then a ValueError is raised.
@@ -353,6 +349,10 @@ def open_dataarray(filename_or_obj, group=None, decode_cf=True,
     decode_times : bool, optional
         If True, decode times encoded in the standard NetCDF datetime format
         into datetime objects. Otherwise, leave them encoded as numbers.
+    autoclose : bool, optional
+        If True, automatically close files to avoid OS Error of too many files
+        being open.  However, this option doesn't work with streams, e.g.,
+        BytesIO.
     concat_characters : bool, optional
         If True, concatenate along the last dimension of character arrays to
         form string arrays. Dimensions will only be concatenated over (and
@@ -400,10 +400,7 @@ def open_dataarray(filename_or_obj, group=None, decode_cf=True,
     --------
     open_dataset
     """
-    dataset = open_dataset(filename_or_obj, group, decode_cf,
-                           mask_and_scale, decode_times,
-                           concat_characters, decode_coords, engine,
-                           chunks, lock, cache, drop_variables)
+    dataset = open_dataset(*args, **kwargs)
 
     if len(dataset.data_vars) != 1:
         raise ValueError('Given file dataset contains more than one data '
@@ -536,7 +533,7 @@ WRITEABLE_STORES = {'netcdf4': backends.NetCDF4DataStore,
                     'h5netcdf': backends.H5NetCDFStore}
 
 
-def to_netcdf(dataset, path=None, mode='w', format=None, group=None,
+def to_netcdf(dataset, path_or_file=None, mode='w', format=None, group=None,
               engine=None, writer=None, encoding=None, unlimited_dims=None):
     """This function creates an appropriate datastore for writing a dataset to
     disk as a netCDF file
@@ -547,18 +544,19 @@ def to_netcdf(dataset, path=None, mode='w', format=None, group=None,
     """
     if encoding is None:
         encoding = {}
-    if path is None:
-        path = BytesIO()
+    if path_or_file is None:
         if engine is None:
             engine = 'scipy'
-        elif engine is not None:
+        elif engine != 'scipy':
             raise ValueError('invalid engine for creating bytes with '
                              'to_netcdf: %r. Only the default engine '
                              "or engine='scipy' is supported" % engine)
-    else:
+    elif isinstance(path_or_file, basestring):
         if engine is None:
-            engine = _get_default_engine(path)
-        path = _normalize_path(path)
+            engine = _get_default_engine(path_or_file)
+        path_or_file = _normalize_path(path_or_file)
+    else:  # file-like object
+        engine = 'scipy'
 
     # validate Dataset keys, DataArray names, and attr keys/values
     _validate_dataset_names(dataset)
@@ -575,17 +573,18 @@ def to_netcdf(dataset, path=None, mode='w', format=None, group=None,
     # if a writer is provided, store asynchronously
     sync = writer is None
 
-    store = store_cls(path, mode, format, group, writer)
+    target = path_or_file if path_or_file is not None else BytesIO()
+    store = store_cls(target, mode, format, group, writer)
 
     if unlimited_dims is None:
         unlimited_dims = dataset.encoding.get('unlimited_dims', None)
     try:
         dataset.dump_to_store(store, sync=sync, encoding=encoding,
                               unlimited_dims=unlimited_dims)
-        if isinstance(path, BytesIO):
-            return path.getvalue()
+        if path_or_file is None:
+            return target.getvalue()
     finally:
-        if sync:
+        if sync and isinstance(path_or_file, basestring):
             store.close()
 
     if not sync:

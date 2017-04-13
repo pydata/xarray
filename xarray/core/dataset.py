@@ -17,6 +17,7 @@ from . import rolling
 from . import indexing
 from . import alignment
 from . import formatting
+from . import duck_array_ops
 from .. import conventions
 from .alignment import align
 from .coordinates import DatasetCoordinates, LevelCoordinatesSource, Indexes
@@ -490,6 +491,34 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         new = self.copy(deep=False)
         return new.load()
 
+    def _persist_inplace(self):
+        """ Persist all Dask arrays in memory """
+        # access .data to coerce everything to numpy or dask arrays
+        lazy_data = {k: v._data for k, v in self.variables.items()
+                     if isinstance(v._data, dask_array_type)}
+        if lazy_data:
+            import dask
+
+            # evaluate all the dask arrays simultaneously
+            evaluated_data = dask.persist(*lazy_data.values())
+
+            for k, data in zip(lazy_data, evaluated_data):
+                self.variables[k].data = data
+
+        return self
+
+    def persist(self):
+        """ Trigger computation, keeping data as dask arrays
+
+        This operation can be used to trigger computation on underlying dask
+        arrays, similar to ``.compute()``.  However this operation keeps the
+        data as dask arrays.  This is particularly useful when using the
+        dask.distributed scheduler and you want to load a large amount of data
+        into distributed memory.
+        """
+        new = self.copy(deep=False)
+        return new._persist_inplace()
+
     @classmethod
     def _construct_direct(cls, variables, coord_names, dims=None, attrs=None,
                           file_obj=None, encoding=None):
@@ -892,6 +921,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         store.store(variables, attrs, check_encoding,
                     unlimited_dims=unlimited_dims)
         if sync:
+            print('syncing')
             store.sync()
 
     def to_netcdf(self, path=None, mode='w', format=None, group=None,
@@ -900,11 +930,12 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
 
         Parameters
         ----------
-        path : str, optional
-            Path to which to save this dataset. If no path is provided, this
-            function returns the resulting netCDF file as a bytes object; in
-            this case, we need to use scipy.io.netcdf, which does not support
-            netCDF version 4 (the default format becomes NETCDF3_64BIT).
+        path : str or file-like object, optional
+            Path to which to save this dataset. File-like objects are only
+            supported by the scipy engine. If no path is provided, this
+            function returns the resulting netCDF file as bytes; in this case,
+            we need to use scipy, which does not support netCDF version 4 (the
+            default format becomes NETCDF3_64BIT).
         mode : {'w', 'a'}, optional
             Write ('w') or append ('a') mode. If mode='w', any existing file at
             this location will be overwritten.
@@ -1575,6 +1606,90 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         return self._replace_vars_and_dims(variables, coord_names,
                                            inplace=inplace)
 
+    def expand_dims(self, dim, axis=None):
+        """Return a new object with an additional axis (or axes) inserted at the
+        corresponding position in the array shape.
+
+        If dim is already a scalar coordinate, it will be promoted to a 1D
+        coordinate consisting of a single value.
+
+        Parameters
+        ----------
+        dim : str or sequence of str.
+            Dimensions to include on the new variable.
+            dimensions are inserted with length 1.
+        axis : integer, list (or tuple) of integers, or None
+            Axis position(s) where new axis is to be inserted (position(s) on
+            the result array). If a list (or tuple) of integers is passed,
+            multiple axes are inserted. In this case, dim arguments should be
+            the same length list. If axis=None is passed, all the axes will
+            be inserted to the start of the result array.
+
+        Returns
+        -------
+        expanded : same type as caller
+            This object, but with an additional dimension(s).
+        """
+        if isinstance(dim, int):
+            raise ValueError('dim should be str or sequence of strs or dict')
+
+        if isinstance(dim, basestring):
+            dim = [dim]
+        if axis is not None and not isinstance(axis, (list, tuple)):
+            axis = [axis]
+
+        if axis is None:
+            axis = list(range(len(dim)))
+
+        if len(dim) != len(axis):
+            raise ValueError('lengths of dim and axis should be identical.')
+        for d in dim:
+            if d in self.dims:
+                raise ValueError(
+                            'Dimension {dim} already exists.'.format(dim=d))
+            if (d in self._variables and
+                    not utils.is_scalar(self._variables[d])):
+                raise ValueError(
+                            '{dim} already exists as coordinate or'
+                            ' variable name.'.format(dim=d))
+
+        if len(dim) != len(set(dim)):
+            raise ValueError('dims should not contain duplicate values.')
+
+        variables = OrderedDict()
+        for k, v in iteritems(self._variables):
+            if k not in dim:
+                if k in self._coord_names:  # Do not change coordinates
+                    variables[k] = v
+                else:
+                    result_ndim = len(v.dims) + len(axis)
+                    for a in axis:
+                        if a < -result_ndim or result_ndim - 1 < a:
+                            raise IndexError(
+                                'Axis {a} is out of bounds of the expanded'
+                                ' dimension size {dim}.'.format(
+                                               a=a, v=k, dim=result_ndim))
+
+                    axis_pos = [a if a >= 0 else result_ndim + a
+                                for a in axis]
+                    if len(axis_pos) != len(set(axis_pos)):
+                        raise ValueError('axis should not contain duplicate'
+                                         ' values.')
+                    # We need to sort them to make sure `axis` equals to the
+                    # axis positions of the result array.
+                    zip_axis_dim = sorted(zip(axis_pos, dim))
+
+                    all_dims = list(v.dims)
+                    for a, d in zip_axis_dim:
+                        all_dims.insert(a, d)
+                    variables[k] = v.set_dims(all_dims)
+            else:
+                # If dims includes a label of a non-dimension coordinate,
+                # it will be promoted to a 1D coordinate with a single value.
+                variables[k] = v.set_dims(k)
+
+        return self._replace_vars_and_dims(variables, self._coord_names)
+
     def set_index(self, append=False, inplace=False, **indexes):
         """Set Dataset (multi-)indexes using one or more existing coordinates or
         variables.
@@ -1676,7 +1791,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
                     add_dims = [d for d in dims if d not in var.dims]
                     vdims = list(var.dims) + add_dims
                     shape = [self.dims[d] for d in vdims]
-                    exp_var = var.expand_dims(vdims, shape)
+                    exp_var = var.set_dims(vdims, shape)
                     stacked_var = exp_var.stack(**{new_dim: dims})
                     variables[name] = stacked_var
                 else:
@@ -2206,7 +2321,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
 
         data_vars = [self.variables[k] for k in self.data_vars]
         broadcast_vars = broadcast_variables(*data_vars)
-        data = ops.stack([b.data for b in broadcast_vars], axis=0)
+        data = duck_array_ops.stack([b.data for b in broadcast_vars], axis=0)
 
         coords = dict(self.coords)
         coords[dim] = list(self.data_vars)
@@ -2217,7 +2332,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
 
     def _to_dataframe(self, ordered_dims):
         columns = [k for k in self if k not in self.dims]
-        data = [self._variables[k].expand_dims(ordered_dims).values.reshape(-1)
+        data = [self._variables[k].set_dims(ordered_dims).values.reshape(-1)
                 for k in columns]
         index = self.coords.to_index(ordered_dims)
         return pd.DataFrame(OrderedDict(zip(columns, data)), index=index)

@@ -1509,6 +1509,57 @@ class TestDataset(TestCase):
         with self.assertRaisesRegexp(ValueError, 'replacement dimension'):
             original.swap_dims({'x': 'z'})
 
+    def test_expand_dims_error(self):
+        original = Dataset({'x': ('a', np.random.randn(3)),
+                            'y': (['b', 'a'], np.random.randn(4, 3)),
+                            'z': ('a', np.random.randn(3))},
+                           coords={'a': np.linspace(0, 1, 3),
+                                   'b': np.linspace(0, 1, 4),
+                                   'c': np.linspace(0, 1, 5)},
+                           attrs={'key': 'entry'})
+
+        with self.assertRaisesRegexp(ValueError, 'already exists'):
+            original.expand_dims(dim=['x'])
+
+        # Make sure it raises true error also for non-dimensional coordinates
+        # which has dimension.
+        original.set_coords('z', inplace=True)
+        with self.assertRaisesRegexp(ValueError, 'already exists'):
+            original.expand_dims(dim=['z'])
+
+    def test_expand_dims(self):
+        original = Dataset({'x': ('a', np.random.randn(3)),
+                            'y': (['b', 'a'], np.random.randn(4, 3))},
+                           coords={'a': np.linspace(0, 1, 3),
+                                   'b': np.linspace(0, 1, 4),
+                                   'c': np.linspace(0, 1, 5)},
+                           attrs={'key': 'entry'})
+
+        actual = original.expand_dims(['z'], [1])
+        expected = Dataset({'x': original['x'].expand_dims('z', 1),
+                            'y': original['y'].expand_dims('z', 1)},
+                           coords={'a': np.linspace(0, 1, 3),
+                                   'b': np.linspace(0, 1, 4),
+                                   'c': np.linspace(0, 1, 5)},
+                           attrs={'key': 'entry'})
+        self.assertDatasetIdentical(expected, actual)
+        # make sure squeeze restores the original data set.
+        roundtripped = actual.squeeze('z')
+        self.assertDatasetIdentical(original, roundtripped)
+
+        # another test with a negative axis
+        actual = original.expand_dims(['z'], [-1])
+        expected = Dataset({'x': original['x'].expand_dims('z', -1),
+                            'y': original['y'].expand_dims('z', -1)},
+                           coords={'a': np.linspace(0, 1, 3),
+                                   'b': np.linspace(0, 1, 4),
+                                   'c': np.linspace(0, 1, 5)},
+                           attrs={'key': 'entry'})
+        self.assertDatasetIdentical(expected, actual)
+        # make sure squeeze restores the original data set.
+        roundtripped = actual.squeeze('z')
+        self.assertDatasetIdentical(original, roundtripped)
+
     def test_set_index(self):
         expected = create_test_multiindex()
         mindex = expected['x'].to_index()
@@ -2006,7 +2057,7 @@ class TestDataset(TestCase):
                         'letters': ('y', ['a', 'a', 'b', 'b'])})
 
         expected = data.mean('y')
-        expected['yonly'] = expected['yonly'].variable.expand_dims({'x': 3})
+        expected['yonly'] = expected['yonly'].variable.set_dims({'x': 3})
         actual = data.groupby('x').mean()
         self.assertDatasetAllClose(expected, actual)
 
@@ -2016,7 +2067,7 @@ class TestDataset(TestCase):
         letters = data['letters']
         expected = Dataset({'xy': data['xy'].groupby(letters).mean(),
                             'xonly': (data['xonly'].mean().variable
-                                      .expand_dims({'letters': 2})),
+                                      .set_dims({'letters': 2})),
                             'yonly': data['yonly'].groupby(letters).mean()})
         actual = data.groupby('letters').mean()
         self.assertDatasetAllClose(expected, actual)
@@ -3291,21 +3342,21 @@ def test_dir_unicode(data_set):
 @pytest.fixture(params=[1])
 def ds(request):
     if request.param == 1:
-        return Dataset({'z1': (['y', 'x'], np.random.randn(5, 20)),
-                        'z2': (['time', 'y'], np.random.randn(30, 5))},
-                       {'x': ('x', np.linspace(0, 1.0, 20)),
-                        'time': ('time', np.linspace(0, 1.0, 30)),
-                        'c': ('y', ['a', 'b', 'c', 'd', 'e']),
-                        'y': range(5)})
+        return Dataset({'z1': (['y', 'x'], np.random.randn(2, 8)),
+                        'z2': (['time', 'y'], np.random.randn(10, 2))},
+                       {'x': ('x', np.linspace(0, 1.0, 8)),
+                        'time': ('time', np.linspace(0, 1.0, 10)),
+                        'c': ('y', ['a', 'b']),
+                        'y': range(2)})
 
     if request.param == 2:
-        return Dataset({'z1': (['time', 'y'], np.random.randn(30, 5)),
-                        'z2': (['time'], np.random.randn(30)),
-                        'z3': (['x', 'time'], np.random.randn(20, 30))},
-                       {'x': ('x', np.linspace(0, 1.0, 20)),
-                        'time': ('time', np.linspace(0, 1.0, 30)),
-                        'c': ('y', ['a', 'b', 'c', 'd', 'e']),
-                        'y': range(5)})
+        return Dataset({'z1': (['time', 'y'], np.random.randn(10, 2)),
+                        'z2': (['time'], np.random.randn(10)),
+                        'z3': (['x', 'time'], np.random.randn(8, 10))},
+                       {'x': ('x', np.linspace(0, 1.0, 8)),
+                        'time': ('time', np.linspace(0, 1.0, 10)),
+                        'c': ('y', ['a', 'b']),
+                        'y': range(2)})
 
 
 def test_rolling_properties(ds):
@@ -3389,6 +3440,7 @@ def test_rolling_pandas_compat(center, window, min_periods):
                                ds_rolling['index'])
 
 
+@pytest.mark.slow
 @pytest.mark.parametrize('ds', (1, 2), indirect=True)
 @pytest.mark.parametrize('center', (True, False))
 @pytest.mark.parametrize('min_periods', (None, 1, 2, 3))
