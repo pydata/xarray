@@ -1,10 +1,6 @@
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
-try:
-    import cPickle as pickle
-except ImportError:
-    import pickle
 
 import xarray as xr
 import numpy as np
@@ -34,9 +30,9 @@ class TestDatetimeAccessor(TestCase):
         years = xr.DataArray(self.times.year, name='year',
                              coords=[self.times, ], dims=['time', ])
         months = xr.DataArray(self.times.month, name='month',
-                             coords=[self.times, ], dims=['time', ])
+                              coords=[self.times, ], dims=['time', ])
         days = xr.DataArray(self.times.day, name='day',
-                             coords=[self.times, ], dims=['time', ])
+                            coords=[self.times, ], dims=['time', ])
         hours = xr.DataArray(self.times.hour, name='hour',
                              coords=[self.times, ], dims=['time', ])
 
@@ -89,4 +85,3 @@ class TestDatetimeAccessor(TestCase):
         self.assertDataArrayEqual(months, dask_month.compute())
         self.assertDataArrayEqual(days, dask_day.compute())
         self.assertDataArrayEqual(hours, dask_hour.compute())
-

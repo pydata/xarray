@@ -9,6 +9,7 @@ from .pycompat import dask_array_type
 import numpy as np
 import pandas as pd
 
+
 def _get_date_field(values, name):
     """Indirectly access pandas' libts.get_date_field by wrapping data
     as a Series and calling through `.dt` attribute.
@@ -52,9 +53,9 @@ class DatetimeAccessor(object):
         Coordinates:
           * time     (time) datetime64[ns] 2000-01-01 2000-01-02 2000-01-03 ...
 
-     All of the pandas fields are accessible here. Note that these fields are not
-     calendar-aware; if your datetimes are encoded with a non-Gregorian calendar
-     (e.g. a 360-day calendar) using netcdftime, then some fields like
+     All of the pandas fields are accessible here. Note that these fields are
+     not calendar-aware; if your datetimes are encoded with a non-Gregorian
+     calendar (e.g. a 360-day calendar) using netcdftime, then some fields like
      `dayofyear` may not be accurate.
 
      """
@@ -103,7 +104,9 @@ class DatetimeAccessor(object):
         'weekday_name', "The name of day in a week (ex: Friday)"
     )
 
-    dayofyear = _tslib_field_accessor('dayofyear', "The ordinal day of the year")
+    dayofyear = _tslib_field_accessor(
+        'dayofyear', "The ordinal day of the year"
+    )
     quarter = _tslib_field_accessor('quarter', "The quarter of the date")
     days_in_month = _tslib_field_accessor(
         'days_in_month', "The number of days in the month"
