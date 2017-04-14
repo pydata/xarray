@@ -2719,6 +2719,12 @@ class TestDataset(TestCase):
         expected = DataArray(np.zeros((0, 10)), dims=['nCells', 'nVertLevels'])
         self.assertDatasetIdentical(expected, actual)
 
+    def test_where_drop_no_indexes(self):
+        ds = Dataset({'foo': ('x', [0.0, 1.0])})
+        expected = Dataset({'foo': ('x', [1.0])})
+        actual = ds.where(ds == 1, drop=True)
+        self.assertDatasetIdentical(expected, actual)
+
     def test_reduce(self):
         data = create_test_data()
 

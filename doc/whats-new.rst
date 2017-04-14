@@ -33,9 +33,15 @@ Enhancements
 Bug fixes
 ~~~~~~~~~
 
+- Fix ``.where()`` with ``drop=True`` when arguments do not have indexes
+  (:issue:`1350`). This bug, introduced in v0.9, resulted in xarray producing
+  incorrect results in some cases.
+  By `Stephan Hoyer <https://github.com/shoyer>`_.
+
 - Fixed writing to file-like objects with :py:meth:`~xarray.Dataset.to_netcdf`
   (:issue:`1320`).
   `Stephan Hoyer <https://github.com/shoyer>`_.
+
 - Fixed explicitly setting ``engine='scipy'`` with ``to_netcdf`` when not
   providing a path (:issue:`1321`).
   `Stephan Hoyer <https://github.com/shoyer>`_.
