@@ -5,8 +5,9 @@ import numpy as np
 import logging
 import time
 import traceback
+import contextlib
 from collections import Mapping
-from distutils.version import StrictVersion
+from distutils.version import LooseVersion
 
 from ..conventions import cf_encoder
 from ..core.utils import FrozenOrderedDict
@@ -41,6 +42,15 @@ def _decode_variable_name(name):
     return name
 
 
+def find_root(ds):
+    """
+    Helper function to find the root of a netcdf or h5netcdf dataset.
+    """
+    while ds.parent is not None:
+        ds = ds.parent
+    return ds
+
+
 def robust_getitem(array, key, catch=Exception, max_retries=6,
                    initial_delay=500):
     """
@@ -67,6 +77,7 @@ def robust_getitem(array, key, catch=Exception, max_retries=6,
 
 
 class AbstractDataStore(Mapping):
+    _autoclose = False
 
     def __iter__(self):
         return iter(self.variables)
@@ -107,8 +118,8 @@ class AbstractDataStore(Mapping):
         This function will be called anytime variables or attributes
         are requested, so care should be taken to make sure its fast.
         """
-        variables = FrozenOrderedDict((_decode_variable_name(k), v) for k, v in
-                                      iteritems(self.get_variables()))
+        variables = FrozenOrderedDict((_decode_variable_name(k), v)
+                                      for k, v in self.get_variables().items())
         attributes = FrozenOrderedDict(self.get_attrs())
         return variables, attributes
 
@@ -164,7 +175,7 @@ class ArrayWriter(object):
         if self.sources:
             import dask.array as da
             import dask
-            if StrictVersion(dask.__version__) > StrictVersion('0.8.1'):
+            if LooseVersion(dask.__version__) > LooseVersion('0.8.1'):
                 da.store(self.sources, self.targets, lock=GLOBAL_LOCK)
             else:
                 da.store(self.sources, self.targets)
@@ -252,3 +263,27 @@ class DataStorePickleMixin(object):
     def __setstate__(self, state):
         self.__dict__.update(state)
         self.ds = self._opener(mode=self._mode)
+
+    @contextlib.contextmanager
+    def ensure_open(self, autoclose):
+        """
+        Helper function to make sure datasets are closed and opened
+        at appropriate times to avoid too many open file errors.
+
+        Use requires `autoclose=True` argument to `open_mfdataset`.
+        """
+        if self._autoclose and not self._isopen:
+            try:
+                self.ds = self._opener()
+                self._isopen = True
+                yield
+            finally:
+                if autoclose:
+                    self.close()
+        else:
+            yield
+
+    def assert_open(self):
+        if not self._isopen:
+            raise AssertionError('internal failure: file must be open '
+                                 'if `autoclose=True` is used.')

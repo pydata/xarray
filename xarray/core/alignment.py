@@ -7,7 +7,7 @@ from collections import defaultdict
 
 import numpy as np
 
-from . import ops, utils
+from . import duck_array_ops, utils
 from .common import _maybe_promote
 from .indexing import get_indexer
 from .pycompat import iteritems, OrderedDict, suppress
@@ -376,8 +376,8 @@ def reindex_variables(variables, sizes, indexes, indexers, method=None,
                     for axis, indexer in enumerate(assign_to):
                         if not is_full_slice(indexer):
                             indices = np.cumsum(indexer)[~indexer]
-                            data = ops.insert(data, indices, fill_value,
-                                              axis=axis)
+                            data = duck_array_ops.insert(
+                                data, indices, fill_value, axis=axis)
                     new_var = Variable(var.dims, data, var.attrs,
                                        fastpath=True)
 
@@ -489,7 +489,7 @@ def broadcast(*args, **kwargs):
                 if dim in arg.coords:
                     common_coords[dim] = arg.coords[dim].variable
 
-    def _expand_dims(var):
+    def _set_dims(var):
         # Add excluded dims to a copy of dims_map
         var_dims_map = dims_map.copy()
         for dim in exclude:
@@ -497,10 +497,10 @@ def broadcast(*args, **kwargs):
                 # ignore dim not in var.dims
                 var_dims_map[dim] = var.shape[var.dims.index(dim)]
 
-        return var.expand_dims(var_dims_map)
+        return var.set_dims(var_dims_map)
 
     def _broadcast_array(array):
-        data = _expand_dims(array.variable)
+        data = _set_dims(array.variable)
         coords = OrderedDict(array.coords)
         coords.update(common_coords)
         return DataArray(data, coords, data.dims, name=array.name,
@@ -508,7 +508,7 @@ def broadcast(*args, **kwargs):
 
     def _broadcast_dataset(ds):
         data_vars = OrderedDict(
-            (k, _expand_dims(ds.variables[k]))
+            (k, _set_dims(ds.variables[k]))
             for k in ds.data_vars)
         coords = OrderedDict(ds.coords)
         coords.update(common_coords)

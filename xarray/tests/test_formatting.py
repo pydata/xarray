@@ -131,6 +131,17 @@ class TestFormatting(TestCase):
         result = formatting.format_timestamp(date)
         self.assertEqual(result, expected)
 
+    def test_attribute_repr(self):
+        short = formatting.summarize_attr(u'key', u'Short string')
+        long = formatting.summarize_attr(u'key', 100 * u'Very long string ')
+        newlines = formatting.summarize_attr(u'key', u'\n\n\n')
+        tabs = formatting.summarize_attr(u'key', u'\t\t\t')
+        self.assertEqual(short, '    key: Short string')
+        self.assertLessEqual(len(long), 80)
+        self.assertTrue(long.endswith(u'...'))
+        self.assertNotIn(u'\n', newlines)
+        self.assertNotIn(u'\t', tabs)
+
 
 def test_set_numpy_options():
     original_options = np.get_printoptions()

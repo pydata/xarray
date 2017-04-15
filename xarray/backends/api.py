@@ -1,9 +1,8 @@
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
-import gzip
 import os.path
-from distutils.version import StrictVersion
+from distutils.version import LooseVersion
 from glob import glob
 from io import BytesIO
 from numbers import Number
@@ -133,7 +132,7 @@ def _protect_dataset_variables_inplace(dataset, cache):
 
 
 def open_dataset(filename_or_obj, group=None, decode_cf=True,
-                 mask_and_scale=True, decode_times=True,
+                 mask_and_scale=True, decode_times=True, autoclose=False,
                  concat_characters=True, decode_coords=True, engine=None,
                  chunks=None, lock=None, cache=None, drop_variables=None):
     """Load and decode a dataset from a file or file-like object.
@@ -163,6 +162,10 @@ def open_dataset(filename_or_obj, group=None, decode_cf=True,
     decode_times : bool, optional
         If True, decode times encoded in the standard NetCDF datetime format
         into datetime objects. Otherwise, leave them encoded as numbers.
+    autoclose : bool, optional
+        If True, automatically close files to avoid OS Error of too many files
+        being open.  However, this option doesn't work with streams, e.g.,
+        BytesIO.
     concat_characters : bool, optional
         If True, concatenate along the last dimension of character arrays to
         form string arrays. Dimensions will only be concatenated over (and
@@ -230,7 +233,7 @@ def open_dataset(filename_or_obj, group=None, decode_cf=True,
             except ImportError:
                 # raise the usual error if dask is entirely missing
                 import dask
-                if StrictVersion(dask.__version__) < StrictVersion('0.6'):
+                if LooseVersion(dask.__version__) < LooseVersion('0.6'):
                     raise ImportError(
                         'xarray requires dask version 0.6 or newer')
                 else:
@@ -250,6 +253,12 @@ def open_dataset(filename_or_obj, group=None, decode_cf=True,
             ds2._file_obj = ds._file_obj
         else:
             ds2 = ds
+
+        # protect so that dataset store isn't necessarily closed, e.g.,
+        # streams like BytesIO  can't be reopened
+        # datastore backend is responsible for determining this capability
+        if store._autoclose:
+            store.close()
 
         return ds2
 
@@ -271,33 +280,30 @@ def open_dataset(filename_or_obj, group=None, decode_cf=True,
             if engine is not None and engine != 'scipy':
                 raise ValueError('can only read gzipped netCDF files with '
                                  "default engine or engine='scipy'")
-            # if the string ends with .gz, then gunzip and open as netcdf file
-            try:
-                store = backends.ScipyDataStore(gzip.open(filename_or_obj))
-            except TypeError as e:
-                # TODO: gzipped loading only works with NetCDF3 files.
-                if 'is not a valid NetCDF 3 file' in e.message:
-                    raise ValueError('gzipped file loading only supports '
-                                     'NetCDF 3 files.')
-                else:
-                    raise
-        else:
-            if engine is None:
-                engine = _get_default_engine(filename_or_obj,
-                                             allow_remote=True)
-            if engine == 'netcdf4':
-                store = backends.NetCDF4DataStore(filename_or_obj, group=group)
-            elif engine == 'scipy':
-                store = backends.ScipyDataStore(filename_or_obj)
-            elif engine == 'pydap':
-                store = backends.PydapDataStore(filename_or_obj)
-            elif engine == 'h5netcdf':
-                store = backends.H5NetCDFStore(filename_or_obj, group=group)
-            elif engine == 'pynio':
-                store = backends.NioDataStore(filename_or_obj)
             else:
-                raise ValueError('unrecognized engine for open_dataset: %r'
-                                 % engine)
+                engine = 'scipy'
+
+        if engine is None:
+            engine = _get_default_engine(filename_or_obj,
+                                         allow_remote=True)
+        if engine == 'netcdf4':
+            store = backends.NetCDF4DataStore(filename_or_obj, group=group,
+                                              autoclose=autoclose)
+        elif engine == 'scipy':
+            store = backends.ScipyDataStore(filename_or_obj,
+                                            autoclose=autoclose)
+        elif engine == 'pydap':
+            store = backends.PydapDataStore(filename_or_obj)
+        elif engine == 'h5netcdf':
+            store = backends.H5NetCDFStore(filename_or_obj, group=group,
+                                           autoclose=autoclose)
+        elif engine == 'pynio':
+            store = backends.NioDataStore(filename_or_obj,
+                                          autoclose=autoclose)
+        else:
+            raise ValueError('unrecognized engine for open_dataset: %r'
+                             % engine)
+
         if lock is None:
             lock = _default_lock(filename_or_obj, engine)
         with close_on_error(store):
@@ -312,12 +318,8 @@ def open_dataset(filename_or_obj, group=None, decode_cf=True,
     return maybe_decode_store(store)
 
 
-def open_dataarray(filename_or_obj, group=None, decode_cf=True,
-                   mask_and_scale=True, decode_times=True,
-                   concat_characters=True, decode_coords=True, engine=None,
-                   chunks=None, lock=None, cache=None, drop_variables=None):
-    """
-    Opens an DataArray from a netCDF file containing a single data variable.
+def open_dataarray(*args, **kwargs):
+    """Open an DataArray from a netCDF file containing a single data variable.
 
     This is designed to read netCDF files with only one data variable. If
     multiple variables are present then a ValueError is raised.
@@ -347,6 +349,10 @@ def open_dataarray(filename_or_obj, group=None, decode_cf=True,
     decode_times : bool, optional
         If True, decode times encoded in the standard NetCDF datetime format
         into datetime objects. Otherwise, leave them encoded as numbers.
+    autoclose : bool, optional
+        If True, automatically close files to avoid OS Error of too many files
+        being open.  However, this option doesn't work with streams, e.g.,
+        BytesIO.
     concat_characters : bool, optional
         If True, concatenate along the last dimension of character arrays to
         form string arrays. Dimensions will only be concatenated over (and
@@ -394,10 +400,7 @@ def open_dataarray(filename_or_obj, group=None, decode_cf=True,
     --------
     open_dataset
     """
-    dataset = open_dataset(filename_or_obj, group, decode_cf,
-                           mask_and_scale, decode_times,
-                           concat_characters, decode_coords, engine,
-                           chunks, lock, cache, drop_variables)
+    dataset = open_dataset(*args, **kwargs)
 
     if len(dataset.data_vars) != 1:
         raise ValueError('Given file dataset contains more than one data '
@@ -437,7 +440,8 @@ def open_mfdataset(paths, chunks=None, concat_dim=_CONCAT_DIM_DEFAULT,
                    lock=None, **kwargs):
     """Open multiple files as a single dataset.
 
-    Experimental. Requires dask to be installed.
+    Requires dask to be installed.  Attributes from the first dataset file
+    are used for the combined dataset.
 
     Parameters
     ----------
@@ -479,6 +483,10 @@ def open_mfdataset(paths, chunks=None, concat_dim=_CONCAT_DIM_DEFAULT,
         Engine to use when reading files. If not provided, the default engine
         is chosen based on available dependencies, with a preference for
         'netcdf4'.
+    autoclose : bool, optional
+        If True, automatically close files to avoid OS Error of too many files
+        being open.  However, this option doesn't work with streams, e.g.,
+        BytesIO.
     lock : False, True or threading.Lock, optional
         This argument is passed on to :py:func:`dask.array.from_array`. By
         default, a per-variable lock is used when reading data from netCDF
@@ -515,6 +523,8 @@ def open_mfdataset(paths, chunks=None, concat_dim=_CONCAT_DIM_DEFAULT,
     else:
         combined = auto_combine(datasets, concat_dim=concat_dim, compat=compat)
     combined._file_obj = _MultiFileCloser(file_objs)
+    combined.attrs = datasets[0].attrs
+
     return combined
 
 
@@ -523,7 +533,7 @@ WRITEABLE_STORES = {'netcdf4': backends.NetCDF4DataStore,
                     'h5netcdf': backends.H5NetCDFStore}
 
 
-def to_netcdf(dataset, path=None, mode='w', format=None, group=None,
+def to_netcdf(dataset, path_or_file=None, mode='w', format=None, group=None,
               engine=None, writer=None, encoding=None, unlimited_dims=None):
     """This function creates an appropriate datastore for writing a dataset to
     disk as a netCDF file
@@ -534,18 +544,19 @@ def to_netcdf(dataset, path=None, mode='w', format=None, group=None,
     """
     if encoding is None:
         encoding = {}
-    if path is None:
-        path = BytesIO()
+    if path_or_file is None:
         if engine is None:
             engine = 'scipy'
-        elif engine is not None:
+        elif engine != 'scipy':
             raise ValueError('invalid engine for creating bytes with '
                              'to_netcdf: %r. Only the default engine '
                              "or engine='scipy' is supported" % engine)
-    else:
+    elif isinstance(path_or_file, basestring):
         if engine is None:
-            engine = _get_default_engine(path)
-        path = _normalize_path(path)
+            engine = _get_default_engine(path_or_file)
+        path_or_file = _normalize_path(path_or_file)
+    else:  # file-like object
+        engine = 'scipy'
 
     # validate Dataset keys, DataArray names, and attr keys/values
     _validate_dataset_names(dataset)
@@ -562,17 +573,18 @@ def to_netcdf(dataset, path=None, mode='w', format=None, group=None,
     # if a writer is provided, store asynchronously
     sync = writer is None
 
-    store = store_cls(path, mode, format, group, writer)
+    target = path_or_file if path_or_file is not None else BytesIO()
+    store = store_cls(target, mode, format, group, writer)
 
     if unlimited_dims is None:
         unlimited_dims = dataset.encoding.get('unlimited_dims', None)
     try:
         dataset.dump_to_store(store, sync=sync, encoding=encoding,
                               unlimited_dims=unlimited_dims)
-        if isinstance(path, BytesIO):
-            return path.getvalue()
+        if path_or_file is None:
+            return target.getvalue()
     finally:
-        if sync:
+        if sync and isinstance(path_or_file, basestring):
             store.close()
 
     if not sync:

@@ -10,7 +10,7 @@ import re
 
 import numpy as np
 
-from . import ops
+from . import duck_array_ops
 from .alignment import deep_align
 from .merge import expand_and_merge_variables
 from .pycompat import OrderedDict, basestring, dask_array_type
@@ -463,7 +463,7 @@ def broadcast_compat_data(variable, broadcast_dims, core_dims):
     reordered_dims = old_broadcast_dims + core_dims
     if reordered_dims != old_dims:
         order = tuple(old_dims.index(d) for d in reordered_dims)
-        data = ops.transpose(data, order)
+        data = duck_array_ops.transpose(data, order)
 
     if new_dims != reordered_dims:
         key_parts = []

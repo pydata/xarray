@@ -321,7 +321,7 @@ Arithmetic between two datasets matches data variables of the same name:
     ds - ds2
 
 Similarly to index based alignment, the result has the intersection of all
-matching variables, and ``ValueError`` is raised if the result would be empty.
+matching data variables.
 
 .. [1] In some future version of NumPy, we should be able to override ufuncs for
        datasets by making use of ``__numpy_ufunc__``.

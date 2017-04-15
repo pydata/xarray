@@ -1,7 +1,3 @@
-"""Functions copied from unreleased versions of numpy.
-
-See the NumPy license in the licenses directory.
-"""
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
@@ -10,7 +6,8 @@ import numpy as np
 try:
     from numpy import broadcast_to, stack, nanprod, nancumsum, nancumprod
 except ImportError:  # pragma: no cover
-    # these functions should arrive in numpy v1.10 to v1.12
+    # Code copied from newer versions of NumPy (v1.10 to v1.12).
+    # Used under the terms of NumPy's license, see licenses/NUMPY_LICENSE.
 
     def _maybe_view_as_subclass(original_array, new_array):
         if type(original_array) is not type(new_array):

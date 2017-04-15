@@ -49,7 +49,7 @@ class TestDataArray(TestCase):
             other    int64 0
         Dimensions without coordinates: time
         Attributes:
-            foo: bar""")
+            foo:      bar""")
         self.assertEqual(expected, repr(data_array))
 
     def test_repr_multiindex(self):
@@ -105,6 +105,13 @@ class TestDataArray(TestCase):
         assert array.get_index('y').equals(pd.Index([0, 1, 2]))
         with self.assertRaises(KeyError):
             array.get_index('z')
+
+    def test_get_index_size_zero(self):
+        array = DataArray(np.zeros((0,)), dims=['x'])
+        actual = array.get_index('x')
+        expected = pd.Index([], dtype=np.int64)
+        assert actual.equals(expected)
+        assert actual.dtype == expected.dtype
 
     def test_struct_array_dims(self):
         """
@@ -905,6 +912,100 @@ class TestDataArray(TestCase):
         expected = DataArray(array.values, {'y': list('abc')}, dims='y')
         actual = array.swap_dims({'x': 'y'})
         self.assertDataArrayIdentical(expected, actual)
+
+    def test_expand_dims_error(self):
+        array = DataArray(np.random.randn(3, 4), dims=['x', 'dim_0'],
+                          coords={'x': np.linspace(0.0, 1.0, 3.0)},
+                          attrs={'key': 'entry'})
+
+        with self.assertRaisesRegexp(ValueError, 'dim should be str or'):
+            array.expand_dims(0)
+        with self.assertRaisesRegexp(ValueError, 'lengths of dim and axis'):
+            # dims and axis argument should be the same length
+            array.expand_dims(dim=['a', 'b'], axis=[1, 2, 3])
+        with self.assertRaisesRegexp(ValueError, 'Dimension x already'):
+            # Should not pass the already existing dimension.
+            array.expand_dims(dim=['x'])
+        # raise if duplicate
+        with self.assertRaisesRegexp(ValueError, 'duplicate values.'):
+            array.expand_dims(dim=['y', 'y'])
+        with self.assertRaisesRegexp(ValueError, 'duplicate values.'):
+            array.expand_dims(dim=['y', 'z'], axis=[1, 1])
+        with self.assertRaisesRegexp(ValueError, 'duplicate values.'):
+            array.expand_dims(dim=['y', 'z'], axis=[2, -2])
+
+        # out of bounds error, axis must be in [-4, 3]
+        with self.assertRaises(IndexError):
+            array.expand_dims(dim=['y', 'z'], axis=[2, 4])
+        with self.assertRaises(IndexError):
+            array.expand_dims(dim=['y', 'z'], axis=[2, -5])
+        # Does not raise an IndexError
+        array.expand_dims(dim=['y', 'z'], axis=[2, -4])
+        array.expand_dims(dim=['y', 'z'], axis=[2, 3])
+
+    def test_expand_dims(self):
+        array = DataArray(np.random.randn(3, 4), dims=['x', 'dim_0'],
+                          coords={'x': np.linspace(0.0, 1.0, 3)},
+                          attrs={'key': 'entry'})
+        # pass only dim label
+        actual = array.expand_dims(dim='y')
+        expected = DataArray(np.expand_dims(array.values, 0),
+                             dims=['y', 'x', 'dim_0'],
+                             coords={'x': np.linspace(0.0, 1.0, 3)},
+                             attrs={'key': 'entry'})
+        self.assertDataArrayIdentical(expected, actual)
+        roundtripped = actual.squeeze('y', drop=True)
+        self.assertDatasetIdentical(array, roundtripped)
+
+        # pass multiple dims
+        actual = array.expand_dims(dim=['y', 'z'])
+        expected = DataArray(np.expand_dims(np.expand_dims(array.values, 0),
+                                            0),
+                             dims=['y', 'z', 'x', 'dim_0'],
+                             coords={'x': np.linspace(0.0, 1.0, 3)},
+                             attrs={'key': 'entry'})
+        self.assertDataArrayIdentical(expected, actual)
+        roundtripped = actual.squeeze(['y', 'z'], drop=True)
+        self.assertDatasetIdentical(array, roundtripped)
+
+        # pass multiple dims and axis. Axis is out of order
+        actual = array.expand_dims(dim=['z', 'y'], axis=[2, 1])
+        expected = DataArray(np.expand_dims(np.expand_dims(array.values, 1),
+                                            2),
+                             dims=['x', 'y', 'z', 'dim_0'],
+                             coords={'x': np.linspace(0.0, 1.0, 3)},
+                             attrs={'key': 'entry'})
+        self.assertDataArrayIdentical(expected, actual)
+        # make sure the attrs are tracked
+        self.assertTrue(actual.attrs['key'] == 'entry')
+        roundtripped = actual.squeeze(['z', 'y'], drop=True)
+        self.assertDatasetIdentical(array, roundtripped)
+
+        # Negative axis and they are out of order
+        actual = array.expand_dims(dim=['y', 'z'], axis=[-1, -2])
+        expected = DataArray(np.expand_dims(np.expand_dims(array.values, -1),
+                                            -1),
+                             dims=['x', 'dim_0', 'z', 'y'],
+                             coords={'x': np.linspace(0.0, 1.0, 3)},
+                             attrs={'key': 'entry'})
+        self.assertDataArrayIdentical(expected, actual)
+        self.assertTrue(actual.attrs['key'] == 'entry')
+        roundtripped = actual.squeeze(['y', 'z'], drop=True)
+        self.assertDatasetIdentical(array, roundtripped)
+
+    def test_expand_dims_with_scalar_coordinate(self):
+        array = DataArray(np.random.randn(3, 4), dims=['x', 'dim_0'],
+                          coords={'x': np.linspace(0.0, 1.0, 3), 'z': 1.0},
+                          attrs={'key': 'entry'})
+        actual = array.expand_dims(dim='z')
+        expected = DataArray(np.expand_dims(array.values, 0),
+                             dims=['z', 'x', 'dim_0'],
+                             coords={'x': np.linspace(0.0, 1.0, 3),
+                                     'z': np.ones(1)},
+                             attrs={'key': 'entry'})
+        self.assertDataArrayIdentical(expected, actual)
+        roundtripped = actual.squeeze(['z'], drop=False)
+        self.assertDatasetIdentical(array, roundtripped)
 
     def test_set_index(self):
         indexes = [self.mindex.get_level_values(n) for n in self.mindex.names]
@@ -2443,12 +2544,19 @@ def test_rolling_iter(da):
         assert label == da['time'].isel(time=i)
 
 
+def test_rolling_doc(da):
+    rolling_obj = da.rolling(time=7)
+
+    # argument substitution worked
+    assert '`mean`' in rolling_obj.mean.__doc__
+
+
 def test_rolling_properties(da):
     pytest.importorskip('bottleneck', minversion='1.0')
 
     rolling_obj = da.rolling(time=4)
 
-    assert rolling_obj._axis_num == 1
+    assert rolling_obj.obj.get_axis_num('time') == 1
 
     # catching invalid args
     with pytest.raises(ValueError) as exception:
@@ -2544,4 +2652,4 @@ def test_rolling_reduce(da, center, min_periods, window, name):
     actual = rolling_obj.reduce(getattr(np, 'nan%s' % name))
     expected = getattr(rolling_obj, name)()
     assert_allclose(actual, expected)
-    assert da.dims == expected.dims
+    assert actual.dims == expected.dims
