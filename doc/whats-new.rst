@@ -16,14 +16,16 @@ What's New
 
 .. _whats-new.0.9.3:
 
-v0.9.3 (unreleased)
--------------------
+v0.9.3 (16 April, 2017)
+-----------------------
+
+This minor release includes bug-fixes and backwards compatible enhancements.
 
 Enhancements
 ~~~~~~~~~~~~
 
-- Add ``.persist()`` method to Datasets and DataArrays to enable persisting
-  data in distributed memory (:issue:`1344`).
+- New :py:meth:`~xarray.DataArray.persist` method to Datasets and DataArrays to
+  enable persisting data in distributed memory when using Dask (:issue:`1344`).
   By `Matthew Rocklin <https://github.com/mrocklin>`_.
 
 - New :py:meth:`~xarray.DataArray.expand_dims` method for ``DataArray`` and
@@ -57,8 +59,8 @@ Bug fixes
 
 .. _whats-new.0.9.2:
 
-v0.9.2 (2 April, 2017)
-----------------------
+v0.9.2 (2 April 2017)
+---------------------
 
 The minor release includes bug-fixes and backwards compatible enhancements.
 
