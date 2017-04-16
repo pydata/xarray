@@ -13,7 +13,7 @@ from collections import Mapping, MutableMapping, Iterable
 import numpy as np
 import pandas as pd
 
-from . import ops
+from . import duck_array_ops
 from .pycompat import iteritems, OrderedDict, basestring, bytes_type
 
 
@@ -99,7 +99,7 @@ def equivalent(first, second):
     array_equiv if either object is an ndarray
     """
     if isinstance(first, np.ndarray) or isinstance(second, np.ndarray):
-        return ops.array_equiv(first, second)
+        return duck_array_ops.array_equiv(first, second)
     else:
         return ((first is second) or
                 (first == second) or
@@ -398,7 +398,12 @@ class NdimSizeLenMixin(object):
             raise TypeError('len() of unsized object')
 
 
-class NDArrayMixin(NdimSizeLenMixin):
+class DunderArrayMixin(object):
+    def __array__(self, dtype=None):
+        return np.asarray(self[...], dtype=dtype)
+
+
+class NDArrayMixin(NdimSizeLenMixin, DunderArrayMixin):
     """Mixin class for making wrappers of N-dimensional arrays that conform to
     the ndarray interface required for the data argument to Variable objects.
 
@@ -412,9 +417,6 @@ class NDArrayMixin(NdimSizeLenMixin):
     @property
     def shape(self):
         return self.array.shape
-
-    def __array__(self, dtype=None):
-        return np.asarray(self[...], dtype=dtype)
 
     def __getitem__(self, key):
         return self.array[key]

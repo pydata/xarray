@@ -75,10 +75,12 @@ Dataset contents
    Dataset.copy
    Dataset.assign
    Dataset.assign_coords
+   Dataset.assign_attrs
    Dataset.pipe
    Dataset.merge
    Dataset.rename
    Dataset.swap_dims
+   Dataset.expand_dims
    Dataset.drop
    Dataset.set_coords
    Dataset.reset_coords
@@ -121,6 +123,7 @@ Computation
    Dataset.reduce
    Dataset.groupby
    Dataset.groupby_bins
+   Dataset.rolling
    Dataset.resample
    Dataset.diff
    Dataset.quantile
@@ -217,9 +220,11 @@ DataArray contents
    :toctree: generated/
 
    DataArray.assign_coords
+   DataArray.assign_attrs
    DataArray.pipe
    DataArray.rename
    DataArray.swap_dims
+   DataArray.expand_dims
    DataArray.drop
    DataArray.reset_coords
    DataArray.copy
@@ -419,6 +424,7 @@ Dataset methods
    Dataset.from_dict
    Dataset.close
    Dataset.compute
+   Dataset.persist
    Dataset.load
    Dataset.chunk
    Dataset.filter_by_attrs
@@ -444,6 +450,7 @@ DataArray methods
    DataArray.from_cdms2
    DataArray.from_dict
    DataArray.compute
+   DataArray.persist
    DataArray.load
    DataArray.chunk
 

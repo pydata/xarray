@@ -7,7 +7,7 @@ import pytest
 import numpy as np
 import pandas as pd
 
-from xarray.core import ops, utils
+from xarray.core import duck_array_ops, utils
 from xarray.core.pycompat import OrderedDict
 from . import TestCase
 
@@ -53,11 +53,12 @@ class TestArrayEquiv(TestCase):
     def test_0d(self):
         # verify our work around for pd.isnull not working for 0-dimensional
         # object arrays
-        self.assertTrue(ops.array_equiv(0, np.array(0, dtype=object)))
         self.assertTrue(
-            ops.array_equiv(np.nan, np.array(np.nan, dtype=object)))
+            duck_array_ops.array_equiv(0, np.array(0, dtype=object)))
+        self.assertTrue(
+            duck_array_ops.array_equiv(np.nan, np.array(np.nan, dtype=object)))
         self.assertFalse(
-            ops.array_equiv(0, np.array(1, dtype=object)))
+            duck_array_ops.array_equiv(0, np.array(1, dtype=object)))
 
 
 class TestDictionaries(TestCase):

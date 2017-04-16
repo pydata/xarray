@@ -49,7 +49,7 @@ class TestDataArray(TestCase):
             other    int64 0
         Dimensions without coordinates: time
         Attributes:
-            foo: bar""")
+            foo:      bar""")
         self.assertEqual(expected, repr(data_array))
 
     def test_repr_multiindex(self):
@@ -105,6 +105,13 @@ class TestDataArray(TestCase):
         assert array.get_index('y').equals(pd.Index([0, 1, 2]))
         with self.assertRaises(KeyError):
             array.get_index('z')
+
+    def test_get_index_size_zero(self):
+        array = DataArray(np.zeros((0,)), dims=['x'])
+        actual = array.get_index('x')
+        expected = pd.Index([], dtype=np.int64)
+        assert actual.equals(expected)
+        assert actual.dtype == expected.dtype
 
     def test_struct_array_dims(self):
         """
@@ -906,6 +913,100 @@ class TestDataArray(TestCase):
         actual = array.swap_dims({'x': 'y'})
         self.assertDataArrayIdentical(expected, actual)
 
+    def test_expand_dims_error(self):
+        array = DataArray(np.random.randn(3, 4), dims=['x', 'dim_0'],
+                          coords={'x': np.linspace(0.0, 1.0, 3.0)},
+                          attrs={'key': 'entry'})
+
+        with self.assertRaisesRegexp(ValueError, 'dim should be str or'):
+            array.expand_dims(0)
+        with self.assertRaisesRegexp(ValueError, 'lengths of dim and axis'):
+            # dims and axis argument should be the same length
+            array.expand_dims(dim=['a', 'b'], axis=[1, 2, 3])
+        with self.assertRaisesRegexp(ValueError, 'Dimension x already'):
+            # Should not pass the already existing dimension.
+            array.expand_dims(dim=['x'])
+        # raise if duplicate
+        with self.assertRaisesRegexp(ValueError, 'duplicate values.'):
+            array.expand_dims(dim=['y', 'y'])
+        with self.assertRaisesRegexp(ValueError, 'duplicate values.'):
+            array.expand_dims(dim=['y', 'z'], axis=[1, 1])
+        with self.assertRaisesRegexp(ValueError, 'duplicate values.'):
+            array.expand_dims(dim=['y', 'z'], axis=[2, -2])
+
+        # out of bounds error, axis must be in [-4, 3]
+        with self.assertRaises(IndexError):
+            array.expand_dims(dim=['y', 'z'], axis=[2, 4])
+        with self.assertRaises(IndexError):
+            array.expand_dims(dim=['y', 'z'], axis=[2, -5])
+        # Does not raise an IndexError
+        array.expand_dims(dim=['y', 'z'], axis=[2, -4])
+        array.expand_dims(dim=['y', 'z'], axis=[2, 3])
+
+    def test_expand_dims(self):
+        array = DataArray(np.random.randn(3, 4), dims=['x', 'dim_0'],
+                          coords={'x': np.linspace(0.0, 1.0, 3)},
+                          attrs={'key': 'entry'})
+        # pass only dim label
+        actual = array.expand_dims(dim='y')
+        expected = DataArray(np.expand_dims(array.values, 0),
+                             dims=['y', 'x', 'dim_0'],
+                             coords={'x': np.linspace(0.0, 1.0, 3)},
+                             attrs={'key': 'entry'})
+        self.assertDataArrayIdentical(expected, actual)
+        roundtripped = actual.squeeze('y', drop=True)
+        self.assertDatasetIdentical(array, roundtripped)
+
+        # pass multiple dims
+        actual = array.expand_dims(dim=['y', 'z'])
+        expected = DataArray(np.expand_dims(np.expand_dims(array.values, 0),
+                                            0),
+                             dims=['y', 'z', 'x', 'dim_0'],
+                             coords={'x': np.linspace(0.0, 1.0, 3)},
+                             attrs={'key': 'entry'})
+        self.assertDataArrayIdentical(expected, actual)
+        roundtripped = actual.squeeze(['y', 'z'], drop=True)
+        self.assertDatasetIdentical(array, roundtripped)
+
+        # pass multiple dims and axis. Axis is out of order
+        actual = array.expand_dims(dim=['z', 'y'], axis=[2, 1])
+        expected = DataArray(np.expand_dims(np.expand_dims(array.values, 1),
+                                            2),
+                             dims=['x', 'y', 'z', 'dim_0'],
+                             coords={'x': np.linspace(0.0, 1.0, 3)},
+                             attrs={'key': 'entry'})
+        self.assertDataArrayIdentical(expected, actual)
+        # make sure the attrs are tracked
+        self.assertTrue(actual.attrs['key'] == 'entry')
+        roundtripped = actual.squeeze(['z', 'y'], drop=True)
+        self.assertDatasetIdentical(array, roundtripped)
+
+        # Negative axis and they are out of order
+        actual = array.expand_dims(dim=['y', 'z'], axis=[-1, -2])
+        expected = DataArray(np.expand_dims(np.expand_dims(array.values, -1),
+                                            -1),
+                             dims=['x', 'dim_0', 'z', 'y'],
+                             coords={'x': np.linspace(0.0, 1.0, 3)},
+                             attrs={'key': 'entry'})
+        self.assertDataArrayIdentical(expected, actual)
+        self.assertTrue(actual.attrs['key'] == 'entry')
+        roundtripped = actual.squeeze(['y', 'z'], drop=True)
+        self.assertDatasetIdentical(array, roundtripped)
+
+    def test_expand_dims_with_scalar_coordinate(self):
+        array = DataArray(np.random.randn(3, 4), dims=['x', 'dim_0'],
+                          coords={'x': np.linspace(0.0, 1.0, 3), 'z': 1.0},
+                          attrs={'key': 'entry'})
+        actual = array.expand_dims(dim='z')
+        expected = DataArray(np.expand_dims(array.values, 0),
+                             dims=['z', 'x', 'dim_0'],
+                             coords={'x': np.linspace(0.0, 1.0, 3),
+                                     'z': np.ones(1)},
+                             attrs={'key': 'entry'})
+        self.assertDataArrayIdentical(expected, actual)
+        roundtripped = actual.squeeze(['z'], drop=False)
+        self.assertDatasetIdentical(array, roundtripped)
+
     def test_set_index(self):
         indexes = [self.mindex.get_level_values(n) for n in self.mindex.names]
         coords = {idx.name: ('x', idx) for idx in indexes}
@@ -1351,6 +1452,20 @@ class TestDataArray(TestCase):
         vm = self.va.mean(keep_attrs=True)
         self.assertEqual(len(vm.attrs), len(self.attrs))
         self.assertEqual(vm.attrs, self.attrs)
+
+    def test_assign_attrs(self):
+        expected = DataArray([], attrs=dict(a=1, b=2))
+        expected.attrs['a'] = 1
+        expected.attrs['b'] = 2
+        new = DataArray([])
+        actual = DataArray([]).assign_attrs(a=1, b=2)
+        self.assertDatasetIdentical(actual, expected)
+        self.assertEqual(new.attrs, {})
+
+        expected.attrs['c'] = 3
+        new_actual = actual.assign_attrs({'c': 3})
+        self.assertDatasetIdentical(new_actual, expected)
+        self.assertEqual(actual.attrs, {'a': 1, 'b': 2})
 
     def test_fillna(self):
         a = DataArray([np.nan, 1, np.nan, 3], coords={'x': range(4)}, dims='x')
@@ -2408,8 +2523,8 @@ class TestDataArray(TestCase):
 def da(request):
     if request.param == 1:
         times = pd.date_range('2000-01-01', freq='1D', periods=21)
-        values = np.random.random((21, 4))
-        da = DataArray(values, dims=('time', 'x'))
+        values = np.random.random((3, 21, 4))
+        da = DataArray(values, dims=('a', 'time', 'x'))
         da['time'] = times
         return da
 
@@ -2429,12 +2544,19 @@ def test_rolling_iter(da):
         assert label == da['time'].isel(time=i)
 
 
+def test_rolling_doc(da):
+    rolling_obj = da.rolling(time=7)
+
+    # argument substitution worked
+    assert '`mean`' in rolling_obj.mean.__doc__
+
+
 def test_rolling_properties(da):
     pytest.importorskip('bottleneck', minversion='1.0')
 
     rolling_obj = da.rolling(time=4)
 
-    assert rolling_obj._axis_num == 0
+    assert rolling_obj.obj.get_axis_num('time') == 1
 
     # catching invalid args
     with pytest.raises(ValueError) as exception:
@@ -2448,23 +2570,32 @@ def test_rolling_properties(da):
     assert 'min_periods must be greater than zero' in str(exception)
 
 
-@pytest.mark.parametrize('name', ('sum', 'mean', 'std', 'min', 'max', 'median'))
+@pytest.mark.parametrize('name', ('sum', 'mean', 'std', 'var',
+                                  'min', 'max', 'median'))
 @pytest.mark.parametrize('center', (True, False, None))
 @pytest.mark.parametrize('min_periods', (1, None))
 def test_rolling_wrapped_bottleneck(da, name, center, min_periods):
     pytest.importorskip('bottleneck')
     import bottleneck as bn
 
-    # skip if median and min_periods
-    if (min_periods == 1) and (name == 'median'):
-        pytest.skip()
+    # skip if median and min_periods bottleneck version < 1.1
+    if ((min_periods == 1) and
+        (name == 'median') and
+            (LooseVersion(bn.__version__) < LooseVersion('1.1'))):
+        pytest.skip('rolling median accepts min_periods for bottleneck 1.1')
+
+    # skip if var and bottleneck version < 1.1
+    if ((name == 'median') and
+            (LooseVersion(bn.__version__) < LooseVersion('1.1'))):
+        pytest.skip('rolling median accepts min_periods for bottleneck 1.1')
 
     # Test all bottleneck functions
     rolling_obj = da.rolling(time=7, min_periods=min_periods)
 
     func_name = 'move_{0}'.format(name)
     actual = getattr(rolling_obj, name)()
-    expected = getattr(bn, func_name)(da.values, window=7, axis=0, min_count=min_periods)
+    expected = getattr(bn, func_name)(da.values, window=7, axis=1,
+                                      min_count=min_periods)
     assert_array_equal(actual.values, expected)
 
     # Test center
@@ -2472,8 +2603,12 @@ def test_rolling_wrapped_bottleneck(da, name, center, min_periods):
     actual = getattr(rolling_obj, name)()['time']
     assert_equal(actual, da['time'])
 
+
 def test_rolling_invalid_args(da):
-    pytest.importorskip('bottleneck')
+    pytest.importorskip('bottleneck', minversion="1.0")
+    import bottleneck as bn
+    if LooseVersion(bn.__version__) >= LooseVersion('1.1'):
+        pytest.skip('rolling median accepts min_periods for bottleneck 1.1')
     with pytest.raises(ValueError) as exception:
         da.rolling(time=7, min_periods=1).median()
     assert 'Rolling.median does not' in str(exception)
@@ -2517,3 +2652,4 @@ def test_rolling_reduce(da, center, min_periods, window, name):
     actual = rolling_obj.reduce(getattr(np, 'nan%s' % name))
     expected = getattr(rolling_obj, name)()
     assert_allclose(actual, expected)
+    assert actual.dims == expected.dims

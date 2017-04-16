@@ -7,7 +7,7 @@ import numpy as np
 
 from .. import Variable
 from ..conventions import coding
-from ..core import ops
+from ..core import duck_array_ops
 from ..core.pycompat import basestring, unicode_type, OrderedDict
 
 
@@ -46,7 +46,7 @@ def coerce_nc3_dtype(arr):
         if ((('int' in dtype or 'U' in dtype) and
                 not (cast_arr == arr).all()) or
                 ('float' in dtype and
-                    not ops.allclose_or_equiv(cast_arr, arr))):
+                    not duck_array_ops.allclose_or_equiv(cast_arr, arr))):
             raise ValueError('could not safely cast array from dtype %s to %s'
                              % (dtype, new_dtype))
         arr = cast_arr

@@ -4,7 +4,7 @@ from __future__ import print_function
 from pytest import mark
 import numpy as np
 from numpy import array, nan
-from xarray.core.ops import (
+from xarray.core.duck_array_ops import (
     first, last, count, mean, array_notnull_equiv,
 )
 

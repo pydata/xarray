@@ -103,14 +103,15 @@ def _color_palette(cmap, n_colors):
     return pal
 
 
+# _determine_cmap_params is adapted from Seaborn:
+# https://github.com/mwaskom/seaborn/blob/v0.6/seaborn/matrix.py#L158
+# Used under the terms of Seaborn's license, see licenses/SEABORN_LICENSE.
+
 def _determine_cmap_params(plot_data, vmin=None, vmax=None, cmap=None,
                            center=None, robust=False, extend=None,
                            levels=None, filled=True, norm=None):
     """
     Use some heuristics to set good defaults for colorbar and range.
-
-    Adapted from Seaborn:
-    https://github.com/mwaskom/seaborn/blob/v0.6/seaborn/matrix.py#L158
 
     Parameters
     ==========
@@ -221,8 +222,14 @@ def _infer_xy_labels(darray, x, y):
         if darray.ndim != 2:
             raise ValueError('DataArray must be 2d')
         y, x = darray.dims
-    elif x is None or y is None:
-        raise ValueError('cannot supply only one of x and y')
+    elif x is None:
+        if y not in darray.dims:
+            raise ValueError('y must be a dimension name if x is not supplied')
+        x = darray.dims[0] if y == darray.dims[1] else darray.dims[1]
+    elif y is None:
+        if x not in darray.dims:
+            raise ValueError('x must be a dimension name if y is not supplied')
+        y = darray.dims[0] if x == darray.dims[1] else darray.dims[1]
     elif any(k not in darray.coords and k not in darray.dims for k in (x, y)):
         raise ValueError('x and y must be coordinate variables')
     return x, y

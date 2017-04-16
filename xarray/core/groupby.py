@@ -5,13 +5,14 @@ import functools
 import numpy as np
 import pandas as pd
 
+from . import duck_array_ops
 from . import nputils
 from . import ops
 from .combine import concat
 from .common import (
     ImplementsArrayReduce, ImplementsDatasetReduce, _maybe_promote,
 )
-from .pycompat import range, zip
+from .pycompat import range, zip, integer_types
 from .utils import hashable, peek_at, maybe_wrap_array, safe_cast_to_index
 from .variable import as_variable, Variable, IndexVariable
 
@@ -408,7 +409,7 @@ class GroupBy(object):
         return self._where(cond)
 
     def _first_or_last(self, op, skipna, keep_attrs):
-        if isinstance(self._group_indices[0], (int, np.integer)):
+        if isinstance(self._group_indices[0], integer_types):
             # NB. this is currently only used for reductions along an existing
             # dimension
             return self._obj
@@ -418,12 +419,12 @@ class GroupBy(object):
     def first(self, skipna=None, keep_attrs=True):
         """Return the first element of each group along the group dimension
         """
-        return self._first_or_last(ops.first, skipna, keep_attrs)
+        return self._first_or_last(duck_array_ops.first, skipna, keep_attrs)
 
     def last(self, skipna=None, keep_attrs=True):
         """Return the last element of each group along the group dimension
         """
-        return self._first_or_last(ops.last, skipna, keep_attrs)
+        return self._first_or_last(duck_array_ops.last, skipna, keep_attrs)
 
     def assign_coords(self, **kwargs):
         """Assign coordinates by group.

@@ -11,7 +11,7 @@ import pandas as pd
 from collections import defaultdict
 from pandas.tslib import OutOfBoundsDatetime
 
-from ..core import indexing, ops, utils
+from ..core import duck_array_ops, indexing, ops, utils
 from ..core.formatting import format_timestamp, first_n_items, last_item
 from ..core.variable import as_variable, Variable
 from ..core.pycompat import iteritems, OrderedDict, PY3, basestring
@@ -632,7 +632,7 @@ def maybe_encode_dtype(var, name=None):
                                   'point data as an integer dtype without '
                                   'any _FillValue to use for NaNs' % name,
                                   RuntimeWarning, stacklevel=3)
-                data = ops.around(data)[...]
+                data = duck_array_ops.around(data)[...]
             if dtype == 'S1' and data.dtype != 'S1':
                 data = string_to_char(np.asarray(data, 'S'))
                 dims = dims + ('string%s' % data.shape[-1],)
