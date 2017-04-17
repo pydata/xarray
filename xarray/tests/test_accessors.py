@@ -85,3 +85,12 @@ class TestDatetimeAccessor(TestCase):
         self.assertDataArrayEqual(months, dask_month.compute())
         self.assertDataArrayEqual(days, dask_day.compute())
         self.assertDataArrayEqual(hours, dask_hour.compute())
+
+    def test_seasons(self):
+        dates = pd.date_range(start="2000/01/01", freq="M", periods=12)
+        dates = xr.DataArray(dates)
+        seasons = ["DJF", "DJF", "MAM", "MAM", "MAM", "JJA", "JJA", "JJA",
+                   "SON", "SON", "SON", "DJF"]
+        seasons = xr.DataArray(seasons)
+
+        self.assertArrayEqual(seasons.values, dates.dt.season.values)

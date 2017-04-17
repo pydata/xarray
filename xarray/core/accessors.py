@@ -10,6 +10,15 @@ import numpy as np
 import pandas as pd
 
 
+def _season_from_months(months):
+    """ Compute season (DJF, MAM, JJA, SON) from month ordinal
+    """
+    # TODO: Move "season" accessor upstream into pandas
+    seasons = np.array(['DJF', 'MAM', 'JJA', 'SON'])
+    months = np.asarray(months)
+    return seasons[(months // 3) % 4]
+
+
 def _get_date_field(values, name):
     """Indirectly access pandas' libts.get_date_field by wrapping data
     as a Series and calling through `.dt` attribute.
@@ -24,7 +33,11 @@ def _get_date_field(values, name):
     """
     def _access_through_series(values, name):
         values_as_series = pd.Series(values.ravel())
-        field_values = getattr(values_as_series.dt, name).values
+        if name == "season":
+            months = values_as_series.dt.month.values
+            field_values = _season_from_months(months)
+        else:
+            field_values = getattr(values_as_series.dt, name).values
         return field_values.reshape(values.shape)
 
     if isinstance(values, dask_array_type):
@@ -112,3 +125,5 @@ class DatetimeAccessor(object):
         'days_in_month', "The number of days in the month"
     )
     daysinmonth = days_in_month
+
+    season = _tslib_field_accessor("season", "Season of the year (ex: DJF)")
