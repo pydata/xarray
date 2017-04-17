@@ -15,14 +15,10 @@ What's New
 
 .. _whats-new.0.9.4:
 
-v0.9.4 (unreleased)
--------------------
+v0.9.4 (17 April, 2017)
+-----------------------
 
-Enhancements
-~~~~~~~~~~~~
-
-Bug fixes
-~~~~~~~~~
+Remove an inadvertently introduced print statement.
 
 .. _whats-new.0.9.3:
 
