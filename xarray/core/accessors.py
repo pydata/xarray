@@ -30,6 +30,7 @@ def _access_through_series(values, name):
         field_values = getattr(values_as_series.dt, name).values
     return field_values.reshape(values.shape)
 
+
 def _get_date_field(values, name):
     """Indirectly access pandas' libts.get_date_field by wrapping data
     as a Series and calling through `.dt` attribute.
@@ -132,3 +133,7 @@ class DatetimeAccessor(object):
     daysinmonth = days_in_month
 
     season = _tslib_field_accessor("season", "Season of the year (ex: DJF)")
+
+    time = _tslib_field_accessor(
+        "time", "Timestamps corresponding to datetimes"
+    )
