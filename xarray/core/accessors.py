@@ -3,7 +3,6 @@ from __future__ import division
 from __future__ import print_function
 
 from .common import is_datetime_like
-from .extensions import register_dataarray_accessor
 from .pycompat import dask_array_type
 
 import numpy as np
@@ -11,13 +10,25 @@ import pandas as pd
 
 
 def _season_from_months(months):
-    """ Compute season (DJF, MAM, JJA, SON) from month ordinal
+    """Compute season (DJF, MAM, JJA, SON) from month ordinal
     """
     # TODO: Move "season" accessor upstream into pandas
     seasons = np.array(['DJF', 'MAM', 'JJA', 'SON'])
     months = np.asarray(months)
     return seasons[(months // 3) % 4]
 
+
+def _access_through_series(values, name):
+    """Coerce an array of datetime-like values to a pandas Series and
+    access requested datetime component
+    """
+    values_as_series = pd.Series(values.ravel())
+    if name == "season":
+        months = values_as_series.dt.month.values
+        field_values = _season_from_months(months)
+    else:
+        field_values = getattr(values_as_series.dt, name).values
+    return field_values.reshape(values.shape)
 
 def _get_date_field(values, name):
     """Indirectly access pandas' libts.get_date_field by wrapping data
@@ -30,16 +41,12 @@ def _get_date_field(values, name):
     name : str
         Name of datetime field to access
 
-    """
-    def _access_through_series(values, name):
-        values_as_series = pd.Series(values.ravel())
-        if name == "season":
-            months = values_as_series.dt.month.values
-            field_values = _season_from_months(months)
-        else:
-            field_values = getattr(values_as_series.dt, name).values
-        return field_values.reshape(values.shape)
+    Returns
+    -------
+    datetime_fields : same type as values
+        Array-like of datetime fields accessed for each element in values
 
+    """
     if isinstance(values, dask_array_type):
         from dask.array import map_blocks
         out_dtype = object if name == "weekday_name" else np.int64
@@ -49,7 +56,6 @@ def _get_date_field(values, name):
         return _access_through_series(values, name)
 
 
-@register_dataarray_accessor('dt')
 class DatetimeAccessor(object):
     """Access datetime fields for DataArrays with datetime-like dtypes.
 
@@ -77,14 +83,13 @@ class DatetimeAccessor(object):
             raise TypeError("'dt' accessor only available for "
                             "DataArray with datetime64 or timedelta64 dtype")
         self._obj = xarray_obj
-        self._dt = self._obj.data
 
     def _tslib_field_accessor(name, docstring=None):
         def f(self):
-            from .dataarray import DataArray
-            result = _get_date_field(self._dt, name)
-            return DataArray(result, name=name,
-                             coords=self._obj.coords, dims=self._obj.dims)
+            obj_type = type(self._obj)
+            result = _get_date_field(self._obj.data, name)
+            return obj_type(result, name=name,
+                            coords=self._obj.coords, dims=self._obj.dims)
 
         f.__name__ = name
         f.__doc__ = docstring
