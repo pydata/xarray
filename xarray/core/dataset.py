@@ -921,7 +921,6 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         store.store(variables, attrs, check_encoding,
                     unlimited_dims=unlimited_dims)
         if sync:
-            print('syncing')
             store.sync()
 
     def to_netcdf(self, path=None, mode='w', format=None, group=None,
