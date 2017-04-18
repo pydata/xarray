@@ -5,6 +5,8 @@ from __future__ import print_function
 from .common import is_datetime_like
 from .pycompat import dask_array_type
 
+from functools import partial
+
 import numpy as np
 import pandas as pd
 
@@ -31,7 +33,7 @@ def _access_through_series(values, name):
     return field_values.reshape(values.shape)
 
 
-def _get_date_field(values, name):
+def _get_date_field(values, name, dtype):
     """Indirectly access pandas' libts.get_date_field by wrapping data
     as a Series and calling through `.dt` attribute.
 
@@ -41,6 +43,8 @@ def _get_date_field(values, name):
         Array-like container of datetime-like values
     name : str
         Name of datetime field to access
+    dtype : dtype-like
+        dtype for output date field values
 
     Returns
     -------
@@ -50,9 +54,8 @@ def _get_date_field(values, name):
     """
     if isinstance(values, dask_array_type):
         from dask.array import map_blocks
-        out_dtype = object if name == "weekday_name" else np.int64
         return map_blocks(_access_through_series,
-                          values, name, dtype=out_dtype)
+                          values, name, dtype=dtype)
     else:
         return _access_through_series(values, name)
 
@@ -85,10 +88,12 @@ class DatetimeAccessor(object):
                             "DataArray with datetime64 or timedelta64 dtype")
         self._obj = xarray_obj
 
-    def _tslib_field_accessor(name, docstring=None):
-        def f(self):
+    def _tslib_field_accessor(name, docstring=None, dtype=None):
+        def f(self, dtype=dtype):
+            if dtype is None:
+                dtype = self._obj.dtype
             obj_type = type(self._obj)
-            result = _get_date_field(self._obj.data, name)
+            result = _get_date_field(self._obj.data, name, dtype)
             return obj_type(result, name=name,
                             coords=self._obj.coords, dims=self._obj.dims)
 
@@ -96,44 +101,50 @@ class DatetimeAccessor(object):
         f.__doc__ = docstring
         return property(f)
 
-    year = _tslib_field_accessor('year', "The year of the datetime")
+    year = _tslib_field_accessor('year', "The year of the datetime", np.int64)
     month = _tslib_field_accessor(
-        'month', "The month as January=1, December=12"
+        'month', "The month as January=1, December=12", np.int64
     )
-    day = _tslib_field_accessor('day', "The days of the datetime")
-    hour = _tslib_field_accessor('hour', "The hours of the datetime")
-    minute = _tslib_field_accessor('minute', "The minutes of the datetime")
-    second = _tslib_field_accessor('second', "The seconds of the datetime")
+    day = _tslib_field_accessor('day', "The days of the datetime", np.int64)
+    hour = _tslib_field_accessor('hour', "The hours of the datetime", np.int64)
+    minute = _tslib_field_accessor(
+        'minute', "The minutes of the datetime", np.int64
+    )
+    second = _tslib_field_accessor(
+        'second', "The seconds of the datetime", np.int64
+    )
     microsecond = _tslib_field_accessor(
-        'microsecond', "The microseconds of the datetime"
+        'microsecond', "The microseconds of the datetime", np.int64
     )
     nanosecond = _tslib_field_accessor(
-        'nanosecond', "The nanoseconds of the datetime"
+        'nanosecond', "The nanoseconds of the datetime", np.int64
     )
     weekofyear = _tslib_field_accessor(
-        'weekofyear', "The week ordinal of the year"
+        'weekofyear', "The week ordinal of the year", np.int64
     )
     week = weekofyear
     dayofweek = _tslib_field_accessor(
-        'dayofweek', "The day of the week with Monday=0, Sunday=6"
+        'dayofweek', "The day of the week with Monday=0, Sunday=6", np.int64
     )
     weekday = dayofweek
 
     weekday_name = _tslib_field_accessor(
-        'weekday_name', "The name of day in a week (ex: Friday)"
+        'weekday_name', "The name of day in a week (ex: Friday)", object
     )
 
     dayofyear = _tslib_field_accessor(
-        'dayofyear', "The ordinal day of the year"
+        'dayofyear', "The ordinal day of the year", np.int64
     )
     quarter = _tslib_field_accessor('quarter', "The quarter of the date")
     days_in_month = _tslib_field_accessor(
-        'days_in_month', "The number of days in the month"
+        'days_in_month', "The number of days in the month", np.int64
     )
     daysinmonth = days_in_month
 
-    season = _tslib_field_accessor("season", "Season of the year (ex: DJF)")
+    season = _tslib_field_accessor(
+        "season", "Season of the year (ex: DJF)", object
+    )
 
     time = _tslib_field_accessor(
-        "time", "Timestamps corresponding to datetimes"
+        "time", "Timestamps corresponding to datetimes", object
     )
