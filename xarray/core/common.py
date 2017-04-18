@@ -447,6 +447,33 @@ class BaseDataObject(AttrAccessMixin):
                                              'precision': precision,
                                              'include_lowest': include_lowest})
 
+    def aggregate_over(self, axes, squeeze=True):
+        """Returns a GroupBy object for performing grouped operations where 
+        the given axes are operated on and all other axes form the groups.
+        Parameters
+        ----------
+        axes : list(str) or str
+            Array whose unique values should be dimension names of this object.
+            Can also be a string that is the name of a single dimension.
+        squeeze : boolean, optional
+            controls whether the dimensions in `axes` are included in each 
+            subarray (as dimensions of length 1) when calls to apply() are 
+            executed or if the dimension is squeezed out (default when 
+            squeeze=True).
+        Returns
+        -------
+        grouped : GroupBy
+            A `GroupBy` object patterned after `pandas.GroupBy` that can be
+            iterated over in the form of `(unique_value, grouped_array)` pairs.
+        """
+        group_dims = list(self.dims) 
+        if isinstance(axes, basestring):
+            group_dims.remove(axes)
+        else:
+            for ax in axes:
+                group_dims.remove(ax)
+        return self.groupby_cls(self, group=group_dims, squeeze=squeeze)
+
     def rolling(self, min_periods=None, center=False, **windows):
         """
         Rolling window object.
