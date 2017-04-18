@@ -610,21 +610,25 @@ class BaseDataObject(AttrAccessMixin):
         if drop:
             from .dataarray import DataArray
             from .dataset import Dataset
+            from .alignment import align
+
+            if not isinstance(cond, (Dataset, DataArray)):
+                raise TypeError("Cond argument is %r but must be a %r or %r" %
+                                (cond, Dataset, DataArray))
+            # align so we can use integer indexing
+            self, cond = align(self, cond)
+
             # get cond with the minimal size needed for the Dataset
             if isinstance(cond, Dataset):
                 clipcond = cond.to_array().any('variable')
-            elif isinstance(cond, DataArray):
-                clipcond = cond
             else:
-                raise TypeError("Cond argument is %r but must be a %r or %r" %
-                                (cond, Dataset, DataArray))
+                clipcond = cond
 
             # clip the data corresponding to coordinate dims that are not used
-            clip = dict(zip(clipcond.dims, [np.unique(adim)
-                                            for adim in np.nonzero(clipcond.values)]))
-            outcond = cond.isel(**clip)
-            indexers = {dim: outcond.get_index(dim) for dim in outcond.dims}
-            outobj = self.sel(**indexers)
+            nonzeros = zip(clipcond.dims, np.nonzero(clipcond.values))
+            indexers = {k: np.unique(v) for k, v in nonzeros}
+            outobj = self.isel(**indexers)
+            outcond = cond.isel(**indexers)
         else:
             outobj = self
             outcond = cond

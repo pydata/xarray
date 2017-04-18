@@ -13,17 +13,36 @@ What's New
     import xarray as xr
     np.random.seed(123456)
 
+.. _whats-new.0.9.6:
 
-.. _whats-new.0.9.3:
-
-v0.9.3 (unreleased)
+v0.9.6 (unreleased)
 -------------------
 
 Enhancements
 ~~~~~~~~~~~~
 
-- Add ``.persist()`` method to Datasets and DataArrays to enable persisting
-  data in distributed memory (:issue:`1344`).
+Bug fixes
+~~~~~~~~~
+
+.. _whats-new.0.9.5:
+
+v0.9.5 (17 April, 2017)
+-----------------------
+
+Remove an inadvertently introduced print statement.
+
+.. _whats-new.0.9.3:
+
+v0.9.3 (16 April, 2017)
+-----------------------
+
+This minor release includes bug-fixes and backwards compatible enhancements.
+
+Enhancements
+~~~~~~~~~~~~
+
+- New :py:meth:`~xarray.DataArray.persist` method to Datasets and DataArrays to
+  enable persisting data in distributed memory when using Dask (:issue:`1344`).
   By `Matthew Rocklin <https://github.com/mrocklin>`_.
 
 - New :py:meth:`~xarray.DataArray.expand_dims` method for ``DataArray`` and
@@ -37,9 +56,15 @@ Enhancements
 Bug fixes
 ~~~~~~~~~
 
+- Fix ``.where()`` with ``drop=True`` when arguments do not have indexes
+  (:issue:`1350`). This bug, introduced in v0.9, resulted in xarray producing
+  incorrect results in some cases.
+  By `Stephan Hoyer <https://github.com/shoyer>`_.
+
 - Fixed writing to file-like objects with :py:meth:`~xarray.Dataset.to_netcdf`
   (:issue:`1320`).
   `Stephan Hoyer <https://github.com/shoyer>`_.
+
 - Fixed explicitly setting ``engine='scipy'`` with ``to_netcdf`` when not
   providing a path (:issue:`1321`).
   `Stephan Hoyer <https://github.com/shoyer>`_.
@@ -55,8 +80,8 @@ Bug fixes
 
 .. _whats-new.0.9.2:
 
-v0.9.2 (2 April, 2017)
-----------------------
+v0.9.2 (2 April 2017)
+---------------------
 
 The minor release includes bug-fixes and backwards compatible enhancements.
 
