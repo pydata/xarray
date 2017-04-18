@@ -277,10 +277,11 @@ class DataArray(AbstractArray, BaseDataObject):
         return self._to_dataset_whole(name=self.__this_array,
                                       shallow_copy=False)
 
-    def _from_temp_dataset(self, dataset, name=__default):
-        variable = dataset._variables.pop(self.__this_array)
+    @classmethod
+    def _from_temp_dataset(cls, dataset, name=__default):
+        variable = dataset._variables.pop(cls.__this_array)
         coords = dataset._variables
-        return self._replace(variable, coords, name)
+        return cls(variable, coords, name=name, fastpath=True)
 
     def _to_dataset_split(self, dim):
         def subset(dim, label):
