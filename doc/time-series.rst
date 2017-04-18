@@ -121,6 +121,7 @@ datetime components supported by pandas:
 .. ipython:: python
 
     ds['time.season']
+    ds['time'].dt.season
 
 The set of valid seasons consists of 'DJF', 'MAM', 'JJA' and 'SON', labeled by
 the first letters of the corresponding months.
