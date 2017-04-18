@@ -80,7 +80,7 @@ def _get_virtual_variable(variables, key, level_vars=None, dim_sizes=None):
             ref_var = xr.DataArray(ref_var)
             data = getattr(ref_var.dt, var_name).data
         else:
-            data = getattr(ref_var).data
+            data = getattr(ref_var, var_name).data
         virtual_var = Variable(ref_var.dims, data)
 
     return ref_name, var_name, virtual_var
