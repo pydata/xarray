@@ -32,6 +32,7 @@ def _decode_attrs(d):
 
 
 class ScipyArrayWrapper(NdimSizeLenMixin, DunderArrayMixin):
+
     def __init__(self, variable_name, datastore):
         self.datastore = datastore
         self.variable_name = variable_name
@@ -77,8 +78,22 @@ def _open_scipy_netcdf(filename, mode, mmap, version):
         # it's a NetCDF3 bytestring
         filename = BytesIO(filename)
 
-    return scipy.io.netcdf_file(filename, mode=mode, mmap=mmap,
-                                version=version)
+    try:
+        return scipy.io.netcdf_file(filename, mode=mode, mmap=mmap,
+                                    version=version)
+    except TypeError as e:  # netcdf3 message is obscure in this case
+        errmsg = e.args[0]
+        if 'is not a valid NetCDF 3 file' in errmsg:
+            msg = """
+            If this is a NetCDF4 file, you may need to install the 
+            netcdf4 library, e.g.,
+            
+            $ pip install netcdf4
+            """
+            errmsg += msg
+            raise TypeError(errmsg)
+        else:
+            raise
 
 
 class ScipyDataStore(WritableCFDataStore, DataStorePickleMixin):
@@ -89,6 +104,7 @@ class ScipyDataStore(WritableCFDataStore, DataStorePickleMixin):
 
     It only supports the NetCDF3 file-format.
     """
+
     def __init__(self, filename_or_obj, mode='r', format=None, group=None,
                  writer=None, mmap=None, autoclose=False):
         import scipy
