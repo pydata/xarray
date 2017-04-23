@@ -44,6 +44,9 @@ Bug fixes
 - Fix test suite failure caused by changes to ``pandas.cut`` function (:issue:`1386`).
 By `Ryan Abernathey <https://github.com/rabernat>`_.
 
+- Fix error from repeated indexing of datasets loaded from disk (:issue:`1374`).
+  By `Stephan Hoyer <https://github.com/shoyer>`_.
+
 - Fix a bug where ``.isel_points`` wrongly assigns unselected coordinate to
 ``data_vars``.
 By `Keisuke Fujii <https://github.com/fujiisoup>`_.
@@ -58,7 +61,7 @@ Documentation
 - A new `gallery <http://xarray.pydata.org/en/latest/auto_gallery/index.html>`_
   allows to add interactive examples to the documentation.
   By `Fabien Maussion <https://github.com/fmaussion>`_.
-  
+
 
 .. _whats-new.0.9.5:
 
