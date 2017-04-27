@@ -2748,6 +2748,39 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
 
         return self._replace_vars_and_dims(variables)
 
+    def sort_index(self, dims, ascending=True, inplace=False):
+        """
+        The xarray-equivalent of pandas.DataFrame.sort_index.
+        Given dimension(s), sorts dataset based on dimensional labels.
+
+        Parameters
+        ----------
+        dims: str or iterable of str.
+            Dimension(s) over which to sort by dimensional labels.
+        ascending: boolean, optional.
+            whether to sort by ascending order.
+        inplace: boolean, optional.
+            Whether to return a new object.
+
+        Returns
+        -------
+        sorted: Dataset
+            A new dataset where all the specified dims are sorted by dim
+            labels.
+        """
+        if isinstance(dims, (str or unicode)):
+            dimensions = [dims]
+        else:
+            dimensions = dims
+        if inplace:
+            self = self.isel({d: self.indexes[d].argsort()
+                              if ascending else self.indexes[d].argsort()[::-1]
+                              for d in dimensions})
+        else:
+            return self.isel({d: self.indexes[d].argsort()
+                              if ascending else self.indexes[d].argsort()[::-1]
+                              for d in dimensions})
+
     def quantile(self, q, dim=None, interpolation='linear',
                  numeric_only=False, keep_attrs=False):
         """Compute the qth quantile of the data along the specified dimension.
