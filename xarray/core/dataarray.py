@@ -1811,7 +1811,8 @@ class DataArray(AbstractArray, BaseDataObject):
         """
         ds = self._to_temp_dataset().sort_index(dims, ascending=ascending)
         if inplace:
-            self = self._from_temp_dataset(ds)
+            obj = self._from_temp_dataset(ds)
+            self = obj
         else:
             return self._from_temp_dataset(ds)
 

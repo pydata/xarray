@@ -3313,10 +3313,33 @@ class TestDataset(TestCase):
 
         # works just like xr.merge([self, other])
         dsy2 = DataArray([2, 2, 2],
-                        [('x', ['b', 'c', 'd'])]).to_dataset(name='dsy2')
+                         [('x', ['b', 'c', 'd'])]).to_dataset(name='dsy2')
         actual = dsx0.combine_first(dsy2)
         expected = xr.merge([dsy2, dsx0])
         self.assertDatasetEqual(actual, expected)
+
+    def test_sort_index(self):
+        ds = Dataset({'A': DataArray([[1, 2], [3, 4]],
+                                     [('x', ['b', 'a']),
+                                      ('y', [1, 0])]),
+                      'B': DataArray([[5, 6], [7, 8]], dims=['x', 'y'])})
+
+        expected = Dataset({'A': DataArray([[4, 3], [2, 1]],
+                                     [('x', ['a', 'b']),
+                                      ('y', [0, 1])]),
+                            'B': DataArray([[8, 7], [6, 5]], dims=['x', 'y'])})
+
+        actual = ds.sort_index(dims=['x', 'y'])
+        self.assertDatasetEqual(actual, expected)
+
+        # test descending order sort
+        actual = ds.sort_index(dims=['x', 'y'], ascending=False)
+        self.assertDatasetEqual(actual, ds)
+
+        # test inplace
+        ds.sort_index(dims=['x', 'y'], inplace=True)
+        import pdb; pdb.set_trace()
+        self.assertDatasetEqual(ds, expected)
 
 ### Py.test tests
 

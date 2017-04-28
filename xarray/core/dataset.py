@@ -2773,13 +2773,15 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         else:
             dimensions = dims
         if inplace:
-            self = self.isel({d: self.indexes[d].argsort()
-                              if ascending else self.indexes[d].argsort()[::-1]
-                              for d in dimensions})
+            self = self.isel(**{d: self.indexes[d].argsort()
+                                if ascending
+                                else self.indexes[d].argsort()[::-1]
+                                for d in dimensions})
         else:
-            return self.isel({d: self.indexes[d].argsort()
-                              if ascending else self.indexes[d].argsort()[::-1]
-                              for d in dimensions})
+            return self.isel(**{d: self.indexes[d].argsort()
+                                if ascending
+                                else self.indexes[d].argsort()[::-1]
+                                for d in dimensions})
 
     def quantile(self, q, dim=None, interpolation='linear',
                  numeric_only=False, keep_attrs=False):

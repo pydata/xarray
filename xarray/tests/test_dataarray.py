@@ -2518,6 +2518,23 @@ class TestDataArray(TestCase):
                              [('x', ['a', 'b', 'd']), ('y', [-1, 0])])
         self.assertDataArrayEqual(actual, expected)
 
+    def test_sort_index(self):
+        da = DataArray([[1, 2, 3, 4], [5, 6, 7, 8]],
+                       [('x', ['b', 'a']), ('y', [4, 3, 2, 1])])
+
+        expected = DataArray([[8, 7, 6, 5], [4, 3, 2, 1]],
+                             [('x', ['a', 'b']), ('y', [1, 2, 3, 4])])
+
+        actual = da.sort_index(dims=['x', 'y'])
+        self.assertDataArrayEqual(actual, expected)
+
+        # test descending order sort
+        actual = da.sort_index(dims=['x', 'y'], ascending=False)
+        self.assertDataArrayEqual(actual, da)
+        # test inplace
+        da.sort_index(dims=['x', 'y'], inplace=True)
+        self.assertDataArrayEqual(da, expected)
+
 
 @pytest.fixture(params=[1])
 def da(request):
