@@ -15,6 +15,7 @@ from . import groupby
 from . import rolling
 from . import ops
 from . import utils
+from .accessors import DatetimeAccessor
 from .alignment import align, reindex_like_indexers
 from .common import AbstractArray, BaseDataObject
 from .coordinates import (DataArrayCoordinates, LevelCoordinatesSource,
@@ -158,6 +159,7 @@ class DataArray(AbstractArray, BaseDataObject):
     """
     _groupby_cls = groupby.DataArrayGroupBy
     _rolling_cls = rolling.DataArrayRolling
+    dt = property(DatetimeAccessor)
 
     def __init__(self, data, coords=None, dims=None, name=None,
                  attrs=None, encoding=None, fastpath=False):
