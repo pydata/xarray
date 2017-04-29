@@ -541,6 +541,6 @@ lengths) as the calling object.
     ds.sortby('x')
     ds.sortby(['y', 'x'])
     ds.sortby(['y', 'x'], ascending=False)
-    dax = DataArray([100, 99], [('x', [100, 99])])
-    day = DataArray([90, 80], [('y', [90, 80])])
+    dax = DataArray([100, 99], [('x', [0, 1])])
+    day = DataArray([90, 80], [('y', [0, 1])])
     actual = ds.sortby([day, dax])

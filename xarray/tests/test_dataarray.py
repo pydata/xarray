@@ -2533,8 +2533,8 @@ class TestDataArray(TestCase):
         self.assertDataArrayEqual(actual, da)
 
         # test sort by 1D dataarray values
-        dax = DataArray([100, 99], [('x', [100, 99])])
-        day = DataArray([90, 80], [('y', [90, 80])])
+        dax = DataArray([100, 99], [('x', [0, 1])])
+        day = DataArray([90, 80], [('y', [0, 1])])
         actual = da.sortby([day, dax])
         self.assertDataArrayEqual(actual, expected)
 
@@ -2548,7 +2548,7 @@ class TestDataArray(TestCase):
         assert "DataArray has more than 1 dimension" in str(excinfo.value)
 
         with pytest.raises(ValueError) as excinfo:
-            dax = DataArray([100, 99, 98], [('x', [100, 99, 98])])
+            dax = DataArray([100, 99, 98], [('x', [0, 1, 2])])
             actual = da.sortby(dax)
         assert "must have same length as dimension" in str(excinfo.value)
 
