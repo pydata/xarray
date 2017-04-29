@@ -3318,30 +3318,46 @@ class TestDataset(TestCase):
         expected = xr.merge([dsy2, dsx0])
         self.assertDatasetEqual(actual, expected)
 
-    def test_sort_index(self):
+    def test_sortby(self):
         ds = Dataset({'A': DataArray([[1, 2], [3, 4]],
                                      [('x', ['b', 'a']),
                                       ('y', [1, 0])]),
                       'B': DataArray([[5, 6], [7, 8]], dims=['x', 'y'])})
 
         expected = Dataset({'A': DataArray([[4, 3], [2, 1]],
-                                     [('x', ['a', 'b']),
-                                      ('y', [0, 1])]),
+                                           [('x', ['a', 'b']),
+                                            ('y', [0, 1])]),
                             'B': DataArray([[8, 7], [6, 5]], dims=['x', 'y'])})
 
-        actual = ds.sort_index(dims=['x', 'y'])
+        actual = ds.sortby(['x', 'y'])
         self.assertDatasetEqual(actual, expected)
 
         # test descending order sort
-        actual = ds.sort_index(dims=['x', 'y'], ascending=False)
+        actual = ds.sortby(['x', 'y'], ascending=False)
         self.assertDatasetEqual(actual, ds)
 
-        # test inplace
-        ds.sort_index(dims=['x', 'y'], inplace=True)
-        import pdb; pdb.set_trace()
-        self.assertDatasetEqual(ds, expected)
+        # test sort by 1D dataarray values
+        dax = DataArray([100, 99], [('x', [100, 99])])
+        day = DataArray([90, 80], [('y', [90, 80])])
+        actual = ds.sortby([day, dax])
+        self.assertDatasetEqual(actual, expected)
 
-### Py.test tests
+        # test exception-raising
+        with pytest.raises(KeyError) as excinfo:
+            actual = ds.sortby('z')
+        assert "does not exist" in str(excinfo.value)
+
+        with pytest.raises(ValueError) as excinfo:
+            actual = ds.sortby(ds['A'])
+        assert "DataArray has more than 1 dimension" in str(excinfo.value)
+
+        with pytest.raises(ValueError) as excinfo:
+            dax = DataArray([100, 99, 98], [('x', [100, 99, 98])])
+            actual = ds.sortby(dax)
+        assert "must have same length as dimension" in str(excinfo.value)
+
+
+# Py.test tests
 
 
 @pytest.fixture()

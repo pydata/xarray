@@ -1789,19 +1789,19 @@ class DataArray(AbstractArray, BaseDataObject):
 
         return type(self)(new_data, new_coords, new_dims)
 
-    def sort_index(self, dims, ascending=True, inplace=False):
+    def sortby(self, variables, ascending=True):
         """
-        The xarray-equivalent of pandas.DataFrame.sort_index.
-        Given dimension(s), sorts dataarray based on dimensional labels.
+        Sorts the dataarray, either along specified dimensions,
+        or according to values of 1-D dataarrays that share dimension
+        with calling object.
 
         Parameters
         ----------
-        dims: str or iterable of str.
-            Dimension(s) over which to sort by dimensional labels.
+        variables: (str, DataArray, or iterable of either)
+            Name of a 1D variable in coords/data_vars whose values are used to
+            to sort the dataset.
         ascending: boolean, optional.
             whether to sort by ascending order.
-        inplace: boolean.
-            Whether to return a new object.
 
         Returns
         -------
@@ -1809,12 +1809,8 @@ class DataArray(AbstractArray, BaseDataObject):
             A new dataarray where all the specified dims are sorted by dim
             labels.
         """
-        ds = self._to_temp_dataset().sort_index(dims, ascending=ascending)
-        if inplace:
-            obj = self._from_temp_dataset(ds)
-            self = obj
-        else:
-            return self._from_temp_dataset(ds)
+        ds = self._to_temp_dataset().sortby(variables, ascending=ascending)
+        return self._from_temp_dataset(ds)
 
     def quantile(self, q, dim=None, interpolation='linear', keep_attrs=False):
         """Compute the qth quantile of the data along the specified dimension.

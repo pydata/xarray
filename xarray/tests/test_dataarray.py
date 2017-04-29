@@ -2518,22 +2518,39 @@ class TestDataArray(TestCase):
                              [('x', ['a', 'b', 'd']), ('y', [-1, 0])])
         self.assertDataArrayEqual(actual, expected)
 
-    def test_sort_index(self):
-        da = DataArray([[1, 2, 3, 4], [5, 6, 7, 8]],
-                       [('x', ['b', 'a']), ('y', [4, 3, 2, 1])])
+    def test_sortby(self):
+        da = DataArray([[1, 2], [3, 4]],
+                       [('x', ['b', 'a']), ('y', [1, 0])])
 
-        expected = DataArray([[8, 7, 6, 5], [4, 3, 2, 1]],
-                             [('x', ['a', 'b']), ('y', [1, 2, 3, 4])])
+        expected = DataArray([[4, 3], [2, 1]],
+                             [('x', ['a', 'b']), ('y', [0, 1])])
 
-        actual = da.sort_index(dims=['x', 'y'])
+        actual = da.sortby(['x', 'y'])
         self.assertDataArrayEqual(actual, expected)
 
         # test descending order sort
-        actual = da.sort_index(dims=['x', 'y'], ascending=False)
+        actual = da.sortby(['y', 'x'], ascending=False)
         self.assertDataArrayEqual(actual, da)
-        # test inplace
-        da.sort_index(dims=['x', 'y'], inplace=True)
-        self.assertDataArrayEqual(da, expected)
+
+        # test sort by 1D dataarray values
+        dax = DataArray([100, 99], [('x', [100, 99])])
+        day = DataArray([90, 80], [('y', [90, 80])])
+        actual = da.sortby([day, dax])
+        self.assertDataArrayEqual(actual, expected)
+
+        # test exception-raising
+        with pytest.raises(KeyError) as excinfo:
+            actual = da.sortby('z')
+        assert "does not exist" in str(excinfo.value)
+
+        with pytest.raises(ValueError) as excinfo:
+            actual = da.sortby(da)
+        assert "DataArray has more than 1 dimension" in str(excinfo.value)
+
+        with pytest.raises(ValueError) as excinfo:
+            dax = DataArray([100, 99, 98], [('x', [100, 99, 98])])
+            actual = da.sortby(dax)
+        assert "must have same length as dimension" in str(excinfo.value)
 
 
 @pytest.fixture(params=[1])

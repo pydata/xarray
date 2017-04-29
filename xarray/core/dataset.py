@@ -2,7 +2,7 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 import functools
-from collections import Mapping, defaultdict
+from collections import Mapping, defaultdict, Iterable
 from numbers import Number
 
 import sys
@@ -2748,19 +2748,19 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
 
         return self._replace_vars_and_dims(variables)
 
-    def sort_index(self, dims, ascending=True, inplace=False):
+    def sortby(self, variables, ascending=True):
         """
-        The xarray-equivalent of pandas.DataFrame.sort_index.
-        Given dimension(s), sorts dataset based on dimensional labels.
+        Sorts the dataset, either along specified dimensions,
+        or according to values of 1-D dataarrays that share dimension
+        with calling object.
 
         Parameters
         ----------
-        dims: str or iterable of str.
-            Dimension(s) over which to sort by dimensional labels.
+        variables: (str, DataArray, or iterable of either)
+            Name of a 1D variable in coords/data_vars whose values are used to
+            to sort the dataset.
         ascending: boolean, optional.
             whether to sort by ascending order.
-        inplace: boolean, optional.
-            Whether to return a new object.
 
         Returns
         -------
@@ -2768,20 +2768,43 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
             A new dataset where all the specified dims are sorted by dim
             labels.
         """
-        if isinstance(dims, (str or unicode)):
-            dimensions = [dims]
-        else:
-            dimensions = dims
-        if inplace:
-            self = self.isel(**{d: self.indexes[d].argsort()
-                                if ascending
-                                else self.indexes[d].argsort()[::-1]
-                                for d in dimensions})
-        else:
-            return self.isel(**{d: self.indexes[d].argsort()
-                                if ascending
-                                else self.indexes[d].argsort()[::-1]
-                                for d in dimensions})
+        from .dataarray import DataArray
+        if isinstance(variables, (str, unicode, DataArray)):
+            vs = [variables]
+        elif not isinstance(variables, Iterable):
+            raise TypeError("variables must be either str or iterable."
+                            "  Got {}.".format(type(variables)))
+        else:  # an iterable
+            if not all([isinstance(v, (str, unicode, DataArray))
+                       for v in variables]):
+                raise TypeError("At least one of the variables is not "
+                                "str or DataArray.")
+            else:
+                vs = variables
+        dims = []
+        for d in vs:
+            if isinstance(d, (str or unicode)):
+                if d not in self:
+                    raise KeyError("Dimension {} does not exist "
+                                   "in object.".format(d))
+                key = d
+                val = self[d].argsort() if ascending\
+                    else self[d].argsort()[::-1]
+            else:  # d is a DataArray
+                if len(d.dims) > 1:
+                    raise ValueError("Input DataArray has more "
+                                     "than 1 dimension.")
+                else:
+                    key = d.dims[0]
+                    if key not in self:
+                        raise KeyError("Dimension {} does not exist "
+                                       "in object.".format(key))
+                    val = d.argsort() if ascending else d.argsort()[::-1]
+                    if len(val) != len(self[key]):
+                        raise ValueError("Input DataArray must have same "
+                                         "length as dimension it is sorting.")
+            dims.append((key, val))
+        return self.isel(**dict(dims))
 
     def quantile(self, q, dim=None, interpolation='linear',
                  numeric_only=False, keep_attrs=False):
