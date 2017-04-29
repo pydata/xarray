@@ -22,7 +22,8 @@ Enhancements
 ~~~~~~~~~~~~
 - New :py:meth:`~xarray.Dataset.sortby` method to ``Dataset`` and ``DataArray``
   that enable sorting along dimensions (:issue:`967`).  (see :ref:`indexing`).
-  By `Chun-Wei Yuan <https://github.com/chunweiyuan>`_.
+  By `Chun-Wei Yuan <https://github.com/chunweiyuan>`_ and
+     `Kyle Heuton <https://github.com/kheuton>`_.
 
 Bug fixes
 ~~~~~~~~~
