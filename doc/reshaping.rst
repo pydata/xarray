@@ -190,6 +190,8 @@ labels for one or several dimensions:
     array.set_index(x='c', inplace=True)
     array.reset_index('x', drop=True)
 
+.. _reshape.shift_and_roll:
+
 Shift and roll
 --------------
 
@@ -201,3 +203,26 @@ To adjust coordinate labels, you can use the :py:meth:`~xarray.Dataset.shift` an
 	array = xr.DataArray([1, 2, 3, 4], dims='x')
 	array.shift(x=2)
 	array.roll(x=2)
+
+.. _reshape.sort:
+
+Sort
+----
+
+One may sort a dataarray/dataset via :py:meth:`~xarray.DataArray.sortby` and
+:py:meth:`~xarray.DataArray.sortby`.  The input could either be existing
+dimensions, or 1-D dataarrays that share dimensions (and have correct dimension
+lengths) as the calling object.
+
+.. ipython:: python
+
+  ds = Dataset({'A': DataArray([[1, 2], [3, 4]],
+                                   [('x', ['b', 'a']),
+                                    ('y', [1, 0])]),
+                'B': DataArray([[5, 6], [7, 8]], dims=['x', 'y'])})
+  ds.sortby('x')
+  ds.sortby(['y', 'x'])
+  ds.sortby(['y', 'x'], ascending=False)
+  dax = DataArray([100, 99], [('x', [0, 1])])
+  day = DataArray([90, 80], [('y', [0, 1])])
+  actual = ds.sortby([day, dax])

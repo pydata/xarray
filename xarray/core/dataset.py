@@ -2,7 +2,7 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 import functools
-from collections import Mapping, defaultdict, Iterable
+from collections import Mapping, defaultdict
 from numbers import Number
 
 import sys
@@ -2756,8 +2756,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
 
         Parameters
         ----------
-        variables: (str, DataArray, or iterable of either)
-            Name of a 1D variable in coords/data_vars whose values are used to
+        variables: (str, DataArray, or list of either)
+            Name(s) of a 1D variable in coords/data_vars whose values are used to
             to sort the dataset.
         ascending: boolean, optional.
             whether to sort by ascending order.
@@ -2769,42 +2769,27 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
             labels.
         """
         from .dataarray import DataArray
-        if isinstance(variables, (str, unicode, DataArray)):
+
+        if not isinstance(variables, list):
             vs = [variables]
-        elif not isinstance(variables, Iterable):
-            raise TypeError("variables must be either str or iterable."
-                            "  Got {}.".format(type(variables)))
-        else:  # an iterable
-            if not all([isinstance(v, (str, unicode, DataArray))
-                       for v in variables]):
-                raise TypeError("At least one of the variables is not "
-                                "str or DataArray.")
-            else:
-                vs = variables
-        dims = []
+        else:
+            vs = variables
+        vs = [v if isinstance(v, DataArray) else self[v] for v in vs]
+
+        dims = {}
         for d in vs:
-            if isinstance(d, (str or unicode)):
-                if d not in self:
-                    raise KeyError("Dimension {} does not exist "
-                                   "in object.".format(d))
-                key = d
-                val = self[d].argsort() if ascending\
-                    else self[d].argsort()[::-1]
-            else:  # d is a DataArray
-                if len(d.dims) > 1:
-                    raise ValueError("Input DataArray has more "
-                                     "than 1 dimension.")
-                else:
-                    key = d.dims[0]
-                    if key not in self:
-                        raise KeyError("Dimension {} does not exist "
-                                       "in object.".format(key))
-                    val = d.argsort() if ascending else d.argsort()[::-1]
-                    if len(val) != len(self[key]):
-                        raise ValueError("Input DataArray must have same "
-                                         "length as dimension it is sorting.")
-            dims.append((key, val))
-        return self.isel(**dict(dims))
+            if len(d.dims) > 1:
+                raise ValueError("Input DataArray has more than 1 dimension.")
+            else:
+                key = d.dims[0]
+                val = d.argsort() if ascending else d.argsort()[::-1]
+                if len(val) != len(self[key]):
+                    raise ValueError("Input DataArray must have same "
+                                     "length as dimension it is sorting.")
+            if key in dims:
+                dims[key] = np.lexsort((val, dims[key]))
+            dims.update({key: val})
+        return self.isel(**dims)
 
     def quantile(self, q, dim=None, interpolation='linear',
                  numeric_only=False, keep_attrs=False):

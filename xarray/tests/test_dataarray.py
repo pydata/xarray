@@ -2522,6 +2522,16 @@ class TestDataArray(TestCase):
         da = DataArray([[1, 2], [3, 4]],
                        [('x', ['b', 'a']), ('y', [1, 0])])
 
+        expected = DataArray([[3, 4], [1, 2]],
+                             [('x', ['a', 'b']), ('y', [1, 0])])
+
+        actual = da.sortby('x')
+        self.assertDataArrayEqual(actual, expected)
+
+        dax = DataArray([100, 99], [('x', [0, 1])])
+        actual = da.sortby(dax)
+        self.assertDataArrayEqual(actual, expected)
+
         expected = DataArray([[4, 3], [2, 1]],
                              [('x', ['a', 'b']), ('y', [0, 1])])
 
@@ -2533,7 +2543,6 @@ class TestDataArray(TestCase):
         self.assertDataArrayEqual(actual, da)
 
         # test sort by 1D dataarray values
-        dax = DataArray([100, 99], [('x', [0, 1])])
         day = DataArray([90, 80], [('y', [0, 1])])
         actual = da.sortby([day, dax])
         self.assertDataArrayEqual(actual, expected)
@@ -2541,7 +2550,6 @@ class TestDataArray(TestCase):
         # test exception-raising
         with pytest.raises(KeyError) as excinfo:
             actual = da.sortby('z')
-        assert "does not exist" in str(excinfo.value)
 
         with pytest.raises(ValueError) as excinfo:
             actual = da.sortby(da)

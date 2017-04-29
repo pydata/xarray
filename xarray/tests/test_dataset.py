@@ -3324,6 +3324,18 @@ class TestDataset(TestCase):
                                       ('y', [1, 0])]),
                       'B': DataArray([[5, 6], [7, 8]], dims=['x', 'y'])})
 
+        expected = Dataset({'A': DataArray([[3, 4], [1, 2]],
+                                           [('x', ['a', 'b']),
+                                            ('y', [1, 0])]),
+                            'B': DataArray([[7, 8], [5, 6]], dims=['x', 'y'])})
+
+        actual = ds.sortby('x')
+        self.assertDatasetEqual(actual, expected)
+
+        dax = DataArray([100, 99], [('x', [0, 1])])
+        actual = ds.sortby(dax)
+        self.assertDatasetEqual(actual, expected)
+
         expected = Dataset({'A': DataArray([[4, 3], [2, 1]],
                                            [('x', ['a', 'b']),
                                             ('y', [0, 1])]),
@@ -3337,7 +3349,6 @@ class TestDataset(TestCase):
         self.assertDatasetEqual(actual, ds)
 
         # test sort by 1D dataarray values
-        dax = DataArray([100, 99], [('x', [0, 1])])
         day = DataArray([90, 80], [('y', [0, 1])])
         actual = ds.sortby([day, dax])
         self.assertDatasetEqual(actual, expected)
@@ -3345,7 +3356,6 @@ class TestDataset(TestCase):
         # test exception-raising
         with pytest.raises(KeyError) as excinfo:
             actual = ds.sortby('z')
-        assert "does not exist" in str(excinfo.value)
 
         with pytest.raises(ValueError) as excinfo:
             actual = ds.sortby(ds['A'])
