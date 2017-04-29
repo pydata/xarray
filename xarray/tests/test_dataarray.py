@@ -2519,21 +2519,27 @@ class TestDataArray(TestCase):
         self.assertDataArrayEqual(actual, expected)
 
     def test_sortby(self):
-        da = DataArray([[1, 2], [3, 4]],
-                       [('x', ['b', 'a']), ('y', [1, 0])])
+        da = DataArray([[1, 2], [3, 4], [5, 6]],
+                       [('x', ['c', 'b', 'a']), ('y', [1, 0])])
 
-        expected = DataArray([[3, 4], [1, 2]],
-                             [('x', ['a', 'b']), ('y', [1, 0])])
+        expected = DataArray([[5, 6], [3, 4], [1, 2]],
+                             [('x', ['a', 'b', 'c']), ('y', [1, 0])])
 
         actual = da.sortby('x')
         self.assertDataArrayEqual(actual, expected)
 
-        dax = DataArray([100, 99], [('x', [0, 1])])
+        dax = DataArray([100, 90, 80], [('x', [0, 1, 2])])
         actual = da.sortby(dax)
         self.assertDataArrayEqual(actual, expected)
 
-        expected = DataArray([[4, 3], [2, 1]],
-                             [('x', ['a', 'b']), ('y', [0, 1])])
+        # test 1-D lexsort
+        dax0 = DataArray([100, 95, 95], [('x', [0, 1, 2])])
+        actual = da.sortby([dax0, dax])
+        self.assertDataArrayEqual(actual, expected)
+
+        # test muti-dim sort
+        expected = DataArray([[6, 5], [4, 3], [2, 1]],
+                             [('x', ['a', 'b', 'c']), ('y', [0, 1])])
 
         actual = da.sortby(['x', 'y'])
         self.assertDataArrayEqual(actual, expected)
@@ -2556,7 +2562,7 @@ class TestDataArray(TestCase):
         assert "DataArray has more than 1 dimension" in str(excinfo.value)
 
         with pytest.raises(ValueError) as excinfo:
-            dax = DataArray([100, 99, 98], [('x', [0, 1, 2])])
+            dax = DataArray([100, 99, 98, 97], [('x', [0, 1, 2, 3])])
             actual = da.sortby(dax)
         assert "must have same length as dimension" in str(excinfo.value)
 

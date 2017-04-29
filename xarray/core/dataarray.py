@@ -1793,12 +1793,16 @@ class DataArray(AbstractArray, BaseDataObject):
         """
         Sorts the dataarray, either along specified dimensions,
         or according to values of 1-D dataarrays that share dimension
-        with calling object.
+        with calling object.  If multiple sorts along the same dimension is
+        given, numpy's lexsort is performed along that dimension:
+        https://docs.scipy.org/doc/numpy/reference/generated/numpy.lexsort.html
+        and the FIRST key in the sequence is used as the primary sort key,
+        followed by the 2nd key, etc.
 
         Parameters
         ----------
         variables: (str, DataArray, or iterable of either)
-            Name of a 1D variable in coords/data_vars whose values are used to
+            Name(s) of a 1D variable in coords/data_vars whose values are used
             to sort the dataset.
         ascending: boolean, optional.
             whether to sort by ascending order.

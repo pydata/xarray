@@ -3319,27 +3319,36 @@ class TestDataset(TestCase):
         self.assertDatasetEqual(actual, expected)
 
     def test_sortby(self):
-        ds = Dataset({'A': DataArray([[1, 2], [3, 4]],
-                                     [('x', ['b', 'a']),
+        ds = Dataset({'A': DataArray([[1, 2], [3, 4], [5, 6]],
+                                     [('x', ['c', 'b', 'a']),
                                       ('y', [1, 0])]),
-                      'B': DataArray([[5, 6], [7, 8]], dims=['x', 'y'])})
+                      'B': DataArray([[5, 6], [7, 8], [9, 10]],
+                                     dims=['x', 'y'])})
 
-        expected = Dataset({'A': DataArray([[3, 4], [1, 2]],
-                                           [('x', ['a', 'b']),
+        expected = Dataset({'A': DataArray([[5, 6], [3, 4], [1, 2]],
+                                           [('x', ['a', 'b', 'c']),
                                             ('y', [1, 0])]),
-                            'B': DataArray([[7, 8], [5, 6]], dims=['x', 'y'])})
+                            'B': DataArray([[9, 10], [7, 8], [5, 6]],
+                                           dims=['x', 'y'])})
 
         actual = ds.sortby('x')
         self.assertDatasetEqual(actual, expected)
 
-        dax = DataArray([100, 99], [('x', [0, 1])])
+        dax = DataArray([100, 99, 98], [('x', [0, 1, 2])])
         actual = ds.sortby(dax)
         self.assertDatasetEqual(actual, expected)
 
-        expected = Dataset({'A': DataArray([[4, 3], [2, 1]],
-                                           [('x', ['a', 'b']),
+        # test 1-D lexsort
+        dax0 = DataArray([100, 95, 95], [('x', [0, 1, 2])])
+        actual = ds.sortby([dax0, dax])
+        self.assertDatasetEqual(actual, expected)
+
+        # test muti-dim sort
+        expected = Dataset({'A': DataArray([[6, 5], [4, 3], [2, 1]],
+                                           [('x', ['a', 'b', 'c']),
                                             ('y', [0, 1])]),
-                            'B': DataArray([[8, 7], [6, 5]], dims=['x', 'y'])})
+                            'B': DataArray([[10, 9], [8, 7], [6, 5]],
+                                           dims=['x', 'y'])})
 
         actual = ds.sortby(['x', 'y'])
         self.assertDatasetEqual(actual, expected)
@@ -3362,7 +3371,7 @@ class TestDataset(TestCase):
         assert "DataArray has more than 1 dimension" in str(excinfo.value)
 
         with pytest.raises(ValueError) as excinfo:
-            dax = DataArray([100, 99, 98], [('x', [0, 1, 2])])
+            dax = DataArray([100, 99, 98, 97], [('x', [0, 1, 2, 3])])
             actual = ds.sortby(dax)
         assert "must have same length as dimension" in str(excinfo.value)
 
