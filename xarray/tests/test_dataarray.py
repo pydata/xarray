@@ -2533,8 +2533,11 @@ class TestDataArray(TestCase):
         self.assertDataArrayEqual(actual, expected)
 
         # test 1-D lexsort
+        # dax0 is sorted first to give indices of [1, 2, 0]
+        # and then dax1 would be used to move index 2 ahead of 1
         dax0 = DataArray([100, 95, 95], [('x', [0, 1, 2])])
-        actual = da.sortby([dax0, dax])
+        dax1 = DataArray([0, 1, 0], [('x', [7, 8, 9])])
+        actual = da.sortby([dax0, dax1])
         self.assertDataArrayEqual(actual, expected)
 
         # test muti-dim sort

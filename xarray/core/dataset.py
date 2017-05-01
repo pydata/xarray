@@ -2781,20 +2781,22 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
             vs = variables
         vs = [v if isinstance(v, DataArray) else self[v] for v in vs]
 
-        dims = {}
+        vars_by_dim = defaultdict(list)
         for d in vs:
             if len(d.dims) > 1:
                 raise ValueError("Input DataArray has more than 1 dimension.")
             else:
                 key = d.dims[0]
-                val = d.argsort() if ascending else d.argsort()[::-1]
-                if len(val) != len(self[key]):
+                if len(d) != self.dims[key]:
                     raise ValueError("Input DataArray must have same "
                                      "length as dimension it is sorting.")
-            if key in dims:
-                dims[key] = np.lexsort((val, dims[key]))
-            dims.update({key: val})
-        return self.isel(**dims)
+            vars_by_dim[key].append(d)
+
+        indices = {}
+        for key, ds in vars_by_dim.items():
+            order = np.lexsort(tuple(reversed(ds)))
+            indices[key] = order if ascending else order[::-1]
+        return self.isel(**indices)
 
     def quantile(self, q, dim=None, interpolation='linear',
                  numeric_only=False, keep_attrs=False):
