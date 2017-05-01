@@ -18,6 +18,10 @@ What's New
 v0.9.6 (unreleased)
 -------------------
 
+- Add ``.dt`` accessor to DataArrays for computing datetime-like properties
+for the values they contain, similar to ``pandas.Series`` (:issue:`358`).
+By `Daniel Rothenberg <https://github.com/darothen>`_.
+
 Enhancements
 ~~~~~~~~~~~~
 - New :py:meth:`~xarray.Dataset.sortby` method to ``Dataset`` and ``DataArray``
