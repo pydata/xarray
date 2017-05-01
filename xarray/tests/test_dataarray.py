@@ -1768,7 +1768,7 @@ class TestDataArray(TestCase):
 
     def test_groupby_bins_multidim(self):
         array = self.make_groupby_multidim_example_array()
-        bins = [0,15,20]
+        bins = [0, 15, 20]
         bin_coords = pd.cut(array['lat'].values.flat, bins).categories
         expected = DataArray([16, 40], dims='lat_bins',
                              coords={'lat_bins': bin_coords})
