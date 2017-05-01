@@ -28,7 +28,7 @@ Enhancements
 Bug fixes
 ~~~~~~~~~
 
-- Fix bug caused by changes to ``pandas.cut`` function (:issue:`1386`).
+- Fix test suite failure caused by changes to ``pandas.cut`` function (:issue:`1386`).
 By `Ryan Abernathey <https://github.com/rabernat>`_.
 
 .. _whats-new.0.9.5:
