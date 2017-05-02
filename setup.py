@@ -9,7 +9,7 @@ from setuptools import Command
 
 MAJOR = 0
 MINOR = 9
-MICRO = 2
+MICRO = 5
 ISRELEASED = False
 VERSION = '%d.%d.%d' % (MAJOR, MINOR, MICRO)
 QUALIFIER = ''

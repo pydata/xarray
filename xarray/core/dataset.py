@@ -21,7 +21,7 @@ from . import duck_array_ops
 from .. import conventions
 from .alignment import align
 from .coordinates import DatasetCoordinates, LevelCoordinatesSource, Indexes
-from .common import ImplementsDatasetReduce, BaseDataObject
+from .common import ImplementsDatasetReduce, BaseDataObject, is_datetime_like
 from .merge import (dataset_update_method, dataset_merge_method,
                     merge_data_and_coords)
 from .utils import (Frozen, SortedKeysDict, maybe_wrap_array, hashable,
@@ -31,6 +31,8 @@ from .variable import (Variable, as_variable, IndexVariable,
 from .pycompat import (iteritems, basestring, OrderedDict,
                        integer_types, dask_array_type, range)
 from .options import OPTIONS
+
+import xarray as xr
 
 # list of attributes of pd.DatetimeIndex that are ndarrays of time info
 _DATETIMEINDEX_COMPONENTS = ['year', 'month', 'day', 'hour', 'minute',
@@ -74,20 +76,11 @@ def _get_virtual_variable(variables, key, level_vars=None, dim_sizes=None):
         virtual_var = ref_var
         var_name = key
     else:
-        if ref_var.ndim == 1:
-            date = ref_var.to_index()
-        elif ref_var.ndim == 0:
-            date = pd.Timestamp(ref_var.values)
+        if is_datetime_like(ref_var.dtype):
+            ref_var = xr.DataArray(ref_var)
+            data = getattr(ref_var.dt, var_name).data
         else:
-            raise KeyError(key)
-
-        if var_name == 'season':
-            # TODO: move 'season' into pandas itself
-            seasons = np.array(['DJF', 'MAM', 'JJA', 'SON'])
-            month = date.month
-            data = seasons[(month // 3) % 4]
-        else:
-            data = getattr(date, var_name)
+            data = getattr(ref_var, var_name).data
         virtual_var = Variable(ref_var.dims, data)
 
     return ref_name, var_name, virtual_var
@@ -921,7 +914,6 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         store.store(variables, attrs, check_encoding,
                     unlimited_dims=unlimited_dims)
         if sync:
-            print('syncing')
             store.sync()
 
     def to_netcdf(self, path=None, mode='w', format=None, group=None,

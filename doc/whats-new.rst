@@ -13,17 +13,43 @@ What's New
     import xarray as xr
     np.random.seed(123456)
 
+.. _whats-new.0.9.6:
 
-.. _whats-new.0.9.3:
-
-v0.9.3 (unreleased)
+v0.9.6 (unreleased)
 -------------------
+
+- Add ``.dt`` accessor to DataArrays for computing datetime-like properties
+for the values they contain, similar to ``pandas.Series`` (:issue:`358`).
+By `Daniel Rothenberg <https://github.com/darothen>`_.
 
 Enhancements
 ~~~~~~~~~~~~
 
-- Add ``.persist()`` method to Datasets and DataArrays to enable persisting
-  data in distributed memory (:issue:`1344`).
+Bug fixes
+~~~~~~~~~
+
+- Fix test suite failure caused by changes to ``pandas.cut`` function (:issue:`1386`).
+By `Ryan Abernathey <https://github.com/rabernat>`_.
+
+.. _whats-new.0.9.5:
+
+v0.9.5 (17 April, 2017)
+-----------------------
+
+Remove an inadvertently introduced print statement.
+
+.. _whats-new.0.9.3:
+
+v0.9.3 (16 April, 2017)
+-----------------------
+
+This minor release includes bug-fixes and backwards compatible enhancements.
+
+Enhancements
+~~~~~~~~~~~~
+
+- New :py:meth:`~xarray.DataArray.persist` method to Datasets and DataArrays to
+  enable persisting data in distributed memory when using Dask (:issue:`1344`).
   By `Matthew Rocklin <https://github.com/mrocklin>`_.
 
 - New :py:meth:`~xarray.DataArray.expand_dims` method for ``DataArray`` and
@@ -57,8 +83,8 @@ Bug fixes
 
 .. _whats-new.0.9.2:
 
-v0.9.2 (2 April, 2017)
-----------------------
+v0.9.2 (2 April 2017)
+---------------------
 
 The minor release includes bug-fixes and backwards compatible enhancements.
 
