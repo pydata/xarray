@@ -12,7 +12,6 @@ from __future__ import print_function
 import hashlib
 
 import os as _os
-import shutil as _shutil
 
 from .backends.api import open_dataset as _open_dataset
 from .core.pycompat import urlretrieve as _urlretrieve
