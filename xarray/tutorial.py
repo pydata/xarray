@@ -20,7 +20,7 @@ from .core.pycompat import urlretrieve as _urlretrieve
 _default_cache_dir = _os.sep.join(('~', '.xarray_tutorial_data'))
 
 
-def _md5(fname):
+def file_md5_checksum(fname):
     hash_md5 = hashlib.md5()
     with open(fname, "rb") as f:
         hash_md5.update(f.read())
@@ -71,7 +71,7 @@ def load_dataset(name, cache=True, cache_dir=_default_cache_dir,
         url = '/'.join((github_url, 'raw', branch, md5name))
         _urlretrieve(url, md5file)
 
-        localmd5 = _md5(localfile)
+        localmd5 = file_md5_checksum(localfile)
         with open(md5file, 'r') as f:
             remotemd5 = f.read()
         if localmd5 != remotemd5:
