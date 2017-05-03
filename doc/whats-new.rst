@@ -39,6 +39,9 @@ By `Ryan Abernathey <https://github.com/rabernat>`_.
 - Fix a bug where ``.isel_points`` wrongly assigns unselected coordinate to
 ``data_vars``.
 By `Keisuke Fujii <https://github.com/fujiisoup>`_.
+- Tutorial datasets are now checked against a reference MD5 sum to confirm
+  successful download (:issue:`13921). By `Matthew Gidden
+  <https://github.com/gidden>`_.
 
 .. _whats-new.0.9.5:
 
