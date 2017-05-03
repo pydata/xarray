@@ -1,4 +1,6 @@
 name: test_env
+channels:
+  - conda-forge
 dependencies:
   - python=2.7
   - dask
@@ -13,7 +15,3 @@ dependencies:
   - scipy
   - seaborn
   - toolz
-  - pip:
-    - coveralls
-    - pytest-cov
-    - pydap

@@ -1,4 +1,6 @@
 name: test_env
+channels:
+  - conda-forge
 dependencies:
   - python=3.6
   - cython
@@ -12,7 +14,6 @@ dependencies:
   - pandas
   - scipy
   - toolz
-  - rasterio>=1.0
   - pip:
     - coveralls
     - pytest-cov

@@ -13,7 +13,6 @@ dependencies:
   - numpy
   - scipy
   - toolz
-  - rasterio>=1.0
   - pip:
     - coveralls
     - pytest-cov

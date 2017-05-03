@@ -18,7 +18,6 @@ dependencies:
   - scipy
   - seaborn
   - toolz
-  - cyordereddict
   - pip:
     - coveralls
     - pytest-cov
