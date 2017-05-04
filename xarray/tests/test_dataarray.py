@@ -2569,6 +2569,18 @@ class TestDataArray(TestCase):
             actual = da.sortby(dax)
         assert "must have same length as dimension" in str(excinfo.value)
 
+        # test pandas.MultiIndex
+        indices = (('b', 1), ('b', 0), ('a', 1), ('a', 0))
+        midx = pd.MultiIndex.from_tuples(indices, names=['one', 'two'])
+        da_midx = DataArray([[1, 2], [3, 4], [5, 6], [7, 8]],
+                            [('x', midx), ('y', [0, 1])])
+        actual = da_midx.sortby('x')
+        midx_reversed = pd.MultiIndex.from_tuples(tuple(reversed(indices)),
+                                                  names=['one', 'two'])
+        expected = DataArray([[7, 8], [5, 6], [3, 4], [1, 2]],
+                             [('x', midx_reversed), ('y', [0, 1])])
+        self.assertDataArrayEqual(actual, expected)
+
 
 @pytest.fixture(params=[1])
 def da(request):

@@ -2743,6 +2743,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
 
     def sortby(self, variables, ascending=True):
         """
+        Sort object by labels or values (along an axis).
+
         Sorts the dataset, either along specified dimensions,
         or according to values of 1-D dataarrays that share dimension
         with calling object.  If multiple sorts along the same dimension is
@@ -2750,7 +2752,6 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         https://docs.scipy.org/doc/numpy/reference/generated/numpy.lexsort.html
         and the FIRST key in the sequence is used as the primary sort key,
         followed by the 2nd key, etc.
-
 
         Parameters
         ----------
@@ -2769,25 +2770,26 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         from .dataarray import DataArray
 
         if not isinstance(variables, list):
-            vs = [variables]
+            variables = [variables]
         else:
-            vs = variables
-        vs = [v if isinstance(v, DataArray) else self[v] for v in vs]
+            variables = variables
+        variables = [v if isinstance(v, DataArray)
+                     else self[v] for v in variables]
 
         vars_by_dim = defaultdict(list)
-        for d in vs:
-            if len(d.dims) > 1:
+        for data_array in variables:
+            if len(data_array.dims) > 1:
                 raise ValueError("Input DataArray has more than 1 dimension.")
             else:
-                key = d.dims[0]
-                if len(d) != self.dims[key]:
+                key = data_array.dims[0]
+                if len(data_array) != self.dims[key]:
                     raise ValueError("Input DataArray must have same "
                                      "length as dimension it is sorting.")
-            vars_by_dim[key].append(d)
+            vars_by_dim[key].append(data_array)
 
         indices = {}
-        for key, ds in vars_by_dim.items():
-            order = np.lexsort(tuple(reversed(ds)))
+        for key, arrays in vars_by_dim.items():
+            order = np.lexsort(tuple(reversed(arrays)))
             indices[key] = order if ascending else order[::-1]
         return self.isel(**indices)
 
