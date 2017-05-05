@@ -1793,9 +1793,16 @@ class DataArray(AbstractArray, BaseDataObject):
 
     def sortby(self, variables, ascending=True):
         """
+        Sort object by labels or values (along an axis).
+
         Sorts the dataarray, either along specified dimensions,
         or according to values of 1-D dataarrays that share dimension
-        with calling object.  If multiple sorts along the same dimension is
+        with calling object.
+
+        If the input variables are dataarrays, then the dataarrays are aligned
+        (via left-join) to the calling object prior to sorting by cell values.
+
+        If multiple sorts along the same dimension is
         given, numpy's lexsort is performed along that dimension:
         https://docs.scipy.org/doc/numpy/reference/generated/numpy.lexsort.html
         and the FIRST key in the sequence is used as the primary sort key,

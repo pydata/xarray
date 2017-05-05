@@ -3334,15 +3334,20 @@ class TestDataset(TestCase):
         actual = ds.sortby('x')
         self.assertDatasetEqual(actual, expected)
 
-        dax = DataArray([100, 99, 98], [('x', [0, 1, 2])])
+        dax = DataArray([100, 99, 98], [('x', ['c', 'b', 'a'])])
         actual = ds.sortby(dax)
+        self.assertDatasetEqual(actual, expected)
+
+        # test alignment (fills in nan for 'c')
+        dax_short = DataArray([98, 97], [('x', ['b', 'a'])])
+        actual = ds.sortby(dax_short)
         self.assertDatasetEqual(actual, expected)
 
         # test 1-D lexsort
         # dax0 is sorted first to give indices of [1, 2, 0]
         # and then dax1 would be used to move index 2 ahead of 1
-        dax0 = DataArray([100, 95, 95], [('x', [0, 1, 2])])
-        dax1 = DataArray([0, 1, 0], [('x', [7, 8, 9])])
+        dax0 = DataArray([100, 95, 95], [('x', ['c', 'b', 'a'])])
+        dax1 = DataArray([0, 1, 0], [('x', ['c', 'b', 'a'])])
         actual = ds.sortby([dax0, dax1])  # lexsort underneath gives [2, 1, 0]
         self.assertDatasetEqual(actual, expected)
 
@@ -3361,7 +3366,7 @@ class TestDataset(TestCase):
         self.assertDatasetEqual(actual, ds)
 
         # test sort by 1D dataarray values
-        day = DataArray([90, 80], [('y', [0, 1])])
+        day = DataArray([90, 80], [('y', [1, 0])])
         actual = ds.sortby([day, dax])
         self.assertDatasetEqual(actual, expected)
 
@@ -3372,11 +3377,6 @@ class TestDataset(TestCase):
         with pytest.raises(ValueError) as excinfo:
             actual = ds.sortby(ds['A'])
         assert "DataArray has more than 1 dimension" in str(excinfo.value)
-
-        with pytest.raises(ValueError) as excinfo:
-            dax = DataArray([100, 99, 98, 97], [('x', [0, 1, 2, 3])])
-            actual = ds.sortby(dax)
-        assert "must have same length as dimension" in str(excinfo.value)
 
         # test pandas.MultiIndex
         indices = (('b', 1), ('b', 0), ('a', 1), ('a', 0))

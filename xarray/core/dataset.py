@@ -2747,7 +2747,12 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
 
         Sorts the dataset, either along specified dimensions,
         or according to values of 1-D dataarrays that share dimension
-        with calling object.  If multiple sorts along the same dimension is
+        with calling object.
+
+        If the input variables are dataarrays, then the dataarrays are aligned
+        (via left-join) to the calling object prior to sorting by cell values.
+
+        If multiple sorts along the same dimension is
         given, numpy's lexsort is performed along that dimension:
         https://docs.scipy.org/doc/numpy/reference/generated/numpy.lexsort.html
         and the FIRST key in the sequence is used as the primary sort key,
@@ -2775,23 +2780,22 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
             variables = variables
         variables = [v if isinstance(v, DataArray)
                      else self[v] for v in variables]
-
+        aligned_vars = align(self, *variables, join='left')
+        aligned_self = aligned_vars[0]
+        aligned_other_vars = aligned_vars[1:]
         vars_by_dim = defaultdict(list)
-        for data_array in variables:
+        for data_array in aligned_other_vars:
             if len(data_array.dims) > 1:
                 raise ValueError("Input DataArray has more than 1 dimension.")
             else:
                 key = data_array.dims[0]
-                if len(data_array) != self.dims[key]:
-                    raise ValueError("Input DataArray must have same "
-                                     "length as dimension it is sorting.")
             vars_by_dim[key].append(data_array)
 
         indices = {}
         for key, arrays in vars_by_dim.items():
             order = np.lexsort(tuple(reversed(arrays)))
             indices[key] = order if ascending else order[::-1]
-        return self.isel(**indices)
+        return aligned_self.isel(**indices)
 
     def quantile(self, q, dim=None, interpolation='linear',
                  numeric_only=False, keep_attrs=False):
