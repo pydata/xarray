@@ -916,6 +916,8 @@ class TestDataset(TestCase):
 
         actual = data.isel_points(dim1=pdim1, dim2=pdim2)
         assert 'points' in actual.dims
+        assert 'dim3' in actual.dims
+        assert 'dim3' not in actual.data_vars
         np.testing.assert_array_equal(data['dim2'][pdim2], actual['dim2'])
 
         # test that the order of the indexers doesn't matter
