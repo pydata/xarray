@@ -2751,6 +2751,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
 
         If the input variables are dataarrays, then the dataarrays are aligned
         (via left-join) to the calling object prior to sorting by cell values.
+        NaNs are sorted to the end, following Numpy convention.
 
         If multiple sorts along the same dimension is
         given, numpy's lexsort is performed along that dimension:
