@@ -1330,7 +1330,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
                 variables[name] = var
 
         coord_names = (set(coords) & set(variables)) | non_indexed_coords
-        
+
         dset = self._replace_vars_and_dims(variables, coord_names=coord_names)
         # Add the dim coord to the new dset. Must be done after creation
         # because_replace_vars_and_dims can only access existing coords,
