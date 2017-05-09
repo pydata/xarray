@@ -2788,16 +2788,15 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         aligned_other_vars = aligned_vars[1:]
         vars_by_dim = defaultdict(list)
         for data_array in aligned_other_vars:
-            if len(data_array.dims) > 1:
-                raise ValueError("Input DataArray has more than 1 dimension.")
-            elif data_array.dtype == object and\
-            LooseVersion(np.__version__) < LooseVersion('1.11.0'):
+            if data_array.ndim != 1:
+                raise ValueError("Input DataArray is not 1-D.")
+            if (data_array.dtype == object and
+               LooseVersion(np.__version__) < LooseVersion('1.11.0')):
                     raise NotImplementedError(
                         'sortby uses np.lexsort under the hood, which '
                         'requires numpy 1.11.0 or later to support '
                         'object data-type.')
-            else:
-                key = data_array.dims[0]
+            (key,) = data_array.dims
             vars_by_dim[key].append(data_array)
 
         indices = {}

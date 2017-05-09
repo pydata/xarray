@@ -3327,18 +3327,26 @@ class TestDataset(TestCase):
                       'B': DataArray([[5, 6], [7, 8], [9, 10]],
                                      dims=['x', 'y'])})
 
-        expected = Dataset({'A': DataArray([[5, 6], [3, 4], [1, 2]],
+        sorted1d = Dataset({'A': DataArray([[5, 6], [3, 4], [1, 2]],
                                            [('x', ['a', 'b', 'c']),
                                             ('y', [1, 0])]),
                             'B': DataArray([[9, 10], [7, 8], [5, 6]],
                                            dims=['x', 'y'])})
 
-        actual = ds.sortby('x')
-        self.assertDatasetEqual(actual, expected)
+        sorted2d = Dataset({'A': DataArray([[6, 5], [4, 3], [2, 1]],
+                                           [('x', ['a', 'b', 'c']),
+                                            ('y', [0, 1])]),
+                            'B': DataArray([[10, 9], [8, 7], [6, 5]],
+                                           dims=['x', 'y'])})
 
+        expected = sorted1d
         dax = DataArray([100, 99, 98], [('x', ['c', 'b', 'a'])])
         actual = ds.sortby(dax)
         self.assertDatasetEqual(actual, expected)
+
+        # test descending order sort
+        actual = ds.sortby(dax, ascending=False)
+        self.assertDatasetEqual(actual, ds)
 
         # test alignment (fills in nan for 'c')
         dax_short = DataArray([98, 97], [('x', ['b', 'a'])])
@@ -3353,21 +3361,8 @@ class TestDataset(TestCase):
         actual = ds.sortby([dax0, dax1])  # lexsort underneath gives [2, 1, 0]
         self.assertDatasetEqual(actual, expected)
 
-        # test muti-dim sort
-        expected = Dataset({'A': DataArray([[6, 5], [4, 3], [2, 1]],
-                                           [('x', ['a', 'b', 'c']),
-                                            ('y', [0, 1])]),
-                            'B': DataArray([[10, 9], [8, 7], [6, 5]],
-                                           dims=['x', 'y'])})
-
-        actual = ds.sortby(['x', 'y'])
-        self.assertDatasetEqual(actual, expected)
-
-        # test descending order sort
-        actual = ds.sortby(['x', 'y'], ascending=False)
-        self.assertDatasetEqual(actual, ds)
-
-        # test sort by 1D dataarray values
+        expected = sorted2d
+        # test multi-dim sort by 1D dataarray values
         day = DataArray([90, 80], [('y', [1, 0])])
         actual = ds.sortby([day, dax])
         self.assertDatasetEqual(actual, expected)
@@ -3378,7 +3373,14 @@ class TestDataset(TestCase):
 
         with pytest.raises(ValueError) as excinfo:
             actual = ds.sortby(ds['A'])
-        assert "DataArray has more than 1 dimension" in str(excinfo.value)
+        assert "DataArray is not 1-D" in str(excinfo.value)
+
+        if LooseVersion(np.__version__) < LooseVersion('1.11.0'):
+            pytest.skip('numpy 1.11.0 or later to support object data-type.')
+
+        expected = sorted1d
+        actual = ds.sortby('x')
+        self.assertDatasetEqual(actual, expected)
 
         # test pandas.MultiIndex
         indices = (('b', 1), ('b', 0), ('a', 1), ('a', 0))
@@ -3396,6 +3398,15 @@ class TestDataset(TestCase):
                             'B': DataArray([[11, 12], [9, 10], [7, 8], [5, 6]],
                                            dims=['x', 'y'])})
         self.assertDatasetEqual(actual, expected)
+
+        # multi-dim sort by coordinate objects
+        expected = sorted2d
+        actual = ds.sortby(['x', 'y'])
+        self.assertDatasetEqual(actual, expected)
+
+        # test descending order sort
+        actual = ds.sortby(['x', 'y'], ascending=False)
+        self.assertDatasetEqual(actual, ds)
 
 
 # Py.test tests

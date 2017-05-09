@@ -2523,32 +2523,42 @@ class TestDataArray(TestCase):
         da = DataArray([[1, 2], [3, 4], [5, 6]],
                        [('x', ['c', 'b', 'a']), ('y', [1, 0])])
 
-        expected = DataArray([[5, 6], [3, 4], [1, 2]],
+        sorted1d = DataArray([[5, 6], [3, 4], [1, 2]],
                              [('x', ['a', 'b', 'c']), ('y', [1, 0])])
 
-        actual = da.sortby('x')
-        self.assertDataArrayEqual(actual, expected)
+        sorted2d = DataArray([[6, 5], [4, 3], [2, 1]],
+                             [('x', ['a', 'b', 'c']), ('y', [0, 1])])
+
+        expected = sorted1d
+        dax = DataArray([100, 99, 98], [('x', ['c', 'b', 'a'])])
+        actual = da.sortby(dax)
+        self.assertDatasetEqual(actual, expected)
+
+        # test descending order sort
+        actual = da.sortby(dax, ascending=False)
+        self.assertDatasetEqual(actual, da)
 
         # test alignment (fills in nan for 'c')
         dax_short = DataArray([98, 97], [('x', ['b', 'a'])])
         actual = da.sortby(dax_short)
         self.assertDatasetEqual(actual, expected)
 
-        # test muti-dim sort
-        expected = DataArray([[6, 5], [4, 3], [2, 1]],
-                             [('x', ['a', 'b', 'c']), ('y', [0, 1])])
-
-        actual = da.sortby(['x', 'y'])
-        self.assertDataArrayEqual(actual, expected)
-
-        # test descending order sort
-        actual = da.sortby(['y', 'x'], ascending=False)
-        self.assertDataArrayEqual(actual, da)
-
-        # test sort by 1D dataarray values
+        # test multi-dim sort by 1D dataarray values
+        expected = sorted2d
         dax = DataArray([100, 99, 98], [('x', ['c', 'b', 'a'])])
         day = DataArray([90, 80], [('y', [1, 0])])
         actual = da.sortby([day, dax])
+        self.assertDataArrayEqual(actual, expected)
+
+        if LooseVersion(np.__version__) < LooseVersion('1.11.0'):
+            pytest.skip('numpy 1.11.0 or later to support object data-type.')
+
+        expected = sorted1d
+        actual = da.sortby('x')
+        self.assertDataArrayEqual(actual, expected)
+
+        expected = sorted2d
+        actual = da.sortby(['x', 'y'])
         self.assertDataArrayEqual(actual, expected)
 
 
