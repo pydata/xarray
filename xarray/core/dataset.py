@@ -2779,8 +2779,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
             variables = [variables]
         else:
             variables = variables
-        variables = [v if isinstance(v, DataArray)
-                     else self[v] for v in variables]
+        variables = [v if isinstance(v, DataArray) else self[v]
+                     for v in variables]
         aligned_vars = align(self, *variables, join='left')
         aligned_self = aligned_vars[0]
         aligned_other_vars = aligned_vars[1:]

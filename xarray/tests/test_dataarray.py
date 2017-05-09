@@ -2529,22 +2529,10 @@ class TestDataArray(TestCase):
         actual = da.sortby('x')
         self.assertDataArrayEqual(actual, expected)
 
-        dax = DataArray([100, 90, 80], [('x', ['c', 'b', 'a'])])
-        actual = da.sortby(dax)
-        self.assertDataArrayEqual(actual, expected)
-
         # test alignment (fills in nan for 'c')
         dax_short = DataArray([98, 97], [('x', ['b', 'a'])])
         actual = da.sortby(dax_short)
         self.assertDatasetEqual(actual, expected)
-
-        # test 1-D lexsort
-        # dax0 is sorted first to give indices of [1, 2, 0]
-        # and then dax1 would be used to move index 2 ahead of 1
-        dax0 = DataArray([100, 95, 95], [('x', ['c', 'b', 'a'])])
-        dax1 = DataArray([0, 1, 0], [('x', ['c', 'b', 'a'])])
-        actual = da.sortby([dax0, dax1])
-        self.assertDataArrayEqual(actual, expected)
 
         # test muti-dim sort
         expected = DataArray([[6, 5], [4, 3], [2, 1]],
@@ -2560,26 +2548,6 @@ class TestDataArray(TestCase):
         # test sort by 1D dataarray values
         day = DataArray([90, 80], [('y', [1, 0])])
         actual = da.sortby([day, dax])
-        self.assertDataArrayEqual(actual, expected)
-
-        # test exception-raising
-        with pytest.raises(KeyError) as excinfo:
-            actual = da.sortby('z')
-
-        with pytest.raises(ValueError) as excinfo:
-            actual = da.sortby(da)
-        assert "DataArray has more than 1 dimension" in str(excinfo.value)
-
-        # test pandas.MultiIndex
-        indices = (('b', 1), ('b', 0), ('a', 1), ('a', 0))
-        midx = pd.MultiIndex.from_tuples(indices, names=['one', 'two'])
-        da_midx = DataArray([[1, 2], [3, 4], [5, 6], [7, 8]],
-                            [('x', midx), ('y', [0, 1])])
-        actual = da_midx.sortby('x')
-        midx_reversed = pd.MultiIndex.from_tuples(tuple(reversed(indices)),
-                                                  names=['one', 'two'])
-        expected = DataArray([[7, 8], [5, 6], [3, 4], [1, 2]],
-                             [('x', midx_reversed), ('y', [0, 1])])
         self.assertDataArrayEqual(actual, expected)
 
 
