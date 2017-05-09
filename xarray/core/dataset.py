@@ -3,6 +3,7 @@ from __future__ import division
 from __future__ import print_function
 import functools
 from collections import Mapping, defaultdict
+from distutils.version import LooseVersion
 from numbers import Number
 
 import sys
@@ -2774,6 +2775,11 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
             A new dataset where all the specified dims are sorted by dim
             labels.
         """
+        if LooseVersion(np.__version__) < LooseVersion('1.11.0'):
+            raise NotImplementedError(
+                'sortby uses np.lexsort under the hood, which requires '
+                'numpy 1.11.0 or later to support object data-type.')
+
         from .dataarray import DataArray
 
         if not isinstance(variables, list):
