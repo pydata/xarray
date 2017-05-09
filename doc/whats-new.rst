@@ -36,6 +36,10 @@ Bug fixes
 - Fix test suite failure caused by changes to ``pandas.cut`` function (:issue:`1386`).
 By `Ryan Abernathey <https://github.com/rabernat>`_.
 
+- Fix a bug where ``.isel_points`` wrongly assigns unselected coordinate to
+``data_vars``.
+By `Keisuke Fujii <https://github.com/fujiisoup>`_.
+
 .. _whats-new.0.9.5:
 
 v0.9.5 (17 April, 2017)

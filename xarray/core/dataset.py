@@ -1267,6 +1267,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         indexers = [(k, np.asarray(v)) for k, v in iteritems(indexers)]
         indexers_dict = dict(indexers)
         non_indexed_dims = set(self.dims) - indexer_dims
+        non_indexed_coords = set(self.coords) - set(coords)
 
         # All the indexers should be iterables
         # Check that indexers are valid dims, integers, and 1D
@@ -1328,7 +1329,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
                 # If not indexed just add it back to variables or coordinates
                 variables[name] = var
 
-        coord_names = set(coords) & set(variables)
+        coord_names = (set(coords) & set(variables)) | non_indexed_coords
 
         dset = self._replace_vars_and_dims(variables, coord_names=coord_names)
         # Add the dim coord to the new dset. Must be done after creation
