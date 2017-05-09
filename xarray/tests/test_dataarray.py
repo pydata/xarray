@@ -2546,6 +2546,7 @@ class TestDataArray(TestCase):
         self.assertDataArrayEqual(actual, da)
 
         # test sort by 1D dataarray values
+        dax = DataArray([100, 99, 98], [('x', ['c', 'b', 'a'])])
         day = DataArray([90, 80], [('y', [1, 0])])
         actual = da.sortby([day, dax])
         self.assertDataArrayEqual(actual, expected)
