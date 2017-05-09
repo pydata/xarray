@@ -2775,11 +2775,6 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
             A new dataset where all the specified dims are sorted by dim
             labels.
         """
-        if LooseVersion(np.__version__) < LooseVersion('1.11.0'):
-            raise NotImplementedError(
-                'sortby uses np.lexsort under the hood, which requires '
-                'numpy 1.11.0 or later to support object data-type.')
-
         from .dataarray import DataArray
 
         if not isinstance(variables, list):
@@ -2795,6 +2790,12 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         for data_array in aligned_other_vars:
             if len(data_array.dims) > 1:
                 raise ValueError("Input DataArray has more than 1 dimension.")
+            elif data_array.dtype == object and\
+            LooseVersion(np.__version__) < LooseVersion('1.11.0'):
+                    raise NotImplementedError(
+                        'sortby uses np.lexsort under the hood, which '
+                        'requires numpy 1.11.0 or later to support '
+                        'object data-type.')
             else:
                 key = data_array.dims[0]
             vars_by_dim[key].append(data_array)
