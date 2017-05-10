@@ -2763,11 +2763,11 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
 
         Parameters
         ----------
-        variables: (str, DataArray, or list of either)
-            Name(s) of a 1D variable in coords/data_vars whose values are used
-            to sort the dataset.
-        ascending: boolean, optional.
-            whether to sort by ascending order.
+        variables: str, DataArray, or list of either
+            1D DataArray objects or name(s) of 1D variable(s) in
+            coords/data_vars whose values are used to sort the dataset.
+        ascending: boolean, optional
+            Whether to sort by ascending or descending order.
 
         Returns
         -------
@@ -2791,11 +2791,10 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
             if data_array.ndim != 1:
                 raise ValueError("Input DataArray is not 1-D.")
             if (data_array.dtype == object and
-               LooseVersion(np.__version__) < LooseVersion('1.11.0')):
-                    raise NotImplementedError(
-                        'sortby uses np.lexsort under the hood, which '
-                        'requires numpy 1.11.0 or later to support '
-                        'object data-type.')
+                    LooseVersion(np.__version__) < LooseVersion('1.11.0')):
+                raise NotImplementedError(
+                    'sortby uses np.lexsort under the hood, which requires '
+                    'numpy 1.11.0 or later to support object data-type.')
             (key,) = data_array.dims
             vars_by_dim[key].append(data_array)
 
