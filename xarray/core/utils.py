@@ -10,6 +10,7 @@ import re
 import warnings
 from collections import Mapping, MutableMapping, Iterable
 
+from netcdftime._netcdftime import datetime as ncdatetime
 import numpy as np
 import pandas as pd
 
@@ -46,6 +47,7 @@ def safe_cast_to_index(array):
     this function will not attempt to do automatic type conversion but will
     always return an index with dtype=object.
     """
+    from ..conventions.netcdftimeindex import NetCDFTimeIndex
     if isinstance(array, pd.Index):
         index = array
     elif hasattr(array, 'to_index'):
@@ -55,6 +57,9 @@ def safe_cast_to_index(array):
         if hasattr(array, 'dtype') and array.dtype.kind == 'O':
             kwargs['dtype'] = object
         index = pd.Index(np.asarray(array), **kwargs)
+        if len(index):
+            if isinstance(index[0], ncdatetime):
+                index = NetCDFTimeIndex(index)
     return index
 
 

@@ -97,20 +97,22 @@ def _decode_datetime_with_netcdf4(num_dates, units, calendar):
     import netCDF4 as nc4
 
     dates = np.asarray(nc4.num2date(num_dates, units, calendar))
-    if (dates[np.nanargmin(num_dates)].year < 1678 or
-            dates[np.nanargmax(num_dates)].year >= 2262):
-        warnings.warn('Unable to decode time axis into full '
-                      'numpy.datetime64 objects, continuing using dummy '
-                      'netCDF4.datetime objects instead, reason: dates out'
-                      ' of range', RuntimeWarning, stacklevel=3)
-    else:
-        try:
+    if calendar in _STANDARD_CALENDARS:
+        if (dates[np.nanargmin(num_dates)].year < 1678 or
+           dates[np.nanargmax(num_dates)].year >= 2262):
+            warnings.warn(
+                'Unable to decode time axis into full '
+                'numpy.datetime64 objects, continuing using dummy '
+                'netCDF4.datetime objects instead, reason: dates out'
+                ' of range', RuntimeWarning, stacklevel=3)
+        else:
             dates = nctime_to_nptime(dates)
-        except ValueError as e:
-            warnings.warn('Unable to decode time axis into full '
-                          'numpy.datetime64 objects, continuing using '
-                          'dummy netCDF4.datetime objects instead, reason:'
-                          '{0}'.format(e), RuntimeWarning, stacklevel=3)
+    else:
+        warnings.warn('Unable to decode time axis into full numpy.datetime64 '
+                      'objects, because dates are encoded using a '
+                      'non-standard calendar ({}).  Using netCDF4.datetime '
+                      'objects instead'.format(calendar),
+                      RuntimeWarning, stacklevel=3)
     return dates
 
 
@@ -190,18 +192,39 @@ def _infer_time_units_from_diff(unique_timedeltas):
     return 'seconds'
 
 
+def infer_calendar_name(dates):
+    """Given an array of datetimes, infer the CF calendar name"""
+    if np.asarray(dates).dtype == 'datetime64[ns]':
+        return 'proleptic_gregorian'
+    else:
+        try:
+            return np.asarray(dates)[0].calendar
+        except IndexError:
+            return np.asarray(dates).item().calendar
+
+
 def infer_datetime_units(dates):
     """Given an array of datetimes, returns a CF compatible time-unit string of
     the form "{time_unit} since {date[0]}", where `time_unit` is 'days',
     'hours', 'minutes' or 'seconds' (the first one that can evenly divide all
     unique time deltas in `dates`)
     """
-    dates = pd.to_datetime(np.asarray(dates).ravel(), box=False)
-    dates = dates[pd.notnull(dates)]
-    unique_timedeltas = np.unique(np.diff(dates))
+    # There is a test that uses a list of strings as input (not consistent with
+    # the docstring).  Should this be allowed or not?  We could potentially
+    # continue supporting this, but it would require knowledge of the calendar
+    # type to decode the strings into the appropriate datetimes.
+    if np.asarray(dates).dtype == 'datetime64[ns]':
+        dates = pd.to_datetime(np.asarray(dates).ravel(), box=False)
+        dates = dates[pd.notnull(dates)]
+        unique_timedeltas = np.unique(np.diff(dates))
+        reference_date = dates[0] if len(dates) > 0 else '1970-01-01'
+        reference_date = pd.Timestamp(reference_date)
+    else:
+        dates = np.asarray(dates).ravel()
+        unique_timedeltas = np.unique(pd.to_timedelta(np.diff(dates)))
+        reference_date = dates[0] if len(dates) > 0 else '1970-01-01'
     units = _infer_time_units_from_diff(unique_timedeltas)
-    reference_date = dates[0] if len(dates) > 0 else '1970-01-01'
-    return '%s since %s' % (units, pd.Timestamp(reference_date))
+    return '%s since %s' % (units, reference_date)
 
 
 def infer_timedelta_units(deltas):
@@ -221,7 +244,8 @@ def nctime_to_nptime(times):
     times = np.asarray(times)
     new = np.empty(times.shape, dtype='M8[ns]')
     for i, t in np.ndenumerate(times):
-        dt = datetime(t.year, t.month, t.day, t.hour, t.minute, t.second)
+        dt = datetime(t.year, t.month, t.day, t.hour,
+                      t.minute, t.second)
         new[i] = np.datetime64(dt)
     return new
 
@@ -279,7 +303,7 @@ def encode_cf_datetime(dates, units=None, calendar=None):
         units = _cleanup_netcdf_time_units(units)
 
     if calendar is None:
-        calendar = 'proleptic_gregorian'
+        calendar = infer_calendar_name(dates)
 
     delta, ref_date = _unpack_netcdf_time_units(units)
     try:
@@ -575,7 +599,9 @@ def _var_as_tuple(var):
 
 
 def maybe_encode_datetime(var):
-    if np.issubdtype(var.dtype, np.datetime64):
+    from netcdftime._netcdftime import datetime as ncdatetime
+    is_netcdftime = isinstance(var.data.flatten()[0], ncdatetime)
+    if np.issubdtype(var.dtype, np.datetime64) or is_netcdftime:
         dims, data, attrs, encoding = _var_as_tuple(var)
         (data, units, calendar) = encode_cf_datetime(
             data, encoding.pop('units', None), encoding.pop('calendar', None))

@@ -7,9 +7,11 @@ import pytest
 import numpy as np
 import pandas as pd
 
+from xarray.conventions.netcdftimeindex import NetCDFTimeIndex
 from xarray.core import duck_array_ops, utils
 from xarray.core.pycompat import OrderedDict
-from . import TestCase
+from . import TestCase, requires_netCDF4
+from .test_coding import _all_netcdftime_date_types
 
 
 class TestAlias(TestCase):
@@ -34,6 +36,16 @@ class TestSafeCastToIndex(TestCase):
                 (pd.Index(td, dtype=object), td.astype(object)),
                 ]:
             actual = utils.safe_cast_to_index(array)
+            self.assertArrayEqual(expected, actual)
+            self.assertEqual(expected.dtype, actual.dtype)
+
+    @requires_netCDF4
+    def test_netcdftimeindex(self):
+        date_types = _all_netcdftime_date_types()
+        for date_type in date_types.values():
+            dates = [date_type(1, 1, day) for day in range(1, 20)]
+            expected = NetCDFTimeIndex(dates)
+            actual = utils.safe_cast_to_index(np.array(dates))
             self.assertArrayEqual(expected, actual)
             self.assertEqual(expected.dtype, actual.dtype)
 

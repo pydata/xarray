@@ -19,6 +19,7 @@ def date_dict(year=None, month=None, day=None,
     return dict(year=year, month=month, day=day, hour=hour,
                 minute=minute, second=second)
 
+
 ISO8601_STRING_TESTS = {
     'year': ('1999', date_dict(year='1999')),
     'month': ('199901', date_dict(year='1999', month='01')),

@@ -278,6 +278,18 @@ class DatasetIOTestCases(object):
             self.assertEquals(actual.t0.encoding['units'],
                               'days since 1950-01-01')
 
+    def test_roundtrip_netcdftime_datetime_data(self):
+        from .test_coding import _all_netcdftime_date_types
+        date_types = _all_netcdftime_date_types()
+        for date_type in date_types.values():
+            times = [date_type(1, 1, 1), date_type(1, 1, 2)]
+            expected = Dataset({'t': ('t', times), 't0': times[0]})
+            kwds = {'encoding': {'t0': {'units': 'days since 0001-01-01'}}}
+            with self.roundtrip(expected, save_kwargs=kwds) as actual:
+                self.assertDatasetIdentical(expected, actual)
+                self.assertEquals(actual.t0.encoding['units'],
+                                  'days since 0001-01-01')
+
     def test_roundtrip_timedelta_data(self):
         time_deltas = pd.to_timedelta(['1h', '2h', 'NaT'])
         expected = Dataset({'td': ('td', time_deltas), 'td0': time_deltas[0]})
