@@ -39,6 +39,8 @@ matrix:
     env: CONDA_ENV=py36-pandas-dev
   - python: 3.6
     env: CONDA_ENV=py36-condaforge-rc
+  - python: 3.6
+    env: CONDA_ENV=py36-bn
   allow_failures:
   - python: 3.6
     env:
