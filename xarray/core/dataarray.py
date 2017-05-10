@@ -1811,11 +1811,11 @@ class DataArray(AbstractArray, BaseDataObject):
 
         Parameters
         ----------
-        variables: (str, DataArray, or iterable of either)
-            Name(s) of a 1D variable in coords/data_vars whose values are used
-            to sort the dataset.
-        ascending: boolean, optional.
-            whether to sort by ascending order.
+        variables: str, DataArray, or list of either
+            1D DataArray objects or name(s) of 1D variable(s) in
+            coords whose values are used to sort this array.
+        ascending: boolean, optional
+            Whether to sort by ascending or descending order.
 
         Returns
         -------
