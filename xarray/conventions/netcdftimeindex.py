@@ -212,3 +212,7 @@ class NetCDFTimeIndex(pd.Index):
                     (isinstance(result, np.ndarray) and result.size))
         except (KeyError, TypeError, ValueError):
             return False
+
+    def contains(self, key):
+        """Needed for .loc based partial-string indexing"""
+        return self.__contains__(key)
