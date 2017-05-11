@@ -38,6 +38,8 @@ matrix:
   - python: 3.6
     env: CONDA_ENV=py36-pandas-dev
   - python: 3.6
+    env: CONDA_ENV=py36-bottleneck-dev
+  - python: 3.6
     env: CONDA_ENV=py36-condaforge-rc
   allow_failures:
   - python: 3.6
@@ -57,6 +59,8 @@ matrix:
     env: CONDA_ENV=py36-dask-dev
   - python: 3.6
     env: CONDA_ENV=py36-pandas-dev
+  - python: 3.6
+    env: CONDA_ENV=py36-bottleneck-dev
   - python: 3.6
     env: CONDA_ENV=py36-condaforge-rc
 

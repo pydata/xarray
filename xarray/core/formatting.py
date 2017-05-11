@@ -13,7 +13,11 @@ import functools
 
 import numpy as np
 import pandas as pd
-from pandas.tslib import OutOfBoundsDatetime
+try:
+    from pandas.errors import OutOfBoundsDatetime
+except ImportError:
+    # pandas < 0.20
+    from pandas.tslib import OutOfBoundsDatetime
 
 from .options import OPTIONS
 from .pycompat import PY2, unicode_type, bytes_type, dask_array_type
