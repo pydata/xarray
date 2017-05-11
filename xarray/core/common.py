@@ -763,8 +763,25 @@ def ones_like(other, dtype=None):
     return full_like(other, 1, dtype)
 
 
-def is_datetime_like(dtype):
+def is_np_datetime_like(dtype):
     """Check if a dtype is a subclass of the numpy datetime types
     """
     return (np.issubdtype(dtype, np.datetime64) or
             np.issubdtype(dtype, np.timedelta64))
+
+
+def _contains_netcdftime_datetimes(var):
+    """Check if a variable contains netcdftime datetime objects"""
+    from netcdftime._netcdftime import datetime
+    return isinstance(var.data.ravel()[0], datetime)
+
+
+def _contains_datetime_like_objects(var):
+    """Check if a variable contains datetime like objects (either
+    np.datetime64, np.timedelta64, or netcdftime._netcdftime.datetime)"""
+    if is_np_datetime_like(var.dtype):
+        return True
+    try:
+        return _contains_netcdftime_datetimes(var)
+    except ImportError:
+        return False

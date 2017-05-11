@@ -2,7 +2,7 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-from .common import is_datetime_like
+from .common import is_np_datetime_like, _contains_datetime_like_objects
 from .pycompat import dask_array_type
 
 from functools import partial
@@ -18,6 +18,20 @@ def _season_from_months(months):
     seasons = np.array(['DJF', 'MAM', 'JJA', 'SON'])
     months = np.asarray(months)
     return seasons[(months // 3) % 4]
+
+
+def _access_through_netcdftimeindex(values, name):
+    """Coerce an array of datetime-like values to a NetCDFTimeIndex 
+    and access requested datetime component
+    """
+    from ..conventions.netcdftimeindex import NetCDFTimeIndex
+    values_as_netcdftimeindex = NetCDFTimeIndex(values)
+    if name == 'season':
+        months = values_as_netcdftimeindex.month
+        field_values = _season_from_months(months)
+    else:
+        field_values = getattr(values_as_netcdftimeindex, name)
+    return field_values.reshape(values.shape)
 
 
 def _access_through_series(values, name):
@@ -52,12 +66,17 @@ def _get_date_field(values, name, dtype):
         Array-like of datetime fields accessed for each element in values
 
     """
+    if is_np_datetime_like(values.dtype):
+        access_method = _access_through_series
+    else:
+        access_method = _access_through_netcdftimeindex
+
     if isinstance(values, dask_array_type):
         from dask.array import map_blocks
-        return map_blocks(_access_through_series,
+        return map_blocks(access_method,
                           values, name, dtype=dtype)
     else:
-        return _access_through_series(values, name)
+        return access_method(values, name)
 
 
 class DatetimeAccessor(object):
@@ -83,9 +102,11 @@ class DatetimeAccessor(object):
 
      """
     def __init__(self, xarray_obj):
-        if not is_datetime_like(xarray_obj.dtype):
+        if not _contains_datetime_like_objects(xarray_obj):
             raise TypeError("'dt' accessor only available for "
-                            "DataArray with datetime64 or timedelta64 dtype")
+                            "DataArray with datetime64 timedelta64 dtype or "
+                            "for arrays containing netcdftime datetime "
+                            "objects.")
         self._obj = xarray_obj
 
     def _tslib_field_accessor(name, docstring=None, dtype=None):

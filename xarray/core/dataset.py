@@ -21,7 +21,8 @@ from . import duck_array_ops
 from .alignment import align
 from ..conventions import coding
 from .coordinates import DatasetCoordinates, LevelCoordinatesSource, Indexes
-from .common import ImplementsDatasetReduce, BaseDataObject, is_datetime_like
+from .common import (ImplementsDatasetReduce, BaseDataObject,
+                     _contains_datetime_like_objects)
 from .merge import (dataset_update_method, dataset_merge_method,
                     merge_data_and_coords)
 from .utils import (Frozen, SortedKeysDict, maybe_wrap_array, hashable,
@@ -76,7 +77,7 @@ def _get_virtual_variable(variables, key, level_vars=None, dim_sizes=None):
         virtual_var = ref_var
         var_name = key
     else:
-        if is_datetime_like(ref_var.dtype):
+        if _contains_datetime_like_objects(ref_var):
             ref_var = xr.DataArray(ref_var)
             data = getattr(ref_var.dt, var_name).data
         else:
