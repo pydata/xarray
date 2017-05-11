@@ -48,6 +48,7 @@ class TestSafeCastToIndex(TestCase):
             actual = utils.safe_cast_to_index(np.array(dates))
             self.assertArrayEqual(expected, actual)
             self.assertEqual(expected.dtype, actual.dtype)
+            assert isinstance(actual, NetCDFTimeIndex)
 
 
 def test_multiindex_from_product_levels():

@@ -310,6 +310,7 @@ def encode_cf_datetime(dates, units=None, calendar=None):
         if calendar not in _STANDARD_CALENDARS or dates.dtype.kind == 'O':
             # parse with netCDF4 instead
             raise OutOfBoundsDatetime
+
         assert dates.dtype == 'datetime64[ns]'
 
         delta_units = _netcdf_to_numpy_timeunit(delta)
@@ -598,10 +599,16 @@ def _var_as_tuple(var):
     return var.dims, var.data, var.attrs.copy(), var.encoding.copy()
 
 
+def _contains_netcdftimes(var):
+    try:
+        from netcdftime._netcdftime import datetime as ncdatetime
+        return isinstance(var.data.flatten()[0], ncdatetime)
+    except ImportError:
+        return False
+
+
 def maybe_encode_datetime(var):
-    from netcdftime._netcdftime import datetime as ncdatetime
-    is_netcdftime = isinstance(var.data.flatten()[0], ncdatetime)
-    if np.issubdtype(var.dtype, np.datetime64) or is_netcdftime:
+    if np.issubdtype(var.dtype, np.datetime64) or _contains_netcdftimes(var):
         dims, data, attrs, encoding = _var_as_tuple(var)
         (data, units, calendar) = encode_cf_datetime(
             data, encoding.pop('units', None), encoding.pop('calendar', None))

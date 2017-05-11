@@ -279,16 +279,31 @@ class DatasetIOTestCases(object):
                               'days since 1950-01-01')
 
     def test_roundtrip_netcdftime_datetime_data(self):
-        from .test_coding import _all_netcdftime_date_types
-        date_types = _all_netcdftime_date_types()
+        from .test_coding import _non_standard_netcdftime_date_types
+        date_types = _non_standard_netcdftime_date_types()
         for date_type in date_types.values():
             times = [date_type(1, 1, 1), date_type(1, 1, 2)]
             expected = Dataset({'t': ('t', times), 't0': times[0]})
             kwds = {'encoding': {'t0': {'units': 'days since 0001-01-01'}}}
             with self.roundtrip(expected, save_kwargs=kwds) as actual:
-                self.assertDatasetIdentical(expected, actual)
+                expected_t = np.array(times)
+                abs_diff = abs(actual.t.values - expected_t)
+                self.assertTrue((abs_diff <= np.timedelta64(1, 's')).all())
+
+                self.assertEquals(actual.t.encoding['units'],
+                                  'days since    1-01-01 00:00:00')
+                self.assertEquals(actual.t.encoding['calendar'],
+                                  times[0].calendar)
+
+                expected_t0 = np.array([date_type(1, 1, 1)])
+                abs_diff = abs(actual.t0.values - expected_t0)
+                self.assertTrue((abs_diff <= np.timedelta64(1, 's')).all())
+
                 self.assertEquals(actual.t0.encoding['units'],
                                   'days since 0001-01-01')
+                self.assertEquals(actual.t.encoding['calendar'],
+                                  times[0].calendar)
+
 
     def test_roundtrip_timedelta_data(self):
         time_deltas = pd.to_timedelta(['1h', '2h', 'NaT'])
