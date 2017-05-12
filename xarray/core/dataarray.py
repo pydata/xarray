@@ -1791,6 +1791,41 @@ class DataArray(AbstractArray, BaseDataObject):
 
         return type(self)(new_data, new_coords, new_dims)
 
+    def sortby(self, variables, ascending=True):
+        """
+        Sort object by labels or values (along an axis).
+
+        Sorts the dataarray, either along specified dimensions,
+        or according to values of 1-D dataarrays that share dimension
+        with calling object.
+
+        If the input variables are dataarrays, then the dataarrays are aligned
+        (via left-join) to the calling object prior to sorting by cell values.
+        NaNs are sorted to the end, following Numpy convention.
+
+        If multiple sorts along the same dimension is
+        given, numpy's lexsort is performed along that dimension:
+        https://docs.scipy.org/doc/numpy/reference/generated/numpy.lexsort.html
+        and the FIRST key in the sequence is used as the primary sort key,
+        followed by the 2nd key, etc.
+
+        Parameters
+        ----------
+        variables: str, DataArray, or list of either
+            1D DataArray objects or name(s) of 1D variable(s) in
+            coords whose values are used to sort this array.
+        ascending: boolean, optional
+            Whether to sort by ascending or descending order.
+
+        Returns
+        -------
+        sorted: DataArray
+            A new dataarray where all the specified dims are sorted by dim
+            labels.
+        """
+        ds = self._to_temp_dataset().sortby(variables, ascending=ascending)
+        return self._from_temp_dataset(ds)
+
     def quantile(self, q, dim=None, interpolation='linear', keep_attrs=False):
         """Compute the qth quantile of the data along the specified dimension.
 
