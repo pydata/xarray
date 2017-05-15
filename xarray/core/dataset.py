@@ -1138,12 +1138,18 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
                     for k, v in iteritems(indexers)]
 
         variables = OrderedDict()
+        coord_names = self._coord_names
         for name, var in iteritems(self._variables):
             var_indexers = dict((k, v) for k, v in indexers if k in var.dims)
             new_var = var.isel(**var_indexers)
-            if not (drop and name in var_indexers):
+            if not drop and isinstance(new_var, OrderedDict):
+                # new_var is an OrderedDict if a single element is extracted
+                # from MultiIndex. See IndexVariable.__getitem__
+                variables.update(new_var)
+                coord_names = coord_names | set(new_var.keys())
+            elif not (drop and name in var_indexers):
                 variables[name] = new_var
-        coord_names = set(self._coord_names) & set(variables)
+        coord_names = set(coord_names) & set(variables)
         return self._replace_vars_and_dims(variables, coord_names=coord_names)
 
     def sel(self, method=None, tolerance=None, drop=False, **indexers):

@@ -14,7 +14,8 @@ import pandas as pd
 
 from xarray import Variable, IndexVariable, Coordinate, Dataset
 from xarray.core import indexing
-from xarray.core.variable import as_variable, as_compatible_data
+from xarray.core.variable import (as_variable, as_compatible_data,
+                                  variables_from_multiindex)
 from xarray.core.indexing import PandasIndexAdapter, LazilyIndexedArray
 from xarray.core.pycompat import PY3, OrderedDict
 from xarray.core.common import full_like, zeros_like, ones_like
@@ -456,7 +457,12 @@ class VariableSubclassTestCases(object):
     def test_multiindex(self):
         idx = pd.MultiIndex.from_product([list('abc'), [0, 1]])
         v = self.cls('x', idx)
-        self.assertVariableIdentical(Variable((), ('a', 0)), v[0])
+        variables = v[0]  # should returns an OrderedDict
+        if hasattr(self.cls, 'level_names'):
+            self.assertVariableIdentical(Variable((), 'a'),
+                                         variables['x_level_0'])
+        else:
+            self.assertVariableIdentical(Variable((), ('a', 0)), v[0])
         self.assertVariableIdentical(v, v[:])
 
     def test_load(self):
