@@ -1103,8 +1103,14 @@ class TestDataset(TestCase):
         mdata = Dataset(data_vars={'var': ('x', range(8))},
                         coords={'x': mindex})
         selected = mdata.isel(x=0)
-        print(selected)
         self.assertTrue('one' in selected.coords)
+        self.assertTrue('two' in selected.coords)
+        self.assertTrue('three' in selected.coords)
+        # drop
+        selected = mdata.isel(x=0, drop=True)
+        self.assertTrue('one' not in selected.coords)
+        self.assertTrue('two' not in selected.coords)
+        self.assertTrue('three' not in selected.coords)
 
     def test_reindex_like(self):
         data = create_test_data()
