@@ -364,7 +364,8 @@ class GroupBy(object):
         return obj
 
     def _maybe_stack(self, applied):
-        """ This construct MultiIndex if applied does not have dim.
+        """ This constructs MultiIndex if applied does not have dim.
+        It may happen if a single item is selected from MultiIndex-ed array.
         """
         index = self._group.to_index()
         if not isinstance(index, pd.MultiIndex):
