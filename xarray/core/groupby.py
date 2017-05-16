@@ -298,6 +298,7 @@ class GroupBy(object):
             yield self._obj.isel(**{self._group_dim: indices})
 
     def _infer_concat_args(self, applied_example):
+
         if self._group_dim in applied_example.dims:
             coord = self._group
             positions = self._group_indices
@@ -361,6 +362,18 @@ class GroupBy(object):
                 if dim in obj.coords:
                     del obj.coords[dim]
         return obj
+
+    def _maybe_stack(self, applied):
+        """ This construct MultiIndex if applied does not have dim.
+        """
+        index = self._group.to_index()
+        if not isinstance(index, pd.MultiIndex):
+            return applied
+        else:
+            return [ds if self._group_dim in ds.coords
+                    else ds.expand_dims(index.names).\
+                        stack(**{self._group.name:index.names})
+                    for ds in applied]
 
     def fillna(self, value):
         """Fill missing values in this object by group.
@@ -528,6 +541,7 @@ class DataArrayGroupBy(GroupBy, ImplementsArrayReduce):
         """Recombine the applied objects like the original."""
         applied_example, applied = peek_at(applied)
         coord, dim, positions = self._infer_concat_args(applied_example)
+        applied = self._maybe_stack(applied)
         if shortcut:
             combined = self._concat_shortcut(applied, dim, positions)
         else:
@@ -619,6 +633,7 @@ class DatasetGroupBy(GroupBy, ImplementsDatasetReduce):
     def _combine(self, applied):
         """Recombine the applied objects like the original."""
         applied_example, applied = peek_at(applied)
+        applied = self._maybe_stack(applied)
         coord, dim, positions = self._infer_concat_args(applied_example)
         combined = concat(applied, dim)
         combined = _maybe_reorder(combined, dim, positions)
