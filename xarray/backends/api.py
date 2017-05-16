@@ -247,7 +247,7 @@ def open_dataset(filename_or_obj, group=None, decode_cf=True,
             token = tokenize(file_arg, group, decode_cf, mask_and_scale,
                              decode_times, concat_characters, decode_coords,
                              engine, chunks, drop_variables)
-            name_prefix = '%s:%s/' % (filename_or_obj, group or '')
+            name_prefix = 'open_dataset-%s' % token
             ds2 = ds.chunk(chunks, name_prefix=name_prefix, token=token,
                            lock=lock)
             ds2._file_obj = ds._file_obj
