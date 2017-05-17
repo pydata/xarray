@@ -13,8 +13,8 @@ from .variable import Variable, as_variable, IndexVariable, concat as concat_var
 
 
 def concat(objs, dim=None, data_vars='all', coords='different',
-           compat='equals', positions=None, indexers=None, mode=None,
-           concat_over=None):
+           compat='equals', positions=None, prealigned=False,
+           indexers=None,mode=None, concat_over=None):
     """Concatenate xarray objects along a new or existing dimension.
 
     Parameters
@@ -66,6 +66,10 @@ def concat(objs, dim=None, data_vars='all', coords='different',
         List of integer arrays which specifies the integer positions to which
         to assign each dataset along the concatenated dimension. If not
         supplied, objects are concatenated in the provided order.
+    prealigned : bool, optional
+        If True, the objects will be assumed to be already aligned. Coordinates
+        will be taken from the first object and ignored from the subsequent
+        objects.
     indexers, mode, concat_over : deprecated
 
     Returns
@@ -117,7 +121,7 @@ def concat(objs, dim=None, data_vars='all', coords='different',
     else:
         raise TypeError('can only concatenate xarray Dataset and DataArray '
                         'objects, got %s' % type(first_obj))
-    return f(objs, dim, data_vars, coords, compat, positions)
+    return f(objs, dim, data_vars, coords, compat, positions, prealigned)
 
 
 def _calc_concat_dim_coord(dim):
@@ -195,7 +199,8 @@ def _calc_concat_over(datasets, dim, data_vars, coords):
     return concat_over
 
 
-def _dataset_concat(datasets, dim, data_vars, coords, compat, positions):
+def _dataset_concat(datasets, dim, data_vars, coords, compat, positions,
+                    prealigned):
     """
     Concatenate a sequence of datasets along a new or existing dimension
     """
@@ -207,7 +212,10 @@ def _dataset_concat(datasets, dim, data_vars, coords, compat, positions):
 
     dim, coord = _calc_concat_dim_coord(dim)
     datasets = [as_dataset(ds) for ds in datasets]
-    datasets = align(*datasets, join='outer', copy=False, exclude=[dim])
+    if not prealigned:
+        datasets = align(*datasets, join='outer', copy=False, exclude=[dim])
+    else:
+        coords = 'minimal'
 
     concat_over = _calc_concat_over(datasets, dim, data_vars, coords)
 
@@ -228,21 +236,22 @@ def _dataset_concat(datasets, dim, data_vars, coords, compat, positions):
 
     # check that global attributes and non-concatenated variables are fixed
     # across all datasets
-    for ds in datasets[1:]:
-        if (compat == 'identical' and
-                not utils.dict_equiv(ds.attrs, result_attrs)):
-            raise ValueError('dataset global attributes not equal')
-        for k, v in iteritems(ds.variables):
-            if k not in result_vars and k not in concat_over:
-                raise ValueError('encountered unexpected variable %r' % k)
-            elif (k in result_coord_names) != (k in ds.coords):
-                raise ValueError('%r is a coordinate in some datasets but not '
-                                 'others' % k)
-            elif (k in result_vars and k != dim and
-                  not getattr(v, compat)(result_vars[k])):
-                verb = 'equal' if compat == 'equals' else compat
-                raise ValueError(
-                    'variable %r not %s across datasets' % (k, verb))
+    if not prealigned:
+        for ds in datasets[1:]:
+            if (compat == 'identical' and
+                    not utils.dict_equiv(ds.attrs, result_attrs)):
+                raise ValueError('dataset global attributes not equal')
+            for k, v in iteritems(ds.variables):
+                if k not in result_vars and k not in concat_over:
+                    raise ValueError('encountered unexpected variable %r' % k)
+                elif (k in result_coord_names) != (k in ds.coords):
+                    raise ValueError('%r is a coordinate in some datasets but not '
+                                     'others' % k)
+                elif (k in result_vars and k != dim and
+                      not getattr(v, compat)(result_vars[k])):
+                    verb = 'equal' if compat == 'equals' else compat
+                    raise ValueError(
+                        'variable %r not %s across datasets' % (k, verb))
 
     # we've already verified everything is consistent; now, calculate
     # shared dimension sizes so we can expand the necessary variables
