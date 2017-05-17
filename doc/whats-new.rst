@@ -30,6 +30,12 @@ Enhancements
   By `Chun-Wei Yuan <https://github.com/chunweiyuan>`_ and
      `Kyle Heuton <https://github.com/kheuton>`_.
 
+- New backend to open raster files with the
+  `rasterio <https://mapbox.github.io/rasterio/>`_ library.
+  By `Joe Hamman <https://github.com/jhamman>`_,
+  `Nic Wayand <https://github.com/NicWayand>`_ and
+  `Fabien Maussion <https://github.com/fmaussion>`_
+
 Bug fixes
 ~~~~~~~~~
 
