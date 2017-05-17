@@ -1469,6 +1469,7 @@ class TestRasterIO(CFEncodedDataTest, Only32BitTypes, TestCase):
             lon, lat = np.meshgrid(expected['x'], expected['y'])
             expected['lon'] = (('y', 'x'), lon)
             expected['lat'] = (('y', 'x'), lat)
+            expected = expected.set_coords(['lon', 'lat'])
 
             # tests
             assert_allclose(actual.y, expected.y)
@@ -1519,6 +1520,7 @@ class TestRasterIO(CFEncodedDataTest, Only32BitTypes, TestCase):
                  [0.68551428, 0.68552266, 0.68553103, 0.68553937]])
             expected['lon'] = (('y', 'x'), lon)
             expected['lat'] = (('y', 'x'), lat)
+            expected = expected.set_coords(['lon', 'lat'])
 
             # tests
             assert_allclose(actual.y, expected.y)
