@@ -1458,7 +1458,7 @@ class TestRasterIO(CFEncodedDataTest, Only32BitTypes, TestCase):
                     transform=transform,
                     dtype=rasterio.float32) as s:
                 s.write(data, indexes=1)
-            actual = xr.open_rasterio(tmp_file)
+            actual = xr.open_rasterio(tmp_file, add_latlon=True)
 
             # ref
             expected = Dataset()
@@ -1499,7 +1499,7 @@ class TestRasterIO(CFEncodedDataTest, Only32BitTypes, TestCase):
                     transform=transform,
                     dtype=rasterio.float32) as s:
                 s.write(data)
-            actual = xr.open_rasterio(tmp_file)
+            actual = xr.open_rasterio(tmp_file, add_latlon=True)
 
             # ref
             expected = Dataset()
@@ -1548,7 +1548,7 @@ class TestRasterIO(CFEncodedDataTest, Only32BitTypes, TestCase):
                     transform=transform,
                     dtype=rasterio.float32) as s:
                 s.write(data)
-            actual = xr.open_rasterio(tmp_file, add_latlon=False)
+            actual = xr.open_rasterio(tmp_file)
             assert 'lon' not in actual
             assert 'lat' not in actual
 

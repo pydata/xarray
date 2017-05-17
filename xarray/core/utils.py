@@ -531,4 +531,4 @@ def add_latlon_coords_from_crs(ds, crs=None):
                           attrs={'units': 'degrees_north',
                                  'long_name': 'latitude',
                                  'standard_name': 'latitude'})
-    return ds
+    return ds.set_coords(['lon', 'lat'])

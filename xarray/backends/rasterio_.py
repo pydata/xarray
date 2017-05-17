@@ -60,8 +60,8 @@ class RasterioArrayWrapper(NDArrayMixin):
                     raise IndexError(_error_mess)
             else:
                 if is_scalar(k):
-                    # windowed operations will always return an array which
-                    # we will have to squeeze later on
+                    # windowed operations will always return an array
+                    # we will have to squeeze it later
                     squeeze_axis.append(i+1)
                 k = np.asarray(k).flatten()
                 start = k[0]
@@ -81,7 +81,6 @@ class RasterioDataStore(AbstractDataStore):
     """
     def __init__(self, filename, mode='r'):
 
-        # TODO: is the rasterio.Env() really necessary, and if yes: when?
         with rasterio.Env():
             self.ds = rasterio.open(filename, mode=mode)
 

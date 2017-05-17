@@ -318,10 +318,27 @@ def open_dataset(filename_or_obj, group=None, decode_cf=True,
     return maybe_decode_store(store)
 
 
-def open_rasterio(filename, add_latlon=True):
+def open_rasterio(filename, add_latlon=False):
+    """Open a file with RasterIO (experimental).
 
-    store = backends.RasterioDataStore(filename)
-    ds = conventions.decode_cf(store)
+    This should work with any file that rasterio can open (typically: 
+    geoTIFF). The x and y coordinates are generated automatically out of the 
+    file's geoinformation.
+
+    Parameters
+    ----------
+    filename : str
+        path to the file to open
+    add_latlon : bool, optional
+        if the file ships with valid geoinformation, longitudes and latitudes
+        can be computed and added to the dataset as non-dimension coordinates
+
+    Returns
+    -------
+    dataset : Dataset
+        The newly created dataset.
+    """
+    ds = conventions.decode_cf(backends.RasterioDataStore(filename))
     if add_latlon:
         from ..core.utils import add_latlon_coords_from_crs
         ds = add_latlon_coords_from_crs(ds)

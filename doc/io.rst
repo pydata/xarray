@@ -384,6 +384,48 @@ over the network until we look at particular values:
 
 .. image:: _static/opendap-prism-tmax.png
 
+.. _io.rasterio:
+
+Rasterio
+--------
+
+GeoTIFFs and other gridded raster datasets can be opened using `rasterio`_, if
+rasterio is installed. Here is an example of how to use
+:py:func:`~xarray.open_rasterio` to read one of rasterio's `test files`_:
+
+.. ipython::
+    :verbatim:
+
+    In [7]: rio = xr.open_rasterio('RGB.byte.tif', add_latlon=True)
+
+    In [8]: rio
+    Out[8]:
+    <xarray.Dataset>
+    Dimensions:  (band: 3, x: 791, y: 718)
+    Coordinates:
+      * y        (y) float64 2.827e+06 2.827e+06 2.826e+06 2.826e+06 2.826e+06 ...
+      * x        (x) float64 1.02e+05 1.023e+05 1.026e+05 1.029e+05 1.032e+05 ...
+      * band     (band) int64 1 2 3
+        lon      (y, x) float64 -78.96 -78.96 -78.95 -78.95 -78.95 -78.94 -78.94 ...
+        lat      (y, x) float64 25.51 25.51 25.51 25.51 25.51 25.51 25.51 25.51 ...
+    Data variables:
+        raster   (band, y, x) uint8 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 ...
+    Attributes:
+        crs:      CRS({'init': 'epsg:32618'})
+
+    In [6]: ds.raster.sel(band=1).plot()
+
+.. image:: _static/rasterio_example.png
+
+.. warning::
+
+    This feature has been added in xarray v0.9.6 and should still be
+    considered as being experimental. Please report any bug you may find
+    on xarray's github repository.
+
+.. _rasterio: https://mapbox.github.io/rasterio/
+.. _test files: https://github.com/mapbox/rasterio/blob/master/tests/data/RGB.byte.tif
+
 .. _io.pynio:
 
 Formats supported by PyNIO
