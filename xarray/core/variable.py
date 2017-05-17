@@ -1342,10 +1342,8 @@ def variables_from_multiindex(dims, data, attrs=None, encoding=None,
     dims: tuples, mainly comes from IndexVariable.level_names
     data: 0d-np.ndarray which contains a set of level_values.
     """
-    # needs flattened?
-    data = data.flatten()[0]  # tuple
     variables = OrderedDict()
-    for dim, value in zip(dims, data):
+    for dim, value in zip(dims, data.item()):
         variables[dim] = Variable((), value, attrs, encoding, fastpath)
     return variables
 
