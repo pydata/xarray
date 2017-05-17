@@ -239,14 +239,16 @@ def open_dataset(filename_or_obj, group=None, decode_cf=True,
                 else:
                     raise
 
+            # if passed an actual file path, augment the token with
+            # the file modification time
             if (isinstance(filename_or_obj, basestring) and
                     not is_remote_uri(filename_or_obj)):
-                file_arg = os.path.getmtime(filename_or_obj)
+                mtime = os.path.getmtime(filename_or_obj)
             else:
-                file_arg = filename_or_obj
-            token = tokenize(file_arg, group, decode_cf, mask_and_scale,
-                             decode_times, concat_characters, decode_coords,
-                             engine, chunks, drop_variables)
+                mtime = None
+            token = tokenize(filename_or_obj, mtime, group, decode_cf,
+                             mask_and_scale, decode_times, concat_characters,
+                             decode_coords, engine, chunks, drop_variables)
             name_prefix = 'open_dataset-%s' % token
             ds2 = ds.chunk(chunks, name_prefix=name_prefix, token=token,
                            lock=lock)
