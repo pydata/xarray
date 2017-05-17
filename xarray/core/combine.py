@@ -293,7 +293,7 @@ def _dataset_concat(datasets, dim, data_vars, coords, compat, positions,
 
 
 def _dataarray_concat(arrays, dim, data_vars, coords, compat,
-                      positions):
+                      positions, prealigned):
     arrays = list(arrays)
 
     if data_vars != 'all':
@@ -312,7 +312,7 @@ def _dataarray_concat(arrays, dim, data_vars, coords, compat,
         datasets.append(arr._to_temp_dataset())
 
     ds = _dataset_concat(datasets, dim, data_vars, coords, compat,
-                         positions)
+                         positions, prealigned)
     return arrays[0]._from_temp_dataset(ds, name)
 
 
