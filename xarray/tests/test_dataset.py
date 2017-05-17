@@ -1096,12 +1096,10 @@ class TestDataset(TestCase):
 
         self.assertDatasetIdentical(mdata.sel(x={'one': 'a', 'two': 1}),
                                     mdata.sel(one='a', two=1))
-        print(mdata.sel(one='a'))
         self.assertTrue('one' in mdata.sel(one='a').coords)
         self.assertTrue('one' in mdata.sel(one='a', two=1).coords)
         self.assertTrue('two' in mdata.sel(one='a', two=1).coords)
         self.assertTrue('three' in mdata.sel(one='a', two=1, three=-1).coords)
-
 
     def test_isel_multiindex(self):
         mindex = pd.MultiIndex.from_product([['a', 'b'], [1, 2], [-1, -2]],

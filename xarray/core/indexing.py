@@ -265,8 +265,11 @@ def get_dim_indexers(data_obj, indexers):
 
 def remap_label_indexers(data_obj, indexers, method=None, tolerance=None):
     """Given an xarray data object and label based indexers, return a mapping
-    of equivalent location based indexers. Also return a mapping of updated
-    pandas index objects (in case of multi-index level drop).
+    of equivalent location based indexers.
+    In case of multi-index level drop, it also returns
+    (new_indexes) a mapping of updated pandas index objects and
+    (selected_dims) a mapping from the original dims to selected (dropped)
+    dims.
     """
     if method is not None and not isinstance(method, str):
         raise TypeError('``method`` must be a string')

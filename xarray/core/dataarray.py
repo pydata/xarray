@@ -103,8 +103,10 @@ class _LocIndexer(object):
         return indexing.remap_label_indexers(self.data_array, key)
 
     def __getitem__(self, key):
-        pos_indexers, new_indexes, _ = self._remap_key(key)
-        return self.data_array[pos_indexers]._replace_indexes(new_indexes)
+        pos_indexers, new_indexes, selected_dims = self._remap_key(key)
+        ds = self.data_array._to_temp_dataset().isel(**pos_indexers)
+        return self.data_array._from_temp_dataset(
+            ds._replace_indexes(new_indexes, selected_dims))
 
     def __setitem__(self, key, value):
         pos_indexers, _, _ = self._remap_key(key)
@@ -255,23 +257,6 @@ class DataArray(AbstractArray, BaseDataObject):
             coords = OrderedDict((k, v) for k, v in self._coords.items()
                                  if set(v.dims) <= allowed_dims)
         return self._replace(variable, coords, name)
-
-    def _replace_indexes(self, indexes):
-        if not len(indexes):
-            return self
-        coords = self._coords.copy()
-        for name, idx in indexes.items():
-            coords[name] = IndexVariable(name, idx)
-        obj = self._replace(coords=coords)
-
-        # switch from dimension to level names, if necessary
-        dim_names = {}
-        for dim, idx in indexes.items():
-            if not isinstance(idx, pd.MultiIndex) and idx.name != dim:
-                dim_names[dim] = idx.name
-        if dim_names:
-            obj = obj.rename(dim_names)
-        return obj
 
     __this_array = _ThisArray()
 
@@ -682,8 +667,9 @@ class DataArray(AbstractArray, BaseDataObject):
         pos_indexers, new_indexes, selected_dims = \
             indexing.remap_label_indexers(
                 self, indexers, method=method, tolerance=tolerance)
-        result = self.isel(drop=drop, **pos_indexers)
-        return result._replace_indexes(new_indexes)
+        ds = self._to_temp_dataset().isel(drop=drop, **pos_indexers)
+        return self._from_temp_dataset(
+            ds._replace_indexes(new_indexes, selected_dims))
 
     def isel_points(self, dim='points', **indexers):
         """Return a new DataArray whose dataset is given by pointwise integer

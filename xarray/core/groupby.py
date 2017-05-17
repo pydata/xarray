@@ -298,7 +298,6 @@ class GroupBy(object):
             yield self._obj.isel(**{self._group_dim: indices})
 
     def _infer_concat_args(self, applied_example):
-
         if self._group_dim in applied_example.dims:
             coord = self._group
             positions = self._group_indices
@@ -364,7 +363,8 @@ class GroupBy(object):
         return obj
 
     def _maybe_stack(self, applied):
-        """ This constructs MultiIndex if applied does not have dim.
+        """
+        This constructs MultiIndex if 'applied' does not have self._group_dim.
         It may happen if a single item is selected from MultiIndex-ed array.
         """
         if not hasattr(self._group, 'to_index'):
@@ -374,8 +374,8 @@ class GroupBy(object):
             return applied
         else:
             return [ds if self._group_dim in ds.coords
-                    else ds.expand_dims(index.names).\
-                        stack(**{self._group.name:index.names})
+                    else ds.expand_dims(index.names).stack(
+                        **{self._group.name: index.names})
                     for ds in applied]
 
     def fillna(self, value):

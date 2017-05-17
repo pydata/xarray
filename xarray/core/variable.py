@@ -1205,7 +1205,7 @@ class IndexVariable(Variable):
         if not hasattr(values, 'ndim') or values.ndim == 0:
             level_names = self.level_names
             if level_names:
-                # In case of a single item is selected from MultiIndex,
+                # If a single item is selected from MultiIndex,
                 # returns an OrderedDict with multiple scalar variables
                 return variables_from_multiindex(level_names, values,
                                                  self._attrs, self._encoding)
@@ -1330,8 +1330,9 @@ class IndexVariable(Variable):
     def name(self, value):
         raise AttributeError('cannot modify name of IndexVariable in-place')
 
+
 def variables_from_multiindex(dims, data, attrs=None, encoding=None,
-                                     fastpath=False):
+                              fastpath=False):
     """ Construct an OrderedDict from a single item of MultiIndex.
     keys :level_names
     items: Variable with zero-dimension.

@@ -684,6 +684,24 @@ class TestDataArray(TestCase):
 
         self.assertDataArrayIdentical(mdata.sel(x={'one': 'a', 'two': 1}),
                                       mdata.sel(one='a', two=1))
+        self.assertTrue('one' in mdata.sel(one='a').coords)
+        self.assertTrue('one' in mdata.sel(one='a', two=1).coords)
+        self.assertTrue('two' in mdata.sel(one='a', two=1).coords)
+        self.assertTrue('three' in mdata.sel(one='a', two=1, three=-1).coords)
+
+    def test_isel_multiindex(self):
+        mindex = pd.MultiIndex.from_product([['a', 'b'], [1, 2], [-1, -2]],
+                                            names=('one', 'two', 'three'))
+        mdata = DataArray(range(8), dims=['x'], coords={'x': mindex})
+        selected = mdata.isel(x=0)
+        self.assertTrue('one' in selected.coords)
+        self.assertTrue('two' in selected.coords)
+        self.assertTrue('three' in selected.coords)
+        # drop
+        selected = mdata.isel(x=0, drop=True)
+        self.assertTrue('one' not in selected.coords)
+        self.assertTrue('two' not in selected.coords)
+        self.assertTrue('three' not in selected.coords)
 
     def test_virtual_default_coords(self):
         array = DataArray(np.zeros((5,)), dims='x')

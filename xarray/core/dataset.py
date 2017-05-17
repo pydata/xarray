@@ -577,10 +577,11 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
 
     def _replace_indexes(self, indexes, selected_indexes={}):
         """
-        Replace indexes by indexes, which is a dict mapping the original dim
-        (name) to new dim (pandas.index).
+        Replace coords and dims by indexes, which is a dict mapping
+        the original dim (str) to new dim (pandas.index).
         selected_indexes is a dict which maps the original dims to the
-        selected dims that would become scalar coordinates.
+        selected dims that will be scalar coordinates, because they were
+        selected.
         """
         if not len(indexes):
             return self
@@ -591,7 +592,10 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
                 _, _, ary = _get_virtual_variable(
                                 variables, sd, level_vars=self._level_coords)
                 variables[sd] = ary[0]
-                coord_names = coord_names | set(sd)
+                if coord_names is None:
+                    coord_names = set([sd, ])
+                else:
+                    coord_names.add(sd)
         for name, idx in indexes.items():
             variables[name] = IndexVariable(name, idx)
         obj = self._replace_vars_and_dims(variables, coord_names=coord_names)
@@ -1222,11 +1226,11 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         Dataset.isel_points
         DataArray.sel
         """
-        pos_indexers, new_indexes, selected_indexes = \
+        pos_indexers, new_indexes, selected_dims = \
             indexing.remap_label_indexers(
                 self, indexers, method=method, tolerance=tolerance)
         result = self.isel(drop=drop, **pos_indexers)
-        return result._replace_indexes(new_indexes, selected_indexes)
+        return result._replace_indexes(new_indexes, selected_dims)
 
     def isel_points(self, dim='points', **indexers):
         # type: (...) -> Dataset

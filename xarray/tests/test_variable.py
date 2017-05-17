@@ -14,8 +14,7 @@ import pandas as pd
 
 from xarray import Variable, IndexVariable, Coordinate, Dataset
 from xarray.core import indexing
-from xarray.core.variable import (as_variable, as_compatible_data,
-                                  variables_from_multiindex)
+from xarray.core.variable import as_variable, as_compatible_data
 from xarray.core.indexing import PandasIndexAdapter, LazilyIndexedArray
 from xarray.core.pycompat import PY3, OrderedDict
 from xarray.core.common import full_like, zeros_like, ones_like
