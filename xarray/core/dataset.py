@@ -575,13 +575,26 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
             obj = self._construct_direct(variables, coord_names, dims, attrs)
         return obj
 
-    def _replace_indexes(self, indexes):
+    def _replace_indexes(self, indexes, selected_indexes={}):
+        """
+        Replace indexes by indexes, which is a dict mapping the original dim
+        (name) to new dim (pandas.index).
+        selected_indexes is a dict which maps the original dims to the
+        selected dims that would become scalar coordinates.
+        """
         if not len(indexes):
             return self
         variables = self._variables.copy()
+        coord_names = self._coord_names.copy()
+        for dim, selected_dim in selected_indexes.items():
+            for sd in selected_dim:
+                _, _, ary = _get_virtual_variable(
+                                variables, sd, level_vars=self._level_coords)
+                variables[sd] = ary[0]
+                coord_names = coord_names | set(sd)
         for name, idx in indexes.items():
             variables[name] = IndexVariable(name, idx)
-        obj = self._replace_vars_and_dims(variables)
+        obj = self._replace_vars_and_dims(variables, coord_names=coord_names)
 
         # switch from dimension to level names, if necessary
         dim_names = {}
@@ -1209,11 +1222,11 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         Dataset.isel_points
         DataArray.sel
         """
-        pos_indexers, new_indexes = indexing.remap_label_indexers(
-            self, indexers, method=method, tolerance=tolerance
-        )
+        pos_indexers, new_indexes, selected_indexes = \
+            indexing.remap_label_indexers(
+                self, indexers, method=method, tolerance=tolerance)
         result = self.isel(drop=drop, **pos_indexers)
-        return result._replace_indexes(new_indexes)
+        return result._replace_indexes(new_indexes, selected_indexes)
 
     def isel_points(self, dim='points', **indexers):
         # type: (...) -> Dataset
@@ -1399,7 +1412,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         Dataset.isel_points
         DataArray.sel_points
         """
-        pos_indexers, _ = indexing.remap_label_indexers(
+        pos_indexers, _, _ = indexing.remap_label_indexers(
             self, indexers, method=method, tolerance=tolerance
         )
         return self.isel_points(dim=dim, **pos_indexers)

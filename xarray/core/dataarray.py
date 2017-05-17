@@ -103,11 +103,11 @@ class _LocIndexer(object):
         return indexing.remap_label_indexers(self.data_array, key)
 
     def __getitem__(self, key):
-        pos_indexers, new_indexes = self._remap_key(key)
+        pos_indexers, new_indexes, _ = self._remap_key(key)
         return self.data_array[pos_indexers]._replace_indexes(new_indexes)
 
     def __setitem__(self, key, value):
-        pos_indexers, _ = self._remap_key(key)
+        pos_indexers, _, _ = self._remap_key(key)
         self.data_array[pos_indexers] = value
 
 
@@ -679,9 +679,9 @@ class DataArray(AbstractArray, BaseDataObject):
         Dataset.sel
         DataArray.isel
         """
-        pos_indexers, new_indexes = indexing.remap_label_indexers(
-            self, indexers, method=method, tolerance=tolerance
-        )
+        pos_indexers, new_indexes, selected_dims = \
+            indexing.remap_label_indexers(
+                self, indexers, method=method, tolerance=tolerance)
         result = self.isel(drop=drop, **pos_indexers)
         return result._replace_indexes(new_indexes)
 

@@ -367,6 +367,8 @@ class GroupBy(object):
         """ This constructs MultiIndex if applied does not have dim.
         It may happen if a single item is selected from MultiIndex-ed array.
         """
+        if not hasattr(self._group, 'to_index'):
+            return applied
         index = self._group.to_index()
         if not isinstance(index, pd.MultiIndex):
             return applied
