@@ -6,7 +6,7 @@ except ImportError:
     rasterio = False
 
 from .. import Variable
-from ..core.utils import FrozenOrderedDict, Frozen, NDArrayMixin
+from ..core.utils import FrozenOrderedDict, Frozen, NDArrayMixin, is_scalar
 from ..core import indexing
 from ..core.pycompat import OrderedDict, suppress
 
@@ -14,9 +14,10 @@ from .common import AbstractDataStore
 
 _rio_varname = 'raster'
 
-_error_mess = 'The kind of indexing operation you are trying to do is not '
-'valid on RasterIO files. Try to load your data with ds.load()'
-'first.'
+_error_mess = ('The kind of indexing operation you are trying to do is not '
+               'valid on RasterIO files. Try to load your data with ds.load()'
+               'first.')
+
 
 class RasterioArrayWrapper(NDArrayMixin):
     def __init__(self, ds):
@@ -48,15 +49,20 @@ class RasterioArrayWrapper(NDArrayMixin):
         # be sure we give out a list
         bands = (np.asarray(bands) + 1).tolist()
 
-        # but other dims can
+        # but other dims can only be windowed
         window = []
-        for k, n in zip(key[1:], self.shape[1:]):
+        squeeze_axis = []
+        for i, (k, n) in enumerate(zip(key[1:], self.shape[1:])):
             if isinstance(k, slice):
                 start = k.start if k.start is not None else 0
                 stop = k.stop if k.stop is not None else n
                 if k.step is not None and k.step != 1:
                     raise IndexError(_error_mess)
             else:
+                if is_scalar(k):
+                    # windowed operations will always return an array which
+                    # we will have to squeeze later on
+                    squeeze_axis.append(i+1)
                 k = np.asarray(k).flatten()
                 start = k[0]
                 stop = k[-1] + 1
@@ -64,7 +70,10 @@ class RasterioArrayWrapper(NDArrayMixin):
                     raise IndexError(_error_mess)
             window.append((start, stop))
 
-        return self.ds.read(bands, window=window)
+        out = self.ds.read(bands, window=window)
+        if squeeze_axis:
+            out = np.squeeze(out, axis=squeeze_axis)
+        return out
 
 
 class RasterioDataStore(AbstractDataStore):

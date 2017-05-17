@@ -491,8 +491,16 @@ def ensure_us_time_resolution(val):
     return val
 
 
-def get_latlon_coords_from_crs(ds, crs=None):
-    """Currently very specific function, but coul dbe generalized."""
+def add_latlon_coords_from_crs(ds, crs=None):
+    """Computes the longitudes and latitudes out of the x and y coordinates 
+    of a dataset and a coordinate reference system (crs). If crs isn't provided
+    it will look for "crs" in the dataset's attributes. 
+    
+    Needs rasterIO to be installe.
+    
+    Note that this function could be generalized to other coordinates or 
+    for all datasets with a valid crs.
+    """
 
     from .. import DataArray
 

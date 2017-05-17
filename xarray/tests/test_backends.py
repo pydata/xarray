@@ -1444,7 +1444,6 @@ class TestRasterIO(CFEncodedDataTest, Only32BitTypes, TestCase):
 
         import rasterio
         from rasterio.transform import from_origin
-        from ..core.utils import get_latlon_coords_from_crs
 
         # Create a geotiff file in latlong proj
         with create_tmp_file(suffix='.tif') as tmp_file:
@@ -1459,7 +1458,7 @@ class TestRasterIO(CFEncodedDataTest, Only32BitTypes, TestCase):
                     transform=transform,
                     dtype=rasterio.float32) as s:
                 s.write(data, indexes=1)
-            actual = xr.open_dataset(tmp_file, engine='rasterio')
+            actual = xr.open_rasterio(tmp_file)
 
             # ref
             expected = Dataset()
@@ -1475,8 +1474,6 @@ class TestRasterIO(CFEncodedDataTest, Only32BitTypes, TestCase):
             assert_allclose(actual.y, expected.y)
             assert_allclose(actual.x, expected.x)
             assert_allclose(actual.raster, expected.raster)
-
-            actual = get_latlon_coords_from_crs(actual)
             assert_allclose(actual.lon, expected.lon)
             assert_allclose(actual.lat, expected.lat)
 
@@ -1486,7 +1483,6 @@ class TestRasterIO(CFEncodedDataTest, Only32BitTypes, TestCase):
 
         import rasterio
         from rasterio.transform import from_origin
-        from ..core.utils import get_latlon_coords_from_crs
 
         # Create a geotiff file in utm proj
         with create_tmp_file(suffix='.tif') as tmp_file:
@@ -1503,7 +1499,7 @@ class TestRasterIO(CFEncodedDataTest, Only32BitTypes, TestCase):
                     transform=transform,
                     dtype=rasterio.float32) as s:
                 s.write(data)
-            actual = xr.open_dataset(tmp_file, engine='rasterio')
+            actual = xr.open_rasterio(tmp_file)
 
             # ref
             expected = Dataset()
@@ -1528,8 +1524,6 @@ class TestRasterIO(CFEncodedDataTest, Only32BitTypes, TestCase):
             assert_allclose(actual.y, expected.y)
             assert_allclose(actual.x, expected.x)
             assert_allclose(actual.raster, expected.raster)
-
-            actual = get_latlon_coords_from_crs(actual)
             assert_allclose(actual.lon, expected.lon)
             assert_allclose(actual.lat, expected.lat)
 
@@ -1554,7 +1548,9 @@ class TestRasterIO(CFEncodedDataTest, Only32BitTypes, TestCase):
                     transform=transform,
                     dtype=rasterio.float32) as s:
                 s.write(data)
-            actual = xr.open_dataset(tmp_file, engine='rasterio')
+            actual = xr.open_rasterio(tmp_file, add_latlon=False)
+            assert 'lon' not in actual
+            assert 'lat' not in actual
 
             # ref
             expected = Dataset()
@@ -1583,23 +1579,47 @@ class TestRasterIO(CFEncodedDataTest, Only32BitTypes, TestCase):
             assert_allclose(_ac.x, _ex.x)
             assert_allclose(_ac.raster, _ex.raster)
 
+            # Selecting lists of bands is fine
+            _ex = expected.isel(band=[1, 2])
+            _ac = actual.isel(band=[1, 2])
+            assert_allclose(_ac.y, _ex.y)
+            assert_allclose(_ac.x, _ex.x)
+            assert_allclose(_ac.band, _ex.band)
+            assert_allclose(_ac.raster, _ex.raster)
+
+            # but on x and y only windowed operations are allowed
+            with self.assertRaisesRegexp(IndexError, 'not valid on RasterIO'):
+                _ = actual.isel(x=[2, 4], y=[1, 3]).raster.values
+
             _ex = expected.isel(x=1, y=2)
             _ac = actual.isel(x=1, y=2)
             assert_allclose(_ac.y, _ex.y)
             assert_allclose(_ac.x, _ex.x)
-            # TODO: this doesnt work properly because of the shape
-            # assert_allclose(_ac.raster, _ex.raster)
-            np.testing.assert_allclose(_ac.raster.values.flatten(),
-                                       _ex.raster.values)
+            assert_allclose(_ac.raster, _ex.raster)
 
             _ex = expected.isel(band=0, x=1, y=2)
             _ac = actual.isel(band=0, x=1, y=2)
             assert_allclose(_ac.y, _ex.y)
             assert_allclose(_ac.x, _ex.x)
-            # TODO: this doesnt work properly because of the shape
-            # assert_allclose(_ac.raster, _ex.raster)
-            np.testing.assert_allclose(_ac.raster.values.flatten(),
-                                       _ex.raster.values)
+            assert_allclose(_ac.raster, _ex.raster)
+
+            _ex = expected.isel(band=0, x=1, y=slice(5, 7))
+            _ac = actual.isel(band=0, x=1, y=slice(5, 7))
+            assert_allclose(_ac.y, _ex.y)
+            assert_allclose(_ac.x, _ex.x)
+            assert_allclose(_ac.raster, _ex.raster)
+
+            _ex = expected.isel(band=0, x=slice(2, 5), y=2)
+            _ac = actual.isel(band=0, x=slice(2, 5), y=2)
+            assert_allclose(_ac.y, _ex.y)
+            assert_allclose(_ac.x, _ex.x)
+            assert_allclose(_ac.raster, _ex.raster)
+
+            _ex = expected.isel(band=[0], x=slice(2, 5), y=[2])
+            _ac = actual.isel(band=[0], x=slice(2, 5), y=[2])
+            assert_allclose(_ac.y, _ex.y)
+            assert_allclose(_ac.x, _ex.x)
+            assert_allclose(_ac.raster, _ex.raster)
 
 
 class TestEncodingInvalid(TestCase):
