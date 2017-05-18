@@ -1203,12 +1203,6 @@ class IndexVariable(Variable):
         key = self._item_key_to_tuple(key)
         values = self._indexable_data[key]
         if not hasattr(values, 'ndim') or values.ndim == 0:
-            level_names = self.level_names
-            if level_names:
-                # If a single item is selected from MultiIndex,
-                # returns an OrderedDict with multiple scalar variables
-                return variables_from_multiindex(level_names, values,
-                                                 self._attrs, self._encoding)
             return Variable((), values, self._attrs, self._encoding)
         else:
             return type(self)(self.dims, values, self._attrs,
@@ -1329,23 +1323,6 @@ class IndexVariable(Variable):
     @name.setter
     def name(self, value):
         raise AttributeError('cannot modify name of IndexVariable in-place')
-
-
-def variables_from_multiindex(dims, data, attrs=None, encoding=None,
-                              fastpath=False):
-    """ Construct an OrderedDict from a single item of MultiIndex.
-    keys :level_names
-    items: Variable with zero-dimension.
-    This conversion is necessary because pandas.MultiIndex losts its
-    hierarchical structure if a single element is selected.
-
-    dims: tuples, mainly comes from IndexVariable.level_names
-    data: 0d-np.ndarray which contains a set of level_values.
-    """
-    variables = OrderedDict()
-    for dim, value in zip(dims, data.item()):
-        variables[dim] = Variable((), value, attrs, encoding, fastpath)
-    return variables
 
 # for backwards compatibility
 Coordinate = utils.alias(IndexVariable, 'Coordinate')

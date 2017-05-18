@@ -456,13 +456,7 @@ class VariableSubclassTestCases(object):
     def test_multiindex(self):
         idx = pd.MultiIndex.from_product([list('abc'), [0, 1]])
         v = self.cls('x', idx)
-        variables = v[0]
-        if hasattr(self.cls, 'level_names'):
-            # returns an OrderedDict if a single item is selected.
-            self.assertVariableIdentical(Variable((), 'a'),
-                                         variables['x_level_0'])
-        else:
-            self.assertVariableIdentical(Variable((), ('a', 0)), v[0])
+        self.assertVariableIdentical(Variable((), ('a', 0)), v[0])
         actual = v[0:1]
         value = np.ndarray((1,), dtype=np.dtype('O'))
         value[0] = ('a', 0)

@@ -1100,6 +1100,9 @@ class TestDataset(TestCase):
         self.assertTrue('one' in mdata.sel(one='a', two=1).coords)
         self.assertTrue('two' in mdata.sel(one='a', two=1).coords)
         self.assertTrue('three' in mdata.sel(one='a', two=1, three=-1).coords)
+        # make sure Multiindex coordinate can be a DataArray and it also
+        # as a Multiindex-ed array
+        self.assertTrue('one' in mdata['x'].isel(x=0).coords)
 
     def test_isel_multiindex(self):
         mindex = pd.MultiIndex.from_product([['a', 'b'], [1, 2], [-1, -2]],

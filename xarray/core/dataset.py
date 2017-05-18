@@ -248,6 +248,19 @@ def as_dataset(obj):
     return obj
 
 
+def _maybe_split(old_var, old_name, new_var):
+    """
+    Returns an OrderedDict if a new_var is a single element chosen from
+    MultiIndex. Otherwise, returns an empty OrderedDict.
+    """
+    variables = OrderedDict()
+    level_names = getattr(old_var, 'level_names', None)
+    if len(new_var.dims) == 0 and level_names:
+        for name, v in zip(level_names, new_var.item()):
+            variables[name] = Variable((), v)
+    return variables
+
+
 class DataVariables(Mapping, formatting.ReprMixin):
     def __init__(self, dataset):
         self._dataset = dataset
@@ -1155,17 +1168,15 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
                     for k, v in iteritems(indexers)]
 
         variables = OrderedDict()
-        coord_names = self._coord_names
+        coord_names = self._coord_names.copy()
         for name, var in iteritems(self._variables):
             var_indexers = dict((k, v) for k, v in indexers if k in var.dims)
             new_var = var.isel(**var_indexers)
             if not (drop and name in var_indexers):
-                if isinstance(new_var, OrderedDict):
-                    # new_var is an OrderedDict if a single element is
-                    # extracted from MultiIndex. See IndexVariable.__getitem__
-                    variables.update(new_var)
-                    coord_names = coord_names | set(new_var.keys())
-                else:
+                level_vars = _maybe_split(var, name, new_var)
+                coord_names = coord_names | set(level_vars)
+                variables.update(level_vars)
+                if not level_vars or name not in self._coord_names:
                     variables[name] = new_var
         coord_names = set(coord_names) & set(variables)
         return self._replace_vars_and_dims(variables, coord_names=coord_names)
