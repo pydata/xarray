@@ -7,7 +7,7 @@ Multiple plots and map projections
 Control the map projection parameters on multiple axes
 
 This example illustrates how to plot multiple maps and control their extent
-and aspect ratio so that the map preserves the its aspect ratio.
+and aspect ratio.
 
 For more details see `this discussion`_ on github.
 
@@ -35,7 +35,7 @@ for ax in p.axes.flat:
     ax.coastlines()
     ax.set_extent([-160, -30, 5, 75])
     # Without this aspect attributes the maps will look chaotic and the
-    # "extent" attribute above might be ignored
+    # "extent" attribute above will be ignored
     ax.set_aspect('equal', 'box-forced')
 
 plt.show()

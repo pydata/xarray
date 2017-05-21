@@ -22,7 +22,7 @@ air.plot(ax=ax1, cbar_kwargs={'label':'K'})
 ax1.set_title('Kelvins: default')
 ax2.set_xlabel('')
 
-# The secon plot (in celsius) now chooses "BuRd" and center min/max arounf 0
+# The second plot (in celsius) now chooses "BuRd" and centers min/max around 0
 airc = air - 273.15
 airc.plot(ax=ax2, cbar_kwargs={'label':'°C'})
 ax2.set_title('Celsius: default')
@@ -31,12 +31,13 @@ ax2.set_ylabel('')
 
 # The center doesn't have to be 0
 air.plot(ax=ax3, center=273.15, cbar_kwargs={'label':'K'})
-ax3.set_title('Kelvins: Set center to a value')
+ax3.set_title('Kelvins: center=273.15')
 
 # Or it can be ignored
 airc.plot(ax=ax4, center=False, cbar_kwargs={'label':'°C'})
-ax4.set_title('Celsius: set center to False')
+ax4.set_title('Celsius: center=False')
 ax4.set_ylabel('')
 
+# Mke it nice
 plt.tight_layout()
 plt.show()

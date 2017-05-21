@@ -51,7 +51,6 @@ Documentation
    io
    dask
    plotting
-   auto_gallery/index
    api
    internals
 
