@@ -30,6 +30,11 @@ Enhancements
   By `Chun-Wei Yuan <https://github.com/chunweiyuan>`_ and
      `Kyle Heuton <https://github.com/kheuton>`_.
 
+- Enhanced tests suite by use of ``@network`` decorator, which is
+  controlled via ``--run-network-tests`` command line argument
+  to ``py.test`` (:issue:`1393`).
+  By `Matthew Gidden <https://github.com/gidden>`_.
+
 Bug fixes
 ~~~~~~~~~
 
@@ -40,12 +45,17 @@ By `Ryan Abernathey <https://github.com/rabernat>`_.
 ``data_vars``.
 By `Keisuke Fujii <https://github.com/fujiisoup>`_.
 
+- Tutorial datasets are now checked against a reference MD5 sum to confirm
+  successful download (:issue:`1392`). By `Matthew Gidden
+  <https://github.com/gidden>`_.
+
 Documentation
 ~~~~~~~~~~~~~
 
 - A new `gallery <http://xarray.pydata.org/en/latest/auto_gallery/index.html>`_
   allows to add interactive examples to the documentation.
   By `Fabien Maussion <https://github.com/fmaussion>`_.
+  
 
 .. _whats-new.0.9.5:
 
