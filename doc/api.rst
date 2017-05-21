@@ -485,7 +485,6 @@ Exceptions
 .. autosummary::
    :toctree: generated/
 
-   AlignmentError
    MergeError
 
 Advanced API

@@ -130,7 +130,7 @@ Enhancements
   `Vincent Noel <https://github.com/vnoel>`_.
 
 - :py:func:`~xarray.align` now supports ``join='exact'``, which raises
-  :py:class:`~xarray.AlignmentError` instead of aligning when indexes to be
+  :py:class:`~xarray.ValueError` instead of aligning when indexes to be
   aligned are not equal.
   By `Stephan Hoyer <https://github.com/shoyer>`_.
 

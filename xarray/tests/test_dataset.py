@@ -1251,7 +1251,7 @@ class TestDataset(TestCase):
         self.assertDatasetIdentical(left1, left)
         self.assertDatasetIdentical(left2, left)
 
-        with self.assertRaises(xr.AlignmentError):
+        with self.assertRaisesRegexp(ValueError, 'indexes .* not equal'):
             xr.align(left, right, join='exact')
 
     def test_align_exclude(self):

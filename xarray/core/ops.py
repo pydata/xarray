@@ -133,8 +133,8 @@ def fillna(data, other, join="left", dataset_join="left"):
         - 'inner': use the intersection of object indexes
         - 'left': use indexes from the first object with each dimension
         - 'right': use indexes from the last object with each dimension
-        - 'exact': raise `xarray.AlignmentError` instead of aligning when
-          indexes to be aligned are not equal
+        - 'exact': raise `ValueError` instead of aligning when indexes to be
+          aligned are not equal
     dataset_join : {'outer', 'inner', 'left', 'right'}, optional
         Method for joining variables of Dataset objects with mismatched
         data variables.

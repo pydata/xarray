@@ -15,10 +15,6 @@ from .utils import is_full_slice, is_dict_like
 from .variable import Variable, IndexVariable
 
 
-class AlignmentError(Exception):
-    """Error for when an operation cannot be done with non-aligned objects."""
-
-
 def _get_joiner(join):
     if join == 'outer':
         return functools.partial(functools.reduce, operator.or_)
@@ -62,8 +58,8 @@ def align(*objects, **kwargs):
         - 'inner': use the intersection of object indexes
         - 'left': use indexes from the first object with each dimension
         - 'right': use indexes from the last object with each dimension
-        - 'exact': raise `xarray.AlignmentError` instead of aligning when
-          indexes to be aligned are not equal
+        - 'exact': instead of aligning, raise `ValueError` when indexes to be
+          aligned are not equal
     copy : bool, optional
         If ``copy=True``, data in the return values is always copied. If
         ``copy=False`` and reindexing is unnecessary, or can be performed with
@@ -131,7 +127,7 @@ def align(*objects, **kwargs):
                     for other in matching_indexes[1:]) or
                     dim in unlabeled_dim_sizes):
                 if join == 'exact':
-                    raise AlignmentError(
+                    raise ValueError(
                         'indexes along dimension {!r} are not equal'
                         .format(dim))
                 index = joiner(matching_indexes)

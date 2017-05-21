@@ -66,7 +66,7 @@ class TestMergeFunction(TestCase):
     def test_merge_alignment_error(self):
         ds = xr.Dataset(coords={'x': [1, 2]})
         other = xr.Dataset(coords={'x': [2, 3]})
-        with self.assertRaises(xr.AlignmentError):
+        with self.assertRaisesRegexp(ValueError, 'indexes .* not equal'):
             xr.merge([ds, other], join='exact')
 
     def test_merge_no_conflicts_single_var(self):
