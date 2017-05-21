@@ -20,6 +20,7 @@ class TestLoadDataset(TestCase):
             ('~', '.xarray_tutorial_data', self.testfile)))
         with suppress(OSError):
             os.remove('{}.nc'.format(self.testfilepath))
+        with suppress(OSError):
             os.remove('{}.md5'.format(self.testfilepath))
 
     def test_download_from_github(self):
