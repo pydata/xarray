@@ -248,6 +248,19 @@ def as_dataset(obj):
     return obj
 
 
+def _maybe_split(old_var, old_name, new_var):
+    """
+    Returns an OrderedDict if a new_var is a single element chosen from
+    MultiIndex. Otherwise, returns an empty OrderedDict.
+    """
+    variables = OrderedDict()
+    level_names = getattr(old_var, 'level_names', None)
+    if len(new_var.dims) == 0 and level_names:
+        for name, v in zip(level_names, new_var.item()):
+            variables[name] = Variable((), v)
+    return variables
+
+
 class DataVariables(Mapping, formatting.ReprMixin):
     def __init__(self, dataset):
         self._dataset = dataset
@@ -575,13 +588,30 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
             obj = self._construct_direct(variables, coord_names, dims, attrs)
         return obj
 
-    def _replace_indexes(self, indexes):
+    def _replace_indexes(self, indexes, selected_indexes={}):
+        """
+        Replace coords and dims by indexes, which is a dict mapping
+        the original dim (str) to new dim (pandas.index).
+        selected_indexes is a dict which maps the original dims to the
+        selected dims that will be scalar coordinates, because they were
+        selected.
+        """
         if not len(indexes):
             return self
         variables = self._variables.copy()
+        coord_names = self._coord_names.copy()
+        for dim, selected_dim in selected_indexes.items():
+            for sd in selected_dim:
+                _, _, ary = _get_virtual_variable(
+                                variables, sd, level_vars=self._level_coords)
+                variables[sd] = ary[0]
+                if coord_names is None:
+                    coord_names = set([sd, ])
+                else:
+                    coord_names.add(sd)
         for name, idx in indexes.items():
             variables[name] = IndexVariable(name, idx)
-        obj = self._replace_vars_and_dims(variables)
+        obj = self._replace_vars_and_dims(variables, coord_names=coord_names)
 
         # switch from dimension to level names, if necessary
         dim_names = {}
@@ -1138,12 +1168,17 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
                     for k, v in iteritems(indexers)]
 
         variables = OrderedDict()
+        coord_names = self._coord_names.copy()
         for name, var in iteritems(self._variables):
             var_indexers = dict((k, v) for k, v in indexers if k in var.dims)
             new_var = var.isel(**var_indexers)
             if not (drop and name in var_indexers):
-                variables[name] = new_var
-        coord_names = set(self._coord_names) & set(variables)
+                level_vars = _maybe_split(var, name, new_var)
+                coord_names = coord_names | set(level_vars)
+                variables.update(level_vars)
+                if not level_vars or name not in self._coord_names:
+                    variables[name] = new_var
+        coord_names = set(coord_names) & set(variables)
         return self._replace_vars_and_dims(variables, coord_names=coord_names)
 
     def sel(self, method=None, tolerance=None, drop=False, **indexers):
@@ -1202,11 +1237,11 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         Dataset.isel_points
         DataArray.sel
         """
-        pos_indexers, new_indexes = indexing.remap_label_indexers(
-            self, indexers, method=method, tolerance=tolerance
-        )
+        pos_indexers, new_indexes, selected_dims = \
+            indexing.remap_label_indexers(
+                self, indexers, method=method, tolerance=tolerance)
         result = self.isel(drop=drop, **pos_indexers)
-        return result._replace_indexes(new_indexes)
+        return result._replace_indexes(new_indexes, selected_dims)
 
     def isel_points(self, dim='points', **indexers):
         # type: (...) -> Dataset
@@ -1392,7 +1427,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         Dataset.isel_points
         DataArray.sel_points
         """
-        pos_indexers, _ = indexing.remap_label_indexers(
+        pos_indexers, _, _ = indexing.remap_label_indexers(
             self, indexers, method=method, tolerance=tolerance
         )
         return self.isel_points(dim=dim, **pos_indexers)

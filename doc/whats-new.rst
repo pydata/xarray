@@ -40,6 +40,10 @@ By `Ryan Abernathey <https://github.com/rabernat>`_.
 ``data_vars``.
 By `Keisuke Fujii <https://github.com/fujiisoup>`_.
 
+- Fix a bug where selected levels of Multi-Index were lost by ``isel()`` and ``sel()`` (:issue:1408).
+  Now, the selected levels are automatically converted to scalar coordinates.
+By `Keisuke Fujii <https://github.com/fujiisoup>`_.
+
 .. _whats-new.0.9.5:
 
 v0.9.5 (17 April, 2017)

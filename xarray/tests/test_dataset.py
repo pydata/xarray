@@ -1096,6 +1096,28 @@ class TestDataset(TestCase):
 
         self.assertDatasetIdentical(mdata.sel(x={'one': 'a', 'two': 1}),
                                     mdata.sel(one='a', two=1))
+        self.assertTrue('one' in mdata.sel(one='a').coords)
+        self.assertTrue('one' in mdata.sel(one='a', two=1).coords)
+        self.assertTrue('two' in mdata.sel(one='a', two=1).coords)
+        self.assertTrue('three' in mdata.sel(one='a', two=1, three=-1).coords)
+        # make sure Multiindex coordinate can be a DataArray and it also
+        # as a Multiindex-ed array
+        self.assertTrue('one' in mdata['x'].isel(x=0).coords)
+
+    def test_isel_multiindex(self):
+        mindex = pd.MultiIndex.from_product([['a', 'b'], [1, 2], [-1, -2]],
+                                            names=('one', 'two', 'three'))
+        mdata = Dataset(data_vars={'var': ('x', range(8))},
+                        coords={'x': mindex})
+        selected = mdata.isel(x=0)
+        self.assertTrue('one' in selected.coords)
+        self.assertTrue('two' in selected.coords)
+        self.assertTrue('three' in selected.coords)
+        # drop
+        selected = mdata.isel(x=0, drop=True)
+        self.assertTrue('one' not in selected.coords)
+        self.assertTrue('two' not in selected.coords)
+        self.assertTrue('three' not in selected.coords)
 
     def test_reindex_like(self):
         data = create_test_data()

@@ -457,6 +457,11 @@ class VariableSubclassTestCases(object):
         idx = pd.MultiIndex.from_product([list('abc'), [0, 1]])
         v = self.cls('x', idx)
         self.assertVariableIdentical(Variable((), ('a', 0)), v[0])
+        actual = v[0:1]
+        value = np.ndarray((1,), dtype=np.dtype('O'))
+        value[0] = ('a', 0)
+        expected = self.cls(('x'), value)
+        self.assertVariableIdentical(actual, expected)
         self.assertVariableIdentical(v, v[:])
 
     def test_load(self):

@@ -128,41 +128,51 @@ class TestIndexers(TestCase):
             indexing.get_dim_indexers(mdata, {'four': 1})
 
     def test_remap_label_indexers(self):
-        def test_indexer(data, x, expected_pos, expected_idx=None):
-            pos, idx = indexing.remap_label_indexers(data, {'x': x})
+        def test_indexer(data, x, expected_pos, expected_idx=None,
+                         expected_sdims=None):
+            pos, idx, sdim = indexing.remap_label_indexers(data, {'x': x})
             self.assertArrayEqual(pos.get('x'), expected_pos)
             self.assertArrayEqual(idx.get('x'), expected_idx)
+            self.assertArrayEqual(sdim.get('x'), expected_sdims)
 
         data = Dataset({'x': ('x', [1, 2, 3])})
         mindex = pd.MultiIndex.from_product([['a', 'b'], [1, 2], [-1, -2]],
                                             names=('one', 'two', 'three'))
         mdata = DataArray(range(8), [('x', mindex)])
 
-        test_indexer(data, 1, 0)
-        test_indexer(data, np.int32(1), 0)
-        test_indexer(data, Variable([], 1), 0)
-        test_indexer(mdata, ('a', 1, -1), 0)
+        test_indexer(data, 1, 0, expected_sdims=['x'])
+        test_indexer(data, np.int32(1), 0, expected_sdims=['x'])
+        test_indexer(data, Variable([], 1), 0, expected_sdims=['x'])
+        test_indexer(mdata, ('a', 1, -1), 0,
+                     expected_sdims=['one', 'two', 'three'])
         test_indexer(mdata, ('a', 1),
                      [True,  True, False, False, False, False, False, False],
-                     [-1, -2])
+                     [-1, -2],
+                     expected_sdims=['one', 'two'])
         test_indexer(mdata, 'a', slice(0, 4, None),
-                     pd.MultiIndex.from_product([[1, 2], [-1, -2]]))
+                     pd.MultiIndex.from_product([[1, 2], [-1, -2]]),
+                     expected_sdims=['one'])
         test_indexer(mdata, ('a',),
                      [True,  True,  True,  True, False, False, False, False],
-                     pd.MultiIndex.from_product([[1, 2], [-1, -2]]))
+                     pd.MultiIndex.from_product([[1, 2], [-1, -2]]),
+                     expected_sdims=['one'])
         test_indexer(mdata, [('a', 1, -1), ('b', 2, -2)], [0, 7])
         test_indexer(mdata, slice('a', 'b'), slice(0, 8, None))
         test_indexer(mdata, slice(('a', 1), ('b', 1)), slice(0, 6, None))
-        test_indexer(mdata, {'one': 'a', 'two': 1, 'three': -1}, 0)
+        test_indexer(mdata, {'one': 'a', 'two': 1, 'three': -1}, 0,
+                     expected_sdims=['one', 'two', 'three'])
         test_indexer(mdata, {'one': 'a', 'two': 1},
                      [True,  True, False, False, False, False, False, False],
-                     [-1, -2])
+                     [-1, -2],
+                     expected_sdims=['one', 'two'])
         test_indexer(mdata, {'one': 'a', 'three': -1},
                      [True,  False, True, False, False, False, False, False],
-                     [1, 2])
+                     [1, 2],
+                     expected_sdims=['one', 'three'])
         test_indexer(mdata, {'one': 'a'},
                      [True,  True,  True,  True, False, False, False, False],
-                     pd.MultiIndex.from_product([[1, 2], [-1, -2]]))
+                     pd.MultiIndex.from_product([[1, 2], [-1, -2]]),
+                     expected_sdims=['one'])
 
 
 class TestLazyArray(TestCase):
