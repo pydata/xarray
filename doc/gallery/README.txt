@@ -1,0 +1,5 @@
+.. _gallery:
+
+Gallery
+=======
+
