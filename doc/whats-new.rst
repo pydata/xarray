@@ -40,7 +40,7 @@ By `Ryan Abernathey <https://github.com/rabernat>`_.
 ``data_vars``.
 By `Keisuke Fujii <https://github.com/fujiisoup>`_.
 - Tutorial datasets are now checked against a reference MD5 sum to confirm
-  successful download (:issue:`13921). By `Matthew Gidden
+  successful download (:issue:`1392`). By `Matthew Gidden
   <https://github.com/gidden>`_.
 
 .. _whats-new.0.9.5:
