@@ -33,6 +33,11 @@ Enhancements
 - Rename the dask arrays created by `open_dataset` to match new dask conventions
   (:issue:`1343`). By `Ryan Abernathey <https://github.com/rabernat>`_.
 
+- Enhanced tests suite by use of ``@network`` decorator, which is
+  controlled via ``--run-network-tests`` command line argument
+  to ``py.test`` (:issue:`1393`).
+  By `Matthew Gidden <https://github.com/gidden>`_.
+
 Bug fixes
 ~~~~~~~~~
 
@@ -42,6 +47,10 @@ By `Ryan Abernathey <https://github.com/rabernat>`_.
 - Fix a bug where ``.isel_points`` wrongly assigns unselected coordinate to
 ``data_vars``.
 By `Keisuke Fujii <https://github.com/fujiisoup>`_.
+
+- Tutorial datasets are now checked against a reference MD5 sum to confirm
+  successful download (:issue:`1392`). By `Matthew Gidden
+  <https://github.com/gidden>`_.
 
 .. _whats-new.0.9.5:
 
