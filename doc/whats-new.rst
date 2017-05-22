@@ -30,6 +30,9 @@ Enhancements
   By `Chun-Wei Yuan <https://github.com/chunweiyuan>`_ and
      `Kyle Heuton <https://github.com/kheuton>`_.
 
+- Rename the dask arrays created by `open_dataset` to match new dask conventions
+  (:issue:`1343`). By `Ryan Abernathey <https://github.com/rabernat>`_.
+
 - Enhanced tests suite by use of ``@network`` decorator, which is
   controlled via ``--run-network-tests`` command line argument
   to ``py.test`` (:issue:`1393`).
