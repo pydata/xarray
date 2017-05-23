@@ -90,7 +90,7 @@ class ScipyDataStore(WritableCFDataStore, DataStorePickleMixin):
     It only supports the NetCDF3 file-format.
     """
     def __init__(self, filename_or_obj, mode='r', format=None, group=None,
-                 writer=None, mmap=None, autoclose=False):
+                 writer=None, mmap=None, autoclose=False, allow_object=False):
         import scipy
         import scipy.io
 
@@ -122,7 +122,7 @@ class ScipyDataStore(WritableCFDataStore, DataStorePickleMixin):
         self._opener = opener
         self._mode = mode
 
-        super(ScipyDataStore, self).__init__(writer)
+        super(ScipyDataStore, self).__init__(writer, allow_object=allow_object)
 
     def open_store_variable(self, name, var):
         with self.ensure_open(autoclose=False):

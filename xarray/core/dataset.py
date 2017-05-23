@@ -898,6 +898,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
     def dump_to_store(self, store, encoder=None, sync=True, encoding=None,
                       unlimited_dims=None):
         """Store dataset contents to a backends.*DataStore object."""
+
         if encoding is None:
             encoding = {}
         variables, attrs = conventions.encode_dataset_coordinates(self)
@@ -918,7 +919,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
             store.sync()
 
     def to_netcdf(self, path=None, mode='w', format=None, group=None,
-                  engine=None, encoding=None, unlimited_dims=None):
+                  engine=None, encoding=None, unlimited_dims=None,
+                  allow_object=False):
         """Write dataset contents to a netCDF file.
 
         Parameters
@@ -968,13 +970,16 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
             By default, no dimensions are treated as unlimited dimensions.
             Note that unlimited_dims may also be set via
             ``dataset.encoding['unlimited_dims']``.
+        allow_object : bool, optional
+            If True, allow native Python objects to be serialized.
         """
         if encoding is None:
             encoding = {}
         from ..backends.api import to_netcdf
         return to_netcdf(self, path, mode, format=format, group=group,
                          engine=engine, encoding=encoding,
-                         unlimited_dims=unlimited_dims)
+                         unlimited_dims=unlimited_dims,
+                         allow_object=allow_object)
 
     def __unicode__(self):
         return formatting.dataset_repr(self)

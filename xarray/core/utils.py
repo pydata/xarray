@@ -9,6 +9,7 @@ import itertools
 import re
 import warnings
 from collections import Mapping, MutableMapping, Iterable
+from six.moves import cPickle as pickle
 
 import numpy as np
 import pandas as pd
@@ -489,3 +490,13 @@ def ensure_us_time_resolution(val):
     elif np.issubdtype(val.dtype, np.timedelta64):
         val = val.astype('timedelta64[us]')
     return val
+
+
+@functools.partial(np.vectorize, otypes='O')
+def encode_pickle(obj):
+    return np.frombuffer(pickle.dumps(obj), dtype=np.uint8)
+
+
+@functools.partial(np.vectorize, otypes='O')
+def decode_pickle(obj):
+    return pickle.loads(obj.tostring())

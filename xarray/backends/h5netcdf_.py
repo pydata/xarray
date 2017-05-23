@@ -55,7 +55,7 @@ class H5NetCDFStore(WritableCFDataStore, DataStorePickleMixin):
     """Store for reading and writing data via h5netcdf
     """
     def __init__(self, filename, mode='r', format=None, group=None,
-                 writer=None, autoclose=False):
+                 writer=None, autoclose=False, allow_object=False):
         if format not in [None, 'NETCDF4']:
             raise ValueError('invalid format for h5netcdf backend')
         opener = functools.partial(_open_h5netcdf_group, filename, mode=mode,
@@ -71,7 +71,7 @@ class H5NetCDFStore(WritableCFDataStore, DataStorePickleMixin):
         self._opener = opener
         self._filename = filename
         self._mode = mode
-        super(H5NetCDFStore, self).__init__(writer)
+        super(H5NetCDFStore, self).__init__(writer, allow_object=allow_object)
 
     def open_store_variable(self, name, var):
         with self.ensure_open(autoclose=False):

@@ -1314,6 +1314,8 @@ class DataArray(AbstractArray, BaseDataObject):
             Nested dictionary with variable names as keys and dictionaries of
             variable specific encodings as values, e.g.,
             ``{'my_variable': {'dtype': 'int16', 'scale_factor': 0.1, 'zlib': True}, ...}``
+        allow_object : bool, optional
+            If True, allow native Python objects to be serialized.
 
         Notes
         -----

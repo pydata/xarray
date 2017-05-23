@@ -11,11 +11,11 @@ from ..conventions import pop_to
 from ..core import indexing
 from ..core.utils import (FrozenOrderedDict, NdimSizeLenMixin,
                           DunderArrayMixin, close_on_error,
-                          is_remote_uri)
+                          is_remote_uri, encode_pickle, decode_pickle)
 from ..core.pycompat import iteritems, basestring, OrderedDict, PY3
 
 from .common import (WritableCFDataStore, robust_getitem,
-                     DataStorePickleMixin, find_root)
+                     DataStorePickleMixin, find_root, ArrayWriter)
 from .netcdf3 import (encode_nc3_attr_value, encode_nc3_variable,
                       maybe_convert_to_char_array)
 
@@ -41,6 +41,11 @@ class BaseNetCDF4Array(NdimSizeLenMixin, DunderArrayMixin):
             # represent variable length strings; it also prevents automatic
             # string concatenation via conventions.decode_cf_variable
             dtype = np.dtype('O')
+        if dtype == np.uint8 and array.datatype.name == 'object':
+            self.is_object = True
+            dtype = np.dtype('O')
+        else:
+            self.is_object = False
         self.dtype = dtype
 
     def get_array(self):
@@ -75,6 +80,8 @@ class NetCDF4ArrayWrapper(BaseNetCDF4Array):
             # arrays (slicing them always returns a 1-dimensional array):
             # https://github.com/Unidata/netcdf4-python/pull/220
             data = np.asscalar(data)
+        if self.is_object:
+            data = decode_pickle(data)
         return data
 
 
@@ -200,9 +207,14 @@ class NetCDF4DataStore(WritableCFDataStore, DataStorePickleMixin):
     """
     def __init__(self, filename, mode='r', format='NETCDF4', group=None,
                  writer=None, clobber=True, diskless=False, persist=False,
-                 autoclose=False):
+                 autoclose=False, allow_object=False):
         if format is None:
             format = 'NETCDF4'
+
+        assert not allow_object or format.startswith('NETCDF4'), \
+            """serializing native Python objects is only possible with
+            'NETCDF4' format.  Current format is '{}'""".format(format)
+
         opener = functools.partial(_open_netcdf4_group, filename, mode=mode,
                                    group=group, clobber=clobber,
                                    diskless=diskless, persist=persist,
@@ -215,7 +227,22 @@ class NetCDF4DataStore(WritableCFDataStore, DataStorePickleMixin):
         self._filename = filename
         self._mode = 'a' if mode == 'w' else mode
         self._opener = functools.partial(opener, mode=self._mode)
-        super(NetCDF4DataStore, self).__init__(writer)
+        super(NetCDF4DataStore, self).__init__(writer,
+                                               allow_object=allow_object)
+
+    @WritableCFDataStore.allow_object.setter
+    def allow_object(self, value):
+        self._allow_object = value
+
+    @property
+    def _object_datatype(self):
+        msg = "Object datatype only supported with keyword 'allow_object'"
+        assert self.allow_object, msg
+        dtype = self.ds.vltypes.get('object',
+                                    self.ds.createVLType(np.uint8, 'object'))
+        msg = "Object datatype is '{}'. Should be 'uint8'.".format(dtype.dtype)
+        assert dtype.dtype == np.uint8, msg
+        return dtype
 
     def open_store_variable(self, name, var):
         with self.ensure_open(autoclose=False):
@@ -287,17 +314,25 @@ class NetCDF4DataStore(WritableCFDataStore, DataStorePickleMixin):
         with self.ensure_open(autoclose=False):
             super(NetCDF4DataStore, self).set_variables(*args, **kwargs)
 
+    def _extract_variable_and_datatype(self, variable):
+        if self.format == 'NETCDF4':
+            if variable.dtype.kind == 'O' and self.allow_object:
+                datatype = self._object_datatype
+                variable.data = encode_pickle(variable)
+            else:
+                variable, datatype = _nc4_values_and_dtype(variable)
+        else:
+            variable = encode_nc3_variable(variable)
+            datatype = variable.dtype
+        return variable, datatype
+
     def prepare_variable(self, name, variable, check_encoding=False,
                          unlimited_dims=None):
         attrs = variable.attrs.copy()
 
         variable = _force_native_endianness(variable)
 
-        if self.format == 'NETCDF4':
-            variable, datatype = _nc4_values_and_dtype(variable)
-        else:
-            variable = encode_nc3_variable(variable)
-            datatype = variable.dtype
+        variable, datatype = self._extract_variable_and_datatype(variable)
 
         self.set_necessary_dimensions(variable, unlimited_dims=unlimited_dims)
 
