@@ -22,6 +22,7 @@ Top-level functions
    full_like
    zeros_like
    ones_like
+   as_variable
 
 Dataset
 =======

@@ -38,6 +38,10 @@ Enhancements
   to ``py.test`` (:issue:`1393`).
   By `Matthew Gidden <https://github.com/gidden>`_.
 
+- ``xarray.core.variable.as_variable`` is now part of the public API and
+  can be accessed using :py:meth:`~xarray.as_variable` (:issue:`1303`).
+  By `Benoit Bovy <https://github.com/benbovy>`_.
+
 Bug fixes
 ~~~~~~~~~
 

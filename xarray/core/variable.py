@@ -28,14 +28,26 @@ except ImportError:
     pass
 
 
-def as_variable(obj, name=None, copy=False):
-    """Convert an object into an Variable.
+def as_variable(obj, name=None):
+    """Convert an object into a Variable.
 
-    - If the object is already an `Variable`, return a shallow copy.
-    - Otherwise, if the object has 'dims' and 'data' attributes, convert
-      it into a new `Variable`.
-    - If all else fails, attempt to convert the object into an `Variable` by
-      unpacking it into the arguments for `Variable.__init__`.
+    Parameters
+    ----------
+    obj : object
+        Object to convert into a Variable.
+        If the object is already a Variable, return a shallow copy.
+        Otherwise, if the object has 'dims' and 'data' attributes, convert
+        it into a new Variable.
+        If all else fails, attempt to convert the object into a Variable by
+        unpacking it into the arguments for creating a new Variable.
+    name : str, optional
+        Dimension name (only if data in `obj` is 1-dimensional).
+
+    Returns
+    -------
+    var : Variable
+        The newly created variable.
+
     """
     # TODO: consider extending this method to automatically handle Iris and
     # pandas objects.
@@ -75,7 +87,7 @@ def as_variable(obj, name=None, copy=False):
                         'explicit list of dimensions: %r' % obj)
 
     if name is not None and name in obj.dims:
-        # convert the into an Index
+        # convert the Variable into an Index
         if obj.ndim != 1:
             raise ValueError(
                 '%r has more than 1-dimension and the same name as one of its '
